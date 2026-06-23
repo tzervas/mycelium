@@ -1821,7 +1821,8 @@ mod tests {
         // **elaborates** — the monomorphization pre-pass statically resolves it to a direct call to
         // the instance's method body (a mangled monomorphic fn), so it lowers to a closed L0 term and
         // runs. (Before M-673 this was a staged dictionary-passing `Residual`; that site is kept in
-        // `app` as a defensive invariant — see `the_generic_residual_sites_remain_as_invariants`.)
+        // `app` as a defensive invariant — see
+        // `the_generic_and_trait_residual_sites_remain_as_defensive_invariants`.)
         let env = env(
             "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
              impl Cmp<Binary{8}> for Binary{8} \

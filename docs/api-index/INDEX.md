@@ -452,10 +452,10 @@
 | `mycelium_doc::SourceKind` | enum | `crates/mycelium-doc/src/ir.rs:55` | Which corpus family a [`Payload::Document`] was projected from (drives ordering + the template's |
 | `mycelium_doc::apiref` | mod | `crates/mycelium-doc/src/lib.rs:19` | — |
 | `mycelium_doc::apiref::project_nodule` | fn | `crates/mycelium-doc/src/apiref.rs:21` | Project a `.myc` source into a [`Payload::Document`] (`source_kind: api`) of api-item nodes. |
-| `mycelium_doc::apiref::project_schema` | fn | `crates/mycelium-doc/src/apiref.rs:103` | Project a JSON-schema file into a [`Payload::Document`] of api-item nodes (one per top-level |
+| `mycelium_doc::apiref::project_schema` | fn | `crates/mycelium-doc/src/apiref.rs:107` | Project a JSON-schema file into a [`Payload::Document`] of api-item nodes (one per top-level |
 | `mycelium_doc::build` | mod | `crates/mycelium-doc/src/lib.rs:20` | — |
-| `mycelium_doc::build` | fn | `crates/mycelium-doc/src/build.rs:54` | Build the resolved doc model from the input. |
-| `mycelium_doc::build::BuildInput::conventional` | fn | `crates/mycelium-doc/src/build.rs:39` | The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`. |
+| `mycelium_doc::build` | fn | `crates/mycelium-doc/src/build.rs:59` | Build the resolved doc model from the input. |
+| `mycelium_doc::build::BuildInput::conventional` | fn | `crates/mycelium-doc/src/build.rs:44` | The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`, |
 | `mycelium_doc::build::EPUB_DEFERRAL:` | const | `crates/mycelium-doc/src/build.rs:19` | EPUB is an honest deferral (spec §8 / §4.1 "never a half-build"). |
 | `mycelium_doc::corpus` | mod | `crates/mycelium-doc/src/lib.rs:21` | — |
 | `mycelium_doc::corpus::AnchorAlloc` | struct | `crates/mycelium-doc/src/corpus.rs:14` | Allocates globally-unique, stable anchor slugs (so deep links never collide — §4.1 navigability). |
@@ -484,7 +484,7 @@
 | `mycelium_doc::emit::json::render_search_index` | fn | `crates/mycelium-doc/src/emit/json.rs:42` | One JSON record per node, newline-delimited (a streamable search/tooling index). |
 | `mycelium_doc::emit::typst` | mod | `crates/mycelium-doc/src/emit/mod.rs:9` | — |
 | `mycelium_doc::emit::typst::render` | fn | `crates/mycelium-doc/src/emit/typst.rs:11` | Render the whole model to one Typst document source. |
-| `mycelium_doc::emit_all` | fn | `crates/mycelium-doc/src/build.rs:136` | Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note). |
+| `mycelium_doc::emit_all` | fn | `crates/mycelium-doc/src/build.rs:141` | Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note). |
 | `mycelium_doc::hash` | mod | `crates/mycelium-doc/src/lib.rs:24` | — |
 | `mycelium_doc::hash::DocHasher` | struct | `crates/mycelium-doc/src/hash.rs:14` | A canonical, injective content hasher: tagged, length-prefixed writes feed a single BLAKE3 state. |
 | `mycelium_doc::hash::DocHasher::child` | fn | `crates/mycelium-doc/src/hash.rs:64` | Absorb an already-computed child address (a content hash), length-prefixed. |
@@ -3141,8 +3141,8 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::build::BuildInput::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::build::BuildInput::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::build::BuildInput::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_doc::build::build` | dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:54 — one canonical row kept |
-| `mycelium_doc::build::emit_all` | dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:136 — one canonical row kept |
+| `mycelium_doc::build::build` | dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:59 — one canonical row kept |
+| `mycelium_doc::build::emit_all` | dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:141 — one canonical row kept |
 | `mycelium_doc::corpus::AnchorAlloc::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::corpus::AnchorAlloc::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::doc_lint::CHECK_NAMES:` | dedup-alias: same definition as `mycelium_doc::CHECK_NAMES:` at crates/mycelium-doc/src/doc_lint.rs:16 — one canonical row kept |

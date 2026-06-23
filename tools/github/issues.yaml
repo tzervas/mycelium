@@ -2915,7 +2915,7 @@ issues:
   - id: E10-1
     title: "E10-1 (epic) — Core/kernel 1.0.0 sub-gate (honesty-integrity durability)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:epic, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:epic, area:release, priority:P1, status:in-progress]
     depends_on: []
     epic: E10
     doc_refs:
@@ -2927,8 +2927,10 @@ issues:
       The residual ADR-021 Gate A work required to declare the Mycelium Rust core/kernel at
       1.0.0. The kernel reaching 1.0.0 is a precondition for full-language 1.0.0 (ADR-022 /
       DN-25): the full-language gate inherits the kernel's honesty-integrity and durability
-      guarantees. Gate A's open rows (A2 Medium ledger, A3 WS8 durability, A4 supply-chain)
-      must all close before the kernel 1.0.0 tag is cut and ADR-021 moves Accepted -> Enacted.
+      guarantees. Gate A's rows (A2 Medium ledger, A3 WS8 durability, A4 supply-chain) must all
+      close before the kernel 1.0.0 tag is cut and track T1 is enacted at the tag. NOTE: ADR-021 is
+      now Superseded by ADR-022, so the inherited kernel-gate enactment attaches to ADR-022 track T1
+      (not ADR-021 -> Enacted); see the Status section below.
 
       User stories:
       - As a maintainer, I want every ADR-021 Gate A row demonstrably met before cutting the
@@ -2955,23 +2957,44 @@ issues:
       - cargo-fuzz targets exist for the L1 lexer, parser, and checker, wired into CI.
       - cargo-deny and cargo-audit are wired into just check and green (no silent skips).
       - just check passes fully on the release branch (all crates, all gates, no skips).
-      - ADR-021 is moved Accepted -> Enacted (append-only, maintainer sign-off).
+      - ADR-022 track T1 is enacted at the tag (ADR-021 is Superseded — the inherited kernel-gate
+        enactment attaches to ADR-022 T1; append-only, maintainer sign-off).
       - The 1.0.0 tag exists on main per ADR-018.
 
+      Status (2026-06-23, kickoff c10 — maintainer: refresh-status): T1 is GATE-MET / TAG-READY.
+      The A2/A3/A4 engineering was already satisfied by the original ADR-021 kernel-gate wave
+      (2026-06-21) — M-700/M-701/M-702 close by reference to M-653/#306 (Medium ledger 25/25 Fixed),
+      M-654/#313 (mutants/proptest/fuzz durability), M-652/#303 (cargo-deny/audit non-silent in
+      `just check`); the tooling remains present. ADR-022 §4/§5 T1 status refreshed to met (no fresh
+      gate run — VR-5: a status report on the prior checked landing, not a new claim). The only open
+      item is M-703 (the core `1.0.0` tag act), which is maintainer-reserved (like M-655); the epic
+      stays in-progress until that act lands. ADR-021 is now Superseded — the inherited enactment
+      attaches to ADR-022 track T1 at the tag.
+
       Children: M-700 (close Medium-findings ledger A2), M-701 (WS8 durability surface A3),
-      M-702 (supply-chain gate A4), M-703 (cut core/kernel 1.0.0 + ADR-021 Enacted).
+      M-702 (supply-chain gate A4), M-703 (cut core/kernel 1.0.0 + ADR-022 T1 Enacted at the tag).
 
   - id: M-700
     title: "M-700 — Close the deep-review Medium-findings ledger (Gate A2)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:chore, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:chore, area:release, priority:P1, status:done]
     depends_on: []
     epic: E10
+    landed_pr: 306
+    landed_date: 2026-06-21
+    landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-653 (PR #306): docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md records 25 Medium ids · 25 Fixed · 0 deferred (Gate A2 met), each with a failing-without-the-fix regression test. Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
     doc_refs:
+      - corpus:ADR-022
       - corpus:ADR-021
       - corpus:DN-19
       - corpus:DN-25
     body: |
+      DONE (closed by reference, 2026-06-23, kickoff c10): the Medium ledger was closed by the
+      original kernel-gate wave (M-653, PR #306) — 25/25 Fixed, 0 deferred, in
+      docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md (Gate A2 met). E10-1 re-scoped
+      the row under ADR-022 T1 but the engineering was already present; the maintainer ratified T1 as
+      met (refresh-status, no fresh gate run). Original task framing follows.
+
       ADR-021 Gate A2 requires every Medium finding from the 2026-06-14 deep review to be either
       resolved or explicitly deferred with a one-line rationale. This task closes that ledger so
       the "no open Mediums" claim is grounded (VR-5). DN-19 §2 GAP-2 lists the remaining open
@@ -2998,15 +3021,26 @@ issues:
   - id: M-701
     title: "M-701 — WS8 durability surface: cargo-mutants, proptest migration, fuzz targets"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:infra, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:infra, area:release, priority:P1, status:done]
     depends_on: [M-700]
     epic: E10
+    landed_pr: 313
+    landed_date: 2026-06-21
+    landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-654 (PR #313): just mutants recipe + .cargo/mutants.toml (0 un-triaged survivors on core/cert/interp/numerics, equivalents justified); hand-rolled LCG suites migrated to proptest (crates/mycelium-numerics/tests/properties.rs, seed rotation); cargo-fuzz targets fuzz/fuzz_targets/{fuzz_l1_parse, fuzz_core_value_deser, fuzz_m210_checker}.rs + just fuzz-smoke wired into just check-full (Tier 2). Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
     doc_refs:
+      - corpus:ADR-022
       - corpus:ADR-021
       - corpus:DN-19
       - corpus:DN-25
       - src:crates/mycelium-l1/src/lexer.rs
     body: |
+      DONE (closed by reference, 2026-06-23, kickoff c10): WS8 durability was landed by the original
+      kernel-gate wave (M-654, PR #313) — just mutants recipe + .cargo/mutants.toml (0 un-triaged
+      survivors), LCG suites migrated to proptest with seed rotation, and three cargo-fuzz targets
+      (L1 parse, core value deser, M-210 checker) + just fuzz-smoke wired into just check-full. E10-1
+      re-scoped the row under ADR-022 T1 but the tooling was already present; the maintainer ratified
+      T1 as met (refresh-status, no fresh gate run). Original task framing follows.
+
       ADR-021 Gate A3 (WS8) requires the honesty-surface fixes from WS1-WS7 to be durable:
       cargo-mutants green on the trusted base, hand-rolled LCG tests migrated to proptest with
       seed rotation, and cargo-fuzz targets for the lexer/parser/checker. WS8 turns "we fixed it
@@ -3037,14 +3071,24 @@ issues:
   - id: M-702
     title: "M-702 — Supply-chain gate: wire cargo-deny + cargo-audit into just check"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:infra, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:infra, area:release, priority:P1, status:done]
     depends_on: []
     epic: E10
+    landed_pr: 303
+    landed_date: 2026-06-21
+    landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-652 (PR #303): deny.toml (MIT-aligned license allow-list + advisories + crates.io-only sources); just deny / scripts/checks/deny.sh runs cargo-deny + cargo-audit, wired non-silently into just check (scripts/checks/all.sh); cargo-deny/cargo-audit installed by scripts/install-tools.sh (skip-if-missing locally, never silent in CI). Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
     doc_refs:
+      - corpus:ADR-022
       - corpus:ADR-021
       - corpus:DN-19
       - corpus:DN-25
     body: |
+      DONE (closed by reference, 2026-06-23, kickoff c10): the supply-chain gate was landed by the
+      original kernel-gate wave (M-652, PR #303) — deny.toml + just deny (cargo-deny + cargo-audit)
+      wired non-silently into just check; tools installed by just setup with the skip-if-missing
+      pattern. E10-1 re-scoped the row under ADR-022 T1 but the wiring was already present; the
+      maintainer ratified T1 as met (refresh-status, no fresh gate run). Original task framing follows.
+
       ADR-021 Gate A4 requires cargo-deny and cargo-audit to be wired into just check and green.
       Currently both tools skip (not installed), so just check passes silently without supply-chain
       verification. For a 1.0.0 release, "just check green" must include license policy,
@@ -3071,16 +3115,26 @@ issues:
       - Gate A4 criterion is met.
 
   - id: M-703
-    title: "M-703 — Cut core/kernel 1.0.0 + move ADR-021 Accepted -> Enacted"
+    title: "M-703 — Cut core/kernel 1.0.0 + enact ADR-022 track T1 (maintainer-reserved)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:chore, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:chore, area:release, priority:P1, status:todo]
     depends_on: [M-700, M-701, M-702]
     epic: E10
     doc_refs:
+      - corpus:ADR-022
       - corpus:ADR-021
       - corpus:ADR-018
       - corpus:DN-25
     body: |
+      maintainer-reserved (like M-655 — no agent cuts the tag or enacts the status). READY
+      (2026-06-23, kickoff c10): M-700/M-701/M-702 are satisfied and ADR-022 §4/§5 records track T1 as
+      GATE-MET / TAG-READY (A1–A5, B1–B2 all met). The remaining act is the maintainer's:
+      cut the `core 1.0.0` tag per ADR-018 and record the enactment. NOTE on the supersession: ADR-021
+      is now SUPERSEDED by ADR-022, so it cannot move Accepted -> Enacted; the inherited kernel-gate
+      enactment attaches instead to ADR-022 track T1 (mark T1 Enacted at the tag — house rule #3,
+      append-only). This issue overlaps the pre-existing maintainer-reserved M-655 (cut 1.0.0 tag);
+      resolve them together. Original (pre-supersession) framing follows.
+
       The release act: once Gate A rows A2/A3/A4 are all demonstrably met (M-700/M-701/M-702
       landed), cut the 1.0.0 tag per ADR-018 and move ADR-021 from Accepted to Enacted. This is
       the formal record that the kernel/core has stabilized. It is a precondition for
@@ -3101,8 +3155,9 @@ issues:
 
       Definition of Done:
       - M-700, M-701, M-702 are all landed and just check is fully green.
-      - The maintainer confirms Gate A is met (explicit record in ADR-021 §3, append-only).
-      - ADR-021 is moved Accepted -> Enacted (append-only changelog entry, maintainer sign-off).
+      - The maintainer confirms Gate A is met (explicit record in ADR-022 §4 / E10-1, append-only).
+      - ADR-022 track T1 is enacted at the tag (ADR-021 is Superseded, cannot move to Enacted;
+        append-only changelog entry, maintainer sign-off).
       - The 1.0.0 tag is cut on main per ADR-018 (tag name, changelog entry, crate versions).
       - CHANGELOG.md has a 1.0.0 release section (append-only; orchestrator-owned).
 
@@ -4409,7 +4464,7 @@ issues:
   - id: E15-1
     title: "E15-1 (epic) -- Native AOT maturity, optimization, and acceleration"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:epic, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:epic, area:execution, priority:P2, status:in-progress]
     depends_on: [E6-1]
     epic: E15
     doc_refs:
@@ -4417,14 +4472,29 @@ issues:
       - corpus:RFC-0004
       - corpus:DN-25
     body: |
-      Mature the native AOT path (today: direct-LLVM kernel subset + mlir-dialect feature
-      skeleton in crates/mycelium-mlir/) into a real optimizing backend with performance
-      suitable for a usable 1.0. The interpreter stays the trusted base; the native path is
-      the performance path. This epic delivers: full libMLIR lowering (subsumes E6-1 remaining),
-      EXPLAIN-able never-silent optimization passes (inlining/CSE/DCE), JIT for dynamic/VSA
-      workloads (ADR-009 deferred to enacted), BitNet packed-ternary acceleration (FR-C3), and
-      a mutant-witnessed three-way differential (interp == AOT == JIT). Every transform is
-      EXPLAIN-able per ADR-006/G2 -- no black-box optimization is permitted.
+      DESIGN GATE CLEARED (2026-06-23): RFC-0029 reached Accepted, with its open questions
+      resolved against the live crates/mycelium-mlir/. Honest re-scope: E6-1 is `done`, so the
+      JIT (M-340 jit.rs), BitNet packed-ternary accel (M-360 bitnet.rs), real arith/func->LLVM
+      MLIR-dialect lowering (M-601 dialect/native.rs), and the three-way native differential
+      (M-602 threeway_differential.rs) ALREADY landed; ADR-019 is Enacted; ADR-009 already
+      sanctions interpreter/JIT for dynamic VSA. The one genuinely-new mechanism is M-726
+      (optimization passes — no src/passes/ exists yet); M-725/727/728/729 are coverage-widening
+      / formalization / capability-gating / differential-unification (see RFC-0029 §5/§7).
+
+      Mature the native AOT path into a real optimizing backend (a 1.1 track per ADR-022 §8 Q4 —
+      QoL/perf, not a 1.0.0 blocker; see the SCOPE note in the DoD below). Per the re-scope above,
+      the path is already substantial (E6-1 `done`: direct-LLVM
+      backend + in-process JIT + BitNet accel + real MLIR-dialect lowering for the element-wise
+      fragment + a three-way native differential). The interpreter stays the trusted base; the
+      native path is the performance path. This epic delivers the REMAINING work:
+      EXPLAIN-able never-silent optimization passes (inlining/CSE/DCE — the one genuinely-new
+      mechanism, M-726), libMLIR lowering COVERAGE WIDENING beyond the element-wise fragment
+      (M-725, with an explicit refusal at every honest boundary — not a re-unblock; the binding is
+      present via ADR-019/setup-mlir.sh), JIT FORMALIZED as an explicit never-silently-selected
+      mode (M-727 — ADR-009 already sanctions interpreter/JIT, so this is hardening, not a deferral
+      lift), BitNet capability-flag + graceful-degradation formalization (FR-C3, M-728), and a
+      unified mutant-witnessed three-way differential (interp == AOT == JIT, M-729). Every
+      transform is EXPLAIN-able per ADR-006/G2 -- no black-box optimization is permitted.
 
       User stories:
       - As a language user, I want programs compiled AOT to produce the same results as the
@@ -4433,8 +4503,9 @@ issues:
       - As a compiler engineer, I want optimization passes (inlining, CSE, DCE) to be
         EXPLAIN-able -- reified, inspectable, auditable -- so that no optimization is a black
         box violating ADR-006.
-      - As a stdlib author, I want the AOT backend to cover the full language surface (generics,
-        traits, HOF, pattern matching) so that .myc stdlib modules compile natively.
+      - As a stdlib author, I want the AOT backend to cover the language surface it honestly can,
+        and to refuse the rest explicitly (never silently), so that I always know whether a .myc
+        module compiled natively or fell back to the interpreter.
       - As a downstream app developer, I want JIT available for VSA/HDC dynamic workloads, so
         that I get native performance for streaming pipelines without an offline AOT step.
       - As a tool author, I want BitNet packed-ternary acceleration behind an explicit
@@ -4442,40 +4513,48 @@ issues:
       - As a maintainer, I want the three-way differential to be mutant-witnessed, so that a
         codegen regression is caught before it reaches main.
 
-      Issues to resolve:
-      - What is the current status of the libMLIR binding (ADR-019/M-348)? DN-15 records it
-        was blocked at M-373; is it unblocked now?
-      - How are optimization passes made EXPLAIN-able (transform log, per-IR-node annotation,
-        or EXPLAIN query extending M-673's MonoSelections)?
-      - Should JIT (ADR-009) be enacted for VSA/HDC only or also for REPL/interactive use?
-      - What hardware targets are in scope for BitNet packed-ternary acceleration (FR-C3)?
+      Issues to resolve (ALL RESOLVED by RFC-0029 — see §5/§7):
+      - libMLIR binding status: RESOLVED — ADR-019 Enacted; the binding is provisioned by
+        scripts/setup-mlir.sh and probed at runtime (skip-gracefully when absent). M-725 is
+        coverage-widening, not unblocking. (RFC-0029 §5.1)
+      - Optimization-pass EXPLAIN model: RESOLVED — a reified transform-log of
+        (pass, rule, site, before->after, reason), extending M-673's MonoSelections. (§5.2/§7.2)
+      - JIT scope: RESOLVED — VSA/HDC + the bit/trit subset it already compiles; explicit mode;
+        REPL/interactive deferred beyond 1.0.0; ADR-009 already sanctions JIT. (§5.3/§7.3)
+      - BitNet hardware targets: RESOLVED — 2-bit {-1,0,+1} packing (I2_S/TL1/TL2) + the
+        runtime-data dot kernel; tile/MMA deferred beyond 1.0.0. (§5.4/§7.4)
 
       Definition of Done:
-      - RFC-0029 reaches Accepted (design gate).
-      - Full libMLIR lowering path is implemented (M-725); E6-1 remaining tasks subsumed.
+      - [done] RFC-0029 reaches Accepted (design gate).
+      - libMLIR lowering coverage is widened beyond the element-wise fragment (M-725), each
+        increment keeping an explicit never-silent refusal at its honest boundary.
       - Inlining/CSE/DCE passes implemented as EXPLAIN-able never-silent transforms (M-726);
         differential tests confirm optimized output == unoptimized (Empirical).
-      - JIT implemented for dynamic/VSA workloads, never silently selected (M-727);
+      - JIT formalized as an explicit, never-silently-selected mode (M-727);
         JIT result == interpreter result (Empirical).
       - BitNet packed-ternary acceleration behind explicit capability flag; graceful degradation
         never-silent; accel result == reference ternary (Empirical) (M-728).
       - Three-way differential (interp == AOT == JIT) is mutant-witnessed (M-729).
       - just check green on crates/mycelium-mlir/ with all new features enabled.
+      - SCOPE (ADR-022 §8 Q4): this is a 1.1 track, NOT a 1.0.0 blocker — T6 native AOT is un-gated
+        (QoL/perf, patched in post-1.0.0; 1.0.0 runs on the interpreter + direct-LLVM kernel subset).
 
       Children:
-      - M-725 -- full libMLIR integration: ternary-dialect to MLIR to LLVM lowering, subsuming
-        E6-1 remaining. [type:feature]
+      - M-725 -- libMLIR lowering coverage widening (beyond the M-601 element-wise fragment),
+        each increment with an explicit honest-boundary refusal. [type:feature]
       - M-726 -- optimization passes (RFC-0029): inlining/CSE/DCE as EXPLAIN-able, never-silent,
-        differential-checked transforms. [type:feature]
-      - M-727 -- JIT for dynamic / VSA workloads (ADR-009 deferred to enacted). [type:feature]
-      - M-728 -- BitNet-class packed-ternary acceleration (FR-C3). [type:feature]
+        differential-checked transforms (the one genuinely-new mechanism). [type:feature]
+      - M-727 -- JIT formalized as an explicit never-silently-selected mode (ADR-009 already
+        sanctions interpreter/JIT — hardening, not a deferral lift). [type:feature]
+      - M-728 -- BitNet-class packed-ternary acceleration (FR-C3): capability-flag +
+        graceful-degradation formalization over the M-360 kernels. [type:feature]
       - M-729 -- codegen differential durability: interp == AOT == JIT three-way agreement,
         mutant-witnessed. [type:verification]
 
   - id: M-725
     title: "full libMLIR integration: ternary-dialect to MLIR to LLVM lowering"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
     epic: E15-1
     doc_refs:
       - corpus:RFC-0029
@@ -4483,40 +4562,41 @@ issues:
       - src:crates/mycelium-mlir/src/lib.rs
       - corpus:DN-25
     body: |
-      Implement the complete ternary-dialect to MLIR to LLVM dialect lowering chain in
-      crates/mycelium-mlir/, subsuming E6-1's remaining tasks. Today the crate provides a
-      textual skeleton (M-150), a partial mlir-dialect feature (M-601), and a direct-LLVM
-      backend (M-301/M-373/M-378/M-379). This task replaces the dialect skeleton with a real
-      libMLIR binding and implements the full ternary-dialect to arith/func to LLVM dialect
-      chain. PREREQUISITE: confirm ADR-019 / libMLIR binding is available in the environment
-      (DN-15 s1 records it was blocked at M-373 -- check before branching; if still blocked,
-      stage the direct-LLVM-advanceable half per DN-15 s2 and FLAG).
+      WIDEN the real ternary-dialect -> arith/func -> LLVM dialect lowering in
+      crates/mycelium-mlir/src/dialect/native.rs BEYOND the element-wise fragment already landed
+      under M-601 (E6-1 `done`). This is coverage-widening, NOT an unblock: per RFC-0029 §5.1 the
+      libMLIR binding is provisioned (ADR-019 Enacted; scripts/setup-mlir.sh) and probed at runtime
+      with a graceful skip when absent; the direct-LLVM backend (M-301/M-373/M-379) and interpreter
+      already cover the full v0 calculus. Today the MLIR-dialect path handles the bit/trit
+      element-wise fragment and explicitly refuses (never silently) the trit-carry, data, closure,
+      and recursion fragments, routing them to direct-LLVM/interp. Each widening increment moves one
+      such fragment into the dialect path AND keeps an explicit never-silent refusal at its new
+      honest boundary -- never a second divergent codegen for the same semantics (DRY/G2).
 
       User stories:
-      - As a compiler engineer, I want the real ternary-dialect to MLIR to LLVM path
-        implemented, so that the direct-LLVM IR fallback (which DN-15 calls brittle for complex
-        data layouts) can be retired.
+      - As a compiler engineer, I want more of the calculus lowered through the real MLIR-dialect
+        path, so that the direct-LLVM IR fallback (which DN-15 calls brittle for complex data
+        layouts) carries progressively less of the surface.
 
-      Issues to resolve:
-      - Is the libMLIR binding in the current environment available (ADR-019/M-348 resolved)?
-      - Which E6-1 tasks remain open and are subsumed by this task?
-      - What is the coverage: does the full language surface (generics post-mono, traits, HOF
-        post-defunctionalization, match, recursion) need to be covered in M-725, or is a
-        subset sufficient as a first increment?
+      Issues to resolve (binding status RESOLVED by RFC-0029 §5.1):
+      - Which fragment to widen first (trit-carry arithmetic is the natural next increment after
+        the element-wise fragment)?
+      - For each increment, what is the honest-boundary refusal that routes the rest to
+        direct-LLVM/interp?
 
       Definition of Done:
-      - libMLIR binding confirmed available in the environment (pre-flight check documented).
-      - ternary-dialect to arith/func to LLVM dialect chain is implemented and tested.
-      - The mlir-dialect skeleton (placeholder) is replaced by the real binding.
-      - E6-1 remaining tasks are subsumed; their issues closed with references to M-725.
-      - Differential tests: .myc programs produce the same result via the new MLIR path as
-        via the interpreter (Empirical).
-      - just check green on crates/mycelium-mlir/.
+      - At least one fragment beyond element-wise (e.g. trit-carry) is lowered through the real
+        MLIR-dialect path, with an explicit never-silent refusal at the new boundary.
+      - Differential tests: .myc programs in the widened fragment produce the same result via the
+        MLIR-dialect path as via the interpreter and direct-LLVM (Empirical, three-way; M-602
+        harness extended).
+      - just check green on crates/mycelium-mlir/ (with --features mlir-dialect skip-graceful when
+        the toolchain is absent).
 
   - id: M-726
     title: "optimization passes: inlining/CSE/DCE as EXPLAIN-able never-silent transforms"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
     epic: E15-1
     doc_refs:
       - corpus:RFC-0029
@@ -4552,22 +4632,25 @@ issues:
       - just check green.
 
   - id: M-727
-    title: "JIT for dynamic / VSA workloads (ADR-009 deferred to enacted)"
+    title: "JIT formalized as an explicit never-silently-selected mode (VSA/HDC dynamic)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
     epic: E15-1
     doc_refs:
       - corpus:RFC-0029
       - corpus:RFC-0004
-      - src:crates/mycelium-mlir/src/lib.rs
+      - src:crates/mycelium-mlir/src/jit.rs
       - corpus:DN-25
     body: |
-      Implement JIT compilation for dynamic / VSA/HDC workloads, lifting the ADR-009 deferral.
-      The JIT path must be never-silently-selected: it is an explicit execution mode, not
-      engaged transparently (G2 -- no silent substitution of JIT for interpreter or AOT).
-      Correctness obligation: JIT result == interpreter result (Empirical). Scope decision
-      (open, to be resolved by RFC-0029): VSA/HDC dynamic workloads only, or also REPL/
-      interactive use. Depends on M-725 (the full lowering infrastructure).
+      FORMALIZE the in-process dlopen JIT (already implemented under M-340 in
+      crates/mycelium-mlir/src/jit.rs; E6-1 `done`) as a first-class, never-silently-selected
+      execution mode for dynamic VSA/HDC workloads. This is hardening, NOT a deferral lift:
+      ADR-009 already sanctions interpreter/JIT as part of the hybrid execution model (RFC-0029
+      §5.3/§7.3), so no superseding ADR is required. The JIT must be selected ONLY explicitly
+      (API/flag), never engaged transparently (G2 -- no silent substitution of JIT for interpreter
+      or AOT). Correctness obligation: JIT result == interpreter result (Empirical), already
+      exercised by tests/jit_differential.rs. Scope: VSA/HDC dynamic + the bit/trit subset the
+      JIT already compiles; REPL/interactive deferred beyond 1.0.0 (RFC-0029 §5.3).
 
       User stories:
       - As a downstream app developer, I want JIT available for streaming VSA/HDC pipelines,
@@ -4575,22 +4658,24 @@ issues:
       - As a maintainer, I want JIT to be an explicit mode (never silently engaged), so that
         interpreter-vs-JIT divergence is always detectable (G2).
 
-      Issues to resolve:
-      - What is the JIT scope (VSA/HDC only, or also REPL/interactive)?
-      - What correctness bar is required before JIT can be selected over the interpreter?
-      - How is the JIT mode selected (explicit flag/API, not a heuristic)?
+      Issues to resolve (ALL RESOLVED by RFC-0029 §5.3/§7.3):
+      - JIT scope: VSA/HDC dynamic + the bit/trit subset already compiled; REPL deferred.
+      - Correctness bar: JIT == interpreter (Empirical), per tests/jit_differential.rs.
+      - Mode selection: explicit API/flag, never a heuristic.
 
       Definition of Done:
-      - JIT execution mode implemented in crates/mycelium-mlir/src/jit.rs.
-      - JIT is never silently selected (explicit mode selection, not a heuristic).
+      - The M-340 JIT (crates/mycelium-mlir/src/jit.rs) is exposed as an explicit, named
+        execution mode with a documented selection API.
+      - JIT is never silently selected (explicit mode selection, not a heuristic; G2).
       - Differential tests: JIT result == interpreter result (Empirical) on the test suite.
-      - ADR-009 deferral is lifted via a superseding ADR or an Enacted status update.
+      - No superseding ADR is required (ADR-009 already sanctions interpreter/JIT); the JIT's
+        first-class status is recorded honestly (RFC-0029 §7.3).
       - just check green.
 
   - id: M-728
     title: "BitNet-class packed-ternary acceleration (FR-C3)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
     epic: E15-1
     doc_refs:
       - corpus:RFC-0029
@@ -4627,7 +4712,7 @@ issues:
   - id: M-729
     title: "codegen differential durability: interp == AOT == JIT three-way agreement"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:verification, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:verification, area:execution, priority:P2, status:ready]
     epic: E15-1
     doc_refs:
       - corpus:RFC-0029
@@ -4861,7 +4946,8 @@ issues:
   - id: E17-1
     title: "E17-1 (epic) — Documentation, stability guarantees & 1.0.0 release"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:epic, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:epic, area:release, priority:P1, status:in-progress]
+    landed_basis: "status:in-progress (2026-06-23) — 3 of 4 children done: M-735 (language reference + tutorial, docs/reference/, with a parser-verified conformance fixture), M-736 (generated stdlib API docs — lib/std wired into mycelium-doc + per-fn source-comment extraction, std.result covered, gaps flagged), M-737 (ADR-023 Draft->Proposed->Accepted). M-738 (the release act) is BLOCKED on the external deps E13-1 + E18-1 (both needs-design) and ADR-022 enactment — the 1.0.0 tag is NOT cut (G2 / house rule #3). Epic completes when E13-1 + E18-1 close and M-738 fires."
     depends_on: [E13-1, E18-1]
     epic: E17
     doc_refs: [corpus:ADR-023, corpus:ADR-022, corpus:DN-25]
@@ -4910,7 +4996,7 @@ issues:
   - id: M-735
     title: "M-735 — docs(release): language reference + tutorial"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:docs, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:docs, area:release, priority:P1, status:done]
     epic: E17-1
     doc_refs: [corpus:DN-25, corpus:ADR-023]
     body: |
@@ -4942,7 +5028,7 @@ issues:
   - id: M-736
     title: "M-736 — docs(stdlib): generated per-module stdlib API docs"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:docs, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:docs, area:release, priority:P1, status:done]
     epic: E17-1
     doc_refs: [corpus:DN-25, corpus:ADR-023]
     body: |
@@ -4971,7 +5057,7 @@ issues:
   - id: M-737
     title: "M-737 — design(release): stability & API-compatibility guarantees (ADR-023)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:design, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:design, area:release, priority:P1, status:done]
     epic: E17-1
     doc_refs: [corpus:ADR-023, corpus:ADR-022, corpus:DN-25]
     body: |
@@ -5003,7 +5089,8 @@ issues:
   - id: M-738
     title: "M-738 — chore(release): full-language 1.0.0 release act"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:chore, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:chore, area:release, priority:P1, status:blocked]
+    landed_basis: "status:blocked (2026-06-23) — the release act is NOT performed: its external gate deps are unmet. E13-1 (self-hosting stdlib) is needs-design (only lib/std/result.myc self-hosts — 1 of 25 modules); E18-1 (full-language readiness) is needs-design; ADR-022 is Accepted (NOT Enacted) with sub-gate rows A2/A3/A4 still open. Per the rel10 kickoff + house rule #3 / G2, the tag is NOT cut and ADR-021/ADR-022 stay Accepted (no Enacted). M-737 (ADR-023 Accepted) IS done; this task unblocks only when E13-1 + E18-1 + every ADR-022 gate row are confirmed closed."
     epic: E17-1
     doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:DN-25]
     body: |
