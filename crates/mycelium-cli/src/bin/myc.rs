@@ -58,9 +58,9 @@ fn main() -> ExitCode {
             },
             _ => usage(),
         },
-        "build" => with_manifest(&rest, |m| cmd_build(m)),
-        "check" => with_manifest(&rest, |m| cmd_check(m)),
-        "test" => with_manifest(&rest, |m| cmd_test(m)),
+        "build" => with_manifest(&rest, cmd_build),
+        "check" => with_manifest(&rest, cmd_check),
+        "test" => with_manifest(&rest, cmd_test),
         "run" => with_manifest(&rest, |m| match run(m) {
             Ok(()) => ExitCode::SUCCESS,
             Err(r) => fail(&r),

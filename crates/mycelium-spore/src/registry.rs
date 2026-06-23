@@ -286,7 +286,7 @@ fn select_version(root: &Path, name: &str, constraint: &str) -> Result<String, R
     }
     if c == "latest" || c == "*" {
         let mut versions = published_versions(root, name)?;
-        versions.sort_by(|a, b| version_key(a).cmp(&version_key(b)));
+        versions.sort_by_key(|v| version_key(v));
         return versions
             .pop()
             .ok_or_else(|| RegistryError::NotFound(format!("{name}: no versions published")));

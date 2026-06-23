@@ -27,7 +27,6 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import sys
 from pathlib import Path
 
 # Repo-root-relative locations (this file lives at tools/grammar/generate.py).
@@ -53,12 +52,21 @@ def extract_keywords(token_rs: str) -> dict[str, list[str]]:
 
     Never-silent: a `keyword()` body that cannot be located is a hard error, not an empty result.
     """
-    m = re.search(r"pub fn keyword\(word: &str\) -> Option<Tok> \{(.*?)\n\}", token_rs, re.DOTALL)
+    m = re.search(
+        r"pub fn keyword\(word: &str\) -> Option<Tok> \{(.*?)\n\}", token_rs, re.DOTALL
+    )
     if not m:
-        raise SystemExit("drift: could not locate `pub fn keyword(...)` in token.rs (G2)")
+        raise SystemExit(
+            "drift: could not locate `pub fn keyword(...)` in token.rs (G2)"
+        )
     body = m.group(1)
 
-    buckets: dict[str, list[str]] = {"keyword": [], "type": [], "scalar": [], "strength": []}
+    buckets: dict[str, list[str]] = {
+        "keyword": [],
+        "type": [],
+        "scalar": [],
+        "strength": [],
+    }
     # Each arm: "<word>" => Tok::<RHS>,   (the RHS may be `Strength(StrengthTok::Exact)` etc.)
     for word, rhs in re.findall(r'"([^"]+)"\s*=>\s*(Tok::[^,]+),', body):
         if rhs.startswith("Tok::Strength"):
@@ -110,7 +118,12 @@ def render_tmlanguage(buckets: dict[str, list[str]]) -> str:
     # Comments and binary/ternary literals are syntactic (not in keyword()): include the obvious ones
     # so the scaffold is usable, still under a TODO scope until RFC-0026 fixes the names.
     patterns.append({"name": f"{TODO_SCOPE}.comment.line.mycelium", "match": r"//.*$"})
-    patterns.append({"name": f"{TODO_SCOPE}.constant.numeric.mycelium", "match": r"0b[01]+|<[+\-0]+>"})
+    patterns.append(
+        {
+            "name": f"{TODO_SCOPE}.constant.numeric.mycelium",
+            "match": r"0b[01]+|<[+\-0]+>",
+        }
+    )
 
     grammar = {
         "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
@@ -194,10 +207,14 @@ def check(out_dir: Path, rendered: dict[str, str]) -> int:
         if not path.exists() or path.read_text(encoding="utf-8") != content:
             stale.append(rel)
     if stale:
-        print("drift: the committed editor grammars are stale vs the lexer keyword() table:")
+        print(
+            "drift: the committed editor grammars are stale vs the lexer keyword() table:"
+        )
         for rel in stale:
             print(f"  - tools/grammar/{rel}")
-        print("fix: run `python3 tools/grammar/generate.py` and commit the result (G2).")
+        print(
+            "fix: run `python3 tools/grammar/generate.py` and commit the result (G2)."
+        )
         return 2
     print("grammar artifacts are current with the lexer keyword() table")
     return 0
@@ -226,9 +243,21 @@ def self_test(buckets: dict[str, list[str]]) -> int:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--check", action="store_true", help="drift gate: fail if committed artifacts are stale")
-    ap.add_argument("--self-test", action="store_true", help="offline extraction/determinism sanity check")
-    ap.add_argument("--output-dir", default=str(HERE), help="where artifacts live (default: tools/grammar/)")
+    ap.add_argument(
+        "--check",
+        action="store_true",
+        help="drift gate: fail if committed artifacts are stale",
+    )
+    ap.add_argument(
+        "--self-test",
+        action="store_true",
+        help="offline extraction/determinism sanity check",
+    )
+    ap.add_argument(
+        "--output-dir",
+        default=str(HERE),
+        help="where artifacts live (default: tools/grammar/)",
+    )
     args = ap.parse_args()
 
     buckets = extract_keywords(TOKEN_RS.read_text(encoding="utf-8"))
@@ -241,7 +270,9 @@ def main() -> int:
         return check(out_dir, rendered)
     write(out_dir, rendered)
     total = sum(len(v) for v in buckets.values())
-    print(f"wrote {len(rendered)} grammar artifact(s) from {total} lexer keywords -> {out_dir}")
+    print(
+        f"wrote {len(rendered)} grammar artifact(s) from {total} lexer keywords -> {out_dir}"
+    )
     return 0
 
 
