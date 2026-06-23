@@ -383,7 +383,12 @@ asked to wait, wait.)
    `dev`/`claude/head/*`). Misalignment is corrected by bringing history *together* — a **merge or a
    rebase plus pull-down**, then a *plain* push — **never** by rewriting published history. This is the
    durable rule: a plain push that is rejected (non-fast-forward) is a never-silent signal to *reconcile*,
-   not a problem to overwrite. Keep the per-session working branch a *clean pointer at `main`*: do the
+   not a problem to overwrite. When local work is in the way of pulling history together, the mechanism is
+   **`git stash` → reconcile (merge / rebase the incoming history) → `git stash pop` → deconflict** → a
+   plain push: it *keeps* your work and resolves the divergence honestly, where a force would have
+   silently discarded the other side. Stashing-and-deconflicting is always preferable to a force-push —
+   there is no divergence a force fixes that a merge/rebase + stash-pop cannot fix without losing history.
+   Keep the per-session working branch a *clean pointer at `main`*: do the
    work + reconcile on a per-task/leaf branch, PR **that**, and after the squash lands bring the working
    branch up with `git fetch origin main` → `git merge --ff-only origin/main` (`git stash` first if
    dirty) → a plain `git push`. Because the working branch never carried the squashed commits it stays an
