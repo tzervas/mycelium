@@ -11,7 +11,7 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 
 ## Status set
 
-`Proposed → Accepted → Enacted → Superseded`. ADRs 001–019 and **ADR-021** are **Accepted**; **ADR-020** is **Enacted** (M-521 v0 R1 implementation landed 2026-06-20). ADR-021 (the 1.0.0 release-readiness gate) was **maintainer-ratified 2026-06-21** — its criteria are agreed; it moves to `Enacted` only at the tagged 1.0.0 release (gate-completion work tracked in DN-19).
+`Proposed → Accepted → Enacted → Superseded`. ADRs 001–014/016/017/021 are **Accepted**; **ADR-015/ADR-018/ADR-019** are **Enacted** (2026-06-23, maintainer-approved); **ADR-020** is **Enacted** (M-521 v0 R1 implementation landed 2026-06-20). ADR-021 (the 1.0.0 release-readiness gate) was **maintainer-ratified 2026-06-21** — its criteria are agreed; it moves to `Enacted` only at the tagged 1.0.0 release (gate-completion work tracked in DN-19).
 
 ## Index
 
@@ -31,11 +31,11 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 | 012 | Layered lexicon (Surface/Runtime/Formal tiers) + fungal runtime vocabulary | Accepted | `ADR-012-Layered-Lexicon-and-Fungal-Runtime-Model.md` |
 | 013 | `spore` is the deployable unit; the reconstruction manifest is one component | Accepted | `ADR-013-Spore-Is-The-Deployable-Unit.md` |
 | 014 | `unsafe` Rust: permitted-but-warned (explicit, justified, dev-warned, release-silenceable), not forbidden | Accepted | `ADR-014-Unsafe-Code-Policy.md` |
-| 015 | `DEFAULT_ENUM_BUDGET = 4096` (guarantee-maximal): the RFC-0010 decode selector defaults to the `Exact` arm across the whole validated envelope, not the cost-optimal ≈128 | Accepted | `ADR-015-decode-enum-budget-default.md` |
+| 015 | `DEFAULT_ENUM_BUDGET = 4096` (guarantee-maximal): the RFC-0010 decode selector defaults to the `Exact` arm across the whole validated envelope, not the cost-optimal ≈128 | **Enacted** (2026-06-23, M-350; applied in `decode_select.rs`) | `ADR-015-decode-enum-budget-default.md` |
 | 016 | The interpreted↔compiled ABI: dispatch a compiled definition by its content hash; cross values in the self-describing wire form (RFC-0004 §10 OQ-1) | Accepted | `ADR-016-Interpreted-Compiled-ABI.md` |
 | 017 | Hot-inject recompiled definitions: hash-keyed dispatch + content-addressed dynamic linking, immutable-by-construction (RFC-0004 §10 OQ-2) | Accepted | `ADR-017-Hot-Inject-Recompiled-Definitions.md` |
-| 018 | Versioning policy: per-crate `0.x` SemVer + source-only distribution (no crates.io publish in the design phase); CHANGELOG `[Unreleased]` → release-cut mapping | Accepted | `ADR-018-Versioning-Policy.md` |
-| 019 | libMLIR toolchain: the version-matched build dependency of the off-by-default `mlir-dialect` feature; provisioned via `scripts/setup-mlir.sh` (`just setup-mlir`); resolves M-348 on Linux | Accepted | `ADR-019-libMLIR-Toolchain.md` |
+| 018 | Versioning policy: per-crate `0.x` SemVer + source-only distribution (no crates.io publish in the design phase); CHANGELOG `[Unreleased]` → release-cut mapping | **Enacted** (2026-06-23, M-383/M-384; workspace pinned `0.0.0`; release-plz dry-run wired; first release cut deferred) | `ADR-018-Versioning-Policy.md` |
+| 019 | libMLIR toolchain: the version-matched build dependency of the off-by-default `mlir-dialect` feature; provisioned via `scripts/setup-mlir.sh` (`just setup-mlir`); resolves M-348 on Linux | **Enacted** (2026-06-23, M-348/M-603; `setup-mlir.sh` present; `mlir-dialect` OFF by default; real dialect lowering present M-601) | `ADR-019-libMLIR-Toolchain.md` |
 | 020 | `runtime`/`colony` phylum placement: dedicated `runtime` phylum + thin `std.runtime` facade; construct-by-construct activation at the Phase-7 gate; v0 API surface for the landed R1 slice (M-521) | **Enacted** | `ADR-020-Runtime-Colony-Phylum-Placement.md` |
 | 021 | 1.0.0 release-readiness gate: kernel/core 1.0.0 criteria (Gate A honesty-integrity/durability; Gate B decision/external — KC-2 now met); surface language scoped to `1.x`; Phase-3+ maturation out of scope | **Accepted** | `ADR-021-1.0.0-Release-Readiness-Gate.md` |
 

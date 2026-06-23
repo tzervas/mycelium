@@ -39,28 +39,34 @@ main` promotes it up.
 
 | UID | Kickoff | Isolated tree (owns) | Swarm method | Depends on |
 |---|---|---|---|---|
-| **`run`** | `run.md` | `crates/mycelium-l1/**` (+ one new `.myc`) | Opus · **serial-on-L1** | — (critical path) |
-| **`srf`** | `srf.md` | `crates/mycelium-l1/**` · `.claude/memory/lang-lexicon-syntax.md` | Opus · **serial-on-L1** | — (M-659 checker landed) |
+| **`srf`** | `srf.md` | `crates/mycelium-l1/**` · `.claude/memory/lang-lexicon-syntax.md` | Sonnet · **serial-on-L1** (M-664 → M-667) + parallel docs leaf (M-668) | `run` ✅ (M-673 landed) |
+| **`std`** | `std.md` | `lib/std/result.myc` + differential tests | Sonnet · **single leaf** (disjoint from L1 Rust) | `run` ✅ (M-673 landed) |
 | **`tul`** | `tul.md` | `tools/github/**` | Sonnet (docs/tooling) | — (needs GitHub read access) |
-| **`dfb`** | `dfb.md` | `crates/mycelium-web/` · `crates/mycelium-adk/` (NEW) | Sonnet · parallel-leaf | `dfr` ✅ (discharged #344) + the L1 surface |
+| **`dfb`** | `dfb.md` | `crates/mycelium-web/` · `crates/mycelium-adk/` (NEW) | Sonnet · parallel-leaf | `dfr` ✅ (discharged #344) + `run` ✅ (L1 surface advanced) |
 
 **Parallelism (collision profile):**
-- **`run` and `srf` share `crates/mycelium-l1` → they SERIALIZE** (one L1 editor at a time —
-  mitigation #7). Run them in **one** session: **`run` first** (it's the critical-path unblock that
-  flips M-657/M-659 to done and opens self-hosting), then `srf`. Neither blocks the other; the order
-  is by priority.
-- **`tul` ⟂ (the L1 track) are fully disjoint — fire them in parallel** (separate sessions).
+- **`srf` owns `crates/mycelium-l1/` (Rust) → serial-on-L1** (M-664 leaf lands, then M-667 rebases
+  + lands; M-668 docs leaf can run in parallel). See `srf.md` §M-673 run-collisions for the mandatory
+  rebase checklist.
+- **`std` owns only `.myc` + test files** — fully disjoint from `srf`'s Rust edits. `std` and `srf`
+  **may run in parallel** (no collision).
+- **`tul` ⟂ (the L1 track) are fully disjoint — fire in parallel** (separate sessions).
   `tul` = `tools/github/` only; the L1 track = `crates/mycelium-l1`. (`dfr` — research/docs only — is
   **done**: landed #344, see Completed.)
-- **`dfb`** stays gated, but its **research dependency is now discharged** (`dfr` #344) — it needs only
-  the L1 surface remaining.
+- **`dfb`** is now unblocked: `dfr` research discharged + L1 surface advanced (M-673 landed). Gated
+  only on the `srf` keywords it may consume — scaffold can start now.
 
 Cross-work continuity rides the **issues** (`tools/github/issues.yaml` `depends_on` + body notes),
 never by touching another tree's files. (`dfb` predates this workflow — ignore its old
 `claude/head/*` reference; it now branches off `dev` like everything else.) **M-677** (effect→budget
-runtime) is L1-collision and runs inside the `run`/`srf` serial track, not as its own parallel wave.
+runtime) is L1-collision and runs inside the `srf` serial track, not as its own parallel wave.
 
 ## Completed (archived)
+- **`run`** — **M-673 LANDED** on `main` (via `claude/int-docs-mono-wave`, 2026-06-22):
+  monomorphization + dictionary-free static trait resolution → generics/traits run to closed L0;
+  `mono.rs` added; `Env.impls` field added; `Ty::Data` carries args; three-way differential green;
+  DN-14 §3 rows 6+7 → `present`; M-657/M-659 → `done`. Unblocks **`std`** (M-649 — first
+  self-hosted `.myc` nodule). See `run.md` for the full M-673 base-change summary.
 - **`dfr`** — **RP-10/RP-9 research gate DISCHARGED + RFC-0022/0023 → Accepted, LANDED** on `main`
   (#344, 2026-06-21): four fractured Opus sub-reasoners per RFC verified the Honest-Uncertainty
   Registers against primary specs (RFC 9110/9112 · RFC 8259 · WHATWG-URL; ADK v2.3.0) + landed
@@ -72,7 +78,7 @@ runtime) is L1-collision and runs inside the `run`/`srf` serial track, not as it
 - **`lex`** — **M-663 LANDED** on `main` (#375→`dev`, #377→`integration`, #380 release→`main`): RFC-0018
   stage-1a static guarantee grading (`grade.rs` Pass 3d) enacted; RFC-0018 → **Enacted**; DN-14 §3 row
   11 → `present`. Plus a Copilot-caught grade-upgrade soundness fix + the check-tooling packed exit
-  codes / failure digest (**DN-22** design capture). Continues via **`M-673`** (above).
+  codes / failure digest (**DN-22** design capture). Continued by **`run`** (M-673, now landed).
 - **`u78`** — **M-678 epic (M-679…M-683) LANDED** on `main` (#378): DN-21 unsafe-code hardening —
   all workspace `unsafe` confined to `jit.rs`, the trusted base `#![forbid(unsafe_code)]`-pinned, and
   the `just safety-check` SAFETY-adjacency gate added.
