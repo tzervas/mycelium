@@ -919,8 +919,70 @@ impl Parser {
             Tok::Wild => self.parse_wild(),
             Tok::Spore => self.parse_spore(),
             Tok::Colony => self.parse_colony(),
-            _ => self.parse_app(),
+            // RFC-0025 / M-705: the infix-operator layer. A non-keyword expression is an operator
+            // expression over unary/applicative operands; each operator desugars to its canonical
+            // word function. The keyword-led forms above (let/if/match/…) are statements, not
+            // operands; to use one as an operand, parenthesize it.
+            _ => self.parse_binexpr(0),
         }
+    }
+
+    /// Precedence-climbing parser for infix operator expressions (RFC-0025 / M-705). Each binary
+    /// operator desugars to its canonical word function (`a + b` → `add(a, b)`); the word form
+    /// remains valid everywhere the sugar is (the sugar is *additive* — words stay canonical, the
+    /// kernel is unchanged: this is a frontend-only desugaring, no L0/L1 change, KC-3). `min_bp`
+    /// is the minimum binding power this call consumes; left-associativity is encoded by recursing
+    /// on the right operand at `bp + 1` so an equal-precedence operator is left for the loop.
+    ///
+    /// **Stack-safety (A4-02).** This needs no extra depth charge of its own and must not add one
+    /// (the enclosing [`parse_expr`](Self::parse_expr) already charges the budget for this
+    /// expression level — charging again would double-count and halve the effective nesting limit).
+    /// The RHS recursion `parse_binexpr(bp + 1)` strictly *raises* `min_bp` each step, so its
+    /// recursion depth is bounded by the fixed number of precedence tiers (a small constant),
+    /// independent of input length — it cannot overflow. A flat left-associative chain
+    /// `a + a + …` is consumed by the loop (not recursion), so it too stays O(1) deep. The only
+    /// genuinely unbounded operator vector is the prefix chain in [`parse_unary`](Self::parse_unary),
+    /// which carries its own depth guard. Nested parens route back through `parse_expr` (guarded).
+    fn parse_binexpr(&mut self, min_bp: u8) -> Result<Expr, ParseError> {
+        let mut lhs = self.parse_unary()?;
+        while let Some((bp, word)) = infix_op(self.cur()) {
+            if bp < min_bp {
+                break;
+            }
+            self.bump(); // the operator token
+            let rhs = self.parse_binexpr(bp + 1)?;
+            lhs = op_call(word, vec![lhs, rhs]);
+        }
+        Ok(lhs)
+    }
+
+    /// Prefix unary operators (RFC-0025 / M-705): `-a` → `neg(a)`, `!a` → `not(a)`. Unary binds
+    /// tighter than every binary operator and is right-associative (`- - a` → `neg(neg(a))`). A
+    /// `!` here is always the unary operator: the effect-set `!{…}` only ever appears in a fn
+    /// signature (parsed elsewhere), never at expression position. Any other token delegates to
+    /// the applicative layer ([`parse_app`]).
+    ///
+    /// The prefix recursion participates in the shared [`MAX_EXPR_DEPTH`] budget (A4-02): a crafted
+    /// prefix chain (`!!!!…a`, `----a`) is refused with an explicit error past the limit, never a
+    /// host-stack overflow (G2 — never crash).
+    fn parse_unary(&mut self) -> Result<Expr, ParseError> {
+        let word = match self.cur() {
+            Tok::Minus => "neg",
+            Tok::Bang => "not",
+            _ => return self.parse_app(),
+        };
+        self.depth += 1;
+        if self.depth > MAX_EXPR_DEPTH {
+            self.depth -= 1;
+            return Err(ParseError::new(
+                self.pos(),
+                format!("expression nests deeper than the limit of {MAX_EXPR_DEPTH} — refusing to recurse"),
+            ));
+        }
+        self.bump(); // the prefix operator
+        let operand = self.parse_unary();
+        self.depth -= 1;
+        operand.map(|o| op_call(word, vec![o]))
     }
 
     /// Teaching diagnostic (RFC-0007 §4.8): `while`/`loop`/`break`/`continue`/`return` are not
@@ -1213,6 +1275,46 @@ impl Parser {
     }
 }
 
+/// The infix binding power and canonical word function for an operator token (RFC-0025 / M-705),
+/// or `None` if the token does not open an infix operator. Higher binding power binds tighter;
+/// every binary operator is left-associative. The precedence tiers follow **Rust's** table (the
+/// implementation language, syntactically adjacent; RFC-0025 §4), omitting the angle-bracket
+/// operators (`<`, `<=`, `>`, `>=`, `<<`, `>>`) which are **deferred** (RFC-0025 §3 / M-745)
+/// because `<`/`>` collide with the type-argument `<…>` grammar (resolving that cleanly needs
+/// contextual lexing, a separate effort). The desugaring is purely syntactic: a word target whose
+/// prim/stdlib function does not yet exist (`div`, `rem`, `band`, `bor`, `eq`, `ne`, `and`, `or`)
+/// still desugars here and surfaces an explicit "unknown function/prim" refusal downstream (never
+/// silent — G2); only `add`/`sub`/`mul`/`xor` (and unary `neg`/`not`) resolve end-to-end today.
+fn infix_op(tok: &Tok) -> Option<(u8, &'static str)> {
+    Some(match tok {
+        Tok::Star => (70, "mul"),
+        Tok::Slash => (70, "div"),
+        Tok::Percent => (70, "rem"),
+        Tok::Plus => (60, "add"),
+        Tok::Minus => (60, "sub"),
+        Tok::Amp => (50, "band"),
+        Tok::Caret => (40, "xor"),
+        Tok::Pipe => (30, "bor"),
+        Tok::EqEq => (20, "eq"),
+        Tok::BangEq => (20, "ne"),
+        Tok::AmpAmp => (11, "and"),
+        Tok::PipePipe => (10, "or"),
+        _ => return None,
+    })
+}
+
+/// Build the canonical word-function application an operator desugars to (RFC-0025 / M-705). The
+/// sugar leaves **no separate trace**: the desugared `App` node *is* the audit record — the
+/// canonical word form is the inspectable EXPLAIN (ADR-006, no black boxes), so `a + b` and
+/// `add(a, b)` are structurally identical after parsing (this resolves RFC-0025 Q5 — no separate
+/// `DesugarRecord` is needed; the desugaring target is the record).
+fn op_call(word: &str, args: Vec<Expr>) -> Expr {
+    Expr::App {
+        head: Box::new(Expr::Path(Path(vec![word.to_owned()]))),
+        args,
+    }
+}
+
 /// The first value appearing more than once in `xs` (left to right), if any. Used by the effect
 /// annotation parser to reject a duplicate effect name explicitly (M-660; G2 — never a silent
 /// dedup). A small, allocation-light scan (effect sets are short); mirrors the checker's
@@ -1260,6 +1362,99 @@ mod tests {
                 _ => None,
             })
             .expect("a fn item")
+    }
+
+    // --- RFC-0025 / M-705: operator syntax (infix sugar desugaring to word functions) ----------
+
+    /// The body of `fn main() -> T = <expr>` for an operator-sugar fixture.
+    fn op_body(expr: &str) -> Expr {
+        fn_body(&format!("nodule d\nfn main() -> Binary{{8}} = {expr}"))
+    }
+
+    #[test]
+    fn infix_sugar_desugars_to_the_word_call() {
+        // `a + b` is *structurally identical* to `add(a, b)` after parsing — the sugar leaves no
+        // separate trace (RFC-0025 Q5: the desugared App node is the EXPLAIN record).
+        assert_eq!(op_body("a + b"), op_body("add(a, b)"));
+        assert_eq!(op_body("a - b"), op_body("sub(a, b)"));
+        assert_eq!(op_body("a * b"), op_body("mul(a, b)"));
+        assert_eq!(op_body("a ^ b"), op_body("xor(a, b)"));
+        assert_eq!(op_body("a / b"), op_body("div(a, b)"));
+        assert_eq!(op_body("a % b"), op_body("rem(a, b)"));
+        assert_eq!(op_body("a & b"), op_body("band(a, b)"));
+        assert_eq!(op_body("a | b"), op_body("bor(a, b)"));
+        assert_eq!(op_body("a == b"), op_body("eq(a, b)"));
+        assert_eq!(op_body("a != b"), op_body("ne(a, b)"));
+        assert_eq!(op_body("a && b"), op_body("and(a, b)"));
+        assert_eq!(op_body("a || b"), op_body("or(a, b)"));
+    }
+
+    #[test]
+    fn prefix_sugar_desugars_to_the_word_call() {
+        assert_eq!(op_body("-a"), op_body("neg(a)"));
+        assert_eq!(op_body("!a"), op_body("not(a)"));
+        // Prefix is right-associative and binds tighter than any binary op.
+        assert_eq!(op_body("- -a"), op_body("neg(neg(a))"));
+        assert_eq!(op_body("-a + b"), op_body("add(neg(a), b)"));
+    }
+
+    #[test]
+    fn precedence_follows_the_rust_table() {
+        // `*` (70) > `+` (60): `a + b * c` ≡ `add(a, mul(b, c))`.
+        assert_eq!(op_body("a + b * c"), op_body("add(a, mul(b, c))"));
+        // `&` (50) > `^` (40) > `|` (30): `a | b ^ c & d` ≡ `bor(a, xor(b, band(c, d)))`.
+        assert_eq!(
+            op_body("a | b ^ c & d"),
+            op_body("bor(a, xor(b, band(c, d)))")
+        );
+        // arithmetic (60) > equality (20) > `&&` (11) > `||` (10).
+        assert_eq!(
+            op_body("a + b == c && d || e"),
+            op_body("or(and(eq(add(a, b), c), d), e)")
+        );
+    }
+
+    #[test]
+    fn binary_operators_are_left_associative() {
+        // `a - b - c` ≡ `sub(sub(a, b), c)`, NOT `sub(a, sub(b, c))`.
+        assert_eq!(op_body("a - b - c"), op_body("sub(sub(a, b), c)"));
+        assert_eq!(op_body("a + b + c"), op_body("add(add(a, b), c)"));
+    }
+
+    #[test]
+    fn parens_override_precedence() {
+        assert_eq!(op_body("(a + b) * c"), op_body("mul(add(a, b), c)"));
+    }
+
+    #[test]
+    fn deep_operator_nesting_is_refused_not_crashed() {
+        // A4-02 / G2: a crafted prefix chain (`!!!…a`) or parenthesized operator nesting must be
+        // refused with an explicit depth error, never drive a host-stack overflow. Both the prefix
+        // recursion (parse_unary) and the precedence recursion (parse_binexpr) participate in the
+        // shared MAX_EXPR_DEPTH budget.
+        let prefix = "!".repeat(2000);
+        let src = format!("nodule d\nfn main() -> Binary{{8}} = {prefix}0b0000_0000");
+        let err = parse(&src).expect_err("a 2000-deep prefix chain must be refused");
+        assert!(
+            err.message.contains("refusing to recurse"),
+            "got: {}",
+            err.message
+        );
+        // A flat (non-nested) left-associative chain of the SAME length must still parse — the loop
+        // keeps it O(1) deep, so length alone never trips the budget.
+        let flat = (0..2000)
+            .map(|_| "0b0000_0000")
+            .collect::<Vec<_>>()
+            .join(" ^ ");
+        let ok = format!("nodule d\nfn main() -> Binary{{8}} = {flat}");
+        parse(&ok).expect("a long FLAT operator chain parses (loop, not recursion)");
+    }
+
+    #[test]
+    fn word_form_remains_valid_alongside_sugar() {
+        // The sugar is additive: the canonical word call still parses (and is a legal operand of
+        // sugar). `add(a, b) * c` ≡ `mul(add(a, b), c)`.
+        assert_eq!(op_body("add(a, b) * c"), op_body("mul(add(a, b), c)"));
     }
 
     #[test]

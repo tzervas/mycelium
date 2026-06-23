@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0025 |
-| **Status** | **Draft** (2026-06-23) |
+| **Status** | **Proposed** (2026-06-23) — adopts DN-23's **hybrid** recommendation: a frontend-only infix/prefix sugar layer desugaring to canonical word functions, no L0/L1 kernel change (KC-3). The binding precedence/associativity table (§4.1), desugaring map (§4.2), and grammar extension are now normative **as proposed** (maintainer ratifies → Accepted; house rule #3 — never skipping steps). **implemented (Rust-first), pending ratification** (2026-06-23, M-705 — `crates/mycelium-l1` lexer+parser desugaring + `docs/spec/grammar/mycelium.ebnf` operator grammar + `accept/20-operator-syntax.myc`; sugar↔word agreement across L1-eval ≡ L0-interp ≡ AOT is **Empirical**). |
 | **Type** | Surface / normative (once Accepted) — frontend-only; no L0 or L1 kernel change |
 | **Date** | 2026-06-23 |
 | **Feeds** | E7-5 (operator-syntax leg); E11-1 (surface-language completeness) |
@@ -11,10 +11,13 @@
 | **Depends on** | RFC-0006 §3/§4.3 (grammar discipline — S1–S6, machine-readable EBNF); RFC-0007 §4.1–§4.8 (L1 kernel calculus — the desugaring target); RFC-0024 (HOF via static defunctionalization — word operators become first-class values once HOF lands, which strengthens the word-canonical argument); DN-23 (design space + recommendation; source of truth for the three options); `docs/spec/grammar/mycelium.ebnf` (the EBNF to be extended or left unchanged) |
 | **Task** | E7-5 (M-705) |
 
-> **Posture (honesty rule / VR-5).** This is a **planning stub** — scope, user stories, decision
-> space, and open questions only. It decides nothing normatively. Status: **Draft**. All normative
-> choices wait on the design process this RFC governs. No syntax is enacted, no grammar change is
-> made, and no guarantee tag is upgraded here.
+> **Posture (honesty rule / VR-5).** This RFC is **Proposed**: it makes the binding decisions DN-23
+> deferred (§4 — the precedence table, the desugaring map, the grammar extension) and is implemented
+> Rust-first in `mycelium-l1` (M-705). The sugar is **frontend-only** — a pure syntactic rewrite to
+> the canonical word call, with **no L0 or L1 kernel change** (KC-3). No guarantee tag is upgraded:
+> the desugaring is a structural transform (no theorem); the three-path sugar↔word agreement is
+> **Empirical** (differential trials). The decisions are normative **as proposed** and become binding
+> on maintainer ratification (Proposed → Accepted; house rule #3).
 
 ---
 
@@ -83,26 +86,126 @@ canonical). These choices belong in a binding RFC, not an advisory note.
 
 ---
 
-## 4. Definition of Done
+## 4. Decision (normative as proposed)
 
-- A maintainer-ratified, binding precedence / associativity table with a normative grounding for
-  each level (drawn from established practice — C / Haskell / Rust — cited explicitly).
-- An updated `docs/spec/grammar/mycelium.ebnf` capturing the operator-expression grammar or a
-  confirmed decision that the grammar stays words-only.
-- A desugaring specification: every adopted infix operator maps to a named word function,
-  auditable via `EXPLAIN` (ADR-006), with the map committed in this RFC.
-- `crates/mycelium-l1` parser updated to accept (or reject) infix expressions per the table, with
-  `just check` green (including `cargo clippy -D warnings` and the conformance corpus).
-- Accept/reject conformance fixtures in `docs/spec/grammar/conformance/` covering: operator
-  precedence ordering, associativity (left/right), the sugar↔word equivalence, and at least one
-  case per operator class (arithmetic, bitwise, comparison, logical).
-- RFC-0025 status moves from **Draft → Proposed** (for maintainer review) and then
-  **Proposed → Accepted** (maintainer ratification) — never skipping steps (house rule #3).
-- DN-23 remains untouched (append-only); this RFC is the binding forward record.
+**The hybrid is adopted** (DN-23's recommendation). Mycelium gains a symbolic infix/prefix operator
+layer that is **frontend-only sugar**: each operator desugars at parse time to a canonical
+word-function application. The kernel is unchanged — words stay canonical, the sugar is **additive**
+(the word form remains valid everywhere the sugar is). This is the same discipline as
+monomorphization and HOF defunctionalization: a frontend rewrite, **no `mycelium-core` and no L0/L1
+node** (KC-3).
+
+### 4.1 Precedence & associativity table (Rust-derived)
+
+The precedence source of truth is **Rust's operator table** (*The Rust Reference*, §"Expressions —
+Operator precedence"). Rust is chosen because it is the implementation language and Mycelium's
+surface is syntactically adjacent, so reader/author expectations transfer with least surprise.
+Tiers are highest-binding (tightest) first; every binary operator is **left-associative**, every
+prefix operator is **right-associative** and binds tighter than every binary operator:
+
+| Tier | Operators | Assoc | Class |
+|---|---|---|---|
+| 1 (tightest) | unary `-`, unary `!` | prefix (right) | negation / bitwise-not |
+| 2 | `*` `/` `%` | left | multiplicative |
+| 3 | `+` `-` | left | additive |
+| 4 | `&` | left | bitwise-and |
+| 5 | `^` | left | bitwise-xor |
+| 6 | `\|` | left | bitwise-or |
+| 7 | `==` `!=` | left | equality |
+| 8 | `&&` | left | logical-and |
+| 9 (loosest) | `\|\|` | left | logical-or |
+
+Type ascription (`: T`) and the guarantee annotation (`@ strength`) bind **tighter** than every
+infix operator — they are postfix on the applicative atom — so `a + b : Binary{8} @ Exact` parses
+as `add(a, (b : Binary{8} @ Exact))` (resolving open question Q6). The function-type `->` and the
+match-arm `=>` are not expression operators and are untouched (DN-23 §4 — no new ambiguity).
+
+### 4.2 Desugaring map
+
+Each operator desugars to the named word function below (grounded in the existing prim/word names —
+`crates/mycelium-l1/src/checkty.rs::prim_kernel_name` and the `examples/`/`lib/std/` corpus):
+
+| Operator | Word | Operator | Word | Operator | Word |
+|---|---|---|---|---|---|
+| `a + b` | `add(a, b)` | `a & b` | `band(a, b)` | `a == b` | `eq(a, b)` |
+| `a - b` | `sub(a, b)` | `a ^ b` | `xor(a, b)` | `a != b` | `ne(a, b)` |
+| `a * b` | `mul(a, b)` | `a \| b` | `bor(a, b)` | `a && b` | `and(a, b)` |
+| `a / b` | `div(a, b)` | `-a` | `neg(a)` | `a \|\| b` | `or(a, b)` |
+| `a % b` | `rem(a, b)` | `!a` | `not(a)` | | |
+
+**Honesty boundary (G2/VR-5):** the desugaring is **purely syntactic** — it produces the word-call
+AST regardless of whether the target function exists. The targets that resolve to a kernel prim
+**today** are `add`/`sub`/`mul`/`neg` (`trit.*`) and `xor`/`not` (`bit.*`); these are exercised
+end-to-end through all three execution paths (the M-705 differential corpus). The remaining targets
+(`div`, `rem`, `band`, `bor`, `eq`, `ne`, `and`, `or`) parse and desugar correctly but currently
+surface an **explicit** "unknown function/prim" refusal downstream (never silent) until their
+stdlib/kernel definitions land — they are reserved in the table so the grammar is complete and the
+sugar is stable as those prims arrive.
+
+### 4.3 Deferred: the angle-bracket operators
+
+The ordering/shift operators `<` `<=` `>` `>=` `<<` `>>` are **deferred** (tracked by **M-745**).
+`<`/`>` collide with the type-argument `<…>` grammar (`f<T>(x)`, `type Box<A>`); disambiguating
+expression `a < b` from a generic instantiation needs contextual lexing or speculative parsing — a
+self-contained follow-up. The desugaring map reserves their word targets (`lt`/`le`/`gt`/`ge`/
+`shl`/`shr`) so the extension is purely additive when M-745 lands. Until then, the comparison words
+remain available in their function form (never silently refused — G2).
+
+### 4.4 EXPLAIN / audit trail (resolves Q5)
+
+The desugaring leaves **no separate record**: the emitted `App` node *is* the audit artifact —
+`a + b` and `add(a, b)` are structurally identical after parsing, so the canonical word call is the
+inspectable EXPLAIN form (ADR-006). No `DesugarRecord` and no entry in `MonoSelections` is needed;
+the rewrite is observable directly in the AST. This keeps the sugar a zero-cost, fully-reified
+front-end transform.
 
 ---
 
-## 5. Open questions
+## 5. Resolved open questions
+
+The §6 questions are resolved here (the table moves to "answered"); the original questions are
+retained below for the record (append-only).
+
+1. **Sugar or words-only?** → **Hybrid adopted** (§4), per DN-23's recommendation and the M-705
+   implementation. Words stay canonical; sugar is additive.
+2. **Which operators in v1?** → Arithmetic (`+ - * / %`), bitwise (`& ^ |`), equality (`== !=`),
+   logical (`&& ||`), and unary (`- !`). Ordering/shift (`< <= > >= << >>`) **deferred** (§4.3,
+   M-745). Word targets without a prim yet still parse (never-silent downstream refusal).
+3. **Precedence source?** → **Rust** (§4.1), cited explicitly (implementation language, adjacent
+   surface).
+4. **User-defined infix?** → **Deferred** (conservative). The v1 table is fixed; operator
+   overloading / custom precedence is out of scope (a future RFC if demand is shown).
+5. **EXPLAIN record shape?** → The desugared `App` node is the record (§4.4); no separate structure.
+6. **`@` / ascription binding vs infix?** → `@`/`:` bind **tighter** than every infix operator
+   (§4.1): `a + b @ Exact` = `add(a, (b @ Exact))`.
+
+---
+
+## 6. Definition of Done
+
+- [x] A binding precedence / associativity table grounded in established practice (**Rust**, cited
+  explicitly) — §4.1. *(Maintainer ratification moves it Proposed → Accepted.)*
+- [x] An updated `docs/spec/grammar/mycelium.ebnf` capturing the operator-expression grammar
+  (`op_expr` … `unary_expr`, precedence-climbing tiers).
+- [x] A desugaring specification: every adopted infix/prefix operator maps to a named word function
+  (§4.2), with the audit trail being the desugared `App` node itself (§4.4 — ADR-006).
+- [x] `crates/mycelium-l1` parser updated to accept infix expressions per the table, with the L1
+  suite (lexer + parser + conformance + differential) green and clippy clean.
+- [x] Conformance fixture `docs/spec/grammar/conformance/accept/20-operator-syntax.myc` covering
+  precedence ordering, associativity, sugar↔word equivalence, and one case per operator class
+  (arithmetic, bitwise, comparison, logical, unary). Sugar↔word equivalence is additionally pinned
+  end-to-end by the M-705 entries in the `tests/differential.rs` corpus (all three execution paths).
+- [x] RFC-0025 status **Draft → Proposed** (this change). **Proposed → Accepted** awaits maintainer
+  ratification — never skipping steps (house rule #3).
+- [x] DN-23 untouched (append-only); this RFC is the binding forward record.
+- [ ] **Deferred (M-745):** the angle-bracket operators `< <= > >= << >>` (type-arg disambiguation;
+  §4.3).
+
+---
+
+## 7. Open questions (original record — answered in §5)
+
+*Retained verbatim for the append-only record; each is resolved in §5.*
 
 1. **Sugar or words-only?** DN-23 recommends hybrid, but the decision is the maintainer's. Should
    this RFC adopt the hybrid recommendation or stay words-only? What additional evidence would
@@ -122,18 +225,29 @@ canonical). These choices belong in a binding RFC, not an advisory note.
 
 ---
 
-## 6. Grounding / honesty
+## 8. Grounding / honesty
 
-This stub cites DN-23 (the advisory note that maps the full decision space and grounds the
+This RFC cites DN-23 (the advisory note that maps the full decision space and grounds the
 three-option analysis) and RFC-0024 (HOF — the landing that makes word operators first-class
-values). Normative decisions wait on the design process. No implementation exists; no tag is
-upgraded (VR-5). Claims about what the word functions are named (`add`, `mul`, etc.) are grounded
-in `examples/repr-tour/` and `lib/std/result.myc`, cited in DN-23 §1.
+values). The decision (§4) is implemented Rust-first in `mycelium-l1` (M-705); no tag is upgraded
+to `Proven` (VR-5) — the desugaring is a structural transform (no theorem), and the sugar↔word
+three-path agreement is **Empirical** (differential trials). The word-function names (`add`, `mul`,
+`xor`, …) are grounded in `crates/mycelium-l1/src/checkty.rs::prim_kernel_name`, the
+`examples/repr-tour/` corpus, and `lib/std/result.myc` (cited in DN-23 §1).
 
 ---
 
 ## Meta — changelog
 
+- **2026-06-23 — Draft → Proposed (M-705).** Adopts DN-23's hybrid: a frontend-only infix/prefix
+  operator sugar layer desugaring to canonical word functions. Adds the binding precedence table
+  (§4.1, Rust-derived), the desugaring map (§4.2), the EXPLAIN/audit decision (§4.4), and the
+  resolved open questions (§5). Angle-bracket operators (`< <= > >= << >>`) **deferred** to M-745
+  (type-arg disambiguation, §4.3). Implemented Rust-first: `crates/mycelium-l1` lexer (new operator
+  tokens) + parser (precedence-climbing desugaring) + `docs/spec/grammar/mycelium.ebnf` operator
+  grammar + `accept/20-operator-syntax.myc` + `tests/differential.rs` sugar↔word corpus. No L0/L1
+  kernel change (KC-3). Sugar↔word three-path agreement **Empirical**; no tag upgraded (VR-5).
+  Proposed → Accepted awaits maintainer ratification (house rule #3).
 - **2026-06-23 — Draft stub created.** Scope, user stories, decision space, Definition of Done,
   and open questions captured as a planning stub. Feeds E7-5 (M-705) and E11-1. Built on DN-23
   (Resolved) and RFC-0024 (implemented, pending ratification). Decides nothing normatively.
