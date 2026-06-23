@@ -468,7 +468,9 @@ def build_index(repo_root: Path) -> tuple[list[dict], list[dict]]:
     # completeness check to confirm they are covered by their canonical row).
     from collections import OrderedDict
 
-    canonical: dict[tuple, dict] = OrderedDict()  # (file, line, short_name) -> best item
+    canonical: dict[tuple, dict] = (
+        OrderedDict()
+    )  # (file, line, short_name) -> best item
     for item in items:
         short = item["symbol"].split("::")[-1]
         key = (item["file"], item["line"], short)
