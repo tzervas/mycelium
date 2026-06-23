@@ -50,9 +50,11 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   stays **blocked on RFC-0027 reaching `Accepted`**, which RFC-0027 itself reserves for maintainer
   sign-off — not advanced unilaterally. E12-1 remains in progress; RFC-0008 stays `Accepted` (the
   machinery is implemented Rust-first; the spec is not silently moved). Verified with `cargo fmt`,
-  `cargo clippy -p mycelium-std-runtime --all-targets -D warnings`, `cargo test -p
-  mycelium-std-runtime` (40 tests green), and the full `just check` (Tier-1 CI parity).
-  (E12-1; M-709/M-711/M-713; M-710/M-712 deferred)
+  `cargo clippy -p mycelium-std-runtime --all-targets -D warnings`, and `cargo test -p
+  mycelium-std-runtime` (40 tests green) — this change's full scope is clean. (The two remaining
+  `just check` findings are **pre-existing and unrelated** to this PR — a codespell typo + Python
+  formatting in `tools/github/gh-issues-dedup.py`, and a codespell typo in RFC-0031 — both in files
+  this PR does not touch.) (E12-1; M-709/M-711/M-713; M-710/M-712 deferred)
 
 ### Changed (2026-06-23: full-language 1.0.0 program — Q1/Q2/Q3 resolved + reconcile tooling)
 
