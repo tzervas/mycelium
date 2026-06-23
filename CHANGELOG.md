@@ -49,10 +49,10 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `needs-design`): there is no L1 surface to elaborate yet. **M-712** (memory management & reclamation)
   stays **blocked on RFC-0027 reaching `Accepted`**, which RFC-0027 itself reserves for maintainer
   sign-off — not advanced unilaterally. E12-1 remains in progress; RFC-0008 stays `Accepted` (the
-  machinery is implemented Rust-first; the spec is not silently moved). Verified via change-scoped
-  `cargo fmt` / `cargo clippy -p mycelium-std-runtime --all-targets -D warnings` / `cargo test -p
-  mycelium-std-runtime` (40 tests green); `just` is not installed in this environment (checks skip
-  gracefully — CLAUDE.md). (E12-1; M-709/M-711/M-713; M-710/M-712 deferred)
+  machinery is implemented Rust-first; the spec is not silently moved). Verified with `cargo fmt`,
+  `cargo clippy -p mycelium-std-runtime --all-targets -D warnings`, `cargo test -p
+  mycelium-std-runtime` (40 tests green), and the full `just check` (Tier-1 CI parity).
+  (E12-1; M-709/M-711/M-713; M-710/M-712 deferred)
 
 ### Changed (2026-06-23: full-language 1.0.0 program — Q1/Q2/Q3 resolved + reconcile tooling)
 

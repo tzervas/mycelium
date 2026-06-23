@@ -39,7 +39,12 @@ pub const SUPERVISION_RESTART_BOUND_STRENGTH: GuaranteeStrength = GuaranteeStren
 /// Cancelling a node cascades to **every descendant** (parent→child), so cancelling a colony
 /// propagates failure to all its children — never-silent (G2). Cancellation never flows the other
 /// way: a child cancel leaves the parent live (structured-concurrency direction).
-#[derive(Debug, Clone, Default)]
+///
+/// Deliberately **not `Clone`**: cloning would deep-copy the child subtree, so attaching a child to
+/// one clone after the split would not cascade from the other — silently violating the
+/// "cancels every descendant" contract. Share a node's cancellation via [`token`](CancelTree::token)
+/// (the [`CancelToken`] *is* `Clone`, sharing one flag) instead of cloning the tree.
+#[derive(Debug, Default)]
 pub struct CancelTree {
     token: CancelToken,
     children: Vec<CancelTree>,
@@ -153,23 +158,27 @@ pub struct SupervisionRecord {
 
 /// The result of supervising a restartable child to resolution or escalation.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SupervisedRun<T, E> {
+pub struct SupervisedRun<T> {
     /// The final outcome: `Ok(value)` if the child eventually succeeded, `Err` if the supervisor
     /// escalated (a bounded cascade hit a bound — an explicit failure, never an unbounded storm).
-    pub result: Result<T, SupervisedFailure<E>>,
+    pub result: Result<T, SupervisedFailure>,
     /// The EXPLAIN trace: every restart/escalation decision, in order (no black boxes; ADR-006).
     pub trace: Vec<SupervisionRecord>,
 }
 
 /// Why a supervised child run ended in failure — always explicit (G2).
+///
+/// The child's *transient* per-attempt errors are not surfaced here: each one is **handled** by a
+/// restart and recorded in the EXPLAIN trace as a [`SupervisionAction::Restarted`] decision (so no
+/// failure is silently dropped — RT4/I1), and the terminal outcome is exactly one of these two
+/// explicit cases. (The supervisor's contract is "restart on failure, escalate when the bound is
+/// hit"; a non-restartable error is not a case `supervise_with_restart` itself produces.)
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum SupervisedFailure<E> {
+pub enum SupervisedFailure {
     /// The supervisor escalated: the restart cascade hit a bound (rate or total).
     Escalated(Escalation),
     /// The child was cancelled (cooperative; RT7).
     Cancelled,
-    /// The child failed with an explicit error and was not restartable (no restart attempted).
-    Failed(E),
 }
 
 /// Run a restartable child under a live [`Supervisor`] (M-356) until it succeeds or the supervisor
@@ -177,14 +186,16 @@ pub enum SupervisedFailure<E> {
 ///
 /// `attempt` runs the child once and returns its [`TaskOutcome`]. On a failure outcome the
 /// supervisor tries to restart (consuming the bounded cascade); on success it returns the value with
-/// the full trace; on a bound hit it escalates explicitly (never an unbounded restart storm).
+/// the full trace; on a bound hit it escalates explicitly (never an unbounded restart storm). The
+/// child's `E` is the per-attempt error type; transient failures are *handled* by restart (traced),
+/// so the terminal [`SupervisedRun`] does not itself carry an `E`.
 ///
 /// Guarantee: the restart **bound** is **`Exact`** ([`SUPERVISION_RESTART_BOUND_STRENGTH`], inherited
 /// from [`Supervisor`]); the trace is exact (every decision is recorded).
 pub fn supervise_with_restart<T, E>(
     supervisor: &mut Supervisor,
     mut attempt: impl FnMut() -> TaskOutcome<T, E>,
-) -> SupervisedRun<T, E> {
+) -> SupervisedRun<T> {
     let mut trace = Vec::new();
     let mut restarts_before = 0u64; // honest local count of restarts already granted this run
     loop {
