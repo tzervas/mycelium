@@ -16,7 +16,7 @@ is PR-only; the head → `main` PR is the final squash step.
 | **Head branch** | `claude/head/rel10` |
 | **Status** | ready |
 | **Swarm mode** | Sonnet |
-| **Depends on** | E13-1 (self-hosting stdlib gate — stdlib written in `.myc`, stable, usable); E18-1 (full-language readiness gate — per the roadmap; the full gate definition is in ADR-022, forthcoming from another roadmap agent) |
+| **Depends on** | E13-1 (self-hosting stdlib gate — stdlib written in `.myc`, stable, usable); E18-1 (full-language readiness gate — per the roadmap; the full gate definition is in ADR-022, Accepted) |
 
 ## Scope
 
@@ -39,15 +39,16 @@ E17-1 (epic), M-735, M-736, M-737, M-738.
 
 - `docs/adr/ADR-023-*.md` (Draft, 2026-06-23): the stub for the stability & API-compatibility
   decision. M-737 authors + ratifies it.
-- `docs/adr/ADR-022-*.md` (forthcoming from another roadmap agent): the full-language
+- `docs/adr/ADR-022-*.md` (Accepted): the full-language
   1.0.0 release-readiness gate (the full-language analog of ADR-021). M-738 moves it
   `Accepted -> Enacted` at the tag.
-- `docs/adr/ADR-021-*.md` (`Accepted`): the kernel/core 1.0.0 gate. M-738 subsumes it.
+- `docs/adr/ADR-021-*.md` (Superseded by ADR-022; kernel-gate criteria preserved as track T1):
+  the kernel/core 1.0.0 gate. M-738 subsumes it.
 - `crates/mycelium-doc/`: builds the content-addressed doc-IR (M-363, done); M-736
   adds per-module stdlib API output.
-- DN-25 (forthcoming): the full-language 1.0.0 north-star definition. This kickoff reads
+- DN-25 (Draft): the full-language 1.0.0 north-star definition. This kickoff reads
   it; does not author it.
-- ADR-022 (forthcoming): the full-language release-readiness gate. M-738 enacts it.
+- ADR-022 (Accepted): the full-language release-readiness gate. M-738 enacts it.
 - MIT-only license: a 1.0.0 legal-readiness criterion (ADR-023 §3.4); confirmed by
   `cargo deny check licenses` (gate must be non-skip-graceful at release time).
 - All guarantee claims: `Declared` until checked basis exists (VR-5).
