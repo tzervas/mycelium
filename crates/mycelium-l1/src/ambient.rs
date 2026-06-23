@@ -382,6 +382,12 @@ impl Resolver {
                 }
                 BaseType::Named(name.clone(), out)
             }
+            // Function types carry two inner TypeRefs; resolve each so that a paradigm-less
+            // repr nested inside `A -> B` is filled in context (RFC-0024 §3, M-685).
+            BaseType::Fn(arg, ret) => BaseType::Fn(
+                Box::new(self.type_ref(amb, site, arg)?),
+                Box::new(self.type_ref(amb, site, ret)?),
+            ),
             other => other.clone(),
         };
         Ok(TypeRef {
@@ -750,6 +756,10 @@ impl core::fmt::Display for DisplayBase<'_> {
                 write!(f, "{n}<{}>", a.join(", "))
             }
             BaseType::Ambient(params) => write!(f, "{{{}}}", ambient_params_str(params)),
+            // Function type: `A -> B` in canonical surface form (RFC-0024 §3, M-685).
+            BaseType::Fn(arg, ret) => {
+                write!(f, "{} -> {}", print_type_ref(arg), print_type_ref(ret))
+            }
         }
     }
 }
