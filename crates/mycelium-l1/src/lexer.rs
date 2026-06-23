@@ -49,19 +49,26 @@ struct Lexer {
     i: usize,
     line: u32,
     col: u32,
-    /// Comments collected so far, in source order.  Populated during `skip_trivia` calls.
+    /// Comments collected so far, in source order.  Populated during `skip_trivia` calls
+    /// **only when [`capture_comments`](Self::capture_comments) is set** (the `mycfmt` path).
     comments: Vec<Comment>,
     /// The source line on which the most-recently-emitted non-comment token started, or `0`
     /// if no token has been emitted yet.  Used to compute [`Comment::trailing`].
     last_token_line: u32,
+    /// When `false` (the plain [`lex`] path), `//` comments are skipped without allocating a
+    /// [`Comment`] — the common parse/check front-end pays no comment-capture cost. When `true`
+    /// (the [`lex_with_comments`] / `mycfmt` path), each comment is captured into `comments`.
+    capture_comments: bool,
 }
 
 /// Tokenize `src` into a [`Spanned`] stream terminated by [`Tok::Eof`].
 ///
-/// Comments are **discarded** (behavior-identical to the original implementation).  Use
+/// Comments are **discarded** (behavior-identical to the original implementation).  This is the
+/// front-end fast path: `//` comments are *skipped without allocating* a [`Comment`], so a
+/// parse/check that never needs comments pays no capture cost (Copilot #397).  Use
 /// [`lex_with_comments`] to obtain the comment side-table alongside the same token stream.
 pub fn lex(src: &str) -> Result<Vec<Spanned>, ParseError> {
-    lex_with_comments(src).map(|(toks, _comments)| toks)
+    run_lexer(src, false).map(|(toks, _comments)| toks)
 }
 
 /// Tokenize `src`, returning the [`Spanned`] token stream **and** an ordered [`Vec<Comment>`]
@@ -75,6 +82,16 @@ pub fn lex(src: &str) -> Result<Vec<Spanned>, ParseError> {
 /// Returns a [`ParseError`] on any lexically invalid input (e.g. an unrecognized character or a
 /// malformed ternary literal) — the same conditions under which [`lex`] returns `Err`.
 pub fn lex_with_comments(src: &str) -> Result<(Vec<Spanned>, Vec<Comment>), ParseError> {
+    run_lexer(src, true)
+}
+
+/// Shared lexer driver. `capture_comments` selects the fast path ([`lex`], comments skipped without
+/// allocation) vs the `mycfmt` path ([`lex_with_comments`], comments captured into the side-table).
+/// The token stream is identical either way (comments never enter the token stream).
+fn run_lexer(
+    src: &str,
+    capture_comments: bool,
+) -> Result<(Vec<Spanned>, Vec<Comment>), ParseError> {
     let mut lx = Lexer {
         chars: src.chars().collect(),
         i: 0,
@@ -82,6 +99,7 @@ pub fn lex_with_comments(src: &str) -> Result<(Vec<Spanned>, Vec<Comment>), Pars
         col: 1,
         comments: Vec::new(),
         last_token_line: 0,
+        capture_comments,
     };
     let toks = lx.run()?;
     Ok((toks, lx.comments))
@@ -324,8 +342,10 @@ impl Lexer {
                     let comment_line = self.line;
                     let comment_col = self.col;
                     let trailing = self.last_token_line == comment_line;
-                    // Consume the comment text up to (but not including) the newline.
-                    let mut text = String::new();
+                    // Build the comment text only on the capture path; on the plain `lex` path
+                    // `text` stays `None`, so we advance past the comment with no `String` alloc
+                    // and no `Comment` push (Copilot #397 — the front-end pays no comment cost).
+                    let mut text = self.capture_comments.then(String::new);
                     while let Some(c) = self.peek() {
                         // Stop at the line terminator — break on `\r` too so a CRLF source does not
                         // leave a trailing `\r` in the comment text (the `\r\n` is then consumed by
@@ -334,15 +354,19 @@ impl Lexer {
                         if c == '\n' || c == '\r' {
                             break;
                         }
-                        text.push(c);
+                        if let Some(t) = text.as_mut() {
+                            t.push(c);
+                        }
                         self.bump();
                     }
-                    self.comments.push(Comment {
-                        text,
-                        line: comment_line,
-                        col: comment_col,
-                        trailing,
-                    });
+                    if let Some(text) = text {
+                        self.comments.push(Comment {
+                            text,
+                            line: comment_line,
+                            col: comment_col,
+                            trailing,
+                        });
+                    }
                 }
                 _ => return,
             }
@@ -402,6 +426,32 @@ mod tests {
         assert!(
             !last.text.contains('\r'),
             "no carriage-return in comment text"
+        );
+    }
+
+    /// Copilot #397 (perf): `lex` is the front-end fast path — it skips `//` comments without
+    /// building a [`Comment`], while [`lex_with_comments`] still captures them. The capture flag
+    /// never changes the token stream. This pins that the fast path coexists with capture rather
+    /// than routing every parse/check through comment allocation.
+    #[test]
+    fn lex_fast_path_skips_comments_capture_path_keeps_them() {
+        let src = "// doc: why\nnodule demo  // trailing why\nfn f() -> Binary{1} = 0b1 // more";
+        let fast = lex(src).expect("lex (fast path) succeeded");
+        let (cap, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
+        assert_eq!(
+            fast, cap,
+            "the capture flag must not change the token stream"
+        );
+        assert_eq!(
+            comments.len(),
+            3,
+            "all three // comments captured: {comments:?}"
+        );
+        assert!(
+            !fast
+                .iter()
+                .any(|s| matches!(&s.tok, Tok::Ident(t) if t.starts_with("//"))),
+            "no comment text leaks into the fast-path token stream"
         );
     }
 

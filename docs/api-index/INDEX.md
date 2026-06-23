@@ -669,8 +669,8 @@
 | `mycelium_l1::expand_to_source` | fn | `crates/mycelium-l1/src/ambient.rs:198` | Render a (resolved or partly-resolved) [`Nodule`] back to canonical surface text — the M-142/LSP |
 | `mycelium_l1::lexer` | mod | `crates/mycelium-l1/src/lib.rs:48` | — |
 | `mycelium_l1::lexer::Comment` | struct | `crates/mycelium-l1/src/lexer.rs:32` | A captured `//` line comment, produced by [`lex_with_comments`]. |
-| `mycelium_l1::lexer::lex` | fn | `crates/mycelium-l1/src/lexer.rs:63` | Tokenize `src` into a [`Spanned`] stream terminated by [`Tok::Eof`]. |
-| `mycelium_l1::lexer::lex_with_comments` | fn | `crates/mycelium-l1/src/lexer.rs:77` | Tokenize `src`, returning the [`Spanned`] token stream **and** an ordered [`Vec<Comment>`] |
+| `mycelium_l1::lexer::lex` | fn | `crates/mycelium-l1/src/lexer.rs:70` | Tokenize `src` into a [`Spanned`] stream terminated by [`Tok::Eof`]. |
+| `mycelium_l1::lexer::lex_with_comments` | fn | `crates/mycelium-l1/src/lexer.rs:84` | Tokenize `src`, returning the [`Spanned`] token stream **and** an ordered [`Vec<Comment>`] |
 | `mycelium_l1::mono` | mod | `crates/mycelium-l1/src/lib.rs:49` | — |
 | `mycelium_l1::mono::HofSpecialization` | struct | `crates/mycelium-l1/src/mono.rs:245` | The **EXPLAIN record** of a single HOF defunctionalization (RFC-0024 §4, M-687): which |
 | `mycelium_l1::mono::MonoSelections::get` | fn | `crates/mycelium-l1/src/mono.rs:95` | The selection mono made for the mangled callee `mangled`, if any. |
