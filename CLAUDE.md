@@ -46,6 +46,12 @@ canonical definitions: `docs/Glossary.md` + DN-02/03/06.
    `R1–R8`, `T0.x–T2.x`) or are marked open questions. No ungrounded "facts".
 5. **Small, auditable kernel** (KC-3). SOLID · DRY · KISS · YAGNI · Law of Demeter · SoC;
    composition over inheritance.
+6. **User stories + Definition of Done; MIT-only.** Every epic/issue carries explicit **user stories**
+   (`As a <role>, I want <X>, so that <Y>` — realistic use cases + the problems to resolve) **and** an
+   explicit **Definition of Done**; every ADR/RFC/DN carries a Definition of Done (its gate/criteria —
+   a corollary of rule 1: you can't honestly claim "done" without stating what done means). The project
+   is **MIT-licensed only** — no Apache/dual-license on first-party artifacts (CONTRIBUTING §Licensing;
+   ADR-022 §7).
 
 ## Toolchain
 - **Rust** kernel + reference interpreter — MSRV **1.92** pinned; `cargo fmt`, `cargo clippy

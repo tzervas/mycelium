@@ -7,7 +7,7 @@
 name        = "tour"
 kind        = "phylum"
 version     = "0.1.0"
-license     = "Apache-2.0"
+license     = "MIT"
 authors     = ["Tyler Zervas"]
 since       = "2026-06-17"
 summary     = "Representation-surface tour: the toolchain gate's richer dogfood fixture."
