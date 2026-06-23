@@ -1816,13 +1816,13 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_std_sys::fs` | mod | `crates/mycelium-std-sys/src/lib.rs:44` | — |
+| `mycelium_std_sys::fs` | mod | `crates/mycelium-std-sys/src/lib.rs:48` | — |
 | `mycelium_std_sys::fs::create_dir_all` | fn | `crates/mycelium-std-sys/src/fs.rs:41` | \[Declared\] Create a directory and all its parents. |
 | `mycelium_std_sys::fs::exists` | fn | `crates/mycelium-std-sys/src/fs.rs:34` | \[Declared\] Check whether a path exists on the filesystem. |
 | `mycelium_std_sys::fs::read` | fn | `crates/mycelium-std-sys/src/fs.rs:18` | \[Declared\] Read the entire contents of a file at `path`. |
 | `mycelium_std_sys::fs::remove_file` | fn | `crates/mycelium-std-sys/src/fs.rs:48` | \[Declared\] Remove a file. |
 | `mycelium_std_sys::fs::write` | fn | `crates/mycelium-std-sys/src/fs.rs:25` | \[Declared\] Write `contents` to a file at `path`, creating or truncating it. |
-| `mycelium_std_sys::math` | mod | `crates/mycelium-std-sys/src/lib.rs:46` | — |
+| `mycelium_std_sys::math` | mod | `crates/mycelium-std-sys/src/lib.rs:51` | — |
 | `mycelium_std_sys::math::acos` | fn | `crates/mycelium-std-sys/src/math.rs:37` | \[Declared\] `acos(x)`. |
 | `mycelium_std_sys::math::asin` | fn | `crates/mycelium-std-sys/src/math.rs:32` | \[Declared\] `asin(x)`. |
 | `mycelium_std_sys::math::atan` | fn | `crates/mycelium-std-sys/src/math.rs:42` | \[Declared\] `atan(x)`. |
@@ -1837,10 +1837,10 @@
 | `mycelium_std_sys::math::sin` | fn | `crates/mycelium-std-sys/src/math.rs:17` | \[Declared\] `sin(x)`. |
 | `mycelium_std_sys::math::sqrt` | fn | `crates/mycelium-std-sys/src/math.rs:77` | \[Declared\] `sqrt(x)`. |
 | `mycelium_std_sys::math::tan` | fn | `crates/mycelium-std-sys/src/math.rs:27` | \[Declared\] `tan(x)`. |
-| `mycelium_std_sys::rand` | mod | `crates/mycelium-std-sys/src/lib.rs:47` | — |
+| `mycelium_std_sys::rand` | mod | `crates/mycelium-std-sys/src/lib.rs:52` | — |
 | `mycelium_std_sys::rand::EntropyError` | enum | `crates/mycelium-std-sys/src/rand.rs:37` | Errors from platform entropy operations. |
 | `mycelium_std_sys::rand::fill_bytes` | fn | `crates/mycelium-std-sys/src/rand.rs:70` | \[Declared\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`). |
-| `mycelium_std_sys::time` | mod | `crates/mycelium-std-sys/src/lib.rs:49` | — |
+| `mycelium_std_sys::time` | mod | `crates/mycelium-std-sys/src/lib.rs:54` | — |
 | `mycelium_std_sys::time::mono_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:41` | \[Declared\] Returns monotonic nanoseconds since an unspecified process-local epoch. |
 | `mycelium_std_sys::time::sleep_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:57` | \[Declared\] Pause the current thread for approximately `nanos` nanoseconds. |
 | `mycelium_std_sys::time::wall_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:26` | \[Declared\] Returns nanoseconds since the Unix epoch from the wall clock. |

@@ -8,6 +8,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: E14-1 completion — M-722/M-723 syscall floor wired + data guarantee matrix; epic `done`)
+
+- **`mycelium-std-sys` guarantee matrix encoded as data (`guarantee_matrix.rs`; M-722).** The prior
+  M-722 increment shipped the real `io`/`fs`/`sys` floors with per-op tags in **prose doc tables**;
+  RFC-0016 §4.5 / VR-5 require the matrix as **data, asserted in tests, never prose-only**. The new
+  module supplies exactly that: one `MatrixRow` per floor op (io/fs/sys/rand/time/math, 31 rows),
+  **every op `Declared`** (the honest floor for an unaudited host wrapper — promotion needs its own
+  checked basis), with fallibility/error-set/effect columns. Tests guard coverage, the all-`Declared`
+  invariant (no silent upgrade, VR-5), fallibility↔error-set consistency, and the wall-clock /
+  entropy effect declarations (RT3). (M-722; RFC-0016 §4.5)
+- **Production host wiring — `mycelium-std-sys-host` (new crate; M-722/M-723).** The pure std crates
+  kept their OS contact behind injectable seams (`EntropySource`, `ClockSource`) so they stay
+  `wild`-free; this crate fills those seams with the audited floor: **`OsEntropy`** drives
+  `std-rand`'s `EntropySource` from `std-sys::rand` (`/dev/urandom`), **`OsClock`** drives
+  `std-time`'s `ClockSource` from `std-sys::time` (monotonic + wall + a FLAGged logical placeholder).
+  It is the one crate depending on **both** the floor and the pure crates, so the dependency
+  direction stays honest (pure std → seam ← host wiring → floor); `#![forbid(unsafe_code)]`, no kernel
+  coupling. Every read is `Declared`; failures are explicit (`EntropyUnavailable`, `ClockUnavailable`,
+  `Overflow`) — never a zero-fill or clock wrap (G2). End-to-end tests seed `EntropyRng` from the OS
+  and assert monotonic-clock non-regression. (M-722/M-723; RFC-0028 §4.5)
+- **M-722, M-723, and epic E14-1 → `done`.** With the floors executing, the data matrix landed, and
+  the entropy/clock seams wired, the FFI epic's Definition of Done is met. **Honestly staged
+  follow-up (not a regression — already deferred in RFC-0028 §4.4):** the Mycelium-surface `wild:`
+  per-op byte encoding that makes the byte-oriented `io`/`fs` ops reachable from a `wild { io.write(…) }`
+  block is the `@std-sys`-author host encoding, still uncommitted in §4.4; the entropy/clock seams are
+  wired today and the io/fs surface encoding follows when §4.4 lands. (E14-1; VR-5/G2)
+
 ### Added (2026-06-23: E14-1 — the `wild`/FFI execution floor executes; RFC-0028 Accepted; M-720/M-721/M-722/M-724)
 
 - **RFC-0028 — FFI and System Interface → Accepted** (maintainer sign-off on the three architecturally-significant forks). The normative v0 model: a **build-time `@std-sys` capability gate** (no runtime `Capability<io>` value — KISS/YAGNI/KC-3; runtime sandboxing deferred §7, flagged forward-compatible); the **prim registry as the execution host / capability handle**; `wild` lowers to `Op { prim: "wild:…" }` (**no new Core-IR node** — KC-3); `Declared` guarantee baseline with `Empirical` only for a differentially-covered deterministic op (VR-5); a full Mycelium-level `just safety-check` audit. (RFC-0028; E14-1)
@@ -15,6 +42,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 - **M-721 — host dispatch + three-way differential (`Empirical`).** The L1 surface evaluator (`eval.rs` `eval_wild`) dispatches a `wild:` op through the prim registry; the L0 interpreter and the AOT env-machine already dispatch `Op` through the *same* registry, so a deterministic `wild`-backed op now agrees **L1-eval ≡ L0-interp ≡ AOT** (new `wild_ffi_execution_agrees_three_ways` differential, validated by the shared M-210 checker). The default registry grants **no** `wild:` op, so an ungranted host op is an explicit, never-silent `UnknownPrim` whose message names the ungranted capability (G2; `crates/mycelium-interp`). Real syscalls stay `Declared`; the differentially-covered op is `Empirical` (VR-5).
 - **M-722 — `mycelium-std-sys` gains `io` + `sys` modules** (`Declared`): standard-stream I/O (stdin/stdout/stderr, never-silent `write_all`) and process/env (`exit`, `get_env` → explicit `Option`, `args`). The crate stays a pure-std leaf (`#![forbid(unsafe_code)]`, no workspace deps); `fs`/`rand`/`time` already provided real floors. Each op carries a guarantee-matrix doc row (RFC-0016 §4.5). The host-registration *bridge* wiring these into the `wild:` dispatch is specified (RFC-0028 §4.3/§4.5) and proven via the mock differential — the real-op wiring (a host layer depending on both `mycelium-interp` and `std-sys`) is the next incremental step (honestly staged; M-722/M-723 stay `in-progress`, VR-5).
 - **M-724 — `just safety-check` extended to a Mycelium-level `wild`-site audit** (`scripts/checks/safety.sh`): in addition to the Rust `// SAFETY:` adjacency gate (M-681), every `wild` block in a shippable `.myc` nodule must be in a `@std-sys` nodule, inside a fn declaring `!{ffi}`, and carry a `// SAFETY:` comment — a gate, not a lint (G2). The grammar-conformance corpus is excluded (parser fixtures, validated by checker tests). Forward-looking (no shippable `.myc` `wild` sites yet); green.
+
 ### Added (2026-06-23: E12-1 — runtime & concurrency execution maturity, M-709/M-711/M-713)
 
 - **Real OS-thread scheduler (`mycelium-std-runtime::scheduler`; M-709).** The v0 R1 surface ran tasks
