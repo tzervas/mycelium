@@ -142,8 +142,8 @@ the enablers below. The ratified decisions: **D1** `eq`/`lt` prims (→`Bool`, E
 derives in `.myc`); **D2** surface `bit.and`/`bit.or` + never-silent carry-chain `add`/`sub`; **D3**
 `Repr::Seq` (indexed sequence, never-silent `get`); **D4** `Repr::Bytes` (byte/string, never-silent
 decode); **D5** width-generics → E11-1/`s10` (M-751 closed → **M-753**); **D6** in `core 1.0.0`
-(extends ADR-022 T1 — append-only via supersession, **pending the mechanism**: confirm before relying
-on the gate text); **D7** sequencing comparison → binary-arith → `Repr::Seq` → `Repr::Bytes`. *(Historical
+(extends ADR-022 T1 — enacted append-only by the focused amending **ADR-024**); **D7** sequencing
+comparison → binary-arith → `Repr::Seq` → `Repr::Bytes`. *(Historical
 brief for re-authoring, now satisfied: the two maintainer-settled questions were —)*
 - **Q6 (placement) = IN `core` 1.0.0** — the reprs/prims land in the kernel before the 1.0.0 tag.
   **Consequence you must carry through:** E19-1 becomes a **core-1.0.0 gate prerequisite**, so

@@ -20,8 +20,8 @@
 > honest tag before any `.myc` consumer (E13-1) depends on it. Every addition **enlarges the value
 > model / trusted base** (KC-3); per **D6** that growth is *deliberate* and lands **in `core 1.0.0`**,
 > extending ADR-022 track T1's Definition of Done (the core tag waits on E19-1). That T1 criteria change
-> is captured **append-only via supersession** (house rule #3) — D6 records the decision; ADR-022's
-> gate text is not edited in place (§4 carries a pending note). Until each addition is implemented +
+> is captured **append-only via supersession** (house rule #3) — D6 records the decision and **ADR-024**
+> enacts it into the gate (ADR-022's text is not edited in place). Until each addition is implemented +
 > differential-tested, claims about its behaviour are
 > `Declared` positions checked by implementation (VR-5); never-silent (G2) is mandatory on every one
 > (overflow, out-of-bounds, invalid-encoding → explicit `Option`/error).
@@ -183,12 +183,11 @@ met Gate A/B rows are not reopened), so **the core tag (M-703) waits on E19-1**.
 
 **Governance (append-only — house rule #3).** Extending T1's DoD is a *criteria* change to the
 **Accepted** ADR-022, whose Status requires **superseding** to change criteria. Therefore this RFC
-**records the decision** (here, D6) but the gate text is **not edited in place**: ADR-022 §4 carries a
-non-normative *pending-amendment* note, and the T1-scope change is enacted via the maintainer-selected
-append-only mechanism — **a focused superseding/amending ADR is the default and recommended path**
-(confirmation pending; PR #514). The tracker carries the operational linkage now (M-703 `depends_on`
-E19-1, flagged pending). The KC-3 trusted-base growth (D1–D4 — two prims + two `Repr` variants) is
-**deliberate and gated by this RFC + that ADR mechanism**; each addition carries its own trusted-base
+**records the decision** (here, D6) and it is enacted into the gate by the focused amending
+**ADR-024** (Accepted 2026-06-23) — **not** by editing ADR-022's §4/§5 criteria in place (ADR-022
+carries an append-only "amended by ADR-024" pointer). The tracker carries the operational linkage
+(M-703 `depends_on` E19-1). The KC-3 trusted-base growth (D1–D4 — two prims + two `Repr` variants) is
+**deliberate and gated by this RFC + ADR-024**; each addition carries its own trusted-base
 justification at implementation. Chosen over a leaner core tag + a 1.1 value-model extension.
 
 ### D7 — Sequencing (Q7)
@@ -226,5 +225,5 @@ named in the `kpr` kickoff before merge.
 
 | Date | Status | Note |
 |---|---|---|
-| 2026-06-23 | **Accepted** | M-746: §5 D1–D7 ratified — D1 `eq`/`lt` comparison prims (Exact), D2 binary arithmetic (surface `bit.and`/`bit.or` + never-silent carry-chain `add`/`sub`), D3 `Repr::Seq` (indexed sequence, never-silent `get`), D4 `Repr::Bytes` (string/byte value, never-silent decode), D5 width-generics → E11-1/`s10` (M-751 → pointer to M-753), D6 placement **in `core 1.0.0`** (extends ADR-022 T1 — captured append-only via supersession, not an in-place edit; pending the mechanism, PR #514), D7 sequencing (comparison → binary-arith → `Repr::Seq` → `Repr::Bytes` → conformance). Enablers M-747…M-750 move `blocked → todo`. |
+| 2026-06-23 | **Accepted** | M-746: §5 D1–D7 ratified — D1 `eq`/`lt` comparison prims (Exact), D2 binary arithmetic (surface `bit.and`/`bit.or` + never-silent carry-chain `add`/`sub`), D3 `Repr::Seq` (indexed sequence, never-silent `get`), D4 `Repr::Bytes` (string/byte value, never-silent decode), D5 width-generics → E11-1/`s10` (M-751 → pointer to M-753), D6 placement **in `core 1.0.0`** (extends ADR-022 T1 — enacted append-only by the focused amending ADR-024, not an in-place edit), D7 sequencing (comparison → binary-arith → `Repr::Seq` → `Repr::Bytes` → conformance). Enablers M-747…M-750 move `blocked → todo`. |
 | 2026-06-23 | **Draft** | Initial stub — open questions enumerated; no normative decisions. Scopes the kernel prims + value representations that unblock E13-1 Tier-1/Tier-2 (RFC-0031 §5 D4). Task: E19-1/M-746. |

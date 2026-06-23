@@ -8,6 +8,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: ADR-024 — Core 1.0.0 Gate (T1) scope amendment, enacting RFC-0032 D6 append-only)
+
+- **ADR-024 — Core 1.0.0 Gate (Track T1) Scope Amendment → Accepted.** The house-rule-correct
+  (supersede-to-change-criteria — house rule #3) capture of RFC-0032 §5 D6: it **amends ADR-022 track
+  T1** to add epic **E19-1** (the kernel self-hosting-enablement surface — `eq`/`lt` prims, binary
+  arithmetic, `Repr::Seq`, `Repr::Bytes`) to the `core 1.0.0` Definition of Done, so the stdlib is
+  fully `.myc`-self-hosted at the tag. A **scoped amendment**, not a wholesale supersession: ADR-022's
+  dual-version model + tracks T2–T9 + the preserved ADR-021 Gate A/B rows all remain in force and
+  **unchanged + met**; `M-703` now `depends_on` E19-1. ADR-022 is touched only with an append-only
+  "amended by ADR-024" pointer (§4 note + §5 T1 row + changelog) — its normative §4/§5 criteria text is
+  **not** rewritten (resolves Copilot #514: the earlier in-place criteria edit was reverted, then
+  enacted here via the proper mechanism). All criteria `Declared` until each E19-1 leaf lands
+  differential-tested (VR-5). →Enacted with ADR-022 T1 at the `core 1.0.0` tag. (ADR-024; RFC-0032 D6;
+  E19-1)
+
 ### Changed (2026-06-23: RFC-0032 → Accepted — the kernel self-hosting-enablement surface ratified; M-746)
 
 - **RFC-0032 — Kernel Self-Hosting Enablement Surface → Accepted** (M-746, the E19-1 gate). §5 D1–D7
