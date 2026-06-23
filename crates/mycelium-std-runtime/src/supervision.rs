@@ -66,13 +66,16 @@ impl CancelTree {
         self.token.clone()
     }
 
-    /// Attach a fresh child scope and return its token. The child is cancelled if **this** node is
-    /// later cancelled (cascade), but cancelling the child does not cancel this node (RT7).
-    pub fn child(&mut self) -> CancelToken {
-        let child = CancelTree::new();
-        let tok = child.token();
-        self.children.push(child);
-        tok
+    /// Attach a fresh child scope and return a mutable handle to it, so callers can build a genuine
+    /// multi-level tree (attach grandchildren via the returned node's own [`child`](CancelTree::child)).
+    /// The child — and everything attached under it — is cancelled if **this** node is later
+    /// cancelled (the cascade), but cancelling the child does not cancel this node (RT7). Use
+    /// [`token`](CancelTree::token) on the returned handle to get its cooperative cancel token.
+    pub fn child(&mut self) -> &mut CancelTree {
+        self.children.push(CancelTree::new());
+        self.children
+            .last_mut()
+            .expect("a child was just pushed, so last_mut is Some")
     }
 
     /// Whether this node has been cancelled.
@@ -250,25 +253,35 @@ mod tests {
     type BoxTask<T, E> = Box<dyn FnOnce(&CancelToken) -> TaskOutcome<T, E> + Send>;
 
     #[test]
-    fn cancel_tree_cascades_to_children_never_silently() {
-        // Mutant witness: if cancel() did not recurse into children, the child token would stay live.
+    fn cancel_tree_cascades_to_every_descendant_never_silently() {
+        // A genuine multi-level tree: root → c1 → grandchild, and root → c2. Mutant witness: if
+        // cancel() did not recurse, a descendant token would stay live.
         let mut root = CancelTree::new();
-        let c1 = root.child();
-        let c2 = root.child();
-        assert_eq!(root.child_count(), 2);
+        let (c1_tok, gc_tok) = {
+            let c1 = root.child(); // &mut CancelTree
+            let c1_tok = c1.token();
+            let gc_tok = c1.child().token(); // grandchild attached under c1
+            (c1_tok, gc_tok)
+        };
+        let c2_tok = root.child().token();
+        assert_eq!(root.child_count(), 2, "root has two direct children");
         assert!(
-            !c1.is_cancelled() && !c2.is_cancelled(),
-            "children start live"
+            ![&c1_tok, &gc_tok, &c2_tok].iter().any(|t| t.is_cancelled()),
+            "every node starts live"
         );
         root.cancel();
         assert!(root.is_cancelled(), "root must be cancelled");
         assert!(
-            c1.is_cancelled(),
-            "child 1 must observe the cascade (RT7/G2)"
+            c1_tok.is_cancelled(),
+            "child must observe the cascade (RT7/G2)"
         );
         assert!(
-            c2.is_cancelled(),
-            "child 2 must observe the cascade (RT7/G2)"
+            gc_tok.is_cancelled(),
+            "grandchild must observe the cascade too — every descendant (RT7/G2)"
+        );
+        assert!(
+            c2_tok.is_cancelled(),
+            "second child must observe the cascade (RT7/G2)"
         );
     }
 
@@ -276,7 +289,7 @@ mod tests {
     fn cancel_does_not_flow_child_to_parent() {
         // Structured-concurrency direction: cancelling a child leaves the parent live.
         let mut root = CancelTree::new();
-        let child_tok = root.child();
+        let child_tok = root.child().token();
         child_tok.cancel();
         assert!(child_tok.is_cancelled(), "the child token is cancelled");
         assert!(

@@ -34,14 +34,19 @@ pub struct BuildInput {
 }
 
 impl BuildInput {
-    /// The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`.
+    /// The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`,
+    /// and `lib/std/` (the self-hosted standard library — M-736). Every `.myc` nodule under
+    /// `lib/std/` is projected into the API reference (per-module `fn` signatures + `@summary`),
+    /// so the generated stdlib API docs grow as the E13-1 self-hosting migration lands modules.
+    /// Today only `lib/std/result.myc` self-hosts; the remaining stdlib modules are Rust-first and
+    /// appear here as they are ported (the gap is honest, not silent — G2).
     #[must_use]
     pub fn conventional(repo_root: impl Into<PathBuf>) -> Self {
         let repo_root = repo_root.into();
         BuildInput {
             corpus_root: Some(repo_root.join("docs")),
             schemas_root: Some(repo_root.join("docs/spec/schemas")),
-            example_roots: vec![repo_root.join("examples")],
+            example_roots: vec![repo_root.join("examples"), repo_root.join("lib/std")],
             repo_root,
         }
     }
