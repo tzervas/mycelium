@@ -206,3 +206,7 @@ Recorded so the program stays honest about where it ends — these are **vision,
   not a fresh gate run. The only remaining T1 item is the **maintainer-reserved
   core `1.0.0` tag act** (M-703 / M-655). ADR-021 stays **Superseded** — its inherited enactment now
   attaches to ADR-022 T1 at the tag.
+- 2026-06-23 — §5 gate-table **status cells refreshed** for **T2/T3/T5/T8** (open → in progress) to
+  reflect landed Wave-A work (s10 surface/operators · r10 runtime · rel10 docs · ffi10 on dev); the
+  Gate A/B **criteria are unchanged** — a status report on a checked basis (VR-5), recorded append-only
+  (house rule #3). (Copilot #506.)
