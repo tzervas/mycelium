@@ -65,13 +65,14 @@ mod tests {
 
     /// An existing variable round-trips through the reader verbatim (the OS env is ground truth).
     /// Reads a pre-existing var instead of mutating the global environment — `std::env::set_var`
-    /// is not thread-safe with the concurrent env reads other tests perform (Copilot #507).
+    /// is not thread-safe with the concurrent env reads other tests perform (Copilot #507). Skips
+    /// silently when the process starts with an empty environment (`env -i` / hermetic runners): the
+    /// unset-var test above already covers the empty-env case, so this must not panic on it (#508).
     #[test]
     fn an_existing_env_var_reads_back_verbatim() {
-        let (key, value) = std::env::vars()
-            .next()
-            .expect("the test process always has at least one environment variable");
-        assert_eq!(get_env(&key), Some(value));
+        if let Some((key, value)) = std::env::vars().next() {
+            assert_eq!(get_env(&key), Some(value));
+        }
     }
 
     /// `args()` always contains at least the program name (arg 0).
