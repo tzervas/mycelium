@@ -979,3 +979,198 @@ fn the_monomorphized_differential_distinguishes_divergent_instances() {
         "different impl bodies must yield different L0 values (the differential discriminates)"
     );
 }
+
+// --- M-688: HOF differential — named fns passed to map/and_then/fold over Result ----------------
+//
+// RFC-0024 §4 (M-685/686/687): a named top-level function is now a first-class value; the
+// monomorphizer (mono.rs) specializes the HOF combinator at the call site (defunctionalization),
+// yielding closed first-order L0. The obligation is the SAME three-way differential as the
+// generic/trait corpus (L1-eval ≡ elaborate→L0-interp ≡ AOT) on the MONOMORPHIZED env — run on
+// the mono'd env so L1-eval (which has no HOF dispatch) can run the same program. Differential
+// agreement is `Empirical` (trials; VR-5). Contract is `Declared`.
+//
+// All programs include the std.result combinators inline (inlining from lib/std/result.myc so each
+// program is a self-contained source string; the checker sees the full nodule). Named helpers:
+//   `not_val(x: Binary{8}) -> Binary{8} = not(x)` — the function value passed to map/and_then
+//   `mk_ok_inner(x: Binary{8}) -> Result<Binary{8},Binary{8}> = Ok(not(x))` — for and_then
+//   `id_val(x: Binary{8}) -> Binary{8} = x`           — on_ok branch for fold
+//   `const_zero(e: Binary{8}) -> Binary{8} = xor(e, e)` — on_err branch for fold (always 0)
+
+/// The HOF corpus: programs using map/and_then/fold with named function arguments, inline.
+/// Each must monomorphize to closed L0 — the defunctionalization obligation (RFC-0024 §4).
+///
+/// Empirical: differential agreement confirmed by the three-way harness below; not a proof.
+fn hof_corpus() -> Vec<&'static str> {
+    vec![
+        // (1) map Ok: map(Ok(0b0000_0001), not_val) → Ok(not(0b0000_0001)) = Ok(0b1111_1110)
+        "nodule d\n\
+         type Result<A, E> = Ok(A) | Err(E)\n\
+         fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =\n  \
+           match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
+         fn not_val(x: Binary{8}) -> Binary{8} = not(x)\n\
+         fn mk_ok() -> Result<Binary{8},Binary{8}> = Ok(0b0000_0001)\n\
+         fn main() -> Result<Binary{8},Binary{8}> = map(mk_ok(), not_val)",
+        // (2) map Err: map(Err(0b1111_1111), not_val) → Err(0b1111_1111) [Err passes through]
+        "nodule d\n\
+         type Result<A, E> = Ok(A) | Err(E)\n\
+         fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =\n  \
+           match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
+         fn not_val(x: Binary{8}) -> Binary{8} = not(x)\n\
+         fn mk_err() -> Result<Binary{8},Binary{8}> = Err(0b1111_1111)\n\
+         fn main() -> Result<Binary{8},Binary{8}> = map(mk_err(), not_val)",
+        // (3) and_then Ok: and_then(Ok(0b0000_0001), mk_ok_inner) → Ok(not(0b0000_0001)) = Ok(0b1111_1110)
+        "nodule d\n\
+         type Result<A, E> = Ok(A) | Err(E)\n\
+         fn and_then<A, B, E>(r: Result<A, E>, f: A -> Result<B, E>) -> Result<B, E> =\n  \
+           match r { Ok(x) => f(x), Err(e) => Err(e) }\n\
+         fn mk_ok_inner(x: Binary{8}) -> Result<Binary{8},Binary{8}> = Ok(not(x))\n\
+         fn mk_ok() -> Result<Binary{8},Binary{8}> = Ok(0b0000_0001)\n\
+         fn main() -> Result<Binary{8},Binary{8}> = and_then(mk_ok(), mk_ok_inner)",
+        // (4) and_then Err: and_then(Err(0b1111_1111), mk_ok_inner) → Err(0b1111_1111) [short-circuits]
+        "nodule d\n\
+         type Result<A, E> = Ok(A) | Err(E)\n\
+         fn and_then<A, B, E>(r: Result<A, E>, f: A -> Result<B, E>) -> Result<B, E> =\n  \
+           match r { Ok(x) => f(x), Err(e) => Err(e) }\n\
+         fn mk_ok_inner(x: Binary{8}) -> Result<Binary{8},Binary{8}> = Ok(not(x))\n\
+         fn mk_err() -> Result<Binary{8},Binary{8}> = Err(0b1111_1111)\n\
+         fn main() -> Result<Binary{8},Binary{8}> = and_then(mk_err(), mk_ok_inner)",
+        // (5) fold Ok: fold(Ok(0b1010_1010), id_val, const_zero) → id_val(0b1010_1010) = 0b1010_1010
+        "nodule d\n\
+         type Result<A, E> = Ok(A) | Err(E)\n\
+         fn fold<A, E, B>(r: Result<A, E>, on_ok: A -> B, on_err: E -> B) -> B =\n  \
+           match r { Ok(x) => on_ok(x), Err(e) => on_err(e) }\n\
+         fn id_val(x: Binary{8}) -> Binary{8} = x\n\
+         fn const_zero(e: Binary{8}) -> Binary{8} = xor(e, e)\n\
+         fn mk_ok() -> Result<Binary{8},Binary{8}> = Ok(0b1010_1010)\n\
+         fn main() -> Binary{8} = fold(mk_ok(), id_val, const_zero)",
+        // (6) fold Err: fold(Err(0b1111_0000), id_val, const_zero) → xor(0b1111_0000,0b1111_0000) = 0b0000_0000
+        "nodule d\n\
+         type Result<A, E> = Ok(A) | Err(E)\n\
+         fn fold<A, E, B>(r: Result<A, E>, on_ok: A -> B, on_err: E -> B) -> B =\n  \
+           match r { Ok(x) => on_ok(x), Err(e) => on_err(e) }\n\
+         fn id_val(x: Binary{8}) -> Binary{8} = x\n\
+         fn const_zero(e: Binary{8}) -> Binary{8} = xor(e, e)\n\
+         fn mk_err() -> Result<Binary{8},Binary{8}> = Err(0b1111_0000)\n\
+         fn main() -> Binary{8} = fold(mk_err(), id_val, const_zero)",
+    ]
+}
+
+/// **M-688 (RFC-0024 §4):** HOF programs using named fn arguments to map/and_then/fold over
+/// Result run through the three-way differential — L1-eval(mono) ≡ elaborate→L0-interp ≡ AOT —
+/// on the MONOMORPHIZED env. This is the end-to-end proof that static defunctionalization (M-687)
+/// produces closed first-order L0 that agrees on all three evaluation paths. Mirrors the
+/// `l1_eval_l0_interp_and_aot_agree_on_the_monomorphized_generic_and_trait_fragment` harness.
+///
+/// Empirical: differential agreement is by trial (VR-5 — never Proven). Declared: type contract.
+#[test]
+fn l1_eval_l0_interp_and_aot_agree_on_hof_via_defunctionalization() {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    for (i, src) in hof_corpus().iter().enumerate() {
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+        // Monomorphize: resolves both generic type args AND defunctionalizes the fn-valued params
+        // (RFC-0024 §4, M-687). The result is a closed, first-order, trait-free env L1-eval can run.
+        let mono = monomorphize(&env, "main").unwrap_or_else(|e| {
+            panic!("HOF program #{i}: must monomorphize + defunctionalize: {e}")
+        });
+        // Closure invariant (M-673 / RFC-0024 §4): no generics, no traits, no fn-typed params.
+        assert!(
+            mono.fns.values().all(|fd| fd.sig.params.is_empty())
+                && mono.types.values().all(|d| d.params.is_empty())
+                && mono.traits.is_empty()
+                && mono.instances.is_empty()
+                && mono.impls.is_empty(),
+            "HOF program #{i}: monomorphized+defunctionalized env must be closed (no generics/traits)"
+        );
+        let registry = build_registry(&mono).expect("the mono'd data registry builds");
+
+        // Path 1: the L1 fuel-guarded evaluator, on the MONOMORPHIZED+DEFUNCTIONALIZED env.
+        // (L1-eval has no HOF dispatch — it can only run the defunctionalized, first-order version.)
+        let l1 = Evaluator::new(&mono)
+            .call("main", vec![])
+            .unwrap_or_else(|e| panic!("HOF program #{i}: L1-eval(mono) failed: {e}"));
+        let l1_core = l1.to_core(&mono, &registry).unwrap_or_else(|| {
+            panic!("HOF program #{i}: L1 result is outside the r3 data fragment")
+        });
+
+        // Path 2: elaborate to L0 (elaborate calls monomorphize internally — on the source env),
+        // run on the reference interpreter. Empirical: Err arms must pass through, Ok arms transform.
+        let node = elaborate(&env, "main").unwrap_or_else(|e| {
+            panic!("HOF program #{i}: must elaborate after defunctionalization: {e}")
+        });
+        let l0_core = interp
+            .eval_core(&node)
+            .unwrap_or_else(|e| panic!("HOF program #{i}: L0-interp failed: {e}"));
+
+        // Path 3: the same L0 term through the AOT env-machine.
+        let aot_core = mycelium_mlir::run_core(&node, &prims, &engine)
+            .unwrap_or_else(|e| panic!("HOF program #{i}: AOT run_core failed: {e}"));
+
+        // All three paths must agree — Empirical (differential over HOF corpus; VR-5).
+        assert_eq!(
+            l1_core, l0_core,
+            "HOF program #{i} diverged: L1-eval(mono+defun) vs elaborate→L0-interp"
+        );
+        assert_eq!(
+            l0_core, aot_core,
+            "HOF program #{i} diverged: L0-interp vs AOT env-machine"
+        );
+
+        // The shared M-210 checker validates each agreeing pair (a mislabeled lowering is an
+        // explicit NotValidated, never a silent pass — NFR-7/VR-4/G2).
+        for (x, y, pair) in [
+            (&l1_core, &l0_core, "L1↔interp"),
+            (&l0_core, &aot_core, "interp↔AOT"),
+        ] {
+            assert_eq!(
+                check_core(x, y),
+                CheckVerdict::Validated {
+                    strength: GuaranteeStrength::Exact
+                },
+                "HOF program #{i}: the shared checker must validate the {pair} pair"
+            );
+        }
+    }
+}
+
+/// **Mutant-witness (M-688):** two different named functions passed to `map` produce different L0
+/// results — confirming the defunctionalization discriminates. A vacuous differential that always
+/// passes regardless of the fn argument would not be caught by the harness above; this closes
+/// that gap. `not_val` and `id_val` yield different images on a non-all-ones input (Empirical).
+#[test]
+fn the_hof_differential_distinguishes_different_named_fn_arguments() {
+    let run = |src: &str| {
+        let env = check_nodule(&parse(src).unwrap()).unwrap();
+        let node = elaborate(&env, "main").unwrap();
+        Interpreter::new(
+            PrimRegistry::with_builtins(),
+            Box::new(BinaryTernarySwapEngine),
+        )
+        .eval_core(&node)
+        .unwrap()
+    };
+    // Same map call, different fn argument: not_val vs id_val — must give different L0 results on
+    // input 0b0000_0001 (not(0b0000_0001) = 0b1111_1110 ≠ 0b0000_0001 = id_val(0b0000_0001)).
+    let with_not = run("nodule d\n\
+         type Result<A, E> = Ok(A) | Err(E)\n\
+         fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =\n  \
+           match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
+         fn not_val(x: Binary{8}) -> Binary{8} = not(x)\n\
+         fn mk_ok() -> Result<Binary{8},Binary{8}> = Ok(0b0000_0001)\n\
+         fn main() -> Result<Binary{8},Binary{8}> = map(mk_ok(), not_val)");
+    let with_id = run("nodule d\n\
+         type Result<A, E> = Ok(A) | Err(E)\n\
+         fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =\n  \
+           match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
+         fn id_val(x: Binary{8}) -> Binary{8} = x\n\
+         fn mk_ok() -> Result<Binary{8},Binary{8}> = Ok(0b0000_0001)\n\
+         fn main() -> Result<Binary{8},Binary{8}> = map(mk_ok(), id_val)");
+    assert_ne!(
+        with_not, with_id,
+        "map with not_val vs id_val must yield different L0 values (the HOF differential discriminates)"
+    );
+}
