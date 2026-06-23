@@ -53,12 +53,12 @@ still maturing. `lang` never borrows `core`'s version number (G2 — no silent o
 
 In scope for `lang 1.0.0` (each a tracked epic, see §5 + DN-25):
 **core sub-gate (T1)**, surface-language completeness (T2), runtime & concurrency execution (T3),
-**the standard library written in Mycelium (T4)**, FFI & system interface (T5), native AOT maturity
-(T6), toolchain/IDE/distribution (T7), documentation & stability guarantees (T8), and
+**the standard library written in Mycelium (T4)**, FFI & system interface (T5),
+toolchain/IDE/distribution (T7), documentation & stability guarantees (T8), and
 **self-hosting of everything beyond the bare core (T9)**. T4 + T9 are the defining criteria of the
 maintainer's clarification.
 
-Out of scope for `1.0.0` (tracked, but `1.x`/`2.0`): semantic-level projections to other languages
+Out of scope for `1.0.0` (tracked, but `1.x`/`2.0`): **native AOT maturity / optimization / JIT (T6 — rolled to `1.1` as a QoL/perf enhancement; 1.0.0 ships on the interpreter trusted base + the existing direct-LLVM kernel subset; see §8 Q4)**, semantic-level projections to other languages
 (RFC-0021 exploratory), resonator-only probabilistic pipelines beyond the VSA submodule, and any
 "nice to have" not required for *full usability*. Deferrals stay named, never silent.
 
@@ -67,9 +67,25 @@ Out of scope for `1.0.0` (tracked, but `1.x`/`2.0`): semantic-level projections 
 ADR-021's **Gate A** (A1 zero-High; A2 Medium ledger; A3 durability — mutants/proptest/fuzz; A4
 `just check` green incl. `cargo deny`/`cargo audit`; A5 KC-4 cert-overhead budget) and **Gate B** (B1
 RFC-0003/0006/0007 Accepted; B2 KC-2 verdict) are carried forward **verbatim** as the criteria for
-`core 1.0.0`. Status as of supersession: A1/A5/B1/B2 ✅ met; A2/A3/A4 ⏳ open. This sub-gate is
-**epic E10-1** (issues M-700–M-703). The core may tag `1.0.0` the moment T1 closes — it does **not**
-wait for T2–T9.
+`core 1.0.0`.
+
+**Status (refreshed 2026-06-23 — maintainer: T1 engineering satisfied by the prior kernel-gate
+landing): `A1·A2·A3·A4·A5 ✅ met · B1·B2 ✅ met` — gate-met / tag-ready.** The three rows that read
+"⏳ open" at supersession were closed by the original ADR-021 kernel-gate wave (2026-06-21), and the
+tooling remains present: **A2** — the Medium-findings ledger is 25/25 Fixed, 0 deferred
+(`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`; M-653, PR #306); **A3** —
+`cargo-mutants` 0 un-triaged survivors on the trusted base (`.cargo/mutants.toml`), the hand-rolled
+LCG suites migrated to `proptest`, and `cargo-fuzz` targets + smoke CI present (`fuzz/`; M-654,
+PR #313); **A4** — `cargo deny` / `cargo audit` wired **non-silently** into `just check` (`deny.toml`,
+`scripts/checks/`; M-652, PR #303). This refresh is a **status report moving forward on a checked
+basis** (VR-5) — it records the prior landing, not a fresh re-run.
+
+The **only remaining T1 item is the core `1.0.0` tag act itself — M-703, maintainer-reserved** (cut
+the tag + record the enactment; a separate append-only decision per house rule #3). Because ADR-021 is
+now **Superseded**, that inherited enactment attaches **here, to ADR-022 track T1**, at the tag — a
+Superseded ADR cannot itself move to Enacted. This sub-gate is **epic E10-1** (issues M-700–M-703;
+M-700/M-701/M-702 satisfied, M-703 reserved). The core may tag `1.0.0` the moment the maintainer
+performs M-703 — it does **not** wait for T2–T9.
 
 ## 5. Definition of Done — the full-language 1.0.0 gate
 
@@ -78,12 +94,12 @@ its own per-issue DoDs (DN-25 is the map; the epics carry the detail). Summary c
 
 | Track | Epic | Done when (summary) | Status |
 |---|---|---|---|
-| **T1 Core sub-gate** | E10-1 | ADR-021 Gate A/B all ✅; `core 1.0.0` tagged; ADR-021 → Enacted | ⏳ A2/A3/A4 open |
+| **T1 Core sub-gate** | E10-1 | ADR-021 Gate A/B all ✅; `core 1.0.0` tagged; ADR-022 T1 → Enacted at the tag | ✅ gate-met / tag-ready; `core 1.0.0` tag pending (M-703, maintainer-reserved) |
 | **T2 Surface completeness** | E11-1 (+E7-1/E7-3/E7-5) | full HOF/closures; operator syntax (RFC-0025); committed L3 EBNF grammar (RFC-0030, RFC-0006 Q3/Q8 resolved); generics/traits/effects stable | ⏳ open |
 | **T3 Runtime & concurrency** | E12-1 (+E7-2) | real scheduler; full RFC-0008 vocabulary executes; deadlock-freedom checked; memory reclamation (RFC-0027); supervision/cancellation | ⏳ open |
 | **T4 Stdlib in Mycelium** | E13-1 | the stdlib + core libs **written in `.myc`** (RFC-0031), differential-tested, stable APIs; Rust std-`*` beyond the bare core superseded by `.myc` | ⏳ open |
 | **T5 FFI & system** | E14-1 | capability-based FFI (RFC-0028); `wild` executes; real io/fs/sys bindings; ADR-014 unsafe floor confined + audited | ⏳ open |
-| **T6 Native AOT maturity** | E15-1 (+E6-1) | full libMLIR lowering; EXPLAIN-able optimization passes (RFC-0029); JIT; interp ≡ AOT ≡ JIT differential durable | ⏳ open |
+| **T6 Native AOT maturity** | E15-1 (+E6-1) | full libMLIR lowering; EXPLAIN-able optimization passes (RFC-0029); JIT; interp ≡ AOT ≡ JIT differential durable | **→ `1.1` (un-gated 2026-06-23; QoL/perf, not a 1.0.0 blocker — §8 Q4)** |
 | **T7 Toolchain/IDE/dist** | E16-1 (+E9-1) | full LSP (completions/hover/semantic tokens); highlighting shipped (RFC-0026); package publish/resolve; reproducible install | ⏳ open |
 | **T8 Docs & stability** | E17-1 | language reference + tutorial; per-module stdlib docs; stability/API-compat guarantees (ADR-023); `lang` SemVer enacted; **MIT-only licensing audited** (§7) | ⏳ open |
 | **T9 Self-hosting** | E18-1 | **1.0.0 bar (Q1):** the core stdlib/corelib is self-hosted in Mycelium so no dev must hand-write L0/L1 (with T4); self-hosting CI gate green for that slice (DN-14, DN-26). The full toolchain/compiler self-host (zero-Rust) **trails to the long-term arc (§10)** — not a 1.0.0 blocker | ⏳ open |
@@ -97,7 +113,7 @@ usable, not yet zero-Rust.
 ## 6. Sequencing (high level; DN-25 has the dependency graph)
 
 T1 (core gate) and T2 (surface) run first and in parallel; T4 (stdlib in Mycelium) depends on T2;
-T3/T5 (runtime/FFI) enable T4's system-touching modules; T6 (AOT) is perf, gated on T1; T7/T8 are
+T3/T5 (runtime/FFI) enable T4's system-touching modules; **T6 (AOT) is deferred to `1.1`** (perf/QoL, §8 Q4); T7/T8 are
 continuous; T9 (self-hosting) is the capstone, depending on T2 + T4. The `core 1.0.0` tag (T1) can
 land long before `lang 1.0.0`.
 
@@ -132,6 +148,12 @@ land long before `lang 1.0.0`.
   `core`'s axis; ADR-018 mechanics apply per-axis). *Post-1.0.0 (§10):* once `lang 1.0.0` is reached and
   satisfied, the monorepo is decomposed into component repos + phylum re-export repos and flipped to a
   public MIT corpus.
+- **Q4 (T6 native AOT a 1.0.0 blocker?) — RESOLVED: NO.** T6 (native AOT maturity / optimization
+  passes / JIT / BitNet accel — epic E15-1) is **rolled to `1.1`** as a QoL/perf enhancement, patched
+  in after 1.0.0. `lang 1.0.0` ships on the **interpreter (the trusted base — correct execution)** plus
+  the existing direct-LLVM kernel-subset path; optimized native codegen is *performance, not
+  correctness*, so it does not gate the release. T6 is removed from the §5 gate (→ `1.1`) and `aot10`
+  leaves the 1.0.0 waves (it runs post-1.0.0, alongside the T9 self-host capstone).
 
 ## 9. Grounding & honesty
 
@@ -166,3 +188,13 @@ Recorded so the program stays honest about where it ends — these are **vision,
   (usable without hand-L0/L1); full toolchain self-host trails. Q2 MIT = first-party only; deps keep
   their licenses. Q3 `lang` starts `0.1.0` now. Added §10 long-term vision (zero-Rust end state;
   post-1.0.0 repo decomposition + public-MIT flip → DN-27).
+- 2026-06-23 — **Track T1 status refreshed** (maintainer; kickoff `c10`). §4/§5 T1 rows A2/A3/A4
+  marked **met**, grounded in the prior kernel-gate landing (A2 → M-653/#306; A3 → M-654/#313; A4 →
+  M-652/#303; 2026-06-21) with the tooling still present — so T1 is **gate-met / tag-ready**. No
+  criteria changed (the §5 Definition of Done is untouched); this is a status report moving forward on
+  a checked basis (VR-5), not a fresh gate run. The only remaining T1 item is the **maintainer-reserved
+  core `1.0.0` tag act** (M-703 / M-655). ADR-021 stays **Superseded** — its inherited enactment now
+  attaches to ADR-022 T1 at the tag.
+- 2026-06-23 — **Q4 resolved** (maintainer): **T6 (native AOT maturity / optimization / JIT, E15-1)
+  un-gated from 1.0.0 → `1.1`** (QoL/perf, patched in after release; 1.0.0 runs on the interpreter +
+  direct-LLVM kernel subset). Removed T6 from the §5 gate + §3 scope; `aot10` leaves the 1.0.0 waves.
