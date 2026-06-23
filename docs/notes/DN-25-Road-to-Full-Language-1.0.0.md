@@ -34,7 +34,7 @@ Mycelium (`.myc`), stable, and fully usable**.
 | **T3** Runtime & concurrency execution maturity | **E12-1** | RFC-0027 (memory mgmt & reclamation) | `r10` | 7 |
 | **T4** Standard library **in Mycelium** | **E13-1** | RFC-0031 (self-hosted stdlib composition) | `lib10` | 5 |
 | **T5** FFI & system interface | **E14-1** | RFC-0028 (FFI & system interface) | `ffi10` | 7 |
-| **T6** Native AOT maturity, optimization & accel | **E15-1** | RFC-0029 (AOT opt, codegen maturity & JIT) | `aot10` | 6 |
+| **T6** Native AOT maturity, optimization & accel — **→ `1.1` (post-1.0.0; ADR-022 §8 Q4)** | **E15-1** | RFC-0029 (AOT opt, codegen maturity & JIT) | `aot10` | 6 |
 | **T7** Toolchain, IDE & package distribution | **E16-1** | RFC-0026 (editor highlighting grammar) | `tool10` | 8 |
 | **T8** Documentation, stability & release | **E17-1** | ADR-023 (stability & API-compat guarantees) | `rel10` | 8 |
 | **T9** Self-hosting capstone | **E18-1** | DN-26 (self-hosting bootstrap plan) | `boot10` | 5 |
@@ -66,14 +66,14 @@ lang axis:   T2 (E11-1) ─┬─► T4 (E13-1) ─┬─► T9 (E18-1) ─► l
                          │               │
              T3 (E12-1) ─┘               │   (T8 docs/stability + T7 tooling: continuous)
              T5 (E14-1) ─► (system libs in T4)
-             T6 (E15-1)  (perf; gated on T1; parallel)
+             T6 (E15-1)  (perf — DEFERRED to 1.1, ADR-022 §8 Q4; post-1.0.0, off the gate)
 ```
 
 - **Wave A (now, parallel):** T1 (core gate) ∥ T2 (surface) ∥ T7/T8 continuous tooling/docs.
 - **Wave B:** T3 (runtime) ∥ T5 (FFI) — unblock the system-touching stdlib modules.
 - **Wave C:** T4 (stdlib in Mycelium) — the heart; depends on T2 (+ T3/T5 for system modules).
 - **Wave D:** T9 (self-hosting capstone) — depends on T2 + T4; then T8/M-738 cuts `lang 1.0.0`.
-- **Anytime:** T6 (native AOT/perf) — gated only on T1; the interpreter stays the trusted base.
+- **Post-1.0.0 (not a gate):** T6 (native AOT/perf — `aot10`) is **rolled to `1.1`** (ADR-022 §8 Q4) — patched in as a QoL/perf enhancement; the interpreter (+ direct-LLVM kernel subset) is the trusted 1.0.0 base. Runs post-1.0.0 alongside the T9 self-host capstone.
 
 ## 5. Kickoffs (the parallelizable heads)
 

@@ -4328,8 +4328,9 @@ issues:
       (optimization passes — no src/passes/ exists yet); M-725/727/728/729 are coverage-widening
       / formalization / capability-gating / differential-unification (see RFC-0029 §5/§7).
 
-      Mature the native AOT path into a real optimizing backend with performance suitable for a
-      usable 1.0. Per the re-scope above, the path is already substantial (E6-1 `done`: direct-LLVM
+      Mature the native AOT path into a real optimizing backend (a 1.1 track per ADR-022 §8 Q4 —
+      QoL/perf, not a 1.0.0 blocker; see the SCOPE note in the DoD below). Per the re-scope above,
+      the path is already substantial (E6-1 `done`: direct-LLVM
       backend + in-process JIT + BitNet accel + real MLIR-dialect lowering for the element-wise
       fragment + a three-way native differential). The interpreter stays the trusted base; the
       native path is the performance path. This epic delivers the REMAINING work:
@@ -4382,6 +4383,8 @@ issues:
         never-silent; accel result == reference ternary (Empirical) (M-728).
       - Three-way differential (interp == AOT == JIT) is mutant-witnessed (M-729).
       - just check green on crates/mycelium-mlir/ with all new features enabled.
+      - SCOPE (ADR-022 §8 Q4): this is a 1.1 track, NOT a 1.0.0 blocker — T6 native AOT is un-gated
+        (QoL/perf, patched in post-1.0.0; 1.0.0 runs on the interpreter + direct-LLVM kernel subset).
 
       Children:
       - M-725 -- libMLIR lowering coverage widening (beyond the M-601 element-wise fragment),
