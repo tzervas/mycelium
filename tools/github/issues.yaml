@@ -2073,15 +2073,15 @@ issues:
   - id: M-649
     title: "M-649 — Self-hosting Stage-2: first stdlib module written in Mycelium-lang L1 syntax"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P0, status:in-progress]
+    labels: [phase:5, type:feature, area:language, priority:P0, status:done]
     depends_on: [M-502, M-647, M-673, E7-3, E7-4]
     evidence_pr: 310
     evidence_date: 2026-06-21
-    landed_basis: "status:needs-design (NOT done) — evidence is a REFERENCE/partial, not a completed landing; git log 824449f (2026-06-21) 'docs: enactment & resolution sweep (M-647/648/650 done; M-381/646 closed; M-649 deferred)'; merged-PR-list #310 (cross-checked; no (#NNN) in the curated subject)"
+    landed_basis: "status:done — landed on main via #397 squash (2026-06-23); lib/std/result.myc self-hosts Result<A,E> + is_ok/is_err/unwrap_or + executable map/and_then/fold with inline docstrings; three-way differential green; DN-14 -> Resolved. Supersedes the 2026-06-21 deferral (HOF unblocked by E7-3; inline docstrings by E7-4)."
     doc_refs: [corpus:DN-14, corpus:RFC-0020, corpus:RFC-0007, src:docs/spec/stdlib, src:crates/mycelium-l1/src/lib.rs]
     body: |
       M-502 produced the honest verdict: self-hosting NOT YET established. Gate-fails (5): generics, trait interfaces, effect annotations, wild/FFI blocks, static guarantee index. PRESENT (5): value types + ADTs, pattern matching, functions + recursion, let/lambda, nodule organization.
-      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      landed on main via #397 squash-merge (2026-06-23)
 
       Self-hosting does NOT require all 11 features. It requires ≥1 stdlib module written in Mycelium-lang that passes myc-check and meets the M-501 guarantee/EXPLAIN contract. The 5 present features are SUFFICIENT for a pure-function module with no generics, traits, effects, or FFI.
 
@@ -2104,7 +2104,7 @@ issues:
       - Phase 5 gate logged as "partially met" (first module in Mycelium-lang exists)
       - DN-14 Status: Resolved (with honest recording of remaining gate-fails — no silent upgrade)
       DEFERRED (2026-06-21, M-648 editorial sweep): scoped post-1.0 per ADR-021 §5. The 5 gate-fails (generics, trait interfaces, effect annotations, wild/FFI, static guarantee index) block all non-trivial stdlib authoring in Mycelium-lang; the 5 present features are insufficient for any module in the RFC-0016 taxonomy. This issue stays OPEN; resumption requires Stage-1 generics/traits RFC amendments (Phase-6). DN-14 deferral note appended (2026-06-21).
-      RESUMED (2026-06-23, run-kickoff capstone): unblocked by M-673 (generics/traits run to closed L0). First-order combinators (is_ok/is_err/unwrap_or) + differential tests + DN-14 Status->Resolved are DONE on branch claude/feat/m649-std-result; map/and_then/fold are captured as RFC-0024-syntax pseudocode in lib/std/result.pending-hof.md (mycfmt v0 refuses interior comments — E7-4 fixes that, then the docstrings + combinators move inline). Per maintainer (2026-06-23) M-649 is HELD and lands COMPLETE: the pseudocode is swapped for executable map/and_then/fold once E7-3 (HOF) lands and is pulled down. status -> in-progress; depends_on E7-3 (combinators) + E7-4 (inline docstrings).
+      RESUMED (2026-06-23, run-kickoff capstone): unblocked by M-673 (generics/traits run to closed L0). First-order combinators (is_ok/is_err/unwrap_or) + differential tests + DN-14 Status->Resolved are DONE on branch claude/feat/m649-std-result; map/and_then/fold are captured as RFC-0024-syntax pseudocode in lib/std/result.pending-hof.md (mycfmt v0 refuses interior comments — E7-4 fixes that, then the docstrings + combinators move inline). Per maintainer (2026-06-23) M-649 is HELD and lands COMPLETE: the pseudocode is swapped for executable map/and_then/fold once E7-3 (HOF) lands and is pulled down. status -> in-progress; depends_on E7-3 (combinators) + E7-4 (inline docstrings). LANDED COMPLETE on main via #397 squash (2026-06-23): E7-3 (HOF) + E7-4 (inline docstrings) landed, so map/and_then/fold are executable inline; status -> done.
 
   - id: M-650
     title: "M-650 — DN-11 Next Wave Plan: capture Phase 5 completion summary + Phase 6 road map"
@@ -2612,12 +2612,12 @@ issues:
   - id: E7-3
     title: "E7-3 (epic) — L1 Higher-Order Functions via Static Defunctionalization (RFC-0024)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:epic, area:language, priority:P1, status:done]
     depends_on: [M-673]
     epic: E7
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, corpus:DN-14, src:crates/mycelium-l1/src/mono.rs]
     body: |
-      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      landed on main via #397 squash-merge (2026-06-23)
       Capstone of the `run` kickoff: make higher-order functions RUN so the stdlib combinators
       (`map`/`and_then`/`fold`) can self-host. The v0 surface is first-order (no function type `A -> B`
       as a value); this epic adds a minimal HOF surface and lowers it by **static defunctionalization**
@@ -2640,7 +2640,7 @@ issues:
   - id: M-684
     title: "M-684 — spec(rfc-0024): Higher-Order Functions via Static Defunctionalization"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: [M-673]
     epic: E7-3
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, src:lib/std/result.myc]
@@ -2657,7 +2657,7 @@ issues:
   - id: M-685
     title: "M-685 — feat(l1): function-type surface `A -> B` + named-fn-as-value (parser + AST)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-684]
     epic: E7-3
     doc_refs: [corpus:RFC-0007, src:crates/mycelium-l1/src/parse.rs, src:crates/mycelium-l1/src/ast.rs]
@@ -2669,11 +2669,11 @@ issues:
       Single-arg arrow only in v1 (multi-arg deferred — FLAG). Serial-on-L1 (shares ast.rs/parse.rs with the
       rest of E7-3 and with E7-4's optional anchoring fallback). Acceptance: `f: A -> B` parses to
       `BaseType::Fn`; `map(mk_ok(), double)` parses with `double` as `Path`; conformance corpus green.
-      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      landed on main via #397 squash-merge (2026-06-23)
   - id: M-686
     title: "M-686 — feat(l1): checker — `Ty::Fn`, fn-value typing, higher-order application, inference"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-685]
     epic: E7-3
     doc_refs: [corpus:RFC-0019, src:crates/mycelium-l1/src/checkty.rs]
@@ -2685,11 +2685,11 @@ issues:
       of the new `unify` Fn arm. Every refusal explicit (G2); guarantee Declared. Acceptance: map/and_then/
       fold over Result type-check; arrow-type mismatch + generic-fn-as-value + partial application all refuse
       explicitly; `cargo test -p mycelium-l1` green.
-      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      landed on main via #397 squash-merge (2026-06-23)
   - id: M-687
     title: "M-687 — feat(l1): defunctionalizing monomorphization (specialize HOF by static fn argument)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-686]
     epic: E7-3
     doc_refs: [corpus:RFC-0019, corpus:RFC-0007, src:crates/mycelium-l1/src/mono.rs]
@@ -2703,11 +2703,11 @@ issues:
       (closures, dynamic fn-flow, partial application, generic-fn-as-value). Acceptance: `map(mk_ok(),double)`
       monomorphizes to closed first-order L0 and runs (three paths agree); dynamic-fn case = explicit
       Residual; determinism (mono twice = byte-equal); `cargo test -p mycelium-l1` green.
-      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      landed on main via #397 squash-merge (2026-06-23)
   - id: M-688
     title: "M-688 — test(l1): HOF capability differential + conformance (map/and_then/fold to closed L0)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:verification, area:language, priority:P1, status:done]
     depends_on: [M-687]
     epic: E7-3
     doc_refs: [src:crates/mycelium-l1/tests/differential.rs, src:crates/mycelium-l1/src/mono.rs]
@@ -2718,16 +2718,16 @@ issues:
       termination. Conformance accept fixture (function type + fn-value) and a reject fixture (malformed
       arrow / partial application) — orchestrator owns the docs/spec/grammar corpus + mycelium.ebnf.
       Acceptance: the differential + property tests pass; `just check` green.
-      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      landed on main via #397 squash-merge (2026-06-23)
   - id: E7-4
     title: "E7-4 (epic) — Comment-preserving mycfmt (docstrings survive the formatter)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:epic, area:toolchain, priority:P1, status:in-progress]
+    labels: [phase:8, type:epic, area:toolchain, priority:P1, status:done]
     depends_on: []
     epic: E7
     doc_refs: [src:crates/mycelium-l1/src/lexer.rs, src:crates/mycelium-fmt/src/lib.rs, src:docs/spec/Mycfmt-Formatter-Contract.md]
     body: |
-      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      landed on main via #397 squash-merge (2026-06-23)
       Hard requirement (maintainer, 2026-06-23): docstring-style "why" comments must be writable in `.myc`
       code and survive `mycfmt`. Today the lexer discards `//` comments as trivia and `mycfmt` rebuilds the
       body from the AST, so to avoid silently dropping comments (G2) it REFUSES any interior or extra-header
@@ -2744,7 +2744,7 @@ issues:
   - id: M-689
     title: "M-689 — feat(l1): lexer captures // comments into a side table (mycfmt stage 1)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:in-progress]
+    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:done]
     depends_on: []
     epic: E7-4
     doc_refs: [src:crates/mycelium-l1/src/lexer.rs]
@@ -2755,11 +2755,11 @@ issues:
       IN PROGRESS (branch claude/feat/mycfmt-comments-lexer, SHA c3ff439) — capture + 10 tests green.
       Acceptance: existing lexer tests green; lex_with_comments returns correct text/line/trailing for
       full-line/trailing/consecutive/blank-separated/header comments; exact capture, never-silent (G2).
-      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      landed on main via #397 squash-merge (2026-06-23)
   - id: M-690
     title: "M-690 — feat(fmt): mycfmt interleaves preserved comments (replace refusal with placement)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:in-progress]
+    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:done]
     depends_on: [M-689]
     epic: E7-4
     doc_refs: [src:crates/mycelium-fmt/src/lib.rs, src:crates/mycelium-l1/src/lexer.rs]
@@ -2773,11 +2773,11 @@ issues:
       `Item`/`Arm` line-number addition serializes on L1 with E7-3 (FLAG). Acceptance: docstring/interior/
       trailing comments format canonically, preserved, idempotent + round-tripping; previously-refusing tests
       updated to assert preservation; `just check` green.
-      implemented on the l1-capstone head (2026-06-23); pending the integration→main PR
+      landed on main via #397 squash-merge (2026-06-23)
   - id: M-691
     title: "M-691 — test+spec: mycfmt comment-preservation conformance + contract enactment + api-index"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:verification, area:toolchain, priority:P2, status:needs-design]
+    labels: [phase:8, type:verification, area:toolchain, priority:P2, status:done]
     depends_on: [M-690]
     epic: E7-4
     doc_refs: [src:crates/mycelium-fmt/tests/conformance.rs, src:docs/spec/Mycfmt-Formatter-Contract.md]
