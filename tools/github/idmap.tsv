@@ -260,3 +260,81 @@ M-679	364	4718169370
 M-678	365	4718169368
 M-682	366	4718169375
 M-683	367	4718169394
+# 2026-06-23 (M-675, tul): SECOND idmap reconcile pass — the Phase-5/6/7/8 backlog + gap-closure
+#   epics created AFTER the 2026-06-23 pass above (issues #404-485). Every id below mapped
+#   id -> number -> db_id with db_ids FETCHED LIVE (the GitHub MCP `search_issues` `id` field —
+#   `issue_read`/`list_issues` strip the REST id; `search_issues` exposes it), never guessed
+#   (G2/VR-5). Cross-validated this run: all 209 PRE-EXISTING rows still match live GitHub
+#   (0 mismatches in number AND db_id); the 4 known duplicate task-ids (M-302/330/342/348) still
+#   anchor to their canonical (lower) number; no duplicate task-id, no duplicate issue-number across
+#   the whole map. Rows below sorted by issue number. Append-only (rows/notes above unchanged).
+M-685	404	4726560925
+M-688	405	4726560927
+M-684	406	4726560943
+M-687	407	4726560940
+M-686	408	4726560946
+E7-3	409	4726560950
+E7-4	410	4726561420
+M-690	411	4726561459
+M-689	412	4726561469
+E7-5	413	4726561487
+M-691	414	4726561488
+M-692	415	4726561499
+M-697	424	4727426640
+M-695	425	4727426638
+E9-1	426	4727426648
+M-693	427	4727426655
+M-696	428	4727426653
+M-694	429	4727426679
+M-700	430	4727426997
+M-701	431	4727427011
+M-702	432	4727427028
+E10-1	433	4727427027
+M-703	434	4727427044
+E11-1	435	4727427057
+M-704	436	4727427325
+M-705	437	4727427337
+M-708	438	4727427357
+M-707	439	4727427358
+M-706	440	4727427368
+E18-1	441	4727427381
+M-739	442	4727427603
+M-740	443	4727427640
+M-741	444	4727427678
+M-742	445	4727427680
+E12-1	446	4727427705
+M-709	447	4727427769
+M-710	448	4727428205
+M-712	449	4727428267
+M-711	450	4727428276
+M-713	451	4727428300
+E14-1	452	4727428307
+M-720	453	4727428373
+M-721	454	4727428503
+M-722	455	4727428544
+M-723	456	4727428595
+M-724	457	4727428702
+E13-1	458	4727428707
+E15-1	465	4727429185
+E16-1	471	4727429412
+M-730	472	4727429559
+M-731	473	4727429558
+M-732	474	4727429586
+M-733	475	4727429640
+M-734	476	4727429722
+E17-1	477	4727429736
+M-735	478	4727429853
+M-736	479	4727429879
+M-737	480	4727429915
+M-738	481	4727429940
+M-743	482	4727430060
+M-744	485	4727582260
+# FLAG (authored-ahead, NOT in this map — never invented; G2): 11 issues.yaml ids have NO live GitHub
+#   issue yet — M-714 M-715 M-716 M-717 M-718 M-719 (epic E13-1 children) and
+#   M-725 M-726 M-727 M-728 M-729 (epic E15-1 children). A prior `--issues` create run materialized
+#   their siblings (M-709-713/#447-451, M-720-724/#453-457, M-730-734/#472-476) but skipped these.
+#   They are a `gh-issues-sync.py --issues` create-if-absent follow-up (owned by the issue-creating
+#   flow, not tul, which maps ids<->live issues and does not create/re-status). A number cannot be
+#   mapped for a non-existent issue (a number-only/db-id-only row would still be a guess) — so they
+#   stay uncovered + flagged here until created. After creation: 281/281 issues.yaml ids covered;
+#   currently 270/281 (all 11 gaps are exactly these authored-ahead ids).
