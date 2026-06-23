@@ -4793,7 +4793,8 @@ issues:
   - id: E17-1
     title: "E17-1 (epic) — Documentation, stability guarantees & 1.0.0 release"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:epic, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:epic, area:release, priority:P1, status:in-progress]
+    landed_basis: "status:in-progress (2026-06-23) — 3 of 4 children done: M-735 (language reference + tutorial, docs/reference/, with a parser-verified conformance fixture), M-736 (generated stdlib API docs — lib/std wired into mycelium-doc + per-fn source-comment extraction, std.result covered, gaps flagged), M-737 (ADR-023 Draft->Proposed->Accepted). M-738 (the release act) is BLOCKED on the external deps E13-1 + E18-1 (both needs-design) and ADR-022 enactment — the 1.0.0 tag is NOT cut (G2 / house rule #3). Epic completes when E13-1 + E18-1 close and M-738 fires."
     depends_on: [E13-1, E18-1]
     epic: E17
     doc_refs: [corpus:ADR-023, corpus:ADR-022, corpus:DN-25]
@@ -4842,7 +4843,7 @@ issues:
   - id: M-735
     title: "M-735 — docs(release): language reference + tutorial"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:docs, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:docs, area:release, priority:P1, status:done]
     epic: E17-1
     doc_refs: [corpus:DN-25, corpus:ADR-023]
     body: |
@@ -4874,7 +4875,7 @@ issues:
   - id: M-736
     title: "M-736 — docs(stdlib): generated per-module stdlib API docs"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:docs, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:docs, area:release, priority:P1, status:done]
     epic: E17-1
     doc_refs: [corpus:DN-25, corpus:ADR-023]
     body: |
@@ -4903,7 +4904,7 @@ issues:
   - id: M-737
     title: "M-737 — design(release): stability & API-compatibility guarantees (ADR-023)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:design, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:design, area:release, priority:P1, status:done]
     epic: E17-1
     doc_refs: [corpus:ADR-023, corpus:ADR-022, corpus:DN-25]
     body: |
@@ -4935,7 +4936,8 @@ issues:
   - id: M-738
     title: "M-738 — chore(release): full-language 1.0.0 release act"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:chore, area:release, priority:P1, status:needs-design]
+    labels: [phase:8, type:chore, area:release, priority:P1, status:blocked]
+    landed_basis: "status:blocked (2026-06-23) — the release act is NOT performed: its external gate deps are unmet. E13-1 (self-hosting stdlib) is needs-design (only lib/std/result.myc self-hosts — 1 of 25 modules); E18-1 (full-language readiness) is needs-design; ADR-022 is Accepted (NOT Enacted) with sub-gate rows A2/A3/A4 still open. Per the rel10 kickoff + house rule #3 / G2, the tag is NOT cut and ADR-021/ADR-022 stay Accepted (no Enacted). M-737 (ADR-023 Accepted) IS done; this task unblocks only when E13-1 + E18-1 + every ADR-022 gate row are confirmed closed."
     epic: E17-1
     doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:DN-25]
     body: |
