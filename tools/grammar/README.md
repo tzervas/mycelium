@@ -1,4 +1,4 @@
-# Editor grammars (M-731; RFC-0026)
+# Editor grammars (M-731; RFC-0026 Accepted)
 
 Three-layer syntax-highlighting stack for `.myc`, **generated** from the canonical L1 lexer so it
 can never silently diverge from the language the compiler actually accepts (G2):
@@ -25,13 +25,28 @@ just drift-check     # the CI gate: committed grammars must match a fresh regene
 `drift-check` is wired into `just check`; it fails CI if the committed grammars drift from the
 lexer.
 
-## Status — SCAFFOLD, not finalized (honesty, VR-5/G2)
+## Scope names — ratified (RFC-0026 §3.2, Accepted)
 
-> **RFC-0026 (the binding scope-name decision) is still `Draft`.** Per the M-731 sequencing, the
-> generator and drift gate are complete, but the **TextMate / tree-sitter scope names** — the open
-> question of RFC-0026 §3.2 — are emitted as explicit `TODO.rfc-0026.*` placeholders. They are
-> **not** the ratified scope-name table and must not be treated as final. The scope-name mapping is
-> finalized (and this note removed) when RFC-0026 is Accepted (M-693 Done); the generator is then
-> re-run to replace the placeholders. The keyword *set* and *class buckets* are already
-> lexer-derived and gated, so the highlighting wiring is real today — only the colour-category
-> names await ratification.
+The TextMate / tree-sitter / LSP scope names are the **ratified RFC-0026 §3.2 table**: standard
+TextMate / tree-sitter / LSP names with a `.mycelium` suffix (chosen for maximal theme
+compatibility — every existing theme colors `.myc` with no theme work). The keyword/type/scalar/
+strength **buckets** are mechanically derived from the lexer; the **names** they render to are fixed
+by the RFC:
+
+| Lexer bucket | TextMate scope | tree-sitter capture | LSP token type |
+|---|---|---|---|
+| `keyword` | `keyword.control.mycelium` | `@keyword` | `keyword` |
+| `type` | `storage.type.mycelium` | `@type` | `type` |
+| `scalar` | `support.type.builtin.mycelium` | `@type.builtin` | `type` |
+| `strength` | `storage.modifier.guarantee.mycelium` | `@attribute` | `enumMember` |
+| comment | `comment.line.double-slash.mycelium` | `@comment` | `comment` |
+| numeric | `constant.numeric.mycelium` | `@number` | `number` |
+
+A change to this table **supersedes** RFC-0026 (append-only); the generator is then re-run.
+
+## Status & follow-ups
+
+The TextMate grammar, the tree-sitter keyword-accurate scaffold, and the LSP semantic-token legend
+ship at the E9-1 / E16-1 gate (M-731). The **full structural tree-sitter grammar** (productions
+beyond the reserved-word set) and the **VS Code extension + GitHub Linguist registration** are the
+**M-697** community follow-up named in RFC-0026 §3.1/§3.4 — not part of this gate.

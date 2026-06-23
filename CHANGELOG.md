@@ -8,6 +8,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-23: RFC-0026 → Accepted — editor-grammar scope names ratified; M-693 done, M-731 finalized; E16-1 epic `done`)
+
+- **RFC-0026 — Editor Syntax Highlighting Grammar → Accepted** (M-693, the E9-1 gate; Draft → Proposed
+  → Accepted same day, maintainer-ratified). §3 fixed normatively: **§3.1** artifact scope (the three
+  grammar layers — TextMate · tree-sitter · LSP semantic tokens — are the E9-1/E16-1 gate; the VS Code
+  extension + GitHub Linguist registration are the **M-697** follow-up); **§3.2** the scope-name table
+  — **standard TextMate / tree-sitter / LSP names** with a `.mycelium` suffix (chosen for maximal theme
+  compatibility, §5 Q2) mapped over the **lexer-derived** keyword/type/scalar/strength buckets; **§3.3**
+  the single-source-of-truth/drift contract (already implemented: `tools/grammar/generate.py` +
+  `just drift-check`). **DN-24 → Resolved** (its recommended layered stack adopted). (M-693; RFC-0026)
+- **M-731 finalized — editor grammars now ship ratified scope names.** The `TODO.rfc-0026.*`
+  placeholders are replaced with the RFC-0026 §3.2 names: TextMate (`keyword.control.mycelium`,
+  `storage.type.mycelium`, `support.type.builtin.mycelium`, `storage.modifier.guarantee.mycelium`,
+  `comment.line.double-slash.mycelium`, `constant.numeric.mycelium`), tree-sitter captures
+  (`@keyword`/`@type`/`@type.builtin`/`@attribute`/…), and the LSP legend (the M-730 semantic-token
+  types are that table's LSP layer). Still **lexer-derived + drift-checked** (G2 — `just drift-check`
+  green). Subsumes the E9-1 leaves **M-694** (TextMate) / **M-695** (tree-sitter scaffold) / **M-696**
+  (LSP semantic tokens). The full structural tree-sitter grammar + M-697 packaging remain follow-ups.
+  (M-731; M-694/M-695/M-696)
+- **Epic E16-1 → `done`** (all five children landed: M-730/M-731/M-732/M-733/M-734). **E9-1 →
+  `in-progress`** (M-693 + M-694/M-695/M-696 done; **M-697** VS Code extension + Linguist remains). (E16-1; E9-1)
+
 ### Added (2026-06-23: ADR-024 — Core 1.0.0 Gate (T1) scope amendment, enacting RFC-0032 D6 append-only)
 
 - **ADR-024 — Core 1.0.0 Gate (Track T1) Scope Amendment → Accepted.** The house-rule-correct
@@ -55,8 +77,8 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   required vs the recursive-ADT `List`, string repr, width-generics ownership, the core-1.0.0-vs-post-1.0.0
   placement against ADR-022, and sequencing). Epic **E19-1** + issues **M-746** (RFC authoring, the gate)
   → **M-747** (comparison prim) · **M-748** (binary arithmetic) · **M-749** (sequence repr) · **M-750**
-  (byte/string repr) · **M-751** (width-generic fns — ownership per RFC-0032 Q5) → **M-752** (conformance
-  + `.myc` smoke ports). Cross-leg continuity wired via `depends_on`: E13-1 M-716 ⟸ M-749, M-717 ⟸ M-750,
+  (byte/string repr) · **M-751** (width-generic fns — ownership per RFC-0032 Q5) → **M-752** (conformance +
+  `.myc` smoke ports). Cross-leg continuity wired via `depends_on`: E13-1 M-716 ⟸ M-749, M-717 ⟸ M-750,
   M-718 ⟸ M-747/M-748/M-751. Kickoff **`kpr`** stowed (`.claude/kickoffs/kpr.md`, registered in the
   index) — owns `crates/mycelium-interp/src/prims.rs` + the `prim_kernel_name` map; the `mycelium-core`
   reprs + L1 width-generics are flagged **coordinated** with `c10`/`s10` (maintainer sign-off on the

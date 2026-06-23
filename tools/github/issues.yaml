@@ -2822,7 +2822,8 @@ issues:
   - id: E9-1
     title: "E9-1 (epic) — Editor syntax highlighting & grammar distribution (DN-24)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:epic, area:toolchain, priority:P2, status:needs-design]
+    labels: [phase:8, type:epic, area:toolchain, priority:P2, status:in-progress]
+    landed_basis: "status:in-progress (2026-06-23) — M-693 (RFC-0026 Accepted) + M-694/M-695/M-696 done (the three grammar layers — TextMate, tree-sitter scaffold, LSP semantic tokens — ship via M-731/M-730). M-697 (reference VS Code extension + GitHub Linguist registration) remains; epic completes when M-697 lands."
     depends_on: []
     epic: E9
     doc_refs: [corpus:DN-24, src:crates/mycelium-l1/src/token.rs, src:crates/mycelium-lsp]
@@ -2843,7 +2844,8 @@ issues:
   - id: M-693
     title: "M-693 — spec(rfc-0026): editor syntax-highlighting grammar(s) + scope-name conventions"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:spec, area:toolchain, priority:P2, status:needs-design]
+    labels: [phase:8, type:spec, area:toolchain, priority:P2, status:done]
+    landed_basis: "status:done (2026-06-23) — RFC-0026 authored + ratified (Draft→Proposed→Accepted): artifact scope (§3.1), the scope-name table (§3.2 — standard TextMate/tree-sitter/LSP names over lexer-derived buckets), and the single-source-of-truth/drift contract (§3.3, already implemented in tools/grammar/ + just drift-check). DN-24 → Resolved."
     depends_on: []
     epic: E9-1
     doc_refs: [corpus:DN-24, src:crates/mycelium-l1/src/token.rs]
@@ -2858,7 +2860,8 @@ issues:
   - id: M-694
     title: "M-694 — feat(tooling): TextMate grammar (.tmLanguage.json) generated from the lexer + drift-check"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:needs-design]
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
+    landed_basis: "status:done (2026-06-23) — subsumed by M-731: the TextMate grammar (mycelium.tmLanguage.json) is generated from the lexer keyword() table with the ratified RFC-0026 §3.2 scope names; just drift-check green in CI (G2)."
     depends_on: [M-693]
     epic: E9-1
     doc_refs: [corpus:DN-24, src:crates/mycelium-l1/src/token.rs]
@@ -2872,7 +2875,8 @@ issues:
   - id: M-695
     title: "M-695 — feat(tooling): tree-sitter grammar for Mycelium (modern editors + GitHub)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:8, type:feature, area:toolchain, priority:P3, status:done]
+    landed_basis: "status:done (2026-06-23) — subsumed by M-731: the tree-sitter grammar.js + highlights.scm keyword-accurate scaffold is generated from the lexer with the RFC-0026 §3.2 captures; the full structural grammar is the M-697 follow-up (RFC-0026 §3.4)."
     depends_on: [M-693]
     epic: E9-1
     doc_refs: [corpus:DN-24, src:crates/mycelium-l1/src/parse.rs]
@@ -2886,7 +2890,8 @@ issues:
   - id: M-696
     title: "M-696 — feat(lsp): semantic tokens in mycelium-lsp (type-aware highlighting overlay)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:needs-design]
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
+    landed_basis: "status:done (2026-06-23) — subsumed by M-730/M-731: mycelium-lsp textDocument/semanticTokens/full ships; its legend is the LSP layer of the ratified RFC-0026 §3.2 table (keyword/type/enumMember/...)."
     depends_on: [M-693]
     epic: E9-1
     doc_refs: [corpus:DN-24, src:crates/mycelium-lsp/src/lib.rs]
@@ -4887,8 +4892,8 @@ issues:
   - id: E16-1
     title: "E16-1 (epic) — Toolchain, IDE & package distribution"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:epic, area:toolchain, priority:P2, status:in-progress]
-    landed_basis: "status:in-progress (2026-06-23) — 4 of 5 children done (M-730/M-732/M-733/M-734); M-731 is a scaffold blocked on RFC-0026 §3.2 (M-693, E9-1). Epic completes when RFC-0026 is Accepted and M-731's scope-name table is finalized."
+    labels: [phase:8, type:epic, area:toolchain, priority:P2, status:done]
+    landed_basis: "status:done (2026-06-23) — all 5 children done: M-730 (full LSP), M-731 (editor grammars finalized — RFC-0026 Accepted, scope names ratified), M-732 (spore registry), M-733 (myc UX), M-734 (reproducible dist). just check green; guarantee tags at honest strength (VR-5)."
     depends_on: [E9-1]
     epic: E16
     doc_refs: [corpus:RFC-0026, corpus:DN-24, corpus:DN-25]
@@ -4965,8 +4970,8 @@ issues:
   - id: M-731
     title: "M-731 — feat(tooling): editor syntax highlighting delivery (RFC-0026)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:in-progress]
-    landed_basis: "status:in-progress (2026-06-23) — SCAFFOLD landed: tools/grammar/generate.py derives the keyword set + class buckets from token.rs::keyword() and renders TextMate + tree-sitter artifacts; `just drift-check` wired into `just check` (G2 — no silent lexer divergence). Scope names are TODO.rfc-0026.* stubs because RFC-0026 §3.2 is still Draft (M-693 not Done) — the scope-name table is NOT finalized (never guessed, VR-5). Completes when RFC-0026 is Accepted and the generator is re-run."
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
+    landed_basis: "status:done (2026-06-23) — RFC-0026 Accepted (M-693); the TODO.rfc-0026.* placeholders replaced with the ratified §3.2 scope names; TextMate + tree-sitter scaffold + the M-730 LSP legend all ship from the lexer keyword() table; just drift-check green in just check (G2). Subsumes M-694/M-695/M-696. VS Code extension + GitHub Linguist remain M-697."
     epic: E16-1
     doc_refs: [corpus:RFC-0026, corpus:DN-24, corpus:DN-25, src:crates/mycelium-lsp/src/lib.rs]
     body: |

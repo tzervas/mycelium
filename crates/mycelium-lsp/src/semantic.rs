@@ -1,10 +1,11 @@
 //! **Semantic-tokens provider** (M-730; `textDocument/semanticTokens/full`).
 //!
 //! Classifies the lexical token stream into LSP semantic-token types and emits the protocol's
-//! relative-delta encoding. This is the **foundation M-731 extends**: M-731 (RFC-0026) maps this
-//! legend to the editor-grammar scope names; until RFC-0026 is Accepted, the legend uses the
-//! LSP-standard type names (which are independent of the TextMate scope-name table still open in
-//! RFC-0026 §3.2).
+//! relative-delta encoding. The legend is the **LSP layer of the ratified RFC-0026 §3.2 scope-name
+//! table** (Accepted): `keyword`/`type`/`enumMember`/`number`/`operator`/`comment`/`variable` — the
+//! standard LSP token types the table maps each lexer bucket to (e.g. the guarantee-strength bucket
+//! → `enumMember`, the substrate/scalar types → `type`). The TextMate/tree-sitter layers of the same
+//! table live in `tools/grammar/` (M-731), generated from the same lexer `keyword()`.
 //!
 //! Scope and honesty (`Declared`): classification is **purely lexical/token-kind** — every
 //! identifier is `variable` because the lexer cannot tell a function name from a binding without
@@ -19,8 +20,9 @@ use mycelium_l1::token::Tok;
 use crate::span::{lex_items, LexItem, LexKind};
 
 /// The semantic-token **type legend**, in index order. The encoded stream's `tokenType` field is an
-/// index into this list (LSP §`semanticTokens`). The names are the LSP-standard types; M-731 maps
-/// them onto RFC-0026 scope names for the TextMate/tree-sitter grammars.
+/// index into this list (LSP §`semanticTokens`). These are the standard LSP token types the ratified
+/// RFC-0026 §3.2 table maps each lexer bucket to (the TextMate/tree-sitter names of the same table
+/// live in `tools/grammar/`).
 pub const TOKEN_TYPES: &[&str] = &[
     "keyword",    // 0 — reserved words (declaration + control + runtime vocabulary)
     "type",       // 1 — substrate/representation types (Binary/Ternary/Dense/VSA/…) + scalars

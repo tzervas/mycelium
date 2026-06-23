@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-24 |
-| **Status** | **Draft** (2026-06-23) |
+| **Status** | **Resolved** (2026-06-23 — the binding decision landed as **RFC-0026 (Accepted)**; this note's recommended layered stack + single-source-of-truth rule were adopted) |
 | **Feeds** | RFC-0006 (lexer/grammar); DN-02/DN-03 (lexicon/syntax); `crates/mycelium-lsp`; E9-1 (editor-highlighting leg) |
 | **Date** | June 23, 2026 |
 | **Decides** | *Nothing normatively* — advisory. Records the design space for **editor syntax highlighting** (coloring `.myc` code) and the recommended **layered** approach, so the "make Mycelium readable in any editor" capability is tracked + grounded before it is built. A binding decision is deferred to **RFC-0026** (forthcoming). |
