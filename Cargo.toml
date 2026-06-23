@@ -49,6 +49,7 @@ members = [
     "crates/mycelium-std-time",
     "crates/mycelium-std-rand",
     "crates/mycelium-std-sys",
+    "crates/mycelium-std-sys-host",
     "crates/mycelium-cli-common",
     "crates/mycelium-bench",
     "xtask",

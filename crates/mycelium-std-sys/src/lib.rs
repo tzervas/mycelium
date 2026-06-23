@@ -8,10 +8,14 @@
 //! earn a **`wild`-free badge** as soon as they wire through this phylum — no `unsafe` or
 //! FFI contact anywhere in their own code (RFC-0016 §9).
 //!
-//! **Wiring** the existing std crates through `std-sys` is deferred to a future wave (M-541
-//! established the floor; the call-site plumbing is the next step). The pure std crates
-//! currently use Rust's own `f64` / `std::*` wrappers as placeholders, tagged `Declared`,
-//! with FLAGs pointing here.
+//! **Wiring** the pure std crates through this floor (M-722/M-723) now exists: the
+//! `mycelium-std-sys-host` crate supplies `OsEntropy` (fills `std-rand`'s `EntropySource` from
+//! [`rand::fill_bytes`]) and `OsClock` (drives `std-time`'s `ClockSource` from [`time`]), so
+//! `std.rand`/`std.time` bottom out in this audited floor while staying `wild`-free. The remaining
+//! step — the Mycelium-surface `wild:` per-op byte encoding that makes the byte-oriented
+//! [`io`]/[`fs`] ops reachable from a `wild { io.write(…) }` block — is the RFC-0028 §4.4 host
+//! encoding, deferred to the `@std-sys` author and not yet committed (tracked in E14-1). The pure
+//! `std-math` path still uses Rust's `f64` intrinsics as a `Declared` placeholder, FLAGged here.
 //!
 //! # Honesty
 //!
@@ -42,6 +46,7 @@
 #![forbid(unsafe_code)]
 
 pub mod fs;
+pub mod guarantee_matrix;
 pub mod io;
 pub mod math;
 pub mod rand;
