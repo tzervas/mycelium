@@ -110,6 +110,117 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 - **ADR-022 §4/§5 track-T1 status refreshed: `A1·A2·A3·A4·A5 ✅ · B1·B2 ✅` — GATE-MET / TAG-READY.** The three rows that read "⏳ open" at the 2026-06-23 supersession (A2 Medium ledger, A3 WS8 durability, A4 supply-chain) were in fact closed by the original ADR-021 kernel-gate wave (2026-06-21), and the tooling remains present: **A2** — the Medium-findings ledger is 25/25 Fixed, 0 deferred (`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`; M-653/#306); **A3** — `cargo-mutants` 0 un-triaged survivors (`.cargo/mutants.toml`) + LCG→`proptest` migration + `cargo-fuzz` targets/smoke CI (`fuzz/`; M-654/#313); **A4** — `cargo deny`/`cargo audit` wired **non-silently** into `just check` (`deny.toml`, `scripts/checks/`; M-652/#303). **Honesty (VR-5): this is a status report moving forward on a checked prior landing, not a fresh gate run** — the maintainer ratified T1 as satisfied (refresh-status scope), no re-verification was performed this session.
 - **issues.yaml status reconciled (E10-1 / T1):** M-700 (A2 ledger), M-701 (A3 durability), M-702 (A4 supply-chain) → `done` (closed **by reference** to M-653/M-654/M-652 with explicit `landed_basis`); **E10-1** → `in-progress` (gate-met, tag pending). **M-703** (the release act) → `todo` and **MAINTAINER-RESERVED** (overlaps the pre-existing M-655); its title/body corrected — ADR-021 is **Superseded** so it cannot move Accepted→Enacted, and the inherited kernel-gate enactment now attaches to **ADR-022 track T1** at the tag (append-only, house rule #3).
 - **Tag-ready hand-off.** No `core 1.0.0` tag was cut and no decision was enacted this session (maintainer-reserved boundary, M-703/M-655). The substrate is tag-ready; the tag + T1 enactment remain the maintainer's act. (kickoff `c10`; ADR-022; E10-1)
+### Added (2026-06-23: M-708 / E11-1 — surface stabilization declaration + M-706/M-707/M-704 honest scoping)
+
+- **Surface Stability Declaration (M-708; `docs/spec/Surface-Stability-Declaration.md`).** A stage-1
+  surface audit consolidating DN-14 §3, the checker's own refusal comments, and the RFC residual
+  sections: **12 features declared present** (value types, ADTs+patterns, recursion, generics
+  [checked + monomorphized], traits+coherence, effects, `wild`/FFI [gated], phyla, grading stage-1a,
+  `colony`/`hypha`, static HOF, operators) each with a source/test ref, and the **deferred set**
+  enumerated with a never-silent refusal + a forward issue ref for each (dynamic HOF → M-704;
+  angle-bracket operators → M-745; effect→budget wiring → M-677; `consume`/`grow`/inherent-`impl` →
+  M-664; R1/R2 runtime vocab → M-667/M-668; VSA/Substrate + `wild` execution → RFC follow-ups). The
+  audit found **no silent-incorrect surface form** — every refusal is an explicit
+  `CheckError`/`Residual`/parse error (G2). Advisory, no normative move, no tag upgrade (VR-5).
+- **RFC-0030 partial decision (M-706; stays Draft).** Integrated the M-705 operator grammar into
+  `mycelium.ebnf`; **proposed** the RFC-0006 **Q8** resolution = ratify `wild { … }` as the
+  unsafe-class spelling (gated by `@std-sys` + `!{ffi}`; ratifies the implemented M-661 status quo;
+  `unsafe`/`audited` alternatives declined); **corrected** the stub's **Q3** mischaracterization
+  (RFC-0006 Q3 is the LR-6 guarantee-grading mechanism — discharged by RFC-0018; the representation
+  question is RFC-0012's — so there is no open Q3 here). Draft → Proposed remains **gated on M-707 +
+  M-745** — a complete ratified L3 grammar cannot be honestly claimed until the RFC-0020 carve-outs
+  and the angle-bracket operators land (VR-5 / house rule #3).
+- **Honest deferrals recorded (M-704, M-707).** **M-704** (dynamic HOF): the RFC-0024 §5 residuals
+  (closures, dynamic fn-flow, partial application, generic-fn-as-value) are catalogued in the
+  stability declaration §3.2 — each a never-silent `Residual` in `mono.rs` today; the issue stays
+  open for the implementation (full Reynolds defunctionalization under the §5 STOP-and-flag KC-3
+  guard). **M-707** (RFC-0020 enactment): the §4.2/§4.5/R20-Q1…Q5 carve-outs are explicitly
+  **re-deferred** (forward ref = M-707; RFC-0020 stays "Accepted (scoped)", no status change —
+  append-only); the polymorphic-instantiation/operator-sugar interaction is confirmed independent
+  (sugar desugars to `App` before inference). Doc-Index / rfcs README updated; no code change.
+
+### Added (2026-06-23: M-705 / E11-1 — operator syntax: infix sugar desugaring to word functions)
+
+- **Operator syntax — symbolic infix/prefix sugar (RFC-0025 → Proposed; M-705).** Mycelium's
+  surface gains optional symbolic operators that desugar **at parse time** to the canonical word
+  functions: `a + b` → `add(a, b)`, `a * b + c` → `add(mul(a, b), c)`, `-a` → `neg(a)`, `!a` →
+  `not(a)`. The desugaring is **frontend-only** — a pure syntactic rewrite producing the same `App`
+  AST as the word call — so **`mycelium-core` is untouched and there is no new L0/L1 node (KC-3)**.
+  The word form stays valid everywhere the sugar is (the sugar is **additive** — words are
+  canonical). Lexer (`crates/mycelium-l1/src/lexer.rs`) gains the operator tokens
+  (`Minus`/`Slash`/`Percent`/`Caret`/`Amp`/`AmpAmp`/`PipePipe`/`EqEq`/`BangEq`; `Plus`/`Star`/
+  `Pipe`/`Bang` become context-dual — bound/glob/pattern/effect *and* operator); the parser gains a
+  precedence-climbing layer (`parse_binexpr`/`parse_unary`, with `infix_op`/`op_call`). **Precedence
+  & associativity follow Rust's table** (RFC-0025 §4.1; the implementation language, cited
+  explicitly): unary (tightest) → `* / %` → `+ -` → `&` → `^` → `|` → `== !=` → `&&` → `||`; all
+  binary operators left-associative, prefix right-associative. **EXPLAIN (resolves RFC-0025 Q5):**
+  the desugared `App` node *is* the audit record — no separate `DesugarRecord` (ADR-006, no black
+  boxes). **Honesty (G2/VR-5):** the desugaring is purely syntactic; `add`/`sub`/`mul`/`xor` (and
+  unary `neg`/`not`) resolve to kernel prims **today** and are pinned end-to-end across all three
+  execution paths (L1-eval ≡ L0-interp ≡ AOT) by new `tests/differential.rs` entries (**Empirical**);
+  the other targets (`div`/`rem`/`band`/`bor`/`eq`/`ne`/`and`/`or`) parse + desugar but surface an
+  **explicit** "unknown prim" refusal downstream (never silent) pending their stdlib/kernel defs.
+  Grammar `docs/spec/grammar/mycelium.ebnf` extended (`op_expr` … `unary_expr`); conformance
+  fixture `accept/20-operator-syntax.myc` added. **Deferred → M-745:** the angle-bracket operators
+  `< <= > >= << >>` (their `<`/`>` collide with the type-argument `<…>` grammar — RFC-0025 §4.3).
+  **RFC-0025 → Proposed** (no tag upgraded — VR-5; Proposed → Accepted awaits maintainer
+  ratification, house rule #3). (M-705; RFC-0025; E11-1)
+### Changed (2026-06-23: RFC-0029 → Accepted — native-AOT design gate cleared, E15-1 honestly re-scoped)
+
+- **RFC-0029 (AOT Optimization, Codegen Maturity, and JIT) → Accepted** (was Draft; append-only — Draft row preserved). The seven §5 open questions are **resolved against the live `crates/mycelium-mlir/`** (checked 2026-06-23), not from the stub's assumptions. Substantive finding that re-scopes E15-1: **E6-1 is `done`**, so the JIT (M-340 `jit.rs`), BitNet packed-ternary accel (M-360 `bitnet.rs` — I2_S/TL1/TL2), real `arith`/`func`→LLVM **MLIR-dialect** lowering (M-601 `dialect/native.rs`), and the **three-way native differential** (M-602 `tests/threeway_differential.rs`) **already landed**; ADR-019 (libMLIR toolchain) is **Enacted**; and **ADR-009 already sanctions interpreter/JIT for dynamic VSA** (no superseding ADR needed to "lift a deferral"). New normative §7 sanctions: inlining/CSE/DCE as **EXPLAIN-able, never-silent** transforms reified as a transform-log (M-726 — **the one genuinely-new mechanism**, no `src/passes/` exists yet); JIT as an **explicit, never-silently-selected** first-class mode (M-727); the BitNet **explicit capability flag** + never-silent graceful degradation (M-728); and the **mutant-witnessed `interp ≡ AOT ≡ JIT`** durability gate (M-729). Honest tags throughout: `Empirical` for the existing differentially-checked paths, `Declared` for the as-yet-unbuilt optimization passes (VR-5 — no overclaim). RFC index + Doc-Index updated. (RFC-0029; E15-1)
+
+### Added (2026-06-23: E17-1 docs tranche — language reference + tutorial, generated stdlib API docs, ADR-023 stability; M-738 release act BLOCKED)
+
+- **M-735 — language reference + tutorial (`docs/reference/`).** A full-surface **language
+  reference** (`language-reference.md`) covering lexical structure, nodules/phyla, the four
+  representation types + ADTs + substrates, the guarantee-strength lattice, functions & effects,
+  every expression form, pattern matching, the swap system, generics & traits, ambient paradigms,
+  maturation/`thaw`, `wild`/FFI, the full keyword set, and the L0–L3 layer model — grounded in
+  `mycelium.ebnf`, the conformance corpus, and `crates/mycelium-l1/src/token.rs`, with honest VR-5
+  notes where surface type-checks-but-doesn't-run (generics/traits → M-673; effects checker-only →
+  M-677). A **tutorial** (`tutorial.md`) builds a complete program whose full source is committed as
+  the **parser-verified** conformance fixture `accept/20-tutorial-classifier.myc` (parsed by
+  `mycelium-l1` `tests/conformance.rs` — examples are CI-checked, never invented). Plus a section
+  index (`README.md`). Guarantee: `Declared`. (E17-1; M-735)
+- **M-736 — generated per-module stdlib API docs (`mycelium-doc`).** Wired `lib/std/` into the
+  `myc-doc` apiref build (`BuildInput::conventional`), so every self-hosted stdlib `.myc` nodule is
+  projected into the API reference; added **per-`fn` source-comment extraction** (`apiref::preceding_doc`)
+  so a function's preceding `//` block becomes its documented summary (traces to source, never
+  invented — an undocumented `fn` stays an explicit flagged gap, G2). The whole source is captured as
+  a *checked example* (type-checked). Today `std.result` is covered (the only self-hosting module;
+  `map`/`and_then`/`fold` documented, `is_ok`/`is_err`/`unwrap_or` flagged undocumented); coverage
+  grows as **E13-1** ports modules. `myc-doc lint` (part of `just check`) green:
+  checked-examples 6→7, documented api statements 35→38. New committed reference page
+  `docs/reference/stdlib-api.md`. Guarantee: `Declared`. (E17-1; M-736)
+- **M-737 — ADR-023 stability & API-compatibility guarantees `Draft → Proposed → Accepted`.** All
+  six §5 open questions resolved (append-only): **§3.1** four-layer stability scope (surface syntax,
+  Core-IR/cert/interp, LSP wire, Rust crate API) with explicit carve-outs (codegen internals,
+  reserved-not-active keywords); **§3.2** dual-version model — the full-language 1.0.0 is a
+  *release-event* (`v1.0.0` tag + CHANGELOG + ADR-022 gate record), **not** a crate/workspace version
+  (ADR-018 upheld), labelled distinctly from `core 1.0.0`; **§3.3/§3.3.1** release-based never-silent
+  deprecation (≥ one minor, removal at 2.0.0) + no surface `@unstable` at 1.0; **§3.4** MIT-only legal
+  gate. All §3 claims `Declared` (policy warrants no `Proven` — VR-5). Not Enacted (that is M-738 at
+  the tag). (E17-1; M-737; ADR-023)
+- **MIT-only license fix (ADR-023 §3.4 gate).** A repo-wide sweep of first-party *shipped* `.myc`
+  headers found **six** non-MIT violations, all corrected to **`MIT`**: `lib/std/result.myc` and the
+  five `examples/**` programs (`examples/repr-tour/{ambient,swaps,traits,iter}.myc`,
+  `examples/hello-phylum/hello.myc`). The only remaining non-MIT `@license` strings are deliberate
+  `crates/mycelium-proj/tests/fixtures/` test inputs (Apache + a deliberately-invalid SPDX id) that
+  the `mycelium-proj` tests *assert* (non-inheritance + bad-id error) — left as-is by design.
+- **M-738 — full-language 1.0.0 release act: BLOCKED (no tag cut).** The terminal release act is
+  **not** performed — its external gate deps are unmet: **E13-1** (self-hosting stdlib) and **E18-1**
+  (full-language readiness) are both `needs-design`, and **ADR-022** is `Accepted` (not `Enacted`)
+  with sub-gate rows A2/A3/A4 still open. Per house rule #3 / G2, **`v1.0.0` is not cut**, ADR-021/
+  ADR-022 stay `Accepted`, and the changelog stays `[Unreleased]` — recorded explicitly rather than
+  forced prematurely. M-738 fires only when E13-1 + E18-1 + every ADR-022 row close. (E17-1; M-738)
+### Changed (2026-06-23: ADR-022 Q4 — T6 native AOT un-gated from 1.0.0 → 1.1)
+
+- **ADR-022 Q4 resolved** (maintainer): **T6 (native AOT maturity / optimization passes / JIT / BitNet accel — epic E15-1) is un-gated from `1.0.0` and rolled to `1.1`** as a QoL/perf enhancement, patched in after release. `lang 1.0.0` ships on the **interpreter (trusted base) + the existing direct-LLVM kernel subset** — optimized native codegen is performance, not correctness. Removed T6 from the ADR-022 §5 gate + §3 scope; updated DN-25 (graph + waves), the `aot10` kickoff row (→ `1.1`/post-1.0.0), and E15-1's DoD scope note. Net: nothing perf-related sits between `lib10` (T4) and the release tag; `aot10` now runs post-1.0.0 alongside `boot10`.
+### Changed (2026-06-23: ADR-022 track T1 status refreshed — core/kernel gate-met, tag-ready; kickoff c10)
+
+- **ADR-022 §4/§5 track-T1 status refreshed: `A1·A2·A3·A4·A5 ✅ · B1·B2 ✅` — GATE-MET / TAG-READY.** The three rows that read "⏳ open" at the 2026-06-23 supersession (A2 Medium ledger, A3 WS8 durability, A4 supply-chain) were in fact closed by the original ADR-021 kernel-gate wave (2026-06-21), and the tooling remains present: **A2** — the Medium-findings ledger is 25/25 Fixed, 0 deferred (`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`; M-653/#306); **A3** — `cargo-mutants` 0 un-triaged survivors (`.cargo/mutants.toml`) + LCG→`proptest` migration + `cargo-fuzz` targets/smoke CI (`fuzz/`; M-654/#313); **A4** — `cargo deny`/`cargo audit` wired **non-silently** into `just check` (`deny.toml`, `scripts/checks/`; M-652/#303). **Honesty (VR-5): this is a status report moving forward on a checked prior landing, not a fresh gate run** — the maintainer ratified T1 as satisfied (refresh-status scope), no re-verification was performed this session.
+- **issues.yaml status reconciled (E10-1 / T1):** M-700 (A2 ledger), M-701 (A3 durability), M-702 (A4 supply-chain) → `done` (closed **by reference** to M-653/M-654/M-652 with explicit `landed_basis`); **E10-1** → `in-progress` (gate-met, tag pending). **M-703** (the release act) → `todo` and **MAINTAINER-RESERVED** (overlaps the pre-existing M-655); its title/body corrected — ADR-021 is **Superseded** so it cannot move Accepted→Enacted, and the inherited kernel-gate enactment now attaches to **ADR-022 track T1** at the tag (append-only, house rule #3).
+- **Tag-ready hand-off.** No `core 1.0.0` tag was cut and no decision was enacted this session (maintainer-reserved boundary, M-703/M-655). The substrate is tag-ready; the tag + T1 enactment remain the maintainer's act. (kickoff `c10`; ADR-022; E10-1)
 
 ### Changed (2026-06-23: full-language 1.0.0 program — Q1/Q2/Q3 resolved + reconcile tooling)
 
