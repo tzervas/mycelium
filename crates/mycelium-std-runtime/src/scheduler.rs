@@ -86,7 +86,7 @@ pub struct Scheduler {
 
 impl Scheduler {
     /// A scheduler sized to the host's available parallelism (fallback: 1 worker), with a ready
-    /// queue capacity of `2 × workers` (room for one in-flight job per worker plus one queued).
+    /// queue capacity of `2 × workers` (allows up to two pending jobs per worker, independent of in-flight work).
     ///
     /// Guarantee: **Exact** (construction is deterministic given the probed parallelism).
     #[must_use]

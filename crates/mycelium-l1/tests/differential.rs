@@ -43,6 +43,16 @@ fn corpus() -> Vec<&'static str> {
         // balanced-ternary arithmetic (in range — never a silent wrap)
         "nodule d\nfn main() -> Ternary{4} = add(<00+->, <0+0->)",
         "nodule d\nfn main() -> Ternary{4} = mul(<00+0>, <00-0>)",
+        // RFC-0025 / M-705: the SAME programs written with infix/prefix operator sugar. Each
+        // desugars (frontend-only, KC-3) to the canonical word call above, so all three paths
+        // (L1-eval ≡ L0-interp ≡ AOT) must agree on it exactly as on the word form — pinning the
+        // sugar↔word equivalence end-to-end through the trusted prim registry.
+        "nodule d\nfn main() -> Binary{8} = 0b1011_0010 ^ 0b1111_1111",
+        "nodule d\nfn main() -> Binary{8} = !0b1011_0010",
+        "nodule d\nfn main() -> Ternary{4} = <00+-> + <0+0->",
+        "nodule d\nfn main() -> Ternary{4} = <00+0> * <00-0>",
+        // precedence: `*` binds tighter than `+`, so `a + b * c` ≡ `add(a, mul(b, c))`.
+        "nodule d\nfn main() -> Ternary{4} = <000+> + <00+0> * <00-0>",
         // the certified binary→ternary swap
         "nodule d\nfn main() -> Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)",
         // a call, inlined (acyclic call graph)
