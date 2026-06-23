@@ -152,7 +152,8 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 | **M-677** | Effect→`mycelium-interp::budget` runtime wiring + per-effect budget syntax | follow-up (post M-661) |
 | **Dogfooding** | RFC-0022 web + RFC-0023 ADK **→ Accepted** (#344, 2026-06-21 — RP-10/RP-9 research gate discharged); doc-site (#336) + LSP completions (#330) landed. **Builds M-670/M-671 (`dfb`) now gated on E7-1/E7-2 + the L1 surface only** — research dependency cleared | build-gated |
 | **M-649** | self-host the first stdlib nodule in Mycelium-lang | needs-design (after E7-1; M-502 ✅) |
-| M-655 | Cut 1.0.0 tag — ADR-021 → Enacted | **maintainer-reserved** |
+| **E10-1** | Core/kernel 1.0.0 sub-gate (ADR-022 T1) — **GATE-MET / TAG-READY** (status refreshed, kickoff `c10`, 2026-06-23): A2/A3/A4 closed by reference to M-653/#306, M-654/#313, M-652/#303; M-700/701/702 → done | in-progress (tag pending) |
+| M-655 / M-703 | Cut `core 1.0.0` tag + enact ADR-022 T1 (ADR-021 is Superseded → enactment attaches to ADR-022 T1) | **maintainer-reserved** |
 | M-381 / M-646 | LLM-leverage ablation arms 3/5 — local runs | **maintainer-reserved** |
 
 ### Post-compaction continuation (durable handoff)
