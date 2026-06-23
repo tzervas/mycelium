@@ -198,3 +198,11 @@ Recorded so the program stays honest about where it ends — these are **vision,
 - 2026-06-23 — **Q4 resolved** (maintainer): **T6 (native AOT maturity / optimization / JIT, E15-1)
   un-gated from 1.0.0 → `1.1`** (QoL/perf, patched in after release; 1.0.0 runs on the interpreter +
   direct-LLVM kernel subset). Removed T6 from the §5 gate + §3 scope; `aot10` leaves the 1.0.0 waves.
+- 2026-06-23 — **Track T1 status refreshed** (maintainer; kickoff `c10`). §4/§5 T1 rows A2/A3/A4
+  marked **met**, grounded in the prior kernel-gate landing (A2 → M-653/#306; A3 → M-654/#313; A4 →
+  M-652/#303; 2026-06-21) with the tooling still present — so T1 is **gate-met / tag-ready**. The
+  Gate A/B criteria themselves are unchanged (only the §5 T1 status cell + the enactment target moved
+  forward — ADR-021 → ADR-022 T1); this is a status report moving forward on a checked basis (VR-5),
+  not a fresh gate run. The only remaining T1 item is the **maintainer-reserved
+  core `1.0.0` tag act** (M-703 / M-655). ADR-021 stays **Superseded** — its inherited enactment now
+  attaches to ADR-022 T1 at the tag.

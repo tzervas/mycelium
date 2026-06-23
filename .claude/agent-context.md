@@ -105,11 +105,12 @@ Validate: `python3 tools/github/doc_refs_check.py`
   per-PR/issue override manifest (#304/#309), bench Grok ingestion (M-651 #308), llm-harness
   one-command `run.sh --all` (#307).
 
-### The 1.0.0 gate — **CLOSED** (ADR-021 Accepted; the maintainer enacts at the tag)
+### The 1.0.0 gate — **CLOSED** (ADR-021 **Superseded by ADR-022**; the kernel gate = ADR-022 track T1, enacted at the tag)
 
 Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is **1.0.0-ready**.
-- **M-655** (cut 1.0.0) is **unblocked** and **maintainer-reserved**: move ADR-021 `Accepted → Enacted`
-  (append-only) + tag the kernel/core set (per-crate SemVer, ADR-018) + roll CHANGELOG `[1.0.0]`.
+- **M-655 / M-703** (cut 1.0.0) is **unblocked** and **maintainer-reserved**: enact **ADR-022 track T1**
+  (ADR-021 is Superseded — it cannot move to Enacted; append-only) + tag the kernel/core set (per-crate
+  SemVer, ADR-018) + roll CHANGELOG `[1.0.0]`.
 - **Post-1.0 work = the active wave** (see `.claude/kickoff.md`): E7-1 + E7-2 (language/runtime
   completeness), dogfooding (web/ADK phyla, doc-site, LSP completions), and **M-649** (self-hosting).
 - **Maintainer-reserved (excluded from the wave):** M-655 (tag) and M-381/M-646 (LLM local runs).
@@ -124,7 +125,9 @@ Every row green: **A1 · A2 · A3 · A4 · A5 · B1 · B2.** The kernel/core is 
 | RFC-0018 / 0019 | Accepted (grading / traits — **traits type-check** M-659/M-660 ✅; elaboration STAGED → M-673; grading `Declared` → M-663) |
 | RFC-0020 | Accepted (scoped) |
 | RFC-0022 / 0023 | **Accepted** (#344 — web / ADK dogfood phyla; RP-10/RP-9 discharged; **Enacted** gated on the `dfb` builds + E7-1/E7-2) |
-| ADR-010…021 | Accepted (ADR-020 **Enacted**; **ADR-021** gate met, awaiting `Enacted` at the 1.0.0 tag) |
+| ADR-010…020 | Accepted (ADR-020 **Enacted**) |
+| ADR-021 | **Superseded by ADR-022** (kernel gate met → carried forward as ADR-022 **track T1**; enacted at the `core 1.0.0` tag) |
+| ADR-022 | **Accepted** (full-language 1.0.0 gate; T1 gate-met/tag-ready) |
 | stdlib specs | **25/25 ratified**; only `self-hosting-readiness` Draft |
 | DNs | DN-01…03,06…13,16,19 Resolved; **DN-14** Draft (self-hosting gate — row 6/7 partial [type-checks, elab STAGED → M-673], row 8 `present` M-660 ✅); DN-15,17,18 Draft |
 
