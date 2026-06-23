@@ -8,6 +8,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: M-705 / E11-1 — operator syntax: infix sugar desugaring to word functions)
+
+- **Operator syntax — symbolic infix/prefix sugar (RFC-0025 → Proposed; M-705).** Mycelium's
+  surface gains optional symbolic operators that desugar **at parse time** to the canonical word
+  functions: `a + b` → `add(a, b)`, `a * b + c` → `add(mul(a, b), c)`, `-a` → `neg(a)`, `!a` →
+  `not(a)`. The desugaring is **frontend-only** — a pure syntactic rewrite producing the same `App`
+  AST as the word call — so **`mycelium-core` is untouched and there is no new L0/L1 node (KC-3)**.
+  The word form stays valid everywhere the sugar is (the sugar is **additive** — words are
+  canonical). Lexer (`crates/mycelium-l1/src/lexer.rs`) gains the operator tokens
+  (`Minus`/`Slash`/`Percent`/`Caret`/`Amp`/`AmpAmp`/`PipePipe`/`EqEq`/`BangEq`; `Plus`/`Star`/
+  `Pipe`/`Bang` become context-dual — bound/glob/pattern/effect *and* operator); the parser gains a
+  precedence-climbing layer (`parse_binexpr`/`parse_unary`, with `infix_op`/`op_call`). **Precedence
+  & associativity follow Rust's table** (RFC-0025 §4.1; the implementation language, cited
+  explicitly): unary (tightest) → `* / %` → `+ -` → `&` → `^` → `|` → `== !=` → `&&` → `||`; all
+  binary operators left-associative, prefix right-associative. **EXPLAIN (resolves RFC-0025 Q5):**
+  the desugared `App` node *is* the audit record — no separate `DesugarRecord` (ADR-006, no black
+  boxes). **Honesty (G2/VR-5):** the desugaring is purely syntactic; `add`/`sub`/`mul`/`xor` (and
+  unary `neg`/`not`) resolve to kernel prims **today** and are pinned end-to-end across all three
+  execution paths (L1-eval ≡ L0-interp ≡ AOT) by new `tests/differential.rs` entries (**Empirical**);
+  the other targets (`div`/`rem`/`band`/`bor`/`eq`/`ne`/`and`/`or`) parse + desugar but surface an
+  **explicit** "unknown prim" refusal downstream (never silent) pending their stdlib/kernel defs.
+  Grammar `docs/spec/grammar/mycelium.ebnf` extended (`op_expr` … `unary_expr`); conformance
+  fixture `accept/20-operator-syntax.myc` added. **Deferred → M-745:** the angle-bracket operators
+  `< <= > >= << >>` (their `<`/`>` collide with the type-argument `<…>` grammar — RFC-0025 §4.3).
+  **RFC-0025 → Proposed** (no tag upgraded — VR-5; Proposed → Accepted awaits maintainer
+  ratification, house rule #3). (M-705; RFC-0025; E11-1)
+
 ### Changed (2026-06-23: full-language 1.0.0 program — Q1/Q2/Q3 resolved + reconcile tooling)
 
 - **ADR-022 Q1/Q2/Q3 resolved** (maintainer): **Q1** — the `lang 1.0.0` self-hosting bar is the **core stdlib/corelib self-hosted in Mycelium** (the language is usable without hand-writing L0/L1); full toolchain self-host trails as the long-term arc, not a 1.0.0 blocker (T9 row + headline scoped accordingly; E18-1 DoD noted). **Q2** — MIT governs **first-party only**; third-party deps keep their licenses (`deny.toml` unchanged). **Q3** — `lang` versioning **starts at `0.1.0` now**. Added **ADR-022 §10 long-term vision** (zero-Rust end state; post-1.0.0 repo decomposition + public-MIT flip).

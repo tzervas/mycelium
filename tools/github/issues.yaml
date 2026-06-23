@@ -3209,7 +3209,7 @@ issues:
   - id: M-705
     title: "M-705 — Operator syntax (RFC-0025): infix sugar, precedence/associativity table"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: []
     epic: E11
     doc_refs:
@@ -3218,6 +3218,20 @@ issues:
       - src:crates/mycelium-l1/src/lexer.rs
       - src:crates/mycelium-l1/src/parse.rs
     body: |
+      DONE (2026-06-23): RFC-0025 → Proposed (adopts DN-23's hybrid). Frontend-only infix/prefix
+      operator sugar desugars to canonical word functions at parse time — NO L0/L1 kernel change
+      (KC-3). Lexer (`lexer.rs`) gains the operator tokens (Minus/Slash/Percent/Caret/Amp/AmpAmp/
+      PipePipe/EqEq/BangEq; Plus/Star/Pipe/Bang made context-dual); `parse.rs` gains a
+      precedence-climbing layer (parse_binexpr/parse_unary + infix_op/op_call) desugaring a + b →
+      add(a, b), -a → neg(a), etc. Precedence/associativity = Rust's table (RFC-0025 §4.1); the
+      desugared App node IS the EXPLAIN record (no separate DesugarRecord — §4.4, resolves Q5).
+      `mycelium.ebnf` extended (op_expr…unary_expr); accept/20-operator-syntax.myc + the
+      tests/differential.rs M-705 corpus pin sugar↔word equivalence across all three execution
+      paths (Empirical). Resolving prims today: add/sub/mul/xor + unary neg/not; div/rem/band/bor/
+      eq/ne/and/or parse + desugar but surface an explicit "unknown prim" downstream (never silent —
+      G2) pending their stdlib/kernel defs. Deferred → M-745: the angle-bracket operators
+      < <= > >= << >> (type-arg <…> disambiguation, §4.3). Proposed → Accepted awaits maintainer
+      ratification (house rule #3). — Original task:
       Mycelium's surface is word-based for operations: add(a, b), mul(x, y). DN-23 recommends a
       hybrid: keep words canonical in the kernel, add optional infix symbol sugar (a + b desugars
       to add(a, b)) as a frontend-only pass — no kernel change (KC-3). This task implements that
@@ -3246,6 +3260,44 @@ issues:
       - The desugaring pass produces an EXPLAIN record (extends MonoSelections or a new
         DesugarRecord).
       - Conformance fixtures cover precedence ordering, associativity, and sugar-word equivalence.
+      - just check is green.
+
+  - id: M-745
+    title: "M-745 — Operator syntax: angle-bracket operators (< <= > >= << >>) with type-arg disambiguation"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
+    depends_on: [M-705]
+    epic: E11
+    doc_refs:
+      - corpus:RFC-0025
+      - src:crates/mycelium-l1/src/lexer.rs
+      - src:crates/mycelium-l1/src/parse.rs
+    body: |
+      M-705 landed the infix/prefix operator sugar but DEFERRED the angle-bracket operators —
+      ordering (`<`, `<=`, `>`, `>=`) and shift (`<<`, `>>`) — because `<`/`>` collide with the
+      type-argument `<…>` grammar (`f<T>(x)`, `type Box<A>`): disambiguating an expression
+      `a < b` from a generic instantiation needs contextual lexing or speculative parsing
+      (RFC-0025 §4.3). This task resolves that collision and adds the six operators. The desugaring
+      map already reserves their word targets (lt/le/gt/ge for ordering, shl/shr for shifts), so
+      the extension is purely additive: slot them into the Rust-precedence tiers (shifts between
+      additive and bitwise-and; ordering between equality and bitwise-or per Rust's table) and add
+      conformance fixtures. Until this lands, the comparison/shift words remain available in their
+      function form (never silently refused — G2).
+
+      User stories:
+      - As a language user, I want to write `a < b` and `a << n`, so that comparison and shift read
+        naturally alongside the other infix operators (M-705).
+      - As a compiler engineer, I want the type-arg vs comparison ambiguity resolved by a documented,
+        inspectable rule (no black box), so that the parser stays auditable (ADR-006).
+
+      Definition of Done:
+      - The `<`/`>` type-arg vs comparison/shift ambiguity is resolved by a documented rule
+        (contextual lexing or bounded speculative parse); the rule is grounded in the grammar.
+      - parse.rs parses `< <= > >= << >>` per the Rust precedence tiers; each desugars to its word
+        (lt/le/gt/ge/shl/shr).
+      - mycelium.ebnf is extended with the ordering/shift tiers (RFC-0025 §4.3 lifted out of Deferred).
+      - RFC-0025 §4.3 moves from Deferred to implemented; conformance fixtures cover the new ops and
+        a type-arg-vs-comparison disambiguation case.
       - just check is green.
 
   - id: M-706

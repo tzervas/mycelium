@@ -164,21 +164,35 @@ impl Lexer {
                 ':' => self.single(Tok::Colon),
                 ',' => self.single(Tok::Comma),
                 '.' => self.single(Tok::Dot),
-                '|' => self.single(Tok::Pipe),
-                // `!` opens the effect annotation `!{ … }` (RFC-0014 §3.4; M-660). Single-char token;
-                // the effect names inside stay identifiers. v0 has no other `!` use, so the parser
-                // accepts it only before an effect set and errors otherwise (never a silent accept).
-                '!' => self.single(Tok::Bang),
-                // `+` is the trait-bound separator (`T: A + B`; RFC-0019 §4.1). It is also a trit
-                // glyph, but a trit literal is only ever scanned *whole* from an opening `<` (in
-                // `lex_angle_or_trit`), so a `+` reaching here is always the bound separator token.
+                // `|` is the match-arm/pattern-alternation glyph and the bitwise-`bor` operator
+                // (RFC-0025 / M-705); `||` is the logical-`or` operator. The parser disambiguates
+                // single `|` by position (pattern vs expression).
+                '|' => self.lex_pipe(),
+                // `!` opens the effect annotation `!{ … }` (RFC-0014 §3.4; M-660) and is the unary
+                // `not` operator at expression position (RFC-0025 / M-705); `!=` is the `ne`
+                // operator. The parser accepts a signature `!` only before `{` (never a silent
+                // accept, G2).
+                '!' => self.lex_bang(),
+                // `+` is the trait-bound separator (`T: A + B`; RFC-0019 §4.1) and the infix `add`
+                // operator at expression position (RFC-0025 / M-705). It is also a trit glyph, but a
+                // trit literal is only ever scanned *whole* from an opening `<` (in
+                // `lex_angle_or_trit`), so a `+` reaching here is one of those two operator tokens.
                 '+' => self.single(Tok::Plus),
-                // `*` is the glob marker of a wildcard import `use a.b.*` (M-662). v0 has no other
-                // `*` use, so the parser accepts it only as a glob-`use` tail and errors otherwise.
+                // `*` is the glob marker of a wildcard import `use a.b.*` (M-662) and the infix
+                // `mul` operator at expression position (RFC-0025 / M-705); the parser disambiguates
+                // by position.
                 '*' => self.single(Tok::Star),
+                // `/` is the infix `div` operator (RFC-0025 / M-705). `//` line comments are
+                // consumed by `skip_trivia`, so a `/` reaching here is always the operator.
+                '/' => self.single(Tok::Slash),
+                // `%` (rem), `^` (xor): infix operators at expression position (RFC-0025 / M-705).
+                '%' => self.single(Tok::Percent),
+                '^' => self.single(Tok::Caret),
+                // `&` (band) / `&&` (and): bitwise- and logical-and operators (RFC-0025 / M-705).
+                '&' => self.lex_amp(),
                 '<' => self.lex_angle_or_trit(pos)?,
                 '=' => self.lex_eq(),
-                '-' => self.lex_dash(pos)?,
+                '-' => self.lex_dash(),
                 '0' if self.peek2() == Some('b') => self.lex_binary(),
                 c if c.is_ascii_digit() => self.lex_int(pos)?,
                 c if is_ident_start(c) => self.lex_ident(),
@@ -228,25 +242,63 @@ impl Lexer {
 
     fn lex_eq(&mut self) -> Tok {
         self.bump(); // '='
-        if self.peek() == Some('>') {
-            self.bump();
-            Tok::FatArrow
-        } else {
-            Tok::Eq
+        match self.peek() {
+            Some('>') => {
+                self.bump();
+                Tok::FatArrow
+            }
+            // `==` is the infix `eq` operator (RFC-0025 / M-705); `=` stays the binder glyph.
+            Some('=') => {
+                self.bump();
+                Tok::EqEq
+            }
+            _ => Tok::Eq,
         }
     }
 
-    fn lex_dash(&mut self, pos: Pos) -> Result<Tok, ParseError> {
+    fn lex_dash(&mut self) -> Tok {
         self.bump(); // '-'
         if self.peek() == Some('>') {
             self.bump();
-            Ok(Tok::Arrow)
+            // `->` is the function-type arrow (RFC-0024 §3).
+            Tok::Arrow
         } else {
-            // A bare '-' is not part of v0's surface outside trit literals/arrows.
-            Err(ParseError::new(
-                pos,
-                "unexpected '-' (expected '->')".to_owned(),
-            ))
+            // A bare `-` is the infix sub / unary neg operator (RFC-0025 / M-705); the parser
+            // disambiguates binary from prefix by position.
+            Tok::Minus
+        }
+    }
+
+    /// `&` (band) or `&&` (logical and) — RFC-0025 / M-705.
+    fn lex_amp(&mut self) -> Tok {
+        self.bump(); // '&'
+        if self.peek() == Some('&') {
+            self.bump();
+            Tok::AmpAmp
+        } else {
+            Tok::Amp
+        }
+    }
+
+    /// `|` (bor / pattern-alternation) or `||` (logical or) — RFC-0025 / M-705.
+    fn lex_pipe(&mut self) -> Tok {
+        self.bump(); // '|'
+        if self.peek() == Some('|') {
+            self.bump();
+            Tok::PipePipe
+        } else {
+            Tok::Pipe
+        }
+    }
+
+    /// `!` (effect-set opener / unary not) or `!=` (ne) — RFC-0014 §3.4 / RFC-0025 / M-705.
+    fn lex_bang(&mut self) -> Tok {
+        self.bump(); // '!'
+        if self.peek() == Some('=') {
+            self.bump();
+            Tok::BangEq
+        } else {
+            Tok::Bang
         }
     }
 
@@ -488,13 +540,24 @@ mod tests {
 
     #[test]
     fn at_std_sys_is_a_whole_word_only() {
-        // `@std-system` is NOT the marker: it is `@` + ident `std` + `-` … (the `-` then fails the
-        // lexer as it is not `->`), so the special case is maximally narrow. We assert the lexer does
-        // not produce `AtStdSys` for it (it errors on the `-`, which proves it never matched the
-        // marker — never a silent over-match, G2).
+        // `@std-system` is NOT the marker: it lexes as `@` + ident `std` + `-` (the infix `sub`
+        // operator, RFC-0025 / M-705) + ident `system`, so the special case is maximally narrow.
+        // We assert the lexer never produces `AtStdSys` for it (never a silent over-match, G2).
+        let ts = toks("@std-system");
         assert!(
-            lex("@std-system").is_err(),
-            "`@std-system` must not lex as the `@std-sys` marker (whole-word only)"
+            !ts.contains(&Tok::AtStdSys),
+            "`@std-system` must not lex as the `@std-sys` marker (whole-word only): {ts:?}"
+        );
+        assert_eq!(
+            ts,
+            vec![
+                Tok::At,
+                Tok::Ident("std".to_owned()),
+                Tok::Minus,
+                Tok::Ident("system".to_owned()),
+                Tok::Eof,
+            ],
+            "`@std-system` lexes as `@ std - system`"
         );
         // `@std` (no `-sys` tail) is a bare `@` + the identifier `std`.
         let ts = toks("@std");

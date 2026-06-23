@@ -184,25 +184,59 @@ pub enum Tok {
     Dot,
     /// `|`.
     Pipe,
-    /// `+` — the trait-bound separator in a bounded type-parameter (`T: A + B`; RFC-0019 §4.1).
-    /// v0 has no arithmetic `+` (prims are named calls), so this token appears **only** inside a
-    /// bound; anywhere else the parser raises an explicit error, never a silent accept (G2).
+    /// `+` — context-dependent (RFC-0025 / M-705): in a bounded type-parameter it is the
+    /// trait-bound separator (`T: A + B`; RFC-0019 §4.1); at expression position it is the
+    /// infix **add** operator (`a + b` desugars to `add(a, b)`). The two contexts never overlap
+    /// (a bound list is inside `<…>`); outside both, the parser raises an explicit error (G2).
     Plus,
-    /// `*` — the **glob** marker, the final segment of a wildcard import `use a.b.*` (M-662). v0 has
-    /// no arithmetic `*` (prims are named calls), so this token appears **only** as the tail of a
-    /// glob `use`; anywhere else the parser raises an explicit error, never a silent accept (G2).
+    /// `-` — context-dependent: the unary/binary **sub/neg** operator at expression position
+    /// (`a - b` → `sub(a, b)`, `-a` → `neg(a)`; RFC-0025 / M-705). `->` lexes as [`Tok::Arrow`]
+    /// (the function-type arrow), so a bare `-` is only ever the arithmetic operator.
+    Minus,
+    /// `*` — context-dependent (RFC-0025 / M-705): the **glob** marker as the tail of a wildcard
+    /// import `use a.b.*` (M-662), or the infix **mul** operator at expression position
+    /// (`a * b` → `mul(a, b)`). The two contexts never overlap; outside both it is an error (G2).
     Star,
+    /// `/` — the infix **div** operator at expression position (`a / b` → `div(a, b)`;
+    /// RFC-0025 / M-705). `//` opens a line comment (consumed as trivia), so a bare `/` is only
+    /// ever the division operator.
+    Slash,
+    /// `%` — the infix **rem** operator at expression position (`a % b` → `rem(a, b)`;
+    /// RFC-0025 / M-705).
+    Percent,
+    /// `^` — the infix bitwise-**xor** operator at expression position (`a ^ b` → `xor(a, b)`;
+    /// RFC-0025 / M-705).
+    Caret,
+    /// `&` — the infix bitwise-**and** operator at expression position (`a & b` → `band(a, b)`;
+    /// RFC-0025 / M-705).
+    Amp,
+    /// `&&` — the infix logical-**and** operator at expression position (`a && b` → `and(a, b)`;
+    /// RFC-0025 / M-705).
+    AmpAmp,
     /// `=`.
     Eq,
+    /// `==` — the infix **eq** operator at expression position (`a == b` → `eq(a, b)`;
+    /// RFC-0025 / M-705). `=` (single) stays the binder/definition glyph; `==` never collides
+    /// with it (the binder is always a single `=`).
+    EqEq,
     /// `->`.
     Arrow,
     /// `=>`.
     FatArrow,
-    /// `!` — opens the effect annotation `!{ … }` on a fn signature (RFC-0014 §3.4; M-660). It
-    /// appears **only** before the `{` of an effect set; v0 has no boolean-`not`/negation operator
-    /// (logical ops are named prims), so a `!` anywhere else is an explicit parse error (G2), never a
-    /// silent accept. The effect *names* inside the braces stay ordinary identifiers.
+    /// `!` — context-dependent: it opens the effect annotation `!{ … }` on a fn signature
+    /// (RFC-0014 §3.4; M-660), and at expression position it is the unary bitwise-**not** operator
+    /// (`!a` → `not(a)`; RFC-0025 / M-705). The effect-set use is only ever `!` immediately
+    /// before `{` in a signature; outside both the parser raises an explicit error (G2). The
+    /// effect *names* inside the braces stay ordinary identifiers.
     Bang,
+    /// `!=` — the infix **ne** operator at expression position (`a != b` → `ne(a, b)`;
+    /// RFC-0025 / M-705).
+    BangEq,
+    /// `||` — the infix logical-**or** operator at expression position (`a || b` → `or(a, b)`;
+    /// RFC-0025 / M-705). `|` (single) stays the match-arm/pattern-alternation glyph and the
+    /// bitwise-**or** operator (`a | b` → `bor(a, b)`); the two `|` uses never overlap (patterns
+    /// are parsed in pattern position, the operator at expression position).
+    PipePipe,
     /// End of input.
     Eof,
 }
