@@ -4363,6 +4363,8 @@ issues:
         never-silent; accel result == reference ternary (Empirical) (M-728).
       - Three-way differential (interp == AOT == JIT) is mutant-witnessed (M-729).
       - just check green on crates/mycelium-mlir/ with all new features enabled.
+      - SCOPE (ADR-022 §8 Q4): this is a 1.1 track, NOT a 1.0.0 blocker — T6 native AOT is un-gated
+        (QoL/perf, patched in post-1.0.0; 1.0.0 runs on the interpreter + direct-LLVM kernel subset).
 
       Children:
       - M-725 -- full libMLIR integration: ternary-dialect to MLIR to LLVM lowering, subsuming
