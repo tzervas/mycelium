@@ -2927,8 +2927,10 @@ issues:
       The residual ADR-021 Gate A work required to declare the Mycelium Rust core/kernel at
       1.0.0. The kernel reaching 1.0.0 is a precondition for full-language 1.0.0 (ADR-022 /
       DN-25): the full-language gate inherits the kernel's honesty-integrity and durability
-      guarantees. Gate A's open rows (A2 Medium ledger, A3 WS8 durability, A4 supply-chain)
-      must all close before the kernel 1.0.0 tag is cut and ADR-021 moves Accepted -> Enacted.
+      guarantees. Gate A's rows (A2 Medium ledger, A3 WS8 durability, A4 supply-chain) must all
+      close before the kernel 1.0.0 tag is cut and track T1 is enacted at the tag. NOTE: ADR-021 is
+      now Superseded by ADR-022, so the inherited kernel-gate enactment attaches to ADR-022 track T1
+      (not ADR-021 -> Enacted); see the Status section below.
 
       User stories:
       - As a maintainer, I want every ADR-021 Gate A row demonstrably met before cutting the
@@ -2955,7 +2957,8 @@ issues:
       - cargo-fuzz targets exist for the L1 lexer, parser, and checker, wired into CI.
       - cargo-deny and cargo-audit are wired into just check and green (no silent skips).
       - just check passes fully on the release branch (all crates, all gates, no skips).
-      - ADR-021 is moved Accepted -> Enacted (append-only, maintainer sign-off).
+      - ADR-022 track T1 is enacted at the tag (ADR-021 is Superseded — the inherited kernel-gate
+        enactment attaches to ADR-022 T1; append-only, maintainer sign-off).
       - The 1.0.0 tag exists on main per ADR-018.
 
       Status (2026-06-23, kickoff c10 — maintainer: refresh-status): T1 is GATE-MET / TAG-READY.
@@ -2977,7 +2980,8 @@ issues:
     labels: [phase:8, type:chore, area:release, priority:P1, status:done]
     depends_on: []
     epic: E10
-    evidence_date: 2026-06-21
+    landed_pr: 306
+    landed_date: 2026-06-21
     landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-653 (PR #306): docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md records 25 Medium ids · 25 Fixed · 0 deferred (Gate A2 met), each with a failing-without-the-fix regression test. Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
     doc_refs:
       - corpus:ADR-022
@@ -3020,7 +3024,8 @@ issues:
     labels: [phase:8, type:infra, area:release, priority:P1, status:done]
     depends_on: [M-700]
     epic: E10
-    evidence_date: 2026-06-21
+    landed_pr: 313
+    landed_date: 2026-06-21
     landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-654 (PR #313): just mutants recipe + .cargo/mutants.toml (0 un-triaged survivors on core/cert/interp/numerics, equivalents justified); hand-rolled LCG suites migrated to proptest (crates/mycelium-numerics/tests/properties.rs, seed rotation); cargo-fuzz targets fuzz/fuzz_targets/{fuzz_l1_parse, fuzz_core_value_deser, fuzz_m210_checker}.rs + just fuzz-smoke wired into just check-full (Tier 2). Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
     doc_refs:
       - corpus:ADR-022
@@ -3069,7 +3074,8 @@ issues:
     labels: [phase:8, type:infra, area:release, priority:P1, status:done]
     depends_on: []
     epic: E10
-    evidence_date: 2026-06-21
+    landed_pr: 303
+    landed_date: 2026-06-21
     landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-652 (PR #303): deny.toml (MIT-aligned license allow-list + advisories + crates.io-only sources); just deny / scripts/checks/deny.sh runs cargo-deny + cargo-audit, wired non-silently into just check (scripts/checks/all.sh); cargo-deny/cargo-audit installed by scripts/install-tools.sh (skip-if-missing locally, never silent in CI). Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
     doc_refs:
       - corpus:ADR-022
@@ -3149,8 +3155,9 @@ issues:
 
       Definition of Done:
       - M-700, M-701, M-702 are all landed and just check is fully green.
-      - The maintainer confirms Gate A is met (explicit record in ADR-021 §3, append-only).
-      - ADR-021 is moved Accepted -> Enacted (append-only changelog entry, maintainer sign-off).
+      - The maintainer confirms Gate A is met (explicit record in ADR-022 §4 / E10-1, append-only).
+      - ADR-022 track T1 is enacted at the tag (ADR-021 is Superseded, cannot move to Enacted;
+        append-only changelog entry, maintainer sign-off).
       - The 1.0.0 tag is cut on main per ADR-018 (tag name, changelog entry, crate versions).
       - CHANGELOG.md has a 1.0.0 release section (append-only; orchestrator-owned).
 
