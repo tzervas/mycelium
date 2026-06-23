@@ -3648,7 +3648,7 @@ issues:
   - id: E12-1
     title: "E12-1 (epic) — Runtime & concurrency execution maturity (RFC-0008)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:epic, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:epic, area:execution, priority:P1, status:in-progress]
     depends_on: [E7-2]
     epic: E12
     doc_refs: [corpus:RFC-0008, corpus:RFC-0027, corpus:ADR-020, corpus:DN-25]
@@ -3707,10 +3707,19 @@ issues:
       EXPLAIN-able) / M-713 (structured-concurrency supervision + cancellation with never-silent
       failure propagation).
 
+      Progress (2026-06-23): M-709 (real OS-thread scheduler — fairness + demand-signalled
+      backpressure + RT2 differential), M-711 (deadlock-freedom — never-silent sweep-order Deadlock,
+      cooperative + OS-thread paths), and M-713 (structured-concurrency supervision + cancellation
+      tree + EXPLAIN-able bounded-cascade restart) are implemented Rust-first in
+      crates/mycelium-std-runtime (cargo test/clippy -D warnings/fmt green; 40 tests). M-710 BLOCKED
+      on M-667 (the L1 fuse/reclaim/tier surface, not yet landed); M-712 BLOCKED on RFC-0027 reaching
+      Accepted (maintainer sign-off). Epic stays in-progress. RFC-0008 remains Accepted (machinery
+      implemented; spec not silently moved — VR-5).
+
   - id: M-709
     title: "M-709 — feat(runtime): real scheduler — hypha/colony execution on OS threads, fairness + backpressure"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:in-progress]
     depends_on: [E7-2]
     epic: E12-1
     doc_refs: [corpus:RFC-0008, corpus:RFC-0027, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
@@ -3742,7 +3751,7 @@ issues:
   - id: M-710
     title: "M-710 — feat(l1+runtime): runtime vocabulary execution — fuse/reclaim/tier/mesh/xloc/cyst end-to-end"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:blocked]
     depends_on: [E7-2, M-709]
     epic: E12-1
     doc_refs: [corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs, src:crates/mycelium-mlir/src/runtime.rs]
@@ -3771,10 +3780,16 @@ issues:
         (at least one construct per vocabulary term).
       - just check green for affected crates; guarantee tags Empirical (trial-tested).
 
+      Status (2026-06-23): BLOCKED on M-667 — the fuse/reclaim/tier L1 surface constructs are not
+      yet landed (M-667 is status:needs-design), so there is no surface to elaborate. The runtime
+      machinery this construct elaborates *to* (scheduler M-709, deadlock M-711, supervision M-713)
+      has landed Rust-first in crates/mycelium-std-runtime. Unblock: land M-667, then elaborate each
+      construct to a runtime call. (Flagged, not guessed — VR-5/G2.)
+
   - id: M-711
     title: "M-711 — verify(runtime): deadlock-freedom — RFC-0008 sweep-order property checked/enforced, never-silent"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:verification, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:verification, area:execution, priority:P1, status:in-progress]
     depends_on: [M-709]
     epic: E12-1
     doc_refs: [corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
@@ -3802,7 +3817,7 @@ issues:
   - id: M-712
     title: "M-712 — feat(runtime): memory management & reclamation (RFC-0027) — reclaim model + lifetime guarantees, EXPLAIN-able"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:blocked]
     depends_on: [M-709]
     epic: E12-1
     doc_refs: [corpus:RFC-0027, corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
@@ -3827,10 +3842,17 @@ issues:
       - Reclamation cascade respects sweep order (property test; tagged Empirical if tested).
       - just check green.
 
+      Status (2026-06-23): BLOCKED on RFC-0027 reaching Accepted — RFC-0027 is Draft and its own
+      Posture section reserves the Draft→Accepted move for maintainer sign-off. Not advanced
+      unilaterally (architecturally significant — flag, don't guess; VR-5/G2). The M-709 scheduler +
+      M-711 sweep-order driver this would dispatch through are landed. Unblock: maintainer ratifies
+      RFC-0027, then elaborate `reclaim` to the runtime reclamation path (EXPLAIN record; cascade
+      respects the sweep order).
+
   - id: M-713
     title: "M-713 — feat(runtime): structured-concurrency supervision + cancellation with never-silent failure propagation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:in-progress]
     depends_on: [M-709]
     epic: E12-1
     doc_refs: [corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]

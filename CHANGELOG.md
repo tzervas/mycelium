@@ -8,6 +8,53 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: E12-1 — runtime & concurrency execution maturity, M-709/M-711/M-713)
+
+- **Real OS-thread scheduler (`mycelium-std-runtime::scheduler`; M-709).** The v0 R1 surface ran tasks
+  cooperatively on the calling thread; the new `Scheduler` runs independent tasks across a fixed pool
+  of OS worker threads (`std::thread::scope` — the crate stays `#![forbid(unsafe_code)]`, no new
+  dependency) with **fair FIFO dispatch** and **demand-signalled, bounded backpressure**: the ready
+  queue holds at most `capacity` pending jobs *by construction* (enqueue only while `len < capacity`),
+  never an unbounded silent buffer (G2 / RFC-0008 §4.3). `run_indexed` returns outputs in spawn order,
+  so the result is directly comparable to the sequential reference — the **RT2 sequentialization
+  differential**, property-tested (`Empirical`, not `Proven`). Zero workers / zero capacity fail closed
+  (explicit `SchedulerError`, never a silent single-worker substitution). Backpressure bound is `Exact`
+  (structural); liveness (each job runs exactly once) is `Empirical`. (M-709; RFC-0008 RT1·RT2·§4.3)
+- **Deadlock-freedom for communicating tasks (`mycelium-std-runtime::dataflow`; M-711).** Communicating
+  tasks are **swept** (one non-blocking poll-step per pending task per sweep); a full sweep that makes
+  no progress while tasks remain pending is an explicit `task::Deadlock`, **never a silent hang** (G2 /
+  RFC-0008 §4.3 sweep-order). The std-runtime sibling of the proven `mycelium-mlir` `run_dataflow`
+  model. Two paths share the *same* never-silent decision: a cooperative `run_dataflow` (schedule is
+  `Exact` — a fixed function of the sweep direction; ascending/descending agree — Kahn-determinism) and
+  `run_dataflow_scheduled`, which runs each sweep's independent polls **across the M-709 OS-thread pool**
+  (the "checked across OS threads" requirement). Detection is complete for DAG channel graphs (`Empirical`);
+  cyclic graphs are an explicit open follow-up (FLAG: ADR-020 §7), never silently mis-reported. (M-711)
+- **Structured-concurrency supervision + cancellation (`mycelium-std-runtime::supervision`; M-713).**
+  Reuses the M-356 composition kernel from `mycelium-interp` (`CancelToken`/`TaskOutcome`/`Supervisor`/
+  `RestartIntensity`/`Escalation` — DRY, no cycle: `mycelium-interp` depends only on core+numerics).
+  Adds: a cancellation **tree** (`CancelTree`) where cancelling a node cascades to every descendant
+  (parent→child, never child→parent — RT7), so a cancelled colony propagates to all its children
+  (never-silent, G2); `run_supervised`, which runs a task set on the OS-thread pool, collects **every**
+  child's explicit `TaskOutcome` (no dropped/silent variant — RT4/I1), and on the first failure cancels
+  the remaining siblings (cooperative observation, never-silent); and `supervise_with_restart`, a live
+  bounded-cascade restart policy that is **EXPLAIN-able** — each decision is a reified `SupervisionRecord`
+  (no black boxes, ADR-006), escalating explicitly when the rate or total-cascade bound is hit, never an
+  unbounded storm. Propagation/collection are `Empirical` (property-tested); the restart bound is `Exact`
+  (inherited from `Supervisor`). (M-713; RFC-0008 RT4·RT7·§4.7)
+- **Guarantee matrix extended** with six E12-1 rows (scheduler RT2 / backpressure / liveness; deadlock
+  sweep; supervision propagation / restart bound), asserted in tests — no tag upgraded without a checked
+  basis (VR-5). Reserved-vocabulary guard still green (no `fuse`/`reclaim`/`tier`/`mesh`/… in op names).
+- **Honest deferrals (VR-5/G2 — flagged, not guessed):** **M-710** (runtime vocabulary execution —
+  `fuse`/`reclaim`/`tier` elaboration) stays **blocked on M-667** (the L1 surface constructs, still
+  `needs-design`): there is no L1 surface to elaborate yet. **M-712** (memory management & reclamation)
+  stays **blocked on RFC-0027 reaching `Accepted`**, which RFC-0027 itself reserves for maintainer
+  sign-off — not advanced unilaterally. E12-1 remains in progress; RFC-0008 stays `Accepted` (the
+  machinery is implemented Rust-first; the spec is not silently moved). Verified with `cargo fmt`,
+  `cargo clippy -p mycelium-std-runtime --all-targets -D warnings`, and `cargo test -p
+  mycelium-std-runtime` (40 tests green) — this change's full scope is clean. (The two remaining
+  `just check` findings are **pre-existing and unrelated** to this PR — a codespell typo + Python
+  formatting in `tools/github/gh-issues-dedup.py`, and a codespell typo in RFC-0031 — both in files
+  this PR does not touch.) (E12-1; M-709/M-711/M-713; M-710/M-712 deferred)
 ### Changed (2026-06-23: ADR-022 track T1 status refreshed — core/kernel gate-met, tag-ready; kickoff c10)
 
 - **ADR-022 §4/§5 track-T1 status refreshed: `A1·A2·A3·A4·A5 ✅ · B1·B2 ✅` — GATE-MET / TAG-READY.** The three rows that read "⏳ open" at the 2026-06-23 supersession (A2 Medium ledger, A3 WS8 durability, A4 supply-chain) were in fact closed by the original ADR-021 kernel-gate wave (2026-06-21), and the tooling remains present: **A2** — the Medium-findings ledger is 25/25 Fixed, 0 deferred (`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`; M-653/#306); **A3** — `cargo-mutants` 0 un-triaged survivors (`.cargo/mutants.toml`) + LCG→`proptest` migration + `cargo-fuzz` targets/smoke CI (`fuzz/`; M-654/#313); **A4** — `cargo deny`/`cargo audit` wired **non-silently** into `just check` (`deny.toml`, `scripts/checks/`; M-652/#303). **Honesty (VR-5): this is a status report moving forward on a checked prior landing, not a fresh gate run** — the maintainer ratified T1 as satisfied (refresh-status scope), no re-verification was performed this session.
