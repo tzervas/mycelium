@@ -93,8 +93,12 @@ section "Mycelium wild-site audit (@std-sys + !{ffi} + // SAFETY:; RFC-0028 §4.
 
 # `.myc` files that contain a `wild` *block* keyword (`wild` followed by `{`, not the `wildcard`/`_`
 # pattern or the word in prose). Exclude the grammar-conformance corpus. Same exit-code discipline as
-# above: >=2 is a real error.
-wild_raw=$(git grep -lE '(^|[^[:alnum:]_])wild[[:space:]]*\{' \
+# above: >=2 is a real error. We match with line numbers (`-n`, not `-l`) so the audit is
+# **per-`wild`-occurrence**, not per-file: a `.myc` file may hold several nodules/fns, so checking
+# the predicates "somewhere in the file" would false-pass (e.g. one `@std-sys` nodule + a `wild` in
+# a *different*, non-`@std-sys` nodule). Each `wild` site is judged against its own context.
+WINDOW_MYC=8
+wild_raw=$(git grep -nE '(^|[^[:alnum:]_])wild[[:space:]]*\{' \
   -- ':(glob)**/*.myc' ':(exclude,glob)docs/spec/grammar/conformance/**') || wgrep_rc=$?
 wgrep_rc=${wgrep_rc:-0}
 if (( wgrep_rc >= 2 )); then
@@ -102,38 +106,45 @@ if (( wgrep_rc >= 2 )); then
   exit 1
 fi
 
-wild_files=()
+# Drop comment-only lines (a `wild {` inside a `//` comment is prose, not a real site).
+wild_hits=()
 if [[ -n "$wild_raw" ]]; then
-  mapfile -t wild_files < <(printf '%s\n' "$wild_raw")
+  mapfile -t wild_hits < <(printf '%s\n' "$wild_raw" | grep -vE ':[0-9]+:[[:space:]]*//' || true)
 fi
 
-if [[ ${#wild_files[@]} -eq 0 ]]; then
+if [[ ${#wild_hits[@]} -eq 0 ]]; then
   ok "no shippable .myc \`wild\` sites yet (forward-looking gate; conformance fixtures excluded)"
 else
   myc_missing=()
-  sites=0
-  for f in "${wild_files[@]}"; do
-    # (a) the nodule header must carry @std-sys; (b) some fn must declare !{ffi}; (c) a // SAFETY:
-    # comment must be present. Per-file granularity (a regex heuristic — the checker is ground truth).
-    has_std_sys=0; has_ffi=0; has_safety=0
-    grep -qE 'nodule[[:space:]].*@std-sys' "$f" && has_std_sys=1
-    grep -qE '!\{[^}]*\bffi\b[^}]*\}' "$f" && has_ffi=1
-    grep -qE '//[[:space:]]*SAFETY:' "$f" && has_safety=1
-    # Count the wild block sites in this file (for the summary).
-    n=$(grep -cE '(^|[^[:alnum:]_])wild[[:space:]]*\{' "$f")
-    sites=$(( sites + n ))
+  for h in "${wild_hits[@]}"; do
+    file="${h%%:*}"
+    rest="${h#*:}"
+    line="${rest%%:*}"
+    start=$(( line > WINDOW_MYC ? line - WINDOW_MYC : 1 ))
     reasons=()
-    (( has_std_sys )) || reasons+=("no @std-sys nodule header")
-    (( has_ffi ))     || reasons+=("no fn declares !{ffi}")
-    (( has_safety ))  || reasons+=("no // SAFETY: comment")
+    # (a) the **nearest preceding** `nodule` header (at or above this site) must carry `@std-sys`
+    #     — the context gate is the *enclosing* nodule's, judged per site, not "any nodule in the file".
+    nodule_hdr=$(grep -nE '^[[:space:]]*nodule[[:space:]]' "$file" \
+      | awk -F: -v L="$line" '$1<=L{n=$0} END{print n}')
+    if [[ -z "$nodule_hdr" ]] || ! printf '%s' "$nodule_hdr" | grep -qE '@std-sys'; then
+      reasons+=("enclosing nodule is not @std-sys")
+    fi
+    # (b) the enclosing fn must declare `!{ffi}` (its signature is within the window above the body).
+    if ! sed -n "${start},${line}p" "$file" | grep -qE '!\{[^}]*\bffi\b[^}]*\}'; then
+      reasons+=("no !{ffi} on the enclosing fn (within ${WINDOW_MYC} lines above)")
+    fi
+    # (c) a `// SAFETY:` comment within the window directly above the site (mirrors the Rust gate).
+    if ! sed -n "${start},$((line - 1))p" "$file" | grep -qE '//[[:space:]]*SAFETY:'; then
+      reasons+=("no // SAFETY: comment (within ${WINDOW_MYC} lines above)")
+    fi
     if (( ${#reasons[@]} > 0 )); then
-      myc_missing+=("$f: $(IFS='; '; echo "${reasons[*]}")")
+      myc_missing+=("$file:$line: $(IFS='; '; echo "${reasons[*]}")")
     fi
   done
   if [[ ${#myc_missing[@]} -eq 0 ]]; then
-    ok "${sites} shippable .myc \`wild\` site(s) across ${#wild_files[@]} file(s): each in @std-sys + !{ffi} + // SAFETY: (RFC-0028 §4.7)"
+    ok "${#wild_hits[@]} shippable .myc \`wild\` site(s): each in @std-sys + !{ffi} + adjacent // SAFETY: (RFC-0028 §4.7)"
   else
-    fail "${#myc_missing[@]} .myc file(s) with a \`wild\` block fail the FFI-floor audit (RFC-0028 §4.7):"
+    fail "${#myc_missing[@]} .myc \`wild\` site(s) fail the FFI-floor audit (RFC-0028 §4.7):"
     printf '        %s\n' "${myc_missing[@]}"
     status=1
   fi

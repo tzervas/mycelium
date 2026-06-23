@@ -39,12 +39,16 @@ pub fn get_env(name: &str) -> Option<String> {
     std::env::var(name).ok()
 }
 
-/// \[Declared\] The process's command-line arguments (including arg 0). A lossy conversion is avoided:
-/// any non-Unicode argument is dropped rather than replaced with a placeholder — callers needing the
-/// raw `OsString` form should use `std::env::args_os` directly (this floor is the Unicode convenience).
+/// \[Declared\] The process's command-line arguments (including arg 0). Built on `args_os` with
+/// `into_string().ok()`, so a non-Unicode argument is **dropped** — a lossy placeholder is never
+/// fabricated, and (unlike `std::env::args()`) this never *panics* on non-Unicode (G2). Dropping
+/// shifts the positions of any following args; callers needing the faithful, position-stable raw
+/// form should use `std::env::args_os` directly (this floor is the Unicode convenience).
 #[must_use]
 pub fn args() -> Vec<String> {
-    std::env::args().collect()
+    std::env::args_os()
+        .filter_map(|a| a.into_string().ok())
+        .collect()
 }
 
 #[cfg(test)]
