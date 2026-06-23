@@ -3425,6 +3425,8 @@ issues:
         full-toolchain level, with the differential evidence cited and graded Empirical.
       - The CI pipeline includes a bootstrap gate (just bootstrap or equivalent) that builds
         the compiler with itself and runs the three-way differential automatically.
+      - NOTE (ADR-022 §8 Q1): only the core stdlib/corelib self-host slice (with E13-1/T4) is a
+        lang 1.0.0 blocker; the full-toolchain self-host above is the long-term arc (ADR-022 §10).
       - cargo-mutants on the Rust frontend witnesses the differential before the port is
         declared canonical.
       - The full-language 1.0.0 capstone criterion (ADR-022) is demonstrably met.
@@ -4012,7 +4014,7 @@ issues:
       - just check green (safety-check is part of the check suite).
   - id: E13-1
     title: "E13-1 (epic) -- Standard library in Mycelium (self-hosted stdlib + core libs)"
-    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:epic, area:stdlib, priority:P1, status:needs-design]
     depends_on: [E11-1]
     epic: E13
@@ -4086,7 +4088,7 @@ issues:
 
   - id: M-714
     title: "stdlib composition + phylum layout (RFC-0031)"
-    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:design, area:stdlib, priority:P1, status:needs-design]
     epic: E13-1
     doc_refs:
@@ -4126,7 +4128,7 @@ issues:
 
   - id: M-715
     title: "core/prelude in Mycelium: Option/Result/cmp/Ord/Eq + iter traits as .myc"
-    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
     epic: E13-1
     doc_refs:
@@ -4163,7 +4165,7 @@ issues:
 
   - id: M-716
     title: "collections in Mycelium: Vec/Map/Set as .myc with honest bounds"
-    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
     epic: E13-1
     doc_refs:
@@ -4197,7 +4199,7 @@ issues:
 
   - id: M-717
     title: "text + fmt in Mycelium: string handling + formatting as .myc"
-    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
     epic: E13-1
     doc_refs:
@@ -4231,7 +4233,7 @@ issues:
 
   - id: M-718
     title: "math + numerics surface in Mycelium: math ops + epsilon/delta surface as .myc"
-    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
     epic: E13-1
     doc_refs:
@@ -4267,7 +4269,7 @@ issues:
 
   - id: M-719
     title: "stdlib conformance + stability: differential tests + stable documented API"
-    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:verification, area:stdlib, priority:P1, status:needs-design]
     epic: E13-1
     doc_refs:
@@ -4308,7 +4310,7 @@ issues:
 
   - id: E15-1
     title: "E15-1 (epic) -- Native AOT maturity, optimization, and acceleration"
-    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:epic, area:execution, priority:P2, status:needs-design]
     depends_on: [E6-1]
     epic: E15
@@ -4374,7 +4376,7 @@ issues:
 
   - id: M-725
     title: "full libMLIR integration: ternary-dialect to MLIR to LLVM lowering"
-    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
     epic: E15-1
     doc_refs:
@@ -4415,7 +4417,7 @@ issues:
 
   - id: M-726
     title: "optimization passes: inlining/CSE/DCE as EXPLAIN-able never-silent transforms"
-    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
     epic: E15-1
     doc_refs:
@@ -4453,7 +4455,7 @@ issues:
 
   - id: M-727
     title: "JIT for dynamic / VSA workloads (ADR-009 deferred to enacted)"
-    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
     epic: E15-1
     doc_refs:
@@ -4489,7 +4491,7 @@ issues:
 
   - id: M-728
     title: "BitNet-class packed-ternary acceleration (FR-C3)"
-    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
     epic: E15-1
     doc_refs:
@@ -4526,7 +4528,7 @@ issues:
 
   - id: M-729
     title: "codegen differential durability: interp == AOT == JIT three-way agreement"
-    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
     labels: [phase:6, type:verification, area:execution, priority:P2, status:needs-design]
     epic: E15-1
     doc_refs:
@@ -4963,3 +4965,35 @@ issues:
       - A CI gate (in just check) fails on any first-party artifact whose license is not MIT.
       - ADR-023 records the MIT-only policy + resolves the dependency-license question (Q2).
       - No first-party Apache/dual-license remains; the audit is green.
+  - id: M-744
+    title: "M-744 — infra: gh-issues-dedup.py — reliable duplicate-issue reconcile (safety net)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:project, priority:P2, status:todo]
+    depends_on: []
+    epic: E8-1
+    doc_refs: [src:tools/github/gh-issues-dedup.py, src:tools/github/RECONCILE.md]
+    body: |
+      gh-issues-sync.py is designed never to duplicate (matches idmap-number-then-title), but a re-run
+      before idmap.tsv is committed has historically created twin issues (#126-129 duplicated
+      M-302/M-330/M-342/M-348). gh-issues-dedup.py is the safety net: group issues by task-id
+      (M-xxx/Exx-x) + normalized title, pick the lowest-numbered canonical, and (dry-run by default)
+      report; --apply closes the non-canonical OPEN twins (never the canonical), --fix-idmap re-anchors
+      idmap.tsv. Landed with a dry-run report + offline --self-test; the --apply path awaits a live,
+      token-scoped run.
+      User stories:
+      - As the maintainer, I want a one-command duplicate report after a sync, so erroneous twins are
+        caught before they pollute the tracker.
+      - As the maintainer, I want --apply to close only non-canonical twins (never the canonical) with a
+        pointer comment, so reconciliation is safe and auditable (G2).
+      - As an AI co-author, I want the dedup logic offline-testable (--self-test), so I can trust it
+        without a live run.
+      Issues to resolve:
+      - Validate --apply + --fix-idmap against live GitHub (token-scoped): confirm the close reason /
+        comment and idmap re-anchor behave as designed.
+      - Decide whether gh-issues-sync.py --all should invoke a post-create dedup pass automatically, or
+        keep dedup a separate explicit command.
+      Definition of Done:
+      - gh-issues-dedup.py exists, ruff-clean, --self-test green (DONE).
+      - A live --apply run reconciles a known duplicate set correctly (canonical kept, twins closed,
+        idmap re-anchored), every action printed (never-silent).
+      - RECONCILE.md documents it (DONE) and the sync -> dedup workflow is recorded.

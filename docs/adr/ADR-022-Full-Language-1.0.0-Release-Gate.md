@@ -86,11 +86,13 @@ its own per-issue DoDs (DN-25 is the map; the epics carry the detail). Summary c
 | **T6 Native AOT maturity** | E15-1 (+E6-1) | full libMLIR lowering; EXPLAIN-able optimization passes (RFC-0029); JIT; interp ≡ AOT ≡ JIT differential durable | ⏳ open |
 | **T7 Toolchain/IDE/dist** | E16-1 (+E9-1) | full LSP (completions/hover/semantic tokens); highlighting shipped (RFC-0026); package publish/resolve; reproducible install | ⏳ open |
 | **T8 Docs & stability** | E17-1 | language reference + tutorial; per-module stdlib docs; stability/API-compat guarantees (ADR-023); `lang` SemVer enacted; **MIT-only licensing audited** (§7) | ⏳ open |
-| **T9 Self-hosting** | E18-1 | the toolchain + all beyond-core libs are Mycelium; self-hosting CI gate green (DN-14, DN-26); three-way differential (Rust-host ≡ self-host ≡ AOT) | ⏳ open |
+| **T9 Self-hosting** | E18-1 | **1.0.0 bar (Q1):** the core stdlib/corelib is self-hosted in Mycelium so no dev must hand-write L0/L1 (with T4); self-hosting CI gate green for that slice (DN-14, DN-26). The full toolchain/compiler self-host (zero-Rust) **trails to the long-term arc (§10)** — not a 1.0.0 blocker | ⏳ open |
 
-**The headline criterion (maintainer):** `lang 1.0.0` is **not** reached while any library/phylum that
-*could* be Mycelium is still Rust-only. The bare core may stay Rust (T1); everything above it must be
-`.myc`, stable, and fully usable (T4 + T9).
+**The headline criterion (maintainer, Q1-scoped):** `lang 1.0.0` requires the **core stdlib/corelib
+self-hosted in Mycelium** — the language is *properly usable without any developer writing raw L0/L1*
+(T4 + the core-lib slice of T9). The bare core may stay Rust (T1); the *complete* zero-Rust rewrite of
+every library is the **long-term arc (§10)**, not a 1.0.0 gate. Reasonable, not maximal: 1.0.0 = fully
+usable, not yet zero-Rust.
 
 ## 6. Sequencing (high level; DN-25 has the dependency graph)
 
@@ -113,18 +115,23 @@ land long before `lang 1.0.0`.
    recognizes other SPDX ids — accepting an identifier is parser correctness, not a project-license
    claim. The `deny.toml` *dependency* license allow-list is a separate policy — see §8 open question.)
 
-## 8. Open questions
+## 8. Resolved questions (maintainer, 2026-06-23)
 
-- **Q1 (T9 hard-block?):** Is full self-hosting (T9) a hard 1.0.0 blocker, or may a first `lang 1.0.0`
-  ship with a documented, tracked self-hosting remainder (→ `1.1`)? (Recommended: hard-block the
-  *beyond-core libs in Mycelium* (T4) but allow the *toolchain* self-host to trail to 1.1 if T4 + the
-  surface are stable. Maintainer call.)
-- **Q2 (dependency license policy):** `deny.toml` allows MIT/Apache-2.0/BSD/ISC/Unicode **for
-  third-party Rust dependencies** (the kernel is Rust). "MIT-only" governs *first-party* code; should
-  the *dependency* allow-list also be tightened (would exclude much of the Rust ecosystem)? Flagged for
-  the maintainer — left unchanged pending that decision (never silently narrowed).
-- **Q3 (lang version start):** Does `lang` versioning start at `0.1.0` now (CHANGELOG currently frames
-  one project version)? ADR-018 mechanics + this dual axis need a one-line reconciliation.
+- **Q1 (T9 hard-block?) — RESOLVED.** The `lang 1.0.0` hard requirement is **full self-hosting of a
+  proper core stdlib/corelib** — enough that the language is **properly usable without a developer ever
+  dropping to hand-written L0/L1** (T4 + the core-library slice of T9). Full self-hosting of the
+  *entire* toolchain/compiler is **not** a hard 1.0.0 blocker — it is the long-term arc (§10). So T4
+  (stdlib + core libs in Mycelium) and the core-lib slice of T9 hard-block 1.0.0; the compiler-self-host
+  remainder may trail past 1.0.0. (Reasonable, not maximal.)
+- **Q2 (dependency license policy) — RESOLVED.** **MIT governs first-party only** — libs, modules,
+  crates, nodules, phyla. Third-party Rust (and other) **dependencies keep their own licenses**
+  (`deny.toml`'s Apache/BSD/ISC/Unicode allow-list stays). *Long-term (§10):* all Rust is rewritten in
+  Mycelium, one nodule/phylum at a time, until **no Rust remains** — at which point the dependency
+  surface is first-party Mycelium and the distinction dissolves.
+- **Q3 (lang version start) — RESOLVED.** `lang` versioning **starts at `0.1.0` now** (distinct from
+  `core`'s axis; ADR-018 mechanics apply per-axis). *Post-1.0.0 (§10):* once `lang 1.0.0` is reached and
+  satisfied, the monorepo is decomposed into component repos + phylum re-export repos and flipped to a
+  public MIT corpus.
 
 ## 9. Grounding & honesty
 
@@ -134,6 +141,20 @@ survey (only `lib/std/result.myc` self-hosts today; `crates/mycelium-std-*` are 
 upgraded; no spec is moved to Accepted/Enacted by this ADR. The program map + sequencing live in
 DN-25; this ADR is the gate of record.
 
+## 10. Long-term vision (post-1.0.0)
+
+Recorded so the program stays honest about where it ends — these are **vision, not 1.0.0 criteria**:
+
+- **Zero-Rust end state.** All Rust is progressively rewritten in Mycelium — replacing and stabilizing
+  **one nodule and phylum at a time** until no Rust remains and the entire project is written in
+  Mycelium. 1.0.0 requires only the *core* stdlib/corelib self-hosted (Q1); the full rewrite continues
+  past 1.0.0 (DN-26 tracks the staged port order).
+- **Repository decomposition + public MIT release.** Once `lang 1.0.0` is reached, completed, and
+  satisfied, the monorepo is decomposed into **component repos** + **phylum re-export repos** (each
+  re-export repo groups its component repos and presents a user-friendly interface over its phyla and
+  nodules), and the project **flips to a full set of public, MIT-licensed repos** — a useful corpus for
+  developers, users, and models to leverage. Captured in **DN-27**.
+
 ---
 
 ## Changelog
@@ -141,3 +162,7 @@ DN-25; this ADR is the gate of record.
   carried forward as track T1). Establishes the dual-version (`core` ⟂ `lang`) model, the full-language
   1.0.0 Definition of Done (T1–T9 → epics E10-1…E18-1), and three project-wide conventions (user
   stories, Definition of Done, MIT-only licensing). Program map: DN-25.
+- 2026-06-23 — Q1/Q2/Q3 **resolved** (maintainer): Q1 1.0.0 bar = core stdlib/corelib self-hosted
+  (usable without hand-L0/L1); full toolchain self-host trails. Q2 MIT = first-party only; deps keep
+  their licenses. Q3 `lang` starts `0.1.0` now. Added §10 long-term vision (zero-Rust end state;
+  post-1.0.0 repo decomposition + public-MIT flip → DN-27).
