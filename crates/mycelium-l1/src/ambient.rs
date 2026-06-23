@@ -758,7 +758,14 @@ impl core::fmt::Display for DisplayBase<'_> {
             BaseType::Ambient(params) => write!(f, "{{{}}}", ambient_params_str(params)),
             // Function type: `A -> B` in canonical surface form (RFC-0024 §3, M-685).
             BaseType::Fn(arg, ret) => {
-                write!(f, "{} -> {}", print_type_ref(arg), print_type_ref(ret))
+                // Parenthesize a function-typed LHS so `(A -> B) -> C` round-trips unambiguously,
+                // not as `A -> B -> C` (Copilot #397).
+                let lhs = print_type_ref(arg);
+                if matches!(arg.base, BaseType::Fn(_, _)) {
+                    write!(f, "({lhs}) -> {}", print_type_ref(ret))
+                } else {
+                    write!(f, "{lhs} -> {}", print_type_ref(ret))
+                }
             }
         }
     }

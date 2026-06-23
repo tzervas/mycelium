@@ -230,8 +230,17 @@ fn render_type(t: &TypeRef) -> String {
                 Sparsity::Sparse(k) => format!("{{{model}, {dim}, Sparse{{{k}}}}}"),
             },
         },
-        // RFC-0024 §3: function type `A -> B` (right-associative); inner refs rendered recursively.
-        BaseType::Fn(a, b) => format!("{} -> {}", render_type(a), render_type(b)),
+        // RFC-0024 §3: function type `A -> B` (right-associative). Parenthesize a function-typed
+        // LHS so `(A -> B) -> C` is unambiguous, not `A -> B -> C` (Copilot #397).
+        BaseType::Fn(a, b) => {
+            let lhs = render_type(a);
+            let lhs = if matches!(a.base, BaseType::Fn(..)) {
+                format!("({lhs})")
+            } else {
+                lhs
+            };
+            format!("{lhs} -> {}", render_type(b))
+        }
     };
     match t.guarantee {
         None => base,
