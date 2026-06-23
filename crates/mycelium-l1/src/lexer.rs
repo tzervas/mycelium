@@ -327,7 +327,11 @@ impl Lexer {
                     // Consume the comment text up to (but not including) the newline.
                     let mut text = String::new();
                     while let Some(c) = self.peek() {
-                        if c == '\n' {
+                        // Stop at the line terminator — break on `\r` too so a CRLF source does not
+                        // leave a trailing `\r` in the comment text (the `\r\n` is then consumed by
+                        // the whitespace arm). Keeps comment text `\r`-free + LF/CRLF round-trip
+                        // parity, per the lexer's "no carriage-return" contract (Copilot #397).
+                        if c == '\n' || c == '\r' {
                             break;
                         }
                         text.push(c);
@@ -380,6 +384,24 @@ mod tests {
         assert_eq!(
             plain, with_cmt,
             "token stream mismatch between lex and lex_with_comments for input {src:?}"
+        );
+    }
+
+    /// Copilot #397: on a CRLF source the captured comment text must not retain the trailing `\r`
+    /// (the lexer's "no carriage-return" contract; LF/CRLF round-trip parity).
+    #[test]
+    fn comment_capture_strips_trailing_cr_on_crlf() {
+        let (_toks, comments) =
+            lex_with_comments("nodule d\r\nfn f() -> Binary{1} = 0b1 // why\r\n")
+                .expect("lex_with_comments succeeded");
+        let last = comments.last().expect("a comment was captured");
+        assert_eq!(
+            last.text, "// why",
+            "comment text must be CR-free on CRLF input"
+        );
+        assert!(
+            !last.text.contains('\r'),
+            "no carriage-return in comment text"
         );
     }
 

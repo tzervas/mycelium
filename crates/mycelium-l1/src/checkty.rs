@@ -102,8 +102,9 @@ impl core::fmt::Display for Ty {
             }
             Ty::Substrate(t) => write!(f, "Substrate{{{t}}}"),
             Ty::Var(v) => write!(f, "{v}"),
-            // RFC-0024 §3: render as `A -> B` (right-associative; nested arrow-left is parenthesised
-            // for readability but both are valid in the surface grammar — here we keep it minimal).
+            // RFC-0024 §3: render as `A -> B` (right-associative). Parenthesize a function-typed
+            // LHS so `(A -> B) -> C` is unambiguous in diagnostics, not `A -> B -> C` (Copilot #397).
+            Ty::Fn(a, r) if matches!(a.as_ref(), Ty::Fn(_, _)) => write!(f, "({a}) -> {r}"),
             Ty::Fn(a, r) => write!(f, "{a} -> {r}"),
         }
     }
@@ -3517,6 +3518,25 @@ mod tests {
 
     fn env(src: &str) -> Env {
         check_nodule(&parse(src).expect("parses")).expect("checks")
+    }
+
+    /// Copilot #397: a function-typed LHS is parenthesized in `Ty::Fn`'s Display, so `(A -> B) -> C`
+    /// is unambiguous (not `A -> B -> C`); a simple `A -> B` and the right-associative RHS stay bare.
+    #[test]
+    fn ty_fn_display_parenthesizes_a_function_typed_lhs() {
+        let var = |n: &str| Ty::Var(n.to_owned());
+        let simple = Ty::Fn(Box::new(var("A")), Box::new(var("B")));
+        assert_eq!(format!("{simple}"), "A -> B");
+        let higher_order = Ty::Fn(
+            Box::new(Ty::Fn(Box::new(var("A")), Box::new(var("B")))),
+            Box::new(var("C")),
+        );
+        assert_eq!(format!("{higher_order}"), "(A -> B) -> C");
+        let right = Ty::Fn(
+            Box::new(var("A")),
+            Box::new(Ty::Fn(Box::new(var("B")), Box::new(var("C")))),
+        );
+        assert_eq!(format!("{right}"), "A -> B -> C");
     }
 
     fn check_err(src: &str) -> CheckError {
