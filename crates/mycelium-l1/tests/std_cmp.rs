@@ -122,7 +122,7 @@ fn assert_bool(label: &str, call: &str, expected_bool: &str) {
 /// A `main` returning `Ordering`; `expected` is the reference Ordering constructor.
 fn assert_ordering(label: &str, call: &str, expected_ord: &str) {
     let src = program(&format!("fn main() -> Ordering = {call}"));
-    // The reference program re-declares Ordering so the constructor resolves.
+    // The reference program redeclares Ordering so the constructor resolves.
     let expected =
         format!("nodule ref\ntype Ordering = Lt | Eq | Gt\nfn main() -> Ordering = {expected_ord}");
     assert_three_way(label, &src, &expected);
