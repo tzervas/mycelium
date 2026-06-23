@@ -104,7 +104,16 @@ def check_idmap(issues, idmap_path: Path) -> int:
         print(f"  note: {idmap_path.name} not found — idmap cross-check skipped")
         return 0
 
-    rows, malformed = parse_idmap(idmap_path)
+    try:
+        rows, malformed = parse_idmap(idmap_path)
+    except Exception as exc:
+        print(
+            f"ERROR (idmap): {idmap_path.name} is unreadable — "
+            f"{type(exc).__name__}: {exc} "
+            "(re-run with --debug for the full traceback)",
+            file=sys.stderr,
+        )
+        return 1
     errors = 0
     for lineno, raw, reason in malformed:
         print(
