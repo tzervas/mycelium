@@ -98,6 +98,37 @@ pub static MATRIX: &[GaugeRow] = &[
         strength: GuaranteeStrength::Exact,
         basis: "pop from VecDeque head; FIFO ordering exact by construction (ADR-020 §4)",
     },
+    // ── E12-1 execution maturity (M-709 scheduler / M-711 deadlock / M-713 supervision) ──
+    GaugeRow {
+        operation: "Scheduler RT2 sequentialization differential (OS threads)",
+        strength: GuaranteeStrength::Empirical,
+        basis: "parallel run equals sequential reference by RT1; property-tested, not Proven (M-709)",
+    },
+    GaugeRow {
+        operation: "Scheduler backpressure bound (bounded ready queue)",
+        strength: GuaranteeStrength::Exact,
+        basis: "ready queue ≤ capacity by construction (enqueue only while len<capacity); G2 (M-709)",
+    },
+    GaugeRow {
+        operation: "Scheduler liveness (each job runs exactly once)",
+        strength: GuaranteeStrength::Empirical,
+        basis: "property-tested over random job sets; not Proven (M-709)",
+    },
+    GaugeRow {
+        operation: "Deadlock-freedom sweep (run_dataflow no-progress)",
+        strength: GuaranteeStrength::Empirical,
+        basis: "no-progress sweep ⇒ explicit Deadlock (never a hang, G2); complete for DAG graphs (M-711)",
+    },
+    GaugeRow {
+        operation: "Supervision cancellation propagation (structured scope)",
+        strength: GuaranteeStrength::Empirical,
+        basis: "cooperative cancel cascades to every child; explicit outcome per child; property-tested (M-713)",
+    },
+    GaugeRow {
+        operation: "Supervision restart bound (bounded cascade)",
+        strength: GuaranteeStrength::Exact,
+        basis: "rate + total restart bounds enforced structurally; inherited from M-356 Supervisor (M-713)",
+    },
 ];
 
 #[cfg(test)]

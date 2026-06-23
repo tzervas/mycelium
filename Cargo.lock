@@ -498,7 +498,9 @@ name = "mycelium-std-runtime"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
+ "mycelium-interp",
  "mycelium-std-core",
+ "proptest",
 ]
 
 [[package]]
