@@ -125,7 +125,7 @@ crates (`mycelium-std-*`). This RFC must answer:
    (RFC-0024) is now landed, unblocking `core/prelude` combinators first. What is the
    revised order? Is `core` (Option/Result/Ord/Eq) before `iter` before `collections`?
 5. **Stability bar granularity** — must every exported function have a differential test
-   (interpretor ≡ Rust reference), or is per-module aggregate coverage sufficient? What is
+   (interpreter ≡ Rust reference), or is per-module aggregate coverage sufficient? What is
    the minimum guarantee-tag obligation (all `Declared`, or `Empirical` required for
    performance-sensitive ops)?
 6. **Rust crate retirement** — when a `.myc` port is accepted, how is the `mycelium-std-*`

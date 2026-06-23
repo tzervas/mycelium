@@ -477,20 +477,23 @@ fn a_wild_inside_an_impl_method_is_gated_by_the_nodule_std_sys_context() {
 }
 
 #[test]
-fn a_wild_in_a_std_sys_nodule_is_staged_at_elaboration() {
-    // Execution is STAGED: a `@std-sys` `wild` fn type-checks, but elaborating it to L0 is an explicit
-    // `Residual` (no FFI host in v0 — M-661), never a fabricated artifact (G2). Mirrors M-657/659/660.
+fn a_wild_in_a_std_sys_nodule_lowers_to_a_host_dispatch_op() {
+    // M-720 (was staged in M-661): a `@std-sys` `wild` fn type-checks AND now *elaborates* — its
+    // host-call body lowers to a host-dispatch `Op` in the reserved `wild:` prim namespace
+    // (RFC-0028 §4.2/§4.3), with **no new Core-IR node** (KC-3). Never a fabricated artifact (G2):
+    // an ungranted host op refuses at *runtime* (an explicit `UnknownPrim`), and a non-host-call
+    // body refuses at *elaboration* — both tested in `tests/differential.rs`.
+    use mycelium_core::Node;
     let nodule = parse(
         "nodule std.sys.fs @std-sys\nfn read_byte() -> Binary{8} !{ffi} = wild { foreign_read() }",
     )
     .expect("parses");
     let env = check_nodule(&nodule).expect("type-checks");
-    let err = mycelium_l1::elaborate(&env, "read_byte")
-        .expect_err("a wild block has no L0 form in v0 — staged as Residual");
-    let msg = err.to_string();
+    let node = mycelium_l1::elaborate(&env, "read_byte")
+        .expect("a wild host-call body lowers to a host-dispatch Op (M-720)");
     assert!(
-        msg.contains("staged") && (msg.contains("FFI") || msg.contains("wild")),
-        "the elaboration refusal must frame wild/FFI as staged, got: {msg}"
+        matches!(&node, Node::Op { prim, args } if prim == "wild:foreign_read" && args.is_empty()),
+        "wild {{ foreign_read() }} must lower to Op{{prim:\"wild:foreign_read\", args:[]}}; got {node:?}"
     );
 }
 
