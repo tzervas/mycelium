@@ -1379,6 +1379,10 @@ fn mangle_ty(t: &Ty) -> String {
         // A `Ty::Var` must never reach mangling (mono refuses an undetermined parameter first); a
         // distinctive marker keeps a hypothetical leak observable rather than silently collidable.
         Ty::Var(v) => format!("VAR_{v}"),
+        // RFC-0024 §4 / M-687: function-type parameters are defunctionalized in M-687.
+        // A `Ty::Fn` reaching mangling before M-687 is a bug — use a distinctive, non-collidable
+        // marker so the leak surfaces loudly (never silently — G2/VR-5).
+        Ty::Fn(a, r) => format!("HOF_FN_{}__TO__{}", mangle_ty(a), mangle_ty(r)),
     }
 }
 
@@ -1430,6 +1434,9 @@ fn mangle_ty_in_ty(t: &Ty) -> Ty {
         Ty::Data(_, args) if args.is_empty() => t.clone(),
         Ty::Data(_, _) => Ty::Data(mangle_ty(t), vec![]),
         Ty::Var(v) => Ty::Var(v.clone()), // defended against earlier; pass through if it ever appears
+        // RFC-0024 §4 / M-687: function types pass through un-mangled; the defunctionalization
+        // rewrite in M-687 will eliminate them before any fn mangle/registry step.
+        Ty::Fn(_, _) => t.clone(),
     }
 }
 
@@ -1449,6 +1456,9 @@ fn ty_to_source_ref(t: &Ty) -> TypeRef {
             BaseType::Named(n.clone(), args.iter().map(ty_to_source_ref).collect())
         }
         Ty::Var(v) => BaseType::Named(v.clone(), vec![]),
+        // RFC-0024 §4 / M-687: function types round-trip as `BaseType::Fn`. Used only for re-inference
+        // context threading; defunctionalization (M-687) rewrites them before any registry step.
+        Ty::Fn(a, r) => BaseType::Fn(Box::new(ty_to_source_ref(a)), Box::new(ty_to_source_ref(r))),
     };
     TypeRef::unguaranteed(base)
 }
@@ -1469,6 +1479,10 @@ fn ty_to_ref(t: &Ty) -> TypeRef {
         Ty::Data(n, args) if args.is_empty() => BaseType::Named(n.clone(), vec![]),
         Ty::Data(_, _) => BaseType::Named(mangle_ty(t), vec![]),
         Ty::Var(v) => BaseType::Named(format!("VAR_{v}"), vec![]),
+        // RFC-0024 §4 / M-687: function types in rewritten fn-decl positions; defunctionalization
+        // in M-687 will eliminate these. Preserve as `BaseType::Fn` so the AST stays structurally
+        // sound (never a silent drop or panic — G2/VR-5).
+        Ty::Fn(a, r) => BaseType::Fn(Box::new(ty_to_ref(a)), Box::new(ty_to_ref(r))),
     };
     TypeRef::unguaranteed(base)
 }
