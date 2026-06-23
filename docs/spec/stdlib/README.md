@@ -72,10 +72,12 @@ ratification. The **first wave** landed the Tier-A differentiators `core`/`swap`
 remainder (`numerics`/`vsa`/`diag`/`recover`/`runtime`/`spore` + `collections`/`text`/`io`/`fs`/`time`/
 `rand`/`testing`) — every module in the RFC-0016 taxonomy got a `Draft` spec. **Ratified 2026-06-20
 (DN-07):** the **23 Rust-first specs moved `Draft — landed` → `Accepted`** on a checked basis (each spec's
-own Status line + the changelog below carry the per-spec disposition); **`runtime` and
-`self-hosting-readiness` stay `Draft (needs-design)`** (Phase-7 / migration-gated). The index tables below
-keep their `Draft — landed` cells as **append-only design-wave history** — each spec's Status line is the
-authoritative current state. Cross-module FLAGs reconciled in §5.
+own Status line + the changelog below carry the per-spec disposition). **`self-hosting-readiness` stays
+`Draft (needs-design)`** (migration-gated — the M-502 gate doc, not a crate spec). **`runtime` was
+additionally ratified 2026-06-21** (v0 R1 surface — preconditions met, DN-16 re-audit clean; further
+constructs activate at the Phase-7 gate per ADR-020) — bringing the total to **25/25 crate specs
+`Accepted`**. The index tables below keep their `Draft — landed` cells as **append-only design-wave
+history** — each spec's Status line is the authoritative current state. Cross-module FLAGs reconciled in §5.
 
 ### Tier A — differentiator modules (RFC-0016 §4.3)
 
@@ -91,7 +93,7 @@ authoritative current state. Cross-module FLAGs reconciled in §5.
 | `vsa` / `hdc` | [`vsa.md`](./vsa.md) | M-513 (#154) | RFC-0003/0009; M-130/240–242/260 | **Draft — landed** |
 | `diag` | [`diag.md`](./diag.md) | M-510 (#151) | RFC-0013; M-345 | **Draft — landed** |
 | `recover` | [`recover.md`](./recover.md) | M-520 (#156) | RFC-0014; M-352/353 | **Draft — landed** |
-| `runtime` / `colony` | [`runtime.md`](./runtime.md) | M-521 (#162) | RFC-0008; M-355–357 | **Draft — landed** (reserved-vocabulary; Phase-7-gated, §8-Q4) |
+| `runtime` / `colony` | [`runtime.md`](./runtime.md) | M-521 (#162) | RFC-0008; M-355–357 | **Accepted 2026-06-21** (v0 R1 surface; further constructs Phase-7-gated, §8-Q4) |
 | `spore` | [`spore.md`](./spore.md) | M-522 (#163) | ADR-013; RFC-0003 §6; M-368 | **Draft — landed** |
 | `sys` (OS/FFI floor) | [`sys.md`](./sys.md) | M-541 | RFC-0016 §8-Q6; ADR-014 | **landed; Accepted 2026-06-21** |
 
@@ -176,6 +178,12 @@ The Mycelium-lang *migration half* of M-510…M-520 still waits on the concrete 
 (KC-2-gated; RFC-0006 §10; self-hosting capability #3 — `self-hosting-readiness.md`); the Rust-first specs +
 implementations proceed against RFC-0016 now.
 
+**Current self-hosting status (2026-06-23, E13-1 / ADR-022 T4 — the long pole):** only
+`lib/std/result.myc` self-hosts today; the remaining modules are still Rust crates under
+`crates/mycelium-std-*/`. E13-1 (`lib10`) is the next major wave (M-714…M-719). The
+`self-hosting-readiness.md` gate verdict remains **not yet established**. Self-hosting capstone
+(E18-1) is post-E13-1. Nothing here is pre-recorded as done (VR-5 / house rule #3).
+
 ## 6. How this index stays honest
 
 - **Append-only with status transitions**, mirroring the ADR/RFC discipline: a module row moves
@@ -187,6 +195,18 @@ implementations proceed against RFC-0016 now.
 
 ## Meta — changelog
 
+- **2026-06-23 — Status narrative + `runtime` row corrected; E13-1 self-hosting note added.** The
+  wave-status paragraph now reflects the 2026-06-21 ratification of `runtime` (v0 R1 surface;
+  DN-16 re-audit; 25/25 crate specs `Accepted`); the `runtime` Tier-A index row updated from
+  `Draft — landed` to `Accepted 2026-06-21`. Added a §5 note on the current self-hosting state:
+  only `lib/std/result.myc` self-hosts; the rest of the stdlib remains Rust crates; E13-1 (`lib10`)
+  is the next wave; E18-1 self-hosting capstone is post-E13-1. No spec status changes; no design
+  decisions (VR-5). Append-only.
+- **2026-06-21 — `runtime` and `sys` specs ratified `Accepted` (DN-16; M-541).** The maintainer
+  additionally ratified `runtime` (v0 R1 surface — preconditions met, DN-16 re-audit clean;
+  further constructs Phase-7-gated per ADR-020) and the newly-written `sys` spec
+  (`mycelium-std-sys`, M-541) — completing 25/25 crate specs `Accepted`. (Recorded in the Status
+  field above; index rows updated.) Append-only.
 - **2026-06-20 — 23 Rust-first specs ratified `Draft — landed` → `Accepted` (DN-07; PR #228).** The
   maintainer ran the DN-07 per-spec ratification pass: the 23 Rust-first module specs (`cmp`, `collections`,
   `content`, `core`, `dense`, `diag`, `error`, `fmt`, `fs`, `io`, `iter`, `math`, `numerics`, `rand`,

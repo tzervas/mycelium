@@ -8,6 +8,7 @@ reading compiler source**.
 |---|---|---|
 | **[tutorial.md](./tutorial.md)** | A hands-on walkthrough that builds a complete program from scratch | …you are new to Mycelium |
 | **[language-reference.md](./language-reference.md)** | The full surface — every construct, in lookup form | …you want to look up a keyword, type, or form |
+| **[stdlib-api.md](./stdlib-api.md)** | Generated per-module stdlib API docs (M-736); coverage grows with E13-1 self-hosting | …you want to look up a stdlib function's signature or doc |
 
 ## How these docs are grounded (honesty)
 
@@ -32,5 +33,8 @@ does not yet run* (generics/traits elaboration → M-673; effect annotations →
 
 ## Changelog
 
+- **2026-06-23 — stdlib API docs added (M-736).** `stdlib-api.md` added to the index: generated
+  per-module stdlib API reference projected from `lib/std/` by `mycelium-doc`. Today covers
+  `std.result` (the only self-hosted module; E13-1 ports the rest). Append-only.
 - **2026-06-23 — Created (M-735).** Reference section index for the full-language 1.0.0 docs gate
   (E17-1): the language reference + tutorial. Append-only.
