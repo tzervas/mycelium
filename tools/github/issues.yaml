@@ -4466,7 +4466,8 @@ issues:
       BLOCKED (RFC-0031 §5 D4 Tier-1) on E19-1: width-typed comparison needs M-747 (reduce-to-Bool
       comparison prim); binary math needs M-748 (binary arithmetic surface); a GENERAL (non-fixed-
       width) math/cmp surface needs M-751 (width-generic fns) -- all gated by RFC-0032. The kernel
-      surfaces only bit.not/bit.xor for Binary{N} (no add/cmp), and width {N} is a concrete literal,
+      surfaces only bit.not/bit.xor for Binary{N} (bit.and/bit.or are registered but not surfaced via
+      prim_kernel_name; no add/sub/cmp), and width {N} is a concrete literal,
       not a generic parameter, so a fixed-width-only port would bake Ternary{4} into the stdlib (a weak
       surface -- not taken, VR-5). NOTE: the ternary-arithmetic ops (add/sub/mul/neg over Ternary{N})
       are already surfaced as trit.* prims, so once M-751 lands a width-generic ternary-math leaf is
@@ -5266,20 +5267,36 @@ issues:
     title: "E19-1 (epic) -- Kernel self-hosting-enablement surface (value reprs + primitive floor)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:epic, area:core, priority:P1, status:needs-design]
-    depends_on: [E13-1]
     epic: E19
     doc_refs:
       - corpus:RFC-0032
       - corpus:RFC-0031
       - corpus:RFC-0001
+      - corpus:ADR-022
       - src:crates/mycelium-core/src/repr.rs
       - src:crates/mycelium-interp/src/prims.rs
     body: |
+      Dependency direction: E19-1 is a PREREQUISITE OF E13-1 (it unblocks E13-1's blocked tiers), not
+      dependent on it -- so no `depends_on: [E13-1]` (that would invert the DAG). The unblock is wired
+      the correct way via the E13-1 children's depends_on (M-716 <= M-749, M-717 <= M-750, M-718 <=
+      M-747/M-748/M-751). E19-1's only internal gate is its own RFC-0032/M-746.
+
+      MAINTAINER DECISIONS (2026-06-23, recorded for M-746 to ratify in RFC-0032):
+      - Q6 (placement) = IN CORE 1.0.0. The new reprs/prims land in the core kernel BEFORE the 1.0.0
+        tag, so the language is fully self-hosting at 1.0.0. CONSEQUENCE: this makes E19-1 a core-1.0.0
+        gate prerequisite -- the E10-1/c10 "gate-met / tag-ready" status (ADR-022 track T1) now also
+        waits on E19-1. FLAG (coordinate, do not edit here): ADR-022 + E10-1 + the c10 kickoff need a
+        maintainer update so the core tag accounts for E19-1; this epic does not rewrite that gate
+        (append-only, c10-owned).
+      - Q5 (width-generics ownership) = E11-1/s10. M-751 (fn f<N>(x: Ternary{N})) is reassigned to the
+        s10 surface-language leg (it edits the mycelium-l1 type system); M-751 stays as a pointer.
+
       The kernel work leg that unblocks E13-1's blocked tiers. RFC-0031 §5 D4 tiered the stdlib
       migration and found Tier-0 (structural/polymorphic core) executable (landed, M-715) but the
       heavier tiers blocked on kernel surface that does not yet exist: Tier-1 (width-typed cmp/Eq/Ord
-      + binary math) needs a reduce-to-Bool comparison prim + binary arithmetic (today only
-      bit.not/bit.xor + trit.* are surfaced); Tier-2 (efficient collections, text/fmt) needs a
+      + binary math) needs a reduce-to-Bool comparison prim + binary arithmetic (today bit.not/bit.xor
+      are surfaced + bit.and/bit.or registered-but-unsurfaced; no comparison or add/sub); Tier-2
+      (efficient collections, text/fmt) needs a
       sequence/array value + a byte/string value (the value model Repr = Binary/Ternary/Dense/Vsa has
       neither). These additions ENLARGE the value model / trusted base (KC-3), so the epic is
       DESIGN-GATED by RFC-0032 (M-746) exactly as E13-1 was gated by RFC-0031 (M-714).
@@ -5437,7 +5454,7 @@ issues:
       - E13-1 M-717 precondition marked satisfied; .myc smoke port in M-752.
 
   - id: M-751
-    title: "M-751 -- width-generic functions (fn f<N>(x: Ternary{N})) [ownership per RFC-0032 Q5]"
+    title: "M-751 -- width-generic functions (fn f<N>(x: Ternary{N})) -- REASSIGNED to E11-1/s10 (RFC-0032 Q5)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
     epic: E19-1
@@ -5446,16 +5463,19 @@ issues:
       - corpus:RFC-0032
       - src:crates/mycelium-l1/src/checkty.rs
     body: |
-      BLOCKED on M-746 (RFC-0032 Q5 decides whether this is owned by E19-1 or reassigned to E11-1/s10 --
-      it touches the mycelium-l1 type system, the language-leg collision surface). Add const-generic
-      function parameters over representation width (fn f<N>(x: Ternary{N}) -> Ternary{N}) so math/cmp
-      can be width-polymorphic rather than fixed-width (the reason a general std.math was not portable in
-      M-715/M-718). If reassigned, this issue is closed as a pointer to the E11-1 task.
+      REASSIGNED to E11-1/s10 (maintainer, 2026-06-23 -- RFC-0032 Q5). Width-generics (const-generic
+      function parameters over representation width: fn f<N>(x: Ternary{N}) -> Ternary{N}) is a
+      surface-language type-system feature that edits the mycelium-l1 checker -- the s10 (E11-1) leg's
+      collision surface -- so it is owned there, not by E19-1. This issue stays as a POINTER: M-746
+      (RFC-0032) records the reassignment and files/links the E11-1 task; M-751 then closes pointing at
+      it. Rationale: keeps exactly one leg editing the l1 type system (no kpr<->s10 collision); E19-1
+      stays the prims+reprs leg. Width-generics is what makes a GENERAL (non-fixed-width) std.math/cmp
+      portable (the reason M-715/M-718 could not ship a width-polymorphic surface); E13-1 M-718 depends
+      on it landing under s10.
 
       Definition of Done:
-      - Either: width-generic fns type-check + monomorphize + run three-way (owned here); OR: the work is
-        reassigned to E11-1/s10 with an explicit pointer (RFC-0032 Q5 resolution recorded).
-      - If implemented: a width-generic ternary-math .myc smoke port demonstrates the unblock (M-752).
+      - M-746 records the Q5 reassignment in RFC-0032 + files/links the E11-1/s10 width-generics task.
+      - M-751 closed as a pointer to that task (never silently dropped -- the dependency is preserved).
 
   - id: M-752
     title: "M-752 -- enablement conformance: each prim/repr differential-tested + .myc smoke ports"

@@ -31,8 +31,10 @@ finite-type `Ordering`/`Eq`/`Ord`) — is executable today and landed (M-715). T
 **blocked on kernel surface that does not yet exist**:
 
 - **Tier-1** — width-typed `cmp`/`Eq`/`Ord` over `Binary{N}`/`Ternary{N}`, and binary `math`. The
-  kernel surfaces `bit.not`/`bit.xor` (binary) and `trit.neg/add/sub/mul` (ternary) but **no
-  reduce-to-`Bool` comparison/equality prim** and **no binary arithmetic**, so a width-typed `eq`/`cmp`
+  kernel *surfaces* `bit.not`/`bit.xor` (binary) and `trit.neg/add/sub/mul` (ternary) — note
+  `bit.and`/`bit.or` are **registered** in the prim registry but **not yet surfaced** via
+  `prim_kernel_name` (Q2) — but there is **no reduce-to-`Bool` comparison/equality prim** and **no
+  binary arithmetic** (`add`/`sub`), so a width-typed `eq`/`cmp`
   or a binary `add` has nothing to bottom out on.
 - **Tier-2** — `collections` (efficient `Vec`/`Map`/`Set`) and `text`/`fmt`. The value model
   (`Repr` = `Binary`/`Ternary`/`Dense`/`Vsa`) has **no sequence/array value** and **no byte/string
@@ -116,10 +118,21 @@ design gate for epic E19-1.
    is needed for a *general* (non-fixed-width) `math`/`cmp` surface. Is this in scope for E19-1, or is
    it a surface-language type-system feature owned by **E11-1** (`s10`)? It touches `mycelium-l1`'s
    checker — the collision surface with the language legs.
+   > **Resolved direction (maintainer, 2026-06-23): E11-1/`s10`.** Width-generics is a surface-language
+   > type-system feature and is owned by the `s10` leg (which already owns the `mycelium-l1` type
+   > system) — keeps exactly one leg editing the checker. M-751 is reassigned to E11-1/`s10` as a
+   > pointer; M-746 records the link. (To be ratified into a normative decision when M-746 authors §5.)
 6. **KC-3 / 1.0.0 placement** — the core kernel gate (ADR-022 T1) is gate-met / tag-ready. Do the new
    reprs/prims land **in** `core` 1.0.0 (enlarging the just-frozen value model), **post-1.0.0** (a 1.1
    value-model extension), or as a **non-trusted representation-extension** layered above the trusted
    base? KISS/YAGNI + KC-3 weigh here; ADR-022 is the gate of record.
+   > **Resolved direction (maintainer, 2026-06-23): IN `core` 1.0.0.** The new reprs/prims land in the
+   > core kernel **before** the 1.0.0 tag, so the language is fully self-hosting at 1.0.0. **Consequence
+   > (flag, coordinate):** this makes E19-1 a **core-1.0.0 gate prerequisite** — E10-1/`c10`'s "gate-met
+   > / tag-ready" status (ADR-022 track T1) now also waits on E19-1; ADR-022 + E10-1 + the `c10` kickoff
+   > need a maintainer update so the core tag accounts for E19-1. The KC-3 trusted-base growth is thus
+   > deliberate and gated by this RFC + ADR-022. (To be ratified into a normative decision, with the
+   > per-addition trusted-base justification, when M-746 authors §5.)
 7. **Sequencing** — comparison prim first (smallest, unblocks Tier-1 `cmp` immediately), then binary
    arithmetic, then the representations (largest, KC-3-heaviest)? Or representation-first because it
    unblocks the most E13-1 surface?

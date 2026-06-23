@@ -26,7 +26,11 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   index) — owns `crates/mycelium-interp/src/prims.rs` + the `prim_kernel_name` map; the `mycelium-core`
   reprs + L1 width-generics are flagged **coordinated** with `c10`/`s10` (maintainer sign-off on the
   RFC-0032 KC-3/placement before merge — architecturally significant, flag-don't-guess). No kernel code
-  changed yet (planning + design-gate scaffolding only). (RFC-0032; E19-1/M-746)
+  changed yet (planning + design-gate scaffolding only). **Maintainer direction recorded (2026-06-23,
+  for M-746 to ratify):** RFC-0032 Q6 = **in `core` 1.0.0** (the reprs/prims land before the 1.0.0 tag
+  → E19-1 becomes a core-1.0.0 gate prerequisite; ADR-022 T1 / E10-1 / `c10` need a maintainer update so
+  the core tag accounts for E19-1 — flagged, not edited here); Q5 = **E11-1/`s10`** (width-generics
+  reassigned; M-751 → pointer). (RFC-0032; E19-1/M-746)
 
 ### Added (2026-06-23: E13-1 — self-hosted stdlib composition ratified + the executable core/prelude; RFC-0031 Accepted; M-714/M-715 Tier-0)
 

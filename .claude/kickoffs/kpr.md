@@ -139,12 +139,20 @@ blocked tiers of E13-1 (self-hosted stdlib). The repo is `/home/user/mycelium`. 
 
 **Step 0 — the gate (M-746), do this first and alone:** author `RFC-0032` (the Draft stub exists at
 `docs/rfcs/RFC-0032-Kernel-Self-Hosting-Enablement-Surface.md`) to **Accepted** by resolving its §5
-open questions. These are **architecturally significant** (new value-model reprs, KC-3 trusted-base
-growth, the 1.0.0-placement question against ADR-022, and the width-generics ownership vs `s10`):
-**use `AskUserQuestion` for the Q3/Q4 representation shape, the Q6 core-1.0.0-vs-post-1.0.0 placement,
-and the Q5 width-generics ownership — do not guess.** Mirror how M-714 authored RFC-0031 (resolve the
-open questions into normative decisions, mark the DoD, move the status footer Draft → Accepted,
-append the changelog row).
+open questions. **Two are already settled by the maintainer (2026-06-23, recorded in §5):**
+- **Q6 (placement) = IN `core` 1.0.0** — the reprs/prims land in the kernel before the 1.0.0 tag.
+  **Consequence you must carry through:** E19-1 becomes a **core-1.0.0 gate prerequisite**, so
+  E10-1/`c10`'s "tag-ready" status (ADR-022 T1) now waits on E19-1 — **FLAG that ADR-022 + E10-1 + the
+  `c10` kickoff need a maintainer update** (do not rewrite that gate yourself; append-only, c10-owned).
+- **Q5 (width-generics) = E11-1/`s10`** — M-751 is reassigned there as a pointer; record the link in
+  RFC-0032 + file/link the s10 task, then close M-751.
+
+The **remaining architecturally-significant questions are Q3 (sequence repr vs the recursive-ADT
+`List` — the minimal addition) and Q4 (byte/string repr — dedicated `Repr` vs `Seq<Binary{8}>`)** —
+**use `AskUserQuestion` for those two; do not guess.** Q1 (comparison-prim shape), Q2 (binary-overflow
+semantics), and Q7 (sequencing) are engineering calls you may decide and document. Mirror how M-714
+authored RFC-0031 (resolve the open questions into normative decisions, mark the DoD, move the status
+footer Draft → Accepted, append the changelog row).
 
 **Then the enablers (only after RFC-0032 is Accepted), per the RFC's sequencing:**
 
@@ -161,8 +169,9 @@ append the changelog row).
    sign-off on the RFC-0032 placement before merge.**
 4. **M-750 — byte/string repr** + codepoint ops (dedicated `Repr` or `Seq<Binary{8}>` per RFC-0032
    Q4); never-silent invalid-encoding (`Result`). Builds on M-749 if strings are sequences.
-5. **M-751 — width-generic fns** (`fn f<N>(x: Ternary{N})`) in the `mycelium-l1` type system — **only
-   if RFC-0032 Q5 assigns it here**; otherwise close M-751 as a pointer to the E11-1/`s10` task.
+5. **M-751 — width-generic fns** (`fn f<N>(x: Ternary{N})`) — **REASSIGNED to E11-1/`s10`** (Q5,
+   settled). Do **not** implement here: record the reassignment in RFC-0032 (M-746), file/link the
+   `s10` task, and close M-751 as a pointer. (E13-1 M-718 depends on it landing under `s10`.)
 6. **M-752 — conformance:** a `.myc` smoke port per unblocked tier under
    `crates/mycelium-l1/tests/`, proving the E13-1 preconditions are genuinely satisfied; flip the
    M-716/M-717/M-718 precondition notes with a pointer to each test.
