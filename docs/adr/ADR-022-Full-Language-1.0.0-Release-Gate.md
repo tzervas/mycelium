@@ -95,13 +95,13 @@ its own per-issue DoDs (DN-25 is the map; the epics carry the detail). Summary c
 | Track | Epic | Done when (summary) | Status |
 |---|---|---|---|
 | **T1 Core sub-gate** | E10-1 | ADR-021 Gate A/B all ✅; `core 1.0.0` tagged; ADR-022 T1 → Enacted at the tag | ✅ gate-met / tag-ready; `core 1.0.0` tag pending (M-703, maintainer-reserved) |
-| **T2 Surface completeness** | E11-1 (+E7-1/E7-3/E7-5) | full HOF/closures; operator syntax (RFC-0025); committed L3 EBNF grammar (RFC-0030, RFC-0006 Q3/Q8 resolved); generics/traits/effects stable | ⏳ open |
-| **T3 Runtime & concurrency** | E12-1 (+E7-2) | real scheduler; full RFC-0008 vocabulary executes; deadlock-freedom checked; memory reclamation (RFC-0027); supervision/cancellation | ⏳ open |
+| **T2 Surface completeness** | E11-1 (+E7-1/E7-3/E7-5) | full HOF/closures; operator syntax (RFC-0025); committed L3 EBNF grammar (RFC-0030, RFC-0006 Q3/Q8 resolved); generics/traits/effects stable | 🔨 in progress — operator syntax + surface stabilization landed (M-705/706/708); M-704/M-707 open |
+| **T3 Runtime & concurrency** | E12-1 (+E7-2) | real scheduler; full RFC-0008 vocabulary executes; deadlock-freedom checked; memory reclamation (RFC-0027); supervision/cancellation | 🔨 in progress — scheduler/deadlock/supervision landed (M-709/711/713); M-710/M-712 open |
 | **T4 Stdlib in Mycelium** | E13-1 | the stdlib + core libs **written in `.myc`** (RFC-0031), differential-tested, stable APIs; Rust std-`*` beyond the bare core superseded by `.myc` | ⏳ open |
-| **T5 FFI & system** | E14-1 | capability-based FFI (RFC-0028); `wild` executes; real io/fs/sys bindings; ADR-014 unsafe floor confined + audited | ⏳ open |
+| **T5 FFI & system** | E14-1 | capability-based FFI (RFC-0028); `wild` executes; real io/fs/sys bindings; ADR-014 unsafe floor confined + audited | 🔨 in progress (on dev) — wild/@std-sys executes (#499); not yet on main |
 | **T6 Native AOT maturity** | E15-1 (+E6-1) | full libMLIR lowering; EXPLAIN-able optimization passes (RFC-0029); JIT; interp ≡ AOT ≡ JIT differential durable | **→ `1.1` (un-gated 2026-06-23; QoL/perf, not a 1.0.0 blocker — §8 Q4)** |
 | **T7 Toolchain/IDE/dist** | E16-1 (+E9-1) | full LSP (completions/hover/semantic tokens); highlighting shipped (RFC-0026); package publish/resolve; reproducible install | ⏳ open |
-| **T8 Docs & stability** | E17-1 | language reference + tutorial; per-module stdlib docs; stability/API-compat guarantees (ADR-023); `lang` SemVer enacted; **MIT-only licensing audited** (§7) | ⏳ open |
+| **T8 Docs & stability** | E17-1 | language reference + tutorial; per-module stdlib docs; stability/API-compat guarantees (ADR-023); `lang` SemVer enacted; **MIT-only licensing audited** (§7) | 🔨 in progress — language ref + stdlib API docs + ADR-023 done (M-735/736/737); M-738 release act blocked |
 | **T9 Self-hosting** | E18-1 | **1.0.0 bar (Q1):** the core stdlib/corelib is self-hosted in Mycelium so no dev must hand-write L0/L1 (with T4); self-hosting CI gate green for that slice (DN-14, DN-26). The full toolchain/compiler self-host (zero-Rust) **trails to the long-term arc (§10)** — not a 1.0.0 blocker | ⏳ open |
 
 **The headline criterion (maintainer, Q1-scoped):** `lang 1.0.0` requires the **core stdlib/corelib

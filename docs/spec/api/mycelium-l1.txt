@@ -1142,13 +1142,17 @@ impl core::marker::UnsafeUnpin for mycelium_l1::token::StrengthTok
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::token::StrengthTok
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::token::StrengthTok
 pub enum mycelium_l1::token::Tok
+pub mycelium_l1::token::Tok::Amp
+pub mycelium_l1::token::Tok::AmpAmp
 pub mycelium_l1::token::Tok::Arrow
 pub mycelium_l1::token::Tok::At
 pub mycelium_l1::token::Tok::AtStdSys
 pub mycelium_l1::token::Tok::Backbone
 pub mycelium_l1::token::Tok::Bang
+pub mycelium_l1::token::Tok::BangEq
 pub mycelium_l1::token::Tok::BinLit(alloc::string::String)
 pub mycelium_l1::token::Tok::Binary
+pub mycelium_l1::token::Tok::Caret
 pub mycelium_l1::token::Tok::Colon
 pub mycelium_l1::token::Tok::Colony
 pub mycelium_l1::token::Tok::Comma
@@ -1159,6 +1163,7 @@ pub mycelium_l1::token::Tok::Dot
 pub mycelium_l1::token::Tok::Else
 pub mycelium_l1::token::Tok::Eof
 pub mycelium_l1::token::Tok::Eq
+pub mycelium_l1::token::Tok::EqEq
 pub mycelium_l1::token::Tok::FatArrow
 pub mycelium_l1::token::Tok::Fn
 pub mycelium_l1::token::Tok::For
@@ -1179,10 +1184,13 @@ pub mycelium_l1::token::Tok::Let
 pub mycelium_l1::token::Tok::Match
 pub mycelium_l1::token::Tok::Matured
 pub mycelium_l1::token::Tok::Mesh
+pub mycelium_l1::token::Tok::Minus
 pub mycelium_l1::token::Tok::Nodule
 pub mycelium_l1::token::Tok::Paradigm
+pub mycelium_l1::token::Tok::Percent
 pub mycelium_l1::token::Tok::Phylum
 pub mycelium_l1::token::Tok::Pipe
+pub mycelium_l1::token::Tok::PipePipe
 pub mycelium_l1::token::Tok::Plus
 pub mycelium_l1::token::Tok::Policy
 pub mycelium_l1::token::Tok::Pub
@@ -1192,6 +1200,7 @@ pub mycelium_l1::token::Tok::RBracket
 pub mycelium_l1::token::Tok::RParen
 pub mycelium_l1::token::Tok::Reclaim
 pub mycelium_l1::token::Tok::Scalar(mycelium_l1::token::ScalarTok)
+pub mycelium_l1::token::Tok::Slash
 pub mycelium_l1::token::Tok::Sparse
 pub mycelium_l1::token::Tok::Spore
 pub mycelium_l1::token::Tok::Star
