@@ -3168,10 +3168,21 @@ issues:
     depends_on: [E7-3]
     epic: E11
     doc_refs:
-      - corpus:RFC-0025
+      - corpus:RFC-0024
       - corpus:DN-25
       - src:crates/mycelium-l1/src/mono.rs
+      - src:docs/spec/Surface-Stability-Declaration.md
     body: |
+      RESIDUALS DOCUMENTED (2026-06-23, M-708 wave): the RFC-0024 §5 dynamic-HOF residuals are
+      catalogued in `docs/spec/Surface-Stability-Declaration.md` §3.2 — every dynamic case (closures
+      capturing an environment; dynamic fn-flow out of a match arm / data field / fn return; partial
+      application / multi-arg HOF; a still-generic function as a value) is a NEVER-SILENT `Residual`
+      in `mono.rs` today (G2 holds). This issue remains OPEN for the actual implementation: full
+      Reynolds defunctionalization (fn-tag sum + `apply` dispatch) is the eventual generalization,
+      under the RFC-0024 §5 STOP-and-flag KC-3 guard — if any in-scope case cannot be made closed
+      first-order at L1 without a new L0 node, that requires a new RFC (flag, never add silently). No
+      implementation attempted this session (the dynamic leg is large + KC-3-risky; deferred per the
+      surface-stabilization wave). — Original task:
       RFC-0024 (static defunctionalization) landed named top-level functions as first-class values,
       sufficient for std.result's map/and_then/fold. The explicit RFC-0024 §5 residuals — closures
       that capture an environment, dynamic fn-flow through match arms or data fields, partial
@@ -3303,8 +3314,8 @@ issues:
   - id: M-706
     title: "M-706 — Concrete surface grammar / L3 ratification (RFC-0030)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P1, status:needs-design]
-    depends_on: [M-705]
+    labels: [phase:5, type:spec, area:language, priority:P1, status:in-progress]
+    depends_on: [M-705, M-707, M-745]
     epic: E11
     doc_refs:
       - corpus:RFC-0030
@@ -3312,6 +3323,17 @@ issues:
       - corpus:DN-25
       - src:docs/spec/grammar/mycelium.ebnf
     body: |
+      PARTIAL (2026-06-23): RFC-0030 advanced (stays Draft — full L3 ratification is GATED). Done
+      this session: (1) the M-705 operator grammar is integrated into mycelium.ebnf (op_expr…
+      unary_expr); (2) RFC-0030 §4.1 PROPOSES the RFC-0006 Q8 resolution = ratify `wild { … }` as the
+      unsafe-class spelling (gated by @std-sys + !{ffi}; ratifies the implemented M-661 status quo;
+      `unsafe`/`audited` alternatives declined); (3) RFC-0030 §4.2 CORRECTS the stub's Q3
+      mischaracterization — RFC-0006 Q3 is the LR-6 guarantee-grading mechanism (already discharged by
+      RFC-0018/M-663), and the implicit/explicit REPRESENTATION question is RFC-0012's (Enacted), so
+      there is no open Q3 for this RFC. Draft → Proposed remains GATED on M-707 (RFC-0020 L2
+      carve-outs) + M-745 (angle-bracket operators) per RFC-0030 §4.3 — a "complete ratified grammar"
+      cannot be honestly claimed until those land (VR-5). depends_on updated to reflect the gate. —
+      Original task:
       The mycelium.ebnf grammar is currently a "v0 working fragment" covering what is implemented
       in crates/mycelium-l1 today. It does not cover: full L2 surface forms (RFC-0020), effect
       annotations (!{...} — in the parser but not in the EBNF), phylum/nodule organization
@@ -3353,10 +3375,20 @@ issues:
     depends_on: [E7-1]
     epic: E11
     doc_refs:
-      - corpus:RFC-0030
+      - corpus:RFC-0020
       - corpus:DN-25
       - src:crates/mycelium-l1/src/checkty.rs
     body: |
+      RE-DEFERRED (2026-06-23, surface-stabilization wave): the RFC-0020 carve-outs are NOT enacted
+      this session and are explicitly re-deferred with this issue (M-707) as their forward ref —
+      §4.2 (polymorphic-instantiation inference sugar), §4.5 (grow-derived trait forms), and
+      R20-Q1…Q5 all remain Accepted-scoped / Draft-staged, never silently. Rationale: the carve-outs
+      are substantial type-inference machinery serial-on-`mycelium-l1` (checkty.rs), too large to
+      enact partially without risking honesty/over-rejection; RFC-0020 stays "Accepted (scoped)" (no
+      status change — append-only) and `grow`'s surface keyword is tracked separately by M-664.
+      Coordination note (answered): polymorphic-instantiation inference is independent of the M-705
+      operator sugar (the sugar desugars to ordinary `App` nodes before inference runs), so no
+      cross-task coordination is required. This issue remains OPEN for the enactment. — Original task:
       RFC-0020 was Accepted with carve-outs: §4.2 (polymorphic instantiation inference sugar),
       §4.5 (grow-derived traits), and R20-Q1...Q5 were explicitly deferred. These carve-outs
       are the richer L2 surface + inference machinery that makes writing polymorphic, trait-bearing
@@ -3390,14 +3422,28 @@ issues:
   - id: M-708
     title: "M-708 — Surface stabilization: finalize E7-1 generics/traits/effects edge cases"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [E7-1]
     epic: E11
     doc_refs:
       - corpus:RFC-0030
       - corpus:DN-25
       - src:crates/mycelium-l1/src/checkty.rs
+      - src:docs/spec/Surface-Stability-Declaration.md
     body: |
+      DONE (2026-06-23): the stage-1 surface audit landed as `docs/spec/Surface-Stability-Declaration.md`
+      — a per-feature catalogue consolidating DN-14 §3, the checker's own refusal comments, and the
+      RFC residual sections. 12 features declared PRESENT (value types, ADTs+patterns, recursion,
+      generics [checked + monomorphized M-673], traits+coherence [M-659/M-673], effects [M-660],
+      wild/FFI [M-661, gated], phyla [M-662], grading stage-1a [M-663], colony/hypha [M-666], static
+      HOF [RFC-0024], operators [M-705]); the DEFERRED set is enumerated with a never-silent refusal
+      and a forward issue ref for each: dynamic HOF (RFC-0024 §5 → M-704), angle-bracket operators
+      (→ M-745), effect→budget wiring (→ M-677), consume/grow/inherent-impl (→ M-664), R1/R2 runtime
+      vocab (→ M-667/M-668), VSA/Substrate + wild execution (→ RFC follow-ups). The audit found NO
+      silent-incorrect surface form (every refusal is an explicit CheckError/Residual/parse error —
+      G2 holds). Honest open item (flagged, not silently dropped): multi-param traits / associated
+      types / width-granular coherence are stage-1 boundaries without a dedicated tracking issue yet
+      (recorded in §3.1/§4). Advisory doc; no normative move, no tag upgrade (VR-5). — Original task:
       E7-1 (L1 Stage-1 Language Completeness) landed the core generics, traits, and effects
       machinery. Edge cases, under-specified interactions, and undocumented behaviors remain —
       discovered during dogfooding and the first self-hosted stdlib modules. Stabilizing these

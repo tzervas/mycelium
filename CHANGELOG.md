@@ -8,6 +8,35 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: M-708 / E11-1 — surface stabilization declaration + M-706/M-707/M-704 honest scoping)
+
+- **Surface Stability Declaration (M-708; `docs/spec/Surface-Stability-Declaration.md`).** A stage-1
+  surface audit consolidating DN-14 §3, the checker's own refusal comments, and the RFC residual
+  sections: **12 features declared present** (value types, ADTs+patterns, recursion, generics
+  [checked + monomorphized], traits+coherence, effects, `wild`/FFI [gated], phyla, grading stage-1a,
+  `colony`/`hypha`, static HOF, operators) each with a source/test ref, and the **deferred set**
+  enumerated with a never-silent refusal + a forward issue ref for each (dynamic HOF → M-704;
+  angle-bracket operators → M-745; effect→budget wiring → M-677; `consume`/`grow`/inherent-`impl` →
+  M-664; R1/R2 runtime vocab → M-667/M-668; VSA/Substrate + `wild` execution → RFC follow-ups). The
+  audit found **no silent-incorrect surface form** — every refusal is an explicit
+  `CheckError`/`Residual`/parse error (G2). Advisory, no normative move, no tag upgrade (VR-5).
+- **RFC-0030 partial decision (M-706; stays Draft).** Integrated the M-705 operator grammar into
+  `mycelium.ebnf`; **proposed** the RFC-0006 **Q8** resolution = ratify `wild { … }` as the
+  unsafe-class spelling (gated by `@std-sys` + `!{ffi}`; ratifies the implemented M-661 status quo;
+  `unsafe`/`audited` alternatives declined); **corrected** the stub's **Q3** mischaracterization
+  (RFC-0006 Q3 is the LR-6 guarantee-grading mechanism — discharged by RFC-0018; the representation
+  question is RFC-0012's — so there is no open Q3 here). Draft → Proposed remains **gated on M-707 +
+  M-745** — a complete ratified L3 grammar cannot be honestly claimed until the RFC-0020 carve-outs
+  and the angle-bracket operators land (VR-5 / house rule #3).
+- **Honest deferrals recorded (M-704, M-707).** **M-704** (dynamic HOF): the RFC-0024 §5 residuals
+  (closures, dynamic fn-flow, partial application, generic-fn-as-value) are catalogued in the
+  stability declaration §3.2 — each a never-silent `Residual` in `mono.rs` today; the issue stays
+  open for the implementation (full Reynolds defunctionalization under the §5 STOP-and-flag KC-3
+  guard). **M-707** (RFC-0020 enactment): the §4.2/§4.5/R20-Q1…Q5 carve-outs are explicitly
+  **re-deferred** (forward ref = M-707; RFC-0020 stays "Accepted (scoped)", no status change —
+  append-only); the polymorphic-instantiation/operator-sugar interaction is confirmed independent
+  (sugar desugars to `App` before inference). Doc-Index / rfcs README updated; no code change.
+
 ### Added (2026-06-23: M-705 / E11-1 — operator syntax: infix sugar desugaring to word functions)
 
 - **Operator syntax — symbolic infix/prefix sugar (RFC-0025 → Proposed; M-705).** Mycelium's
