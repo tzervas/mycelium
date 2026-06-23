@@ -16276,7 +16276,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 29,
+      "line": 45,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16342,7 +16342,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 30,
+      "line": 47,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16364,7 +16364,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 31,
+      "line": 48,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16485,7 +16485,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 32,
+      "line": 51,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []

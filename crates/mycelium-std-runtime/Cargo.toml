@@ -14,5 +14,10 @@ workspace = true
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
 mycelium-std-core = { path = "../mycelium-std-core" }
+# E12-1 (M-713): reuse the M-356 supervision/cancellation composition kernel (CancelToken,
+# TaskOutcome, Supervisor) — no cycle (mycelium-interp depends only on core + numerics).
+mycelium-interp = { path = "../mycelium-interp" }
 
 [dev-dependencies]
+# Property-based testing for the RT2 sequentialization + liveness + backpressure differentials.
+proptest = "1"
