@@ -19,6 +19,10 @@ use std::path::{Path, PathBuf};
 use mycelium_core::ContentHash;
 use mycelium_proj::{Manifest, ProjectKind};
 
+/// The content-addressed registry (M-732): `publish` / `resolve` over a local store (ADR-003).
+pub mod registry;
+pub use registry::{artifact_hash, publish, resolve, PublishReceipt, RegistryError, Resolved};
+
 /// A project source file, content-addressed (raw-byte BLAKE3; ADR-003).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceFile {
