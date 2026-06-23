@@ -67,6 +67,31 @@ So the registry stores the **map** (and metadata + the `name@version → spore_i
 **content** is fetched from elsewhere and integrity-checked locally. That is the cheap/lightweight
 win, stated without the impossible "rebuild source from a bare hash" premise.
 
+### 3.1 A Mycelium-native compact encoding (Parquet-inspired)
+
+Beyond "a hash points at content," the maintainer's principle is a **calculated computational
+representation** — an *encoding* that is small to transfer and store, where the **consumer's machine
+does the reconstruction work**. The registry ships the lightweight encoded value back and forth; the
+heavy lifting (decode → rebuild the phylum) happens locally. This is the right cost shape for a
+**self-hosted, near-zero-budget registry**: storage and bandwidth scale with the *encoding*, not the
+source.
+
+A promising direction is to take inspiration from **Apache Parquet** — columnar layout, dictionary
+encoding, run-length / delta encoding, per-column compression, a self-describing footer — and
+**improve on it in pure Mycelium** for this domain. A phylum's content DAG + source is highly
+**structured and repetitive** (shared identifiers, repeated type/representation tags, the
+guarantee-strength lattice, dependency edges), which is exactly where columnar + dictionary encoding
+wins. Dog-fooding it in Mycelium also exercises the language on a real systems-encoding workload and
+keeps the toolchain self-hosted (DN-26/E18-1 spirit).
+
+**Honesty guardrails for any such encoding (VR-5 / G2):**
+- It is a **lossless, content-addressed** encoding: decode must reproduce **byte-identical** source,
+  verified against the same content hashes (§3) — never a lossy/approximate "reconstruction."
+- The decode cost moved onto the consumer must be **bounded and `EXPLAIN`-able** (no black box; house
+  rule #2) — a pathological encoding is a refusal, not an unbounded local blow-up.
+- Compression/encoding **never** weakens the integrity guarantee: the hash is over the canonical
+  *content*, independent of how it was packed for transit.
+
 ## 4. Relation to what landed (M-732) — the seam is already cut
 
 The v0 registry (M-732) deliberately separates the two addresses this architecture needs:
@@ -106,11 +131,14 @@ every backend change.
 3. **Forge coupling.** How are git-forge object addresses (commit/tree/blob) reconciled with the
    spore's BLAKE3 content addresses — a translation layer, or a re-hash-on-publish into a
    forge-independent object store?
-4. **Trust without source.** For closed-license/binary publishers, what is the *honest* trust contract
+4. **The compact encoding (§3.1).** Is a Parquet-inspired, Mycelium-native columnar encoding worth
+   building over a generic compressor? What is the decode-cost bound, and does dog-fooding it in
+   Mycelium pay for itself vs. a stock format? It must stay **lossless + content-verified** (§3.1).
+5. **Trust without source.** For closed-license/binary publishers, what is the *honest* trust contract
    surfaced to a consumer (what is verified vs what is merely asserted — VR-5)?
-5. **Secrecy mechanism.** If sensitive portions are sealed, how does a build consume them without
+6. **Secrecy mechanism.** If sensitive portions are sealed, how does a build consume them without
    exposing them — and how is that capability *never-silent* about what it cannot inspect (G2)?
-6. **Policy.** Should the public registry **require source** (inspectable, buildable) as a hosting
+7. **Policy.** Should the public registry **require source** (inspectable, buildable) as a hosting
    capability, deferring binary-only distribution to private/trusted channels?
 
 ## 7. Definition of Done (this note's gate)
