@@ -1,0 +1,2 @@
+pub mod mycelium_stack
+pub fn mycelium_stack::with_deep_stack<T, F>(F) -> T where F: core::ops::function::FnOnce() -> T + core::marker::Send, T: core::marker::Send

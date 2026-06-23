@@ -18,6 +18,9 @@ pub use mycelium_std_core::SparsityClass
 pub use mycelium_std_core::SparsityObs
 pub use mycelium_std_core::Trit
 pub use mycelium_std_core::Value
+pub mod mycelium_std_core::error_scaffold
+pub trait mycelium_std_core::error_scaffold::StdError: core::fmt::Debug + core::fmt::Display + core::error::Error
+impl<T: ?core::marker::Sized + core::fmt::Debug + core::fmt::Display + core::error::Error> mycelium_std_core::error_scaffold::StdError for T
 pub mod mycelium_std_core::prelude
 pub use mycelium_std_core::prelude::Bound
 pub use mycelium_std_core::prelude::BoundBasis
@@ -37,6 +40,7 @@ pub fn mycelium_std_core::prelude::guarantee_of(&mycelium_core::datum::CoreValue
 pub fn mycelium_std_core::prelude::meta_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::meta::Meta>
 pub fn mycelium_std_core::prelude::provenance_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::meta::Provenance>
 pub fn mycelium_std_core::prelude::repr_of(&mycelium_core::datum::CoreValue) -> core::option::Option<&mycelium_core::repr::Repr>
+pub macro mycelium_std_core::impl_std_error!
 pub struct mycelium_std_core::GuaranteeRow
 pub mycelium_std_core::GuaranteeRow::effects: &'static str
 pub mycelium_std_core::GuaranteeRow::explainable: bool
