@@ -33,8 +33,8 @@ this epic is the necessary path.
 - ADR-014 (Accepted) — `unsafe` policy (permitted-but-warned, `// SAFETY:` required); the FFI
   surface is the primary site this ADR targets.
 - RFC-0016 §8-Q6 — `std-sys` phylum split (the mechanism for confining OS-level surface).
-- DN-14 row 9 — `wild`/FFI gate: `conditionally present (audited, std-sys context; type-checks
-  + gates; execution staged)`. This epic closes the staged-execution gap.
+- DN-14 row 9 — `wild`/FFI gate: `conditionally present (audited, std-sys context;
+  type-checks + gates; execution staged)`. This epic closes the staged-execution gap.
 - `crates/mycelium-mlir/src/jit.rs` — the only current `unsafe` site in the workspace (confined
   per DN-21/M-682); the FFI surface follows the same confinement pattern.
 - `crates/mycelium-std-{io,fs,sys,rand,time}/src/` — existing partial/stub implementations

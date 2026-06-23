@@ -93,4 +93,4 @@ GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo t
 
 ## Provenance
 
-Mycelium was formerly named *Verid* (provenance note only). Everything in `docs/` traces to the research recorded in `research/`.
+Everything in `docs/` traces to the research recorded in `research/`.

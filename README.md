@@ -12,8 +12,6 @@ rows A2/A3/A4 as the remaining critical path (DN-19). Surface language and self-
 post-1.0 / 1.x scope. Per the honesty rule, no claim here is upgraded beyond what a checked basis
 supports (VR-5).
 
-*(Formerly named **Verid** — retained only as a provenance note.)*
-
 ---
 
 ## Why this exists
