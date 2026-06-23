@@ -88,6 +88,15 @@ GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo t
 - Branch from `main`; keep branches focused on one task/issue.
 - Conventional, imperative commit subjects (e.g., `docs(rfc-0003): tighten capacity-bound wording`). Reference the issue/task.
 - A PR should state which `FR/NFR/VR/SC` it advances (or which ADR/RFC it implements), and how it was verified. Editorial-only PRs say so.
+- **No force pushes.** `git push --force` / `--force-with-lease` (and `+refs` push specs) are prohibited
+  on every branch — and never on the protected `main`/`integration`/`dev`/`claude/head/*`. Correct a
+  diverged or misaligned branch by bringing history *together* (a **merge**, or a **rebase + pull-down of
+  `main`**, then a *plain* push), never by rewriting published history: a rejected non-fast-forward push
+  is a never-silent cue to reconcile, not to overwrite. If a published branch's own commits already
+  landed on `main` (so it can never fast-forward), abandon it and branch a **fresh** one off current
+  `main`, re-applying only the unlanded work. (A local-only branch may be rebased freely before its first
+  push — that is reconciliation, not a force-push of published history.) See `CLAUDE.md` §Commits & PRs
+  for the agent-facing form of this rule.
 
 ---
 

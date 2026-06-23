@@ -378,14 +378,23 @@ asked to wait, wait.)
    against current `main`, and the squash-merge stays conflict-free. In a swarm, propagate the
    freshly-squashed `main` **down through every level** (orch → epic → leaf) after each landing so no
    lower branch keeps building on a superseded base — pull-down flows *down*, squash-merge flows *up*.
-   **Prefer fast-forward over force-push (drop the force op).** Keep the per-session working branch a
-   *clean pointer at `main`* — do the work + reconcile on a per-task/leaf branch, PR **that**, and after
-   the squash lands bring the working branch up with `git fetch origin main` → `git merge --ff-only
-   origin/main` (`git stash` first if dirty) → a plain (non-force) `git push`. Because the working
-   branch never carried the squashed commits it stays an ancestor of the new tip, so `--ff-only` always
-   succeeds — and *fails loudly* if it ever diverged (a never-silent guard) instead of papering over
-   divergence with `--force`/`--force-with-lease`. Reserve a force-push for the unavoidable case (a
-   branch whose own pre-squash commits already landed on `main` from a prior session).
+   **Force pushes are prohibited — full stop.** No `git push --force`, no `--force-with-lease`, no
+   `+refs` push spec, on **any** branch (and *absolutely never* on the protected `main`/`integration`/
+   `dev`/`claude/head/*`). Misalignment is corrected by bringing history *together* — a **merge or a
+   rebase plus pull-down**, then a *plain* push — **never** by rewriting published history. This is the
+   durable rule: a plain push that is rejected (non-fast-forward) is a never-silent signal to *reconcile*,
+   not a problem to overwrite. Keep the per-session working branch a *clean pointer at `main`*: do the
+   work + reconcile on a per-task/leaf branch, PR **that**, and after the squash lands bring the working
+   branch up with `git fetch origin main` → `git merge --ff-only origin/main` (`git stash` first if
+   dirty) → a plain `git push`. Because the working branch never carried the squashed commits it stays an
+   ancestor of the new tip, so `--ff-only` always succeeds — and *fails loudly* if it ever diverged (the
+   never-silent guard) instead of papering over divergence with a force.
+   **The one case that used to "justify" a force — a published branch whose own pre-squash commits
+   already landed on `main` — is resolved without one:** treat the diverged branch as spent and branch a
+   **fresh** one off the current `main`, re-applying only the *unlanded* work (cherry-pick / re-commit);
+   or merge current `main` into it and continue forward. A diverged branch is a cue to re-branch from
+   `main`, never a license to overwrite history. (Local-only, never-pushed branches may still be rebased
+   freely before their first push — that is reconciliation, not a force-push of published history.)
 
 ## Wave-N multi-session workflow — protected bases, free children, squash-only `main`
 
