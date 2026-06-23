@@ -6,13 +6,18 @@ in issues.yaml is actually defined in labels.json / milestones.json. This closes
 the silent gap that previously stalled a bootstrap rerun: `gh issue create
 --label <name>` errors if the label was never created from labels.json, so a
 label used by issues.yaml but absent from the manifest leaves issues uncreated
-with no obvious cause. Here that drift is an explicit, fail-fast error (G2:
-never silent) rather than a half-finished sync.
+with no obvious cause. Here that drift is surfaced loudly (G2: never silent) — a
+non-fatal WARNING (the label-sync auto-creates such a label with a default colour
+until you add it properly), not a half-finished silent sync.
 
-It also reports the reverse (manifest entries unused by any issue) as a *warning*
-only — an unused label/milestone is harmless, just noted.
+It also reports the reverse (manifest entries unused by any issue) as info, and
+cross-validates idmap.tsv against issues.yaml (the id↔number map must be 1:1 — see
+check_idmap).
 
-Exit status: 0 = consistent; 1 = a referenced label/milestone is undefined.
+Exit status: 0 = OK — label/milestone gaps and idmap coverage / missing-db-id /
+stale-row findings are loud but NON-FATAL warnings; 1 = a BLOCKING error: a
+malformed/unreadable manifest, a dangling doc_ref, or idmap corruption (a malformed
+row, or a duplicate task-id / issue-number breaking the 1:1 id↔number map).
 
 Usage:
   python3 tools/github/manifest-check.py

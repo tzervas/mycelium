@@ -1492,8 +1492,12 @@ def label_to_field_values(labels, field_label_map, field_option_order=None):
     Returns ``(values, flags, infos)``:
       * ``values`` — {field: option_name} to set (names; the engine resolves names→option ids and
         writes only on drift).
-      * ``flags``  — never-silent problems that leave a field UNSET (a genuine conflict / unmapped
-        label); the caller prints them and the value is never guessed past (G2).
+      * ``flags``  — never-silent CONFLICTS that leave a field unset: several ``<prefix>*`` labels
+        on a field with no ``multi`` policy, or two+ conflicting exact-mapped labels (e.g. two
+        Status labels). An *unmapped* label (e.g. ``status:needs-design``, which has no Status
+        option) is NOT flagged here — it is simply left unset so the board default stands (the
+        self-test pins this); a value mapping to a missing board option is surfaced later by
+        ``reconcile_project``. The caller prints flags; nothing is guessed past them (G2).
       * ``infos``  — informational notes for a value that WAS set under a documented rule (e.g. a
         multi-area item anchored to its primary area, with the full span recorded).
 
