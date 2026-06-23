@@ -1,0 +1,65 @@
+{
+  "_generated_by": "tools/grammar/generate.py",
+  "_source_of_truth": "crates/mycelium-l1/src/token.rs::keyword()",
+  "_honesty": "keyword set + class buckets are lexer-derived (G2); scope names are RFC-0026-pending TODO stubs (VR-5).",
+  "classes": {
+    "keyword": [
+      "backbone",
+      "colony",
+      "cyst",
+      "default",
+      "else",
+      "fn",
+      "for",
+      "forage",
+      "fuse",
+      "graft",
+      "hypha",
+      "if",
+      "impl",
+      "in",
+      "let",
+      "match",
+      "matured",
+      "mesh",
+      "nodule",
+      "paradigm",
+      "phylum",
+      "policy",
+      "pub",
+      "reclaim",
+      "spore",
+      "swap",
+      "thaw",
+      "then",
+      "tier",
+      "to",
+      "trait",
+      "type",
+      "use",
+      "wild",
+      "with",
+      "xloc"
+    ],
+    "type": [
+      "Binary",
+      "Dense",
+      "Sparse",
+      "Substrate",
+      "Ternary",
+      "VSA"
+    ],
+    "scalar": [
+      "BF16",
+      "F16",
+      "F32",
+      "F64"
+    ],
+    "strength": [
+      "Declared",
+      "Empirical",
+      "Exact",
+      "Proven"
+    ]
+  }
+}

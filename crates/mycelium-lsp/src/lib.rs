@@ -9,14 +9,18 @@
 
 pub mod baseline;
 pub mod completions;
+pub mod definition;
 pub mod diagnostics;
 pub mod expand;
 pub mod feedback;
 pub mod fmt;
+pub mod hover;
 pub mod lint;
 pub mod llm_canonical_parser;
 pub mod project;
 pub mod recover;
+pub mod semantic;
+mod span;
 pub mod sync;
 pub mod wire;
 
@@ -25,6 +29,7 @@ pub use baseline::{
     BaselineRule, RecoveryProfile, RESILIENT_MAX_ATTEMPTS,
 };
 pub use completions::{completion_list, CompletionItem, KEYWORD_COMPLETIONS, SNIPPET_COMPLETIONS};
+pub use definition::definition;
 pub use diagnostics::{
     present, AuditView, ClassRegistry, Crossing, DiagnosticPolicy, DiagnosticRecord, Level,
     Presentation, ReasonedError, Rule, UnknownClass,
@@ -34,6 +39,7 @@ pub use feedback::{
     analyze, analyze_with, ExplainSite, Feedback, FeedbackSummary, GuaranteeAnnotation, SwapSite,
 };
 pub use fmt::format;
+pub use hover::hover;
 pub use lint::{
     has_errors, lint, lint_nodule_header, lint_structured_header, Diagnostic, Severity,
 };
@@ -42,6 +48,7 @@ pub use recover::{
     check_effects, handle, EffectBudget, EffectBudgetExhausted, EffectKind, Outcome,
     RecoveryPolicy, Resolution, StructuredError, UndeclaredEffect as RecoverUndeclaredEffect,
 };
+pub use semantic::{semantic_tokens_full, semantic_tokens_legend, TOKEN_TYPES};
 pub use sync::{
     publish_for_source, resilient_publish_for_source, resilient_source_diagnostics,
     source_diagnostics, DocumentStore,

@@ -5,7 +5,7 @@
 **Status:** design + **Rust-first implementation underway.** The design corpus spans Foundation,
 RFC-0001…0031, ADR-001…023, DN-01…27 — per-document status (Draft / Proposed / Accepted / Enacted /
 Resolved) is in [`docs/Doc-Index.md`](docs/Doc-Index.md); the newest RFCs (0025–0031) range from Draft to Accepted. The Rust workspace has
-**48 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
+**49 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
 the selection-policy engine, a verified-numerics layer, a **Rust-first standard library**, an L1 surface
 with **generics · traits · higher-order functions · operator syntax**, and a **runtime** (scheduler,
 structured concurrency). Versioning is **dual-axis (ADR-022)**: the Rust **core/kernel** is

@@ -7630,7 +7630,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 12,
+      "line": 13,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8191,7 +8191,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 13,
+      "line": 14,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8224,7 +8224,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 14,
+      "line": 15,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8268,7 +8268,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 15,
+      "line": 16,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8312,7 +8312,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 16,
+      "line": 18,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8367,7 +8367,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 17,
+      "line": 19,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8400,7 +8400,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 18,
+      "line": 20,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8444,7 +8444,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 115,
+      "line": 125,
       "summary": "Read one JSON-RPC message off `reader`, decoding the `Content-Length` header framing.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8455,7 +8455,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 19,
+      "line": 21,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8631,7 +8631,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 182,
+      "line": 192,
       "summary": "Drive the LSP lifecycle **with document sync** (M-310) over `reader`/`writer` (stdio in the real",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8642,7 +8642,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 254,
+      "line": 292,
       "summary": "Run [`serve`] over the process's **real stdio** — the entry point an editor launches",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8664,7 +8664,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 20,
+      "line": 24,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8752,7 +8752,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/lib.rs",
-      "line": 21,
+      "line": 25,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8807,7 +8807,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/wire.rs",
-      "line": 154,
+      "line": 164,
       "summary": "Write one JSON-RPC message to `writer` with the `Content-Length` framing, then flush.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11645,7 +11645,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 33,
+      "line": 37,
       "summary": "A resolved dependency edge — pinned by content hash (authoritative, ADR-003).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11656,7 +11656,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 24,
+      "line": 28,
       "summary": "A project source file, content-addressed (raw-byte BLAKE3; ADR-003).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11667,7 +11667,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 47,
+      "line": 51,
       "summary": "A built spore: its content-addressed identity plus the components that define it and the metadata that",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11678,7 +11678,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 67,
+      "line": 71,
       "summary": "A spore-build refusal — never a partial artifact (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11689,7 +11689,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore::SporeError",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 77,
+      "line": 81,
       "summary": "The CLI exit code for this refusal.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11700,7 +11700,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 102,
+      "line": 106,
       "summary": "Build a [`Spore`] from a parsed manifest and the project root directory.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11711,7 +11711,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 269,
+      "line": 273,
       "summary": "The `EXPLAIN` of a built spore (no black box): the identity receipt, the surface, the code by hash, the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11722,7 +11722,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 218,
+      "line": 222,
       "summary": "The canonical `[project].kind` spelling.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28798,15 +28798,15 @@
     },
     {
       "symbol": "mycelium_lsp::wire::read_message",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::read_message` at crates/mycelium-lsp/src/wire.rs:115 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::read_message` at crates/mycelium-lsp/src/wire.rs:125 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::wire::serve",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::serve` at crates/mycelium-lsp/src/wire.rs:182 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::serve` at crates/mycelium-lsp/src/wire.rs:192 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::wire::serve_stdio",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::serve_stdio` at crates/mycelium-lsp/src/wire.rs:254 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::serve_stdio` at crates/mycelium-lsp/src/wire.rs:292 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::wire::to_lsp_diagnostic",
@@ -28814,7 +28814,7 @@
     },
     {
       "symbol": "mycelium_lsp::wire::write_message",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::write_message` at crates/mycelium-lsp/src/wire.rs:154 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::write_message` at crates/mycelium-lsp/src/wire.rs:164 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::Task::Error",

@@ -66,6 +66,51 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   → E19-1 becomes a core-1.0.0 gate prerequisite; ADR-022 T1 / E10-1 / `c10` need a maintainer update so
   the core tag accounts for E19-1 — flagged, not edited here); Q5 = **E11-1/`s10`** (width-generics
   reassigned; M-751 → pointer). (RFC-0032; E19-1/M-746)
+### Added (2026-06-23: E16-1 — toolchain, IDE & package distribution; M-730/M-732/M-733/M-734 `done`, M-731 scaffold)
+
+- **Full LSP providers — `mycelium-lsp` hover / go-to-definition / semantic tokens (M-730).** Three
+  position-aware providers extend the server beyond completions/diagnostics/fmt: `textDocument/
+  semanticTokens/full` (a standard LSP legend + relative-delta encoding, classified by token kind),
+  `textDocument/hover` (grounded descriptions for keywords, substrate types, and guarantee-strength
+  tokens), and `textDocument/definition` (single-document `fn`/`type`/`trait` navigation). A shared
+  lexical span layer recovers token lengths from the canonical L1 lexer without duplicating it.
+  **Honest scope (`Declared`/VR-5):** classification is lexical, hover **refuses to fabricate** an
+  identifier's type/guarantee (it flags the absence instead), definition is single-document, and an
+  unknown position/symbol is a null result — never-silent (G2). Capabilities advertised; all prior
+  tests green; clippy `-D warnings` clean. (M-730)
+- **Editor-grammar generator + drift gate — `tools/grammar/` (M-731; SCAFFOLD).** A generator derives
+  the keyword set + class buckets (keyword/type/scalar/strength) from `token.rs::keyword()` and renders
+  TextMate (`.tmLanguage.json`) + tree-sitter (`grammar.js` + `highlights.scm`) artifacts; `just
+  drift-check` (wired into `just check`) fails on any divergence from the lexer (G2 — the grammars can
+  never silently drift from the language the compiler accepts). **Honestly a scaffold (VR-5):** RFC-0026
+  §3.2 (the scope-name table) is still `Draft`, so the TextMate/tree-sitter scope names are emitted as
+  explicit `TODO.rfc-0026.*` placeholders — **not finalized, never guessed**; they land when RFC-0026 is
+  Accepted (M-693). (M-731 — `in-progress`)
+- **`spore` registry — publish / resolve (M-732).** `mycelium-spore` grows from the build artifact to a
+  package manager: a local, content-addressed store where `publish` records the descriptor bytes by
+  BLAKE3 (the `artifact` integrity hash) plus an index entry carrying the `spore_id` DAG identity
+  (ADR-003), and `resolve` fetches by name + exact-version-or-`latest` and **verifies the bytes against
+  the recorded address before returning**. Never-silent (G2): republishing a different artifact under an
+  existing `name@version` is a refused `Conflict` (immutability); a missing/tampered object is an
+  `Integrity` error; a SemVer **range** is an explicit `Unsupported` error (v0 never mis-resolves a range
+  it cannot honestly evaluate — ADR-018 deferred). proptest hash-verification bound; `spore publish`/
+  `resolve` CLI subcommands. (M-732)
+- **`myc` one-command toolchain driver — `mycelium-cli` (new crate; M-733).** `myc init|build|check|
+  test|run` over a phylum, calling the real library APIs directly (no fragile subprocess plumbing).
+  `init` scaffolds a gate-clean phylum (refuses a bad name, never overwrites — G2); `build` packages the
+  spore; `check` parses + type-checks every `.myc` via the L1 front-end; `test` runs the check
+  verification (explicit that a `.myc` unit-test runner is future work — not faked); `run` is **honestly
+  not-yet-wired** and reports so with an actionable message + exit 70, never a silent no-op. **Error
+  quality bar (DN-22/RFC-0013):** every failure is a structured `Report` (`error[<code>]: <message>` +
+  `--> location` + `help:`) — no raw Rust panic reaches the user. (M-733)
+- **Reproducible toolchain distribution — `scripts/dist/` (M-734).** A pinned, content-addressed install
+  path: `install.sh` verifies a toolchain artifact against a committed self-describing content-address
+  pin (`blake3`/ADR-003 when `b3sum` is present, else `sha256`) before copying it into place; re-running
+  on the same pin is byte-identical, and a tampered/missing/added file is a never-silent integrity error
+  (G2). **Strict, never skip-graceful:** a missing hasher hard-fails (exit 69) rather than skipping the
+  check. `just dist-verify` self-tests the mechanism end-to-end. **Honest scope (VR-5):** pinning the
+  actual compiler binaries additionally needs a reproducible release *build* (deferred); the
+  pin/verify/install mechanism is what landed. (M-734)
 
 ### Added (2026-06-23: E14-1 completion — M-722/M-723 syscall floor wired + data guarantee matrix; epic `done`)
 
