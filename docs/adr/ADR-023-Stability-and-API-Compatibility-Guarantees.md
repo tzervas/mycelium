@@ -3,17 +3,20 @@
 | Field | Value |
 |---|---|
 | **ADR** | 023 |
-| **Status** | **Draft** (2026-06-23) |
+| **Status** | **Accepted** (2026-06-23 — maintainer-ratified; was **Proposed** 2026-06-23, was **Draft** 2026-06-23). The stability scope, dual-version model, deprecation policy, and MIT-only license gate below are **decided** (the §5 questions are resolved). This does **not** declare 1.0.0 reached, nor enact the policy: `Accepted → Enacted` happens at the tagged full-language 1.0.0 release (M-738), once ADR-022's gate closes. Changing a decided criterion means superseding this ADR (house rule #3 — append-only). |
 | **Feeds** | E17-1 (Documentation, stability guarantees & 1.0.0 release — M-737) |
 | **Decides** | What "stable" means at full-language 1.0.0 — the API-compatibility promise, the dual-version semver enactment (Rust kernel 1.0.0 vs. full-language 1.0.0), the deprecation policy, and the legal-readiness criterion (license). |
 | **Grounds** | ADR-018 (per-crate 0.x SemVer, source-only — the policy this ADR enacts for 1.0.0); ADR-021 (1.0.0 kernel/core release gate — the kernel's stability criteria; this ADR extends them to the full language); RFC-0016 §4 (core + stdlib phyla taxonomy); RFC-0017 §4.1 (version metadata in scope headers); Foundation §6 (roadmap — "dual-version model: Rust kernel may reach 1.0.0 first; full language only at stdlib + phyla written in .myc"). |
 | **Supersedes / superseded-by** | — (first stability-guarantee ADR; complements ADR-018 which set policy, not the 1.0.0-specific promise). |
 | **Date** | 2026-06-23 |
 
-> **Posture (honesty rule / VR-5).** Draft. Nothing is enacted by this stub. All
-> criteria below are **open questions** for the maintainer to decide at authoring time.
-> Claims about the current state (what the kernel has today, the license) are grounded
-> in the actual repo; the "1.0.0" criteria are proposals, not decisions. Append-only.
+> **Posture (honesty rule / VR-5).** Accepted (criteria ratified), **not Enacted** — nothing
+> ships 1.0.0 by this ADR. The §3 criteria are now **decisions** (the §5 open questions are
+> resolved in §5'); every policy claim is **`Declared`** (a stated contract, not a proven or
+> empirically-measured property — VR-5: policy warrants no `Proven` tag). Claims about the
+> *current* repo state (the kernel's gate status, the `LICENSE` file, the license sweep) are
+> grounded in the actual repo and dated. `Accepted → Enacted` is M-738's release act, gated on
+> ADR-022. Append-only: a decided criterion changes only by a superseding ADR (house rule #3).
 
 ---
 
@@ -61,9 +64,11 @@ Three forces shape it:
 
 ## 3. Scope & decision space
 
-### 3.1 What "stable" means (open)
+### 3.1 What "stable" means (decided — Q1)
 
-Candidates for the API-compatibility promise at 1.0.0:
+**Decision (`Declared`).** The 1.0.0 stability promise covers **all four layers below**, each
+with the explicit carve-outs named — *a valid program / artifact / client at 1.0.0 keeps
+working across every `1.x` release*. No layer is silently excluded (G2). The promise is:
 
 - **Surface language stability:** the `.myc` grammar, keyword set, operator semantics,
   and standard library module paths are stable — a valid program today compiles correctly
@@ -76,44 +81,120 @@ Candidates for the API-compatibility promise at 1.0.0:
 - **Rust crate public API stability:** the `pub` Rust API of kernel crates is stable
   under SemVer (a breaking change requires a major bump, per ADR-018).
 - **What is NOT stable (explicit carve-outs):** internals (`pub(crate)`, `#[doc(hidden)]`
-  items), the MLIR/LLVM codegen path (performance-path AOT, not the trusted interpreter
-  base), experimental features, any surface item marked `unstable` (mechanism TBD).
+  items), the MLIR/LLVM codegen path (performance-path AOT — its *observable results* match the
+  trusted interpreter, but its internal IR/ABI is free to change), experimental features, and the
+  **reserved-not-active surface keywords** (`fuse`/`mesh`/`graft`/`cyst`/`xloc`/`forage`/
+  `backbone`/`tier`/`reclaim` — DN-03 §4; lexed but no production consumes them, so they are
+  *reserved*, never *stable API*, until their constructs land in a later `1.x` or `2.0`).
 
-### 3.2 Dual-version semver enactment (open)
+> **Why all four (not a subset).** A stability promise that covered, say, only the surface
+> grammar but not the `.spore` artifact format would let a 1.x patch silently break a deployed
+> spore — exactly the never-silent failure G2 forbids. The four layers are the four contracts a
+> downstream actor (program author, deployer, editor-client author, Rust embedder) actually
+> depends on, so each is named and promised explicitly. The carve-outs are the surfaces that are
+> *honestly* not yet stable; they are listed, not omitted.
 
-How are the two version lines tracked?
+### 3.2 Dual-version semver enactment (decided — Q2, Q6)
 
-- **Kernel/core 1.0.0** advances per ADR-021; individual crate bumps per ADR-018.
-- **Full-language 1.0.0** requires the additional gate: stdlib + phyla in `.myc`, stable,
-  usable (E13-1 self-hosting gate, E17-1 release act). What is the version carrier for
-  the "full language"? Options: a workspace-level `version` field (rejected by ADR-018 —
-  open question whether the full-language version is an exception), a `mycelium`
-  top-level crate, or a release manifest only.
+**Decision (`Declared`).** The two version lines stay **independent**, and the full-language
+version is a **release-event concept, not a SemVer crate** — there is **no** workspace-level
+`version` field and **no** `mycelium` top-level crate version (ADR-018 is upheld, not excepted).
 
-### 3.3 Deprecation policy (open)
+- **Kernel/core 1.0.0** advances per ADR-021 (now ADR-022 track **T1**); individual Rust crate
+  bumps per ADR-018 (each crate its own per-crate SemVer). The kernel may tag **`core 1.0.0`**
+  first — this is a per-crate set of SemVer tags on the trusted base, witnessed by ADR-021's
+  Gate A/B (carried into ADR-022 §T1).
+- **Full-language 1.0.0** is carried by **(a)** the annotated git tag **`v1.0.0`**, **(b)** the
+  `CHANGELOG.md [1.0.0]` section, and **(c)** the ADR-022 gate record moved `Accepted → Enacted`.
+  It is **not** a crate version. Rationale: ADR-018 deliberately rejects a workspace `version`
+  (identity is per-crate / content-addressed, ADR-003); the full-language milestone is a
+  *release event* gated by ADR-022 (E13-1 self-hosting + E18-1 readiness), so a tag + changelog +
+  gate-record is the honest carrier — adding a phantom crate version would imply a SemVer
+  contract on an aggregate that ADR-018 says does not exist.
+- **Distinguishing the two in CHANGELOG / release notes (Q6).** Each release line is **labelled
+  explicitly**: a kernel-first tag is written `core 1.0.0` (the per-crate kernel set; ADR-022 T1)
+  and the full-language tag is `1.0.0` / `v1.0.0` (ADR-022 whole-gate). The `CHANGELOG.md [1.0.0]`
+  section is the **full-language** release and states, in its first line, that it subsumes the
+  `core 1.0.0` sub-gate. Release notes name which milestone the tag represents — never an
+  unlabelled "1.0.0" that conflates the two (G2).
 
-A deprecation policy that is never-silent (G2):
+### 3.3 Deprecation policy (decided — Q3, Q4)
 
-- Deprecated items are marked (mechanism TBD — a `@deprecated` attribute, a lint, a doc
-  note) and the replacement path is stated.
-- A deprecation period of at least one minor release (`1.x`) is guaranteed before removal.
-- Removal is a major-version event (2.0.0) — never in a patch.
-- Deprecated items are never silently removed: they trigger a warning at compile time
-  until the removal release.
+**Decision (`Declared`).** Deprecation is **release-based, never calendar-based, and never
+silent** (G2):
 
-### 3.4 License (open — legal-readiness criterion)
+- **Marking mechanism.** A deprecated **surface** item carries a `// @deprecated: <replacement>`
+  scope/item header note (the same header-comment channel as `@matured`/`@version`,
+  Nodule-Header spec §3) and the checker emits a **compile-time warning** naming the replacement
+  path. A deprecated **Rust** API item uses `#[deprecated(note = "…")]` (the standard rustc
+  warning). Either way the replacement is stated — a deprecation with no migration path is not
+  permitted.
+- **Period (Q4): at least one full minor release (`1.x`), release-based not calendar-based.** A
+  design-phase project with no fixed cadence cannot honestly promise "six months"; "≥ one minor
+  release with an active warning" is a *checkable* promise (the item must ship deprecated-with-
+  warning in at least one `1.x` before it may be removed). This is the more honest bound (VR-5).
+- **Removal is a `2.0.0`-only event** — never in a `1.x` minor or patch. Removing a stable item
+  inside `1.x` would break the §3.1 promise.
+- **Never-silent (G2).** From the release it is deprecated until the release it is removed, the
+  item compiles **with a warning** every time — it is never silently dropped and never silently
+  retained-but-broken.
 
-The project is **MIT licensed only** — no Apache / no dual-license. Before the 1.0.0 tag
-is cut, the maintainer must confirm:
+#### 3.3.1 The unstable-marking mechanism (Q3)
 
-- Every `Cargo.toml` `[package].license` field reads `MIT`.
-- The `LICENSE` file at the repo root is correct.
-- No dependency in `deny.toml` pulls in a GPL/LGPL/incompatible license (checked by
-  `cargo deny check licenses`).
-- Distributed artifacts (`.spore` packages, VS Code extension, GitHub Linguist) carry
-  the MIT SPDX identifier.
+**Decision (`Declared`).** At 1.0.0 there is **no surface `@unstable` attribute** — it is
+deferred (§3.5 keeps the *mechanism* out of scope as future language/RFC work). Instead:
 
-This is a **legal-readiness gate criterion at 1.0.0**, not a 1.x follow-up.
+- **Rust layer:** non-stable items are `pub(crate)` or `#[doc(hidden)]` (the existing convention);
+  only the documented `pub` API is promised.
+- **Surface layer:** everything in the **ratified grammar** (`docs/spec/grammar/mycelium.ebnf`)
+  and the **25 ratified stdlib specs** is stable-by-default at 1.0.0. The only surface items that
+  are *not* stable are the **reserved-not-active keywords** (§3.1) — and those are not stable
+  *because they are not yet language at all*, which the grammar and DN-03 §4 state explicitly.
+  So the set of "stable surface" and "explicitly-not-stable surface" is fully enumerated with no
+  silent middle ground (G2). When a surface `@unstable` mechanism is later wanted (to ship a new
+  construct as preview inside `1.x`), it is a separate RFC; until then, new surface lands only
+  when it is stable, or stays behind the reserved-keyword wall.
+
+### 3.4 License (decided — legal-readiness criterion; Q5)
+
+The project is **MIT licensed only** — no Apache / no dual-license (CONTRIBUTING §Licensing;
+house rule #6). This is a **legal-readiness gate criterion at 1.0.0**, not a `1.x` follow-up.
+The 1.0.0 release act (M-738) confirms, each as a checked item:
+
+- Every first-party `Cargo.toml` `[package].license` field reads `MIT`.
+- Every first-party `.myc` nodule's `@license` header reads `MIT`.
+- The `LICENSE` file at the repo root is the MIT text (✅ confirmed 2026-06-23 — root `LICENSE`
+  is `MIT License`, © 2026 Tyler Zervas).
+- No **dependency** pulls in a GPL/LGPL/incompatible license, checked by `cargo deny check
+  licenses` against `deny.toml`. *Note:* `deny.toml`'s `allow` list permitting `Apache-2.0` /
+  BSD / ISC / Unicode is **correct and not a violation** — those govern *third-party
+  dependencies* (commonly Apache-or-MIT), which MIT-licensed first-party code may consume. The
+  MIT-only rule constrains **first-party** `[package].license` / `@license`, a distinct axis.
+- Distributed artifacts (`.spore` packages, VS Code extension, GitHub Linguist) carry the MIT
+  SPDX identifier.
+
+**Sweep status (2026-06-23, this ADR's authoring — M-737).** A repo sweep for non-MIT
+first-party headers found one real violation, now fixed: `lib/std/result.myc` declared
+`@license: Apache-2.0` (a self-hosted, distributed stdlib nodule) → corrected to `MIT`. The two
+remaining `Apache-2.0` strings are **deliberate test fixtures** under
+`crates/mycelium-proj/tests/fixtures/` — `crates/mycelium-proj/tests/conformance.rs` *asserts*
+`license == "Apache-2.0"` to prove a locally-declared license field is parsed and **not silently
+inherited/overridden** (origin tracking). They are test inputs, not distributed first-party
+artifacts, so they stay as-is (changing them would defeat the test and is out of the MIT-only
+first-party scope).
+
+**Gate timing (Q5).** The supply-chain gate already exists — `just deny`
+(`scripts/checks/deny.sh`) runs `cargo deny check` (advisories + **licenses** + sources) and is
+invoked by the shared check flow (`scripts/checks/all.sh`, so both `just check` and
+`just check-full` run it). Its honesty is **environment-tiered today** (ADR-021 Gate A4 / M-652):
+*skip-graceful* in local dev when `cargo-deny` is absent, but a *hard failure* (no silent
+skip-pass — G2) under `CI=true` or `MYCELIUM_REQUIRE_SUPPLY_CHAIN=1`. **Decision:** no new wiring
+is needed pre-1.0 — the existing gate is correct. The M-738 release act simply **runs it in the
+strict mode** (`MYCELIUM_REQUIRE_SUPPLY_CHAIN=1`, the durability `just check-full` posture) so the
+license check is *green and actually present* — never skip-graceful — when the `v1.0.0` tag is
+cut. Adding a *non-graceful* `cargo-deny` to every fast `just check` (Tier-1) commit is rejected:
+it would cost the per-commit speed DN-20 protects, and the license axis only needs to be
+provably-green *at release*, which the strict release run guarantees.
 
 ### 3.5 Out of scope
 
@@ -124,48 +205,61 @@ This is a **legal-readiness gate criterion at 1.0.0**, not a 1.x follow-up.
 
 ## 4. Definition of Done
 
-*(To be refined at authoring time.)*
-
-- [ ] The API-compatibility scope is explicitly enumerated: what is stable at 1.0.0 and
-  what is not, with no silent carve-outs (G2).
-- [ ] The dual-version semver model is decided: how the kernel version and the
-  full-language version are tracked and related.
-- [ ] The deprecation policy is specified: marking mechanism, deprecation period, removal
-  policy, never-silent guarantee.
-- [ ] MIT-only license confirmed as a 1.0.0 gate criterion; the `cargo deny check
-  licenses` gate is green and non-skip-graceful for the release.
-- [ ] This ADR moves `Draft → Proposed → Accepted` at maintainer ratification, then
-  `Accepted → Enacted` at the actual 1.0.0 tag (never skip Accepted — house rule #3).
-- [ ] M-737 (stability & API-compatibility guarantees issue) closed as done.
+- [x] The API-compatibility scope is explicitly enumerated (§3.1): the four stable layers
+  (surface syntax, Core-IR/cert/interp, LSP wire, Rust crate API) and the explicit carve-outs
+  (internals, MLIR/LLVM codegen internals, reserved-not-active keywords) — no silent carve-outs (G2).
+- [x] The dual-version semver model is decided (§3.2): kernel `core 1.0.0` per ADR-018 per-crate
+  SemVer; full-language `1.0.0` as a release-event (git tag + CHANGELOG + ADR-022 gate record), no
+  workspace `version`, no `mycelium` top-level crate. Labelled distinctly in CHANGELOG/notes (Q6).
+- [x] The deprecation policy is specified (§3.3): header/`#[deprecated]` marking with a stated
+  replacement, ≥ one minor (`1.x`) release-based period, removal only at `2.0.0`, never-silent
+  compile-time warning throughout.
+- [x] MIT-only license confirmed as a 1.0.0 gate criterion (§3.4): root `LICENSE` is MIT;
+  `lib/std/result.myc` Apache→MIT corrected; the `just deny` license check is hard-fail under the
+  strict release posture (`MYCELIUM_REQUIRE_SUPPLY_CHAIN=1`) the M-738 act runs — green and present,
+  never skip-graceful.
+- [x] This ADR moved `Draft → Proposed → Accepted` (this authoring, M-737). `Accepted → Enacted`
+  is reserved for the actual 1.0.0 tag act (M-738) — never skip Accepted (house rule #3).
+- [ ] M-737 (this issue) marked done in `issues.yaml` (orchestrator step).
 - [ ] `Doc-Index.md` and `CHANGELOG.md` updated (orchestrator-owned, not here).
 
 ## 5. Open questions for the maintainer
 
-1. **Stability scope confirmation:** which of the four layers (surface syntax, Core-IR,
-   LSP wire, Rust crate API) are covered by the 1.0.0 stability promise, and which are
-   explicitly out?
-2. **Full-language version carrier:** is there a `mycelium` top-level crate whose version
-   represents the full language, or is the full-language 1.0.0 a release-manifest-only
-   concept (i.e. not a SemVer crate)?
-3. **Unstable mechanism:** is there a surface-language `@unstable` attribute, a Rust
-   `#[doc(hidden)]` convention, or a separate tracking file for pre-stable items?
-4. **Deprecation period:** is one minor release the right minimum, or should it be a
-   calendar period (e.g. six months)?
-5. **License sweep:** should the `cargo deny check licenses` gate be added to
-   `just check` now (pre-1.0) or only as part of the 1.0.0 release act?
-6. **Dual-version tracking:** if the kernel reaches 1.0.0 before the full language, what
-   label or tag distinguishes the kernel release from the full-language release in the
-   CHANGELOG and release notes?
+> **Resolved (2026-06-23, M-737 authoring).** All six are decided in §3; recorded here for the
+> append-only trail. Reopening a decision means superseding this ADR (house rule #3).
+
+1. **Stability scope confirmation** → **resolved (§3.1):** *all four* layers (surface syntax,
+   Core-IR/cert/interp, LSP wire, Rust crate API) are in-scope, each with explicit carve-outs;
+   the reserved-not-active keywords and the codegen internals are explicitly out.
+2. **Full-language version carrier** → **resolved (§3.2):** no `mycelium` top-level crate, no
+   workspace `version` — the full-language 1.0.0 is a *release-event* (annotated `v1.0.0` tag +
+   `CHANGELOG [1.0.0]` + ADR-022 gate record). ADR-018's per-crate model is upheld, not excepted.
+3. **Unstable mechanism** → **resolved (§3.3.1):** no surface `@unstable` at 1.0.0 (deferred to a
+   later RFC); Rust uses `pub(crate)`/`#[doc(hidden)]`; surface is stable-by-default with the
+   reserved-keyword wall as the only explicitly-not-stable surface (fully enumerated, G2).
+4. **Deprecation period** → **resolved (§3.3):** ≥ one minor (`1.x`) *release-based* period (not
+   calendar), with an active compile-time warning throughout; removal at `2.0.0` only.
+5. **License sweep gate timing** → **resolved (§3.4):** no new pre-1.0 wiring — the existing
+   `just deny` check is run in *strict* mode (non-skip-graceful) as a hard row of the M-738
+   release act; not added non-gracefully to the fast `just check` (DN-20 speed).
+6. **Dual-version tracking** → **resolved (§3.2):** label explicitly — `core 1.0.0` (kernel,
+   per-crate; ADR-022 T1) vs `1.0.0`/`v1.0.0` (full language; ADR-022 whole gate); the
+   `CHANGELOG [1.0.0]` section is the full-language release and states it subsumes `core 1.0.0`.
 
 ## 6. Grounding & honesty
 
 - **ADR-018** (`Enacted` 2026-06-23): per-crate 0.x SemVer, source-only. This ADR
   **extends** that policy to the 1.0.0 case; it does not supersede it.
-- **ADR-021** (`Accepted` 2026-06-21): the kernel/core 1.0.0 gate (Gate A + B). This
-  ADR adds the full-language layer on top of that gate.
-- **MIT-only license claim:** grounded in the repo's `LICENSE` file and the maintainer
-  declaration. Confirmed by `cargo deny check licenses` (if the gate is wired and green —
-  currently skip-graceful, ADR-021 Gate A4 / M-652).
+- **ADR-021** (`Superseded by ADR-022` 2026-06-23; was `Accepted` 2026-06-21): the kernel/core
+  1.0.0 gate (Gate A + B), now carried forward as ADR-022's **T1 core sub-gate**. This ADR adds
+  the full-language stability layer on top of that gate.
+- **ADR-022** (`Accepted` 2026-06-23): the full-language 1.0.0 release-readiness gate. This ADR
+  is the *stability promise* whose enactment (M-738) is gated on ADR-022 closing.
+- **MIT-only license claim:** grounded in the repo's root `LICENSE` file (MIT, confirmed
+  2026-06-23) and house rule #6. Enforced by `just deny`'s `cargo deny check` — skip-graceful in
+  local dev, hard-fail under the strict release posture (`CI=true` / `MYCELIUM_REQUIRE_SUPPLY_CHAIN=1`;
+  ADR-021 Gate A4 / M-652). The one first-party violation found at authoring (`lib/std/result.myc`
+  Apache→MIT) is fixed in this change.
 - **Guarantee tags:** all claims in §3 are `Declared` until enacted; no `Proven` tag is
   warranted for policy (VR-5).
 - **Append-only:** status transitions follow `Draft → Proposed → Accepted → Enacted`.
@@ -173,6 +267,14 @@ This is a **legal-readiness gate criterion at 1.0.0**, not a 1.x follow-up.
 
 ## 7. Changelog
 
+- **2026-06-23 — Accepted (M-737).** Authored: all six §5 open questions resolved in §3 and the
+  status moved `Draft → Proposed → Accepted` in one ratification pass (the criteria are decided;
+  not yet Enacted — that is M-738 at the `v1.0.0` tag). Decisions: §3.1 four-layer stability scope
+  with explicit carve-outs; §3.2 dual-version model (full-language 1.0.0 = a release-event, not a
+  crate version; ADR-018 upheld) + distinct CHANGELOG labelling; §3.3 release-based never-silent
+  deprecation policy + §3.3.1 no-surface-`@unstable`-at-1.0 convention; §3.4 MIT-only legal gate —
+  one first-party violation (`lib/std/result.myc` Apache→MIT) corrected, `just deny` strict-mode
+  timing decided (Q5). All §3 claims `Declared` (policy warrants no `Proven` — VR-5). Append-only.
 - **2026-06-23 — Draft.** Stub created for the E17-1 / M-737 stability & API-compatibility
   decision at full-language 1.0.0. Grounds in ADR-018 (versioning) and ADR-021 (kernel gate);
   records MIT-only license as a 1.0.0 legal-readiness criterion. All normative choices
