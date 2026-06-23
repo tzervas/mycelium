@@ -238,11 +238,14 @@ impl core::fmt::Display for EvalError {
             // capability handle, and the default registry grants none — so an unresolved `wild:` key
             // is an *ungranted host capability*, not a typo. Report it as such (never silent — G2).
             EvalError::UnknownPrim(p) => match p.strip_prefix("wild:") {
+                // Continued lines begin with an explicit `\u{20}` space, not a trailing space before
+                // the `\`: the repo's `trailing-whitespace` hook would strip the latter and silently
+                // fuse the words (`§4.3)dispatches`) — never-silent (G2). (Copilot #508.)
                 Some(op) => write!(
                     f,
-                    "host capability `{op}` not granted: the `wild` FFI floor (RFC-0028 §4.3) \
-dispatches through the prim registry, which registers no host op by default — \
-the `@std-sys` host must register `wild:{op}` to grant it (never silent — G2)"
+                    "host capability `{op}` not granted: the `wild` FFI floor (RFC-0028 §4.3)\
+\u{20}dispatches through the prim registry, which registers no host op by default —\
+\u{20}the `@std-sys` host must register `wild:{op}` to grant it (never silent — G2)"
                 ),
                 None => write!(f, "unknown primitive: {p}"),
             },
