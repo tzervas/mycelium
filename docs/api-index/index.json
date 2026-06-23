@@ -3945,7 +3945,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 71,
+      "line": 104,
       "summary": "A formatting refusal — never a partial rewrite (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3956,7 +3956,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt::FmtError",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 83,
+      "line": 116,
       "summary": "The CLI exit code for this refusal (contract §5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3967,7 +3967,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 41,
+      "line": 74,
       "summary": "A successful format result.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3978,7 +3978,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 33,
+      "line": 66,
       "summary": "The formatter spelling/version this build implements.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3989,7 +3989,7 @@
       "crate": "mycelium-fmt",
       "module": "mycelium_fmt",
       "file": "crates/mycelium-fmt/src/lib.rs",
-      "line": 128,
+      "line": 161,
       "summary": "Format `src` into its canonical form.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4528,7 +4528,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 104,
+      "line": 114,
       "summary": "An explicit check failure (never a silent pass or a guess — S5/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4550,7 +4550,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 307,
+      "line": 332,
       "summary": "The checked program environment: registry + function table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4605,7 +4605,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 79,
+      "line": 83,
       "summary": "The **EXPLAIN record** of a monomorphization (M-673): every trait-method dispatch mono resolved,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4671,7 +4671,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 468,
+      "line": 502,
       "summary": "The checked environments of a whole **phylum** (M-662): one [`Env`] per nodule, paired with the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4781,7 +4781,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 539,
+      "line": 546,
       "summary": "A `match` arm.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4814,7 +4814,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 428,
+      "line": 435,
       "summary": "An expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4858,7 +4858,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 553,
+      "line": 560,
       "summary": "One `hypha <expr>` spawn inside a [`Expr::Colony`] block — a single concurrent execution unit",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4891,7 +4891,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 602,
+      "line": 609,
       "summary": "A binary literal from its verbatim digit/`_` string (the `…` of `0b…`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4902,7 +4902,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 610,
+      "line": 617,
       "summary": "A ternary literal from its verbatim `+0-` string, MSB-first (the inner text of `<…>`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4946,7 +4946,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 560,
+      "line": 567,
       "summary": "A pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4968,7 +4968,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 363,
+      "line": 370,
       "summary": "A scalar element kind.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4979,7 +4979,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 354,
+      "line": 361,
       "summary": "Declared sparsity of a VSA type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4990,7 +4990,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 376,
+      "line": 383,
       "summary": "A guarantee-lattice strength.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5001,7 +5001,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 408,
+      "line": 415,
       "summary": "The **meet** `g₁ ∧ g₂` — the *weaker* (less trusted) of the two grades (RFC-0018 §4.1: the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5012,7 +5012,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 393,
+      "line": 400,
       "summary": "The **trust rank** on the integrity lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5023,7 +5023,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 421,
+      "line": 428,
       "summary": "`self ⊒ demand` — is `self` **at least as trusted** as `demand`? The honesty rule as a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5122,7 +5122,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 975,
+      "line": 1009,
       "summary": "Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5133,7 +5133,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 560,
+      "line": 594,
       "summary": "Check a whole nodule: build the registry (prelude + declarations), then type every function",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5144,7 +5144,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 916,
+      "line": 950,
       "summary": "Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5155,7 +5155,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 578,
+      "line": 612,
       "summary": "Check a whole **phylum** (M-662; RFC-0006 §4.3): build the phylum-wide `pub` **export table** and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5166,7 +5166,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 588,
+      "line": 622,
       "summary": "Like [`check_phylum`] but with the explicit `matured_scope` gate applied to **every** nodule",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5188,7 +5188,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::CheckError",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 124,
+      "line": 134,
       "summary": "Public, ergonomic constructor: a check failure at `site` with `message`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5199,7 +5199,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 159,
+      "line": 169,
       "summary": "One constructor of a registered data type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5210,7 +5210,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 171,
+      "line": 181,
       "summary": "A registered data type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5221,7 +5221,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 338,
+      "line": 363,
       "summary": "Find the data type owning constructor `ctor`, with its index — `None` if no type has it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5232,7 +5232,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 354,
+      "line": 379,
       "summary": "The function declaration named `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5243,7 +5243,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 362,
+      "line": 387,
       "summary": "The totality verdict for function `name`, if it has been classified.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5254,7 +5254,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 376,
+      "line": 401,
       "summary": "The registered instance for `(trait_name, head)`, if any (RFC-0019 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5265,7 +5265,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 369,
+      "line": 394,
       "summary": "The registered trait named `name`, if any (RFC-0019 §4.2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5276,7 +5276,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 347,
+      "line": 372,
       "summary": "The registered data type named `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5287,7 +5287,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 199,
+      "line": 209,
       "summary": "A registered **instance** `impl Trait<args> for T` (RFC-0019 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5309,7 +5309,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::PhylumEnv",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 486,
+      "line": 520,
       "summary": "The checked [`Env`] of the nodule whose path equals `path`, if present.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5320,7 +5320,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::PhylumEnv",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 477,
+      "line": 511,
       "summary": "The single nodule's [`Env`] when this is a phylum-of-one, else `None`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5331,7 +5331,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 186,
+      "line": 196,
       "summary": "A registered **trait** (RFC-0019 §4.2; LR-2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5342,7 +5342,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3376,
+      "line": 3501,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5353,7 +5353,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3362,
+      "line": 3487,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5364,7 +5364,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 218,
+      "line": 228,
       "summary": "The **coherence key** of a type (RFC-0019 §4.5): the head a `(trait, type-head)` instance key is",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5386,7 +5386,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 508,
+      "line": 516,
       "summary": "Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5408,7 +5408,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 184,
+      "line": 192,
       "summary": "The v0 **policy-name reference**: a deterministic, domain-separated content address derived",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5430,7 +5430,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 205,
+      "line": 213,
       "summary": "Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5441,7 +5441,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 242,
+      "line": 250,
       "summary": "**Per-hypha elaboration of a `colony` entry** for the *real-concurrency* execution path",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5595,7 +5595,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::lexer",
       "file": "crates/mycelium-l1/src/lexer.rs",
-      "line": 21,
+      "line": 63,
       "summary": "Tokenize `src` into a [`Spanned`] stream terminated by [`Tok::Eof`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5617,7 +5617,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 88,
+      "line": 95,
       "summary": "The selection mono made for the mangled callee `mangled`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5628,7 +5628,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 106,
+      "line": 113,
       "summary": "Were no trait-method selections recorded? (A non-trait program monomorphizes with an empty",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5639,7 +5639,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 93,
+      "line": 100,
       "summary": "Every recorded selection, in deterministic (mangled-name) order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5650,7 +5650,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 99,
+      "line": 106,
       "summary": "How many distinct trait-method instances were resolved (0 for a non-trait program).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5661,7 +5661,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 121,
+      "line": 140,
       "summary": "Monomorphize a checked `Env` from nullary monomorphic `entry`, returning a closed monomorphic",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5672,7 +5672,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 130,
+      "line": 149,
       "summary": "Like [`monomorphize`] but also returns the [`MonoSelections`] EXPLAIN record of every trait-method",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23226,7 +23226,7 @@
     },
     {
       "symbol": "mycelium_l1::checkty::CheckError",
-      "reason": "dedup-alias: same definition as `mycelium_l1::CheckError` at crates/mycelium-l1/src/checkty.rs:104 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::CheckError` at crates/mycelium-l1/src/checkty.rs:114 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::CheckError::clone",
@@ -23302,7 +23302,7 @@
     },
     {
       "symbol": "mycelium_l1::checkty::Env",
-      "reason": "dedup-alias: same definition as `mycelium_l1::Env` at crates/mycelium-l1/src/checkty.rs:307 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::Env` at crates/mycelium-l1/src/checkty.rs:332 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::Env::clone",
@@ -23334,7 +23334,7 @@
     },
     {
       "symbol": "mycelium_l1::checkty::PhylumEnv",
-      "reason": "dedup-alias: same definition as `mycelium_l1::PhylumEnv` at crates/mycelium-l1/src/checkty.rs:468 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::PhylumEnv` at crates/mycelium-l1/src/checkty.rs:502 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::PhylumEnv::clone",
@@ -23402,23 +23402,23 @@
     },
     {
       "symbol": "mycelium_l1::checkty::check_and_resolve",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:975 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:1009 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:560 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:594 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:916 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:950 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:578 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:612 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:588 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:622 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::ElabError",
@@ -23458,11 +23458,11 @@
     },
     {
       "symbol": "mycelium_l1::elab::elaborate",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate` at crates/mycelium-l1/src/elab.rs:205 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate` at crates/mycelium-l1/src/elab.rs:213 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_colony",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:242 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:250 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::error::ParseError",
@@ -23670,7 +23670,7 @@
     },
     {
       "symbol": "mycelium_l1::mono::MonoSelections",
-      "reason": "dedup-alias: same definition as `mycelium_l1::MonoSelections` at crates/mycelium-l1/src/mono.rs:79 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::MonoSelections` at crates/mycelium-l1/src/mono.rs:83 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::mono::MonoSelections::clone",
@@ -23706,11 +23706,11 @@
     },
     {
       "symbol": "mycelium_l1::mono::monomorphize",
-      "reason": "dedup-alias: same definition as `mycelium_l1::monomorphize` at crates/mycelium-l1/src/mono.rs:121 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::monomorphize` at crates/mycelium-l1/src/mono.rs:140 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::mono::monomorphize_with_selections",
-      "reason": "dedup-alias: same definition as `mycelium_l1::monomorphize_with_selections` at crates/mycelium-l1/src/mono.rs:130 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::monomorphize_with_selections` at crates/mycelium-l1/src/mono.rs:149 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::nodule::NoduleHeader",
