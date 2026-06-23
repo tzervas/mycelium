@@ -50,6 +50,9 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   with sub-gate rows A2/A3/A4 still open. Per house rule #3 / G2, **`v1.0.0` is not cut**, ADR-021/
   ADR-022 stay `Accepted`, and the changelog stays `[Unreleased]` — recorded explicitly rather than
   forced prematurely. M-738 fires only when E13-1 + E18-1 + every ADR-022 row close. (E17-1; M-738)
+### Changed (2026-06-23: ADR-022 Q4 — T6 native AOT un-gated from 1.0.0 → 1.1)
+
+- **ADR-022 Q4 resolved** (maintainer): **T6 (native AOT maturity / optimization passes / JIT / BitNet accel — epic E15-1) is un-gated from `1.0.0` and rolled to `1.1`** as a QoL/perf enhancement, patched in after release. `lang 1.0.0` ships on the **interpreter (trusted base) + the existing direct-LLVM kernel subset** — optimized native codegen is performance, not correctness. Removed T6 from the ADR-022 §5 gate + §3 scope; updated DN-25 (graph + waves), the `aot10` kickoff row (→ `1.1`/post-1.0.0), and E15-1's DoD scope note. Net: nothing perf-related sits between `lib10` (T4) and the release tag; `aot10` now runs post-1.0.0 alongside `boot10`.
 
 ### Changed (2026-06-23: full-language 1.0.0 program — Q1/Q2/Q3 resolved + reconcile tooling)
 
