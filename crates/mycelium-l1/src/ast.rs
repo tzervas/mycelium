@@ -347,6 +347,13 @@ pub enum BaseType {
     /// enclosing ambient, or refuses (`UnresolvedAmbient`/`ParadigmShapeMismatch`). It never
     /// survives into the checker (defense-in-depth: a residual one is an explicit internal refusal).
     Ambient(AmbientParams),
+    /// **Function type** `A -> B` (RFC-0024 §3, HOF stage 1 — surface only). Single-argument
+    /// v1; right-associative; `@` binds tighter than `->` (so `A @ Exact -> B` parses as
+    /// `(A @ Exact) -> B`). The checker and mono are responsible for defunctionalization
+    /// (M-686/M-687); this variant does **not** survive past the checker in v1 (deferred —
+    /// multi-argument `(A, B) -> C` is not yet supported and is a never-silent refusal at the
+    /// parser).
+    Fn(Box<TypeRef>, Box<TypeRef>),
 }
 
 /// Declared sparsity of a VSA type.

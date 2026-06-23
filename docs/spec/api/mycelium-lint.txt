@@ -1,6 +1,6 @@
 pub mod mycelium_lint
 pub use mycelium_lint::DOC_QUALITY_CHECKS
-pub enum mycelium_lint::FixTier
+#[non_exhaustive] pub enum mycelium_lint::FixTier
 pub mycelium_lint::FixTier::Apply
 pub mycelium_lint::FixTier::Scaffold
 pub mycelium_lint::FixTier::Suggest
@@ -31,6 +31,8 @@ pub fn mycelium_lint::Fix::clone(&self) -> mycelium_lint::Fix
 impl core::cmp::Eq for mycelium_lint::Fix
 impl core::cmp::PartialEq for mycelium_lint::Fix
 pub fn mycelium_lint::Fix::eq(&self, &mycelium_lint::Fix) -> bool
+impl core::default::Default for mycelium_lint::Fix
+pub fn mycelium_lint::Fix::default() -> Self
 impl core::fmt::Debug for mycelium_lint::Fix
 pub fn mycelium_lint::Fix::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for mycelium_lint::Fix
@@ -48,6 +50,8 @@ pub mycelium_lint::LintFinding::file: alloc::string::String
 pub mycelium_lint::LintFinding::fix: core::option::Option<mycelium_lint::Fix>
 pub mycelium_lint::LintFinding::message: alloc::string::String
 pub mycelium_lint::LintFinding::severity: mycelium_lsp::lint::Severity
+impl mycelium_lint::LintFinding
+pub fn mycelium_lint::LintFinding::with_fix(self, mycelium_lint::Fix) -> Self
 impl core::clone::Clone for mycelium_lint::LintFinding
 pub fn mycelium_lint::LintFinding::clone(&self) -> mycelium_lint::LintFinding
 impl core::cmp::Eq for mycelium_lint::LintFinding
@@ -69,6 +73,8 @@ pub mycelium_lint::LintReport::findings: alloc::vec::Vec<mycelium_lint::LintFind
 impl mycelium_lint::LintReport
 pub fn mycelium_lint::LintReport::has_errors(&self) -> bool
 pub fn mycelium_lint::LintReport::tier_counts(&self) -> (usize, usize, usize)
+pub fn mycelium_lint::LintReport::with_files(self, usize) -> Self
+pub fn mycelium_lint::LintReport::with_finding(self, mycelium_lint::LintFinding) -> Self
 impl core::clone::Clone for mycelium_lint::LintReport
 pub fn mycelium_lint::LintReport::clone(&self) -> mycelium_lint::LintReport
 impl core::default::Default for mycelium_lint::LintReport

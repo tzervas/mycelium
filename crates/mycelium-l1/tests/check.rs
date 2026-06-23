@@ -1507,3 +1507,138 @@ fn monomorphize_specializes_first_or_to_a_closed_env() {
         "the monomorphized env is closed (no generic data, no traits, no trait impls)"
     );
 }
+
+// --- M-686: HOF checker (RFC-0024 §3) — Ty::Fn + fn-as-value + HOF application ----------------
+
+/// Shared helper: a minimal `Result<A, E>` data type + typical HOF helpers used by multiple
+/// M-686 tests. `double_bits` XORs `x` with itself (always zero — chosen because `xor` is the
+/// available Binary prim; `add` is Ternary-only in stage-1).
+const RESULT_PREAMBLE: &str = "\
+nodule d
+type Result<A, E> = Ok(A) | Err(E)
+fn double_bits(x: Binary{8}) -> Binary{8} = xor(x, x)
+fn mk_ok() -> Result<Binary{8}, Binary{8}> = Ok(0b0000_0001)
+fn identity_err(e: Binary{8}) -> Binary{8} = e\n";
+
+#[test]
+fn hof_map_typechecks_with_fn_as_value() {
+    // RFC-0024 §3 acceptance: `map` takes a function-typed parameter, `double_bits` in value
+    // position has type `Binary{8} -> Binary{8}`, and the call type-checks (M-686; Declared).
+    let src = format!(
+        "{RESULT_PREAMBLE}\
+fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =
+  match r {{ Ok(x) => Ok(f(x)), Err(e) => Err(e) }}
+fn main() -> Result<Binary{{8}}, Binary{{8}}> = map(mk_ok(), double_bits)"
+    );
+    check(&src).expect("map with fn-as-value type-checks (RFC-0024 §3, M-686)");
+}
+
+#[test]
+fn hof_and_then_typechecks_with_fn_as_value() {
+    // RFC-0024 §3 acceptance: `and_then` takes `f: A -> Result<B, E>`; `pass_through` fits.
+    let src = "\
+nodule d
+type Result<A, E> = Ok(A) | Err(E)
+fn pass_through(x: Binary{8}) -> Result<Binary{8}, Binary{8}> = Ok(x)
+fn mk_ok() -> Result<Binary{8}, Binary{8}> = Ok(0b0000_0001)
+fn and_then<A, B, E>(r: Result<A, E>, f: A -> Result<B, E>) -> Result<B, E> =
+  match r { Ok(x) => f(x), Err(e) => Err(e) }
+fn main() -> Result<Binary{8}, Binary{8}> = and_then(mk_ok(), pass_through)";
+    check(src).expect("and_then with fn-as-value type-checks (RFC-0024 §3, M-686)");
+}
+
+#[test]
+fn hof_fold_typechecks_with_two_fn_params() {
+    // RFC-0024 §3 acceptance: `fold` takes two single-arg fns; both `double_bits` and `identity_err`
+    // resolve correctly (two HOF params, each synthesizing `Ty::Fn`).
+    let src = format!(
+        "{RESULT_PREAMBLE}\
+fn fold<A, E, B>(r: Result<A, E>, on_ok: A -> B, on_err: E -> B) -> B =
+  match r {{ Ok(x) => on_ok(x), Err(e) => on_err(e) }}
+fn main() -> Binary{{8}} = fold(mk_ok(), double_bits, identity_err)"
+    );
+    check(&src).expect("fold with two fn-as-value params type-checks (RFC-0024 §3, M-686)");
+}
+
+#[test]
+fn hof_fn_typed_param_application_inside_body_typechecks() {
+    // Inside a HOF body: applying `f` (a scope binder of type `A -> B`) to `x` type-checks —
+    // the new HOF branch in `check_app` handles this (M-686).
+    let src = "\
+nodule d
+fn apply(f: Binary{8} -> Binary{8}, x: Binary{8}) -> Binary{8} = f(x)
+fn flip_bits(x: Binary{8}) -> Binary{8} = not(x)
+fn main() -> Binary{8} = apply(flip_bits, 0b00000001)";
+    check(src).expect("HOF application inside body type-checks (M-686)");
+}
+
+#[test]
+fn hof_arrow_type_mismatch_is_refused() {
+    // Negative: passing a `Binary{8} -> Binary{8}` fn where `Binary{8} -> Result<Binary{8},Binary{8}>`
+    // is needed is a never-silent type error (RFC-0024 §3, G2).
+    let err = check(
+        "nodule d
+type Result<A, E> = Ok(A) | Err(E)
+fn wrong_return_type(x: Binary{8}) -> Binary{8} = not(x)
+fn mk_ok() -> Result<Binary{8}, Binary{8}> = Ok(0b0000_0001)
+fn and_then<A, B, E>(r: Result<A, E>, f: A -> Result<B, E>) -> Result<B, E> =
+  match r { Ok(x) => f(x), Err(e) => Err(e) }
+fn main() -> Result<Binary{8}, Binary{8}> = and_then(mk_ok(), wrong_return_type)",
+    )
+    .expect_err("arrow-type mismatch must be refused (RFC-0024 §3, G2)");
+    assert!(
+        err.message.contains("Binary")
+            && (err.message.contains("arrow")
+                || err.message.contains("mismatch")
+                || err.message.contains("match")),
+        "refusal must mention type mismatch, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn hof_generic_fn_as_value_without_context_is_refused() {
+    // Negative: referencing a GENERIC function bare without a context that fixes its type args
+    // is a never-silent refusal (RFC-0024 §5, RFC-0007 §11.3, G2/VR-5).
+    let err = check(
+        "nodule d
+type Result<A, E> = Ok(A) | Err(E)
+fn identity<A>(x: A) -> A = x
+fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =
+  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }
+fn mk_ok() -> Result<Binary{8}, Binary{8}> = Ok(0b0000_0001)
+fn main() -> Result<Binary{8}, Binary{8}> = map(mk_ok(), identity)",
+    )
+    .expect_err("generic fn-as-value without determined type args must be refused (RFC-0024 §5)");
+    assert!(
+        err.message.contains("generic")
+            || err.message.contains("type argument")
+            || err.message.contains("type parameter")
+            || err.message.contains("determined"),
+        "refusal must mention undetermined type args, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn hof_multi_param_fn_as_value_is_refused() {
+    // Negative: a multi-parameter function cannot be used as a first-class value in stage-1
+    // (partial application is deferred — RFC-0024 §5, never silently coerced).
+    let err = check(
+        "nodule d
+type Result<A, E> = Ok(A) | Err(E)
+fn two_args(x: Binary{8}, y: Binary{8}) -> Binary{8} = xor(x, y)
+fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =
+  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }
+fn mk_ok() -> Result<Binary{8}, Binary{8}> = Ok(0b0000_0001)
+fn main() -> Result<Binary{8}, Binary{8}> = map(mk_ok(), two_args)",
+    )
+    .expect_err("multi-param fn-as-value must be refused (RFC-0024 §5)");
+    assert!(
+        err.message.contains("parameter")
+            || err.message.contains("partial application")
+            || err.message.contains("single-argument"),
+        "refusal must mention partial application / single-arg restriction, got: {}",
+        err.message
+    );
+}

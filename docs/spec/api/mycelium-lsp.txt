@@ -52,6 +52,33 @@ pub fn mycelium_lsp::baseline::derive_baseline(&mycelium_lsp::diagnostics::regis
 pub fn mycelium_lsp::baseline::derive_baseline_for(&mycelium_lsp::diagnostics::registry::ClassRegistry, &[&str]) -> core::result::Result<mycelium_lsp::diagnostics::policy::DiagnosticPolicy, mycelium_lsp::diagnostics::registry::UnknownClass>
 pub fn mycelium_lsp::baseline::explain_baseline(&mycelium_lsp::diagnostics::registry::ClassRegistry) -> alloc::string::String
 pub fn mycelium_lsp::baseline::recovery_profile(mycelium_lsp::baseline::RecoveryProfile, &mycelium_lsp::diagnostics::registry::ClassRegistry, &[&str]) -> core::result::Result<mycelium_lsp::recover::policy::RecoveryPolicy, mycelium_lsp::diagnostics::registry::UnknownClass>
+pub mod mycelium_lsp::completions
+pub struct mycelium_lsp::completions::CompletionItem
+pub mycelium_lsp::completions::CompletionItem::detail: &'static str
+pub mycelium_lsp::completions::CompletionItem::documentation: &'static str
+pub mycelium_lsp::completions::CompletionItem::insert_text: &'static str
+pub mycelium_lsp::completions::CompletionItem::insert_text_format: u8
+pub mycelium_lsp::completions::CompletionItem::kind: u8
+pub mycelium_lsp::completions::CompletionItem::label: &'static str
+impl mycelium_lsp::completions::CompletionItem
+pub fn mycelium_lsp::completions::CompletionItem::to_lsp_value(&self) -> serde_json::value::Value
+impl core::clone::Clone for mycelium_lsp::completions::CompletionItem
+pub fn mycelium_lsp::completions::CompletionItem::clone(&self) -> mycelium_lsp::completions::CompletionItem
+impl core::cmp::PartialEq for mycelium_lsp::completions::CompletionItem
+pub fn mycelium_lsp::completions::CompletionItem::eq(&self, &mycelium_lsp::completions::CompletionItem) -> bool
+impl core::fmt::Debug for mycelium_lsp::completions::CompletionItem
+pub fn mycelium_lsp::completions::CompletionItem::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::completions::CompletionItem
+impl core::marker::Freeze for mycelium_lsp::completions::CompletionItem
+impl core::marker::Send for mycelium_lsp::completions::CompletionItem
+impl core::marker::Sync for mycelium_lsp::completions::CompletionItem
+impl core::marker::Unpin for mycelium_lsp::completions::CompletionItem
+impl core::marker::UnsafeUnpin for mycelium_lsp::completions::CompletionItem
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::completions::CompletionItem
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::completions::CompletionItem
+pub const mycelium_lsp::completions::KEYWORD_COMPLETIONS: &[mycelium_lsp::completions::CompletionItem]
+pub const mycelium_lsp::completions::SNIPPET_COMPLETIONS: &[mycelium_lsp::completions::CompletionItem]
+pub fn mycelium_lsp::completions::completion_list() -> serde_json::value::Value
 pub mod mycelium_lsp::diagnostics
 pub mod mycelium_lsp::diagnostics::audit
 pub struct mycelium_lsp::diagnostics::audit::AuditView
@@ -1047,6 +1074,34 @@ pub fn mycelium_lsp::lint::has_errors(&[mycelium_lsp::lint::Diagnostic]) -> bool
 pub fn mycelium_lsp::lint::lint(&mycelium_core::node::Node) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
 pub fn mycelium_lsp::lint::lint_nodule_header(&str) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
 pub fn mycelium_lsp::lint::lint_structured_header(&str) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
+pub mod mycelium_lsp::llm_canonical_parser
+pub enum mycelium_lsp::llm_canonical_parser::ParseError
+pub mycelium_lsp::llm_canonical_parser::ParseError::DepthLimitExceeded
+pub mycelium_lsp::llm_canonical_parser::ParseError::DepthLimitExceeded::limit: usize
+pub mycelium_lsp::llm_canonical_parser::ParseError::EmptyInput
+pub mycelium_lsp::llm_canonical_parser::ParseError::UnclosedDelimiter
+pub mycelium_lsp::llm_canonical_parser::ParseError::UnclosedDelimiter::delimiter: char
+pub mycelium_lsp::llm_canonical_parser::ParseError::UnclosedDelimiter::line: usize
+pub mycelium_lsp::llm_canonical_parser::ParseError::UnrecognizedConstruct
+pub mycelium_lsp::llm_canonical_parser::ParseError::UnrecognizedConstruct::line: usize
+pub mycelium_lsp::llm_canonical_parser::ParseError::UnrecognizedConstruct::token: alloc::string::String
+impl core::cmp::Eq for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::cmp::PartialEq for mycelium_lsp::llm_canonical_parser::ParseError
+pub fn mycelium_lsp::llm_canonical_parser::ParseError::eq(&self, &mycelium_lsp::llm_canonical_parser::ParseError) -> bool
+impl core::fmt::Debug for mycelium_lsp::llm_canonical_parser::ParseError
+pub fn mycelium_lsp::llm_canonical_parser::ParseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::llm_canonical_parser::ParseError
+pub fn mycelium_lsp::llm_canonical_parser::ParseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::marker::Freeze for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::marker::Send for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::marker::Sync for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::marker::Unpin for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::marker::UnsafeUnpin for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::llm_canonical_parser::ParseError
+pub const mycelium_lsp::llm_canonical_parser::DEPTH_LIMIT: usize
+pub fn mycelium_lsp::llm_canonical_parser::parse_llm_canonical(&str) -> core::result::Result<alloc::string::String, mycelium_lsp::llm_canonical_parser::ParseError>
 pub mod mycelium_lsp::project
 pub fn mycelium_lsp::project::llm_canonical(&mycelium_core::node::Node) -> alloc::string::String
 pub mod mycelium_lsp::recover
@@ -1341,6 +1396,31 @@ impl core::marker::Unpin for mycelium_lsp::recover::Outcome
 impl core::marker::UnsafeUnpin for mycelium_lsp::recover::Outcome
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::recover::Outcome
 impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::Outcome
+pub enum mycelium_lsp::ParseError
+pub mycelium_lsp::ParseError::DepthLimitExceeded
+pub mycelium_lsp::ParseError::DepthLimitExceeded::limit: usize
+pub mycelium_lsp::ParseError::EmptyInput
+pub mycelium_lsp::ParseError::UnclosedDelimiter
+pub mycelium_lsp::ParseError::UnclosedDelimiter::delimiter: char
+pub mycelium_lsp::ParseError::UnclosedDelimiter::line: usize
+pub mycelium_lsp::ParseError::UnrecognizedConstruct
+pub mycelium_lsp::ParseError::UnrecognizedConstruct::line: usize
+pub mycelium_lsp::ParseError::UnrecognizedConstruct::token: alloc::string::String
+impl core::cmp::Eq for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::cmp::PartialEq for mycelium_lsp::llm_canonical_parser::ParseError
+pub fn mycelium_lsp::llm_canonical_parser::ParseError::eq(&self, &mycelium_lsp::llm_canonical_parser::ParseError) -> bool
+impl core::fmt::Debug for mycelium_lsp::llm_canonical_parser::ParseError
+pub fn mycelium_lsp::llm_canonical_parser::ParseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_lsp::llm_canonical_parser::ParseError
+pub fn mycelium_lsp::llm_canonical_parser::ParseError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::marker::Freeze for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::marker::Send for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::marker::Sync for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::marker::Unpin for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::marker::UnsafeUnpin for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::llm_canonical_parser::ParseError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::llm_canonical_parser::ParseError
 pub enum mycelium_lsp::RecoveryProfile
 pub mycelium_lsp::RecoveryProfile::Resilient
 pub mycelium_lsp::RecoveryProfile::Strict
@@ -1472,6 +1552,29 @@ impl core::marker::Unpin for mycelium_lsp::diagnostics::registry::ClassRegistry
 impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::registry::ClassRegistry
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::registry::ClassRegistry
 impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::registry::ClassRegistry
+pub struct mycelium_lsp::CompletionItem
+pub mycelium_lsp::CompletionItem::detail: &'static str
+pub mycelium_lsp::CompletionItem::documentation: &'static str
+pub mycelium_lsp::CompletionItem::insert_text: &'static str
+pub mycelium_lsp::CompletionItem::insert_text_format: u8
+pub mycelium_lsp::CompletionItem::kind: u8
+pub mycelium_lsp::CompletionItem::label: &'static str
+impl mycelium_lsp::completions::CompletionItem
+pub fn mycelium_lsp::completions::CompletionItem::to_lsp_value(&self) -> serde_json::value::Value
+impl core::clone::Clone for mycelium_lsp::completions::CompletionItem
+pub fn mycelium_lsp::completions::CompletionItem::clone(&self) -> mycelium_lsp::completions::CompletionItem
+impl core::cmp::PartialEq for mycelium_lsp::completions::CompletionItem
+pub fn mycelium_lsp::completions::CompletionItem::eq(&self, &mycelium_lsp::completions::CompletionItem) -> bool
+impl core::fmt::Debug for mycelium_lsp::completions::CompletionItem
+pub fn mycelium_lsp::completions::CompletionItem::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_lsp::completions::CompletionItem
+impl core::marker::Freeze for mycelium_lsp::completions::CompletionItem
+impl core::marker::Send for mycelium_lsp::completions::CompletionItem
+impl core::marker::Sync for mycelium_lsp::completions::CompletionItem
+impl core::marker::Unpin for mycelium_lsp::completions::CompletionItem
+impl core::marker::UnsafeUnpin for mycelium_lsp::completions::CompletionItem
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::completions::CompletionItem
+impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::completions::CompletionItem
 pub struct mycelium_lsp::Crossing
 pub mycelium_lsp::Crossing::from: core::option::Option<mycelium_core::repr::Repr>
 pub mycelium_lsp::Crossing::honesty: core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
@@ -1865,11 +1968,15 @@ impl core::marker::Unpin for mycelium_lsp::diagnostics::registry::UnknownClass
 impl core::marker::UnsafeUnpin for mycelium_lsp::diagnostics::registry::UnknownClass
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_lsp::diagnostics::registry::UnknownClass
 impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::diagnostics::registry::UnknownClass
+pub const mycelium_lsp::DEPTH_LIMIT: usize
+pub const mycelium_lsp::KEYWORD_COMPLETIONS: &[mycelium_lsp::completions::CompletionItem]
 pub const mycelium_lsp::RESILIENT_MAX_ATTEMPTS: u64
+pub const mycelium_lsp::SNIPPET_COMPLETIONS: &[mycelium_lsp::completions::CompletionItem]
 pub fn mycelium_lsp::analyze(&mycelium_core::node::Node) -> mycelium_lsp::feedback::Feedback
 pub fn mycelium_lsp::analyze_with(&mycelium_core::node::Node, &mycelium_select::PolicyRegistry) -> mycelium_lsp::feedback::Feedback
 pub fn mycelium_lsp::baseline_for_class(&str) -> mycelium_lsp::baseline::BaselineRule
 pub fn mycelium_lsp::check_effects(&mycelium_lsp::recover::effect::EffectSet, &mycelium_lsp::recover::effect::EffectSet) -> core::result::Result<(), mycelium_lsp::recover::effect::UndeclaredEffect>
+pub fn mycelium_lsp::completion_list() -> serde_json::value::Value
 pub fn mycelium_lsp::derive_baseline(&mycelium_lsp::diagnostics::registry::ClassRegistry) -> mycelium_lsp::diagnostics::policy::DiagnosticPolicy
 pub fn mycelium_lsp::derive_baseline_for(&mycelium_lsp::diagnostics::registry::ClassRegistry, &[&str]) -> core::result::Result<mycelium_lsp::diagnostics::policy::DiagnosticPolicy, mycelium_lsp::diagnostics::registry::UnknownClass>
 pub fn mycelium_lsp::expand_ambient(&str) -> core::result::Result<alloc::string::String, alloc::string::String>
@@ -1880,6 +1987,7 @@ pub fn mycelium_lsp::has_errors(&[mycelium_lsp::lint::Diagnostic]) -> bool
 pub fn mycelium_lsp::lint(&mycelium_core::node::Node) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
 pub fn mycelium_lsp::lint_nodule_header(&str) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
 pub fn mycelium_lsp::lint_structured_header(&str) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
+pub fn mycelium_lsp::parse_llm_canonical(&str) -> core::result::Result<alloc::string::String, mycelium_lsp::llm_canonical_parser::ParseError>
 pub fn mycelium_lsp::present(mycelium_lsp::diagnostics::record::ReasonedError, core::option::Option<&mycelium_lsp::diagnostics::policy::DiagnosticPolicy>) -> mycelium_lsp::diagnostics::record::Presentation
 pub fn mycelium_lsp::publish_diagnostics_notification(&str, &mycelium_lsp::feedback::Feedback) -> serde_json::value::Value
 pub fn mycelium_lsp::publish_for_source(&str, &str) -> serde_json::value::Value

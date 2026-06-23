@@ -1,5 +1,5 @@
 pub mod mycelium_fmt
-pub enum mycelium_fmt::FmtError
+#[non_exhaustive] pub enum mycelium_fmt::FmtError
 pub mycelium_fmt::FmtError::Header(alloc::string::String)
 pub mycelium_fmt::FmtError::OutOfScope(alloc::string::String)
 pub mycelium_fmt::FmtError::Parse(alloc::string::String)
@@ -32,6 +32,10 @@ pub fn mycelium_fmt::Formatted::clone(&self) -> mycelium_fmt::Formatted
 impl core::cmp::Eq for mycelium_fmt::Formatted
 impl core::cmp::PartialEq for mycelium_fmt::Formatted
 pub fn mycelium_fmt::Formatted::eq(&self, &mycelium_fmt::Formatted) -> bool
+impl core::convert::From<alloc::string::String> for mycelium_fmt::Formatted
+pub fn mycelium_fmt::Formatted::from(alloc::string::String) -> Self
+impl core::default::Default for mycelium_fmt::Formatted
+pub fn mycelium_fmt::Formatted::default() -> mycelium_fmt::Formatted
 impl core::fmt::Debug for mycelium_fmt::Formatted
 pub fn mycelium_fmt::Formatted::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
 impl core::marker::StructuralPartialEq for mycelium_fmt::Formatted

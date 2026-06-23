@@ -1,0 +1,1058 @@
+pub mod mycelium_bench
+pub mod mycelium_bench::backend
+pub enum mycelium_bench::backend::Backend
+pub mycelium_bench::backend::Backend::AotEnv
+pub mycelium_bench::backend::Backend::DirectLlvm
+pub mycelium_bench::backend::Backend::Interp
+pub mycelium_bench::backend::Backend::Jit
+pub mycelium_bench::backend::Backend::MlirDialect
+impl mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::all() -> [mycelium_bench::backend::Backend; 5]
+pub fn mycelium_bench::backend::Backend::is_baseline(self) -> bool
+pub fn mycelium_bench::backend::Backend::is_process_spawn_bound(self) -> bool
+pub fn mycelium_bench::backend::Backend::label(self) -> &'static str
+impl core::clone::Clone for mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::clone(&self) -> mycelium_bench::backend::Backend
+impl core::cmp::Eq for mycelium_bench::backend::Backend
+impl core::cmp::PartialEq for mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::eq(&self, &mycelium_bench::backend::Backend) -> bool
+impl core::fmt::Debug for mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_bench::backend::Backend
+impl core::marker::StructuralPartialEq for mycelium_bench::backend::Backend
+impl serde_core::ser::Serialize for mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::backend::Backend
+impl core::marker::Send for mycelium_bench::backend::Backend
+impl core::marker::Sync for mycelium_bench::backend::Backend
+impl core::marker::Unpin for mycelium_bench::backend::Backend
+impl core::marker::UnsafeUnpin for mycelium_bench::backend::Backend
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::backend::Backend
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::backend::Backend
+pub enum mycelium_bench::backend::Outcome
+pub mycelium_bench::backend::Outcome::Error(alloc::string::String)
+pub mycelium_bench::backend::Outcome::Skipped(alloc::string::String)
+pub mycelium_bench::backend::Outcome::Unlowerable(alloc::string::String)
+pub mycelium_bench::backend::Outcome::Value(alloc::boxed::Box<mycelium_core::datum::CoreValue>)
+impl mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::Outcome::reason(&self) -> &str
+pub fn mycelium_bench::backend::Outcome::status(&self) -> &'static str
+pub fn mycelium_bench::backend::Outcome::value(&self) -> core::option::Option<&mycelium_core::datum::CoreValue>
+pub fn mycelium_bench::backend::Outcome::value_outcome(mycelium_core::datum::CoreValue) -> Self
+impl core::clone::Clone for mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::Outcome::clone(&self) -> mycelium_bench::backend::Outcome
+impl core::fmt::Debug for mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::Outcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_bench::backend::Outcome
+impl core::marker::Send for mycelium_bench::backend::Outcome
+impl core::marker::Sync for mycelium_bench::backend::Outcome
+impl core::marker::Unpin for mycelium_bench::backend::Outcome
+impl core::marker::UnsafeUnpin for mycelium_bench::backend::Outcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::backend::Outcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::backend::Outcome
+pub struct mycelium_bench::backend::Engines
+pub mycelium_bench::backend::Engines::prims: mycelium_interp::prims::PrimRegistry
+pub mycelium_bench::backend::Engines::swap: mycelium_cert::BinaryTernarySwapEngine
+impl core::default::Default for mycelium_bench::backend::Engines
+pub fn mycelium_bench::backend::Engines::default() -> Self
+impl core::marker::Freeze for mycelium_bench::backend::Engines
+impl core::marker::Send for mycelium_bench::backend::Engines
+impl core::marker::Sync for mycelium_bench::backend::Engines
+impl core::marker::Unpin for mycelium_bench::backend::Engines
+impl core::marker::UnsafeUnpin for mycelium_bench::backend::Engines
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::backend::Engines
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::backend::Engines
+pub struct mycelium_bench::backend::WarmRun
+pub mycelium_bench::backend::WarmRun::compile_ns: core::option::Option<f64>
+pub mycelium_bench::backend::WarmRun::probe: mycelium_bench::backend::Outcome
+pub mycelium_bench::backend::WarmRun::run: core::option::Option<alloc::boxed::Box<dyn core::ops::function::Fn() -> mycelium_bench::backend::Outcome>>
+impl core::marker::Freeze for mycelium_bench::backend::WarmRun
+impl !core::marker::Send for mycelium_bench::backend::WarmRun
+impl !core::marker::Sync for mycelium_bench::backend::WarmRun
+impl core::marker::Unpin for mycelium_bench::backend::WarmRun
+impl core::marker::UnsafeUnpin for mycelium_bench::backend::WarmRun
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::backend::WarmRun
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_bench::backend::WarmRun
+pub fn mycelium_bench::backend::observable_eq(&mycelium_core::datum::CoreValue, &mycelium_core::datum::CoreValue) -> bool
+pub fn mycelium_bench::backend::run_aot_env(&mycelium_core::node::Node, &mycelium_bench::backend::Engines) -> mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::run_direct_llvm(&mycelium_core::node::Node) -> mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::run_interp(&mycelium_core::node::Node, &mycelium_bench::backend::Engines) -> mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::run_jit(&mycelium_core::node::Node) -> mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::run_mlir_dialect(&mycelium_core::node::Node) -> mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::run_once(mycelium_bench::backend::Backend, &mycelium_core::node::Node, &mycelium_bench::backend::Engines) -> mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::warm_runner(mycelium_bench::backend::Backend, &mycelium_core::node::Node, &mycelium_bench::backend::Engines) -> mycelium_bench::backend::WarmRun
+pub mod mycelium_bench::corpus
+pub enum mycelium_bench::corpus::CorpusError
+pub mycelium_bench::corpus::CorpusError::Check(alloc::string::String)
+pub mycelium_bench::corpus::CorpusError::Elaborate(alloc::string::String)
+pub mycelium_bench::corpus::CorpusError::Parse(alloc::string::String)
+impl core::error::Error for mycelium_bench::corpus::CorpusError
+impl core::fmt::Debug for mycelium_bench::corpus::CorpusError
+pub fn mycelium_bench::corpus::CorpusError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_bench::corpus::CorpusError
+pub fn mycelium_bench::corpus::CorpusError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_bench::corpus::CorpusError
+impl core::marker::Send for mycelium_bench::corpus::CorpusError
+impl core::marker::Sync for mycelium_bench::corpus::CorpusError
+impl core::marker::Unpin for mycelium_bench::corpus::CorpusError
+impl core::marker::UnsafeUnpin for mycelium_bench::corpus::CorpusError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::corpus::CorpusError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::corpus::CorpusError
+pub enum mycelium_bench::corpus::Fragment
+pub mycelium_bench::corpus::Fragment::BitSubset
+pub mycelium_bench::corpus::Fragment::Data
+pub mycelium_bench::corpus::Fragment::Recursion
+pub mycelium_bench::corpus::Fragment::Swap
+impl mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::label(self) -> &'static str
+impl core::clone::Clone for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::clone(&self) -> mycelium_bench::corpus::Fragment
+impl core::cmp::Eq for mycelium_bench::corpus::Fragment
+impl core::cmp::Ord for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::cmp(&self, &mycelium_bench::corpus::Fragment) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::eq(&self, &mycelium_bench::corpus::Fragment) -> bool
+impl core::cmp::PartialOrd for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::partial_cmp(&self, &mycelium_bench::corpus::Fragment) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_bench::corpus::Fragment
+impl core::marker::StructuralPartialEq for mycelium_bench::corpus::Fragment
+impl serde_core::ser::Serialize for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::corpus::Fragment
+impl core::marker::Send for mycelium_bench::corpus::Fragment
+impl core::marker::Sync for mycelium_bench::corpus::Fragment
+impl core::marker::Unpin for mycelium_bench::corpus::Fragment
+impl core::marker::UnsafeUnpin for mycelium_bench::corpus::Fragment
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::corpus::Fragment
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::corpus::Fragment
+pub struct mycelium_bench::corpus::Case
+pub mycelium_bench::corpus::Case::fragment: mycelium_bench::corpus::Fragment
+pub mycelium_bench::corpus::Case::id: &'static str
+pub mycelium_bench::corpus::Case::note: &'static str
+pub mycelium_bench::corpus::Case::src: &'static str
+impl mycelium_bench::corpus::Case
+pub fn mycelium_bench::corpus::Case::elaborate(&self) -> core::result::Result<mycelium_core::node::Node, mycelium_bench::corpus::CorpusError>
+impl core::clone::Clone for mycelium_bench::corpus::Case
+pub fn mycelium_bench::corpus::Case::clone(&self) -> mycelium_bench::corpus::Case
+impl core::fmt::Debug for mycelium_bench::corpus::Case
+pub fn mycelium_bench::corpus::Case::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_bench::corpus::Case
+impl core::marker::Send for mycelium_bench::corpus::Case
+impl core::marker::Sync for mycelium_bench::corpus::Case
+impl core::marker::Unpin for mycelium_bench::corpus::Case
+impl core::marker::UnsafeUnpin for mycelium_bench::corpus::Case
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::corpus::Case
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::corpus::Case
+pub fn mycelium_bench::corpus::corpus() -> alloc::vec::Vec<mycelium_bench::corpus::Case>
+pub mod mycelium_bench::llm
+pub enum mycelium_bench::llm::LlmIngestError
+pub mycelium_bench::llm::LlmIngestError::Io(alloc::string::String)
+pub mycelium_bench::llm::LlmIngestError::Parse(alloc::string::String)
+impl core::error::Error for mycelium_bench::llm::LlmIngestError
+impl core::fmt::Debug for mycelium_bench::llm::LlmIngestError
+pub fn mycelium_bench::llm::LlmIngestError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_bench::llm::LlmIngestError
+pub fn mycelium_bench::llm::LlmIngestError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_bench::llm::LlmIngestError
+impl core::marker::Send for mycelium_bench::llm::LlmIngestError
+impl core::marker::Sync for mycelium_bench::llm::LlmIngestError
+impl core::marker::Unpin for mycelium_bench::llm::LlmIngestError
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::LlmIngestError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::LlmIngestError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::LlmIngestError
+pub struct mycelium_bench::llm::GrokAblation
+pub mycelium_bench::llm::GrokAblation::arms: alloc::vec::Vec<serde_json::value::Value>
+pub mycelium_bench::llm::GrokAblation::experiment: alloc::string::String
+pub mycelium_bench::llm::GrokAblation::model: alloc::string::String
+pub mycelium_bench::llm::GrokAblation::retention: serde_json::value::Value
+pub mycelium_bench::llm::GrokAblation::seeds: alloc::vec::Vec<u64>
+pub mycelium_bench::llm::GrokAblation::task_set_id: alloc::string::String
+impl core::clone::Clone for mycelium_bench::llm::GrokAblation
+pub fn mycelium_bench::llm::GrokAblation::clone(&self) -> mycelium_bench::llm::GrokAblation
+impl core::fmt::Debug for mycelium_bench::llm::GrokAblation
+pub fn mycelium_bench::llm::GrokAblation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::GrokAblation
+pub fn mycelium_bench::llm::GrokAblation::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::GrokAblation
+impl core::marker::Send for mycelium_bench::llm::GrokAblation
+impl core::marker::Sync for mycelium_bench::llm::GrokAblation
+impl core::marker::Unpin for mycelium_bench::llm::GrokAblation
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::GrokAblation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::GrokAblation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::GrokAblation
+pub struct mycelium_bench::llm::GrokHonestyPosture
+pub mycelium_bench::llm::GrokHonestyPosture::guarantee_lattice: alloc::vec::Vec<alloc::string::String>
+pub mycelium_bench::llm::GrokHonestyPosture::model_allowed_tags: alloc::vec::Vec<alloc::string::String>
+pub mycelium_bench::llm::GrokHonestyPosture::never_silent: bool
+pub mycelium_bench::llm::GrokHonestyPosture::synthetic: bool
+pub mycelium_bench::llm::GrokHonestyPosture::synthetic_note: alloc::string::String
+pub mycelium_bench::llm::GrokHonestyPosture::vr5_rule: alloc::string::String
+impl core::clone::Clone for mycelium_bench::llm::GrokHonestyPosture
+pub fn mycelium_bench::llm::GrokHonestyPosture::clone(&self) -> mycelium_bench::llm::GrokHonestyPosture
+impl core::fmt::Debug for mycelium_bench::llm::GrokHonestyPosture
+pub fn mycelium_bench::llm::GrokHonestyPosture::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::GrokHonestyPosture
+pub fn mycelium_bench::llm::GrokHonestyPosture::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::GrokHonestyPosture
+impl core::marker::Send for mycelium_bench::llm::GrokHonestyPosture
+impl core::marker::Sync for mycelium_bench::llm::GrokHonestyPosture
+impl core::marker::Unpin for mycelium_bench::llm::GrokHonestyPosture
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::GrokHonestyPosture
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::GrokHonestyPosture
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::GrokHonestyPosture
+pub struct mycelium_bench::llm::GrokLlmReport
+pub mycelium_bench::llm::GrokLlmReport::ablation: core::option::Option<mycelium_bench::llm::GrokAblation>
+pub mycelium_bench::llm::GrokLlmReport::honesty_posture: mycelium_bench::llm::GrokHonestyPosture
+pub mycelium_bench::llm::GrokLlmReport::metadata: mycelium_bench::llm::GrokMetadata
+pub mycelium_bench::llm::GrokLlmReport::outcomes: alloc::vec::Vec<mycelium_bench::llm::GrokOutcome>
+pub mycelium_bench::llm::GrokLlmReport::performance: mycelium_bench::llm::GrokPerformance
+pub mycelium_bench::llm::GrokLlmReport::quality: mycelium_bench::llm::GrokQuality
+impl mycelium_bench::llm::GrokLlmReport
+pub fn mycelium_bench::llm::GrokLlmReport::from_json(&str) -> core::result::Result<Self, mycelium_bench::llm::LlmIngestError>
+pub fn mycelium_bench::llm::GrokLlmReport::is_synthetic(&self) -> bool
+pub fn mycelium_bench::llm::GrokLlmReport::provenance(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_bench::llm::GrokLlmReport
+pub fn mycelium_bench::llm::GrokLlmReport::clone(&self) -> mycelium_bench::llm::GrokLlmReport
+impl core::fmt::Debug for mycelium_bench::llm::GrokLlmReport
+pub fn mycelium_bench::llm::GrokLlmReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::GrokLlmReport
+pub fn mycelium_bench::llm::GrokLlmReport::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::GrokLlmReport
+impl core::marker::Send for mycelium_bench::llm::GrokLlmReport
+impl core::marker::Sync for mycelium_bench::llm::GrokLlmReport
+impl core::marker::Unpin for mycelium_bench::llm::GrokLlmReport
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::GrokLlmReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::GrokLlmReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::GrokLlmReport
+pub struct mycelium_bench::llm::GrokMetadata
+pub mycelium_bench::llm::GrokMetadata::endpoint: alloc::string::String
+pub mycelium_bench::llm::GrokMetadata::harness: alloc::string::String
+pub mycelium_bench::llm::GrokMetadata::max_rounds: u32
+pub mycelium_bench::llm::GrokMetadata::mode: alloc::string::String
+pub mycelium_bench::llm::GrokMetadata::model: alloc::string::String
+pub mycelium_bench::llm::GrokMetadata::seed: u64
+pub mycelium_bench::llm::GrokMetadata::task_set_id: alloc::string::String
+pub mycelium_bench::llm::GrokMetadata::timestamp_utc: alloc::string::String
+pub mycelium_bench::llm::GrokMetadata::version: alloc::string::String
+impl core::clone::Clone for mycelium_bench::llm::GrokMetadata
+pub fn mycelium_bench::llm::GrokMetadata::clone(&self) -> mycelium_bench::llm::GrokMetadata
+impl core::fmt::Debug for mycelium_bench::llm::GrokMetadata
+pub fn mycelium_bench::llm::GrokMetadata::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::GrokMetadata
+pub fn mycelium_bench::llm::GrokMetadata::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::GrokMetadata
+impl core::marker::Send for mycelium_bench::llm::GrokMetadata
+impl core::marker::Sync for mycelium_bench::llm::GrokMetadata
+impl core::marker::Unpin for mycelium_bench::llm::GrokMetadata
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::GrokMetadata
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::GrokMetadata
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::GrokMetadata
+pub struct mycelium_bench::llm::GrokOutcome
+pub mycelium_bench::llm::GrokOutcome::guarantee_tag: alloc::string::String
+pub mycelium_bench::llm::GrokOutcome::iterations_to_clean: u32
+pub mycelium_bench::llm::GrokOutcome::message: alloc::string::String
+pub mycelium_bench::llm::GrokOutcome::model: alloc::string::String
+pub mycelium_bench::llm::GrokOutcome::rounds: alloc::vec::Vec<serde_json::value::Value>
+pub mycelium_bench::llm::GrokOutcome::spec: alloc::string::String
+pub mycelium_bench::llm::GrokOutcome::status: alloc::string::String
+pub mycelium_bench::llm::GrokOutcome::task_id: alloc::string::String
+pub mycelium_bench::llm::GrokOutcome::total_completion_tokens: u64
+pub mycelium_bench::llm::GrokOutcome::total_cost_usd: f64
+pub mycelium_bench::llm::GrokOutcome::total_latency_s: f64
+pub mycelium_bench::llm::GrokOutcome::total_prompt_tokens: u64
+impl core::clone::Clone for mycelium_bench::llm::GrokOutcome
+pub fn mycelium_bench::llm::GrokOutcome::clone(&self) -> mycelium_bench::llm::GrokOutcome
+impl core::fmt::Debug for mycelium_bench::llm::GrokOutcome
+pub fn mycelium_bench::llm::GrokOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::GrokOutcome
+pub fn mycelium_bench::llm::GrokOutcome::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::GrokOutcome
+impl core::marker::Send for mycelium_bench::llm::GrokOutcome
+impl core::marker::Sync for mycelium_bench::llm::GrokOutcome
+impl core::marker::Unpin for mycelium_bench::llm::GrokOutcome
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::GrokOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::GrokOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::GrokOutcome
+pub struct mycelium_bench::llm::GrokPerformance
+pub mycelium_bench::llm::GrokPerformance::batch_count: u32
+pub mycelium_bench::llm::GrokPerformance::completion_tokens: u64
+pub mycelium_bench::llm::GrokPerformance::mean_latency_s: core::option::Option<f64>
+pub mycelium_bench::llm::GrokPerformance::prompt_tokens: u64
+pub mycelium_bench::llm::GrokPerformance::request_count: u32
+pub mycelium_bench::llm::GrokPerformance::total_cost_usd: f64
+pub mycelium_bench::llm::GrokPerformance::total_latency_s: f64
+pub mycelium_bench::llm::GrokPerformance::total_tokens: u64
+impl core::clone::Clone for mycelium_bench::llm::GrokPerformance
+pub fn mycelium_bench::llm::GrokPerformance::clone(&self) -> mycelium_bench::llm::GrokPerformance
+impl core::fmt::Debug for mycelium_bench::llm::GrokPerformance
+pub fn mycelium_bench::llm::GrokPerformance::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::GrokPerformance
+pub fn mycelium_bench::llm::GrokPerformance::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::GrokPerformance
+impl core::marker::Send for mycelium_bench::llm::GrokPerformance
+impl core::marker::Sync for mycelium_bench::llm::GrokPerformance
+impl core::marker::Unpin for mycelium_bench::llm::GrokPerformance
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::GrokPerformance
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::GrokPerformance
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::GrokPerformance
+pub struct mycelium_bench::llm::GrokQuality
+pub mycelium_bench::llm::GrokQuality::edit_to_fix_iterations: alloc::vec::Vec<u32>
+pub mycelium_bench::llm::GrokQuality::mean_edit_to_fix: f64
+pub mycelium_bench::llm::GrokQuality::scored: u32
+pub mycelium_bench::llm::GrokQuality::skipped: u32
+pub mycelium_bench::llm::GrokQuality::syntactic_valid: u32
+pub mycelium_bench::llm::GrokQuality::syntactic_validity_rate: f64
+pub mycelium_bench::llm::GrokQuality::total: u32
+pub mycelium_bench::llm::GrokQuality::typecheck_pass: u32
+pub mycelium_bench::llm::GrokQuality::typecheck_pass_rate: f64
+impl core::clone::Clone for mycelium_bench::llm::GrokQuality
+pub fn mycelium_bench::llm::GrokQuality::clone(&self) -> mycelium_bench::llm::GrokQuality
+impl core::fmt::Debug for mycelium_bench::llm::GrokQuality
+pub fn mycelium_bench::llm::GrokQuality::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::GrokQuality
+pub fn mycelium_bench::llm::GrokQuality::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::GrokQuality
+impl core::marker::Send for mycelium_bench::llm::GrokQuality
+impl core::marker::Sync for mycelium_bench::llm::GrokQuality
+impl core::marker::Unpin for mycelium_bench::llm::GrokQuality
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::GrokQuality
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::GrokQuality
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::GrokQuality
+pub struct mycelium_bench::llm::HonestyPosture
+pub mycelium_bench::llm::HonestyPosture::guarantee_lattice: alloc::vec::Vec<alloc::string::String>
+pub mycelium_bench::llm::HonestyPosture::model_allowed_tags: alloc::vec::Vec<alloc::string::String>
+pub mycelium_bench::llm::HonestyPosture::never_silent: bool
+pub mycelium_bench::llm::HonestyPosture::vr5_rule: alloc::string::String
+impl core::clone::Clone for mycelium_bench::llm::HonestyPosture
+pub fn mycelium_bench::llm::HonestyPosture::clone(&self) -> mycelium_bench::llm::HonestyPosture
+impl core::fmt::Debug for mycelium_bench::llm::HonestyPosture
+pub fn mycelium_bench::llm::HonestyPosture::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::HonestyPosture
+pub fn mycelium_bench::llm::HonestyPosture::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::HonestyPosture
+impl core::marker::Send for mycelium_bench::llm::HonestyPosture
+impl core::marker::Sync for mycelium_bench::llm::HonestyPosture
+impl core::marker::Unpin for mycelium_bench::llm::HonestyPosture
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::HonestyPosture
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::HonestyPosture
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::HonestyPosture
+pub struct mycelium_bench::llm::LlmReport
+pub mycelium_bench::llm::LlmReport::harness: alloc::string::String
+pub mycelium_bench::llm::LlmReport::honesty_posture: mycelium_bench::llm::HonestyPosture
+pub mycelium_bench::llm::LlmReport::mode: alloc::string::String
+pub mycelium_bench::llm::LlmReport::results: alloc::vec::Vec<mycelium_bench::llm::ValidationResult>
+pub mycelium_bench::llm::LlmReport::run_id: alloc::string::String
+pub mycelium_bench::llm::LlmReport::summary: mycelium_bench::llm::Summary
+pub mycelium_bench::llm::LlmReport::version: alloc::string::String
+impl mycelium_bench::llm::LlmReport
+pub fn mycelium_bench::llm::LlmReport::from_json(&str) -> core::result::Result<Self, mycelium_bench::llm::LlmIngestError>
+pub fn mycelium_bench::llm::LlmReport::from_path(&std::path::Path) -> core::result::Result<Self, mycelium_bench::llm::LlmIngestError>
+pub fn mycelium_bench::llm::LlmReport::is_synthetic(&self) -> bool
+pub fn mycelium_bench::llm::LlmReport::newest_in_dir(&std::path::Path) -> core::result::Result<core::option::Option<std::path::PathBuf>, mycelium_bench::llm::LlmIngestError>
+pub fn mycelium_bench::llm::LlmReport::provenance(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_bench::llm::LlmReport
+pub fn mycelium_bench::llm::LlmReport::clone(&self) -> mycelium_bench::llm::LlmReport
+impl core::fmt::Debug for mycelium_bench::llm::LlmReport
+pub fn mycelium_bench::llm::LlmReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::LlmReport
+pub fn mycelium_bench::llm::LlmReport::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::LlmReport
+impl core::marker::Send for mycelium_bench::llm::LlmReport
+impl core::marker::Sync for mycelium_bench::llm::LlmReport
+impl core::marker::Unpin for mycelium_bench::llm::LlmReport
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::LlmReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::LlmReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::LlmReport
+pub struct mycelium_bench::llm::ParsedLlmSection
+pub mycelium_bench::llm::ParsedLlmSection::is_synthetic: bool
+pub mycelium_bench::llm::ParsedLlmSection::provenance: alloc::string::String
+pub mycelium_bench::llm::ParsedLlmSection::source_path: alloc::string::String
+pub mycelium_bench::llm::ParsedLlmSection::validations: alloc::vec::Vec<mycelium_bench::report::LlmValidationRow>
+impl core::fmt::Debug for mycelium_bench::llm::ParsedLlmSection
+pub fn mycelium_bench::llm::ParsedLlmSection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_bench::llm::ParsedLlmSection
+impl core::marker::Send for mycelium_bench::llm::ParsedLlmSection
+impl core::marker::Sync for mycelium_bench::llm::ParsedLlmSection
+impl core::marker::Unpin for mycelium_bench::llm::ParsedLlmSection
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::ParsedLlmSection
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::ParsedLlmSection
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::ParsedLlmSection
+pub struct mycelium_bench::llm::Summary
+pub mycelium_bench::llm::Summary::exit_code: i32
+pub mycelium_bench::llm::Summary::fail: u32
+pub mycelium_bench::llm::Summary::mock_pass: u32
+pub mycelium_bench::llm::Summary::mode: alloc::string::String
+pub mycelium_bench::llm::Summary::model: core::option::Option<alloc::string::String>
+pub mycelium_bench::llm::Summary::overall: alloc::string::String
+pub mycelium_bench::llm::Summary::pass: u32
+pub mycelium_bench::llm::Summary::skip: u32
+pub mycelium_bench::llm::Summary::total: u32
+impl core::clone::Clone for mycelium_bench::llm::Summary
+pub fn mycelium_bench::llm::Summary::clone(&self) -> mycelium_bench::llm::Summary
+impl core::fmt::Debug for mycelium_bench::llm::Summary
+pub fn mycelium_bench::llm::Summary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::Summary
+pub fn mycelium_bench::llm::Summary::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::Summary
+impl core::marker::Send for mycelium_bench::llm::Summary
+impl core::marker::Sync for mycelium_bench::llm::Summary
+impl core::marker::Unpin for mycelium_bench::llm::Summary
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::Summary
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::Summary
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::Summary
+pub struct mycelium_bench::llm::ValidationResult
+pub mycelium_bench::llm::ValidationResult::detail: serde_json::value::Value
+pub mycelium_bench::llm::ValidationResult::guarantee_tag: core::option::Option<alloc::string::String>
+pub mycelium_bench::llm::ValidationResult::id: alloc::string::String
+pub mycelium_bench::llm::ValidationResult::message: alloc::string::String
+pub mycelium_bench::llm::ValidationResult::status: alloc::string::String
+impl mycelium_bench::llm::ValidationResult
+pub fn mycelium_bench::llm::ValidationResult::is_mock(&self) -> bool
+pub fn mycelium_bench::llm::ValidationResult::token_counts(&self) -> core::option::Option<(core::option::Option<u64>, core::option::Option<u64>)>
+pub fn mycelium_bench::llm::ValidationResult::wall_seconds(&self) -> core::option::Option<f64>
+impl core::clone::Clone for mycelium_bench::llm::ValidationResult
+pub fn mycelium_bench::llm::ValidationResult::clone(&self) -> mycelium_bench::llm::ValidationResult
+impl core::fmt::Debug for mycelium_bench::llm::ValidationResult
+pub fn mycelium_bench::llm::ValidationResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::ValidationResult
+pub fn mycelium_bench::llm::ValidationResult::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::ValidationResult
+impl core::marker::Send for mycelium_bench::llm::ValidationResult
+impl core::marker::Sync for mycelium_bench::llm::ValidationResult
+impl core::marker::Unpin for mycelium_bench::llm::ValidationResult
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::ValidationResult
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::ValidationResult
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::ValidationResult
+pub fn mycelium_bench::llm::parse_any_llm_json(&str, alloc::string::String) -> core::result::Result<mycelium_bench::llm::ParsedLlmSection, mycelium_bench::llm::LlmIngestError>
+pub mod mycelium_bench::measure
+pub struct mycelium_bench::measure::BackendResult
+pub mycelium_bench::measure::BackendResult::backend: mycelium_bench::backend::Backend
+pub mycelium_bench::measure::BackendResult::compile_ns: core::option::Option<f64>
+pub mycelium_bench::measure::BackendResult::outcome_reason: alloc::string::String
+pub mycelium_bench::measure::BackendResult::outcome_status: &'static str
+pub mycelium_bench::measure::BackendResult::timing: core::option::Option<mycelium_bench::timing::Timing>
+pub mycelium_bench::measure::BackendResult::verdict: mycelium_bench::verdict::Verdict
+impl core::clone::Clone for mycelium_bench::measure::BackendResult
+pub fn mycelium_bench::measure::BackendResult::clone(&self) -> mycelium_bench::measure::BackendResult
+impl core::fmt::Debug for mycelium_bench::measure::BackendResult
+pub fn mycelium_bench::measure::BackendResult::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::measure::BackendResult
+pub fn mycelium_bench::measure::BackendResult::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::measure::BackendResult
+impl core::marker::Send for mycelium_bench::measure::BackendResult
+impl core::marker::Sync for mycelium_bench::measure::BackendResult
+impl core::marker::Unpin for mycelium_bench::measure::BackendResult
+impl core::marker::UnsafeUnpin for mycelium_bench::measure::BackendResult
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::measure::BackendResult
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::measure::BackendResult
+pub struct mycelium_bench::measure::CaseRecord
+pub mycelium_bench::measure::CaseRecord::backends: alloc::vec::Vec<mycelium_bench::measure::BackendResult>
+pub mycelium_bench::measure::CaseRecord::baseline_ns: core::option::Option<f64>
+pub mycelium_bench::measure::CaseRecord::fragment: mycelium_bench::corpus::Fragment
+pub mycelium_bench::measure::CaseRecord::id: alloc::string::String
+pub mycelium_bench::measure::CaseRecord::note: alloc::string::String
+pub mycelium_bench::measure::CaseRecord::src: alloc::string::String
+impl core::clone::Clone for mycelium_bench::measure::CaseRecord
+pub fn mycelium_bench::measure::CaseRecord::clone(&self) -> mycelium_bench::measure::CaseRecord
+impl core::fmt::Debug for mycelium_bench::measure::CaseRecord
+pub fn mycelium_bench::measure::CaseRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::measure::CaseRecord
+pub fn mycelium_bench::measure::CaseRecord::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::measure::CaseRecord
+impl core::marker::Send for mycelium_bench::measure::CaseRecord
+impl core::marker::Sync for mycelium_bench::measure::CaseRecord
+impl core::marker::Unpin for mycelium_bench::measure::CaseRecord
+impl core::marker::UnsafeUnpin for mycelium_bench::measure::CaseRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::measure::CaseRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::measure::CaseRecord
+pub struct mycelium_bench::measure::RunRecord
+pub mycelium_bench::measure::RunRecord::cases: alloc::vec::Vec<mycelium_bench::measure::CaseRecord>
+impl core::clone::Clone for mycelium_bench::measure::RunRecord
+pub fn mycelium_bench::measure::RunRecord::clone(&self) -> mycelium_bench::measure::RunRecord
+impl core::fmt::Debug for mycelium_bench::measure::RunRecord
+pub fn mycelium_bench::measure::RunRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::measure::RunRecord
+pub fn mycelium_bench::measure::RunRecord::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::measure::RunRecord
+impl core::marker::Send for mycelium_bench::measure::RunRecord
+impl core::marker::Sync for mycelium_bench::measure::RunRecord
+impl core::marker::Unpin for mycelium_bench::measure::RunRecord
+impl core::marker::UnsafeUnpin for mycelium_bench::measure::RunRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::measure::RunRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::measure::RunRecord
+pub fn mycelium_bench::measure::measure_case(&mycelium_bench::corpus::Case, &mycelium_bench::backend::Engines) -> mycelium_bench::measure::CaseRecord
+pub fn mycelium_bench::measure::run_corpus(&[mycelium_bench::corpus::Case], &mycelium_bench::backend::Engines) -> mycelium_bench::measure::RunRecord
+pub mod mycelium_bench::report
+pub struct mycelium_bench::report::Honesty
+pub mycelium_bench::report::Honesty::lattice: [&'static str; 4]
+pub mycelium_bench::report::Honesty::rule: &'static str
+impl core::clone::Clone for mycelium_bench::report::Honesty
+pub fn mycelium_bench::report::Honesty::clone(&self) -> mycelium_bench::report::Honesty
+impl core::default::Default for mycelium_bench::report::Honesty
+pub fn mycelium_bench::report::Honesty::default() -> Self
+impl core::fmt::Debug for mycelium_bench::report::Honesty
+pub fn mycelium_bench::report::Honesty::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::report::Honesty
+pub fn mycelium_bench::report::Honesty::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::Honesty
+impl core::marker::Send for mycelium_bench::report::Honesty
+impl core::marker::Sync for mycelium_bench::report::Honesty
+impl core::marker::Unpin for mycelium_bench::report::Honesty
+impl core::marker::UnsafeUnpin for mycelium_bench::report::Honesty
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::Honesty
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::Honesty
+pub struct mycelium_bench::report::LlmSection
+pub mycelium_bench::report::LlmSection::is_synthetic: bool
+pub mycelium_bench::report::LlmSection::provenance: alloc::string::String
+pub mycelium_bench::report::LlmSection::source_path: alloc::string::String
+pub mycelium_bench::report::LlmSection::validations: alloc::vec::Vec<mycelium_bench::report::LlmValidationRow>
+impl mycelium_bench::report::LlmSection
+pub fn mycelium_bench::report::LlmSection::from_parsed(mycelium_bench::llm::ParsedLlmSection) -> Self
+pub fn mycelium_bench::report::LlmSection::from_report(&mycelium_bench::llm::LlmReport, alloc::string::String, bool) -> Self
+impl core::clone::Clone for mycelium_bench::report::LlmSection
+pub fn mycelium_bench::report::LlmSection::clone(&self) -> mycelium_bench::report::LlmSection
+impl core::fmt::Debug for mycelium_bench::report::LlmSection
+pub fn mycelium_bench::report::LlmSection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::report::LlmSection
+pub fn mycelium_bench::report::LlmSection::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::LlmSection
+impl core::marker::Send for mycelium_bench::report::LlmSection
+impl core::marker::Sync for mycelium_bench::report::LlmSection
+impl core::marker::Unpin for mycelium_bench::report::LlmSection
+impl core::marker::UnsafeUnpin for mycelium_bench::report::LlmSection
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::LlmSection
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::LlmSection
+pub struct mycelium_bench::report::LlmValidationRow
+pub mycelium_bench::report::LlmValidationRow::generated_tokens: core::option::Option<u64>
+pub mycelium_bench::report::LlmValidationRow::guarantee_tag: core::option::Option<alloc::string::String>
+pub mycelium_bench::report::LlmValidationRow::id: alloc::string::String
+pub mycelium_bench::report::LlmValidationRow::message: alloc::string::String
+pub mycelium_bench::report::LlmValidationRow::prompt_tokens: core::option::Option<u64>
+pub mycelium_bench::report::LlmValidationRow::status: alloc::string::String
+pub mycelium_bench::report::LlmValidationRow::wall_seconds: core::option::Option<f64>
+impl core::clone::Clone for mycelium_bench::report::LlmValidationRow
+pub fn mycelium_bench::report::LlmValidationRow::clone(&self) -> mycelium_bench::report::LlmValidationRow
+impl core::fmt::Debug for mycelium_bench::report::LlmValidationRow
+pub fn mycelium_bench::report::LlmValidationRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::report::LlmValidationRow
+pub fn mycelium_bench::report::LlmValidationRow::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::LlmValidationRow
+impl core::marker::Send for mycelium_bench::report::LlmValidationRow
+impl core::marker::Sync for mycelium_bench::report::LlmValidationRow
+impl core::marker::Unpin for mycelium_bench::report::LlmValidationRow
+impl core::marker::UnsafeUnpin for mycelium_bench::report::LlmValidationRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::LlmValidationRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::LlmValidationRow
+pub struct mycelium_bench::report::LossRollup
+pub mycelium_bench::report::LossRollup::capability: alloc::vec::Vec<(alloc::string::String, &'static str, alloc::string::String)>
+pub mycelium_bench::report::LossRollup::correctness: alloc::vec::Vec<(alloc::string::String, &'static str, alloc::string::String)>
+pub mycelium_bench::report::LossRollup::speed: alloc::vec::Vec<(alloc::string::String, &'static str, u64, alloc::string::String)>
+impl core::clone::Clone for mycelium_bench::report::LossRollup
+pub fn mycelium_bench::report::LossRollup::clone(&self) -> mycelium_bench::report::LossRollup
+impl core::default::Default for mycelium_bench::report::LossRollup
+pub fn mycelium_bench::report::LossRollup::default() -> mycelium_bench::report::LossRollup
+impl core::fmt::Debug for mycelium_bench::report::LossRollup
+pub fn mycelium_bench::report::LossRollup::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::report::LossRollup
+pub fn mycelium_bench::report::LossRollup::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::LossRollup
+impl core::marker::Send for mycelium_bench::report::LossRollup
+impl core::marker::Sync for mycelium_bench::report::LossRollup
+impl core::marker::Unpin for mycelium_bench::report::LossRollup
+impl core::marker::UnsafeUnpin for mycelium_bench::report::LossRollup
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::LossRollup
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::LossRollup
+pub struct mycelium_bench::report::Report
+pub mycelium_bench::report::Report::honesty: mycelium_bench::report::Honesty
+pub mycelium_bench::report::Report::host_note: alloc::string::String
+pub mycelium_bench::report::Report::llm: core::option::Option<mycelium_bench::report::LlmSection>
+pub mycelium_bench::report::Report::mlir_dialect_feature: bool
+pub mycelium_bench::report::Report::neutral_band: f64
+pub mycelium_bench::report::Report::profile: &'static str
+pub mycelium_bench::report::Report::run: mycelium_bench::measure::RunRecord
+pub mycelium_bench::report::Report::tool: &'static str
+impl mycelium_bench::report::Report
+pub fn mycelium_bench::report::Report::loss_rollup(&self) -> mycelium_bench::report::LossRollup
+pub fn mycelium_bench::report::Report::tallies(&self) -> mycelium_bench::report::Tallies
+pub fn mycelium_bench::report::Report::to_json(&self) -> core::result::Result<alloc::string::String, serde_json::error::Error>
+pub fn mycelium_bench::report::Report::to_markdown(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_bench::report::Report
+pub fn mycelium_bench::report::Report::clone(&self) -> mycelium_bench::report::Report
+impl core::fmt::Debug for mycelium_bench::report::Report
+pub fn mycelium_bench::report::Report::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::report::Report
+pub fn mycelium_bench::report::Report::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::Report
+impl core::marker::Send for mycelium_bench::report::Report
+impl core::marker::Sync for mycelium_bench::report::Report
+impl core::marker::Unpin for mycelium_bench::report::Report
+impl core::marker::UnsafeUnpin for mycelium_bench::report::Report
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::Report
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::Report
+pub struct mycelium_bench::report::Tallies
+pub mycelium_bench::report::Tallies::baseline_failures: u32
+pub mycelium_bench::report::Tallies::capability_losses: u32
+pub mycelium_bench::report::Tallies::correctness_losses: u32
+pub mycelium_bench::report::Tallies::errors: u32
+pub mycelium_bench::report::Tallies::neutral: u32
+pub mycelium_bench::report::Tallies::skips: u32
+pub mycelium_bench::report::Tallies::speed_losses: u32
+pub mycelium_bench::report::Tallies::wins: u32
+impl core::clone::Clone for mycelium_bench::report::Tallies
+pub fn mycelium_bench::report::Tallies::clone(&self) -> mycelium_bench::report::Tallies
+impl core::default::Default for mycelium_bench::report::Tallies
+pub fn mycelium_bench::report::Tallies::default() -> mycelium_bench::report::Tallies
+impl core::fmt::Debug for mycelium_bench::report::Tallies
+pub fn mycelium_bench::report::Tallies::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_bench::report::Tallies
+impl serde_core::ser::Serialize for mycelium_bench::report::Tallies
+pub fn mycelium_bench::report::Tallies::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::Tallies
+impl core::marker::Send for mycelium_bench::report::Tallies
+impl core::marker::Sync for mycelium_bench::report::Tallies
+impl core::marker::Unpin for mycelium_bench::report::Tallies
+impl core::marker::UnsafeUnpin for mycelium_bench::report::Tallies
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::Tallies
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::Tallies
+pub fn mycelium_bench::report::neutral_band() -> f64
+pub mod mycelium_bench::timing
+pub struct mycelium_bench::timing::Timing
+pub mycelium_bench::timing::Timing::batches: u32
+pub mycelium_bench::timing::Timing::iters: u32
+pub mycelium_bench::timing::Timing::ns_per_call: f64
+pub mycelium_bench::timing::Timing::ns_per_call_worst: f64
+impl mycelium_bench::timing::Timing
+pub fn mycelium_bench::timing::Timing::spread(&self) -> f64
+impl core::clone::Clone for mycelium_bench::timing::Timing
+pub fn mycelium_bench::timing::Timing::clone(&self) -> mycelium_bench::timing::Timing
+impl core::cmp::PartialEq for mycelium_bench::timing::Timing
+pub fn mycelium_bench::timing::Timing::eq(&self, &mycelium_bench::timing::Timing) -> bool
+impl core::fmt::Debug for mycelium_bench::timing::Timing
+pub fn mycelium_bench::timing::Timing::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_bench::timing::Timing
+impl core::marker::StructuralPartialEq for mycelium_bench::timing::Timing
+impl serde_core::ser::Serialize for mycelium_bench::timing::Timing
+pub fn mycelium_bench::timing::Timing::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::timing::Timing
+impl core::marker::Send for mycelium_bench::timing::Timing
+impl core::marker::Sync for mycelium_bench::timing::Timing
+impl core::marker::Unpin for mycelium_bench::timing::Timing
+impl core::marker::UnsafeUnpin for mycelium_bench::timing::Timing
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::timing::Timing
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::timing::Timing
+pub const mycelium_bench::timing::BATCHES: u32
+pub fn mycelium_bench::timing::bench(u32, impl core::ops::function::FnMut()) -> mycelium_bench::timing::Timing
+pub fn mycelium_bench::timing::is_debug_build() -> bool
+pub fn mycelium_bench::timing::refuse_debug_build()
+pub mod mycelium_bench::verdict
+pub enum mycelium_bench::verdict::Speed
+pub mycelium_bench::verdict::Speed::Loss
+pub mycelium_bench::verdict::Speed::Neutral
+pub mycelium_bench::verdict::Speed::Win
+impl core::clone::Clone for mycelium_bench::verdict::Speed
+pub fn mycelium_bench::verdict::Speed::clone(&self) -> mycelium_bench::verdict::Speed
+impl core::cmp::Eq for mycelium_bench::verdict::Speed
+impl core::cmp::PartialEq for mycelium_bench::verdict::Speed
+pub fn mycelium_bench::verdict::Speed::eq(&self, &mycelium_bench::verdict::Speed) -> bool
+impl core::fmt::Debug for mycelium_bench::verdict::Speed
+pub fn mycelium_bench::verdict::Speed::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_bench::verdict::Speed
+impl core::marker::StructuralPartialEq for mycelium_bench::verdict::Speed
+impl serde_core::ser::Serialize for mycelium_bench::verdict::Speed
+pub fn mycelium_bench::verdict::Speed::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::verdict::Speed
+impl core::marker::Send for mycelium_bench::verdict::Speed
+impl core::marker::Sync for mycelium_bench::verdict::Speed
+impl core::marker::Unpin for mycelium_bench::verdict::Speed
+impl core::marker::UnsafeUnpin for mycelium_bench::verdict::Speed
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::verdict::Speed
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::verdict::Speed
+pub enum mycelium_bench::verdict::Verdict
+pub mycelium_bench::verdict::Verdict::BaselineFailed
+pub mycelium_bench::verdict::Verdict::BaselineFailed::message: alloc::string::String
+pub mycelium_bench::verdict::Verdict::CapabilityLoss
+pub mycelium_bench::verdict::Verdict::CapabilityLoss::reason: alloc::string::String
+pub mycelium_bench::verdict::Verdict::CorrectnessLoss
+pub mycelium_bench::verdict::Verdict::CorrectnessLoss::detail: alloc::string::String
+pub mycelium_bench::verdict::Verdict::RuntimeError
+pub mycelium_bench::verdict::Verdict::RuntimeError::message: alloc::string::String
+pub mycelium_bench::verdict::Verdict::Skipped
+pub mycelium_bench::verdict::Verdict::Skipped::reason: alloc::string::String
+pub mycelium_bench::verdict::Verdict::SpeedLoss
+pub mycelium_bench::verdict::Verdict::SpeedLoss::ratio_x1000: u64
+pub mycelium_bench::verdict::Verdict::SpeedLoss::reason: alloc::string::String
+pub mycelium_bench::verdict::Verdict::SpeedNeutral
+pub mycelium_bench::verdict::Verdict::SpeedNeutral::ratio_x1000: u64
+pub mycelium_bench::verdict::Verdict::SpeedWin
+pub mycelium_bench::verdict::Verdict::SpeedWin::ratio_x1000: u64
+impl mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::Verdict::guarantee_tag(&self) -> &'static str
+pub fn mycelium_bench::verdict::Verdict::is_loss(&self) -> bool
+pub fn mycelium_bench::verdict::Verdict::is_win(&self) -> bool
+pub fn mycelium_bench::verdict::Verdict::status(&self) -> &'static str
+impl core::clone::Clone for mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::Verdict::clone(&self) -> mycelium_bench::verdict::Verdict
+impl core::cmp::Eq for mycelium_bench::verdict::Verdict
+impl core::cmp::PartialEq for mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::Verdict::eq(&self, &mycelium_bench::verdict::Verdict) -> bool
+impl core::fmt::Debug for mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::Verdict::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_bench::verdict::Verdict
+impl serde_core::ser::Serialize for mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::Verdict::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::verdict::Verdict
+impl core::marker::Send for mycelium_bench::verdict::Verdict
+impl core::marker::Sync for mycelium_bench::verdict::Verdict
+impl core::marker::Unpin for mycelium_bench::verdict::Verdict
+impl core::marker::UnsafeUnpin for mycelium_bench::verdict::Verdict
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::verdict::Verdict
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::verdict::Verdict
+pub const mycelium_bench::verdict::NEUTRAL_BAND: f64
+pub fn mycelium_bench::verdict::classify(mycelium_bench::backend::Backend, (&mycelium_bench::backend::Outcome, core::option::Option<mycelium_bench::timing::Timing>), (&mycelium_bench::backend::Outcome, core::option::Option<mycelium_bench::timing::Timing>)) -> mycelium_bench::verdict::Verdict
+pub enum mycelium_bench::Backend
+pub mycelium_bench::Backend::AotEnv
+pub mycelium_bench::Backend::DirectLlvm
+pub mycelium_bench::Backend::Interp
+pub mycelium_bench::Backend::Jit
+pub mycelium_bench::Backend::MlirDialect
+impl mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::all() -> [mycelium_bench::backend::Backend; 5]
+pub fn mycelium_bench::backend::Backend::is_baseline(self) -> bool
+pub fn mycelium_bench::backend::Backend::is_process_spawn_bound(self) -> bool
+pub fn mycelium_bench::backend::Backend::label(self) -> &'static str
+impl core::clone::Clone for mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::clone(&self) -> mycelium_bench::backend::Backend
+impl core::cmp::Eq for mycelium_bench::backend::Backend
+impl core::cmp::PartialEq for mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::eq(&self, &mycelium_bench::backend::Backend) -> bool
+impl core::fmt::Debug for mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_bench::backend::Backend
+impl core::marker::StructuralPartialEq for mycelium_bench::backend::Backend
+impl serde_core::ser::Serialize for mycelium_bench::backend::Backend
+pub fn mycelium_bench::backend::Backend::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::backend::Backend
+impl core::marker::Send for mycelium_bench::backend::Backend
+impl core::marker::Sync for mycelium_bench::backend::Backend
+impl core::marker::Unpin for mycelium_bench::backend::Backend
+impl core::marker::UnsafeUnpin for mycelium_bench::backend::Backend
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::backend::Backend
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::backend::Backend
+pub enum mycelium_bench::Fragment
+pub mycelium_bench::Fragment::BitSubset
+pub mycelium_bench::Fragment::Data
+pub mycelium_bench::Fragment::Recursion
+pub mycelium_bench::Fragment::Swap
+impl mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::label(self) -> &'static str
+impl core::clone::Clone for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::clone(&self) -> mycelium_bench::corpus::Fragment
+impl core::cmp::Eq for mycelium_bench::corpus::Fragment
+impl core::cmp::Ord for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::cmp(&self, &mycelium_bench::corpus::Fragment) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::eq(&self, &mycelium_bench::corpus::Fragment) -> bool
+impl core::cmp::PartialOrd for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::partial_cmp(&self, &mycelium_bench::corpus::Fragment) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_bench::corpus::Fragment
+impl core::marker::StructuralPartialEq for mycelium_bench::corpus::Fragment
+impl serde_core::ser::Serialize for mycelium_bench::corpus::Fragment
+pub fn mycelium_bench::corpus::Fragment::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::corpus::Fragment
+impl core::marker::Send for mycelium_bench::corpus::Fragment
+impl core::marker::Sync for mycelium_bench::corpus::Fragment
+impl core::marker::Unpin for mycelium_bench::corpus::Fragment
+impl core::marker::UnsafeUnpin for mycelium_bench::corpus::Fragment
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::corpus::Fragment
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::corpus::Fragment
+pub enum mycelium_bench::Outcome
+pub mycelium_bench::Outcome::Error(alloc::string::String)
+pub mycelium_bench::Outcome::Skipped(alloc::string::String)
+pub mycelium_bench::Outcome::Unlowerable(alloc::string::String)
+pub mycelium_bench::Outcome::Value(alloc::boxed::Box<mycelium_core::datum::CoreValue>)
+impl mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::Outcome::reason(&self) -> &str
+pub fn mycelium_bench::backend::Outcome::status(&self) -> &'static str
+pub fn mycelium_bench::backend::Outcome::value(&self) -> core::option::Option<&mycelium_core::datum::CoreValue>
+pub fn mycelium_bench::backend::Outcome::value_outcome(mycelium_core::datum::CoreValue) -> Self
+impl core::clone::Clone for mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::Outcome::clone(&self) -> mycelium_bench::backend::Outcome
+impl core::fmt::Debug for mycelium_bench::backend::Outcome
+pub fn mycelium_bench::backend::Outcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_bench::backend::Outcome
+impl core::marker::Send for mycelium_bench::backend::Outcome
+impl core::marker::Sync for mycelium_bench::backend::Outcome
+impl core::marker::Unpin for mycelium_bench::backend::Outcome
+impl core::marker::UnsafeUnpin for mycelium_bench::backend::Outcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::backend::Outcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::backend::Outcome
+pub enum mycelium_bench::Speed
+pub mycelium_bench::Speed::Loss
+pub mycelium_bench::Speed::Neutral
+pub mycelium_bench::Speed::Win
+impl core::clone::Clone for mycelium_bench::verdict::Speed
+pub fn mycelium_bench::verdict::Speed::clone(&self) -> mycelium_bench::verdict::Speed
+impl core::cmp::Eq for mycelium_bench::verdict::Speed
+impl core::cmp::PartialEq for mycelium_bench::verdict::Speed
+pub fn mycelium_bench::verdict::Speed::eq(&self, &mycelium_bench::verdict::Speed) -> bool
+impl core::fmt::Debug for mycelium_bench::verdict::Speed
+pub fn mycelium_bench::verdict::Speed::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_bench::verdict::Speed
+impl core::marker::StructuralPartialEq for mycelium_bench::verdict::Speed
+impl serde_core::ser::Serialize for mycelium_bench::verdict::Speed
+pub fn mycelium_bench::verdict::Speed::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::verdict::Speed
+impl core::marker::Send for mycelium_bench::verdict::Speed
+impl core::marker::Sync for mycelium_bench::verdict::Speed
+impl core::marker::Unpin for mycelium_bench::verdict::Speed
+impl core::marker::UnsafeUnpin for mycelium_bench::verdict::Speed
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::verdict::Speed
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::verdict::Speed
+pub enum mycelium_bench::Verdict
+pub mycelium_bench::Verdict::BaselineFailed
+pub mycelium_bench::Verdict::BaselineFailed::message: alloc::string::String
+pub mycelium_bench::Verdict::CapabilityLoss
+pub mycelium_bench::Verdict::CapabilityLoss::reason: alloc::string::String
+pub mycelium_bench::Verdict::CorrectnessLoss
+pub mycelium_bench::Verdict::CorrectnessLoss::detail: alloc::string::String
+pub mycelium_bench::Verdict::RuntimeError
+pub mycelium_bench::Verdict::RuntimeError::message: alloc::string::String
+pub mycelium_bench::Verdict::Skipped
+pub mycelium_bench::Verdict::Skipped::reason: alloc::string::String
+pub mycelium_bench::Verdict::SpeedLoss
+pub mycelium_bench::Verdict::SpeedLoss::ratio_x1000: u64
+pub mycelium_bench::Verdict::SpeedLoss::reason: alloc::string::String
+pub mycelium_bench::Verdict::SpeedNeutral
+pub mycelium_bench::Verdict::SpeedNeutral::ratio_x1000: u64
+pub mycelium_bench::Verdict::SpeedWin
+pub mycelium_bench::Verdict::SpeedWin::ratio_x1000: u64
+impl mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::Verdict::guarantee_tag(&self) -> &'static str
+pub fn mycelium_bench::verdict::Verdict::is_loss(&self) -> bool
+pub fn mycelium_bench::verdict::Verdict::is_win(&self) -> bool
+pub fn mycelium_bench::verdict::Verdict::status(&self) -> &'static str
+impl core::clone::Clone for mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::Verdict::clone(&self) -> mycelium_bench::verdict::Verdict
+impl core::cmp::Eq for mycelium_bench::verdict::Verdict
+impl core::cmp::PartialEq for mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::Verdict::eq(&self, &mycelium_bench::verdict::Verdict) -> bool
+impl core::fmt::Debug for mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::Verdict::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_bench::verdict::Verdict
+impl serde_core::ser::Serialize for mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::Verdict::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::verdict::Verdict
+impl core::marker::Send for mycelium_bench::verdict::Verdict
+impl core::marker::Sync for mycelium_bench::verdict::Verdict
+impl core::marker::Unpin for mycelium_bench::verdict::Verdict
+impl core::marker::UnsafeUnpin for mycelium_bench::verdict::Verdict
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::verdict::Verdict
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::verdict::Verdict
+pub struct mycelium_bench::Case
+pub mycelium_bench::Case::fragment: mycelium_bench::corpus::Fragment
+pub mycelium_bench::Case::id: &'static str
+pub mycelium_bench::Case::note: &'static str
+pub mycelium_bench::Case::src: &'static str
+impl mycelium_bench::corpus::Case
+pub fn mycelium_bench::corpus::Case::elaborate(&self) -> core::result::Result<mycelium_core::node::Node, mycelium_bench::corpus::CorpusError>
+impl core::clone::Clone for mycelium_bench::corpus::Case
+pub fn mycelium_bench::corpus::Case::clone(&self) -> mycelium_bench::corpus::Case
+impl core::fmt::Debug for mycelium_bench::corpus::Case
+pub fn mycelium_bench::corpus::Case::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_bench::corpus::Case
+impl core::marker::Send for mycelium_bench::corpus::Case
+impl core::marker::Sync for mycelium_bench::corpus::Case
+impl core::marker::Unpin for mycelium_bench::corpus::Case
+impl core::marker::UnsafeUnpin for mycelium_bench::corpus::Case
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::corpus::Case
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::corpus::Case
+pub struct mycelium_bench::CaseRecord
+pub mycelium_bench::CaseRecord::backends: alloc::vec::Vec<mycelium_bench::measure::BackendResult>
+pub mycelium_bench::CaseRecord::baseline_ns: core::option::Option<f64>
+pub mycelium_bench::CaseRecord::fragment: mycelium_bench::corpus::Fragment
+pub mycelium_bench::CaseRecord::id: alloc::string::String
+pub mycelium_bench::CaseRecord::note: alloc::string::String
+pub mycelium_bench::CaseRecord::src: alloc::string::String
+impl core::clone::Clone for mycelium_bench::measure::CaseRecord
+pub fn mycelium_bench::measure::CaseRecord::clone(&self) -> mycelium_bench::measure::CaseRecord
+impl core::fmt::Debug for mycelium_bench::measure::CaseRecord
+pub fn mycelium_bench::measure::CaseRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::measure::CaseRecord
+pub fn mycelium_bench::measure::CaseRecord::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::measure::CaseRecord
+impl core::marker::Send for mycelium_bench::measure::CaseRecord
+impl core::marker::Sync for mycelium_bench::measure::CaseRecord
+impl core::marker::Unpin for mycelium_bench::measure::CaseRecord
+impl core::marker::UnsafeUnpin for mycelium_bench::measure::CaseRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::measure::CaseRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::measure::CaseRecord
+pub struct mycelium_bench::Engines
+pub mycelium_bench::Engines::prims: mycelium_interp::prims::PrimRegistry
+pub mycelium_bench::Engines::swap: mycelium_cert::BinaryTernarySwapEngine
+impl core::default::Default for mycelium_bench::backend::Engines
+pub fn mycelium_bench::backend::Engines::default() -> Self
+impl core::marker::Freeze for mycelium_bench::backend::Engines
+impl core::marker::Send for mycelium_bench::backend::Engines
+impl core::marker::Sync for mycelium_bench::backend::Engines
+impl core::marker::Unpin for mycelium_bench::backend::Engines
+impl core::marker::UnsafeUnpin for mycelium_bench::backend::Engines
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::backend::Engines
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::backend::Engines
+pub struct mycelium_bench::GrokLlmReport
+pub mycelium_bench::GrokLlmReport::ablation: core::option::Option<mycelium_bench::llm::GrokAblation>
+pub mycelium_bench::GrokLlmReport::honesty_posture: mycelium_bench::llm::GrokHonestyPosture
+pub mycelium_bench::GrokLlmReport::metadata: mycelium_bench::llm::GrokMetadata
+pub mycelium_bench::GrokLlmReport::outcomes: alloc::vec::Vec<mycelium_bench::llm::GrokOutcome>
+pub mycelium_bench::GrokLlmReport::performance: mycelium_bench::llm::GrokPerformance
+pub mycelium_bench::GrokLlmReport::quality: mycelium_bench::llm::GrokQuality
+impl mycelium_bench::llm::GrokLlmReport
+pub fn mycelium_bench::llm::GrokLlmReport::from_json(&str) -> core::result::Result<Self, mycelium_bench::llm::LlmIngestError>
+pub fn mycelium_bench::llm::GrokLlmReport::is_synthetic(&self) -> bool
+pub fn mycelium_bench::llm::GrokLlmReport::provenance(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_bench::llm::GrokLlmReport
+pub fn mycelium_bench::llm::GrokLlmReport::clone(&self) -> mycelium_bench::llm::GrokLlmReport
+impl core::fmt::Debug for mycelium_bench::llm::GrokLlmReport
+pub fn mycelium_bench::llm::GrokLlmReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::GrokLlmReport
+pub fn mycelium_bench::llm::GrokLlmReport::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::GrokLlmReport
+impl core::marker::Send for mycelium_bench::llm::GrokLlmReport
+impl core::marker::Sync for mycelium_bench::llm::GrokLlmReport
+impl core::marker::Unpin for mycelium_bench::llm::GrokLlmReport
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::GrokLlmReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::GrokLlmReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::GrokLlmReport
+pub struct mycelium_bench::Honesty
+pub mycelium_bench::Honesty::lattice: [&'static str; 4]
+pub mycelium_bench::Honesty::rule: &'static str
+impl core::clone::Clone for mycelium_bench::report::Honesty
+pub fn mycelium_bench::report::Honesty::clone(&self) -> mycelium_bench::report::Honesty
+impl core::default::Default for mycelium_bench::report::Honesty
+pub fn mycelium_bench::report::Honesty::default() -> Self
+impl core::fmt::Debug for mycelium_bench::report::Honesty
+pub fn mycelium_bench::report::Honesty::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::report::Honesty
+pub fn mycelium_bench::report::Honesty::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::Honesty
+impl core::marker::Send for mycelium_bench::report::Honesty
+impl core::marker::Sync for mycelium_bench::report::Honesty
+impl core::marker::Unpin for mycelium_bench::report::Honesty
+impl core::marker::UnsafeUnpin for mycelium_bench::report::Honesty
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::Honesty
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::Honesty
+pub struct mycelium_bench::LlmReport
+pub mycelium_bench::LlmReport::harness: alloc::string::String
+pub mycelium_bench::LlmReport::honesty_posture: mycelium_bench::llm::HonestyPosture
+pub mycelium_bench::LlmReport::mode: alloc::string::String
+pub mycelium_bench::LlmReport::results: alloc::vec::Vec<mycelium_bench::llm::ValidationResult>
+pub mycelium_bench::LlmReport::run_id: alloc::string::String
+pub mycelium_bench::LlmReport::summary: mycelium_bench::llm::Summary
+pub mycelium_bench::LlmReport::version: alloc::string::String
+impl mycelium_bench::llm::LlmReport
+pub fn mycelium_bench::llm::LlmReport::from_json(&str) -> core::result::Result<Self, mycelium_bench::llm::LlmIngestError>
+pub fn mycelium_bench::llm::LlmReport::from_path(&std::path::Path) -> core::result::Result<Self, mycelium_bench::llm::LlmIngestError>
+pub fn mycelium_bench::llm::LlmReport::is_synthetic(&self) -> bool
+pub fn mycelium_bench::llm::LlmReport::newest_in_dir(&std::path::Path) -> core::result::Result<core::option::Option<std::path::PathBuf>, mycelium_bench::llm::LlmIngestError>
+pub fn mycelium_bench::llm::LlmReport::provenance(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_bench::llm::LlmReport
+pub fn mycelium_bench::llm::LlmReport::clone(&self) -> mycelium_bench::llm::LlmReport
+impl core::fmt::Debug for mycelium_bench::llm::LlmReport
+pub fn mycelium_bench::llm::LlmReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::llm::LlmReport
+pub fn mycelium_bench::llm::LlmReport::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::llm::LlmReport
+impl core::marker::Send for mycelium_bench::llm::LlmReport
+impl core::marker::Sync for mycelium_bench::llm::LlmReport
+impl core::marker::Unpin for mycelium_bench::llm::LlmReport
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::LlmReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::LlmReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::LlmReport
+pub struct mycelium_bench::LlmSection
+pub mycelium_bench::LlmSection::is_synthetic: bool
+pub mycelium_bench::LlmSection::provenance: alloc::string::String
+pub mycelium_bench::LlmSection::source_path: alloc::string::String
+pub mycelium_bench::LlmSection::validations: alloc::vec::Vec<mycelium_bench::report::LlmValidationRow>
+impl mycelium_bench::report::LlmSection
+pub fn mycelium_bench::report::LlmSection::from_parsed(mycelium_bench::llm::ParsedLlmSection) -> Self
+pub fn mycelium_bench::report::LlmSection::from_report(&mycelium_bench::llm::LlmReport, alloc::string::String, bool) -> Self
+impl core::clone::Clone for mycelium_bench::report::LlmSection
+pub fn mycelium_bench::report::LlmSection::clone(&self) -> mycelium_bench::report::LlmSection
+impl core::fmt::Debug for mycelium_bench::report::LlmSection
+pub fn mycelium_bench::report::LlmSection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::report::LlmSection
+pub fn mycelium_bench::report::LlmSection::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::LlmSection
+impl core::marker::Send for mycelium_bench::report::LlmSection
+impl core::marker::Sync for mycelium_bench::report::LlmSection
+impl core::marker::Unpin for mycelium_bench::report::LlmSection
+impl core::marker::UnsafeUnpin for mycelium_bench::report::LlmSection
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::LlmSection
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::LlmSection
+pub struct mycelium_bench::ParsedLlmSection
+pub mycelium_bench::ParsedLlmSection::is_synthetic: bool
+pub mycelium_bench::ParsedLlmSection::provenance: alloc::string::String
+pub mycelium_bench::ParsedLlmSection::source_path: alloc::string::String
+pub mycelium_bench::ParsedLlmSection::validations: alloc::vec::Vec<mycelium_bench::report::LlmValidationRow>
+impl core::fmt::Debug for mycelium_bench::llm::ParsedLlmSection
+pub fn mycelium_bench::llm::ParsedLlmSection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_bench::llm::ParsedLlmSection
+impl core::marker::Send for mycelium_bench::llm::ParsedLlmSection
+impl core::marker::Sync for mycelium_bench::llm::ParsedLlmSection
+impl core::marker::Unpin for mycelium_bench::llm::ParsedLlmSection
+impl core::marker::UnsafeUnpin for mycelium_bench::llm::ParsedLlmSection
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::llm::ParsedLlmSection
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::llm::ParsedLlmSection
+pub struct mycelium_bench::Report
+pub mycelium_bench::Report::honesty: mycelium_bench::report::Honesty
+pub mycelium_bench::Report::host_note: alloc::string::String
+pub mycelium_bench::Report::llm: core::option::Option<mycelium_bench::report::LlmSection>
+pub mycelium_bench::Report::mlir_dialect_feature: bool
+pub mycelium_bench::Report::neutral_band: f64
+pub mycelium_bench::Report::profile: &'static str
+pub mycelium_bench::Report::run: mycelium_bench::measure::RunRecord
+pub mycelium_bench::Report::tool: &'static str
+impl mycelium_bench::report::Report
+pub fn mycelium_bench::report::Report::loss_rollup(&self) -> mycelium_bench::report::LossRollup
+pub fn mycelium_bench::report::Report::tallies(&self) -> mycelium_bench::report::Tallies
+pub fn mycelium_bench::report::Report::to_json(&self) -> core::result::Result<alloc::string::String, serde_json::error::Error>
+pub fn mycelium_bench::report::Report::to_markdown(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_bench::report::Report
+pub fn mycelium_bench::report::Report::clone(&self) -> mycelium_bench::report::Report
+impl core::fmt::Debug for mycelium_bench::report::Report
+pub fn mycelium_bench::report::Report::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::report::Report
+pub fn mycelium_bench::report::Report::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::Report
+impl core::marker::Send for mycelium_bench::report::Report
+impl core::marker::Sync for mycelium_bench::report::Report
+impl core::marker::Unpin for mycelium_bench::report::Report
+impl core::marker::UnsafeUnpin for mycelium_bench::report::Report
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::Report
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::Report
+pub struct mycelium_bench::RunRecord
+pub mycelium_bench::RunRecord::cases: alloc::vec::Vec<mycelium_bench::measure::CaseRecord>
+impl core::clone::Clone for mycelium_bench::measure::RunRecord
+pub fn mycelium_bench::measure::RunRecord::clone(&self) -> mycelium_bench::measure::RunRecord
+impl core::fmt::Debug for mycelium_bench::measure::RunRecord
+pub fn mycelium_bench::measure::RunRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::measure::RunRecord
+pub fn mycelium_bench::measure::RunRecord::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::measure::RunRecord
+impl core::marker::Send for mycelium_bench::measure::RunRecord
+impl core::marker::Sync for mycelium_bench::measure::RunRecord
+impl core::marker::Unpin for mycelium_bench::measure::RunRecord
+impl core::marker::UnsafeUnpin for mycelium_bench::measure::RunRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::measure::RunRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::measure::RunRecord
+pub fn mycelium_bench::classify(mycelium_bench::backend::Backend, (&mycelium_bench::backend::Outcome, core::option::Option<mycelium_bench::timing::Timing>), (&mycelium_bench::backend::Outcome, core::option::Option<mycelium_bench::timing::Timing>)) -> mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::corpus() -> alloc::vec::Vec<mycelium_bench::corpus::Case>
+pub fn mycelium_bench::parse_any_llm_json(&str, alloc::string::String) -> core::result::Result<mycelium_bench::llm::ParsedLlmSection, mycelium_bench::llm::LlmIngestError>
+pub fn mycelium_bench::run_corpus(&[mycelium_bench::corpus::Case], &mycelium_bench::backend::Engines) -> mycelium_bench::measure::RunRecord

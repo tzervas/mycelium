@@ -286,6 +286,7 @@ mycelium/
 │   └── devlog/      ← append-only development log
 ├── research/                 ← the evidence base (records 01 … 13)
 ├── examples/                 ← worked `.myc` programs (hello-phylum, repr-tour)
+├── lib/                      ← self-hosted Mycelium-lang stdlib (`.myc`; std.result — M-649/RFC-0024)
 ├── experiments/              ← uv-managed Python experiments (the KC-2 LLM-leverage harness)
 ├── fuzz/                     ← cargo-fuzz durability targets (standalone nightly workspace; WS8/M-654)
 ├── proofs/                   ← Z3/SMT2 + Liquid-Haskell proof artifacts
