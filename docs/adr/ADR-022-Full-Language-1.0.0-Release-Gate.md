@@ -67,9 +67,25 @@ Out of scope for `1.0.0` (tracked, but `1.x`/`2.0`): **native AOT maturity / opt
 ADR-021's **Gate A** (A1 zero-High; A2 Medium ledger; A3 durability — mutants/proptest/fuzz; A4
 `just check` green incl. `cargo deny`/`cargo audit`; A5 KC-4 cert-overhead budget) and **Gate B** (B1
 RFC-0003/0006/0007 Accepted; B2 KC-2 verdict) are carried forward **verbatim** as the criteria for
-`core 1.0.0`. Status as of supersession: A1/A5/B1/B2 ✅ met; A2/A3/A4 ⏳ open. This sub-gate is
-**epic E10-1** (issues M-700–M-703). The core may tag `1.0.0` the moment T1 closes — it does **not**
-wait for T2–T9.
+`core 1.0.0`.
+
+**Status (refreshed 2026-06-23 — maintainer: T1 engineering satisfied by the prior kernel-gate
+landing): `A1·A2·A3·A4·A5 ✅ met · B1·B2 ✅ met` — gate-met / tag-ready.** The three rows that read
+"⏳ open" at supersession were closed by the original ADR-021 kernel-gate wave (2026-06-21), and the
+tooling remains present: **A2** — the Medium-findings ledger is 25/25 Fixed, 0 deferred
+(`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`; M-653, PR #306); **A3** —
+`cargo-mutants` 0 un-triaged survivors on the trusted base (`.cargo/mutants.toml`), the hand-rolled
+LCG suites migrated to `proptest`, and `cargo-fuzz` targets + smoke CI present (`fuzz/`; M-654,
+PR #313); **A4** — `cargo deny` / `cargo audit` wired **non-silently** into `just check` (`deny.toml`,
+`scripts/checks/`; M-652, PR #303). This refresh is a **status report moving forward on a checked
+basis** (VR-5) — it records the prior landing, not a fresh re-run.
+
+The **only remaining T1 item is the core `1.0.0` tag act itself — M-703, maintainer-reserved** (cut
+the tag + record the enactment; a separate append-only decision per house rule #3). Because ADR-021 is
+now **Superseded**, that inherited enactment attaches **here, to ADR-022 track T1**, at the tag — a
+Superseded ADR cannot itself move to Enacted. This sub-gate is **epic E10-1** (issues M-700–M-703;
+M-700/M-701/M-702 satisfied, M-703 reserved). The core may tag `1.0.0` the moment the maintainer
+performs M-703 — it does **not** wait for T2–T9.
 
 ## 5. Definition of Done — the full-language 1.0.0 gate
 
@@ -78,7 +94,7 @@ its own per-issue DoDs (DN-25 is the map; the epics carry the detail). Summary c
 
 | Track | Epic | Done when (summary) | Status |
 |---|---|---|---|
-| **T1 Core sub-gate** | E10-1 | ADR-021 Gate A/B all ✅; `core 1.0.0` tagged; ADR-021 → Enacted | ⏳ A2/A3/A4 open |
+| **T1 Core sub-gate** | E10-1 | ADR-021 Gate A/B all ✅; `core 1.0.0` tagged; ADR-022 T1 → Enacted at the tag | ✅ gate-met / tag-ready; `core 1.0.0` tag pending (M-703, maintainer-reserved) |
 | **T2 Surface completeness** | E11-1 (+E7-1/E7-3/E7-5) | full HOF/closures; operator syntax (RFC-0025); committed L3 EBNF grammar (RFC-0030, RFC-0006 Q3/Q8 resolved); generics/traits/effects stable | ⏳ open |
 | **T3 Runtime & concurrency** | E12-1 (+E7-2) | real scheduler; full RFC-0008 vocabulary executes; deadlock-freedom checked; memory reclamation (RFC-0027); supervision/cancellation | ⏳ open |
 | **T4 Stdlib in Mycelium** | E13-1 | the stdlib + core libs **written in `.myc`** (RFC-0031), differential-tested, stable APIs; Rust std-`*` beyond the bare core superseded by `.myc` | ⏳ open |
@@ -175,3 +191,11 @@ Recorded so the program stays honest about where it ends — these are **vision,
 - 2026-06-23 — **Q4 resolved** (maintainer): **T6 (native AOT maturity / optimization / JIT, E15-1)
   un-gated from 1.0.0 → `1.1`** (QoL/perf, patched in after release; 1.0.0 runs on the interpreter +
   direct-LLVM kernel subset). Removed T6 from the §5 gate + §3 scope; `aot10` leaves the 1.0.0 waves.
+- 2026-06-23 — **Track T1 status refreshed** (maintainer; kickoff `c10`). §4/§5 T1 rows A2/A3/A4
+  marked **met**, grounded in the prior kernel-gate landing (A2 → M-653/#306; A3 → M-654/#313; A4 →
+  M-652/#303; 2026-06-21) with the tooling still present — so T1 is **gate-met / tag-ready**. The
+  Gate A/B criteria themselves are unchanged (only the §5 T1 status cell + the enactment target moved
+  forward — ADR-021 → ADR-022 T1); this is a status report moving forward on a checked basis (VR-5),
+  not a fresh gate run. The only remaining T1 item is the **maintainer-reserved
+  core `1.0.0` tag act** (M-703 / M-655). ADR-021 stays **Superseded** — its inherited enactment now
+  attaches to ADR-022 T1 at the tag.
