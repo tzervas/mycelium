@@ -1,0 +1,59 @@
+// nodule: std.cmp
+// @version: 0.1.0
+// @license: MIT
+// @authors: Tyler Zervas
+// @since: 2026-06-23
+// @updated: 2026-06-23
+// @summary: Self-hosted ordering/equality surface — the Ordering type (Lt | Eq | Gt), its
+// projections (is_lt/is_eq/is_gt, reverse), and the structural equality/total-order functions over
+// finite kernel types (Bool, Ordering). M-715 (E13-1, RFC-0031 §5 D4 Tier-0). Guarantee: every op
+// here is total over a *finite* domain and match-defined, so each is Exact (no approximation, no
+// kernel comparison prim involved); differential agreement (L1-eval ≡ L0-interp ≡ AOT) is Empirical
+// (trials, std_cmp.rs). Honesty boundary (RFC-0031 §5 D4 Tier-1): equality/ordering over the
+// *width* types Binary{N}/Ternary{N} is NOT self-hosted here — the kernel surfaces bit.not/bit.xor
+// and trit arithmetic but no reduce-to-Bool comparison prim, so a Binary{N} `eq`/`cmp` cannot be
+// honestly written in .myc today. That port lands when the comparison prim is surfaced. Never-silent
+// (G2): no op fabricates an ordering for a value it cannot compare — the surface only covers the
+// finite types it can decide structurally.
+nodule std.cmp
+
+// The three-valued total-order result. Total and finite: every comparison lands in exactly one arm.
+type Ordering = Lt | Eq | Gt
+
+// is_lt / is_eq / is_gt: project an Ordering to Bool. Total over the finite Ordering domain (Exact).
+fn is_lt(o: Ordering) -> Bool =
+  match o { Lt => True, Eq => False, Gt => False }
+
+fn is_eq(o: Ordering) -> Bool =
+  match o { Lt => False, Eq => True, Gt => False }
+
+fn is_gt(o: Ordering) -> Bool =
+  match o { Lt => False, Eq => False, Gt => True }
+
+// reverse: swap Lt <-> Gt, fix Eq — the order-reversal that turns an ascending comparator into a
+// descending one. An involution; total over Ordering (Exact).
+fn reverse(o: Ordering) -> Ordering =
+  match o { Lt => Gt, Eq => Eq, Gt => Lt }
+
+// bool_eq: structural equality on Bool, match-defined (no kernel eq prim needed). Total (Exact).
+fn bool_eq(a: Bool, b: Bool) -> Bool =
+  match a {
+    True => match b { True => True, False => False },
+    False => match b { True => False, False => True },
+  }
+
+// bool_cmp: the canonical total order on Bool with False < True. Total over Bool x Bool (Exact).
+fn bool_cmp(a: Bool, b: Bool) -> Ordering =
+  match a {
+    False => match b { False => Eq, True => Lt },
+    True => match b { False => Gt, True => Eq },
+  }
+
+// ord_eq: structural equality on Ordering itself (a finite enum). Total (Exact). Useful for asserting
+// a comparator's result without re-matching at every call site.
+fn ord_eq(a: Ordering, b: Ordering) -> Bool =
+  match a {
+    Lt => match b { Lt => True, Eq => False, Gt => False },
+    Eq => match b { Lt => False, Eq => True, Gt => False },
+    Gt => match b { Lt => False, Eq => False, Gt => True },
+  }
