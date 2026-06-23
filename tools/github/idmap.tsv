@@ -178,3 +178,85 @@ M-658	317	4710401112
 # E7-2 children's ISSUE numbers were NOT enumerated this session (M-665..668) — do not confuse with
 # their LANDING PR numbers in pr-index.json (M-665→PR#332, M-666→PR#342 are PRs, not issues). Look
 # up the issue numbers + db-ids live before linking them under E7-2 (#324).
+
+# 2026-06-23 (M-675): FULL idmap reconcile against live GitHub. Every remaining issues.yaml id
+#   (the Phase-3.5/5/6/7/8 backlog + the e7l/u78 epics E3-8/E3-9/E4-1/E5-1/E6-1/E8-1) mapped
+#   id -> number -> db_id. The db_ids are FETCHED LIVE (GitHub search API `id` field via the MCP
+#   server), never guessed (G2/VR-5) — this RESOLVES the "db-ids NOT yet fetched" gap the
+#   2026-06-22 note above flags (M-657 / M-659..664 / M-649 / M-673 / M-674 now carry real db_ids).
+#   Cross-validated this run: every PRE-EXISTING row above matches live GitHub (0 mismatches); no
+#   duplicate task-id and no duplicate issue-number across the whole map; all 209 issues.yaml ids
+#   are now covered. Rows below sorted by issue number. Append-only (rows/notes above unchanged).
+# NOTE (data-quality, not acted on here — needs a write-scoped maintainer run): GitHub carries 4
+#   DUPLICATE issues from a 2026-06-16 gh-sync-all.sh re-run — #126/#127/#128/#129 duplicate the
+#   canonical M-302/#87, M-330/#97, M-342/#104, M-348/#110 (mapped far above). The idmap anchors
+#   each task-id to its canonical (earliest) issue; the duplicates are left to a maintainer close,
+#   not mapped (mapping a task-id to two numbers would break the id<->number invariant).
+E3-8	208	4702139526
+M-392	209	4702140010
+M-393	210	4702140283
+M-394	211	4702140586
+M-395	212	4702141047
+M-373	214	4702627028
+M-374	215	4702627264
+M-375	216	4702627484
+M-376	218	4702687934
+M-377	221	4703181651
+M-378	223	4703627469
+M-382	225	4704090801
+M-379	226	4704091021
+E5-1	239	4704998310
+M-535	240	4704998379
+M-536	241	4704998450
+E8-1	242	4704998543
+M-383	243	4704998643
+M-384	244	4704998728
+M-385	245	4704998818
+E6-1	246	4704998910
+M-603	247	4704998980
+E4-1	248	4704999121
+M-640	249	4704999216
+M-641	250	4704999414
+M-642	251	4704999527
+M-643	252	4704999616
+M-644	253	4704999699
+M-396	254	4704999775
+M-397	258	4705082800
+E3-9	269	4706618762
+M-645	270	4706618765
+M-650	282	4708626828
+M-647	283	4708626829
+M-649	284	4708626830
+M-651	285	4708626831
+M-648	286	4708626842
+M-646	287	4708626843
+M-655	298	4709032863
+M-654	299	4709032864
+M-653	300	4709032869
+M-652	301	4709032870
+M-657	314	4710401108
+M-659	318	4710401114
+M-660	319	4710401120
+M-661	320	4710401266
+M-662	321	4710401273
+M-663	322	4710401277
+M-664	323	4710401278
+M-665	325	4710401285
+M-666	326	4710401413
+M-667	327	4710401424
+M-668	328	4710401429
+M-669	333	4711008104
+M-671	337	4711108188
+M-670	338	4711108189
+M-672	339	4711162099
+M-674	350	4713190415
+M-673	351	4713190417
+M-675	354	4713516186
+M-676	357	4716978524
+M-677	358	4716978532
+M-680	362	4718169360
+M-681	363	4718169364
+M-679	364	4718169370
+M-678	365	4718169368
+M-682	366	4718169375
+M-683	367	4718169394
