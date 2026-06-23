@@ -145,7 +145,7 @@ operator-expression grammar (`op_expr` … `unary_expr`; RFC-0025/M-705), effect
 the phylum/nodule organization (`phylum`/`pub`/`use` glob; M-662), the `for` sugar, the `colony`
 expression (M-666), and the `@ strength` guarantee annotation. RFC-0025 is recorded as **integrated**
 (its productions are in the EBNF), not as a pending placeholder (resolving this RFC's open question
-#4 for the operator case).
+no. 4 for the operator case).
 
 ---
 

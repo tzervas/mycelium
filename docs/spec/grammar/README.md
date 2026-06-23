@@ -108,6 +108,27 @@ header (`// @key: value`) + `mycelium-proj.toml` manifest layer on top of this (
 
 ## Status
 
-**v0, non-normative until RFC-0006 is ratified.** The grammar tracks the ratified DN-02 lexicon;
-it grows as the L1 RFC (kernel calculus, typing judgments) lands. `.myc` is the file extension
-(language name = Mycelium, shared with the project).
+**Committed L3 text surface (DN-09 KC-2 verdict — proceed; RFC-0006 §10 Q1 resolved;
+2026-06-18).** The grammar is the normative oracle for the accept/reject corpus; refinements are
+append-only recorded decisions, not silent drift. `.myc` is the file extension (language name =
+Mycelium, shared with the project).
+
+Two recent additions to the operator + surface picture:
+
+- **Operator-expression layer (RFC-0025 / M-705; implemented, pending ratification).** An
+  `op_expr` production with precedence tiers `or → and → eq → bor → xor → band → add → mul →
+  unary → app` desugars each symbolic operator to a canonical word function (`a + b → add(a, b)`,
+  `-a → neg(a)`) — frontend-only sugar, no L0/L1 kernel change (KC-3). Angle-bracket comparisons
+  (`<`, `<=`, `>`, `>=`, `<<`, `>>`) are deferred (RFC-0025 §3; M-745). RFC-0025 is **Proposed**
+  (implemented Rust-first, pending maintainer ratification — house rule #3). Accept fixture:
+  `conformance/accept/20-operator-syntax.myc`.
+- **RFC-0030 (Concrete Surface Grammar + L3 Ratification) — Draft.** The formal ratification pass
+  for the full committed grammar; **Draft → Proposed** is gated on M-707 (RFC-0020 L2 surface
+  complete) and M-745 (angle-bracket disambiguation). Status stays Draft — no premature advancement
+  (VR-5 / house rule #3).
+
+### Changelog
+
+- **2026-06-23 — Operator-expression layer integrated (RFC-0025 / M-705).** `op_expr` with the
+  full precedence table added to `mycelium.ebnf`; `conformance/accept/20-operator-syntax.myc`
+  added. RFC-0025 → Proposed (pending ratification). RFC-0030 opened (Draft). Append-only.

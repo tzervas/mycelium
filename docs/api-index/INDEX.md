@@ -1672,6 +1672,18 @@
 | `mycelium_std_runtime::colony::SCOPE_JOIN_STRENGTH:` | const | `crates/mycelium-std-runtime/src/colony.rs:21` | Guarantee strength for `Scope` join semantics (RT2 sequentialization differential). |
 | `mycelium_std_runtime::colony::Scope` | struct | `crates/mycelium-std-runtime/src/colony.rs:43` | Structured concurrency scope: all tasks complete or are cancelled before scope exit. |
 | `mycelium_std_runtime::colony::ScopeError` | enum | `crates/mycelium-std-runtime/src/colony.rs:28` | Error type for scope exits with active tasks. |
+| `mycelium_std_runtime::dataflow` | mod | `crates/mycelium-std-runtime/src/lib.rs:46` | — |
+| `mycelium_std_runtime::dataflow::DEADLOCK_DETECTION_STRENGTH:` | const | `crates/mycelium-std-runtime/src/dataflow.rs:37` | Guarantee strength for deadlock detection (complete for DAG channel graphs; cyclic = open). |
+| `mycelium_std_runtime::dataflow::PollTask` | trait | `crates/mycelium-std-runtime/src/dataflow.rs:56` | A communicating task that is **swept** (polled non-blockingly) rather than run to completion. |
+| `mycelium_std_runtime::dataflow::Progress` | struct | `crates/mycelium-std-runtime/src/dataflow.rs:77` | A monotone progress counter for channel work — bump it on every successful `try_send`/`try_recv` |
+| `mycelium_std_runtime::dataflow::Progress::bump` | fn | `crates/mycelium-std-runtime/src/dataflow.rs:91` | Record one unit of channel progress (a successful send or recv). |
+| `mycelium_std_runtime::dataflow::Progress::epoch` | fn | `crates/mycelium-std-runtime/src/dataflow.rs:97` | The current epoch (monotone). |
+| `mycelium_std_runtime::dataflow::Progress::new` | fn | `crates/mycelium-std-runtime/src/dataflow.rs:84` | A fresh counter at epoch 0. |
+| `mycelium_std_runtime::dataflow::SWEEP_DETERMINISM_STRENGTH:` | const | `crates/mycelium-std-runtime/src/dataflow.rs:40` | Guarantee strength for the cooperative sweep schedule (a fixed function of the sweep direction). |
+| `mycelium_std_runtime::dataflow::Step` | enum | `crates/mycelium-std-runtime/src/dataflow.rs:44` | One non-blocking step of a communicating task. |
+| `mycelium_std_runtime::dataflow::SweepDir` | enum | `crates/mycelium-std-runtime/src/dataflow.rs:64` | The order a sweep visits still-pending tasks. |
+| `mycelium_std_runtime::dataflow::run_dataflow` | fn | `crates/mycelium-std-runtime/src/dataflow.rs:121` | Sweep `tasks` cooperatively until all resolve, or return [`Deadlock`] on a no-progress sweep. |
+| `mycelium_std_runtime::dataflow::run_dataflow_scheduled` | fn | `crates/mycelium-std-runtime/src/dataflow.rs:167` | As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool** (M-709) |
 | `mycelium_std_runtime::guarantee_matrix` | mod | `crates/mycelium-std-runtime/src/lib.rs:47` | — |
 | `mycelium_std_runtime::guarantee_matrix::GaugeRow` | struct | `crates/mycelium-std-runtime/src/guarantee_matrix.rs:10` | One row in the guarantee matrix. |
 | `mycelium_std_runtime::network` | mod | `crates/mycelium-std-runtime/src/lib.rs:48` | — |
@@ -1685,6 +1697,33 @@
 | `mycelium_std_runtime::network::Sender` | struct | `crates/mycelium-std-runtime/src/network.rs:109` | Sending end of a typed channel. |
 | `mycelium_std_runtime::network::TryRecv` | enum | `crates/mycelium-std-runtime/src/network.rs:206` | Result of a non-blocking receive attempt. |
 | `mycelium_std_runtime::network::TrySend` | enum | `crates/mycelium-std-runtime/src/network.rs:195` | Result of a non-blocking send attempt. |
+| `mycelium_std_runtime::scheduler` | mod | `crates/mycelium-std-runtime/src/lib.rs:49` | — |
+| `mycelium_std_runtime::scheduler::SCHEDULER_BACKPRESSURE_STRENGTH:` | const | `crates/mycelium-std-runtime/src/scheduler.rs:40` | Guarantee strength for the demand-signalled backpressure bound. |
+| `mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH:` | const | `crates/mycelium-std-runtime/src/scheduler.rs:45` | Guarantee strength for liveness (every submitted job runs exactly once). |
+| `mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH:` | const | `crates/mycelium-std-runtime/src/scheduler.rs:34` | Guarantee strength for the scheduler's RT2 sequentialization differential. |
+| `mycelium_std_runtime::scheduler::Scheduler` | struct | `crates/mycelium-std-runtime/src/scheduler.rs:82` | A real OS-thread scheduler: a fixed worker pool with fair FIFO dispatch and a **bounded**, |
+| `mycelium_std_runtime::scheduler::Scheduler::capacity` | fn | `crates/mycelium-std-runtime/src/scheduler.rs:124` | The bounded ready-queue depth — the backpressure ceiling (never exceeded; G2). |
+| `mycelium_std_runtime::scheduler::Scheduler::new` | fn | `crates/mycelium-std-runtime/src/scheduler.rs:93` | A scheduler sized to the host's available parallelism (fallback: 1 worker), with a ready |
+| `mycelium_std_runtime::scheduler::Scheduler::run_indexed` | fn | `crates/mycelium-std-runtime/src/scheduler.rs:142` | Run `jobs` across the OS-thread pool and return their outputs **in spawn order** (so the |
+| `mycelium_std_runtime::scheduler::Scheduler::with_workers` | fn | `crates/mycelium-std-runtime/src/scheduler.rs:106` | A scheduler with exactly `workers` OS threads and a ready-queue `capacity`. |
+| `mycelium_std_runtime::scheduler::Scheduler::workers` | fn | `crates/mycelium-std-runtime/src/scheduler.rs:118` | The number of OS worker threads this scheduler runs. |
+| `mycelium_std_runtime::scheduler::SchedulerError` | enum | `crates/mycelium-std-runtime/src/scheduler.rs:49` | Why constructing a [`Scheduler`] refused — always explicit, never a silent fallback (G2). |
+| `mycelium_std_runtime::supervision` | mod | `crates/mycelium-std-runtime/src/lib.rs:50` | — |
+| `mycelium_std_runtime::supervision::CancelTree` | struct | `crates/mycelium-std-runtime/src/supervision.rs:48` | A cancellation **tree** (RFC-0008 RT7): a node with its own [`CancelToken`] and child tokens. |
+| `mycelium_std_runtime::supervision::CancelTree::cancel` | fn | `crates/mycelium-std-runtime/src/supervision.rs:88` | Cancel this node **and every descendant** — the never-silent cascade (G2/RT7). |
+| `mycelium_std_runtime::supervision::CancelTree::child` | fn | `crates/mycelium-std-runtime/src/supervision.rs:74` | Attach a fresh child scope and return a mutable handle to it, so callers can build a genuine |
+| `mycelium_std_runtime::supervision::CancelTree::child_count` | fn | `crates/mycelium-std-runtime/src/supervision.rs:97` | The number of direct child scopes (for inspection/tests). |
+| `mycelium_std_runtime::supervision::CancelTree::is_cancelled` | fn | `crates/mycelium-std-runtime/src/supervision.rs:83` | Whether this node has been cancelled. |
+| `mycelium_std_runtime::supervision::CancelTree::new` | fn | `crates/mycelium-std-runtime/src/supervision.rs:56` | A fresh, un-cancelled root. |
+| `mycelium_std_runtime::supervision::CancelTree::token` | fn | `crates/mycelium-std-runtime/src/supervision.rs:65` | This node's cooperative cancel token (clones share the same flag). |
+| `mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH:` | const | `crates/mycelium-std-runtime/src/supervision.rs:32` | Guarantee strength for cancellation propagation + explicit outcome collection. |
+| `mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH:` | const | `crates/mycelium-std-runtime/src/supervision.rs:35` | Guarantee strength for the restart bound (inherited from the M-356 [`Supervisor`]). |
+| `mycelium_std_runtime::supervision::SupervisedFailure` | enum | `crates/mycelium-std-runtime/src/supervision.rs:180` | Why a supervised child run ended in failure — always explicit (G2). |
+| `mycelium_std_runtime::supervision::SupervisedRun` | struct | `crates/mycelium-std-runtime/src/supervision.rs:164` | The result of supervising a restartable child to resolution or escalation. |
+| `mycelium_std_runtime::supervision::SupervisionAction` | enum | `crates/mycelium-std-runtime/src/supervision.rs:143` | What a supervisor did about one child failure — a reified, inspectable action (EXPLAIN; no black |
+| `mycelium_std_runtime::supervision::SupervisionRecord` | struct | `crates/mycelium-std-runtime/src/supervision.rs:153` | One reified supervision decision — the EXPLAIN record (RFC-0008 §4.7; ADR-006: selections are |
+| `mycelium_std_runtime::supervision::run_supervised` | fn | `crates/mycelium-std-runtime/src/supervision.rs:113` | Run `tasks` on the OS-thread pool under a shared [`CancelToken`], collecting **every** child's |
+| `mycelium_std_runtime::supervision::supervise_with_restart` | fn | `crates/mycelium-std-runtime/src/supervision.rs:198` | Run a restartable child under a live [`Supervisor`] (M-356) until it succeeds or the supervisor |
 | `mycelium_std_runtime::task` | mod | `crates/mycelium-std-runtime/src/lib.rs:51` | — |
 | `mycelium_std_runtime::task::Deadlock` | struct | `crates/mycelium-std-runtime/src/task.rs:97` | Deadlock descriptor: returned when a scope cannot make progress. |
 | `mycelium_std_runtime::task::Poll` | enum | `crates/mycelium-std-runtime/src/task.rs:75` | Poll result for an async task step. |
@@ -1777,13 +1816,13 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_std_sys::fs` | mod | `crates/mycelium-std-sys/src/lib.rs:44` | — |
+| `mycelium_std_sys::fs` | mod | `crates/mycelium-std-sys/src/lib.rs:48` | — |
 | `mycelium_std_sys::fs::create_dir_all` | fn | `crates/mycelium-std-sys/src/fs.rs:41` | \[Declared\] Create a directory and all its parents. |
 | `mycelium_std_sys::fs::exists` | fn | `crates/mycelium-std-sys/src/fs.rs:34` | \[Declared\] Check whether a path exists on the filesystem. |
 | `mycelium_std_sys::fs::read` | fn | `crates/mycelium-std-sys/src/fs.rs:18` | \[Declared\] Read the entire contents of a file at `path`. |
 | `mycelium_std_sys::fs::remove_file` | fn | `crates/mycelium-std-sys/src/fs.rs:48` | \[Declared\] Remove a file. |
 | `mycelium_std_sys::fs::write` | fn | `crates/mycelium-std-sys/src/fs.rs:25` | \[Declared\] Write `contents` to a file at `path`, creating or truncating it. |
-| `mycelium_std_sys::math` | mod | `crates/mycelium-std-sys/src/lib.rs:46` | — |
+| `mycelium_std_sys::math` | mod | `crates/mycelium-std-sys/src/lib.rs:51` | — |
 | `mycelium_std_sys::math::acos` | fn | `crates/mycelium-std-sys/src/math.rs:37` | \[Declared\] `acos(x)`. |
 | `mycelium_std_sys::math::asin` | fn | `crates/mycelium-std-sys/src/math.rs:32` | \[Declared\] `asin(x)`. |
 | `mycelium_std_sys::math::atan` | fn | `crates/mycelium-std-sys/src/math.rs:42` | \[Declared\] `atan(x)`. |
@@ -1798,10 +1837,10 @@
 | `mycelium_std_sys::math::sin` | fn | `crates/mycelium-std-sys/src/math.rs:17` | \[Declared\] `sin(x)`. |
 | `mycelium_std_sys::math::sqrt` | fn | `crates/mycelium-std-sys/src/math.rs:77` | \[Declared\] `sqrt(x)`. |
 | `mycelium_std_sys::math::tan` | fn | `crates/mycelium-std-sys/src/math.rs:27` | \[Declared\] `tan(x)`. |
-| `mycelium_std_sys::rand` | mod | `crates/mycelium-std-sys/src/lib.rs:47` | — |
+| `mycelium_std_sys::rand` | mod | `crates/mycelium-std-sys/src/lib.rs:52` | — |
 | `mycelium_std_sys::rand::EntropyError` | enum | `crates/mycelium-std-sys/src/rand.rs:37` | Errors from platform entropy operations. |
 | `mycelium_std_sys::rand::fill_bytes` | fn | `crates/mycelium-std-sys/src/rand.rs:70` | \[Declared\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`). |
-| `mycelium_std_sys::time` | mod | `crates/mycelium-std-sys/src/lib.rs:49` | — |
+| `mycelium_std_sys::time` | mod | `crates/mycelium-std-sys/src/lib.rs:54` | — |
 | `mycelium_std_sys::time::mono_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:41` | \[Declared\] Returns monotonic nanoseconds since an unspecified process-local epoch. |
 | `mycelium_std_sys::time::sleep_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:57` | \[Declared\] Pause the current thread for approximately `nanos` nanoseconds. |
 | `mycelium_std_sys::time::wall_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:26` | \[Declared\] Returns nanoseconds since the Unix epoch from the wall clock. |
@@ -5565,6 +5604,16 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_runtime::colony::Scope` | definition not found via regex heuristic (kind='fn', name='Scope') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::colony::ScopeError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::colony::ScopeError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::dataflow::PollTask::poll` | definition not found via regex heuristic (kind='fn', name='poll') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::dataflow::Progress::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::dataflow::Progress::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::dataflow::Step::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::dataflow::Step::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::dataflow::Step::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::dataflow::SweepDir::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::dataflow::SweepDir::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::dataflow::SweepDir::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::dataflow::SweepDir::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::guarantee_matrix::GaugeRow::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::guarantee_matrix::GaugeRow::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::guarantee_matrix::GaugeRow::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -5581,6 +5630,33 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_runtime::network::TryRecv` | definition not found via regex heuristic (kind='fn', name='TryRecv') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::network::TrySend` | definition not found via regex heuristic (kind='fn', name='TrySend') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::network::TrySend` | definition not found via regex heuristic (kind='fn', name='TrySend') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::scheduler::Scheduler::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::scheduler::Scheduler::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::scheduler::Scheduler::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::scheduler::SchedulerError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::scheduler::SchedulerError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::scheduler::SchedulerError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::scheduler::SchedulerError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::CancelToken` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::CancelTree::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::CancelTree::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::Cancelled` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::Escalation` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::RestartIntensity` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::SupervisedFailure::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisedFailure::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisedFailure::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisedRun` | definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisedRun` | definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisedRun` | definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisionAction::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisionAction::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisionAction::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisionRecord::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisionRecord::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SupervisionRecord::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::Supervisor` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::TaskOutcome` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_runtime::task::Deadlock::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::task::Deadlock::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::task::Deadlock::new` | dedup-alias: same definition as `mycelium_std_runtime::task::Task::new` at crates/mycelium-std-runtime/src/task.rs:27 — one canonical row kept |

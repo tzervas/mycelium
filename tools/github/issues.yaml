@@ -2979,7 +2979,7 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:release, priority:P1, status:done]
     depends_on: []
-    epic: E10
+    epic: E10-1
     landed_pr: 306
     landed_date: 2026-06-21
     landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-653 (PR #306): docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md records 25 Medium ids · 25 Fixed · 0 deferred (Gate A2 met), each with a failing-without-the-fix regression test. Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
@@ -3023,7 +3023,7 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:infra, area:release, priority:P1, status:done]
     depends_on: [M-700]
-    epic: E10
+    epic: E10-1
     landed_pr: 313
     landed_date: 2026-06-21
     landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-654 (PR #313): just mutants recipe + .cargo/mutants.toml (0 un-triaged survivors on core/cert/interp/numerics, equivalents justified); hand-rolled LCG suites migrated to proptest (crates/mycelium-numerics/tests/properties.rs, seed rotation); cargo-fuzz targets fuzz/fuzz_targets/{fuzz_l1_parse, fuzz_core_value_deser, fuzz_m210_checker}.rs + just fuzz-smoke wired into just check-full (Tier 2). Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
@@ -3073,7 +3073,7 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:infra, area:release, priority:P1, status:done]
     depends_on: []
-    epic: E10
+    epic: E10-1
     landed_pr: 303
     landed_date: 2026-06-21
     landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-652 (PR #303): deny.toml (MIT-aligned license allow-list + advisories + crates.io-only sources); just deny / scripts/checks/deny.sh runs cargo-deny + cargo-audit, wired non-silently into just check (scripts/checks/all.sh); cargo-deny/cargo-audit installed by scripts/install-tools.sh (skip-if-missing locally, never silent in CI). Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
@@ -3119,7 +3119,7 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:release, priority:P1, status:todo]
     depends_on: [M-700, M-701, M-702]
-    epic: E10
+    epic: E10-1
     doc_refs:
       - corpus:ADR-022
       - corpus:ADR-021
@@ -3164,7 +3164,7 @@ issues:
   - id: E11-1
     title: "E11-1 (epic) — Surface-language completeness & grammar ratification"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:epic, area:language, priority:P1, status:in-progress]
     depends_on: [E7-1, E7-3]
     epic: E11
     doc_refs:
@@ -3221,7 +3221,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
     depends_on: [E7-3]
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0024
       - corpus:DN-25
@@ -3277,7 +3277,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: []
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0025
       - corpus:DN-25
@@ -3333,7 +3333,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
     depends_on: [M-705]
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0025
       - src:crates/mycelium-l1/src/lexer.rs
@@ -3371,7 +3371,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:spec, area:language, priority:P1, status:in-progress]
     depends_on: [M-705, M-707, M-745]
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0030
       - corpus:RFC-0006
@@ -3428,7 +3428,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
     depends_on: [E7-1]
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0020
       - corpus:DN-25
@@ -3479,7 +3479,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [E7-1]
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0030
       - corpus:DN-25
@@ -3593,7 +3593,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:design, area:language, priority:P2, status:needs-design]
     depends_on: [E11-1]
-    epic: E18
+    epic: E18-1
     doc_refs:
       - corpus:DN-26
       - corpus:DN-14
@@ -3629,7 +3629,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
     depends_on: [M-739, E11-1]
-    epic: E18
+    epic: E18-1
     doc_refs:
       - corpus:DN-26
       - corpus:DN-14
@@ -3671,7 +3671,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
     depends_on: [M-740, E13-1]
-    epic: E18
+    epic: E18-1
     doc_refs:
       - corpus:DN-26
       - corpus:DN-14
@@ -3709,7 +3709,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:verification, area:language, priority:P2, status:needs-design]
     depends_on: [M-741]
-    epic: E18
+    epic: E18-1
     doc_refs:
       - corpus:DN-26
       - corpus:DN-25
@@ -3979,7 +3979,7 @@ issues:
   - id: E14-1
     title: "E14-1 (epic) — FFI & system interface"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:epic, area:execution, priority:P1, status:in-progress]
+    labels: [phase:7, type:epic, area:execution, priority:P1, status:done]
     depends_on: []
     epic: E14
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25]
@@ -4042,6 +4042,18 @@ issues:
       for 1.0) / M-724 (FFI safety: ADR-014 unsafe-floor confinement for the FFI surface,
       audited + just safety-check green).
 
+      Resolution (2026-06-23, done): all five children landed. M-720/M-721 made wild execute
+      (lowers to Op{prim:"wild:<name>"}, no new Core-IR node; three-way differential covers
+      wild:echo) and M-724 audited the floor (just safety-check). M-722/M-723 landed the real
+      syscall floors (mycelium-std-sys: io/fs/sys/rand[/dev/urandom]/time), their data guarantee
+      matrix (crates/mycelium-std-sys/src/guarantee_matrix.rs — every op Declared, asserted in
+      tests per RFC-0016 §4.5), and the production host wiring (new crate mycelium-std-sys-host:
+      OsEntropy/OsClock fill std-rand's EntropySource / std-time's ClockSource from the audited
+      floor, never-silent). FOLLOW-UP (not a regression — already deferred in RFC-0028 §4.4): the
+      per-op wild: Value-encoding that makes the byte-oriented io/fs ops reachable from a Mycelium
+      `wild { io.write(…) }` block is the @std-sys-author surface encoding, uncommitted in §4.4;
+      the entropy/clock seams are wired today, the io/fs surface encoding follows when §4.4 lands.
+
   - id: M-720
     title: "M-720 — feat(ffi): FFI surface (RFC-0028) — capability-based Mycelium<->C/Rust calls, never-silent ABI claims"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
@@ -4103,7 +4115,7 @@ issues:
   - id: M-722
     title: "M-722 — feat(std-sys): syscall binding — real io/fs/sys bindings, sandboxed + capability-gated"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:in-progress]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-721]
     epic: E14-1
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-io/src/io.rs, src:crates/mycelium-std-fs/src/lib.rs, src:crates/mycelium-std-sys/src/lib.rs]
@@ -4130,10 +4142,20 @@ issues:
       - All bindings capability-gated; every syscall failure is explicit Result/Option (G2).
       - just check green.
 
+      Resolution (2026-06-23, done): the real syscall floors execute and are never-silent —
+      io (read_to_end/read_line/write_out/write_err/flush_out), fs (read/write/exists/
+      create_dir_all/remove_file; full stat lives in pure std-fs::metadata), sys (exit/get_env/
+      args) in crates/mycelium-std-sys (#![forbid(unsafe_code)], thin std::* wrappers). The
+      missing piece — a Declared guarantee matrix encoded as DATA (RFC-0016 §4.5, not prose) —
+      landed in crates/mycelium-std-sys/src/guarantee_matrix.rs: one row per floor op, every op
+      Declared, fallibility/effect/error-set columns asserted in tests. Capability-gating is the
+      wild/@std-sys checker (M-661/M-720); the registry grants no host op by default (G2). The
+      Mycelium-surface wild: byte-encoding for io/fs is the RFC-0028 §4.4 deferral (see E14-1).
+
   - id: M-723
     title: "M-723 — feat(std-sys): time/clock + rand entropy real bindings hardened for 1.0"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:in-progress]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-721]
     epic: E14-1
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-rand/src/lib.rs, src:crates/mycelium-std-time/src/lib.rs]
@@ -4158,6 +4180,21 @@ issues:
       - std.rand: OS entropy read executes; Declared guarantee tag; never-silent on failure.
       - Effect annotations correct: !{time} and !{entropy} match M-660 coverage checker.
       - just check green.
+
+      Resolution (2026-06-23, done): the OS sources execute through the audited floor and are
+      wired end-to-end. std-sys::rand::fill_bytes reads /dev/urandom via std::fs (no getrandom
+      dep, #![forbid(unsafe_code)] preserved; never zero-fills — explicit
+      Err(EntropyError::Unavailable) on a platform without it, G2). std-sys::time gives monotonic
+      + wall reads. The new crate mycelium-std-sys-host wires these into the pure crates'
+      injectable seams: OsEntropy: std-rand::EntropySource and OsClock: std-time::ClockSource,
+      so std.rand/std.time bottom out in the real OS while staying wild-free. Guarantee matrices
+      are data: std-sys (guarantee_matrix.rs), plus std-rand/std-time already had theirs. Tags:
+      every floor read Declared; structural monotonic-instant arithmetic stays Exact in std-time.
+      Effects carried structurally by DeclaredTime / DeclaredTimeEntropy (wall = time+entropy,
+      RT3). FLAG: the Mycelium-surface M-660 effect-checker cross-test (a deterministic fragment
+      may not call a DeclaredTimeEntropy reader without naming !{entropy}) belongs to M-660's
+      checker integration (post-RFC-0014 surface), tracked there — the type-level markers are in
+      place here.
 
   - id: M-724
     title: "M-724 — verify(ffi): FFI safety — ADR-014 unsafe-floor confinement for FFI surface, audited + just safety-check green"
