@@ -4,7 +4,7 @@
 **Revision:** r4 — records the **Rust-first implementation** status: the kernel + reference interpreter + certified swaps + the 25-crate standard library have landed (Phases 0–3/5/7 complete, 4/6/8 in progress); per the honesty rule the stdlib specs read *"implemented (Rust-first), pending ratification,"* and self-hosting (M-502) is not yet established. Extends the §6 roadmap with Phases 4–8 and refreshes §10. **Design decisions are unchanged (append-only)** — this is a status/roadmap refresh, not a decision change. *Status addendum (2026-06-22):* RFC-0022 and RFC-0023 ratified to Accepted; RFC-0018 Enacted (stage 1a, M-663); the E7-1 L1 stage-1 checker surface complete (M-656–M-663); research: 13 passes recorded (`01…13`).
 **Revision history:** r3 — integrates the follow-up research findings: ratifies ADR-010 (two bound kernels) and ADR-007 (Rust kernel + MLIR); records the **KC-1 pass** (proven VSA bundling bounds exist); marks RFC-0001…0005 Accepted and DN-01 Resolved (packing → schedule-staged); de-risks RR-1 and adds residual risks RR-13/RR-14. · r2 — added the execution-model and VSA-packaging decisions (ADR-008, ADR-009) plus a first-class toolchain treatment (§5.8); folded hybrid-compilation and tooling constraints into Requirements (§3) and the Roadmap (§6).
 **Date:** June 08, 2026
-**Working name:** Mycelium (formerly *Verid* — provenance note; sole remaining reference)
+**Working name:** Mycelium
 **Source of truth for claims:** the prior-art *Survey & Synthesis* and the follow-up *Research Findings* (T0/T1/T2). Inline references use those labels (Areas, **G1–G11**, **A–E**, **R1–R8**, **T0.x/T1.x/T2.x**) so every assertion is traceable. The r2/r3 additions are *engineering decisions* grounded in those findings, not new prior art.
 
 ---

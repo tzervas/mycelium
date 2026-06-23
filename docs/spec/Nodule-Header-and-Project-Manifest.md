@@ -44,7 +44,7 @@ even carry only a nodule header and skip the manifest entirely.
 name        = "geometry"          # the project name (a phylum's dotted-root, or a program/script name)
 kind        = "phylum"            # "phylum" (library) | "program" | "script" — the project shape
 version     = "1.2.0"             # semver; a human release label over content hashes
-license     = "Apache-2.0"        # SPDX identifier (checked against the SPDX list)
+license     = "MIT"               # SPDX identifier (checked against the SPDX list)
 authors     = ["Tyler Zervas <…>"]
 since       = "2026-01-10"        # first publication (ISO-8601)
 summary     = "2D/3D geometry primitives and certified swaps."
@@ -97,7 +97,7 @@ A **phylum/nodule root** carries the fuller header; a **subnodule** typically ca
 ```mycelium
 // nodule: geometry.shapes        ← a nodule root
 // @version: 1.2.0
-// @license: Apache-2.0
+// @license: MIT
 // @authors: Tyler Zervas
 // @since:   2026-01-10
 // @updated: 2026-06-16

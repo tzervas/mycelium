@@ -2911,3 +2911,2055 @@ issues:
       Linguist acceptance is UPSTREAM (a PR to github/linguist) — track the submission, do not claim repo
       colorization until merged (G2/VR-5). Acceptance: the extension installs + highlights locally; the
       Linguist PR is opened (its merge is the upstream gate).
+
+  - id: E10-1
+    title: "E10-1 (epic) — Core/kernel 1.0.0 sub-gate (honesty-integrity durability)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:release, priority:P1, status:needs-design]
+    depends_on: []
+    epic: E10
+    doc_refs:
+      - corpus:ADR-022
+      - corpus:ADR-021
+      - corpus:DN-19
+      - corpus:DN-25
+    body: |
+      The residual ADR-021 Gate A work required to declare the Mycelium Rust core/kernel at
+      1.0.0. The kernel reaching 1.0.0 is a precondition for full-language 1.0.0 (ADR-022 /
+      DN-25): the full-language gate inherits the kernel's honesty-integrity and durability
+      guarantees. Gate A's open rows (A2 Medium ledger, A3 WS8 durability, A4 supply-chain)
+      must all close before the kernel 1.0.0 tag is cut and ADR-021 moves Accepted -> Enacted.
+
+      User stories:
+      - As a maintainer, I want every ADR-021 Gate A row demonstrably met before cutting the
+        1.0.0 tag, so that the "kernel stabilizes" claim is grounded, not pre-declared (VR-5).
+      - As a compiler engineer, I want cargo-mutants green on the trusted base and cargo-fuzz
+        targets in CI, so that the honesty fixes from WS1-WS7 are durable and cannot regress
+        silently.
+      - As a downstream app developer evaluating Mycelium, I want the 1.0.0 release to carry
+        a supply-chain gate (cargo-deny + cargo-audit green), so that I can assess license and
+        CVE hygiene before adopting the substrate.
+      - As a language user, I want the Medium-findings ledger closed with explicit rationale
+        per finding, so that "no open Mediums" is a checkable fact, not an assertion.
+
+      Issues to resolve:
+      - What is the explicit deferral rationale for each remaining Medium finding (WS2/WS3/WS4/
+        WS5/WS6 per DN-19 §2 GAP-2), and which are truly fixed vs. still open?
+      - Does the maintainer treat WS8 (cargo-mutants + fuzz) as a hard 1.0.0 blocker or a
+        1.0.1 hardening follow-up? (DN-19 §2 GAP-4 open question — must be answered before M-703.)
+
+      Definition of Done:
+      - ADR-021 Gate A rows A2, A3, A4 are all demonstrably met (not speculatively declared).
+      - Every Medium finding is either fixed or carries an explicit one-line deferral rationale.
+      - cargo-mutants is green on mycelium-core, -cert, -numerics, -vsa (the trusted base).
+      - cargo-fuzz targets exist for the L1 lexer, parser, and checker, wired into CI.
+      - cargo-deny and cargo-audit are wired into just check and green (no silent skips).
+      - just check passes fully on the release branch (all crates, all gates, no skips).
+      - ADR-021 is moved Accepted -> Enacted (append-only, maintainer sign-off).
+      - The 1.0.0 tag exists on main per ADR-018.
+
+      Children: M-700 (close Medium-findings ledger A2), M-701 (WS8 durability surface A3),
+      M-702 (supply-chain gate A4), M-703 (cut core/kernel 1.0.0 + ADR-021 Enacted).
+
+  - id: M-700
+    title: "M-700 — Close the deep-review Medium-findings ledger (Gate A2)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:release, priority:P1, status:needs-design]
+    depends_on: []
+    epic: E10
+    doc_refs:
+      - corpus:ADR-021
+      - corpus:DN-19
+      - corpus:DN-25
+    body: |
+      ADR-021 Gate A2 requires every Medium finding from the 2026-06-14 deep review to be either
+      resolved or explicitly deferred with a one-line rationale. This task closes that ledger so
+      the "no open Mediums" claim is grounded (VR-5). DN-19 §2 GAP-2 lists the remaining open
+      Mediums by WS area (WS2/WS3/WS4/WS5/WS6). Without a closed ledger the honesty-integrity
+      claim for the 1.0.0 kernel release is ungrounded.
+
+      User stories:
+      - As a maintainer, I want a complete ledger showing every Medium as either fixed or
+        explicitly deferred, so that the Gate A2 criterion is checkable, not asserted.
+      - As a compiler engineer, I want each deferral to have a one-line rationale, so that
+        future maintainers understand why a finding was not resolved at 1.0.0.
+
+      Issues to resolve:
+      - Which of the listed Mediums (WS2 A6-03/06/08/09, A1-04/05; WS3 A3-04..10; WS4 A4-03/04;
+        WS5 A5-02/03/05/06/07/08; WS6 A6-05/10/11 B2-04) are actually fixed vs. still open?
+      - Are any Mediums blocked on a design decision (not just an implementation gap)?
+
+      Definition of Done:
+      - Every Medium finding in DN-19 §2 GAP-2 has a disposition: fixed (with a commit ref) or
+        explicitly deferred (with a one-line rationale recorded in the ledger document).
+      - The ledger document is committed to the repo and linked from ADR-021 §3 A2 (append-only).
+      - Gate A2 criterion is met: no Medium is silently unresolved.
+
+  - id: M-701
+    title: "M-701 — WS8 durability surface: cargo-mutants, proptest migration, fuzz targets"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:release, priority:P1, status:needs-design]
+    depends_on: [M-700]
+    epic: E10
+    doc_refs:
+      - corpus:ADR-021
+      - corpus:DN-19
+      - corpus:DN-25
+      - src:crates/mycelium-l1/src/lexer.rs
+    body: |
+      ADR-021 Gate A3 (WS8) requires the honesty-surface fixes from WS1-WS7 to be durable:
+      cargo-mutants green on the trusted base, hand-rolled LCG tests migrated to proptest with
+      seed rotation, and cargo-fuzz targets for the lexer/parser/checker. WS8 turns "we fixed it
+      once" into "it stays fixed" — a mutant that survives identifies a genuine test gap. This
+      is the largest remaining engineering task on the 1.0.0 critical path (DN-19 §2 GAP-4).
+
+      User stories:
+      - As a compiler engineer, I want cargo-mutants green on mycelium-core/-cert/-numerics/-vsa,
+        so that honesty fixes cannot regress silently between releases.
+      - As a maintainer, I want cargo-fuzz targets for the L1 lexer and parser, so that
+        malformed input cannot crash the trusted base.
+
+      Issues to resolve:
+      - Does the maintainer treat WS8 as a hard 1.0.0 blocker or a 1.0.1 hardening follow-up?
+        (Must be answered before M-703 can proceed.)
+      - Which mutant survivors in the trusted base represent genuine gaps vs. equivalent mutants
+        (semantics-preserving changes that tests cannot distinguish)?
+
+      Definition of Done:
+      - just mutants recipe exists; cargo-mutants runs green on mycelium-core, -cert,
+        -numerics, -vsa (the trusted base per ADR-021 §3 A3).
+      - Hand-rolled LCG property tests in mycelium-numerics and mycelium-vsa are migrated to
+        proptest with shrinking and PROPTEST_CASES / seed rotation.
+      - cargo-fuzz targets exist for the L1 lexer (crates/mycelium-l1/src/lexer.rs), parser,
+        and the M-210 checker; wired into just check-full (Tier 2, not Tier 1).
+      - Gate A3 criterion is demonstrably met (not speculatively declared).
+
+  - id: M-702
+    title: "M-702 — Supply-chain gate: wire cargo-deny + cargo-audit into just check"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:release, priority:P1, status:needs-design]
+    depends_on: []
+    epic: E10
+    doc_refs:
+      - corpus:ADR-021
+      - corpus:DN-19
+      - corpus:DN-25
+    body: |
+      ADR-021 Gate A4 requires cargo-deny and cargo-audit to be wired into just check and green.
+      Currently both tools skip (not installed), so just check passes silently without supply-chain
+      verification. For a 1.0.0 release, "just check green" must include license policy,
+      duplicate-dependency hygiene, and known CVE checks. This is a prerequisite for the
+      kernel's honesty claim at 1.0.0 — a silent skip is itself a never-silent violation (G2).
+
+      User stories:
+      - As a maintainer, I want just check to fail if a known CVE is present in the dependency
+        tree, so that a supply-chain risk cannot silently ship in a 1.0.0 release.
+      - As a downstream app developer, I want to know the Mycelium 1.0.0 release passed
+        license and advisory checks, so that I can adopt it without a separate audit.
+
+      Issues to resolve:
+      - Which licenses should the deny.toml permit? (MIT/Apache-2.0/ISC at minimum; any others?)
+      - How are known false-positive advisories handled (deny.toml ignore list)?
+
+      Definition of Done:
+      - cargo-deny and cargo-audit are listed in just setup and installed by it.
+      - A minimal deny.toml is committed (licenses + advisories sections; documented rationale
+        for any ignores).
+      - just check runs cargo-deny and cargo-audit (skip-if-missing pattern for local envs
+        without the tools; never silent in CI).
+      - just check is green with both tools active on the release branch.
+      - Gate A4 criterion is met.
+
+  - id: M-703
+    title: "M-703 — Cut core/kernel 1.0.0 + move ADR-021 Accepted -> Enacted"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:release, priority:P1, status:needs-design]
+    depends_on: [M-700, M-701, M-702]
+    epic: E10
+    doc_refs:
+      - corpus:ADR-021
+      - corpus:ADR-018
+      - corpus:DN-25
+    body: |
+      The release act: once Gate A rows A2/A3/A4 are all demonstrably met (M-700/M-701/M-702
+      landed), cut the 1.0.0 tag per ADR-018 and move ADR-021 from Accepted to Enacted. This is
+      the formal record that the kernel/core has stabilized. It is a precondition for
+      full-language 1.0.0 (ADR-022 / DN-25): the full-lang gate inherits the kernel gate. The
+      append-only rule applies: ADR-021 must step through Accepted (already done) before Enacted
+      — never skip, never rewrite.
+
+      User stories:
+      - As a maintainer, I want ADR-021 to move Accepted -> Enacted at the moment of the
+        tagged release, so that the decision record matches the release event (append-only, G2).
+      - As a downstream app developer, I want a 1.0.0 tag on main that I can depend on, so
+        that I have a stable artifact to evaluate.
+
+      Issues to resolve:
+      - Is the maintainer satisfied that all Gate A rows are demonstrably met before cutting the
+        tag? (This is the final maintainer confirmation step — no agent can make this call alone.)
+      - Does ADR-022 (full-lang 1.0.0) require any additional gate beyond ADR-021 Enacted?
+
+      Definition of Done:
+      - M-700, M-701, M-702 are all landed and just check is fully green.
+      - The maintainer confirms Gate A is met (explicit record in ADR-021 §3, append-only).
+      - ADR-021 is moved Accepted -> Enacted (append-only changelog entry, maintainer sign-off).
+      - The 1.0.0 tag is cut on main per ADR-018 (tag name, changelog entry, crate versions).
+      - CHANGELOG.md has a 1.0.0 release section (append-only; orchestrator-owned).
+
+  - id: E11-1
+    title: "E11-1 (epic) — Surface-language completeness & grammar ratification"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P1, status:needs-design]
+    depends_on: [E7-1, E7-3]
+    epic: E11
+    doc_refs:
+      - corpus:RFC-0025
+      - corpus:RFC-0030
+      - corpus:RFC-0006
+      - corpus:DN-25
+    body: |
+      Finish the Mycelium surface language so that real programs and a self-hosted stdlib are
+      pleasant to write — ergonomic, complete, and backed by a ratified grammar. The surface
+      language must be complete and stable before the self-hosting capstone (E18-1) can port
+      the toolchain to Mycelium, and before downstream apps (E7-5 dogfooding / dfb) exercise
+      it at scale. This epic is the surface-language arm of the full-language 1.0.0 path
+      defined in DN-25 and ADR-022 (forthcoming).
+
+      User stories:
+      - As a language user writing a numeric algorithm, I want to write a * b + c rather than
+        add(mul(a, b), c), so that my code reads like the mathematics it encodes.
+      - As a stdlib author, I want closures and partial application so that I can write generic
+        combinators without duplicating logic per operator or type.
+      - As a tool author writing mycfmt or an editor syntax highlighter (DN-24), I want a
+        committed EBNF reference grammar, so that formatting and highlighting rules can be derived
+        mechanically.
+      - As a compiler engineer, I want RFC-0006 Q3 and Q8 resolved with committed normative text,
+        so that the surface has no pending open questions that could force breaking changes.
+      - As a downstream app developer, I want a ratified, stable surface I can rely on not
+        changing incompatibly, so that I can invest in tooling and training without surface churn.
+
+      Issues to resolve:
+      - Does the maintainer adopt the DN-23 hybrid (symbol sugar on top of word canonical) or
+        stay words-only? (Binding decision in RFC-0025.)
+      - What is the concrete spelling for RFC-0006 Q3 (implicit/explicit representation) and
+        Q8 (unsafe-class constructs)? (Binding decisions in RFC-0030.)
+      - Can dynamic HOF (closures, partial application) be implemented without adding a new L0
+        kernel node? (KC-3 constraint; flag if not — do not add silently.)
+      - Which RFC-0020 carve-outs (§4.2 polymorphic instantiation, §4.5 grow-derived traits)
+        are ready to enact now vs. needing more design?
+
+      Definition of Done:
+      - RFC-0025 is Proposed or Accepted with a normative precedence table and desugaring map.
+      - RFC-0030 is Proposed with a complete, updated mycelium.ebnf and conformance-corpus update.
+      - RFC-0006 Q3 and Q8 are resolved with committed normative text.
+      - RFC-0020 carved-out sections are enacted or explicitly re-deferred with forward refs.
+      - Dynamic HOF residuals (RFC-0024 §5) are addressed or honestly flagged as future work.
+      - just check is green on the integrated branch (all crates, all gates).
+      - No surface form in the conformance corpus is silently refused (G2).
+
+      Children: M-704 (full HOF — closures/partial application/dynamic fn-flow), M-705 (operator
+      syntax / RFC-0025), M-706 (concrete surface grammar / RFC-0030 ratification), M-707
+      (RFC-0020 L2 enactment), M-708 (surface stabilization).
+
+  - id: M-704
+    title: "M-704 — Full higher-order functions: closures, partial application, dynamic fn-flow"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    depends_on: [E7-3]
+    epic: E11
+    doc_refs:
+      - corpus:RFC-0025
+      - corpus:DN-25
+      - src:crates/mycelium-l1/src/mono.rs
+    body: |
+      RFC-0024 (static defunctionalization) landed named top-level functions as first-class values,
+      sufficient for std.result's map/and_then/fold. The explicit RFC-0024 §5 residuals — closures
+      that capture an environment, dynamic fn-flow through match arms or data fields, partial
+      application, and a still-generic function as a value — remain unimplemented. These are
+      required for a fully expressive stdlib (std.collections iterators, std.math combinators) and
+      for the self-hosting capstone (E18-1) to write the compiler's own passes in Mycelium.
+      Full HOF is a prerequisite for the full-language 1.0.0 surface to be "pleasant to write."
+
+      User stories:
+      - As a stdlib author, I want to write closures (fn(x) => expr) and pass them to higher-order
+        combinators, so that I can implement std.iter and std.collections without duplicating logic.
+      - As a compiler engineer porting the L1 frontend to Mycelium (E18-1), I want partial
+        application and dynamic fn-flow so that I can express the elaborator's recursive passes
+        without a Rust-style trait-object workaround.
+
+      Issues to resolve:
+      - Can closures and dynamic fn-flow be implemented via Reynolds defunctionalization (fn-tag
+        sum + apply dispatch) without adding a new L0 node? KC-3 is a hard constraint — flag
+        immediately if a kernel node is needed.
+      - Multi-argument arrows (A, B) -> C require a tuple type that the v0 surface defers. Is
+        the tuple type a prerequisite for multi-arg arrows, or can they be encoded as curried
+        single-arg arrows?
+
+      Definition of Done:
+      - Closure syntax (fn(x) => expr or an agreed form) is parsed and type-checked in
+        crates/mycelium-l1/src/parse.rs and checkty.rs.
+      - Dynamic fn-flow through match arms and data fields is lowered by mono.rs without adding
+        an L0 kernel node (KC-3); if a kernel node is needed, this task is blocked and flagged.
+      - Partial application is supported with an explicit surface form.
+      - The RFC-0024 §5 residual sites in mono.rs are resolved or re-flagged as Residual with
+        a forward issue ref (never silent, G2).
+      - Conformance fixtures in docs/spec/grammar/conformance/ cover all new forms.
+      - just check is green.
+
+  - id: M-705
+    title: "M-705 — Operator syntax (RFC-0025): infix sugar, precedence/associativity table"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    depends_on: []
+    epic: E11
+    doc_refs:
+      - corpus:RFC-0025
+      - corpus:DN-25
+      - src:crates/mycelium-l1/src/lexer.rs
+      - src:crates/mycelium-l1/src/parse.rs
+    body: |
+      Mycelium's surface is word-based for operations: add(a, b), mul(x, y). DN-23 recommends a
+      hybrid: keep words canonical in the kernel, add optional infix symbol sugar (a + b desugars
+      to add(a, b)) as a frontend-only pass — no kernel change (KC-3). This task implements that
+      decision (once RFC-0025 makes the binding choice) and delivers the precedence/associativity
+      table, the sugar grammar extension to mycelium.ebnf, and the desugaring pass wired into the
+      L1 frontend. Ergonomic symbolic math is needed for the stdlib (std.math, std.numerics) and
+      for dogfooding builds (dfb) to be pleasant to write.
+
+      User stories:
+      - As a language user writing a numeric algorithm, I want to write a * b + c rather than
+        add(mul(a, b), c), so that my code reads like the mathematics it encodes.
+      - As a compiler engineer, I want the desugaring reified in an EXPLAIN record so that the
+        transform is auditable (ADR-006: no black boxes).
+
+      Issues to resolve:
+      - Does the maintainer adopt the DN-23 hybrid or stay words-only? RFC-0025 must record this
+        binding decision before implementation begins.
+      - Which operators get sugar in v1 (arithmetic only, or bitwise/comparison/logical too)?
+      - Which existing precedence table is the source of truth (Rust, C, Haskell)?
+
+      Definition of Done:
+      - RFC-0025 records the binding precedence/associativity table and desugaring map.
+      - parse.rs parses infix operator expressions per the table (or the words-only decision is
+        committed and this task closes without a grammar change).
+      - mycelium.ebnf is updated with the operator-expression grammar (or a Residual note).
+      - The desugaring pass produces an EXPLAIN record (extends MonoSelections or a new
+        DesugarRecord).
+      - Conformance fixtures cover precedence ordering, associativity, and sugar-word equivalence.
+      - just check is green.
+
+  - id: M-706
+    title: "M-706 — Concrete surface grammar / L3 ratification (RFC-0030)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:spec, area:language, priority:P1, status:needs-design]
+    depends_on: [M-705]
+    epic: E11
+    doc_refs:
+      - corpus:RFC-0030
+      - corpus:RFC-0006
+      - corpus:DN-25
+      - src:docs/spec/grammar/mycelium.ebnf
+    body: |
+      The mycelium.ebnf grammar is currently a "v0 working fragment" covering what is implemented
+      in crates/mycelium-l1 today. It does not cover: full L2 surface forms (RFC-0020), effect
+      annotations (!{...} — in the parser but not in the EBNF), phylum/nodule organization
+      (M-662), operator sugar (M-705), or the guarantee-index annotation. RFC-0006 Q3 and Q8
+      remain open (the concrete spelling for ambient-representation and unsafe-class constructs).
+      A committed, complete EBNF reference grammar is required for tool authors, conformance
+      testing, and the self-hosting capstone (E18-1) — the ported compiler must parse the same
+      language the Rust compiler parses.
+
+      User stories:
+      - As a compiler engineer implementing a parser, I want a single normative EBNF document
+        covering the complete surface, so that I do not reconcile a partial grammar against
+        scattered RFC sections and implementation details.
+      - As a tool author (mycfmt, syntax highlighter), I want a machine-readable, complete
+        grammar so that I can derive tokenization and parse rules mechanically.
+
+      Issues to resolve:
+      - RFC-0006 Q3: which ambient-representation spelling is committed (implicit, explicit, hybrid)?
+      - RFC-0006 Q8: is wild { ... } the committed unsafe-class spelling, or does this RFC
+        explore alternatives?
+      - Should mycelium.ebnf remain a separate file extended by this RFC, or should this RFC
+        inline the complete grammar and mycelium.ebnf become a generated extract?
+
+      Definition of Done:
+      - docs/spec/grammar/mycelium.ebnf is updated to a complete L3 reference grammar covering
+        all surface forms (L2 sugar, effect annotations, phylum/nodule, operator grammar, @ g).
+      - RFC-0006 Q3 and Q8 are resolved with committed normative text in RFC-0030.
+      - The EBNF SURFACE STATUS header is updated from "v0 working fragment" to "ratified"
+        (append-only change to the EBNF comment block).
+      - New accept/reject conformance fixtures cover every grammar extension.
+      - parse.rs and the EBNF are in sync: every accepted production parses; every rejected
+        production is refused with an explicit error (G2).
+      - RFC-0030 is moved to Proposed (for maintainer review).
+
+  - id: M-707
+    title: "M-707 — RFC-0020 L2 surface term language enactment"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    depends_on: [E7-1]
+    epic: E11
+    doc_refs:
+      - corpus:RFC-0030
+      - corpus:DN-25
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      RFC-0020 was Accepted with carve-outs: §4.2 (polymorphic instantiation inference sugar),
+      §4.5 (grow-derived traits), and R20-Q1...Q5 were explicitly deferred. These carve-outs
+      are the richer L2 surface + inference machinery that makes writing polymorphic, trait-bearing
+      code ergonomic. They are required for the stdlib to be pleasant to write in Mycelium and
+      for the self-hosting capstone (E18-1) to be practical. Without them, the programmer must
+      always write fully explicit type annotations and manual trait dispatch.
+
+      User stories:
+      - As a stdlib author, I want polymorphic instantiation sugar (inferred type arguments at
+        call sites) so that I do not write explicit type parameters everywhere.
+      - As a language user, I want grow-derived trait forms so that common trait implementations
+        can be derived rather than written by hand.
+
+      Issues to resolve:
+      - Which RFC-0020 carve-outs are ready to enact now (unblocked by landed RFC-0018/RFC-0019)
+        vs. which need additional design?
+      - Does polymorphic instantiation inference interact with the operator sugar (M-705) in
+        ways that require coordination?
+
+      Definition of Done:
+      - RFC-0020 §4.2 (polymorphic instantiation sugar) is enacted in checkty.rs: inferred
+        type arguments at call sites where the type is unambiguous.
+      - RFC-0020 §4.5 (grow-derived forms) is enacted: at least one derived trait form works
+        end-to-end.
+      - R20-Q1...Q5 are each either enacted or explicitly re-deferred with a forward issue ref
+        (never silent, G2).
+      - RFC-0020 status is updated to Accepted (without the scoped qualifier) once all
+        carve-outs are enacted (append-only; only the maintainer ratifies this flip).
+      - just check is green.
+
+  - id: M-708
+    title: "M-708 — Surface stabilization: finalize E7-1 generics/traits/effects edge cases"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    depends_on: [E7-1]
+    epic: E11
+    doc_refs:
+      - corpus:RFC-0030
+      - corpus:DN-25
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      E7-1 (L1 Stage-1 Language Completeness) landed the core generics, traits, and effects
+      machinery. Edge cases, under-specified interactions, and undocumented behaviors remain —
+      discovered during dogfooding and the first self-hosted stdlib modules. Stabilizing these
+      is required before the surface is declared complete (E11-1 exit gate), and before tool
+      authors and the self-hosting capstone (E18-1) can rely on the surface not changing under
+      them. This task audits, fixes, and documents the edge cases to produce a stable-surface
+      declaration.
+
+      User stories:
+      - As a language user, I want the generics, traits, and effects surface to have no
+        undocumented surprises, so that I can write programs without hitting silent refusals or
+        unexpected behavior.
+      - As a tool author, I want a stable-surface declaration document, so that I can build
+        on the surface without fear of breaking changes.
+
+      Issues to resolve:
+      - Which E7-1 edge cases remain open (not yet discovered — the audit finds them)?
+      - Are there any generics/traits/effects interactions that produce silent incorrect behavior
+        rather than an explicit CheckError (a G2 violation if so)?
+
+      Definition of Done:
+      - An audit pass over crates/mycelium-l1/src/ identifies all known edge cases in
+        generics, traits, and effects.
+      - Each edge case is either fixed (with a test) or explicitly deferred (with a forward
+        issue ref and an honest capability label).
+      - A stable-surface declaration document is committed summarizing what is present, what
+        is deferred, and what the guarantee level is (Declared for the checker contract).
+      - No surface form produces a silent incorrect result (G2); every refusal is explicit.
+      - just check is green.
+
+  - id: E18-1
+    title: "E18-1 (epic) — Self-hosting capstone (toolchain + libs in Mycelium)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P2, status:needs-design]
+    depends_on: [E11-1, E13-1]
+    epic: E18
+    doc_refs:
+      - corpus:DN-26
+      - corpus:DN-14
+      - corpus:DN-25
+    body: |
+      The capstone criterion of full-language 1.0.0 (ADR-022, forthcoming; DN-25): everything
+      beyond the bare Rust mycelium-core kernel is written in Mycelium (.myc files) and the
+      toolchain bootstraps from itself. This is distinct from the Rust kernel's 1.0.0 (ADR-021,
+      Accepted) which explicitly scopes self-hosting to Phase 5. DN-14 (Resolved, 2026-06-23)
+      confirms the surface is now self-hosting capable; lib/std/result.myc is the first
+      self-hosted nodule. This epic drives the staged port of the L1 frontend and the bootstrap
+      CI gate that witnesses the capstone criterion is met.
+
+      User stories:
+      - As a language user who wants to audit the compiler, I want the frontend (lexer/parser/
+        checker) written in Mycelium, so that I can read and verify the implementation in the
+        same language I use to write programs.
+      - As a maintainer, I want a three-way differential CI gate (Rust-host vs self-host vs
+        AOT), so that the self-hosted compiler is continuously verified against the Rust frontend.
+      - As a downstream app developer evaluating Mycelium for production, I want evidence that
+        the language can build non-trivial real programs (including itself), so that I can assess
+        maturity beyond hello-world-scale examples.
+      - As an AI co-author agent generating Mycelium code, I want the compiler written in
+        Mycelium so that I can use the same language tooling to inspect and verify my outputs.
+
+      Issues to resolve:
+      - What is the concrete port order for crates/mycelium-l1/src/ files (the DN-26 §4 sketch
+        is advisory; M-739 makes it concrete)?
+      - How is the wild/FFI execution gap (DN-14 row 9, staged) handled during the port? The
+        ported compiler needs file I/O; what is the plan before wild execution is fully wired?
+      - What is the bootstrap protocol: stage 2 (self-hosted compiler compiles itself) or a
+        three-way differential (Rust-host == self-host == AOT)?
+
+      Definition of Done:
+      - DN-26 is filled out with a concrete, agreed port order and per-stage gates (M-739).
+      - The L1 frontend (lexer, parser, checker, elaborator, mono) is ported to .myc with a
+        passing three-way differential for each stage (Empirical — differential agreement across
+        trials; VR-5: not upgraded to Proven without a theorem).
+      - The self-hosted frontend passes the full L1 conformance corpus without regression.
+      - A ratification document records that the DN-14 self-hosting gate is met at the
+        full-toolchain level, with the differential evidence cited and graded Empirical.
+      - The CI pipeline includes a bootstrap gate (just bootstrap or equivalent) that builds
+        the compiler with itself and runs the three-way differential automatically.
+      - cargo-mutants on the Rust frontend witnesses the differential before the port is
+        declared canonical.
+      - The full-language 1.0.0 capstone criterion (ADR-022) is demonstrably met.
+
+      Children: M-739 (self-hosting bootstrap plan + staged port order), M-740 (port L1
+      frontend to .myc with differential), M-741 (ratify self-hosted toolchain as canonical),
+      M-742 (self-hosting CI gate: bootstrap + three-way differential + mutant-witnessed).
+
+  - id: M-739
+    title: "M-739 — Self-hosting bootstrap plan (DN-26) + staged port order"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P2, status:needs-design]
+    depends_on: [E11-1]
+    epic: E18
+    doc_refs:
+      - corpus:DN-26
+      - corpus:DN-14
+      - corpus:DN-25
+      - src:crates/mycelium-l1/src/lexer.rs
+    body: |
+      Before porting any Rust frontend code to Mycelium (M-740), the port order and stage gates
+      must be agreed and committed. DN-26 (Draft, 2026-06-23) is the planning stub; this task
+      fills it out: which files in crates/mycelium-l1/src/ move first, what their mutual
+      dependencies imply for sequencing, where the new .myc files live (e.g., lib/compiler/),
+      and what the stage gate criterion is for each wave. A clear plan prevents mid-port
+      discoveries from causing costly resequencing.
+
+      User stories:
+      - As a compiler engineer doing the port, I want a concrete, agreed port order before I
+        start, so that I do not discover mid-port that a dependency was not yet ported.
+
+      Issues to resolve:
+      - What is the concrete directory structure for the self-hosted frontend (.myc files)?
+      - How does the port handle files with mutual Rust dependencies (elab.rs <-> checkty.rs)?
+      - What are the practical bootstrap steps (justfile recipe) for each stage gate?
+
+      Definition of Done:
+      - DN-26 is updated (append-only) with: the concrete port order per stage, the directory
+        structure for lib/compiler/ (or chosen equivalent), and the stage gate criterion for
+        each wave (a passing differential or a conformance-corpus pass).
+      - The plan is reviewed by the maintainer and recorded (not ratified normatively -- it is
+        advisory planning, DN posture).
+      - No code is changed by this task (design only).
+
+  - id: M-740
+    title: "M-740 — Port the L1 frontend (lexer/parser/checker) to Mycelium (.myc)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
+    depends_on: [M-739, E11-1]
+    epic: E18
+    doc_refs:
+      - corpus:DN-26
+      - corpus:DN-14
+      - corpus:DN-25
+      - src:crates/mycelium-l1/src/lexer.rs
+      - src:lib/std/result.myc
+    body: |
+      Following the port order agreed in M-739, implement the staged port of the L1 frontend
+      from Rust to Mycelium. Each stage produces .myc source files in lib/compiler/ (or the
+      agreed directory), a passing three-way differential (Rust-hosted compiler output == self-
+      hosted compiler output == AOT for a shared test program), and a green just check. The port
+      is the largest implementation task of the self-hosting capstone and is itself a multi-wave
+      swarm (one leaf agent per stage, sequenced per the M-739 plan).
+
+      User stories:
+      - As a language user, I want the compiler written in Mycelium so that I can audit the
+        implementation in the same language I write programs.
+      - As a compiler engineer, I want each stage of the port to have a differential witness,
+        so that regressions are caught at stage boundaries.
+
+      Issues to resolve:
+      - Which Rust standard library types (HashMap, Vec, String) are used in the frontend and
+        how are they replaced in the self-hosted version (self-hosted std.collections, or wild)?
+      - Does the port surface any gaps in the Mycelium surface language that require E11-1
+        items to be re-opened?
+
+      Definition of Done:
+      - The L1 frontend (lexer, parser, checker, elaborator, mono) is ported to .myc per the
+        M-739 stage plan.
+      - Each stage has a passing three-way differential (Empirical -- differential agreement
+        across trials; VR-5: not upgraded to Proven).
+      - The self-hosted frontend passes the full L1 conformance corpus without regression.
+      - just check is green on the integrated branch.
+      - No Rust source file in crates/mycelium-l1/src/ is deleted or modified (the Rust
+        frontend remains as the reference host compiler until M-741 ratification).
+
+  - id: M-741
+    title: "M-741 — Ratify the self-hosted toolchain as canonical (DN-14 gate at full scale)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
+    depends_on: [M-740, E13-1]
+    epic: E18
+    doc_refs:
+      - corpus:DN-26
+      - corpus:DN-14
+      - corpus:DN-25
+    body: |
+      When M-740 (port) and E13-1 (stdlib completeness) are both landed, ratify the self-hosted
+      toolchain as canonical -- confirming that the DN-14 self-hosting gate is met at the
+      full-toolchain level (not just for std.result). This is a formal record-keeping and
+      verification task: the differential evidence is reviewed, graded Empirical, and committed
+      as an append-only entry in DN-26 (or a new ADR if the maintainer decides a binding
+      decision is needed). The capstone criterion of full-language 1.0.0 is not declared until
+      this task and M-742 are both done.
+
+      User stories:
+      - As a maintainer, I want a formal ratification record that the self-hosted toolchain
+        passes the DN-14 gate, so that the full-language 1.0.0 capstone criterion is grounded
+        in evidence, not intent.
+
+      Issues to resolve:
+      - Is DN-14 Status -> Resolved (already done for std.result) the right record, or does the
+        full-toolchain ratification warrant a new ADR?
+      - What is the required evidence strength for "canonical"? (Empirical differential is the
+        minimum; Proven would require a formal proof -- not required here, VR-5.)
+
+      Definition of Done:
+      - A ratification record is committed (append-only entry in DN-26, or a new ADR) confirming:
+        (a) DN-14 gate is met at the full-toolchain level; (b) the differential evidence is cited
+        and graded Empirical; (c) the full conformance corpus passes against the self-hosted
+        compiler.
+      - The ratification is not pre-declared: the evidence (M-740 differential results) must
+        exist before this task closes.
+
+  - id: M-742
+    title: "M-742 — Self-hosting CI gate: bootstrap + three-way differential + mutant-witnessed"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:language, priority:P2, status:needs-design]
+    depends_on: [M-741]
+    epic: E18
+    doc_refs:
+      - corpus:DN-26
+      - corpus:DN-25
+      - src:crates/mycelium-l1/src/lexer.rs
+    body: |
+      Make the self-hosting capstone durable: wire a bootstrap CI gate so that the self-hosted
+      compiler is continuously verified against the Rust frontend. The gate must: (a) build the
+      self-hosted compiler using the Rust-hosted compiler, (b) use the self-hosted compiler to
+      compile a test program, (c) use the AOT-compiled output to compile the same test program,
+      (d) diff (b) and (c) for equality. Additionally, cargo-mutants on the Rust frontend must
+      witness the differential -- survivors would identify genuine test gaps. This gate is the
+      full-language 1.0.0 durability equivalent of WS8 for the kernel.
+
+      User stories:
+      - As a maintainer, I want the bootstrap CI gate to fail loudly if the self-hosted and
+        Rust-hosted compilers diverge, so that a regression in the port is caught automatically.
+      - As a compiler engineer, I want cargo-mutants on the Rust frontend to witness the
+        differential, so that a mutation that changes compiler behavior also breaks the CI gate.
+
+      Issues to resolve:
+      - What is the just recipe name (just bootstrap, just self-host-check, or other)?
+      - Which tier (just check or just check-full) does the bootstrap gate belong to? (Bootstrap
+        is expensive; Tier 2 is likely, but the maintainer must decide.)
+      - What test programs are used for the three-way differential?
+
+      Definition of Done:
+      - A just bootstrap recipe exists that runs the full three-way differential.
+      - The recipe is wired into just check-full (or the tier the maintainer decides).
+      - cargo-mutants on crates/mycelium-l1/src/ witnesses the differential: a mutant that
+        changes compiler behavior causes the bootstrap gate to fail.
+      - The CI pipeline runs the bootstrap gate on the release branch before the full-language
+        1.0.0 tag is cut.
+      - just check is green (bootstrap at the chosen tier).
+  - id: E12-1
+    title: "E12-1 (epic) — Runtime & concurrency execution maturity (RFC-0008)"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:epic, area:execution, priority:P1, status:needs-design]
+    depends_on: [E7-2]
+    epic: E12
+    doc_refs: [corpus:RFC-0008, corpus:RFC-0027, corpus:ADR-020, corpus:DN-25]
+    body: |
+      Grow the skeletal v0 runtime (std.runtime R1 API exists in crates/mycelium-std-runtime)
+      into a real, stable concurrency runtime — required for a fully-usable language at 1.0.0.
+      The R1 slice (Colony/Scope/Task/Network, M-521) is landed; E7-2's hypha/colony/fuse/reclaim
+      L1 constructs activate the vocabulary. This epic makes them execute end-to-end: a real
+      scheduler on OS threads, the full RFC-0008 vocabulary running, deadlock-freedom enforced,
+      the reclamation model (RFC-0027) live, and structured-concurrency supervision with
+      never-silent failure propagation. Kickoff: .claude/kickoffs/r10.md.
+
+      User stories:
+      - As a language user, I want colony/hypha concurrency to execute on real OS threads, so
+        that my Mycelium programs can use all available cores without a single-threaded fiction.
+      - As a library/phylum author building on std.runtime, I want fuse/reclaim/tier to elaborate
+        and dispatch end-to-end, so that I can write supervision policies and merge operations
+        that actually run.
+      - As a compiler engineer, I want the RFC-0008 sweep-order property to be a checked
+        assertion (not a prose claim), so that deadlock-freedom is verifiable and never-silent.
+      - As a downstream app developer, I want structured-concurrency cancellation to propagate
+        honestly through the Colony tree, so that a cancelled scope never silently leaks a task.
+      - As a maintainer, I want the reclamation model (RFC-0027) live and EXPLAIN-able, so that
+        every reclamation event is auditable and the "no silent GC pause" stance is enforced by
+        the runtime, not just asserted in prose.
+
+      Issues to resolve:
+      - What scheduler design (OS-thread pool, work-stealing, cooperative round-robin) satisfies
+        RFC-0008 RT1/RT2 fairness + backpressure at the Empirical guarantee level?
+      - How does the reclamation cascade respect the sweep order (RFC-0008 §4.3)? Is the coupling
+        strong (required) or weak (permitted)?
+      - When RFC-0027 reaches Accepted, what elaboration changes in elab.rs are needed to lower
+        the reclaim construct to the runtime Supervisor API?
+      - Does M-710 (vocabulary execution) depend on M-709 (scheduler) at the elab level, or only
+        at the runtime dispatch level?
+
+      Definition of Done:
+      - Real OS-thread scheduler runs Colony/Scope tasks; fairness + backpressure documented and
+        tagged Empirical (in-repo property test).
+      - RFC-0008 R1 vocabulary (fuse/reclaim/tier) elaborates and dispatches; no Residual for any
+        R1 construct; RT1-RT7 invariants hold by test.
+      - Deadlock is never silent: sweep-order property is a checked assertion; violation is an
+        explicit Deadlock error (G2), not a hang.
+      - RFC-0027 reclamation model live: EXPLAIN records for reclamation events; cascade respects
+        sweep order (property-tested).
+      - Structured-concurrency supervision end-to-end: cancelled Colony propagates failure to
+        every child; CancelToken path exercised by a never-silent property test.
+      - just check green across all modified crates; guarantee tags honest per VR-5.
+      - Orchestrator-owned files reconciled: CHANGELOG, issues.yaml updated, api-index
+        regenerated.
+
+      Children: M-709 (real scheduler: hypha/colony on OS threads, fairness + backpressure) /
+      M-710 (runtime vocabulary execution: fuse/reclaim/tier/mesh/xloc/cyst end-to-end) /
+      M-711 (deadlock-freedom: RFC-0008 sweep-order property checked/enforced, never-silent) /
+      M-712 (memory management & reclamation per RFC-0027: reclaim model + lifetime guarantees,
+      EXPLAIN-able) / M-713 (structured-concurrency supervision + cancellation with never-silent
+      failure propagation).
+
+  - id: M-709
+    title: "M-709 — feat(runtime): real scheduler — hypha/colony execution on OS threads, fairness + backpressure"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    depends_on: [E7-2]
+    epic: E12-1
+    doc_refs: [corpus:RFC-0008, corpus:RFC-0027, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
+    body: |
+      The v0 R1 runtime (M-521, crates/mycelium-std-runtime) implements a cooperative single-
+      threaded scheduler (run_sequential/run_interleaved/run_dataflow). For production use and
+      full-language 1.0.0, Colony/Scope tasks must execute on OS threads with fairness guarantees
+      and backpressure. This issue replaces the cooperative stub with a real OS-thread pool
+      scheduler satisfying RFC-0008 RT1 (values move, no shared mutable state) and RT2
+      (deterministic fragment is the default and trusted base).
+
+      User stories:
+      - As a language user, I want Colony/hypha concurrency to run on real OS threads, so that
+        my programs exploit available cores.
+      - As a compiler engineer, I want the scheduler to satisfy the RFC-0008 RT2 sequentialization
+        differential, so that the Empirical guarantee tag is backed by a property test.
+
+      Issues to resolve:
+      - Which scheduler design (work-stealing a la rayon, simple thread pool, or cooperative)
+        best preserves RT2 determinism while enabling real parallelism?
+      - How is backpressure (demand-signalled per RFC-0008 §4.3) expressed in the scheduler API?
+
+      Definition of Done:
+      - Colony/Scope tasks run on OS threads; thread count configurable.
+      - RT2 sequentialization differential holds (in-repo property test, tagged Empirical).
+      - Backpressure is demand-signalled, never a silent unbounded buffer (G2).
+      - just check green for crates/mycelium-std-runtime; guarantee matrix updated.
+
+  - id: M-710
+    title: "M-710 — feat(l1+runtime): runtime vocabulary execution — fuse/reclaim/tier/mesh/xloc/cyst end-to-end"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    depends_on: [E7-2, M-709]
+    epic: E12-1
+    doc_refs: [corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs, src:crates/mycelium-mlir/src/runtime.rs]
+    body: |
+      E7-2's leaves (M-666/M-667) activate fuse/reclaim/tier as L1 surface constructs with
+      Residual elaboration stubs. This issue makes them execute: elaborates each RFC-0008 R1
+      construct through to the runtime dispatch layer (the M-709 scheduler + the mycelium-mlir
+      runtime primitives). Subsumes the E7-2 lexer-to-L1-activation path for execution.
+
+      User stories:
+      - As a language user, I want fuse/reclaim/tier to do real work when my program runs, so
+        that RFC-0008's runtime vocabulary is usable, not just parseable.
+      - As a compiler engineer, I want each construct's elaboration to close the Residual gap
+        and produce testable L0 or runtime dispatch, so that the three-way differential extends
+        to cover runtime vocabulary.
+
+      Issues to resolve:
+      - Which of fuse/reclaim/tier can be elaborated before M-709's scheduler is done, and which
+        are blocked on it?
+      - Does fuse require session/protocol typing (RFC-0008 §4.3 hook) before it can execute, or
+        can a structural semilattice check suffice for R1?
+
+      Definition of Done:
+      - fuse/reclaim/tier elaborate to runtime calls (no Residual); each has a property test.
+      - RFC-0008 R1 vocabulary execution is end-to-end verified by the three-way differential
+        (at least one construct per vocabulary term).
+      - just check green for affected crates; guarantee tags Empirical (trial-tested).
+
+  - id: M-711
+    title: "M-711 — verify(runtime): deadlock-freedom — RFC-0008 sweep-order property checked/enforced, never-silent"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:verification, area:execution, priority:P1, status:needs-design]
+    depends_on: [M-709]
+    epic: E12-1
+    doc_refs: [corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
+    body: |
+      RFC-0008 §4.3 defines a sweep-order property (Kahn-determinism differential; the existing
+      run_dataflow returns Err(Deadlock) explicitly). With the real OS-thread scheduler (M-709),
+      the sweep-order invariant must be checked/enforced across threads — not just on the
+      cooperative single-threaded path. Deadlock must never be a silent hang: it is always an
+      explicit Deadlock error (G2).
+
+      User stories:
+      - As a compiler engineer, I want a property test that checks the sweep-order invariant
+        holds under the real scheduler, so that deadlock-freedom is Empirical (not Declared).
+
+      Issues to resolve:
+      - Can deadlock be detected eagerly (at schedule time) or only lazily (at a full-stall
+        epoch)? The answer affects the Empirical/Declared tag.
+
+      Definition of Done:
+      - A property test asserts that any stalled Colony emits Deadlock, never hangs silently.
+      - Sweep-order invariant is checked across OS threads (not just cooperative path).
+      - Guarantee tag: Empirical if property test covers real scheduler; Declared otherwise.
+      - just check green.
+
+  - id: M-712
+    title: "M-712 — feat(runtime): memory management & reclamation (RFC-0027) — reclaim model + lifetime guarantees, EXPLAIN-able"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    depends_on: [M-709]
+    epic: E12-1
+    doc_refs: [corpus:RFC-0027, corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
+    body: |
+      Implement the runtime memory management and reclamation model as specified by RFC-0027
+      (once Accepted). The reclaim surface construct (reserved in ADR-020) must elaborate to
+      a real runtime path: EXPLAIN records for reclamation events, cascade respects RFC-0008
+      §4.3 sweep order, and reclamation is never silent (G2 — no silent drop, no silent pause).
+
+      User stories:
+      - As a language user, I want to know when and why values are reclaimed, so that I can
+        reason about memory lifecycle without a hidden GC pause.
+
+      Issues to resolve:
+      - RFC-0027 must be Accepted before implementation begins — this issue is gated on that.
+      - What is the EXPLAIN record schema for a reclamation event (scope id, sweep epoch,
+        reclaimed bytes, RFC-0027 policy applied)?
+
+      Definition of Done:
+      - RFC-0027 is Accepted (gate).
+      - reclaim elaborates to runtime reclamation with EXPLAIN record (no silent drop; G2).
+      - Reclamation cascade respects sweep order (property test; tagged Empirical if tested).
+      - just check green.
+
+  - id: M-713
+    title: "M-713 — feat(runtime): structured-concurrency supervision + cancellation with never-silent failure propagation"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    depends_on: [M-709]
+    epic: E12-1
+    doc_refs: [corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
+    body: |
+      RFC-0008 RT7 requires structured concurrency: a scope does not exit until all children
+      complete or are cancelled. The v0 R1 runtime has CancelToken/TaskOutcome (M-356) but the
+      full supervision tree (OTP-style restart policies, cascade cancellation) is not yet
+      end-to-end. This issue makes cancellation propagate through the Colony tree with
+      never-silent failure reporting.
+
+      User stories:
+      - As a downstream app developer, I want a cancelled Colony to propagate failure to every
+        child and report each outcome explicitly, so that partial failures are never silently
+        swallowed.
+
+      Issues to resolve:
+      - Does the supervision policy (RestartIntensity from M-356) belong in std.runtime or in a
+        reclaim sub-construct (per ADR-020 recommendations)?
+
+      Definition of Done:
+      - Cancellation propagates through the Colony tree to all children (never-silent; G2).
+      - A never-silent property test covers cancel + outcome collection.
+      - Supervision policy (at least one restart strategy) is live and EXPLAIN-able.
+      - just check green.
+
+  - id: E14-1
+    title: "E14-1 (epic) — FFI & system interface"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:epic, area:execution, priority:P1, status:needs-design]
+    depends_on: []
+    epic: E14
+    doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25]
+    body: |
+      The wild/@std-sys FFI gate type-checks and is capability-gated (M-661, DN-14 row 9) but
+      execution is staged as an explicit Residual. Every stdlib module that bottoms out in a
+      syscall (std.io, std.fs, std.sys, std.rand, std.time) is therefore non-executable until
+      the FFI floor executes for real. For full-language 1.0.0, programs must do real I/O and
+      link C/Rust. This epic implements the capability-based FFI model (RFC-0028), makes wild
+      execute, binds real syscalls, and audits the unsafe floor (ADR-014). Kickoff:
+      .claude/kickoffs/ffi10.md.
+
+      User stories:
+      - As a language user, I want to write Mycelium programs that read files, write output, and
+        generate entropy, so that Mycelium is usable for real programs at 1.0.0, not just
+        in-memory demos.
+      - As a library/phylum author writing std.io or std.rand, I want a normative FFI model with
+        Declared guarantee tags on syscall-backed operations, so that the guarantee matrix
+        (RFC-0016 §4.5) is grounded and auditable.
+      - As a compiler engineer, I want the wild elaboration path to be a concrete, testable
+        dispatch target (not a Residual stub), so that the three-way differential extends to
+        wild-backed operations and DN-14 row 9 is fully closed.
+      - As a tool author building sandboxing on top of Mycelium, I want the capability model to
+        be an explicit surface (not ambient OS permissions), so that a program without the io
+        capability cannot obtain it through a side channel.
+      - As an AI co-author agent generating Mycelium stdlib code, I want the FFI protocol
+        (capability annotation + wild body + SAFETY comment + guarantee tag) to be normative
+        and verifiable, not inferred from source conventions.
+      - As a maintainer, I want just safety-check to audit every wild site mechanically
+        (SAFETY comment present, @std-sys context, !{ffi} annotation), so that the trusted-base
+        boundary (ADR-007) is auditable as the FFI surface grows.
+
+      Issues to resolve:
+      - Is the capability model a Mycelium-language-level type (a Capability<io> value) or a
+        build-time attribute (@std-sys is the full check, nothing runtime)?
+      - What is the wild execution host: a Rust FFI trampoline baked into the interpreter, or a
+        capability handle passed into the Scope context?
+      - What guarantee tag is correct for a successfully-executed wild block: Declared (audited,
+        not verified) or Empirical if covered by an in-repo property test?
+      - How does just safety-check scope: SAFETY comment presence only (ADR-014), or also
+        Mycelium-level audit (@std-sys context + !{ffi} annotation verified)?
+
+      Definition of Done:
+      - wild blocks in @std-sys nodules execute for real; Residual gap closed; three-way
+        differential covers at least one wild-backed operation.
+      - Capability model implemented: wild outside @std-sys remains a hard CheckError (G2).
+      - Real syscall bindings: std.io (read/write), std.fs (open/close/read/write/stat),
+        std.rand (entropy), std.time (clock) — each with a Declared guarantee matrix row.
+      - ADR-014 unsafe-floor confinement: every wild site carries SAFETY comment; just
+        safety-check mechanically verifies and is green.
+      - Never-silent error paths: every syscall failure is an explicit Result/Option (G2).
+      - just check green across all modified crates; guarantee tags honest per VR-5.
+      - Orchestrator-owned files reconciled: CHANGELOG, issues.yaml updated, api-index
+        regenerated.
+
+      Children: M-720 (FFI surface per RFC-0028: capability-based Mycelium<->C/Rust calls,
+      never-silent ABI claims) / M-721 (wild host execution: make @std-sys FFI floor execute
+      — DN-14 row 9 full closure) / M-722 (syscall binding: real io/fs/sys bindings,
+      sandboxed + capability-gated) / M-723 (time/clock + rand entropy real bindings hardened
+      for 1.0) / M-724 (FFI safety: ADR-014 unsafe-floor confinement for the FFI surface,
+      audited + just safety-check green).
+
+  - id: M-720
+    title: "M-720 — feat(ffi): FFI surface (RFC-0028) — capability-based Mycelium<->C/Rust calls, never-silent ABI claims"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    depends_on: []
+    epic: E14-1
+    doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-sys/src/lib.rs]
+    body: |
+      Implement the capability-based FFI surface as specified by RFC-0028 (once Accepted). This
+      includes: the elab.rs Residual-to-dispatch change for wild blocks in @std-sys context, the
+      ABI boundary protocol (value layout, calling convention, SAFETY comment requirement), and
+      the never-silent ABI claim policy (a wild block that violates its ascribed type is a hard
+      runtime error, never a silent wrong-type call). RFC-0028 must be Accepted before this
+      issue begins (gate).
+
+      User stories:
+      - As a language user, I want wild blocks to execute real C/Rust functions when my program
+        runs in an @std-sys nodule, so that FFI is available and honest.
+
+      Issues to resolve:
+      - RFC-0028 must be Accepted (gate on this issue).
+      - Does the elab.rs change require a new elaboration variant or can the Residual node be
+        replaced in-place?
+
+      Definition of Done:
+      - RFC-0028 Accepted (gate).
+      - wild in @std-sys elaborates to a concrete runtime dispatch (no Residual).
+      - ABI boundary protocol is normative: SAFETY comment required; violation is explicit error.
+      - just check green for crates/mycelium-l1 + crates/mycelium-std-sys.
+
+  - id: M-721
+    title: "M-721 — feat(ffi): wild host execution — @std-sys FFI floor executes (DN-14 row 9 full closure)"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    depends_on: [M-720]
+    epic: E14-1
+    doc_refs: [corpus:RFC-0028, corpus:DN-25, src:crates/mycelium-std-sys/src/lib.rs, src:crates/mycelium-mlir/src/jit.rs]
+    body: |
+      M-661 staged wild execution as an explicit Residual (DN-14 row 9: conditionally present,
+      execution staged). M-720 changes elab.rs to dispatch; this issue implements the host-side
+      execution shim: the Rust trampoline or capability handle that resolves a wild block call to
+      a real C/Rust function at runtime. The jit.rs dlopen/dlsym pattern (the only current unsafe
+      site) is the reference for confinement discipline.
+
+      User stories:
+      - As a compiler engineer, I want the three-way differential to cover a wild-backed
+        operation, so that DN-14 row 9 is fully closed (Empirical, not just Declared).
+
+      Issues to resolve:
+      - Trampoline vs capability handle (RFC-0028 decision; gated on that RFC).
+      - Does the host shim live in mycelium-std-sys or in the interpreter/runtime layer?
+
+      Definition of Done:
+      - A wild block in an @std-sys nodule executes a real host function end-to-end.
+      - Three-way differential covers at least one wild-backed operation (Empirical tag).
+      - SAFETY comment on every unsafe site; confined per ADR-014/DN-21 pattern.
+      - just check green.
+
+  - id: M-722
+    title: "M-722 — feat(std-sys): syscall binding — real io/fs/sys bindings, sandboxed + capability-gated"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    depends_on: [M-721]
+    epic: E14-1
+    doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-io/src/io.rs, src:crates/mycelium-std-fs/src/lib.rs, src:crates/mycelium-std-sys/src/lib.rs]
+    body: |
+      crates/mycelium-std-{io,fs,sys} are partial/stub today. With M-721's wild execution floor
+      live, implement real syscall bindings: io (read/write/flush), fs (open/close/read/write/
+      stat/remove), and sys (process/env basics). Each binding is sandboxed (capability-gated via
+      @std-sys), carries a Declared guarantee matrix row (RFC-0016 §4.5 format), and uses
+      never-silent fallibility (every syscall error is an explicit Result::Err, never ignored).
+
+      User stories:
+      - As a language user, I want std.io and std.fs to work for real file and stream I/O, so
+        that Mycelium programs can do useful work.
+
+      Issues to resolve:
+      - Which syscalls are in scope for v0 (minimum for 1.0.0)?
+      - Does each binding need its own SAFETY comment, or does a module-level comment cover the
+        @std-sys nodule?
+
+      Definition of Done:
+      - std.io: read/write operations execute; Declared guarantee matrix row each.
+      - std.fs: open/close/read/write/stat/remove execute; Declared guarantee matrix rows.
+      - std.sys: at minimum process exit and env variable read; Declared.
+      - All bindings capability-gated; every syscall failure is explicit Result/Option (G2).
+      - just check green.
+
+  - id: M-723
+    title: "M-723 — feat(std-sys): time/clock + rand entropy real bindings hardened for 1.0"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    depends_on: [M-721]
+    epic: E14-1
+    doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-rand/src/lib.rs, src:crates/mycelium-std-time/src/lib.rs]
+    body: |
+      crates/mycelium-std-rand and mycelium-std-time are partial stubs. With the wild execution
+      floor live (M-721), implement and harden the real bindings: time/clock (monotonic +
+      wall-clock reads via syscall), and rand entropy (OS entropy source — /dev/urandom or
+      getrandom(2)). Both carry the !{time} and !{entropy} effects respectively (M-660 effect
+      annotations), Declared guarantee tags, and never-silent error paths.
+
+      User stories:
+      - As a language user, I want std.rand and std.time to return real OS entropy and clock
+        values, so that Mycelium programs can do random number generation and timing correctly.
+
+      Issues to resolve:
+      - Is getrandom(2) the required entropy source, or is /dev/urandom acceptable for v0?
+      - Does wall-clock time carry a Declared tag only (monotonic reads are Exact structurally)?
+
+      Definition of Done:
+      - std.time: monotonic and wall-clock reads execute; Declared (wall-clock) / Exact
+        (structural monotonicity) guarantee tags.
+      - std.rand: OS entropy read executes; Declared guarantee tag; never-silent on failure.
+      - Effect annotations correct: !{time} and !{entropy} match M-660 coverage checker.
+      - just check green.
+
+  - id: M-724
+    title: "M-724 — verify(ffi): FFI safety — ADR-014 unsafe-floor confinement for FFI surface, audited + just safety-check green"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:verification, area:execution, priority:P1, status:needs-design]
+    depends_on: [M-720, M-721, M-722, M-723]
+    epic: E14-1
+    doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-sys/src/lib.rs, src:crates/mycelium-mlir/src/jit.rs]
+    body: |
+      After M-720 through M-723 land, audit the full FFI surface against ADR-014 confinement
+      requirements and add a just safety-check gate that verifies the audit mechanically in CI.
+      Every wild site in an @std-sys nodule must carry a SAFETY comment specifying the ABI
+      contract; every unsafe Rust block in the FFI layer must be confined per the DN-21/M-682
+      pattern (SAFETY comment + cfg_attr release-silent).
+
+      User stories:
+      - As a maintainer, I want just safety-check to fail if any wild site lacks a SAFETY
+        comment, so that the trusted-base boundary is auditable as the FFI surface grows.
+
+      Issues to resolve:
+      - Should just safety-check check only SAFETY comment presence (current ADR-014 scope) or
+        also verify @std-sys context + !{ffi} annotation for every wild site?
+      - Does the check live in scripts/checks/safety.sh or as a cargo xtask?
+
+      Definition of Done:
+      - Every wild site in @std-sys nodules has a SAFETY comment specifying the ABI contract.
+      - just safety-check recipe exists and is green (CI-runnable).
+      - Any future wild site without a SAFETY comment fails just safety-check (gate, not lint).
+      - just check green (safety-check is part of the check suite).
+  - id: E13-1
+    title: "E13-1 (epic) -- Standard library in Mycelium (self-hosted stdlib + core libs)"
+    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:stdlib, priority:P1, status:needs-design]
+    depends_on: [E11-1]
+    epic: E13
+    doc_refs:
+      - corpus:RFC-0031
+      - corpus:RFC-0016
+      - corpus:DN-25
+    body: |
+      THE defining full-language-1.0.0 criterion: the stdlib and libraries beyond the bare Rust
+      core are written fully in Mycelium (.myc), stable, and fully usable. Today only
+      lib/std/result.myc self-hosts (M-649); all other mycelium-std-* crates are Rust-first.
+      This epic delivers the complete migration -- core/prelude, collections, text+fmt,
+      math+numerics -- differential-tested and stable, so that the language is genuinely
+      self-hosting at the library layer and the full honesty contract (G2/VR-5) is visible at
+      source level in every stdlib op. The Rust kernel (mycelium-core/l0/l1) stays Rust; that
+      boundary is defined by RFC-0031.
+
+      User stories:
+      - As a language user, I want to import std.collections, std.text, and std.math as .myc
+        nodules, so that my programs do not depend on Rust internals and the honesty contract
+        is visible at source level.
+      - As a stdlib author, I want a clear per-module stability bar (differential tests,
+        guarantee-tag obligations, API-freeze criteria), so that I know when a .myc port is
+        done without ad hoc review criteria at each PR.
+      - As a compiler engineer, I want the phylum layout and layering defined before any port
+        begins (RFC-0031 Accepted), so that import paths, content-addressed identity (ADR-003),
+        and spore packaging (ADR-013) are consistent across the migration.
+      - As a library/phylum author, I want the per-module stability bar documented, so that
+        a contributed .myc phylum can be accepted by the same criteria as the core stdlib ports.
+      - As a maintainer, I want the migration sequenced by language-surface readiness (RFC-0024
+        HOF for combinators, RFC-0019 traits for iter/cmp/Ord/Eq, operator syntax for math),
+        so that each increment is reviewable and the wave is not a big-bang rewrite.
+      - As a downstream app developer, I want every ported std module to have a stable,
+        documented API before I depend on it, so that upgrading Mycelium does not silently
+        break my code.
+
+      Issues to resolve:
+      - What is the irreducible-Rust boundary -- which mycelium-std-* crates can never be .myc
+        (bootstrapping, unsafe memory, platform I/O)?
+      - What is the correct phylum layout and nodule naming (lib/std/ root, import paths,
+        versioning) consistent with ADR-003 and ADR-013?
+      - What is the migration order given revised language-surface readiness (RFC-0024 HOF now
+        landed; RFC-0019 traits available)?
+      - What is the per-module stability bar -- differential test granularity, minimum guarantee
+        tags, Rust crate retirement policy?
+
+      Definition of Done:
+      - RFC-0031 reaches Accepted (M-714 complete); the irreducible-Rust boundary, phylum
+        layout, stability bar, and migration order are ratified.
+      - lib/std/core.myc (Option/Result/Ord/Eq) and lib/std/iter.myc land, differential-tested
+        against the Rust reference, with honest guarantee tags and never-silent G2 (M-715).
+      - lib/std/collections.myc (Vec/Map/Set) lands with honest bounds, differential-tested (M-716).
+      - lib/std/text.myc + lib/std/fmt.myc land, differential-tested (M-717).
+      - lib/std/math.myc + lib/std/numerics.myc land with honest epsilon/delta surface (M-718).
+      - Every ported module has a stable documented API; the corresponding mycelium-std-* Rust
+        crate is deprecated or retired per RFC-0031's stability bar (M-719).
+      - just check green on the full lib/std/ tree.
+
+      Children:
+      - M-714 -- stdlib composition + phylum layout (RFC-0031 authoring): the module set,
+        layering on the Rust core, irreducibly-Rust vs must-be-.myc boundary. [type:design]
+      - M-715 -- core/prelude in Mycelium: Option/Result/cmp/Ord/Eq + iter traits as .myc
+        (port from the Rust std-* crates), differential-tested. [type:feature]
+      - M-716 -- collections in Mycelium: Vec/Map/Set as .myc with honest bounds. [type:feature]
+      - M-717 -- text + fmt in Mycelium: string handling + formatting as .myc. [type:feature]
+      - M-718 -- math + numerics surface in Mycelium: math ops + epsilon/delta numerics surface
+        as .myc. [type:feature]
+      - M-719 -- stdlib conformance + stability: every std module has differential tests + a
+        stable documented API; the Rust std-* crates beyond the bare core are superseded by
+        .myc. [type:verification]
+
+  - id: M-714
+    title: "stdlib composition + phylum layout (RFC-0031)"
+    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:stdlib, priority:P1, status:needs-design]
+    epic: E13-1
+    doc_refs:
+      - corpus:RFC-0031
+      - corpus:RFC-0016
+      - src:lib/std/result.myc
+    body: |
+      Author RFC-0031 (Self-Hosted Standard Library Composition): define the module set,
+      the phylum layout, which parts of the system are irreducibly Rust vs must-be-.myc, and
+      the per-module stability bar. This is the design gate that must reach Accepted before any
+      M-715...M-719 implementation leaf starts -- getting the layout and boundary wrong here
+      would force all subsequent ports to be re-done.
+
+      User stories:
+      - As a stdlib author, I want the phylum layout and nodule paths fixed before I write a
+        single .myc line, so that import paths and content-addressed identity are consistent
+        across all ports.
+      - As a compiler engineer, I want the irreducible-Rust boundary explicitly named, so that
+        no port accidentally tries to self-host the interpreter or kernel.
+
+      Issues to resolve:
+      - Which mycelium-std-* crates are irreducibly Rust (candidates: mycelium-core, l0, l1,
+        swap/cert, unsafe memory, platform I/O)?
+      - Does lib/std/result.myc (M-649) correctly establish the path convention for all ports?
+      - What is the per-module stability bar (differential test requirements, guarantee-tag
+        obligations, API-freeze criteria, Rust crate retirement policy)?
+      - What is the migration order given RFC-0024 HOF is now landed?
+
+      Definition of Done:
+      - RFC-0031 draft is written with all open questions in ss5 addressed or explicitly
+        deferred with direction.
+      - RFC-0031 reaches Accepted (maintainer ratification).
+      - The irreducible-Rust boundary is documented as a named list with reasoning.
+      - The phylum layout (nodule paths, groupings, versioning) is specified.
+      - The per-module stability bar is documented.
+      - The migration order is sequenced and grounded.
+
+  - id: M-715
+    title: "core/prelude in Mycelium: Option/Result/cmp/Ord/Eq + iter traits as .myc"
+    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
+    epic: E13-1
+    doc_refs:
+      - corpus:RFC-0031
+      - corpus:RFC-0016
+      - src:lib/std/result.myc
+      - corpus:DN-25
+    body: |
+      Port the core/prelude module family to Mycelium (.myc): Option, Result (extending
+      lib/std/result.myc), cmp, Ord, Eq, and the iter traits. This is the foundation all other
+      stdlib ports depend on -- Vec, Map, and fmt all require Option/iter/Ord. The port must
+      be differential-tested against the Rust mycelium-std-core reference and carry honest
+      guarantee tags throughout. Requires RFC-0024 HOF (for map/and_then/fold) and RFC-0019
+      traits (for Ord/Eq/iter) to be implemented Rust-first at minimum.
+
+      User stories:
+      - As a language user, I want Option and Result to be importable as std.core .myc nodules
+        with combinators (map, and_then, fold) that work natively in .myc code.
+      - As a stdlib author, I want Ord/Eq/iter defined as .myc traits so that subsequent
+        collection and math ports can depend on them without a Rust FFI boundary.
+
+      Issues to resolve:
+      - Is RFC-0019 traits (for Ord/Eq/iter dispatch) sufficiently complete to write these
+        in .myc, or does M-715 require a further language surface increment?
+      - Does lib/std/result.myc (M-649) need to be refactored, or just extended?
+      - What is the differential test strategy: per-function or per-module aggregate coverage?
+
+      Definition of Done:
+      - lib/std/core.myc (or equivalent) is written in .myc with Option/Result/cmp/Ord/Eq.
+      - lib/std/iter.myc is written in .myc with the iter trait surface.
+      - Differential tests pass: .myc eval == Rust mycelium-std-core reference (Empirical).
+      - Honest guarantee tags on every exported op; never-silent G2; EXPLAIN-able selections.
+      - just check green on the new nodules.
+
+  - id: M-716
+    title: "collections in Mycelium: Vec/Map/Set as .myc with honest bounds"
+    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
+    epic: E13-1
+    doc_refs:
+      - corpus:RFC-0031
+      - corpus:RFC-0016
+      - corpus:DN-25
+    body: |
+      Port the collections module family (Vec/Map/Set) to Mycelium (.myc) with honest bounds:
+      every op carries an explicit guarantee tag (Exact/Empirical/Declared) and out-of-range
+      or capacity-exceeded conditions are never-silent (G2 -- Option/Result, never a silent
+      sentinel or panic). Depends on M-715 (core/prelude, especially Option and iter).
+      The Rust mycelium-std-collections crate stays as the differential reference.
+
+      User stories:
+      - As a language user, I want std.collections.Vec to be a .myc nodule with honest
+        capacity bounds, so that I never get a silent overflow or capacity failure.
+      - As a stdlib author, I want the Map and Set ports to use the .myc iter/Ord/Eq traits
+        (from M-715), so that the collection types are fully self-contained in .myc.
+
+      Issues to resolve:
+      - What is the honest bound model for Vec growth (amortized O(1) push -- Empirical or
+        Declared)? How is the amortization disclosed?
+      - What Map implementation is used (B-tree vs hash) and how is the selection reified
+        (EXPLAIN-able per ADR-006)?
+
+      Definition of Done:
+      - lib/std/collections.myc written in .myc with Vec, Map, Set.
+      - Differential tests pass vs Rust reference (Empirical).
+      - Honest guarantee tags on every op; never-silent capacity/range conditions.
+      - just check green.
+
+  - id: M-717
+    title: "text + fmt in Mycelium: string handling + formatting as .myc"
+    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
+    epic: E13-1
+    doc_refs:
+      - corpus:RFC-0031
+      - corpus:RFC-0016
+      - corpus:DN-25
+    body: |
+      Port the text and fmt module families to Mycelium (.myc): string handling (slices,
+      concatenation, search, encoding) and formatting (the Display-equivalent surface).
+      These are Tier-B common modules per RFC-0016 but prerequisite for diagnostics and any
+      user-facing output from .myc programs. Depends on M-715 (core/prelude, especially Result
+      and Option for never-silent encoding errors).
+
+      User stories:
+      - As a language user, I want std.text and std.fmt as .myc nodules so that I can write
+        .myc programs that handle and display strings without a Rust FFI boundary.
+      - As a stdlib author, I want encoding errors (invalid UTF-8, out-of-bounds slices) to be
+        never-silent (G2 -- Result, not a sentinel), so that the text surface is as honest as
+        the rest of the library.
+
+      Issues to resolve:
+      - What encoding does the Mycelium text type assume (UTF-8 only, or multi-encoding)?
+      - How is the fmt/Display equivalent expressed in .myc (trait-based per RFC-0019, or a
+        simpler first-order interface)?
+
+      Definition of Done:
+      - lib/std/text.myc and lib/std/fmt.myc written in .myc.
+      - Differential tests pass vs Rust reference (Empirical).
+      - Never-silent encoding/slicing errors (Result); honest tags.
+      - just check green.
+
+  - id: M-718
+    title: "math + numerics surface in Mycelium: math ops + epsilon/delta surface as .myc"
+    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:needs-design]
+    epic: E13-1
+    doc_refs:
+      - corpus:RFC-0031
+      - corpus:RFC-0016
+      - corpus:DN-25
+    body: |
+      Port the math and numerics module families to Mycelium (.myc): arithmetic ops (add,
+      sub, mul, div, and the Mycelium-native ternary math), the epsilon/delta numerics surface
+      (honest rounding, overflow, and precision disclosure), and the binary/ternary/dense
+      representation math surfaces. The numerics surface is a Tier-A differentiator per
+      RFC-0016 -- the honest-bounds obligation is especially load-bearing here (VR-5/G2:
+      rounding is never silent, overflow is always an explicit condition). Depends on M-715
+      (core/prelude for Result/Option). May depend on operator syntax (DN-23/future RFC-0025)
+      if infix math sugar is wanted; otherwise word-based (add/mul/etc.) is sufficient.
+
+      User stories:
+      - As a language user, I want std.math to expose ternary and binary arithmetic as .myc
+        nodules with honest rounding and overflow (never silent, never a sentinel).
+      - As a downstream app developer, I want the epsilon/delta numerics surface in .myc so
+        that numeric accuracy guarantees are visible in my source without reading Rust crates.
+
+      Issues to resolve:
+      - Does M-718 wait for operator syntax (RFC-0025) or land with word-based math first?
+      - What is the overflow policy for each numeric type (Exact for non-overflowing ops;
+        Empirical/Declared for floating-point rounding)?
+
+      Definition of Done:
+      - lib/std/math.myc and lib/std/numerics.myc written in .myc.
+      - Differential tests pass vs Rust reference (Empirical).
+      - Rounding and overflow are never-silent (Result/Option); honest epsilon/delta tags.
+      - just check green.
+
+  - id: M-719
+    title: "stdlib conformance + stability: differential tests + stable documented API"
+    milestone: "Phase 5 -- Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:stdlib, priority:P1, status:needs-design]
+    epic: E13-1
+    doc_refs:
+      - corpus:RFC-0031
+      - corpus:RFC-0016
+      - corpus:DN-25
+    body: |
+      Integration and conformance gate for E13-1: verify that every ported .myc stdlib module
+      (M-715...M-718) meets the RFC-0031 stability bar, retire or deprecate the corresponding
+      mycelium-std-* Rust crates, and document a stable public API for each module. This is
+      the closure task that makes the stdlib "fully usable" per the full-language-1.0.0
+      criterion -- not just implemented but differentially tested, honestly tagged, and stable
+      enough to depend on.
+
+      User stories:
+      - As a maintainer, I want a conformance gate that confirms all ported modules meet the
+        RFC-0031 stability bar before E13-1 is closed, so that the 1.0.0 criterion is
+        verifiably met, not just asserted.
+      - As a downstream app developer, I want the stdlib API documented and stable, so that
+        I can start building on it without risk of breaking changes.
+
+      Issues to resolve:
+      - What is the final stability bar (API-freeze criteria, documentation requirements)?
+      - Which mycelium-std-* crates are retired (removed) vs deprecated (kept as differential
+        reference) per RFC-0031?
+      - How is the three-way differential (interpreter == .myc nodule == any AOT path) checked
+        at the stdlib level?
+
+      Definition of Done:
+      - Every .myc module from M-715...M-718 has differential tests passing (Empirical) against
+        the Rust reference; no module is undifferentiated.
+      - Each module has a stable documented public API (stable import paths, documented ops,
+        honest guarantee tags visible in the API docs).
+      - The corresponding mycelium-std-* Rust crates are deprecated or retired per RFC-0031's
+        stability bar; no Rust crate is left as an undeclared dependency of .myc code.
+      - just check green on the full lib/std/ tree.
+      - E13-1 issue status -> done; CHANGELOG entry append-only with honest framing.
+
+  - id: E15-1
+    title: "E15-1 (epic) -- Native AOT maturity, optimization, and acceleration"
+    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    labels: [phase:6, type:epic, area:execution, priority:P2, status:needs-design]
+    depends_on: [E6-1]
+    epic: E15
+    doc_refs:
+      - corpus:RFC-0029
+      - corpus:RFC-0004
+      - corpus:DN-25
+    body: |
+      Mature the native AOT path (today: direct-LLVM kernel subset + mlir-dialect feature
+      skeleton in crates/mycelium-mlir/) into a real optimizing backend with performance
+      suitable for a usable 1.0. The interpreter stays the trusted base; the native path is
+      the performance path. This epic delivers: full libMLIR lowering (subsumes E6-1 remaining),
+      EXPLAIN-able never-silent optimization passes (inlining/CSE/DCE), JIT for dynamic/VSA
+      workloads (ADR-009 deferred to enacted), BitNet packed-ternary acceleration (FR-C3), and
+      a mutant-witnessed three-way differential (interp == AOT == JIT). Every transform is
+      EXPLAIN-able per ADR-006/G2 -- no black-box optimization is permitted.
+
+      User stories:
+      - As a language user, I want programs compiled AOT to produce the same results as the
+        interpreter (Empirical three-way differential), so that I can trust AOT output without
+        re-auditing my code under a different execution model.
+      - As a compiler engineer, I want optimization passes (inlining, CSE, DCE) to be
+        EXPLAIN-able -- reified, inspectable, auditable -- so that no optimization is a black
+        box violating ADR-006.
+      - As a stdlib author, I want the AOT backend to cover the full language surface (generics,
+        traits, HOF, pattern matching) so that .myc stdlib modules compile natively.
+      - As a downstream app developer, I want JIT available for VSA/HDC dynamic workloads, so
+        that I get native performance for streaming pipelines without an offline AOT step.
+      - As a tool author, I want BitNet packed-ternary acceleration behind an explicit
+        capability flag, so that portability is never silently compromised.
+      - As a maintainer, I want the three-way differential to be mutant-witnessed, so that a
+        codegen regression is caught before it reaches main.
+
+      Issues to resolve:
+      - What is the current status of the libMLIR binding (ADR-019/M-348)? DN-15 records it
+        was blocked at M-373; is it unblocked now?
+      - How are optimization passes made EXPLAIN-able (transform log, per-IR-node annotation,
+        or EXPLAIN query extending M-673's MonoSelections)?
+      - Should JIT (ADR-009) be enacted for VSA/HDC only or also for REPL/interactive use?
+      - What hardware targets are in scope for BitNet packed-ternary acceleration (FR-C3)?
+
+      Definition of Done:
+      - RFC-0029 reaches Accepted (design gate).
+      - Full libMLIR lowering path is implemented (M-725); E6-1 remaining tasks subsumed.
+      - Inlining/CSE/DCE passes implemented as EXPLAIN-able never-silent transforms (M-726);
+        differential tests confirm optimized output == unoptimized (Empirical).
+      - JIT implemented for dynamic/VSA workloads, never silently selected (M-727);
+        JIT result == interpreter result (Empirical).
+      - BitNet packed-ternary acceleration behind explicit capability flag; graceful degradation
+        never-silent; accel result == reference ternary (Empirical) (M-728).
+      - Three-way differential (interp == AOT == JIT) is mutant-witnessed (M-729).
+      - just check green on crates/mycelium-mlir/ with all new features enabled.
+
+      Children:
+      - M-725 -- full libMLIR integration: ternary-dialect to MLIR to LLVM lowering, subsuming
+        E6-1 remaining. [type:feature]
+      - M-726 -- optimization passes (RFC-0029): inlining/CSE/DCE as EXPLAIN-able, never-silent,
+        differential-checked transforms. [type:feature]
+      - M-727 -- JIT for dynamic / VSA workloads (ADR-009 deferred to enacted). [type:feature]
+      - M-728 -- BitNet-class packed-ternary acceleration (FR-C3). [type:feature]
+      - M-729 -- codegen differential durability: interp == AOT == JIT three-way agreement,
+        mutant-witnessed. [type:verification]
+
+  - id: M-725
+    title: "full libMLIR integration: ternary-dialect to MLIR to LLVM lowering"
+    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    epic: E15-1
+    doc_refs:
+      - corpus:RFC-0029
+      - corpus:RFC-0004
+      - src:crates/mycelium-mlir/src/lib.rs
+      - corpus:DN-25
+    body: |
+      Implement the complete ternary-dialect to MLIR to LLVM dialect lowering chain in
+      crates/mycelium-mlir/, subsuming E6-1's remaining tasks. Today the crate provides a
+      textual skeleton (M-150), a partial mlir-dialect feature (M-601), and a direct-LLVM
+      backend (M-301/M-373/M-378/M-379). This task replaces the dialect skeleton with a real
+      libMLIR binding and implements the full ternary-dialect to arith/func to LLVM dialect
+      chain. PREREQUISITE: confirm ADR-019 / libMLIR binding is available in the environment
+      (DN-15 s1 records it was blocked at M-373 -- check before branching; if still blocked,
+      stage the direct-LLVM-advanceable half per DN-15 s2 and FLAG).
+
+      User stories:
+      - As a compiler engineer, I want the real ternary-dialect to MLIR to LLVM path
+        implemented, so that the direct-LLVM IR fallback (which DN-15 calls brittle for complex
+        data layouts) can be retired.
+
+      Issues to resolve:
+      - Is the libMLIR binding in the current environment available (ADR-019/M-348 resolved)?
+      - Which E6-1 tasks remain open and are subsumed by this task?
+      - What is the coverage: does the full language surface (generics post-mono, traits, HOF
+        post-defunctionalization, match, recursion) need to be covered in M-725, or is a
+        subset sufficient as a first increment?
+
+      Definition of Done:
+      - libMLIR binding confirmed available in the environment (pre-flight check documented).
+      - ternary-dialect to arith/func to LLVM dialect chain is implemented and tested.
+      - The mlir-dialect skeleton (placeholder) is replaced by the real binding.
+      - E6-1 remaining tasks are subsumed; their issues closed with references to M-725.
+      - Differential tests: .myc programs produce the same result via the new MLIR path as
+        via the interpreter (Empirical).
+      - just check green on crates/mycelium-mlir/.
+
+  - id: M-726
+    title: "optimization passes: inlining/CSE/DCE as EXPLAIN-able never-silent transforms"
+    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    epic: E15-1
+    doc_refs:
+      - corpus:RFC-0029
+      - corpus:RFC-0004
+      - src:crates/mycelium-mlir/src/lib.rs
+      - corpus:DN-25
+    body: |
+      Implement at minimum inlining, CSE (common subexpression elimination), and DCE (dead code
+      elimination) as optimization passes in crates/mycelium-mlir/. Each pass must be EXPLAIN-able
+      (reified, inspectable, auditable -- extending M-673's MonoSelections pattern; no black-box
+      heuristics per ADR-006/G2) and never-silent (every transform is recorded; no pass silently
+      drops or changes semantics). Differential tests confirm optimized output == unoptimized
+      output (Empirical). Depends on M-725 (the full lowering path must exist to apply passes to).
+
+      User stories:
+      - As a compiler engineer, I want each optimization pass to be EXPLAIN-able, so that a
+        user can query why a particular inlining or CSE decision was made (no black boxes).
+      - As a language user, I want optimization to be never-silent -- if a pass changes
+        observable behavior it is an error, not a "feature" (G2).
+
+      Issues to resolve:
+      - How is an optimization pass reified as an EXPLAIN-able transform (transform log,
+        per-IR-node annotation, or EXPLAIN query)?
+      - Which passes are sanctioned for 1.0 (inlining/CSE/DCE confirmed; any others)?
+      - What is the differential test strategy for optimization correctness (same output with
+        and without passes; Empirical)?
+
+      Definition of Done:
+      - Inlining, CSE, and DCE passes implemented in crates/mycelium-mlir/src/passes/.
+      - Each pass is EXPLAIN-able: its transform decisions are reified and queryable.
+      - Differential tests: output with passes == output without passes == interpreter
+        (Empirical); no silent semantic change.
+      - just check green.
+
+  - id: M-727
+    title: "JIT for dynamic / VSA workloads (ADR-009 deferred to enacted)"
+    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    epic: E15-1
+    doc_refs:
+      - corpus:RFC-0029
+      - corpus:RFC-0004
+      - src:crates/mycelium-mlir/src/lib.rs
+      - corpus:DN-25
+    body: |
+      Implement JIT compilation for dynamic / VSA/HDC workloads, lifting the ADR-009 deferral.
+      The JIT path must be never-silently-selected: it is an explicit execution mode, not
+      engaged transparently (G2 -- no silent substitution of JIT for interpreter or AOT).
+      Correctness obligation: JIT result == interpreter result (Empirical). Scope decision
+      (open, to be resolved by RFC-0029): VSA/HDC dynamic workloads only, or also REPL/
+      interactive use. Depends on M-725 (the full lowering infrastructure).
+
+      User stories:
+      - As a downstream app developer, I want JIT available for streaming VSA/HDC pipelines,
+        so that I get native performance without an offline AOT compilation step.
+      - As a maintainer, I want JIT to be an explicit mode (never silently engaged), so that
+        interpreter-vs-JIT divergence is always detectable (G2).
+
+      Issues to resolve:
+      - What is the JIT scope (VSA/HDC only, or also REPL/interactive)?
+      - What correctness bar is required before JIT can be selected over the interpreter?
+      - How is the JIT mode selected (explicit flag/API, not a heuristic)?
+
+      Definition of Done:
+      - JIT execution mode implemented in crates/mycelium-mlir/src/jit.rs.
+      - JIT is never silently selected (explicit mode selection, not a heuristic).
+      - Differential tests: JIT result == interpreter result (Empirical) on the test suite.
+      - ADR-009 deferral is lifted via a superseding ADR or an Enacted status update.
+      - just check green.
+
+  - id: M-728
+    title: "BitNet-class packed-ternary acceleration (FR-C3)"
+    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    epic: E15-1
+    doc_refs:
+      - corpus:RFC-0029
+      - corpus:RFC-0004
+      - src:crates/mycelium-mlir/src/lib.rs
+      - corpus:DN-25
+    body: |
+      Implement BitNet-class packed-ternary acceleration (FR-C3) in crates/mycelium-mlir/.
+      The acceleration must be: (1) behind an explicit capability flag -- never silently engaged
+      on hardware that supports it; (2) correct -- the accelerated result must equal the
+      reference ternary result (Empirical differential); (3) gracefully degrading -- on hardware
+      without the acceleration, the reference path is taken without error or silent substitution
+      (G2). Depends on M-725 (the full lowering path provides the hook points).
+
+      User stories:
+      - As a tool author, I want BitNet acceleration behind an explicit capability flag, so
+        that portability is never silently compromised on hardware without the acceleration.
+      - As a downstream app developer, I want VSA/HDC workloads to run at native packed-ternary
+        throughput when the hardware supports it, so that Mycelium is competitive for BitNet-class
+        inference workloads (FR-C3).
+
+      Issues to resolve:
+      - What hardware targets are in scope for 1.0 (SIMD 2-bit packing? tile operations?)?
+      - How is the capability flag exposed (compile-time feature, runtime query, or both)?
+      - What is the graceful degradation path on unsupported hardware?
+
+      Definition of Done:
+      - BitNet packed-ternary acceleration implemented in crates/mycelium-mlir/src/accel/.
+      - Explicit capability flag gates the acceleration (never silently engaged).
+      - Differential tests: accelerated result == reference ternary result (Empirical).
+      - Graceful degradation on unsupported hardware is tested and never-silent.
+      - just check green.
+
+  - id: M-729
+    title: "codegen differential durability: interp == AOT == JIT three-way agreement"
+    milestone: "Phase 6 -- Native Acceleration & Deployment"
+    labels: [phase:6, type:verification, area:execution, priority:P2, status:needs-design]
+    epic: E15-1
+    doc_refs:
+      - corpus:RFC-0029
+      - corpus:RFC-0004
+      - src:crates/mycelium-mlir/src/lib.rs
+      - corpus:DN-25
+    body: |
+      Integration and durability gate for E15-1: verify the three-way differential agreement
+      (interpreter == AOT == JIT) is mutant-witnessed -- meaning the test suite detectably
+      catches a codegen divergence injected by cargo-mutants or cargo-fuzz. This is the closure
+      task that makes the native path "trustworthy" per the full-language-1.0.0 criterion.
+      Extends the existing two-way differential (L1-eval == L0-interp from M-210/M-673) to
+      include the AOT and JIT paths from M-725/M-727.
+
+      User stories:
+      - As a maintainer, I want the three-way differential to be mutant-witnessed, so that
+        a codegen regression is automatically caught before it reaches main.
+      - As a language user, I want confidence that AOT and JIT outputs are correct by
+        construction (not by assertion), grounded in a durability test harness.
+
+      Issues to resolve:
+      - Is cargo-mutants sufficient for codegen mutation testing, or is a custom fuzzer
+        (cargo-fuzz + property-based generators) required?
+      - What is the three-way differential test infrastructure (extend M-210's checker? a new
+        test harness in crates/mycelium-mlir/tests/)?
+      - What coverage is required for the mutant-witnessed claim to be Empirical (not just
+        Declared)?
+
+      Definition of Done:
+      - Three-way differential test harness implemented (interp == AOT == JIT on the test suite).
+      - At least one mutant-injection scenario (cargo-mutants or cargo-fuzz) confirms the
+        harness catches a codegen divergence (mutant-witnessed, Empirical).
+      - The differential claim for AOT and JIT is labelled Empirical (not Declared) in the
+        codebase and CHANGELOG.
+      - just check green including the differential durability tests.
+      - E15-1 issue status -> done; CHANGELOG entry append-only with honest guarantee framing.
+  - id: E16-1
+    title: "E16-1 (epic) — Toolchain, IDE & package distribution"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:toolchain, priority:P2, status:needs-design]
+    depends_on: [E9-1]
+    epic: E16
+    doc_refs: [corpus:RFC-0026, corpus:DN-24, corpus:DN-25]
+    body: |
+      The day-to-day developer experience required for a usable full-language 1.0.0: a
+      complete LSP server beyond the current skeleton, syntax highlighting delivered
+      across all major editors (per RFC-0026), a package manager capable of spore publish
+      and resolution, a polished one-command toolchain UX, and a reproducible content-
+      addressed install. Without this wave, the language is technically complete but not
+      practically usable by external developers.
+
+      User stories:
+      - As a language user, I want completions, hover, and go-to-def in VS Code and
+        Neovim via LSP, so that I can write Mycelium code with the same IDE support I
+        have for other languages.
+      - As a library/phylum author, I want to publish a spore to a registry and have
+        users resolve it by name + version, so that distributing my phylum requires no
+        manual file copying.
+      - As a downstream app developer, I want `myc init`, `myc build`, and `myc run`
+        to work in one command, so that I can start a Mycelium project without reading
+        implementation internals.
+      - As a tool author, I want syntax highlighting in TextMate, tree-sitter, and LSP
+        semantic-token form, so that my editor tooling can colour `.myc` files correctly
+        out of the box.
+      - As a maintainer, I want a content-addressed, pinned toolchain install, so that
+        reproducible builds are verifiable and the install step is never-silent on failure.
+
+      Issues to resolve:
+      - What is the registry backend for spore publish/resolve (self-hosted, crates.io-compatible, or other)?
+      - What is the error-message quality bar and how is it verified at the toolchain UX gate?
+      - What constitutes a complete LSP (which capabilities are required vs optional at 1.0)?
+
+      Definition of Done:
+      - M-730 done: LSP provides completions, hover, semantic tokens, go-to-def; all existing tests green.
+      - M-731 done: TextMate + tree-sitter + LSP semantic-token grammars ship; generator derives from token.rs keyword(); just drift-check green in CI (G2 — never silent divergence).
+      - M-732 done: spore publish / resolve / registry query work end-to-end; content-addressed identity preserved (ADR-003); never-silent fallibility.
+      - M-733 done: myc init/build/test/run work; error messages meet DN-22 quality bar (structured, actionable, not opaque).
+      - M-734 done: reproducible install script; pinned, content-addressed artifact; re-install is byte-identical.
+      - just check green; all guarantee tags honest (VR-5); property test per bound.
+      - E16-1 epic status updated; kickoff tool10.md Definition of Done fully checked.
+
+      Children: M-730 (full LSP: completions/hover/semantic-tokens/go-to-def beyond the skeleton), M-731 (editor syntax highlighting delivery — RFC-0026: TextMate + tree-sitter + LSP semantic tokens, subsumes E9-1 leaves), M-732 (package manager: spore publish/resolve/registry beyond the build artifact), M-733 (toolchain UX: one-command init/build/test/run + error-message quality bar), M-734 (reproducible toolchain distribution: pinned, content-addressed install).
+
+  - id: M-730
+    title: "M-730 — feat(lsp): full LSP completions/hover/semantic-tokens/go-to-def"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:needs-design]
+    epic: E16-1
+    doc_refs: [corpus:DN-24, corpus:DN-25, src:crates/mycelium-lsp/src/lib.rs]
+    body: |
+      Extend `mycelium-lsp` beyond its current skeleton (completions, diagnostics, fmt)
+      to provide the full set of LSP capabilities expected at a 1.0.0 IDE experience:
+      hover (type + guarantee info), go-to-definition, and semantic tokens. The semantic-
+      token provider is the foundation that M-731 (RFC-0026 highlighting) will extend,
+      so M-730 must land first.
+
+      User stories:
+      - As a language user, I want hover to show the type and guarantee tag of any symbol,
+        so that I can understand code without leaving my editor.
+      - As a language user, I want go-to-definition to navigate to any function, type, or
+        trait declaration, so that I can explore a codebase without grep.
+
+      Issues to resolve:
+      - Which LSP capabilities are required at 1.0 vs optional (e.g. rename, references)?
+      - How does semantic-token classification map to the guarantee-strength lattice (Exact/Proven/Empirical/Declared)?
+
+      Definition of Done:
+      - textDocument/hover returns type + guarantee tag for every symbol in a valid .myc file; never-silent on unknown symbols.
+      - textDocument/definition navigates to the declaration; never-silent on unresolvable refs.
+      - textDocument/semanticTokens/full returns a correct legend and token stream for a .myc file.
+      - All existing completions/diagnostics/fmt tests remain green; cargo clippy -D warnings clean.
+
+  - id: M-731
+    title: "M-731 — feat(tooling): editor syntax highlighting delivery (RFC-0026)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:needs-design]
+    epic: E16-1
+    doc_refs: [corpus:RFC-0026, corpus:DN-24, corpus:DN-25, src:crates/mycelium-lsp/src/lib.rs]
+    body: |
+      Ship the three-layer syntax highlighting stack decided by RFC-0026: a TextMate
+      grammar (`.tmLanguage.json`), a tree-sitter grammar (`grammar.js`), and a
+      semantic-token provider in `mycelium-lsp`. All three are generated from the
+      canonical lexer `keyword()` table in `crates/mycelium-l1/src/token.rs`; a
+      `just drift-check` gate fails CI on any divergence (G2 — never silent). This
+      task subsumes the E9-1 leaves (M-694, M-695, M-696) and depends on RFC-0026
+      (M-693) being Accepted and M-730 (LSP semantic-token base) being done.
+
+      User stories:
+      - As a language user, I want to drop a single grammar file into my editor and get
+        accurate syntax colors with no further setup, so that I can start reading Mycelium
+        code immediately.
+      - As a tool author, I want a tree-sitter grammar whose queries match the RFC-0026
+        scope names, so that my structural-nav tooling is consistent with the highlighter.
+
+      Issues to resolve:
+      - Which grammar artifacts are required at the E16-1 gate vs packaged as community follow-ups?
+      - What is the exact generator architecture (Python, Rust xtask, template)?
+
+      Definition of Done:
+      - TextMate grammar shipped and validates against a VS Code/Sublime test; covers all token classes from token.rs keyword().
+      - tree-sitter grammar compiles (C or wasm); highlights.scm queries match RFC-0026 scope names.
+      - LSP semantic-token provider extends M-730; legend matches RFC-0026 scope names.
+      - just drift-check green and wired into just check; generator derives from token.rs (no hand-maintained keyword list).
+      - No silent divergence from the lexer possible (G2).
+
+  - id: M-732
+    title: "M-732 — feat(spore): package manager — publish/resolve/registry"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:needs-design]
+    epic: E16-1
+    doc_refs: [corpus:DN-25, src:crates/mycelium-spore/src/lib.rs]
+    body: |
+      Extend `mycelium-spore` from its current role as the build artifact type to a
+      full package-manager capability: `spore publish` (upload a content-addressed spore
+      to a registry), `spore resolve` (resolve a name + version constraint to a specific
+      artifact), and a registry query interface. Content-addressed identity (ADR-003)
+      is preserved; fallibility is never-silent (`Result`/`Option` throughout, G2).
+
+      User stories:
+      - As a library/phylum author, I want `myc publish` to upload my spore to a registry,
+        so that others can depend on it by name without manual file sharing.
+      - As a downstream app developer, I want version resolution to be content-addressed
+        and auditable, so that I can verify what I installed against what was published.
+
+      Issues to resolve:
+      - What is the registry backend (self-hosted, crates.io-compatible protocol, or a simpler file-based store)?
+      - How are version constraints expressed in the phylum manifest (SemVer per ADR-018)?
+
+      Definition of Done:
+      - myc publish uploads a .spore artifact to a registry; the content hash is verified on upload and on fetch.
+      - myc resolve finds and downloads a spore matching a name + version constraint; never-silent on resolution failure.
+      - cargo clippy -D warnings clean; property test for hash verification; just check green.
+
+  - id: M-733
+    title: "M-733 — feat(toolchain): toolchain UX — one-command init/build/test/run + error-message quality"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:needs-design]
+    epic: E16-1
+    doc_refs: [corpus:DN-25, corpus:DN-22]
+    body: |
+      Surface a polished one-command developer loop: `myc init` scaffolds a new phylum,
+      `myc build` compiles it, `myc test` runs the test suite, `myc run` executes the
+      entry point. Error messages meet the DN-22 structured-diagnostic quality bar:
+      every error is actionable (a source location + a human-readable message + a
+      suggested fix where possible); no opaque internal panics surface to the user.
+
+      User stories:
+      - As a language user, I want `myc init my-phylum` to create a working phylum
+        skeleton in one command, so that I can start writing code immediately.
+      - As a downstream app developer, I want `myc build` error messages to point to the
+        exact source location and explain the problem, so that I can fix errors without
+        reading compiler internals.
+
+      Issues to resolve:
+      - What is the minimum set of subcommands required at 1.0 vs deferred?
+      - How is the error-message quality bar verified (test corpus? lint rule?)?
+
+      Definition of Done:
+      - myc init, myc build, myc test, myc run work end-to-end on the examples/ phyla.
+      - Every user-visible error carries a source location and an actionable message (DN-22 bar); no raw Rust panics reach the user.
+      - just check green.
+
+  - id: M-734
+    title: "M-734 — infra(toolchain): reproducible toolchain distribution — pinned, content-addressed install"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:toolchain, priority:P2, status:needs-design]
+    epic: E16-1
+    doc_refs: [corpus:DN-25]
+    body: |
+      Produce a reproducible, content-addressed install path for the Mycelium toolchain:
+      a pinned install script or manifest that downloads a specific, hash-verified
+      toolchain artifact and verifies its integrity before installation. Re-running the
+      install on the same pin produces a byte-identical result. This supports the
+      ADR-021 durability bar and the full-language 1.0.0 release act (M-738).
+
+      User stories:
+      - As a maintainer, I want the toolchain install to be pinned and hash-verified,
+        so that supply-chain attacks are detected and never silently accepted.
+      - As a downstream app developer, I want to reproduce an exact toolchain environment
+        from a lock file, so that my builds are stable across machines.
+
+      Issues to resolve:
+      - What is the install artifact format (binary, tarball, rustup-style toolchain)?
+      - Is the hash-verification done on download or on first use?
+
+      Definition of Done:
+      - An install script (or manifest) pins the toolchain to a content-addressed artifact hash.
+      - Re-running on the same pin produces byte-identical output; mismatch is a never-silent error.
+      - just check green; the gate does not skip-gracefully on missing tools.
+
+  - id: E17-1
+    title: "E17-1 (epic) — Documentation, stability guarantees & 1.0.0 release"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:release, priority:P1, status:needs-design]
+    depends_on: [E13-1, E18-1]
+    epic: E17
+    doc_refs: [corpus:ADR-023, corpus:ADR-022, corpus:DN-25]
+    body: |
+      The terminal wave for the full-language Mycelium 1.0.0: make the language learnable
+      (language reference + tutorial), generate per-module stdlib API docs, ratify the
+      stability and API-compatibility guarantees (ADR-023), and cut the full-language
+      1.0.0 release tag once E13-1 (self-hosting stdlib gate) and E18-1 (full-language
+      readiness gate) are both done. The dual-version north star: the Rust kernel may
+      reach 1.0.0 first (ADR-021 gate valid); the full-language 1.0.0 requires the stdlib
+      and all libraries/phyla beyond the bare core to be written fully in Mycelium (.myc),
+      stable, and fully usable.
+
+      User stories:
+      - As a language user, I want a language reference and tutorial that covers the full
+        surface (keywords, types, effects, traits, generics, match, modules), so that I
+        can learn Mycelium from the official documentation without reading compiler source.
+      - As a library/phylum author, I want generated per-module stdlib API docs with every
+        public symbol documented, so that I can understand the standard library without
+        reading .myc source files.
+      - As a downstream app developer, I want a documented, enforceable stability promise
+        at 1.0.0 (API compatibility, deprecation policy, MIT license confirmed), so that
+        I can build production software on Mycelium with confidence.
+      - As a maintainer, I want the release act (ADR-022 Accepted -> Enacted + v1.0.0 tag)
+        to be a gated, append-only step that only fires when every gate row is confirmed
+        closed, so that 1.0.0 is never cut prematurely (G2 / house rule #3).
+      - As a compiler engineer, I want the dual-version semver model (kernel version vs.
+        full-language version) documented in ADR-023 and enacted at the tag, so that the
+        two release lines are unambiguous in CHANGELOG and release notes.
+
+      Issues to resolve:
+      - What is the full-language 1.0.0 gate definition (ADR-022 criteria — the full-language analog of ADR-021)?
+      - How is the language reference authored and maintained (Markdown, Typst, generated from corpus)?
+      - What is the dual-version version carrier (a mycelium top-level crate, or release-manifest only)?
+
+      Definition of Done:
+      - M-735 done: language reference + tutorial complete, technically accurate, published.
+      - M-736 done: per-module stdlib API docs generated; every public symbol documented; just docs green.
+      - M-737 done: ADR-023 Draft -> Accepted; all §5 open questions resolved; MIT-only license gate confirmed.
+      - M-738 done: all ADR-022 gate rows closed; ADR-021 + ADR-022 Accepted -> Enacted; cargo deny check licenses green; just check-full green; CHANGELOG [Unreleased] -> [1.0.0]; v1.0.0 tag cut.
+      - Every guarantee tag honest (VR-5); no silent gate pass (G2).
+      - E17-1 epic status updated; kickoff rel10.md Definition of Done fully checked.
+
+      Children: M-735 (language reference + tutorial — user-facing docs for full usability), M-736 (stdlib API docs — generated, per-module), M-737 (stability & API-compatibility guarantees — ADR-023: what is stable at 1.0, deprecation policy, lang-vs-core semver enactment), M-738 (full-language 1.0.0 release act: verify ADR-022 Definition of Done is met, then move ADR-022 Accepted -> Enacted — append-only).
+
+  - id: M-735
+    title: "M-735 — docs(release): language reference + tutorial"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:docs, area:release, priority:P1, status:needs-design]
+    epic: E17-1
+    doc_refs: [corpus:DN-25, corpus:ADR-023]
+    body: |
+      Author the user-facing language reference and tutorial that make Mycelium learnable
+      at the full-language 1.0.0 gate. The reference covers the full surface (keywords,
+      types, effects, traits, generics, match, modules, phyla, the guarantee-strength
+      lattice, the swap system) in a navigable, accurate form. The tutorial walks a
+      developer through building a complete, non-trivial program. Both are technically
+      accurate against `crates/mycelium-l1/` and `lib/std/`; any claim about behavior
+      is checked against the actual interpreter output (never invented — G2 / VR-5).
+
+      User stories:
+      - As a language user, I want a single authoritative reference page for every
+        language construct, so that I can look up syntax and semantics in one place.
+      - As an AI co-author agent, I want the tutorial to include worked examples that
+        demonstrate the guarantee-strength annotation system, so that I can generate
+        Mycelium code with correct tags.
+
+      Issues to resolve:
+      - What is the authoring format (Markdown in docs/reference/, Typst, generated from corpus)?
+      - How are code examples verified (mycelium-doc lint, CI test run, or manual)?
+
+      Definition of Done:
+      - Language reference covers every keyword, type, effect, trait, generic, match, module, and phylum construct.
+      - Tutorial builds a complete, runnable program from scratch; code examples are verified green by mycelium-doc or a CI test.
+      - Technical accuracy confirmed against crates/mycelium-l1/ and lib/std/ (never invented — G2).
+      - just docs green.
+
+  - id: M-736
+    title: "M-736 — docs(stdlib): generated per-module stdlib API docs"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:docs, area:release, priority:P1, status:needs-design]
+    epic: E17-1
+    doc_refs: [corpus:DN-25, corpus:ADR-023]
+    body: |
+      Generate per-module stdlib API documentation from `lib/std/**/*.myc` via
+      `crates/mycelium-doc/`, so that every public symbol in the standard library has
+      an authoritative, browsable API doc. The generation is content-addressed and
+      reproducible; undocumented public symbols are flagged (never silently dropped —
+      G2). This is the stdlib-facing complement to M-735's user tutorial.
+
+      User stories:
+      - As a library/phylum author, I want to browse generated API docs for std.result,
+        std.iter, std.io, and every other stdlib module, so that I know which functions
+        are available and what their types and guarantees are.
+      - As a stdlib author, I want the doc-generation lint to flag undocumented public
+        symbols, so that gaps in coverage are never silently shipped.
+
+      Issues to resolve:
+      - Which stdlib modules exist and have public symbols at the time M-736 runs (depends on E13-1)?
+      - What output format does the API doc take (HTML, Markdown, JSON)?
+
+      Definition of Done:
+      - Every public symbol in lib/std/**/*.myc has a generated API doc entry.
+      - Undocumented public symbols trigger a warning in mycelium-doc lint (never silently dropped — G2).
+      - just docs green; output committed or publishable via just check.
+
+  - id: M-737
+    title: "M-737 — design(release): stability & API-compatibility guarantees (ADR-023)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:design, area:release, priority:P1, status:needs-design]
+    epic: E17-1
+    doc_refs: [corpus:ADR-023, corpus:ADR-022, corpus:DN-25]
+    body: |
+      Author and ratify ADR-023 (Stability and API Compatibility Guarantees at Full-Language
+      1.0.0). The stub exists at `docs/adr/ADR-023-*.md` (Draft, 2026-06-23). This task
+      answers all §5 open questions: the API-compatibility scope (surface syntax, Core-IR,
+      LSP wire, Rust crate API), the dual-version semver model (kernel version vs.
+      full-language version), the deprecation policy (marking mechanism, period, removal
+      guarantee), and the MIT-only license gate (confirmed via cargo deny check licenses,
+      non-skip-graceful). Moves ADR-023 Draft -> Proposed -> Accepted (append-only; never
+      Enacted until the 1.0.0 tag act in M-738 — house rule #3).
+
+      User stories:
+      - As a maintainer, I want ADR-023 ratified before the 1.0.0 tag is cut, so that
+        the stability promise is on record and not improvised at release time.
+      - As a downstream app developer, I want to read the ratified ADR-023 and know
+        exactly what is stable, what is not, and how breaking changes are communicated.
+
+      Issues to resolve:
+      - All §5 open questions in the ADR-023 stub (see docs/adr/ADR-023-*.md §5).
+      - Whether cargo deny check licenses needs to be wired into just check now or only as part of the 1.0.0 release act.
+
+      Definition of Done:
+      - ADR-023 all §5 open questions answered with grounded rationale.
+      - ADR-023 status moves Draft -> Proposed -> Accepted (append-only; never silently skipped).
+      - MIT-only license confirmed; cargo deny check licenses gate green and non-skip-graceful.
+      - The API-compatibility scope, dual-version model, and deprecation policy are normatively fixed.
+
+  - id: M-738
+    title: "M-738 — chore(release): full-language 1.0.0 release act"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:release, priority:P1, status:needs-design]
+    epic: E17-1
+    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:DN-25]
+    body: |
+      The terminal step: verify that every ADR-022 (full-language 1.0.0 release-readiness
+      gate) row is closed, then record the conscientious release decision by moving
+      ADR-022 `Accepted -> Enacted` (append-only — must step through Accepted first;
+      house rule #3). Also confirm ADR-021 `Accepted -> Enacted` (kernel gate, should
+      already be done). Cut the `v1.0.0` tag; advance `CHANGELOG.md [Unreleased] ->
+      [1.0.0]`. This task does not build anything — it is a gate-check + release-record
+      step. It must not run until E13-1 (stdlib gate), E18-1 (full-language readiness
+      gate), and M-737 (ADR-023 Accepted) are all confirmed done (G2 — never-silent).
+
+      User stories:
+      - As a maintainer, I want the 1.0.0 tag to be cut only when every gate row is
+        confirmed closed, so that a premature release is impossible by construction.
+      - As a downstream app developer, I want the CHANGELOG and release notes to
+        accurately record what changed at 1.0.0, so that I know what I am adopting.
+
+      Issues to resolve:
+      - Confirm E13-1 and E18-1 are done before starting this task.
+      - Confirm ADR-022 criteria (forthcoming) are all met row-by-row.
+      - Confirm cargo deny check licenses is green (MIT-only; non-skip-graceful).
+
+      Definition of Done:
+      - Every ADR-022 gate row confirmed closed (documented, not assumed — G2).
+      - ADR-021 Accepted -> Enacted confirmed (kernel gate; append-only).
+      - ADR-022 Accepted -> Enacted recorded (full-language gate; append-only; must step through Accepted first — house rule #3).
+      - cargo deny check licenses green; gate non-skip-graceful.
+      - just check-full green (full workspace, mutants, fuzz — the durability tier).
+      - CHANGELOG.md [Unreleased] -> [1.0.0] curated; release notes published.
+      - v1.0.0 tag cut on main.
+  - id: M-743
+    title: "M-743 — chore: MIT-only licensing audit + enforcement (first-party artifacts)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:release, priority:P2, status:needs-design]
+    depends_on: []
+    epic: E17-1
+    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:DN-25]
+    body: |
+      The project is MIT-licensed only (ADR-022 §7; CONTRIBUTING §Licensing) — no Apache-2.0 / dual-license
+      on any first-party artifact. Root LICENSE + workspace Cargo.toml are already MIT and the example
+      manifests + reference-doc samples are normalized; this issue AUDITS + ENFORCES it as a 1.0.0 legal-
+      readiness criterion (a standing green check, not a one-time sweep).
+      User stories:
+      - As the maintainer, I want every first-party crate/file MIT-licensed, so that the project's license
+        is unambiguous and consistent at 1.0.0.
+      - As a downstream app developer, I want one clear license (MIT), so that I can adopt Mycelium without
+        reviewing a dual-license matrix.
+      - As a tool author, I want a CI check that fails on a non-MIT first-party license, so that drift is
+        caught automatically (never-silent — G2).
+      Issues to resolve:
+      - Resolve the dependency-license policy (ADR-022 §8 Q2): keep allowing Apache/BSD for third-party Rust
+        deps vs tighten — distinct from the first-party MIT rule.
+      - Add the enforcement check (cargo-deny [licenses] over first-party crates, or a script) without
+        mistaking the mycelium-proj SPDX parser's example data for project policy.
+      Definition of Done:
+      - A CI gate (in just check) fails on any first-party artifact whose license is not MIT.
+      - ADR-023 records the MIT-only policy + resolves the dependency-license question (Q2).
+      - No first-party Apache/dual-license remains; the audit is green.

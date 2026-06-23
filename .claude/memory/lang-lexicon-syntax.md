@@ -232,7 +232,7 @@ v0 key set (all values are metadata, never part of the content hash):
 
 ```mycelium
 // nodule: ml.inference
-// @license: Apache-2.0
+// @license: MIT
 // @authors: Tyler Zervas <...>
 // @since: 2026-01-10
 // @updated: 2026-06-16
@@ -253,7 +253,7 @@ The project-level manifest (the pyproject.toml / Cargo.toml analogue). `[project
 name    = "geometry"
 kind    = "phylum"       # "phylum" (library) | "program" | "script"
 version = "1.2.0"
-license = "Apache-2.0"
+license = "MIT"
 lang    = "mycelium-0"   # surface-language edition (MSRV-analogue)
 
 [dependencies]
