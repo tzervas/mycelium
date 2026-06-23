@@ -53,6 +53,7 @@ main` promotes it up.
 | **`tool10`** | `tool10.md` | `tools/**` · editor grammars · package-dist scope | Sonnet · parallel-leaf | Status: **ready**; head `claude/head/tool10`; governs E16-1 (toolchain, IDE & package distribution, T7); gate: ADR-022 T7 + DN-25; deps: E9-1 (`tul`/RFC-0026) |
 | **`rel10`** | `rel10.md` | `docs/**` · `CHANGELOG.md` · stability & release scope | Sonnet · serial (docs-heavy) | Status: **in progress**; head `claude/head/rel10`; governs E17-1 (documentation, stability & 1.0.0 release, T8); gate: ADR-022 T8 + DN-25; no code dep (runs in parallel with T1–T7; gates the release tag); language ref + stdlib API docs + ADR-023 landed (M-735/736/737; #493); M-738 release act blocked (gate) |
 | **`boot10`** | `boot10.md` | `lib/std/**` · `crates/mycelium-l1/**` · self-hosting scope | Sonnet · serial-on-L1 | Status: **ready** (**long pole**); head `claude/head/boot10`; governs E18-1 (self-hosting capstone, T9); gate: ADR-022 T9 + DN-25; deps: E11-1 (`s10`) + E13-1 (`lib10`) |
+| **`kpr`** | `kpr.md` | `crates/mycelium-interp/src/prims.rs` · `crates/mycelium-l1/src/checkty.rs` (`prim_kernel_name`) · `docs/rfcs/RFC-0032-*` · **coordinated:** `crates/mycelium-core/**` (with `c10`) + L1 type system (with `s10`) | Sonnet · **design-gated** (RFC-0032/M-746) then serial-on-prims / serial-on-core | Status: **ready (design-gated)**; head `claude/head/kpr`; governs **E19-1** (kernel self-hosting-enablement surface — the prims + value reprs that **unblock E13-1 Tier-1/Tier-2**); gate: RFC-0032/M-746 Accepted; deps: E13-1 §5 D4 (RFC-0031 ✅); coordinates with `c10` (core) + `s10` (width-generics) |
 
 **Parallelism (collision profile):**
 - **`srf` owns `crates/mycelium-l1/` (Rust) → serial-on-L1** (M-664 leaf lands, then M-667 rebases
@@ -74,6 +75,16 @@ main` promotes it up.
   **`claude/orch-0000-l1-capstone`** head (the common fixed base); the head advances as each leaf merges,
   and the next leaf branches from / pulls down the advanced head. M-649 completes (pseudocode → real
   combinators) on the head once E7-3 lands.
+- **`kpr` is the kernel-enablement leg that unblocks `lib10`** (E13-1 Tier-1/Tier-2). It owns
+  `crates/mycelium-interp/src/prims.rs` + the `prim_kernel_name` map (largely unowned by other legs)
+  and is **design-gated by RFC-0032/M-746** — no implementation leaf fires until that RFC is Accepted.
+  Two coordinated overlaps (flag-don't-guess, maintainer sign-off before merge): the value-model reprs
+  (M-749/M-750) touch `crates/mycelium-core/**` (**`c10`**'s kernel-T1 scope — the 1.0.0-placement is
+  an RFC-0032 decision), and width-generics (M-751) touch the `mycelium-l1` type system (**`s10`**'s
+  E11-1 scope — RFC-0032 Q5 decides whether `kpr` owns it or it reassigns to `s10`). `kpr` ⟂ `lib10`'s
+  `lib/std/**` (the unblock is *demonstrated* via smoke tests under `crates/mycelium-l1/tests/`; the
+  `.myc` consumers land in `lib10`), so cross-leg continuity rides the issues' `depends_on`
+  (M-716 ⟸ M-749 · M-717 ⟸ M-750 · M-718 ⟸ M-747/M-748/M-751).
 
 ### Cross-track deconfliction — `r10` (runtime) ↔ `rel10` (docs/release)
 

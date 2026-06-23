@@ -8,6 +8,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: E19-1 — kernel self-hosting-enablement work leg scaffolded; RFC-0032 Draft + kickoff `kpr`)
+
+- **New work leg E19-1 + RFC-0032 (Draft) — the kernel surface that unblocks E13-1's blocked tiers.**
+  RFC-0031 §5 D4 found Tier-0 executable (landed, M-715) but Tier-1/Tier-2 blocked on kernel surface
+  that does not exist: a reduce-to-`Bool` comparison prim + binary arithmetic (Tier-1), and
+  sequence/array + byte/string value representations (Tier-2 — the value model `Repr` =
+  `Binary`/`Ternary`/`Dense`/`Vsa` has neither). These **enlarge the value model / trusted base
+  (KC-3)**, so the leg is **design-gated** by `docs/rfcs/RFC-0032-Kernel-Self-Hosting-Enablement-Surface.md`
+  (Draft stub — 7 open questions: prim shape, binary-overflow semantics, whether an indexed `Repr` is
+  required vs the recursive-ADT `List`, string repr, width-generics ownership, the core-1.0.0-vs-post-1.0.0
+  placement against ADR-022, and sequencing). Epic **E19-1** + issues **M-746** (RFC authoring, the gate)
+  → **M-747** (comparison prim) · **M-748** (binary arithmetic) · **M-749** (sequence repr) · **M-750**
+  (byte/string repr) · **M-751** (width-generic fns — ownership per RFC-0032 Q5) → **M-752** (conformance
+  + `.myc` smoke ports). Cross-leg continuity wired via `depends_on`: E13-1 M-716 ⟸ M-749, M-717 ⟸ M-750,
+  M-718 ⟸ M-747/M-748/M-751. Kickoff **`kpr`** stowed (`.claude/kickoffs/kpr.md`, registered in the
+  index) — owns `crates/mycelium-interp/src/prims.rs` + the `prim_kernel_name` map; the `mycelium-core`
+  reprs + L1 width-generics are flagged **coordinated** with `c10`/`s10` (maintainer sign-off on the
+  RFC-0032 KC-3/placement before merge — architecturally significant, flag-don't-guess). No kernel code
+  changed yet (planning + design-gate scaffolding only). (RFC-0032; E19-1/M-746)
+
 ### Added (2026-06-23: E13-1 — self-hosted stdlib composition ratified + the executable core/prelude; RFC-0031 Accepted; M-714/M-715 Tier-0)
 
 - **RFC-0031 — Self-Hosted Standard Library Composition → Accepted** (M-714, the E13-1 gate). §5 D1–D7
