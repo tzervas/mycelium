@@ -1499,7 +1499,11 @@ fn monomorphize_specializes_first_or_to_a_closed_env() {
     assert_eq!(fo.sig.value_params.len(), 2);
     // The mono'd env has no generics or traits left (the M-673 closure invariant).
     assert!(
-        mono.types.values().all(|d| d.params.is_empty()) && mono.traits.is_empty(),
-        "the monomorphized env is closed (no generic data, no traits)"
+        mono.fns.values().all(|fd| fd.sig.params.is_empty())
+            && mono.types.values().all(|d| d.params.is_empty())
+            && mono.traits.is_empty()
+            && mono.instances.is_empty()
+            && mono.impls.is_empty(),
+        "the monomorphized env is closed (no generic data, no traits, no trait impls)"
     );
 }
