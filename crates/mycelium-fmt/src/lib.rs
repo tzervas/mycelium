@@ -1278,6 +1278,10 @@ fn render_type_ref(t: &mycelium_l1::ast::TypeRef) -> String {
             format!("{n}<{}>", a.join(", "))
         }
         BaseType::Ambient(params) => format!("{{{}}}", ambient_params_str(params)),
+        // RFC-0024 §3: function type `A -> B` (right-associative). The parser builds `Fn(atom, rhs)`
+        // where the left is always a non-`Fn` atom, so rendering both sides recursively and joining
+        // with ` -> ` round-trips without parentheses (C1).
+        BaseType::Fn(a, b) => format!("{} -> {}", render_type_ref(a), render_type_ref(b)),
     };
     match t.guarantee {
         Some(g) => format!("{base} @ {g:?}"),
