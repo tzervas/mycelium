@@ -2932,6 +2932,12 @@ issues:
       now Superseded by ADR-022, so the inherited kernel-gate enactment attaches to ADR-022 track T1
       (not ADR-021 -> Enacted); see the Status section below.
 
+      SCOPE EXTENDED (2026-06-23, maintainer — RFC-0032 Q6): T1's Definition of Done now ALSO includes
+      E19-1 (the kernel self-hosting-enablement reprs/prims land IN core 1.0.0, so the language is fully
+      self-hosting at the tag). The original ADR-021 Gate A/B rows remain met; this is an additive
+      scope extension, not a reopening of those rows. CONSEQUENCE: the core tag (M-703) is no longer
+      simply "tag-ready" -- it now waits on E19-1. See ADR-022 §4 (Q6 amendment).
+
       User stories:
       - As a maintainer, I want every ADR-021 Gate A row demonstrably met before cutting the
         1.0.0 tag, so that the "kernel stabilizes" claim is grounded, not pre-declared (VR-5).
@@ -3118,17 +3124,24 @@ issues:
     title: "M-703 — Cut core/kernel 1.0.0 + enact ADR-022 track T1 (maintainer-reserved)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:release, priority:P1, status:todo]
-    depends_on: [M-700, M-701, M-702]
+    depends_on: [M-700, M-701, M-702, E19-1]
     epic: E10-1
     doc_refs:
       - corpus:ADR-022
       - corpus:ADR-021
       - corpus:ADR-018
+      - corpus:RFC-0032
       - corpus:DN-25
     body: |
-      maintainer-reserved (like M-655 — no agent cuts the tag or enacts the status). READY
-      (2026-06-23, kickoff c10): M-700/M-701/M-702 are satisfied and ADR-022 §4/§5 records track T1 as
-      GATE-MET / TAG-READY (A1–A5, B1–B2 all met). The remaining act is the maintainer's:
+      SCOPE EXTENDED (2026-06-23, maintainer — RFC-0032 Q6): the core `1.0.0` tag now ALSO waits on
+      E19-1 (kernel self-hosting-enablement reprs/prims land IN core 1.0.0). The ADR-021 Gate A/B rows
+      remain met, but T1's Definition of Done is extended by E19-1, so this tag act is NO LONGER simply
+      "tag-ready" -- it is gated on E19-1 landing (depends_on now includes E19-1). See ADR-022 §4.
+
+      maintainer-reserved (like M-655 — no agent cuts the tag or enacts the status). The A/B engineering
+      rows are met (2026-06-23, kickoff c10): M-700/M-701/M-702 are satisfied and ADR-022 §4/§5 records
+      track T1's A1–A5/B1–B2 all met; the gate SCOPE now additionally requires E19-1 (above). The
+      remaining acts are the maintainer's:
       cut the `core 1.0.0` tag per ADR-018 and record the enactment. NOTE on the supersession: ADR-021
       is now SUPERSEDED by ADR-022, so it cannot move Accepted -> Enacted; the inherited kernel-gate
       enactment attaches instead to ADR-022 track T1 (mark T1 Enacted at the tag — house rule #3,
