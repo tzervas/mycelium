@@ -734,16 +734,12 @@ impl Elab<'_> {
                 "internal: a `with paradigm` block reached elaboration — the ambient resolution \
                  pass strips it (RFC-0012 §4.4)",
             ),
-            // `wild` (the audited FFI floor — M-661) type-checks + is gated + audited, but its
-            // execution is **staged**: there is no FFI host in v0, so it has no L0 form yet. Lower it
-            // to an explicit `Residual` (a future capability), mirroring the M-657/659/660 staging —
-            // never a fabricated artifact (G2). The body is the trusted/opaque escape, not lowered.
-            Expr::Wild(_) => residual(
-                site,
-                "wild/FFI lowering staged — no FFI host in v0 (M-661; RFC-0016 §8-Q6). The `wild` \
-                 block is the audited FFI floor; it type-checks + gates (`@std-sys` context, LR-9) \
-                 but does not execute yet — its lowering to a host call is a future capability.",
-            ),
+            // `wild` (the audited FFI floor — M-661/M-720) lowers to a host-dispatch `Op` in the
+            // reserved `wild:` prim namespace (RFC-0028 §4.2/§4.3) — **no new Core-IR node** (KC-3,
+            // reusing `Node::Op`). The body is the trusted/opaque escape (a `name(args…)` host-call
+            // form); a body that is not that form is an explicit `Residual`, never a fabricated
+            // artifact (G2).
+            Expr::Wild(body) => self.elab_wild(stack, scope, body),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
             Expr::Colony(hyphae) => self.elab_colony(stack, scope, hyphae),
             Expr::Ascribe(inner, _t) => {
@@ -753,6 +749,57 @@ impl Elab<'_> {
             }
             Expr::App { head, args } => self.app(stack, scope, head, args),
         }
+    }
+
+    /// Lower a `wild { name(a₁,…,aₙ) }` block to a host-dispatch [`Node::Op`] in the reserved
+    /// `wild:` prim namespace (RFC-0028 §4.2/§4.3; M-720). The body is the trusted/opaque FFI escape
+    /// (M-661): it is **not** type-checked, so only its *shape* is interpreted here — a single
+    /// host-call form `name(args…)` or a bare `name` with an undotted host-operation name. The
+    /// arguments are ordinary in-scope expressions, elaborated through the normal path. Any other
+    /// body shape is an explicit [`ElabError::Residual`] (never a fabricated lowering — G2).
+    ///
+    /// The resulting `Op { prim: "wild:name", … }` is resolved at runtime through the interpreter's
+    /// prim registry — the capability handle (RFC-0028 §4.3) — which registers **no** `wild:` op by
+    /// default, so an ungranted host op is a never-silent `UnknownPrim` (G2). The `wild:` prefix is
+    /// reserved: no built-in paradigm primitive uses it, so a `wild:`-prefixed `Op` is unambiguously
+    /// a host call. **No new Core-IR node** (KC-3).
+    fn elab_wild(
+        &mut self,
+        stack: &mut Vec<String>,
+        scope: &[Binding],
+        body: &Expr,
+    ) -> Result<Node, ElabError> {
+        let site = stack.last().expect("non-empty").clone();
+        let (name, args): (&str, &[Expr]) = match body {
+            Expr::App { head, args } => match head.as_ref() {
+                Expr::Path(p) if p.0.len() == 1 => (p.0[0].as_str(), args.as_slice()),
+                _ => {
+                    return residual(
+                        &site,
+                        "a v0 `wild` block body must be a host-call form `name(args…)` with a \
+                         single, undotted host-operation name (RFC-0028 §4.2) — never a guess (G2)",
+                    )
+                }
+            },
+            Expr::Path(p) if p.0.len() == 1 => (p.0[0].as_str(), &[]),
+            _ => {
+                return residual(
+                    &site,
+                    "a v0 `wild` block body must be a host-call form `name(args…)` or a bare \
+                     `name` (RFC-0028 §4.2); other body shapes are a future append-only extension \
+                     — never a fabricated lowering (G2)",
+                )
+            }
+        };
+        let prim = format!("wild:{name}");
+        let mut elab_args = Vec::with_capacity(args.len());
+        for a in args {
+            elab_args.push(self.expr(stack, scope, a)?);
+        }
+        Ok(Node::Op {
+            prim,
+            args: elab_args,
+        })
     }
 
     /// `if c then t else e` desugars to a flat `Match` on the prelude `Bool` (RFC-0007 §4.4; the

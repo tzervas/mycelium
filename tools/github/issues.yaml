@@ -3979,7 +3979,7 @@ issues:
   - id: E14-1
     title: "E14-1 (epic) — FFI & system interface"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:epic, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:epic, area:execution, priority:P1, status:in-progress]
     depends_on: []
     epic: E14
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25]
@@ -4045,7 +4045,7 @@ issues:
   - id: M-720
     title: "M-720 — feat(ffi): FFI surface (RFC-0028) — capability-based Mycelium<->C/Rust calls, never-silent ABI claims"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:done]
     depends_on: []
     epic: E14-1
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-sys/src/lib.rs]
@@ -4075,7 +4075,7 @@ issues:
   - id: M-721
     title: "M-721 — feat(ffi): wild host execution — @std-sys FFI floor executes (DN-14 row 9 full closure)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-720]
     epic: E14-1
     doc_refs: [corpus:RFC-0028, corpus:DN-25, src:crates/mycelium-std-sys/src/lib.rs, src:crates/mycelium-mlir/src/jit.rs]
@@ -4103,7 +4103,7 @@ issues:
   - id: M-722
     title: "M-722 — feat(std-sys): syscall binding — real io/fs/sys bindings, sandboxed + capability-gated"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:in-progress]
     depends_on: [M-721]
     epic: E14-1
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-io/src/io.rs, src:crates/mycelium-std-fs/src/lib.rs, src:crates/mycelium-std-sys/src/lib.rs]
@@ -4133,7 +4133,7 @@ issues:
   - id: M-723
     title: "M-723 — feat(std-sys): time/clock + rand entropy real bindings hardened for 1.0"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:in-progress]
     depends_on: [M-721]
     epic: E14-1
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-rand/src/lib.rs, src:crates/mycelium-std-time/src/lib.rs]
@@ -4162,7 +4162,7 @@ issues:
   - id: M-724
     title: "M-724 — verify(ffi): FFI safety — ADR-014 unsafe-floor confinement for FFI surface, audited + just safety-check green"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:verification, area:execution, priority:P1, status:needs-design]
+    labels: [phase:7, type:verification, area:execution, priority:P1, status:done]
     depends_on: [M-720, M-721, M-722, M-723]
     epic: E14-1
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-sys/src/lib.rs, src:crates/mycelium-mlir/src/jit.rs]
