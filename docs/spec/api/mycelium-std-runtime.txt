@@ -52,6 +52,69 @@ impl<T, E> !core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::co
 impl<T, E> !core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::colony::Scope<T, E>
 pub const mycelium_std_runtime::colony::COLONY_KAHN_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
 pub const mycelium_std_runtime::colony::SCOPE_JOIN_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub mod mycelium_std_runtime::dataflow
+pub enum mycelium_std_runtime::dataflow::Step
+pub mycelium_std_runtime::dataflow::Step::Done
+pub mycelium_std_runtime::dataflow::Step::Pending
+impl core::clone::Clone for mycelium_std_runtime::dataflow::Step
+pub fn mycelium_std_runtime::dataflow::Step::clone(&self) -> mycelium_std_runtime::dataflow::Step
+impl core::cmp::Eq for mycelium_std_runtime::dataflow::Step
+impl core::cmp::PartialEq for mycelium_std_runtime::dataflow::Step
+pub fn mycelium_std_runtime::dataflow::Step::eq(&self, &mycelium_std_runtime::dataflow::Step) -> bool
+impl core::fmt::Debug for mycelium_std_runtime::dataflow::Step
+pub fn mycelium_std_runtime::dataflow::Step::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_runtime::dataflow::Step
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::dataflow::Step
+impl core::marker::Freeze for mycelium_std_runtime::dataflow::Step
+impl core::marker::Send for mycelium_std_runtime::dataflow::Step
+impl core::marker::Sync for mycelium_std_runtime::dataflow::Step
+impl core::marker::Unpin for mycelium_std_runtime::dataflow::Step
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::dataflow::Step
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::dataflow::Step
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::dataflow::Step
+pub enum mycelium_std_runtime::dataflow::SweepDir
+pub mycelium_std_runtime::dataflow::SweepDir::Ascending
+pub mycelium_std_runtime::dataflow::SweepDir::Descending
+impl core::clone::Clone for mycelium_std_runtime::dataflow::SweepDir
+pub fn mycelium_std_runtime::dataflow::SweepDir::clone(&self) -> mycelium_std_runtime::dataflow::SweepDir
+impl core::cmp::Eq for mycelium_std_runtime::dataflow::SweepDir
+impl core::cmp::PartialEq for mycelium_std_runtime::dataflow::SweepDir
+pub fn mycelium_std_runtime::dataflow::SweepDir::eq(&self, &mycelium_std_runtime::dataflow::SweepDir) -> bool
+impl core::default::Default for mycelium_std_runtime::dataflow::SweepDir
+pub fn mycelium_std_runtime::dataflow::SweepDir::default() -> mycelium_std_runtime::dataflow::SweepDir
+impl core::fmt::Debug for mycelium_std_runtime::dataflow::SweepDir
+pub fn mycelium_std_runtime::dataflow::SweepDir::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_runtime::dataflow::SweepDir
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::dataflow::SweepDir
+impl core::marker::Freeze for mycelium_std_runtime::dataflow::SweepDir
+impl core::marker::Send for mycelium_std_runtime::dataflow::SweepDir
+impl core::marker::Sync for mycelium_std_runtime::dataflow::SweepDir
+impl core::marker::Unpin for mycelium_std_runtime::dataflow::SweepDir
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::dataflow::SweepDir
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::dataflow::SweepDir
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::dataflow::SweepDir
+pub struct mycelium_std_runtime::dataflow::Progress
+impl mycelium_std_runtime::dataflow::Progress
+pub fn mycelium_std_runtime::dataflow::Progress::bump(&self)
+pub fn mycelium_std_runtime::dataflow::Progress::epoch(&self) -> u64
+pub fn mycelium_std_runtime::dataflow::Progress::new() -> Self
+impl core::default::Default for mycelium_std_runtime::dataflow::Progress
+pub fn mycelium_std_runtime::dataflow::Progress::default() -> mycelium_std_runtime::dataflow::Progress
+impl core::fmt::Debug for mycelium_std_runtime::dataflow::Progress
+pub fn mycelium_std_runtime::dataflow::Progress::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl !core::marker::Freeze for mycelium_std_runtime::dataflow::Progress
+impl core::marker::Send for mycelium_std_runtime::dataflow::Progress
+impl core::marker::Sync for mycelium_std_runtime::dataflow::Progress
+impl core::marker::Unpin for mycelium_std_runtime::dataflow::Progress
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::dataflow::Progress
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::dataflow::Progress
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::dataflow::Progress
+pub const mycelium_std_runtime::dataflow::DEADLOCK_DETECTION_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub const mycelium_std_runtime::dataflow::SWEEP_DETERMINISM_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub trait mycelium_std_runtime::dataflow::PollTask
+pub fn mycelium_std_runtime::dataflow::PollTask::poll(&mut self) -> mycelium_std_runtime::dataflow::Step
+pub fn mycelium_std_runtime::dataflow::run_dataflow(&mut [alloc::boxed::Box<dyn mycelium_std_runtime::dataflow::PollTask>], mycelium_std_runtime::dataflow::SweepDir, impl core::ops::function::Fn() -> u64) -> core::result::Result<(), mycelium_std_runtime::task::Deadlock>
+pub fn mycelium_std_runtime::dataflow::run_dataflow_scheduled(&mycelium_std_runtime::scheduler::Scheduler, &mut [alloc::boxed::Box<(dyn mycelium_std_runtime::dataflow::PollTask + core::marker::Send)>], impl core::ops::function::Fn() -> u64) -> core::result::Result<(), mycelium_std_runtime::task::Deadlock>
 pub mod mycelium_std_runtime::guarantee_matrix
 pub struct mycelium_std_runtime::guarantee_matrix::GaugeRow
 pub mycelium_std_runtime::guarantee_matrix::GaugeRow::basis: &'static str
@@ -165,6 +228,156 @@ impl<V> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::networ
 impl<V> core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::network::Sender<V>
 pub const mycelium_std_runtime::network::CHANNEL_FIFO_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
 pub const mycelium_std_runtime::network::KAHN_DETERMINISM_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub mod mycelium_std_runtime::scheduler
+pub enum mycelium_std_runtime::scheduler::SchedulerError
+pub mycelium_std_runtime::scheduler::SchedulerError::ZeroCapacity
+pub mycelium_std_runtime::scheduler::SchedulerError::ZeroWorkers
+impl core::clone::Clone for mycelium_std_runtime::scheduler::SchedulerError
+pub fn mycelium_std_runtime::scheduler::SchedulerError::clone(&self) -> mycelium_std_runtime::scheduler::SchedulerError
+impl core::cmp::Eq for mycelium_std_runtime::scheduler::SchedulerError
+impl core::cmp::PartialEq for mycelium_std_runtime::scheduler::SchedulerError
+pub fn mycelium_std_runtime::scheduler::SchedulerError::eq(&self, &mycelium_std_runtime::scheduler::SchedulerError) -> bool
+impl core::error::Error for mycelium_std_runtime::scheduler::SchedulerError
+impl core::fmt::Debug for mycelium_std_runtime::scheduler::SchedulerError
+pub fn mycelium_std_runtime::scheduler::SchedulerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_runtime::scheduler::SchedulerError
+pub fn mycelium_std_runtime::scheduler::SchedulerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_runtime::scheduler::SchedulerError
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::scheduler::SchedulerError
+impl core::marker::Freeze for mycelium_std_runtime::scheduler::SchedulerError
+impl core::marker::Send for mycelium_std_runtime::scheduler::SchedulerError
+impl core::marker::Sync for mycelium_std_runtime::scheduler::SchedulerError
+impl core::marker::Unpin for mycelium_std_runtime::scheduler::SchedulerError
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::scheduler::SchedulerError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::scheduler::SchedulerError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::scheduler::SchedulerError
+pub struct mycelium_std_runtime::scheduler::Scheduler
+impl mycelium_std_runtime::scheduler::Scheduler
+pub fn mycelium_std_runtime::scheduler::Scheduler::capacity(&self) -> usize
+pub fn mycelium_std_runtime::scheduler::Scheduler::new() -> Self
+pub fn mycelium_std_runtime::scheduler::Scheduler::run_indexed<T, F>(&self, alloc::vec::Vec<F>, core::option::Option<&mut usize>) -> alloc::vec::Vec<T> where F: core::ops::function::FnOnce() -> T + core::marker::Send, T: core::marker::Send
+pub fn mycelium_std_runtime::scheduler::Scheduler::with_workers(usize, usize) -> core::result::Result<Self, mycelium_std_runtime::scheduler::SchedulerError>
+pub fn mycelium_std_runtime::scheduler::Scheduler::workers(&self) -> usize
+impl core::clone::Clone for mycelium_std_runtime::scheduler::Scheduler
+pub fn mycelium_std_runtime::scheduler::Scheduler::clone(&self) -> mycelium_std_runtime::scheduler::Scheduler
+impl core::default::Default for mycelium_std_runtime::scheduler::Scheduler
+pub fn mycelium_std_runtime::scheduler::Scheduler::default() -> Self
+impl core::fmt::Debug for mycelium_std_runtime::scheduler::Scheduler
+pub fn mycelium_std_runtime::scheduler::Scheduler::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_runtime::scheduler::Scheduler
+impl core::marker::Freeze for mycelium_std_runtime::scheduler::Scheduler
+impl core::marker::Send for mycelium_std_runtime::scheduler::Scheduler
+impl core::marker::Sync for mycelium_std_runtime::scheduler::Scheduler
+impl core::marker::Unpin for mycelium_std_runtime::scheduler::Scheduler
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::scheduler::Scheduler
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::scheduler::Scheduler
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::scheduler::Scheduler
+pub const mycelium_std_runtime::scheduler::SCHEDULER_BACKPRESSURE_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub const mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub const mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub mod mycelium_std_runtime::supervision
+pub use mycelium_std_runtime::supervision::CancelToken
+pub use mycelium_std_runtime::supervision::Cancelled
+pub use mycelium_std_runtime::supervision::Escalation
+pub use mycelium_std_runtime::supervision::RestartIntensity
+pub use mycelium_std_runtime::supervision::Supervisor
+pub use mycelium_std_runtime::supervision::TaskOutcome
+pub enum mycelium_std_runtime::supervision::SupervisedFailure
+pub mycelium_std_runtime::supervision::SupervisedFailure::Cancelled
+pub mycelium_std_runtime::supervision::SupervisedFailure::Escalated(mycelium_interp::supervise::Escalation)
+impl core::clone::Clone for mycelium_std_runtime::supervision::SupervisedFailure
+pub fn mycelium_std_runtime::supervision::SupervisedFailure::clone(&self) -> mycelium_std_runtime::supervision::SupervisedFailure
+impl core::cmp::Eq for mycelium_std_runtime::supervision::SupervisedFailure
+impl core::cmp::PartialEq for mycelium_std_runtime::supervision::SupervisedFailure
+pub fn mycelium_std_runtime::supervision::SupervisedFailure::eq(&self, &mycelium_std_runtime::supervision::SupervisedFailure) -> bool
+impl core::fmt::Debug for mycelium_std_runtime::supervision::SupervisedFailure
+pub fn mycelium_std_runtime::supervision::SupervisedFailure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::supervision::SupervisedFailure
+impl core::marker::Freeze for mycelium_std_runtime::supervision::SupervisedFailure
+impl core::marker::Send for mycelium_std_runtime::supervision::SupervisedFailure
+impl core::marker::Sync for mycelium_std_runtime::supervision::SupervisedFailure
+impl core::marker::Unpin for mycelium_std_runtime::supervision::SupervisedFailure
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::supervision::SupervisedFailure
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::supervision::SupervisedFailure
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::supervision::SupervisedFailure
+pub enum mycelium_std_runtime::supervision::SupervisionAction
+pub mycelium_std_runtime::supervision::SupervisionAction::Escalated(mycelium_interp::supervise::Escalation)
+pub mycelium_std_runtime::supervision::SupervisionAction::Restarted
+impl core::clone::Clone for mycelium_std_runtime::supervision::SupervisionAction
+pub fn mycelium_std_runtime::supervision::SupervisionAction::clone(&self) -> mycelium_std_runtime::supervision::SupervisionAction
+impl core::cmp::Eq for mycelium_std_runtime::supervision::SupervisionAction
+impl core::cmp::PartialEq for mycelium_std_runtime::supervision::SupervisionAction
+pub fn mycelium_std_runtime::supervision::SupervisionAction::eq(&self, &mycelium_std_runtime::supervision::SupervisionAction) -> bool
+impl core::fmt::Debug for mycelium_std_runtime::supervision::SupervisionAction
+pub fn mycelium_std_runtime::supervision::SupervisionAction::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::supervision::SupervisionAction
+impl core::marker::Freeze for mycelium_std_runtime::supervision::SupervisionAction
+impl core::marker::Send for mycelium_std_runtime::supervision::SupervisionAction
+impl core::marker::Sync for mycelium_std_runtime::supervision::SupervisionAction
+impl core::marker::Unpin for mycelium_std_runtime::supervision::SupervisionAction
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::supervision::SupervisionAction
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::supervision::SupervisionAction
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::supervision::SupervisionAction
+pub struct mycelium_std_runtime::supervision::CancelTree
+impl mycelium_std_runtime::supervision::CancelTree
+pub fn mycelium_std_runtime::supervision::CancelTree::cancel(&self)
+pub fn mycelium_std_runtime::supervision::CancelTree::child(&mut self) -> &mut mycelium_std_runtime::supervision::CancelTree
+pub fn mycelium_std_runtime::supervision::CancelTree::child_count(&self) -> usize
+pub fn mycelium_std_runtime::supervision::CancelTree::is_cancelled(&self) -> bool
+pub fn mycelium_std_runtime::supervision::CancelTree::new() -> Self
+pub fn mycelium_std_runtime::supervision::CancelTree::token(&self) -> mycelium_interp::supervise::CancelToken
+impl core::default::Default for mycelium_std_runtime::supervision::CancelTree
+pub fn mycelium_std_runtime::supervision::CancelTree::default() -> mycelium_std_runtime::supervision::CancelTree
+impl core::fmt::Debug for mycelium_std_runtime::supervision::CancelTree
+pub fn mycelium_std_runtime::supervision::CancelTree::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_runtime::supervision::CancelTree
+impl core::marker::Send for mycelium_std_runtime::supervision::CancelTree
+impl core::marker::Sync for mycelium_std_runtime::supervision::CancelTree
+impl core::marker::Unpin for mycelium_std_runtime::supervision::CancelTree
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::supervision::CancelTree
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::supervision::CancelTree
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::supervision::CancelTree
+pub struct mycelium_std_runtime::supervision::SupervisedRun<T>
+pub mycelium_std_runtime::supervision::SupervisedRun::result: core::result::Result<T, mycelium_std_runtime::supervision::SupervisedFailure>
+pub mycelium_std_runtime::supervision::SupervisedRun::trace: alloc::vec::Vec<mycelium_std_runtime::supervision::SupervisionRecord>
+impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_runtime::supervision::SupervisedRun<T>
+pub fn mycelium_std_runtime::supervision::SupervisedRun<T>::clone(&self) -> mycelium_std_runtime::supervision::SupervisedRun<T>
+impl<T: core::cmp::Eq> core::cmp::Eq for mycelium_std_runtime::supervision::SupervisedRun<T>
+impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_runtime::supervision::SupervisedRun<T>
+pub fn mycelium_std_runtime::supervision::SupervisedRun<T>::eq(&self, &mycelium_std_runtime::supervision::SupervisedRun<T>) -> bool
+impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_runtime::supervision::SupervisedRun<T>
+impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_runtime::supervision::SupervisedRun<T>
+pub fn mycelium_std_runtime::supervision::SupervisedRun<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<T> core::marker::Freeze for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::marker::Freeze
+impl<T> core::marker::Send for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::marker::Send
+impl<T> core::marker::Sync for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::marker::Sync
+impl<T> core::marker::Unpin for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::marker::Unpin
+impl<T> core::marker::UnsafeUnpin for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::marker::UnsafeUnpin
+impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::panic::unwind_safe::RefUnwindSafe
+impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_runtime::supervision::SupervisionRecord
+pub mycelium_std_runtime::supervision::SupervisionRecord::action: mycelium_std_runtime::supervision::SupervisionAction
+pub mycelium_std_runtime::supervision::SupervisionRecord::logical_tick: u64
+pub mycelium_std_runtime::supervision::SupervisionRecord::restarts_before: u64
+impl core::clone::Clone for mycelium_std_runtime::supervision::SupervisionRecord
+pub fn mycelium_std_runtime::supervision::SupervisionRecord::clone(&self) -> mycelium_std_runtime::supervision::SupervisionRecord
+impl core::cmp::Eq for mycelium_std_runtime::supervision::SupervisionRecord
+impl core::cmp::PartialEq for mycelium_std_runtime::supervision::SupervisionRecord
+pub fn mycelium_std_runtime::supervision::SupervisionRecord::eq(&self, &mycelium_std_runtime::supervision::SupervisionRecord) -> bool
+impl core::fmt::Debug for mycelium_std_runtime::supervision::SupervisionRecord
+pub fn mycelium_std_runtime::supervision::SupervisionRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::supervision::SupervisionRecord
+impl core::marker::Freeze for mycelium_std_runtime::supervision::SupervisionRecord
+impl core::marker::Send for mycelium_std_runtime::supervision::SupervisionRecord
+impl core::marker::Sync for mycelium_std_runtime::supervision::SupervisionRecord
+impl core::marker::Unpin for mycelium_std_runtime::supervision::SupervisionRecord
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::supervision::SupervisionRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::supervision::SupervisionRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::supervision::SupervisionRecord
+pub const mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub const mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_std_runtime::supervision::run_supervised<T, E, F>(&mycelium_std_runtime::scheduler::Scheduler, &mycelium_interp::supervise::CancelToken, alloc::vec::Vec<F>) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>> where F: core::ops::function::FnOnce(&mycelium_interp::supervise::CancelToken) -> mycelium_interp::supervise::TaskOutcome<T, E> + core::marker::Send, T: core::marker::Send, E: core::marker::Send
+pub fn mycelium_std_runtime::supervision::supervise_with_restart<T, E>(&mut mycelium_interp::supervise::Supervisor, impl core::ops::function::FnMut() -> mycelium_interp::supervise::TaskOutcome<T, E>) -> mycelium_std_runtime::supervision::SupervisedRun<T>
 pub mod mycelium_std_runtime::task
 pub enum mycelium_std_runtime::task::Poll<T>
 pub mycelium_std_runtime::task::Poll::Pending

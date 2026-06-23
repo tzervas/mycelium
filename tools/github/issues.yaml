@@ -2979,7 +2979,7 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:release, priority:P1, status:done]
     depends_on: []
-    epic: E10
+    epic: E10-1
     landed_pr: 306
     landed_date: 2026-06-21
     landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-653 (PR #306): docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md records 25 Medium ids · 25 Fixed · 0 deferred (Gate A2 met), each with a failing-without-the-fix regression test. Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
@@ -3023,7 +3023,7 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:infra, area:release, priority:P1, status:done]
     depends_on: [M-700]
-    epic: E10
+    epic: E10-1
     landed_pr: 313
     landed_date: 2026-06-21
     landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-654 (PR #313): just mutants recipe + .cargo/mutants.toml (0 un-triaged survivors on core/cert/interp/numerics, equivalents justified); hand-rolled LCG suites migrated to proptest (crates/mycelium-numerics/tests/properties.rs, seed rotation); cargo-fuzz targets fuzz/fuzz_targets/{fuzz_l1_parse, fuzz_core_value_deser, fuzz_m210_checker}.rs + just fuzz-smoke wired into just check-full (Tier 2). Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
@@ -3073,7 +3073,7 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:infra, area:release, priority:P1, status:done]
     depends_on: []
-    epic: E10
+    epic: E10-1
     landed_pr: 303
     landed_date: 2026-06-21
     landed_basis: "Satisfied by reference to the prior ADR-021 kernel-gate landing M-652 (PR #303): deny.toml (MIT-aligned license allow-list + advisories + crates.io-only sources); just deny / scripts/checks/deny.sh runs cargo-deny + cargo-audit, wired non-silently into just check (scripts/checks/all.sh); cargo-deny/cargo-audit installed by scripts/install-tools.sh (skip-if-missing locally, never silent in CI). Refresh-status close (kickoff c10, maintainer-ratified, 2026-06-23); no fresh work this session — VR-5 grounding on the prior checked landing."
@@ -3119,7 +3119,7 @@ issues:
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:release, priority:P1, status:todo]
     depends_on: [M-700, M-701, M-702]
-    epic: E10
+    epic: E10-1
     doc_refs:
       - corpus:ADR-022
       - corpus:ADR-021
@@ -3164,7 +3164,7 @@ issues:
   - id: E11-1
     title: "E11-1 (epic) — Surface-language completeness & grammar ratification"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:epic, area:language, priority:P1, status:in-progress]
     depends_on: [E7-1, E7-3]
     epic: E11
     doc_refs:
@@ -3221,7 +3221,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
     depends_on: [E7-3]
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0024
       - corpus:DN-25
@@ -3277,7 +3277,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: []
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0025
       - corpus:DN-25
@@ -3333,7 +3333,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
     depends_on: [M-705]
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0025
       - src:crates/mycelium-l1/src/lexer.rs
@@ -3371,7 +3371,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:spec, area:language, priority:P1, status:in-progress]
     depends_on: [M-705, M-707, M-745]
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0030
       - corpus:RFC-0006
@@ -3428,7 +3428,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
     depends_on: [E7-1]
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0020
       - corpus:DN-25
@@ -3479,7 +3479,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [E7-1]
-    epic: E11
+    epic: E11-1
     doc_refs:
       - corpus:RFC-0030
       - corpus:DN-25
@@ -3593,7 +3593,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:design, area:language, priority:P2, status:needs-design]
     depends_on: [E11-1]
-    epic: E18
+    epic: E18-1
     doc_refs:
       - corpus:DN-26
       - corpus:DN-14
@@ -3629,7 +3629,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
     depends_on: [M-739, E11-1]
-    epic: E18
+    epic: E18-1
     doc_refs:
       - corpus:DN-26
       - corpus:DN-14
@@ -3671,7 +3671,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
     depends_on: [M-740, E13-1]
-    epic: E18
+    epic: E18-1
     doc_refs:
       - corpus:DN-26
       - corpus:DN-14
@@ -3709,7 +3709,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:verification, area:language, priority:P2, status:needs-design]
     depends_on: [M-741]
-    epic: E18
+    epic: E18-1
     doc_refs:
       - corpus:DN-26
       - corpus:DN-25
