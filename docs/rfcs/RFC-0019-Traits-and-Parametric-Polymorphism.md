@@ -796,6 +796,19 @@ This RFC is **Draft**. The maintainer must ratify it (move to Accepted) based on
 
 ## Meta — changelog
 
+- **2026-06-23 — trait elaboration LANDED via monomorphization + static resolution (M-673; append-only,
+  status unchanged).** The §4.5 dictionary-passing lowering staged by M-659 is now implemented — but, as
+  RFC-0007 §11.3/§12.3 record, via **monomorphization with static instance resolution**, not the literal
+  §4.4-recommended runtime-dictionary form. Under monomorphization every trait-method call site is at a
+  known concrete type, so `crates/mycelium-l1/src/mono.rs` resolves the coherent instance and rewrites the
+  call to a **direct call** to that instance's (mangled, monomorphic) method body, reified in a queryable
+  EXPLAIN selection record (no black boxes). The honest §4.4 tradeoff stands and is **recorded, not
+  hidden**: identity *fragments across specializations* (the mangled names are the record). The literal
+  §4.5 runtime **dictionary record** (a `Construct` of method values) is **not v0-expressible** — the
+  trusted core's `FieldSpec` is `Repr | Data` only, with no function-typed field — so it remains the
+  **deferred normative target**, gated on an abstract-parameter `FieldSpec` trusted-core change (a separate
+  ADR). Honesty (VR-5): coherence stays **Declared-with-argument**; no result is upgraded. DN-14 §3 row 7 →
+  `present`.
 - **2026-06-22 — §4.5 orphan rule generalized phylum-wide (M-662, E7-1; append-only, status unchanged).**
   The cross-nodule enforcement the M-659 entry below staged "with the phylum work" has landed: the §4.5
   orphan rule is now checked **phylum-wide** in `crates/mycelium-l1` — an `impl Trait for T` is legal iff

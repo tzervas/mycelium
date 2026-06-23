@@ -592,6 +592,23 @@ and does **not** advance the decision's status.
   `head`; higher-order `map` is noted as L2-with-lambdas — v0 has no surface arrow type). No v0
   calculus content changed; this only aligns the amendment's wording with the honest implementation
   (VR-5/G2).
+- **2026-06-23 — §11.3 monomorphization + §12.3 trait elaboration LANDED (M-673; append-only, no
+  calculus change).** The §11.3 `Residual` ("monomorphization staged") placeholder is now lowered: a
+  frontend monomorphization pre-pass (`crates/mycelium-l1/src/mono.rs`) specializes each concrete
+  generic instantiation to a mangled monomorphic decl/fn and **statically resolves** each
+  trait-method call to a direct call to the coherent instance's method body (§12.3), so the existing
+  trusted elaborator/registry run **unchanged** — no `mycelium-core` change (KC-3). The honest cost is
+  recorded, not hidden: a generic's content-addressed identity **fragments across specializations**
+  (the mangled names are the record — RFC-0019 §4.4). Static trait resolution is reified in a
+  queryable EXPLAIN selection record (no black boxes — house rule #2). Mangling is injective and
+  surface-disjoint (`$`-joined, `#`-tagged nullary data, so a data type named like a repr can never
+  alias it — never silent, G2). No `Swap` is ever inserted (S1); an undetermined type parameter and
+  every out-of-fragment construct (multi-parameter traits, higher-order generics, `wild`/FFI, VSA,
+  Substrate) stay **explicit** `Residual`s, and the §11.3/§12.3 refusal sites are kept as defensive
+  invariants. The **literal RFC-0019 §4.5 runtime dictionary-record** form remains deferred (it needs
+  an abstract-parameter `FieldSpec` in the trusted core — a separate ADR). DN-14 §3 rows 6/7 →
+  `present`. VR-5: no guarantee/totality tag is upgraded (totality is recomputed over the specialized
+  set, never fabricated).
 - **2026-06-22 — §4.4 generics deferral discharged → new §11 (M-656; RFC-0019 ripple, append-only,
   no calculus change).** §4.4's "polymorphism/traits deliberately out of v0 — its own later RFC" is
   now routed to its destination: **RFC-0019 (Accepted 2026-06-18)** ratifies dictionary-passing
