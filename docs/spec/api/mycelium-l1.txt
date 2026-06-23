@@ -100,6 +100,7 @@ pub enum mycelium_l1::ast::BaseType
 pub mycelium_l1::ast::BaseType::Ambient(mycelium_l1::ast::AmbientParams)
 pub mycelium_l1::ast::BaseType::Binary(u32)
 pub mycelium_l1::ast::BaseType::Dense(u32, mycelium_l1::ast::Scalar)
+pub mycelium_l1::ast::BaseType::Fn(alloc::boxed::Box<mycelium_l1::ast::TypeRef>, alloc::boxed::Box<mycelium_l1::ast::TypeRef>)
 pub mycelium_l1::ast::BaseType::Named(alloc::string::String, alloc::vec::Vec<mycelium_l1::ast::TypeRef>)
 pub mycelium_l1::ast::BaseType::Substrate(alloc::string::String)
 pub mycelium_l1::ast::BaseType::Ternary(u32)
@@ -640,6 +641,7 @@ pub enum mycelium_l1::checkty::Ty
 pub mycelium_l1::checkty::Ty::Binary(u32)
 pub mycelium_l1::checkty::Ty::Data(alloc::string::String, alloc::vec::Vec<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::checkty::Ty::Dense(u32, mycelium_l1::ast::Scalar)
+pub mycelium_l1::checkty::Ty::Fn(alloc::boxed::Box<mycelium_l1::checkty::Ty>, alloc::boxed::Box<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::checkty::Ty::Substrate(alloc::string::String)
 pub mycelium_l1::checkty::Ty::Ternary(u32)
 pub mycelium_l1::checkty::Ty::Var(alloc::string::String)
@@ -961,8 +963,49 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::eval::EvaluatorOpt
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::eval::EvaluatorOpts
 pub fn mycelium_l1::eval::strength_of(mycelium_l1::ast::Strength) -> mycelium_core::guarantee::GuaranteeStrength
 pub mod mycelium_l1::lexer
+pub struct mycelium_l1::lexer::Comment
+pub mycelium_l1::lexer::Comment::col: u32
+pub mycelium_l1::lexer::Comment::line: u32
+pub mycelium_l1::lexer::Comment::text: alloc::string::String
+pub mycelium_l1::lexer::Comment::trailing: bool
+impl core::clone::Clone for mycelium_l1::lexer::Comment
+pub fn mycelium_l1::lexer::Comment::clone(&self) -> mycelium_l1::lexer::Comment
+impl core::cmp::Eq for mycelium_l1::lexer::Comment
+impl core::cmp::PartialEq for mycelium_l1::lexer::Comment
+pub fn mycelium_l1::lexer::Comment::eq(&self, &mycelium_l1::lexer::Comment) -> bool
+impl core::fmt::Debug for mycelium_l1::lexer::Comment
+pub fn mycelium_l1::lexer::Comment::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::lexer::Comment
+impl core::marker::Freeze for mycelium_l1::lexer::Comment
+impl core::marker::Send for mycelium_l1::lexer::Comment
+impl core::marker::Sync for mycelium_l1::lexer::Comment
+impl core::marker::Unpin for mycelium_l1::lexer::Comment
+impl core::marker::UnsafeUnpin for mycelium_l1::lexer::Comment
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::lexer::Comment
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::lexer::Comment
 pub fn mycelium_l1::lexer::lex(&str) -> core::result::Result<alloc::vec::Vec<mycelium_l1::token::Spanned>, mycelium_l1::error::ParseError>
+pub fn mycelium_l1::lexer::lex_with_comments(&str) -> core::result::Result<(alloc::vec::Vec<mycelium_l1::token::Spanned>, alloc::vec::Vec<mycelium_l1::lexer::Comment>), mycelium_l1::error::ParseError>
 pub mod mycelium_l1::mono
+pub struct mycelium_l1::mono::HofSpecialization
+pub mycelium_l1::mono::HofSpecialization::fn_args: alloc::vec::Vec<(usize, alloc::string::String)>
+pub mycelium_l1::mono::HofSpecialization::mangled: alloc::string::String
+pub mycelium_l1::mono::HofSpecialization::source_fn: alloc::string::String
+pub mycelium_l1::mono::HofSpecialization::targs: alloc::vec::Vec<mycelium_l1::checkty::Ty>
+impl core::clone::Clone for mycelium_l1::mono::HofSpecialization
+pub fn mycelium_l1::mono::HofSpecialization::clone(&self) -> mycelium_l1::mono::HofSpecialization
+impl core::cmp::Eq for mycelium_l1::mono::HofSpecialization
+impl core::cmp::PartialEq for mycelium_l1::mono::HofSpecialization
+pub fn mycelium_l1::mono::HofSpecialization::eq(&self, &mycelium_l1::mono::HofSpecialization) -> bool
+impl core::fmt::Debug for mycelium_l1::mono::HofSpecialization
+pub fn mycelium_l1::mono::HofSpecialization::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::mono::HofSpecialization
+impl core::marker::Freeze for mycelium_l1::mono::HofSpecialization
+impl core::marker::Send for mycelium_l1::mono::HofSpecialization
+impl core::marker::Sync for mycelium_l1::mono::HofSpecialization
+impl core::marker::Unpin for mycelium_l1::mono::HofSpecialization
+impl core::marker::UnsafeUnpin for mycelium_l1::mono::HofSpecialization
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::mono::HofSpecialization
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::mono::HofSpecialization
 pub struct mycelium_l1::mono::InstanceSelection
 pub mycelium_l1::mono::InstanceSelection::for_ty: mycelium_l1::checkty::Ty
 pub mycelium_l1::mono::InstanceSelection::impl_mangled: alloc::string::String
@@ -985,6 +1028,8 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::mono::InstanceSelecti
 pub struct mycelium_l1::mono::MonoSelections
 impl mycelium_l1::mono::MonoSelections
 pub fn mycelium_l1::mono::MonoSelections::get(&self, &str) -> core::option::Option<&mycelium_l1::mono::InstanceSelection>
+pub fn mycelium_l1::mono::MonoSelections::hof(&self, &str) -> core::option::Option<&mycelium_l1::mono::HofSpecialization>
+pub fn mycelium_l1::mono::MonoSelections::hof_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&alloc::string::String, &mycelium_l1::mono::HofSpecialization)>
 pub fn mycelium_l1::mono::MonoSelections::is_empty(&self) -> bool
 pub fn mycelium_l1::mono::MonoSelections::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&alloc::string::String, &mycelium_l1::mono::InstanceSelection)>
 pub fn mycelium_l1::mono::MonoSelections::len(&self) -> usize
@@ -1376,6 +1421,7 @@ pub enum mycelium_l1::Ty
 pub mycelium_l1::Ty::Binary(u32)
 pub mycelium_l1::Ty::Data(alloc::string::String, alloc::vec::Vec<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::Ty::Dense(u32, mycelium_l1::ast::Scalar)
+pub mycelium_l1::Ty::Fn(alloc::boxed::Box<mycelium_l1::checkty::Ty>, alloc::boxed::Box<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::Ty::Substrate(alloc::string::String)
 pub mycelium_l1::Ty::Ternary(u32)
 pub mycelium_l1::Ty::Var(alloc::string::String)
@@ -1504,6 +1550,8 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::mono::InstanceSelecti
 pub struct mycelium_l1::MonoSelections
 impl mycelium_l1::mono::MonoSelections
 pub fn mycelium_l1::mono::MonoSelections::get(&self, &str) -> core::option::Option<&mycelium_l1::mono::InstanceSelection>
+pub fn mycelium_l1::mono::MonoSelections::hof(&self, &str) -> core::option::Option<&mycelium_l1::mono::HofSpecialization>
+pub fn mycelium_l1::mono::MonoSelections::hof_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&alloc::string::String, &mycelium_l1::mono::HofSpecialization)>
 pub fn mycelium_l1::mono::MonoSelections::is_empty(&self) -> bool
 pub fn mycelium_l1::mono::MonoSelections::iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&alloc::string::String, &mycelium_l1::mono::InstanceSelection)>
 pub fn mycelium_l1::mono::MonoSelections::len(&self) -> usize

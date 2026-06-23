@@ -25,6 +25,8 @@ pub mycelium_check::Finding::level: mycelium_lsp::diagnostics::record::Level
 pub mycelium_check::Finding::message: alloc::string::String
 pub mycelium_check::Finding::route: core::option::Option<alloc::string::String>
 pub mycelium_check::Finding::site: alloc::string::String
+impl mycelium_check::Finding
+pub fn mycelium_check::Finding::with_route(self, alloc::string::String) -> Self
 impl core::clone::Clone for mycelium_check::Finding
 pub fn mycelium_check::Finding::clone(&self) -> mycelium_check::Finding
 impl core::cmp::Eq for mycelium_check::Finding
@@ -46,6 +48,8 @@ pub mycelium_check::Report::findings: alloc::vec::Vec<mycelium_check::Finding>
 impl mycelium_check::Report
 pub fn mycelium_check::Report::exit_code(&self) -> u8
 pub fn mycelium_check::Report::is_ok(&self) -> bool
+pub fn mycelium_check::Report::with_files_checked(self, usize) -> Self
+pub fn mycelium_check::Report::with_finding(self, mycelium_check::Finding) -> Self
 impl core::clone::Clone for mycelium_check::Report
 pub fn mycelium_check::Report::clone(&self) -> mycelium_check::Report
 impl core::default::Default for mycelium_check::Report
@@ -80,4 +84,5 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_check::ResolveError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_check::ResolveError
 pub fn mycelium_check::check_project(&std::path::Path) -> core::result::Result<mycelium_check::Report, mycelium_check::ResolveError>
 pub fn mycelium_check::check_source(&str, &str, &mycelium_lsp::diagnostics::policy::DiagnosticPolicy, &mycelium_lsp::diagnostics::registry::ClassRegistry, &mut alloc::vec::Vec<mycelium_check::Finding>)
+pub fn mycelium_check::check_source_default(&str, &str, &mut alloc::vec::Vec<mycelium_check::Finding>)
 pub fn mycelium_check::check_sources(&[(alloc::string::String, alloc::string::String)]) -> mycelium_check::Report

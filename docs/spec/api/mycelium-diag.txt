@@ -28,7 +28,7 @@ impl core::marker::Unpin for mycelium_diag::Code
 impl core::marker::UnsafeUnpin for mycelium_diag::Code
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_diag::Code
 impl core::panic::unwind_safe::UnwindSafe for mycelium_diag::Code
-pub enum mycelium_diag::Severity
+#[non_exhaustive] pub enum mycelium_diag::Severity
 pub mycelium_diag::Severity::Debug
 pub mycelium_diag::Severity::Error
 pub mycelium_diag::Severity::Info

@@ -10,7 +10,9 @@ pub fn mycelium_mlir::aot::run_with_layout(&mycelium_core::node::Node, &mycelium
 pub mod mycelium_mlir::bitnet
 pub struct mycelium_mlir::bitnet::BitnetDotKernel
 impl mycelium_mlir::bitnet::BitnetDotKernel
+pub fn mycelium_mlir::bitnet::BitnetDotKernel::bind(&self) -> core::result::Result<mycelium_mlir::bitnet::BoundBitnetDot<'_>, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::bitnet::BitnetDotKernel::call(&self, &[u8], &[i32], usize) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::bitnet::BitnetDotKernel::layout(&self) -> mycelium_mlir::bitnet::KernelLayout
 pub fn mycelium_mlir::bitnet::BitnetDotKernel::scheme(&self) -> mycelium_core::meta::PackScheme
 impl core::marker::Freeze for mycelium_mlir::bitnet::BitnetDotKernel
 impl !core::marker::Send for mycelium_mlir::bitnet::BitnetDotKernel
@@ -19,6 +21,38 @@ impl core::marker::Unpin for mycelium_mlir::bitnet::BitnetDotKernel
 impl core::marker::UnsafeUnpin for mycelium_mlir::bitnet::BitnetDotKernel
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::bitnet::BitnetDotKernel
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::bitnet::BitnetDotKernel
+pub struct mycelium_mlir::bitnet::BoundBitnetDot<'lib>
+impl mycelium_mlir::bitnet::BoundBitnetDot<'_>
+pub fn mycelium_mlir::bitnet::BoundBitnetDot<'_>::call(&self, &[u8], &[i32], usize) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+impl<'lib> core::marker::Freeze for mycelium_mlir::bitnet::BoundBitnetDot<'lib>
+impl<'lib> !core::marker::Send for mycelium_mlir::bitnet::BoundBitnetDot<'lib>
+impl<'lib> !core::marker::Sync for mycelium_mlir::bitnet::BoundBitnetDot<'lib>
+impl<'lib> core::marker::Unpin for mycelium_mlir::bitnet::BoundBitnetDot<'lib>
+impl<'lib> core::marker::UnsafeUnpin for mycelium_mlir::bitnet::BoundBitnetDot<'lib>
+impl<'lib> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::bitnet::BoundBitnetDot<'lib>
+impl<'lib> core::panic::unwind_safe::UnwindSafe for mycelium_mlir::bitnet::BoundBitnetDot<'lib>
+pub struct mycelium_mlir::bitnet::KernelLayout
+impl mycelium_mlir::bitnet::KernelLayout
+pub fn mycelium_mlir::bitnet::KernelLayout::bits_per_element(self) -> f64
+pub fn mycelium_mlir::bitnet::KernelLayout::explain(self) -> alloc::string::String
+pub fn mycelium_mlir::bitnet::KernelLayout::new(mycelium_core::meta::PackScheme) -> Self
+pub fn mycelium_mlir::bitnet::KernelLayout::physical(self) -> mycelium_core::meta::PhysicalLayout
+pub fn mycelium_mlir::bitnet::KernelLayout::scheme(self) -> mycelium_core::meta::PackScheme
+impl core::clone::Clone for mycelium_mlir::bitnet::KernelLayout
+pub fn mycelium_mlir::bitnet::KernelLayout::clone(&self) -> mycelium_mlir::bitnet::KernelLayout
+impl core::cmp::PartialEq for mycelium_mlir::bitnet::KernelLayout
+pub fn mycelium_mlir::bitnet::KernelLayout::eq(&self, &mycelium_mlir::bitnet::KernelLayout) -> bool
+impl core::fmt::Debug for mycelium_mlir::bitnet::KernelLayout
+pub fn mycelium_mlir::bitnet::KernelLayout::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::StructuralPartialEq for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::Freeze for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::Send for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::Sync for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::Unpin for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::UnsafeUnpin for mycelium_mlir::bitnet::KernelLayout
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::bitnet::KernelLayout
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::bitnet::KernelLayout
 pub const mycelium_mlir::bitnet::KERNEL_SCHEME: mycelium_core::meta::PackScheme
 pub fn mycelium_mlir::bitnet::compile_bitnet_dot() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::bitnet::compile_bitnet_dot_for(mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
@@ -234,6 +268,50 @@ impl<V> core::marker::Unpin for mycelium_mlir::channel::Sender<V>
 impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::Sender<V>
 impl<V> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Sender<V>
 impl<V> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Sender<V>
+pub mod mycelium_mlir::deploy
+pub enum mycelium_mlir::deploy::DeployError
+pub mycelium_mlir::deploy::DeployError::NotDeployable(alloc::string::String)
+pub mycelium_mlir::deploy::DeployError::ToolchainMissing(alloc::string::String)
+impl core::clone::Clone for mycelium_mlir::deploy::DeployError
+pub fn mycelium_mlir::deploy::DeployError::clone(&self) -> mycelium_mlir::deploy::DeployError
+impl core::cmp::PartialEq for mycelium_mlir::deploy::DeployError
+pub fn mycelium_mlir::deploy::DeployError::eq(&self, &mycelium_mlir::deploy::DeployError) -> bool
+impl core::error::Error for mycelium_mlir::deploy::DeployError
+impl core::fmt::Debug for mycelium_mlir::deploy::DeployError
+pub fn mycelium_mlir::deploy::DeployError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::deploy::DeployError
+pub fn mycelium_mlir::deploy::DeployError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::deploy::DeployError
+impl core::marker::Freeze for mycelium_mlir::deploy::DeployError
+impl core::marker::Send for mycelium_mlir::deploy::DeployError
+impl core::marker::Sync for mycelium_mlir::deploy::DeployError
+impl core::marker::Unpin for mycelium_mlir::deploy::DeployError
+impl core::marker::UnsafeUnpin for mycelium_mlir::deploy::DeployError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::deploy::DeployError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::deploy::DeployError
+pub struct mycelium_mlir::deploy::NativeArtifact
+impl mycelium_mlir::deploy::NativeArtifact
+pub fn mycelium_mlir::deploy::NativeArtifact::build(&mycelium_core::node::Node) -> core::result::Result<Self, mycelium_mlir::deploy::DeployError>
+pub fn mycelium_mlir::deploy::NativeArtifact::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::deploy::NativeArtifact::faithfulness(&self) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_mlir::deploy::NativeArtifact::id(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_mlir::deploy::NativeArtifact::lowered_ir(&self) -> &str
+pub fn mycelium_mlir::deploy::NativeArtifact::same_identity_as(&self, &mycelium_mlir::deploy::NativeArtifact) -> bool
+pub fn mycelium_mlir::deploy::NativeArtifact::vr4(&self) -> &mycelium_mlir::vr4::CrossBackendGate
+impl core::clone::Clone for mycelium_mlir::deploy::NativeArtifact
+pub fn mycelium_mlir::deploy::NativeArtifact::clone(&self) -> mycelium_mlir::deploy::NativeArtifact
+impl core::cmp::PartialEq for mycelium_mlir::deploy::NativeArtifact
+pub fn mycelium_mlir::deploy::NativeArtifact::eq(&self, &mycelium_mlir::deploy::NativeArtifact) -> bool
+impl core::fmt::Debug for mycelium_mlir::deploy::NativeArtifact
+pub fn mycelium_mlir::deploy::NativeArtifact::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::deploy::NativeArtifact
+impl core::marker::Freeze for mycelium_mlir::deploy::NativeArtifact
+impl core::marker::Send for mycelium_mlir::deploy::NativeArtifact
+impl core::marker::Sync for mycelium_mlir::deploy::NativeArtifact
+impl core::marker::Unpin for mycelium_mlir::deploy::NativeArtifact
+impl core::marker::UnsafeUnpin for mycelium_mlir::deploy::NativeArtifact
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::deploy::NativeArtifact
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::deploy::NativeArtifact
 pub mod mycelium_mlir::dialect
 pub fn mycelium_mlir::dialect::emit(&mycelium_core::node::Node) -> alloc::string::String
 pub mod mycelium_mlir::inject
@@ -391,6 +469,33 @@ pub fn mycelium_mlir::pack::pack_trits(&[mycelium_core::value::Trit], mycelium_c
 pub fn mycelium_mlir::pack::relayout_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> alloc::vec::Vec<mycelium_core::value::Trit>
 pub fn mycelium_mlir::pack::unpack_trits(&[u8], mycelium_core::meta::PackScheme, usize) -> core::result::Result<alloc::vec::Vec<mycelium_core::value::Trit>, mycelium_mlir::pack::PackError>
 pub mod mycelium_mlir::runtime
+pub enum mycelium_mlir::runtime::ColonyError
+pub mycelium_mlir::runtime::ColonyError::Empty
+pub mycelium_mlir::runtime::ColonyError::HyphaFailed
+pub mycelium_mlir::runtime::ColonyError::HyphaFailed::index: usize
+pub mycelium_mlir::runtime::ColonyError::HyphaFailed::outcome: alloc::string::String
+pub mycelium_mlir::runtime::ColonyError::NondeterministicDivergence
+pub mycelium_mlir::runtime::ColonyError::NondeterministicDivergence::concurrent: alloc::string::String
+pub mycelium_mlir::runtime::ColonyError::NondeterministicDivergence::index: usize
+pub mycelium_mlir::runtime::ColonyError::NondeterministicDivergence::sequential: alloc::string::String
+impl core::clone::Clone for mycelium_mlir::runtime::ColonyError
+pub fn mycelium_mlir::runtime::ColonyError::clone(&self) -> mycelium_mlir::runtime::ColonyError
+impl core::cmp::Eq for mycelium_mlir::runtime::ColonyError
+impl core::cmp::PartialEq for mycelium_mlir::runtime::ColonyError
+pub fn mycelium_mlir::runtime::ColonyError::eq(&self, &mycelium_mlir::runtime::ColonyError) -> bool
+impl core::error::Error for mycelium_mlir::runtime::ColonyError
+impl core::fmt::Debug for mycelium_mlir::runtime::ColonyError
+pub fn mycelium_mlir::runtime::ColonyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::runtime::ColonyError
+pub fn mycelium_mlir::runtime::ColonyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::runtime::ColonyError
+impl core::marker::Freeze for mycelium_mlir::runtime::ColonyError
+impl core::marker::Send for mycelium_mlir::runtime::ColonyError
+impl core::marker::Sync for mycelium_mlir::runtime::ColonyError
+impl core::marker::Unpin for mycelium_mlir::runtime::ColonyError
+impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::ColonyError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::ColonyError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::ColonyError
 pub enum mycelium_mlir::runtime::Poll<T, E>
 pub mycelium_mlir::runtime::Poll::Pending
 pub mycelium_mlir::runtime::Poll::Ready(mycelium_interp::supervise::TaskOutcome<T, E>)
@@ -437,23 +542,23 @@ impl core::marker::Unpin for mycelium_mlir::runtime::Deadlock
 impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::Deadlock
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Deadlock
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Deadlock
-pub struct mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> mycelium_mlir::runtime::Scope<T, E>
-pub fn mycelium_mlir::runtime::Scope<T, E>::cancel_token(&self) -> mycelium_interp::supervise::CancelToken
-pub fn mycelium_mlir::runtime::Scope<T, E>::new() -> Self
-pub fn mycelium_mlir::runtime::Scope<T, E>::run_dataflow(self, mycelium_mlir::runtime::SweepOrder, impl core::ops::function::Fn() -> u64) -> core::result::Result<alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>, mycelium_mlir::runtime::Deadlock>
-pub fn mycelium_mlir::runtime::Scope<T, E>::run_interleaved(self, core::option::Option<&mut alloc::vec::Vec<usize>>) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
-pub fn mycelium_mlir::runtime::Scope<T, E>::run_sequential(self) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
-pub fn mycelium_mlir::runtime::Scope<T, E>::spawn(&mut self, alloc::boxed::Box<dyn mycelium_mlir::runtime::Task<Output = T, Error = E>>, mycelium_interp::budget::Budgets) -> usize
-impl<T, E> core::default::Default for mycelium_mlir::runtime::Scope<T, E>
-pub fn mycelium_mlir::runtime::Scope<T, E>::default() -> Self
-impl<T, E> core::marker::Freeze for mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> !core::marker::Send for mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> !core::marker::Sync for mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> core::marker::Unpin for mycelium_mlir::runtime::Scope<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
-impl<T, E> core::marker::UnsafeUnpin for mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Scope<T, E>
+pub struct mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> mycelium_mlir::runtime::Scope<'a, T, E>
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::cancel_token(&self) -> mycelium_interp::supervise::CancelToken
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::new() -> Self
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::run_dataflow(self, mycelium_mlir::runtime::SweepOrder, impl core::ops::function::Fn() -> u64) -> core::result::Result<alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>, mycelium_mlir::runtime::Deadlock>
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::run_interleaved(self, core::option::Option<&mut alloc::vec::Vec<usize>>) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::run_sequential(self) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::spawn(&mut self, alloc::boxed::Box<(dyn mycelium_mlir::runtime::Task<Output = T, Error = E> + 'a)>, mycelium_interp::budget::Budgets) -> usize
+impl<T, E> core::default::Default for mycelium_mlir::runtime::Scope<'_, T, E>
+pub fn mycelium_mlir::runtime::Scope<'_, T, E>::default() -> Self
+impl<'a, T, E> core::marker::Freeze for mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> !core::marker::Send for mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> !core::marker::Sync for mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> core::marker::Unpin for mycelium_mlir::runtime::Scope<'a, T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<'a, T, E> core::marker::UnsafeUnpin for mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Scope<'a, T, E>
 pub struct mycelium_mlir::runtime::TaskCtx<'a>
 pub mycelium_mlir::runtime::TaskCtx::budgets: &'a mut mycelium_interp::budget::Budgets
 pub mycelium_mlir::runtime::TaskCtx::cancel: &'a mycelium_interp::supervise::CancelToken
@@ -469,7 +574,8 @@ pub trait mycelium_mlir::runtime::Task
 pub type mycelium_mlir::runtime::Task::Error
 pub type mycelium_mlir::runtime::Task::Output
 pub fn mycelium_mlir::runtime::Task::poll(&mut self, &mut mycelium_mlir::runtime::TaskCtx<'_>) -> mycelium_mlir::runtime::Poll<Self::Output, Self::Error>
-pub type mycelium_mlir::runtime::Colony<T, E> = mycelium_mlir::runtime::Scope<T, E>
+pub fn mycelium_mlir::runtime::run_colony(&[mycelium_core::node::Node], &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_mlir::runtime::ColonyError>
+pub type mycelium_mlir::runtime::Colony<'a, T, E> = mycelium_mlir::runtime::Scope<'a, T, E>
 pub mod mycelium_mlir::simd
 pub fn mycelium_mlir::simd::compile_bitnet_dot_simd() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::simd::compile_bitnet_dot_simd_tl1() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
@@ -478,8 +584,19 @@ pub fn mycelium_mlir::simd::emit_bitnet_dot_simd_ir() -> alloc::string::String
 pub fn mycelium_mlir::simd::emit_bitnet_dot_simd_tl1_ir() -> alloc::string::String
 pub fn mycelium_mlir::simd::emit_bitnet_dot_simd_tl2_ir() -> alloc::string::String
 pub mod mycelium_mlir::specialize
+pub struct mycelium_mlir::specialize::BoundSpecializedDot<'lib>
+impl mycelium_mlir::specialize::BoundSpecializedDot<'_>
+pub fn mycelium_mlir::specialize::BoundSpecializedDot<'_>::call(&self, &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+impl<'lib> core::marker::Freeze for mycelium_mlir::specialize::BoundSpecializedDot<'lib>
+impl<'lib> !core::marker::Send for mycelium_mlir::specialize::BoundSpecializedDot<'lib>
+impl<'lib> !core::marker::Sync for mycelium_mlir::specialize::BoundSpecializedDot<'lib>
+impl<'lib> core::marker::Unpin for mycelium_mlir::specialize::BoundSpecializedDot<'lib>
+impl<'lib> core::marker::UnsafeUnpin for mycelium_mlir::specialize::BoundSpecializedDot<'lib>
+impl<'lib> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::specialize::BoundSpecializedDot<'lib>
+impl<'lib> core::panic::unwind_safe::UnwindSafe for mycelium_mlir::specialize::BoundSpecializedDot<'lib>
 pub struct mycelium_mlir::specialize::SpecializedDotKernel
 impl mycelium_mlir::specialize::SpecializedDotKernel
+pub fn mycelium_mlir::specialize::SpecializedDotKernel::bind(&self) -> core::result::Result<mycelium_mlir::specialize::BoundSpecializedDot<'_>, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::specialize::SpecializedDotKernel::call(&self, &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::specialize::SpecializedDotKernel::n(&self) -> usize
 pub fn mycelium_mlir::specialize::SpecializedDotKernel::nonzero(&self) -> usize
@@ -493,6 +610,95 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::specialize::Special
 pub fn mycelium_mlir::specialize::compile_specialized_dot(&[mycelium_core::value::Trit]) -> core::result::Result<mycelium_mlir::specialize::SpecializedDotKernel, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::specialize::emit_specialized_dot_ir(&[mycelium_core::value::Trit]) -> alloc::string::String
 pub fn mycelium_mlir::specialize::jit_specialized_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub mod mycelium_mlir::vr4
+pub enum mycelium_mlir::vr4::Backend
+pub mycelium_mlir::vr4::Backend::AotEnvMachine
+pub mycelium_mlir::vr4::Backend::DirectLlvm
+pub mycelium_mlir::vr4::Backend::Interpreter
+pub mycelium_mlir::vr4::Backend::JitSimd
+pub mycelium_mlir::vr4::Backend::MlirDialect
+pub mycelium_mlir::vr4::Backend::MlirSkeleton
+impl mycelium_mlir::vr4::Backend
+pub fn mycelium_mlir::vr4::Backend::all() -> [mycelium_mlir::vr4::Backend; 6]
+pub fn mycelium_mlir::vr4::Backend::name(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::vr4::Backend
+pub fn mycelium_mlir::vr4::Backend::clone(&self) -> mycelium_mlir::vr4::Backend
+impl core::cmp::Eq for mycelium_mlir::vr4::Backend
+impl core::cmp::PartialEq for mycelium_mlir::vr4::Backend
+pub fn mycelium_mlir::vr4::Backend::eq(&self, &mycelium_mlir::vr4::Backend) -> bool
+impl core::fmt::Debug for mycelium_mlir::vr4::Backend
+pub fn mycelium_mlir::vr4::Backend::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_mlir::vr4::Backend
+pub fn mycelium_mlir::vr4::Backend::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_mlir::vr4::Backend
+impl core::marker::StructuralPartialEq for mycelium_mlir::vr4::Backend
+impl core::marker::Freeze for mycelium_mlir::vr4::Backend
+impl core::marker::Send for mycelium_mlir::vr4::Backend
+impl core::marker::Sync for mycelium_mlir::vr4::Backend
+impl core::marker::Unpin for mycelium_mlir::vr4::Backend
+impl core::marker::UnsafeUnpin for mycelium_mlir::vr4::Backend
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::vr4::Backend
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::vr4::Backend
+pub enum mycelium_mlir::vr4::StageStatus
+pub mycelium_mlir::vr4::StageStatus::Dumped(alloc::string::String)
+pub mycelium_mlir::vr4::StageStatus::Skipped(alloc::string::String)
+impl mycelium_mlir::vr4::StageStatus
+pub fn mycelium_mlir::vr4::StageStatus::is_dumped(&self) -> bool
+impl core::clone::Clone for mycelium_mlir::vr4::StageStatus
+pub fn mycelium_mlir::vr4::StageStatus::clone(&self) -> mycelium_mlir::vr4::StageStatus
+impl core::cmp::PartialEq for mycelium_mlir::vr4::StageStatus
+pub fn mycelium_mlir::vr4::StageStatus::eq(&self, &mycelium_mlir::vr4::StageStatus) -> bool
+impl core::fmt::Debug for mycelium_mlir::vr4::StageStatus
+pub fn mycelium_mlir::vr4::StageStatus::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::vr4::StageStatus
+impl core::marker::Freeze for mycelium_mlir::vr4::StageStatus
+impl core::marker::Send for mycelium_mlir::vr4::StageStatus
+impl core::marker::Sync for mycelium_mlir::vr4::StageStatus
+impl core::marker::Unpin for mycelium_mlir::vr4::StageStatus
+impl core::marker::UnsafeUnpin for mycelium_mlir::vr4::StageStatus
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::vr4::StageStatus
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::vr4::StageStatus
+pub struct mycelium_mlir::vr4::BackendStage
+pub mycelium_mlir::vr4::BackendStage::backend: mycelium_mlir::vr4::Backend
+pub mycelium_mlir::vr4::BackendStage::faithfulness: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_mlir::vr4::BackendStage::status: mycelium_mlir::vr4::StageStatus
+impl mycelium_mlir::vr4::BackendStage
+pub fn mycelium_mlir::vr4::BackendStage::explain(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_mlir::vr4::BackendStage
+pub fn mycelium_mlir::vr4::BackendStage::clone(&self) -> mycelium_mlir::vr4::BackendStage
+impl core::cmp::PartialEq for mycelium_mlir::vr4::BackendStage
+pub fn mycelium_mlir::vr4::BackendStage::eq(&self, &mycelium_mlir::vr4::BackendStage) -> bool
+impl core::fmt::Debug for mycelium_mlir::vr4::BackendStage
+pub fn mycelium_mlir::vr4::BackendStage::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::vr4::BackendStage
+impl core::marker::Freeze for mycelium_mlir::vr4::BackendStage
+impl core::marker::Send for mycelium_mlir::vr4::BackendStage
+impl core::marker::Sync for mycelium_mlir::vr4::BackendStage
+impl core::marker::Unpin for mycelium_mlir::vr4::BackendStage
+impl core::marker::UnsafeUnpin for mycelium_mlir::vr4::BackendStage
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::vr4::BackendStage
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::vr4::BackendStage
+pub struct mycelium_mlir::vr4::CrossBackendGate
+pub mycelium_mlir::vr4::CrossBackendGate::stages: alloc::vec::Vec<mycelium_mlir::vr4::BackendStage>
+impl mycelium_mlir::vr4::CrossBackendGate
+pub fn mycelium_mlir::vr4::CrossBackendGate::covered(&self) -> usize
+pub fn mycelium_mlir::vr4::CrossBackendGate::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::vr4::CrossBackendGate::fully_covered(&self) -> bool
+impl core::clone::Clone for mycelium_mlir::vr4::CrossBackendGate
+pub fn mycelium_mlir::vr4::CrossBackendGate::clone(&self) -> mycelium_mlir::vr4::CrossBackendGate
+impl core::cmp::PartialEq for mycelium_mlir::vr4::CrossBackendGate
+pub fn mycelium_mlir::vr4::CrossBackendGate::eq(&self, &mycelium_mlir::vr4::CrossBackendGate) -> bool
+impl core::fmt::Debug for mycelium_mlir::vr4::CrossBackendGate
+pub fn mycelium_mlir::vr4::CrossBackendGate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::vr4::CrossBackendGate
+impl core::marker::Freeze for mycelium_mlir::vr4::CrossBackendGate
+impl core::marker::Send for mycelium_mlir::vr4::CrossBackendGate
+impl core::marker::Sync for mycelium_mlir::vr4::CrossBackendGate
+impl core::marker::Unpin for mycelium_mlir::vr4::CrossBackendGate
+impl core::marker::UnsafeUnpin for mycelium_mlir::vr4::CrossBackendGate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::vr4::CrossBackendGate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::vr4::CrossBackendGate
+pub fn mycelium_mlir::vr4::cross_backend_gate(&mycelium_core::node::Node) -> mycelium_mlir::vr4::CrossBackendGate
 pub enum mycelium_mlir::AotError
 pub mycelium_mlir::AotError::Compile(alloc::string::String)
 pub mycelium_mlir::AotError::DepthLimit(alloc::string::String)
@@ -528,6 +734,81 @@ impl core::marker::Unpin for mycelium_mlir::llvm::AotError
 impl core::marker::UnsafeUnpin for mycelium_mlir::llvm::AotError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::llvm::AotError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::llvm::AotError
+pub enum mycelium_mlir::Backend
+pub mycelium_mlir::Backend::AotEnvMachine
+pub mycelium_mlir::Backend::DirectLlvm
+pub mycelium_mlir::Backend::Interpreter
+pub mycelium_mlir::Backend::JitSimd
+pub mycelium_mlir::Backend::MlirDialect
+pub mycelium_mlir::Backend::MlirSkeleton
+impl mycelium_mlir::vr4::Backend
+pub fn mycelium_mlir::vr4::Backend::all() -> [mycelium_mlir::vr4::Backend; 6]
+pub fn mycelium_mlir::vr4::Backend::name(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::vr4::Backend
+pub fn mycelium_mlir::vr4::Backend::clone(&self) -> mycelium_mlir::vr4::Backend
+impl core::cmp::Eq for mycelium_mlir::vr4::Backend
+impl core::cmp::PartialEq for mycelium_mlir::vr4::Backend
+pub fn mycelium_mlir::vr4::Backend::eq(&self, &mycelium_mlir::vr4::Backend) -> bool
+impl core::fmt::Debug for mycelium_mlir::vr4::Backend
+pub fn mycelium_mlir::vr4::Backend::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_mlir::vr4::Backend
+pub fn mycelium_mlir::vr4::Backend::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_mlir::vr4::Backend
+impl core::marker::StructuralPartialEq for mycelium_mlir::vr4::Backend
+impl core::marker::Freeze for mycelium_mlir::vr4::Backend
+impl core::marker::Send for mycelium_mlir::vr4::Backend
+impl core::marker::Sync for mycelium_mlir::vr4::Backend
+impl core::marker::Unpin for mycelium_mlir::vr4::Backend
+impl core::marker::UnsafeUnpin for mycelium_mlir::vr4::Backend
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::vr4::Backend
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::vr4::Backend
+pub enum mycelium_mlir::ColonyError
+pub mycelium_mlir::ColonyError::Empty
+pub mycelium_mlir::ColonyError::HyphaFailed
+pub mycelium_mlir::ColonyError::HyphaFailed::index: usize
+pub mycelium_mlir::ColonyError::HyphaFailed::outcome: alloc::string::String
+pub mycelium_mlir::ColonyError::NondeterministicDivergence
+pub mycelium_mlir::ColonyError::NondeterministicDivergence::concurrent: alloc::string::String
+pub mycelium_mlir::ColonyError::NondeterministicDivergence::index: usize
+pub mycelium_mlir::ColonyError::NondeterministicDivergence::sequential: alloc::string::String
+impl core::clone::Clone for mycelium_mlir::runtime::ColonyError
+pub fn mycelium_mlir::runtime::ColonyError::clone(&self) -> mycelium_mlir::runtime::ColonyError
+impl core::cmp::Eq for mycelium_mlir::runtime::ColonyError
+impl core::cmp::PartialEq for mycelium_mlir::runtime::ColonyError
+pub fn mycelium_mlir::runtime::ColonyError::eq(&self, &mycelium_mlir::runtime::ColonyError) -> bool
+impl core::error::Error for mycelium_mlir::runtime::ColonyError
+impl core::fmt::Debug for mycelium_mlir::runtime::ColonyError
+pub fn mycelium_mlir::runtime::ColonyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::runtime::ColonyError
+pub fn mycelium_mlir::runtime::ColonyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::runtime::ColonyError
+impl core::marker::Freeze for mycelium_mlir::runtime::ColonyError
+impl core::marker::Send for mycelium_mlir::runtime::ColonyError
+impl core::marker::Sync for mycelium_mlir::runtime::ColonyError
+impl core::marker::Unpin for mycelium_mlir::runtime::ColonyError
+impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::ColonyError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::ColonyError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::ColonyError
+pub enum mycelium_mlir::DeployError
+pub mycelium_mlir::DeployError::NotDeployable(alloc::string::String)
+pub mycelium_mlir::DeployError::ToolchainMissing(alloc::string::String)
+impl core::clone::Clone for mycelium_mlir::deploy::DeployError
+pub fn mycelium_mlir::deploy::DeployError::clone(&self) -> mycelium_mlir::deploy::DeployError
+impl core::cmp::PartialEq for mycelium_mlir::deploy::DeployError
+pub fn mycelium_mlir::deploy::DeployError::eq(&self, &mycelium_mlir::deploy::DeployError) -> bool
+impl core::error::Error for mycelium_mlir::deploy::DeployError
+impl core::fmt::Debug for mycelium_mlir::deploy::DeployError
+pub fn mycelium_mlir::deploy::DeployError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::deploy::DeployError
+pub fn mycelium_mlir::deploy::DeployError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::deploy::DeployError
+impl core::marker::Freeze for mycelium_mlir::deploy::DeployError
+impl core::marker::Send for mycelium_mlir::deploy::DeployError
+impl core::marker::Sync for mycelium_mlir::deploy::DeployError
+impl core::marker::Unpin for mycelium_mlir::deploy::DeployError
+impl core::marker::UnsafeUnpin for mycelium_mlir::deploy::DeployError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::deploy::DeployError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::deploy::DeployError
 pub enum mycelium_mlir::DepthBasis
 pub mycelium_mlir::DepthBasis::DetectedMemory
 pub mycelium_mlir::DepthBasis::DetectedMemory::clamped: bool
@@ -622,6 +903,25 @@ impl core::marker::Unpin for mycelium_mlir::inject::Resolution
 impl core::marker::UnsafeUnpin for mycelium_mlir::inject::Resolution
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::Resolution
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::Resolution
+pub enum mycelium_mlir::StageStatus
+pub mycelium_mlir::StageStatus::Dumped(alloc::string::String)
+pub mycelium_mlir::StageStatus::Skipped(alloc::string::String)
+impl mycelium_mlir::vr4::StageStatus
+pub fn mycelium_mlir::vr4::StageStatus::is_dumped(&self) -> bool
+impl core::clone::Clone for mycelium_mlir::vr4::StageStatus
+pub fn mycelium_mlir::vr4::StageStatus::clone(&self) -> mycelium_mlir::vr4::StageStatus
+impl core::cmp::PartialEq for mycelium_mlir::vr4::StageStatus
+pub fn mycelium_mlir::vr4::StageStatus::eq(&self, &mycelium_mlir::vr4::StageStatus) -> bool
+impl core::fmt::Debug for mycelium_mlir::vr4::StageStatus
+pub fn mycelium_mlir::vr4::StageStatus::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::vr4::StageStatus
+impl core::marker::Freeze for mycelium_mlir::vr4::StageStatus
+impl core::marker::Send for mycelium_mlir::vr4::StageStatus
+impl core::marker::Sync for mycelium_mlir::vr4::StageStatus
+impl core::marker::Unpin for mycelium_mlir::vr4::StageStatus
+impl core::marker::UnsafeUnpin for mycelium_mlir::vr4::StageStatus
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::vr4::StageStatus
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::vr4::StageStatus
 pub enum mycelium_mlir::StaticReason
 pub mycelium_mlir::StaticReason::DetectionFailed
 pub mycelium_mlir::StaticReason::Explicit
@@ -718,9 +1018,31 @@ impl core::marker::Unpin for mycelium_mlir::budget::AutoDepthBudget
 impl core::marker::UnsafeUnpin for mycelium_mlir::budget::AutoDepthBudget
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::AutoDepthBudget
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::AutoDepthBudget
+pub struct mycelium_mlir::BackendStage
+pub mycelium_mlir::BackendStage::backend: mycelium_mlir::vr4::Backend
+pub mycelium_mlir::BackendStage::faithfulness: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_mlir::BackendStage::status: mycelium_mlir::vr4::StageStatus
+impl mycelium_mlir::vr4::BackendStage
+pub fn mycelium_mlir::vr4::BackendStage::explain(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_mlir::vr4::BackendStage
+pub fn mycelium_mlir::vr4::BackendStage::clone(&self) -> mycelium_mlir::vr4::BackendStage
+impl core::cmp::PartialEq for mycelium_mlir::vr4::BackendStage
+pub fn mycelium_mlir::vr4::BackendStage::eq(&self, &mycelium_mlir::vr4::BackendStage) -> bool
+impl core::fmt::Debug for mycelium_mlir::vr4::BackendStage
+pub fn mycelium_mlir::vr4::BackendStage::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::vr4::BackendStage
+impl core::marker::Freeze for mycelium_mlir::vr4::BackendStage
+impl core::marker::Send for mycelium_mlir::vr4::BackendStage
+impl core::marker::Sync for mycelium_mlir::vr4::BackendStage
+impl core::marker::Unpin for mycelium_mlir::vr4::BackendStage
+impl core::marker::UnsafeUnpin for mycelium_mlir::vr4::BackendStage
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::vr4::BackendStage
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::vr4::BackendStage
 pub struct mycelium_mlir::BitnetDotKernel
 impl mycelium_mlir::bitnet::BitnetDotKernel
+pub fn mycelium_mlir::bitnet::BitnetDotKernel::bind(&self) -> core::result::Result<mycelium_mlir::bitnet::BoundBitnetDot<'_>, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::bitnet::BitnetDotKernel::call(&self, &[u8], &[i32], usize) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::bitnet::BitnetDotKernel::layout(&self) -> mycelium_mlir::bitnet::KernelLayout
 pub fn mycelium_mlir::bitnet::BitnetDotKernel::scheme(&self) -> mycelium_core::meta::PackScheme
 impl core::marker::Freeze for mycelium_mlir::bitnet::BitnetDotKernel
 impl !core::marker::Send for mycelium_mlir::bitnet::BitnetDotKernel
@@ -739,6 +1061,26 @@ impl core::marker::Unpin for mycelium_mlir::llvm::CompiledArtifact
 impl core::marker::UnsafeUnpin for mycelium_mlir::llvm::CompiledArtifact
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::llvm::CompiledArtifact
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::llvm::CompiledArtifact
+pub struct mycelium_mlir::CrossBackendGate
+pub mycelium_mlir::CrossBackendGate::stages: alloc::vec::Vec<mycelium_mlir::vr4::BackendStage>
+impl mycelium_mlir::vr4::CrossBackendGate
+pub fn mycelium_mlir::vr4::CrossBackendGate::covered(&self) -> usize
+pub fn mycelium_mlir::vr4::CrossBackendGate::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::vr4::CrossBackendGate::fully_covered(&self) -> bool
+impl core::clone::Clone for mycelium_mlir::vr4::CrossBackendGate
+pub fn mycelium_mlir::vr4::CrossBackendGate::clone(&self) -> mycelium_mlir::vr4::CrossBackendGate
+impl core::cmp::PartialEq for mycelium_mlir::vr4::CrossBackendGate
+pub fn mycelium_mlir::vr4::CrossBackendGate::eq(&self, &mycelium_mlir::vr4::CrossBackendGate) -> bool
+impl core::fmt::Debug for mycelium_mlir::vr4::CrossBackendGate
+pub fn mycelium_mlir::vr4::CrossBackendGate::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::vr4::CrossBackendGate
+impl core::marker::Freeze for mycelium_mlir::vr4::CrossBackendGate
+impl core::marker::Send for mycelium_mlir::vr4::CrossBackendGate
+impl core::marker::Sync for mycelium_mlir::vr4::CrossBackendGate
+impl core::marker::Unpin for mycelium_mlir::vr4::CrossBackendGate
+impl core::marker::UnsafeUnpin for mycelium_mlir::vr4::CrossBackendGate
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::vr4::CrossBackendGate
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::vr4::CrossBackendGate
 pub struct mycelium_mlir::Deadlock
 pub mycelium_mlir::Deadlock::parked: alloc::vec::Vec<usize>
 impl core::clone::Clone for mycelium_mlir::runtime::Deadlock
@@ -806,6 +1148,51 @@ impl core::marker::Unpin for mycelium_mlir::jit::JitArtifact
 impl core::marker::UnsafeUnpin for mycelium_mlir::jit::JitArtifact
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::jit::JitArtifact
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::jit::JitArtifact
+pub struct mycelium_mlir::KernelLayout
+impl mycelium_mlir::bitnet::KernelLayout
+pub fn mycelium_mlir::bitnet::KernelLayout::bits_per_element(self) -> f64
+pub fn mycelium_mlir::bitnet::KernelLayout::explain(self) -> alloc::string::String
+pub fn mycelium_mlir::bitnet::KernelLayout::new(mycelium_core::meta::PackScheme) -> Self
+pub fn mycelium_mlir::bitnet::KernelLayout::physical(self) -> mycelium_core::meta::PhysicalLayout
+pub fn mycelium_mlir::bitnet::KernelLayout::scheme(self) -> mycelium_core::meta::PackScheme
+impl core::clone::Clone for mycelium_mlir::bitnet::KernelLayout
+pub fn mycelium_mlir::bitnet::KernelLayout::clone(&self) -> mycelium_mlir::bitnet::KernelLayout
+impl core::cmp::PartialEq for mycelium_mlir::bitnet::KernelLayout
+pub fn mycelium_mlir::bitnet::KernelLayout::eq(&self, &mycelium_mlir::bitnet::KernelLayout) -> bool
+impl core::fmt::Debug for mycelium_mlir::bitnet::KernelLayout
+pub fn mycelium_mlir::bitnet::KernelLayout::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::StructuralPartialEq for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::Freeze for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::Send for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::Sync for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::Unpin for mycelium_mlir::bitnet::KernelLayout
+impl core::marker::UnsafeUnpin for mycelium_mlir::bitnet::KernelLayout
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::bitnet::KernelLayout
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::bitnet::KernelLayout
+pub struct mycelium_mlir::NativeArtifact
+impl mycelium_mlir::deploy::NativeArtifact
+pub fn mycelium_mlir::deploy::NativeArtifact::build(&mycelium_core::node::Node) -> core::result::Result<Self, mycelium_mlir::deploy::DeployError>
+pub fn mycelium_mlir::deploy::NativeArtifact::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::deploy::NativeArtifact::faithfulness(&self) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_mlir::deploy::NativeArtifact::id(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_mlir::deploy::NativeArtifact::lowered_ir(&self) -> &str
+pub fn mycelium_mlir::deploy::NativeArtifact::same_identity_as(&self, &mycelium_mlir::deploy::NativeArtifact) -> bool
+pub fn mycelium_mlir::deploy::NativeArtifact::vr4(&self) -> &mycelium_mlir::vr4::CrossBackendGate
+impl core::clone::Clone for mycelium_mlir::deploy::NativeArtifact
+pub fn mycelium_mlir::deploy::NativeArtifact::clone(&self) -> mycelium_mlir::deploy::NativeArtifact
+impl core::cmp::PartialEq for mycelium_mlir::deploy::NativeArtifact
+pub fn mycelium_mlir::deploy::NativeArtifact::eq(&self, &mycelium_mlir::deploy::NativeArtifact) -> bool
+impl core::fmt::Debug for mycelium_mlir::deploy::NativeArtifact
+pub fn mycelium_mlir::deploy::NativeArtifact::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::deploy::NativeArtifact
+impl core::marker::Freeze for mycelium_mlir::deploy::NativeArtifact
+impl core::marker::Send for mycelium_mlir::deploy::NativeArtifact
+impl core::marker::Sync for mycelium_mlir::deploy::NativeArtifact
+impl core::marker::Unpin for mycelium_mlir::deploy::NativeArtifact
+impl core::marker::UnsafeUnpin for mycelium_mlir::deploy::NativeArtifact
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::deploy::NativeArtifact
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::deploy::NativeArtifact
 pub struct mycelium_mlir::Network
 impl mycelium_mlir::channel::Network
 pub fn mycelium_mlir::channel::Network::channel<V>(&self, core::num::nonzero::NonZeroUsize) -> (mycelium_mlir::channel::Sender<V>, mycelium_mlir::channel::Receiver<V>)
@@ -835,23 +1222,23 @@ impl<V> core::marker::Unpin for mycelium_mlir::channel::Receiver<V>
 impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::Receiver<V>
 impl<V> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Receiver<V>
 impl<V> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Receiver<V>
-pub struct mycelium_mlir::Scope<T, E>
-impl<T, E> mycelium_mlir::runtime::Scope<T, E>
-pub fn mycelium_mlir::runtime::Scope<T, E>::cancel_token(&self) -> mycelium_interp::supervise::CancelToken
-pub fn mycelium_mlir::runtime::Scope<T, E>::new() -> Self
-pub fn mycelium_mlir::runtime::Scope<T, E>::run_dataflow(self, mycelium_mlir::runtime::SweepOrder, impl core::ops::function::Fn() -> u64) -> core::result::Result<alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>, mycelium_mlir::runtime::Deadlock>
-pub fn mycelium_mlir::runtime::Scope<T, E>::run_interleaved(self, core::option::Option<&mut alloc::vec::Vec<usize>>) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
-pub fn mycelium_mlir::runtime::Scope<T, E>::run_sequential(self) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
-pub fn mycelium_mlir::runtime::Scope<T, E>::spawn(&mut self, alloc::boxed::Box<dyn mycelium_mlir::runtime::Task<Output = T, Error = E>>, mycelium_interp::budget::Budgets) -> usize
-impl<T, E> core::default::Default for mycelium_mlir::runtime::Scope<T, E>
-pub fn mycelium_mlir::runtime::Scope<T, E>::default() -> Self
-impl<T, E> core::marker::Freeze for mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> !core::marker::Send for mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> !core::marker::Sync for mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> core::marker::Unpin for mycelium_mlir::runtime::Scope<T, E> where T: core::marker::Unpin, E: core::marker::Unpin
-impl<T, E> core::marker::UnsafeUnpin for mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Scope<T, E>
-impl<T, E> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Scope<T, E>
+pub struct mycelium_mlir::Scope<'a, T, E>
+impl<'a, T, E> mycelium_mlir::runtime::Scope<'a, T, E>
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::cancel_token(&self) -> mycelium_interp::supervise::CancelToken
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::new() -> Self
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::run_dataflow(self, mycelium_mlir::runtime::SweepOrder, impl core::ops::function::Fn() -> u64) -> core::result::Result<alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>, mycelium_mlir::runtime::Deadlock>
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::run_interleaved(self, core::option::Option<&mut alloc::vec::Vec<usize>>) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::run_sequential(self) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>>
+pub fn mycelium_mlir::runtime::Scope<'a, T, E>::spawn(&mut self, alloc::boxed::Box<(dyn mycelium_mlir::runtime::Task<Output = T, Error = E> + 'a)>, mycelium_interp::budget::Budgets) -> usize
+impl<T, E> core::default::Default for mycelium_mlir::runtime::Scope<'_, T, E>
+pub fn mycelium_mlir::runtime::Scope<'_, T, E>::default() -> Self
+impl<'a, T, E> core::marker::Freeze for mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> !core::marker::Send for mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> !core::marker::Sync for mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> core::marker::Unpin for mycelium_mlir::runtime::Scope<'a, T, E> where T: core::marker::Unpin, E: core::marker::Unpin
+impl<'a, T, E> core::marker::UnsafeUnpin for mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Scope<'a, T, E>
+impl<'a, T, E> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Scope<'a, T, E>
 pub struct mycelium_mlir::Sender<V>
 impl<V> mycelium_mlir::channel::Sender<V>
 pub fn mycelium_mlir::channel::Sender<V>::is_connected(&self) -> bool
@@ -867,6 +1254,7 @@ impl<V> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Sen
 impl<V> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Sender<V>
 pub struct mycelium_mlir::SpecializedDotKernel
 impl mycelium_mlir::specialize::SpecializedDotKernel
+pub fn mycelium_mlir::specialize::SpecializedDotKernel::bind(&self) -> core::result::Result<mycelium_mlir::specialize::BoundSpecializedDot<'_>, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::specialize::SpecializedDotKernel::call(&self, &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::specialize::SpecializedDotKernel::n(&self) -> usize
 pub fn mycelium_mlir::specialize::SpecializedDotKernel::nonzero(&self) -> usize
@@ -923,6 +1311,7 @@ pub fn mycelium_mlir::compile_bitnet_dot_simd_tl1() -> core::result::Result<myce
 pub fn mycelium_mlir::compile_bitnet_dot_simd_tl2() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::compile_so(&mycelium_core::node::Node) -> core::result::Result<mycelium_mlir::jit::JitArtifact, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::compile_specialized_dot(&[mycelium_core::value::Trit]) -> core::result::Result<mycelium_mlir::specialize::SpecializedDotKernel, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::cross_backend_gate(&mycelium_core::node::Node) -> mycelium_mlir::vr4::CrossBackendGate
 pub fn mycelium_mlir::default_depth_budget() -> mycelium_mlir::budget::DepthResolution
 pub fn mycelium_mlir::emit(&mycelium_core::node::Node) -> alloc::string::String
 pub fn mycelium_mlir::emit_bitnet_dot_ir() -> alloc::string::String
@@ -936,14 +1325,16 @@ pub fn mycelium_mlir::jit_run(&mycelium_core::node::Node) -> core::result::Resul
 pub fn mycelium_mlir::jit_specialized_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::jit_ternary_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::jit_ternary_dot_for(&[mycelium_core::value::Trit], &[i32], mycelium_core::meta::PackScheme) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::needed_bytes_for(mycelium_core::meta::PackScheme, usize) -> usize
 pub fn mycelium_mlir::pack_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme) -> alloc::vec::Vec<u8>
 pub fn mycelium_mlir::recompile_closure(&std::collections::hash::map::HashMap<mycelium_core::id::ContentHash, alloc::vec::Vec<mycelium_core::id::ContentHash>>, &[mycelium_core::id::ContentHash]) -> std::collections::hash::set::HashSet<mycelium_core::id::ContentHash>
 pub fn mycelium_mlir::relayout_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> alloc::vec::Vec<mycelium_core::value::Trit>
 pub fn mycelium_mlir::run(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub fn mycelium_mlir::run_colony(&[mycelium_core::node::Node], &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_mlir::runtime::ColonyError>
 pub fn mycelium_mlir::run_core(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_core_with_effects(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize, &mut mycelium_interp::budget::Budgets) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_core_with_fuel(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_with_layout(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
 pub fn mycelium_mlir::ternary_dot_ref(&[mycelium_core::value::Trit], &[i32]) -> i64
 pub fn mycelium_mlir::unpack_trits(&[u8], mycelium_core::meta::PackScheme, usize) -> core::result::Result<alloc::vec::Vec<mycelium_core::value::Trit>, mycelium_mlir::pack::PackError>
-pub type mycelium_mlir::Colony<T, E> = mycelium_mlir::runtime::Scope<T, E>
+pub type mycelium_mlir::Colony<'a, T, E> = mycelium_mlir::runtime::Scope<'a, T, E>
