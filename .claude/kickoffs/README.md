@@ -43,11 +43,11 @@ main` promotes it up.
 | **`std`** | `std.md` | `lib/std/result.myc` + differential tests | Sonnet · **single leaf** (disjoint from L1 Rust) | `run` ✅ (M-673 landed) |
 | **`tul`** | `tul.md` | `tools/github/**` | Sonnet (docs/tooling) | — (needs GitHub read access) |
 | **`dfb`** | `dfb.md` | `crates/mycelium-web/` · `crates/mycelium-adk/` (NEW) | Sonnet · parallel-leaf | ⏸ **SHELVED** behind E7-3/E7-4/E7-5 (L1 surface completeness) — maintainer 2026-06-23 |
-| _(active)_ **l1-capstone** | run-kickoff continuation; head `claude/orch-0000-l1-capstone` | `crates/mycelium-l1/**` · `crates/mycelium-fmt/**` · `lib/std/**` | **E7-3** HOF (serial-on-L1) ∥ **E7-4** comment-preserving mycfmt (lexer+fmt, disjoint) → M-649 complete | `run` ✅ (M-673 landed) |
+| *(active)* **l1-capstone** | run-kickoff continuation; head `claude/orch-0000-l1-capstone` | `crates/mycelium-l1/**` · `crates/mycelium-fmt/**` · `lib/std/**` | **E7-3** HOF (serial-on-L1) ∥ **E7-4** comment-preserving mycfmt (lexer+fmt, disjoint) → M-649 complete | `run` ✅ (M-673 landed) |
 
 **Parallelism (collision profile):**
 - **`srf` owns `crates/mycelium-l1/` (Rust) → serial-on-L1** (M-664 leaf lands, then M-667 rebases
-  + lands; M-668 docs leaf can run in parallel). See `srf.md` §M-673 run-collisions for the mandatory
+  and lands; M-668 docs leaf can run in parallel). See `srf.md` §M-673 run-collisions for the mandatory
   rebase checklist.
 - **`std` owns only `.myc` + test files** — fully disjoint from `srf`'s Rust edits. `std` and `srf`
   **may run in parallel** (no collision).
