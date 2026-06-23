@@ -167,6 +167,14 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
             "internal: an unresolved paradigm-less repr `{…}` reached elaboration — the ambient \
              resolution pass fills it first (RFC-0012 §4.3)",
         ),
+        // Function types are surface-only in HOF stage 1 (RFC-0024 §3, M-685); elaboration
+        // (defunctionalization) is M-687. A function type used as a swap target is a
+        // never-silent explicit refusal (G2).
+        BaseType::Fn(_, _) => residual(
+            site,
+            "function types (`A -> B`) are not a representation type and cannot be a swap target \
+             (RFC-0024 §3, HOF stage 1 — defunctionalization is M-687)",
+        ),
     }
 }
 

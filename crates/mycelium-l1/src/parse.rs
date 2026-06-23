@@ -671,6 +671,27 @@ impl Parser {
     // ---- types ----
 
     fn parse_type_ref(&mut self) -> Result<TypeRef, ParseError> {
+        // Parse `base [@guarantee]` first.  Then, if a `->` follows, this whole LHS
+        // becomes the argument of a function type and we parse the RHS recursively
+        // (right-associative; `@` binds tighter than `->` — RFC-0024 §3).
+        let lhs = self.parse_type_ref_atom()?;
+        if self.eat(&Tok::Arrow) {
+            // Right-associative: recurse for the result type (which may itself be `A -> B`).
+            let rhs = self.parse_type_ref()?;
+            Ok(TypeRef::unguaranteed(BaseType::Fn(
+                Box::new(lhs),
+                Box::new(rhs),
+            )))
+        } else {
+            Ok(lhs)
+        }
+    }
+
+    /// Parse a single `base [@guarantee]` atom — without consuming a trailing `->`.  This is
+    /// the non-recursive inner step of [`parse_type_ref`]; callers that need to stop *before*
+    /// the arrow use this directly (none in v1 — `parse_sig_tail` already consumed its own
+    /// `->` before calling `parse_type_ref` for the return type, so there is no ambiguity).
+    fn parse_type_ref_atom(&mut self) -> Result<TypeRef, ParseError> {
         let base = self.parse_base_type()?;
         let guarantee = if self.eat(&Tok::At) {
             Some(self.parse_strength()?)
@@ -1228,7 +1249,7 @@ mod tests {
     //! call sites are exercised end-to-end (empty / single / multi lists, the match-arm trailing
     //! comma, and that bare lists reject a trailing comma) — pinning byte-identical behavior.
     use super::*;
-    use crate::ast::{Expr, Item, Literal};
+    use crate::ast::{BaseType, Expr, Item, Literal, TypeRef};
 
     fn fn_body(src: &str) -> Expr {
         let n = parse(src).expect("parses");
@@ -1508,5 +1529,176 @@ mod tests {
         };
         assert!(matches!(fd.body, Expr::Wild(_)), "the body is a wild block");
         assert_eq!(fd.sig.effects, vec!["ffi".to_owned()]);
+    }
+
+    // --- M-685 / RFC-0024 §3: function type `A -> B` surface + fn-name-as-value ---
+
+    /// Helper: extract the `TypeRef` of the first named parameter of the first `fn` item.
+    fn first_param_ty(src: &str) -> TypeRef {
+        let n = parse(src).expect("parses");
+        n.items
+            .into_iter()
+            .find_map(|i| match i {
+                Item::Fn(fd) => Some(fd.sig.value_params.into_iter().next()?.ty),
+                _ => None,
+            })
+            .expect("a fn with at least one value parameter")
+    }
+
+    #[test]
+    fn simple_fn_type_parses_to_basetype_fn() {
+        // `f: A -> B` in a parameter builds `BaseType::Fn(Named("A"), Named("B"))`.
+        // Use a single-param fn so `first_param_ty` finds the fn-typed one directly.
+        let ty = first_param_ty("nodule d\nfn apply<A, B>(f: A -> B) -> B = f");
+        let BaseType::Fn(arg, ret) = ty.base else {
+            panic!("expected BaseType::Fn, got {:?}", ty.base);
+        };
+        assert!(
+            matches!(arg.base, BaseType::Named(ref n, _) if n == "A"),
+            "arg should be Named(A), got {:?}",
+            arg.base
+        );
+        assert!(
+            matches!(ret.base, BaseType::Named(ref n, _) if n == "B"),
+            "ret should be Named(B), got {:?}",
+            ret.base
+        );
+        assert!(ty.guarantee.is_none(), "no guarantee on the outer fn type");
+    }
+
+    #[test]
+    fn fn_type_is_right_associative() {
+        // `A -> B -> C` must parse as `A -> (B -> C)`.
+        let ty = first_param_ty("nodule d\nfn f<A, B, C>(g: A -> B -> C) -> A = g");
+        // Outer is `Fn(A, B -> C)`.
+        let BaseType::Fn(arg, ret) = ty.base else {
+            panic!("expected outer BaseType::Fn");
+        };
+        assert!(matches!(arg.base, BaseType::Named(ref n, _) if n == "A"));
+        // Inner `ret` must itself be `Fn(B, C)`.
+        let BaseType::Fn(b, c) = ret.base else {
+            panic!(
+                "expected inner BaseType::Fn (right-assoc), got {:?}",
+                ret.base
+            );
+        };
+        assert!(matches!(b.base, BaseType::Named(ref n, _) if n == "B"));
+        assert!(matches!(c.base, BaseType::Named(ref n, _) if n == "C"));
+    }
+
+    #[test]
+    fn guarantee_binds_tighter_than_arrow() {
+        // `A @ Exact -> B` must parse as `(A @ Exact) -> B`.
+        let ty = first_param_ty("nodule d\nfn f<A, B>(g: A @ Exact -> B) -> B = g");
+        let BaseType::Fn(arg, _ret) = ty.base else {
+            panic!("expected BaseType::Fn");
+        };
+        // The LHS `(A @ Exact)` carries the Exact guarantee; the outer fn type has none.
+        assert!(
+            matches!(arg.guarantee, Some(crate::ast::Strength::Exact)),
+            "arg should carry Exact guarantee, got {:?}",
+            arg.guarantee
+        );
+        assert!(ty.guarantee.is_none(), "outer fn type has no guarantee");
+    }
+
+    #[test]
+    fn rfc_0024_map_snippet_parses() {
+        // RFC-0024 §3's canonical snippet: `fn map<A, B, E>(r: Result<A,E>, f: A -> B) -> Result<B,E>`.
+        // Structural check: two value params, second has type `BaseType::Fn`.
+        let n = parse(
+            "nodule d\n\
+             type Result<A, E> = Ok(A) | Err(E)\n\
+             fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =\
+               match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }",
+        )
+        .expect("RFC-0024 §3 map snippet parses");
+        let Item::Fn(fd) = n
+            .items
+            .iter()
+            .find(|i| matches!(i, Item::Fn(_)))
+            .expect("fn")
+        else {
+            panic!("fn");
+        };
+        assert_eq!(fd.sig.name, "map");
+        assert_eq!(fd.sig.value_params.len(), 2);
+        let f_ty = &fd.sig.value_params[1].ty;
+        assert!(
+            matches!(f_ty.base, BaseType::Fn(_, _)),
+            "second param `f` should have a function type, got {:?}",
+            f_ty.base
+        );
+    }
+
+    #[test]
+    fn bare_fn_name_in_value_position_parses_as_path() {
+        // `map(mk_ok(), double)` — `double` in value (non-call) position is `Expr::Path`, not
+        // `Expr::App`.  This confirms fn-as-value needs no parser change (RFC-0024 §3).
+        let n = parse(
+            "nodule d\n\
+             type Result<A, E> = Ok(A) | Err(E)\n\
+             fn double<A>(x: A) -> A = x\n\
+             fn mk_ok<A>(x: A) -> Result<A, A> = Ok(x)\n\
+             fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =\
+               match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
+             fn main() -> Result<Binary{8}, Binary{8}> = map(mk_ok(0b00000000), double)",
+        )
+        .expect("parses");
+        // Find the `main` fn and inspect its body.
+        let Item::Fn(main_fd) = n
+            .items
+            .iter()
+            .find(|i| matches!(i, Item::Fn(fd) if fd.sig.name == "main"))
+            .expect("main fn")
+        else {
+            panic!("main fn");
+        };
+        // Body is `map(mk_ok(0b00000000), double)` → `App { head: Path([map]), args: [App(mk_ok), Path([double])] }`.
+        let Expr::App { ref head, ref args } = main_fd.body else {
+            panic!("expected App, got {:?}", main_fd.body);
+        };
+        assert!(matches!(head.as_ref(), Expr::Path(p) if p.0 == vec!["map"]));
+        assert_eq!(args.len(), 2);
+        // First arg: `mk_ok(0b00000000)` — an App.
+        assert!(
+            matches!(args[0], Expr::App { .. }),
+            "first arg is App (call)"
+        );
+        // Second arg: `double` — a bare Path (fn-as-value, no call parens).
+        assert!(
+            matches!(args[1], Expr::Path(ref p) if p.0 == vec!["double"]),
+            "second arg `double` should be a bare Path, got {:?}",
+            args[1]
+        );
+    }
+
+    #[test]
+    fn malformed_arrow_missing_rhs_is_explicit_error() {
+        // `A ->` with no right-hand type must be an explicit `ParseError` — never silently accepted
+        // (G2 / house rule #2: never-silent).
+        let err = parse("nodule d\nfn f<A>(g: A ->) -> A = g")
+            .expect_err("a bare `A ->` with no rhs must be rejected");
+        // The error should describe what was missing — a type is expected after `->`.
+        assert!(
+            err.message.contains("type") || err.message.contains("expected"),
+            "error message should mention a missing type: {:?}",
+            err.message
+        );
+    }
+
+    #[test]
+    fn fn_type_in_return_position_parses() {
+        // A function may return a function type: `fn make_fn<A, B>() -> A -> B = ...`
+        // The `->` in the return type is also right-associative and fully parsed.
+        let n = parse("nodule d\nfn make_fn<A, B>(x: A) -> A -> B = x").expect("parses");
+        let Item::Fn(fd) = &n.items[0] else {
+            panic!("fn")
+        };
+        assert!(
+            matches!(fd.sig.ret.base, BaseType::Fn(_, _)),
+            "return type should be BaseType::Fn, got {:?}",
+            fd.sig.ret.base
+        );
     }
 }

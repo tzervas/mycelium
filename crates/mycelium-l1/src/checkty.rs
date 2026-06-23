@@ -457,6 +457,17 @@ pub(crate) fn resolve_ty(
                  ambient resolution pass should have filled it (RFC-0012 §4.3)",
             ));
         }
+        // Function types are a surface-only construct in HOF stage 1 (RFC-0024 §3, M-685).
+        // The checker (M-686) will handle these once defunctionalization is wired up.
+        // A function-typed parameter reaching this point today is an explicit refusal — never
+        // silently accepted (G2 / VR-5).
+        BaseType::Fn(_, _) => {
+            return Err(CheckError::new(
+                site,
+                "function types (`A -> B`) are not yet checked — HOF checker is deferred to \
+                 M-686 (RFC-0024 §3, stage 2); this site reached the checker before it is ready",
+            ));
+        }
     };
     Ok((base, t.guarantee))
 }
