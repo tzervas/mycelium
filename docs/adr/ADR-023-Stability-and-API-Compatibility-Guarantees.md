@@ -162,7 +162,11 @@ house rule #6). This is a **legal-readiness gate criterion at 1.0.0**, not a `1.
 The 1.0.0 release act (M-738) confirms, each as a checked item:
 
 - Every first-party `Cargo.toml` `[package].license` field reads `MIT`.
-- Every first-party `.myc` nodule's `@license` header reads `MIT`.
+- Every first-party **shipped** `.myc` nodule's `@license` header reads `MIT` (stdlib under
+  `lib/std/**` + the `examples/**` programs). **Test fixtures are excepted** — fixtures under
+  `crates/**/tests/` deliberately carry other license strings (Apache / a deliberately-invalid
+  SPDX id) to exercise license-field parsing and non-inheritance; they are inputs, not shipped
+  artifacts (see the sweep note below).
 - The `LICENSE` file at the repo root is the MIT text (✅ confirmed 2026-06-23 — root `LICENSE`
   is `MIT License`, © 2026 Tyler Zervas).
 - No **dependency** pulls in a GPL/LGPL/incompatible license, checked by `cargo deny check
@@ -173,15 +177,18 @@ The 1.0.0 release act (M-738) confirms, each as a checked item:
 - Distributed artifacts (`.spore` packages, VS Code extension, GitHub Linguist) carry the MIT
   SPDX identifier.
 
-**Sweep status (2026-06-23, this ADR's authoring — M-737).** A repo sweep for non-MIT
-first-party headers found one real violation, now fixed: `lib/std/result.myc` declared
-`@license: Apache-2.0` (a self-hosted, distributed stdlib nodule) → corrected to `MIT`. The two
-remaining `Apache-2.0` strings are **deliberate test fixtures** under
-`crates/mycelium-proj/tests/fixtures/` — `crates/mycelium-proj/tests/conformance.rs` *asserts*
-`license == "Apache-2.0"` to prove a locally-declared license field is parsed and **not silently
-inherited/overridden** (origin tracking). They are test inputs, not distributed first-party
-artifacts, so they stay as-is (changing them would defeat the test and is out of the MIT-only
-first-party scope).
+**Sweep status (2026-06-23, this ADR's authoring — M-737).** A **repo-wide** sweep of every
+first-party **shipped** `.myc` header (`grep -rn '@license' --include='*.myc'`) found **six**
+non-MIT violations, all now corrected to `MIT`: `lib/std/result.myc` (the self-hosted stdlib
+nodule) and the five `examples/**` programs (`examples/repr-tour/{ambient,swaps,traits,iter}.myc`
+and `examples/hello-phylum/hello.myc`). The **only** remaining non-MIT `@license` strings are
+**deliberate test fixtures** under `crates/mycelium-proj/tests/fixtures/` —
+`crates/mycelium-proj/tests/conformance.rs` (and the `mycelium-proj` source) *assert*
+`root.myc`/`mycelium-proj.toml` carry `Apache-2.0` and `bad-header.myc` carries a
+deliberately-invalid SPDX id, to prove a locally-declared license is parsed and **not silently
+inherited/overridden** (origin tracking) and that a bad id is an explicit error. They are test
+*inputs*, not shipped artifacts, so they stay as-is (changing them would defeat the tests and is
+outside the first-party shipped scope).
 
 **Gate timing (Q5).** The supply-chain gate already exists — `just deny`
 (`scripts/checks/deny.sh`) runs `cargo deny check` (advisories + **licenses** + sources) and is

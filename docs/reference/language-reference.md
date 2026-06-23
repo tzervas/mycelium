@@ -90,9 +90,11 @@ closed; an **unknown key is an explicit lint error** (G2 — never silently igno
 // @matured: true
 ```
 
-> **Licensing (house rule #6 / ADR-023 §3.4).** First-party `@license` headers and
-> `[package].license` fields are **MIT** — the project is MIT-only. (Third-party *dependencies* may
-> carry other permissive licenses; that is a distinct axis.)
+> **Licensing (house rule #6 / ADR-023 §3.4).** First-party **shipped** `@license` headers and
+> `[package].license` fields are **MIT** — the project is MIT-only. (Two distinct exceptions, by
+> design: third-party *dependencies* may carry other permissive licenses; and *test fixtures* —
+> e.g. under `crates/mycelium-proj/tests/` — deliberately carry non-MIT/invalid license strings to
+> exercise license-field parsing.)
 
 ### The `nodule` construct (active)
 

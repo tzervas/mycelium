@@ -40,10 +40,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   deprecation (≥ one minor, removal at 2.0.0) + no surface `@unstable` at 1.0; **§3.4** MIT-only legal
   gate. All §3 claims `Declared` (policy warrants no `Proven` — VR-5). Not Enacted (that is M-738 at
   the tag). (E17-1; M-737; ADR-023)
-- **MIT-only license fix (ADR-023 §3.4 gate).** A repo sweep found one first-party violation:
-  `lib/std/result.myc` declared `@license: Apache-2.0` → corrected to **`MIT`**. (The remaining
-  `Apache-2.0` strings are deliberate `mycelium-proj` test fixtures that *assert* non-inherited local
-  licenses — left as-is.)
+- **MIT-only license fix (ADR-023 §3.4 gate).** A repo-wide sweep of first-party *shipped* `.myc`
+  headers found **six** non-MIT violations, all corrected to **`MIT`**: `lib/std/result.myc` and the
+  five `examples/**` programs (`examples/repr-tour/{ambient,swaps,traits,iter}.myc`,
+  `examples/hello-phylum/hello.myc`). The only remaining non-MIT `@license` strings are deliberate
+  `crates/mycelium-proj/tests/fixtures/` test inputs (Apache + a deliberately-invalid SPDX id) that
+  the `mycelium-proj` tests *assert* (non-inheritance + bad-id error) — left as-is by design.
 - **M-738 — full-language 1.0.0 release act: BLOCKED (no tag cut).** The terminal release act is
   **not** performed — its external gate deps are unmet: **E13-1** (self-hosting stdlib) and **E18-1**
   (full-language readiness) are both `needs-design`, and **ADR-022** is `Accepted` (not `Enacted`)

@@ -49,6 +49,8 @@ pub fn project_nodule(path: &str, src: &str, alloc: &mut AnchorAlloc) -> Node {
     // One api-item per `fn` signature. The summary is the contiguous `//` doc-comment block
     // immediately preceding the `fn` (M-736) — extracted from source, never invented; a `fn` with
     // no preceding comment stays `None` (rendered "undocumented", an explicit honest gap — G2).
+    // The source is split into lines once here (not per `fn`) so projection stays O(#lines).
+    let lines: Vec<&str> = src.lines().collect();
     for (sig, line) in fn_signatures(src) {
         let name = fn_name(&sig).unwrap_or_else(|| "fn".to_owned());
         children.push(Node::new(
@@ -61,7 +63,7 @@ pub fn project_nodule(path: &str, src: &str, alloc: &mut AnchorAlloc) -> Node {
             },
             Payload::ApiItem {
                 signature: Some(sig),
-                summary: preceding_doc(src, line),
+                summary: preceding_doc(&lines, line),
             },
             vec![],
         ));
@@ -201,13 +203,13 @@ fn fn_signatures(src: &str) -> Vec<(String, u32)> {
     out
 }
 
-/// The contiguous `//` doc-comment block immediately above the `fn` at `fn_line` (1-based). The
-/// scan walks backward, joining `//` comment lines into one summary, and stops at the first blank
-/// line, non-comment line, or header line (`// nodule…` / `// @key:` are metadata, not doc prose).
-/// Returns `None` when the `fn` has no preceding comment — an honest, explicit gap (never invented
-/// filler, G2). The text is taken verbatim from source, so it always traces to its provenance.
-fn preceding_doc(src: &str, fn_line: u32) -> Option<String> {
-    let lines: Vec<&str> = src.lines().collect();
+/// The contiguous `//` doc-comment block immediately above the `fn` at `fn_line` (1-based), over
+/// the already-split source `lines`. The scan walks backward, joining `//` comment lines into one
+/// summary, and stops at the first blank line, non-comment line, or header line (`// nodule…` /
+/// `// @key:` are metadata, not doc prose). Returns `None` when the `fn` has no preceding comment —
+/// an honest, explicit gap (never invented filler, G2). The text is taken verbatim from source, so
+/// it always traces to its provenance. Takes a `&[&str]` so the caller splits the source once.
+fn preceding_doc(lines: &[&str], fn_line: u32) -> Option<String> {
     if fn_line == 0 || (fn_line as usize) > lines.len() {
         return None;
     }
