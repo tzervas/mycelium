@@ -92,6 +92,46 @@ keeps the toolchain self-hosted (DN-26/E18-1 spirit).
 - Compression/encoding **never** weakens the integrity guarantee: the hash is over the canonical
   *content*, independent of how it was packed for transit.
 
+### 3.2 One canonical identity, three deliveries (source · dense manifest · binary)
+
+A publisher may deliver a phylum as **source**, as the **dense manifest** (§3.1), and/or as a
+**binary** — and wants the registry footprint to be just the lightweight manifest + hashes, with
+hashes as the verification method. The natural wish is a **single hash that matches all three**. Here
+is the honest analysis (VR-5 / G2):
+
+- **Source ⇄ dense manifest share one identity, by reconstruction.** Both are **lossless
+  representations of the same content**. Canonicalize to the source DAG and hash it — that hash is the
+  **identity** (this is exactly what `spore_id` already is, ADR-003). Decode the manifest → byte-
+  identical source → recompute the DAG hash → it **equals the identity**. So source *or* manifest each
+  verify to the **same** `spore_id` by reconstruction. This is the "1:1 reconstruction ⇒ the hash
+  checks out" property, and it is **achievable today**.
+- **A binary cannot share that identity by reconstruction — and that is the feature, not a bug.**
+  Compilation is **one-way**: you cannot recover source from a binary, so a binary cannot recompute
+  the source-DAG hash. Crucially, this is the *same* fact that gives **proprietary privacy**: if a
+  binary *could* reproduce the source identity, the source would be recoverable and the IP would be
+  exposed. The two goals — "one hash verifies the binary by reconstruction" and "source is not
+  recoverable from the binary" — are **mutually exclusive**; for the closed-source case, privacy wins.
+  So a binary having its **own** content hash is not a KISS compromise — it is the **correct** model.
+
+**The model that satisfies all of it:**
+- **One canonical identity = `spore_id`** (the source-DAG hash; already built). **Source** and the
+  **dense manifest** each verify to it by lossless reconstruction.
+- **Binary = a derived artifact** with its **own** content hash *plus* a small binding record
+  `{ built_from: spore_id, … }`. The binding is verifiable **cheaply by a reproducible build** (rebuild
+  from source → compare the binary hash); absent a reproducible build it is an honest **`Declared`**
+  "trust the publisher" — **never** claimed as `Proven` (VR-5). The binary deliberately does **not**
+  reconstruct source (privacy preserved).
+
+So a publisher picks what to ship: **source and/or manifest** (open, reconstructable, verified to
+`spore_id`) and/or **binary** (closed, own hash + attestation). The registry stores the **manifest +
+the hashes + the binding records** — a tiny, reliable footprint; the bytes (source in a forge,
+binaries wherever the publisher hosts them) are fetched and integrity-checked on use. The encoding is
+**not encryption** — it is a lossless efficiency format (§3.1); the *secrecy* of a closed binary comes
+from **not shipping the source**, not from obfuscating the manifest. The **KISS fallback** (hash each
+delivered artifact independently) is a strict subset of this and stays available; the only thing
+`spore_id` adds for free is the source⇄manifest *unification*, so we get the elegant property at no
+extra cost.
+
 ## 4. Relation to what landed (M-732) — the seam is already cut
 
 The v0 registry (M-732) deliberately separates the two addresses this architecture needs:
