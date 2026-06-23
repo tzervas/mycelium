@@ -464,8 +464,9 @@ def build_index(repo_root: Path) -> tuple[list[dict], list[dict]]:
     # re-exports, and the canonical module path is shorter for assoc-fn duplicates);
     # break ties lexically for determinism. Genuinely distinct symbols (different
     # file:line, or different short name) are never dropped (G2: never silent).
-    # Dropped alias symbols are tracked in `deduped_aliases` (used by the self-test
-    # completeness check to confirm they are covered by their canonical row).
+    # Dropped alias symbols are recorded as `flagged` entries with reason `dedup-alias`
+    # (used by the self-test completeness check to confirm they are covered by their
+    # canonical row) — see the loop below.
     from collections import OrderedDict
 
     canonical: dict[tuple, dict] = (
