@@ -87,16 +87,14 @@ Superseded ADR cannot itself move to Enacted. This sub-gate is **epic E10-1** (i
 M-700/M-701/M-702 satisfied, M-703 reserved). The core may tag `1.0.0` the moment the maintainer
 performs M-703 — it does **not** wait for T2–T9.
 
-> **Pending T1-scope amendment (RFC-0032 D6 — governance mechanism to be confirmed).** The maintainer
-> decided (2026-06-23, RFC-0032 §5 D6) that the kernel self-hosting-enablement reprs/prims (epic
-> **E19-1** — comparison + binary-arithmetic prims, the `Repr::Seq`/`Repr::Bytes` value
-> representations) land **in `core 1.0.0`**, which would extend T1's Definition of Done to also require
-> E19-1 before the tag. Because this ADR is **Accepted** and its Status requires **superseding** to
-> change the *criteria* (house rule #3, append-only), that T1-scope change is **not applied in place
-> here** — it is recorded in RFC-0032 D6 and will be enacted into this gate via the maintainer-selected
-> append-only mechanism (a focused superseding/amending ADR is the default). Until that lands, the
-> criteria above are unchanged; the tracker carries the operational linkage (M-703 `depends_on` E19-1)
-> flagged as pending. See RFC-0032 D6 / PR #514.
+> **T1-scope amendment — enacted by ADR-024 (2026-06-23).** The maintainer decided (RFC-0032 §5 D6)
+> that the kernel self-hosting-enablement reprs/prims (epic **E19-1** — `eq`/`lt` comparison + binary
+> arithmetic prims, the `Repr::Seq`/`Repr::Bytes` value representations) land **in `core 1.0.0`**,
+> extending T1's Definition of Done to also require E19-1 before the tag (so the stdlib is fully
+> `.myc`-self-hosted at the tag). Because changing T1's *criteria* is a supersede-only act (this ADR's
+> Status, house rule #3), that extension is enacted in the focused amending **ADR-024**, **not** by
+> editing the §4/§5 criteria text here. The ADR-021 Gate A/B rows below are **unchanged and remain
+> met**; `M-703` now `depends_on E19-1`. See **ADR-024** + RFC-0032 §5 D6.
 
 ## 5. Definition of Done — the full-language 1.0.0 gate
 
@@ -105,7 +103,7 @@ its own per-issue DoDs (DN-25 is the map; the epics carry the detail). Summary c
 
 | Track | Epic | Done when (summary) | Status |
 |---|---|---|---|
-| **T1 Core sub-gate** | E10-1 | ADR-021 Gate A/B all ✅; `core 1.0.0` tagged; ADR-022 T1 → Enacted at the tag | ✅ gate-met / tag-ready; `core 1.0.0` tag pending (M-703, maintainer-reserved). *(Pending T1-scope amendment to add E19-1 — RFC-0032 D6; §4, via supersession.)* |
+| **T1 Core sub-gate** | E10-1 (T1 scope amended by **ADR-024**) | ADR-021 Gate A/B all ✅; `core 1.0.0` tagged; ADR-022 T1 → Enacted at the tag | ✅ gate-met / tag-ready on these criteria; **T1 scope amended by ADR-024 (adds E19-1) — see ADR-024**; `core 1.0.0` tag pending (M-703, maintainer-reserved) |
 | **T2 Surface completeness** | E11-1 (+E7-1/E7-3/E7-5) | full HOF/closures; operator syntax (RFC-0025); committed L3 EBNF grammar (RFC-0030, RFC-0006 Q3/Q8 resolved); generics/traits/effects stable | 🔨 in progress — operator syntax + surface stabilization landed (M-705/706/708); M-704/M-707 open |
 | **T3 Runtime & concurrency** | E12-1 (+E7-2) | real scheduler; full RFC-0008 vocabulary executes; deadlock-freedom checked; memory reclamation (RFC-0027); supervision/cancellation | 🔨 in progress — scheduler/deadlock/supervision landed (M-709/711/713); M-710/M-712 open |
 | **T4 Stdlib in Mycelium** | E13-1 | the stdlib + core libs **written in `.myc`** (RFC-0031), differential-tested, stable APIs; Rust std-`*` beyond the bare core superseded by `.myc` | ⏳ open |
@@ -228,3 +226,10 @@ Recorded so the program stays honest about where it ends — these are **vision,
   a *pending-amendment* note and the decision lives in RFC-0032 D6; it will be enacted via the
   maintainer-selected append-only mechanism (a focused superseding/amending ADR is the default). The
   tracker carries the operational linkage (M-703 `depends_on` E19-1) flagged pending. (Copilot #514.)
+- 2026-06-23 — **T1-scope amendment ENACTED by ADR-024** (maintainer-selected mechanism; supersedes the
+  "pending" entry above). T1's Definition of Done now also requires epic **E19-1** (the RFC-0032
+  self-hosting-enablement surface) before the `core 1.0.0` tag — recorded in the focused amending
+  **ADR-024**, not by rewriting this ADR's §4/§5 criteria (§4 carries an "amended by ADR-024" pointer;
+  §5 T1 row references ADR-024). The ADR-021 Gate A/B rows stay met + unchanged; `M-703` `depends_on`
+  E19-1. This is the house-rule-correct (supersede-to-change-criteria) capture of the RFC-0032 §5 D6
+  decision. (ADR-024; Copilot #514.)

@@ -2920,6 +2920,7 @@ issues:
     epic: E10
     doc_refs:
       - corpus:ADR-022
+      - corpus:ADR-024
       - corpus:ADR-021
       - corpus:DN-19
       - corpus:DN-25
@@ -2932,14 +2933,13 @@ issues:
       now Superseded by ADR-022, so the inherited kernel-gate enactment attaches to ADR-022 track T1
       (not ADR-021 -> Enacted); see the Status section below.
 
-      SCOPE EXTENSION PENDING (2026-06-23, maintainer — RFC-0032 D6): the decision is that T1's
-      Definition of Done also includes E19-1 (the kernel self-hosting-enablement reprs/prims land IN
-      core 1.0.0, so the language is fully self-hosting at the tag). The original ADR-021 Gate A/B rows
-      remain met. This is a CRITERIA change to an Accepted ADR, so per ADR-022's Status (supersede to
-      change criteria, house rule #3) it is recorded in RFC-0032 D6 and will be enacted via the
-      append-only mechanism (a focused superseding/amending ADR) -- NOT applied to ADR-022 §4/§5 in
-      place. M-703 carries the operational depends_on E19-1, flagged pending. See ADR-022 §4 (pending
-      note) + RFC-0032 D6.
+      SCOPE EXTENSION (2026-06-23, maintainer — RFC-0032 D6; enacted by ADR-024): T1's Definition of
+      Done also includes E19-1 (the kernel self-hosting-enablement reprs/prims land IN core 1.0.0, so
+      the language is fully self-hosting at the tag). The original ADR-021 Gate A/B rows remain met +
+      unchanged. This is a CRITERIA change to an Accepted ADR, so per ADR-022's Status (supersede to
+      change criteria, house rule #3) it is enacted append-only by the focused amending ADR-024
+      (Accepted 2026-06-23) -- NOT applied to ADR-022 §4/§5 in place (which carry an "amended by
+      ADR-024" pointer). M-703 carries the operational depends_on E19-1. See ADR-024 + RFC-0032 D6.
 
       User stories:
       - As a maintainer, I want every ADR-021 Gate A row demonstrably met before cutting the
@@ -3131,17 +3131,17 @@ issues:
     epic: E10-1
     doc_refs:
       - corpus:ADR-022
+      - corpus:ADR-024
       - corpus:ADR-021
       - corpus:ADR-018
       - corpus:RFC-0032
       - corpus:DN-25
     body: |
-      SCOPE EXTENDED (2026-06-23, maintainer — RFC-0032 D6): the core `1.0.0` tag now ALSO waits on
-      E19-1 (kernel self-hosting-enablement reprs/prims land IN core 1.0.0); depends_on includes E19-1
-      (operational linkage). The ADR-021 Gate A/B rows remain met. The formal ADR-022 T1-scope amendment
-      is PENDING the append-only mechanism (RFC-0032 D6 — ADR-022's Status requires superseding to
-      change criteria, house rule #3; the change is NOT applied to ADR-022 §4/§5 in place). See ADR-022
-      §4 (pending-amendment note) + RFC-0032 D6.
+      SCOPE EXTENDED (2026-06-23, maintainer — RFC-0032 D6; enacted by ADR-024): the core `1.0.0` tag
+      now ALSO waits on E19-1 (kernel self-hosting-enablement reprs/prims land IN core 1.0.0);
+      depends_on includes E19-1. The ADR-021 Gate A/B rows remain met + unchanged. The T1-scope
+      amendment is enacted append-only by the focused amending ADR-024 (Accepted 2026-06-23) -- NOT by
+      rewriting ADR-022 §4/§5 (which carry an "amended by ADR-024" pointer). See ADR-024 + RFC-0032 D6.
 
       maintainer-reserved (like M-655 — no agent cuts the tag or enacts the status). The A/B engineering
       rows are met (2026-06-23, kickoff c10): M-700/M-701/M-702 are satisfied and ADR-022 §4/§5 records
@@ -5328,6 +5328,7 @@ issues:
       - corpus:RFC-0031
       - corpus:RFC-0001
       - corpus:ADR-022
+      - corpus:ADR-024
       - src:crates/mycelium-core/src/repr.rs
       - src:crates/mycelium-interp/src/prims.rs
     body: |
