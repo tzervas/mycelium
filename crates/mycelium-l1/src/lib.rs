@@ -46,6 +46,7 @@ pub mod eval;
 /// frontend (driven by [`checkty::check_nodule`]); not part of the public surface.
 mod grade;
 pub mod lexer;
+pub mod mono;
 pub mod nodule;
 pub mod parse;
 pub mod token;
@@ -63,6 +64,7 @@ pub use checkty::{
 pub use elab::{elaborate, elaborate_colony, ElabError};
 pub use error::ParseError;
 pub use eval::{Evaluator, L1Error, L1Value};
+pub use mono::{monomorphize, monomorphize_with_selections, InstanceSelection, MonoSelections};
 pub use nodule::{parse_nodule_header, NoduleHeader, NoduleHeaderError};
 pub use parse::{parse, parse_phylum};
 pub use totality::Totality;

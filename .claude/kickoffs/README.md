@@ -39,20 +39,43 @@ main` promotes it up.
 
 | UID | Kickoff | Isolated tree (owns) | Swarm method | Depends on |
 |---|---|---|---|---|
-| **`lex`** | `lex.md` | `crates/mycelium-l1/**` · `docs/spec/grammar/**` | Sonnet · **serial-on-L1** (collision files) | — (critical path) |
-| **`u78`** | `u78.md` | `crates/mycelium-mlir/**` · `scripts/checks/**` · `justfile` | Sonnet · **parallel-leaf** | — (fully disjoint from `lex`) |
-| **`dfr`** | `dfr.md` | `research/12,13` · RFC-0022/0023 Status · `docs/notes/research-prompts.md` | Opus reasoners (docs-only) | — (gates `dfb`) |
-| **`dfb`** | `dfb.md` | `crates/mycelium-web/` · `crates/mycelium-adk/` (NEW) | Sonnet · parallel-leaf | `dfr` + `lex` (surface) |
+| **`run`** | `run.md` | `crates/mycelium-l1/**` (+ one new `.myc`) | Opus · **serial-on-L1** | — (critical path) |
+| **`srf`** | `srf.md` | `crates/mycelium-l1/**` · `.claude/memory/lang-lexicon-syntax.md` | Opus · **serial-on-L1** | — (M-659 checker landed) |
+| **`tul`** | `tul.md` | `tools/github/**` | Sonnet (docs/tooling) | — (needs GitHub read access) |
+| **`dfb`** | `dfb.md` | `crates/mycelium-web/` · `crates/mycelium-adk/` (NEW) | Sonnet · parallel-leaf | `dfr` ✅ (discharged #344) + the L1 surface |
 
-**`lex` ⟂ `u78` ⟂ `dfr` are fully disjoint — fire all three in parallel today.** `dfb` is gated
-(needs `dfr`'s research discharged + the `lex` surface). Cross-work continuity rides the **issues**
-(`tools/github/issues.yaml` `depends_on` + body notes), never by touching another tree's files.
-(`dfr`/`dfb` predate this workflow — ignore their old `claude/head/*` references; they now branch off
-`dev` like everything else.)
+**Parallelism (collision profile):**
+- **`run` and `srf` share `crates/mycelium-l1` → they SERIALIZE** (one L1 editor at a time —
+  mitigation #7). Run them in **one** session: **`run` first** (it's the critical-path unblock that
+  flips M-657/M-659 to done and opens self-hosting), then `srf`. Neither blocks the other; the order
+  is by priority.
+- **`tul` ⟂ (the L1 track) are fully disjoint — fire them in parallel** (separate sessions).
+  `tul` = `tools/github/` only; the L1 track = `crates/mycelium-l1`. (`dfr` — research/docs only — is
+  **done**: landed #344, see Completed.)
+- **`dfb`** stays gated, but its **research dependency is now discharged** (`dfr` #344) — it needs only
+  the L1 surface remaining.
+
+Cross-work continuity rides the **issues** (`tools/github/issues.yaml` `depends_on` + body notes),
+never by touching another tree's files. (`dfb` predates this workflow — ignore its old
+`claude/head/*` reference; it now branches off `dev` like everything else.) **M-677** (effect→budget
+runtime) is L1-collision and runs inside the `run`/`srf` serial track, not as its own parallel wave.
 
 ## Completed (archived)
+- **`dfr`** — **RP-10/RP-9 research gate DISCHARGED + RFC-0022/0023 → Accepted, LANDED** on `main`
+  (#344, 2026-06-21): four fractured Opus sub-reasoners per RFC verified the Honest-Uncertainty
+  Registers against primary specs (RFC 9110/9112 · RFC 8259 · WHATWG-URL; ADK v2.3.0) + landed
+  substrate — design-sound, no falsification (`research/12 §8` · `research/13 §6`). Both RFCs **Draft →
+  Accepted** (maintainer ratification; **Enacted** still gated on the builds); M-670/M-671 bodies carry
+  the cleared gate + the `dfb` build constraints. Unblocks **`dfb`** (now gated on the L1 surface only).
 - **`e7l` / `e7lb` / `e7lc`** — the E7-1/E7-2 L1-surface chain **M-656 → M-662 LANDED** on `main`
   (generics · traits · effects · `wild`/FFI · phylum + cross-nodule). Continued by **`lex`**.
+- **`lex`** — **M-663 LANDED** on `main` (#375→`dev`, #377→`integration`, #380 release→`main`): RFC-0018
+  stage-1a static guarantee grading (`grade.rs` Pass 3d) enacted; RFC-0018 → **Enacted**; DN-14 §3 row
+  11 → `present`. Plus a Copilot-caught grade-upgrade soundness fix + the check-tooling packed exit
+  codes / failure digest (**DN-22** design capture). Continues via **`M-673`** (above).
+- **`u78`** — **M-678 epic (M-679…M-683) LANDED** on `main` (#378): DN-21 unsafe-code hardening —
+  all workspace `unsafe` confined to `jit.rs`, the trusted base `#![forbid(unsafe_code)]`-pinned, and
+  the `just safety-check` SAFETY-adjacency gate added.
 
 ## Reserved (maintainer-only; excluded from every kickoff)
 **M-655** (cut the 1.0.0 tag) · **M-381 / M-646** (LLM local runs).

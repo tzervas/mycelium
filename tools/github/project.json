@@ -83,7 +83,8 @@
   "field_label_map": {
     "_about": "How an item's labels set its single-select field values. The engine resolves each rule to an option id and writes it only when it differs from the item's current value (idempotent). An unmapped label is reported, never invented (G2).",
     "Phase":    { "from": "label_prefix", "prefix": "phase:",    "template": "Phase {value}" },
-    "Area":     { "from": "label_prefix", "prefix": "area:",     "template": "{value}" },
+    "Area":     { "from": "label_prefix", "prefix": "area:",     "template": "{value}", "multi": "primary",
+                  "_note": "M-676: an item may legitimately carry several area:* labels. The single-select Area field anchors to the PRIMARY area — the one earliest in this field's declared option order above (alphabetical tie-break for any value outside it) — and records the full span as an info, never a silent 'not set' punt (G2). Mirrors the primary-task milestone anchor (#353); rule ratified by the maintainer 2026-06-23. Switch to a multi-select Area field if a board needs all areas surfaced." },
     "Priority": { "from": "label_prefix", "prefix": "priority:", "template": "{value}" },
     "Status":   { "from": "label_exact",  "map": { "status:blocked": "Blocked", "status:done": "Done" },
                   "_note": "Only these explicit status labels override Status. status:needs-design has no Status option (the workflow's item-added→Todo default stands); it is reported as unmapped, never guessed." }
