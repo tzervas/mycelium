@@ -124,6 +124,11 @@ alias drift := drift-check
 # table; commit the result. Run after any change to crates/mycelium-l1/src/token.rs::keyword().
 grammar-gen:
     @python3 tools/grammar/generate.py
+# Reproducible-distribution self-test (M-734): proves the pin/verify/install mechanism is
+# byte-identical on re-install and never-silent on a tampered/missing artifact. Deliberately NOT in
+# `just check` (it needs a hasher and is a release-engineering gate); run it before cutting a dist.
+dist-verify:
+    @bash scripts/dist/verify.sh
 
 # --- durability / WS8 (M-654; opt-in, deliberately NOT part of `just check`) ---
 # Mutation testing on the trusted base. SLOW (re-runs the suite per mutant) — run deliberately.
