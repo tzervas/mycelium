@@ -57,7 +57,7 @@ drift from the language:
    **GitHub Linguist** registration for `.myc`, as the one-click / repo-visible reference consumers.
 
 **Single source of truth (honesty).** The token classes (keywords, the guarantee strengths
-`Exact/Proven/Empirical/Declared`, ctor vs type casing, the `@`/`!{…}`/`-> ` operators, ternary
+`Exact/Proven/Empirical/Declared`, ctor vs type casing, the `@` / `!{…}` / `->` operators, ternary
 literals) are **derived from the canonical lexer** — `crates/mycelium-l1/src/token.rs` (`keyword()`)
 plus `.claude/memory/lang-lexicon-syntax.md` — by a generator, **not** hand-maintained. A `just`
 drift-check fails CI if the generated grammar's keyword set diverges from `keyword()`, so the
