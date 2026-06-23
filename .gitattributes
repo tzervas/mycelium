@@ -1,18 +1,21 @@
-# Merge drivers for append-only files.
-# Union merge takes all lines from all branches — safe for PROSE that only ever grows
-# (CHANGELOG entries, per-doc changelog footers). Prevents spurious conflicts during octopus
-# and swarm merges without requiring a custom driver script.
+# Merge strategy for the repo's append-only prose + structured tracking files.
 #
-# NOT union-merged (deliberately): tools/github/idmap.tsv and tools/github/issues.yaml are
-# STRUCTURED, orchestrator-owned files with a hard uniqueness invariant (exactly one row/entry
-# per task-id). They are never edited by parallel agents (the orchestrator owns them — CLAUDE.md
-# §Swarm), so union-merge gives no benefit and actively HARMS: across a squash-divergent or
-# cross-branch merge it silently appends BOTH sides, producing duplicate task-id rows / YAML keys
-# that are syntactically valid but semantically broken (CLAUDE.md swarm mitigation #2). They use
-# the default 3-way merge instead, so any genuine collision surfaces as an explicit conflict to
-# reconcile — never a silent duplicate (G2).
-
-CHANGELOG.md            merge=union
-docs/notes/*.md          merge=union
-docs/rfcs/*.md           merge=union
-docs/adr/*.md            merge=union
+# NONE of these use `merge=union` anymore. Union merge takes all lines from all branches, which
+# looked safe for "prose that only ever grows" (CHANGELOG entries, per-doc changelog footers) — but
+# across a SQUASH-divergent or cross-branch promotion (e.g. dev → integration → main, where main's
+# history is rewritten by squash-landing) it silently appends BOTH sides of a touched block, producing
+# DUPLICATE entries: duplicate CHANGELOG headings (markdownlint MD024) and duplicate ADR/RFC changelog
+# bullets. Those are syntactically valid but semantically broken, and they slip through unless caught
+# by a lint gate (CLAUDE.md swarm mitigation #2 — originally applied to idmap.tsv / issues.yaml; now
+# extended to the prose files for the same reason).
+#
+# All of these therefore use the default 3-way merge: a genuine collision surfaces as an EXPLICIT
+# conflict to reconcile by hand — never a silent duplicate (G2). These files are append-only by
+# discipline (new entry at the top / a new dated bullet), so real conflicts are rare and, when they
+# happen, are exactly what a human should see.
+#
+#   CHANGELOG.md, docs/notes/*.md, docs/rfcs/*.md, docs/adr/*.md  — default 3-way merge (was union)
+#   tools/github/idmap.tsv, tools/github/issues.yaml             — default 3-way merge (since #397)
+#
+# (Intentionally no `merge=union` lines here. Do not re-add them without a decision — they trade a
+# rare explicit conflict for a silent, lint-only-detectable duplicate.)
