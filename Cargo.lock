@@ -541,6 +541,15 @@ name = "mycelium-std-sys"
 version = "0.1.0"
 
 [[package]]
+name = "mycelium-std-sys-host"
+version = "0.1.0"
+dependencies = [
+ "mycelium-std-rand",
+ "mycelium-std-sys",
+ "mycelium-std-time",
+]
+
+[[package]]
 name = "mycelium-std-ternary"
 version = "0.0.0"
 dependencies = [

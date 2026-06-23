@@ -5,7 +5,7 @@
 **Status:** design + **Rust-first implementation underway.** The design corpus spans Foundation,
 RFC-0001…0031, ADR-001…023, DN-01…27 — per-document status (Draft / Proposed / Accepted / Enacted /
 Resolved) is in [`docs/Doc-Index.md`](docs/Doc-Index.md); the newest RFCs (0025–0031) range from Draft to Accepted. The Rust workspace has
-**47 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
+**48 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
 the selection-policy engine, a verified-numerics layer, a **Rust-first standard library**, an L1 surface
 with **generics · traits · higher-order functions · operator syntax**, and a **runtime** (scheduler,
 structured concurrency). Versioning is **dual-axis (ADR-022)**: the Rust **core/kernel** is
@@ -69,7 +69,7 @@ Three non-negotiables shape every decision:
 
 ## What is built
 
-### The Rust workspace — 47 crates (+ `xtask`)
+### The Rust workspace — 48 crates (+ `xtask`)
 
 The kernel and tooling live in `crates/` under MSRV-pinned Rust 1.92 (ADR-007). The public
 surface is gated by a committed API baseline (`docs/spec/api/`, KC-3). Grouped by role:
@@ -271,7 +271,7 @@ mycelium/
 ├── CONTRIBUTING.md           ← decision process, honesty rule, dev env, workflow
 ├── CLAUDE.md                 ← operating guide for Claude Code / agents (the house rules)
 ├── CHANGELOG.md              ← Keep-a-Changelog; design baseline + implementation edits
-├── Cargo.toml                ← Rust workspace (47 crates + xtask; MSRV 1.92, ADR-007)
+├── Cargo.toml                ← Rust workspace (48 crates + xtask; MSRV 1.92, ADR-007)
 ├── rust-toolchain.toml       ← pinned MSRV
 ├── justfile                  ← one source of truth for local↔CI checks (`just check`)
 ├── deny.toml                 ← cargo-deny supply-chain policy
