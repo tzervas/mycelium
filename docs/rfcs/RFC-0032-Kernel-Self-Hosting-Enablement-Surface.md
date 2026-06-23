@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0032 |
-| **Status** | **Draft** (2026-06-23) |
+| **Status** | **Accepted** (2026-06-23) — the kernel prims (eq/lt comparison, binary arithmetic), the value representations (`Repr::Seq`, `Repr::Bytes`), the width-generics ownership (→ E11-1/`s10`), the **in-`core`-1.0.0** placement, and the sequencing are ratified (§5 D1–D7). Was Draft (2026-06-23). |
 | **Type** | Foundational / normative (once Accepted) — the kernel value-representations and primitive operations the self-hosted `.myc` stdlib must bottom out on to complete the Tier-1/Tier-2 ports |
 | **Date** | 2026-06-23 |
 | **Feeds** | E13-1 (stdlib in Mycelium) — unblocks M-716 (collections), M-717 (text/fmt), M-718 (width-typed cmp/math) |
@@ -12,14 +12,19 @@
 | **Coupled with** | `crates/mycelium-core/src/repr.rs` (the `Repr` enum — `Binary`/`Ternary`/`Dense`/`Vsa`, no sequence/string today); `crates/mycelium-interp/src/prims.rs` (the prim registry — `core.id`/`bit.*`/`trit.*`); `crates/mycelium-l1/src/checkty.rs` (`prim_kernel_name` surface map + the type system for width-generics); `lib/std/*.myc` (the consumers); E13-1 children M-716/M-717/M-718 |
 | **Task** | E19-1 (epic) / M-746 (this RFC's authoring task) |
 
-> **Posture (honesty rule / VR-5).** Advisory stub — decides nothing normatively yet. The required
-> prims, the value representations, their `core`-1.0.0-vs-post-1.0.0 placement, and the width-generics
-> ownership are **open questions** enumerated in §5. RFC-0031 §5 D4 established (and VR-5 requires)
-> that no stdlib module is claimed self-hosted ahead of the kernel surface it bottoms out on; this RFC
-> is that surface, scoped honestly. Every addition here **enlarges the value model / trusted base**
-> (KC-3), so each is gated on this RFC reaching **Accepted** and on a checked differential test before
-> any `.myc` consumer depends on it. Claims about "what the kernel must add" are `Declared` positions
-> until checked by implementation.
+> **Posture (honesty rule / VR-5).** This RFC **decides** the kernel self-hosting-enablement surface
+> normatively (§5 D1–D7): the comparison prims, binary arithmetic, the `Repr::Seq` and `Repr::Bytes`
+> value representations, the width-generics reassignment to E11-1/`s10`, the **in-`core`-1.0.0**
+> placement, and the sequencing. It **decides the surface, it does not implement it** — no prim or repr
+> exists yet; each lands under E19-1 (M-747…M-750) with a checked three-way differential test and an
+> honest tag before any `.myc` consumer (E13-1) depends on it. Every addition **enlarges the value
+> model / trusted base** (KC-3); per **D6** that growth is *deliberate* and lands **in `core 1.0.0`**,
+> extending ADR-022 track T1's Definition of Done (the core tag waits on E19-1). That T1 criteria change
+> is captured **append-only via supersession** (house rule #3) — D6 records the decision; ADR-022's
+> gate text is not edited in place (§4 carries a pending note). Until each addition is implemented +
+> differential-tested, claims about its behaviour are
+> `Declared` positions checked by implementation (VR-5); never-silent (G2) is mandatory on every one
+> (overflow, out-of-bounds, invalid-encoding → explicit `Option`/error).
 
 ---
 
@@ -88,54 +93,116 @@ design gate for epic E19-1.
 
 ## 4. Definition of Done
 
-- [ ] The required new prims are named with signatures, semantics, never-silent behaviour (G2), and
-  honest guarantee tags.
-- [ ] The required value representations are named (or shown ADT-expressible and thus not required),
-  with their well-formedness and the indexing/codepoint operations they expose.
-- [ ] Each addition's `core`-1.0.0-vs-post-1.0.0 placement is decided and grounded in ADR-022/KC-3.
-- [ ] The width-generics ownership (this epic vs E11-1/`s10`) is decided.
-- [ ] Each enabler is tied to the E13-1 module(s) it unblocks via `depends_on`.
-- [ ] The implementation order is sequenced and grounded.
-- [ ] This RFC reaches **Accepted** before any M-747…M-751 implementation leaf begins.
-- [ ] All §5 open questions are resolved or explicitly deferred with direction.
+- [x] The required new prims are named with signatures, semantics, never-silent behaviour (G2), and
+  honest guarantee tags. → **§5 D1 (comparison), D2 (binary arithmetic).**
+- [x] The required value representations are named, with their well-formedness and the
+  indexing/codepoint operations they expose. → **§5 D3 (`Repr::Seq`), D4 (`Repr::Bytes`).**
+- [x] Each addition's `core`-1.0.0-vs-post-1.0.0 placement is decided and grounded in ADR-022/KC-3.
+  → **§5 D6 (in `core 1.0.0`; ADR-022 §4 amendment).**
+- [x] The width-generics ownership (this epic vs E11-1/`s10`) is decided. → **§5 D5 (→ E11-1/`s10`).**
+- [x] Each enabler is tied to the E13-1 module(s) it unblocks via `depends_on`. → **§5 D7 + issues.yaml
+  (M-716 ⟸ M-749, M-717 ⟸ M-750, M-718 ⟸ M-747/M-748/M-753).**
+- [x] The implementation order is sequenced and grounded. → **§5 D7.**
+- [x] This RFC reaches **Accepted** before any M-747…M-750 implementation leaf begins. → **this
+  revision; the leaves move `blocked → todo`.**
+- [x] All §5 questions are resolved. → **§5 D1–D7.**
 
-## 5. Open questions
+## 5. Decisions (D1–D7) — ratified
 
-1. **Comparison/equality prim** — one `eq` (→ `Bool`) or a full `cmp` (→ a kernel `Ordering`)? Over
-   both `Binary{N}` and `Ternary{N}`? Guarantee `Exact` (it is a total decidable relation)? Does it
-   reuse the existing content-addressed equality (ADR-003) or define a width-typed structural one?
-2. **Binary arithmetic** — surface the registered `bit.and`/`bit.or` (trivial `prim_kernel_name`
-   add) plus a binary `add`/`sub`: a fixed-width carry chain with **never-silent overflow** (an
-   explicit out-of-range error, mirroring the ternary prims' in-range contract) — or a wrapping
-   modular `add` (which would violate G2 unless the wrap is the declared semantics)?
-3. **Sequence/array representation** — is a new `Repr::Seq { elem, len }` (or similar) required for an
-   indexed `Vec`, or does the recursive-ADT `List` cover enough of `collections` that only `Map`/`Set`
-   (hashing/ordering) need kernel support? What is the *minimal* addition? Indexing must be never-silent
-   (out-of-bounds → `Option`/error, G2).
-4. **Byte/string representation** — a dedicated `Repr` for UTF-8 text, or `Seq<Binary{8}>` + codepoint
-   ops in `.myc`? How are invalid-encoding conditions made never-silent (`Result`, RFC-0031 D-tier)?
-5. **Width-generic functions** — `fn f<N>(x: Ternary{N}) -> Ternary{N}` (a const-generic over width)
-   is needed for a *general* (non-fixed-width) `math`/`cmp` surface. Is this in scope for E19-1, or is
-   it a surface-language type-system feature owned by **E11-1** (`s10`)? It touches `mycelium-l1`'s
-   checker — the collision surface with the language legs.
-   > **Resolved direction (maintainer, 2026-06-23): E11-1/`s10`.** Width-generics is a surface-language
-   > type-system feature and is owned by the `s10` leg (which already owns the `mycelium-l1` type
-   > system) — keeps exactly one leg editing the checker. M-751 is reassigned to E11-1/`s10` as a
-   > pointer; M-746 records the link. (To be ratified into a normative decision when M-746 authors §5.)
-6. **KC-3 / 1.0.0 placement** — the core kernel gate (ADR-022 T1) is gate-met / tag-ready. Do the new
-   reprs/prims land **in** `core` 1.0.0 (enlarging the just-frozen value model), **post-1.0.0** (a 1.1
-   value-model extension), or as a **non-trusted representation-extension** layered above the trusted
-   base? KISS/YAGNI + KC-3 weigh here; ADR-022 is the gate of record.
-   > **Resolved direction (maintainer, 2026-06-23): IN `core` 1.0.0.** The new reprs/prims land in the
-   > core kernel **before** the 1.0.0 tag, so the language is fully self-hosting at 1.0.0. **Consequence
-   > (flag, coordinate):** this makes E19-1 a **core-1.0.0 gate prerequisite** — E10-1/`c10`'s "gate-met
-   > / tag-ready" status (ADR-022 track T1) now also waits on E19-1; ADR-022 + E10-1 + the `c10` kickoff
-   > need a maintainer update so the core tag accounts for E19-1. The KC-3 trusted-base growth is thus
-   > deliberate and gated by this RFC + ADR-022. (To be ratified into a normative decision, with the
-   > per-addition trusted-base justification, when M-746 authors §5.)
-7. **Sequencing** — comparison prim first (smallest, unblocks Tier-1 `cmp` immediately), then binary
-   arithmetic, then the representations (largest, KC-3-heaviest)? Or representation-first because it
-   unblocks the most E13-1 surface?
+> Each decision is **normative** for E19-1. Q5 (D5) and Q6 (D6) were maintainer calls (2026-06-23);
+> Q3 (D3) and Q4 (D4) the representation shapes (maintainer, 2026-06-23); Q1/Q2/Q7 (D1/D2/D7)
+> engineering calls. Honesty (VR-5): each is a `Declared` design position until its implementation
+> lands with a checked three-way differential test; never-silent (G2) is mandatory on every one.
+
+### D1 — Comparison/equality prims (Q1)
+
+Two kernel prims over `Binary{N}` and `Ternary{N}`, each returning `Bool`, guarantee **`Exact`** (a
+total decidable relation): **`eq(a, b)`** (structural width-typed equality — equal payload over equal
+`Repr`) and **`lt(a, b)`** (the total order: unsigned magnitude for `Binary{N}`, balanced-integer
+value for `Ternary{N}`). Everything else derives **in `.myc`**: `std.cmp`'s `cmp(a,b) -> Ordering`
+(`match eq(a,b) { True => Eq, False => match lt(a,b) { True => Lt, False => Gt } }`), `le`/`gt`/`ge`,
+`min`/`max`/`clamp`. Mismatched widths/paradigms are an explicit never-silent prim error (G2 — never a
+silent `false`). `eq` is the width-typed structural relation; it is consistent with but does not
+replace ADR-003 content-addressed identity (which is the kernel's own value identity). Surfaced via
+`prim_kernel_name` as `eq`/`lt`. **Unblocks** E13-1 M-718 (width-typed `cmp`/`Eq`/`Ord`) + the M-716
+`Map`/`Set` ordering basis.
+
+### D2 — Binary arithmetic (Q2)
+
+(a) **Surface the already-registered `bit.and`/`bit.or`** via `prim_kernel_name` (a one-line addition
+each — they exist in `PrimRegistry::with_builtins`, just unsurfaced). (b) **Add binary `add`/`sub`**
+over `Binary{N}` as a **fixed-width carry chain with never-silent overflow**: a result outside
+`[0, 2^N)` is an **explicit out-of-range error**, exactly mirroring the `trit.*` prims' in-range
+contract (G2 — *never* a silent wrap). Guarantee **`Exact`** on the in-range result. A wrapping/modular
+`add` is **rejected** (it would violate G2 unless the wrap were the declared semantics, which it is
+not here — an explicit `wrapping_add` could be a separate, declared op later). Surfaced as `and`/`or`/
+`add_bin`/`sub_bin` (names finalized at implementation to avoid clashing with the `trit`-backed
+`add`/`sub` already mapped — a dispatch-by-`Repr` `add`/`sub` is the preferred surface if the checker
+can resolve it). **Unblocks** E13-1 M-718 (binary `math`).
+
+### D3 — Sequence/array value representation (Q3)
+
+**Add a first-class `Repr::Seq` to `mycelium-core`** (with a matching `Payload::Seq(Vec<Value>)`), an
+**indexed sequence** of a homogeneous element type — `Repr::Seq { elem: Box<Repr>, len: u32 }` (shape
+finalized at implementation), well-formed iff every element matches `elem` and the count matches `len`.
+It exposes **never-silent indexing** (`get(s, i) -> Option<elem>` — out-of-bounds is `None`, **never** a
+panic or a silent default; G2), `len`, `push`/`pop` (capacity/empty conditions never-silent), and a
+fold/iterate basis. This is the substrate for an **O(1)-indexed `Vec`** and the ordered/〔hashed〕
+`Map`/`Set` (over D1's `lt`/`eq`). It is the **largest KC-3 trusted-base addition** here — justified by
+D6 (full self-hosting at 1.0.0) and gated by the maintainer sign-off in the `kpr` kickoff. **Unblocks**
+E13-1 M-716 (collections). *(The recursive-ADT `List<A> = Nil | Cons(A, List<A>)` remains valid `.myc`
+for the functional/linked case and needs no kernel support — `Repr::Seq` is specifically the indexed,
+O(1) substrate the maintainer chose for the efficient `Vec`/`Map`/`Set` surface.)*
+
+### D4 — Byte/string value representation (Q4)
+
+**Add a dedicated `Repr::Bytes` to `mycelium-core`** (with `Payload::Bytes(Vec<u8>)`) — a first-class
+byte string, well-formed for any byte content. Text operations layer on it: **codepoint/UTF-8 decode is
+written in `.myc`** over the byte surface, and **invalid encoding is never-silent** (a `Result`, per
+RFC-0031's `Declared`-tier honesty — `decode_utf8(b) -> Result<…, DecodeError>`, never a silent
+replacement char unless explicitly requested). `Repr::Bytes` exposes `len`, never-silent `get`/`slice`
+(out-of-range → `Option`/error, G2), and byte concatenation. Chosen over modelling strings as
+`Seq<Binary{8}>` so text has a clear, efficient first-class value (a second deliberate KC-3 addition,
+D6-gated). **Unblocks** E13-1 M-717 (text/fmt).
+
+### D5 — Width-generic functions ownership (Q5)
+
+**Reassigned to E11-1/`s10`** (maintainer, 2026-06-23). Width-generic function parameters over
+representation width (`fn f<N>(x: Ternary{N}) -> Ternary{N}`) are a **surface-language type-system
+feature** that edits the `mycelium-l1` checker — the `s10` leg's collision surface — so `s10`/E11-1
+owns it (keeps exactly one leg editing the type system). E19-1's **M-751 is closed as a pointer** to the
+new E11-1 task **M-753**; E13-1 M-718's `depends_on` points at M-753 for the general (non-fixed-width)
+`math`/`cmp` surface. E19-1 stays the prims+reprs leg.
+
+### D6 — Placement: in `core 1.0.0` (Q6)
+
+**The reprs/prims land in the core kernel before the `core 1.0.0` tag** (maintainer, 2026-06-23), so
+the stdlib is **fully `.myc`-self-hosted at the tag** rather than only its structural core. This
+extends **ADR-022 track T1's Definition of Done** to also require E19-1 (an additive extension — the
+met Gate A/B rows are not reopened), so **the core tag (M-703) waits on E19-1**.
+
+**Governance (append-only — house rule #3).** Extending T1's DoD is a *criteria* change to the
+**Accepted** ADR-022, whose Status requires **superseding** to change criteria. Therefore this RFC
+**records the decision** (here, D6) but the gate text is **not edited in place**: ADR-022 §4 carries a
+non-normative *pending-amendment* note, and the T1-scope change is enacted via the maintainer-selected
+append-only mechanism — **a focused superseding/amending ADR is the default and recommended path**
+(confirmation pending; PR #514). The tracker carries the operational linkage now (M-703 `depends_on`
+E19-1, flagged pending). The KC-3 trusted-base growth (D1–D4 — two prims + two `Repr` variants) is
+**deliberate and gated by this RFC + that ADR mechanism**; each addition carries its own trusted-base
+justification at implementation. Chosen over a leaner core tag + a 1.1 value-model extension.
+
+### D7 — Sequencing (Q7)
+
+Smallest-unblock-first, KC-3-lightest-first:
+1. **M-747** (comparison `eq`/`lt` prims) — smallest; unblocks Tier-1 `cmp` immediately.
+2. **M-748** (binary arithmetic) — small; unblocks binary `math`.
+3. **M-749** (`Repr::Seq`) — the first `Repr` addition; unblocks `collections`.
+4. **M-750** (`Repr::Bytes`) — the second `Repr` addition (independent of D3 — strings are bytes, not
+   sequences-of-bytes, per D4); unblocks `text`/`fmt`.
+5. **M-752** (conformance + `.myc` smoke ports) — after the enablers.
+M-753 (width-generics) runs **in parallel under `s10`/E11-1** (disjoint — the `mycelium-l1` type
+system, not the prims/reprs). Each `Repr`-touching leaf (M-749/M-750) takes the maintainer sign-off
+named in the `kpr` kickoff before merge.
 
 ## 6. Grounding / honesty
 
@@ -159,4 +226,5 @@ design gate for epic E19-1.
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-23 | **Accepted** | M-746: §5 D1–D7 ratified — D1 `eq`/`lt` comparison prims (Exact), D2 binary arithmetic (surface `bit.and`/`bit.or` + never-silent carry-chain `add`/`sub`), D3 `Repr::Seq` (indexed sequence, never-silent `get`), D4 `Repr::Bytes` (string/byte value, never-silent decode), D5 width-generics → E11-1/`s10` (M-751 → pointer to M-753), D6 placement **in `core 1.0.0`** (extends ADR-022 T1 — captured append-only via supersession, not an in-place edit; pending the mechanism, PR #514), D7 sequencing (comparison → binary-arith → `Repr::Seq` → `Repr::Bytes` → conformance). Enablers M-747…M-750 move `blocked → todo`. |
 | 2026-06-23 | **Draft** | Initial stub — open questions enumerated; no normative decisions. Scopes the kernel prims + value representations that unblock E13-1 Tier-1/Tier-2 (RFC-0031 §5 D4). Task: E19-1/M-746. |

@@ -8,6 +8,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-23: RFC-0032 → Accepted — the kernel self-hosting-enablement surface ratified; M-746)
+
+- **RFC-0032 — Kernel Self-Hosting Enablement Surface → Accepted** (M-746, the E19-1 gate). §5 D1–D7
+  ratified: **D1** `eq`/`lt` comparison prims over `Binary{N}`/`Ternary{N}` (→ `Bool`, `Exact`; `cmp`/
+  `Ordering` derives in `.myc`); **D2** binary arithmetic (surface the registered `bit.and`/`bit.or` +
+  add a never-silent carry-chain `add`/`sub` — overflow is an explicit error, never a silent wrap, G2);
+  **D3** a first-class **`Repr::Seq`** (indexed sequence + never-silent `get`/`push`) for efficient
+  `Vec`/`Map`/`Set`; **D4** a dedicated **`Repr::Bytes`** (byte/string value + never-silent UTF-8
+  decode) for `text`/`fmt`; **D5** width-generics → **E11-1/`s10`** (M-751 closed as a pointer to the
+  new **M-753** under E11-1; E13-1 M-718 `depends_on` repointed); **D6** placement **in `core 1.0.0`**
+  (maintainer); **D7** sequencing (comparison → binary-arith → `Repr::Seq` → `Repr::Bytes` →
+  conformance). Enablers **M-747…M-750 → `todo`** (RFC gate cleared); E19-1 → in-progress.
+- **D6 governance (append-only — house rule #3 + Copilot #514).** "In `core 1.0.0`" extends ADR-022
+  track T1's Definition of Done (the core tag waits on E19-1) — a *criteria* change to an **Accepted**
+  ADR, which ADR-022's Status requires capturing by **supersession**, not an in-place edit. The earlier
+  in-place §4/§5 amendment was **reverted**: ADR-022's gate text is pristine (a non-normative
+  *pending-amendment* note in §4), the decision lives in RFC-0032 D6, and the T1-scope change will be
+  enacted via the maintainer-selected append-only mechanism (a focused superseding/amending ADR is the
+  default — confirmation pending). The tracker carries the operational linkage (M-703 `depends_on`
+  E19-1, flagged pending). (RFC-0032 D6; ADR-022 §4; E19-1/M-746)
+
 ### Added (2026-06-23: E19-1 — kernel self-hosting-enablement work leg scaffolded; RFC-0032 Draft + kickoff `kpr`)
 
 - **New work leg E19-1 + RFC-0032 (Draft) — the kernel surface that unblocks E13-1's blocked tiers.**

@@ -84,20 +84,19 @@ The **only remaining T1 item is the core `1.0.0` tag act itself — M-703, maint
 the tag + record the enactment; a separate append-only decision per house rule #3). Because ADR-021 is
 now **Superseded**, that inherited enactment attaches **here, to ADR-022 track T1**, at the tag — a
 Superseded ADR cannot itself move to Enacted. This sub-gate is **epic E10-1** (issues M-700–M-703;
-M-700/M-701/M-702 satisfied, M-703 reserved).
+M-700/M-701/M-702 satisfied, M-703 reserved). The core may tag `1.0.0` the moment the maintainer
+performs M-703 — it does **not** wait for T2–T9.
 
-> **T1 scope amendment (maintainer, 2026-06-23 — RFC-0032 Q6).** The core value model gains the
-> **self-hosting-enablement reprs/prims of epic E19-1** (a reduce-to-`Bool` comparison prim, binary
-> arithmetic, and the sequence/string value representations — RFC-0032) **in `core 1.0.0`**, so that
-> the stdlib can be *fully* self-hosted (`.myc`) at the tag rather than only its structural core. This
-> is an **additive extension** of T1's Definition of Done: the ADR-021 Gate A/B rows above **remain
-> met** (no reopening), but T1 now *also* requires **E19-1** to land before the tag. **Consequence:**
-> the core tag (M-703) is **no longer simply "tag-ready"** — it now **waits on E19-1** (M-703
-> `depends_on` includes E19-1). The KC-3 trusted-base growth this entails is deliberate and gated by
-> RFC-0032 + this ADR. (Rationale: the maintainer chose full self-hosting at 1.0.0 over a leaner core
-> tag with a 1.1 value-model extension — RFC-0031 §5 D4 / RFC-0032 §5 Q6.) Previously the core could
-> tag the moment M-703 was performed; **now it additionally awaits E19-1.** It still does **not** wait
-> for T2–T9.
+> **Pending T1-scope amendment (RFC-0032 D6 — governance mechanism to be confirmed).** The maintainer
+> decided (2026-06-23, RFC-0032 §5 D6) that the kernel self-hosting-enablement reprs/prims (epic
+> **E19-1** — comparison + binary-arithmetic prims, the `Repr::Seq`/`Repr::Bytes` value
+> representations) land **in `core 1.0.0`**, which would extend T1's Definition of Done to also require
+> E19-1 before the tag. Because this ADR is **Accepted** and its Status requires **superseding** to
+> change the *criteria* (house rule #3, append-only), that T1-scope change is **not applied in place
+> here** — it is recorded in RFC-0032 D6 and will be enacted into this gate via the maintainer-selected
+> append-only mechanism (a focused superseding/amending ADR is the default). Until that lands, the
+> criteria above are unchanged; the tracker carries the operational linkage (M-703 `depends_on` E19-1)
+> flagged as pending. See RFC-0032 D6 / PR #514.
 
 ## 5. Definition of Done — the full-language 1.0.0 gate
 
@@ -106,7 +105,7 @@ its own per-issue DoDs (DN-25 is the map; the epics carry the detail). Summary c
 
 | Track | Epic | Done when (summary) | Status |
 |---|---|---|---|
-| **T1 Core sub-gate** | E10-1 (+**E19-1**) | ADR-021 Gate A/B all ✅; **E19-1 self-hosting-enablement reprs/prims landed (RFC-0032 Q6, 2026-06-23)**; `core 1.0.0` tagged; ADR-022 T1 → Enacted at the tag | A/B rows ✅ met; **+ E19-1 now required in `core 1.0.0` (§4 amendment) — tag waits on E19-1**; `core 1.0.0` tag pending (M-703, maintainer-reserved) |
+| **T1 Core sub-gate** | E10-1 | ADR-021 Gate A/B all ✅; `core 1.0.0` tagged; ADR-022 T1 → Enacted at the tag | ✅ gate-met / tag-ready; `core 1.0.0` tag pending (M-703, maintainer-reserved). *(Pending T1-scope amendment to add E19-1 — RFC-0032 D6; §4, via supersession.)* |
 | **T2 Surface completeness** | E11-1 (+E7-1/E7-3/E7-5) | full HOF/closures; operator syntax (RFC-0025); committed L3 EBNF grammar (RFC-0030, RFC-0006 Q3/Q8 resolved); generics/traits/effects stable | 🔨 in progress — operator syntax + surface stabilization landed (M-705/706/708); M-704/M-707 open |
 | **T3 Runtime & concurrency** | E12-1 (+E7-2) | real scheduler; full RFC-0008 vocabulary executes; deadlock-freedom checked; memory reclamation (RFC-0027); supervision/cancellation | 🔨 in progress — scheduler/deadlock/supervision landed (M-709/711/713); M-710/M-712 open |
 | **T4 Stdlib in Mycelium** | E13-1 | the stdlib + core libs **written in `.myc`** (RFC-0031), differential-tested, stable APIs; Rust std-`*` beyond the bare core superseded by `.myc` | ⏳ open |
@@ -222,11 +221,10 @@ Recorded so the program stays honest about where it ends — these are **vision,
   reflect landed Wave-A work (s10 surface/operators · r10 runtime · rel10 docs · ffi10 on dev); the
   Gate A/B **criteria are unchanged** — a status report on a checked basis (VR-5), recorded append-only
   (house rule #3). (Copilot #506.)
-- 2026-06-23 — **Track T1 scope EXTENDED** (maintainer — RFC-0032 Q6, the kernel self-hosting-enablement
-  decision). §4 gains a scope-amendment block + §5's T1 row now reads "E10-1 (+E19-1)": the core value
-  model gains epic **E19-1**'s reprs/prims (comparison, binary arithmetic, sequence/string values —
-  RFC-0032) **in `core 1.0.0`**, so the stdlib is fully `.myc`-self-hosted at the tag. **This is the
-  first change to a T1 Definition-of-Done since supersession** — an *additive* extension, not a status
-  refresh: the ADR-021 Gate A/B rows stay met, but the tag (M-703) now **waits on E19-1** (its
-  `depends_on` includes E19-1). The KC-3 trusted-base growth is deliberate, gated by RFC-0032 + this
-  ADR. Chosen over a leaner core tag + a 1.1 value-model extension (the §5 Q6 trade-off). E19-1/M-746.
+- 2026-06-23 — **Pending T1-scope amendment recorded (not applied in place).** The maintainer decided
+  (RFC-0032 §5 D6) that epic **E19-1**'s self-hosting-enablement reprs/prims land **in `core 1.0.0`**,
+  which would extend T1's DoD to require E19-1 before the tag. Per this ADR's Status (criteria changes
+  require **superseding**, house rule #3), the change is **not applied to §4/§5 in place** — §4 carries
+  a *pending-amendment* note and the decision lives in RFC-0032 D6; it will be enacted via the
+  maintainer-selected append-only mechanism (a focused superseding/amending ADR is the default). The
+  tracker carries the operational linkage (M-703 `depends_on` E19-1) flagged pending. (Copilot #514.)

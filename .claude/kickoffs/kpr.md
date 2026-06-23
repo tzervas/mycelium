@@ -11,7 +11,7 @@
 |---|---|
 | **UID** | `kpr` |
 | **Head branch** | `claude/head/kpr` |
-| **Status** | ready (design-gated) |
+| **Status** | **gate cleared** — M-746 done (RFC-0032 **Accepted**, §5 D1–D7); the implementation leaves M-747…M-750 are `todo` and ready to start |
 | **Swarm mode** | Sonnet |
 | **Depends on** | E13-1 §5 D4 (RFC-0031, **Accepted** — names the blockers); **gate: RFC-0032/M-746 must reach Accepted first**. Coordinates with `c10` (mycelium-core / kernel-T1 ownership) and `s10` (mycelium-l1 type system / width-generics). |
 
@@ -137,9 +137,14 @@ You are running kickoff `kpr` — building the kernel prims + value representati
 blocked tiers of E13-1 (self-hosted stdlib). The repo is `/home/user/mycelium`. Your working branch is
 `claude/head/kpr`; branch off `dev` (or `main` if `dev` is current) and push before spawning leaves.
 
-**Step 0 — the gate (M-746), do this first and alone:** author `RFC-0032` (the Draft stub exists at
-`docs/rfcs/RFC-0032-Kernel-Self-Hosting-Enablement-Surface.md`) to **Accepted** by resolving its §5
-open questions. **Two are already settled by the maintainer (2026-06-23, recorded in §5):**
+**Step 0 — DONE (M-746, 2026-06-23): RFC-0032 is Accepted (§5 D1–D7).** The gate is cleared; start at
+the enablers below. The ratified decisions: **D1** `eq`/`lt` prims (→`Bool`, Exact; `cmp`/`Ordering`
+derives in `.myc`); **D2** surface `bit.and`/`bit.or` + never-silent carry-chain `add`/`sub`; **D3**
+`Repr::Seq` (indexed sequence, never-silent `get`); **D4** `Repr::Bytes` (byte/string, never-silent
+decode); **D5** width-generics → E11-1/`s10` (M-751 closed → **M-753**); **D6** in `core 1.0.0`
+(extends ADR-022 T1 — append-only via supersession, **pending the mechanism**: confirm before relying
+on the gate text); **D7** sequencing comparison → binary-arith → `Repr::Seq` → `Repr::Bytes`. *(Historical
+brief for re-authoring, now satisfied: the two maintainer-settled questions were —)*
 - **Q6 (placement) = IN `core` 1.0.0** — the reprs/prims land in the kernel before the 1.0.0 tag.
   **Consequence you must carry through:** E19-1 becomes a **core-1.0.0 gate prerequisite**, so
   E10-1/`c10`'s "tag-ready" status (ADR-022 T1) now waits on E19-1 — **FLAG that ADR-022 + E10-1 + the
