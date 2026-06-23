@@ -4,7 +4,7 @@
 |---|---|
 | **ADR** | 015 |
 | **Title** | Fix the RFC-0010 decode-methodology selector's default enumeration budget at `DEFAULT_ENUM_BUDGET = 4096` (= `MAPI_RESONATOR_PROFILE.max_capacity`) — the *guarantee-maximal* arm: every in-regime request is also enumerable, so the brute-force `Exact` arm dominates the whole validated envelope, rather than the *cost-optimal* ≈128 |
-| **Status** | **Accepted** (maintainer directive, 2026-06-15) |
+| **Status** | **Enacted** (2026-06-23, M-350; maintainer-approved) · **Accepted** (maintainer directive, 2026-06-15) |
 | **Date** | 2026-06-15 |
 | **Depends on** | RFC-0010 §3/§4.3/§8 (the decode-method selector, the `enum_budget` cost-model parameter, and the open question this ratifies); RFC-0009 §10.3 (`MAPI_RESONATOR_PROFILE`, `max_capacity = 4096`); RFC-0005 §2 (the one selection mechanism + mandatory `EXPLAIN`); **G2** (no black boxes / never silent), **G4** (resonator guarantees are probabilistic), **VR-5** (no tag upgrade without a checked basis), tension **D** (reified/auditable selection — the policy stays inspectable, the trade lives in `EXPLAIN`) |
 | **Resolves** | RFC-0010 §8 — the `enum_budget` crossover open question (a policy call, now ratified) |
@@ -128,6 +128,7 @@ default + a deferred re-open trigger, no precheck machinery built).
 
 ## Meta — changelog
 
+- **2026-06-23 — Enacted (M-350; maintainer-approved).** `DEFAULT_ENUM_BUDGET = 4096` is applied in `crates/mycelium-vsa/src/decode_select.rs`; the value is read by the `DecodeMethodPolicy` arm-1 threshold and closes RFC-0010 §8. No deferral — the decision is fully in force. Append-only.
 - **2026-06-15 — Accepted (maintainer directive).** Ratifies `DEFAULT_ENUM_BUDGET = 4096`
   (= `MAPI_RESONATOR_PROFILE.max_capacity`), the guarantee-maximal default, over the cost-optimal ≈128,
   on the measured `∏k ≈ 100–128` cost-parity crossover (≈ 19× / ≤ ≈ 157 ms latency tax at the regime

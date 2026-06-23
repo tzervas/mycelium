@@ -4,7 +4,7 @@
 |---|---|
 | **ADR** | 019 |
 | **Title** | Adopt libMLIR (the `mlir-opt`/`mlir-translate` toolchain, version-matched to the installed LLVM major) as the OPTIONAL build dependency of the `mlir-dialect` Cargo feature of `mycelium-mlir` — provisioned durably by `scripts/setup-mlir.sh`, OFF by default, with an honest skip path; the default build and `cargo test` stay green without it |
-| **Status** | **Accepted** (drafted 2026-06-20; ratified 2026-06-20; grounds RFC-0004 §2 / ADR-009) |
+| **Status** | **Enacted** (2026-06-23, M-348/M-603; maintainer-approved) · **Accepted** (drafted 2026-06-20; ratified 2026-06-20; grounds RFC-0004 §2 / ADR-009) |
 | **Date** | 2026-06-20 |
 | **Depends on** | RFC-0004 §2 (MLIR→LLVM backbone) / §6 (inspectability) / §9.3 (host-target-only); ADR-009 (hybrid execution / no-opaque-lowering, all backends); DN-15 (native-path decomposition — the libMLIR-gated half); M-348 (the provisioning block this resolves); M-601 (real ternary→arith/vector→LLVM lowering) / M-602 (three-way differential) / M-603 (this provisioning recipe + ADR) |
 | **Resolves** | M-348 provisioning block (libMLIR-absent premise) on Linux |
@@ -103,6 +103,7 @@ basis; G2 — never silent). **Cross-target codegen for non-host triples stays o
 
 ## Meta — changelog
 
+- **2026-06-23 — Enacted (M-348/M-603; maintainer-approved).** `scripts/setup-mlir.sh` is present and exposes the `just setup-mlir` recipe (deliberately kept out of `just setup`); the `mlir-dialect` Cargo feature of `mycelium-mlir` is OFF by default; the default build and `cargo test` stay green without libMLIR; real dialect lowering is present (M-601 ternary→arith/vector→LLVM path). **Deferred (ongoing maintenance, not open design items):** MLIR version drift and platform-specific provisioning (Windows/macOS receive a named-package message, not an automated install) are continuous maintenance concerns, not design decisions requiring a separate ADR. Append-only.
 - **2026-06-20 — Proposed.** Drafts the resolution of the M-348 "libMLIR absent" premise on Linux:
   the verified `apt-get install libmlir-18-dev mlir-18-tools` (candidate `1:18.1.3-1ubuntu1`,
   version-matched to the installed LLVM 18.1.3) provides `mlir-opt-18`/`mlir-translate-18` and the

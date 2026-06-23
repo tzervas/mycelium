@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0010 |
-| **Status** | **Accepted** |
+| **Status** | **Enacted** (2026-06-23, M-350; maintainer-approved) · **Accepted** (ratified 2026-06-15) |
 | **Type** | Foundational / normative |
 | **Date** | June 15, 2026 |
 | **Depends on** | RFC-0005 (the `SelectionPolicy` decision-table mechanism + mandatory `EXPLAIN`); RFC-0009 (the resonator decode + the `ResonatorProfile` regime gate + the §10.3 measured matrix); RFC-0003 (the VSA guarantee matrix + `DecodeProcedure`); RFC-0001 (`Meta`, guarantee lattice, content-addressing); **G2**, **G4**, **VR-5**; cross-cutting tension **D** |
@@ -223,6 +223,7 @@ profile δ, or the recon schema; no learned/statistics-driven costing (RFC-0005 
 
 ## Meta — changelog
 
+- **2026-06-23 — Enacted (M-350; maintainer-approved).** `crates/mycelium-vsa/src/decode_select.rs` is present and implements the three-arm `DecodeMethodPolicy` as a third site of the one RFC-0005 selection mechanism: `BruteForceExact` (tag: `Exact`; identifiability-checked), `Resonator{Hebbian}` (tag: `Empirical`, `MAPI_RESONATOR_PROFILE` δ attached), `Refuse` (`OutsideEmpiricalProfile`). The honesty floor is enforced in the executor (forced overrides cannot escape it). ADR-015 closes §8's `enum_budget` open question (`DEFAULT_ENUM_BUDGET = 4096`). **Deferred (normative record):** Hebbian cleanup-variant is the normative default; other cleanup variants (ArgMax, SoftmaxSign) deferred as out-of-scope by design (§2/§4.1/§8). The cheap identifiability-precheck for the resonator arm (§8) remains deferred (YAGNI). Append-only.
 - **2026-06-15 — Draft.** Initial design, prompted by the RFC-0009 §10.3 ablation outcome. Frames
   decode-methodology choice as a **third site of the one RFC-0005 selection mechanism** (no parallel
   selector — DRY/SoC): a content-addressed, `EXPLAIN`-mandatory decision table over **exact** metadata

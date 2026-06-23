@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0009 |
-| **Status** | **Accepted** (Phase-3 exploratory design; ratified by the maintainer 2026-06-15 — prototype building) |
+| **Status** | **Enacted** (2026-06-23, M-350; maintainer-approved) · **Accepted** (Phase-3 exploratory design; ratified by the maintainer 2026-06-15 — prototype building) |
 | **Type** | Foundational / normative — opt-in VSA submodule feature |
 | **Date** | June 15, 2026 |
 | **Depends on** | RFC-0003 (VSA submodule boundary, `VsaModel`, guarantee matrix, reconstruction manifest §6); RFC-0001 (`VSA` Repr, `Hypervector`, `CrosstalkBound`, lattice); ADR-008 (VSA optional submodule); ADR-010/011 (bound kernels, `BoundBasis`) |
@@ -324,6 +324,7 @@ deliberately left to be *fit by trials* rather than asserted (VR-5), and are fla
 
 ## Changelog
 
+- **2026-06-23 — Enacted (M-350; maintainer-approved).** `crates/mycelium-vsa/src/resonator.rs` is present and implements the §3 resonator loop (MAP-I, parallel/Jacobi update, Hebbian cleanup default, discrete index-tuple convergence + stall detection per §9 Q3 premature-abort correction); never-silent `NoConverge` / `BudgetExhausted` / `Oscillating` / `Stalled` verdicts; brute-force differential oracle; trial-validated `MAPI_RESONATOR_PROFILE` (`F≤3, k≤16, ∏k≤4096, d≥4096, δ=0.02`). The §5/§6 honesty contract is in force: tag stays `Empirical`, never `Proven`; only a clean `Converged` clearing `τ_lock` + confidence + margin yields factors. **Deferred (build-phase, not a ratification gate):** the full measured convergence corpus (≥100-vector/regime grid, §9 Q4 expansion) is a build-phase deliverable; cleanup-variant alternatives (ArgMax, SoftmaxSign, HRR/FHRR, BSC) remain deferred out-of-scope by design (§9 Q6). Append-only.
 - **2026-06-15 — Draft.** Initial design from the RFC-0003 §6 resonator note and the FR-C2/G4/RR-5
   risk position: the iterative update (Frady et al. 2020), the never-`Proven` / `Empirical`-ceiling
   honesty contract (already schema-enforced in `mycelium-core::recon`), the never-silent termination

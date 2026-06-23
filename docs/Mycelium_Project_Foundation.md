@@ -1,7 +1,7 @@
 # Mycelium — Project Foundation
 
-**Status:** Foundation — design corpus Accepted; **Rust-first implementation underway** (Phases 0–3, 5, 7 complete; 4, 6, 8 in progress). Research: eleven passes recorded (`research/01…11`).
-**Revision:** r4 — records the **Rust-first implementation** status: the kernel + reference interpreter + certified swaps + the 23-crate standard library have landed (Phases 0–3/5/7 complete, 4/6/8 in progress); per the honesty rule the stdlib specs read *"implemented (Rust-first), pending ratification,"* and self-hosting (M-502) is not yet established. Extends the §6 roadmap with Phases 4–8 and refreshes §10. **Design decisions are unchanged (append-only)** — this is a status/roadmap refresh, not a decision change.
+**Status:** Foundation — design corpus Accepted; **Rust-first implementation underway** (Phases 0–3, 5, 7 complete; 4, 6, 8 in progress). Research: thirteen passes recorded (`research/01…13`).
+**Revision:** r4 — records the **Rust-first implementation** status: the kernel + reference interpreter + certified swaps + the 25-crate standard library have landed (Phases 0–3/5/7 complete, 4/6/8 in progress); per the honesty rule the stdlib specs read *"implemented (Rust-first), pending ratification,"* and self-hosting (M-502) is not yet established. Extends the §6 roadmap with Phases 4–8 and refreshes §10. **Design decisions are unchanged (append-only)** — this is a status/roadmap refresh, not a decision change. *Status addendum (2026-06-22):* RFC-0022 and RFC-0023 ratified to Accepted; RFC-0018 Enacted (stage 1a, M-663); the E7-1 L1 stage-1 checker surface complete (M-656–M-663); research: 13 passes recorded (`01…13`).
 **Revision history:** r3 — integrates the follow-up research findings: ratifies ADR-010 (two bound kernels) and ADR-007 (Rust kernel + MLIR); records the **KC-1 pass** (proven VSA bundling bounds exist); marks RFC-0001…0005 Accepted and DN-01 Resolved (packing → schedule-staged); de-risks RR-1 and adds residual risks RR-13/RR-14. · r2 — added the execution-model and VSA-packaging decisions (ADR-008, ADR-009) plus a first-class toolchain treatment (§5.8); folded hybrid-compilation and tooling constraints into Requirements (§3) and the Roadmap (§6).
 **Date:** June 08, 2026
 **Working name:** Mycelium (formerly *Verid* — provenance note; sole remaining reference)
@@ -287,7 +287,7 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 
 ### Phase 5 — Self-hosting & core library
 **Goal:** the standard library (RFC-0016) and the Rust-first → Mycelium-lang migration.
-**Status (2026-06): Rust-first complete; self-hosting open.** 23 `std-*` crates implement the RFC-0016 contract with their guarantee matrices asserted in tests; the specs read *"implemented (Rust-first), pending ratification."* Self-hosting readiness (M-502) is **not yet established**.
+**Status (2026-06): Rust-first complete; self-hosting open.** **25** `std-*` crates implement the RFC-0016 contract with their guarantee matrices asserted in tests; all 25/25 specs ratified to **`Accepted`** (2026-06-20/21, DN-07 + maintainer). Self-hosting readiness (M-502) is **not yet established**. *2026-06-22 addendum:* the E7-1 L1 stage-1 checker surface now complete (M-656–M-663); L0 elaboration of generic/trait instantiations staged → M-673.
 
 ### Phase 6 — Native acceleration & deployment
 **Goal:** native MLIR→LLVM codegen for the full calculus, native differential, BitNet-class acceleration, deployable spore units, and the VR-4 hardening gate.
@@ -417,7 +417,7 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 
 > The original Phase-0 confirm + Phases 1–3 build items (1–7) are **complete**; the live next actions follow. The authoritative task board is `tools/github/issues.yaml` (+ `idmap.tsv`) and `docs/planning/phase-*.md`.
 
-**Complete (Phases 0–3, 5, 7):** the LH `bundle` probe (KC-1 confirmed, `proofs/lh-bundle/`); the Core IR + reference interpreter; the binary↔ternary `LosslessWithinRange` swap + the single certificate checker; the `ternary` MLIR dialect + schedule-staged packing (E1 measured); the VSA submodule; the LLM-leverage experiment (KC-2 verdict **proceed**, DN-09); and the Rust-first standard library (23 `std-*` crates).
+**Complete (Phases 0–3, 5, 7):** the LH `bundle` probe (KC-1 confirmed, `proofs/lh-bundle/`); the Core IR + reference interpreter; the binary↔ternary `LosslessWithinRange` swap + the single certificate checker; the `ternary` MLIR dialect + schedule-staged packing (E1 measured); the VSA submodule; the LLM-leverage experiment (KC-2 verdict **proceed**, DN-09); and the Rust-first standard library (**25** `std-*` crates, all specs Accepted 2026-06-20/21). The E7-1 L1 stage-1 checker surface is complete (M-656–M-663, 2026-06-22); L0 elaboration of generic/trait instantiations is staged → M-673.
 
 **Live, dependency-ordered:**
 1. **[P1 · build] Phase-4 ABI/AOT completion** — the full AOT env-machine, RFC-0001 r5 mutual recursion, the RFC-0012 ambient, dynamic budgets, and stack-robustness (M-341…M-354), toward the three-way NFR-7 differential.

@@ -874,7 +874,8 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_monomorphized_generic_and_trait_fragme
             mono.fns.values().all(|fd| fd.sig.params.is_empty())
                 && mono.types.values().all(|d| d.params.is_empty())
                 && mono.traits.is_empty()
-                && mono.instances.is_empty(),
+                && mono.instances.is_empty()
+                && mono.impls.is_empty(),
             "program #{i}: monomorphized env must be closed (no generics/traits)"
         );
         let registry = build_registry(&mono).expect("the mono'd data registry builds");
