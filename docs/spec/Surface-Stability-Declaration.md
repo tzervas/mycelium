@@ -37,7 +37,7 @@ Each row is grounded in source + tests; see DN-14 §3 for the fuller evidence ch
 
 | Feature | Status | Source / test | Guarantee |
 |---|---|---|---|
-| Value types (repr literals `Binary{n}`/`Ternary{m}`/`Dense`/`VSA` types, `i64`, ADT booleans/tuples) | **present** | `ast.rs` `BaseType`, `checkty.rs` `Ty`, `eval.rs` | n/a (structural) |
+| Value types (repr literals `Binary{n}`/`Ternary{m}`, `Dense` types, `i64`, ADT booleans/tuples) | **present** | `ast.rs` `BaseType`, `checkty.rs` `Ty`, `eval.rs` | n/a (structural) |
 | ADTs + pattern matching (nested patterns, Maranget exhaustiveness/redundancy) | **present** | `usefulness.rs`, `decision.rs`, `tests/check.rs` | n/a |
 | Functions, self- + mutual recursion (Tarjan SCC → `FixGroup`), `let`, `for`-fold sugar | **present** | `elab.rs` `FixGroup`, `ast.rs` `Expr::{Let,For}` | n/a |
 | Generic type parameters (`fn f<A>(…)`, `type List<A>`) — checked + monomorphized to closed L0 | **present** | `checkty.rs` (unification-based instantiation), `mono.rs` (M-673); `tests/differential.rs` | `Declared` |
@@ -91,7 +91,8 @@ cannot be made closed first-order at L1 without an L0 node, that breaks KC-3 and
 | **`consume` / `grow` / inherent `impl T { … }`** keywords (DN-03 §1) | reserved-not-active / unimplemented surface | **M-664** |
 | **R1 runtime vocabulary** `fuse` / `reclaim` / `tier` | reserved keywords; explicit teaching diagnostic at use | **M-667** |
 | **R2 distribution vocabulary** `xloc` / `mesh` / `cyst` / `graft` / `forage` / `backbone` | reserved keywords; explicit teaching diagnostic at use | **M-668** |
-| **VSA / `Substrate` value forms** | `checkty.rs` `Residual` — "VSA types are deferred in the L1 v0 prototype (no value forms yet)" | RFC follow-ups (VSA / Substrate execution) |
+| **`VSA{…}` types** | explicit **`CheckError`** in `checkty.rs::resolve_ty` — "VSA types are deferred in the L1 v0 prototype (no value forms yet)" (the *type* itself is refused, not merely staged) | RFC follow-ups (VSA execution) |
+| **`Substrate{tag}` value forms** | the *type* resolves (`Ty::Substrate`, accepted in signatures/`consume`), but **no v0 value forms exist** (`checkty.rs:68` — affine `Substrate` is type-level only) | RFC follow-ups (Substrate execution; `consume` surface → M-664) |
 | **`wild` execution** (FFI host) | `elab.rs` `Residual` (type-checks + gates; no FFI host in v0) | M-661 follow-up / FFI RFC (RFC-0028) |
 
 ---

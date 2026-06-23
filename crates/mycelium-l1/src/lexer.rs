@@ -164,9 +164,10 @@ impl Lexer {
                 ':' => self.single(Tok::Colon),
                 ',' => self.single(Tok::Comma),
                 '.' => self.single(Tok::Dot),
-                // `|` is the match-arm/pattern-alternation glyph and the bitwise-`bor` operator
-                // (RFC-0025 / M-705); `||` is the logical-`or` operator. The parser disambiguates
-                // single `|` by position (pattern vs expression).
+                // `|` is the sum-type constructor separator (`type T = A | B`) and the bitwise-`bor`
+                // operator (RFC-0025 / M-705); `||` is the logical-`or` operator. The parser
+                // disambiguates single `|` by position (type-decl separator vs expression operator).
+                // (There is no `|`-separated pattern-alternation production in the v0 surface.)
                 '|' => self.lex_pipe(),
                 // `!` opens the effect annotation `!{ … }` (RFC-0014 §3.4; M-660) and is the unary
                 // `not` operator at expression position (RFC-0025 / M-705); `!=` is the `ne`
@@ -280,7 +281,7 @@ impl Lexer {
         }
     }
 
-    /// `|` (bor / pattern-alternation) or `||` (logical or) — RFC-0025 / M-705.
+    /// `|` (sum-type constructor separator / `bor`) or `||` (logical or) — RFC-0025 / M-705.
     fn lex_pipe(&mut self) -> Tok {
         self.bump(); // '|'
         if self.peek() == Some('|') {

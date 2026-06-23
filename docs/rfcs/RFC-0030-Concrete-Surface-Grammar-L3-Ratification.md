@@ -172,18 +172,25 @@ expression (M-666), and the `@ strength` guarantee annotation. RFC-0025 is recor
 
 ## 6. Open questions
 
-1. **RFC-0006 Q3 resolution:** which ambient-representation spelling does the surface commit?
-   Implicit (no annotation, paradigm inferred from context), explicit (`in Binary { … }` block),
-   or a hybrid? DN-07 §3-Q3 accepted the direction; the concrete spelling is TBD.
-2. **RFC-0006 Q8 resolution:** is `wild { … }` the committed unsafe-class spelling, or does this
-   RFC explore alternatives (`unsafe { … }` for familiarity, `audited { … }` for honesty)? The
-   `@std-sys` context gate (M-661) is committed — the spelling of the inner block is open.
+> **Note (this revision).** Questions 1 and 2 are **answered in §4** and are retained here only for
+> the record (append-only); the framing of the original #1 was itself incorrect — see §4.2.
+
+1. **RFC-0006 Q3 — RESOLVED/CORRECTED (see §4.2):** this stub originally framed Q3 as the
+   ambient-*representation* spelling, which **mis-states** RFC-0006's Q3 (the LR-6 guarantee-grading
+   mechanism, already discharged by RFC-0018). The representation surface is RFC-0012's (Enacted:
+   `default paradigm` / `with paradigm` + the `@ strength` annotation). There is **no open Q3** for
+   this RFC. *(Historical wording: "which ambient-representation spelling does the surface commit —
+   implicit, explicit `in Binary { … }`, or hybrid?" — superseded by this correction.)*
+2. **RFC-0006 Q8 — PROPOSED (see §4.1):** `wild { … }` is proposed as the committed unsafe-class
+   spelling (gated by `@std-sys` + `!{ffi}`); the `unsafe { … }` / `audited { … }` alternatives are
+   declined. Becomes normative on maintainer ratification of this RFC.
 3. **EBNF artifact ownership:** should `mycelium.ebnf` remain a separate file extended by this
    RFC, or should this RFC inline the complete grammar and `mycelium.ebnf` become a generated
    extract? One canonical source avoids drift.
-4. **Relation to RFC-0025:** if RFC-0025 is not yet Accepted when RFC-0030 drafts, how are the
-   operator-expression productions handled — as a guarded extension, as `Residual` placeholders,
-   or by sequencing RFC-0030 after RFC-0025?
+4. **Relation to RFC-0025 — ANSWERED (see §4.3):** RFC-0025 (Proposed) is **integrated** — its
+   operator-expression productions (`op_expr` … `unary_expr`) are committed in `mycelium.ebnf` now,
+   not held as `Residual` placeholders. The angle-bracket-operator tail (M-745) is the only pending
+   piece of the operator grammar.
 5. **Conformance-corpus scale:** the current corpus has O(tens) of fixtures. A complete grammar
    ratification implies O(hundreds). How is this maintained without becoming a burden? A
    grammar-based fuzzer (e.g., `cargo-fuzz` + a grammar-guided generator) may replace hand-written

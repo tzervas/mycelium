@@ -233,9 +233,10 @@ pub enum Tok {
     /// RFC-0025 / M-705).
     BangEq,
     /// `||` — the infix logical-**or** operator at expression position (`a || b` → `or(a, b)`;
-    /// RFC-0025 / M-705). `|` (single) stays the match-arm/pattern-alternation glyph and the
-    /// bitwise-**or** operator (`a | b` → `bor(a, b)`); the two `|` uses never overlap (patterns
-    /// are parsed in pattern position, the operator at expression position).
+    /// RFC-0025 / M-705). `|` (single) stays the **sum-type constructor separator** in a `type`
+    /// declaration (`type T = A | B`) and the bitwise-**or** operator (`a | b` → `bor(a, b)`); the
+    /// two `|` uses never overlap (the separator is in a `type` decl, the operator at expression
+    /// position). (There is no `|`-separated pattern-alternation production in the v0 surface.)
     PipePipe,
     /// End of input.
     Eof,

@@ -933,6 +933,16 @@ impl Parser {
     /// kernel is unchanged: this is a frontend-only desugaring, no L0/L1 change, KC-3). `min_bp`
     /// is the minimum binding power this call consumes; left-associativity is encoded by recursing
     /// on the right operand at `bp + 1` so an equal-precedence operator is left for the loop.
+    ///
+    /// **Stack-safety (A4-02).** This needs no extra depth charge of its own and must not add one
+    /// (the enclosing [`parse_expr`](Self::parse_expr) already charges the budget for this
+    /// expression level — charging again would double-count and halve the effective nesting limit).
+    /// The RHS recursion `parse_binexpr(bp + 1)` strictly *raises* `min_bp` each step, so its
+    /// recursion depth is bounded by the fixed number of precedence tiers (a small constant),
+    /// independent of input length — it cannot overflow. A flat left-associative chain
+    /// `a + a + …` is consumed by the loop (not recursion), so it too stays O(1) deep. The only
+    /// genuinely unbounded operator vector is the prefix chain in [`parse_unary`](Self::parse_unary),
+    /// which carries its own depth guard. Nested parens route back through `parse_expr` (guarded).
     fn parse_binexpr(&mut self, min_bp: u8) -> Result<Expr, ParseError> {
         let mut lhs = self.parse_unary()?;
         while let Some((bp, word)) = infix_op(self.cur()) {
@@ -951,15 +961,28 @@ impl Parser {
     /// `!` here is always the unary operator: the effect-set `!{…}` only ever appears in a fn
     /// signature (parsed elsewhere), never at expression position. Any other token delegates to
     /// the applicative layer ([`parse_app`]).
+    ///
+    /// The prefix recursion participates in the shared [`MAX_EXPR_DEPTH`] budget (A4-02): a crafted
+    /// prefix chain (`!!!!…a`, `----a`) is refused with an explicit error past the limit, never a
+    /// host-stack overflow (G2 — never crash).
     fn parse_unary(&mut self) -> Result<Expr, ParseError> {
         let word = match self.cur() {
             Tok::Minus => "neg",
             Tok::Bang => "not",
             _ => return self.parse_app(),
         };
+        self.depth += 1;
+        if self.depth > MAX_EXPR_DEPTH {
+            self.depth -= 1;
+            return Err(ParseError::new(
+                self.pos(),
+                format!("expression nests deeper than the limit of {MAX_EXPR_DEPTH} — refusing to recurse"),
+            ));
+        }
         self.bump(); // the prefix operator
-        let operand = self.parse_unary()?;
-        Ok(op_call(word, vec![operand]))
+        let operand = self.parse_unary();
+        self.depth -= 1;
+        operand.map(|o| op_call(word, vec![o]))
     }
 
     /// Teaching diagnostic (RFC-0007 §4.8): `while`/`loop`/`break`/`continue`/`return` are not
@@ -1401,6 +1424,30 @@ mod tests {
     #[test]
     fn parens_override_precedence() {
         assert_eq!(op_body("(a + b) * c"), op_body("mul(add(a, b), c)"));
+    }
+
+    #[test]
+    fn deep_operator_nesting_is_refused_not_crashed() {
+        // A4-02 / G2: a crafted prefix chain (`!!!…a`) or parenthesized operator nesting must be
+        // refused with an explicit depth error, never drive a host-stack overflow. Both the prefix
+        // recursion (parse_unary) and the precedence recursion (parse_binexpr) participate in the
+        // shared MAX_EXPR_DEPTH budget.
+        let prefix = "!".repeat(2000);
+        let src = format!("nodule d\nfn main() -> Binary{{8}} = {prefix}0b0000_0000");
+        let err = parse(&src).expect_err("a 2000-deep prefix chain must be refused");
+        assert!(
+            err.message.contains("refusing to recurse"),
+            "got: {}",
+            err.message
+        );
+        // A flat (non-nested) left-associative chain of the SAME length must still parse — the loop
+        // keeps it O(1) deep, so length alone never trips the budget.
+        let flat = (0..2000)
+            .map(|_| "0b0000_0000")
+            .collect::<Vec<_>>()
+            .join(" ^ ");
+        let ok = format!("nodule d\nfn main() -> Binary{{8}} = {flat}");
+        parse(&ok).expect("a long FLAT operator chain parses (loop, not recursion)");
     }
 
     #[test]
