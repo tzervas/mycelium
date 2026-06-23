@@ -254,3 +254,22 @@ the `gh` CLI** (some runners/sandboxes have only a token), reading `GITHUB_TOKEN
 status + body), and **`--dry-run`-aware** (mutating verbs preview, reads always run). A missing token
 is the **honest stop** — it FLAGs the gated step and falls back to `pr-index.json`, **never** a
 fabricated sync.
+
+## Reconciling erroneous duplicate issues (`gh-issues-dedup.py`)
+
+The reconciler matches by idmap-number-then-title and is designed to **never duplicate**. When that
+contract slips anyway — a sync re-run before `idmap.tsv` was committed once created twins (#126-129
+duplicated M-302/M-330/M-342/M-348) — `gh-issues-dedup.py` is the safety net:
+
+> Preview:  `python tools/github/gh-issues-dedup.py`
+> Act:      `python tools/github/gh-issues-dedup.py --apply [--fix-idmap]`
+> Offline:  `python tools/github/gh-issues-dedup.py --self-test`
+
+- Groups all issues by the **task-id in the title** (`M-xxx` / `Exx-x`) and by **normalized title**;
+  the **lowest-numbered** (earliest) issue in a set is the **canonical**.
+- **DRY-RUN by default** — prints every duplicate set (canonical + twins) and what `--apply` would do.
+- `--apply` closes only the **non-canonical OPEN task-id** twins (commented to point at the canonical),
+  **never the canonical**; a CLOSED canonical or a **title-only** match is reported for **manual**
+  review, never auto-closed (G2 — no guessing).
+- `--fix-idmap` re-anchors any `idmap.tsv` row that points at a non-canonical number.
+- Same contract as the reconciler: no new dependency (the `gh` CLI), never-silent, offline `--self-test`.
