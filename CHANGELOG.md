@@ -38,11 +38,10 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 - **D6 governance (append-only — house rule #3 + Copilot #514).** "In `core 1.0.0`" extends ADR-022
   track T1's Definition of Done (the core tag waits on E19-1) — a *criteria* change to an **Accepted**
   ADR, which ADR-022's Status requires capturing by **supersession**, not an in-place edit. The earlier
-  in-place §4/§5 amendment was **reverted**: ADR-022's gate text is pristine (a non-normative
-  *pending-amendment* note in §4), the decision lives in RFC-0032 D6, and the T1-scope change will be
-  enacted via the maintainer-selected append-only mechanism (a focused superseding/amending ADR is the
-  default — confirmation pending). The tracker carries the operational linkage (M-703 `depends_on`
-  E19-1, flagged pending). (RFC-0032 D6; ADR-022 §4; E19-1/M-746)
+  in-place §4/§5 amendment was **reverted**, and the change is now enacted append-only by the focused
+  amending **ADR-024** (Accepted 2026-06-23 — see the entry above): ADR-022's §4/§5 criteria text stays
+  pristine (only an "amended by ADR-024" pointer), the decision lives in RFC-0032 D6, and `M-703`
+  `depends_on` E19-1. (RFC-0032 D6; ADR-024; ADR-022 §4; E19-1/M-746)
 
 ### Added (2026-06-23: E19-1 — kernel self-hosting-enablement work leg scaffolded; RFC-0032 Draft + kickoff `kpr`)
 

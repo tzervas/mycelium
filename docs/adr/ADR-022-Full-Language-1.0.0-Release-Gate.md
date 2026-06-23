@@ -103,7 +103,7 @@ its own per-issue DoDs (DN-25 is the map; the epics carry the detail). Summary c
 
 | Track | Epic | Done when (summary) | Status |
 |---|---|---|---|
-| **T1 Core sub-gate** | E10-1 (+ E19-1, **ADR-024**) | ADR-021 Gate A/B all ✅; **E19-1 self-hosting-enablement surface landed (ADR-024 / RFC-0032)**; `core 1.0.0` tagged; ADR-022 T1 → Enacted at the tag | A/B rows ✅ met; **+ E19-1 required (ADR-024 amendment) — tag waits on E19-1**; `core 1.0.0` tag pending (M-703, maintainer-reserved) |
+| **T1 Core sub-gate** | E10-1 (T1 scope amended by **ADR-024**) | ADR-021 Gate A/B all ✅; `core 1.0.0` tagged; ADR-022 T1 → Enacted at the tag | ✅ gate-met / tag-ready on these criteria; **T1 scope amended by ADR-024 (adds E19-1) — see ADR-024**; `core 1.0.0` tag pending (M-703, maintainer-reserved) |
 | **T2 Surface completeness** | E11-1 (+E7-1/E7-3/E7-5) | full HOF/closures; operator syntax (RFC-0025); committed L3 EBNF grammar (RFC-0030, RFC-0006 Q3/Q8 resolved); generics/traits/effects stable | 🔨 in progress — operator syntax + surface stabilization landed (M-705/706/708); M-704/M-707 open |
 | **T3 Runtime & concurrency** | E12-1 (+E7-2) | real scheduler; full RFC-0008 vocabulary executes; deadlock-freedom checked; memory reclamation (RFC-0027); supervision/cancellation | 🔨 in progress — scheduler/deadlock/supervision landed (M-709/711/713); M-710/M-712 open |
 | **T4 Stdlib in Mycelium** | E13-1 | the stdlib + core libs **written in `.myc`** (RFC-0031), differential-tested, stable APIs; Rust std-`*` beyond the bare core superseded by `.myc` | ⏳ open |

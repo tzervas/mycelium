@@ -2920,6 +2920,7 @@ issues:
     epic: E10
     doc_refs:
       - corpus:ADR-022
+      - corpus:ADR-024
       - corpus:ADR-021
       - corpus:DN-19
       - corpus:DN-25
