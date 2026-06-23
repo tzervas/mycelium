@@ -43,8 +43,8 @@ E16-1 (epic), M-730, M-731, M-732, M-733, M-734.
 - `crates/mycelium-spore/src/lib.rs`: the build artifact; **no** publish/resolve/registry today.
 - RFC-0026 (Draft): the binding grammar artifact + scope-name decision (M-693); M-731 depends on it.
 - DN-24 (Draft): the editor highlighting design space note; RFC-0026 is the binding decision.
-- DN-25 (forthcoming — from another roadmap agent): the 1.0.0 full-language north-star definition.
-- ADR-021 (`Accepted`): the kernel 1.0.0 gate; this wave is the full-language layer on top.
+- DN-25 (Draft): the 1.0.0 full-language north-star definition.
+- ADR-021 (Superseded by ADR-022; kernel-gate criteria preserved as track T1): the kernel 1.0.0 gate; this wave is the full-language layer on top.
 - All guarantee claims: `Declared` until checked basis exists (VR-5).
 
 ## Swarm / parallelization pattern
