@@ -174,8 +174,10 @@ swarm**, all branching off **`dev`**:
   `crates/mycelium-mlir` + the check tooling. *Was disjoint from `lex` — ran in parallel.*
 - **`/kickoff dfr`** ✅ LANDED (#344) — RP-10/RP-9 dogfood research (docs-only); RFC-0022/0023 → Accepted. *Gated `dfb`; now discharged.*
 
-`lex ⟂ u78 ⟂ dfr` were fully disjoint (ran in parallel). **Maintainer direction (FIRM): complete
-the FULL lexicon (`lex`) before the web/ADK dogfood *builds* (`dfb`)** — a complete surface unlocks
+`lex ⟂ u78 ⟂ dfr` were fully disjoint (ran in parallel). **Maintainer direction (FIRM, still
+governing): the FULL lexicon must complete before the web/ADK dogfood *builds* (`dfb`).** The `lex`
+kickoff **landed** its tranche (#380, M-663); the remaining lexicon work continues on the `run`/`srf`
+L1 track (M-664/M-667/M-668), and `dfb` stays gated on that surface. A complete surface unlocks
 self-hosting + the example phylum.
 
 **M-661:** accept `wild { … }` inside a fn that declares the `ffi` effect; `wild` becomes the `ffi`
@@ -199,12 +201,12 @@ orphan is `origin/claude/rescue/m665-dup-orphan-a2f18c62` (a duplicate M-665 —
 1. **M-666 ✅ LANDED** (`1d67da8`) — `hypha`/`colony` real-concurrency via the M-357 runtime,
    RT2-validated, determinism **Empirical** (not Proven); `ColonyError` never-silent (G2); RFC-0008
    **Accepted-not-Enacted** (trusted base stays sequential — in-base concurrency would **supersede
-   RFC-0008**, not taken). **The remaining items 2–6 are now stowed wave-2 kickoffs** — fire each in
-   its own fresh session via **`/kickoff <uid>`** (`.claude/kickoffs/`, indexed in `README.md`):
-   **`e7l`** → the `mycelium-l1` chain (E7-1 items 2–3, E7-2, M-649; **M-666 foundation in place**),
-   **`dfr`** → the RP-10/RP-9 research gate (item 4), **`dfb`** → the web/adk Rust-first builds
-   (item 5). Each runs on a **protected head branch** current with `main`; land via **`/wave-land`**,
-   propagate via `scripts/sync-heads.sh` (CLAUDE.md §Wave-N).
+   RFC-0008**, not taken). **Items 2–6 were stowed wave-2 kickoffs** (`.claude/kickoffs/`, indexed in
+   `README.md`): ✅ **`e7l`** (the `mycelium-l1` chain M-656→M-662, continued by **`lex`**) and ✅
+   **`dfr`** (the RP-10/RP-9 research gate, item 4) have **LANDED**; **`dfb`** (the web/adk Rust-first
+   builds, item 5) remains, gated on the L1 surface. **The active landing workflow is now the tiered
+   `dev → integration → main` flow** (see `.claude/kickoffs/README.md`); the earlier protected-head /
+   `/wave-land` / `scripts/sync-heads.sh` Wave-N references for these kickoffs are superseded by it.
 2. **E7-1 generics chain** — serialize on the shared `mycelium-l1` files (one task at a time, never two
    leaves editing token/parse/checkty/elab in parallel): M-656/M-657/M-658 ✅ generics → M-659 ✅ traits →
    M-660 ✅ effects → **M-661** `wild`/FFI → M-662 phylum/cross-nodule → M-663 RFC-0018 grading → M-664
