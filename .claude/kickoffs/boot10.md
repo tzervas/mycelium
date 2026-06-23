@@ -8,7 +8,7 @@
 | **Head branch** | `claude/head/boot10` |
 | **Status** | ready |
 | **Swarm mode** | Sonnet |
-| **Depends on** | E11-1 (surface-language completeness, kickoff `s10`); E13-1 (stdlib completeness — must precede the port; forthcoming); DN-14 (self-hosting gate — Resolved); DN-26 (bootstrap plan — Draft, this kickoff drives M-739 to fill it out) |
+| **Depends on** | E11-1 (surface-language completeness, kickoff `s10`); E13-1 (the self-hosting stdlib epic — must precede the port); DN-14 (self-hosting gate — Resolved); DN-26 (bootstrap plan — Draft, this kickoff drives M-739 to fill it out) |
 
 ---
 
@@ -44,7 +44,7 @@ Four tasks in dependency order:
   `conditionally present`; `lib/std/result.myc` self-hosts as concrete evidence.
 - DN-26 (Draft, 2026-06-23): the bootstrap plan stub; M-739 fills it out with the concrete
   staged port order.
-- ADR-021 (Accepted): explicitly scopes self-hosting to Phase 5; M-739–M-742 are that scope.
+- ADR-021 (Superseded by ADR-022; kernel-gate criteria preserved as track T1): explicitly scopes self-hosting to Phase 5; M-739–M-742 are that scope.
 - `crates/mycelium-l1/src/`: the Rust source tree being ported (lexer.rs, token.rs, parse.rs,
   ast.rs, checkty.rs, grade.rs, decision.rs, elab.rs, mono.rs, nodule.rs — all exist today).
 - `lib/std/result.myc`: the first self-hosted nodule; the stage-0 evidence base.
@@ -111,7 +111,7 @@ M-742 (CI gate: bootstrap + three-way differential + mutant witness)
 - M-742: the CI pipeline (`just check-full` or a new `just bootstrap` recipe) builds the
   compiler with itself and runs the three-way differential automatically; `cargo-mutants` on
   the Rust frontend confirms mutant-witnessing before the port is declared canonical.
-- The full-language 1.0.0 capstone criterion (ADR-022, forthcoming) is demonstrably met.
+- The full-language 1.0.0 capstone criterion (ADR-022, Accepted) is demonstrably met.
 
 ---
 
