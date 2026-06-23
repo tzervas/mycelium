@@ -2271,7 +2271,7 @@ issues:
   - id: M-657
     title: "M-657 — feat(l1): Implement generic type parameters in checkty.rs + elab.rs"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-656]
     epic: E7-1
     evidence_pr: 346
@@ -2280,18 +2280,19 @@ issues:
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, src:crates/mycelium-l1/src/checkty.rs, src:crates/mycelium-l1/src/elab.rs]
     body: |
       CHECKER DONE (2026-06-22); elaboration STAGED → M-673. The `checkty.rs` checker now implements unbounded parametric generics (RFC-0007 §11): `Ty::Var` abstract type variables + applied `Ty::Data`; generic data + function declarations register and check; **call-site instantiation by unification** infers type arguments; constructor/match field types are instantiated by substitution. Honest never-guess refusals: wrong arity, an undetermined type parameter, and a representation-specific op on a type parameter (RFC-0019 §4.6 — `Var` is representation-opaque; S1 enforced at the checker, so the elaborator is never asked to insert a `Swap`). `elab.rs` **stages** the L0 lowering of a generic *instantiation* behind an explicit never-silent `Residual` (monomorphization → M-673); a monomorphic program elaborates unchanged. RFC-0007 §11.2–§11.4 corrected to this as-implemented split. Also landed (necessitated by the wider `Ty`): depth-safe checker/elaborator recursion — explicit `MAX_CHECK_DEPTH=4096` budget (banked guard 4) + deep worker stack (`crate::deep`, 256 MiB; measured physical ceiling ~24,600 levels debug → ~6× margin).
-      Verified: `cargo test -p mycelium-l1` green (incl. generics accept/refuse tests + width-sweep property bound + depth-budget regression); `cargo clippy -p mycelium-l1 --lib` clean; workspace builds; reverse-deps (lsp/check) green. Honesty: `head<A> -> A` is non-total (no `A` for `Nil`; W7) — replaced by total `first_or`/`is_empty`; higher-order `map` needs L2 arrow types. DN-14 §3 row 6 → **partial (type-checks; elaboration staged)**, flips to `present` when M-673 lands. Original acceptance ("elaborate to closed L0") is split: checker here, monomorphization in M-673 (maintainer-scoped decision 2026-06-22: checker-now, stage-elab).
+      Verified: `cargo test -p mycelium-l1` green (incl. generics accept/refuse tests + width-sweep property bound + depth-budget regression); `cargo clippy -p mycelium-l1 --lib` clean; workspace builds; reverse-deps (lsp/check) green. Honesty: `head<A> -> A` is non-total (no `A` for `Nil`; W7) — replaced by total `first_or`/`is_empty`; higher-order `map` needs L2 arrow types. DN-14 §3 row 6 → **partial (type-checks; elaboration staged)**, flips to `present` when M-673 lands. Original acceptance ("elaborate to closed L0") is split: checker here, monomorphization in M-673 (maintainer-scoped decision 2026-06-22: checker-now, stage-elab). DONE (2026-06-23): M-673 landed the monomorphization elaboration (`crates/mycelium-l1/src/mono.rs`) — a generic instantiation now lowers to closed L0; `cargo test -p mycelium-l1` green (M-210 three-way differential on the mono'd env). DN-14 §3 row 6 → present; status → done.
 
   - id: M-673
     title: "M-673 — feat(l1): Monomorphization elaboration for generic instantiations (M-657 follow-up)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-657, M-659]
-    evidence_pr: 348
-    landed_basis: "status:needs-design (NOT done) — evidence is a REFERENCE/partial, not a completed landing; merged-PR-list #348 (cross-checked; no (#NNN) in the curated subject)"
+    landed_date: 2026-06-23
+    landed_basis: "DONE (2026-06-23) — the run-kickoff wave landed the monomorphization elaboration (crates/mycelium-l1/src/mono.rs) + static trait-instance resolution + a reified EXPLAIN selection record; CHANGELOG.md '### Added (2026-06-23: M-673 — monomorphization makes generics + traits run to closed L0)'; flips M-657/M-659 to done and DN-14 §3 rows 6/7 to present."
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, src:crates/mycelium-l1/src/elab.rs]
     body: |
       M-657 landed the generics CHECKER; the L0 elaboration of a generic *instantiation* is currently an explicit never-silent `Residual` ("monomorphization staged" — RFC-0007 §11.3). This issue lands the elaboration. Chosen strategy (RFC-0007 §11.3): **monomorphization** — a pre-pass over the checked `Env` specializes each concrete generic use (`List<Binary{8}>`, `first_or` at `A=Binary{8}`) into a monomorphic registry declaration + function instance under a mangled name, rewriting ctor/type/call references, so the existing trusted elaborator/registry run unchanged (no `mycelium-core` change; KC-3). Honest cost (RFC-0019 §4.4): a generic's content-addressed identity fragments across specializations — recorded, not hidden. The alternative (uniform/dictionary "one hash" elaboration via a new abstract-parameter `FieldSpec` in `mycelium-core`) is a separate, trusted-core decision (deferred). Acceptance: a program defining + instantiating `List<A>`/`first_or<A>` elaborates to closed L0 (no `Residual`); the M-210 three-way differential agrees (L1-eval ≡ L0-interp ≡ AOT) on the monomorphized output; never silently inserts a `Swap` (S1); `cargo test -p mycelium-l1` green; DN-14 §3 row 6 → `present`; unblocks M-649 self-hosting of a generic stdlib nodule. ALSO lands the **trait dictionary-passing** lowering staged by M-659 (trait-method + bounded-generic calls elaborate to dictionary construction/projection via the same monomorphization/`Residual` mechanism); DN-14 §3 row 7 → `present` when this lands.
+      DONE (2026-06-23, run-kickoff wave). As-implemented: a frontend monomorphization pre-pass (`crates/mycelium-l1/src/mono.rs`) specializes generic data/fn instantiations and **statically resolves** each trait-method call to a direct call to the coherent instance's method body — dictionary-free under monomorphization — reified in a queryable EXPLAIN selection record (`MonoSelections`; no black boxes, house rule #2). An additive `Env.impls` field retains the instances' resolved method bodies. Mangling is injective + surface-disjoint (`$`-joined, with a `#` tag on a nullary data type so a data type named like a repr can never alias it — never-silent, G2). No `mycelium-core` change (KC-3). The **literal RFC-0019 §4.5 runtime dictionary records remain deferred** — they need an abstract-parameter `FieldSpec` in the trusted core, a separate ADR. Verified: `cargo test -p mycelium-l1` green (M-210 three-way differential L1-eval ≡ L0-interp ≡ AOT on the monomorphized env + a mutant-witness + injectivity + determinism). DN-14 §3 rows 6/7 → present; M-657/M-659 → done.
 
   - id: M-674
     title: "M-674 — robustness: uniform explicit-budget + deep-stack discipline across all recursion limit points"
@@ -2336,14 +2337,14 @@ issues:
   - id: M-659
     title: "M-659 — feat(l1): Implement trait checking + `impl` blocks in checkty.rs"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [M-658]
     epic: E7-1
     doc_refs: [corpus:RFC-0007, corpus:RFC-0019, src:crates/mycelium-l1/src/checkty.rs]
     body: |
       CHECKER LANDED (2026-06-22): trait/impl checking + coherence (global uniqueness + single-nodule orphan rule) + exact method-set conformance + bounded-call/trait-method resolution landed across `ast.rs`/`token.rs`/`parse.rs`/`checkty.rs`/`elab.rs`; every coherence/orphan/missing-method/extra-method/no-instance/ambiguous case is an explicit `CheckError` (G2). Guarantee `Declared` (RFC-0019 §4.5 coherence is Declared-with-argument, not machine-checked — VR-5). Single-parameter self-bound sugar `T: Cmp ≡ T: Cmp<T>` supported; ambiguous/multi-param bounds are explicit errors. Dictionary-passing **L0 lowering STAGED** → **M-673** (explicit `Residual`, mirroring M-657). 187 `mycelium-l1` tests green incl. a coherence property sweep + `accept/14-trait-impl.myc` / `reject/15-trait-param-bound.myc`; RFC-0007 §12 + RFC-0019 carry append-only impl notes. **status: in-progress** — DN-14 §3 row 7 → `partial` (type-checks; elaboration staged), flips to `present` when M-673 lands the dictionaries. — Original task:
       `checkty.rs` currently skips `Item::Trait(_)` with no check arm; `Item::Fn` does not handle `impl`-block methods. Implements: (1) trait declaration checking (method signature type-checking, coherence checking per RFC-0019 orphan rule); (2) `impl` block parsing + type-checking; (3) dictionary-passing elaboration in `elab.rs` so trait method calls lower to the correct L0 application. No new kernel node (KC-3). Coherence violation is an explicit `CheckError`, never silent.
-      Acceptance: `trait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }` + `impl Cmp<Binary{8}> for Binary{8} { … }` parse, check, and elaborate; RFC-0016 §4.1 C1–C6 contract expressible as surface trait constraints; property tests for coherence check; DN-14 §3 row 7 → `present`.
+      Acceptance: `trait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }` + `impl Cmp<Binary{8}> for Binary{8} { … }` parse, check, and elaborate; RFC-0016 §4.1 C1–C6 contract expressible as surface trait constraints; property tests for coherence check; DN-14 §3 row 7 → `present`. DONE (2026-06-23): M-673 landed the dictionary-free static trait-instance resolution + a reified EXPLAIN selection record — trait-method calls now lower to closed L0; DN-14 §3 row 7 → present; status → done.
 
   - id: M-676
     title: "M-676 — tooling: gh-issues-sync Projects-v2 Area/multi-value field handling (secondary)"
