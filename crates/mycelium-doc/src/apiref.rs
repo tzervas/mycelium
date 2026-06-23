@@ -46,7 +46,11 @@ pub fn project_nodule(path: &str, src: &str, alloc: &mut AnchorAlloc) -> Node {
         vec![],
     ));
 
-    // One api-item per `fn` signature (undocumented until the doc-comment surface lands — honest gap).
+    // One api-item per `fn` signature. The summary is the contiguous `//` doc-comment block
+    // immediately preceding the `fn` (M-736) — extracted from source, never invented; a `fn` with
+    // no preceding comment stays `None` (rendered "undocumented", an explicit honest gap — G2).
+    // The source is split into lines once here (not per `fn`) so projection stays O(#lines).
+    let lines: Vec<&str> = src.lines().collect();
     for (sig, line) in fn_signatures(src) {
         let name = fn_name(&sig).unwrap_or_else(|| "fn".to_owned());
         children.push(Node::new(
@@ -59,7 +63,7 @@ pub fn project_nodule(path: &str, src: &str, alloc: &mut AnchorAlloc) -> Node {
             },
             Payload::ApiItem {
                 signature: Some(sig),
-                summary: None, // no doc-comment surface yet — undocumented, never invented (G2)
+                summary: preceding_doc(&lines, line),
             },
             vec![],
         ));
@@ -199,6 +203,38 @@ fn fn_signatures(src: &str) -> Vec<(String, u32)> {
     out
 }
 
+/// The contiguous `//` doc-comment block immediately above the `fn` at `fn_line` (1-based), over
+/// the already-split source `lines`. The scan walks backward, joining `//` comment lines into one
+/// summary, and stops at the first blank line, non-comment line, or header line (`// nodule…` /
+/// `// @key:` are metadata, not doc prose). Returns `None` when the `fn` has no preceding comment —
+/// an honest, explicit gap (never invented filler, G2). The text is taken verbatim from source, so
+/// it always traces to its provenance. Takes a `&[&str]` so the caller splits the source once.
+fn preceding_doc(lines: &[&str], fn_line: u32) -> Option<String> {
+    if fn_line == 0 || (fn_line as usize) > lines.len() {
+        return None;
+    }
+    let mut idx = (fn_line as usize) - 1; // 0-based index of the `fn` line itself
+    let mut collected: Vec<String> = Vec::new();
+    while idx > 0 {
+        idx -= 1;
+        let t = lines[idx].trim();
+        let Some(rest) = t.strip_prefix("//") else {
+            break; // a non-comment line ends the doc block
+        };
+        let rest = rest.trim();
+        // Header lines and blank comments are not doc prose — they bound the block.
+        if rest.is_empty() || rest.starts_with('@') || rest.starts_with("nodule") {
+            break;
+        }
+        collected.push(rest.to_owned());
+    }
+    if collected.is_empty() {
+        return None;
+    }
+    collected.reverse();
+    Some(collected.join(" "))
+}
+
 /// The function name from a `fn NAME(...)` signature.
 fn fn_name(sig: &str) -> Option<String> {
     let rest = sig.strip_prefix("fn ")?;
@@ -262,6 +298,37 @@ mod tests {
             Payload::ApiItem { summary, signature } => {
                 assert!(summary.is_none(), "undocumented, never invented");
                 assert_eq!(signature.as_deref(), Some("fn wave() -> Ternary{4}"));
+            }
+            _ => panic!("expected an api-item"),
+        }
+    }
+
+    #[test]
+    fn a_fn_with_a_preceding_comment_is_documented_from_source() {
+        // The contiguous `//` block above a `fn` becomes its summary (M-736); a `@`/`nodule`
+        // header or a blank line bounds the block, so the nodule header never leaks into a fn doc.
+        const DOC_SRC: &str = "// nodule: m\n\
+                               nodule m\n\
+                               \n\
+                               // add: combine two bytes. Why: the running total step.\n\
+                               // It is total and never-silent.\n\
+                               fn add(a: Binary{8}, b: Binary{8}) -> Binary{8} = a\n";
+        let mut a = AnchorAlloc::new();
+        let doc = project_nodule("x.myc", DOC_SRC, &mut a);
+        let fn_item = doc
+            .children
+            .iter()
+            .find(|n| n.title.as_deref() == Some("fn add(a: Binary{8}, b: Binary{8}) -> Binary{8}"))
+            .unwrap();
+        match &fn_item.payload {
+            Payload::ApiItem { summary, .. } => {
+                assert_eq!(
+                    summary.as_deref(),
+                    Some(
+                        "add: combine two bytes. Why: the running total step. It is total and never-silent."
+                    ),
+                    "the two-line source comment is joined verbatim — traces to source, never invented"
+                );
             }
             _ => panic!("expected an api-item"),
         }

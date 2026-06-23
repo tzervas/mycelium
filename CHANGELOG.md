@@ -8,6 +8,54 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-23: RFC-0029 → Accepted — native-AOT design gate cleared, E15-1 honestly re-scoped)
+
+- **RFC-0029 (AOT Optimization, Codegen Maturity, and JIT) → Accepted** (was Draft; append-only — Draft row preserved). The seven §5 open questions are **resolved against the live `crates/mycelium-mlir/`** (checked 2026-06-23), not from the stub's assumptions. Substantive finding that re-scopes E15-1: **E6-1 is `done`**, so the JIT (M-340 `jit.rs`), BitNet packed-ternary accel (M-360 `bitnet.rs` — I2_S/TL1/TL2), real `arith`/`func`→LLVM **MLIR-dialect** lowering (M-601 `dialect/native.rs`), and the **three-way native differential** (M-602 `tests/threeway_differential.rs`) **already landed**; ADR-019 (libMLIR toolchain) is **Enacted**; and **ADR-009 already sanctions interpreter/JIT for dynamic VSA** (no superseding ADR needed to "lift a deferral"). New normative §7 sanctions: inlining/CSE/DCE as **EXPLAIN-able, never-silent** transforms reified as a transform-log (M-726 — **the one genuinely-new mechanism**, no `src/passes/` exists yet); JIT as an **explicit, never-silently-selected** first-class mode (M-727); the BitNet **explicit capability flag** + never-silent graceful degradation (M-728); and the **mutant-witnessed `interp ≡ AOT ≡ JIT`** durability gate (M-729). Honest tags throughout: `Empirical` for the existing differentially-checked paths, `Declared` for the as-yet-unbuilt optimization passes (VR-5 — no overclaim). RFC index + Doc-Index updated. (RFC-0029; E15-1)
+
+### Added (2026-06-23: E17-1 docs tranche — language reference + tutorial, generated stdlib API docs, ADR-023 stability; M-738 release act BLOCKED)
+
+- **M-735 — language reference + tutorial (`docs/reference/`).** A full-surface **language
+  reference** (`language-reference.md`) covering lexical structure, nodules/phyla, the four
+  representation types + ADTs + substrates, the guarantee-strength lattice, functions & effects,
+  every expression form, pattern matching, the swap system, generics & traits, ambient paradigms,
+  maturation/`thaw`, `wild`/FFI, the full keyword set, and the L0–L3 layer model — grounded in
+  `mycelium.ebnf`, the conformance corpus, and `crates/mycelium-l1/src/token.rs`, with honest VR-5
+  notes where surface type-checks-but-doesn't-run (generics/traits → M-673; effects checker-only →
+  M-677). A **tutorial** (`tutorial.md`) builds a complete program whose full source is committed as
+  the **parser-verified** conformance fixture `accept/20-tutorial-classifier.myc` (parsed by
+  `mycelium-l1` `tests/conformance.rs` — examples are CI-checked, never invented). Plus a section
+  index (`README.md`). Guarantee: `Declared`. (E17-1; M-735)
+- **M-736 — generated per-module stdlib API docs (`mycelium-doc`).** Wired `lib/std/` into the
+  `myc-doc` apiref build (`BuildInput::conventional`), so every self-hosted stdlib `.myc` nodule is
+  projected into the API reference; added **per-`fn` source-comment extraction** (`apiref::preceding_doc`)
+  so a function's preceding `//` block becomes its documented summary (traces to source, never
+  invented — an undocumented `fn` stays an explicit flagged gap, G2). The whole source is captured as
+  a *checked example* (type-checked). Today `std.result` is covered (the only self-hosting module;
+  `map`/`and_then`/`fold` documented, `is_ok`/`is_err`/`unwrap_or` flagged undocumented); coverage
+  grows as **E13-1** ports modules. `myc-doc lint` (part of `just check`) green:
+  checked-examples 6→7, documented api statements 35→38. New committed reference page
+  `docs/reference/stdlib-api.md`. Guarantee: `Declared`. (E17-1; M-736)
+- **M-737 — ADR-023 stability & API-compatibility guarantees `Draft → Proposed → Accepted`.** All
+  six §5 open questions resolved (append-only): **§3.1** four-layer stability scope (surface syntax,
+  Core-IR/cert/interp, LSP wire, Rust crate API) with explicit carve-outs (codegen internals,
+  reserved-not-active keywords); **§3.2** dual-version model — the full-language 1.0.0 is a
+  *release-event* (`v1.0.0` tag + CHANGELOG + ADR-022 gate record), **not** a crate/workspace version
+  (ADR-018 upheld), labelled distinctly from `core 1.0.0`; **§3.3/§3.3.1** release-based never-silent
+  deprecation (≥ one minor, removal at 2.0.0) + no surface `@unstable` at 1.0; **§3.4** MIT-only legal
+  gate. All §3 claims `Declared` (policy warrants no `Proven` — VR-5). Not Enacted (that is M-738 at
+  the tag). (E17-1; M-737; ADR-023)
+- **MIT-only license fix (ADR-023 §3.4 gate).** A repo-wide sweep of first-party *shipped* `.myc`
+  headers found **six** non-MIT violations, all corrected to **`MIT`**: `lib/std/result.myc` and the
+  five `examples/**` programs (`examples/repr-tour/{ambient,swaps,traits,iter}.myc`,
+  `examples/hello-phylum/hello.myc`). The only remaining non-MIT `@license` strings are deliberate
+  `crates/mycelium-proj/tests/fixtures/` test inputs (Apache + a deliberately-invalid SPDX id) that
+  the `mycelium-proj` tests *assert* (non-inheritance + bad-id error) — left as-is by design.
+- **M-738 — full-language 1.0.0 release act: BLOCKED (no tag cut).** The terminal release act is
+  **not** performed — its external gate deps are unmet: **E13-1** (self-hosting stdlib) and **E18-1**
+  (full-language readiness) are both `needs-design`, and **ADR-022** is `Accepted` (not `Enacted`)
+  with sub-gate rows A2/A3/A4 still open. Per house rule #3 / G2, **`v1.0.0` is not cut**, ADR-021/
+  ADR-022 stay `Accepted`, and the changelog stays `[Unreleased]` — recorded explicitly rather than
+  forced prematurely. M-738 fires only when E13-1 + E18-1 + every ADR-022 row close. (E17-1; M-738)
 ### Changed (2026-06-23: ADR-022 Q4 — T6 native AOT un-gated from 1.0.0 → 1.1)
 
 - **ADR-022 Q4 resolved** (maintainer): **T6 (native AOT maturity / optimization passes / JIT / BitNet accel — epic E15-1) is un-gated from `1.0.0` and rolled to `1.1`** as a QoL/perf enhancement, patched in after release. `lang 1.0.0` ships on the **interpreter (trusted base) + the existing direct-LLVM kernel subset** — optimized native codegen is performance, not correctness. Removed T6 from the ADR-022 §5 gate + §3 scope; updated DN-25 (graph + waves), the `aot10` kickoff row (→ `1.1`/post-1.0.0), and E15-1's DoD scope note. Net: nothing perf-related sits between `lib10` (T4) and the release tag; `aot10` now runs post-1.0.0 alongside `boot10`.
@@ -26,7 +74,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 - **9 new epics E10-1…E18-1 (tracks T1–T9) + 44 issues M-700…M-743.** Each epic and each issue carries a **user story** and a **Definition of Done** — new conventions for the 1.0.0 program. Tracks: E10-1 (kernel/core 1.0.0 sub-gate, T1) · E11-1 (surface-language completeness & grammar, T2) · E12-1 (runtime & concurrency execution maturity, T3) · E13-1 (stdlib in Mycelium, T4 — long pole) · E14-1 (FFI & system interface, T5) · E15-1 (native AOT maturity, optimization & accel, T6) · E16-1 (toolchain, IDE & package distribution, T7) · E17-1 (documentation, stability & 1.0.0 release, T8) · E18-1 (self-hosting capstone, T9 — long pole). All issues are planning artifacts; no code landed.
 - **11 new design stubs** (all **Draft**; stubs only — no normative decisions, no spec Accepted/Enacted): RFC-0025 (Operator Syntax — infix sugar & precedence table; E7-5/E11-1) · RFC-0026 (Editor Syntax Highlighting Grammar; E9-1/E16-1) · RFC-0027 (Memory Management and Reclamation; E12-1) · RFC-0028 (FFI and System Interface; E14-1) · RFC-0029 (AOT Optimization, Codegen Maturity, and JIT; E15-1) · RFC-0030 (Concrete Surface Grammar & L3 Ratification; E11-1) · RFC-0031 (Self-Hosted Standard Library Composition; E13-1) · ADR-023 (Stability and API-Compatibility Guarantees; E17-1) · DN-26 (program governance note). Together with ADR-022 and DN-25: 11 new files total (stubs are planning scaffolding; normative content comes as each track's design work proceeds).
 - **New conventions (applied to all 1.0.0 epics/issues).** Every epic and issue in the full-language program carries a **user story** ("As a … I want … so that …") and an explicit **Definition of Done** (measurable acceptance criteria). RFC/ADR/DN stubs likewise open with a user-story framing and clear open-question section. **MIT-only first-party licensing** confirmed as the release policy (recorded in ADR-022 and E17-1).
-- **Removed false provenance note.** The "formerly named Verid" claim (which appeared in one doc header) has been struck — it was ungrounded; no prior project by that name exists in the repository history (G2/honesty rule). No decision changed; this is a correction of a factual error.
+- **Removed unsupported provenance note.** The "formerly named Verid" claim (which appeared in one doc header) has been struck — it was ungrounded, with no supporting evidence anywhere in the current tree (no corpus, ADR/RFC/DN, or research artifact references it; G2/honesty rule). No decision changed; this narrows an unsupported assertion to what is verifiable in-repo.
 
 ### Added (2026-06-23: DN-24 / E9-1 — editor syntax-highlighting roadmap)
 - **DN-24 — Editor Syntax Highlighting & Grammar Distribution, + the E9-1 epic.** Advisory design note (DN-17 posture) recording the design space for **coloring `.myc` code** (which renders as plain text in every editor + on GitHub today) and the recommended **layered** stack — a **TextMate** grammar baseline (VS Code/Sublime/Zed/IntelliJ + GitHub Linguist) + a **tree-sitter** grammar (Neovim/Helix/Emacs + GitHub) + **LSP semantic tokens** in `mycelium-lsp` (type-aware overlay; no provider today) + packaging (reference VS Code extension + Linguist registration) — which together cover essentially any actively-used editor ("easily pluggable into pretty much any development environment"). **Single source of truth (honesty):** grammar token classes are **generated** from the canonical lexer `keyword()` (`crates/mycelium-l1/src/token.rs`) + a `just` drift-check, so the highlighter is a projection of the real lexer and can't silently drift (G2); **KC-3 untouched** (highlighting reads tokens, changes no semantics). Binding format/scope-name decision deferred to **RFC-0026**. Roadmapped as epic **E9-1** (Phase 8) with leaves M-693 (RFC-0026 spec) → M-694 (TextMate, generated + drift-checked) ∥ M-695 (tree-sitter) ∥ M-696 (LSP semantic tokens) → M-697 (packaging + Linguist). A highlighter, not a linter (myc-lint/myc-check already cover those — DN-22). (DN-24; E9-1; M-693…697)
