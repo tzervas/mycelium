@@ -3,14 +3,17 @@
 > A programming language that treats **traditional binary**, **balanced ternary**, **dense embeddings**, and **Vector Symbolic Architectures (VSA / hyperdimensional computing)** as co-equal, first-class substrates — under semantics that are **transparent** (no hidden behavior), **metadata-native**, and **amenable to formal reasoning**.
 
 **Status:** design + **Rust-first implementation underway.** The design corpus is Accepted/Resolved
-(Foundation, RFC-0001…0023, ADR-001…021, DN-01…22), and the Rust workspace has
+(Foundation, RFC-0001…0031, ADR-001…023, DN-01…27), and the Rust workspace has
 **47 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
-the selection-policy engine, a verified-numerics layer, and a **25-crate Rust-first standard library**
-(all 25/25 specs Accepted, 2026-06-21). Phases **0–3, 5, 7, and 8** are complete. The
-**1.0.0 release-readiness gate is defined and ratified** (ADR-021, Accepted 2026-06-21) with open
-rows A2/A3/A4 as the remaining critical path (DN-19). Surface language and self-hosting are
-post-1.0 / 1.x scope. Per the honesty rule, no claim here is upgraded beyond what a checked basis
-supports (VR-5).
+the selection-policy engine, a verified-numerics layer, a **Rust-first standard library**, an L1 surface
+with **generics · traits · higher-order functions · operator syntax**, and a **runtime** (scheduler,
+structured concurrency). Versioning is **dual-axis (ADR-022)**: the Rust **core/kernel** is
+**gate-met / tag-ready** for `core 1.0.0` (the ratified ADR-021 criteria, carried forward as ADR-022
+**track T1**), while the **full language** (`lang`) targets a broader `1.0.0` — a fully usable language
+whose **stdlib and libraries are themselves written in Mycelium**. That program is mapped in **ADR-022**
+(the gate, supersedes ADR-021) + **DN-25** (tracks **T1–T9** → epics E10-1…E18-1): surface completeness,
+runtime, **stdlib-in-Mycelium** (the long pole), FFI, toolchain, docs, and self-hosting — native-AOT
+perf is `1.1`. Per the honesty rule, no claim here is upgraded beyond what a checked basis supports (VR-5).
 
 ---
 
