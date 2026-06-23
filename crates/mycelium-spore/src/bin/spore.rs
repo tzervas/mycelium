@@ -71,23 +71,67 @@ fn main() -> ExitCode {
     };
 
     match cmd.as_str() {
-        "build" | "explain" | "publish" => run_with_spore(&cmd, &opts),
-        "resolve" => run_resolve(&opts),
+        "build" | "explain" | "publish" | "resolve" => {
+            // Reject irrelevant flags / stray positionals per subcommand before dispatch — the
+            // never-ignored posture (G2): an input a subcommand does not use is a usage error.
+            if let Err(code) = validate_opts(&cmd, &opts) {
+                return code;
+            }
+            if cmd == "resolve" {
+                run_resolve(&opts)
+            } else {
+                run_with_spore(&cmd, &opts)
+            }
+        }
         _ => usage(),
     }
 }
 
-/// The subcommands that first build a spore from a manifest (`build`/`explain`/`publish`).
-fn run_with_spore(cmd: &str, opts: &Opts) -> ExitCode {
-    // These subcommands take no positional arguments — a stray one is a usage error, never silently
-    // ignored (the same never-ignored posture parse_opts applies to unknown flags; G2).
-    if !opts.positionals.is_empty() {
+/// Reject inputs a subcommand does not use — never silently ignored (G2). Each subcommand declares
+/// exactly the flags it accepts and whether it takes positional arguments; anything else (an
+/// irrelevant flag like `spore explain -o out`, or a stray positional like `spore build garbage`) is
+/// a usage error rather than a silent no-op.
+fn validate_opts(cmd: &str, opts: &Opts) -> Result<(), ExitCode> {
+    let (allowed, takes_positionals): (&[&str], bool) = match cmd {
+        "explain" => (&["--config"], false),
+        "build" => (&["--config", "-o"], false),
+        "publish" => (&["--config", "--registry", "--name", "--version"], false),
+        "resolve" => (&["--registry", "-o"], true),
+        _ => (&[], false),
+    };
+    let present = [
+        ("--config", opts.config.is_some()),
+        ("-o", opts.out.is_some()),
+        ("--registry", opts.registry.is_some()),
+        ("--name", opts.name.is_some()),
+        ("--version", opts.version.is_some()),
+    ];
+    let bad: Vec<&str> = present
+        .iter()
+        .filter(|(flag, set)| *set && !allowed.contains(flag))
+        .map(|(flag, _)| *flag)
+        .collect();
+    if !bad.is_empty() {
         eprintln!(
-            "spore: unexpected argument(s): {} — `{cmd}` takes options only",
+            "spore: `{cmd}` does not accept {} — irrelevant flag(s) are never silently ignored (G2)",
+            bad.join(", ")
+        );
+        return Err(usage());
+    }
+    if !takes_positionals && !opts.positionals.is_empty() {
+        eprintln!(
+            "spore: `{cmd}` takes no positional arguments, got: {}",
             opts.positionals.join(" ")
         );
-        return usage();
+        return Err(usage());
     }
+    Ok(())
+}
+
+/// The subcommands that first build a spore from a manifest (`build`/`explain`/`publish`). Argument
+/// relevance is validated up-front by [`validate_opts`] (irrelevant flags / stray positionals are
+/// already rejected before this runs).
+fn run_with_spore(cmd: &str, opts: &Opts) -> ExitCode {
     let manifest_path = opts
         .config
         .as_deref()

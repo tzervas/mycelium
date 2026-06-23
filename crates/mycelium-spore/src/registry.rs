@@ -70,8 +70,9 @@ pub struct Resolved {
 /// A registry operation refusal — always explicit, never a partial/silent result (G2).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RegistryError {
-    /// A missing/empty publish input (e.g. no version label to publish under) (exit 3).
-    PublishInput(String),
+    /// An invalid input: a missing/empty version label, or a `name`/`version` that is not a safe
+    /// path component (used by both `publish` and `resolve`) (exit 3).
+    InvalidInput(String),
     /// A `name`/`version` with no index entry (exit 4).
     NotFound(String),
     /// A content-integrity failure: the object is absent, or its bytes don't hash to the recorded
@@ -90,7 +91,7 @@ impl RegistryError {
     #[must_use]
     pub fn exit_code(&self) -> u8 {
         match self {
-            RegistryError::PublishInput(_) => 3,
+            RegistryError::InvalidInput(_) => 3,
             RegistryError::NotFound(_) => 4,
             RegistryError::Integrity(_) => 5,
             RegistryError::Conflict(_) => 6,
@@ -103,7 +104,7 @@ impl RegistryError {
 impl std::fmt::Display for RegistryError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RegistryError::PublishInput(m) => write!(f, "publish-input-error: {m}"),
+            RegistryError::InvalidInput(m) => write!(f, "input-error: {m}"),
             RegistryError::NotFound(m) => write!(f, "not-found: {m}"),
             RegistryError::Integrity(m) => write!(f, "integrity-error: {m}"),
             RegistryError::Conflict(m) => write!(f, "conflict: {m}"),
@@ -147,7 +148,7 @@ fn safe_component(kind: &str, value: &str) -> Result<(), RegistryError> {
         || value.contains('\\')
         || value.contains('\0');
     if bad {
-        return Err(RegistryError::PublishInput(format!(
+        return Err(RegistryError::InvalidInput(format!(
             "{kind} {value:?} is not a safe path component — a registry {kind} may not be empty, `.`, \
              `..`, or contain `/`, `\\`, or NUL (refusing to escape the registry root; G2)"
         )));
@@ -169,7 +170,7 @@ fn io<E: std::fmt::Display>(ctx: &str, e: E) -> RegistryError {
 /// object back after write.
 ///
 /// # Errors
-/// [`RegistryError::PublishInput`] for an empty `version`; [`RegistryError::Conflict`] on an
+/// [`RegistryError::InvalidInput`] for an empty `version`; [`RegistryError::Conflict`] on an
 /// immutability violation; [`RegistryError::Integrity`] if the written object fails read-back
 /// verification; [`RegistryError::Io`] on a filesystem failure.
 pub fn publish(
@@ -180,7 +181,7 @@ pub fn publish(
     version: &str,
 ) -> Result<PublishReceipt, RegistryError> {
     if version.trim().is_empty() {
-        return Err(RegistryError::PublishInput(
+        return Err(RegistryError::InvalidInput(
             "a publish needs a non-empty version label (it is never guessed; ADR-003 metadata)"
                 .to_owned(),
         ));
