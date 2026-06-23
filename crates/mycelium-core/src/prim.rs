@@ -50,6 +50,11 @@ pub enum PrimParadigm {
 pub enum WidthRel {
     /// All operands and the result share one width.
     Uniform,
+    /// The result width is **fixed and independent** of the operands' shared width — the
+    /// width-collapsing rule of the reduce-to-`Bool` comparison prims (`cmp.eq`/`cmp.lt`, RFC-0032
+    /// D1): two equal-width operands reduce to a one-bit `Binary{1}` truth value. (Operand widths
+    /// must still agree; only the result is decoupled.)
+    Collapse,
 }
 
 /// A prim's signature `Π(p) = (τ₁…τₙ) → τ` (RFC-0007 §4.4): the per-operand paradigms (arity is their
@@ -170,6 +175,16 @@ impl PrimTable {
             },
             intrinsic: GuaranteeStrength::Exact,
         };
+        // RFC-0032 D1 (M-747): the reduce-to-`Bool` comparison prims are width-*collapsing* — two
+        // equal-width operands of either paradigm (`Any`) reduce to a `Binary{1}` truth value.
+        let cmp = || PrimDecl {
+            sig: PrimSig {
+                operands: vec![Any, Any],
+                result: Binary,
+                width: WidthRel::Collapse,
+            },
+            intrinsic: GuaranteeStrength::Exact,
+        };
         // Identity (paradigm-polymorphic passthrough).
         t.insert("core.id", exact(vec![Any], Any));
         // Elementwise binary logic.
@@ -182,6 +197,12 @@ impl PrimTable {
         t.insert("trit.add", exact(vec![Ternary, Ternary], Ternary));
         t.insert("trit.sub", exact(vec![Ternary, Ternary], Ternary));
         t.insert("trit.mul", exact(vec![Ternary, Ternary], Ternary));
+        // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (width-collapsing → Binary{1}).
+        t.insert("cmp.eq", cmp());
+        t.insert("cmp.lt", cmp());
+        // RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic (width-uniform).
+        t.insert("bit.add", exact(vec![Binary, Binary], Binary));
+        t.insert("bit.sub", exact(vec![Binary, Binary], Binary));
         t
     }
 
@@ -309,15 +330,16 @@ mod tests {
         let t = PrimTable::builtins();
         for name in [
             "core.id", "bit.not", "bit.and", "bit.or", "bit.xor", "trit.neg", "trit.add",
-            "trit.sub", "trit.mul",
+            "trit.sub", "trit.mul", "cmp.eq", "cmp.lt", "bit.add", "bit.sub",
         ] {
             let r = t.prim_ref(name).expect("builtin registered");
             let d = t.resolve(&r).expect("ref resolves");
             assert_eq!(d.intrinsic, GuaranteeStrength::Exact);
             assert_eq!(t.intrinsic(name), Some(GuaranteeStrength::Exact));
         }
-        // `entries()` is the EXPLAIN surface: one inspectable entry per builtin.
-        assert_eq!(t.entries().len(), 9);
+        // `entries()` is the EXPLAIN surface: one inspectable entry per builtin (RFC-0032 D1/D2
+        // added cmp.eq/cmp.lt/bit.add/bit.sub to the original nine).
+        assert_eq!(t.entries().len(), 13);
     }
 
     #[test]
@@ -419,10 +441,10 @@ mod tests {
     fn names_returns_registered_sorted_names() {
         let t = PrimTable::builtins();
         let ns = t.names();
-        // Exactly 9 builtins.
+        // Exactly 13 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub).
         assert_eq!(
             ns.len(),
-            9,
+            13,
             "names() count must match the builtin count: {ns:?}"
         );
         // Sorted (BTreeMap iteration is sorted).

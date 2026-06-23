@@ -22,6 +22,7 @@
 //! (`EvalError::ApproxCompositionUnsupported`) — refusing remains the honest choice over fabricating a
 //! bound (G2/VR-5).
 
+use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 use mycelium_core::{
@@ -78,6 +79,12 @@ impl PrimRegistry {
         r.register("trit.add", prim_trit_add);
         r.register("trit.sub", prim_trit_sub);
         r.register("trit.mul", prim_trit_mul);
+        // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality over `Binary{N}`/`Ternary{N}`.
+        r.register("cmp.eq", prim_cmp_eq);
+        r.register("cmp.lt", prim_cmp_lt);
+        // RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic over `Binary{N}`.
+        r.register("bit.add", prim_bit_add);
+        r.register("bit.sub", prim_bit_sub);
         r
     }
 
@@ -316,6 +323,161 @@ fn prim_trit_mul(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     trit_binop(prim, args, ternary::mul, ApproxRule::Refuse)
 }
 
+// --- RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality ---------------------------------
+//
+// `eq`/`lt` are the two kernel comparison prims (RFC-0032 §5 D1). Each takes two equal-width
+// operands of the **same paradigm** (`Binary{N}` or `Ternary{N}`) and reduces to a one-bit truth
+// value. **Realization note (engineering call, RFC-0032 Q1):** a kernel prim returns a
+// representation [`Value`], never a `.myc` data value, so the `Bool` of D1 bottoms out here as
+// **`Binary{1}`** (`0b1` = true, `0b0` = false); the `.myc` `std.cmp` surface lifts that bit into
+// the `Bool` ADT (`match eq(a, b) { 0b1 => True, _ => False }`) — a one-line bridge that lands with
+// the E13-1 `std.cmp` port (M-718), demonstrated by the M-752 smoke ports. Guarantee **`Exact`**: a
+// total decidable relation over a finite domain. Mismatched widths/paradigms are an explicit
+// never-silent [`EvalError::PrimType`] — never a silent `false`/`0b0` (G2).
+
+/// Compare two representation values for the comparison prims. Requires equal width and the same
+/// paradigm; a mismatch is an explicit error (never a silent ordering). The orderings are the D1
+/// total orders: **unsigned magnitude** for `Binary{N}` (MSB-first lexicographic over the bits) and
+/// **balanced-integer value** for `Ternary{N}` (MSB-first lexicographic over the signed digits — for
+/// fixed-width balanced ternary the most-significant differing digit dominates, so this equals the
+/// integer-value order).
+fn cmp_repr_operands(prim: &str, a: &Value, b: &Value) -> Result<Ordering, EvalError> {
+    match (a.repr(), b.repr()) {
+        (Repr::Binary { width: wa }, Repr::Binary { width: wb }) => {
+            if wa != wb {
+                return Err(EvalError::PrimType {
+                    prim: prim.to_owned(),
+                    why: format!("width mismatch: Binary{{{wa}}} vs Binary{{{wb}}}"),
+                });
+            }
+            let xa = as_bits(prim, a)?;
+            let xb = as_bits(prim, b)?;
+            Ok(xa.iter().cmp(xb.iter()))
+        }
+        (Repr::Ternary { trits: ta }, Repr::Ternary { trits: tb }) => {
+            if ta != tb {
+                return Err(EvalError::PrimType {
+                    prim: prim.to_owned(),
+                    why: format!("width mismatch: Ternary{{{ta}}} vs Ternary{{{tb}}}"),
+                });
+            }
+            let xa = as_trits(prim, a)?;
+            let xb = as_trits(prim, b)?;
+            Ok(xa
+                .iter()
+                .map(|t| ternary::digit(*t))
+                .cmp(xb.iter().map(|t| ternary::digit(*t))))
+        }
+        _ => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "comparison requires two operands of the same paradigm (both Binary or both \
+                  Ternary)"
+                .to_owned(),
+        }),
+    }
+}
+
+/// Build the `Binary{1}` truth value for a comparison result (`0b1` = true). Threads provenance/
+/// guarantee honestly via [`compose_result`]; comparison has no defined ε-propagation over an
+/// approximate input, so an approximate operand is refused (`ApproxRule::Refuse`) rather than
+/// fabricating a bound (G2/VR-5).
+fn bool_result(prim: &str, inputs: &[&Value], truth: bool) -> Result<Value, EvalError> {
+    compose_result(
+        prim,
+        inputs,
+        Repr::Binary { width: 1 },
+        Payload::Bits(vec![truth]),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `cmp.eq : (T{N}, T{N}) → Binary{1}` — structural width-typed equality (RFC-0032 D1).
+fn prim_cmp_eq(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let truth = cmp_repr_operands(prim, args[0], args[1])? == Ordering::Equal;
+    bool_result(prim, args, truth)
+}
+
+/// `cmp.lt : (T{N}, T{N}) → Binary{1}` — the D1 total order (`a < b`).
+fn prim_cmp_lt(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let truth = cmp_repr_operands(prim, args[0], args[1])? == Ordering::Less;
+    bool_result(prim, args, truth)
+}
+
+// --- RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic ---------------------------
+//
+// `bit.add`/`bit.sub` are unsigned fixed-width ripple-carry add/subtract over `Binary{N}` (bits
+// MSB-first), exactly mirroring the `trit.*` in-range contract: a result outside `[0, 2^N)` is an
+// explicit [`EvalError::Overflow`], **never** a silent wrap (RFC-0032 §5 D2; G2). Guarantee
+// **`Exact`** on the in-range result. (A wrapping/modular `add` is intentionally absent — it would
+// be a separate, *declared* op, never this never-silent one.)
+
+/// Shared kernel for the never-silent binary arithmetic prims. `subtract == false` is ripple-carry
+/// addition (carry-out ⇒ overflow); `subtract == true` is ripple-borrow subtraction (borrow-out ⇒
+/// underflow, i.e. a negative result with no unsigned representation). Operands must be equal-width
+/// `Binary`; a width mismatch is an explicit [`EvalError::PrimType`].
+fn bin_arith(prim: &str, args: &[&Value], subtract: bool) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let b = as_bits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), b.len()),
+        });
+    }
+    let n = a.len();
+    let mut out = vec![false; n];
+    if subtract {
+        let mut borrow = 0i8;
+        for i in (0..n).rev() {
+            let d = i8::from(a[i]) - i8::from(b[i]) - borrow;
+            if d < 0 {
+                out[i] = (d + 2) == 1;
+                borrow = 1;
+            } else {
+                out[i] = d == 1;
+                borrow = 0;
+            }
+        }
+        if borrow != 0 {
+            return Err(EvalError::Overflow {
+                prim: prim.to_owned(),
+            });
+        }
+    } else {
+        let mut carry = 0u8;
+        for i in (0..n).rev() {
+            let s = u8::from(a[i]) + u8::from(b[i]) + carry;
+            out[i] = (s & 1) == 1;
+            carry = s >> 1;
+        }
+        if carry != 0 {
+            return Err(EvalError::Overflow {
+                prim: prim.to_owned(),
+            });
+        }
+    }
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bit.add : (Binary{N}, Binary{N}) → Binary{N}` — never-silent unsigned addition (RFC-0032 D2).
+fn prim_bit_add(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    bin_arith(prim, args, false)
+}
+
+/// `bit.sub : (Binary{N}, Binary{N}) → Binary{N}` — never-silent unsigned subtraction (RFC-0032 D2).
+fn prim_bit_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    bin_arith(prim, args, true)
+}
+
 #[cfg(test)]
 mod mutant_witness_tests {
     //! Mutant-witness tests for prims.rs survivors (M-654 Gate A3).
@@ -430,5 +592,123 @@ mod mutant_witness_tests {
         // Mixed: a=[T,F,T,F,T,F,T,F], b=[F,F,F,F,F,F,F,F].
         // OR=[T,F,T,F,T,F,T,F], AND=[F;8], XOR=[T,F,T,F,T,F,T,F] — OR and XOR agree here.
         // But the two tests above already distinguish OR from both AND and XOR.
+    }
+
+    // ---- RFC-0032 D1 (M-747): comparison/equality prims ----
+
+    /// MSB-first bit vector from a string (e.g. `"1010_0000"`, underscores ignored).
+    fn bits(s: &str) -> Vec<bool> {
+        s.chars().filter(|c| *c != '_').map(|c| c == '1').collect()
+    }
+
+    /// A `Binary{8}` value from an MSB-first bit string (e.g. `"1010_0000"`, underscores ignored).
+    fn b8(s: &str) -> Value {
+        let v = bits(s);
+        assert_eq!(v.len(), 8, "b8 expects 8 bits");
+        let mut a = [false; 8];
+        a.copy_from_slice(&v);
+        byte(a)
+    }
+
+    #[test]
+    fn cmp_eq_is_structural_equality_returning_binary1() {
+        let reg = PrimRegistry::with_builtins();
+        let f = reg.get("cmp.eq").expect("cmp.eq registered");
+        let a = b8("1010_0000");
+        let same = b8("1010_0000");
+        let diff = b8("1010_0001");
+        // Equal ⇒ Binary{1} = 0b1; the repr collapses from Binary{8} to Binary{1}.
+        let r = f("cmp.eq", &[&a, &same]).expect("cmp.eq evaluates");
+        assert_eq!(r.repr(), &Repr::Binary { width: 1 });
+        assert_eq!(r.payload(), &Payload::Bits(vec![true]));
+        // Unequal ⇒ 0b0 (never a silent 0b1).
+        let r = f("cmp.eq", &[&a, &diff]).expect("cmp.eq evaluates");
+        assert_eq!(r.payload(), &Payload::Bits(vec![false]));
+    }
+
+    #[test]
+    fn cmp_lt_is_unsigned_magnitude_strict() {
+        let reg = PrimRegistry::with_builtins();
+        let f = reg.get("cmp.lt").expect("cmp.lt registered");
+        let lo = b8("1000_0000"); // 128
+        let hi = b8("1010_0000"); // 160
+                                  // 128 < 160 ⇒ true.
+        assert_eq!(
+            f("cmp.lt", &[&lo, &hi]).expect("lt").payload(),
+            &Payload::Bits(vec![true])
+        );
+        // Strict: not less when equal, and not less when greater.
+        assert_eq!(
+            f("cmp.lt", &[&hi, &hi]).expect("lt").payload(),
+            &Payload::Bits(vec![false])
+        );
+        assert_eq!(
+            f("cmp.lt", &[&hi, &lo]).expect("lt").payload(),
+            &Payload::Bits(vec![false])
+        );
+    }
+
+    #[test]
+    fn cmp_width_mismatch_is_never_silent() {
+        // A `Binary{8}` vs `Binary{1}` comparison is an explicit PrimType error — never a silent
+        // false (G2). (Same-paradigm, mismatched width.)
+        let reg = PrimRegistry::with_builtins();
+        let f = reg.get("cmp.eq").expect("cmp.eq registered");
+        let wide = b8("0000_0000");
+        let narrow = Value::new(
+            Repr::Binary { width: 1 },
+            Payload::Bits(vec![false]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap();
+        assert!(
+            matches!(
+                f("cmp.eq", &[&wide, &narrow]),
+                Err(EvalError::PrimType { .. })
+            ),
+            "mismatched-width eq must be PrimType, never a silent false"
+        );
+    }
+
+    // ---- RFC-0032 D2 (M-748): never-silent binary arithmetic ----
+
+    #[test]
+    fn bit_add_in_range_and_overflow_never_silent() {
+        let reg = PrimRegistry::with_builtins();
+        let f = reg.get("bit.add").expect("bit.add registered");
+        // 1 + 2 = 3, carries propagate MSB-first correctly.
+        let r = f("bit.add", &[&b8("0000_0001"), &b8("0000_0010")]).expect("add");
+        assert_eq!(r.payload(), &Payload::Bits(bits("0000_0011")));
+        // 0b0000_1111 (15) + 0b0000_0001 (1) = 0b0001_0000 (16) — carry chain across the nibble.
+        let r = f("bit.add", &[&b8("0000_1111"), &b8("0000_0001")]).expect("add");
+        assert_eq!(r.payload(), &Payload::Bits(bits("0001_0000")));
+        // 255 + 1 overflows Binary{8}: explicit Overflow, never a silent wrap to 0.
+        assert!(
+            matches!(
+                f("bit.add", &[&b8("1111_1111"), &b8("0000_0001")]),
+                Err(EvalError::Overflow { .. })
+            ),
+            "add overflow must be explicit, never a silent wrap"
+        );
+    }
+
+    #[test]
+    fn bit_sub_in_range_and_underflow_never_silent() {
+        let reg = PrimRegistry::with_builtins();
+        let f = reg.get("bit.sub").expect("bit.sub registered");
+        // 5 - 2 = 3, borrow chain correct.
+        let r = f("bit.sub", &[&b8("0000_0101"), &b8("0000_0010")]).expect("sub");
+        assert_eq!(r.payload(), &Payload::Bits(bits("0000_0011")));
+        // 16 - 1 = 15 — borrow across the nibble.
+        let r = f("bit.sub", &[&b8("0001_0000"), &b8("0000_0001")]).expect("sub");
+        assert_eq!(r.payload(), &Payload::Bits(bits("0000_1111")));
+        // 0 - 1 underflows (no unsigned negative): explicit Overflow, never a silent wrap to 255.
+        assert!(
+            matches!(
+                f("bit.sub", &[&b8("0000_0000"), &b8("0000_0001")]),
+                Err(EvalError::Overflow { .. })
+            ),
+            "sub underflow must be explicit, never a silent wrap"
+        );
     }
 }

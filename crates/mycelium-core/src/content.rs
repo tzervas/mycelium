@@ -87,6 +87,9 @@ pub(crate) mod tag {
     pub const PRIM_STRENGTH_PROVEN: u8 = 0x66;
     pub const PRIM_STRENGTH_EMPIRICAL: u8 = 0x67;
     pub const PRIM_STRENGTH_DECLARED: u8 = 0x68;
+    /// The width-collapsing comparison rule (RFC-0032 D1). Distinct tag ⇒ a collapsing prim's decl
+    /// hash differs from an otherwise-identical uniform one; existing uniform decls are unchanged.
+    pub const PRIM_WIDTH_COLLAPSE: u8 = 0x69;
 }
 
 /// A canonical, injective, metadata-free byte encoder feeding a [`blake3::Hasher`]. Every write is
@@ -167,6 +170,7 @@ impl Canon {
         self.prim_paradigm(sig.result);
         match sig.width {
             crate::prim::WidthRel::Uniform => self.tag(tag::PRIM_WIDTH_UNIFORM),
+            crate::prim::WidthRel::Collapse => self.tag(tag::PRIM_WIDTH_COLLAPSE),
         }
         self.strength(intrinsic);
     }

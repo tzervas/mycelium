@@ -8,6 +8,36 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: E19-1 — Tier-1 kernel enablers landed (M-747, M-748); implemented, pending ratification)
+
+- **M-747 — reduce-to-`Bool` comparison/equality prims `eq`/`lt`** (RFC-0032 D1). New kernel prims
+  `cmp.eq`/`cmp.lt` (`crates/mycelium-interp/src/prims.rs`) over `Binary{N}`/`Ternary{N}`: each takes
+  two equal-width same-paradigm operands and returns `Binary{1}` (`0b1` = true), guarantee **`Exact`**.
+  `eq` is structural width-typed equality; `lt` is the D1 total order (unsigned magnitude for Binary,
+  balanced-integer value for Ternary, MSB-first lexicographic). Surfaced `eq`/`lt` via a dedicated
+  **width-collapsing** checker branch (operands `T{N}` → `Binary{1}` does not fit the width-preserving
+  `prim_family` path). Cross-paradigm / mismatched-width / bare-decimal comparands are explicit
+  never-silent refusals (G2). **Realization note (engineering call, Q1):** a kernel prim returns a
+  representation value, never a `.myc` data value, so D1's `Bool` bottoms out as `Binary{1}`; the
+  `.myc` `std.cmp` lift to the `Bool` ADT is a one-line match (demonstrated by the bool-bridge smoke
+  port — the E13-1 M-718 consumer). Declared in the content-addressed Π table with a new
+  **`WidthRel::Collapse`** (the sanctioned "new width rule = a variant" extension). **Unblocks** E13-1
+  M-718 (width-typed `cmp`/`Eq`/`Ord`). (RFC-0032 D1; E19-1/M-747)
+- **M-748 — never-silent fixed-width binary arithmetic** (RFC-0032 D2). Surface the already-registered
+  `bit.and`/`bit.or` (`and`/`or`); add kernel prims `bit.add`/`bit.sub` (surface `add_bin`/`sub_bin`):
+  unsigned ripple-carry add / ripple-borrow subtract over `Binary{N}`, guarantee **`Exact`** on the
+  in-range result. A result outside `[0, 2^N)` is an explicit `EvalError::Overflow`, **never** a silent
+  wrap — mirroring the `trit.*` in-range contract (G2). Distinct surface names from the trit-backed
+  `add`/`sub`. **Unblocks** E13-1 M-718 (binary `math`). (RFC-0032 D2; E19-1/M-748)
+- **M-752 (partial — Tier-1) — enablement conformance.** `crates/mycelium-l1/tests/enablement.rs`:
+  three-way differential smoke ports (L1-eval ≡ L0-interp ≡ AOT) per unblocked surface + never-silent
+  refusal tests (overflow/underflow refuse on every path; mismatch refuses statically), plus a
+  `Bool`-bridge port. Prim unit/mutant-witness tests + Π/surface consistency guards extended.
+  `docs/api-index/` + the `mycelium-core` public-API baseline regenerated (deterministic). RFC-0032
+  stays **Accepted** (not Enacted) — specs are "implemented, pending ratification" (VR-5). The Tier-2
+  reprs (M-749 `Repr::Seq` / M-750 `Repr::Bytes`) are KC-3-significant, maintainer-sign-off-gated core
+  additions and are **not** in this change. (RFC-0032 D7; E19-1/M-752)
+
 ### Added (2026-06-23: ADR-024 — Core 1.0.0 Gate (T1) scope amendment, enacting RFC-0032 D6 append-only)
 
 - **ADR-024 — Core 1.0.0 Gate (Track T1) Scope Amendment → Accepted.** The house-rule-correct
@@ -55,8 +85,8 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   required vs the recursive-ADT `List`, string repr, width-generics ownership, the core-1.0.0-vs-post-1.0.0
   placement against ADR-022, and sequencing). Epic **E19-1** + issues **M-746** (RFC authoring, the gate)
   → **M-747** (comparison prim) · **M-748** (binary arithmetic) · **M-749** (sequence repr) · **M-750**
-  (byte/string repr) · **M-751** (width-generic fns — ownership per RFC-0032 Q5) → **M-752** (conformance
-  + `.myc` smoke ports). Cross-leg continuity wired via `depends_on`: E13-1 M-716 ⟸ M-749, M-717 ⟸ M-750,
+  (byte/string repr) · **M-751** (width-generic fns — ownership per RFC-0032 Q5) → **M-752** (conformance +
+  `.myc` smoke ports). Cross-leg continuity wired via `depends_on`: E13-1 M-716 ⟸ M-749, M-717 ⟸ M-750,
   M-718 ⟸ M-747/M-748/M-751. Kickoff **`kpr`** stowed (`.claude/kickoffs/kpr.md`, registered in the
   index) — owns `crates/mycelium-interp/src/prims.rs` + the `prim_kernel_name` map; the `mycelium-core`
   reprs + L1 width-generics are flagged **coordinated** with `c10`/`s10` (maintainer sign-off on the

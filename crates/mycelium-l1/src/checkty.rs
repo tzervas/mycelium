@@ -2443,6 +2443,47 @@ impl Cx<'_> {
         if let Some(err) = self.imports.ambiguity_error(self.site, name) {
             return Err(err);
         }
+        // RFC-0032 D1 (M-747): the comparison prims `eq`/`lt` are **width-collapsing** — two
+        // equal-width operands of one paradigm reduce to `Binary{1}` (the realized `Bool`; see
+        // `prims.rs`). They do not fit the width-*preserving* `prim_family` path below (whose
+        // result width equals the operand width and which anchors bare decimals off the expected
+        // type), so they are checked here. A bare-decimal operand has no width anchor (the result
+        // is `Binary{1}`, not the operand width), so it is refused honestly (G2 — never a default
+        // width); ascribe it or write it explicitly.
+        if matches!(name.as_str(), "eq" | "lt") {
+            if args.len() != 2 {
+                return self.err(format!(
+                    "`{name}` takes two operands (got {}); RFC-0032 D1",
+                    args.len()
+                ));
+            }
+            let mut rebuilt = Vec::with_capacity(2);
+            let mut tys = Vec::with_capacity(2);
+            for a in args {
+                if matches!(a, Expr::Lit(Literal::AmbientInt(_, _))) {
+                    return self.err(format!(
+                        "a bare decimal operand of `{name}` has no width here — comparison is \
+                         width-collapsing (RFC-0032 D1), so no operand or expected type pins it. \
+                         Ascribe it or write it explicitly (RFC-0012 §4.3, never a default width)"
+                    ));
+                }
+                let (t, a2) = self.check(scope, a, None)?;
+                tys.push(t);
+                rebuilt.push(a2);
+            }
+            match (&tys[0], &tys[1]) {
+                (Ty::Binary(x), Ty::Binary(y)) if x == y => {}
+                (Ty::Ternary(x), Ty::Ternary(y)) if x == y => {}
+                _ => {
+                    return self.err(format!(
+                        "`{name}` compares two equal-width operands of the same paradigm \
+                         (Binary/Ternary), got {:?} and {:?} (RFC-0032 D1)",
+                        tys[0], tys[1]
+                    ));
+                }
+            }
+            return Ok((Ty::Binary(1), app_node(head, rebuilt)));
+        }
         let Some(fam) = prim_family(name) else {
             return self.err(teach_unknown(
                 name,
@@ -3402,7 +3443,8 @@ impl PrimFam {
 /// The family of a builtin prim, or `None` if `name` is not a known prim.
 fn prim_family(name: &str) -> Option<PrimFam> {
     Some(match name {
-        "not" | "xor" => PrimFam::Binary,
+        // RFC-0032 D2 (M-748): width-preserving binary logical + arithmetic prims.
+        "not" | "xor" | "and" | "or" | "add_bin" | "sub_bin" => PrimFam::Binary,
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -3489,6 +3531,11 @@ pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
     match (name, args) {
         ("not", [Ty::Binary(n)]) => Some(Ty::Binary(*n)),
         ("xor", [Ty::Binary(a), Ty::Binary(b)]) if a == b => Some(Ty::Binary(*a)),
+        // RFC-0032 D2 (M-748): width-preserving binary arithmetic/logical (never-silent overflow is
+        // a runtime contract; the static signature is width-preserving like the trit arithmetic).
+        ("and" | "or" | "add_bin" | "sub_bin", [Ty::Binary(a), Ty::Binary(b)]) if a == b => {
+            Some(Ty::Binary(*a))
+        }
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
             Some(Ty::Ternary(*a))
         }
@@ -3503,6 +3550,15 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
     Some(match name {
         "not" => "bit.not",
         "xor" => "bit.xor",
+        // RFC-0032 D2 (M-748): surface the already-registered `bit.and`/`bit.or` + never-silent
+        // binary `add`/`sub` (distinct surface names from the trit-backed `add`/`sub` below).
+        "and" => "bit.and",
+        "or" => "bit.or",
+        "add_bin" => "bit.add",
+        "sub_bin" => "bit.sub",
+        // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (returns `Binary{1}`).
+        "eq" => "cmp.eq",
+        "lt" => "cmp.lt",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",
