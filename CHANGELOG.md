@@ -8,6 +8,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: E13-1 — self-hosted stdlib composition ratified + the executable core/prelude; RFC-0031 Accepted; M-714/M-715 Tier-0)
+
+- **RFC-0031 — Self-Hosted Standard Library Composition → Accepted** (M-714, the E13-1 gate). §5 D1–D7
+  ratified: **D1** the irreducible-Rust boundary (`mycelium-core`/`l0`/`l1`/`cert`/`swap`/`interp::prims`/
+  `mlir`/`std-sys` stay Rust) + the decision criterion (trust-root / bootstrap-floor / value-model-FFI /
+  unsafe-ABI); **D2** phylum layout (`std.<module>` → `lib/std/<module>.myc`, crate-mirrored); **D3** no
+  bootstrap circularity (the Rust frontend compiles the `.myc` stdlib; ring layering forbids `use`-cycles);
+  **D4** the surface-readiness-**tiered** migration order — the honesty crux (VR-5): only the
+  structural/polymorphic core is executable today, so `collections`/`iter`/`text`/`fmt` (Tier-2) and
+  width-typed `cmp`/`math` (Tier-1) are sequenced **behind** the kernel prims (a reduce-to-`Bool`
+  comparison, binary arithmetic, a sequence/string representation) that would enable them — never claimed
+  ahead; **D5** the per-op stability bar + the `std_result`/`std_option`/`std_cmp` differential-test
+  prototype pattern; **D6** the `mycelium-std-*` Rust crate kept as the differential oracle (deprecated, not
+  removed); **D7** one `spore` per phylum. (RFC-0031; E13-1/M-714)
+- **M-715 (Tier-0) — the executable core/prelude self-hosts.** `lib/std/option.myc` (`Option<A>` +
+  `is_some`/`is_none`/`unwrap_or`/`map`/`and_then`/`fold`, the never-silent sibling of `std.result`) and
+  `lib/std/cmp.myc` (`Ordering` + `is_lt`/`is_eq`/`is_gt`/`reverse` + structural `bool_eq`/`bool_cmp`/`ord_eq`
+  over the finite kernel types) are written in `.myc`, three-way **differential-tested** (L1-eval ≡ L0-interp
+  ≡ AOT — `crates/mycelium-l1/tests/std_option.rs` + `std_cmp.rs`, 22 tests green via the M-649 harness), and
+  registered in the `std` phylum manifest (`lib/std/mycelium-proj.toml`). Honest tags (VR-5): total
+  finite/structural ops `Exact`; generic combinators `Declared`; differential agreement `Empirical`.
+  Never-silent (G2): `unwrap_or`/`fold` take a caller-supplied fallback — `None` never silently becomes a
+  value. **Honestly deferred:** width-typed `cmp`/`Eq`/`Ord` (needs a comparison prim → Tier-1, blocks with
+  M-718) and the `iter` trait surface (needs a concrete sequence → Tier-2, blocks with M-716) are *not*
+  claimed self-hosted ahead of their enabling surface. M-716/M-717/M-718 moved to `status:blocked` with the
+  explicit kernel-prim precondition recorded; E13-1 → `in-progress`. (RFC-0031 §5 D4/D5; E13-1/M-715)
+
 ### Added (2026-06-23: E14-1 — the `wild`/FFI execution floor executes; RFC-0028 Accepted; M-720/M-721/M-722/M-724)
 
 - **RFC-0028 — FFI and System Interface → Accepted** (maintainer sign-off on the three architecturally-significant forks). The normative v0 model: a **build-time `@std-sys` capability gate** (no runtime `Capability<io>` value — KISS/YAGNI/KC-3; runtime sandboxing deferred §7, flagged forward-compatible); the **prim registry as the execution host / capability handle**; `wild` lowers to `Op { prim: "wild:…" }` (**no new Core-IR node** — KC-3); `Declared` guarantee baseline with `Empirical` only for a differentially-covered deterministic op (VR-5); a full Mycelium-level `just safety-check` audit. (RFC-0028; E14-1)
