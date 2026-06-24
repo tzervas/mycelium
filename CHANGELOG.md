@@ -8,6 +8,18 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: DN-29 — Tunable Certification & Honesty Modes (Draft deliberation anchor, advisory))
+
+- **DN-29 — Tunable Certification & Honesty Modes** (`docs/notes/`, **Draft**, advisory). Anchors the
+  deliberation on making the certification/honesty/hashing machinery **tunable off → full** via scoped
+  config instead of mandatory-everywhere, *while preserving honesty*: the two-axis split (certification
+  **depth** vs cheap never-silent **failure semantics**), a strawman level ladder (L0 Raw…L3 Proven) +
+  the content-hash sub-toggle (spores/hot-inject depend on it), the knob's home (reuse RFC-0012
+  ambient-scoping + `mycelium-proj` manifest/header `@certification`; ADR-003 → no content-hash
+  perturbation), and the honesty argument (generalizes **KC-4**; a systematic flagged downgrade to
+  `Declared` per **VR-5**; **G2** never-silent about the active mode). **Enacts nothing**; the binding
+  decision is the future **RFC-0034** + a superseding ADR. Open questions tracked in §9.
+
 ### Changed (2026-06-24: ADR-029/030/031 → Accepted — value-model ternary + the two content-address one-way doors ratified (owner approval))
 
 - **ADR-029 — Ternary arithmetic is arbitrary-width → Accepted** (maintainer-ratified). The V0
