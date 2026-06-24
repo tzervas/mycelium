@@ -2,11 +2,15 @@
 //! ([`CertMode::gate_guarantee`], [`CertMode::gate_result`]) and their never-silent / VR-5 floors
 //! (RFC-0034 §5/§7; M-786/M-787/M-788). Mode-parametric (RFC-0034 §13): every assertion sweeps the
 //! finite [`CertMode::ALL`] × [`GuaranteeStrength::ALL`] case space where it applies.
+//!
+//! Bound fixtures and the Meta-constructibility helper delegate to the shared harness
+//! ([`super::mode_harness`]; M-795) so they stay in one place and any fixture change propagates
+//! automatically.
 
-use crate::bound::{Bound, BoundBasis, BoundKind, NormKind};
+use super::mode_harness::{assert_meta_constructs, declared_bound, empirical_bound, proven_bound};
+use crate::bound::{Bound, BoundBasis, BoundKind};
 use crate::cert_mode::CertMode;
 use crate::guarantee::GuaranteeStrength;
-use crate::meta::{Meta, Provenance};
 
 // --- M-786/M-787 carried-over tests (extracted from the logic file, as-touched per M-797) ---
 
@@ -68,57 +72,15 @@ fn serde_form_is_the_bare_variant_string() {
 }
 
 // --- M-788: gate_result — the (guarantee, bound) reconciliation against M-I1…M-I4 ---
+//
+// Fixture functions (`proven_bound`, `empirical_bound`, `declared_bound`) and
+// `assert_meta_constructs` are imported from the shared harness (super::mode_harness; M-795).
+// The local `kind_of` helper remains since it is cert_mode-specific and not harness-general.
 
-/// A `Proven`-basis ε bound (matches the Dense F32→BF16 swap's emission).
-fn proven_bound() -> Bound {
-    Bound {
-        kind: BoundKind::Error {
-            eps: 0.003_906_25,
-            norm: NormKind::Rel,
-        },
-        basis: BoundBasis::ProvenThm {
-            citation: "round-to-nearest relative error theorem".to_owned(),
-        },
-    }
-}
-
-/// An `Empirical`-basis δ bound (matches the Dense↔VSA swap's empirical-profile emission).
-fn empirical_bound() -> Bound {
-    Bound {
-        kind: BoundKind::Probability { delta: 0.05 },
-        basis: BoundBasis::EmpiricalFit {
-            trials: 10_000,
-            method: "Monte-Carlo round trip".to_owned(),
-        },
-    }
-}
-
-/// A `UserDeclared`-basis bound (an already-`Declared` intent).
-fn declared_bound() -> Bound {
-    Bound {
-        kind: BoundKind::Error {
-            eps: 0.1,
-            norm: NormKind::L2,
-        },
-        basis: BoundBasis::UserDeclared,
-    }
-}
-
-/// The bound's `kind` payload (the computed ε/δ *value*), independent of its basis.
+/// The bound's `kind` payload (the computed ε/δ *value*), independent of its basis. Local helper
+/// for cert_mode tests that check the value survives the gate unchanged.
 fn kind_of(b: &Bound) -> BoundKind {
     b.kind.clone()
-}
-
-/// **Contract:** the pair `gate_result` returns is one `Meta::new` (the M-I1…M-I4 checker) accepts,
-/// in *every* mode for *every* `(intended, bound)` case below. This is the central M-788 invariant:
-/// the gate never produces an inconsistent `(guarantee, bound)` pair.
-fn assert_meta_constructs(g: GuaranteeStrength, b: Option<Bound>) {
-    let meta = Meta::new(Provenance::Root, g, b.clone(), None, None, None);
-    assert!(
-        meta.is_ok(),
-        "gate_result must yield a Meta-constructible pair (g={g:?}, bound={b:?}), got {:?}",
-        meta.err()
-    );
 }
 
 #[test]
