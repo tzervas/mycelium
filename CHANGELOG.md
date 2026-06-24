@@ -20,6 +20,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `Declared` per **VR-5**; **G2** never-silent about the active mode). **Enacts nothing**; the binding
   decision is the future **RFC-0034** + a superseding ADR. Open questions tracked in §9.
 
+### Changed (2026-06-24: DN-29 rev. 4 — deliberation settled; §9 fully resolved (still Draft, advisory))
+
+- **DN-29 deliberation settled (in place; stays Draft)** — owner confirmed the remaining forks; **§9 has no
+  open questions left.** Resolutions: Q4 expose the named **`wrapping`/`fast`** Axis-B opt-out in v0; Q5
+  ship **global/phylum/nodule** scope and defer the per-op `thaw`-style knob (YAGNI); Q6 the **two-step**
+  path (settle DN-29 → **RFC-0034 + a superseding ADR**, §11 as the RFC appendix); Q7 **named modes ship
+  first**, per-knob overrides later; Q11 the honesty→transparency reframe is **whole-corpus**; Q12 the
+  **superseding ADR amends the Foundation/charter** while **RFC-0034 stays implementation-focused**; Q13
+  Accepted RFCs/ADRs get **append-only §-end footnotes** pointing to the relaxations (§9/§10/§11.5). Still
+  **advisory — enacts nothing** (VR-5/G2); the binding act is the forthcoming RFC-0034 + ADR.
+
 ### Changed (2026-06-24: DN-29 rev. 3 — provenance tag adjustable, generation≠consumption, §11 ripple map (still Draft, advisory))
 
 - **DN-29 refined again (in place; stays Draft)** — **provenance tag is now an adjustable unit**: `fast`

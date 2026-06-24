@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-29 |
-| **Status** | **Draft** (2026-06-24; deliberation anchor — advisory, non-committal · rev. 2026-06-24 — owner-steered: phase-decomposed knobs, `fast`-default, north-star reframe · rev. 2 2026-06-24 — `fast`+`certified` first-class modes, safe-by-default + explicit per-use unsafe escape, diagnostic-verbosity knob, "honesty"→"transparency & auditability" reframe · rev. 3 2026-06-24 — provenance tag as adjustable unit (`fast` omits `Empirical`/`Proven`), signal **generation** split from **consumption**, **§11 ripple map** (40-hit corpus inventory + batched-replacement mechanism)) |
+| **Status** | **Draft** (2026-06-24; deliberation anchor — advisory, non-committal · rev. 2026-06-24 — owner-steered: phase-decomposed knobs, `fast`-default, north-star reframe · rev. 2 2026-06-24 — `fast`+`certified` first-class modes, safe-by-default + explicit per-use unsafe escape, diagnostic-verbosity knob, "honesty"→"transparency & auditability" reframe · rev. 3 2026-06-24 — provenance tag as adjustable unit (`fast` omits `Empirical`/`Proven`), signal **generation** split from **consumption**, **§11 ripple map** (40-hit corpus inventory + batched-replacement mechanism) · rev. 4 2026-06-24 — **deliberation settled**: §9 Q4–Q7 + Q11–Q13 resolved; next act is RFC-0034 + the superseding ADR) |
 | **Feeds** | the eventual **RFC-0034** (binding decision) + a superseding ADR; conditionalizes RFC-0001 §3.3/§3.4/§4.6, RFC-0002 §2, RFC-0005 §2, ADR-010, ADR-011, ADR-013/016/017; grounds in **KC-4**, **VR-5**, **G2**, ADR-014 |
 | **Date** | June 24, 2026 |
 | **Decides** | *Nothing normatively* — advisory. Records the maintainer's intended **shift** (2026-06-24): make the certification / honesty / hashing machinery **tunable from fully-off → fully-engaged** via scoped config, instead of mandatory-everywhere, **while preserving honesty and keeping the good procedures** the early maximalist phase produced. Captures the design space, the knob model, the feature-dependency consequences, and the open questions, so the binding RFC-0034 is shaped toward this end-state. The binding decision is the future RFC. **Rev. 2026-06-24 (owner-steered, §10):** the single ladder is **decomposed into independent knobs split by *phase*** — compile/deploy-time **spore identity hashing stays available even when all runtime certification is off** — composing into named **profiles**; the default profile is **`fast`** (opt-in certification); and the note now **captures a north-star reframe** (Mycelium as a fast, memory-safe, ergonomic multi-paradigm language with certification *baked in as optional*), with the Foundation/charter ripple **flagged** for the binding RFC-0034 + superseding ADR. |
@@ -304,17 +304,26 @@ lattice, the M-210 checker. None of this is discarded; it is **gated behind the 
 - ~~Q9 **"Honesty" framing**~~ → **reframed to "transparency & auditability"** (§1/§6); mechanism
   unchanged, charter-vocabulary ripple flagged (§7).
 - ~~Q10 **Diagnostic verbosity**~~ → its own **tunable knob, mode-defaulted** (lean at `fast` → full audit
-  trail at `certified`), independently overridable; **tagging stays on** as the inspectability substrate
-  (§3.1).
+  trail at `certified`), independently overridable (§3.1). *(Refined rev. 3: signal **generation** is the
+  always-on part; **consumption** is what's tuned — §3.1/§10.9.)*
 
-**Still open:**
-4. **Axis B** — model says **default-on with a named `wrapping`/`fast` opt-out** (§3.1); confirm that
-   opt-out is exposed in v0 vs. deferred.
-5. **Per-op granularity** — ship v0 at global/phylum/nodule scope; defer the per-op `thaw`-style knob?
-6. **Form/sequencing** — DN-29 (this) → settle → **RFC-0034** + superseding ADR + the amendments. Confirm
-   the two-step (deliberate-then-decide) vs. going straight to a `Proposed` RFC.
-7. **Mode knob-overrides** — expose individual knob overrides under a mode (§5) in v0, or ship the named
-   modes only and add knob-level overrides later?
+**Resolved (owner-steered, 2026-06-24 rev. 4 — folded into §3/§5/§10/§11):**
+- ~~Q4 **Axis-B opt-out**~~ → **expose the named `wrapping`/`fast` opt-out in v0** (cheap, expected; explicit
+  + named, never silent — §3.1).
+- ~~Q5 **Per-op granularity**~~ → **ship v0 at global/phylum/nodule scope; defer the per-op `thaw`-style
+  knob** (YAGNI until a use case demands it).
+- ~~Q6 **Form/sequencing**~~ → **two-step**: settle DN-29 (now done) → then **RFC-0034 + a superseding ADR**
+  carry the binding change, with §11 as the RFC's amendment appendix.
+- ~~Q7 **Mode knob-overrides**~~ → **ship the named modes first**; add per-knob overrides once the modes
+  prove out (don't front-load the full override matrix).
+- ~~Q11 **Vocabulary scope**~~ → **whole-corpus** honesty→transparency reframe (CLAUDE.md, CONTRIBUTING,
+  Foundation, RFCs, Glossary) — a partial reframe would read inconsistent (§11.5).
+- ~~Q12 **Who amends the charter**~~ → the **superseding ADR amends the Foundation/charter**; **RFC-0034
+  stays implementation-focused** (keeps the charter change in the decision record — §11.5).
+- ~~Q13 **Backward-compat**~~ → **§-end footnotes** on the Accepted RFCs/ADRs (RFC-0001/0002/0005,
+  ADR-010/011/013/016/017) pointing to the mode-relaxations — append-only, originals preserved (§11.5).
+
+**Open questions: none.** The deliberation is **settled**; the next act is drafting RFC-0034 + the ADR.
 
 ## §10 Decisions captured this revision (2026-06-24, owner-steered — still advisory)
 
@@ -348,6 +357,12 @@ ADR; VR-5/G2 — DN-29 enacts nothing):
     superseding ADR must touch, plus an **anchor-keyed, single-pass-per-file** replacement mechanism that
     avoids positional mangling. Inventory is `Empirical/Declared` (re-verify against source at RFC-0034
     time); spine anchors (SC-3, FR-M3, VR-5) validated.
+11. **Deliberation settled (rev. 4 — §9 fully resolved).** v0 exposes the named **`wrapping`/`fast`**
+    Axis-B opt-out (Q4); scope is **global/phylum/nodule**, per-op `thaw` deferred (Q5); the path is the
+    **two-step** DN-29→RFC-0034+ADR with §11 as the RFC appendix (Q6); **named modes ship first**, per-knob
+    overrides later (Q7); the honesty→transparency reframe is **whole-corpus** (Q11); the **superseding ADR
+    amends the charter, RFC-0034 stays implementation-focused** (Q12); Accepted RFCs/ADRs get **append-only
+    §-end footnotes** pointing to the relaxations (Q13). **Next act: draft RFC-0034 + the superseding ADR.**
 
 ## §11 Ripple map — what RFC-0034 + the superseding ADR must amend
 
@@ -435,4 +450,9 @@ from this map once RFC-0034 fixes the final wording.
 > consumption tunable and lean at `fast`; §3.1/§10.9); and a **§11 ripple map** — a ~40-hit/~12-file
 > `Empirical/Declared` inventory of the RFC-0034 amendment surface (change-type taxonomy, high-collision +
 > multi-category lines, spine anchors validated) plus an **anchor-keyed single-pass-per-file** batched
-> replacement mechanism with a never-silent guard. Still **Draft**, still advisory.
+> replacement mechanism with a never-silent guard. Still **Draft**, still advisory. *2026-06-24 (rev. 4)*
+> — owner confirmed the remaining forks; **§9 is fully resolved** (Q4 expose `wrapping` opt-out in v0; Q5
+> global/phylum/nodule scope, defer per-op `thaw`; Q6 two-step DN→RFC-0034+ADR; Q7 named modes first; Q11
+> whole-corpus reframe; Q12 ADR amends the charter, RFC stays implementation-focused; Q13 append-only §-end
+> footnotes on the Accepted RFCs/ADRs — §9/§10/§11.5). **The deliberation is settled; the next act is
+> drafting RFC-0034 + the superseding ADR.** Remains **Draft** until that binding act supersedes it.
