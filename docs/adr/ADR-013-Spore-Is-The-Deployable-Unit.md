@@ -74,3 +74,5 @@ status note; RFC-0008 §4.4/§8 R8-Q5.
 - **2026-06-10 — Accepted.** Maintainer deliberation resolved ADR-012 §7.4 by generalization:
   spore = deployable unit, manifest = component, narrow sense = degenerate case. RFC-0003
   amended to r2 (scope note only).
+
+> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** Spore content-hash identity is a **compile/deploy-phase** concern and **remains available even when the runtime certification mode is fully off** (`fast`) — deployability survives a cert-off runtime (RFC-0034 §8). Disabling the *compile* spore hash is a separate, explicit, `EXPLAIN`-ed choice (never silent — G2). The identity mechanism is **unchanged**. See **ADR-032**.

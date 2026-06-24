@@ -8,7 +8,24 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
-### Added (2026-06-24: RFC-0034 + ADR-032 — the binding tunable-certification act (Proposed; drafted from the settled DN-29))
+### Changed (2026-06-24: RFC-0034 + ADR-032 ratified & Enacted (design-driven); corpus amendments applied; DN-29 Superseded)
+
+- **RFC-0034 + ADR-032 ratified `Proposed → Accepted → Enacted (design-driven)`** (maintainer, stepped per
+  house rule #3). **Tunable certification is now the governing model.** The corpus amendments (ADR-032's
+  act) were **applied** via the never-silent `tools/dn29_apply.py`: **21 amendments across 13 files** —
+  - **Charter conditionalize:** Foundation **SC-3** / **FR-M3** now read "at the active mode (`certified`); the mode itself never-silent," attributed to RFC-0034/ADR-032.
+  - **Living-doc transparency reframe:** CLAUDE.md house-rule 1 (**"the honesty rule" → "the transparency rule"**) + the "what this repo is" north-star line; CONTRIBUTING heading; README headline principle + decision-process bullet; Glossary ("honesty lattice" → "transparency lattice", the rule gloss, the `Declared` floor). **Mechanism unchanged** — the guarantee lattice, VR-5, and G2 keep their force; only the model-vocabulary wording moved.
+  - **Append-only footnotes** on the relaxed Accepted decisions: RFC-0001/0002/0005 + ADR-010/011/013/016/017 (mandates apply at `certified`; `fast`/`balanced` per RFC-0034; spore/ABI/inject hashing is compile-time and survives a cert-off runtime).
+  - **Deliberately excluded** (stringent scope): the ~45 development-process / colloquial uses of "honest" (swarm-review discipline, "defer honestly", "made honestly", "honest open follow-up") — not the guarantee-model term; rewording them would change meaning.
+- **DN-29 → `Superseded`** (by RFC-0034 + ADR-032), retained as the append-only rationale record.
+- **Pacing note (doc-and-design-driven loop, paired with TDD).** "Enacted" here is **design-driven**: the
+  design + corpus amendments are landed and **governing**, while the **runtime mode *mechanism*** (modes
+  affecting execution, tag computation, resolution) is the **paired TDD cycle — not yet code, never claimed
+  implemented** (VR-5/G2). RFC-0034 advances to fully Enacted-with-code as the modes land Rust-first. This
+  records the slightly-less-rigid pacing (design lands ahead of code) while keeping the honesty discipline
+  stringent: nothing is claimed done that isn't.
+
+### Added (2026-06-24: RFC-0034 + ADR-032 — the binding tunable-certification act (drafted from the settled DN-29))
 
 - **RFC-0034 — Tunable Certification & Transparency Modes** (`docs/rfcs/`, **Proposed**). The binding
   *mechanism* from the settled DN-29 deliberation: makes certification/hashing/tag machinery a **tunable

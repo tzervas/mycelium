@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0034 |
-| **Status** | **Proposed** (2026-06-24) — the tunable-certification model (the knob matrix, the two first-class modes `fast`/`certified`, mode resolution + scoping, the provenance-tag-as-adjustable-unit, the generation/consumption split, the compile/runtime phase split, and the never-silent mode invariant) is stated normatively **as proposed**. The maintainer ratifies → **Accepted** (house rule #3 — never skipping steps). The corpus amendments (the always-on→per-mode rewordings and the honesty→transparency reframe) are carried by the **superseding ADR-032** and applied via the staged manifest (§13) only **after** both are Accepted — never silently. |
+| **Status** | **Enacted (design-driven)** (2026-06-24) — ratified **Proposed → Accepted → Enacted** by the maintainer (house rule #3, stepped, not skipped). This is a **doc-and-design-driven** enactment *paired with TDD*: the design is ratified and the **corpus amendments are applied + governing** (ADR-032; 21 amendments across 13 files via `tools/dn29_apply.py`). **Implementation status: pending** — the runtime mode *mechanism* (modes affecting execution, tag computation/tuning, resolution/scoping) is the **paired TDD cycle**, not yet code, and is **never claimed implemented** (VR-5/G2). Advances to fully Enacted-with-code as the modes land Rust-first. |
 | **Type** | Foundational / normative (once Accepted) — makes certification/hashing/tag machinery a *tunable policy* over the existing RFC-0001/0002/0005 substrate; the substrate's mechanisms are unchanged |
 | **Date** | 2026-06-24 |
 | **Decides** | the knob matrix (§4); the two first-class modes `fast`/`certified` + `balanced` intermediate (§5); mode resolution + `global/phylum/nodule` scoping (§6); provenance tagging as an adjustable unit, `fast` omitting `Empirical`/`Proven` (§7); the generation≠consumption split for the inspectability signal (§7); the compile/runtime phase split — spores survive a cert-off runtime (§8); memory-safe-by-default + explicit per-use escape (§9); the named `wrapping`/`fast` Axis-B opt-out (§10); the never-silent mode invariant (§3) |
@@ -17,8 +17,10 @@
 > implement it** — no kernel code lands alongside it; claims about runtime behaviour are `Declared`
 > positions to be checked by implementation (VR-5). The machinery it tunes (RFC-0001 lattice, RFC-0002
 > certificates, ADR-010 kernels, ADR-013 spores) is **unchanged** — this RFC only makes *when* it runs a
-> policy. The corpus rewordings and the charter reframe are **ADR-032's** act, applied via the staged
-> §13 manifest **after** ratification (append-only; never silently). Until then the always-on rules hold.
+> policy. The corpus rewordings and the charter reframe are **ADR-032's** act; they were **applied to the
+> corpus on ratification (2026-06-24)** via the §13 manifest (append-only; never silently), so the
+> **per-mode rules now govern**. The **runtime mode mechanism remains unimplemented** (the paired TDD
+> cycle) — claims about runtime behaviour stay `Declared` until code lands (VR-5).
 >
 > **Provenance.** Rationale, the knob-by-knob cost audit, the keep-list, and the rejected single-ladder
 > strawman are recorded in **DN-29** (`docs/notes/DN-29-Tunable-Certification-and-Honesty-Modes.md`),
@@ -206,23 +208,28 @@ pending ratification"* as pieces land — never silently to `Accepted` (VR-5).
 
 ## §13 Conformance & Definition of Done
 
-**Definition of Done (this RFC):** ratified to **Accepted** by the maintainer; the knob matrix (§4), the two
-first-class modes (§5), the resolution/scoping rules (§6), the tagging + generation/consumption split (§7),
-the phase split (§8), and the §3 invariants are stated normatively and grounded; the companion **ADR-032**
-is Accepted in lockstep (it carries the charter/vocabulary reframe); the staged amendment manifest (below)
-exists and is dry-run-clean; **no corpus text is rewritten and no code lands** under this RFC (those are the
-post-ratification acts).
+**Definition of Done (design — satisfied 2026-06-24):** ratified **Proposed → Accepted → Enacted (design)**
+by the maintainer; the knob matrix (§4), the two first-class modes (§5), the resolution/scoping rules (§6),
+the tagging + generation/consumption split (§7), the phase split (§8), and the §3 invariants are stated
+normatively and grounded; the companion **ADR-032** is Enacted in lockstep (it carries the charter/vocabulary
+reframe); the amendment manifest is **applied** (21 amendments / 13 files; below). **Implementation DoD
+(pending, paired TDD):** the §13 conformance clauses below are met by landed Rust code, at which point this
+RFC advances to fully Enacted-with-code — until then claims about runtime behaviour stay `Declared` (VR-5).
 
 **Conformance (once implemented):** an implementation conforms iff (a) every result carries a never-silent
 mode tag (§3.1); (b) no `fast` result carries `Empirical`/`Proven` (§3.2); (c) memory safety + Axis-B hold
 in every mode (§3.3); (d) `EXPLAIN` of the active mode is always available; (e) spores are mintable with the
 runtime cert-off (§8); (f) cross-mode composition surfaces the boundary (§6).
 
-**Staged amendment manifest.** The corpus rewordings (ADR-032's act) are applied — **only after both this
-RFC and ADR-032 are Accepted** — via the anchor-keyed, single-pass-per-file mechanism of DN-29 §11.4
-(`tools/dn29_apply.py` + `docs/notes/dn29-amendment-manifest.json`). The tool is **dry-run by default** and
-**never-silent**: it asserts each anchor matches exactly once and fails loudly otherwise. It is **staged,
-not run**, under this RFC.
+**Amendment manifest — applied 2026-06-24.** The corpus rewordings (ADR-032's act) were applied on
+ratification via the anchor-keyed, single-pass-per-file mechanism of DN-29 §11.4 (`tools/dn29_apply.py` +
+`docs/notes/dn29-amendment-manifest.json`): **21 amendments across 13 files** — the charter conditionalize
+(SC-3/FR-M3), the living-doc transparency reframe (CLAUDE.md/CONTRIBUTING/README/Glossary), and append-only
+footnotes on the relaxed Accepted decisions (RFC-0001/0002/0005, ADR-010/011/013/016/017). The process /
+colloquial uses of "honest" (dev-workflow discipline) were deliberately **excluded** (not the
+guarantee-model term — manifest `_scope`). The tool is **dry-run by default** and **never-silent** (each
+anchor must match exactly once or it fails loudly); the manifest status is now `applied`, so a re-apply is
+refused.
 
 ## §14 Residual / open
 
@@ -239,3 +246,5 @@ not run**, under this RFC.
 | Date | Status | Note |
 |---|---|---|
 | 2026-06-24 | **Proposed** | Initial proposal from the settled DN-29 deliberation. Makes certification/hashing/tag machinery a tunable policy over RFC-0001/0002/0005: the knob matrix (§4), two first-class modes `fast`/`certified` + `balanced` intermediate (§5), `global/phylum/nodule` resolution reusing RFC-0012 scoping (§6), provenance tag as an adjustable unit with `fast` omitting `Empirical`/`Proven` + the generation≠consumption split (§7), the compile/runtime phase split so spores survive a cert-off runtime (§8), memory-safe-by-default + explicit per-use escape sharpening ADR-014 (§9), the named `wrapping` Axis-B opt-out (§10), and the never-silent mode invariant (§3). Implementation-focused; the charter/north-star reframe + whole-corpus honesty→transparency vocabulary reword are carried by the superseding **ADR-032** and applied via the staged §13 manifest only after both are Accepted. Decides the surface, implements nothing (VR-5/G2). Anchor: DN-29. |
+| 2026-06-24 | **Accepted** | Maintainer ratification (stepped Proposed → Accepted, house rule #3). The design — knob matrix, two first-class modes, resolution/scoping, tagging + generation/consumption split, phase split, memory safety, `wrapping` opt-out, never-silent mode invariant — is ratified. |
+| 2026-06-24 | **Enacted (design-driven)** | Doc-and-design-driven enactment paired with TDD. The corpus amendments (ADR-032's act) were **applied**: 21 amendments / 13 files via `tools/dn29_apply.py` (charter conditionalize SC-3/FR-M3; living-doc transparency reframe; append-only footnotes on RFC-0001/0002/0005 + ADR-010/011/013/016/017); process/colloquial "honest" deliberately excluded. The per-mode rules now govern the corpus. **Implementation pending** — the runtime mode mechanism is the paired TDD cycle, not yet code, never claimed implemented (VR-5/G2); advances to fully Enacted-with-code as the modes land Rust-first. DN-29 → Superseded. |

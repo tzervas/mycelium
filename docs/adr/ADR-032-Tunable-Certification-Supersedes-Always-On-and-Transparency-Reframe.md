@@ -4,7 +4,7 @@
 |---|---|
 | **ADR** | 032 |
 | **Title** | Supersede the *unconditional* reading of the always-on certification mandates (SC-3/FR-M3 framing) in favour of RFC-0034's tunable modes; reframe the project's "honesty" vocabulary as "transparency & auditability" (mechanism unchanged); and reposition the north star toward *a fast, memory-safe, ergonomic multi-paradigm language with certification baked in as optional* |
-| **Status** | **Proposed** (2026-06-24) — maintainer ratifies → **Accepted** (house rule #3 — never skipping steps; an Accepted decision becomes **Enacted** only once the corpus amendments land) |
+| **Status** | **Enacted** (2026-06-24) — ratified **Proposed → Accepted → Enacted** by the maintainer (house rule #3, stepped, not skipped). The decision is a documentation/decision change and is **fully realized**: the supersession + the whole-corpus transparency reframe + the append-only footnotes were **applied to the corpus** (21 amendments across 13 files via `tools/dn29_apply.py`). The runtime mode *mechanism* it adopts (decision 1) is **RFC-0034's paired TDD implementation** — pending, never claimed done (VR-5/G2). |
 | **Date** | 2026-06-24 |
 | **Depends on** | RFC-0034 (the tunable-certification *mechanism* this ADR adopts); DN-29 (the settled deliberation — §9 fully resolved, §11 ripple map); **KC-4** (cost-driven downgrade already authorized); **VR-5 / G2** (downgrade-don't-overclaim; never-silent — preserved); ADR-014 (unsafe `permitted-but-warned` — sharpened, not superseded) |
 | **Supersedes** | the **unconditional reading** of **SC-3** ("zero swaps without a certificate"), **FR-M3** ("always emits a certificate"), and the always-on framing of RFC-0001 §3.4 / §4.6, RFC-0002 §2, RFC-0005 §2 — they hold **at the active mode** (`certified`), with the **mode itself never silent**. The mechanisms are **not** superseded; only "always, on every value/swap" becomes "at the active mode." |
@@ -100,11 +100,15 @@ never-silent, anchor-keyed manifest (RFC-0034 §13 / DN-29 §11.4) — never sil
 
 ## Definition of Done
 
-Ratified to **Accepted** by the maintainer in lockstep with RFC-0034; the supersession scope (which mandates
-become per-mode), the vocabulary reframe scope (whole-corpus), the north-star reframe, the memory-safety
-sharpening, and the footnote list are stated and grounded; the staged amendment manifest exists and is
-dry-run-clean. **Enacted** only once the manifest is applied (the corpus text reworded, the footnotes added)
-and `just check` + `doc_refs` are green — at which point DN-29 is **Superseded** by this ADR + RFC-0034.
+Ratified **Proposed → Accepted → Enacted** by the maintainer in lockstep with RFC-0034; the supersession
+scope (which mandates become per-mode), the vocabulary reframe scope (whole-corpus, **living docs + charter
+criteria; Accepted RFCs/ADRs footnoted, not rewritten; process/colloquial "honest" excluded**), the
+north-star reframe, the memory-safety sharpening, and the footnote list are stated and grounded. **Enacted
+(satisfied 2026-06-24):** the manifest was **applied** — the living-doc transparency reframe + the SC-3/FR-M3
+charter conditionalize + the append-only footnotes landed (21 amendments / 13 files), `doc_refs` is green,
+and **DN-29 is now Superseded** by this ADR + RFC-0034. *Residual (paired TDD):* the runtime mode mechanism
+(decision 1) and the ADR-014 per-use lint sharpening's enforcement land as code — tracked, never claimed
+done.
 
 ## Grounding
 

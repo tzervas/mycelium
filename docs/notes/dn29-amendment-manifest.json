@@ -1,7 +1,8 @@
 {
-  "_about": "Staged amendment manifest for RFC-0034 + ADR-032 (DN-29 §11). Anchor-keyed, single-pass-per-file (see tools/dn29_apply.py). STAGED, NOT RUN: apply only AFTER both RFC-0034 and ADR-032 are Accepted (RFC-0034 §13). Anchors are unique content substrings, never line/offset, so order is irrelevant. Line numbers in DN-29 §11 drift — re-verify every anchor against source before completing this manifest.",
-  "status": "staged-incomplete",
-  "_completion_note": "Only the validated Foundation spine anchors (SC-3, FR-M3) are populated here as dry-run-clean worked examples. The remaining ~38 hits across ~12 files (DN-29 §11.2: README ~10, Foundation ~9, CLAUDE.md ~8, plus RFC-0001/0002/0005, Glossary, CONTRIBUTING, ADR footnotes) are authored at ratification, once RFC-0034 fixes the final wording. The tool refuses --apply while status != 'final'.",
+  "_about": "Amendment manifest for RFC-0034 + ADR-032 (DN-29 §11). Anchor-keyed, single-pass-per-file (tools/dn29_apply.py). Anchors are unique content substrings, never line/offset, so order is irrelevant. APPLIED 2026-06-24 (21 amendments / 13 files) on maintainer ratification of RFC-0034 + ADR-032. status 'applied' makes the tool refuse a re-apply; a fresh dry-run will now fail loudly (anchors consumed) — the never-silent signal that the edits already landed.",
+  "status": "applied",
+  "_scope": "STRINGENT SCOPE (DN-29 Q11 interpreted carefully): the vocabulary reframe touches the LIVING/GOVERNANCE docs (CLAUDE.md, CONTRIBUTING, README, Glossary) where in-place revision is normal, and the CHARTER criteria (SC-3/FR-M3) get attributed in-place amendments. The Accepted RFCs/ADRs (RFC-0001/0002/0005, ADR-010/011/013/016/017) get APPEND-ONLY FOOTNOTES only — their bodies are NOT rewritten (append-only; house rule #3). DELIBERATELY EXCLUDED: the ~45 development-process / colloquial uses of 'honest' (swarm-review discipline, 'defer honestly', 'made honestly', 'honest open follow-up', etc.) — these are not the guarantee-model term and rewording them would change meaning. The formal VR-5/G2 rules and the guarantee lattice are unchanged; only the model-vocabulary wording moves.",
+  "_footnote_text": "Reused below verbatim as the append-only footnote on each relaxed Accepted decision.",
   "files": {
     "docs/Mycelium_Project_Foundation.md": [
       {
@@ -15,6 +16,144 @@
         "note": "FR-M3 — 'always emits a certificate' becomes 'at the active mode'; swap stays never-silent (ADR-032 decision 2).",
         "anchor": "- **FR-M3.** Provide an explicit `swap` operation that never runs implicitly and always emits a certificate (cross-cutting **A.1**; **G2**, **G9**).",
         "replacement": "- **FR-M3.** Provide an explicit `swap` operation that never runs implicitly and, at the active mode (`certified`), emits a certificate; the swap is never-silent in every mode (cross-cutting **A.1**; **G2**, **G9**; relaxed to per-mode by RFC-0034 + ADR-032)."
+      }
+    ],
+    "CLAUDE.md": [
+      {
+        "category": "north-star",
+        "note": "'What this repo is' — reposition the north star + reframe honesty→transparency (ADR-032 decisions 3,4).",
+        "anchor": "Mycelium is a unified value-semantics substrate (binary/ternary/dense/VSA) with **certified,\nnever-silent** representation swaps and **honest, per-operation guarantees**.",
+        "replacement": "Mycelium is a fast, memory-safe, ergonomic multi-paradigm value-semantics language (binary/ternary/dense/VSA) whose **transparent, never-silent** representation swaps and **per-operation provenance/auditability** are baked in as **optional, tunable** capabilities (`fast` default · `certified` on request — RFC-0034/ADR-032)."
+      },
+      {
+        "category": "reword-honesty",
+        "note": "House rule 1 title — honesty rule → transparency rule (mechanism unchanged).",
+        "anchor": "1. **The honesty rule.** Every accuracy/guarantee claim is tagged per-model/per-op on the",
+        "replacement": "1. **The transparency rule** *(reframed from \"the honesty rule\" by ADR-032; mechanism unchanged)*. Every accuracy/guarantee claim is tagged per-model/per-op on the"
+      },
+      {
+        "category": "reword-honesty",
+        "note": "House rule 1 body — 'stay honest' → 'stay accurate' (VR-5 mechanism unchanged).",
+        "anchor": "always flagged). Downgrade to stay honest; never upgrade without a checked basis (VR-5).",
+        "replacement": "always flagged). Downgrade to stay accurate; never upgrade without a checked basis (VR-5)."
+      }
+    ],
+    "CONTRIBUTING.md": [
+      {
+        "category": "reword-honesty",
+        "note": "Section heading — honesty rule → transparency rule.",
+        "anchor": "## The honesty rule (non-negotiable)",
+        "replacement": "## The transparency rule (non-negotiable) *(reframed from \"the honesty rule\" by ADR-032; mechanism unchanged)*"
+      },
+      {
+        "category": "reword-honesty",
+        "note": "'keep a claim honest' → 'keep a claim accurate'.",
+        "anchor": "New results may *upgrade* a tag; absence of a proof keeps it weaker. Downgrading to keep a claim honest is always acceptable; upgrading without a checked basis is not.",
+        "replacement": "New results may *upgrade* a tag; absence of a proof keeps it weaker. Downgrading to keep a claim accurate is always acceptable; upgrading without a checked basis is not."
+      }
+    ],
+    "README.md": [
+      {
+        "category": "reword-honesty",
+        "note": "Headline principle — 'Honesty is a typed, monotone property' → 'Transparency …'.",
+        "anchor": "- **Honesty is a typed, monotone property.** A guarantee lattice —",
+        "replacement": "- **Transparency is a typed, monotone property.** A guarantee lattice —"
+      },
+      {
+        "category": "reword-honesty",
+        "note": "Decision-process bullet — 'Honesty rule' → 'Transparency rule'.",
+        "anchor": "- **Honesty rule.** Guarantee tags are assigned **per model and per operation**, never in",
+        "replacement": "- **Transparency rule.** Guarantee tags are assigned **per model and per operation**, never in"
+      }
+    ],
+    "docs/Glossary.md": [
+      {
+        "category": "reword-honesty",
+        "note": "'honesty lattice' → 'transparency lattice'.",
+        "anchor": "The **honesty lattice**: every accuracy/guarantee claim is tagged per-model/per-operation on this",
+        "replacement": "The **transparency lattice** *(reframed from \"honesty lattice\" by ADR-032)*: every accuracy/guarantee claim is tagged per-model/per-operation on this"
+      },
+      {
+        "category": "reword-honesty",
+        "note": "Declared description — 'honest floor' → 'transparent floor'.",
+        "anchor": "- **Declared** — merely asserted; **always flagged**. The honest floor for anything unproven.",
+        "replacement": "- **Declared** — merely asserted; **always flagged**. The transparent floor for anything unproven."
+      },
+      {
+        "category": "reword-honesty",
+        "note": "The rule gloss — 'downgrade to stay honest' → 'stay accurate'.",
+        "anchor": "**The rule:** *downgrade to stay honest; never upgrade without a checked basis* (VR-5). **Defining doc:**",
+        "replacement": "**The rule:** *downgrade to stay accurate; never upgrade without a checked basis* (VR-5). **Defining doc:**"
+      },
+      {
+        "category": "reword-honesty",
+        "note": "Defining-doc pointer — 'the honesty rule' → 'the transparency rule'.",
+        "anchor": "RFC-0001 (the lattice + `Meta`); the honesty rule, CLAUDE.md / Project Foundation. *Usage:* \"a",
+        "replacement": "RFC-0001 (the lattice + `Meta`); the transparency rule, CLAUDE.md / Project Foundation. *Usage:* \"a"
+      }
+    ],
+    "docs/rfcs/RFC-0001-Core-IR-and-Metadata-Schema.md": [
+      {
+        "category": "footnote",
+        "note": "Append-only footnote — RFC-0001 §3.4/§4.6 mandates apply at `certified` (ADR-032 decision 6).",
+        "anchor": "- Re-validate §4.7 once ADR-010 is ratified; promote composed-result default from `Declared` to the foundation's actual composition rules.",
+        "replacement": "- Re-validate §4.7 once ADR-010 is ratified; promote composed-result default from `Declared` to the foundation's actual composition rules.\n\n> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The always-on certification / content-hashing / mandatory guarantee-tag-propagation mandates in this document apply **at the active certification mode (`certified`)**; the `fast` (default) and `balanced` relaxations are governed by **RFC-0034**, and the mode itself is **never silent** (G2 — every result is mode-tagged and `EXPLAIN`-able). The mechanisms here are **unchanged**. See **ADR-032**, which supersedes the *unconditional* reading."
+      }
+    ],
+    "docs/rfcs/RFC-0002-Swap-Certificate-and-Split-Regime.md": [
+      {
+        "category": "footnote",
+        "note": "Append-only footnote — RFC-0002 §2 per-swap certificate applies at `certified` (ADR-032 decision 6).",
+        "anchor": "Mechanically checking the *derivations* of lossy-swap bounds end-to-end (vs. axiomatizing cited theorems) is future work; the accepted path axiomatizes theorem statements (tag `Proven`, proof = citation) and checks only the arithmetic instantiation (per ADR-010).",
+        "replacement": "Mechanically checking the *derivations* of lossy-swap bounds end-to-end (vs. axiomatizing cited theorems) is future work; the accepted path axiomatizes theorem statements (tag `Proven`, proof = citation) and checks only the arithmetic instantiation (per ADR-010).\n\n> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The per-swap certificate emission/checking mandated here applies **at the active certification mode (`certified`)**; the `fast` (default) and `balanced` relaxations are governed by **RFC-0034**, and the swap stays **never silent** in every mode (G2 — mode-tagged + `EXPLAIN`-able). The certificate machinery is **unchanged**. See **ADR-032**, which supersedes the *unconditional* reading."
+      }
+    ],
+    "docs/rfcs/RFC-0005-Selection-Policy-Language.md": [
+      {
+        "category": "footnote",
+        "note": "Append-only footnote — RFC-0005 §2 mandatory EXPLAIN; EXPLAIN-of-the-mode stays mandatory (ADR-032 decision 6).",
+        "anchor": "Provides `SelectionPolicy`/`PolicyRef` for RFC-0001's `Swap` and `Meta.policy_used`; same mechanism serves **RFC-0004** packing schedules; policies content-addressed per RFC-0001 §4.6.",
+        "replacement": "Provides `SelectionPolicy`/`PolicyRef` for RFC-0001's `Swap` and `Meta.policy_used`; same mechanism serves **RFC-0004** packing schedules; policies content-addressed per RFC-0001 §4.6.\n\n> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** Selection/cert machinery is gated by the active certification mode per **RFC-0034**; **`EXPLAIN` of the active mode itself stays mandatory in every mode** (G2 — never silent). The selection mechanism is **unchanged**. See **ADR-032**, which supersedes the *unconditional* reading."
+      }
+    ],
+    "docs/adr/ADR-010-Verified-Numerics-Foundation.md": [
+      {
+        "category": "footnote",
+        "note": "Append-only footnote — ADR-010 bound kernels invoked at `certified` (ADR-032 decision 6).",
+        "anchor": "T0.1 (a–d), T0.2; survey Area 5; RFC-0001 §4.7 / guarantee lattice.",
+        "replacement": "T0.1 (a–d), T0.2; survey Area 5; RFC-0001 §4.7 / guarantee lattice.\n\n> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The bound kernels / certificate-checking here are invoked **at the active certification mode (`certified`)**; the `fast` (default) and `balanced` relaxations are governed by **RFC-0034** (the mode is never silent — G2). The kernels are **unchanged**. See **ADR-032**, which supersedes the *unconditional* reading."
+      }
+    ],
+    "docs/adr/ADR-011-BoundBasis-Is-Universal.md": [
+      {
+        "category": "footnote",
+        "note": "Append-only footnote — ADR-011 universal BoundBasis within `certified` (ADR-032 decision 6).",
+        "anchor": "VR-5; survey **G5**. Raised as OQ-3 during M-010 (#5).",
+        "replacement": "VR-5; survey **G5**. Raised as OQ-3 during M-010 (#5).\n\n> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The universal `BoundBasis` applies **within the active certification mode (`certified`)**; the `fast` (default) and `balanced` relaxations are governed by **RFC-0034** (the mode is never silent — G2). The basis machinery is **unchanged**. See **ADR-032**, which supersedes the *unconditional* reading."
+      }
+    ],
+    "docs/adr/ADR-013-Spore-Is-The-Deployable-Unit.md": [
+      {
+        "category": "footnote",
+        "note": "Append-only footnote — ADR-013 spore identity is a COMPILE/DEPLOY hash, available even cert-off (RFC-0034 §8).",
+        "anchor": "  amended to r2 (scope note only).",
+        "replacement": "  amended to r2 (scope note only).\n\n> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** Spore content-hash identity is a **compile/deploy-phase** concern and **remains available even when the runtime certification mode is fully off** (`fast`) — deployability survives a cert-off runtime (RFC-0034 §8). Disabling the *compile* spore hash is a separate, explicit, `EXPLAIN`-ed choice (never silent — G2). The identity mechanism is **unchanged**. See **ADR-032**."
+      }
+    ],
+    "docs/adr/ADR-016-Interpreted-Compiled-ABI.md": [
+      {
+        "category": "footnote",
+        "note": "Append-only footnote — ADR-016 ABI dispatch keys are compile-time hashes (RFC-0034 §8).",
+        "anchor": "  honest deferral, VR-5). Append-only.",
+        "replacement": "  honest deferral, VR-5). Append-only.\n\n> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The ABI dispatch keys are **compile-time** content hashes and **remain available with the runtime certification mode off** (`fast`) — RFC-0034 §8. The ABI mechanism is **unchanged**. See **ADR-032**."
+      }
+    ],
+    "docs/adr/ADR-017-Hot-Inject-Recompiled-Definitions.md": [
+      {
+        "category": "footnote",
+        "note": "Append-only footnote — ADR-017 hot-inject dispatch keys are compile-time hashes (RFC-0034 §8).",
+        "anchor": "  (MLIR→LLVM; §10 OQ-3) — honest scope, VR-5. Append-only.",
+        "replacement": "  (MLIR→LLVM; §10 OQ-3) — honest scope, VR-5. Append-only.\n\n> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The hot-inject dispatch keys are **compile-time** content hashes and **remain available with the runtime certification mode off** (`fast`) — RFC-0034 §8. The inject mechanism is **unchanged**. See **ADR-032**."
       }
     ]
   }

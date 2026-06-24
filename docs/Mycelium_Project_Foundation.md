@@ -50,7 +50,7 @@
 
 - **SC-1 (round-trip integrity).** Binary↔ternary swaps satisfy `decode ∘ encode = id` for 100% of a property-test corpus *and* admit a machine-checkable proof of bijectivity (Area 5; **G3**).
 - **SC-2 (honest bounds).** Every exposed approximate op (bundle, unbind+cleanup, embedding-similarity) ships a stated capacity/crosstalk/probability bound whose *measured* behaviour falls within the stated bound across ≥10⁴ randomized trials, with the bound tagged `Proven | Empirical` and a citation (**B**, **G5**; survey Caveats).
-- **SC-3 (no silent swaps).** Static + runtime invariant: zero representation swaps occur without producing an inspectable certificate (auditable; cross-cutting **A.1**, **G9**).
+- **SC-3 (no silent swaps).** Static + runtime invariant: at the active certification mode (`certified`), zero representation swaps occur without producing an inspectable certificate; in **every** mode the mode itself is never silent — each result is mode-tagged and `EXPLAIN`-able (auditable; cross-cutting **A.1**, **G9**; relaxed to per-mode by RFC-0034 + ADR-032).
 - **SC-4 (no opaque lowering).** Every lowering step is dumpable and diffable at each stage (MLIR-grade), with a documented per-stage semantics (Area 1; **R3**).
 - **SC-5 (dual intelligibility).** (a) A human reviewer can reconstruct what a swap did from its certificate alone; (b) an AI agent generates syntactically valid, type-checking Mycelium for ≥X% of a fixed benchmark set (X set by the P0 LLM probe baseline, **G10**).
 
@@ -70,7 +70,7 @@
 **Must**
 - **FR-M1.** Represent values as `(payload, representation-descriptor, metadata)` with the representation paradigm reflected in the static type (Area 4; **G1**).
 - **FR-M2.** Provide first-class binary and logical-ternary {−1,0,+1} values with balanced-arithmetic identities (negation = digit flip; rounding ≡ truncation) (Area 3).
-- **FR-M3.** Provide an explicit `swap` operation that never runs implicitly and always emits a certificate (cross-cutting **A.1**; **G2**, **G9**).
+- **FR-M3.** Provide an explicit `swap` operation that never runs implicitly and, at the active mode (`certified`), emits a certificate; the swap is never-silent in every mode (cross-cutting **A.1**; **G2**, **G9**; relaxed to per-mode by RFC-0034 + ADR-032).
 - **FR-M4.** Distinguish, in the type/cert system, **bijective** swaps (binary↔ternary) from **bounded/lossy** swaps (↔VSA/embedding) (cross-cutting **B**; **R2**).
 - **FR-M5.** Carry representation metadata *through* lowering without erasure (dimensional-persistence, contra F# units erasure; Area 4/5; **G2**).
 - **FR-M6.** Expose lowering stages as inspectable, diffable artifacts (MLIR-grade) (Area 1; **R3**).

@@ -47,7 +47,7 @@ Three non-negotiables shape every decision:
 - **`Swap` is the only representation-changing operation**, and every swap emits a **certificate**
   describing exactly what the conversion cost — bijective for binary↔ternary, bounded/probabilistic
   for ↔VSA/embedding (the split verification regime, ADR-002).
-- **Honesty is a typed, monotone property.** A guarantee lattice —
+- **Transparency is a typed, monotone property.** A guarantee lattice —
   **`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`** — travels with every value and degrades by *meet*
   through operations, so a disclosed guarantee can never spuriously strengthen.
 - **Metadata is self-describing and survives lowering** (Apache-Arrow-grade): provenance, bounds,
@@ -479,7 +479,7 @@ and `docs/planning/phase-*.md` for the live phase ladder.
 - **Decisions are append-only.** Don't silently edit an ADR/RFC decision — supersede it with a
   new status (`Draft/Proposed → Accepted → Enacted → Superseded`) and link forward. Every claim
   cites its grounding (survey labels `G*`/`A–E`/`R*`; research labels `T0.x/T1.x/T2.x`).
-- **Honesty rule.** Guarantee tags are assigned **per model and per operation**, never in
+- **Transparency rule.** Guarantee tags are assigned **per model and per operation**, never in
   aggregate. A bound may be tagged `Proven` *only* if it cites a theorem whose side-conditions
   are checked; otherwise it is `Empirical` (validated) or `Declared` (user-asserted, always
   flagged). New results may *upgrade* a tag; absence keeps it weaker.

@@ -84,15 +84,15 @@ A **content-addressed checkpoint** of a dormable computation — encystment is t
 resume-and-replay sound. Runtime tier. **Defining doc:** RFC-0008 §4.4 (T4.4; invariant RT2). Reserved.
 
 ### 2.4 The guarantee lattice — Exact ⊐ Proven ⊐ Empirical ⊐ Declared *(H)*
-The **honesty lattice**: every accuracy/guarantee claim is tagged per-model/per-operation on this
+The **transparency lattice** *(reframed from "honesty lattice" by ADR-032)*: every accuracy/guarantee claim is tagged per-model/per-operation on this
 four-point order.
 - **Exact** — exact, no error (a lossless operation).
 - **Proven** — backed by a theorem whose **side-conditions are *checked***; allowed *only* then.
 - **Empirical** — backed by trials (≥1, with a named method) — never evidence-free.
-- **Declared** — merely asserted; **always flagged**. The honest floor for anything unproven.
+- **Declared** — merely asserted; **always flagged**. The transparent floor for anything unproven.
 
-**The rule:** *downgrade to stay honest; never upgrade without a checked basis* (VR-5). **Defining doc:**
-RFC-0001 (the lattice + `Meta`); the honesty rule, CLAUDE.md / Project Foundation. *Usage:* "a
+**The rule:** *downgrade to stay accurate; never upgrade without a checked basis* (VR-5). **Defining doc:**
+RFC-0001 (the lattice + `Meta`); the transparency rule, CLAUDE.md / Project Foundation. *Usage:* "a
 substituted fallback is at most `Declared`; a swap certificate may carry `Proven`."
 
 ### 2.5 EXPLAIN *(H)*

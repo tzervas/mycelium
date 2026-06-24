@@ -43,13 +43,13 @@ Draft / Proposed / Preliminary  →  Accepted  →  Enacted  →  Superseded
 
 ---
 
-## The honesty rule (non-negotiable)
+## The transparency rule (non-negotiable) *(reframed from "the honesty rule" by ADR-032; mechanism unchanged)*
 
 This is the project's reason to exist; it applies to docs and, later, code.
 
 - Accuracy/guarantee claims use the lattice **`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`**, assigned **per model and per operation** — never in aggregate (`VR-5`).
 - A bound may be tagged **`Proven`** *only* if it cites a theorem whose side-conditions are checked. Otherwise it is **`Empirical`** (validated by trials) or **`Declared`** (user-asserted; always flagged in tooling).
-- New results may *upgrade* a tag; absence of a proof keeps it weaker. Downgrading to keep a claim honest is always acceptable; upgrading without a checked basis is not.
+- New results may *upgrade* a tag; absence of a proof keeps it weaker. Downgrading to keep a claim accurate is always acceptable; upgrading without a checked basis is not.
 - **No black boxes.** Any feature that could introduce opaque behavior — especially "intelligent" automatic representation selection — must be reified, inspectable, and explainable (`EXPLAIN`). If you find yourself hiding a conversion or an approximation, that's a bug.
 
 ---

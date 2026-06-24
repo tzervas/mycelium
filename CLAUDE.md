@@ -11,8 +11,7 @@ docs: @README.md, @CONTRIBUTING.md, @docs/Doc-Index.md. This file is the short, 
 distillation; `CONTRIBUTING.md` wins on any conflict.
 
 ## What this repo is
-Mycelium is a unified value-semantics substrate (binary/ternary/dense/VSA) with **certified,
-never-silent** representation swaps and **honest, per-operation guarantees**. It is in the
+Mycelium is a fast, memory-safe, ergonomic multi-paradigm value-semantics language (binary/ternary/dense/VSA) whose **transparent, never-silent** representation swaps and **per-operation provenance/auditability** are baked in as **optional, tunable** capabilities (`fast` default · `certified` on request — RFC-0034/ADR-032). It is in the
 **design phase**: the corpus in `docs/` is the product right now; code lands per the phase plan
 (see `tools/github/issues.yaml` and the `M-xxx`/`E*` task ids).
 
@@ -30,10 +29,10 @@ are ratified names not yet lexed. Full reference
 canonical definitions: `docs/Glossary.md` + DN-02/03/06.
 
 ## Non-negotiable house rules
-1. **The honesty rule.** Every accuracy/guarantee claim is tagged per-model/per-op on the
+1. **The transparency rule** *(reframed from "the honesty rule" by ADR-032; mechanism unchanged)*. Every accuracy/guarantee claim is tagged per-model/per-op on the
    lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`. `Proven` is allowed **only** with a theorem
    whose side-conditions are *checked*; otherwise `Empirical` (trials) or `Declared` (asserted,
-   always flagged). Downgrade to stay honest; never upgrade without a checked basis (VR-5).
+   always flagged). Downgrade to stay accurate; never upgrade without a checked basis (VR-5).
 2. **No black boxes.** Selections/conversions/approximations are reified, inspectable, and
    `EXPLAIN`-able. A swap is **never silent**; out-of-range is an explicit `Option`/error.
 3. **Append-only decisions.** ADR/RFC/DN status moves forward only
