@@ -11,8 +11,11 @@
 //! intermediate (RFC-0034 §5). The mode is *disclosure of how much certification ran*, ordered by
 //! [`depth`](CertMode::depth) `Fast < Balanced < Certified`. It is **not** a guarantee strength and
 //! never upgrades one (VR-5): a `Fast` value sits at the structural `Exact`/`Declared` tags and never
-//! claims an `Empirical`/`Proven` it did not earn. The mode-gating of tag *computation* lands in
-//! M-787; this leaf (M-786) introduces the type and the never-silent tag.
+//! claims an `Empirical`/`Proven` it did not earn. M-786 introduces the type + the never-silent tag;
+//! M-787 adds [`gate_guarantee`](CertMode::gate_guarantee) — the policy that floors `fast` to the
+//! structural tags.
+
+use crate::guarantee::GuaranteeStrength;
 
 /// The active certification mode a value was produced under (RFC-0034). Default
 /// [`Fast`](CertMode::Fast) — the project default (RFC-0034 §5).
@@ -53,6 +56,32 @@ impl CertMode {
             CertMode::Certified => 2,
         }
     }
+
+    /// Gate an operation's *intended* intrinsic guarantee strength by this mode (RFC-0034 §7; M-787).
+    ///
+    /// `Fast` does not run the trials behind [`Empirical`](GuaranteeStrength::Empirical) or the proof
+    /// behind [`Proven`](GuaranteeStrength::Proven), so it **floors both to**
+    /// [`Declared`](GuaranteeStrength::Declared) — the honest "computed, but its bound is asserted not
+    /// verified in this mode" tag (VR-5: never claim a strength you did not establish). The free,
+    /// **structural** [`Exact`](GuaranteeStrength::Exact) (e.g. a bijective binary↔ternary swap) passes
+    /// untouched, and an already-`Declared` tag is unchanged. `Balanced` and `Certified` run the
+    /// machinery, so they pass every strength through identically (the mechanism is unchanged).
+    ///
+    /// This is the policy primitive; the operation layer applies it when it constructs a result's
+    /// `Meta` (the bound's basis is relabelled to `UserDeclared` in lockstep so M-I1…M-I4 stay
+    /// consistent — wired where operations become mode-aware, M-788 onward). It guarantees the M-787
+    /// invariant directly: **no `Fast` result ever carries `Empirical`/`Proven`.**
+    #[must_use]
+    pub fn gate_guarantee(self, intended: GuaranteeStrength) -> GuaranteeStrength {
+        use GuaranteeStrength::{Declared, Empirical, Exact, Proven};
+        match self {
+            CertMode::Fast => match intended {
+                Exact => Exact,
+                Proven | Empirical | Declared => Declared,
+            },
+            CertMode::Balanced | CertMode::Certified => intended,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -73,6 +102,34 @@ mod tests {
         // `ALL` is in depth order and exhaustive (the value space is finite — a complete check).
         let depths: Vec<u8> = CertMode::ALL.iter().map(|m| m.depth()).collect();
         assert_eq!(depths, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn fast_never_yields_empirical_or_proven() {
+        // The M-787 invariant (VR-5 floor): exhaustive over the finite strength space.
+        use crate::guarantee::GuaranteeStrength as G;
+        for &g in &G::ALL {
+            let gated = CertMode::Fast.gate_guarantee(g);
+            assert!(
+                gated != G::Empirical && gated != G::Proven,
+                "fast must never compute Empirical/Proven (got {gated:?} from {g:?})"
+            );
+        }
+        // Specifically: structural Exact passes; everything else floors to Declared.
+        assert_eq!(CertMode::Fast.gate_guarantee(G::Exact), G::Exact);
+        assert_eq!(CertMode::Fast.gate_guarantee(G::Proven), G::Declared);
+        assert_eq!(CertMode::Fast.gate_guarantee(G::Empirical), G::Declared);
+        assert_eq!(CertMode::Fast.gate_guarantee(G::Declared), G::Declared);
+    }
+
+    #[test]
+    fn balanced_and_certified_pass_every_strength_through() {
+        // The machinery runs in these modes, so tag assignment is unchanged (mechanism preserved).
+        use crate::guarantee::GuaranteeStrength as G;
+        for &g in &G::ALL {
+            assert_eq!(CertMode::Balanced.gate_guarantee(g), g);
+            assert_eq!(CertMode::Certified.gate_guarantee(g), g);
+        }
     }
 
     #[test]

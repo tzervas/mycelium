@@ -8,7 +8,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
-### Added (2026-06-24: E21-1/M-786 — CertMode + never-silent mode tag in Meta (RFC-0034 §3.1))
+### Added (2026-06-24: E21-1 Group A — cert-mode core (M-786 + M-787), RFC-0034 §3.1/§7)
 
 - **`CertMode { Fast, Balanced, Certified }`** in `mycelium-core` (`cert_mode.rs`) — the tunable
   certification mode (RFC-0034 §5), default **`Fast`**, ordered by `depth()` (`Fast < Balanced <
@@ -25,8 +25,15 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `@certification` scope (M-790), so it is intentionally not in `MetaWire` yet (keeps
   `meta.schema.json` unchanged); a deserialized `Meta` resolves to **`Fast`** — the weakest mode,
   never silently claiming a stronger one (the VR-5 floor). Documented on `MetaWire` + tested.
+- **`CertMode::gate_guarantee()` — the mode→tag floor (M-787, RFC-0034 §7).** `Fast` floors
+  `Empirical`/`Proven` (whose trials/proofs it does not run) to **`Declared`** — the honest
+  "computed, bound asserted-not-verified" tag (VR-5) — while structural `Exact` passes untouched;
+  `Balanced`/`Certified` pass every strength through unchanged (mechanism preserved). The policy
+  primitive; the operation layer applies it (with the bound's basis relabelled in lockstep) where ops
+  become mode-aware. The M-787 invariant — **no `fast` result ever carries `Empirical`/`Proven`** — is
+  proven directly by an exhaustive test over the finite strength space.
 - Verified: `cargo fmt --check`, `cargo clippy -p mycelium-core --all-targets -D warnings`,
-  `cargo test -p mycelium-core` (164 unit + 11 integration, all green), `cargo check --workspace`.
+  `cargo test -p mycelium-core` (all green), `cargo check --workspace`.
 
 ### Added (2026-06-24: E21-1 — RFC-0034 paired-TDD implementation epic queued)
 
