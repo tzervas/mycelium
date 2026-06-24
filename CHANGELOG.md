@@ -8,6 +8,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: ADR-029/030/031 → Accepted — value-model ternary + the two content-address one-way doors ratified (owner approval))
+
+- **ADR-029 — Ternary arithmetic is arbitrary-width → Accepted** (maintainer-ratified). The V0
+  `BigTernary` reference implementation landed (#535); the decision is now locked.
+- **ADR-030 — Dense granularity-descriptor quant → Accepted** and **ADR-031 — VSA element-space +
+  block-sparse + complex carrier → Accepted** (maintainer-ratified). Both are **content-address
+  one-way doors**; their implementation lands in the single E20-1 rehash (M-780) **before any
+  Dense/VSA value is persisted** (RFC-0033 §7). RFC-0033 + ADR-025…028 remain **Proposed**
+  (implementation proceeds as *"implemented (Rust-first), pending ratification"*; the collections
+  decisions also defer to the already-Accepted RFC-0032).
+
 ### Added (2026-06-24: E20-1 V0 — arbitrary-width balanced ternary `BigTernary` landed (M-754…M-757); implemented, pending ratification)
 
 - **M-754/M-755 — DRY balanced full-adder** (`crates/mycelium-core/src/ternary/`). Converted

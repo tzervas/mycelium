@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **ADR** | 029 |
-| **Status** | **Proposed** (2026-06-24) — value-model decision recommended by the research review; **high priority**. Maintainer ratifies → Accepted (house rule #3). The V0 `BigTernary` code moves to *"implemented (Rust-first), pending ratification"* when it lands (next PR), **never silently to Accepted** (VR-5). |
+| **Status** | **Accepted** (2026-06-24 — maintainer-ratified, owner approval granted). The V0 `BigTernary` reference implementation **landed** (#535, M-754…M-757) — reconciled into `core::ternary` (DRY shared full-adder, never-silent fixed-width boundary), `cargo +1.92` fmt/clippy/test green — and reads *"implemented (Rust-first)"*. Was **Proposed** (2026-06-24). The limbed/Karatsuba perf paths (M-758/M-759) remain YAGNI follow-ons (no status of their own). |
 | **Decides** | Balanced-ternary arithmetic is **arbitrary-width**: a digit-serial reference (`BigTernary`) that grows instead of overflowing, an optional limbed perf path proven bit-exact against it, a never-silent fixed-width boundary, and a non-redundant canonical form. Reconciled into **`crates/mycelium-core/src/ternary/`** (no new crate, no duplicate `Trit`). |
 | **Grounds** | RFC-0033 §4.2 (the normative statement); the existing M-111 `core::ternary` codec + `docs/spec/swaps/binary-ternary.md` §1; G2 (never-silent fixed-width boundary); `research/14-value-model-integration-report-RECORD.md` §3 (B-Ternary) + `research/15-embeddonator-leverage-map-RECORD.md` §2 (the gap). |
 | **Date** | 2026-06-24 |
@@ -50,4 +50,5 @@ content-addressing).
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-24 | **Accepted** | Maintainer-ratified (owner approval). The V0 reference implementation landed in **#535** (M-754…M-757): arbitrary-width `BigTernary` reconciled into `core::ternary` with a DRY shared `add_with_carry` (proven identical over all 27 inputs) + a never-silent fixed-width boundary (`FixedWidthTrits`/`checked_add_fixed`/`checked_to_width`); `cargo +1.92` fmt/clippy/test green, 11 new tests incl. the `3^41` cap-removal witness. `PackedTernary`/Karatsuba (M-758/M-759) stay YAGNI (bench-gated). |
 | 2026-06-24 | **Proposed** | Initial record. Arbitrary-width balanced ternary (`BigTernary`), reconciled into `core::ternary`; removes the cap (core already cap-honest), `Limb27`/`PackedTernary` YAGNI follow-on (B-Ternary). Grounds RFC-0033 §4.2. |
