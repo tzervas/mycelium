@@ -190,6 +190,8 @@ dependencies = [
  "mycelium-core",
  "mycelium-interp",
  "mycelium-numerics",
+ "mycelium-proj",
+ "mycelium-spore",
  "mycelium-vsa",
  "serde",
  "serde_json",
