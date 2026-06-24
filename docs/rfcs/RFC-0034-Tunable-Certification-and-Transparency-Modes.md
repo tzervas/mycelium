@@ -233,6 +233,19 @@ dropped: each mode-sensitive fixture is pinned to `certified` or parameterized, 
 explicit (the DN-20 transparency rule for tiered tests — over-specify, never silently drop coverage). The
 shared parameterization harness is M-795; the M-794 gate consolidates it.
 
+**Mode-parametric testing is a native, scoped toolkit capability (downstream — M-796).** The conformance
+contract above is the *kernel instance* of a general principle the **Mycelium testing toolkit**
+(`mycelium-std-testing`) exposes as **first-class and natively wired in**: a developer marks a test (or
+suite) to run **across the `CertMode` tiers**, with the *fires-where-it-applies / absent-where-it-doesn't*
+(negative cross-mode) assertions supported as a built-in pattern — so they get this discipline **for free**,
+not hand-rolled from scratch. Its coverage is **configurable in scope, reusing the §6 `@certification`
+resolution** (most-specific-wins): a **project-wide** default mode-set (manifest), overridable **nodule-wide**
+(nodule header), overridable **granularly** per test/unit. The default is sensible (a mode-sensitive unit
+covers the tiers whose behaviour differs, plus the negatives); a unit may pin or widen explicitly. This
+makes the §13 test contract the toolchain's *behaviour*, not a convention each project re-implements — the
+ergonomic, never-cornering stance of §7 applied to testing: give developers the tool + the default + the
+scope dial, and let them choose.
+
 **Amendment manifest — applied 2026-06-24.** The corpus rewordings (ADR-032's act) were applied on
 ratification via the anchor-keyed, single-pass-per-file mechanism of DN-29 §11.4 (`tools/dn29_apply.py` +
 `docs/notes/dn29-amendment-manifest.json`): **21 amendments across 13 files** — the charter conditionalize
@@ -260,4 +273,5 @@ refused.
 | 2026-06-24 | **Proposed** | Initial proposal from the settled DN-29 deliberation. Makes certification/hashing/tag machinery a tunable policy over RFC-0001/0002/0005: the knob matrix (§4), two first-class modes `fast`/`certified` + `balanced` intermediate (§5), `global/phylum/nodule` resolution reusing RFC-0012 scoping (§6), provenance tag as an adjustable unit with `fast` omitting `Empirical`/`Proven` + the generation≠consumption split (§7), the compile/runtime phase split so spores survive a cert-off runtime (§8), memory-safe-by-default + explicit per-use escape sharpening ADR-014 (§9), the named `wrapping` Axis-B opt-out (§10), and the never-silent mode invariant (§3). Implementation-focused; the charter/north-star reframe + whole-corpus honesty→transparency vocabulary reword are carried by the superseding **ADR-032** and applied via the staged §13 manifest only after both are Accepted. Decides the surface, implements nothing (VR-5/G2). Anchor: DN-29. |
 | 2026-06-24 | **Accepted** | Maintainer ratification (stepped Proposed → Accepted, house rule #3). The design — knob matrix, two first-class modes, resolution/scoping, tagging + generation/consumption split, phase split, memory safety, `wrapping` opt-out, never-silent mode invariant — is ratified. |
 | 2026-06-24 | **Enacted (design-driven)** *(rev. — test contract)* | §13 conformance refined to require **mode-parametric** verification + the cross-mode **negative** cases (an invariant must be absent/relaxed where it should be, not just present where it should) and the **adapt-don't-drop** rule for the pre-existing all-on suite (DN-20). Implementation tasks: harness **M-795**, consolidated by the **M-794** gate. Strengthens the test obligation; the mechanism + the conformance clauses (a)–(f) are unchanged. |
+| 2026-06-24 | **Enacted (design-driven)** *(rev. — native scoped test toolkit)* | §13 generalizes the test contract into a **native, scoped capability of the Mycelium testing toolkit** (`mycelium-std-testing`): mode-parametric tests + the negative cross-mode pattern are first-class and configurable in **project / nodule / granular** scope, reusing the §6 `@certification` resolution — so downstream developers get the discipline for free, not hand-rolled. Implementation task **M-796** (the developer-facing surface generalization; M-795 is the kernel instance). Additive; mechanism + clauses (a)–(f) unchanged. |
 | 2026-06-24 | **Enacted (design-driven)** | Doc-and-design-driven enactment paired with TDD. The corpus amendments (ADR-032's act) were **applied**: 21 amendments / 13 files via `tools/dn29_apply.py` (charter conditionalize SC-3/FR-M3; living-doc transparency reframe; append-only footnotes on RFC-0001/0002/0005 + ADR-010/011/013/016/017); process/colloquial "honest" deliberately excluded. The per-mode rules now govern the corpus. **Implementation pending** — the runtime mode mechanism is the paired TDD cycle, not yet code, never claimed implemented (VR-5/G2); advances to fully Enacted-with-code as the modes land Rust-first. DN-29 → Superseded. |
