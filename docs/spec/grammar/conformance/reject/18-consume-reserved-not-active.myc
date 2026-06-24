@@ -1,0 +1,7 @@
+// rejected: 'consume' is a DN-03 §1 surface-tier reserved keyword (acquire + take exclusive
+// ownership of an affine Substrate — `consume <expr>`). It is reserved-not-active: it lexes as a
+// keyword (never a silent identifier, G2) but no L1 construct consumes it yet, so it cannot appear
+// at item position. The parser emits a teaching diagnostic naming DN-03 §1. Its construct lands
+// with M-664's surface step. ('grow' is reserved the same way; see fixture 19.)
+nodule demo
+consume worker

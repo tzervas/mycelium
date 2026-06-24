@@ -235,13 +235,13 @@
 | `mycelium_core::FieldTy` | enum | `crates/mycelium-core/src/data.rs:72` | A field type within a resolved declaration: a representation type, or a (possibly cyclic) data |
 | `mycelium_core::GuaranteeStrength` | enum | `crates/mycelium-core/src/guarantee.rs:16` | How trustworthy a value's representation/bound is. |
 | `mycelium_core::InitStrategy` | enum | `crates/mycelium-core/src/recon.rs:68` | The resonator initialisation strategy (RFC-0003 §6.1; RFC-0009 §9 Q1). |
-| `mycelium_core::Meta` | struct | `crates/mycelium-core/src/meta.rs:88` | Runtime, queryable metadata (RFC-0001 §4.3). |
+| `mycelium_core::Meta` | struct | `crates/mycelium-core/src/meta.rs:89` | Runtime, queryable metadata (RFC-0001 §4.3). |
 | `mycelium_core::Names` | struct | `crates/mycelium-core/src/content.rs:457` | The separable `hash ↔ name` side-table (RFC-0001 §4.6, "names-as-metadata"). |
 | `mycelium_core::Node` | enum | `crates/mycelium-core/src/node.rs:37` | A Core IR node. |
 | `mycelium_core::NormKind` | enum | `crates/mycelium-core/src/bound.rs:53` | Norm in which an [`BoundKind::Error`] `eps` is expressed (extensible registry; RFC-0001 §4.3 r2). |
-| `mycelium_core::PackScheme` | enum | `crates/mycelium-core/src/meta.rs:44` | Lossless physical packing schemes (extensible registry; RFC-0001 §4.3; DN-01). |
+| `mycelium_core::PackScheme` | enum | `crates/mycelium-core/src/meta.rs:45` | Lossless physical packing schemes (extensible registry; RFC-0001 §4.3; DN-01). |
 | `mycelium_core::Payload` | enum | `crates/mycelium-core/src/value.rs:55` | Representation-specific payload. |
-| `mycelium_core::PhysicalLayout` | enum | `crates/mycelium-core/src/meta.rs:65` | The recorded schedule-staged packing (RFC-0001 §4.3; RFC-0004 §5). |
+| `mycelium_core::PhysicalLayout` | enum | `crates/mycelium-core/src/meta.rs:66` | The recorded schedule-staged packing (RFC-0001 §4.3; RFC-0004 §5). |
 | `mycelium_core::PolicyRef` | type | `crates/mycelium-core/src/node.rs:33` | A reference to the selection policy a swap used (RFC-0005), as a content hash. |
 | `mycelium_core::Prim` | type | `crates/mycelium-core/src/node.rs:31` | A primitive operator name; each declares its operand/result paradigms (RFC-0001 §4.5). |
 | `mycelium_core::PrimDecl` | struct | `crates/mycelium-core/src/prim.rs:86` | A resolved, content-addressed prim declaration: its signature and the *intrinsic guarantee* `g_f` |
@@ -249,7 +249,7 @@
 | `mycelium_core::PrimRef` | struct | `crates/mycelium-core/src/prim.rs:110` | A prim reference `#p` (the prim analogue of CtorRef `#T#i`): the content hash |
 | `mycelium_core::PrimSig` | struct | `crates/mycelium-core/src/prim.rs:65` | A prim's signature `Π(p) = (τ₁…τₙ) → τ` (RFC-0007 §4.4): the per-operand paradigms (arity is their |
 | `mycelium_core::PrimTable` | struct | `crates/mycelium-core/src/prim.rs:141` | The content-addressed **prim table `Π`** (RFC-0007 §4.4; R7-Q4): resolved declarations keyed by |
-| `mycelium_core::Provenance` | enum | `crates/mycelium-core/src/meta.rs:20` | Provenance: an acyclic derivation DAG (RFC-0001 §4.6). |
+| `mycelium_core::Provenance` | enum | `crates/mycelium-core/src/meta.rs:21` | Provenance: an acyclic derivation DAG (RFC-0001 §4.6). |
 | `mycelium_core::Recipe` | struct | `crates/mycelium-core/src/recon.rs:40` | The compositional recipe / role schema: which ops combined which slots. |
 | `mycelium_core::ReconInfo` | struct | `crates/mycelium-core/src/recon.rs:111` | The reconstruction manifest. |
 | `mycelium_core::ReconMode` | enum | `crates/mycelium-core/src/recon.rs:30` | Which capability the manifest supports (RFC-0003 §6). |
@@ -257,11 +257,11 @@
 | `mycelium_core::Repr` | enum | `crates/mycelium-core/src/repr.rs:57` | The four closed paradigm kinds (RFC-0001 §4.1). |
 | `mycelium_core::ScalarKind` | enum | `crates/mycelium-core/src/repr.rs:14` | Scalar element kind for `Dense` values (extensible registry). |
 | `mycelium_core::SparsityClass` | enum | `crates/mycelium-core/src/repr.rs:44` | Declared sparsity class of a VSA value (RFC-0001 §4.1; RFC-0003 §5). |
-| `mycelium_core::SparsityObs` | struct | `crates/mycelium-core/src/meta.rs:34` | Measured (dynamic) sparsity — distinct from the declared [`crate::repr::SparsityClass`]. |
+| `mycelium_core::SparsityObs` | struct | `crates/mycelium-core/src/meta.rs:35` | Measured (dynamic) sparsity — distinct from the declared [`crate::repr::SparsityClass`]. |
 | `mycelium_core::Trit` | enum | `crates/mycelium-core/src/value.rs:19` | A balanced trit in `{-1, 0, +1}`. |
 | `mycelium_core::Value` | struct | `crates/mycelium-core/src/value.rs:134` | A Mycelium value. |
 | `mycelium_core::VarId` | type | `crates/mycelium-core/src/node.rs:29` | A variable identifier (a name; not part of content identity — RFC-0001 §4.6). |
-| `mycelium_core::WfError` | enum | `crates/mycelium-core/src/lib.rs:49` | Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants). |
+| `mycelium_core::WfError` | enum | `crates/mycelium-core/src/lib.rs:51` | Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants). |
 | `mycelium_core::WidthRel` | enum | `crates/mycelium-core/src/prim.rs:52` | How a prim's operand and result *widths* relate. |
 | `mycelium_core::binary` | mod | `crates/mycelium-core/src/lib.rs:13` | — |
 | `mycelium_core::binary::bits_to_int` | fn | `crates/mycelium-core/src/binary.rs:10` | The signed two's-complement value of an MSB-first bit string. |
@@ -269,13 +269,13 @@
 | `mycelium_core::bound` | mod | `crates/mycelium-core/src/lib.rs:14` | — |
 | `mycelium_core::bound::Bound::well_formed` | fn | `crates/mycelium-core/src/bound.rs:119` | Well-formedness per `bound.schema.json`: the payload ranges (magnitudes finite and in range) |
 | `mycelium_core::bound::BoundBasis::strength` | fn | `crates/mycelium-core/src/bound.rs:42` | The honest [`GuaranteeStrength`] this basis implies (M-I2/M-I3/M-I4): the basis *is* the |
-| `mycelium_core::content` | mod | `crates/mycelium-core/src/lib.rs:15` | — |
+| `mycelium_core::content` | mod | `crates/mycelium-core/src/lib.rs:16` | — |
 | `mycelium_core::content::Names::bind` | fn | `crates/mycelium-core/src/content.rs:472` | Bind a human name to a content hash, returning any previous name for that hash. |
 | `mycelium_core::content::Names::is_empty` | fn | `crates/mycelium-core/src/content.rs:490` | Whether the table is empty. |
 | `mycelium_core::content::Names::len` | fn | `crates/mycelium-core/src/content.rs:484` | Number of bound names. |
 | `mycelium_core::content::Names::name_of` | fn | `crates/mycelium-core/src/content.rs:478` | The name bound to `hash`, if any. |
 | `mycelium_core::content::Names::new` | fn | `crates/mycelium-core/src/content.rs:464` | An empty name table. |
-| `mycelium_core::data` | mod | `crates/mycelium-core/src/lib.rs:16` | — |
+| `mycelium_core::data` | mod | `crates/mycelium-core/src/lib.rs:17` | — |
 | `mycelium_core::data::CtorRef::decl` | fn | `crates/mycelium-core/src/data.rs:51` | The referenced data declaration's content hash (`#T`). |
 | `mycelium_core::data::CtorRef::index` | fn | `crates/mycelium-core/src/data.rs:57` | The constructor's index within its declaration (`#i`). |
 | `mycelium_core::data::CtorRef::new` | fn | `crates/mycelium-core/src/data.rs:45` | Build a constructor reference from a declaration hash and a constructor index. |
@@ -285,7 +285,7 @@
 | `mycelium_core::data::DataRegistry::ctor_ref` | fn | `crates/mycelium-core/src/data.rs:249` | A [`CtorRef`] for constructor `index` of the declaration named `name`, if the declaration is |
 | `mycelium_core::data::DataRegistry::decl_hash` | fn | `crates/mycelium-core/src/data.rs:242` | The content hash of the declaration registered under build-time name `name`, if any. |
 | `mycelium_core::data::DataRegistry::field_count` | fn | `crates/mycelium-core/src/data.rs:275` | The number of fields the referenced constructor takes (its saturation arity, WF6). |
-| `mycelium_core::datum` | mod | `crates/mycelium-core/src/lib.rs:17` | — |
+| `mycelium_core::datum` | mod | `crates/mycelium-core/src/lib.rs:18` | — |
 | `mycelium_core::datum::CoreValue::as_data` | fn | `crates/mycelium-core/src/datum.rs:109` | The underlying datum, if this is a [`CoreValue::Data`]. |
 | `mycelium_core::datum::CoreValue::as_repr` | fn | `crates/mycelium-core/src/datum.rs:100` | The underlying representation value, if this is a [`CoreValue::Repr`]. |
 | `mycelium_core::datum::Datum::content_hash` | fn | `crates/mycelium-core/src/datum.rs:80` | The identity-bearing content hash of this datum: its constructor reference and its fields' |
@@ -294,20 +294,20 @@
 | `mycelium_core::datum::Datum::guarantee` | fn | `crates/mycelium-core/src/datum.rs:64` | The meet-summary guarantee. |
 | `mycelium_core::datum::Datum::meet_guarantee` | fn | `crates/mycelium-core/src/datum.rs:71` | This datum with its summary guarantee met against `g` (weakest-wins). |
 | `mycelium_core::datum::Datum::new` | fn | `crates/mycelium-core/src/datum.rs:41` | Construct a datum from a constructor reference and its field values, computing the |
-| `mycelium_core::guarantee` | mod | `crates/mycelium-core/src/lib.rs:18` | — |
+| `mycelium_core::guarantee` | mod | `crates/mycelium-core/src/lib.rs:19` | — |
 | `mycelium_core::guarantee::GuaranteeStrength::ALL:` | const | `crates/mycelium-core/src/guarantee.rs:33` | All four strengths, strongest-to-weakest — for exhaustive iteration in tests and tooling. |
 | `mycelium_core::guarantee::GuaranteeStrength::TOP:` | const | `crates/mycelium-core/src/guarantee.rs:30` | The strongest strength — the identity of meet and the unit of |
 | `mycelium_core::guarantee::GuaranteeStrength::meet` | fn | `crates/mycelium-core/src/guarantee.rs:61` | The lattice **meet** (greatest lower bound): the *weakest* of `self` and `other` |
 | `mycelium_core::guarantee::GuaranteeStrength::meet_all` | fn | `crates/mycelium-core/src/guarantee.rs:88` | The meet of a sequence of strengths, weakest-wins, starting from TOP |
 | `mycelium_core::guarantee::GuaranteeStrength::propagate` | fn | `crates/mycelium-core/src/guarantee.rs:77` | Propagate guarantees through an operation (RFC-0001 §4.7): |
 | `mycelium_core::guarantee::GuaranteeStrength::rank` | fn | `crates/mycelium-core/src/guarantee.rs:43` | Lattice rank, `0` = strongest (`Exact`) … `3` = weakest (`Declared`). |
-| `mycelium_core::id` | mod | `crates/mycelium-core/src/lib.rs:19` | — |
+| `mycelium_core::id` | mod | `crates/mycelium-core/src/lib.rs:20` | — |
 | `mycelium_core::id::ContentHash::algo` | fn | `crates/mycelium-core/src/id.rs:45` | The algorithm tag (the part before `:`), e.g. |
 | `mycelium_core::id::ContentHash::as_str` | fn | `crates/mycelium-core/src/id.rs:57` | The address as a string slice. |
 | `mycelium_core::id::ContentHash::digest` | fn | `crates/mycelium-core/src/id.rs:51` | The digest (the part after `:`). |
 | `mycelium_core::id::ContentHash::from_parts` | fn | `crates/mycelium-core/src/id.rs:39` | Build a content address from an algorithm tag and digest, validating the shape (`algo` is |
 | `mycelium_core::id::ContentHash::parse` | fn | `crates/mycelium-core/src/id.rs:15` | Parse a content address, validating its shape: `algo` is `[a-z0-9]+`, `digest` is |
-| `mycelium_core::lower` | mod | `crates/mycelium-core/src/lib.rs:20` | — |
+| `mycelium_core::lower` | mod | `crates/mycelium-core/src/lib.rs:21` | — |
 | `mycelium_core::lower::Anf` | struct | `crates/mycelium-core/src/lower.rs:567` | A flattened (A-normal-form) lowering of a Core IR node. |
 | `mycelium_core::lower::Anf::bindings` | fn | `crates/mycelium-core/src/lower.rs:909` | The ordered bindings (for backends consuming the lowered IR — M-150). |
 | `mycelium_core::lower::Anf::dump` | fn | `crates/mycelium-core/src/lower.rs:873` | The canonical, diffable dump of the substrate stage (SC-4). |
@@ -325,24 +325,24 @@
 | `mycelium_core::lower::lower_to_anf` | fn | `crates/mycelium-core/src/lower.rs:586` | Lower a Core IR node into A-normal form (flatten nested nodes to a linear binding list). |
 | `mycelium_core::lower::schedule` | fn | `crates/mycelium-core/src/lower.rs:41` | The default schedule-staged packing for a representation (RFC-0004 §5; DN-01). |
 | `mycelium_core::lower::stages` | fn | `crates/mycelium-core/src/lower.rs:56` | Run the lowering pipeline, returning every stage in order (currently `core` → `substrate`). |
-| `mycelium_core::meta` | mod | `crates/mycelium-core/src/lib.rs:21` | — |
-| `mycelium_core::meta::Meta::bound` | fn | `crates/mycelium-core/src/meta.rs:188` | The bound, if approximate. |
-| `mycelium_core::meta::Meta::exact` | fn | `crates/mycelium-core/src/meta.rs:164` | The common `Exact` metadata with no bound (M-I1). |
-| `mycelium_core::meta::Meta::guarantee` | fn | `crates/mycelium-core/src/meta.rs:183` | The disclosed guarantee strength. |
-| `mycelium_core::meta::Meta::new` | fn | `crates/mycelium-core/src/meta.rs:106` | Build a `Meta`, enforcing the guarantee/bound invariants: |
-| `mycelium_core::meta::Meta::physical` | fn | `crates/mycelium-core/src/meta.rs:198` | The recorded physical layout, if any. |
-| `mycelium_core::meta::Meta::policy_used` | fn | `crates/mycelium-core/src/meta.rs:208` | The policy that produced this value (set iff produced by a swap). |
-| `mycelium_core::meta::Meta::provenance` | fn | `crates/mycelium-core/src/meta.rs:178` | The value's provenance. |
-| `mycelium_core::meta::Meta::reconstruction` | fn | `crates/mycelium-core/src/meta.rs:203` | The reconstruction manifest, if attached (RFC-0003 §6). |
-| `mycelium_core::meta::Meta::sparsity` | fn | `crates/mycelium-core/src/meta.rs:193` | Measured sparsity, if recorded. |
-| `mycelium_core::meta::Meta::with_physical` | fn | `crates/mycelium-core/src/meta.rs:157` | Record the schedule-staged packing chosen at a lowering stage (RFC-0004 §5; DN-01; |
-| `mycelium_core::meta::Meta::with_reconstruction` | fn | `crates/mycelium-core/src/meta.rs:142` | Attach a reconstruction manifest (RFC-0003 §6; M-260). |
-| `mycelium_core::node` | mod | `crates/mycelium-core/src/lib.rs:22` | — |
+| `mycelium_core::meta` | mod | `crates/mycelium-core/src/lib.rs:22` | — |
+| `mycelium_core::meta::Meta::bound` | fn | `crates/mycelium-core/src/meta.rs:206` | The bound, if approximate. |
+| `mycelium_core::meta::Meta::exact` | fn | `crates/mycelium-core/src/meta.rs:181` | The common `Exact` metadata with no bound (M-I1). |
+| `mycelium_core::meta::Meta::guarantee` | fn | `crates/mycelium-core/src/meta.rs:201` | The disclosed guarantee strength. |
+| `mycelium_core::meta::Meta::new` | fn | `crates/mycelium-core/src/meta.rs:112` | Build a `Meta`, enforcing the guarantee/bound invariants: |
+| `mycelium_core::meta::Meta::physical` | fn | `crates/mycelium-core/src/meta.rs:216` | The recorded physical layout, if any. |
+| `mycelium_core::meta::Meta::policy_used` | fn | `crates/mycelium-core/src/meta.rs:226` | The policy that produced this value (set iff produced by a swap). |
+| `mycelium_core::meta::Meta::provenance` | fn | `crates/mycelium-core/src/meta.rs:196` | The value's provenance. |
+| `mycelium_core::meta::Meta::reconstruction` | fn | `crates/mycelium-core/src/meta.rs:221` | The reconstruction manifest, if attached (RFC-0003 §6). |
+| `mycelium_core::meta::Meta::sparsity` | fn | `crates/mycelium-core/src/meta.rs:211` | Measured sparsity, if recorded. |
+| `mycelium_core::meta::Meta::with_physical` | fn | `crates/mycelium-core/src/meta.rs:164` | Record the schedule-staged packing chosen at a lowering stage (RFC-0004 §5; DN-01; |
+| `mycelium_core::meta::Meta::with_reconstruction` | fn | `crates/mycelium-core/src/meta.rs:149` | Attach a reconstruction manifest (RFC-0003 §6; M-260). |
+| `mycelium_core::node` | mod | `crates/mycelium-core/src/lib.rs:23` | — |
 | `mycelium_core::node::Node::content_hash` | fn | `crates/mycelium-core/src/content.rs:421` | The content hash of this value's *identity-bearing* content: its [`Repr`] and payload, with |
 | `mycelium_core::node::Node::is_aot_lowerable` | fn | `crates/mycelium-core/src/node.rs:182` | Whether this whole node is in the **AOT-lowerable** fragment — i.e. |
 | `mycelium_core::node::Node::is_repr_changing` | fn | `crates/mycelium-core/src/node.rs:169` | Whether this node is the (only) representation-changing node, [`Node::Swap`] (WF1). |
 | `mycelium_core::operation_hash` | fn | `crates/mycelium-core/src/content.rs:446` | The content address of a *primitive operation* identified by its name — for the `op` field of a |
-| `mycelium_core::prim` | mod | `crates/mycelium-core/src/lib.rs:23` | — |
+| `mycelium_core::prim` | mod | `crates/mycelium-core/src/lib.rs:24` | — |
 | `mycelium_core::prim::PrimDecl::content_hash` | fn | `crates/mycelium-core/src/prim.rs:99` | The content hash of this declaration's identity-bearing content (signature + intrinsic |
 | `mycelium_core::prim::PrimRef::decl` | fn | `crates/mycelium-core/src/prim.rs:121` | The referenced declaration's content hash. |
 | `mycelium_core::prim::PrimRef::new` | fn | `crates/mycelium-core/src/prim.rs:115` | Build a prim reference from a declaration hash. |
@@ -357,7 +357,7 @@
 | `mycelium_core::prim::PrimTable::names` | fn | `crates/mycelium-core/src/prim.rs:263` | The registered kernel names, sorted. |
 | `mycelium_core::prim::PrimTable::prim_ref` | fn | `crates/mycelium-core/src/prim.rs:226` | A [`PrimRef`] for the prim named `name`, if registered. |
 | `mycelium_core::prim::PrimTable::resolve` | fn | `crates/mycelium-core/src/prim.rs:238` | The declaration a [`PrimRef`] points at, if registered. |
-| `mycelium_core::recon` | mod | `crates/mycelium-core/src/lib.rs:24` | — |
+| `mycelium_core::recon` | mod | `crates/mycelium-core/src/lib.rs:25` | — |
 | `mycelium_core::recon::ReconInfo::bound` | fn | `crates/mycelium-core/src/recon.rs:245` | The attached `{ε, δ, strength}` bound certificate. |
 | `mycelium_core::recon::ReconInfo::codebooks` | fn | `crates/mycelium-core/src/recon.rs:230` | The content-addressed codebook references. |
 | `mycelium_core::recon::ReconInfo::decode` | fn | `crates/mycelium-core/src/recon.rs:240` | The decode procedure + parameters. |
@@ -366,10 +366,10 @@
 | `mycelium_core::recon::ReconInfo::model` | fn | `crates/mycelium-core/src/recon.rs:220` | The VSA model id (matches the producing `Repr.model`). |
 | `mycelium_core::recon::ReconInfo::new` | fn | `crates/mycelium-core/src/recon.rs:132` | Build a manifest, enforcing the schema invariants (RFC-0003 §6; |
 | `mycelium_core::recon::ReconInfo::recipe` | fn | `crates/mycelium-core/src/recon.rs:235` | The compositional recipe, if this manifest is compositional. |
-| `mycelium_core::repr` | mod | `crates/mycelium-core/src/lib.rs:25` | — |
+| `mycelium_core::repr` | mod | `crates/mycelium-core/src/lib.rs:26` | — |
 | `mycelium_core::repr::Repr::well_formed` | fn | `crates/mycelium-core/src/repr.rs:91` | Well-formed iff all widths/dims/trits (and any `max_active`) are positive and a VSA `model` |
 | `mycelium_core::repr::ScalarKind::tag` | fn | `crates/mycelium-core/src/repr.rs:30` | A stable one-byte code for content-addressing (M-103). |
-| `mycelium_core::ternary` | mod | `crates/mycelium-core/src/lib.rs:26` | — |
+| `mycelium_core::ternary` | mod | `crates/mycelium-core/src/lib.rs:27` | — |
 | `mycelium_core::ternary::BigTernary` | struct | `crates/mycelium-core/src/ternary/big_ternary.rs:46` | Arbitrary-width balanced-ternary integer (digit-serial reference form). |
 | `mycelium_core::ternary::BigTernary::checked_to_width` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:202` | NEVER-SILENT narrowing to a fixed width of `n` trits: `Some` iff `width() ≤ n`; `None` |
 | `mycelium_core::ternary::BigTernary::digits` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:76` | Borrow the canonical digit slice (least-significant-first). |
@@ -390,7 +390,7 @@
 | `mycelium_core::ternary::neg` | fn | `crates/mycelium-core/src/ternary/mod.rs:139` | Digit-wise negation: `value(neg t) = −value(t)` exactly (balanced ternary is sign-symmetric, §1). |
 | `mycelium_core::ternary::sub` | fn | `crates/mycelium-core/src/ternary/mod.rs:176` | Fixed-width subtraction `a − b` = `add(a, neg(b))`. |
 | `mycelium_core::ternary::trits_to_int` | fn | `crates/mycelium-core/src/ternary/mod.rs:108` | The integer denoted by an MSB-first trit string (`value(t)`, §1). |
-| `mycelium_core::value` | mod | `crates/mycelium-core/src/lib.rs:27` | — |
+| `mycelium_core::value` | mod | `crates/mycelium-core/src/lib.rs:28` | — |
 | `mycelium_core::value::Value::meta` | fn | `crates/mycelium-core/src/value.rs:169` | The metadata. |
 | `mycelium_core::value::Value::new` | fn | `crates/mycelium-core/src/value.rs:143` | Build a value, checking `repr.well_formed()` and that `payload` matches `repr`. |
 | `mycelium_core::value::Value::payload` | fn | `crates/mycelium-core/src/value.rs:164` | The payload. |
@@ -704,11 +704,11 @@
 | `mycelium_l1::resolve_report` | fn | `crates/mycelium-l1/src/ambient.rs:152` | Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3). |
 | `mycelium_l1::token` | mod | `crates/mycelium-l1/src/lib.rs:52` | — |
 | `mycelium_l1::token::Pos` | struct | `crates/mycelium-l1/src/token.rs:5` | A 1-based source position, for never-silent parse diagnostics. |
-| `mycelium_l1::token::ScalarTok` | enum | `crates/mycelium-l1/src/token.rs:247` | Scalar-kind keyword payload. |
-| `mycelium_l1::token::Spanned` | struct | `crates/mycelium-l1/src/token.rs:273` | A token with its starting position. |
-| `mycelium_l1::token::StrengthTok` | enum | `crates/mycelium-l1/src/token.rs:260` | Guarantee-strength keyword payload. |
+| `mycelium_l1::token::ScalarTok` | enum | `crates/mycelium-l1/src/token.rs:257` | Scalar-kind keyword payload. |
+| `mycelium_l1::token::Spanned` | struct | `crates/mycelium-l1/src/token.rs:283` | A token with its starting position. |
+| `mycelium_l1::token::StrengthTok` | enum | `crates/mycelium-l1/src/token.rs:270` | Guarantee-strength keyword payload. |
 | `mycelium_l1::token::Tok` | enum | `crates/mycelium-l1/src/token.rs:22` | A lexical token. |
-| `mycelium_l1::token::keyword` | fn | `crates/mycelium-l1/src/token.rs:282` | Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier. |
+| `mycelium_l1::token::keyword` | fn | `crates/mycelium-l1/src/token.rs:292` | Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier. |
 | `mycelium_l1::totality` | mod | `crates/mycelium-l1/src/lib.rs:53` | — |
 | `mycelium_l1::totality::classify_all` | fn | `crates/mycelium-l1/src/totality.rs:45` | Classify every function in the table. |
 
@@ -2869,7 +2869,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::lower::Stage::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::lower::Stage::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_core::lower::Stage::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_core::meta::Meta` | dedup-alias: same definition as `mycelium_core::Meta` at crates/mycelium-core/src/meta.rs:88 — one canonical row kept |
+| `mycelium_core::meta::Meta` | dedup-alias: same definition as `mycelium_core::Meta` at crates/mycelium-core/src/meta.rs:89 — one canonical row kept |
 | `mycelium_core::meta::Meta::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::Meta::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::Meta::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
@@ -2880,7 +2880,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::meta::Meta::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::Meta::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::Meta::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_core::meta::PackScheme` | dedup-alias: same definition as `mycelium_core::PackScheme` at crates/mycelium-core/src/meta.rs:44 — one canonical row kept |
+| `mycelium_core::meta::PackScheme` | dedup-alias: same definition as `mycelium_core::PackScheme` at crates/mycelium-core/src/meta.rs:45 — one canonical row kept |
 | `mycelium_core::meta::PackScheme::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::PackScheme::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::PackScheme::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
@@ -2891,7 +2891,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::meta::PackScheme::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::PackScheme::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::PackScheme::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_core::meta::PhysicalLayout` | dedup-alias: same definition as `mycelium_core::PhysicalLayout` at crates/mycelium-core/src/meta.rs:65 — one canonical row kept |
+| `mycelium_core::meta::PhysicalLayout` | dedup-alias: same definition as `mycelium_core::PhysicalLayout` at crates/mycelium-core/src/meta.rs:66 — one canonical row kept |
 | `mycelium_core::meta::PhysicalLayout::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::PhysicalLayout::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::PhysicalLayout::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
@@ -2902,7 +2902,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::meta::PhysicalLayout::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::PhysicalLayout::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::PhysicalLayout::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_core::meta::Provenance` | dedup-alias: same definition as `mycelium_core::Provenance` at crates/mycelium-core/src/meta.rs:20 — one canonical row kept |
+| `mycelium_core::meta::Provenance` | dedup-alias: same definition as `mycelium_core::Provenance` at crates/mycelium-core/src/meta.rs:21 — one canonical row kept |
 | `mycelium_core::meta::Provenance::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::Provenance::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::Provenance::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
@@ -2913,7 +2913,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::meta::Provenance::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::Provenance::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::Provenance::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_core::meta::SparsityObs` | dedup-alias: same definition as `mycelium_core::SparsityObs` at crates/mycelium-core/src/meta.rs:34 — one canonical row kept |
+| `mycelium_core::meta::SparsityObs` | dedup-alias: same definition as `mycelium_core::SparsityObs` at crates/mycelium-core/src/meta.rs:35 — one canonical row kept |
 | `mycelium_core::meta::SparsityObs::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::SparsityObs::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::meta::SparsityObs::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |

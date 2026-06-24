@@ -8,6 +8,24 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: M-664 — `consume` + `grow` lexed (DN-03 §1); closes the not-yet-lexed lexicon gap)
+
+- **`consume` + `grow` are now reserved surface keywords** (`crates/mycelium-l1`). DN-03 §1 ratified
+  them but they were the only two **NOT-YET-LEXED** terms (lexicon survey, 2026-06-24) — silent
+  identifiers, a G2 hazard. Now lexed (`Tok::Consume`/`Tok::Grow` + `keyword()`), with a teaching
+  diagnostic at item + expression position naming **DN-03 §1** ("reserved surface keyword … not yet
+  active — its construct lands with M-664"); never a silent accept. Their parser constructs
+  (`consume <expr>`, `grow Trait for Type { … }`) are the follow-on surface step.
+- **The reservation immediately caught a real silent identifier:** the AOT differential test fragment
+  defined `fn grow` (a `shrink`/`grow` mutual recursion) — renamed to `expand` (exactly the G2 case the
+  reservation exists to surface).
+- Tests: unit `surface_keywords_consume_grow_are_reserved_not_active` (item/expr/binder positions) +
+  conformance reject fixtures `18-consume-…` / `19-grow-reserved-not-active.myc` (self-policing
+  `REJECT_EXPECTED`). Lexicon status: **37 active-or-reserved**, **0 not-yet-lexed** (the 9 runtime-tier
+  terms stay correctly reserved-not-active, blocked on RFC-0008 R2 design, not lexing).
+- Verified: gate clippy (`-D warnings -A unsafe_code`, ADR-014) green; `// SAFETY:` gate green;
+  `cargo test -p mycelium-l1` green.
+
 ### Changed (2026-06-24: CLAUDE.md house rule 4 — merit-based agreement / anti-sycophancy safeguard)
 
 - **House rule 4 ("Ground every claim") extended to bind *agreement*** — a standing agent safeguard

@@ -2240,7 +2240,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 88,
+      "line": 89,
       "summary": "Runtime, queryable metadata (RFC-0001 §4.3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2284,7 +2284,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 44,
+      "line": 45,
       "summary": "Lossless physical packing schemes (extensible registry; RFC-0001 §4.3; DN-01).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2306,7 +2306,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 65,
+      "line": 66,
       "summary": "The recorded schedule-staged packing (RFC-0001 §4.3; RFC-0004 §5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2394,7 +2394,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 20,
+      "line": 21,
       "summary": "Provenance: an acyclic derivation DAG (RFC-0001 §4.6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2482,7 +2482,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 34,
+      "line": 35,
       "summary": "Measured (dynamic) sparsity — distinct from the declared [`crate::repr::SparsityClass`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2526,7 +2526,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 49,
+      "line": 51,
       "summary": "Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2614,7 +2614,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 15,
+      "line": 16,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2680,7 +2680,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 16,
+      "line": 17,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2790,7 +2790,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 17,
+      "line": 18,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2889,7 +2889,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 18,
+      "line": 19,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2966,7 +2966,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 19,
+      "line": 20,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3032,7 +3032,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 20,
+      "line": 21,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3230,7 +3230,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 21,
+      "line": 22,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3241,7 +3241,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 188,
+      "line": 206,
       "summary": "The bound, if approximate.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3252,7 +3252,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 164,
+      "line": 181,
       "summary": "The common `Exact` metadata with no bound (M-I1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3263,7 +3263,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 183,
+      "line": 201,
       "summary": "The disclosed guarantee strength.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3274,7 +3274,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 106,
+      "line": 112,
       "summary": "Build a `Meta`, enforcing the guarantee/bound invariants:",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3285,7 +3285,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 198,
+      "line": 216,
       "summary": "The recorded physical layout, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3296,7 +3296,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 208,
+      "line": 226,
       "summary": "The policy that produced this value (set iff produced by a swap).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3307,7 +3307,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 178,
+      "line": 196,
       "summary": "The value's provenance.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3318,7 +3318,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 203,
+      "line": 221,
       "summary": "The reconstruction manifest, if attached (RFC-0003 §6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3329,7 +3329,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 193,
+      "line": 211,
       "summary": "Measured sparsity, if recorded.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3340,7 +3340,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 157,
+      "line": 164,
       "summary": "Record the schedule-staged packing chosen at a lowering stage (RFC-0004 §5; DN-01;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3351,7 +3351,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 142,
+      "line": 149,
       "summary": "Attach a reconstruction manifest (RFC-0003 §6; M-260).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3362,7 +3362,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 22,
+      "line": 23,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3417,7 +3417,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 23,
+      "line": 24,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3582,7 +3582,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 24,
+      "line": 25,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3681,7 +3681,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 25,
+      "line": 26,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3714,7 +3714,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 26,
+      "line": 27,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3945,7 +3945,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 27,
+      "line": 28,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7069,7 +7069,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 247,
+      "line": 257,
       "summary": "Scalar-kind keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7080,7 +7080,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 273,
+      "line": 283,
       "summary": "A token with its starting position.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7091,7 +7091,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 260,
+      "line": 270,
       "summary": "Guarantee-strength keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7113,7 +7113,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 282,
+      "line": 292,
       "summary": "Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23826,7 +23826,7 @@
     },
     {
       "symbol": "mycelium_core::meta::Meta",
-      "reason": "dedup-alias: same definition as `mycelium_core::Meta` at crates/mycelium-core/src/meta.rs:88 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::Meta` at crates/mycelium-core/src/meta.rs:89 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::meta::Meta::clone",
@@ -23870,7 +23870,7 @@
     },
     {
       "symbol": "mycelium_core::meta::PackScheme",
-      "reason": "dedup-alias: same definition as `mycelium_core::PackScheme` at crates/mycelium-core/src/meta.rs:44 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::PackScheme` at crates/mycelium-core/src/meta.rs:45 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::meta::PackScheme::clone",
@@ -23914,7 +23914,7 @@
     },
     {
       "symbol": "mycelium_core::meta::PhysicalLayout",
-      "reason": "dedup-alias: same definition as `mycelium_core::PhysicalLayout` at crates/mycelium-core/src/meta.rs:65 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::PhysicalLayout` at crates/mycelium-core/src/meta.rs:66 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::meta::PhysicalLayout::clone",
@@ -23958,7 +23958,7 @@
     },
     {
       "symbol": "mycelium_core::meta::Provenance",
-      "reason": "dedup-alias: same definition as `mycelium_core::Provenance` at crates/mycelium-core/src/meta.rs:20 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::Provenance` at crates/mycelium-core/src/meta.rs:21 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::meta::Provenance::clone",
@@ -24002,7 +24002,7 @@
     },
     {
       "symbol": "mycelium_core::meta::SparsityObs",
-      "reason": "dedup-alias: same definition as `mycelium_core::SparsityObs` at crates/mycelium-core/src/meta.rs:34 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::SparsityObs` at crates/mycelium-core/src/meta.rs:35 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::meta::SparsityObs::clone",
