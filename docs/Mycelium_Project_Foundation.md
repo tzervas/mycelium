@@ -1,7 +1,7 @@
 # Mycelium — Project Foundation
 
 **Status:** Foundation — design corpus Accepted; **Rust-first implementation underway** (Phases 0–3, 5, 7 complete; 4, 6, 8 in progress). Research: thirteen passes recorded (`research/01…13`).
-**Revision:** r4 — records the **Rust-first implementation** status: the kernel + reference interpreter + certified swaps + the 25-crate standard library have landed (Phases 0–3/5/7 complete, 4/6/8 in progress); per the honesty rule the stdlib specs read *"implemented (Rust-first), pending ratification,"* and self-hosting (M-502) is not yet established. Extends the §6 roadmap with Phases 4–8 and refreshes §10. **Design decisions are unchanged (append-only)** — this is a status/roadmap refresh, not a decision change. *Status addendum (2026-06-22):* RFC-0022 and RFC-0023 ratified to Accepted; RFC-0018 Enacted (stage 1a, M-663); the E7-1 L1 stage-1 checker surface complete (M-656–M-663); research: 13 passes recorded (`01…13`).
+**Revision:** r4 — records the **Rust-first implementation** status: the kernel + reference interpreter + certified swaps + the 25-crate standard library have landed (Phases 0–3/5/7 complete, 4/6/8 in progress); per the transparency rule the stdlib specs read *"implemented (Rust-first), pending ratification,"* and self-hosting (M-502) is not yet established. Extends the §6 roadmap with Phases 4–8 and refreshes §10. **Design decisions are unchanged (append-only)** — this is a status/roadmap refresh, not a decision change. *Status addendum (2026-06-22):* RFC-0022 and RFC-0023 ratified to Accepted; RFC-0018 Enacted (stage 1a, M-663); the E7-1 L1 stage-1 checker surface complete (M-656–M-663); research: 13 passes recorded (`01…13`).
 **Revision history:** r3 — integrates the follow-up research findings: ratifies ADR-010 (two bound kernels) and ADR-007 (Rust kernel + MLIR); records the **KC-1 pass** (proven VSA bundling bounds exist); marks RFC-0001…0005 Accepted and DN-01 Resolved (packing → schedule-staged); de-risks RR-1 and adds residual risks RR-13/RR-14. · r2 — added the execution-model and VSA-packaging decisions (ADR-008, ADR-009) plus a first-class toolchain treatment (§5.8); folded hybrid-compilation and tooling constraints into Requirements (§3) and the Roadmap (§6).
 **Date:** June 08, 2026
 **Working name:** Mycelium
@@ -56,7 +56,7 @@
 
 ### 2.4 Kill / major-redirect criteria
 
-- **KC-1.** If the P0 bundling probe shows *no* core VSA op admits a usefully tight, honestly-statable bound (**R1**'s stated falsifier), VSA leaves the **core** and becomes a clearly-demarcated approximate sublanguage — or the project redirects away from native VSA. **— Checked at the research gate: PASSED; confirmed (build) 2026-06-09.** Proven non-asymptotic bundling bounds exist (Clarkson-Ubaru-Yang 2023; Thomas-Dasgupta-Rosing 2021; **T0.2**), so MAP-I/sparse `bundle` carry honest `Proven` tags. The confirming build is **complete**: the Liquid-Haskell MAP-I `bundle` capacity refinement (`proofs/lh-bundle/`, M-001) type-checks **SAFE** and Z3 discharged all constraints (LiquidHaskell 0.9.8.2 / Z3 4.8.12), ratifying the axiomatized-theorem + checked-instantiation strategy (RFC-0003 §5; ADR-010).
+- **KC-1.** If the P0 bundling probe shows *no* core VSA op admits a usefully tight, statable bound (**R1**'s stated falsifier), VSA leaves the **core** and becomes a clearly-demarcated approximate sublanguage — or the project redirects away from native VSA. **— Checked at the research gate: PASSED; confirmed (build) 2026-06-09.** Proven non-asymptotic bundling bounds exist (Clarkson-Ubaru-Yang 2023; Thomas-Dasgupta-Rosing 2021; **T0.2**), so MAP-I/sparse `bundle` carry `Proven` tags. The confirming build is **complete**: the Liquid-Haskell MAP-I `bundle` capacity refinement (`proofs/lh-bundle/`, M-001) type-checks **SAFE** and Z3 discharged all constraints (LiquidHaskell 0.9.8.2 / Z3 4.8.12), ratifying the axiomatized-theorem + checked-instantiation strategy (RFC-0003 §5; ADR-010).
 - **KC-2.** If the P0 LLM-leverage experiment shows code-gen/reasoning collapses *irrecoverably* even with projections + semantic feedback (**G10**, **R6**), reweight toward human-primary design or fall back to an embedded DSL in a high-resource host language.
 - **KC-3.** If integrative complexity makes the kernel un-auditable by a single domain expert, Mycelium has reintroduced a *meta-level* black box (violating its own mandate); scope must be cut until the kernel is auditable.
 - **KC-4.** If verified-swap infrastructure (translation validation) proves so costly that certificates cannot be produced per-swap at acceptable overhead (**G9**; CompCert-level effort caveat), downgrade lossy-swap guarantees from *certified* to *declared-and-property-tested* and document the loss.
@@ -122,7 +122,7 @@
 
 **Working resolution (adopted, see ADR-001).** Redefine the constraint as **"no *hidden/unspecified* approximations."** Every approximate op is modeled as an *exactly specified deterministic function* together with a *proven or declared-and-checkable bound* on its error/crosstalk/failure-probability — the Rosa/Daisy "ideal-real spec + certified error ε" pattern, and the differential-privacy "(ε,δ) as an exact, proven inequality" pattern (Area 5; cross-cutting **B**; **R1**). Under this reading the approximation is fully explicit, inspectable, and auditable (satisfying *no black boxes*) while remaining first-class.
 
-**Honesty conditions (non-negotiable).** (a) Some VSA bounds are only Gaussian-approximate (Frady-Sommer), so the "proven bound" is sometimes an "empirically-validated bound" and **must be tagged as such** (**G5**, **VR-5**). (b) Anything depending on resonator factorization carries at best a *probabilistic* success guarantee (**G4**). (c) Whether the end state is genuinely "no statistical approximation in core" or rather "fully-disclosed statistical approximation" was a *definitional* choice — **now settled** in favour of fully-disclosed approximation (ADR-001; §9), since the bundling probe confirmed honest bounds exist (**T0.2**).
+**Transparency conditions (non-negotiable).** (a) Some VSA bounds are only Gaussian-approximate (Frady-Sommer), so the "proven bound" is sometimes an "empirically-validated bound" and **must be tagged as such** (**G5**, **VR-5**). (b) Anything depending on resonator factorization carries at best a *probabilistic* success guarantee (**G4**). (c) Whether the end state is genuinely "no statistical approximation in core" or rather "fully-disclosed statistical approximation" was a *definitional* choice — **now settled** in favour of fully-disclosed approximation (ADR-001; §9), since the bundling probe confirmed bounds exist (**T0.2**).
 
 ### 4.2 Split verification regime *(adopted, see ADR-002)*
 
@@ -255,7 +255,7 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 
 ### Phase 0 — Feasibility probes & foundational specs
 **Goal:** de-risk the two existential questions (Tension B, LLM leverage) and close the survey's four coverage gaps before any kernel commitment.
-**Status (June 2026): largely complete.** The two research passes resolved P0.3 (coverage gaps closed), delivered the **KC-1 verdict (PASSED)**, and settled the foundational design questions (ADR-010, DN-01, RFCs 0001–0005). P0.4/P0.5/P0.6 are specified in the RFCs and carry into the build. **Remaining P0 items:** the P0.1 *formalization* artifact (the Liquid-Haskell `bundle` instantiation, RFC-0003 §5). **The P0.2 LLM-leverage experiment (KC-2) now has its written verdict: KC-2 verdict recorded (DN-09) = proceed** — the last open P0 probe is closed (2026-06-18). Honest scope: the measured leverage is *weak but recoverable* (not the irrecoverable collapse the kill criterion guards against); the T3.6 rigorous ablation was not run and remains an honest open follow-up (DN-09 §4; VR-5 — "proceed" does not claim the strong Q1 hypothesis). The selected L3 strategy = committed text syntax + co-equal projection layer (M-380).
+**Status (June 2026): largely complete.** The two research passes resolved P0.3 (coverage gaps closed), delivered the **KC-1 verdict (PASSED)**, and settled the foundational design questions (ADR-010, DN-01, RFCs 0001–0005). P0.4/P0.5/P0.6 are specified in the RFCs and carry into the build. **Remaining P0 items:** the P0.1 *formalization* artifact (the Liquid-Haskell `bundle` instantiation, RFC-0003 §5). **The P0.2 LLM-leverage experiment (KC-2) now has its written verdict: KC-2 verdict recorded (DN-09) = proceed** — the last open P0 probe is closed (2026-06-18). Scope: the measured leverage is *weak but recoverable* (not the irrecoverable collapse the kill criterion guards against); the T3.6 rigorous ablation was not run and remains an open follow-up (DN-09 §4; VR-5 — "proceed" does not claim the strong Q1 hypothesis). The selected L3 strategy = committed text syntax + co-equal projection layer (M-380).
 - **Deliverables:** (P0.1) end-to-end formalization of **one** VSA op — bundling — with a capacity/crosstalk bound in a refinement-type or Rosa/Daisy style (**R5**, **G7**); (P0.2) LLM-leverage experiment, Mycelium surface fragment vs Python-embedded DSL (**R6**, **G10**); (P0.3) targeted survey closing the four coverage gaps — Halide/Dex/Futhark/APL-family, neurosymbolic synthesis IRs, verified probabilistic numerics, Rust VSA/ternary crates (**R8**); (P0.4) binary↔ternary bijective-swap spec + property tests + BitNet packing evaluation (**R7**, **G3**); (P0.5) reified selection-policy prototype (**G2**); (P0.6) **execution-model + LSP-surface spec sketch** — define "stable component," the interpreter-as-reference contract (NFR-7), the backend fan-out, and the minimal LSP semantic-feedback surface (ADR-008, ADR-009; §5.6–5.8).
 - **Success metrics:** SC-1 (P0.4), SC-2 partial (P0.1), an LLM baseline X for SC-5b (P0.2), a written verdict on KC-1 and KC-2, and an agreed execution-model/toolchain spec sketch (P0.6).
 - **Major risks:** bundling admits no usefully tight bound (→ KC-1); LLM collapse (→ KC-2); toolchain/backend scope balloons (→ RR-11, manage via a minimal Phase-1 surface).
@@ -294,7 +294,7 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 **Status (2026-06): anticipated** (M-601…M-630), gated on the Phase-4 three-way NFR-7 differential.
 
 ### Phase 7 — Runtime & concurrency execution model (RFC-0008)
-**Goal:** the RT1–RT7 runtime invariants — deterministic-fragment-first, partial failure explicit, honest probabilistic guarantees.
+**Goal:** the RT1–RT7 runtime invariants — deterministic-fragment-first, partial failure explicit, probabilistic guarantees.
 **Status (2026-06): complete.** RFC-0008 Accepted; concurrency/supervision, the RT2 fork/join differential, and the structured-nodule manifest landed (M-355…M-362).
 
 ### Phase 8 — Toolchain & release engineering
@@ -308,7 +308,7 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 - **US-1 (Human programmer, mixed representations).** *As a systems engineer, I declare a buffer as ternary and bind it into a VSA structure, so that the compiler tracks the paradigm in the type and refuses an implicit conversion* — exercising FR-M1/M2/M4 (Area 3/4).
 - **US-2 (AI agent, generate + verify).** *As an AI agent, I synthesize a Mycelium function and immediately read back the typechecker/bound feedback, so that I can self-correct against explicit semantic signals* — exercising NFR-2 and the survey's semantic-feedback finding (Area 6; **G10**).
 - **US-3 (AI agent, refactor a swap).** *As an AI agent, I replace a dense-embedding step with a sparse-VSA step and obtain the swap certificate, so that the change's error bound is explicit and auditable rather than silently degrading accuracy* — exercising FR-M3/M4, VR-3/4 (cross-cutting **B**).
-- **US-4 (VSA/holographic filesystem-style usage).** *As a developer building a holographic store (à la the Embeddenator use-cases), I bundle records into a fixed-width hypervector and retrieve via clean-up memory, with the capacity bound surfaced so I know when superposition saturates* — exercising FR-S1/S4 and the honest-capacity requirement (Area 2; **G5**, **G6**).
+- **US-4 (VSA/holographic filesystem-style usage).** *As a developer building a holographic store (à la the Embeddenator use-cases), I bundle records into a fixed-width hypervector and retrieve via clean-up memory, with the capacity bound surfaced so I know when superposition saturates* — exercising FR-S1/S4 and the capacity requirement (Area 2; **G5**, **G6**).
 - **US-5 (Representation swap with explicit bounds).** *As an ML engineer, I swap an FP embedding to packed ternary and the system reports ε and tags it `Empirical (Frady-Sommer basis)`, so that I can decide if the loss is acceptable* — exercising VR-3/VR-5 (cross-cutting **B**; survey Caveats).
 - **US-6 (Debug/audit a complex VSA composition).** *As an auditor, I inspect each lowering stage and each swap certificate for a multi-bind/bundle pipeline, so that I can localize where crosstalk accumulated* — exercising SC-3/SC-4, FR-M6 (Area 1; **G4**).
 
@@ -322,14 +322,14 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 *Status:* **Accepted** (definitional question settled — see §9; KC-1 passed, **T0.2**).
 *Context:* Core forbids hidden approximations, yet VSA/embeddings are inherently approximate (cross-cutting **B**).
 *Decision:* Reinterpret as "no *hidden* approximations"; every approximate op = deterministic spec + typed, tagged bound (Rosa/Daisy + DP pattern). The guarantee lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (RFC-0001) is the typed realization.
-*Consequences:* Enables first-class VSA without opacity; requires honest `Proven|Empirical|Declared` tagging per model/op (**VR-5**). The end-state is "fully-disclosed approximation," not "no statistical approximation" — settled at the research gate.
+*Consequences:* Enables first-class VSA without opacity; requires `Proven|Empirical|Declared` tagging per model/op (**VR-5**). The end-state is "fully-disclosed approximation," not "no statistical approximation" — settled at the research gate.
 *Grounding:* **B**, **R1**, **R5**; Area 5; **T0.2**.
 
 **ADR-002 · Split verification regime**
 *Status:* Accepted.
 *Context:* binary↔ternary is exact; ↔VSA/embedding is lossy.
 *Decision:* Bijective proofs for binary↔ternary; per-swap certificates with ε/δ bounds for lossy swaps; do not unify.
-*Consequences:* Two code paths; honest non-uniformity; translation-validation infra needed (**G9**).
+*Consequences:* Two code paths; non-uniformity; translation-validation infra needed (**G9**).
 *Grounding:* **R2**, **VR-4**; cross-cutting **B**.
 
 **ADR-003 · Architecture anchors = MLIR ⊕ Unison ⊕ Arrow**
@@ -383,7 +383,7 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 
 **ADR-010 · Verified-numerics foundation: two bound kernels + shared certificate** *(full record: standalone ADR-010 file)*
 *Status:* **Accepted** (ratified by **T0.1**).
-*Context:* Approximate ops need sound, composable, honestly-tagged bounds; a single algebra cannot unify error-magnitude (ε) and failure-probability (δ) composition (T0.1c).
+*Context:* Approximate ops need sound, composable, tagged bounds; a single algebra cannot unify error-magnitude (ε) and failure-probability (δ) composition (T0.1c).
 *Decision:* Two kernels meeting at one `{ε, δ, strength}` certificate — `ErrorBound` (affine arithmetic, Daisy/FloVer) for ε; `ProbBound` (union-bound, with apRHL couplings for relational certs) for δ. `strength` composes by meet; the one cross-kernel inference is accuracy→probability. Trusted base = certificate-checker-in-Rust (FloVer-style), not a hosted prover. VSA crosstalk *content* comes from the concentration-inequality literature (RFC-0003), not the verified-numerics tools.
 *Consequences:* Unblocks RFC-0001 §4.7 (composed results carry `Proven`/`Empirical`, not `Declared`); one bound vocabulary across RFC-0001/0002/0003.
 *Grounding:* **T0.1**, **T0.2**; survey Area 5.
@@ -397,7 +397,7 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 | RR-1 | ~~Tension B unsolvable for VSA in core~~ — **de-risked: KC-1 passed (T0.2)**; residual is only that proven bounds are loose sufficient conditions | L · M | Proven bounds axiomatized + arithmetic checked (ADR-010); opt into `Empirical` for tighter Frady-style numbers | **G7**, **G5** |
 | RR-2 | Integrative complexity → meta-level black box | H · M | Small auditable kernel (NFR-6); KC-3; phase gates | TL;DR |
 | RR-3 | LLM leverage collapses on novel syntax | M · H | P0.2 experiment; projections + semantic feedback; KC-2; embedded-DSL fallback | **G10** |
-| RR-4 | VSA bounds too weak to tag `Proven` | M · M | Use Clarkson-Ubaru-Yang / Thomas-Dasgupta-Rosing where applicable; else tag `Empirical` honestly | **G5** |
+| RR-4 | VSA bounds too weak to tag `Proven` | M · M | Use Clarkson-Ubaru-Yang / Thomas-Dasgupta-Rosing where applicable; else tag `Empirical` | **G5** |
 | RR-5 | Resonator factorization non-convergence breaks compositional queries | M · M | Keep factorization opt-in & probabilistic (FR-C2); never in core | **G4** |
 | RR-6 | Metadata-driven selection reintroduces opacity | M · H | Reified policies (ADR-006); selection is logged per-swap | **G2** |
 | RR-7 | Per-swap certificate (translation validation) too costly | M · M | Per-swap validation not whole-engine proof; KC-4 downgrade path | **G9** |
@@ -433,7 +433,7 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 - **Treat this as a living, version-controlled artifact.** Keep it in git; consider content-addressing in spirit (ADR-003/Unison) — each ratified version gets an immutable reference.
 - **ADRs are append-only** with status transitions (Proposed → Accepted → Superseded). Never silently edit a decision; supersede it and link forward.
 - **Re-run the kill criteria (KC-1…KC-4) at every phase gate.** They are the project's circuit-breakers; a gate that doesn't check them is a gate that hides risk (**KC-3** spirit).
-- **Keep `Proven | Empirical` tags honest as the literature moves.** New non-asymptotic VSA results can *upgrade* a tag; absence of one keeps it `Empirical` (**G5**, **VR-5**).
+- **Keep `Proven | Empirical` tags accurate as the literature moves.** New non-asymptotic VSA results can *upgrade* a tag; absence of one keeps it `Empirical` (**G5**, **VR-5**).
 - **Update grounding references when new research lands.** This phase forbade new prior art; subsequent research passes will add citations — re-anchor claims to them rather than letting assertions float.
 - **Freeze the Phase-1 spec only after the four coverage gaps are closed** (**R8**) and after ADR-001's definitional question is ratified.
 - **Track work as dependency-ordered, priority-tagged tasks** (§10 is already in that shape) so the Kanban board mirrors this document, and the document remains the single source of truth the board points back to.

@@ -14,7 +14,7 @@ structured concurrency). Versioning is **dual-axis (ADR-022)**: the Rust **core/
 whose **stdlib and libraries are themselves written in Mycelium**. That program is mapped in **ADR-022**
 (the gate, supersedes ADR-021) + **DN-25** (tracks **T1–T9** → epics E10-1…E18-1): surface completeness,
 runtime, **stdlib-in-Mycelium** (the long pole), FFI, toolchain, docs, and self-hosting — native-AOT
-perf is `1.1`. Per the honesty rule, no claim here is upgraded beyond what a checked basis supports (VR-5).
+perf is `1.1`. Per the transparency rule, no claim here is upgraded beyond what a checked basis supports (VR-5).
 
 ---
 
@@ -88,7 +88,7 @@ surface is gated by a committed API baseline (`docs/spec/api/`, KC-3). Grouped b
 
 | Crate | Role |
 |---|---|
-| `mycelium-dense` | Dense embedding values: typed, dimension-tracked, honest tags on approximate ops |
+| `mycelium-dense` | Dense embedding values: typed, dimension-tracked, guarantee tags on approximate ops |
 | `mycelium-vsa` | The MAP-I algebra: `bind`/`unbind`/`bundle`/`permute`/`cleanup` + per-model guarantee matrix (RFC-0003); `Proven` tags only where Clarkson-Ubaru-Yang / Thomas-Dasgupta-Rosing bounds apply |
 | `mycelium-select` | The total, EXPLAIN-able selection-policy engine (RFC-0005, ADR-006): deterministic, auditable, no cardinality-estimate black box |
 
@@ -118,7 +118,7 @@ surface is gated by a committed API baseline (`docs/spec/api/`, KC-3). Grouped b
 #### Standard library — 25 `mycelium-std-*` crates (all specs Accepted, 2026-06-21)
 
 The Rust-first standard library implements RFC-0016's three-ring contract. Every exported op
-carries an honest per-op guarantee tag; every fallible op returns an explicit `Result`/`Option`,
+carries a per-op guarantee tag; every fallible op returns an explicit `Result`/`Option`,
 never a silent fallback. The RFC-0016 §4.5 guarantee matrix is encoded as data and asserted in
 tests — never prose only.
 
@@ -160,7 +160,7 @@ committed text syntax + a co-equal structured-projection layer (M-380, RFC-0021)
 
 ## The guarantee lattice in practice
 
-Every operation in the kernel and standard library carries one of four honest guarantee tags,
+Every operation in the kernel and standard library carries one of four guarantee tags,
 never upgraded without a checked basis (VR-5):
 
 | Tag | Meaning | When it applies |
@@ -186,7 +186,7 @@ spuriously claim a stronger guarantee than its inputs. Out-of-range input is an 
 ## How it compares — and why
 
 Mycelium is not trying to be a faster general-purpose systems language, a better ML framework,
-or a novel dependently-typed proof assistant. Each comparison is made honestly — shared ground
+or a novel dependently-typed proof assistant. Each comparison is made fairly — shared ground
 and genuine differences.
 
 ### vs. typed systems languages (Rust, Haskell, ML family)
@@ -207,7 +207,7 @@ embedding, sparse/dense VSA} as co-equal, first-class substrates with verifiable
 
 ### vs. ML / array languages and Python scientific stack
 
-**Shared:** first-class dense vector/matrix operations; numeric precision tagging; the honesty
+**Shared:** first-class dense vector/matrix operations; numeric precision tagging; the accuracy
 requirement around float approximation recalls Rosa/Daisy/Gappa.
 
 **Different:** NumPy/PyTorch treat conversion silently — a `.half()` call in PyTorch does not
@@ -224,14 +224,14 @@ not through documentation conventions.
 ### vs. VSA / HDC libraries (torchhd, resonator-network implementations)
 
 **Shared:** the MAP-I algebra (`bind`/`unbind`/`bundle`/`permute`/`cleanup`), per-model
-guarantee matrices, honesty about capacity bounds and crosstalk.
+guarantee matrices, with capacity bounds and crosstalk stated.
 
 **Different:** torchhd (and similar libraries) sit above PyTorch as a numeric layer; the host
 language's type system knows nothing about the hypervector type or its bounds. Mycelium's `VSA`
 type is a first-class type family in the *language's* core type system. The capacity bound is a
 `Proven` or `Empirical` guarantee tag on the *value*, not a comment in the source. The `bundle`
-probe (`proofs/lh-bundle/`) confirmed that MAP-I capacity admits honest `Proven` tags under the
-Clarkson-Ubaru-Yang / Thomas-Dasgupta-Rosing non-asymptotic bounds — so "honest bounds exist"
+probe (`proofs/lh-bundle/`) confirmed that MAP-I capacity admits `Proven` tags under the
+Clarkson-Ubaru-Yang / Thomas-Dasgupta-Rosing non-asymptotic bounds — so "bounds exist"
 is checked, not declared.
 
 HRR/FHRR are the VSA weak link (RR-13): non-self-inverse bind means unbind is lossy
@@ -245,7 +245,7 @@ paths.
 ### vs. verification-oriented languages (CompCert, Fstar, Lean, Dafny)
 
 **Shared:** translation-validation (per-swap certificate checking, not whole-engine proof, VR-4),
-the "no black boxes" principle, honesty about what is and is not proven.
+the "no black boxes" principle, explicit about what is and is not proven.
 
 **Different:** CompCert-style verified compilers prove a *compiler* correct once; Mycelium uses
 translation-validation to prove each *instance* of a swap or lowering correct. Mycelium does not
@@ -255,7 +255,7 @@ is also multi-substrate (four representation families), which no existing verifi
 language treats as first-class.
 
 **Why:** whole-engine proofs (CompCert-style) are high-cost; per-swap translation validation
-(the "certificate checker in Rust" approach from ADR-010) gives honest guarantees at per-swap
+(the "certificate checker in Rust" approach from ADR-010) gives guarantees at per-swap
 granularity with manageable overhead. The KC-4 gate (cert-overhead budget) confirms the overhead
 is within budget: ≤ 2× the swap cost for swaps whose own cost exceeds the check, ≤ 5 µs
 absolute (ADR-021 A5, measured — `cargo xtask kc4`).
@@ -268,7 +268,7 @@ absolute (ADR-021 A5, measured — `cargo xtask kc4`).
 mycelium/
 ├── README.md                 ← you are here
 ├── LICENSE                   ← MIT
-├── CONTRIBUTING.md           ← decision process, honesty rule, dev env, workflow
+├── CONTRIBUTING.md           ← decision process, transparency rule, dev env, workflow
 ├── CLAUDE.md                 ← operating guide for Claude Code / agents (the house rules)
 ├── CHANGELOG.md              ← Keep-a-Changelog; design baseline + implementation edits
 ├── Cargo.toml                ← Rust workspace (48 crates + xtask; MSRV 1.92, ADR-007)
@@ -279,7 +279,7 @@ mycelium/
 ├── docs/
 │   ├── Mycelium_Project_Foundation.md   ← charter, requirements, ADR-001…009, roadmap, risks
 │   ├── Doc-Index.md                     ← map of the corpus + status + dependency DAG
-│   ├── Glossary.md                      ← the fungal lexicon + honesty/architecture terms
+│   ├── Glossary.md                      ← the fungal lexicon + transparency/architecture terms
 │   ├── rfcs/        ← RFC-0001…0032 (normative designs) + index
 │   ├── adr/         ← ADR-010…024 as files (ADR-001…009 live in the Foundation §8) + index
 │   ├── notes/       ← DN-01…28 design notes + reference material (lexicon, examples, research prompts)
@@ -326,7 +326,7 @@ Checks **skip gracefully** when a tool isn't present. Remote CI
 bundling bounds exist (Clarkson-Ubaru-Yang 2023; Thomas-Dasgupta-Rosing 2021), and the
 Liquid-Haskell `bundle` capacity-refinement probe (`proofs/lh-bundle/`, RFC-0003 §5) reports
 **SAFE** (Z3 discharged), ratifying the axiomatized-theorem + checked-instantiation strategy.
-VSA stays in core with honest `Proven` tags.
+VSA stays in core with `Proven` tags.
 
 **KC-2 / LLM leverage: verdict Proceed (DN-09, Resolved 2026-06-18).** The experiment measured
 weak-but-recoverable leverage (best local arm: 40% first-attempt → 70% eventual); the
@@ -337,7 +337,7 @@ non-blocking research follow-up (M-381, backlogged per ADR-021 §5).
 
 **Built (Phases 0–3, 5, 7, 8 complete):** the Core IR + Rust reference interpreter; the single
 certificate checker; the certified binary↔ternary swap (Z3-proved); the verified-numerics layer
-(ε/δ, `mycelium-numerics`); Dense/VSA breadth with honest per-model guarantee matrices; the
+(ε/δ, `mycelium-numerics`); Dense/VSA breadth with per-model guarantee matrices; the
 selection-policy engine + EXPLAIN; the direct-LLVM native path (data/closure/tail-recursion
 fragment, M-373/M-378/M-379); JIT (M-340); hot-inject (M-341); the L1 calculus; the
 runtime/concurrency model (RFC-0008); the full toolchain suite; and the Rust-first standard
@@ -353,7 +353,7 @@ on all three paths (L1-eval ≡ L0-interp ≡ AOT); DN-14 §3 rows 6 and 7 are n
 findings from the 2026-06-14 deep review) and Gate B2 (KC-2 verdict) are met. Open gate rows
 are the critical path (DN-19): A2 (Medium-findings ledger), A3 (WS8 durability:
 `cargo-mutants`/proptest/fuzz), A4 (`cargo deny`/`cargo audit` wired into `just check`). The
-1.0.0 product scope is the kernel/core (interpreter, certified swaps, VSA/dense ops with honest
+1.0.0 product scope is the kernel/core (interpreter, certified swaps, VSA/dense ops with
 bounds, selection + EXPLAIN, the trusted toolchain); surface-language ratification is scoped to
 a tracked `1.x`.
 
@@ -384,7 +384,7 @@ and `docs/planning/phase-*.md` for the live phase ladder.
   stand-in; unblocked by libMLIR provisioning on Linux, M-348). `vsa`/`embedding` dialects
   deferred.
 - **VSA submodule:** Rust (`crates/mycelium-vsa`) — the MAP-I algebra + the per-model guarantee
-  matrix (RFC-0003). Built as a first-class submodule with honest `Proven`/`Empirical` tags per
+  matrix (RFC-0003). Built as a first-class submodule with `Proven`/`Empirical` tags per
   model and per operation.
 - **Verified numerics:** a FloVer-style certificate-checker-in-Rust — two assurance tiers, ε
   (affine arithmetic) and δ (union-bound/apRHL) sharing one `{ε, δ, strength}` certificate
@@ -415,22 +415,22 @@ and `docs/planning/phase-*.md` for the live phase ladder.
 
 | Decision | Where | Summary |
 |---|---|---|
-| Guarantee lattice + honesty propagation | RFC-0001; ADR-001 | `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`, meet on compose |
+| Guarantee lattice + transparency propagation | RFC-0001; ADR-001 | `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`, meet on compose |
 | No implicit conversion; explicit `Swap` only | RFC-0001 §3.3; FR-M3 | the central transparency rule |
 | Split verification regime | RFC-0002; ADR-002 | provable binary↔ternary; bounded/probabilistic VSA |
 | One certificate checker, two uses | RFC-0002 + RFC-0004 | swaps *and* interpreter-vs-compiled equivalence |
 | Binary↔ternary = `LosslessWithinRange` | RFC-0002 | total bijection impossible at fixed widths; `Option`-typed, never silent |
 | VSA in core, but an optional submodule | RFC-0003; ADR-008 | lean kernel (type slot only); opt-in algebra |
-| Per-model × per-op guarantee matrix | RFC-0003 | honest tags; HRR/FHRR unbind is the weak link |
+| Per-model × per-op guarantee matrix | RFC-0003 | tags; HRR/FHRR unbind is the weak link |
 | Sparsity as static refinement | RFC-0001 §4.4; RFC-0003 §5 | declared class checked by SMT; capacity = axiomatized theorem + checked instantiation |
 | Verified-numerics: two bound kernels | ADR-010 | `ErrorBound` (ε, affine arith.) + `ProbBound` (δ, union-bound/apRHL), shared certificate |
 | Hybrid execution; interpreter = reference | RFC-0004; ADR-009 | AOT (MLIR→LLVM) for stable components; interpret/JIT for dev/dynamic |
 | Packing is schedule-staged, not typed | DN-01; RFC-0004 §5 | cost-model selector over a small fixed set (I2_S/TL1/TL2) |
 | Selection policy is total + EXPLAIN-mandatory | RFC-0005; ADR-006 | non-learned, deterministic, auditable; no cardinality-estimate black box |
-| Surface/term-language layering (L0–L3) | RFC-0006; RFC-0007 | syntactic honesty invariants; the ten-node L1 kernel calculus; L3 = committed text syntax + co-equal projection layer (M-380, KC-2 verdict) |
-| Runtime & concurrency model | RFC-0008 | RT1–RT7; deterministic-fragment-first; partial failure explicit; honest probabilistic guarantees |
+| Surface/term-language layering (L0–L3) | RFC-0006; RFC-0007 | syntactic transparency invariants; the ten-node L1 kernel calculus; L3 = committed text syntax + co-equal projection layer (M-380, KC-2 verdict) |
+| Runtime & concurrency model | RFC-0008 | RT1–RT7; deterministic-fragment-first; partial failure explicit; probabilistic guarantees |
 | Structured diagnostics + declarative recovery | RFC-0013; RFC-0014 | additive over the never-silent error (never substitutive); declared, **bounded** effects |
-| Standard-library scope + per-op contract | RFC-0016 | C1–C6 (never-silent · honest tags · EXPLAIN · content-addressed · above-the-kernel · bounded effects); ring layering; 25/25 specs Accepted |
+| Standard-library scope + per-op contract | RFC-0016 | C1–C6 (never-silent · guarantee tags · EXPLAIN · content-addressed · above-the-kernel · bounded effects); ring layering; 25/25 specs Accepted |
 | `spore` is the deployable unit | ADR-013 | content-addressed code + values + metadata; identity is the content hash (ADR-003) |
 | Interpreted↔compiled ABI + hot-inject | ADR-016; ADR-017 | hash-keyed dispatch; content-addressed dynamic linking; immutable-by-construction |
 | 1.0.0 release-readiness gate | ADR-021 | Gate A (honesty-integrity + durability) + Gate B (decision/external); kernel/core scope; surface → 1.x |

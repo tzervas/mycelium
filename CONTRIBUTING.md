@@ -35,7 +35,7 @@ Draft / Proposed / Preliminary  →  Accepted  →  Enacted  →  Superseded
 - **Design note (DN)** — explores a tradeoff and *recommends*; it does not decide. When its recommendation is adopted, mark it `Resolved` and fold the result into the relevant RFC/ADR.
 
 ### Definition of Done + user stories (every decision and work item)
-- **Definition of Done.** Every ADR/RFC/DN **and** every epic/issue carries an explicit, checkable **Definition of Done** — the honest "what must be true to call this complete." A decision's gate (e.g. ADR-022 §5) or an issue's acceptance criteria *are* its DoD; never leave "done" implicit (this is a corollary of the honesty rule — you cannot honestly claim something done without first stating what done means).
+- **Definition of Done.** Every ADR/RFC/DN **and** every epic/issue carries an explicit, checkable **Definition of Done** — the explicit "what must be true to call this complete." A decision's gate (e.g. ADR-022 §5) or an issue's acceptance criteria *are* its DoD; never leave "done" implicit (this is a corollary of the transparency rule — you cannot claim something done without first stating what done means).
 - **User stories.** Every epic and issue carries explicit **user stories** — `As a <role>, I want <capability>, so that <benefit>` — capturing realistic use cases and the concrete problems it must resolve, so work is grounded in real usage rather than abstraction. Use real roles: language user, library/phylum author, stdlib author, compiler engineer, tool author, AI co-author agent, maintainer, operator, downstream app developer.
 
 ### Licensing — MIT only
@@ -97,7 +97,7 @@ GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo t
   pushed branch** (rebasing rewrites its published commits, so the plain push would be rejected and only a
   force could land it) — rebase is only for a **local-only, never-pushed** branch before its first push.
   When local work is in the way, the mechanism is **`git stash` → reconcile (merge `main` in) →
-  `git stash pop` → deconflict** → plain push — it keeps your work and resolves divergence honestly, where
+  `git stash pop` → deconflict** → plain push — it keeps your work and resolves divergence, where
   a force would silently discard the other side. If a published branch's own commits already landed on
   `main` (so it can never fast-forward), abandon it and branch a **fresh** one off current `main`,
   re-applying only the unlanded work. See `CLAUDE.md` §Commits & PRs for the agent-facing form of this

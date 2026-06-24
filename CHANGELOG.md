@@ -8,6 +8,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: editorial — trim redundant "honest" qualifiers (concision; honesty is implied))
+
+- **Concision pass — dropped the redundant "honest"/"honestly" filler** across CLAUDE.md, CONTRIBUTING,
+  README, Foundation, Glossary (**61 edits / 5 files** via the never-silent `tools/dn29_apply.py` +
+  `docs/notes/honest-trim-manifest.json`). Rationale (maintainer): honesty is **implied by construction** —
+  G2/no-black-boxes guarantee that a trace, error, or guarantee tag that *isn't* honest is useless — so the
+  adjective is noise, not information ("honest tags" → "tags", "honest bounds exist" → "bounds exist",
+  "honest probabilistic guarantees" → "probabilistic guarantees", etc.). The same pass fixed the few stale
+  **"honesty rule" → "transparency rule"** name references left after the ADR-032 rename. **Kept
+  deliberately:** the formal named criteria **SC-2 "(honest bounds)"** and **VR-5 "(honest
+  guarantee-strength)"** (cross-referenced labels, not filler), the Glossary `(H)` taxonomy marker, and the
+  proper nouns `honesty-integrity` (ADR-021 Gate A) / `honest-stdlib` (prior-art ref). Purely editorial — no
+  decision changes, no guarantee semantics touched (VR-5/G2 mechanism unchanged).
+
 ### Changed (2026-06-24: RFC-0034 + ADR-032 ratified & Enacted (design-driven); corpus amendments applied; DN-29 Superseded)
 
 - **RFC-0034 + ADR-032 ratified `Proposed → Accepted → Enacted (design-driven)`** (maintainer, stepped per
