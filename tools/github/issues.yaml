@@ -5880,7 +5880,7 @@ issues:
   - id: M-786
     title: "M-786 -- CertMode + never-silent mode tag in Meta (RFC-0034 §3.1)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P1, status:todo]
+    labels: [phase:5, type:feat, area:core, priority:P1, status:done]
     epic: E21-1
     depends_on: []
     doc_refs:
@@ -5900,7 +5900,7 @@ issues:
   - id: M-787
     title: "M-787 -- mode-gated provenance tagging: `fast` omits Empirical/Proven (RFC-0034 §7, §3.2)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P1, status:todo]
+    labels: [phase:5, type:feat, area:core, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -5921,7 +5921,7 @@ issues:
   - id: M-788
     title: "M-788 -- mode-gated swap-cert emission + checking (RFC-0034 §4)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:cert, priority:P1, status:todo]
+    labels: [phase:5, type:feat, area:cert, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786, M-787]
     doc_refs:
@@ -5942,7 +5942,7 @@ issues:
   - id: M-789
     title: "M-789 -- compile/runtime phase split: spores mintable with runtime cert OFF (RFC-0034 §8)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P1, status:todo]
+    labels: [phase:5, type:feat, area:core, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -5963,7 +5963,7 @@ issues:
   - id: M-790
     title: "M-790 -- mode resolution + scoping (@certification; global/phylum/nodule) via RFC-0012 (RFC-0034 §6)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:project, priority:P1, status:todo]
+    labels: [phase:5, type:feat, area:project, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -5985,7 +5985,7 @@ issues:
   - id: M-791
     title: "M-791 -- named `wrapping` Axis-B opt-out (RFC-0034 §10)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P2, status:todo]
+    labels: [phase:5, type:feat, area:core, priority:P2, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
