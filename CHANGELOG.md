@@ -8,6 +8,18 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: DN-30 rev. 2 — the security catalog is lightweight / reconstruction-on-render (DN-28))
+
+- **DN-30 §4 + DN-28 §5:** the security catalog **reuses DN-28's reconstruction-based distribution model
+  verbatim** — the registry stores the findings' **hashes + manifest** (the dense, verifiable map; the
+  fingerprints + severity/affected-version index + DAG), **not** the heavy finding bodies inline; the full
+  finding (screened pattern, description, mitigations) is **reconstructed + hash-verified on render** from
+  the content store. So the security catalog is **as lightweight as the package registry**, and because
+  every finding is content-addressed, a published advisory is **tamper-evident** — reconstruction verifies
+  it against its hash, so a poisoned/altered advisory **fails the check** (never-silent integrity, G2). The
+  registry hosts **two content-addressed catalogs of the same shape** — packages and findings. E22-1 DoD
+  updated. Still Draft, advisory.
+
 ### Changed (2026-06-24: DN-30 rev. — the registry as a screened security-advisory host (DN-28))
 
 - **DN-30 §4 expanded:** a finding reports to **two sinks** — the **CLI report** *and* the **registry**. The

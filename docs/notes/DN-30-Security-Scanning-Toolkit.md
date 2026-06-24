@@ -81,6 +81,18 @@ ecosystem-wide while the specific instance stays private. Disclose enough to def
   consumer can review or auto-apply.
 - **Provenance + confidence** — an honest tag on the finding itself (proven taint-flow vs heuristic, §3).
 
+**The catalog is lightweight — reconstruction-on-render (DN-28's model, reused).** Exactly as the package
+registry stores a phylum's **content-hash DAG + manifest** (the dense, verifiable *map*) and reconstructs the
+source bytes from a forge / object store on use, the security catalog stores only the findings' **hashes +
+manifest** — the fingerprints, the severity + affected-version index, the DAG — **not** the heavy finding
+bodies inline. The full finding (screened pattern, description, mitigations) is **fetched + hash-verified
+from the content store and reconstructed on render**. So the security catalog is **as cheap to host as the
+package registry** (the same reconstruction-based distribution), and because every finding is
+content-addressed, a published advisory is **tamper-evident**: reconstruction verifies it against its hash,
+so a poisoned or silently-altered advisory **fails the check** (never-silent integrity, G2). The registry
+thus hosts **two content-addressed catalogs of the same shape** — packages **and** findings — both
+lightweight and reconstructed-on-render.
+
 (Disclosure governance — embargo windows, coordinated disclosure, the **screening policy** that decides what
 is safe to publish — is an explicit open question, §7.)
 
@@ -148,4 +160,9 @@ it is the direction record, superseded (append-only) by that RFC when the design
 > as **screened/anonymized/privatized** entries (vulnerable logic minimized to a content-addressed pattern
 > fingerprint — detectable + mitigable ecosystem-wide without exposing the victim's source); the hosted
 > finding content model (what / severity / affected content-addressed versions / logic-retaining mitigations
-> / honest confidence) is stated; §7 Q4 gains the **screening policy** governance question.
+> / honest confidence) is stated; §7 Q4 gains the **screening policy** governance question. *2026-06-24
+> (rev. 2)* — §4: the security catalog **reuses DN-28's reconstruction-on-render model** — the registry
+> stores the findings' hashes + manifest (the dense, verifiable map) and reconstructs + hash-verifies the
+> finding bodies on render, so the catalog is as **lightweight** as the package side and a tampered advisory
+> fails its hash (never-silent integrity). The registry hosts two content-addressed catalogs of the same
+> shape — packages and findings. Cross-ref in DN-28 §5 + E22-1.
