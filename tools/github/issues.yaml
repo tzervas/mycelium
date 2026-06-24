@@ -5853,11 +5853,26 @@ issues:
       - As an auditor/AI agent, I want every value mode-tagged and `EXPLAIN`-able, and every cross-mode
         boundary explicit, so I can always tell what assurance a value actually carries (never silent).
 
+      Testing strategy (cross-cutting -- M-795 owns the harness, every leaf obeys it):
+      The existing suite implicitly assumes the all-on (`certified`) behaviour. As modes land, tests
+      become MODE-AWARE: every mode-sensitive test is PARAMETERIZED over the CertMode tiers
+      (fast/balanced/certified) and maps to the INTENDED per-mode behaviour, not a single tier's. Each
+      invariant is asserted (a) to FIRE in the tiers it applies to AND (b) to be correctly ABSENT/relaxed
+      in the tiers it does not -- the negative/cross-mode cases, so we catch "the invariant holding when
+      it shouldn't" (e.g. swap-cert CHECKING present in `certified`, ABSENT in `fast`; `Empirical`/`Proven`
+      reachable in `certified`, NEVER in `fast`; certificate emission in balanced+certified, none in fast).
+      Existing fixtures that asserted all-on behaviour are adapted: pinned explicitly to `certified` where
+      they encode that contract, or parameterized where the behaviour differs by tier. No test is dropped
+      -- only its mode-scope is made explicit (the DN-20 transparency rule for tiered tests).
+
       Definition of Done:
       - M-786..M-793 land Rust-first, each with property tests for its invariant; cargo +1.92
         fmt/clippy -D warnings/test green per crate.
-      - M-794 conformance suite asserts all RFC-0034 §13 clauses (a)-(f) green; RFC-0034 advances
-        Enacted(design) -> Enacted-with-code; ADR-032 decision 1 (mechanism adoption) realized.
+      - Tests are MODE-PARAMETERIZED per the strategy above: each leaf's tests cover the relevant tiers
+        + the cross-mode NEGATIVE cases (invariant absent where it should be); existing all-on fixtures
+        adapted (pinned-to-certified or parameterized), none dropped. M-795 lands the shared harness.
+      - M-794 conformance suite asserts all RFC-0034 §13 clauses (a)-(f) green, EACH parameterized over
+        the modes; RFC-0034 advances Enacted(design) -> Enacted-with-code; ADR-032 decision 1 realized.
       - just check green; CHANGELOG append-only; docs/api-index regenerated for the new public surface.
       - No content-hash perturbation by the mode (ADR-003 property test); `fast` never carries
         Empirical/Proven (VR-5 property test).
@@ -6032,19 +6047,54 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:verification, area:core, priority:P1, status:todo]
     epic: E21-1
-    depends_on: [M-786, M-787, M-788, M-789, M-790, M-791, M-792, M-793]
+    depends_on: [M-786, M-787, M-788, M-789, M-790, M-791, M-792, M-793, M-795]
     doc_refs:
       - corpus:RFC-0034
       - corpus:ADR-032
       - src:crates/mycelium-cert
     body: |
-      The conformance gate. A suite asserting ALL RFC-0034 §13 conformance clauses end-to-end:
+      The conformance gate. A suite asserting ALL RFC-0034 §13 conformance clauses end-to-end, EACH
+      parameterized over the CertMode tiers (using the M-795 harness):
       (a) every result carries a never-silent mode tag; (b) no `fast` result carries Empirical/Proven;
       (c) memory safety + Axis-B hold in every mode; (d) EXPLAIN-of-mode always available; (e) spores
       mintable with the runtime cert off; (f) cross-mode composition surfaces the boundary.
       Acceptance / DoD (TDD):
-      - All six clauses green in CI; just check green; docs/api-index regenerated for the new surface.
+      - All six clauses green in CI, each parameterized over fast/balanced/certified + the cross-mode
+        NEGATIVE cases (the invariant absent/relaxed where it should be); just check green; docs/api-index
+        regenerated for the new surface.
       - RFC-0034 advances Enacted(design) -> Enacted-with-code; ADR-032 decision 1 (mechanism adoption)
         realized; the relaxed RFC/ADR footnotes' "pending" notes updated where landed.
       - CHANGELOG append-only; honest "implemented (Rust-first)" framing; no guarantee tag upgraded
         without a checked basis (VR-5).
+
+  - id: M-795
+    title: "M-795 -- adapt + parameterize the test suite across CertMode tiers (cross-cutting)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:core, priority:P1, status:todo]
+    epic: E21-1
+    depends_on: [M-786]
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:DN-20
+      - src:crates/mycelium-core/src/cert_mode.rs
+    body: |
+      The cross-cutting TEST-ADAPTATION leaf. The existing suite implicitly assumes the all-on
+      (`certified`) behaviour; this leaf makes the suite MODE-AWARE and provides the shared harness every
+      other leaf's tests use.
+      Scope:
+      - A reusable parameterization harness (e.g. `for mode in CertMode::ALL { ... }` helpers + per-mode
+        fixtures) so a mode-sensitive test runs across fast/balanced/certified and maps to the INTENDED
+        per-mode behaviour, not one tier's.
+      - CROSS-MODE NEGATIVE tests as a first-class pattern: assert each invariant (a) FIRES in the tiers it
+        applies to AND (b) is correctly ABSENT/relaxed in the tiers it does not -- so we catch "the
+        invariant holding when it shouldn't." Examples: swap-cert CHECKING present in `certified`, absent
+        in `fast`; `Empirical`/`Proven` reachable in `certified`, NEVER in `fast`; certificate emission in
+        balanced+certified, none in `fast`; Axis-B never-silent in EVERY mode (not relaxed by mode).
+      - Adapt existing fixtures: pin to `certified` where they encode the all-on contract, or parameterize
+        where behaviour differs by tier. NO test is dropped -- only its mode-scope is made explicit
+        (the DN-20 transparency rule for tiered tests: over-specify, never silently drop coverage).
+      Acceptance / DoD (TDD):
+      - Shared harness lands + is used by >=2 leaves; the negative-case pattern is documented + exercised.
+      - Every adapted fixture states its mode-scope; a grep/CI check (or review) confirms no mode-sensitive
+        assertion is left implicitly all-on. fmt/clippy -D warnings/test green; just check green.
+      - Lands incrementally with the wiring leaves (M-788..M-792) and is consolidated by the M-794 gate.
