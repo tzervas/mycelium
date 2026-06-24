@@ -221,6 +221,18 @@ mode tag (§3.1); (b) no `fast` result carries `Empirical`/`Proven` (§3.2); (c)
 in every mode (§3.3); (d) `EXPLAIN` of the active mode is always available; (e) spores are mintable with the
 runtime cert-off (§8); (f) cross-mode composition surfaces the boundary (§6).
 
+**Conformance is verified mode-parametrically (test contract).** Each clause above is exercised
+**parameterized over the `CertMode` tiers** (`fast`/`balanced`/`certified`), and every mode-sensitive
+invariant is checked **both ways**: it must *fire* in the tiers it applies to **and** be *correctly absent
+or relaxed* in the tiers it does not — the cross-mode **negative** cases, so a `certified`-only invariant
+holding spuriously in `fast` is caught, not silently passed (e.g. swap-cert *checking* present in
+`certified` / absent in `fast`; certificate *emission* in `balanced`+`certified` / none in `fast`;
+`Empirical`/`Proven` reachable in `certified` / never in `fast`; Axis-B never-silent in **every** mode).
+The pre-existing suite — which implicitly assumed the all-on (`certified`) behaviour — is adapted, not
+dropped: each mode-sensitive fixture is pinned to `certified` or parameterized, its mode-scope made
+explicit (the DN-20 transparency rule for tiered tests — over-specify, never silently drop coverage). The
+shared parameterization harness is M-795; the M-794 gate consolidates it.
+
 **Amendment manifest — applied 2026-06-24.** The corpus rewordings (ADR-032's act) were applied on
 ratification via the anchor-keyed, single-pass-per-file mechanism of DN-29 §11.4 (`tools/dn29_apply.py` +
 `docs/notes/dn29-amendment-manifest.json`): **21 amendments across 13 files** — the charter conditionalize
@@ -247,4 +259,5 @@ refused.
 |---|---|---|
 | 2026-06-24 | **Proposed** | Initial proposal from the settled DN-29 deliberation. Makes certification/hashing/tag machinery a tunable policy over RFC-0001/0002/0005: the knob matrix (§4), two first-class modes `fast`/`certified` + `balanced` intermediate (§5), `global/phylum/nodule` resolution reusing RFC-0012 scoping (§6), provenance tag as an adjustable unit with `fast` omitting `Empirical`/`Proven` + the generation≠consumption split (§7), the compile/runtime phase split so spores survive a cert-off runtime (§8), memory-safe-by-default + explicit per-use escape sharpening ADR-014 (§9), the named `wrapping` Axis-B opt-out (§10), and the never-silent mode invariant (§3). Implementation-focused; the charter/north-star reframe + whole-corpus honesty→transparency vocabulary reword are carried by the superseding **ADR-032** and applied via the staged §13 manifest only after both are Accepted. Decides the surface, implements nothing (VR-5/G2). Anchor: DN-29. |
 | 2026-06-24 | **Accepted** | Maintainer ratification (stepped Proposed → Accepted, house rule #3). The design — knob matrix, two first-class modes, resolution/scoping, tagging + generation/consumption split, phase split, memory safety, `wrapping` opt-out, never-silent mode invariant — is ratified. |
+| 2026-06-24 | **Enacted (design-driven)** *(rev. — test contract)* | §13 conformance refined to require **mode-parametric** verification + the cross-mode **negative** cases (an invariant must be absent/relaxed where it should be, not just present where it should) and the **adapt-don't-drop** rule for the pre-existing all-on suite (DN-20). Implementation tasks: harness **M-795**, consolidated by the **M-794** gate. Strengthens the test obligation; the mechanism + the conformance clauses (a)–(f) are unchanged. |
 | 2026-06-24 | **Enacted (design-driven)** | Doc-and-design-driven enactment paired with TDD. The corpus amendments (ADR-032's act) were **applied**: 21 amendments / 13 files via `tools/dn29_apply.py` (charter conditionalize SC-3/FR-M3; living-doc transparency reframe; append-only footnotes on RFC-0001/0002/0005 + ADR-010/011/013/016/017); process/colloquial "honest" deliberately excluded. The per-mode rules now govern the corpus. **Implementation pending** — the runtime mode mechanism is the paired TDD cycle, not yet code, never claimed implemented (VR-5/G2); advances to fully Enacted-with-code as the modes land Rust-first. DN-29 → Superseded. |

@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: E21-1 — capture the mode-aware test strategy (RFC-0034 §13 + M-795))
+
+- **Test-adaptation captured as a first-class E21-1 requirement.** As the `CertMode` tiers land, the
+  suite must become **mode-aware**: every mode-sensitive test is **parameterized over `fast`/`balanced`/
+  `certified`** and maps to the *intended per-mode* behaviour, and each invariant is checked **both
+  ways** — it must *fire* in the tiers it applies to **and** be *correctly absent/relaxed* in the tiers it
+  doesn't (the cross-mode **negative** cases), so a `certified`-only invariant holding spuriously in
+  `fast` is caught, not silently passed. The pre-existing all-on suite is **adapted, not dropped** (each
+  fixture pinned to `certified` or parameterized; mode-scope made explicit — the DN-20 tiered-test
+  transparency rule).
+- **Captured in:** RFC-0034 §13 (the conformance contract, now mode-parametric + negative — recorded in
+  the RFC changelog, append-only); the E21-1 epic body + DoD (`tools/github/issues.yaml`); a new
+  cross-cutting leaf **M-795** (the shared parameterization harness + the negative-case pattern + fixture
+  adaptation), which **M-794** (the conformance gate) now depends on. Examples encoded: swap-cert
+  *checking* present in `certified`/absent in `fast`; certificate *emission* in `balanced`+`certified`/none
+  in `fast`; Axis-B never-silent in **every** mode.
+
 ### Added (2026-06-24: E21-1 Group A — cert-mode core (M-786 + M-787), RFC-0034 §3.1/§7)
 
 - **`CertMode { Fast, Balanced, Certified }`** in `mycelium-core` (`cert_mode.rs`) — the tunable
