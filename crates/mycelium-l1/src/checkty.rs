@@ -2443,6 +2443,73 @@ impl Cx<'_> {
         if let Some(err) = self.imports.ambiguity_error(self.site, name) {
             return Err(err);
         }
+        // RFC-0032 D1 (M-747): the comparison prims `eq`/`lt` are **width-collapsing** — two
+        // equal-width operands of one paradigm reduce to `Binary{1}` (the realized `Bool`; see
+        // `prims.rs`). They do not fit the width-*preserving* `prim_family` path below (whose result
+        // width equals the operand width and which can anchor a bare decimal off the *expected* type).
+        // Because the result is `Binary{1}` — not the operand width — the expected type cannot anchor a
+        // bare-decimal operand here; a *concrete* operand still can, so we anchor a bare decimal off the
+        // other operand (consistent with the width-preserving prims). Only when **both** operands are
+        // bare decimals is there no anchor at all, and then it is refused honestly (G2 — never a default
+        // width); ascribe one operand or write it explicitly.
+        if matches!(name.as_str(), "eq" | "lt") {
+            if args.len() != 2 {
+                return self.err(format!(
+                    "`{name}` takes two operands (got {}); RFC-0032 D1",
+                    args.len()
+                ));
+            }
+            // First pass: type the non-bare-decimal operand(s); the first concrete one anchors width.
+            let mut typed: Vec<Option<(Ty, Expr)>> = vec![None, None];
+            let mut anchor: Option<Ty> = None;
+            for (i, a) in args.iter().enumerate() {
+                if matches!(a, Expr::Lit(Literal::AmbientInt(_, _))) {
+                    continue;
+                }
+                let (t, a2) = self.check(scope, a, None)?;
+                if anchor.is_none() {
+                    anchor = Some(t.clone());
+                }
+                typed[i] = Some((t, a2));
+            }
+            // Second pass: resolve each bare decimal against the concrete operand's type, if any.
+            let mut tys = Vec::with_capacity(2);
+            let mut rebuilt = Vec::with_capacity(2);
+            for (i, a) in args.iter().enumerate() {
+                let (t, a2) = match typed[i].take() {
+                    Some(x) => x,
+                    None => {
+                        let anchor_ty = anchor.clone().ok_or_else(|| {
+                            CheckError::new(
+                                self.site,
+                                format!(
+                                    "both operands of `{name}` are bare decimals, so neither pins a \
+                                     width — and because comparison is width-collapsing (RFC-0032 D1) \
+                                     the `Binary{{1}}` result cannot anchor them either. Ascribe one \
+                                     operand or write it explicitly (RFC-0012 §4.3, never a default \
+                                     width)"
+                                ),
+                            )
+                        })?;
+                        self.check(scope, a, Some(&anchor_ty))?
+                    }
+                };
+                tys.push(t);
+                rebuilt.push(a2);
+            }
+            match (&tys[0], &tys[1]) {
+                (Ty::Binary(x), Ty::Binary(y)) if x == y => {}
+                (Ty::Ternary(x), Ty::Ternary(y)) if x == y => {}
+                _ => {
+                    return self.err(format!(
+                        "`{name}` compares two equal-width operands of the same paradigm \
+                         (Binary/Ternary), got {:?} and {:?} (RFC-0032 D1)",
+                        tys[0], tys[1]
+                    ));
+                }
+            }
+            return Ok((Ty::Binary(1), app_node(head, rebuilt)));
+        }
         let Some(fam) = prim_family(name) else {
             return self.err(teach_unknown(
                 name,
@@ -3402,7 +3469,8 @@ impl PrimFam {
 /// The family of a builtin prim, or `None` if `name` is not a known prim.
 fn prim_family(name: &str) -> Option<PrimFam> {
     Some(match name {
-        "not" | "xor" => PrimFam::Binary,
+        // RFC-0032 D2 (M-748): width-preserving binary logical + arithmetic prims.
+        "not" | "xor" | "and" | "or" | "add_bin" | "sub_bin" => PrimFam::Binary,
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -3489,6 +3557,11 @@ pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
     match (name, args) {
         ("not", [Ty::Binary(n)]) => Some(Ty::Binary(*n)),
         ("xor", [Ty::Binary(a), Ty::Binary(b)]) if a == b => Some(Ty::Binary(*a)),
+        // RFC-0032 D2 (M-748): width-preserving binary arithmetic/logical (never-silent overflow is
+        // a runtime contract; the static signature is width-preserving like the trit arithmetic).
+        ("and" | "or" | "add_bin" | "sub_bin", [Ty::Binary(a), Ty::Binary(b)]) if a == b => {
+            Some(Ty::Binary(*a))
+        }
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
             Some(Ty::Ternary(*a))
         }
@@ -3503,6 +3576,15 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
     Some(match name {
         "not" => "bit.not",
         "xor" => "bit.xor",
+        // RFC-0032 D2 (M-748): surface the already-registered `bit.and`/`bit.or` + never-silent
+        // binary `add`/`sub` (distinct surface names from the trit-backed `add`/`sub` below).
+        "and" => "bit.and",
+        "or" => "bit.or",
+        "add_bin" => "bit.add",
+        "sub_bin" => "bit.sub",
+        // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (returns `Binary{1}`).
+        "eq" => "cmp.eq",
+        "lt" => "cmp.lt",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",

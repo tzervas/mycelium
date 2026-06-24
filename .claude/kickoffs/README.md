@@ -46,13 +46,14 @@ main` promotes it up.
 | *(active)* **l1-capstone** | run-kickoff continuation; head `claude/orch-0000-l1-capstone` | `crates/mycelium-l1/**` · `crates/mycelium-fmt/**` · `lib/std/**` | **E7-3** HOF (serial-on-L1) ∥ **E7-4** comment-preserving mycfmt (lexer+fmt, disjoint) → M-649 complete | `run` ✅ (M-673 landed) |
 | **`c10`** | `c10.md` | `crates/mycelium-core/**` · kernel T1 scope | Sonnet · serial-on-kernel | Status: **core gate met / tag-ready**; head `claude/head/c10`; governs E10-1 (kernel/core 1.0.0 sub-gate, T1); gate: ADR-022 T1 + DN-25; no task dep (T1 is the preserved ADR-021 kernel track); E10-1; M-700/701/702 done, M-703 tag reserved (#500) |
 | **`s10`** | `s10.md` | `crates/mycelium-l1/**` · `docs/spec/grammar/**` · surface-language scope | Sonnet · serial-on-L1 | Status: **in progress**; head `claude/head/s10`; governs E11-1 (surface-language completeness & grammar, T2); gate: ADR-022 T2 + DN-25; deps: E7-1 (M-657/M-659 ✅) + E7-3 (M-685…M-688 ✅); operator syntax + surface stabilization landed (M-705/706/708; #502) |
-| **`r10`** | `r10.md` | `crates/mycelium-std-runtime/**` · `crates/mycelium-runtime/**` · runtime scope | Sonnet · parallel-leaf | Status: **in progress**; head `claude/head/r10`; governs E12-1 (runtime & concurrency execution maturity, T3); gate: ADR-022 T3 + DN-25; deps: E7-2 (M-666 ✅); scheduler/deadlock/supervision landed (M-709/711/713; #501); M-710/M-712 open |
+| **`r10`** | `r10.md` | `crates/mycelium-std-runtime/**` · `crates/mycelium-mlir/src/runtime.rs` · runtime scope | Sonnet · parallel-leaf | Status: **in progress**; head `claude/head/r10`; governs E12-1 (runtime & concurrency execution maturity, T3); gate: ADR-022 T3 + DN-25; deps: E7-2 (M-666 ✅); scheduler/deadlock/supervision landed (M-709/711/713; #501); M-710/M-712 open |
 | **`lib10`** | `lib10.md` | `lib/std/**` · `crates/mycelium-std-*/**` · stdlib scope | Sonnet · parallel-leaf | Status: **ready** (**long pole**); head `claude/head/lib10`; governs E13-1 (standard library in Mycelium, T4); gate: ADR-022 T4 + DN-25; deps: E11-1 (`s10`) |
 | **`ffi10`** | `ffi10.md` | `crates/mycelium-std-sys/**` · FFI scope | Sonnet · parallel-leaf | Status: **in progress (on dev)**; head `claude/head/ffi10`; governs E14-1 (FFI & system interface, T5); gate: ADR-022 T5 + DN-25; no blocking dep (disjoint from T2/T3); wild/@std-sys execution landed to dev (#499); not yet on main |
 | **`aot10`** | `aot10.md` | `crates/mycelium-mlir/**` · native-codegen scope | Sonnet · parallel-leaf | Status: **ready, but `1.1`/post-1.0.0** — T6 un-gated 2026-06-23 (ADR-022 §8 Q4: QoL/perf, **not a 1.0.0 blocker**; runs after the release alongside `boot10`); head `claude/head/aot10`; governs E15-1 (native AOT maturity, T6 → `1.1`); gate: ADR-022 §8 Q4 + DN-25; deps: E6-1 |
 | **`tool10`** | `tool10.md` | `tools/**` · editor grammars · package-dist scope | Sonnet · parallel-leaf | Status: **ready**; head `claude/head/tool10`; governs E16-1 (toolchain, IDE & package distribution, T7); gate: ADR-022 T7 + DN-25; deps: E9-1 (`tul`/RFC-0026) |
 | **`rel10`** | `rel10.md` | `docs/**` · `CHANGELOG.md` · stability & release scope | Sonnet · serial (docs-heavy) | Status: **in progress**; head `claude/head/rel10`; governs E17-1 (documentation, stability & 1.0.0 release, T8); gate: ADR-022 T8 + DN-25; no code dep (runs in parallel with T1–T7; gates the release tag); language ref + stdlib API docs + ADR-023 landed (M-735/736/737; #493); M-738 release act blocked (gate) |
 | **`boot10`** | `boot10.md` | `lib/std/**` · `crates/mycelium-l1/**` · self-hosting scope | Sonnet · serial-on-L1 | Status: **ready** (**long pole**); head `claude/head/boot10`; governs E18-1 (self-hosting capstone, T9); gate: ADR-022 T9 + DN-25; deps: E11-1 (`s10`) + E13-1 (`lib10`) |
+| **`kpr`** | `kpr.md` | `crates/mycelium-interp/src/prims.rs` · `crates/mycelium-l1/src/checkty.rs` (`prim_kernel_name`) · `docs/rfcs/RFC-0032-*` · **coordinated:** `crates/mycelium-core/**` (with `c10`) + L1 type system (with `s10`) | Sonnet · serial-on-prims then serial-on-core (`Repr::Seq`→`Repr::Bytes`) | Status: **gate cleared** — RFC-0032 **Accepted** (M-746, §5 D1–D7); enablers M-747…M-750 `todo`; head `claude/head/kpr`; governs **E19-1** (prims + value reprs that **unblock E13-1 Tier-1/Tier-2**); deps: RFC-0031 §5 D4 ✅; D6 (in core 1.0.0) extends ADR-022 T1 — **enacted append-only by ADR-024**; coordinates with `c10` (core) + `s10` (M-753 width-generics) |
 
 **Parallelism (collision profile):**
 - **`srf` owns `crates/mycelium-l1/` (Rust) → serial-on-L1** (M-664 leaf lands, then M-667 rebases
@@ -74,6 +75,57 @@ main` promotes it up.
   **`claude/orch-0000-l1-capstone`** head (the common fixed base); the head advances as each leaf merges,
   and the next leaf branches from / pulls down the advanced head. M-649 completes (pseudocode → real
   combinators) on the head once E7-3 lands.
+- **`kpr` is the kernel-enablement leg that unblocks `lib10`** (E13-1 Tier-1/Tier-2). It owns
+  `crates/mycelium-interp/src/prims.rs` + the `prim_kernel_name` map (largely unowned by other legs)
+  and is **design-gated by RFC-0032/M-746** — no implementation leaf fires until that RFC is Accepted.
+  Two coordinated overlaps (flag-don't-guess, maintainer sign-off before merge): the value-model reprs
+  (M-749/M-750) touch `crates/mycelium-core/**` (**`c10`**'s kernel-T1 scope — the 1.0.0-placement is
+  an RFC-0032 decision), and width-generics (M-751) touch the `mycelium-l1` type system (**`s10`**'s
+  E11-1 scope — RFC-0032 Q5 decides whether `kpr` owns it or it reassigns to `s10`). `kpr` ⟂ `lib10`'s
+  `lib/std/**` (the unblock is *demonstrated* via smoke tests under `crates/mycelium-l1/tests/`; the
+  `.myc` consumers land in `lib10`), so cross-leg continuity rides the issues' `depends_on`
+  (M-716 ⟸ M-749 · M-717 ⟸ M-750 · M-718 ⟸ M-747/M-748/M-751).
+
+### Cross-track deconfliction — `r10` (runtime) ↔ `rel10` (docs/release)
+
+`r10` is a **code** track and `rel10` the **docs/release** track; their working directories are
+**disjoint, so they develop fully in parallel**:
+
+- **`r10` (code)** owns `crates/mycelium-std-runtime/**`, `crates/mycelium-mlir/src/runtime.rs`,
+  `crates/mycelium-l1/src/elab.rs` (M-710), plus its own **design docs** — `docs/rfcs/RFC-0008-*`,
+  `docs/rfcs/RFC-0027-*`, `docs/spec/stdlib/runtime.md` — and its **per-crate API baseline**
+  `docs/spec/api/mycelium-std-runtime.txt`.
+- **`rel10` (docs/release)** owns `docs/reference/**`, `crates/mycelium-doc/**`,
+  `docs/adr/ADR-023-*`, and the release notes + tag.
+
+They overlap on exactly **five release-surface files** (the same set `rel10` shares with *every*
+code track). Each has a single owner so neither head writes a file the other writes — the other
+track **FLAGs up**, it does not edit:
+
+| Shared file | Owner | The other track's protocol |
+|---|---|---|
+| `docs/api-index/` (unified `index.json` + `INDEX.md`) | **integrator** — regenerated once via `just docs-index` on the merged state (CLAUDE.md: never hand-merged) | neither head hand-edits it; per-crate baselines `docs/spec/api/<crate>.txt` stay **disjoint** (each track owns its own crate's file) |
+| `CHANGELOG.md` | **`rel10`** (curation is M-738) | `r10` supplies its entry as PR-body / FLAG text; never edits the top-level CHANGELOG on its head |
+| `docs/adr/ADR-022-*.md` §5 gate table | **`rel10`** (release-gate steward) | `r10` **FLAGs "T3 → gate-met" up**; its live status rides its own `issues.yaml` rows, not ADR-022 |
+| `docs/Doc-Index.md` | **integrator** (reconcile once at `dev → integration`) | each FLAGs its index line; neither edits it on its head |
+| `tools/github/issues.yaml` + `idmap.tsv` | **integrator** (reconcile once) | disjoint rows (M-709…713 vs M-735…738); validate + dedup after merge (mitigation #2) |
+
+**Sequencing is a landing-time constraint only — development stays parallel:**
+
+1. **`r10` lands before `rel10` reconciles the gate.** `rel10`'s ADR-022 §5 T3 status flip + the
+   M-738 release act must reflect `r10`'s *final* T3 state, so `rel10` integrates the gate **last**
+   ("`rel10` gates the release").
+2. **`rel10`'s runtime prose cites `r10`'s spec as source-of-truth.** Write the M-735 runtime
+   section + M-736 stdlib-runtime API in parallel, then run a content-consistency pass against
+   `r10`'s final RFC-0008 / `runtime.md` / `mycelium-std-runtime` at integration — don't block prose
+   on code.
+
+**Not an `r10`↔`rel10` concern (noted to avoid false coupling):** `r10`'s **M-712** (reclamation) is
+blocked on **RFC-0027 → Accepted**, which `r10` owns and advances itself. `r10`'s **M-710** edits
+`crates/mycelium-l1/src/elab.rs`, putting it on the **L1-serialization track with `s10`/`srf`/
+`l1-capstone`** — an `r10`↔L1 collision, not an `r10`↔`rel10` one. `rel10`'s **M-736** *reads*
+`lib/std/**` (lib10's write territory) read-only — a content dependency on `lib10`, no write
+collision.
 
 Cross-work continuity rides the **issues** (`tools/github/issues.yaml` `depends_on` + body notes),
 never by touching another tree's files. (`dfb` predates this workflow — ignore its old

@@ -206,6 +206,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-cli"
+version = "0.0.0"
+dependencies = [
+ "mycelium-cli-common",
+ "mycelium-l1",
+ "mycelium-proj",
+ "mycelium-spore",
+]
+
+[[package]]
 name = "mycelium-cli-common"
 version = "0.0.0"
 
@@ -354,6 +364,7 @@ dependencies = [
  "blake3",
  "mycelium-core",
  "mycelium-proj",
+ "proptest",
 ]
 
 [[package]]
