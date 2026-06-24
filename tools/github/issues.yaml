@@ -6192,7 +6192,9 @@ issues:
         least one honest, certificate-backed safe-fix class.
       - Findings report to BOTH sinks: the CLI report AND the registry (DN-28), the registry hosting them as
         SCREENED/anonymized entries (content-addressed pattern fingerprint, no victim source); the screening
-        policy is decided (DN-30 §7 Q4) before any finding is published.
+        policy is decided (DN-30 §7 Q4) before any finding is published. The security catalog reuses DN-28's
+        LIGHTWEIGHT reconstruction-on-render model (store hashes/manifest, reconstruct + hash-verify finding
+        bodies on render -- tamper-evident, as cheap as the package side).
       - Native + scope-configurable (project/nodule/granular) reusing the @certification resolver; findings +
         fixes reified, EXPLAIN-able, never-silent; honest confidence tags throughout (VR-5/G2).
       - just check green; CHANGELOG append-only; the /security-review skill consumes the toolkit's findings
