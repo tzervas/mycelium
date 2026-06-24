@@ -8,6 +8,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: E21-1 — mode-parametric testing as a native, scoped toolkit capability (RFC-0034 §13 + M-796))
+
+- **Generalized the test contract into a developer-facing toolkit capability.** The §13 mode-parametric
+  test discipline is not just *our* convention — the **Mycelium testing toolkit** (`mycelium-std-testing`)
+  exposes it as **first-class and natively wired in**: a developer marks a test/suite to run across the
+  `CertMode` tiers (with the cross-mode *negative* pattern built in), getting the discipline **for free**
+  rather than hand-rolling it. Its coverage is **configurable in scope, reusing the §6 `@certification`
+  resolution** (most-specific-wins): **project-wide** default (manifest) > **nodule-wide** (header) >
+  **granular** per test/unit — the §7 ergonomic, never-cornering stance applied to testing (tool +
+  default + scope dial; never forced one way).
+- **Captured in:** RFC-0034 §13 (the native-scoped-toolkit paragraph; recorded in the RFC changelog,
+  append-only) and a new leaf **M-796** (`tools/github/issues.yaml`) — the developer-facing surface
+  generalization (depends on M-790 resolution + the testing toolkit). M-795 reframed as the *kernel
+  instance* of the same principle.
+
 ### Changed (2026-06-24: E21-1 — capture the mode-aware test strategy (RFC-0034 §13 + M-795))
 
 - **Test-adaptation captured as a first-class E21-1 requirement.** As the `CertMode` tiers land, the

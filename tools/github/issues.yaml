@@ -6078,9 +6078,10 @@ issues:
       - corpus:DN-20
       - src:crates/mycelium-core/src/cert_mode.rs
     body: |
-      The cross-cutting TEST-ADAPTATION leaf. The existing suite implicitly assumes the all-on
-      (`certified`) behaviour; this leaf makes the suite MODE-AWARE and provides the shared harness every
-      other leaf's tests use.
+      The cross-cutting TEST-ADAPTATION leaf -- the KERNEL-LEVEL (Rust) instance of the general
+      mode-parametric-testing principle that M-796 generalizes into the developer-facing toolkit. The
+      existing suite implicitly assumes the all-on (`certified`) behaviour; this leaf makes the suite
+      MODE-AWARE and provides the shared harness every other leaf's tests use.
       Scope:
       - A reusable parameterization harness (e.g. `for mode in CertMode::ALL { ... }` helpers + per-mode
         fixtures) so a mode-sensitive test runs across fast/balanced/certified and maps to the INTENDED
@@ -6098,3 +6099,36 @@ issues:
       - Every adapted fixture states its mode-scope; a grep/CI check (or review) confirms no mode-sensitive
         assertion is left implicitly all-on. fmt/clippy -D warnings/test green; just check green.
       - Lands incrementally with the wiring leaves (M-788..M-792) and is consolidated by the M-794 gate.
+
+  - id: M-796
+    title: "M-796 -- native scoped mode-parametric testing in the Mycelium testing toolkit (downstream)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feat, area:tooling, priority:P2, status:todo]
+    epic: E21-1
+    depends_on: [M-790, M-795]
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:RFC-0012
+      - corpus:RFC-0016
+      - src:crates/mycelium-std-testing
+    body: |
+      Generalize the mode-parametric-testing principle (the kernel instance is M-795) into a FIRST-CLASS,
+      NATIVELY-WIRED-IN capability of the Mycelium testing toolkit (`mycelium-std-testing`), so downstream
+      developers GET IT FOR FREE instead of hand-rolling it (RFC-0034 §13, "native scoped test toolkit").
+      Capability:
+      - A developer marks a test/suite to run ACROSS the CertMode tiers, with the cross-mode NEGATIVE
+        pattern (fires-where-it-applies / absent-where-it-doesn't) supported as a built-in -- the §13
+        conformance contract becomes the toolchain's behaviour, not a per-project re-implementation.
+      - CONFIGURABLE SCOPE, reusing the §6 `@certification` resolution (most-specific-wins, via RFC-0012
+        ambient/scoped-override): PROJECT-WIDE default test-mode-set (manifest) > NODULE-WIDE (nodule
+        header) > GRANULAR per test/unit. Sensible default (a mode-sensitive unit covers the tiers whose
+        behaviour differs + the negatives); a unit may pin or widen explicitly. Never forces one way (the
+        §7 ergonomic, never-cornering stance applied to testing).
+      Acceptance / DoD (TDD):
+      - The toolkit exposes the scoped mode-parametric API + the negative-case helpers; scope resolves
+        project/nodule/granular reusing the @certification mechanism (shared resolver, not a parallel one).
+      - A worked example + docs show a downstream dev getting per-tier + negative coverage with zero
+        boilerplate; default behaviour is documented and never-silent about which tiers ran.
+      - fmt/clippy -D warnings/test green; just check green. NOTE: developer-facing surface generalization
+        -- depends on the @certification resolution (M-790) + the testing toolkit; may extend into its own
+        surface-phase follow-on if the toolkit work outgrows this leaf (flag at design time, don't guess).
