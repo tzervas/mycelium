@@ -51,13 +51,38 @@ Every finding carries **provenance + a confidence tag** on the lattice (`Exact �
 Declared`, RFC-0034): a *proven* taint-flow vs a *heuristic* pattern-match is **disclosed**, never
 conflated — the transparency rule, applied to the scanner's own claims.
 
-## §4 Find-once, report-to-community
+## §4 Find-once, report-to-community — the registry as a security-advisory host
 
-A vulnerability found once in a phylum is **shared with the ecosystem**: the toolkit publishes to an
-**advisory feed** (OSV-shaped) keyed by the phylum's **content-hash DAG** (DN-28's registry model), so
-consumers are notified precisely which content-addressed versions are affected and which fix supersedes
-them. *Find once, report to the community* — the discovery cost is paid once and the benefit is ecosystem-wide.
-(Disclosure governance — embargo windows, coordinated disclosure — is an explicit open question, §7.)
+A finding is reported to **two sinks**, not one:
+
+1. **The CLI report** (local) — the SARIF/CWE output (§3) for the developer running the scan.
+2. **The registry** — the **same registry that hosts packages (phyla + nodules; DN-28) ALSO hosts the
+   security findings.** A vulnerability found once is **shared with the ecosystem** there: the registry is
+   the security-advisory database, not just a package host.
+
+*Find once, report to the community* — the discovery cost is paid once and the benefit is ecosystem-wide.
+
+**Screened / anonymized / privatized disclosure (the keystone of §4).** What the registry hosts is **not**
+the victim's raw vulnerable source — it is a **screened** finding: the vulnerable logic is
+**anonymized/privatized** (secrets + PII stripped, proprietary specifics removed, **minimized to the
+essential vulnerable *pattern***) before it is published. Content-addressing makes this precise: the screened
+pattern is itself **content-addressed to a fingerprint**, so *other* scans can match the same vulnerable
+pattern across phyla **without ever seeing the original source** — detection + mitigation propagate
+ecosystem-wide while the specific instance stays private. Disclose enough to defend, never enough to weaponize.
+
+**The hosted finding records** (the content model, machine-consumable per §3):
+- **What** — the vulnerability class (CWE) + the **screened/minimized** vulnerable-logic pattern (anonymized)
+  + its content-addressed fingerprint.
+- **Severity** — a CVSS-style score / severity tier.
+- **Affected** — precisely which content-addressed phylum/nodule versions (the DN-28 content-hash DAG +
+  a VEX applicability statement — is this version actually exploitable?).
+- **Mitigation options that retain the logic** — one or more fixes (§5), each carrying an **honest** tag that
+  it preserves intended behaviour while removing the vuln (the RFC-0002 refinement certificate), so a
+  consumer can review or auto-apply.
+- **Provenance + confidence** — an honest tag on the finding itself (proven taint-flow vs heuristic, §3).
+
+(Disclosure governance — embargo windows, coordinated disclosure, the **screening policy** that decides what
+is safe to publish — is an explicit open question, §7.)
 
 ## §5 Honest, semantics-preserving safe auto-fix
 
@@ -96,7 +121,10 @@ stance applied to security.
 2. **The reporting standard set.** SARIF + CWE + OSV + VEX is the proposed baseline — confirm + pin schemas.
 3. **Auto-fix verification depth.** How much of "refines the original" is `Proven` (checked) vs `Empirical`
    (corpus-tested) in v0? The RFC-0002 checker is the reuse vehicle; the bar per fix-class is open.
-4. **Disclosure governance.** Embargo / coordinated-disclosure policy for the community feed (§4).
+4. **Disclosure governance + screening policy.** Embargo / coordinated-disclosure for the community feed,
+   and — the harder one — the **screening/anonymization policy** (§4): what minimization makes a hosted
+   vulnerable-logic pattern safe to publish (detectable + mitigable, but not weaponizable and not leaking
+   the victim's proprietary source)? Who reviews/approves a screening before it lands in the registry?
 5. **Relationship to `/security-review`.** Does the skill become the *interactive front-end* to the
    automated toolkit, or stay a separate manual lens? (Lean: the skill consumes the toolkit's findings.)
 
@@ -115,4 +143,9 @@ it is the direction record, superseded (append-only) by that RFC when the design
 > Advisory only; no normative claim (VR-5 / G2).
 >
 > **Revision history.** *2026-06-24* — initial Draft (direction capture; the security-scanning toolkit as a
-> shippable, native, honest toolchain component).
+> shippable, native, honest toolchain component). *2026-06-24 (rev.)* — §4 expanded: a finding reports to
+> **two sinks** (CLI + the registry); the **registry hosts security findings alongside packages** (DN-28),
+> as **screened/anonymized/privatized** entries (vulnerable logic minimized to a content-addressed pattern
+> fingerprint — detectable + mitigable ecosystem-wide without exposing the victim's source); the hosted
+> finding content model (what / severity / affected content-addressed versions / logic-retaining mitigations
+> / honest confidence) is stated; §7 Q4 gains the **screening policy** governance question.

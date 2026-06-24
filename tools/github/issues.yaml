@@ -6163,8 +6163,12 @@ issues:
       - STANDARD, MACHINE-CONSUMABLE REPORTING: SARIF + CWE class + CVE/OSV id + VEX applicability, each
         finding carrying provenance + an honest confidence tag (Exact/Proven/Empirical/Declared, RFC-0034) --
         a proven taint-flow vs a heuristic match is disclosed, never conflated.
-      - FIND-ONCE, REPORT-TO-COMMUNITY: publish to an OSV-shaped advisory feed keyed by the phylum's
-        content-hash DAG (DN-28 registry), so consumers learn precisely which versions are affected.
+      - FIND-ONCE, REPORT-TO-COMMUNITY (two sinks): the CLI report (local) AND the REGISTRY -- the same
+        registry that hosts packages (phyla + nodules; DN-28) ALSO hosts the security findings, as
+        SCREENED/ANONYMIZED/PRIVATIZED entries (vulnerable logic minimized to a content-addressed pattern
+        fingerprint -- detectable + mitigable ecosystem-wide WITHOUT exposing the victim's source; disclose
+        enough to defend, never to weaponize). Hosted finding: what (CWE + screened pattern) / severity /
+        affected content-addressed versions (+ VEX) / logic-retaining mitigations / honest confidence.
       - HONEST, SEMANTICS-PRESERVING SAFE AUTO-FIX: a fix ships a certificate (REUSING the RFC-0002
         refinement/translation-validation machinery) that it (a) eliminates/mitigates the vuln AND (b)
         refines the original modulo the vuln (logic preserved), each honestly tagged. EXPLAIN-able
@@ -6186,6 +6190,9 @@ issues:
       - A binding security-scanning RFC is Accepted (shaped by DN-30 §2-§6 + the §7 open questions resolved).
       - v0 detects an agreed class set (DN-30 §7 Q1), emits SARIF+CWE (+OSV where applicable), and offers at
         least one honest, certificate-backed safe-fix class.
+      - Findings report to BOTH sinks: the CLI report AND the registry (DN-28), the registry hosting them as
+        SCREENED/anonymized entries (content-addressed pattern fingerprint, no victim source); the screening
+        policy is decided (DN-30 §7 Q4) before any finding is published.
       - Native + scope-configurable (project/nodule/granular) reusing the @certification resolver; findings +
         fixes reified, EXPLAIN-able, never-silent; honest confidence tags throughout (VR-5/G2).
       - just check green; CHANGELOG append-only; the /security-review skill consumes the toolkit's findings

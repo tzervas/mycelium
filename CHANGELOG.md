@@ -8,6 +8,18 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: DN-30 rev. — the registry as a screened security-advisory host (DN-28))
+
+- **DN-30 §4 expanded:** a finding reports to **two sinks** — the **CLI report** *and* the **registry**. The
+  same registry that hosts packages (phyla + nodules; DN-28) **also hosts the security findings**, as
+  **screened / anonymized / privatized** entries: the vulnerable logic is minimized to a
+  **content-addressed pattern fingerprint** so other scans match the same weakness across phyla **without
+  exposing the victim's source** (disclose enough to defend, never to weaponize). The hosted finding records
+  *what* (CWE + screened pattern + fingerprint) / *severity* / *affected content-addressed versions* (+ VEX)
+  / *logic-retaining mitigations* (honestly tagged) / *confidence*. §7 gains the **screening-policy**
+  governance question (what is safe to publish; who approves). Cross-referenced in **DN-28 §5** and the
+  **E22-1** epic. Still Draft, advisory — enacts nothing.
+
 ### Added (2026-06-24: DN-30 — Security Scanning Toolkit (direction capture, Draft))
 
 - **DN-30 — Security Scanning Toolkit** (`docs/notes/`, **Draft**, advisory). Captures the direction for a
