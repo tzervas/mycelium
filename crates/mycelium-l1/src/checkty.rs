@@ -2445,11 +2445,13 @@ impl Cx<'_> {
         }
         // RFC-0032 D1 (M-747): the comparison prims `eq`/`lt` are **width-collapsing** — two
         // equal-width operands of one paradigm reduce to `Binary{1}` (the realized `Bool`; see
-        // `prims.rs`). They do not fit the width-*preserving* `prim_family` path below (whose
-        // result width equals the operand width and which anchors bare decimals off the expected
-        // type), so they are checked here. A bare-decimal operand has no width anchor (the result
-        // is `Binary{1}`, not the operand width), so it is refused honestly (G2 — never a default
-        // width); ascribe it or write it explicitly.
+        // `prims.rs`). They do not fit the width-*preserving* `prim_family` path below (whose result
+        // width equals the operand width and which can anchor a bare decimal off the *expected* type).
+        // Because the result is `Binary{1}` — not the operand width — the expected type cannot anchor a
+        // bare-decimal operand here; a *concrete* operand still can, so we anchor a bare decimal off the
+        // other operand (consistent with the width-preserving prims). Only when **both** operands are
+        // bare decimals is there no anchor at all, and then it is refused honestly (G2 — never a default
+        // width); ascribe one operand or write it explicitly.
         if matches!(name.as_str(), "eq" | "lt") {
             if args.len() != 2 {
                 return self.err(format!(
@@ -2457,17 +2459,41 @@ impl Cx<'_> {
                     args.len()
                 ));
             }
-            let mut rebuilt = Vec::with_capacity(2);
-            let mut tys = Vec::with_capacity(2);
-            for a in args {
+            // First pass: type the non-bare-decimal operand(s); the first concrete one anchors width.
+            let mut typed: Vec<Option<(Ty, Expr)>> = vec![None, None];
+            let mut anchor: Option<Ty> = None;
+            for (i, a) in args.iter().enumerate() {
                 if matches!(a, Expr::Lit(Literal::AmbientInt(_, _))) {
-                    return self.err(format!(
-                        "a bare decimal operand of `{name}` has no width here — comparison is \
-                         width-collapsing (RFC-0032 D1), so no operand or expected type pins it. \
-                         Ascribe it or write it explicitly (RFC-0012 §4.3, never a default width)"
-                    ));
+                    continue;
                 }
                 let (t, a2) = self.check(scope, a, None)?;
+                if anchor.is_none() {
+                    anchor = Some(t.clone());
+                }
+                typed[i] = Some((t, a2));
+            }
+            // Second pass: resolve each bare decimal against the concrete operand's type, if any.
+            let mut tys = Vec::with_capacity(2);
+            let mut rebuilt = Vec::with_capacity(2);
+            for (i, a) in args.iter().enumerate() {
+                let (t, a2) = match typed[i].take() {
+                    Some(x) => x,
+                    None => {
+                        let anchor_ty = anchor.clone().ok_or_else(|| {
+                            CheckError::new(
+                                self.site,
+                                format!(
+                                    "both operands of `{name}` are bare decimals, so neither pins a \
+                                     width — and because comparison is width-collapsing (RFC-0032 D1) \
+                                     the `Binary{{1}}` result cannot anchor them either. Ascribe one \
+                                     operand or write it explicitly (RFC-0012 §4.3, never a default \
+                                     width)"
+                                ),
+                            )
+                        })?;
+                        self.check(scope, a, Some(&anchor_ty))?
+                    }
+                };
                 tys.push(t);
                 rebuilt.push(a2);
             }

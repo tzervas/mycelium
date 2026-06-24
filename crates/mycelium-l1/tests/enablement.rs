@@ -294,13 +294,37 @@ fn eq_cross_paradigm_refuses_statically() {
     );
 }
 
-/// A bare-decimal comparand has no width anchor (comparison is width-collapsing) — refused, never a
-/// defaulted width (RFC-0032 D1 / RFC-0012 §4.3).
+/// When **both** comparands are bare ambient decimals neither pins a *width* (and the `Binary{1}`
+/// result can't anchor them, comparison being width-collapsing) — refused, never a defaulted width
+/// (RFC-0032 D1 / RFC-0012 §4.3). `default paradigm Binary` makes `5`/`6` ambient (paradigm known,
+/// width unknown), so this exercises the width-anchor refusal specifically.
 #[test]
-fn eq_bare_decimal_refuses() {
-    let src = "nodule d\nfn main() -> Binary{1} = eq(5, 6)";
+fn eq_both_bare_decimals_refuse() {
+    let src = "nodule d\ndefault paradigm Binary\nfn main() -> Binary{1} = eq(5, 6)";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
-        "a bare-decimal `eq` must refuse (no width anchor), never a default width"
+        "a both-bare-decimal `eq` must refuse (no width anchor), never a default width"
+    );
+}
+
+/// A **concrete** operand anchors a bare ambient comparand's width (consistent with the
+/// width-preserving prims, e.g. `xor(0b1111_0000, 15)`): under `default paradigm Binary`,
+/// `eq(0b0000_0101, 5)` type-checks with `5` resolving to `Binary{8}`, evaluating to `0b1`.
+#[test]
+fn eq_concrete_operand_anchors_bare_decimal() {
+    let (r, p) = b1(true);
+    assert_three_way(
+        "eq concrete anchors bare decimal",
+        "nodule d\ndefault paradigm Binary\nfn main() -> Binary{1} = eq(0b0000_0101, 5)",
+        &r,
+        &p,
+    );
+    // Order-independent: bare decimal first, concrete second (`4` ≠ `5`).
+    let (r, p) = b1(false);
+    assert_three_way(
+        "eq bare-first anchored false",
+        "nodule d\ndefault paradigm Binary\nfn main() -> Binary{1} = eq(4, 0b0000_0101)",
+        &r,
+        &p,
     );
 }

@@ -380,14 +380,20 @@ asked to wait, wait.)
    lower branch keeps building on a superseded base — pull-down flows *down*, squash-merge flows *up*.
    **Force pushes are prohibited — full stop.** No `git push --force`, no `--force-with-lease`, no
    `+refs` push spec, on **any** branch (and *absolutely never* on the protected `main`/`integration`/
-   `dev`/`claude/head/*`). Misalignment is corrected by bringing history *together* — a **merge or a
-   rebase plus pull-down**, then a *plain* push — **never** by rewriting published history. This is the
-   durable rule: a plain push that is rejected (non-fast-forward) is a never-silent signal to *reconcile*,
-   not a problem to overwrite. When local work is in the way of pulling history together, the mechanism is
-   **`git stash` → reconcile (merge / rebase the incoming history) → `git stash pop` → deconflict** → a
+   `dev`/`claude/head/*`). Misalignment is corrected by bringing history *together*, **never** by
+   rewriting published history. For an **already-pushed** branch — the case that matters — **merge `main`
+   into it** (pull-down), resolve, then a *plain* push: a merge only ever *adds* a commit, so the push
+   fast-forwards the remote branch and no force is needed. **Do not rebase a pushed branch** — rebasing
+   rewrites its published commits, so the plain push would be rejected (non-fast-forward) and *only* a
+   force (which this rule forbids) could land it; reach for **merge**, not rebase, once a branch is
+   published. (A **local-only, never-pushed** branch may be rebased freely before its first push — that
+   is reconciliation, not a rewrite of published history.) This is the durable rule: a plain push that is
+   rejected (non-fast-forward) is a never-silent signal to *reconcile*, not a problem to overwrite. When
+   local work is in the way of pulling history together, the mechanism is **`git stash` → reconcile
+   (merge `main` in — rebase only if the branch is still local-only) → `git stash pop` → deconflict** → a
    plain push: it *keeps* your work and resolves the divergence honestly, where a force would have
    silently discarded the other side. Stashing-and-deconflicting is always preferable to a force-push —
-   there is no divergence a force fixes that a merge/rebase + stash-pop cannot fix without losing history.
+   there is no divergence a force fixes that a merge (+ stash-pop) cannot fix without losing history.
    Keep the per-session working branch a *clean pointer at `main`*: do the
    work + reconcile on a per-task/leaf branch, PR **that**, and after the squash lands bring the working
    branch up with `git fetch origin main` → `git merge --ff-only origin/main` (`git stash` first if

@@ -90,16 +90,18 @@ GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo t
 - A PR should state which `FR/NFR/VR/SC` it advances (or which ADR/RFC it implements), and how it was verified. Editorial-only PRs say so.
 - **No force pushes.** `git push --force` / `--force-with-lease` (and `+refs` push specs) are prohibited
   on every branch — and never on the protected `main`/`integration`/`dev`/`claude/head/*`. Correct a
-  diverged or misaligned branch by bringing history *together* (a **merge**, or a **rebase + pull-down of
-  `main`**, then a *plain* push), never by rewriting published history: a rejected non-fast-forward push
-  is a never-silent cue to reconcile, not to overwrite. When local work is in the way, the mechanism is
-  **`git stash` → reconcile → `git stash pop` → deconflict** → plain push — it keeps your work and
-  resolves divergence honestly, where a force would silently discard the other side. If a published
-  branch's own commits already
-  landed on `main` (so it can never fast-forward), abandon it and branch a **fresh** one off current
-  `main`, re-applying only the unlanded work. (A local-only branch may be rebased freely before its first
-  push — that is reconciliation, not a force-push of published history.) See `CLAUDE.md` §Commits & PRs
-  for the agent-facing form of this rule.
+  diverged or misaligned branch by bringing history *together*, never by rewriting published history: a
+  rejected non-fast-forward push is a never-silent cue to reconcile, not to overwrite. For an
+  **already-pushed** branch, **merge `main` into it** (pull-down), resolve, then a *plain* push — a merge
+  only adds a commit, so the push fast-forwards the remote and no force is needed. **Do not rebase a
+  pushed branch** (rebasing rewrites its published commits, so the plain push would be rejected and only a
+  force could land it) — rebase is only for a **local-only, never-pushed** branch before its first push.
+  When local work is in the way, the mechanism is **`git stash` → reconcile (merge `main` in) →
+  `git stash pop` → deconflict** → plain push — it keeps your work and resolves divergence honestly, where
+  a force would silently discard the other side. If a published branch's own commits already landed on
+  `main` (so it can never fast-forward), abandon it and branch a **fresh** one off current `main`,
+  re-applying only the unlanded work. See `CLAUDE.md` §Commits & PRs for the agent-facing form of this
+  rule.
 
 ---
 
