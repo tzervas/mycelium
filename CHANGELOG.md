@@ -8,6 +8,38 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: E20-1 — value-model collections & precision design (RFC-0033 + ADR-025…031, **Proposed**); docs-only, M-785)
+
+- **RFC-0033 — Value-Model Collections & Precision** (`docs/rfcs/`, **Proposed**, E20-1/M-785). The
+  corrected `Repr`/`Payload` as a normative-as-proposed spec: §3 `Seq`/`Bytes` length-in-type (aligned
+  with the already-decided RFC-0032 D3/D4, not re-decided); §4 Binary **sign-free** (signedness is
+  operations, not a `Repr` field) · Ternary **arbitrary-width** (`BigTernary` grows past the ~40-trit
+  cap) · Dense **granularity-descriptor quant in `Repr`** + scale/zero-point **arrays in `Payload`** ·
+  VSA **explicit element-space + block-sparsity + complex carrier**; §6 swap/guarantee reconciliation;
+  §7 content-address identity set + the dogfood gate (single rehash M-780).
+- **ADR-025…031** (`docs/adr/`, **Proposed**) — the seven value-model decision records (Seq/Bytes
+  length-in-type · repr-value elements · `get→(Repr,bit)` + `lift_option` · Binary sign-free · Ternary
+  arbitrary-width · Dense granularity descriptor · VSA element-space). ADR-030 (Dense) and ADR-031 (VSA)
+  deliberately **disagree** with the input research draft on never-silent grounds and are
+  **content-address one-way doors**.
+- **Research records** `research/14-value-model-integration-report-RECORD.md` +
+  `research/15-embeddonator-leverage-map-RECORD.md` (recorded external research input — an
+  `embeddonator` value-model bundle; not normative), and the **plan/backlog**
+  `docs/planning/value-model-{implementation-plan,backlog}.md` (tasks remapped `VM-010…071` →
+  **M-754…M-784**, design gate **M-785**, all under epic **E20-1**).
+- **Honesty reconciliations vs the source bundle** (recorded in the docs): (a) **no `mycelium-value`
+  crate / no duplicate `Trit`** — the trusted arbitrary-width ternary reconciles into
+  `crates/mycelium-core/src/ternary/` (DRY `add_with_carry` extracted from the existing fixed-width
+  `add`); (b) the **"silent precision ceiling" is `embeddonator`'s** (`dimensional.rs`), **not
+  Mycelium's** — `core::ternary` is already never-silent about the cap (`max_magnitude → None` at
+  `m ≥ 41`), so `BigTernary` **removes** the cap rather than fixing a bug; (c) **OQ-3 is already closed
+  by the ratified ADR-011** (BoundBasis is universal) — RFC-0033 §6.2 *extends* the dequant
+  `bound.basis` with block structure, it does **not** reopen OQ-3; (d) collections align with RFC-0032.
+- **Scope:** docs-only — no Rust, no `docs/api-index` regen. The V0 `BigTernary` kernel code
+  (reconciled into `core::ternary`, cargo-gated) follows in a separate PR (M-754…M-757); the
+  content-address one-way doors (Dense/VSA) land only after ratification, in a single rehash before any
+  value is persisted (RFC-0033 §7).
+
 ### Added (2026-06-23: E19-1 — Tier-1 kernel enablers landed (M-747, M-748); implemented, pending ratification)
 
 - **M-747 — reduce-to-`Bool` comparison/equality prims `eq`/`lt`** (RFC-0032 D1). New kernel prims
