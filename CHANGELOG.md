@@ -8,6 +8,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: CLAUDE.md — test-layout rule (no tests in logic files); retrofit tracked as M-797)
+
+- **New binding convention (maintainer-directed):** logic `.rs` files carry **no test code**. Every
+  `#[cfg(test)]` unit test lives in an **in-crate** test module — `#[cfg(test)] mod tests;` in `lib.rs` →
+  `src/tests/` (one submodule per source module), each `use crate::…::*` for **white-box** access to
+  private items (precedent: `mycelium-std-recover/src/tests.rs`). Chosen over fully-external `tests/` on
+  merit — that would lose private-internal coverage or force internals `pub`. **Complex test logic → fixtures
+  + parameterization**, not test bodies. New tests follow it now; the ~185-file inline-test retrofit
+  (mycelium-core alone is 18 files / ~5k test lines) is tracked as **M-797**, a per-crate octopus-merge
+  swarm (no behaviour change — identical test counts pre/post).
+
 ### Added (2026-06-24: M-664 — `consume` + `grow` lexed (DN-03 §1); closes the not-yet-lexed lexicon gap)
 
 - **`consume` + `grow` are now reserved surface keywords** (`crates/mycelium-l1`). DN-03 §1 ratified

@@ -6133,6 +6133,33 @@ issues:
         -- depends on the @certification resolution (M-790) + the testing toolkit; may extend into its own
         surface-phase follow-on if the toolkit work outgrows this leaf (flag at design time, don't guess).
 
+  - id: M-797
+    title: "M-797 -- extract inline #[cfg(test)] tests to in-crate src/tests/ (no tests in logic files)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:refactor, area:tooling, priority:P2, status:todo]
+    epic: E21-1
+    depends_on: []
+    doc_refs:
+      - src:crates/mycelium-std-recover/src/tests.rs
+      - src:CLAUDE.md
+    body: |
+      The TEST-LAYOUT retrofit (CLAUDE.md "Test layout" rule, maintainer-directed). Logic `.rs` files must
+      carry NO test code; every `#[cfg(test)]` unit test moves to a dedicated IN-CRATE test module
+      (`#[cfg(test)] mod tests;` in lib.rs -> `src/tests/` with a `mod.rs` declaring one submodule per
+      source module), each `use crate::…::*` for WHITE-BOX access to private items. Precedent:
+      `mycelium-std-recover/src/tests.rs`. This keeps logic files clean WITHOUT the black-box coverage loss
+      of fully-external `tests/` (chosen over that on merit; the alt would force internals `pub`).
+      Scope: ~185 source files across the workspace carry inline tests (mycelium-core alone is 18 files /
+      ~5k test lines). Mechanical but delicate (the trusted kernel is in scope) -- run as a PER-CRATE
+      octopus-merge SWARM: each crate is disjoint, one agent per crate, the parent owns only the workspace
+      manifest. No behaviour change -- a pure move; every crate's `cargo test` count must be identical
+      before/after (count it -- mitigation #2/#7).
+      Also: complex test logic moves to FIXTURES + PARAMETERIZATION (corpus tables, CertMode::ALL-style
+      params, REJECT_EXPECTED, differential::data_corpus) -- a test body asserts over a case, not bespoke
+      logic. New tests already follow the rule (CLAUDE.md); this leaf retrofits the existing inline tests.
+      Acceptance / DoD: every crate's logic files are `#[cfg(test)]`-free (grep proves it); tests live in
+      `src/tests/`; identical test counts pre/post per crate; just check green; CHANGELOG append-only.
+
   # ---------------- E22-1: Security Scanning Toolkit (DN-30) ----------------
   - id: E22-1
     title: "E22-1 (epic) -- Security Scanning Toolkit (automated detection, standard reporting, honest safe auto-fix)"
