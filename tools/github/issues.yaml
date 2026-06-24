@@ -5443,10 +5443,12 @@ issues:
       - src:crates/mycelium-interp/src/prims.rs
       - src:crates/mycelium-l1/src/checkty.rs
     body: |
-      BLOCKED on M-746 (RFC-0032 must fix the prim shape first). Add the kernel comparison/equality
-      prim(s) over Binary{N}/Ternary{N} that reduce to Bool (or to a kernel Ordering, per RFC-0032 Q1),
-      register them in mycelium-interp::prims, and surface them via prim_kernel_name. Guarantee Exact (a
-      total decidable relation); differential-tested three-way (L1-eval == L0-interp == AOT). UNBLOCKS
+      LANDED (#518; status:done). The kernel comparison/equality prims cmp.eq/cmp.lt over
+      Binary{N}/Ternary{N} reduce to Binary{1} (the realized Bool — a kernel prim returns a
+      representation value, never a .myc data value; RFC-0032 D1), registered in
+      mycelium-interp::prims and surfaced via prim_kernel_name + a dedicated width-collapsing checker
+      branch (declared in the Π table with a new WidthRel::Collapse). Guarantee Exact (a total
+      decidable relation); differential-tested three-way (L1-eval == L0-interp == AOT). UNBLOCKS
       E13-1 M-718 (width-typed cmp/Eq/Ord) and the ordering basis for M-716 Map/Set.
 
       Definition of Done:
@@ -5465,11 +5467,12 @@ issues:
       - src:crates/mycelium-interp/src/prims.rs
       - src:crates/mycelium-l1/src/checkty.rs
     body: |
-      BLOCKED on M-746 (RFC-0032 must fix the overflow semantics first). Surface the already-registered
-      bit.and/bit.or (a one-line prim_kernel_name addition) and add binary add/sub over Binary{N} -- a
-      fixed-width carry chain with NEVER-SILENT overflow (an explicit out-of-range error mirroring the
-      ternary prims' in-range contract; G2), unless RFC-0032 Q2 declares a wrapping modular semantics
-      explicitly. UNBLOCKS E13-1 M-718 (binary math half).
+      LANDED (#518; status:done). Surfaced the already-registered bit.and/bit.or (as and/or) and added
+      binary add/sub over Binary{N} (surface add_bin/sub_bin -> kernel bit.add/bit.sub) -- a fixed-width
+      ripple-carry/borrow chain with NEVER-SILENT overflow (a result outside [0, 2^N) is an explicit
+      EvalError::Overflow, mirroring the ternary prims' in-range contract; G2 -- no wrapping, per
+      RFC-0032 D2). Guarantee Exact on the in-range result; three-way differential incl. overflow/
+      underflow refusal. UNBLOCKS E13-1 M-718 (binary math half).
 
       Definition of Done:
       - bit.and/bit.or surfaced; binary add/sub registered + surfaced with the RFC-0032-decided overflow
@@ -5554,12 +5557,14 @@ issues:
       - corpus:RFC-0031
       - src:lib/std/result.myc
     body: |
-      BLOCKED on the enabler leaves. Integration gate for E19-1: confirm every new prim/representation
-      (M-747..M-750, M-751 if owned here) is differential-tested (three-way where it runs to closed L0)
-      and honestly tagged, and demonstrate each unblock with a small .myc smoke port (e.g. a width-typed
-      eq, a binary add, an indexed Vec op, a string slice) following the std_result/std_option/std_cmp
-      harness pattern. The smoke ports prove the E13-1 preconditions are genuinely satisfied -- never
-      asserted (VR-5/G2).
+      IN PROGRESS (Tier-1 landed in #518; Tier-2 pending M-749/M-750). Integration gate for E19-1:
+      confirm every new prim/representation is differential-tested (three-way where it runs to closed L0)
+      and honestly tagged, and demonstrate each unblock with a small .myc smoke port following the
+      std_result/std_option/std_cmp harness pattern. DONE for Tier-1: crates/mycelium-l1/tests/
+      enablement.rs covers the width-typed eq/lt + binary add/sub three-way + never-silent refusals + a
+      Bool-bridge port. REMAINING (Tier-2): the indexed Vec op + string slice smoke ports land with
+      M-749 (Repr::Seq) / M-750 (Repr::Bytes). The smoke ports prove the E13-1 preconditions are
+      genuinely satisfied -- never asserted (VR-5/G2).
 
       Definition of Done:
       - Every enabler has a passing three-way differential test; no enabler is undifferentiated.
