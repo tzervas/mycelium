@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **ADR** | 030 |
-| **Status** | **Proposed** (2026-06-24) — value-model decision recommended by the research review; **disagrees with the input draft** (which put a scalar `{scale, zero_point}` in the `Repr`). Maintainer ratifies → Accepted (house rule #3). |
+| **Status** | **Accepted** (2026-06-24 — maintainer-ratified, owner approval granted). The granularity-descriptor quant decision is **locked**; the implementation (Dense `Dtype` expansion + `QuantDesc` in `Repr`, scale/zero-point arrays in `Payload`) is a **content-address one-way door** that lands in the single E20-1 rehash (M-771 → M-780) **before any Dense value is persisted** (RFC-0033 §7). Was **Proposed** (2026-06-24); disagrees with the input draft. |
 | **Decides** | Expand `Dtype` (I8/U8/I16/U16/I4/U4/F8E4M3/F8E5M2/TF32; MX FP6/FP4 later). Quant = `QuantDesc{scheme: PerTensor\|PerChannel{axis}\|PerBlock{axis,block}, symmetric, scale_dtype}` **in the `Repr`** (part of content-address identity); scale/zero-point **arrays in the `Payload`**. Quantized dtype ⇒ `quant = Some` (unconstructable otherwise). |
 | **Grounds** | RFC-0033 §4.3 (the normative statement); RFC-0001 §4.1 (`Dense`/`ScalarKind` extensible registry); **ADR-011 (BoundBasis universal — the dequant `Bounded` bound extends the basis with block structure; OQ-3 already closed, not reopened)**; ONNX QuantizeLinear, GGUF K-quants, OCP MX (E8M0/32), NF4 (block 64); `research/14-value-model-integration-report-RECORD.md` §3 (B-Dense). |
 | **Date** | 2026-06-24 |
@@ -48,4 +48,5 @@ paths: `PerTensor` + `PerBlock` first).
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-24 | **Accepted** | Maintainer-ratified (owner approval). The Dense granularity-descriptor decision is locked ahead of the single content-address rehash (RFC-0033 §7 / M-780); implementation (M-770…M-774) lands in E20-1 V3 before any Dense value is persisted. |
 | 2026-06-24 | **Proposed** | Initial record. Granularity-descriptor quant in `Repr` + scale arrays in `Payload` (B-Dense, disagrees with the input draft). Dequant basis extends ADR-011 (OQ-3 not reopened). Grounds RFC-0033 §4.3. |
