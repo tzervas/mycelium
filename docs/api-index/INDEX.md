@@ -1947,31 +1947,59 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_std_testing::Budget` | struct | `crates/mycelium-std-testing/src/lib.rs:165` | A declared, bounded trial budget for a property run (C6 — effects are bounded). |
-| `mycelium_std_testing::Budget::DEFAULT:` | const | `crates/mycelium-std-testing/src/lib.rs:169` | The default budget when no specific value is required (100 trials). |
-| `mycelium_std_testing::Budget::MIN:` | const | `crates/mycelium-std-testing/src/lib.rs:172` | The minimum budget (1 trial). |
-| `mycelium_std_testing::Budget::trials` | fn | `crates/mycelium-std-testing/src/lib.rs:186` | The number of trials this budget permits. |
+| `mycelium_std_testing::Budget` | struct | `crates/mycelium-std-testing/src/lib.rs:173` | A declared, bounded trial budget for a property run (C6 — effects are bounded). |
+| `mycelium_std_testing::Budget::DEFAULT:` | const | `crates/mycelium-std-testing/src/lib.rs:177` | The default budget when no specific value is required (100 trials). |
+| `mycelium_std_testing::Budget::MIN:` | const | `crates/mycelium-std-testing/src/lib.rs:180` | The minimum budget (1 trial). |
+| `mycelium_std_testing::Budget::trials` | fn | `crates/mycelium-std-testing/src/lib.rs:194` | The number of trials this budget permits. |
 | `mycelium_std_testing::FailRecord` | struct | `crates/mycelium-std-testing/src/verdict.rs:30` | A structured failure record carried by [`Verdict::Fail`]. |
-| `mycelium_std_testing::Gen` | trait | `crates/mycelium-std-testing/src/lib.rs:147` | A type that can produce values of type `T` given an `Rng`. |
-| `mycelium_std_testing::GoldenBaseline` | struct | `crates/mycelium-std-testing/src/lib.rs:304` | A golden baseline: an identifier (the "name") and its expected serialized form. |
-| `mycelium_std_testing::Rng` | struct | `crates/mycelium-std-testing/src/lib.rs:84` | A deterministic, seeded pseudo-random generator for property-test inputs (RT3 / C6). |
-| `mycelium_std_testing::Rng::new` | fn | `crates/mycelium-std-testing/src/lib.rs:93` | Construct a generator from a fixed seed (RT3: no undeclared entropy). |
-| `mycelium_std_testing::Rng::next_u32` | fn | `crates/mycelium-std-testing/src/lib.rs:116` | Advance and return a `u32`. |
-| `mycelium_std_testing::Rng::next_u64` | fn | `crates/mycelium-std-testing/src/lib.rs:106` | Advance the state and return the next `u64` (Xorshift64). |
-| `mycelium_std_testing::Rng::next_usize_below` | fn | `crates/mycelium-std-testing/src/lib.rs:123` | Advance and return a value in `[0, n)`. |
+| `mycelium_std_testing::Gen` | trait | `crates/mycelium-std-testing/src/lib.rs:155` | A type that can produce values of type `T` given an `Rng`. |
+| `mycelium_std_testing::GoldenBaseline` | struct | `crates/mycelium-std-testing/src/lib.rs:312` | A golden baseline: an identifier (the "name") and its expected serialized form. |
+| `mycelium_std_testing::ModeScope` | struct | `crates/mycelium-std-testing/src/cert_mode_test.rs:124` | A typed predicate set describing in which [`CertMode`] tiers a property is expected to hold. |
+| `mycelium_std_testing::ModeTestConfig` | struct | `crates/mycelium-std-testing/src/cert_mode_test.rs:319` | Configurable per-test / per-suite mode scope, resolved most-specific-wins via the shared |
+| `mycelium_std_testing::ModeVisit` | struct | `crates/mycelium-std-testing/src/cert_mode_test.rs:427` | A summary of which `CertMode` tiers were visited and which were skipped by |
+| `mycelium_std_testing::Rng` | struct | `crates/mycelium-std-testing/src/lib.rs:92` | A deterministic, seeded pseudo-random generator for property-test inputs (RT3 / C6). |
+| `mycelium_std_testing::Rng::new` | fn | `crates/mycelium-std-testing/src/lib.rs:101` | Construct a generator from a fixed seed (RT3: no undeclared entropy). |
+| `mycelium_std_testing::Rng::next_u32` | fn | `crates/mycelium-std-testing/src/lib.rs:124` | Advance and return a `u32`. |
+| `mycelium_std_testing::Rng::next_u64` | fn | `crates/mycelium-std-testing/src/lib.rs:114` | Advance the state and return the next `u64` (Xorshift64). |
+| `mycelium_std_testing::Rng::next_usize_below` | fn | `crates/mycelium-std-testing/src/lib.rs:131` | Advance and return a value in `[0, n)`. |
 | `mycelium_std_testing::SkipReason` | enum | `crates/mycelium-std-testing/src/verdict.rs:67` | The reason a test was skipped (spec §3). |
 | `mycelium_std_testing::Summary` | struct | `crates/mycelium-std-testing/src/verdict.rs:157` | The aggregated outcome of a collection of verdicts (spec §3 / [`crate::summarize`]). |
 | `mycelium_std_testing::UndetReason` | enum | `crates/mycelium-std-testing/src/verdict.rs:94` | The reason a test result is undetermined (ran but could not decide — spec §3). |
 | `mycelium_std_testing::Verdict` | enum | `crates/mycelium-std-testing/src/verdict.rs:120` | The outcome of a single test case (spec §3 / §4 guarantee matrix). |
-| `mycelium_std_testing::differential` | fn | `crates/mycelium-std-testing/src/lib.rs:426` | Run a differential (oracle) test: require `lhs(input) == rhs(input)`. |
-| `mycelium_std_testing::for_all` | fn | `crates/mycelium-std-testing/src/lib.rs:213` | Run a property test: generate `budget` inputs from `gen` and check `prop` for each. |
-| `mycelium_std_testing::golden` | fn | `crates/mycelium-std-testing/src/lib.rs:338` | Run a golden / snapshot test: compare `produced` against the stored baseline. |
-| `mycelium_std_testing::guarantee_matrix` | mod | `crates/mycelium-std-testing/src/lib.rs:67` | — |
+| `mycelium_std_testing::assert_mode_negative` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:581` | Assert that `predicate(mode)` returns **`false`** for every mode **outside** `scope` — the |
+| `mycelium_std_testing::assert_mode_scope` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:548` | Assert that `predicate(mode)` returns **`true`** for every mode in `scope` and **`false`** |
+| `mycelium_std_testing::cert_mode_test` | mod | `crates/mycelium-std-testing/src/lib.rs:67` | — |
+| `mycelium_std_testing::cert_mode_test::ModeScope::ALL_MODES:` | const | `crates/mycelium-std-testing/src/cert_mode_test.rs:133` | Property holds in **every** mode — the unconditional scope (e.g. |
+| `mycelium_std_testing::cert_mode_test::ModeScope::BALANCED_ONLY:` | const | `crates/mycelium-std-testing/src/cert_mode_test.rs:164` | Property holds only in `Balanced` (e.g. |
+| `mycelium_std_testing::cert_mode_test::ModeScope::CERTIFIED_ONLY:` | const | `crates/mycelium-std-testing/src/cert_mode_test.rs:152` | Property holds **only in `Certified`** (e.g. |
+| `mycelium_std_testing::cert_mode_test::ModeScope::EMIT_MODES:` | const | `crates/mycelium-std-testing/src/cert_mode_test.rs:158` | Property holds in **`Balanced` and `Certified`** — the modes that *emit* swap certificates |
+| `mycelium_std_testing::cert_mode_test::ModeScope::FAST_ONLY:` | const | `crates/mycelium-std-testing/src/cert_mode_test.rs:139` | Property holds **only in `Fast`** (e.g. |
+| `mycelium_std_testing::cert_mode_test::ModeScope::NON_FAST:` | const | `crates/mycelium-std-testing/src/cert_mode_test.rs:146` | Property holds in **`Balanced` and `Certified`** — the modes where the certification |
+| `mycelium_std_testing::cert_mode_test::ModeScope::contains` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:173` | Returns `true` iff the given mode is in scope. |
+| `mycelium_std_testing::cert_mode_test::ModeScope::count` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:208` | The number of modes in scope (0..=3). |
+| `mycelium_std_testing::cert_mode_test::ModeScope::from_resolved_mode` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:266` | Build a `ModeScope` from the effective mode of a [`ResolvedMode`]: the scope is "exactly |
+| `mycelium_std_testing::cert_mode_test::ModeScope::intersect` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:241` | The intersection of two scopes: a mode is in scope only if it is in *both* scopes. |
+| `mycelium_std_testing::cert_mode_test::ModeScope::is_empty` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:217` | `true` iff the scope is empty (no modes — a scope with nothing in it is a no-op but |
+| `mycelium_std_testing::cert_mode_test::ModeScope::modes_in_scope` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:183` | The set of modes **in** scope (at most 3 elements, in `CertMode::ALL` order). |
+| `mycelium_std_testing::cert_mode_test::ModeScope::modes_out_of_scope` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:196` | The set of modes **outside** scope (the complement; at most 3 elements). |
+| `mycelium_std_testing::cert_mode_test::ModeScope::union` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:226` | The union of two scopes: a mode is in scope if it is in *either* scope. |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig::new` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:340` | Build a `ModeTestConfig` from a slice of `@certification` scope declarations. |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig::provenance` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:372` | The provenance of the resolved test mode — the effective mode and the scope it came from. |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig::resolve` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:395` | Resolve the effective `ModeScope` for this test/suite configuration. |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig::with_granular` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:353` | Add (or replace) a **granular** per-test override — the most-specific tier, overrides |
+| `mycelium_std_testing::cert_mode_test::ModeVisit::matches_scope` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:448` | `true` iff the visit covered exactly the given scope (no more, no fewer modes visited). |
+| `mycelium_std_testing::cert_mode_test::ModeVisit::visited_all` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:440` | `true` iff the visit covered all three modes (regardless of scope — useful for asserting |
+| `mycelium_std_testing::differential` | fn | `crates/mycelium-std-testing/src/lib.rs:434` | Run a differential (oracle) test: require `lhs(input) == rhs(input)`. |
+| `mycelium_std_testing::for_all` | fn | `crates/mycelium-std-testing/src/lib.rs:221` | Run a property test: generate `budget` inputs from `gen` and check `prop` for each. |
+| `mycelium_std_testing::for_each_mode` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:470` | Run `f(mode)` for **every** mode in [`CertMode::ALL`] (weakest → strongest: Fast, Balanced, |
+| `mycelium_std_testing::for_each_mode_in` | fn | `crates/mycelium-std-testing/src/cert_mode_test.rs:490` | Run `f(mode)` for each mode **in** `scope`, returning a [`ModeVisit`] that records which |
+| `mycelium_std_testing::golden` | fn | `crates/mycelium-std-testing/src/lib.rs:346` | Run a golden / snapshot test: compare `produced` against the stored baseline. |
+| `mycelium_std_testing::guarantee_matrix` | mod | `crates/mycelium-std-testing/src/lib.rs:68` | — |
 | `mycelium_std_testing::guarantee_matrix::MATRIX:` | const | `crates/mycelium-std-testing/src/guarantee_matrix.rs:49` | The `std.testing` guarantee matrix (spec §4). |
 | `mycelium_std_testing::guarantee_matrix::Row` | struct | `crates/mycelium-std-testing/src/guarantee_matrix.rs:23` | One row of the `std.testing` guarantee matrix. |
-| `mycelium_std_testing::is_green` | fn | `crates/mycelium-std-testing/src/lib.rs:511` | True only if there are no failures **and** skipped/undetermined counts are surfaced (i.e., |
-| `mycelium_std_testing::summarize` | fn | `crates/mycelium-std-testing/src/lib.rs:473` | Aggregate a slice of verdicts into a [`Summary`]. |
-| `mycelium_std_testing::verdict` | mod | `crates/mycelium-std-testing/src/lib.rs:68` | — |
+| `mycelium_std_testing::is_green` | fn | `crates/mycelium-std-testing/src/lib.rs:519` | True only if there are no failures **and** skipped/undetermined counts are surfaced (i.e., |
+| `mycelium_std_testing::summarize` | fn | `crates/mycelium-std-testing/src/lib.rs:481` | Aggregate a slice of verdicts into a [`Summary`]. |
+| `mycelium_std_testing::verdict` | mod | `crates/mycelium-std-testing/src/lib.rs:69` | — |
 | `mycelium_std_testing::verdict::FailRecord::to_diag` | fn | `crates/mycelium-std-testing/src/verdict.rs:50` | Project this failure to the canonical [`mycelium_diag::Diag`] record (the testing↔diag |
 | `mycelium_std_testing::verdict::Summary::total` | fn | `crates/mycelium-std-testing/src/verdict.rs:171` | Total number of verdicts in this summary. |
 
@@ -6109,16 +6137,43 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_testing::Budget::cmp` | definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated |
 | `mycelium_std_testing::Budget::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_testing::Budget::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_testing::Budget::new` | dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:93 — one canonical row kept |
+| `mycelium_std_testing::Budget::new` | dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:101 — one canonical row kept |
 | `mycelium_std_testing::Budget::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
 | `mycelium_std_testing::Gen::generate` | definition not found via regex heuristic (kind='fn', name='generate') — possibly macro-generated or cfg-gated |
 | `mycelium_std_testing::Gen::shrink` | definition not found via regex heuristic (kind='fn', name='shrink') — possibly macro-generated or cfg-gated |
 | `mycelium_std_testing::GoldenBaseline::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_std_testing::GoldenBaseline::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_testing::GoldenBaseline::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_testing::GoldenBaseline::new` | dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:93 — one canonical row kept |
+| `mycelium_std_testing::GoldenBaseline::new` | dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:101 — one canonical row kept |
 | `mycelium_std_testing::Rng::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_std_testing::Rng::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::CertDecl` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_testing::cert_mode_test::CertScope` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_testing::cert_mode_test::ModeScope` | dedup-alias: same definition as `mycelium_std_testing::ModeScope` at crates/mycelium-std-testing/src/cert_mode_test.rs:124 — one canonical row kept |
+| `mycelium_std_testing::cert_mode_test::ModeScope::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeScope::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeScope::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeScope::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeScope::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeScope::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig` | dedup-alias: same definition as `mycelium_std_testing::ModeTestConfig` at crates/mycelium-std-testing/src/cert_mode_test.rs:319 — one canonical row kept |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeTestConfig::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeVisit` | dedup-alias: same definition as `mycelium_std_testing::ModeVisit` at crates/mycelium-std-testing/src/cert_mode_test.rs:427 — one canonical row kept |
+| `mycelium_std_testing::cert_mode_test::ModeVisit::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeVisit::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeVisit::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeVisit::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeVisit::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::ModeVisit::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_testing::cert_mode_test::assert_mode_negative` | dedup-alias: same definition as `mycelium_std_testing::assert_mode_negative` at crates/mycelium-std-testing/src/cert_mode_test.rs:581 — one canonical row kept |
+| `mycelium_std_testing::cert_mode_test::assert_mode_scope` | dedup-alias: same definition as `mycelium_std_testing::assert_mode_scope` at crates/mycelium-std-testing/src/cert_mode_test.rs:548 — one canonical row kept |
+| `mycelium_std_testing::cert_mode_test::for_each_mode` | dedup-alias: same definition as `mycelium_std_testing::for_each_mode` at crates/mycelium-std-testing/src/cert_mode_test.rs:470 — one canonical row kept |
+| `mycelium_std_testing::cert_mode_test::for_each_mode_in` | dedup-alias: same definition as `mycelium_std_testing::for_each_mode_in` at crates/mycelium-std-testing/src/cert_mode_test.rs:490 — one canonical row kept |
 | `mycelium_std_testing::guarantee_matrix::Row::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_std_testing::guarantee_matrix::Row::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_testing::guarantee_matrix::Row::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
