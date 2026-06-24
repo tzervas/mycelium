@@ -92,6 +92,19 @@ always runs everything.
 Checks **skip gracefully** when a tool or language isn't present yet (most code doesn't exist
 yet). Never hand off a red `just check` without explaining the skip.
 
+## Test layout — no tests in logic files (in-crate `src/tests/`)
+**Logic files carry no test code.** Every `#[cfg(test)]` unit test lives in a dedicated **in-crate**
+test module, not inline in the `.rs` it tests: `#[cfg(test)] mod tests;` in `lib.rs` → `src/tests/`
+(a `mod.rs` declaring one submodule per source module, e.g. `src/tests/cert_mode.rs`), each doing
+`use crate::…::*` for **white-box access to private items** (precedent: `mycelium-std-recover/src/tests.rs`).
+This keeps logic files clean **without** the black-box coverage loss of fully-external `tests/` (which would
+force internals `pub`). Integration/behavioural tests that only need the public API still go in `tests/`.
+**Complex test logic lives in fixtures + parameterization, not in test bodies** — data-driven cases
+(corpus tables, `CertMode::ALL`-style parameterization, the conformance `REJECT_EXPECTED` pattern,
+`differential.rs::data_corpus()`), so a test body is *assert over a case*, not bespoke logic. New tests
+follow this from the start; the existing inline-test retrofit (185 files) is tracked as **M-797** (a
+per-crate octopus-merge swarm — disjoint by crate).
+
 ## Remote CI policy
 **No automatic remote CI.** `.github/workflows/checks.yml` is **manual-dispatch only**
 (`workflow_dispatch`) and **advisory** (non-blocking) — to keep parity with local while avoiding
