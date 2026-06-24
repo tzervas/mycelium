@@ -2339,7 +2339,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 84,
+      "line": 86,
       "summary": "A resolved, content-addressed prim declaration: its signature and the *intrinsic guarantee* `g_f`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2361,7 +2361,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 108,
+      "line": 110,
       "summary": "A prim reference `#p` (the prim analogue of CtorRef `#T#i`): the content hash",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2372,7 +2372,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 63,
+      "line": 65,
       "summary": "A prim's signature `Π(p) = (τ₁…τₙ) → τ` (RFC-0007 §4.4): the per-operand paradigms (arity is their",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2383,7 +2383,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 139,
+      "line": 141,
       "summary": "The content-addressed **prim table `Π`** (RFC-0007 §4.4; R7-Q4): resolved declarations keyed by",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2537,7 +2537,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 50,
+      "line": 52,
       "summary": "How a prim's operand and result *widths* relate.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3428,7 +3428,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimDecl",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 97,
+      "line": 99,
       "summary": "The content hash of this declaration's identity-bearing content (signature + intrinsic",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3439,7 +3439,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimRef",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 119,
+      "line": 121,
       "summary": "The referenced declaration's content hash.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3450,7 +3450,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimRef",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 113,
+      "line": 115,
       "summary": "Build a prim reference from a declaration hash.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3461,7 +3461,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimSig",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 75,
+      "line": 77,
       "summary": "The prim's arity (operand count).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3472,8 +3472,8 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 167,
-      "summary": "The default table: the closed v0 kernel-prim set — the identity, the elementwise binary",
+      "line": 172,
+      "summary": "The default table: the closed v0 kernel-prim set — the identity, the elementwise binary logic",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -3483,7 +3483,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 252,
+      "line": 257,
       "summary": "Whether a prim named `name` is registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3494,7 +3494,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 215,
+      "line": 220,
       "summary": "The content hash of the prim registered under kernel name `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3505,7 +3505,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 266,
+      "line": 271,
       "summary": "Every entry as `(name, #p, decl)`, in name order — the inspectable surface for EXPLAIN over",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3516,7 +3516,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 239,
+      "line": 244,
       "summary": "The declaration registered under kernel name `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3527,7 +3527,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 155,
+      "line": 157,
       "summary": "Register (or replace) a prim declaration under build-time kernel name `name`, returning its",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3538,7 +3538,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 246,
+      "line": 251,
       "summary": "The intrinsic guarantee `g_f` of the prim named `name` (RFC-0001 §4.7), if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3549,7 +3549,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 258,
+      "line": 263,
       "summary": "The registered kernel names, sorted.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3560,7 +3560,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 221,
+      "line": 226,
       "summary": "A [`PrimRef`] for the prim named `name`, if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3571,7 +3571,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 233,
+      "line": 238,
       "summary": "The declaration a [`PrimRef`] points at, if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23990,7 +23990,7 @@
     },
     {
       "symbol": "mycelium_core::prim::PrimDecl",
-      "reason": "dedup-alias: same definition as `mycelium_core::PrimDecl` at crates/mycelium-core/src/prim.rs:84 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::PrimDecl` at crates/mycelium-core/src/prim.rs:86 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::prim::PrimDecl::clone",
@@ -24046,7 +24046,7 @@
     },
     {
       "symbol": "mycelium_core::prim::PrimRef",
-      "reason": "dedup-alias: same definition as `mycelium_core::PrimRef` at crates/mycelium-core/src/prim.rs:108 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::PrimRef` at crates/mycelium-core/src/prim.rs:110 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::prim::PrimRef::clone",
@@ -24106,7 +24106,7 @@
     },
     {
       "symbol": "mycelium_core::prim::PrimSig",
-      "reason": "dedup-alias: same definition as `mycelium_core::PrimSig` at crates/mycelium-core/src/prim.rs:63 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::PrimSig` at crates/mycelium-core/src/prim.rs:65 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::prim::PrimSig::clone",
@@ -24134,7 +24134,7 @@
     },
     {
       "symbol": "mycelium_core::prim::PrimTable",
-      "reason": "dedup-alias: same definition as `mycelium_core::PrimTable` at crates/mycelium-core/src/prim.rs:139 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::PrimTable` at crates/mycelium-core/src/prim.rs:141 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::prim::PrimTable::clone",
@@ -24146,11 +24146,11 @@
     },
     {
       "symbol": "mycelium_core::prim::PrimTable::decl",
-      "reason": "dedup-alias: same definition as `mycelium_core::prim::PrimRef::decl` at crates/mycelium-core/src/prim.rs:119 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::prim::PrimRef::decl` at crates/mycelium-core/src/prim.rs:121 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::prim::PrimTable::decl",
-      "reason": "dedup-alias: same definition as `mycelium_core::prim::PrimRef::decl` at crates/mycelium-core/src/prim.rs:119 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::prim::PrimRef::decl` at crates/mycelium-core/src/prim.rs:121 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::prim::PrimTable::default",
@@ -24178,15 +24178,15 @@
     },
     {
       "symbol": "mycelium_core::prim::PrimTable::new",
-      "reason": "dedup-alias: same definition as `mycelium_core::prim::PrimRef::new` at crates/mycelium-core/src/prim.rs:113 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::prim::PrimRef::new` at crates/mycelium-core/src/prim.rs:115 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::prim::PrimTable::new",
-      "reason": "dedup-alias: same definition as `mycelium_core::prim::PrimRef::new` at crates/mycelium-core/src/prim.rs:113 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::prim::PrimRef::new` at crates/mycelium-core/src/prim.rs:115 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::prim::WidthRel",
-      "reason": "dedup-alias: same definition as `mycelium_core::WidthRel` at crates/mycelium-core/src/prim.rs:50 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::WidthRel` at crates/mycelium-core/src/prim.rs:52 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::prim::WidthRel::clone",

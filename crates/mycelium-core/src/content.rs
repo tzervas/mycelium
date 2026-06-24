@@ -771,6 +771,30 @@ mod tests {
         );
     }
 
+    // Mutant-witness for Canon::prim_decl's WidthRel arm (content.rs: the `WidthRel::Collapse` tag,
+    // RFC-0032 D1): if the width relation is dropped or both arms emit the same tag, a width-`Uniform`
+    // decl and an otherwise-identical width-`Collapse` decl hash the same — and a collapsing prim
+    // would alias a uniform one in the content-addressed registry.
+    #[test]
+    fn prim_decl_width_rel_is_included_in_hash() {
+        use crate::guarantee::GuaranteeStrength;
+        use crate::prim::{PrimDecl, PrimParadigm, PrimSig, WidthRel};
+        // Identical sig + intrinsic; the ONLY difference is the width relation.
+        let mk = |width| PrimDecl {
+            sig: PrimSig {
+                operands: vec![PrimParadigm::Binary, PrimParadigm::Binary],
+                result: PrimParadigm::Binary,
+                width,
+            },
+            intrinsic: GuaranteeStrength::Exact,
+        };
+        assert_ne!(
+            mk(WidthRel::Uniform).content_hash(),
+            mk(WidthRel::Collapse).content_hash(),
+            "PrimDecls differing only in WidthRel (Uniform vs Collapse) must hash differently"
+        );
+    }
+
     // Mutant-witnesses for de Bruijn arithmetic (content.rs:287:50, 287:54 → `+` or `/`):
     // The subtraction `scope.len() - 1 - pos` computes the de Bruijn index.
     // - For a single binder, pos=0 and scope.len()=1, so 1-1-0=0 always (mutations also give 0).

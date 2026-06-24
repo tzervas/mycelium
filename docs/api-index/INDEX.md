@@ -244,11 +244,11 @@
 | `mycelium_core::PhysicalLayout` | enum | `crates/mycelium-core/src/meta.rs:65` | The recorded schedule-staged packing (RFC-0001 §4.3; RFC-0004 §5). |
 | `mycelium_core::PolicyRef` | type | `crates/mycelium-core/src/node.rs:33` | A reference to the selection policy a swap used (RFC-0005), as a content hash. |
 | `mycelium_core::Prim` | type | `crates/mycelium-core/src/node.rs:31` | A primitive operator name; each declares its operand/result paradigms (RFC-0001 §4.5). |
-| `mycelium_core::PrimDecl` | struct | `crates/mycelium-core/src/prim.rs:84` | A resolved, content-addressed prim declaration: its signature and the *intrinsic guarantee* `g_f` |
+| `mycelium_core::PrimDecl` | struct | `crates/mycelium-core/src/prim.rs:86` | A resolved, content-addressed prim declaration: its signature and the *intrinsic guarantee* `g_f` |
 | `mycelium_core::PrimParadigm` | enum | `crates/mycelium-core/src/prim.rs:36` | The representation paradigm of a prim operand or result (the `τ`'s paradigm in `Π(p)`). |
-| `mycelium_core::PrimRef` | struct | `crates/mycelium-core/src/prim.rs:108` | A prim reference `#p` (the prim analogue of CtorRef `#T#i`): the content hash |
-| `mycelium_core::PrimSig` | struct | `crates/mycelium-core/src/prim.rs:63` | A prim's signature `Π(p) = (τ₁…τₙ) → τ` (RFC-0007 §4.4): the per-operand paradigms (arity is their |
-| `mycelium_core::PrimTable` | struct | `crates/mycelium-core/src/prim.rs:139` | The content-addressed **prim table `Π`** (RFC-0007 §4.4; R7-Q4): resolved declarations keyed by |
+| `mycelium_core::PrimRef` | struct | `crates/mycelium-core/src/prim.rs:110` | A prim reference `#p` (the prim analogue of CtorRef `#T#i`): the content hash |
+| `mycelium_core::PrimSig` | struct | `crates/mycelium-core/src/prim.rs:65` | A prim's signature `Π(p) = (τ₁…τₙ) → τ` (RFC-0007 §4.4): the per-operand paradigms (arity is their |
+| `mycelium_core::PrimTable` | struct | `crates/mycelium-core/src/prim.rs:141` | The content-addressed **prim table `Π`** (RFC-0007 §4.4; R7-Q4): resolved declarations keyed by |
 | `mycelium_core::Provenance` | enum | `crates/mycelium-core/src/meta.rs:20` | Provenance: an acyclic derivation DAG (RFC-0001 §4.6). |
 | `mycelium_core::Recipe` | struct | `crates/mycelium-core/src/recon.rs:40` | The compositional recipe / role schema: which ops combined which slots. |
 | `mycelium_core::ReconInfo` | struct | `crates/mycelium-core/src/recon.rs:111` | The reconstruction manifest. |
@@ -262,7 +262,7 @@
 | `mycelium_core::Value` | struct | `crates/mycelium-core/src/value.rs:134` | A Mycelium value. |
 | `mycelium_core::VarId` | type | `crates/mycelium-core/src/node.rs:29` | A variable identifier (a name; not part of content identity — RFC-0001 §4.6). |
 | `mycelium_core::WfError` | enum | `crates/mycelium-core/src/lib.rs:49` | Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants). |
-| `mycelium_core::WidthRel` | enum | `crates/mycelium-core/src/prim.rs:50` | How a prim's operand and result *widths* relate. |
+| `mycelium_core::WidthRel` | enum | `crates/mycelium-core/src/prim.rs:52` | How a prim's operand and result *widths* relate. |
 | `mycelium_core::binary` | mod | `crates/mycelium-core/src/lib.rs:13` | — |
 | `mycelium_core::binary::bits_to_int` | fn | `crates/mycelium-core/src/binary.rs:10` | The signed two's-complement value of an MSB-first bit string. |
 | `mycelium_core::binary::int_to_bits` | fn | `crates/mycelium-core/src/binary.rs:29` | The `n`-bit two's-complement representation of `value`, MSB-first — or `None` if `value` is |
@@ -343,20 +343,20 @@
 | `mycelium_core::node::Node::is_repr_changing` | fn | `crates/mycelium-core/src/node.rs:169` | Whether this node is the (only) representation-changing node, [`Node::Swap`] (WF1). |
 | `mycelium_core::operation_hash` | fn | `crates/mycelium-core/src/content.rs:446` | The content address of a *primitive operation* identified by its name — for the `op` field of a |
 | `mycelium_core::prim` | mod | `crates/mycelium-core/src/lib.rs:23` | — |
-| `mycelium_core::prim::PrimDecl::content_hash` | fn | `crates/mycelium-core/src/prim.rs:97` | The content hash of this declaration's identity-bearing content (signature + intrinsic |
-| `mycelium_core::prim::PrimRef::decl` | fn | `crates/mycelium-core/src/prim.rs:119` | The referenced declaration's content hash. |
-| `mycelium_core::prim::PrimRef::new` | fn | `crates/mycelium-core/src/prim.rs:113` | Build a prim reference from a declaration hash. |
-| `mycelium_core::prim::PrimSig::arity` | fn | `crates/mycelium-core/src/prim.rs:75` | The prim's arity (operand count). |
-| `mycelium_core::prim::PrimTable::builtins` | fn | `crates/mycelium-core/src/prim.rs:167` | The default table: the closed v0 kernel-prim set — the identity, the elementwise binary |
-| `mycelium_core::prim::PrimTable::contains` | fn | `crates/mycelium-core/src/prim.rs:252` | Whether a prim named `name` is registered. |
-| `mycelium_core::prim::PrimTable::decl_hash` | fn | `crates/mycelium-core/src/prim.rs:215` | The content hash of the prim registered under kernel name `name`, if any. |
-| `mycelium_core::prim::PrimTable::entries` | fn | `crates/mycelium-core/src/prim.rs:266` | Every entry as `(name, #p, decl)`, in name order — the inspectable surface for EXPLAIN over |
-| `mycelium_core::prim::PrimTable::get` | fn | `crates/mycelium-core/src/prim.rs:239` | The declaration registered under kernel name `name`, if any. |
-| `mycelium_core::prim::PrimTable::insert` | fn | `crates/mycelium-core/src/prim.rs:155` | Register (or replace) a prim declaration under build-time kernel name `name`, returning its |
-| `mycelium_core::prim::PrimTable::intrinsic` | fn | `crates/mycelium-core/src/prim.rs:246` | The intrinsic guarantee `g_f` of the prim named `name` (RFC-0001 §4.7), if registered. |
-| `mycelium_core::prim::PrimTable::names` | fn | `crates/mycelium-core/src/prim.rs:258` | The registered kernel names, sorted. |
-| `mycelium_core::prim::PrimTable::prim_ref` | fn | `crates/mycelium-core/src/prim.rs:221` | A [`PrimRef`] for the prim named `name`, if registered. |
-| `mycelium_core::prim::PrimTable::resolve` | fn | `crates/mycelium-core/src/prim.rs:233` | The declaration a [`PrimRef`] points at, if registered. |
+| `mycelium_core::prim::PrimDecl::content_hash` | fn | `crates/mycelium-core/src/prim.rs:99` | The content hash of this declaration's identity-bearing content (signature + intrinsic |
+| `mycelium_core::prim::PrimRef::decl` | fn | `crates/mycelium-core/src/prim.rs:121` | The referenced declaration's content hash. |
+| `mycelium_core::prim::PrimRef::new` | fn | `crates/mycelium-core/src/prim.rs:115` | Build a prim reference from a declaration hash. |
+| `mycelium_core::prim::PrimSig::arity` | fn | `crates/mycelium-core/src/prim.rs:77` | The prim's arity (operand count). |
+| `mycelium_core::prim::PrimTable::builtins` | fn | `crates/mycelium-core/src/prim.rs:172` | The default table: the closed v0 kernel-prim set — the identity, the elementwise binary logic |
+| `mycelium_core::prim::PrimTable::contains` | fn | `crates/mycelium-core/src/prim.rs:257` | Whether a prim named `name` is registered. |
+| `mycelium_core::prim::PrimTable::decl_hash` | fn | `crates/mycelium-core/src/prim.rs:220` | The content hash of the prim registered under kernel name `name`, if any. |
+| `mycelium_core::prim::PrimTable::entries` | fn | `crates/mycelium-core/src/prim.rs:271` | Every entry as `(name, #p, decl)`, in name order — the inspectable surface for EXPLAIN over |
+| `mycelium_core::prim::PrimTable::get` | fn | `crates/mycelium-core/src/prim.rs:244` | The declaration registered under kernel name `name`, if any. |
+| `mycelium_core::prim::PrimTable::insert` | fn | `crates/mycelium-core/src/prim.rs:157` | Register (or replace) a prim declaration under build-time kernel name `name`, returning its |
+| `mycelium_core::prim::PrimTable::intrinsic` | fn | `crates/mycelium-core/src/prim.rs:251` | The intrinsic guarantee `g_f` of the prim named `name` (RFC-0001 §4.7), if registered. |
+| `mycelium_core::prim::PrimTable::names` | fn | `crates/mycelium-core/src/prim.rs:263` | The registered kernel names, sorted. |
+| `mycelium_core::prim::PrimTable::prim_ref` | fn | `crates/mycelium-core/src/prim.rs:226` | A [`PrimRef`] for the prim named `name`, if registered. |
+| `mycelium_core::prim::PrimTable::resolve` | fn | `crates/mycelium-core/src/prim.rs:238` | The declaration a [`PrimRef`] points at, if registered. |
 | `mycelium_core::recon` | mod | `crates/mycelium-core/src/lib.rs:24` | — |
 | `mycelium_core::recon::ReconInfo::bound` | fn | `crates/mycelium-core/src/recon.rs:245` | The attached `{ε, δ, strength}` bound certificate. |
 | `mycelium_core::recon::ReconInfo::codebooks` | fn | `crates/mycelium-core/src/recon.rs:230` | The content-addressed codebook references. |
@@ -2931,7 +2931,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::node::PolicyRef` | dedup-alias: same definition as `mycelium_core::PolicyRef` at crates/mycelium-core/src/node.rs:33 — one canonical row kept |
 | `mycelium_core::node::Prim` | dedup-alias: same definition as `mycelium_core::Prim` at crates/mycelium-core/src/node.rs:31 — one canonical row kept |
 | `mycelium_core::node::VarId` | dedup-alias: same definition as `mycelium_core::VarId` at crates/mycelium-core/src/node.rs:29 — one canonical row kept |
-| `mycelium_core::prim::PrimDecl` | dedup-alias: same definition as `mycelium_core::PrimDecl` at crates/mycelium-core/src/prim.rs:84 — one canonical row kept |
+| `mycelium_core::prim::PrimDecl` | dedup-alias: same definition as `mycelium_core::PrimDecl` at crates/mycelium-core/src/prim.rs:86 — one canonical row kept |
 | `mycelium_core::prim::PrimDecl::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimDecl::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimDecl::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
@@ -2945,7 +2945,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::prim::PrimParadigm::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimParadigm::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimParadigm::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_core::prim::PrimRef` | dedup-alias: same definition as `mycelium_core::PrimRef` at crates/mycelium-core/src/prim.rs:108 — one canonical row kept |
+| `mycelium_core::prim::PrimRef` | dedup-alias: same definition as `mycelium_core::PrimRef` at crates/mycelium-core/src/prim.rs:110 — one canonical row kept |
 | `mycelium_core::prim::PrimRef::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimRef::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimRef::cmp` | definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated |
@@ -2960,27 +2960,27 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::prim::PrimRef::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimRef::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimRef::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
-| `mycelium_core::prim::PrimSig` | dedup-alias: same definition as `mycelium_core::PrimSig` at crates/mycelium-core/src/prim.rs:63 — one canonical row kept |
+| `mycelium_core::prim::PrimSig` | dedup-alias: same definition as `mycelium_core::PrimSig` at crates/mycelium-core/src/prim.rs:65 — one canonical row kept |
 | `mycelium_core::prim::PrimSig::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimSig::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimSig::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimSig::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimSig::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimSig::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_core::prim::PrimTable` | dedup-alias: same definition as `mycelium_core::PrimTable` at crates/mycelium-core/src/prim.rs:139 — one canonical row kept |
+| `mycelium_core::prim::PrimTable` | dedup-alias: same definition as `mycelium_core::PrimTable` at crates/mycelium-core/src/prim.rs:141 — one canonical row kept |
 | `mycelium_core::prim::PrimTable::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimTable::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_core::prim::PrimTable::decl` | dedup-alias: same definition as `mycelium_core::prim::PrimRef::decl` at crates/mycelium-core/src/prim.rs:119 — one canonical row kept |
-| `mycelium_core::prim::PrimTable::decl` | dedup-alias: same definition as `mycelium_core::prim::PrimRef::decl` at crates/mycelium-core/src/prim.rs:119 — one canonical row kept |
+| `mycelium_core::prim::PrimTable::decl` | dedup-alias: same definition as `mycelium_core::prim::PrimRef::decl` at crates/mycelium-core/src/prim.rs:121 — one canonical row kept |
+| `mycelium_core::prim::PrimTable::decl` | dedup-alias: same definition as `mycelium_core::prim::PrimRef::decl` at crates/mycelium-core/src/prim.rs:121 — one canonical row kept |
 | `mycelium_core::prim::PrimTable::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimTable::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimTable::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimTable::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimTable::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::PrimTable::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_core::prim::PrimTable::new` | dedup-alias: same definition as `mycelium_core::prim::PrimRef::new` at crates/mycelium-core/src/prim.rs:113 — one canonical row kept |
-| `mycelium_core::prim::PrimTable::new` | dedup-alias: same definition as `mycelium_core::prim::PrimRef::new` at crates/mycelium-core/src/prim.rs:113 — one canonical row kept |
-| `mycelium_core::prim::WidthRel` | dedup-alias: same definition as `mycelium_core::WidthRel` at crates/mycelium-core/src/prim.rs:50 — one canonical row kept |
+| `mycelium_core::prim::PrimTable::new` | dedup-alias: same definition as `mycelium_core::prim::PrimRef::new` at crates/mycelium-core/src/prim.rs:115 — one canonical row kept |
+| `mycelium_core::prim::PrimTable::new` | dedup-alias: same definition as `mycelium_core::prim::PrimRef::new` at crates/mycelium-core/src/prim.rs:115 — one canonical row kept |
+| `mycelium_core::prim::WidthRel` | dedup-alias: same definition as `mycelium_core::WidthRel` at crates/mycelium-core/src/prim.rs:52 — one canonical row kept |
 | `mycelium_core::prim::WidthRel::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::WidthRel::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::prim::WidthRel::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |

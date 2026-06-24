@@ -42,10 +42,12 @@ pub enum PrimParadigm {
     Ternary,
 }
 
-/// How a prim's operand and result *widths* relate. The whole v0 builtin set is width-preserving:
+/// How a prim's operand and result *widths* relate. Most of the builtin set is width-preserving —
 /// every operand and the result share one width (`bit.xor : Binary{n} × Binary{n} → Binary{n}`,
-/// `trit.add : Ternary{m} × Ternary{m} → Ternary{m}`, the unary cases trivially). This is the single
-/// v0 rule; new rules (e.g. a width-changing pack) are added as variants, never silently assumed.
+/// `trit.add : Ternary{m} × Ternary{m} → Ternary{m}`, the unary cases trivially: [`WidthRel::Uniform`]).
+/// The reduce-to-`Bool` comparison prims (`cmp.eq`/`cmp.lt`, RFC-0032 D1) are the exception — they
+/// **collapse** to a fixed `Binary{1}` independent of the operand width ([`WidthRel::Collapse`]). New
+/// rules (e.g. a width-changing pack) are added as variants, never silently assumed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WidthRel {
     /// All operands and the result share one width.
@@ -159,10 +161,13 @@ impl PrimTable {
         PrimRef::new(hash)
     }
 
-    /// The default table: the closed v0 kernel-prim set — the identity, the elementwise binary
-    /// logic (`bit.*`), and the fixed-width balanced-ternary arithmetic (`trit.*`, M-111). Every
-    /// entry is `intrinsic = Exact` and width-`Uniform`. This is the single source of truth the
-    /// `mycelium-interp` intrinsic and the `mycelium-l1` surface table are checked against.
+    /// The default table: the closed v0 kernel-prim set — the identity, the elementwise binary logic
+    /// (`bit.*`), the fixed-width balanced-ternary arithmetic (`trit.*`, M-111), the reduce-to-`Bool`
+    /// comparison prims (`cmp.eq`/`cmp.lt`, RFC-0032 D1), and the never-silent binary arithmetic
+    /// (`bit.add`/`bit.sub`, RFC-0032 D2). Every entry is `intrinsic = Exact`; all are width-`Uniform`
+    /// **except** `cmp.eq`/`cmp.lt`, which are width-`Collapse` (operand width → `Binary{1}`). This is
+    /// the single source of truth the `mycelium-interp` intrinsic and the `mycelium-l1` surface table
+    /// are checked against.
     #[must_use]
     pub fn builtins() -> Self {
         use PrimParadigm::{Any, Binary, Ternary};
