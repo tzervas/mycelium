@@ -3,45 +3,67 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-29 |
-| **Status** | **Draft** (2026-06-24; deliberation anchor — advisory, non-committal · rev. 2026-06-24 — owner-steered: phase-decomposed knobs, `fast`-default, north-star reframe) |
+| **Status** | **Draft** (2026-06-24; deliberation anchor — advisory, non-committal · rev. 2026-06-24 — owner-steered: phase-decomposed knobs, `fast`-default, north-star reframe · rev. 2 2026-06-24 — `fast`+`certified` first-class modes, safe-by-default + explicit per-use unsafe escape, diagnostic-verbosity knob, "honesty"→"transparency & auditability" reframe) |
 | **Feeds** | the eventual **RFC-0034** (binding decision) + a superseding ADR; conditionalizes RFC-0001 §3.3/§3.4/§4.6, RFC-0002 §2, RFC-0005 §2, ADR-010, ADR-011, ADR-013/016/017; grounds in **KC-4**, **VR-5**, **G2**, ADR-014 |
 | **Date** | June 24, 2026 |
 | **Decides** | *Nothing normatively* — advisory. Records the maintainer's intended **shift** (2026-06-24): make the certification / honesty / hashing machinery **tunable from fully-off → fully-engaged** via scoped config, instead of mandatory-everywhere, **while preserving honesty and keeping the good procedures** the early maximalist phase produced. Captures the design space, the knob model, the feature-dependency consequences, and the open questions, so the binding RFC-0034 is shaped toward this end-state. The binding decision is the future RFC. **Rev. 2026-06-24 (owner-steered, §10):** the single ladder is **decomposed into independent knobs split by *phase*** — compile/deploy-time **spore identity hashing stays available even when all runtime certification is off** — composing into named **profiles**; the default profile is **`fast`** (opt-in certification); and the note now **captures a north-star reframe** (Mycelium as a fast, memory-safe, ergonomic multi-paradigm language with certification *baked in as optional*), with the Foundation/charter ripple **flagged** for the binding RFC-0034 + superseding ADR. |
 | **Task** | value-model / honesty-model evolution (pre-RFC-0034 deliberation) |
 
-> **Posture (honesty rule / VR-5).** Advisory, forward-looking. **Enacts nothing; moves no status; changes
-> no normative text.** What exists **today** is the all-on machinery (SC-3 / FR-M3: every swap emits +
-> checks a certificate; every value is content-hashed; every value carries a guarantee tag). This note
-> records a *direction* — a tunable model — and the argument that it stays honest. The binding change is
-> RFC-0034 + a superseding ADR; until then the all-on rules hold. No code or guarantee is claimed here
-> (VR-5 / G2).
+> **Posture (transparency rule / VR-5).** Advisory, forward-looking. **Enacts nothing; moves no status;
+> changes no normative text.** What exists **today** is the all-on machinery (SC-3 / FR-M3: every swap
+> emits + checks a certificate; every value is content-hashed; every value carries a guarantee tag). This
+> note records a *direction* — a tunable model — and the argument that it stays **transparent and
+> accurate** at every setting. It also proposes a **vocabulary reframe** (§1, §6): the project's "honesty"
+> principle is restated as **transparency & auditability** — same mechanism, pragmatic framing. The binding
+> change is RFC-0034 + a superseding ADR; until then the all-on rules hold. No code or guarantee is claimed
+> here (VR-5 / G2).
 
 ---
 
 ## §1 Purpose & the reframe
 
-The corpus mandates the full honesty/certification/hashing machinery **unconditionally**: every value
+The corpus mandates the full transparency/certification/hashing machinery **unconditionally**: every value
 carries a `GuaranteeStrength` (RFC-0001 §3.4), every swap emits + checks a certificate (**SC-3**,
 **FR-M3**, RFC-0002 §2), every value/definition is content-hashed (RFC-0001 §4.6). The maintainer's
 assessment (2026-06-24): *"certification everywhere is messy and expensive"* — devs/users should dial it
 from **fully off → fully engaged**, and disable the machinery entirely when undesired, **keeping** the
 genuinely good procedures the maximalist phase produced.
 
-**The keystone: honesty ≠ mandatory maximal certification.** Honesty = *never claim more than you
-established.* Certification *depth* = *how much you bother to establish.* Splitting these makes the
-expensive machinery a **tunable policy**, and honesty **survives at every setting** because the corpus
-already contains the hooks:
+**Vocabulary reframe (owner-steered, 2026-06-24): "honesty" → "transparency & auditability."** The
+corpus's "honesty rule / never lie" framing is recast in pragmatic engineering terms — it was always about
+**transparent, inspectable operations**, not a moral claim. The restatement:
+
+- **By default (`fast`): transparent & inspectable — *non-certified auditability*.** Every operation is
+  debuggable and inspectable: you can see *what happened, what went wrong, why, and how*, **without** any
+  certification machinery running. This is the everyday value — a fast language whose operations are never
+  opaque.
+- **With certification (`certified`): a *fully auditable* framework.** Engaging certification upgrades the
+  inspectable trail into a checked, certificate-backed, fully-auditable record. **Optional**, on request.
+
+The **mechanism is unchanged** — never-silent (G2), the four-point provenance lattice
+(`Exact⊐Proven⊐Empirical⊐Declared`), `EXPLAIN`-able selections, and downgrade-don't-overclaim (VR-5). Only
+the *framing* changes: from "stay honest" to "stay transparent and accurate." (Charter-level vocabulary —
+**captured here, flagged** for RFC-0034 + the superseding ADR; CLAUDE.md house-rule 1, CONTRIBUTING, and
+the VR-5/G2 wording are not rewritten here — §7.)
+
+**The keystone: transparency ≠ mandatory maximal certification.** Transparency = *operations are never
+opaque and never overclaim* (you can always see what was established). Certification *depth* = *how much
+you bother to establish, and whether it's checked.* Splitting these makes the expensive machinery a
+**tunable policy**, and transparency **survives at every setting** because the corpus already contains the
+hooks:
 
 - **KC-4** (Foundation §2.4) already authorizes downgrading *certified → declared-and-property-tested*
   on cost grounds — "document the loss." Tunable certification **generalizes KC-4 from a one-time
   kill-switch into a knob.**
-- **VR-5** ("downgrade to stay honest; never upgrade without a checked basis") + the **`Declared`** tier
+- **VR-5** ("downgrade to stay accurate; never upgrade without a checked basis") + the **`Declared`** tier
   (RFC-0001 §4.3 — *"always flagged; never silently trusted"*) make "off" a *systematic, flagged
-  downgrade to `Declared`*, **not** a lie.
+  downgrade to `Declared`*, **not** a hidden overclaim.
 - **G2 (never-silent)** binds the *mode itself*: results carry an explicit certification-mode tag;
   tooling always surfaces the active level; a cross-mode operation is an explicit `Option`/error.
 - **ADR-014** (relaxed the global `forbid unsafe` → `permitted-but-warned`) is the precedent for
-  relaxing a global rule honestly.
+  relaxing a global rule transparently — and the model for memory safety here: **safe by default, with an
+  *explicit per-use* escape hatch** (§3.1) so unsafe mem ops are a conscious, visible choice at the use
+  site, never an ambient default.
 
 **The reframe is bigger than a knob — it repositions the north star (owner-steered, 2026-06-24).** The
 intended end-state is **Mycelium as a fast, efficient, memory-safe, easy-to-use multi-paradigm language**,
@@ -101,9 +123,10 @@ only as the "preset" intuition.)
 | Knob | Phase | Cost | Consumes / enables | Recommended floor |
 |---|---|---|---|---|
 | **Spore / deploy identity hash** | compile / deploy | cheap, **per-artifact** | spores (ADR-013), hot-inject + ABI dispatch keys (ADR-016/017), dedup | **available even when runtime is fully off** |
-| **Memory safety** | always | inherited (Rust kernel) | the safe surface; no raw pointers | **on, non-negotiable** |
+| **Memory safety** | always | inherited (Rust kernel) | the safe surface; no raw pointers | **safe by default; *explicit per-use* unsafe escape hatch** (see below) |
 | **Never-silent failure** (Axis B) | runtime | O(1) | `Option`/`Result`/`SwapError` out-of-range | **on** (named `wrapping`/`fast` opt-out) |
-| **Guarantee-tag propagation** | runtime | O(1) | honest `Exact⊐Proven⊐Empirical⊐Declared` tags, unchecked | off |
+| **Diagnostic verbosity / noise** | runtime + tooling | ~O(1) | how loud errors / traces / `EXPLAIN` output are | **tied to the mode** (quiet at `fast` → full audit trail at `certified`); independently overridable |
+| **Guarantee-tag propagation** | runtime | O(1) | provenance `Exact⊐Proven⊐Empirical⊐Declared` tags, unchecked | off (kept available — the inspectability mechanism) |
 | **Runtime value hashing / dedup** | runtime | O(size) | runtime identity/dedup of values | off |
 | **Swap-cert emission** | runtime | O(1) | a certificate object per swap | off |
 | **Swap-cert checking** | runtime | **expensive** | M-210 checker + ADR-010 bound kernels | off |
@@ -111,19 +134,37 @@ only as the "preset" intuition.)
 The knobs compose; out-of-range / cross-knob interactions stay never-silent (§6). Two are *not* really
 "Axis A cost" and stay on cheaply: **memory safety** (inherited) and **Axis-B never-silence** (O(1)).
 
-### §3.2 Profiles (presets over the knobs)
+**Memory safety — safe by default, explicit per-use escape (owner-decided, 2026-06-24).** The surface is
+**memory-safe by default**; unsafe mem ops are reachable **only** through an *explicit, per-use* escape
+hatch at the call site (the ADR-014 `permitted-but-warned` precedent, sharpened from a global toggle to a
+**per-use** opt-in) — so the dev must consciously think at each use, and the escape is visible/auditable in
+the source. This is independent of the certification profile: even `fast` is memory-safe.
 
-| Profile | Spore hash (compile) | Axis-B | Tags | Runtime hash | Cert emit | Cert check | Character |
-|---|---|---|---|---|---|---|---|
-| **`fast`** ***(default)*** | available | on | off | off | off | off | fast, memory-safe, ergonomic; **still deployable** |
-| **`balanced`** | available | on | propagated (unchecked) | off | emitted (unchecked) | off | honest tags + certs, not verified |
-| **`certified`** | available | on | tracked | on | emitted | **checked** (ADR-010) | today's all-on behaviour; max assurance |
+**Diagnostic verbosity — tunable noise, tied to the mode (owner-steered, 2026-06-24).** "How noisy our
+errors and traces are" is its own knob, *defaulted by the mode* — `fast` keeps diagnostics lean (inspect on
+demand), `certified` emits the full audit trail — but independently overridable (e.g. a `fast` build can
+crank verbosity for a debugging session without turning on cert checking). Guarantee **tagging stays on as
+the inspectability substrate** regardless of how loud the surface output is.
 
-`certified` is the union of the maximalist phase's machinery (§8), now **engaged on request** rather than
-always. The earlier L0–L3 ladder maps roughly: `fast ≈ L0`-but-**with spores kept**, `balanced ≈ L1`,
-`certified ≈ L2/L3` (L3 = `certified` with `Proven` side-conditions checked).
+### §3.2 Modes (presets over the knobs)
 
-**The honest catch, corrected.** The §3-strawman coupled "lowest level ⇒ lose spores." The phase split
+**Two first-class modes — `fast` and `certified` (owner-decided, 2026-06-24)** — are the anchors the
+language is designed around; **`balanced` is an optional intermediate**, not a headline.
+
+| Mode | First-class? | Spore hash (compile) | Mem-safe | Axis-B | Diagnostics | Tags | Runtime hash | Cert emit | Cert check | Character |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **`fast`** ***(default)*** | **yes** | available | safe | on | lean | off | off | off | off | fast, memory-safe, ergonomic, **inspectable + still deployable** |
+| **`balanced`** *(intermediate)* | no | available | safe | on | medium | propagated (unchecked) | off | emitted (unchecked) | off | provenance tags + certs, not verified |
+| **`certified`** | **yes** | available | safe | on | full audit trail | tracked | on | emitted | **checked** (ADR-010) | today's all-on behaviour; **fully auditable**, max assurance |
+
+The two first-class modes name the two postures a dev actually chooses between: **`fast`** — a fast,
+memory-safe, ergonomic language whose ops are still transparent/inspectable (non-certified auditability) —
+and **`certified`** — the same language with the full, checked, certificate-backed auditable framework
+engaged. `certified` is the union of the maximalist phase's machinery (§8), now **engaged on request**
+rather than always. The earlier L0–L3 ladder maps roughly: `fast ≈ L0`-but-**with spores + tags-available
+kept**, `balanced ≈ L1`, `certified ≈ L2/L3` (L3 = `certified` with `Proven` side-conditions checked).
+
+**The real catch, corrected.** The §3-strawman coupled "lowest level ⇒ lose spores." The phase split
 (§2) **breaks that coupling**: spore identity is a *compile/deploy* hash, so **`fast` keeps spores** while
 paying no *runtime* hash/cert cost. Turning off the *compile* spore hash is a separate, deliberate choice
 (embedded/no-deploy builds) that MUST **explicitly disable and `EXPLAIN`** the loss of spores/inject —
@@ -171,24 +212,33 @@ RFC-0017's `@matured` took (Enacted; the machinery exists):
 - **Not RFC-0005 selection policy for v0** — overkill for a scalar knob (it is for multi-candidate
   selection); revisit only if cert level ever becomes data-driven per-op.
 
-## §6 Honesty-preservation argument
+## §6 Transparency & auditability argument *(was: "honesty-preservation")*
 
-Tunability is honest **because honesty is disclosure-of-strength, not universal certification** — and the
-corpus already says so:
+Tunability stays **transparent and accurate** at every setting — *transparency is disclosure-of-strength
+plus inspectable ops, not universal certification* — and the corpus already says so. The two tiers of the
+guarantee:
 
-- The **`Declared`** tier exists precisely for *"asserted, not proven, always flagged."* "Off" computes a
-  result and tags it `Declared` + `mode: Off`. That is the *intended* use of the weakest tier, applied
+- **`fast` = transparent + non-certified auditability.** Ops are inspectable and never overclaim, but the
+  audit trail is *unchecked* — you can see *what happened and why*, you just don't get a certificate proving
+  it. Cheap, debuggable, the everyday default.
+- **`certified` = fully auditable.** The same trail, now checked and certificate-backed — a fully auditable
+  framework, engaged on request.
+
+Why it holds:
+
+- The **`Declared`** tier exists precisely for *"asserted, not proven, always flagged."* `fast` computes a
+  result and tags it `Declared` + `mode: fast`. That is the *intended* use of the weakest tier, applied
   systematically.
 - **VR-5 / RFC-0014** already permit *downgrade-and-disclose* (recovery/fallbacks "never fabricate or
   upgrade a guarantee"). A tunable mode is a *systematic, flagged downgrade*.
 - **G2** is satisfied so long as the mode is **inspectable** and **cross-mode operations are explicit**:
-  a value computed at L0 carries `mode: Off`; combining it into an L3 computation is an explicit,
-  visible event (never a silent upgrade — disclosure can only degrade, RFC-0001 §3.4).
+  a value computed in `fast` carries `mode: fast`; combining it into a `certified` computation is an
+  explicit, visible event (never a silent upgrade — disclosure can only degrade, RFC-0001 §3.4).
 - **ADR-010's "tier-i pragmatic checker"** already trades a full prover for checked arithmetic; tunability
-  extends the ladder downward to "tier-0: no check, honest about it."
+  extends the ladder downward to "tier-0: no check, transparent about it."
 
-What stays non-negotiable even at L0: **the mode is never hidden, and no result ever claims a strength it
-did not compute.** That single rule is the whole honesty contract; everything else becomes opt-in.
+What stays non-negotiable even in `fast`: **the mode is never hidden, and no result ever claims a strength
+it did not compute.** That single rule is the whole transparency contract; everything else becomes opt-in.
 
 ## §7 Corpus reach (preview — nothing amended here)
 
@@ -201,13 +251,20 @@ The binding RFC-0034 + a superseding ADR would *conditionalize* (not delete) the
 - **ADR-010 / ADR-011** (bound kernels / universal `BoundBasis`) — invoked when certification ≥ L2.
 - **ADR-013 / 016 / 017** (spore / ABI / hot-inject) — gated on the hashing sub-toggle; their identity
   contract is stated per-level.
+- **ADR-014** (unsafe `permitted-but-warned`) — sharpened toward **safe-by-default with an *explicit
+  per-use* escape hatch** (§3.1); memory safety is a first-class default, not merely "warned."
+- **Vocabulary: "honesty" → "transparency & auditability"** — **CLAUDE.md house-rule 1 ("The honesty
+  rule")**, **CONTRIBUTING.md**, and the **VR-5 / G2** phrasing reframe from a moral "honesty / never lie"
+  register to pragmatic *transparent, inspectable ops + (optional) certified auditability*. The
+  **mechanism is unchanged** (never-silent, the provenance lattice, `EXPLAIN`, downgrade-don't-overclaim);
+  only the framing/wording moves. Charter-level — **flagged, not amended here** (append-only).
 - **Foundation §1 north star** — the headline framing shifts from *"certified, never-silent substrate with
   honest per-operation guarantees"* toward *"a fast, memory-safe, ergonomic multi-paradigm language, with
-  certified/honest semantics as optional, baked-in capabilities."* Memory-safety + speed + ergonomics rise
-  to first-class goals (§1). **Charter-level — flagged, not amended here** (append-only); the binding
+  certified/auditable semantics as optional, baked-in capabilities."* Memory-safety + speed + ergonomics
+  rise to first-class goals (§1). **Charter-level — flagged, not amended here** (append-only); the binding
   RFC-0034 + superseding ADR carry it.
-- **Foundation** SC-3 / FR-M3 / KC-4, and the honesty-rule wording in **CLAUDE.md** / **CONTRIBUTING.md**
-  — reworded from "always" to "at the active certification profile; the profile itself is never silent."
+- **Foundation** SC-3 / FR-M3 / KC-4, and the transparency-rule wording in **CLAUDE.md** /
+  **CONTRIBUTING.md** — reworded from "always" to "at the active mode; the mode itself is never silent."
 
 ## §8 What we keep (the maximalist phase earned these)
 
@@ -227,14 +284,25 @@ lattice, the M-210 checker. None of this is discarded; it is **gated behind the 
 - ~~Q3 **Default level**~~ → **`fast`** (memory-safe, never-silent, spores available; runtime cert/hash/
   check off); certification is **opt-in** (§5).
 
+**Resolved (owner-steered, 2026-06-24 rev. 2 — folded into §1/§3/§6/§10):**
+- ~~Q2′ **First-class modes**~~ → **`fast` and `certified` are both first-class modes** (the two anchors);
+  `balanced` is an optional intermediate (§3.2).
+- ~~Q8 **Memory safety**~~ → **safe by default with an *explicit per-use* unsafe escape hatch** (§3.1);
+  independent of certification profile.
+- ~~Q9 **"Honesty" framing**~~ → **reframed to "transparency & auditability"** (§1/§6); mechanism
+  unchanged, charter-vocabulary ripple flagged (§7).
+- ~~Q10 **Diagnostic verbosity**~~ → its own **tunable knob, mode-defaulted** (lean at `fast` → full audit
+  trail at `certified`), independently overridable; **tagging stays on** as the inspectability substrate
+  (§3.1).
+
 **Still open:**
 4. **Axis B** — model says **default-on with a named `wrapping`/`fast` opt-out** (§3.1); confirm that
    opt-out is exposed in v0 vs. deferred.
 5. **Per-op granularity** — ship v0 at global/phylum/nodule scope; defer the per-op `thaw`-style knob?
 6. **Form/sequencing** — DN-29 (this) → settle → **RFC-0034** + superseding ADR + the amendments. Confirm
    the two-step (deliberate-then-decide) vs. going straight to a `Proposed` RFC.
-7. **Profile knob-overrides** — expose individual knob overrides under a profile (§5) in v0, or ship the
-   3 named profiles only and add knob-level overrides later?
+7. **Mode knob-overrides** — expose individual knob overrides under a mode (§5) in v0, or ship the named
+   modes only and add knob-level overrides later?
 
 ## §10 Decisions captured this revision (2026-06-24, owner-steered — still advisory)
 
@@ -250,6 +318,15 @@ ADR; VR-5/G2 — DN-29 enacts nothing):
 4. **North-star reframe captured.** Mycelium repositions toward a fast, memory-safe, ergonomic
    multi-paradigm language with certification baked in as optional (§1). The Foundation §1 / SC-3 / FR-M3
    ripple is **flagged for RFC-0034 + the superseding ADR** (§7) — *not* amended here (append-only).
+5. **`fast` and `certified` are both first-class modes** (§3.2); `balanced` is an optional intermediate.
+6. **Memory-safe by default + explicit per-use unsafe escape hatch** (§3.1) — a conscious, visible opt-in
+   at each use site (ADR-014 precedent, sharpened to per-use); independent of the certification mode.
+7. **"Honesty" reframed to "transparency & auditability"** (§1/§6): default `fast` = transparent +
+   inspectable *non-certified auditability*; `certified` = the same trail as a *fully auditable* framework.
+   Mechanism unchanged (never-silent, provenance lattice, `EXPLAIN`, VR-5); the CLAUDE.md house-rule 1 /
+   CONTRIBUTING / VR-5 / G2 vocabulary ripple is **flagged for RFC-0034** (§7) — not rewritten here.
+8. **Diagnostic verbosity is a tunable knob, mode-defaulted** (§3.1): lean at `fast`, full audit trail at
+   `certified`, independently overridable; **guarantee tagging stays on** as the inspectability substrate.
 
 ---
 
@@ -263,3 +340,8 @@ ADR; VR-5/G2 — DN-29 enacts nothing):
 > compile-time spore hashing decoupled from runtime certification (§2), `fast` default (§5), north-star
 > reframe captured with the charter ripple flagged (§1/§7/§10), open questions Q1–Q3 resolved (§9). Status
 > stays **Draft** (still advisory; a Draft is iterated in place, not status-advanced — append-only honored).
+> *2026-06-24 (rev. 2)* — owner-steered: **`fast` + `certified` elevated to first-class modes** (`balanced`
+> intermediate, §3.2); **memory-safe by default + explicit per-use unsafe escape hatch** (§3.1); a
+> **diagnostic-verbosity knob** tied to the mode, tagging kept on (§3.1); and the **"honesty" → "transparency
+> & auditability" reframe** (§1/§6) with the CLAUDE.md/CONTRIBUTING/VR-5/G2 vocabulary ripple flagged (§7).
+> Mechanism unchanged; still **Draft**, still advisory.

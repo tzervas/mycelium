@@ -20,6 +20,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `Declared` per **VR-5**; **G2** never-silent about the active mode). **Enacts nothing**; the binding
   decision is the future **RFC-0034** + a superseding ADR. Open questions tracked in §9.
 
+### Changed (2026-06-24: DN-29 rev. 2 — first-class modes, memory-safety default, "honesty"→"transparency" reframe (still Draft, advisory))
+
+- **DN-29 refined again (in place; stays Draft)** — **`fast` and `certified` elevated to two first-class
+  modes** (`balanced` an optional intermediate, §3.2); **memory-safe by default with an *explicit per-use*
+  unsafe escape hatch** (ADR-014 precedent sharpened to per-use, §3.1); a **tunable diagnostic-verbosity
+  knob** mode-defaulted (lean at `fast` → full audit trail at `certified`), with guarantee **tagging kept
+  on** as the inspectability substrate (§3.1); and a **vocabulary reframe — "honesty" → "transparency &
+  auditability"** (§1/§6): default `fast` gives transparent, inspectable *non-certified auditability*,
+  `certified` upgrades it to a *fully auditable* framework. The **mechanism is unchanged** (never-silent
+  G2, the provenance lattice, `EXPLAIN`, VR-5 downgrade-don't-overclaim); only the framing moves. The
+  CLAUDE.md house-rule 1 / CONTRIBUTING / VR-5 / G2 / Foundation §1 vocabulary ripple is **flagged for
+  RFC-0034 + the superseding ADR** — *not* rewritten here (append-only). §9 Q2′/Q8–Q10 resolved; Q4–Q7
+  open. Still **advisory — enacts nothing** (VR-5/G2).
+
 ### Changed (2026-06-24: DN-29 rev. — owner-steered refinement (still Draft, advisory))
 
 - **DN-29 refined (in place; stays Draft)** — the single L0–L3 ladder is **decomposed into independent
