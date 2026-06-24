@@ -5435,7 +5435,7 @@ issues:
   - id: M-747
     title: "M-747 -- reduce-to-Bool comparison/equality prim over Binary{N}/Ternary{N}"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746]
     doc_refs:
@@ -5457,7 +5457,7 @@ issues:
   - id: M-748
     title: "M-748 -- binary arithmetic prim surface (bit.and/bit.or + never-silent add/sub)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746]
     doc_refs:
@@ -5546,7 +5546,7 @@ issues:
   - id: M-752
     title: "M-752 -- enablement conformance: each prim/repr differential-tested + .myc smoke ports"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core, priority:P1, status:blocked]
+    labels: [phase:5, type:verification, area:core, priority:P1, status:in-progress]
     epic: E19-1
     depends_on: [M-747, M-748, M-749, M-750]
     doc_refs:
