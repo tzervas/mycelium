@@ -11,7 +11,7 @@
 > **Grounding discipline.** This is a planning artifact, not a normative one. It cites the corpus
 > (`FR/NFR/VR/SC/KC`, `RFC-xxxx §`, `ADR-0xx`, `Tx.y`, `G#`, `RR-#`) for every claim about *what* is
 > required; it introduces no new requirements. Where it records a *decision about sequencing or
-> scope* it says so and routes anything normative back to an RFC/ADR. The honesty rule applies to the
+> scope* it says so and routes anything normative back to an RFC/ADR. The transparency rule applies to the
 > gate verdicts below: a guarantee tag, kill-criterion verdict, or perf number stays at the strength
 > actually *established* by a checked run (VR-5), never pre-written.
 
@@ -173,7 +173,7 @@ genuinely independent and runs in parallel.
 
 ## 5. Gate verdicts — Phase-2→3 re-run of KC-1…KC-4 (honest status)
 
-Per the honesty rule and VR-5, kill-criterion status is tracked at the strength actually
+Per the transparency rule and VR-5, kill-criterion status is tracked at the strength actually
 *established*. Re-run at the Phase-2→3 gate. **No Phase-3 exit gate is claimed yet** — this doc opens
 the phase; the gate is defined in §6 and verdicts are filled as tasks land.
 

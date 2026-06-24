@@ -8,6 +8,79 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: E21-1 — RFC-0034 paired-TDD implementation epic queued)
+
+- **E21-1 (epic) + M-786…M-794** queued in `tools/github/issues.yaml` — the paired-TDD Rust-first
+  implementation of RFC-0034 + ADR-032 (the runtime mode mechanism the design-driven enactment left
+  pending). Dependency-ordered from the `Meta` mode tag outward: `CertMode` + never-silent mode tag
+  (M-786) → mode-gated provenance tagging, `fast` omits Empirical/Proven (M-787) → mode-gated swap-cert
+  emit/check (M-788) → compile/runtime phase split so spores survive a cert-off runtime (M-789) →
+  `@certification` resolution/scoping reusing RFC-0012 (M-790) → `wrapping` Axis-B opt-out (M-791) →
+  EXPLAIN-of-mode + generation≠consumption (M-792) → memory-safe per-use unsafe escape sharpening ADR-014
+  (M-793) → the RFC-0034 §13 conformance gate that advances the RFC to Enacted-with-code (M-794). Each
+  leaf carries property-test acceptance criteria + an honest "implemented (Rust-first)" framing (VR-5/G2).
+  RFC-0034's `Task` field updated to reference the epic. ids collision-checked (E21/M-786… free); YAML
+  validated (no duplicate ids); `doc_refs` resolve.
+
+### Changed (2026-06-24: editorial — trim redundant "honest" qualifiers (concision; honesty is implied))
+
+- **Concision pass — dropped the redundant "honest"/"honestly" filler** across CLAUDE.md, CONTRIBUTING,
+  README, Foundation, Glossary (**61 edits / 5 files** via the never-silent `tools/dn29_apply.py` +
+  `docs/notes/honest-trim-manifest.json`). Rationale (maintainer): honesty is **implied by construction** —
+  G2/no-black-boxes guarantee that a trace, error, or guarantee tag that *isn't* honest is useless — so the
+  adjective is noise, not information ("honest tags" → "tags", "honest bounds exist" → "bounds exist",
+  "honest probabilistic guarantees" → "probabilistic guarantees", etc.). The same pass fixed the few stale
+  **"honesty rule" → "transparency rule"** name references left after the ADR-032 rename. **Kept
+  deliberately:** the formal named criteria **SC-2 "(honest bounds)"** and **VR-5 "(honest
+  guarantee-strength)"** (cross-referenced labels, not filler), the Glossary `(H)` taxonomy marker, and the
+  proper nouns `honesty-integrity` (ADR-021 Gate A) / `honest-stdlib` (prior-art ref). Purely editorial — no
+  decision changes, no guarantee semantics touched (VR-5/G2 mechanism unchanged).
+
+### Changed (2026-06-24: RFC-0034 + ADR-032 ratified & Enacted (design-driven); corpus amendments applied; DN-29 Superseded)
+
+- **RFC-0034 + ADR-032 ratified `Proposed → Accepted → Enacted (design-driven)`** (maintainer, stepped per
+  house rule #3). **Tunable certification is now the governing model.** The corpus amendments (ADR-032's
+  act) were **applied** via the never-silent `tools/dn29_apply.py`: **21 amendments across 13 files** —
+  - **Charter conditionalize:** Foundation **SC-3** / **FR-M3** now read "at the active mode (`certified`); the mode itself never-silent," attributed to RFC-0034/ADR-032.
+  - **Living-doc transparency reframe:** CLAUDE.md house-rule 1 (**"the honesty rule" → "the transparency rule"**) + the "what this repo is" north-star line; CONTRIBUTING heading; README headline principle + decision-process bullet; Glossary ("honesty lattice" → "transparency lattice", the rule gloss, the `Declared` floor). **Mechanism unchanged** — the guarantee lattice, VR-5, and G2 keep their force; only the model-vocabulary wording moved.
+  - **Append-only footnotes** on the relaxed Accepted decisions: RFC-0001/0002/0005 + ADR-010/011/013/016/017 (mandates apply at `certified`; `fast`/`balanced` per RFC-0034; spore/ABI/inject hashing is compile-time and survives a cert-off runtime).
+  - **Deliberately excluded** (stringent scope): the ~45 development-process / colloquial uses of "honest" (swarm-review discipline, "defer honestly", "made honestly", "honest open follow-up") — not the guarantee-model term; rewording them would change meaning.
+- **DN-29 → `Superseded`** (by RFC-0034 + ADR-032), retained as the append-only rationale record.
+- **Pacing note (doc-and-design-driven loop, paired with TDD).** "Enacted" here is **design-driven**: the
+  design + corpus amendments are landed and **governing**, while the **runtime mode *mechanism*** (modes
+  affecting execution, tag computation, resolution) is the **paired TDD cycle — not yet code, never claimed
+  implemented** (VR-5/G2). RFC-0034 advances to fully Enacted-with-code as the modes land Rust-first. This
+  records the slightly-less-rigid pacing (design lands ahead of code) while keeping the honesty discipline
+  stringent: nothing is claimed done that isn't.
+
+### Added (2026-06-24: RFC-0034 + ADR-032 — the binding tunable-certification act (drafted from the settled DN-29))
+
+- **RFC-0034 — Tunable Certification & Transparency Modes** (`docs/rfcs/`, **Proposed**). The binding
+  *mechanism* from the settled DN-29 deliberation: makes certification/hashing/tag machinery a **tunable
+  policy** over RFC-0001/0002/0005 — the knob matrix (§4); two **first-class modes** `fast` (default) /
+  `certified` + a `balanced` intermediate (§5); `global/phylum/nodule` resolution reusing **RFC-0012**
+  scoping + a `@certification` attribute, no content-hash perturbation per ADR-003 (§6); the **provenance
+  tag as an adjustable unit** (`fast` omits `Empirical`/`Proven`, sits at structural `Exact`/`Declared`)
+  and the **generation≠consumption** signal split (§7); the **compile/runtime phase split** — spores
+  survive a cert-off runtime (§8); memory-safe-by-default + an explicit per-use escape sharpening
+  **ADR-014** (§9); the named `wrapping` Axis-B opt-out (§10); and the never-silent mode invariant (§3).
+  Implementation-focused; decides the surface, implements nothing (VR-5/G2).
+- **ADR-032 — Tunable certification supersedes always-on; transparency reframe** (`docs/adr/`,
+  **Proposed**). The superseding ADR: supersedes the **unconditional** reading of **SC-3/FR-M3** +
+  RFC-0001 §3.4/§4.6, RFC-0002 §2, RFC-0005 §2 (they hold **at the active mode**; the mode itself is
+  never-silent; mechanisms unchanged); reframes **"honesty" → "transparency & auditability"** whole-corpus
+  (the lattice/VR-5/G2 mechanism is unchanged — only the wording); repositions the **north star** toward a
+  fast, memory-safe, ergonomic language with certification optional (the Foundation **mission sentence is
+  already transparency-framed** — unchanged); **sharpens ADR-014** (safe-by-default + explicit per-use
+  escape); and adds append-only **§-end footnotes** to RFC-0001/0002/0005 + ADR-010/011/013/016/017.
+- **Staged amendment tooling** (`tools/dn29_apply.py` + `docs/notes/dn29-amendment-manifest.json`). The
+  **anchor-keyed, single-pass-per-file** corpus amender (DN-29 §11.4) that applies the rewordings without
+  positional mangling: **dry-run by default**, **never-silent** (each anchor must match exactly once or it
+  fails loudly), and it **refuses `--apply` while the manifest is not `final`**. **Staged, not run** — the
+  corpus edits land only **after** RFC-0034 + ADR-032 are Accepted (RFC-0034 §13). The manifest ships the
+  two validated Foundation spine anchors (SC-3, FR-M3) as dry-run-clean worked examples; the rest are
+  authored at ratification. Registered in `docs/Doc-Index.md`.
+
 ### Added (2026-06-24: DN-29 — Tunable Certification & Honesty Modes (Draft deliberation anchor, advisory))
 
 - **DN-29 — Tunable Certification & Honesty Modes** (`docs/notes/`, **Draft**, advisory). Anchors the
@@ -19,6 +92,61 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   perturbation), and the honesty argument (generalizes **KC-4**; a systematic flagged downgrade to
   `Declared` per **VR-5**; **G2** never-silent about the active mode). **Enacts nothing**; the binding
   decision is the future **RFC-0034** + a superseding ADR. Open questions tracked in §9.
+
+### Changed (2026-06-24: DN-29 rev. 4 — deliberation settled; §9 fully resolved (still Draft, advisory))
+
+- **DN-29 deliberation settled (in place; stays Draft)** — owner confirmed the remaining forks; **§9 has no
+  open questions left.** Resolutions: Q4 expose the named **`wrapping`/`fast`** Axis-B opt-out in v0; Q5
+  ship **global/phylum/nodule** scope and defer the per-op `thaw`-style knob (YAGNI); Q6 the **two-step**
+  path (settle DN-29 → **RFC-0034 + a superseding ADR**, §11 as the RFC appendix); Q7 **named modes ship
+  first**, per-knob overrides later; Q11 the honesty→transparency reframe is **whole-corpus**; Q12 the
+  **superseding ADR amends the Foundation/charter** while **RFC-0034 stays implementation-focused**; Q13
+  Accepted RFCs/ADRs get **append-only §-end footnotes** pointing to the relaxations (§9/§10/§11.5). Still
+  **advisory — enacts nothing** (VR-5/G2); the binding act is the forthcoming RFC-0034 + ADR.
+
+### Changed (2026-06-24: DN-29 rev. 3 — provenance tag adjustable, generation≠consumption, §11 ripple map (still Draft, advisory))
+
+- **DN-29 refined again (in place; stays Draft)** — **provenance tag is now an adjustable unit**: `fast`
+  defaults to **not using `Empirical`/`Proven`** (they cost the trials/proofs `fast` skips), sitting at
+  structural `Exact`/`Declared`; heavier tags dial up per mode/unit — the honest floor (`fast` never claims
+  a tag it didn't earn, VR-5). **Signal generation split from consumption**: the cheap inspectability signal
+  is **always generated ≥ middle tier** (safe default) while **consumption** (DX/UX surfacing, diagnostic
+  noise) is tunable and lean at `fast`, so a dev can dial it up mid-session with history already captured
+  (§3.1). Adds **§11 — a ripple map**: a ~40-hit / ~12-file `Empirical/Declared` inventory of every corpus
+  location the binding RFC-0034 + superseding ADR must amend (change-type taxonomy: conditionalize-per-mode
+  / honesty→transparency / north-star / tag-adjustable / memory-safety; high-collision files README/
+  Foundation/CLAUDE.md flagged; multi-category mangle-risk lines called out; spine anchors SC-3/FR-M3/VR-5
+  validated against source), plus an **anchor-keyed, single-pass-per-file batched-replacement mechanism**
+  (content-keyed not positional ⇒ no mangling; never-silent guard fails loudly on a missing/ambiguous
+  anchor). Still **advisory — enacts nothing** (VR-5/G2); the inventory is heuristic, to be re-verified at
+  RFC-0034 drafting time.
+
+### Changed (2026-06-24: DN-29 rev. 2 — first-class modes, memory-safety default, "honesty"→"transparency" reframe (still Draft, advisory))
+
+- **DN-29 refined again (in place; stays Draft)** — **`fast` and `certified` elevated to two first-class
+  modes** (`balanced` an optional intermediate, §3.2); **memory-safe by default with an *explicit per-use*
+  unsafe escape hatch** (ADR-014 precedent sharpened to per-use, §3.1); a **tunable diagnostic-verbosity
+  knob** mode-defaulted (lean at `fast` → full audit trail at `certified`), with guarantee **tagging kept
+  on** as the inspectability substrate (§3.1); and a **vocabulary reframe — "honesty" → "transparency &
+  auditability"** (§1/§6): default `fast` gives transparent, inspectable *non-certified auditability*,
+  `certified` upgrades it to a *fully auditable* framework. The **mechanism is unchanged** (never-silent
+  G2, the provenance lattice, `EXPLAIN`, VR-5 downgrade-don't-overclaim); only the framing moves. The
+  CLAUDE.md house-rule 1 / CONTRIBUTING / VR-5 / G2 / Foundation §1 vocabulary ripple is **flagged for
+  RFC-0034 + the superseding ADR** — *not* rewritten here (append-only). §9 Q2′/Q8–Q10 resolved; Q4–Q7
+  open. Still **advisory — enacts nothing** (VR-5/G2).
+
+### Changed (2026-06-24: DN-29 rev. — owner-steered refinement (still Draft, advisory))
+
+- **DN-29 refined (in place; stays Draft)** — the single L0–L3 ladder is **decomposed into independent
+  knobs split by *phase*** (compile/deploy vs runtime) composing into named **profiles**
+  (`fast`/`balanced`/`certified`, §3). Keystone: **compile/deploy spore-identity hashing is decoupled from
+  runtime certification**, so deployable, content-addressed units survive a fully cert-off runtime (§2,
+  resolving the old "L0 loses spores" coupling). **Default profile = `fast`** (memory-safe, never-silent,
+  spores available; runtime cert/hash/check off — certification opt-in, §5). Captures a **north-star
+  reframe** — Mycelium as a fast, memory-safe, ergonomic multi-paradigm language with certification baked
+  in as *optional* — with the Foundation §1 / SC-3 / FR-M3 ripple **flagged** for RFC-0034 + the
+  superseding ADR (**not** amended here; append-only). Open questions Q1–Q3 resolved; Q4–Q7 open (§9).
+  Still **advisory — enacts nothing** (VR-5/G2).
 
 ### Changed (2026-06-24: ADR-029/030/031 → Accepted — value-model ternary + the two content-address one-way doors ratified (owner approval))
 
