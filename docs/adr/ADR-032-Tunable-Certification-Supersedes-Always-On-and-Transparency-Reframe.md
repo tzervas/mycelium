@@ -114,10 +114,12 @@ done.
 > **landed**: E21-1's wiring leaves (M-786…M-793) implemented `CertMode` + the mode machinery Rust-first, and
 > the **RFC-0034 §13 conformance suite** (`crates/mycelium-cert/tests/conformance.rs`) verifies all six
 > clauses (a)–(f) end-to-end, parameterized over `fast`/`balanced`/`certified` with the cross-mode negatives
-> — green. Decision 1's residual is therefore **discharged** (pending maintainer ratification of RFC-0034's
-> advance to *Enacted — with code*). The **ADR-014 per-use unsafe-lint enforcement** (decision 5) remains the
-> open residual; the trusted-base crates are unsafe-free by `#![forbid(unsafe_code)]` (the suite checks this
-> side-condition), but the *project-wide* per-use lint gate is not yet a `just`/CI check. Append-only — prior
+> — green. Decision 1's residual is therefore **discharged**, **ratified by the maintainer 2026-06-24**
+> together with RFC-0034's advance to *Enacted — with code*. The **ADR-014 per-use unsafe-lint enforcement**
+> (decision 5) is **also realized** (M-793): the never-skip `unsafe-per-use` gate
+> (`scripts/checks/unsafe-per-use.sh`, wired into `all.sh` + the justfile) asserts both `#![forbid(unsafe_code)]`
+> on the trusted-base crates **and** a per-use `#[allow(unsafe_code)]` at every unsafe site (no crate-global
+> allows). Append-only — prior
 > DoD prose preserved (VR-5/G2).
 
 ## Grounding

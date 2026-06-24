@@ -8,6 +8,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: maintainer ratifications — RFC-0034 advance + E21-1 design flags)
+
+- **RFC-0034 advance RATIFIED.** The `Enacted (design-driven) → Enacted — with code (Rust-first)` advance
+  (M-794, the §13 conformance gate) is ratified by the maintainer — the "pending ratification" qualifiers are
+  cleared in RFC-0034 (Status + changelog row) and ADR-032 (decision 1 discharged). RFC-0034 is now fully
+  **Enacted — with code**.
+- **ADR-032 decision 5 also realized + noted:** the per-use unsafe-lint enforcement landed in M-793 (the
+  `unsafe-per-use` gate) — ADR-032's M-794 update note is corrected (it had still listed decision 5 as the open
+  residual). Remaining ADR-032/RFC-0034 residual: §14 per-op/per-knob granularity (deferred, named-not-silent).
+- **E21-1 design flags ratified as-built** (maintainer): M-790 `@certification` surface spelling (lowercase
+  `fast|balanced|certified`) + the v0 single-manifest `phylum`-tier modeling (`Global` reserved for
+  multi-manifest); M-794's conformance suite using `mycelium-cert` dev-deps + **local duplication** of the
+  harness shapes (not a shared `mycelium-test-support` crate); M-796's `ModeScope` `pub [bool;3]` field +
+  granular-override `source: None`. All stand as implemented.
+
 ### Added (2026-06-24: E21-1 Group-B Wave-3 — M-794 conformance gate + M-796 toolkit; **CLOSES E21-1**)
 
 - **M-794 — the §13 conformance gate (E21-1 capstone)** (`crates/mycelium-cert/tests/conformance.rs`, 19
