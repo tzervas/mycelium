@@ -101,9 +101,11 @@ This keeps logic files clean **without** the black-box coverage loss of fully-ex
 force internals `pub`). Integration/behavioural tests that only need the public API still go in `tests/`.
 **Complex test logic lives in fixtures + parameterization, not in test bodies** — data-driven cases
 (corpus tables, `CertMode::ALL`-style parameterization, the conformance `REJECT_EXPECTED` pattern,
-`differential.rs::data_corpus()`), so a test body is *assert over a case*, not bespoke logic. New tests
-follow this from the start; the existing inline-test retrofit (185 files) is tracked as **M-797** (a
-per-crate octopus-merge swarm — disjoint by crate).
+`differential.rs::data_corpus()`), so a test body is *assert over a case*, not bespoke logic.
+**Enforced going-forward, retrofit lazily** (maintainer's chosen rollout): new/changed code complies
+immediately, and **when you modify a logic file that still has inline tests, extract them as part of that
+change** (as-touched — no big-bang refactor; the codebase stays mixed until the lazy sweep completes,
+which is accepted). The remaining inline-test retrofit (~185 files) is tracked as **M-797**.
 
 ## Remote CI policy
 **No automatic remote CI.** `.github/workflows/checks.yml` is **manual-dispatch only**
