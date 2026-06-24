@@ -1,5 +1,18 @@
 # Embeddenator-* Crossover Research — Mycelium Open Design Questions
 
+> ⚠️ **CORRECTION (2026-06-24) — superseded in part by `embeddenator-groundtruth.md`.** A later full-source
+> ground-truth pass (against the maintainer's authoritative repo zips) **refuted several claims below**, most
+> importantly the copy/mut finding: `VersionedEmbrFS` mutation is **re-encode-the-whole-chunk-and-overwrite-in-place**
+> (`versioned_embrfs.rs:744–788`), **not** "chunk-level copy-on-write / structural sharing" as stated in §Q1 — the
+> refcount/dedup/GC code is present but **dead/unwired** (`ref_count` never decremented, `gc()` a no-op, no `compact`).
+> Embeddenator **sidesteps** efficient copy/mut by re-encoding; it does not solve it (this *strengthens* the synthesis
+> thesis that provenance + reclamation is the unsolved residue). Also corrected: **zero committed *measured* benchmark
+> numbers** exist (the figures here are "Expected"/theoretical projections); the `TernaryVecRepr` 25% auto-selector is
+> module-header guidance, **not code**; the correction model is **5 declared / 4 active** (`TritFlips` never generated).
+> The bitsliced ternary kernel finding is *strengthened* (now line-anchored to real code). **Read `embeddenator-groundtruth.md`
+> for the corrected, file:line-grounded record; this file is preserved as the superseded first pass (VR-5: corrections
+> are recorded, not hidden).**
+
 | Field | Value |
 |---|---|
 | **Role** | Investigation agent — full-file local read of 13 repos |
