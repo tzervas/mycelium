@@ -4,7 +4,7 @@
 |---|---|
 | **ADR** | 032 |
 | **Title** | Supersede the *unconditional* reading of the always-on certification mandates (SC-3/FR-M3 framing) in favour of RFC-0034's tunable modes; reframe the project's "honesty" vocabulary as "transparency & auditability" (mechanism unchanged); and reposition the north star toward *a fast, memory-safe, ergonomic multi-paradigm language with certification baked in as optional* |
-| **Status** | **Enacted** (2026-06-24) — ratified **Proposed → Accepted → Enacted** by the maintainer (house rule #3, stepped, not skipped). The decision is a documentation/decision change and is **fully realized**: the supersession + the whole-corpus transparency reframe + the append-only footnotes were **applied to the corpus** (21 amendments across 13 files via `tools/dn29_apply.py`). The runtime mode *mechanism* it adopts (decision 1) is **RFC-0034's paired TDD implementation** — pending, never claimed done (VR-5/G2). |
+| **Status** | **Enacted** (2026-06-24) — ratified **Proposed → Accepted → Enacted** by the maintainer (house rule #3, stepped, not skipped). The decision is a documentation/decision change and is **fully realized**: the supersession + the whole-corpus transparency reframe + the append-only footnotes were **applied to the corpus** (21 amendments across 13 files via `tools/dn29_apply.py`). **Decision 1 (mechanism adoption) is now realized in code (Rust-first), 2026-06-24** — RFC-0034's tunable-certification mechanism (`CertMode` + the never-silent mode tag, mode-gated tagging/swap-cert, the spore phase split, `@certification` scoping, EXPLAIN-of-mode, the `wrapping` opt-out, memory-safe-by-default) landed via E21-1 (M-786…M-793) and its **§13 conformance clauses (a)–(f) are verified end-to-end, mode-parametrically** (M-794: `crates/mycelium-cert/tests/conformance.rs`, green). This realizes decision 1 *pending maintainer ratification of the advance* (see RFC-0034's changelog). ADR-032's own Status stays **Enacted** (a decision change, already fully realized as a decision; append-only — not re-flipped). The ADR-014 per-use unsafe-lint *enforcement* (decision 5) remains the residual paired-TDD item (VR-5/G2). |
 | **Date** | 2026-06-24 |
 | **Depends on** | RFC-0034 (the tunable-certification *mechanism* this ADR adopts); DN-29 (the settled deliberation — §9 fully resolved, §11 ripple map); **KC-4** (cost-driven downgrade already authorized); **VR-5 / G2** (downgrade-don't-overclaim; never-silent — preserved); ADR-014 (unsafe `permitted-but-warned` — sharpened, not superseded) |
 | **Supersedes** | the **unconditional reading** of **SC-3** ("zero swaps without a certificate"), **FR-M3** ("always emits a certificate"), and the always-on framing of RFC-0001 §3.4 / §4.6, RFC-0002 §2, RFC-0005 §2 — they hold **at the active mode** (`certified`), with the **mode itself never silent**. The mechanisms are **not** superseded; only "always, on every value/swap" becomes "at the active mode." |
@@ -109,6 +109,16 @@ charter conditionalize + the append-only footnotes landed (21 amendments / 13 fi
 and **DN-29 is now Superseded** by this ADR + RFC-0034. *Residual (paired TDD):* the runtime mode mechanism
 (decision 1) and the ADR-014 per-use lint sharpening's enforcement land as code — tracked, never claimed
 done.
+
+> **Update — decision 1 realized in code (Rust-first), 2026-06-24 (M-794).** The runtime mode mechanism is
+> **landed**: E21-1's wiring leaves (M-786…M-793) implemented `CertMode` + the mode machinery Rust-first, and
+> the **RFC-0034 §13 conformance suite** (`crates/mycelium-cert/tests/conformance.rs`) verifies all six
+> clauses (a)–(f) end-to-end, parameterized over `fast`/`balanced`/`certified` with the cross-mode negatives
+> — green. Decision 1's residual is therefore **discharged** (pending maintainer ratification of RFC-0034's
+> advance to *Enacted — with code*). The **ADR-014 per-use unsafe-lint enforcement** (decision 5) remains the
+> open residual; the trusted-base crates are unsafe-free by `#![forbid(unsafe_code)]` (the suite checks this
+> side-condition), but the *project-wide* per-use lint gate is not yet a `just`/CI check. Append-only — prior
+> DoD prose preserved (VR-5/G2).
 
 ## Grounding
 

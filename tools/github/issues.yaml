@@ -6045,7 +6045,7 @@ issues:
   - id: M-794
     title: "M-794 -- RFC-0034 §13 conformance suite + advance to Enacted-with-code (the E21-1 gate)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core, priority:P1, status:todo]
+    labels: [phase:5, type:verification, area:core, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786, M-787, M-788, M-789, M-790, M-791, M-792, M-793, M-795]
     doc_refs:
@@ -6103,7 +6103,7 @@ issues:
   - id: M-796
     title: "M-796 -- native scoped mode-parametric testing in the Mycelium testing toolkit (downstream)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feat, area:tooling, priority:P2, status:done]
     epic: E21-1
     depends_on: [M-790, M-795]
     doc_refs:

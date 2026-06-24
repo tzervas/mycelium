@@ -23,3 +23,11 @@ serde.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
+# The M-794 §13 conformance suite (tests/conformance.rs) is the E21-1 capstone: it exercises all six
+# RFC-0034 §13 clauses end-to-end, which span four crates. `mycelium-proj` carries the
+# `@certification` resolution + EXPLAIN-of-mode + cross-mode composition (M-790/M-792; clauses d/f);
+# `mycelium-spore` carries the compile/runtime phase split (M-789; clause e). These are **dev-only**
+# (test-target reach), add no runtime dependency (KC-3), and form no cycle — neither proj nor spore
+# depends on mycelium-cert.
+mycelium-proj = { path = "../mycelium-proj" }
+mycelium-spore = { path = "../mycelium-spore" }

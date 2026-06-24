@@ -19037,7 +19037,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 165,
+      "line": 173,
       "summary": "A declared, bounded trial budget for a property run (C6 — effects are bounded).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19048,7 +19048,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Budget",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 169,
+      "line": 177,
       "summary": "The default budget when no specific value is required (100 trials).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19059,7 +19059,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Budget",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 172,
+      "line": 180,
       "summary": "The minimum budget (1 trial).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19070,7 +19070,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Budget",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 186,
+      "line": 194,
       "summary": "The number of trials this budget permits.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19092,7 +19092,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 147,
+      "line": 155,
       "summary": "A type that can produce values of type `T` given an `Rng`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19103,8 +19103,41 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 304,
+      "line": 312,
       "summary": "A golden baseline: an identifier (the \"name\") and its expected serialized form.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::ModeScope",
+      "kind": "struct",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 124,
+      "summary": "A typed predicate set describing in which [`CertMode`] tiers a property is expected to hold.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::ModeTestConfig",
+      "kind": "struct",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 319,
+      "summary": "Configurable per-test / per-suite mode scope, resolved most-specific-wins via the shared",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::ModeVisit",
+      "kind": "struct",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 427,
+      "summary": "A summary of which `CertMode` tiers were visited and which were skipped by",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19114,7 +19147,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 84,
+      "line": 92,
       "summary": "A deterministic, seeded pseudo-random generator for property-test inputs (RT3 / C6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19125,7 +19158,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Rng",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 93,
+      "line": 101,
       "summary": "Construct a generator from a fixed seed (RT3: no undeclared entropy).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19136,7 +19169,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Rng",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 116,
+      "line": 124,
       "summary": "Advance and return a `u32`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19147,7 +19180,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Rng",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 106,
+      "line": 114,
       "summary": "Advance the state and return the next `u64` (Xorshift64).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19158,7 +19191,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Rng",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 123,
+      "line": 131,
       "summary": "Advance and return a value in `[0, n)`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19208,12 +19241,265 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_std_testing::assert_mode_negative",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 581,
+      "summary": "Assert that `predicate(mode)` returns **`false`** for every mode **outside** `scope` — the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::assert_mode_scope",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 548,
+      "summary": "Assert that `predicate(mode)` returns **`true`** for every mode in `scope` and **`false`**",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test",
+      "kind": "mod",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing",
+      "file": "crates/mycelium-std-testing/src/lib.rs",
+      "line": 67,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::ALL_MODES:",
+      "kind": "const",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 133,
+      "summary": "Property holds in **every** mode — the unconditional scope (e.g.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::BALANCED_ONLY:",
+      "kind": "const",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 164,
+      "summary": "Property holds only in `Balanced` (e.g.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::CERTIFIED_ONLY:",
+      "kind": "const",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 152,
+      "summary": "Property holds **only in `Certified`** (e.g.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::EMIT_MODES:",
+      "kind": "const",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 158,
+      "summary": "Property holds in **`Balanced` and `Certified`** — the modes that *emit* swap certificates",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::FAST_ONLY:",
+      "kind": "const",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 139,
+      "summary": "Property holds **only in `Fast`** (e.g.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::NON_FAST:",
+      "kind": "const",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 146,
+      "summary": "Property holds in **`Balanced` and `Certified`** — the modes where the certification",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::contains",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 173,
+      "summary": "Returns `true` iff the given mode is in scope.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::count",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 208,
+      "summary": "The number of modes in scope (0..=3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::from_resolved_mode",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 266,
+      "summary": "Build a `ModeScope` from the effective mode of a [`ResolvedMode`]: the scope is \"exactly",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::intersect",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 241,
+      "summary": "The intersection of two scopes: a mode is in scope only if it is in *both* scopes.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::is_empty",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 217,
+      "summary": "`true` iff the scope is empty (no modes — a scope with nothing in it is a no-op but",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::modes_in_scope",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 183,
+      "summary": "The set of modes **in** scope (at most 3 elements, in `CertMode::ALL` order).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::modes_out_of_scope",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 196,
+      "summary": "The set of modes **outside** scope (the complement; at most 3 elements).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::union",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 226,
+      "summary": "The union of two scopes: a mode is in scope if it is in *either* scope.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig::new",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeTestConfig",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 340,
+      "summary": "Build a `ModeTestConfig` from a slice of `@certification` scope declarations.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig::provenance",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeTestConfig",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 372,
+      "summary": "The provenance of the resolved test mode — the effective mode and the scope it came from.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig::resolve",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeTestConfig",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 395,
+      "summary": "Resolve the effective `ModeScope` for this test/suite configuration.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig::with_granular",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeTestConfig",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 353,
+      "summary": "Add (or replace) a **granular** per-test override — the most-specific tier, overrides",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeVisit::matches_scope",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeVisit",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 448,
+      "summary": "`true` iff the visit covered exactly the given scope (no more, no fewer modes visited).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeVisit::visited_all",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing::cert_mode_test::ModeVisit",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 440,
+      "summary": "`true` iff the visit covered all three modes (regardless of scope — useful for asserting",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_std_testing::differential",
       "kind": "fn",
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 426,
+      "line": 434,
       "summary": "Run a differential (oracle) test: require `lhs(input) == rhs(input)`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19224,8 +19510,30 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 213,
+      "line": 221,
       "summary": "Run a property test: generate `budget` inputs from `gen` and check `prop` for each.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::for_each_mode",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 470,
+      "summary": "Run `f(mode)` for **every** mode in [`CertMode::ALL`] (weakest → strongest: Fast, Balanced,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_testing::for_each_mode_in",
+      "kind": "fn",
+      "crate": "mycelium-std-testing",
+      "module": "mycelium_std_testing",
+      "file": "crates/mycelium-std-testing/src/cert_mode_test.rs",
+      "line": 490,
+      "summary": "Run `f(mode)` for each mode **in** `scope`, returning a [`ModeVisit`] that records which",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19235,7 +19543,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 338,
+      "line": 346,
       "summary": "Run a golden / snapshot test: compare `produced` against the stored baseline.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19246,7 +19554,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 67,
+      "line": 68,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19279,7 +19587,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 511,
+      "line": 519,
       "summary": "True only if there are no failures **and** skipped/undetermined counts are surfaced (i.e.,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19290,7 +19598,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 473,
+      "line": 481,
       "summary": "Aggregate a slice of verdicts into a [`Summary`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19301,7 +19609,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 68,
+      "line": 69,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -37073,7 +37381,7 @@
     },
     {
       "symbol": "mycelium_std_testing::Budget::new",
-      "reason": "dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:93 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:101 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_testing::Budget::partial_cmp",
@@ -37101,7 +37409,7 @@
     },
     {
       "symbol": "mycelium_std_testing::GoldenBaseline::new",
-      "reason": "dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:93 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:101 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_testing::Rng::clone",
@@ -37110,6 +37418,114 @@
     {
       "symbol": "mycelium_std_testing::Rng::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::CertDecl",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::CertScope",
+      "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope",
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::ModeScope` at crates/mycelium-std-testing/src/cert_mode_test.rs:124 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeScope::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig",
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::ModeTestConfig` at crates/mycelium-std-testing/src/cert_mode_test.rs:319 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeTestConfig::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeVisit",
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::ModeVisit` at crates/mycelium-std-testing/src/cert_mode_test.rs:427 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeVisit::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeVisit::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeVisit::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeVisit::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeVisit::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::ModeVisit::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::assert_mode_negative",
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::assert_mode_negative` at crates/mycelium-std-testing/src/cert_mode_test.rs:581 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::assert_mode_scope",
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::assert_mode_scope` at crates/mycelium-std-testing/src/cert_mode_test.rs:548 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::for_each_mode",
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::for_each_mode` at crates/mycelium-std-testing/src/cert_mode_test.rs:470 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_testing::cert_mode_test::for_each_mode_in",
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::for_each_mode_in` at crates/mycelium-std-testing/src/cert_mode_test.rs:490 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_testing::guarantee_matrix::Row::clone",

@@ -8,6 +8,24 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: E21-1 Group-B Wave-3 — M-794 conformance gate + M-796 toolkit; **CLOSES E21-1**)
+
+- **M-794 — the §13 conformance gate (E21-1 capstone)** (`crates/mycelium-cert/tests/conformance.rs`, 19
+  tests). Asserts **all six RFC-0034 §13 clauses (a)–(f)** end-to-end, EACH parameterized over
+  `fast`/`balanced`/`certified` + the cross-mode NEGATIVE cases (the M-795 `assert_mode_scope` pattern —
+  invariant present where it fires, absent/relaxed where it must not). Memory-safety clause (c) is `Proven`
+  **by a checked side-condition** (the suite reads the trusted base's `#![forbid(unsafe_code)]`), not by fiat.
+  **⚠️ Advances RFC-0034 `Enacted (design-driven)` → `Enacted — with code (Rust-first)` + realizes ADR-032
+  decision 1 — append-only, PENDING MAINTAINER RATIFICATION of the advance** (the capstone milestone, flagged
+  not routine). Residual deferred (named-not-silent): §14 per-op/per-knob granularity.
+- **M-796 — native scoped mode-parametric testing toolkit** (`mycelium-std-testing`): `ModeScope` +
+  `ModeTestConfig` (wiring M-790's `@certification` resolver — project>phylum>nodule, shared not parallel) +
+  `assert_mode_scope` + `for_each_mode_in` (returns visited/**skipped**, never-silent) + a zero-boilerplate
+  worked example; re-exports `CertDecl`/`CertScope`. Downstream devs get per-tier + cross-mode-negative
+  coverage for free. Followed M-797 (extracted a 605-line inline block).
+- **E21-1 is functionally complete:** the full tunable-certification mechanism (M-786…M-796) is landed
+  Rust-first with the §13 conformance gate green. Statuses: `issues.yaml` M-794/796 → `done`.
+
 ### Added (2026-06-24: E21-1 Group-B Wave-2 — M-792/M-793/M-795)
 
 - **M-792** (`mycelium-proj`) — EXPLAIN-of-mode + the **generation≠consumption split** (RFC-0034 §7/§3.1/§13d):
