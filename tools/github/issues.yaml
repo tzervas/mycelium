@@ -5625,7 +5625,7 @@ issues:
       - corpus:ADR-011
       - src:crates/mycelium-core/src/repr.rs
       - src:crates/mycelium-core/src/value.rs
-      - src:crates/mycelium-core/src/ternary.rs
+      - src:crates/mycelium-core/src/ternary/mod.rs
     body: |
       The value-model collections + precision leg. RFC-0033 (Proposed) + ADR-025..031 (Proposed) decide
       the corrected Repr/Payload: Seq/Bytes length-in-type (aligned with RFC-0032 D3/D4), Binary
@@ -5703,13 +5703,13 @@ issues:
   - id: M-754
     title: "M-754 -- reconcile balanced-trit primitives into core::ternary (DRY add_with_carry)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P0, status:todo]
+    labels: [phase:5, type:feat, area:core, priority:P0, status:done]
     epic: E20-1
     depends_on: [M-785]
     doc_refs:
       - corpus:RFC-0033
       - corpus:ADR-029
-      - src:crates/mycelium-core/src/ternary.rs
+      - src:crates/mycelium-core/src/ternary/mod.rs
       - src:crates/mycelium-core/src/value.rs
     body: |
       (was VM-010) Reconcile the ternary substrate into the EXISTING crates/mycelium-core/src/ternary
@@ -5723,12 +5723,12 @@ issues:
   - id: M-755
     title: "M-755 -- port exhaustive Trit truth-table tests (add_with_carry 27-row)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:test, area:core, priority:P1, status:todo]
+    labels: [phase:5, type:test, area:core, priority:P1, status:done]
     epic: E20-1
     depends_on: [M-754]
     doc_refs:
       - corpus:ADR-029
-      - src:crates/mycelium-core/src/ternary.rs
+      - src:crates/mycelium-core/src/ternary/mod.rs
     body: |
       (was VM-011) Exhaustive 27-row truth-table test for the extracted add_with_carry helper (invariant:
       digit(a)+digit(b)+digit(c) == digit(sum)+3*digit(carry)), inline #[cfg(test)] next to the helper.
@@ -5738,14 +5738,14 @@ issues:
   - id: M-756
     title: "M-756 -- arbitrary-width balanced-ternary integer arithmetic (BigTernary)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P0, status:todo]
+    labels: [phase:5, type:feat, area:core, priority:P0, status:done]
     epic: E20-1
     depends_on: [M-754]
     doc_refs:
       - corpus:RFC-0033
       - corpus:ADR-029
       - corpus:RFC-0002
-      - src:crates/mycelium-core/src/ternary.rs
+      - src:crates/mycelium-core/src/ternary/mod.rs
     body: |
       (was VM-012) Add BigTernary (digit-serial Vec<Trit>, canonicalized, GROWS instead of overflowing --
       the reference/oracle) + never-silent from_i128/to_i128 bridges, into core::ternary/big_ternary.rs.
@@ -5759,13 +5759,13 @@ issues:
   - id: M-757
     title: "M-757 -- never-silent fixed-width ternary boundary (FixedWidthTrits, checked_add_fixed)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P0, status:todo]
+    labels: [phase:5, type:feat, area:core, priority:P0, status:done]
     epic: E20-1
     depends_on: [M-756]
     doc_refs:
       - corpus:RFC-0033
       - corpus:ADR-029
-      - src:crates/mycelium-core/src/ternary.rs
+      - src:crates/mycelium-core/src/ternary/mod.rs
     body: |
       (was VM-013) FixedWidthTrits + checked_add_fixed + BigTernary::checked_to_width -- the never-silent
       fixed-width boundary: any op exceeding +-(3^N-1)/2 returns None, never wrap/truncate (the single
@@ -5780,7 +5780,7 @@ issues:
     depends_on: [M-756]
     doc_refs:
       - corpus:RFC-0033
-      - src:crates/mycelium-core/src/ternary.rs
+      - src:crates/mycelium-core/src/ternary/mod.rs
     body: |
       (was VM-014) YAGNI follow-on, GATE ON A BENCH showing the digit-serial path is hot. Limbed
       PackedTernary (>=40 trits/u64) as the perf path, differentially proven bit-exact against BigTernary
@@ -5794,7 +5794,7 @@ issues:
     depends_on: [M-756]
     doc_refs:
       - corpus:RFC-0033
-      - src:crates/mycelium-core/src/ternary.rs
+      - src:crates/mycelium-core/src/ternary/mod.rs
     body: |
       (was VM-015) YAGNI follow-on, GATE ON A BENCH. Karatsuba/Toom multiplication proven equivalent to
       the schoolbook BigTernary::mul over a fuzz corpus. Do not build until a profile justifies it.

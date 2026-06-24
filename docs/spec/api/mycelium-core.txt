@@ -1188,7 +1188,58 @@ impl core::marker::UnsafeUnpin for mycelium_core::repr::SparsityClass
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::SparsityClass
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::SparsityClass
 pub mod mycelium_core::ternary
+pub struct mycelium_core::ternary::BigTernary
+impl mycelium_core::ternary::BigTernary
+pub fn mycelium_core::ternary::BigTernary::add(&self, &Self) -> Self
+pub fn mycelium_core::ternary::BigTernary::checked_to_width(&self, u32) -> core::option::Option<mycelium_core::ternary::FixedWidthTrits>
+pub fn mycelium_core::ternary::BigTernary::digits(&self) -> &[mycelium_core::value::Trit]
+pub fn mycelium_core::ternary::BigTernary::from_i128(i128) -> Self
+pub fn mycelium_core::ternary::BigTernary::from_trits_lsf(impl core::iter::traits::collect::IntoIterator<Item = mycelium_core::value::Trit>) -> Self
+pub fn mycelium_core::ternary::BigTernary::is_zero(&self) -> bool
+pub fn mycelium_core::ternary::BigTernary::mul(&self, &Self) -> Self
+pub fn mycelium_core::ternary::BigTernary::neg(&self) -> Self
+pub fn mycelium_core::ternary::BigTernary::sub(&self, &Self) -> Self
+pub fn mycelium_core::ternary::BigTernary::to_i128(&self) -> core::option::Option<i128>
+pub fn mycelium_core::ternary::BigTernary::width(&self) -> usize
+pub fn mycelium_core::ternary::BigTernary::zero() -> Self
+impl core::clone::Clone for mycelium_core::ternary::BigTernary
+pub fn mycelium_core::ternary::BigTernary::clone(&self) -> mycelium_core::ternary::BigTernary
+impl core::cmp::Eq for mycelium_core::ternary::BigTernary
+impl core::cmp::PartialEq for mycelium_core::ternary::BigTernary
+pub fn mycelium_core::ternary::BigTernary::eq(&self, &mycelium_core::ternary::BigTernary) -> bool
+impl core::default::Default for mycelium_core::ternary::BigTernary
+pub fn mycelium_core::ternary::BigTernary::default() -> mycelium_core::ternary::BigTernary
+impl core::fmt::Debug for mycelium_core::ternary::BigTernary
+pub fn mycelium_core::ternary::BigTernary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::ternary::BigTernary
+impl core::marker::Freeze for mycelium_core::ternary::BigTernary
+impl core::marker::Send for mycelium_core::ternary::BigTernary
+impl core::marker::Sync for mycelium_core::ternary::BigTernary
+impl core::marker::Unpin for mycelium_core::ternary::BigTernary
+impl core::marker::UnsafeUnpin for mycelium_core::ternary::BigTernary
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::ternary::BigTernary
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::ternary::BigTernary
+pub struct mycelium_core::ternary::FixedWidthTrits
+pub mycelium_core::ternary::FixedWidthTrits::trits: alloc::vec::Vec<mycelium_core::value::Trit>
+impl mycelium_core::ternary::FixedWidthTrits
+pub fn mycelium_core::ternary::FixedWidthTrits::to_big(&self) -> mycelium_core::ternary::BigTernary
+impl core::clone::Clone for mycelium_core::ternary::FixedWidthTrits
+pub fn mycelium_core::ternary::FixedWidthTrits::clone(&self) -> mycelium_core::ternary::FixedWidthTrits
+impl core::cmp::Eq for mycelium_core::ternary::FixedWidthTrits
+impl core::cmp::PartialEq for mycelium_core::ternary::FixedWidthTrits
+pub fn mycelium_core::ternary::FixedWidthTrits::eq(&self, &mycelium_core::ternary::FixedWidthTrits) -> bool
+impl core::fmt::Debug for mycelium_core::ternary::FixedWidthTrits
+pub fn mycelium_core::ternary::FixedWidthTrits::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::ternary::FixedWidthTrits
+impl core::marker::Freeze for mycelium_core::ternary::FixedWidthTrits
+impl core::marker::Send for mycelium_core::ternary::FixedWidthTrits
+impl core::marker::Sync for mycelium_core::ternary::FixedWidthTrits
+impl core::marker::Unpin for mycelium_core::ternary::FixedWidthTrits
+impl core::marker::UnsafeUnpin for mycelium_core::ternary::FixedWidthTrits
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::ternary::FixedWidthTrits
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::ternary::FixedWidthTrits
 pub fn mycelium_core::ternary::add(&[mycelium_core::value::Trit], &[mycelium_core::value::Trit]) -> core::option::Option<alloc::vec::Vec<mycelium_core::value::Trit>>
+pub fn mycelium_core::ternary::checked_add_fixed(&mycelium_core::ternary::FixedWidthTrits, &mycelium_core::ternary::FixedWidthTrits) -> core::option::Option<mycelium_core::ternary::FixedWidthTrits>
 pub fn mycelium_core::ternary::digit(mycelium_core::value::Trit) -> i64
 pub fn mycelium_core::ternary::int_to_trits(i64, u32) -> core::option::Option<alloc::vec::Vec<mycelium_core::value::Trit>>
 pub fn mycelium_core::ternary::max_magnitude(u32) -> core::option::Option<i64>

@@ -370,14 +370,14 @@
 | `mycelium_core::repr::Repr::well_formed` | fn | `crates/mycelium-core/src/repr.rs:91` | Well-formed iff all widths/dims/trits (and any `max_active`) are positive and a VSA `model` |
 | `mycelium_core::repr::ScalarKind::tag` | fn | `crates/mycelium-core/src/repr.rs:30` | A stable one-byte code for content-addressing (M-103). |
 | `mycelium_core::ternary` | mod | `crates/mycelium-core/src/lib.rs:26` | — |
-| `mycelium_core::ternary::add` | fn | `crates/mycelium-core/src/ternary.rs:107` | Ripple-carry add over two equal-length MSB-first trit strings, fixed-width. |
-| `mycelium_core::ternary::digit` | fn | `crates/mycelium-core/src/ternary.rs:22` | The signed value of a single trit. |
-| `mycelium_core::ternary::int_to_trits` | fn | `crates/mycelium-core/src/ternary.rs:69` | The unique `m`-trit balanced representation of `value`, MSB-first — or `None` if `value` lies |
-| `mycelium_core::ternary::max_magnitude` | fn | `crates/mycelium-core/src/ternary.rs:51` | The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`. |
-| `mycelium_core::ternary::mul` | fn | `crates/mycelium-core/src/ternary.rs:141` | Fixed-width multiplication. |
-| `mycelium_core::ternary::neg` | fn | `crates/mycelium-core/src/ternary.rs:92` | Digit-wise negation: `value(neg t) = −value(t)` exactly (balanced ternary is sign-symmetric, §1). |
-| `mycelium_core::ternary::sub` | fn | `crates/mycelium-core/src/ternary.rs:130` | Fixed-width subtraction `a − b` = `add(a, neg(b))`. |
-| `mycelium_core::ternary::trits_to_int` | fn | `crates/mycelium-core/src/ternary.rs:61` | The integer denoted by an MSB-first trit string (`value(t)`, §1). |
+| `mycelium_core::ternary::add` | fn | `crates/mycelium-core/src/ternary/mod.rs:154` | Ripple-carry add over two equal-length MSB-first trit strings, fixed-width. |
+| `mycelium_core::ternary::digit` | fn | `crates/mycelium-core/src/ternary/mod.rs:29` | The signed value of a single trit. |
+| `mycelium_core::ternary::int_to_trits` | fn | `crates/mycelium-core/src/ternary/mod.rs:116` | The unique `m`-trit balanced representation of `value`, MSB-first — or `None` if `value` lies |
+| `mycelium_core::ternary::max_magnitude` | fn | `crates/mycelium-core/src/ternary/mod.rs:98` | The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`. |
+| `mycelium_core::ternary::mul` | fn | `crates/mycelium-core/src/ternary/mod.rs:187` | Fixed-width multiplication. |
+| `mycelium_core::ternary::neg` | fn | `crates/mycelium-core/src/ternary/mod.rs:139` | Digit-wise negation: `value(neg t) = −value(t)` exactly (balanced ternary is sign-symmetric, §1). |
+| `mycelium_core::ternary::sub` | fn | `crates/mycelium-core/src/ternary/mod.rs:176` | Fixed-width subtraction `a − b` = `add(a, neg(b))`. |
+| `mycelium_core::ternary::trits_to_int` | fn | `crates/mycelium-core/src/ternary/mod.rs:108` | The integer denoted by an MSB-first trit string (`value(t)`, §1). |
 | `mycelium_core::value` | mod | `crates/mycelium-core/src/lib.rs:27` | — |
 | `mycelium_core::value::Value::meta` | fn | `crates/mycelium-core/src/value.rs:169` | The metadata. |
 | `mycelium_core::value::Value::new` | fn | `crates/mycelium-core/src/value.rs:143` | Build a value, checking `repr.well_formed()` and that `payload` matches `repr`. |

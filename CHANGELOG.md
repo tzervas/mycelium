@@ -8,6 +8,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: E20-1 V0 — arbitrary-width balanced ternary `BigTernary` landed (M-754…M-757); implemented, pending ratification)
+
+- **M-754/M-755 — DRY balanced full-adder** (`crates/mycelium-core/src/ternary/`). Converted
+  `ternary.rs` → a `ternary/` module dir and extracted the inline full-adder from the fixed-width `add`
+  into a shared `add_with_carry(Trit, Trit, carry) -> (Trit, Trit)` — proven identical to the incumbent
+  over all 27 inputs (an exhaustive truth-table test). Both the fixed-width `add` and the new growable
+  `BigTernary` now ripple this single never-silent primitive. No new crate, no duplicate `Trit`; the
+  public `mycelium_core::ternary::{digit,add,sub,mul,neg,int_to_trits,trits_to_int,max_magnitude}`
+  surface and every consumer (std-ternary, std-swap, interp, cert, mlir) are unchanged.
+- **M-756/M-757 — arbitrary-width `BigTernary`** (`…/ternary/big_ternary.rs`). A digit-serial,
+  canonicalized `Vec<Trit>` integer that **grows instead of overflowing** — *removing* the fixed-width
+  ~40-trit cap (which `core::ternary` was already never-silent about; the silent-overflow defect is
+  `embeddonator`'s `dimensional.rs`, not Mycelium's). `from_i128`/`to_i128` (overflow-checked),
+  `add`/`sub`/`mul`/`neg`, and the never-silent fixed-width boundary `FixedWidthTrits` +
+  `checked_add_fixed` + `checked_to_width` (`None` on out-of-range, never a wrap). All ops **`Exact`**.
+  Witnessed by the `3^41`-exact test and a cross-check that `BigTernary` agrees with the fixed-width
+  `add` within range (bridged through the integer value — MSB-first ↔ LSB-first). RFC-0033 §4.2 / ADR-029.
+- Verified on **MSRV 1.92**: `cargo fmt` / `clippy -D warnings` / `test -p mycelium-core` green (11 new
+  tests); `cargo check --workspace` + the public-API surface gate + direct-consumer tests all green.
+  `docs/spec/api/mycelium-core.txt` regenerated for the additive surface; `docs/api-index` refreshed.
+  `PackedTernary` / Karatsuba (M-758/M-759) remain YAGNI follow-ons, gated on a benchmark.
+
 ### Added (2026-06-24: E20-1 — value-model collections & precision design (RFC-0033 + ADR-025…031, **Proposed**); docs-only, M-785)
 
 - **RFC-0033 — Value-Model Collections & Precision** (`docs/rfcs/`, **Proposed**, E20-1/M-785). The
