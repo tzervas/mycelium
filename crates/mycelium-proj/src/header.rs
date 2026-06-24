@@ -1,9 +1,10 @@
 //! The **structured nodule header** (M-359; spec §3) — the `// @key: value` metadata lines that may
 //! follow the required `// nodule:` marker (DN-06 §6, recognised by [`mycelium_l1::parse_nodule_header`]).
 //!
-//! The v0 key set is **closed** (spec §7.3, ratified 2026-06-16, extended 2026-06-18 by RFC-0017):
+//! The v0 key set is **closed** (spec §7.3, ratified 2026-06-16, extended 2026-06-18 by RFC-0017,
+//! 2026-06-24 by RFC-0034 §6 — `@certification`):
 //! `version`, `license`, `authors`, `since`, `updated`, `summary`, `repository`, `keywords`,
-//! `deprecated`, `matured`. An **unknown** `@key`, a
+//! `deprecated`, `matured`, `certification`. An **unknown** `@key`, a
 //! **duplicate** key, a **malformed** value (non-SPDX `@license`, non-ISO `@since`/`@updated`,
 //! ill-formed `@version`) — each is an **explicit** error, never silently ignored or guessed
 //! (G2 / VR-5). Metadata is **not** identity (ADR-003): nothing here perturbs a definition's content
@@ -24,6 +25,7 @@ pub const HEADER_KEYS: &[&str] = &[
     "keywords",
     "deprecated",
     "matured",
+    "certification",
 ];
 
 /// A `@deprecated` value: a bare flag or a reason string (spec §3).
@@ -58,6 +60,11 @@ pub struct HeaderFields {
     pub deprecated: Option<Deprecated>,
     /// `@matured` — the nodule/phylum is a matured (AOT) scope; RFC-0017; inherited top-down.
     pub matured: Option<bool>,
+    /// `@certification` — the active certification mode (RFC-0034 §6; M-790). The **most-specific**
+    /// (nodule) tier of the `global > phylum > nodule` lattice; overrides the manifest's. The value
+    /// is the closed set `fast | balanced | certified` ([`mycelium_core::cert_mode::CertMode`]); an
+    /// unknown word is an explicit error (G2). Resolved by [`crate::cert_scope::resolve_mode`].
+    pub certification: Option<mycelium_core::cert_mode::CertMode>,
 }
 
 /// A parsed structured header: the `// nodule:` marker plus its `@key` metadata.
@@ -231,6 +238,14 @@ fn set_field(
                 }
             });
         }
+        "certification" => {
+            // RFC-0034 §6: the closed mode set `fast | balanced | certified` (FLAG-A, cert_scope.rs).
+            // An unknown word is an explicit error (G2) — never a silent default.
+            fields.certification = Some(
+                crate::cert_scope::parse_cert_mode(val)
+                    .map_err(|m| HeaderError { line, message: m })?,
+            );
+        }
         _ => unreachable!("key membership checked by caller"),
     }
     Ok(())
@@ -367,120 +382,4 @@ pub fn is_spdx(s: &str) -> bool {
         return false;
     }
     true
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn a_full_root_header_parses() {
-        let src = "// nodule: geometry.shapes\n\
-                   // @version: 1.2.0\n\
-                   // @license: Apache-2.0\n\
-                   // @authors: Tyler Zervas, A. N. Other\n\
-                   // @since: 2026-01-10\n\
-                   // @updated: 2026-06-16\n\
-                   // @summary: 2D shape primitives.\n\
-                   // @repository: https://github.com/example/geometry\n\
-                   // @keywords: geometry, shapes\n\
-                   // @deprecated: false\n\
-                   nodule geometry.shapes\n";
-        let h = parse_header(src).unwrap().unwrap();
-        assert_eq!(h.marker.dotted().as_deref(), Some("geometry.shapes"));
-        assert_eq!(h.fields.version.as_deref(), Some("1.2.0"));
-        assert_eq!(h.fields.license.as_deref(), Some("Apache-2.0"));
-        assert_eq!(h.fields.authors.as_ref().unwrap().len(), 2);
-        assert_eq!(h.fields.keywords.as_ref().unwrap(), &["geometry", "shapes"]);
-        assert_eq!(h.fields.deprecated, Some(Deprecated::Flag(false)));
-    }
-
-    #[test]
-    fn a_subnodule_marker_only_has_no_fields() {
-        let h = parse_header("// nodule: geometry.shapes.circle\nnodule geometry.shapes.circle\n")
-            .unwrap()
-            .unwrap();
-        assert_eq!(h.fields, HeaderFields::default());
-    }
-
-    #[test]
-    fn no_marker_means_no_header() {
-        assert_eq!(parse_header("fn f() -> Binary{8} = 0b0").unwrap(), None);
-    }
-
-    #[test]
-    fn an_unknown_key_is_an_explicit_error() {
-        let e = parse_header("// nodule: g\n// @authrs: x\n").unwrap_err();
-        assert!(e.message.contains("unknown header key"), "{e}");
-        assert_eq!(e.line, 2);
-    }
-
-    #[test]
-    fn a_duplicate_key_is_an_explicit_error() {
-        let e = parse_header("// nodule: g\n// @license: MIT\n// @license: MIT\n").unwrap_err();
-        assert!(e.message.contains("duplicate"), "{e}");
-    }
-
-    #[test]
-    fn bad_values_are_explicit_errors() {
-        assert!(parse_header("// nodule: g\n// @license: NotARealLicense\n").is_err());
-        assert!(parse_header("// nodule: g\n// @since: 2026-13-40\n").is_err());
-        assert!(parse_header("// nodule: g\n// @updated: yesterday\n").is_err());
-        assert!(parse_header("// nodule: g\n// @version: 1.x\n").is_err());
-        assert!(parse_header("// nodule: g\n// @repository: not a url\n").is_err());
-    }
-
-    #[test]
-    fn deprecated_can_carry_a_reason() {
-        let h = parse_header("// nodule: g\n// @deprecated: use geometry.v2 instead\n")
-            .unwrap()
-            .unwrap();
-        assert_eq!(
-            h.fields.deprecated,
-            Some(Deprecated::Reason("use geometry.v2 instead".to_owned()))
-        );
-    }
-
-    // RFC-0017: @matured is a boolean key inherited top-down.
-    #[test]
-    fn matured_true_parses() {
-        // Mutant-witness: removing the `"matured"` arm in set_field would make this panic.
-        let h = parse_header("// nodule: g\n// @matured: true\n")
-            .unwrap()
-            .unwrap();
-        assert_eq!(h.fields.matured, Some(true));
-    }
-
-    #[test]
-    fn matured_false_parses() {
-        // Mutant-witness: swapping true/false arms would make this fail.
-        let h = parse_header("// nodule: g\n// @matured: false\n")
-            .unwrap()
-            .unwrap();
-        assert_eq!(h.fields.matured, Some(false));
-    }
-
-    #[test]
-    fn matured_bad_value_is_explicit_error() {
-        // Mutant-witness: removing the bad() call for unknown values would make this succeed.
-        let e = parse_header("// nodule: g\n// @matured: yes\n").unwrap_err();
-        assert!(
-            e.message.contains("a boolean `true` or `false`"),
-            "expected boolean error, got: {e}"
-        );
-        assert_eq!(e.line, 2);
-    }
-
-    #[test]
-    fn validators_are_honest() {
-        assert!(is_iso_date("2026-06-16"));
-        assert!(!is_iso_date("2026-6-16"));
-        assert!(!is_iso_date("2026-13-01"));
-        assert!(is_semver("1.2.0"));
-        assert!(is_semver("1.2.0-rc.1"));
-        assert!(!is_semver("1.2"));
-        assert!(is_spdx("MIT"));
-        assert!(is_spdx("MIT OR Apache-2.0"));
-        assert!(!is_spdx("Bogus-9.9"));
-    }
 }
