@@ -42,14 +42,21 @@ pub enum PrimParadigm {
     Ternary,
 }
 
-/// How a prim's operand and result *widths* relate. The whole v0 builtin set is width-preserving:
+/// How a prim's operand and result *widths* relate. Most of the builtin set is width-preserving —
 /// every operand and the result share one width (`bit.xor : Binary{n} × Binary{n} → Binary{n}`,
-/// `trit.add : Ternary{m} × Ternary{m} → Ternary{m}`, the unary cases trivially). This is the single
-/// v0 rule; new rules (e.g. a width-changing pack) are added as variants, never silently assumed.
+/// `trit.add : Ternary{m} × Ternary{m} → Ternary{m}`, the unary cases trivially: [`WidthRel::Uniform`]).
+/// The reduce-to-`Bool` comparison prims (`cmp.eq`/`cmp.lt`, RFC-0032 D1) are the exception — they
+/// **collapse** to a fixed `Binary{1}` independent of the operand width ([`WidthRel::Collapse`]). New
+/// rules (e.g. a width-changing pack) are added as variants, never silently assumed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WidthRel {
     /// All operands and the result share one width.
     Uniform,
+    /// The result width is **fixed and independent** of the operands' shared width — the
+    /// width-collapsing rule of the reduce-to-`Bool` comparison prims (`cmp.eq`/`cmp.lt`, RFC-0032
+    /// D1): two equal-width operands reduce to a one-bit `Binary{1}` truth value. (Operand widths
+    /// must still agree; only the result is decoupled.)
+    Collapse,
 }
 
 /// A prim's signature `Π(p) = (τ₁…τₙ) → τ` (RFC-0007 §4.4): the per-operand paradigms (arity is their
@@ -154,10 +161,13 @@ impl PrimTable {
         PrimRef::new(hash)
     }
 
-    /// The default table: the closed v0 kernel-prim set — the identity, the elementwise binary
-    /// logic (`bit.*`), and the fixed-width balanced-ternary arithmetic (`trit.*`, M-111). Every
-    /// entry is `intrinsic = Exact` and width-`Uniform`. This is the single source of truth the
-    /// `mycelium-interp` intrinsic and the `mycelium-l1` surface table are checked against.
+    /// The default table: the closed v0 kernel-prim set — the identity, the elementwise binary logic
+    /// (`bit.*`), the fixed-width balanced-ternary arithmetic (`trit.*`, M-111), the reduce-to-`Bool`
+    /// comparison prims (`cmp.eq`/`cmp.lt`, RFC-0032 D1), and the never-silent binary arithmetic
+    /// (`bit.add`/`bit.sub`, RFC-0032 D2). Every entry is `intrinsic = Exact`; all are width-`Uniform`
+    /// **except** `cmp.eq`/`cmp.lt`, which are width-`Collapse` (operand width → `Binary{1}`). This is
+    /// the single source of truth the `mycelium-interp` intrinsic and the `mycelium-l1` surface table
+    /// are checked against.
     #[must_use]
     pub fn builtins() -> Self {
         use PrimParadigm::{Any, Binary, Ternary};
@@ -167,6 +177,20 @@ impl PrimTable {
                 operands,
                 result,
                 width: WidthRel::Uniform,
+            },
+            intrinsic: GuaranteeStrength::Exact,
+        };
+        // RFC-0032 D1 (M-747): the reduce-to-`Bool` comparison prims are width-*collapsing* — two
+        // equal-width operands of either paradigm reduce to a `Binary{1}` truth value. The operands
+        // are typed `Any` because each may be Binary OR Ternary; this does NOT permit a *cross*-
+        // paradigm comparison — the same-paradigm + equal-width constraint is enforced (never-silent,
+        // G2) by the interpreter prim (`prims.rs::cmp_repr_operands`) and the L1 checker branch
+        // (`checkty.rs`), since the per-operand `Any` paradigm model cannot express "both agree".
+        let cmp = || PrimDecl {
+            sig: PrimSig {
+                operands: vec![Any, Any],
+                result: Binary,
+                width: WidthRel::Collapse,
             },
             intrinsic: GuaranteeStrength::Exact,
         };
@@ -182,6 +206,12 @@ impl PrimTable {
         t.insert("trit.add", exact(vec![Ternary, Ternary], Ternary));
         t.insert("trit.sub", exact(vec![Ternary, Ternary], Ternary));
         t.insert("trit.mul", exact(vec![Ternary, Ternary], Ternary));
+        // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (width-collapsing → Binary{1}).
+        t.insert("cmp.eq", cmp());
+        t.insert("cmp.lt", cmp());
+        // RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic (width-uniform).
+        t.insert("bit.add", exact(vec![Binary, Binary], Binary));
+        t.insert("bit.sub", exact(vec![Binary, Binary], Binary));
         t
     }
 
@@ -309,15 +339,16 @@ mod tests {
         let t = PrimTable::builtins();
         for name in [
             "core.id", "bit.not", "bit.and", "bit.or", "bit.xor", "trit.neg", "trit.add",
-            "trit.sub", "trit.mul",
+            "trit.sub", "trit.mul", "cmp.eq", "cmp.lt", "bit.add", "bit.sub",
         ] {
             let r = t.prim_ref(name).expect("builtin registered");
             let d = t.resolve(&r).expect("ref resolves");
             assert_eq!(d.intrinsic, GuaranteeStrength::Exact);
             assert_eq!(t.intrinsic(name), Some(GuaranteeStrength::Exact));
         }
-        // `entries()` is the EXPLAIN surface: one inspectable entry per builtin.
-        assert_eq!(t.entries().len(), 9);
+        // `entries()` is the EXPLAIN surface: one inspectable entry per builtin (RFC-0032 D1/D2
+        // added cmp.eq/cmp.lt/bit.add/bit.sub to the original nine).
+        assert_eq!(t.entries().len(), 13);
     }
 
     #[test]
@@ -419,10 +450,10 @@ mod tests {
     fn names_returns_registered_sorted_names() {
         let t = PrimTable::builtins();
         let ns = t.names();
-        // Exactly 9 builtins.
+        // Exactly 13 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub).
         assert_eq!(
             ns.len(),
-            9,
+            13,
             "names() count must match the builtin count: {ns:?}"
         );
         // Sorted (BTreeMap iteration is sorted).

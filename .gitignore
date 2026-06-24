@@ -20,6 +20,8 @@ venv/
 *.egg-info/
 .eggs/
 dist/
+# ...but `scripts/dist/` is the committed reproducible-distribution tooling (M-734), not a Python build dir.
+!scripts/dist/
 build/
 .pytest_cache/
 .ruff_cache/

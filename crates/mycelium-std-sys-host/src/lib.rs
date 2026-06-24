@@ -57,8 +57,11 @@ impl ClockSource for OsClock {
                 Ok(signed) => Ok(WallInstant::from_nanos_since_epoch(signed)),
                 Err(_) => Err(TimeErr::Overflow),
             },
+            // `std-sys::time::wall_nanos` errors only when `SystemTime::now() < UNIX_EPOCH`
+            // (`duration_since` fails), so name that exact failure mode — not a generic
+            // "unavailable" (the wall read itself is always reachable).
             Err(_) => Err(TimeErr::ClockUnavailable {
-                reason: "OS wall clock unavailable or before the Unix epoch",
+                reason: "OS wall clock read a time before the Unix epoch",
             }),
         };
         DeclaredTimeEntropy::new(r)
