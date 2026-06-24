@@ -90,3 +90,6 @@ pub use specialize::{
     compile_specialized_dot, emit_specialized_dot_ir, jit_specialized_dot, SpecializedDotKernel,
 };
 pub use vr4::{cross_backend_gate, Backend, BackendStage, CrossBackendGate, StageStatus};
+
+#[cfg(test)]
+mod tests;
