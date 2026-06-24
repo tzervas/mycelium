@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: E21-1 Group-B Wave-2 — M-792/M-793/M-795)
+
+- **M-792** (`mycelium-proj`) — EXPLAIN-of-mode + the **generation≠consumption split** (RFC-0034 §7/§3.1/§13d):
+  `ModeSignal` (the always-generated, mode-independent inspectability record — cheap, no heap, present even in
+  `fast`) + `ConsumptionTier {Lean,Medium,Full}` + `render_mode_signal` (dial verbosity up from *already-captured*
+  history — no re-run, no mode switch). Lean output is contractually identical to `explain_mode` (the §13d floor).
+- **M-793** (`scripts/checks/unsafe-per-use.sh` + justfile + `mycelium-mlir`) — sharpens ADR-014 to an **explicit
+  per-use unsafe escape** (RFC-0034 §9): a new never-skip gate asserts (a) the 4 trusted-kernel crates retain
+  `#![forbid(unsafe_code)]` and (b) every `unsafe` site carries a *per-use* `#[allow(unsafe_code)]` (no crate-global
+  allows). One `mlir/jit.rs` site annotated; ADR-014's `// SAFETY:` + dev-warning discipline preserved (sharpened,
+  not superseded).
+- **M-795** (`mycelium-core`) — the shared **mode-parametric test harness** (`for_each_mode`, canonical per-strength
+  `Bound` fixtures, and `assert_mode_scope` — the cross-mode NEGATIVE pattern as a first-class primitive: asserts an
+  invariant fires in its in-scope tiers AND is absent in out-of-scope tiers). `#[cfg(test)]`-only (no public API,
+  KC-3); 14 mode tests; `cert_mode.rs` adapted to use it. Broad cross-crate fixture-adaptation deferred to M-794.
+- Statuses: `issues.yaml` M-792/793/795 → `done`. proj baseline + agent index regenerated (deterministic).
+
 ### Added (2026-06-24: E21-1 Group-B Wave-1 — M-789/M-790/M-791 + M-788 ratified)
 
 - **M-788 bound/basis decision RATIFIED** (maintainer, 2026-06-24): when `fast` floors a computed

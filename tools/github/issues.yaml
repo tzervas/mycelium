@@ -6004,7 +6004,7 @@ issues:
   - id: M-792
     title: "M-792 -- EXPLAIN-of-mode + generation != consumption (RFC-0034 §7, §3.1, conformance d)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feat, area:tooling, priority:P2, status:done]
     epic: E21-1
     depends_on: [M-786, M-790]
     doc_refs:
@@ -6025,7 +6025,7 @@ issues:
   - id: M-793
     title: "M-793 -- memory-safe by default + explicit per-use unsafe escape (RFC-0034 §9, sharpens ADR-014)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:feat, area:tooling, priority:P2, status:done]
     epic: E21-1
     depends_on: []
     doc_refs:
@@ -6070,7 +6070,7 @@ issues:
   - id: M-795
     title: "M-795 -- adapt + parameterize the test suite across CertMode tiers (cross-cutting)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core, priority:P1, status:todo]
+    labels: [phase:5, type:verification, area:core, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
