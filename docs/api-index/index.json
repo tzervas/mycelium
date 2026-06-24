@@ -1553,6 +1553,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_cert::GatedSwap",
+      "kind": "struct",
+      "crate": "mycelium-cert",
+      "module": "mycelium_cert",
+      "file": "crates/mycelium-cert/src/mode.rs",
+      "line": 39,
+      "summary": "The outcome of a **mode-gated** swap: the converted value (with its mode-reconciled `Meta`), the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cert::ModeGatedSwapEngine",
+      "kind": "struct",
+      "crate": "mycelium-cert",
+      "module": "mycelium_cert",
+      "file": "crates/mycelium-cert/src/mode.rs",
+      "line": 162,
+      "summary": "A [`SwapEngine`] that wraps the CertifiedSwapEngine surface and",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_cert::NotValidatedReason",
       "kind": "enum",
       "crate": "mycelium-cert",
@@ -1729,6 +1751,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_cert::gate_swap",
+      "kind": "fn",
+      "crate": "mycelium-cert",
+      "module": "mycelium_cert",
+      "file": "crates/mycelium-cert/src/mode.rs",
+      "line": 120,
+      "summary": "Apply the [`CertMode`] policy to a **raw** swap result `(value, cert)` produced by one of the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_cert::legal_pair",
       "kind": "fn",
       "crate": "mycelium-cert",
@@ -1736,6 +1769,61 @@
       "file": "crates/mycelium-cert/src/lib.rs",
       "line": 236,
       "summary": "Whether `(n, m)` admits a lossless binary→ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2`",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cert::mode",
+      "kind": "mod",
+      "crate": "mycelium-cert",
+      "module": "mycelium_cert",
+      "file": "crates/mycelium-cert/src/lib.rs",
+      "line": 25,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cert::mode::GatedSwap::validated",
+      "kind": "fn",
+      "crate": "mycelium-cert",
+      "module": "mycelium_cert::mode::GatedSwap",
+      "file": "crates/mycelium-cert/src/mode.rs",
+      "line": 54,
+      "summary": "`true` iff this swap was certified-and-validated — i.e.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::mode",
+      "kind": "fn",
+      "crate": "mycelium-cert",
+      "module": "mycelium_cert::mode::ModeGatedSwapEngine",
+      "file": "crates/mycelium-cert/src/mode.rs",
+      "line": 184,
+      "summary": "The active [`CertMode`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::new",
+      "kind": "fn",
+      "crate": "mycelium-cert",
+      "module": "mycelium_cert::mode::ModeGatedSwapEngine",
+      "file": "crates/mycelium-cert/src/mode.rs",
+      "line": 178,
+      "summary": "A mode-gated engine in the given [`CertMode`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::swap_gated",
+      "kind": "fn",
+      "crate": "mycelium-cert",
+      "module": "mycelium_cert::mode::ModeGatedSwapEngine",
+      "file": "crates/mycelium-cert/src/mode.rs",
+      "line": 191,
+      "summary": "Perform the swap and return the **full** [`GatedSwap`] (value + certificate + check verdict",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -1916,6 +2004,127 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_cli::CheckReport",
+      "kind": "struct",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 147,
+      "summary": "The outcome of [`check_project`]: which nodules type-checked, and the structured failures.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::CheckReport::ok",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli::CheckReport",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 157,
+      "summary": "Whether every checked file passed.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::Report",
+      "kind": "struct",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 30,
+      "summary": "A structured, actionable diagnostic (the DN-22 quality bar; a projection of an RFC-0013",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::Report::at",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli::Report",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 58,
+      "summary": "Attach a `path:line:col` (or `path`) location.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::Report::help",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli::Report",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 65,
+      "summary": "Attach an actionable `help:` line.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::Report::new",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli::Report",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 46,
+      "summary": "A report with a code, message and exit code (no location/help).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::Report::render",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli::Report",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 72,
+      "summary": "Render the multi-line, structured form (no trailing newline).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::build",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 133,
+      "summary": "`myc build` — build the content-addressed spore for the project at `manifest_path`, returning the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::check_project",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 170,
+      "summary": "`myc check` — parse and type-check every `.myc` source under the project directory containing",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::init",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 100,
+      "summary": "`myc init <name>` — scaffold a new phylum named `name` under `parent`, returning the created",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::run",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 216,
+      "summary": "`myc run` — **not yet wired** (honest, never-silent).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_cli_common::Args",
       "kind": "struct",
       "crate": "mycelium-cli-common",
@@ -2055,6 +2264,17 @@
       "file": "crates/mycelium-core/src/bound.rs",
       "line": 68,
       "summary": "The bound payload, per kind (RFC-0001 §4.3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::CertMode",
+      "kind": "enum",
+      "crate": "mycelium-core",
+      "module": "mycelium_core",
+      "file": "crates/mycelium-core/src/cert_mode.rs",
+      "line": 27,
+      "summary": "The active certification mode a value was produced under (RFC-0034).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -2240,7 +2460,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 89,
+      "line": 90,
       "summary": "Runtime, queryable metadata (RFC-0001 §4.3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2284,7 +2504,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 45,
+      "line": 46,
       "summary": "Lossless physical packing schemes (extensible registry; RFC-0001 §4.3; DN-01).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2306,7 +2526,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 66,
+      "line": 67,
       "summary": "The recorded schedule-staged packing (RFC-0001 §4.3; RFC-0004 §5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2394,7 +2614,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 21,
+      "line": 22,
       "summary": "Provenance: an acyclic derivation DAG (RFC-0001 §4.6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2482,7 +2702,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 35,
+      "line": 36,
       "summary": "Measured (dynamic) sparsity — distinct from the declared [`crate::repr::SparsityClass`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2526,7 +2746,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/lib.rs",
-      "line": 54,
+      "line": 56,
       "summary": "Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2539,6 +2759,17 @@
       "file": "crates/mycelium-core/src/prim.rs",
       "line": 52,
       "summary": "How a prim's operand and result *widths* relate.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::WrappingOpt",
+      "kind": "struct",
+      "crate": "mycelium-core",
+      "module": "mycelium_core",
+      "file": "crates/mycelium-core/src/wrapping.rs",
+      "line": 44,
+      "summary": "The explicit, named Axis-B opt-out (RFC-0034 §10; M-791).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -2605,6 +2836,61 @@
       "file": "crates/mycelium-core/src/bound.rs",
       "line": 42,
       "summary": "The honest [`GuaranteeStrength`] this basis implies (M-I2/M-I3/M-I4): the basis *is* the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::cert_mode",
+      "kind": "mod",
+      "crate": "mycelium-core",
+      "module": "mycelium_core",
+      "file": "crates/mycelium-core/src/lib.rs",
+      "line": 15,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::ALL:",
+      "kind": "const",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::cert_mode::CertMode",
+      "file": "crates/mycelium-core/src/cert_mode.rs",
+      "line": 44,
+      "summary": "All three modes, weakest-to-strongest certification depth — for exhaustive iteration in tests",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::depth",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::cert_mode::CertMode",
+      "file": "crates/mycelium-core/src/cert_mode.rs",
+      "line": 53,
+      "summary": "Certification **depth**, `0` = Fast (least) … `2` =",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::gate_guarantee",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::cert_mode::CertMode",
+      "file": "crates/mycelium-core/src/cert_mode.rs",
+      "line": 76,
+      "summary": "Gate an operation's *intended* intrinsic guarantee strength by this mode (RFC-0034 §7; M-787).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::gate_result",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::cert_mode::CertMode",
+      "file": "crates/mycelium-core/src/cert_mode.rs",
+      "line": 118,
+      "summary": "Gate an operation's *intended* `(guarantee, bound)` **pair** by this mode, reconciling the",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -3241,8 +3527,19 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 206,
+      "line": 236,
       "summary": "The bound, if approximate.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::meta::Meta::cert_mode",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::meta::Meta",
+      "file": "crates/mycelium-core/src/meta.rs",
+      "line": 262,
+      "summary": "The certification mode this value was produced under (RFC-0034 §3.1; M-786).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -3252,7 +3549,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 181,
+      "line": 210,
       "summary": "The common `Exact` metadata with no bound (M-I1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3263,7 +3560,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 201,
+      "line": 231,
       "summary": "The disclosed guarantee strength.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3274,7 +3571,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 112,
+      "line": 120,
       "summary": "Build a `Meta`, enforcing the guarantee/bound invariants:",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3285,7 +3582,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 216,
+      "line": 246,
       "summary": "The recorded physical layout, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3296,7 +3593,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 226,
+      "line": 256,
       "summary": "The policy that produced this value (set iff produced by a swap).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3307,7 +3604,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 196,
+      "line": 226,
       "summary": "The value's provenance.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3318,7 +3615,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 221,
+      "line": 251,
       "summary": "The reconstruction manifest, if attached (RFC-0003 §6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3329,8 +3626,19 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 211,
+      "line": 241,
       "summary": "Measured sparsity, if recorded.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::meta::Meta::with_cert_mode",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::meta::Meta",
+      "file": "crates/mycelium-core/src/meta.rs",
+      "line": 183,
+      "summary": "Record the certification mode this value was produced under (RFC-0034 §3.1; M-786).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -3340,7 +3648,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 164,
+      "line": 173,
       "summary": "Record the schedule-staged packing chosen at a lowering stage (RFC-0004 §5; DN-01;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3351,8 +3659,30 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::meta::Meta",
       "file": "crates/mycelium-core/src/meta.rs",
-      "line": 149,
+      "line": 158,
       "summary": "Attach a reconstruction manifest (RFC-0003 §6; M-260).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::meta::Meta::with_wrapping",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::meta::Meta",
+      "file": "crates/mycelium-core/src/meta.rs",
+      "line": 203,
+      "summary": "Attach the explicit named Axis-B `wrapping` opt-out marker (RFC-0034 §10; M-791).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::meta::Meta::wrapping_opt",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::meta::Meta",
+      "file": "crates/mycelium-core/src/meta.rs",
+      "line": 275,
+      "summary": "The explicit Axis-B `wrapping` opt-out marker, if present (RFC-0034 §10; M-791).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -3991,6 +4321,17 @@
       "file": "crates/mycelium-core/src/value.rs",
       "line": 159,
       "summary": "The representation descriptor.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::wrapping",
+      "kind": "mod",
+      "crate": "mycelium-core",
+      "module": "mycelium_core",
+      "file": "crates/mycelium-core/src/lib.rs",
+      "line": 29,
+      "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -7603,6 +7944,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_lsp::TOKEN_TYPES:",
+      "kind": "const",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/semantic.rs",
+      "line": 29,
+      "summary": "The semantic-token **type legend**, in index order.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_lsp::UnknownClass",
       "kind": "struct",
       "crate": "mycelium-lsp",
@@ -7731,6 +8083,28 @@
       "file": "crates/mycelium-lsp/src/completions.rs",
       "line": 65,
       "summary": "Serialize this item to an LSP `CompletionItem` JSON value.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::definition",
+      "kind": "mod",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/lib.rs",
+      "line": 12,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::definition",
+      "kind": "fn",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/definition.rs",
+      "line": 26,
+      "summary": "Build the `textDocument/definition` result for `src` at the 0-based position `(line, character)`,",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -8439,6 +8813,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_lsp::hover",
+      "kind": "mod",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/lib.rs",
+      "line": 17,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::hover",
+      "kind": "fn",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/hover.rs",
+      "line": 26,
+      "summary": "Build the `textDocument/hover` result for `src` at the 0-based LSP position `(line, character)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_lsp::lint",
       "kind": "mod",
       "crate": "mycelium-lsp",
@@ -8754,6 +9150,39 @@
       "file": "crates/mycelium-lsp/src/sync.rs",
       "line": 102,
       "summary": "Like [`source_diagnostics`], but **isolating an internal analysis panic** as a structured",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::semantic",
+      "kind": "mod",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/lib.rs",
+      "line": 22,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::semantic_tokens_full",
+      "kind": "fn",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/semantic.rs",
+      "line": 154,
+      "summary": "Build the `textDocument/semanticTokens/full` result for `src`: the LSP relative-delta encoding",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::semantic_tokens_legend",
+      "kind": "fn",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/semantic.rs",
+      "line": 52,
+      "summary": "The `legend` advertised in the server's `semanticTokensProvider` capability: the type list above",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -10892,12 +11321,45 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_proj::CertDecl",
+      "kind": "struct",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 97,
+      "summary": "One `@certification` declaration: a [`CertMode`] declared at a given [`CertScope`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::CertScope",
+      "kind": "enum",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 56,
+      "summary": "The scope a certification-mode declaration was made at — the RFC-0034 §6 lattice",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::CrossModeEvent",
+      "kind": "struct",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 201,
+      "summary": "The **explicit, visible event** raised when a value produced under one [`CertMode`] enters a",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_proj::Dependency",
       "kind": "struct",
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/manifest.rs",
-      "line": 80,
+      "line": 85,
       "summary": "One `[dependencies]` entry (M-368): another phylum, **content-addressed** (ADR-003) — pinned by",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10908,7 +11370,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 31,
+      "line": 33,
       "summary": "A `@deprecated` value: a bare flag or a reason string (spec §3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10919,7 +11381,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 16,
+      "line": 17,
       "summary": "The closed v0 metadata key set (spec §7.3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10930,7 +11392,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 74,
+      "line": 81,
       "summary": "An explicit header error (G2): a malformed marker, an unknown/duplicate key, or a bad value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10941,7 +11403,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 40,
+      "line": 42,
       "summary": "The parsed `@key` metadata of a header (all optional; absent fields inherit per the resolver).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10952,7 +11414,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/manifest.rs",
-      "line": 102,
+      "line": 107,
       "summary": "A parsed `mycelium-proj.toml` (v0: the typed `[project]` table + the optional `[toolchain]`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10963,7 +11425,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/manifest.rs",
-      "line": 117,
+      "line": 122,
       "summary": "An explicit manifest error (G2): a syntax error, an out-of-subset construct, or a bad value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10974,7 +11436,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/resolve.rs",
-      "line": 22,
+      "line": 23,
       "summary": "Where a resolved field's value came from.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11007,7 +11469,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/resolve.rs",
-      "line": 40,
+      "line": 41,
       "summary": "A resolved field: its effective value and where it came from.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11018,8 +11480,19 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/resolve.rs",
-      "line": 49,
+      "line": 50,
       "summary": "The fully-resolved header — each inherited field annotated with its [`Origin`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::ResolvedMode",
+      "kind": "struct",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 112,
+      "summary": "The resolved certification mode plus its provenance — the analogue of",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11029,7 +11502,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/manifest.rs",
-      "line": 94,
+      "line": 99,
       "summary": "The typed `[spore]` table (M-368): how the project publishes as a deployable (ADR-013).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11040,7 +11513,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 65,
+      "line": 72,
       "summary": "A parsed structured header: the `// nodule:` marker plus its `@key` metadata.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11051,7 +11524,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/manifest.rs",
-      "line": 71,
+      "line": 76,
       "summary": "The typed `[surface]` table (M-368): a phylum's **public exports** — the germination boundary.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11062,8 +11535,107 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/manifest.rs",
-      "line": 60,
+      "line": 65,
       "summary": "The typed `[toolchain]` table (M-364): the optional pins the toolchain reads.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::cert_mode_word",
+      "kind": "fn",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 152,
+      "summary": "The surface spelling of a mode (the inverse of [`parse_cert_mode`]) — for `EXPLAIN`/round-trip.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope",
+      "kind": "mod",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj",
+      "file": "crates/mycelium-proj/src/lib.rs",
+      "line": 22,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::ALL:",
+      "kind": "const",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj::cert_scope::CertScope",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 70,
+      "summary": "All three scopes, least-specific → most-specific — for exhaustive iteration in tests/tooling.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::label",
+      "kind": "fn",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj::cert_scope::CertScope",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 86,
+      "summary": "A stable, lower-case label for `EXPLAIN` output (RFC-0012 renderability; G2 — never ambient).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::specificity",
+      "kind": "fn",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj::cert_scope::CertScope",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 76,
+      "summary": "Specificity rank, `0` = Global (least) … `2` =",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CrossModeEvent::is_boundary",
+      "kind": "fn",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj::cert_scope::CrossModeEvent",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 220,
+      "summary": "Whether this crossing is a genuine **mode boundary** — the producer ran *less* certification",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CrossModeEvent::upgraded_strength",
+      "kind": "fn",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj::cert_scope::CrossModeEvent",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 231,
+      "summary": "Whether the crossing **upgraded** the value's guarantee strength.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::ResolvedMode::defaulted",
+      "kind": "fn",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj::cert_scope::ResolvedMode",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 124,
+      "summary": "The default resolution: no declaration at any scope ⇒ the project default",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::compose",
+      "kind": "fn",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 249,
+      "summary": "Compose a value produced under `producer` into a computation running under `consumer`, surfacing",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11073,8 +11645,19 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/resolve.rs",
-      "line": 145,
+      "line": 181,
       "summary": "The `EXPLAIN` of a resolved header — every field with its value and source, so nothing about the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::explain_mode",
+      "kind": "fn",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 183,
+      "summary": "The `EXPLAIN` of a certification-mode resolution — the effective mode and its source scope, so the",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11084,7 +11667,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/lib.rs",
-      "line": 18,
+      "line": 23,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11095,7 +11678,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj::header",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 326,
+      "line": 341,
       "summary": "The v0 known-SPDX subset — common OSI/FSF identifiers.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11106,7 +11689,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj::header",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 281,
+      "line": 296,
       "summary": "A `YYYY-MM-DD` ISO-8601 calendar date with a plausible month/day (cheap, dependency-free; the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11117,7 +11700,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj::header",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 303,
+      "line": 318,
       "summary": "A `MAJOR.MINOR.PATCH` semver core, with an optional `-prerelease` and/or `+build` suffix.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11128,7 +11711,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj::header",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 354,
+      "line": 369,
       "summary": "A recognised SPDX identifier or a simple expression over [`KNOWN_SPDX`] (operators `OR`/`AND`/",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11139,7 +11722,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj::header",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 315,
+      "line": 330,
       "summary": "A non-empty, URL-shaped string (scheme-prefixed or `git@`-style).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11150,8 +11733,19 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/lib.rs",
-      "line": 19,
+      "line": 24,
       "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::parse_cert_mode",
+      "kind": "fn",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 138,
+      "summary": "Parse the `@certification` attribute value into a [`CertMode`] — the closed, never-silent set",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11161,7 +11755,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/header.rs",
-      "line": 107,
+      "line": 114,
       "summary": "Parse the structured header from `src`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11172,7 +11766,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/manifest.rs",
-      "line": 160,
+      "line": 166,
       "summary": "Parse a `mycelium-proj.toml` source into a [`Manifest`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11183,7 +11777,7 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/lib.rs",
-      "line": 20,
+      "line": 25,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11194,8 +11788,19 @@
       "crate": "mycelium-proj",
       "module": "mycelium_proj",
       "file": "crates/mycelium-proj/src/resolve.rs",
-      "line": 76,
+      "line": 83,
       "summary": "Resolve a parsed header against an optional project manifest.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_proj::resolve_mode",
+      "kind": "fn",
+      "crate": "mycelium-proj",
+      "module": "mycelium_proj",
+      "file": "crates/mycelium-proj/src/cert_scope.rs",
+      "line": 170,
+      "summary": "**Resolve the active certification mode most-specific-wins** over a set of `@certification`",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11772,6 +12377,39 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_spore::PublishReceipt",
+      "kind": "struct",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 40,
+      "summary": "The outcome of a successful [`publish`]: the receipt a CLI prints (no black box).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::RegistryError",
+      "kind": "enum",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 72,
+      "summary": "A registry operation refusal — always explicit, never a partial/silent result (G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::Resolved",
+      "kind": "struct",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 57,
+      "summary": "The outcome of a successful [`resolve`]: the fetched, hash-verified artifact and its identity.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_spore::ResolvedDep",
       "kind": "struct",
       "crate": "mycelium-spore",
@@ -11827,6 +12465,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_spore::artifact_hash",
+      "kind": "fn",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 121,
+      "summary": "BLAKE3 the bytes into a `blake3:<hex>` [`ContentHash`] — the integrity address of an artifact.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_spore::build_spore",
       "kind": "fn",
       "crate": "mycelium-spore",
@@ -11856,6 +12505,50 @@
       "file": "crates/mycelium-spore/src/lib.rs",
       "line": 222,
       "summary": "The canonical `[project].kind` spelling.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::publish",
+      "kind": "fn",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 176,
+      "summary": "**Publish** `spore`'s `descriptor` bytes under `name@version` into the registry at `root`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::registry",
+      "kind": "mod",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/lib.rs",
+      "line": 23,
+      "summary": "The content-addressed registry (M-732): `publish` / `resolve` over a local store (ADR-003).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::exit_code",
+      "kind": "fn",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore::registry::RegistryError",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 92,
+      "summary": "The CLI exit code for this refusal.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::resolve",
+      "kind": "fn",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 268,
+      "summary": "**Resolve** `name` at `constraint` against the registry at `root`, returning the integrity-verified",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -17899,6 +18592,138 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_std_sys::guarantee_matrix",
+      "kind": "mod",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys",
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 49,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::Fallibility",
+      "kind": "enum",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::guarantee_matrix",
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 62,
+      "summary": "Fallibility classification for an exported op (C1).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::GuaranteeTag",
+      "kind": "enum",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::guarantee_matrix",
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 36,
+      "summary": "Guarantee tag on the honesty lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (RFC-0016 §4.1 C2;",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::GuaranteeTag::as_str",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::guarantee_matrix::GuaranteeTag",
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 50,
+      "summary": "Human-readable name matching the lattice notation (`\"Declared\"`, etc.).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::MATRIX:",
+      "kind": "const",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::guarantee_matrix",
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 87,
+      "summary": "The `std-sys` syscall-floor guarantee matrix — one row per exported floor op.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::MatrixRow",
+      "kind": "struct",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::guarantee_matrix",
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 71,
+      "summary": "One row in the `std-sys` syscall-floor guarantee matrix (RFC-0016 §4.5).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io",
+      "kind": "mod",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys",
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 50,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::flush_out",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 64,
+      "summary": "\\[Declared\\] Flush stdout — surfaces any deferred OS write error explicitly (G2), so a buffered",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::read_line",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 43,
+      "summary": "\\[Declared\\] Read a single line from stdin (including the trailing newline if present).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::read_to_end",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 35,
+      "summary": "\\[Declared\\] Read **all** of stdin to end-of-input.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::write_err",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 58,
+      "summary": "\\[Declared\\] Write all of `bytes` to stderr.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::write_out",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 52,
+      "summary": "\\[Declared\\] Write all of `bytes` to stdout.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_std_sys::math",
       "kind": "mod",
       "crate": "mycelium-std-sys",
@@ -18097,6 +18922,50 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_std_sys::sys",
+      "kind": "mod",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys",
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 53,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::args",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::sys",
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 48,
+      "summary": "\\[Declared\\] The process's command-line arguments (including arg 0).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::exit",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::sys",
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 30,
+      "summary": "\\[Declared\\] Terminate the process with `code`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::get_env",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::sys",
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 38,
+      "summary": "\\[Declared\\] Read environment variable `name`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_std_sys::time",
       "kind": "mod",
       "crate": "mycelium-std-sys",
@@ -18137,6 +19006,28 @@
       "file": "crates/mycelium-std-sys/src/time.rs",
       "line": 26,
       "summary": "\\[Declared\\] Returns nanoseconds since the Unix epoch from the wall clock.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock",
+      "kind": "struct",
+      "crate": "mycelium-std-sys-host",
+      "module": "mycelium_std_sys_host",
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 43,
+      "summary": "The production [`ClockSource`] — reads the OS clock through the audited `std-sys` time floor",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsEntropy",
+      "kind": "struct",
+      "crate": "mycelium-std-sys-host",
+      "module": "mycelium_std_sys_host",
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 21,
+      "summary": "The production [`EntropySource`] — fills entropy from the audited `std-sys` OS floor",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -22929,6 +23820,74 @@
       "reason": "dedup-alias: same definition as `mycelium_cert::vsa_to_dense` at crates/mycelium-cert/src/dense_vsa.rs:195 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_cert::mode::GatedSwap",
+      "reason": "dedup-alias: same definition as `mycelium_cert::GatedSwap` at crates/mycelium-cert/src/mode.rs:39 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_cert::mode::GatedSwap::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::GatedSwap::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::GatedSwap::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::GatedSwap::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::GatedSwap::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::GatedSwap::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine",
+      "reason": "dedup-alias: same definition as `mycelium_cert::ModeGatedSwapEngine` at crates/mycelium-cert/src/mode.rs:162 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::swap",
+      "reason": "definition not found via regex heuristic (kind='fn', name='swap') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::ModeGatedSwapEngine::swap",
+      "reason": "definition not found via regex heuristic (kind='fn', name='swap') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cert::mode::gate_swap",
+      "reason": "dedup-alias: same definition as `mycelium_cert::gate_swap` at crates/mycelium-cert/src/mode.rs:120 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_check::Finding::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -22978,6 +23937,38 @@
     },
     {
       "symbol": "mycelium_check::ResolveError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::CheckReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::CheckReport::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::CheckReport::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::CheckReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::Report::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::Report::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::Report::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::Report::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
@@ -23182,6 +24173,58 @@
     },
     {
       "symbol": "mycelium_core::bound::NormKind::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode",
+      "reason": "dedup-alias: same definition as `mycelium_core::CertMode` at crates/mycelium-core/src/cert_mode.rs:27 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::deserialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::serialize",
+      "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::cert_mode::CertMode::serialize",
       "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
     },
     {
@@ -23826,7 +24869,7 @@
     },
     {
       "symbol": "mycelium_core::meta::Meta",
-      "reason": "dedup-alias: same definition as `mycelium_core::Meta` at crates/mycelium-core/src/meta.rs:89 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::Meta` at crates/mycelium-core/src/meta.rs:90 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::meta::Meta::clone",
@@ -23870,7 +24913,7 @@
     },
     {
       "symbol": "mycelium_core::meta::PackScheme",
-      "reason": "dedup-alias: same definition as `mycelium_core::PackScheme` at crates/mycelium-core/src/meta.rs:45 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::PackScheme` at crates/mycelium-core/src/meta.rs:46 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::meta::PackScheme::clone",
@@ -23914,7 +24957,7 @@
     },
     {
       "symbol": "mycelium_core::meta::PhysicalLayout",
-      "reason": "dedup-alias: same definition as `mycelium_core::PhysicalLayout` at crates/mycelium-core/src/meta.rs:66 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::PhysicalLayout` at crates/mycelium-core/src/meta.rs:67 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::meta::PhysicalLayout::clone",
@@ -23958,7 +25001,7 @@
     },
     {
       "symbol": "mycelium_core::meta::Provenance",
-      "reason": "dedup-alias: same definition as `mycelium_core::Provenance` at crates/mycelium-core/src/meta.rs:21 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::Provenance` at crates/mycelium-core/src/meta.rs:22 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::meta::Provenance::clone",
@@ -24002,7 +25045,7 @@
     },
     {
       "symbol": "mycelium_core::meta::SparsityObs",
-      "reason": "dedup-alias: same definition as `mycelium_core::SparsityObs` at crates/mycelium-core/src/meta.rs:35 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::SparsityObs` at crates/mycelium-core/src/meta.rs:36 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::meta::SparsityObs::clone",
@@ -24959,6 +26002,58 @@
     {
       "symbol": "mycelium_core::value::Value::serialize",
       "reason": "definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt",
+      "reason": "dedup-alias: same definition as `mycelium_core::WrappingOpt` at crates/mycelium-core/src/wrapping.rs:44 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::new",
+      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-core/src/content.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::new",
+      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-core/src/content.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::new",
+      "reason": "dedup-alias: same definition as `mycelium_core::content::Names::new` at crates/mycelium-core/src/content.rs:464 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_core::wrapping::WrappingOpt::new",
+      "reason": "dedup-alias: same definition as `mycelium_core::content::Names::new` at crates/mycelium-core/src/content.rs:464 — one canonical row kept"
     },
     {
       "symbol": "mycelium_dense::DenseError::clone",
@@ -27473,6 +28568,10 @@
       "reason": "dedup-alias: same definition as `mycelium_lsp::completion_list` at crates/mycelium-lsp/src/completions.rs:538 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_lsp::definition::definition",
+      "reason": "dedup-alias: same definition as `mycelium_lsp::definition` at crates/mycelium-lsp/src/definition.rs:26 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_lsp::diagnostics::AuditView",
       "reason": "dedup-alias: same definition as `mycelium_lsp::AuditView` at crates/mycelium-lsp/src/diagnostics/audit.rs:34 — one canonical row kept"
     },
@@ -28549,6 +29648,10 @@
       "reason": "dedup-alias: same definition as `mycelium_lsp::format` at crates/mycelium-lsp/src/fmt.rs:16 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_lsp::hover::hover",
+      "reason": "dedup-alias: same definition as `mycelium_lsp::hover` at crates/mycelium-lsp/src/hover.rs:26 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_lsp::lint::Diagnostic",
       "reason": "dedup-alias: same definition as `mycelium_lsp::Diagnostic` at crates/mycelium-lsp/src/lint.rs:35 — one canonical row kept"
     },
@@ -28923,6 +30026,18 @@
     {
       "symbol": "mycelium_lsp::recover::policy::RecoveryPolicy::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_lsp::semantic::TOKEN_TYPES:",
+      "reason": "dedup-alias: same definition as `mycelium_lsp::TOKEN_TYPES:` at crates/mycelium-lsp/src/semantic.rs:29 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_lsp::semantic::semantic_tokens_full",
+      "reason": "dedup-alias: same definition as `mycelium_lsp::semantic_tokens_full` at crates/mycelium-lsp/src/semantic.rs:154 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_lsp::semantic::semantic_tokens_legend",
+      "reason": "dedup-alias: same definition as `mycelium_lsp::semantic_tokens_legend` at crates/mycelium-lsp/src/semantic.rs:52 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::sync::DocumentStore",
@@ -30405,8 +31520,164 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_proj::cert_scope::CertDecl",
+      "reason": "dedup-alias: same definition as `mycelium_proj::CertDecl` at crates/mycelium-proj/src/cert_scope.rs:97 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertDecl::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertDecl::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertDecl::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertDecl::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertDecl::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertDecl::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope",
+      "reason": "dedup-alias: same definition as `mycelium_proj::CertScope` at crates/mycelium-proj/src/cert_scope.rs:56 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::partial_cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CertScope::partial_cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CrossModeEvent",
+      "reason": "dedup-alias: same definition as `mycelium_proj::CrossModeEvent` at crates/mycelium-proj/src/cert_scope.rs:201 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CrossModeEvent::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CrossModeEvent::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CrossModeEvent::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CrossModeEvent::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CrossModeEvent::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::CrossModeEvent::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::ResolvedMode",
+      "reason": "dedup-alias: same definition as `mycelium_proj::ResolvedMode` at crates/mycelium-proj/src/cert_scope.rs:112 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::ResolvedMode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::ResolvedMode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::ResolvedMode::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::ResolvedMode::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::ResolvedMode::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::ResolvedMode::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::ResolvedMode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::ResolvedMode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::cert_mode_word",
+      "reason": "dedup-alias: same definition as `mycelium_proj::cert_mode_word` at crates/mycelium-proj/src/cert_scope.rs:152 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::compose",
+      "reason": "dedup-alias: same definition as `mycelium_proj::compose` at crates/mycelium-proj/src/cert_scope.rs:249 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::explain_mode",
+      "reason": "dedup-alias: same definition as `mycelium_proj::explain_mode` at crates/mycelium-proj/src/cert_scope.rs:183 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::parse_cert_mode",
+      "reason": "dedup-alias: same definition as `mycelium_proj::parse_cert_mode` at crates/mycelium-proj/src/cert_scope.rs:138 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_proj::cert_scope::resolve_mode",
+      "reason": "dedup-alias: same definition as `mycelium_proj::resolve_mode` at crates/mycelium-proj/src/cert_scope.rs:170 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_proj::header::Deprecated",
-      "reason": "dedup-alias: same definition as `mycelium_proj::Deprecated` at crates/mycelium-proj/src/header.rs:31 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::Deprecated` at crates/mycelium-proj/src/header.rs:33 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::header::Deprecated::clone",
@@ -30434,11 +31705,11 @@
     },
     {
       "symbol": "mycelium_proj::header::HEADER_KEYS:",
-      "reason": "dedup-alias: same definition as `mycelium_proj::HEADER_KEYS:` at crates/mycelium-proj/src/header.rs:16 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::HEADER_KEYS:` at crates/mycelium-proj/src/header.rs:17 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::header::HeaderError",
-      "reason": "dedup-alias: same definition as `mycelium_proj::HeaderError` at crates/mycelium-proj/src/header.rs:74 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::HeaderError` at crates/mycelium-proj/src/header.rs:81 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::header::HeaderError::clone",
@@ -30482,7 +31753,7 @@
     },
     {
       "symbol": "mycelium_proj::header::HeaderFields",
-      "reason": "dedup-alias: same definition as `mycelium_proj::HeaderFields` at crates/mycelium-proj/src/header.rs:40 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::HeaderFields` at crates/mycelium-proj/src/header.rs:42 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::header::HeaderFields::clone",
@@ -30518,7 +31789,7 @@
     },
     {
       "symbol": "mycelium_proj::header::StructuredHeader",
-      "reason": "dedup-alias: same definition as `mycelium_proj::StructuredHeader` at crates/mycelium-proj/src/header.rs:65 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::StructuredHeader` at crates/mycelium-proj/src/header.rs:72 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::header::StructuredHeader::clone",
@@ -30546,11 +31817,11 @@
     },
     {
       "symbol": "mycelium_proj::header::parse_header",
-      "reason": "dedup-alias: same definition as `mycelium_proj::parse_header` at crates/mycelium-proj/src/header.rs:107 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::parse_header` at crates/mycelium-proj/src/header.rs:114 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::manifest::Dependency",
-      "reason": "dedup-alias: same definition as `mycelium_proj::Dependency` at crates/mycelium-proj/src/manifest.rs:80 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::Dependency` at crates/mycelium-proj/src/manifest.rs:85 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::manifest::Dependency::clone",
@@ -30578,7 +31849,7 @@
     },
     {
       "symbol": "mycelium_proj::manifest::Manifest",
-      "reason": "dedup-alias: same definition as `mycelium_proj::Manifest` at crates/mycelium-proj/src/manifest.rs:102 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::Manifest` at crates/mycelium-proj/src/manifest.rs:107 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::manifest::Manifest::clone",
@@ -30606,7 +31877,7 @@
     },
     {
       "symbol": "mycelium_proj::manifest::ManifestError",
-      "reason": "dedup-alias: same definition as `mycelium_proj::ManifestError` at crates/mycelium-proj/src/manifest.rs:117 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::ManifestError` at crates/mycelium-proj/src/manifest.rs:122 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::manifest::ManifestError::clone",
@@ -30698,7 +31969,7 @@
     },
     {
       "symbol": "mycelium_proj::manifest::SporeConfig",
-      "reason": "dedup-alias: same definition as `mycelium_proj::SporeConfig` at crates/mycelium-proj/src/manifest.rs:94 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::SporeConfig` at crates/mycelium-proj/src/manifest.rs:99 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::manifest::SporeConfig::clone",
@@ -30734,7 +32005,7 @@
     },
     {
       "symbol": "mycelium_proj::manifest::Surface",
-      "reason": "dedup-alias: same definition as `mycelium_proj::Surface` at crates/mycelium-proj/src/manifest.rs:71 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::Surface` at crates/mycelium-proj/src/manifest.rs:76 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::manifest::Surface::clone",
@@ -30770,7 +32041,7 @@
     },
     {
       "symbol": "mycelium_proj::manifest::Toolchain",
-      "reason": "dedup-alias: same definition as `mycelium_proj::Toolchain` at crates/mycelium-proj/src/manifest.rs:60 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::Toolchain` at crates/mycelium-proj/src/manifest.rs:65 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::manifest::Toolchain::clone",
@@ -30806,11 +32077,11 @@
     },
     {
       "symbol": "mycelium_proj::manifest::parse_manifest",
-      "reason": "dedup-alias: same definition as `mycelium_proj::parse_manifest` at crates/mycelium-proj/src/manifest.rs:160 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::parse_manifest` at crates/mycelium-proj/src/manifest.rs:166 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::resolve::Origin",
-      "reason": "dedup-alias: same definition as `mycelium_proj::Origin` at crates/mycelium-proj/src/resolve.rs:22 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::Origin` at crates/mycelium-proj/src/resolve.rs:23 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::resolve::Origin::clone",
@@ -30862,11 +32133,11 @@
     },
     {
       "symbol": "mycelium_proj::resolve::Resolved",
-      "reason": "dedup-alias: same definition as `mycelium_proj::Resolved` at crates/mycelium-proj/src/resolve.rs:40 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::Resolved` at crates/mycelium-proj/src/resolve.rs:41 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::resolve::ResolvedHeader",
-      "reason": "dedup-alias: same definition as `mycelium_proj::ResolvedHeader` at crates/mycelium-proj/src/resolve.rs:49 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::ResolvedHeader` at crates/mycelium-proj/src/resolve.rs:50 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::resolve::ResolvedHeader::clone",
@@ -30902,11 +32173,11 @@
     },
     {
       "symbol": "mycelium_proj::resolve::explain",
-      "reason": "dedup-alias: same definition as `mycelium_proj::explain` at crates/mycelium-proj/src/resolve.rs:145 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::explain` at crates/mycelium-proj/src/resolve.rs:181 — one canonical row kept"
     },
     {
       "symbol": "mycelium_proj::resolve::resolve",
-      "reason": "dedup-alias: same definition as `mycelium_proj::resolve` at crates/mycelium-proj/src/resolve.rs:76 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_proj::resolve` at crates/mycelium-proj/src/resolve.rs:83 — one canonical row kept"
     },
     {
       "symbol": "mycelium_sec::Finding::clone",
@@ -31303,6 +32574,110 @@
     {
       "symbol": "mycelium_spore::SporeError::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt",
+      "reason": "dedup-alias: same definition as `mycelium_spore::PublishReceipt` at crates/mycelium-spore/src/registry.rs:40 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError",
+      "reason": "dedup-alias: same definition as `mycelium_spore::RegistryError` at crates/mycelium-spore/src/registry.rs:72 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved",
+      "reason": "dedup-alias: same definition as `mycelium_spore::Resolved` at crates/mycelium-spore/src/registry.rs:57 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::artifact_hash",
+      "reason": "dedup-alias: same definition as `mycelium_spore::artifact_hash` at crates/mycelium-spore/src/registry.rs:121 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_spore::registry::publish",
+      "reason": "dedup-alias: same definition as `mycelium_spore::publish` at crates/mycelium-spore/src/registry.rs:176 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_spore::registry::resolve",
+      "reason": "dedup-alias: same definition as `mycelium_spore::resolve` at crates/mycelium-spore/src/registry.rs:268 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_cmp::Bf16Bits::clone",
@@ -35797,6 +37172,42 @@
       "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
+      "symbol": "mycelium_std_sys::guarantee_matrix::Fallibility::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::Fallibility::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::Fallibility::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::GuaranteeTag::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::GuaranteeTag::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::GuaranteeTag::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::MatrixRow::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::MatrixRow::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::MatrixRow::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_sys::rand::EntropyError::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -35810,6 +37221,46 @@
     },
     {
       "symbol": "mycelium_std_sys::rand::EntropyError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::logical_now",
+      "reason": "definition not found via regex heuristic (kind='fn', name='logical_now') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::mono_now",
+      "reason": "definition not found via regex heuristic (kind='fn', name='mono_now') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::wall_now",
+      "reason": "definition not found via regex heuristic (kind='fn', name='wall_now') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsEntropy::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsEntropy::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsEntropy::fill_bytes",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fill_bytes') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsEntropy::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
