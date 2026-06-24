@@ -1,7 +1,7 @@
 {
   "_generated_by": "tools/grammar/generate.py",
   "_source_of_truth": "crates/mycelium-l1/src/token.rs::keyword()",
-  "_honesty": "keyword set + class buckets are lexer-derived (G2); scope names are RFC-0026-pending TODO stubs (VR-5).",
+  "_honesty": "keyword set + class buckets are lexer-derived (G2); scope names are the ratified RFC-0026 \u00a73.2 table.",
   "classes": {
     "keyword": [
       "backbone",
