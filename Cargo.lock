@@ -575,6 +575,7 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-diag",
+ "mycelium-proj",
  "mycelium-std-core",
 ]
 
