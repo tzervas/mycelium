@@ -636,18 +636,20 @@ class GitHubApi:
         return h
 
     def _maybe_throttle(self, headers):
-        """Pre-emptive pause: if the core budget is nearly spent, sleep until the reset so the NEXT
-        call doesn't trip the limit (never-silent, G2). This is what keeps a long pagination from
-        burning the last of the budget and then hard-failing — it slows *before* the wall, not after.
-        Bounded by ``_API_MAX_SLEEP``."""
+        """Pre-emptive pause: if the rate budget for THIS resource is nearly spent, sleep until its
+        reset so the NEXT call doesn't trip the limit (never-silent, G2). This is what keeps a long
+        pagination from burning the last of the budget and then hard-failing — it slows *before* the
+        wall, not after. The ``X-RateLimit-*`` headers reflect whichever resource the endpoint draws
+        on (core / search / graphql), so the message stays resource-agnostic. Bounded by
+        ``_API_MAX_SLEEP``."""
         remaining = _header_int(headers, "X-RateLimit-Remaining")
         reset = _header_int(headers, "X-RateLimit-Reset")
         if remaining is not None and remaining < _API_LOW_WATER and reset is not None:
             wait = min(_API_MAX_SLEEP, max(0, reset - int(time.time())))
             if wait > 0:
                 safe_print(
-                    f"   ~ API budget low ({remaining} core calls left) — pausing {wait}s for the "
-                    f"reset before continuing (proactive, G2)",
+                    f"   ~ API rate budget low ({remaining} calls left for this resource) — pausing "
+                    f"{wait}s for the reset before continuing (proactive, G2)",
                     file=sys.stderr,
                 )
                 time.sleep(wait)
@@ -680,11 +682,9 @@ class GitHubApi:
                         False  # never auto-retry a mutating verb on an ambiguous 5xx
                     )
                 if not retry:
-                    raise RuntimeError(
-                        f"GitHub {req.get_method()} {req.full_url} -> HTTP {e.code}: {last[:500]}"
-                    )
+                    raise RuntimeError(f"GitHub {what} -> HTTP {e.code}: {last[:500]}")
                 safe_print(
-                    f"   ~ API HTTP {e.code} — waiting {sleep_s}s, then retry "
+                    f"   ~ {what}: API HTTP {e.code} — waiting {sleep_s}s, then retry "
                     f"{attempt + 1}/{_API_RETRY_MAX} ({reason})",
                     file=sys.stderr,
                 )
@@ -692,25 +692,22 @@ class GitHubApi:
             except urllib.error.URLError as e:
                 if not idempotent:
                     raise RuntimeError(
-                        f"GitHub {req.get_method()} {req.full_url} -> network error (not retried on a "
-                        f"mutating verb — may have applied): {e}"
+                        f"GitHub {what} -> network error (not retried on a mutating verb — may "
+                        f"have applied): {e}"
                     )
                 retry, sleep_s, _ = compute_api_backoff(
                     503, None, attempt, now=time.time()
                 )
                 if not retry:
-                    raise RuntimeError(
-                        f"GitHub {req.get_method()} {req.full_url} -> network error: {e}"
-                    )
+                    raise RuntimeError(f"GitHub {what} -> network error: {e}")
                 safe_print(
-                    f"   ~ API network error ({e}) — waiting {sleep_s}s, then retry "
+                    f"   ~ {what}: API network error ({e}) — waiting {sleep_s}s, then retry "
                     f"{attempt + 1}/{_API_RETRY_MAX}",
                     file=sys.stderr,
                 )
                 time.sleep(sleep_s)
         raise RuntimeError(
-            f"GitHub {req.get_method()} {req.full_url} -> exhausted {_API_RETRY_MAX} retries; "
-            f"last: {last[:300]}"
+            f"GitHub {what} -> exhausted {_API_RETRY_MAX} retries; last: {last[:300]}"
         )
 
     def request(self, method, path, *, body=None):
