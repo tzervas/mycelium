@@ -8,6 +8,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: E21-1 — RFC-0034 paired-TDD implementation epic queued)
+
+- **E21-1 (epic) + M-786…M-794** queued in `tools/github/issues.yaml` — the paired-TDD Rust-first
+  implementation of RFC-0034 + ADR-032 (the runtime mode mechanism the design-driven enactment left
+  pending). Dependency-ordered from the `Meta` mode tag outward: `CertMode` + never-silent mode tag
+  (M-786) → mode-gated provenance tagging, `fast` omits Empirical/Proven (M-787) → mode-gated swap-cert
+  emit/check (M-788) → compile/runtime phase split so spores survive a cert-off runtime (M-789) →
+  `@certification` resolution/scoping reusing RFC-0012 (M-790) → `wrapping` Axis-B opt-out (M-791) →
+  EXPLAIN-of-mode + generation≠consumption (M-792) → memory-safe per-use unsafe escape sharpening ADR-014
+  (M-793) → the RFC-0034 §13 conformance gate that advances the RFC to Enacted-with-code (M-794). Each
+  leaf carries property-test acceptance criteria + an honest "implemented (Rust-first)" framing (VR-5/G2).
+  RFC-0034's `Task` field updated to reference the epic. ids collision-checked (E21/M-786… free); YAML
+  validated (no duplicate ids); `doc_refs` resolve.
+
 ### Changed (2026-06-24: editorial — trim redundant "honest" qualifiers (concision; honesty is implied))
 
 - **Concision pass — dropped the redundant "honest"/"honestly" filler** across CLAUDE.md, CONTRIBUTING,

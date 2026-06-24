@@ -5798,3 +5798,253 @@ issues:
     body: |
       (was VM-015) YAGNI follow-on, GATE ON A BENCH. Karatsuba/Toom multiplication proven equivalent to
       the schoolbook BigTernary::mul over a fuzz corpus. Do not build until a profile justifies it.
+
+  # ---------------- E21-1: Tunable Certification & Transparency Modes (RFC-0034 / ADR-032) ----------------
+  - id: E21-1
+    title: "E21-1 (epic) -- Tunable Certification & Transparency Modes (RFC-0034 / ADR-032 implementation)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:core, priority:P1, status:proposed]
+    epic: E21
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:ADR-032
+      - corpus:DN-29
+      - corpus:RFC-0001
+      - corpus:RFC-0002
+      - corpus:RFC-0005
+      - corpus:RFC-0012
+      - corpus:ADR-010
+      - corpus:ADR-013
+      - src:crates/mycelium-core/src/meta.rs
+      - src:crates/mycelium-core/src/guarantee.rs
+      - src:crates/mycelium-core/src/content.rs
+      - src:crates/mycelium-cert
+      - src:crates/mycelium-proj
+      - src:crates/mycelium-spore
+      - src:crates/mycelium-mlir/src/inject.rs
+    body: |
+      The PAIRED TDD IMPLEMENTATION of RFC-0034 + ADR-032 (both Enacted design-driven 2026-06-24; the
+      corpus amendments landed, the runtime mechanism did not). RFC-0034 made certification/hashing/tag
+      machinery a TUNABLE POLICY over the existing RFC-0001/0002/0005 substrate; this epic lands the
+      runtime mechanism Rust-first so the docs advance from "Enacted (design)" to fully Enacted-with-code.
+
+      Cross-cutting core-runtime feature: it spans mycelium-core (Meta mode tag, guarantee/tag gating,
+      content-hash exclusion), mycelium-cert (mode-gated emit/check), mycelium-proj (the @certification
+      declaration + resolution), mycelium-l1 (scoped resolution, reusing RFC-0012 ambient/scoped-override),
+      mycelium-spore + mycelium-mlir/inject (the compile/runtime phase split). The machinery it tunes is
+      UNCHANGED -- only WHEN it runs becomes a policy.
+
+      HONESTY / never-silent (VR-5/G2): every result carries a never-silent certification-mode tag; `fast`
+      never claims a tag it did not earn (no Empirical/Proven in `fast`); the mode is excluded from the
+      content hash (ADR-003, no spore-identity perturbation); cross-mode composition is an explicit,
+      visible event. Specs move to "implemented (Rust-first), pending ratification" as leaves land -- never
+      silently to Enacted-with-code until the M-794 conformance gate is green.
+
+      ID layout: design gate = the RFC-0034 + ADR-032 docs (already landed, PR #538). Implementation =
+      M-786..M-794 (this epic), dependency-ordered from the Meta mode tag outward. Phase placement follows
+      the active Phase-5 implementation wave (E19/E20); the feature is core-runtime, not self-hosting per se.
+
+      User stories:
+      - As an application developer, I want a `fast`-by-default build that pays no runtime cert/hash cost
+        yet stays inspectable + deployable, so day-to-day code is fast without forfeiting assurance I can
+        opt into later.
+      - As a phylum author, I want to declare `@certification certified` at project/phylum/nodule scope and
+        have it resolve most-specific-wins, so published guarantees are checked where it matters.
+      - As an auditor/AI agent, I want every value mode-tagged and `EXPLAIN`-able, and every cross-mode
+        boundary explicit, so I can always tell what assurance a value actually carries (never silent).
+
+      Definition of Done:
+      - M-786..M-793 land Rust-first, each with property tests for its invariant; cargo +1.92
+        fmt/clippy -D warnings/test green per crate.
+      - M-794 conformance suite asserts all RFC-0034 §13 clauses (a)-(f) green; RFC-0034 advances
+        Enacted(design) -> Enacted-with-code; ADR-032 decision 1 (mechanism adoption) realized.
+      - just check green; CHANGELOG append-only; docs/api-index regenerated for the new public surface.
+      - No content-hash perturbation by the mode (ADR-003 property test); `fast` never carries
+        Empirical/Proven (VR-5 property test).
+
+  - id: M-786
+    title: "M-786 -- CertMode + never-silent mode tag in Meta (RFC-0034 §3.1)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feat, area:core, priority:P1, status:todo]
+    epic: E21-1
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:RFC-0001
+      - src:crates/mycelium-core/src/meta.rs
+      - src:crates/mycelium-core/src/content.rs
+    body: |
+      Introduce `CertMode { Fast, Balanced, Certified }` in mycelium-core and attach the ACTIVE mode to
+      every result's `Meta` (dynamic metadata). The foundation the rest of the epic builds on.
+      Acceptance / DoD (TDD):
+      - Property test: every constructed result carries a CertMode tag (never-silent, RFC-0034 §3.1).
+      - Property test: the mode is EXCLUDED from the content hash (ADR-003 / RFC-0001 §4.6) -- switching
+        modes does not change a value's content-id (mirrors how dynamic Meta is already excluded).
+      - Tooling surfaces the active mode. fmt/clippy -D warnings/test -p mycelium-core green.
+
+  - id: M-787
+    title: "M-787 -- mode-gated provenance tagging: `fast` omits Empirical/Proven (RFC-0034 §7, §3.2)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feat, area:core, priority:P1, status:todo]
+    epic: E21-1
+    depends_on: [M-786]
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:RFC-0001
+      - src:crates/mycelium-core/src/guarantee.rs
+      - src:crates/mycelium-core/src/meta.rs
+    body: |
+      Make guarantee-tag computation/propagation mode-aware (the provenance tag as an adjustable unit).
+      In `fast`, results sit at the structural tags (`Exact` where the repr is exact, else `Declared`) and
+      NEVER compute `Empirical` (trials) / `Proven` (checked theorem); `balanced`/`certified` compute +
+      propagate as today.
+      Acceptance / DoD (TDD):
+      - Property test (the VR-5 floor): NO `fast` result ever carries `Empirical` or `Proven`.
+      - Property test: `certified` reproduces today's meet-propagation exactly (mechanism unchanged).
+      - fmt/clippy -D warnings/test -p mycelium-core green.
+
+  - id: M-788
+    title: "M-788 -- mode-gated swap-cert emission + checking (RFC-0034 §4)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feat, area:cert, priority:P1, status:todo]
+    epic: E21-1
+    depends_on: [M-786, M-787]
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:RFC-0002
+      - corpus:ADR-010
+      - src:crates/mycelium-cert
+    body: |
+      Gate RFC-0002 certificate EMISSION and the M-210 checker / ADR-010 bound kernels behind the mode:
+      `fast` = neither; `balanced` = emit (unchecked); `certified` = emit + check. The certificate
+      machinery itself is UNCHANGED.
+      Acceptance / DoD (TDD):
+      - Property test: `fast` swaps run cert-free; `certified` swaps emit + check (and reject on
+        check-failure, never-silent); `balanced` emits without checking.
+      - Out-of-range stays an explicit Option/error in EVERY mode (Axis-B is not gated here).
+      - fmt/clippy -D warnings/test -p mycelium-cert green.
+
+  - id: M-789
+    title: "M-789 -- compile/runtime phase split: spores mintable with runtime cert OFF (RFC-0034 §8)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feat, area:core, priority:P1, status:todo]
+    epic: E21-1
+    depends_on: [M-786]
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:ADR-013
+      - src:crates/mycelium-spore
+      - src:crates/mycelium-mlir/src/inject.rs
+    body: |
+      Ensure spore identity (mycelium-spore, ADR-013) + hot-inject/ABI dispatch keys
+      (mycelium-mlir/inject, ADR-016/017) are COMPILE/DEPLOY-phase and remain available when the runtime
+      certification mode is fully off (`fast`) -- deployability survives a cert-off runtime.
+      Acceptance / DoD (TDD):
+      - Property test: a spore is mintable + content-addressed in `fast` (no runtime hash/cert needed).
+      - Disabling the COMPILE spore-hash (embedded/no-deploy) is an explicit, EXPLAIN-ed choice that
+        flags the loss of spores/inject -- never-silent about capabilities (G2).
+      - fmt/clippy -D warnings/test green for the touched crates.
+
+  - id: M-790
+    title: "M-790 -- mode resolution + scoping (@certification; global/phylum/nodule) via RFC-0012 (RFC-0034 §6)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feat, area:project, priority:P1, status:todo]
+    epic: E21-1
+    depends_on: [M-786]
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:RFC-0012
+      - corpus:RFC-0005
+      - src:crates/mycelium-proj
+    body: |
+      The `@certification` attribute on the mycelium-proj manifest / nodule header, resolved
+      most-specific-wins across `global` > `phylum` > `nodule`, REUSING the RFC-0012 ambient-representation
+      + scoped-override mechanism (no new scoping machinery). Per-op `thaw`-style granularity is DEFERRED
+      (YAGNI, RFC-0034 §6). Cross-mode composition surfaces the boundary explicitly.
+      Acceptance / DoD (TDD):
+      - Property test: resolution precedence (nodule overrides phylum overrides global).
+      - Property test: a `fast` value entering a `certified` computation is an explicit, visible event --
+        never a silent upgrade to a strength it did not earn (RFC-0034 §3.1).
+      - Mode is data in the source (not a hidden build flag); fmt/clippy -D warnings/test green.
+
+  - id: M-791
+    title: "M-791 -- named `wrapping` Axis-B opt-out (RFC-0034 §10)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feat, area:core, priority:P2, status:todo]
+    epic: E21-1
+    depends_on: [M-786]
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:RFC-0001
+      - src:crates/mycelium-core/src/meta.rs
+    body: |
+      Never-silent failability (Axis B -- out-of-range yields Option/Result/SwapError) is DEFAULT-ON in
+      every mode incl. `fast`. Expose a NAMED, explicit `wrapping` construct for the wraparound opt-out
+      (v0, RFC-0034 §10) -- choosing it is itself never-silent (visible at the use site).
+      Acceptance / DoD (TDD):
+      - Property test: default arithmetic is never-silent on out-of-range in every mode.
+      - Property test: `wrapping` opt-in is explicit + visible; it does not silence other modes' tags.
+      - fmt/clippy -D warnings/test green.
+
+  - id: M-792
+    title: "M-792 -- EXPLAIN-of-mode + generation != consumption (RFC-0034 §7, §3.1, conformance d)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feat, area:tooling, priority:P2, status:todo]
+    epic: E21-1
+    depends_on: [M-786, M-790]
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:RFC-0005
+      - src:crates/mycelium-proj
+    body: |
+      `EXPLAIN` of the ACTIVE MODE is always available (mode-independent, RFC-0034 §3.1/§13d). Implement
+      the generation != consumption split: the cheap inspectability SIGNAL is always generated >= middle
+      tier (safe default), while DX/UX CONSUMPTION (verbosity/noise) is tunable and lean at `fast` -- so a
+      dev can dial consumption up mid-session with the history already captured (no re-run, no mode switch).
+      Acceptance / DoD (TDD):
+      - Property test: EXPLAIN of the active mode is available in EVERY mode incl. `fast`.
+      - Property test: the inspectability signal is generated even when consumption is lean (dial-up
+        surfaces already-captured history).
+      - fmt/clippy -D warnings/test green.
+
+  - id: M-793
+    title: "M-793 -- memory-safe by default + explicit per-use unsafe escape (RFC-0034 §9, sharpens ADR-014)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feat, area:tooling, priority:P2, status:todo]
+    epic: E21-1
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:DN-29
+    body: |
+      Sharpen the ADR-014 `permitted-but-warned` policy from a global toggle to an EXPLICIT PER-USE escape
+      at the call site (RFC-0034 §9) -- so an unsafe mem op is a conscious, source-visible, grep-auditable
+      choice, independent of the certification mode (even `fast` is memory-safe). ADR-014 is SHARPENED, not
+      superseded (its dev/test warning + mandatory `// SAFETY:` still apply).
+      Acceptance / DoD (TDD):
+      - A `just`/security-review check asserts every `unsafe` block has an adjacent `// SAFETY:` and a
+        per-use `#[allow(unsafe_code)]` (the ADR-014 follow-on, now enforced).
+      - Trusted kernel crates (mycelium-core/-cert/-numerics/-vsa) stay unsafe-free (crate-level forbid).
+      - check green; no new unsafe in the trusted base.
+
+  - id: M-794
+    title: "M-794 -- RFC-0034 §13 conformance suite + advance to Enacted-with-code (the E21-1 gate)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:core, priority:P1, status:todo]
+    epic: E21-1
+    depends_on: [M-786, M-787, M-788, M-789, M-790, M-791, M-792, M-793]
+    doc_refs:
+      - corpus:RFC-0034
+      - corpus:ADR-032
+      - src:crates/mycelium-cert
+    body: |
+      The conformance gate. A suite asserting ALL RFC-0034 §13 conformance clauses end-to-end:
+      (a) every result carries a never-silent mode tag; (b) no `fast` result carries Empirical/Proven;
+      (c) memory safety + Axis-B hold in every mode; (d) EXPLAIN-of-mode always available; (e) spores
+      mintable with the runtime cert off; (f) cross-mode composition surfaces the boundary.
+      Acceptance / DoD (TDD):
+      - All six clauses green in CI; just check green; docs/api-index regenerated for the new surface.
+      - RFC-0034 advances Enacted(design) -> Enacted-with-code; ADR-032 decision 1 (mechanism adoption)
+        realized; the relaxed RFC/ADR footnotes' "pending" notes updated where landed.
+      - CHANGELOG append-only; honest "implemented (Rust-first)" framing; no guarantee tag upgraded
+        without a checked basis (VR-5).
