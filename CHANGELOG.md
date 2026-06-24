@@ -8,6 +8,24 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: DN-31 — Delimiter & Operator Deconfliction (direction capture, Draft))
+
+- **DN-31** (`docs/notes/`, **Draft**, advisory). Captures the maintainer's decided reallocation of the four
+  bracket families into one collision-free scheme, grounded in a grep of the normative grammar showing **`<>`
+  triple-loaded** (type params + type args + trit literals + the wanted comparison/shift operators) while
+  **`[]` is near-empty** (list literals only):
+  - **`<>` → comparison/shift operators only** (`< > << >>`); `<=`/`>=` retire to word operators `lte`/`gte`.
+  - **`[]` → type args + sized/repr types + list literals** (`List[T]`, `Binary[64]`, `[1,2,3]`), position-
+    disambiguated (clean because indexing is `get()` not `arr[i]`, calls are `()`).
+  - **`()`** calls/grouping/tuples/ctors · **`{}`** blocks/effects/match/**maps**.
+  - return arrow **`->` → `=>`** (bare `= - >` remain operators); trit literals **`<+-0>` → `0t+-0`** (types
+    `trit[N]`/`tryte[9]`, extends to `byte[N]`).
+  - **Resolves M-745 by reallocation** (no speculative parsing); proposes to **supersede RFC-0019 §4.1**
+    (Enacted) + update RFC-0030/0025/0001/0033.
+  - **Open questions flagged on merit:** empty `{}` block-vs-map ambiguity (sharpest — undecided), list-literal
+    at statement start, and the `<=`/`>=`→words asymmetry. Enacts nothing (VR-5/G2); feeds the binding RFC.
+  Registered in `docs/Doc-Index.md`.
+
 ### Changed (2026-06-24: CLAUDE.md — test-layout rule (no tests in logic files); retrofit tracked as M-797)
 
 - **New binding convention (maintainer-directed):** logic `.rs` files carry **no test code**. Every
