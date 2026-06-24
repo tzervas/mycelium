@@ -8,6 +8,34 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: RFC-0034 + ADR-032 — the binding tunable-certification act (Proposed; drafted from the settled DN-29))
+
+- **RFC-0034 — Tunable Certification & Transparency Modes** (`docs/rfcs/`, **Proposed**). The binding
+  *mechanism* from the settled DN-29 deliberation: makes certification/hashing/tag machinery a **tunable
+  policy** over RFC-0001/0002/0005 — the knob matrix (§4); two **first-class modes** `fast` (default) /
+  `certified` + a `balanced` intermediate (§5); `global/phylum/nodule` resolution reusing **RFC-0012**
+  scoping + a `@certification` attribute, no content-hash perturbation per ADR-003 (§6); the **provenance
+  tag as an adjustable unit** (`fast` omits `Empirical`/`Proven`, sits at structural `Exact`/`Declared`)
+  and the **generation≠consumption** signal split (§7); the **compile/runtime phase split** — spores
+  survive a cert-off runtime (§8); memory-safe-by-default + an explicit per-use escape sharpening
+  **ADR-014** (§9); the named `wrapping` Axis-B opt-out (§10); and the never-silent mode invariant (§3).
+  Implementation-focused; decides the surface, implements nothing (VR-5/G2).
+- **ADR-032 — Tunable certification supersedes always-on; transparency reframe** (`docs/adr/`,
+  **Proposed**). The superseding ADR: supersedes the **unconditional** reading of **SC-3/FR-M3** +
+  RFC-0001 §3.4/§4.6, RFC-0002 §2, RFC-0005 §2 (they hold **at the active mode**; the mode itself is
+  never-silent; mechanisms unchanged); reframes **"honesty" → "transparency & auditability"** whole-corpus
+  (the lattice/VR-5/G2 mechanism is unchanged — only the wording); repositions the **north star** toward a
+  fast, memory-safe, ergonomic language with certification optional (the Foundation **mission sentence is
+  already transparency-framed** — unchanged); **sharpens ADR-014** (safe-by-default + explicit per-use
+  escape); and adds append-only **§-end footnotes** to RFC-0001/0002/0005 + ADR-010/011/013/016/017.
+- **Staged amendment tooling** (`tools/dn29_apply.py` + `docs/notes/dn29-amendment-manifest.json`). The
+  **anchor-keyed, single-pass-per-file** corpus amender (DN-29 §11.4) that applies the rewordings without
+  positional mangling: **dry-run by default**, **never-silent** (each anchor must match exactly once or it
+  fails loudly), and it **refuses `--apply` while the manifest is not `final`**. **Staged, not run** — the
+  corpus edits land only **after** RFC-0034 + ADR-032 are Accepted (RFC-0034 §13). The manifest ships the
+  two validated Foundation spine anchors (SC-3, FR-M3) as dry-run-clean worked examples; the rest are
+  authored at ratification. Registered in `docs/Doc-Index.md`.
+
 ### Added (2026-06-24: DN-29 — Tunable Certification & Honesty Modes (Draft deliberation anchor, advisory))
 
 - **DN-29 — Tunable Certification & Honesty Modes** (`docs/notes/`, **Draft**, advisory). Anchors the

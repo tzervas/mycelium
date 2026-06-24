@@ -1,0 +1,21 @@
+{
+  "_about": "Staged amendment manifest for RFC-0034 + ADR-032 (DN-29 §11). Anchor-keyed, single-pass-per-file (see tools/dn29_apply.py). STAGED, NOT RUN: apply only AFTER both RFC-0034 and ADR-032 are Accepted (RFC-0034 §13). Anchors are unique content substrings, never line/offset, so order is irrelevant. Line numbers in DN-29 §11 drift — re-verify every anchor against source before completing this manifest.",
+  "status": "staged-incomplete",
+  "_completion_note": "Only the validated Foundation spine anchors (SC-3, FR-M3) are populated here as dry-run-clean worked examples. The remaining ~38 hits across ~12 files (DN-29 §11.2: README ~10, Foundation ~9, CLAUDE.md ~8, plus RFC-0001/0002/0005, Glossary, CONTRIBUTING, ADR footnotes) are authored at ratification, once RFC-0034 fixes the final wording. The tool refuses --apply while status != 'final'.",
+  "files": {
+    "docs/Mycelium_Project_Foundation.md": [
+      {
+        "category": "conditionalize-per-mode",
+        "note": "SC-3 — unconditional 'zero swaps without a certificate' becomes per-mode; the mode stays never-silent (ADR-032 decision 2).",
+        "anchor": "- **SC-3 (no silent swaps).** Static + runtime invariant: zero representation swaps occur without producing an inspectable certificate (auditable; cross-cutting **A.1**, **G9**).",
+        "replacement": "- **SC-3 (no silent swaps).** Static + runtime invariant: at the active certification mode (`certified`), zero representation swaps occur without producing an inspectable certificate; in **every** mode the mode itself is never silent — each result is mode-tagged and `EXPLAIN`-able (auditable; cross-cutting **A.1**, **G9**; relaxed to per-mode by RFC-0034 + ADR-032)."
+      },
+      {
+        "category": "conditionalize-per-mode",
+        "note": "FR-M3 — 'always emits a certificate' becomes 'at the active mode'; swap stays never-silent (ADR-032 decision 2).",
+        "anchor": "- **FR-M3.** Provide an explicit `swap` operation that never runs implicitly and always emits a certificate (cross-cutting **A.1**; **G2**, **G9**).",
+        "replacement": "- **FR-M3.** Provide an explicit `swap` operation that never runs implicitly and, at the active mode (`certified`), emits a certificate; the swap is never-silent in every mode (cross-cutting **A.1**; **G2**, **G9**; relaxed to per-mode by RFC-0034 + ADR-032)."
+      }
+    ]
+  }
+}
