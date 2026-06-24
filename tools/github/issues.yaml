@@ -6132,3 +6132,61 @@ issues:
       - fmt/clippy -D warnings/test green; just check green. NOTE: developer-facing surface generalization
         -- depends on the @certification resolution (M-790) + the testing toolkit; may extend into its own
         surface-phase follow-on if the toolkit work outgrows this leaf (flag at design time, don't guess).
+
+  # ---------------- E22-1: Security Scanning Toolkit (DN-30) ----------------
+  - id: E22-1
+    title: "E22-1 (epic) -- Security Scanning Toolkit (automated detection, standard reporting, honest safe auto-fix)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:tooling, priority:P2, status:proposed]
+    epic: E22
+    doc_refs:
+      - corpus:DN-30
+      - corpus:RFC-0034
+      - corpus:RFC-0002
+      - corpus:RFC-0013
+      - corpus:RFC-0028
+      - corpus:ADR-014
+      - corpus:DN-28
+      - src:scripts/checks/deny.sh
+      - src:crates/mycelium-cert
+    body: |
+      A shippable, Mycelium-native SECURITY SCANNING TOOLKIT as a first-class toolchain component (like the
+      LSP / linter / formatter / testing toolkit), inherited by downstream developers. Direction captured in
+      DN-30; this epic is the backlog. Leaves are scoped when the binding security-scanning RFC lands (the
+      forward-epic pattern -- children minted at the design gate, not pre-allocated here).
+
+      Pillars (DN-30 §2-§6):
+      - AUTOMATED DETECTION over the inspectable Core IR (RFC-0001) -- the toolchain logically enumerates +
+        finds vulnerability classes, NOT solely from documented findings; runs in conjunction with them
+        (correlate if documented, report the same way if found independently). Never-silent (G2): a flaw the
+        toolchain can see is surfaced, never hidden.
+      - STANDARD, MACHINE-CONSUMABLE REPORTING: SARIF + CWE class + CVE/OSV id + VEX applicability, each
+        finding carrying provenance + an honest confidence tag (Exact/Proven/Empirical/Declared, RFC-0034) --
+        a proven taint-flow vs a heuristic match is disclosed, never conflated.
+      - FIND-ONCE, REPORT-TO-COMMUNITY: publish to an OSV-shaped advisory feed keyed by the phylum's
+        content-hash DAG (DN-28 registry), so consumers learn precisely which versions are affected.
+      - HONEST, SEMANTICS-PRESERVING SAFE AUTO-FIX: a fix ships a certificate (REUSING the RFC-0002
+        refinement/translation-validation machinery) that it (a) eliminates/mitigates the vuln AND (b)
+        refines the original modulo the vuln (logic preserved), each honestly tagged. EXPLAIN-able
+        (RFC-0005/0013); a Declared-strength fix is always flagged + gated behind human acceptance -- no
+        black-box "trust me" rewrites (G2/VR-5).
+      - NATIVE + SCOPED like the testing toolkit (M-796): project / nodule / granular scan profile, reusing
+        the @certification resolution (RFC-0034 §6 / RFC-0012) -- never forced, the §7 ergonomic stance.
+
+      User stories:
+      - As a phylum author, I want the toolchain to automatically find + report security flaws in my code in
+        a standard format, so I catch them without relying on someone having documented them first.
+      - As a consumer, I want a found vulnerability in a dependency reported to a community feed keyed by
+        content-hash, so I know precisely which versions I use are affected and what fix supersedes them.
+      - As a developer, I want an offered auto-fix to come with a certificate that it preserves my intended
+        logic while removing the vuln (honestly tagged), so I can accept it without fearing a silent
+        behaviour change.
+
+      Definition of Done (epic):
+      - A binding security-scanning RFC is Accepted (shaped by DN-30 §2-§6 + the §7 open questions resolved).
+      - v0 detects an agreed class set (DN-30 §7 Q1), emits SARIF+CWE (+OSV where applicable), and offers at
+        least one honest, certificate-backed safe-fix class.
+      - Native + scope-configurable (project/nodule/granular) reusing the @certification resolver; findings +
+        fixes reified, EXPLAIN-able, never-silent; honest confidence tags throughout (VR-5/G2).
+      - just check green; CHANGELOG append-only; the /security-review skill consumes the toolkit's findings
+        (DN-30 §7 Q5) or the relationship is explicitly decided.

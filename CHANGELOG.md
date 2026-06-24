@@ -8,6 +8,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: DN-30 — Security Scanning Toolkit (direction capture, Draft))
+
+- **DN-30 — Security Scanning Toolkit** (`docs/notes/`, **Draft**, advisory). Captures the direction for a
+  shippable, Mycelium-native security toolkit as a first-class toolchain component (inherited by downstream
+  devs, like the testing toolkit): **automated** vulnerability detection over the inspectable Core IR — not
+  solely documented findings, running in conjunction with them (never-silent, G2 — a flaw the toolchain can
+  see is surfaced); **standard machine-consumable reporting** (SARIF + CWE + CVE/OSV + VEX, each finding
+  carrying provenance + an honest confidence tag); **find-once-report-to-community** via an OSV-shaped
+  advisory feed keyed by the content-hash DAG (DN-28); and **honest, semantics-preserving safe auto-fix**
+  that reuses the **RFC-0002** refinement/translation-validation certificate (proves a fix removes the vuln
+  **and** refines the original modulo it, honestly tagged — `Declared` fixes always flagged + human-gated,
+  no black-box rewrites). Native + scoped (project/nodule/granular, reusing the RFC-0034 §6 `@certification`
+  resolution). **Enacts nothing**; feeds a future security-scanning RFC + the backlog epic **E22-1**
+  (`tools/github/issues.yaml`). Registered in `docs/Doc-Index.md`.
+
 ### Changed (2026-06-24: E21-1 — mode-parametric testing as a native, scoped toolkit capability (RFC-0034 §13 + M-796))
 
 - **Generalized the test contract into a developer-facing toolkit capability.** The §13 mode-parametric
