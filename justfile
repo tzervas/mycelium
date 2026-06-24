@@ -90,6 +90,13 @@ secrets:
 safety-check:
     @bash scripts/checks/safety.sh
 alias safety := safety-check
+# Per-use unsafe escape gate (M-793; RFC-0034 §9; sharpens ADR-014): (A) trusted-kernel crates
+# (`mycelium-core`, `-cert`, `-numerics`, `-vsa`) must retain `#![forbid(unsafe_code)]`; (B) every
+# non-kernel `unsafe` site must carry a per-use `#[allow(unsafe_code)]` (or `cfg_attr` form) within
+# 12 lines above — no crate-global `#![allow(unsafe_code)]` accepted. Pure git-grep, never skips.
+unsafe-per-use-check:
+    @bash scripts/checks/unsafe-per-use.sh
+alias unsafe-per-use := unsafe-per-use-check
 test:
     @bash scripts/checks/test.sh
 # Mycelium toolchain gates (M-361): canonical format, type-check, security audit, lint over
