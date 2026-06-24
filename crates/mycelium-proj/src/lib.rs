@@ -11,14 +11,26 @@
 //!   full TOML crate would be an ADR, not a build detail). It is honestly a subset, named as one.
 //! - [`mod@resolve`] — **top-down inheritance** (`in-file > manifest`) with per-field provenance and an
 //!   `EXPLAIN`, so a field's effective value and *source* are never ambient (G2).
+//! - [`cert_scope`] — **`@certification` mode resolution & scoping** (RFC-0034 §6; M-790): the active
+//!   [`CertMode`](mycelium_core::cert_mode::CertMode) resolved most-specific-wins over the
+//!   `global > phylum > nodule` lattice (reusing RFC-0012's scoped-override mechanism), plus the
+//!   explicit cross-mode-composition boundary ([`cert_scope::compose`]).
 //!
 //! **Metadata is not identity (ADR-003).** Nothing here perturbs a definition's content hash — these
 //! are associated, queryable fields, the human/release layer on top of content-addressing.
 
+pub mod cert_scope;
 pub mod header;
 pub mod manifest;
 pub mod resolve;
 
+#[cfg(test)]
+mod tests;
+
+pub use cert_scope::{
+    cert_mode_word, compose, explain_mode, parse_cert_mode, resolve_mode, CertDecl, CertScope,
+    CrossModeEvent, ResolvedMode,
+};
 pub use header::{
     parse_header, Deprecated, HeaderError, HeaderFields, StructuredHeader, HEADER_KEYS,
 };

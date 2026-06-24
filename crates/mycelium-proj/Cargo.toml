@@ -14,3 +14,10 @@ workspace = true
 [dependencies]
 # Reuses the L1 `// nodule:` marker recogniser (M-358); the structured header layers on top of it.
 mycelium-l1 = { path = "../mycelium-l1" }
+# The `CertMode` type (M-786) the `@certification` attribute resolves to (RFC-0034 §6; M-790). proj
+# already depends transitively on core via l1, so this introduces no new dependency cycle.
+mycelium-core = { path = "../mycelium-core" }
+
+[dev-dependencies]
+# Property-based testing for the resolution-precedence + cross-mode-boundary laws (M-790; RFC-0034 §6).
+proptest = "1"

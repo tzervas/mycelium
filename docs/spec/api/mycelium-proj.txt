@@ -1,4 +1,104 @@
 pub mod mycelium_proj
+pub mod mycelium_proj::cert_scope
+pub enum mycelium_proj::cert_scope::CertScope
+pub mycelium_proj::cert_scope::CertScope::Global
+pub mycelium_proj::cert_scope::CertScope::Nodule
+pub mycelium_proj::cert_scope::CertScope::Phylum
+impl mycelium_proj::cert_scope::CertScope
+pub const mycelium_proj::cert_scope::CertScope::ALL: [mycelium_proj::cert_scope::CertScope; 3]
+pub fn mycelium_proj::cert_scope::CertScope::label(self) -> &'static str
+pub fn mycelium_proj::cert_scope::CertScope::specificity(self) -> u8
+impl core::clone::Clone for mycelium_proj::cert_scope::CertScope
+pub fn mycelium_proj::cert_scope::CertScope::clone(&self) -> mycelium_proj::cert_scope::CertScope
+impl core::cmp::Eq for mycelium_proj::cert_scope::CertScope
+impl core::cmp::Ord for mycelium_proj::cert_scope::CertScope
+pub fn mycelium_proj::cert_scope::CertScope::cmp(&self, &mycelium_proj::cert_scope::CertScope) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::CertScope
+pub fn mycelium_proj::cert_scope::CertScope::eq(&self, &mycelium_proj::cert_scope::CertScope) -> bool
+impl core::cmp::PartialOrd for mycelium_proj::cert_scope::CertScope
+pub fn mycelium_proj::cert_scope::CertScope::partial_cmp(&self, &mycelium_proj::cert_scope::CertScope) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_proj::cert_scope::CertScope
+pub fn mycelium_proj::cert_scope::CertScope::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::CertScope
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::CertScope
+impl core::marker::Freeze for mycelium_proj::cert_scope::CertScope
+impl core::marker::Send for mycelium_proj::cert_scope::CertScope
+impl core::marker::Sync for mycelium_proj::cert_scope::CertScope
+impl core::marker::Unpin for mycelium_proj::cert_scope::CertScope
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::CertScope
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::CertScope
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::CertScope
+pub struct mycelium_proj::cert_scope::CertDecl
+pub mycelium_proj::cert_scope::CertDecl::mode: mycelium_core::cert_mode::CertMode
+pub mycelium_proj::cert_scope::CertDecl::scope: mycelium_proj::cert_scope::CertScope
+impl core::clone::Clone for mycelium_proj::cert_scope::CertDecl
+pub fn mycelium_proj::cert_scope::CertDecl::clone(&self) -> mycelium_proj::cert_scope::CertDecl
+impl core::cmp::Eq for mycelium_proj::cert_scope::CertDecl
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::CertDecl
+pub fn mycelium_proj::cert_scope::CertDecl::eq(&self, &mycelium_proj::cert_scope::CertDecl) -> bool
+impl core::fmt::Debug for mycelium_proj::cert_scope::CertDecl
+pub fn mycelium_proj::cert_scope::CertDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::CertDecl
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::CertDecl
+impl core::marker::Freeze for mycelium_proj::cert_scope::CertDecl
+impl core::marker::Send for mycelium_proj::cert_scope::CertDecl
+impl core::marker::Sync for mycelium_proj::cert_scope::CertDecl
+impl core::marker::Unpin for mycelium_proj::cert_scope::CertDecl
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::CertDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::CertDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::CertDecl
+pub struct mycelium_proj::cert_scope::CrossModeEvent
+pub mycelium_proj::cert_scope::CrossModeEvent::consumer: mycelium_core::cert_mode::CertMode
+pub mycelium_proj::cert_scope::CrossModeEvent::effective: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_proj::cert_scope::CrossModeEvent::incoming: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_proj::cert_scope::CrossModeEvent::producer: mycelium_core::cert_mode::CertMode
+impl mycelium_proj::cert_scope::CrossModeEvent
+pub fn mycelium_proj::cert_scope::CrossModeEvent::is_boundary(self) -> bool
+pub fn mycelium_proj::cert_scope::CrossModeEvent::upgraded_strength(self) -> bool
+impl core::clone::Clone for mycelium_proj::cert_scope::CrossModeEvent
+pub fn mycelium_proj::cert_scope::CrossModeEvent::clone(&self) -> mycelium_proj::cert_scope::CrossModeEvent
+impl core::cmp::Eq for mycelium_proj::cert_scope::CrossModeEvent
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::CrossModeEvent
+pub fn mycelium_proj::cert_scope::CrossModeEvent::eq(&self, &mycelium_proj::cert_scope::CrossModeEvent) -> bool
+impl core::fmt::Debug for mycelium_proj::cert_scope::CrossModeEvent
+pub fn mycelium_proj::cert_scope::CrossModeEvent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::Freeze for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::Send for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::Sync for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::Unpin for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::CrossModeEvent
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::CrossModeEvent
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::CrossModeEvent
+pub struct mycelium_proj::cert_scope::ResolvedMode
+pub mycelium_proj::cert_scope::ResolvedMode::mode: mycelium_core::cert_mode::CertMode
+pub mycelium_proj::cert_scope::ResolvedMode::source: core::option::Option<mycelium_proj::cert_scope::CertScope>
+impl mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::ResolvedMode::defaulted() -> Self
+impl core::clone::Clone for mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::ResolvedMode::clone(&self) -> mycelium_proj::cert_scope::ResolvedMode
+impl core::cmp::Eq for mycelium_proj::cert_scope::ResolvedMode
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::ResolvedMode::eq(&self, &mycelium_proj::cert_scope::ResolvedMode) -> bool
+impl core::default::Default for mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::ResolvedMode::default() -> mycelium_proj::cert_scope::ResolvedMode
+impl core::fmt::Debug for mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::ResolvedMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::Freeze for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::Send for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::Sync for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::Unpin for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::ResolvedMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::ResolvedMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::cert_mode_word(mycelium_core::cert_mode::CertMode) -> &'static str
+pub fn mycelium_proj::cert_scope::compose(mycelium_core::cert_mode::CertMode, mycelium_core::cert_mode::CertMode, mycelium_core::guarantee::GuaranteeStrength) -> mycelium_proj::cert_scope::CrossModeEvent
+pub fn mycelium_proj::cert_scope::explain_mode(&mycelium_proj::cert_scope::ResolvedMode) -> alloc::string::String
+pub fn mycelium_proj::cert_scope::parse_cert_mode(&str) -> core::result::Result<mycelium_core::cert_mode::CertMode, alloc::string::String>
+pub fn mycelium_proj::cert_scope::resolve_mode(&[mycelium_proj::cert_scope::CertDecl]) -> mycelium_proj::cert_scope::ResolvedMode
 pub mod mycelium_proj::header
 pub enum mycelium_proj::header::Deprecated
 pub mycelium_proj::header::Deprecated::Flag(bool)
@@ -43,6 +143,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::header::HeaderEr
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::header::HeaderError
 pub struct mycelium_proj::header::HeaderFields
 pub mycelium_proj::header::HeaderFields::authors: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::header::HeaderFields::certification: core::option::Option<mycelium_core::cert_mode::CertMode>
 pub mycelium_proj::header::HeaderFields::deprecated: core::option::Option<mycelium_proj::header::Deprecated>
 pub mycelium_proj::header::HeaderFields::keywords: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub mycelium_proj::header::HeaderFields::license: core::option::Option<alloc::string::String>
@@ -179,6 +280,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Manife
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::ManifestError
 pub struct mycelium_proj::manifest::Project
 pub mycelium_proj::manifest::Project::authors: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::manifest::Project::certification: core::option::Option<mycelium_core::cert_mode::CertMode>
 pub mycelium_proj::manifest::Project::keywords: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub mycelium_proj::manifest::Project::kind: mycelium_proj::manifest::ProjectKind
 pub mycelium_proj::manifest::Project::lang: core::option::Option<alloc::string::String>
@@ -302,6 +404,7 @@ impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::resolve::Reso
 impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_proj::resolve::Resolved<T> where T: core::panic::unwind_safe::UnwindSafe
 pub struct mycelium_proj::resolve::ResolvedHeader
 pub mycelium_proj::resolve::ResolvedHeader::authors: core::option::Option<mycelium_proj::resolve::Resolved<alloc::vec::Vec<alloc::string::String>>>
+pub mycelium_proj::resolve::ResolvedHeader::certification: mycelium_proj::cert_scope::ResolvedMode
 pub mycelium_proj::resolve::ResolvedHeader::deprecated: core::option::Option<mycelium_proj::header::Deprecated>
 pub mycelium_proj::resolve::ResolvedHeader::keywords: core::option::Option<mycelium_proj::resolve::Resolved<alloc::vec::Vec<alloc::string::String>>>
 pub mycelium_proj::resolve::ResolvedHeader::license: core::option::Option<mycelium_proj::resolve::Resolved<alloc::string::String>>
@@ -331,6 +434,34 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::resolve::Resolve
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::resolve::ResolvedHeader
 pub fn mycelium_proj::resolve::explain(&mycelium_proj::resolve::ResolvedHeader) -> alloc::string::String
 pub fn mycelium_proj::resolve::resolve(&mycelium_proj::header::StructuredHeader, core::option::Option<&mycelium_proj::manifest::Manifest>) -> mycelium_proj::resolve::ResolvedHeader
+pub enum mycelium_proj::CertScope
+pub mycelium_proj::CertScope::Global
+pub mycelium_proj::CertScope::Nodule
+pub mycelium_proj::CertScope::Phylum
+impl mycelium_proj::cert_scope::CertScope
+pub const mycelium_proj::cert_scope::CertScope::ALL: [mycelium_proj::cert_scope::CertScope; 3]
+pub fn mycelium_proj::cert_scope::CertScope::label(self) -> &'static str
+pub fn mycelium_proj::cert_scope::CertScope::specificity(self) -> u8
+impl core::clone::Clone for mycelium_proj::cert_scope::CertScope
+pub fn mycelium_proj::cert_scope::CertScope::clone(&self) -> mycelium_proj::cert_scope::CertScope
+impl core::cmp::Eq for mycelium_proj::cert_scope::CertScope
+impl core::cmp::Ord for mycelium_proj::cert_scope::CertScope
+pub fn mycelium_proj::cert_scope::CertScope::cmp(&self, &mycelium_proj::cert_scope::CertScope) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::CertScope
+pub fn mycelium_proj::cert_scope::CertScope::eq(&self, &mycelium_proj::cert_scope::CertScope) -> bool
+impl core::cmp::PartialOrd for mycelium_proj::cert_scope::CertScope
+pub fn mycelium_proj::cert_scope::CertScope::partial_cmp(&self, &mycelium_proj::cert_scope::CertScope) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_proj::cert_scope::CertScope
+pub fn mycelium_proj::cert_scope::CertScope::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::CertScope
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::CertScope
+impl core::marker::Freeze for mycelium_proj::cert_scope::CertScope
+impl core::marker::Send for mycelium_proj::cert_scope::CertScope
+impl core::marker::Sync for mycelium_proj::cert_scope::CertScope
+impl core::marker::Unpin for mycelium_proj::cert_scope::CertScope
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::CertScope
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::CertScope
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::CertScope
 pub enum mycelium_proj::Deprecated
 pub mycelium_proj::Deprecated::Flag(bool)
 pub mycelium_proj::Deprecated::Reason(alloc::string::String)
@@ -388,6 +519,49 @@ impl core::marker::Unpin for mycelium_proj::manifest::ProjectKind
 impl core::marker::UnsafeUnpin for mycelium_proj::manifest::ProjectKind
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::ProjectKind
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::ProjectKind
+pub struct mycelium_proj::CertDecl
+pub mycelium_proj::CertDecl::mode: mycelium_core::cert_mode::CertMode
+pub mycelium_proj::CertDecl::scope: mycelium_proj::cert_scope::CertScope
+impl core::clone::Clone for mycelium_proj::cert_scope::CertDecl
+pub fn mycelium_proj::cert_scope::CertDecl::clone(&self) -> mycelium_proj::cert_scope::CertDecl
+impl core::cmp::Eq for mycelium_proj::cert_scope::CertDecl
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::CertDecl
+pub fn mycelium_proj::cert_scope::CertDecl::eq(&self, &mycelium_proj::cert_scope::CertDecl) -> bool
+impl core::fmt::Debug for mycelium_proj::cert_scope::CertDecl
+pub fn mycelium_proj::cert_scope::CertDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::CertDecl
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::CertDecl
+impl core::marker::Freeze for mycelium_proj::cert_scope::CertDecl
+impl core::marker::Send for mycelium_proj::cert_scope::CertDecl
+impl core::marker::Sync for mycelium_proj::cert_scope::CertDecl
+impl core::marker::Unpin for mycelium_proj::cert_scope::CertDecl
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::CertDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::CertDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::CertDecl
+pub struct mycelium_proj::CrossModeEvent
+pub mycelium_proj::CrossModeEvent::consumer: mycelium_core::cert_mode::CertMode
+pub mycelium_proj::CrossModeEvent::effective: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_proj::CrossModeEvent::incoming: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_proj::CrossModeEvent::producer: mycelium_core::cert_mode::CertMode
+impl mycelium_proj::cert_scope::CrossModeEvent
+pub fn mycelium_proj::cert_scope::CrossModeEvent::is_boundary(self) -> bool
+pub fn mycelium_proj::cert_scope::CrossModeEvent::upgraded_strength(self) -> bool
+impl core::clone::Clone for mycelium_proj::cert_scope::CrossModeEvent
+pub fn mycelium_proj::cert_scope::CrossModeEvent::clone(&self) -> mycelium_proj::cert_scope::CrossModeEvent
+impl core::cmp::Eq for mycelium_proj::cert_scope::CrossModeEvent
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::CrossModeEvent
+pub fn mycelium_proj::cert_scope::CrossModeEvent::eq(&self, &mycelium_proj::cert_scope::CrossModeEvent) -> bool
+impl core::fmt::Debug for mycelium_proj::cert_scope::CrossModeEvent
+pub fn mycelium_proj::cert_scope::CrossModeEvent::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::Freeze for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::Send for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::Sync for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::Unpin for mycelium_proj::cert_scope::CrossModeEvent
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::CrossModeEvent
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::CrossModeEvent
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::CrossModeEvent
 pub struct mycelium_proj::Dependency
 pub mycelium_proj::Dependency::hash: core::option::Option<alloc::string::String>
 pub mycelium_proj::Dependency::name: alloc::string::String
@@ -433,6 +607,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::header::HeaderEr
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::header::HeaderError
 pub struct mycelium_proj::HeaderFields
 pub mycelium_proj::HeaderFields::authors: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::HeaderFields::certification: core::option::Option<mycelium_core::cert_mode::CertMode>
 pub mycelium_proj::HeaderFields::deprecated: core::option::Option<mycelium_proj::header::Deprecated>
 pub mycelium_proj::HeaderFields::keywords: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub mycelium_proj::HeaderFields::license: core::option::Option<alloc::string::String>
@@ -503,6 +678,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Manife
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::ManifestError
 pub struct mycelium_proj::Project
 pub mycelium_proj::Project::authors: core::option::Option<alloc::vec::Vec<alloc::string::String>>
+pub mycelium_proj::Project::certification: core::option::Option<mycelium_core::cert_mode::CertMode>
 pub mycelium_proj::Project::keywords: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub mycelium_proj::Project::kind: mycelium_proj::manifest::ProjectKind
 pub mycelium_proj::Project::lang: core::option::Option<alloc::string::String>
@@ -547,6 +723,7 @@ impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::resolve::Reso
 impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_proj::resolve::Resolved<T> where T: core::panic::unwind_safe::UnwindSafe
 pub struct mycelium_proj::ResolvedHeader
 pub mycelium_proj::ResolvedHeader::authors: core::option::Option<mycelium_proj::resolve::Resolved<alloc::vec::Vec<alloc::string::String>>>
+pub mycelium_proj::ResolvedHeader::certification: mycelium_proj::cert_scope::ResolvedMode
 pub mycelium_proj::ResolvedHeader::deprecated: core::option::Option<mycelium_proj::header::Deprecated>
 pub mycelium_proj::ResolvedHeader::keywords: core::option::Option<mycelium_proj::resolve::Resolved<alloc::vec::Vec<alloc::string::String>>>
 pub mycelium_proj::ResolvedHeader::license: core::option::Option<mycelium_proj::resolve::Resolved<alloc::string::String>>
@@ -574,6 +751,29 @@ impl core::marker::Unpin for mycelium_proj::resolve::ResolvedHeader
 impl core::marker::UnsafeUnpin for mycelium_proj::resolve::ResolvedHeader
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::resolve::ResolvedHeader
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::resolve::ResolvedHeader
+pub struct mycelium_proj::ResolvedMode
+pub mycelium_proj::ResolvedMode::mode: mycelium_core::cert_mode::CertMode
+pub mycelium_proj::ResolvedMode::source: core::option::Option<mycelium_proj::cert_scope::CertScope>
+impl mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::ResolvedMode::defaulted() -> Self
+impl core::clone::Clone for mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::ResolvedMode::clone(&self) -> mycelium_proj::cert_scope::ResolvedMode
+impl core::cmp::Eq for mycelium_proj::cert_scope::ResolvedMode
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::ResolvedMode::eq(&self, &mycelium_proj::cert_scope::ResolvedMode) -> bool
+impl core::default::Default for mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::ResolvedMode::default() -> mycelium_proj::cert_scope::ResolvedMode
+impl core::fmt::Debug for mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_proj::cert_scope::ResolvedMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::Freeze for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::Send for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::Sync for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::Unpin for mycelium_proj::cert_scope::ResolvedMode
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::ResolvedMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::ResolvedMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::ResolvedMode
 pub struct mycelium_proj::SporeConfig
 pub mycelium_proj::SporeConfig::include: alloc::vec::Vec<alloc::string::String>
 impl core::clone::Clone for mycelium_proj::manifest::SporeConfig
@@ -651,7 +851,12 @@ impl core::marker::UnsafeUnpin for mycelium_proj::manifest::Toolchain
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::Toolchain
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::Toolchain
 pub const mycelium_proj::HEADER_KEYS: &[&str]
+pub fn mycelium_proj::cert_mode_word(mycelium_core::cert_mode::CertMode) -> &'static str
+pub fn mycelium_proj::compose(mycelium_core::cert_mode::CertMode, mycelium_core::cert_mode::CertMode, mycelium_core::guarantee::GuaranteeStrength) -> mycelium_proj::cert_scope::CrossModeEvent
 pub fn mycelium_proj::explain(&mycelium_proj::resolve::ResolvedHeader) -> alloc::string::String
+pub fn mycelium_proj::explain_mode(&mycelium_proj::cert_scope::ResolvedMode) -> alloc::string::String
+pub fn mycelium_proj::parse_cert_mode(&str) -> core::result::Result<mycelium_core::cert_mode::CertMode, alloc::string::String>
 pub fn mycelium_proj::parse_header(&str) -> core::result::Result<core::option::Option<mycelium_proj::header::StructuredHeader>, mycelium_proj::header::HeaderError>
 pub fn mycelium_proj::parse_manifest(&str) -> core::result::Result<mycelium_proj::manifest::Manifest, mycelium_proj::manifest::ManifestError>
 pub fn mycelium_proj::resolve(&mycelium_proj::header::StructuredHeader, core::option::Option<&mycelium_proj::manifest::Manifest>) -> mycelium_proj::resolve::ResolvedHeader
+pub fn mycelium_proj::resolve_mode(&[mycelium_proj::cert_scope::CertDecl]) -> mycelium_proj::cert_scope::ResolvedMode

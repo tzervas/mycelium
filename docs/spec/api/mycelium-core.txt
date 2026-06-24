@@ -708,6 +708,8 @@ pub fn mycelium_core::meta::Meta::sparsity(&self) -> core::option::Option<myceli
 pub fn mycelium_core::meta::Meta::with_cert_mode(self, mycelium_core::cert_mode::CertMode) -> Self
 pub fn mycelium_core::meta::Meta::with_physical(self, mycelium_core::meta::PhysicalLayout) -> Self
 pub fn mycelium_core::meta::Meta::with_reconstruction(self, mycelium_core::recon::ReconInfo) -> Self
+pub fn mycelium_core::meta::Meta::with_wrapping(self, mycelium_core::wrapping::WrappingOpt) -> Self
+pub fn mycelium_core::meta::Meta::wrapping_opt(&self) -> core::option::Option<mycelium_core::wrapping::WrappingOpt>
 impl core::clone::Clone for mycelium_core::meta::Meta
 pub fn mycelium_core::meta::Meta::clone(&self) -> mycelium_core::meta::Meta
 impl core::cmp::PartialEq for mycelium_core::meta::Meta
@@ -1353,6 +1355,28 @@ impl core::marker::Unpin for mycelium_core::value::Value
 impl core::marker::UnsafeUnpin for mycelium_core::value::Value
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Value
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Value
+pub mod mycelium_core::wrapping
+pub struct mycelium_core::wrapping::WrappingOpt
+impl mycelium_core::wrapping::WrappingOpt
+pub const fn mycelium_core::wrapping::WrappingOpt::new() -> Self
+impl core::clone::Clone for mycelium_core::wrapping::WrappingOpt
+pub fn mycelium_core::wrapping::WrappingOpt::clone(&self) -> mycelium_core::wrapping::WrappingOpt
+impl core::cmp::Eq for mycelium_core::wrapping::WrappingOpt
+impl core::cmp::PartialEq for mycelium_core::wrapping::WrappingOpt
+pub fn mycelium_core::wrapping::WrappingOpt::eq(&self, &mycelium_core::wrapping::WrappingOpt) -> bool
+impl core::default::Default for mycelium_core::wrapping::WrappingOpt
+pub fn mycelium_core::wrapping::WrappingOpt::default() -> Self
+impl core::fmt::Debug for mycelium_core::wrapping::WrappingOpt
+pub fn mycelium_core::wrapping::WrappingOpt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::wrapping::WrappingOpt
+impl core::marker::StructuralPartialEq for mycelium_core::wrapping::WrappingOpt
+impl core::marker::Freeze for mycelium_core::wrapping::WrappingOpt
+impl core::marker::Send for mycelium_core::wrapping::WrappingOpt
+impl core::marker::Sync for mycelium_core::wrapping::WrappingOpt
+impl core::marker::Unpin for mycelium_core::wrapping::WrappingOpt
+impl core::marker::UnsafeUnpin for mycelium_core::wrapping::WrappingOpt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::wrapping::WrappingOpt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::wrapping::WrappingOpt
 pub enum mycelium_core::Alt
 pub mycelium_core::Alt::Ctor
 pub mycelium_core::Alt::Ctor::binders: alloc::vec::Vec<mycelium_core::node::VarId>
@@ -2261,6 +2285,8 @@ pub fn mycelium_core::meta::Meta::sparsity(&self) -> core::option::Option<myceli
 pub fn mycelium_core::meta::Meta::with_cert_mode(self, mycelium_core::cert_mode::CertMode) -> Self
 pub fn mycelium_core::meta::Meta::with_physical(self, mycelium_core::meta::PhysicalLayout) -> Self
 pub fn mycelium_core::meta::Meta::with_reconstruction(self, mycelium_core::recon::ReconInfo) -> Self
+pub fn mycelium_core::meta::Meta::with_wrapping(self, mycelium_core::wrapping::WrappingOpt) -> Self
+pub fn mycelium_core::meta::Meta::wrapping_opt(&self) -> core::option::Option<mycelium_core::wrapping::WrappingOpt>
 impl core::clone::Clone for mycelium_core::meta::Meta
 pub fn mycelium_core::meta::Meta::clone(&self) -> mycelium_core::meta::Meta
 impl core::cmp::PartialEq for mycelium_core::meta::Meta
@@ -2502,6 +2528,27 @@ impl core::marker::Unpin for mycelium_core::value::Value
 impl core::marker::UnsafeUnpin for mycelium_core::value::Value
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Value
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Value
+pub struct mycelium_core::WrappingOpt
+impl mycelium_core::wrapping::WrappingOpt
+pub const fn mycelium_core::wrapping::WrappingOpt::new() -> Self
+impl core::clone::Clone for mycelium_core::wrapping::WrappingOpt
+pub fn mycelium_core::wrapping::WrappingOpt::clone(&self) -> mycelium_core::wrapping::WrappingOpt
+impl core::cmp::Eq for mycelium_core::wrapping::WrappingOpt
+impl core::cmp::PartialEq for mycelium_core::wrapping::WrappingOpt
+pub fn mycelium_core::wrapping::WrappingOpt::eq(&self, &mycelium_core::wrapping::WrappingOpt) -> bool
+impl core::default::Default for mycelium_core::wrapping::WrappingOpt
+pub fn mycelium_core::wrapping::WrappingOpt::default() -> Self
+impl core::fmt::Debug for mycelium_core::wrapping::WrappingOpt
+pub fn mycelium_core::wrapping::WrappingOpt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::wrapping::WrappingOpt
+impl core::marker::StructuralPartialEq for mycelium_core::wrapping::WrappingOpt
+impl core::marker::Freeze for mycelium_core::wrapping::WrappingOpt
+impl core::marker::Send for mycelium_core::wrapping::WrappingOpt
+impl core::marker::Sync for mycelium_core::wrapping::WrappingOpt
+impl core::marker::Unpin for mycelium_core::wrapping::WrappingOpt
+impl core::marker::UnsafeUnpin for mycelium_core::wrapping::WrappingOpt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::wrapping::WrappingOpt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::wrapping::WrappingOpt
 pub fn mycelium_core::operation_hash(&str) -> mycelium_core::id::ContentHash
 pub type mycelium_core::PolicyRef = mycelium_core::id::ContentHash
 pub type mycelium_core::Prim = alloc::string::String

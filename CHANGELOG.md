@@ -8,6 +8,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: E21-1 Group-B Wave-1 — M-789/M-790/M-791 + M-788 ratified)
+
+- **M-788 bound/basis decision RATIFIED** (maintainer, 2026-06-24): when `fast` floors a computed
+  `Proven`/`Empirical` result to `Declared`, keep the computed bound *value* and relabel its basis to
+  `UserDeclared` (`CertMode::gate_result`) is the settled approach; the `BoundBasis::ModeFloored`
+  refinement is set aside.
+- **M-789** (`mycelium-spore`, `mycelium-mlir`) — spore identity + MLIR hot-inject/ABI dispatch keys are
+  **`Proven`-by-construction independent of `CertMode`** (content_address/dispatch-key hash only
+  code+deps+surface+kind; `CertMode` rides `Meta`, excluded per RFC-0001 §4.6 / ADR-003), exhaustively
+  tested over `CertMode::ALL` — a spore is mintable + content-addressed in `fast` (RFC-0034 §8). The
+  embedded/no-deploy compile-hash *disable* path is flagged as an open gap (`Declared` + TODO; never-silent, G2).
+- **M-790** (`mycelium-proj`) — `@certification` resolution + scoping, most-specific-wins `global > phylum >
+  nodule` (RFC-0034 §6) **reusing the RFC-0012 scoped-override mechanism** (no new scoping machinery);
+  `resolve_mode` order-independent, defaults `Fast` with **named provenance (never ambient)**; cross-mode
+  `compose` floors by the **producer's** mode (never a silent upgrade, VR-5/§3.1). **Resolves M-788's FLAG-2**
+  (the deferred mode source). Two maintainer flags pending: surface spelling (lowercase `fast|balanced|certified`),
+  and v0 single-manifest modeled at the `phylum` tier with `Global` reserved for multi-manifest/workspace.
+- **M-791** (`mycelium-core`) — named, explicit `WrappingOpt` Axis-B opt-out marker on `Meta` (RFC-0034 §10);
+  Axis-B never-silent failability stays default-on in every mode; the wraparound *op-layer wiring* is downstream.
+- **M-797 (as-touched):** all three leaves extracted their inline `#[cfg(test)]` tests to in-crate `src/tests/`.
+- Statuses: `issues.yaml` M-786..M-791 → `done`. api baselines (core/proj) + agent index regenerated.
+
 ### Added (2026-06-24: M-788 — mode-gated swap-cert emission/checking + bound/basis reconciliation)
 
 - **`CertMode::gate_result(intended_guarantee, intended_bound) -> (GuaranteeStrength, Option<Bound>)`**
