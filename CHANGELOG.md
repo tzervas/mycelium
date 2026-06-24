@@ -8,6 +8,162 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-23: E19-1 — Tier-1 kernel enablers landed (M-747, M-748); implemented, pending ratification)
+
+- **M-747 — reduce-to-`Bool` comparison/equality prims `eq`/`lt`** (RFC-0032 D1). New kernel prims
+  `cmp.eq`/`cmp.lt` (`crates/mycelium-interp/src/prims.rs`) over `Binary{N}`/`Ternary{N}`: each takes
+  two equal-width same-paradigm operands and returns `Binary{1}` (`0b1` = true), guarantee **`Exact`**.
+  `eq` is structural width-typed equality; `lt` is the D1 total order (unsigned magnitude for Binary,
+  balanced-integer value for Ternary, MSB-first lexicographic). Surfaced `eq`/`lt` via a dedicated
+  **width-collapsing** checker branch (operands `T{N}` → `Binary{1}` does not fit the width-preserving
+  `prim_family` path). Cross-paradigm / mismatched-width / bare-decimal comparands are explicit
+  never-silent refusals (G2). **Realization note (engineering call, Q1):** a kernel prim returns a
+  representation value, never a `.myc` data value, so D1's `Bool` bottoms out as `Binary{1}`; the
+  `.myc` `std.cmp` lift to the `Bool` ADT is a one-line match (demonstrated by the bool-bridge smoke
+  port — the E13-1 M-718 consumer). Declared in the content-addressed Π table with a new
+  **`WidthRel::Collapse`** (the sanctioned "new width rule = a variant" extension). **Unblocks** E13-1
+  M-718 (width-typed `cmp`/`Eq`/`Ord`). (RFC-0032 D1; E19-1/M-747)
+- **M-748 — never-silent fixed-width binary arithmetic** (RFC-0032 D2). Surface the already-registered
+  `bit.and`/`bit.or` (`and`/`or`); add kernel prims `bit.add`/`bit.sub` (surface `add_bin`/`sub_bin`):
+  unsigned ripple-carry add / ripple-borrow subtract over `Binary{N}`, guarantee **`Exact`** on the
+  in-range result. A result outside `[0, 2^N)` is an explicit `EvalError::Overflow`, **never** a silent
+  wrap — mirroring the `trit.*` in-range contract (G2). Distinct surface names from the trit-backed
+  `add`/`sub`. **Unblocks** E13-1 M-718 (binary `math`). (RFC-0032 D2; E19-1/M-748)
+- **M-752 (partial — Tier-1) — enablement conformance.** `crates/mycelium-l1/tests/enablement.rs`:
+  three-way differential smoke ports (L1-eval ≡ L0-interp ≡ AOT) per unblocked surface + never-silent
+  refusal tests (overflow/underflow refuse on every path; mismatch refuses statically), plus a
+  `Bool`-bridge port. Prim unit/mutant-witness tests + Π/surface consistency guards extended.
+  `docs/api-index/` + the `mycelium-core` public-API baseline regenerated (deterministic). RFC-0032
+  stays **Accepted** (not Enacted) — specs are "implemented, pending ratification" (VR-5). The Tier-2
+  reprs (M-749 `Repr::Seq` / M-750 `Repr::Bytes`) are KC-3-significant, maintainer-sign-off-gated core
+  additions and are **not** in this change. (RFC-0032 D7; E19-1/M-752)
+### Changed (2026-06-23: RFC-0026 → Accepted — editor-grammar scope names ratified; M-693 done, M-731 finalized; E16-1 epic `done`)
+
+- **RFC-0026 — Editor Syntax Highlighting Grammar → Accepted** (M-693, the E9-1 gate; Draft → Proposed
+  → Accepted same day, maintainer-ratified). §3 fixed normatively: **§3.1** artifact scope (the three
+  grammar layers — TextMate · tree-sitter · LSP semantic tokens — are the E9-1/E16-1 gate; the VS Code
+  extension + GitHub Linguist registration are the **M-697** follow-up); **§3.2** the scope-name table
+  — **standard names per layer** (TextMate scopes carry a `.mycelium` suffix; tree-sitter captures and
+  LSP token types are the standard *unsuffixed* names — chosen for maximal theme compatibility, §5 Q2)
+  mapped over the **lexer-derived** keyword/type/scalar/strength buckets; **§3.3**
+  the single-source-of-truth/drift contract (already implemented: `tools/grammar/generate.py` +
+  `just drift-check`). **DN-24 → Resolved** (its recommended layered stack adopted). (M-693; RFC-0026)
+- **M-731 finalized — editor grammars now ship ratified scope names.** The `TODO.rfc-0026.*`
+  placeholders are replaced with the RFC-0026 §3.2 names: TextMate (`keyword.control.mycelium`,
+  `storage.type.mycelium`, `support.type.builtin.mycelium`, `storage.modifier.guarantee.mycelium`,
+  `comment.line.double-slash.mycelium`, `constant.numeric.mycelium`), tree-sitter captures
+  (`@keyword`/`@type`/`@type.builtin`/`@attribute`/…), and the LSP legend (the M-730 semantic-token
+  types are that table's LSP layer). Still **lexer-derived + drift-checked** (G2 — `just drift-check`
+  green). Subsumes the E9-1 leaves **M-694** (TextMate) / **M-695** (tree-sitter scaffold) / **M-696**
+  (LSP semantic tokens). The full structural tree-sitter grammar + M-697 packaging remain follow-ups.
+  (M-731; M-694/M-695/M-696)
+- **Epic E16-1 → `done`** (all five children landed: M-730/M-731/M-732/M-733/M-734). **E9-1 →
+  `in-progress`** (M-693 + M-694/M-695/M-696 done; **M-697** VS Code extension + Linguist remains). (E16-1; E9-1)
+
+### Added (2026-06-23: ADR-024 — Core 1.0.0 Gate (T1) scope amendment, enacting RFC-0032 D6 append-only)
+
+- **ADR-024 — Core 1.0.0 Gate (Track T1) Scope Amendment → Accepted.** The house-rule-correct
+  (supersede-to-change-criteria — house rule #3) capture of RFC-0032 §5 D6: it **amends ADR-022 track
+  T1** to add epic **E19-1** (the kernel self-hosting-enablement surface — `eq`/`lt` prims, binary
+  arithmetic, `Repr::Seq`, `Repr::Bytes`) to the `core 1.0.0` Definition of Done, so the stdlib is
+  fully `.myc`-self-hosted at the tag. A **scoped amendment**, not a wholesale supersession: ADR-022's
+  dual-version model + tracks T2–T9 + the preserved ADR-021 Gate A/B rows all remain in force and
+  **unchanged + met**; `M-703` now `depends_on` E19-1. ADR-022 is touched only with an append-only
+  "amended by ADR-024" pointer (§4 note + §5 T1 row + changelog) — its normative §4/§5 criteria text is
+  **not** rewritten (resolves Copilot #514: the earlier in-place criteria edit was reverted, then
+  enacted here via the proper mechanism). All criteria `Declared` until each E19-1 leaf lands
+  differential-tested (VR-5). →Enacted with ADR-022 T1 at the `core 1.0.0` tag. (ADR-024; RFC-0032 D6;
+  E19-1)
+
+### Changed (2026-06-23: RFC-0032 → Accepted — the kernel self-hosting-enablement surface ratified; M-746)
+
+- **RFC-0032 — Kernel Self-Hosting Enablement Surface → Accepted** (M-746, the E19-1 gate). §5 D1–D7
+  ratified: **D1** `eq`/`lt` comparison prims over `Binary{N}`/`Ternary{N}` (→ `Bool`, `Exact`; `cmp`/
+  `Ordering` derives in `.myc`); **D2** binary arithmetic (surface the registered `bit.and`/`bit.or` +
+  add a never-silent carry-chain `add`/`sub` — overflow is an explicit error, never a silent wrap, G2);
+  **D3** a first-class **`Repr::Seq`** (indexed sequence + never-silent `get`/`push`) for efficient
+  `Vec`/`Map`/`Set`; **D4** a dedicated **`Repr::Bytes`** (byte/string value + never-silent UTF-8
+  decode) for `text`/`fmt`; **D5** width-generics → **E11-1/`s10`** (M-751 closed as a pointer to the
+  new **M-753** under E11-1; E13-1 M-718 `depends_on` repointed); **D6** placement **in `core 1.0.0`**
+  (maintainer); **D7** sequencing (comparison → binary-arith → `Repr::Seq` → `Repr::Bytes` →
+  conformance). Enablers **M-747…M-750 → `todo`** (RFC gate cleared); E19-1 → in-progress.
+- **D6 governance (append-only — house rule #3 + Copilot #514).** "In `core 1.0.0`" extends ADR-022
+  track T1's Definition of Done (the core tag waits on E19-1) — a *criteria* change to an **Accepted**
+  ADR, which ADR-022's Status requires capturing by **supersession**, not an in-place edit. The earlier
+  in-place §4/§5 amendment was **reverted**, and the change is now enacted append-only by the focused
+  amending **ADR-024** (Accepted 2026-06-23 — see the entry above): ADR-022's §4/§5 criteria text stays
+  pristine (only an "amended by ADR-024" pointer), the decision lives in RFC-0032 D6, and `M-703`
+  `depends_on` E19-1. (RFC-0032 D6; ADR-024; ADR-022 §4; E19-1/M-746)
+
+### Added (2026-06-23: E19-1 — kernel self-hosting-enablement work leg scaffolded; RFC-0032 Draft + kickoff `kpr`)
+
+- **New work leg E19-1 + RFC-0032 (Draft) — the kernel surface that unblocks E13-1's blocked tiers.**
+  RFC-0031 §5 D4 found Tier-0 executable (landed, M-715) but Tier-1/Tier-2 blocked on kernel surface
+  that does not exist: a reduce-to-`Bool` comparison prim + binary arithmetic (Tier-1), and
+  sequence/array + byte/string value representations (Tier-2 — the value model `Repr` =
+  `Binary`/`Ternary`/`Dense`/`Vsa` has neither). These **enlarge the value model / trusted base
+  (KC-3)**, so the leg is **design-gated** by `docs/rfcs/RFC-0032-Kernel-Self-Hosting-Enablement-Surface.md`
+  (Draft stub — 7 open questions: prim shape, binary-overflow semantics, whether an indexed `Repr` is
+  required vs the recursive-ADT `List`, string repr, width-generics ownership, the core-1.0.0-vs-post-1.0.0
+  placement against ADR-022, and sequencing). Epic **E19-1** + issues **M-746** (RFC authoring, the gate)
+  → **M-747** (comparison prim) · **M-748** (binary arithmetic) · **M-749** (sequence repr) · **M-750**
+  (byte/string repr) · **M-751** (width-generic fns — ownership per RFC-0032 Q5) → **M-752** (conformance +
+  `.myc` smoke ports). Cross-leg continuity wired via `depends_on`: E13-1 M-716 ⟸ M-749, M-717 ⟸ M-750,
+  M-718 ⟸ M-747/M-748/M-751. Kickoff **`kpr`** stowed (`.claude/kickoffs/kpr.md`, registered in the
+  index) — owns `crates/mycelium-interp/src/prims.rs` + the `prim_kernel_name` map; the `mycelium-core`
+  reprs + L1 width-generics are flagged **coordinated** with `c10`/`s10` (maintainer sign-off on the
+  RFC-0032 KC-3/placement before merge — architecturally significant, flag-don't-guess). No kernel code
+  changed yet (planning + design-gate scaffolding only). **Maintainer direction recorded (2026-06-23,
+  for M-746 to ratify):** RFC-0032 Q6 = **in `core` 1.0.0** (the reprs/prims land before the 1.0.0 tag
+  → E19-1 becomes a core-1.0.0 gate prerequisite; ADR-022 T1 / E10-1 / `c10` need a maintainer update so
+  the core tag accounts for E19-1 — flagged, not edited here); Q5 = **E11-1/`s10`** (width-generics
+  reassigned; M-751 → pointer). (RFC-0032; E19-1/M-746)
+### Added (2026-06-23: E16-1 — toolchain, IDE & package distribution; M-730/M-732/M-733/M-734 `done`, M-731 scaffold)
+
+- **Full LSP providers — `mycelium-lsp` hover / go-to-definition / semantic tokens (M-730).** Three
+  position-aware providers extend the server beyond completions/diagnostics/fmt: `textDocument/
+  semanticTokens/full` (a standard LSP legend + relative-delta encoding, classified by token kind),
+  `textDocument/hover` (grounded descriptions for keywords, substrate types, and guarantee-strength
+  tokens), and `textDocument/definition` (single-document `fn`/`type`/`trait` navigation). A shared
+  lexical span layer recovers token lengths from the canonical L1 lexer without duplicating it.
+  **Honest scope (`Declared`/VR-5):** classification is lexical, hover **refuses to fabricate** an
+  identifier's type/guarantee (it flags the absence instead), definition is single-document, and an
+  unknown position/symbol is a null result — never-silent (G2). Capabilities advertised; all prior
+  tests green; clippy `-D warnings` clean. (M-730)
+- **Editor-grammar generator + drift gate — `tools/grammar/` (M-731; SCAFFOLD).** A generator derives
+  the keyword set + class buckets (keyword/type/scalar/strength) from `token.rs::keyword()` and renders
+  TextMate (`.tmLanguage.json`) + tree-sitter (`grammar.js` + `highlights.scm`) artifacts; `just
+  drift-check` (wired into `just check`) fails on any divergence from the lexer (G2 — the grammars can
+  never silently drift from the language the compiler accepts). **Honestly a scaffold (VR-5):** RFC-0026
+  §3.2 (the scope-name table) is still `Draft`, so the TextMate/tree-sitter scope names are emitted as
+  explicit `TODO.rfc-0026.*` placeholders — **not finalized, never guessed**; they land when RFC-0026 is
+  Accepted (M-693). (M-731 — `in-progress`)
+- **`spore` registry — publish / resolve (M-732).** `mycelium-spore` grows from the build artifact to a
+  package manager: a local, content-addressed store where `publish` records the descriptor bytes by
+  BLAKE3 (the `artifact` integrity hash) plus an index entry carrying the `spore_id` DAG identity
+  (ADR-003), and `resolve` fetches by name + exact-version-or-`latest` and **verifies the bytes against
+  the recorded address before returning**. Never-silent (G2): republishing a different artifact under an
+  existing `name@version` is a refused `Conflict` (immutability); a missing/tampered object is an
+  `Integrity` error; a SemVer **range** is an explicit `Unsupported` error (v0 never mis-resolves a range
+  it cannot honestly evaluate — ADR-018 deferred). proptest hash-verification bound; `spore publish`/
+  `resolve` CLI subcommands. (M-732)
+- **`myc` one-command toolchain driver — `mycelium-cli` (new crate; M-733).** `myc init|build|check|
+  test|run` over a phylum, calling the real library APIs directly (no fragile subprocess plumbing).
+  `init` scaffolds a gate-clean phylum (refuses a bad name, never overwrites — G2); `build` packages the
+  spore; `check` parses + type-checks every `.myc` via the L1 front-end; `test` runs the check
+  verification (explicit that a `.myc` unit-test runner is future work — not faked); `run` is **honestly
+  not-yet-wired** and reports so with an actionable message + exit 70, never a silent no-op. **Error
+  quality bar (DN-22/RFC-0013):** every failure is a structured `Report` (`error[<code>]: <message>` +
+  `--> location` + `help:`) — no raw Rust panic reaches the user. (M-733)
+- **Reproducible toolchain distribution — `scripts/dist/` (M-734).** A pinned, content-addressed install
+  path: `install.sh` verifies a toolchain artifact against a committed self-describing content-address
+  pin (`blake3`/ADR-003 when `b3sum` is present, else `sha256`) before copying it into place; re-running
+  on the same pin is byte-identical, and a tampered/missing/added file is a never-silent integrity error
+  (G2). **Strict, never skip-graceful:** a missing hasher hard-fails (exit 69) rather than skipping the
+  check. `just dist-verify` self-tests the mechanism end-to-end. **Honest scope (VR-5):** pinning the
+  actual compiler binaries additionally needs a reproducible release *build* (deferred); the
+  pin/verify/install mechanism is what landed. (M-734)
+
 ### Added (2026-06-23: E14-1 completion — M-722/M-723 syscall floor wired + data guarantee matrix; epic `done`)
 
 - **`mycelium-std-sys` guarantee matrix encoded as data (`guarantee_matrix.rs`; M-722).** The prior
@@ -34,6 +190,35 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   per-op byte encoding that makes the byte-oriented `io`/`fs` ops reachable from a `wild { io.write(…) }`
   block is the `@std-sys`-author host encoding, still uncommitted in §4.4; the entropy/clock seams are
   wired today and the io/fs surface encoding follows when §4.4 lands. (E14-1; VR-5/G2)
+
+### Added (2026-06-23: E13-1 — self-hosted stdlib composition ratified + the executable core/prelude; RFC-0031 Accepted; M-714/M-715 Tier-0)
+
+- **RFC-0031 — Self-Hosted Standard Library Composition → Accepted** (M-714, the E13-1 gate). §5 D1–D7
+  ratified: **D1** the irreducible-Rust boundary (`mycelium-core`/`l0`/`l1`/`cert`/`swap`/`interp::prims`/
+  `mlir`/`std-sys` stay Rust) + the decision criterion (trust-root / bootstrap-floor / value-model-FFI /
+  unsafe-ABI); **D2** phylum layout (`std.<module>` → `lib/std/<module>.myc`, crate-mirrored); **D3** no
+  bootstrap circularity (the Rust frontend compiles the `.myc` stdlib; ring layering forbids `use`-cycles);
+  **D4** the surface-readiness-**tiered** migration order — the honesty crux (VR-5): only the
+  structural/polymorphic core is executable today, so `collections`/`iter`/`text`/`fmt` (Tier-2) and
+  width-typed `cmp`/`math` (Tier-1) are sequenced **behind** the kernel prims (a reduce-to-`Bool`
+  comparison, binary arithmetic, a sequence/string representation) that would enable them — never claimed
+  ahead; **D5** the per-op stability bar + the `std_result`/`std_option`/`std_cmp` differential-test
+  prototype pattern; **D6** the `mycelium-std-*` Rust crate kept as the differential oracle (deprecated, not
+  removed); **D7** one `spore` per phylum. (RFC-0031; E13-1/M-714)
+- **M-715 (Tier-0) — the executable core/prelude self-hosts.** `lib/std/option.myc` (`Option<A>` +
+  `is_some`/`is_none`/`unwrap_or`/`map`/`and_then`/`fold`/`or_else`/`flatten`, the never-silent sibling of
+  `std.result`), `lib/std/cmp.myc` (`Ordering` + `is_lt`/`is_eq`/`is_gt`/`reverse` + structural
+  `bool_eq`/`bool_cmp`/`ord_eq` over the finite kernel types), and an extended `lib/std/result.myc`
+  (`map_err`/`or_else` added to the M-649 surface) are written in `.myc`, three-way **differential-tested**
+  (L1-eval ≡ L0-interp ≡ AOT — `crates/mycelium-l1/tests/std_option.rs` + `std_cmp.rs` + `std_result.rs`,
+  44 tests green via the M-649 harness), and registered in the `std` phylum manifest
+  (`lib/std/mycelium-proj.toml`). Honest tags (VR-5): total finite/structural ops `Exact`; generic
+  combinators `Declared`; differential agreement `Empirical`.
+  Never-silent (G2): `unwrap_or`/`fold` take a caller-supplied fallback — `None` never silently becomes a
+  value. **Honestly deferred:** width-typed `cmp`/`Eq`/`Ord` (needs a comparison prim → Tier-1, blocks with
+  M-718) and the `iter` trait surface (needs a concrete sequence → Tier-2, blocks with M-716) are *not*
+  claimed self-hosted ahead of their enabling surface. M-716/M-717/M-718 moved to `status:blocked` with the
+  explicit kernel-prim precondition recorded; E13-1 → `in-progress`. (RFC-0031 §5 D4/D5; E13-1/M-715)
 
 ### Added (2026-06-23: E14-1 — the `wild`/FFI execution floor executes; RFC-0028 Accepted; M-720/M-721/M-722/M-724)
 

@@ -341,3 +341,65 @@ fn main() -> Binary{8} = fold(mk_err(), id_val, const_zero)";
     let expected = "nodule ref\nfn main() -> Binary{8} = xor(0b1111_0000, 0b1111_0000)";
     assert_three_way("fold(Err, id_val, const_zero)", &src, expected);
 }
+
+// ── map_err (M-715 — the Err-side mirror of map) ──────────────────────────────────────────────────
+//
+// Helper: `not_val(e) = not(e)`. The error is transformed; an Ok passes through untouched.
+//   map_err(Ok(0b0000_0001), not_val) → Ok(0b0000_0001)  [Ok preserved]
+//   map_err(Err(0b0000_1111), not_val) → Err(not(0b0000_1111)) = Err(0b1111_0000)
+
+/// `map_err(Ok(x), not_val)` → `Ok(x)` — the success value passes through; the error fn is not run.
+#[test]
+fn map_err_on_ok_passes_through() {
+    let driver = "\
+fn not_val(e: Binary{8}) -> Binary{8} = not(e)\n\
+fn mk_ok() -> Result<Binary{8},Binary{8}> = Ok(0b0000_0001)\n\
+fn main() -> Result<Binary{8},Binary{8}> = map_err(mk_ok(), not_val)";
+    let src = program(driver);
+    let expected = "nodule ref\ntype Result<A,E> = Ok(A) | Err(E)\nfn main() -> Result<Binary{8},Binary{8}> = Ok(0b0000_0001)";
+    assert_three_way("map_err(Ok, not_val)", &src, expected);
+}
+
+/// `map_err(Err(e), not_val)` → `Err(not(e))` — the error is transformed.
+/// Hand-computed: not(0b0000_1111) = 0b1111_0000.
+#[test]
+fn map_err_on_err_transforms_error() {
+    let driver = "\
+fn not_val(e: Binary{8}) -> Binary{8} = not(e)\n\
+fn mk_err() -> Result<Binary{8},Binary{8}> = Err(0b0000_1111)\n\
+fn main() -> Result<Binary{8},Binary{8}> = map_err(mk_err(), not_val)";
+    let src = program(driver);
+    let expected = "nodule ref\ntype Result<A,E> = Ok(A) | Err(E)\nfn main() -> Result<Binary{8},Binary{8}> = Err(not(0b0000_1111))";
+    assert_three_way("map_err(Err, not_val)", &src, expected);
+}
+
+// ── or_else (M-715 — the Err-side bind, dual of and_then) ─────────────────────────────────────────
+//
+// Helper: `recover(e) = Ok(not(e))` — a recovery step that turns an error into a success.
+//   or_else(Ok(0b0000_0001), recover) → Ok(0b0000_0001)  [Ok kept; recover not run]
+//   or_else(Err(0b0000_1111), recover) → Ok(not(0b0000_1111)) = Ok(0b1111_0000)
+
+/// `or_else(Ok(x), recover)` → `Ok(x)` — the success value is kept; the recovery step is not run.
+#[test]
+fn or_else_on_ok_keeps_value() {
+    let driver = "\
+fn recover(e: Binary{8}) -> Result<Binary{8},Binary{8}> = Ok(not(e))\n\
+fn mk_ok() -> Result<Binary{8},Binary{8}> = Ok(0b0000_0001)\n\
+fn main() -> Result<Binary{8},Binary{8}> = or_else(mk_ok(), recover)";
+    let src = program(driver);
+    let expected = "nodule ref\ntype Result<A,E> = Ok(A) | Err(E)\nfn main() -> Result<Binary{8},Binary{8}> = Ok(0b0000_0001)";
+    assert_three_way("or_else(Ok, recover)", &src, expected);
+}
+
+/// `or_else(Err(e), recover)` → `recover(e) = Ok(not(e))` — the recovery step runs on the error.
+/// Hand-computed: Ok(not(0b0000_1111)) = Ok(0b1111_0000).
+#[test]
+fn or_else_on_err_runs_recovery() {
+    let driver = "\
+fn recover(e: Binary{8}) -> Result<Binary{8},Binary{8}> = Ok(not(e))\n\
+fn mk_err() -> Result<Binary{8},Binary{8}> = Err(0b0000_1111)\n\
+fn main() -> Result<Binary{8},Binary{8}> = or_else(mk_err(), recover)";
+    let src = program(driver);
+    let expected = "nodule ref\ntype Result<A,E> = Ok(A) | Err(E)\nfn main() -> Result<Binary{8},Binary{8}> = Ok(not(0b0000_1111))";
+    assert_three_way("or_else(Err, recover)", &src, expected);
+}

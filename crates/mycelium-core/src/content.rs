@@ -87,6 +87,9 @@ pub(crate) mod tag {
     pub const PRIM_STRENGTH_PROVEN: u8 = 0x66;
     pub const PRIM_STRENGTH_EMPIRICAL: u8 = 0x67;
     pub const PRIM_STRENGTH_DECLARED: u8 = 0x68;
+    /// The width-collapsing comparison rule (RFC-0032 D1). Distinct tag ⇒ a collapsing prim's decl
+    /// hash differs from an otherwise-identical uniform one; existing uniform decls are unchanged.
+    pub const PRIM_WIDTH_COLLAPSE: u8 = 0x69;
 }
 
 /// A canonical, injective, metadata-free byte encoder feeding a [`blake3::Hasher`]. Every write is
@@ -167,6 +170,7 @@ impl Canon {
         self.prim_paradigm(sig.result);
         match sig.width {
             crate::prim::WidthRel::Uniform => self.tag(tag::PRIM_WIDTH_UNIFORM),
+            crate::prim::WidthRel::Collapse => self.tag(tag::PRIM_WIDTH_COLLAPSE),
         }
         self.strength(intrinsic);
     }
@@ -764,6 +768,30 @@ mod tests {
             bin_decl.content_hash(),
             tern_decl.content_hash(),
             "PrimDecls with different paradigms must have different content hashes"
+        );
+    }
+
+    // Mutant-witness for Canon::prim_decl's WidthRel arm (content.rs: the `WidthRel::Collapse` tag,
+    // RFC-0032 D1): if the width relation is dropped or both arms emit the same tag, a width-`Uniform`
+    // decl and an otherwise-identical width-`Collapse` decl hash the same — and a collapsing prim
+    // would alias a uniform one in the content-addressed registry.
+    #[test]
+    fn prim_decl_width_rel_is_included_in_hash() {
+        use crate::guarantee::GuaranteeStrength;
+        use crate::prim::{PrimDecl, PrimParadigm, PrimSig, WidthRel};
+        // Identical sig + intrinsic; the ONLY difference is the width relation.
+        let mk = |width| PrimDecl {
+            sig: PrimSig {
+                operands: vec![PrimParadigm::Binary, PrimParadigm::Binary],
+                result: PrimParadigm::Binary,
+                width,
+            },
+            intrinsic: GuaranteeStrength::Exact,
+        };
+        assert_ne!(
+            mk(WidthRel::Uniform).content_hash(),
+            mk(WidthRel::Collapse).content_hash(),
+            "PrimDecls differing only in WidthRel (Uniform vs Collapse) must hash differently"
         );
     }
 
