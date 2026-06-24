@@ -20,6 +20,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `Declared` per **VR-5**; **G2** never-silent about the active mode). **Enacts nothing**; the binding
   decision is the future **RFC-0034** + a superseding ADR. Open questions tracked in §9.
 
+### Changed (2026-06-24: DN-29 rev. 3 — provenance tag adjustable, generation≠consumption, §11 ripple map (still Draft, advisory))
+
+- **DN-29 refined again (in place; stays Draft)** — **provenance tag is now an adjustable unit**: `fast`
+  defaults to **not using `Empirical`/`Proven`** (they cost the trials/proofs `fast` skips), sitting at
+  structural `Exact`/`Declared`; heavier tags dial up per mode/unit — the honest floor (`fast` never claims
+  a tag it didn't earn, VR-5). **Signal generation split from consumption**: the cheap inspectability signal
+  is **always generated ≥ middle tier** (safe default) while **consumption** (DX/UX surfacing, diagnostic
+  noise) is tunable and lean at `fast`, so a dev can dial it up mid-session with history already captured
+  (§3.1). Adds **§11 — a ripple map**: a ~40-hit / ~12-file `Empirical/Declared` inventory of every corpus
+  location the binding RFC-0034 + superseding ADR must amend (change-type taxonomy: conditionalize-per-mode
+  / honesty→transparency / north-star / tag-adjustable / memory-safety; high-collision files README/
+  Foundation/CLAUDE.md flagged; multi-category mangle-risk lines called out; spine anchors SC-3/FR-M3/VR-5
+  validated against source), plus an **anchor-keyed, single-pass-per-file batched-replacement mechanism**
+  (content-keyed not positional ⇒ no mangling; never-silent guard fails loudly on a missing/ambiguous
+  anchor). Still **advisory — enacts nothing** (VR-5/G2); the inventory is heuristic, to be re-verified at
+  RFC-0034 drafting time.
+
 ### Changed (2026-06-24: DN-29 rev. 2 — first-class modes, memory-safety default, "honesty"→"transparency" reframe (still Draft, advisory))
 
 - **DN-29 refined again (in place; stays Draft)** — **`fast` and `certified` elevated to two first-class

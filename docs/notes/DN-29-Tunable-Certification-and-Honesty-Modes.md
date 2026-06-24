@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-29 |
-| **Status** | **Draft** (2026-06-24; deliberation anchor — advisory, non-committal · rev. 2026-06-24 — owner-steered: phase-decomposed knobs, `fast`-default, north-star reframe · rev. 2 2026-06-24 — `fast`+`certified` first-class modes, safe-by-default + explicit per-use unsafe escape, diagnostic-verbosity knob, "honesty"→"transparency & auditability" reframe) |
+| **Status** | **Draft** (2026-06-24; deliberation anchor — advisory, non-committal · rev. 2026-06-24 — owner-steered: phase-decomposed knobs, `fast`-default, north-star reframe · rev. 2 2026-06-24 — `fast`+`certified` first-class modes, safe-by-default + explicit per-use unsafe escape, diagnostic-verbosity knob, "honesty"→"transparency & auditability" reframe · rev. 3 2026-06-24 — provenance tag as adjustable unit (`fast` omits `Empirical`/`Proven`), signal **generation** split from **consumption**, **§11 ripple map** (40-hit corpus inventory + batched-replacement mechanism)) |
 | **Feeds** | the eventual **RFC-0034** (binding decision) + a superseding ADR; conditionalizes RFC-0001 §3.3/§3.4/§4.6, RFC-0002 §2, RFC-0005 §2, ADR-010, ADR-011, ADR-013/016/017; grounds in **KC-4**, **VR-5**, **G2**, ADR-014 |
 | **Date** | June 24, 2026 |
 | **Decides** | *Nothing normatively* — advisory. Records the maintainer's intended **shift** (2026-06-24): make the certification / honesty / hashing machinery **tunable from fully-off → fully-engaged** via scoped config, instead of mandatory-everywhere, **while preserving honesty and keeping the good procedures** the early maximalist phase produced. Captures the design space, the knob model, the feature-dependency consequences, and the open questions, so the binding RFC-0034 is shaped toward this end-state. The binding decision is the future RFC. **Rev. 2026-06-24 (owner-steered, §10):** the single ladder is **decomposed into independent knobs split by *phase*** — compile/deploy-time **spore identity hashing stays available even when all runtime certification is off** — composing into named **profiles**; the default profile is **`fast`** (opt-in certification); and the note now **captures a north-star reframe** (Mycelium as a fast, memory-safe, ergonomic multi-paradigm language with certification *baked in as optional*), with the Foundation/charter ripple **flagged** for the binding RFC-0034 + superseding ADR. |
@@ -125,8 +125,9 @@ only as the "preset" intuition.)
 | **Spore / deploy identity hash** | compile / deploy | cheap, **per-artifact** | spores (ADR-013), hot-inject + ABI dispatch keys (ADR-016/017), dedup | **available even when runtime is fully off** |
 | **Memory safety** | always | inherited (Rust kernel) | the safe surface; no raw pointers | **safe by default; *explicit per-use* unsafe escape hatch** (see below) |
 | **Never-silent failure** (Axis B) | runtime | O(1) | `Option`/`Result`/`SwapError` out-of-range | **on** (named `wrapping`/`fast` opt-out) |
-| **Diagnostic verbosity / noise** | runtime + tooling | ~O(1) | how loud errors / traces / `EXPLAIN` output are | **tied to the mode** (quiet at `fast` → full audit trail at `certified`); independently overridable |
-| **Guarantee-tag propagation** | runtime | O(1) | provenance `Exact⊐Proven⊐Empirical⊐Declared` tags, unchecked | off (kept available — the inspectability mechanism) |
+| **Provenance tagging** *(adjustable unit)* | runtime | `Exact`/`Declared` O(1); `Empirical`=trials, `Proven`=checked theorem | the `Exact⊐Proven⊐Empirical⊐Declared` lattice | **`fast`: structural `Exact`/`Declared` only — `Empirical`/`Proven` not used**; heavier tags dialled up per mode/unit |
+| **Signal generation** (inspectability trace) | runtime | cheap | the "what happened / which swap / why / how" trace `EXPLAIN` reads | **safe default; always generated ≥ middle tier** so consumption can always be dialled up |
+| **Diagnostic consumption / DX surfacing** | tooling | ~O(1) | how much of the generated signal surfaces in DX/UX | **tunable; `fast` lean** (signal still generated, just not shown) |
 | **Runtime value hashing / dedup** | runtime | O(size) | runtime identity/dedup of values | off |
 | **Swap-cert emission** | runtime | O(1) | a certificate object per swap | off |
 | **Swap-cert checking** | runtime | **expensive** | M-210 checker + ADR-010 bound kernels | off |
@@ -140,11 +141,22 @@ hatch at the call site (the ADR-014 `permitted-but-warned` precedent, sharpened 
 **per-use** opt-in) — so the dev must consciously think at each use, and the escape is visible/auditable in
 the source. This is independent of the certification profile: even `fast` is memory-safe.
 
-**Diagnostic verbosity — tunable noise, tied to the mode (owner-steered, 2026-06-24).** "How noisy our
-errors and traces are" is its own knob, *defaulted by the mode* — `fast` keeps diagnostics lean (inspect on
-demand), `certified` emits the full audit trail — but independently overridable (e.g. a `fast` build can
-crank verbosity for a debugging session without turning on cert checking). Guarantee **tagging stays on as
-the inspectability substrate** regardless of how loud the surface output is.
+**Provenance tagging is an adjustable unit; and generation is split from consumption (owner-steered,
+2026-06-24 rev. 2).** Two refinements keep the lightweight value on by default *without* cornering anyone:
+
+- **The provenance tag is tunable per unit.** `fast` defaults to **not using `Empirical`/`Proven`** — those
+  cost *trials* / *checked theorems*, the very work `fast` skips — so `fast` results sit at the structural
+  `Exact`/`Declared` tags. Computing the heavier tags is dialled up per mode or per unit, never forced. This
+  is the honest floor: `fast` doesn't *claim* `Empirical` because it didn't run the trials (VR-5).
+- **Generation ≠ consumption.** The cheap, valuable *signal* — the inspectability trace (what happened,
+  which swap, why, how) — is **always generated from the middle tier up** (a *safe default*), so the data
+  exists to inspect. What's tunable is **consumption**: how much of that signal the DX/UX surfaces. `fast`
+  defaults to lean output, but the signal is still generated, so a dev can **dial consumption up
+  mid-session and the history is already there** — no re-run, no mode switch, no painting-into-a-corner.
+
+The stance this encodes: **give devs the tools, the options, and the reasoning behind why each exists — and
+let them choose whether to use them.** Lightweight-value-on-by-default + an always-generated signal +
+tunable consumption is how `fast` stays *both* cheap *and* non-cornering.
 
 ### §3.2 Modes (presets over the knobs)
 
@@ -325,8 +337,81 @@ ADR; VR-5/G2 — DN-29 enacts nothing):
    inspectable *non-certified auditability*; `certified` = the same trail as a *fully auditable* framework.
    Mechanism unchanged (never-silent, provenance lattice, `EXPLAIN`, VR-5); the CLAUDE.md house-rule 1 /
    CONTRIBUTING / VR-5 / G2 vocabulary ripple is **flagged for RFC-0034** (§7) — not rewritten here.
-8. **Diagnostic verbosity is a tunable knob, mode-defaulted** (§3.1): lean at `fast`, full audit trail at
-   `certified`, independently overridable; **guarantee tagging stays on** as the inspectability substrate.
+8. **Provenance tag is an adjustable unit** (§3.1): `fast` defaults to **not using `Empirical`/`Proven`**
+   (they cost trials/proofs it skips), sitting at structural `Exact`/`Declared`; heavier tags dial up per
+   mode/unit. Honest floor — `fast` never *claims* a tag it didn't earn (VR-5).
+9. **Signal generation is split from consumption** (§3.1): the cheap inspectability signal is **always
+   generated ≥ middle tier** (safe default), while **consumption** (DX/UX surfacing, diagnostic noise) is
+   tunable and lean at `fast` — so a dev can dial consumption up mid-session with the history already
+   captured. The stance: *give the tools + the reasoning; let devs choose to use them.*
+10. **Ripple map built** (§11): a 40-hit, 12-file inventory of every corpus location the binding RFC-0034 +
+    superseding ADR must touch, plus an **anchor-keyed, single-pass-per-file** replacement mechanism that
+    avoids positional mangling. Inventory is `Empirical/Declared` (re-verify against source at RFC-0034
+    time); spine anchors (SC-3, FR-M3, VR-5) validated.
+
+## §11 Ripple map — what RFC-0034 + the superseding ADR must amend
+
+**Status: `Empirical/Declared` inventory** (a line/regex sweep, 2026-06-24; spine anchors SC-3 / FR-M3 /
+VR-5 spot-validated against source). It scopes the amendment surface; it is **not** the amendment (that is
+the binding RFC-0034 + ADR — append-only). Re-verify each `file:line` against source at drafting time, as
+line numbers drift.
+
+### §11.1 Change-type taxonomy (what each edit does)
+
+| Type | Meaning | Example targets |
+|---|---|---|
+| **conditionalize-per-mode** | "every/always/mandatory" → "at the active mode (e.g. cert ≥ `certified`); the mode itself is never silent" | SC-3, FR-M3, RFC-0002 §2, RFC-0005 §2, G2/SC-3 invariants |
+| **reword honesty→transparency** | "honesty / honest / never lie" → "transparency & auditability / accurate" (mechanism unchanged) | CLAUDE.md house-rule 1, CONTRIBUTING §honesty-rule, Glossary, VR-5 colloquial |
+| **north-star reframe** | headline "certified, never-silent substrate / honest guarantees" → "fast, memory-safe, ergonomic language; certification optional" | CLAUDE.md §what-this-repo-is, README opening, Foundation §1 mission |
+| **tag-now-adjustable** | "every value carries / meet-propagates a tag" → "tag is computed at cert ≥ L1; `fast` is structural `Exact`/`Declared`, composition is identity" | RFC-0001 §3.4, §4.3 (M-I4), §4.6 lattice + worked example |
+| **memory-safety sharpen** | ADR-014 `permitted-but-warned` → "safe by default + explicit *per-use* escape hatch" | CONTRIBUTING §unsafe, ADR-014 (sharpened, not superseded) |
+
+### §11.2 Surface summary (sweep, 2026-06-24)
+
+- **~40 hits across ~12 files.** Change-type distribution (approx): reword-honesty **~14**, conditionalize
+  **~12**, north-star **~8**, tag-adjustable **~6**, memory-safety **~2**.
+- **High-collision files (>5 hits) — amend as one batched pass each:** `README.md` (~10), `Foundation` (~9),
+  `CLAUDE.md` (~8).
+- **Spine mandates (validated):** `Foundation:53` SC-3, `Foundation:73` FR-M3, `Foundation:113` VR-5 (note:
+  VR-5's *formal* def is narrow — Gaussian-approx ⇒ `Empirical`; the colloquial "downgrade to stay honest"
+  rule lives in `Glossary:94` + CLAUDE.md). Plus RFC-0001 §3.3/§3.4/§4.3/§4.6, RFC-0002 §2, RFC-0005 §2.
+
+### §11.3 Multi-category lines (highest mangle-risk — rewrite whole, don't sequential-edit)
+
+These single lines need **two or three** change-types at once; sequential edits drift positions and risk
+mangling — each is rewritten as **one** replacement:
+
+- `CLAUDE.md:14-15` — *north-star* **+** *honesty→transparency* ("certified, never-silent … honest, per-operation guarantees").
+- `README.md:52-53` — *honesty→transparency* **+** *north-star* **+** *tag-adjustable* ("Honesty is a typed, monotone property … meet").
+- `Foundation:53` (SC-3) — *conditionalize* **+** *G2/never-silent reword*.
+- `Foundation:73` (FR-M3) — *conditionalize* ("always emits a certificate") **+** vocabulary.
+- `RFC-0001:27` — *honesty→transparency* **+** *tag-adjustable* **+** VR-5-consequence reword.
+
+### §11.4 Batched-replacement mechanism (avoids positional mangling)
+
+Execution (built + run **with** RFC-0034, not now):
+
+1. **Manifest** `{file: [{anchor, replacement, category}, …]}` — `anchor` is a **unique content substring**,
+   never a line/offset, so matches are position-independent.
+2. **One pass per file:** read once → apply all replacements to the in-memory string → write once. Replacing
+   one anchor never invalidates another's match (content-keyed, not positional) ⇒ no recalc, no rescan,
+   order-independent.
+3. **Never-silent guard on the tool itself (G2):** assert each anchor matches **exactly once** before
+   applying; a missing/ambiguous anchor *fails loudly* (the tooling obeys the rule the corpus does). The
+   multi-category lines (§11.3) appear as a **single** anchor→replacement each, so they are rewritten whole.
+
+A small one-shot generator (e.g. `tools/dn29-apply.py`) consumes the manifest; the manifest is authored
+from this map once RFC-0034 fixes the final wording.
+
+### §11.5 Process decisions the sweep surfaced (owner to confirm)
+
+- **Vocabulary scope = whole-corpus** (not CLAUDE.md only): CONTRIBUTING, Foundation, RFCs, Glossary all
+  reframe honesty→transparency. *(lean: yes — partial reframe would read inconsistent.)*
+- **The superseding ADR amends the Foundation/charter; RFC-0034 stays implementation-focused.** *(lean: yes
+  — keeps the charter change in the decision record, per append-only.)*
+- **Backward-compat footnotes** on the Accepted RFCs/ADRs (RFC-0001/0002/0005, ADR-010/011/013/016/017):
+  a §-end note "mandates apply at `certified`; `fast`/`balanced` relaxations per RFC-0034 + ADR-xxxx." *(lean:
+  yes — append-only, preserves the originals while pointing forward.)*
 
 ---
 
@@ -344,4 +429,10 @@ ADR; VR-5/G2 — DN-29 enacts nothing):
 > intermediate, §3.2); **memory-safe by default + explicit per-use unsafe escape hatch** (§3.1); a
 > **diagnostic-verbosity knob** tied to the mode, tagging kept on (§3.1); and the **"honesty" → "transparency
 > & auditability" reframe** (§1/§6) with the CLAUDE.md/CONTRIBUTING/VR-5/G2 vocabulary ripple flagged (§7).
-> Mechanism unchanged; still **Draft**, still advisory.
+> Mechanism unchanged; still **Draft**, still advisory. *2026-06-24 (rev. 3)* — owner-steered:
+> **provenance tag is an adjustable unit** (`fast` omits `Empirical`/`Proven`, sits at `Exact`/`Declared`;
+> §3.1/§10.8); **signal generation split from consumption** (signal always generated ≥ middle tier, DX/UX
+> consumption tunable and lean at `fast`; §3.1/§10.9); and a **§11 ripple map** — a ~40-hit/~12-file
+> `Empirical/Declared` inventory of the RFC-0034 amendment surface (change-type taxonomy, high-collision +
+> multi-category lines, spine anchors validated) plus an **anchor-keyed single-pass-per-file** batched
+> replacement mechanism with a never-silent guard. Still **Draft**, still advisory.
