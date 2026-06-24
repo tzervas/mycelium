@@ -316,3 +316,39 @@ Enacted.)*
   dependency and priority, partitions into three parallel tracks, and recommends three immediate
   actions. Records that Gate A1 and Gate B2 are met; B1 is likely met pending maintainer
   confirmation. Decides nothing normatively.
+
+---
+
+## GAP-2 Medium-Findings Ledger (draft, 2026-06-24)
+
+> **Posture (honesty rule / VR-5).** This is a **DRAFT verification ledger** for ADR-021 **Gate A2**
+> (GAP-2, §2 above), produced by an agent re-grounding the prior disposition record
+> (`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`, M-653, 2026-06-21) against the
+> **live tree** (`origin/main` tip `db4a6be`). It **does not ratify the gate** — Gate A2 requires the
+> maintainer's sign-off (ADR-021 §6). Append-only: this records a new verification pass; it rewrites
+> no prior prose and re-grades nothing upward. Full per-finding evidence (greps, `file:line`, test
+> runs) is archived in `docs/handoffs/gap-2-ledger-context.md`.
+
+**Scope.** The 25 open Medium finding-ids listed in §2 GAP-2 (WS2–WS6), matching the M-653 ledger.
+Each was re-located in the current tree by its cited test/variant/marker name; a representative
+subset (one per workstream with a Rust target) was **executed green** (not merely confirmed present).
+
+**Verdicts (each FIXED; grounding cited per-row in the handoff):**
+
+| WS | Findings | Verdict | Note |
+|---|---|---|---|
+| WS2 | A1-04, A1-05, A6-03, A6-06, A6-08, A6-09 | FIXED ×6 | A6-03 is the M-653-landed wire-spelling pin (executed: pass). |
+| WS3 | A3-04, A3-05, A3-06/C1-04, A3-07, A3-08, A3-09, A3-10 | FIXED ×7 | A3-05 is an honest comment-reconciliation (Haskell/z3 absent locally → `Declared` here, README is the checkable artifact). A3-08/A3-10 are documented scope notes, not new behavioral tests. A3-06 is *qualified, not upgraded*. |
+| WS4 | A4-03, A4-04, reject-corpus | FIXED ×3 | reject-corpus integrity is the M-653-landed bidirectional test. |
+| WS5 | A5-02, A5-03, A5-05, A5-06, A5-07, A5-08 | FIXED ×6 | **A5-08 citation FLAG:** the M-653 ledger cites `mycelium-dense/lib.rs::bits_per_element(Tl2)`, but the fix actually lives in `mycelium-select::packing_bits_per_element` + `mycelium-mlir/pack.rs`. Fix is present; the *citation* needs correcting. |
+| WS6 | A6-05, A6-10/B2-04, A6-11 | FIXED ×3 | A6-11 is structural (xtask runner, no unit surface). |
+
+**Tally: 25 finding-ids · 25 FIXED · 0 DEFERRED · 0 N-A · 0 verdict-flags.** One non-verdict
+**citation flag** (A5-08, above) for the maintainer to correct in the record. Subject to maintainer
+ratification, Gate A2 is supportable on verified evidence.
+
+### Changelog (this subsection)
+
+- **2026-06-24 — Draft ledger appended.** GAP-2 Gate-A2 verification pass: re-grounded all 25 open
+  Mediums against the live tree, executed a representative subset green, recorded one citation flag
+  (A5-08). Draft — pending maintainer sign-off. Evidence: `docs/handoffs/gap-2-ledger-context.md`.

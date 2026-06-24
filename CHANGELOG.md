@@ -8,6 +8,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: DN-19 GAP-2 — Medium-findings verification ledger (draft, Gate A2))
+
+- **DN-19 GAP-2 Medium-findings ledger** appended (append-only subsection, `docs/notes/DN-19-Road-to-1.0.0.md`,
+  **draft**). Re-grounds ADR-021 **Gate A2** against the live tree (`origin/main` `db4a6be`): all **25 open
+  Medium finding-ids** (WS2–WS6) re-located by their cited test/variant names, a representative subset
+  **executed green** (A6-03, A3-09, A5-05/06, A5-03). Tally **25 FIXED · 0 DEFERRED · 0 N-A**, with one
+  **citation flag** (A5-08's prior citation points at `mycelium-dense` but the fix lives in
+  `mycelium-select::packing_bits_per_element` + `mycelium-mlir/pack.rs`). **Draft — pending maintainer
+  sign-off** (Gate A2 ratification is the maintainer's, ADR-021 §6). Full per-finding evidence archived in
+  `docs/handoffs/gap-2-ledger-context.md`. Decides nothing normatively (VR-5/G2).
+
 ### Added (2026-06-24: DN-31 — Delimiter & Operator Deconfliction (direction capture, Draft))
 
 - **DN-31** (`docs/notes/`, **Draft**, advisory). Captures the maintainer's decided reallocation of the four
