@@ -8,6 +8,35 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: RFC-0035 — Security Scanning Toolkit (binding design, Proposed))
+
+- **RFC-0035** (`docs/rfcs/`, **Proposed**). The binding security-scanning design — a native, inherited,
+  scope-configurable security toolkit — lifted from the settled **DN-30** direction capture plus the
+  maintainer's now-answered answers to DN-30 §7's five open questions (tabled as Decisions D1–D5, §10):
+  - **D1 (§2)** — v0 vulnerability classes are a **fixed base of categories WITH an extensibility seam**
+    (an extension class is first-class + versioned, never silently folded into the base); base grounded in
+    Mycelium's own surfaces (RFC-0028/ADR-014 `unsafe`/FFI, the `/security-review` recurring-defect bank).
+  - **D2 (§3)** — reporting is **SARIF + CWE + OSV + VEX** with **versioned pinning**: a pinned schema
+    version is **immutable once pinned**; new versions are allowed (additive-by-new-version, append-only),
+    the finding schema content-addressed (RFC-0001 §4.6) so the pin is mechanically enforced.
+  - **§4** — find-once-report-to-**two-sinks** (CLI + registry); the registry hosts **screened/anonymized**
+    advisories as a **second content-addressed catalog** reusing **DN-28** reconstruction-on-render
+    (lightweight, tamper-evident — a poisoned advisory fails its hash, G2).
+  - **D3/D5 (§5)** — honest, **RFC-0002-certificate-backed safe auto-fix** (proves the fix eliminates the
+    vuln AND refines the original modulo it); **per-class fix-strength + a pedantic mode**; a **certified
+    patch registry**; `/security-review` is a **supporting tool only** (not a replacement/prerequisite).
+    `Declared` fixes are always flagged + human-gated — no black-box rewrites (VR-5/G2).
+  - **D4 (§6)** — the **screening policy** is configurable-with-defaults, **mandatory for high-security
+    classes by default** (cannot be silently disabled for them), per-project adjustable (every adjustment
+    surfaced).
+  - **§7** — native + scoped reusing the **RFC-0034 §6** `@certification` resolution (project/phylum/nodule/
+    granular) — no new scoping machinery.
+  - **Designs the toolkit; implements nothing** — every runtime claim is a `Declared` position for epic
+    **E22-1** to discharge; the two **worked examples** (a safe-fix refinement-certificate; a screening
+    case study) are the deferred pre-Accepted work and were **not fabricated** (§9, VR-5/G2).
+  - **DN-30** gains an append-only rev. 3 note ("feeds RFC-0035"); registered in `docs/Doc-Index.md`;
+    working notes in `docs/handoffs/security-rfc-context.md`. `doc_refs` check passes.
+
 ### Added (2026-06-24: DN-31 — Delimiter & Operator Deconfliction (direction capture, Draft))
 
 - **DN-31** (`docs/notes/`, **Draft**, advisory). Captures the maintainer's decided reallocation of the four

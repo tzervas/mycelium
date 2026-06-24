@@ -165,4 +165,12 @@ it is the direction record, superseded (append-only) by that RFC when the design
 > stores the findings' hashes + manifest (the dense, verifiable map) and reconstructs + hash-verifies the
 > finding bodies on render, so the catalog is as **lightweight** as the package side and a tampered advisory
 > fails its hash (never-silent integrity). The registry hosts two content-addressed catalogs of the same
-> shape — packages and findings. Cross-ref in DN-28 §5 + E22-1.
+> shape — packages and findings. Cross-ref in DN-28 §5 + E22-1. *2026-06-24 (rev. 3 — feeds RFC-0035)* —
+> the binding design this note shaped is now drafted as **RFC-0035 — Security Scanning Toolkit**
+> (`docs/rfcs/RFC-0035-Security-Scanning-Toolkit.md`, **Proposed**), which lifts §2–§6 and **decides the
+> five §7 open questions** per the maintainer's 2026-06-24 answers (D1 fixed-base-classes + extensibility ·
+> D2 SARIF/CWE/OSV/VEX with versioned-pinned immutable schemas · D3 per-class fix-strength + pedantic mode ·
+> D4 configurable-default screening, mandatory for high-security classes · D5 `/security-review` as a
+> supporting tool only + a certified patch registry). This note stays **Draft** (append-only direction
+> record); RFC-0035 carries the binding design and moves toward `Accepted` (its two worked examples are the
+> remaining pre-Accepted work). Append-only — DN-30's existing prose is unchanged (VR-5/G2).
