@@ -20,6 +20,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `Declared` per **VR-5**; **G2** never-silent about the active mode). **Enacts nothing**; the binding
   decision is the future **RFC-0034** + a superseding ADR. Open questions tracked in §9.
 
+### Changed (2026-06-24: DN-29 rev. — owner-steered refinement (still Draft, advisory))
+
+- **DN-29 refined (in place; stays Draft)** — the single L0–L3 ladder is **decomposed into independent
+  knobs split by *phase*** (compile/deploy vs runtime) composing into named **profiles**
+  (`fast`/`balanced`/`certified`, §3). Keystone: **compile/deploy spore-identity hashing is decoupled from
+  runtime certification**, so deployable, content-addressed units survive a fully cert-off runtime (§2,
+  resolving the old "L0 loses spores" coupling). **Default profile = `fast`** (memory-safe, never-silent,
+  spores available; runtime cert/hash/check off — certification opt-in, §5). Captures a **north-star
+  reframe** — Mycelium as a fast, memory-safe, ergonomic multi-paradigm language with certification baked
+  in as *optional* — with the Foundation §1 / SC-3 / FR-M3 ripple **flagged** for RFC-0034 + the
+  superseding ADR (**not** amended here; append-only). Open questions Q1–Q3 resolved; Q4–Q7 open (§9).
+  Still **advisory — enacts nothing** (VR-5/G2).
+
 ### Changed (2026-06-24: ADR-029/030/031 → Accepted — value-model ternary + the two content-address one-way doors ratified (owner approval))
 
 - **ADR-029 — Ternary arithmetic is arbitrary-width → Accepted** (maintainer-ratified). The V0

@@ -370,7 +370,19 @@
 | `mycelium_core::repr::Repr::well_formed` | fn | `crates/mycelium-core/src/repr.rs:91` | Well-formed iff all widths/dims/trits (and any `max_active`) are positive and a VSA `model` |
 | `mycelium_core::repr::ScalarKind::tag` | fn | `crates/mycelium-core/src/repr.rs:30` | A stable one-byte code for content-addressing (M-103). |
 | `mycelium_core::ternary` | mod | `crates/mycelium-core/src/lib.rs:26` | — |
+| `mycelium_core::ternary::BigTernary` | struct | `crates/mycelium-core/src/ternary/big_ternary.rs:46` | Arbitrary-width balanced-ternary integer (digit-serial reference form). |
+| `mycelium_core::ternary::BigTernary::checked_to_width` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:202` | NEVER-SILENT narrowing to a fixed width of `n` trits: `Some` iff `width() ≤ n`; `None` |
+| `mycelium_core::ternary::BigTernary::digits` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:76` | Borrow the canonical digit slice (least-significant-first). |
+| `mycelium_core::ternary::BigTernary::from_i128` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:162` | Exact construction from `i128`. |
+| `mycelium_core::ternary::BigTernary::from_trits_lsf` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:82` | Build from raw least-significant-first trits (any non-canonical input is accepted and |
+| `mycelium_core::ternary::BigTernary::is_zero` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:62` | `true` iff this is exactly zero. |
+| `mycelium_core::ternary::BigTernary::to_i128` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:184` | NEVER-SILENT conversion to `i128`: `None` if the value does not fit (overflow-checked Horner). |
+| `mycelium_core::ternary::BigTernary::width` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:69` | Number of significant trits (0 for zero). |
+| `mycelium_core::ternary::BigTernary::zero` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:55` | The additive identity (empty digit vector). |
+| `mycelium_core::ternary::FixedWidthTrits` | struct | `crates/mycelium-core/src/ternary/big_ternary.rs:216` | A balanced-ternary value pinned to exactly `trits.len()` trits — the in-memory image of |
+| `mycelium_core::ternary::FixedWidthTrits::to_big` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:224` | Promote to the growable form (always exact). |
 | `mycelium_core::ternary::add` | fn | `crates/mycelium-core/src/ternary/mod.rs:154` | Ripple-carry add over two equal-length MSB-first trit strings, fixed-width. |
+| `mycelium_core::ternary::checked_add_fixed` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:234` | NEVER-SILENT fixed-width addition: ripples the shared [`super::add_with_carry`] across `n` trits and |
 | `mycelium_core::ternary::digit` | fn | `crates/mycelium-core/src/ternary/mod.rs:29` | The signed value of a single trit. |
 | `mycelium_core::ternary::int_to_trits` | fn | `crates/mycelium-core/src/ternary/mod.rs:116` | The unique `m`-trit balanced representation of `value`, MSB-first — or `None` if `value` lies |
 | `mycelium_core::ternary::max_magnitude` | fn | `crates/mycelium-core/src/ternary/mod.rs:98` | The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`. |
@@ -3097,6 +3109,17 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::repr::SparsityClass::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::SparsityClass::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::SparsityClass::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
+| `mycelium_core::ternary::BigTernary::add` | dedup-alias: same definition as `mycelium_core::ternary::add` at crates/mycelium-core/src/ternary/mod.rs:154 — one canonical row kept |
+| `mycelium_core::ternary::BigTernary::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_core::ternary::BigTernary::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_core::ternary::BigTernary::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_core::ternary::BigTernary::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_core::ternary::BigTernary::mul` | dedup-alias: same definition as `mycelium_core::ternary::mul` at crates/mycelium-core/src/ternary/mod.rs:187 — one canonical row kept |
+| `mycelium_core::ternary::BigTernary::neg` | dedup-alias: same definition as `mycelium_core::ternary::neg` at crates/mycelium-core/src/ternary/mod.rs:139 — one canonical row kept |
+| `mycelium_core::ternary::BigTernary::sub` | dedup-alias: same definition as `mycelium_core::ternary::sub` at crates/mycelium-core/src/ternary/mod.rs:176 — one canonical row kept |
+| `mycelium_core::ternary::FixedWidthTrits::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_core::ternary::FixedWidthTrits::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_core::ternary::FixedWidthTrits::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::value::Payload` | dedup-alias: same definition as `mycelium_core::Payload` at crates/mycelium-core/src/value.rs:55 — one canonical row kept |
 | `mycelium_core::value::Payload::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::value::Payload::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
