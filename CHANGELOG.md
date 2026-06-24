@@ -8,6 +8,15 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: DN-31 §4-Q1 resolved — empty `{}` = block, `{:}` = empty map)
+
+- **Empty-`{}` ambiguity resolved (maintainer):** in the DN-31 delimiter scheme, **`{}` is an empty block**
+  and **`{:}` is an empty map** (the colon is the same "map" marker, just with no entries). Non-empty cases
+  were never ambiguous (`{ k: v }` maps already split from `{ e }` blocks on the `:` pairs); only the empty
+  case needed a rule, and `{:}` does it minimally — no per-literal map tagging, JS block-vs-object trap
+  avoided. Closes DN-31 §4-Q1 (the sharpest open question); §4-Q2 (list-at-statement-start) remains open.
+  This **unblocks the bracket-implementation work**. Recorded append-only in DN-31 + Doc-Index.
+
 ### Added (2026-06-24: RFC-0035 — Security Scanning Toolkit (binding design, Proposed))
 
 - **RFC-0035** (`docs/rfcs/`, **Proposed**). The binding security-scanning design — a native, inherited,

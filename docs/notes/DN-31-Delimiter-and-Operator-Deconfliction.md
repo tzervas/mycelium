@@ -64,11 +64,11 @@ unambiguously type/size args and a standalone `[…]` is a list. The maintainer 
 
 ## §4 Open questions — the real tensions (don't paper over them)
 
-1. **`{}` is now blocks *and* maps — the empty case is ambiguous.** `{ e }` (block) vs `{ k: v }` (map) split
-   on `:` pairs, but **`{}` (empty)** is an empty block *or* an empty map. Needs a rule (a typed context, or a
-   distinct empty-map spelling e.g. `[:]`/`Map[]`). **This is the sharpest open question** — it's the JS
-   block-vs-object-literal problem; resolve it before the grammar commits. *(Flagged on merit — the scheme as
-   stated does not yet disambiguate empty `{}`.)*
+1. **`{}` blocks vs maps — the empty case. RESOLVED (2026-06-24, maintainer):** **`{}` = empty block;
+   `{:}` = empty map** (the colon marks "map"). Non-empty cases were never ambiguous — `{ e }` (block) vs
+   `{ k: v }` (map) already split on the `:` pairs; the rule only had to disambiguate the *empty* case, and
+   `{:}` does it minimally (the colon is the same "map" marker, just with no entries). The JS block-vs-object
+   trap is avoided without tagging every map literal. *(Q1 closed; the rest of §4 remains open.)*
 2. **`[]` carries type-args *and* sized/repr types *and* lists.** In *type* position `Name[…]` is uniformly
    "bracketed type/size params" (so `Binary[64]` and `List[T]` are the *same* form — fine); in *value* position
    `[…]` is a list. The residual edge is a **list literal at statement start right after an expression on the
@@ -82,8 +82,9 @@ unambiguously type/size args and a standalone `[…]` is a list. The maintainer 
 
 ## §5 Definition of Done (this note)
 
-A binding RFC (or an RFC-0019 supersession + RFC-0030/0025 update) ratifies §2, with §4-Q1 (empty `{}`)
-and §4-Q2 (list-at-statement-start) **resolved with explicit disambiguation rules** before the grammar commits.
+A binding RFC (or an RFC-0019 supersession + RFC-0030/0025 update) ratifies §2. §4-Q1 (empty `{}`) is
+**resolved** (`{}` = empty block, `{:}` = empty map); §4-Q2 (list-at-statement-start) must be **resolved with
+an explicit disambiguation rule** before the grammar commits.
 This note **enacts nothing** (VR-5/G2); it is the direction record + the grounding, superseded (append-only) by
 that act.
 
@@ -95,4 +96,5 @@ that act.
 > normative claim (VR-5 / G2).
 >
 > **Revision history.** *2026-06-24* — initial Draft (the decided delimiter/operator deconfliction; resolves
-> M-745 by reallocation; supersession of RFC-0019 §4.1 proposed, not performed).
+> M-745 by reallocation; supersession of RFC-0019 §4.1 proposed, not performed). *2026-06-24 (rev.)* — §4-Q1
+> (empty `{}`) **resolved** by the maintainer: `{}` = empty block, `{:}` = empty map. §4-Q2 remains open.
