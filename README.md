@@ -3,8 +3,8 @@
 > A programming language that treats **traditional binary**, **balanced ternary**, **dense embeddings**, and **Vector Symbolic Architectures (VSA / hyperdimensional computing)** as co-equal, first-class substrates — under semantics that are **transparent** (no hidden behavior), **metadata-native**, and **amenable to formal reasoning**.
 
 **Status:** design + **Rust-first implementation underway.** The design corpus spans Foundation,
-RFC-0001…0031, ADR-001…023, DN-01…27 — per-document status (Draft / Proposed / Accepted / Enacted /
-Resolved) is in [`docs/Doc-Index.md`](docs/Doc-Index.md); the newest RFCs (0025–0031) range from Draft to Accepted. The Rust workspace has
+RFC-0001…0032, ADR-001…024, DN-01…28 — per-document status (Draft / Proposed / Accepted / Enacted /
+Resolved) is in [`docs/Doc-Index.md`](docs/Doc-Index.md); the newest RFCs (0025–0032) range from Draft to Accepted. The Rust workspace has
 **49 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
 the selection-policy engine, a verified-numerics layer, a **Rust-first standard library**, an L1 surface
 with **generics · traits · higher-order functions · operator syntax**, and a **runtime** (scheduler,
@@ -280,9 +280,9 @@ mycelium/
 │   ├── Mycelium_Project_Foundation.md   ← charter, requirements, ADR-001…009, roadmap, risks
 │   ├── Doc-Index.md                     ← map of the corpus + status + dependency DAG
 │   ├── Glossary.md                      ← the fungal lexicon + honesty/architecture terms
-│   ├── rfcs/        ← RFC-0001…0023 (normative designs) + index
-│   ├── adr/         ← ADR-010…021 as files (ADR-001…009 live in the Foundation §8) + index
-│   ├── notes/       ← DN-01…22 design notes + reference material (lexicon, examples, research prompts)
+│   ├── rfcs/        ← RFC-0001…0032 (normative designs) + index
+│   ├── adr/         ← ADR-010…024 as files (ADR-001…009 live in the Foundation §8) + index
+│   ├── notes/       ← DN-01…28 design notes + reference material (lexicon, examples, research prompts)
 │   ├── spec/        ← per-module + per-tool specs (stdlib/, api/ baselines, swaps/, grammar/)
 │   ├── planning/    ← phase-by-phase build plans (phase-0 … phase-8)
 │   └── devlog/      ← append-only development log
@@ -298,7 +298,7 @@ mycelium/
 ```
 
 > **Note on ADRs.** ADR-001 through ADR-009 live inside `docs/Mycelium_Project_Foundation.md` §8
-> (the decision log); ADR-010 through ADR-021 are broken out as their own files in `docs/adr/`.
+> (the decision log); ADR-010 through ADR-024 are broken out as their own files in `docs/adr/`.
 > All are append-only with status transitions. The authoritative, always-current map of the whole
 > corpus (every RFC/ADR/DN with status) is [`docs/Doc-Index.md`](./docs/Doc-Index.md).
 
@@ -403,7 +403,7 @@ and `docs/planning/phase-*.md` for the live phase ladder.
 2. **`docs/Mycelium_Project_Foundation.md`** — the charter: vision, requirements (FR/NFR/VR),
    success & kill criteria, ADRs 001–009, roadmap, risks.
 3. **`docs/rfcs/RFC-0001…`** — the Core IR & metadata schema (everything else plugs into this).
-4. **RFC-0002 → RFC-0023**, then the ADRs (010…021) and design notes (DN-01…22) for the deep
+4. **RFC-0002 → RFC-0032**, then the ADRs (010…024) and design notes (DN-01…28) for the deep
    dives — `Doc-Index.md` orders them.
 5. **`crates/mycelium-core` and `crates/mycelium-interp`** — the kernel and reference semantics,
    if you want to read the design as code.
