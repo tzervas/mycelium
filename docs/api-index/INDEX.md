@@ -149,20 +149,20 @@
 |---|---|---|---|
 | `mycelium_cert::BF16_MIN_NORMAL:` | const | `crates/mycelium-cert/src/dense.rs:34` | Smallest positive *normal* bfloat16 (same exponent range as f32): `2^−126`. |
 | `mycelium_cert::BF16_REL_EPS:` | const | `crates/mycelium-cert/src/dense.rs:30` | The proven per-element relative rounding bound: the unit roundoff `u = β^(1−p)/2 = 2^(1−8)/2 = |
-| `mycelium_cert::BinTernParams` | struct | `crates/mycelium-cert/src/lib.rs:43` | Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary |
-| `mycelium_cert::BinaryTernarySwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:360` | A [`SwapEngine`] for the reference interpreter that performs the |
-| `mycelium_cert::CertifiedSwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:395` | A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the |
+| `mycelium_cert::BinTernParams` | struct | `crates/mycelium-cert/src/lib.rs:45` | Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary |
+| `mycelium_cert::BinaryTernarySwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:362` | A [`SwapEngine`] for the reference interpreter that performs the |
+| `mycelium_cert::CertifiedSwapEngine` | struct | `crates/mycelium-cert/src/lib.rs:397` | A [`SwapEngine`] over the **complete certified swap surface** (SC-3 global, M-212): the |
 | `mycelium_cert::CheckVerdict` | enum | `crates/mycelium-cert/src/check.rs:110` | The checker's verdict. |
-| `mycelium_cert::DENSE_VSA_DEFAULT_DELTA:` | const | `crates/mycelium-cert/src/lib.rs:386` | The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same |
+| `mycelium_cert::DENSE_VSA_DEFAULT_DELTA:` | const | `crates/mycelium-cert/src/lib.rs:388` | The δ the engine requests for a Dense↔VSA swap when no policy channel supplies one — the same |
 | `mycelium_cert::DENSE_VSA_EMP_DELTA:` | const | `crates/mycelium-cert/src/dense_vsa.rs:48` | Empirical profile — the validated δ. |
 | `mycelium_cert::DENSE_VSA_MODEL:` | const | `crates/mycelium-cert/src/dense_vsa.rs:41` | The VSA model the swap targets (the atoms are bipolar and the encoding is the MAP-I additive |
 | `mycelium_cert::Evidence` | enum | `crates/mycelium-cert/src/check.rs:58` | The evidence presented to the checker — the *certificate* of `(A, B, R, claimed, certificate)`. |
 | `mycelium_cert::Fallback` | enum | `crates/mycelium-cert/src/check.rs:69` | The explicit fallback path when validation fails — required by RFC-0002 §2 (TV incompleteness |
 | `mycelium_cert::NotValidatedReason` | enum | `crates/mycelium-cert/src/check.rs:79` | Why the checker did not validate. |
 | `mycelium_cert::RefinementRelation` | enum | `crates/mycelium-cert/src/check.rs:45` | The relation `R` under which `B` claims to refine `A` (RFC-0002 §2). |
-| `mycelium_cert::SwapCertificate` | enum | `crates/mycelium-cert/src/lib.rs:54` | The inspectable certificate every swap produces (RFC-0002 §3/§5; `swap-certificate.schema.json`). |
-| `mycelium_cert::SwapError` | enum | `crates/mycelium-cert/src/lib.rs:83` | Why a swap could not be performed — always explicit (SC-3; G2), never a silent coercion. |
-| `mycelium_cert::binary_to_ternary` | fn | `crates/mycelium-cert/src/lib.rs:270` | `enc`: encode an `n`-bit two's-complement [`Value`] into `m` balanced trits over a legal pair. |
+| `mycelium_cert::SwapCertificate` | enum | `crates/mycelium-cert/src/lib.rs:56` | The inspectable certificate every swap produces (RFC-0002 §3/§5; `swap-certificate.schema.json`). |
+| `mycelium_cert::SwapError` | enum | `crates/mycelium-cert/src/lib.rs:85` | Why a swap could not be performed — always explicit (SC-3; G2), never a silent coercion. |
+| `mycelium_cert::binary_to_ternary` | fn | `crates/mycelium-cert/src/lib.rs:272` | `enc`: encode an `n`-bit two's-complement [`Value`] into `m` balanced trits over a legal pair. |
 | `mycelium_cert::check` | mod | `crates/mycelium-cert/src/lib.rs:22` | — |
 | `mycelium_cert::check` | fn | `crates/mycelium-cert/src/check.rs:158` | The single shared checker: does artifact `B` refine reference `A` under `relation` within the |
 | `mycelium_cert::check_core` | fn | `crates/mycelium-cert/src/check.rs:293` | Observational equivalence over a whole [`CoreValue`] (RFC-0011 §4.6; NFR-7) — the M-151/M-210 |
@@ -174,9 +174,9 @@
 | `mycelium_cert::dense_vsa::DENSE_VSA_EMP_MAX_COMPONENTS:` | const | `crates/mycelium-cert/src/dense_vsa.rs:44` | Empirical profile — maximum Dense components covered by the trials. |
 | `mycelium_cert::dense_vsa::DENSE_VSA_EMP_METHOD:` | const | `crates/mycelium-cert/src/dense_vsa.rs:52` | Empirical profile — the method recorded in the `EmpiricalFit` basis. |
 | `mycelium_cert::dense_vsa::DENSE_VSA_EMP_TRIALS:` | const | `crates/mycelium-cert/src/dense_vsa.rs:50` | Empirical profile — the trial count `tests/dense_vsa.rs` runs. |
-| `mycelium_cert::legal_pair` | fn | `crates/mycelium-cert/src/lib.rs:234` | Whether `(n, m)` admits a lossless binary→ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2` |
-| `mycelium_cert::roundtrip_lemma_ref` | fn | `crates/mycelium-cert/src/lib.rs:247` | The content hash of the once-per-swap-kind binary↔ternary round-trip lemma (P1/P2, |
-| `mycelium_cert::ternary_to_binary` | fn | `crates/mycelium-cert/src/lib.rs:314` | `dec`: decode `m` balanced trits back into an `n`-bit two's-complement [`Value`]. |
+| `mycelium_cert::legal_pair` | fn | `crates/mycelium-cert/src/lib.rs:236` | Whether `(n, m)` admits a lossless binary→ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2` |
+| `mycelium_cert::roundtrip_lemma_ref` | fn | `crates/mycelium-cert/src/lib.rs:249` | The content hash of the once-per-swap-kind binary↔ternary round-trip lemma (P1/P2, |
+| `mycelium_cert::ternary_to_binary` | fn | `crates/mycelium-cert/src/lib.rs:316` | `dec`: decode `m` balanced trits back into an `n`-bit two's-complement [`Value`]. |
 | `mycelium_cert::vsa_to_dense` | fn | `crates/mycelium-cert/src/dense_vsa.rs:195` | Decode a `swap.dense_vsa.enc.v1` product back to a bipolar `Dense{components, F32}` value by |
 
 ## mycelium-check
@@ -261,7 +261,7 @@
 | `mycelium_core::Trit` | enum | `crates/mycelium-core/src/value.rs:19` | A balanced trit in `{-1, 0, +1}`. |
 | `mycelium_core::Value` | struct | `crates/mycelium-core/src/value.rs:134` | A Mycelium value. |
 | `mycelium_core::VarId` | type | `crates/mycelium-core/src/node.rs:29` | A variable identifier (a name; not part of content identity — RFC-0001 §4.6). |
-| `mycelium_core::WfError` | enum | `crates/mycelium-core/src/lib.rs:51` | Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants). |
+| `mycelium_core::WfError` | enum | `crates/mycelium-core/src/lib.rs:54` | Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants). |
 | `mycelium_core::WidthRel` | enum | `crates/mycelium-core/src/prim.rs:52` | How a prim's operand and result *widths* relate. |
 | `mycelium_core::binary` | mod | `crates/mycelium-core/src/lib.rs:13` | — |
 | `mycelium_core::binary::bits_to_int` | fn | `crates/mycelium-core/src/binary.rs:10` | The signed two's-complement value of an MSB-first bit string. |

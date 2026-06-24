@@ -8,6 +8,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: M-788 — mode-gated swap-cert emission/checking + bound/basis reconciliation)
+
+- **`CertMode::gate_result(intended_guarantee, intended_bound) -> (GuaranteeStrength, Option<Bound>)`**
+  (`mycelium-core`, RFC-0034 §7) — the bound/basis half M-787 explicitly deferred. When `Fast` floors a
+  would-be `Proven`/`Empirical` result to `Declared`, it **keeps the computed bound value but relabels its
+  basis to `UserDeclared`** ("computed, asserted-not-verified in fast") — the only basis M-I4 admits for
+  `Declared`, and the honest tag (VR-5: the ε/δ was computed, but `Fast` ran no machinery to *certify* it).
+  This keeps M-I1…M-I4 consistent by construction; the gated pair is exhaustively tested to be
+  `Meta::new`-constructible across `CertMode::ALL × {Exact,Proven,Empirical,Declared}`.
+  **Pending maintainer ratification** (the candidate-(a) "keep value, relabel basis" resolution — see
+  `docs/handoffs/m788-context.md`).
+- **Mode-gated swap certificates** (`mycelium-cert::mode`, RFC-0034 §4/§5): `gate_swap`, `GatedSwap`
+  (value + optional certificate + optional check verdict — inspectable, no black box), and
+  `ModeGatedSwapEngine` (a `SwapEngine`, default `Fast`). `Fast` runs the cert machinery **not at all**
+  (no emit, no check; Meta reconciled via `gate_result`); `Balanced` **emits** without checking; `Certified`
+  **emits + checks** through the unchanged M-210 `check` (a non-validating verdict is surfaced
+  never-silently). **Axis-B is not gated** — out-of-range / illegal-pair stays an explicit error in every
+  mode. The certificate machinery itself is unchanged. Mode-parametric tests (RFC-0034 §13) across the
+  three tiers + cross-mode negatives. *Implemented (Rust-first), pending RFC-0034 ratification.*
+- **Test-layout (M-797 as-touched):** `mycelium-core`'s `cert_mode` + crate-root `WfError` inline tests
+  extracted to in-crate `src/tests/` (white-box) as part of touching those logic files.
+
 ### Changed (2026-06-24: DN-31 §4-Q1 resolved — empty `{}` = block, `{:}` = empty map)
 
 - **Empty-`{}` ambiguity resolved (maintainer):** in the DN-31 delimiter scheme, **`{}` is an empty block**

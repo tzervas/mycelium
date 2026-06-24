@@ -108,6 +108,38 @@ impl core::marker::Unpin for mycelium_core::bound::Bound
 impl core::marker::UnsafeUnpin for mycelium_core::bound::Bound
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::bound::Bound
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::bound::Bound
+pub mod mycelium_core::cert_mode
+pub enum mycelium_core::cert_mode::CertMode
+pub mycelium_core::cert_mode::CertMode::Balanced
+pub mycelium_core::cert_mode::CertMode::Certified
+pub mycelium_core::cert_mode::CertMode::Fast
+impl mycelium_core::cert_mode::CertMode
+pub const mycelium_core::cert_mode::CertMode::ALL: [mycelium_core::cert_mode::CertMode; 3]
+pub fn mycelium_core::cert_mode::CertMode::depth(self) -> u8
+pub fn mycelium_core::cert_mode::CertMode::gate_guarantee(self, mycelium_core::guarantee::GuaranteeStrength) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::cert_mode::CertMode::gate_result(self, mycelium_core::guarantee::GuaranteeStrength, core::option::Option<mycelium_core::bound::Bound>) -> (mycelium_core::guarantee::GuaranteeStrength, core::option::Option<mycelium_core::bound::Bound>)
+impl core::clone::Clone for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::clone(&self) -> mycelium_core::cert_mode::CertMode
+impl core::cmp::Eq for mycelium_core::cert_mode::CertMode
+impl core::cmp::PartialEq for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::eq(&self, &mycelium_core::cert_mode::CertMode) -> bool
+impl core::default::Default for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::default() -> mycelium_core::cert_mode::CertMode
+impl core::fmt::Debug for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::cert_mode::CertMode
+impl core::marker::StructuralPartialEq for mycelium_core::cert_mode::CertMode
+impl serde_core::ser::Serialize for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::cert_mode::CertMode
+impl core::marker::Send for mycelium_core::cert_mode::CertMode
+impl core::marker::Sync for mycelium_core::cert_mode::CertMode
+impl core::marker::Unpin for mycelium_core::cert_mode::CertMode
+impl core::marker::UnsafeUnpin for mycelium_core::cert_mode::CertMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::cert_mode::CertMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::cert_mode::CertMode
 pub mod mycelium_core::content
 pub struct mycelium_core::content::Names
 impl mycelium_core::content::Names
@@ -664,6 +696,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::Provenance
 pub struct mycelium_core::meta::Meta
 impl mycelium_core::meta::Meta
 pub fn mycelium_core::meta::Meta::bound(&self) -> core::option::Option<&mycelium_core::bound::Bound>
+pub fn mycelium_core::meta::Meta::cert_mode(&self) -> mycelium_core::cert_mode::CertMode
 pub fn mycelium_core::meta::Meta::exact(mycelium_core::meta::Provenance) -> Self
 pub fn mycelium_core::meta::Meta::guarantee(&self) -> mycelium_core::guarantee::GuaranteeStrength
 pub fn mycelium_core::meta::Meta::new(mycelium_core::meta::Provenance, mycelium_core::guarantee::GuaranteeStrength, core::option::Option<mycelium_core::bound::Bound>, core::option::Option<mycelium_core::meta::SparsityObs>, core::option::Option<mycelium_core::meta::PhysicalLayout>, core::option::Option<mycelium_core::id::ContentHash>) -> core::result::Result<Self, mycelium_core::WfError>
@@ -672,6 +705,7 @@ pub fn mycelium_core::meta::Meta::policy_used(&self) -> core::option::Option<&my
 pub fn mycelium_core::meta::Meta::provenance(&self) -> &mycelium_core::meta::Provenance
 pub fn mycelium_core::meta::Meta::reconstruction(&self) -> core::option::Option<&mycelium_core::recon::ReconInfo>
 pub fn mycelium_core::meta::Meta::sparsity(&self) -> core::option::Option<mycelium_core::meta::SparsityObs>
+pub fn mycelium_core::meta::Meta::with_cert_mode(self, mycelium_core::cert_mode::CertMode) -> Self
 pub fn mycelium_core::meta::Meta::with_physical(self, mycelium_core::meta::PhysicalLayout) -> Self
 pub fn mycelium_core::meta::Meta::with_reconstruction(self, mycelium_core::recon::ReconInfo) -> Self
 impl core::clone::Clone for mycelium_core::meta::Meta
@@ -1398,6 +1432,37 @@ impl core::marker::Unpin for mycelium_core::bound::BoundKind
 impl core::marker::UnsafeUnpin for mycelium_core::bound::BoundKind
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::bound::BoundKind
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::bound::BoundKind
+pub enum mycelium_core::CertMode
+pub mycelium_core::CertMode::Balanced
+pub mycelium_core::CertMode::Certified
+pub mycelium_core::CertMode::Fast
+impl mycelium_core::cert_mode::CertMode
+pub const mycelium_core::cert_mode::CertMode::ALL: [mycelium_core::cert_mode::CertMode; 3]
+pub fn mycelium_core::cert_mode::CertMode::depth(self) -> u8
+pub fn mycelium_core::cert_mode::CertMode::gate_guarantee(self, mycelium_core::guarantee::GuaranteeStrength) -> mycelium_core::guarantee::GuaranteeStrength
+pub fn mycelium_core::cert_mode::CertMode::gate_result(self, mycelium_core::guarantee::GuaranteeStrength, core::option::Option<mycelium_core::bound::Bound>) -> (mycelium_core::guarantee::GuaranteeStrength, core::option::Option<mycelium_core::bound::Bound>)
+impl core::clone::Clone for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::clone(&self) -> mycelium_core::cert_mode::CertMode
+impl core::cmp::Eq for mycelium_core::cert_mode::CertMode
+impl core::cmp::PartialEq for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::eq(&self, &mycelium_core::cert_mode::CertMode) -> bool
+impl core::default::Default for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::default() -> mycelium_core::cert_mode::CertMode
+impl core::fmt::Debug for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::cert_mode::CertMode
+impl core::marker::StructuralPartialEq for mycelium_core::cert_mode::CertMode
+impl serde_core::ser::Serialize for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::cert_mode::CertMode
+pub fn mycelium_core::cert_mode::CertMode::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::cert_mode::CertMode
+impl core::marker::Send for mycelium_core::cert_mode::CertMode
+impl core::marker::Sync for mycelium_core::cert_mode::CertMode
+impl core::marker::Unpin for mycelium_core::cert_mode::CertMode
+impl core::marker::UnsafeUnpin for mycelium_core::cert_mode::CertMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::cert_mode::CertMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::cert_mode::CertMode
 pub enum mycelium_core::CleanupShape
 pub mycelium_core::CleanupShape::ArgMax
 pub mycelium_core::CleanupShape::Softmax
@@ -2184,6 +2249,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::DecodeSpec
 pub struct mycelium_core::Meta
 impl mycelium_core::meta::Meta
 pub fn mycelium_core::meta::Meta::bound(&self) -> core::option::Option<&mycelium_core::bound::Bound>
+pub fn mycelium_core::meta::Meta::cert_mode(&self) -> mycelium_core::cert_mode::CertMode
 pub fn mycelium_core::meta::Meta::exact(mycelium_core::meta::Provenance) -> Self
 pub fn mycelium_core::meta::Meta::guarantee(&self) -> mycelium_core::guarantee::GuaranteeStrength
 pub fn mycelium_core::meta::Meta::new(mycelium_core::meta::Provenance, mycelium_core::guarantee::GuaranteeStrength, core::option::Option<mycelium_core::bound::Bound>, core::option::Option<mycelium_core::meta::SparsityObs>, core::option::Option<mycelium_core::meta::PhysicalLayout>, core::option::Option<mycelium_core::id::ContentHash>) -> core::result::Result<Self, mycelium_core::WfError>
@@ -2192,6 +2258,7 @@ pub fn mycelium_core::meta::Meta::policy_used(&self) -> core::option::Option<&my
 pub fn mycelium_core::meta::Meta::provenance(&self) -> &mycelium_core::meta::Provenance
 pub fn mycelium_core::meta::Meta::reconstruction(&self) -> core::option::Option<&mycelium_core::recon::ReconInfo>
 pub fn mycelium_core::meta::Meta::sparsity(&self) -> core::option::Option<mycelium_core::meta::SparsityObs>
+pub fn mycelium_core::meta::Meta::with_cert_mode(self, mycelium_core::cert_mode::CertMode) -> Self
 pub fn mycelium_core::meta::Meta::with_physical(self, mycelium_core::meta::PhysicalLayout) -> Self
 pub fn mycelium_core::meta::Meta::with_reconstruction(self, mycelium_core::recon::ReconInfo) -> Self
 impl core::clone::Clone for mycelium_core::meta::Meta

@@ -15,6 +15,7 @@
 //! M-787 adds [`gate_guarantee`](CertMode::gate_guarantee) — the policy that floors `fast` to the
 //! structural tags.
 
+use crate::bound::{Bound, BoundBasis};
 use crate::guarantee::GuaranteeStrength;
 
 /// The active certification mode a value was produced under (RFC-0034). Default
@@ -82,66 +83,66 @@ impl CertMode {
             CertMode::Balanced | CertMode::Certified => intended,
         }
     }
+
+    /// Gate an operation's *intended* `(guarantee, bound)` **pair** by this mode, reconciling the
+    /// bound's basis with the floored guarantee so the result still satisfies the `Meta` invariants
+    /// **M-I1…M-I4** (RFC-0034 §7; M-788 — the bound/basis half [`gate_guarantee`] explicitly
+    /// deferred).
+    ///
+    /// The guarantee is gated exactly as [`gate_guarantee`](CertMode::gate_guarantee). The subtlety
+    /// is the *bound*: when `Fast` floors a would-be [`Proven`](GuaranteeStrength::Proven)/
+    /// [`Empirical`](GuaranteeStrength::Empirical) result to [`Declared`](GuaranteeStrength::Declared),
+    /// the operation has *computed* a bound value (an ε/δ) but `Fast` ran **no** certification
+    /// machinery to check it — so the bound's basis ([`ProvenThm`](BoundBasis::ProvenThm)/
+    /// [`EmpiricalFit`](BoundBasis::EmpiricalFit)) is no longer earned. Carrying it unchanged would
+    /// violate **M-I4** (`Declared ⟹ UserDeclared`). The honest reconciliation (VR-5: never claim a
+    /// basis you did not establish) is to **keep the computed bound *value* but relabel its basis to
+    /// [`UserDeclared`](BoundBasis::UserDeclared)** — "computed, but asserted-not-verified in this
+    /// mode" — which is exactly the basis M-I4 requires for a `Declared` tag.
+    ///
+    /// Concretely, mode by intended strength:
+    /// - **`Fast` + `Exact`** → `(Exact, None)`. `Exact` is structural and bound-free; the caller's
+    ///   `bound` is already `None` by M-I1 (a non-`None` bound on an `Exact` intent is itself a
+    ///   bug the `Meta` constructor would reject), and this preserves M-I1.
+    /// - **`Fast` + `Proven`/`Empirical`/`Declared`** → `(Declared, bound.relabel(UserDeclared))`.
+    ///   The value is kept; only the basis is demoted, satisfying M-I4. (An already-`Declared`
+    ///   intent already carries a `UserDeclared` basis, so the relabel is a no-op for it.)
+    /// - **`Balanced`/`Certified`** → `(intended, bound)` unchanged — the machinery runs, so the
+    ///   computed basis is earned and passes through (the mechanism is preserved).
+    ///
+    /// The returned pair is **always** one the `Meta` constructor (which enforces M-I1…M-I4) accepts
+    /// — that round-trip is the unit-tested contract (`gate_result` then `Meta::new` never errors on
+    /// the invariant check). Numeric well-formedness of the bound is unchanged by the relabel (the
+    /// payload is untouched), so a well-formed input stays well-formed.
+    #[must_use]
+    pub fn gate_result(
+        self,
+        intended_guarantee: GuaranteeStrength,
+        intended_bound: Option<Bound>,
+    ) -> (GuaranteeStrength, Option<Bound>) {
+        use GuaranteeStrength::{Declared, Empirical, Exact, Proven};
+        match self {
+            CertMode::Fast => match intended_guarantee {
+                // Structural exact: bound stays None (M-I1). Any stray bound is dropped — an
+                // `Exact` result is bound-free by definition, never a silent carry.
+                Exact => (Exact, None),
+                // Floored to Declared: keep the computed bound value, relabel its basis to
+                // UserDeclared so M-I4 holds (honest: computed, asserted-not-verified in Fast).
+                Proven | Empirical | Declared => {
+                    (Declared, intended_bound.map(relabel_user_declared))
+                }
+            },
+            // The machinery runs: the intended pair is earned and passes through unchanged.
+            CertMode::Balanced | CertMode::Certified => (intended_guarantee, intended_bound),
+        }
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::CertMode;
-
-    #[test]
-    fn default_is_fast() {
-        // RFC-0034 §5: `fast` is the project default.
-        assert_eq!(CertMode::default(), CertMode::Fast);
-    }
-
-    #[test]
-    fn depth_orders_fast_balanced_certified() {
-        // Strictly increasing certification depth (RFC-0034 §5).
-        assert!(CertMode::Fast.depth() < CertMode::Balanced.depth());
-        assert!(CertMode::Balanced.depth() < CertMode::Certified.depth());
-        // `ALL` is in depth order and exhaustive (the value space is finite — a complete check).
-        let depths: Vec<u8> = CertMode::ALL.iter().map(|m| m.depth()).collect();
-        assert_eq!(depths, vec![0, 1, 2]);
-    }
-
-    #[test]
-    fn fast_never_yields_empirical_or_proven() {
-        // The M-787 invariant (VR-5 floor): exhaustive over the finite strength space.
-        use crate::guarantee::GuaranteeStrength as G;
-        for &g in &G::ALL {
-            let gated = CertMode::Fast.gate_guarantee(g);
-            assert!(
-                gated != G::Empirical && gated != G::Proven,
-                "fast must never compute Empirical/Proven (got {gated:?} from {g:?})"
-            );
-        }
-        // Specifically: structural Exact passes; everything else floors to Declared.
-        assert_eq!(CertMode::Fast.gate_guarantee(G::Exact), G::Exact);
-        assert_eq!(CertMode::Fast.gate_guarantee(G::Proven), G::Declared);
-        assert_eq!(CertMode::Fast.gate_guarantee(G::Empirical), G::Declared);
-        assert_eq!(CertMode::Fast.gate_guarantee(G::Declared), G::Declared);
-    }
-
-    #[test]
-    fn balanced_and_certified_pass_every_strength_through() {
-        // The machinery runs in these modes, so tag assignment is unchanged (mechanism preserved).
-        use crate::guarantee::GuaranteeStrength as G;
-        for &g in &G::ALL {
-            assert_eq!(CertMode::Balanced.gate_guarantee(g), g);
-            assert_eq!(CertMode::Certified.gate_guarantee(g), g);
-        }
-    }
-
-    #[test]
-    fn serde_form_is_the_bare_variant_string() {
-        // Mirrors GuaranteeStrength's wire form (RFC-0034 / guarantee.schema.json convention).
-        for (mode, json) in [
-            (CertMode::Fast, "\"Fast\""),
-            (CertMode::Balanced, "\"Balanced\""),
-            (CertMode::Certified, "\"Certified\""),
-        ] {
-            assert_eq!(serde_json::to_string(&mode).unwrap(), json);
-            assert_eq!(serde_json::from_str::<CertMode>(json).unwrap(), mode);
-        }
-    }
+/// Relabel a bound's basis to [`UserDeclared`](BoundBasis::UserDeclared), keeping its `kind`
+/// payload (the computed ε/δ value) intact. Used when `Fast` floors a computed-but-unchecked bound
+/// to a `Declared` tag (M-788): the value is honest, the *basis* is demoted to "asserted, not
+/// verified in this mode" — the only basis M-I4 admits for `Declared`.
+fn relabel_user_declared(mut bound: Bound) -> Bound {
+    bound.basis = BoundBasis::UserDeclared;
+    bound
 }
