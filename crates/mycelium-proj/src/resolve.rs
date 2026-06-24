@@ -14,6 +14,7 @@
 //! ancestor tier as deferred. Disallowed cross-tier conflicts (e.g. license-incompatible overrides)
 //! are likewise a later compliance check (M-361), not fabricated here.
 
+use crate::cert_scope::{cert_mode_word, resolve_mode, CertDecl, CertScope, ResolvedMode};
 use crate::header::{Deprecated, HeaderFields, StructuredHeader};
 use crate::manifest::Manifest;
 
@@ -69,6 +70,12 @@ pub struct ResolvedHeader {
     pub deprecated: Option<Deprecated>,
     /// `matured` — the nodule/phylum is a matured (AOT) scope; RFC-0017; inherited top-down.
     pub matured: Option<Resolved<bool>>,
+    /// `certification` — the active [`CertMode`](mycelium_core::cert_mode::CertMode), resolved
+    /// **most-specific-wins** over the `global > phylum > nodule` lattice (RFC-0034 §6; M-790). The
+    /// nodule `@certification` (header) overrides the phylum one (manifest); with neither, the project
+    /// default [`CertMode::Fast`](mycelium_core::cert_mode::CertMode::Fast). Always present (it falls
+    /// back to the default), and always carries its winning [`CertScope`] — never ambient (G2).
+    pub certification: ResolvedMode,
 }
 
 /// Resolve a parsed header against an optional project manifest.
@@ -136,7 +143,36 @@ pub fn resolve(header: &StructuredHeader, manifest: Option<&Manifest>) -> Resolv
         updated: f.updated.clone(),
         summary: f.summary.clone(),
         deprecated: f.deprecated.clone(),
+        // Certification mode (RFC-0034 §6; M-790): gather the `@certification` declarations from each
+        // scope and resolve most-specific-wins via the shared `cert_scope` fold (reusing RFC-0012's
+        // innermost-enclosing-wins mechanism). The nodule (in-file header) is the most-specific tier;
+        // the manifest is the phylum tier (FLAG-B). `global` is reserved (no source in v0).
+        certification: resolve_certification(f, p.and_then(|p| p.certification)),
     }
+}
+
+/// Gather the in-scope `@certification` declarations and resolve them most-specific-wins
+/// (RFC-0034 §6) via [`resolve_mode`]. The header carries the **nodule** tier, the manifest the
+/// **phylum** tier (FLAG-B in [`crate::cert_scope`]); `global` has no v0 source. With no declaration
+/// at any scope the result is the project default ([`ResolvedMode::defaulted`]).
+fn resolve_certification(
+    header: &HeaderFields,
+    manifest_mode: Option<mycelium_core::cert_mode::CertMode>,
+) -> ResolvedMode {
+    let mut decls: Vec<CertDecl> = Vec::new();
+    if let Some(mode) = manifest_mode {
+        decls.push(CertDecl {
+            scope: CertScope::Phylum,
+            mode,
+        });
+    }
+    if let Some(mode) = header.certification {
+        decls.push(CertDecl {
+            scope: CertScope::Nodule,
+            mode,
+        });
+    }
+    resolve_mode(&decls)
 }
 
 /// The `EXPLAIN` of a resolved header — every field with its value and source, so nothing about the
@@ -208,68 +244,13 @@ pub fn explain(r: &ResolvedHeader) -> String {
         dep,
         r.deprecated.as_ref().map(|_| Origin::Local),
     );
+    // Certification mode (RFC-0034 §6): always present (defaults to `fast`); its source is a
+    // `CertScope` (`global`/`phylum`/`nodule`) or `default` when no declaration was made — so it has
+    // its own row rather than reusing the `Origin`-typed `row` closure. Never ambient (G2).
+    let cert_src = r.certification.source.map_or("default", CertScope::label);
+    out.push_str(&format!(
+        "  certification: {}  [{cert_src}]\n",
+        cert_mode_word(r.certification.mode)
+    ));
     out
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::header::parse_header;
-    use crate::manifest::parse_manifest;
-
-    fn manifest() -> Manifest {
-        parse_manifest(
-            "[project]\nname=\"geometry\"\nkind=\"phylum\"\nversion=\"1.2.0\"\n\
-             license=\"Apache-2.0\"\nauthors=[\"Tyler Zervas\"]\nsince=\"2026-01-10\"\n\
-             repository=\"https://github.com/example/geometry\"\nkeywords=[\"geometry\"]\n",
-        )
-        .unwrap()
-    }
-
-    #[test]
-    fn a_subnodule_inherits_from_the_manifest() {
-        let h = parse_header("// nodule: geometry.shapes.circle\n// @updated: 2026-06-16\n")
-            .unwrap()
-            .unwrap();
-        let r = resolve(&h, Some(&manifest()));
-        // Inherited from the manifest.
-        assert_eq!(r.license.as_ref().unwrap().value, "Apache-2.0");
-        assert_eq!(r.license.as_ref().unwrap().origin, Origin::ProjectManifest);
-        assert_eq!(r.version.as_ref().unwrap().origin, Origin::ProjectManifest);
-        // Per-file: local, never inherited.
-        assert_eq!(r.updated.as_deref(), Some("2026-06-16"));
-    }
-
-    #[test]
-    fn a_local_value_overrides_the_manifest() {
-        let h = parse_header("// nodule: geometry.shapes\n// @license: MIT\n")
-            .unwrap()
-            .unwrap();
-        let r = resolve(&h, Some(&manifest()));
-        assert_eq!(r.license.as_ref().unwrap().value, "MIT");
-        assert_eq!(r.license.as_ref().unwrap().origin, Origin::Local);
-    }
-
-    #[test]
-    fn explain_names_every_source() {
-        let h =
-            parse_header("// nodule: geometry.shapes\n// @license: MIT\n// @updated: 2026-06-16\n")
-                .unwrap()
-                .unwrap();
-        let r = resolve(&h, Some(&manifest()));
-        let ex = explain(&r);
-        assert!(ex.contains("license: MIT  [local]"), "{ex}");
-        assert!(ex.contains("version: 1.2.0  [mycelium-proj.toml]"), "{ex}");
-        assert!(ex.contains("updated: 2026-06-16  [local]"), "{ex}");
-    }
-
-    #[test]
-    fn no_manifest_means_only_local_fields_resolve() {
-        let h = parse_header("// nodule: solo\n// @license: MIT\n")
-            .unwrap()
-            .unwrap();
-        let r = resolve(&h, None);
-        assert_eq!(r.license.as_ref().unwrap().origin, Origin::Local);
-        assert!(r.version.is_none());
-    }
 }

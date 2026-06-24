@@ -336,7 +336,9 @@ dependencies = [
 name = "mycelium-proj"
 version = "0.0.0"
 dependencies = [
+ "mycelium-core",
  "mycelium-l1",
+ "proptest",
 ]
 
 [[package]]

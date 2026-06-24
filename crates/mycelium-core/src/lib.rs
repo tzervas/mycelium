@@ -26,6 +26,7 @@ pub mod recon;
 pub mod repr;
 pub mod ternary;
 pub mod value;
+pub mod wrapping;
 
 #[cfg(test)]
 mod tests;
@@ -48,6 +49,7 @@ pub use recon::{
 };
 pub use repr::{Repr, ScalarKind, SparsityClass};
 pub use value::{Payload, Trit, Value};
+pub use wrapping::WrappingOpt;
 
 /// Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants).
 #[derive(Debug, Clone, PartialEq, Eq)]
