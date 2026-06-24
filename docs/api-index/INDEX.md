@@ -973,7 +973,7 @@
 | `mycelium_mlir::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:131` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:248` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:595` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
-| `mycelium_mlir::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:322` | Compile the bit/trit-subset program to a shared object without calling it. |
+| `mycelium_mlir::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:323` | Compile the bit/trit-subset program to a shared object without calling it. |
 | `mycelium_mlir::compile_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:168` | Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load |
 | `mycelium_mlir::cross_backend_gate` | fn | `crates/mycelium-mlir/src/vr4.rs:195` | Run the **VR-4 cross-backend gate** over `node`: for every backend, produce its dumpable lowering |
 | `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:64` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
@@ -1005,7 +1005,7 @@
 | `mycelium_mlir::inject::Image::with_interpreter` | fn | `crates/mycelium-mlir/src/inject.rs:125` | Build an image with a specific interpreter for the fallback path (e.g. |
 | `mycelium_mlir::jit` | mod | `crates/mycelium-mlir/src/lib.rs:51` | — |
 | `mycelium_mlir::jit::JitArtifact::call` | fn | `crates/mycelium-mlir/src/jit.rs:113` | Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact` |
-| `mycelium_mlir::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:346` | Compile the program to a shared object and call it once, in-process. |
+| `mycelium_mlir::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:347` | Compile the program to a shared object and call it once, in-process. |
 | `mycelium_mlir::jit_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:205` | Convenience: specialize on `weights`, compile, and run the dot product against `activations` once. |
 | `mycelium_mlir::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:445` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
 | `mycelium_mlir::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:451` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
@@ -1099,7 +1099,8 @@
 |---|---|---|---|
 | `mycelium_proj::CertDecl` | struct | `crates/mycelium-proj/src/cert_scope.rs:97` | One `@certification` declaration: a [`CertMode`] declared at a given [`CertScope`]. |
 | `mycelium_proj::CertScope` | enum | `crates/mycelium-proj/src/cert_scope.rs:56` | The scope a certification-mode declaration was made at — the RFC-0034 §6 lattice |
-| `mycelium_proj::CrossModeEvent` | struct | `crates/mycelium-proj/src/cert_scope.rs:201` | The **explicit, visible event** raised when a value produced under one [`CertMode`] enters a |
+| `mycelium_proj::ConsumptionTier` | enum | `crates/mycelium-proj/src/cert_scope.rs:214` | The **DX consumption tier** — how much of the already-generated inspectability signal is |
+| `mycelium_proj::CrossModeEvent` | struct | `crates/mycelium-proj/src/cert_scope.rs:332` | The **explicit, visible event** raised when a value produced under one [`CertMode`] enters a |
 | `mycelium_proj::Dependency` | struct | `crates/mycelium-proj/src/manifest.rs:85` | One `[dependencies]` entry (M-368): another phylum, **content-addressed** (ADR-003) — pinned by |
 | `mycelium_proj::Deprecated` | enum | `crates/mycelium-proj/src/header.rs:33` | A `@deprecated` value: a bare flag or a reason string (spec §3). |
 | `mycelium_proj::HEADER_KEYS:` | const | `crates/mycelium-proj/src/header.rs:17` | The closed v0 metadata key set (spec §7.3). |
@@ -1107,6 +1108,7 @@
 | `mycelium_proj::HeaderFields` | struct | `crates/mycelium-proj/src/header.rs:42` | The parsed `@key` metadata of a header (all optional; absent fields inherit per the resolver). |
 | `mycelium_proj::Manifest` | struct | `crates/mycelium-proj/src/manifest.rs:107` | A parsed `mycelium-proj.toml` (v0: the typed `[project]` table + the optional `[toolchain]`, |
 | `mycelium_proj::ManifestError` | struct | `crates/mycelium-proj/src/manifest.rs:122` | An explicit manifest error (G2): a syntax error, an out-of-subset construct, or a bad value. |
+| `mycelium_proj::ModeSignal` | struct | `crates/mycelium-proj/src/cert_scope.rs:251` | The **always-generated inspectability signal** for the active certification mode (RFC-0034 §7). |
 | `mycelium_proj::Origin` | enum | `crates/mycelium-proj/src/resolve.rs:23` | Where a resolved field's value came from. |
 | `mycelium_proj::Project` | struct | `crates/mycelium-proj/src/manifest.rs:33` | The typed `[project]` table (the v0 closed key set). |
 | `mycelium_proj::ProjectKind` | enum | `crates/mycelium-proj/src/manifest.rs:22` | The shape of a Mycelium project (spec §2 — `[project].kind`). |
@@ -1118,27 +1120,30 @@
 | `mycelium_proj::Surface` | struct | `crates/mycelium-proj/src/manifest.rs:76` | The typed `[surface]` table (M-368): a phylum's **public exports** — the germination boundary. |
 | `mycelium_proj::Toolchain` | struct | `crates/mycelium-proj/src/manifest.rs:65` | The typed `[toolchain]` table (M-364): the optional pins the toolchain reads. |
 | `mycelium_proj::cert_mode_word` | fn | `crates/mycelium-proj/src/cert_scope.rs:152` | The surface spelling of a mode (the inverse of [`parse_cert_mode`]) — for `EXPLAIN`/round-trip. |
-| `mycelium_proj::cert_scope` | mod | `crates/mycelium-proj/src/lib.rs:22` | — |
+| `mycelium_proj::cert_scope` | mod | `crates/mycelium-proj/src/lib.rs:25` | — |
 | `mycelium_proj::cert_scope::CertScope::ALL:` | const | `crates/mycelium-proj/src/cert_scope.rs:70` | All three scopes, least-specific → most-specific — for exhaustive iteration in tests/tooling. |
 | `mycelium_proj::cert_scope::CertScope::label` | fn | `crates/mycelium-proj/src/cert_scope.rs:86` | A stable, lower-case label for `EXPLAIN` output (RFC-0012 renderability; G2 — never ambient). |
 | `mycelium_proj::cert_scope::CertScope::specificity` | fn | `crates/mycelium-proj/src/cert_scope.rs:76` | Specificity rank, `0` = Global (least) … `2` = |
-| `mycelium_proj::cert_scope::CrossModeEvent::is_boundary` | fn | `crates/mycelium-proj/src/cert_scope.rs:220` | Whether this crossing is a genuine **mode boundary** — the producer ran *less* certification |
-| `mycelium_proj::cert_scope::CrossModeEvent::upgraded_strength` | fn | `crates/mycelium-proj/src/cert_scope.rs:231` | Whether the crossing **upgraded** the value's guarantee strength. |
+| `mycelium_proj::cert_scope::ConsumptionTier::is_at_least` | fn | `crates/mycelium-proj/src/cert_scope.rs:237` | Whether this tier is at least as verbose as another — for asserting that dialing consumption |
+| `mycelium_proj::cert_scope::CrossModeEvent::is_boundary` | fn | `crates/mycelium-proj/src/cert_scope.rs:351` | Whether this crossing is a genuine **mode boundary** — the producer ran *less* certification |
+| `mycelium_proj::cert_scope::CrossModeEvent::upgraded_strength` | fn | `crates/mycelium-proj/src/cert_scope.rs:362` | Whether the crossing **upgraded** the value's guarantee strength. |
 | `mycelium_proj::cert_scope::ResolvedMode::defaulted` | fn | `crates/mycelium-proj/src/cert_scope.rs:124` | The default resolution: no declaration at any scope ⇒ the project default |
-| `mycelium_proj::compose` | fn | `crates/mycelium-proj/src/cert_scope.rs:249` | Compose a value produced under `producer` into a computation running under `consumer`, surfacing |
+| `mycelium_proj::compose` | fn | `crates/mycelium-proj/src/cert_scope.rs:380` | Compose a value produced under `producer` into a computation running under `consumer`, surfacing |
 | `mycelium_proj::explain` | fn | `crates/mycelium-proj/src/resolve.rs:181` | The `EXPLAIN` of a resolved header — every field with its value and source, so nothing about the |
-| `mycelium_proj::explain_mode` | fn | `crates/mycelium-proj/src/cert_scope.rs:183` | The `EXPLAIN` of a certification-mode resolution — the effective mode and its source scope, so the |
-| `mycelium_proj::header` | mod | `crates/mycelium-proj/src/lib.rs:23` | — |
+| `mycelium_proj::explain_mode` | fn | `crates/mycelium-proj/src/cert_scope.rs:188` | The `EXPLAIN` of a certification-mode resolution — the effective mode and its source scope, so the |
+| `mycelium_proj::generate_mode_signal` | fn | `crates/mycelium-proj/src/cert_scope.rs:270` | **Generate the inspectability signal** for a resolved certification mode — always available, |
+| `mycelium_proj::header` | mod | `crates/mycelium-proj/src/lib.rs:26` | — |
 | `mycelium_proj::header::KNOWN_SPDX:` | const | `crates/mycelium-proj/src/header.rs:341` | The v0 known-SPDX subset — common OSI/FSF identifiers. |
 | `mycelium_proj::header::is_iso_date` | fn | `crates/mycelium-proj/src/header.rs:296` | A `YYYY-MM-DD` ISO-8601 calendar date with a plausible month/day (cheap, dependency-free; the |
 | `mycelium_proj::header::is_semver` | fn | `crates/mycelium-proj/src/header.rs:318` | A `MAJOR.MINOR.PATCH` semver core, with an optional `-prerelease` and/or `+build` suffix. |
 | `mycelium_proj::header::is_spdx` | fn | `crates/mycelium-proj/src/header.rs:369` | A recognised SPDX identifier or a simple expression over [`KNOWN_SPDX`] (operators `OR`/`AND`/ |
 | `mycelium_proj::header::is_url` | fn | `crates/mycelium-proj/src/header.rs:330` | A non-empty, URL-shaped string (scheme-prefixed or `git@`-style). |
-| `mycelium_proj::manifest` | mod | `crates/mycelium-proj/src/lib.rs:24` | — |
+| `mycelium_proj::manifest` | mod | `crates/mycelium-proj/src/lib.rs:27` | — |
 | `mycelium_proj::parse_cert_mode` | fn | `crates/mycelium-proj/src/cert_scope.rs:138` | Parse the `@certification` attribute value into a [`CertMode`] — the closed, never-silent set |
 | `mycelium_proj::parse_header` | fn | `crates/mycelium-proj/src/header.rs:114` | Parse the structured header from `src`. |
 | `mycelium_proj::parse_manifest` | fn | `crates/mycelium-proj/src/manifest.rs:166` | Parse a `mycelium-proj.toml` source into a [`Manifest`]. |
-| `mycelium_proj::resolve` | mod | `crates/mycelium-proj/src/lib.rs:25` | — |
+| `mycelium_proj::render_mode_signal` | fn | `crates/mycelium-proj/src/cert_scope.rs:292` | **Render the inspectability signal** at a given DX consumption tier (RFC-0034 §7). |
+| `mycelium_proj::resolve` | mod | `crates/mycelium-proj/src/lib.rs:28` | — |
 | `mycelium_proj::resolve` | fn | `crates/mycelium-proj/src/resolve.rs:83` | Resolve a parsed header against an optional project manifest. |
 | `mycelium_proj::resolve_mode` | fn | `crates/mycelium-proj/src/cert_scope.rs:170` | **Resolve the active certification mode most-specific-wins** over a set of `@certification` |
 
@@ -4393,8 +4398,8 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::inject::Resolution::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::inject::recompile_closure` | dedup-alias: same definition as `mycelium_mlir::recompile_closure` at crates/mycelium-mlir/src/inject.rs:226 — one canonical row kept |
 | `mycelium_mlir::jit::JitArtifact` | dedup-alias: same definition as `mycelium_mlir::JitArtifact` at crates/mycelium-mlir/src/jit.rs:103 — one canonical row kept |
-| `mycelium_mlir::jit::compile_so` | dedup-alias: same definition as `mycelium_mlir::compile_so` at crates/mycelium-mlir/src/jit.rs:322 — one canonical row kept |
-| `mycelium_mlir::jit::jit_run` | dedup-alias: same definition as `mycelium_mlir::jit_run` at crates/mycelium-mlir/src/jit.rs:346 — one canonical row kept |
+| `mycelium_mlir::jit::compile_so` | dedup-alias: same definition as `mycelium_mlir::compile_so` at crates/mycelium-mlir/src/jit.rs:323 — one canonical row kept |
+| `mycelium_mlir::jit::jit_run` | dedup-alias: same definition as `mycelium_mlir::jit_run` at crates/mycelium-mlir/src/jit.rs:347 — one canonical row kept |
 | `mycelium_mlir::llvm::AotError` | dedup-alias: same definition as `mycelium_mlir::AotError` at crates/mycelium-mlir/src/llvm.rs:60 — one canonical row kept |
 | `mycelium_mlir::llvm::AotError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::llvm::AotError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4611,13 +4616,33 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_proj::cert_scope::CertScope::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::CertScope::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::CertScope::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
-| `mycelium_proj::cert_scope::CrossModeEvent` | dedup-alias: same definition as `mycelium_proj::CrossModeEvent` at crates/mycelium-proj/src/cert_scope.rs:201 — one canonical row kept |
+| `mycelium_proj::cert_scope::ConsumptionTier` | dedup-alias: same definition as `mycelium_proj::ConsumptionTier` at crates/mycelium-proj/src/cert_scope.rs:214 — one canonical row kept |
+| `mycelium_proj::cert_scope::ConsumptionTier::ALL:` | dedup-alias: same definition as `mycelium_proj::cert_scope::CertScope::ALL:` at crates/mycelium-proj/src/cert_scope.rs:70 — one canonical row kept |
+| `mycelium_proj::cert_scope::ConsumptionTier::ALL:` | dedup-alias: same definition as `mycelium_proj::cert_scope::CertScope::ALL:` at crates/mycelium-proj/src/cert_scope.rs:70 — one canonical row kept |
+| `mycelium_proj::cert_scope::ConsumptionTier::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ConsumptionTier::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ConsumptionTier::cmp` | definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ConsumptionTier::cmp` | definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ConsumptionTier::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ConsumptionTier::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ConsumptionTier::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ConsumptionTier::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ConsumptionTier::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ConsumptionTier::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::CrossModeEvent` | dedup-alias: same definition as `mycelium_proj::CrossModeEvent` at crates/mycelium-proj/src/cert_scope.rs:332 — one canonical row kept |
 | `mycelium_proj::cert_scope::CrossModeEvent::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::CrossModeEvent::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::CrossModeEvent::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::CrossModeEvent::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::CrossModeEvent::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::CrossModeEvent::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ModeSignal` | dedup-alias: same definition as `mycelium_proj::ModeSignal` at crates/mycelium-proj/src/cert_scope.rs:251 — one canonical row kept |
+| `mycelium_proj::cert_scope::ModeSignal::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ModeSignal::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ModeSignal::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ModeSignal::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ModeSignal::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_proj::cert_scope::ModeSignal::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::ResolvedMode` | dedup-alias: same definition as `mycelium_proj::ResolvedMode` at crates/mycelium-proj/src/cert_scope.rs:112 — one canonical row kept |
 | `mycelium_proj::cert_scope::ResolvedMode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::ResolvedMode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4628,9 +4653,11 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_proj::cert_scope::ResolvedMode::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::ResolvedMode::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::cert_scope::cert_mode_word` | dedup-alias: same definition as `mycelium_proj::cert_mode_word` at crates/mycelium-proj/src/cert_scope.rs:152 — one canonical row kept |
-| `mycelium_proj::cert_scope::compose` | dedup-alias: same definition as `mycelium_proj::compose` at crates/mycelium-proj/src/cert_scope.rs:249 — one canonical row kept |
-| `mycelium_proj::cert_scope::explain_mode` | dedup-alias: same definition as `mycelium_proj::explain_mode` at crates/mycelium-proj/src/cert_scope.rs:183 — one canonical row kept |
+| `mycelium_proj::cert_scope::compose` | dedup-alias: same definition as `mycelium_proj::compose` at crates/mycelium-proj/src/cert_scope.rs:380 — one canonical row kept |
+| `mycelium_proj::cert_scope::explain_mode` | dedup-alias: same definition as `mycelium_proj::explain_mode` at crates/mycelium-proj/src/cert_scope.rs:188 — one canonical row kept |
+| `mycelium_proj::cert_scope::generate_mode_signal` | dedup-alias: same definition as `mycelium_proj::generate_mode_signal` at crates/mycelium-proj/src/cert_scope.rs:270 — one canonical row kept |
 | `mycelium_proj::cert_scope::parse_cert_mode` | dedup-alias: same definition as `mycelium_proj::parse_cert_mode` at crates/mycelium-proj/src/cert_scope.rs:138 — one canonical row kept |
+| `mycelium_proj::cert_scope::render_mode_signal` | dedup-alias: same definition as `mycelium_proj::render_mode_signal` at crates/mycelium-proj/src/cert_scope.rs:292 — one canonical row kept |
 | `mycelium_proj::cert_scope::resolve_mode` | dedup-alias: same definition as `mycelium_proj::resolve_mode` at crates/mycelium-proj/src/cert_scope.rs:170 — one canonical row kept |
 | `mycelium_proj::header::Deprecated` | dedup-alias: same definition as `mycelium_proj::Deprecated` at crates/mycelium-proj/src/header.rs:33 — one canonical row kept |
 | `mycelium_proj::header::Deprecated::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |

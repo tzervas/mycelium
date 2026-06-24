@@ -28,6 +28,33 @@ impl core::marker::Unpin for mycelium_proj::cert_scope::CertScope
 impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::CertScope
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::CertScope
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::CertScope
+pub enum mycelium_proj::cert_scope::ConsumptionTier
+pub mycelium_proj::cert_scope::ConsumptionTier::Full
+pub mycelium_proj::cert_scope::ConsumptionTier::Lean
+pub mycelium_proj::cert_scope::ConsumptionTier::Medium
+impl mycelium_proj::cert_scope::ConsumptionTier
+pub const mycelium_proj::cert_scope::ConsumptionTier::ALL: [mycelium_proj::cert_scope::ConsumptionTier; 3]
+pub fn mycelium_proj::cert_scope::ConsumptionTier::is_at_least(self, mycelium_proj::cert_scope::ConsumptionTier) -> bool
+impl core::clone::Clone for mycelium_proj::cert_scope::ConsumptionTier
+pub fn mycelium_proj::cert_scope::ConsumptionTier::clone(&self) -> mycelium_proj::cert_scope::ConsumptionTier
+impl core::cmp::Eq for mycelium_proj::cert_scope::ConsumptionTier
+impl core::cmp::Ord for mycelium_proj::cert_scope::ConsumptionTier
+pub fn mycelium_proj::cert_scope::ConsumptionTier::cmp(&self, &mycelium_proj::cert_scope::ConsumptionTier) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::ConsumptionTier
+pub fn mycelium_proj::cert_scope::ConsumptionTier::eq(&self, &mycelium_proj::cert_scope::ConsumptionTier) -> bool
+impl core::cmp::PartialOrd for mycelium_proj::cert_scope::ConsumptionTier
+pub fn mycelium_proj::cert_scope::ConsumptionTier::partial_cmp(&self, &mycelium_proj::cert_scope::ConsumptionTier) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_proj::cert_scope::ConsumptionTier
+pub fn mycelium_proj::cert_scope::ConsumptionTier::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::Freeze for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::Send for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::Sync for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::Unpin for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::ConsumptionTier
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::ConsumptionTier
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::ConsumptionTier
 pub struct mycelium_proj::cert_scope::CertDecl
 pub mycelium_proj::cert_scope::CertDecl::mode: mycelium_core::cert_mode::CertMode
 pub mycelium_proj::cert_scope::CertDecl::scope: mycelium_proj::cert_scope::CertScope
@@ -71,6 +98,25 @@ impl core::marker::Unpin for mycelium_proj::cert_scope::CrossModeEvent
 impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::CrossModeEvent
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::CrossModeEvent
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::CrossModeEvent
+pub struct mycelium_proj::cert_scope::ModeSignal
+pub mycelium_proj::cert_scope::ModeSignal::depth: u8
+pub mycelium_proj::cert_scope::ModeSignal::resolved: mycelium_proj::cert_scope::ResolvedMode
+impl core::clone::Clone for mycelium_proj::cert_scope::ModeSignal
+pub fn mycelium_proj::cert_scope::ModeSignal::clone(&self) -> mycelium_proj::cert_scope::ModeSignal
+impl core::cmp::Eq for mycelium_proj::cert_scope::ModeSignal
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::ModeSignal
+pub fn mycelium_proj::cert_scope::ModeSignal::eq(&self, &mycelium_proj::cert_scope::ModeSignal) -> bool
+impl core::fmt::Debug for mycelium_proj::cert_scope::ModeSignal
+pub fn mycelium_proj::cert_scope::ModeSignal::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::Freeze for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::Send for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::Sync for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::Unpin for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::ModeSignal
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::ModeSignal
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::ModeSignal
 pub struct mycelium_proj::cert_scope::ResolvedMode
 pub mycelium_proj::cert_scope::ResolvedMode::mode: mycelium_core::cert_mode::CertMode
 pub mycelium_proj::cert_scope::ResolvedMode::source: core::option::Option<mycelium_proj::cert_scope::CertScope>
@@ -97,7 +143,9 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::Resolve
 pub fn mycelium_proj::cert_scope::cert_mode_word(mycelium_core::cert_mode::CertMode) -> &'static str
 pub fn mycelium_proj::cert_scope::compose(mycelium_core::cert_mode::CertMode, mycelium_core::cert_mode::CertMode, mycelium_core::guarantee::GuaranteeStrength) -> mycelium_proj::cert_scope::CrossModeEvent
 pub fn mycelium_proj::cert_scope::explain_mode(&mycelium_proj::cert_scope::ResolvedMode) -> alloc::string::String
+pub fn mycelium_proj::cert_scope::generate_mode_signal(&mycelium_proj::cert_scope::ResolvedMode) -> mycelium_proj::cert_scope::ModeSignal
 pub fn mycelium_proj::cert_scope::parse_cert_mode(&str) -> core::result::Result<mycelium_core::cert_mode::CertMode, alloc::string::String>
+pub fn mycelium_proj::cert_scope::render_mode_signal(&mycelium_proj::cert_scope::ModeSignal, mycelium_proj::cert_scope::ConsumptionTier) -> alloc::string::String
 pub fn mycelium_proj::cert_scope::resolve_mode(&[mycelium_proj::cert_scope::CertDecl]) -> mycelium_proj::cert_scope::ResolvedMode
 pub mod mycelium_proj::header
 pub enum mycelium_proj::header::Deprecated
@@ -462,6 +510,33 @@ impl core::marker::Unpin for mycelium_proj::cert_scope::CertScope
 impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::CertScope
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::CertScope
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::CertScope
+pub enum mycelium_proj::ConsumptionTier
+pub mycelium_proj::ConsumptionTier::Full
+pub mycelium_proj::ConsumptionTier::Lean
+pub mycelium_proj::ConsumptionTier::Medium
+impl mycelium_proj::cert_scope::ConsumptionTier
+pub const mycelium_proj::cert_scope::ConsumptionTier::ALL: [mycelium_proj::cert_scope::ConsumptionTier; 3]
+pub fn mycelium_proj::cert_scope::ConsumptionTier::is_at_least(self, mycelium_proj::cert_scope::ConsumptionTier) -> bool
+impl core::clone::Clone for mycelium_proj::cert_scope::ConsumptionTier
+pub fn mycelium_proj::cert_scope::ConsumptionTier::clone(&self) -> mycelium_proj::cert_scope::ConsumptionTier
+impl core::cmp::Eq for mycelium_proj::cert_scope::ConsumptionTier
+impl core::cmp::Ord for mycelium_proj::cert_scope::ConsumptionTier
+pub fn mycelium_proj::cert_scope::ConsumptionTier::cmp(&self, &mycelium_proj::cert_scope::ConsumptionTier) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::ConsumptionTier
+pub fn mycelium_proj::cert_scope::ConsumptionTier::eq(&self, &mycelium_proj::cert_scope::ConsumptionTier) -> bool
+impl core::cmp::PartialOrd for mycelium_proj::cert_scope::ConsumptionTier
+pub fn mycelium_proj::cert_scope::ConsumptionTier::partial_cmp(&self, &mycelium_proj::cert_scope::ConsumptionTier) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_proj::cert_scope::ConsumptionTier
+pub fn mycelium_proj::cert_scope::ConsumptionTier::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::Freeze for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::Send for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::Sync for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::Unpin for mycelium_proj::cert_scope::ConsumptionTier
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::ConsumptionTier
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::ConsumptionTier
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::ConsumptionTier
 pub enum mycelium_proj::Deprecated
 pub mycelium_proj::Deprecated::Flag(bool)
 pub mycelium_proj::Deprecated::Reason(alloc::string::String)
@@ -676,6 +751,25 @@ impl core::marker::Unpin for mycelium_proj::manifest::ManifestError
 impl core::marker::UnsafeUnpin for mycelium_proj::manifest::ManifestError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::ManifestError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::ManifestError
+pub struct mycelium_proj::ModeSignal
+pub mycelium_proj::ModeSignal::depth: u8
+pub mycelium_proj::ModeSignal::resolved: mycelium_proj::cert_scope::ResolvedMode
+impl core::clone::Clone for mycelium_proj::cert_scope::ModeSignal
+pub fn mycelium_proj::cert_scope::ModeSignal::clone(&self) -> mycelium_proj::cert_scope::ModeSignal
+impl core::cmp::Eq for mycelium_proj::cert_scope::ModeSignal
+impl core::cmp::PartialEq for mycelium_proj::cert_scope::ModeSignal
+pub fn mycelium_proj::cert_scope::ModeSignal::eq(&self, &mycelium_proj::cert_scope::ModeSignal) -> bool
+impl core::fmt::Debug for mycelium_proj::cert_scope::ModeSignal
+pub fn mycelium_proj::cert_scope::ModeSignal::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::StructuralPartialEq for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::Freeze for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::Send for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::Sync for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::Unpin for mycelium_proj::cert_scope::ModeSignal
+impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::ModeSignal
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::ModeSignal
+impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::ModeSignal
 pub struct mycelium_proj::Project
 pub mycelium_proj::Project::authors: core::option::Option<alloc::vec::Vec<alloc::string::String>>
 pub mycelium_proj::Project::certification: core::option::Option<mycelium_core::cert_mode::CertMode>
@@ -855,8 +949,10 @@ pub fn mycelium_proj::cert_mode_word(mycelium_core::cert_mode::CertMode) -> &'st
 pub fn mycelium_proj::compose(mycelium_core::cert_mode::CertMode, mycelium_core::cert_mode::CertMode, mycelium_core::guarantee::GuaranteeStrength) -> mycelium_proj::cert_scope::CrossModeEvent
 pub fn mycelium_proj::explain(&mycelium_proj::resolve::ResolvedHeader) -> alloc::string::String
 pub fn mycelium_proj::explain_mode(&mycelium_proj::cert_scope::ResolvedMode) -> alloc::string::String
+pub fn mycelium_proj::generate_mode_signal(&mycelium_proj::cert_scope::ResolvedMode) -> mycelium_proj::cert_scope::ModeSignal
 pub fn mycelium_proj::parse_cert_mode(&str) -> core::result::Result<mycelium_core::cert_mode::CertMode, alloc::string::String>
 pub fn mycelium_proj::parse_header(&str) -> core::result::Result<core::option::Option<mycelium_proj::header::StructuredHeader>, mycelium_proj::header::HeaderError>
 pub fn mycelium_proj::parse_manifest(&str) -> core::result::Result<mycelium_proj::manifest::Manifest, mycelium_proj::manifest::ManifestError>
+pub fn mycelium_proj::render_mode_signal(&mycelium_proj::cert_scope::ModeSignal, mycelium_proj::cert_scope::ConsumptionTier) -> alloc::string::String
 pub fn mycelium_proj::resolve(&mycelium_proj::header::StructuredHeader, core::option::Option<&mycelium_proj::manifest::Manifest>) -> mycelium_proj::resolve::ResolvedHeader
 pub fn mycelium_proj::resolve_mode(&[mycelium_proj::cert_scope::CertDecl]) -> mycelium_proj::cert_scope::ResolvedMode
