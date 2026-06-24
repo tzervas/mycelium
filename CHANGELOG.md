@@ -8,6 +8,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: RFC-0027 advanced Draft → Proposed — reclamation mechanism resolved)
+
+- **RFC-0027 (Memory Management & Reclamation) advanced Draft → Proposed** (append-only: §§1–6 preserved;
+  resolved design additive in §§7–11), incorporating the landed research cluster. **Awaiting maintainer
+  ratification of the Draft → Proposed move** (banner in the RFC; does not skip to Accepted, house rule #3).
+  - **§7 mechanism = REFERENCE COUNTING, not tracing GC** — justified by LR-9 acyclicity being *exactly*
+    Perceus's garbage-free precondition (no cycle detector needed). Scoped single-owner intra-hypha;
+    cross-hypha rides the affine channel protocol.
+  - **§8 honest tags (VR-5):** RC-soundness `Proven`-**modulo the LR-9 side-condition** (external theorem, no
+    in-repo mechanized check yet — *not* bare `Proven`); the ~32K-LOC embeddenator confirmation `Empirical`,
+    **tempered** by the ground-truth correction (embeddenator actually chose OCC with inert refcount — the
+    transfer is not 1:1); all Mycelium wiring `Declared`.
+  - **§9 reclamation EXPLAIN/audit record** (never-silent G2): `scope_id`, `sweep_epoch`,
+    `trigger ∈ {RcZero, ScopeExit, ChannelClose}`, `value_meta_hash`, optional `channel_id`.
+  - **§10 copy/mut + reclamation unify** via the `rc==1` FBIP reuse probe (free / mutate-in-place /
+    structural-share); `fuse` is **structurally** unified (δ-CRDT anti-entropy over the Provenance DAG) but
+    **algebraically separate** (semilattice-join, independent of refcounting) — no overclaim.
+  - **§11 OQ-1 (sweep-order vs reclamation-order, partial vs total) left OPEN** — the explicit reason status
+    stops at Proposed; lane-B recommends prototyping both before committing.
+
 ### Changed (2026-06-24: maintainer ratifications — RFC-0034 advance + E21-1 design flags)
 
 - **RFC-0034 advance RATIFIED.** The `Enacted (design-driven) → Enacted — with code (Rust-first)` advance
