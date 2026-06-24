@@ -8,6 +8,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-24: E21-1/M-786 — CertMode + never-silent mode tag in Meta (RFC-0034 §3.1))
+
+- **`CertMode { Fast, Balanced, Certified }`** in `mycelium-core` (`cert_mode.rs`) — the tunable
+  certification mode (RFC-0034 §5), default **`Fast`**, ordered by `depth()` (`Fast < Balanced <
+  Certified`); serde form is the bare variant string. The first E21-1 implementation leaf (M-786).
+- **`Meta` now carries a never-silent `cert_mode` tag** (RFC-0034 §3.1) — a non-`Option` field
+  defaulting to `Fast`, with a `.with_cert_mode()` builder + `cert_mode()` accessor (mirroring the
+  existing `with_physical`/`physical` pattern). Non-breaking: the field is private and the
+  `Meta::new`/`Meta::exact` signatures are unchanged, so no caller or dependent breaks
+  (`cargo check --workspace` green).
+- **Content-hash exclusion holds by construction** — `cert_mode` rides `Meta`, which RFC-0001 §4.6
+  excludes from the content hash wholesale, so switching modes never perturbs a value's identity
+  (ADR-003). Verified by a new exhaustive test (`cert_mode_is_excluded_from_the_content_hash`).
+- **Wire persistence deferred, not silent** — `cert_mode` is a runtime tag resolved from the
+  `@certification` scope (M-790), so it is intentionally not in `MetaWire` yet (keeps
+  `meta.schema.json` unchanged); a deserialized `Meta` resolves to **`Fast`** — the weakest mode,
+  never silently claiming a stronger one (the VR-5 floor). Documented on `MetaWire` + tested.
+- Verified: `cargo fmt --check`, `cargo clippy -p mycelium-core --all-targets -D warnings`,
+  `cargo test -p mycelium-core` (164 unit + 11 integration, all green), `cargo check --workspace`.
+
 ### Added (2026-06-24: E21-1 — RFC-0034 paired-TDD implementation epic queued)
 
 - **E21-1 (epic) + M-786…M-794** queued in `tools/github/issues.yaml` — the paired-TDD Rust-first

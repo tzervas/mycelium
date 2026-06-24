@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::bound::{Bound, BoundBasis};
+use crate::cert_mode::CertMode;
 use crate::id::ContentHash;
 use crate::recon::ReconInfo;
 use crate::{GuaranteeStrength, WfError};
@@ -93,6 +94,11 @@ pub struct Meta {
     physical: Option<PhysicalLayout>,
     reconstruction: Option<Box<ReconInfo>>,
     policy_used: Option<ContentHash>,
+    /// The certification mode this value was produced under (RFC-0034 §3.1; M-786). A **never-silent**
+    /// tag — every `Meta` carries one — defaulting to [`CertMode::Fast`] (RFC-0034 §5). Like all of
+    /// `Meta`, it is **excluded from the content hash** (RFC-0001 §4.6; ADR-003 — switching modes never
+    /// perturbs identity); the exclusion is by construction (the hasher never reads `Meta`).
+    cert_mode: CertMode,
 }
 
 impl Meta {
@@ -132,6 +138,7 @@ impl Meta {
             physical,
             reconstruction: None,
             policy_used,
+            cert_mode: CertMode::default(),
         })
     }
 
@@ -159,6 +166,16 @@ impl Meta {
         self
     }
 
+    /// Record the certification mode this value was produced under (RFC-0034 §3.1; M-786). Touches
+    /// only the `cert_mode` tag — it leaves the guarantee, bound, and value untouched, so it can
+    /// never change a value's strength or identity (the mode rides `Meta`, excluded from the content
+    /// hash; RFC-0001 §4.6 / ADR-003). A stronger mode is **not** a stronger guarantee (VR-5).
+    #[must_use]
+    pub fn with_cert_mode(mut self, cert_mode: CertMode) -> Self {
+        self.cert_mode = cert_mode;
+        self
+    }
+
     /// The common `Exact` metadata with no bound (M-I1).
     #[must_use]
     pub fn exact(provenance: Provenance) -> Self {
@@ -170,6 +187,7 @@ impl Meta {
             physical: None,
             reconstruction: None,
             policy_used: None,
+            cert_mode: CertMode::default(),
         }
     }
 
@@ -208,6 +226,12 @@ impl Meta {
     pub fn policy_used(&self) -> Option<&ContentHash> {
         self.policy_used.as_ref()
     }
+    /// The certification mode this value was produced under (RFC-0034 §3.1; M-786). Always present —
+    /// a never-silent tag — defaulting to [`CertMode::Fast`].
+    #[must_use]
+    pub fn cert_mode(&self) -> CertMode {
+        self.cert_mode
+    }
 }
 
 /// The wire projection of [`Meta`] (`meta.schema.json`). Optional fields are omitted when absent
@@ -216,6 +240,13 @@ impl Meta {
 /// present, re-validated on the way in). `deny_unknown_fields` makes the schema's
 /// `additionalProperties: false` a real contract — an unknown wire field is rejected, not silently
 /// dropped (A6-02/B2-03).
+///
+/// **`cert_mode` is not carried on the wire (M-786, deferred — not silent).** The certification mode
+/// (RFC-0034 §3.1) is a *runtime* tag resolved from the active `@certification` scope (M-790), not an
+/// intrinsic property of a persisted value, so it is intentionally **not** part of this projection
+/// (keeping `meta.schema.json` / `additionalProperties: false` unchanged until the schema migration
+/// lands). A deserialized `Meta` therefore resolves to [`CertMode::Fast`] — the *weakest* mode, which
+/// never over-claims a stronger one (the VR-5 floor: a loaded value is never silently `Certified`).
 #[derive(Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct MetaWire {
@@ -703,5 +734,43 @@ mod tests {
             WfError::GuaranteeBoundMismatch,
             "Declared with EmpiricalFit basis must be rejected (M-I4)"
         );
+    }
+
+    #[test]
+    fn every_meta_carries_a_cert_mode_defaulting_to_fast() {
+        // Never-silent (RFC-0034 §3.1; M-786): every Meta carries a mode; the default is Fast (§5).
+        assert_eq!(
+            Meta::exact(Provenance::Root).cert_mode(),
+            crate::CertMode::Fast
+        );
+        let m = Meta::new(
+            Provenance::Root,
+            GuaranteeStrength::Exact,
+            None,
+            None,
+            None,
+            None,
+        )
+        .unwrap();
+        assert_eq!(m.cert_mode(), crate::CertMode::Fast);
+    }
+
+    #[test]
+    fn with_cert_mode_sets_the_tag_without_changing_guarantee() {
+        // The mode is not a guarantee strength — setting it never upgrades the value (VR-5).
+        let m = Meta::exact(Provenance::Root).with_cert_mode(crate::CertMode::Certified);
+        assert_eq!(m.cert_mode(), crate::CertMode::Certified);
+        assert_eq!(m.guarantee(), GuaranteeStrength::Exact);
+    }
+
+    #[test]
+    fn deserialize_resolves_mode_to_fast_never_silently_stronger() {
+        // cert_mode is a runtime tag not carried on the wire (M-786, deferred — documented on
+        // `MetaWire`). A loaded value resolves to the WEAKEST mode (Fast), never silently claiming a
+        // stronger one (the VR-5 floor).
+        let certified = Meta::exact(Provenance::Root).with_cert_mode(crate::CertMode::Certified);
+        let json = serde_json::to_string(&certified).expect("serialize");
+        let back: Meta = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(back.cert_mode(), crate::CertMode::Fast);
     }
 }

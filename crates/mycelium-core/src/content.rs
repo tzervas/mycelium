@@ -577,6 +577,34 @@ mod tests {
     }
 
     #[test]
+    fn cert_mode_is_excluded_from_the_content_hash() {
+        // RFC-0034 §3.1 / ADR-003 (M-786): the certification mode rides `Meta` (dynamic metadata), so
+        // switching it must never perturb a value's content identity (RFC-0001 §4.6). Exhaustive over
+        // the finite mode space — a complete check, not sampling.
+        use crate::cert_mode::CertMode;
+        let mk = |mode: CertMode| {
+            Value::new(
+                Repr::Binary { width: 8 },
+                Payload::Bits(B.to_vec()),
+                Meta::exact(Provenance::Root).with_cert_mode(mode),
+            )
+            .expect("well-formed")
+        };
+        for mode in CertMode::ALL {
+            assert_eq!(
+                mk(CertMode::Fast).content_hash(),
+                mk(mode).content_hash(),
+                "cert_mode must not change a value's content identity (ADR-003)"
+            );
+            assert_eq!(
+                Node::Const(mk(CertMode::Fast)).content_hash(),
+                Node::Const(mk(mode)).content_hash(),
+                "cert_mode must not change a definition's content identity (RFC-0001 §4.6)"
+            );
+        }
+    }
+
+    #[test]
     fn paradigm_change_changes_identity() {
         // A definition differing only in representation paradigm gets a different hash (§4.6).
         let bin = Node::Const(byte(B));
