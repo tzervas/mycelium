@@ -130,7 +130,7 @@ else
       reasons+=("enclosing nodule is not @std-sys")
     fi
     # (b) the enclosing fn must declare `!{ffi}` (its signature is within the window above the body).
-    if ! sed -n "${start},${line}p" "$file" | grep -qE '!\{[^}]*\bffi\b[^}]*\}'; then
+    if ! sed -n "${start},${line}p" "$file" | sed 's,//.*,,' | grep -qE '!\{[^}]*\bffi\b[^}]*\}'; then
       reasons+=("no !{ffi} on the enclosing fn (within ${WINDOW_MYC} lines above)")
     fi
     # (c) a `// SAFETY:` comment within the window directly above the site (mirrors the Rust gate).

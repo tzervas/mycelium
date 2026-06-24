@@ -104,6 +104,16 @@ pub fn initialize_result() -> Value {
                 "resolveProvider": false,
                 "triggerCharacters": ["/", "@"],
             },
+            // M-730 position-aware providers (Declared / lexical scope -- see the crate::hover,
+            // crate::definition, crate::semantic module docs). Honest about their limits: hover
+            // never fabricates a type, definition is single-document, semantic tokens classify by
+            // token kind only.
+            "hoverProvider": true,
+            "definitionProvider": true,
+            "semanticTokensProvider": {
+                "legend": crate::semantic::semantic_tokens_legend(),
+                "full": true,
+            },
         },
         "serverInfo": { "name": SERVER_NAME, "version": env!("CARGO_PKG_VERSION") },
     })
@@ -234,6 +244,34 @@ pub fn serve<R: BufRead, W: Write>(reader: &mut R, writer: &mut W) -> io::Result
                 write_message(writer, &response(id, crate::completions::completion_list()))?;
             }
 
+            // --- M-730 position-aware providers (requests; id is always Some) ---
+            // Each looks the document text up in the sync store; an unopened/unknown document or a
+            // position off any token is a null result (never-silent: no fabricated answer, G2).
+            ("textDocument/hover", Some(id)) => {
+                let result = position_params(&msg)
+                    .and_then(|(uri, line, ch)| {
+                        store.text(&uri).map(|t| crate::hover::hover(t, line, ch))
+                    })
+                    .unwrap_or(Value::Null);
+                write_message(writer, &response(id, result))?;
+            }
+            ("textDocument/definition", Some(id)) => {
+                let result = position_params(&msg)
+                    .and_then(|(uri, line, ch)| {
+                        store
+                            .text(&uri)
+                            .map(|t| crate::definition::definition(&uri, t, line, ch))
+                    })
+                    .unwrap_or(Value::Null);
+                write_message(writer, &response(id, result))?;
+            }
+            ("textDocument/semanticTokens/full", Some(id)) => {
+                let result = doc_uri(&msg)
+                    .and_then(|uri| store.text(&uri).map(crate::semantic::semantic_tokens_full))
+                    .unwrap_or_else(|| serde_json::json!({ "data": [] }));
+                write_message(writer, &response(id, result))?;
+            }
+
             // Any other request must get a response (never a silent hang); -32601 = MethodNotFound.
             (other, Some(id)) => write_message(
                 writer,
@@ -284,6 +322,17 @@ fn did_change_params(msg: &Value) -> Option<(String, String)> {
     let changes = msg.get("params")?.get("contentChanges")?.as_array()?;
     let text = changes.last()?.get("text")?.as_str()?.to_owned();
     Some((uri, text))
+}
+
+/// `(uri, line, character)` (0-based position) from a `textDocument/{hover,definition}` request:
+/// `params.textDocument.uri` + `params.position.{line, character}`. `None` if any field is missing —
+/// the caller answers with a null result rather than guessing (G2).
+fn position_params(msg: &Value) -> Option<(String, u32, u32)> {
+    let uri = doc_uri(msg)?;
+    let position = msg.get("params")?.get("position")?;
+    let line = u32::try_from(position.get("line")?.as_u64()?).ok()?;
+    let character = u32::try_from(position.get("character")?.as_u64()?).ok()?;
+    Some((uri, line, character))
 }
 
 #[cfg(test)]
@@ -440,7 +489,9 @@ mod tests {
         let mut input = Vec::new();
         write_message(
             &mut input,
-            &json!({ "jsonrpc": "2.0", "id": 7, "method": "textDocument/hover" }),
+            // `textDocument/rename` is not advertised or handled (M-730 added hover/definition/
+            // semanticTokens, not rename); an unhandled request must still get an explicit -32601.
+            &json!({ "jsonrpc": "2.0", "id": 7, "method": "textDocument/rename" }),
         )
         .unwrap();
         write_message(&mut input, &json!({ "jsonrpc": "2.0", "method": "exit" })).unwrap();
@@ -552,6 +603,88 @@ mod tests {
         assert!(
             triggers.iter().any(|t| t == "/"),
             "triggerCharacters must include '/' for the nodule-header snippet"
+        );
+    }
+
+    #[test]
+    fn initialize_result_advertises_the_m730_providers() {
+        // M-730: hover/definition/semanticTokens must be advertised, and the semantic-tokens legend
+        // must carry the type list (mutant-witness: dropping any provider breaks editor discovery).
+        let caps = &initialize_result()["capabilities"];
+        assert_eq!(caps["hoverProvider"], true);
+        assert_eq!(caps["definitionProvider"], true);
+        assert_eq!(caps["semanticTokensProvider"]["full"], true);
+        let types = caps["semanticTokensProvider"]["legend"]["tokenTypes"]
+            .as_array()
+            .expect("semantic-token legend must list token types");
+        assert!(types.iter().any(|t| t == "keyword"));
+    }
+
+    #[test]
+    fn serve_answers_hover_definition_and_semantic_tokens_after_did_open() {
+        // End-to-end through the document store: didOpen a nodule, then request hover (on `fn`),
+        // definition (on a call site), and semanticTokens/full. Each must answer from the stored
+        // text, never -32601 and never silence.
+        let src = "nodule d\nfn g() -> Binary{8} = 0b0\nfn h() = g()\n";
+        let mut input = Vec::new();
+        write_message(
+            &mut input,
+            &json!({
+                "jsonrpc": "2.0", "method": "textDocument/didOpen",
+                "params": { "textDocument": { "uri": "mem://d.myc", "text": src } }
+            }),
+        )
+        .unwrap();
+        // hover on `fn` (line 1, char 0).
+        write_message(
+            &mut input,
+            &json!({ "jsonrpc": "2.0", "id": 10, "method": "textDocument/hover",
+                "params": { "textDocument": { "uri": "mem://d.myc" }, "position": { "line": 1, "character": 0 } } }),
+        )
+        .unwrap();
+        // definition on the `g` call site (line 2 `fn h() = g()`, char of `g` is 9).
+        write_message(
+            &mut input,
+            &json!({ "jsonrpc": "2.0", "id": 11, "method": "textDocument/definition",
+                "params": { "textDocument": { "uri": "mem://d.myc" }, "position": { "line": 2, "character": 9 } } }),
+        )
+        .unwrap();
+        write_message(
+            &mut input,
+            &json!({ "jsonrpc": "2.0", "id": 12, "method": "textDocument/semanticTokens/full",
+                "params": { "textDocument": { "uri": "mem://d.myc" } } }),
+        )
+        .unwrap();
+        write_message(&mut input, &json!({ "jsonrpc": "2.0", "method": "exit" })).unwrap();
+
+        let mut reader = Cursor::new(input);
+        let mut out = Vec::new();
+        serve(&mut reader, &mut out).unwrap();
+
+        let mut rout = Cursor::new(out);
+        // The didOpen publishes diagnostics first (skip that notification).
+        let first = read_message(&mut rout).unwrap().unwrap();
+        assert_eq!(first["method"], "textDocument/publishDiagnostics");
+        let hover = read_message(&mut rout).unwrap().unwrap();
+        assert_eq!(hover["id"], 10);
+        assert!(
+            hover["result"]["contents"]["value"]
+                .as_str()
+                .unwrap()
+                .contains("function"),
+            "hover on `fn` must describe it"
+        );
+        let def = read_message(&mut rout).unwrap().unwrap();
+        assert_eq!(def["id"], 11);
+        assert_eq!(
+            def["result"]["range"]["start"]["line"], 1,
+            "g is declared on line 2 (0-based 1)"
+        );
+        let sem = read_message(&mut rout).unwrap().unwrap();
+        assert_eq!(sem["id"], 12);
+        assert!(
+            !sem["result"]["data"].as_array().unwrap().is_empty(),
+            "semantic tokens must be non-empty for a real nodule"
         );
     }
 }

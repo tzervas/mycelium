@@ -814,6 +814,7 @@ impl core::marker::UnsafeUnpin for mycelium_core::prim::PrimParadigm
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::prim::PrimParadigm
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::prim::PrimParadigm
 pub enum mycelium_core::prim::WidthRel
+pub mycelium_core::prim::WidthRel::Collapse
 pub mycelium_core::prim::WidthRel::Uniform
 impl core::clone::Clone for mycelium_core::prim::WidthRel
 pub fn mycelium_core::prim::WidthRel::clone(&self) -> mycelium_core::prim::WidthRel
@@ -1882,6 +1883,7 @@ impl core::marker::UnsafeUnpin for mycelium_core::WfError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::WfError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::WfError
 pub enum mycelium_core::WidthRel
+pub mycelium_core::WidthRel::Collapse
 pub mycelium_core::WidthRel::Uniform
 impl core::clone::Clone for mycelium_core::prim::WidthRel
 pub fn mycelium_core::prim::WidthRel::clone(&self) -> mycelium_core::prim::WidthRel

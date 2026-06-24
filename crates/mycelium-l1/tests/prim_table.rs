@@ -30,7 +30,42 @@ fn surface_cases() -> Vec<(&'static str, Vec<Ty>, Ty)> {
         ("sub", vec![Ty::Ternary(4), Ty::Ternary(4)], Ty::Ternary(4)),
         ("mul", vec![Ty::Ternary(4), Ty::Ternary(4)], Ty::Ternary(4)),
         ("neg", vec![Ty::Ternary(4)], Ty::Ternary(4)),
+        // RFC-0032 D2 (M-748): width-uniform binary logical + never-silent arithmetic.
+        ("and", vec![Ty::Binary(8), Ty::Binary(8)], Ty::Binary(8)),
+        ("or", vec![Ty::Binary(8), Ty::Binary(8)], Ty::Binary(8)),
+        ("add_bin", vec![Ty::Binary(8), Ty::Binary(8)], Ty::Binary(8)),
+        ("sub_bin", vec![Ty::Binary(8), Ty::Binary(8)], Ty::Binary(8)),
     ]
+}
+
+/// The RFC-0032 D1 (M-747) comparison prims are **width-collapsing** and paradigm-flexible
+/// (`Any, Any → Binary`, `WidthRel::Collapse`), so they do not fit the width-uniform `surface_cases`
+/// shape (they bypass `prim_sig` via a dedicated checker branch). This guard pins their surface→Π
+/// consistency directly: each maps to a declared collapsing kernel prim with arity 2.
+#[test]
+fn comparison_prims_resolve_to_declared_collapsing_kernel_prims() {
+    use mycelium_core::WidthRel;
+    let table = PrimTable::builtins();
+    for surface in ["eq", "lt"] {
+        let kernel = prim_kernel_name(surface)
+            .unwrap_or_else(|| panic!("comparison prim `{surface}` must map to a kernel name"));
+        assert!(
+            table.contains(kernel),
+            "surface `{surface}` → kernel `{kernel}`, but `{kernel}` is not declared in Π",
+        );
+        let decl = table.get(kernel).expect("declared prim");
+        assert_eq!(decl.sig.arity(), 2, "`{kernel}` is binary (two operands)");
+        assert_eq!(
+            decl.sig.result,
+            PrimParadigm::Binary,
+            "`{kernel}` reduces to a Binary truth value",
+        );
+        assert_eq!(
+            decl.sig.width,
+            WidthRel::Collapse,
+            "`{kernel}` is width-collapsing (operands' width → Binary{{1}})",
+        );
+    }
 }
 
 #[test]

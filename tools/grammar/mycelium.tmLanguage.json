@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Mycelium",
+  "scopeName": "source.mycelium",
+  "_generated_by": "tools/grammar/generate.py \u2014 DO NOT EDIT BY HAND",
+  "_scope_names_status": "RATIFIED \u2014 RFC-0026 \u00a73.2 (Accepted): standard TextMate names, lexer-derived buckets.",
+  "patterns": [
+    {
+      "name": "keyword.control.mycelium",
+      "match": "\\b(backbone|paradigm|default|matured|reclaim|colony|forage|nodule|phylum|policy|graft|hypha|match|spore|trait|cyst|else|fuse|impl|mesh|swap|thaw|then|tier|type|wild|with|xloc|for|let|pub|use|fn|if|in|to)\\b"
+    },
+    {
+      "name": "storage.type.mycelium",
+      "match": "\\b(Substrate|Ternary|Binary|Sparse|Dense|VSA)\\b"
+    },
+    {
+      "name": "support.type.builtin.mycelium",
+      "match": "\\b(BF16|F16|F32|F64)\\b"
+    },
+    {
+      "name": "storage.modifier.guarantee.mycelium",
+      "match": "\\b(Empirical|Declared|Proven|Exact)\\b"
+    },
+    {
+      "name": "comment.line.double-slash.mycelium",
+      "match": "//.*$"
+    },
+    {
+      "name": "constant.numeric.mycelium",
+      "match": "0b[01_]+|<[+\\-0]+>"
+    }
+  ]
+}

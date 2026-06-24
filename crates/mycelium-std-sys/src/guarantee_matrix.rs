@@ -29,8 +29,9 @@
 //! (process/environment) · `"none"` (pure, e.g. the libm transcendentals over their `f64` input).
 
 /// Guarantee tag on the honesty lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (RFC-0016 §4.1 C2;
-/// VR-5). `'static` strings matching the lattice names so rows are assertable without a dependency
-/// on the core lattice type.
+/// VR-5). A standalone enum whose variants mirror the lattice names; [`GuaranteeTag::as_str`] yields
+/// the matching `'static` string, so rows are assertable in tests without depending on the core
+/// lattice type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GuaranteeTag {
     /// No accuracy/precision/probability semantics — the honest floor `Exact` (unused here).

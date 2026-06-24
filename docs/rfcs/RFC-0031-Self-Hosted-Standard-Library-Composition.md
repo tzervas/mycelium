@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0031 |
-| **Status** | **Draft** (2026-06-23) |
+| **Status** | **Accepted** (2026-06-23) — composition model, irreducible-Rust boundary, phylum layout, stability bar, and surface-readiness-sequenced migration order ratified (§5 D1–D7). Was Draft (2026-06-23). |
 | **Type** | Foundational / normative (once Accepted) — the self-hosting composition model and phylum layout for the stdlib and core libs |
 | **Date** | 2026-06-23 |
 | **Feeds** | E13-1 (stdlib in Mycelium — the defining full-language-1.0.0 criterion) |
@@ -12,13 +12,18 @@
 | **Coupled with** | `lib/std/result.myc` (M-649 — first self-hosted nodule, the composition prototype); `docs/spec/stdlib/*.md` (25 module specs); `crates/mycelium-std-*` (Rust-first crates to be superseded); `docs/Doc-Index.md`; E13-1 children M-714…M-719 |
 | **Task** | E13-1 (epic) / M-714 (this RFC's authoring task) |
 
-> **Posture (honesty rule / VR-5).** Advisory stub — decides nothing normatively. The
-> composition model, phylum layout, and migration order are **open questions** enumerated in §5.
-> No module is declared self-hosted until its `.myc` nodule differential-tests pass and the
-> corresponding `mycelium-std-*` Rust crate is retired or relegated to the irreducible core.
-> `lib/std/result.myc` (M-649) is the only currently self-hosted nodule; all other
-> `mycelium-std-*` crates are Rust-first. Claims about "what must be `.myc`" are `Declared`
-> positions, not `Proven` ones, until checked by implementation.
+> **Posture (honesty rule / VR-5).** This RFC decides the *composition model* — the boundary,
+> layout, stability bar, and migration order (§5 D1–D7) — **normatively**. It does **not** declare
+> any module self-hosted: a module is self-hosted only when its `.myc` nodule clears the §5 D5
+> stability bar (differential tests pass, honest per-op tags, frozen signature). As of acceptance,
+> `lib/std/result.myc` (M-649), `lib/std/option.myc`, and `lib/std/cmp.myc` (M-715, Tier-0) are
+> self-hosted and differential-tested; all other `mycelium-std-*` modules remain Rust-first and
+> migrate per the §5 D4 surface-readiness order. The central honesty stance (§5 D4): **only the
+> structural/polymorphic core is executable today** — the `collections`/`text`/`math` ports are
+> *blocked* on kernel prims (binary arithmetic, a reduce-to-`Bool` comparison, a sequence
+> representation) that are not yet surfaced. This RFC sequences those ports **behind** their enabling
+> prims rather than claiming a self-hosting it cannot yet demonstrate (VR-5). Claims about "what must
+> be `.myc`" are `Declared` positions checked by implementation as each port lands.
 
 ---
 
@@ -90,49 +95,122 @@ crates (`mycelium-std-*`). This RFC must answer:
 
 ## 4. Definition of Done
 
-- [ ] The irreducible-Rust boundary is defined: a named list of crates/modules that stay Rust
-  forever and the reasoning for each (bootstrapping, unsafe, platform ABI).
-- [ ] The `.myc` migration target is named: a ranked list of modules with their readiness
-  preconditions (which language-surface features must land first).
-- [ ] The phylum layout is specified: nodule import paths, phylum groupings, versioning, and
+- [x] The irreducible-Rust boundary is defined: a named list of crates/modules that stay Rust
+  forever and the reasoning for each (bootstrapping, unsafe, platform ABI). → **§5 D1**.
+- [x] The `.myc` migration target is named: a ranked list of modules with their readiness
+  preconditions (which language-surface features must land first). → **§5 D4**.
+- [x] The phylum layout is specified: nodule import paths, phylum groupings, versioning, and
   how they layer on the Rust core — consistent with ADR-003 (content-addressed) and ADR-013
-  (`spore`).
-- [ ] The per-module stability bar is documented: what a `.myc` port must demonstrate
+  (`spore`). → **§5 D2, D7**.
+- [x] The per-module stability bar is documented: what a `.myc` port must demonstrate
   (differential tests vs Rust reference, guarantee tags, API-freeze commitment) before the
-  Rust crate is retired.
-- [ ] The migration order is sequenced and grounded in language-surface dependencies
-  (RFC-0024 HOF for combinators, RFC-0019 traits for `iter`/`cmp`, operator syntax for `math`).
-- [ ] `lib/std/result.myc` is analysed as the composition prototype and the patterns it
-  establishes are codified as requirements for all subsequent ports.
-- [ ] This RFC reaches **Accepted** (maintainer ratification) before any M-715…M-719 leaf
-  begins implementation.
-- [ ] All open questions in §5 are resolved or explicitly deferred with direction.
+  Rust crate is retired. → **§5 D5, D6**.
+- [x] The migration order is sequenced and grounded in language-surface dependencies
+  (RFC-0024 HOF for combinators, RFC-0019 traits for `iter`/`cmp`, prims for `math`). → **§5 D4**.
+- [x] `lib/std/result.myc` is analysed as the composition prototype and the patterns it
+  establishes are codified as requirements for all subsequent ports. → **§5 D5 (the prototype
+  pattern); M-715 `option.myc`/`cmp.myc` follow it.**
+- [x] This RFC reaches **Accepted** (maintainer ratification), and implementation leaves follow
+  the ratified §5 D1–D7 rather than a pre-design guess. → **this revision.** The M-715 **Tier-0**
+  ports (`option.myc`/`cmp.myc`) co-land in this PR, written *against* the ratified decisions (the
+  design is the gate, the ports follow it within the same change); the heavier leaves **M-716…M-719
+  begin only after acceptance** (and are `status:blocked` on their §5 D4 surface preconditions).
+- [x] All open questions in §5 are resolved or explicitly deferred with direction. → **§5 D1–D7.**
 
-## 5. Open questions
+## 5. Decisions (D1–D7) — resolving the open questions
 
-1. **Irreducible-Rust boundary** — which crates/modules can never safely be `.myc`? Candidates
-   for the irreducible core: `mycelium-core` (the value model, registry, guarantee lattice),
-   `mycelium-l0` (the interpreter trusted base), `mycelium-l1` (the compiler frontend), the
-   `swap`/`cert` machinery, unsafe memory operations, and platform I/O. Is this the right
-   cut? What is the decision criterion?
-2. **Phylum naming and paths** — RFC-0016 §Q2 resolved: phylum `std`, crate-mirrored names.
-   Does `std.result` (already in `lib/std/result.myc`) set the convention for all ports?
-   What is the canonical root for the `lib/std/` tree?
-3. **Bootstrap circularity** — the `.myc` compiler is written in Rust (L1 frontend); porting
-   stdlib modules to `.myc` requires the compiler to compile them. Is there a circularity
-   risk, and if so, how is it staged?
-4. **Migration order** — RFC-0016 Q1 recommended `diag`/`recover` lead migration; but HOF
-   (RFC-0024) is now landed, unblocking `core/prelude` combinators first. What is the
-   revised order? Is `core` (Option/Result/Ord/Eq) before `iter` before `collections`?
-5. **Stability bar granularity** — must every exported function have a differential test
-   (interpreter ≡ Rust reference), or is per-module aggregate coverage sufficient? What is
-   the minimum guarantee-tag obligation (all `Declared`, or `Empirical` required for
-   performance-sensitive ops)?
-6. **Rust crate retirement** — when a `.myc` port is accepted, how is the `mycelium-std-*`
-   Rust crate retired (deprecated, removed, or kept as the irreducible-Rust reference
-   implementation for differential testing)?
-7. **`spore` packaging** — how are `.myc` nodules packaged as `spore` artifacts (ADR-013)?
-   Is each phylum one `spore`, or one per nodule? What is the versioning policy?
+> Each decision resolves the like-numbered open question from the Draft. They are **normative** for
+> the migration; honesty (VR-5) governs every claim — nothing is declared self-hosted ahead of a
+> passing differential test.
+
+### D1 — The irreducible-Rust boundary
+
+The following stay **Rust forever** (the bare kernel the language's own compilation/evaluation/trust
+depends on); everything *above* this line is a `.myc` migration target:
+
+| Stays Rust | Why (the criterion below) |
+|---|---|
+| `mycelium-core` | The value model itself (`Value`/`Repr`/`Meta`, the guarantee lattice, content-addressing). A language cannot define in itself the values it *is* — bootstrap floor (c). |
+| `mycelium-l0` | The trusted reference interpreter — the evaluation semantics and the root of trust (KC-3) (a). |
+| `mycelium-l1` | The bootstrap compiler frontend (lex/parse/check/elaborate/monomorphize). A self-hosted *compiler* is explicitly **out of scope** (RFC-0016 / KC-2: stdlib-only self-hosting) (a). |
+| `mycelium-cert`, `mycelium-swap` | The certificate machinery + swap engines — the verifiable-swap trust root (RFC-0002) (b). |
+| `mycelium-interp::prims` | The elementwise/arithmetic primitive registry (`bit.*`, `trit.*`) — the FFI to the value model the surface bottoms out on (c). |
+| `mycelium-mlir` | AOT codegen — LLVM/MLIR FFI, `unsafe` (d). |
+| `mycelium-std-sys` | Platform I/O + `wild`/FFI (unsafe memory, platform ABI; E14-1/`ffi10`) (d). |
+
+**Decision criterion.** A module stays Rust **iff** it is (a) the **trust root** the certificate/
+evaluation guarantees rest on, (b) the **bootstrap floor** the language's own compilation depends on,
+(c) the **value-model FFI** (the prims / `core` types the surface bottoms out on), or (d) an
+**unsafe / platform-ABI** boundary. A module that is none of these is a `.myc` migration target.
+
+### D2 — Phylum naming and paths
+
+Confirmed (extends RFC-0016 §Q2): phylum **`std`**; nodule path **`std.<module>`**; file
+**`lib/std/<module>.myc`**; crate-mirrored names. `lib/std/` is the canonical root and
+`lib/std/mycelium-proj.toml` is the phylum manifest (`[surface] exports`). `std.result` sets the
+convention; `std.option` and `std.cmp` (M-715) follow it. A sub-family MAY use a subdirectory —
+`lib/std/collections/vec.myc` with nodule path `std.collections.vec` — once it grows past one nodule.
+
+### D3 — Bootstrap circularity
+
+**No circularity for the stdlib.** The `.myc` stdlib is compiled by the Rust L1 frontend, which is
+itself Rust (D1) — the stdlib never compiles the compiler. Staging is linear: *Rust kernel →
+compiles `.myc` stdlib*. The only constraint is RFC-0016 **ring layering**: a `.myc` nodule may
+`use` only nodules at or below its ring, so there is no `use`-cycle among the ported modules. (A
+self-hosted *compiler* would reintroduce circularity — it is out of scope, D1.)
+
+### D4 — Migration order (surface-readiness sequenced) — **the honesty crux**
+
+The order is sequenced by **kernel-prim / language-surface readiness**, not by module taxonomy alone.
+Today the surface bottoms out on a *small* prim set — `bit.not`/`bit.xor` (binary) and
+`trit.neg/add/sub/mul` (ternary), plus `core.id` — with ADTs, generics, HOF (RFC-0024), traits
+(RFC-0019/M-673), and `match`. That set is enough for the *structural/polymorphic* core and nothing
+heavier. The migration therefore tiers:
+
+| Tier | Modules | Executable today? | Enabling surface still needed |
+|---|---|---|---|
+| **Tier 0** | `core`/prelude structure: `Option`/`Result` ADTs + HOF combinators; finite-type `Ordering`/`Eq`/`Ord` (match-defined) | **Yes** — landed: `result.myc` (M-649), `option.myc`, `cmp.myc` (M-715) | — (RFC-0024 HOF already landed) |
+| **Tier 1** | `cmp`/`convert` over width types `Binary{N}`/`Ternary{N}`; `math`/`numerics` | **No** | A reduce-to-`Bool` **comparison/equality prim**; **binary arithmetic** prims (only ternary arith + binary `not`/`xor` are surfaced) |
+| **Tier 2** | `collections` (Vec/Map/Set); `iter`; `text`/`fmt` | **No** | A **sequence/collection value representation** + indexing; a **string/byte-sequence** value + codepoint ops |
+
+Honest consequence (VR-5): **M-716 (collections), M-717 (text+fmt), and the width-typed part of
+M-718 (math) are blocked** on prims/representations that do not yet exist — they are *not* claimed
+self-hosted, and their issues carry the explicit precondition. The executable order is: **`core`
+first (now)** → the comparison/arithmetic prims land → **`cmp`(width)/`math`** → the sequence/string
+representations land → **`collections`/`iter`/`text`/`fmt`**. This supersedes RFC-0016 Q1's
+`diag`/`recover`-first suggestion (HOF landing made the structural core the cheapest honest start).
+
+### D5 — Stability bar (and the prototype pattern)
+
+A `.myc` port is **self-hosted** only when, per **exported op**:
+1. **≥1 differential test** asserts `.myc` eval ≡ the `mycelium-std-*` Rust reference — *three-way*
+   where the op runs to closed L0 (L1-eval ≡ L0-interp ≡ AOT), per the `std_result.rs`/`std_option.rs`/
+   `std_cmp.rs` harness (the prototype pattern: `include_str!` the nodule verbatim as the single
+   source of truth, append a typed driver pinning generics, assert all three paths + the reference).
+2. an **honest per-op guarantee tag** at the honestly-supportable strength — total finite/structural
+   ops `Exact`; a generic type-level contract `Declared`; a measured bound `Empirical`; **never
+   `Proven`** without a checked theorem (VR-5);
+3. a **documented, frozen public signature** (the API-freeze commitment).
+Per **module**: the spec's aggregate guarantee matrix is reproduced and *every* exported op is
+covered. The bar is **per-op**, not per-module-aggregate (a single uncovered op leaves the module not
+self-hosted — G2: no silent gaps).
+
+### D6 — Rust crate retirement
+
+The `mycelium-std-*` Rust crate is **kept as the differential-test reference oracle** (not deleted)
+through the migration. Once a `.myc` port clears D5, the Rust crate's public API is marked
+`#[deprecated(note = "self-hosted as std.<module>; Rust crate retained as differential oracle")]`.
+**Final removal is a separate post-Enactment decision** — a module's Rust reference is the cheapest
+honest oracle, so it survives until RFC-0031 is Enacted and the maintainer retires it explicitly.
+
+### D7 — `spore` packaging
+
+**One `spore` per phylum** (`std`), versioned as a unit (ADR-013 deployable artifact; ADR-003
+content-addressed). Individual nodules are content-addressed *within* the phylum spore; nodule
+versioning rides the phylum version. Rationale: the stdlib is consumed as a whole, so per-nodule
+spores would multiply the dependency surface with no isolation benefit at this maturity. (A future
+phylum split — e.g. an optional `std-collections` spore — is a packaging decision deferred to when a
+consumer needs the smaller surface.)
 
 ## 6. Grounding / honesty
 
@@ -152,4 +230,5 @@ crates (`mycelium-std-*`). This RFC must answer:
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-23 | **Accepted** | M-714: composition model ratified — §5 D1 (irreducible-Rust boundary + criterion), D2 (phylum layout), D3 (no bootstrap circularity), D4 (surface-readiness-tiered migration order; the executable core is Tier-0, `collections`/`text`/`math` blocked on prims — VR-5), D5 (per-op stability bar + the `std_result`/`std_option`/`std_cmp` prototype pattern), D6 (Rust crate kept as differential oracle), D7 (one spore per phylum). M-715 Tier-0 (`option.myc`/`cmp.myc`) lands alongside. |
 | 2026-06-23 | **Draft** | Initial stub — open questions enumerated; no normative decisions. Task: E13-1/M-714. |

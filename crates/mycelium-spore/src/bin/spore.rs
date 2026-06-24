@@ -1,50 +1,140 @@
-//! `spore` — packaging & publishing CLI (M-368; contract `docs/spec/Spore-Build-and-Publish-Contract.md`).
+//! `spore` — packaging & publishing CLI (M-368/M-732; contract `docs/spec/Spore-Build-and-Publish-Contract.md`).
 //!
-//! Builds a content-addressed `spore` from a `mycelium-proj.toml` project (ADR-013). Identity is the
-//! code+deps DAG (ADR-003); metadata is not identity. A missing/ambiguous publish input is an explicit
-//! error — **no partial artifact** is ever written (G2).
+//! Builds a content-addressed `spore` from a `mycelium-proj.toml` project (ADR-013) and
+//! publishes/resolves it against a content-addressed registry (M-732). Identity is the code+deps
+//! DAG (ADR-003); metadata is not identity. A missing/ambiguous input is an explicit error —
+//! **no partial artifact** is ever written, and a registry never silently overwrites or mis-resolves (G2).
 //!
 //! ```text
-//! spore build   [--config <mycelium-proj.toml>] [-o <out>]   # build + write the spore descriptor
-//! spore explain [--config <mycelium-proj.toml>]              # the identity receipt; write nothing
+//! spore build    [--config <manifest>] [-o <out>]              # build + write the spore descriptor
+//! spore explain  [--config <manifest>]                         # the identity receipt; write nothing
+//! spore publish  --registry <dir> [--config <manifest>]        # publish to a content-addressed registry
+//!                [--name <n>] [--version <v>]
+//! spore resolve  <name> <version|latest> --registry <dir> [-o <out>]   # fetch a hash-verified artifact
 //! ```
 //!
-//! Exit codes: 0 ok · 2 manifest error · 3 publish-input error · 64 usage · 66 I/O.
+//! Exit codes: 0 ok · 2 manifest error · 3 publish-input · 4 not-found · 5 integrity · 6 conflict ·
+//! 64 usage/unsupported · 66 I/O.
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use mycelium_proj::parse_manifest;
-use mycelium_spore::{build_spore, explain, Spore};
+use mycelium_spore::{build_spore, explain, registry, Spore};
 
 fn usage() -> ExitCode {
-    eprintln!("usage: spore <build|explain> [--config <mycelium-proj.toml>] [-o <out>]");
+    eprintln!(
+        "usage:\n  \
+         spore build   [--config <manifest>] [-o <out>]\n  \
+         spore explain [--config <manifest>]\n  \
+         spore publish --registry <dir> [--config <manifest>] [--name <n>] [--version <v>]\n  \
+         spore resolve <name> <version|latest> --registry <dir> [-o <out>]"
+    );
     ExitCode::from(64)
 }
 
+/// The flags shared across subcommands, parsed once.
+#[derive(Default)]
+struct Opts {
+    config: Option<String>,
+    out: Option<String>,
+    registry: Option<String>,
+    name: Option<String>,
+    version: Option<String>,
+    positionals: Vec<String>,
+}
+
+fn parse_opts(mut args: std::env::Args) -> Option<Opts> {
+    let mut o = Opts::default();
+    while let Some(a) = args.next() {
+        match a.as_str() {
+            "--config" => o.config = Some(args.next()?),
+            "-o" => o.out = Some(args.next()?),
+            "--registry" => o.registry = Some(args.next()?),
+            "--name" => o.name = Some(args.next()?),
+            "--version" => o.version = Some(args.next()?),
+            s if s.starts_with('-') => return None, // an unknown flag is a usage error, never ignored
+            _ => o.positionals.push(a),
+        }
+    }
+    Some(o)
+}
+
 fn main() -> ExitCode {
-    let mut args = std::env::args().skip(1);
+    let mut args = std::env::args();
+    let _argv0 = args.next();
     let Some(cmd) = args.next() else {
         return usage();
     };
+    let Some(opts) = parse_opts(args) else {
+        return usage();
+    };
 
-    let mut config: Option<String> = None;
-    let mut out: Option<String> = None;
-    while let Some(a) = args.next() {
-        match a.as_str() {
-            "--config" => match args.next() {
-                Some(p) => config = Some(p),
-                None => return usage(),
-            },
-            "-o" => match args.next() {
-                Some(p) => out = Some(p),
-                None => return usage(),
-            },
-            _ => return usage(),
+    match cmd.as_str() {
+        "build" | "explain" | "publish" | "resolve" => {
+            // Reject irrelevant flags / stray positionals per subcommand before dispatch — the
+            // never-ignored posture (G2): an input a subcommand does not use is a usage error.
+            if let Err(code) = validate_opts(&cmd, &opts) {
+                return code;
+            }
+            if cmd == "resolve" {
+                run_resolve(&opts)
+            } else {
+                run_with_spore(&cmd, &opts)
+            }
         }
+        _ => usage(),
     }
+}
 
-    let manifest_path = config
+/// Reject inputs a subcommand does not use — never silently ignored (G2). Each subcommand declares
+/// exactly the flags it accepts and whether it takes positional arguments; anything else (an
+/// irrelevant flag like `spore explain -o out`, or a stray positional like `spore build garbage`) is
+/// a usage error rather than a silent no-op.
+fn validate_opts(cmd: &str, opts: &Opts) -> Result<(), ExitCode> {
+    let (allowed, takes_positionals): (&[&str], bool) = match cmd {
+        "explain" => (&["--config"], false),
+        "build" => (&["--config", "-o"], false),
+        "publish" => (&["--config", "--registry", "--name", "--version"], false),
+        "resolve" => (&["--registry", "-o"], true),
+        _ => (&[], false),
+    };
+    let present = [
+        ("--config", opts.config.is_some()),
+        ("-o", opts.out.is_some()),
+        ("--registry", opts.registry.is_some()),
+        ("--name", opts.name.is_some()),
+        ("--version", opts.version.is_some()),
+    ];
+    let bad: Vec<&str> = present
+        .iter()
+        .filter(|(flag, set)| *set && !allowed.contains(flag))
+        .map(|(flag, _)| *flag)
+        .collect();
+    if !bad.is_empty() {
+        eprintln!(
+            "spore: `{cmd}` does not accept {} — irrelevant flag(s) are never silently ignored (G2)",
+            bad.join(", ")
+        );
+        return Err(usage());
+    }
+    if !takes_positionals && !opts.positionals.is_empty() {
+        eprintln!(
+            "spore: `{cmd}` takes no positional arguments, got: {}",
+            opts.positionals.join(" ")
+        );
+        return Err(usage());
+    }
+    Ok(())
+}
+
+/// The subcommands that first build a spore from a manifest (`build`/`explain`/`publish`). Argument
+/// relevance is validated up-front by [`validate_opts`] (irrelevant flags / stray positionals are
+/// already rejected before this runs).
+fn run_with_spore(cmd: &str, opts: &Opts) -> ExitCode {
+    let manifest_path = opts
+        .config
+        .as_deref()
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("mycelium-proj.toml"));
     let project_dir = manifest_path
@@ -67,7 +157,6 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
-
     let spore = match build_spore(&manifest, &project_dir) {
         Ok(s) => s,
         Err(e) => {
@@ -76,13 +165,98 @@ fn main() -> ExitCode {
         }
     };
 
-    match cmd.as_str() {
+    match cmd {
         "explain" => {
             print!("{}", explain(&spore));
             ExitCode::SUCCESS
         }
-        "build" => emit_build(&spore, out.as_deref()),
+        "build" => emit_build(&spore, opts.out.as_deref()),
+        "publish" => run_publish(&spore, opts),
         _ => usage(),
+    }
+}
+
+/// `spore publish` — publish the built spore's descriptor to the registry under `name@version`.
+fn run_publish(spore: &Spore, opts: &Opts) -> ExitCode {
+    let Some(registry_dir) = opts.registry.as_deref() else {
+        eprintln!("spore: usage: publish requires --registry <dir>");
+        return ExitCode::from(64);
+    };
+    let name = opts.name.clone().unwrap_or_else(|| spore.name.clone());
+    // The version is metadata, never guessed: take --version, else the manifest version, else error.
+    let Some(version) = opts.version.clone().or_else(|| spore.version.clone()) else {
+        eprintln!(
+            "spore: publish-input-error: no version to publish under — pass --version or set \
+             [project].version (it is never guessed; ADR-003)"
+        );
+        return ExitCode::from(3);
+    };
+    let descriptor = explain(spore).into_bytes();
+    match registry::publish(Path::new(registry_dir), spore, &descriptor, &name, &version) {
+        Ok(r) => {
+            let state = if r.already_present {
+                "already present"
+            } else {
+                "published"
+            };
+            eprintln!(
+                "spore: {state} {name}@{version}\n  spore_id: {}\n  artifact: {}\n  object:   {}",
+                r.spore_id.as_str(),
+                r.artifact.as_str(),
+                r.object_path.display()
+            );
+            ExitCode::SUCCESS
+        }
+        Err(e) => {
+            eprintln!("spore: {e}");
+            ExitCode::from(e.exit_code())
+        }
+    }
+}
+
+/// `spore resolve <name> <version|latest>` — fetch a hash-verified artifact from the registry.
+fn run_resolve(opts: &Opts) -> ExitCode {
+    let Some(registry_dir) = opts.registry.as_deref() else {
+        eprintln!("spore: usage: resolve requires --registry <dir>");
+        return ExitCode::from(64);
+    };
+    let [name, constraint] = match opts.positionals.as_slice() {
+        [n, c] => [n.clone(), c.clone()],
+        _ => {
+            eprintln!("spore: usage: resolve <name> <version|latest> --registry <dir> [-o <out>]");
+            return ExitCode::from(64);
+        }
+    };
+    match registry::resolve(Path::new(registry_dir), &name, &constraint) {
+        Ok(r) => {
+            eprintln!(
+                "spore: resolved {name}@{} (spore_id {}, artifact {})",
+                r.version,
+                r.spore_id.as_str(),
+                r.artifact.as_str()
+            );
+            match opts.out.as_deref() {
+                Some(path) => match std::fs::write(path, &r.bytes) {
+                    Ok(()) => {
+                        eprintln!("spore: wrote {path}");
+                        ExitCode::SUCCESS
+                    }
+                    Err(e) => {
+                        eprintln!("spore: io-error: {path}: {e}");
+                        ExitCode::from(66)
+                    }
+                },
+                None => {
+                    // The descriptor is UTF-8 text (the explain receipt); stream it to stdout.
+                    print!("{}", String::from_utf8_lossy(&r.bytes));
+                    ExitCode::SUCCESS
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("spore: {e}");
+            ExitCode::from(e.exit_code())
+        }
     }
 }
 
