@@ -37,6 +37,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   stays **Accepted** (not Enacted) — specs are "implemented, pending ratification" (VR-5). The Tier-2
   reprs (M-749 `Repr::Seq` / M-750 `Repr::Bytes`) are KC-3-significant, maintainer-sign-off-gated core
   additions and are **not** in this change. (RFC-0032 D7; E19-1/M-752)
+### Changed (2026-06-23: RFC-0026 → Accepted — editor-grammar scope names ratified; M-693 done, M-731 finalized; E16-1 epic `done`)
+
+- **RFC-0026 — Editor Syntax Highlighting Grammar → Accepted** (M-693, the E9-1 gate; Draft → Proposed
+  → Accepted same day, maintainer-ratified). §3 fixed normatively: **§3.1** artifact scope (the three
+  grammar layers — TextMate · tree-sitter · LSP semantic tokens — are the E9-1/E16-1 gate; the VS Code
+  extension + GitHub Linguist registration are the **M-697** follow-up); **§3.2** the scope-name table
+  — **standard names per layer** (TextMate scopes carry a `.mycelium` suffix; tree-sitter captures and
+  LSP token types are the standard *unsuffixed* names — chosen for maximal theme compatibility, §5 Q2)
+  mapped over the **lexer-derived** keyword/type/scalar/strength buckets; **§3.3**
+  the single-source-of-truth/drift contract (already implemented: `tools/grammar/generate.py` +
+  `just drift-check`). **DN-24 → Resolved** (its recommended layered stack adopted). (M-693; RFC-0026)
+- **M-731 finalized — editor grammars now ship ratified scope names.** The `TODO.rfc-0026.*`
+  placeholders are replaced with the RFC-0026 §3.2 names: TextMate (`keyword.control.mycelium`,
+  `storage.type.mycelium`, `support.type.builtin.mycelium`, `storage.modifier.guarantee.mycelium`,
+  `comment.line.double-slash.mycelium`, `constant.numeric.mycelium`), tree-sitter captures
+  (`@keyword`/`@type`/`@type.builtin`/`@attribute`/…), and the LSP legend (the M-730 semantic-token
+  types are that table's LSP layer). Still **lexer-derived + drift-checked** (G2 — `just drift-check`
+  green). Subsumes the E9-1 leaves **M-694** (TextMate) / **M-695** (tree-sitter scaffold) / **M-696**
+  (LSP semantic tokens). The full structural tree-sitter grammar + M-697 packaging remain follow-ups.
+  (M-731; M-694/M-695/M-696)
+- **Epic E16-1 → `done`** (all five children landed: M-730/M-731/M-732/M-733/M-734). **E9-1 →
+  `in-progress`** (M-693 + M-694/M-695/M-696 done; **M-697** VS Code extension + Linguist remains). (E16-1; E9-1)
 
 ### Added (2026-06-23: ADR-024 — Core 1.0.0 Gate (T1) scope amendment, enacting RFC-0032 D6 append-only)
 

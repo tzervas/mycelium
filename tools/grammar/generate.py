@@ -11,10 +11,12 @@ HONESTY / status (VR-5, G2):
   * The keyword *set* and its *class buckets* are derived mechanically from `token.rs` (the RHS
     `=> Tok::…` of each arm), never hand-maintained — so adding a keyword to the lexer without
     regenerating fails the drift gate.
-  * The TextMate / tree-sitter *scope names* are the open question of RFC-0026 §3.2, which is still
-    **Draft**. They are therefore emitted as explicit `TODO.rfc-0026.*` placeholders — scaffolded,
-    not finalized. Do not treat them as the ratified scope-name table; that lands when RFC-0026 is
-    Accepted (M-693 Done). This generator must not *guess* them.
+  * The *scope names* are the **ratified RFC-0026 §3.2 (Accepted)** table: standard names per layer —
+    TextMate scopes carry a `.mycelium` suffix (`TM_SCOPES`), while the tree-sitter captures
+    (`TS_CAPTURES`) are the standard *unsuffixed* names (`@keyword`, `@type.builtin`, …). The
+    tree-sitter `highlights.scm` covers the four word buckets only (a reserved-word scaffold);
+    comment/number/operator/identifier captures arrive with the full structural grammar (RFC-0026
+    §3.4). A change to the table supersedes RFC-0026 (append-only); the generator is then re-run.
 
 Usage:
   generate.py                 # (re)write the committed artifacts under tools/grammar/
@@ -34,8 +36,24 @@ HERE = Path(__file__).resolve().parent
 REPO_ROOT = HERE.parent.parent
 TOKEN_RS = REPO_ROOT / "crates" / "mycelium-l1" / "src" / "token.rs"
 
-# Provisional scope-name placeholders (RFC-0026 §3.2 is OPEN — never the final names; see module doc).
-TODO_SCOPE = "TODO.rfc-0026"
+# Ratified RFC-0026 §3.2 scope names — standard TextMate / tree-sitter / LSP names with a `.mycelium`
+# suffix (chosen for maximal theme compatibility; see RFC-0026 §3.2 / §5 Q2). The keyword/type/scalar/
+# strength buckets are lexer-derived (§3.3); these tables fix the NAME each bucket renders to.
+TM_SCOPES = {
+    "keyword": "keyword.control.mycelium",
+    "type": "storage.type.mycelium",
+    "scalar": "support.type.builtin.mycelium",
+    "strength": "storage.modifier.guarantee.mycelium",
+}
+TM_COMMENT = "comment.line.double-slash.mycelium"
+TM_NUMERIC = "constant.numeric.mycelium"
+# tree-sitter highlight captures (RFC-0026 §3.2).
+TS_CAPTURES = {
+    "keyword": "keyword",
+    "type": "type",
+    "scalar": "type.builtin",
+    "strength": "attribute",
+}
 
 # The substrate/representation type keywords — identified by their bare `Tok::<Variant>` RHS.
 TYPE_VARIANTS = {"Binary", "Ternary", "Dense", "Vsa", "Substrate", "Sparse"}
@@ -90,7 +108,7 @@ def render_keywords_json(buckets: dict[str, list[str]]) -> str:
     doc = {
         "_generated_by": "tools/grammar/generate.py",
         "_source_of_truth": "crates/mycelium-l1/src/token.rs::keyword()",
-        "_honesty": "keyword set + class buckets are lexer-derived (G2); scope names are RFC-0026-pending TODO stubs (VR-5).",
+        "_honesty": "keyword set + class buckets are lexer-derived (G2); scope names are the ratified RFC-0026 §3.2 table.",
         "classes": buckets,
     }
     return json.dumps(doc, indent=2) + "\n"
@@ -103,7 +121,7 @@ def _regex_alt(words: list[str]) -> str:
 
 
 def render_tmlanguage(buckets: dict[str, list[str]]) -> str:
-    """A minimal TextMate grammar. Scope names are RFC-0026-pending placeholders (NOT final)."""
+    """A minimal TextMate grammar using the ratified RFC-0026 §3.2 scope names."""
     patterns = []
     for cls in ("keyword", "type", "scalar", "strength"):
         words = buckets[cls]
@@ -111,17 +129,16 @@ def render_tmlanguage(buckets: dict[str, list[str]]) -> str:
             continue
         patterns.append(
             {
-                "name": f"{TODO_SCOPE}.{cls}.mycelium",
+                "name": TM_SCOPES[cls],
                 "match": _regex_alt(words),
             }
         )
-    # Comments and binary/ternary literals are syntactic (not in keyword()): include the obvious ones
-    # so the scaffold is usable, still under a TODO scope until RFC-0026 fixes the names. The binary
-    # literal allows `_` digit separators, matching the lexer (lex_binary accepts '0'/'1'/'_').
-    patterns.append({"name": f"{TODO_SCOPE}.comment.line.mycelium", "match": r"//.*$"})
+    # Comments and binary/ternary literals are syntactic (not in keyword()). The binary literal allows
+    # `_` digit separators, matching the lexer (lex_binary accepts '0'/'1'/'_').
+    patterns.append({"name": TM_COMMENT, "match": r"//.*$"})
     patterns.append(
         {
-            "name": f"{TODO_SCOPE}.constant.numeric.mycelium",
+            "name": TM_NUMERIC,
             "match": r"0b[01_]+|<[+\-0]+>",
         }
     )
@@ -131,27 +148,28 @@ def render_tmlanguage(buckets: dict[str, list[str]]) -> str:
         "name": "Mycelium",
         "scopeName": "source.mycelium",
         "_generated_by": "tools/grammar/generate.py — DO NOT EDIT BY HAND",
-        "_scope_names_status": "PROVISIONAL — RFC-0026 §3.2 OPEN (Draft); TODO.* placeholders, not final.",
+        "_scope_names_status": "RATIFIED — RFC-0026 §3.2 (Accepted): standard TextMate names, lexer-derived buckets.",
         "patterns": patterns,
     }
     return json.dumps(grammar, indent=2) + "\n"
 
 
 def render_tree_sitter(buckets: dict[str, list[str]]) -> str:
-    """A tree-sitter `grammar.js` scaffold listing the lexer keywords. Structure/queries are TODO."""
+    """A tree-sitter `grammar.js` scaffold listing the lexer keywords. Full structure is follow-up."""
     all_words = sorted({w for words in buckets.values() for w in words})
     kw_rules = ",\n".join(f"      '{w}'" for w in all_words)
     return f"""// tree-sitter grammar for Mycelium — GENERATED by tools/grammar/generate.py. DO NOT EDIT.
 //
-// Status (RFC-0026, Draft): this is a SCAFFOLD. The keyword set below is derived from the canonical
-// lexer (crates/mycelium-l1/src/token.rs::keyword()); the full structural grammar and the
-// highlight-query scope names are RFC-0026-pending (§3.2 OPEN) and must not be guessed (VR-5/G2).
+// Status (RFC-0026, Accepted): the keyword set below is derived from the canonical lexer
+// (crates/mycelium-l1/src/token.rs::keyword()) and kept in lockstep by `just drift-check`. This is a
+// keyword-accurate SCAFFOLD; the full structural grammar (productions beyond the reserved-word set)
+// is the community follow-up named in RFC-0026 §3.4. Highlight captures are in queries/highlights.scm.
 module.exports = grammar({{
   name: 'mycelium',
   // The reserved-word set, kept in lockstep with the lexer by `just drift-check`.
   word: $ => $.identifier,
   rules: {{
-    // Placeholder source rule — the real productions land when RFC-0026 is Accepted.
+    // Scaffold source rule — the full structural productions are the RFC-0026 §3.4 follow-up.
     source_file: $ => repeat(choice($.keyword, $.identifier)),
     identifier: $ => /[A-Za-z_][A-Za-z0-9_]*/,
     keyword: $ => choice(
@@ -163,10 +181,10 @@ module.exports = grammar({{
 
 
 def render_highlights_scm(buckets: dict[str, list[str]]) -> str:
-    """tree-sitter highlight queries — scope (capture) names are RFC-0026-pending TODO placeholders."""
+    """tree-sitter highlight queries using the ratified RFC-0026 §3.2 capture names."""
     lines = [
         "; tree-sitter highlight queries for Mycelium — GENERATED by tools/grammar/generate.py.",
-        "; Status: SCOPE/CAPTURE NAMES ARE PROVISIONAL — RFC-0026 §3.2 OPEN (Draft). Not final (VR-5/G2).",
+        "; Capture names are the ratified RFC-0026 §3.2 (Accepted) standard tree-sitter captures.",
         "",
     ]
     for cls in ("keyword", "type", "scalar", "strength"):
@@ -174,8 +192,7 @@ def render_highlights_scm(buckets: dict[str, list[str]]) -> str:
         if not words:
             continue
         alt = " ".join(f'"{w}"' for w in words)
-        # Capture name is a TODO placeholder until RFC-0026 fixes the scope-name table.
-        lines.append(f"[{alt}] @TODO.rfc-0026.{cls}")
+        lines.append(f"[{alt}] @{TS_CAPTURES[cls]}")
     return "\n".join(lines) + "\n"
 
 
