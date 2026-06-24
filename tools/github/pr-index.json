@@ -1,6 +1,6 @@
 {
-  "_about": "Issue↔PR cross-check map: {task_id: merged_PR_number}, derived from the LIVE merged-PR list of tzervas/mycelium (GitHub REST, enumerated 2026-06-22 via the GitHub MCP `list_pull_requests` tool). Consumed by gh-issues-sync.py --relationships as the offline cross-check for the git-log (#NNN) PR source (most curated squash subjects omit the (#NNN), so this carries the real merged-PR number). Honesty (G2/VR-5): every entry is grounded in a real merged PR whose TITLE names the task-id (parsed exactly as the conventions.json task_id_patterns, slash-runs expanded). It is NOT authoritative over a git-log (#NNN) that disagrees — build_relationship_manifest prefers the git-log subject and FLAGs any disagreement. Regenerate with `--use-api` against a token (api_merged_pr_index) or by re-querying the merged-PR list. Append-only in spirit; a corrected mapping supersedes, never silently rewrites history.",
-  "_basis": "GitHub MCP list_pull_requests(state=closed) → 39 merged PRs; schema fields number/merged_at/title/state; merged signalled by non-null merged_at (the list endpoint's `merged` bool is unreliably false). PRs #346/#348/#349 (e7l generics tranche) and the #310 multi-id enactment sweep verified against CHANGELOG.md headers + git log origin/main.",
+  "_about": "Issue\u2194PR cross-check map: {task_id: merged_PR_number}, derived from the LIVE merged-PR list of tzervas/mycelium (GitHub REST, enumerated 2026-06-22 via the GitHub MCP `list_pull_requests` tool). Consumed by gh-issues-sync.py --relationships as the offline cross-check for the git-log (#NNN) PR source (most curated squash subjects omit the (#NNN), so this carries the real merged-PR number). Honesty (G2/VR-5): every entry is grounded in a real merged PR whose TITLE names the task-id (parsed exactly as the conventions.json task_id_patterns, slash-runs expanded). It is NOT authoritative over a git-log (#NNN) that disagrees \u2014 build_relationship_manifest prefers the git-log subject and FLAGs any disagreement. Regenerate with `--use-api` against a token (api_merged_pr_index) or by re-querying the merged-PR list. Append-only in spirit; a corrected mapping supersedes, never silently rewrites history.",
+  "_basis": "GitHub MCP list_pull_requests(state=closed, newest page #390\u2013#532) re-enumerated 2026-06-24, merged via non-null merged_at into the prior 2026-06-22 enumeration (#306\u2013#375), earliest-PR-wins. Added M-675\u2026M-752 (E13-1/E14-1/E16-1/E19-1 + post-1.0). A full --use-api regen (incl. #376\u2013#389) supersedes.",
   "map": {
     "M-663": 375,
     "M-656": 346,
@@ -22,6 +22,22 @@
     "M-650": 310,
     "M-649": 310,
     "M-381": 310,
-    "M-646": 310
+    "M-646": 310,
+    "M-675": 487,
+    "M-709": 491,
+    "M-711": 491,
+    "M-713": 491,
+    "M-738": 492,
+    "M-705": 494,
+    "M-708": 494,
+    "M-706": 494,
+    "M-714": 510,
+    "M-715": 510,
+    "M-722": 511,
+    "M-723": 511,
+    "M-731": 517,
+    "M-747": 518,
+    "M-748": 518,
+    "M-752": 528
   }
 }
