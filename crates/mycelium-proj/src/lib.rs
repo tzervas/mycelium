@@ -14,7 +14,10 @@
 //! - [`cert_scope`] — **`@certification` mode resolution & scoping** (RFC-0034 §6; M-790): the active
 //!   [`CertMode`](mycelium_core::cert_mode::CertMode) resolved most-specific-wins over the
 //!   `global > phylum > nodule` lattice (reusing RFC-0012's scoped-override mechanism), plus the
-//!   explicit cross-mode-composition boundary ([`cert_scope::compose`]).
+//!   explicit cross-mode-composition boundary ([`cert_scope::compose`]), plus the
+//!   **generation≠consumption split** (RFC-0034 §7; M-792): the always-on [`ModeSignal`] /
+//!   [`generate_mode_signal`] + tunable [`ConsumptionTier`] / [`render_mode_signal`] so the
+//!   inspectability history is captured in every mode and consumption is dial-up.
 //!
 //! **Metadata is not identity (ADR-003).** Nothing here perturbs a definition's content hash — these
 //! are associated, queryable fields, the human/release layer on top of content-addressing.
@@ -28,8 +31,9 @@ pub mod resolve;
 mod tests;
 
 pub use cert_scope::{
-    cert_mode_word, compose, explain_mode, parse_cert_mode, resolve_mode, CertDecl, CertScope,
-    CrossModeEvent, ResolvedMode,
+    cert_mode_word, compose, explain_mode, generate_mode_signal, parse_cert_mode,
+    render_mode_signal, resolve_mode, CertDecl, CertScope, ConsumptionTier, CrossModeEvent,
+    ModeSignal, ResolvedMode,
 };
 pub use header::{
     parse_header, Deprecated, HeaderError, HeaderFields, StructuredHeader, HEADER_KEYS,

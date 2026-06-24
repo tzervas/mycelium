@@ -179,10 +179,141 @@ pub fn resolve_mode(decls: &[CertDecl]) -> ResolvedMode {
 
 /// The `EXPLAIN` of a certification-mode resolution — the effective mode and its source scope, so the
 /// active mode is never ambient (G2 / RFC-0012 renderability). Stable and deterministic.
+///
+/// **Mode-independent (RFC-0034 §13d / §3):** this function is available and meaningful in **every**
+/// mode including `fast`. The EXPLAIN of the active mode is the transparency floor — it is never
+/// conditioned on the cert depth. Callers in `fast` may dial consumption lean (see
+/// [`render_mode_signal`]) but the signal is always capturable.
 #[must_use]
 pub fn explain_mode(r: &ResolvedMode) -> String {
     let src = r.source.map_or("default", CertScope::label);
     format!("certification: {}  [{src}]", cert_mode_word(r.mode))
+}
+
+// --- generation ≠ consumption (RFC-0034 §7) ---
+//
+// Two things that were fused under "verbosity" are now distinct:
+//
+// 1. **Signal generation** — the cheap inspectability record (active mode, source scope, depth)
+//    is *always generated*, available in every mode including `fast`. This is cheap; it just
+//    captures the already-resolved `ResolvedMode`.
+//
+// 2. **Consumption / DX surfacing** — how much of that signal the DX renders is tunable via
+//    [`ConsumptionTier`]. `fast` defaults to `Lean`; the developer can dial up to `Full` mid-
+//    session and the history is *already captured* — no re-run, no mode switch.
+
+/// The **DX consumption tier** — how much of the already-generated inspectability signal is
+/// rendered by the tooling / DX layer (RFC-0034 §7).
+///
+/// This is **orthogonal to the certification mode** — in particular, `fast` sessions default to
+/// [`Lean`](ConsumptionTier::Lean) consumption, but a developer can call
+/// [`render_mode_signal`] with `Full` at any time: the [`ModeSignal`] was already generated (no
+/// re-run required). The split makes `fast` cheap-by-default *and* non-cornering (the history is
+/// there when you need it).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ConsumptionTier {
+    /// **Lean** — the fast default: one compact line naming the active mode and its source. Minimal
+    /// noise for everyday development.
+    Lean,
+    /// **Medium** — adds the mode depth and a note about what the mode enables/omits. For
+    /// debugging / log-level output.
+    Medium,
+    /// **Full** — the complete audit trail: mode, source scope, depth rank, the generation≠
+    /// consumption split note. Matches the `certified` audit-trail posture.
+    Full,
+}
+
+impl ConsumptionTier {
+    /// All three consumption tiers, least-verbose → most-verbose — for exhaustive iteration.
+    pub const ALL: [ConsumptionTier; 3] = [
+        ConsumptionTier::Lean,
+        ConsumptionTier::Medium,
+        ConsumptionTier::Full,
+    ];
+
+    /// Whether this tier is at least as verbose as another — for asserting that dialing consumption
+    /// up reveals at least as much information.
+    #[must_use]
+    pub fn is_at_least(self, other: ConsumptionTier) -> bool {
+        self >= other
+    }
+}
+
+/// The **always-generated inspectability signal** for the active certification mode (RFC-0034 §7).
+///
+/// A `ModeSignal` is constructed from any [`ResolvedMode`] in **any** cert mode (including `fast`)
+/// by [`generate_mode_signal`]. It is the *generation* half of the generation≠consumption split:
+/// the signal is captured eagerly and cheaply so it is *already there* when consumption is dialed
+/// up later — no re-run, no mode switch required.
+///
+/// To render the signal at a given DX verbosity, call [`render_mode_signal`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ModeSignal {
+    /// The resolved mode (effective mode + its winning scope).
+    pub resolved: ResolvedMode,
+    /// The certification depth of the active mode (`0` = Fast … `2` = Certified). Cached so the
+    /// render path has everything it needs without re-computing.
+    pub depth: u8,
+}
+
+/// **Generate the inspectability signal** for a resolved certification mode — always available,
+/// in **any** cert mode including `fast` (RFC-0034 §7 / §13d).
+///
+/// This is the *generation* step: it captures the mode, its provenance, and its depth as an
+/// inspectable [`ModeSignal`] value. Generation is cheap (no allocation beyond the returned
+/// struct, no machinery) and is therefore always-on — the transparency floor (RFC-0034 §3
+/// invariant 3).
+///
+/// To control *how much* of the signal is surfaced in the DX/UX, pass the returned
+/// [`ModeSignal`] to [`render_mode_signal`] with the appropriate [`ConsumptionTier`].
+#[must_use]
+pub fn generate_mode_signal(r: &ResolvedMode) -> ModeSignal {
+    ModeSignal {
+        resolved: *r,
+        depth: r.mode.depth(),
+    }
+}
+
+/// **Render the inspectability signal** at a given DX consumption tier (RFC-0034 §7).
+///
+/// The [`ModeSignal`] was already captured by [`generate_mode_signal`] — this function only
+/// controls *how verbose* the output is. Calling this with a higher tier on an existing
+/// `ModeSignal` surfaces more of the already-captured history, **with no re-run or mode switch**.
+///
+/// | Tier | Output |
+/// |------|--------|
+/// | [`Lean`](ConsumptionTier::Lean) | one compact line — `certification: fast  [default]` |
+/// | [`Medium`](ConsumptionTier::Medium) | adds the depth rank |
+/// | [`Full`](ConsumptionTier::Full) | adds the generation≠consumption split note |
+///
+/// The `Lean` output is identical to [`explain_mode`] applied to the same [`ResolvedMode`] —
+/// that function is the mode-EXPLAIN floor (always-available, mode-independent, §13d).
+#[must_use]
+pub fn render_mode_signal(signal: &ModeSignal, tier: ConsumptionTier) -> String {
+    let src = signal.resolved.source.map_or("default", CertScope::label);
+    let mode_word = cert_mode_word(signal.resolved.mode);
+    match tier {
+        ConsumptionTier::Lean => {
+            // The fast default: one compact line — minimal noise, still never-silent (G2).
+            format!("certification: {mode_word}  [{src}]")
+        }
+        ConsumptionTier::Medium => {
+            // Adds the certification depth rank (0 = fast … 2 = certified).
+            format!(
+                "certification: {mode_word}  [{src}]  (depth {})",
+                signal.depth
+            )
+        }
+        ConsumptionTier::Full => {
+            // The full audit trail — already-captured, no re-run needed (RFC-0034 §7).
+            format!(
+                "certification: {mode_word}  [{src}]  (depth {})\n  \
+                 signal: generated (always-on, RFC-0034 §7); consumption tier: full\n  \
+                 note: dial consumption up any time — the history is already captured",
+                signal.depth,
+            )
+        }
+    }
 }
 
 // --- cross-mode composition: the explicit, visible boundary (RFC-0034 §3.1, §6) ---

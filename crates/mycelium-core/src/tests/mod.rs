@@ -5,4 +5,9 @@ mod cert_mode;
 #[path = "lib.rs"]
 mod lib_root;
 mod meta;
+/// Shared mode-parametric test harness (M-795; RFC-0034 §13; DN-20). Provides canonical bound
+/// fixtures, `for_each_mode`, `ModeScope`, and `assert_mode_scope` for the cross-mode negative
+/// pattern. Used by `cert_mode` and `mode_tests`; available to any in-crate test module.
+pub(super) mod mode_harness;
+mod mode_tests;
 mod wrapping;

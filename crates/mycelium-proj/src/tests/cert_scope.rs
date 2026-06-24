@@ -1,16 +1,29 @@
-//! White-box + property tests for [`crate::cert_scope`] — the M-790 DoD laws (RFC-0034 §6 / §3.1).
+//! White-box + property tests for [`crate::cert_scope`] — the M-790 and M-792 DoD laws
+//! (RFC-0034 §6 / §3.1 / §7 / §13d).
 //!
-//! The two property tests required by the DoD:
+//! M-790 DoD property tests (existing):
 //! 1. **Resolution precedence** — a `nodule` declaration overrides a `phylum` one, which overrides a
 //!    `global` one (most-specific-wins), for *any* combination of modes and *any* declaration order.
 //! 2. **Cross-mode never-silent-upgrade** — composing a value produced under one mode into a
 //!    computation under any other mode never upgrades the value's guarantee strength (VR-5); a `fast`
 //!    value entering a `certified` computation is always an explicit, visible boundary event.
+//!
+//! M-792 DoD property tests (new — RFC-0034 §7 / §13d):
+//! 3. **EXPLAIN of the active mode is available in every mode** — `explain_mode` produces a non-empty,
+//!    mode-naming string for any `ResolvedMode`, including the `fast` default (RFC-0034 §13d).
+//! 4. **Signal generated even when consumption is lean** — `generate_mode_signal` succeeds in every
+//!    mode; dialing `render_mode_signal` to a higher `ConsumptionTier` surfaces more of the *already-
+//!    captured* history (no re-run or mode switch — RFC-0034 §7).
 
 use crate::cert_scope::*;
 use mycelium_core::cert_mode::CertMode;
 use mycelium_core::guarantee::GuaranteeStrength;
 use proptest::prelude::*;
+
+/// Strategy over the three consumption tiers.
+fn any_consumption_tier() -> impl Strategy<Value = ConsumptionTier> {
+    prop::sample::select(ConsumptionTier::ALL.to_vec())
+}
 
 /// Strategy over the three certification modes.
 fn any_mode() -> impl Strategy<Value = CertMode> {
@@ -87,6 +100,121 @@ fn structural_exact_survives_the_boundary() {
     assert!(!ev.upgraded_strength());
 }
 
+// --- M-792 unit checks: EXPLAIN-of-mode + generation≠consumption (RFC-0034 §7 / §13d) ---
+
+#[test]
+fn explain_mode_is_available_in_every_mode_including_fast() {
+    // RFC-0034 §13d: EXPLAIN of the active mode is always available.
+    // The fast default (no declarations) must produce a non-empty, mode-naming output.
+    let fast_default = ResolvedMode::defaulted();
+    let ex = explain_mode(&fast_default);
+    assert!(
+        !ex.is_empty(),
+        "explain_mode must produce output in fast/default"
+    );
+    assert!(ex.contains("fast"), "fast default must name 'fast': {ex}");
+    assert!(
+        ex.contains("default"),
+        "fast default must name source 'default': {ex}"
+    );
+
+    // All three modes, all three scopes — every combination must explain.
+    for mode in CertMode::ALL {
+        for scope in CertScope::ALL {
+            let r = ResolvedMode {
+                mode,
+                source: Some(scope),
+            };
+            let ex = explain_mode(&r);
+            let mode_word = cert_mode_word(mode);
+            assert!(
+                ex.contains(mode_word),
+                "explain_mode missing mode word for {:?}: {ex}",
+                mode
+            );
+            assert!(
+                ex.contains(scope.label()),
+                "explain_mode missing scope label for {:?}: {ex}",
+                scope
+            );
+        }
+    }
+}
+
+#[test]
+fn generate_mode_signal_is_available_in_every_mode() {
+    // Generation is always-on — the signal is captured for any ResolvedMode.
+    for mode in CertMode::ALL {
+        let r = ResolvedMode::defaulted();
+        let mut rm = r;
+        rm.mode = mode;
+        let sig = generate_mode_signal(&rm);
+        assert_eq!(sig.resolved, rm);
+        assert_eq!(sig.depth, mode.depth());
+    }
+}
+
+#[test]
+fn lean_consumption_is_identical_to_explain_mode() {
+    // The Lean render is the EXPLAIN floor — it must produce the same text as explain_mode
+    // (RFC-0034 §7: lean = "one compact line", which is exactly what explain_mode already is).
+    // Mutant witness: if `render_mode_signal` with Lean diverged from `explain_mode`, this test
+    // fails, revealing the contract break.
+    for mode in CertMode::ALL {
+        let r = ResolvedMode { mode, source: None };
+        let sig = generate_mode_signal(&r);
+        assert_eq!(
+            render_mode_signal(&sig, ConsumptionTier::Lean),
+            explain_mode(&r),
+            "Lean render must equal explain_mode for {:?}",
+            mode
+        );
+    }
+}
+
+#[test]
+fn dialing_consumption_up_surfaces_more_without_rerun() {
+    // The DoD invariant: a higher ConsumptionTier renders more information from the *same*
+    // already-captured ModeSignal — no new generation step needed.
+    // Concrete case: a fast default signal, rendered at Lean vs Medium vs Full.
+    let r = ResolvedMode::defaulted();
+    let sig = generate_mode_signal(&r);
+
+    let lean = render_mode_signal(&sig, ConsumptionTier::Lean);
+    let medium = render_mode_signal(&sig, ConsumptionTier::Medium);
+    let full = render_mode_signal(&sig, ConsumptionTier::Full);
+
+    // Lean ⊆ Medium ⊆ Full (medium/full are strictly longer and contain the lean prefix).
+    // Mutant witness: swapping Lean/Full output makes this length check fail.
+    assert!(
+        medium.len() > lean.len(),
+        "medium render must be longer than lean for the same signal"
+    );
+    assert!(
+        full.len() > medium.len(),
+        "full render must be longer than medium for the same signal"
+    );
+    // Lean prefix is preserved — the history is not replaced, only augmented.
+    assert!(
+        medium.starts_with(&lean),
+        "medium render must start with lean prefix — same captured history, more surfaced"
+    );
+    // Full contains the generation≠consumption note (the already-captured marker).
+    assert!(
+        full.contains("already captured"),
+        "full render must surface the already-captured note: {full}"
+    );
+}
+
+#[test]
+fn consumption_tier_ordering_is_lean_lt_medium_lt_full() {
+    assert!(ConsumptionTier::Lean < ConsumptionTier::Medium);
+    assert!(ConsumptionTier::Medium < ConsumptionTier::Full);
+    assert!(ConsumptionTier::Full.is_at_least(ConsumptionTier::Lean));
+    assert!(ConsumptionTier::Full.is_at_least(ConsumptionTier::Full));
+    assert!(!ConsumptionTier::Lean.is_at_least(ConsumptionTier::Medium));
+}
+
 // --- DoD property tests ---
 
 proptest! {
@@ -158,5 +286,74 @@ proptest! {
         prop_assert_eq!(ev.effective, producer.gate_guarantee(incoming));
         // An up-crossing (producer weaker-certified than consumer) is flagged as a boundary.
         prop_assert_eq!(ev.is_boundary(), producer.depth() < consumer.depth());
+    }
+
+    /// M-792 DoD #3 — **EXPLAIN of the active mode is available in every mode** (RFC-0034 §13d):
+    /// for *any* `ResolvedMode` (any combination of mode and optional source scope), `explain_mode`
+    /// produces a non-empty string that names both the mode word and the source label.
+    #[test]
+    fn prop_explain_mode_available_in_every_mode(
+        mode in any_mode(),
+        scope in any_scope(),
+        has_source in any::<bool>(),
+    ) {
+        let r = ResolvedMode {
+            mode,
+            source: if has_source { Some(scope) } else { None },
+        };
+        let ex = explain_mode(&r);
+        // Non-empty and names the mode (RFC-0034 §13d — never ambient, G2).
+        prop_assert!(!ex.is_empty());
+        prop_assert!(ex.contains(cert_mode_word(mode)),
+            "explain_mode did not name mode {:?}: {ex}", mode);
+        // The source scope (or "default") is always named — never ambient.
+        let expected_src = r.source.map_or("default", CertScope::label);
+        prop_assert!(ex.contains(expected_src),
+            "explain_mode did not name source {expected_src:?}: {ex}");
+    }
+
+    /// M-792 DoD #4 — **signal is always generated; dialing consumption up surfaces more**
+    /// (RFC-0034 §7): for *any* `ResolvedMode` and *any* pair of consumption tiers where
+    /// `higher >= lower`, `render_mode_signal` with the higher tier produces output that is
+    /// at least as long as the lower tier — the already-captured history is only augmented,
+    /// never discarded when consumption increases.
+    #[test]
+    fn prop_signal_generated_and_consumption_monotone(
+        mode in any_mode(),
+        scope in any_scope(),
+        has_source in any::<bool>(),
+        lower in any_consumption_tier(),
+        higher in any_consumption_tier(),
+    ) {
+        let r = ResolvedMode {
+            mode,
+            source: if has_source { Some(scope) } else { None },
+        };
+        // Signal is generated for any mode — no mode-gating, no failure (RFC-0034 §7).
+        let sig = generate_mode_signal(&r);
+        // The signal captures the resolved mode faithfully.
+        prop_assert_eq!(sig.resolved, r);
+        prop_assert_eq!(sig.depth, mode.depth());
+
+        // Consumption monotonicity: dialing up produces at least as many bytes.
+        // (A higher tier can only add information, never remove it.)
+        let output_lower = render_mode_signal(&sig, lower);
+        let output_higher = render_mode_signal(&sig, higher);
+        if higher >= lower {
+            prop_assert!(
+                output_higher.len() >= output_lower.len(),
+                "render with {:?} ({} chars) shorter than {:?} ({} chars) — \
+                 dialing up must never reduce output length",
+                higher, output_higher.len(), lower, output_lower.len()
+            );
+        }
+
+        // Lean output always names the mode and source — the EXPLAIN floor holds at every mode.
+        let lean = render_mode_signal(&sig, ConsumptionTier::Lean);
+        prop_assert!(lean.contains(cert_mode_word(mode)),
+            "Lean render did not name mode {:?}: {lean}", mode);
+        let expected_src = r.source.map_or("default", CertScope::label);
+        prop_assert!(lean.contains(expected_src),
+            "Lean render did not name source {expected_src:?}: {lean}");
     }
 }
