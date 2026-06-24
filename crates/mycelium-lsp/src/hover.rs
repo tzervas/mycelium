@@ -74,12 +74,12 @@ fn describe(kind: &LexKind) -> Option<String> {
             )
         }
         // --- substrate / representation types ---
-        Tok::Binary => kw("Binary", "the binary value-semantics substrate (bit-packed)."),
-        Tok::Ternary => kw("Ternary", "the balanced-ternary substrate (trits: −, 0, +)."),
-        Tok::Dense => kw("Dense", "the dense numeric substrate (packed scalars)."),
-        Tok::Vsa => kw("VSA", "the vector-symbolic-architecture substrate (hypervectors)."),
-        Tok::Substrate => kw("Substrate", "the abstract substrate kind (representation family)."),
-        Tok::Sparse => kw("Sparse", "the sparse representation modifier."),
+        Tok::Binary => ty("Binary", "the binary value-semantics substrate (bit-packed)."),
+        Tok::Ternary => ty("Ternary", "the balanced-ternary substrate (trits: −, 0, +)."),
+        Tok::Dense => ty("Dense", "the dense numeric substrate (packed scalars)."),
+        Tok::Vsa => ty("VSA", "the vector-symbolic-architecture substrate (hypervectors)."),
+        Tok::Substrate => ty("Substrate", "the abstract substrate kind (representation family)."),
+        Tok::Sparse => ty("Sparse", "the sparse representation modifier."),
         Tok::Scalar(s) => {
             let n = match s {
                 ScalarTok::F16 => "F16",
@@ -87,7 +87,7 @@ fn describe(kind: &LexKind) -> Option<String> {
                 ScalarTok::F32 => "F32",
                 ScalarTok::F64 => "F64",
             };
-            kw(n, "a floating-point scalar element type.")
+            ty(n, "a floating-point scalar element type.")
         }
         // --- declaration / control keywords (the high-value ones get a gloss) ---
         Tok::Nodule => kw("nodule", "opens a static unit (the basic module of a program)."),
@@ -143,9 +143,16 @@ fn describe(kind: &LexKind) -> Option<String> {
     Some(body)
 }
 
-/// A keyword/type hover body: a bold lexeme tag plus a one-line gloss.
+/// A **keyword** hover body: a bold lexeme tag plus a one-line gloss. Use [`ty`] for substrate /
+/// scalar *types* so the role label stays accurate (a `Binary`/`F32` token is a type, not a keyword).
 fn kw(name: &str, gloss: &str) -> String {
     format!("**`{name}`** — keyword\n\n{gloss}")
+}
+
+/// A **type** hover body (substrate / representation / scalar element types — `Binary`, `Ternary`,
+/// `Dense`, `VSA`, `Substrate`, `Sparse`, `F32`, …): same shape as [`kw`] but the honest role label.
+fn ty(name: &str, gloss: &str) -> String {
+    format!("**`{name}`** — type\n\n{gloss}")
 }
 
 #[cfg(test)]
@@ -165,8 +172,29 @@ mod tests {
         let v = h["contents"]["value"].as_str().unwrap();
         assert!(v.contains("fn"), "{v}");
         assert!(v.contains("function"), "{v}");
+        // A real keyword is labelled "keyword", not "type".
+        assert!(v.contains("— keyword"), "{v}");
         // The range covers the two-char `fn`.
         assert_eq!(h["range"]["end"]["character"], 2);
+    }
+
+    #[test]
+    fn hover_on_type_is_labeled_type_not_keyword() {
+        // A substrate/representation type (`Binary`) is a TYPE, not a keyword — the role label must
+        // say so (the kw()/ty() split). Hover on `Binary` in the return position.
+        let src = "fn f() -> Binary{8} = 0b0\n";
+        let c = src.find("Binary").unwrap() as u32;
+        let h = hover(src, 0, c);
+        let v = h["contents"]["value"].as_str().unwrap();
+        assert!(v.contains("Binary"), "{v}");
+        assert!(
+            v.contains("— type"),
+            "type token must be labelled 'type': {v}"
+        );
+        assert!(
+            !v.contains("— keyword"),
+            "type token must NOT be labelled 'keyword': {v}"
+        );
     }
 
     #[test]

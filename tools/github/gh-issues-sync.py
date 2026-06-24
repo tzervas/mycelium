@@ -523,6 +523,7 @@ def gql_str(text):
 # is not exercised here (no token in this environment). See project-v2-spec.md.
 
 import os  # noqa: E402  (kept local to this gh-independent section for clarity)
+import random  # noqa: E402  (jitter for the API-path backoff)
 import urllib.error  # noqa: E402
 import urllib.request  # noqa: E402
 
@@ -530,6 +531,15 @@ _GITHUB_API = "https://api.github.com"
 _GITHUB_GRAPHQL = "https://api.github.com/graphql"
 _API_TIMEOUT = (
     60  # per-request ceiling (mirrors the gh path's bounded timeout discipline)
+)
+# Rate/transient resilience for the urllib (`--use-api`) path — the `gh` path has _run_gh's retry +
+# the RateGate; this gives the token API the same never-silent backoff so a 403/429/5xx or a
+# rate-limit reset is WAITED OUT and the request resumed, never aborting the whole paginated sync.
+_API_RETRY_MAX = 5  # bounded attempts per request (attempt 0 + 5 retries)
+_API_BACKOFF_BASE = 2.0  # exponential base for 5xx/secondary backoff (seconds)
+_API_MAX_SLEEP = 300  # clamp ANY single wait (incl. a far-off rate-limit reset) — never block forever
+_API_LOW_WATER = (
+    50  # proactively pause pagination when the core budget dips below this many calls
 )
 
 
@@ -540,6 +550,61 @@ def github_token():
     caller FLAG the token-gated step rather than fabricate a sync — the honest failure mode.
     """
     return os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+
+
+def _header_int(headers, name):
+    """PURE: parse integer header ``name`` from a mapping/HTTPMessage, or None (tolerant)."""
+    if headers is None:
+        return None
+    try:
+        val = headers.get(name)
+    except AttributeError:
+        val = None
+    if val is None:
+        return None
+    s = str(val).strip()
+    return int(s) if s.lstrip("-").isdigit() else None
+
+
+def compute_api_backoff(status, headers, attempt, *, now):
+    """PURE: decide whether/how long to wait before retrying a GitHub HTTP response on the urllib
+    (``--use-api``) path (no I/O — exercised offline by ``--self-test``).
+
+    Returns ``(retry: bool, sleep: float, reason: str)``.
+
+    Policy (never-silent, honest):
+      * **403 / 429** — a rate-limit / secondary-limit / abuse stop. Wait the server-advised window:
+        ``Retry-After`` (seconds) if present, else ``X-RateLimit-Reset`` (epoch) − ``now`` when the
+        remaining budget is exhausted, else an exponential backoff. This is the WAIT-AND-RESUME that
+        keeps a primary rate-limit from aborting the whole sync (the reported "stall then skip").
+      * **5xx** — a transient server error: exponential backoff with jitter.
+      * **anything else (2xx/4xx)** — not retryable here (the caller surfaces it never-silently).
+
+    Every wait is clamped to ``_API_MAX_SLEEP`` so a far-off reset can never block forever; ``attempt``
+    beyond ``_API_RETRY_MAX`` returns ``retry=False`` so the loop is bounded.
+    """
+    if attempt >= _API_RETRY_MAX:
+        return False, 0.0, "retries exhausted"
+    # Exponential backoff with full jitter (used for 5xx and as the 403/429 fallback).
+    backoff = min(_API_MAX_SLEEP, _API_BACKOFF_BASE * (2**attempt))
+    jittered = round(backoff / 2 + random.uniform(0, backoff / 2), 2)
+    if status in (403, 429):
+        retry_after = _header_int(headers, "Retry-After")
+        if retry_after is not None:
+            return (
+                True,
+                float(min(_API_MAX_SLEEP, max(1, retry_after))),
+                "Retry-After header",
+            )
+        remaining = _header_int(headers, "X-RateLimit-Remaining")
+        reset = _header_int(headers, "X-RateLimit-Reset")
+        if remaining == 0 and reset is not None:
+            wait = min(_API_MAX_SLEEP, max(1, reset - int(now)))
+            return True, float(wait), "X-RateLimit-Reset (primary limit)"
+        return True, jittered, "secondary/abuse backoff"
+    if 500 <= status < 600:
+        return True, jittered, f"HTTP {status} (transient server)"
+    return False, 0.0, f"HTTP {status} (not retryable)"
 
 
 class GitHubApi:
@@ -570,9 +635,85 @@ class GitHubApi:
             h["Accept"] = "application/json"
         return h
 
+    def _maybe_throttle(self, headers):
+        """Pre-emptive pause: if the rate budget for THIS resource is nearly spent, sleep until its
+        reset so the NEXT call doesn't trip the limit (never-silent, G2). This is what keeps a long
+        pagination from burning the last of the budget and then hard-failing — it slows *before* the
+        wall, not after. The ``X-RateLimit-*`` headers reflect whichever resource the endpoint draws
+        on (core / search / graphql), so the message stays resource-agnostic. Bounded by
+        ``_API_MAX_SLEEP``."""
+        remaining = _header_int(headers, "X-RateLimit-Remaining")
+        reset = _header_int(headers, "X-RateLimit-Reset")
+        if remaining is not None and remaining < _API_LOW_WATER and reset is not None:
+            wait = min(_API_MAX_SLEEP, max(0, reset - int(time.time())))
+            if wait > 0:
+                safe_print(
+                    f"   ~ API rate budget low ({remaining} calls left for this resource) — pausing "
+                    f"{wait}s for the reset before continuing (proactive, G2)",
+                    file=sys.stderr,
+                )
+                time.sleep(wait)
+
+    def _open(self, req, *, what, idempotent):
+        """Issue one urllib request with rate-aware, never-silent retry/backoff — the urllib twin of
+        the gh path's ``_run_gh``. Returns ``(body_text, headers)``. A 403/429/5xx or transient
+        network failure is WAITED OUT per :func:`compute_api_backoff` and the request resumed (so a
+        rate-limit reset never aborts the whole paginated sync); a non-retryable status, or exhausting
+        the bounded retries, raises ``RuntimeError`` (G2 — explicit, never a silent skip).
+
+        ``idempotent`` gates 5xx/network retries: a GET is safely retried on anything, but a *mutating*
+        verb is only retried on 403/429 (the request was rejected **before** applying, so re-issuing is
+        safe) — never on an ambiguous 5xx/network blip that may have already taken effect.
+        """
+        last = ""
+        for attempt in range(0, _API_RETRY_MAX + 1):
+            try:
+                with urllib.request.urlopen(req, timeout=_API_TIMEOUT) as resp:
+                    body = resp.read().decode()
+                    self._maybe_throttle(resp.headers)
+                    return body, resp.headers
+            except urllib.error.HTTPError as e:
+                last = e.read().decode(errors="replace") if hasattr(e, "read") else ""
+                retry, sleep_s, reason = compute_api_backoff(
+                    e.code, e.headers, attempt, now=time.time()
+                )
+                if retry and not idempotent and 500 <= e.code < 600:
+                    retry = (
+                        False  # never auto-retry a mutating verb on an ambiguous 5xx
+                    )
+                if not retry:
+                    raise RuntimeError(f"GitHub {what} -> HTTP {e.code}: {last[:500]}")
+                safe_print(
+                    f"   ~ {what}: API HTTP {e.code} — waiting {sleep_s}s, then retry "
+                    f"{attempt + 1}/{_API_RETRY_MAX} ({reason})",
+                    file=sys.stderr,
+                )
+                time.sleep(sleep_s)
+            except urllib.error.URLError as e:
+                if not idempotent:
+                    raise RuntimeError(
+                        f"GitHub {what} -> network error (not retried on a mutating verb — may "
+                        f"have applied): {e}"
+                    )
+                retry, sleep_s, _ = compute_api_backoff(
+                    503, None, attempt, now=time.time()
+                )
+                if not retry:
+                    raise RuntimeError(f"GitHub {what} -> network error: {e}")
+                safe_print(
+                    f"   ~ {what}: API network error ({e}) — waiting {sleep_s}s, then retry "
+                    f"{attempt + 1}/{_API_RETRY_MAX}",
+                    file=sys.stderr,
+                )
+                time.sleep(sleep_s)
+        raise RuntimeError(
+            f"GitHub {what} -> exhausted {_API_RETRY_MAX} retries; last: {last[:300]}"
+        )
+
     def request(self, method, path, *, body=None):
         """Issue a REST request. ``path`` is API-relative (``/repos/...``) or absolute. Returns the
-        parsed JSON (or {} on 204). Mutating verbs honour ``dry_run`` (printed, no write)."""
+        parsed JSON (or {} on 204). Mutating verbs honour ``dry_run`` (printed, no write). Rate/
+        transient-resilient via :meth:`_open` (never-silent backoff; G2)."""
         url = path if path.startswith("http") else f"{_GITHUB_API}{path}"
         mutating = method.upper() not in ("GET", "HEAD")
         if mutating and self.dry_run:
@@ -586,24 +727,16 @@ class GitHubApi:
         )
         if data is not None:
             req.add_header("Content-Type", "application/json")
-        try:
-            with urllib.request.urlopen(req, timeout=_API_TIMEOUT) as resp:
-                raw = resp.read().decode()
-                return json.loads(raw) if raw.strip() else {}
-        except urllib.error.HTTPError as e:  # never-silent: surface status + body (G2)
-            detail = e.read().decode(errors="replace") if hasattr(e, "read") else ""
-            raise RuntimeError(
-                f"GitHub REST {method} {url} -> HTTP {e.code}: {detail[:500]}"
-            )
-        except urllib.error.URLError as e:
-            raise RuntimeError(f"GitHub REST {method} {url} -> network error: {e}")
+        raw, _ = self._open(req, what=f"{method} {url}", idempotent=not mutating)
+        return json.loads(raw) if raw.strip() else {}
 
     def paginate(self, path, *, params=None):
         """GET every page of a list endpoint, following the RFC-5988 ``Link: rel=next`` header.
 
         Yields each item across pages. ``params`` is a dict merged into the query string (``per_page``
-        defaults to 100). Pure-ish: GET only, no mutation.
-        """
+        defaults to 100). GET only. Each page is rate/transient-resilient via :meth:`_open` — a
+        throttled or flaky page is WAITED OUT and re-fetched, never skipped (so pagination can no
+        longer drop items mid-stream on a rate-limit; G2)."""
         from urllib.parse import urlencode
 
         q = dict(params or {})
@@ -615,15 +748,9 @@ class GitHubApi:
         )
         while url:
             req = urllib.request.Request(url, method="GET", headers=self._headers())
-            try:
-                with urllib.request.urlopen(req, timeout=_API_TIMEOUT) as resp:
-                    page = json.loads(resp.read().decode() or "[]")
-                    link = resp.headers.get("Link", "") or ""
-            except urllib.error.HTTPError as e:
-                detail = e.read().decode(errors="replace") if hasattr(e, "read") else ""
-                raise RuntimeError(
-                    f"GitHub REST GET {url} -> HTTP {e.code}: {detail[:500]}"
-                )
+            raw, headers = self._open(req, what=f"GET {url}", idempotent=True)
+            page = json.loads(raw or "[]")
+            link = headers.get("Link", "") or ""
             for item in page:
                 yield item
             url = _next_link(link)
@@ -3949,6 +4076,53 @@ def self_test():
     )
     assert _next_link('<...>; rel="prev"') is None
 
+    # _header_int: tolerant integer header parse (mapping or HTTPMessage-like .get).
+    assert _header_int({"X-RateLimit-Remaining": "0"}, "X-RateLimit-Remaining") == 0
+    assert (
+        _header_int({"X-RateLimit-Reset": "1700000000"}, "X-RateLimit-Reset")
+        == 1700000000
+    )
+    assert _header_int({"X": "nope"}, "X") is None
+    assert _header_int({}, "absent") is None
+    assert _header_int(None, "x") is None
+
+    # compute_api_backoff: the urllib (--use-api) path's never-silent retry/backoff policy.
+    NOW = 1_000_000
+    # 403 + Retry-After header → wait exactly that (clamped), retry.
+    retry, sleep_s, why = compute_api_backoff(403, {"Retry-After": "12"}, 0, now=NOW)
+    assert retry and sleep_s == 12.0 and "Retry-After" in why, (retry, sleep_s, why)
+    # 403 + exhausted budget + reset epoch → wait until reset (primary limit, never abort).
+    retry, sleep_s, why = compute_api_backoff(
+        403,
+        {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": str(NOW + 90)},
+        0,
+        now=NOW,
+    )
+    assert retry and sleep_s == 90.0 and "Reset" in why, (retry, sleep_s, why)
+    # A far-off reset is clamped to _API_MAX_SLEEP (never block forever).
+    retry, sleep_s, _ = compute_api_backoff(
+        429,
+        {"X-RateLimit-Remaining": "0", "X-RateLimit-Reset": str(NOW + 100_000)},
+        0,
+        now=NOW,
+    )
+    assert retry and sleep_s == float(_API_MAX_SLEEP), sleep_s
+    # 403 with budget left → secondary/abuse exponential backoff (bounded, non-zero).
+    retry, sleep_s, why = compute_api_backoff(403, {}, 0, now=NOW)
+    assert retry and 0 < sleep_s <= _API_MAX_SLEEP and "backoff" in why, (
+        retry,
+        sleep_s,
+        why,
+    )
+    # 5xx → transient-server backoff, retryable.
+    retry, _, why = compute_api_backoff(503, {}, 0, now=NOW)
+    assert retry and "transient" in why, why
+    # A non-retryable status (404) → no retry.
+    retry, sleep_s, _ = compute_api_backoff(404, {}, 0, now=NOW)
+    assert (retry, sleep_s) == (False, 0.0)
+    # Bounded: at/after _API_RETRY_MAX, stop retrying regardless of status.
+    assert compute_api_backoff(503, {}, _API_RETRY_MAX, now=NOW)[0] is False
+
     print(
         "self-test OK: label_delta, normalize_body, plan_issue_update, parse_conventional, "
         "derive_pr_labels, milestone_rank, infer_milestone (multi-milestone), "
@@ -3961,7 +4135,8 @@ def self_test():
         "negotiate_concurrency, aggregate_results, _issue_update_args, partition_issue_work, run_batch, "
         "expand_task_id_run, parse_changelog_landings, parse_git_log_landings, epic_of_task_id, "
         "_status_of, build_relationship_manifest (status-aware landed_/evidence_), "
-        "plan_relationship_enrichment, _insert_fields_into_issue_block, _yaml_scalar, _next_link"
+        "plan_relationship_enrichment, _insert_fields_into_issue_block, _yaml_scalar, _next_link, "
+        "_header_int, compute_api_backoff (urllib rate/backoff)"
     )
 
 
