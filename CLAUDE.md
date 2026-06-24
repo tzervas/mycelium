@@ -41,8 +41,15 @@ canonical definitions: `docs/Glossary.md` + DN-02/03/06.
    maintenance and future-dev integration; it **must step through `Accepted`** first (never skip
    straight to Enacted). To change an Accepted/Enacted decision, **supersede** it — don't rewrite
    history.
-4. **Ground every claim.** Normative statements cite their basis (`G1–G11`, tensions `A–E`,
-   `R1–R8`, `T0.x–T2.x`) or are marked open questions. No ungrounded "facts".
+4. **Ground every claim — including agreement.** Normative statements cite their basis (`G1–G11`,
+   tensions `A–E`, `R1–R8`, `T0.x–T2.x`) or are marked open questions. No ungrounded "facts".
+   **The same rule binds assent: agree only on merit, never to please.** An affirmation *is* a claim —
+   tag its strength (checked/`Proven` vs plausible/`Empirical` vs asserted/`Declared`) and surface the
+   disconfirming evidence **even when it cuts against the maintainer's stated direction**. **Sycophancy
+   is a defect, ranked with an ungrounded claim.** The maintainer's standing preference is explicit:
+   *be corrected over being wrongly affirmed — follow the evidence, not the speaker.* Say "I don't
+   know" / "this is unproven" plainly; flag confidence; never soften a real disagreement into
+   agreement. This is **VR-5 applied to agreement: don't upgrade assent past its basis.**
 5. **Small, auditable kernel** (KC-3). SOLID · DRY · KISS · YAGNI · Law of Demeter · SoC;
    composition over inheritance.
 6. **User stories + Definition of Done; MIT-only.** Every epic/issue carries explicit **user stories**

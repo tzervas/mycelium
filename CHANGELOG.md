@@ -8,6 +8,15 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-24: CLAUDE.md house rule 4 — merit-based agreement / anti-sycophancy safeguard)
+
+- **House rule 4 ("Ground every claim") extended to bind *agreement*** — a standing agent safeguard
+  (maintainer-directed). Agree only on merit, never to please; an affirmation is a claim, so tag its
+  strength (checked/`Proven` vs plausible/`Empirical` vs asserted/`Declared`) and surface disconfirming
+  evidence even when it cuts against the stated direction. Sycophancy is ranked with an ungrounded claim;
+  the maintainer's explicit standing preference is *be corrected over being wrongly affirmed — follow the
+  evidence, not the speaker.* VR-5 applied to assent: don't upgrade agreement past its basis.
+
 ### Changed (2026-06-24: DN-30 rev. 2 — the security catalog is lightweight / reconstruction-on-render (DN-28))
 
 - **DN-30 §4 + DN-28 §5:** the security catalog **reuses DN-28's reconstruction-based distribution model
