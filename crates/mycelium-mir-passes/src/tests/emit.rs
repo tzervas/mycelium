@@ -12,7 +12,7 @@ use super::common::{app, c, lam, let_, op, var};
 fn count_rc_ops(node: &RcNode) -> (usize, usize) {
     fn go(n: &RcNode, dups: &mut usize, drops: &mut usize) {
         match n {
-            RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) => {}
+            RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) | RcNode::MoveUnique(_) => {}
             RcNode::Dup { body, .. } => {
                 *dups += 1;
                 go(body, dups, drops);

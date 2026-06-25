@@ -13,7 +13,7 @@ use super::common::{c, let_, op, var};
 fn counts(node: &RcNode) -> (usize, usize, usize) {
     fn go(n: &RcNode, d: &mut usize, dr: &mut usize, b: &mut usize) {
         match n {
-            RcNode::Const(_) | RcNode::Var(_) => {}
+            RcNode::Const(_) | RcNode::Var(_) | RcNode::MoveUnique(_) => {}
             RcNode::Borrow(_) => *b += 1,
             RcNode::Dup { body, .. } => {
                 *d += 1;

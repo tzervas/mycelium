@@ -8,3 +8,4 @@ mod common;
 mod corpus;
 mod elision;
 mod emit;
+mod reuse;

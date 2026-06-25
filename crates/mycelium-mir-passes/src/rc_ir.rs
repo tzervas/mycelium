@@ -83,6 +83,13 @@ pub enum RcNode {
     /// reader-primitive positions (`Op`/`Swap` arguments) in the immutable value model, where a
     /// primitive reads its operands and produces a fresh result, retaining nothing.
     Borrow(VarId),
+    /// A **sole-owner consuming move** — semantically identical to [`RcNode::Var`] (it consumes one
+    /// reference), but **statically proven** to be the unique owner at this point (reference count
+    /// is exactly 1). Produced by MEM-4 Increment 2 (`rc == 1` reuse annotation, DN-33 §6 D-3): the
+    /// runtime `RcCell::drop_ref` `UniqueOwner` branch is guaranteed to fire here, so the value's
+    /// allocation is **FBIP-reuse-eligible** (the freed cell may be recycled by codegen). The static
+    /// claim is **machine-verified** by [`crate::eval`] (it errors if the rc is not 1 here).
+    MoveUnique(VarId),
     /// `dup var; body` — increment `var`'s reference count, then evaluate `body`.
     Dup {
         /// The variable whose reference count is incremented.

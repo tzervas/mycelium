@@ -8,6 +8,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: MEM-4 Increment 2 — `rc == 1` reuse annotation, machine-verified)
+
+- **MEM-4 Increment 2** (`mycelium-mir-passes`, DN-33 §6 D-3): the `rc == 1` reuse annotation, now
+  unblocked by the Q5 gate. A new IR node `RcNode::MoveUnique` marks a consuming move **statically
+  proven to be the sole owner** (reference count exactly 1 → the runtime `RcCell::drop_ref`
+  `UniqueOwner` branch is guaranteed to fire → the allocation is **FBIP-reuse-eligible**).
+  - **`emit::emit_reuse`** — a superset of `emit_elided`: a `let` binding that is a **sole-owned
+    single move** (`is_sole_owned_move` — used exactly once, in a move position) has that move
+    emitted as `MoveUnique`. Conservative (only the unambiguous single-move case; multi-move
+    last-consume is a later refinement); `Lam` params still `Owned`.
+  - **Machine-verified soundness:** the reference RC-evaluator (`eval`) **checks** every `MoveUnique`
+    — it errors (`RcError::UnsoundUnique`) if the annotation is reached at a reference count other
+    than 1. So a wrong annotation cannot slip through (mutation-tested: a hand-built `dup x;
+    MoveUnique(x)` at rc=2 is caught). Semantics-preservation is confirmed against the owned emission
+    (same reclamation multiset) over the corpus.
+  - Honest tags: the annotation is semantics-preserving and **machine-verified** — `Empirical`
+    (differential + the verifying evaluator), **not `Proven`** (a mechanized proof is Phase 3); the
+    reuse-site **count** is `Exact` (read off the IR); the FBIP **performance** benefit stays
+    `Declared` (the actual cell-recycling is downstream codegen, not yet wired). 43 tests (8 new);
+    clippy `-D warnings` clean; Core IR untouched (KC-3).
+
 ### Added (2026-06-25: DN-34 — Rust→Mycelium transpiler strategy, Draft)
 
 - **DN-34 — Rust→Mycelium Transpiler Strategy (Self-Hosting Acceleration)**

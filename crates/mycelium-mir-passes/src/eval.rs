@@ -43,6 +43,14 @@ pub enum RcError {
     UseAfterFree(VarId),
     /// A reference count was decremented below zero (over-release / double free).
     DoubleFree(VarId),
+    /// A `MoveUnique` annotation (Increment 2) was reached where the reference count was **not** 1 —
+    /// i.e. the static "sole owner" claim is false. This catches an unsound reuse annotation.
+    UnsoundUnique {
+        /// The annotated variable.
+        var: VarId,
+        /// The actual reference count found (≠ 1).
+        found: i64,
+    },
     /// A node outside the straight-line fragment (e.g. `App`/`Match`/`Construct`/`Lam`).
     UnsupportedNode(&'static str),
 }
@@ -55,6 +63,11 @@ impl std::fmt::Display for RcError {
             RcError::DoubleFree(v) => {
                 write!(f, "double free: reference count of `{v}` went negative")
             }
+            RcError::UnsoundUnique { var, found } => write!(
+                f,
+                "unsound rc==1 annotation: `{var}` was marked sole-owner (MoveUnique) but its \
+                 reference count was {found}, not 1"
+            ),
             RcError::UnsupportedNode(k) => {
                 write!(
                     f,
@@ -171,6 +184,20 @@ fn go(node: &RcNode, env: &HashMap<VarId, AllocId>, m: &mut Machine) -> Result<A
             m.assert_live(a, x)?;
             Ok(a)
         }
+        RcNode::MoveUnique(x) => {
+            // Verify the Increment-2 static claim: the reference count MUST be exactly 1 here.
+            let a = lookup(env, x)?;
+            let rc = m.rc.get(&a).copied().unwrap_or(0);
+            if rc != 1 {
+                return Err(RcError::UnsoundUnique {
+                    var: x.clone(),
+                    found: rc,
+                });
+            }
+            // Then it consumes (the unique owner → reclaim), exactly like a Var move.
+            m.dec(a, x)?;
+            Ok(a)
+        }
         RcNode::Dup { var, body } => {
             let a = lookup(env, var)?;
             m.dup(a);
@@ -240,7 +267,7 @@ impl Differential {
 #[must_use]
 pub fn count_dups(node: &RcNode) -> usize {
     match node {
-        RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) => 0,
+        RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) | RcNode::MoveUnique(_) => 0,
         RcNode::Dup { body, .. } => 1 + count_dups(body),
         RcNode::Drop { body, .. } | RcNode::DropAfter { body, .. } => count_dups(body),
         RcNode::Let { bound, body, .. } => count_dups(bound) + count_dups(body),
@@ -265,6 +292,41 @@ pub fn count_dups(node: &RcNode) -> usize {
         }
         RcNode::Lam { body, .. } => count_dups(body),
         RcNode::App { func, arg } => count_dups(func) + count_dups(arg),
+    }
+}
+
+/// Count [`RcNode::MoveUnique`] annotations (Increment 2 `rc == 1` reuse sites) anywhere in an
+/// [`RcNode`] — the FBIP-reuse-eligible consume points. `Exact` (read off the IR).
+#[must_use]
+pub fn count_move_unique(node: &RcNode) -> usize {
+    match node {
+        RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) => 0,
+        RcNode::MoveUnique(_) => 1,
+        RcNode::Dup { body, .. } | RcNode::Drop { body, .. } | RcNode::DropAfter { body, .. } => {
+            count_move_unique(body)
+        }
+        RcNode::Let { bound, body, .. } => count_move_unique(bound) + count_move_unique(body),
+        RcNode::Op { args, .. } | RcNode::Construct { args, .. } => {
+            args.iter().map(count_move_unique).sum()
+        }
+        RcNode::Swap { src, .. } => count_move_unique(src),
+        RcNode::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            count_move_unique(scrutinee)
+                + alts
+                    .iter()
+                    .map(|a| match a {
+                        crate::rc_ir::RcAlt::Ctor { body, .. }
+                        | crate::rc_ir::RcAlt::Lit { body, .. } => count_move_unique(body),
+                    })
+                    .sum::<usize>()
+                + default.as_deref().map_or(0, count_move_unique)
+        }
+        RcNode::Lam { body, .. } => count_move_unique(body),
+        RcNode::App { func, arg } => count_move_unique(func) + count_move_unique(arg),
     }
 }
 

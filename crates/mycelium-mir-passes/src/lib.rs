@@ -37,10 +37,21 @@
 //!   while the `Dup` count strictly drops. Together with the structural balance invariant
 //!   ([`balance`]) this is the full Q3 check.
 //!
+//! # MEM-4 Increment 2 — `rc == 1` reuse annotation (now built)
+//!
+//! - [`emit::emit_reuse`] — a superset of [`emit::emit_elided`]: a `let` binding that is a
+//!   **sole-owned single move** ([`emit::is_sole_owned_move`] — used exactly once, in a move
+//!   position) has that move emitted as [`rc_ir::RcNode::MoveUnique`], recording that the runtime
+//!   `UniqueOwner` branch is statically guaranteed (FBIP-reuse-eligible). The annotation's soundness
+//!   is **machine-verified** by [`eval`]: it errors ([`eval::RcError::UnsoundUnique`]) if any
+//!   `MoveUnique` is reached at a reference count other than 1. ~`Empirical`.
+//!
 //! # What is next (later increments)
 //!
-//! Increment 2 (`rc==1` reuse annotation) and Increment 3 (full FIP static guarantee, Phase 3);
-//! interprocedural borrowing (`Mode::Borrowed` at call boundaries); recursion (`Fix`/`FixGroup`).
+//! Increment 3 (full FIP static guarantee, Phase 3); the FBIP reuse-token *threading* (matching a
+//! `MoveUnique` to a downstream same-shape allocation to recycle the cell); multi-move last-consume
+//! annotation; interprocedural borrowing (`Mode::Borrowed` at call boundaries); recursion
+//! (`Fix`/`FixGroup`).
 //!
 //! # Guarantee posture (VR-5)
 //!
