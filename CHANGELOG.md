@@ -8,6 +8,25 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: DN-33 — MEM-4 static uniqueness analysis design, research-backed, Draft)
+
+- **DN-33 — Layer-1 Static Uniqueness Analysis (MEM-4) & Cross-Hypha Reconciliation**
+  (`docs/notes/DN-33-Layer1-Static-Uniqueness-Analysis.md`, **Draft/advisory**): the research-backed
+  design direction for the deferred MEM-4 leg of DN-32, authored design-first before implementation.
+  Records (1) **MEM-4 = an additive, semantics-preserving compiler lowering pass** that elides
+  provably-redundant RC ops, with the runtime `RcCell` probe (MEM-2) as the **sound fallback** — so
+  the analysis is **sound-but-may-be-incomplete** (a bug costs throughput, never memory safety); (2)
+  how LR-8 immutability + LR-9 acyclicity + content-addressing shrink the problem below Rust-style
+  borrow checking; (3) KC-3 disciplines (lowering-pass-not-type-checker, additive-only, watch+measure
+  — DN-32 §6b); (4) an incremental decomposition (non-escaping borrow elision → `rc==1` reuse
+  annotation → full FIP static guarantee); and (5) a **recommendation for the cross-hypha
+  sub-question** (DN-32 §7 / RFC-0027 §12) — **Option A** (sole-move-only / affine-channel boundary;
+  `RcCell` stays `!Send`) for R1, **Option B** (shared-crosses-atomic-RC) deferred to R2. All
+  Mycelium-specific claims `Declared`; external prior art (Perceus, Lorenzen, Koka FP², ASAP, Pony,
+  Rust, Verona) `Empirical`; the cross-hypha recommendation is an argument with its ergonomic cost as
+  the named open risk. **Enacts nothing; moves no status; changes no normative text** — promotion past
+  Draft requires the §8 deliberation + maintainer ratification (house rule #3, append-only).
+
 ### Added (2026-06-25: E12 Wave-4 — ChannelClose trigger + live scope/region wiring + L1/L2/L3 composition)
 
 - **ChannelClose — the third (and final) live reclamation trigger**
