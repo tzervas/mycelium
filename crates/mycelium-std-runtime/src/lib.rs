@@ -46,6 +46,7 @@ pub mod colony;
 pub mod dataflow;
 pub mod guarantee_matrix;
 pub mod network;
+pub mod rc;
 pub mod reclamation;
 pub mod scheduler;
 pub mod supervision;
