@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: E12 memory-model build — Wave 1 — MEM-1 + CI blocker removal)
+
+- **E12 build plan** (`docs/planning/E12-Memory-Model-Build-Plan.md`) — the DN-32/RFC-0027 implementation
+  roadmap, decomposed into tightly-scoped Sonnet-swarm waves (BLK blockers; MEM-1 record → MEM-2 RC →
+  MEM-3 regions → MEM-4 static analysis).
+- **MEM-1 — reclamation EXPLAIN/audit record** (`crates/mycelium-std-runtime/src/reclamation.rs`, RFC-0027 §9):
+  `ReclamationRecord{ scope_id, sweep_epoch, trigger ∈ {RcZero, ScopeExit, ChannelClose}, value_meta_hash,
+  channel_id? }` + the exhaustive `ReclamationTrigger` enum + the **`ReclamationSink` never-silent contract**
+  (a proptest proves every reclamation event emits exactly one record — silent reclamation is structurally
+  impossible) + EXPLAIN integration (RFC-0005). The observability FOUNDATION of the memory model. Placed in the
+  runtime tier (not `mycelium-core` — KC-3). Tagged **`Declared`**: the record structure is concrete; the live
+  trigger-wiring (rc→0 / scope-exit / channel-close) is downstream (MEM-2/MEM-3), `ScopeId`/`ChannelId`/
+  `SweepEpoch` are `u64` placeholders pending the canonical types. 52/52 tests green.
+- **CI blocker removal (BLK):** the `api` gate is green (regenerated the drifted `l1`/`lsp`/`spore`/`std-sys`
+  baselines + new `cli`/`std-sys-host`) and the `myc-fmt` gate is green (`mycfmt`-canonicalized `lib/std/{cmp,
+  option}.myc`) — formatting/baseline-only, no logic change. agent index regenerated.
+
 ### Added (2026-06-25: DN-32 three-layer memory architecture; RFC-0027 → Accepted (ratified))
 
 - **DN-32 — Three-Layer Hybrid Memory Architecture** (`docs/notes/`, **Accepted**, ratified by maintainer):

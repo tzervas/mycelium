@@ -2004,6 +2004,127 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_cli::CheckReport",
+      "kind": "struct",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 147,
+      "summary": "The outcome of [`check_project`]: which nodules type-checked, and the structured failures.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::CheckReport::ok",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli::CheckReport",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 157,
+      "summary": "Whether every checked file passed.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::Report",
+      "kind": "struct",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 30,
+      "summary": "A structured, actionable diagnostic (the DN-22 quality bar; a projection of an RFC-0013",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::Report::at",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli::Report",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 58,
+      "summary": "Attach a `path:line:col` (or `path`) location.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::Report::help",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli::Report",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 65,
+      "summary": "Attach an actionable `help:` line.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::Report::new",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli::Report",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 46,
+      "summary": "A report with a code, message and exit code (no location/help).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::Report::render",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli::Report",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 72,
+      "summary": "Render the multi-line, structured form (no trailing newline).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::build",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 133,
+      "summary": "`myc build` — build the content-addressed spore for the project at `manifest_path`, returning the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::check_project",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 170,
+      "summary": "`myc check` — parse and type-check every `.myc` source under the project directory containing",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::init",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 100,
+      "summary": "`myc init <name>` — scaffold a new phylum named `name` under `parent`, returning the created",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::run",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 216,
+      "summary": "`myc run` — **not yet wired** (honest, never-silent).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_cli_common::Args",
       "kind": "struct",
       "crate": "mycelium-cli-common",
@@ -7823,6 +7944,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_lsp::TOKEN_TYPES:",
+      "kind": "const",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/semantic.rs",
+      "line": 29,
+      "summary": "The semantic-token **type legend**, in index order.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_lsp::UnknownClass",
       "kind": "struct",
       "crate": "mycelium-lsp",
@@ -7951,6 +8083,28 @@
       "file": "crates/mycelium-lsp/src/completions.rs",
       "line": 65,
       "summary": "Serialize this item to an LSP `CompletionItem` JSON value.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::definition",
+      "kind": "mod",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/lib.rs",
+      "line": 12,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::definition",
+      "kind": "fn",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/definition.rs",
+      "line": 26,
+      "summary": "Build the `textDocument/definition` result for `src` at the 0-based position `(line, character)`,",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -8659,6 +8813,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_lsp::hover",
+      "kind": "mod",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/lib.rs",
+      "line": 17,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::hover",
+      "kind": "fn",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/hover.rs",
+      "line": 26,
+      "summary": "Build the `textDocument/hover` result for `src` at the 0-based LSP position `(line, character)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_lsp::lint",
       "kind": "mod",
       "crate": "mycelium-lsp",
@@ -8974,6 +9150,39 @@
       "file": "crates/mycelium-lsp/src/sync.rs",
       "line": 102,
       "summary": "Like [`source_diagnostics`], but **isolating an internal analysis panic** as a structured",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::semantic",
+      "kind": "mod",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/lib.rs",
+      "line": 22,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::semantic_tokens_full",
+      "kind": "fn",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/semantic.rs",
+      "line": 154,
+      "summary": "Build the `textDocument/semanticTokens/full` result for `src`: the LSP relative-delta encoding",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_lsp::semantic_tokens_legend",
+      "kind": "fn",
+      "crate": "mycelium-lsp",
+      "module": "mycelium_lsp",
+      "file": "crates/mycelium-lsp/src/semantic.rs",
+      "line": 52,
+      "summary": "The `legend` advertised in the server's `semanticTokensProvider` capability: the type list above",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -12223,6 +12432,39 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_spore::PublishReceipt",
+      "kind": "struct",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 40,
+      "summary": "The outcome of a successful [`publish`]: the receipt a CLI prints (no black box).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::RegistryError",
+      "kind": "enum",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 72,
+      "summary": "A registry operation refusal — always explicit, never a partial/silent result (G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::Resolved",
+      "kind": "struct",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 57,
+      "summary": "The outcome of a successful [`resolve`]: the fetched, hash-verified artifact and its identity.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_spore::ResolvedDep",
       "kind": "struct",
       "crate": "mycelium-spore",
@@ -12278,6 +12520,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_spore::artifact_hash",
+      "kind": "fn",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 121,
+      "summary": "BLAKE3 the bytes into a `blake3:<hex>` [`ContentHash`] — the integrity address of an artifact.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_spore::build_spore",
       "kind": "fn",
       "crate": "mycelium-spore",
@@ -12307,6 +12560,50 @@
       "file": "crates/mycelium-spore/src/lib.rs",
       "line": 222,
       "summary": "The canonical `[project].kind` spelling.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::publish",
+      "kind": "fn",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 176,
+      "summary": "**Publish** `spore`'s `descriptor` bytes under `name@version` into the registry at `root`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::registry",
+      "kind": "mod",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/lib.rs",
+      "line": 23,
+      "summary": "The content-addressed registry (M-732): `publish` / `resolve` over a local store (ADR-003).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::exit_code",
+      "kind": "fn",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore::registry::RegistryError",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 92,
+      "summary": "The CLI exit code for this refusal.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::resolve",
+      "kind": "fn",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/registry.rs",
+      "line": 268,
+      "summary": "**Resolve** `name` at `constraint` against the registry at `root`, returning the integrity-verified",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -17195,12 +17492,199 @@
       "corpus_refs": []
     },
     {
-      "symbol": "mycelium_std_runtime::scheduler",
+      "symbol": "mycelium_std_runtime::reclamation",
       "kind": "mod",
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
       "line": 49,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ChannelId",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 61,
+      "summary": "A stable, opaque identifier for a channel (RFC-0027 §9, `channel_id`).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 343,
+      "summary": "A `ReclamationSink` implementation that collects all emitted records into a `Vec`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::drain",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation::CollectingSink",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 370,
+      "summary": "Drain all collected records, leaving the sink empty.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::is_empty",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation::CollectingSink",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 365,
+      "summary": "Whether no records have been collected.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::len",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation::CollectingSink",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 359,
+      "summary": "Number of records collected so far.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::new",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation::CollectingSink",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 182,
+      "summary": "Construct a `ReclamationRecord` for a `RcZero` or `ScopeExit` event (no channel).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 270,
+      "summary": "The EXPLAIN output for a `ReclamationRecord` — the RFC-0005 EXPLAIN contract applied",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 148,
+      "summary": "The EXPLAIN/audit record for a single reclamation event (RFC-0027 §9).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::explain",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation::ReclamationRecord",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 234,
+      "summary": "EXPLAIN-ability (RFC-0005): return a human-readable summary of all five fields.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::for_channel_close",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation::ReclamationRecord",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 207,
+      "summary": "Construct a `ReclamationRecord` for a `ChannelClose` event.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::trigger",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation::ReclamationRecord",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 246,
+      "summary": "Return a reference to the trigger — the G2 \"why\" of this reclamation event.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::value_meta_hash",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation::ReclamationRecord",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 252,
+      "summary": "Return the content-identity hash of the reclaimed value (RFC-0027 §9 / RFC-0001 §4.6).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationSink",
+      "kind": "trait",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 330,
+      "summary": "The never-silent emit contract (G2 / RFC-0027 §9).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger",
+      "kind": "enum",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 93,
+      "summary": "The reason a reclamation event fired — exhaustive over the three structural triggers",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ScopeId",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 52,
+      "summary": "A stable, opaque identifier for a runtime scope (RT7 scope tree node).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::reclamation",
+      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
+      "line": 76,
+      "summary": "A monotonic epoch counter from the `SweepOrder` model (RFC-0008 §4.3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::scheduler",
+      "kind": "mod",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime",
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 50,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17321,7 +17805,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 50,
+      "line": 51,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17497,7 +17981,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 51,
+      "line": 52,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18350,6 +18834,138 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_std_sys::guarantee_matrix",
+      "kind": "mod",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys",
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 49,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::Fallibility",
+      "kind": "enum",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::guarantee_matrix",
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 62,
+      "summary": "Fallibility classification for an exported op (C1).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::GuaranteeTag",
+      "kind": "enum",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::guarantee_matrix",
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 36,
+      "summary": "Guarantee tag on the honesty lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` (RFC-0016 §4.1 C2;",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::GuaranteeTag::as_str",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::guarantee_matrix::GuaranteeTag",
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 50,
+      "summary": "Human-readable name matching the lattice notation (`\"Declared\"`, etc.).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::MATRIX:",
+      "kind": "const",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::guarantee_matrix",
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 87,
+      "summary": "The `std-sys` syscall-floor guarantee matrix — one row per exported floor op.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::MatrixRow",
+      "kind": "struct",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::guarantee_matrix",
+      "file": "crates/mycelium-std-sys/src/guarantee_matrix.rs",
+      "line": 71,
+      "summary": "One row in the `std-sys` syscall-floor guarantee matrix (RFC-0016 §4.5).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io",
+      "kind": "mod",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys",
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 50,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::flush_out",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 64,
+      "summary": "\\[Declared\\] Flush stdout — surfaces any deferred OS write error explicitly (G2), so a buffered",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::read_line",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 43,
+      "summary": "\\[Declared\\] Read a single line from stdin (including the trailing newline if present).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::read_to_end",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 35,
+      "summary": "\\[Declared\\] Read **all** of stdin to end-of-input.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::write_err",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 58,
+      "summary": "\\[Declared\\] Write all of `bytes` to stderr.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::write_out",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 52,
+      "summary": "\\[Declared\\] Write all of `bytes` to stdout.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_std_sys::math",
       "kind": "mod",
       "crate": "mycelium-std-sys",
@@ -18548,6 +19164,50 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_std_sys::sys",
+      "kind": "mod",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys",
+      "file": "crates/mycelium-std-sys/src/lib.rs",
+      "line": 53,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::args",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::sys",
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 48,
+      "summary": "\\[Declared\\] The process's command-line arguments (including arg 0).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::exit",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::sys",
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 30,
+      "summary": "\\[Declared\\] Terminate the process with `code`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::get_env",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::sys",
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 38,
+      "summary": "\\[Declared\\] Read environment variable `name`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_std_sys::time",
       "kind": "mod",
       "crate": "mycelium-std-sys",
@@ -18588,6 +19248,28 @@
       "file": "crates/mycelium-std-sys/src/time.rs",
       "line": 26,
       "summary": "\\[Declared\\] Returns nanoseconds since the Unix epoch from the wall clock.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock",
+      "kind": "struct",
+      "crate": "mycelium-std-sys-host",
+      "module": "mycelium_std_sys_host",
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 43,
+      "summary": "The production [`ClockSource`] — reads the OS clock through the audited `std-sys` time floor",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsEntropy",
+      "kind": "struct",
+      "crate": "mycelium-std-sys-host",
+      "module": "mycelium_std_sys_host",
+      "file": "crates/mycelium-std-sys-host/src/lib.rs",
+      "line": 21,
+      "summary": "The production [`EntropySource`] — fills entropy from the audited `std-sys` OS floor",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -23808,6 +24490,38 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_cli::CheckReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::CheckReport::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::CheckReport::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::CheckReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::Report::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::Report::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::Report::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::Report::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_cli_common::ReadError::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -28404,6 +29118,10 @@
       "reason": "dedup-alias: same definition as `mycelium_lsp::completion_list` at crates/mycelium-lsp/src/completions.rs:538 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_lsp::definition::definition",
+      "reason": "dedup-alias: same definition as `mycelium_lsp::definition` at crates/mycelium-lsp/src/definition.rs:26 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_lsp::diagnostics::AuditView",
       "reason": "dedup-alias: same definition as `mycelium_lsp::AuditView` at crates/mycelium-lsp/src/diagnostics/audit.rs:34 — one canonical row kept"
     },
@@ -29480,6 +30198,10 @@
       "reason": "dedup-alias: same definition as `mycelium_lsp::format` at crates/mycelium-lsp/src/fmt.rs:16 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_lsp::hover::hover",
+      "reason": "dedup-alias: same definition as `mycelium_lsp::hover` at crates/mycelium-lsp/src/hover.rs:26 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_lsp::lint::Diagnostic",
       "reason": "dedup-alias: same definition as `mycelium_lsp::Diagnostic` at crates/mycelium-lsp/src/lint.rs:35 — one canonical row kept"
     },
@@ -29854,6 +30576,18 @@
     {
       "symbol": "mycelium_lsp::recover::policy::RecoveryPolicy::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_lsp::semantic::TOKEN_TYPES:",
+      "reason": "dedup-alias: same definition as `mycelium_lsp::TOKEN_TYPES:` at crates/mycelium-lsp/src/semantic.rs:29 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_lsp::semantic::semantic_tokens_full",
+      "reason": "dedup-alias: same definition as `mycelium_lsp::semantic_tokens_full` at crates/mycelium-lsp/src/semantic.rs:154 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_lsp::semantic::semantic_tokens_legend",
+      "reason": "dedup-alias: same definition as `mycelium_lsp::semantic_tokens_legend` at crates/mycelium-lsp/src/semantic.rs:52 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::sync::DocumentStore",
@@ -32478,6 +33212,110 @@
     {
       "symbol": "mycelium_spore::SporeError::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt",
+      "reason": "dedup-alias: same definition as `mycelium_spore::PublishReceipt` at crates/mycelium-spore/src/registry.rs:40 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::PublishReceipt::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError",
+      "reason": "dedup-alias: same definition as `mycelium_spore::RegistryError` at crates/mycelium-spore/src/registry.rs:72 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::RegistryError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved",
+      "reason": "dedup-alias: same definition as `mycelium_spore::Resolved` at crates/mycelium-spore/src/registry.rs:57 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::Resolved::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_spore::registry::artifact_hash",
+      "reason": "dedup-alias: same definition as `mycelium_spore::artifact_hash` at crates/mycelium-spore/src/registry.rs:121 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_spore::registry::publish",
+      "reason": "dedup-alias: same definition as `mycelium_spore::publish` at crates/mycelium-spore/src/registry.rs:176 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_spore::registry::resolve",
+      "reason": "dedup-alias: same definition as `mycelium_spore::resolve` at crates/mycelium-spore/src/registry.rs:268 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_cmp::Bf16Bits::clone",
@@ -36136,6 +36974,126 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='TrySend') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_std_runtime::reclamation::ChannelId::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ChannelId::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ChannelId::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ChannelId::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::emit",
+      "reason": "definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::emit",
+      "reason": "definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::new",
+      "reason": "dedup-alias: same definition as `mycelium_std_runtime::reclamation::CollectingSink::new` at crates/mycelium-std-runtime/src/reclamation.rs:182 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationSink::emit",
+      "reason": "definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ScopeId::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ScopeId::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ScopeId::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ScopeId::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::partial_cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_runtime::scheduler::Scheduler::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -36972,6 +37930,42 @@
       "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
+      "symbol": "mycelium_std_sys::guarantee_matrix::Fallibility::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::Fallibility::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::Fallibility::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::GuaranteeTag::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::GuaranteeTag::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::GuaranteeTag::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::MatrixRow::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::MatrixRow::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::guarantee_matrix::MatrixRow::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_sys::rand::EntropyError::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -36985,6 +37979,46 @@
     },
     {
       "symbol": "mycelium_std_sys::rand::EntropyError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::logical_now",
+      "reason": "definition not found via regex heuristic (kind='fn', name='logical_now') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::mono_now",
+      "reason": "definition not found via regex heuristic (kind='fn', name='mono_now') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsClock::wall_now",
+      "reason": "definition not found via regex heuristic (kind='fn', name='wall_now') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsEntropy::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsEntropy::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsEntropy::fill_bytes",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fill_bytes') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys_host::OsEntropy::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
