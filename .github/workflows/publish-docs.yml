@@ -3,8 +3,15 @@
 # Manual-dispatch only (workflow_dispatch) — Mycelium keeps CI advisory / on-demand by policy
 # (see .github/workflows/checks.yml). Nothing here runs on push.
 #
-# Requires, in repo Settings: the **Wiki** feature enabled (for the wiki sync) and **Pages** set to
-# "GitHub Actions" (for the rustdoc deploy). Both jobs use the built-in GITHUB_TOKEN.
+# Requires, in repo Settings:
+#   - the **Wiki** feature enabled (for the wiki sync) and **Pages** set to "GitHub Actions"
+#     (for the rustdoc deploy);
+#   - **a repository secret `DOCS_PUBLISH_TOKEN`** (Settings -> Secrets and variables -> Actions) —
+#     a fine-grained PAT with *Contents: write* (covers the wiki). This is preferred because the
+#     default `GITHUB_TOKEN` cannot always push to the wiki under stricter org policies. The secret
+#     is stored + masked by GitHub's Secrets feature and is never exposed in logs. If the secret is
+#     absent the job falls back to the built-in `GITHUB_TOKEN` (also masked).
+# (Pages deploy uses OIDC `id-token` + the workflow token; it needs no extra secret.)
 name: Publish wiki & API docs
 
 on:
@@ -33,7 +40,10 @@ jobs:
         uses: actions/checkout@v4
       - name: Mirror docs/wiki/ to the wiki repository
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Prefer the repo-managed DOCS_PUBLISH_TOKEN secret (a PAT with Contents:write that can
+          # push the wiki); fall back to the built-in token. Both come from GitHub's Secrets feature
+          # and are masked in logs.
+          GH_TOKEN: ${{ secrets.DOCS_PUBLISH_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           tmp="$(mktemp -d)"

@@ -24,9 +24,16 @@ wiki page titles (`Memory-Model.md` → the *Memory Model* page); `_Sidebar.md` 
 ## Publishing
 
 Trigger the **publish-docs** workflow (Actions tab → *Publish wiki & API docs* → *Run workflow*). It
-mirrors `docs/wiki/*.md` to the wiki repo and builds + deploys the rustdoc to GitHub Pages. Both
-steps use the Actions `GITHUB_TOKEN`; the repository's **Wiki** feature and **Pages** must be enabled
-in Settings. See [API Reference](API-Reference) for the docs side.
+mirrors `docs/wiki/*.md` to the wiki repo and builds + deploys the rustdoc to GitHub Pages. Required
+repo Settings:
+
+- **Wiki** feature enabled, and **Pages** set to *GitHub Actions*.
+- A repository secret **`DOCS_PUBLISH_TOKEN`** (Settings → Secrets and variables → Actions) — a
+  fine-grained PAT with *Contents: write* (covers the wiki), stored + masked by GitHub's Secrets
+  feature so it is never exposed in logs. The wiki job falls back to the built-in `GITHUB_TOKEN` if
+  the secret is absent; Pages deploy uses OIDC and needs no extra secret.
+
+See [API Reference](API-Reference) for the docs side.
 
 ## Local preview
 
