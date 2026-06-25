@@ -8,6 +8,31 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: DN-35 — env-machine reclamation, research-backed)
+
+- **DN-35 — Env-Machine Reclamation (the Deferred Big Step past the §9 Audit Trail)**
+  (`docs/notes/DN-35-Env-Machine-Reclamation.md`, **Draft/advisory**), backed by `research/16`+`17`
+  (internal `eval_machine`-seam dossier + external Perceus/Frame-Limited-Reuse/RC⊕region prior art).
+  The load-bearing memory note behind DN-36's constant-heap loops.
+  - **The deferred step:** thread *actual* Mycelium-level reclamation into the AOT env-machine
+    (`eval_machine`, `crates/mycelium-mlir/src/aot.rs`) — today the §9 audit-trail bridge
+    (`rc_plan.rs`) is **audit-only**; the env-machine lets Rust manage values. DN-35 designs the
+    big step past it.
+  - **Principle — static decisions, dynamic verification:** the compiler statically plans
+    drop-guided / **Frame-Limited reuse** (Lorenzen–Leijen) and inserts reclamation points; the
+    runtime **`is-unique` gate** (the `RcCell` probe, MEM-2) is the **sound safety valve** — a wrong
+    static guess costs throughput, never safety.
+  - **In-place-reuse-vs-content-address obligation:** reuse a cell in place only at `rc==1`; a
+    **weak intern table** + **evict-or-copy** keeps content-addressing (ADR-003) sound when a reused
+    cell was interned.
+  - **RC⊕region exactly-once** (Gay–Aiken): region batch-reclaim and RC drop must not double-free.
+  - **`fast`/`certified` split** (ADR-032/RFC-0034): `fast` trusts the static plan + the `is-unique`
+    valve; `certified` additionally emits per-reclamation audit records (the §9 trail) and can run
+    the reference RC-evaluator (`eval.rs`) as oracle.
+  - Open-question gating set carried into the build epic (Q4 reuse-granularity / Q6
+    intern-eviction-policy / Q2 region-RC-ordering). Internal claims `Empirical`/`Declared`; external
+    mechanisms `Empirical`/`Proven`-in-literature (primary-source-checked). Enacts nothing.
+
 ### Added (2026-06-25: DN-38 — the layered-lowering atlas & generative sugar, research-backed)
 
 - **DN-38 — The Layered-Lowering Atlas & Generative Sugar (one seamless gradient to L0)**
