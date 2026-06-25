@@ -40,6 +40,16 @@
 //!
 //! Design: `docs/adr/ADR-020-Runtime-Colony-Phylum-Placement.md`;
 //! spec: `docs/spec/stdlib/runtime.md`; tasks M-521, E12-1 (M-709/M-711/M-713).
+//!
+//! # Memory model (E12 MEM-1/MEM-2/MEM-3)
+//!
+//! - [`reclamation`] (MEM-1) — the reclamation EXPLAIN/audit record and never-silent sink
+//!   contract (RFC-0027 §9).
+//! - [`rc`] (MEM-2) — non-atomic intra-hypha RC cell + `rc`-probe decision (DN-32 §2.2).
+//! - [`region`] (MEM-3) — region-based batched scope-exit reclamation (DN-32 §2.3 / RFC-0027
+//!   §10.3): [`region::Region`] accumulates deferred entries and bulk-emits `ScopeExit` records
+//!   at scope-exit; [`region::ScopeNodeId`] / [`region::RegionEpoch`] are the canonical forms
+//!   of the MEM-1 `ScopeId`/`SweepEpoch` placeholder types.
 #![forbid(unsafe_code)]
 
 pub mod colony;
@@ -48,6 +58,7 @@ pub mod guarantee_matrix;
 pub mod network;
 pub mod rc;
 pub mod reclamation;
+pub mod region;
 pub mod scheduler;
 pub mod supervision;
 pub mod task;

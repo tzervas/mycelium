@@ -17156,7 +17156,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 45,
+      "line": 55,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17222,7 +17222,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 46,
+      "line": 56,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17354,7 +17354,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 47,
+      "line": 57,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17376,7 +17376,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 48,
+      "line": 58,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17497,7 +17497,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 49,
+      "line": 59,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17530,7 +17530,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 50,
+      "line": 60,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17712,12 +17712,199 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_std_runtime::region",
+      "kind": "mod",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime",
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 61,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ClosedRegion",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 391,
+      "summary": "Summary returned by [`Region::close`] — the audit-visible outcome of a scope-exit",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::DeferredEntry",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 182,
+      "summary": "One value deferred for scope-exit reclamation within a [`Region`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::Region",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 224,
+      "summary": "A scope-exit reclamation region (DN-32 §2.3 / RFC-0027 §10.3 / MEM-3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::Region::close",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region::Region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 322,
+      "summary": "Close this region: **batch-emit all deferred reclamations**, advance the monotonic",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::Region::closed_epoch",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region::Region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 289,
+      "summary": "The epoch assigned at close time, if this region has been closed.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::Region::defer",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region::Region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 258,
+      "summary": "Defer a value for scope-exit reclamation.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::Region::deferred_count",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region::Region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 271,
+      "summary": "The number of values currently deferred in this region.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::Region::is_closed",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region::Region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 279,
+      "summary": "Whether this region has been closed.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::Region::new",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region::Region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 190,
+      "summary": "Create a new deferred entry for `value_meta_hash`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::RegionEpoch",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 147,
+      "summary": "A monotonic epoch counter — one allocated per [`Region::close`] call.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::RegionEpoch::as_sweep_epoch",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region::RegionEpoch",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 161,
+      "summary": "Convert to a [`SweepEpoch`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::RegionEpoch::as_u64",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region::RegionEpoch",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 128,
+      "summary": "Return the underlying `u64` value.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeNodeId",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 105,
+      "summary": "The canonical scope-tree identity type for the region tier (MEM-3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeNodeId::as_scope_id",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region::ScopeNodeId",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 122,
+      "summary": "Convert to a [`ScopeId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeTree",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 415,
+      "summary": "A minimal parent–child scope-tree for encoding and testing the sweep-order model",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeTree::close_ordered",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::region::ScopeTree",
+      "file": "crates/mycelium-std-runtime/src/region.rs",
+      "line": 444,
+      "summary": "Close all children first (in any order — siblings are concurrent), then close the parent.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_std_runtime::scheduler",
       "kind": "mod",
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 51,
+      "line": 62,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17838,7 +18025,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 52,
+      "line": 63,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18014,7 +18201,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 53,
+      "line": 64,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -37153,6 +37340,102 @@
     {
       "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::partial_cmp",
       "reason": "definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ClosedRegion::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ClosedRegion::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ClosedRegion::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::DeferredEntry::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::DeferredEntry::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::DeferredEntry::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::DeferredEntry::new",
+      "reason": "dedup-alias: same definition as `mycelium_std_runtime::region::Region::new` at crates/mycelium-std-runtime/src/region.rs:190 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::Region::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::Region::drop",
+      "reason": "definition not found via regex heuristic (kind='fn', name='drop') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::Region::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::RegionEpoch::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::RegionEpoch::cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::RegionEpoch::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::RegionEpoch::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::RegionEpoch::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::RegionEpoch::partial_cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeNodeId::as_u64",
+      "reason": "dedup-alias: same definition as `mycelium_std_runtime::region::RegionEpoch::as_u64` at crates/mycelium-std-runtime/src/region.rs:128 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeNodeId::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeNodeId::cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeNodeId::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeNodeId::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeNodeId::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeNodeId::partial_cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::region::ScopeTree::new",
+      "reason": "dedup-alias: same definition as `mycelium_std_runtime::region::Region::new` at crates/mycelium-std-runtime/src/region.rs:190 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_runtime::scheduler::Scheduler::clone",
