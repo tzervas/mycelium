@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-33 |
-| **Status** | **Draft (advisory)** (2026-06-25) — research-backed direction capture for the MEM-4 leg of DN-32. Authored by the integrating agent from a sourced research dossier; **enacts nothing**, moves no status, ships no code. The binding decision is a future RFC-0027 follow-on / superseding RFC; **promotion past Draft requires maintainer deliberation** (the §8 agenda) and ratification (house rule #3). |
+| **Status** | **Accepted** (2026-06-25; ratified Draft → Accepted by the maintainer — the §8 deliberation is settled, see §8.1). Was Draft/advisory; the maintainer ruled the three load-bearing §8 questions (Q1/Q2/Q3) and the Q4–Q7 recommendations are adopted as defaults, so the **design direction is now ratified**. Still **enacts no code** — it is the agreed design the MEM-4 implementation epic builds to (a build that remains gated on the §8 Q5 measurement discipline as each increment lands). The cross-hypha commit (Q1 → Option A) feeds the eventual RFC-0027 follow-on; this note does not itself move RFC-0027's status. |
 | **Feeds** | the DN-32 **Layer-2 static uniqueness analysis** leg (DN-32 §2.2 / §6b) and the **cross-hypha reconciliation sub-question** (DN-32 §7 / RFC-0027 §12); anchors **MEM-4** in the E12 memory-model build (`docs/planning/E12-Memory-Model-Build-Plan.md`) |
 | **Date** | June 25, 2026 |
 | **Decides** | *Nothing normatively* — advisory + design-direction capture. Records (1) that **MEM-4 is an *additive, semantics-preserving* compiler lowering pass** that statically elides provably-redundant RC operations, with the runtime `RcCell` probe (MEM-2) as the sound fallback; (2) a **recommended incremental decomposition** (non-escaping borrow elision → `rc==1` reuse annotation → full FIP static guarantee); (3) a **recommendation for the cross-hypha sub-question** — **Option A (sole-move-only / affine-channel boundary) for R1**, Option B (shared-crosses-atomic-RC) deferred to R2 — each at its supportable grounding strength. |
@@ -266,6 +266,58 @@ is not undertaken speculatively here (flag, don't guess).
    memory, not full *garbage-free*. State which Mycelium targets and why (frame-limited is sufficient
    for most systems use cases; the full guarantee costs more analysis).
 
+## §8.1 Resolutions (ratified by the maintainer, 2026-06-25)
+
+The §8 deliberation is **settled**. The three load-bearing questions were ruled directly; the
+secondary four are adopted as the recorded defaults below (overridable by a later supersession, house
+rule #3). These resolutions move this note **Draft → Accepted** and are the design the MEM-4 build
+implements.
+
+- **Q1 (cross-hypha boundary) → Option A for R1.** Only **sole ownership** crosses a hypha boundary
+  (affine move; the RFC-0027 §7.3 channel protocol already enforces it); **`RcCell<T>` stays
+  `!Send`**, no atomic RC. Option B (shared-crosses-atomic-RC) is **gated to R2** (`xloc`/`mesh`).
+  Grounding unchanged (§5): prior art `Empirical`; "A sufficient for R1" `Declared`; the
+  restructuring-cost risk is carried forward, to be revisited if R1 programs hit it.
+- **Q2 (ownership-mode representation) → separate RC-annotated IR.** The mode (own vs borrow) and the
+  emitted `dup`/`drop` ops live on a **new RC-annotated IR** produced by the lowering pass; the
+  trusted Core IR (`mycelium-core/src/node.rs` `Node`) **stays pristine** — no `BorrowMode` field on
+  kernel binding forms. This honours §4 ("lowering-pass-not-type-checker; trusted base unchanged") and
+  KC-3: the kernel everyone audits does not grow; MEM-4's correctness obligation lives entirely in the
+  (untrusted, optimisation-only) `mir-passes` crate. Chosen over the simpler "annotate `Node`" option
+  precisely because that option would tax the trusted base (the merit argument beat the convenience).
+- **Q3 (soundness strategy) → differential + structural invariant; tag `Empirical`.** Soundness is
+  established by (a) a **differential test** — run the RC-annotated IR through a reference RC-evaluator
+  **with and without** elision and assert **identical observable results AND identical reclamation
+  records** — backed by (b) a **structural-invariant argument** (the elision fires only where the
+  emission's own balance invariant guarantees the removed `dup`/`drop` pair is net-zero). The pass's
+  correctness tag is **`Empirical`** (differential trials), **not `Proven`** — a mechanized proof is a
+  Phase-3 option (VR-5: no upgrade past the basis).
+
+**Secondary resolutions (adopted defaults):**
+- **Q4 (substrate/`consume`) → subsume, not a separate path.** A `substrate`/affine-typed binding is
+  already statically unique; that uniqueness **feeds the same elision mechanism** rather than a
+  parallel proof path (DRY / KC-3). The borrow analysis treats a known-affine binding as owned-unique.
+- **Q5 (perf-measurement gate) → an RC-op-reduction ratio on a representative corpus.** The metric
+  Increment 1 must clear before Increment 2 is committed is a **measured reduction in emitted
+  `dup`/`drop` count** on a representative program corpus (threshold fixed when that corpus exists; the
+  count is well-defined now via the RC-annotated IR). Until measured the perf claim stays `Declared`
+  (DN-32 §6b); the **count itself is `Exact`** (it is read off the IR), so the gate is enforceable as
+  soon as a corpus lands.
+- **Q6 (FIP user surface) → invisible/inferred for R1.** No user-facing `fip`/`@unique` annotation in
+  R1 (KISS / ergonomics — the §7 "never forced" stance). A surface annotation with a *static* in-place
+  guarantee is a **Phase-3** decision tied to Increment 3 (the full FIP layer).
+- **Q7 (target) → frame-limited for R1.** Increment 1 targets **frame-limited** reuse (Lorenzen — peak
+  memory within a constant factor of the live set), sufficient for systems use; full *garbage-free*
+  (Perceus) is the **Phase-3 aspiration**, not an R1 gate.
+
+**Consequence — MEM-4 is unblocked at the design level.** The build proceeds per these resolutions:
+(1) a new `crates/mycelium-mir-passes/` with the RC-annotated IR + a naive (fully-owned) RC-emission
+lowering `Node → RcNode` + a reference RC-evaluator + the balance invariant; then (2) **Increment 1**
+— non-escaping borrow elision + the Q3 differential harness. Each increment lands behind the Q5 gate;
+the runtime `RcCell` probe remains the sound fallback throughout. The cross-hypha §7 reconciliation
+(Q1 → Option A) will be carried into the eventual RFC-0027 follow-on; this note does not itself move
+RFC-0027's status (append-only).
+
 ## §9 Relation to the corpus & grounding
 
 - **Corpus:** DN-32 §2.2 (Layer-2 static uniqueness), §6b (KC-3 tension), §7 (cross-hypha
@@ -301,6 +353,15 @@ is not undertaken speculatively here (flag, don't guess).
   the named open risk. **Enacts nothing; moves no status; changes no normative text.** Promotion past
   Draft requires the §8 deliberation + maintainer ratification (house rule #3, append-only). CHANGELOG
   / Doc-Index / issues.yaml / docs/api-index owned by the integrating parent. (Append-only; VR-5; G2.)
+- **2026-06-25 — Ratified Draft → Accepted (§8.1 resolutions; maintainer).** The §8 deliberation is
+  settled: **Q1 → Option A** (sole-move-only cross-hypha; `RcCell` stays `!Send`; Option B → R2),
+  **Q2 → separate RC-annotated IR** (Core IR `node.rs` stays pristine — KC-3 / §4), **Q3 → differential
+  + structural-invariant** soundness (tag `Empirical`, not `Proven`). Q4–Q7 adopted as recorded
+  defaults (subsume `substrate` uniqueness; perf gate = measured `dup`/`drop`-reduction ratio, count
+  `Exact` / perf `Declared`; FIP user-surface deferred to Phase 3; frame-limited R1 target). Status
+  moves Draft → Accepted (legal forward move; the design is ratified, the code is the forward epic).
+  **Still enacts no code**; does not move RFC-0027's status. Doc-Index DN-33 row synced to Accepted.
+  (Append-only; VR-5; G2.)
 - **2026-06-25 — Addendum §6.1 (prerequisite gap; append-only).** A read-only investigation of the
   post-Wave-4 tree confirms **MEM-4 Increment 1 is blocked-by-prerequisite, not merely deferred**:
   the Core IR (`mycelium-core/src/node.rs`) carries no ownership-mode field on binding sites, there is

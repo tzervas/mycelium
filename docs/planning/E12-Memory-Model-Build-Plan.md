@@ -52,16 +52,22 @@ blockers — systematically, never-silent (G2), honest tags (VR-5), small audita
   scope/region wiring (`with_region`/`RegionScope`) + end-to-end L1/L2/L3 composition test. ✅ done — **Phase-1
   three-layer model feature-complete at the runtime tier** (all three triggers live; all ID placeholders
   canonicalized; scope-exit fires from a live scope).
-- **DN-33 (MEM-4 design):** ✅ authored (Draft, research-backed) — additive lowering pass, incremental
-  decomposition, cross-hypha Option A for R1.
-- **Next — MEM-4 is BLOCKED-by-prerequisite (DN-33 §6.1, investigated 2026-06-25).** Not merely
-  deferred: the Core IR (`mycelium-core/src/node.rs`) has no ownership-mode field on binding sites,
-  there is no RC-annotated IR / `mir-passes` crate, and `clone_ref`/`drop_ref` are hand-called only in
-  tests — **no lowering emits RC ops for MEM-4 to elide.** The prerequisite chain (resolve DN-33 §8 Q2
-  ownership-mode representation → add the field to `node.rs` → build the `mir-passes` RC-emission
-  lowering → wire into `elab.rs` → *then* MEM-4 Increment 1) is a **forward language-frontend epic
-  gated on the §8 Q2 maintainer decision** — not built speculatively (G2/VR-5: flag, don't guess). The
-  runtime substrate (MEM-1..3 + live triggers) is the sound, complete fallback and stands alone.
+- **DN-33 (MEM-4 design):** ✅ authored, then **ratified Draft → Accepted (2026-06-25, §8.1)** —
+  additive lowering pass; cross-hypha **Option A** for R1 (`RcCell` stays `!Send`); **separate
+  RC-annotated IR** (Core IR `node.rs` stays pristine); **differential + structural-invariant**
+  soundness (`Empirical`). Design unblocked.
+- **MEM-4 build (forward epic, per the §8.1 resolutions) — sequenced:**
+  - **MEM-4·B0 — RC-emission pipeline foundation:** new `crates/mycelium-mir-passes/` with the
+    **RC-annotated IR** (`RcNode` — mirrors `Node` + `Dup`/`Drop` + own/borrow mode), a **naive
+    (fully-owned) RC-emission** lowering `Node → RcNode` (dup at non-last use, drop at end-of-scope),
+    a **reference RC-evaluator** producing a reclamation trace, and the **balance invariant** test
+    (every value dup/drop-balanced to net-zero — no leak, no double-free). `node.rs` untouched.
+  - **MEM-4·1 — Increment 1 (non-escaping borrow elision):** the escape analysis marking non-escaping
+    uses *borrowed* (eliding their `dup`/`drop`), + the **Q3 differential harness** (emit with/without
+    elision → identical results AND identical reclamation records). Subsumes `substrate` uniqueness
+    (Q4). Behind the Q5 gate (measured `dup`/`drop`-reduction; count `Exact`, perf `Declared`).
+  - **Later — Increment 2** (`rc==1` reuse annotation) **/ Increment 3** (full FIP static guarantee,
+    Phase 3). The runtime `RcCell` probe stays the sound fallback throughout.
 
 ## Swarm discipline (per CLAUDE.md)
 Sonnet leaves, disjoint dirs, `cargo fmt`/`clippy -D warnings -A unsafe_code`/`test -p <crate>` green, in-crate
