@@ -37,8 +37,12 @@ jobs:
         run: |
           set -euo pipefail
           tmp="$(mktemp -d)"
-          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
-          if ! git clone "$url" "$tmp" 2>/dev/null; then
+          url="https://github.com/${GITHUB_REPOSITORY}.wiki.git"
+          # Inject the token via a masked HTTP auth header (the actions/checkout pattern) rather than
+          # the remote URL, so it can never leak into the logs on a git failure.
+          auth="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git_wiki() { git -C "$tmp" -c http.extraheader="$auth" "$@"; }
+          if ! git -c http.extraheader="$auth" clone "$url" "$tmp"; then
             echo "wiki repo not initialized yet — creating the first commit"
             git init -q "$tmp"
             git -C "$tmp" remote add origin "$url"
@@ -55,8 +59,7 @@ jobs:
             -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -q -m "docs(wiki): sync from docs/wiki @ ${GITHUB_SHA::12}"
           # GitHub wikis default to the `master` branch; fall back to `main` if needed.
-          git -C "$tmp" push origin HEAD:master 2>/dev/null \
-            || git -C "$tmp" push origin HEAD:main
+          git_wiki push origin HEAD:master || git_wiki push origin HEAD:main
 
   publish-rustdoc:
     if: ${{ inputs.publish_rustdoc }}
