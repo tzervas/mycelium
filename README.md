@@ -1,20 +1,32 @@
 # Mycelium
 
-> A programming language that treats **traditional binary**, **balanced ternary**, **dense embeddings**, and **Vector Symbolic Architectures (VSA / hyperdimensional computing)** as co-equal, first-class substrates — under semantics that are **transparent** (no hidden behavior), **metadata-native**, and **amenable to formal reasoning**.
+> A **fast, memory-safe, ergonomic** multi-paradigm language that treats **traditional binary**, **balanced ternary**, **dense embeddings**, and **Vector Symbolic Architectures (VSA / hyperdimensional computing)** as co-equal, first-class substrates — under semantics that are **transparent** (no hidden behavior) and **metadata-native**, with **certification & auditability baked in as *optional, tunable* capabilities** (`fast` by default · `certified` on request) rather than a tax on every line.
 
 **Status:** design + **Rust-first implementation underway.** The design corpus spans Foundation,
-RFC-0001…0032, ADR-001…024, DN-01…28 — per-document status (Draft / Proposed / Accepted / Enacted /
-Resolved) is in [`docs/Doc-Index.md`](docs/Doc-Index.md); the newest RFCs (0025–0032) range from Draft to Accepted. The Rust workspace has
-**50 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
-the selection-policy engine, a verified-numerics layer, a **Rust-first standard library**, an L1 surface
-with **generics · traits · higher-order functions · operator syntax**, and a **runtime** (scheduler,
-structured concurrency). Versioning is **dual-axis (ADR-022)**: the Rust **core/kernel** is
-**gate-met / tag-ready** for `core 1.0.0` (the ratified ADR-021 criteria, carried forward as ADR-022
-**track T1**), while the **full language** (`lang`) targets a broader `1.0.0` — a fully usable language
-whose **stdlib and libraries are themselves written in Mycelium**. That program is mapped in **ADR-022**
-(the gate, supersedes ADR-021) + **DN-25** (tracks **T1–T9** → epics E10-1…E18-1): surface completeness,
-runtime, **stdlib-in-Mycelium** (the long pole), FFI, toolchain, docs, and self-hosting — native-AOT
-perf is `1.1`. Per the transparency rule, no claim here is upgraded beyond what a checked basis supports (VR-5).
+RFC-0001…0035, ADR-001…032, DN-01…33 — per-document status (Draft / Proposed / Accepted / Enacted /
+Resolved) is in [`docs/Doc-Index.md`](docs/Doc-Index.md); the newest decisions range from Draft to Enacted. The Rust workspace has
+**50 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, explicit
+representation **swaps** (certified at the `certified` mode), the selection-policy engine, a
+verified-numerics layer, a **Rust-first standard library**, an L1 surface with **generics · traits ·
+higher-order functions · operator syntax**, a **runtime** (scheduler, structured concurrency) with a
+**three-layer hybrid memory model** (affine ownership → optimized reference counting → region
+reclamation; DN-32 / RFC-0027), and the **static RC-elision passes** that build on it (MEM-4 / DN-33).
+Versioning is **dual-axis (ADR-022)**: the Rust **core/kernel** is **gate-met / tag-ready** for
+`core 1.0.0` (the ratified ADR-021 criteria, carried forward as ADR-022 **track T1**), while the
+**full language** (`lang`) targets a broader `1.0.0` — a fully usable language whose **stdlib and
+libraries are themselves written in Mycelium**. That program is mapped in **ADR-022** (the gate,
+supersedes ADR-021) + **DN-25** (tracks **T1–T9** → epics E10-1…E18-1): surface completeness, runtime,
+**stdlib-in-Mycelium** (the long pole), FFI, toolchain, docs, and self-hosting — native-AOT perf is
+`1.1`. Per the transparency rule, no claim here is upgraded beyond what a checked basis supports (VR-5).
+
+> **Direction note (ADR-032, Enacted 2026-06-24).** The north star has been **repositioned** from the
+> original "certified-everything substrate" premise toward **a fast, memory-safe, ergonomic
+> multi-paradigm language**, with certification/transparency as **optional, tunable** capabilities
+> (RFC-0034: `fast` default · `balanced` · `certified`). Memory-safety, speed, and ergonomics are now
+> **first-class goals** alongside the transparent-swap thesis. The "honesty rule" is reframed as the
+> **transparency & auditability rule** (mechanism unchanged — the `Exact ⊐ Proven ⊐ Empirical ⊐
+> Declared` lattice, never-silent G2, and downgrade-don't-overclaim VR-5 all stand). See ADR-032 +
+> RFC-0034, the memory model (DN-32 / RFC-0027 / DN-33), and the Foundation §1 charter update.
 
 ---
 
@@ -69,71 +81,81 @@ Three non-negotiables shape every decision:
 
 ## What is built
 
-### The Rust workspace — 48 crates (+ `xtask`)
+### The Rust workspace — 50 crates (+ `xtask`)
 
 The kernel and tooling live in `crates/` under MSRV-pinned Rust 1.92 (ADR-007). The public
-surface is gated by a committed API baseline (`docs/spec/api/`, KC-3). Grouped by role:
+surface is gated by a committed API baseline (`docs/spec/api/`, KC-3). **Every crate now carries its
+own `README.md`** (linked below) for a 30-second orientation; this map is synthesised from them.
+Grouped by role:
 
 #### Kernel / trusted base
 
 | Crate | Role |
 |---|---|
-| `mycelium-core` | Core IR: `Value`/`Repr`/`Meta`, the guarantee lattice, content-addressing (ADR-003), the never-silent fallibility contract |
-| `mycelium-interp` | The **reference interpreter** — the executable trusted semantics; AOT/JIT paths are validated against it (NFR-7) |
-| `mycelium-cert` | Swap certificates + the certified binary↔ternary swap (Z3-proved bijective); the **one** shared certificate checker used for swaps *and* interpreter↔compiled equivalence |
-| `mycelium-numerics` | Two bound kernels (`ErrorBound` — ε via affine arithmetic; `ProbBound` — δ via union-bound/apRHL) sharing one `{ε, δ, strength}` certificate (ADR-010) |
-| `mycelium-diag` | Structured diagnostic records (RFC-0013): additive, never substitutive; every failure is a record, never silently swallowed |
+| [`mycelium-core`](crates/mycelium-core/README.md) | Core IR: `Value<Repr,Meta>`, the guarantee lattice, content-addressing, the node grammar; the never-silent fallibility contract (RFC-0001) |
+| [`mycelium-numerics`](crates/mycelium-numerics/README.md) | Two bound kernels — `ErrorBound` (ε, affine arithmetic) + `ProbBound` (δ, union/apRHL) — meeting at one `{ε, δ, strength}` certificate (ADR-010) |
+| [`mycelium-vsa`](crates/mycelium-vsa/README.md) | The VSA submodule: the `VsaModel` trait + MAP-I, dependency-gated so the kernel stays small (RFC-0003; ADR-008) |
+| [`mycelium-dense`](crates/mycelium-dense/README.md) | Dense `Dense{dim,dtype}` values + elementwise ops with honest per-op rounding bounds (RFC-0001 §4.1) |
+| [`mycelium-select`](crates/mycelium-select/README.md) | The total, EXPLAIN-able selection-policy engine — content-addressed decision tables, no black box (RFC-0005, ADR-006) |
 
-#### Capability / paradigm crates
-
-| Crate | Role |
-|---|---|
-| `mycelium-dense` | Dense embedding values: typed, dimension-tracked, guarantee tags on approximate ops |
-| `mycelium-vsa` | The MAP-I algebra: `bind`/`unbind`/`bundle`/`permute`/`cleanup` + per-model guarantee matrix (RFC-0003); `Proven` tags only where Clarkson-Ubaru-Yang / Thomas-Dasgupta-Rosing bounds apply |
-| `mycelium-select` | The total, EXPLAIN-able selection-policy engine (RFC-0005, ADR-006): deterministic, auditable, no cardinality-estimate black box |
-
-#### Language & execution
+#### Compiler / execution
 
 | Crate | Role |
 |---|---|
-| `mycelium-l1` | The ten-node L1 kernel calculus (RFC-0007) + the unified swap/interp differential checker; **E7-1 stage-1 surface landed**: generics (M-656/M-657), traits (M-658/M-659), effects (M-660), `wild`/FFI gate (M-661), phyla/cross-nodule (M-662), and static guarantee grading (M-663, RFC-0018 Enacted); **M-673 landed monomorphization + dictionary-free static trait resolution, so generic/trait instantiations now elaborate to closed L0 and run** (DN-14 §3 rows 6/7 `present`) |
-| `mycelium-mlir` | The AOT path: env-machine + direct-LLVM native lowering of the data/closure/tail-recursion fragment (M-373/M-378/M-379), JIT (M-340), and hot-inject (M-341); the real `ternary`→LLVM MLIR dialect in progress (M-601) |
+| [`mycelium-interp`](crates/mycelium-interp/README.md) | The **reference interpreter** — the trusted small-step semantics; AOT/JIT paths are validated against it (RFC-0004; ADR-009) |
+| [`mycelium-cert`](crates/mycelium-cert/README.md) | Swap certificates + the certified binary↔ternary swap, and the **one** shared translation-validation checker (RFC-0002) |
+| [`mycelium-l1`](crates/mycelium-l1/README.md) | The L1 surface prototype (RFC-0006/0007): lexer, parser, typechecker, totality checker, evaluator, elaborator to Core IR; stage-1 generics/traits/effects landed (E7-1) |
+| [`mycelium-stack`](crates/mycelium-stack/README.md) | Host-stack management for the L1 frontend's recursive passes — kept outside the kernel so `mycelium-l1` stays `unsafe`-free (KC-3) |
+| [`mycelium-mlir`](crates/mycelium-mlir/README.md) | The AOT path: env-machine, direct-LLVM-IR backend, optional MLIR `ternary` dialect, JIT + hot-inject (RFC-0004; ADR-007) |
+| [`mycelium-mir-passes`](crates/mycelium-mir-passes/README.md) | **MEM-4 (DN-33):** the RC-annotated IR + Perceus-style RC emission/elision passes — optimisation-only, **outside** the trusted Core IR (KC-3) |
+
+#### Runtime & memory model
+
+| Crate | Role |
+|---|---|
+| [`mycelium-std-runtime`](crates/mycelium-std-runtime/README.md) | The fungal concurrency surface (Colony/Scope/Task/Network/scheduler/supervision — ADR-020 / RFC-0008) **and** the landed **three-layer hybrid memory model** runtime — reclamation records, RC cell, regions, live scope/region wiring, and the three triggers (RcZero · ScopeExit · ChannelClose) — DN-32 / RFC-0027 / DN-33 |
 
 #### Toolchain crates
 
 | Crate | Binary | Role |
 |---|---|---|
-| `mycelium-check` | `myc-check` | Parse + typecheck; the scoring oracle for the KC-2 LLM-leverage harness |
-| `mycelium-fmt` | `mycfmt` | Formatter (canonical rendering; with content-addressing, formatting is a projection not a mutation) |
-| `mycelium-lint` | `myc-lint` | Structural + semantic lints — no implicit swap, no untagged bound, no swap without `PolicyRef` |
-| `mycelium-sec` | `myc-sec` | Security/audit checks |
-| `mycelium-doc` | `myc-doc` | Documentation generation |
-| `mycelium-spore` | `spore` | Content-addressed packager: code + values + metadata; identity = content hash (ADR-013) |
-| `mycelium-lsp` | LSP server | Language server: diagnostics, swap certificates, bound/guarantee annotations, lowering-stage dumps — consumed identically by human IDEs and AI co-authors |
-| `mycelium-bench` | — | Benchmark harness; wired to the LLM-validation scoring schema |
-| `mycelium-build` | — | Build system: stable-vs-experimental split, content-addressed caching, per-swap certificate artifacts |
-| `mycelium-proj` | — | Project management tooling |
-| `mycelium-cli-common` | — | Shared CLI utilities |
+| [`mycelium-cli`](crates/mycelium-cli/README.md) | `myc` | The one-command driver: `myc init\|build\|check\|test\|run` over a phylum, with DN-22 structured diagnostics |
+| [`mycelium-check`](crates/mycelium-check/README.md) | `myc-check` | Project-aware type-check driver; aggregates every refusal as an RFC-0013 diagnostic |
+| [`mycelium-fmt`](crates/mycelium-fmt/README.md) | `mycfmt` | The canonical formatter — an identity-preserving projection that never changes content-addressed identity |
+| [`mycelium-lint`](crates/mycelium-lint/README.md) | `myc-lint` | Lint + auto-fix with a `suggest`/`apply`/`scaffold` boundary (M-141 invariant lints) |
+| [`mycelium-sec`](crates/mycelium-sec/README.md) | `myc-sec` | Security checks — the `wild`-block audit + secrets/supply-chain gates |
+| [`mycelium-doc`](crates/mycelium-doc/README.md) | `myc-doc` | The doc build pipeline: content-addressed doc-IR, HTML/Typst/JSON renderers, §4.1 quality lint |
+| [`mycelium-spore`](crates/mycelium-spore/README.md) | `spore` | Content-addressed packager: builds a deployable `spore` from a project (ADR-013) |
+| [`mycelium-lsp`](crates/mycelium-lsp/README.md) | LSP | The semantic-feedback facade — diagnostics, swap certificates, bound/guarantee annotations, EXPLAIN traces over one surface |
+| [`mycelium-build`](crates/mycelium-build/README.md) | — | Stable-vs-interpreted classification + content-addressed build certificates (RFC-0004 §4) |
+| [`mycelium-proj`](crates/mycelium-proj/README.md) | — | Project metadata: nodule header, `mycelium-proj.toml`, the inheritance resolver, `@certification` scoping |
+| [`mycelium-bench`](crates/mycelium-bench/README.md) | — | Honest benchmark harness: a deterministic WIN/LOSS/REGRESSION report over the execution backends |
+| [`mycelium-diag`](crates/mycelium-diag/README.md) | — | The canonical RFC-0013 `Diag` record types (the failure-legibility substrate) |
+| [`mycelium-cli-common`](crates/mycelium-cli-common/README.md) | — | Small dependency-free helper shared by the toolchain CLIs |
 
-#### Standard library — 25 `mycelium-std-*` crates (all specs Accepted, 2026-06-21)
+#### Standard library — 26 `mycelium-std-*` crates
 
-The Rust-first standard library implements RFC-0016's three-ring contract. Every exported op
-carries a per-op guarantee tag; every fallible op returns an explicit `Result`/`Option`,
-never a silent fallback. The RFC-0016 §4.5 guarantee matrix is encoded as data and asserted in
-tests — never prose only.
+The Rust-first standard library implements RFC-0016's three-ring contract. Every exported op carries
+a per-op guarantee tag; every fallible op returns an explicit `Result`/`Option`, never a silent
+fallback. The RFC-0016 §4.5 guarantee matrix is encoded as data and asserted in tests — never prose
+only. Each crate's `README.md` links its `docs/spec/stdlib/<name>.md` spec.
 
-**Tier A — differentiators** (the substrates and Mycelium-specific capabilities):
+**Tier A — differentiators** (the substrates + Mycelium-specific capabilities):
+[`std-core`](crates/mycelium-std-core/README.md) · [`std-swap`](crates/mycelium-std-swap/README.md) ·
+[`std-ternary`](crates/mycelium-std-ternary/README.md) · [`std-dense`](crates/mycelium-std-dense/README.md) ·
+[`std-vsa`](crates/mycelium-std-vsa/README.md) · [`std-select`](crates/mycelium-std-select/README.md) ·
+[`std-content`](crates/mycelium-std-content/README.md) · [`std-numerics`](crates/mycelium-std-numerics/README.md) ·
+[`std-diag`](crates/mycelium-std-diag/README.md) · [`std-recover`](crates/mycelium-std-recover/README.md) ·
+[`std-spore`](crates/mycelium-std-spore/README.md) · [`std-sys`](crates/mycelium-std-sys/README.md) ·
+[`std-sys-host`](crates/mycelium-std-sys-host/README.md) (the `std-runtime` crate is listed under *Runtime & memory model* above).
 
-`mycelium-std-core` · `mycelium-std-swap` · `mycelium-std-ternary` · `mycelium-std-dense` ·
-`mycelium-std-vsa` · `mycelium-std-select` · `mycelium-std-content` · `mycelium-std-numerics` ·
-`mycelium-std-diag` · `mycelium-std-recover` · `mycelium-std-runtime` · `mycelium-std-spore` ·
-`mycelium-std-sys`
-
-**Tier B — common / expected** (written to the same C1–C6 contract above the Tier-A crates):
-
-`mycelium-std-collections` · `mycelium-std-error` · `mycelium-std-cmp` · `mycelium-std-iter` ·
-`mycelium-std-math` · `mycelium-std-text` · `mycelium-std-fmt` · `mycelium-std-io` ·
-`mycelium-std-fs` · `mycelium-std-time` · `mycelium-std-rand` · `mycelium-std-testing`
+**Tier B — common / expected** (same C1–C6 contract, above the Tier-A crates):
+[`std-collections`](crates/mycelium-std-collections/README.md) · [`std-error`](crates/mycelium-std-error/README.md) ·
+[`std-cmp`](crates/mycelium-std-cmp/README.md) · [`std-iter`](crates/mycelium-std-iter/README.md) ·
+[`std-math`](crates/mycelium-std-math/README.md) · [`std-text`](crates/mycelium-std-text/README.md) ·
+[`std-fmt`](crates/mycelium-std-fmt/README.md) · [`std-io`](crates/mycelium-std-io/README.md) ·
+[`std-fs`](crates/mycelium-std-fs/README.md) · [`std-time`](crates/mycelium-std-time/README.md) ·
+[`std-rand`](crates/mycelium-std-rand/README.md) · [`std-testing`](crates/mycelium-std-testing/README.md)
 
 **Note on self-hosting.** The stdlib is Rust-first; the Mycelium-lang migration half (M-502)
 is not yet established and is explicitly post-1.0 scope (ADR-021 §5).
@@ -271,7 +293,7 @@ mycelium/
 ├── CONTRIBUTING.md           ← decision process, transparency rule, dev env, workflow
 ├── CLAUDE.md                 ← operating guide for Claude Code / agents (the house rules)
 ├── CHANGELOG.md              ← Keep-a-Changelog; design baseline + implementation edits
-├── Cargo.toml                ← Rust workspace (48 crates + xtask; MSRV 1.92, ADR-007)
+├── Cargo.toml                ← Rust workspace (50 crates + xtask; MSRV 1.92, ADR-007)
 ├── rust-toolchain.toml       ← pinned MSRV
 ├── justfile                  ← one source of truth for local↔CI checks (`just check`)
 ├── deny.toml                 ← cargo-deny supply-chain policy
