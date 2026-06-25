@@ -5,3 +5,4 @@
 
 pub mod rc;
 pub mod reclamation;
+pub mod region;
