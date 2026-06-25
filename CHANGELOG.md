@@ -8,6 +8,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-25: DN-33 ratified Draft → Accepted — §8 deliberation settled)
+
+- **DN-33 ratified Draft → Accepted (§8.1 resolutions, maintainer).** The MEM-4 design deliberation is
+  settled: **Q1 → Option A** (only sole ownership crosses a hypha boundary; `RcCell<T>` stays `!Send`;
+  Option B / atomic-RC sharing gated to R2), **Q2 → separate RC-annotated IR** (the trusted Core IR
+  `mycelium-core/src/node.rs` stays pristine — KC-3 / DN-33 §4), **Q3 → differential + structural-
+  invariant** soundness (tag `Empirical`, not `Proven`). Q4–Q7 adopted as defaults (subsume `substrate`
+  uniqueness; perf gate = measured `dup`/`drop`-reduction ratio — count `Exact`, perf `Declared`; FIP
+  user-surface deferred to Phase 3; frame-limited R1 target). Status moves Draft → Accepted (the design
+  is ratified; **enacts no code**). The E12 build plan now sequences the MEM-4 build (B0: RC-emission
+  pipeline foundation → Increment 1: borrow elision + differential harness). Does not move RFC-0027's
+  status (the cross-hypha Option A feeds a later RFC-0027 follow-on). Append-only.
+
 ### Changed (2026-06-25: DN-33 §6.1 addendum — MEM-4 is blocked-by-prerequisite, not just deferred)
 
 - **DN-33 §6.1 (append-only addendum)** records a grounded investigation finding: **MEM-4 Increment 1
