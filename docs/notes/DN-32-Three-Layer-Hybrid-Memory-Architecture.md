@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-32 |
-| **Status** | **Accepted-pending-ratification** (2026-06-25) — the maintainer's strategic direction for the runtime memory architecture, carrying the maintainer's recommendation. **A maintainer must ratify the move to a full `Accepted` (house rule #3, append-only); until then treat as Proposed-with-the-maintainer's-recommendation.** *(Status flagged: this note is authored from a verified maintainer proposal, so it starts above bare `Draft` — but it enacts nothing and changes no normative text; the binding decision is the RFC-0027 follow-on.)* |
+| **Status** | **Accepted** (2026-06-25, **ratified by the maintainer**) — the maintainer's strategic direction for the runtime memory architecture. *(Status flagged: this note is authored from a verified maintainer proposal, so it starts above bare `Draft` — but it enacts nothing and changes no normative text; the binding decision is the RFC-0027 follow-on.)* |
 | **Feeds** | resolves **RFC-0027** §11 **OQ-1** + **OQ-4** (and mitigates **OQ-3**); feeds E12-1 (runtime & concurrency execution maturity); anchors the future RFC-0027 follow-on (Layer-2 uniqueness analysis + the cross-hypha sharing sub-question, §7) |
 | **Date** | June 25, 2026 |
 | **Decides** | *Nothing normatively* — advisory + strategic-direction capture. Records the maintainer's **three-layer hybrid memory architecture** for the Mycelium runtime: (1) affine/linear ownership as the **primary** path for unique data, (2) optimized reference counting only for **explicit** sharing, (3) region-based allocation/reclamation **within scopes**, with parent–child reclamation **total** and sibling reclamation **concurrent-by-default** (weak/partial coupling; strong coupling opt-in). Captures the goals, the Phase 1–3 roadmap, the risks, and the relation to the corpus, **with the verified-parent caveats (§6) as honest scope.** The binding decision is the RFC-0027 follow-on. |
@@ -331,7 +331,7 @@ most-kernel-growing leg and is sequenced last and measured.
 
 ## Meta — changelog
 
-- **2026-06-25 — Created (Accepted-pending-ratification; status flagged).** Captures the maintainer's
+- **2026-06-25 — Created (Accepted (ratified 2026-06-25); status flagged).** Captures the maintainer's
   **three-layer hybrid memory architecture**: (1) affine/linear ownership PRIMARY for unique data
   (zero/near-zero cost, default path), (2) optimized reference counting only for EXPLICIT sharing
   (static uniqueness analysis removes ops; non-atomic intra-hypha, atomic after cross-hypha transfer;

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0027 |
-| **Status** | **Accepted** (2026-06-25) — *proposed move from Proposed; **awaiting maintainer ratification (governance milestone — see the STATUS-MOVE FLAG banner)**. OQ-1 (the banner blocker) + OQ-4 are now resolved by DN-32; OQ-2/5/6 are deferred non-blockers. Prior Draft (2026-06-23) → Proposed (2026-06-24) history preserved below (append-only).* |
+| **Status** | **Accepted** (2026-06-25) — *Proposed → Accepted, **ratified by the maintainer 2026-06-25**. OQ-1 (the banner blocker) + OQ-4 are now resolved by DN-32; OQ-2/5/6 are deferred non-blockers. Prior Draft (2026-06-23) → Proposed (2026-06-24) history preserved below (append-only).* |
 | **Feeds** | E12-1 (runtime & concurrency execution maturity) |
 | **Decides** | The reclamation model for Mycelium runtime values: the reclamation **mechanism** (reference counting), ownership/lifetime semantics, reclaim-cascade scope, explicit-vs-implicit discipline, the reclamation **EXPLAIN/audit record**, and the "no silent GC pause" honesty stance (G2/VR-5). |
 | **Date** | June 24, 2026 (Draft: June 23, 2026) |
@@ -516,7 +516,7 @@ These remain **open** — the advance does not decide them. They are the named t
 ## 12. Resolved architecture — three-layer hybrid (DN-32) (2026-06-25)
 
 > **Pointer section (append-only).** DN-32 (*Three-Layer Hybrid Memory Architecture*,
-> Accepted-pending-ratification 2026-06-25) is the architectural synthesis that sits above this RFC's
+> Accepted (ratified 2026-06-25) 2026-06-25) is the architectural synthesis that sits above this RFC's
 > resolved **mechanism** (§7 RC) and **resolves OQ-1 + OQ-4** (and mitigates OQ-3). This section is a
 > **short pointer** — DN-32 carries the detail. Everything below is `Declared` strategic direction
 > except where a stronger tag is named; the resolutions are tagged at their supportable strength in
@@ -593,7 +593,7 @@ DN). It does **not** block OQ-1/OQ-4, which resolve under either option. **DN-32
   issues.yaml / docs/api-index are owned by the integrating parent. (Append-only; VR-5; G2.)
 - **2026-06-25 — OQ-1 + OQ-4 resolved (by DN-32); status move proposed (Proposed → Accepted,
   GOVERNANCE-FLAGGED for ratification).** Captured the maintainer's verified **three-layer hybrid
-  memory architecture** as **DN-32** (Accepted-pending-ratification) and wired its resolutions back
+  memory architecture** as **DN-32** (Accepted (ratified 2026-06-25)) and wired its resolutions back
   here (append-only; §§1–11 prior prose preserved verbatim, resolutions added inline + a new pointer
   §12). **(§11) OQ-1 → RESOLVED:** weak/partial coupling is the **default** (sibling scopes reclaim
   concurrently — RT7 already makes siblings concurrent, LR-9 acyclicity makes it safe with no
