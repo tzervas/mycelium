@@ -8,6 +8,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: MEM-4 corpus — Increment-2 reuse + audit-trail measurement)
+
+- **MEM-4 measurement, broadened** (`mycelium-mir-passes::corpus`): the Q5 corpus measured only
+  Increment 1's `Dup` reduction. A companion measurement now covers the rest of the built analysis
+  tier over the **same** corpus — `measure_mem4` / `measure_mem4_standard` → `Mem4Report`:
+  - **Reuse sites** — the count of `RcNode::MoveUnique` annotations `emit_reuse` emits (Increment 2's
+    `rc == 1` reuse points), each **machine-verified sound** (reached at rc == 1 — the reference
+    evaluator would error `UnsoundUnique` otherwise) and confirmed semantics-preserving against the
+    owned emission.
+  - **Reclamation records** — the per-term `rc → 0` reclamation count over the elided emission: the
+    size of the RFC-0027 §9 audit trail the AOT tier (`mycelium-mlir::rc_plan`) emits.
+  - Added three sole-owned-move terms to `standard_corpus` so the reuse dimension is exercised
+    (`result_move`, `borrow_then_sole_move`, `sole_move_after_drop`); the Q5 dup-reduction stays
+    ~91% (the additions are dup-neutral or a further win). 7 new tests (≥ 3 reuse sites located, all
+    machine-verified sound + preserved, per-term/aggregate consistency).
+  - Honest tags: the counts are `Exact` (read off the IR / reference machine); soundness is
+    `Empirical` (the verifying evaluator over the corpus); corpus representativeness stays `Declared`
+    (no Mycelium program population to sample yet — DN-33 §8.1). Q5 `CorpusReport`/`measure` left
+    untouched (the gate is stable). Clippy `-D warnings` clean.
+
 ### Added (2026-06-25: MEM-4 → AOT — the RFC-0027 §9 reclamation audit trail)
 
 - **MEM-4 AOT wiring** (`mycelium-mlir::rc_plan`): the bridge that finally **consumes** the MEM-4

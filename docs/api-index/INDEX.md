@@ -938,13 +938,17 @@
 | `mycelium_mir_passes::balance::BalanceError` | enum | `crates/mycelium-mir-passes/src/balance.rs:36` | A balance-invariant violation for one binding (never-silent diagnostics, G2). |
 | `mycelium_mir_passes::balance::check_balance` | fn | `crates/mycelium-mir-passes/src/balance.rs:107` | Verify the balance invariant over `node` and every binding nested within it. |
 | `mycelium_mir_passes::corpus` | mod | `crates/mycelium-mir-passes/src/lib.rs:67` | — |
-| `mycelium_mir_passes::corpus::CorpusError` | enum | `crates/mycelium-mir-passes/src/corpus.rs:145` | Errors a corpus measurement can surface (never-silent). |
-| `mycelium_mir_passes::corpus::CorpusReport` | struct | `crates/mycelium-mir-passes/src/corpus.rs:111` | The per-corpus measurement: the Q5 number plus the semantics-preservation guarantee. |
-| `mycelium_mir_passes::corpus::CorpusReport::dups_removed` | fn | `crates/mycelium-mir-passes/src/corpus.rs:138` | Total `Dup`s removed by elision across the corpus. |
-| `mycelium_mir_passes::corpus::CorpusReport::reduction_ratio` | fn | `crates/mycelium-mir-passes/src/corpus.rs:128` | The aggregate `Dup`-reduction ratio in `[0, 1]` — `(owned - elided) / owned`, or `0.0` if the |
-| `mycelium_mir_passes::corpus::measure` | fn | `crates/mycelium-mir-passes/src/corpus.rs:168` | Measure Increment 1 over `corpus`: aggregate `Dup` counts (owned vs elided) and confirm every |
-| `mycelium_mir_passes::corpus::measure_standard` | fn | `crates/mycelium-mir-passes/src/corpus.rs:196` | Measure the [`standard_corpus`] — the canonical Q5 measurement. |
-| `mycelium_mir_passes::corpus::standard_corpus` | fn | `crates/mycelium-mir-passes/src/corpus.rs:73` | A representative, **mixed** corpus of straight-line Core IR terms (named for the report). |
+| `mycelium_mir_passes::corpus::CorpusError` | enum | `crates/mycelium-mir-passes/src/corpus.rs:163` | Errors a corpus measurement can surface (never-silent). |
+| `mycelium_mir_passes::corpus::CorpusReport` | struct | `crates/mycelium-mir-passes/src/corpus.rs:129` | The per-corpus measurement: the Q5 number plus the semantics-preservation guarantee. |
+| `mycelium_mir_passes::corpus::CorpusReport::dups_removed` | fn | `crates/mycelium-mir-passes/src/corpus.rs:156` | Total `Dup`s removed by elision across the corpus. |
+| `mycelium_mir_passes::corpus::CorpusReport::reduction_ratio` | fn | `crates/mycelium-mir-passes/src/corpus.rs:146` | The aggregate `Dup`-reduction ratio in `[0, 1]` — `(owned - elided) / owned`, or `0.0` if the |
+| `mycelium_mir_passes::corpus::Mem4Report` | struct | `crates/mycelium-mir-passes/src/corpus.rs:245` | The Increment-2 + audit-trail measurement over a corpus (the companion to the Q5 [`CorpusReport`]). |
+| `mycelium_mir_passes::corpus::Mem4Row` | struct | `crates/mycelium-mir-passes/src/corpus.rs:229` | One term's row in a [`Mem4Report`]. |
+| `mycelium_mir_passes::corpus::measure` | fn | `crates/mycelium-mir-passes/src/corpus.rs:186` | Measure Increment 1 over `corpus`: aggregate `Dup` counts (owned vs elided) and confirm every |
+| `mycelium_mir_passes::corpus::measure_mem4` | fn | `crates/mycelium-mir-passes/src/corpus.rs:269` | Measure Increment 2 + the audit trail over `corpus`: aggregate the reuse-site and |
+| `mycelium_mir_passes::corpus::measure_mem4_standard` | fn | `crates/mycelium-mir-passes/src/corpus.rs:318` | Measure the [`standard_corpus`] for Increment 2 + the audit trail. |
+| `mycelium_mir_passes::corpus::measure_standard` | fn | `crates/mycelium-mir-passes/src/corpus.rs:214` | Measure the [`standard_corpus`] — the canonical Q5 measurement. |
+| `mycelium_mir_passes::corpus::standard_corpus` | fn | `crates/mycelium-mir-passes/src/corpus.rs:80` | A representative, **mixed** corpus of straight-line Core IR terms (named for the report). |
 | `mycelium_mir_passes::emit` | mod | `crates/mycelium-mir-passes/src/lib.rs:68` | — |
 | `mycelium_mir_passes::emit::EmitError` | enum | `crates/mycelium-mir-passes/src/emit.rs:39` | Why RC-emission could not lower a node. |
 | `mycelium_mir_passes::emit::borrow_occurrences` | fn | `crates/mycelium-mir-passes/src/emit.rs:498` | Count occurrences of `var` in **borrow positions** (direct `Op` argument / `Swap` source), |
@@ -4449,6 +4453,12 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mir_passes::corpus::CorpusReport::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::corpus::CorpusReport::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::corpus::CorpusReport::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::corpus::Mem4Report::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::corpus::Mem4Report::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::corpus::Mem4Report::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::corpus::Mem4Row::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::corpus::Mem4Row::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::corpus::Mem4Row::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::emit::EmitError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::emit::EmitError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::emit::EmitError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |

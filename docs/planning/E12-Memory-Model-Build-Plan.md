@@ -83,6 +83,13 @@ blockers — systematically, never-silent (G2), honest tags (VR-5), small audita
     statically guaranteed → FBIP-reuse-eligible); soundness is **machine-verified** by the evaluator
     (`RcError::UnsoundUnique` if any annotation is reached at rc≠1). Semantics-preserving (`Empirical`);
     reuse-site count `Exact`; FBIP perf `Declared` (cell-recycling is downstream codegen). 43 tests.
+  - **MEM-4·corpus-2 — Increment-2 reuse + audit-trail measurement:** ✅ **done (2026-06-25).**
+    `mycelium-mir-passes::corpus` gained `measure_mem4`/`Mem4Report` alongside the Q5 `measure`:
+    it counts Increment-2 **reuse sites** (`MoveUnique` annotations) and **reclamation records**
+    (the §9 audit-trail size over the elided emission) over the same corpus, with every reuse
+    annotation **machine-verified sound** (rc == 1) and semantics-preserving. Counts `Exact`,
+    soundness `Empirical`, representativeness `Declared`; the Q5 gate is untouched. The corpus gained
+    three sole-owned-move terms so the reuse dimension is exercised (≥ 3 reuse sites); Q5 stays ~91%.
   - **MEM-4·AOT — wire the analysis into execution (RFC-0027 §9 audit trail):** ✅ **done
     (2026-06-25).** `mycelium-mlir::rc_plan` is the bridge that finally *consumes* the MEM-4 passes
     at the AOT tier: `emit_reclamation_plan` runs the borrow-elided emission → reference RC-evaluator
