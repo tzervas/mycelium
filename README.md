@@ -1,20 +1,32 @@
 # Mycelium
 
-> A programming language that treats **traditional binary**, **balanced ternary**, **dense embeddings**, and **Vector Symbolic Architectures (VSA / hyperdimensional computing)** as co-equal, first-class substrates — under semantics that are **transparent** (no hidden behavior), **metadata-native**, and **amenable to formal reasoning**.
+> A **fast, memory-safe, ergonomic** multi-paradigm language that treats **traditional binary**, **balanced ternary**, **dense embeddings**, and **Vector Symbolic Architectures (VSA / hyperdimensional computing)** as co-equal, first-class substrates — under semantics that are **transparent** (no hidden behavior) and **metadata-native**, with **certification & auditability baked in as *optional, tunable* capabilities** (`fast` by default · `certified` on request) rather than a tax on every line.
 
 **Status:** design + **Rust-first implementation underway.** The design corpus spans Foundation,
-RFC-0001…0032, ADR-001…024, DN-01…28 — per-document status (Draft / Proposed / Accepted / Enacted /
-Resolved) is in [`docs/Doc-Index.md`](docs/Doc-Index.md); the newest RFCs (0025–0032) range from Draft to Accepted. The Rust workspace has
-**50 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, certified swaps,
-the selection-policy engine, a verified-numerics layer, a **Rust-first standard library**, an L1 surface
-with **generics · traits · higher-order functions · operator syntax**, and a **runtime** (scheduler,
-structured concurrency). Versioning is **dual-axis (ADR-022)**: the Rust **core/kernel** is
-**gate-met / tag-ready** for `core 1.0.0` (the ratified ADR-021 criteria, carried forward as ADR-022
-**track T1**), while the **full language** (`lang`) targets a broader `1.0.0` — a fully usable language
-whose **stdlib and libraries are themselves written in Mycelium**. That program is mapped in **ADR-022**
-(the gate, supersedes ADR-021) + **DN-25** (tracks **T1–T9** → epics E10-1…E18-1): surface completeness,
-runtime, **stdlib-in-Mycelium** (the long pole), FFI, toolchain, docs, and self-hosting — native-AOT
-perf is `1.1`. Per the transparency rule, no claim here is upgraded beyond what a checked basis supports (VR-5).
+RFC-0001…0035, ADR-001…032, DN-01…33 — per-document status (Draft / Proposed / Accepted / Enacted /
+Resolved) is in [`docs/Doc-Index.md`](docs/Doc-Index.md); the newest decisions range from Draft to Enacted. The Rust workspace has
+**50 crates** (+ `xtask`) <!-- doc-currency:crate-count --> — a trusted reference interpreter, explicit
+representation **swaps** (certified at the `certified` mode), the selection-policy engine, a
+verified-numerics layer, a **Rust-first standard library**, an L1 surface with **generics · traits ·
+higher-order functions · operator syntax**, a **runtime** (scheduler, structured concurrency) with a
+**three-layer hybrid memory model** (affine ownership → optimized reference counting → region
+reclamation; DN-32 / RFC-0027), and the **static RC-elision passes** that build on it (MEM-4 / DN-33).
+Versioning is **dual-axis (ADR-022)**: the Rust **core/kernel** is **gate-met / tag-ready** for
+`core 1.0.0` (the ratified ADR-021 criteria, carried forward as ADR-022 **track T1**), while the
+**full language** (`lang`) targets a broader `1.0.0` — a fully usable language whose **stdlib and
+libraries are themselves written in Mycelium**. That program is mapped in **ADR-022** (the gate,
+supersedes ADR-021) + **DN-25** (tracks **T1–T9** → epics E10-1…E18-1): surface completeness, runtime,
+**stdlib-in-Mycelium** (the long pole), FFI, toolchain, docs, and self-hosting — native-AOT perf is
+`1.1`. Per the transparency rule, no claim here is upgraded beyond what a checked basis supports (VR-5).
+
+> **Direction note (ADR-032, Enacted 2026-06-24).** The north star has been **repositioned** from the
+> original "certified-everything substrate" premise toward **a fast, memory-safe, ergonomic
+> multi-paradigm language**, with certification/transparency as **optional, tunable** capabilities
+> (RFC-0034: `fast` default · `balanced` · `certified`). Memory-safety, speed, and ergonomics are now
+> **first-class goals** alongside the transparent-swap thesis. The "honesty rule" is reframed as the
+> **transparency & auditability rule** (mechanism unchanged — the `Exact ⊐ Proven ⊐ Empirical ⊐
+> Declared` lattice, never-silent G2, and downgrade-don't-overclaim VR-5 all stand). See ADR-032 +
+> RFC-0034, the memory model (DN-32 / RFC-0027 / DN-33), and the Foundation §1 charter update.
 
 ---
 

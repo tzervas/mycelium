@@ -1,8 +1,8 @@
 # Mycelium — Project Foundation
 
 **Status:** Foundation — design corpus Accepted; **Rust-first implementation underway** (Phases 0–3, 5, 7 complete; 4, 6, 8 in progress). Research: thirteen passes recorded (`research/01…13`).
-**Revision:** r4 — records the **Rust-first implementation** status: the kernel + reference interpreter + certified swaps + the 25-crate standard library have landed (Phases 0–3/5/7 complete, 4/6/8 in progress); per the transparency rule the stdlib specs read *"implemented (Rust-first), pending ratification,"* and self-hosting (M-502) is not yet established. Extends the §6 roadmap with Phases 4–8 and refreshes §10. **Design decisions are unchanged (append-only)** — this is a status/roadmap refresh, not a decision change. *Status addendum (2026-06-22):* RFC-0022 and RFC-0023 ratified to Accepted; RFC-0018 Enacted (stage 1a, M-663); the E7-1 L1 stage-1 checker surface complete (M-656–M-663); research: 13 passes recorded (`01…13`).
-**Revision history:** r3 — integrates the follow-up research findings: ratifies ADR-010 (two bound kernels) and ADR-007 (Rust kernel + MLIR); records the **KC-1 pass** (proven VSA bundling bounds exist); marks RFC-0001…0005 Accepted and DN-01 Resolved (packing → schedule-staged); de-risks RR-1 and adds residual risks RR-13/RR-14. · r2 — added the execution-model and VSA-packaging decisions (ADR-008, ADR-009) plus a first-class toolchain treatment (§5.8); folded hybrid-compilation and tooling constraints into Requirements (§3) and the Roadmap (§6).
+**Revision:** r5 — **records the north-star repositioning (ADR-032, Enacted) and the memory model** as an append-only **charter update** (the boxed note at the end of §1): certification/transparency become *optional, tunable* capabilities (RFC-0034 `fast`/`balanced`/`certified`), memory-safety + speed + ergonomics rise to first-class goals, and the **three-layer hybrid memory model** (DN-32 / RFC-0027 / MEM-4 DN-33) joins the core design. The original §1 prose is retained for historical context (append-only, house rule #3); no prior decision is rewritten.
+**Revision history:** r4 — records the **Rust-first implementation** status: the kernel + reference interpreter + certified swaps + the 25-crate standard library have landed (Phases 0–3/5/7 complete, 4/6/8 in progress); per the transparency rule the stdlib specs read *"implemented (Rust-first), pending ratification,"* and self-hosting (M-502) is not yet established. Extends the §6 roadmap with Phases 4–8 and refreshes §10. **Design decisions are unchanged (append-only)** — this is a status/roadmap refresh, not a decision change. *Status addendum (2026-06-22):* RFC-0022 and RFC-0023 ratified to Accepted; RFC-0018 Enacted (stage 1a, M-663); the E7-1 L1 stage-1 checker surface complete (M-656–M-663); research: 13 passes recorded (`01…13`). · r3 — integrates the follow-up research findings: ratifies ADR-010 (two bound kernels) and ADR-007 (Rust kernel + MLIR); records the **KC-1 pass** (proven VSA bundling bounds exist); marks RFC-0001…0005 Accepted and DN-01 Resolved (packing → schedule-staged); de-risks RR-1 and adds residual risks RR-13/RR-14. · r2 — added the execution-model and VSA-packaging decisions (ADR-008, ADR-009) plus a first-class toolchain treatment (§5.8); folded hybrid-compilation and tooling constraints into Requirements (§3) and the Roadmap (§6).
 **Date:** June 08, 2026
 **Working name:** Mycelium
 **Source of truth for claims:** the prior-art *Survey & Synthesis* and the follow-up *Research Findings* (T0/T1/T2). Inline references use those labels (Areas, **G1–G11**, **A–E**, **R1–R8**, **T0.x/T1.x/T2.x**) so every assertion is traceable. The r2/r3 additions are *engineering decisions* grounded in those findings, not new prior art.
@@ -14,6 +14,36 @@
 **Mission (one sentence).** Mycelium is a programming language that makes the *encoding and representation of information* a transparent, first-class, formally-auditable artifact — unifying binary, balanced ternary, dense embeddings, and sparse/dense VSA under one metadata-native model with explicit, verifiable representation swaps, intelligible to both human programmers and AI agents.
 
 **Core value proposition.** The survey established that no existing system unifies even two of {binary, balanced ternary, dense embedding, sparse/dense VSA} as *co-equal, first-class* substrates with verifiable inter-conversion; the four-way union is unprecedented (survey TL;DR; **G1**). Every *component* capability is mature and separable — MLIR's progressive inspectable lowering, Unison's content-addressed AST-as-truth with names-as-metadata, Arrow's self-describing custom metadata, dependent/refinement types, the verified-numerics toolchain (Gappa/FPTaylor/Rosa-Daisy/Flocq), and the Kleyko et al. VSA taxonomy. Mycelium's contribution is therefore *integrative*, and its single biggest unsolved problem — the one no existing system solves — is **metadata-native, non-opaque, formally-bounded representation swapping across fundamentally different algebras**: binary↔ternary is bijective and provable, while ↔VSA/embedding is inherently lossy/approximate and must carry an explicit, inspectable error/crosstalk/probability bound rather than a hidden approximation (survey cross-cutting **A.1**, **B**; **G1**, **G4**, **G7**).
+
+> **Charter update (r5, 2026-06-25 — append-only; per ADR-032, Enacted).** The premise above frames
+> Mycelium primarily as the solution to *one* unsolved problem — metadata-native, formally-bounded
+> representation swapping — with the certification machinery applied **unconditionally** to every
+> value and swap. **The project has since matured past that framing**, and this note records the
+> repositioning (the prose above is retained for historical context — house rule #3, append-only):
+>
+> - **North star repositioned (ADR-032 decision 4).** From a "certified-everything substrate" toward
+>   **a fast, memory-safe, ergonomic multi-paradigm language**. The transparent, verifiable
+>   representation-**swap** thesis is **retained and still central**, but it is no longer the *sole*
+>   north star — **memory-safety, speed, and ergonomics are now first-class goals** of equal standing.
+> - **Certification is now optional & tunable (RFC-0034 / ADR-032 decisions 1–2).** The always-on
+>   mandates (SC-3 "zero swaps without a certificate", FR-M3, RFC-0001 §3.4/§4.6, RFC-0002 §2) hold
+>   **at the active mode** — `fast` (default) · `balanced` · `certified` (opt-in per
+>   `global`/`phylum`/`nodule`) — with the **mode itself never silent** (G2). Certification is engaged
+>   where it earns its cost, not paid as a tax on every line.
+> - **A three-layer hybrid memory model is now core design (absent from the original premise).**
+>   DN-32 (Accepted): affine/linear ownership (L1) → optimized reference counting for explicit sharing
+>   (L2) → region-based batched scope reclamation (L3); mechanism in **RFC-0027** (Accepted, never-
+>   silent reclamation with EXPLAIN records); static RC-elision in **MEM-4 / DN-33** (Accepted). The
+>   runtime substrate has landed (`mycelium-std-runtime`; the `mycelium-mir-passes` static-analysis
+>   crate sits outside the trusted Core IR).
+> - **"Honesty rule" → "transparency & auditability rule" (ADR-032 decision 3).** A vocabulary
+>   reframe only — the **mechanism is unchanged**: the `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` lattice,
+>   never-silent **G2**, and downgrade-don't-overclaim **VR-5** all keep their force.
+>
+> Authoritative current framing: **ADR-032 + RFC-0034** (tunable certification / transparency modes),
+> **DN-32 / RFC-0027 / DN-33** (memory model). The SC-/FR-/VR- criteria below remain in force *as
+> conditionalized by those decisions* (several already carry inline "relaxed to per-mode by RFC-0034 +
+> ADR-032" notes).
 
 ---
 
