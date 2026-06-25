@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-37 |
-| **Status** | **Draft** (2026-06-25; direction capture — advisory, non-committal). Deliberates and recommends; **ratifies nothing, enacts nothing, ships no code**. Promotion past Draft is gated on the §9 Definition of Done + maintainer ratification (house rule #3, append-only). |
+| **Status** | **Accepted** (2026-06-25; **ratified by maintainer**) — the **objects-vs-ADTs framing** (ADT/static-dispatch horn), the **composition-ranked inheritance-emulation menu**, and the **Sigil Category Scheme** are ratified as the **design direction**. **Accepted ratifies the direction, not every open question:** §8's build-order, first-class-`class`-vs-implicit, dynamic-dispatch design, field/opaque encapsulation, and the `~`-operator-vs-function questions remain **open** and tracked; the delegation **keyword** is resolved to **`via`** (DN-38 §8.1, 2026-06-25). Prior: **Draft** (2026-06-25; direction capture). Append-only; house rule #3. Enacts no code. |
 | **Feeds** | the **inheritance-emulation surface** leg of the value-semantics language — **default methods** + **super-traits** (RFC-0019 §4.3, deferred), a **delegation `~>`** operator, an **`@`-decorator**, and a possible `class`-like desugaring; the **sigil-category scheme** that intersects the `[]`-grammar wave (**DN-31**, **RFC-0030**, **epic #27**); the eventual **dynamic-dispatch** design (`FieldSpec`-function-field trusted-core ADR, RFC-0019 §4.5). Builds on **RFC-0011** (`Construct`/`Match`), **RFC-0019** (traits + coherence + monomorphization), **RFC-0006** (LR-8/LR-9, Q8 acyclicity), **ADR-003** (content-addressed identity), **DN-31** (sigil/grammar home), and **DN-36** (functional-update / FBIP performance). |
 | **Date** | June 25, 2026 |
 | **Decides** | *Nothing normatively* — advisory + design-direction capture. Records (1) the **objects-vs-ADTs framing** (Cook's duality: Mycelium sits on the **ADT / static-dispatch horn** by construction — native strength = adding *operations* + clean binary methods; constrained axis = adding *open representations*); (2) a **scrupulously honest built-vs-deferred split** (data + traits + coherence + monomorphization = **built `Exact`**; the whole ergonomic-inheritance layer = mostly **deferred/greenfield**); (3) the **inheritance-emulation menu, ranked by composition-alignment**, each item carried at its honest grounding strength + its never-silent caveat; (4) the **Sigil Category Scheme** (one glyph → one layer of discourse, verified non-conflicting against the lexer); and (5) that **yes, the maintainer can design their own object system** — at the surface (L2/L3) + traits + derives, never the kernel (KC-3). |
@@ -451,3 +451,12 @@ VR-5; G2.
   Draft→Accepted gate (maintainer ratifies the menu ranking + the sigil scheme + the build order).
   **Enacts nothing; moves no status; changes no normative text.** CHANGELOG / Doc-Index / issues.yaml /
   docs/api-index owned by the integrating parent. (Append-only; VR-5; G2.)
+- **Ratified Draft → Accepted (2026-06-25).** The maintainer ratified the **objects-vs-ADTs framing**,
+  the **composition-ranked inheritance-emulation menu**, and the **Sigil Category Scheme** as the
+  design direction. The status move accepts the *direction only*: foundation stays `Exact` (built),
+  menu + sigils + object sugar stay `Declared` proposals — no guarantee upgraded (VR-5). **§8's build
+  order, first-class-`class`-vs-implicit, dynamic-dispatch, encapsulation, and `~`-form questions
+  remain open** (Accepted ≠ all questions closed). The **delegation keyword is resolved to `via`**
+  (preposition = conduit-not-agent — honest about static by-value forwarding; the prepositional twin
+  of the `~>` flow-glyph; matches Kotlin's `by` precedent the design cites; the transport-network
+  metaphor; the feature is still *named* "delegation" in prose — recorded in DN-38 §8.1).

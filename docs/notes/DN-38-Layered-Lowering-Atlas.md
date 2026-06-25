@@ -261,6 +261,17 @@ rather than asserted.
 1. **Construct naming** — `derive` (conventional) vs `weave` (coined, mnemonic); `via` vs `delegate`
    for the delegation keyword; `reveal` vs `expand` for the inspector (§4–§5). Plain-first; coin only on
    a clear mnemonic win (house naming rule).
+   - **Resolved (2026-06-25, maintainer delegated the call): the delegation keyword is `via`.** Rationale:
+     `delegate` connotes *entrusting authority to a deputy that then acts on your behalf* — an agentive,
+     late-binding flavor Mycelium's delegation **does not have** (§line 152 here / DN-37 §3.3: static,
+     by-value forwarding to a *held value*, no late binding, no chain walk), so it would over-claim
+     dynamism (VR-5 applied to naming). `via` names the **conduit** ("by way of / through"), claiming only
+     "obtained by way of" — the literal truth of static forwarding; it is the **prepositional twin of the
+     `~>` flow-glyph** (sigil + keyword express one concept, not two), it matches the **Kotlin `by`
+     precedent** the design already cites (a preposition, not the pattern-name), and it carries the
+     transport-network metaphor without being forced. Discoverability cost (it is not the textbook pattern
+     name) is recovered by still *calling* the feature "delegation" everywhere except the keyword. `derive`
+     vs `weave` and `reveal` vs `expand` **remain open**.
 2. **Nanopass vs single elaboration** — how much of the gradient is implemented as *separate*
    IL-grammar-checked passes (the full nanopass tower, §2) versus the **single `elab.rs` elaboration**
    today? Nanopass buys per-pass checkability and failure isolation; one elaboration is simpler. Where
