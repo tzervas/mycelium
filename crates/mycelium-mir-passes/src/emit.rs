@@ -283,36 +283,98 @@ use crate::rc_ir::RcNode as N;
 /// argument. The `dup`-count reduction is `Exact` (read off the IR); the *performance* benefit of
 /// that reduction stays `Declared` until measured (DN-33 §8.1 Q5).
 pub fn emit_elided(node: &Node) -> Result<RcNode, EmitError> {
-    emit_with_borrows(node, &HashSet::new())
+    // reuse = false: borrow elision only (Increment 1).
+    emit_ann(node, &Ann::new(false))
 }
 
-/// Emit `node`, rewriting every use of a variable in `borrowed` to a non-consuming
-/// [`RcNode::Borrow`], and borrow-eliding any fully-borrowable `let` binding encountered.
-fn emit_with_borrows(node: &Node, borrowed: &HashSet<VarId>) -> Result<RcNode, EmitError> {
+/// Lower a Core IR [`Node`] with MEM-4 Increment 1 (**borrow elision**) **and** Increment 2
+/// (**`rc == 1` reuse annotation**) applied.
+///
+/// A superset of [`emit_elided`]: in addition to borrow-eliding fully-borrowable bindings, a `let`
+/// binding that is a **sole-owned single move** ([`is_sole_owned_move`] — used exactly once, in a
+/// move position) has that move emitted as [`RcNode::MoveUnique`](crate::rc_ir::RcNode::MoveUnique),
+/// recording that the runtime `UniqueOwner` branch is statically guaranteed (FBIP-reuse-eligible).
+///
+/// Returns [`EmitError::UnsupportedNode`] for `Fix`/`FixGroup` (G2).
+///
+/// Guarantee: the reuse annotation is **semantics-preserving** and its soundness is
+/// **machine-verified** — [`crate::eval`] errors ([`crate::eval::RcError::UnsoundUnique`]) if any
+/// `MoveUnique` is reached at a reference count other than 1. Tag `Empirical` (differential + the
+/// verifying evaluator), not `Proven`.
+pub fn emit_reuse(node: &Node) -> Result<RcNode, EmitError> {
+    // reuse = true: borrow elision + the rc==1 reuse annotation (Increment 2).
+    emit_ann(node, &Ann::new(true))
+}
+
+/// Annotation context threaded through emission: the in-scope `borrowed` and `unique` variable sets
+/// and whether the `rc == 1` reuse annotation (Increment 2) is enabled.
+#[derive(Clone)]
+struct Ann {
+    borrowed: HashSet<VarId>,
+    unique: HashSet<VarId>,
+    reuse: bool,
+}
+
+impl Ann {
+    fn new(reuse: bool) -> Self {
+        Ann {
+            borrowed: HashSet::new(),
+            unique: HashSet::new(),
+            reuse,
+        }
+    }
+
+    fn with_borrowed(&self, id: &VarId) -> Ann {
+        let mut a = self.clone();
+        a.borrowed.insert(id.clone());
+        a
+    }
+
+    fn with_unique(&self, id: &VarId) -> Ann {
+        let mut a = self.clone();
+        a.unique.insert(id.clone());
+        a
+    }
+}
+
+/// Emit `node` under the annotation context: every use of a `borrowed` variable becomes a
+/// non-consuming [`RcNode::Borrow`]; every use of a `unique` variable becomes a sole-owner
+/// [`RcNode::MoveUnique`]; fully-borrowable `let`s are borrow-elided; sole-owned single-move `let`s
+/// are reuse-annotated (when `reuse` is enabled).
+fn emit_ann(node: &Node, ann: &Ann) -> Result<RcNode, EmitError> {
     match node {
         Node::Const(v) => Ok(N::Const(v.clone())),
-        Node::Var(x) => Ok(if borrowed.contains(x) {
+        Node::Var(x) => Ok(if ann.borrowed.contains(x) {
             N::Borrow(x.clone())
+        } else if ann.unique.contains(x) {
+            N::MoveUnique(x.clone())
         } else {
             N::Var(x.clone())
         }),
         Node::Let { id, bound, body } => {
-            let rc_bound = emit_with_borrows(bound, borrowed)?;
+            let rc_bound = emit_ann(bound, ann)?;
             if is_fully_borrowable(id, body) {
-                // Borrow-elide: add `id` to the borrowed set for the body, emit no Dup, and reclaim
-                // it with a single DropAfter (after its reads complete).
-                let mut inner = borrowed.clone();
-                inner.insert(id.clone());
-                let rc_body = emit_with_borrows(body, &inner)?;
+                // Borrow-elide: read `id` without consuming, reclaim with a single DropAfter.
+                let rc_body = emit_ann(body, &ann.with_borrowed(id))?;
                 Ok(N::Let {
                     id: id.clone(),
                     bound: Box::new(rc_bound),
                     body: Box::new(N::drop_after(id, rc_body)),
                 })
+            } else if ann.reuse && is_sole_owned_move(id, body) {
+                // Reuse-annotate (Increment 2): `id` is used exactly once, in a move position, so its
+                // reference count is statically 1 at that consume → emit it as MoveUnique. k == 1 ⇒
+                // no Dup, no Drop (the single move reclaims it).
+                let rc_body = emit_ann(body, &ann.with_unique(id))?;
+                Ok(N::Let {
+                    id: id.clone(),
+                    bound: Box::new(rc_bound),
+                    body: Box::new(balance_binder(id, 1, rc_body)),
+                })
             } else {
-                // Owned (naive) emission for this binding (some use escapes / moves).
+                // Owned (naive) emission for this binding.
                 let k = count_occurrences(id, body);
-                let rc_body = emit_with_borrows(body, borrowed)?;
+                let rc_body = emit_ann(body, ann)?;
                 Ok(N::Let {
                     id: id.clone(),
                     bound: Box::new(rc_bound),
@@ -322,33 +384,33 @@ fn emit_with_borrows(node: &Node, borrowed: &HashSet<VarId>) -> Result<RcNode, E
         }
         Node::Op { prim, args } => Ok(N::Op {
             prim: prim.clone(),
-            args: emit_args_b(args, borrowed)?,
+            args: emit_args_a(args, ann)?,
         }),
         Node::Swap {
             src,
             target,
             policy,
         } => Ok(N::Swap {
-            src: Box::new(emit_with_borrows(src, borrowed)?),
+            src: Box::new(emit_ann(src, ann)?),
             target: target.clone(),
             policy: policy.clone(),
         }),
         Node::Construct { ctor, args } => Ok(N::Construct {
             ctor: ctor.clone(),
-            args: emit_args_b(args, borrowed)?,
+            args: emit_args_a(args, ann)?,
         }),
         Node::Match {
             scrutinee,
             alts,
             default,
         } => {
-            let rc_scrutinee = Box::new(emit_with_borrows(scrutinee, borrowed)?);
+            let rc_scrutinee = Box::new(emit_ann(scrutinee, ann)?);
             let mut rc_alts = Vec::with_capacity(alts.len());
             for alt in alts {
-                rc_alts.push(emit_alt_b(alt, borrowed)?);
+                rc_alts.push(emit_alt_a(alt, ann)?);
             }
             let rc_default = match default {
-                Some(d) => Some(Box::new(emit_with_borrows(d, borrowed)?)),
+                Some(d) => Some(Box::new(emit_ann(d, ann)?)),
                 None => None,
             };
             Ok(N::Match {
@@ -358,9 +420,9 @@ fn emit_with_borrows(node: &Node, borrowed: &HashSet<VarId>) -> Result<RcNode, E
             })
         }
         Node::Lam { param, body } => {
-            // Lam params stay Owned in Increment 1 (interprocedural borrowing is later).
+            // Lam params stay Owned (interprocedural borrowing is a later increment).
             let k = count_occurrences(param, body);
-            let rc_body = emit_with_borrows(body, borrowed)?;
+            let rc_body = emit_ann(body, ann)?;
             Ok(N::Lam {
                 param: param.clone(),
                 mode: Mode::Owned,
@@ -368,28 +430,26 @@ fn emit_with_borrows(node: &Node, borrowed: &HashSet<VarId>) -> Result<RcNode, E
             })
         }
         Node::App { func, arg } => Ok(N::App {
-            func: Box::new(emit_with_borrows(func, borrowed)?),
-            arg: Box::new(emit_with_borrows(arg, borrowed)?),
+            func: Box::new(emit_ann(func, ann)?),
+            arg: Box::new(emit_ann(arg, ann)?),
         }),
         Node::Fix { .. } => Err(EmitError::UnsupportedNode("Fix")),
         Node::FixGroup { .. } => Err(EmitError::UnsupportedNode("FixGroup")),
     }
 }
 
-fn emit_args_b(args: &[Node], borrowed: &HashSet<VarId>) -> Result<Vec<RcNode>, EmitError> {
-    args.iter()
-        .map(|a| emit_with_borrows(a, borrowed))
-        .collect()
+fn emit_args_a(args: &[Node], ann: &Ann) -> Result<Vec<RcNode>, EmitError> {
+    args.iter().map(|a| emit_ann(a, ann)).collect()
 }
 
-fn emit_alt_b(alt: &Alt, borrowed: &HashSet<VarId>) -> Result<RcAlt, EmitError> {
+fn emit_alt_a(alt: &Alt, ann: &Ann) -> Result<RcAlt, EmitError> {
     match alt {
         Alt::Ctor {
             ctor,
             binders,
             body,
         } => {
-            let rc_body = emit_with_borrows(body, borrowed)?;
+            let rc_body = emit_ann(body, ann)?;
             let wrapped = binders.iter().fold(rc_body, |acc, b| {
                 let k = count_occurrences(b, body);
                 balance_binder(b, k, acc)
@@ -402,9 +462,20 @@ fn emit_alt_b(alt: &Alt, borrowed: &HashSet<VarId>) -> Result<RcAlt, EmitError> 
         }
         Alt::Lit { value, body } => Ok(RcAlt::Lit {
             value: value.clone(),
-            body: emit_with_borrows(body, borrowed)?,
+            body: emit_ann(body, ann)?,
         }),
     }
+}
+
+/// Whether `var`'s binding is a **sole-owned single move**: used **exactly once**, and that use is a
+/// **move** (not a borrow position). At such a use the reference count is statically 1, so the
+/// runtime `UniqueOwner` branch is guaranteed — the `rc == 1` reuse annotation (Increment 2) applies.
+///
+/// Guarantee: `Exact` — a deterministic structural test (conservative: only the unambiguous
+/// single-move case; multi-move last-consume is a later refinement).
+#[must_use]
+pub fn is_sole_owned_move(var: &VarId, body: &Node) -> bool {
+    count_occurrences(var, body) == 1 && borrow_occurrences(var, body) == 0
 }
 
 /// Whether `var`'s binding is **fully borrowable** over `body`: it is used at least once and **every**

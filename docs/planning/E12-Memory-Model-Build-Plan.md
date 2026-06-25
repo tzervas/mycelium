@@ -78,9 +78,14 @@ blockers — systematically, never-silent (G2), honest tags (VR-5), small audita
     Increment 1 over a representative mixed corpus: **22 → 2 `Dup`s (20 removed, ~91% reduction), all
     semantics-preserved.** Count/ratio `Exact`; representativeness + perf-interpretation `Declared`.
     This clears the DN-33 §8.1 Q5 gate and **unblocks Increment 2.**
-  - **Next — Increment 2** (`rc==1` reuse annotation; now unblocked) **/ Increment 3** (full FIP
-    static guarantee, Phase 3) / interprocedural borrowing / recursion RC. The runtime `RcCell` probe
-    stays the sound fallback throughout.
+  - **MEM-4·2 — Increment 2 (`rc==1` reuse annotation):** ✅ **done (2026-06-25).** `emit_reuse`
+    annotates sole-owned single moves as `RcNode::MoveUnique` (the runtime `UniqueOwner` branch is
+    statically guaranteed → FBIP-reuse-eligible); soundness is **machine-verified** by the evaluator
+    (`RcError::UnsoundUnique` if any annotation is reached at rc≠1). Semantics-preserving (`Empirical`);
+    reuse-site count `Exact`; FBIP perf `Declared` (cell-recycling is downstream codegen). 43 tests.
+  - **Next — Increment 3** (full FIP static guarantee, Phase 3) / the FBIP reuse-token *threading*
+    (recycle the cell into a downstream same-shape allocation) / multi-move last-consume / inter-
+    procedural borrowing / recursion RC. The runtime `RcCell` probe stays the sound fallback throughout.
 
 ## Swarm discipline (per CLAUDE.md)
 Sonnet leaves, disjoint dirs, `cargo fmt`/`clippy -D warnings -A unsafe_code`/`test -p <crate>` green, in-crate

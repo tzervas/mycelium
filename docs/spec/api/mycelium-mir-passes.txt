@@ -102,11 +102,16 @@ pub fn mycelium_mir_passes::emit::borrow_occurrences(&mycelium_core::node::VarId
 pub fn mycelium_mir_passes::emit::count_occurrences(&mycelium_core::node::VarId, &mycelium_core::node::Node) -> usize
 pub fn mycelium_mir_passes::emit::emit_elided(&mycelium_core::node::Node) -> core::result::Result<mycelium_mir_passes::rc_ir::RcNode, mycelium_mir_passes::emit::EmitError>
 pub fn mycelium_mir_passes::emit::emit_owned(&mycelium_core::node::Node) -> core::result::Result<mycelium_mir_passes::rc_ir::RcNode, mycelium_mir_passes::emit::EmitError>
+pub fn mycelium_mir_passes::emit::emit_reuse(&mycelium_core::node::Node) -> core::result::Result<mycelium_mir_passes::rc_ir::RcNode, mycelium_mir_passes::emit::EmitError>
 pub fn mycelium_mir_passes::emit::is_fully_borrowable(&mycelium_core::node::VarId, &mycelium_core::node::Node) -> bool
+pub fn mycelium_mir_passes::emit::is_sole_owned_move(&mycelium_core::node::VarId, &mycelium_core::node::Node) -> bool
 pub mod mycelium_mir_passes::eval
 pub enum mycelium_mir_passes::eval::RcError
 pub mycelium_mir_passes::eval::RcError::DoubleFree(mycelium_core::node::VarId)
 pub mycelium_mir_passes::eval::RcError::UnboundVar(mycelium_core::node::VarId)
+pub mycelium_mir_passes::eval::RcError::UnsoundUnique
+pub mycelium_mir_passes::eval::RcError::UnsoundUnique::found: i64
+pub mycelium_mir_passes::eval::RcError::UnsoundUnique::var: mycelium_core::node::VarId
 pub mycelium_mir_passes::eval::RcError::UnsupportedNode(&'static str)
 pub mycelium_mir_passes::eval::RcError::UseAfterFree(mycelium_core::node::VarId)
 impl core::clone::Clone for mycelium_mir_passes::eval::RcError
@@ -170,6 +175,7 @@ impl core::marker::UnsafeUnpin for mycelium_mir_passes::eval::EvalReport
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mir_passes::eval::EvalReport
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mir_passes::eval::EvalReport
 pub fn mycelium_mir_passes::eval::count_dups(&mycelium_mir_passes::rc_ir::RcNode) -> usize
+pub fn mycelium_mir_passes::eval::count_move_unique(&mycelium_mir_passes::rc_ir::RcNode) -> usize
 pub fn mycelium_mir_passes::eval::differential(&mycelium_mir_passes::rc_ir::RcNode, &mycelium_mir_passes::rc_ir::RcNode) -> core::result::Result<mycelium_mir_passes::eval::Differential, mycelium_mir_passes::eval::RcError>
 pub fn mycelium_mir_passes::eval::eval(&mycelium_mir_passes::rc_ir::RcNode) -> core::result::Result<mycelium_mir_passes::eval::EvalReport, mycelium_mir_passes::eval::RcError>
 pub type mycelium_mir_passes::eval::AllocId = u64
@@ -247,6 +253,7 @@ pub mycelium_mir_passes::rc_ir::RcNode::Match
 pub mycelium_mir_passes::rc_ir::RcNode::Match::alts: alloc::vec::Vec<mycelium_mir_passes::rc_ir::RcAlt>
 pub mycelium_mir_passes::rc_ir::RcNode::Match::default: core::option::Option<alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>>
 pub mycelium_mir_passes::rc_ir::RcNode::Match::scrutinee: alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::MoveUnique(mycelium_core::node::VarId)
 pub mycelium_mir_passes::rc_ir::RcNode::Op
 pub mycelium_mir_passes::rc_ir::RcNode::Op::args: alloc::vec::Vec<mycelium_mir_passes::rc_ir::RcNode>
 pub mycelium_mir_passes::rc_ir::RcNode::Op::prim: mycelium_core::node::Prim

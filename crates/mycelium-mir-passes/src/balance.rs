@@ -106,7 +106,7 @@ impl Tally {
 /// Guarantee: `Exact` — a deterministic pass over the IR.
 pub fn check_balance(node: &RcNode) -> Result<(), BalanceError> {
     match node {
-        RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) => Ok(()),
+        RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) | RcNode::MoveUnique(_) => Ok(()),
         RcNode::Dup { body, .. } | RcNode::Drop { body, .. } | RcNode::DropAfter { body, .. } => {
             check_balance(body)
         }
@@ -191,7 +191,8 @@ fn check_owned_tally(var: &VarId, t: Tally) -> Result<(), BalanceError> {
 fn tally(var: &VarId, body: &RcNode) -> Tally {
     match body {
         RcNode::Const(_) => Tally::default(),
-        RcNode::Var(x) => Tally {
+        // A `MoveUnique` is a consuming move, exactly like `Var` for the balance equation.
+        RcNode::Var(x) | RcNode::MoveUnique(x) => Tally {
             uses: usize::from(x == var),
             ..Tally::default()
         },
