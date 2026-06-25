@@ -8,6 +8,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: DN-36 — safe & high-performance iteration, research-backed)
+
+- **DN-36 — Safe & High-Performance Iteration in the Value-Semantics Model**
+  (`docs/notes/DN-36-Safe-and-High-Performance-Iteration.md`, **Draft/advisory**), backed by two new
+  research records (`research/21` internal, `research/22` external prior-art). Captures how iteration
+  stays **functional + safe + high-performance** without a mutable loop variable: keep value-semantics
+  in the surface, source mutation from the lowering (TRMC + Perceus/FBIP reuse — Koka's lesson).
+  - **Safety is already built** (`Exact`): bounded `for`→`Fix` fold, O(1)-host-stack trampoline, three
+    never-silent budgets (`fuel`/`max_depth`/`alloc`), `while`/`loop` removed-by-construction with a
+    teaching diagnostic, total `mycelium-std-iter` combinators.
+  - **Recommended two-tier surface** (the maintainer's "both"): a bounded total-by-construction Tier-1
+    idiom (termination `Proven`) + a sugared budget-gated Tier-2 open `loop`/`while` (catchable
+    `BudgetExhausted`, `Declared`), both desugaring to one tail-recursive `Fix`; `recur`-checked tail
+    position; folds in DN-31's grammar input (line-breaks/indentation, `,` delimiter).
+  - **High-performance roadmap** makes the recursion-aware FBIP increment (E12 Increment 3 / task #6)
+    load-bearing — RC across `Fix`, recursive verifying evaluator, value-affecting reuse, native
+    structural accumulators (`tailcc`/`musttail`), region-per-iteration, interpreter TRMC parity,
+    benchmarks — to deliver constant-memory loops for general structural accumulators (today only a
+    scalar `Binary{8}` accumulator is allocation-free).
+  - Honest posture: safety `Exact`; perf mechanism `Proven`-in-literature / `Empirical`-`Declared`-for-
+    Mycelium until built+benchmarked; surface `Declared`. Enacts nothing; indexed in Doc-Index.
+
 ### Changed (2026-06-25: corpus-audit decision log — maintainer rulings encoded append-only)
 
 - **Maintainer decisions from the corpus audit**, encoded across the corpus (append-only; no original
