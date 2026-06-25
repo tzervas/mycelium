@@ -8,6 +8,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: documentation wiki + paired API-docs publishing)
+
+- **GitHub wiki source** (`docs/wiki/`): a browsable wiki generated from the unified per-crate
+  READMEs + the design corpus — `Home`, `Architecture`, `Crate-Index` (all 50 crates, regenerated
+  from the READMEs), `Memory-Model` (DN-32 / RFC-0027 / DN-33), `Tunable-Certification` (RFC-0034 /
+  ADR-032), `Getting-Started`, `Decision-Records`, `API-Reference`, plus `_Sidebar`. Kept in-repo
+  (versioned, reviewable) rather than authored directly in the wiki repo.
+- **`publish-docs` GitHub Action** (`.github/workflows/publish-docs.yml`, **manual-dispatch only** —
+  consistent with the repo's advisory-CI policy): mirrors `docs/wiki/*.md` to the GitHub wiki and
+  builds + deploys the **rustdoc** API docs to GitHub Pages (both via the Actions `GITHUB_TOKEN`;
+  requires the Wiki feature + Pages enabled in Settings). rustdoc verified to build clean
+  (`cargo doc --no-deps --workspace`).
+- **README** gains a **Documentation** section pointing to the wiki, the rustdoc/`just docs`, the
+  committed `docs/api-index/INDEX.md`, the per-crate READMEs, and the design corpus. Markdownlint +
+  codespell clean.
+
 ### Added (2026-06-25: MEM-4 Increment 1 — non-escaping borrow elision + the Q3 differential harness)
 
 - **MEM-4 Increment 1 — borrow elision** (`mycelium-mir-passes`, DN-33 Accepted §8.1): the pass that
