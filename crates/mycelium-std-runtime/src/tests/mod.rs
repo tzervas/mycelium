@@ -3,6 +3,7 @@
 //! One submodule per source module, each doing `use crate::…::*` for white-box access.
 //! Logic files carry no test code — tests live here.
 
+pub mod composition;
 pub mod network;
 pub mod rc;
 pub mod reclamation;
