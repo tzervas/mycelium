@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: DN-34 — Rust→Mycelium transpiler strategy, Draft)
+
+- **DN-34 — Rust→Mycelium Transpiler Strategy (Self-Hosting Acceleration)**
+  (`docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md`, **Draft/advisory**): captures how a
+  **Rust→Mycelium transpiler** would do the **bulk** of the Mycelium self-hosting rewrite
+  (stdlib-in-Mycelium long pole) — transpile the project's Rust crates to Mycelium surface,
+  **flagging** (never guessing) the hard residue for manual refinement. Seeded from the maintainer's
+  **py2rust** (AST-walk transpilation + a never-silent `CompatibilityAnalyzer`) and **py-rust-bridge**
+  (Python↔Rust FFI/SFI bridge) projects, retargeted `syn` (Rust AST) → Mycelium and **reusing the
+  MEM-4 ownership/borrow analysis** (`mycelium-mir-passes`) — Rust already encodes the ownership facts
+  DN-32 wants. Records a construct-mapping sketch, the **flag-don't-guess** analyzer as the
+  load-bearing G2 principle, and the phasing (isolated branch → incremental interop-bridged
+  transpile-then-refine → differential verify → DN-27 component-repo decomposition). Feeds DN-26 /
+  DN-27 / RFC-0028 / M-502. **Gated** on the Mycelium surface being a viable target (post-core-1.0) —
+  **enacts nothing, ships no code, begins no phase.** All effort/coverage claims `Declared`;
+  seed-architecture `Empirical`, transfer `Declared`.
+
 ### Added (2026-06-25: MEM-4 Q5 measurement corpus — Increment 1 gate cleared)
 
 - **`mycelium-mir-passes::corpus`** — the DN-33 §8.1 **Q5** measurement: a representative, **mixed**
