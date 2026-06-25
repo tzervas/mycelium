@@ -8,6 +8,32 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: DN-37 — object & behavior model + sigil category scheme, research-backed)
+
+- **DN-37 — Object & Behavior Model (and the Sigil Category Scheme)**
+  (`docs/notes/DN-37-Object-and-Behavior-Model.md`, **Draft/advisory**), backed by two new research
+  records (`research/23` internal, `research/24` external prior-art). How objects render and how to
+  emulate ergonomic inheritance, composition-aligned, in the value-semantics + trait model.
+  - **Framing (Cook's duality):** Mycelium sits on the **ADT / static-dispatch horn** by construction
+    — strong at adding *operations* + clean binary methods; constrained at *open representations*.
+  - **Built (`Exact`):** data via one keyword `type` (record/sum, `Construct`/`Match`, content-addressed
+    structural equality); traits + `impl` + bounded generics + **coherence** via **monomorphization**;
+    nodule-level `pub`. **Content-addressing forces coherence** (ADR-003) — firmer than Haskell.
+  - **Deferred/greenfield** (honest correction — the ergonomic-inheritance layer is mostly future work):
+    super-traits (designed RFC-0019 §4.3, unparsed), default method bodies, delegation, `@`-decorator,
+    dynamic dispatch / record-of-closures (`FieldSpec` is `Repr|Data` only — no function-typed field),
+    field/opaque encapsulation, associated types (v2).
+  - **Ranked emulation menu:** default methods → super-traits → `~>`-delegation → `@`-decorator →
+    embedding → row-poly → record-of-closures (escape hatch — its `fix`-over-`self` *is* the cyclic
+    back-edge LR-9 excludes; `Declared`). Never-silent caveat: forwarding-without-late-binding is the
+    honest behavior (avoid Rust's silent `Deref` fake-"is-a").
+  - **Settled sigil-category scheme** (verified non-conflicting against the lexer): `@` wrap/decorate ·
+    `#` identity · `$` splice · `?` fallibility · bare `~` approximate / `~>` delegate · `!` effects ·
+    `&` conjoin (not borrow) · `` ` `` reserved (quasiquote/raw). One glyph = one layer of discourse;
+    grammar home DN-31/RFC-0030/epic #27.
+  - **Perf:** monomorphization is the vtable-free default; Swift-existential (3-word inline buffer) for
+    the eventual dynamic-dispatch. Foundation `Exact`; menu+sigils+sugar `Declared`. Enacts nothing.
+
 ### Added (2026-06-25: DN-36 — safe & high-performance iteration, research-backed)
 
 - **DN-36 — Safe & High-Performance Iteration in the Value-Semantics Model**
