@@ -33,13 +33,27 @@ blockers — systematically, never-silent (G2), honest tags (VR-5), small audita
   `rc→0`=free / `rc==1`=reuse / `rc>1`=share decision, emitting a MEM-1 record on reclaim. Depends on MEM-1.
 - **MEM-3 — region/scope batched reclamation (L3).** Scope = region; batched reclaim at scope-exit over the
   RT7 scope tree; weak sibling coupling (OQ-1 resolved). Depends on MEM-1/2.
-- **MEM-4 (hard, deferred) — Layer-1 static uniqueness analysis** (affine-primary lowering) **+ the cross-hypha
-  RC-vs-affine reconciliation sub-question** (DN-32 §7 / RFC-0027 §12). Design-heavy; a later careful wave —
-  flag, don't guess (KC-3 tension per DN-32 §6b).
+- **MEM-4 (hard, design-first) — Layer-1 static uniqueness analysis** (affine-primary / Perceus-style RC
+  elision lowering) **+ the cross-hypha RC-vs-affine reconciliation sub-question** (DN-32 §7 / RFC-0027 §12).
+  Design-heavy; sequenced through a **research-backed design note (DN-33)** before any implementation
+  (KC-3 tension per DN-32 §6b). The runtime `RcCell` probe is the sound fallback, so MEM-4 is purely
+  *additive* (it only elides provably-redundant RC ops — a bug downgrades to a missed optimization, never
+  unsafety). Recommended decomposition (from the DN-33 research dossier): (1) non-escaping borrow elision
+  [smallest, testable: refcount-invariant static check] → (2) `rc==1` reuse annotation → (3) full FIP static
+  guarantee [Phase 3, deferred]. Cross-hypha: **Option A** (sole-move-only, affine channel = Pony-iso /
+  Rust-`Box`; `RcCell` stays `!Send`) recommended for R1; **Option B** (shared-crosses-atomic-RC = `Arc`)
+  deferred to R2 (`xloc`/`mesh`).
 
 ## Sequencing
-- **Wave 1 (now):** BLK (blocker removal) ∥ MEM-1 (reclamation record) — disjoint, Sonnet, octopus-merge.
-- **Wave 2:** MEM-2 (RC core). **Wave 3:** MEM-3 (regions). **Later:** MEM-4 (static analysis — careful).
+- **Wave 1:** BLK (blocker removal) ∥ MEM-1 (reclamation record) — disjoint, Sonnet, octopus-merge. ✅ done.
+- **Wave 2:** MEM-2 (RC core — `RcZero` live trigger). ✅ done.
+- **Wave 3:** MEM-3 (regions — `ScopeExit` live trigger + canonical `ScopeNodeId`/`RegionEpoch`). ✅ done.
+- **Wave 4:** ChannelClose live trigger + canonical `ChannelNodeId` (the last MEM-1 placeholder) ∥ live-executor
+  scope/region wiring (`with_region`/`RegionScope`) + end-to-end L1/L2/L3 composition test. ✅ done — **Phase-1
+  three-layer model feature-complete at the runtime tier** (all three triggers live; all ID placeholders
+  canonicalized; scope-exit fires from a live scope).
+- **Next:** **DN-33** (MEM-4 research-backed design) → then MEM-4 implementation (static analysis — careful,
+  incremental, watch+measure per DN-32 §6b).
 
 ## Swarm discipline (per CLAUDE.md)
 Sonnet leaves, disjoint dirs, `cargo fmt`/`clippy -D warnings -A unsafe_code`/`test -p <crate>` green, in-crate

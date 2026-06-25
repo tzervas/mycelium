@@ -17156,7 +17156,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 55,
+      "line": 64,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17222,7 +17222,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 56,
+      "line": 65,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17354,7 +17354,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 57,
+      "line": 66,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17376,7 +17376,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 58,
+      "line": 67,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17387,7 +17387,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::network",
       "file": "crates/mycelium-std-runtime/src/network.rs",
-      "line": 21,
+      "line": 39,
       "summary": "Guarantee strength for single-channel FIFO ordering.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17398,8 +17398,41 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::network",
       "file": "crates/mycelium-std-runtime/src/network.rs",
-      "line": 49,
+      "line": 119,
       "summary": "Errors returned by `Network` construction operations.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::ChannelNodeId",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::network",
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 65,
+      "summary": "The canonical channel-tier identity type (resolves the MEM-1 `ChannelId` placeholder FLAG).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::ChannelNodeId::as_channel_id",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::network::ChannelNodeId",
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 82,
+      "summary": "Convert to a [`ChannelId`] for use in [`ReclamationRecord`] fields (RFC-0027 §9).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::ChannelNodeId::as_u64",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::network::ChannelNodeId",
+      "file": "crates/mycelium-std-runtime/src/network.rs",
+      "line": 88,
+      "summary": "Return the underlying `u64` value.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -17409,7 +17442,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::network",
       "file": "crates/mycelium-std-runtime/src/network.rs",
-      "line": 24,
+      "line": 42,
       "summary": "Guarantee strength for cross-channel Kahn-determinism.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17420,7 +17453,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::network",
       "file": "crates/mycelium-std-runtime/src/network.rs",
-      "line": 60,
+      "line": 130,
       "summary": "A named network of typed channels within a `Colony`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17431,7 +17464,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::network::Network",
       "file": "crates/mycelium-std-runtime/src/network.rs",
-      "line": 81,
+      "line": 154,
       "summary": "Create a bounded FIFO channel with the given capacity.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17442,7 +17475,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::network::Network",
       "file": "crates/mycelium-std-runtime/src/network.rs",
-      "line": 68,
+      "line": 138,
       "summary": "Create a new network.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17453,7 +17486,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::network",
       "file": "crates/mycelium-std-runtime/src/network.rs",
-      "line": 157,
+      "line": 246,
       "summary": "Receiving end of a typed channel.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17464,7 +17497,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::network",
       "file": "crates/mycelium-std-runtime/src/network.rs",
-      "line": 109,
+      "line": 183,
       "summary": "Sending end of a typed channel.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17475,7 +17508,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::network",
       "file": "crates/mycelium-std-runtime/src/network.rs",
-      "line": 206,
+      "line": 371,
       "summary": "Result of a non-blocking receive attempt.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17486,7 +17519,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::network",
       "file": "crates/mycelium-std-runtime/src/network.rs",
-      "line": 195,
+      "line": 360,
       "summary": "Result of a non-blocking send attempt.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17497,7 +17530,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 59,
+      "line": 68,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17530,7 +17563,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 60,
+      "line": 69,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17717,7 +17750,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 61,
+      "line": 70,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17904,7 +17937,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 62,
+      "line": 71,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18020,12 +18053,100 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_std_runtime::scope_region",
+      "kind": "mod",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime",
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 72,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::scope_region::RegionScope",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::scope_region",
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 183,
+      "summary": "An explicit-close scope guard wrapping a [`Region`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::scope_region::RegionScope::close",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::scope_region::RegionScope",
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 236,
+      "summary": "Close this scope guard, emitting all deferred reclamation records and returning the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::scope_region::RegionScope::defer",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::scope_region::RegionScope",
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 207,
+      "summary": "Defer a value for scope-exit reclamation.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::scope_region::RegionScope::deferred_count",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::scope_region::RegionScope",
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 215,
+      "summary": "Number of values currently deferred in this scope.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::scope_region::RegionScope::enter",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::scope_region::RegionScope",
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 193,
+      "summary": "Open a new scope guard, allocating a fresh [`Region`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::scope_region::RegionScope::id",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::scope_region::RegionScope",
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 223,
+      "summary": "The unique identity of this scope's underlying [`Region`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::scope_region::with_region",
+      "kind": "fn",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::scope_region",
+      "file": "crates/mycelium-std-runtime/src/scope_region.rs",
+      "line": 128,
+      "summary": "Run `body` within a freshly-opened scope region and close the region after the body returns.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_std_runtime::supervision",
       "kind": "mod",
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 63,
+      "line": 73,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18201,7 +18322,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 64,
+      "line": 74,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -37150,6 +37271,30 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_std_runtime::network::ChannelNodeId::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::ChannelNodeId::cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::ChannelNodeId::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::ChannelNodeId::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::ChannelNodeId::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::ChannelNodeId::partial_cmp",
+      "reason": "definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_runtime::network::Network::default",
       "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
     },
@@ -37164,6 +37309,18 @@
     {
       "symbol": "mycelium_std_runtime::network::Receiver",
       "reason": "definition not found via regex heuristic (kind='fn', name='Receiver') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::Receiver",
+      "reason": "definition not found via regex heuristic (kind='fn', name='Receiver') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::Receiver",
+      "reason": "definition not found via regex heuristic (kind='fn', name='Receiver') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::network::Sender",
+      "reason": "definition not found via regex heuristic (kind='fn', name='Sender') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::network::Sender",
@@ -37463,6 +37620,10 @@
     },
     {
       "symbol": "mycelium_std_runtime::scheduler::SchedulerError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::scope_region::RegionScope::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {

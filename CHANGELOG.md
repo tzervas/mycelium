@@ -8,6 +8,44 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: E12 Wave-4 — ChannelClose trigger + live scope/region wiring + L1/L2/L3 composition)
+
+- **ChannelClose — the third (and final) live reclamation trigger**
+  (`crates/mycelium-std-runtime/src/network.rs`, RFC-0027 §9 / §7.3): tearing down a channel that
+  still holds **in-transit** values (sent, never to be received) reclaims them —
+  `Receiver::close_with_reclaim(sink, scope_id, sweep_epoch, hash_of)` drains the buffer FIFO and
+  emits one `ReclamationRecord(ChannelClose)` per value, returning the reclaimed count. Never silent
+  (G2): an undelivered value is reclaimed-and-recorded, never dropped. Normal drain (receiver gets
+  the values) needs no reclamation — the teardown path is the distinct case.
+  - **Canonical `ChannelNodeId` (resolves MEM-1's last placeholder):** a monotonic per-channel id
+    (mirrors `region::ScopeNodeId`), bridged to the `ReclamationRecord` `ChannelId` field via
+    `as_channel_id()`; allocated once per `Network::channel` and exposed on both `Sender`/`Receiver`.
+    With this, all three of MEM-1's `u64` placeholders (`ScopeId`/`SweepEpoch`/`ChannelId`) are
+    canonicalized.
+- **Live-executor scope/region wiring** (`crates/mycelium-std-runtime/src/scope_region.rs`): the
+  Layer-3 `ScopeExit` reclamation now fires from a **running structured scope**, not just the bare
+  data structure. `with_region(sink, body)` (closure form — `close` is always called after `body`,
+  `Exact` by construction) and `RegionScope` (explicit-close guard for interleaved deferrals) tie a
+  `Region`'s lifecycle to a single-hypha scope; **nested `with_region` gives child-before-parent
+  epoch order for free** (monotonic counter). No `Drop`-with-sink (KC-3 — a sink can't thread
+  through `Drop`; mirrors `rc.rs`); a dropped guard with pending entries hits the `Region` debug
+  panic (G2 — silent audit loss impossible in debug). Cross-hypha atomic-RC stays FLAGged
+  (DN-32 §7 / RFC-0027 §12 — see DN-33).
+- **End-to-end L1/L2/L3 composition test** (`crates/mycelium-std-runtime/src/tests/composition.rs`):
+  one `CollectingSink` observes a single scope in which `RcZero` (L2 — last-handle drop), the
+  `ChannelClose` channel teardown, and the batched `ScopeExit` (L3 — scope close) **interleave and
+  compose**, with never-silent accounting (every reclamation event yields exactly one record;
+  2 `RcZero` + 3 `ChannelClose` + 2 `ScopeExit` = 7) and child-before-parent epoch order across a
+  nested scope. This validates the three triggers compose through one audit trail (RFC-0027 §9).
+  - Tags honest: probe/close/ordering logic `Exact` (enforced-by-construction); batching-as-perf
+    `Declared` (DN-32 §6a — no measurement). 104/104 tests (20 new across the wave); clippy
+    `-D warnings` clean; `#![forbid(unsafe_code)]`.
+  - **Phase-1 three-layer memory model now feature-complete at the runtime tier:** all three live
+    triggers wired (RcZero · ScopeExit · ChannelClose), all placeholder ID types canonicalized,
+    scope-exit reclamation fires from a live scope. Remaining: **MEM-4** Layer-1 *static* uniqueness
+    analysis (Perceus-style RC elision) — design-first as **DN-33** (research-backed), the runtime
+    `RcCell` probe is the sound fallback until it lands.
+
 ### Added (2026-06-25: E12 Wave-3 — MEM-3 regions + batched scope reclamation (DN-32 Layer 3))
 
 - **MEM-3 — region-based batched scope reclamation** (`crates/mycelium-std-runtime/src/region.rs`, DN-32
