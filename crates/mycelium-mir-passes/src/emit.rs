@@ -27,7 +27,7 @@
 //! No performance claim is made (B0 emits the *most* RC ops; Increment 1 removes the redundant
 //! ones).
 
-use mycelium_core::{Alt, Node};
+use mycelium_core::{Alt, Node, VarId};
 
 use crate::rc_ir::{Mode, RcAlt, RcNode};
 
@@ -246,5 +246,256 @@ pub fn count_occurrences(var: &mycelium_core::VarId, node: &Node) -> usize {
                     + count_occurrences(var, body)
             }
         }
+    }
+}
+
+// ── MEM-4 Increment 1 — non-escaping borrow elision ──────────────────────────
+//
+// In the immutable value model, a reader primitive (`Op`/`Swap`) *reads* its operands and produces
+// a fresh result, retaining nothing — so an operand position is a **borrow** (non-consuming read),
+// not a move. A `let` binding whose every use is such a borrow is **fully borrowable**: it needs no
+// `Dup` (one reference serves all reads) and is reclaimed by a single `DropAfter` once its reads are
+// done. This is strictly fewer RC ops than the naive owned emission (`k-1` `Dup`s → `0`), and it is
+// **semantics-preserving** (the same value is reclaimed, exactly once) — verified by the differential
+// harness in [`crate::eval`].
+//
+// Increment 1 is intraprocedural and conservative: it elides only **fully-borrowable `let`
+// bindings**. A binding with ANY escaping use (the binding flows to the result, into a `Construct`,
+// or to an `App`/`Match`) stays fully **owned** (the naive emission). `Lam` parameters stay `Owned`
+// (interprocedural borrowing — `Mode::Borrowed` at a call boundary — is a later increment).
+
+use std::collections::HashSet;
+
+use crate::rc_ir::RcNode as N;
+
+/// Lower a Core IR [`Node`] with MEM-4 Increment 1 **borrow elision** applied.
+///
+/// Identical to [`emit_owned`] except that every **fully-borrowable** `let` binding (every use is a
+/// reader-primitive read — [`is_fully_borrowable`]) is emitted with its uses as
+/// [`RcNode::Borrow`](crate::rc_ir::RcNode::Borrow), **no** `Dup`, and a single
+/// [`RcNode::DropAfter`](crate::rc_ir::RcNode::DropAfter) reclaiming it after its reads.
+///
+/// Returns [`EmitError::UnsupportedNode`] for `Fix`/`FixGroup` (G2 — never-silent on recursion).
+///
+/// Guarantee: the elision is **semantics-preserving** — `Empirical` (the differential harness in
+/// [`crate::eval`] checks that, for a corpus of terms, the multiset of reclaimed values is identical
+/// to the owned emission's, with no use-after-free), backed by the structural `DropAfter`-after-reads
+/// argument. The `dup`-count reduction is `Exact` (read off the IR); the *performance* benefit of
+/// that reduction stays `Declared` until measured (DN-33 §8.1 Q5).
+pub fn emit_elided(node: &Node) -> Result<RcNode, EmitError> {
+    emit_with_borrows(node, &HashSet::new())
+}
+
+/// Emit `node`, rewriting every use of a variable in `borrowed` to a non-consuming
+/// [`RcNode::Borrow`], and borrow-eliding any fully-borrowable `let` binding encountered.
+fn emit_with_borrows(node: &Node, borrowed: &HashSet<VarId>) -> Result<RcNode, EmitError> {
+    match node {
+        Node::Const(v) => Ok(N::Const(v.clone())),
+        Node::Var(x) => Ok(if borrowed.contains(x) {
+            N::Borrow(x.clone())
+        } else {
+            N::Var(x.clone())
+        }),
+        Node::Let { id, bound, body } => {
+            let rc_bound = emit_with_borrows(bound, borrowed)?;
+            if is_fully_borrowable(id, body) {
+                // Borrow-elide: add `id` to the borrowed set for the body, emit no Dup, and reclaim
+                // it with a single DropAfter (after its reads complete).
+                let mut inner = borrowed.clone();
+                inner.insert(id.clone());
+                let rc_body = emit_with_borrows(body, &inner)?;
+                Ok(N::Let {
+                    id: id.clone(),
+                    bound: Box::new(rc_bound),
+                    body: Box::new(N::drop_after(id, rc_body)),
+                })
+            } else {
+                // Owned (naive) emission for this binding (some use escapes / moves).
+                let k = count_occurrences(id, body);
+                let rc_body = emit_with_borrows(body, borrowed)?;
+                Ok(N::Let {
+                    id: id.clone(),
+                    bound: Box::new(rc_bound),
+                    body: Box::new(balance_binder(id, k, rc_body)),
+                })
+            }
+        }
+        Node::Op { prim, args } => Ok(N::Op {
+            prim: prim.clone(),
+            args: emit_args_b(args, borrowed)?,
+        }),
+        Node::Swap {
+            src,
+            target,
+            policy,
+        } => Ok(N::Swap {
+            src: Box::new(emit_with_borrows(src, borrowed)?),
+            target: target.clone(),
+            policy: policy.clone(),
+        }),
+        Node::Construct { ctor, args } => Ok(N::Construct {
+            ctor: ctor.clone(),
+            args: emit_args_b(args, borrowed)?,
+        }),
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            let rc_scrutinee = Box::new(emit_with_borrows(scrutinee, borrowed)?);
+            let mut rc_alts = Vec::with_capacity(alts.len());
+            for alt in alts {
+                rc_alts.push(emit_alt_b(alt, borrowed)?);
+            }
+            let rc_default = match default {
+                Some(d) => Some(Box::new(emit_with_borrows(d, borrowed)?)),
+                None => None,
+            };
+            Ok(N::Match {
+                scrutinee: rc_scrutinee,
+                alts: rc_alts,
+                default: rc_default,
+            })
+        }
+        Node::Lam { param, body } => {
+            // Lam params stay Owned in Increment 1 (interprocedural borrowing is later).
+            let k = count_occurrences(param, body);
+            let rc_body = emit_with_borrows(body, borrowed)?;
+            Ok(N::Lam {
+                param: param.clone(),
+                mode: Mode::Owned,
+                body: Box::new(balance_binder(param, k, rc_body)),
+            })
+        }
+        Node::App { func, arg } => Ok(N::App {
+            func: Box::new(emit_with_borrows(func, borrowed)?),
+            arg: Box::new(emit_with_borrows(arg, borrowed)?),
+        }),
+        Node::Fix { .. } => Err(EmitError::UnsupportedNode("Fix")),
+        Node::FixGroup { .. } => Err(EmitError::UnsupportedNode("FixGroup")),
+    }
+}
+
+fn emit_args_b(args: &[Node], borrowed: &HashSet<VarId>) -> Result<Vec<RcNode>, EmitError> {
+    args.iter()
+        .map(|a| emit_with_borrows(a, borrowed))
+        .collect()
+}
+
+fn emit_alt_b(alt: &Alt, borrowed: &HashSet<VarId>) -> Result<RcAlt, EmitError> {
+    match alt {
+        Alt::Ctor {
+            ctor,
+            binders,
+            body,
+        } => {
+            let rc_body = emit_with_borrows(body, borrowed)?;
+            let wrapped = binders.iter().fold(rc_body, |acc, b| {
+                let k = count_occurrences(b, body);
+                balance_binder(b, k, acc)
+            });
+            Ok(RcAlt::Ctor {
+                ctor: ctor.clone(),
+                binders: binders.clone(),
+                body: wrapped,
+            })
+        }
+        Alt::Lit { value, body } => Ok(RcAlt::Lit {
+            value: value.clone(),
+            body: emit_with_borrows(body, borrowed)?,
+        }),
+    }
+}
+
+/// Whether `var`'s binding is **fully borrowable** over `body`: it is used at least once and **every**
+/// use is in a reader-primitive (borrow) position (`Op` argument or `Swap` source). Such a binding
+/// never escapes (it does not flow to the result, into a `Construct`, or to an `App`/`Match`), so it
+/// can be read without consuming and reclaimed once at the end.
+///
+/// Guarantee: `Exact` — a deterministic structural test (conservative: any escaping use makes it
+/// `false`, keeping the binding owned — never wrongly elided).
+#[must_use]
+pub fn is_fully_borrowable(var: &VarId, body: &Node) -> bool {
+    let total = count_occurrences(var, body);
+    total >= 1 && borrow_occurrences(var, body) == total
+}
+
+/// Count occurrences of `var` in **borrow positions** (direct `Op` argument / `Swap` source),
+/// respecting shadowing. A bare `Var`, a `Construct`/`App`/`Match`/tail occurrence is **not** a
+/// borrow position (those are moves/escapes).
+#[must_use]
+pub fn borrow_occurrences(var: &VarId, node: &Node) -> usize {
+    match node {
+        Node::Const(_) | Node::Var(_) => 0,
+        Node::Let { id, bound, body } => {
+            borrow_occurrences(var, bound)
+                + if id == var {
+                    0
+                } else {
+                    borrow_occurrences(var, body)
+                }
+        }
+        // Op args and Swap src ARE borrow positions: a direct `Var(var)` child counts; a deeper
+        // child is recursed (its own immediate parent decides).
+        Node::Op { args, .. } => args.iter().map(|a| arg_borrow(var, a)).sum(),
+        Node::Swap { src, .. } => arg_borrow(var, src),
+        // Construct args are MOVES (stored into the data value): a direct `Var(var)` is NOT a borrow;
+        // only deeper reader positions count → recurse with `borrow_occurrences` (not `arg_borrow`).
+        Node::Construct { args, .. } => args.iter().map(|a| borrow_occurrences(var, a)).sum(),
+        Node::Match {
+            scrutinee,
+            alts,
+            default,
+        } => {
+            // The scrutinee is a move (deconstructed), not a borrow → recurse for deeper readers.
+            let mut n = borrow_occurrences(var, scrutinee);
+            for alt in alts {
+                n += match alt {
+                    Alt::Ctor { binders, body, .. } => {
+                        if binders.iter().any(|b| b == var) {
+                            0
+                        } else {
+                            borrow_occurrences(var, body)
+                        }
+                    }
+                    Alt::Lit { body, .. } => borrow_occurrences(var, body),
+                };
+            }
+            n + default.as_deref().map_or(0, |d| borrow_occurrences(var, d))
+        }
+        Node::Lam { param, body } => {
+            if param == var {
+                0
+            } else {
+                borrow_occurrences(var, body)
+            }
+        }
+        Node::App { func, arg } => borrow_occurrences(var, func) + borrow_occurrences(var, arg),
+        Node::Fix { name, body } => {
+            if name == var {
+                0
+            } else {
+                borrow_occurrences(var, body)
+            }
+        }
+        Node::FixGroup { defs, body } => {
+            if defs.iter().any(|(name, _)| name == var) {
+                0
+            } else {
+                defs.iter()
+                    .map(|(_, d)| borrow_occurrences(var, d))
+                    .sum::<usize>()
+                    + borrow_occurrences(var, body)
+            }
+        }
+    }
+}
+
+/// One reader-primitive argument: a direct `Var(var)` is a borrow position (count 1); anything else
+/// recurses (its own structure decides where `var`'s borrows are).
+fn arg_borrow(var: &VarId, arg: &Node) -> usize {
+    match arg {
+        Node::Var(x) if x == var => 1,
+        other => borrow_occurrences(var, other),
     }
 }

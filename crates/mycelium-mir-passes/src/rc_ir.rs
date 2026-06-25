@@ -76,8 +76,13 @@ pub enum RcAlt {
 pub enum RcNode {
     /// A constant value (allocates one reference when evaluated).
     Const(Value),
-    /// A variable reference — a **consuming use** of one reference of the variable.
+    /// A variable reference — a **consuming use** (move) of one reference of the variable.
     Var(VarId),
+    /// A **borrowing read** of a variable — non-consuming (the reference count is unchanged; the
+    /// value must be live). Produced by MEM-4 Increment 1 (borrow elision) for reads in
+    /// reader-primitive positions (`Op`/`Swap` arguments) in the immutable value model, where a
+    /// primitive reads its operands and produces a fresh result, retaining nothing.
+    Borrow(VarId),
     /// `dup var; body` — increment `var`'s reference count, then evaluate `body`.
     Dup {
         /// The variable whose reference count is incremented.
@@ -90,6 +95,17 @@ pub enum RcNode {
         /// The variable whose reference count is decremented.
         var: VarId,
         /// The continuation, evaluated after the decrement.
+        body: Box<RcNode>,
+    },
+    /// `let r = body in (drop var; r)` — evaluate `body` to its result, **then** decrement `var`'s
+    /// reference count (reclaim at zero), then yield the result. Distinct from [`RcNode::Drop`]
+    /// (which decrements *before* its body): the borrowed value must stay live **through** its reads
+    /// inside `body`, so its reclamation is placed *after* the body completes. Produced by MEM-4
+    /// Increment 1 to reclaim a fully-borrowed binding once its reads are done.
+    DropAfter {
+        /// The variable reclaimed after `body` completes.
+        var: VarId,
+        /// The body evaluated (and read from) before the decrement.
         body: Box<RcNode>,
     },
     /// A let binding. `id` is owned within `body`; its `Dup`/`Drop` annotations are placed at the
@@ -176,6 +192,17 @@ impl RcNode {
     #[must_use]
     pub fn drop_one(var: &VarId, body: RcNode) -> RcNode {
         RcNode::Drop {
+            var: var.clone(),
+            body: Box::new(body),
+        }
+    }
+
+    /// Wrap `body` in a single `DropAfter { var }` node (reclaim `var` *after* `body`).
+    ///
+    /// Guarantee: `Exact` — produces exactly one `DropAfter` wrapper.
+    #[must_use]
+    pub fn drop_after(var: &VarId, body: RcNode) -> RcNode {
+        RcNode::DropAfter {
             var: var.clone(),
             body: Box::new(body),
         }

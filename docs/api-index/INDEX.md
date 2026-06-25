@@ -934,19 +934,34 @@
 
 | Symbol | Kind | File:Line | Summary |
 |---|---|---|---|
-| `mycelium_mir_passes::balance` | mod | `crates/mycelium-mir-passes/src/lib.rs:42` | — |
+| `mycelium_mir_passes::balance` | mod | `crates/mycelium-mir-passes/src/lib.rs:55` | — |
 | `mycelium_mir_passes::balance::BalanceError` | enum | `crates/mycelium-mir-passes/src/balance.rs:36` | A balance-invariant violation for one binding (never-silent diagnostics, G2). |
 | `mycelium_mir_passes::balance::check_balance` | fn | `crates/mycelium-mir-passes/src/balance.rs:107` | Verify the balance invariant over `node` and every binding nested within it. |
-| `mycelium_mir_passes::emit` | mod | `crates/mycelium-mir-passes/src/lib.rs:43` | — |
+| `mycelium_mir_passes::emit` | mod | `crates/mycelium-mir-passes/src/lib.rs:56` | — |
 | `mycelium_mir_passes::emit::EmitError` | enum | `crates/mycelium-mir-passes/src/emit.rs:39` | Why RC-emission could not lower a node. |
+| `mycelium_mir_passes::emit::borrow_occurrences` | fn | `crates/mycelium-mir-passes/src/emit.rs:427` | Count occurrences of `var` in **borrow positions** (direct `Op` argument / `Swap` source), |
 | `mycelium_mir_passes::emit::count_occurrences` | fn | `crates/mycelium-mir-passes/src/emit.rs:186` | Count the **free** consuming occurrences of `var` in `node`, respecting shadowing. |
+| `mycelium_mir_passes::emit::emit_elided` | fn | `crates/mycelium-mir-passes/src/emit.rs:285` | Lower a Core IR [`Node`] with MEM-4 Increment 1 **borrow elision** applied. |
 | `mycelium_mir_passes::emit::emit_owned` | fn | `crates/mycelium-mir-passes/src/emit.rs:65` | Lower a Core IR [`Node`] to the naive fully-owned [`RcNode`] (MEM-4·B0). |
-| `mycelium_mir_passes::rc_ir` | mod | `crates/mycelium-mir-passes/src/lib.rs:44` | — |
+| `mycelium_mir_passes::emit::is_fully_borrowable` | fn | `crates/mycelium-mir-passes/src/emit.rs:418` | Whether `var`'s binding is **fully borrowable** over `body`: it is used at least once and **every** |
+| `mycelium_mir_passes::eval` | mod | `crates/mycelium-mir-passes/src/lib.rs:57` | — |
+| `mycelium_mir_passes::eval::AllocId` | type | `crates/mycelium-mir-passes/src/eval.rs:35` | A distinct allocation identity (assigned in evaluation order). |
+| `mycelium_mir_passes::eval::Differential` | struct | `crates/mycelium-mir-passes/src/eval.rs:216` | The verdict of a differential run on one term (DN-33 §8.1 Q3). |
+| `mycelium_mir_passes::eval::Differential::dups_removed` | fn | `crates/mycelium-mir-passes/src/eval.rs:234` | `Dup`s removed by elision (≥ 0; the optimisation's effect — `Exact`, read off the IR). |
+| `mycelium_mir_passes::eval::Differential::is_semantics_preserving` | fn | `crates/mycelium-mir-passes/src/eval.rs:228` | The elision is **semantics-preserving** iff the reclamation multisets match. |
+| `mycelium_mir_passes::eval::EvalReport` | struct | `crates/mycelium-mir-passes/src/eval.rs:72` | The outcome of evaluating a term: its result allocation and the reclamation log (in order). |
+| `mycelium_mir_passes::eval::EvalReport::reclaimed_sorted` | fn | `crates/mycelium-mir-passes/src/eval.rs:83` | The reclamation log as a sorted multiset — the comparison key for [`differential`] |
+| `mycelium_mir_passes::eval::RcError` | enum | `crates/mycelium-mir-passes/src/eval.rs:39` | An RC-discipline violation detected by the evaluator (never-silent, G2). |
+| `mycelium_mir_passes::eval::count_dups` | fn | `crates/mycelium-mir-passes/src/eval.rs:241` | Count `Dup` nodes anywhere in an [`RcNode`]. |
+| `mycelium_mir_passes::eval::differential` | fn | `crates/mycelium-mir-passes/src/eval.rs:277` | Run the differential check: evaluate the owned and elided emissions of the **same** Core IR term |
+| `mycelium_mir_passes::eval::eval` | fn | `crates/mycelium-mir-passes/src/eval.rs:143` | Evaluate an [`RcNode`] in the abstract RC machine, returning its reclamation report. |
+| `mycelium_mir_passes::rc_ir` | mod | `crates/mycelium-mir-passes/src/lib.rs:58` | — |
 | `mycelium_mir_passes::rc_ir::Mode` | enum | `crates/mycelium-mir-passes/src/rc_ir.rs:40` | The ownership mode of a binding (DN-33 §2 / §8.1 Q2). |
 | `mycelium_mir_passes::rc_ir::RcAlt` | enum | `crates/mycelium-mir-passes/src/rc_ir.rs:49` | One alternative of a flat [`RcNode::Match`] — mirrors `mycelium_core::Alt`. |
 | `mycelium_mir_passes::rc_ir::RcNode` | enum | `crates/mycelium-mir-passes/src/rc_ir.rs:76` | An RC-annotated Core IR node (the first-order fragment + `Dup`/`Drop`). |
-| `mycelium_mir_passes::rc_ir::RcNode::drop_one` | fn | `crates/mycelium-mir-passes/src/rc_ir.rs:177` | Wrap `body` in a single `Drop { var }` node. |
-| `mycelium_mir_passes::rc_ir::RcNode::dup_n` | fn | `crates/mycelium-mir-passes/src/rc_ir.rs:162` | Wrap `body` in `n` nested `Dup { var }` nodes (innermost is `body`). |
+| `mycelium_mir_passes::rc_ir::RcNode::drop_after` | fn | `crates/mycelium-mir-passes/src/rc_ir.rs:204` | Wrap `body` in a single `DropAfter { var }` node (reclaim `var` *after* `body`). |
+| `mycelium_mir_passes::rc_ir::RcNode::drop_one` | fn | `crates/mycelium-mir-passes/src/rc_ir.rs:193` | Wrap `body` in a single `Drop { var }` node. |
+| `mycelium_mir_passes::rc_ir::RcNode::dup_n` | fn | `crates/mycelium-mir-passes/src/rc_ir.rs:178` | Wrap `body` in `n` nested `Dup { var }` nodes (innermost is `body`). |
 
 ## mycelium-mlir
 
@@ -4415,6 +4430,16 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mir_passes::emit::EmitError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::emit::EmitError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::emit::EmitError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::Differential::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::Differential::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::Differential::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::EvalReport::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::EvalReport::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::EvalReport::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::RcError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::RcError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::RcError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::eval::RcError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::rc_ir::Mode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::rc_ir::Mode::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_mir_passes::rc_ir::Mode::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |

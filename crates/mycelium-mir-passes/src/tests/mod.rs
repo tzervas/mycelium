@@ -5,4 +5,5 @@
 
 mod balance;
 mod common;
+mod elision;
 mod emit;

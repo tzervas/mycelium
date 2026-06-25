@@ -22,12 +22,25 @@
 //!   binding), verified independently over the emitted IR: the structural-invariant half of the
 //!   ratified Q3 soundness strategy (DN-33 §8.1).
 //!
-//! # What is next (MEM-4 Increment 1 — not in this crate yet)
+//! # MEM-4 Increment 1 — non-escaping borrow elision (now built)
 //!
-//! Non-escaping **borrow elision** (mark non-consuming reads `Borrowed`, eliding their `Dup`/`Drop`)
-//! plus the **differential** half of Q3 (run with/without elision, compare reclamation traces). The
-//! [`rc_ir::Mode::Borrowed`] variant and the borrowed clause in [`balance`] are already in place for
-//! it.
+//! - [`emit::emit_elided`] — borrow elision: a **fully-borrowable** `let` binding (every use is a
+//!   reader-primitive read — `Op`/`Swap` argument — so the value never escapes) is emitted with its
+//!   uses as [`rc_ir::RcNode::Borrow`] (non-consuming), **no** `Dup`, and a single
+//!   [`rc_ir::RcNode::DropAfter`] reclaiming it after its reads. Strictly fewer RC ops than the naive
+//!   owned emission (`k-1` `Dup`s → `0`), and semantics-preserving. Conservative + intraprocedural:
+//!   any escaping use keeps the binding fully owned; `Lam` params stay `Owned` (interprocedural
+//!   borrowing is a later increment).
+//! - [`eval`] — the **reference RC-evaluator** + [`eval::differential`]: the differential half of the
+//!   ratified Q3 soundness strategy. It runs a term's owned and elided emissions through an abstract
+//!   RC machine and checks they reclaim the **same multiset of values** with **no use-after-free**,
+//!   while the `Dup` count strictly drops. Together with the structural balance invariant
+//!   ([`balance`]) this is the full Q3 check.
+//!
+//! # What is next (later increments)
+//!
+//! Increment 2 (`rc==1` reuse annotation) and Increment 3 (full FIP static guarantee, Phase 3);
+//! interprocedural borrowing (`Mode::Borrowed` at call boundaries); recursion (`Fix`/`FixGroup`).
 //!
 //! # Guarantee posture (VR-5)
 //!
@@ -41,6 +54,7 @@
 
 pub mod balance;
 pub mod emit;
+pub mod eval;
 pub mod rc_ir;
 
 #[cfg(test)]
