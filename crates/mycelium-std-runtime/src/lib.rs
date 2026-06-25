@@ -41,7 +41,7 @@
 //! Design: `docs/adr/ADR-020-Runtime-Colony-Phylum-Placement.md`;
 //! spec: `docs/spec/stdlib/runtime.md`; tasks M-521, E12-1 (M-709/M-711/M-713).
 //!
-//! # Memory model (E12 MEM-1/MEM-2/MEM-3)
+//! # Memory model (E12 MEM-1/MEM-2/MEM-3 + live wiring)
 //!
 //! - [`reclamation`] (MEM-1) — the reclamation EXPLAIN/audit record and never-silent sink
 //!   contract (RFC-0027 §9).
@@ -50,6 +50,15 @@
 //!   §10.3): [`region::Region`] accumulates deferred entries and bulk-emits `ScopeExit` records
 //!   at scope-exit; [`region::ScopeNodeId`] / [`region::RegionEpoch`] are the canonical forms
 //!   of the MEM-1 `ScopeId`/`SweepEpoch` placeholder types.
+//! - [`scope_region`] — the **live-executor wiring**: structured `with_region` /
+//!   [`scope_region::RegionScope`] tie a [`region::Region`]'s lifecycle to a single-hypha
+//!   structured-concurrency scope, closing it (emitting the batched `ScopeExit` records) at
+//!   scope-exit — reclamation fires from the running executor, not just the data structure.
+//!   Nested scopes give child-before-parent epoch order for free.
+//! - [`network`] also carries the **third live trigger**, `ChannelClose`: closing a channel that
+//!   still holds buffered values in transit reclaims them, emitting one
+//!   `ReclamationRecord(ChannelClose)` per value (RFC-0027 §9 / §7.3), with a canonical
+//!   [`network::ChannelNodeId`] resolving the MEM-1 `ChannelId` placeholder.
 #![forbid(unsafe_code)]
 
 pub mod colony;
@@ -60,6 +69,7 @@ pub mod rc;
 pub mod reclamation;
 pub mod region;
 pub mod scheduler;
+pub mod scope_region;
 pub mod supervision;
 pub mod task;
 

@@ -186,6 +186,32 @@ impl<V> core::marker::Unpin for mycelium_std_runtime::network::TrySend<V> where 
 impl<V> core::marker::UnsafeUnpin for mycelium_std_runtime::network::TrySend<V> where V: core::marker::UnsafeUnpin
 impl<V> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::network::TrySend<V> where V: core::panic::unwind_safe::RefUnwindSafe
 impl<V> core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::network::TrySend<V> where V: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_std_runtime::network::ChannelNodeId(_)
+impl mycelium_std_runtime::network::ChannelNodeId
+pub fn mycelium_std_runtime::network::ChannelNodeId::as_channel_id(self) -> mycelium_std_runtime::reclamation::ChannelId
+pub fn mycelium_std_runtime::network::ChannelNodeId::as_u64(self) -> u64
+impl core::clone::Clone for mycelium_std_runtime::network::ChannelNodeId
+pub fn mycelium_std_runtime::network::ChannelNodeId::clone(&self) -> mycelium_std_runtime::network::ChannelNodeId
+impl core::cmp::Eq for mycelium_std_runtime::network::ChannelNodeId
+impl core::cmp::Ord for mycelium_std_runtime::network::ChannelNodeId
+pub fn mycelium_std_runtime::network::ChannelNodeId::cmp(&self, &mycelium_std_runtime::network::ChannelNodeId) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_std_runtime::network::ChannelNodeId
+pub fn mycelium_std_runtime::network::ChannelNodeId::eq(&self, &mycelium_std_runtime::network::ChannelNodeId) -> bool
+impl core::cmp::PartialOrd for mycelium_std_runtime::network::ChannelNodeId
+pub fn mycelium_std_runtime::network::ChannelNodeId::partial_cmp(&self, &mycelium_std_runtime::network::ChannelNodeId) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_std_runtime::network::ChannelNodeId
+pub fn mycelium_std_runtime::network::ChannelNodeId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_std_runtime::network::ChannelNodeId
+pub fn mycelium_std_runtime::network::ChannelNodeId::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_std_runtime::network::ChannelNodeId
+impl core::marker::StructuralPartialEq for mycelium_std_runtime::network::ChannelNodeId
+impl core::marker::Freeze for mycelium_std_runtime::network::ChannelNodeId
+impl core::marker::Send for mycelium_std_runtime::network::ChannelNodeId
+impl core::marker::Sync for mycelium_std_runtime::network::ChannelNodeId
+impl core::marker::Unpin for mycelium_std_runtime::network::ChannelNodeId
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::network::ChannelNodeId
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::network::ChannelNodeId
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::network::ChannelNodeId
 pub struct mycelium_std_runtime::network::Network
 impl mycelium_std_runtime::network::Network
 pub fn mycelium_std_runtime::network::Network::channel<V>(usize) -> core::result::Result<(mycelium_std_runtime::network::Sender<V>, mycelium_std_runtime::network::Receiver<V>), mycelium_std_runtime::network::ChannelError>
@@ -203,6 +229,8 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::network::
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::network::Network
 pub struct mycelium_std_runtime::network::Receiver<V>
 impl<V> mycelium_std_runtime::network::Receiver<V>
+pub fn mycelium_std_runtime::network::Receiver<V>::channel_id(&self) -> mycelium_std_runtime::network::ChannelNodeId
+pub fn mycelium_std_runtime::network::Receiver<V>::close_with_reclaim(self, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink, mycelium_std_runtime::reclamation::ScopeId, mycelium_std_runtime::reclamation::SweepEpoch, impl core::ops::function::Fn(&V) -> mycelium_core::id::ContentHash) -> usize
 pub fn mycelium_std_runtime::network::Receiver<V>::try_recv(&self) -> mycelium_std_runtime::network::TryRecv<V>
 impl<V> core::fmt::Debug for mycelium_std_runtime::network::Receiver<V>
 pub fn mycelium_std_runtime::network::Receiver<V>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -215,6 +243,7 @@ impl<V> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::networ
 impl<V> core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::network::Receiver<V>
 pub struct mycelium_std_runtime::network::Sender<V>
 impl<V> mycelium_std_runtime::network::Sender<V>
+pub fn mycelium_std_runtime::network::Sender<V>::channel_id(&self) -> mycelium_std_runtime::network::ChannelNodeId
 pub fn mycelium_std_runtime::network::Sender<V>::close(self)
 pub fn mycelium_std_runtime::network::Sender<V>::try_send(&self, V) -> mycelium_std_runtime::network::TrySend<V>
 impl<V> core::fmt::Debug for mycelium_std_runtime::network::Sender<V>
@@ -585,6 +614,24 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::scheduler::S
 pub const mycelium_std_runtime::scheduler::SCHEDULER_BACKPRESSURE_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
 pub const mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
 pub const mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub mod mycelium_std_runtime::scope_region
+pub struct mycelium_std_runtime::scope_region::RegionScope
+impl mycelium_std_runtime::scope_region::RegionScope
+pub fn mycelium_std_runtime::scope_region::RegionScope::close(self, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink) -> mycelium_std_runtime::region::ClosedRegion
+pub fn mycelium_std_runtime::scope_region::RegionScope::defer(&mut self, mycelium_core::id::ContentHash)
+pub fn mycelium_std_runtime::scope_region::RegionScope::deferred_count(&self) -> usize
+pub fn mycelium_std_runtime::scope_region::RegionScope::enter() -> Self
+pub fn mycelium_std_runtime::scope_region::RegionScope::id(&self) -> mycelium_std_runtime::region::ScopeNodeId
+impl core::fmt::Debug for mycelium_std_runtime::scope_region::RegionScope
+pub fn mycelium_std_runtime::scope_region::RegionScope::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_runtime::scope_region::RegionScope
+impl core::marker::Send for mycelium_std_runtime::scope_region::RegionScope
+impl core::marker::Sync for mycelium_std_runtime::scope_region::RegionScope
+impl core::marker::Unpin for mycelium_std_runtime::scope_region::RegionScope
+impl core::marker::UnsafeUnpin for mycelium_std_runtime::scope_region::RegionScope
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::scope_region::RegionScope
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::scope_region::RegionScope
+pub fn mycelium_std_runtime::scope_region::with_region<R>(&mut dyn mycelium_std_runtime::reclamation::ReclamationSink, impl core::ops::function::FnOnce(&mut mycelium_std_runtime::region::Region) -> R) -> (R, mycelium_std_runtime::region::ClosedRegion)
 pub mod mycelium_std_runtime::supervision
 pub use mycelium_std_runtime::supervision::CancelToken
 pub use mycelium_std_runtime::supervision::Cancelled
