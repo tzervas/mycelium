@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: E12 Wave-3 — MEM-3 regions + batched scope reclamation (DN-32 Layer 3))
+
+- **MEM-3 — region-based batched scope reclamation** (`crates/mycelium-std-runtime/src/region.rs`, DN-32
+  Layer 3 / RFC-0027 §10.3): `Region` = one RT7 scope-tree node; `Region::defer(value_meta_hash)` accrues
+  reclamations during the scope, and `Region::close(&sink)` drains them in bulk, emitting one
+  `ReclamationRecord(ScopeExit)` per value — **the second live reclamation trigger** (after MEM-2's `RcZero`).
+  Bulk emission is G2-enforced (a Region dropped with deferred entries un-closed panics in debug). `ScopeTree`
+  closes children before the parent.
+  - **Canonical ID types (resolves MEM-1's placeholders):** `ScopeNodeId` + `RegionEpoch` (monotonic counters)
+    replace the `u64` `ScopeId`/`SweepEpoch` placeholders, threaded through reclamation.rs/rc.rs; the epoch
+    number-line encodes the child→root sweep order (child epoch < parent epoch always).
+  - **OQ-1 (weak coupling) realized + tested:** parent-child reclamation total (child-before-parent, `Exact`
+    by the monotonic counter), siblings order-independent (`Proven`-modulo-LR-9) — property tests both ways.
+  - Tags honest: ordering logic `Exact`/by-construction; bulk-efficiency-as-perf `Declared` (DN-32 §6a). 84/84.
+  - Downstream-flagged: live-executor `Region::close` wiring (the running scheduler/MLIR runtime), cross-hypha
+    atomic RC (§7), strong-coupling opt-in, `ChannelId` canonicalization (network tier).
+
 ### Added (2026-06-25: E12 Wave-2 — MEM-2 explicit RC + rc==1 reuse (DN-32 Layer 2))
 
 - **MEM-2 — explicit reference counting + `rc==1` reuse probe** (`crates/mycelium-std-runtime/src/rc.rs`,
