@@ -188,6 +188,45 @@ Core IR → producing RC-annotated IR; it owns no shared files except an orchest
 `borrow_annotation` field on the Core IR binding type. The analysis logic is a leaf-agent task; the
 increments are dependency-ordered waves, mirroring MEM-1→4.
 
+### §6.1 Prerequisite gap — Increment 1 is BLOCKED on the RC-emission pipeline (investigated 2026-06-25)
+
+A read-only investigation of the current tree (after E12 Wave-4 landed) confirms **MEM-4 Increment 1
+is not implementable yet** — it has no input to operate on. MEM-4 elides *compiler-emitted* RC ops;
+today there are none. The grounded findings (file:line evidence):
+
+- **The Core IR exists but carries no ownership mode.** `crates/mycelium-core/src/node.rs` is the
+  typed `Node` grammar (`Const/Var/Let/Op/Swap/Construct/Match/Lam/App/Fix/FixGroup`) — a closed
+  typed term language. But `Node::Lam { param: VarId, … }` has `VarId = String` with **no
+  owned/borrowed annotation field** on any binding site. That annotation is precisely the *output*
+  of Increment 1, and the *representation* of it is the open question §8 Q2 — so the field cannot be
+  added without first resolving Q2.
+- **No RC-annotated IR layer / no `mir-passes` crate.** There is no `crates/mycelium-mir-passes/`
+  (or `mycelium-core-mir`), and no IR type representing `Node` terms with `clone_ref`/`drop_ref`
+  placed-or-elided. The output IR MEM-4 produces does not exist.
+- **RC ops are hand-called in tests only — never emitted by a lowering.** `clone_ref`/`drop_ref`/
+  `RcCell` appear in exactly four files, all within `mycelium-std-runtime` (the definition `rc.rs`,
+  a comment in `scope_region.rs`, and the two test files). The L1 lowering (`mycelium-l1/src/elab.rs`,
+  the *only* IR-to-IR transform in the repo) emits `Node` terms with **zero** RC annotations. So no
+  pass inserts the `clone_ref`/`drop_ref` pairs that Increment 1 would elide.
+
+**The prerequisite chain before Increment 1 can land** (each step is itself substantial — this is
+language-frontend work, broader than "finishing the memory model"):
+1. **Resolve §8 Q2** — the binding-site ownership-mode *representation* (a `BorrowMode` annotation on
+   `Node` binding forms vs a separate borrow IR layer vs a compiler-internal flag). Type-system- and
+   KC-3-significant — a **maintainer decision**, not research-resolvable.
+2. Add the chosen ownership-mode field to `mycelium-core/src/node.rs` binding forms.
+3. Create `crates/mycelium-mir-passes/` with an **RC-emission lowering pass** (`Node` → RC-annotated
+   IR) — the step that *inserts* `clone_ref`/`drop_ref`, wired into the `elab.rs` → interp/AOT
+   pipeline so RC ops are emitted structurally instead of hand-called.
+4. **Only then** does Increment 1 (non-escaping borrow elision) slot in — annotating own-vs-borrow so
+   step 3 inserts fewer ops.
+
+**Consequence (VR-5/G2 — honest sequencing).** MEM-4 is **deferred-by-prerequisite**, not merely
+deferred-by-priority. The runtime substrate (MEM-1..3 + the live triggers, landed Wave-4) is the
+**sound, complete fallback** and stands on its own — the `RcCell` probe needs no static analysis to
+be correct (§2). Building the RC-emission pipeline is a forward epic gated on the §8 Q2 decision; it
+is not undertaken speculatively here (flag, don't guess).
+
 ## §7 Honest scope (VR-5 — do not omit)
 
 - Every Mycelium-specific claim here is **`Declared`** — nothing in MEM-4 is built; the increments,
@@ -262,4 +301,13 @@ increments are dependency-ordered waves, mirroring MEM-1→4.
   the named open risk. **Enacts nothing; moves no status; changes no normative text.** Promotion past
   Draft requires the §8 deliberation + maintainer ratification (house rule #3, append-only). CHANGELOG
   / Doc-Index / issues.yaml / docs/api-index owned by the integrating parent. (Append-only; VR-5; G2.)
-</content>
+- **2026-06-25 — Addendum §6.1 (prerequisite gap; append-only).** A read-only investigation of the
+  post-Wave-4 tree confirms **MEM-4 Increment 1 is blocked-by-prerequisite, not merely deferred**:
+  the Core IR (`mycelium-core/src/node.rs`) carries no ownership-mode field on binding sites, there is
+  no RC-annotated IR / `mir-passes` crate, and `clone_ref`/`drop_ref` are hand-called only in
+  `mycelium-std-runtime` tests — **no lowering emits RC ops, so MEM-4 has nothing to elide.** §6.1
+  records the grounded findings + the prerequisite chain (resolve §8 Q2 ownership-mode representation →
+  add the field to `node.rs` → build the `mir-passes` RC-emission lowering → wire into `elab.rs` →
+  *then* Increment 1). The runtime substrate remains the sound, complete fallback; the RC-emission
+  pipeline is a forward epic gated on the §8 Q2 maintainer decision — not built speculatively (G2/VR-5:
+  flag, don't guess). No status moves; no normative text changes.

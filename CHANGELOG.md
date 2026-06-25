@@ -8,6 +8,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-25: DN-33 §6.1 addendum — MEM-4 is blocked-by-prerequisite, not just deferred)
+
+- **DN-33 §6.1 (append-only addendum)** records a grounded investigation finding: **MEM-4 Increment 1
+  has no input to operate on** — the Core IR (`mycelium-core/src/node.rs`) carries no ownership-mode
+  field on binding sites, there is no RC-annotated IR / `crates/mycelium-mir-passes/`, and
+  `clone_ref`/`drop_ref` are hand-called only in `mycelium-std-runtime` tests (no lowering emits RC ops
+  to elide). The prerequisite chain (resolve DN-33 §8 Q2 ownership-mode representation → add the field
+  to `node.rs` → build the `mir-passes` RC-emission lowering → wire into `elab.rs` → then Increment 1)
+  is a forward language-frontend epic **gated on the §8 Q2 maintainer decision** — not built
+  speculatively (G2/VR-5). The E12 build plan's MEM-4 status is updated to **blocked-by-prerequisite**.
+  The runtime substrate (MEM-1..3 + live triggers, landed) is the sound, complete fallback. Also fixes
+  a stray `</content>` artifact at the end of DN-33. No status moves; no normative text changes.
+
 ### Added (2026-06-25: DN-33 — MEM-4 static uniqueness analysis design, research-backed, Draft)
 
 - **DN-33 — Layer-1 Static Uniqueness Analysis (MEM-4) & Cross-Hypha Reconciliation**
