@@ -3,23 +3,41 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0027 |
-| **Status** | **Proposed** (2026-06-24) — *proposed move from Draft; awaiting maintainer ratification (see banner below)* |
+| **Status** | **Accepted** (2026-06-25) — *proposed move from Proposed; **awaiting maintainer ratification (governance milestone — see the STATUS-MOVE FLAG banner)**. OQ-1 (the banner blocker) + OQ-4 are now resolved by DN-32; OQ-2/5/6 are deferred non-blockers. Prior Draft (2026-06-23) → Proposed (2026-06-24) history preserved below (append-only).* |
 | **Feeds** | E12-1 (runtime & concurrency execution maturity) |
 | **Decides** | The reclamation model for Mycelium runtime values: the reclamation **mechanism** (reference counting), ownership/lifetime semantics, reclaim-cascade scope, explicit-vs-implicit discipline, the reclamation **EXPLAIN/audit record**, and the "no silent GC pause" honesty stance (G2/VR-5). |
 | **Date** | June 24, 2026 (Draft: June 23, 2026) |
 | **Task** | E12-1 (M-712) |
 
-> **⚠️ STATUS-MOVE FLAG — maintainer ratification required (house rule #3, append-only).**
-> This revision **proposes** advancing RFC-0027 **Draft → Proposed**. The *reclamation mechanism*
-> is now resolved by the provenance/ownership research cluster (wave-1 + wave-2 + the embeddenator
-> ground-truth pass — see §7): **reference counting** (RC), justified by LR-9 acyclicity (which *is*
-> Perceus's garbage-free precondition), is the decided mechanism. The move stops at **Proposed**,
-> **not** `Accepted`: the highest-uncertainty design point — sweep-order vs. reclamation-order
-> coupling (§5/§11, OQ-1) — is *deliberately left open* for prototyping before commitment, and no
-> in-repo mechanized proof or property test yet exists (the soundness is **`Proven`-modulo the LR-9
-> side-condition**, not `Proven` outright — §8). **A maintainer must ratify this Draft → Proposed
-> move; it must not skip to `Accepted` (never skip a state — house rule #3).** Until ratified,
-> treat the status as Draft-with-a-proposed-advance.
+> **⚠️ STATUS-MOVE FLAG — maintainer ratification required (GOVERNANCE MILESTONE; house rule #3, append-only).**
+> **This (2026-06-25) revision proposes advancing RFC-0027 `Proposed → Accepted`** — the
+> Proposed → Accepted step is *not* routine and **must be maintainer-signed-off** (house rule #3:
+> status advances one stepped state at a time, the maintainer ratifies). **What unblocks the move:**
+> the banner blocker — sweep-order vs. reclamation-order sibling coupling (**OQ-1**) — is now
+> **RESOLVED by DN-32** (weak/partial coupling is the default: sibling scopes reclaim concurrently,
+> safe by RC + LR-9 acyclicity since there are no cross-sibling aliases; strong/total coupling is an
+> opt-in for high-assurance subsets), and **OQ-4** (the `rc==1` reuse-vs-copy visibility) is
+> **RESOLVED** (EXPLAIN-record-only by default; surface visibility deferred). **OQ-3** is
+> **mitigated** (regions + batched reclamation move it from inherent-limitation toward
+> engineering/measurement). **OQ-2 / OQ-5 / OQ-6 remain deferred** — legitimate, non-blocking. The
+> resolutions are tagged at their supportable strength (the *safety* of concurrent sibling
+> reclamation is **`Proven`-modulo the LR-9 side-condition** — §8; the *throughput* benefit of weak
+> over strong coupling is **`Declared`** — expected, not measured; see §11 OQ-1 + §12 + DN-32 §6).
+> **A maintainer must ratify this `Proposed → Accepted` move; it must not skip to `Enacted` (no
+> in-repo implementation/proof exists yet — house rule #3).** Until ratified, treat the status as
+> Proposed-with-a-proposed-advance.
+>
+> *(Prior banner — preserved append-only.)* The 2026-06-24 revision **proposed** advancing
+> RFC-0027 **Draft → Proposed**. The *reclamation mechanism* is resolved by the provenance/ownership
+> research cluster (wave-1 + wave-2 + the embeddenator ground-truth pass — see §7): **reference
+> counting** (RC), justified by LR-9 acyclicity (which *is* Perceus's garbage-free precondition), is
+> the decided mechanism. That move stopped at **Proposed**, **not** `Accepted`: the
+> highest-uncertainty design point — sweep-order vs. reclamation-order coupling (§5/§11, OQ-1) — was
+> *deliberately left open* for prototyping before commitment, and no in-repo mechanized proof or
+> property test yet existed (the soundness is **`Proven`-modulo the LR-9 side-condition**, not
+> `Proven` outright — §8). **(That Draft → Proposed move likewise required maintainer ratification
+> and must not have skipped to `Accepted` — house rule #3.)** The 2026-06-25 revision (this one)
+> resolves OQ-1 + OQ-4 via DN-32 and proposes the next stepped advance, Proposed → Accepted.
 
 > **Posture (transparency/honesty rule / VR-5).** The original (2026-06-23) revision was a planning
 > stub — scope, user stories, and open questions only, all `Declared`. This (2026-06-24) revision
@@ -146,9 +164,11 @@ interacts with the reclamation lifecycle.
 - [x] *(met-as-proposed, §10.4)* The interaction with RFC-0008 §4.4 (`cyst` checkpointing) is
   addressed: **checkpoint-and-keep** is the R1 default; checkpoint-and-free is gated on an
   `Empirical` serializer property test (RC makes the free mechanically clean — §10.4).
-- [ ] *(in progress)* Status advances `Draft` → `Proposed` → `Accepted` per the append-only
-  discipline. **This revision proposes Draft → Proposed (flagged for ratification); maintainer
-  sign-off is still required for both Proposed and, later, `Accepted`.**
+- [ ] *(in progress — 2026-06-25 update)* Status advances `Draft` → `Proposed` → `Accepted` per the
+  append-only discipline. **The 2026-06-24 revision proposed Draft → Proposed; the 2026-06-25
+  revision proposes Proposed → Accepted** (OQ-1 + OQ-4 now resolved by DN-32 — §11, §12). **Both
+  moves are flagged for maintainer ratification (house rule #3, stepped); `Enacted` is *not* claimed
+  — no in-repo implementation or mechanized proof exists yet.**
 
 ---
 
@@ -426,33 +446,60 @@ explicitly out of scope here (§3) and flagged in §11 OQ-2.
 These remain **open** — the advance does not decide them. They are the named tradeoffs a future
 `Accepted` revision must close.
 
-- **OQ-1 — Sweep-order vs. reclamation-order coupling: partial vs. total across siblings
-  (`Declared`, the highest-uncertainty decision).** RC makes reclamation *derive from* the scope
-  tree (§10.3), which collapses parent–child ordering — but the **sibling** question stands:
+- **OQ-1 — Sweep-order vs. reclamation-order coupling: partial vs. total across siblings.
+  → RESOLVED (2026-06-25) by DN-32 — see §12.** *Resolution:* **weak/partial coupling is the
+  default** — sibling scopes reclaim **concurrently** (RT7 already makes siblings concurrent by
+  construction; LR-9 acyclicity rules out cross-sibling aliases, so concurrent sibling reclamation
+  is **safe** with no serialization needed). **Strong/total coupling is an opt-in** for
+  high-assurance subsets (one property test covering both scheduling + reclamation, at the cost of
+  serialized sibling cleanup). *Honest tagging (VR-5):* the **safety** of concurrent sibling
+  reclamation is **`Proven`-modulo the LR-9 side-condition** (the same strength §8 holds the
+  RC-soundness claim — external argument, corpus-invariant side-condition, no in-repo mechanized
+  check yet); the **throughput benefit** of weak over strong coupling is **`Declared`** —
+  *expected, not measured*. **DN-32 resolves this by *argument* (RC + acyclicity ⇒
+  order-independent safety; RT7 ⇒ siblings already concurrent), NOT by the prototype-both-and-measure
+  path lane-B recommended** — the follow-on may still measure before locking the property-test
+  surface (DN-32 §6c). The original Draft framing is preserved below (append-only):
+  RC makes reclamation *derive from* the scope tree (§10.3), which collapses parent–child ordering —
+  but the **sibling** question stood:
   - **Weak / partial coupling** (lane-B's `Declared` default): sibling scopes reclaim *concurrently*
     → better throughput; the reclamation-order property test is *separate from* (and weaker than) the
     Kahn-determinism differential.
   - **Strong / total coupling:** reclamation order is *identical* to `SweepOrder` → **one** property
     test covers both scheduling and reclamation (maximal auditability); cost: sibling cleanup is
     serialized, a throughput cost with no safety benefit (LR-9 rules out cross-sibling aliases).
-  **lane-B explicitly recommends prototyping BOTH and measuring the property-test surface before
-  committing** (`lane-B` OQ-1, R-2; wave-1 O-1; `SYNTHESIS-wave2-addendum.md` W2-A2). This is a
-  genuine unresolved tradeoff, not a finding — it is the reason the status stops at **Proposed**.
+  **lane-B explicitly recommended prototyping BOTH and measuring the property-test surface before
+  committing** (`lane-B` OQ-1, R-2; wave-1 O-1; `SYNTHESIS-wave2-addendum.md` W2-A2). *(This was a
+  genuine unresolved tradeoff at the 2026-06-24 Proposed revision — the reason the status stopped at
+  **Proposed** then. It is now **RESOLVED by DN-32** — see the resolution note above + §12 — which
+  settles the **default** (weak/concurrent) by argument; the measured throughput magnitude stays
+  `Declared`, and the follow-on may still run lane-B's measurement before locking the property
+  test.)*
 - **OQ-2 — R2 distributed reclamation provenance (`Declared`, deferred).** When `xloc`/`mesh` land
   (R2), a value may cross node boundaries and the reclaiming scope may not be the creating scope —
   CRDT tombstone GC + weighted reference counting territory (`lane-B` §3.5–3.6, OQ-4; wave-1 O-8;
   W2-O3: embeddenator's correction store has *no* merge semantics, a concrete instance). Explicitly
   out of scope for R1; flagged so the R2 RFC has a clean handoff.
-- **OQ-3 — Worst-case RC-cascade drop latency / the pause budget (`Declared`).** Re-frames the Draft
-  "pause budget" question. Each `rc_dec` is O(1) but a deep-tree drop is O(*n*); "no silent GC pause"
+- **OQ-3 — Worst-case RC-cascade drop latency / the pause budget (`Declared`). → MITIGATED
+  (2026-06-25) by DN-32 — see §12.** DN-32's **Layer 3 (region-based allocation + batched scope-exit
+  reclamation)** + the sweep-epoch model move this from an *inherent limitation* toward an
+  *engineering/measurement* problem: batched region reclamation bounds per-epoch latency at the price
+  of deferred reclamation. **The latency SLO stays `Declared`** (no methodology'd in-repo benchmark;
+  the fuel-model bound is still open) — *mitigated, not closed.* Re-frames the Draft "pause budget"
+  question. Each `rc_dec` is O(1) but a deep-tree drop is O(*n*); "no silent GC pause"
   is satisfied as an *honesty stance* (every step observable) but is **not** a sub-millisecond SLO.
   Can the fuel model (RFC-0014 §4.8) bound the cascade, lifting latency `Declared` → `Empirical` /
   `Proven`? The sweep-epoch model could spread the cost across epochs at the price of deferred
   reclamation (`lane-B` OQ-3; `lane-F` OQ-F5, F-D; wave-1 O-7; W2-O2). A dedicated research note is
   warranted.
-- **OQ-4 — Is the `rc==1` reuse-vs-copy choice surface-visible or EXPLAIN-record-only? (`Declared`).**
-  G2 requires the `Provenance` record always capture it (§10.2); whether the *caller* can observe
-  which path was taken is open — Perceus makes reuse fully transparent, FP2 `fip` makes it static and
+- **OQ-4 — Is the `rc==1` reuse-vs-copy choice surface-visible or EXPLAIN-record-only? → RESOLVED
+  (2026-06-25) by DN-32 — see §12.** *Resolution:* **EXPLAIN-record-only by default** — the
+  `Provenance` DAG always captures the reuse-vs-copy choice (`push_reuse` vs `push_copy`, G2,
+  never-silent), and **surface visibility is deferred** (a future may expose an FP2 `fip`-style
+  surface-visible variant, but the default keeps the choice an implementation detail recorded in the
+  EXPLAIN/Provenance trail). The original framing is preserved (append-only): G2 requires the
+  `Provenance` record always capture it (§10.2); whether the *caller* can observe which path was
+  taken — Perceus makes reuse fully transparent, FP2 `fip` makes it static and
   visible (`lane-F` OQ-F4; W2-O4).
 - **OQ-5 — `substrate`/`graft` reclamation (`Declared`, flag-and-defer).** What is the protocol when
   an affine `substrate` handle is *dropped* rather than *consumed* — runtime error, silent no-op, or
@@ -463,6 +510,55 @@ These remain **open** — the advance does not decide them. They are the named t
   TN-1).** Settling this lets reclamation / decision-ledger / spore provenance share one schema
   (DRY/KC-3) and could upgrade the record's strength toward content-hash-pinned identity (§9; wave-1
   TN-1, CHG-1). Routed to the transpilation DN + this RFC's follow-on.
+
+---
+
+## 12. Resolved architecture — three-layer hybrid (DN-32) (2026-06-25)
+
+> **Pointer section (append-only).** DN-32 (*Three-Layer Hybrid Memory Architecture*,
+> Accepted-pending-ratification 2026-06-25) is the architectural synthesis that sits above this RFC's
+> resolved **mechanism** (§7 RC) and **resolves OQ-1 + OQ-4** (and mitigates OQ-3). This section is a
+> **short pointer** — DN-32 carries the detail. Everything below is `Declared` strategic direction
+> except where a stronger tag is named; the resolutions are tagged at their supportable strength in
+> §11 and DN-32 §6, not here-upgraded (VR-5).
+
+The resolved architecture is a **three-layer hybrid** (DN-32 §2), each layer engaging only when the
+program needs it (the memory-tier analogue of RFC-0034's "pay for what you use"):
+
+1. **Affine/linear ownership — PRIMARY (the default path).** Unique data is *moved*, not shared, at
+   (near-)zero cost; reclamation is a scope-exit drop. RC (Layer 2) engages only on *explicit*
+   sharing. (Corpus: RFC-0008 RT1; the affine `Sender`/`Receiver` pair, §7.3; the `substrate` lever.)
+2. **Optimized reference counting — only for EXPLICIT sharing.** The §7 RC mechanism, made cheap:
+   **static uniqueness analysis removes RC ops** (Perceus/Lorenzen borrowing), **non-atomic
+   intra-hypha** counting, **atomic only after cross-hypha transfer**, and **`rc==1` in-place reuse**
+   (FBIP — §10.1/§10.2; single-owner only, OCC is the concurrent path).
+3. **Region-based allocation & reclamation — within scopes.** Region-local allocation, **batched
+   reclamation at scope-exit** (Tofte-Talpin mapped onto the RT7 scope tree; §10.3). This is what
+   **mitigates OQ-3**.
+
+**Reclamation coupling (resolves OQ-1):** parent–child **TOTAL** (RT7 — children reclaim before the
+parent), siblings **CONCURRENT by default** (weak/partial coupling — RT7 already makes siblings
+concurrent, LR-9 makes it safe), with **strong/total coupling an opt-in** for high-assurance subsets.
+Safety is `Proven`-modulo-LR-9; the throughput benefit is `Declared` (DN-32 §3, §6c).
+
+**Named open sub-question for the follow-on (DN-32 §7) — surfaced, not buried (G2/VR-5).** Layer 2's
+"**atomic RC after cross-hypha transfer**" and this RFC's **§7.3 "cross-hypha transfer rides the
+affine channel protocol, NOT a distributed/cross-hypha refcount"** must be reconciled by deciding an
+explicit boundary:
+
+> **When a value crosses a hypha boundary, is it a *shared* value (→ atomic RC, Layer 2) or *sole*
+> ownership being moved (→ affine channel move, no cross-hypha RC, §7.3)?**
+
+- **Option A — sole-ownership move only (§7.3 as-is):** only uniquely-owned values cross, via the
+  affine move; Layer 2's "atomic after cross-hypha transfer" never fires (no cross-hypha shared
+  value). Simpler; keeps RC strictly intra-hypha + non-atomic.
+- **Option B — shared values may cross (atomic RC engages):** a genuinely shared value (rc > 1) may
+  cross into concurrent use, where its RC becomes atomic — reaching past §7.3's "no cross-hypha
+  refcount" and requiring an atomic-RC ownership/release protocol (closer to Pony ORCA's deferred
+  weighted refcount, which §7.3 deliberately avoided).
+
+This is **not decided here** — it is tabled (both options) for the RFC-0027 follow-on (or a dedicated
+DN). It does **not** block OQ-1/OQ-4, which resolve under either option. **DN-32 is the detail.**
 
 ---
 
@@ -495,3 +591,28 @@ These remain **open** — the advance does not decide them. They are the named t
   reason the status stops at **Proposed**, not `Accepted`. **⚠️ Status move requires maintainer
   ratification; must not skip to `Accepted` (house rule #3).** Touches no other doc; CHANGELOG.md /
   issues.yaml / docs/api-index are owned by the integrating parent. (Append-only; VR-5; G2.)
+- **2026-06-25 — OQ-1 + OQ-4 resolved (by DN-32); status move proposed (Proposed → Accepted,
+  GOVERNANCE-FLAGGED for ratification).** Captured the maintainer's verified **three-layer hybrid
+  memory architecture** as **DN-32** (Accepted-pending-ratification) and wired its resolutions back
+  here (append-only; §§1–11 prior prose preserved verbatim, resolutions added inline + a new pointer
+  §12). **(§11) OQ-1 → RESOLVED:** weak/partial coupling is the **default** (sibling scopes reclaim
+  concurrently — RT7 already makes siblings concurrent, LR-9 acyclicity makes it safe with no
+  cross-sibling aliases); **strong/total coupling is an opt-in** for high-assurance subsets. Tagged:
+  the **safety** is **`Proven`-modulo the LR-9 side-condition** (§8 strength), the **throughput**
+  benefit is **`Declared`** (expected, not measured) — resolved *by argument*, not the lane-B
+  prototype (DN-32 §6c). **OQ-4 → RESOLVED:** `rc==1` reuse is **EXPLAIN-record-only by default**
+  (Provenance DAG always captures `push_reuse`/`push_copy`, G2); surface visibility deferred.
+  **OQ-3 → MITIGATED:** DN-32 Layer 3 (regions + batched scope-exit reclamation) + the sweep-epoch
+  model move it from inherent-limitation toward engineering/measurement; the **SLO stays `Declared`**.
+  **OQ-2 / OQ-5 / OQ-6 remain deferred** (legitimate non-blockers). **(§12)** new short pointer
+  section summarizing the three layers (affine-primary / optimized-RC-for-explicit-sharing /
+  region-reclamation), the coupling resolution, and the **named open sub-question** for the follow-on
+  — Layer-2 "atomic RC after cross-hypha transfer" vs §7.3 "cross-hypha rides the affine channel, no
+  cross-hypha refcount": does a **shared** value cross a hypha boundary (→ atomic RC) or only **sole**
+  ownership (→ affine move, no cross-hypha RC)? Both options tabled (not decided), orthogonal to
+  OQ-1/OQ-4. **STATUS: advance `Proposed → Accepted`** — OQ-1 (the banner blocker) + OQ-4 resolved,
+  OQ-2/5/6 deferred non-blockers. **⚠️ This is a GOVERNANCE MILESTONE, not routine: a maintainer must
+  ratify the `Proposed → Accepted` move; it must not skip to `Enacted` (no in-repo implementation/proof
+  exists — house rule #3, stepped + maintainer-signed-off).** Touches DN-32 + this RFC + Doc-Index
+  only; CHANGELOG.md / issues.yaml / docs/api-index are owned by the integrating parent.
+  (Append-only; VR-5; G2.)
