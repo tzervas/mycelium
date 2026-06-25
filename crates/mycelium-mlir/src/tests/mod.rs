@@ -2,3 +2,4 @@
 //! White-box access via `use crate::…::*`; logic files carry no `#[cfg(test)]` inline code.
 
 mod inject_tests;
+mod rc_plan_tests;

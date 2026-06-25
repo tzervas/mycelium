@@ -83,9 +83,25 @@ blockers — systematically, never-silent (G2), honest tags (VR-5), small audita
     statically guaranteed → FBIP-reuse-eligible); soundness is **machine-verified** by the evaluator
     (`RcError::UnsoundUnique` if any annotation is reached at rc≠1). Semantics-preserving (`Empirical`);
     reuse-site count `Exact`; FBIP perf `Declared` (cell-recycling is downstream codegen). 43 tests.
+  - **MEM-4·AOT — wire the analysis into execution (RFC-0027 §9 audit trail):** ✅ **done
+    (2026-06-25).** `mycelium-mlir::rc_plan` is the bridge that finally *consumes* the MEM-4 passes
+    at the AOT tier: `emit_reclamation_plan` runs the borrow-elided emission → reference RC-evaluator
+    and emits one `ReclamationRecord` (trigger `RcZero`) per predicted `rc→0` reclamation to a
+    `ReclamationSink`; `run_with_reclamation` computes the value with the **unmodified** trusted
+    env-machine and emits the plan **additively** alongside it. **Honest scope (VR-5):** the
+    env-machine still Rust-manages values, so this is the *observable* §9 audit trail of where the
+    static analysis says reclamation happens, **not** a behaviour change — a bug here is a wrong/
+    missing audit record, never a wrong value (DN-33 §2). Two `Declared` bounds: the analysed fragment
+    is the RC-evaluator's straight-line fragment (out-of-fragment terms → explicit `reclaimed: None`,
+    never a silent empty plan — G2), and the record's `value_meta_hash` is a synthetic `rcplan:<id>`
+    identity (the abstract machine tracks references, not content). Record *count* `Exact`. 5 tests;
+    `mycelium-core`/the env-machine untouched (KC-3); deps stay a DAG (`mir-passes`/`std-runtime`
+    are upstream of `mlir`).
   - **Next — Increment 3** (full FIP static guarantee, Phase 3) / the FBIP reuse-token *threading*
     (recycle the cell into a downstream same-shape allocation) / multi-move last-consume / inter-
-    procedural borrowing / recursion RC. The runtime `RcCell` probe stays the sound fallback throughout.
+    procedural borrowing / recursion RC / **threading actual reclamation into the env-machine** (the
+    deferred big step past the audit trail — RFC-0027 §10). The runtime `RcCell` probe stays the sound
+    fallback throughout.
 
 ## Swarm discipline (per CLAUDE.md)
 Sonnet leaves, disjoint dirs, `cargo fmt`/`clippy -D warnings -A unsafe_code`/`test -p <crate>` green, in-crate
