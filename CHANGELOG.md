@@ -8,6 +8,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: MEM-4 Q5 measurement corpus — Increment 1 gate cleared)
+
+- **`mycelium-mir-passes::corpus`** — the DN-33 §8.1 **Q5** measurement: a representative, **mixed**
+  corpus of Core IR terms (elision-friendly reader-heavy `let`s + elision-neutral escaping/single-use
+  terms) and a `measure()` that lowers each term both ways (`emit_owned` vs `emit_elided`), counts
+  `Dup`s, and runs the differential to confirm semantics-preservation. **Result: 22 → 2 `Dup`s
+  (20 removed, ~91% reduction), all terms semantics-preserved.** This clears the Q5 gate
+  (Increment 1's effect is measured), **unblocking Increment 2**.
+  - Honest tags: the `Dup` **count / ratio** is **`Exact`** (read off the IR — an exact measurement
+    *of this corpus*); the corpus being **representative** of real Mycelium programs is **`Declared`**
+    (no program population to sample yet — the corpus is a deliberate mix so the ratio isn't inflated);
+    the runtime **performance** interpretation stays **`Declared`** (no Mycelium runtime benchmark
+    yet — the gate is "the analysis does real work", not a perf SLO). 35 tests (4 new, incl. the Q5
+    gate assertion + the honest-mix + per-term-monotonicity checks); clippy `-D warnings` clean.
+
 ### Added (2026-06-25: documentation wiki + paired API-docs publishing)
 
 - **GitHub wiki source** (`docs/wiki/`): a browsable wiki generated from the unified per-crate

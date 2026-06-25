@@ -74,8 +74,13 @@ blockers — systematically, never-silent (G2), honest tags (VR-5), small audita
     `Empirical`; `dup`-reduction `Exact`, perf `Declared` (Q5). 31 tests; Core IR untouched.
     *(Recursion + interprocedural borrowing + the `substrate` subsumption Q4 remain for later
     increments.)*
-  - **Later — Increment 2** (`rc==1` reuse annotation) **/ Increment 3** (full FIP static guarantee,
-    Phase 3). The runtime `RcCell` probe stays the sound fallback throughout.
+  - **MEM-4·Q5 — measurement gate:** ✅ **met (2026-06-25).** `mycelium-mir-passes::corpus` measures
+    Increment 1 over a representative mixed corpus: **22 → 2 `Dup`s (20 removed, ~91% reduction), all
+    semantics-preserved.** Count/ratio `Exact`; representativeness + perf-interpretation `Declared`.
+    This clears the DN-33 §8.1 Q5 gate and **unblocks Increment 2.**
+  - **Next — Increment 2** (`rc==1` reuse annotation; now unblocked) **/ Increment 3** (full FIP
+    static guarantee, Phase 3) / interprocedural borrowing / recursion RC. The runtime `RcCell` probe
+    stays the sound fallback throughout.
 
 ## Swarm discipline (per CLAUDE.md)
 Sonnet leaves, disjoint dirs, `cargo fmt`/`clippy -D warnings -A unsafe_code`/`test -p <crate>` green, in-crate

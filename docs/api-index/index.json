@@ -9407,12 +9407,100 @@
       "corpus_refs": []
     },
     {
-      "symbol": "mycelium_mir_passes::emit",
+      "symbol": "mycelium_mir_passes::corpus",
       "kind": "mod",
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes",
       "file": "crates/mycelium-mir-passes/src/lib.rs",
       "line": 56,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusError",
+      "kind": "enum",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::corpus",
+      "file": "crates/mycelium-mir-passes/src/corpus.rs",
+      "line": 145,
+      "summary": "Errors a corpus measurement can surface (never-silent).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusReport",
+      "kind": "struct",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::corpus",
+      "file": "crates/mycelium-mir-passes/src/corpus.rs",
+      "line": 111,
+      "summary": "The per-corpus measurement: the Q5 number plus the semantics-preservation guarantee.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusReport::dups_removed",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::corpus::CorpusReport",
+      "file": "crates/mycelium-mir-passes/src/corpus.rs",
+      "line": 138,
+      "summary": "Total `Dup`s removed by elision across the corpus.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusReport::reduction_ratio",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::corpus::CorpusReport",
+      "file": "crates/mycelium-mir-passes/src/corpus.rs",
+      "line": 128,
+      "summary": "The aggregate `Dup`-reduction ratio in `[0, 1]` — `(owned - elided) / owned`, or `0.0` if the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::measure",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::corpus",
+      "file": "crates/mycelium-mir-passes/src/corpus.rs",
+      "line": 168,
+      "summary": "Measure Increment 1 over `corpus`: aggregate `Dup` counts (owned vs elided) and confirm every",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::measure_standard",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::corpus",
+      "file": "crates/mycelium-mir-passes/src/corpus.rs",
+      "line": 196,
+      "summary": "Measure the [`standard_corpus`] — the canonical Q5 measurement.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::standard_corpus",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::corpus",
+      "file": "crates/mycelium-mir-passes/src/corpus.rs",
+      "line": 73,
+      "summary": "A representative, **mixed** corpus of straight-line Core IR terms (named for the report).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::emit",
+      "kind": "mod",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes",
+      "file": "crates/mycelium-mir-passes/src/lib.rs",
+      "line": 57,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9489,7 +9577,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes",
       "file": "crates/mycelium-mir-passes/src/lib.rs",
-      "line": 57,
+      "line": 58,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9610,7 +9698,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes",
       "file": "crates/mycelium-mir-passes/src/lib.rs",
-      "line": 58,
+      "line": 59,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -31320,6 +31408,34 @@
     },
     {
       "symbol": "mycelium_mir_passes::balance::BalanceError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusReport::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::corpus::CorpusReport::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
