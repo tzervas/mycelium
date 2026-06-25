@@ -39,7 +39,10 @@ fn hash_of_i32(v: &i32) -> ContentHash {
 
 /// Count records in `sink` carrying `trigger`.
 fn count_trigger(sink: &CollectingSink, trigger: &ReclamationTrigger) -> usize {
-    sink.records.iter().filter(|r| &r.trigger == trigger).count()
+    sink.records
+        .iter()
+        .filter(|r| &r.trigger == trigger)
+        .count()
 }
 
 // ── 1. All three triggers compose through one never-silent sink ──────────────
@@ -66,11 +69,18 @@ fn three_triggers_compose_through_one_sink_never_silent() {
         RcProbe::Shared => {} // expected: another handle remains, no record
         RcProbe::UniqueOwner(_) => panic!("rc was 2 — must be Shared, not UniqueOwner"),
     }
-    assert_eq!(sink.len(), 0, "dropping a non-last handle emits no record (L2)");
+    assert_eq!(
+        sink.len(),
+        0,
+        "dropping a non-last handle emits no record (L2)"
+    );
 
     match shared_2.drop_ref(&mut sink, scope_id, pre_close_epoch, make_hash(10)) {
         RcProbe::UniqueOwner(v) => {
-            assert_eq!(v, "shared-value", "the sole owner recovers the value (FBIP)");
+            assert_eq!(
+                v, "shared-value",
+                "the sole owner recovers the value (FBIP)"
+            );
             // L2 → L3 handoff: a value that became uniquely-owned inside the scope is deferred
             // to the region for *batched* scope-exit reclamation.
             scope.defer(make_hash(10));
@@ -119,7 +129,10 @@ fn three_triggers_compose_through_one_sink_never_silent() {
     // `ScopeExit`. This is the second live trigger, fired from the structured scope.
     let records_before_close = sink.len();
     let closed = scope.close(&mut sink);
-    assert_eq!(closed.reclaimed_count, 2, "two deferred entries batched at close");
+    assert_eq!(
+        closed.reclaimed_count, 2,
+        "two deferred entries batched at close"
+    );
     assert_eq!(
         count_trigger(&sink, &ReclamationTrigger::ScopeExit),
         2,
