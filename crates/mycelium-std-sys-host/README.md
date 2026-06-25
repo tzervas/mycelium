@@ -1,29 +1,34 @@
 # mycelium-std-sys-host
 
-Production **host wiring** for the Mycelium standard library (RFC-0028 §4.5; M-722/M-723).
+> Production host wiring: connects the pure std crates' injectable seams to the audited `mycelium-std-sys` OS floor.
 
-The pure `std` crates (`mycelium-std-rand`, `mycelium-std-time`, …) keep their OS contact behind
-**injectable seams** — `EntropySource`, `ClockSource` — so they stay `wild`-free and testable with
-deterministic stubs. The audited OS floor (`/dev/urandom`, `std::time`, …) lives in exactly one
-place: `mycelium-std-sys` (LR-9 / RFC-0016 §8-Q6).
+**Tier:** stdlib  ·  **Status:** implemented (Rust-first), pending ratification  ·  **License:** MIT
 
-This crate is the **production glue** that fills those seams with the real floor:
+## Overview
 
-- [`OsEntropy`] — `EntropySource` backed by `mycelium-std-sys::rand` (`/dev/urandom`).
-- [`OsClock`] — `ClockSource` backed by `mycelium-std-sys::time` (monotonic + wall + logical).
+The pure `std` crates (`mycelium-std-rand`, `mycelium-std-time`, …) keep OS contact behind injectable
+seams — `EntropySource`, `ClockSource` — so they stay `wild`-free and testable with deterministic
+stubs. The audited OS floor lives in exactly one place: `mycelium-std-sys` (LR-9/RFC-0016 §8-Q6).
+`mycelium-std-sys-host` is the production glue that fills those seams with the real floor: `OsEntropy`
+fills `std-rand`'s `EntropySource` from `mycelium-std-sys::rand::fill_bytes`, and `OsClock` drives
+`std-time`'s `ClockSource` from `mycelium-std-sys::time`. No `unsafe`, no kernel coupling; the
+dependency arrow stays honest: pure std → (seam) ← host wiring → floor.
 
-It is the only crate that depends on **both** the audited floor and the pure std crates, so the
-dependency direction stays honest: pure std → (seam) ← host wiring → floor. No `unsafe`, no kernel
-coupling.
+## Key items
 
-## Honesty (VR-5 / G2)
+- `OsEntropy` — `EntropySource` backed by the audited `std-sys` OS entropy floor (M-723).
+- `OsClock` — `ClockSource` backed by the audited `std-sys` time floor (monotonic + wall + logical).
 
-Every read is **`Declared`** — a genuine OS source, but no checked precision/quality theorem or
-corpus. Failures are explicit `Result`/`Option` (no silent zero-fill, no clock wrap/clamp).
+## Guarantee posture
 
-## Scope note
+Every read is `Declared` — a genuine OS source, but no checked precision/quality theorem. Failures
+are explicit `Err` (no silent zero-fill, no clock wrap/clamp). Source is ground truth.
 
-The Mycelium-surface `wild:`-dispatch encoding for the byte-oriented `io`/`fs` ops (so a Mycelium
-`wild { io.write(…) }` block reaches these functions) is the **RFC-0028 §4.4 per-op host encoding**,
-which is deferred to the `@std-sys` author and not yet committed. This crate supplies the Rust-level
-production wiring the std crates need today; the surface encoding follows when §4.4 is decided.
+## Design references
+
+- RFC-0028 §4.5 (host encoding); RFC-0016 §8-Q6 (std-sys floor); LR-9 (wild boundary).
+- Tasks: M-722/M-723.
+
+## Role in the workspace
+
+The sole crate that depends on both the audited OS floor and the pure std crates; wires the production entropy and clock sources without touching `unsafe`. See the [workspace overview](../../README.md).
