@@ -930,6 +930,24 @@
 | `mycelium_lsp::wire::publish_diagnostics_params` | fn | `crates/mycelium-lsp/src/wire.rs:64` | The `params` of a `textDocument/publishDiagnostics` notification for `feedback` at `uri`. |
 | `mycelium_lsp::write_message` | fn | `crates/mycelium-lsp/src/wire.rs:164` | Write one JSON-RPC message to `writer` with the `Content-Length` framing, then flush. |
 
+## mycelium-mir-passes
+
+| Symbol | Kind | File:Line | Summary |
+|---|---|---|---|
+| `mycelium_mir_passes::balance` | mod | `crates/mycelium-mir-passes/src/lib.rs:42` | — |
+| `mycelium_mir_passes::balance::BalanceError` | enum | `crates/mycelium-mir-passes/src/balance.rs:36` | A balance-invariant violation for one binding (never-silent diagnostics, G2). |
+| `mycelium_mir_passes::balance::check_balance` | fn | `crates/mycelium-mir-passes/src/balance.rs:107` | Verify the balance invariant over `node` and every binding nested within it. |
+| `mycelium_mir_passes::emit` | mod | `crates/mycelium-mir-passes/src/lib.rs:43` | — |
+| `mycelium_mir_passes::emit::EmitError` | enum | `crates/mycelium-mir-passes/src/emit.rs:39` | Why RC-emission could not lower a node. |
+| `mycelium_mir_passes::emit::count_occurrences` | fn | `crates/mycelium-mir-passes/src/emit.rs:186` | Count the **free** consuming occurrences of `var` in `node`, respecting shadowing. |
+| `mycelium_mir_passes::emit::emit_owned` | fn | `crates/mycelium-mir-passes/src/emit.rs:65` | Lower a Core IR [`Node`] to the naive fully-owned [`RcNode`] (MEM-4·B0). |
+| `mycelium_mir_passes::rc_ir` | mod | `crates/mycelium-mir-passes/src/lib.rs:44` | — |
+| `mycelium_mir_passes::rc_ir::Mode` | enum | `crates/mycelium-mir-passes/src/rc_ir.rs:40` | The ownership mode of a binding (DN-33 §2 / §8.1 Q2). |
+| `mycelium_mir_passes::rc_ir::RcAlt` | enum | `crates/mycelium-mir-passes/src/rc_ir.rs:49` | One alternative of a flat [`RcNode::Match`] — mirrors `mycelium_core::Alt`. |
+| `mycelium_mir_passes::rc_ir::RcNode` | enum | `crates/mycelium-mir-passes/src/rc_ir.rs:76` | An RC-annotated Core IR node (the first-order fragment + `Dup`/`Drop`). |
+| `mycelium_mir_passes::rc_ir::RcNode::drop_one` | fn | `crates/mycelium-mir-passes/src/rc_ir.rs:177` | Wrap `body` in a single `Drop { var }` node. |
+| `mycelium_mir_passes::rc_ir::RcNode::dup_n` | fn | `crates/mycelium-mir-passes/src/rc_ir.rs:162` | Wrap `body` in `n` nested `Dup { var }` nodes (innermost is `body`). |
+
 ## mycelium-mlir
 
 | Symbol | Kind | File:Line | Summary |
@@ -4389,6 +4407,24 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_lsp::wire::serve_stdio` | dedup-alias: same definition as `mycelium_lsp::serve_stdio` at crates/mycelium-lsp/src/wire.rs:292 — one canonical row kept |
 | `mycelium_lsp::wire::to_lsp_diagnostic` | dedup-alias: same definition as `mycelium_lsp::to_lsp_diagnostic` at crates/mycelium-lsp/src/wire.rs:47 — one canonical row kept |
 | `mycelium_lsp::wire::write_message` | dedup-alias: same definition as `mycelium_lsp::write_message` at crates/mycelium-lsp/src/wire.rs:164 — one canonical row kept |
+| `mycelium_mir_passes::balance::BalanceError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::balance::BalanceError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::balance::BalanceError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::balance::BalanceError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::emit::EmitError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::emit::EmitError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::emit::EmitError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::emit::EmitError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::rc_ir::Mode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::rc_ir::Mode::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::rc_ir::Mode::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::rc_ir::Mode::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::rc_ir::RcAlt::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::rc_ir::RcAlt::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::rc_ir::RcAlt::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::rc_ir::RcNode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::rc_ir::RcNode::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mir_passes::rc_ir::RcNode::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::Task::Error` | definition not found via regex heuristic (kind='type', name='Error') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::Task::Output` | definition not found via regex heuristic (kind='type', name='Output') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::Task::poll` | definition not found via regex heuristic (kind='fn', name='poll') — possibly macro-generated or cfg-gated |

@@ -57,11 +57,14 @@ blockers — systematically, never-silent (G2), honest tags (VR-5), small audita
   RC-annotated IR** (Core IR `node.rs` stays pristine); **differential + structural-invariant**
   soundness (`Empirical`). Design unblocked.
 - **MEM-4 build (forward epic, per the §8.1 resolutions) — sequenced:**
-  - **MEM-4·B0 — RC-emission pipeline foundation:** new `crates/mycelium-mir-passes/` with the
-    **RC-annotated IR** (`RcNode` — mirrors `Node` + `Dup`/`Drop` + own/borrow mode), a **naive
-    (fully-owned) RC-emission** lowering `Node → RcNode` (dup at non-last use, drop at end-of-scope),
-    a **reference RC-evaluator** producing a reclamation trace, and the **balance invariant** test
-    (every value dup/drop-balanced to net-zero — no leak, no double-free). `node.rs` untouched.
+  - **MEM-4·B0 — RC-emission pipeline foundation:** ✅ **done (2026-06-25).** New
+    `crates/mycelium-mir-passes/` with the **RC-annotated IR** (`RcNode` — mirrors the first-order
+    `Node` fragment + `Dup`/`Drop` + own/borrow `Mode`), the **naive (fully-owned) RC-emission**
+    lowering `Node → RcNode` (shadowing-aware; `Fix`/`FixGroup` refused explicitly — G2), and the
+    **structural balance invariant** (`1 + dups == uses + drops`, independently checked over the
+    emitted IR — mutation-tested). `mycelium-core/src/node.rs` untouched (KC-3 / Q2). 21 tests green.
+    *(The reference RC-evaluator / differential half of Q3 moves to Increment 1, where there are two
+    emissions to compare.)*
   - **MEM-4·1 — Increment 1 (non-escaping borrow elision):** the escape analysis marking non-escaping
     uses *borrowed* (eliding their `dup`/`drop`), + the **Q3 differential harness** (emit with/without
     elision → identical results AND identical reclamation records). Subsumes `substrate` uniqueness
