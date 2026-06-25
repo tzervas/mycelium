@@ -270,8 +270,16 @@ rather than asserted.
      `~>` flow-glyph** (sigil + keyword express one concept, not two), it matches the **Kotlin `by`
      precedent** the design already cites (a preposition, not the pattern-name), and it carries the
      transport-network metaphor without being forced. Discoverability cost (it is not the textbook pattern
-     name) is recovered by still *calling* the feature "delegation" everywhere except the keyword. `derive`
-     vs `weave` and `reveal` vs `expand` **remain open**.
+     name) is recovered by still *calling* the feature "delegation" everywhere except the keyword.
+   - **Resolved (2026-06-25): the generative-lowering construct is `derive`, the inspector is `reveal`.**
+     `derive` over the coined `weave` — **plain-first** (house naming rule): `derive` is the conventional
+     term (Rust `#[derive]`, Haskell `deriving`), instantly discoverable, and the coinage cleared no
+     mnemonic bar high enough to justify departing from it. `reveal` over `expand` — `expand` overloads
+     **macro-expansion** (`cargo expand`, Lean `pp.all`), whereas the construct shows the *real, already-
+     lowered L0 term* (not a re-expansion step); `reveal` names that disclosure without the collision and
+     reinforces the **abstracted-never-hidden** thesis (§2: the L0 form is always `reveal`-able). With
+     this, **§8.1 Construct naming is fully settled** (delegation `via`; generative `derive`; inspector
+     `reveal`).
 2. **Nanopass vs single elaboration** — how much of the gradient is implemented as *separate*
    IL-grammar-checked passes (the full nanopass tower, §2) versus the **single `elab.rs` elaboration**
    today? Nanopass buys per-pass checkability and failure isolation; one elaboration is simpler. Where

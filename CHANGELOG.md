@@ -8,6 +8,16 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-25: DN-38 §8.1 naming settled — `derive` + `reveal`)
+
+- **DN-38 §8.1 Construct naming fully settled** (append-only; **DN-38 stays Draft**). The
+  generative-lowering construct is **`derive`** (plain-first over the coined `weave` — conventional,
+  discoverable: Rust `#[derive]` / Haskell `deriving`; coinage cleared no mnemonic bar). The inspector
+  is **`reveal`** (over `expand`, which overloads macro-*expansion*; the construct *discloses* the real
+  already-lowered L0 term, reinforcing the abstracted-never-hidden thesis). Combined with the earlier
+  `via` resolution, all three §8.1 naming questions are now closed (delegation `via`; generative
+  `derive`; inspector `reveal`).
+
 ### Changed (2026-06-25: DN-36 + DN-37 ratified Draft → Accepted; delegation keyword → `via`)
 
 - **DN-36 — Safe & High-Performance Iteration** ratified **Draft → Accepted** (maintainer). Accepts
