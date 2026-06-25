@@ -8,6 +8,29 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: research records — env-machine reclamation + transpiler evidence base)
+
+- **Four research records** (`research/16`–`research/19`), landed as the evidence base for the next
+  two memory/self-hosting steps. Each is a multi-agent research pass (internal repo-grounded +
+  external web prior-art), adversarially verified, with honest guarantee tags (internal claims
+  `Empirical`/`Declared`; external mechanisms `Empirical` where primary-source-checked, `Declared`
+  where second-hand and flagged):
+  - **16/17 — Env-machine reclamation (a future DN-35).** The ground truth for threading *actual*
+    Mycelium-level reclamation into the AOT env-machine (the deferred step past the §9 audit trail):
+    the exact `eval_machine` seam (`crates/mycelium-mlir/src/aot.rs`), the reference RC-evaluator as
+    correctness oracle, the open design decisions; plus a prior-art survey (Perceus / Frame-Limited
+    Reuse, Counting Immutable Beans, FP² FIP, Lean 4 RC, RC⊕region coupling) with a concrete
+    "static decisions, dynamic verification" recommendation and the one novel obligation Mycelium
+    must own (in-place reuse vs content-address identity).
+  - **18/19 — Rust→Mycelium transpiler (DN-34 evidence).** The two maintainer seed projects (py2rust
+    + py-rust-bridge) with reuse verdicts; Mycelium-as-transpile-target readiness; the
+    construct-mapping table; plus a prior-art survey (front-end choice — `syn` vs rust-analyzer HIR
+    vs rustc MIR `mir_borrowck` as the ownership oracle; c2rust/SACTOR preserve-first architecture;
+    never-silent residue reporting; the Laertes ~11% ceiling as an honest caution on "the bulk
+    transpiles"; diverse-double-compiling for bootstrap trust).
+  - Indexed in `docs/Doc-Index.md`. These enact nothing and ship no code — they back the future
+    DN-35 and the DN-34 follow-on design work.
+
 ### Added (2026-06-25: MEM-4 corpus — Increment-2 reuse + audit-trail measurement)
 
 - **MEM-4 measurement, broadened** (`mycelium-mir-passes::corpus`): the Q5 corpus measured only
