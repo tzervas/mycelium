@@ -8,6 +8,32 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: MEM-4 Increment 1 — non-escaping borrow elision + the Q3 differential harness)
+
+- **MEM-4 Increment 1 — borrow elision** (`mycelium-mir-passes`, DN-33 Accepted §8.1): the pass that
+  actually **removes** RC ops. In the immutable value model a reader primitive (`Op`/`Swap`) reads its
+  operands and produces a fresh result, retaining nothing — so an operand position is a **borrow**
+  (non-consuming read), not a move.
+  - **`emit::emit_elided`** — a `let` binding whose every use is such a read (**fully borrowable** —
+    `emit::is_fully_borrowable`, conservative: any escaping use to the result / a `Construct` / an
+    `App`/`Match` keeps it owned) is emitted with its uses as `RcNode::Borrow` (non-consuming), **no**
+    `Dup`, and a single `RcNode::DropAfter` reclaiming it **after** its reads. Strictly fewer RC ops
+    than B0's owned emission (`k-1` `Dup`s → `0`). Intraprocedural; `Lam` params stay `Owned`
+    (interprocedural borrowing is a later increment). New IR nodes: `Borrow` (read) and `DropAfter`
+    (reclaim-after-body — the correct drop placement so a borrowed value stays live through its reads).
+  - **`eval` — the reference RC-evaluator + `eval::differential`** (the differential half of the
+    ratified Q3 soundness strategy): an abstract RC machine over the straight-line fragment that runs
+    a term's owned **and** elided emissions and checks they reclaim the **same multiset of values**
+    with **no use-after-free / double-free**, while the `Dup` count strictly drops. Control-flow
+    nodes outside the straight-line fragment are refused explicitly (`RcError::UnsupportedNode`, G2).
+  - Honest tags: the elision's **semantics-preservation** is **`Empirical`** (differential trials over
+    a corpus, backed by the structural `DropAfter`-after-reads + balance argument), **not `Proven`**
+    (a mechanized proof is the Phase-3 option — VR-5); the `Dup`-count reduction is **`Exact`** (read
+    off the IR), the *performance* benefit stays `Declared` until measured (Q5). 31 tests (10 new:
+    borrow classification, elided shape, the differential over a corpus, dup-reduction, and evaluator
+    use-after-free / double-free / unsupported-node witnesses); clippy `-D warnings` clean;
+    `#![forbid(unsafe_code)]`. Core IR still untouched (KC-3).
+
 ### Added (2026-06-25: MEM-4·B0 — the RC-emission pipeline foundation (`mycelium-mir-passes`))
 
 - **`crates/mycelium-mir-passes`** — the first MEM-4 code (DN-33 Accepted §8.1), building the

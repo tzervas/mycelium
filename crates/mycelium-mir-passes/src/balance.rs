@@ -106,8 +106,10 @@ impl Tally {
 /// Guarantee: `Exact` — a deterministic pass over the IR.
 pub fn check_balance(node: &RcNode) -> Result<(), BalanceError> {
     match node {
-        RcNode::Const(_) | RcNode::Var(_) => Ok(()),
-        RcNode::Dup { body, .. } | RcNode::Drop { body, .. } => check_balance(body),
+        RcNode::Const(_) | RcNode::Var(_) | RcNode::Borrow(_) => Ok(()),
+        RcNode::Dup { body, .. } | RcNode::Drop { body, .. } | RcNode::DropAfter { body, .. } => {
+            check_balance(body)
+        }
         RcNode::Let { id, bound, body } => {
             check_balance(bound)?;
             check_owned(id, body)?;
@@ -193,6 +195,10 @@ fn tally(var: &VarId, body: &RcNode) -> Tally {
             uses: usize::from(x == var),
             ..Tally::default()
         },
+        // A borrow is a non-consuming read: it changes no reference count, so it contributes
+        // nothing to the balance equation (its liveness — that a reference is live when it reads —
+        // is the reference evaluator's obligation, not the structural balance's).
+        RcNode::Borrow(_) => Tally::default(),
         RcNode::Dup { var: v, body } => {
             let base = tally(var, body);
             if v == var {
@@ -204,7 +210,7 @@ fn tally(var: &VarId, body: &RcNode) -> Tally {
                 base
             }
         }
-        RcNode::Drop { var: v, body } => {
+        RcNode::Drop { var: v, body } | RcNode::DropAfter { var: v, body } => {
             let base = tally(var, body);
             if v == var {
                 Tally {

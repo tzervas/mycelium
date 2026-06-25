@@ -9379,7 +9379,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes",
       "file": "crates/mycelium-mir-passes/src/lib.rs",
-      "line": 42,
+      "line": 55,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9412,7 +9412,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes",
       "file": "crates/mycelium-mir-passes/src/lib.rs",
-      "line": 43,
+      "line": 56,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9429,6 +9429,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mir_passes::emit::borrow_occurrences",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::emit",
+      "file": "crates/mycelium-mir-passes/src/emit.rs",
+      "line": 427,
+      "summary": "Count occurrences of `var` in **borrow positions** (direct `Op` argument / `Swap` source),",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mir_passes::emit::count_occurrences",
       "kind": "fn",
       "crate": "mycelium-mir-passes",
@@ -9436,6 +9447,17 @@
       "file": "crates/mycelium-mir-passes/src/emit.rs",
       "line": 186,
       "summary": "Count the **free** consuming occurrences of `var` in `node`, respecting shadowing.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::emit::emit_elided",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::emit",
+      "file": "crates/mycelium-mir-passes/src/emit.rs",
+      "line": 285,
+      "summary": "Lower a Core IR [`Node`] with MEM-4 Increment 1 **borrow elision** applied.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -9451,12 +9473,144 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mir_passes::emit::is_fully_borrowable",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::emit",
+      "file": "crates/mycelium-mir-passes/src/emit.rs",
+      "line": 418,
+      "summary": "Whether `var`'s binding is **fully borrowable** over `body`: it is used at least once and **every**",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval",
+      "kind": "mod",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes",
+      "file": "crates/mycelium-mir-passes/src/lib.rs",
+      "line": 57,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::AllocId",
+      "kind": "type",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::eval",
+      "file": "crates/mycelium-mir-passes/src/eval.rs",
+      "line": 35,
+      "summary": "A distinct allocation identity (assigned in evaluation order).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::Differential",
+      "kind": "struct",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::eval",
+      "file": "crates/mycelium-mir-passes/src/eval.rs",
+      "line": 216,
+      "summary": "The verdict of a differential run on one term (DN-33 §8.1 Q3).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::Differential::dups_removed",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::eval::Differential",
+      "file": "crates/mycelium-mir-passes/src/eval.rs",
+      "line": 234,
+      "summary": "`Dup`s removed by elision (≥ 0; the optimisation's effect — `Exact`, read off the IR).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::Differential::is_semantics_preserving",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::eval::Differential",
+      "file": "crates/mycelium-mir-passes/src/eval.rs",
+      "line": 228,
+      "summary": "The elision is **semantics-preserving** iff the reclamation multisets match.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::EvalReport",
+      "kind": "struct",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::eval",
+      "file": "crates/mycelium-mir-passes/src/eval.rs",
+      "line": 72,
+      "summary": "The outcome of evaluating a term: its result allocation and the reclamation log (in order).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::EvalReport::reclaimed_sorted",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::eval::EvalReport",
+      "file": "crates/mycelium-mir-passes/src/eval.rs",
+      "line": 83,
+      "summary": "The reclamation log as a sorted multiset — the comparison key for [`differential`]",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::RcError",
+      "kind": "enum",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::eval",
+      "file": "crates/mycelium-mir-passes/src/eval.rs",
+      "line": 39,
+      "summary": "An RC-discipline violation detected by the evaluator (never-silent, G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::count_dups",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::eval",
+      "file": "crates/mycelium-mir-passes/src/eval.rs",
+      "line": 241,
+      "summary": "Count `Dup` nodes anywhere in an [`RcNode`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::differential",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::eval",
+      "file": "crates/mycelium-mir-passes/src/eval.rs",
+      "line": 277,
+      "summary": "Run the differential check: evaluate the owned and elided emissions of the **same** Core IR term",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::eval",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::eval",
+      "file": "crates/mycelium-mir-passes/src/eval.rs",
+      "line": 143,
+      "summary": "Evaluate an [`RcNode`] in the abstract RC machine, returning its reclamation report.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mir_passes::rc_ir",
       "kind": "mod",
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes",
       "file": "crates/mycelium-mir-passes/src/lib.rs",
-      "line": 44,
+      "line": 58,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9495,12 +9649,23 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mir_passes::rc_ir::RcNode::drop_after",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::rc_ir::RcNode",
+      "file": "crates/mycelium-mir-passes/src/rc_ir.rs",
+      "line": 204,
+      "summary": "Wrap `body` in a single `DropAfter { var }` node (reclaim `var` *after* `body`).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mir_passes::rc_ir::RcNode::drop_one",
       "kind": "fn",
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::rc_ir::RcNode",
       "file": "crates/mycelium-mir-passes/src/rc_ir.rs",
-      "line": 177,
+      "line": 193,
       "summary": "Wrap `body` in a single `Drop { var }` node.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -9511,7 +9676,7 @@
       "crate": "mycelium-mir-passes",
       "module": "mycelium_mir_passes::rc_ir::RcNode",
       "file": "crates/mycelium-mir-passes/src/rc_ir.rs",
-      "line": 162,
+      "line": 178,
       "summary": "Wrap `body` in `n` nested `Dup { var }` nodes (innermost is `body`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -31171,6 +31336,46 @@
     },
     {
       "symbol": "mycelium_mir_passes::emit::EmitError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::Differential::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::Differential::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::Differential::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::EvalReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::EvalReport::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::EvalReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::RcError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::RcError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::RcError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::eval::RcError::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {

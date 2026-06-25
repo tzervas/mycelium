@@ -65,10 +65,15 @@ blockers — systematically, never-silent (G2), honest tags (VR-5), small audita
     emitted IR — mutation-tested). `mycelium-core/src/node.rs` untouched (KC-3 / Q2). 21 tests green.
     *(The reference RC-evaluator / differential half of Q3 moves to Increment 1, where there are two
     emissions to compare.)*
-  - **MEM-4·1 — Increment 1 (non-escaping borrow elision):** the escape analysis marking non-escaping
-    uses *borrowed* (eliding their `dup`/`drop`), + the **Q3 differential harness** (emit with/without
-    elision → identical results AND identical reclamation records). Subsumes `substrate` uniqueness
-    (Q4). Behind the Q5 gate (measured `dup`/`drop`-reduction; count `Exact`, perf `Declared`).
+  - **MEM-4·1 — Increment 1 (non-escaping borrow elision):** ✅ **done (2026-06-25).** `emit_elided`
+    borrow-elides fully-borrowable `let` bindings (every use a reader-primitive read) → `Borrow` uses,
+    no `Dup`, a single `DropAfter` (new IR nodes `Borrow`/`DropAfter`); conservative (any escaping use
+    stays owned), intraprocedural (`Lam` params stay `Owned`). The **Q3 differential harness**
+    (`eval` + `eval::differential`, an abstract RC machine) confirms owned ≡ elided reclaim the same
+    value multiset with no use-after-free while the `Dup` count strictly drops. Semantics-preservation
+    `Empirical`; `dup`-reduction `Exact`, perf `Declared` (Q5). 31 tests; Core IR untouched.
+    *(Recursion + interprocedural borrowing + the `substrate` subsumption Q4 remain for later
+    increments.)*
   - **Later — Increment 2** (`rc==1` reuse annotation) **/ Increment 3** (full FIP static guarantee,
     Phase 3). The runtime `RcCell` probe stays the sound fallback throughout.
 
