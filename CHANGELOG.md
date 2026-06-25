@@ -8,6 +8,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: DN-38 — the layered-lowering atlas & generative sugar, research-backed)
+
+- **DN-38 — The Layered-Lowering Atlas & Generative Sugar (one seamless gradient to L0)**
+  (`docs/notes/DN-38-Layered-Lowering-Atlas.md`, **Draft/advisory**), backed by `research/25`
+  (pit-of-success + nanopass/language-tower + inspectable-desugaring/generative-lowering prior art).
+  The **unifying** note the feature DNs (DN-36/37, future DN-35) hang off.
+  - **Thesis:** Mycelium is **one seamless language** — the L0–L3 "levels" are how the *compiler
+    lowers*, not modes the *programmer declares*; a program freely intermixes high-sugar and
+    low-explicit forms because they're the same program at different points on a **desugaring
+    gradient**. The batteries-included feature **superset** abstracts L0 away — *abstracted, never
+    hidden* (always `reveal`-able). (Racket "languages as libraries" taken further: the low level is
+    the *same* language less-sugared.)
+  - **The lowering law:** every feature lowers to L0 with the same observable meaning; each pass small,
+    IL-grammar-checked, semantics-preserving; kernel never grows (KC-3). The "seamless gradient" and
+    the "verified tower" (nanopass/CompCert) are one property from two seats (RFC-0012
+    observational-identity + NFR-7).
+  - **Honest refinement:** levels invisible, but `wild`/`!{io}`/`@matured`/guarantee-tags stay
+    explicit + **level-independent** (they surface *what the code does* — the audit trail survives
+    free mixing).
+  - **Generative lowering:** terse-params → explicit, inspectable, **content-addressed** L0 artifact
+    (`derive`/`weave`; Lombok-style hidden magic is structurally impossible — the only output is an
+    L0 term; same-intent→same-identity free via ADR-003; Dynel/RFC-0013 errors woven in).
+  - **Inspectable desugaring:** `reveal` shows the *real* L0 term (not a lossy text render),
+    layer-hideable, `delaborate∘lower=id` round-trip gated by `certified` (ADR-032).
+  - Includes the **per-feature Lowering Map** (living checklist). Layering + observational-identity +
+    built lowerings `Exact`; framing + construct + naming `Declared`. Enacts nothing.
+
 ### Added (2026-06-25: DN-37 — object & behavior model + sigil category scheme, research-backed)
 
 - **DN-37 — Object & Behavior Model (and the Sigil Category Scheme)**
