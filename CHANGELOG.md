@@ -8,6 +8,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: E12 Wave-2 — MEM-2 explicit RC + rc==1 reuse (DN-32 Layer 2))
+
+- **MEM-2 — explicit reference counting + `rc==1` reuse probe** (`crates/mycelium-std-runtime/src/rc.rs`,
+  DN-32 Layer 2 / RFC-0027 §10): `RcCell<T>` wraps `std::rc::Rc<T>` — **non-atomic, `!Send + !Sync`**
+  (intra-hypha fast path), immutable-value-only (LR-8), no `unsafe` (respects `#![forbid(unsafe_code)]`).
+  `drop_ref(sink, …) -> RcProbe<T>` probes the strong count **before** decrement: `count==1` →
+  `UniqueOwner(T)` — emits exactly one `ReclamationRecord(RcZero)` through MEM-1's `ReclamationSink` (**the
+  first live reclamation trigger wired**) and returns the owned `T` (FBIP reuse, §10.2); `count>1` → `Shared`
+  (decrement, no record). Probe logic tagged **`Exact`** (enforced by construction); FBIP reuse-as-perf-win
+  **`Declared`** (no measurement, DN-32 §6a). 64/64 tests (12 new). Downstream-flagged: the **atomic
+  cross-hypha** upgrade (the DN-32 §7 reconciliation sub-question), **region** deferred-drop accumulation
+  (MEM-3), and **static RC elision** (MEM-4 / Perceus uniqueness analysis).
+
 ### Added (2026-06-25: E12 memory-model build — Wave 1 — MEM-1 + CI blocker removal)
 
 - **E12 build plan** (`docs/planning/E12-Memory-Model-Build-Plan.md`) — the DN-32/RFC-0027 implementation

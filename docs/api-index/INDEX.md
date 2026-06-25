@@ -1782,7 +1782,10 @@
 | `mycelium_std_runtime::network::Sender` | struct | `crates/mycelium-std-runtime/src/network.rs:109` | Sending end of a typed channel. |
 | `mycelium_std_runtime::network::TryRecv` | enum | `crates/mycelium-std-runtime/src/network.rs:206` | Result of a non-blocking receive attempt. |
 | `mycelium_std_runtime::network::TrySend` | enum | `crates/mycelium-std-runtime/src/network.rs:195` | Result of a non-blocking send attempt. |
-| `mycelium_std_runtime::reclamation` | mod | `crates/mycelium-std-runtime/src/lib.rs:49` | — |
+| `mycelium_std_runtime::rc` | mod | `crates/mycelium-std-runtime/src/lib.rs:49` | — |
+| `mycelium_std_runtime::rc::RcCell` | struct | `crates/mycelium-std-runtime/src/rc.rs:102` | A non-atomic intra-hypha reference-counted handle to a shared immutable value. |
+| `mycelium_std_runtime::rc::RcProbe` | enum | `crates/mycelium-std-runtime/src/rc.rs:239` | The outcome of an [`RcCell::drop_ref`] call — the rc-probe decision (RFC-0027 §10.1). |
+| `mycelium_std_runtime::reclamation` | mod | `crates/mycelium-std-runtime/src/lib.rs:50` | — |
 | `mycelium_std_runtime::reclamation::ChannelId` | struct | `crates/mycelium-std-runtime/src/reclamation.rs:61` | A stable, opaque identifier for a channel (RFC-0027 §9, `channel_id`). |
 | `mycelium_std_runtime::reclamation::CollectingSink` | struct | `crates/mycelium-std-runtime/src/reclamation.rs:343` | A `ReclamationSink` implementation that collects all emitted records into a `Vec`. |
 | `mycelium_std_runtime::reclamation::CollectingSink::drain` | fn | `crates/mycelium-std-runtime/src/reclamation.rs:370` | Drain all collected records, leaving the sink empty. |
@@ -1799,7 +1802,7 @@
 | `mycelium_std_runtime::reclamation::ReclamationTrigger` | enum | `crates/mycelium-std-runtime/src/reclamation.rs:93` | The reason a reclamation event fired — exhaustive over the three structural triggers |
 | `mycelium_std_runtime::reclamation::ScopeId` | struct | `crates/mycelium-std-runtime/src/reclamation.rs:52` | A stable, opaque identifier for a runtime scope (RT7 scope tree node). |
 | `mycelium_std_runtime::reclamation::SweepEpoch` | struct | `crates/mycelium-std-runtime/src/reclamation.rs:76` | A monotonic epoch counter from the `SweepOrder` model (RFC-0008 §4.3). |
-| `mycelium_std_runtime::scheduler` | mod | `crates/mycelium-std-runtime/src/lib.rs:50` | — |
+| `mycelium_std_runtime::scheduler` | mod | `crates/mycelium-std-runtime/src/lib.rs:51` | — |
 | `mycelium_std_runtime::scheduler::SCHEDULER_BACKPRESSURE_STRENGTH:` | const | `crates/mycelium-std-runtime/src/scheduler.rs:40` | Guarantee strength for the demand-signalled backpressure bound. |
 | `mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH:` | const | `crates/mycelium-std-runtime/src/scheduler.rs:45` | Guarantee strength for liveness (every submitted job runs exactly once). |
 | `mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH:` | const | `crates/mycelium-std-runtime/src/scheduler.rs:34` | Guarantee strength for the scheduler's RT2 sequentialization differential. |
@@ -1810,7 +1813,7 @@
 | `mycelium_std_runtime::scheduler::Scheduler::with_workers` | fn | `crates/mycelium-std-runtime/src/scheduler.rs:106` | A scheduler with exactly `workers` OS threads and a ready-queue `capacity`. |
 | `mycelium_std_runtime::scheduler::Scheduler::workers` | fn | `crates/mycelium-std-runtime/src/scheduler.rs:118` | The number of OS worker threads this scheduler runs. |
 | `mycelium_std_runtime::scheduler::SchedulerError` | enum | `crates/mycelium-std-runtime/src/scheduler.rs:49` | Why constructing a [`Scheduler`] refused — always explicit, never a silent fallback (G2). |
-| `mycelium_std_runtime::supervision` | mod | `crates/mycelium-std-runtime/src/lib.rs:51` | — |
+| `mycelium_std_runtime::supervision` | mod | `crates/mycelium-std-runtime/src/lib.rs:52` | — |
 | `mycelium_std_runtime::supervision::CancelTree` | struct | `crates/mycelium-std-runtime/src/supervision.rs:48` | A cancellation **tree** (RFC-0008 RT7): a node with its own [`CancelToken`] and child tokens. |
 | `mycelium_std_runtime::supervision::CancelTree::cancel` | fn | `crates/mycelium-std-runtime/src/supervision.rs:88` | Cancel this node **and every descendant** — the never-silent cascade (G2/RT7). |
 | `mycelium_std_runtime::supervision::CancelTree::child` | fn | `crates/mycelium-std-runtime/src/supervision.rs:74` | Attach a fresh child scope and return a mutable handle to it, so callers can build a genuine |
@@ -1826,7 +1829,7 @@
 | `mycelium_std_runtime::supervision::SupervisionRecord` | struct | `crates/mycelium-std-runtime/src/supervision.rs:153` | One reified supervision decision — the EXPLAIN record (RFC-0008 §4.7; ADR-006: selections are |
 | `mycelium_std_runtime::supervision::run_supervised` | fn | `crates/mycelium-std-runtime/src/supervision.rs:113` | Run `tasks` on the OS-thread pool under a shared [`CancelToken`], collecting **every** child's |
 | `mycelium_std_runtime::supervision::supervise_with_restart` | fn | `crates/mycelium-std-runtime/src/supervision.rs:198` | Run a restartable child under a live [`Supervisor`] (M-356) until it succeeds or the supervisor |
-| `mycelium_std_runtime::task` | mod | `crates/mycelium-std-runtime/src/lib.rs:52` | — |
+| `mycelium_std_runtime::task` | mod | `crates/mycelium-std-runtime/src/lib.rs:53` | — |
 | `mycelium_std_runtime::task::Deadlock` | struct | `crates/mycelium-std-runtime/src/task.rs:97` | Deadlock descriptor: returned when a scope cannot make progress. |
 | `mycelium_std_runtime::task::Poll` | enum | `crates/mycelium-std-runtime/src/task.rs:75` | Poll result for an async task step. |
 | `mycelium_std_runtime::task::SweepOrder` | enum | `crates/mycelium-std-runtime/src/task.rs:84` | Order in which tasks are swept from a scope's run queue. |
@@ -5937,6 +5940,13 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_runtime::network::TryRecv` | definition not found via regex heuristic (kind='fn', name='TryRecv') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::network::TrySend` | definition not found via regex heuristic (kind='fn', name='TrySend') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::network::TrySend` | definition not found via regex heuristic (kind='fn', name='TrySend') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::rc::RcCell` | definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::rc::RcCell` | definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::rc::RcCell` | definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::rc::RcCell` | definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::rc::RcCell` | definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::rc::RcCell` | definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::rc::RcProbe` | definition not found via regex heuristic (kind='fn', name='RcProbe') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::reclamation::ChannelId::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::reclamation::ChannelId::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::reclamation::ChannelId::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
