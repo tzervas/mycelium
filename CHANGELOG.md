@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: DN-32 three-layer memory architecture; RFC-0027 → Accepted (ratified))
+
+- **DN-32 — Three-Layer Hybrid Memory Architecture** (`docs/notes/`, **Accepted**, ratified by maintainer):
+  affine/linear ownership PRIMARY (unique data, ~zero cost) → optimized RC for EXPLICIT sharing
+  (non-atomic intra-hypha, `rc==1` reuse) → region-based alloc/reclamation in scopes (batched at scope-exit).
+  Parent-child reclamation total; siblings concurrent-by-default (weak coupling), strong opt-in. Grounded in
+  Perceus / Smith-structured-concurrency / Lorenzen + the landed research. Carries four honest caveats (§6):
+  perf claims are `Declared` GOALS; Layer-2 static uniqueness analysis is the hard leg + a KC-3 tension; OQ-1
+  resolved by argument (not prototype); the cross-hypha RC-vs-affine reconciliation sub-question is named.
+- **RFC-0027 advanced Proposed → Accepted (ratified by maintainer 2026-06-25):** DN-32 **resolves OQ-1**
+  (weak/partial sibling coupling default — safe by RC + LR-9 acyclicity, RT7 siblings already concurrent;
+  throughput benefit `Declared`) and **OQ-4** (`rc==1` reuse EXPLAIN-record-only by default); **mitigates OQ-3**
+  (regions + batching; SLO stays `Declared`). OQ-2/5/6 deferred non-blockers. New §12 points to DN-32 + names
+  the cross-hypha sub-question. Append-only (prior Draft→Proposed history preserved). The memory model is now
+  decided end-to-end (design); implementation follows (E12-1).
+- Registered DN-32 in `docs/Doc-Index.md`; refreshed the stale RFC-0027 index row.
+
 ### Changed (2026-06-24: RFC-0027 advanced Draft → Proposed — reclamation mechanism resolved)
 
 - **RFC-0027 (Memory Management & Reclamation) advanced Draft → Proposed** (append-only: §§1–6 preserved;
