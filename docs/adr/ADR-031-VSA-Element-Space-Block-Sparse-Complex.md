@@ -8,9 +8,11 @@
 | **Grounds** | RFC-0033 §4.4 (the normative statement); RFC-0003 (VSA submodule boundary — models, sparsity); RFC-0001 §4.1 (`Vsa`/`SparsityClass`); KC-3 (the `Payload` enum is trusted — this growth is a correctness condition, §2.3(a)); `research/14-value-model-integration-report-RECORD.md` §3 (B-VSA) + `research/15-embeddonator-leverage-map-RECORD.md` §1 (`block_sparse.rs` reference impl). |
 | **Date** | 2026-06-24 |
 
-> **Posture (VR-5).** Proposed decision direction. **Content-address one-way door** (`Vsa.elem` and
-> `Vsa.sparsity` are hashed into every VSA value's identity). It lands in the single rehash (RFC-0033
-> §7 / M-780) before any VSA value is persisted. No implementation lands with this ADR.
+> **Posture (VR-5).** Accepted decision direction (the "Proposed decision direction" wording here is a
+> pre-ratification snapshot — the header + changelog are **Accepted** as of 2026-06-24; reconciled
+> 2026-06-25). **Content-address one-way door** (`Vsa.elem` and `Vsa.sparsity` are hashed into every VSA
+> value's identity). It lands in the single rehash (RFC-0033 §7 / **E20-1** — see the milestone-ID erratum
+> in §Status; "M-780" is unminted) before any VSA value is persisted. No implementation lands with this ADR.
 
 ## Context
 `Hypervector(Vec<f64>)` + a global `Sparse{max_active}` today. The input draft held that `model:String`
@@ -30,7 +32,13 @@ carrier. The registry then chooses the algebra *on top of* a carrier that can ho
 `SparseBlock{…, active_per_block}` covers both strict SBC (`=1`) and BSDC (`>1`).
 
 ## Status
-**Proposed (recommended)** — **disagrees with** the input draft. **One-way door.**
+**Accepted** (2026-06-24 — reconciled 2026-06-25 to match the ratified header + changelog; was
+"**Proposed (recommended)**" in this in-body block) — **disagrees with** the input draft. **One-way door.**
+
+> **Milestone-ID erratum (2026-06-25).** This ADR's header + changelog cite per-issue IDs **M-775…M-780**
+> for the implementation/rehash, but those IDs are **not minted** in `tools/github/issues.yaml`. The work
+> is owned by the existing **`E20-1`** epic (the single content-address rehash, RFC-0033 §7); read every
+> "M-775…M-780" reference as **E20-1** until/unless those issue IDs are actually minted. No fabricated IDs.
 
 ## Consequences
 Unblocks FHRR/MAP-C (complex), MAP-I (integer), BSDC/SBC (block-sparse) — three standard families the
@@ -50,5 +58,6 @@ complex/block families** (FHRR and SBC are not fringe; the "complete coverage" g
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-25 | **Accepted (in-body reconciliation) + ID erratum** | Post corpus-alignment audit hygiene: reconciled the in-body `## Status` and §Posture blocks (both read "Proposed") to **Accepted**, matching the authoritative header (forward-only; Accepted 2026-06-24 — no new ratification). Also recorded a **milestone-ID erratum**: the cited per-issue IDs **M-775…M-780** are **unminted** in `issues.yaml`; the work is owned by the existing **`E20-1`** epic — read those IDs as `E20-1` (no fabricated IDs). Append-only. |
 | 2026-06-24 | **Accepted** | Maintainer-ratified (owner approval). The VSA element-space / sparsity / complex-carrier decision is locked ahead of the single content-address rehash (RFC-0033 §7 / M-780); implementation (M-775…M-779) lands in E20-1 V4 before any VSA value is persisted. |
 | 2026-06-24 | **Proposed** | Initial record. VSA element-space + block-sparsity + complex `Payload` carrier (B-VSA, disagrees with the input draft). `embeddonator/block_sparse.rs` is the reference impl. Grounds RFC-0033 §4.4. |

@@ -40,6 +40,14 @@ Mycelium-native security toolkit**: a first-class toolchain component that downs
 **logically enumerates, finds, and reports** vulnerability classes **automatically** — and can **fix**
 them honestly.
 
+> **Erratum (2026-06-25, post corpus-alignment audit).** For accuracy of the "what it lacks" framing
+> above: a **Mycelium-native security crate already exists** — `mycelium-sec` (`myc-sec`, M-367), whose v0
+> provides the `wild`-block / ADR-014 `// SAFETY:`-presence audit plus secrets / supply-chain
+> orchestration (`crates/mycelium-sec/src/lib.rs`). It is **not** the full automatic vuln-class
+> enumerate/find/report/fix toolkit this RFC designs, but this RFC **builds on it** rather than starting
+> greenfield; read §1 as understating the existing native surface, not asserting its absence. RFC-0035
+> remains Proposed (it implements nothing here); this note adds no status move (VR-5/G2).
+
 **Goal.** Design that component so it:
 
 1. **Detects independently** (§2) — by logical/semantic analysis over the inspectable Core IR (RFC-0001,

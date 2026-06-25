@@ -24,6 +24,9 @@ the stdlib and all libraries/phyla beyond the bare Rust core be **written in Myc
 toolchain bootstrap from itself** — the canonical self-hosting capstone. This is distinct from
 the Rust kernel's 1.0.0 (ADR-021, Accepted) which gates on honesty-integrity durability but
 explicitly scopes self-hosting to Phase 5 (ADR-021 §5).
+<!-- erratum 2026-06-25 (applies to every "ADR-021, Accepted" cite in this note): ADR-021 is now
+**Superseded by ADR-022** (2026-06-23); its kernel Gate A/B is preserved as ADR-022 track T1. Read each
+"ADR-021 (Accepted)" reference as "ADR-021 (Accepted → Superseded by ADR-022); gate carried into ADR-022 T1". -->
 
 DN-14 (Resolved 2026-06-23) establishes that the surface language is now self-hosting-capable
 for pure, polymorphic, generic, trait-bearing modules (all 11 gate-rows `present` or

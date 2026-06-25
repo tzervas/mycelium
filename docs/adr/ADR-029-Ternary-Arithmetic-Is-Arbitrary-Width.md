@@ -29,8 +29,9 @@ differentially tested against the reference. The canonical form is non-redundant
 signed-digit redundancy), preserving content-addressing.
 
 ## Status
-**Proposed (recommended). High priority.** The *capped* choice is the one-way door (it would force a
-later `BigTernary` variant or a break).
+**Accepted** (2026-06-24 — reconciled 2026-06-25 to match the ratified header + changelog; was
+"**Proposed (recommended). High priority.**" in this in-body block). High priority. The *capped* choice is
+the one-way door (it would force a later `BigTernary` variant or a break).
 
 ## Consequences
 Closes the precision ceiling. Binary↔ternary base conversion (2,3 coprime — no bit shortcut) lands in
@@ -50,5 +51,6 @@ content-addressing).
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-25 | **Accepted (in-body reconciliation)** | Post corpus-alignment audit hygiene: the in-body `## Status` block still read "Proposed (recommended)" while the header + changelog were already **Accepted**. Reconciled the in-body block to **Accepted** to match the authoritative header (forward-only; no new ratification — the decision was Accepted 2026-06-24). Append-only. |
 | 2026-06-24 | **Accepted** | Maintainer-ratified (owner approval). The V0 reference implementation landed in **#535** (M-754…M-757): arbitrary-width `BigTernary` reconciled into `core::ternary` with a DRY shared `add_with_carry` (proven identical over all 27 inputs) + a never-silent fixed-width boundary (`FixedWidthTrits`/`checked_add_fixed`/`checked_to_width`); `cargo +1.92` fmt/clippy/test green, 11 new tests incl. the `3^41` cap-removal witness. `PackedTernary`/Karatsuba (M-758/M-759) stay YAGNI (bench-gated). |
 | 2026-06-24 | **Proposed** | Initial record. Arbitrary-width balanced ternary (`BigTernary`), reconciled into `core::ternary`; removes the cap (core already cap-honest), `Limb27`/`PackedTernary` YAGNI follow-on (B-Ternary). Grounds RFC-0033 §4.2. |

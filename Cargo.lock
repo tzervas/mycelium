@@ -478,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-math"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-numerics",
@@ -562,11 +562,11 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-sys"
-version = "0.1.0"
+version = "0.0.0"
 
 [[package]]
 name = "mycelium-std-sys-host"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "mycelium-std-rand",
  "mycelium-std-sys",

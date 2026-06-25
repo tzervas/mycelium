@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-06 |
-| **Status** | **Resolved** (2026-06-16) — ratified by the maintainer this session (the proposal below + this note's deconfliction); the static keyword migration it requires is tracked as **M-358** (staged, not yet executed) |
+| **Status** | **Resolved** (2026-06-16) — ratified by the maintainer this session (the proposal below + this note's deconfliction); the static keyword migration it requires is tracked as **M-358** (staged, not yet executed) <!-- erratum 2026-06-25: M-358 has since **executed** (2026-06-16); the `colony`→`nodule` migration landed (`token.rs:24` Nodule supersedes static colony; `nodule.rs:75 parse_nodule_header`). The "not yet executed" lines here / in §2 / the final changelog are superseded by the §4 table + code — see the changelog. --> |
 | **Amends / supersedes** | **DN-02 §2** (Resolved, append-only) — **supersedes** its `colony = module/namespace` line (supersede-don't-edit, per DN-02's own rule); complements **DN-03** (the lexicon amendment + one-name-per-term rule). DN-02/DN-03 are **not** rewritten — DN-02's changelog records the partial supersession. |
 | **Feeds** | RFC-0006 (the L2 static surface: `phylum` / `nodule`); RFC-0008 (the Runtime tier: `colony` as a dynamic grouping of `hypha`, §4.7); the grammar/conformance corpus (`docs/spec/grammar/`); the L1 prototype reserved-word set |
 | **Date** | June 16, 2026 |
@@ -155,6 +155,7 @@ hashable unit with a public surface), consistent with the existing content-addre
 
 ## Meta — changelog & maintenance
 
+- **2026-06-25 — Erratum: M-358 executed (post corpus-alignment audit; Status unchanged — Resolved).** The Status line, §2, and the M-358 changelog entry below describe the `colony`→`nodule` static migration as "**staged, not yet executed**". That is **superseded** by this note's own §4 table + the landed code: **M-358 executed (2026-06-16)** — `nodule` is the active static keyword (`crates/mycelium-l1/src/token.rs:24`, supersedes static `colony`) and the header parser is live (`crates/mycelium-l1/src/nodule.rs:75 parse_nodule_header`). The "not yet executed" prose is left intact as the historical record; read §4 + code as authoritative.
 - **2026-06-22 — `phylum` activated (M-662, E7-1; append-only, supersedes nothing).** The library-scale
   grouping `phylum` — added as **reserved-not-active** by the M-358 entry below — is now an **active L1
   construct**. An optional `phylum <path>` header (the §6 header model: metadata, never content-addressed

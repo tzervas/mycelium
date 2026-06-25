@@ -98,3 +98,16 @@ that act.
 > **Revision history.** *2026-06-24* — initial Draft (the decided delimiter/operator deconfliction; resolves
 > M-745 by reallocation; supersession of RFC-0019 §4.1 proposed, not performed). *2026-06-24 (rev.)* — §4-Q1
 > (empty `{}`) **resolved** by the maintainer: `{}` = empty block, `{:}` = empty map. §4-Q2 remains open.
+> *2026-06-25 (D7 decision record, post corpus-alignment audit; Status unchanged — Draft/advisory)* — the
+> maintainer **confirms the direction**: **adopt `[]` for type-arguments**, freeing `<>` for
+> comparison/shift operators (`< > << >>`). **Rationale:** this resolves the triple-loaded `<>` vs type-arg
+> collision (**M-745**) by *reallocation*, with **no disambiguation machinery** — `[]` has spare capacity and
+> the type-arg-vs-list-literal split is a clean position rule (Mycelium has no `arr[i]` indexing and no
+> juxtaposition application, §2). **Consequence — a grammar-supersession wave**, flagged as a **tracked epic**
+> (forthcoming; *no code is implemented by this note*): it **supersedes** RFC-0019 §4.1's `<…>` type params
+> and RFC-0030's current `<>`-based direction, and spans the lexer/parser (`crates/mycelium-l1`), the
+> tree-sitter / editor grammars (`just grammar-gen`), the conformance corpus, and the `[]`-vs-list-literal
+> disambiguation (§4-Q2, which must be resolved with an explicit rule before the grammar commits). **Maintainer
+> design input to fold into that work:** (a) **better support for line-breaks / indentation** so syntax is
+> more **human-visible**, and (b) using **`,` to delineate syntax portions**. This is a **recorded direction**,
+> not an enactment — DN-31 stays **Draft**; the binding act is the future RFC/supersession (VR-5 / G2).

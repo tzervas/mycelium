@@ -27,7 +27,8 @@ cannot collide). The scale/zero-point **arrays** are `O(dim/block)`, so they are
 The draft's "metadata in `Repr`" instinct is right for the *descriptor*, wrong for the *data*.
 
 ## Status
-**Proposed (recommended)** — **disagrees with** the input draft. **One-way door.**
+**Accepted** (2026-06-24 — reconciled 2026-06-25 to match the ratified header + changelog; was
+"**Proposed (recommended)**" in this in-body block) — **disagrees with** the input draft. **One-way door.**
 
 ## Consequences
 Honest for ONNX per-axis/blocked, GGUF K-quants, OCP MX, NF4. Dequant is a `Bounded` swap whose error
@@ -48,5 +49,6 @@ paths: `PerTensor` + `PerBlock` first).
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-25 | **Accepted (in-body reconciliation)** | Post corpus-alignment audit hygiene: the in-body `## Status` block still read "Proposed (recommended)" while the header + changelog were already **Accepted**. Reconciled to **Accepted** to match the authoritative header (forward-only; no new ratification — Accepted 2026-06-24). Append-only. |
 | 2026-06-24 | **Accepted** | Maintainer-ratified (owner approval). The Dense granularity-descriptor decision is locked ahead of the single content-address rehash (RFC-0033 §7 / M-780); implementation (M-770…M-774) lands in E20-1 V3 before any Dense value is persisted. |
 | 2026-06-24 | **Proposed** | Initial record. Granularity-descriptor quant in `Repr` + scale arrays in `Payload` (B-Dense, disagrees with the input draft). Dequant basis extends ADR-011 (OQ-3 not reopened). Grounds RFC-0033 §4.3. |

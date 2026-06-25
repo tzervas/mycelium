@@ -8,6 +8,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-25: corpus-audit decision log — maintainer rulings encoded append-only)
+
+- **Maintainer decisions from the corpus audit**, encoded across the corpus (append-only; no original
+  text deleted; the only status changes are forward moves, each with a changelog entry). 26 docs +
+  the H1 re-pin:
+  - **H1 (code):** re-pinned `mycelium-std-math`, `mycelium-std-sys`, `mycelium-std-sys-host` from
+    the drifted `0.1.0` back to `0.0.0` + `publish = false`, restoring ADR-018's uniform policy
+    (Cargo.lock refreshed; workspace still builds). ADR-018 erratum records the corrected facts +
+    count (44→50).
+  - **H2/H3:** ADR-020 record-completion (Proposed→Accepted→Enacted entries; `runtime.rs` 106→116);
+    DN-23 footer + RFC-0025/M-705 supersession, **Status Draft→Resolved**.
+  - **Decisions-to-implement (recorded as decisions + tracked epics, no code yet):** RFC-0017 §4.1
+    top-down `@matured` inheritance + §4.4 record (D1); E19-1 `Repr::Seq`/`Repr::Bytes` value-model
+    additions + the T1-after-E19-1 gate (D2/D3, ADR-024); adopt **`[]` for type-args** superseding
+    RFC-0030's `<>` direction, with the line-break/indentation + `,`-delimiter design input folded in
+    (D7, DN-31); RFC-0030 Draft→Proposed sequenced behind the grammar wave (D6).
+  - **Decisions-to-defer:** Gate A2/A3/A4/A5 pass-criteria post-T1 (D4); T4/T9 stdlib-in-Mycelium /
+    self-hosting post-core (D5); Theme-A verification batch post-T1 (D8).
+  - **Hygiene batch:** ADR-029/030/031 in-body `Status: Proposed`→Accepted (+ ADR-031 ID erratum);
+    DN-21 **Draft→Enacted**; DN-16/17/19/06/14 + locator errata (DN-10/22/24/26, RFC-0004/0016/0035,
+    ADR-023 index). doc_refs resolve; markdown clean in the edited files.
+
 ### Added (2026-06-25: exhaustive corpus-alignment audit record — all 92 DNs/ADRs/RFCs)
 
 - **`research/20-corpus-alignment-audit-RECORD.md`** — an exhaustive read-only doc↔code alignment

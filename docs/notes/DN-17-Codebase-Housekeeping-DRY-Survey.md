@@ -111,6 +111,11 @@ maintenance, scheduled at a stable point (DN-08 coarse-granularity posture).
 
 ## Changelog
 
+- **2026-06-25 — "Superseded by the tree" erratum (post corpus-alignment audit; Status unchanged — Draft).** Several P1/P2 premises in this survey are **already done in the tree** and are recorded as such append-only (the §1/§2/§4 prose is left intact):
+  - **P1 — workspace external-dependency dedup: DONE.** §2.1's "No `[workspace.dependencies]` exists in root `Cargo.toml`" is stale — one now exists (`Cargo.toml:67 [workspace.dependencies]`; e.g. `mycelium-spore` uses `blake3.workspace = true`). The proposed dedup has landed.
+  - **P1 — xtask path-dep versions: DONE.** §2.2/§4's "the xtask path-deps lack a `version` field" is stale — the xtask path-deps already carry `version = "0.0.0"` (`xtask/Cargo.toml:16-22`).
+  - **P2 — MLIR test-corpus helpers: DONE.** §2.3/§4's "factor into `tests/common/mod.rs`" is stale — `mycelium-mlir/tests/common/mod.rs` already exists.
+  - **Scale figures corrected.** §1's stale scale (~43 crates / 23-crate stdlib) is updated to **50 crates / 26 `mycelium-std-*` crates** (numeric drift only; the survey conclusions are unchanged).
 - **2026-06-19 (Draft; M-376):** Initial planning capture. Read-only DRY/duplication survey of the
   Rust workspace; priority-ordered, risk-tagged extraction plan for a future behaviour-preserving
   housekeeping wave. Grounded in a workspace survey; nothing extracted here.

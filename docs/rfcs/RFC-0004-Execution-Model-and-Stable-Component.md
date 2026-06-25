@@ -145,6 +145,11 @@ The following fragments remain deferred / explicitly unadvanced by this incremen
 - **Real `ternary` MLIR dialect lowering** — `crates/mycelium-mlir/src/dialect.rs` is a textual
   skeleton only; real lowering requires libMLIR (M-348, blocked). Every verdict on this path
   stays "not established" (VR-5) until the toolchain is present.
+  > **Erratum (2026-06-25, post-audit).** Partly superseded (safe direction — this was an under-claim):
+  > a **real** `ternary`→`arith`/`func`→LLVM dialect lowering path **landed** as **M-601**
+  > (`crates/mycelium-mlir/src/dialect/native.rs`, ~895 lines), **feature-gated behind `mlir-dialect`
+  > (OFF by default)**. The qualifier above stays technically true for the *default* build (no libMLIR →
+  > textual skeleton); read it as "real lowering exists but is off-by-default, libMLIR-gated", not absent.
 
 ### 11.4 Inspectability (§6 preserved)
 
