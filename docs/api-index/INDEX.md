@@ -1001,6 +1001,8 @@
 | `mycelium_mlir::NativeArtifact` | struct | `crates/mycelium-mlir/src/deploy.rs:98` | The inspectable, content-addressed descriptor of one natively-compiled program — the unit a |
 | `mycelium_mlir::Network` | struct | `crates/mycelium-mlir/src/channel.rs:75` | A **Kahn process network** (RFC-0008 §4.3): the grouping whose typed SPSC channels form a |
 | `mycelium_mlir::Poll` | enum | `crates/mycelium-mlir/src/runtime.rs:37` | The result of advancing a task one cooperative step. |
+| `mycelium_mlir::RcPlanError` | enum | `crates/mycelium-mlir/src/rc_plan.rs:61` | A failure to build the reclamation plan for a term — never-silent (G2). |
+| `mycelium_mlir::RcRun` | struct | `crates/mycelium-mlir/src/rc_plan.rs:141` | The result of [`run_with_reclamation`]: the computed value plus the size of the reclamation plan. |
 | `mycelium_mlir::Receiver` | struct | `crates/mycelium-mlir/src/channel.rs:121` | The **single consumer** end of a channel. |
 | `mycelium_mlir::Resolution` | enum | `crates/mycelium-mlir/src/inject.rs:54` | How a [`ContentHash`] resolves in an [`Image`] — the inspectable/`EXPLAIN`-able dispatch decision |
 | `mycelium_mlir::STATIC_FALLBACK_DEPTH:` | const | `crates/mycelium-mlir/src/budget.rs:60` | The conservative static fallback ceiling: the prior fixed default (M-347's `AOT_MAX_DEPTH`), |
@@ -1061,6 +1063,7 @@
 | `mycelium_mlir::emit_bitnet_dot_simd_tl1_ir` | fn | `crates/mycelium-mlir/src/simd.rs:167` | Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel |
 | `mycelium_mlir::emit_bitnet_dot_simd_tl2_ir` | fn | `crates/mycelium-mlir/src/simd.rs:300` | Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel |
 | `mycelium_mlir::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:1924` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
+| `mycelium_mlir::emit_reclamation_plan` | fn | `crates/mycelium-mlir/src/rc_plan.rs:120` | Build and emit the MEM-4 reclamation plan for `node`, returning the number of records emitted. |
 | `mycelium_mlir::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:57` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
 | `mycelium_mlir::inject` | mod | `crates/mycelium-mlir/src/lib.rs:50` | — |
 | `mycelium_mlir::inject::Image::call` | fn | `crates/mycelium-mlir/src/inject.rs:185` | Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction). |
@@ -1085,6 +1088,7 @@
 | `mycelium_mlir::pack::PackError` | enum | `crates/mycelium-mlir/src/pack.rs:47` | A packing-codec error. |
 | `mycelium_mlir::pack::needed_bytes` | fn | `crates/mycelium-mlir/src/pack.rs:96` | Bytes required to hold `count` trits under `scheme` — the buffer-bound model. |
 | `mycelium_mlir::pack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:201` | Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer). |
+| `mycelium_mlir::rc_plan` | mod | `crates/mycelium-mlir/src/lib.rs:54` | — |
 | `mycelium_mlir::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:226` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
 | `mycelium_mlir::relayout_trits` | fn | `crates/mycelium-mlir/src/pack.rs:291` | Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as** |
 | `mycelium_mlir::run` | fn | `crates/mycelium-mlir/src/aot.rs:213` | Run a Core IR program through the AOT path to a representation [`Value`]. |
@@ -1093,9 +1097,10 @@
 | `mycelium_mlir::run_core_with_effects` | fn | `crates/mycelium-mlir/src/aot.rs:196` | [`run_core_with_budget`] with a shared **effect-budget ledger** threaded through the env-machine |
 | `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:156` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
 | `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:547` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
-| `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:54` | — |
-| `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
-| `mycelium_mlir::specialize` | mod | `crates/mycelium-mlir/src/lib.rs:56` | — |
+| `mycelium_mlir::run_with_reclamation` | fn | `crates/mycelium-mlir/src/rc_plan.rs:163` | Run a Core IR program through the AOT path **and** emit its MEM-4 reclamation plan additively. |
+| `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
+| `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:56` | — |
+| `mycelium_mlir::specialize` | mod | `crates/mycelium-mlir/src/lib.rs:57` | — |
 | `mycelium_mlir::specialize::BoundSpecializedDot` | struct | `crates/mycelium-mlir/src/specialize.rs:139` | A [`SpecializedDotKernel`] with its entry point resolved into a lifetime-bound `Sym` (M-682). |
 | `mycelium_mlir::specialize::SpecializedDotKernel::bind` | fn | `crates/mycelium-mlir/src/specialize.rs:119` | **Bind once, call many** (M-682): resolve the `myc_bitnet_dot_spec` entry point a single time |
 | `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/specialize.rs:130` | Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the |
@@ -1103,7 +1108,7 @@
 | `mycelium_mlir::specialize::SpecializedDotKernel::nonzero` | fn | `crates/mycelium-mlir/src/specialize.rs:111` | The number of nonzero (surviving) lanes — the straight-line `add`/`sub` count, exposed for |
 | `mycelium_mlir::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:135` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
 | `mycelium_mlir::unpack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:243` | Decode `count` trits from `bytes` under `scheme`. |
-| `mycelium_mlir::vr4` | mod | `crates/mycelium-mlir/src/lib.rs:57` | — |
+| `mycelium_mlir::vr4` | mod | `crates/mycelium-mlir/src/lib.rs:58` | — |
 | `mycelium_mlir::vr4::Backend::all` | fn | `crates/mycelium-mlir/src/vr4.rs:67` | All backends, in lowering order — the exhaustive set the VR-4 gate must cover. |
 | `mycelium_mlir::vr4::Backend::name` | fn | `crates/mycelium-mlir/src/vr4.rs:80` | A stable human-readable name (for `EXPLAIN` / reports). |
 | `mycelium_mlir::vr4::BackendStage::explain` | fn | `crates/mycelium-mlir/src/vr4.rs:127` | A short `EXPLAIN` line: backend, covered/skipped, the faithfulness tag, and the dump size / |
@@ -4642,6 +4647,26 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::pack::pack_trits` | dedup-alias: same definition as `mycelium_mlir::pack_trits` at crates/mycelium-mlir/src/pack.rs:201 — one canonical row kept |
 | `mycelium_mlir::pack::relayout_trits` | dedup-alias: same definition as `mycelium_mlir::relayout_trits` at crates/mycelium-mlir/src/pack.rs:291 — one canonical row kept |
 | `mycelium_mlir::pack::unpack_trits` | dedup-alias: same definition as `mycelium_mlir::unpack_trits` at crates/mycelium-mlir/src/pack.rs:243 — one canonical row kept |
+| `mycelium_mlir::rc_plan::RcPlanError` | dedup-alias: same definition as `mycelium_mlir::RcPlanError` at crates/mycelium-mlir/src/rc_plan.rs:61 — one canonical row kept |
+| `mycelium_mlir::rc_plan::RcPlanError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcPlanError::from` | definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcRun` | dedup-alias: same definition as `mycelium_mlir::RcRun` at crates/mycelium-mlir/src/rc_plan.rs:141 — one canonical row kept |
+| `mycelium_mlir::rc_plan::RcRun::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcRun::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcRun::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::RcRun::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::rc_plan::emit_reclamation_plan` | dedup-alias: same definition as `mycelium_mlir::emit_reclamation_plan` at crates/mycelium-mlir/src/rc_plan.rs:120 — one canonical row kept |
+| `mycelium_mlir::rc_plan::run_with_reclamation` | dedup-alias: same definition as `mycelium_mlir::run_with_reclamation` at crates/mycelium-mlir/src/rc_plan.rs:163 — one canonical row kept |
 | `mycelium_mlir::run` | ambiguous: short name 'run' is defined in multiple modules; attributed to crates/mycelium-mlir/src/aot.rs by heuristic — verify against source (ground truth) |
 | `mycelium_mlir::runtime::Colony` | dedup-alias: same definition as `mycelium_mlir::Colony` at crates/mycelium-mlir/src/runtime.rs:116 — one canonical row kept |
 | `mycelium_mlir::runtime::ColonyError` | dedup-alias: same definition as `mycelium_mlir::ColonyError` at crates/mycelium-mlir/src/runtime.rs:340 — one canonical row kept |

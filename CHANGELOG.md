@@ -8,6 +8,29 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: MEM-4 → AOT — the RFC-0027 §9 reclamation audit trail)
+
+- **MEM-4 AOT wiring** (`mycelium-mlir::rc_plan`): the bridge that finally **consumes** the MEM-4
+  static analysis (`mycelium-mir-passes`) at execution time. It turns the borrow-elided RC-emission's
+  predicted reclamations into the never-silent RFC-0027 §9 EXPLAIN/audit trail, emitted from the AOT
+  path (previously only the runtime `RcCell` probe produced records).
+  - **`emit_reclamation_plan(node, sink, scope_id, sweep_epoch)`** — runs `emit_elided` → the
+    reference RC-evaluator (`eval`) and emits one `ReclamationRecord` (trigger `RcZero`) per
+    `rc → 0` reclamation the analysis predicts, to a `ReclamationSink`. Returns the typed `RcPlanError`
+    (not an empty plan) for a term outside the analysable fragment — never-silent (G2).
+  - **`run_with_reclamation(node, prims, swap, sink)`** — computes the value with the **unmodified**
+    trusted env-machine (`aot::run_core`) and emits the plan **additively** alongside it
+    (`RcRun { value, reclaimed: Option<usize> }`); an out-of-fragment term yields `reclaimed: None`,
+    an explicit documented skip.
+  - **Honest scope (VR-5):** the AOT env-machine still **Rust-manages values**, so this is the
+    *observable* audit trail of *where* the static analysis says reclamation occurs — **not** a
+    change to execution. A bug here is a wrong/missing audit record, never a wrong value (DN-33 §2;
+    the runtime `RcCell` probe remains the sound fallback). Threading actual reclamation into the
+    env-machine is the deferred big step (RFC-0027 §10). The record *count* is `Exact`; the analysed
+    fragment (straight-line) and the synthetic `rcplan:<id>` `value_meta_hash` are `Declared`.
+  - 5 tests (lib); clippy `-D warnings` clean; `mycelium-core` + the env-machine untouched (KC-3);
+    the dependency graph stays a DAG (`mir-passes`/`std-runtime` are upstream of `mlir`).
+
 ### Added (2026-06-25: MEM-4 Increment 2 — `rc == 1` reuse annotation, machine-verified)
 
 - **MEM-4 Increment 2** (`mycelium-mir-passes`, DN-33 §6 D-3): the `rc == 1` reuse annotation, now

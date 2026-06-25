@@ -468,6 +468,48 @@ pub fn mycelium_mlir::pack::needed_bytes(mycelium_core::meta::PackScheme, usize)
 pub fn mycelium_mlir::pack::pack_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme) -> alloc::vec::Vec<u8>
 pub fn mycelium_mlir::pack::relayout_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> alloc::vec::Vec<mycelium_core::value::Trit>
 pub fn mycelium_mlir::pack::unpack_trits(&[u8], mycelium_core::meta::PackScheme, usize) -> core::result::Result<alloc::vec::Vec<mycelium_core::value::Trit>, mycelium_mlir::pack::PackError>
+pub mod mycelium_mlir::rc_plan
+pub enum mycelium_mlir::rc_plan::RcPlanError
+pub mycelium_mlir::rc_plan::RcPlanError::Emit(mycelium_mir_passes::emit::EmitError)
+pub mycelium_mlir::rc_plan::RcPlanError::Eval(mycelium_mir_passes::eval::RcError)
+impl core::clone::Clone for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::clone(&self) -> mycelium_mlir::rc_plan::RcPlanError
+impl core::cmp::Eq for mycelium_mlir::rc_plan::RcPlanError
+impl core::cmp::PartialEq for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::eq(&self, &mycelium_mlir::rc_plan::RcPlanError) -> bool
+impl core::convert::From<mycelium_mir_passes::emit::EmitError> for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::from(mycelium_mir_passes::emit::EmitError) -> Self
+impl core::convert::From<mycelium_mir_passes::eval::RcError> for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::from(mycelium_mir_passes::eval::RcError) -> Self
+impl core::error::Error for mycelium_mlir::rc_plan::RcPlanError
+impl core::fmt::Debug for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::rc_plan::RcPlanError
+impl core::marker::Freeze for mycelium_mlir::rc_plan::RcPlanError
+impl core::marker::Send for mycelium_mlir::rc_plan::RcPlanError
+impl core::marker::Sync for mycelium_mlir::rc_plan::RcPlanError
+impl core::marker::Unpin for mycelium_mlir::rc_plan::RcPlanError
+impl core::marker::UnsafeUnpin for mycelium_mlir::rc_plan::RcPlanError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::rc_plan::RcPlanError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::rc_plan::RcPlanError
+pub struct mycelium_mlir::rc_plan::RcRun
+pub mycelium_mlir::rc_plan::RcRun::reclaimed: core::option::Option<usize>
+pub mycelium_mlir::rc_plan::RcRun::value: mycelium_core::datum::CoreValue
+impl core::clone::Clone for mycelium_mlir::rc_plan::RcRun
+pub fn mycelium_mlir::rc_plan::RcRun::clone(&self) -> mycelium_mlir::rc_plan::RcRun
+impl core::fmt::Debug for mycelium_mlir::rc_plan::RcRun
+pub fn mycelium_mlir::rc_plan::RcRun::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::rc_plan::RcRun
+impl core::marker::Send for mycelium_mlir::rc_plan::RcRun
+impl core::marker::Sync for mycelium_mlir::rc_plan::RcRun
+impl core::marker::Unpin for mycelium_mlir::rc_plan::RcRun
+impl core::marker::UnsafeUnpin for mycelium_mlir::rc_plan::RcRun
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::rc_plan::RcRun
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::rc_plan::RcRun
+pub fn mycelium_mlir::rc_plan::emit_reclamation_plan(&mycelium_core::node::Node, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink, mycelium_std_runtime::reclamation::ScopeId, mycelium_std_runtime::reclamation::SweepEpoch) -> core::result::Result<usize, mycelium_mlir::rc_plan::RcPlanError>
+pub fn mycelium_mlir::rc_plan::run_with_reclamation(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink) -> core::result::Result<mycelium_mlir::rc_plan::RcRun, mycelium_interp::EvalError>
 pub mod mycelium_mlir::runtime
 pub enum mycelium_mlir::runtime::ColonyError
 pub mycelium_mlir::runtime::ColonyError::Empty
@@ -883,6 +925,31 @@ impl<T, E> core::marker::Unpin for mycelium_mlir::runtime::Poll<T, E> where T: c
 impl<T, E> core::marker::UnsafeUnpin for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
 impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Poll<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
 impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Poll<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+pub enum mycelium_mlir::RcPlanError
+pub mycelium_mlir::RcPlanError::Emit(mycelium_mir_passes::emit::EmitError)
+pub mycelium_mlir::RcPlanError::Eval(mycelium_mir_passes::eval::RcError)
+impl core::clone::Clone for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::clone(&self) -> mycelium_mlir::rc_plan::RcPlanError
+impl core::cmp::Eq for mycelium_mlir::rc_plan::RcPlanError
+impl core::cmp::PartialEq for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::eq(&self, &mycelium_mlir::rc_plan::RcPlanError) -> bool
+impl core::convert::From<mycelium_mir_passes::emit::EmitError> for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::from(mycelium_mir_passes::emit::EmitError) -> Self
+impl core::convert::From<mycelium_mir_passes::eval::RcError> for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::from(mycelium_mir_passes::eval::RcError) -> Self
+impl core::error::Error for mycelium_mlir::rc_plan::RcPlanError
+impl core::fmt::Debug for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::rc_plan::RcPlanError
+pub fn mycelium_mlir::rc_plan::RcPlanError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::rc_plan::RcPlanError
+impl core::marker::Freeze for mycelium_mlir::rc_plan::RcPlanError
+impl core::marker::Send for mycelium_mlir::rc_plan::RcPlanError
+impl core::marker::Sync for mycelium_mlir::rc_plan::RcPlanError
+impl core::marker::Unpin for mycelium_mlir::rc_plan::RcPlanError
+impl core::marker::UnsafeUnpin for mycelium_mlir::rc_plan::RcPlanError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::rc_plan::RcPlanError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::rc_plan::RcPlanError
 pub enum mycelium_mlir::Resolution
 pub mycelium_mlir::Resolution::Compiled
 pub mycelium_mlir::Resolution::Interpreted
@@ -1209,6 +1276,20 @@ impl core::marker::Unpin for mycelium_mlir::channel::Network
 impl core::marker::UnsafeUnpin for mycelium_mlir::channel::Network
 impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Network
 impl !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Network
+pub struct mycelium_mlir::RcRun
+pub mycelium_mlir::RcRun::reclaimed: core::option::Option<usize>
+pub mycelium_mlir::RcRun::value: mycelium_core::datum::CoreValue
+impl core::clone::Clone for mycelium_mlir::rc_plan::RcRun
+pub fn mycelium_mlir::rc_plan::RcRun::clone(&self) -> mycelium_mlir::rc_plan::RcRun
+impl core::fmt::Debug for mycelium_mlir::rc_plan::RcRun
+pub fn mycelium_mlir::rc_plan::RcRun::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::rc_plan::RcRun
+impl core::marker::Send for mycelium_mlir::rc_plan::RcRun
+impl core::marker::Sync for mycelium_mlir::rc_plan::RcRun
+impl core::marker::Unpin for mycelium_mlir::rc_plan::RcRun
+impl core::marker::UnsafeUnpin for mycelium_mlir::rc_plan::RcRun
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::rc_plan::RcRun
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::rc_plan::RcRun
 pub struct mycelium_mlir::Receiver<V>
 impl<V> mycelium_mlir::channel::Receiver<V>
 pub fn mycelium_mlir::channel::Receiver<V>::is_connected(&self) -> bool
@@ -1320,6 +1401,7 @@ pub fn mycelium_mlir::emit_bitnet_dot_simd_ir() -> alloc::string::String
 pub fn mycelium_mlir::emit_bitnet_dot_simd_tl1_ir() -> alloc::string::String
 pub fn mycelium_mlir::emit_bitnet_dot_simd_tl2_ir() -> alloc::string::String
 pub fn mycelium_mlir::emit_llvm_ir(&mycelium_core::node::Node) -> core::result::Result<alloc::string::String, mycelium_mlir::llvm::AotError>
+pub fn mycelium_mlir::emit_reclamation_plan(&mycelium_core::node::Node, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink, mycelium_std_runtime::reclamation::ScopeId, mycelium_std_runtime::reclamation::SweepEpoch) -> core::result::Result<usize, mycelium_mlir::rc_plan::RcPlanError>
 pub fn mycelium_mlir::emit_specialized_dot_ir(&[mycelium_core::value::Trit]) -> alloc::string::String
 pub fn mycelium_mlir::jit_run(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::jit_specialized_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<i64, mycelium_mlir::llvm::AotError>
@@ -1335,6 +1417,7 @@ pub fn mycelium_mlir::run_core(&mycelium_core::node::Node, &mycelium_interp::pri
 pub fn mycelium_mlir::run_core_with_effects(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize, &mut mycelium_interp::budget::Budgets) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_core_with_fuel(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_with_layout(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+pub fn mycelium_mlir::run_with_reclamation(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink) -> core::result::Result<mycelium_mlir::rc_plan::RcRun, mycelium_interp::EvalError>
 pub fn mycelium_mlir::ternary_dot_ref(&[mycelium_core::value::Trit], &[i32]) -> i64
 pub fn mycelium_mlir::unpack_trits(&[u8], mycelium_core::meta::PackScheme, usize) -> core::result::Result<alloc::vec::Vec<mycelium_core::value::Trit>, mycelium_mlir::pack::PackError>
 pub type mycelium_mlir::Colony<'a, T, E> = mycelium_mlir::runtime::Scope<'a, T, E>
