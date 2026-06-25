@@ -1,0 +1,87 @@
+# Publish the wiki (from docs/wiki/) and the rustdoc API docs (to GitHub Pages).
+#
+# Manual-dispatch only (workflow_dispatch) — Mycelium keeps CI advisory / on-demand by policy
+# (see .github/workflows/checks.yml). Nothing here runs on push.
+#
+# Requires, in repo Settings: the **Wiki** feature enabled (for the wiki sync) and **Pages** set to
+# "GitHub Actions" (for the rustdoc deploy). Both jobs use the built-in GITHUB_TOKEN.
+name: Publish wiki & API docs
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_wiki:
+        description: "Mirror docs/wiki/ to the GitHub wiki"
+        type: boolean
+        default: true
+      publish_rustdoc:
+        description: "Build + deploy rustdoc to GitHub Pages"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish-wiki:
+    if: ${{ inputs.publish_wiki }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the wiki is part of the repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Mirror docs/wiki/ to the wiki repository
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tmp="$(mktemp -d)"
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.wiki.git"
+          if ! git clone "$url" "$tmp" 2>/dev/null; then
+            echo "wiki repo not initialized yet — creating the first commit"
+            git init -q "$tmp"
+            git -C "$tmp" remote add origin "$url"
+          fi
+          # Sync: copy the source pages over (the wiki source of truth is docs/wiki/).
+          cp docs/wiki/*.md "$tmp"/
+          git -C "$tmp" add -A
+          if git -C "$tmp" diff --cached --quiet; then
+            echo "wiki already up to date"
+            exit 0
+          fi
+          git -C "$tmp" \
+            -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "docs(wiki): sync from docs/wiki @ ${GITHUB_SHA::12}"
+          # GitHub wikis default to the `master` branch; fall back to `main` if needed.
+          git -C "$tmp" push origin HEAD:master 2>/dev/null \
+            || git -C "$tmp" push origin HEAD:main
+
+  publish-rustdoc:
+    if: ${{ inputs.publish_rustdoc }}
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build rustdoc (workspace, no deps)
+        run: |
+          set -euo pipefail
+          # rust-toolchain.toml pins the MSRV; rustup installs it on first invocation.
+          cargo doc --no-deps --workspace
+          # A landing redirect to the kernel crate's docs.
+          echo '<meta http-equiv="refresh" content="0; url=mycelium_core/index.html">' \
+            > target/doc/index.html
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/doc
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

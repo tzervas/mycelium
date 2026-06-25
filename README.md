@@ -326,6 +326,19 @@ mycelium/
 
 ---
 
+## Documentation
+
+- **Wiki** — the browsable project wiki is generated from
+  [`docs/wiki/`](docs/wiki/) (Home · Architecture · Crate Index · Memory Model · Tunable
+  Certification · Getting Started · API Reference) and published to the GitHub wiki by the
+  manual-dispatch [`publish-docs`](.github/workflows/publish-docs.yml) workflow.
+- **API docs** — rustdoc for the workspace: `just docs` (or `cargo doc --no-deps --workspace`);
+  published to GitHub Pages by the same workflow. The committed grep-friendly agent index is
+  [`docs/api-index/INDEX.md`](docs/api-index/INDEX.md).
+- **Per-crate READMEs** — every crate has its own `README.md` (linked in the crate map above).
+- **Design corpus** — `docs/` (`rfcs/`, `adr/`, `notes/`, `spec/`); status in
+  [`docs/Doc-Index.md`](docs/Doc-Index.md).
+
 ## Build & checks
 
 ```
