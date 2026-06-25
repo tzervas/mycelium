@@ -52,8 +52,16 @@ blockers — systematically, never-silent (G2), honest tags (VR-5), small audita
   scope/region wiring (`with_region`/`RegionScope`) + end-to-end L1/L2/L3 composition test. ✅ done — **Phase-1
   three-layer model feature-complete at the runtime tier** (all three triggers live; all ID placeholders
   canonicalized; scope-exit fires from a live scope).
-- **Next:** **DN-33** (MEM-4 research-backed design) → then MEM-4 implementation (static analysis — careful,
-  incremental, watch+measure per DN-32 §6b).
+- **DN-33 (MEM-4 design):** ✅ authored (Draft, research-backed) — additive lowering pass, incremental
+  decomposition, cross-hypha Option A for R1.
+- **Next — MEM-4 is BLOCKED-by-prerequisite (DN-33 §6.1, investigated 2026-06-25).** Not merely
+  deferred: the Core IR (`mycelium-core/src/node.rs`) has no ownership-mode field on binding sites,
+  there is no RC-annotated IR / `mir-passes` crate, and `clone_ref`/`drop_ref` are hand-called only in
+  tests — **no lowering emits RC ops for MEM-4 to elide.** The prerequisite chain (resolve DN-33 §8 Q2
+  ownership-mode representation → add the field to `node.rs` → build the `mir-passes` RC-emission
+  lowering → wire into `elab.rs` → *then* MEM-4 Increment 1) is a **forward language-frontend epic
+  gated on the §8 Q2 maintainer decision** — not built speculatively (G2/VR-5: flag, don't guess). The
+  runtime substrate (MEM-1..3 + live triggers) is the sound, complete fallback and stands alone.
 
 ## Swarm discipline (per CLAUDE.md)
 Sonnet leaves, disjoint dirs, `cargo fmt`/`clippy -D warnings -A unsafe_code`/`test -p <crate>` green, in-crate
