@@ -495,3 +495,20 @@ The **primary refactoring burden** is closures (defunctionalization), macros (ex
 **Report status:** `Declared` (research-backing draft for DN-34 design iteration)  
 **Date:** 2026-06-25
 
+---
+
+## Erratum (2026-06-25, append-only)
+
+Two snapshot claims in this record have since been corrected against ground truth (alignment audit):
+
+1. **The static uniqueness analysis is now *partly built*, not "unbuilt."** MEM-4 **Increments 1–2**
+   (intraprocedural, straight-line, non-escaping) have landed in `crates/mycelium-mir-passes/`
+   (`rc_ir`/`emit`/`eval`/`balance`/`corpus`). The body's "unbuilt" phrasing reflects an earlier
+   snapshot; it should read "partly built (Increments 1–2; full FIP/Increment-3 remains Phase-3)."
+   Note also that MEM-4 *optimizes* emitted Mycelium **Core IR** RC — it is **not** a Rust-ownership
+   analyzer (Rust ownership facts come from a rustc/rust-analyzer front-end; see DN-34 §3 correction).
+2. **`colony`/`hypha` are active *as expressions only*.** They parse as expressions (`parse.rs`), but
+   the **authoritative lexicon** still lists them **Reserved-not-active** for the static/item sense
+   (lexicon §97/§114). The "Now ACTIVE M-666" note should be read with that scope qualifier.
+
+(Append-only erratum — the original text is preserved as the dated record it is; VR-5/G2.)

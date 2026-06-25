@@ -8,6 +8,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-25: corpus alignment audit — append-only corrections to the memory/transpiler cluster)
+
+- **Doc↔code alignment corrections** from a two-cluster audit (memory/reclamation + self-hosting/
+  transpiler) against the actual codebase. All append-only (no Status moved; no original text deleted
+  from any Accepted doc — the only `−` lines are in the Draft DN-34 and a Doc-Index row):
+  - **DN-33 §6.1 (Critical):** the stale "prerequisite gap" passage claimed `mycelium-mir-passes`
+    does not exist and MEM-4 is blocked — now false (the crate is fully built; the §8.1 Q2 ruling
+    makes the "add a field to `node.rs`" step moot). Added a dated correction callout; §6.1 prose
+    preserved as a historical snapshot.
+  - **DN-34 §3 + Doc-Index (Critical/High):** corrected the "reuse the MEM-4 ownership analysis"
+    category error — Rust ownership facts come from a rustc/rust-analyzer front-end (authoritative:
+    rustc MIR `mir_borrowck`); `syn` is syntax-only; MEM-4 is a *downstream* RC optimizer over
+    Mycelium Core IR, not the transpiler's ownership analyzer. Annotated the HOF/`?` rows with real
+    surface status (RFC-0024 Proposed; capturing closures auto-Impossible; `?` absent from v0).
+  - **DN-32 + RFC-0027 (High):** added honest-scope notes — the model is implemented at the runtime
+    + MEM-4 static tiers with all three §9 triggers live, but reclamation is **not yet threaded into
+    the AOT env-machine** (env-machine still Rust-manages values; §9 output is an additive audit
+    trail; seam = `mycelium-mlir/src/aot.rs::eval_machine`).
+  - **RFC-0028 §4.5 (Low):** clarified v0 `std.rand` entropy = `/dev/urandom` via `std::fs`
+    (`getrandom(2)` deferred). **research/18 / DN-26:** errata for the MEM-4-built / `colony`-`hypha`-
+    expression-only / DN-14-row-9 freshness nits.
+
 ### Added (2026-06-25: research records — env-machine reclamation + transpiler evidence base)
 
 - **Four research records** (`research/16`–`research/19`), landed as the evidence base for the next

@@ -560,6 +560,17 @@ explicit boundary:
 This is **not decided here** — it is tabled (both options) for the RFC-0027 follow-on (or a dedicated
 DN). It does **not** block OQ-1/OQ-4, which resolve under either option. **DN-32 is the detail.**
 
+> **Honest-scope note (2026-06-25, append-only — no status move).** Since ratification, the §7 RC
+> mechanism, the §9 EXPLAIN-record, and all three live triggers (RcZero / ScopeExit / ChannelClose)
+> have **landed** at the runtime tier (MEM-1/2/3, `mycelium-std-runtime`), and the **MEM-4 static tier**
+> (`mycelium-mir-passes`, Increments 1–2) is built — so this RFC is now arguably *under*-claiming, which
+> is VR-5-safe. **The one integration bound, stated plainly:** reclamation is **not yet threaded into
+> the AOT env-machine** — the env-machine still **Rust-manages** values, and the §9 record is an
+> **additive audit trail of where reclamation would occur**, not actual Mycelium reclamation. The
+> integration seam is `crates/mycelium-mlir/src/aot.rs::eval_machine` (research/16 §2). Status therefore
+> stays **Accepted** (not Enacted): execution-threaded reclamation and the *full* coupling property
+> tests remain Phase-3. (Append-only; VR-5; G2.)
+
 ---
 
 ## Meta — changelog
@@ -616,3 +627,10 @@ DN). It does **not** block OQ-1/OQ-4, which resolve under either option. **DN-32
   exists — house rule #3, stepped + maintainer-signed-off).** Touches DN-32 + this RFC + Doc-Index
   only; CHANGELOG.md / issues.yaml / docs/api-index are owned by the integrating parent.
   (Append-only; VR-5; G2.)
+- **2026-06-25 — Honest-scope note added to §12 (append-only; no status move).** Per an alignment
+  audit: the §7 RC mechanism, §9 EXPLAIN-record, and all three live triggers (RcZero/ScopeExit/
+  ChannelClose) have landed (MEM-1/2/3) and the MEM-4 static tier is built — so the RFC now mildly
+  *under*-claims (VR-5-safe). The standing integration bound is stated plainly: reclamation is **not
+  yet threaded into the AOT env-machine** (env-machine still Rust-manages values; §9 = additive audit
+  trail; seam = `crates/mycelium-mlir/src/aot.rs::eval_machine`, research/16 §2). Status remains
+  **Accepted** (not Enacted); no normative text changed. (Append-only; VR-5; G2.)

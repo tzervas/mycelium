@@ -227,6 +227,21 @@ deferred-by-priority. The runtime substrate (MEM-1..3 + the live triggers, lande
 be correct (§2). Building the RC-emission pipeline is a forward epic gated on the §8 Q2 decision; it
 is not undertaken speculatively here (flag, don't guess).
 
+> **Correction (2026-06-25, append-only — §6.1 above is now a preserved historical snapshot).** The
+> "prerequisite gap" §6.1 describes has since been **resolved**; its file:line findings are now
+> FALSE and must not be read as current state. The `crates/mycelium-mir-passes/` crate now **exists
+> and is fully built**: `rc_ir.rs` (separate RC-annotated IR mirroring `Node` + `Dup`/`Drop`/
+> `MoveUnique`), `emit.rs` (RC-emission lowering `emit_owned` + Increment-1 borrow elision
+> `emit_elided` + Increment-2 reuse `emit_reuse`), `eval.rs` (differential check), `balance.rs`
+> (`1 + dups == uses + drops` structural invariant), and `corpus.rs` (Q5 dup-reduction gate) — i.e.
+> **Increments 1–2 have landed** (see the E12 build plan Wave entries). Two specific §6.1 claims are
+> now stale: the "no `mycelium-mir-passes` crate / no RC-annotated IR" finding is contradicted by the
+> built crate, and the prerequisite step **"add the chosen ownership-mode field to `node.rs`"** is
+> **moot** — the §8.1 **Q2 ruling above** chose a *separate RC-annotated IR* with `mycelium-core/src/
+> node.rs` left **pristine**, so no field was ever added (and none is needed). §6.1's prose is kept
+> verbatim as the post-Wave-4 historical snapshot it was; this note neutralizes the standing claim.
+> (Append-only — original text preserved per house rule #3; VR-5/G2.)
+
 ## §7 Honest scope (VR-5 — do not omit)
 
 - Every Mycelium-specific claim here is **`Declared`** — nothing in MEM-4 is built; the increments,
@@ -372,3 +387,11 @@ RFC-0027's status (append-only).
   *then* Increment 1). The runtime substrate remains the sound, complete fallback; the RC-emission
   pipeline is a forward epic gated on the §8 Q2 maintainer decision — not built speculatively (G2/VR-5:
   flag, don't guess). No status moves; no normative text changes.
+- **2026-06-25 — Correction to §6.1 (append-only; supersedes the §6.1 "prerequisite gap" finding).**
+  An alignment audit confirmed §6.1's grounded findings are now FALSE: `crates/mycelium-mir-passes/`
+  exists and is fully built (`rc_ir`/`emit`/`eval`/`balance`/`corpus` = separate RC-annotated IR +
+  RC-emission lowering + Increments 1–2 + Q5 corpus; see the E12 build plan). The §6.1 step "add an
+  ownership-mode field to `node.rs`" is moot — the §8.1 **Q2** ruling chose a *separate* RC-annotated
+  IR, leaving `mycelium-core/src/node.rs` pristine. §6.1's prose is preserved verbatim as a historical
+  snapshot; a `> Correction` callout after it neutralizes the standing claim. No status moves; no
+  original text deleted (house rule #3, append-only; VR-5/G2).

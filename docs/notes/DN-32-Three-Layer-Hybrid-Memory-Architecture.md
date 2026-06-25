@@ -227,6 +227,20 @@ budget as each increment of it is implemented. (lane-F §4.2.2 F-5/F-6 already f
 uniqueness tracking as a *future* direction, not a current proposal, on exactly KC-3/YAGNI grounds —
 DN-32 names it as the architecture's hardest, most kernel-growing leg.)
 
+> **Honest-scope update (2026-06-25, append-only).** Two clarifications, neither a status move:
+> (1) **Integration bound — not yet execution-wired.** The model is implemented at the **runtime tier**
+> (MEM-1/2/3 — RC probe, regions, reclamation records in `mycelium-std-runtime`) and the **MEM-4 static
+> tier**, and all three §9 reclamation triggers (RcZero / ScopeExit / ChannelClose) are live — **but
+> reclamation is NOT yet threaded into the AOT env-machine.** The env-machine still **Rust-manages**
+> values; the §9 output is an **additive audit trail of where reclamation *would* occur**, not actual
+> Mycelium-level reclamation. The integration seam is
+> `crates/mycelium-mlir/src/aot.rs::eval_machine` (research/16 §2). This keeps a single-doc reader from
+> over-reading "the three layers" as execution-wired. (2) **§6b update — MEM-4 has since landed
+> additively.** MEM-4 **Increments 1–2** are now built in `crates/mycelium-mir-passes/` (a separate,
+> optimization-only crate; **Core IR `node.rs` left pristine**, so KC-3 held); the full **FIP /
+> Increment-3** leg remains **Phase-3** (see §8). See DN-33 §8.1 + the E12 build plan. (Append-only;
+> VR-5/G2; no status change.)
+
 ### §6c OQ-1 is resolved by ARGUMENT, not by the lane-B prototype; the throughput benefit is `Declared`
 
 OQ-1 is resolved here **by argument** — RC + LR-9 acyclicity make reclamation safe *order-
@@ -355,4 +369,12 @@ most-kernel-growing leg and is sequenced last and measured.
   figures `Declared`. **⚠️ Status move to a full `Accepted` requires maintainer ratification (house
   rule #3, append-only).** Touches no other doc's normative text; CHANGELOG.md / issues.yaml /
   docs/api-index are owned by the integrating parent. (Append-only; VR-5; G2.)
+- **2026-06-25 — Honest-scope update (§6b note; append-only; no status move).** Added a §6 callout
+  recording, per an alignment audit, that the model is implemented at the runtime tier (MEM-1/2/3) and
+  the MEM-4 static tier with all three §9 triggers live, **but reclamation is not yet threaded into the
+  AOT env-machine** (env-machine still Rust-manages values; §9 output is an additive audit trail; seam =
+  `crates/mycelium-mlir/src/aot.rs::eval_machine`, research/16 §2); and that MEM-4 Increments 1–2 have
+  since landed **additively** in `mycelium-mir-passes` (Core IR pristine — KC-3 held; full FIP/
+  Increment-3 stays Phase-3). Status remains **Accepted**; no normative text changed. (Append-only;
+  VR-5; G2.)
 </content>
