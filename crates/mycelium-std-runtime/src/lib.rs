@@ -46,6 +46,10 @@ pub mod colony;
 pub mod dataflow;
 pub mod guarantee_matrix;
 pub mod network;
+pub mod reclamation;
 pub mod scheduler;
 pub mod supervision;
 pub mod task;
+
+#[cfg(test)]
+mod tests;
