@@ -17492,12 +17492,45 @@
       "corpus_refs": []
     },
     {
-      "symbol": "mycelium_std_runtime::reclamation",
+      "symbol": "mycelium_std_runtime::rc",
       "kind": "mod",
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
       "line": 49,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::rc::RcCell",
+      "kind": "struct",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::rc",
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 102,
+      "summary": "A non-atomic intra-hypha reference-counted handle to a shared immutable value.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::rc::RcProbe",
+      "kind": "enum",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime::rc",
+      "file": "crates/mycelium-std-runtime/src/rc.rs",
+      "line": 239,
+      "summary": "The outcome of an [`RcCell::drop_ref`] call — the rc-probe decision (RFC-0027 §10.1).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation",
+      "kind": "mod",
+      "crate": "mycelium-std-runtime",
+      "module": "mycelium_std_runtime",
+      "file": "crates/mycelium-std-runtime/src/lib.rs",
+      "line": 50,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17684,7 +17717,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 50,
+      "line": 51,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17805,7 +17838,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 51,
+      "line": 52,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17981,7 +18014,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 52,
+      "line": 53,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -36972,6 +37005,34 @@
     {
       "symbol": "mycelium_std_runtime::network::TrySend",
       "reason": "definition not found via regex heuristic (kind='fn', name='TrySend') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::rc::RcCell",
+      "reason": "definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::rc::RcCell",
+      "reason": "definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::rc::RcCell",
+      "reason": "definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::rc::RcCell",
+      "reason": "definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::rc::RcCell",
+      "reason": "definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::rc::RcCell",
+      "reason": "definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::rc::RcProbe",
+      "reason": "definition not found via regex heuristic (kind='fn', name='RcProbe') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ChannelId::clone",
