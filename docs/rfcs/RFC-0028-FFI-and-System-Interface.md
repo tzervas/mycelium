@@ -203,6 +203,12 @@ The v0 binding strategy is **safe-Rust `std`/`libc` wrappers** inside `std-sys`,
 checked structural property; the *value* read remains `Declared` (VR-5). Every syscall failure is
 an explicit `Result::Err`/`Option::None` — never a silent discard (G2).
 
+> **Clarification (2026-06-25, append-only).** The v0 `std.rand` source is `/dev/urandom` **via
+> `std::fs`** only; `getrandom(2)` is **deferred** (`FLAG-GETRANDOM` in `mycelium-std-sys/src/rand.rs`)
+> to avoid a workspace dependency and preserve `#![forbid(unsafe_code)]`. The `Declared` tag and
+> never-silent behavior are unchanged; only the named mechanism is narrower than the table's
+> "`getrandom(2)`" implies. Status remains **Accepted** (no decision change).
+
 ### 4.6 Guarantee-tag policy (VR-5)
 
 - **`Declared`** is the v0 tag for every syscall-backed operation (the host body is audited, not
@@ -289,6 +295,12 @@ M-721); `crates/mycelium-std-sys/src/` (the syscall floor, M-722/M-723);
 
 ## Meta — changelog
 
+- **2026-06-25 — §4.5 clarification (append-only; no status move).** Per an alignment audit, noted
+  that v0 `std.rand` entropy is `/dev/urandom` via `std::fs` only; `getrandom(2)` is deferred
+  (`FLAG-GETRANDOM`, `mycelium-std-sys/src/rand.rs`) to avoid a workspace dep and keep
+  `#![forbid(unsafe_code)]`. The `Declared` tag and never-silent behavior are unchanged; only the
+  named mechanism is narrower than the §4.5 table implied. Status remains **Accepted**. (Append-only;
+  VR-5; G2.)
 - **2026-06-23 — Accepted.** Resolved all five Draft open questions (maintainer sign-off): build-time
   `@std-sys` capability gate (no runtime `Capability` value in v0); the prim registry as the
   capability handle / execution host; `wild` lowers to `Op { prim: "wild:…" }` (no new Core-IR node,
