@@ -8,6 +8,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: exhaustive corpus-alignment audit record — all 92 DNs/ADRs/RFCs)
+
+- **`research/20-corpus-alignment-audit-RECORD.md`** — an exhaustive read-only doc↔code alignment
+  audit of the *entire* design corpus (34 DN + 23 ADR + 35 RFC = 92 docs), one auditor per doc,
+  cross-checking every status + normative claim against the landed tree (code/lexicon treated as
+  ground truth). Result: **0 Critical, 8 High, 7 Medium, 37 Low**; verdicts **76 honest /
+  6 internally-inconsistent / 6 stale / 3 over-claims / 0 under-claims**; **no VR-5 guarantee-tag
+  violation anywhere** — every drift is status/fact/locator staleness, not a strength over-claim.
+  The record includes a per-status roster (every doc exactly once) and a consolidated open-question
+  ledger (~9 near-term-gating, concentrated in the core/full-language 1.0.0 gate). All corrections
+  are recommend-only + append-only-safe (none applied in this record). Flags one item for an explicit
+  maintainer decision: three crates at `0.1.0` (vs the ADR-018 "all `0.0.0`" premise) suggest a
+  partial undocumented release-cut to reconcile.
+
 ### Changed (2026-06-25: corpus alignment audit — append-only corrections to the memory/transpiler cluster)
 
 - **Doc↔code alignment corrections** from a two-cluster audit (memory/reclamation + self-hosting/
