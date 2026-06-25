@@ -8,6 +8,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-25: DN-36 + DN-37 ratified Draft → Accepted; delegation keyword → `via`)
+
+- **DN-36 — Safe & High-Performance Iteration** ratified **Draft → Accepted** (maintainer). Accepts
+  the **two-tier surface** (bounded Tier-1 idiom + budget-gated Tier-2 open form, both desugaring to one
+  tail-recursive `Fix`) and the **§6 high-performance roadmap** as the *design direction*. Enacts no
+  code, upgrades no guarantee (safety `Exact`, perf mechanism `Proven`-in-lit / `Empirical`-`Declared`,
+  surface `Declared`); each §6 item still gates on its own build epic (VR-5).
+- **DN-37 — Object & Behavior Model (and the Sigil Category Scheme)** ratified **Draft → Accepted**
+  (maintainer). Accepts the **objects-vs-ADTs framing**, the **composition-ranked inheritance-emulation
+  menu**, and the **Sigil Category Scheme** as the *design direction*. Accepted ratifies the direction,
+  **not** every open question — §8's build-order, first-class-`class`-vs-implicit, dynamic-dispatch,
+  encapsulation, and `~`-form questions remain **open** and tracked. No guarantee upgraded (foundation
+  `Exact`; menu + sigils + sugar `Declared`).
+- **Delegation keyword resolved to `via`** (DN-38 §8.1, append-only; DN-38 stays Draft). The maintainer
+  delegated the call; `via` (preposition = conduit, not agent) is honest about Mycelium's **static,
+  by-value forwarding** — no late-binding/agency over-claim (VR-5 applied to naming), the prepositional
+  twin of the `~>` flow-glyph, matching the cited Kotlin `by` precedent. `derive`/`weave` and
+  `reveal`/`expand` remain open. (Note: the `0t` trit-literal shorthand — analogous to `0b`/`0x` — is
+  already the DN-31 scheme; no change.)
+
 ### Added (2026-06-25: DN-35 — env-machine reclamation, research-backed)
 
 - **DN-35 — Env-Machine Reclamation (the Deferred Big Step past the §9 Audit Trail)**

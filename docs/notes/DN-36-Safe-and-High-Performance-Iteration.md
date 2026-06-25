@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-36 |
-| **Status** | **Draft** (2026-06-25; direction capture — advisory, non-committal). Deliberates and recommends; **ratifies nothing, enacts nothing, ships no code**. Promotion past Draft is gated on the §9 Definition of Done + maintainer ratification (house rule #3, append-only). |
+| **Status** | **Accepted** (2026-06-25; **ratified by maintainer**) — the **two-tier surface** (bounded Tier-1 idiom + budget-gated Tier-2 open form, both desugaring to one tail-recursive `Fix`) and the **§6 high-performance roadmap** are ratified as the **design direction**. Accepted ratifies the *direction*, **not** an implementation: each §6 roadmap item still gates on its own build epic + honest grounding (the recursion-aware FBIP increment is `Declared`/`Empirical`, not `Enacted`). Prior: **Draft** (2026-06-25; direction capture). Append-only; house rule #3. |
 | **Feeds** | the **high-performance iteration** leg of the value-semantics surface — the recursion-aware FBIP increment (E12 **Increment 3** / "FBIP reuse-token threading", `docs/planning/E12-Memory-Model-Build-Plan.md:107`; tracked as task #6 "MEM-4 follow-ons … recursion … gated"); the iteration **surface grammar** (intersects the `[]`-grammar wave — DN-31, RFC-0030, epic #27); the kernel early-exit fold question (RFC-0007 §4.8). Builds on **DN-32** (three-layer memory), **DN-33** (MEM-4 static uniqueness), and the reclamation thread (DN-35). |
 | **Date** | June 25, 2026 |
 | **Decides** | *Nothing normatively* — advisory + design-direction capture. Records (1) that the value-semantics iteration **tension dissolves** by keeping value semantics in the *surface* and sourcing mutation from the *lowering* (Koka's lesson: `for`/`while` desugar to tail recursion; mutation comes from TRMC + Perceus reuse); (2) a recommended **two-tier surface** — a bounded, total-by-construction Tier-1 idiom and a budget-gated Tier-2 open form — **both desugaring to one tail-recursive `Fix` lowering path**; (3) the **safety contract** (mostly already built — `Exact`); and (4) the **high-performance roadmap** that makes the recursion-aware FBIP increment load-bearing, each item carried at its honest grounding strength. |
@@ -378,3 +378,8 @@ throughout. Promotion is append-only; nothing here moves another doc's status (h
   maintainer ratification (the two-tier surface + the §6 roadmap sequencing) — house rule #3,
   append-only. CHANGELOG / Doc-Index / issues.yaml / docs/api-index owned by the integrating parent.
   (Append-only; VR-5; G2.)
+- **Ratified Draft → Accepted (2026-06-25).** The maintainer ratified the **two-tier surface** + the
+  **§6 high-performance roadmap** as the design direction. The status move accepts the *direction
+  only* — it enacts no code and upgrades no guarantee: safety stays `Exact` (already built), perf
+  mechanism stays `Proven`-in-literature / `Empirical`-`Declared`-for-Mycelium, surface stays
+  `Declared`; each §6 roadmap item still gates on its own build epic (VR-5 — no upgrade past basis).
