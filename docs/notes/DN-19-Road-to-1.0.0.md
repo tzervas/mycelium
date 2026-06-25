@@ -22,6 +22,11 @@
 **1.0.0 = ADR-021 Gate A + Gate B open rows.** ADR-021 (Proposed, 2026-06-21) is the spine.
 It defines two gates:
 
+> **Erratum (2026-06-25, post-audit).** ADR-021 is no longer "Proposed": it reached **Accepted
+> (2026-06-21)** and was then **Superseded by ADR-022 (2026-06-23)**, which carries this Gate A/B
+> forward as **track T1** (the core/kernel 1.0.0 sub-gate, further amended by ADR-024). The Gate A/B
+> *criteria* below are unchanged; only their home document moved (see the §6 changelog spine-erratum).
+
 **Gate A — resolvable now (honesty-integrity + durability):**
 
 | Row | Criterion | Status (per ADR-021) |
@@ -185,7 +190,11 @@ threshold, and records it in ADR-021 or a short ADR-021 annotation).
 
 **What it is.** ADR-021 itself is currently **Proposed**, not Accepted. The maintainer must
 ratify the *criteria* (agreeing that "these are the 1.0.0 release-readiness criteria") before
-the gate can be called met. The "ship 1.0.0" act (Accepted → Enacted at the tagged release)
+the gate can be called met.
+
+> **Erratum (2026-06-25):** this GAP-6 premise is **closed/superseded** — ADR-021 *was* ratified to
+> **Accepted (2026-06-21)** and is now **Superseded by ADR-022 (2026-06-23)**; the criteria-ratification
+> this GAP asked for happened, and the gate moved into ADR-022 track T1 (amended by ADR-024). See §6. The "ship 1.0.0" act (Accepted → Enacted at the tagged release)
 is separate. Source: ADR-021 §6; CLAUDE.md house rule #3 (append-only decisions; Proposed →
 Accepted → Enacted; never skip straight to Enacted).
 
@@ -310,6 +319,10 @@ Enacted.)*
 
 ## 6. Changelog
 
+- **2026-06-25 — Decisions + spine erratum (post corpus-alignment audit; advisory note, no status move).** Three append-only records, none rewriting the §1–§5 prose:
+  - **Spine re-framed under ADR-022 (GAP-6 hygiene).** The note's spine treats **ADR-021** as "Proposed, needs ratification". That is **superseded**: ADR-021 reached **Accepted (2026-06-21)** and was then **Superseded by ADR-022 (2026-06-23)** — its kernel **Gate A/B is carried forward, preserved not discarded, as ADR-022 track T1** (the core/kernel 1.0.0 sub-gate; further amended by **ADR-024** to add E19-1 to T1's Definition of Done). Read every "ADR-021 (Proposed)" / GAP-6 reference below as **ADR-021 (Accepted → Superseded-by-ADR-022); the gate now lives in ADR-022 §4/§5 track T1**. The §2 GAP table and §1 Gate-A/B rows remain the correct *criteria* — only their *home document* moved.
+  - **D4 — DEFER the full Gate A2/A3/A4/A5 pass-criteria definition to post-T1 (advisory for now).** The maintainer's decision (2026-06-25): the precise *pass thresholds* for A2 (Medium-ledger completeness), A3 (durability — mutants/proptest/fuzz), A4 (`cargo deny`/`cargo audit` wiring) and A5 (KC-4 cert-overhead numeric budget) are **deferred to post-T1**; they remain **advisory** until then. The GAP-2 ledger subsection below stands as the (draft) A2 evidence; nothing here ratifies a gate (ADR-022 §5 + the maintainer sign-off do).
+  - **D8 — DEFER Theme-A verification to post-T1.** The VSA/numerics confirmatory probes — the in-repo **performance benchmark** (no Mycelium-native benchmark yet; perf figures stay `Declared` until measured, VR-5), the single Liquid-Haskell **`bundle` capacity-refinement** probe (KC-1), and the **≥100-vector measured resonator corpus** — are **deferred post-T1**. They are confirmatory (they gate only *upgrading* a `Declared`/axiomatized-citation tag to `Empirical`/`Proven`), not correctness blockers; recorded here so the deferral is explicit, never silent (G2).
 - **2026-06-21 — Draft.** Planning capture of the remaining gaps to a 1.0.0 kernel/core release,
   grounded in ADR-021 (Proposed, 2026-06-21) and the deep-review remediation roadmap
   (WS1–WS9 status, 2026-06-15). Identifies six gaps (GAP-1 through GAP-6), orders them by

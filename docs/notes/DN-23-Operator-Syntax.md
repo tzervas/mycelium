@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-23 |
-| **Status** | **Draft** (2026-06-23) |
+| **Status** | **Resolved** (2026-06-25 — the operator-syntax direction this note framed was ratified into **RFC-0025** and implemented Rust-first under **M-705**; symbolic infix operators now exist in the lexer. See the Meta/changelog footer.) · was **Draft** (2026-06-23) |
 | **Feeds** | RFC-0007 (L1 Kernel Calculus); RFC-0024 (HOF via static defunctionalization); DN-02/DN-03 (lexicon/syntax); E7-5 (operator-syntax leg) |
 | **Date** | June 23, 2026 |
 | **Decides** | *Nothing normatively* — advisory. Records the design space for basic mathematics / operator syntax (symbols vs words) and the recommended path, so the "whole other leg" of operator support is tracked and grounded before it is taken. A binding decision is deferred to **RFC-0025** (forthcoming). |
@@ -15,6 +15,13 @@
 ---
 
 ## 1. The question
+
+> **Historical snapshot (annotated 2026-06-25, post-audit).** The "today entirely word-based / **no**
+> symbolic infix operators" framing below is a **2026-06-23 snapshot** and is **superseded**: the
+> recommended hybrid was ratified into **RFC-0025** and **implemented Rust-first (M-705)**, so the lexer
+> now tokenizes the symbolic operators (`lexer.rs:181-193` → `Plus`/`Star`/`Slash`/`Percent`, `lex_dash`
+> → `Minus`; `token.rs:201-219` defines them). Read §1 and §4 as the design-space record that motivated
+> RFC-0025, not as current surface state. See the Meta/changelog footer.
 
 Mycelium's surface is today **entirely word-based** for operations: arithmetic and logic are
 ordinary first-order function applications — `add(x, y)`, `xor(acc, b)`, `neg(x)`, `and(x, y)`,
@@ -43,6 +50,11 @@ mathematics use **symbols** or **words**, and what are the side effects?
 
 ## 4. Side effects — already handled or moot (grounded)
 
+> **Historical snapshot (annotated 2026-06-25).** This section's "a *future* `-` math operator" /
+> "RFC-0025 (forthcoming)" framing is superseded — the `-` math operator and the rest of the symbolic
+> set landed via RFC-0025 / M-705 (`lexer.rs:262` already cites RFC-0025/M-705). The dash-disambiguation
+> analysis below remains accurate as the *reason* the addition was clean.
+
 - **The dash / `-`:** the lexer already tokenizes `-`, `->`, and `=>` as **distinct atomic tokens**
   (`crates/mycelium-l1/src/lexer.rs` `lex_dash` / `lex_eq`; this is what makes RFC-0024's `A -> B`
   unambiguous). A *future* `-` math operator therefore coexists with the `->` function-type arrow at
@@ -63,3 +75,25 @@ mathematics use **symbols** or **words**, and what are the side effects?
 A deferred leg (**E7-5**), sequenced **after** the in-flight L1 surface work (HOF capstone E7-3;
 comment-preserving `mycfmt` E7-4) and **before** the dogfooding builds (`dfb`, M-670/M-671), which
 benefit from a complete, ergonomic surface. No tag is upgraded; no syntax is enacted here (VR-5).
+
+---
+
+## Meta — changelog
+
+- **2026-06-25 — Resolved (post corpus-alignment audit).** This note's recommended path (a word kernel
+  with optional symbol **sugar**) was **ratified into RFC-0025** and **implemented Rust-first under
+  M-705**; the lexer now tokenizes the symbolic infix operators (`crates/mycelium-l1/src/lexer.rs:181-193` →
+  `Plus`/`Star`/`Slash`/`Percent`; `lex_dash` → `Minus`; `crates/mycelium-l1/src/token.rs:201-219`
+  defines the set). The §1/§4 "current state" prose (entirely word-based / no symbolic operators /
+  RFC-0025 forthcoming) is therefore a **historical snapshot** and has been annotated as such (the prose
+  itself is left intact — append-only). Status moves **Draft → Resolved** (forward; the direction is now
+  ratified + built), mirroring sibling DN-24's move to Resolved when its RFC landed. No tag upgraded
+  (VR-5).
+- **2026-06-25 — Cross-note (D7, advisory).** The *glyph allocation* for the symbolic operators is the
+  subject of a separate maintainer decision (DN-31, 2026-06-24/25): **`[]` is adopted for type-arguments**,
+  freeing `<>` for the comparison/shift operators (`< > << >>`), which resolves the `<>`/type-arg vs
+  operator collision (**M-745**). That is a recorded *direction* gated behind a future grammar-supersession
+  wave (see DN-31 §2–§3 and RFC-0030); it does not reopen the word-vs-symbol decision this note resolved.
+- **2026-06-23 — Draft.** Initial design-space capture for operator syntax (symbols vs words) and the
+  recommended hybrid (word kernel + frontend-only symbol sugar). Decided nothing normatively; deferred the
+  binding decision to RFC-0025.

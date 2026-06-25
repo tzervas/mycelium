@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-21 |
-| **Status** | **Draft** (2026-06-22; planning capture) |
+| **Status** | **Enacted** (2026-06-25 — reconciled forward to match this note's own changelog: the M-678 hardening epic landed (M-679…M-683), every `unsafe` block confined to `jit.rs` with explicit per-symbol `// SAFETY:` justifications; the workspace count is now **8**). Was **Draft** (2026-06-22; planning capture). |
 | **Feeds** | ADR-014 (Unsafe-Code Policy, **Accepted**) — enacts its named follow-ons; LR-9 (`wild` is the only *in-language* unsafe escape, denied by default); KC-3 (small auditable kernel); house rule #5 (SOLID · DRY · KISS · YAGNI) |
 | **Date** | June 22, 2026 |
 | **Decides** | *Planning capture, advisory (DN-17 posture) — **not** a ratified decision.* Records a grounded, read-only audit of **every** `unsafe` block in the Rust workspace, verifies each carries an adequate `// SAFETY:` justification per ADR-014, and gives a priority-ordered, risk-tagged hardening plan (the tracked epic **M-678**). **No code is changed by this note** — nothing is refactored here. |
@@ -33,6 +33,11 @@ follow-ons (plus a structural lifetime hardening) into a tracked, priority-order
 unsafe-code twin of DN-17's DRY survey: a read-only map + a fearless-refactor plan, nothing changed.
 
 ## 2. The unsafe inventory (exhaustive)
+
+> **Erratum (2026-06-25):** the "exactly 6 `unsafe` blocks" count below is the **pre-M-682** snapshot.
+> After the M-678 hardening epic landed (M-682), the workspace count is **8** — still all in `jit.rs`,
+> larger in *count* but smaller in *kind* (per-symbol-class ABI claims made explicit, not inline-implicit;
+> see the changelog at the foot of this note). The §2 prose is left intact as the historical baseline.
 
 A whole-`crates/` audit (real `unsafe { }` / `unsafe fn` / `unsafe impl`, excluding `forbid`/`deny`
 lines, doc-comments, and string literals) finds **exactly 6 `unsafe` blocks, all in
