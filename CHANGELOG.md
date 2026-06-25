@@ -8,6 +8,35 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-25: MEM-4·B0 — the RC-emission pipeline foundation (`mycelium-mir-passes`))
+
+- **`crates/mycelium-mir-passes`** — the first MEM-4 code (DN-33 Accepted §8.1), building the
+  RC-emission pipeline the §6.1 investigation found missing (nothing emitted RC ops, so there was
+  nothing to elide). **Optimisation-only and OUTSIDE the trusted Core IR** (KC-3 / DN-33 §8.1 Q2): it
+  consumes `mycelium_core::Node` read-only and produces a **separate** RC-annotated IR — the kernel
+  `mycelium-core` is **untouched**, and a bug here is a missed optimisation, never unsafety (the
+  runtime `RcCell` probe stays the sound fallback).
+  - **`rc_ir` — the RC-annotated IR** (`RcNode`): mirrors the Core IR first-order fragment
+    (`Const/Var/Let/Op/Swap/Construct/Match/Lam/App`) plus `Dup`/`Drop` wrapper nodes and a
+    per-binding own/borrow `Mode` (the `Borrowed` variant is the forward hook for Increment 1).
+  - **`emit` — naive fully-owned RC-emission** `Node → RcNode`: a binding used `k` times gets `k-1`
+    `Dup`s (one reference per use) and each use consumes one; an unused binding gets one `Drop`.
+    Occurrence counting is **shadowing-aware** (rubric A4-01). Recursion (`Fix`/`FixGroup`) is
+    **refused explicitly** (`EmitError::UnsupportedNode`) — never silently mis-emitted (G2).
+  - **`balance` — the structural balance invariant** (`1 + dups == uses + drops` per owned binding;
+    a `Borrowed` binding must carry no `Dup`/`Drop`), verified **independently** over the emitted IR
+    (re-derives the counts, so a buggy emission is caught — mutation-tested). This is the
+    structural-invariant half of the ratified Q3 soundness strategy; the differential half lands with
+    Increment 1.
+  - Honest tags: the balance property is **`Exact`** by construction (independently checked); **no
+    perf claim** — B0 deliberately emits the *most* RC ops (the `dup`/`drop` count is `Exact`, read
+    off the IR; any reduction figure stays `Declared` until measured — DN-33 §8.1 Q5). 21 tests
+    (emission shape, shadowing, recursion-refusal, mutation witnesses for unbalanced/over-released
+    IR); clippy `-D warnings` clean; `#![forbid(unsafe_code)]`.
+  - **Next:** MEM-4 Increment 1 — non-escaping borrow elision (mark non-consuming reads `Borrowed`,
+    eliding their `Dup`/`Drop`) + the Q3 differential harness (with/without elision → identical
+    results AND reclamation records).
+
 ### Changed (2026-06-25: DN-33 ratified Draft → Accepted — §8 deliberation settled)
 
 - **DN-33 ratified Draft → Accepted (§8.1 resolutions, maintainer).** The MEM-4 design deliberation is

@@ -1,0 +1,149 @@
+pub mod mycelium_mir_passes
+pub mod mycelium_mir_passes::balance
+pub enum mycelium_mir_passes::balance::BalanceError
+pub mycelium_mir_passes::balance::BalanceError::BorrowedHasRcOps
+pub mycelium_mir_passes::balance::BalanceError::BorrowedHasRcOps::drops: usize
+pub mycelium_mir_passes::balance::BalanceError::BorrowedHasRcOps::dups: usize
+pub mycelium_mir_passes::balance::BalanceError::BorrowedHasRcOps::var: mycelium_core::node::VarId
+pub mycelium_mir_passes::balance::BalanceError::OwnedUnbalanced
+pub mycelium_mir_passes::balance::BalanceError::OwnedUnbalanced::drops: usize
+pub mycelium_mir_passes::balance::BalanceError::OwnedUnbalanced::dups: usize
+pub mycelium_mir_passes::balance::BalanceError::OwnedUnbalanced::uses: usize
+pub mycelium_mir_passes::balance::BalanceError::OwnedUnbalanced::var: mycelium_core::node::VarId
+impl core::clone::Clone for mycelium_mir_passes::balance::BalanceError
+pub fn mycelium_mir_passes::balance::BalanceError::clone(&self) -> mycelium_mir_passes::balance::BalanceError
+impl core::cmp::Eq for mycelium_mir_passes::balance::BalanceError
+impl core::cmp::PartialEq for mycelium_mir_passes::balance::BalanceError
+pub fn mycelium_mir_passes::balance::BalanceError::eq(&self, &mycelium_mir_passes::balance::BalanceError) -> bool
+impl core::error::Error for mycelium_mir_passes::balance::BalanceError
+impl core::fmt::Debug for mycelium_mir_passes::balance::BalanceError
+pub fn mycelium_mir_passes::balance::BalanceError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mir_passes::balance::BalanceError
+pub fn mycelium_mir_passes::balance::BalanceError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mir_passes::balance::BalanceError
+impl core::marker::Freeze for mycelium_mir_passes::balance::BalanceError
+impl core::marker::Send for mycelium_mir_passes::balance::BalanceError
+impl core::marker::Sync for mycelium_mir_passes::balance::BalanceError
+impl core::marker::Unpin for mycelium_mir_passes::balance::BalanceError
+impl core::marker::UnsafeUnpin for mycelium_mir_passes::balance::BalanceError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mir_passes::balance::BalanceError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mir_passes::balance::BalanceError
+pub fn mycelium_mir_passes::balance::check_balance(&mycelium_mir_passes::rc_ir::RcNode) -> core::result::Result<(), mycelium_mir_passes::balance::BalanceError>
+pub mod mycelium_mir_passes::emit
+pub enum mycelium_mir_passes::emit::EmitError
+pub mycelium_mir_passes::emit::EmitError::UnsupportedNode(&'static str)
+impl core::clone::Clone for mycelium_mir_passes::emit::EmitError
+pub fn mycelium_mir_passes::emit::EmitError::clone(&self) -> mycelium_mir_passes::emit::EmitError
+impl core::cmp::Eq for mycelium_mir_passes::emit::EmitError
+impl core::cmp::PartialEq for mycelium_mir_passes::emit::EmitError
+pub fn mycelium_mir_passes::emit::EmitError::eq(&self, &mycelium_mir_passes::emit::EmitError) -> bool
+impl core::error::Error for mycelium_mir_passes::emit::EmitError
+impl core::fmt::Debug for mycelium_mir_passes::emit::EmitError
+pub fn mycelium_mir_passes::emit::EmitError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mir_passes::emit::EmitError
+pub fn mycelium_mir_passes::emit::EmitError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mir_passes::emit::EmitError
+impl core::marker::Freeze for mycelium_mir_passes::emit::EmitError
+impl core::marker::Send for mycelium_mir_passes::emit::EmitError
+impl core::marker::Sync for mycelium_mir_passes::emit::EmitError
+impl core::marker::Unpin for mycelium_mir_passes::emit::EmitError
+impl core::marker::UnsafeUnpin for mycelium_mir_passes::emit::EmitError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mir_passes::emit::EmitError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mir_passes::emit::EmitError
+pub fn mycelium_mir_passes::emit::count_occurrences(&mycelium_core::node::VarId, &mycelium_core::node::Node) -> usize
+pub fn mycelium_mir_passes::emit::emit_owned(&mycelium_core::node::Node) -> core::result::Result<mycelium_mir_passes::rc_ir::RcNode, mycelium_mir_passes::emit::EmitError>
+pub mod mycelium_mir_passes::rc_ir
+pub enum mycelium_mir_passes::rc_ir::Mode
+pub mycelium_mir_passes::rc_ir::Mode::Borrowed
+pub mycelium_mir_passes::rc_ir::Mode::Owned
+impl core::clone::Clone for mycelium_mir_passes::rc_ir::Mode
+pub fn mycelium_mir_passes::rc_ir::Mode::clone(&self) -> mycelium_mir_passes::rc_ir::Mode
+impl core::cmp::Eq for mycelium_mir_passes::rc_ir::Mode
+impl core::cmp::PartialEq for mycelium_mir_passes::rc_ir::Mode
+pub fn mycelium_mir_passes::rc_ir::Mode::eq(&self, &mycelium_mir_passes::rc_ir::Mode) -> bool
+impl core::fmt::Debug for mycelium_mir_passes::rc_ir::Mode
+pub fn mycelium_mir_passes::rc_ir::Mode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_mir_passes::rc_ir::Mode
+pub fn mycelium_mir_passes::rc_ir::Mode::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_mir_passes::rc_ir::Mode
+impl core::marker::StructuralPartialEq for mycelium_mir_passes::rc_ir::Mode
+impl core::marker::Freeze for mycelium_mir_passes::rc_ir::Mode
+impl core::marker::Send for mycelium_mir_passes::rc_ir::Mode
+impl core::marker::Sync for mycelium_mir_passes::rc_ir::Mode
+impl core::marker::Unpin for mycelium_mir_passes::rc_ir::Mode
+impl core::marker::UnsafeUnpin for mycelium_mir_passes::rc_ir::Mode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mir_passes::rc_ir::Mode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mir_passes::rc_ir::Mode
+pub enum mycelium_mir_passes::rc_ir::RcAlt
+pub mycelium_mir_passes::rc_ir::RcAlt::Ctor
+pub mycelium_mir_passes::rc_ir::RcAlt::Ctor::binders: alloc::vec::Vec<mycelium_core::node::VarId>
+pub mycelium_mir_passes::rc_ir::RcAlt::Ctor::body: mycelium_mir_passes::rc_ir::RcNode
+pub mycelium_mir_passes::rc_ir::RcAlt::Ctor::ctor: mycelium_core::data::CtorRef
+pub mycelium_mir_passes::rc_ir::RcAlt::Lit
+pub mycelium_mir_passes::rc_ir::RcAlt::Lit::body: mycelium_mir_passes::rc_ir::RcNode
+pub mycelium_mir_passes::rc_ir::RcAlt::Lit::value: mycelium_core::value::Value
+impl core::clone::Clone for mycelium_mir_passes::rc_ir::RcAlt
+pub fn mycelium_mir_passes::rc_ir::RcAlt::clone(&self) -> mycelium_mir_passes::rc_ir::RcAlt
+impl core::cmp::PartialEq for mycelium_mir_passes::rc_ir::RcAlt
+pub fn mycelium_mir_passes::rc_ir::RcAlt::eq(&self, &mycelium_mir_passes::rc_ir::RcAlt) -> bool
+impl core::fmt::Debug for mycelium_mir_passes::rc_ir::RcAlt
+pub fn mycelium_mir_passes::rc_ir::RcAlt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mir_passes::rc_ir::RcAlt
+impl core::marker::Freeze for mycelium_mir_passes::rc_ir::RcAlt
+impl core::marker::Send for mycelium_mir_passes::rc_ir::RcAlt
+impl core::marker::Sync for mycelium_mir_passes::rc_ir::RcAlt
+impl core::marker::Unpin for mycelium_mir_passes::rc_ir::RcAlt
+impl core::marker::UnsafeUnpin for mycelium_mir_passes::rc_ir::RcAlt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mir_passes::rc_ir::RcAlt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mir_passes::rc_ir::RcAlt
+pub enum mycelium_mir_passes::rc_ir::RcNode
+pub mycelium_mir_passes::rc_ir::RcNode::App
+pub mycelium_mir_passes::rc_ir::RcNode::App::arg: alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::App::func: alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::Const(mycelium_core::value::Value)
+pub mycelium_mir_passes::rc_ir::RcNode::Construct
+pub mycelium_mir_passes::rc_ir::RcNode::Construct::args: alloc::vec::Vec<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::Construct::ctor: mycelium_core::data::CtorRef
+pub mycelium_mir_passes::rc_ir::RcNode::Drop
+pub mycelium_mir_passes::rc_ir::RcNode::Drop::body: alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::Drop::var: mycelium_core::node::VarId
+pub mycelium_mir_passes::rc_ir::RcNode::Dup
+pub mycelium_mir_passes::rc_ir::RcNode::Dup::body: alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::Dup::var: mycelium_core::node::VarId
+pub mycelium_mir_passes::rc_ir::RcNode::Lam
+pub mycelium_mir_passes::rc_ir::RcNode::Lam::body: alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::Lam::mode: mycelium_mir_passes::rc_ir::Mode
+pub mycelium_mir_passes::rc_ir::RcNode::Lam::param: mycelium_core::node::VarId
+pub mycelium_mir_passes::rc_ir::RcNode::Let
+pub mycelium_mir_passes::rc_ir::RcNode::Let::body: alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::Let::bound: alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::Let::id: mycelium_core::node::VarId
+pub mycelium_mir_passes::rc_ir::RcNode::Match
+pub mycelium_mir_passes::rc_ir::RcNode::Match::alts: alloc::vec::Vec<mycelium_mir_passes::rc_ir::RcAlt>
+pub mycelium_mir_passes::rc_ir::RcNode::Match::default: core::option::Option<alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>>
+pub mycelium_mir_passes::rc_ir::RcNode::Match::scrutinee: alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::Op
+pub mycelium_mir_passes::rc_ir::RcNode::Op::args: alloc::vec::Vec<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::Op::prim: mycelium_core::node::Prim
+pub mycelium_mir_passes::rc_ir::RcNode::Swap
+pub mycelium_mir_passes::rc_ir::RcNode::Swap::policy: mycelium_core::node::PolicyRef
+pub mycelium_mir_passes::rc_ir::RcNode::Swap::src: alloc::boxed::Box<mycelium_mir_passes::rc_ir::RcNode>
+pub mycelium_mir_passes::rc_ir::RcNode::Swap::target: mycelium_core::repr::Repr
+pub mycelium_mir_passes::rc_ir::RcNode::Var(mycelium_core::node::VarId)
+impl mycelium_mir_passes::rc_ir::RcNode
+pub fn mycelium_mir_passes::rc_ir::RcNode::drop_one(&mycelium_core::node::VarId, mycelium_mir_passes::rc_ir::RcNode) -> mycelium_mir_passes::rc_ir::RcNode
+pub fn mycelium_mir_passes::rc_ir::RcNode::dup_n(&mycelium_core::node::VarId, usize, mycelium_mir_passes::rc_ir::RcNode) -> mycelium_mir_passes::rc_ir::RcNode
+impl core::clone::Clone for mycelium_mir_passes::rc_ir::RcNode
+pub fn mycelium_mir_passes::rc_ir::RcNode::clone(&self) -> mycelium_mir_passes::rc_ir::RcNode
+impl core::cmp::PartialEq for mycelium_mir_passes::rc_ir::RcNode
+pub fn mycelium_mir_passes::rc_ir::RcNode::eq(&self, &mycelium_mir_passes::rc_ir::RcNode) -> bool
+impl core::fmt::Debug for mycelium_mir_passes::rc_ir::RcNode
+pub fn mycelium_mir_passes::rc_ir::RcNode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mir_passes::rc_ir::RcNode
+impl core::marker::Freeze for mycelium_mir_passes::rc_ir::RcNode
+impl core::marker::Send for mycelium_mir_passes::rc_ir::RcNode
+impl core::marker::Sync for mycelium_mir_passes::rc_ir::RcNode
+impl core::marker::Unpin for mycelium_mir_passes::rc_ir::RcNode
+impl core::marker::UnsafeUnpin for mycelium_mir_passes::rc_ir::RcNode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mir_passes::rc_ir::RcNode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mir_passes::rc_ir::RcNode

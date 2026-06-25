@@ -9374,6 +9374,149 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mir_passes::balance",
+      "kind": "mod",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes",
+      "file": "crates/mycelium-mir-passes/src/lib.rs",
+      "line": 42,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::balance::BalanceError",
+      "kind": "enum",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::balance",
+      "file": "crates/mycelium-mir-passes/src/balance.rs",
+      "line": 36,
+      "summary": "A balance-invariant violation for one binding (never-silent diagnostics, G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::balance::check_balance",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::balance",
+      "file": "crates/mycelium-mir-passes/src/balance.rs",
+      "line": 107,
+      "summary": "Verify the balance invariant over `node` and every binding nested within it.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::emit",
+      "kind": "mod",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes",
+      "file": "crates/mycelium-mir-passes/src/lib.rs",
+      "line": 43,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::emit::EmitError",
+      "kind": "enum",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::emit",
+      "file": "crates/mycelium-mir-passes/src/emit.rs",
+      "line": 39,
+      "summary": "Why RC-emission could not lower a node.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::emit::count_occurrences",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::emit",
+      "file": "crates/mycelium-mir-passes/src/emit.rs",
+      "line": 186,
+      "summary": "Count the **free** consuming occurrences of `var` in `node`, respecting shadowing.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::emit::emit_owned",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::emit",
+      "file": "crates/mycelium-mir-passes/src/emit.rs",
+      "line": 65,
+      "summary": "Lower a Core IR [`Node`] to the naive fully-owned [`RcNode`] (MEM-4·B0).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir",
+      "kind": "mod",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes",
+      "file": "crates/mycelium-mir-passes/src/lib.rs",
+      "line": 44,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::Mode",
+      "kind": "enum",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::rc_ir",
+      "file": "crates/mycelium-mir-passes/src/rc_ir.rs",
+      "line": 40,
+      "summary": "The ownership mode of a binding (DN-33 §2 / §8.1 Q2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::RcAlt",
+      "kind": "enum",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::rc_ir",
+      "file": "crates/mycelium-mir-passes/src/rc_ir.rs",
+      "line": 49,
+      "summary": "One alternative of a flat [`RcNode::Match`] — mirrors `mycelium_core::Alt`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::RcNode",
+      "kind": "enum",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::rc_ir",
+      "file": "crates/mycelium-mir-passes/src/rc_ir.rs",
+      "line": 76,
+      "summary": "An RC-annotated Core IR node (the first-order fragment + `Dup`/`Drop`).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::RcNode::drop_one",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::rc_ir::RcNode",
+      "file": "crates/mycelium-mir-passes/src/rc_ir.rs",
+      "line": 177,
+      "summary": "Wrap `body` in a single `Drop { var }` node.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::RcNode::dup_n",
+      "kind": "fn",
+      "crate": "mycelium-mir-passes",
+      "module": "mycelium_mir_passes::rc_ir::RcNode",
+      "file": "crates/mycelium-mir-passes/src/rc_ir.rs",
+      "line": 162,
+      "summary": "Wrap `body` in `n` nested `Dup { var }` nodes (innermost is `body`).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::AotError",
       "kind": "enum",
       "crate": "mycelium-mlir",
@@ -30997,6 +31140,78 @@
     {
       "symbol": "mycelium_lsp::wire::write_message",
       "reason": "dedup-alias: same definition as `mycelium_lsp::write_message` at crates/mycelium-lsp/src/wire.rs:164 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mir_passes::balance::BalanceError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::balance::BalanceError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::balance::BalanceError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::balance::BalanceError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::emit::EmitError::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::emit::EmitError::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::emit::EmitError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::emit::EmitError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::Mode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::Mode::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::Mode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::Mode::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::RcAlt::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::RcAlt::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::RcAlt::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::RcNode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::RcNode::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mir_passes::rc_ir::RcNode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_mlir::Task::Error",
