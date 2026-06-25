@@ -53,6 +53,7 @@
 #![forbid(unsafe_code)]
 
 pub mod balance;
+pub mod corpus;
 pub mod emit;
 pub mod eval;
 pub mod rc_ir;

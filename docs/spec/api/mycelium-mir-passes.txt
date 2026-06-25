@@ -29,6 +29,54 @@ impl core::marker::UnsafeUnpin for mycelium_mir_passes::balance::BalanceError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mir_passes::balance::BalanceError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mir_passes::balance::BalanceError
 pub fn mycelium_mir_passes::balance::check_balance(&mycelium_mir_passes::rc_ir::RcNode) -> core::result::Result<(), mycelium_mir_passes::balance::BalanceError>
+pub mod mycelium_mir_passes::corpus
+pub enum mycelium_mir_passes::corpus::CorpusError
+pub mycelium_mir_passes::corpus::CorpusError::Emit(mycelium_mir_passes::emit::EmitError)
+pub mycelium_mir_passes::corpus::CorpusError::Eval(mycelium_mir_passes::eval::RcError)
+impl core::clone::Clone for mycelium_mir_passes::corpus::CorpusError
+pub fn mycelium_mir_passes::corpus::CorpusError::clone(&self) -> mycelium_mir_passes::corpus::CorpusError
+impl core::cmp::Eq for mycelium_mir_passes::corpus::CorpusError
+impl core::cmp::PartialEq for mycelium_mir_passes::corpus::CorpusError
+pub fn mycelium_mir_passes::corpus::CorpusError::eq(&self, &mycelium_mir_passes::corpus::CorpusError) -> bool
+impl core::error::Error for mycelium_mir_passes::corpus::CorpusError
+impl core::fmt::Debug for mycelium_mir_passes::corpus::CorpusError
+pub fn mycelium_mir_passes::corpus::CorpusError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mir_passes::corpus::CorpusError
+pub fn mycelium_mir_passes::corpus::CorpusError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mir_passes::corpus::CorpusError
+impl core::marker::Freeze for mycelium_mir_passes::corpus::CorpusError
+impl core::marker::Send for mycelium_mir_passes::corpus::CorpusError
+impl core::marker::Sync for mycelium_mir_passes::corpus::CorpusError
+impl core::marker::Unpin for mycelium_mir_passes::corpus::CorpusError
+impl core::marker::UnsafeUnpin for mycelium_mir_passes::corpus::CorpusError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mir_passes::corpus::CorpusError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mir_passes::corpus::CorpusError
+pub struct mycelium_mir_passes::corpus::CorpusReport
+pub mycelium_mir_passes::corpus::CorpusReport::all_semantics_preserved: bool
+pub mycelium_mir_passes::corpus::CorpusReport::elided_dups: usize
+pub mycelium_mir_passes::corpus::CorpusReport::n_terms: usize
+pub mycelium_mir_passes::corpus::CorpusReport::owned_dups: usize
+pub mycelium_mir_passes::corpus::CorpusReport::rows: alloc::vec::Vec<(&'static str, usize, usize, bool)>
+impl mycelium_mir_passes::corpus::CorpusReport
+pub fn mycelium_mir_passes::corpus::CorpusReport::dups_removed(&self) -> usize
+pub fn mycelium_mir_passes::corpus::CorpusReport::reduction_ratio(&self) -> f64
+impl core::clone::Clone for mycelium_mir_passes::corpus::CorpusReport
+pub fn mycelium_mir_passes::corpus::CorpusReport::clone(&self) -> mycelium_mir_passes::corpus::CorpusReport
+impl core::cmp::PartialEq for mycelium_mir_passes::corpus::CorpusReport
+pub fn mycelium_mir_passes::corpus::CorpusReport::eq(&self, &mycelium_mir_passes::corpus::CorpusReport) -> bool
+impl core::fmt::Debug for mycelium_mir_passes::corpus::CorpusReport
+pub fn mycelium_mir_passes::corpus::CorpusReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mir_passes::corpus::CorpusReport
+impl core::marker::Freeze for mycelium_mir_passes::corpus::CorpusReport
+impl core::marker::Send for mycelium_mir_passes::corpus::CorpusReport
+impl core::marker::Sync for mycelium_mir_passes::corpus::CorpusReport
+impl core::marker::Unpin for mycelium_mir_passes::corpus::CorpusReport
+impl core::marker::UnsafeUnpin for mycelium_mir_passes::corpus::CorpusReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mir_passes::corpus::CorpusReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mir_passes::corpus::CorpusReport
+pub fn mycelium_mir_passes::corpus::measure(&[(&'static str, mycelium_core::node::Node)]) -> core::result::Result<mycelium_mir_passes::corpus::CorpusReport, mycelium_mir_passes::corpus::CorpusError>
+pub fn mycelium_mir_passes::corpus::measure_standard() -> core::result::Result<mycelium_mir_passes::corpus::CorpusReport, mycelium_mir_passes::corpus::CorpusError>
+pub fn mycelium_mir_passes::corpus::standard_corpus() -> alloc::vec::Vec<(&'static str, mycelium_core::node::Node)>
 pub mod mycelium_mir_passes::emit
 pub enum mycelium_mir_passes::emit::EmitError
 pub mycelium_mir_passes::emit::EmitError::UnsupportedNode(&'static str)
