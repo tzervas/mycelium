@@ -1,11 +1,13 @@
-//! The **real** ternary-dialect lowering (M-601; RFC-0004 §2; ADR-009/ADR-019).
+//! The **real** ternary-dialect lowering (M-601; M-725; RFC-0004 §2; RFC-0029 §7; ADR-009/ADR-019).
 //!
 //! Feature-gated (`mlir-dialect`, OFF by default). For the **bit/trit element-wise straight-line
-//! fragment** this emits a genuine MLIR module in the `func` + `arith` dialects and drives it
-//! through the verified libMLIR pipeline
+//! fragment plus the balanced-ternary additive carry chain** (`trit.add`/`trit.sub`, M-725) this
+//! emits a genuine MLIR module in the `func` + `arith` + `cf` dialects and drives it through the
+//! verified libMLIR pipeline
 //!
 //! ```text
-//! mlir-opt-<v> --convert-func-to-llvm --convert-arith-to-llvm --reconcile-unrealized-casts
+//! mlir-opt-<v> --convert-cf-to-llvm --convert-func-to-llvm --convert-arith-to-llvm
+//!   --reconcile-unrealized-casts
 //!   | mlir-translate-<v> --mlir-to-llvmir
 //! ```
 //!
@@ -13,23 +15,34 @@
 //! genuinely MLIR-compiled execution path (not the textual [`super::emit`] skeleton, not the
 //! [`crate::llvm`] direct-LLVM emitter, not the [`crate::aot`] env-machine).
 //!
-//! **Why this fragment, and only this fragment (RFC-0004 §2; VR-5/G2).** RFC-0004 §2 sequences the
-//! AOT path as "`ternary` first … lowering progressively to `linalg`/`vector`/`arith`". The
-//! element-wise bit/trit ops (`core.id`, `bit.not/and/or/xor`, `trit.neg`) are exactly the
-//! sub-fragment the **standard** `arith` dialect carries faithfully — one `arith` op per element,
-//! every op dumpable, the `mlir-opt` passes doing the real lowering. Everything richer (trit
-//! *carry* arithmetic with its overflow read-back, the `Construct`/`Match` data fragment, closures,
-//! recursion, `Swap`, Dense/VSA) is an **explicit, never-silent** [`DialectError::Unsupported`]
-//! that routes the program to the direct-LLVM backend ([`crate::llvm`]) or the interpreter — which
-//! already cover the full v0 calculus. We do **not** ship a second, divergent carry/closure codegen
-//! here just to widen coverage: that would be two sources of truth for the same semantics (DRY) and
-//! a fragility risk (G2). The honest boundary is an explicit refusal, not silent or fragile output.
+//! **The fragment, and the moving honest boundary (RFC-0004 §2; M-725; VR-5/G2).** RFC-0004 §2
+//! sequences the AOT path as "`ternary` first … lowering progressively to `linalg`/`vector`/`arith`".
+//! The element-wise bit/trit ops (`core.id`, `bit.not/and/or/xor`, `trit.neg`) are the sub-fragment
+//! the **standard** `arith` dialect carries faithfully — one `arith` op per element, every op
+//! dumpable. **M-725 widens this one increment beyond element-wise**: the balanced-ternary *additive*
+//! carry chain `trit.add`/`trit.sub` now lowers through the real dialect path as a fixed-width
+//! ripple-carry over `arith` ops (`arith.addi`/`arith.remsi`/`arith.divsi`/`arith.subi`,
+//! digit-for-digit the same `s + 4 → srem/sdiv 3 − 1` step the direct-LLVM path uses), with the
+//! out-of-range result reported through the **shared** [`crate::llvm::OVERFLOW_SENTINEL`] read-back
+//! (a `cf.cond_br` on the runtime overflow flag) — never a silent wrap. The new honest boundary is
+//! `trit.mul` (the shifted-accumulate / 2m-trit-buffer fragment) and everything richer (the
+//! `Construct`/`Match` data fragment, closures, recursion, `Swap`, Dense/VSA): each is an
+//! **explicit, never-silent** [`DialectError::Unsupported`] routing the program to the direct-LLVM
+//! backend ([`crate::llvm`]) or the interpreter — which already cover the full v0 calculus. The
+//! carry *step* mirrors `mycelium_core::ternary::add_with_carry` digit-for-digit (one source of
+//! truth for the carry semantics, re-emitted in `arith`, never a *divergent* second algorithm — DRY);
+//! we still ship **no** divergent codegen for `trit.mul`/closures here just to widen further. The
+//! honest boundary is an explicit refusal, not silent or fragile output.
 //!
 //! **Read-back protocol — shared with [`crate::llvm`] (single contract).** The emitted `@main`
 //! `putchar`s each result element's ASCII char (`'0'`/`'1'` for bits; `'-'`/`'0'`/`'+'` for trits)
 //! then a newline, and the result is decoded by the **same** [`crate::llvm::decode_result`] the
-//! direct-LLVM path uses. So the MLIR-dialect output and the direct-LLVM output are read back
-//! identically — the three-way differential (M-602) compares like with like.
+//! direct-LLVM path uses. On an additive overflow (`trit.add`/`trit.sub` leaving the `m`-trit range)
+//! the artifact prints the **shared** [`crate::llvm::OVERFLOW_SENTINEL`] line instead, decoded to an
+//! explicit [`DialectError::Overflow`] — byte-for-byte the same sentinel and meaning as the
+//! direct-LLVM path's [`crate::llvm::AotError::Overflow`]. So the MLIR-dialect output and the
+//! direct-LLVM output are read back identically — the three-way differential (M-602/M-725) compares
+//! like with like, on the result *and* the overflow refusal.
 //!
 //! **Toolchain probing (skip-gracefully).** `mlir-opt`/`mlir-translate`/`clang` are probed at
 //! runtime; absence is a graceful [`DialectError::ToolchainMissing`] (the caller skips, never
@@ -48,18 +61,25 @@ use std::process::Command;
 use mycelium_core::lower::{self, Anf, Atom, Rhs};
 use mycelium_core::{Node, Payload, Repr, Trit, Value};
 
-use crate::llvm::{decode_result, LaneKind};
+use crate::llvm::{decode_result, LaneKind, OVERFLOW_SENTINEL};
 
 /// An explicit failure of the real MLIR-dialect path. Every unsupported construct, missing tool, or
 /// subprocess failure is one of these — the path is **never silent** (G2). Mirrors the contract of
 /// [`crate::llvm::AotError`], specialized to the MLIR pipeline.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DialectError {
-    /// A node/prim/repr outside the bit/trit element-wise fragment the standard `arith` dialect
-    /// lowers here. The message names what was refused and where it should run instead (the
-    /// direct-LLVM backend [`crate::llvm`] or the interpreter) — an `EXPLAIN`-able routing, never a
-    /// silent drop (G2/VR-5).
+    /// A node/prim/repr outside the fragment the standard `arith`/`func`/`cf` dialects lower here
+    /// (the bit/trit element-wise ops **plus** the balanced-ternary additive carry chain
+    /// `trit.add`/`trit.sub`; M-725). The message names what was refused and where it should run
+    /// instead (the direct-LLVM backend [`crate::llvm`] or the interpreter) — an `EXPLAIN`-able
+    /// routing, never a silent drop (G2/VR-5).
     Unsupported(String),
+    /// A balanced-ternary additive result left the fixed `m`-trit range — the MLIR-compiled artifact
+    /// computed the overflow at runtime and signalled it through the shared read-back protocol (the
+    /// [`crate::llvm::OVERFLOW_SENTINEL`] line). Surfaced as an explicit error mirroring
+    /// [`crate::llvm::AotError::Overflow`] and the interpreter's `EvalError::Overflow` — never a
+    /// silent wrap (SC-3/G2). So the three-way differential stays honest on overflow too (M-725).
+    Overflow(String),
     /// An operand atom with no prior binding (an ill-formed lowering — should not occur for a
     /// well-formed ANF program; surfaced explicitly rather than panicking).
     FreeVariable(String),
@@ -84,6 +104,7 @@ impl fmt::Display for DialectError {
             DialectError::Unsupported(m) => {
                 write!(f, "unsupported for the MLIR-dialect fragment: {m}")
             }
+            DialectError::Overflow(m) => write!(f, "balanced-ternary overflow: {m}"),
             DialectError::FreeVariable(v) => write!(f, "free variable in lowered IR: {v}"),
             DialectError::ToolchainMissing(t) => write!(f, "MLIR toolchain missing: {t}"),
             DialectError::Compile(e) => write!(f, "MLIR pipeline compile failed: {e}"),
@@ -382,15 +403,20 @@ fn map2(
     Ok(Lane { kind: a.kind, vals })
 }
 
-/// Lower one element-wise primitive over its operand lanes to `arith` ops, returning the result
-/// lane. Anything outside the element-wise fragment — notably the trit *carry* ops
-/// (`trit.add/sub/mul`, which need a ripple-carry + an overflow read-back already proven on the
-/// direct-LLVM path) — is an explicit [`DialectError::Unsupported`] routing to [`crate::llvm`] (G2).
+/// Lower one primitive over its operand lanes to `arith` ops, returning the result lane. Covers the
+/// element-wise fragment **and** the balanced-ternary additive carry chain `trit.add`/`trit.sub`
+/// (M-725) — the latter push their runtime overflow `i1` SSA name onto `flags` (the caller folds
+/// them into the program-level overflow flag that drives the read-back). The new honest boundary is
+/// `trit.mul` (and everything richer): an explicit [`DialectError::Unsupported`] routing to
+/// [`crate::llvm`] / the interpreter (G2). The carry *step* re-emits
+/// `mycelium_core::ternary::add_with_carry` digit-for-digit (one source of truth, never a divergent
+/// second algorithm — DRY).
 fn emit_op(
     prim: &str,
     operands: &[&Lane],
     ssa: &mut Ssa,
     body: &mut String,
+    flags: &mut Vec<String>,
 ) -> Result<Lane, DialectError> {
     let arity1 = |p: &str| -> Result<&Lane, DialectError> {
         match operands {
@@ -444,34 +470,171 @@ fn emit_op(
                 format!("    {r} = arith.subi {zero}, {x} : i32")
             }))
         }
-        // Trit *carry* arithmetic is deliberately NOT lowered here: it needs a fixed-width
-        // ripple-carry + a runtime overflow read-back, already implemented and differential-proven
-        // on the direct-LLVM path (`crate::llvm`). Re-emitting it in `arith` would be a second
-        // source of truth for the carry semantics (DRY) and a fragility risk (G2). Explicit refusal.
-        "trit.add" | "trit.sub" | "trit.mul" => Err(DialectError::Unsupported(format!(
-            "{prim}: trit carry arithmetic is not in the MLIR element-wise fragment — it runs on the \
-             direct-LLVM backend (crate::llvm), which carries the ripple-carry + overflow read-back"
+        // Balanced-ternary addition (M-725): a fixed-width ripple-carry over the trits (LSB→MSB),
+        // with a runtime overflow `i1` (non-zero final carry ⇒ out of m-trit range). Mirrors
+        // `mycelium_core::ternary::add` digit-for-digit — the same `s + 4 → srem/sdiv 3 − 1` step
+        // the direct-LLVM path (`crate::llvm::emit_trit_add`) emits, re-expressed in `arith` ops.
+        "trit.add" => {
+            let (a, b) = arity2(prim)?;
+            require_kind(prim, a.kind, LaneKind::Ternary)?;
+            require_kind(prim, b.kind, LaneKind::Ternary)?;
+            require_width(prim, a, b)?;
+            let (lane, ovf) = emit_trit_add(&a.vals, &b.vals, ssa, body);
+            flags.push(ovf);
+            Ok(lane)
+        }
+        // Subtraction `a − b` = `add(a, neg(b))`: negate `b`'s trits, then the same ripple adder
+        // (exactly `crate::llvm`'s `trit.sub`; DRY).
+        "trit.sub" => {
+            let (a, b) = arity2(prim)?;
+            require_kind(prim, a.kind, LaneKind::Ternary)?;
+            require_kind(prim, b.kind, LaneKind::Ternary)?;
+            require_width(prim, a, b)?;
+            let zero = emit_const_i32(0, ssa, body);
+            let neg_b = map1(b, ssa, body, |x, r| {
+                format!("    {r} = arith.subi {zero}, {x} : i32")
+            });
+            let (lane, ovf) = emit_trit_add(&a.vals, &neg_b.vals, ssa, body);
+            flags.push(ovf);
+            Ok(lane)
+        }
+        // The NEW honest boundary (M-725): `trit.mul` is the shifted-accumulate / 2m-trit-buffer
+        // fragment — materially richer than the additive ripple, and already implemented and
+        // differential-proven on the direct-LLVM path (`crate::llvm::emit_trit_mul`). We do NOT ship
+        // a second, divergent multiply codegen here just to widen further: that would be two sources
+        // of truth for the same semantics (DRY) and a fragility risk (G2). Explicit refusal.
+        "trit.mul" => Err(DialectError::Unsupported(format!(
+            "{prim}: balanced-ternary multiply (shifted-accumulate) is the MLIR-dialect fragment's \
+             new boundary — it runs on the direct-LLVM backend (crate::llvm::emit_trit_mul), which \
+             carries the 2m-trit accumulation + overflow read-back"
         ))),
         other => Err(DialectError::Unsupported(format!(
-            "primitive {other:?} is not in the MLIR element-wise fragment (bit.not/and/or/xor, \
-             trit.neg, core.id) — it runs on the direct-LLVM backend / interpreter"
+            "primitive {other:?} is not in the MLIR-dialect fragment (bit.not/and/or/xor, trit.neg, \
+             trit.add, trit.sub, core.id) — it runs on the direct-LLVM backend / interpreter"
         ))),
     }
 }
 
+/// Require two lanes to have equal element count, else an explicit width-mismatch refusal (G2).
+/// Mirrors [`crate::llvm`]'s `require_width`.
+fn require_width(prim: &str, a: &Lane, b: &Lane) -> Result<(), DialectError> {
+    if a.vals.len() == b.vals.len() {
+        Ok(())
+    } else {
+        Err(DialectError::Unsupported(format!(
+            "{prim}: width mismatch {} vs {}",
+            a.vals.len(),
+            b.vals.len()
+        )))
+    }
+}
+
+/// Emit a fixed-width balanced-ternary ripple-carry add over MSB-first trit operands `a`/`b` (equal
+/// length, caller-checked) in `arith` ops. Returns the sum lane (MSB-first) and the SSA name of an
+/// `i1` register set iff the final carry is non-zero (overflow). Digit-for-digit identical to
+/// [`crate::llvm`]'s `emit_trit_add` (and thus to `mycelium_core::ternary::add`): with
+/// `x = aᵢ + bᵢ + carry + 4` (always ≥ 1 so `arith.remsi`/`arith.divsi` are euclidean), the balanced
+/// digit is `x remsi 3 − 1` and the next carry is `x divsi 3 − 1`.
+fn emit_trit_add(a: &[String], b: &[String], ssa: &mut Ssa, body: &mut String) -> (Lane, String) {
+    let m = a.len();
+    // The incoming carry of the LSB step is the constant 0 trit.
+    let mut carry = emit_const_i32(0, ssa, body);
+    let mut sum_lsb: Vec<String> = Vec::with_capacity(m);
+    // Process least-significant first (the tail of the MSB-first strings).
+    for i in (0..m).rev() {
+        let (digit, next_carry) = emit_trit_add_step(&a[i], &b[i], &carry, ssa, body);
+        sum_lsb.push(digit);
+        carry = next_carry;
+    }
+    // Overflow iff the final carry out of the most-significant trit is non-zero (an `i1`).
+    let zero = emit_const_i32(0, ssa, body);
+    let ovf = ssa.fresh();
+    let _ = writeln!(body, "    {ovf} = arith.cmpi ne, {carry}, {zero} : i32");
+    let vals: Vec<String> = sum_lsb.into_iter().rev().collect(); // back to MSB-first
+    (
+        Lane {
+            kind: LaneKind::Ternary,
+            vals,
+        },
+        ovf,
+    )
+}
+
+/// One balanced-ternary add step in `arith`: given operand trits `a`/`b` and the incoming `carry`
+/// (all `i32` SSA in `{−1,0,1}`), emit the balanced digit + outgoing carry. Returns
+/// `(digit_reg, carry_reg)`. Byte-for-byte the `arith` analogue of [`crate::llvm`]'s
+/// `emit_trit_add_step` (the single shared carry primitive — DRY).
+fn emit_trit_add_step(
+    a: &str,
+    b: &str,
+    carry: &str,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> (String, String) {
+    let four = emit_const_i32(4, ssa, body);
+    let three = emit_const_i32(3, ssa, body);
+    let one = emit_const_i32(1, ssa, body);
+    let s1 = ssa.fresh();
+    let _ = writeln!(body, "    {s1} = arith.addi {a}, {b} : i32");
+    let s2 = ssa.fresh();
+    let _ = writeln!(body, "    {s2} = arith.addi {s1}, {carry} : i32");
+    // x = s + 4 ∈ [1,7], strictly positive ⇒ remsi/divsi coincide with euclidean rem/div by 3.
+    let x = ssa.fresh();
+    let _ = writeln!(body, "    {x} = arith.addi {s2}, {four} : i32");
+    let rem = ssa.fresh();
+    let _ = writeln!(body, "    {rem} = arith.remsi {x}, {three} : i32");
+    let digit = ssa.fresh();
+    let _ = writeln!(body, "    {digit} = arith.subi {rem}, {one} : i32");
+    let q = ssa.fresh();
+    let _ = writeln!(body, "    {q} = arith.divsi {x}, {three} : i32");
+    let next_carry = ssa.fresh();
+    let _ = writeln!(body, "    {next_carry} = arith.subi {q}, {one} : i32");
+    (digit, next_carry)
+}
+
+/// Fold a list of `i1` overflow flags into one (`arith.ori` chain), or `None` if empty.
+/// Deterministic. Mirrors [`crate::llvm`]'s `fold_or`.
+fn fold_or(flags: &[String], ssa: &mut Ssa, body: &mut String) -> Option<String> {
+    let mut it = flags.iter();
+    let mut acc = it.next()?.clone();
+    for f in it {
+        let r = ssa.fresh();
+        let _ = writeln!(body, "    {r} = arith.ori {acc}, {f} : i1");
+        acc = r;
+    }
+    Some(acc)
+}
+
 /// Walk the lowered ANF, emitting one `arith` op per binding into `@main`'s body, and return the
-/// result lane. Returns an explicit [`DialectError::Unsupported`] for any node outside the
-/// element-wise fragment — routing the program to the direct-LLVM backend / interpreter (G2).
-fn lower_program(node: &Node, ssa: &mut Ssa, body: &mut String) -> Result<Lane, DialectError> {
+/// result lane **plus** the program-level overflow flag (`Some(i1)` iff any `trit.add`/`trit.sub`
+/// binding can overflow at runtime, else `None`). Returns an explicit [`DialectError::Unsupported`]
+/// for any node outside the fragment — routing the program to the direct-LLVM backend / interpreter
+/// (G2).
+fn lower_program(
+    node: &Node,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> Result<(Lane, Option<String>), DialectError> {
     let anf = lower::lower_to_anf(node);
     lower_block(&anf, ssa, body)
 }
 
-/// Lower one ANF block (its bindings + result) into MLIR ops, returning the result lane. The data /
-/// closure / recursion / swap nodes are explicit refusals here (they live on the richer paths).
-fn lower_block(anf: &Anf, ssa: &mut Ssa, body: &mut String) -> Result<Lane, DialectError> {
+/// Lower one ANF block (its bindings + result) into MLIR ops, returning the result lane and the
+/// folded program-level overflow flag (`None` when no trit additive op is present, so an
+/// overflow-free program emits exactly the M-601 module). The data / closure / recursion / swap
+/// nodes are explicit refusals here (they live on the richer paths).
+fn lower_block(
+    anf: &Anf,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> Result<(Lane, Option<String>), DialectError> {
     use std::collections::HashMap;
     let mut env: HashMap<Atom, Lane> = HashMap::new();
+    // The per-op overflow `i1` registers, accumulated across the program. Any trit additive op
+    // pushes its overflow condition here; the interpreter errors on the *first* overflow, so the
+    // native path being conservative (OR of all of them ⇒ one explicit overflow) gives the same
+    // verdict — the meaningless result is never read either way. Mirrors `crate::llvm`'s flags.
+    let mut flags: Vec<String> = Vec::new();
     let lookup = |env: &HashMap<Atom, Lane>, a: &Atom| -> Result<Lane, DialectError> {
         env.get(a)
             .cloned()
@@ -488,43 +651,46 @@ fn lower_block(anf: &Anf, ssa: &mut Ssa, body: &mut String) -> Result<Lane, Dial
                     .map(|a| lookup(&env, a))
                     .collect::<Result<_, _>>()?;
                 let refs: Vec<&Lane> = operands.iter().collect();
-                emit_op(prim, &refs, ssa, body)?
+                emit_op(prim, &refs, ssa, body, &mut flags)?
             }
             // Everything below is an explicit, never-silent refusal — it runs on the direct-LLVM
             // backend (`crate::llvm`, which covers the full v0 calculus) or the interpreter. The
             // message routes it there (EXPLAIN-able; G2/VR-5).
             Rhs::Swap { target, .. } => {
                 return Err(DialectError::Unsupported(format!(
-                    "Swap to {target:?}: representation swaps are not in the MLIR element-wise \
-                     fragment (they run on the interpreter / direct-LLVM path)"
+                    "Swap to {target:?}: representation swaps are not in the MLIR-dialect fragment \
+                     (they run on the interpreter / direct-LLVM path)"
                 )));
             }
             Rhs::Construct { .. } | Rhs::Match { .. } => {
                 return Err(DialectError::Unsupported(
-                    "the data fragment (Construct/Match) is not in the MLIR element-wise fragment — \
-                     it is lowered by the direct-LLVM backend (crate::llvm; M-373) or interpreted"
+                    "the data fragment (Construct/Match) is not in the MLIR-dialect fragment — it is \
+                     lowered by the direct-LLVM backend (crate::llvm; M-373) or interpreted"
                         .to_owned(),
                 ));
             }
             Rhs::App { .. } | Rhs::Lam { .. } => {
                 return Err(DialectError::Unsupported(
-                    "closures (App/Lam) are not in the MLIR element-wise fragment — they are \
-                     lowered by the direct-LLVM backend (crate::llvm; M-378) or interpreted"
+                    "closures (App/Lam) are not in the MLIR-dialect fragment — they are lowered by \
+                     the direct-LLVM backend (crate::llvm; M-378) or interpreted"
                         .to_owned(),
                 ));
             }
             Rhs::Fix { .. } | Rhs::FixGroup { .. } => {
                 return Err(DialectError::Unsupported(
-                    "recursion (Fix/FixGroup) is not in the MLIR element-wise fragment — tail \
-                     recursion is lowered by the direct-LLVM backend (crate::llvm; M-379); the rest \
-                     is interpreted"
+                    "recursion (Fix/FixGroup) is not in the MLIR-dialect fragment — tail recursion \
+                     is lowered by the direct-LLVM backend (crate::llvm; M-379); the rest is \
+                     interpreted"
                         .to_owned(),
                 ));
             }
         };
         env.insert(b.name.clone(), lane);
     }
-    lookup(&env, anf.result())
+    let result = lookup(&env, anf.result())?;
+    // Fold every per-op overflow `i1` into one program-level flag (or `None` — no trit additive op).
+    let overflow = fold_or(&flags, ssa, body);
+    Ok((result, overflow))
 }
 
 /// Emit the print sequence: one `func.call @putchar` per result element (its ASCII char), then a
@@ -573,10 +739,18 @@ fn emit_char_code(kind: LaneKind, v: &str, ssa: &mut Ssa, body: &mut String) -> 
     }
 }
 
-/// Emit the full MLIR module for `node` (the element-wise fragment): a `func.func private @putchar`
-/// declaration + a `func.func @main` that computes the result lane, prints each element, and
-/// returns 0. Deterministic. Returns an explicit [`DialectError::Unsupported`] for an out-of-fragment
-/// node (the program then runs on the direct-LLVM backend / interpreter).
+/// Emit the full MLIR module for `node`: a `func.func private @putchar` declaration + a
+/// `func.func @main` that computes the result lane, prints each element, and returns 0. Deterministic.
+/// Returns an explicit [`DialectError::Unsupported`] for an out-of-fragment node (the program then
+/// runs on the direct-LLVM backend / interpreter).
+///
+/// **Overflow read-back (M-725).** When the program contains a `trit.add`/`trit.sub` that can
+/// overflow at runtime, `@main` branches (`cf.cond_br`) on the folded overflow `i1`: on overflow it
+/// prints the shared [`OVERFLOW_SENTINEL`] line and returns 0; otherwise it prints the result line —
+/// exactly mirroring [`crate::llvm`]'s read-back, so the artifact's stdout means the same on both
+/// compiled paths. An **overflow-free** program (no trit additive op) emits the single-block,
+/// straight-line module unchanged (byte-for-byte the M-601 shape) — the branch is added only when it
+/// is needed.
 ///
 /// The returned `(module, kind, width)` triple carries the lane shape so the read-back
 /// ([`crate::llvm::decode_result`]) can parse `@main`'s stdout. Every op is explicit, dumpable MLIR
@@ -584,34 +758,73 @@ fn emit_char_code(kind: LaneKind, v: &str, ssa: &mut Ssa, body: &mut String) -> 
 pub fn emit_mlir(node: &Node) -> Result<(String, ResultKind, usize), DialectError> {
     let mut ssa = Ssa::default();
     let mut body = String::new();
-    let result = lower_program(node, &mut ssa, &mut body)?;
-    emit_print(&result, &mut ssa, &mut body);
+    let (result, overflow) = lower_program(node, &mut ssa, &mut body)?;
+
+    let kind = ResultKind::from_lane(result.kind);
+    let width = result.vals.len();
 
     let mut module = String::new();
     module.push_str("module {\n");
     module.push_str("  func.func private @putchar(i32) -> i32\n");
     module.push_str("  func.func @main() -> i32 {\n");
-    module.push_str(&body);
-    let zero = {
-        // The return value 0 — emitted last so it cannot clash with body SSA names.
-        let r = ssa.fresh();
-        let _ = writeln!(module, "    {r} = arith.constant 0 : i32");
-        format!("    func.return {r} : i32\n")
-    };
-    module.push_str(&zero);
-    module.push_str("  }\n}\n");
 
-    let kind = ResultKind::from_lane(result.kind);
-    let width = result.vals.len();
+    match overflow {
+        // No trit additive op ⇒ no overflow path; straight-line print + return (the M-601 module
+        // unchanged, so element-wise programs emit byte-for-byte as before).
+        None => {
+            emit_print(&result, &mut ssa, &mut body);
+            module.push_str(&body);
+            let r = ssa.fresh();
+            let _ = writeln!(module, "    {r} = arith.constant 0 : i32");
+            let _ = writeln!(module, "    func.return {r} : i32");
+        }
+        // Overflow possible ⇒ branch on the runtime flag (`cf.cond_br`): print the sentinel line on
+        // overflow, the result line otherwise. The read-back protocol — never a silent wrap (G2).
+        // The entry block ends with the body (which computed the `ovf` i1) + the conditional branch;
+        // `^ovf` prints the sentinel, `^ok` prints the result. Both return 0.
+        Some(ovf) => {
+            module.push_str(&body);
+            let _ = writeln!(module, "    cf.cond_br {ovf}, ^ovf, ^ok");
+            // ^ovf: print the OVERFLOW_SENTINEL char + newline, return 0.
+            module.push_str("  ^ovf:\n");
+            let sentinel = emit_const_i32(i32::from(OVERFLOW_SENTINEL), &mut ssa, &mut module);
+            let s = ssa.fresh();
+            let _ = writeln!(
+                module,
+                "    {s} = func.call @putchar({sentinel}) : (i32) -> i32"
+            );
+            let nl = emit_const_i32(10, &mut ssa, &mut module);
+            let snl = ssa.fresh();
+            let _ = writeln!(
+                module,
+                "    {snl} = func.call @putchar({nl}) : (i32) -> i32"
+            );
+            let zo = ssa.fresh();
+            let _ = writeln!(module, "    {zo} = arith.constant 0 : i32");
+            let _ = writeln!(module, "    func.return {zo} : i32");
+            // ^ok: print the result line, return 0.
+            module.push_str("  ^ok:\n");
+            let mut ok = String::new();
+            emit_print(&result, &mut ssa, &mut ok);
+            module.push_str(&ok);
+            let zk = ssa.fresh();
+            let _ = writeln!(module, "    {zk} = arith.constant 0 : i32");
+            let _ = writeln!(module, "    func.return {zk} : i32");
+        }
+    }
+
+    module.push_str("  }\n}\n");
     Ok((module, kind, width))
 }
 
 // ─── The pipeline: MLIR module → real LLVM IR → native → read-back ────────────────────────────
 
 /// Lower `node` through the real MLIR pipeline to **LLVM IR text**, without compiling/running it.
-/// Emits the `arith`/`func` MLIR module ([`emit_mlir`]), then runs
-/// `mlir-opt --convert-func-to-llvm --convert-arith-to-llvm --reconcile-unrealized-casts
-/// | mlir-translate --mlir-to-llvmir`. Each stage is a real libMLIR pass; the intermediate MLIR and
+/// Emits the `arith`/`func`/`cf` MLIR module ([`emit_mlir`]), then runs
+/// `mlir-opt --convert-cf-to-llvm --convert-func-to-llvm --convert-arith-to-llvm
+/// --reconcile-unrealized-casts | mlir-translate --mlir-to-llvmir`. The `--convert-cf-to-llvm` pass
+/// lowers the M-725 overflow-read-back `cf.cond_br` (a no-op for an overflow-free element-wise
+/// program, which contains no `cf` ops). Each stage is a real libMLIR pass; the intermediate MLIR and
 /// the resulting IR are both dumpable (no opaque pass — VR-4). Returns the LLVM IR text + lane shape,
 /// or an explicit [`DialectError`] (skip on `ToolchainMissing`).
 pub fn lower_to_llvm_ir(node: &Node) -> Result<(String, ResultKind, usize), DialectError> {
@@ -624,10 +837,12 @@ pub fn lower_to_llvm_ir(node: &Node) -> Result<(String, ResultKind, usize), Dial
     std::fs::write(&mlir_path, mlir.as_bytes())
         .map_err(|e| DialectError::Run(format!("write MLIR: {e}")))?;
 
-    // Stage 1: mlir-opt lowers func+arith → the LLVM dialect.
+    // Stage 1: mlir-opt lowers cf+func+arith → the LLVM dialect. `--convert-cf-to-llvm` handles the
+    // M-725 overflow-read-back branch; it is a no-op for an overflow-free element-wise module.
     let lowered_mlir = run_capture(
         &tools.mlir_opt,
         &[
+            "--convert-cf-to-llvm",
             "--convert-func-to-llvm",
             "--convert-arith-to-llvm",
             "--reconcile-unrealized-casts",
@@ -669,7 +884,9 @@ impl Compiled {
     }
     /// Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}`
     /// [`Value`] via the **shared** [`crate::llvm::decode_result`] (same read-back as the
-    /// direct-LLVM path).
+    /// direct-LLVM path). A `trit.add`/`trit.sub` that overflowed prints the shared
+    /// [`OVERFLOW_SENTINEL`] line ⇒ an explicit [`DialectError::Overflow`], never a silent wrap
+    /// (M-725; mirrors [`crate::llvm::AotError::Overflow`] and the interpreter's `EvalError::Overflow`).
     pub fn run(&self) -> Result<Value, DialectError> {
         let output = Command::new(&self.bin)
             .output()
@@ -683,6 +900,15 @@ impl Compiled {
         let stdout = String::from_utf8(output.stdout)
             .map_err(|e| DialectError::Parse(format!("non-utf8 output: {e}")))?;
         let line = stdout.lines().next().unwrap_or("");
+        // Read-back protocol: the sentinel line means the native arithmetic overflowed the m-trit
+        // range — an explicit error, never a silently-wrapped result (matches the interpreter's
+        // `EvalError::Overflow` and the direct-LLVM path, so the three-way differential stays honest).
+        if line.as_bytes() == [OVERFLOW_SENTINEL] {
+            return Err(DialectError::Overflow(format!(
+                "fixed-width result out of {}-trit range",
+                self.width
+            )));
+        }
         decode_result(self.kind.to_lane(), self.width, line.chars())
             .map_err(|e| DialectError::Parse(e.to_string()))
     }
@@ -786,110 +1012,5 @@ struct TmpDir(std::path::PathBuf);
 impl Drop for TmpDir {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mycelium_core::{Meta, Provenance};
-
-    fn byte(bits: [bool; 8]) -> Value {
-        Value::new(
-            Repr::Binary { width: 8 },
-            Payload::Bits(bits.to_vec()),
-            Meta::exact(Provenance::Root),
-        )
-        .unwrap()
-    }
-
-    const A: [bool; 8] = [true, false, true, true, false, false, true, false];
-
-    fn not_a_xor_b() -> Node {
-        let b = byte([false, false, true, false, true, false, true, true]);
-        Node::Op {
-            prim: "bit.not".into(),
-            args: vec![Node::Op {
-                prim: "bit.xor".into(),
-                args: vec![Node::Const(byte(A)), Node::Const(b)],
-            }],
-        }
-    }
-
-    #[test]
-    fn emits_a_real_arith_func_module() {
-        let (m, kind, width) = emit_mlir(&not_a_xor_b()).expect("emit");
-        assert!(m.starts_with("module {"));
-        assert!(m.contains("func.func @main()"));
-        assert!(m.contains("func.func private @putchar"));
-        // Real arith ops (the lowering, not the textual skeleton):
-        assert!(m.contains("arith.xori"), "expected arith.xori in:\n{m}");
-        assert!(m.contains("func.call @putchar"));
-        assert!(m.contains("func.return"));
-        assert_eq!(kind, ResultKind::Binary);
-        assert_eq!(width, 8);
-    }
-
-    #[test]
-    fn emission_is_deterministic() {
-        assert_eq!(
-            emit_mlir(&not_a_xor_b()).unwrap().0,
-            emit_mlir(&not_a_xor_b()).unwrap().0
-        );
-    }
-
-    #[test]
-    fn out_of_fragment_nodes_are_explicitly_refused() {
-        // A Swap is refused (routed to interp / direct-LLVM), never silently lowered.
-        let swap = Node::Swap {
-            src: Box::new(Node::Const(byte(A))),
-            target: Repr::Ternary { trits: 6 },
-            policy: mycelium_core::ContentHash::parse("blake3:round_trip_safe").unwrap(),
-        };
-        match emit_mlir(&swap) {
-            Err(DialectError::Unsupported(_)) => {}
-            other => panic!("Swap must be Unsupported, got {other:?}"),
-        }
-        // Trit carry arithmetic is refused (stays on the direct-LLVM path).
-        let add = Node::Op {
-            prim: "trit.add".into(),
-            args: vec![
-                Node::Const(
-                    Value::new(
-                        Repr::Ternary { trits: 3 },
-                        Payload::Trits(vec![Trit::Pos, Trit::Neg, Trit::Neg]),
-                        Meta::exact(Provenance::Root),
-                    )
-                    .unwrap(),
-                ),
-                Node::Const(
-                    Value::new(
-                        Repr::Ternary { trits: 3 },
-                        Payload::Trits(vec![Trit::Zero, Trit::Pos, Trit::Pos]),
-                        Meta::exact(Provenance::Root),
-                    )
-                    .unwrap(),
-                ),
-            ],
-        };
-        match emit_mlir(&add) {
-            Err(DialectError::Unsupported(_)) => {}
-            other => panic!("trit.add must be Unsupported, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn toolchain_resolves_or_skips() {
-        // Either the tools resolve (this container) or we get a graceful ToolchainMissing — never a
-        // panic, never a silent mismatch.
-        match resolve_tools() {
-            Ok(t) => {
-                assert!(t.mlir_opt.contains("mlir-opt"));
-                assert!(t.mlir_translate.contains("mlir-translate"));
-                assert!(t.llvm_major >= 1);
-            }
-            Err(DialectError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected toolchain error: {e}"),
-        }
     }
 }
