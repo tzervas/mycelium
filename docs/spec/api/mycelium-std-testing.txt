@@ -1,4 +1,84 @@
 pub mod mycelium_std_testing
+pub mod mycelium_std_testing::cert_mode_test
+pub use mycelium_std_testing::cert_mode_test::CertDecl
+pub use mycelium_std_testing::cert_mode_test::CertScope
+pub struct mycelium_std_testing::cert_mode_test::ModeScope
+pub mycelium_std_testing::cert_mode_test::ModeScope::in_scope: [bool; 3]
+impl mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::ALL_MODES: mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::BALANCED_ONLY: mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::CERTIFIED_ONLY: mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::EMIT_MODES: mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::FAST_ONLY: mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::NON_FAST: mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::contains(self, mycelium_core::cert_mode::CertMode) -> bool
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::count(self) -> usize
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::from_resolved_mode(&mycelium_proj::cert_scope::ResolvedMode) -> mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::intersect(self, mycelium_std_testing::cert_mode_test::ModeScope) -> mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::is_empty(self) -> bool
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::modes_in_scope(self) -> alloc::vec::Vec<mycelium_core::cert_mode::CertMode>
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::modes_out_of_scope(self) -> alloc::vec::Vec<mycelium_core::cert_mode::CertMode>
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::union(self, mycelium_std_testing::cert_mode_test::ModeScope) -> mycelium_std_testing::cert_mode_test::ModeScope
+impl core::clone::Clone for mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::clone(&self) -> mycelium_std_testing::cert_mode_test::ModeScope
+impl core::cmp::Eq for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::cmp::PartialEq for mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::eq(&self, &mycelium_std_testing::cert_mode_test::ModeScope) -> bool
+impl core::fmt::Debug for mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::StructuralPartialEq for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::Freeze for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::Send for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::Sync for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::Unpin for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::UnsafeUnpin for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::cert_mode_test::ModeScope
+pub struct mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl mycelium_std_testing::cert_mode_test::ModeTestConfig
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::new(&[mycelium_proj::cert_scope::CertDecl]) -> Self
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::provenance(&self) -> mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::resolve(&self) -> mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::with_granular(self, mycelium_core::cert_mode::CertMode) -> Self
+impl core::clone::Clone for mycelium_std_testing::cert_mode_test::ModeTestConfig
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::clone(&self) -> mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::default::Default for mycelium_std_testing::cert_mode_test::ModeTestConfig
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::default() -> Self
+impl core::fmt::Debug for mycelium_std_testing::cert_mode_test::ModeTestConfig
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::marker::Send for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::marker::Sync for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::marker::Unpin for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::marker::UnsafeUnpin for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::cert_mode_test::ModeTestConfig
+pub struct mycelium_std_testing::cert_mode_test::ModeVisit
+pub mycelium_std_testing::cert_mode_test::ModeVisit::skipped: alloc::vec::Vec<mycelium_core::cert_mode::CertMode>
+pub mycelium_std_testing::cert_mode_test::ModeVisit::visited: alloc::vec::Vec<mycelium_core::cert_mode::CertMode>
+impl mycelium_std_testing::cert_mode_test::ModeVisit
+pub fn mycelium_std_testing::cert_mode_test::ModeVisit::matches_scope(&self, mycelium_std_testing::cert_mode_test::ModeScope) -> bool
+pub fn mycelium_std_testing::cert_mode_test::ModeVisit::visited_all(&self) -> bool
+impl core::clone::Clone for mycelium_std_testing::cert_mode_test::ModeVisit
+pub fn mycelium_std_testing::cert_mode_test::ModeVisit::clone(&self) -> mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::cmp::Eq for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::cmp::PartialEq for mycelium_std_testing::cert_mode_test::ModeVisit
+pub fn mycelium_std_testing::cert_mode_test::ModeVisit::eq(&self, &mycelium_std_testing::cert_mode_test::ModeVisit) -> bool
+impl core::fmt::Debug for mycelium_std_testing::cert_mode_test::ModeVisit
+pub fn mycelium_std_testing::cert_mode_test::ModeVisit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::marker::Freeze for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::marker::Send for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::marker::Sync for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::marker::Unpin for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::marker::UnsafeUnpin for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::cert_mode_test::ModeVisit
+pub fn mycelium_std_testing::cert_mode_test::assert_mode_negative(mycelium_std_testing::cert_mode_test::ModeScope, impl core::ops::function::Fn(mycelium_core::cert_mode::CertMode) -> bool, &str)
+pub fn mycelium_std_testing::cert_mode_test::assert_mode_scope(mycelium_std_testing::cert_mode_test::ModeScope, impl core::ops::function::Fn(mycelium_core::cert_mode::CertMode) -> bool, &str)
+pub fn mycelium_std_testing::cert_mode_test::for_each_mode(impl core::ops::function::FnMut(mycelium_core::cert_mode::CertMode))
+pub fn mycelium_std_testing::cert_mode_test::for_each_mode_in(mycelium_std_testing::cert_mode_test::ModeScope, impl core::ops::function::FnMut(mycelium_core::cert_mode::CertMode)) -> mycelium_std_testing::cert_mode_test::ModeVisit
 pub mod mycelium_std_testing::guarantee_matrix
 pub struct mycelium_std_testing::guarantee_matrix::Row
 pub mycelium_std_testing::guarantee_matrix::Row::effects: &'static str
@@ -269,6 +349,79 @@ impl core::marker::Unpin for mycelium_std_testing::GoldenBaseline
 impl core::marker::UnsafeUnpin for mycelium_std_testing::GoldenBaseline
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::GoldenBaseline
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::GoldenBaseline
+pub struct mycelium_std_testing::ModeScope
+pub mycelium_std_testing::ModeScope::in_scope: [bool; 3]
+impl mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::ALL_MODES: mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::BALANCED_ONLY: mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::CERTIFIED_ONLY: mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::EMIT_MODES: mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::FAST_ONLY: mycelium_std_testing::cert_mode_test::ModeScope
+pub const mycelium_std_testing::cert_mode_test::ModeScope::NON_FAST: mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::contains(self, mycelium_core::cert_mode::CertMode) -> bool
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::count(self) -> usize
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::from_resolved_mode(&mycelium_proj::cert_scope::ResolvedMode) -> mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::intersect(self, mycelium_std_testing::cert_mode_test::ModeScope) -> mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::is_empty(self) -> bool
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::modes_in_scope(self) -> alloc::vec::Vec<mycelium_core::cert_mode::CertMode>
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::modes_out_of_scope(self) -> alloc::vec::Vec<mycelium_core::cert_mode::CertMode>
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::union(self, mycelium_std_testing::cert_mode_test::ModeScope) -> mycelium_std_testing::cert_mode_test::ModeScope
+impl core::clone::Clone for mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::clone(&self) -> mycelium_std_testing::cert_mode_test::ModeScope
+impl core::cmp::Eq for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::cmp::PartialEq for mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::eq(&self, &mycelium_std_testing::cert_mode_test::ModeScope) -> bool
+impl core::fmt::Debug for mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeScope::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::StructuralPartialEq for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::Freeze for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::Send for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::Sync for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::Unpin for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::marker::UnsafeUnpin for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::cert_mode_test::ModeScope
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::cert_mode_test::ModeScope
+pub struct mycelium_std_testing::ModeTestConfig
+impl mycelium_std_testing::cert_mode_test::ModeTestConfig
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::new(&[mycelium_proj::cert_scope::CertDecl]) -> Self
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::provenance(&self) -> mycelium_proj::cert_scope::ResolvedMode
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::resolve(&self) -> mycelium_std_testing::cert_mode_test::ModeScope
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::with_granular(self, mycelium_core::cert_mode::CertMode) -> Self
+impl core::clone::Clone for mycelium_std_testing::cert_mode_test::ModeTestConfig
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::clone(&self) -> mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::default::Default for mycelium_std_testing::cert_mode_test::ModeTestConfig
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::default() -> Self
+impl core::fmt::Debug for mycelium_std_testing::cert_mode_test::ModeTestConfig
+pub fn mycelium_std_testing::cert_mode_test::ModeTestConfig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::marker::Send for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::marker::Sync for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::marker::Unpin for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::marker::UnsafeUnpin for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::cert_mode_test::ModeTestConfig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::cert_mode_test::ModeTestConfig
+pub struct mycelium_std_testing::ModeVisit
+pub mycelium_std_testing::ModeVisit::skipped: alloc::vec::Vec<mycelium_core::cert_mode::CertMode>
+pub mycelium_std_testing::ModeVisit::visited: alloc::vec::Vec<mycelium_core::cert_mode::CertMode>
+impl mycelium_std_testing::cert_mode_test::ModeVisit
+pub fn mycelium_std_testing::cert_mode_test::ModeVisit::matches_scope(&self, mycelium_std_testing::cert_mode_test::ModeScope) -> bool
+pub fn mycelium_std_testing::cert_mode_test::ModeVisit::visited_all(&self) -> bool
+impl core::clone::Clone for mycelium_std_testing::cert_mode_test::ModeVisit
+pub fn mycelium_std_testing::cert_mode_test::ModeVisit::clone(&self) -> mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::cmp::Eq for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::cmp::PartialEq for mycelium_std_testing::cert_mode_test::ModeVisit
+pub fn mycelium_std_testing::cert_mode_test::ModeVisit::eq(&self, &mycelium_std_testing::cert_mode_test::ModeVisit) -> bool
+impl core::fmt::Debug for mycelium_std_testing::cert_mode_test::ModeVisit
+pub fn mycelium_std_testing::cert_mode_test::ModeVisit::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::marker::Freeze for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::marker::Send for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::marker::Sync for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::marker::Unpin for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::marker::UnsafeUnpin for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_testing::cert_mode_test::ModeVisit
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::cert_mode_test::ModeVisit
 pub struct mycelium_std_testing::Rng
 impl mycelium_std_testing::Rng
 pub fn mycelium_std_testing::Rng::new(u64) -> Self
@@ -314,8 +467,12 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_std_testing::verdict::Sum
 pub trait mycelium_std_testing::Gen<T>
 pub fn mycelium_std_testing::Gen::generate(&mut self, &mut mycelium_std_testing::Rng) -> core::option::Option<T>
 pub fn mycelium_std_testing::Gen::shrink(&self, &T) -> alloc::vec::Vec<T>
+pub fn mycelium_std_testing::assert_mode_negative(mycelium_std_testing::cert_mode_test::ModeScope, impl core::ops::function::Fn(mycelium_core::cert_mode::CertMode) -> bool, &str)
+pub fn mycelium_std_testing::assert_mode_scope(mycelium_std_testing::cert_mode_test::ModeScope, impl core::ops::function::Fn(mycelium_core::cert_mode::CertMode) -> bool, &str)
 pub fn mycelium_std_testing::differential<O>(&str, bool, impl core::ops::function::FnOnce() -> O, bool, impl core::ops::function::FnOnce() -> O) -> mycelium_std_testing::verdict::Verdict where O: core::cmp::PartialEq + core::fmt::Debug
 pub fn mycelium_std_testing::for_all<T, G>(&mut G, u64, mycelium_std_testing::Budget, impl core::ops::function::Fn(&T) -> bool) -> mycelium_std_testing::verdict::Verdict where G: mycelium_std_testing::Gen<T>, T: core::fmt::Debug
+pub fn mycelium_std_testing::for_each_mode(impl core::ops::function::FnMut(mycelium_core::cert_mode::CertMode))
+pub fn mycelium_std_testing::for_each_mode_in(mycelium_std_testing::cert_mode_test::ModeScope, impl core::ops::function::FnMut(mycelium_core::cert_mode::CertMode)) -> mycelium_std_testing::cert_mode_test::ModeVisit
 pub fn mycelium_std_testing::golden(core::option::Option<&mycelium_std_testing::GoldenBaseline>, &str, &str) -> mycelium_std_testing::verdict::Verdict
 pub fn mycelium_std_testing::is_green(&mycelium_std_testing::verdict::Summary) -> bool
 pub fn mycelium_std_testing::summarize(&[mycelium_std_testing::verdict::Verdict]) -> mycelium_std_testing::verdict::Summary

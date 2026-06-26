@@ -40,7 +40,7 @@ Alphabetical; the **Detail** column names each term's §2 subsection. *(L)* = pa
 | guarantee lattice *(H)* | `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` | Formal | §2.4 |
 | `hypha` ⟂ *(L)* | a single structurally-scoped concurrent execution unit | Runtime | §2.9 |
 | `matured` *(L)* | a compiled-and-frozen **scope** (nodule/phylum/program; header/manifest, not a fn modifier) | Surface | §2.10 |
-| `mesh` ⟂ *(L)* | gossip/pub-sub overlay with honest probabilistic guarantees | Runtime | §2.11 |
+| `mesh` ⟂ *(L)* | gossip/pub-sub overlay with probabilistic guarantees | Runtime | §2.11 |
 | `Meta` *(H)* | the metadata a `Value` carries (guarantee, provenance, …) | Formal | §2.12 |
 | never-silent (G2) *(H)* | no silent failure/swap; refusal is always explicit | Formal | §2.13 |
 | `nodule` *(L)* | the **basic** static unit (replaces "module") | Surface | §2.14 |
@@ -80,19 +80,19 @@ lands; the runtime concept is live. *Usage:* "a `colony` of `hypha` supervised b
 
 ### 2.3 `cyst` ⟂
 A **content-addressed checkpoint** of a dormable computation — encystment is the dormant-resumable form
-(values in scope + the continuation by content hash + the `Meta` to resume honestly). Determinism makes
+(values in scope + the continuation by content hash + the `Meta` to resume faithfully). Determinism makes
 resume-and-replay sound. Runtime tier. **Defining doc:** RFC-0008 §4.4 (T4.4; invariant RT2). Reserved.
 
 ### 2.4 The guarantee lattice — Exact ⊐ Proven ⊐ Empirical ⊐ Declared *(H)*
-The **honesty lattice**: every accuracy/guarantee claim is tagged per-model/per-operation on this
+The **transparency lattice** *(reframed from "honesty lattice" by ADR-032)*: every accuracy/guarantee claim is tagged per-model/per-operation on this
 four-point order.
 - **Exact** — exact, no error (a lossless operation).
 - **Proven** — backed by a theorem whose **side-conditions are *checked***; allowed *only* then.
 - **Empirical** — backed by trials (≥1, with a named method) — never evidence-free.
-- **Declared** — merely asserted; **always flagged**. The honest floor for anything unproven.
+- **Declared** — merely asserted; **always flagged**. The transparent floor for anything unproven.
 
-**The rule:** *downgrade to stay honest; never upgrade without a checked basis* (VR-5). **Defining doc:**
-RFC-0001 (the lattice + `Meta`); the honesty rule, CLAUDE.md / Project Foundation. *Usage:* "a
+**The rule:** *downgrade to stay accurate; never upgrade without a checked basis* (VR-5). **Defining doc:**
+RFC-0001 (the lattice + `Meta`); the transparency rule, CLAUDE.md / Project Foundation. *Usage:* "a
 substituted fallback is at most `Declared`; a swap certificate may carry `Proven`."
 
 ### 2.5 EXPLAIN *(H)*
@@ -109,7 +109,7 @@ lesson). Runtime tier. **Defining doc:** RFC-0008 §4.5 (T4.3; invariant RT3). R
 ### 2.7 `fuse` ⟂
 **Lawful state fusion** (anastomosis): merging two `hypha`'s state *only* through declared
 commutative/associative/idempotent (semilattice) merge operations — the CRDT sufficient condition for
-convergence — with the merged value's guarantee the **meet** of the inputs (payload joins up, honesty
+convergence — with the merged value's guarantee the **meet** of the inputs (payload joins up, strength
 meets down). Runtime tier. **Defining doc:** RFC-0008 §4.5/RT6 (T4.2). Reserved.
 
 ### 2.8 `graft` ⟂
@@ -138,7 +138,7 @@ The **inverse of maturation**: a `thaw fn f` keeps **one** definition **interpre
 otherwise-`matured` scope (the rare iterate/debug escape hatch — RFC-0017 §4.3). `matured` is
 "compiled-and-**frozen**" (§2.10); `thaw` returns *one* definition from frozen to the live, interpreted
 state. It only ever de-matures (a no-op flagged by lint in an unmatured scope), weakens **no** advertised
-honesty tag (only the execution path/performance changes — the guarantee lattice is path-independent,
+guarantee tag (only the execution path/performance changes — the guarantee lattice is path-independent,
 NFR-7), and is never-silent + `EXPLAIN`-able. Conventional-clearest (the themed *germinate* is taken by
 spore-germination, ADR-013). Active Surface tier. **Defining doc:** RFC-0017 §4.3/§5 (the name, DN-02
 three-test gate); DN-03 (changelog pointer). *Usage:* "`thaw fn experimental_shear(…)` — stays
@@ -146,7 +146,7 @@ interpreted while the nodule around it is matured."
 
 ### 2.11 `mesh` ⟂
 The **common mycorrhizal network**: gossip/pub-sub overlay coordination whose delivery/convergence
-guarantees are **probabilistic** — so they carry a `ProbabilityBound` (δ) with an honest basis, never
+guarantees are **probabilistic** — so they carry a `ProbabilityBound` (δ) with a stated basis, never
 claimed reliable. Runtime tier. **Defining doc:** RFC-0008 §4.3/§4.5 (T4.2; invariant RT5). Also a
 diagnostic **route** sink (RFC-0013 §8). Reserved as runtime syntax.
 

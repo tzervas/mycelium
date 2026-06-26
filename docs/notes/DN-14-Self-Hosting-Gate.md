@@ -287,6 +287,14 @@ itself does not flip any row — only a landed, confirmed implementation may do 
 <!-- changelog: 2026-06-23 Status → Resolved (M-649; append-only, VR-5) -->
 **2026-06-23 — Status → Resolved (M-649; append-only, VR-5).** The first self-hosted generic stdlib nodule (`std.result`) has landed: `lib/std/result.myc` type-checks, passes all four toolchain gates (`mycfmt --check`, `myc-check`, `myc-sec`, `myc-lint`), and its differential tests (`crates/mycelium-l1/tests/std_result.rs`) run to closed L0 on all three paths (L1-eval ≡ elaborate→L0-interp ≡ AOT, validated by the M-210 shared checker).
 
+> **Erratum (2026-06-25, post corpus-alignment audit; Status unchanged — Resolved).** The "**execution
+> stays staged → `Residual`**" framing for **row 9 (`wild`/FFI)** in the block immediately below (and in
+> the "Remaining open items" bullet that follows) is a **historical snapshot** and is **superseded**:
+> `wild` now **executes three-ways** — `elab.rs:794` emits `Op { prim: "wild:{name}" }` and the
+> interpreter resolves it (`eval.rs:758`), as the §3 table + the line-175 supersession note already
+> record. Read the §3 table + code as authoritative; the "staged Residual" prose is left intact as the
+> earlier record (append-only, VR-5/G2).
+
 **§3 table status at Resolved:**
 - Rows 1–8, 10–11: all **`present`** (grounded in landed implementations; see prior changelog entries).
 - Row 9 (`wild`/FFI): **`conditionally present`** — type-checks + gated in `@std-sys` context; *execution stays staged* (no FFI host in v0; `elab.rs` lowers `wild` to an explicit `Residual`). This is the only remaining open row; it is not a gate-fail for `std.result` (which is pure and does not use `wild`).

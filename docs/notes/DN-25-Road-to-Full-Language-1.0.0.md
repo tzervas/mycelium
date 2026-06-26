@@ -94,3 +94,22 @@ A2/A3/A4 open); the surface has generics/traits/HOF/phylum landed (E7-x) but ope
 remain; the stdlib is **Rust** save `lib/std/result.myc`; runtime is the skeletal v0 R1 API; the
 native path is direct-LLVM on a kernel subset. The gap to `lang 1.0.0` is therefore real and large —
 this note maps it without overclaiming any of it as done (VR-5/G2).
+
+---
+
+## 8. Changelog
+
+- **2026-06-25 — Sequencing note (D5/D3; post corpus-alignment audit; advisory, no status move).**
+  - **D5 — sequencing confirmed.** **T4 (stdlib-in-Mycelium, M-714–719)** and **T9 (self-hosting capstone)**
+    stay **post-core surface work**, sequenced **behind grammar → E19-1 → runtime Phase-7**: the surface
+    grammar must complete (T2 — operators landed via RFC-0025/M-705; L3/closures + the `[]`-for-type-args
+    grammar wave per DN-31 still pending), then **E19-1** (`Repr::Seq`/`Repr::Bytes` value-model additions,
+    ADR-024/025/026/027) must land + verify, then runtime **Phase-7** activation, before T4's `.myc` stdlib
+    and T9's self-hosting are on the critical path. This matches the §4 wave graph (Wave A → B → C → D); it
+    upgrades nothing as done (VR-5).
+  - **D3 — strict-sequence gate (also recorded in ADR-024).** The **core 1.0.0 (T1) tag act (M-703)** is
+    committed **only after E19-1 is implemented + verified** (M-703 `depends_on E19-1`; the three-way
+    differential + M-752 conformance gate green). The §3 inventory lists M-703 under E10-1/T1 and E19-1's
+    M-749/M-750 under E13-1/T4 — D3 makes the cross-track ordering explicit: the core tag waits on E19-1.
+  - **§7 snapshot note (Low locator).** §7's "stdlib is **Rust** save `lib/std/result.myc`" was accurate at
+    2026-06-23; `option.myc` + `cmp.myc` landed 2026-06-24 (append-only; the §7 prose is left intact).

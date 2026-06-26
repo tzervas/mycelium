@@ -1,0 +1,56 @@
+pub mod mycelium_cli
+pub struct mycelium_cli::CheckReport
+pub mycelium_cli::CheckReport::checked: alloc::vec::Vec<alloc::string::String>
+pub mycelium_cli::CheckReport::failures: alloc::vec::Vec<mycelium_cli::Report>
+impl mycelium_cli::CheckReport
+pub fn mycelium_cli::CheckReport::ok(&self) -> bool
+impl core::clone::Clone for mycelium_cli::CheckReport
+pub fn mycelium_cli::CheckReport::clone(&self) -> mycelium_cli::CheckReport
+impl core::cmp::Eq for mycelium_cli::CheckReport
+impl core::cmp::PartialEq for mycelium_cli::CheckReport
+pub fn mycelium_cli::CheckReport::eq(&self, &mycelium_cli::CheckReport) -> bool
+impl core::default::Default for mycelium_cli::CheckReport
+pub fn mycelium_cli::CheckReport::default() -> mycelium_cli::CheckReport
+impl core::fmt::Debug for mycelium_cli::CheckReport
+pub fn mycelium_cli::CheckReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cli::CheckReport
+impl core::marker::Freeze for mycelium_cli::CheckReport
+impl core::marker::Send for mycelium_cli::CheckReport
+impl core::marker::Sync for mycelium_cli::CheckReport
+impl core::marker::Unpin for mycelium_cli::CheckReport
+impl core::marker::UnsafeUnpin for mycelium_cli::CheckReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cli::CheckReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cli::CheckReport
+pub struct mycelium_cli::Report
+pub mycelium_cli::Report::code: &'static str
+pub mycelium_cli::Report::exit: u8
+pub mycelium_cli::Report::help: core::option::Option<alloc::string::String>
+pub mycelium_cli::Report::location: core::option::Option<alloc::string::String>
+pub mycelium_cli::Report::message: alloc::string::String
+impl mycelium_cli::Report
+pub fn mycelium_cli::Report::at(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_cli::Report::help(self, impl core::convert::Into<alloc::string::String>) -> Self
+pub fn mycelium_cli::Report::new(&'static str, impl core::convert::Into<alloc::string::String>, u8) -> Self
+pub fn mycelium_cli::Report::render(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_cli::Report
+pub fn mycelium_cli::Report::clone(&self) -> mycelium_cli::Report
+impl core::cmp::Eq for mycelium_cli::Report
+impl core::cmp::PartialEq for mycelium_cli::Report
+pub fn mycelium_cli::Report::eq(&self, &mycelium_cli::Report) -> bool
+impl core::error::Error for mycelium_cli::Report
+impl core::fmt::Debug for mycelium_cli::Report
+pub fn mycelium_cli::Report::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_cli::Report
+pub fn mycelium_cli::Report::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cli::Report
+impl core::marker::Freeze for mycelium_cli::Report
+impl core::marker::Send for mycelium_cli::Report
+impl core::marker::Sync for mycelium_cli::Report
+impl core::marker::Unpin for mycelium_cli::Report
+impl core::marker::UnsafeUnpin for mycelium_cli::Report
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cli::Report
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cli::Report
+pub fn mycelium_cli::build(&std::path::Path) -> core::result::Result<(mycelium_spore::Spore, alloc::string::String), mycelium_cli::Report>
+pub fn mycelium_cli::check_project(&std::path::Path) -> core::result::Result<mycelium_cli::CheckReport, mycelium_cli::Report>
+pub fn mycelium_cli::init(&std::path::Path, &str) -> core::result::Result<alloc::vec::Vec<std::path::PathBuf>, mycelium_cli::Report>
+pub fn mycelium_cli::run(&std::path::Path) -> core::result::Result<(), mycelium_cli::Report>

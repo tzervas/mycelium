@@ -1,4 +1,105 @@
 pub mod mycelium_spore
+pub mod mycelium_spore::registry
+pub enum mycelium_spore::registry::RegistryError
+pub mycelium_spore::registry::RegistryError::Conflict(alloc::string::String)
+pub mycelium_spore::registry::RegistryError::Integrity(alloc::string::String)
+pub mycelium_spore::registry::RegistryError::InvalidInput(alloc::string::String)
+pub mycelium_spore::registry::RegistryError::Io(alloc::string::String)
+pub mycelium_spore::registry::RegistryError::NotFound(alloc::string::String)
+pub mycelium_spore::registry::RegistryError::Unsupported(alloc::string::String)
+impl mycelium_spore::registry::RegistryError
+pub fn mycelium_spore::registry::RegistryError::exit_code(&self) -> u8
+impl core::clone::Clone for mycelium_spore::registry::RegistryError
+pub fn mycelium_spore::registry::RegistryError::clone(&self) -> mycelium_spore::registry::RegistryError
+impl core::cmp::Eq for mycelium_spore::registry::RegistryError
+impl core::cmp::PartialEq for mycelium_spore::registry::RegistryError
+pub fn mycelium_spore::registry::RegistryError::eq(&self, &mycelium_spore::registry::RegistryError) -> bool
+impl core::error::Error for mycelium_spore::registry::RegistryError
+impl core::fmt::Debug for mycelium_spore::registry::RegistryError
+pub fn mycelium_spore::registry::RegistryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_spore::registry::RegistryError
+pub fn mycelium_spore::registry::RegistryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::registry::RegistryError
+impl core::marker::Freeze for mycelium_spore::registry::RegistryError
+impl core::marker::Send for mycelium_spore::registry::RegistryError
+impl core::marker::Sync for mycelium_spore::registry::RegistryError
+impl core::marker::Unpin for mycelium_spore::registry::RegistryError
+impl core::marker::UnsafeUnpin for mycelium_spore::registry::RegistryError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::registry::RegistryError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::registry::RegistryError
+pub struct mycelium_spore::registry::PublishReceipt
+pub mycelium_spore::registry::PublishReceipt::already_present: bool
+pub mycelium_spore::registry::PublishReceipt::artifact: mycelium_core::id::ContentHash
+pub mycelium_spore::registry::PublishReceipt::name: alloc::string::String
+pub mycelium_spore::registry::PublishReceipt::object_path: std::path::PathBuf
+pub mycelium_spore::registry::PublishReceipt::spore_id: mycelium_core::id::ContentHash
+pub mycelium_spore::registry::PublishReceipt::version: alloc::string::String
+impl core::clone::Clone for mycelium_spore::registry::PublishReceipt
+pub fn mycelium_spore::registry::PublishReceipt::clone(&self) -> mycelium_spore::registry::PublishReceipt
+impl core::cmp::Eq for mycelium_spore::registry::PublishReceipt
+impl core::cmp::PartialEq for mycelium_spore::registry::PublishReceipt
+pub fn mycelium_spore::registry::PublishReceipt::eq(&self, &mycelium_spore::registry::PublishReceipt) -> bool
+impl core::fmt::Debug for mycelium_spore::registry::PublishReceipt
+pub fn mycelium_spore::registry::PublishReceipt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::registry::PublishReceipt
+impl core::marker::Freeze for mycelium_spore::registry::PublishReceipt
+impl core::marker::Send for mycelium_spore::registry::PublishReceipt
+impl core::marker::Sync for mycelium_spore::registry::PublishReceipt
+impl core::marker::Unpin for mycelium_spore::registry::PublishReceipt
+impl core::marker::UnsafeUnpin for mycelium_spore::registry::PublishReceipt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::registry::PublishReceipt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::registry::PublishReceipt
+pub struct mycelium_spore::registry::Resolved
+pub mycelium_spore::registry::Resolved::artifact: mycelium_core::id::ContentHash
+pub mycelium_spore::registry::Resolved::bytes: alloc::vec::Vec<u8>
+pub mycelium_spore::registry::Resolved::name: alloc::string::String
+pub mycelium_spore::registry::Resolved::spore_id: mycelium_core::id::ContentHash
+pub mycelium_spore::registry::Resolved::version: alloc::string::String
+impl core::clone::Clone for mycelium_spore::registry::Resolved
+pub fn mycelium_spore::registry::Resolved::clone(&self) -> mycelium_spore::registry::Resolved
+impl core::cmp::Eq for mycelium_spore::registry::Resolved
+impl core::cmp::PartialEq for mycelium_spore::registry::Resolved
+pub fn mycelium_spore::registry::Resolved::eq(&self, &mycelium_spore::registry::Resolved) -> bool
+impl core::fmt::Debug for mycelium_spore::registry::Resolved
+pub fn mycelium_spore::registry::Resolved::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::registry::Resolved
+impl core::marker::Freeze for mycelium_spore::registry::Resolved
+impl core::marker::Send for mycelium_spore::registry::Resolved
+impl core::marker::Sync for mycelium_spore::registry::Resolved
+impl core::marker::Unpin for mycelium_spore::registry::Resolved
+impl core::marker::UnsafeUnpin for mycelium_spore::registry::Resolved
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::registry::Resolved
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::registry::Resolved
+pub fn mycelium_spore::registry::artifact_hash(&[u8]) -> mycelium_core::id::ContentHash
+pub fn mycelium_spore::registry::publish(&std::path::Path, &mycelium_spore::Spore, &[u8], &str, &str) -> core::result::Result<mycelium_spore::registry::PublishReceipt, mycelium_spore::registry::RegistryError>
+pub fn mycelium_spore::registry::resolve(&std::path::Path, &str, &str) -> core::result::Result<mycelium_spore::registry::Resolved, mycelium_spore::registry::RegistryError>
+pub enum mycelium_spore::RegistryError
+pub mycelium_spore::RegistryError::Conflict(alloc::string::String)
+pub mycelium_spore::RegistryError::Integrity(alloc::string::String)
+pub mycelium_spore::RegistryError::InvalidInput(alloc::string::String)
+pub mycelium_spore::RegistryError::Io(alloc::string::String)
+pub mycelium_spore::RegistryError::NotFound(alloc::string::String)
+pub mycelium_spore::RegistryError::Unsupported(alloc::string::String)
+impl mycelium_spore::registry::RegistryError
+pub fn mycelium_spore::registry::RegistryError::exit_code(&self) -> u8
+impl core::clone::Clone for mycelium_spore::registry::RegistryError
+pub fn mycelium_spore::registry::RegistryError::clone(&self) -> mycelium_spore::registry::RegistryError
+impl core::cmp::Eq for mycelium_spore::registry::RegistryError
+impl core::cmp::PartialEq for mycelium_spore::registry::RegistryError
+pub fn mycelium_spore::registry::RegistryError::eq(&self, &mycelium_spore::registry::RegistryError) -> bool
+impl core::error::Error for mycelium_spore::registry::RegistryError
+impl core::fmt::Debug for mycelium_spore::registry::RegistryError
+pub fn mycelium_spore::registry::RegistryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_spore::registry::RegistryError
+pub fn mycelium_spore::registry::RegistryError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::registry::RegistryError
+impl core::marker::Freeze for mycelium_spore::registry::RegistryError
+impl core::marker::Send for mycelium_spore::registry::RegistryError
+impl core::marker::Sync for mycelium_spore::registry::RegistryError
+impl core::marker::Unpin for mycelium_spore::registry::RegistryError
+impl core::marker::UnsafeUnpin for mycelium_spore::registry::RegistryError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::registry::RegistryError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::registry::RegistryError
 pub enum mycelium_spore::SporeError
 pub mycelium_spore::SporeError::Io(alloc::string::String)
 pub mycelium_spore::SporeError::Publish(alloc::string::String)
@@ -22,6 +123,49 @@ impl core::marker::Unpin for mycelium_spore::SporeError
 impl core::marker::UnsafeUnpin for mycelium_spore::SporeError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::SporeError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::SporeError
+pub struct mycelium_spore::PublishReceipt
+pub mycelium_spore::PublishReceipt::already_present: bool
+pub mycelium_spore::PublishReceipt::artifact: mycelium_core::id::ContentHash
+pub mycelium_spore::PublishReceipt::name: alloc::string::String
+pub mycelium_spore::PublishReceipt::object_path: std::path::PathBuf
+pub mycelium_spore::PublishReceipt::spore_id: mycelium_core::id::ContentHash
+pub mycelium_spore::PublishReceipt::version: alloc::string::String
+impl core::clone::Clone for mycelium_spore::registry::PublishReceipt
+pub fn mycelium_spore::registry::PublishReceipt::clone(&self) -> mycelium_spore::registry::PublishReceipt
+impl core::cmp::Eq for mycelium_spore::registry::PublishReceipt
+impl core::cmp::PartialEq for mycelium_spore::registry::PublishReceipt
+pub fn mycelium_spore::registry::PublishReceipt::eq(&self, &mycelium_spore::registry::PublishReceipt) -> bool
+impl core::fmt::Debug for mycelium_spore::registry::PublishReceipt
+pub fn mycelium_spore::registry::PublishReceipt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::registry::PublishReceipt
+impl core::marker::Freeze for mycelium_spore::registry::PublishReceipt
+impl core::marker::Send for mycelium_spore::registry::PublishReceipt
+impl core::marker::Sync for mycelium_spore::registry::PublishReceipt
+impl core::marker::Unpin for mycelium_spore::registry::PublishReceipt
+impl core::marker::UnsafeUnpin for mycelium_spore::registry::PublishReceipt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::registry::PublishReceipt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::registry::PublishReceipt
+pub struct mycelium_spore::Resolved
+pub mycelium_spore::Resolved::artifact: mycelium_core::id::ContentHash
+pub mycelium_spore::Resolved::bytes: alloc::vec::Vec<u8>
+pub mycelium_spore::Resolved::name: alloc::string::String
+pub mycelium_spore::Resolved::spore_id: mycelium_core::id::ContentHash
+pub mycelium_spore::Resolved::version: alloc::string::String
+impl core::clone::Clone for mycelium_spore::registry::Resolved
+pub fn mycelium_spore::registry::Resolved::clone(&self) -> mycelium_spore::registry::Resolved
+impl core::cmp::Eq for mycelium_spore::registry::Resolved
+impl core::cmp::PartialEq for mycelium_spore::registry::Resolved
+pub fn mycelium_spore::registry::Resolved::eq(&self, &mycelium_spore::registry::Resolved) -> bool
+impl core::fmt::Debug for mycelium_spore::registry::Resolved
+pub fn mycelium_spore::registry::Resolved::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::registry::Resolved
+impl core::marker::Freeze for mycelium_spore::registry::Resolved
+impl core::marker::Send for mycelium_spore::registry::Resolved
+impl core::marker::Sync for mycelium_spore::registry::Resolved
+impl core::marker::Unpin for mycelium_spore::registry::Resolved
+impl core::marker::UnsafeUnpin for mycelium_spore::registry::Resolved
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::registry::Resolved
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::registry::Resolved
 pub struct mycelium_spore::ResolvedDep
 pub mycelium_spore::ResolvedDep::hash: alloc::string::String
 pub mycelium_spore::ResolvedDep::name: alloc::string::String
@@ -83,6 +227,9 @@ impl core::marker::Unpin for mycelium_spore::Spore
 impl core::marker::UnsafeUnpin for mycelium_spore::Spore
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::Spore
 impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::Spore
+pub fn mycelium_spore::artifact_hash(&[u8]) -> mycelium_core::id::ContentHash
 pub fn mycelium_spore::build_spore(&mycelium_proj::manifest::Manifest, &std::path::Path) -> core::result::Result<mycelium_spore::Spore, mycelium_spore::SporeError>
 pub fn mycelium_spore::explain(&mycelium_spore::Spore) -> alloc::string::String
 pub fn mycelium_spore::kind_str(mycelium_proj::manifest::ProjectKind) -> &'static str
+pub fn mycelium_spore::publish(&std::path::Path, &mycelium_spore::Spore, &[u8], &str, &str) -> core::result::Result<mycelium_spore::registry::PublishReceipt, mycelium_spore::registry::RegistryError>
+pub fn mycelium_spore::resolve(&std::path::Path, &str, &str) -> core::result::Result<mycelium_spore::registry::Resolved, mycelium_spore::registry::RegistryError>

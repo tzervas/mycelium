@@ -223,10 +223,11 @@ fn data_corpus() -> Vec<&'static str> {
          fn lo(n: Nat) -> Binary{8} = match n { Z => 0b0000_0000, S(m) => hi(m) }\n\
          fn main() -> Binary{8} = hi(S(S(Z)))",
         // a mutual pair destructuring a MULTI-FIELD constructor (Maranget over two fields, inside a
-        // FixGroup): shrink(Mk(S Z, S Z)) ⟶ grow(Mk(Z, S Z)) ⟶ shrink(Mk(Z, Z)) ⟶ Z
+        // FixGroup): shrink(Mk(S Z, S Z)) ⟶ expand(Mk(Z, S Z)) ⟶ shrink(Mk(Z, Z)) ⟶ Z.
+        // (`expand`, not `grow` — `grow` is a DN-03 §1 reserved surface keyword as of M-664.)
         "nodule d\ntype Nat = Z | S(Nat)\ntype Two = Mk(Nat, Nat)\n\
-         fn shrink(t: Two) -> Nat = match t { Mk(Z, b) => b, Mk(S(a), b) => grow(Mk(a, b)) }\n\
-         fn grow(t: Two) -> Nat = match t { Mk(a, Z) => a, Mk(a, S(b)) => shrink(Mk(a, b)) }\n\
+         fn shrink(t: Two) -> Nat = match t { Mk(Z, b) => b, Mk(S(a), b) => expand(Mk(a, b)) }\n\
+         fn expand(t: Two) -> Nat = match t { Mk(a, Z) => a, Mk(a, S(b)) => shrink(Mk(a, b)) }\n\
          fn main() -> Nat = shrink(Mk(S(Z), S(Z)))",
     ]
 }

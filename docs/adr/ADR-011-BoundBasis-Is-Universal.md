@@ -69,3 +69,5 @@ population*, not part of this decision — RFC-0001 §4.1 keeps parameter regist
 
 RFC-0001 §3.4/§4.7 + invariants M-I2/M-I3/M-I4; RFC-0002 §3; ADR-010 (shared certificate); VR-3,
 VR-5; survey **G5**. Raised as OQ-3 during M-010 (#5).
+
+> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The universal `BoundBasis` applies **within the active certification mode (`certified`)**; the `fast` (default) and `balanced` relaxations are governed by **RFC-0034** (the mode is never silent — G2). The basis machinery is **unchanged**. See **ADR-032**, which supersedes the *unconditional* reading.

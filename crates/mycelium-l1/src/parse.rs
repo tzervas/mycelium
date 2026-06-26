@@ -336,6 +336,18 @@ impl Parser {
                     word = runtime_keyword_spelling(t)
                 ),
             )),
+            // DN-03 §1: the surface-tier reserved keywords. Lexed (never silent, G2) but their
+            // constructs (`consume <expr>`, `grow Trait for Type { … }`) land with M-664's surface
+            // step — a teaching diagnostic until then, never a silent accept.
+            t @ (Tok::Consume | Tok::Grow) => Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "`{word}` is a reserved surface keyword (DN-03 §1), not yet active — its \
+                     construct lands with M-664; it cannot open a program or be used as an \
+                     identifier at this language version",
+                    word = surface_reserved_spelling(t)
+                ),
+            )),
             // M-662: a `phylum` header must be the *first* token of the program (before the nodule
             // blocks); reaching one at item position means it was misplaced after a nodule began.
             Tok::Phylum => Err(ParseError::new(
@@ -909,6 +921,18 @@ impl Parser {
                 ),
             ));
         }
+        // DN-03 §1: the surface-tier reserved keywords, at expression position (never silent, G2).
+        if let t @ (Tok::Consume | Tok::Grow) = self.cur() {
+            return Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "`{word}` is a reserved surface keyword (DN-03 §1), not yet active — its \
+                     construct lands with M-664; it cannot open a program or be used as an \
+                     identifier at this language version",
+                    word = surface_reserved_spelling(t)
+                ),
+            ));
+        }
         match self.cur() {
             Tok::Let => self.parse_let(),
             Tok::If => self.parse_if(),
@@ -1341,6 +1365,17 @@ fn runtime_keyword_spelling(tok: &Tok) -> &'static str {
         Tok::Tier => "tier",
         Tok::Reclaim => "reclaim",
         _ => "<runtime-keyword>",
+    }
+}
+
+/// Return the surface spelling for a DN-03 §1 surface-tier reserved keyword token (`consume`/`grow`).
+/// Used in teaching diagnostics so the message names the actual word; the `_` arm is unreachable in
+/// practice (callers only pass the two surface arms) but keeps this panic-free (G2).
+fn surface_reserved_spelling(tok: &Tok) -> &'static str {
+    match tok {
+        Tok::Consume => "consume",
+        Tok::Grow => "grow",
+        _ => "<surface-keyword>",
     }
 }
 

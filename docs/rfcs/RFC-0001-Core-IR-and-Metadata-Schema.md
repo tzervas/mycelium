@@ -423,3 +423,5 @@ A fifth paradigm kind (e.g., a future native-ternary-hardware representation, or
 - Maintain as append-only with status transitions (Draft → Accepted → Superseded), mirroring the ADR discipline (Foundation Meta).
 - On acceptance, add a one-line forward-pointer in Foundation §5.2 noting that RFC-0001 supersedes that sketch's packing placement, to prevent divergence.
 - Re-validate §4.7 once ADR-010 is ratified; promote composed-result default from `Declared` to the foundation's actual composition rules.
+
+> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The always-on certification / content-hashing / mandatory guarantee-tag-propagation mandates in this document apply **at the active certification mode (`certified`)**; the `fast` (default) and `balanced` relaxations are governed by **RFC-0034**, and the mode itself is **never silent** (G2 — every result is mode-tagged and `EXPLAIN`-able). The mechanisms here are **unchanged**. See **ADR-032**, which supersedes the *unconditional* reading.

@@ -34,3 +34,5 @@ A policy is a first-class, **content-addressed** value (inspectable, diffable). 
 
 ## 5. Interfaces
 Provides `SelectionPolicy`/`PolicyRef` for RFC-0001's `Swap` and `Meta.policy_used`; same mechanism serves **RFC-0004** packing schedules; policies content-addressed per RFC-0001 §4.6.
+
+> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** Selection/cert machinery is gated by the active certification mode per **RFC-0034**; **`EXPLAIN` of the active mode itself stays mandatory in every mode** (G2 — never silent). The selection mechanism is **unchanged**. See **ADR-032**, which supersedes the *unconditional* reading.

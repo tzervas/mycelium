@@ -62,6 +62,16 @@ pub enum Tok {
     /// `reclaim` — runtime-unit reclamation (stale units only, never memory — RFC-0008 RT7). **Reserved, not yet active.**
     Reclaim,
 
+    // Reserved, not yet active (DN-03 §1): the two surface-tier keywords ratified by DN-03 §1. They
+    // lex as keywords (never silent identifiers, G2) but no L1 construct consumes them yet — their
+    // parser productions land with M-664's surface step.
+    /// `consume` — **reserved, not yet active** (DN-03 §1). Acquire + take *exclusive* ownership of an
+    /// affine `Substrate` (`consume <expr>`; the fungus consumes its substrate exactly once — affinity).
+    Consume,
+    /// `grow` — **reserved, not yet active** (DN-03 §1). Derive-like *generative* capability extension
+    /// (`grow Trait for Type { … }`; the system *grows* a new capability).
+    Grow,
+
     /// `use` — import (conventional).
     Use,
     /// `pub` — the cross-nodule **export** marker on a top-level `fn`/`trait`/`type` (M-662; RFC-0006
@@ -298,6 +308,10 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "backbone" => Tok::Backbone,
         "tier" => Tok::Tier,
         "reclaim" => Tok::Reclaim,
+        // Reserved, not yet active (DN-03 §1): the surface-tier keywords. Lexed so they can never be
+        // silent identifiers (G2); the constructs land with M-664's surface step.
+        "consume" => Tok::Consume,
+        "grow" => Tok::Grow,
         "use" => Tok::Use,
         // `pub` — the M-662 cross-nodule export marker (reserved so it is never a silent identifier).
         "pub" => Tok::Pub,

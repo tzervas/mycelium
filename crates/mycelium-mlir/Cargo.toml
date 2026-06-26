@@ -27,6 +27,11 @@ mlir-dialect = []
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
 mycelium-interp = { path = "../mycelium-interp" }
+# MEM-4 wiring (DN-33 / RFC-0027 §9): the RC-annotated IR + static analysis, and the runtime
+# reclamation-record contract the AOT tier emits the §9 audit trail into. Both are upstream of
+# `mlir` (they depend only on core / std-core / interp) — the dependency graph stays a DAG.
+mycelium-mir-passes = { path = "../mycelium-mir-passes" }
+mycelium-std-runtime = { path = "../mycelium-std-runtime" }
 
 [dev-dependencies]
 # The interp↔AOT differential (M-151) drives both paths with the certified binary↔ternary swap,

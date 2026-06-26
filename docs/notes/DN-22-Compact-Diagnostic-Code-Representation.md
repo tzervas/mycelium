@@ -86,7 +86,7 @@ DN04-Q3 / R7-Q4 took for config):
 
 The check runner is a working proof-of-concept of the whole scheme, at small scale:
 
-- `scripts/checks/all.sh` assigns each gate a **stable component id** (1–24) and packs the process
+- `scripts/checks/all.sh` assigns each gate a **stable component id** (1–24) <!-- locator erratum 2026-06-25: the script comment says "1-31" (5 bits = 0-31); the packing formula below is exact regardless --> and packs the process
   exit as `(component << 3) | reason`; it prints a per-failure **base-36 code** `F<c><r>` and a
   **lossless digest** (the failed gate, its reproduce command, and the tail of its actual output — the
   `EXPLAIN`-equivalent for this domain).
