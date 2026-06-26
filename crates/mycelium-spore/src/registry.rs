@@ -226,9 +226,8 @@ pub fn publish(
     if idx.exists() {
         let existing =
             std::fs::read_to_string(&idx).map_err(|e| io(&idx.display().to_string(), e))?;
-        let (prev_id, prev_art) = parse_entry(&existing).ok_or_else(|| {
-            RegistryError::Integrity(format!("malformed index entry {}", idx.display()))
-        })?;
+        let (prev_id, prev_art) = parse_entry(&existing)
+            .map_err(|e| RegistryError::Integrity(format!("{} — {e}", idx.display())))?;
         if prev_id != spore.id || prev_art != artifact {
             return Err(RegistryError::Conflict(format!(
                 "{name}@{version} is already published with a different artifact \
@@ -273,9 +272,8 @@ pub fn resolve(root: &Path, name: &str, constraint: &str) -> Result<Resolved, Re
     let entry = std::fs::read_to_string(&idx).map_err(|_| {
         RegistryError::NotFound(format!("{name}@{version} has no registry index entry"))
     })?;
-    let (spore_id, artifact) = parse_entry(&entry).ok_or_else(|| {
-        RegistryError::Integrity(format!("malformed index entry {}", idx.display()))
-    })?;
+    let (spore_id, artifact) = parse_entry(&entry)
+        .map_err(|e| RegistryError::Integrity(format!("{} — {e}", idx.display())))?;
 
     let obj = object_path(root, &artifact);
     let bytes = std::fs::read(&obj).map_err(|_| {
@@ -370,7 +368,8 @@ fn version_key(v: &str) -> Vec<(u64, String)> {
 }
 
 /// The two-line index-entry encoding: `spore_id` (identity) + `artifact` (integrity).
-fn format_entry(spore_id: &ContentHash, artifact: &ContentHash) -> String {
+/// `pub(crate)` for white-box in-crate test access (CLAUDE.md test-layout rule); not a public API.
+pub(crate) fn format_entry(spore_id: &ContentHash, artifact: &ContentHash) -> String {
     format!(
         "spore_id = {}\nartifact = {}\n",
         spore_id.as_str(),
@@ -378,20 +377,62 @@ fn format_entry(spore_id: &ContentHash, artifact: &ContentHash) -> String {
     )
 }
 
-/// Parse a [`format_entry`] index entry back into `(spore_id, artifact)`. Returns `None` (→ an
-/// explicit `Integrity` error at the call site) on any malformed/missing field — never a silent default.
-fn parse_entry(text: &str) -> Option<(ContentHash, ContentHash)> {
+/// Parse a [`format_entry`] index entry back into `(spore_id, artifact)`. **Total and strict**: every
+/// line must be either blank or a recognized `key = value` (`spore_id`/`artifact`), and a key may occur
+/// at most **once**. On any malformed/missing/duplicate/unrecognized field this returns an explicit
+/// [`RegistryError::Integrity`] **naming the offending line/key** — never a silent default, never a
+/// silent last-wins, never a silently-ignored stray line (G2). A corrupt or hand-edited index entry is
+/// thus caught at read-back, not papered over.
+/// `pub(crate)` for white-box in-crate test access (CLAUDE.md test-layout rule); not a public API.
+pub(crate) fn parse_entry(text: &str) -> Result<(ContentHash, ContentHash), RegistryError> {
     let mut spore_id = None;
     let mut artifact = None;
     for line in text.lines() {
-        let (k, v) = line.split_once('=')?;
-        match k.trim() {
-            "spore_id" => spore_id = ContentHash::parse(v.trim()),
-            "artifact" => artifact = ContentHash::parse(v.trim()),
-            _ => {}
+        // A blank/whitespace-only line is benign padding (e.g. an interior blank line) and is skipped;
+        // anything else must be a recognized `key = value` pair (no silent drop — G2).
+        if line.trim().is_empty() {
+            continue;
         }
+        let Some((k, v)) = line.split_once('=') else {
+            return Err(RegistryError::Integrity(format!(
+                "malformed index entry: line {line:?} is neither blank nor a `key = value` pair \
+                 (refusing to silently ignore an unrecognized line; G2)"
+            )));
+        };
+        let key = k.trim();
+        let value = v.trim();
+        // Bind the destination slot by key; an unrecognized key is rejected, never ignored (G2).
+        let slot = match key {
+            "spore_id" => &mut spore_id,
+            "artifact" => &mut artifact,
+            other => {
+                return Err(RegistryError::Integrity(format!(
+                    "malformed index entry: unrecognized key {other:?} in line {line:?} \
+                     (expected `spore_id` or `artifact`; refusing to silently ignore it; G2)"
+                )));
+            }
+        };
+        // A second occurrence of a key is a conflict, not last-wins (never silent overwrite; G2).
+        if slot.is_some() {
+            return Err(RegistryError::Integrity(format!(
+                "malformed index entry: duplicate `{key}` line {line:?} — a key occurs at most once \
+                 (refusing last-wins; G2)"
+            )));
+        }
+        let parsed = ContentHash::parse(value).ok_or_else(|| {
+            RegistryError::Integrity(format!(
+                "malformed index entry: `{key}` value {value:?} is not a valid content hash (G2)"
+            ))
+        })?;
+        *slot = Some(parsed);
     }
-    Some((spore_id?, artifact?))
+    let spore_id = spore_id.ok_or_else(|| {
+        RegistryError::Integrity("malformed index entry: missing `spore_id` line (G2)".to_owned())
+    })?;
+    let artifact = artifact.ok_or_else(|| {
+        RegistryError::Integrity("malformed index entry: missing `artifact` line (G2)".to_owned())
+    })?;
+    Ok((spore_id, artifact))
 }
 
 // Tests extracted to src/tests/registry_tests.rs (CLAUDE.md test-layout rule; M-789 as-touched).
