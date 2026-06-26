@@ -176,6 +176,9 @@ pub fn parse_manifest(src: &str) -> Result<Manifest, ManifestError> {
     let mut deps_kv: Vec<(String, Val, u32)> = Vec::new();
     let mut spore_kv: Vec<(String, Val, u32)> = Vec::new();
     let (mut saw_toolchain, mut saw_surface, mut saw_spore) = (false, false, false);
+    // Track which tables have already been opened: a repeated `[table]` header silently merged its
+    // keys into the first instance, which is last-wins-by-stealth. Reject it (G2, never-silent).
+    let mut seen_tables: Vec<String> = Vec::new();
 
     for (idx, raw) in src.lines().enumerate() {
         let line_no = (idx + 1) as u32;
@@ -184,11 +187,28 @@ pub fn parse_manifest(src: &str) -> Result<Manifest, ManifestError> {
             continue;
         }
         if let Some(table) = line.strip_prefix('[').and_then(|s| s.strip_suffix(']')) {
-            current = Some(table.trim().to_owned());
-            match current.as_deref() {
-                Some("toolchain") => saw_toolchain = true,
-                Some("surface") => saw_surface = true,
-                Some("spore") => saw_spore = true,
+            let name = table.trim().to_owned();
+            // Only the v0-interpreted tables are single-instance-checked; other tables stay
+            // accepted-but-uninterpreted (and so a duplicate of them is harmless / ignored anyway).
+            if matches!(
+                name.as_str(),
+                "project" | "toolchain" | "surface" | "dependencies" | "spore"
+            ) {
+                if seen_tables.iter().any(|t| t == &name) {
+                    return Err(ManifestError {
+                        line: line_no,
+                        message: format!(
+                            "duplicate `[{name}]` table — each table may appear at most once (G2)"
+                        ),
+                    });
+                }
+                seen_tables.push(name.clone());
+            }
+            current = Some(name.clone());
+            match name.as_str() {
+                "toolchain" => saw_toolchain = true,
+                "surface" => saw_surface = true,
+                "spore" => saw_spore = true,
                 _ => {}
             }
             continue;
@@ -199,12 +219,40 @@ pub fn parse_manifest(src: &str) -> Result<Manifest, ManifestError> {
         })?;
         let key = key.trim().to_owned();
         let val = parse_value(rhs.trim(), line_no)?;
+        // Reject a duplicate key within the same table instance — a repeat would otherwise
+        // last-wins silently (mirrors the header parser's `seen` set; G2, never-silent).
+        let dup_in = |kv: &[(String, Val, u32)]| kv.iter().any(|(k, _, _)| k == &key);
         match current.as_deref() {
-            Some("project") => project_kv.push((key, val, line_no)),
-            Some("toolchain") => toolchain_kv.push((key, val, line_no)),
-            Some("surface") => surface_kv.push((key, val, line_no)),
-            Some("dependencies") => deps_kv.push((key, val, line_no)),
-            Some("spore") => spore_kv.push((key, val, line_no)),
+            Some("project") => {
+                if dup_in(&project_kv) {
+                    return Err(duplicate_key("project", &key, line_no));
+                }
+                project_kv.push((key, val, line_no));
+            }
+            Some("toolchain") => {
+                if dup_in(&toolchain_kv) {
+                    return Err(duplicate_key("toolchain", &key, line_no));
+                }
+                toolchain_kv.push((key, val, line_no));
+            }
+            Some("surface") => {
+                if dup_in(&surface_kv) {
+                    return Err(duplicate_key("surface", &key, line_no));
+                }
+                surface_kv.push((key, val, line_no));
+            }
+            Some("dependencies") => {
+                if dup_in(&deps_kv) {
+                    return Err(duplicate_key("dependencies", &key, line_no));
+                }
+                deps_kv.push((key, val, line_no));
+            }
+            Some("spore") => {
+                if dup_in(&spore_kv) {
+                    return Err(duplicate_key("spore", &key, line_no));
+                }
+                spore_kv.push((key, val, line_no));
+            }
             // Other tables: accepted, not interpreted in v0.
             _ => {}
         }
@@ -237,6 +285,18 @@ fn strip_comment(line: &str) -> &str {
         }
     }
     line
+}
+
+/// Build the explicit error for a duplicate key within a single table instance (G2, never-silent).
+/// `table` names the offending table and `key` the repeated key, so the diagnostic points at the
+/// exact offending input rather than letting the repeat last-win silently.
+fn duplicate_key(table: &str, key: &str, line: u32) -> ManifestError {
+    ManifestError {
+        line,
+        message: format!(
+            "duplicate `[{table}]` key `{key}` — each key may appear at most once (G2)"
+        ),
+    }
 }
 
 /// The closed v0 `[toolchain]` key set.
@@ -537,10 +597,22 @@ fn as_str_list(val: &Val, key: &str, line: u32) -> Result<Vec<String>, ManifestE
 
 // --- the minimal value scanner (single-line) ---
 
+/// The maximum nesting depth of arrays/inline-tables the v0 reader will descend (DoS bound, G2).
+/// A manifest value (a dependency table, a small export list) is shallow by design; anything deeper
+/// is refused explicitly rather than recursed-into and risking stack exhaustion on adversarial input.
+const MAX_VALUE_DEPTH: u32 = 16;
+
+/// The maximum number of elements one array may hold (DoS bound, G2). Manifest arrays are small
+/// (authors, keywords, exports); a pathological list is refused, never silently truncated.
+const MAX_ARRAY_ELEMS: usize = 1024;
+
+/// The maximum number of key/value pairs one inline table may hold (DoS bound, G2).
+const MAX_TABLE_PAIRS: usize = 1024;
+
 fn parse_value(s: &str, line: u32) -> Result<Val, ManifestError> {
     let chars: Vec<char> = s.chars().collect();
     let mut i = 0;
-    let v = scan_value(&chars, &mut i, line)?;
+    let v = scan_value(&chars, &mut i, line, 0)?;
     skip_ws(&chars, &mut i);
     if i != chars.len() {
         return Err(ManifestError {
@@ -560,12 +632,12 @@ fn skip_ws(chars: &[char], i: &mut usize) {
     }
 }
 
-fn scan_value(chars: &[char], i: &mut usize, line: u32) -> Result<Val, ManifestError> {
+fn scan_value(chars: &[char], i: &mut usize, line: u32, depth: u32) -> Result<Val, ManifestError> {
     skip_ws(chars, i);
     match chars.get(*i) {
         Some('"') => scan_string(chars, i, line).map(Val::Str),
-        Some('[') => scan_array(chars, i, line),
-        Some('{') => scan_inline_table(chars, i, line),
+        Some('[') => scan_array(chars, i, line, depth),
+        Some('{') => scan_inline_table(chars, i, line, depth),
         Some('t') | Some('f') => scan_bool(chars, i, line),
         Some(c) => Err(ManifestError {
             line,
@@ -619,7 +691,21 @@ fn scan_string(chars: &[char], i: &mut usize, line: u32) -> Result<String, Manif
     })
 }
 
-fn scan_array(chars: &[char], i: &mut usize, line: u32) -> Result<Val, ManifestError> {
+/// The explicit error returned when a value nests past [`MAX_VALUE_DEPTH`] (DoS bound, G2).
+fn too_deep(line: u32) -> ManifestError {
+    ManifestError {
+        line,
+        message: format!(
+            "value nests deeper than the v0 limit of {MAX_VALUE_DEPTH} (arrays/inline-tables; \
+             a deeply-nested value is refused, never recursed-into — G2)"
+        ),
+    }
+}
+
+fn scan_array(chars: &[char], i: &mut usize, line: u32, depth: u32) -> Result<Val, ManifestError> {
+    if depth >= MAX_VALUE_DEPTH {
+        return Err(too_deep(line));
+    }
     *i += 1; // '['
     let mut items = Vec::new();
     loop {
@@ -638,12 +724,31 @@ fn scan_array(chars: &[char], i: &mut usize, line: u32) -> Result<Val, ManifestE
                     "unterminated array (missing `]`; multi-line arrays are not in the v0 subset)"
                         .to_owned(),
             }),
-            _ => items.push(scan_value(chars, i, line)?),
+            _ => {
+                if items.len() >= MAX_ARRAY_ELEMS {
+                    return Err(ManifestError {
+                        line,
+                        message: format!(
+                            "array holds more than the v0 limit of {MAX_ARRAY_ELEMS} elements \
+                             (refused, never silently truncated — G2)"
+                        ),
+                    });
+                }
+                items.push(scan_value(chars, i, line, depth + 1)?);
+            }
         }
     }
 }
 
-fn scan_inline_table(chars: &[char], i: &mut usize, line: u32) -> Result<Val, ManifestError> {
+fn scan_inline_table(
+    chars: &[char],
+    i: &mut usize,
+    line: u32,
+    depth: u32,
+) -> Result<Val, ManifestError> {
+    if depth >= MAX_VALUE_DEPTH {
+        return Err(too_deep(line));
+    }
     *i += 1; // '{'
     let mut pairs = Vec::new();
     loop {
@@ -663,6 +768,15 @@ fn scan_inline_table(chars: &[char], i: &mut usize, line: u32) -> Result<Val, Ma
                 })
             }
             _ => {
+                if pairs.len() >= MAX_TABLE_PAIRS {
+                    return Err(ManifestError {
+                        line,
+                        message: format!(
+                            "inline table holds more than the v0 limit of {MAX_TABLE_PAIRS} pairs \
+                             (refused, never silently truncated — G2)"
+                        ),
+                    });
+                }
                 let key = scan_bare_key(chars, i, line)?;
                 skip_ws(chars, i);
                 if chars.get(*i) != Some(&'=') {
@@ -672,7 +786,7 @@ fn scan_inline_table(chars: &[char], i: &mut usize, line: u32) -> Result<Val, Ma
                     });
                 }
                 *i += 1;
-                let v = scan_value(chars, i, line)?;
+                let v = scan_value(chars, i, line, depth + 1)?;
                 pairs.push((key, v));
             }
         }
