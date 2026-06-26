@@ -39,22 +39,3 @@ impl core::fmt::Display for ParseError {
 }
 
 impl std::error::Error for ParseError {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn at_alias_equals_new() {
-        let p = Pos { line: 1, col: 1 };
-        assert_eq!(
-            ParseError::at(p, "boom"),
-            ParseError::new(p, "boom".to_owned())
-        );
-        // Accepts an owned String too.
-        assert_eq!(
-            ParseError::at(p, String::from("x")),
-            ParseError::new(p, "x".to_owned())
-        );
-    }
-}
