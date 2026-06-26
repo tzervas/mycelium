@@ -221,8 +221,8 @@ KC-3, §2).
 | **Ambient repr** (omitted paradigm) | L2/L3 | surface elaboration filling an omitted paradigm — **observationally the identity** | unchanged L0 (never inserts a `Swap`) | **Built** `Exact` (RFC-0012 **Enacted**, M-344) |
 | **Maturation** `@matured` | L2/L3 (level-independent marker) | scope-granularity resolver → totality gate (`matured ⟹ total`) | L0 unchanged; the gate is a check | **Built** `Exact` (RFC-0017 **Enacted**); §4.1 *top-down inheritance* gap = **`Declared`** (epic #26 / D1) |
 | **Value model** `Repr::Seq` / `Repr::Bytes` | L1 value model | new `Repr` cases in the value model (ADR-025/026/027) | extended L0 value model | **Gap** `Declared` (E19-1 / #25 / D2 — ratified, unbuilt) |
-| **Generative** `derive` / `weave` (§4) | L2/L3 | terse params → generated, content-addressed L0 artifact | a nameable, hashed L0 term (dedup by hash) | **Greenfield** `Declared` (no surface form today; DN-37 §2.2) |
-| **Inspector** `reveal` / `expand` (§5) | tooling | print the L0 term; round-trip in `certified` | (reads L0, emits surface) | **Greenfield** `Declared` (cargo-expand/Lean/Racket precedent `Empirical`) |
+| **Generative** `derive` (§4; naming settled §8.1) | L2/L3 | terse params → generated, content-addressed L0 artifact | a nameable, hashed L0 term (dedup by hash) | **Greenfield** `Declared` (no surface form today; DN-37 §2.2) |
+| **Inspector** `reveal` (§5; naming settled §8.1) | tooling | print the L0 term; round-trip in `certified` | (reads L0, emits surface) | **Greenfield** `Declared` (cargo-expand/Lean/Racket precedent `Empirical`) |
 
 Reading the map: the **bottom substrate and the core lowerings are built `Exact`** (iteration safety,
 `type`/`Match`/`Construct`, traits/monomorphization, effects, ambient-identity, maturation gate); the
@@ -307,7 +307,7 @@ rather than asserted.
   checker) with the coherence-result `Declared`-with-argument (RFC-0019).
 - **Designed / `Declared`** — the **seamless-gradient framing** (§1), the **lowering law as an
   organizing principle** (§2), the **level-independent-marker refinement** (§3), the **generative-
-  lowering construct** (`derive`/`weave`, §4), the **`reveal` inspector** + certified round-trip (§5),
+  lowering construct** (`derive`, §4), the **`reveal` inspector** + certified round-trip (§5),
   and the **naming** (§8). Their prior-art mechanisms (nanopass, CompCert, `#[derive]`, Kotlin `by`,
   Hylo MVS, Unison/Nix content-addressing, Racket Macro Stepper, Lean `pp.all`, translation validation)
   are **`Empirical`/`Proven`-at-source** (primary-source-verified in `research/25`), but the **Mycelium
