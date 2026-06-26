@@ -1,22 +1,22 @@
 // nodule: std.cmp
-// @version: 0.1.0
+// @version: 0.2.0
 // @license: MIT
 // @authors: Tyler Zervas
 // @since: 2026-06-23
-// @updated: 2026-06-23
+// @updated: 2026-06-26
 // @summary: Self-hosted ordering/equality surface — the Ordering type (Lt | Eq | Gt), its
 nodule std.cmp
 
 // projections (is_lt/is_eq/is_gt, reverse), and the structural equality/total-order functions over
-// finite kernel types (Bool, Ordering). M-715 (E13-1, RFC-0031 §5 D4 Tier-0). Guarantee: every op
-// here is total over a *finite* domain and match-defined, so each is Exact (no approximation, no
-// kernel comparison prim involved); differential agreement (L1-eval ≡ L0-interp ≡ AOT) is Empirical
-// (trials, std_cmp.rs). Honesty boundary (RFC-0031 §5 D4 Tier-1): equality/ordering over the
-// *width* types Binary{N}/Ternary{N} is NOT self-hosted here — the kernel surfaces bit.not/bit.xor
-// and trit arithmetic but no reduce-to-Bool comparison prim, so a Binary{N} `eq`/`cmp` cannot be
-// honestly written in .myc today. That port lands when the comparison prim is surfaced. Never-silent
-// (G2): no op fabricates an ordering for a value it cannot compare — the surface only covers the
-// finite types it can decide structurally.
+// finite kernel types (Bool, Ordering), plus width-typed comparison helpers over Binary{8} (M-715
+// E13-1, RFC-0031 §5 D4 Tier-0/Tier-1). Guarantee: every op is total over its domain and
+// match-defined or prim-backed; differential agreement (L1-eval ≡ L0-interp ≡ AOT) is Empirical
+// (trials, std_cmp.rs). Width-typed helpers (cmp_u8/le_u8/ge_u8/max_u8/min_u8) wrap the `eq`/`lt`
+// kernel prims which are Exact over the finite Binary{8} domain — tagged Exact. Honesty boundary:
+// width-GENERIC versions (cmp<N>) are NOT possible without M-753 (width-generics unlanded);
+// only monomorphic Binary{8} helpers are provided here — see FLAG below. Never-silent (G2): no op
+// fabricates an ordering for a value it cannot compare — the surface only covers types it can decide
+// structurally or via the surfaced prims.
 // The three-valued total-order result. Total and finite: every comparison lands in exactly one arm.
 type Ordering = Lt | Eq | Gt
 
@@ -47,3 +47,34 @@ fn bool_cmp(a: Bool, b: Bool) -> Ordering =
 // a comparator's result without re-matching at every call site.
 fn ord_eq(a: Ordering, b: Ordering) -> Bool =
   match a { Lt => match b { Lt => True, Eq => False, Gt => False }, Eq => match b { Lt => False, Eq => True, Gt => False }, Gt => match b { Lt => False, Eq => False, Gt => True } }
+
+// ── Width-typed comparison helpers at Binary{8} ───────────────────────────────────────────────────
+//
+// These helpers wrap the `eq`/`lt` kernel prims into the Ordering surface at Binary{8}. The prims
+// are Exact over the finite Binary{8} domain (unsigned magnitude, 256 elements), so the derived
+// helpers are also Exact. Three-way differential agreement is Empirical (trials, std_cmp.rs).
+//
+// FLAG: width-GENERIC versions (cmp<N>, le<N>, ge<N>, max<N>, min<N>) require M-753 (width-generics)
+// which is not yet landed. Only the monomorphic Binary{8} forms are provided here. The generic
+// form is a design-phase goal and will supersede these helpers once M-753 lands.
+// cmp_u8: three-way comparison of two Binary{8} values. Returns Eq if equal, Lt if a < b, Gt if
+// a > b. Total over Binary{8} x Binary{8} (Exact: eq/lt are Exact prims over the finite domain;
+// all cases are covered by the nested match). Declared to the caller as a structural lift.
+fn cmp_u8(a: Binary{8}, b: Binary{8}) -> Ordering =
+  match eq(a, b) { 0b1 => Eq, _ => match lt(a, b) { 0b1 => Lt, _ => Gt } }
+
+// le_u8: True iff a <= b (a is less than or equal to b). Exact (derived from Exact prims; total).
+fn le_u8(a: Binary{8}, b: Binary{8}) -> Bool =
+  match cmp_u8(a, b) { Lt => True, Eq => True, Gt => False }
+
+// ge_u8: True iff a >= b. Exact (total over Binary{8} x Binary{8}).
+fn ge_u8(a: Binary{8}, b: Binary{8}) -> Bool =
+  match cmp_u8(a, b) { Lt => False, Eq => True, Gt => True }
+
+// max_u8: the larger of a and b; returns b when equal (arbitrary but total — Exact).
+fn max_u8(a: Binary{8}, b: Binary{8}) -> Binary{8} =
+  match cmp_u8(a, b) { Lt => b, Eq => b, Gt => a }
+
+// min_u8: the smaller of a and b; returns a when equal (arbitrary but total — Exact).
+fn min_u8(a: Binary{8}, b: Binary{8}) -> Binary{8} =
+  match cmp_u8(a, b) { Lt => a, Eq => a, Gt => b }
