@@ -5,9 +5,13 @@
 mod ambient;
 mod ast;
 mod checkty;
+mod decision;
 mod elab;
+mod error;
 mod eval;
 mod lexer;
 mod lib_root;
 mod mono;
+mod nodule;
 mod parse;
+mod usefulness;
