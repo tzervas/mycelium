@@ -3202,7 +3202,7 @@ impl Cx<'_> {
     /// `expected` [`Ty::Seq`] type is supplied, each element is checked **against** its element type
     /// and the count must match the expected length (never-silent). An empty `[]` against a
     /// `Seq{T, 0}` is the well-formed empty sequence; an empty `[]` with **no** expected `Seq` type
-    /// has no inferrable element type and is an explicit refusal (G2 — never a guessed element).
+    /// has no inferable element type and is an explicit refusal (G2 — never a guessed element).
     ///
     /// Returns the resolved literal so any ambient bare-decimal element (resolved against the
     /// element type) is rewritten to a concrete `Binary`/`Ternary` form for the evaluator/elaborator.
@@ -3249,7 +3249,7 @@ impl Cx<'_> {
         }
         let Some(elem) = elem_ty else {
             return self.err(
-                "an empty list literal `[]` has no inferrable element type here — ascribe it to a \
+                "an empty list literal `[]` has no inferable element type here — ascribe it to a \
                  `Seq{T, 0}` (RFC-0032 D3, never a guessed element type)",
             );
         };
