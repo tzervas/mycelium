@@ -22,8 +22,8 @@
 //! (L1-eval, L0-interp, AOT) — never a silent truncation to the low `M` bits.
 
 use mycelium_core::{Payload, Repr};
-use mycelium_interp::{Interpreter, PrimRegistry};
-use mycelium_l1::{check_nodule, elaborate, parse, Evaluator};
+use mycelium_interp::{EvalError, Interpreter, PrimRegistry};
+use mycelium_l1::{check_nodule, elaborate, parse, Evaluator, L1Error};
 
 /// Run the three-way differential on `src` (L1-eval ≡ elaborate→L0-interp ≡ AOT) and assert all
 /// three paths agree on the observable (`repr + payload`) AND equal the `expected` reference value.
@@ -178,6 +178,11 @@ fn narrow_overflow_refuses_on_every_path() {
         "nodule d\nfn main() -> Binary{{8}} = width_cast({}, 0b0000_0000)",
         lit32(256)
     );
+    // Check-first (the strengthening): the program **type-checks** — so the refusal below is a
+    // genuine *runtime* contract (DN-41), not a static error caught at the wrong layer. The narrow
+    // surfaces uniformly as `EvalError::Overflow` on all three paths (L1 wraps it in `L1Error::Kernel`
+    // since `mycelium_l1`'s `KernelError` *is* `mycelium_interp::EvalError`; the AOT env-machine reuses
+    // the same prim registry, so it too yields `EvalError::Overflow`).
     let env =
         check_nodule(&parse(&src).expect("parses")).expect("checks (fit is a runtime contract)");
 
@@ -189,17 +194,23 @@ fn narrow_overflow_refuses_on_every_path() {
     let engine = mycelium_cert::BinaryTernarySwapEngine;
 
     assert!(
-        Evaluator::new(&env).call("main", vec![]).is_err(),
-        "L1-eval must refuse the lossy narrow (never a silent truncation to 0)"
+        matches!(
+            Evaluator::new(&env).call("main", vec![]),
+            Err(L1Error::Kernel(EvalError::Overflow { .. }))
+        ),
+        "L1-eval must refuse the lossy narrow with Overflow (never a silent truncation to 0)"
     );
     let node = elaborate(&env, "main").expect("in fragment");
     assert!(
-        interp.eval(&node).is_err(),
-        "L0-interp must refuse the lossy narrow"
+        matches!(interp.eval(&node), Err(EvalError::Overflow { .. })),
+        "L0-interp must refuse the lossy narrow with Overflow"
     );
     assert!(
-        mycelium_mlir::run(&node, &prims, &engine).is_err(),
-        "AOT must refuse the lossy narrow"
+        matches!(
+            mycelium_mlir::run(&node, &prims, &engine),
+            Err(EvalError::Overflow { .. })
+        ),
+        "AOT must refuse the lossy narrow with Overflow"
     );
 }
 

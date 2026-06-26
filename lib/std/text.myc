@@ -144,8 +144,10 @@ fn byte_at(b: Bytes, i: Binary{8}) -> Option<Binary{8}> =
 
 // ── widen8 ─────────────────────────────────────────────────────────────────────────────────────────
 // widen8: zero-extend a Binary{8} value to Binary{32} (Exact widen, DN-41). The width witness is a
-// Binary{32} length probe (`bytes_len` of a 4-byte literal = the constant 4, whose only role here is
-// to carry the Binary{32} width — its value is unused per DN-41 §3 width-witness ABI).
+// Binary{32} length probe (`bytes_len` of a 4-byte literal = the constant 4). The value 4 is
+// arbitrary and irrelevant — `bytes_len` returns a `Binary{32}`, and DN-41 §3's width-witness ABI
+// uses ONLY the witness's *type* (its `{32}` width), never its value; any expression of type
+// `Binary{32}` would serve identically. The 4-byte literal is just the cheapest such witness here.
 fn widen8(x: Binary{8}) -> Binary{32} =
   width_cast(x, bytes_len(0x00_00_00_00))
 
