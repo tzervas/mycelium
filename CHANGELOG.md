@@ -27,6 +27,15 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   guarantee posture honest (Exact for total finite ops; Declared for effectful/delegated/host; nothing
   Proven). Cross-links DN-38/37/36 + the sibling example.
 
+### Changed (2026-06-26: DN-40 ratified Draft → Accepted; fixes authorized)
+
+- **DN-40 — Input-Validation Architecture** ratified **Draft → Accepted** (maintainer). The six
+  secure-input principles, the gap-ledger prioritization (the three `Proven` items A1/A2/A3 first), the
+  recognizer-per-boundary architecture, and the principle are adopted as the design direction, and the
+  maintainer **authorized executing the named fixes via swarms** (A1/A2 parser depth-guard + A3 dep-hash
+  parse-don't-validate first, then the mediums). Enacts no code, upgrades no guarantee (each gap keeps its
+  `Proven`/`Declared`/`Empirical` basis — VR-5); each fix lands as its own reviewed, change-scoped PR.
+
 ### Added (2026-06-26: DN-40 — input-validation architecture + stack-wide gap ledger)
 
 - **DN-40 — Input-Validation Architecture (only-intended-inputs across the stack)**
