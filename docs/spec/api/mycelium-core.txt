@@ -437,8 +437,11 @@ impl mycelium_core::id::ContentHash
 pub fn mycelium_core::id::ContentHash::algo(&self) -> &str
 pub fn mycelium_core::id::ContentHash::as_str(&self) -> &str
 pub fn mycelium_core::id::ContentHash::digest(&self) -> &str
+pub fn mycelium_core::id::ContentHash::digest_well_formed(&str, &str) -> bool
 pub fn mycelium_core::id::ContentHash::from_parts(&str, &str) -> core::option::Option<Self>
+pub fn mycelium_core::id::ContentHash::has_well_formed_digest(&self) -> bool
 pub fn mycelium_core::id::ContentHash::parse(&str) -> core::option::Option<Self>
+pub fn mycelium_core::id::ContentHash::parse_digest(&str) -> core::option::Option<Self>
 impl core::clone::Clone for mycelium_core::id::ContentHash
 pub fn mycelium_core::id::ContentHash::clone(&self) -> mycelium_core::id::ContentHash
 impl core::cmp::Eq for mycelium_core::id::ContentHash
@@ -1152,6 +1155,7 @@ pub mycelium_core::repr::Repr::Vsa::dim: u32
 pub mycelium_core::repr::Repr::Vsa::model: alloc::string::String
 pub mycelium_core::repr::Repr::Vsa::sparsity: mycelium_core::repr::SparsityClass
 impl mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::check_well_formed(&self) -> core::result::Result<(), mycelium_core::WfError>
 pub fn mycelium_core::repr::Repr::well_formed(&self) -> bool
 impl core::clone::Clone for mycelium_core::repr::Repr
 pub fn mycelium_core::repr::Repr::clone(&self) -> mycelium_core::repr::Repr
@@ -1223,6 +1227,7 @@ impl core::marker::Unpin for mycelium_core::repr::SparsityClass
 impl core::marker::UnsafeUnpin for mycelium_core::repr::SparsityClass
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::SparsityClass
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::SparsityClass
+pub const mycelium_core::repr::MAX_DIM: u32
 pub mod mycelium_core::ternary
 pub struct mycelium_core::ternary::BigTernary
 impl mycelium_core::ternary::BigTernary
@@ -1906,6 +1911,7 @@ pub mycelium_core::Repr::Vsa::dim: u32
 pub mycelium_core::Repr::Vsa::model: alloc::string::String
 pub mycelium_core::Repr::Vsa::sparsity: mycelium_core::repr::SparsityClass
 impl mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::check_well_formed(&self) -> core::result::Result<(), mycelium_core::WfError>
 pub fn mycelium_core::repr::Repr::well_formed(&self) -> bool
 impl core::clone::Clone for mycelium_core::repr::Repr
 pub fn mycelium_core::repr::Repr::clone(&self) -> mycelium_core::repr::Repr
@@ -1998,6 +2004,10 @@ impl core::marker::UnsafeUnpin for mycelium_core::value::Trit
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Trit
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Trit
 pub enum mycelium_core::WfError
+pub mycelium_core::WfError::DimensionTooLarge
+pub mycelium_core::WfError::DimensionTooLarge::cap: u32
+pub mycelium_core::WfError::DimensionTooLarge::field: &'static str
+pub mycelium_core::WfError::DimensionTooLarge::value: u32
 pub mycelium_core::WfError::GuaranteeBoundMismatch
 pub mycelium_core::WfError::MalformedBound
 pub mycelium_core::WfError::MalformedReconstruction
@@ -2069,8 +2079,11 @@ impl mycelium_core::id::ContentHash
 pub fn mycelium_core::id::ContentHash::algo(&self) -> &str
 pub fn mycelium_core::id::ContentHash::as_str(&self) -> &str
 pub fn mycelium_core::id::ContentHash::digest(&self) -> &str
+pub fn mycelium_core::id::ContentHash::digest_well_formed(&str, &str) -> bool
 pub fn mycelium_core::id::ContentHash::from_parts(&str, &str) -> core::option::Option<Self>
+pub fn mycelium_core::id::ContentHash::has_well_formed_digest(&self) -> bool
 pub fn mycelium_core::id::ContentHash::parse(&str) -> core::option::Option<Self>
+pub fn mycelium_core::id::ContentHash::parse_digest(&str) -> core::option::Option<Self>
 impl core::clone::Clone for mycelium_core::id::ContentHash
 pub fn mycelium_core::id::ContentHash::clone(&self) -> mycelium_core::id::ContentHash
 impl core::cmp::Eq for mycelium_core::id::ContentHash

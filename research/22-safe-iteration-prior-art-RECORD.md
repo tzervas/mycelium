@@ -374,70 +374,70 @@ right lowering.**
   2023 / MSR-TR-2022-18. The canonical TRMC paper: generic modulo-context algorithm (4 equations),
   Minamide-tuple in-place implementation, Perceus-heap soundness proof, hybrid approach for
   effect-handler/non-linear control, Koka benchmarks. *Primary, Proven soundness.*
-  https://www.microsoft.com/en-us/research/wp-content/uploads/2022/07/trmc.pdf
+  <https://www.microsoft.com/en-us/research/wp-content/uploads/2022/07/trmc.pdf>
 - Frédéric Bour, Basile Clément, Gabriel Scherer, *Tail Modulo Cons*, 2021 (arXiv:2102.09823) —
-  OCaml's TMC design + `[@tail_mod_cons]`. https://arxiv.org/abs/2102.09823
+  OCaml's TMC design + `[@tail_mod_cons]`. <https://arxiv.org/abs/2102.09823>
 - *Tail Modulo Cons, OCaml, and Relational Separation Logic*, POPL 2025 (arXiv:2411.19397) —
-  mechanized soundness of OCaml TMC. https://arxiv.org/pdf/2411.19397
+  mechanized soundness of OCaml TMC. <https://arxiv.org/pdf/2411.19397>
 - OCaml Manual, ch. "The Tail Modulo Constructor program transformation" — **normative conditions**:
   tail-mod-cons positions, the cross-boundary demotion warning, and the *refuse-to-guess* rule for
-  two recursive constructor args. https://ocaml.org/manual/5.1/tail_mod_cons.html
+  two recursive constructor args. <https://ocaml.org/manual/5.1/tail_mod_cons.html>
 - CraigFe, *Tail recursion modulo cons* — accessible intro (note: predates OCaml's shipped impl).
-  https://www.craigfe.io/posts/tail-recursion-modulo-cons/
+  <https://www.craigfe.io/posts/tail-recursion-modulo-cons/>
 
 **Perceus / FBIP / reuse**
 - Alex Reinking, Ningning Xie, Leonardo de Moura, Daan Leijen, *Perceus: Garbage Free Reference
   Counting with Reuse*, PLDI 2021. Precise RC, reuse analysis (`drop-reuse`/reuse token), reuse
   specialization, FBIP, the "within 10% of C++ `std::map`" benchmark. *Primary, the core mechanism.*
-  https://xnning.github.io/papers/perceus.pdf
+  <https://xnning.github.io/papers/perceus.pdf>
 - Anton Lorenzen, Daan Leijen, *Reference Counting with Frame-Limited Reuse* (FP²), MSR 2021/ICFP —
-  bounds reuse to the current frame. https://www.microsoft.com/en-us/research/wp-content/uploads/2021/11/flreuse-tr.pdf
+  bounds reuse to the current frame. <https://www.microsoft.com/en-us/research/wp-content/uploads/2021/11/flreuse-tr.pdf>
 - Anton Lorenzen, Daan Leijen, Wouter Swierstra, *FP²: Fully in-Place Functional Programming*,
-  ICFP 2023. https://webspace.science.uu.nl/~swier004/publications/2023-icfp.pdf
+  ICFP 2023. <https://webspace.science.uu.nl/~swier004/publications/2023-icfp.pdf>
 - Sebastian Ullrich & Leonardo de Moura, *Counting Immutable Beans: RC optimized for purely
   functional programming* (Lean's origin of reuse). researchgate (search title).
-- Lean 4 docs — *Tail Recursion* (loops, TRMC, in-place map): https://lean4.dev/language/control-flow/tail-recursion
+- Lean 4 docs — *Tail Recursion* (loops, TRMC, in-place map): <https://lean4.dev/language/control-flow/tail-recursion>
   ; *Functional Programming in Lean*, "Programs and Proofs / Summary" (`Array.set`/`swap` mutate at
-  rc==1): https://leanprover.github.io/functional_programming_in_lean/programs-proofs/summary.html
+  rc==1): <https://leanprover.github.io/functional_programming_in_lean/programs-proofs/summary.html>
 
 **Surface forms**
 - Roc, *Functional* (no `while`; recursion + `List.walk`/fold + TCO):
-  https://www.roc-lang.org/functional ; Roc builtins `List` (unique-list in-place `keep_if`/`map`):
-  https://www.roc-lang.org/builtins/alpha4/List/
+  <https://www.roc-lang.org/functional> ; Roc builtins `List` (unique-list in-place `keep_if`/`map`):
+  <https://www.roc-lang.org/builtins/alpha4/List/>
 - *Reference Counting with Reuse in Roc* (Utrecht MSc thesis — Roc's reuse implementation):
-  https://studenttheses.uu.nl/bitstream/handle/20.500.12932/44634/Reference_Counting_with_Reuse_in_Roc.pdf
+  <https://studenttheses.uu.nl/bitstream/handle/20.500.12932/44634/Reference_Counting_with_Reuse_in_Roc.pdf>
 - Koka book (effectful `for`/`while`/`foreach`, TRMC lowering "to the equivalent of a while loop"):
-  https://koka-lang.github.io/koka/doc/book.html
+  <https://koka-lang.github.io/koka/doc/book.html>
 - Clojure — *Transients* (mutable window over persistent structures, the safety guarantees):
-  https://clojure.org/reference/transients ; `loop`/`recur` vs `reduce` thread:
-  https://groups.google.com/g/clojure/c/Q9KrgqyToIo
+  <https://clojure.org/reference/transients> ; `loop`/`recur` vs `reduce` thread:
+  <https://groups.google.com/g/clojure/c/Q9KrgqyToIo>
 - Troels Henriksen et al., *Futhark: Purely Functional GPU-Programming with Nested Parallelism and
   In-place Array Updates*, PLDI 2017 — `loop … for/while … do`, uniqueness types, **no general
   recursion**, all uniqueness violations caught at compile time.
-  https://futhark-lang.org/publications/pldi17.pdf ; language guide:
-  https://futhark-book.readthedocs.io/en/latest/language.html
+  <https://futhark-lang.org/publications/pldi17.pdf> ; language guide:
+  <https://futhark-book.readthedocs.io/en/latest/language.html>
 
 **Regions**
 - Mads Tofte et al., *Programming with Regions in the MLKit* — region inference, loop-local
-  regions, the region-leak pitfall. https://elsman.com/pdf/mlkit-4.7.16.pdf
+  regions, the region-leak pitfall. <https://elsman.com/pdf/mlkit-4.7.16.pdf>
 - Dan Grossman, Greg Morrisett et al., *Region-Based Memory Management in Cyclone* — explicit
-  regions, escape-preventing type system. https://www.cs.umd.edu/projects/cyclone/papers/cyclone-regions.pdf
+  regions, escape-preventing type system. <https://www.cs.umd.edu/projects/cyclone/papers/cyclone-regions.pdf>
 - Evan Ovadia (Vale) — *Zero-Cost Memory Safety with Vale Regions* / immutable region borrowing /
   bump-allocator isolates (surface precedent; baseline is generational refs, not RC):
-  https://verdagon.dev/blog/zero-cost-memory-safety-regions-overview
+  <https://verdagon.dev/blog/zero-cost-memory-safety-regions-overview>
 
 **Bounded / never-silent termination**
 - eBPF Docs — *Loops* (bounded loops, `bpf_loop`, complexity limit, reject-at-load):
-  https://docs.ebpf.io/linux/concepts/loops/ ; *Verifier*:
-  https://docs.ebpf.io/linux/concepts/verifier/
+  <https://docs.ebpf.io/linux/concepts/loops/> ; *Verifier*:
+  <https://docs.ebpf.io/linux/concepts/verifier/>
 - Matt Rickard, *Smart Contract Language Runtimes* (gas metering, Solana eBPF without verifier,
-  metering instead): https://mattrickard.com/smart-contract-runtimes
+  metering instead): <https://mattrickard.com/smart-contract-runtimes>
 - (Total FP: Agda/Idris `total`, Coq structural/well-founded recursion — standard references.)
 
 **Native codegen**
-- MLIR, *Toy Ch.6: Lowering to LLVM*: https://mlir.llvm.org/docs/Tutorials/Toy/Ch-6/
+- MLIR, *Toy Ch.6: Lowering to LLVM*: <https://mlir.llvm.org/docs/Tutorials/Toy/Ch-6/>
 - LLVM Cookbook, *Tail call optimization* (call/return → goto → loop):
-  https://www.oreilly.com/library/view/llvm-cookbook/9781785285981/ch07s07.html
+  <https://www.oreilly.com/library/view/llvm-cookbook/9781785285981/ch07s07.html>
 - *Lambda the Ultimate SSA: Optimizing Functional Programs in SSA* (arXiv:2201.07272) — functional
-  IR ↔ SSA loops. https://arxiv.org/pdf/2201.07272
+  IR ↔ SSA loops. <https://arxiv.org/pdf/2201.07272>
   (Lean's MLIR backend using `musttail` for guaranteed TCO is noted across Lean compiler discussion.)

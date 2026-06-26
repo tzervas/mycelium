@@ -388,8 +388,8 @@ Legend: ✅ clean/mechanical · ⚠️ maps with added obligations/restriction �
   **Key lesson: Austral is *strictly linear* (must-use, no silent drop); Mycelium being *affine* keeps
   Rust's silent-drop and avoids Austral's "synthesize an explicit destructor at every branch/return"
   tax — making Mycelium a *closer* landing zone for idiomatic Rust than a linear target.**
-- **Vale**: **generational references** replace the borrow checker with an ~8-byte-per-alloc generation
-  + a runtime deref check; this **permits shared mutability and cyclic graphs directly** at ~2–10.8%
+- **Vale**: **generational references** replace the borrow checker with an ~8-byte-per-alloc generation +
+  a runtime deref check; this **permits shared mutability and cyclic graphs directly** at ~2–10.8%
   overhead vs C++ ([generational-references](https://verdagon.dev/blog/generational-references)).
   Vale is the **anti-pattern reference**: it achieves exactly what Mycelium renounces by **moving safety
   to runtime**. Its author's own enumerated "four patterns linear/affine+borrowing *fundamentally
@@ -511,44 +511,44 @@ The transpiler's output is `Empirical` until such a check, **never** silently pr
 ## 6. Annotated bibliography (URLs)
 
 **Rust front-end tooling**
-- syn docs — *purely syntactic, no types/names/traits.* https://docs.rs/syn/latest/syn/ · https://crates.io/crates/syn
-- rust-analyzer architecture — `hir` as the (unstable) library façade. https://rust-analyzer.github.io/book/contributing/architecture.html
-- RA Type System & Inference — *exposes types/traits/mutability/adjustments, **no borrowck/lifetimes***. https://deepwiki.com/rust-lang/rust-analyzer/5.3-type-system-and-inference
-- `ra_ap_hir` crate. https://docs.rs/ra_ap_hir/ · https://crates.io/crates/ra_ap_rust-analyzer
-- rustc-dev-guide: borrow-check (`mir_borrowck`, region constraints). https://rustc-dev-guide.rust-lang.org/borrow-check.html · MIR: https://rustc-dev-guide.rust-lang.org/mir/index.html
-- Building a `rustc_driver` (custom driver, `rustc_private`). https://jyn.dev/rustc-driver/ · MIR instrumentation (nightly-only, `override_queries`): https://emavan.com/blog/2025/mir-instrumentation/
+- syn docs — *purely syntactic, no types/names/traits.* <https://docs.rs/syn/latest/syn/> · <https://crates.io/crates/syn>
+- rust-analyzer architecture — `hir` as the (unstable) library façade. <https://rust-analyzer.github.io/book/contributing/architecture.html>
+- RA Type System & Inference — *exposes types/traits/mutability/adjustments, **no borrowck/lifetimes***. <https://deepwiki.com/rust-lang/rust-analyzer/5.3-type-system-and-inference>
+- `ra_ap_hir` crate. <https://docs.rs/ra_ap_hir/> · <https://crates.io/crates/ra_ap_rust-analyzer>
+- rustc-dev-guide: borrow-check (`mir_borrowck`, region constraints). <https://rustc-dev-guide.rust-lang.org/borrow-check.html> · MIR: <https://rustc-dev-guide.rust-lang.org/mir/index.html>
+- Building a `rustc_driver` (custom driver, `rustc_private`). <https://jyn.dev/rustc-driver/> · MIR instrumentation (nightly-only, `override_queries`): <https://emavan.com/blog/2025/mir-instrumentation/>
 
 **Transpiler prior art**
-- c2rust repo + philosophy + skip-and-warn. https://github.com/immunant/c2rust · known-limitations: https://github.com/immunant/c2rust/blob/master/docs/known-limitations.md
-- c2rust cross-checks (ReMon MVEE, value-hashing). https://c2rust.com/manual/cross-checks/ · design: https://github.com/immunant/c2rust/wiki/Cross-checks-design · hashing: https://c2rust.com/manual/docs/cross-check-hash.html
-- Laertes — "Translating C to Safer Rust," OOPSLA 2021. https://hardekbc.github.io/files/emre21translating.pdf · https://dl.acm.org/doi/10.1145/3485498
-- **"Aliasing Limits on Translating C to Safe Rust," OOPSLA 2023 — ~11% of pointers liftable; residue is *fundamental*.** https://dl.acm.org/doi/abs/10.1145/3586046 · https://2023.splashcon.org/details/splash-2023-oopsla/20/Aliasing-Limits-on-Translating-C-to-Safe-Rust
-- C2SaferRust (second-hand Laertes figures — *flag `Declared`*). https://arxiv.org/html/2501.14257v1
-- corrode + author's c2rust-vs-corrode retrospective (lineage; `idiomatic` never built). https://github.com/jameysharp/corrode · https://jamey.thesharps.us/2018/06/30/c2rust-vs-corrode/ — **"Sherpa" does not exist; real sibling = Citrus.**
-- JSweet spec/`@Erased`/sound errors. https://raw.githubusercontent.com/cincheo/jsweet/master/doc/jsweet-language-specifications.md · https://www.jsweet.org/faq/
-- TeaVM Diagnostics / AOT build-time located errors. https://teavm.org/docs/intro/troubleshooting.html · https://github.com/konsoletyper/teavm/discussions/963
-- Haxe untyped/`__js__` (unvalidated, syntax-marked) + macro diagnostics; silent file-substitution anti-pattern. https://haxe.org/manual/target-syntax.html · https://haxe.org/manual/type-system-untyped.html · https://haxe.org/manual/macro.html · https://haxe.org/manual/lf-target-specific-files.html
-- py2many (visitor + typed exception taxonomy). https://github.com/py2many/py2many · exceptions: https://github.com/py2many/py2many/blob/main/py2many/exceptions.py · Python ast: https://docs.python.org/3/library/ast.html
+- c2rust repo + philosophy + skip-and-warn. <https://github.com/immunant/c2rust> · known-limitations: <https://github.com/immunant/c2rust/blob/master/docs/known-limitations.md>
+- c2rust cross-checks (ReMon MVEE, value-hashing). <https://c2rust.com/manual/cross-checks/> · design: <https://github.com/immunant/c2rust/wiki/Cross-checks-design> · hashing: <https://c2rust.com/manual/docs/cross-check-hash.html>
+- Laertes — "Translating C to Safer Rust," OOPSLA 2021. <https://hardekbc.github.io/files/emre21translating.pdf> · <https://dl.acm.org/doi/10.1145/3485498>
+- **"Aliasing Limits on Translating C to Safe Rust," OOPSLA 2023 — ~11% of pointers liftable; residue is *fundamental*.** <https://dl.acm.org/doi/abs/10.1145/3586046> · <https://2023.splashcon.org/details/splash-2023-oopsla/20/Aliasing-Limits-on-Translating-C-to-Safe-Rust>
+- C2SaferRust (second-hand Laertes figures — *flag `Declared`*). <https://arxiv.org/html/2501.14257v1>
+- corrode + author's c2rust-vs-corrode retrospective (lineage; `idiomatic` never built). <https://github.com/jameysharp/corrode> · <https://jamey.thesharps.us/2018/06/30/c2rust-vs-corrode/> — **"Sherpa" does not exist; real sibling = Citrus.**
+- JSweet spec/`@Erased`/sound errors. <https://raw.githubusercontent.com/cincheo/jsweet/master/doc/jsweet-language-specifications.md> · <https://www.jsweet.org/faq/>
+- TeaVM Diagnostics / AOT build-time located errors. <https://teavm.org/docs/intro/troubleshooting.html> · <https://github.com/konsoletyper/teavm/discussions/963>
+- Haxe untyped/`__js__` (unvalidated, syntax-marked) + macro diagnostics; silent file-substitution anti-pattern. <https://haxe.org/manual/target-syntax.html> · <https://haxe.org/manual/type-system-untyped.html> · <https://haxe.org/manual/macro.html> · <https://haxe.org/manual/lf-target-specific-files.html>
+- py2many (visitor + typed exception taxonomy). <https://github.com/py2many/py2many> · exceptions: <https://github.com/py2many/py2many/blob/main/py2many/exceptions.py> · Python ast: <https://docs.python.org/3/library/ast.html>
 
 **Never-silent residue / diagnostics**
-- rustc JSON diagnostics + `Applicability` lattice (MachineApplicable/MaybeIncorrect/HasPlaceholders/Unspecified). https://doc.rust-lang.org/rustc/json.html · https://doc.rust-lang.org/nightly/nightly-rustc/rustfix/diagnostics/index.html · https://rustc-dev-guide.rust-lang.org/diagnostics/diagnostic-structs.html
+- rustc JSON diagnostics + `Applicability` lattice (MachineApplicable/MaybeIncorrect/HasPlaceholders/Unspecified). <https://doc.rust-lang.org/rustc/json.html> · <https://doc.rust-lang.org/nightly/nightly-rustc/rustfix/diagnostics/index.html> · <https://rustc-dev-guide.rust-lang.org/diagnostics/diagnostic-structs.html>
 
 **Ownership → affine/uniqueness mapping**
-- Rust is affine (drop=weakening, no contraction); safety from affinity; borrow = suspended affinity. https://without.boats/blog/ownership/ · https://borretti.me/article/type-systems-memory-safety
-- NLL (lifetime = CFG points) RFC 2094 + stabilization; Polonius (Datalog origins). https://rust-lang.github.io/rfcs/2094-nll.html · https://blog.rust-lang.org/2022/08/05/nll-by-default/ · https://deepwiki.com/rust-lang/polonius
-- Linear Haskell (multiplicity on arrows; no native borrow). https://arxiv.org/pdf/1710.09756 · https://simon.peytonjones.org/linear-haskell/ · Pure Borrow: https://doi.org/10.1145/3808259
-- ATS (viewtypes/dataview/dataprop). https://en.wikipedia.org/wiki/ATS_(programming_language)
-- Austral (linear-first, regions, 4-state checker; *strictly linear* vs Mycelium affine). https://austral-lang.org/spec/spec.html · https://borretti.me/article/how-australs-linear-type-checker-works
-- Vale (generational refs; permits shared-mutable + cycles at runtime; the "four lost patterns" residue list). https://verdagon.dev/blog/generational-references · https://verdagon.dev/blog/linear-types-borrowing
-- Pony (reference capabilities matrix; iso≈unique, val/box≈shared-immutable, consume≈move). https://tutorial.ponylang.io/reference-capabilities/capability-matrix.html · https://bluishcoder.co.nz/2017/07/31/reference_capabilities_consume_recover_in_pony.html
-- Cyclone (regions; ancestor of Rust lifetimes). https://www.cs.umd.edu/projects/cyclone/papers/cyclone-regions.pdf
+- Rust is affine (drop=weakening, no contraction); safety from affinity; borrow = suspended affinity. <https://without.boats/blog/ownership/> · <https://borretti.me/article/type-systems-memory-safety>
+- NLL (lifetime = CFG points) RFC 2094 + stabilization; Polonius (Datalog origins). <https://rust-lang.github.io/rfcs/2094-nll.html> · <https://blog.rust-lang.org/2022/08/05/nll-by-default/> · <https://deepwiki.com/rust-lang/polonius>
+- Linear Haskell (multiplicity on arrows; no native borrow). <https://arxiv.org/pdf/1710.09756> · <https://simon.peytonjones.org/linear-haskell/> · Pure Borrow: <https://doi.org/10.1145/3808259>
+- ATS (viewtypes/dataview/dataprop). <https://en.wikipedia.org/wiki/ATS_(programming_language)>
+- Austral (linear-first, regions, 4-state checker; *strictly linear* vs Mycelium affine). <https://austral-lang.org/spec/spec.html> · <https://borretti.me/article/how-australs-linear-type-checker-works>
+- Vale (generational refs; permits shared-mutable + cycles at runtime; the "four lost patterns" residue list). <https://verdagon.dev/blog/generational-references> · <https://verdagon.dev/blog/linear-types-borrowing>
+- Pony (reference capabilities matrix; iso≈unique, val/box≈shared-immutable, consume≈move). <https://tutorial.ponylang.io/reference-capabilities/capability-matrix.html> · <https://bluishcoder.co.nz/2017/07/31/reference_capabilities_consume_recover_in_pony.html>
+- Cyclone (regions; ancestor of Rust lifetimes). <https://www.cs.umd.edu/projects/cyclone/papers/cyclone-regions.pdf>
 
 **Verification / bootstrapping**
-- Translation validation (Pnueli; TVOC). https://link.springer.com/chapter/10.1007/11513988_29
-- Validated Code Translation (recent source-to-source). https://arxiv.org/html/2602.18534
-- SACTOR (FFI-based differential verification, two-stage). https://arxiv.org/html/2503.12511v3
-- EMI / differential compiler testing. https://dl.acm.org/doi/10.1145/2594291.2594334
-- Wheeler, Diverse Double-Compiling (countering Trusting Trust in bootstraps). https://dwheeler.com/trusting-trust/dissertation/html/wheeler-trusting-trust-ddc.html · https://dwheeler.com/trusting-trust/
+- Translation validation (Pnueli; TVOC). <https://link.springer.com/chapter/10.1007/11513988_29>
+- Validated Code Translation (recent source-to-source). <https://arxiv.org/html/2602.18534>
+- SACTOR (FFI-based differential verification, two-stage). <https://arxiv.org/html/2503.12511v3>
+- EMI / differential compiler testing. <https://dl.acm.org/doi/10.1145/2594291.2594334>
+- Wheeler, Diverse Double-Compiling (countering Trusting Trust in bootstraps). <https://dwheeler.com/trusting-trust/dissertation/html/wheeler-trusting-trust-ddc.html> · <https://dwheeler.com/trusting-trust/>
 
 ---
 

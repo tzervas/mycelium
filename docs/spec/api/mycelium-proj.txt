@@ -265,7 +265,7 @@ impl core::marker::UnsafeUnpin for mycelium_proj::manifest::ProjectKind
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::manifest::ProjectKind
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::manifest::ProjectKind
 pub struct mycelium_proj::manifest::Dependency
-pub mycelium_proj::manifest::Dependency::hash: core::option::Option<alloc::string::String>
+pub mycelium_proj::manifest::Dependency::hash: core::option::Option<mycelium_core::id::ContentHash>
 pub mycelium_proj::manifest::Dependency::name: alloc::string::String
 pub mycelium_proj::manifest::Dependency::phylum: alloc::string::String
 pub mycelium_proj::manifest::Dependency::version: core::option::Option<alloc::string::String>
@@ -638,7 +638,7 @@ impl core::marker::UnsafeUnpin for mycelium_proj::cert_scope::CrossModeEvent
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_proj::cert_scope::CrossModeEvent
 impl core::panic::unwind_safe::UnwindSafe for mycelium_proj::cert_scope::CrossModeEvent
 pub struct mycelium_proj::Dependency
-pub mycelium_proj::Dependency::hash: core::option::Option<alloc::string::String>
+pub mycelium_proj::Dependency::hash: core::option::Option<mycelium_core::id::ContentHash>
 pub mycelium_proj::Dependency::name: alloc::string::String
 pub mycelium_proj::Dependency::phylum: alloc::string::String
 pub mycelium_proj::Dependency::version: core::option::Option<alloc::string::String>

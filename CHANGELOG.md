@@ -8,6 +8,40 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Fixed (2026-06-26: `just check` greening on the dev consolidation tree)
+
+Cleared the gate failures left after the DN-40 security + design-doc consolidation merged onto `dev`
+(real fixes only; the supply-chain `deny` gate stays red in-sandbox — 403 fetching the RustSec
+advisory-db, an environment block, not a content issue):
+
+- **LSP keyword drift** (`mycelium-lsp`): `consume`/`grow` are now lexed (`mycelium_l1::token::keyword()`
+  returns them) but the parser still refuses them with a teaching diagnostic (no construct until M-664),
+  so they are **reserved-not-active**, not "not yet lexed". Moved them into
+  `reserved_not_active_words_are_not_offered` (beside the `hypha`…`reclaim` runtime words), retired the
+  now-empty `not_yet_lexed_words_are_not_offered` test, and corrected the module comment. Still
+  not offered in completions (G2/VR-5) — only the false "`keyword()` is None" claim is gone.
+- **`.myc` `wild` FFI-floor audit** (`scripts/checks/safety.sh`): excluded `docs/examples/` from the
+  RFC-0028 §4.7 spore-level audit (matching the existing grammar-conformance exclusion). The example
+  programs are illustrative DN-38 lowering-gradient walkthroughs, not buildable spores — they show a
+  `wild { }` drop in narrative `@io` context to *teach* the FFI boundary, and are never compiled/published.
+- **markdownlint** (corpus-wide, the gate scans all tracked `*.md`): cleared 200+ findings —
+  bare URLs wrapped in `<…>` (MD034), list-style/blank-line/fence/heading-punctuation/trailing-space
+  mechanical fixes via `markdownlint-cli2 --fix`, three unescaped `|` inside table-cell code spans
+  escaped (MD056), two stray H1s demoted (MD025), adjacent blockquotes joined (MD028). Prose `+`
+  connectors at line-wraps (which `--fix` mis-rewrote to `-` bullets) were reflowed by hand to keep
+  their meaning.
+- **Broken wiki cross-references** (`docs/wiki/`): appended `.md` to the 26 extensionless intra-wiki
+  links (e.g. a `Crate-Index` target → `Crate-Index.md`) so the offline link-checker resolves them
+  (GitHub's wiki renders both forms).
+- **codespell** (`.codespellrc`): added eight justified false positives (domain terms / proper nouns /
+  valid hyphenations: `theses`, `forin`, `symantics`, `generat`, `disjointness`, `toom`, `pre-emptive`,
+  `re-declare`).
+- **Secret-scan fallback** (`scripts/checks/secrets.sh`): the high-confidence fallback pattern begins
+  with `-----BEGIN`, which `git grep` parsed as an option (erroring out and silently scanning nothing —
+  a G2 never-silent violation); pass it via `-e` so the fallback actually runs.
+- **API baselines + agent index** regenerated (`just api-baseline` for the four DN-40-changed crates;
+  `just docs-index` after the `mycelium-lsp` line-shift) so the `api` and `doc-index` gates are current.
+
 ### Security (2026-06-26: DN-40 input-validation hardening — the full gap ledger, 9 fixes)
 
 The DN-40 review's entire gap ledger, fixed across three agent-reviewed waves (each gap an explicit,
@@ -351,8 +385,8 @@ the spore `content_address` `v1` length-prefix fix (#617) is the reference patte
     rustc MIR `mir_borrowck`); `syn` is syntax-only; MEM-4 is a *downstream* RC optimizer over
     Mycelium Core IR, not the transpiler's ownership analyzer. Annotated the HOF/`?` rows with real
     surface status (RFC-0024 Proposed; capturing closures auto-Impossible; `?` absent from v0).
-  - **DN-32 + RFC-0027 (High):** added honest-scope notes — the model is implemented at the runtime
-    + MEM-4 static tiers with all three §9 triggers live, but reclamation is **not yet threaded into
+  - **DN-32 + RFC-0027 (High):** added honest-scope notes — the model is implemented at the runtime +
+    MEM-4 static tiers with all three §9 triggers live, but reclamation is **not yet threaded into
     the AOT env-machine** (env-machine still Rust-manages values; §9 output is an additive audit
     trail; seam = `mycelium-mlir/src/aot.rs::eval_machine`).
   - **RFC-0028 §4.5 (Low):** clarified v0 `std.rand` entropy = `/dev/urandom` via `std::fs`
@@ -373,8 +407,8 @@ the spore `content_address` `v1` length-prefix fix (#617) is the reference patte
     Reuse, Counting Immutable Beans, FP² FIP, Lean 4 RC, RC⊕region coupling) with a concrete
     "static decisions, dynamic verification" recommendation and the one novel obligation Mycelium
     must own (in-place reuse vs content-address identity).
-  - **18/19 — Rust→Mycelium transpiler (DN-34 evidence).** The two maintainer seed projects (py2rust
-    + py-rust-bridge) with reuse verdicts; Mycelium-as-transpile-target readiness; the
+  - **18/19 — Rust→Mycelium transpiler (DN-34 evidence).** The two maintainer seed projects (py2rust +
+    py-rust-bridge) with reuse verdicts; Mycelium-as-transpile-target readiness; the
     construct-mapping table; plus a prior-art survey (front-end choice — `syn` vs rust-analyzer HIR
     vs rustc MIR `mir_borrowck` as the ownership oracle; c2rust/SACTOR preserve-first architecture;
     never-silent residue reporting; the Laertes ~11% ceiling as an honest caution on "the bulk
@@ -883,8 +917,8 @@ the spore `content_address` `v1` length-prefix fix (#617) is the reference patte
   `#[cfg(test)]` unit test lives in an **in-crate** test module — `#[cfg(test)] mod tests;` in `lib.rs` →
   `src/tests/` (one submodule per source module), each `use crate::…::*` for **white-box** access to
   private items (precedent: `mycelium-std-recover/src/tests.rs`). Chosen over fully-external `tests/` on
-  merit — that would lose private-internal coverage or force internals `pub`. **Complex test logic → fixtures
-  + parameterization**, not test bodies. New tests follow it now; the ~185-file inline-test retrofit
+  merit — that would lose private-internal coverage or force internals `pub`. **Complex test logic → fixtures +
+  parameterization**, not test bodies. New tests follow it now; the ~185-file inline-test retrofit
   (mycelium-core alone is 18 files / ~5k test lines) is tracked as **M-797**, a per-crate octopus-merge
   swarm (no behaviour change — identical test counts pre/post).
 

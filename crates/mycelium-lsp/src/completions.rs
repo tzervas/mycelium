@@ -9,13 +9,16 @@
 //!   completions. Guarantee: `Declared` (asserted capabilities, always flagged).
 //!
 //! Active keywords are drawn from the `keyword()` function in `mycelium-l1::token` — the
-//! authoritative source for which words lex as keywords today. Reserved-not-active words
-//! (`phylum` and the 8 remaining DN-03 runtime words `fuse`/`mesh`/`graft`/`cyst`/`xloc`/
-//! `forage`/`backbone`/`tier`/`reclaim` reserved by M-665) and ratified-not-yet-lexed words
-//! (`impl`, `consume`, `grow`) are intentionally excluded from keyword completions: offering them
-//! as if usable would violate the honesty rule (VR-5 / G2). `colony` and `hypha` were
-//! reserved-not-active through M-665; M-666 made them **active** (they now open real surface
-//! constructs — RFC-0008 §4.5/§4.7) and are offered here.
+//! authoritative source for which words lex as keywords today. Reserved-not-active words are
+//! intentionally excluded from keyword completions: they lex as keywords (never silent, G2) but
+//! no construct consumes them yet, so offering them as if usable would violate the honesty rule
+//! (VR-5 / G2). This set is `phylum`, the 8 remaining DN-03 §4 runtime words
+//! `fuse`/`mesh`/`graft`/`cyst`/`xloc`/`forage`/`backbone`/`tier`/`reclaim` (reserved by M-665),
+//! and the DN-03 §1 surface-tier words `consume`/`grow` (lexed, but the parser refuses them with a
+//! teaching diagnostic until their constructs land with M-664). `impl` graduated to a real, active
+//! keyword in M-659 and is offered. `colony` and `hypha` were reserved-not-active through M-665;
+//! M-666 made them **active** (they now open real surface constructs — RFC-0008 §4.5/§4.7) and are
+//! offered here.
 //!
 //! `matured` is offered as a keyword (it is reserved — using it at item position is an explicit
 //! parse error with a teaching diagnostic, RFC-0017 §4.1); its correct use is the header attribute
@@ -617,10 +620,13 @@ mod tests {
 
     #[test]
     fn reserved_not_active_words_are_not_offered() {
-        // `phylum` and the 8 remaining DN-03 §4 runtime-vocabulary words (reserved by M-665,
-        // minus `colony`/`hypha` which became active in M-666) are reserved-not-active: they lex
-        // as keywords but no construct consumes them yet -- offering them as usable would violate
-        // the honesty rule (G2 / VR-5). `colony` and `hypha` are now offered (see above).
+        // `phylum`, the 8 remaining DN-03 §4 runtime-vocabulary words (reserved by M-665, minus
+        // `colony`/`hypha` which became active in M-666), and the DN-03 §1 surface-tier words
+        // `consume`/`grow` are reserved-not-active: they lex as keywords but no construct consumes
+        // them yet (the parser refuses `consume`/`grow` with a teaching diagnostic until M-664) --
+        // offering them as usable would violate the honesty rule (G2 / VR-5). `colony` and `hypha`
+        // are now offered (see above); `consume`/`grow` were "ratified-not-yet-lexed" until they
+        // were reserved into `keyword()`, mirroring the `hypha`…`reclaim` move under M-665.
         let labels: Vec<&str> = KEYWORD_COMPLETIONS
             .iter()
             .chain(SNIPPET_COMPLETIONS.iter())
@@ -628,7 +634,7 @@ mod tests {
             .collect();
         for banned in [
             "phylum", "fuse", "mesh", "graft", "cyst", "xloc", "forage", "backbone", "tier",
-            "reclaim",
+            "reclaim", "consume", "grow",
         ] {
             assert!(
                 !labels.contains(&banned),
@@ -644,34 +650,12 @@ mod tests {
         }
     }
 
-    #[test]
-    fn not_yet_lexed_words_are_not_offered() {
-        // `consume`/`grow` are ratified but not yet in keyword() -- offering them as active syntax
-        // would be dishonest (they currently lex as plain identifiers). `impl` graduated to a real,
-        // active keyword in M-659 (checker + coherence), so it moved to the offered set (mirroring
-        // `trait`) and is asserted by `all_active_structural_keywords_are_offered`; it is no longer
-        // tracked here. The 10 runtime words `hypha`…`reclaim` were ratified-not-yet-lexed too until
-        // M-665 reserved them; they are now covered by `reserved_not_active_words_are_not_offered`.
-        let labels: Vec<&str> = KEYWORD_COMPLETIONS
-            .iter()
-            .chain(SNIPPET_COMPLETIONS.iter())
-            .map(|c| c.label)
-            .collect();
-        for unlexed in ["consume", "grow"] {
-            assert!(
-                !labels.contains(&unlexed),
-                "ratified-not-yet-lexed word `{unlexed}` must NOT appear in completions"
-            );
-            // Enforce the stated intent against the lexer: these words are genuinely NOT in
-            // keyword() yet. If the lexer starts recognizing one, this fails — forcing the
-            // completion list + the "not yet lexed" claim to be updated together (never drift).
-            assert!(
-                mycelium_l1::token::keyword(unlexed).is_none(),
-                "`{unlexed}` is now a real keyword in mycelium_l1::token::keyword() — it is no \
-                 longer 'not yet lexed'; update the completion list + this test together"
-            );
-        }
-    }
+    // (Historical note) `not_yet_lexed_words_are_not_offered` covered words ratified but not yet in
+    // `keyword()`. That category is now empty: `impl` graduated to an active keyword (M-659) and
+    // moved to the offered set; `consume`/`grow`, the last entries, were reserved into `keyword()`
+    // (DN-03 §1, lexed-not-active) and are now asserted by `reserved_not_active_words_are_not_offered`
+    // (the same place the `hypha`…`reclaim` runtime words landed after M-665). The test was removed
+    // rather than left asserting an empty set.
 
     // ----- snippet well-formedness -----
 

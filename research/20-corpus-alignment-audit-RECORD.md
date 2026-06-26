@@ -58,7 +58,7 @@ No VR-5 guarantee-tag upgrade violations were found anywhere in the corpus. Ever
 
 | Doc | Sev | Summary | doc_loc | Evidence |
 |---|---|---|---|---|
-| ADR-018 | High | FALSE FACT: asserts every crate pinned at `0.0.0`, but three crates are `0.1.0`. Load-bearing premise of the Enacted claim. | Context §1; changelog 2026-06-23 Enacted | `crates/mycelium-std-math|-sys|-sys-host/Cargo.toml` version=`0.1.0`; all others `0.0.0`. |
+| ADR-018 | High | FALSE FACT: asserts every crate pinned at `0.0.0`, but three crates are `0.1.0`. Load-bearing premise of the Enacted claim. | Context §1; changelog 2026-06-23 Enacted | `crates/mycelium-std-math\|-sys\|-sys-host/Cargo.toml` version=`0.1.0`; all others `0.0.0`. |
 | ADR-018 | High | FALSE FACT (VR-5 grounding): claims `publish = false` in every crate Cargo.toml; three crates lack the key. Workspace guard in `release-plz.toml` still blocks publish. | Context §2; Grounding §; changelog Enacted | The same 3 crates have no `publish` key (47/50 do); `release-plz.toml` carries the workspace-level guard. |
 | ADR-020 | High | Status header says Enacted, but the only changelog entry is "Proposed … Awaiting maintainer ratification". No Accepted/Enacted append-only entries — house-rule 3 violation. | Status (line 7) vs Meta-changelog (line 231) | Sole entry `2026-06-20 — Proposed`; grep finds no dated Accepted/Enacted entry; underlying `mycelium-std-runtime` crate genuinely landed (procedural defect, not fabricated). |
 | DN-16 | High | §3.16 declares `runtime` has "no crate / not-yet-implemented", but `mycelium-std-runtime` exists and the doc's own re-audit lists it ratification-ready — self-contradiction. | §2 table (runtime) + §3.16 vs re-audit (~line 492) | `crates/mycelium-std-runtime/src/lib.rs` exists. |
@@ -85,7 +85,7 @@ No VR-5 guarantee-tag upgrade violations were found anywhere in the corpus. Ever
 
 | Doc | Summary | doc_loc | Evidence |
 |---|---|---|---|
-| DN-16 | Survey scope "25 specs" but the tree now has 26 stdlib specs and 26 `mycelium-std-*` crates; `mycelium-std-sys-host` unsurveyed. | §1; §5; §2 table | `ls docs/spec/stdlib/*.md` = 26; `ls crates | grep mycelium-std-` = 26. |
+| DN-16 | Survey scope "25 specs" but the tree now has 26 stdlib specs and 26 `mycelium-std-*` crates; `mycelium-std-sys-host` unsurveyed. | §1; §5; §2 table | `ls docs/spec/stdlib/*.md` = 26; `ls crates \| grep mycelium-std-` = 26. |
 | DN-17 | §2.3/§4 P2 "MLIR test corpus helpers — factor into tests/common/mod.rs" stale: that file already exists. | §2.3; §4 P2 row | `mycelium-mlir/tests/common/mod.rs` exists. |
 
 **Internal-status contradiction (ADR wave):**
