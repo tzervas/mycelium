@@ -8,6 +8,60 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: second example — layered seamless-gradient HTTPS downloader)
+
+- **`docs/examples/https-downloader-layered.myc`** (+ README) — the sibling of the first downloader,
+  adapted to a typical general-programming task (fetch a release/config manifest over HTTPS → parse to a
+  typed `Config` → integrity-check) to make **DN-38's seamless-lowering gradient concrete**: one program
+  intermixing a **sugared DX top** (`derive` boilerplate, `via` dependency-injection for testability,
+  terse combinator pipelines, trait `impl`s) with deliberate **drops to explicit control** where it earns
+  it (a hard-capped byte read as an explicit bounded `for`-fold, canonical length-prefixed encoding of the
+  identity-bearing etag — the spore `v1` lesson, an explicit `!{io}` edge, `wild { }` only at the FFI
+  credential read), a **hand-rolled** `parse_channel` that opts out of `derive`/combinators to enforce a
+  custom `unknown ⇒ Stable` fail-safe invariant, and a `reveal { … }` showing the `for`-fold lowers to a
+  concrete L0 `Fix`/`Match` term (abstracted-never-hidden). **Honesty:** scrupulous per-construct surface
+  tags — `[enacted]` (landed grammar: `type`, `Binary{N}`, `<A>`, `->`, `match`, `trait`/`impl`, `!{io}`,
+  bounded `for`, `wild`) vs `[proposed:DN-31]` (`[]`/`=>`/`0t` — Draft direction, only *named* in comments,
+  never silently adopted, **not** called Accepted) vs `[designed:DN-37/38]` (`via`/`derive`/`reveal` —
+  greenfield); illustrative, **non-runnable** (design phase), assumed host/std surface flagged. Per-op
+  guarantee posture honest (Exact for total finite ops; Declared for effectful/delegated/host; nothing
+  Proven). Cross-links DN-38/37/36 + the sibling example.
+
+### Changed (2026-06-26: DN-40 ratified Draft → Accepted; fixes authorized)
+
+- **DN-40 — Input-Validation Architecture** ratified **Draft → Accepted** (maintainer). The six
+  secure-input principles, the gap-ledger prioritization (the three `Proven` items A1/A2/A3 first), the
+  recognizer-per-boundary architecture, and the principle are adopted as the design direction, and the
+  maintainer **authorized executing the named fixes via swarms** (A1/A2 parser depth-guard + A3 dep-hash
+  parse-don't-validate first, then the mediums). Enacts no code, upgrades no guarantee (each gap keeps its
+  `Proven`/`Declared`/`Empirical` basis — VR-5); each fix lands as its own reviewed, change-scoped PR.
+
+### Added (2026-06-26: DN-40 — input-validation architecture + stack-wide gap ledger)
+
+- **DN-40 — Input-Validation Architecture (only-intended-inputs across the stack)**
+  (`docs/notes/DN-40-Input-Validation-Architecture.md`, **Draft/advisory**) — captures the
+  maintainer-commissioned review. Answers **(a) where** validation is needed (a ranked, file:line-grounded
+  **gap ledger** over 5 boundaries) and **(b) the architecture** (one closed-grammar **recognizer per
+  boundary** minting an immutable/canonical/bounded **typed value** — which doubles as the **lock-free
+  concurrency fan-out**: validate-once-then-trust ⇒ no TOCTOU, data-parallel at memory bandwidth).
+  Patterned on the spore `content_address` `v1` fix as the reference. **Three `Proven` security gaps lead
+  the ledger** (recorded, not yet fixed — each a separate forward decision for the maintainer): **A1
+  CRITICAL** L1-parser type-subgrammar stack-overflow DoS (`parse.rs:685-771`, no `MAX_EXPR_DEPTH` charge →
+  uncatchable `SIGABRT` on attacker `.myc`); **A2 HIGH** pattern-subgrammar DoS (`parse.rs:1125-1146`);
+  **A3 HIGH** parse-don't-validate gap on the identity-bearing dependency hash (free-text `String`; the
+  existing `ContentHash::parse` smart constructor unused). Exhibited gaps `Proven`; architecture
+  `Declared`; prior-art (Parse-don't-validate / LANGSEC / simdjson) `Empirical`/`Proven`-at-source.
+  Enacts nothing; awaiting ratification.
+
+### Changed (2026-06-26: DN-39 ratified Draft → Accepted)
+
+- **DN-39 — Kernel-Promotion Review (KC-3)** ratified **Draft → Accepted** (maintainer). The
+  recommendation is adopted: **no promotions; the kernel boundary stays UNCHANGED** (KC-3 held on merit),
+  the four-clause default-DENY bar and the *"a deterministic encoding is the last thing to axiomatize into
+  the kernel"* principle adopted. Enacts no code, upgrades no guarantee (the kernel was already unchanged;
+  the KEEP-OUT and boundary-unchanged conclusions keep their `Proven`/`Declared` basis — VR-5). The spore
+  injectivity follow-up it named is a separate, already-landed library change (#617).
+
 ### Added (2026-06-26: DN-39 — KC-3 kernel-promotion review (trusted core stays unchanged))
 
 - **DN-39 — Kernel-Promotion Review (KC-3 trusted-core audit)**

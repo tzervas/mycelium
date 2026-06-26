@@ -1,0 +1,418 @@
+// nodule: examples.net.config_fetcher
+// @license: MIT
+// @authors: Mycelium examples
+// @since: 2026-06-26
+// @updated: 2026-06-26
+// @summary: ILLUSTRATIVE design-phase example — the SIBLING of binary64-https-downloader.myc,
+//   reframed from a security demo to a TYPICAL general-programming task: fetch a release/config
+//   manifest over HTTPS, parse it into a typed `Config` value, and use it. Its teaching point is
+//   DN-38's **seamless-lowering gradient**: a single program freely intermixes high-sugar,
+//   high-ergonomics surface (`derive`, `via` dependency-injection, terse combinator pipelines, sum
+//   types + `impl`s) with deliberate DROPS to explicit lower-level control (a hard-capped byte
+//   read written as an explicit `Fix` fold, canonical length-prefixed encoding of identity-bearing
+//   bytes, explicit `!{io}` effect edges, `wild` only at the FFI boundary) — these are NOT
+//   segregated dialects but ONE program at different points on the desugaring gradient (DN-38 §1),
+//   with a `reveal { … }` block showing that a sugared construct lowers to a concrete L0 term
+//   (DN-38 §5, abstracted-never-hidden). Mycelium CANNOT execute yet (design phase) — this is
+//   illustrative source, NOT runnable.
+//
+//   SURFACE-STATUS HONESTY (read this — per-construct, do not over-claim):
+//   The file mixes three honestly-labelled surface tiers, tagged inline as
+//   `// [enacted]` / `// [proposed:DN-31]` / `// [designed:DN-3x]`:
+//     • [enacted]        — the currently-LANDED grammar/lexer/conformance surface: `Binary{N}`
+//                          curly sizing, `<A>` angle-bracket generics, `->` return arrow, `type`
+//                          sum/record decls, `match`, `trait`/`impl` (type-check only — elab
+//                          STAGED→M-673), `!{io}` effect annotation (checker-only, M-660),
+//                          `for … => …` bounded iteration, `wild { }`. These parse against today's
+//                          `mycelium.ebnf`.
+//     • [proposed:DN-31] — the DN-31 delimiter DIRECTION, status **Draft/advisory** (epic #27, NOT
+//                          landed): `[]` for type args / sized types, `=>` as the return arrow,
+//                          `0t`/`0b` literal sigils, `<>` freed for operators. Decided-as-direction,
+//                          NOT enacted. This file uses the *enacted* forms for the spine and only
+//                          NAMES the DN-31 direction where relevant — it does not silently adopt it.
+//     • [designed:DN-37/38] — greenfield, DESIGNED-not-built: `via` delegation, `derive` generative
+//                          lowering, `reveal` inspector, super-traits, default method bodies,
+//                          dynamic dispatch. Per DN-37 §2.2 / DN-38 §6 these are `Declared` design
+//                          proposals with NO surface form in the parser today. Shown to illustrate
+//                          the gradient; their presence is not a claim that they parse.
+//
+//   Nothing here is `Accepted` as landed grammar beyond the [enacted] rows. Host/std names used
+//   (`platform_tls`, `http_get`, `parse_toml`, `blake3`, `env_get`) are ASSUMED surface for
+//   illustration, not a claim they exist in `lib/std` today. Guarantee posture is per-op and honest:
+//   Exact only for total finite ops; Declared for effectful / delegated / host-backed contracts;
+//   nothing is Proven (VR-5). Never-silent throughout (G2): every partial step is an Option/Result.
+nodule examples.net.config_fetcher
+
+use std.option
+use std.result
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PART A — ── sugared surface (L2/L3) ── the high-ergonomics top
+//
+// This part is written at the top of the gradient: terse `type` records + sum
+// types, `derive`d boilerplate, trait `impl`s, and `via` dependency-injection.
+// Per DN-38 §1 these are sugar that LOWERS to the same L0 the explicit forms in
+// Part B lower to — one language, one substrate, no dialect boundary.
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ── The domain model — terse `type` records + a sum type ──────────────────────
+// `type` is the SINGLE data keyword (DN-37 §2.1): single-constructor = record,
+// multi-constructor = sum. Fields are positional (no named fields in v0).
+//
+// [enacted] `type`, single-/multi-ctor, `Binary{N}` sizing, `<A>`-style generics
+//           — all parse today (DN-37 §2.1; lexicon §"type declaration").
+
+// A parsed release channel — a finite, closed sum. Matching over it is Exact.
+type Channel = Stable | Beta | Nightly
+
+// The typed config we fetch + parse the manifest into. A single-constructor
+// record (positional fields): (channel, max_retries, body_cap_bytes, etag).
+type Config = Config(Channel, Binary{32}, Binary{64}, Bytes)
+
+fn config_channel(c: Config)  -> Channel    = match c { Config(ch, _, _, _) => ch }
+fn config_retries(c: Config)  -> Binary{32} = match c { Config(_, r, _, _) => r }
+fn config_cap(c: Config)      -> Binary{64} = match c { Config(_, _, n, _) => n }
+fn config_etag(c: Config)     -> Bytes      = match c { Config(_, _, _, e) => e }
+
+// ── derive — generative lowering of boilerplate (DN-38 §4) ────────────────────
+// `derive` takes a terse intent and GENERATES an explicit, inspectable,
+// content-addressed L0 artifact — `#[derive]`-grade, never Lombok-magic: because
+// the only output channel of a Mycelium lowering is "produce an L0 term," the
+// generated `impl`s are real, nameable, `reveal`-able functions (DN-38 §4.2).
+// Here we derive structural equality, a printer, and TOML deserialization for
+// `Config` instead of hand-writing three `impl` blocks.
+//
+// [designed:DN-38] `derive` is GREENFIELD (DN-38 §6 "Generative" row = `Declared`;
+//   no surface form exists in the parser today — DN-37 §2.2). The conventional
+//   spelling won over the coined `weave` (DN-38 §8.1, plain-first). Guarantee on
+//   what it generates: Eq/Show over a finite record lower to total `Match` folds
+//   → Exact; Deserialize is Declared (it is fallible host-format parsing).
+derive Eq, Show, Deserialize for Config
+
+// ── A trait + an explicit `impl` (the non-derived path, for contrast) ─────────
+// Not everything is derived: `Channel`'s ordering is a hand-written `impl` so the
+// example shows the sugared-`derive` path and the explicit-`impl` path side by
+// side — both lower to the same L0 `Match`. This is the gradient WITHIN one file.
+//
+// [enacted] `trait`/`impl` parse + type-check today; coherence checked (M-659).
+//   ELAB STAGED → M-673 (they type-check but do not yet RUN — lexicon Gotchas).
+//   So the guarantee here is Declared-pending-elab, not a runtime claim.
+trait Rank<A> { fn rank(a: A) -> Binary{8} }
+
+impl Rank<Channel> for Channel {
+  fn rank(a: Channel) -> Binary{8} =
+    match a {
+      Stable  => 0,
+      Beta    => 1,
+      Nightly => 2,
+    }
+}
+
+// ── via — dependency-injection by delegation (DN-37 §3.3, DN-38 §8.1) ──────────
+// `via` is STATIC, by-value forwarding to a HELD value — a conduit ("obtained by
+// way of"), NOT an agentive late-binding delegate (DN-38 §8.1: the keyword names
+// the conduit precisely *because* there is no late binding / no chain walk).
+// We inject the three host-facing capabilities the fetcher needs — a TLS policy,
+// a clock, and a transfer budget — through a `Deps` record the fetcher delegates
+// to. This is Dependency-Injection done ergonomically: swap `Deps` for a stub in
+// a test and the whole fetch is exercised with no network (the testability win).
+//
+// [designed:DN-37] `via`/delegation is GREENFIELD (DN-37 §3.3 status GREENFIELD,
+//   tag `Declared`; absence verified in the parser). Shown to illustrate the DI
+//   ergonomics the gradient is meant to provide; not a claim it parses today.
+
+// The injected capabilities. `TlsPolicy` has NO "disabled" variant (verification
+// is structural — the spore-/security-lesson carried over from the first example).
+type TlsPolicy = SystemRoots | PinnedRoots(Bytes)
+type Clock     = Clock(Binary{64})                 // a monotonic now() reading (ms)
+type Budget    = Budget(Binary{64}, Binary{64})    // (timeout_ms, max_bytes) — both mandatory, finite
+type Deps      = Deps(TlsPolicy, Clock, Budget)
+
+fn deps_tls(d: Deps)    -> TlsPolicy = match d { Deps(t, _, _) => t }
+fn deps_clock(d: Deps)  -> Clock     = match d { Deps(_, c, _) => c }
+fn deps_budget(d: Deps) -> Budget    = match d { Deps(_, _, b) => b }
+
+fn budget_timeout_ms(b: Budget) -> Binary{64} = match b { Budget(t, _) => t }
+fn budget_max_bytes(b: Budget)  -> Binary{64} = match b { Budget(_, m) => m }
+
+// A trait the fetcher delegates its host calls THROUGH. In the sugared call site
+// below, `via deps` injects a concrete `Deps` so `fetch` never hard-codes a TLS
+// stack, a clock, or a cap — they arrive by way of the conduit.
+//
+// [designed:DN-37] super-trait-free single trait (super-traits are designed-not-
+//   built, DN-37 §3.2); the `via deps` delegation header is the greenfield piece.
+trait HostAccess<D> {
+  fn tls(d: D)    -> TlsPolicy
+  fn now_ms(d: D) -> Binary{64}
+  fn cap(d: D)    -> Binary{64}
+}
+
+impl HostAccess<Deps> for Deps {
+  fn tls(d: Deps)    -> TlsPolicy  = deps_tls(d)
+  fn now_ms(d: Deps) -> Binary{64} = match deps_clock(d) { Clock(t) => t }
+  fn cap(d: Deps)    -> Binary{64} = budget_max_bytes(deps_budget(d))
+}
+
+// ── The error vocabulary — a closed sum, never a generic "failed" (G2) ────────
+// [enacted] sum type + payloads parse today.
+type FetchError =
+    NotHttps                                  // scheme was not https — never a silent rewrite
+  | TlsFailed                                 // cert chain did not verify (verification is structural)
+  | Timeout                                   // exceeded the injected time budget
+  | TooLarge(Binary{64})                      // body exceeded the cap (carries the cap)
+  | MalformedManifest                         // parse_toml rejected the body
+  | EtagMismatch                              // integrity: returned etag != expected
+  | TransportError                            // generic socket/read failure
+
+// ── The happy-path pipeline — terse combinator style (── sugared surface ──) ──
+// The top of the gradient: a high-level pipeline reads as a sequence of total /
+// fallible steps bound with `and_then` (the Result bind), each Err short-circuits
+// (never-silent, G2). Read top-to-bottom: validate scheme → GET under the budget
+// → parse → integrity-check the etag. The bytes-read step it calls (`read_capped`)
+// is where Part B DROPS to explicit control.
+//
+// [enacted] `and_then`/bind-propagation, `match`, `if/then/else`, `!{io}` effect
+//   annotation (checker-only, M-660 — Declared, does not run). The `via deps`
+//   injection in the signature is [designed:DN-37].
+//
+// Guarantee: Declared — an effectful multi-step contract; it composes Exact and
+// Declared sub-steps and never claims more than its weakest member (VR-5).
+fn fetch(raw_url: Bytes, expected_etag: Bytes, deps: Deps)
+    -> Result<Config, FetchError> !{ io } via deps =
+  and_then(parse_https_url(raw_url), url =>
+  and_then(http_get_capped(url, deps), body =>
+  and_then(parse_manifest(body), cfg =>
+    check_etag(cfg, expected_etag))))
+
+// ── (── sugared surface ──) scheme validation + manifest parse ────────────────
+// Both are terse one-liners delegating the hard part to assumed host/std surface.
+// parse_https_url is the sole constructor of a validated URL; non-https is an
+// explicit Err, never a silent upgrade. Declared (a stated string-prefix rule).
+type Url = Url(Bytes)
+
+fn parse_https_url(raw: Bytes) -> Result<Url, FetchError> =
+  if starts_with(raw, "https://") then Ok(Url(raw))
+  else Err(NotHttps)
+
+// parse_manifest delegates the TOML decode to the `derive`d `Deserialize` impl
+// (Part A) — terse intent, generated lowering. Fallible host parsing → Declared.
+//
+// [designed:DN-38] uses the derived `Deserialize`; the `<- deserialize` call is
+//   illustrative surface, not a parser claim.
+fn parse_manifest(body: Bytes) -> Result<Config, FetchError> =
+  match parse_toml(body) {
+    Some(cfg) => Ok(cfg),
+    None      => Err(MalformedManifest),    // never silently accept a half-parsed config
+  }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PART B — ── explicit control (drops toward L1/L0) ──
+//
+// Here the program DROPS to lower-level explicit forms — and SAYS WHY at each
+// drop. This is the SAME program (Part A calls straight into these); it is just
+// further down the desugaring gradient (DN-38 §1: high and low interoperate by
+// construction because the low form simply *is* the high form less-sugared).
+// ═════════════════════════════════════════════════════════════════════════════
+
+// ── WHY DROP HERE: precise allocation + bounds control on untrusted input ─────
+// A capped byte read is the security-critical part: we want EXACT control over
+// the cap predicate and the allocation, so we write the read as an EXPLICIT
+// tail-recursive fold rather than leaning on a high-level streaming combinator.
+// DN-36 §2.1: a `for`/`fold` and a hand-written `Fix` fold are two points on ONE
+// gradient and lower to the same tail-recursive `Fix` — we choose the explicit
+// form precisely because we want the cap check visible at every step.
+//
+// First, the never-silent checked accumulator the loop uses. `add` bottoms out in
+// a kernel Binary op (Exact within range); the wrap-detection predicate is a
+// STATED rule, so the contract is Declared (VR-5: not Proven without a checked
+// theorem on the predicate).
+//
+// [enacted] `Binary{64}`, `add`/`lt`, `match`, `if/then/else`, `for … => …`.
+type CapError = WouldOverflow | OverCap(Binary{64})
+
+fn checked_step(acc: Binary{64}, chunk: Binary{64}, cap: Binary{64})
+    -> Result<Binary{64}, CapError> =
+  let next: Binary{64} = add(acc, chunk) in
+  // Carry-out check: an unsigned wrap means the sum dropped below an addend.
+  if lt(next, acc) then Err(WouldOverflow)        // never wrap the counter silently
+  else if lt(cap, next) then Err(OverCap(cap))    // hard cap — abort mid-stream, no huge buffer
+  else Ok(next)
+
+// read_capped — the EXPLICIT bounded read. `for x in chunks, acc = init => body`
+// is the enacted bounded-iteration sugar (DN-36 §4.1, Tier-1 total-by-construction):
+// it descends a FINITE chunk spine, so it terminates by construction — you cannot
+// write a runaway loop with it. We carry a Result accumulator so the FIRST chunk
+// that would overflow or breach the cap short-circuits every later step (G2).
+//
+// We deliberately write the fold by hand (not a `download_all` combinator) so the
+// allocation discipline is on the page: nothing is buffered past `cap`, and the
+// cap is re-checked at EACH chunk, never after a full (possibly huge) read.
+//
+// [enacted] `for … , acc = … => …` is the landed iteration form (lexicon
+//   §"for_expr"; RFC-0007 §4.8). Guarantee: Declared (inherits checked_step's
+//   Declared cap contract; the finite-spine fold itself is Total/Exact).
+fn read_capped(chunks: ByteChunks, cap: Binary{64})
+    -> Result<Binary{64}, CapError> =
+  for c in chunks, acc = Ok(0) =>
+    match acc {
+      Err(e)  => Err(e),                          // already failed — propagate, do not read on
+      Ok(len) => checked_step(len, chunk_len(c), cap),
+    }
+
+// http_get_capped — the IO edge. The `!{io}` annotation is EXPLICIT here (── drop
+// toward the effect boundary ──): DN-38 §3 makes effects a LEVEL-INDEPENDENT
+// honesty marker — an effect is observable behavior, so the never-silent rule (G2)
+// requires it declared no matter how sugared the surroundings. The handshake and
+// the GET are delegated to host surface; verification is structural in TlsPolicy
+// (no off-switch), and the time budget bounds the transfer.
+//
+// [enacted] `!{io}` parses + is coverage-checked (M-660, checker-only → Declared,
+//   does not run). [designed:DN-37] the `via` host delegation. host names assumed.
+//
+// Guarantee: Declared — an effectful streaming contract; the cap predicate is a
+// stated rule (Part B's read_capped), the handshake/GET are delegated.
+fn http_get_capped(url: Url, deps: Deps) -> Result<Bytes, FetchError> !{ io } =
+  // `via` injects the TLS policy + budget; the handshake yields TlsFailed on any
+  // verify failure (never a downgrade to plaintext/unverified).
+  match via platform_tls.connect(url, deps_tls(deps), budget_timeout_ms(deps_budget(deps))) {
+    Err(_)      => Err(TlsFailed),
+    Ok(session) =>
+      // Read the body with the EXPLICIT capped fold from above, then hand back the
+      // bytes. The cap comes from the injected budget — never a literal here.
+      match read_capped(session_chunks(session), budget_max_bytes(deps_budget(deps))) {
+        Err(WouldOverflow) => Err(TooLarge(budget_max_bytes(deps_budget(deps)))),
+        Err(OverCap(cap))  => Err(TooLarge(cap)),
+        Ok(_len)           => via http_collect(session),   // re-collect the verified bytes
+      },
+  }
+
+// ── OPT OUT OF THE SUGAR: a HAND-ROLLED channel parser (no `derive`/combinator) ─
+// This is the third gradient case, distinct from the two "drop to explicit" cases
+// above: here we BYPASS the generative/sugared layer ENTIRELY and write the
+// implementation by hand. We COULD `derive Deserialize for Channel` (like we did
+// for `Config` in Part A) or reach for a high-level `lookup`/`map` combinator —
+// the sugar WOULD generate a perfectly good version. We hand-roll on purpose
+// because we want a CUSTOM INVARIANT the generated form would not give us: an
+// unknown channel string must map to `Stable` (a fail-safe default), NOT to a
+// parse error — a non-standard shape specific to this app's policy. The seamless
+// gradient (DN-38 §1) lets us opt out of the sugar and write it by hand at the
+// lower level in the SAME program; a `reveal` of the sugared `derive`d form would
+// show it lowers to the same kind of L0 `Match`-over-bytes term we write here by
+// hand — so this is not a different language, just the sugar declined.
+//
+// [enacted] `match`, byte equality (`bytes_eq`), explicit arms — all parse today.
+//   We DECLINE [designed:DN-38] `derive Deserialize` here on purpose. Total over a
+//   finite set of byte-string arms with a catch-all → Exact (a total selection).
+fn parse_channel(s: Bytes) -> Channel =
+  // Hand-written, arm-by-arm — the custom fail-safe default lives in the last arm.
+  if bytes_eq(s, "stable")  then Stable
+  else if bytes_eq(s, "beta")    then Beta
+  else if bytes_eq(s, "nightly") then Nightly
+  else Stable                                     // custom invariant: unknown ⇒ Stable, not Err
+
+// ── WHY DROP HERE: canonical length-prefixed encoding of identity-bearing data ─
+// The etag is identity-bearing (it decides whether two fetched configs are "the
+// same"). The spore-v1 lesson: any bytes whose IDENTITY matters must be encoded
+// CANONICALLY — here, length-prefixed — so that "same content" hashes the same
+// regardless of how the field was framed on the wire. We drop to an explicit
+// encoder rather than hashing the raw field, because a non-canonical encoding is
+// exactly the silent-ambiguity the house rules forbid (S3: content-addressed
+// identity is structural).
+//
+// canonical_etag prepends the big-endian 64-bit length, then the bytes. Total
+// over its finite input → Exact (a deterministic, total byte transform).
+//
+// [enacted] `Binary{64}`, `byte_len`, byte ops; the `++` concat is assumed std.
+fn canonical_etag(raw: Bytes) -> Bytes =
+  let n: Binary{64} = byte_len(raw) in
+  be64_bytes(n) ++ raw                            // length-prefix: frame-independent identity
+
+// check_etag — integrity at the typed level. We compare the CANONICAL encodings
+// (not the raw fields) under a constant-time compare. Length-prefix equality is a
+// total Binary{64} comparison (Exact); the byte compare is delegated `via` the
+// audited primitive (Declared — asserted constant-time, not proven here, VR-5).
+//
+// [enacted] equality/`if`; [designed:DN-37] the `via` compare delegation.
+fn check_etag(cfg: Config, expected: Bytes) -> Result<Config, FetchError> =
+  let got: Bytes = canonical_etag(config_etag(cfg)) in
+  let want: Bytes = canonical_etag(expected) in
+  if via bytes_eq_ct(got, want) then Ok(cfg)
+  else Err(EtagMismatch)                          // never silently accept a mismatched config
+
+// ── WHY DROP HERE: the FFI boundary — `wild`, the only raw-host site ──────────
+// The lowest drop on the gradient. DN-38 §3: `wild` is a LEVEL-INDEPENDENT marker
+// — touching the host/OS is a property of the CODE, not of how sugared it is, so
+// it is denied-by-default and lexically marked at ANY level (RFC-0028; lexicon
+// §reserved-words `wild`). We isolate the one genuinely raw call — reading the
+// secret credential from the process environment — inside a `wild { }` block, and
+// keep the SECRET out of source: only the variable NAME is in the program (S4).
+//
+// [enacted] `wild { }` parses today (lexicon §"wild_expr"). Guarantee: Declared —
+//   the host read is asserted, never proven; absence of the var is never-silent.
+fn read_credential(env_var: Bytes) -> Result<Bytes, FetchError> !{ io } =
+  wild {
+    // Inside `wild` is the only place a raw host capability may be exercised. We
+    // STILL return a never-silent Result — a missing credential is an explicit
+    // Err, so we never fall through to an unauthenticated request by accident.
+    match env_get(env_var) {
+      Some(secret) => Ok(secret),
+      None         => Err(TransportError),
+    }
+  }
+
+// ═════════════════════════════════════════════════════════════════════════════
+// PART C — ── the gradient made visible: `reveal` ──
+//
+// DN-38 §5: `reveal` is the inspector — it shows the REAL L0 term the kernel runs
+// (not a lossy text re-render), the inspector counterpart of "abstracted, never
+// hidden." It turns the gradient into a learning surface: you can SEE that a
+// sugared construct and its hand-written equivalent are the SAME L0 program.
+// ═════════════════════════════════════════════════════════════════════════════
+
+// `reveal { e }` lowers `e` and prints its L0 term. Here we reveal that the terse
+// `for`-fold in `read_capped` (── sugared surface ──) lowers to exactly the kind
+// of explicit tail-recursive `Fix` fold one would otherwise hand-write (── L0 ──)
+// — DN-36 §2.1's "two points on one gradient" made literally inspectable, and
+// DN-38 §1's thesis demonstrated: it is ONE program at different points on the
+// desugaring gradient, not two segregated dialects.
+//
+// [designed:DN-38] `reveal` is GREENFIELD (DN-38 §6 "Inspector" row = `Declared`;
+//   cargo-expand/Lean-`pp.all`/Racket-stepper precedent is `Empirical`-at-source,
+//   the Mycelium `reveal` is `Declared`). The L0 sketch below is ILLUSTRATIVE of
+//   the SHAPE (Fix/Match/App over a finite spine — RFC-0007 §3 five L1 nodes), not
+//   a verbatim dump from a tool that does not exist yet.
+fn reveal_the_fold(chunks: ByteChunks, cap: Binary{64}) -> Result<Binary{64}, CapError> =
+  reveal {
+    // SUGARED (── L2/L3 ──), the same form read_capped uses:
+    for c in chunks, acc = Ok(0) =>
+      match acc {
+        Err(e)  => Err(e),
+        Ok(len) => checked_step(len, chunk_len(c), cap),
+      }
+    // ── reveal prints (── L0, illustrative shape ──) ──
+    // App(
+    //   Fix( λself. λspine. λacc.
+    //     Match spine {
+    //       Nil          => acc,                      // finite spine ⇒ terminates (Total)
+    //       Cons(c, rest) =>
+    //         Match acc {
+    //           Err(e)  => Construct Err(e),          // short-circuit (never-silent)
+    //           Ok(len) => App(self, rest,
+    //                          App(checked_step, len, App(chunk_len, c), cap)),
+    //         },
+    //     }),
+    //   chunks, Construct Ok(0))
+    //
+    // The sugar IS this term less-sugared (DN-38 §2 lowering law:
+    //   observe(for-fold) == observe(lower(for-fold))). The `for` is not a
+    //   different language — it is this `Fix` with the boilerplate elided.
+  }
+
+// ── A safe default the call site can use — concrete, conservative ─────────────
+// A 30-second, 16 MiB-capped budget with system roots and a zeroed clock seed.
+// There is still NO way to express "no timeout" / "unbounded body" — the fields
+// are mandatory and finite (the unbounded transfer is unrepresentable).
+//
+// [enacted] all literals + ctors parse today.
+fn default_deps() -> Deps =
+  Deps(SystemRoots, Clock(0), Budget(30000, 16777216))   // 30_000 ms ; 16 * 1024 * 1024 bytes
