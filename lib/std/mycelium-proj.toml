@@ -5,12 +5,12 @@ version     = "0.1.0"
 license     = "MIT"
 authors     = ["Tyler Zervas"]
 since       = "2026-06-23"
-summary     = "Mycelium-language standard library (self-hosted): core/prelude nodules std.result (M-649), std.option + std.cmp (M-715)."
+summary     = "Mycelium-language standard library (self-hosted): core/prelude nodules std.result (M-649), std.option + std.cmp (M-715); collections std.collections (M-716, #461); text/format std.text + std.fmt (M-717, #462, partial — ASCII decode + hex fmt; multi-byte/slice deferred)."
 keywords    = ["stdlib", "self-hosting"]
 lang        = "mycelium-0"
 
 [surface]
-exports     = ["std.result", "std.option", "std.cmp"]
+exports     = ["std.result", "std.option", "std.cmp", "std.collections", "std.text", "std.fmt"]
 
 [toolchain]
 format      = "mycfmt-0"
