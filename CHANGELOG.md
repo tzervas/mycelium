@@ -8,6 +8,31 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Security (2026-06-26: DN-40 input-validation hardening — the full gap ledger, 9 fixes)
+
+The DN-40 review's entire gap ledger, fixed across three agent-reviewed waves (each gap an explicit,
+never-silent refusal — G2; no severity inflated — VR-5):
+
+- **A1 CRITICAL + A2 HIGH — parser stack-overflow DoS** (`mycelium-l1`): the type and pattern
+  subgrammars recursed with no `MAX_EXPR_DEPTH` charge → uncatchable `SIGABRT` on attacker `.myc`. Fixed
+  with a shared `enter_depth`/`leave_depth` guard over every type/pattern recursion entry + crash-refused
+  regression tests.
+- **A3 HIGH — dependency-hash parse-don't-validate** (`mycelium-proj`/`mycelium-spore`): the
+  identity-bearing content-address pin was free-text `String`; now parsed into `Option<ContentHash>` at
+  the manifest boundary (malformed pin → explicit `ManifestError`).
+- **M1 — unbounded stdin read** (`mycelium-std-sys`): `read_to_end_capped(max)` with explicit
+  `TooLarge` (reads `max+1` to refuse, never silently truncate).
+- **M2 — `Repr` dimension over-alloc** (`mycelium-core`): `MAX_DIM = 1<<30` enforced in `Value::new`
+  before payload sizing (`DimensionTooLarge{field,value,cap}`).
+- **Wave-2** — symlink-cycle source-walk cap (`mycelium-spore`, `symlink_metadata` + `MAX_WALK_DEPTH`);
+  strict registry `parse_entry` (duplicate/unknown line rejected); manifest duplicate-key detection +
+  `MAX_VALUE_DEPTH`/element caps (`mycelium-proj`); centralized `ContentHash::digest_well_formed` +
+  opt-in `parse_digest` (`mycelium-core` — `parse` kept shape-only per the normative schema); empty-`0b`
+  lexer refusal (`mycelium-l1`); never-silent `args()` → `Result<_, NonUtf8Arg>` (`mycelium-std-sys`).
+
+Surfaced by the KC-3 trusted-core review (DN-39) and the input-validation architecture review (DN-40);
+the spore `content_address` `v1` length-prefix fix (#617) is the reference pattern. No kernel change.
+
 ### Added (2026-06-26: second example — layered seamless-gradient HTTPS downloader)
 
 - **`docs/examples/https-downloader-layered.myc`** (+ README) — the sibling of the first downloader,
