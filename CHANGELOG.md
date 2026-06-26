@@ -8,6 +8,24 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: DN-35 Phase-1a foundation — honest baseline + Binary[64] HTTPS example)
+
+- **`docs/measurements/DN-35-baseline-2026-06-26.md`** — the release-honest "before" baseline for the
+  reclamation prototype (the data Increments 1–2 are measured against). MEM-4 static dup-reduction
+  91.3% (`Exact` count, corpus-dependent); `mycelium-bench` interp-vs-aot-env timings (aot-env wins
+  rec-build 1.24× / rec-mutual 1.18×, slower on most small kernels — the gap DN-35 targets). Caveats are
+  load-bearing (ephemeral dup-printer, `mlir-dialect` OFF, spawn-bound direct-llvm/jit); runtime
+  heap/RSS counters still need wiring before Increment-1 memory claims are meaningful.
+- **`docs/examples/binary64-https-downloader.myc`** (+ README) — illustrative, lexicon-correct
+  `Binary[64]` general programming + a small HTTPS downloader with named security practice (TLS-verify
+  on + non-disableable, HTTPS-only, bounded streamed reads, secrets-from-env, never-silent
+  `?`-propagation, integrity + size check, mandatory finite timeout/budget). Labeled **non-runnable**
+  (design phase); uses the DN-31 **accepted-but-not-landed** target surface (`[]`/`=>`/`Binary[64]`),
+  flagged in-header — it previews the surface and rides epic #27 to become parseable.
+- Phase-1a's lexicon docs-sweep correctly returned **zero edits** (G2/VR-5): the surface lexicon is
+  Accepted *direction* but unlanded, and DN-31 mandates a coordinated all-at-once grammar wave (epic
+  #27), so piecemeal edits would diverge the docs from the grammar oracle/lexer/conformance corpus.
+
 ### Security (2026-06-26: spore identity encoding — injectivity fix `v0 → v1`)
 
 - **Fixed a content-address injectivity flaw in `mycelium-spore::content_address`** (surfaced by the
