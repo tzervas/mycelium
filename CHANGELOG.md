@@ -8,6 +8,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: RFC-0032 Tier-2 — `Repr::Seq` + `Repr::Bytes` kernel reprs + `.myc` surface (E19-1 `kpr` Wave-B))
+
+- **Kernel value model grows by two reprs (KC-3, maintainer-signed-off)** — RFC-0032 D3/D4, implemented
+  Rust-first (RFC stays **Accepted**, not Enacted):
+  - **`Repr::Seq { elem: Box<Repr>, len: u32 }`** + `Payload::Seq` (M-749) — an indexed homogeneous
+    sequence; never-silent `seq.get` (out-of-bounds → `Option`, G2), `seq.len`; well-formedness recurses
+    into `elem` and applies the over-allocation cap to `len`.
+  - **`Repr::Bytes`** + `Payload::Bytes(Vec<u8>)` (M-750) — a first-class byte string; never-silent
+    `bytes.{get,slice,len,concat}`; UTF-8 decode is written in `.myc` over the byte surface (never in the
+    kernel). Content-addressing extended with append-only, injective tags (`0x14`/`0x15`/`0x24`/`0x25`).
+  - **`.myc` surface (maintainer-ratified):** `[e1,e2,e3]` literal → `Seq{T,N}` type (filling the
+    previously-deferred list-literal path; homogeneous + length-checked, never-silent) and `0x…` hex
+    literal → `Bytes` type (even-hex-digit, never-silent), across the L1 lexer/parser/checker/elaborator.
+    Reserving `Seq`/`Bytes` as repr-type keywords renamed the byte-list ADT fixtures to `ByteList`.
+  - **Verification:** full **three-way differential** (L1-eval ≡ L0-interp ≡ AOT over parsed `.myc`) +
+    never-silent rejects in `crates/mycelium-l1/tests/enablement.rs`; conformance accept/reject corpus.
+    Two T2 trusted-core pr-reviews gated the merge — a `seq.get` VR-5 guarantee-composition leak (an
+    `Exact` container silently re-stamping a `Declared` element) was caught and fixed before landing.
+  - **Unblocks** E13-1 M-716 (efficient collections, ⟸ M-749) and M-717 (text/fmt, ⟸ M-750).
+
 ### Added (2026-06-26: DN-39 — KC-3 kernel-promotion review (trusted core stays unchanged))
 
 - **DN-39 — Kernel-Promotion Review (KC-3 trusted-core audit)**
