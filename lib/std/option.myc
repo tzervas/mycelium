@@ -5,6 +5,8 @@
 // @since: 2026-06-23
 // @updated: 2026-06-23
 // @summary: Self-hosted Option<A> — the never-silent optional value (Some(A) | None) plus the core
+nodule std.option
+
 // combinators is_some, is_none, unwrap_or, map, and_then, fold, or_else, flatten. M-715 (E13-1,
 // RFC-0031 §5 D4 Tier-0). Sibling of std.result; follows the lib/std/result.myc composition
 // prototype exactly. Guarantee (per-op, audit-precise): the Some/None constructors and the total
@@ -14,8 +16,6 @@
 // Empirical (trials, std_option.rs). Never-silent (G2): unwrap_or, fold, and or_else take a
 // caller-supplied fallback/eliminator/alternative — no panic, no sentinel; None never silently
 // becomes a value.
-nodule std.option
-
 type Option<A> = Some(A) | None
 
 // is_some: True iff the optional holds a value. Total projection (Exact).

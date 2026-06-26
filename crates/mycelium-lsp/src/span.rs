@@ -15,9 +15,15 @@
 //! one line, and the only thing between two adjacent lexical items is whitespace or a comment
 //! (itself a boundary). So a token's text runs from its start column to the next item's start (or
 //! end-of-line), with trailing whitespace trimmed against the real source line. This is exact for
-//! ASCII source; for non-ASCII the character offsets are Unicode scalar values, which a UTF-16
-//! LSP client may count differently — flagged here, never silently fabricated (the positions stay
-//! honest scalar-value offsets, documented as such).
+//! ASCII source.
+//!
+//! ## Position encoding (UTF-16 stopgap)
+//! LSP `Position.character` is **UTF-16 code units** by default; this module measures spans in
+//! **Unicode scalar values**, which agree with UTF-16 only for ASCII. The L1 lexer accepts non-ASCII
+//! in `//` comments, so rather than hand a standard client mis-counted offsets, [`lex_items`]
+//! **refuses** a non-ASCII source — it returns no spans (hover/definition/tokens yield nothing for
+//! that file), never a silent mis-offset (G2). The proper fix — UTF-16 length accounting or
+//! position-encoding negotiation (`utf-8`/`utf-16`) — is the follow-up; this is the honest interim.
 
 use mycelium_l1::lexer::lex_with_comments;
 use mycelium_l1::token::Tok;
@@ -53,6 +59,16 @@ pub(crate) struct LexItem {
 /// layer simply has nothing it can honestly highlight. The `Tok::Eof` sentinel is excluded (it has
 /// no source text).
 pub(crate) fn lex_items(src: &str) -> Vec<LexItem> {
+    // UTF-16 stopgap (never-silent, G2): LSP `Position.character` is UTF-16 code units by default,
+    // but this module measures spans in Unicode scalar values. Those agree only while the source is
+    // ASCII. The L1 lexer accepts non-ASCII in `//` comments, so a file with any non-ASCII byte
+    // would yield offsets a standard LSP client mis-counts. Until proper position-encoding
+    // negotiation (`utf-16`/`utf-8`) lands, REFUSE rather than return wrong ranges: a non-ASCII
+    // source yields no spans (hover/definition/tokens return nothing for it), never a silent
+    // mis-offset. ASCII sources are exact and unaffected.
+    if !src.is_ascii() {
+        return Vec::new();
+    }
     let (toks, comments) = match lex_with_comments(src) {
         Ok(pair) => pair,
         Err(_) => return Vec::new(),
@@ -175,6 +191,22 @@ mod tests {
         // a fabricated span or a panic.
         let items = lex_items("fn f() = §"); // `§` is not a valid L1 character
         assert!(items.is_empty());
+    }
+
+    #[test]
+    fn non_ascii_source_refuses_spans_utf16_stopgap() {
+        // A perfectly valid program whose ONLY non-ASCII is in a `//` comment: scalar-vs-UTF-16
+        // offsets would disagree past it, so we refuse (no spans) rather than mis-offset (G2).
+        let ascii = "fn f() = y  // ok\n";
+        assert!(
+            !lex_items(ascii).is_empty(),
+            "ASCII source must still resolve spans"
+        );
+        let non_ascii = "fn f() = y  // café\n"; // non-ASCII 'é' in the comment
+        assert!(
+            lex_items(non_ascii).is_empty(),
+            "non-ASCII source must yield no spans (UTF-16 stopgap), never mis-offset ranges"
+        );
     }
 
     #[test]

@@ -242,6 +242,50 @@ mod tests {
     }
 
     #[test]
+    fn surface_keywords_consume_grow_are_reserved_not_active() {
+        // DN-03 §1 / M-664: `consume` + `grow` are reserved surface keywords — they lex as keywords
+        // (never silent identifiers, G2) but no L1 construct consumes them yet. Closing the lexical
+        // gap (they were previously NOT-YET-LEXED). The teaching diagnostic names DN-03 §1, not the
+        // RFC-0008 runtime message — they are surface-tier, not runtime-vocabulary.
+        for word in ["consume", "grow"] {
+            // (a) lexes as a keyword, not a plain Ident.
+            assert!(
+                crate::token::keyword(word).is_some(),
+                "`{word}` must resolve to a keyword token (keyword() must return Some)"
+            );
+
+            // (b-item) item position → the DN-03 §1 teaching diagnostic.
+            let err = parse(&format!("nodule demo\n{word} worker")).unwrap_err();
+            assert!(
+                err.message.contains("DN-03 §1") && err.message.contains(word),
+                "`{word}` at item position: diagnostic must name DN-03 §1 + the word, got: {}",
+                err.message
+            );
+
+            // (c) cannot be a fn name / param name (binder expects an Ident) — explicit, never silent.
+            assert!(
+                parse(&format!("nodule demo\nfn {word}() -> Binary{{8}} = 0b0")).is_err(),
+                "`{word}` as fn name must be an explicit error"
+            );
+            assert!(
+                parse(&format!(
+                    "nodule demo\nfn f({word}: Binary{{8}}) -> Binary{{8}} = 0b0"
+                ))
+                .is_err(),
+                "`{word}` as param name must be an error"
+            );
+
+            // (d) expression position → the DN-03 §1 teaching diagnostic.
+            let err = parse(&format!("nodule demo\nfn f() -> Binary{{8}} = {word}")).unwrap_err();
+            assert!(
+                err.message.contains("DN-03 §1") && err.message.contains(word),
+                "`{word}` in expression position: diagnostic must name DN-03 §1 + the word, got: {}",
+                err.message
+            );
+        }
+    }
+
+    #[test]
     fn a_malformed_ternary_literal_is_explicit() {
         let src = "nodule demo\nfn f() -> Ternary{3} = <+x->";
         let err = parse(src).unwrap_err();

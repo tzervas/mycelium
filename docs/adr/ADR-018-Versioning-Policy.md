@@ -13,7 +13,8 @@
 ## Context
 
 The workspace is **many independent crates** — 44 `mycelium-*` library/tool crates plus `xtask`,
-each currently at version `0.0.0`. They mature at **different cadences**: the kernel
+each currently at version `0.0.0`. <!-- erratum (2026-06-25, post-audit): the count is now **50** `mycelium-*` crates; see the Meta-changelog erratum entry below. -->
+ They mature at **different cadences**: the kernel
 (`mycelium-core`, `mycelium-l1`, `mycelium-interp`) is the trusted base (ADR-007) and moves
 conservatively; the stdlib capability crates (`mycelium-std-*`) and the toolchain CLIs
 (`mycelium-fmt`/`-check`/`-lint`/`-sec`) land and change far more often. There is **no prior
@@ -143,6 +144,7 @@ proven property.
 
 ## Meta — changelog
 
+- **2026-06-25 — Erratum + maintainer reconciliation (post corpus-alignment audit; Status unchanged — Enacted).** The 2026-06-23 Enacted premise that **every** crate is pinned `0.0.0` with a per-manifest `publish = false` had drifted: three crates — `mycelium-std-math`, `mycelium-std-sys`, `mycelium-std-sys-host` — had reached `0.1.0` and carried **no** `publish` key (an incidental, undocumented bump from the feature commits M-654 / E14-1, not a deliberate release-cut). Distribution stayed blocked the whole time by the **workspace-level `release-plz.toml`** guard (belt-and-braces), so the *policy* held even while the per-crate fact did not. **Maintainer decision (2026-06-25): RE-PIN** — the three crates are restored to `version = "0.0.0"` + `publish = false`, re-establishing the uniform per-crate policy this ADR records (the re-pin code change is applied separately; this entry is the doc record). The §Context "44 `mycelium-* crates`" figure is also corrected to **50** (numeric drift; the policy is unchanged). Append-only — no prior decision text rewritten.
 - **2026-06-23 — Enacted (M-383/M-384; maintainer-approved).** The workspace is pinned at `0.0.0` per-crate with `publish = false` in every `Cargo.toml` (M-383); `release-plz` dry-run wired as a manual-dispatch-only workflow (M-384); `CHANGELOG.md` `[Unreleased]` discipline is in force. **Deferred (separate future act, not a ratification gate):** the first actual release cut (`0.0.0` → `0.x.y`) and any crates.io publish flip — both require the capability bar in §4 to be met and are gated on explicit superseding decisions. Append-only.
 - **2026-06-20 — Accepted.** First versioning policy for the workspace. Decides **per-crate `0.x`
   SemVer** (independent lifecycles, `0.y` = breaking / `0.y.z` = compatible per the documented Rust

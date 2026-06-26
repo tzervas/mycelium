@@ -1,0 +1,77 @@
+{
+  "_about": "EDITORIAL concision pass (not a normative decision): drop the redundant 'honest'/'honestly' qualifiers across the corpus — honesty is implied by construction (G2/no-black-boxes: a trace/error/tag that isn't honest is useless), so the adjective is filler. Also fixes the few stale 'honesty rule' name references to 'transparency rule' (post-ADR-032 rename). Same anchor-keyed, single-pass-per-file, never-silent tool (tools/dn29_apply.py --manifest this). Maintainer-directed 2026-06-24. APPLIED 2026-06-24: 60 edits across 5 files via the tool + 1 caught post-run (CLAUDE.md 'defer honestly' → 'defer', applied directly) = 61 total. status 'applied' refuses re-apply.",
+  "status": "applied",
+  "_kept": "Deliberately UNCHANGED: the formal named criteria SC-2 '(honest bounds)' and VR-5 '(honest guarantee-strength)' (cross-referenced labels, not colloquial filler); the Glossary '(H) = honesty/architecture concept' taxonomy marker; proper-noun-ish 'honesty-integrity' (ADR-021 Gate A) and 'honest-stdlib' (prior-art ref).",
+  "files": {
+    "CLAUDE.md": [
+      {"category": "trim", "anchor": "a corollary of rule 1: you can't honestly claim \"done\"", "replacement": "a corollary of rule 1: you can't claim \"done\""},
+      {"category": "consistency", "anchor": "`cargo-fuzz` smoke). **Honesty (VR-5):**", "replacement": "`cargo-fuzz` smoke). **Transparency (VR-5):**"},
+      {"category": "consistency", "anchor": "the full `just check` green + the honesty/append-only review", "replacement": "the full `just check` green + the transparency/append-only review"},
+      {"category": "trim", "anchor": "Each follows `/dev-workflow`, ships its honest", "replacement": "Each follows `/dev-workflow`, ships its"},
+      {"category": "consistency", "anchor": "6. **Honesty survives the swarm.**", "replacement": "6. **Transparency survives the swarm.**"},
+      {"category": "trim", "anchor": "tags stay at the honestly-supportable strength", "replacement": "tags stay at the supportable strength"},
+      {"category": "consistency", "anchor": "bottom-up octopus merges, honesty preserved through integration", "replacement": "bottom-up octopus merges, transparency preserved through integration"},
+      {"category": "consistency", "anchor": "review every merged subtree for honesty/grounding/append-only", "replacement": "review every merged subtree for transparency/grounding/append-only"},
+      {"category": "consistency", "anchor": "the epic's checks green, review for honesty/grounding, and report", "replacement": "the epic's checks green, review for transparency/grounding, and report"},
+      {"category": "trim", "anchor": "Follow `/dev-workflow`: small auditable steps, honest", "replacement": "Follow `/dev-workflow`: small auditable steps,"},
+      {"category": "consistency", "anchor": "swarm self-driving while keeping honesty and history intact", "replacement": "swarm self-driving while keeping transparency and history intact"},
+      {"category": "consistency", "anchor": "run the `/pr-review` lens on the diff yourself: the honesty rule (per-op tags", "replacement": "run the `/pr-review` lens on the diff yourself: the transparency rule (per-op tags"},
+      {"category": "trim", "anchor": "plain push: it *keeps* your work and resolves the divergence honestly, where a force would have", "replacement": "plain push: it *keeps* your work and resolves the divergence, where a force would have"},
+      {"category": "consistency", "anchor": "- Honesty/append-only survive the split (VR-5/G2)", "replacement": "- Transparency/append-only survive the split (VR-5/G2)"},
+      {"category": "consistency", "anchor": "opinionated PR/diff review (honesty rule, grounding, append-only,", "replacement": "opinionated PR/diff review (transparency rule, grounding, append-only,"},
+      {"category": "consistency", "anchor": "**Honesty:** the index is an `Empirical/Declared` line/regex heuristic", "replacement": "**Transparency:** the index is an `Empirical/Declared` line/regex heuristic"}
+    ],
+    "CONTRIBUTING.md": [
+      {"category": "trim", "anchor": "**Definition of Done** — the honest \"what must be true to call this complete.\"", "replacement": "**Definition of Done** — the explicit \"what must be true to call this complete.\""},
+      {"category": "consistency", "anchor": "this is a corollary of the honesty rule — you cannot honestly claim something done without first", "replacement": "this is a corollary of the transparency rule — you cannot claim something done without first"},
+      {"category": "trim", "anchor": "→ plain push — it keeps your work and resolves divergence honestly, where", "replacement": "→ plain push — it keeps your work and resolves divergence, where"}
+    ],
+    "README.md": [
+      {"category": "consistency", "anchor": "Per the honesty rule, no claim here is upgraded", "replacement": "Per the transparency rule, no claim here is upgraded"},
+      {"category": "trim", "anchor": "Dense embedding values: typed, dimension-tracked, honest tags on approximate ops", "replacement": "Dense embedding values: typed, dimension-tracked, guarantee tags on approximate ops"},
+      {"category": "trim", "anchor": "carries an honest per-op guarantee tag; every fallible op", "replacement": "carries a per-op guarantee tag; every fallible op"},
+      {"category": "trim", "anchor": "carries one of four honest guarantee tags", "replacement": "carries one of four guarantee tags"},
+      {"category": "trim", "anchor": "Each comparison is made honestly — shared ground", "replacement": "Each comparison is made fairly — shared ground"},
+      {"category": "trim", "anchor": "numeric precision tagging; the honesty", "replacement": "numeric precision tagging; the accuracy"},
+      {"category": "trim", "anchor": "guarantee matrices, honesty about capacity bounds and crosstalk.", "replacement": "guarantee matrices, with capacity bounds and crosstalk stated."},
+      {"category": "trim", "anchor": "confirmed that MAP-I capacity admits honest `Proven` tags", "replacement": "confirmed that MAP-I capacity admits `Proven` tags"},
+      {"category": "trim", "anchor": "non-asymptotic bounds — so \"honest bounds exist\"", "replacement": "non-asymptotic bounds — so \"bounds exist\""},
+      {"category": "trim", "anchor": "the \"no black boxes\" principle, honesty about what is and is not proven.", "replacement": "the \"no black boxes\" principle, explicit about what is and is not proven."},
+      {"category": "trim", "anchor": "approach from ADR-010) gives honest guarantees at per-swap", "replacement": "approach from ADR-010) gives guarantees at per-swap"},
+      {"category": "consistency", "anchor": "← decision process, honesty rule, dev env, workflow", "replacement": "← decision process, transparency rule, dev env, workflow"},
+      {"category": "consistency", "anchor": "← the fungal lexicon + honesty/architecture terms", "replacement": "← the fungal lexicon + transparency/architecture terms"},
+      {"category": "trim", "anchor": "VSA stays in core with honest `Proven` tags.", "replacement": "VSA stays in core with `Proven` tags."},
+      {"category": "trim", "anchor": "Dense/VSA breadth with honest per-model guarantee matrices", "replacement": "Dense/VSA breadth with per-model guarantee matrices"},
+      {"category": "trim", "anchor": "interpreter, certified swaps, VSA/dense ops with honest", "replacement": "interpreter, certified swaps, VSA/dense ops with"},
+      {"category": "trim", "anchor": "a first-class submodule with honest `Proven`/`Empirical` tags", "replacement": "a first-class submodule with `Proven`/`Empirical` tags"},
+      {"category": "consistency", "anchor": "Guarantee lattice + honesty propagation | RFC-0001", "replacement": "Guarantee lattice + transparency propagation | RFC-0001"},
+      {"category": "trim", "anchor": "Per-model × per-op guarantee matrix | RFC-0003 | honest tags; HRR/FHRR", "replacement": "Per-model × per-op guarantee matrix | RFC-0003 | tags; HRR/FHRR"},
+      {"category": "consistency", "anchor": "RFC-0006; RFC-0007 | syntactic honesty invariants", "replacement": "RFC-0006; RFC-0007 | syntactic transparency invariants"},
+      {"category": "trim", "anchor": "RT1–RT7; deterministic-fragment-first; partial failure explicit; honest probabilistic guarantees", "replacement": "RT1–RT7; deterministic-fragment-first; partial failure explicit; probabilistic guarantees"},
+      {"category": "trim", "anchor": "C1–C6 (never-silent · honest tags · EXPLAIN", "replacement": "C1–C6 (never-silent · guarantee tags · EXPLAIN"}
+    ],
+    "docs/Mycelium_Project_Foundation.md": [
+      {"category": "consistency", "anchor": "in progress); per the honesty rule the stdlib specs read", "replacement": "in progress); per the transparency rule the stdlib specs read"},
+      {"category": "trim", "anchor": "*no* core VSA op admits a usefully tight, honestly-statable bound", "replacement": "*no* core VSA op admits a usefully tight, statable bound"},
+      {"category": "trim", "anchor": "**T0.2**), so MAP-I/sparse `bundle` carry honest `Proven` tags.", "replacement": "**T0.2**), so MAP-I/sparse `bundle` carry `Proven` tags."},
+      {"category": "consistency", "anchor": "**Honesty conditions (non-negotiable).**", "replacement": "**Transparency conditions (non-negotiable).**"},
+      {"category": "trim", "anchor": "since the bundling probe confirmed honest bounds exist (**T0.2**).", "replacement": "since the bundling probe confirmed bounds exist (**T0.2**)."},
+      {"category": "trim", "anchor": "the last open P0 probe is closed (2026-06-18). Honest scope: the measured leverage", "replacement": "the last open P0 probe is closed (2026-06-18). Scope: the measured leverage"},
+      {"category": "trim", "anchor": "the T3.6 rigorous ablation was not run and remains an honest open follow-up", "replacement": "the T3.6 rigorous ablation was not run and remains an open follow-up"},
+      {"category": "trim", "anchor": "deterministic-fragment-first, partial failure explicit, honest probabilistic guarantees.", "replacement": "deterministic-fragment-first, partial failure explicit, probabilistic guarantees."},
+      {"category": "trim", "anchor": "exercising FR-S1/S4 and the honest-capacity requirement", "replacement": "exercising FR-S1/S4 and the capacity requirement"},
+      {"category": "trim", "anchor": "requires honest `Proven|Empirical|Declared` tagging per model/op", "replacement": "requires `Proven|Empirical|Declared` tagging per model/op"},
+      {"category": "trim", "anchor": "Two code paths; honest non-uniformity; translation-validation infra needed", "replacement": "Two code paths; non-uniformity; translation-validation infra needed"},
+      {"category": "trim", "anchor": "Approximate ops need sound, composable, honestly-tagged bounds", "replacement": "Approximate ops need sound, composable, tagged bounds"},
+      {"category": "trim", "anchor": "where applicable; else tag `Empirical` honestly | **G5** |", "replacement": "where applicable; else tag `Empirical` | **G5** |"},
+      {"category": "trim", "anchor": "**Keep `Proven | Empirical` tags honest as the literature moves.**", "replacement": "**Keep `Proven | Empirical` tags accurate as the literature moves.**"}
+    ],
+    "docs/Glossary.md": [
+      {"category": "trim", "anchor": "gossip/pub-sub overlay with honest probabilistic guarantees", "replacement": "gossip/pub-sub overlay with probabilistic guarantees"},
+      {"category": "trim", "anchor": "the continuation by content hash + the `Meta` to resume honestly)", "replacement": "the continuation by content hash + the `Meta` to resume faithfully)"},
+      {"category": "trim", "anchor": "the inputs (payload joins up, honesty", "replacement": "the inputs (payload joins up, strength"},
+      {"category": "trim", "anchor": "honesty tag (only the execution path/performance changes", "replacement": "guarantee tag (only the execution path/performance changes"},
+      {"category": "trim", "anchor": "so they carry a `ProbabilityBound` (δ) with an honest basis, never", "replacement": "so they carry a `ProbabilityBound` (δ) with a stated basis, never"}
+    ]
+  }
+}

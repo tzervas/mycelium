@@ -11,9 +11,16 @@
 //! ([`max_magnitude`]). Arithmetic is **fixed-width**: a result outside the range is an explicit
 //! `None`/overflow — never a silent wrap (SC-3; G2).
 //!
-//! Integer values use `i64`; this is exact for every width up to `m = 40` (`(3^40−1)/2 < i64::MAX`),
-//! far beyond the small widths exercised here. Larger widths are out of scope until a bignum need
-//! appears.
+//! Integer values in the **fixed-width** path use `i64`; this is exact for every width up to `m = 40`
+//! (`(3^40−1)/2 < i64::MAX`) and is **never-silent** beyond it ([`max_magnitude`] returns `None` at
+//! `m ≥ 41`; [`add`]/[`mul`] return `None` on overflow). The **arbitrary-width** path that *removes*
+//! this cap (growing instead of returning `None`) lives in `big_ternary` ([`BigTernary`]) — the bignum
+//! need the original cap anticipated (E20-1/M-756; RFC-0033 §4.2; ADR-029). The shared balanced
+//! full-adder [`add_with_carry`] is the single never-silent digit primitive both the fixed-width
+//! [`add`] and the growable [`BigTernary`] ripple (DRY).
+
+mod big_ternary;
+pub use big_ternary::{checked_add_fixed, BigTernary, FixedWidthTrits};
 
 use crate::value::Trit;
 
@@ -43,6 +50,46 @@ fn from_digit(d: i64) -> Trit {
             Trit::Zero
         }
     }
+}
+
+/// Balanced full-adder over single trits: returns `(digit_out, carry_out)` with the exact invariant
+/// `digit(a) + digit(b) + digit(carry_in) == digit(digit_out) + 3·digit(carry_out)`. The sum
+/// `s = digit(a)+digit(b)+digit(carry_in) ∈ [−3, 3]`, and `(s+1).rem_euclid(3)−1` / `(s+1).div_euclid(3)`
+/// are provably balanced trits, so both outputs are in `{−1, 0, +1}`. This is the **single**
+/// never-silent digit primitive both the fixed-width [`add`] and the growable [`BigTernary`] ripple
+/// (DRY); it is exhaustively oracle-tested over all 27 inputs (`add_with_carry_is_exhaustively_correct`).
+/// Guarantee: **Exact** (C2).
+#[must_use]
+pub(crate) fn add_with_carry(a: Trit, b: Trit, carry_in: Trit) -> (Trit, Trit) {
+    let s = digit(a) + digit(b) + digit(carry_in);
+    let d = (s + 1).rem_euclid(3) - 1;
+    let c = (s + 1).div_euclid(3);
+    (from_digit(d), from_digit(c))
+}
+
+/// Per-trit negation (sign flip): `value(neg_trit t) = −value(t)` exactly. Total; always in range
+/// (balanced ternary is sign-symmetric, §1).
+#[must_use]
+pub(crate) fn neg_trit(t: Trit) -> Trit {
+    match t {
+        Trit::Neg => Trit::Pos,
+        Trit::Zero => Trit::Zero,
+        Trit::Pos => Trit::Neg,
+    }
+}
+
+/// `true` iff the trit is the additive identity `Zero`.
+#[inline]
+#[must_use]
+pub(crate) fn is_zero(t: Trit) -> bool {
+    matches!(t, Trit::Zero)
+}
+
+/// `true` iff the trit is non-zero (`Neg` or `Pos`).
+#[inline]
+#[must_use]
+pub(crate) fn is_nonzero(t: Trit) -> bool {
+    !is_zero(t)
 }
 
 /// The maximum representable magnitude in `m` trits: `(3^m − 1) / 2`. The range is the symmetric
@@ -110,17 +157,16 @@ pub fn add(a: &[Trit], b: &[Trit]) -> Option<Vec<Trit>> {
     }
     let m = a.len();
     let mut out = vec![Trit::Zero; m];
-    let mut carry: i64 = 0;
-    // Process least-significant first (the tail of an MSB-first string).
+    let mut carry = Trit::Zero;
+    // Process least-significant first (the tail of an MSB-first string), rippling the shared
+    // balanced full-adder. The carry stays a balanced trit throughout (always in {−1, 0, +1}).
     for i in (0..m).rev() {
-        let s = digit(a[i]) + digit(b[i]) + carry;
-        // Normalize s ∈ [−3,3] into a balanced digit + carry.
-        let d = (s + 1).rem_euclid(3) - 1;
-        carry = (s + 1).div_euclid(3);
-        out[i] = from_digit(d);
+        let (d, c) = add_with_carry(a[i], b[i], carry);
+        out[i] = d;
+        carry = c;
     }
-    if carry != 0 {
-        return None; // out of m-trit range
+    if carry != Trit::Zero {
+        return None; // non-zero final carry ⇒ out of m-trit range (explicit, never silent)
     }
     Some(out)
 }
@@ -178,6 +224,26 @@ pub fn mul(a: &[Trit], b: &[Trit]) -> Option<Vec<Trit>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// **Exhaustive truth-table proof** of the shared balanced full-adder over all 27 inputs: the
+    /// digit identity `a + b + carry_in == digit_out + 3·carry_out` holds exactly. This is the
+    /// regression guard for the DRY extraction — both [`add`] and [`BigTernary`] ripple this one
+    /// primitive, so a broken row fails here immediately (alongside `add_matches_integer_oracle`).
+    #[test]
+    fn add_with_carry_is_exhaustively_correct() {
+        for a in [Trit::Neg, Trit::Zero, Trit::Pos] {
+            for b in [Trit::Neg, Trit::Zero, Trit::Pos] {
+                for c in [Trit::Neg, Trit::Zero, Trit::Pos] {
+                    let (d, carry) = add_with_carry(a, b, c);
+                    assert_eq!(
+                        digit(a) + digit(b) + digit(c),
+                        digit(d) + 3 * digit(carry),
+                        "full-adder identity for ({a:?}, {b:?}, {c:?})"
+                    );
+                }
+            }
+        }
+    }
 
     /// Walk every integer representable in `m` trits, paired with its codec encoding.
     fn each_in_range(m: u32, mut f: impl FnMut(i64, Vec<Trit>)) {

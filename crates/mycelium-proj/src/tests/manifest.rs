@@ -1,0 +1,155 @@
+//! White-box tests for [`crate::manifest`] (extracted from the inline module — M-790; test-layout rule).
+
+use crate::manifest::*;
+use mycelium_core::cert_mode::CertMode;
+
+const SAMPLE: &str = r#"
+# mycelium-proj.toml
+[project]
+name        = "geometry"          # the project name
+kind        = "phylum"
+version     = "1.2.0"
+license     = "Apache-2.0"
+authors     = ["Tyler Zervas", "A. N. Other"]
+since       = "2026-01-10"
+summary     = "2D/3D geometry primitives and certified swaps."
+repository  = "https://github.com/example/geometry"
+keywords    = ["geometry", "linear-algebra"]
+lang        = "mycelium-0"
+
+[surface]
+exports     = ["geometry.shapes"]
+
+[dependencies]
+numerics    = { phylum = "numerics", version = "^2", hash = "blake3:abc" }
+"#;
+
+#[test]
+fn the_sample_manifest_parses() {
+    let m = parse_manifest(SAMPLE).unwrap();
+    assert_eq!(m.project.name, "geometry");
+    assert_eq!(m.project.kind, ProjectKind::Phylum);
+    assert_eq!(m.project.version.as_deref(), Some("1.2.0"));
+    assert_eq!(m.project.license.as_deref(), Some("Apache-2.0"));
+    assert_eq!(m.project.authors.as_ref().unwrap().len(), 2);
+    assert_eq!(
+        m.project.keywords.as_ref().unwrap(),
+        &["geometry", "linear-algebra"]
+    );
+}
+
+#[test]
+fn missing_required_fields_are_explicit_errors() {
+    assert!(parse_manifest("[project]\nname = \"x\"\n").is_err()); // no kind
+    assert!(parse_manifest("[project]\nkind = \"program\"\n").is_err()); // no name
+    assert!(parse_manifest("[surface]\nexports = []\n").is_err()); // no [project]
+}
+
+#[test]
+fn an_unknown_project_key_is_an_explicit_error() {
+    let e = parse_manifest("[project]\nname=\"x\"\nkind=\"script\"\nfoo=\"bar\"\n").unwrap_err();
+    assert!(e.message.contains("unknown `[project]` key"), "{e}");
+}
+
+#[test]
+fn bad_kind_and_values_are_explicit_errors() {
+    assert!(parse_manifest("[project]\nname=\"x\"\nkind=\"library\"\n").is_err());
+    assert!(parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\nlicense=\"Nope\"\n").is_err());
+    assert!(
+        parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\nsince=\"2026/01/10\"\n").is_err()
+    );
+}
+
+#[test]
+fn the_toolchain_table_is_interpreted() {
+    // M-364: `[toolchain].format` is now read (the manifest's first toolchain consumer).
+    let m = parse_manifest(SAMPLE).unwrap();
+    assert!(m.toolchain.is_none(), "SAMPLE declares no [toolchain]");
+    let m = parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[toolchain]\nformat=\"mycfmt-0\"\nlints=\"strict\"\n",
+    )
+    .unwrap();
+    let tc = m.toolchain.unwrap();
+    assert_eq!(tc.format.as_deref(), Some("mycfmt-0"));
+    assert_eq!(tc.lints.as_deref(), Some("strict"));
+}
+
+#[test]
+fn the_surface_dependencies_and_spore_tables_are_interpreted() {
+    // M-368: the packaging tables are now typed (first consumer).
+    let m = parse_manifest(SAMPLE).unwrap();
+    assert_eq!(
+        m.surface.as_ref().unwrap().exports,
+        vec!["geometry.shapes".to_owned()]
+    );
+    assert_eq!(m.dependencies.len(), 1);
+    let d = &m.dependencies[0];
+    assert_eq!(d.name, "numerics");
+    assert_eq!(d.phylum, "numerics");
+    assert_eq!(d.hash.as_deref(), Some("blake3:abc"));
+    assert_eq!(d.version.as_deref(), Some("^2"));
+
+    let m =
+        parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\n[spore]\ninclude=[\"surface\"]\n")
+            .unwrap();
+    assert_eq!(m.spore.unwrap().include, vec!["surface".to_owned()]);
+}
+
+#[test]
+fn a_malformed_dependency_or_unknown_key_is_explicit() {
+    // A non-inline-table dependency is an error.
+    assert!(parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\nfoo=\"bar\"\n"
+    )
+    .is_err());
+    // An unknown dependency key is an error (closed set).
+    let e = parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\nfoo={ phylum=\"f\", oops=\"x\" }\n",
+    )
+    .unwrap_err();
+    assert!(e.message.contains("unknown dependency key"), "{e}");
+    // An unknown [surface] key is an error.
+    assert!(
+        parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\n[surface]\nexprts=[\"a\"]\n")
+            .is_err()
+    );
+}
+
+#[test]
+fn an_unknown_toolchain_key_is_an_explicit_error() {
+    let e = parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[toolchain]\nformatt=\"mycfmt-0\"\n",
+    )
+    .unwrap_err();
+    assert!(e.message.contains("unknown `[toolchain]` key"), "{e}");
+}
+
+#[test]
+fn out_of_subset_constructs_are_explicit_errors() {
+    // A bare number is outside the v0 subset — flagged, never silently dropped.
+    let e = parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\nversion=12\n").unwrap_err();
+    assert!(e.message.contains("v0 manifest reader supports"), "{e}");
+}
+
+// RFC-0034 §6 / M-790: `[project].certification` is the phylum-tier mode declaration.
+#[test]
+fn certification_parses_in_the_project_table() {
+    let m = parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\ncertification=\"certified\"\n")
+        .unwrap();
+    assert_eq!(m.project.certification, Some(CertMode::Certified));
+}
+
+#[test]
+fn certification_absent_is_none_not_a_silent_default() {
+    // Honest absence: the manifest carries `None`; the *resolver* applies the project default,
+    // never the parser silently (G2).
+    let m = parse_manifest(SAMPLE).unwrap();
+    assert_eq!(m.project.certification, None);
+}
+
+#[test]
+fn certification_unknown_mode_is_explicit_error() {
+    let e = parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\ncertification=\"turbo\"\n")
+        .unwrap_err();
+    assert!(e.message.contains("unknown @certification mode"), "{e}");
+}

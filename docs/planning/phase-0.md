@@ -174,7 +174,7 @@ RFC ordering.
 
 ## 5. Gate verdicts — honest status (KC-1, KC-2)
 
-Per the honesty rule and VR-5, gate status is tracked at the strength it has actually been
+Per the transparency rule and VR-5, gate status is tracked at the strength it has actually been
 *established*, not at its hoped-for level.
 
 | Gate | Question | Current status | What moves it | Issue |

@@ -514,6 +514,10 @@ honesty cleanups (all of which it confirms held through implementation).
 
 ## Changelog
 
+- **2026-06-25 — Re-audit erratum (post corpus-alignment audit; Status unchanged — Resolved).** Two stale premises in this survey are reconciled append-only (the §2/§3.16 prose is left intact):
+  - **`runtime` row.** §3.16's "no crate / not-yet-implemented" is **superseded** — `crates/mycelium-std-runtime` exists (M-521, ADR-020) and is **ratification-ready**, as this note's own 2026-06-21 re-audit already implies. Read the `runtime` row as ratification-ready.
+  - **`sys` blocker closed.** The 2026-06-21 entry names `mycelium-std-sys` "NEEDS-WORK — the one ratification blocker" for lacking `docs/spec/stdlib/sys.md`; **that spec now exists**, so the single stated blocker is **closed** (the 24/25 tally is stale on that count).
+  - **Scope widened.** The survey scope of **"25 specs"** is widened to **26 stdlib specs / 26 `mycelium-std-*` crates**, adding the previously-unsurveyed **`mycelium-std-sys-host`** (`ls docs/spec/stdlib/*.md` = 26; `ls crates | grep mycelium-std-` = 26). Per-spec *ratification* to Accepted remains the maintainer's append-only call (DN-07).
 - **2026-06-21 — Fresh post-implementation honesty re-audit (swarm).** Three Sonnet agents
   re-verified all 25 stdlib crates against landed code: 24/25 ratification-ready, 1
   NEEDS-WORK (`std-sys` missing its spec), **no honesty-tag violations**. FLAG-RAND-IMPL

@@ -213,6 +213,7 @@ choice is made here (VR-5).
 
 ## Meta — changelog
 
+- **2026-06-25 — Sequencing note (D6/D7; post corpus-alignment audit; Status unchanged — Draft).** The **Draft → Proposed** move is now **sequenced behind the D7 grammar-surface resolution** (DN-31, maintainer 2026-06-24/25): the type-argument surface is **being changed** — **`[]` is adopted for type-arguments** (freeing `<>` for the comparison/shift operators `< > << >>`, resolving the M-745 collision), **superseding this RFC's current `<>`-based direction** (and RFC-0019 §4.1's `<…>` type params, via supersession). The M-707 + M-745 gate named in §4.3 is therefore subsumed by that grammar-supersession wave: RFC-0030's full L3 grammar is regenerated against `[]`-type-args + the `[]`-vs-list-literal position split (DN-31 §2–§4) before it can move to Proposed. No change is made to RFC-0030's §4 prose here; the committed `mycelium.ebnf` stays the normative oracle until that wave lands (append-only; VR-5 / house rule #3).
 - **2026-06-23 — Partial decision (M-706; stays Draft).** Integrated the M-705 operator grammar
   reference (now in `mycelium.ebnf`); **proposed** the Q8 unsafe-class spelling = ratify `wild`
   (gated by `@std-sys` + `!{ffi}`; §4.1); **corrected** the stub's Q3 mischaracterization — RFC-0006

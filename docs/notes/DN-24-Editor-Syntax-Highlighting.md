@@ -85,5 +85,11 @@ development environment."
   scope-naming decision is **RFC-0026**. The "generated from the lexer" claim is grounded in
   `token.rs` `keyword()`; the "no semantic-token provider yet" claim is grounded in the
   `crates/mycelium-lsp/src/` file list. No tag is upgraded (VR-5).
+  > **Erratum (2026-06-25, post corpus-alignment audit; Status unchanged — Resolved).** The "current
+  > state" framing here and in §3 — the recommended stack as *planned*, "no semantic-token provider yet" —
+  > is **superseded by the build**: the layered stack is **BUILT** — a full semantic-tokens provider
+  > (`crates/mycelium-lsp/src/semantic.rs`, M-730, RFC-0026) and the lexer-derived grammars
+  > (`tools/grammar/`: `mycelium.tmLanguage.json` + `tree-sitter-mycelium` + `generate.py`, M-731). Read §3/§5
+  > as the design rationale that was then implemented, not as pending work.
 - Sequencing: independent of, and runnable in parallel with, the dogfooding builds (`dfb`) — better
   highlighting makes dogfood code easier to read, so it is a natural companion rather than a blocker.

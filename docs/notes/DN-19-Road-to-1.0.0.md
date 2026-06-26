@@ -22,6 +22,11 @@
 **1.0.0 = ADR-021 Gate A + Gate B open rows.** ADR-021 (Proposed, 2026-06-21) is the spine.
 It defines two gates:
 
+> **Erratum (2026-06-25, post-audit).** ADR-021 is no longer "Proposed": it reached **Accepted
+> (2026-06-21)** and was then **Superseded by ADR-022 (2026-06-23)**, which carries this Gate A/B
+> forward as **track T1** (the core/kernel 1.0.0 sub-gate, further amended by ADR-024). The Gate A/B
+> *criteria* below are unchanged; only their home document moved (see the §6 changelog spine-erratum).
+
 **Gate A — resolvable now (honesty-integrity + durability):**
 
 | Row | Criterion | Status (per ADR-021) |
@@ -185,7 +190,11 @@ threshold, and records it in ADR-021 or a short ADR-021 annotation).
 
 **What it is.** ADR-021 itself is currently **Proposed**, not Accepted. The maintainer must
 ratify the *criteria* (agreeing that "these are the 1.0.0 release-readiness criteria") before
-the gate can be called met. The "ship 1.0.0" act (Accepted → Enacted at the tagged release)
+the gate can be called met.
+
+> **Erratum (2026-06-25):** this GAP-6 premise is **closed/superseded** — ADR-021 *was* ratified to
+> **Accepted (2026-06-21)** and is now **Superseded by ADR-022 (2026-06-23)**; the criteria-ratification
+> this GAP asked for happened, and the gate moved into ADR-022 track T1 (amended by ADR-024). See §6. The "ship 1.0.0" act (Accepted → Enacted at the tagged release)
 is separate. Source: ADR-021 §6; CLAUDE.md house rule #3 (append-only decisions; Proposed →
 Accepted → Enacted; never skip straight to Enacted).
 
@@ -310,9 +319,49 @@ Enacted.)*
 
 ## 6. Changelog
 
+- **2026-06-25 — Decisions + spine erratum (post corpus-alignment audit; advisory note, no status move).** Three append-only records, none rewriting the §1–§5 prose:
+  - **Spine re-framed under ADR-022 (GAP-6 hygiene).** The note's spine treats **ADR-021** as "Proposed, needs ratification". That is **superseded**: ADR-021 reached **Accepted (2026-06-21)** and was then **Superseded by ADR-022 (2026-06-23)** — its kernel **Gate A/B is carried forward, preserved not discarded, as ADR-022 track T1** (the core/kernel 1.0.0 sub-gate; further amended by **ADR-024** to add E19-1 to T1's Definition of Done). Read every "ADR-021 (Proposed)" / GAP-6 reference below as **ADR-021 (Accepted → Superseded-by-ADR-022); the gate now lives in ADR-022 §4/§5 track T1**. The §2 GAP table and §1 Gate-A/B rows remain the correct *criteria* — only their *home document* moved.
+  - **D4 — DEFER the full Gate A2/A3/A4/A5 pass-criteria definition to post-T1 (advisory for now).** The maintainer's decision (2026-06-25): the precise *pass thresholds* for A2 (Medium-ledger completeness), A3 (durability — mutants/proptest/fuzz), A4 (`cargo deny`/`cargo audit` wiring) and A5 (KC-4 cert-overhead numeric budget) are **deferred to post-T1**; they remain **advisory** until then. The GAP-2 ledger subsection below stands as the (draft) A2 evidence; nothing here ratifies a gate (ADR-022 §5 + the maintainer sign-off do).
+  - **D8 — DEFER Theme-A verification to post-T1.** The VSA/numerics confirmatory probes — the in-repo **performance benchmark** (no Mycelium-native benchmark yet; perf figures stay `Declared` until measured, VR-5), the single Liquid-Haskell **`bundle` capacity-refinement** probe (KC-1), and the **≥100-vector measured resonator corpus** — are **deferred post-T1**. They are confirmatory (they gate only *upgrading* a `Declared`/axiomatized-citation tag to `Empirical`/`Proven`), not correctness blockers; recorded here so the deferral is explicit, never silent (G2).
 - **2026-06-21 — Draft.** Planning capture of the remaining gaps to a 1.0.0 kernel/core release,
   grounded in ADR-021 (Proposed, 2026-06-21) and the deep-review remediation roadmap
   (WS1–WS9 status, 2026-06-15). Identifies six gaps (GAP-1 through GAP-6), orders them by
   dependency and priority, partitions into three parallel tracks, and recommends three immediate
   actions. Records that Gate A1 and Gate B2 are met; B1 is likely met pending maintainer
   confirmation. Decides nothing normatively.
+
+---
+
+## GAP-2 Medium-Findings Ledger (draft, 2026-06-24)
+
+> **Posture (honesty rule / VR-5).** This is a **DRAFT verification ledger** for ADR-021 **Gate A2**
+> (GAP-2, §2 above), produced by an agent re-grounding the prior disposition record
+> (`docs/reviews/2026-06-14-deep-review/06-medium-findings-ledger.md`, M-653, 2026-06-21) against the
+> **live tree** (`origin/main` tip `db4a6be`). It **does not ratify the gate** — Gate A2 requires the
+> maintainer's sign-off (ADR-021 §6). Append-only: this records a new verification pass; it rewrites
+> no prior prose and re-grades nothing upward. Full per-finding evidence (greps, `file:line`, test
+> runs) is archived in `docs/handoffs/gap-2-ledger-context.md`.
+
+**Scope.** The 25 open Medium finding-ids listed in §2 GAP-2 (WS2–WS6), matching the M-653 ledger.
+Each was re-located in the current tree by its cited test/variant/marker name; a representative
+subset (one per workstream with a Rust target) was **executed green** (not merely confirmed present).
+
+**Verdicts (each FIXED; grounding cited per-row in the handoff):**
+
+| WS | Findings | Verdict | Note |
+|---|---|---|---|
+| WS2 | A1-04, A1-05, A6-03, A6-06, A6-08, A6-09 | FIXED ×6 | A6-03 is the M-653-landed wire-spelling pin (executed: pass). |
+| WS3 | A3-04, A3-05, A3-06/C1-04, A3-07, A3-08, A3-09, A3-10 | FIXED ×7 | A3-05 is an honest comment-reconciliation (Haskell/z3 absent locally → `Declared` here, README is the checkable artifact). A3-08/A3-10 are documented scope notes, not new behavioral tests. A3-06 is *qualified, not upgraded*. |
+| WS4 | A4-03, A4-04, reject-corpus | FIXED ×3 | reject-corpus integrity is the M-653-landed bidirectional test. |
+| WS5 | A5-02, A5-03, A5-05, A5-06, A5-07, A5-08 | FIXED ×6 | **A5-08 citation FLAG:** the M-653 ledger cites `mycelium-dense/lib.rs::bits_per_element(Tl2)`, but the fix actually lives in `mycelium-select::packing_bits_per_element` + `mycelium-mlir/pack.rs`. Fix is present; the *citation* needs correcting. |
+| WS6 | A6-05, A6-10/B2-04, A6-11 | FIXED ×3 | A6-11 is structural (xtask runner, no unit surface). |
+
+**Tally: 25 finding-ids · 25 FIXED · 0 DEFERRED · 0 N-A · 0 verdict-flags.** One non-verdict
+**citation flag** (A5-08, above) for the maintainer to correct in the record. Subject to maintainer
+ratification, Gate A2 is supportable on verified evidence.
+
+### Changelog (this subsection)
+
+- **2026-06-24 — Draft ledger appended.** GAP-2 Gate-A2 verification pass: re-grounded all 25 open
+  Mediums against the live tree, executed a representative subset green, recorded one citation flag
+  (A5-08). Draft — pending maintainer sign-off. Evidence: `docs/handoffs/gap-2-ledger-context.md`.
