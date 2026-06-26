@@ -8,6 +8,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: DN-39 — KC-3 kernel-promotion review (trusted core stays unchanged))
+
+- **DN-39 — Kernel-Promotion Review (KC-3 trusted-core audit)**
+  (`docs/notes/DN-39-Kernel-Promotion-Review-KC3.md`, **Draft/advisory**) — captures the
+  maintainer-commissioned review: should any non-kernel functionality become a trusted-core component?
+  **Recommendation: NO — zero promotions; the kernel boundary stays UNCHANGED**, KC-3 held on merit. The
+  one candidate (spore `content_address`) is a decisive KEEP-OUT (verifiable ⇒ must be verified, not
+  trusted). Records the **security finding** the review surfaced — the `v0` content-address injectivity
+  flaw (supply-chain substitution vector), now **`Proven`-and-FIXED** in PR #617 — and the generalizable
+  principle: *a deterministic encoding is the most testable artifact in the system, so it is the last
+  thing that should be axiomatized into the kernel* (VR-5 applied to the trust boundary). Enacts nothing;
+  awaiting ratification.
+
 ### Added (2026-06-26: DN-35 Phase-1a foundation — honest baseline + Binary[64] HTTPS example)
 
 - **`docs/measurements/DN-35-baseline-2026-06-26.md`** — the release-honest "before" baseline for the
@@ -20,7 +33,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `Binary[64]` general programming + a small HTTPS downloader with named security practice (TLS-verify
   on + non-disableable, HTTPS-only, bounded streamed reads, secrets-from-env, never-silent
   `?`-propagation, integrity + size check, mandatory finite timeout/budget). Labeled **non-runnable**
-  (design phase); uses the DN-31 **accepted-but-not-landed** target surface (`[]`/`=>`/`Binary[64]`),
+  (design phase); uses the DN-31 **recorded-direction (Draft), not-yet-landed** target surface (`[]`/`=>`/`Binary[64]`),
   flagged in-header — it previews the surface and rides epic #27 to become parseable.
 - Phase-1a's lexicon docs-sweep correctly returned **zero edits** (G2/VR-5): the surface lexicon is
   Accepted *direction* but unlanded, and DN-31 mandates a coordinated all-at-once grammar wave (epic

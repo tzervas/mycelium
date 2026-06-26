@@ -6,9 +6,10 @@
 // @summary: ILLUSTRATIVE design-phase example. Conventional general-purpose programming over
 //   Binary[64] (arithmetic, sum types, pattern match, never-silent Option/Result) plus a small
 //   HTTPS artifact downloader written with decent security practice (TLS verify ON, HTTPS-only,
-//   bounded/streamed reads, no in-source secrets, never-silent ?-propagation, integrity + size
-//   check, timeout budget). Mycelium CANNOT execute yet (design phase) — this is illustrative
-//   source, NOT runnable. Surface follows the DN-31 ACCEPTED delimiter direction: `[]` for type
+//   bounded/streamed reads, no in-source secrets, never-silent `and_then`/bind-propagation, integrity
+//   + size check, timeout budget). Mycelium CANNOT execute yet (design phase) — this is illustrative
+//   source, NOT runnable. Surface follows the DN-31 delimiter *direction* (recorded in DN-31, status
+//   **Draft/advisory** — not an enactment; the binding act is the grammar-supersession epic #27): `[]` for type
 //   args & sized/repr types (Binary[64]), `=>` as the return arrow, `<>` freed for operators.
 //   That direction is decided but NOT yet landed in the parser (the conformance corpus still uses
 //   `{N}`/`<A>`/`->`); see the caveat. Guarantee posture is per-op and honest: Exact only for
@@ -93,7 +94,7 @@ fn sum_readings(rs: Readings) => Result[Binary[64], ArithError] =
 //   (S-3) Bounded, streamed reads — a hard byte cap, no unbounded buffer.
 //   (S-4) No secrets in source — credentials come from the effect/env, not
 //         literals.
-//   (S-5) Never-silent error handling — every fallible step is ?-propagated as a
+//   (S-5) Never-silent error handling — every fallible step is `and_then`/bind-propagated as a
 //         Result; nothing fails silently.
 //   (S-6) Integrity + size check on the downloaded artifact (expected length +
 //         BLAKE3 content hash).
@@ -191,7 +192,7 @@ fn tls_connect(url: Url, tls: TlsPolicy, budget: Budget)
 // never-silent checked arithmetic and a HARD cap. It never allocates an unbounded
 // buffer: the moment the running total would exceed max_bytes it aborts with
 // TooLarge (S-3). The time budget bounds the whole loop (S-7). Every chunk read
-// is ?-propagated (S-5).
+// is `and_then`/bind-propagated (S-5).
 //
 // Guarantee: Declared (an effectful streaming contract; the cap predicate is a
 // stated rule, the timeout is delegated).

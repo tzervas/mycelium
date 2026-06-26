@@ -42,9 +42,10 @@ Guarantee tags are **per-operation** and never upgraded past their basis:
 
 No operation claims `Proven` (that would need a theorem with checked side-conditions).
 
-## Caveat — surface syntax is the DN-31 *accepted-but-not-yet-landed* direction
+## Caveat — surface syntax is the DN-31 *recorded direction (Draft), not yet landed*
 
-The example is written in the **DN-31 delimiter direction** (Accepted, recorded; epic still open):
+The example is written in the **DN-31 delimiter direction** (recorded in DN-31, status **Draft/advisory** —
+not an enactment; the binding act is the grammar-supersession epic #27, still open):
 `[]` for type args and sized/repr types (`Binary[64]`, `Result[A, E]`, `Option[A]`), `=>` as the
 return arrow, and `<>` freed for operators. **This is not yet the landed grammar.** The
 parser-verified conformance corpus (`docs/spec/grammar/conformance/`) and the self-hosted std
