@@ -41,3 +41,5 @@ The make-or-break experiment (T0.2 / KC-1) is **favorable on the literature**: p
 
 ## Grounding
 T0.1 (a–d), T0.2; survey Area 5; RFC-0001 §4.7 / guarantee lattice.
+
+> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The bound kernels / certificate-checking here are invoked **at the active certification mode (`certified`)**; the `fast` (default) and `balanced` relaxations are governed by **RFC-0034** (the mode is never silent — G2). The kernels are **unchanged**. See **ADR-032**, which supersedes the *unconditional* reading.

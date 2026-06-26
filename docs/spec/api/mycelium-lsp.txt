@@ -79,6 +79,8 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::completions::Complet
 pub const mycelium_lsp::completions::KEYWORD_COMPLETIONS: &[mycelium_lsp::completions::CompletionItem]
 pub const mycelium_lsp::completions::SNIPPET_COMPLETIONS: &[mycelium_lsp::completions::CompletionItem]
 pub fn mycelium_lsp::completions::completion_list() -> serde_json::value::Value
+pub mod mycelium_lsp::definition
+pub fn mycelium_lsp::definition::definition(&str, &str, u32, u32) -> serde_json::value::Value
 pub mod mycelium_lsp::diagnostics
 pub mod mycelium_lsp::diagnostics::audit
 pub struct mycelium_lsp::diagnostics::audit::AuditView
@@ -1028,6 +1030,8 @@ pub fn mycelium_lsp::feedback::analyze(&mycelium_core::node::Node) -> mycelium_l
 pub fn mycelium_lsp::feedback::analyze_with(&mycelium_core::node::Node, &mycelium_select::PolicyRegistry) -> mycelium_lsp::feedback::Feedback
 pub mod mycelium_lsp::fmt
 pub fn mycelium_lsp::fmt::format(&mycelium_core::node::Node) -> alloc::string::String
+pub mod mycelium_lsp::hover
+pub fn mycelium_lsp::hover::hover(&str, u32, u32) -> serde_json::value::Value
 pub mod mycelium_lsp::lint
 pub enum mycelium_lsp::lint::Severity
 pub mycelium_lsp::lint::Severity::Error
@@ -1314,6 +1318,10 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_lsp::recover::effect::Und
 pub fn mycelium_lsp::recover::check_effects(&mycelium_lsp::recover::effect::EffectSet, &mycelium_lsp::recover::effect::EffectSet) -> core::result::Result<(), mycelium_lsp::recover::effect::UndeclaredEffect>
 pub fn mycelium_lsp::recover::handle(mycelium_lsp::recover::Outcome, &mycelium_lsp::recover::policy::RecoveryPolicy, &mut mycelium_interp::budget::Budgets, impl core::ops::function::FnMut() -> mycelium_lsp::recover::Outcome) -> mycelium_lsp::recover::Resolution
 pub type mycelium_lsp::recover::EffectSet = alloc::collections::btree::set::BTreeSet<mycelium_interp::budget::EffectKind>
+pub mod mycelium_lsp::semantic
+pub const mycelium_lsp::semantic::TOKEN_TYPES: &[&str]
+pub fn mycelium_lsp::semantic::semantic_tokens_full(&str) -> serde_json::value::Value
+pub fn mycelium_lsp::semantic::semantic_tokens_legend() -> serde_json::value::Value
 pub mod mycelium_lsp::sync
 pub struct mycelium_lsp::sync::DocumentStore
 impl mycelium_lsp::sync::DocumentStore
@@ -1972,11 +1980,13 @@ pub const mycelium_lsp::DEPTH_LIMIT: usize
 pub const mycelium_lsp::KEYWORD_COMPLETIONS: &[mycelium_lsp::completions::CompletionItem]
 pub const mycelium_lsp::RESILIENT_MAX_ATTEMPTS: u64
 pub const mycelium_lsp::SNIPPET_COMPLETIONS: &[mycelium_lsp::completions::CompletionItem]
+pub const mycelium_lsp::TOKEN_TYPES: &[&str]
 pub fn mycelium_lsp::analyze(&mycelium_core::node::Node) -> mycelium_lsp::feedback::Feedback
 pub fn mycelium_lsp::analyze_with(&mycelium_core::node::Node, &mycelium_select::PolicyRegistry) -> mycelium_lsp::feedback::Feedback
 pub fn mycelium_lsp::baseline_for_class(&str) -> mycelium_lsp::baseline::BaselineRule
 pub fn mycelium_lsp::check_effects(&mycelium_lsp::recover::effect::EffectSet, &mycelium_lsp::recover::effect::EffectSet) -> core::result::Result<(), mycelium_lsp::recover::effect::UndeclaredEffect>
 pub fn mycelium_lsp::completion_list() -> serde_json::value::Value
+pub fn mycelium_lsp::definition(&str, &str, u32, u32) -> serde_json::value::Value
 pub fn mycelium_lsp::derive_baseline(&mycelium_lsp::diagnostics::registry::ClassRegistry) -> mycelium_lsp::diagnostics::policy::DiagnosticPolicy
 pub fn mycelium_lsp::derive_baseline_for(&mycelium_lsp::diagnostics::registry::ClassRegistry, &[&str]) -> core::result::Result<mycelium_lsp::diagnostics::policy::DiagnosticPolicy, mycelium_lsp::diagnostics::registry::UnknownClass>
 pub fn mycelium_lsp::expand_ambient(&str) -> core::result::Result<alloc::string::String, alloc::string::String>
@@ -1984,6 +1994,7 @@ pub fn mycelium_lsp::explain_baseline(&mycelium_lsp::diagnostics::registry::Clas
 pub fn mycelium_lsp::format(&mycelium_core::node::Node) -> alloc::string::String
 pub fn mycelium_lsp::handle(mycelium_lsp::recover::Outcome, &mycelium_lsp::recover::policy::RecoveryPolicy, &mut mycelium_interp::budget::Budgets, impl core::ops::function::FnMut() -> mycelium_lsp::recover::Outcome) -> mycelium_lsp::recover::Resolution
 pub fn mycelium_lsp::has_errors(&[mycelium_lsp::lint::Diagnostic]) -> bool
+pub fn mycelium_lsp::hover(&str, u32, u32) -> serde_json::value::Value
 pub fn mycelium_lsp::lint(&mycelium_core::node::Node) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
 pub fn mycelium_lsp::lint_nodule_header(&str) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
 pub fn mycelium_lsp::lint_structured_header(&str) -> alloc::vec::Vec<mycelium_lsp::lint::Diagnostic>
@@ -1995,6 +2006,8 @@ pub fn mycelium_lsp::read_message<R: std::io::BufRead>(&mut R) -> std::io::error
 pub fn mycelium_lsp::recovery_profile(mycelium_lsp::baseline::RecoveryProfile, &mycelium_lsp::diagnostics::registry::ClassRegistry, &[&str]) -> core::result::Result<mycelium_lsp::recover::policy::RecoveryPolicy, mycelium_lsp::diagnostics::registry::UnknownClass>
 pub fn mycelium_lsp::resilient_publish_for_source(&str, &str) -> serde_json::value::Value
 pub fn mycelium_lsp::resilient_source_diagnostics(&str) -> alloc::vec::Vec<serde_json::value::Value>
+pub fn mycelium_lsp::semantic_tokens_full(&str) -> serde_json::value::Value
+pub fn mycelium_lsp::semantic_tokens_legend() -> serde_json::value::Value
 pub fn mycelium_lsp::serve<R: std::io::BufRead, W: std::io::Write>(&mut R, &mut W) -> std::io::error::Result<()>
 pub fn mycelium_lsp::serve_stdio() -> std::io::error::Result<()>
 pub fn mycelium_lsp::source_diagnostics(&str) -> alloc::vec::Vec<serde_json::value::Value>

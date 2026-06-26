@@ -50,3 +50,5 @@ Consumes RFC-0001 `Swap`, `Meta.{guarantee,bound,policy_used}`, the lattice, con
 
 ## 7. Residual
 Mechanically checking the *derivations* of lossy-swap bounds end-to-end (vs. axiomatizing cited theorems) is future work; the accepted path axiomatizes theorem statements (tag `Proven`, proof = citation) and checks only the arithmetic instantiation (per ADR-010).
+
+> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The per-swap certificate emission/checking mandated here applies **at the active certification mode (`certified`)**; the `fast` (default) and `balanced` relaxations are governed by **RFC-0034**, and the swap stays **never silent** in every mode (G2 — mode-tagged + `EXPLAIN`-able). The certificate machinery is **unchanged**. See **ADR-032**, which supersedes the *unconditional* reading.

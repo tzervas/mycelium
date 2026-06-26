@@ -112,3 +112,5 @@ measurement-driven decision).
   dispatch table this ADR defines (the prototype's closed-program call boundary is the call ABI
   restricted to nullary units; the args-carrying value boundary lands with the MLIR→LLVM backend —
   honest deferral, VR-5). Append-only.
+
+> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The ABI dispatch keys are **compile-time** content hashes and **remain available with the runtime certification mode off** (`fast`) — RFC-0034 §8. The ABI mechanism is **unchanged**. See **ADR-032**.

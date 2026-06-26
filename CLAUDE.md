@@ -11,8 +11,7 @@ docs: @README.md, @CONTRIBUTING.md, @docs/Doc-Index.md. This file is the short, 
 distillation; `CONTRIBUTING.md` wins on any conflict.
 
 ## What this repo is
-Mycelium is a unified value-semantics substrate (binary/ternary/dense/VSA) with **certified,
-never-silent** representation swaps and **honest, per-operation guarantees**. It is in the
+Mycelium is a fast, memory-safe, ergonomic multi-paradigm value-semantics language (binary/ternary/dense/VSA) whose **transparent, never-silent** representation swaps and **per-operation provenance/auditability** are baked in as **optional, tunable** capabilities (`fast` default · `certified` on request — RFC-0034/ADR-032). It is in the
 **design phase**: the corpus in `docs/` is the product right now; code lands per the phase plan
 (see `tools/github/issues.yaml` and the `M-xxx`/`E*` task ids).
 
@@ -30,10 +29,10 @@ are ratified names not yet lexed. Full reference
 canonical definitions: `docs/Glossary.md` + DN-02/03/06.
 
 ## Non-negotiable house rules
-1. **The honesty rule.** Every accuracy/guarantee claim is tagged per-model/per-op on the
+1. **The transparency rule** *(reframed from "the honesty rule" by ADR-032; mechanism unchanged)*. Every accuracy/guarantee claim is tagged per-model/per-op on the
    lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`. `Proven` is allowed **only** with a theorem
    whose side-conditions are *checked*; otherwise `Empirical` (trials) or `Declared` (asserted,
-   always flagged). Downgrade to stay honest; never upgrade without a checked basis (VR-5).
+   always flagged). Downgrade to stay accurate; never upgrade without a checked basis (VR-5).
 2. **No black boxes.** Selections/conversions/approximations are reified, inspectable, and
    `EXPLAIN`-able. A swap is **never silent**; out-of-range is an explicit `Option`/error.
 3. **Append-only decisions.** ADR/RFC/DN status moves forward only
@@ -42,14 +41,21 @@ canonical definitions: `docs/Glossary.md` + DN-02/03/06.
    maintenance and future-dev integration; it **must step through `Accepted`** first (never skip
    straight to Enacted). To change an Accepted/Enacted decision, **supersede** it — don't rewrite
    history.
-4. **Ground every claim.** Normative statements cite their basis (`G1–G11`, tensions `A–E`,
-   `R1–R8`, `T0.x–T2.x`) or are marked open questions. No ungrounded "facts".
+4. **Ground every claim — including agreement.** Normative statements cite their basis (`G1–G11`,
+   tensions `A–E`, `R1–R8`, `T0.x–T2.x`) or are marked open questions. No ungrounded "facts".
+   **The same rule binds assent: agree only on merit, never to please.** An affirmation *is* a claim —
+   tag its strength (checked/`Proven` vs plausible/`Empirical` vs asserted/`Declared`) and surface the
+   disconfirming evidence **even when it cuts against the maintainer's stated direction**. **Sycophancy
+   is a defect, ranked with an ungrounded claim.** The maintainer's standing preference is explicit:
+   *be corrected over being wrongly affirmed — follow the evidence, not the speaker.* Say "I don't
+   know" / "this is unproven" plainly; flag confidence; never soften a real disagreement into
+   agreement. This is **VR-5 applied to agreement: don't upgrade assent past its basis.**
 5. **Small, auditable kernel** (KC-3). SOLID · DRY · KISS · YAGNI · Law of Demeter · SoC;
    composition over inheritance.
 6. **User stories + Definition of Done; MIT-only.** Every epic/issue carries explicit **user stories**
    (`As a <role>, I want <X>, so that <Y>` — realistic use cases + the problems to resolve) **and** an
    explicit **Definition of Done**; every ADR/RFC/DN carries a Definition of Done (its gate/criteria —
-   a corollary of rule 1: you can't honestly claim "done" without stating what done means). The project
+   a corollary of rule 1: you can't claim "done" without stating what done means). The project
    is **MIT-licensed only** — no Apache/dual-license on first-party artifacts (CONTRIBUTING §Licensing;
    ADR-022 §7).
 
@@ -78,13 +84,28 @@ fallback): `just test-fast` is the sub-second pre-commit loop (scoped crates' un
 only); **`just check` stays the default and the CI entrypoint** (`just ci` = `just check`) —
 change-scoped crates **+ their reverse-dependents**, all targets + proptest at LOW cases + every
 always-on non-test gate; `just check-full` is the release/nightly durability gate (full workspace,
-HIGH proptest cases, `cargo-mutants` + `cargo-fuzz` smoke). **Honesty (VR-5):** no property/bound
+HIGH proptest cases, `cargo-mutants` + `cargo-fuzz` smoke). **Transparency (VR-5):** no property/bound
 test is dropped — only its *case count* is tiered (low every commit, full on release); the
 change-scoping only ever *widens* to `--workspace` (over-test, never under-test), and `check-full`
 always runs everything.
 
 Checks **skip gracefully** when a tool or language isn't present yet (most code doesn't exist
 yet). Never hand off a red `just check` without explaining the skip.
+
+## Test layout — no tests in logic files (in-crate `src/tests/`)
+**Logic files carry no test code.** Every `#[cfg(test)]` unit test lives in a dedicated **in-crate**
+test module, not inline in the `.rs` it tests: `#[cfg(test)] mod tests;` in `lib.rs` → `src/tests/`
+(a `mod.rs` declaring one submodule per source module, e.g. `src/tests/cert_mode.rs`), each doing
+`use crate::…::*` for **white-box access to private items** (precedent: `mycelium-std-recover/src/tests.rs`).
+This keeps logic files clean **without** the black-box coverage loss of fully-external `tests/` (which would
+force internals `pub`). Integration/behavioural tests that only need the public API still go in `tests/`.
+**Complex test logic lives in fixtures + parameterization, not in test bodies** — data-driven cases
+(corpus tables, `CertMode::ALL`-style parameterization, the conformance `REJECT_EXPECTED` pattern,
+`differential.rs::data_corpus()`), so a test body is *assert over a case*, not bespoke logic.
+**Enforced going-forward, retrofit lazily** (maintainer's chosen rollout): new/changed code complies
+immediately, and **when you modify a logic file that still has inline tests, extract them as part of that
+change** (as-touched — no big-bang refactor; the codebase stays mixed until the lazy sweep completes,
+which is accepted). The remaining inline-test retrofit (~185 files) is tracked as **M-797**.
 
 ## Remote CI policy
 **No automatic remote CI.** `.github/workflows/checks.yml` is **manual-dispatch only**
@@ -102,7 +123,7 @@ not add `on: push` / `on: pull_request` auto-triggers without an explicit decisi
 - **Tiered branches (`dev → integration → main`) — `main` is never touched directly.** Day-to-day
   work branches off **`dev`** (the working tier — messy OK: WIP, exploration, octopus/swarm merges;
   only *compiles + change-scoped tests* required), promotes via PR to **`integration`** (the staging
-  tier — the full `just check` green + the honesty/append-only review, shared files reconciled once),
+  tier — the full `just check` green + the transparency/append-only review, shared files reconciled once),
   and `integration → main` is the polished, **squash-only release** (PR-gated by `/pr-review` + a
   Copilot round). Each tier is PR-gated and **more stringent than the last**; `main`/`integration`/
   `dev` are persistent + protected (no direct push), everything below `dev` is ephemeral and merges
@@ -154,7 +175,7 @@ The discipline:
    pushes the scaffold** so every agent branches from a *buildable* base and never needs to edit
    shared wiring.
 4. **One agent per task, isolated worktree.** Launch each on its own git worktree branch
-   (`isolation: "worktree"`), in parallel. Each follows `/dev-workflow`, ships its honest
+   (`isolation: "worktree"`), in parallel. Each follows `/dev-workflow`, ships its
    guarantee tags + tests, runs `cargo fmt`/`clippy -D warnings`/`test -p <crate>` green, commits
    to its worktree branch (does **not** push), and reports its branch + SHA + any FLAGs. An agent
    that hits ambiguity **flags it**, it does not guess (G2/VR-5 apply to agents too).
@@ -162,15 +183,15 @@ The discipline:
    directories + a pre-finalized workspace manifest ⇒ the N-way merge is conflict-free. The
    orchestrator then makes the single integrating edits to the shared files (step 2), runs the
    **full** `just check`, fixes integration, and commits + pushes.
-6. **Honesty survives the swarm.** The orchestrator reviews each merged crate against the house
-   rules before the wave's changelog entry; tags stay at the honestly-supportable strength, and a
+6. **Transparency survives the swarm.** The orchestrator reviews each merged crate against the house
+   rules before the wave's changelog entry; tags stay at the supportable strength, and a
    spec moves to "implemented (Rust-first), pending ratification", never silently to `Accepted`.
 
 ## Fractal Swarm Development System
 The **recursive generalization** of the octopus-merge pattern above. That pattern is single-level
 (one orchestrator, N leaf agents); the fractal system **nests it**: an **Orchestrator** spawns
 **Epic Agents**, each of which spawns **Leaf Agents**. The collision-free invariants — disjoint
-work, parent-owned shared files, bottom-up octopus merges, honesty preserved through integration —
+work, parent-owned shared files, bottom-up octopus merges, transparency preserved through integration —
 hold **at every level**. Everything in the section above still applies; this section adds the
 **model modes, branch naming, multi-level ownership, merge flow, and reusable role prompts**.
 
@@ -242,7 +263,7 @@ follows the **branch convention**, and obeys the **file-ownership rule**.
 > `CHANGELOG.md`, `docs/Doc-Index.md`, `tools/github/*`, `docs/planning/phase-*.md`, shared
 > indices); epics treat these **read-only**. After epics report, **octopus-merge** their branches
 > into your branch, make the single integrating edits to your owned files, run the **full**
-> `just check`, fix integration, review every merged subtree for honesty/grounding/append-only,
+> `just check`, fix integration, review every merged subtree for transparency/grounding/append-only,
 > update the changelog (append-only; specs → "implemented, pending ratification", never silently
 > `Accepted`), commit, and merge up to `main`. Pass the resolved model explicitly to each spawn.
 
@@ -255,7 +276,7 @@ follows the **branch convention**, and obeys the **file-ownership rule**.
 > `claude/leaf/<EPIC>-<LEAF>-…`. You **own every file shared across your leaves**; leaves treat
 > these **read-only**, and you treat **Orchestrator-owned files read-only** (FLAG up, don't edit).
 > After leaves report, **octopus-merge** them into your epic branch, integrate your owned files, run
-> the epic's checks green, review for honesty/grounding, and report your **branch + SHA + FLAGs** up
+> the epic's checks green, review for transparency/grounding, and report your **branch + SHA + FLAGs** up
 > to the Orchestrator. Do **not** push to `main`. Flag ambiguity; never guess (G2/VR-5).
 
 **Leaf Agent Role**
@@ -263,7 +284,7 @@ follows the **branch convention**, and obeys the **file-ownership rule**.
 > mode's model (Sonnet default · Haiku · Opus). Branch from your **Epic** branch as
 > `claude/leaf/<EPIC>-<LEAF>-<kebab-description>`, in an isolated worktree. Edit **only your disjoint
 > directory**; treat all **Epic- and Orchestrator-owned files as read-only** (if you need a change
-> there, **FLAG it up**, don't edit it). Follow `/dev-workflow`: small auditable steps, honest
+> there, **FLAG it up**, don't edit it). Follow `/dev-workflow`: small auditable steps,
 > per-op guarantee tags, a property test for every bound, never-silent fallibility (`Option`/
 > `Result`), `EXPLAIN`-able selections. Run `cargo fmt` / `clippy -D warnings` / `test -p <crate>`
 > green. Commit to your leaf branch (do **not** push); report your **branch + SHA + any FLAGs** to
@@ -342,16 +363,16 @@ success regardless. The gap is invisible unless you count the result.
 
 The merge gate is the agent's, not a human's. A parent (orchestrator/epic) **merges its children
 up the tree itself** once the work is clean — but only after the discipline below. This makes the
-swarm self-driving while keeping honesty and history intact. (A maintainer may still override; if
+swarm self-driving while keeping transparency and history intact. (A maintainer may still override; if
 asked to wait, wait.)
 
 1. **Self-review before every merge.** Before merging anything (leaf→epic, epic→orch, orch→`main`,
-   or a PR→`main`), run the `/pr-review` lens on the diff yourself: the honesty rule (per-op tags
+   or a PR→`main`), run the `/pr-review` lens on the diff yourself: the transparency rule (per-op tags
    never upgraded without a checked basis), append-only decisions, grounding, never-silent G2, and
    a hallucination/consistency pass. Fix what you find or stop and flag it — never merge past a
    Critical/High you can't resolve.
 2. **Handle every CI / bot review comment first.** For each review comment (Copilot, CI failure,
-   a human note): investigate, then **fix if you're confident and it's small**, **defer honestly**
+   a human note): investigate, then **fix if you're confident and it's small**, **defer**
    if the fix would be fragile or large (keep an explicit refusal + a clear message + a spec-§ note,
    never ship fragile/incorrect output to satisfy a comment — G2/VR-5), or **ask** (`AskUserQuestion`)
    if it's ambiguous or architecturally significant. Reply once, frugally; the diff is the record.
@@ -391,7 +412,7 @@ asked to wait, wait.)
    rejected (non-fast-forward) is a never-silent signal to *reconcile*, not a problem to overwrite. When
    local work is in the way of pulling history together, the mechanism is **`git stash` → reconcile
    (merge `main` in — rebase only if the branch is still local-only) → `git stash pop` → deconflict** → a
-   plain push: it *keeps* your work and resolves the divergence honestly, where a force would have
+   plain push: it *keeps* your work and resolves the divergence, where a force would have
    silently discarded the other side. Stashing-and-deconflicting is always preferable to a force-push —
    there is no divergence a force fixes that a merge (+ stash-pop) cannot fix without losing history.
    Keep the per-session working branch a *clean pointer at `main`*: do the
@@ -426,12 +447,12 @@ file ownership** — one **protected head branch** each — stowed as kickoffs i
 - **Cross-session continuity rides the issues** (`issues.yaml` `depends_on` + body notes), never by
   touching another session's files. Heads complete + self-integrate first; a final integration
   octopus-merges the heads, reconciles shared files once, and squash-PRs to `main`.
-- Honesty/append-only survive the split (VR-5/G2) exactly as in the single-session swarm.
+- Transparency/append-only survive the split (VR-5/G2) exactly as in the single-session swarm.
 
 ## Skills (`.claude/skills/`)
 Invoke with `/<name>`; they auto-engage when relevant.
 - **`/dev-workflow`** — the implementation discipline above, as a working loop.
-- **`/pr-review`** — opinionated PR/diff review (honesty rule, grounding, append-only,
+- **`/pr-review`** — opinionated PR/diff review (transparency rule, grounding, append-only,
   hallucination pass). Adaptive depth (T0/T1/T2) + `--all` exhaustive mode.
 - **`/security-review`** — secrets, supply-chain, shell/CI safety; auto-light on docs-only.
 - **`/docs-review`** — cross-refs, notation, grounding labels, status/changelog discipline.
@@ -457,7 +478,7 @@ report format). Posture is **advisory** — they recommend, they don't gate.
 - `index.json` — machine-readable symbol table (crate, file:line, summary, guarantee_tag)
 - `INDEX.md` — grep-friendly table for agent context lookups, grouped by crate
 
-**Honesty:** the index is an `Empirical/Declared` line/regex heuristic — source is ground truth.
+**Transparency:** the index is an `Empirical/Declared` line/regex heuristic — source is ground truth.
 Use the index to find where to `Read`, not as an authoritative reference. Re-exports,
 macro-generated items, and cfg-gated items appear in the `flagged` section (G2: never silently dropped).
 

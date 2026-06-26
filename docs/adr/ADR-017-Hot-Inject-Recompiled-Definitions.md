@@ -106,3 +106,5 @@ honest deferral, not a shipped capability.
   reachability; and the injected-compiled path is checked observationally equivalent to the
   interpreter through the M-210 checker (NFR-7). Cross-process / native units stay deferred
   (MLIR→LLVM; §10 OQ-3) — honest scope, VR-5. Append-only.
+
+> **Footnote — tunable certification (RFC-0034 / ADR-032, 2026-06-24; append-only).** The hot-inject dispatch keys are **compile-time** content hashes and **remain available with the runtime certification mode off** (`fast`) — RFC-0034 §8. The inject mechanism is **unchanged**. See **ADR-032**.

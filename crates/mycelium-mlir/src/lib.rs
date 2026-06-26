@@ -51,6 +51,7 @@ pub mod inject;
 pub mod jit;
 pub mod llvm;
 pub mod pack;
+pub mod rc_plan;
 pub mod runtime;
 pub mod simd;
 pub mod specialize;
@@ -79,6 +80,7 @@ pub use inject::{recompile_closure, Image, InjectError, Resolution};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
 pub use pack::{needed_bytes as needed_bytes_for, pack_trits, relayout_trits, unpack_trits};
+pub use rc_plan::{emit_reclamation_plan, run_with_reclamation, RcPlanError, RcRun};
 pub use runtime::{
     run_colony, Colony, ColonyError, Deadlock, Poll, Scope, SweepOrder, Task, TaskCtx,
 };
@@ -90,3 +92,6 @@ pub use specialize::{
     compile_specialized_dot, emit_specialized_dot_ir, jit_specialized_dot, SpecializedDotKernel,
 };
 pub use vr4::{cross_backend_gate, Backend, BackendStage, CrossBackendGate, StageStatus};
+
+#[cfg(test)]
+mod tests;

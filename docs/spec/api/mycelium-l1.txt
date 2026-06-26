@@ -1156,6 +1156,7 @@ pub mycelium_l1::token::Tok::Caret
 pub mycelium_l1::token::Tok::Colon
 pub mycelium_l1::token::Tok::Colony
 pub mycelium_l1::token::Tok::Comma
+pub mycelium_l1::token::Tok::Consume
 pub mycelium_l1::token::Tok::Cyst
 pub mycelium_l1::token::Tok::Default
 pub mycelium_l1::token::Tok::Dense
@@ -1170,6 +1171,7 @@ pub mycelium_l1::token::Tok::For
 pub mycelium_l1::token::Tok::Forage
 pub mycelium_l1::token::Tok::Fuse
 pub mycelium_l1::token::Tok::Graft
+pub mycelium_l1::token::Tok::Grow
 pub mycelium_l1::token::Tok::Hypha
 pub mycelium_l1::token::Tok::Ident(alloc::string::String)
 pub mycelium_l1::token::Tok::If

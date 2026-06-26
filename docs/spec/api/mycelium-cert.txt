@@ -115,6 +115,49 @@ pub const mycelium_cert::dense_vsa::DENSE_VSA_EMP_TRIALS: u64
 pub const mycelium_cert::dense_vsa::DENSE_VSA_MODEL: &str
 pub fn mycelium_cert::dense_vsa::dense_to_vsa(&mycelium_core::value::Value, u32, f64, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
 pub fn mycelium_cert::dense_vsa::vsa_to_dense(&mycelium_core::value::Value, u32, f64, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
+pub mod mycelium_cert::mode
+pub struct mycelium_cert::mode::GatedSwap
+pub mycelium_cert::mode::GatedSwap::certificate: core::option::Option<mycelium_cert::SwapCertificate>
+pub mycelium_cert::mode::GatedSwap::check: core::option::Option<mycelium_cert::check::CheckVerdict>
+pub mycelium_cert::mode::GatedSwap::value: mycelium_core::value::Value
+impl mycelium_cert::mode::GatedSwap
+pub fn mycelium_cert::mode::GatedSwap::validated(&self) -> bool
+impl core::clone::Clone for mycelium_cert::mode::GatedSwap
+pub fn mycelium_cert::mode::GatedSwap::clone(&self) -> mycelium_cert::mode::GatedSwap
+impl core::cmp::PartialEq for mycelium_cert::mode::GatedSwap
+pub fn mycelium_cert::mode::GatedSwap::eq(&self, &mycelium_cert::mode::GatedSwap) -> bool
+impl core::fmt::Debug for mycelium_cert::mode::GatedSwap
+pub fn mycelium_cert::mode::GatedSwap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cert::mode::GatedSwap
+impl core::marker::Freeze for mycelium_cert::mode::GatedSwap
+impl core::marker::Send for mycelium_cert::mode::GatedSwap
+impl core::marker::Sync for mycelium_cert::mode::GatedSwap
+impl core::marker::Unpin for mycelium_cert::mode::GatedSwap
+impl core::marker::UnsafeUnpin for mycelium_cert::mode::GatedSwap
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::mode::GatedSwap
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::mode::GatedSwap
+pub struct mycelium_cert::mode::ModeGatedSwapEngine
+impl mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::mode(&self) -> mycelium_core::cert_mode::CertMode
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::new(mycelium_core::cert_mode::CertMode) -> Self
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::swap_gated(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_cert::mode::GatedSwap, mycelium_interp::EvalError>
+impl core::clone::Clone for mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::clone(&self) -> mycelium_cert::mode::ModeGatedSwapEngine
+impl core::default::Default for mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::default() -> Self
+impl core::fmt::Debug for mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cert::mode::ModeGatedSwapEngine
+impl mycelium_interp::swap::SwapEngine for mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+impl core::marker::Freeze for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::marker::Send for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::marker::Sync for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::marker::Unpin for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::marker::UnsafeUnpin for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::gate_swap(&mycelium_core::value::Value, mycelium_core::value::Value, mycelium_cert::SwapCertificate, mycelium_core::cert_mode::CertMode) -> core::result::Result<mycelium_cert::mode::GatedSwap, mycelium_cert::SwapError>
 pub enum mycelium_cert::CheckVerdict
 pub mycelium_cert::CheckVerdict::NotValidated
 pub mycelium_cert::CheckVerdict::NotValidated::fallback: mycelium_cert::check::Fallback
@@ -348,6 +391,47 @@ impl core::marker::Unpin for mycelium_cert::CertifiedSwapEngine
 impl core::marker::UnsafeUnpin for mycelium_cert::CertifiedSwapEngine
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::CertifiedSwapEngine
 impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::CertifiedSwapEngine
+pub struct mycelium_cert::GatedSwap
+pub mycelium_cert::GatedSwap::certificate: core::option::Option<mycelium_cert::SwapCertificate>
+pub mycelium_cert::GatedSwap::check: core::option::Option<mycelium_cert::check::CheckVerdict>
+pub mycelium_cert::GatedSwap::value: mycelium_core::value::Value
+impl mycelium_cert::mode::GatedSwap
+pub fn mycelium_cert::mode::GatedSwap::validated(&self) -> bool
+impl core::clone::Clone for mycelium_cert::mode::GatedSwap
+pub fn mycelium_cert::mode::GatedSwap::clone(&self) -> mycelium_cert::mode::GatedSwap
+impl core::cmp::PartialEq for mycelium_cert::mode::GatedSwap
+pub fn mycelium_cert::mode::GatedSwap::eq(&self, &mycelium_cert::mode::GatedSwap) -> bool
+impl core::fmt::Debug for mycelium_cert::mode::GatedSwap
+pub fn mycelium_cert::mode::GatedSwap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cert::mode::GatedSwap
+impl core::marker::Freeze for mycelium_cert::mode::GatedSwap
+impl core::marker::Send for mycelium_cert::mode::GatedSwap
+impl core::marker::Sync for mycelium_cert::mode::GatedSwap
+impl core::marker::Unpin for mycelium_cert::mode::GatedSwap
+impl core::marker::UnsafeUnpin for mycelium_cert::mode::GatedSwap
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::mode::GatedSwap
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::mode::GatedSwap
+pub struct mycelium_cert::ModeGatedSwapEngine
+impl mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::mode(&self) -> mycelium_core::cert_mode::CertMode
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::new(mycelium_core::cert_mode::CertMode) -> Self
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::swap_gated(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_cert::mode::GatedSwap, mycelium_interp::EvalError>
+impl core::clone::Clone for mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::clone(&self) -> mycelium_cert::mode::ModeGatedSwapEngine
+impl core::default::Default for mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::default() -> Self
+impl core::fmt::Debug for mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_cert::mode::ModeGatedSwapEngine
+impl mycelium_interp::swap::SwapEngine for mycelium_cert::mode::ModeGatedSwapEngine
+pub fn mycelium_cert::mode::ModeGatedSwapEngine::swap(&self, &mycelium_core::value::Value, &mycelium_core::repr::Repr, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
+impl core::marker::Freeze for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::marker::Send for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::marker::Sync for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::marker::Unpin for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::marker::UnsafeUnpin for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cert::mode::ModeGatedSwapEngine
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cert::mode::ModeGatedSwapEngine
 pub const mycelium_cert::BF16_MIN_NORMAL: f64
 pub const mycelium_cert::BF16_REL_EPS: f64
 pub const mycelium_cert::DENSE_VSA_DEFAULT_DELTA: f64
@@ -358,6 +442,7 @@ pub fn mycelium_cert::check(&mycelium_core::value::Value, &mycelium_core::value:
 pub fn mycelium_cert::check_core(&mycelium_core::datum::CoreValue, &mycelium_core::datum::CoreValue) -> mycelium_cert::check::CheckVerdict
 pub fn mycelium_cert::dense_f32_to_bf16(&mycelium_core::value::Value, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
 pub fn mycelium_cert::dense_to_vsa(&mycelium_core::value::Value, u32, f64, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
+pub fn mycelium_cert::gate_swap(&mycelium_core::value::Value, mycelium_core::value::Value, mycelium_cert::SwapCertificate, mycelium_core::cert_mode::CertMode) -> core::result::Result<mycelium_cert::mode::GatedSwap, mycelium_cert::SwapError>
 pub fn mycelium_cert::legal_pair(u32, u32) -> bool
 pub fn mycelium_cert::roundtrip_lemma_ref() -> mycelium_core::id::ContentHash
 pub fn mycelium_cert::ternary_to_binary(&mycelium_core::value::Value, u32, &mycelium_core::id::ContentHash) -> core::result::Result<(mycelium_core::value::Value, mycelium_cert::SwapCertificate), mycelium_cert::SwapError>
