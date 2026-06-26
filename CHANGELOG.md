@@ -8,6 +8,18 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-26: DN-35 ratified Draft → Accepted)
+
+- **DN-35 — Env-Machine Reclamation** ratified **Draft → Accepted** (maintainer). Accepts the §10 design
+  direction (static-decisions/dynamic-verification with a trusted core interpreting only
+  `incref`/`decref`/`is-unique`/`reuse-or-alloc`; drop-guided Frame-Limited reuse with the runtime
+  `is-unique` gate as the mandatory safety valve; the §5 content-address side-condition; the §6 RC ⊕
+  region exactly-once invariant; the `fast`/`certified` split) as the *design direction*. Accepted ratifies
+  the direction, **not** an implementation — enacts no code, upgrades no guarantee (prior-art results
+  `Proven`-at-source; the two Mycelium-specific obligations stay `Empirical`/`Declared` until prototyped +
+  property-tested; the §9 audit trail `Exact` count / `Declared` correspondence — VR-5). The build is the
+  forward epic (E12 Increment 3 / task #6), beginning at §9 Increment 1 behind the §2.3 oracle.
+
 ### Changed (2026-06-26: DN-38 ratified Draft → Accepted)
 
 - **DN-38 — The Layered-Lowering Atlas & Generative Sugar** ratified **Draft → Accepted** (maintainer).
