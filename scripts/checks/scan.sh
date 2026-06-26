@@ -15,12 +15,14 @@ section "advisory scanners (osv-scanner / cargo-geiger / cargo-hack) — opt-in,
 
 rc=0
 # osv-scanner (a Go binary) usually lands in the Go bin dir.
-export PATH="$PATH:$(go env GOPATH 2>/dev/null)/bin:${HOME}/go/bin"
+gopath="$(go env GOPATH 2>/dev/null)"
+export PATH="$PATH:${gopath}/bin:${HOME}/go/bin"
 
-# --- osv-scanner: supply-chain via OSV.dev ---
+# --- osv-scanner: supply-chain via OSV.dev (tuned by osv-scanner.toml — never-silent ignores) ---
+cfg=(); [[ -f osv-scanner.toml ]] && cfg=(--config=osv-scanner.toml)
 if command -v osv-scanner >/dev/null 2>&1; then
-  if osv-scanner --lockfile=Cargo.lock >/tmp/myc-osv.out 2>&1 \
-     || osv-scanner scan source --lockfile=Cargo.lock >/tmp/myc-osv.out 2>&1; then
+  if osv-scanner "${cfg[@]}" --lockfile=Cargo.lock >/tmp/myc-osv.out 2>&1 \
+     || osv-scanner scan source "${cfg[@]}" --lockfile=Cargo.lock >/tmp/myc-osv.out 2>&1; then
     ok "osv-scanner: no known vulnerabilities (OSV.dev) — $(grep -oE '[0-9]+ packages' /tmp/myc-osv.out | head -1)"
   else
     fail "osv-scanner: vulnerability findings — review and bump"; tail -20 /tmp/myc-osv.out | sed 's/^/    /'; rc=1
