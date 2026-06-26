@@ -10,4 +10,6 @@ mod meta;
 /// pattern. Used by `cert_mode` and `mode_tests`; available to any in-crate test module.
 pub(super) mod mode_harness;
 mod mode_tests;
+mod repr;
+mod value;
 mod wrapping;

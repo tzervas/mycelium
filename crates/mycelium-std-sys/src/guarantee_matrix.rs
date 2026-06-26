@@ -90,7 +90,16 @@ pub const MATRIX: &[MatrixRow] = &[
         op: "io::read_to_end",
         guarantee: GuaranteeTag::Declared,
         fallibility: Fallibility::Fallible,
-        error_set: "Err(io::Error) — OS read error (never a silent truncation, G2)",
+        error_set: "Err(io::Error) — OS read error (never a silent truncation, G2); \
+                    UNBOUNDED alloc (trusted-only — use read_to_end_capped for untrusted input)",
+        effects: "io",
+    },
+    MatrixRow {
+        op: "io::read_to_end_capped",
+        guarantee: GuaranteeTag::Declared,
+        fallibility: Fallibility::Fallible,
+        error_set: "Err(ReadCappedError) — OS read error / cap exceeded \
+                    (P3 bounded; refuses, never truncates, G2)",
         effects: "io",
     },
     MatrixRow {
@@ -322,6 +331,7 @@ mod tests {
     fn matrix_covers_every_floor_op_once() {
         let expected = [
             "io::read_to_end",
+            "io::read_to_end_capped",
             "io::read_line",
             "io::write_out",
             "io::write_err",

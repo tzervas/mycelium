@@ -138,12 +138,14 @@ pub struct Value {
 }
 
 impl Value {
-    /// Build a value, checking `repr.well_formed()` and that `payload` matches `repr`. (`meta` is
+    /// Build a value, checking [`Repr::check_well_formed`] (positivity, non-empty model, and the
+    /// [`crate::repr::MAX_DIM`] over-allocation cap) and that `payload` matches `repr`. (`meta` is
     /// already invariant-checked by [`Meta::new`].)
     pub fn new(repr: Repr, payload: Payload, meta: Meta) -> Result<Self, WfError> {
-        if !repr.well_formed() {
-            return Err(WfError::MalformedRepr);
-        }
+        // Never-silent well-formedness: rejects a non-positive dimension *and* (DN-40 §3) a declared
+        // dimension above `repr::MAX_DIM` before the payload is examined or any value materialized,
+        // with an error naming the offending field/value/cap (over-allocation / DoS guard).
+        repr.check_well_formed()?;
         if !payload_matches(&repr, &payload) {
             return Err(WfError::PayloadReprMismatch);
         }
@@ -207,51 +209,5 @@ impl<'de> Deserialize<'de> for Value {
         let w = ValueWire::deserialize(deserializer)?;
         // Re-check repr well-formedness and payload↔repr agreement: never silently accept (§4.8).
         Value::new(w.repr, w.payload, w.meta).map_err(serde::de::Error::custom)
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::meta::Provenance;
-
-    #[test]
-    fn well_matched_value_constructs() {
-        let v = Value::new(
-            Repr::Binary { width: 8 },
-            Payload::Bits(vec![true, false, true, true, false, false, true, false]),
-            Meta::exact(Provenance::Root),
-        );
-        assert!(v.is_ok());
-    }
-
-    #[test]
-    fn payload_length_must_match_repr() {
-        let v = Value::new(
-            Repr::Binary { width: 8 },
-            Payload::Bits(vec![true, false]), // wrong length
-            Meta::exact(Provenance::Root),
-        );
-        assert_eq!(v.unwrap_err(), WfError::PayloadReprMismatch);
-    }
-
-    #[test]
-    fn payload_paradigm_must_match_repr() {
-        let v = Value::new(
-            Repr::Binary { width: 1 },
-            Payload::Trits(vec![Trit::Pos]), // wrong paradigm
-            Meta::exact(Provenance::Root),
-        );
-        assert_eq!(v.unwrap_err(), WfError::PayloadReprMismatch);
-    }
-
-    #[test]
-    fn malformed_repr_rejected() {
-        let v = Value::new(
-            Repr::Binary { width: 0 },
-            Payload::Bits(vec![]),
-            Meta::exact(Provenance::Root),
-        );
-        assert_eq!(v.unwrap_err(), WfError::MalformedRepr);
     }
 }

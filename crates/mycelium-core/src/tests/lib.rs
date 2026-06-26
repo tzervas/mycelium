@@ -16,6 +16,14 @@ fn wf_error_display_is_non_empty_and_variant_specific() {
         (WfError::PayloadReprMismatch, "payload"),
         (WfError::MalformedReconstruction, "manifest"),
         (WfError::MalformedSparsity, "sparsity"),
+        (
+            WfError::DimensionTooLarge {
+                field: "dim",
+                value: 2_000_000_000,
+                cap: 1 << 30,
+            },
+            "exceeds",
+        ),
     ];
     let mut messages = Vec::new();
     for (variant, expected_fragment) in &variants {
