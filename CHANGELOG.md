@@ -8,6 +8,10 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: `just scan` — advisory in-env scanners beyond `just check`)
+
+- **`just scan` + `scripts/checks/scan.sh` + `just setup-scan`** — opt-in supplementary scanners (NOT part of `just check`), all self-hosted in-env with no CI runners: **osv-scanner** (supply-chain via OSV.dev — a working alternative to `cargo-audit`, whose RustSec git-fetch `403`s in this sandbox; OSV.dev is reachable over plain HTTPS, verified clean over 105 packages), **cargo-geiger** (`unsafe`-usage audit, ADR-014), **cargo-hack** (feature-powerset on `mycelium-mlir` — catches broken `mlir-dialect`/`bitnet-accel` combos). Each **skips gracefully** when absent (repo idiom); a real finding fails non-zero (never silently green, G2).
+
 ### Added (2026-06-26: waveN2 Phase-3 — M-717 slicing closed, E15-1 tail, DN-41/42 ratified)
 
 - **`bytes_slice`/`bytes_concat` surfaced (M-799, DN-43)** — the kernel prims existed + were never-silent since M-750; only the `.myc` surface mapping was missing. Surfaced in `checkty.rs`; `text.myc` gains `slice`/`slice_opt`/`concat`; out-of-range/inverted slice refuses on all 3 paths (G2). **std_bytes_slice 11.** **M-717 slicing DoD MET → FLAG-text-3 CLOSED** (correcting the wave-n1 "needs its own prim" misdiagnosis — it was a surfacing gap). M-717's only remainder is the UTF-8 *validity* layer.
