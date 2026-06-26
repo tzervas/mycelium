@@ -258,15 +258,47 @@ pub fn kind_str(kind: ProjectKind) -> &'static str {
     }
 }
 
+/// The maximum directory nesting the source walk will descend before refusing (never-silent; G2).
+///
+/// A project tree this deep is **not** a legitimate `mycelium` layout — it is the signature of a
+/// pathological or adversarial input (a symlink cycle, or a generated tree built to exhaust the
+/// stack). The walk already refuses to follow symlinked directory entries (the primary cycle defence
+/// below), so this cap is the **defence-in-depth** bound that turns "unbounded recursion ⇒ stack
+/// overflow / infinite walk (build DoS)" into an **explicit, exit-coded refusal** (DN-40 §3). The
+/// value is far above any plausible real nodule hierarchy.
+const MAX_WALK_DEPTH: usize = 64;
+
 /// Collect every `.myc` source under `dir` (recursively), content-addressed by raw-byte BLAKE3. Skips
 /// hidden entries, `target/`, and the temp files a formatter might leave — deterministic and reproducible.
+///
+/// **Bounded + symlink-safe (DN-40 §3).** The walk **does not descend into symlinked directory
+/// entries** (a symlinked-directory cycle would otherwise be an unbounded/infinite walk — a build
+/// DoS), and it caps nesting at [`MAX_WALK_DEPTH`], returning an explicit [`SporeError::Publish`]
+/// (never-silent; G2) rather than overflowing the stack.
 fn collect_sources(dir: &Path) -> Result<Vec<SourceFile>, SporeError> {
     let mut out = Vec::new();
-    walk(dir, dir, &mut out)?;
+    walk(dir, dir, 0, &mut out)?;
     Ok(out)
 }
 
-fn walk(root: &Path, dir: &Path, out: &mut Vec<SourceFile>) -> Result<(), SporeError> {
+fn walk(
+    root: &Path,
+    dir: &Path,
+    depth: usize,
+    out: &mut Vec<SourceFile>,
+) -> Result<(), SporeError> {
+    // Defence-in-depth bound: an over-deep tree (the signature of a symlink cycle or an adversarial
+    // input built to exhaust the stack) is refused explicitly — never an unbounded recursion (G2).
+    if depth > MAX_WALK_DEPTH {
+        return Err(SporeError::Publish(format!(
+            "source tree under {} nests deeper than {MAX_WALK_DEPTH} directories at {} — refusing \
+             to recurse further (a tree this deep is not a valid layout; likely a symlink cycle or \
+             an adversarial input). Flatten the tree or remove the offending link (DN-40/G2)",
+            root.display(),
+            dir.display(),
+        )));
+    }
+
     let entries =
         std::fs::read_dir(dir).map_err(|e| SporeError::Io(format!("{}: {e}", dir.display())))?;
     let mut paths: Vec<PathBuf> = entries.filter_map(|e| e.ok().map(|e| e.path())).collect();
@@ -279,9 +311,23 @@ fn walk(root: &Path, dir: &Path, out: &mut Vec<SourceFile>) -> Result<(), SporeE
         if name.starts_with('.') || name == "target" {
             continue;
         }
-        if path.is_dir() {
-            walk(root, &path, out)?;
-        } else if path.extension().is_some_and(|x| x == "myc") {
+        // Classify the entry via `symlink_metadata` — which stats the **link itself**, not its
+        // target — so a symlink is detected as a symlink. `Path::is_dir()` (and `metadata`) follow
+        // the link and would report a symlinked-directory cycle as an ordinary directory, recursing
+        // forever. A symlinked entry is **skipped** here (deterministically), which by construction
+        // means no directory cycle can be re-entered (the only path back into an ancestor is via a
+        // link). Real directories and real files are handled exactly as before (DN-40 §3).
+        let meta = std::fs::symlink_metadata(&path)
+            .map_err(|e| SporeError::Io(format!("{}: {e}", path.display())))?;
+        if meta.file_type().is_symlink() {
+            // Never silently follow a symlink (cycle / tree-escape risk); a symlinked source is not
+            // part of the deterministic content-addressed tree. Skipped, not an error — a benign
+            // convenience link must not fail the build, but it is never traversed.
+            continue;
+        }
+        if meta.is_dir() {
+            walk(root, &path, depth + 1, out)?;
+        } else if meta.is_file() && path.extension().is_some_and(|x| x == "myc") {
             let bytes = std::fs::read(&path)
                 .map_err(|e| SporeError::Io(format!("{}: {e}", path.display())))?;
             let hex = blake3::hash(&bytes).to_hex();
