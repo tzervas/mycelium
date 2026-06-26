@@ -437,8 +437,11 @@ impl mycelium_core::id::ContentHash
 pub fn mycelium_core::id::ContentHash::algo(&self) -> &str
 pub fn mycelium_core::id::ContentHash::as_str(&self) -> &str
 pub fn mycelium_core::id::ContentHash::digest(&self) -> &str
+pub fn mycelium_core::id::ContentHash::digest_well_formed(&str, &str) -> bool
 pub fn mycelium_core::id::ContentHash::from_parts(&str, &str) -> core::option::Option<Self>
+pub fn mycelium_core::id::ContentHash::has_well_formed_digest(&self) -> bool
 pub fn mycelium_core::id::ContentHash::parse(&str) -> core::option::Option<Self>
+pub fn mycelium_core::id::ContentHash::parse_digest(&str) -> core::option::Option<Self>
 impl core::clone::Clone for mycelium_core::id::ContentHash
 pub fn mycelium_core::id::ContentHash::clone(&self) -> mycelium_core::id::ContentHash
 impl core::cmp::Eq for mycelium_core::id::ContentHash
@@ -612,7 +615,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_core::lower::Stage
 pub fn mycelium_core::lower::dump_node(&mycelium_core::node::Node) -> alloc::string::String
 pub fn mycelium_core::lower::format(&mycelium_core::node::Node) -> alloc::string::String
 pub fn mycelium_core::lower::lower_to_anf(&mycelium_core::node::Node) -> mycelium_core::lower::Anf
-pub fn mycelium_core::lower::schedule(&mycelium_core::repr::Repr) -> mycelium_core::meta::PhysicalLayout
+pub fn mycelium_core::lower::schedule(&mycelium_core::repr::Repr) -> core::option::Option<mycelium_core::meta::PhysicalLayout>
 pub fn mycelium_core::lower::stages(&mycelium_core::node::Node) -> alloc::vec::Vec<mycelium_core::lower::Stage>
 pub mod mycelium_core::meta
 pub enum mycelium_core::meta::PackScheme
@@ -1142,9 +1145,13 @@ pub mod mycelium_core::repr
 pub enum mycelium_core::repr::Repr
 pub mycelium_core::repr::Repr::Binary
 pub mycelium_core::repr::Repr::Binary::width: u32
+pub mycelium_core::repr::Repr::Bytes
 pub mycelium_core::repr::Repr::Dense
 pub mycelium_core::repr::Repr::Dense::dim: u32
 pub mycelium_core::repr::Repr::Dense::dtype: mycelium_core::repr::ScalarKind
+pub mycelium_core::repr::Repr::Seq
+pub mycelium_core::repr::Repr::Seq::elem: alloc::boxed::Box<mycelium_core::repr::Repr>
+pub mycelium_core::repr::Repr::Seq::len: u32
 pub mycelium_core::repr::Repr::Ternary
 pub mycelium_core::repr::Repr::Ternary::trits: u32
 pub mycelium_core::repr::Repr::Vsa
@@ -1152,6 +1159,7 @@ pub mycelium_core::repr::Repr::Vsa::dim: u32
 pub mycelium_core::repr::Repr::Vsa::model: alloc::string::String
 pub mycelium_core::repr::Repr::Vsa::sparsity: mycelium_core::repr::SparsityClass
 impl mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::check_well_formed(&self) -> core::result::Result<(), mycelium_core::WfError>
 pub fn mycelium_core::repr::Repr::well_formed(&self) -> bool
 impl core::clone::Clone for mycelium_core::repr::Repr
 pub fn mycelium_core::repr::Repr::clone(&self) -> mycelium_core::repr::Repr
@@ -1223,6 +1231,7 @@ impl core::marker::Unpin for mycelium_core::repr::SparsityClass
 impl core::marker::UnsafeUnpin for mycelium_core::repr::SparsityClass
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::SparsityClass
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::SparsityClass
+pub const mycelium_core::repr::MAX_DIM: u32
 pub mod mycelium_core::ternary
 pub struct mycelium_core::ternary::BigTernary
 impl mycelium_core::ternary::BigTernary
@@ -1286,8 +1295,10 @@ pub fn mycelium_core::ternary::trits_to_int(&[mycelium_core::value::Trit]) -> i6
 pub mod mycelium_core::value
 pub enum mycelium_core::value::Payload
 pub mycelium_core::value::Payload::Bits(alloc::vec::Vec<bool>)
+pub mycelium_core::value::Payload::Bytes(alloc::vec::Vec<u8>)
 pub mycelium_core::value::Payload::Hypervector(alloc::vec::Vec<f64>)
 pub mycelium_core::value::Payload::Scalars(alloc::vec::Vec<f64>)
+pub mycelium_core::value::Payload::Seq(alloc::vec::Vec<mycelium_core::value::Value>)
 pub mycelium_core::value::Payload::Trits(alloc::vec::Vec<mycelium_core::value::Trit>)
 impl core::clone::Clone for mycelium_core::value::Payload
 pub fn mycelium_core::value::Payload::clone(&self) -> mycelium_core::value::Payload
@@ -1329,12 +1340,19 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Trit
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Trit
 pub struct mycelium_core::value::Value
 impl mycelium_core::value::Value
-pub fn mycelium_core::value::Value::content_hash(&self) -> mycelium_core::id::ContentHash
-impl mycelium_core::value::Value
+pub fn mycelium_core::value::Value::bytes(&self) -> core::option::Option<&[u8]>
+pub fn mycelium_core::value::Value::bytes_get(&self, usize) -> core::option::Option<u8>
+pub fn mycelium_core::value::Value::bytes_len(&self) -> core::option::Option<usize>
+pub fn mycelium_core::value::Value::bytes_slice(&self, usize, usize) -> core::option::Option<&[u8]>
 pub fn mycelium_core::value::Value::meta(&self) -> &mycelium_core::meta::Meta
 pub fn mycelium_core::value::Value::new(mycelium_core::repr::Repr, mycelium_core::value::Payload, mycelium_core::meta::Meta) -> core::result::Result<Self, mycelium_core::WfError>
 pub fn mycelium_core::value::Value::payload(&self) -> &mycelium_core::value::Payload
 pub fn mycelium_core::value::Value::repr(&self) -> &mycelium_core::repr::Repr
+pub fn mycelium_core::value::Value::seq_elems(&self) -> core::option::Option<&[mycelium_core::value::Value]>
+pub fn mycelium_core::value::Value::seq_get(&self, usize) -> core::option::Option<&mycelium_core::value::Value>
+pub fn mycelium_core::value::Value::seq_len(&self) -> core::option::Option<usize>
+impl mycelium_core::value::Value
+pub fn mycelium_core::value::Value::content_hash(&self) -> mycelium_core::id::ContentHash
 impl core::clone::Clone for mycelium_core::value::Value
 pub fn mycelium_core::value::Value::clone(&self) -> mycelium_core::value::Value
 impl core::cmp::PartialEq for mycelium_core::value::Value
@@ -1756,8 +1774,10 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::PackScheme
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::PackScheme
 pub enum mycelium_core::Payload
 pub mycelium_core::Payload::Bits(alloc::vec::Vec<bool>)
+pub mycelium_core::Payload::Bytes(alloc::vec::Vec<u8>)
 pub mycelium_core::Payload::Hypervector(alloc::vec::Vec<f64>)
 pub mycelium_core::Payload::Scalars(alloc::vec::Vec<f64>)
+pub mycelium_core::Payload::Seq(alloc::vec::Vec<mycelium_core::value::Value>)
 pub mycelium_core::Payload::Trits(alloc::vec::Vec<mycelium_core::value::Trit>)
 impl core::clone::Clone for mycelium_core::value::Payload
 pub fn mycelium_core::value::Payload::clone(&self) -> mycelium_core::value::Payload
@@ -1896,9 +1916,13 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::RegistryError
 pub enum mycelium_core::Repr
 pub mycelium_core::Repr::Binary
 pub mycelium_core::Repr::Binary::width: u32
+pub mycelium_core::Repr::Bytes
 pub mycelium_core::Repr::Dense
 pub mycelium_core::Repr::Dense::dim: u32
 pub mycelium_core::Repr::Dense::dtype: mycelium_core::repr::ScalarKind
+pub mycelium_core::Repr::Seq
+pub mycelium_core::Repr::Seq::elem: alloc::boxed::Box<mycelium_core::repr::Repr>
+pub mycelium_core::Repr::Seq::len: u32
 pub mycelium_core::Repr::Ternary
 pub mycelium_core::Repr::Ternary::trits: u32
 pub mycelium_core::Repr::Vsa
@@ -1906,6 +1930,7 @@ pub mycelium_core::Repr::Vsa::dim: u32
 pub mycelium_core::Repr::Vsa::model: alloc::string::String
 pub mycelium_core::Repr::Vsa::sparsity: mycelium_core::repr::SparsityClass
 impl mycelium_core::repr::Repr
+pub fn mycelium_core::repr::Repr::check_well_formed(&self) -> core::result::Result<(), mycelium_core::WfError>
 pub fn mycelium_core::repr::Repr::well_formed(&self) -> bool
 impl core::clone::Clone for mycelium_core::repr::Repr
 pub fn mycelium_core::repr::Repr::clone(&self) -> mycelium_core::repr::Repr
@@ -1998,6 +2023,10 @@ impl core::marker::UnsafeUnpin for mycelium_core::value::Trit
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Trit
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Trit
 pub enum mycelium_core::WfError
+pub mycelium_core::WfError::DimensionTooLarge
+pub mycelium_core::WfError::DimensionTooLarge::cap: u32
+pub mycelium_core::WfError::DimensionTooLarge::field: &'static str
+pub mycelium_core::WfError::DimensionTooLarge::value: u32
 pub mycelium_core::WfError::GuaranteeBoundMismatch
 pub mycelium_core::WfError::MalformedBound
 pub mycelium_core::WfError::MalformedReconstruction
@@ -2069,8 +2098,11 @@ impl mycelium_core::id::ContentHash
 pub fn mycelium_core::id::ContentHash::algo(&self) -> &str
 pub fn mycelium_core::id::ContentHash::as_str(&self) -> &str
 pub fn mycelium_core::id::ContentHash::digest(&self) -> &str
+pub fn mycelium_core::id::ContentHash::digest_well_formed(&str, &str) -> bool
 pub fn mycelium_core::id::ContentHash::from_parts(&str, &str) -> core::option::Option<Self>
+pub fn mycelium_core::id::ContentHash::has_well_formed_digest(&self) -> bool
 pub fn mycelium_core::id::ContentHash::parse(&str) -> core::option::Option<Self>
+pub fn mycelium_core::id::ContentHash::parse_digest(&str) -> core::option::Option<Self>
 impl core::clone::Clone for mycelium_core::id::ContentHash
 pub fn mycelium_core::id::ContentHash::clone(&self) -> mycelium_core::id::ContentHash
 impl core::cmp::Eq for mycelium_core::id::ContentHash
@@ -2502,12 +2534,19 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::meta::SparsityOb
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::SparsityObs
 pub struct mycelium_core::Value
 impl mycelium_core::value::Value
-pub fn mycelium_core::value::Value::content_hash(&self) -> mycelium_core::id::ContentHash
-impl mycelium_core::value::Value
+pub fn mycelium_core::value::Value::bytes(&self) -> core::option::Option<&[u8]>
+pub fn mycelium_core::value::Value::bytes_get(&self, usize) -> core::option::Option<u8>
+pub fn mycelium_core::value::Value::bytes_len(&self) -> core::option::Option<usize>
+pub fn mycelium_core::value::Value::bytes_slice(&self, usize, usize) -> core::option::Option<&[u8]>
 pub fn mycelium_core::value::Value::meta(&self) -> &mycelium_core::meta::Meta
 pub fn mycelium_core::value::Value::new(mycelium_core::repr::Repr, mycelium_core::value::Payload, mycelium_core::meta::Meta) -> core::result::Result<Self, mycelium_core::WfError>
 pub fn mycelium_core::value::Value::payload(&self) -> &mycelium_core::value::Payload
 pub fn mycelium_core::value::Value::repr(&self) -> &mycelium_core::repr::Repr
+pub fn mycelium_core::value::Value::seq_elems(&self) -> core::option::Option<&[mycelium_core::value::Value]>
+pub fn mycelium_core::value::Value::seq_get(&self, usize) -> core::option::Option<&mycelium_core::value::Value>
+pub fn mycelium_core::value::Value::seq_len(&self) -> core::option::Option<usize>
+impl mycelium_core::value::Value
+pub fn mycelium_core::value::Value::content_hash(&self) -> mycelium_core::id::ContentHash
 impl core::clone::Clone for mycelium_core::value::Value
 pub fn mycelium_core::value::Value::clone(&self) -> mycelium_core::value::Value
 impl core::cmp::PartialEq for mycelium_core::value::Value

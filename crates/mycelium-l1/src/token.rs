@@ -139,6 +139,15 @@ pub enum Tok {
     Dense,
     /// `VSA`.
     Vsa,
+    /// `Seq` — the first-class indexed homogeneous sequence repr-type keyword (`Seq{T, N}`;
+    /// RFC-0032 D3, M-749). A repr-type keyword like `Binary`/`Ternary`/`Dense`/`VSA`; its
+    /// descriptor `{T, N}` carries an element type and a `u32` length. Reserved so it can never be a
+    /// silent identifier (G2).
+    Seq,
+    /// `Bytes` — the first-class byte-string repr-type keyword (RFC-0032 D4, M-750). A **nullary**
+    /// repr-type keyword (no descriptor), like a paradigm keyword. Reserved so it can never be a
+    /// silent identifier (G2).
+    Bytes,
     /// `Substrate` — the affine external-resource kind (themed; LR-8).
     Substrate,
     /// `Sparse`.
@@ -153,6 +162,10 @@ pub enum Tok {
     Ident(String),
     /// A binary literal `0b…` (digits + `_` separators preserved verbatim).
     BinLit(String),
+    /// A byte-string literal `0x…` (the inner hex string, `_` separators preserved verbatim;
+    /// RFC-0032 D4, M-750). The lexer enforces an even number of hex digits (one byte per two hex
+    /// chars) — an odd count, a non-hex digit, or an empty `0x` is a never-silent [`crate::error::ParseError`] (G2).
+    BytesLit(String),
     /// A balanced-ternary literal `<…>` (the inner `+0-` string, MSB-first).
     TritLit(String),
     /// A non-negative decimal integer literal.
@@ -340,6 +353,10 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "Ternary" => Tok::Ternary,
         "Dense" => Tok::Dense,
         "VSA" => Tok::Vsa,
+        // RFC-0032 D3/D4 (M-749/M-750): the sequence + byte-string repr-type keywords. Reserved so
+        // they can never be silent identifiers (G2).
+        "Seq" => Tok::Seq,
+        "Bytes" => Tok::Bytes,
         "Substrate" => Tok::Substrate,
         "Sparse" => Tok::Sparse,
         "F16" => Tok::Scalar(ScalarTok::F16),

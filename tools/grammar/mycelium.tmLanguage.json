@@ -11,7 +11,7 @@
     },
     {
       "name": "storage.type.mycelium",
-      "match": "\\b(Substrate|Ternary|Binary|Sparse|Dense|VSA)\\b"
+      "match": "\\b(Substrate|Ternary|Binary|Sparse|Bytes|Dense|Seq|VSA)\\b"
     },
     {
       "name": "support.type.builtin.mycelium",

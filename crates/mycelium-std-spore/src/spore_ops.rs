@@ -138,9 +138,11 @@ impl SporeUnit {
     /// The degenerate `spore(v)` case (ADR-013 §2): build a spore whose payload is a single value
     /// with its reconstruction manifest (RFC-0003 §6).
     ///
-    /// The spore hash is computed from the value's content hash (`std.content::hash_of_value(v)`)
-    /// plus a "spore-single-value-v0" domain separator, so identity is the content-addressed
-    /// hash of the value + its reconstruction info, not raw bytes (ADR-003).
+    /// The spore hash is computed by the **same canonical encoder** as a project spore
+    /// (`recompute_identity` → `mycelium_spore::content_address`): a minimal single-source phylum is
+    /// synthesized whose one source `hash` field IS the value's content hash
+    /// (`std.content::hash_of_value(v)`), so identity is the content-addressed hash of the value + its
+    /// reconstruction info, not raw bytes (ADR-003). It therefore inherits the `v1` injective encoding.
     ///
     /// # Guarantee tag: `Exact` (deterministic)
     ///
@@ -265,41 +267,14 @@ impl SporeUnit {
 
 /// Re-derive the canonical content-addressed identity for a built spore (ADR-003 / M-368).
 ///
-/// Mirrors the `content_address` function inside `mycelium-spore` (private there), re-implemented
-/// here for the `verify` self-check. The canonical encoding:
-///
-/// ```text
-/// mycelium-spore-v0
-/// kind:<kind>
-/// surface:
-///   <export1>
-///   …
-/// code:
-///   <path> <hash>
-///   …
-/// deps:
-///   <name> <phylum> <hash>
-///   …
-/// ```
+/// **Delegates to the single canonical encoder `mycelium_spore::content_address`** — it does NOT
+/// re-implement the encoding. A parallel copy here is exactly what produced the `v0`/`v1` split
+/// (the verify path stamping a stale `v0` while `build_spore` stamped `v1`, a cross-crate
+/// `HashMismatch`); the one-encoder rule makes that divergence structurally impossible (DRY).
 ///
 /// The hash is metadata-excluded (ADR-003): `name`/`version`/`authors` are not fed to the hasher.
 fn recompute_identity(raw: &RawSpore) -> ContentHash {
-    let mut s = String::from("mycelium-spore-v0\n");
-    s.push_str(&format!("kind:{}\n", mycelium_spore::kind_str(raw.kind)));
-    s.push_str("surface:\n");
-    for name in &raw.surface {
-        s.push_str(&format!("  {name}\n"));
-    }
-    s.push_str("code:\n");
-    for f in &raw.sources {
-        s.push_str(&format!("  {} {}\n", f.path, f.hash.as_str()));
-    }
-    s.push_str("deps:\n");
-    for d in &raw.deps {
-        s.push_str(&format!("  {} {} {}\n", d.name, d.phylum, d.hash));
-    }
-    let hex = blake3::hash(s.as_bytes()).to_hex();
-    ContentHash::from_parts("blake3", hex.as_str()).expect("blake3 hex is a valid digest")
+    mycelium_spore::content_address(raw.kind, &raw.surface, &raw.sources, &raw.deps)
 }
 
 /// The canonical identity of a `SporeUnit` — a convenience function matching the spec §3 surface.

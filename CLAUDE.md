@@ -124,8 +124,9 @@ not add `on: push` / `on: pull_request` auto-triggers without an explicit decisi
   work branches off **`dev`** (the working tier — messy OK: WIP, exploration, octopus/swarm merges;
   only *compiles + change-scoped tests* required), promotes via PR to **`integration`** (the staging
   tier — the full `just check` green + the transparency/append-only review, shared files reconciled once),
-  and `integration → main` is the polished, **squash-only release** (PR-gated by `/pr-review` + a
-  Copilot round). Each tier is PR-gated and **more stringent than the last**; `main`/`integration`/
+  and `integration → main` is the polished, **squash-only release** (PR-gated by `/pr-review`; the
+  agent-driven review-with-another-agent pass is the gate — third-party review bots (Copilot,
+  Sourcery) are **disabled** in this repo). Each tier is PR-gated and **more stringent than the last**; `main`/`integration`/
   `dev` are persistent + protected (no direct push), everything below `dev` is ephemeral and merges
   freely. `main` advances **only** through the `integration → main` squash-PR — never a direct
   `git push`/merge/commit, even for a one-file fix. Full workflow + the per-isolated-tree kickoff
@@ -371,8 +372,8 @@ asked to wait, wait.)
    never upgraded without a checked basis), append-only decisions, grounding, never-silent G2, and
    a hallucination/consistency pass. Fix what you find or stop and flag it — never merge past a
    Critical/High you can't resolve.
-2. **Handle every CI / bot review comment first.** For each review comment (Copilot, CI failure,
-   a human note): investigate, then **fix if you're confident and it's small**, **defer**
+2. **Handle every CI / bot review comment first.** For each review comment (CI failure,
+   a human note; third-party review bots are disabled — see the tiered-branch note above): investigate, then **fix if you're confident and it's small**, **defer**
    if the fix would be fragile or large (keep an explicit refusal + a clear message + a spec-§ note,
    never ship fragile/incorrect output to satisfy a comment — G2/VR-5), or **ask** (`AskUserQuestion`)
    if it's ambiguous or architecturally significant. Reply once, frugally; the diff is the record.

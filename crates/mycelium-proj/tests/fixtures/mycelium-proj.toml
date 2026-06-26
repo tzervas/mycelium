@@ -15,4 +15,4 @@ lang        = "mycelium-0"
 exports     = ["geometry.shapes", "geometry.transform"]
 
 [dependencies]
-numerics    = { phylum = "numerics", version = "^2", hash = "blake3:abc" }
+numerics    = { phylum = "numerics", version = "^2", hash = "blake3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" }

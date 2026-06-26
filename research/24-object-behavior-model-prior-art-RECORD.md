@@ -278,7 +278,7 @@ pushes to type-level record metaprogramming.
 > mechanism. Composition-alignment: **structural, orthogonal** — flexible but it sidesteps (rather than
 > composes with) the coherent trait model. CONSTRAINED by Mycelium's premises.
 
-### 3.7 Record-of-closures / open recursion — see §4 (the escape hatch; **lowest composition-alignment**, deliberately).
+### 3.7 Record-of-closures / open recursion — see §4 (the escape hatch; **lowest composition-alignment**, deliberately)
 
 **Ranking by composition-alignment (most → least):**
 1. **Default methods** (§3.1) — pure, stateless, coherent reuse.
@@ -406,8 +406,8 @@ indirection:** a `dyn`-like value can't be flat — to be uniform-sized it needs
 plus a vtable (fat pointer + refcount), in tension with flat value layouts but the enabler of
 heterogeneous immutable collections.
 
-**Swift — the closest real-world analog** (value types + protocol-oriented programming + witness tables
-+ ARC), from *Understanding Swift Performance* (WWDC 2016) *(primary session; 3-word buffer / PWT-VWT
+**Swift — the closest real-world analog** (value types + protocol-oriented programming + witness tables +
+ARC), from *Understanding Swift Performance* (WWDC 2016) *(primary session; 3-word buffer / PWT-VWT
 split confirmed by two independent transcriptions):*
 - Three costs: **allocation, reference counting, method dispatch.** Stack alloc *"much much faster than
   … heap."*
@@ -440,96 +440,96 @@ split confirmed by two independent transcriptions):*
 
 **Objects, ADTs, expression problem**
 1. William R. Cook, *On Understanding Data Abstraction, Revisited*, OOPSLA 2009 —
-   https://www.cs.utexas.edu/~wcook/Drafts/2009/essay.pdf — **primary, verified (PDF→text).** Objects
+   <https://www.cs.utexas.edu/~wcook/Drafts/2009/essay.pdf> — **primary, verified (PDF→text).** Objects
    vs ADTs duality, autognosis, the representation/operation matrix, §5.3 type-class analysis.
 2. Philip Wadler, *The Expression Problem* (1998 email) —
-   https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt — **primary, verified.**
+   <https://homepages.inf.ed.ac.uk/wadler/papers/expression/expression.txt> — **primary, verified.**
    The verbatim problem statement + rows/columns framing.
 3. Jacques Carette, Oleg Kiselyov, Chung-chieh Shan, *Finally Tagless, Partially Evaluated*, JFP 19
-   (2009) — https://okmij.org/ftp/tagless-final/JFP.pdf — **primary, verified.** `Symantics` typeclass;
+   (2009) — <https://okmij.org/ftp/tagless-final/JFP.pdf> — **primary, verified.** `Symantics` typeclass;
    "combinator functions rather than data constructors"; static-dispatch EP solution.
 4. Bruno C.d.S. Oliveira & William R. Cook, *Extensibility for the Masses: Practical Extensibility with
-   Object Algebras*, ECOOP 2012 — https://www.cs.utexas.edu/~wcook/Drafts/2012/ecoop2012.pdf —
+   Object Algebras*, ECOOP 2012 — <https://www.cs.utexas.edu/~wcook/Drafts/2012/ecoop2012.pdf> —
    **primary, verified.** Object algebras = generic-factory EP solution in plain generics.
 5. John C. Reynolds, *User-Defined Types and Procedural Data Structures …* (1975) — **secondary**
    (originator of the duality; cited via Cook).
 
 **Typeclasses as interfaces**
 6. Philip Wadler & Stephen Blott, *How to make ad-hoc polymorphism less ad hoc*, POPL 1989 —
-   https://dl.acm.org/doi/10.1145/75277.75283 (PDF:
-   https://www.cse.iitk.ac.in/users/karkare/Courses/cs653/Papers/ad-hoc-polymorphism.pdf) — **primary,
+   <https://dl.acm.org/doi/10.1145/75277.75283> (PDF:
+   <https://www.cse.iitk.ac.in/users/karkare/Courses/cs653/Papers/ad-hoc-polymorphism.pdf>) — **primary,
    verified.** Dictionary-passing translation (class→record, instance→value, constraint→extra arg).
-7. The Rust Reference — *Trait objects* — https://doc.rust-lang.org/reference/types/trait-object.html —
+7. The Rust Reference — *Trait objects* — <https://doc.rust-lang.org/reference/types/trait-object.html> —
    **primary/official, verified.** Fat-pointer + vtable + virtual dispatch.
 8. The Rust Programming Language (Book) — *Traits* / *OOP features* —
-   https://doc.rust-lang.org/book/ch10-02-traits.html ·
-   https://doc.rust-lang.org/book/ch18-01-what-is-oo.html — **primary/official, verified.** Traits ≈
+   <https://doc.rust-lang.org/book/ch10-02-traits.html> ·
+   <https://doc.rust-lang.org/book/ch18-01-what-is-oo.html> — **primary/official, verified.** Traits ≈
    interfaces; no struct inheritance; default-method reuse; trait objects for runtime polymorphism.
 9. Oleg Kiselyov, *Implementing, and Understanding Type Classes* —
-   https://okmij.org/ftp/Computation/typeclass.html — **secondary, authoritative.** Dictionary ↔
+   <https://okmij.org/ftp/Computation/typeclass.html> — **secondary, authoritative.** Dictionary ↔
    monomorphization.
-10. HaskellWiki, *OOP vs type classes* — https://wiki.haskell.org/OOP_vs_type_classes — **secondary.**
+10. HaskellWiki, *OOP vs type classes* — <https://wiki.haskell.org/OOP_vs_type_classes> — **secondary.**
     Value↔dictionary binding "may change at runtime"; the value/dictionary vs object/vtable contrast.
-11. Terbium, *Comparing Traits and Typeclasses* (2021) — https://terbium.io/2021/02/traits-typeclasses/
+11. Terbium, *Comparing Traits and Typeclasses* (2021) — <https://terbium.io/2021/02/traits-typeclasses/>
     — **secondary.** Retroactive impl, return-type dispatch, orphan-rule coherence.
 
 **Inheritance emulation**
 12. The Rust Reference — *Traits* (default methods, supertraits) —
-    https://doc.rust-lang.org/reference/items/traits.html — **primary, verified.**
+    <https://doc.rust-lang.org/reference/items/traits.html> — **primary, verified.**
 13. Rust Design Patterns (rust-unofficial) — *Deref Polymorphism (anti-pattern)* —
-    https://rust-unofficial.github.io/patterns/anti_patterns/deref.html — **primary, verified.** The
+    <https://rust-unofficial.github.io/patterns/anti_patterns/deref.html> — **primary, verified.** The
     explicit caution against faking inheritance via `Deref`.
 14. Scala Language Specification 2.13 — §5 *Classes and Objects* (linearization `+⃗`) —
-    https://www.scala-lang.org/files/archive/spec/2.13/05-classes-and-objects.html — **primary,
+    <https://www.scala-lang.org/files/archive/spec/2.13/05-classes-and-objects.html> — **primary,
     verified.** Leftmost-occurrence linearization rule; `super` along the linear order.
-15. Scala — *Self-types* — https://docs.scala-lang.org/tour/self-types.html — **primary, verified.**
-16. Kotlin Documentation — *Delegation* — https://kotlinlang.org/docs/delegation.html — **primary,
+15. Scala — *Self-types* — <https://docs.scala-lang.org/tour/self-types.html> — **primary, verified.**
+16. Kotlin Documentation — *Delegation* — <https://kotlinlang.org/docs/delegation.html> — **primary,
     verified.** Generated forwarders + the "delegate can't see overrides" caveat (verbatim).
 17. The Go Programming Language Specification — *Struct types* (embedding/promotion) —
-    https://go.dev/ref/spec — **primary, verified.**
-18. Effective Go — *Embedding* — https://go.dev/doc/effective_go — **primary, verified.** "Embedding
+    <https://go.dev/ref/spec> — **primary, verified.**
+18. Effective Go — *Embedding* — <https://go.dev/doc/effective_go> — **primary, verified.** "Embedding
     differs from subclassing … the receiver … is the inner type."
 19. Gamma, Helm, Johnson, Vlissides, *Design Patterns* (1994), Decorator (p. 175) — **secondary**
     (printed; intent line widely reproduced — verify against print).
 
 **Row polymorphism / extensible records**
 20. Daan Leijen, *Extensible records with scoped labels*, TFP 2005 —
-    https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/scopedlabels.pdf — **primary,
+    <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/02/scopedlabels.pdf> — **primary,
     verified (PDF→text).** Rows, row variables, retained-duplicate scoped labels, `(eq-swap)` rule.
 21. OCaml Manual — *Polymorphic variants* (open `` [> ] `` / closed `` [< ] ``) —
-    https://ocaml.org/manual/5.2/polyvariant.html — **primary, verified.**
-22. OCaml Manual — *Object types* (row variable `..`) — https://ocaml.org/manual/4.13/types.html —
+    <https://ocaml.org/manual/5.2/polyvariant.html> — **primary, verified.**
+22. OCaml Manual — *Object types* (row variable `..`) — <https://ocaml.org/manual/4.13/types.html> —
     **primary, verified.**
 23. PureScript documentation — *Types* (`{ x :: Int | r }`, retained duplicates) —
-    https://github.com/purescript/documentation/blob/master/language/Types.md — **primary, verified.**
+    <https://github.com/purescript/documentation/blob/master/language/Types.md> — **primary, verified.**
 24. Adam Chlipala, *Ur: Statically-Typed Metaprogramming with Type-Level Record Computation*, PLDI 2010
-    — https://adam.chlipala.net/papers/UrPLDI10/ — **primary, verified (abstract).**
-25. Elm — *Records* — https://elm-lang.org/docs/records — **secondary.**
+    — <https://adam.chlipala.net/papers/UrPLDI10/> — **primary, verified (abstract).**
+25. Elm — *Records* — <https://elm-lang.org/docs/records> — **secondary.**
 
 **Late binding / open recursion**
 26. William Cook & Jens Palsberg, *A Denotational Semantics of Inheritance and its Correctness*,
-    OOPSLA'89 / Information and Computation 114(2) 1994 — https://web.cs.ucla.edu/~palsberg/paper/ic94.pdf
+    OOPSLA'89 / Information and Computation 114(2) 1994 — <https://web.cs.ucla.edu/~palsberg/paper/ic94.pdf>
     — **primary, verified (PDF→text).** Generator-over-`self`, `fix`, wrapper application
     `W ▷ G = λself.(W(self)(G(self))) ⊕ G(self)`; "self-reference must be changed to refer to the
     modified definition."
 27. William Cook, *A Denotational Semantics of Inheritance* (PhD thesis, 1989) —
-    https://www.cs.utexas.edu/~wcook/papers/thesis/cook89.pdf — **secondary** (located).
+    <https://www.cs.utexas.edu/~wcook/papers/thesis/cook89.pdf> — **secondary** (located).
 
 **Performance**
 28. *Monomorphization* — Rust Compiler Development Guide —
-    https://rustc-dev-guide.rust-lang.org/backend/monomorph.html — **primary/official, verified.**
-29. `dyn` keyword — Rust std docs — https://doc.rust-lang.org/std/keyword.dyn.html — **primary/official,
+    <https://rustc-dev-guide.rust-lang.org/backend/monomorph.html> — **primary/official, verified.**
+29. `dyn` keyword — Rust std docs — <https://doc.rust-lang.org/std/keyword.dyn.html> — **primary/official,
     verified.** Fat pointer; "cannot be inlined"; "smaller code" benefit.
 30. A. Lilley Brinker, *Monomorphization Bloat* (the `n×m` formula) —
-    https://www.alilleybrinker.com/blog/monomorphization-bloat/ — **secondary, corroborated.**
+    <https://www.alilleybrinker.com/blog/monomorphization-bloat/> — **secondary, corroborated.**
 31. Rust Polymorphization WG + David Wood, *Polymorphisation* dissertation —
-    https://rust-lang.github.io/compiler-team/working-groups/polymorphization/ ·
-    https://github.com/rust-lang/compiler-team/issues/810 — **verified the effort exists; status in
+    <https://rust-lang.github.io/compiler-team/working-groups/polymorphization/> ·
+    <https://github.com/rust-lang/compiler-team/issues/810> — **verified the effort exists; status in
     flux** (cite as direction, not shipped).
 32. Apple, *Understanding Swift Performance*, WWDC 2016 (session 416) —
-    https://developer.apple.com/videos/play/wwdc2016/416/ — **primary.** Existential container, 3-word
+    <https://developer.apple.com/videos/play/wwdc2016/416/> — **primary.** Existential container, 3-word
     inline buffer, PWT/VWT, ARC. Community transcriptions:
-    https://saurabhs.org/wwdc-notes/wwdc-16-understanding-swift-performance (**secondary, corroborated**).
+    <https://saurabhs.org/wwdc-notes/wwdc-16-understanding-swift-performance> (**secondary, corroborated**).
 
 ---
 

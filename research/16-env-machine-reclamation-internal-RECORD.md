@@ -51,6 +51,7 @@ Scope: Current state of the memory reclamation architecture + the exact seam whe
     - `clone_ref()` → increment refcount (line 141–145)
     - `drop_ref()` → probe refcount (line 171–225) **+ emit ReclamationRecord** (line 182–188)
   - **RcProbe outcome** (rc.rs:line 81–90):
+
     ```rust
     if strong_count == 1:
         ReclamationRecord::new(scope_id, sweep_epoch, RcZero, value_meta_hash)
@@ -59,6 +60,7 @@ Scope: Current state of the memory reclamation architecture + the exact seam whe
     else:
         → return Shared  // other owners retain
     ```
+
   - **Guarantee:** `Exact` — one record emitted on last-ref; enforced-by-construction (rc.rs:170)
   - **NOT built:** Cross-hypha atomic RC (Arc) — DN-32 §7 named sub-question (Option A vs B)
 
@@ -140,9 +142,10 @@ Scope: Current state of the memory reclamation architecture + the exact seam whe
         └─ val is an AotVal enum (Core/Closure/Fix/FixGroup)
 ```
 
-### The VALUE REPRESENTATION in the machine:
+### The VALUE REPRESENTATION in the machine
 
 **AotVal enum** (aot.rs:78–104):
+
 ```rust
 enum AotVal {
     Core(CoreValue),        // repr value or datum — normal form
@@ -153,13 +156,14 @@ enum AotVal {
 ```
 
 **Env type** (aot.rs:106):
+
 ```rust
 type Env = HashMap<Atom, AotVal>;
 ```
 
 **Key observation:** Currently, **each binding produces an `AotVal` that is immediately inserted into the environment by value**. When the binding goes out of scope, Rust's `Drop` runs on the `HashMap` value — **Rust-managed memory only**.
 
-### HOW RUST CURRENTLY MANAGES VALUES:
+### HOW RUST CURRENTLY MANAGES VALUES
 
 1. **AotVal::Core(CoreValue)** — contains `Value` (repr) or `Datum` (data)
    - Allocated by primitives/swaps/constructors → dropped when environment entry is removed
@@ -171,7 +175,7 @@ type Env = HashMap<Atom, AotVal>;
 
 3. **No actual Mycelium-level RC cell** anywhere in the machine — just Rust's Rc for AST sharing
 
-### THE EXACT SEAM WHERE REAL RECLAMATION THREADS IN:
+### THE EXACT SEAM WHERE REAL RECLAMATION THREADS IN
 
 **Point A: Step::Bind() result handling (aot.rs:415–450)**
 
@@ -233,9 +237,10 @@ loop {
 
 **The seam:** When `env` goes out of scope (line 400), every binding in the old env **must have its `drop_ref()` called before the HashMap is dropped**. This is the **scope-exit reclamation** point (MEM-3).
 
-### PROPOSED CHANGES (high-level structure):
+### PROPOSED CHANGES (high-level structure)
 
 1. **Wrap AotVal in RC:**
+
    ```rust
    // Current:
    enum AotVal {
@@ -258,6 +263,7 @@ loop {
    - Environment cleanup must explicitly call `drop_ref()` on each binding with proper scope_id/sweep_epoch
 
 3. **Thread ReclamationSink through eval_machine signature:**
+
    ```rust
    // Current (line 375):
    fn eval_machine(
@@ -297,7 +303,7 @@ loop {
 
 **Role:** An **abstract machine** (references + reclamation, not data) that serves as the executable semantics for the borrow-elision analysis. It **computes the same multiset of reclaimed allocations** as the naive full-ownership emission, proving that elision is **semantics-preserving**.
 
-### How it works (eval.rs:156–239):
+### How it works (eval.rs:156–239)
 
 ```rust
 pub fn eval(node: &RcNode) -> Result<EvalReport, RcError> {
@@ -324,7 +330,7 @@ pub fn eval(node: &RcNode) -> Result<EvalReport, RcError> {
 - `MoveUnique` → verify rc==1, then `dec(a)` (Increment 2 soundness check)
 - `Drop` / `DropAfter` → `dec(a)` at different points in the term
 
-### Differential harness (eval.rs:250–270):
+### Differential harness (eval.rs:250–270)
 
 ```rust
 pub fn differential(owned_ir, elided_ir) -> bool {
@@ -340,7 +346,7 @@ pub fn differential(owned_ir, elided_ir) -> bool {
 - **Dup count strictly reduces** (elision removes Dups)
 - **Result allocation is identical** (both escape the same value)
 
-### Why this is the oracle for DN-35:
+### Why this is the oracle for DN-35
 
 1. **The env-machine is a second execution path** (alongside `run_core`, the AOT path). If real reclamation is threaded into `eval_machine`, the observable reclamation record stream **must match the abstract machine's reclamation log**.
 
@@ -383,7 +389,7 @@ pub fn differential(owned_ir, elided_ir) -> bool {
 
 **Constraint:** LR-9 guarantees values are acyclic. LR-8 guarantees they're immutable.
 
-**Implication for the seam:** 
+**Implication for the seam:**
 - **No cycle collector is needed** — RC is complete (Perceus guarantee)
 - **No write barriers** — immutability means no mutation-alias hazards
 - **Reference-counting order doesn't matter for safety** — only for observable behaviour (audit trail, FBIP reuse eligibility)
@@ -410,7 +416,7 @@ These are the concrete design decisions the note must make, **each grounded in a
 
 **Grounding:** DN-32 §7 / RFC-0027 §12 names the sub-question explicitly.
 
-**Current fact:** 
+**Current fact:**
 - `RcCell<T>` is `!Send + !Sync` (from `std::rc::Rc<T>` — rc.rs:94, line 58)
 - Cross-hypha transfer rides the affine channel protocol (RFC-0027 §7.3 — no RC across boundaries)
 
@@ -428,7 +434,7 @@ These are the concrete design decisions the note must make, **each grounded in a
 - AOT env-machine produces values but **does not compute content hashes** (that's a Core-tier responsibility — ContentHash from mycelium-core)
 - rc_plan.rs synth_hash() manufactures `rcplan:<id>` because the abstract RC machine has no content data
 
-**Decision for DN-35:** 
+**Decision for DN-35:**
 - **Proposed:** At real reclamation time in `eval_machine`, the environment must **supply the value's real ContentHash** (computed during allocation or stored in RcCell metadata).
 - **Alternative:** Audit records use synthetic hashes; real hashing is deferred to a post-processing step (lower confidence in audit trail).
 
@@ -600,4 +606,3 @@ These are the concrete design decisions the note must make, **each grounded in a
 **Use:** The abstract RC machine predicts which allocations will be reclaimed. The seam's real reclamation must **emit one ReclamationRecord per reclamation, at the same order/time as the evaluator predicts** (mod scheduling concurrency).
 
 ---
-

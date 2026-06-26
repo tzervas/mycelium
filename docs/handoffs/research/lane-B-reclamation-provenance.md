@@ -41,18 +41,18 @@ RFC-0027 §5 lists five open questions that define the decision space:
 > **Model choice:** Should reclamation be purely Rust-drop-order (implicit, no surface) with
 > `reclaim` as a supervision primitive only, or should Mycelium expose explicit "reclaim regions"
 > analogous to arena allocators? The former is simpler (KC-3); the latter is more EXPLAIN-able.
-
+>
 > **Sweep-order coupling:** RFC-0008 §4.3 defines sweep order for Kahn determinism. Is the
 > reclamation cascade *required* to follow the same order (strong coupling), or merely *permitted*
 > to? The strong coupling is property-testable; the weak coupling is more flexible.
-
+>
 > **`reclaim` construct scope:** ADR-020 lists `reclaim` as a supervision primitive for runtime
 > units (tasks), not a memory primitive. Should this RFC also define memory-level reclamation, or
 > only the task-reclamation surface?
-
+>
 > **Pause budget:** Is "no silent GC pause" a hard real-time bound (must specify a worst-case
 > budget) or a best-effort stance (the guarantee is `Declared`/honesty, not a latency SLO)?
-
+>
 > **Checkpoint interaction:** A `cyst` checkpoint writes live values to content-addressed storage.
 > Does the checkpoint operation reclaim the original allocation (checkpoint-and-free) or copy
 > (checkpoint-and-keep)? The former is more memory-efficient; the latter is safer.

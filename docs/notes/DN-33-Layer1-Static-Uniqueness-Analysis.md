@@ -259,8 +259,8 @@ is not undertaken speculatively here (flag, don't guess).
 ## §8 Open questions (the deliberation agenda)
 
 1. **Cross-hypha boundary commit (Option A vs B).** §5 recommends A for R1, B deferred to R2. Confirm,
-   and gate B explicitly — the choice fixes whether `RcCell<T>` is ever `Send` (downstream type-system
-   + cross-hypha API implications).
+   and gate B explicitly — the choice fixes whether `RcCell<T>` is ever `Send` (downstream type-system +
+   cross-hypha API implications).
 2. **Core IR borrow-annotation representation.** Mode/annotation on binding sites (Lean 4 `@`-borrow
    style) vs a separate borrow IR layer vs a compiler-internal flag invisible to the surface IR —
    affects KC-3 impact + auditability.
@@ -370,8 +370,8 @@ RFC-0027's status (append-only).
   / Doc-Index / issues.yaml / docs/api-index owned by the integrating parent. (Append-only; VR-5; G2.)
 - **2026-06-25 — Ratified Draft → Accepted (§8.1 resolutions; maintainer).** The §8 deliberation is
   settled: **Q1 → Option A** (sole-move-only cross-hypha; `RcCell` stays `!Send`; Option B → R2),
-  **Q2 → separate RC-annotated IR** (Core IR `node.rs` stays pristine — KC-3 / §4), **Q3 → differential
-  + structural-invariant** soundness (tag `Empirical`, not `Proven`). Q4–Q7 adopted as recorded
+  **Q2 → separate RC-annotated IR** (Core IR `node.rs` stays pristine — KC-3 / §4), **Q3 → differential +
+  structural-invariant** soundness (tag `Empirical`, not `Proven`). Q4–Q7 adopted as recorded
   defaults (subsume `substrate` uniqueness; perf gate = measured `dup`/`drop`-reduction ratio, count
   `Exact` / perf `Declared`; FIP user-surface deferred to Phase 3; frame-limited R1 target). Status
   moves Draft → Accepted (legal forward move; the design is ratified, the code is the forward epic).

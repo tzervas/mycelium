@@ -135,8 +135,8 @@ A finding is reported to **two sinks**, not one:
    the community* — the discovery cost is paid once, the benefit is ecosystem-wide.
 
 **Screened / anonymized / privatized disclosure.** What the registry hosts is **not** the victim's raw
-vulnerable source — it is a **screened** finding: the vulnerable logic is **anonymized/privatized** (secrets
-+ PII stripped, proprietary specifics removed, **minimized to the essential vulnerable *pattern***) before
+vulnerable source — it is a **screened** finding: the vulnerable logic is **anonymized/privatized** (secrets +
+PII stripped, proprietary specifics removed, **minimized to the essential vulnerable *pattern***) before
 publication. Content-addressing makes this precise: the screened pattern is itself **content-addressed to a
 fingerprint**, so *other* scans match the same vulnerable pattern across phyla **without ever seeing the
 original source** — detection + mitigation propagate ecosystem-wide while the specific instance stays

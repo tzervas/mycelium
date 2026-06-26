@@ -15,6 +15,7 @@ module.exports = grammar({
     keyword: $ => choice(
       'BF16',
       'Binary',
+      'Bytes',
       'Declared',
       'Dense',
       'Empirical',
@@ -23,6 +24,7 @@ module.exports = grammar({
       'F32',
       'F64',
       'Proven',
+      'Seq',
       'Sparse',
       'Substrate',
       'Ternary',

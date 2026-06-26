@@ -37,10 +37,10 @@ run on release.
 ## Repository layout
 
 - `crates/` — the 50 Rust crates (kernel · compiler · runtime · stdlib · tooling). See the
-  [Crate Index](Crate-Index) and [Architecture](Architecture).
+  [Crate Index](Crate-Index.md) and [Architecture](Architecture.md).
 - `docs/` — the design corpus: `rfcs/`, `adr/`, `notes/` (DNs), `spec/`, `planning/`; status is in
   [`docs/Doc-Index.md`](https://github.com/tzervas/mycelium/blob/main/docs/Doc-Index.md).
-- `docs/api-index/` — the committed agent-facing API index (see [API Reference](API-Reference)).
+- `docs/api-index/` — the committed agent-facing API index (see [API Reference](API-Reference.md)).
 - `research/` — the evidence base the corpus traces to.
 - `justfile`, `.pre-commit-config.yaml`, `scripts/` — the check tooling.
 

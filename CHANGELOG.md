@@ -8,6 +8,196 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: RFC-0032 Tier-2 — `Repr::Seq` + `Repr::Bytes` kernel reprs + `.myc` surface (E19-1 `kpr` Wave-B))
+
+- **Kernel value model grows by two reprs (KC-3, maintainer-signed-off)** — RFC-0032 D3/D4, implemented
+  Rust-first (RFC stays **Accepted**, not Enacted):
+  - **`Repr::Seq { elem: Box<Repr>, len: u32 }`** + `Payload::Seq` (M-749) — an indexed homogeneous
+    sequence; never-silent `seq.get` (out-of-bounds → `Option`, G2), `seq.len`; well-formedness recurses
+    into `elem` and applies the over-allocation cap to `len`.
+  - **`Repr::Bytes`** + `Payload::Bytes(Vec<u8>)` (M-750) — a first-class byte string; never-silent
+    `bytes.{get,slice,len,concat}`; UTF-8 decode is written in `.myc` over the byte surface (never in the
+    kernel). Content-addressing extended with append-only, injective tags (`0x14`/`0x15`/`0x24`/`0x25`).
+  - **`.myc` surface (maintainer-ratified):** `[e1,e2,e3]` literal → `Seq{T,N}` type (filling the
+    previously-deferred list-literal path; homogeneous + length-checked, never-silent) and `0x…` hex
+    literal → `Bytes` type (even-hex-digit, never-silent), across the L1 lexer/parser/checker/elaborator.
+    Reserving `Seq`/`Bytes` as repr-type keywords renamed the byte-list ADT fixtures to `ByteList`.
+  - **Verification:** full **three-way differential** (L1-eval ≡ L0-interp ≡ AOT over parsed `.myc`) +
+    never-silent rejects in `crates/mycelium-l1/tests/enablement.rs`; conformance accept/reject corpus.
+    Two T2 trusted-core pr-reviews gated the merge — a `seq.get` VR-5 guarantee-composition leak (an
+    `Exact` container silently re-stamping a `Declared` element) was caught and fixed before landing.
+  - **Unblocks** E13-1 M-716 (efficient collections, ⟸ M-749) and M-717 (text/fmt, ⟸ M-750).
+### Fixed (2026-06-26: `just check` greening on the dev consolidation tree)
+
+Cleared the gate failures left after the DN-40 security + design-doc consolidation merged onto `dev`
+(real fixes only; the supply-chain `deny` gate stays red in-sandbox — 403 fetching the RustSec
+advisory-db, an environment block, not a content issue):
+
+- **LSP keyword drift** (`mycelium-lsp`): `consume`/`grow` are now lexed (`mycelium_l1::token::keyword()`
+  returns them) but the parser still refuses them with a teaching diagnostic (no construct until M-664),
+  so they are **reserved-not-active**, not "not yet lexed". Moved them into
+  `reserved_not_active_words_are_not_offered` (beside the `hypha`…`reclaim` runtime words), retired the
+  now-empty `not_yet_lexed_words_are_not_offered` test, and corrected the module comment. Still
+  not offered in completions (G2/VR-5) — only the false "`keyword()` is None" claim is gone.
+- **`.myc` `wild` FFI-floor audit** (`scripts/checks/safety.sh`): excluded `docs/examples/` from the
+  RFC-0028 §4.7 spore-level audit (matching the existing grammar-conformance exclusion). The example
+  programs are illustrative DN-38 lowering-gradient walkthroughs, not buildable spores — they show a
+  `wild { }` drop in narrative `@io` context to *teach* the FFI boundary, and are never compiled/published.
+- **markdownlint** (corpus-wide, the gate scans all tracked `*.md`): cleared 200+ findings —
+  bare URLs wrapped in `<…>` (MD034), list-style/blank-line/fence/heading-punctuation/trailing-space
+  mechanical fixes via `markdownlint-cli2 --fix`, three unescaped `|` inside table-cell code spans
+  escaped (MD056), two stray H1s demoted (MD025), adjacent blockquotes joined (MD028). Prose `+`
+  connectors at line-wraps (which `--fix` mis-rewrote to `-` bullets) were reflowed by hand to keep
+  their meaning.
+- **Broken wiki cross-references** (`docs/wiki/`): appended `.md` to the 26 extensionless intra-wiki
+  links (e.g. a `Crate-Index` target → `Crate-Index.md`) so the offline link-checker resolves them
+  (GitHub's wiki renders both forms).
+- **codespell** (`.codespellrc`): added eight justified false positives (domain terms / proper nouns /
+  valid hyphenations: `theses`, `forin`, `symantics`, `generat`, `disjointness`, `toom`, `pre-emptive`,
+  `re-declare`).
+- **Secret-scan fallback** (`scripts/checks/secrets.sh`): the high-confidence fallback pattern begins
+  with `-----BEGIN`, which `git grep` parsed as an option (erroring out and silently scanning nothing —
+  a G2 never-silent violation); pass it via `-e` so the fallback actually runs.
+- **API baselines + agent index** regenerated (`just api-baseline` for the four DN-40-changed crates;
+  `just docs-index` after the `mycelium-lsp` line-shift) so the `api` and `doc-index` gates are current.
+
+### Security (2026-06-26: DN-40 input-validation hardening — the full gap ledger, 9 fixes)
+
+The DN-40 review's entire gap ledger, fixed across three agent-reviewed waves (each gap an explicit,
+never-silent refusal — G2; no severity inflated — VR-5):
+
+- **A1 CRITICAL + A2 HIGH — parser stack-overflow DoS** (`mycelium-l1`): the type and pattern
+  subgrammars recursed with no `MAX_EXPR_DEPTH` charge → uncatchable `SIGABRT` on attacker `.myc`. Fixed
+  with a shared `enter_depth`/`leave_depth` guard over every type/pattern recursion entry + crash-refused
+  regression tests.
+- **A3 HIGH — dependency-hash parse-don't-validate** (`mycelium-proj`/`mycelium-spore`): the
+  identity-bearing content-address pin was free-text `String`; now parsed into `Option<ContentHash>` at
+  the manifest boundary (malformed pin → explicit `ManifestError`).
+- **M1 — unbounded stdin read** (`mycelium-std-sys`): `read_to_end_capped(max)` with explicit
+  `TooLarge` (reads `max+1` to refuse, never silently truncate).
+- **M2 — `Repr` dimension over-alloc** (`mycelium-core`): `MAX_DIM = 1<<30` enforced in `Value::new`
+  before payload sizing (`DimensionTooLarge{field,value,cap}`).
+- **Wave-2** — symlink-cycle source-walk cap (`mycelium-spore`, `symlink_metadata` + `MAX_WALK_DEPTH`);
+  strict registry `parse_entry` (duplicate/unknown line rejected); manifest duplicate-key detection +
+  `MAX_VALUE_DEPTH`/element caps (`mycelium-proj`); centralized `ContentHash::digest_well_formed` +
+  opt-in `parse_digest` (`mycelium-core` — `parse` kept shape-only per the normative schema); empty-`0b`
+  lexer refusal (`mycelium-l1`); never-silent `args()` → `Result<_, NonUtf8Arg>` (`mycelium-std-sys`).
+
+Surfaced by the KC-3 trusted-core review (DN-39) and the input-validation architecture review (DN-40);
+the spore `content_address` `v1` length-prefix fix (#617) is the reference pattern. No kernel change.
+
+### Added (2026-06-26: second example — layered seamless-gradient HTTPS downloader)
+
+- **`docs/examples/https-downloader-layered.myc`** (+ README) — the sibling of the first downloader,
+  adapted to a typical general-programming task (fetch a release/config manifest over HTTPS → parse to a
+  typed `Config` → integrity-check) to make **DN-38's seamless-lowering gradient concrete**: one program
+  intermixing a **sugared DX top** (`derive` boilerplate, `via` dependency-injection for testability,
+  terse combinator pipelines, trait `impl`s) with deliberate **drops to explicit control** where it earns
+  it (a hard-capped byte read as an explicit bounded `for`-fold, canonical length-prefixed encoding of the
+  identity-bearing etag — the spore `v1` lesson, an explicit `!{io}` edge, `wild { }` only at the FFI
+  credential read), a **hand-rolled** `parse_channel` that opts out of `derive`/combinators to enforce a
+  custom `unknown ⇒ Stable` fail-safe invariant, and a `reveal { … }` showing the `for`-fold lowers to a
+  concrete L0 `Fix`/`Match` term (abstracted-never-hidden). **Honesty:** scrupulous per-construct surface
+  tags — `[enacted]` (landed grammar: `type`, `Binary{N}`, `<A>`, `->`, `match`, `trait`/`impl`, `!{io}`,
+  bounded `for`, `wild`) vs `[proposed:DN-31]` (`[]`/`=>`/`0t` — Draft direction, only *named* in comments,
+  never silently adopted, **not** called Accepted) vs `[designed:DN-37/38]` (`via`/`derive`/`reveal` —
+  greenfield); illustrative, **non-runnable** (design phase), assumed host/std surface flagged. Per-op
+  guarantee posture honest (Exact for total finite ops; Declared for effectful/delegated/host; nothing
+  Proven). Cross-links DN-38/37/36 + the sibling example.
+
+### Changed (2026-06-26: DN-40 ratified Draft → Accepted; fixes authorized)
+
+- **DN-40 — Input-Validation Architecture** ratified **Draft → Accepted** (maintainer). The six
+  secure-input principles, the gap-ledger prioritization (the three `Proven` items A1/A2/A3 first), the
+  recognizer-per-boundary architecture, and the principle are adopted as the design direction, and the
+  maintainer **authorized executing the named fixes via swarms** (A1/A2 parser depth-guard + A3 dep-hash
+  parse-don't-validate first, then the mediums). Enacts no code, upgrades no guarantee (each gap keeps its
+  `Proven`/`Declared`/`Empirical` basis — VR-5); each fix lands as its own reviewed, change-scoped PR.
+
+### Added (2026-06-26: DN-40 — input-validation architecture + stack-wide gap ledger)
+
+- **DN-40 — Input-Validation Architecture (only-intended-inputs across the stack)**
+  (`docs/notes/DN-40-Input-Validation-Architecture.md`, **Draft/advisory**) — captures the
+  maintainer-commissioned review. Answers **(a) where** validation is needed (a ranked, file:line-grounded
+  **gap ledger** over 5 boundaries) and **(b) the architecture** (one closed-grammar **recognizer per
+  boundary** minting an immutable/canonical/bounded **typed value** — which doubles as the **lock-free
+  concurrency fan-out**: validate-once-then-trust ⇒ no TOCTOU, data-parallel at memory bandwidth).
+  Patterned on the spore `content_address` `v1` fix as the reference. **Three `Proven` security gaps lead
+  the ledger** (recorded, not yet fixed — each a separate forward decision for the maintainer): **A1
+  CRITICAL** L1-parser type-subgrammar stack-overflow DoS (`parse.rs:685-771`, no `MAX_EXPR_DEPTH` charge →
+  uncatchable `SIGABRT` on attacker `.myc`); **A2 HIGH** pattern-subgrammar DoS (`parse.rs:1125-1146`);
+  **A3 HIGH** parse-don't-validate gap on the identity-bearing dependency hash (free-text `String`; the
+  existing `ContentHash::parse` smart constructor unused). Exhibited gaps `Proven`; architecture
+  `Declared`; prior-art (Parse-don't-validate / LANGSEC / simdjson) `Empirical`/`Proven`-at-source.
+  Enacts nothing; awaiting ratification.
+
+### Changed (2026-06-26: DN-39 ratified Draft → Accepted)
+
+- **DN-39 — Kernel-Promotion Review (KC-3)** ratified **Draft → Accepted** (maintainer). The
+  recommendation is adopted: **no promotions; the kernel boundary stays UNCHANGED** (KC-3 held on merit),
+  the four-clause default-DENY bar and the *"a deterministic encoding is the last thing to axiomatize into
+  the kernel"* principle adopted. Enacts no code, upgrades no guarantee (the kernel was already unchanged;
+  the KEEP-OUT and boundary-unchanged conclusions keep their `Proven`/`Declared` basis — VR-5). The spore
+  injectivity follow-up it named is a separate, already-landed library change (#617).
+
+### Added (2026-06-26: DN-39 — KC-3 kernel-promotion review (trusted core stays unchanged))
+
+- **DN-39 — Kernel-Promotion Review (KC-3 trusted-core audit)**
+  (`docs/notes/DN-39-Kernel-Promotion-Review-KC3.md`, **Draft/advisory**) — captures the
+  maintainer-commissioned review: should any non-kernel functionality become a trusted-core component?
+  **Recommendation: NO — zero promotions; the kernel boundary stays UNCHANGED**, KC-3 held on merit. The
+  one candidate (spore `content_address`) is a decisive KEEP-OUT (verifiable ⇒ must be verified, not
+  trusted). Records the **security finding** the review surfaced — the `v0` content-address injectivity
+  flaw (supply-chain substitution vector), now **`Proven`-and-FIXED** in PR #617 — and the generalizable
+  principle: *a deterministic encoding is the most testable artifact in the system, so it is the last
+  thing that should be axiomatized into the kernel* (VR-5 applied to the trust boundary). Enacts nothing;
+  awaiting ratification.
+
+### Added (2026-06-26: DN-35 Phase-1a foundation — honest baseline + Binary[64] HTTPS example)
+
+- **`docs/measurements/DN-35-baseline-2026-06-26.md`** — the release-honest "before" baseline for the
+  reclamation prototype (the data Increments 1–2 are measured against). MEM-4 static dup-reduction
+  91.3% (`Exact` count, corpus-dependent); `mycelium-bench` interp-vs-aot-env timings (aot-env wins
+  rec-build 1.24× / rec-mutual 1.18×, slower on most small kernels — the gap DN-35 targets). Caveats are
+  load-bearing (ephemeral dup-printer, `mlir-dialect` OFF, spawn-bound direct-llvm/jit); runtime
+  heap/RSS counters still need wiring before Increment-1 memory claims are meaningful.
+- **`docs/examples/binary64-https-downloader.myc`** (+ README) — illustrative, lexicon-correct
+  `Binary[64]` general programming + a small HTTPS downloader with named security practice (TLS-verify
+  on + non-disableable, HTTPS-only, bounded streamed reads, secrets-from-env, never-silent
+  `?`-propagation, integrity + size check, mandatory finite timeout/budget). Labeled **non-runnable**
+  (design phase); uses the DN-31 **recorded-direction (Draft), not-yet-landed** target surface (`[]`/`=>`/`Binary[64]`),
+  flagged in-header — it previews the surface and rides epic #27 to become parseable.
+- Phase-1a's lexicon docs-sweep correctly returned **zero edits** (G2/VR-5): the surface lexicon is
+  Accepted *direction* but unlanded, and DN-31 mandates a coordinated all-at-once grammar wave (epic
+  #27), so piecemeal edits would diverge the docs from the grammar oracle/lexer/conformance corpus.
+
+### Security (2026-06-26: spore identity encoding — injectivity fix `v0 → v1`)
+
+- **Fixed a content-address injectivity flaw in `mycelium-spore::content_address`** (surfaced by the
+  KC-3 trusted-core review as a side finding). The `v0` pre-image emitted every author-influenced field
+  (surface names, source `path`, dep `name`/`phylum`/`hash`) **space/newline-delimited with no
+  length-prefix or escaping**, so a crafted field containing a space or newline could shift a record
+  boundary and **alias two distinct spore DAGs onto one pre-image → one address** (a second-pre-image
+  collision; a **supply-chain substitution vector** against dep-pinning / resolve-by-hash / immutability
+  detection). All three `ResolvedDep` fields are free-text manifest strings, so the collision needed no
+  hash-preimage or filesystem — **Proven** (a byte-identical `v0` pre-image for two distinct dep DAGs is
+  exhibited in the regression tests). **Fix:** `v1` **length-prefixes every variable-length field**
+  (`<bytelen>:<bytes>`, the load-bearing part) plus per-section record counts (defense-in-depth), making
+  the encoding injective by construction; added adversarial injectivity property tests
+  (`crates/mycelium-spore/src/tests/lib_tests.rs` → `mod injectivity`).
+- **DRY unification (the real root cause):** spore identity was encoded in **two** places — the verify
+  path (`mycelium-std-spore::recompute_identity`) was a hand-copied duplicate that still stamped `v0`,
+  so a freshly-built `v1` spore failed `verify()` cross-crate. `content_address` is now the **single
+  `pub` canonical encoder**, and `recompute_identity` (hence `from_value`) delegates to it — divergence
+  is now structurally impossible. Verified green across the full reverse-dependent closure
+  (`mycelium-spore` 22, `mycelium-std-spore` 44, `mycelium-std-recover`/`mycelium-cert`/`mycelium-cli`).
+  **Note:** the header bumps `v0 → v1`, which **re-addresses every spore** (append-only supersession of
+  the explicitly provisional format; acceptable pre-1.0 — no live registry).
+- **KC-3 holds:** the right response to a verifiable encoding flaw is *more verification* (a property
+  test), **not** promoting the encoding into the trusted core — identity is a deterministic, checkable
+  function and must be *verified*, never *trusted* (VR-5 applied to the trust boundary). `mycelium-spore`
+  stays a verified library above the kernel; the trusted-core boundary is unchanged.
+
 ### Changed (2026-06-26: DN-35 ratified Draft → Accepted)
 
 - **DN-35 — Env-Machine Reclamation** ratified **Draft → Accepted** (maintainer). Accepts the §10 design
@@ -214,8 +404,8 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
     rustc MIR `mir_borrowck`); `syn` is syntax-only; MEM-4 is a *downstream* RC optimizer over
     Mycelium Core IR, not the transpiler's ownership analyzer. Annotated the HOF/`?` rows with real
     surface status (RFC-0024 Proposed; capturing closures auto-Impossible; `?` absent from v0).
-  - **DN-32 + RFC-0027 (High):** added honest-scope notes — the model is implemented at the runtime
-    + MEM-4 static tiers with all three §9 triggers live, but reclamation is **not yet threaded into
+  - **DN-32 + RFC-0027 (High):** added honest-scope notes — the model is implemented at the runtime +
+    MEM-4 static tiers with all three §9 triggers live, but reclamation is **not yet threaded into
     the AOT env-machine** (env-machine still Rust-manages values; §9 output is an additive audit
     trail; seam = `mycelium-mlir/src/aot.rs::eval_machine`).
   - **RFC-0028 §4.5 (Low):** clarified v0 `std.rand` entropy = `/dev/urandom` via `std::fs`
@@ -236,8 +426,8 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
     Reuse, Counting Immutable Beans, FP² FIP, Lean 4 RC, RC⊕region coupling) with a concrete
     "static decisions, dynamic verification" recommendation and the one novel obligation Mycelium
     must own (in-place reuse vs content-address identity).
-  - **18/19 — Rust→Mycelium transpiler (DN-34 evidence).** The two maintainer seed projects (py2rust
-    + py-rust-bridge) with reuse verdicts; Mycelium-as-transpile-target readiness; the
+  - **18/19 — Rust→Mycelium transpiler (DN-34 evidence).** The two maintainer seed projects (py2rust +
+    py-rust-bridge) with reuse verdicts; Mycelium-as-transpile-target readiness; the
     construct-mapping table; plus a prior-art survey (front-end choice — `syn` vs rust-analyzer HIR
     vs rustc MIR `mir_borrowck` as the ownership oracle; c2rust/SACTOR preserve-first architecture;
     never-silent residue reporting; the Laertes ~11% ceiling as an honest caution on "the bulk
@@ -746,8 +936,8 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `#[cfg(test)]` unit test lives in an **in-crate** test module — `#[cfg(test)] mod tests;` in `lib.rs` →
   `src/tests/` (one submodule per source module), each `use crate::…::*` for **white-box** access to
   private items (precedent: `mycelium-std-recover/src/tests.rs`). Chosen over fully-external `tests/` on
-  merit — that would lose private-internal coverage or force internals `pub`. **Complex test logic → fixtures
-  + parameterization**, not test bodies. New tests follow it now; the ~185-file inline-test retrofit
+  merit — that would lose private-internal coverage or force internals `pub`. **Complex test logic → fixtures +
+  parameterization**, not test bodies. New tests follow it now; the ~185-file inline-test retrofit
   (mycelium-core alone is 18 files / ~5k test lines) is tracked as **M-797**, a per-crate octopus-merge
   swarm (no behaviour change — identical test counts pre/post).
 

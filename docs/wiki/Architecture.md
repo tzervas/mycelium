@@ -3,7 +3,7 @@
 Mycelium is a Rust workspace of **50 crates** (MSRV-pinned Rust 1.92, ADR-007) plus the
 Mycelium-language surface that lowers onto them. The public surface of each crate is gated by a
 committed API baseline (`docs/spec/api/`, KC-3). This page is the conceptual map; the
-[Crate Index](Crate-Index) lists every crate with a link to its README.
+[Crate Index](Crate-Index.md) lists every crate with a link to its README.
 
 ## The tiers
 
@@ -20,7 +20,7 @@ committed API baseline (`docs/spec/api/`, KC-3). This page is the conceptual map
   pass crate (outside the trusted Core IR).
 - **Runtime & memory model** — `mycelium-std-runtime` is the fungal concurrency surface
   (Colony/Scope/Task/Network/scheduler/supervision) **and** the landed three-layer memory model. See
-  [Memory Model](Memory-Model).
+  [Memory Model](Memory-Model.md).
 - **Standard library** — 26 `mycelium-std-*` crates implementing RFC-0016's three-ring contract,
   every op honestly tagged and never-silent.
 - **Toolchain** — `myc` (the one-command driver), `myc-check`, `mycfmt`, `myc-lint`, `myc-sec`,
@@ -35,7 +35,7 @@ committed API baseline (`docs/spec/api/`, KC-3). This page is the conceptual map
   binary↔ternary, bounded/probabilistic for ↔VSA/embedding (the split regime, RFC-0002).
 - **Transparency is a typed, monotone property.** The guarantee lattice
   **`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`** travels with every value and degrades by *meet*, so a
-  disclosed guarantee never spuriously strengthens (VR-5). See [Tunable Certification](Tunable-Certification).
+  disclosed guarantee never spuriously strengthens (VR-5). See [Tunable Certification](Tunable-Certification.md).
 - **No black boxes (G2).** Selections, conversions, and reclamations are reified, inspectable, and
   `EXPLAIN`-able; out-of-range is an explicit `Option`/error, never a quiet value.
 - **Metadata survives lowering** (Arrow-grade): provenance, bounds, layout, and reconstruction info
@@ -54,5 +54,5 @@ committed API baseline (`docs/spec/api/`, KC-3). This page is the conceptual map
 
 Small auditable kernel (KC-3); the transparency & auditability rule (per-op tags never upgraded
 without a checked basis); never-silent operations (G2); append-only decisions (RFC/ADR/DN advance,
-never rewrite); grounded claims. See [Decision Records](Decision-Records) and the repository
+never rewrite); grounded claims. See [Decision Records](Decision-Records.md) and the repository
 `CONTRIBUTING.md` / `CLAUDE.md`.

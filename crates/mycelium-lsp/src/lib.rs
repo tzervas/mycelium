@@ -24,6 +24,9 @@ mod span;
 pub mod sync;
 pub mod wire;
 
+#[cfg(test)]
+mod tests;
+
 pub use baseline::{
     baseline_for_class, derive_baseline, derive_baseline_for, explain_baseline, recovery_profile,
     BaselineRule, RecoveryProfile, RESILIENT_MAX_ATTEMPTS,

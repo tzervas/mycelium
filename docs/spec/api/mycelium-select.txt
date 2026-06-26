@@ -70,7 +70,9 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::DecodeMethod
 impl core::panic::unwind_safe::UnwindSafe for mycelium_select::DecodeMethod
 pub enum mycelium_select::ParadigmKind
 pub mycelium_select::ParadigmKind::Binary
+pub mycelium_select::ParadigmKind::Bytes
 pub mycelium_select::ParadigmKind::Dense
+pub mycelium_select::ParadigmKind::Seq
 pub mycelium_select::ParadigmKind::Ternary
 pub mycelium_select::ParadigmKind::Vsa
 impl core::clone::Clone for mycelium_select::ParadigmKind

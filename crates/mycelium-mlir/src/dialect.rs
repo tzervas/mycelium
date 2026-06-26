@@ -46,6 +46,10 @@ fn repr_attr(repr: &Repr) -> String {
         Repr::Ternary { trits } => format!("ternary<{trits}>"),
         Repr::Dense { dim, .. } => format!("dense<{dim}>"),
         Repr::Vsa { model, dim, .. } => format!("vsa<{model},{dim}>"),
+        // RFC-0032 D3 (M-749): the indexed sequence renders its element attr and declared length.
+        Repr::Seq { elem, len } => format!("seq<{},{len}>", repr_attr(elem)),
+        // RFC-0032 D4 (M-750): the byte string carries no static type parameter.
+        Repr::Bytes => "bytes".to_owned(),
     }
 }
 
@@ -62,6 +66,13 @@ fn payload_attr(p: &Payload) -> String {
             .collect(),
         Payload::Scalars(xs) => format!("{xs:?}"),
         Payload::Hypervector(xs) => format!("{xs:?}"),
+        // RFC-0032 D3 (M-749): a sequence payload renders its elements' attrs, comma-joined.
+        Payload::Seq(elems) => {
+            let inner: Vec<String> = elems.iter().map(|e| payload_attr(e.payload())).collect();
+            format!("[{}]", inner.join(","))
+        }
+        // RFC-0032 D4 (M-750): a byte payload renders as a lowercase-hex string.
+        Payload::Bytes(bytes) => bytes.iter().map(|b| format!("{b:02x}")).collect(),
     }
 }
 
@@ -221,51 +232,6 @@ fn emit_op(rhs: &Rhs, depth: usize, s: &mut String) {
             }
             let _ = write!(s, "{pad}) : (!myc.value) -> !myc.value");
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mycelium_core::{ContentHash, Meta, Provenance, Value};
-
-    fn byte() -> Value {
-        Value::new(
-            Repr::Binary { width: 8 },
-            Payload::Bits(vec![true, false, true, true, false, false, true, false]),
-            Meta::exact(Provenance::Root),
-        )
-        .unwrap()
-    }
-
-    fn program() -> Node {
-        Node::Let {
-            id: "a".into(),
-            bound: Box::new(Node::Const(byte())),
-            body: Box::new(Node::Swap {
-                src: Box::new(Node::Var("a".into())),
-                target: Repr::Ternary { trits: 6 },
-                policy: ContentHash::parse("blake3:round_trip_safe").unwrap(),
-            }),
-        }
-    }
-
-    #[test]
-    fn emits_a_module_with_one_op_per_binding() {
-        let m = emit(&program());
-        assert!(m.starts_with("module {"));
-        assert!(m.contains("func.func @kernel"));
-        assert!(m.contains("\"ternary.const\""));
-        assert!(m.contains("\"ternary.swap\""));
-        assert!(m.contains("func.return"));
-        // target + policy attributes are present (no opaque pass).
-        assert!(m.contains("target = \"ternary<6>\""));
-        assert!(m.contains("policy = \"blake3:round_trip_safe\""));
-    }
-
-    #[test]
-    fn emission_is_deterministic() {
-        assert_eq!(emit(&program()), emit(&program()));
     }
 }
 

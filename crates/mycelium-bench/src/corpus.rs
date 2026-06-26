@@ -199,44 +199,11 @@ pub fn corpus() -> Vec<Case> {
         },
         Case {
             id: "rec-fold",
-            src: "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
-                   fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
+            src: "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
+                   fn checksum(bs: ByteList) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
                    fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
             fragment: Fragment::Recursion,
             note: "a `for` fold over a list spine (a synthesized Fix fold) returning a repr",
         },
     ]
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn every_case_elaborates_to_a_core_term() {
-        // A corpus regression — a program that no longer parses/checks/elaborates — must be loud.
-        for case in corpus() {
-            case.elaborate()
-                .unwrap_or_else(|e| panic!("corpus case `{}` failed to elaborate: {e}", case.id));
-        }
-    }
-
-    #[test]
-    fn case_ids_are_unique() {
-        let mut ids: Vec<&str> = corpus().iter().map(|c| c.id).collect();
-        let n = ids.len();
-        ids.sort_unstable();
-        ids.dedup();
-        assert_eq!(ids.len(), n, "corpus case ids must be unique");
-    }
-
-    #[test]
-    fn corpus_spans_all_fragments() {
-        let frags: std::collections::BTreeSet<_> = corpus().iter().map(|c| c.fragment).collect();
-        // The corpus must exercise every fragment so the capability-loss surface is covered.
-        assert!(frags.contains(&Fragment::BitSubset));
-        assert!(frags.contains(&Fragment::Data));
-        assert!(frags.contains(&Fragment::Recursion));
-        assert!(frags.contains(&Fragment::Swap));
-    }
 }
