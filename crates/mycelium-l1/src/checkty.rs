@@ -3338,6 +3338,37 @@ impl Cx<'_> {
                 // A byte is a `Binary{8}` value.
                 Ok(Some((Ty::Binary(8), app_node(head, vec![recv2, idx2]))))
             }
+            // DN-41 (M-798): `width_cast(value: Binary{N}, into: Binary{M}) -> Binary{M}` — the
+            // never-silent `Binary` re-width. The second operand is a **width witness**: only its
+            // `Binary{M}` width is read (its value drives nothing — the runtime ignores its bits), and
+            // `M` is the result width. Both operands must be `Binary` (a non-`Binary` is an explicit
+            // type refusal — G2). Neither operand is anchored by the *expected* type: the witness
+            // already pins `M`, and the value operand must be a concrete `Binary{N}` (a bare decimal
+            // has no anchor here — the result is the witness width, not the value width — so it is
+            // refused, never defaulted). Whether the cast is exact (widen/identity) or fits (narrow)
+            // is a runtime contract, not a static one — narrowing overflow is a never-silent runtime
+            // refusal (mirroring `add_bin`/`sub_bin`), so the static rule only fixes the result width.
+            "width_cast" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (vty, v2) = self.check(scope, &args[0], None)?;
+                if !matches!(vty, Ty::Binary(_)) {
+                    return self.err(format!(
+                        "`width_cast` value operand must be a concrete `Binary{{N}}`, got {vty} \
+                         (DN-41; never a default width)"
+                    ));
+                }
+                let (wty, w2) = self.check(scope, &args[1], None)?;
+                let Ty::Binary(m) = wty else {
+                    return self.err(format!(
+                        "`width_cast` width witness must be a `Binary{{M}}` (only its width is used), \
+                         got {wty} (DN-41)"
+                    ));
+                };
+                // The result is `Binary{M}` (the witness width); the value→M fit is a runtime contract.
+                Ok(Some((Ty::Binary(m), app_node(head, vec![v2, w2]))))
+            }
             _ => Ok(None),
         }
     }
@@ -3814,6 +3845,8 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "seq_get" => "seq.get",
         "bytes_len" => "bytes.len",
         "bytes_get" => "bytes.get",
+        // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
+        "width_cast" => "bit.width_cast",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",
