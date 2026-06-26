@@ -43,6 +43,15 @@ use crate::llvm::AotError;
 ///
 /// Deliberately **not** `Default`: there is no "the obvious mode" to fall back to — the caller must
 /// choose, so that which path ran is always known (and interpreter↔JIT divergence always detectable).
+///
+/// **`#[non_exhaustive]` tension (G2).** This is marked `#[non_exhaustive]` so a future mode can be
+/// added without a breaking change — but that openness carries a never-silent obligation. When a
+/// variant is added: (1) every **in-crate** exhaustive match (`name`, `is_always_available`, the
+/// [`run`] dispatch, the `ALL` list) must be updated to handle it, and (2) **downstream** code — which
+/// `#[non_exhaustive]` forces to carry a wildcard arm — must treat an unknown variant as an **explicit
+/// error**, never route it silently to an existing mode (a wildcard that fell through to, say,
+/// `Interpreter` would be exactly the silent substitution this enum exists to forbid). The wildcard is
+/// for *refusal*, not for *defaulting*.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub enum ExecMode {

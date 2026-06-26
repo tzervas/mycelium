@@ -59,6 +59,9 @@ fn filter<A>(xs: List<A>, pred: A -> Bool) -> List<A> =
 // spine-walk (Declared). Nil returns the initial `acc` (never-silent, G2). `f: A -> B` is the
 // single-arg HOF (RFC-0024 §3); the prior acc is replaced by `f(h)` at each step — not a true
 // binary (A -> B -> B) fold (which requires multi-arg HOF, deferred RFC-0024 §5). Declared.
+// Note: because each step discards the prior `acc` (it is `f(h)`, ignoring the accumulator), the
+// effective result for a non-empty list is `f(last element)`; the initial `acc` is only ever
+// returned on `Nil`. (A true binary fold — needing multi-arg HOF — is the deferred form below.)
 // FLAG: cannot execute three-way in stage-1 (recursive HOF re-pass — same cause as map).
 // FLAG: a true two-arg fold (f: A -> B -> B) requires multi-arg HOF (M-753 era).
 fn foldl<A, B>(xs: List<A>, f: A -> B, acc: B) -> B =

@@ -25,9 +25,11 @@
 //! path** (L1-eval, L0-interp, AOT) — never a silent clamp to `[..len)` and never a silent truncation
 //! to the empty slice.
 
-use mycelium_core::{Payload, Repr};
-use mycelium_interp::{Interpreter, PrimRegistry};
-use mycelium_l1::{check_nodule, elaborate, parse, Evaluator};
+use mycelium_cert::{check_core, CheckVerdict};
+use mycelium_core::{GuaranteeStrength, Payload, Repr};
+use mycelium_interp::{EvalError, Interpreter, PrimRegistry};
+use mycelium_l1::elab::build_registry;
+use mycelium_l1::{check_nodule, elaborate, monomorphize, parse, Evaluator, L1Error};
 
 /// Run the three-way differential on `src` (L1-eval ≡ elaborate→L0-interp ≡ AOT) and assert all
 /// three paths agree on the observable (`repr + payload`) AND equal the `expected` reference value.
@@ -174,6 +176,12 @@ fn slice_out_of_range_refuses_on_every_path() {
         lit32(2),
         lit32(9)
     );
+    // Check-first (the strengthening): the program **type-checks** — so the refusal below is a
+    // genuine *runtime* contract (DN-43), not a static error caught at the wrong layer. The
+    // out-of-range slice surfaces uniformly as `EvalError::PrimType` (the kernel `prim_bytes_slice`
+    // guard `start > end || end > len`) on all three paths: L1 wraps it in `L1Error::Kernel`
+    // (`mycelium_l1`'s `KernelError` *is* `mycelium_interp::EvalError`), and the AOT env-machine reuses
+    // the same prim registry, so it too yields `EvalError::PrimType`.
     let env = check_nodule(&parse(&src).expect("parses"))
         .expect("checks (range fit is a runtime contract)");
 
@@ -185,16 +193,22 @@ fn slice_out_of_range_refuses_on_every_path() {
     let engine = mycelium_cert::BinaryTernarySwapEngine;
 
     assert!(
-        Evaluator::new(&env).call("main", vec![]).is_err(),
+        matches!(
+            Evaluator::new(&env).call("main", vec![]),
+            Err(L1Error::Kernel(EvalError::PrimType { .. }))
+        ),
         "L1-eval must refuse the out-of-range slice (never a silent clamp to [2,4))"
     );
     let node = elaborate(&env, "main").expect("in fragment");
     assert!(
-        interp.eval(&node).is_err(),
+        matches!(interp.eval(&node), Err(EvalError::PrimType { .. })),
         "L0-interp must refuse the out-of-range slice"
     );
     assert!(
-        mycelium_mlir::run(&node, &prims, &engine).is_err(),
+        matches!(
+            mycelium_mlir::run(&node, &prims, &engine),
+            Err(EvalError::PrimType { .. })
+        ),
         "AOT must refuse the out-of-range slice"
     );
 }
@@ -208,6 +222,10 @@ fn slice_inverted_range_refuses_on_every_path() {
         lit32(3),
         lit32(1)
     );
+    // Check-first (the strengthening): the program **type-checks**, so this is a *runtime* refusal
+    // (DN-43), not a static error. The inverted range (`start > end`) hits the same kernel guard and
+    // surfaces as `EvalError::PrimType` on all three paths (L1 wraps it in `L1Error::Kernel`; the AOT
+    // env-machine reuses the same prim registry).
     let env = check_nodule(&parse(&src).expect("parses")).expect("checks");
 
     let interp = Interpreter::new(
@@ -217,10 +235,19 @@ fn slice_inverted_range_refuses_on_every_path() {
     let prims = PrimRegistry::with_builtins();
     let engine = mycelium_cert::BinaryTernarySwapEngine;
 
-    assert!(Evaluator::new(&env).call("main", vec![]).is_err());
+    assert!(matches!(
+        Evaluator::new(&env).call("main", vec![]),
+        Err(L1Error::Kernel(EvalError::PrimType { .. }))
+    ));
     let node = elaborate(&env, "main").expect("in fragment");
-    assert!(interp.eval(&node).is_err());
-    assert!(mycelium_mlir::run(&node, &prims, &engine).is_err());
+    assert!(matches!(
+        interp.eval(&node),
+        Err(EvalError::PrimType { .. })
+    ));
+    assert!(matches!(
+        mycelium_mlir::run(&node, &prims, &engine),
+        Err(EvalError::PrimType { .. })
+    ));
 }
 
 // ── Never-silent static type refusals (G2): a non-`Bytes` operand is a static error ───────────────
@@ -270,4 +297,140 @@ fn concat_wrong_arity_refuses() {
         check_nodule(&parse(src).expect("parses")).is_err(),
         "bytes_concat requires two operands; one is a static error"
     );
+}
+
+// ── slice_opt — the bounds-checked Option<Bytes> form (DN-43 / M-799) ─────────────────────────────
+//
+// `slice_opt(b, start, end) -> Option<Bytes>` lifts the kernel's never-silent out-of-range refusal
+// into explicit `Some`/`None` data (the range-analog of `byte_at`). Because the result is a **data**
+// value (`Option<Bytes>`), these tests use the full data-value three-way harness (mirroring
+// `std_text.rs::assert_three_way`): they include the `text.myc` source verbatim (the single source of
+// truth for `slice_opt`/`Option`/`byte_len`) and compare the monomorphized L1 / elaborated-L0 / AOT
+// CoreValues against a reference program. The reference reuses the same `bytes_slice` call for the
+// `Some` case so the wrapped value shares `Derived` provenance with the computed result (a literal
+// would carry `Root` provenance and would not compare equal — Meta carries provenance).
+
+/// The `std.text` nodule source, loaded at compile time — the single source of truth for `slice_opt`.
+const TEXT_SRC: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../lib/std/text.myc"
+));
+
+/// Build a full test program by appending a typed driver to the `text.myc` nodule source.
+fn text_program(driver: &str) -> String {
+    format!("{TEXT_SRC}\n{driver}")
+}
+
+/// Data-value three-way differential (L1-eval(mono) ≡ elaborate→L0-interp ≡ AOT) over an
+/// `Option<Bytes>`-returning `src`, asserting all three agree AND equal the `expected` reference
+/// program's value. A faithful copy of `std_text.rs::assert_three_way`, kept local so this surface's
+/// `slice_opt` conformance is self-contained.
+fn assert_three_way_opt(label: &str, src: &str, expected_src: &str) {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+
+    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
+        .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
+    let mono =
+        monomorphize(&env, "main").unwrap_or_else(|e| panic!("{label}: monomorphize failed: {e}"));
+    let registry =
+        build_registry(&mono).unwrap_or_else(|e| panic!("{label}: build_registry failed: {e}"));
+
+    let l1_core = Evaluator::new(&mono)
+        .call("main", vec![])
+        .unwrap_or_else(|e| panic!("{label}: L1-eval failed: {e}"))
+        .to_core(&mono, &registry)
+        .unwrap_or_else(|| panic!("{label}: L1 result is outside the r3 data fragment"));
+
+    let node = elaborate(&env, "main").unwrap_or_else(|e| panic!("{label}: elaborate failed: {e}"));
+    let l0_core = interp
+        .eval_core(&node)
+        .unwrap_or_else(|e| panic!("{label}: L0-interp failed: {e}"));
+    let aot_core = mycelium_mlir::run_core(
+        &node,
+        &PrimRegistry::with_builtins(),
+        &mycelium_cert::BinaryTernarySwapEngine,
+    )
+    .unwrap_or_else(|e| panic!("{label}: AOT run_core failed: {e}"));
+
+    assert_eq!(
+        l1_core, l0_core,
+        "{label}: L1-eval(mono) vs elaborate→L0-interp diverged"
+    );
+    assert_eq!(l0_core, aot_core, "{label}: L0-interp vs AOT diverged");
+    for (x, y, pair) in [
+        (&l1_core, &l0_core, "L1↔interp"),
+        (&l0_core, &aot_core, "interp↔AOT"),
+    ] {
+        assert_eq!(
+            check_core(x, y),
+            CheckVerdict::Validated {
+                strength: GuaranteeStrength::Exact
+            },
+            "{label}: the shared checker must validate the {pair} pair"
+        );
+    }
+
+    let ref_env = check_nodule(
+        &parse(expected_src).unwrap_or_else(|e| panic!("{label}: ref parse failed: {e}")),
+    )
+    .unwrap_or_else(|e| panic!("{label}: ref check failed: {e}"));
+    let ref_node = elaborate(&ref_env, "main")
+        .unwrap_or_else(|e| panic!("{label}: ref elaborate failed: {e}"));
+    let expected = interp
+        .eval_core(&ref_node)
+        .unwrap_or_else(|e| panic!("{label}: ref eval failed: {e}"));
+    assert_eq!(
+        l1_core, expected,
+        "{label}: result does not match expected reference value"
+    );
+}
+
+/// `slice_opt(0xDEADBEEF, 1, 3)` → `Some(bytes_slice(…, 1, 3))` (= Some(0xADBE)) — in range
+/// (`1 <= 3 <= 4`), so the bounds check passes and the sub-slice is wrapped in `Some`. The reference
+/// reuses `bytes_slice` so the wrapped value shares `Derived` provenance. Declared/Empirical.
+#[test]
+fn slice_opt_in_range_is_some() {
+    let driver = format!(
+        "fn main() -> Option<Bytes> = slice_opt(0xDEADBEEF, {}, {})",
+        lit32(1),
+        lit32(3)
+    );
+    let src = text_program(&driver);
+    let expected = text_program(&format!(
+        "fn main() -> Option<Bytes> = Some(bytes_slice(0xDEADBEEF, {}, {}))",
+        lit32(1),
+        lit32(3)
+    ));
+    assert_three_way_opt("slice_opt [1,3) = Some(0xADBE)", &src, &expected);
+}
+
+/// `slice_opt(0xDEADBEEF, 3, 1)` → `None` — inverted range (`start = 3 > end = 1`): the never-silent
+/// out-of-range refusal is lifted to an explicit `None`, never a fabricated empty slice (G2).
+#[test]
+fn slice_opt_inverted_range_is_none() {
+    let driver = format!(
+        "fn main() -> Option<Bytes> = slice_opt(0xDEADBEEF, {}, {})",
+        lit32(3),
+        lit32(1)
+    );
+    let src = text_program(&driver);
+    let expected = text_program("fn main() -> Option<Bytes> = None");
+    assert_three_way_opt("slice_opt [3,1) inverted = None", &src, &expected);
+}
+
+/// `slice_opt(0xDEADBEEF, 2, 9)` → `None` — out of range (`end = 9 > len = 4`): the explicit `None`,
+/// never a silent clamp to `[2, 4)` (G2).
+#[test]
+fn slice_opt_out_of_range_is_none() {
+    let driver = format!(
+        "fn main() -> Option<Bytes> = slice_opt(0xDEADBEEF, {}, {})",
+        lit32(2),
+        lit32(9)
+    );
+    let src = text_program(&driver);
+    let expected = text_program("fn main() -> Option<Bytes> = None");
+    assert_three_way_opt("slice_opt [2,9) oob = None", &src, &expected);
 }

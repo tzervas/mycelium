@@ -54,6 +54,20 @@ fn trit_add_in_range() -> Node {
     }
 }
 
+/// A `trit.sub` over two 3-trit constants with a named numeric oracle: `3 - 1 = 2`, in range (no
+/// overflow). Balanced-ternary MSB-first: `3 = [0,+,0]` (0·9 + 1·3 + 0·1), `1 = [0,0,+]`, and the
+/// difference `2 = [0,+,-]` (0·9 + 1·3 + (-1)·1) all fit 3 trits. Mirrors `trit_add_in_range`'s
+/// named-helper style so the emission test exercises a known in-range pair, not an anonymous one.
+fn trit_sub_in_range() -> Node {
+    Node::Op {
+        prim: "trit.sub".into(),
+        args: vec![
+            Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Zero])),
+            Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
+        ],
+    }
+}
+
 #[test]
 fn emits_a_real_arith_func_module() {
     let (m, kind, width) = emit_mlir(&not_a_xor_b()).expect("emit");
@@ -100,17 +114,11 @@ fn trit_add_emits_real_ripple_carry_with_overflow_branch() {
     assert!(m.contains("func.return"));
 }
 
-/// `trit.sub` lowers via `add(a, neg(b))` — same ripple + overflow branch (M-725).
+/// `trit.sub` lowers via `add(a, neg(b))` — same ripple + overflow branch (M-725). Exercises the
+/// named `3 - 1 = 2` in-range pair (numeric oracle, mirroring `trit_add_in_range`).
 #[test]
 fn trit_sub_lowers_through_the_dialect_path() {
-    let sub = Node::Op {
-        prim: "trit.sub".into(),
-        args: vec![
-            Node::Const(tern(vec![Trit::Pos, Trit::Zero, Trit::Zero])),
-            Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
-        ],
-    };
-    let (m, kind, width) = emit_mlir(&sub).expect("emit trit.sub");
+    let (m, kind, width) = emit_mlir(&trit_sub_in_range()).expect("emit trit.sub");
     assert_eq!(kind, ResultKind::Ternary);
     assert_eq!(width, 3);
     assert!(m.contains("arith.remsi"), "expected ripple-carry in:\n{m}");

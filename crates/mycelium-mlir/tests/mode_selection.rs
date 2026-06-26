@@ -93,7 +93,7 @@ fn jit_mode_equals_interpreter_mode_over_the_subset() {
         let (p, s) = config();
         let jit = match mycelium_mlir::run_mode(ExecMode::Jit, node, p, s) {
             Ok(v) => v,
-            Err(ModeError::ToolchainMissing(_)) => return, // environment skip (clang absent)
+            Err(ModeError::ToolchainMissing(_)) => continue, // environment skip (clang absent)
             Err(e) => panic!("program #{i}: JIT mode errored: {e}"),
         };
         ran_jit = true;
@@ -104,12 +104,25 @@ fn jit_mode_equals_interpreter_mode_over_the_subset() {
             "program #{i}: interp mode ≠ jit mode"
         );
     }
-    // If we got here without an early skip, the JIT genuinely ran (non-vacuous over a present clang).
-    if !ran_jit {
-        // Empty corpus would be a bug; the corpus is non-empty, so a no-run means an early skip path
-        // was hit on every node — which only the toolchain-missing `return` does (already handled).
-        unreachable!("corpus is non-empty and no ToolchainMissing skip occurred");
+    // Non-vacuity guard: if `clang` is present, the JIT must actually have run on ≥1 program (never a
+    // silent vacuous pass). Same guard `threeway_codegen_differential.rs` uses.
+    if clang_present() {
+        assert!(ran_jit, "clang present but JIT ran on no program — vacuous");
     }
+}
+
+/// Probe whether `clang` can compile a trivial in-subset kernel right now (the JIT toolchain). Used by
+/// the non-vacuity guard — `true` means the JIT genuinely should have run.
+fn clang_present() -> bool {
+    let trivial = Node::Op {
+        prim: "bit.not".into(),
+        args: vec![Node::Const(byte(A))],
+    };
+    let (p, s) = config();
+    !matches!(
+        mycelium_mlir::run_mode(ExecMode::Jit, &trivial, p, s),
+        Err(ModeError::ToolchainMissing(_))
+    )
 }
 
 /// M-727 never-silent selection (G2): the AOT mode is **also** equivalent to the interpreter over the

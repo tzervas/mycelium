@@ -28,10 +28,11 @@
 //!   doublings (no shift prim). `decode_ascii` is retained as the `Binary{8}` 1-byte fast path.
 //!   (NOT yet rejected, honestly: overlong forms, surrogates, codepoints > U+10FFFF — a further
 //!   increment; structural malformations DO surface never-silent.)
-//! - FLAG-text-3: byte-cons slice/concat ops **still deferred** — `bytes_slice`/`bytes_concat` are
-//!   STILL not surface-callable (`width_cast` does NOT unblock these; they need their own prim). The
-//!   `Bytes8` type is declared but slice/concat await a future prim surface; `decode_one` returns a
-//!   `Pair(codepoint, byte_width)` (the caller advances by the width) rather than slicing.
+//! - FLAG-text-3: **CLOSED** (DN-43 / M-799). `bytes_slice`/`bytes_concat` are now surface-callable
+//!   over the kernel `Bytes` (`text.myc`'s `slice`/`concat` delegate to them); three-way coverage
+//!   lives in `std_bytes_slice.rs`. The `Bytes8` cons-list type is now superseded (kept declared for
+//!   append-only minimalism). `decode_one` still returns a `Pair(codepoint, byte_width)` (the caller
+//!   advances by the width) — that is a decode convention, independent of slice availability.
 //!
 //! # Anchor
 //! Expected values are hand-computed and verified three-way (L1≡L0≡AOT). The Rust crate
@@ -492,4 +493,25 @@ fn decode_one_err_invalid_high_lead() {
         "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Invalid(bytes_get(0xf8_80_80_80, 0b0000_0000)))",
     );
     assert_three_way("decode_one(0xF8 lead)=Err(Invalid(0xF8))", &src, &expected);
+}
+
+/// `decode_one(0x41, 0b0000_0001)` → `Err(Invalid(0b0000_0000))` — the start index `1` is past the end
+/// of the single-byte input (`byte_at(b, 1)` is `None`), so `decode_one`'s `None` arm reports the
+/// synthetic offending byte `0` (there is no byte to report). Never-silent (G2): an out-of-range start
+/// is an explicit `Err`, never a kernel OOB refusal leaking through. The reference uses the **literal**
+/// `Invalid(0b0000_0000)` to match the `Root` provenance of `decode_one`'s own literal `0` (unlike the
+/// `bytes_get`-derived bytes in the other Err cases).
+#[test]
+fn decode_one_err_oob_start_index() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0x41, 0b0000_0001)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Invalid(0b0000_0000))",
+    );
+    assert_three_way(
+        "decode_one(0x41, idx 1 oob)=Err(Invalid(0))",
+        &src,
+        &expected,
+    );
 }
