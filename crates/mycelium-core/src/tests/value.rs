@@ -269,3 +269,130 @@ fn seq_content_hash_distinguishes_and_collides() {
         mk(false, true).content_hash()
     );
 }
+
+// --- RFC-0032 D4 (M-750): Repr::Bytes payload matching + never-silent byte access ----------------
+
+/// A byte string is well-formed for any byte content (including empty), and `Repr::Bytes` only
+/// matches a `Payload::Bytes` (never another payload).
+#[test]
+fn bytes_constructs_for_any_content_and_rejects_wrong_payload() {
+    assert!(Value::new(
+        Repr::Bytes,
+        Payload::Bytes(vec![0xde, 0xad, 0xbe, 0xef]),
+        Meta::exact(Provenance::Root),
+    )
+    .is_ok());
+    // Empty bytes are a legitimate value.
+    assert!(Value::new(
+        Repr::Bytes,
+        Payload::Bytes(vec![]),
+        Meta::exact(Provenance::Root)
+    )
+    .is_ok());
+    // A non-bytes payload under `Repr::Bytes` is rejected.
+    assert_eq!(
+        Value::new(
+            Repr::Bytes,
+            Payload::Bits(vec![true]),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap_err(),
+        WfError::PayloadReprMismatch
+    );
+}
+
+/// Never-silent byte access (G2): `bytes_get`/`bytes_slice` return `None` out of range, `bytes_len`
+/// reports the count, and every accessor returns `None` for a non-bytes value.
+#[test]
+fn bytes_access_is_never_silent() {
+    let v = Value::new(
+        Repr::Bytes,
+        Payload::Bytes(vec![0x01, 0x02, 0x03]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed bytes");
+
+    assert_eq!(v.bytes_len(), Some(3));
+    assert_eq!(v.bytes_get(0), Some(0x01));
+    assert_eq!(v.bytes_get(2), Some(0x03));
+    // Out of bounds → None.
+    assert_eq!(v.bytes_get(3), None);
+    assert_eq!(v.bytes_get(usize::MAX), None);
+    // Slice: in-range, empty, full; out-of-range / inverted → None.
+    assert_eq!(v.bytes_slice(1, 3), Some(&[0x02, 0x03][..]));
+    assert_eq!(v.bytes_slice(0, 0), Some(&[][..]));
+    assert_eq!(v.bytes_slice(0, 3), Some(&[0x01, 0x02, 0x03][..]));
+    assert_eq!(v.bytes_slice(0, 4), None); // end past len
+    assert_eq!(v.bytes_slice(2, 1), None); // inverted
+
+    // Non-bytes value → None everywhere (never a default / empty slice).
+    let not_bytes = bit(true);
+    assert_eq!(not_bytes.bytes_len(), None);
+    assert_eq!(not_bytes.bytes_get(0), None);
+    assert_eq!(not_bytes.bytes_slice(0, 0), None);
+    assert!(not_bytes.bytes().is_none());
+}
+
+/// A byte string round-trips through JSON (lowercase-hex wire form); a non-hex / odd-length hex wire
+/// form is rejected on the way in (never silently coerced).
+#[test]
+fn bytes_json_round_trips_and_rejects_bad_hex() {
+    let v = Value::new(
+        Repr::Bytes,
+        Payload::Bytes(vec![0xde, 0xad, 0xbe, 0xef]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed bytes");
+    let json = serde_json::to_string(&v).expect("serialize");
+    assert!(
+        json.contains("deadbeef"),
+        "bytes render as lowercase hex: {json}"
+    );
+    let back: Value = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(v, back, "bytes must round-trip faithfully");
+
+    // Odd-length hex is rejected.
+    let odd = r#"{"repr":{"kind":"Bytes"},"payload":{"bytes":"abc"},
+                  "meta":{"provenance":{"kind":"Root"},"guarantee":"Exact"}}"#;
+    assert!(
+        serde_json::from_str::<Value>(odd).is_err(),
+        "odd-length hex must be rejected"
+    );
+    // A non-hex char is rejected.
+    let nonhex = r#"{"repr":{"kind":"Bytes"},"payload":{"bytes":"zz"},
+                     "meta":{"provenance":{"kind":"Root"},"guarantee":"Exact"}}"#;
+    assert!(
+        serde_json::from_str::<Value>(nonhex).is_err(),
+        "non-hex char must be rejected, never silently coerced"
+    );
+}
+
+/// The content hash distinguishes byte strings by content and collides on identical content
+/// (confirms the `Repr::Bytes`/`Payload::Bytes` content-addressing arms are wired).
+#[test]
+fn bytes_content_hash_distinguishes_and_collides() {
+    let mk = |bytes: Vec<u8>| {
+        Value::new(
+            Repr::Bytes,
+            Payload::Bytes(bytes),
+            Meta::exact(Provenance::Root),
+        )
+        .expect("well-formed bytes")
+    };
+    assert_eq!(
+        mk(vec![1, 2, 3]).content_hash(),
+        mk(vec![1, 2, 3]).content_hash()
+    );
+    assert_ne!(
+        mk(vec![1, 2, 3]).content_hash(),
+        mk(vec![1, 2, 4]).content_hash()
+    );
+    // A byte string is a distinct type from a Binary value with the same bytes (distinct repr tag).
+    let as_binary = Value::new(
+        Repr::Binary { width: 8 },
+        Payload::Bits(vec![false, false, false, false, false, false, false, true]),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap();
+    assert_ne!(mk(vec![1]).content_hash(), as_binary.content_hash());
+}

@@ -54,9 +54,10 @@ pub fn schedule(repr: &Repr) -> Option<PhysicalLayout> {
         Repr::Vsa { sparsity, .. } => Some(PhysicalLayout::VsaStore {
             sparse: matches!(sparsity, SparsityClass::Sparse { .. }),
         }),
-        // No designed packing schedule for indexed sequences yet (RFC-0032 D3) — explicitly absent,
-        // never a silently-wrong scalar layout.
-        Repr::Seq { .. } => None,
+        // No designed packing schedule for indexed sequences (RFC-0032 D3) or byte strings
+        // (RFC-0032 D4) in the fixed set yet — explicitly absent, never a silently-wrong scalar
+        // layout.
+        Repr::Seq { .. } | Repr::Bytes => None,
     }
 }
 
@@ -103,6 +104,7 @@ fn render_repr(repr: &Repr) -> String {
             format!("VSA{{{model}:{dim} {s}}}")
         }
         Repr::Seq { elem, len } => format!("Seq{{{}; {len}}}", render_repr(elem)),
+        Repr::Bytes => "Bytes".to_owned(),
     }
 }
 
@@ -133,6 +135,11 @@ fn render_payload(p: &Payload) -> String {
                 .map(|e| format!("{} {}", render_repr(e.repr()), render_payload(e.payload())))
                 .collect();
             format!("seq=[{}]", inner.join(", "))
+        }
+        Payload::Bytes(bytes) => {
+            // Lowercase-hex byte rendering — deterministic and diffable (SC-4).
+            let s: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
+            format!("bytes={s}")
         }
     }
 }

@@ -243,8 +243,9 @@ fn first_non_finite(v: &Value) -> Option<usize> {
         Payload::Bits(_) | Payload::Trits(_) => return None,
         // A sequence (RFC-0032 D3) carries no flat f64 payload at this level; nested non-finite
         // scalars are caught by the recursive `mycelium-std-io` representability check, not here —
-        // return None for the seq's own (absent) scalar payload.
-        Payload::Seq(_) => return None,
+        // return None for the seq's own (absent) scalar payload. A byte string (RFC-0032 D4) has no
+        // f64 either.
+        Payload::Seq(_) | Payload::Bytes(_) => return None,
     };
     scalars.iter().position(|x| !x.is_finite())
 }
@@ -547,6 +548,18 @@ fn format_value_human(v: &Value, detailed: bool) -> String {
                 format!("[{xs}]")
             }
         }
+        Repr::Bytes => {
+            // RFC-0032 D4 (M-750): render the bytes as a lowercase-hex string.
+            let hex = match v.payload() {
+                Payload::Bytes(b) => b.iter().map(|x| format!("{x:02x}")).collect::<String>(),
+                _ => unreachable!("Bytes value must have Bytes payload"),
+            };
+            if detailed {
+                format!("Bytes(0x{hex})")
+            } else {
+                format!("0x{hex}")
+            }
+        }
     }
 }
 
@@ -559,6 +572,7 @@ fn format_repr_short(r: &Repr) -> String {
         Repr::Dense { dim, dtype } => format!("Dense<{dim},{dtype:?}>"),
         Repr::Vsa { model, dim, .. } => format!("Vsa<{model},{dim}>"),
         Repr::Seq { elem, len } => format!("Seq<{},{len}>", format_repr_short(elem)),
+        Repr::Bytes => "Bytes".to_owned(),
     }
 }
 
@@ -723,6 +737,36 @@ fn display_bounded_impl(v: &Value, limit: Budget) -> Rendering {
                 };
                 Rendering {
                     text: Text(format!("[{inner}]")),
+                    truncation: Truncation::Elided { omitted, marker },
+                }
+            }
+        }
+
+        Repr::Bytes => {
+            // RFC-0032 D4 (M-750): elide on the byte *count*, same never-silent discipline. Each
+            // rendered byte is two lowercase-hex digits, prefixed `0x`.
+            let bytes = match v.payload() {
+                Payload::Bytes(b) => b,
+                _ => unreachable!("Bytes value must have Bytes payload"),
+            };
+            let total = bytes.len();
+            let rendered_count = total.min(max_elems);
+            let omitted = total - rendered_count;
+
+            let rendered: String = bytes[..rendered_count]
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect();
+
+            if omitted == 0 {
+                Rendering {
+                    text: Text(format!("0x{rendered}")),
+                    truncation: Truncation::Complete,
+                }
+            } else {
+                let marker = format!("...<{omitted} omitted>");
+                Rendering {
+                    text: Text(format!("0x{rendered}{marker}")),
                     truncation: Truncation::Elided { omitted, marker },
                 }
             }

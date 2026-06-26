@@ -116,6 +116,12 @@ pub enum Repr {
         /// Declared element count (`≤ MAX_DIM` when well-formed; `0` is allowed — the empty seq).
         len: u32,
     },
+    /// A first-class byte string (RFC-0032 D4; M-750) — **well-formed for any byte content**,
+    /// carrying no declared length (the payload [`crate::value::Payload::Bytes`] carries the bytes).
+    /// Text layers on top: UTF-8 decode is written in `.myc` over this byte surface, never in the
+    /// kernel. The substrate for an efficient `str`/`text` value, chosen over modelling strings as
+    /// `Seq<Binary{8}>` so text has a clear first-class value.
+    Bytes,
 }
 
 /// Check one dimension field against the `> 0` lower guard and the [`MAX_DIM`] upper guard,
@@ -200,6 +206,11 @@ impl Repr {
                 elem.check_well_formed()?;
                 true
             }
+            // A byte string is well-formed for any byte content (RFC-0032 D4): it declares no length
+            // (the payload carries the bytes), so there is nothing to bound here. Any over-allocation
+            // is bounded by the payload itself, which a deserializer materializes directly — there is
+            // no separate declared dimension that could exceed it (unlike the scalar paradigms).
+            Repr::Bytes => true,
         };
         if in_range {
             Ok(())

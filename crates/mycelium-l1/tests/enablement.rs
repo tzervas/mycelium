@@ -29,8 +29,12 @@
 //!   the `mycelium-l1` lexer/parser/checker, the `s10` collision surface). The prim-level path *is*
 //!   the trusted-base coverage (the kernel prim + the AOT env-machine over the same registry); it is
 //!   not faked or upgraded past its basis (G2/VR-5).
-//! - **M-750** (`Repr::Bytes`) is **not** exercised here — it lands separately (M-750); its
-//!   conformance ports join this file when it does (never faked here — G2/VR-5).
+//! - **M-750** (`Repr::Bytes`) lands its enabler coverage here as a **prim-level differential**
+//!   (`bytes.get`/`bytes.len`/`bytes.slice`/`bytes.concat` over directly-built L0 `Node`s:
+//!   **L0-interp ≡ AOT**), plus the never-silent out-of-bounds/inverted-range refusals on both
+//!   paths. Like the seq prims, the full **three-way** (`.myc` surface) differential is **deferred**:
+//!   there is no `Bytes` surface literal in the lexer/parser yet (FLAGGED). UTF-8 decode is written
+//!   in `.myc` over these byte prims and is not exercised here (no surface yet).
 
 use mycelium_core::{Meta, Node, Payload, Provenance, Repr, Value};
 use mycelium_interp::{Interpreter, PrimRegistry};
@@ -477,5 +481,147 @@ fn seq_prims_refuse_non_sequence_operand() {
     assert!(
         l0.is_err() && aot.is_err(),
         "seq.len on a non-seq must refuse on both paths"
+    );
+}
+
+// ── M-750: byte-string prims — prim-level differential (L0-interp ≡ AOT) ─────────────────────────
+//
+// As with the seq prims, `Repr::Bytes` has no `.myc` surface literal yet (FLAGGED), so we build the
+// L0 `Node` tree directly. The reference interpreter and the AOT env-machine dispatch
+// `bytes.{len,get,slice,concat}` through the same prim registry, so they must agree — and refuse an
+// out-of-range / inverted access identically (never-silent on both paths, G2).
+
+/// A `Repr::Bytes` const value over `bytes`.
+fn bytes_val(bytes: Vec<u8>) -> Value {
+    Value::new(
+        Repr::Bytes,
+        Payload::Bytes(bytes),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed bytes")
+}
+
+#[test]
+fn bytes_get_and_len_l0_interp_equal_aot() {
+    let bytes = bytes_val(vec![0x01, 0x02, 0x03]);
+
+    // bytes.len → Binary{32}(3).
+    let len_node = Node::Op {
+        prim: "bytes.len".to_owned(),
+        args: vec![Node::Const(bytes.clone())],
+    };
+    let (l0, aot) = run_l0_and_aot(&len_node);
+    let l0 = l0.expect("bytes.len L0-interp");
+    let aot = aot.expect("bytes.len AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(l0.repr(), &Repr::Binary { width: 32 });
+
+    // bytes.get(b, 1) → Binary{8}(0x02).
+    let get_node = Node::Op {
+        prim: "bytes.get".to_owned(),
+        args: vec![Node::Const(bytes), Node::Const(idx8(1))],
+    };
+    let (l0, aot) = run_l0_and_aot(&get_node);
+    let l0 = l0.expect("bytes.get L0-interp");
+    let aot = aot.expect("bytes.get AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(l0.repr(), &Repr::Binary { width: 8 });
+    // 0x02 == 0b0000_0010.
+    let want: Vec<bool> = (0..8).rev().map(|k| (0x02u8 >> k) & 1 == 1).collect();
+    assert_eq!(l0.payload(), &Payload::Bits(want));
+}
+
+#[test]
+fn bytes_slice_and_concat_l0_interp_equal_aot() {
+    let bytes = bytes_val(vec![0x0a, 0x0b, 0x0c, 0x0d]);
+
+    // bytes.slice(b, 1, 3) → Bytes(0x0b 0x0c).
+    let slice_node = Node::Op {
+        prim: "bytes.slice".to_owned(),
+        args: vec![
+            Node::Const(bytes.clone()),
+            Node::Const(idx8(1)),
+            Node::Const(idx8(3)),
+        ],
+    };
+    let (l0, aot) = run_l0_and_aot(&slice_node);
+    let l0 = l0.expect("bytes.slice L0-interp");
+    let aot = aot.expect("bytes.slice AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(l0.payload(), &Payload::Bytes(vec![0x0b, 0x0c]));
+
+    // bytes.concat(b, b) → 8 bytes.
+    let concat_node = Node::Op {
+        prim: "bytes.concat".to_owned(),
+        args: vec![Node::Const(bytes.clone()), Node::Const(bytes)],
+    };
+    let (l0, aot) = run_l0_and_aot(&concat_node);
+    let l0 = l0.expect("bytes.concat L0-interp");
+    let aot = aot.expect("bytes.concat AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(
+        l0.payload(),
+        &Payload::Bytes(vec![0x0a, 0x0b, 0x0c, 0x0d, 0x0a, 0x0b, 0x0c, 0x0d])
+    );
+}
+
+/// Never-silent (G2): an out-of-bounds `bytes.get` and an inverted/out-of-range `bytes.slice` are
+/// explicit refusals on **both** paths — never a panic, never a silently-clamped result.
+#[test]
+fn bytes_out_of_range_refuses_on_both_paths() {
+    let bytes = bytes_val(vec![0x01, 0x02, 0x03]); // len 3
+
+    // index 3 is out of range.
+    let get_oob = Node::Op {
+        prim: "bytes.get".to_owned(),
+        args: vec![Node::Const(bytes.clone()), Node::Const(idx8(3))],
+    };
+    let (l0, aot) = run_l0_and_aot(&get_oob);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "OOB bytes.get must refuse on both paths"
+    );
+
+    // slice [2, 1) is inverted; [0, 4) overruns len — both refuse.
+    let slice_inv = Node::Op {
+        prim: "bytes.slice".to_owned(),
+        args: vec![
+            Node::Const(bytes.clone()),
+            Node::Const(idx8(2)),
+            Node::Const(idx8(1)),
+        ],
+    };
+    let (l0, aot) = run_l0_and_aot(&slice_inv);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "inverted bytes.slice must refuse on both paths"
+    );
+
+    let slice_over = Node::Op {
+        prim: "bytes.slice".to_owned(),
+        args: vec![
+            Node::Const(bytes),
+            Node::Const(idx8(0)),
+            Node::Const(idx8(4)),
+        ],
+    };
+    let (l0, aot) = run_l0_and_aot(&slice_over);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "out-of-range bytes.slice must refuse on both paths"
+    );
+}
+
+/// `bytes.*` over a non-bytes operand is an explicit type refusal on both paths.
+#[test]
+fn bytes_prims_refuse_non_bytes_operand() {
+    let len_bad = Node::Op {
+        prim: "bytes.len".to_owned(),
+        args: vec![Node::Const(b1_val(true))],
+    };
+    let (l0, aot) = run_l0_and_aot(&len_bad);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "bytes.len on a non-bytes must refuse on both paths"
     );
 }

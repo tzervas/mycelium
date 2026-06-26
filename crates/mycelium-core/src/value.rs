@@ -64,6 +64,8 @@ pub enum Payload {
     /// Elements of a [`Repr::Seq`] value (length == the seq's `len`; every element's `repr` matches
     /// the seq's `elem`). RFC-0032 D3 (M-749).
     Seq(Vec<Value>),
+    /// Bytes of a [`Repr::Bytes`] value — any byte content (no declared length). RFC-0032 D4 (M-750).
+    Bytes(Vec<u8>),
 }
 
 /// The externally-tagged wire projection of [`Payload`] — `{"bits": "…"}`, `{"trits": "…"}`,
@@ -84,6 +86,11 @@ enum PayloadWire {
     /// element-wise on the way in. RFC-0032 D3 (M-749).
     #[serde(rename = "seq")]
     Seq(Vec<Value>),
+    /// A byte payload renders as a lowercase hex string (`"deadbeef"`), compact and exactly
+    /// round-trippable; a non-hex / odd-length string is rejected on the way in (never-silent).
+    /// RFC-0032 D4 (M-750).
+    #[serde(rename = "bytes")]
+    Bytes(String),
 }
 
 impl Serialize for Payload {
@@ -98,6 +105,15 @@ impl Serialize for Payload {
             Payload::Scalars(xs) => PayloadWire::Scalars(xs.clone()),
             Payload::Hypervector(xs) => PayloadWire::Hypervector(xs.clone()),
             Payload::Seq(elems) => PayloadWire::Seq(elems.clone()),
+            Payload::Bytes(bytes) => {
+                // Lowercase hex, two chars per byte — compact and exactly round-trippable.
+                let mut s = String::with_capacity(bytes.len() * 2);
+                for &b in bytes {
+                    use core::fmt::Write as _;
+                    let _ = write!(s, "{b:02x}");
+                }
+                PayloadWire::Bytes(s)
+            }
         };
         wire.serialize(serializer)
     }
@@ -134,6 +150,32 @@ impl<'de> Deserialize<'de> for Payload {
             PayloadWire::Scalars(xs) => Payload::Scalars(xs),
             PayloadWire::Hypervector(xs) => Payload::Hypervector(xs),
             PayloadWire::Seq(elems) => Payload::Seq(elems),
+            PayloadWire::Bytes(s) => {
+                // Decode the lowercase-hex string; a non-hex char or an odd length is rejected
+                // never-silently (G2), not coerced.
+                if s.len() % 2 != 0 {
+                    return Err(Error::custom(format!(
+                        "byte string hex has odd length {} (expected an even number of hex digits)",
+                        s.len()
+                    )));
+                }
+                let mut bytes = Vec::with_capacity(s.len() / 2);
+                let raw = s.as_bytes();
+                let hex_val = |c: u8| -> Result<u8, D::Error> {
+                    match c {
+                        b'0'..=b'9' => Ok(c - b'0'),
+                        b'a'..=b'f' => Ok(c - b'a' + 10),
+                        other => Err(Error::custom(format!(
+                            "byte string has non-hex char {:?}",
+                            other as char
+                        ))),
+                    }
+                };
+                for pair in raw.chunks_exact(2) {
+                    bytes.push((hex_val(pair[0])? << 4) | hex_val(pair[1])?);
+                }
+                Payload::Bytes(bytes)
+            }
         })
     }
 }
@@ -214,6 +256,48 @@ impl Value {
             _ => None,
         }
     }
+
+    /// The byte length of a [`Repr::Bytes`] value, or `None` for any other representation
+    /// (never-silent — a non-bytes value has no byte length here). `Exact`. RFC-0032 D4.
+    #[must_use]
+    pub fn bytes_len(&self) -> Option<usize> {
+        match self.payload() {
+            Payload::Bytes(b) => Some(b.len()),
+            _ => None,
+        }
+    }
+
+    /// Never-silent indexed byte access into a [`Repr::Bytes`] value (RFC-0032 D4): the `i`-th byte,
+    /// or `None` when `i` is out of bounds **or** the value is not a byte string — **never** a panic
+    /// or a silent default (G2). `Exact`: total over its domain.
+    #[must_use]
+    pub fn bytes_get(&self, i: usize) -> Option<u8> {
+        match self.payload() {
+            Payload::Bytes(b) => b.get(i).copied(),
+            _ => None,
+        }
+    }
+
+    /// Never-silent byte sub-slice `[start, end)` of a [`Repr::Bytes`] value (RFC-0032 D4): `None`
+    /// when the range is out of bounds or inverted, or the value is not a byte string — **never** a
+    /// panic or a silently-clamped range (G2). `Exact`.
+    #[must_use]
+    pub fn bytes_slice(&self, start: usize, end: usize) -> Option<&[u8]> {
+        match self.payload() {
+            Payload::Bytes(b) if start <= end && end <= b.len() => Some(&b[start..end]),
+            _ => None,
+        }
+    }
+
+    /// The bytes of a [`Repr::Bytes`] value as a slice, or `None` for any other representation
+    /// (never-silent — not an empty slice). RFC-0032 D4.
+    #[must_use]
+    pub fn bytes(&self) -> Option<&[u8]> {
+        match self.payload() {
+            Payload::Bytes(b) => Some(b),
+            _ => None,
+        }
+    }
 }
 
 fn payload_matches(repr: &Repr, payload: &Payload) -> bool {
@@ -229,6 +313,8 @@ fn payload_matches(repr: &Repr, payload: &Payload) -> bool {
         (Repr::Seq { elem, len }, Payload::Seq(elems)) => {
             elems.len() == *len as usize && elems.iter().all(|e| e.repr() == elem.as_ref())
         }
+        // A byte string declares no length, so any byte payload matches (RFC-0032 D4).
+        (Repr::Bytes, Payload::Bytes(_)) => true,
         _ => false,
     }
 }

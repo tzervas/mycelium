@@ -294,3 +294,18 @@ fn nested_seq_recurses_well_formedness() {
     };
     assert_eq!(bad.check_well_formed().unwrap_err(), WfError::MalformedRepr);
 }
+
+// --- RFC-0032 D4 (M-750): Repr::Bytes well-formedness -------------------------------------------
+
+/// A byte string is well-formed unconditionally (any byte content; no declared length to bound).
+#[test]
+fn bytes_is_always_well_formed() {
+    assert!(Repr::Bytes.well_formed());
+    assert!(Repr::Bytes.check_well_formed().is_ok());
+    // A `Seq` of `Bytes` is also well-formed (the element repr `Bytes` recurses to Ok).
+    assert!(Repr::Seq {
+        elem: Box::new(Repr::Bytes),
+        len: 4,
+    }
+    .well_formed());
+}

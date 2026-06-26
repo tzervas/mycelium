@@ -92,6 +92,8 @@ fn check_json_representable(v: &Value) -> Result<(), SerError> {
             }
             return Ok(());
         }
+        // A byte string (RFC-0032 D4) carries no f64 — always JSON-representable here.
+        Payload::Bytes(_) => return Ok(()),
     };
     if let Some(pos) = scalars.iter().position(|x| !x.is_finite()) {
         return Err(SerError::OutOfDomain {

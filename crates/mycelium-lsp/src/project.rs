@@ -202,6 +202,8 @@ fn render_repr(r: &Repr) -> String {
         } => format!("VSA{{{model},{dim}{}}}", sparsity_str(sparsity)),
         // RFC-0032 D3 (M-749): the indexed-sequence repr renders its element type and length.
         Repr::Seq { elem, len } => format!("Seq{{{},{len}}}", render_repr(elem)),
+        // RFC-0032 D4 (M-750): the byte-string repr.
+        Repr::Bytes => "Bytes".to_owned(),
     }
 }
 

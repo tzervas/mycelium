@@ -177,6 +177,9 @@ fn value_corpus() -> Vec<Value> {
                 .unwrap(),
             ]),
         ),
+        // RFC-0032 D4 (M-750): a byte string. The wire form is a lowercase-hex string; faithful
+        // round-trip (incl. the outer `Meta` variants) is the test.
+        (Repr::Bytes, Payload::Bytes(vec![0xde, 0xad, 0xbe, 0xef])),
     ];
     let mut out = Vec::new();
     for (repr, payload) in reprs_payloads {
