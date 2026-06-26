@@ -5,6 +5,77 @@ pub fn mycelium_std_sys::fs::exists(&std::path::Path) -> bool
 pub fn mycelium_std_sys::fs::read(&std::path::Path) -> core::result::Result<alloc::vec::Vec<u8>, std::io::error::Error>
 pub fn mycelium_std_sys::fs::remove_file(&std::path::Path) -> core::result::Result<(), std::io::error::Error>
 pub fn mycelium_std_sys::fs::write(&std::path::Path, &[u8]) -> core::result::Result<(), std::io::error::Error>
+pub mod mycelium_std_sys::guarantee_matrix
+pub enum mycelium_std_sys::guarantee_matrix::Fallibility
+pub mycelium_std_sys::guarantee_matrix::Fallibility::Fallible
+pub mycelium_std_sys::guarantee_matrix::Fallibility::Total
+impl core::clone::Clone for mycelium_std_sys::guarantee_matrix::Fallibility
+pub fn mycelium_std_sys::guarantee_matrix::Fallibility::clone(&self) -> mycelium_std_sys::guarantee_matrix::Fallibility
+impl core::cmp::Eq for mycelium_std_sys::guarantee_matrix::Fallibility
+impl core::cmp::PartialEq for mycelium_std_sys::guarantee_matrix::Fallibility
+pub fn mycelium_std_sys::guarantee_matrix::Fallibility::eq(&self, &mycelium_std_sys::guarantee_matrix::Fallibility) -> bool
+impl core::fmt::Debug for mycelium_std_sys::guarantee_matrix::Fallibility
+pub fn mycelium_std_sys::guarantee_matrix::Fallibility::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_sys::guarantee_matrix::Fallibility
+impl core::marker::StructuralPartialEq for mycelium_std_sys::guarantee_matrix::Fallibility
+impl core::marker::Freeze for mycelium_std_sys::guarantee_matrix::Fallibility
+impl core::marker::Send for mycelium_std_sys::guarantee_matrix::Fallibility
+impl core::marker::Sync for mycelium_std_sys::guarantee_matrix::Fallibility
+impl core::marker::Unpin for mycelium_std_sys::guarantee_matrix::Fallibility
+impl core::marker::UnsafeUnpin for mycelium_std_sys::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys::guarantee_matrix::Fallibility
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_sys::guarantee_matrix::Fallibility
+pub enum mycelium_std_sys::guarantee_matrix::GuaranteeTag
+pub mycelium_std_sys::guarantee_matrix::GuaranteeTag::Declared
+pub mycelium_std_sys::guarantee_matrix::GuaranteeTag::Empirical
+pub mycelium_std_sys::guarantee_matrix::GuaranteeTag::Exact
+pub mycelium_std_sys::guarantee_matrix::GuaranteeTag::Proven
+impl mycelium_std_sys::guarantee_matrix::GuaranteeTag
+pub fn mycelium_std_sys::guarantee_matrix::GuaranteeTag::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+pub fn mycelium_std_sys::guarantee_matrix::GuaranteeTag::clone(&self) -> mycelium_std_sys::guarantee_matrix::GuaranteeTag
+impl core::cmp::Eq for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+impl core::cmp::PartialEq for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+pub fn mycelium_std_sys::guarantee_matrix::GuaranteeTag::eq(&self, &mycelium_std_sys::guarantee_matrix::GuaranteeTag) -> bool
+impl core::fmt::Debug for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+pub fn mycelium_std_sys::guarantee_matrix::GuaranteeTag::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+impl core::marker::StructuralPartialEq for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+impl core::marker::Freeze for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+impl core::marker::Send for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+impl core::marker::Sync for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+impl core::marker::Unpin for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+impl core::marker::UnsafeUnpin for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_sys::guarantee_matrix::GuaranteeTag
+pub struct mycelium_std_sys::guarantee_matrix::MatrixRow
+pub mycelium_std_sys::guarantee_matrix::MatrixRow::effects: &'static str
+pub mycelium_std_sys::guarantee_matrix::MatrixRow::error_set: &'static str
+pub mycelium_std_sys::guarantee_matrix::MatrixRow::fallibility: mycelium_std_sys::guarantee_matrix::Fallibility
+pub mycelium_std_sys::guarantee_matrix::MatrixRow::guarantee: mycelium_std_sys::guarantee_matrix::GuaranteeTag
+pub mycelium_std_sys::guarantee_matrix::MatrixRow::op: &'static str
+impl core::clone::Clone for mycelium_std_sys::guarantee_matrix::MatrixRow
+pub fn mycelium_std_sys::guarantee_matrix::MatrixRow::clone(&self) -> mycelium_std_sys::guarantee_matrix::MatrixRow
+impl core::cmp::Eq for mycelium_std_sys::guarantee_matrix::MatrixRow
+impl core::cmp::PartialEq for mycelium_std_sys::guarantee_matrix::MatrixRow
+pub fn mycelium_std_sys::guarantee_matrix::MatrixRow::eq(&self, &mycelium_std_sys::guarantee_matrix::MatrixRow) -> bool
+impl core::fmt::Debug for mycelium_std_sys::guarantee_matrix::MatrixRow
+pub fn mycelium_std_sys::guarantee_matrix::MatrixRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_sys::guarantee_matrix::MatrixRow
+impl core::marker::Freeze for mycelium_std_sys::guarantee_matrix::MatrixRow
+impl core::marker::Send for mycelium_std_sys::guarantee_matrix::MatrixRow
+impl core::marker::Sync for mycelium_std_sys::guarantee_matrix::MatrixRow
+impl core::marker::Unpin for mycelium_std_sys::guarantee_matrix::MatrixRow
+impl core::marker::UnsafeUnpin for mycelium_std_sys::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys::guarantee_matrix::MatrixRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_sys::guarantee_matrix::MatrixRow
+pub const mycelium_std_sys::guarantee_matrix::MATRIX: &[mycelium_std_sys::guarantee_matrix::MatrixRow]
+pub mod mycelium_std_sys::io
+pub fn mycelium_std_sys::io::flush_out() -> core::result::Result<(), std::io::error::Error>
+pub fn mycelium_std_sys::io::read_line() -> core::result::Result<alloc::string::String, std::io::error::Error>
+pub fn mycelium_std_sys::io::read_to_end() -> core::result::Result<alloc::vec::Vec<u8>, std::io::error::Error>
+pub fn mycelium_std_sys::io::write_err(&[u8]) -> core::result::Result<(), std::io::error::Error>
+pub fn mycelium_std_sys::io::write_out(&[u8]) -> core::result::Result<(), std::io::error::Error>
 pub mod mycelium_std_sys::math
 pub fn mycelium_std_sys::math::acos(f64) -> f64
 pub fn mycelium_std_sys::math::asin(f64) -> f64
@@ -42,6 +113,10 @@ impl core::marker::UnsafeUnpin for mycelium_std_sys::rand::EntropyError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys::rand::EntropyError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_sys::rand::EntropyError
 pub fn mycelium_std_sys::rand::fill_bytes(&mut [u8]) -> core::result::Result<(), mycelium_std_sys::rand::EntropyError>
+pub mod mycelium_std_sys::sys
+pub fn mycelium_std_sys::sys::args() -> alloc::vec::Vec<alloc::string::String>
+pub fn mycelium_std_sys::sys::exit(i32) -> never
+pub fn mycelium_std_sys::sys::get_env(&str) -> core::option::Option<alloc::string::String>
 pub mod mycelium_std_sys::time
 pub fn mycelium_std_sys::time::mono_nanos() -> u64
 pub fn mycelium_std_sys::time::sleep_nanos(u64)

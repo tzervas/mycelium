@@ -11,7 +11,7 @@
 > **Grounding discipline.** This is a planning artifact, not a normative one. It cites the corpus
 > (`FR/NFR/VR/SC/KC`, `RFC-xxxx §`, `ADR-0xx`, `Tx.y`, `G#`, `RR-#`) for every claim about *what* is
 > required; it introduces no new requirements. Where it records a *decision about sequencing or
-> scope* it says so and routes anything normative back to an RFC/ADR. The honesty rule applies to the
+> scope* it says so and routes anything normative back to an RFC/ADR. The transparency rule applies to the
 > gate verdicts below: a guarantee tag or kill-criterion verdict stays at the strength actually
 > *established* by a checked run (VR-5), never pre-written.
 
@@ -163,7 +163,7 @@ first; the selection track (E2-6) runs in parallel since it needs only the Core 
 
 ## 5. Gate verdicts — Phase-1→2 re-run of KC-1…KC-4 (honest status)
 
-Per the honesty rule and VR-5, kill-criterion status is tracked at the strength actually
+Per the transparency rule and VR-5, kill-criterion status is tracked at the strength actually
 *established*. Re-run at the Phase-1→2 gate (Foundation Meta).
 
 | Gate | Question | Phase-1→2 verdict (2026-06-09) | What moves it in Phase 2 |
@@ -180,7 +180,7 @@ checker is a certificate *consumer*. Routed back to ADR-010 (trusted-base tiers)
 basis.
 
 **Phase-2 exit-gate KC re-run (2026-06-12, after Batch H).** Re-run at the Phase-2 gate per the
-honesty rule (VR-5 — strength as actually *established*):
+transparency rule (VR-5 — strength as actually *established*):
 
 - **KC-1 — ✅ confirmed (build), no regression.** Carried from Phase 1 (M-001 LH probe SAFE; M-131
   `Proven` capacity bound by checked instantiation). Batch G/H added MAP-B/BSC/HRR/FHRR/SBC each
@@ -286,7 +286,7 @@ to **exit-gate met** (§8) on this basis.
 - **Delivered.** `mycelium-cert::check` (module `check.rs`): `check(a, b, relation, claimed:
   numerics::Certificate, evidence)` → `CheckVerdict::Validated{strength}` or
   `NotValidated{reason, fallback}`. **Bijection** re-checks the lemma reference
-  (`roundtrip_lemma_ref`) and the `legal_pair(n, m)` side-condition (the honesty rule — `Proven`
+  (`roundtrip_lemma_ref`) and the `legal_pair(n, m)` side-condition (the transparency rule — `Proven`
   only with checked side-conditions), then discharges by *structural re-derivation equality*
   (re-run `enc`/`dec` on A, compare payloads with B — the computational analogue of the SMT/
   `decide` discharge, per-instance and cheap; no per-value proof objects). **BoundedSimilarity**

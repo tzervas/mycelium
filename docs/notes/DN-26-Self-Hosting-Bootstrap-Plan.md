@@ -24,6 +24,9 @@ the stdlib and all libraries/phyla beyond the bare Rust core be **written in Myc
 toolchain bootstrap from itself** — the canonical self-hosting capstone. This is distinct from
 the Rust kernel's 1.0.0 (ADR-021, Accepted) which gates on honesty-integrity durability but
 explicitly scopes self-hosting to Phase 5 (ADR-021 §5).
+<!-- erratum 2026-06-25 (applies to every "ADR-021, Accepted" cite in this note): ADR-021 is now
+**Superseded by ADR-022** (2026-06-23); its kernel Gate A/B is preserved as ADR-022 track T1. Read each
+"ADR-021 (Accepted)" reference as "ADR-021 (Accepted → Superseded by ADR-022); gate carried into ADR-022 T1". -->
 
 DN-14 (Resolved 2026-06-23) establishes that the surface language is now self-hosting-capable
 for pure, polymorphic, generic, trait-bearing modules (all 11 gate-rows `present` or
@@ -33,6 +36,11 @@ components in `crates/mycelium-l1/` move to `.myc`, in what sequence, and how is
 verified to preserve correctness?
 
 The DN-14 self-hosting gate says "the surface is close" — this note makes "close" concrete.
+
+> **Note (2026-06-25, append-only).** DN-14 **row 9** (`wild`/FFI) has since flipped from
+> "conditionally present" to **"present / executes"** (RFC-0028 / M-720–M-721 landed `wild` host
+> execution), so the "all 11 gate-rows … *conditionally present*" phrasing above is now **"all 11
+> present."** Status unchanged (Draft). (Append-only; VR-5/G2.)
 
 ---
 
@@ -149,6 +157,10 @@ No stage is pre-declared done. No guarantee tag is upgraded. The stage sketch is
 
 ## Meta — changelog
 
+- **2026-06-25 — §1 freshness note (append-only; no status move).** Per an alignment audit, noted
+  that DN-14 row 9 (`wild`/FFI) has since flipped from "conditionally present" to "present/executes"
+  (RFC-0028 / M-720–M-721), so §1's "all 11 … conditionally present" reads "all 11 present." Status
+  remains **Draft**. (Append-only; VR-5; G2.)
 - **2026-06-23 — Draft stub created.** Scope, user stories, decision space, tentative stage
   sketch, and open questions captured as a planning stub. Feeds E18-1 (M-739). Built on DN-14
   (Resolved) and ADR-021 (Accepted). Decides nothing normatively. Status: **Draft** (VR-5 /

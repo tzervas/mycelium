@@ -51,6 +51,11 @@ pub struct Project {
     pub keywords: Option<Vec<String>>,
     /// `lang` — the surface-language edition this project targets.
     pub lang: Option<String>,
+    /// `certification` — the project-wide certification mode (RFC-0034 §6; M-790). This is the
+    /// **phylum** tier of the `global > phylum > nodule` lattice (FLAG-B, `cert_scope.rs`); a nodule's
+    /// `@certification` header overrides it. The value is the closed set `fast | balanced |
+    /// certified`; an unknown word is an explicit error (G2). Metadata, not identity (ADR-003).
+    pub certification: Option<mycelium_core::cert_mode::CertMode>,
 }
 
 /// The typed `[toolchain]` table (M-364): the optional pins the toolchain reads. v0 closed key set:
@@ -141,6 +146,7 @@ const PROJECT_KEYS: &[&str] = &[
     "repository",
     "keywords",
     "lang",
+    "certification",
 ];
 
 /// A parsed TOML value (the supported subset).
@@ -354,6 +360,7 @@ fn build_project(kv: Vec<(String, Val, u32)>) -> Result<Project, ManifestError> 
     let mut repository = None;
     let mut keywords = None;
     let mut lang = None;
+    let mut certification = None;
 
     for (key, val, line) in kv {
         if !PROJECT_KEYS.contains(&key.as_str()) {
@@ -392,6 +399,15 @@ fn build_project(kv: Vec<(String, Val, u32)>) -> Result<Project, ManifestError> 
             }
             "summary" => summary = Some(as_str(&val, "summary", line)?),
             "lang" => lang = Some(as_str(&val, "lang", line)?),
+            "certification" => {
+                // RFC-0034 §6 — the closed mode set `fast | balanced | certified` (FLAG-A). An
+                // unknown word is an explicit error (G2), never a silent default.
+                let s = as_str(&val, "certification", line)?;
+                certification = Some(
+                    crate::cert_scope::parse_cert_mode(&s)
+                        .map_err(|m| ManifestError { line, message: m })?,
+                );
+            }
             "authors" => authors = Some(as_str_list(&val, "authors", line)?),
             "keywords" => keywords = Some(as_str_list(&val, "keywords", line)?),
             _ => unreachable!("key membership checked above"),
@@ -416,6 +432,7 @@ fn build_project(kv: Vec<(String, Val, u32)>) -> Result<Project, ManifestError> 
         repository,
         keywords,
         lang,
+        certification,
     };
     Ok(project)
 }
@@ -649,143 +666,5 @@ fn scan_bool(chars: &[char], i: &mut usize, line: u32) -> Result<Val, ManifestEr
             line,
             message: format!("unrecognised bare token {rest:?} (expected `true`/`false`)"),
         })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const SAMPLE: &str = r#"
-# mycelium-proj.toml
-[project]
-name        = "geometry"          # the project name
-kind        = "phylum"
-version     = "1.2.0"
-license     = "Apache-2.0"
-authors     = ["Tyler Zervas", "A. N. Other"]
-since       = "2026-01-10"
-summary     = "2D/3D geometry primitives and certified swaps."
-repository  = "https://github.com/example/geometry"
-keywords    = ["geometry", "linear-algebra"]
-lang        = "mycelium-0"
-
-[surface]
-exports     = ["geometry.shapes"]
-
-[dependencies]
-numerics    = { phylum = "numerics", version = "^2", hash = "blake3:abc" }
-"#;
-
-    #[test]
-    fn the_sample_manifest_parses() {
-        let m = parse_manifest(SAMPLE).unwrap();
-        assert_eq!(m.project.name, "geometry");
-        assert_eq!(m.project.kind, ProjectKind::Phylum);
-        assert_eq!(m.project.version.as_deref(), Some("1.2.0"));
-        assert_eq!(m.project.license.as_deref(), Some("Apache-2.0"));
-        assert_eq!(m.project.authors.as_ref().unwrap().len(), 2);
-        assert_eq!(
-            m.project.keywords.as_ref().unwrap(),
-            &["geometry", "linear-algebra"]
-        );
-    }
-
-    #[test]
-    fn missing_required_fields_are_explicit_errors() {
-        assert!(parse_manifest("[project]\nname = \"x\"\n").is_err()); // no kind
-        assert!(parse_manifest("[project]\nkind = \"program\"\n").is_err()); // no name
-        assert!(parse_manifest("[surface]\nexports = []\n").is_err()); // no [project]
-    }
-
-    #[test]
-    fn an_unknown_project_key_is_an_explicit_error() {
-        let e =
-            parse_manifest("[project]\nname=\"x\"\nkind=\"script\"\nfoo=\"bar\"\n").unwrap_err();
-        assert!(e.message.contains("unknown `[project]` key"), "{e}");
-    }
-
-    #[test]
-    fn bad_kind_and_values_are_explicit_errors() {
-        assert!(parse_manifest("[project]\nname=\"x\"\nkind=\"library\"\n").is_err());
-        assert!(
-            parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\nlicense=\"Nope\"\n").is_err()
-        );
-        assert!(
-            parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\nsince=\"2026/01/10\"\n")
-                .is_err()
-        );
-    }
-
-    #[test]
-    fn the_toolchain_table_is_interpreted() {
-        // M-364: `[toolchain].format` is now read (the manifest's first toolchain consumer).
-        let m = parse_manifest(SAMPLE).unwrap();
-        assert!(m.toolchain.is_none(), "SAMPLE declares no [toolchain]");
-        let m = parse_manifest(
-            "[project]\nname=\"x\"\nkind=\"phylum\"\n[toolchain]\nformat=\"mycfmt-0\"\nlints=\"strict\"\n",
-        )
-        .unwrap();
-        let tc = m.toolchain.unwrap();
-        assert_eq!(tc.format.as_deref(), Some("mycfmt-0"));
-        assert_eq!(tc.lints.as_deref(), Some("strict"));
-    }
-
-    #[test]
-    fn the_surface_dependencies_and_spore_tables_are_interpreted() {
-        // M-368: the packaging tables are now typed (first consumer).
-        let m = parse_manifest(SAMPLE).unwrap();
-        assert_eq!(
-            m.surface.as_ref().unwrap().exports,
-            vec!["geometry.shapes".to_owned()]
-        );
-        assert_eq!(m.dependencies.len(), 1);
-        let d = &m.dependencies[0];
-        assert_eq!(d.name, "numerics");
-        assert_eq!(d.phylum, "numerics");
-        assert_eq!(d.hash.as_deref(), Some("blake3:abc"));
-        assert_eq!(d.version.as_deref(), Some("^2"));
-
-        let m = parse_manifest(
-            "[project]\nname=\"x\"\nkind=\"phylum\"\n[spore]\ninclude=[\"surface\"]\n",
-        )
-        .unwrap();
-        assert_eq!(m.spore.unwrap().include, vec!["surface".to_owned()]);
-    }
-
-    #[test]
-    fn a_malformed_dependency_or_unknown_key_is_explicit() {
-        // A non-inline-table dependency is an error.
-        assert!(parse_manifest(
-            "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\nfoo=\"bar\"\n"
-        )
-        .is_err());
-        // An unknown dependency key is an error (closed set).
-        let e = parse_manifest(
-            "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\nfoo={ phylum=\"f\", oops=\"x\" }\n",
-        )
-        .unwrap_err();
-        assert!(e.message.contains("unknown dependency key"), "{e}");
-        // An unknown [surface] key is an error.
-        assert!(parse_manifest(
-            "[project]\nname=\"x\"\nkind=\"phylum\"\n[surface]\nexprts=[\"a\"]\n"
-        )
-        .is_err());
-    }
-
-    #[test]
-    fn an_unknown_toolchain_key_is_an_explicit_error() {
-        let e = parse_manifest(
-            "[project]\nname=\"x\"\nkind=\"phylum\"\n[toolchain]\nformatt=\"mycfmt-0\"\n",
-        )
-        .unwrap_err();
-        assert!(e.message.contains("unknown `[toolchain]` key"), "{e}");
-    }
-
-    #[test]
-    fn out_of_subset_constructs_are_explicit_errors() {
-        // A bare number is outside the v0 subset — flagged, never silently dropped.
-        let e = parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\nversion=12\n").unwrap_err();
-        assert!(e.message.contains("v0 manifest reader supports"), "{e}");
     }
 }

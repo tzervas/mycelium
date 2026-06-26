@@ -154,6 +154,17 @@ every backend change.
 - The **forge-fetch + verify** reconstruction path in the toolchain (`myc`/`spore resolve`).
 - **Licensing-driven inspectability:** an open-source license ⇒ inspectable source; a closed license ⇒
   the trust reduces to the publisher and whether they ship a **binary** or **buildable source**.
+- **Security-advisory hosting (DN-30).** The registry hosts not only packages (phyla + nodules) but also
+  the **security findings** the scanning toolkit discovers — as **screened/anonymized/privatized** entries
+  (vulnerable logic minimized to a content-addressed pattern fingerprint; what / severity / affected
+  content-addressed versions / logic-retaining mitigations / honest confidence). *Find-once,
+  report-to-community* keyed by the content-hash DAG. **The security catalog reuses this note's
+  reconstruction model verbatim** — the registry stores the findings' **hashes + manifest** (the dense,
+  verifiable map), and the heavy finding bodies (screened pattern, description, mitigations) are
+  **reconstructed + hash-verified on render** from the content store, so the catalog is as lightweight as
+  the package side and a tampered advisory fails its hash (never-silent integrity). The registry hosts **two
+  content-addressed catalogs of the same shape** — packages and findings. The screening policy (what is safe
+  to publish) is an open question — DN-30 §4/§7.
 
 **Out of scope for the MVP / proof-of-concept (future research — §6):**
 - **Secrecy / obfuscation** of sensitive portions while remaining buildable (encryption, sealed

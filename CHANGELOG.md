@@ -8,6 +8,1079 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-26: DN-35 ratified Draft → Accepted)
+
+- **DN-35 — Env-Machine Reclamation** ratified **Draft → Accepted** (maintainer). Accepts the §10 design
+  direction (static-decisions/dynamic-verification with a trusted core interpreting only
+  `incref`/`decref`/`is-unique`/`reuse-or-alloc`; drop-guided Frame-Limited reuse with the runtime
+  `is-unique` gate as the mandatory safety valve; the §5 content-address side-condition; the §6 RC ⊕
+  region exactly-once invariant; the `fast`/`certified` split) as the *design direction*. Accepted ratifies
+  the direction, **not** an implementation — enacts no code, upgrades no guarantee (prior-art results
+  `Proven`-at-source; the two Mycelium-specific obligations stay `Empirical`/`Declared` until prototyped +
+  property-tested; the §9 audit trail `Exact` count / `Declared` correspondence — VR-5). The build is the
+  forward epic (E12 Increment 3 / task #6), beginning at §9 Increment 1 behind the §2.3 oracle.
+
+### Changed (2026-06-26: DN-38 ratified Draft → Accepted)
+
+- **DN-38 — The Layered-Lowering Atlas & Generative Sugar** ratified **Draft → Accepted** (maintainer).
+  Accepts the **seamless-gradient thesis**, the **lowering law** (every feature lowers to L0 with the
+  same observable meaning; small IL-grammar-checked semantics-preserving passes; kernel never grows —
+  KC-3), the **honest-refinement** rule, the **generative-lowering + inspectable-desugaring** construct
+  set, and the **§8.1 naming** (delegation `via` · generative `derive` · inspector `reveal`) as the
+  *design direction*. Accepted ratifies the direction, **not** every open question — §8's *architectural*
+  questions (nanopass-separate-passes vs single `elab.rs`; `reveal` v0 vs post-core; round-trip scope;
+  wave sequencing; the `@matured` gap) remain **open**. No guarantee upgraded (layering +
+  observational-identity + built lowerings `Exact`; framing + construct + naming `Declared` — VR-5).
+  Also tidies the now-stale header naming pairs flagged in review (`derive`/`weave` → `derive`,
+  `reveal`/`expand` → `reveal`).
+
+### Changed (2026-06-25: DN-38 §8.1 naming settled — `derive` + `reveal`)
+
+- **DN-38 §8.1 Construct naming fully settled** (append-only; **DN-38 stays Draft**). The
+  generative-lowering construct is **`derive`** (plain-first over the coined `weave` — conventional,
+  discoverable: Rust `#[derive]` / Haskell `deriving`; coinage cleared no mnemonic bar). The inspector
+  is **`reveal`** (over `expand`, which overloads macro-*expansion*; the construct *discloses* the real
+  already-lowered L0 term, reinforcing the abstracted-never-hidden thesis). Combined with the earlier
+  `via` resolution, all three §8.1 naming questions are now closed (delegation `via`; generative
+  `derive`; inspector `reveal`).
+
+### Changed (2026-06-25: DN-36 + DN-37 ratified Draft → Accepted; delegation keyword → `via`)
+
+- **DN-36 — Safe & High-Performance Iteration** ratified **Draft → Accepted** (maintainer). Accepts
+  the **two-tier surface** (bounded Tier-1 idiom + budget-gated Tier-2 open form, both desugaring to one
+  tail-recursive `Fix`) and the **§6 high-performance roadmap** as the *design direction*. Enacts no
+  code, upgrades no guarantee (safety `Exact`, perf mechanism `Proven`-in-lit / `Empirical`-`Declared`,
+  surface `Declared`); each §6 item still gates on its own build epic (VR-5).
+- **DN-37 — Object & Behavior Model (and the Sigil Category Scheme)** ratified **Draft → Accepted**
+  (maintainer). Accepts the **objects-vs-ADTs framing**, the **composition-ranked inheritance-emulation
+  menu**, and the **Sigil Category Scheme** as the *design direction*. Accepted ratifies the direction,
+  **not** every open question — §8's build-order, first-class-`class`-vs-implicit, dynamic-dispatch,
+  encapsulation, and `~`-form questions remain **open** and tracked. No guarantee upgraded (foundation
+  `Exact`; menu + sigils + sugar `Declared`).
+- **Delegation keyword resolved to `via`** (DN-38 §8.1, append-only; DN-38 stays Draft). The maintainer
+  delegated the call; `via` (preposition = conduit, not agent) is honest about Mycelium's **static,
+  by-value forwarding** — no late-binding/agency over-claim (VR-5 applied to naming), the prepositional
+  twin of the `~>` flow-glyph, matching the cited Kotlin `by` precedent. `derive`/`weave` and
+  `reveal`/`expand` remain open. (Note: the `0t` trit-literal shorthand — analogous to `0b`/`0x` — is
+  already the DN-31 scheme; no change.)
+
+### Added (2026-06-25: DN-35 — env-machine reclamation, research-backed)
+
+- **DN-35 — Env-Machine Reclamation (the Deferred Big Step past the §9 Audit Trail)**
+  (`docs/notes/DN-35-Env-Machine-Reclamation.md`, **Draft/advisory**), backed by `research/16`+`17`
+  (internal `eval_machine`-seam dossier + external Perceus/Frame-Limited-Reuse/RC⊕region prior art).
+  The load-bearing memory note behind DN-36's constant-heap loops.
+  - **The deferred step:** thread *actual* Mycelium-level reclamation into the AOT env-machine
+    (`eval_machine`, `crates/mycelium-mlir/src/aot.rs`) — today the §9 audit-trail bridge
+    (`rc_plan.rs`) is **audit-only**; the env-machine lets Rust manage values. DN-35 designs the
+    big step past it.
+  - **Principle — static decisions, dynamic verification:** the compiler statically plans
+    drop-guided / **Frame-Limited reuse** (Lorenzen–Leijen) and inserts reclamation points; the
+    runtime **`is-unique` gate** (the `RcCell` probe, MEM-2) is the **sound safety valve** — a wrong
+    static guess costs throughput, never safety.
+  - **In-place-reuse-vs-content-address obligation:** reuse a cell in place only at `rc==1`; a
+    **weak intern table** + **evict-or-copy** keeps content-addressing (ADR-003) sound when a reused
+    cell was interned.
+  - **RC⊕region exactly-once** (Gay–Aiken): region batch-reclaim and RC drop must not double-free.
+  - **`fast`/`certified` split** (ADR-032/RFC-0034): `fast` trusts the static plan + the `is-unique`
+    valve; `certified` additionally emits per-reclamation audit records (the §9 trail) and can run
+    the reference RC-evaluator (`eval.rs`) as oracle.
+  - Open-question gating set carried into the build epic (Q4 reuse-granularity / Q6
+    intern-eviction-policy / Q2 region-RC-ordering). Internal claims `Empirical`/`Declared`; external
+    mechanisms `Empirical`/`Proven`-in-literature (primary-source-checked). Enacts nothing.
+
+### Added (2026-06-25: DN-38 — the layered-lowering atlas & generative sugar, research-backed)
+
+- **DN-38 — The Layered-Lowering Atlas & Generative Sugar (one seamless gradient to L0)**
+  (`docs/notes/DN-38-Layered-Lowering-Atlas.md`, **Draft/advisory**), backed by `research/25`
+  (pit-of-success + nanopass/language-tower + inspectable-desugaring/generative-lowering prior art).
+  The **unifying** note the feature DNs (DN-36/37, future DN-35) hang off.
+  - **Thesis:** Mycelium is **one seamless language** — the L0–L3 "levels" are how the *compiler
+    lowers*, not modes the *programmer declares*; a program freely intermixes high-sugar and
+    low-explicit forms because they're the same program at different points on a **desugaring
+    gradient**. The batteries-included feature **superset** abstracts L0 away — *abstracted, never
+    hidden* (always `reveal`-able). (Racket "languages as libraries" taken further: the low level is
+    the *same* language less-sugared.)
+  - **The lowering law:** every feature lowers to L0 with the same observable meaning; each pass small,
+    IL-grammar-checked, semantics-preserving; kernel never grows (KC-3). The "seamless gradient" and
+    the "verified tower" (nanopass/CompCert) are one property from two seats (RFC-0012
+    observational-identity + NFR-7).
+  - **Honest refinement:** levels invisible, but `wild`/`!{io}`/`@matured`/guarantee-tags stay
+    explicit + **level-independent** (they surface *what the code does* — the audit trail survives
+    free mixing).
+  - **Generative lowering:** terse-params → explicit, inspectable, **content-addressed** L0 artifact
+    (`derive`/`weave`; Lombok-style hidden magic is structurally impossible — the only output is an
+    L0 term; same-intent→same-identity free via ADR-003; Dynel/RFC-0013 errors woven in).
+  - **Inspectable desugaring:** `reveal` shows the *real* L0 term (not a lossy text render),
+    layer-hideable, `delaborate∘lower=id` round-trip gated by `certified` (ADR-032).
+  - Includes the **per-feature Lowering Map** (living checklist). Layering + observational-identity +
+    built lowerings `Exact`; framing + construct + naming `Declared`. Enacts nothing.
+
+### Added (2026-06-25: DN-37 — object & behavior model + sigil category scheme, research-backed)
+
+- **DN-37 — Object & Behavior Model (and the Sigil Category Scheme)**
+  (`docs/notes/DN-37-Object-and-Behavior-Model.md`, **Draft/advisory**), backed by two new research
+  records (`research/23` internal, `research/24` external prior-art). How objects render and how to
+  emulate ergonomic inheritance, composition-aligned, in the value-semantics + trait model.
+  - **Framing (Cook's duality):** Mycelium sits on the **ADT / static-dispatch horn** by construction
+    — strong at adding *operations* + clean binary methods; constrained at *open representations*.
+  - **Built (`Exact`):** data via one keyword `type` (record/sum, `Construct`/`Match`, content-addressed
+    structural equality); traits + `impl` + bounded generics + **coherence** via **monomorphization**;
+    nodule-level `pub`. **Content-addressing forces coherence** (ADR-003) — firmer than Haskell.
+  - **Deferred/greenfield** (honest correction — the ergonomic-inheritance layer is mostly future work):
+    super-traits (designed RFC-0019 §4.3, unparsed), default method bodies, delegation, `@`-decorator,
+    dynamic dispatch / record-of-closures (`FieldSpec` is `Repr|Data` only — no function-typed field),
+    field/opaque encapsulation, associated types (v2).
+  - **Ranked emulation menu:** default methods → super-traits → `~>`-delegation → `@`-decorator →
+    embedding → row-poly → record-of-closures (escape hatch — its `fix`-over-`self` *is* the cyclic
+    back-edge LR-9 excludes; `Declared`). Never-silent caveat: forwarding-without-late-binding is the
+    honest behavior (avoid Rust's silent `Deref` fake-"is-a").
+  - **Settled sigil-category scheme** (verified non-conflicting against the lexer): `@` wrap/decorate ·
+    `#` identity · `$` splice · `?` fallibility · bare `~` approximate / `~>` delegate · `!` effects ·
+    `&` conjoin (not borrow) · `` ` `` reserved (quasiquote/raw). One glyph = one layer of discourse;
+    grammar home DN-31/RFC-0030/epic #27.
+  - **Perf:** monomorphization is the vtable-free default; Swift-existential (3-word inline buffer) for
+    the eventual dynamic-dispatch. Foundation `Exact`; menu+sigils+sugar `Declared`. Enacts nothing.
+
+### Added (2026-06-25: DN-36 — safe & high-performance iteration, research-backed)
+
+- **DN-36 — Safe & High-Performance Iteration in the Value-Semantics Model**
+  (`docs/notes/DN-36-Safe-and-High-Performance-Iteration.md`, **Draft/advisory**), backed by two new
+  research records (`research/21` internal, `research/22` external prior-art). Captures how iteration
+  stays **functional + safe + high-performance** without a mutable loop variable: keep value-semantics
+  in the surface, source mutation from the lowering (TRMC + Perceus/FBIP reuse — Koka's lesson).
+  - **Safety is already built** (`Exact`): bounded `for`→`Fix` fold, O(1)-host-stack trampoline, three
+    never-silent budgets (`fuel`/`max_depth`/`alloc`), `while`/`loop` removed-by-construction with a
+    teaching diagnostic, total `mycelium-std-iter` combinators.
+  - **Recommended two-tier surface** (the maintainer's "both"): a bounded total-by-construction Tier-1
+    idiom (termination `Proven`) + a sugared budget-gated Tier-2 open `loop`/`while` (catchable
+    `BudgetExhausted`, `Declared`), both desugaring to one tail-recursive `Fix`; `recur`-checked tail
+    position; folds in DN-31's grammar input (line-breaks/indentation, `,` delimiter).
+  - **High-performance roadmap** makes the recursion-aware FBIP increment (E12 Increment 3 / task #6)
+    load-bearing — RC across `Fix`, recursive verifying evaluator, value-affecting reuse, native
+    structural accumulators (`tailcc`/`musttail`), region-per-iteration, interpreter TRMC parity,
+    benchmarks — to deliver constant-memory loops for general structural accumulators (today only a
+    scalar `Binary{8}` accumulator is allocation-free).
+  - Honest posture: safety `Exact`; perf mechanism `Proven`-in-literature / `Empirical`-`Declared`-for-
+    Mycelium until built+benchmarked; surface `Declared`. Enacts nothing; indexed in Doc-Index.
+
+### Changed (2026-06-25: corpus-audit decision log — maintainer rulings encoded append-only)
+
+- **Maintainer decisions from the corpus audit**, encoded across the corpus (append-only; no original
+  text deleted; the only status changes are forward moves, each with a changelog entry). 26 docs +
+  the H1 re-pin:
+  - **H1 (code):** re-pinned `mycelium-std-math`, `mycelium-std-sys`, `mycelium-std-sys-host` from
+    the drifted `0.1.0` back to `0.0.0` + `publish = false`, restoring ADR-018's uniform policy
+    (Cargo.lock refreshed; workspace still builds). ADR-018 erratum records the corrected facts +
+    count (44→50).
+  - **H2/H3:** ADR-020 record-completion (Proposed→Accepted→Enacted entries; `runtime.rs` 106→116);
+    DN-23 footer + RFC-0025/M-705 supersession, **Status Draft→Resolved**.
+  - **Decisions-to-implement (recorded as decisions + tracked epics, no code yet):** RFC-0017 §4.1
+    top-down `@matured` inheritance + §4.4 record (D1); E19-1 `Repr::Seq`/`Repr::Bytes` value-model
+    additions + the T1-after-E19-1 gate (D2/D3, ADR-024); adopt **`[]` for type-args** superseding
+    RFC-0030's `<>` direction, with the line-break/indentation + `,`-delimiter design input folded in
+    (D7, DN-31); RFC-0030 Draft→Proposed sequenced behind the grammar wave (D6).
+  - **Decisions-to-defer:** Gate A2/A3/A4/A5 pass-criteria post-T1 (D4); T4/T9 stdlib-in-Mycelium /
+    self-hosting post-core (D5); Theme-A verification batch post-T1 (D8).
+  - **Hygiene batch:** ADR-029/030/031 in-body `Status: Proposed`→Accepted (+ ADR-031 ID erratum);
+    DN-21 **Draft→Enacted**; DN-16/17/19/06/14 + locator errata (DN-10/22/24/26, RFC-0004/0016/0035,
+    ADR-023 index). doc_refs resolve; markdown clean in the edited files.
+
+### Added (2026-06-25: exhaustive corpus-alignment audit record — all 92 DNs/ADRs/RFCs)
+
+- **`research/20-corpus-alignment-audit-RECORD.md`** — an exhaustive read-only doc↔code alignment
+  audit of the *entire* design corpus (34 DN + 23 ADR + 35 RFC = 92 docs), one auditor per doc,
+  cross-checking every status + normative claim against the landed tree (code/lexicon treated as
+  ground truth). Result: **0 Critical, 8 High, 7 Medium, 37 Low**; verdicts **76 honest /
+  6 internally-inconsistent / 6 stale / 3 over-claims / 0 under-claims**; **no VR-5 guarantee-tag
+  violation anywhere** — every drift is status/fact/locator staleness, not a strength over-claim.
+  The record includes a per-status roster (every doc exactly once) and a consolidated open-question
+  ledger (~9 near-term-gating, concentrated in the core/full-language 1.0.0 gate). All corrections
+  are recommend-only + append-only-safe (none applied in this record). Flags one item for an explicit
+  maintainer decision: three crates at `0.1.0` (vs the ADR-018 "all `0.0.0`" premise) suggest a
+  partial undocumented release-cut to reconcile.
+
+### Changed (2026-06-25: corpus alignment audit — append-only corrections to the memory/transpiler cluster)
+
+- **Doc↔code alignment corrections** from a two-cluster audit (memory/reclamation + self-hosting/
+  transpiler) against the actual codebase. All append-only (no Status moved; no original text deleted
+  from any Accepted doc — the only `−` lines are in the Draft DN-34 and a Doc-Index row):
+  - **DN-33 §6.1 (Critical):** the stale "prerequisite gap" passage claimed `mycelium-mir-passes`
+    does not exist and MEM-4 is blocked — now false (the crate is fully built; the §8.1 Q2 ruling
+    makes the "add a field to `node.rs`" step moot). Added a dated correction callout; §6.1 prose
+    preserved as a historical snapshot.
+  - **DN-34 §3 + Doc-Index (Critical/High):** corrected the "reuse the MEM-4 ownership analysis"
+    category error — Rust ownership facts come from a rustc/rust-analyzer front-end (authoritative:
+    rustc MIR `mir_borrowck`); `syn` is syntax-only; MEM-4 is a *downstream* RC optimizer over
+    Mycelium Core IR, not the transpiler's ownership analyzer. Annotated the HOF/`?` rows with real
+    surface status (RFC-0024 Proposed; capturing closures auto-Impossible; `?` absent from v0).
+  - **DN-32 + RFC-0027 (High):** added honest-scope notes — the model is implemented at the runtime
+    + MEM-4 static tiers with all three §9 triggers live, but reclamation is **not yet threaded into
+    the AOT env-machine** (env-machine still Rust-manages values; §9 output is an additive audit
+    trail; seam = `mycelium-mlir/src/aot.rs::eval_machine`).
+  - **RFC-0028 §4.5 (Low):** clarified v0 `std.rand` entropy = `/dev/urandom` via `std::fs`
+    (`getrandom(2)` deferred). **research/18 / DN-26:** errata for the MEM-4-built / `colony`-`hypha`-
+    expression-only / DN-14-row-9 freshness nits.
+
+### Added (2026-06-25: research records — env-machine reclamation + transpiler evidence base)
+
+- **Four research records** (`research/16`–`research/19`), landed as the evidence base for the next
+  two memory/self-hosting steps. Each is a multi-agent research pass (internal repo-grounded +
+  external web prior-art), adversarially verified, with honest guarantee tags (internal claims
+  `Empirical`/`Declared`; external mechanisms `Empirical` where primary-source-checked, `Declared`
+  where second-hand and flagged):
+  - **16/17 — Env-machine reclamation (a future DN-35).** The ground truth for threading *actual*
+    Mycelium-level reclamation into the AOT env-machine (the deferred step past the §9 audit trail):
+    the exact `eval_machine` seam (`crates/mycelium-mlir/src/aot.rs`), the reference RC-evaluator as
+    correctness oracle, the open design decisions; plus a prior-art survey (Perceus / Frame-Limited
+    Reuse, Counting Immutable Beans, FP² FIP, Lean 4 RC, RC⊕region coupling) with a concrete
+    "static decisions, dynamic verification" recommendation and the one novel obligation Mycelium
+    must own (in-place reuse vs content-address identity).
+  - **18/19 — Rust→Mycelium transpiler (DN-34 evidence).** The two maintainer seed projects (py2rust
+    + py-rust-bridge) with reuse verdicts; Mycelium-as-transpile-target readiness; the
+    construct-mapping table; plus a prior-art survey (front-end choice — `syn` vs rust-analyzer HIR
+    vs rustc MIR `mir_borrowck` as the ownership oracle; c2rust/SACTOR preserve-first architecture;
+    never-silent residue reporting; the Laertes ~11% ceiling as an honest caution on "the bulk
+    transpiles"; diverse-double-compiling for bootstrap trust).
+  - Indexed in `docs/Doc-Index.md`. These enact nothing and ship no code — they back the future
+    DN-35 and the DN-34 follow-on design work.
+
+### Added (2026-06-25: MEM-4 corpus — Increment-2 reuse + audit-trail measurement)
+
+- **MEM-4 measurement, broadened** (`mycelium-mir-passes::corpus`): the Q5 corpus measured only
+  Increment 1's `Dup` reduction. A companion measurement now covers the rest of the built analysis
+  tier over the **same** corpus — `measure_mem4` / `measure_mem4_standard` → `Mem4Report`:
+  - **Reuse sites** — the count of `RcNode::MoveUnique` annotations `emit_reuse` emits (Increment 2's
+    `rc == 1` reuse points), each **machine-verified sound** (reached at rc == 1 — the reference
+    evaluator would error `UnsoundUnique` otherwise) and confirmed semantics-preserving against the
+    owned emission.
+  - **Reclamation records** — the per-term `rc → 0` reclamation count over the elided emission: the
+    size of the RFC-0027 §9 audit trail the AOT tier (`mycelium-mlir::rc_plan`) emits.
+  - Added three sole-owned-move terms to `standard_corpus` so the reuse dimension is exercised
+    (`result_move`, `borrow_then_sole_move`, `sole_move_after_drop`); the Q5 dup-reduction stays
+    ~91% (the additions are dup-neutral or a further win). 7 new tests (≥ 3 reuse sites located, all
+    machine-verified sound + preserved, per-term/aggregate consistency).
+  - Honest tags: the counts are `Exact` (read off the IR / reference machine); soundness is
+    `Empirical` (the verifying evaluator over the corpus); corpus representativeness stays `Declared`
+    (no Mycelium program population to sample yet — DN-33 §8.1). Q5 `CorpusReport`/`measure` left
+    untouched (the gate is stable). Clippy `-D warnings` clean.
+
+### Added (2026-06-25: MEM-4 → AOT — the RFC-0027 §9 reclamation audit trail)
+
+- **MEM-4 AOT wiring** (`mycelium-mlir::rc_plan`): the bridge that finally **consumes** the MEM-4
+  static analysis (`mycelium-mir-passes`) at execution time. It turns the borrow-elided RC-emission's
+  predicted reclamations into the never-silent RFC-0027 §9 EXPLAIN/audit trail, emitted from the AOT
+  path (previously only the runtime `RcCell` probe produced records).
+  - **`emit_reclamation_plan(node, sink, scope_id, sweep_epoch)`** — runs `emit_elided` → the
+    reference RC-evaluator (`eval`) and emits one `ReclamationRecord` (trigger `RcZero`) per
+    `rc → 0` reclamation the analysis predicts, to a `ReclamationSink`. Returns the typed `RcPlanError`
+    (not an empty plan) for a term outside the analysable fragment — never-silent (G2).
+  - **`run_with_reclamation(node, prims, swap, sink)`** — computes the value with the **unmodified**
+    trusted env-machine (`aot::run_core`) and emits the plan **additively** alongside it
+    (`RcRun { value, reclaimed: Option<usize> }`); an out-of-fragment term yields `reclaimed: None`,
+    an explicit documented skip.
+  - **Honest scope (VR-5):** the AOT env-machine still **Rust-manages values**, so this is the
+    *observable* audit trail of *where* the static analysis says reclamation occurs — **not** a
+    change to execution. A bug here is a wrong/missing audit record, never a wrong value (DN-33 §2;
+    the runtime `RcCell` probe remains the sound fallback). Threading actual reclamation into the
+    env-machine is the deferred big step (RFC-0027 §10). The record *count* is `Exact`; the analysed
+    fragment (straight-line) and the synthetic `rcplan:<id>` `value_meta_hash` are `Declared`.
+  - 5 tests (lib); clippy `-D warnings` clean; `mycelium-core` + the env-machine untouched (KC-3);
+    the dependency graph stays a DAG (`mir-passes`/`std-runtime` are upstream of `mlir`).
+
+### Added (2026-06-25: MEM-4 Increment 2 — `rc == 1` reuse annotation, machine-verified)
+
+- **MEM-4 Increment 2** (`mycelium-mir-passes`, DN-33 §6 D-3): the `rc == 1` reuse annotation, now
+  unblocked by the Q5 gate. A new IR node `RcNode::MoveUnique` marks a consuming move **statically
+  proven to be the sole owner** (reference count exactly 1 → the runtime `RcCell::drop_ref`
+  `UniqueOwner` branch is guaranteed to fire → the allocation is **FBIP-reuse-eligible**).
+  - **`emit::emit_reuse`** — a superset of `emit_elided`: a `let` binding that is a **sole-owned
+    single move** (`is_sole_owned_move` — used exactly once, in a move position) has that move
+    emitted as `MoveUnique`. Conservative (only the unambiguous single-move case; multi-move
+    last-consume is a later refinement); `Lam` params still `Owned`.
+  - **Machine-verified soundness:** the reference RC-evaluator (`eval`) **checks** every `MoveUnique`
+    — it errors (`RcError::UnsoundUnique`) if the annotation is reached at a reference count other
+    than 1. So a wrong annotation cannot slip through (mutation-tested: a hand-built `dup x;
+    MoveUnique(x)` at rc=2 is caught). Semantics-preservation is confirmed against the owned emission
+    (same reclamation multiset) over the corpus.
+  - Honest tags: the annotation is semantics-preserving and **machine-verified** — `Empirical`
+    (differential + the verifying evaluator), **not `Proven`** (a mechanized proof is Phase 3); the
+    reuse-site **count** is `Exact` (read off the IR); the FBIP **performance** benefit stays
+    `Declared` (the actual cell-recycling is downstream codegen, not yet wired). 43 tests (8 new);
+    clippy `-D warnings` clean; Core IR untouched (KC-3).
+
+### Added (2026-06-25: DN-34 — Rust→Mycelium transpiler strategy, Draft)
+
+- **DN-34 — Rust→Mycelium Transpiler Strategy (Self-Hosting Acceleration)**
+  (`docs/notes/DN-34-Rust-to-Mycelium-Transpiler-Strategy.md`, **Draft/advisory**): captures how a
+  **Rust→Mycelium transpiler** would do the **bulk** of the Mycelium self-hosting rewrite
+  (stdlib-in-Mycelium long pole) — transpile the project's Rust crates to Mycelium surface,
+  **flagging** (never guessing) the hard residue for manual refinement. Seeded from the maintainer's
+  **py2rust** (AST-walk transpilation + a never-silent `CompatibilityAnalyzer`) and **py-rust-bridge**
+  (Python↔Rust FFI/SFI bridge) projects, retargeted `syn` (Rust AST) → Mycelium and **reusing the
+  MEM-4 ownership/borrow analysis** (`mycelium-mir-passes`) — Rust already encodes the ownership facts
+  DN-32 wants. Records a construct-mapping sketch, the **flag-don't-guess** analyzer as the
+  load-bearing G2 principle, and the phasing (isolated branch → incremental interop-bridged
+  transpile-then-refine → differential verify → DN-27 component-repo decomposition). Feeds DN-26 /
+  DN-27 / RFC-0028 / M-502. **Gated** on the Mycelium surface being a viable target (post-core-1.0) —
+  **enacts nothing, ships no code, begins no phase.** All effort/coverage claims `Declared`;
+  seed-architecture `Empirical`, transfer `Declared`.
+
+### Added (2026-06-25: MEM-4 Q5 measurement corpus — Increment 1 gate cleared)
+
+- **`mycelium-mir-passes::corpus`** — the DN-33 §8.1 **Q5** measurement: a representative, **mixed**
+  corpus of Core IR terms (elision-friendly reader-heavy `let`s + elision-neutral escaping/single-use
+  terms) and a `measure()` that lowers each term both ways (`emit_owned` vs `emit_elided`), counts
+  `Dup`s, and runs the differential to confirm semantics-preservation. **Result: 22 → 2 `Dup`s
+  (20 removed, ~91% reduction), all terms semantics-preserved.** This clears the Q5 gate
+  (Increment 1's effect is measured), **unblocking Increment 2**.
+  - Honest tags: the `Dup` **count / ratio** is **`Exact`** (read off the IR — an exact measurement
+    *of this corpus*); the corpus being **representative** of real Mycelium programs is **`Declared`**
+    (no program population to sample yet — the corpus is a deliberate mix so the ratio isn't inflated);
+    the runtime **performance** interpretation stays **`Declared`** (no Mycelium runtime benchmark
+    yet — the gate is "the analysis does real work", not a perf SLO). 35 tests (4 new, incl. the Q5
+    gate assertion + the honest-mix + per-term-monotonicity checks); clippy `-D warnings` clean.
+
+### Added (2026-06-25: documentation wiki + paired API-docs publishing)
+
+- **GitHub wiki source** (`docs/wiki/`): a browsable wiki generated from the unified per-crate
+  READMEs + the design corpus — `Home`, `Architecture`, `Crate-Index` (all 50 crates, regenerated
+  from the READMEs), `Memory-Model` (DN-32 / RFC-0027 / DN-33), `Tunable-Certification` (RFC-0034 /
+  ADR-032), `Getting-Started`, `Decision-Records`, `API-Reference`, plus `_Sidebar`. Kept in-repo
+  (versioned, reviewable) rather than authored directly in the wiki repo.
+- **`publish-docs` GitHub Action** (`.github/workflows/publish-docs.yml`, **manual-dispatch only** —
+  consistent with the repo's advisory-CI policy): mirrors `docs/wiki/*.md` to the GitHub wiki and
+  builds + deploys the **rustdoc** API docs to GitHub Pages (both via the Actions `GITHUB_TOKEN`;
+  requires the Wiki feature + Pages enabled in Settings). rustdoc verified to build clean
+  (`cargo doc --no-deps --workspace`).
+- **README** gains a **Documentation** section pointing to the wiki, the rustdoc/`just docs`, the
+  committed `docs/api-index/INDEX.md`, the per-crate READMEs, and the design corpus. Markdownlint +
+  codespell clean.
+
+### Added (2026-06-25: MEM-4 Increment 1 — non-escaping borrow elision + the Q3 differential harness)
+
+- **MEM-4 Increment 1 — borrow elision** (`mycelium-mir-passes`, DN-33 Accepted §8.1): the pass that
+  actually **removes** RC ops. In the immutable value model a reader primitive (`Op`/`Swap`) reads its
+  operands and produces a fresh result, retaining nothing — so an operand position is a **borrow**
+  (non-consuming read), not a move.
+  - **`emit::emit_elided`** — a `let` binding whose every use is such a read (**fully borrowable** —
+    `emit::is_fully_borrowable`, conservative: any escaping use to the result / a `Construct` / an
+    `App`/`Match` keeps it owned) is emitted with its uses as `RcNode::Borrow` (non-consuming), **no**
+    `Dup`, and a single `RcNode::DropAfter` reclaiming it **after** its reads. Strictly fewer RC ops
+    than B0's owned emission (`k-1` `Dup`s → `0`). Intraprocedural; `Lam` params stay `Owned`
+    (interprocedural borrowing is a later increment). New IR nodes: `Borrow` (read) and `DropAfter`
+    (reclaim-after-body — the correct drop placement so a borrowed value stays live through its reads).
+  - **`eval` — the reference RC-evaluator + `eval::differential`** (the differential half of the
+    ratified Q3 soundness strategy): an abstract RC machine over the straight-line fragment that runs
+    a term's owned **and** elided emissions and checks they reclaim the **same multiset of values**
+    with **no use-after-free / double-free**, while the `Dup` count strictly drops. Control-flow
+    nodes outside the straight-line fragment are refused explicitly (`RcError::UnsupportedNode`, G2).
+  - Honest tags: the elision's **semantics-preservation** is **`Empirical`** (differential trials over
+    a corpus, backed by the structural `DropAfter`-after-reads + balance argument), **not `Proven`**
+    (a mechanized proof is the Phase-3 option — VR-5); the `Dup`-count reduction is **`Exact`** (read
+    off the IR), the *performance* benefit stays `Declared` until measured (Q5). 31 tests (10 new:
+    borrow classification, elided shape, the differential over a corpus, dup-reduction, and evaluator
+    use-after-free / double-free / unsupported-node witnesses); clippy `-D warnings` clean;
+    `#![forbid(unsafe_code)]`. Core IR still untouched (KC-3).
+
+### Added (2026-06-25: MEM-4·B0 — the RC-emission pipeline foundation (`mycelium-mir-passes`))
+
+- **`crates/mycelium-mir-passes`** — the first MEM-4 code (DN-33 Accepted §8.1), building the
+  RC-emission pipeline the §6.1 investigation found missing (nothing emitted RC ops, so there was
+  nothing to elide). **Optimisation-only and OUTSIDE the trusted Core IR** (KC-3 / DN-33 §8.1 Q2): it
+  consumes `mycelium_core::Node` read-only and produces a **separate** RC-annotated IR — the kernel
+  `mycelium-core` is **untouched**, and a bug here is a missed optimisation, never unsafety (the
+  runtime `RcCell` probe stays the sound fallback).
+  - **`rc_ir` — the RC-annotated IR** (`RcNode`): mirrors the Core IR first-order fragment
+    (`Const/Var/Let/Op/Swap/Construct/Match/Lam/App`) plus `Dup`/`Drop` wrapper nodes and a
+    per-binding own/borrow `Mode` (the `Borrowed` variant is the forward hook for Increment 1).
+  - **`emit` — naive fully-owned RC-emission** `Node → RcNode`: a binding used `k` times gets `k-1`
+    `Dup`s (one reference per use) and each use consumes one; an unused binding gets one `Drop`.
+    Occurrence counting is **shadowing-aware** (rubric A4-01). Recursion (`Fix`/`FixGroup`) is
+    **refused explicitly** (`EmitError::UnsupportedNode`) — never silently mis-emitted (G2).
+  - **`balance` — the structural balance invariant** (`1 + dups == uses + drops` per owned binding;
+    a `Borrowed` binding must carry no `Dup`/`Drop`), verified **independently** over the emitted IR
+    (re-derives the counts, so a buggy emission is caught — mutation-tested). This is the
+    structural-invariant half of the ratified Q3 soundness strategy; the differential half lands with
+    Increment 1.
+  - Honest tags: the balance property is **`Exact`** by construction (independently checked); **no
+    perf claim** — B0 deliberately emits the *most* RC ops (the `dup`/`drop` count is `Exact`, read
+    off the IR; any reduction figure stays `Declared` until measured — DN-33 §8.1 Q5). 21 tests
+    (emission shape, shadowing, recursion-refusal, mutation witnesses for unbalanced/over-released
+    IR); clippy `-D warnings` clean; `#![forbid(unsafe_code)]`.
+  - **Next:** MEM-4 Increment 1 — non-escaping borrow elision (mark non-consuming reads `Borrowed`,
+    eliding their `Dup`/`Drop`) + the Q3 differential harness (with/without elision → identical
+    results AND reclamation records).
+
+### Changed (2026-06-25: DN-33 ratified Draft → Accepted — §8 deliberation settled)
+
+- **DN-33 ratified Draft → Accepted (§8.1 resolutions, maintainer).** The MEM-4 design deliberation is
+  settled: **Q1 → Option A** (only sole ownership crosses a hypha boundary; `RcCell<T>` stays `!Send`;
+  Option B / atomic-RC sharing gated to R2), **Q2 → separate RC-annotated IR** (the trusted Core IR
+  `mycelium-core/src/node.rs` stays pristine — KC-3 / DN-33 §4), **Q3 → differential + structural-
+  invariant** soundness (tag `Empirical`, not `Proven`). Q4–Q7 adopted as defaults (subsume `substrate`
+  uniqueness; perf gate = measured `dup`/`drop`-reduction ratio — count `Exact`, perf `Declared`; FIP
+  user-surface deferred to Phase 3; frame-limited R1 target). Status moves Draft → Accepted (the design
+  is ratified; **enacts no code**). The E12 build plan now sequences the MEM-4 build (B0: RC-emission
+  pipeline foundation → Increment 1: borrow elision + differential harness). Does not move RFC-0027's
+  status (the cross-hypha Option A feeds a later RFC-0027 follow-on). Append-only.
+
+### Changed (2026-06-25: DN-33 §6.1 addendum — MEM-4 is blocked-by-prerequisite, not just deferred)
+
+- **DN-33 §6.1 (append-only addendum)** records a grounded investigation finding: **MEM-4 Increment 1
+  has no input to operate on** — the Core IR (`mycelium-core/src/node.rs`) carries no ownership-mode
+  field on binding sites, there is no RC-annotated IR / `crates/mycelium-mir-passes/`, and
+  `clone_ref`/`drop_ref` are hand-called only in `mycelium-std-runtime` tests (no lowering emits RC ops
+  to elide). The prerequisite chain (resolve DN-33 §8 Q2 ownership-mode representation → add the field
+  to `node.rs` → build the `mir-passes` RC-emission lowering → wire into `elab.rs` → then Increment 1)
+  is a forward language-frontend epic **gated on the §8 Q2 maintainer decision** — not built
+  speculatively (G2/VR-5). The E12 build plan's MEM-4 status is updated to **blocked-by-prerequisite**.
+  The runtime substrate (MEM-1..3 + live triggers, landed) is the sound, complete fallback. Also fixes
+  a stray `</content>` artifact at the end of DN-33. No status moves; no normative text changes.
+
+### Added (2026-06-25: DN-33 — MEM-4 static uniqueness analysis design, research-backed, Draft)
+
+- **DN-33 — Layer-1 Static Uniqueness Analysis (MEM-4) & Cross-Hypha Reconciliation**
+  (`docs/notes/DN-33-Layer1-Static-Uniqueness-Analysis.md`, **Draft/advisory**): the research-backed
+  design direction for the deferred MEM-4 leg of DN-32, authored design-first before implementation.
+  Records (1) **MEM-4 = an additive, semantics-preserving compiler lowering pass** that elides
+  provably-redundant RC ops, with the runtime `RcCell` probe (MEM-2) as the **sound fallback** — so
+  the analysis is **sound-but-may-be-incomplete** (a bug costs throughput, never memory safety); (2)
+  how LR-8 immutability + LR-9 acyclicity + content-addressing shrink the problem below Rust-style
+  borrow checking; (3) KC-3 disciplines (lowering-pass-not-type-checker, additive-only, watch+measure
+  — DN-32 §6b); (4) an incremental decomposition (non-escaping borrow elision → `rc==1` reuse
+  annotation → full FIP static guarantee); and (5) a **recommendation for the cross-hypha
+  sub-question** (DN-32 §7 / RFC-0027 §12) — **Option A** (sole-move-only / affine-channel boundary;
+  `RcCell` stays `!Send`) for R1, **Option B** (shared-crosses-atomic-RC) deferred to R2. All
+  Mycelium-specific claims `Declared`; external prior art (Perceus, Lorenzen, Koka FP², ASAP, Pony,
+  Rust, Verona) `Empirical`; the cross-hypha recommendation is an argument with its ergonomic cost as
+  the named open risk. **Enacts nothing; moves no status; changes no normative text** — promotion past
+  Draft requires the §8 deliberation + maintainer ratification (house rule #3, append-only).
+
+### Added (2026-06-25: E12 Wave-4 — ChannelClose trigger + live scope/region wiring + L1/L2/L3 composition)
+
+- **ChannelClose — the third (and final) live reclamation trigger**
+  (`crates/mycelium-std-runtime/src/network.rs`, RFC-0027 §9 / §7.3): tearing down a channel that
+  still holds **in-transit** values (sent, never to be received) reclaims them —
+  `Receiver::close_with_reclaim(sink, scope_id, sweep_epoch, hash_of)` drains the buffer FIFO and
+  emits one `ReclamationRecord(ChannelClose)` per value, returning the reclaimed count. Never silent
+  (G2): an undelivered value is reclaimed-and-recorded, never dropped. Normal drain (receiver gets
+  the values) needs no reclamation — the teardown path is the distinct case.
+  - **Canonical `ChannelNodeId` (resolves MEM-1's last placeholder):** a monotonic per-channel id
+    (mirrors `region::ScopeNodeId`), bridged to the `ReclamationRecord` `ChannelId` field via
+    `as_channel_id()`; allocated once per `Network::channel` and exposed on both `Sender`/`Receiver`.
+    With this, all three of MEM-1's `u64` placeholders (`ScopeId`/`SweepEpoch`/`ChannelId`) are
+    canonicalized.
+- **Live-executor scope/region wiring** (`crates/mycelium-std-runtime/src/scope_region.rs`): the
+  Layer-3 `ScopeExit` reclamation now fires from a **running structured scope**, not just the bare
+  data structure. `with_region(sink, body)` (closure form — `close` is always called after `body`,
+  `Exact` by construction) and `RegionScope` (explicit-close guard for interleaved deferrals) tie a
+  `Region`'s lifecycle to a single-hypha scope; **nested `with_region` gives child-before-parent
+  epoch order for free** (monotonic counter). No `Drop`-with-sink (KC-3 — a sink can't thread
+  through `Drop`; mirrors `rc.rs`); a dropped guard with pending entries hits the `Region` debug
+  panic (G2 — silent audit loss impossible in debug). Cross-hypha atomic-RC stays FLAGged
+  (DN-32 §7 / RFC-0027 §12 — see DN-33).
+- **End-to-end L1/L2/L3 composition test** (`crates/mycelium-std-runtime/src/tests/composition.rs`):
+  one `CollectingSink` observes a single scope in which `RcZero` (L2 — last-handle drop), the
+  `ChannelClose` channel teardown, and the batched `ScopeExit` (L3 — scope close) **interleave and
+  compose**, with never-silent accounting (every reclamation event yields exactly one record;
+  2 `RcZero` + 3 `ChannelClose` + 2 `ScopeExit` = 7) and child-before-parent epoch order across a
+  nested scope. This validates the three triggers compose through one audit trail (RFC-0027 §9).
+  - Tags honest: probe/close/ordering logic `Exact` (enforced-by-construction); batching-as-perf
+    `Declared` (DN-32 §6a — no measurement). 104/104 tests (20 new across the wave); clippy
+    `-D warnings` clean; `#![forbid(unsafe_code)]`.
+  - **Phase-1 three-layer memory model now feature-complete at the runtime tier:** all three live
+    triggers wired (RcZero · ScopeExit · ChannelClose), all placeholder ID types canonicalized,
+    scope-exit reclamation fires from a live scope. Remaining: **MEM-4** Layer-1 *static* uniqueness
+    analysis (Perceus-style RC elision) — design-first as **DN-33** (research-backed), the runtime
+    `RcCell` probe is the sound fallback until it lands.
+
+### Added (2026-06-25: E12 Wave-3 — MEM-3 regions + batched scope reclamation (DN-32 Layer 3))
+
+- **MEM-3 — region-based batched scope reclamation** (`crates/mycelium-std-runtime/src/region.rs`, DN-32
+  Layer 3 / RFC-0027 §10.3): `Region` = one RT7 scope-tree node; `Region::defer(value_meta_hash)` accrues
+  reclamations during the scope, and `Region::close(&sink)` drains them in bulk, emitting one
+  `ReclamationRecord(ScopeExit)` per value — **the second live reclamation trigger** (after MEM-2's `RcZero`).
+  Bulk emission is G2-enforced (a Region dropped with deferred entries un-closed panics in debug). `ScopeTree`
+  closes children before the parent.
+  - **Canonical ID types (resolves MEM-1's placeholders):** `ScopeNodeId` + `RegionEpoch` (monotonic counters)
+    replace the `u64` `ScopeId`/`SweepEpoch` placeholders, threaded through reclamation.rs/rc.rs; the epoch
+    number-line encodes the child→root sweep order (child epoch < parent epoch always).
+  - **OQ-1 (weak coupling) realized + tested:** parent-child reclamation total (child-before-parent, `Exact`
+    by the monotonic counter), siblings order-independent (`Proven`-modulo-LR-9) — property tests both ways.
+  - Tags honest: ordering logic `Exact`/by-construction; bulk-efficiency-as-perf `Declared` (DN-32 §6a). 84/84.
+  - Downstream-flagged: live-executor `Region::close` wiring (the running scheduler/MLIR runtime), cross-hypha
+    atomic RC (§7), strong-coupling opt-in, `ChannelId` canonicalization (network tier).
+
+### Added (2026-06-25: E12 Wave-2 — MEM-2 explicit RC + rc==1 reuse (DN-32 Layer 2))
+
+- **MEM-2 — explicit reference counting + `rc==1` reuse probe** (`crates/mycelium-std-runtime/src/rc.rs`,
+  DN-32 Layer 2 / RFC-0027 §10): `RcCell<T>` wraps `std::rc::Rc<T>` — **non-atomic, `!Send + !Sync`**
+  (intra-hypha fast path), immutable-value-only (LR-8), no `unsafe` (respects `#![forbid(unsafe_code)]`).
+  `drop_ref(sink, …) -> RcProbe<T>` probes the strong count **before** decrement: `count==1` →
+  `UniqueOwner(T)` — emits exactly one `ReclamationRecord(RcZero)` through MEM-1's `ReclamationSink` (**the
+  first live reclamation trigger wired**) and returns the owned `T` (FBIP reuse, §10.2); `count>1` → `Shared`
+  (decrement, no record). Probe logic tagged **`Exact`** (enforced by construction); FBIP reuse-as-perf-win
+  **`Declared`** (no measurement, DN-32 §6a). 64/64 tests (12 new). Downstream-flagged: the **atomic
+  cross-hypha** upgrade (the DN-32 §7 reconciliation sub-question), **region** deferred-drop accumulation
+  (MEM-3), and **static RC elision** (MEM-4 / Perceus uniqueness analysis).
+
+### Added (2026-06-25: E12 memory-model build — Wave 1 — MEM-1 + CI blocker removal)
+
+- **E12 build plan** (`docs/planning/E12-Memory-Model-Build-Plan.md`) — the DN-32/RFC-0027 implementation
+  roadmap, decomposed into tightly-scoped Sonnet-swarm waves (BLK blockers; MEM-1 record → MEM-2 RC →
+  MEM-3 regions → MEM-4 static analysis).
+- **MEM-1 — reclamation EXPLAIN/audit record** (`crates/mycelium-std-runtime/src/reclamation.rs`, RFC-0027 §9):
+  `ReclamationRecord{ scope_id, sweep_epoch, trigger ∈ {RcZero, ScopeExit, ChannelClose}, value_meta_hash,
+  channel_id? }` + the exhaustive `ReclamationTrigger` enum + the **`ReclamationSink` never-silent contract**
+  (a proptest proves every reclamation event emits exactly one record — silent reclamation is structurally
+  impossible) + EXPLAIN integration (RFC-0005). The observability FOUNDATION of the memory model. Placed in the
+  runtime tier (not `mycelium-core` — KC-3). Tagged **`Declared`**: the record structure is concrete; the live
+  trigger-wiring (rc→0 / scope-exit / channel-close) is downstream (MEM-2/MEM-3), `ScopeId`/`ChannelId`/
+  `SweepEpoch` are `u64` placeholders pending the canonical types. 52/52 tests green.
+- **CI blocker removal (BLK):** the `api` gate is green (regenerated the drifted `l1`/`lsp`/`spore`/`std-sys`
+  baselines + new `cli`/`std-sys-host`) and the `myc-fmt` gate is green (`mycfmt`-canonicalized `lib/std/{cmp,
+  option}.myc`) — formatting/baseline-only, no logic change. agent index regenerated.
+
+### Added (2026-06-25: DN-32 three-layer memory architecture; RFC-0027 → Accepted (ratified))
+
+- **DN-32 — Three-Layer Hybrid Memory Architecture** (`docs/notes/`, **Accepted**, ratified by maintainer):
+  affine/linear ownership PRIMARY (unique data, ~zero cost) → optimized RC for EXPLICIT sharing
+  (non-atomic intra-hypha, `rc==1` reuse) → region-based alloc/reclamation in scopes (batched at scope-exit).
+  Parent-child reclamation total; siblings concurrent-by-default (weak coupling), strong opt-in. Grounded in
+  Perceus / Smith-structured-concurrency / Lorenzen + the landed research. Carries four honest caveats (§6):
+  perf claims are `Declared` GOALS; Layer-2 static uniqueness analysis is the hard leg + a KC-3 tension; OQ-1
+  resolved by argument (not prototype); the cross-hypha RC-vs-affine reconciliation sub-question is named.
+- **RFC-0027 advanced Proposed → Accepted (ratified by maintainer 2026-06-25):** DN-32 **resolves OQ-1**
+  (weak/partial sibling coupling default — safe by RC + LR-9 acyclicity, RT7 siblings already concurrent;
+  throughput benefit `Declared`) and **OQ-4** (`rc==1` reuse EXPLAIN-record-only by default); **mitigates OQ-3**
+  (regions + batching; SLO stays `Declared`). OQ-2/5/6 deferred non-blockers. New §12 points to DN-32 + names
+  the cross-hypha sub-question. Append-only (prior Draft→Proposed history preserved). The memory model is now
+  decided end-to-end (design); implementation follows (E12-1).
+- Registered DN-32 in `docs/Doc-Index.md`; refreshed the stale RFC-0027 index row.
+
+### Changed (2026-06-24: RFC-0027 advanced Draft → Proposed — reclamation mechanism resolved)
+
+- **RFC-0027 (Memory Management & Reclamation) advanced Draft → Proposed** (append-only: §§1–6 preserved;
+  resolved design additive in §§7–11), incorporating the landed research cluster. **Awaiting maintainer
+  ratification of the Draft → Proposed move** (banner in the RFC; does not skip to Accepted, house rule #3).
+  - **§7 mechanism = REFERENCE COUNTING, not tracing GC** — justified by LR-9 acyclicity being *exactly*
+    Perceus's garbage-free precondition (no cycle detector needed). Scoped single-owner intra-hypha;
+    cross-hypha rides the affine channel protocol.
+  - **§8 honest tags (VR-5):** RC-soundness `Proven`-**modulo the LR-9 side-condition** (external theorem, no
+    in-repo mechanized check yet — *not* bare `Proven`); the ~32K-LOC embeddenator confirmation `Empirical`,
+    **tempered** by the ground-truth correction (embeddenator actually chose OCC with inert refcount — the
+    transfer is not 1:1); all Mycelium wiring `Declared`.
+  - **§9 reclamation EXPLAIN/audit record** (never-silent G2): `scope_id`, `sweep_epoch`,
+    `trigger ∈ {RcZero, ScopeExit, ChannelClose}`, `value_meta_hash`, optional `channel_id`.
+  - **§10 copy/mut + reclamation unify** via the `rc==1` FBIP reuse probe (free / mutate-in-place /
+    structural-share); `fuse` is **structurally** unified (δ-CRDT anti-entropy over the Provenance DAG) but
+    **algebraically separate** (semilattice-join, independent of refcounting) — no overclaim.
+  - **§11 OQ-1 (sweep-order vs reclamation-order, partial vs total) left OPEN** — the explicit reason status
+    stops at Proposed; lane-B recommends prototyping both before committing.
+
+### Changed (2026-06-24: maintainer ratifications — RFC-0034 advance + E21-1 design flags)
+
+- **RFC-0034 advance RATIFIED.** The `Enacted (design-driven) → Enacted — with code (Rust-first)` advance
+  (M-794, the §13 conformance gate) is ratified by the maintainer — the "pending ratification" qualifiers are
+  cleared in RFC-0034 (Status + changelog row) and ADR-032 (decision 1 discharged). RFC-0034 is now fully
+  **Enacted — with code**.
+- **ADR-032 decision 5 also realized + noted:** the per-use unsafe-lint enforcement landed in M-793 (the
+  `unsafe-per-use` gate) — ADR-032's M-794 update note is corrected (it had still listed decision 5 as the open
+  residual). Remaining ADR-032/RFC-0034 residual: §14 per-op/per-knob granularity (deferred, named-not-silent).
+- **E21-1 design flags ratified as-built** (maintainer): M-790 `@certification` surface spelling (lowercase
+  `fast|balanced|certified`) + the v0 single-manifest `phylum`-tier modeling (`Global` reserved for
+  multi-manifest); M-794's conformance suite using `mycelium-cert` dev-deps + **local duplication** of the
+  harness shapes (not a shared `mycelium-test-support` crate); M-796's `ModeScope` `pub [bool;3]` field +
+  granular-override `source: None`. All stand as implemented.
+
+### Added (2026-06-24: E21-1 Group-B Wave-3 — M-794 conformance gate + M-796 toolkit; **CLOSES E21-1**)
+
+- **M-794 — the §13 conformance gate (E21-1 capstone)** (`crates/mycelium-cert/tests/conformance.rs`, 19
+  tests). Asserts **all six RFC-0034 §13 clauses (a)–(f)** end-to-end, EACH parameterized over
+  `fast`/`balanced`/`certified` + the cross-mode NEGATIVE cases (the M-795 `assert_mode_scope` pattern —
+  invariant present where it fires, absent/relaxed where it must not). Memory-safety clause (c) is `Proven`
+  **by a checked side-condition** (the suite reads the trusted base's `#![forbid(unsafe_code)]`), not by fiat.
+  **⚠️ Advances RFC-0034 `Enacted (design-driven)` → `Enacted — with code (Rust-first)` + realizes ADR-032
+  decision 1 — append-only, PENDING MAINTAINER RATIFICATION of the advance** (the capstone milestone, flagged
+  not routine). Residual deferred (named-not-silent): §14 per-op/per-knob granularity.
+- **M-796 — native scoped mode-parametric testing toolkit** (`mycelium-std-testing`): `ModeScope` +
+  `ModeTestConfig` (wiring M-790's `@certification` resolver — project>phylum>nodule, shared not parallel) +
+  `assert_mode_scope` + `for_each_mode_in` (returns visited/**skipped**, never-silent) + a zero-boilerplate
+  worked example; re-exports `CertDecl`/`CertScope`. Downstream devs get per-tier + cross-mode-negative
+  coverage for free. Followed M-797 (extracted a 605-line inline block).
+- **E21-1 is functionally complete:** the full tunable-certification mechanism (M-786…M-796) is landed
+  Rust-first with the §13 conformance gate green. Statuses: `issues.yaml` M-794/796 → `done`.
+
+### Added (2026-06-24: E21-1 Group-B Wave-2 — M-792/M-793/M-795)
+
+- **M-792** (`mycelium-proj`) — EXPLAIN-of-mode + the **generation≠consumption split** (RFC-0034 §7/§3.1/§13d):
+  `ModeSignal` (the always-generated, mode-independent inspectability record — cheap, no heap, present even in
+  `fast`) + `ConsumptionTier {Lean,Medium,Full}` + `render_mode_signal` (dial verbosity up from *already-captured*
+  history — no re-run, no mode switch). Lean output is contractually identical to `explain_mode` (the §13d floor).
+- **M-793** (`scripts/checks/unsafe-per-use.sh` + justfile + `mycelium-mlir`) — sharpens ADR-014 to an **explicit
+  per-use unsafe escape** (RFC-0034 §9): a new never-skip gate asserts (a) the 4 trusted-kernel crates retain
+  `#![forbid(unsafe_code)]` and (b) every `unsafe` site carries a *per-use* `#[allow(unsafe_code)]` (no crate-global
+  allows). One `mlir/jit.rs` site annotated; ADR-014's `// SAFETY:` + dev-warning discipline preserved (sharpened,
+  not superseded).
+- **M-795** (`mycelium-core`) — the shared **mode-parametric test harness** (`for_each_mode`, canonical per-strength
+  `Bound` fixtures, and `assert_mode_scope` — the cross-mode NEGATIVE pattern as a first-class primitive: asserts an
+  invariant fires in its in-scope tiers AND is absent in out-of-scope tiers). `#[cfg(test)]`-only (no public API,
+  KC-3); 14 mode tests; `cert_mode.rs` adapted to use it. Broad cross-crate fixture-adaptation deferred to M-794.
+- Statuses: `issues.yaml` M-792/793/795 → `done`. proj baseline + agent index regenerated (deterministic).
+
+### Added (2026-06-24: E21-1 Group-B Wave-1 — M-789/M-790/M-791 + M-788 ratified)
+
+- **M-788 bound/basis decision RATIFIED** (maintainer, 2026-06-24): when `fast` floors a computed
+  `Proven`/`Empirical` result to `Declared`, keep the computed bound *value* and relabel its basis to
+  `UserDeclared` (`CertMode::gate_result`) is the settled approach; the `BoundBasis::ModeFloored`
+  refinement is set aside.
+- **M-789** (`mycelium-spore`, `mycelium-mlir`) — spore identity + MLIR hot-inject/ABI dispatch keys are
+  **`Proven`-by-construction independent of `CertMode`** (content_address/dispatch-key hash only
+  code+deps+surface+kind; `CertMode` rides `Meta`, excluded per RFC-0001 §4.6 / ADR-003), exhaustively
+  tested over `CertMode::ALL` — a spore is mintable + content-addressed in `fast` (RFC-0034 §8). The
+  embedded/no-deploy compile-hash *disable* path is flagged as an open gap (`Declared` + TODO; never-silent, G2).
+- **M-790** (`mycelium-proj`) — `@certification` resolution + scoping, most-specific-wins `global > phylum >
+  nodule` (RFC-0034 §6) **reusing the RFC-0012 scoped-override mechanism** (no new scoping machinery);
+  `resolve_mode` order-independent, defaults `Fast` with **named provenance (never ambient)**; cross-mode
+  `compose` floors by the **producer's** mode (never a silent upgrade, VR-5/§3.1). **Resolves M-788's FLAG-2**
+  (the deferred mode source). Two maintainer flags pending: surface spelling (lowercase `fast|balanced|certified`),
+  and v0 single-manifest modeled at the `phylum` tier with `Global` reserved for multi-manifest/workspace.
+- **M-791** (`mycelium-core`) — named, explicit `WrappingOpt` Axis-B opt-out marker on `Meta` (RFC-0034 §10);
+  Axis-B never-silent failability stays default-on in every mode; the wraparound *op-layer wiring* is downstream.
+- **M-797 (as-touched):** all three leaves extracted their inline `#[cfg(test)]` tests to in-crate `src/tests/`.
+- Statuses: `issues.yaml` M-786..M-791 → `done`. api baselines (core/proj) + agent index regenerated.
+
+### Added (2026-06-24: M-788 — mode-gated swap-cert emission/checking + bound/basis reconciliation)
+
+- **`CertMode::gate_result(intended_guarantee, intended_bound) -> (GuaranteeStrength, Option<Bound>)`**
+  (`mycelium-core`, RFC-0034 §7) — the bound/basis half M-787 explicitly deferred. When `Fast` floors a
+  would-be `Proven`/`Empirical` result to `Declared`, it **keeps the computed bound value but relabels its
+  basis to `UserDeclared`** ("computed, asserted-not-verified in fast") — the only basis M-I4 admits for
+  `Declared`, and the honest tag (VR-5: the ε/δ was computed, but `Fast` ran no machinery to *certify* it).
+  This keeps M-I1…M-I4 consistent by construction; the gated pair is exhaustively tested to be
+  `Meta::new`-constructible across `CertMode::ALL × {Exact,Proven,Empirical,Declared}`.
+  **Pending maintainer ratification** (the candidate-(a) "keep value, relabel basis" resolution — see
+  `docs/handoffs/m788-context.md`).
+- **Mode-gated swap certificates** (`mycelium-cert::mode`, RFC-0034 §4/§5): `gate_swap`, `GatedSwap`
+  (value + optional certificate + optional check verdict — inspectable, no black box), and
+  `ModeGatedSwapEngine` (a `SwapEngine`, default `Fast`). `Fast` runs the cert machinery **not at all**
+  (no emit, no check; Meta reconciled via `gate_result`); `Balanced` **emits** without checking; `Certified`
+  **emits + checks** through the unchanged M-210 `check` (a non-validating verdict is surfaced
+  never-silently). **Axis-B is not gated** — out-of-range / illegal-pair stays an explicit error in every
+  mode. The certificate machinery itself is unchanged. Mode-parametric tests (RFC-0034 §13) across the
+  three tiers + cross-mode negatives. *Implemented (Rust-first), pending RFC-0034 ratification.*
+- **Test-layout (M-797 as-touched):** `mycelium-core`'s `cert_mode` + crate-root `WfError` inline tests
+  extracted to in-crate `src/tests/` (white-box) as part of touching those logic files.
+
+### Changed (2026-06-24: DN-31 §4-Q1 resolved — empty `{}` = block, `{:}` = empty map)
+
+- **Empty-`{}` ambiguity resolved (maintainer):** in the DN-31 delimiter scheme, **`{}` is an empty block**
+  and **`{:}` is an empty map** (the colon is the same "map" marker, just with no entries). Non-empty cases
+  were never ambiguous (`{ k: v }` maps already split from `{ e }` blocks on the `:` pairs); only the empty
+  case needed a rule, and `{:}` does it minimally — no per-literal map tagging, JS block-vs-object trap
+  avoided. Closes DN-31 §4-Q1 (the sharpest open question); §4-Q2 (list-at-statement-start) remains open.
+  This **unblocks the bracket-implementation work**. Recorded append-only in DN-31 + Doc-Index.
+
+### Added (2026-06-24: RFC-0035 — Security Scanning Toolkit (binding design, Proposed))
+
+- **RFC-0035** (`docs/rfcs/`, **Proposed**). The binding security-scanning design — a native, inherited,
+  scope-configurable security toolkit — lifted from the settled **DN-30** direction capture plus the
+  maintainer's now-answered answers to DN-30 §7's five open questions (tabled as Decisions D1–D5, §10):
+  - **D1 (§2)** — v0 vulnerability classes are a **fixed base of categories WITH an extensibility seam**
+    (an extension class is first-class + versioned, never silently folded into the base); base grounded in
+    Mycelium's own surfaces (RFC-0028/ADR-014 `unsafe`/FFI, the `/security-review` recurring-defect bank).
+  - **D2 (§3)** — reporting is **SARIF + CWE + OSV + VEX** with **versioned pinning**: a pinned schema
+    version is **immutable once pinned**; new versions are allowed (additive-by-new-version, append-only),
+    the finding schema content-addressed (RFC-0001 §4.6) so the pin is mechanically enforced.
+  - **§4** — find-once-report-to-**two-sinks** (CLI + registry); the registry hosts **screened/anonymized**
+    advisories as a **second content-addressed catalog** reusing **DN-28** reconstruction-on-render
+    (lightweight, tamper-evident — a poisoned advisory fails its hash, G2).
+  - **D3/D5 (§5)** — honest, **RFC-0002-certificate-backed safe auto-fix** (proves the fix eliminates the
+    vuln AND refines the original modulo it); **per-class fix-strength + a pedantic mode**; a **certified
+    patch registry**; `/security-review` is a **supporting tool only** (not a replacement/prerequisite).
+    `Declared` fixes are always flagged + human-gated — no black-box rewrites (VR-5/G2).
+  - **D4 (§6)** — the **screening policy** is configurable-with-defaults, **mandatory for high-security
+    classes by default** (cannot be silently disabled for them), per-project adjustable (every adjustment
+    surfaced).
+  - **§7** — native + scoped reusing the **RFC-0034 §6** `@certification` resolution (project/phylum/nodule/
+    granular) — no new scoping machinery.
+  - **Designs the toolkit; implements nothing** — every runtime claim is a `Declared` position for epic
+    **E22-1** to discharge; the two **worked examples** (a safe-fix refinement-certificate; a screening
+    case study) are the deferred pre-Accepted work and were **not fabricated** (§9, VR-5/G2).
+  - **DN-30** gains an append-only rev. 3 note ("feeds RFC-0035"); registered in `docs/Doc-Index.md`;
+    working notes in `docs/handoffs/security-rfc-context.md`. `doc_refs` check passes.
+
+### Added (2026-06-24: DN-19 GAP-2 — Medium-findings verification ledger (draft, Gate A2))
+
+- **DN-19 GAP-2 Medium-findings ledger** appended (append-only subsection, `docs/notes/DN-19-Road-to-1.0.0.md`,
+  **draft**). Re-grounds ADR-021 **Gate A2** against the live tree (`origin/main` `db4a6be`): all **25 open
+  Medium finding-ids** (WS2–WS6) re-located by their cited test/variant names, a representative subset
+  **executed green** (A6-03, A3-09, A5-05/06, A5-03). Tally **25 FIXED · 0 DEFERRED · 0 N-A**, with one
+  **citation flag** (A5-08's prior citation points at `mycelium-dense` but the fix lives in
+  `mycelium-select::packing_bits_per_element` + `mycelium-mlir/pack.rs`). **Draft — pending maintainer
+  sign-off** (Gate A2 ratification is the maintainer's, ADR-021 §6). Full per-finding evidence archived in
+  `docs/handoffs/gap-2-ledger-context.md`. Decides nothing normatively (VR-5/G2).
+
+### Added (2026-06-24: DN-31 — Delimiter & Operator Deconfliction (direction capture, Draft))
+
+- **DN-31** (`docs/notes/`, **Draft**, advisory). Captures the maintainer's decided reallocation of the four
+  bracket families into one collision-free scheme, grounded in a grep of the normative grammar showing **`<>`
+  triple-loaded** (type params + type args + trit literals + the wanted comparison/shift operators) while
+  **`[]` is near-empty** (list literals only):
+  - **`<>` → comparison/shift operators only** (`< > << >>`); `<=`/`>=` retire to word operators `lte`/`gte`.
+  - **`[]` → type args + sized/repr types + list literals** (`List[T]`, `Binary[64]`, `[1,2,3]`), position-
+    disambiguated (clean because indexing is `get()` not `arr[i]`, calls are `()`).
+  - **`()`** calls/grouping/tuples/ctors · **`{}`** blocks/effects/match/**maps**.
+  - return arrow **`->` → `=>`** (bare `= - >` remain operators); trit literals **`<+-0>` → `0t+-0`** (types
+    `trit[N]`/`tryte[9]`, extends to `byte[N]`).
+  - **Resolves M-745 by reallocation** (no speculative parsing); proposes to **supersede RFC-0019 §4.1**
+    (Enacted) + update RFC-0030/0025/0001/0033.
+  - **Open questions flagged on merit:** empty `{}` block-vs-map ambiguity (sharpest — undecided), list-literal
+    at statement start, and the `<=`/`>=`→words asymmetry. Enacts nothing (VR-5/G2); feeds the binding RFC.
+  Registered in `docs/Doc-Index.md`.
+
+### Changed (2026-06-24: CLAUDE.md — test-layout rule (no tests in logic files); retrofit tracked as M-797)
+
+- **New binding convention (maintainer-directed):** logic `.rs` files carry **no test code**. Every
+  `#[cfg(test)]` unit test lives in an **in-crate** test module — `#[cfg(test)] mod tests;` in `lib.rs` →
+  `src/tests/` (one submodule per source module), each `use crate::…::*` for **white-box** access to
+  private items (precedent: `mycelium-std-recover/src/tests.rs`). Chosen over fully-external `tests/` on
+  merit — that would lose private-internal coverage or force internals `pub`. **Complex test logic → fixtures
+  + parameterization**, not test bodies. New tests follow it now; the ~185-file inline-test retrofit
+  (mycelium-core alone is 18 files / ~5k test lines) is tracked as **M-797**, a per-crate octopus-merge
+  swarm (no behaviour change — identical test counts pre/post).
+
+### Added (2026-06-24: M-664 — `consume` + `grow` lexed (DN-03 §1); closes the not-yet-lexed lexicon gap)
+
+- **`consume` + `grow` are now reserved surface keywords** (`crates/mycelium-l1`). DN-03 §1 ratified
+  them but they were the only two **NOT-YET-LEXED** terms (lexicon survey, 2026-06-24) — silent
+  identifiers, a G2 hazard. Now lexed (`Tok::Consume`/`Tok::Grow` + `keyword()`), with a teaching
+  diagnostic at item + expression position naming **DN-03 §1** ("reserved surface keyword … not yet
+  active — its construct lands with M-664"); never a silent accept. Their parser constructs
+  (`consume <expr>`, `grow Trait for Type { … }`) are the follow-on surface step.
+- **The reservation immediately caught a real silent identifier:** the AOT differential test fragment
+  defined `fn grow` (a `shrink`/`grow` mutual recursion) — renamed to `expand` (exactly the G2 case the
+  reservation exists to surface).
+- Tests: unit `surface_keywords_consume_grow_are_reserved_not_active` (item/expr/binder positions) +
+  conformance reject fixtures `18-consume-…` / `19-grow-reserved-not-active.myc` (self-policing
+  `REJECT_EXPECTED`). Lexicon status: **37 active-or-reserved**, **0 not-yet-lexed** (the 9 runtime-tier
+  terms stay correctly reserved-not-active, blocked on RFC-0008 R2 design, not lexing).
+- Verified: gate clippy (`-D warnings -A unsafe_code`, ADR-014) green; `// SAFETY:` gate green;
+  `cargo test -p mycelium-l1` green.
+
+### Changed (2026-06-24: CLAUDE.md house rule 4 — merit-based agreement / anti-sycophancy safeguard)
+
+- **House rule 4 ("Ground every claim") extended to bind *agreement*** — a standing agent safeguard
+  (maintainer-directed). Agree only on merit, never to please; an affirmation is a claim, so tag its
+  strength (checked/`Proven` vs plausible/`Empirical` vs asserted/`Declared`) and surface disconfirming
+  evidence even when it cuts against the stated direction. Sycophancy is ranked with an ungrounded claim;
+  the maintainer's explicit standing preference is *be corrected over being wrongly affirmed — follow the
+  evidence, not the speaker.* VR-5 applied to assent: don't upgrade agreement past its basis.
+
+### Changed (2026-06-24: DN-30 rev. 2 — the security catalog is lightweight / reconstruction-on-render (DN-28))
+
+- **DN-30 §4 + DN-28 §5:** the security catalog **reuses DN-28's reconstruction-based distribution model
+  verbatim** — the registry stores the findings' **hashes + manifest** (the dense, verifiable map; the
+  fingerprints + severity/affected-version index + DAG), **not** the heavy finding bodies inline; the full
+  finding (screened pattern, description, mitigations) is **reconstructed + hash-verified on render** from
+  the content store. So the security catalog is **as lightweight as the package registry**, and because
+  every finding is content-addressed, a published advisory is **tamper-evident** — reconstruction verifies
+  it against its hash, so a poisoned/altered advisory **fails the check** (never-silent integrity, G2). The
+  registry hosts **two content-addressed catalogs of the same shape** — packages and findings. E22-1 DoD
+  updated. Still Draft, advisory.
+
+### Changed (2026-06-24: DN-30 rev. — the registry as a screened security-advisory host (DN-28))
+
+- **DN-30 §4 expanded:** a finding reports to **two sinks** — the **CLI report** *and* the **registry**. The
+  same registry that hosts packages (phyla + nodules; DN-28) **also hosts the security findings**, as
+  **screened / anonymized / privatized** entries: the vulnerable logic is minimized to a
+  **content-addressed pattern fingerprint** so other scans match the same weakness across phyla **without
+  exposing the victim's source** (disclose enough to defend, never to weaponize). The hosted finding records
+  *what* (CWE + screened pattern + fingerprint) / *severity* / *affected content-addressed versions* (+ VEX)
+  / *logic-retaining mitigations* (honestly tagged) / *confidence*. §7 gains the **screening-policy**
+  governance question (what is safe to publish; who approves). Cross-referenced in **DN-28 §5** and the
+  **E22-1** epic. Still Draft, advisory — enacts nothing.
+
+### Added (2026-06-24: DN-30 — Security Scanning Toolkit (direction capture, Draft))
+
+- **DN-30 — Security Scanning Toolkit** (`docs/notes/`, **Draft**, advisory). Captures the direction for a
+  shippable, Mycelium-native security toolkit as a first-class toolchain component (inherited by downstream
+  devs, like the testing toolkit): **automated** vulnerability detection over the inspectable Core IR — not
+  solely documented findings, running in conjunction with them (never-silent, G2 — a flaw the toolchain can
+  see is surfaced); **standard machine-consumable reporting** (SARIF + CWE + CVE/OSV + VEX, each finding
+  carrying provenance + an honest confidence tag); **find-once-report-to-community** via an OSV-shaped
+  advisory feed keyed by the content-hash DAG (DN-28); and **honest, semantics-preserving safe auto-fix**
+  that reuses the **RFC-0002** refinement/translation-validation certificate (proves a fix removes the vuln
+  **and** refines the original modulo it, honestly tagged — `Declared` fixes always flagged + human-gated,
+  no black-box rewrites). Native + scoped (project/nodule/granular, reusing the RFC-0034 §6 `@certification`
+  resolution). **Enacts nothing**; feeds a future security-scanning RFC + the backlog epic **E22-1**
+  (`tools/github/issues.yaml`). Registered in `docs/Doc-Index.md`.
+
+### Changed (2026-06-24: E21-1 — mode-parametric testing as a native, scoped toolkit capability (RFC-0034 §13 + M-796))
+
+- **Generalized the test contract into a developer-facing toolkit capability.** The §13 mode-parametric
+  test discipline is not just *our* convention — the **Mycelium testing toolkit** (`mycelium-std-testing`)
+  exposes it as **first-class and natively wired in**: a developer marks a test/suite to run across the
+  `CertMode` tiers (with the cross-mode *negative* pattern built in), getting the discipline **for free**
+  rather than hand-rolling it. Its coverage is **configurable in scope, reusing the §6 `@certification`
+  resolution** (most-specific-wins): **project-wide** default (manifest) > **nodule-wide** (header) >
+  **granular** per test/unit — the §7 ergonomic, never-cornering stance applied to testing (tool +
+  default + scope dial; never forced one way).
+- **Captured in:** RFC-0034 §13 (the native-scoped-toolkit paragraph; recorded in the RFC changelog,
+  append-only) and a new leaf **M-796** (`tools/github/issues.yaml`) — the developer-facing surface
+  generalization (depends on M-790 resolution + the testing toolkit). M-795 reframed as the *kernel
+  instance* of the same principle.
+
+### Changed (2026-06-24: E21-1 — capture the mode-aware test strategy (RFC-0034 §13 + M-795))
+
+- **Test-adaptation captured as a first-class E21-1 requirement.** As the `CertMode` tiers land, the
+  suite must become **mode-aware**: every mode-sensitive test is **parameterized over `fast`/`balanced`/
+  `certified`** and maps to the *intended per-mode* behaviour, and each invariant is checked **both
+  ways** — it must *fire* in the tiers it applies to **and** be *correctly absent/relaxed* in the tiers it
+  doesn't (the cross-mode **negative** cases), so a `certified`-only invariant holding spuriously in
+  `fast` is caught, not silently passed. The pre-existing all-on suite is **adapted, not dropped** (each
+  fixture pinned to `certified` or parameterized; mode-scope made explicit — the DN-20 tiered-test
+  transparency rule).
+- **Captured in:** RFC-0034 §13 (the conformance contract, now mode-parametric + negative — recorded in
+  the RFC changelog, append-only); the E21-1 epic body + DoD (`tools/github/issues.yaml`); a new
+  cross-cutting leaf **M-795** (the shared parameterization harness + the negative-case pattern + fixture
+  adaptation), which **M-794** (the conformance gate) now depends on. Examples encoded: swap-cert
+  *checking* present in `certified`/absent in `fast`; certificate *emission* in `balanced`+`certified`/none
+  in `fast`; Axis-B never-silent in **every** mode.
+
+### Added (2026-06-24: E21-1 Group A — cert-mode core (M-786 + M-787), RFC-0034 §3.1/§7)
+
+- **`CertMode { Fast, Balanced, Certified }`** in `mycelium-core` (`cert_mode.rs`) — the tunable
+  certification mode (RFC-0034 §5), default **`Fast`**, ordered by `depth()` (`Fast < Balanced <
+  Certified`); serde form is the bare variant string. The first E21-1 implementation leaf (M-786).
+- **`Meta` now carries a never-silent `cert_mode` tag** (RFC-0034 §3.1) — a non-`Option` field
+  defaulting to `Fast`, with a `.with_cert_mode()` builder + `cert_mode()` accessor (mirroring the
+  existing `with_physical`/`physical` pattern). Non-breaking: the field is private and the
+  `Meta::new`/`Meta::exact` signatures are unchanged, so no caller or dependent breaks
+  (`cargo check --workspace` green).
+- **Content-hash exclusion holds by construction** — `cert_mode` rides `Meta`, which RFC-0001 §4.6
+  excludes from the content hash wholesale, so switching modes never perturbs a value's identity
+  (ADR-003). Verified by a new exhaustive test (`cert_mode_is_excluded_from_the_content_hash`).
+- **Wire persistence deferred, not silent** — `cert_mode` is a runtime tag resolved from the
+  `@certification` scope (M-790), so it is intentionally not in `MetaWire` yet (keeps
+  `meta.schema.json` unchanged); a deserialized `Meta` resolves to **`Fast`** — the weakest mode,
+  never silently claiming a stronger one (the VR-5 floor). Documented on `MetaWire` + tested.
+- **`CertMode::gate_guarantee()` — the mode→tag floor (M-787, RFC-0034 §7).** `Fast` floors
+  `Empirical`/`Proven` (whose trials/proofs it does not run) to **`Declared`** — the honest
+  "computed, bound asserted-not-verified" tag (VR-5) — while structural `Exact` passes untouched;
+  `Balanced`/`Certified` pass every strength through unchanged (mechanism preserved). The policy
+  primitive; the operation layer applies it (with the bound's basis relabelled in lockstep) where ops
+  become mode-aware. The M-787 invariant — **no `fast` result ever carries `Empirical`/`Proven`** — is
+  proven directly by an exhaustive test over the finite strength space.
+- Verified: `cargo fmt --check`, `cargo clippy -p mycelium-core --all-targets -D warnings`,
+  `cargo test -p mycelium-core` (all green), `cargo check --workspace`.
+
+### Added (2026-06-24: E21-1 — RFC-0034 paired-TDD implementation epic queued)
+
+- **E21-1 (epic) + M-786…M-794** queued in `tools/github/issues.yaml` — the paired-TDD Rust-first
+  implementation of RFC-0034 + ADR-032 (the runtime mode mechanism the design-driven enactment left
+  pending). Dependency-ordered from the `Meta` mode tag outward: `CertMode` + never-silent mode tag
+  (M-786) → mode-gated provenance tagging, `fast` omits Empirical/Proven (M-787) → mode-gated swap-cert
+  emit/check (M-788) → compile/runtime phase split so spores survive a cert-off runtime (M-789) →
+  `@certification` resolution/scoping reusing RFC-0012 (M-790) → `wrapping` Axis-B opt-out (M-791) →
+  EXPLAIN-of-mode + generation≠consumption (M-792) → memory-safe per-use unsafe escape sharpening ADR-014
+  (M-793) → the RFC-0034 §13 conformance gate that advances the RFC to Enacted-with-code (M-794). Each
+  leaf carries property-test acceptance criteria + an honest "implemented (Rust-first)" framing (VR-5/G2).
+  RFC-0034's `Task` field updated to reference the epic. ids collision-checked (E21/M-786… free); YAML
+  validated (no duplicate ids); `doc_refs` resolve.
+
+### Changed (2026-06-24: editorial — trim redundant "honest" qualifiers (concision; honesty is implied))
+
+- **Concision pass — dropped the redundant "honest"/"honestly" filler** across CLAUDE.md, CONTRIBUTING,
+  README, Foundation, Glossary (**61 edits / 5 files** via the never-silent `tools/dn29_apply.py` +
+  `docs/notes/honest-trim-manifest.json`). Rationale (maintainer): honesty is **implied by construction** —
+  G2/no-black-boxes guarantee that a trace, error, or guarantee tag that *isn't* honest is useless — so the
+  adjective is noise, not information ("honest tags" → "tags", "honest bounds exist" → "bounds exist",
+  "honest probabilistic guarantees" → "probabilistic guarantees", etc.). The same pass fixed the few stale
+  **"honesty rule" → "transparency rule"** name references left after the ADR-032 rename. **Kept
+  deliberately:** the formal named criteria **SC-2 "(honest bounds)"** and **VR-5 "(honest
+  guarantee-strength)"** (cross-referenced labels, not filler), the Glossary `(H)` taxonomy marker, and the
+  proper nouns `honesty-integrity` (ADR-021 Gate A) / `honest-stdlib` (prior-art ref). Purely editorial — no
+  decision changes, no guarantee semantics touched (VR-5/G2 mechanism unchanged).
+
+### Changed (2026-06-24: RFC-0034 + ADR-032 ratified & Enacted (design-driven); corpus amendments applied; DN-29 Superseded)
+
+- **RFC-0034 + ADR-032 ratified `Proposed → Accepted → Enacted (design-driven)`** (maintainer, stepped per
+  house rule #3). **Tunable certification is now the governing model.** The corpus amendments (ADR-032's
+  act) were **applied** via the never-silent `tools/dn29_apply.py`: **21 amendments across 13 files** —
+  - **Charter conditionalize:** Foundation **SC-3** / **FR-M3** now read "at the active mode (`certified`); the mode itself never-silent," attributed to RFC-0034/ADR-032.
+  - **Living-doc transparency reframe:** CLAUDE.md house-rule 1 (**"the honesty rule" → "the transparency rule"**) + the "what this repo is" north-star line; CONTRIBUTING heading; README headline principle + decision-process bullet; Glossary ("honesty lattice" → "transparency lattice", the rule gloss, the `Declared` floor). **Mechanism unchanged** — the guarantee lattice, VR-5, and G2 keep their force; only the model-vocabulary wording moved.
+  - **Append-only footnotes** on the relaxed Accepted decisions: RFC-0001/0002/0005 + ADR-010/011/013/016/017 (mandates apply at `certified`; `fast`/`balanced` per RFC-0034; spore/ABI/inject hashing is compile-time and survives a cert-off runtime).
+  - **Deliberately excluded** (stringent scope): the ~45 development-process / colloquial uses of "honest" (swarm-review discipline, "defer honestly", "made honestly", "honest open follow-up") — not the guarantee-model term; rewording them would change meaning.
+- **DN-29 → `Superseded`** (by RFC-0034 + ADR-032), retained as the append-only rationale record.
+- **Pacing note (doc-and-design-driven loop, paired with TDD).** "Enacted" here is **design-driven**: the
+  design + corpus amendments are landed and **governing**, while the **runtime mode *mechanism*** (modes
+  affecting execution, tag computation, resolution) is the **paired TDD cycle — not yet code, never claimed
+  implemented** (VR-5/G2). RFC-0034 advances to fully Enacted-with-code as the modes land Rust-first. This
+  records the slightly-less-rigid pacing (design lands ahead of code) while keeping the honesty discipline
+  stringent: nothing is claimed done that isn't.
+
+### Added (2026-06-24: RFC-0034 + ADR-032 — the binding tunable-certification act (drafted from the settled DN-29))
+
+- **RFC-0034 — Tunable Certification & Transparency Modes** (`docs/rfcs/`, **Proposed**). The binding
+  *mechanism* from the settled DN-29 deliberation: makes certification/hashing/tag machinery a **tunable
+  policy** over RFC-0001/0002/0005 — the knob matrix (§4); two **first-class modes** `fast` (default) /
+  `certified` + a `balanced` intermediate (§5); `global/phylum/nodule` resolution reusing **RFC-0012**
+  scoping + a `@certification` attribute, no content-hash perturbation per ADR-003 (§6); the **provenance
+  tag as an adjustable unit** (`fast` omits `Empirical`/`Proven`, sits at structural `Exact`/`Declared`)
+  and the **generation≠consumption** signal split (§7); the **compile/runtime phase split** — spores
+  survive a cert-off runtime (§8); memory-safe-by-default + an explicit per-use escape sharpening
+  **ADR-014** (§9); the named `wrapping` Axis-B opt-out (§10); and the never-silent mode invariant (§3).
+  Implementation-focused; decides the surface, implements nothing (VR-5/G2).
+- **ADR-032 — Tunable certification supersedes always-on; transparency reframe** (`docs/adr/`,
+  **Proposed**). The superseding ADR: supersedes the **unconditional** reading of **SC-3/FR-M3** +
+  RFC-0001 §3.4/§4.6, RFC-0002 §2, RFC-0005 §2 (they hold **at the active mode**; the mode itself is
+  never-silent; mechanisms unchanged); reframes **"honesty" → "transparency & auditability"** whole-corpus
+  (the lattice/VR-5/G2 mechanism is unchanged — only the wording); repositions the **north star** toward a
+  fast, memory-safe, ergonomic language with certification optional (the Foundation **mission sentence is
+  already transparency-framed** — unchanged); **sharpens ADR-014** (safe-by-default + explicit per-use
+  escape); and adds append-only **§-end footnotes** to RFC-0001/0002/0005 + ADR-010/011/013/016/017.
+- **Staged amendment tooling** (`tools/dn29_apply.py` + `docs/notes/dn29-amendment-manifest.json`). The
+  **anchor-keyed, single-pass-per-file** corpus amender (DN-29 §11.4) that applies the rewordings without
+  positional mangling: **dry-run by default**, **never-silent** (each anchor must match exactly once or it
+  fails loudly), and it **refuses `--apply` while the manifest is not `final`**. **Staged, not run** — the
+  corpus edits land only **after** RFC-0034 + ADR-032 are Accepted (RFC-0034 §13). The manifest ships the
+  two validated Foundation spine anchors (SC-3, FR-M3) as dry-run-clean worked examples; the rest are
+  authored at ratification. Registered in `docs/Doc-Index.md`.
+
+### Added (2026-06-24: DN-29 — Tunable Certification & Honesty Modes (Draft deliberation anchor, advisory))
+
+- **DN-29 — Tunable Certification & Honesty Modes** (`docs/notes/`, **Draft**, advisory). Anchors the
+  deliberation on making the certification/honesty/hashing machinery **tunable off → full** via scoped
+  config instead of mandatory-everywhere, *while preserving honesty*: the two-axis split (certification
+  **depth** vs cheap never-silent **failure semantics**), a strawman level ladder (L0 Raw…L3 Proven) +
+  the content-hash sub-toggle (spores/hot-inject depend on it), the knob's home (reuse RFC-0012
+  ambient-scoping + `mycelium-proj` manifest/header `@certification`; ADR-003 → no content-hash
+  perturbation), and the honesty argument (generalizes **KC-4**; a systematic flagged downgrade to
+  `Declared` per **VR-5**; **G2** never-silent about the active mode). **Enacts nothing**; the binding
+  decision is the future **RFC-0034** + a superseding ADR. Open questions tracked in §9.
+
+### Changed (2026-06-24: DN-29 rev. 4 — deliberation settled; §9 fully resolved (still Draft, advisory))
+
+- **DN-29 deliberation settled (in place; stays Draft)** — owner confirmed the remaining forks; **§9 has no
+  open questions left.** Resolutions: Q4 expose the named **`wrapping`/`fast`** Axis-B opt-out in v0; Q5
+  ship **global/phylum/nodule** scope and defer the per-op `thaw`-style knob (YAGNI); Q6 the **two-step**
+  path (settle DN-29 → **RFC-0034 + a superseding ADR**, §11 as the RFC appendix); Q7 **named modes ship
+  first**, per-knob overrides later; Q11 the honesty→transparency reframe is **whole-corpus**; Q12 the
+  **superseding ADR amends the Foundation/charter** while **RFC-0034 stays implementation-focused**; Q13
+  Accepted RFCs/ADRs get **append-only §-end footnotes** pointing to the relaxations (§9/§10/§11.5). Still
+  **advisory — enacts nothing** (VR-5/G2); the binding act is the forthcoming RFC-0034 + ADR.
+
+### Changed (2026-06-24: DN-29 rev. 3 — provenance tag adjustable, generation≠consumption, §11 ripple map (still Draft, advisory))
+
+- **DN-29 refined again (in place; stays Draft)** — **provenance tag is now an adjustable unit**: `fast`
+  defaults to **not using `Empirical`/`Proven`** (they cost the trials/proofs `fast` skips), sitting at
+  structural `Exact`/`Declared`; heavier tags dial up per mode/unit — the honest floor (`fast` never claims
+  a tag it didn't earn, VR-5). **Signal generation split from consumption**: the cheap inspectability signal
+  is **always generated ≥ middle tier** (safe default) while **consumption** (DX/UX surfacing, diagnostic
+  noise) is tunable and lean at `fast`, so a dev can dial it up mid-session with history already captured
+  (§3.1). Adds **§11 — a ripple map**: a ~40-hit / ~12-file `Empirical/Declared` inventory of every corpus
+  location the binding RFC-0034 + superseding ADR must amend (change-type taxonomy: conditionalize-per-mode
+  / honesty→transparency / north-star / tag-adjustable / memory-safety; high-collision files README/
+  Foundation/CLAUDE.md flagged; multi-category mangle-risk lines called out; spine anchors SC-3/FR-M3/VR-5
+  validated against source), plus an **anchor-keyed, single-pass-per-file batched-replacement mechanism**
+  (content-keyed not positional ⇒ no mangling; never-silent guard fails loudly on a missing/ambiguous
+  anchor). Still **advisory — enacts nothing** (VR-5/G2); the inventory is heuristic, to be re-verified at
+  RFC-0034 drafting time.
+
+### Changed (2026-06-24: DN-29 rev. 2 — first-class modes, memory-safety default, "honesty"→"transparency" reframe (still Draft, advisory))
+
+- **DN-29 refined again (in place; stays Draft)** — **`fast` and `certified` elevated to two first-class
+  modes** (`balanced` an optional intermediate, §3.2); **memory-safe by default with an *explicit per-use*
+  unsafe escape hatch** (ADR-014 precedent sharpened to per-use, §3.1); a **tunable diagnostic-verbosity
+  knob** mode-defaulted (lean at `fast` → full audit trail at `certified`), with guarantee **tagging kept
+  on** as the inspectability substrate (§3.1); and a **vocabulary reframe — "honesty" → "transparency &
+  auditability"** (§1/§6): default `fast` gives transparent, inspectable *non-certified auditability*,
+  `certified` upgrades it to a *fully auditable* framework. The **mechanism is unchanged** (never-silent
+  G2, the provenance lattice, `EXPLAIN`, VR-5 downgrade-don't-overclaim); only the framing moves. The
+  CLAUDE.md house-rule 1 / CONTRIBUTING / VR-5 / G2 / Foundation §1 vocabulary ripple is **flagged for
+  RFC-0034 + the superseding ADR** — *not* rewritten here (append-only). §9 Q2′/Q8–Q10 resolved; Q4–Q7
+  open. Still **advisory — enacts nothing** (VR-5/G2).
+
+### Changed (2026-06-24: DN-29 rev. — owner-steered refinement (still Draft, advisory))
+
+- **DN-29 refined (in place; stays Draft)** — the single L0–L3 ladder is **decomposed into independent
+  knobs split by *phase*** (compile/deploy vs runtime) composing into named **profiles**
+  (`fast`/`balanced`/`certified`, §3). Keystone: **compile/deploy spore-identity hashing is decoupled from
+  runtime certification**, so deployable, content-addressed units survive a fully cert-off runtime (§2,
+  resolving the old "L0 loses spores" coupling). **Default profile = `fast`** (memory-safe, never-silent,
+  spores available; runtime cert/hash/check off — certification opt-in, §5). Captures a **north-star
+  reframe** — Mycelium as a fast, memory-safe, ergonomic multi-paradigm language with certification baked
+  in as *optional* — with the Foundation §1 / SC-3 / FR-M3 ripple **flagged** for RFC-0034 + the
+  superseding ADR (**not** amended here; append-only). Open questions Q1–Q3 resolved; Q4–Q7 open (§9).
+  Still **advisory — enacts nothing** (VR-5/G2).
+
+### Changed (2026-06-24: ADR-029/030/031 → Accepted — value-model ternary + the two content-address one-way doors ratified (owner approval))
+
+- **ADR-029 — Ternary arithmetic is arbitrary-width → Accepted** (maintainer-ratified). The V0
+  `BigTernary` reference implementation landed (#535); the decision is now locked.
+- **ADR-030 — Dense granularity-descriptor quant → Accepted** and **ADR-031 — VSA element-space +
+  block-sparse + complex carrier → Accepted** (maintainer-ratified). Both are **content-address
+  one-way doors**; their implementation lands in the single E20-1 rehash (M-780) **before any
+  Dense/VSA value is persisted** (RFC-0033 §7). RFC-0033 + ADR-025…028 remain **Proposed**
+  (implementation proceeds as *"implemented (Rust-first), pending ratification"*; the collections
+  decisions also defer to the already-Accepted RFC-0032).
+
+### Added (2026-06-24: E20-1 V0 — arbitrary-width balanced ternary `BigTernary` landed (M-754…M-757); implemented, pending ratification)
+
+- **M-754/M-755 — DRY balanced full-adder** (`crates/mycelium-core/src/ternary/`). Converted
+  `ternary.rs` → a `ternary/` module dir and extracted the inline full-adder from the fixed-width `add`
+  into a shared `add_with_carry(Trit, Trit, carry) -> (Trit, Trit)` — proven identical to the incumbent
+  over all 27 inputs (an exhaustive truth-table test). Both the fixed-width `add` and the new growable
+  `BigTernary` now ripple this single never-silent primitive. No new crate, no duplicate `Trit`; the
+  public `mycelium_core::ternary::{digit,add,sub,mul,neg,int_to_trits,trits_to_int,max_magnitude}`
+  surface and every consumer (std-ternary, std-swap, interp, cert, mlir) are unchanged.
+- **M-756/M-757 — arbitrary-width `BigTernary`** (`…/ternary/big_ternary.rs`). A digit-serial,
+  canonicalized `Vec<Trit>` integer that **grows instead of overflowing** — *removing* the fixed-width
+  ~40-trit cap (which `core::ternary` was already never-silent about; the silent-overflow defect is
+  `embeddonator`'s `dimensional.rs`, not Mycelium's). `from_i128`/`to_i128` (overflow-checked),
+  `add`/`sub`/`mul`/`neg`, and the never-silent fixed-width boundary `FixedWidthTrits` +
+  `checked_add_fixed` + `checked_to_width` (`None` on out-of-range, never a wrap). All ops **`Exact`**.
+  Witnessed by the `3^41`-exact test and a cross-check that `BigTernary` agrees with the fixed-width
+  `add` within range (bridged through the integer value — MSB-first ↔ LSB-first). RFC-0033 §4.2 / ADR-029.
+- Verified on **MSRV 1.92**: `cargo fmt` / `clippy -D warnings` / `test -p mycelium-core` green (11 new
+  tests); `cargo check --workspace` + the public-API surface gate + direct-consumer tests all green.
+  `docs/spec/api/mycelium-core.txt` regenerated for the additive surface; `docs/api-index` refreshed.
+  `PackedTernary` / Karatsuba (M-758/M-759) remain YAGNI follow-ons, gated on a benchmark.
+
+### Added (2026-06-24: E20-1 — value-model collections & precision design (RFC-0033 + ADR-025…031, **Proposed**); docs-only, M-785)
+
+- **RFC-0033 — Value-Model Collections & Precision** (`docs/rfcs/`, **Proposed**, E20-1/M-785). The
+  corrected `Repr`/`Payload` as a normative-as-proposed spec: §3 `Seq`/`Bytes` length-in-type (aligned
+  with the already-decided RFC-0032 D3/D4, not re-decided); §4 Binary **sign-free** (signedness is
+  operations, not a `Repr` field) · Ternary **arbitrary-width** (`BigTernary` grows past the ~40-trit
+  cap) · Dense **granularity-descriptor quant in `Repr`** + scale/zero-point **arrays in `Payload`** ·
+  VSA **explicit element-space + block-sparsity + complex carrier**; §6 swap/guarantee reconciliation;
+  §7 content-address identity set + the dogfood gate (single rehash M-780).
+- **ADR-025…031** (`docs/adr/`, **Proposed**) — the seven value-model decision records (Seq/Bytes
+  length-in-type · repr-value elements · `get→(Repr,bit)` + `lift_option` · Binary sign-free · Ternary
+  arbitrary-width · Dense granularity descriptor · VSA element-space). ADR-030 (Dense) and ADR-031 (VSA)
+  deliberately **disagree** with the input research draft on never-silent grounds and are
+  **content-address one-way doors**.
+- **Research records** `research/14-value-model-integration-report-RECORD.md` +
+  `research/15-embeddonator-leverage-map-RECORD.md` (recorded external research input — an
+  `embeddonator` value-model bundle; not normative), and the **plan/backlog**
+  `docs/planning/value-model-{implementation-plan,backlog}.md` (tasks remapped `VM-010…071` →
+  **M-754…M-784**, design gate **M-785**, all under epic **E20-1**).
+- **Honesty reconciliations vs the source bundle** (recorded in the docs): (a) **no `mycelium-value`
+  crate / no duplicate `Trit`** — the trusted arbitrary-width ternary reconciles into
+  `crates/mycelium-core/src/ternary/` (DRY `add_with_carry` extracted from the existing fixed-width
+  `add`); (b) the **"silent precision ceiling" is `embeddonator`'s** (`dimensional.rs`), **not
+  Mycelium's** — `core::ternary` is already never-silent about the cap (`max_magnitude → None` at
+  `m ≥ 41`), so `BigTernary` **removes** the cap rather than fixing a bug; (c) **OQ-3 is already closed
+  by the ratified ADR-011** (BoundBasis is universal) — RFC-0033 §6.2 *extends* the dequant
+  `bound.basis` with block structure, it does **not** reopen OQ-3; (d) collections align with RFC-0032.
+- **Scope:** docs-only — no Rust, no `docs/api-index` regen. The V0 `BigTernary` kernel code
+  (reconciled into `core::ternary`, cargo-gated) follows in a separate PR (M-754…M-757); the
+  content-address one-way doors (Dense/VSA) land only after ratification, in a single rehash before any
+  value is persisted (RFC-0033 §7).
+
 ### Added (2026-06-23: E19-1 — Tier-1 kernel enablers landed (M-747, M-748); implemented, pending ratification)
 
 - **M-747 — reduce-to-`Bool` comparison/equality prims `eq`/`lt`** (RFC-0032 D1). New kernel prims

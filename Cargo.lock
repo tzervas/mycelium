@@ -190,6 +190,8 @@ dependencies = [
  "mycelium-core",
  "mycelium-interp",
  "mycelium-numerics",
+ "mycelium-proj",
+ "mycelium-spore",
  "mycelium-vsa",
  "serde",
  "serde_json",
@@ -312,14 +314,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "mycelium-mir-passes"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+]
+
+[[package]]
 name = "mycelium-mlir"
 version = "0.0.0"
 dependencies = [
  "mycelium-cert",
  "mycelium-core",
  "mycelium-interp",
+ "mycelium-mir-passes",
  "mycelium-numerics",
  "mycelium-select",
+ "mycelium-std-runtime",
 ]
 
 [[package]]
@@ -336,7 +347,9 @@ dependencies = [
 name = "mycelium-proj"
 version = "0.0.0"
 dependencies = [
+ "mycelium-core",
  "mycelium-l1",
+ "proptest",
 ]
 
 [[package]]
@@ -465,7 +478,7 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-math"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-numerics",
@@ -549,11 +562,11 @@ dependencies = [
 
 [[package]]
 name = "mycelium-std-sys"
-version = "0.1.0"
+version = "0.0.0"
 
 [[package]]
 name = "mycelium-std-sys-host"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "mycelium-std-rand",
  "mycelium-std-sys",
@@ -573,6 +586,7 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-diag",
+ "mycelium-proj",
  "mycelium-std-core",
 ]
 

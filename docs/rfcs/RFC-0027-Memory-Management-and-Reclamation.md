@@ -3,16 +3,50 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0027 |
-| **Status** | **Draft** (2026-06-23) |
+| **Status** | **Accepted** (2026-06-25) — *Proposed → Accepted, **ratified by the maintainer 2026-06-25**. OQ-1 (the banner blocker) + OQ-4 are now resolved by DN-32; OQ-2/5/6 are deferred non-blockers. Prior Draft (2026-06-23) → Proposed (2026-06-24) history preserved below (append-only).* |
 | **Feeds** | E12-1 (runtime & concurrency execution maturity) |
-| **Decides** | The reclamation model for Mycelium runtime values: ownership/lifetime semantics, reclaim-cascade scope, explicit-vs-implicit discipline, and the "no silent GC pause" honesty stance (G2/VR-5). |
-| **Date** | June 23, 2026 |
+| **Decides** | The reclamation model for Mycelium runtime values: the reclamation **mechanism** (reference counting), ownership/lifetime semantics, reclaim-cascade scope, explicit-vs-implicit discipline, the reclamation **EXPLAIN/audit record**, and the "no silent GC pause" honesty stance (G2/VR-5). |
+| **Date** | June 24, 2026 (Draft: June 23, 2026) |
 | **Task** | E12-1 (M-712) |
 
-> **Posture (honesty rule / VR-5).** This is a planning stub — scope, user stories, and open
-> questions only. Nothing is decided normatively here. All guarantee claims remain `Declared`
-> until a mechanized or empirical basis is recorded. Status is **Draft** until a binding
-> decision is reached and the maintainer signs off.
+> **⚠️ STATUS-MOVE FLAG — maintainer ratification required (GOVERNANCE MILESTONE; house rule #3, append-only).**
+> **This (2026-06-25) revision proposes advancing RFC-0027 `Proposed → Accepted`** — the
+> Proposed → Accepted step is *not* routine and **must be maintainer-signed-off** (house rule #3:
+> status advances one stepped state at a time, the maintainer ratifies). **What unblocks the move:**
+> the banner blocker — sweep-order vs. reclamation-order sibling coupling (**OQ-1**) — is now
+> **RESOLVED by DN-32** (weak/partial coupling is the default: sibling scopes reclaim concurrently,
+> safe by RC + LR-9 acyclicity since there are no cross-sibling aliases; strong/total coupling is an
+> opt-in for high-assurance subsets), and **OQ-4** (the `rc==1` reuse-vs-copy visibility) is
+> **RESOLVED** (EXPLAIN-record-only by default; surface visibility deferred). **OQ-3** is
+> **mitigated** (regions + batched reclamation move it from inherent-limitation toward
+> engineering/measurement). **OQ-2 / OQ-5 / OQ-6 remain deferred** — legitimate, non-blocking. The
+> resolutions are tagged at their supportable strength (the *safety* of concurrent sibling
+> reclamation is **`Proven`-modulo the LR-9 side-condition** — §8; the *throughput* benefit of weak
+> over strong coupling is **`Declared`** — expected, not measured; see §11 OQ-1 + §12 + DN-32 §6).
+> **A maintainer must ratify this `Proposed → Accepted` move; it must not skip to `Enacted` (no
+> in-repo implementation/proof exists yet — house rule #3).** Until ratified, treat the status as
+> Proposed-with-a-proposed-advance.
+>
+> *(Prior banner — preserved append-only.)* The 2026-06-24 revision **proposed** advancing
+> RFC-0027 **Draft → Proposed**. The *reclamation mechanism* is resolved by the provenance/ownership
+> research cluster (wave-1 + wave-2 + the embeddenator ground-truth pass — see §7): **reference
+> counting** (RC), justified by LR-9 acyclicity (which *is* Perceus's garbage-free precondition), is
+> the decided mechanism. That move stopped at **Proposed**, **not** `Accepted`: the
+> highest-uncertainty design point — sweep-order vs. reclamation-order coupling (§5/§11, OQ-1) — was
+> *deliberately left open* for prototyping before commitment, and no in-repo mechanized proof or
+> property test yet existed (the soundness is **`Proven`-modulo the LR-9 side-condition**, not
+> `Proven` outright — §8). **(That Draft → Proposed move likewise required maintainer ratification
+> and must not have skipped to `Accepted` — house rule #3.)** The 2026-06-25 revision (this one)
+> resolves OQ-1 + OQ-4 via DN-32 and proposes the next stepped advance, Proposed → Accepted.
+
+> **Posture (transparency/honesty rule / VR-5).** The original (2026-06-23) revision was a planning
+> stub — scope, user stories, and open questions only, all `Declared`. This (2026-06-24) revision
+> **advances the content** by incorporating the research-resolved design (§§7–11), tagging each
+> claim at its supportable strength: the RC-soundness is **`Proven`-modulo the LR-9 side-condition**
+> (cited explicitly — §8), the ~32K-LOC embeddenator confirmation is **`Empirical`**, and all
+> Mycelium-specific wiring (EXPLAIN-record schema, `fuse` binding, the `trigger` field) remains
+> **`Declared`** (unbuilt). The advance is **append-only**: prior prose (§§1–6) is preserved
+> verbatim; the resolved design is additive (§§7–11). Nothing is upgraded past its checked basis.
 
 ---
 
@@ -102,24 +136,51 @@ interacts with the reclamation lifecycle.
 
 ## 4. Definition of Done
 
-- [ ] The reclamation model is defined normatively: ownership transfer at hypha/channel
-  boundaries, scope-exit reclamation cascade, interaction with sweep order.
-- [ ] The `reclaim` surface construct's typing and elaboration are specified (types, effects
-  annotation, EXPLAIN record fields).
-- [ ] A never-silent honesty stance is codified: every reclamation event is logged/observable;
-  a "silent GC pause" violates this RFC and is a rejection criterion for implementation PRs.
-- [ ] Guarantee tags are assigned per-op on the guarantee lattice (`Exact`/`Empirical`/
-  `Declared`) — none `Proven` without a mechanized proof in-repo (VR-5).
-- [ ] A property-test specification is given for the sweep-order reclamation cascade (the
-  property; the test itself ships in M-712).
-- [ ] The interaction with RFC-0008 §4.4 (`cyst` checkpointing) is addressed: what is
-  serialized vs. what is reclaimed at checkpoint time.
-- [ ] Status advances from `Draft` → `Proposed` → `Accepted` per the append-only discipline;
-  maintainer sign-off required for `Accepted`.
+> **Progress note (2026-06-24).** The 2026-06-24 advance (§§7–11) addresses several DoD items
+> at **Proposed** strength; the per-item status below marks which are now met-as-proposed, which
+> are partially met, and which remain open. None are claimed `Accepted`-complete (the status move
+> is Draft → Proposed only — see the banner).
+
+- [x] *(met-as-proposed, §§7–8, §10)* The reclamation model is defined: the **mechanism is reference
+  counting** (LR-9 = the garbage-free precondition), ownership transfer at hypha/channel boundaries
+  rides the affine channel protocol (D-5), the scope-exit reclamation cascade follows the RT7 scope
+  tree, and the interaction with sweep order is specified as *RC-drops-derive-from-the-scope-tree*
+  (with the strong-vs-weak coupling tail left open — §11 OQ-1).
+- [ ] *(partial / deferred, §10.5)* The `reclaim` surface construct's typing and elaboration are
+  specified. **Decision (§10.5): this RFC specifies the memory model only and defers `reclaim`
+  *surface typing* to a follow-on RFC** (KC-3 scope-tightening; `reclaim` is task supervision, not
+  memory — DN-03 §4). The EXPLAIN-record *fields* are specified here (§9).
+- [x] *(met-as-proposed, §9)* A never-silent honesty stance is codified: every reclamation event is
+  observable via the reclamation EXPLAIN record (§9); a "silent GC pause" / a silently-dropped value
+  violates this RFC and is a rejection criterion for implementation PRs.
+- [x] *(met-as-proposed, §8)* Guarantee tags are assigned per-op on the guarantee lattice — and held
+  at their supportable strength: RC-soundness `Proven`-**modulo** LR-9 (not bare `Proven`), the
+  empirical embeddenator confirmation `Empirical`, the Mycelium wiring `Declared`. No bare `Proven`
+  without an in-repo mechanized proof (VR-5).
+- [ ] *(open, §11 OQ-1)* A property-test specification is given for the sweep-order reclamation
+  cascade. The property *shape* is sketched (§10.3), but the **strong-vs-weak coupling decision is
+  deliberately left open** to prototype both before committing the property (lane-B's recommendation);
+  the test ships in M-712 after that decision.
+- [x] *(met-as-proposed, §10.4)* The interaction with RFC-0008 §4.4 (`cyst` checkpointing) is
+  addressed: **checkpoint-and-keep** is the R1 default; checkpoint-and-free is gated on an
+  `Empirical` serializer property test (RC makes the free mechanically clean — §10.4).
+- [ ] *(in progress — 2026-06-25 update)* Status advances `Draft` → `Proposed` → `Accepted` per the
+  append-only discipline. **The 2026-06-24 revision proposed Draft → Proposed; the 2026-06-25
+  revision proposes Proposed → Accepted** (OQ-1 + OQ-4 now resolved by DN-32 — §11, §12). **Both
+  moves are flagged for maintainer ratification (house rule #3, stepped); `Enacted` is *not* claimed
+  — no in-repo implementation or mechanized proof exists yet.**
 
 ---
 
 ## 5. Open questions
+
+> **Resolution pointer (2026-06-24).** The five Draft open questions below are preserved verbatim
+> (append-only). The 2026-06-24 advance (§§7–11) **resolves three** (model choice → RC, §7/§10.5;
+> `reclaim` scope → task-only/defer surface, §10.5; checkpoint → checkpoint-and-keep at R1, §10.4),
+> **partially resolves one** (sweep-order coupling — RC makes reclamation *derive from* the scope
+> tree, but strong-vs-weak across siblings stays open, §11 OQ-1), and **re-frames one** (pause budget
+> → "no silent GC pause" is an honesty stance + a `Declared` per-epoch bound, latency-SLO derivation
+> open, §11 OQ-3). The carried-forward + newly-surfaced open questions are consolidated in **§11**.
 
 - **Model choice:** Should reclamation be purely Rust-drop-order (implicit, no surface) with
   `reclaim` as a supervision primitive only, or should Mycelium expose explicit "reclaim regions"
@@ -153,8 +214,423 @@ basis), KC-3 (small auditable kernel — reclamation model must not grow the ker
 
 ---
 
+## 7. Resolved design — the reclamation mechanism is reference counting (2026-06-24)
+
+> **Provenance of this section.** Everything in §§7–11 is *incorporated from* the just-landed
+> provenance/ownership research cluster — non-normative research artifacts, cited per-claim:
+> `SYNTHESIS-provenance-ownership-cluster.md` (wave-1, lanes A–E),
+> `SYNTHESIS-wave2-addendum.md` (wave-2: academic + empirical integration),
+> `lane-B-reclamation-provenance.md` (the reclamation-provenance lane),
+> `lane-F-efficient-immutable-value-mgmt.md` (Perceus/FBIP/δ-CRDT lane),
+> `lane-A-ownership-map.md` (the Rust→Mycelium ownership map), and
+> `embeddenator-groundtruth.md` (the maintainer's ~32K-LOC implementation, ground-truth-corrected).
+> The research is the *basis*; the RFC is the *decision-in-proposal*. Per house rule #3 the status
+> stops at **Proposed** until ratified.
+
+### 7.1 The decision
+
+**Mycelium's runtime reclamation mechanism is precise reference counting (RC), not tracing GC.**
+This is the wave-2 mechanism-resolution (`SYNTHESIS-wave2-addendum.md` W2-D1 / W2-A1; `lane-F` F-1).
+
+The choice is *forced by the value model rather than imposed on it*. The usual Achilles' heel of
+reference counting — reclaiming cycles, which requires either a cycle detector (Pony ORCA's most
+complex component, `lane-B` §3.4) or a tracing fallback — **cannot arise** for Mycelium values:
+
+- **LR-9 makes values acyclic** (RFC-0006; RFC-0008 §3; restated §3 "Out of scope: cycle detection").
+- **LR-8 makes values immutable**, so there is no write barrier and no aliased-mutation hazard
+  (`lane-A` §2.1; `lane-B` §2.6).
+
+Acyclicity is *exactly* the precondition under which **Perceus** (`Perceus: Garbage-Free Reference
+Counting with Reuse`, PLDI 2021) proves a cycle-free program is **garbage-free** — only live
+references are retained — with no cycle collector (`lane-F` §3.2). The same structural argument
+underpins Lean 4's `Counting Immutable Beans` (arXiv 2019), whose RC scheme is built for an
+immutable-acyclic value model identical in shape to Mycelium's. So the corpus's own LR-9 *is* the
+side-condition the academic soundness result needs — the two meet exactly (see §8 for the guarantee
+tag this licenses, and its honest limit).
+
+### 7.2 Why RC fits the never-silent stance better than tracing GC
+
+RC is the mechanism most aligned with the "no silent GC pause" honesty stance (§1, G2):
+
+- There is **no stop-the-world phase**. Each `rc_dec` is a bounded O(1) event; a chain-drop is
+  O(*n*) in the nodes freed but **deterministic and incremental** — triggered by scope exit, not by
+  an ambient collector firing at an unpredictable time (`lane-F` §4.2.1 F-1, §5.1).
+- Each increment/decrement is a **reifiable event**, so the reclamation EXPLAIN record (§9) has a
+  *structural* anchor (the refcount transition) rather than an editorial label (`lane-F` §4.2.1 F-2).
+
+The honest caveat (`lane-F` §5.1, adversarial check F-D): "bounded" means *deterministic, observable,
+and EXPLAIN-able*, **not** constant-time. Dropping a deep value tree is O(*n*) in its node count — a
+bounded-but-large pause, not a sub-millisecond one. Whether the fuel model can bound that latency is
+open (§11 OQ-3).
+
+### 7.3 Scope of the RC decision — single-owner intra-hypha; cross-hypha rides the channel protocol
+
+RC is decided **for single-owner, intra-hypha value reclamation** (`SYNTHESIS-wave2-addendum.md`
+W2-CL-3). It is **not** "RC for everything":
+
+- **Cross-hypha transfer rides the affine channel protocol, not a distributed refcount.** The
+  channel `Sender`/`Receiver` pair is affine (non-`Clone`), giving exactly-one-owner cross-hypha
+  transfer at R1 — no distributed reference counting is needed (wave-1 D-5; `lane-B` R-4). This is
+  the same role Pony ORCA's deferred weighted ref-count plays, but Mycelium gets it from the channel
+  close protocol for free, and **without ORCA's cycle detector** (eliminated by LR-9).
+- **`reclaim` is not memory.** Per DN-03 §4 / RFC-0008 §4.5, the `reclaim` surface construct is
+  task/runtime-unit supervision — **never** a memory primitive (wave-1 D-4; `lane-A`/`lane-B`
+  converge here). Memory reclamation is the RC mechanism, exposed to supervision *through* the
+  EXPLAIN record (§9), not through `reclaim`.
+
+---
+
+## 8. Guarantee tagging of the RC decision (VR-5 — the honest strength)
+
+Per the transparency rule, each claim is tagged at its supportable strength and **not upgraded**:
+
+| Claim | Tag | Basis / honest limit |
+|---|---|---|
+| RC over Mycelium values is **garbage-free / sound without a cycle collector** | **`Proven`-modulo the LR-9 side-condition** | Perceus (PLDI'21) + Lean-4 (arXiv'19) prove garbage-freedom *given* cycle-freedom; LR-9 supplies that side-condition. **Honest limit:** the theorem is external and its side-condition (LR-9) is a corpus *invariant*, not yet an in-repo *mechanized check* — so this is **not** bare `Proven`. It does not become unqualified `Proven` until LR-9 is mechanically enforced and a Mycelium-side adaptation proof exists in-repo. |
+| RC suffices at scale **in running code** — acyclic content-addressed values need no cycle detector / no GC | **`Empirical`** | The maintainer's embeddenator (~32K-LOC) manages its entire acyclic holographic value graph with **no cycle detection and no GC** (`embeddenator-groundtruth.md`; `SYNTHESIS-wave2-addendum.md` CF-1, W2-D3). Independent convergence of theory (lane-F) and implementation. |
+| The Perceus *algorithm* is **directly** portable to Mycelium's Core IR | **`Declared` (needs adaptation)** | Perceus targets an RC-annotated low-level IR; Mycelium's Core IR is a typed term language, so RC emission must be added as a lowering pass (`lane-F` §7 F-A; W2-CL-3). The *approach* transfers; the *exact algorithm* needs adaptation. |
+| The reclamation EXPLAIN-record schema, `trigger` field, and the whole runtime wiring | **`Declared`** | Unbuilt. Derived from G2 + the sweep-order model + the RFC-0005 EXPLAIN contract; no property test, no proof in-repo (`lane-B` R-1). |
+
+**Crucially:** the embeddenator confirmation is *structural* (substrate-independent: acyclicity ⇒
+no cycle detector; CoW-shaped re-encode; lossless-reconstruction-via-correction). The
+**Mycelium-specific bindings stay `Declared`** — and the maintainer's *divergence* (reaching for
+**optimistic concurrency control** at the multi-writer filesystem layer, with the refcount/dedup/GC
+machinery present but **unwired and inert** in the versioned path) is itself evidence the transfer is
+not 1:1 (`embeddenator-groundtruth.md` C1–C2, CH-1; `SYNTHESIS-wave2-addendum.md` W2-CL-5). The
+single-owner FBIP/refcount-reuse path (§10.2) is therefore a Mycelium *design* move with **no working
+precedent** in embeddenator — its only precedent is the external Perceus/Lean/Swift-CoW line.
+
+---
+
+## 9. The reclamation EXPLAIN / audit record (never-silent, G2)
+
+Every reclamation event MUST be observable as a structured EXPLAIN record (`lane-B` R-1; refined to
+RC by `lane-F` F-2 / `SYNTHESIS-wave2-addendum.md` W2-A1). The minimum field set:
+
+| Field | Type | Rationale |
+|---|---|---|
+| `scope_id` | stable scope identifier | RT7 — which scope's exit triggered reclamation. |
+| `sweep_epoch` | monotonic counter from `SweepOrder` (RFC-0008 §4.3) | epoch-based safety anchor; ties reclamation to the scheduling model. |
+| `trigger` | enum `RcZero \| ScopeExit \| ChannelClose` | G2 — never silent; the record knows *why*. The RC framing makes this **structural, not editorial**: `RcZero` = the refcount hit 0 (deferred to scope exit), `ScopeExit` = a scope-tree node closed, `ChannelClose` = a channel disconnected and released ownership. |
+| `value_meta_hash` | content hash of the value's `Meta` | content identity — ties the event to the value's provenance/guarantee history (the `Provenance` DAG, RFC-0001 §4.6). |
+| `channel_id` | optional; present for `ChannelClose` | which channel boundary the value crossed. |
+
+Discipline (`lane-B` R-1, R-6, R-8):
+
+- The record is an **emit-once** observability artifact at reclamation time, routed to the
+  supervision policy's observability sink (RFC-0013 §8) — **not** a per-value runtime invariant.
+- It **extends the one-mechanism RFC-0005 EXPLAIN contract** (`inputs considered` → which
+  scope/channel triggered; `chosen option` → drop / checkpoint-and-free / return-to-sender;
+  `sweep_epoch` → the deterministic audit anchor), reusing the same sink (KC-3/DRY, no second
+  mechanism).
+- **Failing to emit the record is a G2 violation — exactly as silently dropping a value is.**
+
+**Open relationship (carried, not decided here — TN-1 / `SYNTHESIS` §3.2):** whether this record
+*is* a `Provenance::Derived` node (RFC-0001 §4.6) or merely *cites* one is left to the transpilation
+DN + this RFC's follow-on. Wave-1's CHG-1 notes that hosting it as a `Derived` node could upgrade its
+strength from `Declared` (asserted log) toward content-hash-pinned identity — a strict improvement to
+consider, not yet adopted.
+
+---
+
+## 10. Resolved design — the reclamation–copy/mut–`fuse` relationship (2026-06-24)
+
+### 10.1 RC unifies reclamation and copy/mut via one `rc`-probe
+
+Reclamation and copy/mutation are **two faces of one sharing-state question**, unified by the RC
+count (`lane-F` §4.1; Perceus reuse / Swift CoW / Lean-4 borrow):
+
+```
+rc(v) → 0  ⟹  v is unreachable        → free its allocation             [RECLAMATION]
+rc(v) == 1 ⟹  v has a single owner     → mutate in place (copy elided)   [COPY/MUT — FBIP reuse]
+rc(v) >  1 ⟹  v is shared              → structural-share on update      [DEFAULT TODAY]
+```
+
+The `rc == 1` reuse check is the **Perceus/FBIP** ("Functional But In-Place") lever: a value about
+to be dropped whose refcount is 1 may have its allocation **reused** for the next value of compatible
+shape — in-place mutation written in a purely functional style, surface-semantically a new value.
+The affine `Substrate`/`consume` (DN-02/03; Glossary) is the corpus's existing **uniqueness lever**;
+generalizing uniqueness-tracking from external resources to *ordinary* values is the path that brings
+Mycelium to the Clean/Koka FBIP design point (`lane-F` F-5). Today `substrate` is scoped to external
+resources only — widening it is named as a future direction, **not** proposed here (KC-3/YAGNI).
+
+### 10.2 The copy/mut path — `rc==1` reuse, never-silent, single-owner only
+
+A future O(1) `rc==1` reuse check may be added to `std.collections` mutators
+(`SYNTHESIS-wave2-addendum.md` W2-A3; `lane-F` F-4), with two hard constraints:
+
+- **Never-silent (G2):** the reuse-vs-copy choice is recorded in the `Provenance` DAG as distinct
+  ops — a `Derived{op: "push_reuse", …}` is distinguishable from `Derived{op: "push_copy", …}`. The
+  guarantee tag is `Exact` either way (the operation carries no approximation); only the *path*
+  differs. Whether the choice is *surface-visible* or *EXPLAIN-record-only* is open (§11 OQ-4).
+- **Single-owner only.** The `rc==1` probe is an *intra-hypha single-owner* optimization. The
+  *concurrent multi-writer* path is **optimistic concurrency control (OCC)**, not a uniqueness probe
+  — this is the empirical lesson from embeddenator, which reached for an `AtomicU64` version counter +
+  `VersionMismatch`, not `isKnownUniquelyReferenced` (`SYNTHESIS-wave2-addendum.md` CH-1;
+  `embeddenator-groundtruth.md` C1–C2). FBIP-reuse and OCC are co-residents at different layers, not
+  competitors; presenting refcount-reuse as *the* copy/mut answer would over-claim — it is the
+  single-owner answer.
+
+This whole copy/mut subsection is `Declared` and **sequenced after** the RC mechanism settles; at v0
+interpreter scale, structural sharing remains the correct default and the reuse check is an
+optimization, not a prerequisite (`lane-F` F-6).
+
+### 10.3 Sweep-order derives from the scope tree (the partial resolution)
+
+Under RC, reclamation of a value follows deterministically from its last owner's drop, which is
+itself ordered by the RT7 scope tree. So **sweep-order is not an *additional* constraint on
+reclamation — it is *derived from* the scope-tree order** (`lane-F` F-3;
+`SYNTHESIS-wave2-addendum.md` W2-A2). Deferred RC drops accumulate per scope and flush at scope-exit
+in child→parent order. The minimal-safe model (`lane-B` R-2):
+
+- **Within a scope:** Rust drop order (reverse construction) — `Exact` by Rust's specification.
+- **Parent–child:** children fully reclaim before the parent exits — a total order along the
+  child→root path (the RT7 LIFO for in-scope values; cross-scope transfer rides the channel protocol,
+  not the LIFO — wave-1 CL-7).
+- **Across siblings:** the open question — see §11 OQ-1. Sibling scopes are concurrent by design;
+  the *property-test shape* would assert that for two same-level scopes, neither's reclamation record
+  appears in the other's sweep epoch (sibling epochs non-overlapping/unordered).
+
+### 10.4 `cyst` checkpoint — checkpoint-and-keep at R1 (RC makes free clean)
+
+**Decision (`lane-B` R-5; `lane-F` OQ-F2):** the R1 default is **checkpoint-and-keep** — the
+original allocation survives alongside the content-addressed `cyst` artifact. Checkpoint-and-*free*
+is sound *in principle* (the value's identity is its content hash, not its address — wave-1 TN-4 /
+CL-5), and RC makes it mechanically clean (the serializer holds a temporary `rc+1` during
+serialization, `rc−1` on completion; if last reference, the allocation frees — no separate
+free-after-checkpoint decision). But checkpoint-and-free is **gated on an `Empirical` serializer
+property test** that does not yet exist in-repo; until then the safe default holds. EXPLAIN record:
+`trigger` distinguishes the checkpoint event; `value_meta_hash` + the `cyst` artifact hash are
+recorded.
+
+### 10.5 `reclaim` surface typing is deferred (KC-3 scope-tightening)
+
+This RFC specifies the **memory model only**. The `reclaim` *surface construct* (L1 typing +
+elaboration) is **left to a follow-on RFC** (`lane-B` OQ-2; ADR-020 §consequences defers it). This
+keeps RFC-0027 tight and lets the memory model ratify before the surface shape is locked. `reclaim`
+remains reserved + task-supervision-only (DN-03 §4); it is **not** redefined as memory here.
+
+### 10.6 `fuse` is structurally unified with the value model but algebraically separate
+
+`fuse` (the RT6 CRDT-merge / semilattice join — RFC-0008) has a **precise, deliberately-bounded**
+relationship to RC (`SYNTHESIS-wave2-addendum.md` W2-D2; `lane-F` §4.1, §4.3). State it without
+over-claiming:
+
+- **Structurally unified (real, `Empirical`/`Declared`):** `fuse` shares the *same* `Provenance` DAG
+  (RFC-0001 §4.6) and the *same* guarantee lattice. From the DAG it gets **δ-CRDT anti-entropy
+  efficiency for free**: two replicas exchange their DAG **root hashes**, walk to the **least common
+  ancestor (LCA)**, and ship **only the divergent sub-DAG** — the Merkle-CRDT anti-entropy protocol,
+  O(change) not O(state) (`lane-F` F-7, F-8). A `fuse` result is
+  `Derived{op:"fuse_join", inputs:[left_root, right_root]}`, and guarantees compose by `meet`
+  (`meet(Proven, Empirical) = Empirical` — honesty degrades, never spuriously upgrades; `lane-F`
+  F-9, `meet`-laws `Proven` over the finite lattice). δ-completeness for *non-monotone* merges
+  (removals) needs tombstones/version-vectors — `Declared`, grow-only is `Empirical` (`lane-F` F-C).
+- **Algebraically separate (real, doubly-sourced):** `fuse` correctness is the **semilattice-join
+  law** (commutative/associative/idempotent — convergence is the CRDT strong-eventual-consistency
+  theorem, mechanized in Isabelle/HOL per RFC-0008 RT6). This is **independent of refcounting** — the
+  refcount tells you nothing about the merge function. Two independent sources reach this verdict:
+  lane-F's adversarial check ("the extension to `fuse` is architectural, not mechanical") and the
+  empirical record (embeddenator's VSA `bundle` is commutative + idempotent-at-saturation **yet the
+  maintainer explicitly claims no CRDT semantics — no tombstones, no deletion-merge, no convergence
+  proof**) — `SYNTHESIS-wave2-addendum.md` CH-2, W2-CL-4.
+
+**So `fuse` is unified with the value model in *sharing/structure* (the Provenance DAG + the lattice),
+and separate from it in *convergence law* (the semilattice algebra).** The convergence machinery
+(distributed reclamation, tombstones, weighted ref-counts) is an **R2** concern (`xloc`/`mesh`),
+explicitly out of scope here (§3) and flagged in §11 OQ-2.
+
+---
+
+## 11. Open questions — consolidated (carried-forward + newly surfaced, 2026-06-24)
+
+These remain **open** — the advance does not decide them. They are the named tradeoffs a future
+`Accepted` revision must close.
+
+- **OQ-1 — Sweep-order vs. reclamation-order coupling: partial vs. total across siblings.
+  → RESOLVED (2026-06-25) by DN-32 — see §12.** *Resolution:* **weak/partial coupling is the
+  default** — sibling scopes reclaim **concurrently** (RT7 already makes siblings concurrent by
+  construction; LR-9 acyclicity rules out cross-sibling aliases, so concurrent sibling reclamation
+  is **safe** with no serialization needed). **Strong/total coupling is an opt-in** for
+  high-assurance subsets (one property test covering both scheduling + reclamation, at the cost of
+  serialized sibling cleanup). *Honest tagging (VR-5):* the **safety** of concurrent sibling
+  reclamation is **`Proven`-modulo the LR-9 side-condition** (the same strength §8 holds the
+  RC-soundness claim — external argument, corpus-invariant side-condition, no in-repo mechanized
+  check yet); the **throughput benefit** of weak over strong coupling is **`Declared`** —
+  *expected, not measured*. **DN-32 resolves this by *argument* (RC + acyclicity ⇒
+  order-independent safety; RT7 ⇒ siblings already concurrent), NOT by the prototype-both-and-measure
+  path lane-B recommended** — the follow-on may still measure before locking the property-test
+  surface (DN-32 §6c). The original Draft framing is preserved below (append-only):
+  RC makes reclamation *derive from* the scope tree (§10.3), which collapses parent–child ordering —
+  but the **sibling** question stood:
+  - **Weak / partial coupling** (lane-B's `Declared` default): sibling scopes reclaim *concurrently*
+    → better throughput; the reclamation-order property test is *separate from* (and weaker than) the
+    Kahn-determinism differential.
+  - **Strong / total coupling:** reclamation order is *identical* to `SweepOrder` → **one** property
+    test covers both scheduling and reclamation (maximal auditability); cost: sibling cleanup is
+    serialized, a throughput cost with no safety benefit (LR-9 rules out cross-sibling aliases).
+  **lane-B explicitly recommended prototyping BOTH and measuring the property-test surface before
+  committing** (`lane-B` OQ-1, R-2; wave-1 O-1; `SYNTHESIS-wave2-addendum.md` W2-A2). *(This was a
+  genuine unresolved tradeoff at the 2026-06-24 Proposed revision — the reason the status stopped at
+  **Proposed** then. It is now **RESOLVED by DN-32** — see the resolution note above + §12 — which
+  settles the **default** (weak/concurrent) by argument; the measured throughput magnitude stays
+  `Declared`, and the follow-on may still run lane-B's measurement before locking the property
+  test.)*
+- **OQ-2 — R2 distributed reclamation provenance (`Declared`, deferred).** When `xloc`/`mesh` land
+  (R2), a value may cross node boundaries and the reclaiming scope may not be the creating scope —
+  CRDT tombstone GC + weighted reference counting territory (`lane-B` §3.5–3.6, OQ-4; wave-1 O-8;
+  W2-O3: embeddenator's correction store has *no* merge semantics, a concrete instance). Explicitly
+  out of scope for R1; flagged so the R2 RFC has a clean handoff.
+- **OQ-3 — Worst-case RC-cascade drop latency / the pause budget (`Declared`). → MITIGATED
+  (2026-06-25) by DN-32 — see §12.** DN-32's **Layer 3 (region-based allocation + batched scope-exit
+  reclamation)** + the sweep-epoch model move this from an *inherent limitation* toward an
+  *engineering/measurement* problem: batched region reclamation bounds per-epoch latency at the price
+  of deferred reclamation. **The latency SLO stays `Declared`** (no methodology'd in-repo benchmark;
+  the fuel-model bound is still open) — *mitigated, not closed.* Re-frames the Draft "pause budget"
+  question. Each `rc_dec` is O(1) but a deep-tree drop is O(*n*); "no silent GC pause"
+  is satisfied as an *honesty stance* (every step observable) but is **not** a sub-millisecond SLO.
+  Can the fuel model (RFC-0014 §4.8) bound the cascade, lifting latency `Declared` → `Empirical` /
+  `Proven`? The sweep-epoch model could spread the cost across epochs at the price of deferred
+  reclamation (`lane-B` OQ-3; `lane-F` OQ-F5, F-D; wave-1 O-7; W2-O2). A dedicated research note is
+  warranted.
+- **OQ-4 — Is the `rc==1` reuse-vs-copy choice surface-visible or EXPLAIN-record-only? → RESOLVED
+  (2026-06-25) by DN-32 — see §12.** *Resolution:* **EXPLAIN-record-only by default** — the
+  `Provenance` DAG always captures the reuse-vs-copy choice (`push_reuse` vs `push_copy`, G2,
+  never-silent), and **surface visibility is deferred** (a future may expose an FP2 `fip`-style
+  surface-visible variant, but the default keeps the choice an implementation detail recorded in the
+  EXPLAIN/Provenance trail). The original framing is preserved (append-only): G2 requires the
+  `Provenance` record always capture it (§10.2); whether the *caller* can observe which path was
+  taken — Perceus makes reuse fully transparent, FP2 `fip` makes it static and
+  visible (`lane-F` OQ-F4; W2-O4).
+- **OQ-5 — `substrate`/`graft` reclamation (`Declared`, flag-and-defer).** What is the protocol when
+  an affine `substrate` handle is *dropped* rather than *consumed* — runtime error, silent no-op, or
+  explicit EXPLAIN event? Out of scope here (depends on the `graft` implementation RFC), but flagged
+  so a future `graft` RFC cannot silently contradict this model (`lane-A` OQ-A1/A3; `lane-B` OQ-5;
+  wave-1 O-6).
+- **OQ-6 — Reclamation record: a `Provenance::Derived` node or a citation of one? (`Declared`,
+  TN-1).** Settling this lets reclamation / decision-ledger / spore provenance share one schema
+  (DRY/KC-3) and could upgrade the record's strength toward content-hash-pinned identity (§9; wave-1
+  TN-1, CHG-1). Routed to the transpilation DN + this RFC's follow-on.
+
+---
+
+## 12. Resolved architecture — three-layer hybrid (DN-32) (2026-06-25)
+
+> **Pointer section (append-only).** DN-32 (*Three-Layer Hybrid Memory Architecture*,
+> Accepted (ratified 2026-06-25) 2026-06-25) is the architectural synthesis that sits above this RFC's
+> resolved **mechanism** (§7 RC) and **resolves OQ-1 + OQ-4** (and mitigates OQ-3). This section is a
+> **short pointer** — DN-32 carries the detail. Everything below is `Declared` strategic direction
+> except where a stronger tag is named; the resolutions are tagged at their supportable strength in
+> §11 and DN-32 §6, not here-upgraded (VR-5).
+
+The resolved architecture is a **three-layer hybrid** (DN-32 §2), each layer engaging only when the
+program needs it (the memory-tier analogue of RFC-0034's "pay for what you use"):
+
+1. **Affine/linear ownership — PRIMARY (the default path).** Unique data is *moved*, not shared, at
+   (near-)zero cost; reclamation is a scope-exit drop. RC (Layer 2) engages only on *explicit*
+   sharing. (Corpus: RFC-0008 RT1; the affine `Sender`/`Receiver` pair, §7.3; the `substrate` lever.)
+2. **Optimized reference counting — only for EXPLICIT sharing.** The §7 RC mechanism, made cheap:
+   **static uniqueness analysis removes RC ops** (Perceus/Lorenzen borrowing), **non-atomic
+   intra-hypha** counting, **atomic only after cross-hypha transfer**, and **`rc==1` in-place reuse**
+   (FBIP — §10.1/§10.2; single-owner only, OCC is the concurrent path).
+3. **Region-based allocation & reclamation — within scopes.** Region-local allocation, **batched
+   reclamation at scope-exit** (Tofte-Talpin mapped onto the RT7 scope tree; §10.3). This is what
+   **mitigates OQ-3**.
+
+**Reclamation coupling (resolves OQ-1):** parent–child **TOTAL** (RT7 — children reclaim before the
+parent), siblings **CONCURRENT by default** (weak/partial coupling — RT7 already makes siblings
+concurrent, LR-9 makes it safe), with **strong/total coupling an opt-in** for high-assurance subsets.
+Safety is `Proven`-modulo-LR-9; the throughput benefit is `Declared` (DN-32 §3, §6c).
+
+**Named open sub-question for the follow-on (DN-32 §7) — surfaced, not buried (G2/VR-5).** Layer 2's
+"**atomic RC after cross-hypha transfer**" and this RFC's **§7.3 "cross-hypha transfer rides the
+affine channel protocol, NOT a distributed/cross-hypha refcount"** must be reconciled by deciding an
+explicit boundary:
+
+> **When a value crosses a hypha boundary, is it a *shared* value (→ atomic RC, Layer 2) or *sole*
+> ownership being moved (→ affine channel move, no cross-hypha RC, §7.3)?**
+
+- **Option A — sole-ownership move only (§7.3 as-is):** only uniquely-owned values cross, via the
+  affine move; Layer 2's "atomic after cross-hypha transfer" never fires (no cross-hypha shared
+  value). Simpler; keeps RC strictly intra-hypha + non-atomic.
+- **Option B — shared values may cross (atomic RC engages):** a genuinely shared value (rc > 1) may
+  cross into concurrent use, where its RC becomes atomic — reaching past §7.3's "no cross-hypha
+  refcount" and requiring an atomic-RC ownership/release protocol (closer to Pony ORCA's deferred
+  weighted refcount, which §7.3 deliberately avoided).
+
+This is **not decided here** — it is tabled (both options) for the RFC-0027 follow-on (or a dedicated
+DN). It does **not** block OQ-1/OQ-4, which resolve under either option. **DN-32 is the detail.**
+
+> **Honest-scope note (2026-06-25, append-only — no status move).** Since ratification, the §7 RC
+> mechanism, the §9 EXPLAIN-record, and all three live triggers (RcZero / ScopeExit / ChannelClose)
+> have **landed** at the runtime tier (MEM-1/2/3, `mycelium-std-runtime`), and the **MEM-4 static tier**
+> (`mycelium-mir-passes`, Increments 1–2) is built — so this RFC is now arguably *under*-claiming, which
+> is VR-5-safe. **The one integration bound, stated plainly:** reclamation is **not yet threaded into
+> the AOT env-machine** — the env-machine still **Rust-manages** values, and the §9 record is an
+> **additive audit trail of where reclamation would occur**, not actual Mycelium reclamation. The
+> integration seam is `crates/mycelium-mlir/src/aot.rs::eval_machine` (research/16 §2). Status therefore
+> stays **Accepted** (not Enacted): execution-threaded reclamation and the *full* coupling property
+> tests remain Phase-3. (Append-only; VR-5; G2.)
+
+---
+
 ## Meta — changelog
 
 - **2026-06-23 — Draft created.** Planning stub for the runtime memory/reclamation model. Scope,
   user stories, open questions established. Status: Draft. Task: E12-1 (M-712). No normative
   decision made. (Append-only; VR-5.)
+- **2026-06-24 — Content advanced; status move proposed (Draft → Proposed, flagged for
+  ratification).** Incorporated the just-landed provenance/ownership research cluster
+  (`SYNTHESIS-provenance-ownership-cluster.md`, `SYNTHESIS-wave2-addendum.md`,
+  `lane-B-reclamation-provenance.md`, `lane-F-efficient-immutable-value-mgmt.md`,
+  `lane-A-ownership-map.md`, `embeddenator-groundtruth.md`) as the basis for the resolved design.
+  **Added §§7–11** (append-only; §§1–6 preserved verbatim): (§7) the reclamation **mechanism is
+  reference counting** — LR-9 acyclicity *is* Perceus's garbage-free precondition, so no cycle
+  detector is needed; scoped to single-owner intra-hypha reclamation, with cross-hypha transfer
+  riding the affine channel protocol and `reclaim` staying task-supervision-only. (§8) Guarantee
+  tags held at strength: RC-soundness **`Proven`-modulo the LR-9 side-condition** (not bare
+  `Proven` — external theorem, corpus-invariant side-condition, no in-repo mechanized check yet),
+  the ~32K-LOC embeddenator confirmation **`Empirical`**, all Mycelium wiring **`Declared`**. (§9)
+  The reclamation **EXPLAIN/audit record** minimum field set: `scope_id`, `sweep_epoch`,
+  `trigger ∈ {RcZero, ScopeExit, ChannelClose}`, `value_meta_hash`, optional `channel_id`. (§10)
+  RC **unifies reclamation + copy/mut** via the `rc==1` FBIP reuse check (single-owner only; OCC is
+  the concurrent path); sweep-order **derives from** the RT7 scope tree; `cyst` = **checkpoint-and-
+  keep** at R1; `reclaim` surface typing **deferred** to a follow-on RFC; **`fuse` is structurally
+  unified** (shares the Provenance DAG → free δ-CRDT anti-entropy via DAG-LCA; `meet` on guarantees)
+  **but algebraically separate** (convergence is the semilattice-join law, independent of
+  refcounting). (§11) Consolidated open questions — **OQ-1 sweep-order sibling coupling (partial vs.
+  total) is left OPEN, with lane-B's recommendation to prototype both before committing** — the
+  reason the status stops at **Proposed**, not `Accepted`. **⚠️ Status move requires maintainer
+  ratification; must not skip to `Accepted` (house rule #3).** Touches no other doc; CHANGELOG.md /
+  issues.yaml / docs/api-index are owned by the integrating parent. (Append-only; VR-5; G2.)
+- **2026-06-25 — OQ-1 + OQ-4 resolved (by DN-32); status move proposed (Proposed → Accepted,
+  GOVERNANCE-FLAGGED for ratification).** Captured the maintainer's verified **three-layer hybrid
+  memory architecture** as **DN-32** (Accepted (ratified 2026-06-25)) and wired its resolutions back
+  here (append-only; §§1–11 prior prose preserved verbatim, resolutions added inline + a new pointer
+  §12). **(§11) OQ-1 → RESOLVED:** weak/partial coupling is the **default** (sibling scopes reclaim
+  concurrently — RT7 already makes siblings concurrent, LR-9 acyclicity makes it safe with no
+  cross-sibling aliases); **strong/total coupling is an opt-in** for high-assurance subsets. Tagged:
+  the **safety** is **`Proven`-modulo the LR-9 side-condition** (§8 strength), the **throughput**
+  benefit is **`Declared`** (expected, not measured) — resolved *by argument*, not the lane-B
+  prototype (DN-32 §6c). **OQ-4 → RESOLVED:** `rc==1` reuse is **EXPLAIN-record-only by default**
+  (Provenance DAG always captures `push_reuse`/`push_copy`, G2); surface visibility deferred.
+  **OQ-3 → MITIGATED:** DN-32 Layer 3 (regions + batched scope-exit reclamation) + the sweep-epoch
+  model move it from inherent-limitation toward engineering/measurement; the **SLO stays `Declared`**.
+  **OQ-2 / OQ-5 / OQ-6 remain deferred** (legitimate non-blockers). **(§12)** new short pointer
+  section summarizing the three layers (affine-primary / optimized-RC-for-explicit-sharing /
+  region-reclamation), the coupling resolution, and the **named open sub-question** for the follow-on
+  — Layer-2 "atomic RC after cross-hypha transfer" vs §7.3 "cross-hypha rides the affine channel, no
+  cross-hypha refcount": does a **shared** value cross a hypha boundary (→ atomic RC) or only **sole**
+  ownership (→ affine move, no cross-hypha RC)? Both options tabled (not decided), orthogonal to
+  OQ-1/OQ-4. **STATUS: advance `Proposed → Accepted`** — OQ-1 (the banner blocker) + OQ-4 resolved,
+  OQ-2/5/6 deferred non-blockers. **⚠️ This is a GOVERNANCE MILESTONE, not routine: a maintainer must
+  ratify the `Proposed → Accepted` move; it must not skip to `Enacted` (no in-repo implementation/proof
+  exists — house rule #3, stepped + maintainer-signed-off).** Touches DN-32 + this RFC + Doc-Index
+  only; CHANGELOG.md / issues.yaml / docs/api-index are owned by the integrating parent.
+  (Append-only; VR-5; G2.)
+- **2026-06-25 — Honest-scope note added to §12 (append-only; no status move).** Per an alignment
+  audit: the §7 RC mechanism, §9 EXPLAIN-record, and all three live triggers (RcZero/ScopeExit/
+  ChannelClose) have landed (MEM-1/2/3) and the MEM-4 static tier is built — so the RFC now mildly
+  *under*-claims (VR-5-safe). The standing integration bound is stated plainly: reclamation is **not
+  yet threaded into the AOT env-machine** (env-machine still Rust-manages values; §9 = additive audit
+  trail; seam = `crates/mycelium-mlir/src/aot.rs::eval_machine`, research/16 §2). Status remains
+  **Accepted** (not Enacted); no normative text changed. (Append-only; VR-5; G2.)

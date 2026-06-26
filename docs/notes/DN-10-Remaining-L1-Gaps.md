@@ -275,7 +275,7 @@ data declarations). Both are purely additive in the RFC-0001 r5/RFC-0007 r4 worl
 
 ## Changelog
 
-- **2026-06-21 — Resolved (M-648 editorial sweep).** Both planned items are enacted: R7-Q4 (M-390, 2026-06-18) — prim signature table `Π` migrated to content-addressed prim declarations in `mycelium-core::data`; R7-Q3 (M-391, 2026-06-19) — mutually-recursive surface elaboration (Tarjan SCC → `FixGroup`) landed in `mycelium-l1::elab`, resolving the surface-grammar spike (RP-6). This note's capture purpose is complete. Append-only.
+- **2026-06-21 — Resolved (M-648 editorial sweep).** Both planned items are enacted: R7-Q4 (M-390, 2026-06-18) — prim signature table `Π` migrated to content-addressed prim declarations in `mycelium-core::data` <!-- locator erratum 2026-06-25: the table actually lives in a new `mycelium-core::prim` module (`prim.rs`), not `::data`; the substance (content-addressed prim decls) is correct -->; R7-Q3 (M-391, 2026-06-19) — mutually-recursive surface elaboration (Tarjan SCC → `FixGroup`) landed in `mycelium-l1::elab`, resolving the surface-grammar spike (RP-6). This note's capture purpose is complete. Append-only.
 - **2026-06-18 — Draft / Resolved-as-capture.** Initial capture of the two remaining L1 work
   items (R7-Q3 surface elaboration, R7-Q4 prim-table migration) as concrete, dependency-ordered
   plans. Grounded in RFC-0007 §8, RFC-0001 r4/r5, RFC-0006 §4/§8, ADR-003, KC-3. Advisory

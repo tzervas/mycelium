@@ -1,0 +1,37 @@
+pub mod mycelium_std_sys_host
+pub struct mycelium_std_sys_host::OsClock
+impl core::clone::Clone for mycelium_std_sys_host::OsClock
+pub fn mycelium_std_sys_host::OsClock::clone(&self) -> mycelium_std_sys_host::OsClock
+impl core::default::Default for mycelium_std_sys_host::OsClock
+pub fn mycelium_std_sys_host::OsClock::default() -> mycelium_std_sys_host::OsClock
+impl core::fmt::Debug for mycelium_std_sys_host::OsClock
+pub fn mycelium_std_sys_host::OsClock::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_sys_host::OsClock
+impl mycelium_std_time::ClockSource for mycelium_std_sys_host::OsClock
+pub fn mycelium_std_sys_host::OsClock::logical_now(&self) -> mycelium_std_time::DeclaredTime<mycelium_std_time::LogicalInstant>
+pub fn mycelium_std_sys_host::OsClock::mono_now(&self) -> mycelium_std_time::DeclaredTime<core::result::Result<mycelium_std_time::MonoInstant, mycelium_std_time::TimeErr>>
+pub fn mycelium_std_sys_host::OsClock::wall_now(&self) -> mycelium_std_time::DeclaredTimeEntropy<core::result::Result<mycelium_std_time::WallInstant, mycelium_std_time::TimeErr>>
+impl core::marker::Freeze for mycelium_std_sys_host::OsClock
+impl core::marker::Send for mycelium_std_sys_host::OsClock
+impl core::marker::Sync for mycelium_std_sys_host::OsClock
+impl core::marker::Unpin for mycelium_std_sys_host::OsClock
+impl core::marker::UnsafeUnpin for mycelium_std_sys_host::OsClock
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys_host::OsClock
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_sys_host::OsClock
+pub struct mycelium_std_sys_host::OsEntropy
+impl core::clone::Clone for mycelium_std_sys_host::OsEntropy
+pub fn mycelium_std_sys_host::OsEntropy::clone(&self) -> mycelium_std_sys_host::OsEntropy
+impl core::default::Default for mycelium_std_sys_host::OsEntropy
+pub fn mycelium_std_sys_host::OsEntropy::default() -> mycelium_std_sys_host::OsEntropy
+impl core::fmt::Debug for mycelium_std_sys_host::OsEntropy
+pub fn mycelium_std_sys_host::OsEntropy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_std_sys_host::OsEntropy
+impl mycelium_std_rand::EntropySource for mycelium_std_sys_host::OsEntropy
+pub fn mycelium_std_sys_host::OsEntropy::fill_bytes(&mut self, &mut [u8]) -> core::result::Result<mycelium_std_rand::EntropyEffect, mycelium_std_rand::RandErr>
+impl core::marker::Freeze for mycelium_std_sys_host::OsEntropy
+impl core::marker::Send for mycelium_std_sys_host::OsEntropy
+impl core::marker::Sync for mycelium_std_sys_host::OsEntropy
+impl core::marker::Unpin for mycelium_std_sys_host::OsEntropy
+impl core::marker::UnsafeUnpin for mycelium_std_sys_host::OsEntropy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys_host::OsEntropy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_sys_host::OsEntropy

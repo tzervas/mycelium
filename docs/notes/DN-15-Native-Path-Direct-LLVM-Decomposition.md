@@ -203,6 +203,14 @@ a formal argument is constructed. Never pre-written.
 
 ### 4.4 What remains libMLIR-gated (permanent block until M-348)
 
+> **Erratum (2026-06-25, post corpus-alignment audit; cross-ref §9, which already reconciles this).** The
+> "permanent block until M-348" framing here and in §2 is **partly superseded**: a **real**
+> `ternary`→`arith`/`func`→LLVM dialect lowering **landed** as **M-601**
+> (`crates/mycelium-mlir/src/dialect/native.rs`, ~895 lines), **feature-gated behind `mlir-dialect`
+> (OFF by default)**. The *default* build still uses the textual skeleton (no libMLIR), so the gating is
+> real — but it is "off-by-default, libMLIR-gated", not a permanent block. The §2/§4.4 prose is left intact;
+> §9 + code are authoritative. DN-15 stays **Draft**.
+
 + The real `ternary` → `arith`/`vector` → LLVM dialect pipeline (`dialect.rs` — the textual
   skeleton cannot be compiled without libMLIR).
 + Cross-target codegen for non-host triples (RFC-0004 §9.3: "build is host-target only" until

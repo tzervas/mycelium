@@ -22,6 +22,7 @@
 pub mod check;
 pub mod dense;
 pub mod dense_vsa;
+pub mod mode;
 
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +37,7 @@ pub use check::{
 };
 pub use dense::{dense_f32_to_bf16, BF16_MIN_NORMAL, BF16_REL_EPS};
 pub use dense_vsa::{dense_to_vsa, vsa_to_dense, DENSE_VSA_EMP_DELTA, DENSE_VSA_MODEL};
+pub use mode::{gate_swap, GatedSwap, ModeGatedSwapEngine};
 
 /// Concrete parameters binding a bijection lemma to one use — `{ width, trits }` for binary↔ternary
 /// (lets the certificate be cached by content hash; RFC-0002 §3).

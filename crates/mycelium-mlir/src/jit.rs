@@ -170,6 +170,7 @@ impl Lib {
     /// made once, in an audited safe wrapper ([`Self::jit_kernel`] / [`Self::bitnet_dot`] /
     /// [`Self::spec_dot`]) whose hard-coded `T` matches the IR this crate emits. Callers then get only
     /// the safe, fixed-type accessors.
+    #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
     unsafe fn get<T: Copy>(&self, symbol: &str) -> Result<Sym<'_, T>, AotError> {
         let raw = self.sym(symbol)?; // non-null or an explicit Err
                                      // `sym` errors on a null result, and a fn pointer is pointer-sized on every supported target;

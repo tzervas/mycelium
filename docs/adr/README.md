@@ -11,7 +11,7 @@ New ADRs go here as standalone files. (ADR-001…009 may be extracted into indiv
 
 ## Status set
 
-`Proposed → Accepted → Enacted → Superseded`. ADRs 001–014/016/017 are **Accepted**; **ADR-015/ADR-018/ADR-019** are **Enacted** (2026-06-23, maintainer-approved); **ADR-020** is **Enacted** (M-521 v0 R1 implementation landed 2026-06-20). **ADR-021** (kernel 1.0.0 gate) is **Superseded by ADR-022** (2026-06-23; kernel gate preserved as track T1). **ADR-022** (full-language 1.0.0 gate, dual-version) is **Accepted** (2026-06-23, supersedes ADR-021). **ADR-023** (stability and API-compatibility guarantees) is **Draft** (2026-06-23, planning stub).
+`Proposed → Accepted → Enacted → Superseded`. ADRs 001–014/016/017 are **Accepted**; **ADR-015/ADR-018/ADR-019** are **Enacted** (2026-06-23, maintainer-approved); **ADR-020** is **Enacted** (M-521 v0 R1 implementation landed 2026-06-20). **ADR-021** (kernel 1.0.0 gate) is **Superseded by ADR-022** (2026-06-23; kernel gate preserved as track T1). **ADR-022** (full-language 1.0.0 gate, dual-version) is **Accepted** (2026-06-23, supersedes ADR-021). **ADR-023** (stability and API-compatibility guarantees) is **Accepted** (2026-06-23; corrected 2026-06-25 from a stale "Draft" in this index — the ADR-023 header + the table row below are Accepted).
 
 ## Index
 
