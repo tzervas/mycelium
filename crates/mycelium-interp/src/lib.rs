@@ -111,6 +111,9 @@ pub mod prims;
 pub mod supervise;
 pub mod swap;
 
+#[cfg(test)]
+mod tests;
+
 use mycelium_core::{Alt, CoreValue, Datum, GuaranteeStrength, Node, Repr, Value, WfError};
 
 pub use budget::{Budgets, EffectBudget, EffectBudgetExhausted, EffectKind};
