@@ -8,6 +8,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-26: DN-38 ratified Draft → Accepted)
+
+- **DN-38 — The Layered-Lowering Atlas & Generative Sugar** ratified **Draft → Accepted** (maintainer).
+  Accepts the **seamless-gradient thesis**, the **lowering law** (every feature lowers to L0 with the
+  same observable meaning; small IL-grammar-checked semantics-preserving passes; kernel never grows —
+  KC-3), the **honest-refinement** rule, the **generative-lowering + inspectable-desugaring** construct
+  set, and the **§8.1 naming** (delegation `via` · generative `derive` · inspector `reveal`) as the
+  *design direction*. Accepted ratifies the direction, **not** every open question — §8's *architectural*
+  questions (nanopass-separate-passes vs single `elab.rs`; `reveal` v0 vs post-core; round-trip scope;
+  wave sequencing; the `@matured` gap) remain **open**. No guarantee upgraded (layering +
+  observational-identity + built lowerings `Exact`; framing + construct + naming `Declared` — VR-5).
+  Also tidies the now-stale header naming pairs flagged in review (`derive`/`weave` → `derive`,
+  `reveal`/`expand` → `reveal`).
+
 ### Changed (2026-06-25: DN-38 §8.1 naming settled — `derive` + `reveal`)
 
 - **DN-38 §8.1 Construct naming fully settled** (append-only; **DN-38 stays Draft**). The
