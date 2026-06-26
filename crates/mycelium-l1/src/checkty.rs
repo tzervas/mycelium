@@ -2561,6 +2561,9 @@ impl Cx<'_> {
         //     never-silent *runtime* refusal, not a type error)
         //   - `bytes_len(b: Bytes) -> Binary{32}`
         //   - `bytes_get(b: Bytes, i: Binary{W}) -> Binary{8}`
+        //   - `bytes_slice(b: Bytes, start: Binary{W}, end: Binary{W}) -> Bytes`  (DN-43; never-silent
+        //     out-of-range/inverted-range refusal is a *runtime* contract, not a type error)
+        //   - `bytes_concat(b1: Bytes, b2: Bytes) -> Bytes`  (DN-43; total)
         // The index `i` is any `Binary{W}` (an unsigned magnitude); a bare-decimal index has no
         // anchor here (the result is not the index width), so it must be written/ascribed explicitly
         // (G2 — never a default width).
@@ -3262,8 +3265,9 @@ impl Cx<'_> {
         ))
     }
 
-    /// Type a `Seq`/`Bytes` indexing/length prim (RFC-0032 D3/D4; M-749/M-750), or `Ok(None)` if
-    /// `name` is not one of them (so the caller falls through to the width-preserving prim path).
+    /// Type a `Seq`/`Bytes` indexing/length/slice/concat prim (RFC-0032 D3/D4; M-749/M-750/M-799), or
+    /// `Ok(None)` if `name` is not one of them (so the caller falls through to the width-preserving
+    /// prim path).
     /// The operands are checked, the receiver's repr type is verified (a non-`Seq`/`Bytes` receiver,
     /// or a wrong arity, is an explicit never-silent refusal — G2), and the result type is returned.
     fn try_check_seq_bytes_prim(
@@ -3337,6 +3341,47 @@ impl Cx<'_> {
                 let idx2 = check_index(scope, &args[1])?;
                 // A byte is a `Binary{8}` value.
                 Ok(Some((Ty::Binary(8), app_node(head, vec![recv2, idx2]))))
+            }
+            // DN-43 (M-799): `bytes_slice(b: Bytes, start: Binary{W}, end: Binary{W}) -> Bytes` — the
+            // never-silent half-open sub-slice `[start, end)` (RFC-0032 D4; the kernel prim already
+            // exists). The receiver must be `Bytes`; both bounds are any `Binary{W}` (an unsigned
+            // magnitude, checked via `check_index`). An out-of-range or inverted range is a never-silent
+            // *runtime* refusal (`prims.rs::prim_bytes_slice`), never a static error and never a silent
+            // clamp (G2) — so the static rule only fixes the operand/result shapes.
+            "bytes_slice" => {
+                if args.len() != 3 {
+                    return arity_err(3);
+                }
+                let (recv, recv2) = self.check(scope, &args[0], None)?;
+                if !matches!(recv, Ty::Bytes) {
+                    return self.err(format!(
+                        "`bytes_slice` expects a `Bytes` operand, got {recv} (RFC-0032 D4)"
+                    ));
+                }
+                let start2 = check_index(scope, &args[1])?;
+                let end2 = check_index(scope, &args[2])?;
+                Ok(Some((Ty::Bytes, app_node(head, vec![recv2, start2, end2]))))
+            }
+            // DN-43 (M-799): `bytes_concat(b1: Bytes, b2: Bytes) -> Bytes` — total byte concatenation
+            // (RFC-0032 D4; the kernel prim already exists). Both operands must be `Bytes`; a non-`Bytes`
+            // operand is an explicit static refusal (G2).
+            "bytes_concat" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (a, a2) = self.check(scope, &args[0], None)?;
+                if !matches!(a, Ty::Bytes) {
+                    return self.err(format!(
+                        "`bytes_concat` expects a `Bytes` first operand, got {a} (RFC-0032 D4)"
+                    ));
+                }
+                let (b, b2) = self.check(scope, &args[1], None)?;
+                if !matches!(b, Ty::Bytes) {
+                    return self.err(format!(
+                        "`bytes_concat` expects a `Bytes` second operand, got {b} (RFC-0032 D4)"
+                    ));
+                }
+                Ok(Some((Ty::Bytes, app_node(head, vec![a2, b2]))))
             }
             // DN-41 (M-798): `width_cast(value: Binary{N}, into: Binary{M}) -> Binary{M}` — the
             // never-silent `Binary` re-width. The second operand is a **width witness**: only its
@@ -3845,6 +3890,10 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "seq_get" => "seq.get",
         "bytes_len" => "bytes.len",
         "bytes_get" => "bytes.get",
+        // DN-43 (M-799): surface the already-landed never-silent byte slice/concat prims (RFC-0032 D4,
+        // M-750). Surfacing only — the kernel prims exist + are registered; this maps the surface name.
+        "bytes_slice" => "bytes.slice",
+        "bytes_concat" => "bytes.concat",
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         "width_cast" => "bit.width_cast",
         "add" => "trit.add",
