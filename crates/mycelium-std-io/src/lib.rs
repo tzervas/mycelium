@@ -103,6 +103,12 @@ pub mod guarantee_matrix;
 pub mod io;
 pub mod serialize;
 
+// In-crate white-box unit tests extracted from logic files (M-797 as-touched). Named
+// `unit_tests` to avoid colliding with this crate's own integration-level `mod tests` below.
+#[cfg(test)]
+#[path = "tests/mod.rs"]
+mod unit_tests;
+
 // ── Flat re-exports for convenience ────────────────────────────────────────────
 
 // error types
