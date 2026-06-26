@@ -229,6 +229,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::Spore
 impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::Spore
 pub fn mycelium_spore::artifact_hash(&[u8]) -> mycelium_core::id::ContentHash
 pub fn mycelium_spore::build_spore(&mycelium_proj::manifest::Manifest, &std::path::Path) -> core::result::Result<mycelium_spore::Spore, mycelium_spore::SporeError>
+pub fn mycelium_spore::content_address(mycelium_proj::manifest::ProjectKind, &[alloc::string::String], &[mycelium_spore::SourceFile], &[mycelium_spore::ResolvedDep]) -> mycelium_core::id::ContentHash
 pub fn mycelium_spore::explain(&mycelium_spore::Spore) -> alloc::string::String
 pub fn mycelium_spore::kind_str(mycelium_proj::manifest::ProjectKind) -> &'static str
 pub fn mycelium_spore::publish(&std::path::Path, &mycelium_spore::Spore, &[u8], &str, &str) -> core::result::Result<mycelium_spore::registry::PublishReceipt, mycelium_spore::registry::RegistryError>
