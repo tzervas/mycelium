@@ -245,7 +245,7 @@
 | `mycelium_core::BoundKind` | enum | `crates/mycelium-core/src/bound.rs:68` | The bound payload, per kind (RFC-0001 §4.3). |
 | `mycelium_core::CertMode` | enum | `crates/mycelium-core/src/cert_mode.rs:27` | The active certification mode a value was produced under (RFC-0034). |
 | `mycelium_core::CleanupShape` | enum | `crates/mycelium-core/src/recon.rs:59` | The per-slot cleanup projection a resonator decode uses (RFC-0003 §6.1; RFC-0009 §3/§9 Q2). |
-| `mycelium_core::ContentHash` | struct | `crates/mycelium-core/src/id.rs:9` | A content address, e.g. |
+| `mycelium_core::ContentHash` | struct | `crates/mycelium-core/src/id.rs:20` | A content address, e.g. |
 | `mycelium_core::CoreValue` | enum | `crates/mycelium-core/src/datum.rs:90` | A runtime value: a representation [`Value`] (one of the four paradigm kinds) or an algebraic |
 | `mycelium_core::CtorDecl` | struct | `crates/mycelium-core/src/data.rs:81` | One constructor of a resolved declaration: its field types, in declaration order. |
 | `mycelium_core::CtorRef` | struct | `crates/mycelium-core/src/data.rs:37` | A constructor reference `#T#i` (RFC-0007 §4.2): the content hash of a data declaration and the |
@@ -279,9 +279,9 @@
 | `mycelium_core::ReconInfo` | struct | `crates/mycelium-core/src/recon.rs:111` | The reconstruction manifest. |
 | `mycelium_core::ReconMode` | enum | `crates/mycelium-core/src/recon.rs:30` | Which capability the manifest supports (RFC-0003 §6). |
 | `mycelium_core::RegistryError` | enum | `crates/mycelium-core/src/data.rs:122` | Why building a [`DataRegistry`] from specs failed — always explicit (never a silent drop). |
-| `mycelium_core::Repr` | enum | `crates/mycelium-core/src/repr.rs:57` | The four closed paradigm kinds (RFC-0001 §4.1). |
-| `mycelium_core::ScalarKind` | enum | `crates/mycelium-core/src/repr.rs:14` | Scalar element kind for `Dense` values (extensible registry). |
-| `mycelium_core::SparsityClass` | enum | `crates/mycelium-core/src/repr.rs:44` | Declared sparsity class of a VSA value (RFC-0001 §4.1; RFC-0003 §5). |
+| `mycelium_core::Repr` | enum | `crates/mycelium-core/src/repr.rs:79` | The four closed paradigm kinds (RFC-0001 §4.1). |
+| `mycelium_core::ScalarKind` | enum | `crates/mycelium-core/src/repr.rs:36` | Scalar element kind for `Dense` values (extensible registry). |
+| `mycelium_core::SparsityClass` | enum | `crates/mycelium-core/src/repr.rs:66` | Declared sparsity class of a VSA value (RFC-0001 §4.1; RFC-0003 §5). |
 | `mycelium_core::SparsityObs` | struct | `crates/mycelium-core/src/meta.rs:36` | Measured (dynamic) sparsity — distinct from the declared [`crate::repr::SparsityClass`]. |
 | `mycelium_core::Trit` | enum | `crates/mycelium-core/src/value.rs:19` | A balanced trit in `{-1, 0, +1}`. |
 | `mycelium_core::Value` | struct | `crates/mycelium-core/src/value.rs:134` | A Mycelium value. |
@@ -333,11 +333,11 @@
 | `mycelium_core::guarantee::GuaranteeStrength::propagate` | fn | `crates/mycelium-core/src/guarantee.rs:77` | Propagate guarantees through an operation (RFC-0001 §4.7): |
 | `mycelium_core::guarantee::GuaranteeStrength::rank` | fn | `crates/mycelium-core/src/guarantee.rs:43` | Lattice rank, `0` = strongest (`Exact`) … `3` = weakest (`Declared`). |
 | `mycelium_core::id` | mod | `crates/mycelium-core/src/lib.rs:20` | — |
-| `mycelium_core::id::ContentHash::algo` | fn | `crates/mycelium-core/src/id.rs:45` | The algorithm tag (the part before `:`), e.g. |
-| `mycelium_core::id::ContentHash::as_str` | fn | `crates/mycelium-core/src/id.rs:57` | The address as a string slice. |
-| `mycelium_core::id::ContentHash::digest` | fn | `crates/mycelium-core/src/id.rs:51` | The digest (the part after `:`). |
-| `mycelium_core::id::ContentHash::from_parts` | fn | `crates/mycelium-core/src/id.rs:39` | Build a content address from an algorithm tag and digest, validating the shape (`algo` is |
-| `mycelium_core::id::ContentHash::parse` | fn | `crates/mycelium-core/src/id.rs:15` | Parse a content address, validating its shape: `algo` is `[a-z0-9]+`, `digest` is |
+| `mycelium_core::id::ContentHash::algo` | fn | `crates/mycelium-core/src/id.rs:121` | The algorithm tag (the part before `:`), e.g. |
+| `mycelium_core::id::ContentHash::as_str` | fn | `crates/mycelium-core/src/id.rs:133` | The address as a string slice. |
+| `mycelium_core::id::ContentHash::digest` | fn | `crates/mycelium-core/src/id.rs:127` | The digest (the part after `:`). |
+| `mycelium_core::id::ContentHash::from_parts` | fn | `crates/mycelium-core/src/id.rs:115` | Build a content address from an algorithm tag and digest, validating the **shape** (`algo` is |
+| `mycelium_core::id::ContentHash::parse` | fn | `crates/mycelium-core/src/id.rs:38` | Parse a content address, validating its **shape only**: `algo` is `[a-z0-9]+`, `digest` is |
 | `mycelium_core::lower` | mod | `crates/mycelium-core/src/lib.rs:21` | — |
 | `mycelium_core::lower::Anf` | struct | `crates/mycelium-core/src/lower.rs:567` | A flattened (A-normal-form) lowering of a Core IR node. |
 | `mycelium_core::lower::Anf::bindings` | fn | `crates/mycelium-core/src/lower.rs:909` | The ordered bindings (for backends consuming the lowered IR — M-150). |
@@ -402,8 +402,8 @@
 | `mycelium_core::recon::ReconInfo::new` | fn | `crates/mycelium-core/src/recon.rs:132` | Build a manifest, enforcing the schema invariants (RFC-0003 §6; |
 | `mycelium_core::recon::ReconInfo::recipe` | fn | `crates/mycelium-core/src/recon.rs:235` | The compositional recipe, if this manifest is compositional. |
 | `mycelium_core::repr` | mod | `crates/mycelium-core/src/lib.rs:26` | — |
-| `mycelium_core::repr::Repr::well_formed` | fn | `crates/mycelium-core/src/repr.rs:91` | Well-formed iff all widths/dims/trits (and any `max_active`) are positive and a VSA `model` |
-| `mycelium_core::repr::ScalarKind::tag` | fn | `crates/mycelium-core/src/repr.rs:30` | A stable one-byte code for content-addressing (M-103). |
+| `mycelium_core::repr::Repr::well_formed` | fn | `crates/mycelium-core/src/repr.rs:135` | Well-formed iff all widths/dims/trits (and any `max_active`) are positive **and within |
+| `mycelium_core::repr::ScalarKind::tag` | fn | `crates/mycelium-core/src/repr.rs:52` | A stable one-byte code for content-addressing (M-103). |
 | `mycelium_core::ternary` | mod | `crates/mycelium-core/src/lib.rs:27` | — |
 | `mycelium_core::ternary::BigTernary` | struct | `crates/mycelium-core/src/ternary/big_ternary.rs:46` | Arbitrary-width balanced-ternary integer (digit-serial reference form). |
 | `mycelium_core::ternary::BigTernary::checked_to_width` | fn | `crates/mycelium-core/src/ternary/big_ternary.rs:202` | NEVER-SILENT narrowing to a fixed width of `n` trits: `Some` iff `width() ≤ n`; `None` |
@@ -426,10 +426,10 @@
 | `mycelium_core::ternary::sub` | fn | `crates/mycelium-core/src/ternary/mod.rs:176` | Fixed-width subtraction `a − b` = `add(a, neg(b))`. |
 | `mycelium_core::ternary::trits_to_int` | fn | `crates/mycelium-core/src/ternary/mod.rs:108` | The integer denoted by an MSB-first trit string (`value(t)`, §1). |
 | `mycelium_core::value` | mod | `crates/mycelium-core/src/lib.rs:28` | — |
-| `mycelium_core::value::Value::meta` | fn | `crates/mycelium-core/src/value.rs:169` | The metadata. |
-| `mycelium_core::value::Value::new` | fn | `crates/mycelium-core/src/value.rs:143` | Build a value, checking `repr.well_formed()` and that `payload` matches `repr`. |
-| `mycelium_core::value::Value::payload` | fn | `crates/mycelium-core/src/value.rs:164` | The payload. |
-| `mycelium_core::value::Value::repr` | fn | `crates/mycelium-core/src/value.rs:159` | The representation descriptor. |
+| `mycelium_core::value::Value::meta` | fn | `crates/mycelium-core/src/value.rs:171` | The metadata. |
+| `mycelium_core::value::Value::new` | fn | `crates/mycelium-core/src/value.rs:144` | Build a value, checking [`Repr::check_well_formed`] (positivity, non-empty model, and the |
+| `mycelium_core::value::Value::payload` | fn | `crates/mycelium-core/src/value.rs:166` | The payload. |
+| `mycelium_core::value::Value::repr` | fn | `crates/mycelium-core/src/value.rs:161` | The representation descriptor. |
 | `mycelium_core::wrapping` | mod | `crates/mycelium-core/src/lib.rs:29` | — |
 
 ## mycelium-dense
@@ -1183,8 +1183,8 @@
 | `mycelium_proj::HEADER_KEYS:` | const | `crates/mycelium-proj/src/header.rs:17` | The closed v0 metadata key set (spec §7.3). |
 | `mycelium_proj::HeaderError` | struct | `crates/mycelium-proj/src/header.rs:81` | An explicit header error (G2): a malformed marker, an unknown/duplicate key, or a bad value. |
 | `mycelium_proj::HeaderFields` | struct | `crates/mycelium-proj/src/header.rs:42` | The parsed `@key` metadata of a header (all optional; absent fields inherit per the resolver). |
-| `mycelium_proj::Manifest` | struct | `crates/mycelium-proj/src/manifest.rs:107` | A parsed `mycelium-proj.toml` (v0: the typed `[project]` table + the optional `[toolchain]`, |
-| `mycelium_proj::ManifestError` | struct | `crates/mycelium-proj/src/manifest.rs:122` | An explicit manifest error (G2): a syntax error, an out-of-subset construct, or a bad value. |
+| `mycelium_proj::Manifest` | struct | `crates/mycelium-proj/src/manifest.rs:110` | A parsed `mycelium-proj.toml` (v0: the typed `[project]` table + the optional `[toolchain]`, |
+| `mycelium_proj::ManifestError` | struct | `crates/mycelium-proj/src/manifest.rs:125` | An explicit manifest error (G2): a syntax error, an out-of-subset construct, or a bad value. |
 | `mycelium_proj::ModeSignal` | struct | `crates/mycelium-proj/src/cert_scope.rs:251` | The **always-generated inspectability signal** for the active certification mode (RFC-0034 §7). |
 | `mycelium_proj::Origin` | enum | `crates/mycelium-proj/src/resolve.rs:23` | Where a resolved field's value came from. |
 | `mycelium_proj::Project` | struct | `crates/mycelium-proj/src/manifest.rs:33` | The typed `[project]` table (the v0 closed key set). |
@@ -1192,7 +1192,7 @@
 | `mycelium_proj::Resolved` | struct | `crates/mycelium-proj/src/resolve.rs:41` | A resolved field: its effective value and where it came from. |
 | `mycelium_proj::ResolvedHeader` | struct | `crates/mycelium-proj/src/resolve.rs:50` | The fully-resolved header — each inherited field annotated with its [`Origin`]. |
 | `mycelium_proj::ResolvedMode` | struct | `crates/mycelium-proj/src/cert_scope.rs:112` | The resolved certification mode plus its provenance — the analogue of |
-| `mycelium_proj::SporeConfig` | struct | `crates/mycelium-proj/src/manifest.rs:99` | The typed `[spore]` table (M-368): how the project publishes as a deployable (ADR-013). |
+| `mycelium_proj::SporeConfig` | struct | `crates/mycelium-proj/src/manifest.rs:102` | The typed `[spore]` table (M-368): how the project publishes as a deployable (ADR-013). |
 | `mycelium_proj::StructuredHeader` | struct | `crates/mycelium-proj/src/header.rs:72` | A parsed structured header: the `// nodule:` marker plus its `@key` metadata. |
 | `mycelium_proj::Surface` | struct | `crates/mycelium-proj/src/manifest.rs:76` | The typed `[surface]` table (M-368): a phylum's **public exports** — the germination boundary. |
 | `mycelium_proj::Toolchain` | struct | `crates/mycelium-proj/src/manifest.rs:65` | The typed `[toolchain]` table (M-364): the optional pins the toolchain reads. |
@@ -1218,7 +1218,7 @@
 | `mycelium_proj::manifest` | mod | `crates/mycelium-proj/src/lib.rs:27` | — |
 | `mycelium_proj::parse_cert_mode` | fn | `crates/mycelium-proj/src/cert_scope.rs:138` | Parse the `@certification` attribute value into a [`CertMode`] — the closed, never-silent set |
 | `mycelium_proj::parse_header` | fn | `crates/mycelium-proj/src/header.rs:114` | Parse the structured header from `src`. |
-| `mycelium_proj::parse_manifest` | fn | `crates/mycelium-proj/src/manifest.rs:166` | Parse a `mycelium-proj.toml` source into a [`Manifest`]. |
+| `mycelium_proj::parse_manifest` | fn | `crates/mycelium-proj/src/manifest.rs:169` | Parse a `mycelium-proj.toml` source into a [`Manifest`]. |
 | `mycelium_proj::render_mode_signal` | fn | `crates/mycelium-proj/src/cert_scope.rs:292` | **Render the inspectability signal** at a given DX consumption tier (RFC-0034 §7). |
 | `mycelium_proj::resolve` | mod | `crates/mycelium-proj/src/lib.rs:28` | — |
 | `mycelium_proj::resolve` | fn | `crates/mycelium-proj/src/resolve.rs:83` | Resolve a parsed header against an optional project manifest. |
@@ -1300,12 +1300,12 @@
 | `mycelium_spore::SporeError::exit_code` | fn | `crates/mycelium-spore/src/lib.rs:81` | The CLI exit code for this refusal. |
 | `mycelium_spore::artifact_hash` | fn | `crates/mycelium-spore/src/registry.rs:121` | BLAKE3 the bytes into a `blake3:<hex>` [`ContentHash`] — the integrity address of an artifact. |
 | `mycelium_spore::build_spore` | fn | `crates/mycelium-spore/src/lib.rs:106` | Build a [`Spore`] from a parsed manifest and the project root directory. |
-| `mycelium_spore::explain` | fn | `crates/mycelium-spore/src/lib.rs:273` | The `EXPLAIN` of a built spore (no black box): the identity receipt, the surface, the code by hash, the |
-| `mycelium_spore::kind_str` | fn | `crates/mycelium-spore/src/lib.rs:222` | The canonical `[project].kind` spelling. |
+| `mycelium_spore::explain` | fn | `crates/mycelium-spore/src/lib.rs:350` | The `EXPLAIN` of a built spore (no black box): the identity receipt, the surface, the code by hash, the |
+| `mycelium_spore::kind_str` | fn | `crates/mycelium-spore/src/lib.rs:253` | The canonical `[project].kind` spelling. |
 | `mycelium_spore::publish` | fn | `crates/mycelium-spore/src/registry.rs:176` | **Publish** `spore`'s `descriptor` bytes under `name@version` into the registry at `root`. |
 | `mycelium_spore::registry` | mod | `crates/mycelium-spore/src/lib.rs:23` | The content-addressed registry (M-732): `publish` / `resolve` over a local store (ADR-003). |
 | `mycelium_spore::registry::RegistryError::exit_code` | fn | `crates/mycelium-spore/src/registry.rs:92` | The CLI exit code for this refusal. |
-| `mycelium_spore::resolve` | fn | `crates/mycelium-spore/src/registry.rs:268` | **Resolve** `name` at `constraint` against the registry at `root`, returning the integrity-verified |
+| `mycelium_spore::resolve` | fn | `crates/mycelium-spore/src/registry.rs:267` | **Resolve** `name` at `constraint` against the registry at `root`, returning the integrity-verified |
 
 ## mycelium-stack
 
@@ -1952,13 +1952,13 @@
 | `mycelium_std_spore::SporeUnit` | struct | `crates/mycelium-std-spore/src/spore_ops.rs:96` | A content-addressed, value-semantic spore handle (ADR-013). |
 | `mycelium_std_spore::deploy` | mod | `crates/mycelium-std-spore/src/lib.rs:60` | — |
 | `mycelium_std_spore::explain_deploy` | fn | `crates/mycelium-std-spore/src/deploy.rs:339` | The EXPLAIN of a germination outcome — VR-4 / SC-3 / C3 / G11. |
-| `mycelium_std_spore::explain_spore` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:344` | The `EXPLAIN` of a built spore: the identity receipt, the surface, the code by hash, the |
+| `mycelium_std_spore::explain_spore` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:319` | The `EXPLAIN` of a built spore: the identity receipt, the surface, the code by hash, the |
 | `mycelium_std_spore::germinate` | fn | `crates/mycelium-std-spore/src/deploy.rs:235` | Deploy a [`SporeUnit`] to a [`DeployTarget`] — the ADR-013 native germination entry point. |
 | `mycelium_std_spore::guarantee_matrix` | mod | `crates/mycelium-std-spore/src/lib.rs:61` | — |
 | `mycelium_std_spore::guarantee_matrix::GuaranteeTag` | type | `crates/mycelium-std-spore/src/guarantee_matrix.rs:31` | Guarantee tag string — the lattice position (`Exact ⊐ Proven ⊐ Empirical ⊐ Declared`). |
 | `mycelium_std_spore::guarantee_matrix::MatrixRow` | struct | `crates/mycelium-std-spore/src/guarantee_matrix.rs:35` | One row of the `std.spore` guarantee matrix (RFC-0016 §4.5 / spec §4). |
-| `mycelium_std_spore::identity` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:227` | The spore's canonical content-addressed identity (ADR-003). |
-| `mycelium_std_spore::manifest_of` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:321` | The reconstruction manifest of a `SporeUnit`, if any — `None` for project spores without one. |
+| `mycelium_std_spore::identity` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:229` | The spore's canonical content-addressed identity (ADR-003). |
+| `mycelium_std_spore::manifest_of` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:296` | The reconstruction manifest of a `SporeUnit`, if any — `None` for project spores without one. |
 | `mycelium_std_spore::recon_manifest` | mod | `crates/mycelium-std-spore/src/lib.rs:62` | — |
 | `mycelium_std_spore::recon_manifest::ReconManifest::declared_strength` | fn | `crates/mycelium-std-spore/src/recon_manifest.rs:126` | The declared guarantee strength from the manifest's bound certificate. |
 | `mycelium_std_spore::recon_manifest::ReconManifest::delta` | fn | `crates/mycelium-std-spore/src/recon_manifest.rs:164` | The bound's failure-probability δ, if this is a `ProbabilityBound` (the common case for |
@@ -1974,10 +1974,10 @@
 | `mycelium_std_spore::recon_manifest::RegrowthResult::strength` | fn | `crates/mycelium-std-spore/src/recon_manifest.rs:277` | The honest guarantee strength — **derived** from the bound's basis (never fabricated, |
 | `mycelium_std_spore::spore_ops` | mod | `crates/mycelium-std-spore/src/lib.rs:63` | — |
 | `mycelium_std_spore::spore_ops::SporeUnit::from_manifest` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:127` | Build a `SporeUnit` from a parsed `Manifest` and the project directory. |
-| `mycelium_std_spore::spore_ops::SporeUnit::from_value` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:156` | The degenerate `spore(v)` case (ADR-013 §2): build a spore whose payload is a single value |
-| `mycelium_std_spore::spore_ops::SporeUnit::manifest` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:240` | The reconstruction manifest, if this spore carries one. |
-| `mycelium_std_spore::spore_ops::SporeUnit::raw` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:246` | The raw M-368 spore (for consumers that need the full project representation). |
-| `mycelium_std_spore::verify` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:208` | Verify the spore: recompute the component-DAG hash and compare to the declared identity. |
+| `mycelium_std_spore::spore_ops::SporeUnit::from_value` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:158` | The degenerate `spore(v)` case (ADR-013 §2): build a spore whose payload is a single value |
+| `mycelium_std_spore::spore_ops::SporeUnit::manifest` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:242` | The reconstruction manifest, if this spore carries one. |
+| `mycelium_std_spore::spore_ops::SporeUnit::raw` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:248` | The raw M-368 spore (for consumers that need the full project representation). |
+| `mycelium_std_spore::verify` | fn | `crates/mycelium-std-spore/src/spore_ops.rs:210` | Verify the spore: recompute the component-DAG hash and compare to the declared identity. |
 
 ## mycelium-std-swap
 
@@ -2015,11 +2015,11 @@
 | `mycelium_std_sys::guarantee_matrix::MATRIX:` | const | `crates/mycelium-std-sys/src/guarantee_matrix.rs:87` | The `std-sys` syscall-floor guarantee matrix — one row per exported floor op. |
 | `mycelium_std_sys::guarantee_matrix::MatrixRow` | struct | `crates/mycelium-std-sys/src/guarantee_matrix.rs:71` | One row in the `std-sys` syscall-floor guarantee matrix (RFC-0016 §4.5). |
 | `mycelium_std_sys::io` | mod | `crates/mycelium-std-sys/src/lib.rs:50` | — |
-| `mycelium_std_sys::io::flush_out` | fn | `crates/mycelium-std-sys/src/io.rs:64` | \[Declared\] Flush stdout — surfaces any deferred OS write error explicitly (G2), so a buffered |
-| `mycelium_std_sys::io::read_line` | fn | `crates/mycelium-std-sys/src/io.rs:43` | \[Declared\] Read a single line from stdin (including the trailing newline if present). |
-| `mycelium_std_sys::io::read_to_end` | fn | `crates/mycelium-std-sys/src/io.rs:35` | \[Declared\] Read **all** of stdin to end-of-input. |
-| `mycelium_std_sys::io::write_err` | fn | `crates/mycelium-std-sys/src/io.rs:58` | \[Declared\] Write all of `bytes` to stderr. |
-| `mycelium_std_sys::io::write_out` | fn | `crates/mycelium-std-sys/src/io.rs:52` | \[Declared\] Write all of `bytes` to stdout. |
+| `mycelium_std_sys::io::flush_out` | fn | `crates/mycelium-std-sys/src/io.rs:163` | \[Declared\] Flush stdout — surfaces any deferred OS write error explicitly (G2), so a buffered |
+| `mycelium_std_sys::io::read_line` | fn | `crates/mycelium-std-sys/src/io.rs:142` | \[Declared\] Read a single line from stdin (including the trailing newline if present). |
+| `mycelium_std_sys::io::read_to_end` | fn | `crates/mycelium-std-sys/src/io.rs:53` | \[Declared\] Read **all** of stdin to end-of-input — **UNBOUNDED, TRUSTED-ONLY**. |
+| `mycelium_std_sys::io::write_err` | fn | `crates/mycelium-std-sys/src/io.rs:157` | \[Declared\] Write all of `bytes` to stderr. |
+| `mycelium_std_sys::io::write_out` | fn | `crates/mycelium-std-sys/src/io.rs:151` | \[Declared\] Write all of `bytes` to stdout. |
 | `mycelium_std_sys::math` | mod | `crates/mycelium-std-sys/src/lib.rs:51` | — |
 | `mycelium_std_sys::math::acos` | fn | `crates/mycelium-std-sys/src/math.rs:37` | \[Declared\] `acos(x)`. |
 | `mycelium_std_sys::math::asin` | fn | `crates/mycelium-std-sys/src/math.rs:32` | \[Declared\] `asin(x)`. |
@@ -2039,9 +2039,9 @@
 | `mycelium_std_sys::rand::EntropyError` | enum | `crates/mycelium-std-sys/src/rand.rs:37` | Errors from platform entropy operations. |
 | `mycelium_std_sys::rand::fill_bytes` | fn | `crates/mycelium-std-sys/src/rand.rs:70` | \[Declared\] Fill `buf` with bytes from the OS entropy source (`/dev/urandom`). |
 | `mycelium_std_sys::sys` | mod | `crates/mycelium-std-sys/src/lib.rs:53` | — |
-| `mycelium_std_sys::sys::args` | fn | `crates/mycelium-std-sys/src/sys.rs:48` | \[Declared\] The process's command-line arguments (including arg 0). |
-| `mycelium_std_sys::sys::exit` | fn | `crates/mycelium-std-sys/src/sys.rs:30` | \[Declared\] Terminate the process with `code`. |
-| `mycelium_std_sys::sys::get_env` | fn | `crates/mycelium-std-sys/src/sys.rs:38` | \[Declared\] Read environment variable `name`. |
+| `mycelium_std_sys::sys::args` | fn | `crates/mycelium-std-sys/src/sys.rs:74` | \[Declared\] The process's command-line arguments (including arg 0), parsed to `String`s. |
+| `mycelium_std_sys::sys::exit` | fn | `crates/mycelium-std-sys/src/sys.rs:32` | \[Declared\] Terminate the process with `code`. |
+| `mycelium_std_sys::sys::get_env` | fn | `crates/mycelium-std-sys/src/sys.rs:40` | \[Declared\] Read environment variable `name`. |
 | `mycelium_std_sys::time` | mod | `crates/mycelium-std-sys/src/lib.rs:54` | — |
 | `mycelium_std_sys::time::mono_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:41` | \[Declared\] Returns monotonic nanoseconds since an unspecified process-local epoch. |
 | `mycelium_std_sys::time::sleep_nanos` | fn | `crates/mycelium-std-sys/src/time.rs:57` | \[Declared\] Pause the current thread for approximately `nanos` nanoseconds. |
@@ -3096,7 +3096,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::guarantee::GuaranteeStrength::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::guarantee::GuaranteeStrength::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_core::guarantee::GuaranteeStrength::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_core::id::ContentHash` | dedup-alias: same definition as `mycelium_core::ContentHash` at crates/mycelium-core/src/id.rs:9 — one canonical row kept |
+| `mycelium_core::id::ContentHash` | dedup-alias: same definition as `mycelium_core::ContentHash` at crates/mycelium-core/src/id.rs:20 — one canonical row kept |
 | `mycelium_core::id::ContentHash::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::id::ContentHash::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::id::ContentHash::cmp` | definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated |
@@ -3339,7 +3339,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::recon::ReconMode::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::recon::ReconMode::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_core::recon::ReconMode::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_core::repr::Repr` | dedup-alias: same definition as `mycelium_core::Repr` at crates/mycelium-core/src/repr.rs:57 — one canonical row kept |
+| `mycelium_core::repr::Repr` | dedup-alias: same definition as `mycelium_core::Repr` at crates/mycelium-core/src/repr.rs:79 — one canonical row kept |
 | `mycelium_core::repr::Repr::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::Repr::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::Repr::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
@@ -3350,7 +3350,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::repr::Repr::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::Repr::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::Repr::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_core::repr::ScalarKind` | dedup-alias: same definition as `mycelium_core::ScalarKind` at crates/mycelium-core/src/repr.rs:14 — one canonical row kept |
+| `mycelium_core::repr::ScalarKind` | dedup-alias: same definition as `mycelium_core::ScalarKind` at crates/mycelium-core/src/repr.rs:36 — one canonical row kept |
 | `mycelium_core::repr::ScalarKind::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::ScalarKind::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::ScalarKind::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
@@ -3361,7 +3361,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::repr::ScalarKind::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::ScalarKind::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::ScalarKind::serialize` | definition not found via regex heuristic (kind='fn', name='serialize') — possibly macro-generated or cfg-gated |
-| `mycelium_core::repr::SparsityClass` | dedup-alias: same definition as `mycelium_core::SparsityClass` at crates/mycelium-core/src/repr.rs:44 — one canonical row kept |
+| `mycelium_core::repr::SparsityClass` | dedup-alias: same definition as `mycelium_core::SparsityClass` at crates/mycelium-core/src/repr.rs:66 — one canonical row kept |
 | `mycelium_core::repr::SparsityClass::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::SparsityClass::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::repr::SparsityClass::deserialize` | definition not found via regex heuristic (kind='fn', name='deserialize') — possibly macro-generated or cfg-gated |
@@ -4960,14 +4960,14 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_proj::manifest::Dependency::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::Dependency::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::Dependency::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_proj::manifest::Manifest` | dedup-alias: same definition as `mycelium_proj::Manifest` at crates/mycelium-proj/src/manifest.rs:107 — one canonical row kept |
+| `mycelium_proj::manifest::Manifest` | dedup-alias: same definition as `mycelium_proj::Manifest` at crates/mycelium-proj/src/manifest.rs:110 — one canonical row kept |
 | `mycelium_proj::manifest::Manifest::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::Manifest::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::Manifest::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::Manifest::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::Manifest::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::Manifest::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_proj::manifest::ManifestError` | dedup-alias: same definition as `mycelium_proj::ManifestError` at crates/mycelium-proj/src/manifest.rs:122 — one canonical row kept |
+| `mycelium_proj::manifest::ManifestError` | dedup-alias: same definition as `mycelium_proj::ManifestError` at crates/mycelium-proj/src/manifest.rs:125 — one canonical row kept |
 | `mycelium_proj::manifest::ManifestError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::ManifestError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::ManifestError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
@@ -4990,7 +4990,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_proj::manifest::ProjectKind::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::ProjectKind::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::ProjectKind::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_proj::manifest::SporeConfig` | dedup-alias: same definition as `mycelium_proj::SporeConfig` at crates/mycelium-proj/src/manifest.rs:99 — one canonical row kept |
+| `mycelium_proj::manifest::SporeConfig` | dedup-alias: same definition as `mycelium_proj::SporeConfig` at crates/mycelium-proj/src/manifest.rs:102 — one canonical row kept |
 | `mycelium_proj::manifest::SporeConfig::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::SporeConfig::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::SporeConfig::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
@@ -5017,7 +5017,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_proj::manifest::Toolchain::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::Toolchain::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::manifest::Toolchain::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_proj::manifest::parse_manifest` | dedup-alias: same definition as `mycelium_proj::parse_manifest` at crates/mycelium-proj/src/manifest.rs:166 — one canonical row kept |
+| `mycelium_proj::manifest::parse_manifest` | dedup-alias: same definition as `mycelium_proj::parse_manifest` at crates/mycelium-proj/src/manifest.rs:169 — one canonical row kept |
 | `mycelium_proj::resolve::Origin` | dedup-alias: same definition as `mycelium_proj::Origin` at crates/mycelium-proj/src/resolve.rs:23 — one canonical row kept |
 | `mycelium_proj::resolve::Origin::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::resolve::Origin::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -5167,7 +5167,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_spore::registry::Resolved::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_spore::registry::artifact_hash` | dedup-alias: same definition as `mycelium_spore::artifact_hash` at crates/mycelium-spore/src/registry.rs:121 — one canonical row kept |
 | `mycelium_spore::registry::publish` | dedup-alias: same definition as `mycelium_spore::publish` at crates/mycelium-spore/src/registry.rs:176 — one canonical row kept |
-| `mycelium_spore::registry::resolve` | dedup-alias: same definition as `mycelium_spore::resolve` at crates/mycelium-spore/src/registry.rs:268 — one canonical row kept |
+| `mycelium_spore::registry::resolve` | dedup-alias: same definition as `mycelium_spore::resolve` at crates/mycelium-spore/src/registry.rs:267 — one canonical row kept |
 | `mycelium_std_cmp::Bf16Bits::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_std_cmp::Bf16Bits::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_cmp::Bf16Bits::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -6317,14 +6317,14 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_spore::spore_ops::SporeUnit::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_spore::spore_ops::SporeUnit::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_std_spore::spore_ops::SporeUnit::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_spore::spore_ops::SporeUnit::identity` | dedup-alias: same definition as `mycelium_std_spore::identity` at crates/mycelium-std-spore/src/spore_ops.rs:227 — one canonical row kept |
-| `mycelium_std_spore::spore_ops::SporeUnit::identity` | dedup-alias: same definition as `mycelium_std_spore::identity` at crates/mycelium-std-spore/src/spore_ops.rs:227 — one canonical row kept |
-| `mycelium_std_spore::spore_ops::SporeUnit::verify` | dedup-alias: same definition as `mycelium_std_spore::verify` at crates/mycelium-std-spore/src/spore_ops.rs:208 — one canonical row kept |
-| `mycelium_std_spore::spore_ops::SporeUnit::verify` | dedup-alias: same definition as `mycelium_std_spore::verify` at crates/mycelium-std-spore/src/spore_ops.rs:208 — one canonical row kept |
-| `mycelium_std_spore::spore_ops::explain_spore` | dedup-alias: same definition as `mycelium_std_spore::explain_spore` at crates/mycelium-std-spore/src/spore_ops.rs:344 — one canonical row kept |
-| `mycelium_std_spore::spore_ops::identity` | dedup-alias: same definition as `mycelium_std_spore::identity` at crates/mycelium-std-spore/src/spore_ops.rs:227 — one canonical row kept |
-| `mycelium_std_spore::spore_ops::manifest_of` | dedup-alias: same definition as `mycelium_std_spore::manifest_of` at crates/mycelium-std-spore/src/spore_ops.rs:321 — one canonical row kept |
-| `mycelium_std_spore::spore_ops::verify` | dedup-alias: same definition as `mycelium_std_spore::verify` at crates/mycelium-std-spore/src/spore_ops.rs:208 — one canonical row kept |
+| `mycelium_std_spore::spore_ops::SporeUnit::identity` | dedup-alias: same definition as `mycelium_std_spore::identity` at crates/mycelium-std-spore/src/spore_ops.rs:229 — one canonical row kept |
+| `mycelium_std_spore::spore_ops::SporeUnit::identity` | dedup-alias: same definition as `mycelium_std_spore::identity` at crates/mycelium-std-spore/src/spore_ops.rs:229 — one canonical row kept |
+| `mycelium_std_spore::spore_ops::SporeUnit::verify` | dedup-alias: same definition as `mycelium_std_spore::verify` at crates/mycelium-std-spore/src/spore_ops.rs:210 — one canonical row kept |
+| `mycelium_std_spore::spore_ops::SporeUnit::verify` | dedup-alias: same definition as `mycelium_std_spore::verify` at crates/mycelium-std-spore/src/spore_ops.rs:210 — one canonical row kept |
+| `mycelium_std_spore::spore_ops::explain_spore` | dedup-alias: same definition as `mycelium_std_spore::explain_spore` at crates/mycelium-std-spore/src/spore_ops.rs:319 — one canonical row kept |
+| `mycelium_std_spore::spore_ops::identity` | dedup-alias: same definition as `mycelium_std_spore::identity` at crates/mycelium-std-spore/src/spore_ops.rs:229 — one canonical row kept |
+| `mycelium_std_spore::spore_ops::manifest_of` | dedup-alias: same definition as `mycelium_std_spore::manifest_of` at crates/mycelium-std-spore/src/spore_ops.rs:296 — one canonical row kept |
+| `mycelium_std_spore::spore_ops::verify` | dedup-alias: same definition as `mycelium_std_spore::verify` at crates/mycelium-std-spore/src/spore_ops.rs:210 — one canonical row kept |
 | `mycelium_std_swap::BF16_MIN_NORMAL` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_swap::BF16_REL_EPS` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_swap::Bound` | re-export (pub use) — cannot locate definition without type resolution |

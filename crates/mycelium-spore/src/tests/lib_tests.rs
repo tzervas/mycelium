@@ -307,7 +307,12 @@ mod injectivity {
 
     fn dep(name: &str, phylum: &str, hash: &str) -> ResolvedDep {
         // `version` is metadata (excluded from identity); fixed here so it never confounds the test.
-        ResolvedDep { name: name.into(), phylum: phylum.into(), hash: hash.into(), version: None }
+        ResolvedDep {
+            name: name.into(),
+            phylum: phylum.into(),
+            hash: hash.into(),
+            version: None,
+        }
     }
 
     #[test]
@@ -319,7 +324,10 @@ mod injectivity {
         let deps2 = vec![dep("a", "b", "c\n  d e f")];
         let id1 = content_address(ProjectKind::Program, &[], &[], &deps1);
         let id2 = content_address(ProjectKind::Program, &[], &[], &deps2);
-        assert_ne!(id1, id2, "v1 must distinguish two distinct dep DAGs that aliased under v0");
+        assert_ne!(
+            id1, id2,
+            "v1 must distinguish two distinct dep DAGs that aliased under v0"
+        );
     }
 
     #[test]
@@ -341,8 +349,14 @@ mod injectivity {
         let h1 = ch('1');
         let h2 = ch('2');
         let src_a = vec![
-            SourceFile { path: "a.myc".into(), hash: h1.clone() },
-            SourceFile { path: "b.myc".into(), hash: h2.clone() },
+            SourceFile {
+                path: "a.myc".into(),
+                hash: h1.clone(),
+            },
+            SourceFile {
+                path: "b.myc".into(),
+                hash: h2.clone(),
+            },
         ];
         let src_b = vec![SourceFile {
             path: format!("a.myc {}\n  b.myc", h1.as_str()),
@@ -369,11 +383,18 @@ mod injectivity {
         ];
         let ids: Vec<_> = inputs
             .iter()
-            .map(|d| content_address(ProjectKind::Program, &[], &[], d).as_str().to_owned())
+            .map(|d| {
+                content_address(ProjectKind::Program, &[], &[], d)
+                    .as_str()
+                    .to_owned()
+            })
             .collect();
         for i in 0..ids.len() {
             for j in (i + 1)..ids.len() {
-                assert_ne!(ids[i], ids[j], "adversarial inputs {i} and {j} must not collide under v1");
+                assert_ne!(
+                    ids[i], ids[j],
+                    "adversarial inputs {i} and {j} must not collide under v1"
+                );
             }
         }
     }
