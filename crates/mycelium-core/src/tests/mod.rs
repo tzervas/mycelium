@@ -2,6 +2,7 @@
 //! source module under test). Extracted as-touched (M-797); new modules land here directly.
 
 mod cert_mode;
+mod id;
 #[path = "lib.rs"]
 mod lib_root;
 mod meta;

@@ -194,7 +194,7 @@ impl Lexer {
                 '<' => self.lex_angle_or_trit(pos)?,
                 '=' => self.lex_eq(),
                 '-' => self.lex_dash(),
-                '0' if self.peek2() == Some('b') => self.lex_binary(),
+                '0' if self.peek2() == Some('b') => self.lex_binary(pos)?,
                 c if c.is_ascii_digit() => self.lex_int(pos)?,
                 c if is_ident_start(c) => self.lex_ident(),
                 other => {
@@ -336,19 +336,33 @@ impl Lexer {
         Ok(self.single(Tok::LAngle))
     }
 
-    fn lex_binary(&mut self) -> Tok {
+    fn lex_binary(&mut self, pos: Pos) -> Result<Tok, ParseError> {
         self.bump(); // '0'
         self.bump(); // 'b'
         let mut digits = String::new();
+        // Track whether any actual binary digit (not just a `_` separator) was scanned: a
+        // base-prefixed literal must carry a value. `0b` alone, or `0b_`, is a never-silent
+        // lex error (G2) — the literal is parsed only when it has at least one `0`/`1`.
+        let mut saw_digit = false;
         while let Some(c) = self.peek() {
-            if c == '0' || c == '1' || c == '_' {
+            if c == '0' || c == '1' {
+                saw_digit = true;
+                digits.push(c);
+                self.bump();
+            } else if c == '_' {
                 digits.push(c);
                 self.bump();
             } else {
                 break;
             }
         }
-        Tok::BinLit(digits)
+        if !saw_digit {
+            return Err(ParseError::new(
+                pos,
+                "binary literal `0b` has no digits (expected at least one `0` or `1`)".to_owned(),
+            ));
+        }
+        Ok(Tok::BinLit(digits))
     }
 
     fn lex_int(&mut self, pos: Pos) -> Result<Tok, ParseError> {
@@ -733,5 +747,62 @@ mod tests {
             comments.is_empty(),
             "no comments in source => empty vec: {comments:?}"
         );
+    }
+
+    // -------------------------------------------------------------------------
+    // DN-40 §3 (low) — base-prefixed literal with no digits is a never-silent
+    // lex error (G2). A `0b` prefix that scans no `0`/`1` is rejected, naming the
+    // offending position; valid binary / trit literals are unaffected.
+    // -------------------------------------------------------------------------
+
+    /// `0b` with no following binary digit is a lex error, not a silently-empty `BinLit`.
+    #[test]
+    fn lex_binary_empty_literal_is_a_lex_error() {
+        let err = lex("0b").expect_err("`0b` alone must be a lex error");
+        assert!(
+            err.to_string().contains("no digits"),
+            "error must name the empty-binary-literal cause: {err}"
+        );
+    }
+
+    /// `0b` followed only by a `_` separator (no actual `0`/`1`) carries no value and is rejected.
+    #[test]
+    fn lex_binary_only_separator_is_a_lex_error() {
+        lex("0b_").expect_err("`0b_` (separator, no digit) must be a lex error");
+    }
+
+    /// `0b` at end of a larger source still errors (no digit before EOF), and the error is raised
+    /// rather than emitting an empty token (never-silent).
+    #[test]
+    fn lex_binary_empty_literal_in_context_is_a_lex_error() {
+        lex("fn f() -> Binary{1} = 0b")
+            .expect_err("trailing `0b` with no digit must be a lex error");
+    }
+
+    /// Valid binary literals still lex to a `BinLit` carrying their digits (regression guard).
+    #[test]
+    fn lex_binary_valid_literals_still_lex() {
+        assert_eq!(toks("0b0"), vec![Tok::BinLit("0".to_owned()), Tok::Eof]);
+        assert_eq!(toks("0b1"), vec![Tok::BinLit("1".to_owned()), Tok::Eof]);
+        assert_eq!(
+            toks("0b1010"),
+            vec![Tok::BinLit("1010".to_owned()), Tok::Eof]
+        );
+        // A `_` separator is allowed once at least one real digit is present.
+        assert_eq!(toks("0b1_0"), vec![Tok::BinLit("1_0".to_owned()), Tok::Eof]);
+    }
+
+    /// Trit literals use the `<…>` angle form (not a `0t` prefix); the empty case `<>` is already
+    /// safe (it falls through to `LAngle`, never an empty `TritLit`). Valid trit literals still lex.
+    /// (See FLAG in the leaf report: this lexer has no `0t` literal; `0t` lexes as int `0` + ident.)
+    #[test]
+    fn lex_trit_valid_literals_still_lex() {
+        assert_eq!(
+            toks("<+-0>"),
+            vec![Tok::TritLit("+-0".to_owned()), Tok::Eof]
+        );
+        assert_eq!(toks("<0>"), vec![Tok::TritLit("0".to_owned()), Tok::Eof]);
+        // `<>` is NOT a trit literal: lookahead fails, so it lexes as the `<`/`>` angle pair.
+        assert_eq!(toks("<>"), vec![Tok::LAngle, Tok::RAngle, Tok::Eof]);
     }
 }

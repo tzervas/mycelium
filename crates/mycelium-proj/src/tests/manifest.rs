@@ -198,3 +198,93 @@ fn certification_unknown_mode_is_explicit_error() {
         .unwrap_err();
     assert!(e.message.contains("unknown @certification mode"), "{e}");
 }
+
+// --- DN-40 §3 input-validation: duplicate keys are rejected, never silently last-wins ---
+
+#[test]
+fn a_duplicate_project_key_is_rejected_not_last_wins() {
+    // Two `name =` lines would otherwise let the second silently overwrite the first (G2).
+    let e = parse_manifest("[project]\nname=\"a\"\nkind=\"phylum\"\nname=\"b\"\n").unwrap_err();
+    assert!(e.message.contains("duplicate"), "{e}");
+    assert!(
+        e.message.contains("name"),
+        "should name the offending key: {e}"
+    );
+}
+
+#[test]
+fn a_duplicate_key_in_each_interpreted_table_is_rejected() {
+    // toolchain
+    assert!(parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[toolchain]\nlints=\"a\"\nlints=\"b\"\n"
+    )
+    .unwrap_err()
+    .message
+    .contains("duplicate"));
+    // surface
+    assert!(parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[surface]\nexports=[]\nexports=[\"a\"]\n"
+    )
+    .unwrap_err()
+    .message
+    .contains("duplicate"));
+    // dependencies (a repeated dependency name)
+    assert!(parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\nd={ phylum=\"d\" }\nd={ phylum=\"d\" }\n"
+    )
+    .unwrap_err()
+    .message
+    .contains("duplicate"));
+    // spore
+    assert!(parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[spore]\ninclude=[]\ninclude=[\"s\"]\n"
+    )
+    .unwrap_err()
+    .message
+    .contains("duplicate"));
+}
+
+#[test]
+fn a_duplicate_table_is_rejected() {
+    let e = parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[toolchain]\nformat=\"a\"\n[toolchain]\nlints=\"b\"\n",
+    )
+    .unwrap_err();
+    assert!(e.message.contains("duplicate"), "{e}");
+    assert!(
+        e.message.contains("toolchain"),
+        "should name the offending table: {e}"
+    );
+}
+
+// --- DN-40 §3 input-validation: deeply-nested TOML is refused, never a stack-exhausting crash ---
+
+#[test]
+fn deeply_nested_array_is_refused_not_a_crash() {
+    // A single-line value nested far past MAX_VALUE_DEPTH (16). The parser must return an explicit
+    // error, not recurse to stack exhaustion (DoS bound, G2).
+    let nesting = "[".repeat(2_000);
+    let src = format!("[project]\nname=\"x\"\nkind=\"phylum\"\nkeywords={nesting}\n");
+    let e = parse_manifest(&src).unwrap_err();
+    assert!(e.message.contains("nests deeper"), "{e}");
+}
+
+#[test]
+fn deeply_nested_inline_table_is_refused_not_a_crash() {
+    // Deeply-nested inline tables hit the same depth cap.
+    let nesting = "{ a = ".repeat(2_000);
+    let src = format!("[project]\nname=\"x\"\nkind=\"phylum\"\nlang={nesting}\n");
+    let e = parse_manifest(&src).unwrap_err();
+    assert!(e.message.contains("nests deeper"), "{e}");
+}
+
+#[test]
+fn a_shallow_nested_value_within_the_depth_limit_still_parses() {
+    // A normal dependency inline-table (depth 1) and a small list are well within the cap — the
+    // bound refuses pathological input without rejecting legitimate manifests.
+    let m = parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\nd={ phylum=\"d\", version=\"^1\" }\n",
+    )
+    .unwrap();
+    assert_eq!(m.dependencies.len(), 1);
+}

@@ -389,3 +389,191 @@ mod injectivity {
         assert_eq!(id_a, id_b, "the encoding must stay deterministic");
     }
 }
+
+// ─── DN-40 §3: the source walk is symlink-safe + bounded (build-DoS defence) ────
+//
+// The recursive `.myc` collection in `crate::walk` previously used `Path::is_dir()`, which **stats
+// the symlink target** rather than the link, and recursed with **no depth/cycle cap**. A symlinked
+// directory cycle therefore produced an unbounded / infinite walk — a denial-of-service on the
+// build (DN-40 §3 medium). The fix:
+//   (a) classifies each entry via `symlink_metadata` (stats the link, not its target) and **does
+//       not descend into symlinked directory entries** — so no directory cycle can be re-entered;
+//   (b) caps nesting at `MAX_WALK_DEPTH`, returning an explicit `SporeError::Publish` (never-silent;
+//       G2) instead of overflowing the stack.
+// These tests are the regression witnesses. Symlink creation is Unix-only (`std::os::unix`), so the
+// cycle/skip tests are `#[cfg(unix)]`; the "normal nested tree still collects" test is portable and
+// proves the bounded walk preserves the pre-existing behaviour for real directories.
+//
+// Guarantee: `Empirical` (the tests are concrete filesystem trials over the real `walk`, not a
+// machine-checked proof of every input). The cycle test asserts the walk **returns** (does not hang
+// / overflow) and handles the link explicitly; a stack-overflow regression would abort the process
+// and fail the test rather than pass silently.
+mod symlink_walk {
+    use std::io::Write;
+    use std::path::{Path, PathBuf};
+
+    use crate::build_spore;
+
+    use super::manifest_from;
+
+    /// A program manifest with no surface requirement (so the walk, not the surface, is under test).
+    const PROGRAM_MANIFEST: &str = "[project]\nname=\"walktest\"\nkind=\"program\"\n";
+
+    /// Make a unique scratch dir (no files); caller populates it.
+    fn scratch_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!(
+            "myc-spore-walk-{name}-{}",
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn write_myc(dir: &Path, rel: &str, body: &str) {
+        let p = dir.join(rel);
+        if let Some(parent) = p.parent() {
+            std::fs::create_dir_all(parent).unwrap();
+        }
+        let mut f = std::fs::File::create(p).unwrap();
+        f.write_all(body.as_bytes()).unwrap();
+    }
+
+    /// A normal nested directory tree still collects every real `.myc` source (the fix must preserve
+    /// the pre-existing behaviour for ordinary directories). Portable — no symlinks.
+    #[test]
+    fn normal_nested_tree_still_collects_all_sources() {
+        let dir = scratch_dir("nested");
+        write_myc(&dir, "top.myc", "nodule top\nfn a() -> Binary{1} = 0b0\n");
+        write_myc(
+            &dir,
+            "sub/mid.myc",
+            "nodule sub.mid\nfn b() -> Binary{1} = 0b1\n",
+        );
+        write_myc(
+            &dir,
+            "sub/deep/leaf.myc",
+            "nodule sub.deep.leaf\nfn c() -> Binary{1} = 0b0\n",
+        );
+
+        let spore = build_spore(&manifest_from(PROGRAM_MANIFEST), &dir).expect("builds");
+        let paths: Vec<&str> = spore.sources.iter().map(|s| s.path.as_str()).collect();
+        assert_eq!(
+            paths,
+            vec!["sub/deep/leaf.myc", "sub/mid.myc", "top.myc"],
+            "the bounded walk must still collect every real nested source, sorted"
+        );
+    }
+
+    /// A symlinked-directory **cycle** (a child symlink pointing back at an ancestor) does NOT hang
+    /// or overflow the stack: the walk skips the symlink and returns, collecting only the real
+    /// source. Under the old `Path::is_dir()` + no-cap walk this looped forever. Unix-only.
+    #[cfg(unix)]
+    #[test]
+    fn symlink_directory_cycle_does_not_hang_or_overflow() {
+        use std::os::unix::fs::symlink;
+
+        let dir = scratch_dir("cycle");
+        write_myc(&dir, "real.myc", "nodule real\nfn a() -> Binary{1} = 0b0\n");
+        // Create a subdir whose child `loop` symlinks back to the project root → a cycle.
+        let sub = dir.join("sub");
+        std::fs::create_dir_all(&sub).unwrap();
+        symlink(&dir, sub.join("loop")).unwrap();
+
+        // The walk must terminate (no hang / no stack overflow). If the fix regressed, this test
+        // would loop forever or abort the process — either way it would not pass.
+        let spore = build_spore(&manifest_from(PROGRAM_MANIFEST), &dir).expect("builds");
+        let paths: Vec<&str> = spore.sources.iter().map(|s| s.path.as_str()).collect();
+        assert_eq!(
+            paths,
+            vec!["real.myc"],
+            "the symlinked cycle must be skipped — only the real source is collected"
+        );
+    }
+
+    /// A symlink **to a directory of real `.myc` sources** is skipped (not traversed): the linked
+    /// tree's sources do NOT enter the deterministic content-addressed set. This is the same
+    /// mechanism as the cycle defence, observed on a finite (acyclic) link so the *skip* is what is
+    /// asserted. Unix-only.
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_directory_entry_is_not_traversed() {
+        use std::os::unix::fs::symlink;
+
+        // An external tree with a real source we must NOT pick up via a link.
+        let external = scratch_dir("external");
+        write_myc(
+            &external,
+            "hidden.myc",
+            "nodule hidden\nfn h() -> Binary{1} = 0b1\n",
+        );
+
+        let dir = scratch_dir("linkdir");
+        write_myc(&dir, "real.myc", "nodule real\nfn a() -> Binary{1} = 0b0\n");
+        symlink(&external, dir.join("linked")).unwrap();
+
+        let spore = build_spore(&manifest_from(PROGRAM_MANIFEST), &dir).expect("builds");
+        let paths: Vec<&str> = spore.sources.iter().map(|s| s.path.as_str()).collect();
+        assert_eq!(
+            paths,
+            vec!["real.myc"],
+            "a symlinked directory is never traversed — `linked/hidden.myc` must not appear"
+        );
+        assert!(
+            !paths.iter().any(|p| p.contains("hidden")),
+            "the linked tree's sources must not enter the content-addressed set"
+        );
+    }
+
+    /// The depth cap is an **explicit, exit-coded refusal** (never-silent; G2): a real directory
+    /// tree nested past `MAX_WALK_DEPTH` returns a `SporeError::Publish` naming the offending tree,
+    /// not a stack overflow. This is the defence-in-depth bound (independent of symlinks), so the
+    /// test uses ordinary directories and is portable.
+    #[test]
+    fn over_deep_real_tree_is_refused_explicitly() {
+        let dir = scratch_dir("toodeep");
+        // Build a chain of real directories deeper than the cap (cap + a margin), with a `.myc`
+        // file at the bottom so the walk actually descends the whole way.
+        let mut rel = String::new();
+        for _ in 0..(crate::MAX_WALK_DEPTH + 5) {
+            rel.push_str("d/");
+        }
+        rel.push_str("deep.myc");
+        write_myc(&dir, &rel, "nodule deep\nfn a() -> Binary{1} = 0b0\n");
+
+        let err = build_spore(&manifest_from(PROGRAM_MANIFEST), &dir).unwrap_err();
+        assert_eq!(
+            err.exit_code(),
+            3,
+            "the over-deep refusal is a publish error (exit 3)"
+        );
+        let msg = format!("{err}");
+        assert!(
+            msg.contains("nests deeper than"),
+            "the refusal must name the depth-cap breach (never-silent; G2): {msg}"
+        );
+    }
+
+    /// A symlinked `.myc` **file** is skipped too (only real files are content-addressed): the
+    /// symlink-classification short-circuits before the `.myc` extension branch. Unix-only.
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_myc_file_is_skipped() {
+        use std::os::unix::fs::symlink;
+
+        let dir = scratch_dir("linkfile");
+        write_myc(&dir, "real.myc", "nodule real\nfn a() -> Binary{1} = 0b0\n");
+        // A `.myc` symlink pointing at the real file — must not be collected as a second source.
+        symlink(dir.join("real.myc"), dir.join("alias.myc")).unwrap();
+
+        let spore = build_spore(&manifest_from(PROGRAM_MANIFEST), &dir).expect("builds");
+        let paths: Vec<&str> = spore.sources.iter().map(|s| s.path.as_str()).collect();
+        assert_eq!(
+            paths,
+            vec!["real.myc"],
+            "a symlinked .myc file is skipped — only the real file is content-addressed"
+        );
+    }
+}
