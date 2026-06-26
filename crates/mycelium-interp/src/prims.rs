@@ -535,17 +535,18 @@ fn as_seq<'a>(prim: &str, v: &'a Value) -> Result<&'a [Value], EvalError> {
 fn prim_seq_len(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     expect_arity(prim, args, 1)?;
     let elems = as_seq(prim, args[0])?;
-    // The seq's `len` is a `u32` field (well-formedness caps it at MAX_DIM ≤ 2^30), so 32 bits hold
-    // it exactly; render MSB-first.
-    let n = elems.len() as u32;
-    let out: Vec<bool> = (0..32).rev().map(|k| (n >> k) & 1 == 1).collect();
-    compose_result(
-        prim,
-        args,
-        Repr::Binary { width: 32 },
-        Payload::Bits(out),
-        ApproxRule::Refuse,
-    )
+    // The seq's `len` is a `u32` field (well-formedness caps it at MAX_DIM ≤ 2^30 ≤ 2^32), so 32
+    // bits hold it exactly. Use the same *checked* conversion as `bytes.len` rather than a silent
+    // `as u32` truncation — defensive parity in the trusted base, so a future path that ever yields
+    // an over-2^32 sequence refuses (G2) instead of wrapping.
+    let n = u32::try_from(elems.len()).map_err(|_| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: format!(
+            "sequence length {} exceeds the 32-bit length encoding",
+            elems.len()
+        ),
+    })?;
+    u32_as_binary32(prim, args, n)
 }
 
 /// `seq.get : (Seq<T, N>, Binary{W}) → T` — never-silent indexed access (RFC-0032 D3). An
@@ -557,16 +558,27 @@ fn prim_seq_get(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     let i = as_index(prim, args[1])?;
     match elems.get(i) {
         Some(e) => {
-            // The element is returned as-is (re-stamped with honest provenance). Exact inputs ⇒ an
-            // Exact result; there is no defined ε-composition rule for indexing an *approximate*
-            // sequence, so such an input is refused rather than fabricating a bound (G2/VR-5).
-            compose_result(
-                prim,
-                args,
-                e.repr().clone(),
-                e.payload().clone(),
-                ApproxRule::Refuse,
-            )
+            // Return the element faithfully at **its own** established basis (VR-5): the result's
+            // guarantee is the element's, never upgraded — an `Empirical`/`Declared` element must
+            // not re-stamp as `Exact` just because the container/index were `Exact`. It is then
+            // `meet`-downgraded by the container and index strengths (you cannot trust an element
+            // retrieved from a less-certain container more than that container). Indexing is exact
+            // and introduces no error, so the element's `bound` carries through unchanged; if that
+            // (guarantee, bound) pairing is internally inconsistent for some exotic container meta,
+            // `Meta::new` refuses (`EvalError::Wf`) rather than fabricating one (G2). Provenance is
+            // re-stamped `Derived` from the access inputs (lineage), as for any other prim result.
+            let guarantee = GuaranteeStrength::propagate(
+                e.meta().guarantee(),
+                args.iter().map(|v| v.meta().guarantee()),
+            );
+            let bound = e.meta().bound().cloned();
+            let provenance = Provenance::Derived {
+                op: operation_hash(prim),
+                inputs: args.iter().map(|v| v.content_hash()).collect(),
+            };
+            let meta =
+                Meta::new(provenance, guarantee, bound, None, None, None).map_err(EvalError::Wf)?;
+            Value::new(e.repr().clone(), e.payload().clone(), meta).map_err(EvalError::Wf)
         }
         None => Err(EvalError::PrimType {
             prim: prim.to_owned(),

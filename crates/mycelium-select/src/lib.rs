@@ -45,7 +45,8 @@ use mycelium_core::{
     PhysicalLayout, Repr, ScalarKind, SparsityClass, SparsityObs, Value,
 };
 
-/// The paradigm kinds, as a predicate-level discriminator (RFC-0001 §4.1; RFC-0032 D3 added `Seq`).
+/// The paradigm kinds, as a predicate-level discriminator (RFC-0001 §4.1; RFC-0032 D3 added `Seq`
+/// and D4 added `Bytes`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ParadigmKind {
     /// `Repr::Binary`.

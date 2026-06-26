@@ -36,7 +36,10 @@
 //!   there is no `Bytes` surface literal in the lexer/parser yet (FLAGGED). UTF-8 decode is written
 //!   in `.myc` over these byte prims and is not exercised here (no surface yet).
 
-use mycelium_core::{Meta, Node, Payload, Provenance, Repr, Value};
+use mycelium_core::{
+    Bound, BoundBasis, BoundKind, GuaranteeStrength, Meta, Node, NormKind, Payload, Provenance,
+    Repr, Value,
+};
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::{check_nodule, elaborate, parse, Evaluator};
 
@@ -481,6 +484,84 @@ fn seq_prims_refuse_non_sequence_operand() {
     assert!(
         l0.is_err() && aot.is_err(),
         "seq.len on a non-seq must refuse on both paths"
+    );
+}
+
+/// A `Binary{1}` value carrying a **`Declared`** guarantee (a user-asserted, unvalidated bound) — the
+/// pre-image for the VR-5 no-upgrade test below.
+fn b1_declared(truth: bool) -> Value {
+    let bound = Bound {
+        kind: BoundKind::Error {
+            eps: 0.1,
+            norm: NormKind::L2,
+        },
+        basis: BoundBasis::UserDeclared,
+    };
+    let meta = Meta::new(
+        Provenance::Root,
+        GuaranteeStrength::Declared,
+        Some(bound),
+        None,
+        None,
+        None,
+    )
+    .expect("well-formed Declared meta (M-I4)");
+    Value::new(Repr::Binary { width: 1 }, Payload::Bits(vec![truth]), meta)
+        .expect("well-formed declared bit")
+}
+
+/// VR-5 (regression for the pr-review Medium): `seq.get` must return the indexed element at **its
+/// own** established basis, never upgraded. A `Declared` element retrieved from an otherwise-`Exact`
+/// sequence+index must come back **`Declared`** (carrying its bound), not silently re-stamped `Exact`.
+/// Before the fix, `seq.get` propagated the guarantee from the container/index only and dropped the
+/// element's `Meta`, yielding an `Exact` result — a silent upgrade past basis.
+#[test]
+fn seq_get_preserves_a_declared_elements_guarantee() {
+    // An Exact-container `Seq<Binary{1}, 2>` whose element 0 is *Declared*, element 1 is Exact.
+    let seq = Value::new(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 1 }),
+            len: 2,
+        },
+        Payload::Seq(vec![b1_declared(true), b1_val(false)]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed seq with a declared element");
+
+    // get(seq, 0) → the Declared element: guarantee stays Declared, bound carried, value preserved.
+    let node = Node::Op {
+        prim: "seq.get".to_owned(),
+        args: vec![Node::Const(seq.clone()), Node::Const(idx8(0))],
+    };
+    let (l0, aot) = run_l0_and_aot(&node);
+    let l0 = l0.expect("seq.get(declared elem) L0-interp");
+    let aot = aot.expect("seq.get(declared elem) AOT");
+    assert_eq!(
+        l0.meta().guarantee(),
+        GuaranteeStrength::Declared,
+        "VR-5: seq.get must NOT upgrade a Declared element to Exact"
+    );
+    assert!(
+        l0.meta().bound().is_some(),
+        "the Declared element's bound must carry through, never silently dropped (G2)"
+    );
+    assert_eq!(l0.payload(), &Payload::Bits(vec![true]), "value preserved");
+    assert_eq!(
+        l0.meta().guarantee(),
+        aot.meta().guarantee(),
+        "L0-interp and AOT must agree on the preserved guarantee"
+    );
+
+    // get(seq, 1) → the Exact element stays Exact (no spurious downgrade either).
+    let node1 = Node::Op {
+        prim: "seq.get".to_owned(),
+        args: vec![Node::Const(seq), Node::Const(idx8(1))],
+    };
+    let (l0_1, _) = run_l0_and_aot(&node1);
+    assert_eq!(
+        l0_1.expect("seq.get(exact elem)").meta().guarantee(),
+        GuaranteeStrength::Exact,
+        "an Exact element from an Exact container stays Exact"
     );
 }
 
