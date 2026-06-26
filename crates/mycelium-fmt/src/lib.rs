@@ -1245,6 +1245,8 @@ fn render_literal(l: &mycelium_l1::ast::Literal) -> String {
     match l {
         Literal::Bin(s) => format!("0b{s}"),
         Literal::Trit(s) => format!("<{s}>"),
+        // RFC-0032 D4 (M-750): a `0x…` byte-string literal round-trips to its source form.
+        Literal::Bytes(s) => format!("0x{s}"),
         Literal::Int(i) => format!("{i}"),
         Literal::AmbientInt(p, i) => format!("{i} /* {p} (width from context) */"),
         Literal::List(es) => {
@@ -1272,6 +1274,9 @@ fn render_type_ref(t: &mycelium_l1::ast::TypeRef) -> String {
             format!("VSA{{{model}, {dim}, {}}}", sparsity_str(sparsity))
         }
         BaseType::Substrate(t) => format!("Substrate{{{t}}}"),
+        // RFC-0032 D3/D4 (M-749/M-750): `Seq{T, N}` / nullary `Bytes`.
+        BaseType::Seq { elem, len } => format!("Seq{{{}, {len}}}", render_type_ref(elem)),
+        BaseType::Bytes => "Bytes".to_owned(),
         BaseType::Named(n, args) if args.is_empty() => n.clone(),
         BaseType::Named(n, args) => {
             let a: Vec<String> = args.iter().map(render_type_ref).collect();

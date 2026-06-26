@@ -199,8 +199,8 @@ pub fn corpus() -> Vec<Case> {
         },
         Case {
             id: "rec-fold",
-            src: "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
-                   fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
+            src: "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
+                   fn checksum(bs: ByteList) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
                    fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
             fragment: Fragment::Recursion,
             note: "a `for` fold over a list spine (a synthesized Fix fold) returning a repr",

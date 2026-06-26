@@ -527,7 +527,10 @@ impl Resolver {
                 Literal::List(out)
             }
             // Tagged literals already name their paradigm; AmbientInt is only produced here.
-            Literal::Bin(_) | Literal::Trit(_) | Literal::AmbientInt(_, _) => l.clone(),
+            // RFC-0032 D4: a `0x…` byte-string literal is a tagged repr literal (no ambient).
+            Literal::Bin(_) | Literal::Trit(_) | Literal::Bytes(_) | Literal::AmbientInt(_, _) => {
+                l.clone()
+            }
         })
     }
 
@@ -750,6 +753,11 @@ impl core::fmt::Display for DisplayBase<'_> {
                 sparsity,
             } => write!(f, "VSA{{{model}, {dim}, {}}}", sparsity_str(sparsity)),
             BaseType::Substrate(t) => write!(f, "Substrate{{{t}}}"),
+            // RFC-0032 D3/D4: `Seq{T, N}` / nullary `Bytes`.
+            BaseType::Seq { elem, len } => {
+                write!(f, "Seq{{{}, {len}}}", print_type_ref(elem))
+            }
+            BaseType::Bytes => write!(f, "Bytes"),
             BaseType::Named(n, args) if args.is_empty() => write!(f, "{n}"),
             BaseType::Named(n, args) => {
                 let a: Vec<String> = args.iter().map(print_type_ref).collect();
@@ -890,6 +898,8 @@ fn print_literal(l: &Literal) -> String {
     match l {
         Literal::Bin(s) => format!("0b{s}"),
         Literal::Trit(s) => format!("<{s}>"),
+        // RFC-0032 D4: a `0x…` byte-string literal round-trips to its source form.
+        Literal::Bytes(s) => format!("0x{s}"),
         Literal::Int(i) => format!("{i}"),
         // A still-unresolved ambient decimal: show the decimal + its resolved paradigm (the width is
         // the checker's to fill — this only appears when expanding a type-form-only nodule).

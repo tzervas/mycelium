@@ -21,20 +21,20 @@
 //! refusals on every path**, never a silent wrap or a silent `false` — pinned by the refusal tests.
 //!
 //! # Scope boundary
-//! - **M-749** (`Repr::Seq`) lands its enabler coverage here as a **prim-level differential**
-//!   (`seq.get`/`seq.len` over directly-built L0 `Node`s: **L0-interp ≡ AOT**), plus the never-silent
-//!   out-of-bounds refusal on both paths. The full **three-way** (`.myc` surface) differential is
-//!   **deferred**: there is no `Seq` surface literal in the lexer/parser yet, so L1-eval over a
-//!   parsed `.myc` Seq program cannot be exercised — that wiring is FLAGGED for a follow-up (it edits
-//!   the `mycelium-l1` lexer/parser/checker, the `s10` collision surface). The prim-level path *is*
-//!   the trusted-base coverage (the kernel prim + the AOT env-machine over the same registry); it is
-//!   not faked or upgraded past its basis (G2/VR-5).
-//! - **M-750** (`Repr::Bytes`) lands its enabler coverage here as a **prim-level differential**
-//!   (`bytes.get`/`bytes.len`/`bytes.slice`/`bytes.concat` over directly-built L0 `Node`s:
-//!   **L0-interp ≡ AOT**), plus the never-silent out-of-bounds/inverted-range refusals on both
-//!   paths. Like the seq prims, the full **three-way** (`.myc` surface) differential is **deferred**:
-//!   there is no `Bytes` surface literal in the lexer/parser yet (FLAGGED). UTF-8 decode is written
-//!   in `.myc` over these byte prims and is not exercised here (no surface yet).
+//! - **M-749** (`Repr::Seq`) — the **`.myc` surface is now wired** (lexer/parser/checker/elaborator:
+//!   the `Seq{T, N}` type, the `[e1, …]` list literal, and the `seq_get`/`seq_len` prims). The full
+//!   **three-way** (`L1-eval ≡ elaborate→L0-interp ≡ AOT`) differential over the surface runs in the
+//!   `seq_*_surface_*` tests below, alongside the original **prim-level** differential
+//!   (`seq.get`/`seq.len` over directly-built L0 `Node`s: **L0-interp ≡ AOT**) and the never-silent
+//!   out-of-bounds refusal on both paths. Both layers are real (no faked/upgraded basis — G2/VR-5).
+//! - **M-750** (`Repr::Bytes`) — the **`.myc` surface is now wired** (the `Bytes` type, the `0x…` hex
+//!   literal, and the `bytes_get`/`bytes_len` prims). The full **three-way** differential over the
+//!   surface runs in the `bytes_*_surface_*` tests below, alongside the original **prim-level**
+//!   differential (`bytes.get`/`bytes.len`/`bytes.slice`/`bytes.concat` over directly-built L0
+//!   `Node`s: **L0-interp ≡ AOT**) and the never-silent out-of-range/inverted-range refusals. UTF-8
+//!   decode is written in `.myc` over these byte prims (per RFC-0032 D4) and is not exercised here.
+//! - **Never-silent surface rejects** (G2): a **heterogeneous** list literal and an **odd-hex** `0x…`
+//!   literal are explicit refusals at check/parse time — pinned by the `*_rejects` tests below.
 
 use mycelium_core::{
     Bound, BoundBasis, BoundKind, GuaranteeStrength, Meta, Node, NormKind, Payload, Provenance,
@@ -704,5 +704,141 @@ fn bytes_prims_refuse_non_bytes_operand() {
     assert!(
         l0.is_err() && aot.is_err(),
         "bytes.len on a non-bytes must refuse on both paths"
+    );
+}
+
+// ── M-749 surface: Seq{T,N} / `[..]` literal — full three-way differential (RFC-0032 D3) ─────────
+//
+// Now that the `.myc` surface exists (the `Seq{T, N}` type, the `[e1, …]` list literal, and the
+// `seq_get`/`seq_len` prims), the seq enabler runs the **full three-way** (L1-eval ≡
+// elaborate→L0-interp ≡ AOT) differential over a parsed `.myc` program — not only the prim-level
+// L0≡AOT layer above. `assert_three_way` checks all three paths agree AND equal the reference.
+
+/// The `Binary{32}` MSB-first encoding of `n` (the `seq_len`/`bytes_len` result shape).
+fn b32(n: u32) -> (Repr, Payload) {
+    let bits: Vec<bool> = (0..32).rev().map(|k| (n >> k) & 1 == 1).collect();
+    (Repr::Binary { width: 32 }, Payload::Bits(bits))
+}
+
+/// `[0b1, 0b0, 0b1]` ascribed to `Seq{Binary{1}, 3}` round-trips as a `Repr::Seq` value on all three
+/// paths — the first end-to-end proof the surface list literal builds a kernel sequence.
+#[test]
+fn seq_literal_surface_three_way() {
+    let expected_repr = Repr::Seq {
+        elem: Box::new(Repr::Binary { width: 1 }),
+        len: 3,
+    };
+    let expected_payload = Payload::Seq(vec![b1_val(true), b1_val(false), b1_val(true)]);
+    assert_three_way(
+        "seq literal [0b1,0b0,0b1]",
+        "nodule d\nfn main() -> Seq{Binary{1}, 3} = [0b1, 0b0, 0b1]",
+        &expected_repr,
+        &expected_payload,
+    );
+}
+
+/// `seq_get([0b1,0b0,0b1], i)` over the surface agrees on all three paths for each in-range index.
+/// The index is written as an explicit 8-bit `Binary{8}` literal (MSB-first).
+#[test]
+fn seq_get_surface_three_way() {
+    for (i, want) in [(0u8, true), (1, false), (2, true)] {
+        let (r, p) = b1(want);
+        let src =
+            format!("nodule d\nfn main() -> Binary{{1}} = seq_get([0b1, 0b0, 0b1], 0b{i:08b})");
+        assert_three_way(&format!("seq_get index {i}"), &src, &r, &p);
+    }
+}
+
+/// `seq_len([0b1,0b0,0b1])` over the surface is `Binary{32}(3)` on all three paths.
+#[test]
+fn seq_len_surface_three_way() {
+    let (r, p) = b32(3);
+    assert_three_way(
+        "seq_len",
+        "nodule d\nfn main() -> Binary{32} = seq_len([0b1, 0b0, 0b1])",
+        &r,
+        &p,
+    );
+}
+
+/// Never-silent (G2): a **heterogeneous** list literal is a static check refusal — the elements must
+/// be homogeneous, never silently coerced (RFC-0032 D3). `0b1` is `Binary{1}`, `0b00` is `Binary{2}`.
+#[test]
+fn seq_heterogeneous_elements_reject() {
+    let src = "nodule d\nfn main() -> Seq{Binary{1}, 2} = [0b1, 0b00]";
+    assert!(
+        check_nodule(&parse(src).expect("parses")).is_err(),
+        "a heterogeneous list literal must be a static check error, never a silent coercion"
+    );
+}
+
+/// Never-silent (G2): a list literal whose count disagrees with the ascribed `Seq{T, N}` length is a
+/// static refusal — never a silent truncation/padding (RFC-0032 D3).
+#[test]
+fn seq_length_mismatch_reject() {
+    let src = "nodule d\nfn main() -> Seq{Binary{1}, 5} = [0b1, 0b0, 0b1]";
+    assert!(
+        check_nodule(&parse(src).expect("parses")).is_err(),
+        "a list-length vs Seq{{N}} mismatch must be a static check error"
+    );
+}
+
+// ── M-750 surface: Bytes / `0x..` literal — full three-way differential (RFC-0032 D4) ────────────
+
+/// `0x48_65_6c_6c_6f` ("Hello") round-trips as a `Repr::Bytes` value on all three paths.
+#[test]
+fn bytes_literal_surface_three_way() {
+    let expected_payload = Payload::Bytes(vec![0x48, 0x65, 0x6c, 0x6c, 0x6f]);
+    assert_three_way(
+        "bytes literal 0x48_65_6c_6c_6f",
+        "nodule d\nfn main() -> Bytes = 0x48_65_6c_6c_6f",
+        &Repr::Bytes,
+        &expected_payload,
+    );
+}
+
+/// `bytes_get(0x_…, i)` over the surface is the indexed byte (`Binary{8}`) on all three paths.
+#[test]
+fn bytes_get_surface_three_way() {
+    // 0x01_02_03, index 1 → 0x02 == 0b0000_0010.
+    let want: Vec<bool> = (0..8).rev().map(|k| (0x02u8 >> k) & 1 == 1).collect();
+    assert_three_way(
+        "bytes_get index 1",
+        "nodule d\nfn main() -> Binary{8} = bytes_get(0x01_02_03, 0b0000_0001)",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits(want),
+    );
+}
+
+/// `bytes_len(0x01_02_03)` over the surface is `Binary{32}(3)` on all three paths.
+#[test]
+fn bytes_len_surface_three_way() {
+    let (r, p) = b32(3);
+    assert_three_way(
+        "bytes_len",
+        "nodule d\nfn main() -> Binary{32} = bytes_len(0x01_02_03)",
+        &r,
+        &p,
+    );
+}
+
+/// Never-silent (G2): an **odd-hex** `0x…` literal is a lex/parse refusal — a byte is two hex chars,
+/// never a silent half-byte (RFC-0032 D4). `0x123` has three hex digits.
+#[test]
+fn bytes_odd_hex_reject() {
+    let src = "nodule d\nfn main() -> Bytes = 0x123";
+    assert!(
+        parse(src).is_err(),
+        "an odd-hex `0x…` literal must be a parse error, never a silent half-byte"
+    );
+}
+
+/// Never-silent (G2): an empty `0x` (no hex digits) is a lex/parse refusal.
+#[test]
+fn bytes_empty_hex_reject() {
+    let src = "nodule d\nfn main() -> Bytes = 0x";
+    assert!(
+        parse(src).is_err(),
+        "an empty `0x` literal must be a parse error"
     );
 }

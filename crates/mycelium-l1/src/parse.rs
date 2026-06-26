@@ -802,6 +802,27 @@ impl Parser {
                 self.expect(&Tok::RBrace, "`}` to close `Substrate{…}`")?;
                 Ok(BaseType::Substrate(name))
             }
+            // RFC-0032 D3 (M-749): `Seq{T, N}` — a repr-descriptor `{}` like the other repr types.
+            // The element type `T` is any `TypeRef` (recursing into `parse_type_ref`); `N` is a
+            // `u32` literal. The `{T, N}` order disambiguates trivially: the first descriptor slot is
+            // a type, the second a length (separated by `,`).
+            Tok::Seq => {
+                self.bump();
+                self.expect(&Tok::LBrace, "`{` after `Seq`")?;
+                let elem = self.parse_type_ref()?;
+                self.expect(&Tok::Comma, "`,` between the element type and the length")?;
+                let len = self.u32_lit()?;
+                self.expect(&Tok::RBrace, "`}` to close `Seq{…}`")?;
+                Ok(BaseType::Seq {
+                    elem: Box::new(elem),
+                    len,
+                })
+            }
+            // RFC-0032 D4 (M-750): `Bytes` — a nullary repr keyword (no descriptor).
+            Tok::Bytes => {
+                self.bump();
+                Ok(BaseType::Bytes)
+            }
             Tok::Ident(s) => {
                 self.bump();
                 let args = self.parse_type_args_opt()?;
@@ -1180,7 +1201,7 @@ impl Parser {
                     Ok(Pattern::Ident(s))
                 }
             }
-            Tok::BinLit(_) | Tok::TritLit(_) | Tok::Int(_) | Tok::LBracket => {
+            Tok::BinLit(_) | Tok::TritLit(_) | Tok::BytesLit(_) | Tok::Int(_) | Tok::LBracket => {
                 Ok(Pattern::Lit(self.parse_literal()?))
             }
             _ => self.err("a pattern"),
@@ -1294,7 +1315,7 @@ impl Parser {
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         match self.cur() {
-            Tok::BinLit(_) | Tok::TritLit(_) | Tok::Int(_) | Tok::LBracket => {
+            Tok::BinLit(_) | Tok::TritLit(_) | Tok::BytesLit(_) | Tok::Int(_) | Tok::LBracket => {
                 Ok(Expr::Lit(self.parse_literal()?))
             }
             Tok::Ident(_) => Ok(Expr::Path(self.parse_path()?)),
@@ -1317,6 +1338,12 @@ impl Parser {
             Tok::TritLit(s) => {
                 self.bump();
                 Ok(Literal::Trit(s))
+            }
+            // RFC-0032 D4 (M-750): `0x…` byte-string literal; the lexer already validated even-hex
+            // parity / non-empty, so the inner string is stored verbatim.
+            Tok::BytesLit(s) => {
+                self.bump();
+                Ok(Literal::Bytes(s))
             }
             Tok::Int(n) => {
                 self.bump();

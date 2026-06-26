@@ -407,12 +407,61 @@ impl<'e> Evaluator<'e> {
             .checked_sub(1)
             .ok_or(L1Error::DepthExceeded { limit: self.depth })?;
         match e {
-            Expr::Lit(l @ (Literal::Bin(_) | Literal::Trit(_))) => Ok(L1Value::Repr(
-                lit_value(site, l).map_err(|e| unsupported(site, &e))?,
-            )),
+            // RFC-0032 D4 (M-750): `0x…` byte-string literals share the `lit_value` lowering with the
+            // binary/ternary repr literals (all are context-free repr literals).
+            Expr::Lit(l @ (Literal::Bin(_) | Literal::Trit(_) | Literal::Bytes(_))) => Ok(
+                L1Value::Repr(lit_value(site, l).map_err(|e| unsupported(site, &e))?),
+            ),
+            // RFC-0032 D3 (M-749): a list literal `[e1, …]` evaluates to a `Repr::Seq` value. Each
+            // element is evaluated to a repr value; the element repr (from the first) anchors the
+            // descriptor. The checker has already verified homogeneity; the `Value::new`
+            // well-formedness check is the never-silent final guard (a heterogeneous/malformed seq is
+            // refused, never silently built — G2). A non-repr element (a data value) is an explicit
+            // refusal. An empty `[]` has no element repr at eval time (its width came from an
+            // ascription the value form does not carry) — refused, never silently defaulted.
+            Expr::Lit(Literal::List(elems)) => {
+                let mut vals = Vec::with_capacity(elems.len());
+                for el in elems {
+                    let v = self.eval(fuel, depth, site, scope, el)?;
+                    match v.as_repr() {
+                        Some(rv) => vals.push(rv.clone()),
+                        None => {
+                            return Err(L1Error::Unsupported {
+                                site: site.to_owned(),
+                                what: "a list literal element is not a representation value — a \
+                                       v0 `Seq` is built from repr elements only (RFC-0032 D3)"
+                                    .to_owned(),
+                            })
+                        }
+                    }
+                }
+                let Some(first) = vals.first() else {
+                    return Err(L1Error::Unsupported {
+                        site: site.to_owned(),
+                        what: "an empty list literal `[]` has no element repr to anchor the `Seq` \
+                               descriptor at eval (RFC-0032 D3)"
+                            .to_owned(),
+                    });
+                };
+                let elem = first.repr().clone();
+                let len = u32::try_from(vals.len()).map_or(u32::MAX, |n| n);
+                let seq = mycelium_core::Value::new(
+                    mycelium_core::Repr::Seq {
+                        elem: Box::new(elem),
+                        len,
+                    },
+                    mycelium_core::Payload::Seq(vals),
+                    mycelium_core::Meta::exact(mycelium_core::Provenance::Root),
+                )
+                .map_err(|e| L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: format!("malformed sequence literal: {e}"),
+                })?;
+                Ok(L1Value::Repr(seq))
+            }
             Expr::Lit(_) => Err(L1Error::Unsupported {
                 site: site.to_owned(),
-                what: "bare-integer and list literals have no v0 value form (Q6)".to_owned(),
+                what: "bare-integer literals have no v0 value form (Q6)".to_owned(),
             }),
 
             Expr::Path(p) => {
@@ -1112,8 +1161,8 @@ mod tests {
     fn a_for_fold_evaluates_head_to_tail() {
         // checksum(More(0b1111_0000, More(0b0000_1111, End))) = 0b1111_1111 (xor-fold).
         let v = run(
-            "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
-             fn checksum(bs: Bytes) -> Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
+            "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
+             fn checksum(bs: ByteList) -> Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
              fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
         )
         .expect("evaluates");
@@ -1124,8 +1173,8 @@ mod tests {
     #[test]
     fn a_for_fold_over_nil_is_the_initial_accumulator() {
         let v = run(
-            "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
-             fn checksum(bs: Bytes) -> Binary{8} =\n    for b in bs, acc = 0b1010_1010 => xor(acc, b)\n\
+            "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
+             fn checksum(bs: ByteList) -> Binary{8} =\n    for b in bs, acc = 0b1010_1010 => xor(acc, b)\n\
              fn main() -> Binary{8} = checksum(End)",
         )
         .expect("evaluates");
@@ -1142,8 +1191,8 @@ mod tests {
         // spine walk is iterative and must not (RFC-0007 §4.8). The list value is built
         // programmatically — a 200-deep nested *expression* would itself be depth-guarded.
         let env = env(
-            "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
-             fn checksum(bs: Bytes) -> Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)",
+            "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
+             fn checksum(bs: ByteList) -> Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)",
         );
         let byte = || {
             L1Value::Repr(
@@ -1156,13 +1205,13 @@ mod tests {
             )
         };
         let mut list = L1Value::Data {
-            ty: "Bytes".into(),
+            ty: "ByteList".into(),
             ctor: "End".into(),
             fields: vec![],
         };
         for _ in 0..200 {
             list = L1Value::Data {
-                ty: "Bytes".into(),
+                ty: "ByteList".into(),
                 ctor: "More".into(),
                 fields: vec![byte(), list],
             };

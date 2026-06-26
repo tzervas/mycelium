@@ -340,6 +340,19 @@ pub enum BaseType {
     },
     /// `Substrate{name}` — an affine external resource (LR-8).
     Substrate(String),
+    /// `Seq{elem, len}` — a first-class indexed homogeneous sequence (RFC-0032 D3; M-749). The
+    /// descriptor carries the element type (`elem`, any [`TypeRef`]) and the declared element count
+    /// (`len`, a `u32` literal). The surface literal `[e1, …]` constructs one; the type checks its
+    /// elements are homogeneous and counts match `len` (never-silent — G2).
+    Seq {
+        /// The (boxed) element type.
+        elem: Box<TypeRef>,
+        /// The declared element count.
+        len: u32,
+    },
+    /// `Bytes` — a first-class byte string (RFC-0032 D4; M-750). A **nullary** repr keyword (no
+    /// descriptor). The surface literal `0x…` constructs one.
+    Bytes,
     /// A named type or type variable, with optional type arguments.
     Named(String, Vec<TypeRef>),
     /// A **paradigm-less repr** `{ <params> }` (RFC-0012 §4.2). Produced only by the parser; the
@@ -599,6 +612,10 @@ pub enum Literal {
     AmbientInt(Paradigm, i64),
     /// A list literal `[e, …]`.
     List(Vec<Expr>),
+    /// A byte-string literal `0x…` (the inner hex/`_` string, verbatim; RFC-0032 D4, M-750).
+    /// Elaborates to a [`mycelium_core::Repr::Bytes`] value. The lexer is the never-silent gate
+    /// that only ever builds an even-hex-digit, non-empty string (G2), so the stored text is valid.
+    Bytes(String),
 }
 
 impl Literal {

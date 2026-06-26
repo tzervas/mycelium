@@ -125,6 +125,34 @@ pub fn lit_value(site: &str, l: &Literal) -> Result<Value, ElabError> {
                 Ok,
             )
         }
+        // RFC-0032 D4 (M-750): a `0x…` byte-string literal lowers to a `Repr::Bytes` value. The lexer
+        // already validated even-hex parity / non-empty, so decoding the (separator-stripped) hex
+        // into bytes is total; a stray non-hex char is still a never-silent `Residual` (G2,
+        // defense-in-depth — it should never reach here).
+        Literal::Bytes(s) => {
+            let hex: String = s.chars().filter(|c| *c != '_').collect();
+            // Even count is a lexer invariant; chunk into byte pairs.
+            let mut bytes = Vec::with_capacity(hex.len() / 2);
+            let chars: Vec<char> = hex.chars().collect();
+            for pair in chars.chunks(2) {
+                let hs: String = pair.iter().collect();
+                match u8::from_str_radix(&hs, 16) {
+                    Ok(b) => bytes.push(b),
+                    Err(_) => {
+                        return residual(site, format!("non-hex byte pair {hs:?} in `0x…` literal"))
+                    }
+                }
+            }
+            Value::new(
+                Repr::Bytes,
+                Payload::Bytes(bytes),
+                Meta::exact(Provenance::Root),
+            )
+            .map_or_else(
+                |e| residual(site, format!("malformed byte literal: {e}")),
+                Ok,
+            )
+        }
         Literal::Int(_) => residual(
             site,
             "a bare integer literal has no representation family (Q6)",
@@ -134,7 +162,15 @@ pub fn lit_value(site: &str, l: &Literal) -> Result<Value, ElabError> {
             "internal: an unresolved ambient bare decimal reached elaboration — the checker \
              resolves its width before the L0 bridge runs (RFC-0012 §4.3)",
         ),
-        Literal::List(_) => residual(site, "list literals are deferred in v0"),
+        // A list literal `[…]` lowers via the elaborator's `expr_inner` (it elaborates each element
+        // expression, then builds the `Repr::Seq` const) — `lit_value` only sees context-free
+        // literals, so a `Literal::List` reaching here is an internal invariant break (never silent,
+        // G2/VR-5).
+        Literal::List(_) => residual(
+            site,
+            "internal: a list literal reached `lit_value` — it lowers through `expr_inner` (the \
+             element expressions need elaboration; RFC-0032 D3)",
+        ),
     }
 }
 
@@ -154,6 +190,15 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
             },
         }),
         BaseType::Vsa { .. } => residual(site, "VSA types are deferred in the L1 v0 prototype"),
+        // RFC-0032 D3/D4: the sequence/byte-string reprs resolve to their kernel `Repr` (the element
+        // type recurses through `type_repr`). They are not v0 swap targets (the checker refuses a
+        // `swap` to them — no swap engine), but `type_repr` is the general surface→`Repr` resolver,
+        // so a concrete resolution here is correct and never-silent.
+        BaseType::Seq { elem, len } => Ok(Repr::Seq {
+            elem: Box::new(type_repr(site, elem)?),
+            len: *len,
+        }),
+        BaseType::Bytes => Ok(Repr::Bytes),
         BaseType::Substrate(tag) => residual(
             site,
             format!("Substrate{{{tag}}} is not a representation type"),
@@ -549,6 +594,12 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
             dim: *d,
             dtype: scalar_kind(*s),
         }),
+        // RFC-0032 D3/D4: the sequence/byte-string reprs have monomorphic kernel forms.
+        Ty::Seq(elem, n) => FieldSpec::Repr(Repr::Seq {
+            elem: Box::new(ty_to_repr(elem)?),
+            len: *n,
+        }),
+        Ty::Bytes => FieldSpec::Repr(Repr::Bytes),
         Ty::Data(n, args) if args.is_empty() => FieldSpec::Data(n.clone()),
         Ty::Data(_, _) | Ty::Var(_) => return None,
         Ty::Substrate(_) => return None,
@@ -556,6 +607,28 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
         // stage-1 elaboration (defunctionalization is M-687). A `Ty::Fn` in a field position
         // returns `None` (staged residual — never a silent, half-elaborated artifact; G2/VR-5).
         Ty::Fn(_, _) => return None,
+    })
+}
+
+/// Convert a **representation** [`Ty`] to its kernel [`Repr`] — the element-type resolver for a
+/// `Seq{T, N}` field (RFC-0032 D3). Returns `None` for any non-representation type (a `Data`/`Var`/
+/// `Fn` element has no monomorphic kernel repr in stage-1), so a `Seq` of such an element is itself
+/// staged (`field_spec` returns `None`) rather than half-elaborated (never a silent artifact —
+/// G2/VR-5).
+fn ty_to_repr(ty: &Ty) -> Option<Repr> {
+    Some(match ty {
+        Ty::Binary(n) => Repr::Binary { width: *n },
+        Ty::Ternary(m) => Repr::Ternary { trits: *m },
+        Ty::Dense(d, s) => Repr::Dense {
+            dim: *d,
+            dtype: scalar_kind(*s),
+        },
+        Ty::Seq(elem, n) => Repr::Seq {
+            elem: Box::new(ty_to_repr(elem)?),
+            len: *n,
+        },
+        Ty::Bytes => Repr::Bytes,
+        Ty::Data(_, _) | Ty::Var(_) | Ty::Substrate(_) | Ty::Fn(_, _) => return None,
     })
 }
 
@@ -655,6 +728,51 @@ impl Elab<'_> {
         let site = stack.last().expect("stack starts with the entry").clone();
         let site = site.as_str();
         match e {
+            // RFC-0032 D3 (M-749): a list literal `[e1, …]` lowers to a `Repr::Seq` const. Each
+            // element is elaborated; it must reduce to a `Node::Const` value (the v0 surface only
+            // constructs a `Seq` from constant elements — a non-const element is a never-silent
+            // `Residual`, G2). The element repr is taken from the first element; the checker has
+            // already verified homogeneity, so the `Repr::Seq` well-formedness check is a final
+            // never-silent guard (a malformed/heterogeneous seq is refused, never silently built).
+            Expr::Lit(Literal::List(elems)) => {
+                let mut vals = Vec::with_capacity(elems.len());
+                for el in elems {
+                    match self.expr(stack, scope, el)? {
+                        Node::Const(v) => vals.push(v),
+                        _ => return residual(
+                            site,
+                            "a list literal element did not reduce to a constant — the v0 `Seq` \
+                                 surface constructs from constant elements only (RFC-0032 D3)",
+                        ),
+                    }
+                }
+                // The element repr anchors the seq descriptor. An empty seq has no element to read a
+                // repr from; the v0 surface refuses an un-ascribed `[]` at check time, so a `[]`
+                // reaching elaboration would be one ascribed to a `Seq{T, 0}` — but `lit_value` does
+                // not carry that `T`. We therefore refuse a bare empty list here (never silent, G2);
+                // the non-empty case (the tested surface) lowers fully.
+                let Some(first) = vals.first() else {
+                    return residual(
+                        site,
+                        "an empty list literal `[]` has no element repr to anchor the `Seq` \
+                         descriptor at elaboration (RFC-0032 D3); the empty-seq surface is staged",
+                    );
+                };
+                let elem = first.repr().clone();
+                let len = u32::try_from(vals.len()).map_or(u32::MAX, |n| n);
+                Value::new(
+                    Repr::Seq {
+                        elem: Box::new(elem),
+                        len,
+                    },
+                    Payload::Seq(vals),
+                    Meta::exact(Provenance::Root),
+                )
+                .map_or_else(
+                    |e| residual(site, format!("malformed sequence literal: {e}")),
+                    |v| Ok(Node::Const(v)),
+                )
+            }
             Expr::Lit(l) => Ok(Node::Const(lit_value(site, l)?)),
             Expr::Path(p) => {
                 if p.0.len() == 1 {
@@ -1695,8 +1813,8 @@ mod tests {
     fn a_for_fold_now_elaborates_to_a_fix_fold_and_runs() {
         // r4: `for` desugars to a synthesized self-recursive Fix fold and runs. A 2-element xor-fold
         // of 0b1111_0000 and 0b0000_1111 from 0 is 0b1111_1111.
-        let env = env("nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
-             fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
+        let env = env("nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
+             fn checksum(bs: ByteList) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
              fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))");
         let node = elaborate(&env, "main").expect("`for` elaborates in r4");
         let v = mycelium_interp::Interpreter::default()
@@ -1707,8 +1825,8 @@ mod tests {
 
     #[test]
     fn a_for_fold_over_nil_is_the_initial_accumulator() {
-        let env = env("nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
-             fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b1010_1010 => xor(acc, b)\n\
+        let env = env("nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
+             fn checksum(bs: ByteList) -> Binary{8} = for b in bs, acc = 0b1010_1010 => xor(acc, b)\n\
              fn main() -> Binary{8} = checksum(End)");
         let node = elaborate(&env, "main").expect("`for` elaborates in r4");
         let v = mycelium_interp::Interpreter::default()

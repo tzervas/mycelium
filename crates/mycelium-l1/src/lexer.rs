@@ -195,6 +195,9 @@ impl Lexer {
                 '=' => self.lex_eq(),
                 '-' => self.lex_dash(),
                 '0' if self.peek2() == Some('b') => self.lex_binary(pos)?,
+                // `0x…` is a byte-string literal (RFC-0032 D4, M-750), lexed whole like `0b…`. The
+                // `0x` prefix is unambiguous: a bare `0` not followed by `b`/`x` is an int.
+                '0' if self.peek2() == Some('x') => self.lex_hex_bytes(pos)?,
                 c if c.is_ascii_digit() => self.lex_int(pos)?,
                 c if is_ident_start(c) => self.lex_ident(),
                 other => {
@@ -363,6 +366,49 @@ impl Lexer {
             ));
         }
         Ok(Tok::BinLit(digits))
+    }
+
+    /// Lex a byte-string literal `0x…` (RFC-0032 D4, M-750), mirroring [`Self::lex_binary`]: scan
+    /// hex digits + `_` separators verbatim into the inner string. Never-silent (G2): an empty `0x`
+    /// (no hex digit), a non-hex digit, **or an odd number of hex digits** (a byte is two hex chars)
+    /// is an explicit [`ParseError`] naming the offending position — never a silently-empty or
+    /// half-byte token. The `_` separators are preserved but do not count toward the byte parity.
+    fn lex_hex_bytes(&mut self, pos: Pos) -> Result<Tok, ParseError> {
+        self.bump(); // '0'
+        self.bump(); // 'x'
+        let mut digits = String::new();
+        // Count actual hex digits (not `_` separators) for the even-parity check; a base-prefixed
+        // literal must carry at least one digit (`0x` / `0x_` alone is a never-silent lex error).
+        let mut hex_count = 0usize;
+        while let Some(c) = self.peek() {
+            if c.is_ascii_hexdigit() {
+                hex_count += 1;
+                digits.push(c);
+                self.bump();
+            } else if c == '_' {
+                digits.push(c);
+                self.bump();
+            } else {
+                break;
+            }
+        }
+        if hex_count == 0 {
+            return Err(ParseError::new(
+                pos,
+                "byte-string literal `0x` has no hex digits (expected at least one, even count)"
+                    .to_owned(),
+            ));
+        }
+        if hex_count % 2 != 0 {
+            return Err(ParseError::new(
+                pos,
+                format!(
+                    "byte-string literal `0x` has an odd hex-digit count ({hex_count}) — each byte \
+                     is two hex chars (RFC-0032 D4); never a silent half-byte"
+                ),
+            ));
+        }
+        Ok(Tok::BytesLit(digits))
     }
 
     fn lex_int(&mut self, pos: Pos) -> Result<Tok, ParseError> {
@@ -790,6 +836,71 @@ mod tests {
         );
         // A `_` separator is allowed once at least one real digit is present.
         assert_eq!(toks("0b1_0"), vec![Tok::BinLit("1_0".to_owned()), Tok::Eof]);
+    }
+
+    /// RFC-0032 D4 (M-750): `0x…` byte-string literals lex like `0b…`. A valid even-hex literal
+    /// (optionally with `_` separators) lexes to a `BytesLit` carrying its inner string verbatim.
+    #[test]
+    fn lex_hex_bytes_valid_literals() {
+        assert_eq!(toks("0x48"), vec![Tok::BytesLit("48".to_owned()), Tok::Eof]);
+        assert_eq!(
+            toks("0x48_65_6c_6c_6f"),
+            vec![Tok::BytesLit("48_65_6c_6c_6f".to_owned()), Tok::Eof]
+        );
+        // Uppercase hex digits are accepted too.
+        assert_eq!(
+            toks("0xDEAD_BEEF"),
+            vec![Tok::BytesLit("DEAD_BEEF".to_owned()), Tok::Eof]
+        );
+    }
+
+    /// Never-silent (G2): an **odd** hex-digit count is a lex error — a byte is two hex chars, never
+    /// a silent half-byte.
+    #[test]
+    fn lex_hex_bytes_odd_count_is_a_lex_error() {
+        let err = lex("0x123").expect_err("`0x123` (odd hex count) must be a lex error");
+        assert!(
+            err.to_string().contains("odd hex-digit count"),
+            "error must name the odd-hex cause: {err}"
+        );
+        // A `_` separator does not change parity: `0x1_2_3` is still three hex digits → error.
+        lex("0x1_2_3").expect_err("`0x1_2_3` (three hex digits) must be a lex error");
+    }
+
+    /// Never-silent (G2): an empty `0x` (no hex digit, or only a separator) is a lex error.
+    #[test]
+    fn lex_hex_bytes_empty_is_a_lex_error() {
+        let err = lex("0x").expect_err("`0x` alone must be a lex error");
+        assert!(
+            err.to_string().contains("no hex digits"),
+            "error must name the empty cause: {err}"
+        );
+        lex("0x_").expect_err("`0x_` (separator, no digit) must be a lex error");
+    }
+
+    /// A non-hex digit terminates the hex scan; `0x1g` lexes the even-hex `0x1`?-no: `1` alone is
+    /// odd → error. `0x12g` lexes `0x12` (even) then the identifier `g`. This pins that the hex scan
+    /// stops at a non-hex char rather than consuming it (and the parity check applies to what it took).
+    #[test]
+    fn lex_hex_bytes_stops_at_non_hex() {
+        // `0x12` is even → BytesLit("12"), then `g` is an identifier.
+        assert_eq!(
+            toks("0x12g"),
+            vec![
+                Tok::BytesLit("12".to_owned()),
+                Tok::Ident("g".to_owned()),
+                Tok::Eof
+            ]
+        );
+        // `0x1g` took only `1` (odd) before the non-hex `g` → a lex error (never a silent half-byte).
+        lex("0x1g").expect_err("`0x1g` (one hex digit then non-hex) must be a lex error");
+    }
+
+    /// `Seq` and `Bytes` lex as keywords (never silent identifiers — G2).
+    #[test]
+    fn lex_seq_and_bytes_keywords() {
+        assert_eq!(toks("Seq"), vec![Tok::Seq, Tok::Eof]);
+        assert_eq!(toks("Bytes"), vec![Tok::Bytes, Tok::Eof]);
     }
 
     /// Trit literals use the `<…>` angle form (not a `0t` prefix); the empty case `<>` is already

@@ -665,12 +665,12 @@ fn generic_instantiation_type_checks_across_widths_a_property_bound() {
 
 // --- bounded iteration (RFC-0007 §4.8, r2) ---
 
-const BYTES: &str = "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n";
+const BYTES: &str = "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n";
 
 #[test]
 fn a_for_fold_typechecks_and_is_total() {
     let env = check(&format!(
-        "{BYTES}fn checksum(bs: Bytes) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)"
+        "{BYTES}fn checksum(bs: ByteList) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)"
     ))
     .expect("checks");
     // Bounded by construction: the fn is non-recursive, so it is Total and admissible in a
@@ -678,7 +678,7 @@ fn a_for_fold_typechecks_and_is_total() {
     assert_eq!(env.totality["checksum"], Totality::Total);
     // Confirm admission in a matured scope.
     let env2 = check_matured(&format!(
-        "{BYTES}fn checksum(bs: Bytes) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)"
+        "{BYTES}fn checksum(bs: ByteList) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)"
     ))
     .expect("a total for-fold is admitted by a matured scope");
     assert_eq!(env2.totality["checksum"], Totality::Total);
@@ -701,7 +701,7 @@ fn for_over_a_non_linear_type_is_an_explicit_refusal() {
 #[test]
 fn for_body_must_yield_the_accumulator_type() {
     let err = check(&format!(
-        "{BYTES}fn f(bs: Bytes) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => <+0->"
+        "{BYTES}fn f(bs: ByteList) -> Binary{{8}} =\n    for b in bs, acc = 0b0000_0000 => <+0->"
     ))
     .unwrap_err();
     assert!(err.message.contains("accumulator"), "got: {}", err.message);
@@ -1424,8 +1424,8 @@ fn unannotated_code_is_unaffected_by_grading() {
     // backward-compatibility guarantee — grading only "bites" where an `@ g` is written.
     check(
         "nodule d\n\
-         type Bytes = End | More(Binary{8}, Bytes)\n\
-         fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b00000000 => xor(acc, b)\n\
+         type ByteList = End | More(Binary{8}, ByteList)\n\
+         fn checksum(bs: ByteList) -> Binary{8} = for b in bs, acc = 0b00000000 => xor(acc, b)\n\
          fn main() -> Binary{8} = checksum(More(0b11110000, More(0b00001111, End)))",
     )
     .expect("fully un-annotated code is unaffected by guarantee grading");
@@ -1459,9 +1459,9 @@ fn a_for_fold_accumulator_demanding_a_strong_grade_is_refused() {
     // catching the violation (never a silent accept — G2/VR-5).
     let err = check(
         "nodule d\n\
-         type Bytes = End | More(Binary{8}, Bytes)\n\
+         type ByteList = End | More(Binary{8}, ByteList)\n\
          fn weaken(a: Binary{8} @ Exact) -> Binary{8} @ Empirical = a\n\
-         fn fold(bs: Bytes) -> Binary{8} @ Empirical = \
+         fn fold(bs: ByteList) -> Binary{8} @ Empirical = \
             for b in bs, acc = 0b00000000 => weaken(acc)",
     )
     .expect_err("a for-body demanding @ Exact on a re-weakened accumulator must be refused");

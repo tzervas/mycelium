@@ -1705,6 +1705,10 @@ fn mangle_ty(t: &Ty) -> String {
         Ty::Ternary(m) => format!("Ternary{m}"),
         Ty::Dense(d, s) => format!("Dense{d}{}", scalar_tag(*s)),
         Ty::Substrate(tag) => format!("Substrate{tag}"),
+        // RFC-0032 D3/D4: `Seq{T, N}` mangles to `SeqN$<elem>` (injective — the `$` separates the
+        // length from the recursively-mangled element); `Bytes` is nullary.
+        Ty::Seq(elem, n) => format!("Seq{n}${}", mangle_ty(elem)),
+        Ty::Bytes => "Bytes".to_owned(),
         // A nullary data type tags its name with `#` (not a surface-identifier char — the lexer
         // never produces it), so a data type whose name happens to equal a repr mangle (e.g. a type
         // literally named `Binary8`) becomes `Binary8#` and can NEVER collide with the repr
@@ -1776,7 +1780,12 @@ fn mangle_method(method: &str, trait_name: &str, for_ty: &Ty) -> String {
 /// reprs pass through unchanged.
 fn mangle_ty_in_ty(t: &Ty) -> Ty {
     match t {
-        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => t.clone(),
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => {
+            t.clone()
+        }
+        // RFC-0032 D3: mangle the element type (it may carry a mono'd applied data type), keeping the
+        // sequence structure; primitive element reprs pass through unchanged.
+        Ty::Seq(elem, n) => Ty::Seq(Box::new(mangle_ty_in_ty(elem)), *n),
         Ty::Data(_, args) if args.is_empty() => t.clone(),
         Ty::Data(_, _) => Ty::Data(mangle_ty(t), vec![]),
         Ty::Var(v) => Ty::Var(v.clone()), // defended against earlier; pass through if it ever appears
@@ -1798,6 +1807,12 @@ fn ty_to_source_ref(t: &Ty) -> TypeRef {
         Ty::Ternary(m) => BaseType::Ternary(*m),
         Ty::Dense(d, s) => BaseType::Dense(*d, *s),
         Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
+        // RFC-0032 D3/D4: round-trip the sequence/byte-string reprs to their surface forms.
+        Ty::Seq(elem, n) => BaseType::Seq {
+            elem: Box::new(ty_to_source_ref(elem)),
+            len: *n,
+        },
+        Ty::Bytes => BaseType::Bytes,
         Ty::Data(n, args) => {
             BaseType::Named(n.clone(), args.iter().map(ty_to_source_ref).collect())
         }
@@ -1821,6 +1836,13 @@ fn ty_to_ref(t: &Ty) -> TypeRef {
         Ty::Ternary(m) => BaseType::Ternary(*m),
         Ty::Dense(d, s) => BaseType::Dense(*d, *s),
         Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
+        // RFC-0032 D3/D4: round-trip the sequence/byte-string reprs (the element type is mono'd to a
+        // concrete surface form via the same `ty_to_ref`).
+        Ty::Seq(elem, n) => BaseType::Seq {
+            elem: Box::new(ty_to_ref(elem)),
+            len: *n,
+        },
+        Ty::Bytes => BaseType::Bytes,
         // A mono'd data type is nullary (its arguments are baked into its mangled name).
         Ty::Data(n, args) if args.is_empty() => BaseType::Named(n.clone(), vec![]),
         Ty::Data(_, _) => BaseType::Named(mangle_ty(t), vec![]),
