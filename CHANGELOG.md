@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: DN-40 — input-validation architecture + stack-wide gap ledger)
+
+- **DN-40 — Input-Validation Architecture (only-intended-inputs across the stack)**
+  (`docs/notes/DN-40-Input-Validation-Architecture.md`, **Draft/advisory**) — captures the
+  maintainer-commissioned review. Answers **(a) where** validation is needed (a ranked, file:line-grounded
+  **gap ledger** over 5 boundaries) and **(b) the architecture** (one closed-grammar **recognizer per
+  boundary** minting an immutable/canonical/bounded **typed value** — which doubles as the **lock-free
+  concurrency fan-out**: validate-once-then-trust ⇒ no TOCTOU, data-parallel at memory bandwidth).
+  Patterned on the spore `content_address` `v1` fix as the reference. **Three `Proven` security gaps lead
+  the ledger** (recorded, not yet fixed — each a separate forward decision for the maintainer): **A1
+  CRITICAL** L1-parser type-subgrammar stack-overflow DoS (`parse.rs:685-771`, no `MAX_EXPR_DEPTH` charge →
+  uncatchable `SIGABRT` on attacker `.myc`); **A2 HIGH** pattern-subgrammar DoS (`parse.rs:1125-1146`);
+  **A3 HIGH** parse-don't-validate gap on the identity-bearing dependency hash (free-text `String`; the
+  existing `ContentHash::parse` smart constructor unused). Exhibited gaps `Proven`; architecture
+  `Declared`; prior-art (Parse-don't-validate / LANGSEC / simdjson) `Empirical`/`Proven`-at-source.
+  Enacts nothing; awaiting ratification.
+
 ### Changed (2026-06-26: DN-39 ratified Draft → Accepted)
 
 - **DN-39 — Kernel-Promotion Review (KC-3)** ratified **Draft → Accepted** (maintainer). The
