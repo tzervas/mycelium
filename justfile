@@ -63,11 +63,12 @@ check-full:
 scan:
     @bash scripts/checks/scan.sh
 
-# Best-effort install of the `just scan` advisory tools (osv-scanner via Go; cargo-hack/geiger via cargo).
+# Best-effort install of the `just scan` advisory tools (osv-scanner via Go; cargo-hack/geiger/machete via cargo).
 setup-scan:
     @go install github.com/google/osv-scanner/v2/cmd/osv-scanner@latest 2>/dev/null && echo "  ok    osv-scanner" || echo "  skip  osv-scanner (needs Go)"
     @cargo install --locked cargo-hack 2>/dev/null && echo "  ok    cargo-hack" || echo "  skip  cargo-hack"
     @cargo install --locked cargo-geiger 2>/dev/null && echo "  ok    cargo-geiger" || echo "  skip  cargo-geiger"
+    @cargo install --locked cargo-machete 2>/dev/null && echo "  ok    cargo-machete" || echo "  skip  cargo-machete"
 
 # Auto-format code (rust + python). Writes changes.
 fmt:

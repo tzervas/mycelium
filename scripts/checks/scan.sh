@@ -9,14 +9,17 @@
 #   - cargo-geiger : `unsafe`-usage audit across the dep tree (ADR-014 unsafe-code policy).
 #   - cargo-hack   : feature-powerset compile (catches broken feature-flag combos — e.g.
 #                    mycelium-mlir's `mlir-dialect` / `bitnet-accel`).
+#   - cargo-machete: unused-dependency surface (supply-chain-surface reduction; advisory — DN-44 §6.2).
+#   - kernel-harden: clippy panic-path visibility over the trusted base (advisory — DN-44 §4.2/§6.1).
+# Full posture map: docs/notes/DN-44-Codebase-Security-Posture.md.
 source "${BASH_SOURCE%/*}/../lib.sh"
 cd "$REPO_ROOT" || exit 1
-section "advisory scanners (osv-scanner / cargo-geiger / cargo-hack) — opt-in, not in \`just check\`"
+section "advisory scanners (osv / geiger / hack / machete / kernel-harden) — opt-in, not in \`just check\`"
 
 rc=0
-# osv-scanner (a Go binary) usually lands in the Go bin dir.
+# osv-scanner (a Go binary) lands in the Go bin dir; cargo-machete in the cargo bin dir.
 gopath="$(go env GOPATH 2>/dev/null)"
-export PATH="$PATH:${gopath}/bin:${HOME}/go/bin"
+export PATH="$PATH:${gopath}/bin:${HOME}/go/bin:${HOME}/.cargo/bin"
 
 # --- osv-scanner: supply-chain via OSV.dev (tuned by osv-scanner.toml — never-silent ignores) ---
 cfg=(); [[ -f osv-scanner.toml ]] && cfg=(--config=osv-scanner.toml)
@@ -48,6 +51,34 @@ if command -v cargo-hack >/dev/null 2>&1; then
   fi
 else
   skip "cargo-hack not installed — \`cargo install cargo-hack\` (or \`just setup-scan\`)"
+fi
+
+# --- cargo-machete: unused-dependency surface (advisory; reports candidates, does NOT fail — machete is
+# false-positive-prone, e.g. derive-only `serde`, so candidates are verified per-crate, not auto-stripped) ---
+if command -v cargo-machete >/dev/null 2>&1; then
+  if cargo machete >/tmp/myc-machete.out 2>&1; then
+    ok "cargo-machete: no unused dependencies"
+  else
+    n=$(grep -cE 'Cargo\.toml:' /tmp/myc-machete.out || true)
+    skip "cargo-machete: ${n} crate(s) with unused-dep CANDIDATES (advisory — verify per-crate; false positives possible; tracked DN-44 §6.2):"
+    sed -n '1,/If you believe/p' /tmp/myc-machete.out | grep -vE 'If you believe|^$' | head -14 | sed 's/^/    /'
+  fi
+else
+  skip "cargo-machete not installed — \`cargo install cargo-machete\` (or \`just setup-scan\`)"
+fi
+
+# --- kernel-hardening clippy: panic-path visibility over the TRUSTED BASE (advisory; counts, never fails) ---
+# unwrap/expect/indexing in trusted-base logic are panic paths to review (DN-44 §4.2). Advisory ONLY — NOT a
+# blocking deny: kernel arithmetic panics on overflow BY DESIGN (overflow-checks=true), and `-D warnings`
+# would break the build. The DN-44 §6.1 ratchet promotes this to blocking once the base is clean.
+if command -v cargo >/dev/null 2>&1; then
+  cargo clippy --lib -p mycelium-core -p mycelium-cert -p mycelium-numerics -p mycelium-vsa --no-deps -- \
+    -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing -W clippy::panic_in_result_fn \
+    >/tmp/myc-kernel-harden.out 2>&1 || true
+  n=$(sed -r 's/\x1b\[[0-9;]*[mGKH]//g' /tmp/myc-kernel-harden.out | grep -cE '^warning:' || true)
+  ok "kernel-hardening clippy (trusted base): ${n} panic-path site(s) for review (advisory — DN-44 §6.1 ratchet)"
+else
+  skip "cargo not installed — kernel-hardening clippy pass skipped"
 fi
 
 exit "$rc"
