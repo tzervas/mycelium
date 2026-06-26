@@ -51,6 +51,7 @@ pub mod inject;
 pub mod jit;
 pub mod llvm;
 pub mod pack;
+pub mod passes;
 pub mod rc_plan;
 pub mod runtime;
 pub mod simd;

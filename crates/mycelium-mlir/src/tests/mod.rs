@@ -6,4 +6,5 @@ mod inject_tests;
 // `dialect::native` only compiles under `mlir-dialect`, so its white-box tests are gated to match.
 #[cfg(feature = "mlir-dialect")]
 mod native;
+mod passes;
 mod rc_plan_tests;
