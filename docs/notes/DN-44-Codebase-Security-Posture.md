@@ -30,6 +30,29 @@ today's enforcement and the goal is the ratchet in §6. The complementary half �
 developer *does* write into their programs — is **RFC-0035** (the Mycelium-native security toolkit),
 out of scope here.
 
+### §1.1 The honesty corollary — disclosed-and-guided residual insecurity
+
+The thesis is a *goal*, and where the implementation cannot (yet) meet it the house transparency rule
+binds: **a residual insecurity is never silent.** For any surface that is **intentionally not hardened**
+or **cannot be patched at the language/toolchain level** (an FFI boundary, a platform ABI, a deliberate
+escape hatch like `wild`), the discipline is:
+
+1. **Prefer the in-language / in-toolchain fix.** The first question for any vulnerability is always
+   *can we fix it where it lives* — in the kernel, the checker, a prim, the lowering, a gate. A
+   program-level workaround is the **fallback**, taken only when the surface genuinely cannot be closed
+   in the language or its toolchain.
+2. **If it cannot be fixed there, it ships with a disclosure** — a documented **disclaimer + the
+   reasoning/justification** for why it is unhardened (the trade-off that forced it), **co-located with
+   the surface** (doc-comment, spec §, the `// SAFETY:`/`wild`-justification analogue), never buried.
+3. **…and with practical guidance** — how a Mycelium *program author* insulates against it: the
+   defensive pattern, the capability to withhold, the validation to add — so the residual risk is
+   *accountable in their own code* rather than a hidden trap.
+
+This is never-silent (G2) applied to security itself: we never claim more safety than we have, and an
+unavoidable gap is **surfaced, explained, and worked-around-with-guidance**, not quietly left for a
+developer to trip over. Operationalizing it — a standard disclosure block, and a gate that asserts every
+`wild`/FFI/intentional-escape surface carries one — is a tracked follow-on (the `rsm` kickoff, F2).
+
 ## §2 The hardening floor — what holds today (grounded)
 
 | Property | Mechanism (enforced) | Citation |
