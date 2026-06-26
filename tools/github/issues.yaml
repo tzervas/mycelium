@@ -4426,7 +4426,7 @@ issues:
   - id: M-716
     title: "collections in Mycelium: Vec/Map/Set as .myc with honest bounds"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:ready]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:in-progress]
     epic: E13-1
     depends_on: [M-715, M-749]
     doc_refs:
@@ -4435,7 +4435,22 @@ issues:
       - corpus:RFC-0016
       - corpus:DN-25
       - src:crates/mycelium-l1/tests/enablement.rs
+      - src:crates/mycelium-l1/tests/std_collections.rs
+      - src:lib/std/collections.myc
     body: |
+      IMPLEMENTED (2026-06-26, wave-n1): lib/std/collections.myc landed in .myc — Vec (cons-list),
+      Map + Set (association lists), with honest O(n) bounds (Declared; never claimed Exact O(1)) and
+      never-silent Option on empty/out-of-range/missing-key (G2). Demonstrated three-way (L1-eval ≡
+      L0-interp ≡ AOT) by crates/mycelium-l1/tests/std_collections.rs (19 passing differential tests,
+      incl. a len-bound add_bin overflow refusal). DEFERRED (flagged, not silently dropped — VR-5):
+      (a) snoc/reverse are O(n²) — a bare-nullary-constructor-in-abstract-position check limit
+      (RFC-0007 §11.3 ascription would restore O(n)); (b) Map/Set lookup is monomorphic at Binary{8}
+      because eq is width-typed and width-generics (M-753) are not yet landed — generic-key lookup
+      waits on M-753. Differential gate is the three-way self-differential (the shipped-.myc-nodule
+      gate, std_option.rs precedent) with expected values anchored to the Rust mycelium-std-collections
+      reference; the literal "vs Rust crate" structural diff is not achievable (different data model)
+      — maintainer-flagged. Status ready → in-progress (lands this wave; flip to done at the squash).
+
       PRECONDITION SATISFIED (2026-06-26): the M-749 kernel sequence repr landed (`Repr::Seq` +
       `Payload::Seq` + never-silent `seq.get`/`seq.len`, RFC-0032 D3; Rust-first, RFC Accepted-not-Enacted)
       with a `.myc` surface (`[..]` → `Seq{T,N}`) demonstrated three-way (L1-eval ≡ L0-interp ≡ AOT) in
@@ -4479,7 +4494,7 @@ issues:
   - id: M-717
     title: "text + fmt in Mycelium: string handling + formatting as .myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:ready]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:in-progress]
     epic: E13-1
     depends_on: [M-715, M-750]
     doc_refs:
@@ -4488,7 +4503,23 @@ issues:
       - corpus:RFC-0016
       - corpus:DN-25
       - src:crates/mycelium-l1/tests/enablement.rs
+      - src:crates/mycelium-l1/tests/std_text.rs
+      - src:lib/std/text.myc
     body: |
+      IMPLEMENTED PARTIAL (2026-06-26, wave-n1): lib/std/text.myc + lib/std/fmt.myc landed in .myc.
+      text.myc: byte_len/is_ascii_byte + decode_ascii (UTF-8 ASCII fast-path, U+0000–U+007F) returning
+      Result<Binary{8}, Utf8Error> — a malformed/multi-byte lead byte → never-silent Err(Invalid(byte)),
+      no U+FFFD substitution (G2). fmt.myc: hex_digit/nibble_lo/nibble_hi/to_hex (first-order rendering;
+      no reflective Display — .myc has no Value introspection). Demonstrated three-way by std_text.rs (11)
+      + std_fmt.rs (19) — 30 passing differential tests. DEFERRED (flagged — VR-5): (a) byte_at and full
+      decode_one→Binary{32} Unicode scalar — there is NO surface zero-extension/width-cast prim to
+      compare a Binary{32} length/offset against a Binary{8} index (a real kernel-surface gap, FLAG-up
+      for a follow-on prim task); (b) bytes_slice/bytes_concat are not surface-callable, so a Bytes-native
+      slice/concat is deferred (modeled only over a local byte cons-list). Multi-byte UTF-8 decode rides
+      the width-cast prim. Differential gate as for M-716 (three-way self-diff + Rust mycelium-std-text/
+      -fmt value oracle). Status ready → in-progress (PARTIAL; stays open for the multi-byte + slice
+      follow-on once the width-cast/slice prim surface lands).
+
       PRECONDITION SATISFIED (2026-06-26): the M-750 kernel byte-string repr landed (`Repr::Bytes` +
       `Payload::Bytes` + never-silent `bytes.{get,slice,len,concat}`, RFC-0032 D4; Rust-first, RFC
       Accepted-not-Enacted) with a `.myc` surface (`0x…` hex → `Bytes`) demonstrated three-way
@@ -5574,6 +5605,14 @@ issues:
       - corpus:RFC-0031
       - src:lib/std/result.myc
     body: |
+      TIER-2 SMOKE PORTS LANDED (2026-06-26, wave-n1): the indexed Vec op and the byte index/decode
+      smoke ports now exist — crates/mycelium-l1/tests/std_collections.rs (Vec get/len three-way) and
+      std_text.rs (byte_len/decode_ascii over a Bytes literal, three-way) + std_fmt.rs. The E13-1
+      preconditions are demonstrated, not asserted: M-716 (#461) ⟸ std_collections.rs; M-717 (#462) ⟸
+      std_text.rs / std_fmt.rs — both flipped ready → in-progress with the pointer (M-717 is PARTIAL:
+      multi-byte decode + Bytes-native slice deferred on the width-cast prim gap). REMAINING: a full
+      Bytes-native string-slice smoke port awaits the width-cast/slice prim surface (flagged on M-717).
+
       IN PROGRESS (Tier-1 landed in #518; Tier-2 pending M-749/M-750). Integration gate for E19-1:
       confirm every new prim/representation is differential-tested (three-way where it runs to closed L0)
       and honestly tagged, and demonstrate each unblock with a small .myc smoke port following the

@@ -8,6 +8,41 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: self-hosted stdlib — `std.collections` + `std.text`/`std.fmt` in `.myc` (E13-1, wave-n1))
+
+- **`lib/std/collections.myc` (M-716, #461)** — `Vec`/`Map`/`Set` self-hosted in `.myc`, implemented
+  Rust-first (the spec stays Accepted-not-Enacted). `Vec` is a recursive cons-list (`Nil | Cons`) — the
+  growable representation that executes through the full three-way differential (`Seq{T,N}` is
+  fixed-length); honest **O(n)** index/append/len, O(1) push-front, tagged `Declared` (never claimed
+  `Exact O(1)`). `Map`/`Set` are association lists; never-silent `Option` on empty / out-of-range /
+  missing-key (G2). `len` rides `add_bin`, so a length past 255 is an explicit refusal on every path,
+  never a silent wrap. **Verification:** `crates/mycelium-l1/tests/std_collections.rs` — 19 three-way
+  differential tests (L1-eval ≡ L0-interp ≡ AOT), incl. the `len`-bound overflow refusal. **Deferred
+  (flagged, VR-5):** `snoc`/`reverse` are O(n²) (a bare-nullary-ctor-in-abstract-position check limit —
+  RFC-0007 §11.3 ascription would restore O(n)); `Map`/`Set` lookup is monomorphic at `Binary{8}`
+  pending width-generics (M-753).
+- **`lib/std/text.myc` + `lib/std/fmt.myc` (M-717, #462) — PARTIAL** — UTF-8 decode written in `.myc`
+  over the byte prims (never in the kernel): `byte_len`/`is_ascii_byte`/`decode_ascii` (ASCII fast-path,
+  U+0000–U+007F) → `Result<…, Utf8Error>`; a malformed/multi-byte lead → never-silent `Err(Invalid(byte))`
+  (no U+FFFD, G2). `fmt.myc`: first-order `hex_digit`/`to_hex` (no reflective `Display`). **Verification:**
+  `std_text.rs` (11) + `std_fmt.rs` (19) — 30 three-way differential tests. **Deferred (flagged, VR-5):**
+  full multi-byte decode (`→ Binary{32}`) and `byte_at` need a surface **zero-extension/width-cast prim**
+  (no way to compare a `Binary{32}` length against a `Binary{8}` index today — a real kernel-surface gap);
+  `bytes_slice`/`bytes_concat` are not surface-callable, so a `Bytes`-native slice/concat is deferred.
+- **`std.collections`/`std.text`/`std.fmt` exported** from `lib/std/mycelium-proj.toml`. M-752 (#526)
+  Tier-2 `.myc` smoke ports satisfied (the indexed-Vec + byte-index/decode ports); E13-1 M-716/M-717
+  preconditions flipped to point at the demonstrating tests (never asserted — VR-5/G2).
+
+### Changed (2026-06-26: l1 test-layout hygiene (M-797 as-touched, #584) + idmap issue reconcile)
+
+- **`mycelium-l1` inline tests extracted** to in-crate `src/tests/` (the "no tests in logic files" rule):
+  `decision.rs` (with its three `#[cfg(test)]` helper fns), `error.rs`, `nodule.rs`, `usefulness.rs` are
+  now `#[cfg(test)]`-free; the redundant `mod tests {}` wrapper in `src/tests/checkty.rs` was un-nested.
+  Pure refactor — **identical test counts pre/post** (no logic change; white-box access via
+  `use crate::<mod>::*`). The broader ~185-file retrofit (M-797) stays lazy/as-touched — **not** closed.
+- **`tools/github/idmap.tsv` reconciled** — M-716/#461, M-717/#462, M-725/#467 (since created) plus
+  M-752/#526 and M-797/#584 are now mapped, closing the stale "no live issue" FLAG for those ids.
+
 ### Added (2026-06-26: RFC-0032 Tier-2 — `Repr::Seq` + `Repr::Bytes` kernel reprs + `.myc` surface (E19-1 `kpr` Wave-B))
 
 - **Kernel value model grows by two reprs (KC-3, maintainer-signed-off)** — RFC-0032 D3/D4, implemented

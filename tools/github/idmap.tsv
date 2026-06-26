@@ -316,7 +316,10 @@ M-722	455	4727428544
 M-723	456	4727428595
 M-724	457	4727428702
 E13-1	458	4727428707
+M-716	461	4727429090
+M-717	462	4727429111
 E15-1	465	4727429185
+M-725	467	4727429306
 E16-1	471	4727429412
 M-730	472	4727429559
 M-731	473	4727429558
@@ -330,12 +333,16 @@ M-737	480	4727429915
 M-738	481	4727429940
 M-743	482	4727430060
 M-744	485	4727582260
-# FLAG (authored-ahead, NOT in this map — never invented; G2): 11 issues.yaml ids have NO live GitHub
-#   issue yet — M-714 M-715 M-716 M-717 M-718 M-719 (epic E13-1 children) and
-#   M-725 M-726 M-727 M-728 M-729 (epic E15-1 children). A prior `--issues` create run materialized
+M-752	526	4730573613
+M-797	584	4739622983
+# FLAG (authored-ahead, NOT in this map — never invented; G2): 8 issues.yaml ids have NO live GitHub
+#   issue yet — M-714 M-715 M-718 M-719 (epic E13-1 children) and
+#   M-726 M-727 M-728 M-729 (epic E15-1 children). A prior `--issues` create run materialized
 #   their siblings (M-709-713/#447-451, M-720-724/#453-457, M-730-734/#472-476) but skipped these.
 #   They are a `gh-issues-sync.py --issues` create-if-absent follow-up (owned by the issue-creating
 #   flow, not tul, which maps ids<->live issues and does not create/re-status). A number cannot be
 #   mapped for a non-existent issue (a number-only/db-id-only row would still be a guess) — so they
-#   stay uncovered + flagged here until created. After creation: 281/281 issues.yaml ids covered;
-#   currently 270/281 (all 11 gaps are exactly these authored-ahead ids).
+#   stay uncovered + flagged here until created.
+# RECONCILE (2026-06-26, wave-n1): M-716/#461, M-717/#462, M-725/#467 were since created and are now
+#   mapped above (closing 3 of the prior 11 authored-ahead gaps); M-752/#526 + M-797/#584 likewise
+#   now mapped. 275 ids covered; the 8 ids above remain the only authored-ahead gaps.
