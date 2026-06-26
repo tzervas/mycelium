@@ -26,9 +26,11 @@ use crate::WfError;
 /// smaller — all orders of magnitude under the cap. At the same time a `Repr` at the cap is already
 /// impractical to materialize (a `2^30`-element `f64` vector is 8 GiB), so anything above it is
 /// firmly in DoS territory, never a real workload. A power of two keeps the constant auditable
-/// (KC-3). The bound is **`Exact`**: a declared dimension is either within the cap or it is not, and
-/// the rejection is never-silent — [`Repr::check_well_formed`] returns
-/// [`WfError::DimensionTooLarge`] naming the offending field, its value, and this cap (G2).
+/// (KC-3). The *check* is **`Exact`** — a declared dimension is either within the cap or it is not,
+/// a total decidable predicate; the *cap value* `2^30` is itself a **`Declared`** policy choice (a
+/// DoS heuristic, not an `Exact` fact about any value). The rejection is never-silent —
+/// [`Repr::check_well_formed`] returns [`WfError::DimensionTooLarge`] naming the offending field,
+/// its value, and this cap (G2).
 pub const MAX_DIM: u32 = 1 << 30;
 
 /// Scalar element kind for `Dense` values (extensible registry).
