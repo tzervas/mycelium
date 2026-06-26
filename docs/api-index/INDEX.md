@@ -1104,7 +1104,7 @@
 | `mycelium_mlir::pack::PackError` | enum | `crates/mycelium-mlir/src/pack.rs:47` | A packing-codec error. |
 | `mycelium_mlir::pack::needed_bytes` | fn | `crates/mycelium-mlir/src/pack.rs:96` | Bytes required to hold `count` trits under `scheme` — the buffer-bound model. |
 | `mycelium_mlir::pack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:201` | Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer). |
-| `mycelium_mlir::rc_plan` | mod | `crates/mycelium-mlir/src/lib.rs:54` | — |
+| `mycelium_mlir::rc_plan` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
 | `mycelium_mlir::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:226` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
 | `mycelium_mlir::relayout_trits` | fn | `crates/mycelium-mlir/src/pack.rs:291` | Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as** |
 | `mycelium_mlir::run` | fn | `crates/mycelium-mlir/src/aot.rs:213` | Run a Core IR program through the AOT path to a representation [`Value`]. |
@@ -1114,9 +1114,9 @@
 | `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:156` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
 | `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:547` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
 | `mycelium_mlir::run_with_reclamation` | fn | `crates/mycelium-mlir/src/rc_plan.rs:163` | Run a Core IR program through the AOT path **and** emit its MEM-4 reclamation plan additively. |
-| `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
-| `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:56` | — |
-| `mycelium_mlir::specialize` | mod | `crates/mycelium-mlir/src/lib.rs:57` | — |
+| `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:56` | — |
+| `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:57` | — |
+| `mycelium_mlir::specialize` | mod | `crates/mycelium-mlir/src/lib.rs:58` | — |
 | `mycelium_mlir::specialize::BoundSpecializedDot` | struct | `crates/mycelium-mlir/src/specialize.rs:139` | A [`SpecializedDotKernel`] with its entry point resolved into a lifetime-bound `Sym` (M-682). |
 | `mycelium_mlir::specialize::SpecializedDotKernel::bind` | fn | `crates/mycelium-mlir/src/specialize.rs:119` | **Bind once, call many** (M-682): resolve the `myc_bitnet_dot_spec` entry point a single time |
 | `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/specialize.rs:130` | Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the |
@@ -1124,7 +1124,7 @@
 | `mycelium_mlir::specialize::SpecializedDotKernel::nonzero` | fn | `crates/mycelium-mlir/src/specialize.rs:111` | The number of nonzero (surviving) lanes — the straight-line `add`/`sub` count, exposed for |
 | `mycelium_mlir::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:135` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
 | `mycelium_mlir::unpack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:243` | Decode `count` trits from `bytes` under `scheme`. |
-| `mycelium_mlir::vr4` | mod | `crates/mycelium-mlir/src/lib.rs:58` | — |
+| `mycelium_mlir::vr4` | mod | `crates/mycelium-mlir/src/lib.rs:59` | — |
 | `mycelium_mlir::vr4::Backend::all` | fn | `crates/mycelium-mlir/src/vr4.rs:67` | All backends, in lowering order — the exhaustive set the VR-4 gate must cover. |
 | `mycelium_mlir::vr4::Backend::name` | fn | `crates/mycelium-mlir/src/vr4.rs:80` | A stable human-readable name (for `EXPLAIN` / reports). |
 | `mycelium_mlir::vr4::BackendStage::explain` | fn | `crates/mycelium-mlir/src/vr4.rs:127` | A short `EXPLAIN` line: backend, covered/skipped, the faithfulness tag, and the dump size / |

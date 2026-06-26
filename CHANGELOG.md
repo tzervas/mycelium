@@ -8,6 +8,11 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: waveN2 Phase-2 — M-717 multi-byte UTF-8 complete, M-726 EXPLAIN-able opt passes)
+
+- **`lib/std/text.myc` full UTF-8 decode (M-717)** — `byte_at` + `decode_one` now decode all of **1/2/3/4-byte** UTF-8 three-way (ASCII, é U+00E9, € U+20AC, 😀 U+1F600), using the new `width_cast` prim for the `Binary{32}` codepoint assembly + bounds check (`lt(width_cast(idx,len),len)`); shifts via `add_bin`-doubling (no `shl` prim). Never-silent: a malformed lead / bad-or-missing continuation → `Err(Invalid(byte))`, never U+FFFD. **std_text 24** (13 new, incl. 5 malformation refusals on all 3 paths). **M-717 encoding DoD met.** Still deferred (flagged, VR-5): `Bytes`-native slice/concat (need their own surface prim — the next analog of the width-cast gap) and the UTF-8 *validity* layer (overlong/surrogate/>U+10FFFF rejection — a flagged increment, not faked).
+- **EXPLAIN-able optimization passes `inline`/`cse`/`dce` (M-726, E15-1)** — in `crates/mycelium-mlir/src/passes/`, each a pure `Program → (Program, TransformLog)`; every transform reifies a `TransformRecord {pass, rule, site, before, after, reason}` into an append-only, queryable log (RFC-0029 §7.2 — a silent transform is structurally impossible, G2). **Differential: `eval(optimized) == eval(unoptimized) == interp(source)`** across a corpus where each pass genuinely fires (validated through the trusted env-machine + reference interpreter + the M-210 checker, with a sabotage sentinel for non-vacuity). 102→115 mlir tests. `Declared` pass correctness; `Empirical` agreement.
+
 ### Added (2026-06-26: waveN2 Phase-1 — stdlib enablers, width-cast prim, MLIR carry-chain, design notes (E13-1/E19-1/E15-1))
 
 - **`lib/std/iter.myc` + `cmp.myc` width-typed helpers (M-715)** — iterator surface (`length`/`is_empty` + a fold-overflow refusal run three-way; `map`/`filter`/`fold`/`any`/`find` type-check but **do not yet monomorphize** — a recursive-HOF defunctionalization gap, flagged, design-phase surface) + 10 monomorphic `Binary{8}` comparison helpers (generic forms await M-753). std_iter (10) + std_cmp (31) green.

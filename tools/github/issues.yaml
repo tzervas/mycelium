@@ -4517,6 +4517,15 @@ issues:
       - src:crates/mycelium-l1/tests/std_fmt.rs
       - src:lib/std/fmt.myc
     body: |
+      WAVE-N2-P2 (2026-06-26): multi-byte UTF-8 decode COMPLETE -- byte_at + decode_one now decode
+      1/2/3/4-byte sequences three-way (via the width_cast prim, M-798); never-silent Err(Invalid(byte))
+      on malformed lead/continuation (no U+FFFD). FLAG-text-1 (byte_at) + FLAG-text-2 (Binary{32}
+      codepoints) CLOSED. ENCODING DoD MET. STILL DEFERRED (VR-5): (a) Bytes-native slice/concat --
+      bytes_slice/bytes_concat still not surface-callable (need their own surface prim, the next analog
+      of width_cast/M-798); the slicing DoD clause is the only remainder. (b) UTF-8 VALIDITY layer --
+      decode does not yet reject overlong/surrogate/>U+10FFFF encodings (a flagged increment).
+      Status stays in-progress until slicing lands.
+
       IMPLEMENTED PARTIAL (2026-06-26, wave-n1): lib/std/text.myc + lib/std/fmt.myc landed in .myc.
       text.myc: byte_len/is_ascii_byte + decode_ascii (UTF-8 ASCII fast-path, U+0000–U+007F) returning
       Result<Binary{8}, Utf8Error> — a malformed/multi-byte lead byte → never-silent Err(Invalid(byte)),
@@ -4810,6 +4819,14 @@ issues:
       - src:crates/mycelium-mlir/src/lib.rs
       - corpus:DN-25
     body: |
+      IMPLEMENTED (2026-06-26, waveN2-p2): inline/cse/dce passes in crates/mycelium-mlir/src/passes/,
+      each a pure Program -> (Program, TransformLog). EXPLAIN-able: every transform reifies a
+      TransformRecord {pass, rule, site, before, after, reason} into an append-only queryable log
+      (RFC-0029 §7.2; silent transform structurally impossible, G2). Differential: eval(optimized) ==
+      eval(unoptimized) == interp(source) across a corpus (trusted env-machine + interp + M-210 checker;
+      sabotage sentinel for non-vacuity). 102->115 mlir tests. Declared pass correctness; Empirical
+      agreement. Status stays ready until landed.
+
       Implement at minimum inlining, CSE (common subexpression elimination), and DCE (dead code
       elimination) as optimization passes in crates/mycelium-mlir/. Each pass must be EXPLAIN-able
       (reified, inspectable, auditable -- extending M-673's MonoSelections pattern; no black-box
