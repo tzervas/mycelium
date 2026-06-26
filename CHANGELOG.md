@@ -8,6 +8,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Security (2026-06-26: spore identity encoding — injectivity fix `v0 → v1`)
+
+- **Fixed a content-address injectivity flaw in `mycelium-spore::content_address`** (surfaced by the
+  KC-3 trusted-core review as a side finding). The `v0` pre-image emitted every author-influenced field
+  (surface names, source `path`, dep `name`/`phylum`/`hash`) **space/newline-delimited with no
+  length-prefix or escaping**, so a crafted field containing a space or newline could shift a record
+  boundary and **alias two distinct spore DAGs onto one pre-image → one address** (a second-pre-image
+  collision; a **supply-chain substitution vector** against dep-pinning / resolve-by-hash / immutability
+  detection). All three `ResolvedDep` fields are free-text manifest strings, so the collision needed no
+  hash-preimage or filesystem — **Proven** (a byte-identical `v0` pre-image for two distinct dep DAGs is
+  exhibited in the regression tests). **Fix:** `v1` **length-prefixes every variable-length field**
+  (`<bytelen>:<bytes>`) and prefixes each section's record count, making the encoding injective by
+  construction; added adversarial injectivity property tests (`crates/mycelium-spore/src/tests/lib_tests.rs`
+  → `mod injectivity`). **Note:** the header bumps `v0 → v1`, which **re-addresses every spore**
+  (append-only supersession of the explicitly provisional format; acceptable pre-1.0 — no live registry).
+- **KC-3 holds:** the right response to a verifiable encoding flaw is *more verification* (a property
+  test), **not** promoting the encoding into the trusted core — identity is a deterministic, checkable
+  function and must be *verified*, never *trusted* (VR-5 applied to the trust boundary). `mycelium-spore`
+  stays a verified library above the kernel; the trusted-core boundary is unchanged.
+
 ### Changed (2026-06-26: DN-35 ratified Draft → Accepted)
 
 - **DN-35 — Env-Machine Reclamation** ratified **Draft → Accepted** (maintainer). Accepts the §10 design

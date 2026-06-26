@@ -198,23 +198,48 @@ fn content_address(
     sources: &[SourceFile],
     deps: &[ResolvedDep],
 ) -> ContentHash {
-    let mut s = String::from("mycelium-spore-v0\n");
+    // **Injectivity is the whole contract** (ADR-003): distinct (kind, surface, sources, deps) MUST
+    // map to distinct addresses, or the content-addressed supply chain (dep pinning, resolve-by-hash,
+    // immutability detection) can be substituted under. The original `v0` encoding emitted every
+    // author-influenced field space/newline-delimited with **no length-prefix or escaping** — so a
+    // crafted source path or dep field containing a space/newline could shift a field boundary and
+    // alias two distinct DAGs onto one pre-image string (a second-pre-image collision; all three
+    // `ResolvedDep` fields are free-text manifest strings, so this needed no preimage or filesystem).
+    // `v1` **length-prefixes every variable-length field** (`<bytelen>:<bytes>`) and prefixes each
+    // section's record count, so the byte boundaries are unambiguous and no embedded delimiter can
+    // forge structure — the encoding is injective by construction. Property-tested over adversarial
+    // inputs (paths/names with spaces/newlines) in `src/tests/lib_tests.rs`. The version header bumps
+    // `v0 -> v1`, which **re-addresses every spore** (append-only supersession of the explicitly
+    // provisional format; acceptable pre-1.0 — no live registry). KEEP-OUT of the kernel (KC-3):
+    // identity is a deterministic, *verifiable* encoding — it must be verified, never trusted.
+    let mut s = String::from("mycelium-spore-v1\n");
     s.push_str(&format!("kind:{}\n", kind_str(kind)));
-    s.push_str("surface:\n");
+    s.push_str(&format!("surface:{}\n", surface.len()));
     for name in surface {
-        s.push_str(&format!("  {name}\n"));
+        push_field(&mut s, name);
     }
-    s.push_str("code:\n");
+    s.push_str(&format!("code:{}\n", sources.len()));
     for f in sources {
-        s.push_str(&format!("  {} {}\n", f.path, f.hash.as_str()));
+        push_field(&mut s, &f.path);
+        push_field(&mut s, f.hash.as_str());
     }
-    s.push_str("deps:\n");
+    s.push_str(&format!("deps:{}\n", deps.len()));
     for d in deps {
         // The hash is identity; the version requirement is metadata and is excluded here.
-        s.push_str(&format!("  {} {} {}\n", d.name, d.phylum, d.hash));
+        push_field(&mut s, &d.name);
+        push_field(&mut s, &d.phylum);
+        push_field(&mut s, &d.hash);
     }
     let hex = blake3::hash(s.as_bytes()).to_hex();
     ContentHash::from_parts("blake3", hex.as_str()).expect("blake3 hex is a valid digest")
+}
+
+/// Append one length-prefixed field to the canonical pre-image: `<byte-length>:<bytes>\n`. The byte
+/// count removes all delimiter ambiguity — the field spans exactly `v.len()` bytes, so an embedded
+/// space or newline cannot forge a record/field boundary (netstring-style canonicalization). This is
+/// what makes [`content_address`]'s `v1` encoding **injective** where `v0` was not.
+fn push_field(s: &mut String, v: &str) {
+    s.push_str(&format!("{}:{}\n", v.len(), v));
 }
 
 /// The canonical `[project].kind` spelling.
