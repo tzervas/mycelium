@@ -104,6 +104,18 @@ pub enum Repr {
         /// Declared sparsity class.
         sparsity: SparsityClass,
     },
+    /// A first-class indexed homogeneous sequence (RFC-0032 D3; M-749). `len` elements, each of the
+    /// element representation `elem`. The substrate for an O(1)-indexed `Vec`/`Map`/`Set` (the
+    /// efficient collections surface) — distinct from the recursive-ADT cons-`List`, which needs no
+    /// kernel support. Unlike the scalar paradigms' dimension fields, **`len == 0` is well-formed**
+    /// (the empty sequence is a legitimate value); only the [`MAX_DIM`] over-allocation cap and the
+    /// nested `elem`'s own well-formedness gate it (never-silent on a malformed element repr, G2).
+    Seq {
+        /// The (boxed) element representation — every element of the payload matches this `Repr`.
+        elem: Box<Repr>,
+        /// Declared element count (`≤ MAX_DIM` when well-formed; `0` is allowed — the empty seq).
+        len: u32,
+    },
 }
 
 /// Check one dimension field against the `> 0` lower guard and the [`MAX_DIM`] upper guard,
@@ -122,6 +134,22 @@ fn dim_in_range(field: &'static str, value: u32) -> Result<bool, WfError> {
         });
     }
     Ok(true)
+}
+
+/// Check a *length* field against the [`MAX_DIM`] over-allocation cap **only** — unlike
+/// [`dim_in_range`], `0` is accepted (a [`Repr::Seq`] of `len == 0` is the well-formed empty
+/// sequence, RFC-0032 D3). Returns the never-silent [`WfError::DimensionTooLarge`] (naming `field`,
+/// the value, and the cap) when the cap is exceeded; `Ok(())` otherwise. Same DoS guard as
+/// `dim_in_range`, without the `> 0` lower bound.
+fn len_in_cap(field: &'static str, value: u32) -> Result<(), WfError> {
+    if value > MAX_DIM {
+        return Err(WfError::DimensionTooLarge {
+            field,
+            value,
+            cap: MAX_DIM,
+        });
+    }
+    Ok(())
 }
 
 impl Repr {
@@ -160,6 +188,17 @@ impl Repr {
                     }
                 };
                 dim_ok && !model.is_empty() && sparsity_ok
+            }
+            // A sequence is well-formed iff its declared `len` is within the over-allocation cap
+            // (DN-40 §3) **and** the nested element repr is itself well-formed — recursing so a
+            // malformed `elem` (e.g. `Binary{0}` or an over-cap inner dim) is rejected
+            // never-silently, *before* any payload of `len` elements is materialized (G2). `len == 0`
+            // is allowed: the empty sequence is a legitimate value, so the cap is checked with the
+            // length-only guard, not the `> 0` `dim_in_range`.
+            Repr::Seq { elem, len } => {
+                len_in_cap("len", *len)?;
+                elem.check_well_formed()?;
+                true
             }
         };
         if in_range {

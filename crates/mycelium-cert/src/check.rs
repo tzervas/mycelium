@@ -542,7 +542,8 @@ fn numeric_payload(v: &Value) -> Option<&[f64]> {
     match v.payload() {
         Payload::Scalars(xs) => Some(xs),
         Payload::Hypervector(xs) => Some(xs),
-        Payload::Bits(_) | Payload::Trits(_) => None,
+        // A sequence (RFC-0032 D3) has no flat numeric payload here — explicitly None, not coerced.
+        Payload::Bits(_) | Payload::Trits(_) | Payload::Seq(_) => None,
     }
 }
 

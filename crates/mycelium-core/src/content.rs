@@ -43,11 +43,18 @@ pub(crate) mod tag {
     pub const REPR_TERNARY: u8 = 0x11;
     pub const REPR_DENSE: u8 = 0x12;
     pub const REPR_VSA: u8 = 0x13;
+    /// RFC-0032 D3 (M-749): the new indexed-sequence repr. Appended (append-only: existing codes are
+    /// frozen so a definition's identity never shifts when the registry grows). `0x15` is reserved
+    /// for `REPR_BYTES` (M-750).
+    pub const REPR_SEQ: u8 = 0x14;
 
     pub const PAYLOAD_BITS: u8 = 0x20;
     pub const PAYLOAD_TRITS: u8 = 0x21;
     pub const PAYLOAD_SCALARS: u8 = 0x22;
     pub const PAYLOAD_HYPERVECTOR: u8 = 0x23;
+    /// RFC-0032 D3 (M-749): the sequence payload. Appended (append-only). `0x25` is reserved for
+    /// `PAYLOAD_BYTES` (M-750).
+    pub const PAYLOAD_SEQ: u8 = 0x24;
 
     pub const SPARSITY_DENSE: u8 = 0x30;
     pub const SPARSITY_SPARSE: u8 = 0x31;
@@ -232,6 +239,15 @@ impl Canon {
                     }
                 }
             }
+            Repr::Seq { elem, len } => {
+                // The element type AND the declared length are part of the sequence type's identity
+                // (RFC-0032 D3): `Seq<Binary{8}, 3>` and `Seq<Binary{8}, 4>` are distinct types, and
+                // `Seq<Binary{8}>` ≠ `Seq<Ternary{8}>`. The nested `elem` recurses through this same
+                // injective encoder, so the framing stays collision-free.
+                self.tag(tag::REPR_SEQ);
+                self.u32(*len);
+                self.repr(elem);
+            }
         }
     }
 
@@ -268,6 +284,16 @@ impl Canon {
                 self.u64(xs.len() as u64);
                 for &x in xs {
                     self.f64(x);
+                }
+            }
+            Payload::Seq(elems) => {
+                // Length-prefixed, then each element's identity-bearing content (repr + payload) via
+                // the same `value` encoder — recursive and injective, so two sequences collide iff
+                // they are element-wise identical (RFC-0032 D3).
+                self.tag(tag::PAYLOAD_SEQ);
+                self.u64(elems.len() as u64);
+                for e in elems {
+                    self.value(e);
                 }
             }
         }

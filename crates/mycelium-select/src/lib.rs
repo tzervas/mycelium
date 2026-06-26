@@ -45,7 +45,7 @@ use mycelium_core::{
     PhysicalLayout, Repr, ScalarKind, SparsityClass, SparsityObs, Value,
 };
 
-/// The four closed paradigm kinds, as a predicate-level discriminator (RFC-0001 §4.1).
+/// The paradigm kinds, as a predicate-level discriminator (RFC-0001 §4.1; RFC-0032 D3 added `Seq`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ParadigmKind {
     /// `Repr::Binary`.
@@ -56,6 +56,8 @@ pub enum ParadigmKind {
     Dense,
     /// `Repr::Vsa`.
     Vsa,
+    /// `Repr::Seq` — the indexed homogeneous sequence (RFC-0032 D3; M-749).
+    Seq,
 }
 
 fn kind_of(repr: &Repr) -> ParadigmKind {
@@ -64,6 +66,7 @@ fn kind_of(repr: &Repr) -> ParadigmKind {
         Repr::Ternary { .. } => ParadigmKind::Ternary,
         Repr::Dense { .. } => ParadigmKind::Dense,
         Repr::Vsa { .. } => ParadigmKind::Vsa,
+        Repr::Seq { .. } => ParadigmKind::Seq,
     }
 }
 
@@ -304,6 +307,9 @@ fn repr_storage_bits(repr: &Repr) -> f64 {
             SparsityClass::Dense => f64::from(*dim) * 64.0,
             SparsityClass::Sparse { max_active } => f64::from(*max_active) * 96.0,
         },
+        // RFC-0032 D3 (M-749): a homogeneous sequence stores `len` copies of its element repr's
+        // footprint — recursing through the same exact storage model (a total, finite cost).
+        Repr::Seq { elem, len } => f64::from(*len) * repr_storage_bits(elem),
     }
 }
 
@@ -326,6 +332,8 @@ fn src_elements(repr: &Repr) -> f64 {
         Repr::Binary { width } => f64::from(*width),
         Repr::Ternary { trits } => f64::from(*trits),
         Repr::Dense { dim, .. } | Repr::Vsa { dim, .. } => f64::from(*dim),
+        // RFC-0032 D3 (M-749): the element count of a sequence is its declared `len`.
+        Repr::Seq { len, .. } => f64::from(*len),
     }
 }
 

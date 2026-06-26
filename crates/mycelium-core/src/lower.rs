@@ -37,17 +37,26 @@ pub struct Stage {
 
 /// The default schedule-staged packing for a representation (RFC-0004 §5; DN-01). The fixed,
 /// enumerable layout set keeps selection tractable (T1.4) — `I2_S` is the lossless ternary default.
+///
+/// Returns `None` for a representation that has **no scheduled physical layout in the fixed set**
+/// — currently [`Repr::Seq`] (RFC-0032 D3): a packing schedule for indexed sequences is not yet
+/// designed, so rather than silently mislabel a `Seq` with a scalar layout (a black box, G2), the
+/// schedule is *explicitly absent*. The binding is then left layout-unannotated, exactly as an
+/// `Op` result whose repr is statically unknown is (the omission is explicit, never silent).
 #[must_use]
-pub fn schedule(repr: &Repr) -> PhysicalLayout {
+pub fn schedule(repr: &Repr) -> Option<PhysicalLayout> {
     match repr {
-        Repr::Binary { .. } => PhysicalLayout::BinaryWords,
-        Repr::Ternary { .. } => PhysicalLayout::TritPacked {
+        Repr::Binary { .. } => Some(PhysicalLayout::BinaryWords),
+        Repr::Ternary { .. } => Some(PhysicalLayout::TritPacked {
             scheme: PackScheme::I2S,
-        },
-        Repr::Dense { .. } => PhysicalLayout::DenseArray,
-        Repr::Vsa { sparsity, .. } => PhysicalLayout::VsaStore {
+        }),
+        Repr::Dense { .. } => Some(PhysicalLayout::DenseArray),
+        Repr::Vsa { sparsity, .. } => Some(PhysicalLayout::VsaStore {
             sparse: matches!(sparsity, SparsityClass::Sparse { .. }),
-        },
+        }),
+        // No designed packing schedule for indexed sequences yet (RFC-0032 D3) — explicitly absent,
+        // never a silently-wrong scalar layout.
+        Repr::Seq { .. } => None,
     }
 }
 
@@ -93,6 +102,7 @@ fn render_repr(repr: &Repr) -> String {
             };
             format!("VSA{{{model}:{dim} {s}}}")
         }
+        Repr::Seq { elem, len } => format!("Seq{{{}; {len}}}", render_repr(elem)),
     }
 }
 
@@ -115,6 +125,15 @@ fn render_payload(p: &Payload) -> String {
         }
         Payload::Scalars(xs) => format!("scalars={xs:?}"),
         Payload::Hypervector(xs) => format!("hv={xs:?}"),
+        Payload::Seq(elems) => {
+            // Render each element by its repr+payload head, comma-joined inside brackets — diffable
+            // and deterministic (SC-4), recursing through the same helpers.
+            let inner: Vec<String> = elems
+                .iter()
+                .map(|e| format!("{} {}", render_repr(e.repr()), render_payload(e.payload())))
+                .collect();
+            format!("seq=[{}]", inner.join(", "))
+        }
     }
 }
 
@@ -613,7 +632,7 @@ fn flatten(node: &Node, out: &mut Vec<Binding>, next: &mut usize) -> Atom {
             out.push(Binding {
                 name: name.clone(),
                 rhs: Rhs::Const(v.clone()),
-                layout: Some(schedule(v.repr())),
+                layout: schedule(v.repr()),
             });
             name
         }
@@ -653,7 +672,7 @@ fn flatten(node: &Node, out: &mut Vec<Binding>, next: &mut usize) -> Atom {
                     target: target.clone(),
                     policy: policy.clone(),
                 },
-                layout: Some(schedule(target)),
+                layout: schedule(target),
             });
             name
         }

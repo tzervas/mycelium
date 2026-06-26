@@ -21,11 +21,18 @@
 //! refusals on every path**, never a silent wrap or a silent `false` — pinned by the refusal tests.
 //!
 //! # Scope boundary
-//! The Tier-2 reprs (`Repr::Seq` / `Repr::Bytes`, M-749/M-750) are **not** exercised here — they are
-//! the KC-3-significant, maintainer-sign-off-gated additions and land separately; their conformance
-//! ports join this file when they do (never faked here — G2/VR-5).
+//! - **M-749** (`Repr::Seq`) lands its enabler coverage here as a **prim-level differential**
+//!   (`seq.get`/`seq.len` over directly-built L0 `Node`s: **L0-interp ≡ AOT**), plus the never-silent
+//!   out-of-bounds refusal on both paths. The full **three-way** (`.myc` surface) differential is
+//!   **deferred**: there is no `Seq` surface literal in the lexer/parser yet, so L1-eval over a
+//!   parsed `.myc` Seq program cannot be exercised — that wiring is FLAGGED for a follow-up (it edits
+//!   the `mycelium-l1` lexer/parser/checker, the `s10` collision surface). The prim-level path *is*
+//!   the trusted-base coverage (the kernel prim + the AOT env-machine over the same registry); it is
+//!   not faked or upgraded past its basis (G2/VR-5).
+//! - **M-750** (`Repr::Bytes`) is **not** exercised here — it lands separately (M-750); its
+//!   conformance ports join this file when it does (never faked here — G2/VR-5).
 
-use mycelium_core::{Payload, Repr};
+use mycelium_core::{Meta, Node, Payload, Provenance, Repr, Value};
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::{check_nodule, elaborate, parse, Evaluator};
 
@@ -326,5 +333,149 @@ fn eq_concrete_operand_anchors_bare_decimal() {
         "nodule d\ndefault paradigm Binary\nfn main() -> Binary{1} = eq(4, 0b0000_0101)",
         &r,
         &p,
+    );
+}
+
+// ── M-749: indexed-sequence prims — prim-level differential (L0-interp ≡ AOT) ────────────────────
+//
+// `Repr::Seq` has no `.myc` surface literal yet (lexer/parser wiring deferred — FLAGGED in the
+// module header), so the three-way `.myc` path can't run. Instead we build the L0 `Node` tree
+// directly and exercise the achievable, trusted-base differential: the reference interpreter
+// (`L0-interp`) and the AOT env-machine (`mycelium_mlir::run_core`) dispatch `seq.get`/`seq.len`
+// through the *same* prim registry, so they must agree on the observable — and refuse an
+// out-of-bounds index identically (never-silent on both paths, G2).
+
+/// A `Binary{1}` value (a sequence element / an index bit-source).
+fn b1_val(truth: bool) -> Value {
+    Value::new(
+        Repr::Binary { width: 1 },
+        Payload::Bits(vec![truth]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed bit")
+}
+
+/// An unsigned `Binary{8}` index literal value (MSB-first).
+fn idx8(n: u8) -> Value {
+    let bits: Vec<bool> = (0..8).rev().map(|k| (n >> k) & 1 == 1).collect();
+    Value::new(
+        Repr::Binary { width: 8 },
+        Payload::Bits(bits),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed index")
+}
+
+/// A `Seq<Binary{1}, 3>` const value `[true, false, true]`.
+fn seq3() -> Value {
+    Value::new(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 1 }),
+            len: 3,
+        },
+        Payload::Seq(vec![b1_val(true), b1_val(false), b1_val(true)]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed seq")
+}
+
+/// Run a single-`Op` L0 program on **both** the reference interpreter and the AOT env-machine and
+/// return `(l0_interp, aot)` results (each a `Result`), so a test can assert agreement on success
+/// *and* on refusal.
+fn run_l0_and_aot(node: &Node) -> (Result<Value, String>, Result<Value, String>) {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+    let l0 = interp.eval(node).map_err(|e| format!("{e:?}"));
+    // `run` returns the repr `Value` (the seq prims always yield a repr value, never a data value).
+    let aot = mycelium_mlir::run(node, &prims, &engine).map_err(|e| format!("{e:?}"));
+    (l0, aot)
+}
+
+#[test]
+fn seq_get_in_range_l0_interp_equals_aot() {
+    // seq.get([t,f,t], 0) == t ; index 2 == t ; index 1 == f.
+    for (i, want) in [(0u8, true), (1, false), (2, true)] {
+        let node = Node::Op {
+            prim: "seq.get".to_owned(),
+            args: vec![Node::Const(seq3()), Node::Const(idx8(i))],
+        };
+        let (l0, aot) = run_l0_and_aot(&node);
+        let l0 = l0.unwrap_or_else(|e| panic!("seq.get({i}) L0-interp failed: {e}"));
+        let aot = aot.unwrap_or_else(|e| panic!("seq.get({i}) AOT failed: {e}"));
+        assert_eq!(
+            (l0.repr(), l0.payload()),
+            (aot.repr(), aot.payload()),
+            "seq.get({i}): L0-interp vs AOT diverged"
+        );
+        assert_eq!(l0.repr(), &Repr::Binary { width: 1 });
+        assert_eq!(l0.payload(), &Payload::Bits(vec![want]));
+    }
+}
+
+#[test]
+fn seq_len_l0_interp_equals_aot() {
+    let node = Node::Op {
+        prim: "seq.len".to_owned(),
+        args: vec![Node::Const(seq3())],
+    };
+    let (l0, aot) = run_l0_and_aot(&node);
+    let l0 = l0.expect("seq.len L0-interp");
+    let aot = aot.expect("seq.len AOT");
+    assert_eq!(
+        (l0.repr(), l0.payload()),
+        (aot.repr(), aot.payload()),
+        "seq.len: L0-interp vs AOT diverged"
+    );
+    // 3 as Binary{32}, MSB-first.
+    assert_eq!(l0.repr(), &Repr::Binary { width: 32 });
+    let want: Vec<bool> = (0..32).rev().map(|k| (3u32 >> k) & 1 == 1).collect();
+    assert_eq!(l0.payload(), &Payload::Bits(want));
+}
+
+/// Never-silent (G2): an out-of-bounds `seq.get` is an explicit refusal on **both** paths — never a
+/// panic, never a silent default. (`len == 3`, so index 3 is out of range.)
+#[test]
+fn seq_get_out_of_bounds_refuses_on_both_paths() {
+    let node = Node::Op {
+        prim: "seq.get".to_owned(),
+        args: vec![Node::Const(seq3()), Node::Const(idx8(3))],
+    };
+    let (l0, aot) = run_l0_and_aot(&node);
+    assert!(
+        l0.is_err(),
+        "L0-interp must refuse an out-of-bounds seq.get (never a silent default)"
+    );
+    assert!(
+        aot.is_err(),
+        "AOT must refuse an out-of-bounds seq.get (never a silent default)"
+    );
+}
+
+/// `seq.get`/`seq.len` over a **non-sequence** operand is an explicit type refusal on both paths
+/// (never a silent coercion).
+#[test]
+fn seq_prims_refuse_non_sequence_operand() {
+    let get_bad = Node::Op {
+        prim: "seq.get".to_owned(),
+        args: vec![Node::Const(b1_val(true)), Node::Const(idx8(0))],
+    };
+    let (l0, aot) = run_l0_and_aot(&get_bad);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "seq.get on a non-seq must refuse on both paths"
+    );
+
+    let len_bad = Node::Op {
+        prim: "seq.len".to_owned(),
+        args: vec![Node::Const(b1_val(true))],
+    };
+    let (l0, aot) = run_l0_and_aot(&len_bad);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "seq.len on a non-seq must refuse on both paths"
     );
 }

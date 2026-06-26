@@ -61,6 +61,9 @@ pub enum Payload {
     Scalars(Vec<f64>),
     /// Components of a `Vsa` value (length == `dim`).
     Hypervector(Vec<f64>),
+    /// Elements of a [`Repr::Seq`] value (length == the seq's `len`; every element's `repr` matches
+    /// the seq's `elem`). RFC-0032 D3 (M-749).
+    Seq(Vec<Value>),
 }
 
 /// The externally-tagged wire projection of [`Payload`] — `{"bits": "…"}`, `{"trits": "…"}`,
@@ -76,6 +79,11 @@ enum PayloadWire {
     Scalars(Vec<f64>),
     #[serde(rename = "hypervector")]
     Hypervector(Vec<f64>),
+    /// A sequence payload renders as a JSON array of self-describing element [`Value`]s — each
+    /// element round-trips through its own `Value` (de)serialization, so the seq is checked
+    /// element-wise on the way in. RFC-0032 D3 (M-749).
+    #[serde(rename = "seq")]
+    Seq(Vec<Value>),
 }
 
 impl Serialize for Payload {
@@ -89,6 +97,7 @@ impl Serialize for Payload {
             }
             Payload::Scalars(xs) => PayloadWire::Scalars(xs.clone()),
             Payload::Hypervector(xs) => PayloadWire::Hypervector(xs.clone()),
+            Payload::Seq(elems) => PayloadWire::Seq(elems.clone()),
         };
         wire.serialize(serializer)
     }
@@ -124,6 +133,7 @@ impl<'de> Deserialize<'de> for Payload {
             }
             PayloadWire::Scalars(xs) => Payload::Scalars(xs),
             PayloadWire::Hypervector(xs) => Payload::Hypervector(xs),
+            PayloadWire::Seq(elems) => Payload::Seq(elems),
         })
     }
 }
@@ -171,6 +181,39 @@ impl Value {
     pub fn meta(&self) -> &Meta {
         &self.meta
     }
+
+    /// The element count of a [`Repr::Seq`] value, or `None` for any other representation
+    /// (never-silent — a non-sequence has no length here, G2). `Exact`: a total decidable query.
+    #[must_use]
+    pub fn seq_len(&self) -> Option<usize> {
+        match self.payload() {
+            Payload::Seq(elems) => Some(elems.len()),
+            _ => None,
+        }
+    }
+
+    /// Never-silent indexed access into a [`Repr::Seq`] value (RFC-0032 D3): the `i`-th element, or
+    /// `None` when `i` is out of bounds **or** the value is not a sequence — **never** a panic or a
+    /// silent default (G2). `Exact`: total over its domain. The `.myc` `Vec::get` surface bottoms
+    /// out on this.
+    #[must_use]
+    pub fn seq_get(&self, i: usize) -> Option<&Value> {
+        match self.payload() {
+            Payload::Seq(elems) => elems.get(i),
+            _ => None,
+        }
+    }
+
+    /// The elements of a [`Repr::Seq`] value as a slice, or `None` for any other representation
+    /// (the fold/iterate basis — RFC-0032 D3). Never-silent: a non-sequence yields `None`, not an
+    /// empty slice.
+    #[must_use]
+    pub fn seq_elems(&self) -> Option<&[Value]> {
+        match self.payload() {
+            Payload::Seq(elems) => Some(elems),
+            _ => None,
+        }
+    }
 }
 
 fn payload_matches(repr: &Repr, payload: &Payload) -> bool {
@@ -179,6 +222,13 @@ fn payload_matches(repr: &Repr, payload: &Payload) -> bool {
         (Repr::Ternary { trits }, Payload::Trits(t)) => t.len() == *trits as usize,
         (Repr::Dense { dim, .. }, Payload::Scalars(s)) => s.len() == *dim as usize,
         (Repr::Vsa { dim, .. }, Payload::Hypervector(h)) => h.len() == *dim as usize,
+        // A sequence payload matches iff it has exactly `len` elements **and** every element's own
+        // `repr` equals the declared element repr `elem` (homogeneity — RFC-0032 D3). Each element
+        // is itself a `Value`, so its payload↔repr agreement was already enforced by its own
+        // `Value::new`; here we only re-check the count and the element-type homogeneity.
+        (Repr::Seq { elem, len }, Payload::Seq(elems)) => {
+            elems.len() == *len as usize && elems.iter().all(|e| e.repr() == elem.as_ref())
+        }
         _ => false,
     }
 }

@@ -122,6 +122,8 @@ fn paradigm(repr: &Repr) -> &'static str {
         Repr::Ternary { .. } => "ternary",
         Repr::Dense { .. } => "dense",
         Repr::Vsa { .. } => "vsa",
+        // RFC-0032 D3 (M-749): the indexed-sequence repr.
+        Repr::Seq { .. } => "seq",
     }
 }
 

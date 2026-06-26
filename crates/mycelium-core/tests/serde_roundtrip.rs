@@ -153,6 +153,30 @@ fn value_corpus() -> Vec<Value> {
             },
             Payload::Hypervector(vec![1.0, 0.0, 0.0, -1.0]),
         ),
+        // RFC-0032 D3 (M-749): an indexed homogeneous sequence of `Binary{1}` elements. The wire
+        // form carries self-describing element values; faithful round-trip is the test (each
+        // element rides its own `Value` (de)serialization). The inner elements carry `Exact` meta;
+        // only the *outer* value's `Meta` is varied by the corpus pairing.
+        (
+            Repr::Seq {
+                elem: Box::new(Repr::Binary { width: 1 }),
+                len: 2,
+            },
+            Payload::Seq(vec![
+                Value::new(
+                    Repr::Binary { width: 1 },
+                    Payload::Bits(vec![true]),
+                    Meta::exact(Provenance::Root),
+                )
+                .unwrap(),
+                Value::new(
+                    Repr::Binary { width: 1 },
+                    Payload::Bits(vec![false]),
+                    Meta::exact(Provenance::Root),
+                )
+                .unwrap(),
+            ]),
+        ),
     ];
     let mut out = Vec::new();
     for (repr, payload) in reprs_payloads {

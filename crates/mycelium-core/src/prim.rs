@@ -212,6 +212,18 @@ impl PrimTable {
         // RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic (width-uniform).
         t.insert("bit.add", exact(vec![Binary, Binary], Binary));
         t.insert("bit.sub", exact(vec![Binary, Binary], Binary));
+        // RFC-0032 D3 (M-749): never-silent indexed-sequence access. Both are `intrinsic = Exact`
+        // (total/decidable over the in-range domain). **Paradigm-model note (FLAG):** the Π paradigm
+        // model is `Binary`/`Ternary`/`Any` only — it has no first-class `Seq` paradigm, and a
+        // sequence-element result type cannot be expressed in it. So the seq operand and the
+        // `seq.get` element result are typed `Any` here (the table's existing paradigm-polymorphic
+        // escape hatch, as for `core.id`); the real never-silent typing — "operand must be a `Seq`",
+        // out-of-bounds refusal, the element repr of the result — is enforced by the interpreter prim
+        // (`prims.rs::{as_seq,as_index,prim_seq_get}`), not encoded in this coarse signature. A
+        // first-class `Seq` paradigm in `PrimParadigm` is a deliberate, RFC-unpinned extension left
+        // for the surface-typing work (it ripples into the checker + content-addressing).
+        t.insert("seq.len", exact(vec![Any], Binary));
+        t.insert("seq.get", exact(vec![Any, Binary], Any));
         t
     }
 
@@ -339,7 +351,7 @@ mod tests {
         let t = PrimTable::builtins();
         for name in [
             "core.id", "bit.not", "bit.and", "bit.or", "bit.xor", "trit.neg", "trit.add",
-            "trit.sub", "trit.mul", "cmp.eq", "cmp.lt", "bit.add", "bit.sub",
+            "trit.sub", "trit.mul", "cmp.eq", "cmp.lt", "bit.add", "bit.sub", "seq.len", "seq.get",
         ] {
             let r = t.prim_ref(name).expect("builtin registered");
             let d = t.resolve(&r).expect("ref resolves");
@@ -347,8 +359,8 @@ mod tests {
             assert_eq!(t.intrinsic(name), Some(GuaranteeStrength::Exact));
         }
         // `entries()` is the EXPLAIN surface: one inspectable entry per builtin (RFC-0032 D1/D2
-        // added cmp.eq/cmp.lt/bit.add/bit.sub to the original nine).
-        assert_eq!(t.entries().len(), 13);
+        // added cmp.eq/cmp.lt/bit.add/bit.sub to the original nine; D3/M-749 added seq.len/seq.get).
+        assert_eq!(t.entries().len(), 15);
     }
 
     #[test]
@@ -450,10 +462,11 @@ mod tests {
     fn names_returns_registered_sorted_names() {
         let t = PrimTable::builtins();
         let ns = t.names();
-        // Exactly 13 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub).
+        // Exactly 15 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
+        // seq.len/seq.get).
         assert_eq!(
             ns.len(),
-            13,
+            15,
             "names() count must match the builtin count: {ns:?}"
         );
         // Sorted (BTreeMap iteration is sorted).

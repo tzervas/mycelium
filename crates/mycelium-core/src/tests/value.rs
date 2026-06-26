@@ -107,3 +107,165 @@ fn at_cap_descriptor_is_accepted_by_value_new() {
     }
     .well_formed());
 }
+
+// --- RFC-0032 D3 (M-749): Repr::Seq payload matching + never-silent indexing --------------------
+
+/// A `Binary{1}` element value, for building small homogeneous sequences in tests.
+fn bit(b: bool) -> Value {
+    Value::new(
+        Repr::Binary { width: 1 },
+        Payload::Bits(vec![b]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed bit")
+}
+
+/// A well-matched sequence (count == len, every element's repr == elem) constructs.
+#[test]
+fn seq_well_matched_constructs() {
+    let v = Value::new(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 1 }),
+            len: 3,
+        },
+        Payload::Seq(vec![bit(true), bit(false), bit(true)]),
+        Meta::exact(Provenance::Root),
+    );
+    assert!(v.is_ok());
+    // The empty sequence is a legitimate value.
+    let empty = Value::new(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 1 }),
+            len: 0,
+        },
+        Payload::Seq(vec![]),
+        Meta::exact(Provenance::Root),
+    );
+    assert!(empty.is_ok());
+}
+
+/// A sequence whose element count differs from its declared `len` is rejected (never silently
+/// truncated/padded).
+#[test]
+fn seq_count_must_match_len() {
+    let v = Value::new(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 1 }),
+            len: 3,
+        },
+        Payload::Seq(vec![bit(true), bit(false)]), // 2 != 3
+        Meta::exact(Provenance::Root),
+    );
+    assert_eq!(v.unwrap_err(), WfError::PayloadReprMismatch);
+}
+
+/// A heterogeneous sequence — an element whose repr differs from the declared `elem` — is rejected
+/// (homogeneity is enforced, never silently accepted).
+#[test]
+fn seq_elements_must_be_homogeneous() {
+    let wrong = Value::new(
+        Repr::Ternary { trits: 1 },
+        Payload::Trits(vec![Trit::Pos]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed trit");
+    let v = Value::new(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 1 }),
+            len: 2,
+        },
+        Payload::Seq(vec![bit(true), wrong]), // second element is Ternary, not Binary{1}
+        Meta::exact(Provenance::Root),
+    );
+    assert_eq!(v.unwrap_err(), WfError::PayloadReprMismatch);
+}
+
+/// Never-silent indexing (G2): `seq_get` returns the element in range and `None` out of range —
+/// never a panic, never a silent default. `seq_len` reports the element count.
+#[test]
+fn seq_get_is_never_silent() {
+    let seq = Value::new(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 1 }),
+            len: 2,
+        },
+        Payload::Seq(vec![bit(true), bit(false)]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed seq");
+
+    assert_eq!(seq.seq_len(), Some(2));
+    assert_eq!(seq.seq_get(0), Some(&bit(true)));
+    assert_eq!(seq.seq_get(1), Some(&bit(false)));
+    // Out of bounds → None, never a panic or a silent default.
+    assert_eq!(seq.seq_get(2), None);
+    assert_eq!(seq.seq_get(usize::MAX), None);
+
+    // The accessors return None for a non-sequence value (never an empty-slice coercion).
+    let not_seq = bit(true);
+    assert_eq!(not_seq.seq_len(), None);
+    assert_eq!(not_seq.seq_get(0), None);
+    assert!(not_seq.seq_elems().is_none());
+}
+
+/// A sequence value round-trips through JSON faithfully (the wire form carries self-describing
+/// elements), and deserializing a count≠len wire form is rejected (never silently accepted).
+#[test]
+fn seq_json_round_trips_and_rejects_mismatch() {
+    let seq = Value::new(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 1 }),
+            len: 2,
+        },
+        Payload::Seq(vec![bit(true), bit(false)]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed seq");
+    let json = serde_json::to_string(&seq).expect("serialize");
+    let back: Value = serde_json::from_str(&json).expect("deserialize");
+    assert_eq!(seq, back, "seq must round-trip faithfully: {json}");
+
+    // A wire seq whose element count disagrees with the declared len is rejected on the way in.
+    let bad = r#"{"repr":{"kind":"Seq","elem":{"kind":"Binary","width":1},"len":3},
+                  "payload":{"seq":[
+                     {"repr":{"kind":"Binary","width":1},"payload":{"bits":"1"},
+                      "meta":{"provenance":{"kind":"Root"},"guarantee":"Exact"}}]},
+                  "meta":{"provenance":{"kind":"Root"},"guarantee":"Exact"}}"#;
+    assert!(
+        serde_json::from_str::<Value>(bad).is_err(),
+        "a count≠len seq wire form must be rejected, never silently accepted"
+    );
+}
+
+/// The content hash distinguishes sequences by their elements and is order-sensitive; an identical
+/// sequence collides. (Confirms the `Repr::Seq`/`Payload::Seq` content-addressing arms are wired —
+/// without them a constructed seq would panic in `Canon`.)
+#[test]
+fn seq_content_hash_distinguishes_and_collides() {
+    let mk = |a: bool, b: bool| {
+        Value::new(
+            Repr::Seq {
+                elem: Box::new(Repr::Binary { width: 1 }),
+                len: 2,
+            },
+            Payload::Seq(vec![bit(a), bit(b)]),
+            Meta::exact(Provenance::Root),
+        )
+        .expect("well-formed seq")
+    };
+    // Identical sequences collide.
+    assert_eq!(
+        mk(true, false).content_hash(),
+        mk(true, false).content_hash()
+    );
+    // Different elements differ.
+    assert_ne!(
+        mk(true, false).content_hash(),
+        mk(true, true).content_hash()
+    );
+    // Order-sensitive: [t, f] ≠ [f, t].
+    assert_ne!(
+        mk(true, false).content_hash(),
+        mk(false, true).content_hash()
+    );
+}
