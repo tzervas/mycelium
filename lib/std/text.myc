@@ -1,0 +1,81 @@
+// nodule: std.text
+// @version: 0.1.0
+// @license: MIT
+// @authors: Tyler Zervas
+// @since: 2026-06-26
+// @updated: 2026-06-26
+// @summary: Self-hosted UTF-8 byte/text utilities: byte length, ASCII classification, ASCII decode.
+nodule std.text
+
+// M-717 (E13-1, #462). UTF-8 over `bytes_get`/`bytes_len`. Self-contained:
+// local Option<A> and Result<A,E> types redeclared here so this nodule has no cross-leaf import
+// dependency (worktree discipline). Guarantee: `byte_len` delegates to the Exact `bytes_len` prim
+// (Exact); `is_ascii_byte` is total over Binary{8} via `lt`+match (Exact); `decode_ascii` is
+// Declared (type-level contract) with three-way differential agreement Empirical (trials,
+// std_text.rs). Never-silent (G2): malformed UTF-8 lead bytes produce `Err(Invalid(byte))`
+// — never U+FFFD substitution, never silent coercion. Honesty boundary:
+// FLAG-text-1: `byte_at` is NOT implemented as Option<Binary{8}> in this increment — `bytes_len`
+//   returns Binary{32} and the index is Binary{8}; `lt` is width-typed and the surface has no
+//   zero-extension prim to perform the bounds check.
+// FLAG-text-2: `decode_one` returning Binary{32} codepoints (the full Unicode scalar) is deferred
+//   — Binary{8}→Binary{32} zero-extension is not surface-callable in .myc today. decode_ascii
+//   returns Binary{8} (valid for ASCII U+0000–U+007F only).
+// FLAG-text-3: `bytes_slice`/`bytes_concat` are not surface-callable; the byte-cons slice model
+//   (Bytes8) is declared but slice/concat ops are deferred to the increment that surfaces these
+//   prims or adds tail-call/loop support for the O(n) cons-list walk.
+// Scope of this increment: byte_len, is_ascii_byte, and ASCII-codepoint decode — the achievable,
+// testable first increment. All operations that execute three-way are honest about their basis.
+// ── Local Option (redeclared; no cross-leaf import) ──────────────────────────────────────────────
+// Option<A>: the never-silent optional value. Redeclared here (not imported from std.option) to
+// keep this nodule self-contained per worktree discipline. Semantics identical to std.option.
+type Option<A> = Some(A) | None
+
+// ── Local Result (redeclared; no cross-leaf import) ──────────────────────────────────────────────
+// Result<A, E>: the never-silent fallible value. Redeclared here (not imported from std.result).
+type Result<A, E> = Ok(A) | Err(E)
+
+// ── Error type ─────────────────────────────────────────────────────────────────────────────────────
+// Utf8Error: carries the offending byte — never-silent (G2), never U+FFFD substitution.
+type Utf8Error = Invalid(Binary{8})
+
+// ── Byte cons-list (local model for future slice/concat) ──────────────────────────────────────────
+// Bytes8: a singly-linked cons-list of Binary{8} bytes for future O(n) slice/concat support.
+// Declared here for type-completeness; cons-list operations are deferred (FLAG-text-3).
+type Bytes8 = BNil | BCons(Binary{8}, Bytes8)
+
+// ── byte_len ───────────────────────────────────────────────────────────────────────────────────────
+// byte_len: the number of bytes in `b` as Binary{32}. Delegates directly to the Exact `bytes_len`
+// kernel prim — every input yields the exact byte count, no approximation (Exact).
+fn byte_len(b: Bytes) -> Binary{32} =
+  bytes_len(b)
+
+// ── is_ascii_byte ──────────────────────────────────────────────────────────────────────────────────
+// is_ascii_byte: True iff `x` < 0x80 (0b1000_0000), i.e. `x` has its high bit clear and is a
+// valid 7-bit ASCII byte. Total over Binary{8} via `lt` + match (Exact). The `lt` prim returns
+// Binary{1}; bridged to Bool via match { 0b1 => True, _ => False } (the bool-bridge pattern,
+// M-747 / enablement.rs bool_bridge_from_comparison_bit).
+fn is_ascii_byte(x: Binary{8}) -> Bool =
+  match lt(x, 0b1000_0000) { 0b1 => True, _ => False }
+
+// ── decode_ascii ───────────────────────────────────────────────────────────────────────────────────
+// decode_ascii: decode the byte at position `i` in `b` — ASCII (< 0x80) fast-path only.
+// Returns Ok(codepoint_byte) if the byte at position `i` is a valid ASCII byte (0x00–0x7F),
+// or Err(Invalid(byte)) if the lead byte has its high bit set (a multi-byte UTF-8 lead, a bare
+// continuation byte, or an overlong/invalid byte).
+//
+// The codepoint is returned as Binary{8} (valid for ASCII: U+0000–U+007F). Returning Binary{32}
+// (the full Unicode scalar) requires Binary{8}→Binary{32} zero-extension, which is not
+// surface-callable today — deferred (FLAG-text-2).
+//
+// Never-silent (G2): non-ASCII lead bytes are never substituted with U+FFFD; they always produce
+// Err(Invalid(byte)). The kernel `bytes_get` prim itself refuses out-of-bounds access on all three
+// paths; we do not add a redundant bounds check here (bounds-check via `bytes_len` is blocked by
+// FLAG-text-1: width mismatch Binary{32} vs Binary{8} for `lt`). An out-of-bounds `i` is therefore
+// not representable as `Utf8Error`: it surfaces as a kernel EvalError (refused on all three paths,
+// G2), NOT a `Result::Err` — callers relying on the Result contract must keep `i` in range.
+//
+// Guarantee: Declared (type-level contract; three-way differential agreement Empirical, std_text.rs).
+// Grounding: hand-computed, three-way verified; crates/mycelium-std-text exists but exposes a
+// different Ring-2 surface (no decode_ascii) — not the structural oracle.
+fn decode_ascii(b: Bytes, i: Binary{8}) -> Result<Binary{8}, Utf8Error> =
+  let byte0 = bytes_get(b, i) in match is_ascii_byte(byte0) { True => Ok(byte0), False => Err(Invalid(byte0)) }
