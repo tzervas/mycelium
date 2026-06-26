@@ -110,6 +110,42 @@ impl Parser {
         }
     }
 
+    // ---- recursion budget (A4-02 / DN-40 A1·A2) ----
+    //
+    // Every recursive-descent entry point that can nest on the *host* stack — the expression
+    // grammar (`parse_expr`/`parse_unary`), the **type** subgrammar (`parse_type_ref` →
+    // `parse_base_type`/`parse_type_args_opt`), and the **pattern** grammar (`parse_pattern`,
+    // which recurses over nested constructor sub-patterns) — charges this single shared budget.
+    // Crafted input (`A -> A -> …`, nested `<…>`, `C(C(C(…)))`) would otherwise drive unbounded
+    // host recursion and abort the process (SIGABRT) — `myc-check` must return an explicit error,
+    // never crash (G2; the module's never-silent contract). A single pair keeps the discipline
+    // DRY so no entry point silently drifts off the budget (DN-40 found exactly such a drift).
+
+    /// Charge one level of nesting against the shared [`MAX_EXPR_DEPTH`] budget. Returns an
+    /// explicit [`ParseError`] (not a panic) once the limit is exceeded, leaving the budget
+    /// *unchanged* on the error path so the failed level is not counted. On success the caller
+    /// **must** pair this with exactly one [`leave_depth`](Self::leave_depth) on every exit path.
+    fn enter_depth(&mut self) -> Result<(), ParseError> {
+        self.depth += 1;
+        if self.depth > MAX_EXPR_DEPTH {
+            self.depth -= 1;
+            return Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "expression nests deeper than the limit of {MAX_EXPR_DEPTH} — refusing to recurse"
+                ),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Release one level previously charged by [`enter_depth`](Self::enter_depth). Always paired
+    /// with a successful `enter_depth`, on every (Ok *and* Err) exit path of the guarded region,
+    /// so no increment is ever leaked.
+    fn leave_depth(&mut self) {
+        self.depth -= 1;
+    }
+
     // ---- separated lists (DRY, M-640) ----
     //
     // The grammar repeats two comma-separated shapes; these helpers are the single code path for
@@ -683,6 +719,16 @@ impl Parser {
     // ---- types ----
 
     fn parse_type_ref(&mut self) -> Result<TypeRef, ParseError> {
+        // Depth-guarded (A4-02 / DN-40 A2): a crafted `A -> A -> …` chain recurses right here, and
+        // `parse_base_type` recurses into nested `<…>` type arguments — both charge the shared
+        // budget so deep type nesting is an explicit error, never a host-stack overflow (G2).
+        self.enter_depth()?;
+        let r = self.parse_type_ref_guarded();
+        self.leave_depth();
+        r
+    }
+
+    fn parse_type_ref_guarded(&mut self) -> Result<TypeRef, ParseError> {
         // Parse `base [@guarantee]` first.  Then, if a `->` follows, this whole LHS
         // becomes the argument of a function type and we parse the RHS recursively
         // (right-associative; `@` binds tighter than `->` — RFC-0024 §3).
@@ -872,16 +918,9 @@ impl Parser {
     /// Depth-guarded entry to the expression grammar: refuses to recurse past [`MAX_EXPR_DEPTH`]
     /// with an explicit error rather than overflowing the host stack on crafted nesting (A4-02).
     fn parse_expr(&mut self) -> Result<Expr, ParseError> {
-        self.depth += 1;
-        if self.depth > MAX_EXPR_DEPTH {
-            self.depth -= 1;
-            return Err(ParseError::new(
-                self.pos(),
-                format!("expression nests deeper than the limit of {MAX_EXPR_DEPTH} — refusing to recurse"),
-            ));
-        }
+        self.enter_depth()?;
         let r = self.parse_expr_inner();
-        self.depth -= 1;
+        self.leave_depth();
         r
     }
 
@@ -995,17 +1034,10 @@ impl Parser {
             Tok::Bang => "not",
             _ => return self.parse_app(),
         };
-        self.depth += 1;
-        if self.depth > MAX_EXPR_DEPTH {
-            self.depth -= 1;
-            return Err(ParseError::new(
-                self.pos(),
-                format!("expression nests deeper than the limit of {MAX_EXPR_DEPTH} — refusing to recurse"),
-            ));
-        }
+        self.enter_depth()?;
         self.bump(); // the prefix operator
         let operand = self.parse_unary();
-        self.depth -= 1;
+        self.leave_depth();
         operand.map(|o| op_call(word, vec![o]))
     }
 
@@ -1123,6 +1155,16 @@ impl Parser {
     }
 
     fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
+        // Depth-guarded (A4-02 / DN-40 A1): a nested constructor pattern `C(C(C(…)))` recurses
+        // through `comma_separated(Self::parse_pattern)` below, so it charges the shared budget —
+        // deep pattern nesting is an explicit error, never a host-stack overflow (G2).
+        self.enter_depth()?;
+        let r = self.parse_pattern_guarded();
+        self.leave_depth();
+        r
+    }
+
+    fn parse_pattern_guarded(&mut self) -> Result<Pattern, ParseError> {
         match self.cur().clone() {
             Tok::Ident(s) if s == "_" => {
                 self.bump();

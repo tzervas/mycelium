@@ -159,7 +159,9 @@ pub fn build_spore(manifest: &Manifest, project_dir: &Path) -> Result<Spore, Spo
     // 3. The dependency edges: each pinned by `hash` (authoritative, ADR-003); a hashless dep is refused.
     let mut deps = Vec::with_capacity(manifest.dependencies.len());
     for d in &manifest.dependencies {
-        let hash = d.hash.clone().ok_or_else(|| {
+        // The manifest reader has already parsed this into a typed, well-formed `ContentHash`
+        // (DN-40 A3) — here we only enforce that the pin is *present* (an unpinned dep is refused).
+        let hash = d.hash.as_ref().ok_or_else(|| {
             SporeError::Publish(format!(
                 "dependency `{}` has no `hash` — an unpinned dependency is not reproducible; pin it \
                  (`hash = \"blake3:…\"`, ADR-003/G2)",
@@ -169,7 +171,7 @@ pub fn build_spore(manifest: &Manifest, project_dir: &Path) -> Result<Spore, Spo
         deps.push(ResolvedDep {
             name: d.name.clone(),
             phylum: d.phylum.clone(),
-            hash,
+            hash: hash.as_str().to_owned(),
             version: d.version.clone(),
         });
     }

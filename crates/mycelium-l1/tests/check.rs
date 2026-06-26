@@ -292,6 +292,65 @@ fn deeply_nested_input_is_refused_not_a_crash() {
 }
 
 #[test]
+fn deeply_nested_type_arrow_is_refused_not_a_crash() {
+    // DN-40 A2 (HIGH) regression: the *type* subgrammar (`parse_type_ref`) charges the same
+    // shared depth budget as the expression grammar, so a crafted `A -> A -> … -> A` return type
+    // is refused with an explicit ParseError well before the host stack overflows (SIGABRT).
+    // Mutant-witness: removing the `enter_depth` guard in `parse_type_ref` makes this abort.
+    let deep_arrow = "A -> ".repeat(3000);
+    let src = format!("nodule d\nfn f(x: Binary{{8}}) -> {deep_arrow}A = x");
+    let err = parse(&src).expect_err("deep `->` type nesting must be refused, not crash");
+    assert!(err.message.contains("nests deeper"), "got: {}", err.message);
+
+    // A modest arrow chain still parses.
+    let shallow = format!(
+        "nodule d\nfn f(x: Binary{{8}}) -> {}A = x",
+        "A -> ".repeat(50)
+    );
+    assert!(parse(&shallow).is_ok());
+}
+
+#[test]
+fn deeply_nested_type_args_is_refused_not_a_crash() {
+    // DN-40 A2 (HIGH) regression: nested type arguments `T<T<T<…>>>` recurse through
+    // `parse_type_args_opt` → `parse_type_ref`, which now charges the shared budget — deep angle
+    // nesting is an explicit ParseError, never a host-stack overflow.
+    let depth = 3000;
+    let nested_args = format!("{}A{}", "T<".repeat(depth), ">".repeat(depth));
+    let src = format!("nodule d\nfn f(x: Binary{{8}}) -> {nested_args} = x");
+    let err = parse(&src).expect_err("deep `<…>` type nesting must be refused, not crash");
+    assert!(err.message.contains("nests deeper"), "got: {}", err.message);
+}
+
+#[test]
+fn deeply_nested_ctor_pattern_is_refused_not_a_crash() {
+    // DN-40 A1 (CRITICAL) regression: a nested constructor pattern `C(C(C(…)))` recurses through
+    // `comma_separated(Self::parse_pattern)`, which now charges the shared depth budget. Crafted
+    // nesting is refused with an explicit ParseError, not a SIGABRT. Mutant-witness: removing the
+    // `enter_depth` guard in `parse_pattern` makes this abort instead of returning Err.
+    let depth = 3000;
+    let nested_pat = format!("{}y{}", "C(".repeat(depth), ")".repeat(depth));
+    let src =
+        format!("nodule d\nfn f(x: Binary{{8}}) -> Binary{{8}} = match x {{ {nested_pat} => y }}");
+    let err = parse(&src).expect_err("deep constructor-pattern nesting must be refused, not crash");
+    assert!(err.message.contains("nests deeper"), "got: {}", err.message);
+
+    // A modest constructor-pattern nesting still parses (through the type/check phases or not, the
+    // *parser* must accept it — assert it does not raise the depth error).
+    let shallow = format!("{}y{}", "C(".repeat(50), ")".repeat(50));
+    let shallow_src =
+        format!("nodule d\nfn f(x: Binary{{8}}) -> Binary{{8}} = match x {{ {shallow} => y }}");
+    match parse(&shallow_src) {
+        Ok(_) => {}
+        Err(e) => assert!(
+            !e.message.contains("nests deeper"),
+            "a 50-deep pattern must not trip the depth guard, got: {}",
+            e.message
+        ),
+    }
+}
+
+#[test]
 fn wild_is_denied_outside_a_std_sys_nodule() {
     // M-661: a `wild` block in a non-`@std-sys` nodule is a HARD `CheckError` (the audited FFI floor
     // lives only in `std-sys` — RFC-0016 §8-Q6 / LR-9; never a silent escape — G2). Not a lint.

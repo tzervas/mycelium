@@ -21,8 +21,11 @@ lang        = "mycelium-0"
 exports     = ["geometry.shapes"]
 
 [dependencies]
-numerics    = { phylum = "numerics", version = "^2", hash = "blake3:abc" }
+numerics    = { phylum = "numerics", version = "^2", hash = "blake3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" }
 "#;
+
+/// A real (64-hex) blake3 pin used by the positive dependency tests.
+const VALID_PIN: &str = "blake3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 #[test]
 fn the_sample_manifest_parses() {
@@ -86,7 +89,8 @@ fn the_surface_dependencies_and_spore_tables_are_interpreted() {
     let d = &m.dependencies[0];
     assert_eq!(d.name, "numerics");
     assert_eq!(d.phylum, "numerics");
-    assert_eq!(d.hash.as_deref(), Some("blake3:abc"));
+    // The pin is parsed into a typed `ContentHash` (DN-40 A3), not free text.
+    assert_eq!(d.hash.as_ref().map(|h| h.as_str()), Some(VALID_PIN));
     assert_eq!(d.version.as_deref(), Some("^2"));
 
     let m =
@@ -113,6 +117,47 @@ fn a_malformed_dependency_or_unknown_key_is_explicit() {
         parse_manifest("[project]\nname=\"x\"\nkind=\"phylum\"\n[surface]\nexprts=[\"a\"]\n")
             .is_err()
     );
+}
+
+// DN-40 A3: the dependency `hash` is the identity-bearing pin (ADR-003) and is **parsed**, not
+// accepted as free text. A malformed pin is an explicit `ManifestError` at manifest-build time, so
+// it can never flow downstream into a spore's identity edge.
+#[test]
+fn a_valid_dependency_hash_is_parsed_into_a_typed_pin() {
+    let src = format!(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\n\
+         numerics={{ phylum=\"numerics\", hash=\"{VALID_PIN}\" }}\n"
+    );
+    let m = parse_manifest(&src).unwrap();
+    let d = &m.dependencies[0];
+    assert_eq!(d.hash.as_ref().map(|h| h.as_str()), Some(VALID_PIN));
+    assert_eq!(d.hash.as_ref().unwrap().algo(), "blake3");
+}
+
+#[test]
+fn a_shape_malformed_dependency_hash_is_an_explicit_error() {
+    // No `:` separator — not even an `<algo>:<digest>` shape.
+    let e = parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\n\
+         numerics={ phylum=\"numerics\", hash=\"nocolon\" }\n",
+    )
+    .unwrap_err();
+    assert!(e.message.contains("malformed content-address"), "{e}");
+    assert!(e.message.contains("numerics"), "{e}"); // names the offending dependency (G2)
+    assert!(e.message.contains("DN-40 A3"), "{e}");
+}
+
+#[test]
+fn a_bogus_but_shaped_dependency_hash_is_rejected() {
+    // `blake3:abc` is shape-valid but is NOT a real 64-hex blake3 digest — it must be refused, not
+    // silently accepted as a pin (DN-40 A3: the inverted parse-don't-validate this fix closes).
+    let e = parse_manifest(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[dependencies]\n\
+         numerics={ phylum=\"numerics\", hash=\"blake3:abc\" }\n",
+    )
+    .unwrap_err();
+    assert!(e.message.contains("64 lowercase hex"), "{e}");
+    assert!(e.message.contains("numerics"), "{e}");
 }
 
 #[test]
