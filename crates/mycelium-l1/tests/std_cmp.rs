@@ -210,3 +210,230 @@ fn bool_cmp_eq_agrees_with_bool_eq() {
     assert_bool("consistency(T,T)", "is_eq(bool_cmp(True, True))", "True");
     assert_bool("consistency(T,F)", "is_eq(bool_cmp(True, False))", "False");
 }
+
+// ── Width-typed comparison helpers at Binary{8} ───────────────────────────────────────────────────
+//
+// cmp_u8/le_u8/ge_u8/max_u8/min_u8 wrap the `eq`/`lt` kernel prims into the Ordering surface at
+// Binary{8}. These are Exact over the finite Binary{8} domain (eq/lt are Exact prims). Three-way
+// agreement is Empirical (trials below). FLAG: width-generic versions (cmp<N>) await M-753.
+//
+// Test strategy: cover all three arms of cmp_u8 (Lt/Eq/Gt) and the edge cases (min/max with
+// equal inputs; le/ge boundary). Values chosen as recognisable unsigned magnitudes: 0b0000_0001
+// (1), 0b0000_0010 (2), 0b0000_0011 (3), 0b0000_0000 (0), 0b1111_1111 (255).
+
+// ── cmp_u8 ───────────────────────────────────────────────────────────────────────────────────────
+
+/// `cmp_u8(1, 2)` → `Lt` — 1 < 2 unsigned. Exact (eq/lt prims over Binary{8}).
+/// Expected (hand-computed, three-way verified).
+#[test]
+fn cmp_u8_lt_arm() {
+    assert_ordering("cmp_u8(1,2)", "cmp_u8(0b0000_0001, 0b0000_0010)", "Lt");
+}
+
+/// `cmp_u8(2, 2)` → `Eq` — equal values. Exact.
+/// Expected (hand-computed, three-way verified).
+#[test]
+fn cmp_u8_eq_arm() {
+    assert_ordering("cmp_u8(2,2)", "cmp_u8(0b0000_0010, 0b0000_0010)", "Eq");
+}
+
+/// `cmp_u8(3, 1)` → `Gt` — 3 > 1 unsigned. Exact.
+/// Expected (hand-computed, three-way verified).
+#[test]
+fn cmp_u8_gt_arm() {
+    assert_ordering("cmp_u8(3,1)", "cmp_u8(0b0000_0011, 0b0000_0001)", "Gt");
+}
+
+/// Edge: `cmp_u8(0, 255)` → `Lt` — minimum vs maximum unsigned. Exact.
+/// Expected (hand-computed, three-way verified).
+#[test]
+fn cmp_u8_min_vs_max() {
+    assert_ordering("cmp_u8(0,255)", "cmp_u8(0b0000_0000, 0b1111_1111)", "Lt");
+}
+
+/// `cmp_u8` involution under `reverse`: `reverse(cmp_u8(a,b)) == cmp_u8(b,a)` for a sample pair.
+/// Hand-computed: cmp_u8(1,3) = Lt; reverse(Lt) = Gt; cmp_u8(3,1) = Gt. Empirical cross-op.
+#[test]
+fn cmp_u8_reverse_symmetry() {
+    assert_ordering(
+        "reverse(cmp_u8(1,3))",
+        "reverse(cmp_u8(0b0000_0001, 0b0000_0011))",
+        "Gt",
+    );
+}
+
+// ── le_u8 / ge_u8 ────────────────────────────────────────────────────────────────────────────────
+
+/// `le_u8(1, 2)` → `True` — strict less satisfies le. Exact.
+#[test]
+fn le_u8_strict_less() {
+    assert_bool("le_u8(1,2)", "le_u8(0b0000_0001, 0b0000_0010)", "True");
+}
+
+/// `le_u8(2, 2)` → `True` — equal satisfies le. Exact.
+#[test]
+fn le_u8_equal() {
+    assert_bool("le_u8(2,2)", "le_u8(0b0000_0010, 0b0000_0010)", "True");
+}
+
+/// `le_u8(3, 2)` → `False` — greater does not satisfy le. Exact.
+#[test]
+fn le_u8_greater_is_false() {
+    assert_bool("le_u8(3,2)", "le_u8(0b0000_0011, 0b0000_0010)", "False");
+}
+
+/// `ge_u8(3, 2)` → `True` — strict greater satisfies ge. Exact.
+#[test]
+fn ge_u8_strict_greater() {
+    assert_bool("ge_u8(3,2)", "ge_u8(0b0000_0011, 0b0000_0010)", "True");
+}
+
+/// `ge_u8(2, 2)` → `True` — equal satisfies ge. Exact.
+#[test]
+fn ge_u8_equal() {
+    assert_bool("ge_u8(2,2)", "ge_u8(0b0000_0010, 0b0000_0010)", "True");
+}
+
+/// `ge_u8(1, 2)` → `False` — lesser does not satisfy ge. Exact.
+#[test]
+fn ge_u8_lesser_is_false() {
+    assert_bool("ge_u8(1,2)", "ge_u8(0b0000_0001, 0b0000_0010)", "False");
+}
+
+/// Cross-op: `le_u8(a,b)` and `ge_u8(b,a)` always agree (antisymmetry). Sample: a=1, b=3.
+/// Hand-computed: le_u8(1,3) = True; ge_u8(3,1) = True. Empirical cross-op check.
+#[test]
+fn le_ge_antisymmetry() {
+    assert_bool("le_u8(1,3)", "le_u8(0b0000_0001, 0b0000_0011)", "True");
+    assert_bool("ge_u8(3,1)", "ge_u8(0b0000_0011, 0b0000_0001)", "True");
+}
+
+// ── max_u8 / min_u8 ──────────────────────────────────────────────────────────────────────────────
+//
+// max_u8/min_u8 return a `Binary{8}` value. The reference must share the same provenance (Root,
+// since both args are Root literals and the result is matched from one of them — not a Derived
+// computation like add_bin). We use the literal directly in the reference program.
+
+/// A `main` returning `Binary{8}`; `expected` is the reference Binary{8} literal.
+fn assert_u8(label: &str, call: &str, expected_lit: &str) {
+    let src = program(&format!("fn main() -> Binary{{8}} = {call}"));
+    let expected = format!("nodule ref\nfn main() -> Binary{{8}} = {expected_lit}");
+    assert_three_way(label, &src, &expected);
+}
+
+/// `max_u8(1, 3)` → `3` (0b0000_0011). Exact.
+/// Expected (hand-computed, three-way verified).
+#[test]
+fn max_u8_returns_larger() {
+    assert_u8(
+        "max_u8(1,3)",
+        "max_u8(0b0000_0001, 0b0000_0011)",
+        "0b0000_0011",
+    );
+}
+
+/// `max_u8(3, 1)` → `3` — order-independent. Exact.
+#[test]
+fn max_u8_order_independent() {
+    assert_u8(
+        "max_u8(3,1)",
+        "max_u8(0b0000_0011, 0b0000_0001)",
+        "0b0000_0011",
+    );
+}
+
+/// `max_u8(2, 2)` → `2` — equal inputs; returns the second (b) by definition. Exact.
+/// (max_u8 is defined as: Eq => b, consistent with the nodule source.)
+#[test]
+fn max_u8_equal_inputs() {
+    assert_u8(
+        "max_u8(2,2)",
+        "max_u8(0b0000_0010, 0b0000_0010)",
+        "0b0000_0010",
+    );
+}
+
+/// `min_u8(1, 3)` → `1` (0b0000_0001). Exact.
+/// Expected (hand-computed, three-way verified).
+#[test]
+fn min_u8_returns_smaller() {
+    assert_u8(
+        "min_u8(1,3)",
+        "min_u8(0b0000_0001, 0b0000_0011)",
+        "0b0000_0001",
+    );
+}
+
+/// `min_u8(3, 1)` → `1` — order-independent. Exact.
+#[test]
+fn min_u8_order_independent() {
+    assert_u8(
+        "min_u8(3,1)",
+        "min_u8(0b0000_0011, 0b0000_0001)",
+        "0b0000_0001",
+    );
+}
+
+/// `min_u8(2, 2)` → `2` — equal inputs; returns the first (a) by definition. Exact.
+/// (min_u8 is defined as: Eq => a, consistent with the nodule source.)
+#[test]
+fn min_u8_equal_inputs() {
+    assert_u8(
+        "min_u8(2,2)",
+        "min_u8(0b0000_0010, 0b0000_0010)",
+        "0b0000_0010",
+    );
+}
+
+/// Cross-op consistency: `max_u8(a,b)` and `min_u8(a,b)` together cover the domain —
+/// for unequal a,b: max_u8(1,3) = 3, min_u8(1,3) = 1. Neither equals the other. Empirical.
+#[test]
+fn max_min_complementary() {
+    assert_u8(
+        "max_u8(1,3)",
+        "max_u8(0b0000_0001, 0b0000_0011)",
+        "0b0000_0011",
+    );
+    assert_u8(
+        "min_u8(1,3)",
+        "min_u8(0b0000_0001, 0b0000_0011)",
+        "0b0000_0001",
+    );
+}
+
+/// Edge: `max_u8(0, 255)` → `255`; `min_u8(0, 255)` → `0`. Covers the full Binary{8} range. Exact.
+#[test]
+fn max_min_full_range_edge() {
+    assert_u8(
+        "max_u8(0,255)",
+        "max_u8(0b0000_0000, 0b1111_1111)",
+        "0b1111_1111",
+    );
+    assert_u8(
+        "min_u8(0,255)",
+        "min_u8(0b0000_0000, 0b1111_1111)",
+        "0b0000_0000",
+    );
+}
+
+/// Consistency: `is_lt(cmp_u8(a,b))` agrees with `le_u8(a,b) && !le_u8(b,a)` — structural
+/// cross-check of cmp_u8 and le_u8 on a pair where a < b. Hand-computed: cmp_u8(1,2) = Lt,
+/// is_lt(Lt) = True; le_u8(1,2) = True, le_u8(2,1) = False (its negation is True). Empirical.
+#[test]
+fn cmp_u8_is_lt_agrees_with_le_u8_strict() {
+    assert_bool(
+        "is_lt(cmp_u8(1,2))",
+        "is_lt(cmp_u8(0b0000_0001, 0b0000_0010))",
+        "True",
+    );
+    assert_bool(
+        "le_u8(1,2)-strict",
+        "le_u8(0b0000_0001, 0b0000_0010)",
+        "True",
+    );
+    assert_bool(
+        "le_u8(2,1)-inverted",
+        "le_u8(0b0000_0010, 0b0000_0001)",
+        "False",
+    );
+}

@@ -24,6 +24,19 @@ workspace = true
 # trusted base remains the interpreter (NFR-7); this feature is the perf/inspectability path.
 mlir-dialect = []
 
+# `bitnet-accel` (OFF by default) is the **explicit capability flag** that enables BitNet-class
+# packed-ternary acceleration (M-728; FR-C3; RFC-0029 §7.4). With the feature OFF the
+# `accel::accelerated_ternary_dot` entry point performs **explicit, recorded graceful degradation**
+# to the reference ternary dot (`bitnet::ternary_dot_ref`) — never a silent slow path: the returned
+# `AccelOutcome` records `Path::Reference` and an `EXPLAIN`-able reason (G2). With the feature ON it
+# *additionally* requires the runtime capability (a present `clang` JIT toolchain) to engage the
+# compiled kernel; if the runtime capability is absent it **also** degrades explicitly and records it.
+# So the accel path is engaged iff (compile-time feature ON) AND (runtime capability present) — and
+# every other case is a never-silent, recorded fallback to the reference path. Correctness:
+# accelerated == reference ternary (Empirical, `tests/bitnet_accel.rs`). It depends on the M-360
+# `bitnet` kernels, which already probe `clang` and skip gracefully when absent.
+bitnet-accel = []
+
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
 mycelium-interp = { path = "../mycelium-interp" }
