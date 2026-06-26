@@ -275,3 +275,111 @@ fn spore_error_exit_codes_and_display() {
     assert_eq!(io_err.exit_code(), 66);
     assert!(format!("{io_err}").contains("io-error"), "{io_err}");
 }
+
+// ─── content_address injectivity (security: supply-chain substitution) ─────────
+//
+// The spore identity encoding MUST be injective (ADR-003): distinct (kind, surface, sources, deps)
+// → distinct addresses, or the content-addressed supply chain (dep pinning, resolve-by-hash,
+// immutability detection) can be substituted under. The `v0` encoding emitted every author-influenced
+// field space/newline-delimited with no length-prefix/escaping, so a crafted field containing a space
+// or newline could alias two distinct DAGs onto one pre-image string (a second-pre-image collision).
+// The `v1` encoding length-prefixes every variable field; these tests are the regression witnesses —
+// **each pair below produced a BYTE-IDENTICAL pre-image under `v0` and so collided; under `v1` they
+// must differ.** Guarantee: `Proven` (white-box over `crate::content_address`; the colliding pairs are
+// author-controlled and constructible — no preimage/filesystem needed, since `ResolvedDep` fields are
+// free-text manifest strings).
+mod injectivity {
+    use mycelium_core::ContentHash;
+    use mycelium_proj::ProjectKind;
+
+    use crate::{content_address, ResolvedDep, SourceFile};
+
+    /// A valid 64-hex `blake3` ContentHash from a single hex digit (for deterministic test inputs).
+    fn ch(d: char) -> ContentHash {
+        ContentHash::from_parts("blake3", &d.to_string().repeat(64)).unwrap()
+    }
+
+    fn dep(name: &str, phylum: &str, hash: &str) -> ResolvedDep {
+        // `version` is metadata (excluded from identity); fixed here so it never confounds the test.
+        ResolvedDep { name: name.into(), phylum: phylum.into(), hash: hash.into(), version: None }
+    }
+
+    #[test]
+    fn deps_field_boundary_cannot_alias_two_dags() {
+        // v0: deps1 -> "deps:\n  a b c\n  d e f\n"; deps2 (one dep whose free-text hash embeds a
+        // newline + the second record) -> the SAME string. All fields are author-controlled manifest
+        // strings, so this is the cleanest witness (no preimage/filesystem).
+        let deps1 = vec![dep("a", "b", "c"), dep("d", "e", "f")];
+        let deps2 = vec![dep("a", "b", "c\n  d e f")];
+        let id1 = content_address(ProjectKind::Program, &[], &[], &deps1);
+        let id2 = content_address(ProjectKind::Program, &[], &[], &deps2);
+        assert_ne!(id1, id2, "v1 must distinguish two distinct dep DAGs that aliased under v0");
+    }
+
+    #[test]
+    fn surface_field_boundary_cannot_alias() {
+        // v0: both -> "surface:\n  a\n  b\n".
+        let a = vec!["a".to_string(), "b".to_string()];
+        let b = vec!["a\n  b".to_string()];
+        assert_ne!(
+            content_address(ProjectKind::Phylum, &a, &[], &[]),
+            content_address(ProjectKind::Phylum, &b, &[], &[]),
+            "v1 must distinguish two distinct surface lists that aliased under v0"
+        );
+    }
+
+    #[test]
+    fn source_path_with_embedded_delimiters_cannot_alias() {
+        // v0: src_a (two files) and src_b (one file whose path embeds the first record + newline)
+        // both -> "code:\n  a.myc <h1>\n  b.myc <h2>\n".
+        let h1 = ch('1');
+        let h2 = ch('2');
+        let src_a = vec![
+            SourceFile { path: "a.myc".into(), hash: h1.clone() },
+            SourceFile { path: "b.myc".into(), hash: h2.clone() },
+        ];
+        let src_b = vec![SourceFile {
+            path: format!("a.myc {}\n  b.myc", h1.as_str()),
+            hash: h2.clone(),
+        }];
+        assert_ne!(
+            content_address(ProjectKind::Program, &[], &src_a, &[]),
+            content_address(ProjectKind::Program, &[], &src_b, &[]),
+            "v1 must distinguish source DAGs that aliased under v0 via a newline in a path"
+        );
+    }
+
+    #[test]
+    fn distinct_adversarial_inputs_are_all_distinct() {
+        // A small adversarial corpus: every pair must hash distinctly (injectivity over crafted,
+        // delimiter-laden, author-controlled fields).
+        let inputs: Vec<Vec<ResolvedDep>> = vec![
+            vec![dep("a", "b", "c"), dep("d", "e", "f")],
+            vec![dep("a", "b", "c\n  d e f")],
+            vec![dep("a b", "c", "d")],
+            vec![dep("a", "b c", "d")],
+            vec![dep("a\nb", "c", "d")],
+            vec![],
+        ];
+        let ids: Vec<_> = inputs
+            .iter()
+            .map(|d| content_address(ProjectKind::Program, &[], &[], d).as_str().to_owned())
+            .collect();
+        for i in 0..ids.len() {
+            for j in (i + 1)..ids.len() {
+                assert_ne!(ids[i], ids[j], "adversarial inputs {i} and {j} must not collide under v1");
+            }
+        }
+    }
+
+    #[test]
+    fn encoding_is_deterministic_under_v1() {
+        // The v1 change must stay deterministic: same (kind, surface, sources, deps) DAG -> same
+        // address (the ADR-003 property the registry round-trip relies on).
+        let deps = vec![dep("x", "y", "z")];
+        let surface = vec!["s".to_string()];
+        let id_a = content_address(ProjectKind::Phylum, &surface, &[], &deps);
+        let id_b = content_address(ProjectKind::Phylum, &surface, &[], &deps);
+        assert_eq!(id_a, id_b, "the encoding must stay deterministic");
+    }
+}
