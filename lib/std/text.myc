@@ -4,7 +4,7 @@
 // @authors: Tyler Zervas
 // @since: 2026-06-26
 // @updated: 2026-06-26
-// @summary: Self-hosted UTF-8 utilities: byte length, ASCII/continuation classification, bounds-checked byte access, full multi-byte UTF-8 codepoint decode (1/2/3/4-byte).
+// @summary: Self-hosted UTF-8 utilities: byte length, slice/concat over the kernel Bytes, ASCII/continuation classification, bounds-checked byte access, full multi-byte UTF-8 codepoint decode (1/2/3/4-byte).
 nodule std.text
 
 // M-717 (E13-1, #462). UTF-8 over `bytes_get`/`bytes_len`/`width_cast`. Self-contained:
@@ -34,15 +34,19 @@ nodule std.text
 // Binary{32} via `width_cast` before the shift-accumulate, then OR-combined.
 //
 // Honesty boundary (FLAGs — VR-5; do NOT fake):
-// FLAG-text-3: `bytes_slice`/`bytes_concat` are STILL not surface-callable — the `width_cast` prim
-//   does NOT unblock these (they need their own surface prim). The `Bytes8` byte-cons model below
-//   stays declared-only; slice/concat ops remain deferred to the increment that surfaces those prims
-//   (or adds tail-call/loop support for the O(n) cons-list walk). `decode_one` therefore returns a
-//   `Pair(codepoint, byte_width)` rather than slicing the consumed bytes — the caller advances `i` by
-//   the returned width.
+// FLAG-text-3: CLOSED (DN-43, M-799). `bytes_slice`/`bytes_concat` are now surface-callable over the
+//   kernel `Bytes` — `slice`/`concat` below delegate to them. The diagnosis that they "needed their
+//   own prim" was off (corrected honestly): the kernel prims `bytes.slice`/`bytes.concat` already
+//   existed + were registered (RFC-0032 D4, M-750); only the *surface mapping* was missing (a
+//   `prim_kernel_name` entry + a `try_check_seq_bytes_prim` arm, the DN-41/`width_cast` shape). The
+//   `Bytes8` byte-cons model below is now superseded by these direct-`Bytes` ops (kept declared for
+//   append-only minimalism; a later cleanup may retire it). `decode_one` still returns a
+//   `Pair(codepoint, byte_width)` (the caller advances `i` by the returned width) — that is a decode
+//   convention, independent of slice availability.
 //
-// Scope of this increment: byte_len, is_ascii_byte, byte_at, and full decode_one (1/2/3/4-byte). All
-// operations that execute three-way are honest about their basis.
+// Scope (cumulative): byte_len, is_ascii_byte, byte_at, full decode_one (1/2/3/4-byte), and — added by
+// DN-43/M-799 — `slice`/`concat` over the kernel `Bytes`. All operations that execute three-way are
+// honest about their basis.
 // ── Local Option (redeclared; no cross-leaf import) ──────────────────────────────────────────────
 // Option<A>: the never-silent optional value. Redeclared here (not imported from std.option) to
 // keep this nodule self-contained per worktree discipline. Semantics identical to std.option.
@@ -54,17 +58,18 @@ type Result<A, E> = Ok(A) | Err(E)
 
 // ── Local Pair (redeclared; no cross-leaf import) ────────────────────────────────────────────────
 // Pair<A, B>: a two-field product. `decode_one` returns `Pair(codepoint, byte_width)` — the decoded
-// Unicode scalar plus the number of bytes the sequence consumed (so the caller advances by it).
-// A `Bytes`-returning slice form is blocked on `bytes_slice` (FLAG-text-3).
+// Unicode scalar plus the number of bytes the sequence consumed (so the caller advances by it). A
+// `Bytes`-returning slice form is now available directly via `slice` below (DN-43/M-799).
 type Pair<A, B> = Pr(A, B)
 
 // ── Error type ─────────────────────────────────────────────────────────────────────────────────────
 // Utf8Error: carries the offending byte — never-silent (G2), never U+FFFD substitution.
 type Utf8Error = Invalid(Binary{8})
 
-// ── Byte cons-list (local model for future slice/concat) ──────────────────────────────────────────
-// Bytes8: a singly-linked cons-list of Binary{8} bytes for future O(n) slice/concat support.
-// Declared here for type-completeness; cons-list operations are deferred (FLAG-text-3).
+// ── Byte cons-list (superseded by direct-`Bytes` slice/concat) ─────────────────────────────────────
+// Bytes8: a singly-linked cons-list of Binary{8} bytes — wave-n1's declared-only model for *future*
+// slice/concat. Superseded by `slice`/`concat` over the kernel `Bytes` (DN-43/M-799); retained only
+// for append-only minimalism (a later cleanup may retire it). Not the slice/concat mechanism.
 type Bytes8 = BNil | BCons(Binary{8}, Bytes8)
 
 // ── byte_len ───────────────────────────────────────────────────────────────────────────────────────
@@ -72,6 +77,42 @@ type Bytes8 = BNil | BCons(Binary{8}, Bytes8)
 // kernel prim — every input yields the exact byte count, no approximation (Exact).
 fn byte_len(b: Bytes) -> Binary{32} =
   bytes_len(b)
+
+// ── concat ─────────────────────────────────────────────────────────────────────────────────────────
+// concat: the byte-wise concatenation `b1 ++ b2` over the kernel `Bytes` (DN-43/M-799). A thin total
+// wrapper over the `Exact` `bytes_concat` kernel prim — every pair of byte strings concatenates, no
+// failure mode (Exact). This (with `slice`) closes FLAG-text-3 / M-717's slicing DoD clause.
+fn concat(b1: Bytes, b2: Bytes) -> Bytes =
+  bytes_concat(b1, b2)
+
+// ── slice ──────────────────────────────────────────────────────────────────────────────────────────
+// slice: the half-open sub-slice `b[start, end)` over the kernel `Bytes` (DN-43/M-799). Delegates to
+// the never-silent `bytes_slice` kernel prim: an out-of-range (`end > len`) or inverted (`start > end`)
+// range is a never-silent refusal — NEVER a silent clamp/truncation (G2). This thin form returns
+// `Bytes` directly, surfacing that refusal as an evaluation error; for the refusal-as-data form use
+// `slice_opt` below.
+//
+// Guarantee: Exact over the in-range domain (`start <= end <= len`); the bounds contract is Declared/
+// never-silent (asserted + exhibited three-way by std_bytes_slice.rs, not machine-proven).
+fn slice(b: Bytes, start: Binary{32}, end: Binary{32}) -> Bytes =
+  bytes_slice(b, start, end)
+
+// ── slice_opt ────────────────────────────────────────────────────────────────────────────────────────
+// slice_opt: a bounds-checked sub-slice — `Some(b[start, end))` when the range is in bounds and not
+// inverted, `None` otherwise. The analog of `byte_at` for ranges: it lifts the kernel's never-silent
+// out-of-range refusal into an explicit `None` (never-silent G2), so a caller that wants the refusal
+// as data — rather than as an evaluation error — uses this form. In bounds iff `start <= end` AND
+// `end <= byte_len(b)`; both predicates are Exact `lt`-based comparisons at the common Binary{32} width
+// (start/end are already Binary{32}, so no width-cast is needed, unlike `byte_at`'s Binary{8} index).
+//
+// The two out-of-bounds conditions are each a single `lt`: `lt(end, start)` true means the range is
+// inverted (`start > end`); `lt(byte_len(b), end)` true means it runs past the end (`end > len`).
+// Both false ⇒ in range ⇒ `Some(bytes_slice …)`. (Mirrors the kernel guard `start > end || end > len`.)
+//
+// Guarantee: Declared contract (the bounds predicate is Exact `lt`; the Option wrapping is the
+// never-silent contract). Never-silent (G2): out-of-range/inverted ⇒ explicit `None`.
+fn slice_opt(b: Bytes, start: Binary{32}, end: Binary{32}) -> Option<Bytes> =
+  match lt(end, start) { 0b1 => None, _ => match lt(byte_len(b), end) { 0b1 => None, _ => Some(bytes_slice(b, start, end)) } }
 
 // ── is_ascii_byte ──────────────────────────────────────────────────────────────────────────────────
 // is_ascii_byte: True iff `x` < 0x80 (0b1000_0000), i.e. `x` has its high bit clear and is a
