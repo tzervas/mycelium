@@ -202,6 +202,9 @@ fn render_type(t: &TypeRef) -> String {
             Sparsity::Sparse(k) => format!("VSA{{{model}, {dim}, Sparse{{{k}}}}}"),
         },
         BaseType::Substrate(tag) => format!("Substrate{{{tag}}}"),
+        // RFC-0032 D3/D4 (M-749/M-750): `Seq{T, N}` / nullary `Bytes`.
+        BaseType::Seq { elem, len } => format!("Seq{{{}, {len}}}", render_type(elem)),
+        BaseType::Bytes => "Bytes".to_owned(),
         BaseType::Named(n, args) => {
             if args.is_empty() {
                 n.clone()

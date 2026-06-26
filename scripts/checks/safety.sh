@@ -12,11 +12,14 @@
 #
 # Honesty (VR-5): both audits are `Empirical`/`Declared` regex heuristics, not parsers — the Rust
 # source and the L1 checker (`crates/mycelium-l1`) are ground truth. The Rust scan excludes line/doc
-# comments and the `unsafe_code` lint attribute. The Mycelium scan **excludes the grammar-conformance
-# corpus** (`docs/spec/grammar/conformance/`): those are *parser* fixtures that deliberately exercise
-# parse-legal-but-check-illegal forms (e.g. a `wild` block outside `@std-sys`), validated by the
-# checker test-suite — not shippable FFI-floor code. The entire workspace `unsafe` surface is confined
-# to `crates/mycelium-mlir/src/jit.rs` (DN-21 §6).
+# comments and the `unsafe_code` lint attribute. The Mycelium scan **excludes two non-shippable trees**:
+# the grammar-conformance corpus (`docs/spec/grammar/conformance/`) — *parser* fixtures that deliberately
+# exercise parse-legal-but-check-illegal forms (e.g. a `wild` block outside `@std-sys`), validated by the
+# checker test-suite — and the illustrative example programs (`docs/examples/`), which are teaching
+# walkthroughs of the layered-lowering gradient (DN-38), not buildable spores: they show a `wild { }`
+# drop in narrative `@io` context to TEACH the FFI boundary, and are never compiled/published. Neither
+# tree is shippable FFI-floor code, so neither is in scope for the spore-level §4.7 floor. The entire
+# workspace `unsafe` surface is confined to `crates/mycelium-mlir/src/jit.rs` (DN-21 §6).
 source "${BASH_SOURCE%/*}/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 
@@ -92,14 +95,16 @@ fi
 section "Mycelium wild-site audit (@std-sys + !{ffi} + // SAFETY:; RFC-0028 §4.7)"
 
 # `.myc` files that contain a `wild` *block* keyword (`wild` followed by `{`, not the `wildcard`/`_`
-# pattern or the word in prose). Exclude the grammar-conformance corpus. Same exit-code discipline as
+# pattern or the word in prose). Exclude the grammar-conformance corpus and the illustrative
+# `docs/examples/` walkthroughs (both non-shippable; see header). Same exit-code discipline as
 # above: >=2 is a real error. We match with line numbers (`-n`, not `-l`) so the audit is
 # **per-`wild`-occurrence**, not per-file: a `.myc` file may hold several nodules/fns, so checking
 # the predicates "somewhere in the file" would false-pass (e.g. one `@std-sys` nodule + a `wild` in
 # a *different*, non-`@std-sys` nodule). Each `wild` site is judged against its own context.
 WINDOW_MYC=8
 wild_raw=$(git grep -nE '(^|[^[:alnum:]_])wild[[:space:]]*\{' \
-  -- ':(glob)**/*.myc' ':(exclude,glob)docs/spec/grammar/conformance/**') || wgrep_rc=$?
+  -- ':(glob)**/*.myc' ':(exclude,glob)docs/spec/grammar/conformance/**' \
+  ':(exclude,glob)docs/examples/**') || wgrep_rc=$?
 wgrep_rc=${wgrep_rc:-0}
 if (( wgrep_rc >= 2 )); then
   fail "git grep failed (exit ${wgrep_rc}) while scanning for \`wild\` sites — cannot audit"

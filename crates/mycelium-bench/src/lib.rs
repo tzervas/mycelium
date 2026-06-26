@@ -55,3 +55,6 @@ pub use llm::{parse_any_llm_json, GrokLlmReport, LlmReport, ParsedLlmSection};
 pub use measure::{run_corpus, CaseRecord, RunRecord};
 pub use report::{Honesty, LlmSection, Report};
 pub use verdict::{classify, Speed, Verdict};
+
+#[cfg(test)]
+mod tests;

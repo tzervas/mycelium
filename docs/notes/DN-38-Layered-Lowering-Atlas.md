@@ -154,7 +154,7 @@ code-out" (the maintainer's FSVP-delegation design input). The legitimacy rule i
    *held value* via projections, exclusivity replacing reference identity. Lieberman-style prototype-
    chain delegation (shared mutable prototype, late binding, cyclic `self`-back-reference) is
    **forbidden by construction** under Mycelium's immutable + acyclic + value model — a feature, not a
-   gap. This is exactly DN-37 §3.3's `~> ` (frontend sugar → generated forwarders, no kernel change).
+   gap. This is exactly DN-37 §3.3's `~>` (frontend sugar → generated forwarders, no kernel change).
 
 **Naming — options to surface for the maintainer** (per the house rule: plain/ergonomic first; coin
 only when more mnemonic *and* non-colliding; reserve the fungal lexicon for its own meanings — DN-37 §5

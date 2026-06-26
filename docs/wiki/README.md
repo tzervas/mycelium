@@ -33,7 +33,7 @@ repo Settings:
   feature so it is never exposed in logs. The wiki job falls back to the built-in `GITHUB_TOKEN` if
   the secret is absent; Pages deploy uses OIDC and needs no extra secret.
 
-See [API Reference](API-Reference) for the docs side.
+See [API Reference](API-Reference.md) for the docs side.
 
 ## Local preview
 

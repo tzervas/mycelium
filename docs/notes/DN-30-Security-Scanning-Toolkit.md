@@ -71,8 +71,8 @@ pattern across phyla **without ever seeing the original source** — detection +
 ecosystem-wide while the specific instance stays private. Disclose enough to defend, never enough to weaponize.
 
 **The hosted finding records** (the content model, machine-consumable per §3):
-- **What** — the vulnerability class (CWE) + the **screened/minimized** vulnerable-logic pattern (anonymized)
-  + its content-addressed fingerprint.
+- **What** — the vulnerability class (CWE) + the **screened/minimized** vulnerable-logic pattern (anonymized) +
+  its content-addressed fingerprint.
 - **Severity** — a CVSS-style score / severity tier.
 - **Affected** — precisely which content-addressed phylum/nodule versions (the DN-28 content-hash DAG +
   a VEX applicability statement — is this version actually exploitable?).
@@ -107,8 +107,8 @@ safe-fix ships a **certificate**:
 - it **eliminates/mitigates** the vulnerability (the security property now holds), **and**
 - it **refines the original modulo the vulnerability** (behaviour preserved on the non-vulnerable paths),
 
-each carrying an **honest guarantee tag** (RFC-0034 / VR-5): `Proven` (machine-checked semantics-preserving
-+ vuln-eliminated), `Empirical` (differentially tested over a corpus), or `Declared` (asserted, **always
+each carrying an **honest guarantee tag** (RFC-0034 / VR-5): `Proven` (machine-checked semantics-preserving +
+vuln-eliminated), `Empirical` (differentially tested over a corpus), or `Declared` (asserted, **always
 flagged** — never auto-applied without review). A fix is **reified + `EXPLAIN`-able** (RFC-0005/RFC-0013):
 the developer sees *what changed, why it's safe, and at what strength* before accepting. **No black-box
 "trust me" rewrites** — a fix that cannot state its strength is `Declared` and gated behind explicit human
@@ -119,8 +119,8 @@ acceptance (G2/VR-5).
 Like the testing toolkit (RFC-0034 §13 / M-796), the security toolkit is **native and scope-configurable**,
 reusing the §6 `@certification`-style resolution (project / nodule / granular, most-specific-wins via
 RFC-0012 ambient scoping): a project sets a baseline scan profile (which classes, which severity gate),
-overridable per-nodule or per-construct. Downstream developers get automated detection + standard reporting
-+ honest fixes **for free**, configurable, never forced — the §7-ergonomic *give-the-tool-and-the-dial*
+overridable per-nodule or per-construct. Downstream developers get automated detection + standard reporting +
+honest fixes **for free**, configurable, never forced — the §7-ergonomic *give-the-tool-and-the-dial*
 stance applied to security.
 
 ## §7 Open questions

@@ -99,9 +99,13 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::AmbientParams
 pub enum mycelium_l1::ast::BaseType
 pub mycelium_l1::ast::BaseType::Ambient(mycelium_l1::ast::AmbientParams)
 pub mycelium_l1::ast::BaseType::Binary(u32)
+pub mycelium_l1::ast::BaseType::Bytes
 pub mycelium_l1::ast::BaseType::Dense(u32, mycelium_l1::ast::Scalar)
 pub mycelium_l1::ast::BaseType::Fn(alloc::boxed::Box<mycelium_l1::ast::TypeRef>, alloc::boxed::Box<mycelium_l1::ast::TypeRef>)
 pub mycelium_l1::ast::BaseType::Named(alloc::string::String, alloc::vec::Vec<mycelium_l1::ast::TypeRef>)
+pub mycelium_l1::ast::BaseType::Seq
+pub mycelium_l1::ast::BaseType::Seq::elem: alloc::boxed::Box<mycelium_l1::ast::TypeRef>
+pub mycelium_l1::ast::BaseType::Seq::len: u32
 pub mycelium_l1::ast::BaseType::Substrate(alloc::string::String)
 pub mycelium_l1::ast::BaseType::Ternary(u32)
 pub mycelium_l1::ast::BaseType::Vsa
@@ -195,6 +199,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Item
 #[non_exhaustive] pub enum mycelium_l1::ast::Literal
 pub mycelium_l1::ast::Literal::AmbientInt(mycelium_l1::ast::Paradigm, i64)
 pub mycelium_l1::ast::Literal::Bin(alloc::string::String)
+pub mycelium_l1::ast::Literal::Bytes(alloc::string::String)
 pub mycelium_l1::ast::Literal::Int(i64)
 pub mycelium_l1::ast::Literal::List(alloc::vec::Vec<mycelium_l1::ast::Expr>)
 pub mycelium_l1::ast::Literal::Trit(alloc::string::String)
@@ -639,9 +644,11 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::UsePath
 pub mod mycelium_l1::checkty
 pub enum mycelium_l1::checkty::Ty
 pub mycelium_l1::checkty::Ty::Binary(u32)
+pub mycelium_l1::checkty::Ty::Bytes
 pub mycelium_l1::checkty::Ty::Data(alloc::string::String, alloc::vec::Vec<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::checkty::Ty::Dense(u32, mycelium_l1::ast::Scalar)
 pub mycelium_l1::checkty::Ty::Fn(alloc::boxed::Box<mycelium_l1::checkty::Ty>, alloc::boxed::Box<mycelium_l1::checkty::Ty>)
+pub mycelium_l1::checkty::Ty::Seq(alloc::boxed::Box<mycelium_l1::checkty::Ty>, u32)
 pub mycelium_l1::checkty::Ty::Substrate(alloc::string::String)
 pub mycelium_l1::checkty::Ty::Ternary(u32)
 pub mycelium_l1::checkty::Ty::Var(alloc::string::String)
@@ -1152,6 +1159,8 @@ pub mycelium_l1::token::Tok::Bang
 pub mycelium_l1::token::Tok::BangEq
 pub mycelium_l1::token::Tok::BinLit(alloc::string::String)
 pub mycelium_l1::token::Tok::Binary
+pub mycelium_l1::token::Tok::Bytes
+pub mycelium_l1::token::Tok::BytesLit(alloc::string::String)
 pub mycelium_l1::token::Tok::Caret
 pub mycelium_l1::token::Tok::Colon
 pub mycelium_l1::token::Tok::Colony
@@ -1202,6 +1211,7 @@ pub mycelium_l1::token::Tok::RBracket
 pub mycelium_l1::token::Tok::RParen
 pub mycelium_l1::token::Tok::Reclaim
 pub mycelium_l1::token::Tok::Scalar(mycelium_l1::token::ScalarTok)
+pub mycelium_l1::token::Tok::Seq
 pub mycelium_l1::token::Tok::Slash
 pub mycelium_l1::token::Tok::Sparse
 pub mycelium_l1::token::Tok::Spore
@@ -1430,9 +1440,11 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::totality::Totality
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::totality::Totality
 pub enum mycelium_l1::Ty
 pub mycelium_l1::Ty::Binary(u32)
+pub mycelium_l1::Ty::Bytes
 pub mycelium_l1::Ty::Data(alloc::string::String, alloc::vec::Vec<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::Ty::Dense(u32, mycelium_l1::ast::Scalar)
 pub mycelium_l1::Ty::Fn(alloc::boxed::Box<mycelium_l1::checkty::Ty>, alloc::boxed::Box<mycelium_l1::checkty::Ty>)
+pub mycelium_l1::Ty::Seq(alloc::boxed::Box<mycelium_l1::checkty::Ty>, u32)
 pub mycelium_l1::Ty::Substrate(alloc::string::String)
 pub mycelium_l1::Ty::Ternary(u32)
 pub mycelium_l1::Ty::Var(alloc::string::String)

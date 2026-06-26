@@ -17,7 +17,10 @@ fi
 
 # Fallback: only high-confidence patterns, to avoid noise.
 patterns='-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|gh[pousr]_[A-Za-z0-9]{36}|xox[baprs]-[A-Za-z0-9-]{10,}'
-hits="$(git grep -nIE "$patterns" -- . ':!*.lock' || true)"
+# `-e` is REQUIRED: the pattern begins with `-----BEGIN`, which `git grep` would otherwise parse as
+# a command-line option (failing with "unknown option" and silently scanning nothing — a G2
+# never-silent violation). `--` then terminates option parsing before the pathspecs.
+hits="$(git grep -nIE -e "$patterns" -- . ':!*.lock' || true)"
 if [[ -n "$hits" ]]; then
   fail "high-confidence secret pattern(s) found:"
   printf '%s\n' "$hits"

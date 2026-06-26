@@ -7,5 +7,11 @@ skip = .git,*.lock,node_modules,target,dist-newstyle,.venv,.tools-venv,*.svg,idm
 # Domain terms / abbreviations codespell otherwise flags:
 # ser (Serialize abbrev), clen (Content-Length var), publisherr (PublishErr type), raison (raison
 # d'être), copyed/copys (Dockerfile COPY directive), re-used (valid hyphenation).
-ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,implementors,referenced,effekt,inout,ser,clen,publisherr,raison,copyed,copys,re-use,re-used,re-uses,ot
+# Additional justified false positives (domain terms / proper nouns / valid hyphenation):
+# theses (real word + a URL path segment), forin (Lean 4 `ForIn` typeclass name), symantics
+# (the tagless-final "Symantics" typeclass, a deliberate Syntax/semantics pun — Carette/Kiselyov/
+# Shan), generat (bracketed quote insertion "generat[es]"), disjointness (valid set-theory term;
+# codespell mis-suggests "disjointedness"), toom (Toom-Cook multiplication algorithm), pre-emptive
+# and re-declare (valid hyphenations).
+ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,implementors,referenced,effekt,inout,ser,clen,publisherr,raison,copyed,copys,re-use,re-used,re-uses,ot,theses,forin,symantics,generat,disjointness,toom,pre-emptive,re-declare
 quiet-level = 3

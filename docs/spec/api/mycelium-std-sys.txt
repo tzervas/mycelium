@@ -71,9 +71,29 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys::guarantee_mat
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_sys::guarantee_matrix::MatrixRow
 pub const mycelium_std_sys::guarantee_matrix::MATRIX: &[mycelium_std_sys::guarantee_matrix::MatrixRow]
 pub mod mycelium_std_sys::io
+pub enum mycelium_std_sys::io::ReadCappedError
+pub mycelium_std_sys::io::ReadCappedError::Io(std::io::error::Error)
+pub mycelium_std_sys::io::ReadCappedError::TooLarge
+pub mycelium_std_sys::io::ReadCappedError::TooLarge::cap: usize
+impl core::convert::From<std::io::error::Error> for mycelium_std_sys::io::ReadCappedError
+pub fn mycelium_std_sys::io::ReadCappedError::from(std::io::error::Error) -> Self
+impl core::error::Error for mycelium_std_sys::io::ReadCappedError
+pub fn mycelium_std_sys::io::ReadCappedError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for mycelium_std_sys::io::ReadCappedError
+pub fn mycelium_std_sys::io::ReadCappedError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_sys::io::ReadCappedError
+pub fn mycelium_std_sys::io::ReadCappedError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_std_sys::io::ReadCappedError
+impl core::marker::Send for mycelium_std_sys::io::ReadCappedError
+impl core::marker::Sync for mycelium_std_sys::io::ReadCappedError
+impl core::marker::Unpin for mycelium_std_sys::io::ReadCappedError
+impl core::marker::UnsafeUnpin for mycelium_std_sys::io::ReadCappedError
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys::io::ReadCappedError
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_std_sys::io::ReadCappedError
 pub fn mycelium_std_sys::io::flush_out() -> core::result::Result<(), std::io::error::Error>
 pub fn mycelium_std_sys::io::read_line() -> core::result::Result<alloc::string::String, std::io::error::Error>
 pub fn mycelium_std_sys::io::read_to_end() -> core::result::Result<alloc::vec::Vec<u8>, std::io::error::Error>
+pub fn mycelium_std_sys::io::read_to_end_capped(usize) -> core::result::Result<alloc::vec::Vec<u8>, mycelium_std_sys::io::ReadCappedError>
 pub fn mycelium_std_sys::io::write_err(&[u8]) -> core::result::Result<(), std::io::error::Error>
 pub fn mycelium_std_sys::io::write_out(&[u8]) -> core::result::Result<(), std::io::error::Error>
 pub mod mycelium_std_sys::math
@@ -114,7 +134,28 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys::rand::Entropy
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_sys::rand::EntropyError
 pub fn mycelium_std_sys::rand::fill_bytes(&mut [u8]) -> core::result::Result<(), mycelium_std_sys::rand::EntropyError>
 pub mod mycelium_std_sys::sys
-pub fn mycelium_std_sys::sys::args() -> alloc::vec::Vec<alloc::string::String>
+pub struct mycelium_std_sys::sys::NonUtf8Arg
+pub mycelium_std_sys::sys::NonUtf8Arg::index: usize
+pub mycelium_std_sys::sys::NonUtf8Arg::lossy: alloc::string::String
+impl core::clone::Clone for mycelium_std_sys::sys::NonUtf8Arg
+pub fn mycelium_std_sys::sys::NonUtf8Arg::clone(&self) -> mycelium_std_sys::sys::NonUtf8Arg
+impl core::cmp::Eq for mycelium_std_sys::sys::NonUtf8Arg
+impl core::cmp::PartialEq for mycelium_std_sys::sys::NonUtf8Arg
+pub fn mycelium_std_sys::sys::NonUtf8Arg::eq(&self, &mycelium_std_sys::sys::NonUtf8Arg) -> bool
+impl core::error::Error for mycelium_std_sys::sys::NonUtf8Arg
+impl core::fmt::Debug for mycelium_std_sys::sys::NonUtf8Arg
+pub fn mycelium_std_sys::sys::NonUtf8Arg::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_std_sys::sys::NonUtf8Arg
+pub fn mycelium_std_sys::sys::NonUtf8Arg::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_std_sys::sys::NonUtf8Arg
+impl core::marker::Freeze for mycelium_std_sys::sys::NonUtf8Arg
+impl core::marker::Send for mycelium_std_sys::sys::NonUtf8Arg
+impl core::marker::Sync for mycelium_std_sys::sys::NonUtf8Arg
+impl core::marker::Unpin for mycelium_std_sys::sys::NonUtf8Arg
+impl core::marker::UnsafeUnpin for mycelium_std_sys::sys::NonUtf8Arg
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys::sys::NonUtf8Arg
+impl core::panic::unwind_safe::UnwindSafe for mycelium_std_sys::sys::NonUtf8Arg
+pub fn mycelium_std_sys::sys::args() -> core::result::Result<alloc::vec::Vec<alloc::string::String>, mycelium_std_sys::sys::NonUtf8Arg>
 pub fn mycelium_std_sys::sys::exit(i32) -> never
 pub fn mycelium_std_sys::sys::get_env(&str) -> core::option::Option<alloc::string::String>
 pub mod mycelium_std_sys::time

@@ -26,9 +26,11 @@ use crate::WfError;
 /// smaller — all orders of magnitude under the cap. At the same time a `Repr` at the cap is already
 /// impractical to materialize (a `2^30`-element `f64` vector is 8 GiB), so anything above it is
 /// firmly in DoS territory, never a real workload. A power of two keeps the constant auditable
-/// (KC-3). The bound is **`Exact`**: a declared dimension is either within the cap or it is not, and
-/// the rejection is never-silent — [`Repr::check_well_formed`] returns
-/// [`WfError::DimensionTooLarge`] naming the offending field, its value, and this cap (G2).
+/// (KC-3). The *check* is **`Exact`** — a declared dimension is either within the cap or it is not,
+/// a total decidable predicate; the *cap value* `2^30` is itself a **`Declared`** policy choice (a
+/// DoS heuristic, not an `Exact` fact about any value). The rejection is never-silent —
+/// [`Repr::check_well_formed`] returns [`WfError::DimensionTooLarge`] naming the offending field,
+/// its value, and this cap (G2).
 pub const MAX_DIM: u32 = 1 << 30;
 
 /// Scalar element kind for `Dense` values (extensible registry).
@@ -104,6 +106,24 @@ pub enum Repr {
         /// Declared sparsity class.
         sparsity: SparsityClass,
     },
+    /// A first-class indexed homogeneous sequence (RFC-0032 D3; M-749). `len` elements, each of the
+    /// element representation `elem`. The substrate for an O(1)-indexed `Vec`/`Map`/`Set` (the
+    /// efficient collections surface) — distinct from the recursive-ADT cons-`List`, which needs no
+    /// kernel support. Unlike the scalar paradigms' dimension fields, **`len == 0` is well-formed**
+    /// (the empty sequence is a legitimate value); only the [`MAX_DIM`] over-allocation cap and the
+    /// nested `elem`'s own well-formedness gate it (never-silent on a malformed element repr, G2).
+    Seq {
+        /// The (boxed) element representation — every element of the payload matches this `Repr`.
+        elem: Box<Repr>,
+        /// Declared element count (`≤ MAX_DIM` when well-formed; `0` is allowed — the empty seq).
+        len: u32,
+    },
+    /// A first-class byte string (RFC-0032 D4; M-750) — **well-formed for any byte content**,
+    /// carrying no declared length (the payload [`crate::value::Payload::Bytes`] carries the bytes).
+    /// Text layers on top: UTF-8 decode is written in `.myc` over this byte surface, never in the
+    /// kernel. The substrate for an efficient `str`/`text` value, chosen over modelling strings as
+    /// `Seq<Binary{8}>` so text has a clear first-class value.
+    Bytes,
 }
 
 /// Check one dimension field against the `> 0` lower guard and the [`MAX_DIM`] upper guard,
@@ -122,6 +142,22 @@ fn dim_in_range(field: &'static str, value: u32) -> Result<bool, WfError> {
         });
     }
     Ok(true)
+}
+
+/// Check a *length* field against the [`MAX_DIM`] over-allocation cap **only** — unlike
+/// [`dim_in_range`], `0` is accepted (a [`Repr::Seq`] of `len == 0` is the well-formed empty
+/// sequence, RFC-0032 D3). Returns the never-silent [`WfError::DimensionTooLarge`] (naming `field`,
+/// the value, and the cap) when the cap is exceeded; `Ok(())` otherwise. Same DoS guard as
+/// `dim_in_range`, without the `> 0` lower bound.
+fn len_in_cap(field: &'static str, value: u32) -> Result<(), WfError> {
+    if value > MAX_DIM {
+        return Err(WfError::DimensionTooLarge {
+            field,
+            value,
+            cap: MAX_DIM,
+        });
+    }
+    Ok(())
 }
 
 impl Repr {
@@ -161,6 +197,22 @@ impl Repr {
                 };
                 dim_ok && !model.is_empty() && sparsity_ok
             }
+            // A sequence is well-formed iff its declared `len` is within the over-allocation cap
+            // (DN-40 §3) **and** the nested element repr is itself well-formed — recursing so a
+            // malformed `elem` (e.g. `Binary{0}` or an over-cap inner dim) is rejected
+            // never-silently, *before* any payload of `len` elements is materialized (G2). `len == 0`
+            // is allowed: the empty sequence is a legitimate value, so the cap is checked with the
+            // length-only guard, not the `> 0` `dim_in_range`.
+            Repr::Seq { elem, len } => {
+                len_in_cap("len", *len)?;
+                elem.check_well_formed()?;
+                true
+            }
+            // A byte string is well-formed for any byte content (RFC-0032 D4): it declares no length
+            // (the payload carries the bytes), so there is nothing to bound here. Any over-allocation
+            // is bounded by the payload itself, which a deserializer materializes directly — there is
+            // no separate declared dimension that could exceed it (unlike the scalar paradigms).
+            Repr::Bytes => true,
         };
         if in_range {
             Ok(())

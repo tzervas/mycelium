@@ -6,28 +6,28 @@
 
 ## Part 1 — Pit of Success + Language Tower / Nanopass
 
-# Prior Art — Pit of Success (DX) + Language Tower / Nanopass (verified layered lowering)
+## Prior Art — Pit of Success (DX) + Language Tower / Nanopass (verified layered lowering)
 
 ## A — The "Pit of Success" DX principle
 - **Rico Mariani** (coinage, Microsoft) / **Brad Abrams** (popularized, .NET, 2008): "we want our customers to simply **fall into winning practices** … make it easy to do the right thing and hard to do the wrong thing." Inverse anti-pattern = "pit of despair/failure" (easy path → bugs).
-  - https://blog.codinghorror.com/falling-into-the-pit-of-success/ ; https://learn.microsoft.com/en-us/archive/blogs/brada/the-pit-of-success
+  - <https://blog.codinghorror.com/falling-into-the-pit-of-success/> ; <https://learn.microsoft.com/en-us/archive/blogs/brada/the-pit-of-success>
 - **Progressive disclosure** (Nielsen / NN/g, 2006): defer advanced/rarely-used features to a secondary surface → improves **learnability, efficiency, error rate**. "Show users only the information they need when they need it."
-  - https://www.nngroup.com/articles/progressive-disclosure/
+  - <https://www.nngroup.com/articles/progressive-disclosure/>
 - **"Make illegal states unrepresentable"** (Yaron Minsky, Jane Street, *Effective ML*): encode invariants in the type structure (sum types over loosely-coupled fields) so the compiler rejects invalid states — the *type-system* form of pit-of-success (the only compilable path is the correct one).
-  - https://blog.janestreet.com/effective-ml-revisited/ ; https://fsharpforfunandprofit.com/posts/designing-with-types-making-illegal-states-unrepresentable/
+  - <https://blog.janestreet.com/effective-ml-revisited/> ; <https://fsharpforfunandprofit.com/posts/designing-with-types-making-illegal-states-unrepresentable/>
 - Synthesis: pit-of-success = the easy/default/lowest-effort path is *also* correct+safe. Type-form (illegal states unrepresentable) + surface-form (progressive disclosure) both **teach correct usage through the structure of the tool**, not docs/discipline.
 
 ## B — Language Tower / "Languages as Libraries"
 - **"Languages as Libraries," PLDI 2011** (Tobin-Hochstadt, St-Amour, Culpepper, Flatt, Felleisen): Racket's **tower of languages**, each a library; `#lang L` selects a language = a module exporting syntax/semantics (reader + macros). Language extension = library extension. Surface `#lang` → macro expansion → fully-expanded tiny core (`#%kernel`).
-  - https://www2.ccs.neu.edu/racket/pubs/pldi11-thacff.pdf
+  - <https://www2.ccs.neu.edu/racket/pubs/pldi11-thacff.pdf>
 - **"A Programmable Programming Language," CACM 2018** (Felleisen et al.): language-oriented programming — build a *tower of small domain-tuned languages*, each lowering into the next.
-  - https://cacm.acm.org/research/a-programmable-programming-language/
+  - <https://cacm.acm.org/research/a-programmable-programming-language/>
 
 ## C — Nanopass (many tiny verified lowering passes)
 - **"A Nanopass Infrastructure," ICFP 2004** (Sarkar, Waddell, Dybvig): "a compiler comprised of many single-task passes with a **well-defined intermediate language between each pass**." (1) ILs are **formally specified**; (2) each pass threads only relevant parts; (3) one pass = one task. Framework **auto-generates verification passes** checking each pass's output conforms to its IL grammar.
-  - https://legacy.cs.indiana.edu/~dyb/pubs/nano-jfp.pdf
+  - <https://legacy.cs.indiana.edu/~dyb/pubs/nano-jfp.pdf>
 - **"A Nanopass Framework for Commercial Compiler Development," ICFP 2013** (Keep & Dybvig): scales to production — **Chez Scheme = 50+ nanopasses**. Each IL defined as a *delta* from the previous one (specify only what changes).
-  - https://dl.acm.org/doi/10.1145/2500365.2500618 ; https://nanopass.org/
+  - <https://dl.acm.org/doi/10.1145/2500365.2500618> ; <https://nanopass.org/>
 - **Why a verified chain of small lowerings beats one big elaboration** (grounded synthesis):
   1. **Independent checkability** — each pass has a specified input/output IL; auto-generated checker validates conformance (a monolithic pass leaves internal invariants unchecked).
   2. **Narrow invariants / local reasoning** — one construct per pass → small auditable correctness argument.
@@ -36,7 +36,7 @@
   5. **Maintainability / kernel-never-grows** — new surface features add an *early* pass; the small core + its proofs are untouched (exactly KC-3).
   6. **Spec = IL grammar** — IL definitions are machine-checked contracts between passes; the lowering is *honest* because every intermediate stage is a typed/grammar-checked artifact.
 - **CompCert bridge** (Leroy, CACM 2009): ~20 passes over ~10 IRs, each with small-step semantics + a forward-simulation proof — small passes with well-defined IRs are exactly what makes per-pass semantic-preservation proofs (or translation validation) tractable.
-  - https://dl.acm.org/doi/10.1145/1538788.1538814
+  - <https://dl.acm.org/doi/10.1145/1538788.1538814>
 
 ## Mycelium read
 - The L0–L3 layering + KC-3 ("kernel never grows") + RFC-0012 ("lowering is observationally the identity") + NFR-7 (interp≡AOT differential) is **precisely the nanopass/language-tower thesis**: a tower of small, grammar-checked, semantics-preserving lowering passes bottoming out at a tiny frozen core. The academic backing is strong and direct.
@@ -46,7 +46,7 @@
 
 ## Part 2 — Inspectable Desugaring · Generative Lowering · Value-Semantic Delegation · Content-Addressed Generation · Lowering Verification
 
-# Prior-Art Research — Inspectable Desugaring & Generative Lowering for Mycelium
+## Prior-Art Research — Inspectable Desugaring & Generative Lowering for Mycelium
 
 **Scope.** External prior-art for a Mycelium design note. Covers exactly five topics:
 (1) inspectable desugaring / "see the expansion" tooling; (2) generative lowering from terse
@@ -195,7 +195,7 @@ no inspectable, reusable artifact stands between intent and running code.
 > the running form exists.** Phrased for Mycelium: *every desugaring must produce a nameable L0 term
 > a developer can view, diff, and (ideally) round-trip — never a side-effect on an invisible internal
 > structure with no surfaced form.*
-
+>
 > **[EASIER] for Mycelium.** Because lowering targets a **real frozen L0 core**, the "explicit
 > inspectable artifact" exists *by construction* — the generated thing is just an L0 value, not a
 > separate compiler-internal AST mutation. The Lombok failure mode is structurally impossible if the
@@ -288,7 +288,7 @@ Build systems show the same identity-by-content at the artifact level:
 > parameters *is* its hash; producing it again yields the identical hash and therefore the identical
 > object. "Early cutoff" gives the compile-time dual: if a desugaring's output hash is unchanged,
 > everything downstream is reusable untouched.
-
+>
 > **[EASIER] — this is Mycelium's strongest free win.** Content-addressing **gives dedup and the
 > singleton for free** and **eliminates the mutable registry** that an OOP/identity model would need
 > to coordinate "one instance per params." Because the language is *already* immutable + acyclic +
@@ -339,63 +339,63 @@ verification angle.)
 
 **Topic 1 — inspectable expansion**
 - dtolnay, *cargo-expand* (README; "lossy… debugging aid only" disclaimer; covers derive + proc-macro).
-  https://github.com/dtolnay/cargo-expand
+  <https://github.com/dtolnay/cargo-expand>
 - Racket, *Macro Debugger: Inspecting Macro Expansion* (stepper, rewriting steps, mark-colors,
-  macro hiding, binding info). https://docs.racket-lang.org/macro-debugger/index.html
+  macro hiding, binding info). <https://docs.racket-lang.org/macro-debugger/index.html>
 - Culpepper & Felleisen, *A Stepper for Scheme Macros* (Scheme 2006) — design of the stepper.
-  https://www2.ccs.neu.edu/racket/pubs/scheme2006-cf.pdf
+  <https://www2.ccs.neu.edu/racket/pubs/scheme2006-cf.pdf>
 - Lean 4 metaprogramming book, *Options* (`set_option pp.all`, delaborator injective/round-trip).
-  https://leanprover-community.github.io/lean4-metaprogramming-book/extra/01_options.html
+  <https://leanprover-community.github.io/lean4-metaprogramming-book/extra/01_options.html>
 - Lean reference, *Extending Lean's Output* (delaboration/unexpansion).
-  https://lean-lang.org/doc/reference/latest/Notations-and-Macros/Extending-Lean___s-Output/
+  <https://lean-lang.org/doc/reference/latest/Notations-and-Macros/Extending-Lean___s-Output/>
 - Ullrich & de Moura, *Hygienic Macro Expansion for Theorem Proving Languages* (arXiv:2001.10490) —
-  name-capture as correctness bug; Scheme-derived hygiene. https://arxiv.org/abs/2001.10490
+  name-capture as correctness bug; Scheme-derived hygiene. <https://arxiv.org/abs/2001.10490>
 - GHC users guide, *Template Haskell* (`-ddump-splices`, `======>` splice output).
-  https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/template_haskell.html
+  <https://downloads.haskell.org/ghc/latest/docs/users_guide/exts/template_haskell.html>
 - Scala 3 docs, *Inline* / *Macros* / *Reflection* (`-Xprint`, inline→quote→reflection ladder).
-  https://docs.scala-lang.org/scala3/guides/macros/inline.html ·
-  https://docs.scala-lang.org/scala3/guides/macros/macros.html
+  <https://docs.scala-lang.org/scala3/guides/macros/inline.html> ·
+  <https://docs.scala-lang.org/scala3/guides/macros/macros.html>
 
 **Topic 2 — generative lowering (GOOD vs OPAQUE)**
 - Rust derive — recoverable via cargo-expand (above).
 - Kotlin docs, *Delegation* (`by`: "compiler generates all the methods… that forward to b").
-  https://kotlinlang.org/docs/delegation.html ·
-  *Delegated properties* (`prop$delegate`). https://kotlinlang.org/docs/delegated-properties.html
+  <https://kotlinlang.org/docs/delegation.html> ·
+  *Delegated properties* (`prop$delegate`). <https://kotlinlang.org/docs/delegated-properties.html>
 - Go struct embedding (field/method promotion; composition over inheritance).
-  https://eli.thegreenplace.net/2020/embedding-in-go-part-3-interfaces-in-structs/
+  <https://eli.thegreenplace.net/2020/embedding-in-go-part-3-interfaces-in-structs/>
 - Zig comptime (Loris Cro, *What is Zig's Comptime?* — comptime as the no-macro answer to C macros).
-  https://kristoff.it/blog/what-is-zig-comptime/
+  <https://kristoff.it/blog/what-is-zig-comptime/>
 - **Lombok anti-pattern** — hidden AST/bytecode generation, no source artifact, undebuggable:
-  https://dev.to/yanev/why-i-believe-lombok-should-be-discarded-from-java-projects-1g4h ·
-  https://www.danvega.dev/blog/no-lombok ·
-  https://news.ycombinator.com/item?id=19048335
+  <https://dev.to/yanev/why-i-believe-lombok-should-be-discarded-from-java-projects-1g4h> ·
+  <https://www.danvega.dev/blog/no-lombok> ·
+  <https://news.ycombinator.com/item?id=19048335>
 
 **Topic 3 — value-semantic forwarding without aliasing**
 - Racordon, Shabalin, Zheng, Abrahams, Saeta, *Native Implementation of Mutable Value Semantics*
   (arXiv:2106.12678) — "bans sharing instead of mutation"; second-class references.
-  https://arxiv.org/abs/2106.12678
+  <https://arxiv.org/abs/2106.12678>
 - Hylo, *Language Specification* — subscripts (`let`/`inout`/`sink`/`set`), projections, lifetime
-  exclusivity. https://hylo-lang.org/docs/reference/specification/ · https://hylo-lang.org/
+  exclusivity. <https://hylo-lang.org/docs/reference/specification/> · <https://hylo-lang.org/>
 - Lieberman, *Using Prototypical Objects to Implement Shared Behavior in OO Systems* (OOPSLA 1986) —
   prototype-chain delegation, late binding, shared/cyclic objects (the contrast case).
-  https://www.semanticscholar.org/paper/91b4af9ff2c0f9d7985544d901f6ab2ef01fe271 ·
-  https://en.wikipedia.org/wiki/Delegation_(object-oriented_programming)
+  <https://www.semanticscholar.org/paper/91b4af9ff2c0f9d7985544d901f6ab2ef01fe271> ·
+  <https://en.wikipedia.org/wiki/Delegation_(object-oriented_programming)>
 
 **Topic 4 — content-addressed generated artifacts**
 - Unison, *The big idea* (content-addressed code; hash = AST+deps; names are metadata; dedup).
-  https://www.unison-lang.org/docs/the-big-idea/ · https://github.com/unisonweb/unison
+  <https://www.unison-lang.org/docs/the-big-idea/> · <https://github.com/unisonweb/unison>
 - SoftwareMill, *Trying out Unison: code as hashes* (structural hash → dedup by content).
-  https://softwaremill.com/trying-out-unison-part-1-code-as-hashes/
+  <https://softwaremill.com/trying-out-unison-part-1-code-as-hashes/>
 - Tweag, *Implementing a content-addressed Nix* (CA derivations; early cutoff).
-  https://www.tweag.io/blog/2021-12-02-nix-cas-4/ · https://nixos.wiki/wiki/Ca-derivations
+  <https://www.tweag.io/blog/2021-12-02-nix-cas-4/> · <https://nixos.wiki/wiki/Ca-derivations>
 - Bazel/Nix CA interplay (content-addressed store paths invalidate cache iff content changes).
-  https://blog.consumingchaos.com/posts/nix-bazel-cross-compiling/
+  <https://blog.consumingchaos.com/posts/nix-bazel-cross-compiling/>
 
 **Topic 5 — semantics-preserving lowering verification (desugar/macro angle)**
 - Necula, *Translation Validation for an Optimizing Compiler* (PLDI 2000) — per-run validation,
-  before/after each pass, checkable witness. https://people.eecs.berkeley.edu/~necula/Papers/tv_pldi00.pdf
+  before/after each pass, checkable witness. <https://people.eecs.berkeley.edu/~necula/Papers/tv_pldi00.pdf>
 - Differential/metamorphic testing as gold standard (Csmith lineage), summary survey context.
-  https://arxiv.org/pdf/2504.04321
+  <https://arxiv.org/pdf/2504.04321>
 - Lean injective `pp.all` round-trip (above) — round-trip as a testable expansion property.
 
 ---

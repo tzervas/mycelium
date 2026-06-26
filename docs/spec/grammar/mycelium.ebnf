@@ -137,6 +137,8 @@ base_type      ::= 'Binary'  '{' Int '}'
                  | 'Dense'   '{' Int ',' scalar '}'
                  | 'VSA'     '{' Ident ',' Int ',' sparsity '}'
                  | 'Substrate' '{' Ident '}'                  /* affine external resource (LR-8) */
+                 | 'Seq'     '{' type_ref ',' Int '}'         /* indexed homogeneous sequence (RFC-0032 D3) */
+                 | 'Bytes'                                    /* first-class byte string (RFC-0032 D4) */
                  | Ident type_args?                           /* named type or type variable */
                  | '{' ambient_params '}'                     /* paradigm-less repr (RFC-0012 §4.2) */
 /* A paradigm-less repr writes the size/shape only; the enclosing ambient supplies the paradigm.
@@ -244,11 +246,13 @@ path           ::= Ident ('.' Ident)*
  * names its paradigm; a bare Int has no representation family on its own (Q6) UNLESS an ambient is
  * in scope, in which case it adopts the ambient paradigm and takes its width from the checked
  * context, else an explicit UnresolvedWidth (RFC-0012 §4.3; M-344). */
-literal        ::= BinLit | TritLit | Int | ListLit
-ListLit        ::= '[' (expr (',' expr)*)? ']'
+literal        ::= BinLit | TritLit | BytesLit | Int | ListLit
+ListLit        ::= '[' (expr (',' expr)*)? ']'       /* constructs a Seq{T, N} (RFC-0032 D3) */
 
 /* Terminals (lexer). */
 BinLit         ::= '0b' ('0' | '1' | '_')+
+BytesLit       ::= '0x' HexDigit (HexDigit | '_')*   /* even hex-digit count required (RFC-0032 D4) */
+HexDigit       ::= [0-9a-fA-F]
 TritLit        ::= '<' Trit+ '>'                     /* MSB-first balanced trits, compact */
 Trit           ::= '+' | '0' | '-'
 Int            ::= '-'? [0-9]+

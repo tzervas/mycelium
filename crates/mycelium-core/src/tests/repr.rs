@@ -202,3 +202,110 @@ fn zero_dim_still_malformed_repr_not_too_large() {
         WfError::MalformedRepr
     );
 }
+
+// --- RFC-0032 D3 (M-749): Repr::Seq well-formedness ---------------------------------------------
+
+/// A sequence of a well-formed element repr is well-formed for any `len` within the cap — including
+/// `len == 0` (the empty sequence is a legitimate value, unlike a scalar paradigm's `dim`).
+#[test]
+fn seq_well_formed_for_valid_elem_and_len_including_empty() {
+    let elem = Box::new(Repr::Binary { width: 8 });
+    assert!(Repr::Seq {
+        elem: elem.clone(),
+        len: 3
+    }
+    .well_formed());
+    // len == 0 is well-formed (the empty seq) — the distinguishing rule from `dim_in_range`.
+    assert!(Repr::Seq {
+        elem: elem.clone(),
+        len: 0
+    }
+    .well_formed());
+    // len at the cap is still well-formed (inclusive bound).
+    assert!(Repr::Seq { elem, len: MAX_DIM }.well_formed());
+}
+
+/// A sequence over a **malformed element repr** is rejected, never-silently — the nested
+/// `check_well_formed` recurses, so a `Binary{0}` element propagates its `MalformedRepr` (G2).
+#[test]
+fn seq_rejects_malformed_element_repr() {
+    let bad = Repr::Seq {
+        elem: Box::new(Repr::Binary { width: 0 }),
+        len: 3,
+    };
+    assert_eq!(bad.check_well_formed().unwrap_err(), WfError::MalformedRepr);
+    // …and an over-cap *inner* dimension propagates the named `DimensionTooLarge`.
+    let over = MAX_DIM + 1;
+    assert_eq!(
+        Repr::Seq {
+            elem: Box::new(Repr::Dense {
+                dim: over,
+                dtype: ScalarKind::F32
+            }),
+            len: 3,
+        }
+        .check_well_formed()
+        .unwrap_err(),
+        WfError::DimensionTooLarge {
+            field: "dim",
+            value: over,
+            cap: MAX_DIM,
+        }
+    );
+}
+
+/// A sequence whose own `len` exceeds the cap is rejected never-silently, naming the `len` field.
+#[test]
+fn seq_len_above_cap_rejected_naming_field() {
+    let over = MAX_DIM + 1;
+    assert_eq!(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 8 }),
+            len: over,
+        }
+        .check_well_formed()
+        .unwrap_err(),
+        WfError::DimensionTooLarge {
+            field: "len",
+            value: over,
+            cap: MAX_DIM,
+        }
+    );
+}
+
+/// Nested sequences (a `Seq` of `Seq`) recurse through well-formedness correctly — a malformed
+/// innermost element is still caught (G2 all the way down).
+#[test]
+fn nested_seq_recurses_well_formedness() {
+    let good = Repr::Seq {
+        elem: Box::new(Repr::Seq {
+            elem: Box::new(Repr::Ternary { trits: 4 }),
+            len: 2,
+        }),
+        len: 3,
+    };
+    assert!(good.well_formed());
+    let bad = Repr::Seq {
+        elem: Box::new(Repr::Seq {
+            elem: Box::new(Repr::Ternary { trits: 0 }), // malformed innermost
+            len: 2,
+        }),
+        len: 3,
+    };
+    assert_eq!(bad.check_well_formed().unwrap_err(), WfError::MalformedRepr);
+}
+
+// --- RFC-0032 D4 (M-750): Repr::Bytes well-formedness -------------------------------------------
+
+/// A byte string is well-formed unconditionally (any byte content; no declared length to bound).
+#[test]
+fn bytes_is_always_well_formed() {
+    assert!(Repr::Bytes.well_formed());
+    assert!(Repr::Bytes.check_well_formed().is_ok());
+    // A `Seq` of `Bytes` is also well-formed (the element repr `Bytes` recurses to Ok).
+    assert!(Repr::Seq {
+        elem: Box::new(Repr::Bytes),
+        len: 4,
+    }
+    .well_formed());
+}
