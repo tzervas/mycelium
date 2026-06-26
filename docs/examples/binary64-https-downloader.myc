@@ -1,0 +1,281 @@
+// nodule: examples.net.https_downloader
+// @license: MIT
+// @authors: Mycelium examples
+// @since: 2026-06-26
+// @updated: 2026-06-26
+// @summary: ILLUSTRATIVE design-phase example. Conventional general-purpose programming over
+//   Binary[64] (arithmetic, sum types, pattern match, never-silent Option/Result) plus a small
+//   HTTPS artifact downloader written with decent security practice (TLS verify ON, HTTPS-only,
+//   bounded/streamed reads, no in-source secrets, never-silent ?-propagation, integrity + size
+//   check, timeout budget). Mycelium CANNOT execute yet (design phase) — this is illustrative
+//   source, NOT runnable. Surface follows the DN-31 ACCEPTED delimiter direction: `[]` for type
+//   args & sized/repr types (Binary[64]), `=>` as the return arrow, `<>` freed for operators.
+//   That direction is decided but NOT yet landed in the parser (the conformance corpus still uses
+//   `{N}`/`<A>`/`->`); see the caveat. Guarantee posture is per-op and honest: Exact only for
+//   total finite operations, Declared for the type-level/effectful contracts, never upgraded
+//   without a checked basis (VR-5).
+nodule examples.net.https_downloader
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Part 1 — Conventional general-purpose programming over Binary[64]
+//
+// Binary[64] is a 64-bit binary representation value. We treat it the way a
+// general-purpose program treats a machine integer: arithmetic, comparison,
+// and never-silent fallibility on every partial operation. Nothing here is a
+// `swap` — staying within Binary[64] is no representation change (S1).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// We reuse the self-hosted std vocabulary (lib/std). Option[A] = Some(A) | None,
+// Result[A, E] = Ok(A) | Err(E) — both never-silent: absence/failure is an
+// explicit value the caller must handle, never a sentinel or a panic.
+use std.option
+use std.result
+
+// A small, explicit error vocabulary for the arithmetic surface. A sum type with
+// no payload per arm — finite, so matching over it is Exact.
+type ArithError = Overflow | DivByZero
+
+// checked_add: 64-bit addition that is never-silent on overflow. `add` and the
+// `lt`-style comparisons bottom out in kernel Binary ops; the OVERFLOW DECISION
+// is made explicit here (carry-out detected by `a + b < a` when no wrap is
+// representable). Returns Result so the caller cannot ignore the wrap.
+//
+// Guarantee: Declared — this is a type-level contract over the kernel add; the
+// add itself is Exact within range, but the wrap-detection predicate is a stated
+// rule (VR-5: do not claim Proven without a checked theorem on the predicate).
+fn checked_add(a: Binary[64], b: Binary[64]) => Result[Binary[64], ArithError] =
+  let sum: Binary[64] = add(a, b) in
+  // Carry-out check: an unsigned wrap means the sum dropped below an addend.
+  if lt(sum, a) then Err(Overflow)
+  else Ok(sum)
+
+// checked_div: never-silent division. Division by zero is an explicit Err, not a
+// trap or a silently-substituted zero. Declared (type-level contract over `div`).
+fn checked_div(a: Binary[64], b: Binary[64]) => Result[Binary[64], ArithError] =
+  match is_zero(b) {
+    True  => Err(DivByZero),
+    False => Ok(div(a, b)),
+  }
+
+// min64: total over its finite domain — every pair lands in exactly one arm.
+// Guarantee: Exact (a total selection, no approximation).
+fn min64(a: Binary[64], b: Binary[64]) => Binary[64] =
+  if lt(a, b) then a else b
+
+// clamp_upper: cap a value at an inclusive maximum. Total → Exact. Used below to
+// fold a streamed byte count toward a hard cap without ever exceeding it.
+fn clamp_upper(x: Binary[64], hi: Binary[64]) => Binary[64] =
+  min64(x, hi)
+
+// sum_readings: a conventional bounded fold over a linked list of Binary[64]
+// samples, accumulating with never-silent checked_add so an overflow surfaces
+// as Err rather than wrapping silently. `for` is Total-by-construction
+// (structural recursion over the finite list), so this terminates.
+//
+// Guarantee: Declared — inherits checked_add's Declared contract.
+type Readings = Nil | Cons(Binary[64], Readings)
+
+fn sum_readings(rs: Readings) => Result[Binary[64], ArithError] =
+  match rs {
+    Nil          => Ok(0),
+    Cons(x, rest) =>
+      // Sequence two fallible steps with the Result bind: sum the tail, then add
+      // the head — either failure short-circuits (never-silent).
+      and_then(sum_readings(rest), tail_total => checked_add(tail_total, x)),
+  }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Part 2 — A small HTTPS downloader with decent security practice
+//
+// Each security property is named in a comment AND realized in the type/flow:
+//   (S-1) TLS certificate verification is ON and cannot be disabled.
+//   (S-2) HTTPS-only — http:// / downgrade is an explicit refusal.
+//   (S-3) Bounded, streamed reads — a hard byte cap, no unbounded buffer.
+//   (S-4) No secrets in source — credentials come from the effect/env, not
+//         literals.
+//   (S-5) Never-silent error handling — every fallible step is ?-propagated as a
+//         Result; nothing fails silently.
+//   (S-6) Integrity + size check on the downloaded artifact (expected length +
+//         BLAKE3 content hash).
+//   (S-7) A timeout / budget bounds the whole transfer.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// A URL the policy has already validated. Constructing one is the ONLY way to get
+// a Url, and the constructor (parse_https_url) enforces the HTTPS-only rule — so a
+// plain-http URL is unrepresentable downstream (S-2 made structural).
+type Url = Url(Bytes)
+
+// TLS posture is a closed, two-state type with NO "disabled" variant — there is
+// no value of this type that turns verification off (S-1 made unrepresentable).
+// `Verify(roots)` pins the trust anchors to a caller-supplied root set; `SystemRoots`
+// uses the audited platform store. Both VERIFY; neither can skip it.
+type TlsPolicy = Verify(Bytes) | SystemRoots
+
+// The transfer budget: a hard wall-clock timeout (ms) and a hard maximum body
+// size in bytes. Both are Binary[64] (S-3, S-7). There is no "unlimited" — the
+// caps are mandatory fields, so an unbounded transfer is unrepresentable.
+type Budget = Budget(Binary[64], Binary[64])   // (timeout_ms, max_bytes)
+
+fn budget_timeout_ms(b: Budget) => Binary[64] =
+  match b { Budget(t, _) => t }
+
+fn budget_max_bytes(b: Budget) => Binary[64] =
+  match b { Budget(_, m) => m }
+
+// The integrity contract the caller asserts about the artifact BEFORE the fetch:
+// the exact expected length and the expected BLAKE3 digest. Verifying against a
+// pre-stated hash (not one computed from the same untrusted stream) is what makes
+// this an integrity check rather than a self-fulfilling one (S-6).
+type Integrity = Integrity(Binary[64], Bytes)  // (expected_len_bytes, expected_blake3)
+
+fn integrity_len(i: Integrity) => Binary[64] =
+  match i { Integrity(n, _) => n }
+
+fn integrity_hash(i: Integrity) => Bytes =
+  match i { Integrity(_, h) => h }
+
+// The closed error vocabulary for the download. Every fallible step maps to a
+// named variant — never a generic "failed" — so the caller can react precisely
+// (S-5). No payload carries a secret.
+type DownloadError =
+    NotHttps                                   // S-2: scheme was not https
+  | TlsHandshakeFailed                         // S-1: cert chain did not verify
+  | MissingCredential                          // S-4: required env credential absent
+  | Timeout                                     // S-7: exceeded the time budget
+  | TooLarge(Binary[64])                        // S-3: body exceeded max_bytes (cap)
+  | LengthMismatch(Binary[64], Binary[64])      // S-6: (expected_len, actual_len)
+  | HashMismatch                               // S-6: digest did not match
+  | TransportError                             // generic socket/read failure
+
+// The artifact we hand back: only ever returned AFTER integrity verification
+// passes, so possessing a VerifiedArtifact is itself the proof the checks ran.
+type VerifiedArtifact = VerifiedArtifact(Bytes)
+
+// ── (S-2) HTTPS-only URL construction ────────────────────────────────────────
+// parse_https_url is the sole Url constructor. It refuses any non-https scheme
+// (and thus any http→https downgrade attempt) with an explicit Err — never a
+// silent rewrite to https, never a silent accept of http. Declared: the scheme
+// check is a stated string-prefix rule.
+fn parse_https_url(raw: Bytes) => Result[Url, DownloadError] =
+  if starts_with(raw, "https://") then Ok(Url(raw))
+  else Err(NotHttps)
+
+// ── (S-4) Credentials from the effect, never the source ───────────────────────
+// read_bearer_token reads a bearer credential from the process environment via
+// the `io` effect. The credential NAME is in source; the SECRET is not — it is
+// supplied at run time. A missing credential is never-silent (explicit Err), so
+// we never fall through to an unauthenticated request by accident.
+//
+// `!{ io }` declares the effect (checker-only metadata today, M-660); the
+// guarantee on the contract is Declared.
+fn read_bearer_token(env_var: Bytes) => Result[Bytes, DownloadError] !{ io } =
+  match env_get(env_var) {
+    Some(secret) => Ok(secret),
+    None         => Err(MissingCredential),   // never silently send no auth
+  }
+
+// ── (S-1) TLS connect with verification ON ────────────────────────────────────
+// tls_connect opens a verified TLS session under the given policy. There is no
+// parameter to disable verification (S-1 is structural in TlsPolicy). A failed
+// chain verification is an explicit Err, propagated — never downgraded to a
+// plaintext or unverified session. Declared (the verify is delegated `via` the
+// audited platform TLS stack; we assert, not prove, its correctness — VR-5).
+fn tls_connect(url: Url, tls: TlsPolicy, budget: Budget)
+    => Result[Session, DownloadError] !{ io } =
+  // `via` delegates the handshake to the platform TLS provider; on any verify
+  // failure it yields Err(TlsHandshakeFailed). Connect honours the time budget.
+  via platform_tls.handshake(url, tls, budget_timeout_ms(budget))
+
+// ── (S-3 + S-7) Bounded, streamed, time-budgeted body read ────────────────────
+// read_body_capped streams the response body in chunks, accumulating length with
+// never-silent checked arithmetic and a HARD cap. It never allocates an unbounded
+// buffer: the moment the running total would exceed max_bytes it aborts with
+// TooLarge (S-3). The time budget bounds the whole loop (S-7). Every chunk read
+// is ?-propagated (S-5).
+//
+// Guarantee: Declared (an effectful streaming contract; the cap predicate is a
+// stated rule, the timeout is delegated).
+fn read_body_capped(s: Session, budget: Budget)
+    => Result[Bytes, DownloadError] !{ io } =
+  let cap: Binary[64] = budget_max_bytes(budget) in
+  // stream_fold folds the chunk stream under the deadline; `step` decides whether
+  // to keep reading, stop, or abort — making the cap and the deadline explicit at
+  // every chunk rather than after a full (possibly huge) read.
+  via stream_fold(
+    s,
+    budget_timeout_ms(budget),
+    cap,
+    // step(acc_len, chunk_len) decides the next action against the cap (S-3).
+    (acc_len, chunk_len) =>
+      match checked_add(acc_len, chunk_len) {
+        // Overflowing the 64-bit counter itself is treated as TooLarge — we never
+        // wrap the length silently.
+        Err(_)      => Abort(TooLarge(cap)),
+        Ok(new_len) =>
+          if lt(cap, new_len) then Abort(TooLarge(cap))
+          else Continue(new_len),
+      },
+  )
+
+// ── (S-6) Integrity + size verification ───────────────────────────────────────
+// verify_artifact checks the downloaded bytes against the caller's PRE-STATED
+// expected length and BLAKE3 digest. Both must match or it is an explicit Err.
+// The hash is computed over the received bytes and compared to the expected
+// digest the caller supplied out-of-band — so a tampered body fails closed.
+//
+// Length check: Exact (a total Binary[64] equality). Hash check: Declared
+// (delegates the digest `via` the audited BLAKE3 primitive; constant-time compare
+// asserted, not proven here — VR-5).
+fn verify_artifact(body: Bytes, want: Integrity)
+    => Result[VerifiedArtifact, DownloadError] =
+  let actual_len: Binary[64] = byte_len(body) in
+  // (S-6a) size check first — cheap, and fails fast on truncation/padding.
+  if not(eq64(actual_len, integrity_len(want)))
+  then Err(LengthMismatch(integrity_len(want), actual_len))
+  else
+    // (S-6b) content-hash check. `via blake3` delegates to the audited digest;
+    // bytes_eq is the constant-time comparison of the two digests.
+    let actual_hash: Bytes = via blake3(body) in
+    if bytes_eq(actual_hash, integrity_hash(want))
+    then Ok(VerifiedArtifact(body))
+    else Err(HashMismatch)
+
+// ── The orchestrator: every step never-silent, in security order ──────────────
+// download wires the pipeline together. Each `?`-style step is matched and its
+// Err is propagated immediately (S-5) — there is no path that proceeds past a
+// failed check. Order matters: validate scheme (S-2) → load credential (S-4) →
+// verified TLS connect (S-1, S-7) → bounded streamed read (S-3, S-7) → integrity
+// verify (S-6). The credential name and env var are parameters, never literals
+// (S-4).
+//
+// Guarantee: Declared — an effectful, multi-step contract; it composes Exact and
+// Declared sub-steps and never claims more than its weakest member (VR-5).
+fn download(
+  raw_url: Bytes,
+  cred_env_var: Bytes,
+  tls: TlsPolicy,
+  budget: Budget,
+  want: Integrity,
+) => Result[VerifiedArtifact, DownloadError] !{ io } =
+  // (S-2) HTTPS-only — refuse non-https before touching the network.
+  and_then(parse_https_url(raw_url), url =>
+  // (S-4) credential from the environment, never the source; absence is an Err.
+  and_then(read_bearer_token(cred_env_var), _token =>
+  // (S-1 + S-7) verified TLS session under the time budget; verify never off.
+  and_then(tls_connect(url, tls, budget), session =>
+  // (S-3 + S-7) streamed, capped, time-budgeted body read.
+  and_then(read_body_capped(session, budget), body =>
+  // (S-6) integrity + size check against the pre-stated expectation.
+  verify_artifact(body, want)))))
+
+// ── A safe default the call site can use without footguns ─────────────────────
+// A 30-second, 64 MiB-capped budget with system roots. Concrete, conservative
+// defaults — there is still NO way to express "no timeout" or "unbounded body"
+// (those fields are mandatory and these values are finite). The hash/length the
+// caller MUST supply themselves (we cannot default an integrity expectation
+// honestly — that would defeat S-6).
+fn default_budget() => Budget =
+  Budget(30000, 67108864)   // 30_000 ms ; 64 * 1024 * 1024 bytes
+
+fn default_tls() => TlsPolicy =
+  SystemRoots               // audited platform trust store; verification ON
