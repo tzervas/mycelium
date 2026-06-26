@@ -7,7 +7,8 @@
 //!
 //! # Generic pinning
 //! `Option<A>` and `Result<A,E>` in `std.text` are pinned to concrete `Binary{8}` / `Utf8Error`
-//! types via explicitly-typed helpers (`mk_bytes`, etc.) — without pinning, the monomorphizer
+//! types via explicit return-type annotations on the driver strings (and the `DECODE_REF_PREAMBLE`
+//! constant for `decode_ascii` tests) — without pinning, the monomorphizer
 //! emits a never-silent `Residual` (G2).
 //!
 //! # Honesty tags

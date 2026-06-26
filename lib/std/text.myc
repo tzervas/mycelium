@@ -4,15 +4,15 @@
 // @authors: Tyler Zervas
 // @since: 2026-06-26
 // @updated: 2026-06-26
-// @summary: Self-hosted UTF-8 byte/text utilities over `bytes_get`/`bytes_len` — byte length,
+// @summary: Self-hosted UTF-8 byte/text utilities: byte length, ASCII classification, ASCII decode.
 nodule std.text
 
-// ASCII classification, one-codepoint ASCII-fast-path decode. M-717 (E13-1, #462). Self-contained:
+// M-717 (E13-1, #462). UTF-8 over `bytes_get`/`bytes_len`. Self-contained:
 // local Option<A> and Result<A,E> types redeclared here so this nodule has no cross-leaf import
 // dependency (worktree discipline). Guarantee: `byte_len` delegates to the Exact `bytes_len` prim
 // (Exact); `is_ascii_byte` is total over Binary{8} via `lt`+match (Exact); `decode_ascii` is
 // Declared (type-level contract) with three-way differential agreement Empirical (trials,
-// std_text.rs). Never-silent (G2): malformed UTF-8 lead bytes produce `DecodeErr(Invalid(byte))`
+// std_text.rs). Never-silent (G2): malformed UTF-8 lead bytes produce `Err(Invalid(byte))`
 // — never U+FFFD substitution, never silent coercion. Honesty boundary:
 // FLAG-text-1: `byte_at` is NOT implemented as Option<Binary{8}> in this increment — `bytes_len`
 //   returns Binary{32} and the index is Binary{8}; `lt` is width-typed and the surface has no
@@ -70,7 +70,9 @@ fn is_ascii_byte(x: Binary{8}) -> Bool =
 // Never-silent (G2): non-ASCII lead bytes are never substituted with U+FFFD; they always produce
 // Err(Invalid(byte)). The kernel `bytes_get` prim itself refuses out-of-bounds access on all three
 // paths; we do not add a redundant bounds check here (bounds-check via `bytes_len` is blocked by
-// FLAG-text-1: width mismatch Binary{32} vs Binary{8} for `lt`).
+// FLAG-text-1: width mismatch Binary{32} vs Binary{8} for `lt`). An out-of-bounds `i` is therefore
+// not representable as `Utf8Error`: it surfaces as a kernel EvalError (refused on all three paths,
+// G2), NOT a `Result::Err` — callers relying on the Result contract must keep `i` in range.
 //
 // Guarantee: Declared (type-level contract; three-way differential agreement Empirical, std_text.rs).
 // Grounding: hand-computed, three-way verified; crates/mycelium-std-text exists but exposes a

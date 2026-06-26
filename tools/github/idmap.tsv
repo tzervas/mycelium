@@ -345,4 +345,7 @@ M-797	584	4739622983
 #   stay uncovered + flagged here until created.
 # RECONCILE (2026-06-26, wave-n1): M-716/#461, M-717/#462, M-725/#467 were since created and are now
 #   mapped above (closing 3 of the prior 11 authored-ahead gaps); M-752/#526 + M-797/#584 likewise
-#   now mapped. 275 ids covered; the 8 ids above remain the only authored-ahead gaps.
+#   now mapped. 275 of 313 issues.yaml ids covered. The 8 ids above are the remaining E13-1/E15-1
+#   originals from the FLAG batch; an ADDITIONAL ~30 newer authored-ahead ids (M-745–M-751, M-753–
+#   M-759, M-785–M-796, E19-1–E22-1) are ALSO unmapped (not in the original FLAG) — a full
+#   reconcile-all is a follow-on. The total unmapped count is 38, not 8.

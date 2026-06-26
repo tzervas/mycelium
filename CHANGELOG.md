@@ -16,7 +16,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   fixed-length); honest **O(n)** index/append/len, O(1) push-front, tagged `Declared` (never claimed
   `Exact O(1)`). `Map`/`Set` are association lists; never-silent `Option` on empty / out-of-range /
   missing-key (G2). `len` rides `add_bin`, so a length past 255 is an explicit refusal on every path,
-  never a silent wrap. **Verification:** `crates/mycelium-l1/tests/std_collections.rs` — 19 three-way
+  never a silent wrap. **Verification:** `crates/mycelium-l1/tests/std_collections.rs` — 20 three-way
   differential tests (L1-eval ≡ L0-interp ≡ AOT), incl. the `len`-bound overflow refusal. **Deferred
   (flagged, VR-5):** `snoc`/`reverse` are O(n²) (a bare-nullary-ctor-in-abstract-position check limit —
   RFC-0007 §11.3 ascription would restore O(n)); `Map`/`Set` lookup is monomorphic at `Binary{8}`
@@ -41,7 +41,8 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   Pure refactor — **identical test counts pre/post** (no logic change; white-box access via
   `use crate::<mod>::*`). The broader ~185-file retrofit (M-797) stays lazy/as-touched — **not** closed.
 - **`tools/github/idmap.tsv` reconciled** — M-716/#461, M-717/#462, M-725/#467 (since created) plus
-  M-752/#526 and M-797/#584 are now mapped, closing the stale "no live issue" FLAG for those ids.
+  M-752/#526 and M-797/#584 are now mapped (M-716/717/725 close 3 of the original 11-id FLAG; M-752/797 were never in it).
+  ~30 newer authored-ahead ids (M-745–759, M-785–796, E19-1–E22-1) remain unmapped — a full reconcile is a follow-on, not this wave.
 
 ### Added (2026-06-26: RFC-0032 Tier-2 — `Repr::Seq` + `Repr::Bytes` kernel reprs + `.myc` surface (E19-1 `kpr` Wave-B))
 

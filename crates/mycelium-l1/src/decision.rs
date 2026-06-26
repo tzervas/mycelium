@@ -16,7 +16,7 @@
 //! inspectable* compilation artifact **above** the kernel: the trusted node is the flat `Match`, and
 //! the three-way differential (`tests/differential.rs`) checks the emitted lowering — L1-eval ≡
 //! L0-interp ≡ AOT — so a wrong column choice or specialization is caught, never rubber-stamped. The
-//! tree's own [`eval_tree`] remains a *test-only* reference (it verifies the compiler; it does not
+//! tree's own `eval_tree` remains a *test-only* reference (it verifies the compiler; it does not
 //! run programs). No accuracy guarantee is touched by the compilation — it is a meaning-preserving
 //! rewrite, witnessed by the differential.
 //!

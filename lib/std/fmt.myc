@@ -4,10 +4,10 @@
 // @authors: Tyler Zervas
 // @since: 2026-06-26
 // @updated: 2026-06-26
-// @summary: Self-hosted first-order formatting utilities — hex-digit conversion and two-digit hex
+// @summary: Self-hosted first-order formatting: hex-digit conversion and two-digit hex encoding.
 nodule std.fmt
 
-// encoding of a Binary{8} byte. M-717 (E13-1, #462). Self-contained: no import of std.collections
+// of a Binary{8} byte. M-717 (E13-1, #462). Self-contained: no import of std.collections
 // or std.text (not available in this worktree; must not be imported per worktree discipline).
 // Guarantee: `hex_digit` is total over its finite nibble domain (Binary{8} inputs 0..15) — the
 // case split is match-defined via `lt` + `add_bin` making each in-range arm Exact; nibble >= 16
@@ -53,7 +53,7 @@ fn nibble_lo(x: Binary{8}) -> Binary{8} =
 //
 // The masked value `m = and(x, 0b1111_0000)` is one of exactly 16 values; every Binary{8}
 // produces exactly one leaf via the 4-branch binary search (Exact). Each leaf returns the nibble
-// value (0=0x00, 1=0x10, …, 15=0xf0) as a Binary{8} constant.
+// value (masked 0x00 → nibble 0, 0x10 → nibble 1, …, 0xf0 → nibble 15) as a Binary{8} constant.
 fn nibble_hi(x: Binary{8}) -> Binary{8} =
   let m = and(x, 0b1111_0000) in match lt(m, 0b1000_0000) { 0b1 => match lt(m, 0b0100_0000) { 0b1 => match lt(m, 0b0010_0000) { 0b1 => match lt(m, 0b0001_0000) { 0b1 => 0b0000_0000, _ => 0b0000_0001 }, _ => match lt(m, 0b0011_0000) { 0b1 => 0b0000_0010, _ => 0b0000_0011 } }, _ => match lt(m, 0b0110_0000) { 0b1 => match lt(m, 0b0101_0000) { 0b1 => 0b0000_0100, _ => 0b0000_0101 }, _ => match lt(m, 0b0111_0000) { 0b1 => 0b0000_0110, _ => 0b0000_0111 } } }, _ => match lt(m, 0b1100_0000) { 0b1 => match lt(m, 0b1010_0000) { 0b1 => match lt(m, 0b1001_0000) { 0b1 => 0b0000_1000, _ => 0b0000_1001 }, _ => match lt(m, 0b1011_0000) { 0b1 => 0b0000_1010, _ => 0b0000_1011 } }, _ => match lt(m, 0b1110_0000) { 0b1 => match lt(m, 0b1101_0000) { 0b1 => 0b0000_1100, _ => 0b0000_1101 }, _ => match lt(m, 0b1111_0000) { 0b1 => 0b0000_1110, _ => 0b0000_1111 } } } }
 

@@ -6,7 +6,7 @@
 //! driver `fn main` is appended. `assert_three_way` mirrors `std_option.rs` exactly.
 //!
 //! # Honesty tags
-//! - **`Exact`** — `hex_digit` (total over 0..15 via `lt`/`add_bin`), `nibble_lo` (total bit-mask),
+//! - **`Exact`** — `hex_digit` (total over 0..15 via `lt`/`add_bin`; the ≥16 fallback arm is `Declared`), `nibble_lo` (total bit-mask),
 //!   `nibble_hi` (total 4-level lt binary-search tree over 16 possible masked values).
 //! - **`Declared`** — `to_hex` (structural composition of Exact parts; correct for all Binary{8}
 //!   inputs by construction).

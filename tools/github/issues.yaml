@@ -4438,10 +4438,11 @@ issues:
       - src:crates/mycelium-l1/tests/std_collections.rs
       - src:lib/std/collections.myc
     body: |
-      IMPLEMENTED (2026-06-26, wave-n1): lib/std/collections.myc landed in .myc — Vec (cons-list),
+      IMPLEMENTED (PARTIAL — O(n²) snoc/reverse + Binary{8}-monomorphic Map/Set lookup deferred; 2026-06-26,
+      wave-n1): lib/std/collections.myc landed in .myc — Vec (cons-list),
       Map + Set (association lists), with honest O(n) bounds (Declared; never claimed Exact O(1)) and
       never-silent Option on empty/out-of-range/missing-key (G2). Demonstrated three-way (L1-eval ≡
-      L0-interp ≡ AOT) by crates/mycelium-l1/tests/std_collections.rs (19 passing differential tests,
+      L0-interp ≡ AOT) by crates/mycelium-l1/tests/std_collections.rs (20 passing differential tests,
       incl. a len-bound add_bin overflow refusal). DEFERRED (flagged, not silently dropped — VR-5):
       (a) snoc/reverse are O(n²) — a bare-nullary-constructor-in-abstract-position check limit
       (RFC-0007 §11.3 ascription would restore O(n)); (b) Map/Set lookup is monomorphic at Binary{8}
@@ -4505,6 +4506,8 @@ issues:
       - src:crates/mycelium-l1/tests/enablement.rs
       - src:crates/mycelium-l1/tests/std_text.rs
       - src:lib/std/text.myc
+      - src:crates/mycelium-l1/tests/std_fmt.rs
+      - src:lib/std/fmt.myc
     body: |
       IMPLEMENTED PARTIAL (2026-06-26, wave-n1): lib/std/text.myc + lib/std/fmt.myc landed in .myc.
       text.myc: byte_len/is_ascii_byte + decode_ascii (UTF-8 ASCII fast-path, U+0000–U+007F) returning
@@ -4515,8 +4518,8 @@ issues:
       decode_one→Binary{32} Unicode scalar — there is NO surface zero-extension/width-cast prim to
       compare a Binary{32} length/offset against a Binary{8} index (a real kernel-surface gap, FLAG-up
       for a follow-on prim task); (b) bytes_slice/bytes_concat are not surface-callable, so a Bytes-native
-      slice/concat is deferred (modeled only over a local byte cons-list). Multi-byte UTF-8 decode rides
-      the width-cast prim. Differential gate as for M-716 (three-way self-diff + Rust mycelium-std-text/
+      slice/concat is deferred (modeled only over a local byte cons-list). Multi-byte UTF-8 decode will ride that
+      width-cast prim once it is surfaced. Differential gate as for M-716 (three-way self-diff + Rust mycelium-std-text/
       -fmt value oracle). Status ready → in-progress (PARTIAL; stays open for the multi-byte + slice
       follow-on once the width-cast/slice prim surface lands).
 

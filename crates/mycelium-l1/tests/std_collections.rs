@@ -8,7 +8,7 @@
 //!
 //! # Honesty tags
 //! - **`Exact`** — constructors (`Nil`/`Cons`/`MNil`/`MCons`/`SNil`/`SCons`) and total
-//!   discriminators (`is_empty`) — total, RFC-0016 / core spec §3.
+//!   discriminators (`is_empty`) — total, RFC-0016 §4.1 C2 / docs/spec/stdlib/collections.md §3.
 //! - **`Declared`** — the type-level contract of every eliminator/transformer (`head`/`tail`/`get`/
 //!   `snoc`/`reverse`/`map_get`/`set_contains`) — a structural check, not a theorem.
 //! - **`Empirical`** — the three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT), validated
@@ -188,14 +188,27 @@ fn main() -> Option<Vec<Binary{8}>> = tail(mk_nil())";
     assert_three_way("tail(Nil)", &src, expected);
 }
 
+/// `tail(Cons(x, rest))` → `Some(rest)` — returns the spine after the head. Declared.
+/// Expected (hand-computed, three-way verified): tail on [1, 2] returns Some([2]).
+#[test]
+fn tail_on_cons_returns_some() {
+    let driver = "\
+fn mk_two() -> Vec<Binary{8}> = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
+fn main() -> Option<Vec<Binary{8}>> = tail(mk_two())";
+    let src = program(driver);
+    let expected = "nodule ref\ntype Vec<A> = Nil | Cons(A, Vec<A>)\ntype Option<A> = Some(A) | None\nfn main() -> Option<Vec<Binary{8}>> = Some(Cons(0b0000_0010, Nil))";
+    assert_three_way("tail(Cons)", &src, expected);
+}
+
 // ── Vec: len ───────────────────────────────────────────────────────────────────────────────────────
 
 /// `len` over a two-element list → `0b0000_0010`. O(n) spine-walk; Declared.
 /// Expected (hand-computed, three-way verified): Vec::len on [1, 2] returns 2.
 /// The reference program uses `add_bin` (not a literal) to match the `Derived` provenance produced
 /// by `len`'s `add_bin` spine — a literal `0b0000_0010` has `Root` provenance and fails `assert_eq`.
-/// `len([1,2]) = add_bin(1, add_bin(1, 0))`: same ops, same content hashes (value-based), same
-/// provenance. (Empirical basis; the three-way agreement is separately asserted above.)
+/// `len([1,2]) = add_bin(1, add_bin(1, 0))`: same ops and the same `Derived` provenance, which
+/// `CoreValue` equality requires (a `Root`-provenance literal `0b0000_0010` would fail `assert_eq`).
+/// (Empirical basis; the three-way agreement is separately asserted above.)
 #[test]
 fn len_of_two_element_list() {
     let driver = "\
@@ -326,7 +339,7 @@ fn main() -> Vec<Binary{8}> = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_00
 
 // ── Vec: reverse ───────────────────────────────────────────────────────────────────────────────────
 
-/// `reverse([1,2,3])` → `[3,2,1]` — accumulator recursion reverses the spine. Declared.
+/// `reverse([1,2,3])` → `[3,2,1]` — snoc-based recursion reverses the spine (O(n²); the O(n) accumulator form is blocked under RFC-0007 §11.3 — see the nodule comment). Declared.
 /// Expected (hand-computed, three-way verified): Vec::reverse on [1,2,3] returns [3,2,1].
 #[test]
 fn reverse_of_three_element_list() {
