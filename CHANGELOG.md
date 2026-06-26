@@ -8,6 +8,25 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: second example — layered seamless-gradient HTTPS downloader)
+
+- **`docs/examples/https-downloader-layered.myc`** (+ README) — the sibling of the first downloader,
+  adapted to a typical general-programming task (fetch a release/config manifest over HTTPS → parse to a
+  typed `Config` → integrity-check) to make **DN-38's seamless-lowering gradient concrete**: one program
+  intermixing a **sugared DX top** (`derive` boilerplate, `via` dependency-injection for testability,
+  terse combinator pipelines, trait `impl`s) with deliberate **drops to explicit control** where it earns
+  it (a hard-capped byte read as an explicit bounded `for`-fold, canonical length-prefixed encoding of the
+  identity-bearing etag — the spore `v1` lesson, an explicit `!{io}` edge, `wild { }` only at the FFI
+  credential read), a **hand-rolled** `parse_channel` that opts out of `derive`/combinators to enforce a
+  custom `unknown ⇒ Stable` fail-safe invariant, and a `reveal { … }` showing the `for`-fold lowers to a
+  concrete L0 `Fix`/`Match` term (abstracted-never-hidden). **Honesty:** scrupulous per-construct surface
+  tags — `[enacted]` (landed grammar: `type`, `Binary{N}`, `<A>`, `->`, `match`, `trait`/`impl`, `!{io}`,
+  bounded `for`, `wild`) vs `[proposed:DN-31]` (`[]`/`=>`/`0t` — Draft direction, only *named* in comments,
+  never silently adopted, **not** called Accepted) vs `[designed:DN-37/38]` (`via`/`derive`/`reveal` —
+  greenfield); illustrative, **non-runnable** (design phase), assumed host/std surface flagged. Per-op
+  guarantee posture honest (Exact for total finite ops; Declared for effectful/delegated/host; nothing
+  Proven). Cross-links DN-38/37/36 + the sibling example.
+
 ### Added (2026-06-26: DN-40 — input-validation architecture + stack-wide gap ledger)
 
 - **DN-40 — Input-Validation Architecture (only-intended-inputs across the stack)**
