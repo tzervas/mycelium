@@ -56,7 +56,7 @@ TS_CAPTURES = {
 }
 
 # The substrate/representation type keywords — identified by their bare `Tok::<Variant>` RHS.
-TYPE_VARIANTS = {"Binary", "Ternary", "Dense", "Vsa", "Substrate", "Sparse"}
+TYPE_VARIANTS = {"Binary", "Ternary", "Dense", "Vsa", "Substrate", "Sparse", "Seq", "Bytes"}
 
 
 def extract_keywords(token_rs: str) -> dict[str, list[str]]:

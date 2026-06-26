@@ -766,9 +766,11 @@ fn seq_len_surface_three_way() {
 #[test]
 fn seq_heterogeneous_elements_reject() {
     let src = "nodule d\nfn main() -> Seq{Binary{1}, 2} = [0b1, 0b00]";
+    let err = check_nodule(&parse(src).expect("parses"))
+        .expect_err("a heterogeneous list literal must be a static check error, never a coercion");
     assert!(
-        check_nodule(&parse(src).expect("parses")).is_err(),
-        "a heterogeneous list literal must be a static check error, never a silent coercion"
+        err.to_string().contains("homogeneous"),
+        "the refusal must name the homogeneity cause (never-silent): {err}"
     );
 }
 
@@ -777,9 +779,11 @@ fn seq_heterogeneous_elements_reject() {
 #[test]
 fn seq_length_mismatch_reject() {
     let src = "nodule d\nfn main() -> Seq{Binary{1}, 5} = [0b1, 0b0, 0b1]";
+    let err = check_nodule(&parse(src).expect("parses"))
+        .expect_err("a list-length vs Seq{N} mismatch must be a static check error");
     assert!(
-        check_nodule(&parse(src).expect("parses")).is_err(),
-        "a list-length vs Seq{{N}} mismatch must be a static check error"
+        err.to_string().contains("expected `Seq` length"),
+        "the refusal must name the length-mismatch cause (never-silent): {err}"
     );
 }
 
@@ -827,9 +831,10 @@ fn bytes_len_surface_three_way() {
 #[test]
 fn bytes_odd_hex_reject() {
     let src = "nodule d\nfn main() -> Bytes = 0x123";
+    let err = parse(src).expect_err("an odd-hex `0x…` literal must be a parse error");
     assert!(
-        parse(src).is_err(),
-        "an odd-hex `0x…` literal must be a parse error, never a silent half-byte"
+        err.to_string().contains("odd hex-digit count"),
+        "the refusal must name the odd-hex cause, never a silent half-byte: {err}"
     );
 }
 
@@ -837,8 +842,9 @@ fn bytes_odd_hex_reject() {
 #[test]
 fn bytes_empty_hex_reject() {
     let src = "nodule d\nfn main() -> Bytes = 0x";
+    let err = parse(src).expect_err("an empty `0x` literal must be a parse error");
     assert!(
-        parse(src).is_err(),
-        "an empty `0x` literal must be a parse error"
+        err.to_string().contains("no hex digits"),
+        "the refusal must name the empty-hex cause: {err}"
     );
 }

@@ -399,7 +399,7 @@ impl Lexer {
                     .to_owned(),
             ));
         }
-        if hex_count % 2 != 0 {
+        if !hex_count.is_multiple_of(2) {
             return Err(ParseError::new(
                 pos,
                 format!(
@@ -878,9 +878,9 @@ mod tests {
         lex("0x_").expect_err("`0x_` (separator, no digit) must be a lex error");
     }
 
-    /// A non-hex digit terminates the hex scan; `0x1g` lexes the even-hex `0x1`?-no: `1` alone is
-    /// odd → error. `0x12g` lexes `0x12` (even) then the identifier `g`. This pins that the hex scan
-    /// stops at a non-hex char rather than consuming it (and the parity check applies to what it took).
+    /// A non-hex digit terminates the hex scan rather than being consumed: `0x1g` takes only `1`
+    /// (odd) → lex error; `0x12g` takes `0x12` (even) then the identifier `g`. This pins that the
+    /// scan stops at a non-hex char, and that the parity check applies to exactly what it took.
     #[test]
     fn lex_hex_bytes_stops_at_non_hex() {
         // `0x12` is even → BytesLit("12"), then `g` is an identifier.
