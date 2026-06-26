@@ -8,6 +8,15 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-26: DN-39 ratified Draft → Accepted)
+
+- **DN-39 — Kernel-Promotion Review (KC-3)** ratified **Draft → Accepted** (maintainer). The
+  recommendation is adopted: **no promotions; the kernel boundary stays UNCHANGED** (KC-3 held on merit),
+  the four-clause default-DENY bar and the *"a deterministic encoding is the last thing to axiomatize into
+  the kernel"* principle adopted. Enacts no code, upgrades no guarantee (the kernel was already unchanged;
+  the KEEP-OUT and boundary-unchanged conclusions keep their `Proven`/`Declared` basis — VR-5). The spore
+  injectivity follow-up it named is a separate, already-landed library change (#617).
+
 ### Added (2026-06-26: DN-39 — KC-3 kernel-promotion review (trusted core stays unchanged))
 
 - **DN-39 — Kernel-Promotion Review (KC-3 trusted-core audit)**
