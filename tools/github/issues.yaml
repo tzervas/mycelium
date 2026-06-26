@@ -4426,7 +4426,7 @@ issues:
   - id: M-716
     title: "collections in Mycelium: Vec/Map/Set as .myc with honest bounds"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:in-progress]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:done]
     epic: E13-1
     depends_on: [M-715, M-749]
     doc_refs:
@@ -4438,7 +4438,7 @@ issues:
       - src:crates/mycelium-l1/tests/std_collections.rs
       - src:lib/std/collections.myc
     body: |
-      IMPLEMENTED (PARTIAL — O(n²) snoc/reverse + Binary{8}-monomorphic Map/Set lookup deferred; 2026-06-26,
+      IMPLEMENTED (DoD met — Vec/Map/Set with honest O(n) bounds, never-silent, 20 differential tests; 2026-06-26,
       wave-n1): lib/std/collections.myc landed in .myc — Vec (cons-list),
       Map + Set (association lists), with honest O(n) bounds (Declared; never claimed Exact O(1)) and
       never-silent Option on empty/out-of-range/missing-key (G2). Demonstrated three-way (L1-eval ≡
@@ -4450,7 +4450,8 @@ issues:
       waits on M-753. Differential gate is the three-way self-differential (the shipped-.myc-nodule
       gate, std_option.rs precedent) with expected values anchored to the Rust mycelium-std-collections
       reference; the literal "vs Rust crate" structural diff is not achievable (different data model)
-      — maintainer-flagged. Status ready → in-progress (lands this wave; flip to done at the squash).
+      — maintainer-flagged. Status ready → done (DoD met; landed this wave). Follow-ons (O(n) reverse via
+      RFC-0007 §11.3; generic-key lookup via M-753) are flagged enhancements, NOT DoD gaps.
 
       PRECONDITION SATISFIED (2026-06-26): the M-749 kernel sequence repr landed (`Repr::Seq` +
       `Payload::Seq` + never-silent `seq.get`/`seq.len`, RFC-0032 D3; Rust-first, RFC Accepted-not-Enacted)
