@@ -3,10 +3,10 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-38 |
-| **Status** | **Draft** (2026-06-25; direction capture — advisory, non-committal). Deliberates and recommends; **ratifies nothing, enacts nothing, ships no code**. Promotion past Draft is gated on the §9 Definition of Done + maintainer ratification (house rule #3, append-only). |
-| **Feeds** | the **unifying lowering atlas** the feature DNs hang off — **DN-36** (iteration → `Fix` fold), **DN-37** (objects + the settled sigil scheme + delegation `~>`), the future **DN-35** (reclamation), the **generative-lowering** construct (`derive`/`weave`), and the **inspector** (`reveal`/`expand`); intersects the `[]`-grammar wave (**DN-31**, **RFC-0030**, **epic #27**), **E19-1** (#25, value-model `Repr::Seq`/`Bytes`), and the **`@matured` inheritance** epic (#26). |
+| **Status** | **Accepted** (2026-06-26; **ratified by maintainer**) — the **seamless-gradient thesis**, the **lowering law** (every feature lowers to L0 with the same observable meaning; small IL-grammar-checked semantics-preserving passes; kernel never grows — KC-3), the **honest-refinement** rule, the **generative-lowering + inspectable-desugaring** construct set, and the **§8.1 naming** (delegation **`via`** · generative **`derive`** · inspector **`reveal`**) are ratified as the **design direction**. **Accepted ratifies the direction, not every open question:** §8's **architectural** questions — nanopass-separate-passes vs single `elab.rs`; `reveal` v0 vs post-core; round-trip obligation scope; sequencing vs the `[]`-wave/E19-1/DN-35; the `@matured` gap — remain **open** and tracked. No guarantee upgraded (layering + observational-identity + built lowerings `Exact`; framing + construct + naming `Declared` — VR-5). Prior: **Draft** (2026-06-25; direction capture). Append-only; house rule #3. Enacts no code. |
+| **Feeds** | the **unifying lowering atlas** the feature DNs hang off — **DN-36** (iteration → `Fix` fold), **DN-37** (objects + the settled sigil scheme + delegation `~>`/`via`), **DN-35** (reclamation), the **generative-lowering** construct (`derive`), and the **inspector** (`reveal`) — naming settled §8.1; intersects the `[]`-grammar wave (**DN-31**, **RFC-0030**, **epic #27**), **E19-1** (#25, value-model `Repr::Seq`/`Bytes`), and the **`@matured` inheritance** epic (#26). |
 | **Date** | June 25, 2026 |
-| **Decides** | *Nothing normatively* — advisory + design-direction capture. Records (1) the **seamless-gradient thesis** (the L0–L3 "levels" are how the *compiler lowers*, not modes the *programmer declares* — one language, a desugaring gradient, freely intermixing high-sugar and low-explicit forms); (2) the **lowering law** that earns the seamless mix (every feature lowers to L0 with the same observable meaning; each pass is small, IL-grammar-checked, semantics-preserving; the kernel never grows — KC-3); (3) the **honest refinement** (levels invisible/unannotated, but `wild`/`!{io}`/`@matured`/guarantee tags stay explicit and **level-independent**); (4) **generative lowering** (terse-in → explicit, inspectable, content-addressed L0-out — `#[derive]`-grade, never Lombok-magic) + the **inspectable-desugaring** affordance (`reveal` shows the real L0 term, with a round-trip discipline for `certified`); (5) the **per-feature Lowering Map** (the living checklist at the heart of the atlas); and (6) the **verification discipline** (differential + hygiene + round-trip, tiered LOW/HIGH per DN-20, round-trip gated by `certified` mode). |
+| **Decides** | *Nothing normatively* — advisory + design-direction capture. Records (1) the **seamless-gradient thesis** (the L0–L3 "levels" are how the *compiler lowers*, not modes the *programmer declares* — one language, a desugaring gradient, freely intermixing high-sugar and low-explicit forms); (2) the **lowering law** that earns the seamless mix (every feature lowers to L0 with the same observable meaning; each pass is small, IL-grammar-checked, semantics-preserving; the kernel never grows — KC-3); (3) the **honest refinement** (levels invisible/unannotated, but `wild`/`!{io}`/`@matured`/guarantee tags stay explicit and **level-independent**); (4) **generative lowering** (terse-in → explicit, inspectable, content-addressed L0-out — `derive`, `#[derive]`-grade, never Lombok-magic) + the **inspectable-desugaring** affordance (`reveal` shows the real L0 term, with a round-trip discipline for `certified`); (5) the **per-feature Lowering Map** (the living checklist at the heart of the atlas); and (6) the **verification discipline** (differential + hygiene + round-trip, tiered LOW/HIGH per DN-20, round-trip gated by `certified` mode). |
 | **Task** | the unifying layered-lowering atlas + generative-sugar direction (the frame the feature DNs hang off) |
 
 > **Posture (transparency rule / VR-5 / G2).** This note synthesises an external prior-art record
@@ -221,8 +221,8 @@ KC-3, §2).
 | **Ambient repr** (omitted paradigm) | L2/L3 | surface elaboration filling an omitted paradigm — **observationally the identity** | unchanged L0 (never inserts a `Swap`) | **Built** `Exact` (RFC-0012 **Enacted**, M-344) |
 | **Maturation** `@matured` | L2/L3 (level-independent marker) | scope-granularity resolver → totality gate (`matured ⟹ total`) | L0 unchanged; the gate is a check | **Built** `Exact` (RFC-0017 **Enacted**); §4.1 *top-down inheritance* gap = **`Declared`** (epic #26 / D1) |
 | **Value model** `Repr::Seq` / `Repr::Bytes` | L1 value model | new `Repr` cases in the value model (ADR-025/026/027) | extended L0 value model | **Gap** `Declared` (E19-1 / #25 / D2 — ratified, unbuilt) |
-| **Generative** `derive` / `weave` (§4) | L2/L3 | terse params → generated, content-addressed L0 artifact | a nameable, hashed L0 term (dedup by hash) | **Greenfield** `Declared` (no surface form today; DN-37 §2.2) |
-| **Inspector** `reveal` / `expand` (§5) | tooling | print the L0 term; round-trip in `certified` | (reads L0, emits surface) | **Greenfield** `Declared` (cargo-expand/Lean/Racket precedent `Empirical`) |
+| **Generative** `derive` (§4; naming settled §8.1) | L2/L3 | terse params → generated, content-addressed L0 artifact | a nameable, hashed L0 term (dedup by hash) | **Greenfield** `Declared` (no surface form today; DN-37 §2.2) |
+| **Inspector** `reveal` (§5; naming settled §8.1) | tooling | print the L0 term; round-trip in `certified` | (reads L0, emits surface) | **Greenfield** `Declared` (cargo-expand/Lean/Racket precedent `Empirical`) |
 
 Reading the map: the **bottom substrate and the core lowerings are built `Exact`** (iteration safety,
 `type`/`Match`/`Construct`, traits/monomorphization, effects, ambient-identity, maturation gate); the
@@ -307,7 +307,7 @@ rather than asserted.
   checker) with the coherence-result `Declared`-with-argument (RFC-0019).
 - **Designed / `Declared`** — the **seamless-gradient framing** (§1), the **lowering law as an
   organizing principle** (§2), the **level-independent-marker refinement** (§3), the **generative-
-  lowering construct** (`derive`/`weave`, §4), the **`reveal` inspector** + certified round-trip (§5),
+  lowering construct** (`derive`, §4), the **`reveal` inspector** + certified round-trip (§5),
   and the **naming** (§8). Their prior-art mechanisms (nanopass, CompCert, `#[derive]`, Kotlin `by`,
   Hylo MVS, Unison/Nix content-addressing, Racket Macro Stepper, Lean `pp.all`, translation validation)
   are **`Empirical`/`Proven`-at-source** (primary-source-verified in `research/25`), but the **Mycelium
@@ -400,12 +400,19 @@ nothing here moves another doc's status.
   differential (`observe(surface) == observe(lower(surface))`) + hygiene-no-capture + round-trip, tiered
   LOW/HIGH per DN-20 (case count tiered, never the property), with the round-trip / translation-
   validation witness (Necula) gated on `certified` (ADR-032). **(8)** Open questions — construct naming
-  (`derive` vs `weave`; `via`/`delegate`; `reveal` vs `expand`); nanopass separate passes vs single
-  `elab.rs` elaboration; `reveal` v0 vs post-core; round-trip obligation scope (certified-only?);
-  sequencing vs the `[]`-grammar wave (#27), E19-1 (#25), reclamation (DN-35); `@matured` inheritance gap
-  (#26). **(9)** Guarantee posture — layering + observational-identity + built lowerings `Exact`; the
+  **resolved §8.1** (delegation `via`; generative `derive`; inspector `reveal`); still open: nanopass
+  separate passes vs single `elab.rs` elaboration; `reveal` v0 vs post-core; round-trip obligation scope
+  (certified-only?); sequencing vs the `[]`-grammar wave (#27), E19-1 (#25), reclamation (DN-35);
+  `@matured` inheritance gap (#26). **(9)** Guarantee posture — layering + observational-identity + built lowerings `Exact`; the
   seamless-gradient framing + generative-lowering construct + `reveal` + naming `Declared` (prior-art
   mechanisms `Empirical`/`Proven`-at-source, Mycelium mappings `Declared`-with-argument, no tag upgraded
   past basis — VR-5). DoD = maintainer ratifies the law + the framing + the naming + the verification
   discipline (Draft→Accepted). **Enacts nothing; moves no status; changes no normative text.** CHANGELOG
   / Doc-Index / issues.yaml / docs/api-index owned by the integrating parent. (Append-only; VR-5; G2.)
+- **Ratified Draft → Accepted (2026-06-26).** The maintainer ratified the seamless-gradient thesis, the
+  lowering law, the honest-refinement rule, the generative-lowering + inspectable-desugaring construct
+  set, and the §8.1 naming (`via` / `derive` / `reveal`) as the design direction. The status move accepts
+  the *direction only* — it enacts no code and upgrades no guarantee (layering + built lowerings stay
+  `Exact`; framing + construct + naming stay `Declared` — VR-5). §8's **architectural** questions
+  (nanopass-vs-single-elaboration; `reveal` v0 sequencing; round-trip scope; wave sequencing; the
+  `@matured` gap) **remain open** (Accepted ≠ all questions closed).
