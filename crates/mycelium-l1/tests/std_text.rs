@@ -206,7 +206,7 @@ fn is_ascii_byte_false_for_0xff() {
 //
 // `decode_ascii` returns Result<Binary{8}, Utf8Error> — the generic parameters are pinned by
 // annotating the expected-ref type explicitly. The three `Result`/`Utf8Error` types must be
-// re-declared in the reference program so `eval_core` produces a compatible CoreValue.
+// redeclared in the reference program so `eval_core` produces a compatible CoreValue.
 
 /// Reference program preamble for decode_ascii tests: re-declare the local types so that
 /// `eval_core` produces a compatible CoreValue (same type ContentHash as the test program).

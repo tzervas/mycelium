@@ -5,8 +5,10 @@
 // @since: 2026-06-26
 // @updated: 2026-06-26
 // @summary: Self-hosted UTF-8 byte/text utilities over `bytes_get`/`bytes_len` — byte length,
+nodule std.text
+
 // ASCII classification, one-codepoint ASCII-fast-path decode. M-717 (E13-1, #462). Self-contained:
-// local Option<A> and Result<A,E> types re-declared here so this nodule has no cross-leaf import
+// local Option<A> and Result<A,E> types redeclared here so this nodule has no cross-leaf import
 // dependency (worktree discipline). Guarantee: `byte_len` delegates to the Exact `bytes_len` prim
 // (Exact); `is_ascii_byte` is total over Binary{8} via `lt`+match (Exact); `decode_ascii` is
 // Declared (type-level contract) with three-way differential agreement Empirical (trials,
@@ -23,15 +25,13 @@
 //   prims or adds tail-call/loop support for the O(n) cons-list walk.
 // Scope of this increment: byte_len, is_ascii_byte, and ASCII-codepoint decode — the achievable,
 // testable first increment. All operations that execute three-way are honest about their basis.
-nodule std.text
-
-// ── Local Option (re-declared; no cross-leaf import) ──────────────────────────────────────────────
-// Option<A>: the never-silent optional value. Re-declared here (not imported from std.option) to
+// ── Local Option (redeclared; no cross-leaf import) ──────────────────────────────────────────────
+// Option<A>: the never-silent optional value. Redeclared here (not imported from std.option) to
 // keep this nodule self-contained per worktree discipline. Semantics identical to std.option.
 type Option<A> = Some(A) | None
 
-// ── Local Result (re-declared; no cross-leaf import) ──────────────────────────────────────────────
-// Result<A, E>: the never-silent fallible value. Re-declared here (not imported from std.result).
+// ── Local Result (redeclared; no cross-leaf import) ──────────────────────────────────────────────
+// Result<A, E>: the never-silent fallible value. Redeclared here (not imported from std.result).
 type Result<A, E> = Ok(A) | Err(E)
 
 // ── Error type ─────────────────────────────────────────────────────────────────────────────────────
@@ -75,8 +75,4 @@ fn is_ascii_byte(x: Binary{8}) -> Bool =
 // Guarantee: Declared (type-level contract; three-way differential agreement Empirical, std_text.rs).
 // Anchor: crates/mycelium-std-text (future reference crate, not yet landed).
 fn decode_ascii(b: Bytes, i: Binary{8}) -> Result<Binary{8}, Utf8Error> =
-  let byte0 = bytes_get(b, i) in
-  match is_ascii_byte(byte0) {
-    True  => Ok(byte0),
-    False => Err(Invalid(byte0))
-  }
+  let byte0 = bytes_get(b, i) in match is_ascii_byte(byte0) { True => Ok(byte0), False => Err(Invalid(byte0)) }

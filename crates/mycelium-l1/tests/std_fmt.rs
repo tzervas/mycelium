@@ -303,7 +303,7 @@ fn nibble_hi_fifteen() {
 //   to_hex(0xa0) = HP('a','0') = HP(0x61, 0x30)   nibble_hi=10→'a'; nibble_lo=0→'0'
 // Anchor: crates/mycelium-std-fmt (not yet landed).
 
-/// Build a `to_hex` reference program by re-using the full FMT_SRC (nodule header renamed to
+/// Build a `to_hex` reference program by reusing the full FMT_SRC (nodule header renamed to
 /// `ref`) + the same driver. This ensures the intermediate computation chain (nibble_hi →
 /// hex_digit, nibble_lo → hex_digit) produces bit-identical provenance hashes to the test program.
 fn to_hex_ref(driver: &str) -> String {
