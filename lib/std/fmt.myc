@@ -1,0 +1,118 @@
+// nodule: std.fmt
+// @version: 0.1.0
+// @license: MIT
+// @authors: Tyler Zervas
+// @since: 2026-06-26
+// @updated: 2026-06-26
+// @summary: Self-hosted first-order formatting utilities — hex-digit conversion and two-digit hex
+// encoding of a Binary{8} byte. M-717 (E13-1, #462). Self-contained: no import of std.collections
+// or std.text (not available in this worktree; must not be imported per worktree discipline).
+// Guarantee: `hex_digit` is total over its finite nibble domain (Binary{8} inputs 0..15) — the
+// case split is match-defined via `lt` + `add_bin` making each in-range arm Exact; nibble >= 16
+// returns '?' (0x3F), never-silent (G2: the fallback is explicit, not a silent wrap).
+// `nibble_lo(x)` is Exact (total bit-mask over Binary{8}). `nibble_hi(x)` is Exact over the
+// 16 possible masked values via a 4-level lt binary-search match tree — implementable without
+// a right-shift prim. `to_hex` is Declared (structural composition of nibble_hi/nibble_lo +
+// hex_digit). Differential agreement (L1-eval ≡ L0-interp ≡ AOT) is Empirical (trials,
+// std_fmt.rs). Honesty boundary: no reflective `display(Value)` — .myc has no Value introspection;
+// fmt is first-order over concrete types only. Anchor: crates/mycelium-std-fmt (future reference
+// crate, not yet landed).
+nodule std.fmt
+
+// ── HexPair — the two ASCII hex-digit bytes of a byte encoding ────────────────────────────────────
+// HexPair: carries the high-nibble digit and the low-nibble digit as ASCII bytes (Binary{8}).
+// Used as the return type of `to_hex` so the result is a first-class value pair. (A Bytes return
+// would require bytes_concat which is not surface-callable — see FLAG-fmt-1 in text.myc.)
+type HexPair = HP(Binary{8}, Binary{8})
+
+// ── hex_digit ─────────────────────────────────────────────────────────────────────────────────────
+// hex_digit: map a nibble (0..15) to its ASCII hex character byte ('0'..'9', 'a'..'f').
+// - 0..9  → 0x30 + nibble  (ASCII '0'=0x30 .. '9'=0x39)
+// - 10..15 → 0x57 + nibble  (0x57=87; 87+10=97='a', 87+11=98='b', …, 87+15=102='f')
+// - nibble >= 16 → 0x3F ('?') — never-silent fallback (G2: the out-of-range case is explicit).
+//
+// Guarantee: Exact over the finite in-range domain (0..15) — the `lt`/`add_bin` computation is
+// a closed-form arithmetic on the finite range; Declared for the fallback arm (structurally
+// necessary; unreachable for well-formed nibbles, never-silent for malformed ones). The `lt` prim
+// returns Binary{1}; we use a match { 0b1 => …, _ => … } bridge.
+fn hex_digit(nibble: Binary{8}) -> Binary{8} =
+  match lt(nibble, 0b0000_1010) {
+    0b1 => add_bin(nibble, 0b0011_0000),
+    _   => match lt(nibble, 0b0001_0000) {
+             0b1 => add_bin(nibble, 0b0101_0111),
+             _   => 0b0011_1111
+           }
+  }
+
+// ── nibble_lo ─────────────────────────────────────────────────────────────────────────────────────
+// nibble_lo: extract the low 4 bits of `x` (bits 0..3) as a Binary{8} value in 0..15.
+// Total (Exact): `and` is total over Binary{8}.
+fn nibble_lo(x: Binary{8}) -> Binary{8} =
+  and(x, 0b0000_1111)
+
+// ── nibble_hi ─────────────────────────────────────────────────────────────────────────────────────
+// nibble_hi: extract the high 4 bits of `x` (bits 4..7) as a Binary{8} value in 0..15.
+// Total (Exact): a 4-level lt binary-search match tree over the 16 possible values of
+// `and(x, 0b1111_0000)` ∈ {0x00,0x10,…,0xf0}, returning the corresponding nibble digit 0..15.
+// No right-shift prim is needed — the tree is exhaustive over the finite masked domain.
+//
+// The masked value `m = and(x, 0b1111_0000)` is one of exactly 16 values; every Binary{8}
+// produces exactly one leaf via the 4-branch binary search (Exact). Each leaf returns the nibble
+// value (0=0x00, 1=0x10, …, 15=0xf0) as a Binary{8} constant.
+fn nibble_hi(x: Binary{8}) -> Binary{8} =
+  let m = and(x, 0b1111_0000) in
+  match lt(m, 0b1000_0000) {
+    0b1 => match lt(m, 0b0100_0000) {
+             0b1 => match lt(m, 0b0010_0000) {
+                      0b1 => match lt(m, 0b0001_0000) {
+                               0b1 => 0b0000_0000,
+                               _   => 0b0000_0001
+                             },
+                      _   => match lt(m, 0b0011_0000) {
+                               0b1 => 0b0000_0010,
+                               _   => 0b0000_0011
+                             }
+                    },
+             _   => match lt(m, 0b0110_0000) {
+                      0b1 => match lt(m, 0b0101_0000) {
+                               0b1 => 0b0000_0100,
+                               _   => 0b0000_0101
+                             },
+                      _   => match lt(m, 0b0111_0000) {
+                               0b1 => 0b0000_0110,
+                               _   => 0b0000_0111
+                             }
+                    }
+           },
+    _   => match lt(m, 0b1100_0000) {
+             0b1 => match lt(m, 0b1010_0000) {
+                      0b1 => match lt(m, 0b1001_0000) {
+                               0b1 => 0b0000_1000,
+                               _   => 0b0000_1001
+                             },
+                      _   => match lt(m, 0b1011_0000) {
+                               0b1 => 0b0000_1010,
+                               _   => 0b0000_1011
+                             }
+                    },
+             _   => match lt(m, 0b1110_0000) {
+                      0b1 => match lt(m, 0b1101_0000) {
+                               0b1 => 0b0000_1100,
+                               _   => 0b0000_1101
+                             },
+                      _   => match lt(m, 0b1111_0000) {
+                               0b1 => 0b0000_1110,
+                               _   => 0b0000_1111
+                             }
+                    }
+           }
+  }
+
+// ── to_hex ────────────────────────────────────────────────────────────────────────────────────────
+// to_hex: encode a Binary{8} byte as a HexPair of two ASCII hex-digit bytes (high nibble first,
+// low nibble second). E.g. to_hex(0x4a) = HP(0x34, 0x61) = HP('4', 'a').
+// Guarantee: Declared (structural composition of Exact `nibble_hi`/`nibble_lo`/`hex_digit`);
+// differential agreement Empirical (std_fmt.rs). Total: every Binary{8} input has a defined
+// HexPair output. Anchor: crates/mycelium-std-fmt (future reference crate, not yet landed).
+fn to_hex(x: Binary{8}) -> HexPair =
+  HP(hex_digit(nibble_hi(x)), hex_digit(nibble_lo(x)))
