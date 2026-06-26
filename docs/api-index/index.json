@@ -2669,7 +2669,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/repr.rs",
-      "line": 79,
+      "line": 81,
       "summary": "The four closed paradigm kinds (RFC-0001 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2680,7 +2680,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/repr.rs",
-      "line": 36,
+      "line": 38,
       "summary": "Scalar element kind for `Dense` values (extensible registry).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2691,7 +2691,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/repr.rs",
-      "line": 66,
+      "line": 68,
       "summary": "Declared sparsity class of a VSA value (RFC-0001 §4.1; RFC-0003 §5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3291,6 +3291,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_core::id::ContentHash::digest_well_formed",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::id::ContentHash",
+      "file": "crates/mycelium-core/src/id.rs",
+      "line": 87,
+      "summary": "Is `digest` a well-formed digest for `algo`? For `blake3` (M-103): exactly [`BLAKE3_HEX_LEN`]",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_core::id::ContentHash::from_parts",
       "kind": "fn",
       "crate": "mycelium-core",
@@ -3302,6 +3313,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_core::id::ContentHash::has_well_formed_digest",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::id::ContentHash",
+      "file": "crates/mycelium-core/src/id.rs",
+      "line": 104,
+      "summary": "Does this address carry a well-formed digest for its own algorithm (DN-40 wave-2)? Convenience",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_core::id::ContentHash::parse",
       "kind": "fn",
       "crate": "mycelium-core",
@@ -3309,6 +3331,17 @@
       "file": "crates/mycelium-core/src/id.rs",
       "line": 38,
       "summary": "Parse a content address, validating its **shape only**: `algo` is `[a-z0-9]+`, `digest` is",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::id::ContentHash::parse_digest",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::id::ContentHash",
+      "file": "crates/mycelium-core/src/id.rs",
+      "line": 73,
+      "summary": "Parse a content address with **algorithm-aware digest validation** (DN-40 wave-2) — the",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -4017,12 +4050,34 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_core::repr::MAX_DIM:",
+      "kind": "const",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::repr",
+      "file": "crates/mycelium-core/src/repr.rs",
+      "line": 34,
+      "summary": "Upper bound (inclusive) on every declared dimension field of a [`Repr`] — `width`, `trits`,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::repr::Repr::check_well_formed",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::repr::Repr",
+      "file": "crates/mycelium-core/src/repr.rs",
+      "line": 181,
+      "summary": "Never-silent well-formedness check (G2): returns `Ok(())` when the descriptor is well-formed,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_core::repr::Repr::well_formed",
       "kind": "fn",
       "crate": "mycelium-core",
       "module": "mycelium_core::repr::Repr",
       "file": "crates/mycelium-core/src/repr.rs",
-      "line": 169,
+      "line": 171,
       "summary": "Well-formed iff all widths/dims/trits (and any `max_active`) are positive **and within",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4033,7 +4088,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::repr::ScalarKind",
       "file": "crates/mycelium-core/src/repr.rs",
-      "line": 52,
+      "line": 54,
       "summary": "A stable one-byte code for content-addressing (M-103).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -4281,6 +4336,50 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_core::value::Value::bytes",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::value::Value",
+      "file": "crates/mycelium-core/src/value.rs",
+      "line": 295,
+      "summary": "The bytes of a [`Repr::Bytes`] value as a slice, or `None` for any other representation",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::value::Value::bytes_get",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::value::Value",
+      "file": "crates/mycelium-core/src/value.rs",
+      "line": 274,
+      "summary": "Never-silent indexed byte access into a [`Repr::Bytes`] value (RFC-0032 D4): the `i`-th byte,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::value::Value::bytes_len",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::value::Value",
+      "file": "crates/mycelium-core/src/value.rs",
+      "line": 263,
+      "summary": "The byte length of a [`Repr::Bytes`] value, or `None` for any other representation",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::value::Value::bytes_slice",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::value::Value",
+      "file": "crates/mycelium-core/src/value.rs",
+      "line": 285,
+      "summary": "Never-silent byte sub-slice `[start, end)` of a [`Repr::Bytes`] value (RFC-0032 D4): `None`",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_core::value::Value::meta",
       "kind": "fn",
       "crate": "mycelium-core",
@@ -4321,6 +4420,39 @@
       "file": "crates/mycelium-core/src/value.rs",
       "line": 213,
       "summary": "The representation descriptor.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::value::Value::seq_elems",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::value::Value",
+      "file": "crates/mycelium-core/src/value.rs",
+      "line": 253,
+      "summary": "The elements of a [`Repr::Seq`] value as a slice, or `None` for any other representation",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::value::Value::seq_get",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::value::Value",
+      "file": "crates/mycelium-core/src/value.rs",
+      "line": 242,
+      "summary": "Never-silent indexed access into a [`Repr::Seq`] value (RFC-0032 D3): the `i`-th element, or",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::value::Value::seq_len",
+      "kind": "fn",
+      "crate": "mycelium-core",
+      "module": "mycelium_core::value::Value",
+      "file": "crates/mycelium-core/src/value.rs",
+      "line": 230,
+      "summary": "The element count of a [`Repr::Seq`] value, or `None` for any other representation",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -7663,7 +7795,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/completions.rs",
-      "line": 47,
+      "line": 50,
       "summary": "A single LSP completion item (minimal fields: `label`, `kind`, `insertText`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7784,7 +7916,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/completions.rs",
-      "line": 90,
+      "line": 93,
       "summary": "The complete set of active keyword completions.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7905,7 +8037,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/completions.rs",
-      "line": 462,
+      "line": 465,
       "summary": "The set of high-value scaffolding snippets.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8059,7 +8191,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/completions.rs",
-      "line": 538,
+      "line": 541,
       "summary": "Return the full list of completion items (keywords + snippets) as an LSP",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8081,7 +8213,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp::completions::CompletionItem",
       "file": "crates/mycelium-lsp/src/completions.rs",
-      "line": 65,
+      "line": 68,
       "summary": "Serialize this item to an LSP `CompletionItem` JSON value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13066,6 +13198,17 @@
       "file": "crates/mycelium-spore/src/lib.rs",
       "line": 106,
       "summary": "Build a [`Spore`] from a parsed manifest and the project root directory.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_spore::content_address",
+      "kind": "fn",
+      "crate": "mycelium-spore",
+      "module": "mycelium_spore",
+      "file": "crates/mycelium-spore/src/lib.rs",
+      "line": 200,
+      "summary": "The canonical, deterministic identity encoding (ADR-003) — **the single source of truth for spore",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19780,6 +19923,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_std_sys::io::ReadCappedError",
+      "kind": "enum",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 61,
+      "summary": "Error set for the bounded stdin read [`read_to_end_capped`] (closed sum — never-silent, G2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_std_sys::io::flush_out",
       "kind": "fn",
       "crate": "mycelium-std-sys",
@@ -19809,6 +19963,17 @@
       "file": "crates/mycelium-std-sys/src/io.rs",
       "line": 53,
       "summary": "\\[Declared\\] Read **all** of stdin to end-of-input — **UNBOUNDED, TRUSTED-ONLY**.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::io::read_to_end_capped",
+      "kind": "fn",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::io",
+      "file": "crates/mycelium-std-sys/src/io.rs",
+      "line": 115,
+      "summary": "\\[Declared\\] Read stdin to end-of-input, **bounded by `max` bytes** (P3 — bound at the external",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -20040,6 +20205,17 @@
       "file": "crates/mycelium-std-sys/src/lib.rs",
       "line": 53,
       "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::NonUtf8Arg",
+      "kind": "struct",
+      "crate": "mycelium-std-sys",
+      "module": "mycelium_std_sys::sys",
+      "file": "crates/mycelium-std-sys/src/sys.rs",
+      "line": 49,
+      "summary": "\\[Declared\\] A command-line argument that was not valid UTF-8, reported by its **position**",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -27116,7 +27292,7 @@
     },
     {
       "symbol": "mycelium_core::repr::Repr",
-      "reason": "dedup-alias: same definition as `mycelium_core::Repr` at crates/mycelium-core/src/repr.rs:79 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::Repr` at crates/mycelium-core/src/repr.rs:81 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::repr::Repr::clone",
@@ -27160,7 +27336,7 @@
     },
     {
       "symbol": "mycelium_core::repr::ScalarKind",
-      "reason": "dedup-alias: same definition as `mycelium_core::ScalarKind` at crates/mycelium-core/src/repr.rs:36 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::ScalarKind` at crates/mycelium-core/src/repr.rs:38 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::repr::ScalarKind::clone",
@@ -27204,7 +27380,7 @@
     },
     {
       "symbol": "mycelium_core::repr::SparsityClass",
-      "reason": "dedup-alias: same definition as `mycelium_core::SparsityClass` at crates/mycelium-core/src/repr.rs:66 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::SparsityClass` at crates/mycelium-core/src/repr.rs:68 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::repr::SparsityClass::clone",
@@ -29948,7 +30124,7 @@
     },
     {
       "symbol": "mycelium_lsp::completions::CompletionItem",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::CompletionItem` at crates/mycelium-lsp/src/completions.rs:47 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::CompletionItem` at crates/mycelium-lsp/src/completions.rs:50 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::completions::CompletionItem::clone",
@@ -29976,15 +30152,15 @@
     },
     {
       "symbol": "mycelium_lsp::completions::KEYWORD_COMPLETIONS:",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::KEYWORD_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:90 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::KEYWORD_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:93 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::completions::SNIPPET_COMPLETIONS:",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::SNIPPET_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:462 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::SNIPPET_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:465 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::completions::completion_list",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::completion_list` at crates/mycelium-lsp/src/completions.rs:538 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::completion_list` at crates/mycelium-lsp/src/completions.rs:541 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::definition::definition",
@@ -39243,6 +39419,22 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_std_sys::io::ReadCappedError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::io::ReadCappedError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::io::ReadCappedError::from",
+      "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::io::ReadCappedError::source",
+      "reason": "definition not found via regex heuristic (kind='fn', name='source') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_sys::rand::EntropyError::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -39256,6 +39448,22 @@
     },
     {
       "symbol": "mycelium_std_sys::rand::EntropyError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::NonUtf8Arg::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::NonUtf8Arg::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::NonUtf8Arg::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_sys::sys::NonUtf8Arg::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
