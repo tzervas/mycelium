@@ -5760,7 +5760,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 135,
+      "line": 138,
       "summary": "Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5782,7 +5782,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 314,
+      "line": 317,
       "summary": "The reference interpreter: a primitive registry + a swap engine.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5793,7 +5793,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 522,
+      "line": 525,
       "summary": "Evaluate `node` to a **representation** value by iterating step to a normal",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5804,7 +5804,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 534,
+      "line": 537,
       "summary": "Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5815,7 +5815,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 334,
+      "line": 337,
       "summary": "Build an interpreter with a custom prim registry and swap engine (e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5826,7 +5826,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 351,
+      "line": 354,
       "summary": "The registered primitive names (for tooling/EXPLAIN).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5837,7 +5837,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 359,
+      "line": 362,
       "summary": "Perform exactly one small-step reduction on `node` (the `⟶` relation above).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5848,7 +5848,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 344,
+      "line": 347,
       "summary": "Override the step budget.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5881,7 +5881,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 125,
+      "line": 128,
       "summary": "The result of one small-step attempt on a node.",
       "guarantee_tag": null,
       "corpus_refs": []

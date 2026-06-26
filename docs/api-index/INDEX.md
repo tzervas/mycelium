@@ -585,18 +585,18 @@
 | `mycelium_interp::EffectBudgetExhausted` | struct | `crates/mycelium-interp/src/budget.rs:114` | Exceeding a budget — an **explicit, graceful** structured error (RFC-0014 §4.5 I4), never a hang / |
 | `mycelium_interp::EffectKind` | enum | `crates/mycelium-interp/src/budget.rs:27` | A closed kernel of effect **kinds** (RFC-0014 §4.5 I3) plus user-declared names. |
 | `mycelium_interp::Escalation` | enum | `crates/mycelium-interp/src/supervise.rs:135` | A supervisor escalated: a restart cascade hit a bound and the supervisor itself fails (its own |
-| `mycelium_interp::EvalError` | enum | `crates/mycelium-interp/src/lib.rs:135` | Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2). |
+| `mycelium_interp::EvalError` | enum | `crates/mycelium-interp/src/lib.rs:138` | Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2). |
 | `mycelium_interp::IdentitySwapEngine` | struct | `crates/mycelium-interp/src/swap.rs:27` | The trivial swap engine: a swap whose `target` equals the source `Repr` is the identity — exactly |
-| `mycelium_interp::Interpreter` | struct | `crates/mycelium-interp/src/lib.rs:314` | The reference interpreter: a primitive registry + a swap engine. |
-| `mycelium_interp::Interpreter::eval` | fn | `crates/mycelium-interp/src/lib.rs:522` | Evaluate `node` to a **representation** value by iterating step to a normal |
-| `mycelium_interp::Interpreter::eval_core` | fn | `crates/mycelium-interp/src/lib.rs:534` | Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data |
-| `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:334` | Build an interpreter with a custom prim registry and swap engine (e.g. |
-| `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:351` | The registered primitive names (for tooling/EXPLAIN). |
-| `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:359` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
-| `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:344` | Override the step budget. |
+| `mycelium_interp::Interpreter` | struct | `crates/mycelium-interp/src/lib.rs:317` | The reference interpreter: a primitive registry + a swap engine. |
+| `mycelium_interp::Interpreter::eval` | fn | `crates/mycelium-interp/src/lib.rs:525` | Evaluate `node` to a **representation** value by iterating step to a normal |
+| `mycelium_interp::Interpreter::eval_core` | fn | `crates/mycelium-interp/src/lib.rs:537` | Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data |
+| `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:337` | Build an interpreter with a custom prim registry and swap engine (e.g. |
+| `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:354` | The registered primitive names (for tooling/EXPLAIN). |
+| `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:362` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
+| `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:347` | Override the step budget. |
 | `mycelium_interp::PrimRegistry` | struct | `crates/mycelium-interp/src/prims.rs:54` | The name→implementation table the interpreter dispatches `Op` nodes through. |
 | `mycelium_interp::RestartIntensity` | struct | `crates/mycelium-interp/src/supervise.rs:125` | **Max-restart-intensity** for `reclaim` supervision (RFC-0008 §4.7; Erlang/OTP, Research Record 05 |
-| `mycelium_interp::Step` | enum | `crates/mycelium-interp/src/lib.rs:125` | The result of one small-step attempt on a node. |
+| `mycelium_interp::Step` | enum | `crates/mycelium-interp/src/lib.rs:128` | The result of one small-step attempt on a node. |
 | `mycelium_interp::Supervisor` | struct | `crates/mycelium-interp/src/supervise.rs:179` | A `reclaim` **supervisor** (RFC-0008 §4.7; RT4/RT7): it restarts a failed child under a *bounded* |
 | `mycelium_interp::SwapEngine` | trait | `crates/mycelium-interp/src/swap.rs:16` | Evaluates a `Swap` node. |
 | `mycelium_interp::TaskOutcome` | enum | `crates/mycelium-interp/src/supervise.rs:94` | The **explicit, additive result of running a task** (RFC-0014 I1 lifted across the task boundary, |
