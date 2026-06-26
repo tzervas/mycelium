@@ -1,26 +1,28 @@
-//! M-602 — the **three-way** native differential (NFR-7; VR-4; RR-12; phase-6).
+//! M-602 / M-725 — the **three-way** native differential (NFR-7; VR-4; RR-12; RFC-0029 §7; phase-6).
 //!
 //! Extends the M-302 interp↔native differential (`native_differential.rs`) to a **third** compiled
-//! path: the **real MLIR-dialect** lowering (`dialect::native`, feature `mlir-dialect`; M-601). For
-//! the bit/trit element-wise fragment the calculus corpus runs under
+//! path: the **real MLIR-dialect** lowering (`dialect::native`, feature `mlir-dialect`; M-601, widened
+//! by M-725). For the in-fragment calculus corpus the programs run under
 //!
 //! 1. the M-110 **reference interpreter** (the trusted base),
 //! 2. the **direct-LLVM** backend (`mycelium_mlir::compile_and_run`; `llvm.rs`), and
-//! 3. the **MLIR-dialect** backend (`mycelium_mlir::mlir_compile_and_run`; emits `arith`/`func` MLIR,
-//!    runs `mlir-opt | mlir-translate → clang → native`),
+//! 3. the **MLIR-dialect** backend (`mycelium_mlir::mlir_compile_and_run`; emits `arith`/`func`/`cf`
+//!    MLIR, runs `mlir-opt | mlir-translate → clang → native`),
 //!
 //! and all three must be **observably equivalent** (`repr + payload + guarantee`), each pair
 //! **validated through the single shared M-210 checker** (`ObservationalEquiv`). A deliberately
 //! divergent lowering on *any* path is caught — so a passing three-way differential is meaningful,
 //! not vacuous.
 //!
-//! **Honest fragment boundary (VR-5/G2).** The MLIR-dialect path covers only the element-wise
-//! fragment (`core.id`, `bit.not/and/or/xor`, `trit.neg`); the trit *carry* fragment
-//! (`trit.add/sub/mul`), the data fragment, closures and recursion are **explicit refusals** there
-//! (`DialectError::Unsupported`) that route to the direct-LLVM/interp path. This test asserts BOTH:
-//! the element-wise corpus is three-way equivalent, AND the out-of-fragment corpus is explicitly
-//! refused by the MLIR path while still interp ≡ direct-LLVM (so coverage is honest, never silently
-//! claimed).
+//! **Honest fragment boundary (VR-5/G2).** The MLIR-dialect path covers the element-wise fragment
+//! (`core.id`, `bit.not/and/or/xor`, `trit.neg`) **plus** (M-725) the balanced-ternary additive carry
+//! chain `trit.add`/`trit.sub` — including its never-silent overflow read-back. The **new boundary**
+//! is `trit.mul` (the shifted-accumulate fragment), the data fragment, closures and recursion: each an
+//! **explicit refusal** there (`DialectError::Unsupported`) that routes to the direct-LLVM/interp path.
+//! This test asserts BOTH: the in-fragment corpus (element-wise + trit add/sub, in-range *and*
+//! overflowing) is three-way equivalent — on the result *and* the overflow refusal — AND the
+//! out-of-fragment corpus (`trit.mul`, …) is explicitly refused by the MLIR path while still
+//! interp ≡ direct-LLVM (so coverage is honest, never silently claimed).
 //!
 //! **Toolchain skip.** Both compiled paths need their tools (`llc`/`clang` for direct-LLVM;
 //! `mlir-opt`/`mlir-translate`/`clang` for the dialect path). Where a tool is absent the path returns
@@ -94,9 +96,11 @@ fn bench(iters: u32, mut f: impl FnMut()) -> f64 {
     best
 }
 
-/// The **element-wise** corpus the MLIR-dialect fragment covers: `core.id`, `bit.not/and/or/xor`,
-/// `trit.neg` over `Binary{w}`/`Ternary{m}`, straight-line (through `let`s). A small deterministic
-/// set, not a statistical sample.
+/// The **in-fragment** corpus the MLIR-dialect path covers: the element-wise ops (`core.id`,
+/// `bit.not/and/or/xor`, `trit.neg`) **plus** (M-725) the additive carry chain `trit.add`/`trit.sub`
+/// over `Binary{w}`/`Ternary{m}`, straight-line (through `let`s). All the trit-additive cases here
+/// stay **in range** (no overflow) so every path produces a value; the overflow refusal is covered
+/// separately by [`overflow_corpus`]. A small deterministic set, not a statistical sample.
 fn element_wise_corpus() -> Vec<Node> {
     let cst = |bits: [bool; 8]| Node::Const(byte(bits));
     vec![
@@ -162,6 +166,46 @@ fn element_wise_corpus() -> Vec<Node> {
                     prim: "trit.neg".into(),
                     args: vec![Node::Var("t".into())],
                 }],
+            }),
+        },
+        // ── M-725: the additive carry chain, all in-range (no overflow) ──
+        // trit.add: 1 + 1 = 2 (= [0,+,-]) in 3 trits (max magnitude 13).
+        Node::Op {
+            prim: "trit.add".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
+            ],
+        },
+        // trit.add with a multi-trit carry ripple: 7 + (−7) = 0, over 4 trits.
+        Node::Op {
+            prim: "trit.add".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Neg, Trit::Pos])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Neg, Trit::Pos, Trit::Neg])),
+            ],
+        },
+        // trit.sub: 3 − 1 = 2, over 3 trits.
+        Node::Op {
+            prim: "trit.sub".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Zero])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
+            ],
+        },
+        // nested: (a + b) through a let, then negate — a Ternary lane end-to-end with carry.
+        Node::Let {
+            id: "s".into(),
+            bound: Box::new(Node::Op {
+                prim: "trit.add".into(),
+                args: vec![
+                    Node::Const(tern(vec![Trit::Pos, Trit::Zero, Trit::Neg])),
+                    Node::Const(tern(vec![Trit::Neg, Trit::Pos, Trit::Pos])),
+                ],
+            }),
+            body: Box::new(Node::Op {
+                prim: "trit.neg".into(),
+                args: vec![Node::Var("s".into())],
             }),
         },
     ]
@@ -293,28 +337,66 @@ fn mlir_dialect_distinguishes_different_programs() {
 /// The out-of-fragment corpus: nodes the MLIR-dialect path must **explicitly refuse** (routing to
 /// the direct-LLVM/interp path), while interp ≡ direct-LLVM still holds. This proves coverage is
 /// honest — the dialect path never silently mis-lowers a node it doesn't support (G2/VR-5).
+///
+/// **M-725 moved the boundary:** `trit.add`/`trit.sub` are now IN-fragment (they appear in
+/// [`element_wise_corpus`] / [`overflow_corpus`]); the new boundary is `trit.mul`, the
+/// shifted-accumulate fragment. So these cases exercise the *new* refusal, not the old one.
 fn out_of_fragment_corpus() -> Vec<Node> {
     vec![
-        // trit carry arithmetic — refused by the dialect path, lowered by direct-LLVM.
-        Node::Op {
-            prim: "trit.add".into(),
-            args: vec![
-                Node::Const(tern(vec![Trit::Pos, Trit::Neg, Trit::Neg])),
-                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
-            ],
-        },
-        Node::Op {
-            prim: "trit.sub".into(),
-            args: vec![
-                Node::Const(tern(vec![Trit::Pos, Trit::Zero, Trit::Zero])),
-                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
-            ],
-        },
+        // trit *multiply* — the new boundary: refused by the dialect path, lowered by direct-LLVM.
         Node::Op {
             prim: "trit.mul".into(),
             args: vec![
                 Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Neg])),
                 Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Zero])),
+            ],
+        },
+        Node::Op {
+            prim: "trit.mul".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
+            ],
+        },
+        // trit.mul nested behind an in-fragment trit.add — the whole program is refused (the MLIR
+        // path refuses the *program*, not just the op) and routed to direct-LLVM/interp.
+        Node::Op {
+            prim: "trit.add".into(),
+            args: vec![
+                Node::Op {
+                    prim: "trit.mul".into(),
+                    args: vec![
+                        Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
+                        Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Zero])),
+                    ],
+                },
+                Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
+            ],
+        },
+    ]
+}
+
+/// The **overflow** corpus (M-725): in-fragment `trit.add`/`trit.sub` programs whose fixed-width
+/// result leaves the `m`-trit range. All three paths must **refuse** non-silently — the interpreter
+/// errors (`EvalError::Overflow`), the direct-LLVM path returns `AotError::Overflow`, and the
+/// MLIR-dialect path returns `DialectError::Overflow` (the shared sentinel read-back). This is the
+/// overflow half of the honest carry boundary — a value is never silently wrapped (SC-3/G2).
+fn overflow_corpus() -> Vec<Node> {
+    vec![
+        // max(2 trits) + max(2 trits) = 4 + 4 = 8, out of the 2-trit range [−4, 4]. ([+,+] = 4.)
+        Node::Op {
+            prim: "trit.add".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Pos, Trit::Pos])),
+                Node::Const(tern(vec![Trit::Pos, Trit::Pos])),
+            ],
+        },
+        // 4 − (−4) = 8, out of the 2-trit range.
+        Node::Op {
+            prim: "trit.sub".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Pos, Trit::Pos])),
+                Node::Const(tern(vec![Trit::Neg, Trit::Neg])),
             ],
         },
     ]
@@ -343,6 +425,47 @@ fn out_of_fragment_nodes_are_refused_by_mlir_but_run_on_direct_llvm() {
             ),
             Err(AotError::ToolchainMissing(_)) => { /* env skip */ }
             Err(e) => panic!("out-of-fragment program #{i}: direct-LLVM errored: {e}"),
+        }
+    }
+}
+
+/// M-725: the **overflow** three-way refusal parity. An in-fragment `trit.add`/`trit.sub` whose
+/// result leaves the `m`-trit range must be refused **non-silently by all three paths** — the
+/// interpreter errors, and both compiled paths return an explicit `Overflow`. Never a silent wrap on
+/// any path (SC-3/G2), so the carry boundary is honest on overflow as well as on value.
+#[test]
+fn overflowing_trit_arithmetic_is_refused_non_silently_three_ways() {
+    for (i, node) in overflow_corpus().iter().enumerate() {
+        // Path 1: the reference interpreter must error (not return a wrapped value).
+        let interp = Interpreter::new(PrimRegistry::with_builtins(), Box::new(IdentitySwapEngine))
+            .eval(node);
+        assert!(
+            interp.is_err(),
+            "overflow program #{i}: interpreter must refuse (error), got {:?}",
+            interp.ok().map(|v| v.payload().clone())
+        );
+
+        // Path 2: direct-LLVM must return an explicit Overflow (or skip if the toolchain is absent).
+        match mycelium_mlir::compile_and_run(node) {
+            Err(AotError::Overflow(_)) => { /* expected explicit refusal */ }
+            Err(AotError::ToolchainMissing(_)) => { /* env skip — still no silent success */ }
+            Ok(v) => panic!(
+                "overflow program #{i}: direct-LLVM must refuse, got {:?}",
+                v.payload()
+            ),
+            Err(e) => panic!("overflow program #{i}: unexpected direct-LLVM error: {e}"),
+        }
+
+        // Path 3: MLIR-dialect must return an explicit Overflow (the shared sentinel read-back), or
+        // skip if its toolchain is absent. NOT Unsupported (these ops are in-fragment now), NOT Ok.
+        match mycelium_mlir::mlir_compile_and_run(node) {
+            Err(DialectError::Overflow(_)) => { /* expected explicit refusal */ }
+            Err(DialectError::ToolchainMissing(_)) => { /* env skip */ }
+            Ok(v) => panic!(
+                "overflow program #{i}: MLIR-dialect must refuse (Overflow), got {:?}",
+                v.payload()
+            ),
+            Err(e) => panic!("overflow program #{i}: unexpected MLIR error: {e}"),
         }
     }
 }

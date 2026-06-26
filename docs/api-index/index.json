@@ -3846,7 +3846,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 279,
+      "line": 291,
       "summary": "Whether a prim named `name` is registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3857,7 +3857,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 242,
+      "line": 254,
       "summary": "The content hash of the prim registered under kernel name `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3868,7 +3868,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 293,
+      "line": 305,
       "summary": "Every entry as `(name, #p, decl)`, in name order — the inspectable surface for EXPLAIN over",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3879,7 +3879,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 266,
+      "line": 278,
       "summary": "The declaration registered under kernel name `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3901,7 +3901,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 273,
+      "line": 285,
       "summary": "The intrinsic guarantee `g_f` of the prim named `name` (RFC-0001 §4.7), if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3912,7 +3912,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 285,
+      "line": 297,
       "summary": "The registered kernel names, sorted.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3923,7 +3923,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 248,
+      "line": 260,
       "summary": "A [`PrimRef`] for the prim named `name`, if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3934,7 +3934,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::prim::PrimTable",
       "file": "crates/mycelium-core/src/prim.rs",
-      "line": 260,
+      "line": 272,
       "summary": "The declaration a [`PrimRef`] points at, if registered.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6046,7 +6046,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims::PrimRegistry",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 110,
+      "line": 113,
       "summary": "Look up a primitive by name.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6057,7 +6057,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims::PrimRegistry",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 116,
+      "line": 119,
       "summary": "The registered primitive names (sorted).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6068,7 +6068,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims::PrimRegistry",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 104,
+      "line": 107,
       "summary": "Register (or replace) a primitive.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6079,7 +6079,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::prims::PrimRegistry",
       "file": "crates/mycelium-interp/src/prims.rs",
-      "line": 75,
+      "line": 76,
       "summary": "The default registry: the exact built-ins — elementwise logical (`core.id`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7025,7 +7025,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3798,
+      "line": 3874,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7036,7 +7036,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3779,
+      "line": 3855,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10171,7 +10171,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 103,
+      "line": 106,
       "summary": "A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10413,7 +10413,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 44,
+      "line": 54,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10435,7 +10435,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 45,
+      "line": 55,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10556,7 +10556,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 46,
+      "line": 56,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10578,7 +10578,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 47,
+      "line": 57,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10622,7 +10622,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/dialect/native.rs",
-      "line": 694,
+      "line": 920,
       "summary": "Compile `node` through the MLIR pipeline to a native executable (MLIR → LLVM IR → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10633,7 +10633,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/dialect/native.rs",
-      "line": 724,
+      "line": 950,
       "summary": "Compile + run `node` through the MLIR pipeline and read the result back.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10699,7 +10699,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 323,
+      "line": 326,
       "summary": "Compile the bit/trit-subset program to a shared object without calling it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10743,7 +10743,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 48,
+      "line": 58,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10831,7 +10831,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 49,
+      "line": 59,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10842,7 +10842,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/dialect.rs",
-      "line": 86,
+      "line": 90,
       "summary": "Emit the textual `ternary`-dialect module for `node` (one op per lowered binding).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10941,7 +10941,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 50,
+      "line": 60,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11040,7 +11040,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 51,
+      "line": 61,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11051,7 +11051,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::jit::JitArtifact",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 113,
+      "line": 116,
       "summary": "Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11062,7 +11062,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 347,
+      "line": 350,
       "summary": "Compile the program to a shared object and call it once, in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11106,7 +11106,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 52,
+      "line": 62,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11150,7 +11150,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 53,
+      "line": 64,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11194,7 +11194,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 54,
+      "line": 66,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11304,7 +11304,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 55,
+      "line": 67,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11315,7 +11315,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 56,
+      "line": 68,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11326,7 +11326,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 57,
+      "line": 69,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11414,7 +11414,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 58,
+      "line": 70,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -32384,7 +32384,7 @@
     },
     {
       "symbol": "mycelium_mlir::dialect::emit",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::emit` at crates/mycelium-mlir/src/dialect.rs:86 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::emit` at crates/mycelium-mlir/src/dialect.rs:90 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::inject::Image",
@@ -32476,15 +32476,15 @@
     },
     {
       "symbol": "mycelium_mlir::jit::JitArtifact",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::JitArtifact` at crates/mycelium-mlir/src/jit.rs:103 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::JitArtifact` at crates/mycelium-mlir/src/jit.rs:106 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::jit::compile_so",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::compile_so` at crates/mycelium-mlir/src/jit.rs:323 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::compile_so` at crates/mycelium-mlir/src/jit.rs:326 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::jit::jit_run",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::jit_run` at crates/mycelium-mlir/src/jit.rs:347 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::jit_run` at crates/mycelium-mlir/src/jit.rs:350 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::llvm::AotError",

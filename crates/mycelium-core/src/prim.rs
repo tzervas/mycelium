@@ -212,6 +212,18 @@ impl PrimTable {
         // RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic (width-uniform).
         t.insert("bit.add", exact(vec![Binary, Binary], Binary));
         t.insert("bit.sub", exact(vec![Binary, Binary], Binary));
+        // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
+        // `intrinsic = Exact` (the widen/identity/in-range-narrow result equals the unsigned value
+        // exactly; a lossy narrow is a never-silent *runtime* refusal, not a non-Exact intrinsic).
+        // **Width-model note (FLAG):** the Π `WidthRel` model is `Uniform`/`Collapse` only — it has
+        // **no first-class width-*change* relation**, so this width-cast prim cannot express "result
+        // width = the *second* (witness) operand's width" in the coarse table. It is recorded
+        // `Uniform` here as the nearest tag; the real never-silent typing — both operands `Binary`,
+        // result width = witness width `M`, the narrowing-fit refusal — is enforced by the interpreter
+        // prim (`prims.rs::prim_width_cast`) and the L1 checker (`checkty.rs`), exactly as the seq/
+        // bytes prims' real typing lives in their interpreter prims (same paradigm-model escape hatch).
+        // A first-class width-change `WidthRel` is a deliberate, RFC-unpinned extension left for later.
+        t.insert("bit.width_cast", exact(vec![Binary, Binary], Binary));
         // RFC-0032 D3 (M-749): never-silent indexed-sequence access. Both are `intrinsic = Exact`
         // (total/decidable over the in-range domain). **Paradigm-model note (FLAG):** the Π paradigm
         // model is `Binary`/`Ternary`/`Any` only — it has no first-class `Seq` paradigm, and a
