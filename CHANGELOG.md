@@ -8,6 +8,13 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-26: waveN2 Phase-1 — stdlib enablers, width-cast prim, MLIR carry-chain, design notes (E13-1/E19-1/E15-1))
+
+- **`lib/std/iter.myc` + `cmp.myc` width-typed helpers (M-715)** — iterator surface (`length`/`is_empty` + a fold-overflow refusal run three-way; `map`/`filter`/`fold`/`any`/`find` type-check but **do not yet monomorphize** — a recursive-HOF defunctionalization gap, flagged, design-phase surface) + 10 monomorphic `Binary{8}` comparison helpers (generic forms await M-753). std_iter (10) + std_cmp (31) green.
+- **Width-cast kernel prim `bit.width_cast` (M-798, DN-41 Proposed)** — never-silent re-width of unsigned `Binary{N}`→`Binary{M}`: widen = zero-extension `Exact` (ADR-028); narrow = explicit `Overflow` if high bits set (G2). Resolves the wave-n1 FLAG — **unblocks M-717 multi-byte UTF-8 + `byte_at`** (`lt(width_cast(idx,len),len)` now expressible). 12 three-way tests incl. narrow-overflow refusal on all 3 paths. Rust-first; spec **Proposed**. (Forced minimal `mycelium-core` prim-table + count-guard edit — the registry↔Π drift guard requires it.)
+- **MLIR-dialect lowering widened to the `trit.add`/`trit.sub` carry chain (M-725, E15-1)** — one fragment beyond element-wise through the real `arith`→`mlir-opt`→`mlir-translate`→`clang` path; never-silent `Unsupported` moved to `trit.mul`; overflow via the shared `OVERFLOW_SENTINEL`. **Three-way differential (interp ≡ direct-LLVM ≡ MLIR-dialect) ran end-to-end** (`mlir-18-tools` provisioned; skip-graceful where absent; `ran_mlir` non-vacuity guard — no faked pass). 102→109 feature-gated tests; `native.rs` inline tests extracted to `src/tests/`. `Empirical`.
+- **DN-42 (Proposed)** — width-generics design proposal (M-753): recommends width-as-const-generic-param-at-mono (Option A); syntax + instance-coherence open questions submitted for ratification. Enacts no code.
+
 ### Added (2026-06-26: self-hosted stdlib — `std.collections` + `std.text`/`std.fmt` in `.myc` (E13-1, wave-n1))
 
 - **`lib/std/collections.myc` (M-716, #461)** — `Vec`/`Map`/`Set` self-hosted in `.myc`, implemented

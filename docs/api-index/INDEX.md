@@ -386,15 +386,15 @@
 | `mycelium_core::prim::PrimRef::new` | fn | `crates/mycelium-core/src/prim.rs:115` | Build a prim reference from a declaration hash. |
 | `mycelium_core::prim::PrimSig::arity` | fn | `crates/mycelium-core/src/prim.rs:77` | The prim's arity (operand count). |
 | `mycelium_core::prim::PrimTable::builtins` | fn | `crates/mycelium-core/src/prim.rs:172` | The default table: the closed v0 kernel-prim set — the identity, the elementwise binary logic |
-| `mycelium_core::prim::PrimTable::contains` | fn | `crates/mycelium-core/src/prim.rs:279` | Whether a prim named `name` is registered. |
-| `mycelium_core::prim::PrimTable::decl_hash` | fn | `crates/mycelium-core/src/prim.rs:242` | The content hash of the prim registered under kernel name `name`, if any. |
-| `mycelium_core::prim::PrimTable::entries` | fn | `crates/mycelium-core/src/prim.rs:293` | Every entry as `(name, #p, decl)`, in name order — the inspectable surface for EXPLAIN over |
-| `mycelium_core::prim::PrimTable::get` | fn | `crates/mycelium-core/src/prim.rs:266` | The declaration registered under kernel name `name`, if any. |
+| `mycelium_core::prim::PrimTable::contains` | fn | `crates/mycelium-core/src/prim.rs:291` | Whether a prim named `name` is registered. |
+| `mycelium_core::prim::PrimTable::decl_hash` | fn | `crates/mycelium-core/src/prim.rs:254` | The content hash of the prim registered under kernel name `name`, if any. |
+| `mycelium_core::prim::PrimTable::entries` | fn | `crates/mycelium-core/src/prim.rs:305` | Every entry as `(name, #p, decl)`, in name order — the inspectable surface for EXPLAIN over |
+| `mycelium_core::prim::PrimTable::get` | fn | `crates/mycelium-core/src/prim.rs:278` | The declaration registered under kernel name `name`, if any. |
 | `mycelium_core::prim::PrimTable::insert` | fn | `crates/mycelium-core/src/prim.rs:157` | Register (or replace) a prim declaration under build-time kernel name `name`, returning its |
-| `mycelium_core::prim::PrimTable::intrinsic` | fn | `crates/mycelium-core/src/prim.rs:273` | The intrinsic guarantee `g_f` of the prim named `name` (RFC-0001 §4.7), if registered. |
-| `mycelium_core::prim::PrimTable::names` | fn | `crates/mycelium-core/src/prim.rs:285` | The registered kernel names, sorted. |
-| `mycelium_core::prim::PrimTable::prim_ref` | fn | `crates/mycelium-core/src/prim.rs:248` | A [`PrimRef`] for the prim named `name`, if registered. |
-| `mycelium_core::prim::PrimTable::resolve` | fn | `crates/mycelium-core/src/prim.rs:260` | The declaration a [`PrimRef`] points at, if registered. |
+| `mycelium_core::prim::PrimTable::intrinsic` | fn | `crates/mycelium-core/src/prim.rs:285` | The intrinsic guarantee `g_f` of the prim named `name` (RFC-0001 §4.7), if registered. |
+| `mycelium_core::prim::PrimTable::names` | fn | `crates/mycelium-core/src/prim.rs:297` | The registered kernel names, sorted. |
+| `mycelium_core::prim::PrimTable::prim_ref` | fn | `crates/mycelium-core/src/prim.rs:260` | A [`PrimRef`] for the prim named `name`, if registered. |
+| `mycelium_core::prim::PrimTable::resolve` | fn | `crates/mycelium-core/src/prim.rs:272` | The declaration a [`PrimRef`] points at, if registered. |
 | `mycelium_core::recon` | mod | `crates/mycelium-core/src/lib.rs:25` | — |
 | `mycelium_core::recon::ReconInfo::bound` | fn | `crates/mycelium-core/src/recon.rs:245` | The attached `{ε, δ, strength}` bound certificate. |
 | `mycelium_core::recon::ReconInfo::codebooks` | fn | `crates/mycelium-core/src/recon.rs:230` | The content-addressed codebook references. |
@@ -611,10 +611,10 @@
 | `mycelium_interp::prims` | mod | `crates/mycelium-interp/src/lib.rs:110` | — |
 | `mycelium_interp::prims::PrimFn` | type | `crates/mycelium-interp/src/prims.rs:49` | A primitive implementation: a pure function from argument values to a result value (or an error). |
 | `mycelium_interp::prims::PrimRegistry::empty` | fn | `crates/mycelium-interp/src/prims.rs:61` | An empty registry. |
-| `mycelium_interp::prims::PrimRegistry::get` | fn | `crates/mycelium-interp/src/prims.rs:110` | Look up a primitive by name. |
-| `mycelium_interp::prims::PrimRegistry::names` | fn | `crates/mycelium-interp/src/prims.rs:116` | The registered primitive names (sorted). |
-| `mycelium_interp::prims::PrimRegistry::register` | fn | `crates/mycelium-interp/src/prims.rs:104` | Register (or replace) a primitive. |
-| `mycelium_interp::prims::PrimRegistry::with_builtins` | fn | `crates/mycelium-interp/src/prims.rs:75` | The default registry: the exact built-ins — elementwise logical (`core.id`, |
+| `mycelium_interp::prims::PrimRegistry::get` | fn | `crates/mycelium-interp/src/prims.rs:113` | Look up a primitive by name. |
+| `mycelium_interp::prims::PrimRegistry::names` | fn | `crates/mycelium-interp/src/prims.rs:119` | The registered primitive names (sorted). |
+| `mycelium_interp::prims::PrimRegistry::register` | fn | `crates/mycelium-interp/src/prims.rs:107` | Register (or replace) a primitive. |
+| `mycelium_interp::prims::PrimRegistry::with_builtins` | fn | `crates/mycelium-interp/src/prims.rs:76` | The default registry: the exact built-ins — elementwise logical (`core.id`, |
 | `mycelium_interp::supervise` | mod | `crates/mycelium-interp/src/lib.rs:111` | — |
 | `mycelium_interp::supervise::CancelToken::cancel` | fn | `crates/mycelium-interp/src/supervise.rs:48` | Request cancellation. |
 | `mycelium_interp::supervise::CancelToken::check` | fn | `crates/mycelium-interp/src/supervise.rs:63` | Observe the token at a checkpoint: an explicit [`Cancelled`] if cancellation was requested, else |
@@ -705,8 +705,8 @@
 | `mycelium_l1::checkty::PhylumEnv::nodule` | fn | `crates/mycelium-l1/src/checkty.rs:552` | The checked [`Env`] of the nodule whose path equals `path`, if present. |
 | `mycelium_l1::checkty::PhylumEnv::single` | fn | `crates/mycelium-l1/src/checkty.rs:543` | The single nodule's [`Env`] when this is a phylum-of-one, else `None`. |
 | `mycelium_l1::checkty::TraitInfo` | struct | `crates/mycelium-l1/src/checkty.rs:207` | A registered **trait** (RFC-0019 §4.2; LR-2). |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:3798` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:3779` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:3829` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:3810` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::checkty::type_head` | fn | `crates/mycelium-l1/src/checkty.rs:239` | The **coherence key** of a type (RFC-0019 §4.5): the head a `(trait, type-head)` instance key is |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:41` | — |
 | `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:561` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
@@ -1052,8 +1052,8 @@
 | `mycelium_mlir::channel::Network::channel` | fn | `crates/mycelium-mlir/src/channel.rs:98` | Create a typed SPSC channel on this network with explicit, finite capacity `cap` (no |
 | `mycelium_mlir::channel::Network::epoch` | fn | `crates/mycelium-mlir/src/channel.rs:91` | The number of successful channel sends + recvs across this network so far — monotone, |
 | `mycelium_mlir::channel::Network::new` | fn | `crates/mycelium-mlir/src/channel.rs:82` | A fresh network with its progress clock at zero. |
-| `mycelium_mlir::compile` | fn | `crates/mycelium-mlir/src/dialect/native.rs:694` | Compile `node` through the MLIR pipeline to a native executable (MLIR → LLVM IR → `clang`) |
-| `mycelium_mlir::compile_and_run` | fn | `crates/mycelium-mlir/src/dialect/native.rs:724` | Compile + run `node` through the MLIR pipeline and read the result back. |
+| `mycelium_mlir::compile` | fn | `crates/mycelium-mlir/src/dialect/native.rs:920` | Compile `node` through the MLIR pipeline to a native executable (MLIR → LLVM IR → `clang`) |
+| `mycelium_mlir::compile_and_run` | fn | `crates/mycelium-mlir/src/dialect/native.rs:950` | Compile + run `node` through the MLIR pipeline and read the result back. |
 | `mycelium_mlir::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:408` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
 | `mycelium_mlir::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:415` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
 | `mycelium_mlir::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:131` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
@@ -1072,7 +1072,7 @@
 | `mycelium_mlir::deploy::NativeArtifact::same_identity_as` | fn | `crates/mycelium-mlir/src/deploy.rs:184` | Whether two artifacts have the **same content-addressed identity** (ADR-003) — i.e. |
 | `mycelium_mlir::deploy::NativeArtifact::vr4` | fn | `crates/mycelium-mlir/src/deploy.rs:169` | The VR-4 cross-backend attestation travelling with the deployed unit (no opaque pass anywhere). |
 | `mycelium_mlir::dialect` | mod | `crates/mycelium-mlir/src/lib.rs:49` | — |
-| `mycelium_mlir::emit` | fn | `crates/mycelium-mlir/src/dialect.rs:86` | Emit the textual `ternary`-dialect module for `node` (one op per lowered binding). |
+| `mycelium_mlir::emit` | fn | `crates/mycelium-mlir/src/dialect.rs:90` | Emit the textual `ternary`-dialect module for `node` (one op per lowered binding). |
 | `mycelium_mlir::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:147` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
 | `mycelium_mlir::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:159` | Emit the textual LLVM IR for the packed-ternary dot kernel |
 | `mycelium_mlir::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:59` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
@@ -4628,7 +4628,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::deploy::NativeArtifact::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::deploy::NativeArtifact::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::deploy::NativeArtifact::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_mlir::dialect::emit` | dedup-alias: same definition as `mycelium_mlir::emit` at crates/mycelium-mlir/src/dialect.rs:86 — one canonical row kept |
+| `mycelium_mlir::dialect::emit` | dedup-alias: same definition as `mycelium_mlir::emit` at crates/mycelium-mlir/src/dialect.rs:90 — one canonical row kept |
 | `mycelium_mlir::inject::Image` | dedup-alias: same definition as `mycelium_mlir::Image` at crates/mycelium-mlir/src/inject.rs:103 — one canonical row kept |
 | `mycelium_mlir::inject::Image::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::inject::Image::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
