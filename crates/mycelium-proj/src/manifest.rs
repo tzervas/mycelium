@@ -550,17 +550,15 @@ fn as_content_hash(
     // Shape: `<algo>:<digest>` with the address charset (`ContentHash::parse`).
     let h = mycelium_core::ContentHash::parse(&s)
         .ok_or_else(|| malformed("expected `<algo>:<digest>` (e.g. `blake3:<64-hex>`)"))?;
-    // Algorithm-specific digest check: a blake3 digest is exactly 64 lowercase hex (M-103). This is
-    // what makes a shaped-but-bogus stub like `blake3:abc` an error rather than a silent accept.
-    if h.algo() == "blake3" {
-        let d = h.digest();
-        let is_lower_hex = |b: u8| b.is_ascii_digit() || (b'a'..=b'f').contains(&b);
-        let is_blake3_digest = d.len() == 64 && d.bytes().all(is_lower_hex);
-        if !is_blake3_digest {
-            return Err(malformed(
-                "a `blake3` digest must be exactly 64 lowercase hex characters (M-103)",
-            ));
-        }
+    // Algorithm-aware digest check, delegated to the single source of truth in `mycelium-core`
+    // (`ContentHash::digest_well_formed` / `has_well_formed_digest`) rather than re-deriving the
+    // 64-hex rule here (DRY — the canonical rule moves in one place). This is what makes a
+    // shaped-but-bogus stub like `blake3:abc` an error rather than a silent accept. We keep the
+    // shape-vs-digest split so the two failures carry distinct, granular messages.
+    if !h.has_well_formed_digest() {
+        return Err(malformed(
+            "a `blake3` digest must be exactly 64 lowercase hex characters (M-103)",
+        ));
     }
     Ok(h)
 }

@@ -35,6 +35,7 @@ Usage:
   python3 tools/dn29_apply.py --manifest <path>   # dry-run a specific manifest
   python3 tools/dn29_apply.py --apply             # write the changes (post-ratification only)
 """
+
 from __future__ import annotations
 
 import argparse
@@ -89,11 +90,20 @@ def plan_file(path: Path, entries: list[dict]) -> tuple[str, list[dict]]:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST,
-                        help="path to the amendment manifest JSON")
-    parser.add_argument("--apply", action="store_true",
-                        help="write the changes (default is dry-run). Post-ratification only.")
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument(
+        "--manifest",
+        type=Path,
+        default=DEFAULT_MANIFEST,
+        help="path to the amendment manifest JSON",
+    )
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help="write the changes (default is dry-run). Post-ratification only.",
+    )
     args = parser.parse_args()
 
     if not args.manifest.exists():
@@ -106,9 +116,17 @@ def main() -> int:
     mode = "APPLY" if args.apply else "DRY-RUN"
     print(f"== dn29_apply [{mode}] — manifest status: {status} ==")
     if status != "final" and args.apply:
-        print("!! refusing to --apply a manifest whose status is not 'final'.", file=sys.stderr)
-        print("   (RFC-0034 §13: apply only after RFC-0034 + ADR-032 are Accepted and the", file=sys.stderr)
-        print("    manifest is completed + re-verified against source.)", file=sys.stderr)
+        print(
+            "!! refusing to --apply a manifest whose status is not 'final'.",
+            file=sys.stderr,
+        )
+        print(
+            "   (RFC-0034 §13: apply only after RFC-0034 + ADR-032 are Accepted and the",
+            file=sys.stderr,
+        )
+        print(
+            "    manifest is completed + re-verified against source.)", file=sys.stderr
+        )
         return 2
 
     errors: list[str] = []
@@ -130,7 +148,10 @@ def main() -> int:
         plans.append((path, new_content))
 
     if errors:
-        print(f"\n!! {len(errors)} never-silent failure(s) — nothing written:", file=sys.stderr)
+        print(
+            f"\n!! {len(errors)} never-silent failure(s) — nothing written:",
+            file=sys.stderr,
+        )
         for msg in errors:
             print(f"   - {msg}", file=sys.stderr)
         return 1
@@ -139,10 +160,16 @@ def main() -> int:
         for path, new_content in plans:
             path.write_text(new_content, encoding="utf-8")
         print(f"\n== applied {total} replacement(s) across {len(plans)} file(s). ==")
-        print("   Run `just check` + `python3 tools/github/doc_refs_check.py` to verify.")
+        print(
+            "   Run `just check` + `python3 tools/github/doc_refs_check.py` to verify."
+        )
     else:
-        print(f"\n== dry-run clean: {total} replacement(s) across {len(plans)} file(s) would apply. ==")
-        print("   (staged — apply only after RFC-0034 + ADR-032 are Accepted; --apply to write.)")
+        print(
+            f"\n== dry-run clean: {total} replacement(s) across {len(plans)} file(s) would apply. =="
+        )
+        print(
+            "   (staged — apply only after RFC-0034 + ADR-032 are Accepted; --apply to write.)"
+        )
     return 0
 
 

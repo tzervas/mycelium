@@ -14,21 +14,21 @@ co-equal, first-class substrates — under semantics that are **transparent** (n
 
 ## Start here
 
-- **[Getting Started](Getting-Started)** — clone, build, and the `just` check loop.
-- **[Architecture](Architecture)** — how the 50 crates fit together (kernel → compiler → runtime →
+- **[Getting Started](Getting-Started.md)** — clone, build, and the `just` check loop.
+- **[Architecture](Architecture.md)** — how the 50 crates fit together (kernel → compiler → runtime →
   stdlib → tooling), the value model, swaps, and execution paths.
-- **[Crate Index](Crate-Index)** — every crate with a one-line purpose and a link to its README.
-- **[API Reference](API-Reference)** — building and browsing the rustdoc + the agent API index.
+- **[Crate Index](Crate-Index.md)** — every crate with a one-line purpose and a link to its README.
+- **[API Reference](API-Reference.md)** — building and browsing the rustdoc + the agent API index.
 
 ## Core concepts
 
-- **[Memory Model](Memory-Model)** — the three-layer hybrid (affine ownership → optimized reference
+- **[Memory Model](Memory-Model.md)** — the three-layer hybrid (affine ownership → optimized reference
   counting → region reclamation), never-silent reclamation, and the static RC-elision passes
   (DN-32 / RFC-0027 / MEM-4 DN-33).
-- **[Tunable Certification](Tunable-Certification)** — the `fast` / `balanced` / `certified` modes,
+- **[Tunable Certification](Tunable-Certification.md)** — the `fast` / `balanced` / `certified` modes,
   the transparency & auditability rule, and the `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` lattice
   (RFC-0034 / ADR-032).
-- **[Decision Records](Decision-Records)** — the RFC / ADR / DN index and how decisions evolve
+- **[Decision Records](Decision-Records.md)** — the RFC / ADR / DN index and how decisions evolve
   (append-only).
 
 ## What this is

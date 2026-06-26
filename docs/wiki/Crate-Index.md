@@ -67,4 +67,3 @@ in the repository. Roles are distilled from the crate docs (`lib.rs`).
 - [`mycelium-std-text`](https://github.com/tzervas/mycelium/blob/main/crates/mycelium-std-text/README.md) — `std.text` — UTF-8 string type and operations: parse returns a `Result`, never a sentinel; lossy transcoding is always an explicit, named op.
 - [`mycelium-std-time`](https://github.com/tzervas/mycelium/blob/main/crates/mycelium-std-time/README.md) — `std.time` — typed clocks, durations, and instants: cross-source subtraction is a compile-time error; wall-clock reads are `Declared` + effectful, never dressed as pure values.
 - [`mycelium-std-vsa`](https://github.com/tzervas/mycelium/blob/main/crates/mycelium-std-vsa/README.md) — `std.vsa` — hypervector/VSA encoding capability surface: every approximating op exposes its guarantee tag and an inspectable trace, never a black box.
-

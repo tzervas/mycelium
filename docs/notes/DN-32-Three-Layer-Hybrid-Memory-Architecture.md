@@ -135,8 +135,8 @@ cross-sibling aliases) and is `Proven`-**modulo** that side-condition (the same 
 holds the RC-soundness claim at — external theorem, corpus-invariant side-condition, no in-repo
 mechanized check yet). The **throughput benefit** of weak over strong coupling is **expected, not
 measured** — `Declared`. lane-B explicitly recommended prototyping *both* and measuring before
-committing; this note resolves OQ-1 *by argument* (siblings are already concurrent under RT7, and RC
-+ acyclicity make order-independent reclamation safe), **not** by the prototype lane-B suggested. The
+committing; this note resolves OQ-1 *by argument* (siblings are already concurrent under RT7, and RC +
+acyclicity make order-independent reclamation safe), **not** by the prototype lane-B suggested. The
 throughput claim must not be carried above `Declared` until measured (§6c).
 
 ---

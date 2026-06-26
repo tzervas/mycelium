@@ -1,19 +1,19 @@
 ### Mycelium
 
-- [Home](Home)
-- [Getting Started](Getting-Started)
+- [Home](Home.md)
+- [Getting Started](Getting-Started.md)
 
 **Understand**
 
-- [Architecture](Architecture)
-- [Crate Index](Crate-Index)
-- [API Reference](API-Reference)
+- [Architecture](Architecture.md)
+- [Crate Index](Crate-Index.md)
+- [API Reference](API-Reference.md)
 
 **Concepts**
 
-- [Memory Model](Memory-Model)
-- [Tunable Certification](Tunable-Certification)
-- [Decision Records](Decision-Records)
+- [Memory Model](Memory-Model.md)
+- [Tunable Certification](Tunable-Certification.md)
+- [Decision Records](Decision-Records.md)
 
 **Source**
 

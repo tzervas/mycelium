@@ -30,9 +30,9 @@ charter (FR/NFR/VR, SC-*/KC-*, the roadmap).
 - **ADR-022 / DN-25** — the dual-axis 1.0.0 release gates.
 - **Direction (current):** **ADR-032** + **RFC-0034** — tunable certification & the transparency
   reframe (north star → fast, memory-safe, ergonomic; certification optional). See
-  [Tunable Certification](Tunable-Certification).
+  [Tunable Certification](Tunable-Certification.md).
 - **Memory model:** **DN-32** (three-layer hybrid) + **RFC-0027** (reclamation) + **DN-33** (MEM-4
-  static RC elision). See [Memory Model](Memory-Model).
+  static RC elision). See [Memory Model](Memory-Model.md).
 
 ## Indexes in the repo
 
