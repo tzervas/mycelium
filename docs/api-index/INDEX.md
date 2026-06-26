@@ -705,8 +705,8 @@
 | `mycelium_l1::checkty::PhylumEnv::nodule` | fn | `crates/mycelium-l1/src/checkty.rs:552` | The checked [`Env`] of the nodule whose path equals `path`, if present. |
 | `mycelium_l1::checkty::PhylumEnv::single` | fn | `crates/mycelium-l1/src/checkty.rs:543` | The single nodule's [`Env`] when this is a phylum-of-one, else `None`. |
 | `mycelium_l1::checkty::TraitInfo` | struct | `crates/mycelium-l1/src/checkty.rs:207` | A registered **trait** (RFC-0019 §4.2; LR-2). |
-| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:3829` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
-| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:3810` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
+| `mycelium_l1::checkty::prim_kernel_name` | fn | `crates/mycelium-l1/src/checkty.rs:3874` | The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1). |
+| `mycelium_l1::checkty::prim_sig` | fn | `crates/mycelium-l1/src/checkty.rs:3855` | The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic. |
 | `mycelium_l1::checkty::type_head` | fn | `crates/mycelium-l1/src/checkty.rs:239` | The **coherence key** of a type (RFC-0019 §4.5): the head a `(trait, type-head)` instance key is |
 | `mycelium_l1::elab` | mod | `crates/mycelium-l1/src/lib.rs:41` | — |
 | `mycelium_l1::elab::build_registry` | fn | `crates/mycelium-l1/src/elab.rs:561` | Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's |
@@ -1011,7 +1011,7 @@
 | `mycelium_mlir::DepthResolution` | struct | `crates/mycelium-mlir/src/budget.rs:75` | A resolved depth ceiling plus the [`DepthBasis`] explaining how it was chosen. |
 | `mycelium_mlir::Image` | struct | `crates/mycelium-mlir/src/inject.rs:103` | The running **image**: a hash-keyed dispatch table over a compiled overlay + an interpretable |
 | `mycelium_mlir::InjectError` | enum | `crates/mycelium-mlir/src/inject.rs:69` | A failure at the dispatch/injection boundary — every variant is explicit (never a silent pass or |
-| `mycelium_mlir::JitArtifact` | struct | `crates/mycelium-mlir/src/jit.rs:103` | A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the |
+| `mycelium_mlir::JitArtifact` | struct | `crates/mycelium-mlir/src/jit.rs:106` | A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the |
 | `mycelium_mlir::KernelLayout` | struct | `crates/mycelium-mlir/src/bitnet.rs:56` | The **inspectable physical-layout record** a packed-ternary kernel decodes (M-610; NFR-1/NFR-4; |
 | `mycelium_mlir::MemSource` | enum | `crates/mycelium-mlir/src/budget.rs:97` | Which kernel accounting figure the detected headroom came from. |
 | `mycelium_mlir::NativeArtifact` | struct | `crates/mycelium-mlir/src/deploy.rs:98` | The inspectable, content-addressed descriptor of one natively-compiled program — the unit a |
@@ -1033,9 +1033,9 @@
 | `mycelium_mlir::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:47` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
 | `mycelium_mlir::TryRecv` | enum | `crates/mycelium-mlir/src/channel.rs:138` | Why a [`Receiver::try_recv`] yielded no value. |
 | `mycelium_mlir::TrySend` | enum | `crates/mycelium-mlir/src/channel.rs:128` | Why a [`Sender::try_send`] could not complete *right now*. |
-| `mycelium_mlir::aot` | mod | `crates/mycelium-mlir/src/lib.rs:44` | — |
+| `mycelium_mlir::aot` | mod | `crates/mycelium-mlir/src/lib.rs:54` | — |
 | `mycelium_mlir::aot::run_core_with_budget` | fn | `crates/mycelium-mlir/src/aot.rs:171` | [`run_core`] with **both** budgets explicit (M-347): `fuel` bounds `Fix` unfolds (time), `max_depth` |
-| `mycelium_mlir::bitnet` | mod | `crates/mycelium-mlir/src/lib.rs:45` | — |
+| `mycelium_mlir::bitnet` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
 | `mycelium_mlir::bitnet::BitnetDotKernel::bind` | fn | `crates/mycelium-mlir/src/bitnet.rs:337` | **Bind once, call many** (M-682): resolve the entry point a single time into a lifetime-bound |
 | `mycelium_mlir::bitnet::BitnetDotKernel::call` | fn | `crates/mycelium-mlir/src/bitnet.rs:348` | Run the kernel over `packed_weights` and `activations`, summing the first `n` ternary products. |
 | `mycelium_mlir::bitnet::BitnetDotKernel::layout` | fn | `crates/mycelium-mlir/src/bitnet.rs:328` | The kernel's **inspectable physical-layout record** (M-610): the reified `Meta.physical` |
@@ -1046,9 +1046,9 @@
 | `mycelium_mlir::bitnet::KernelLayout::new` | fn | `crates/mycelium-mlir/src/bitnet.rs:66` | The layout for `scheme`. |
 | `mycelium_mlir::bitnet::KernelLayout::physical` | fn | `crates/mycelium-mlir/src/bitnet.rs:80` | The reified `Meta.physical` record — the [`PhysicalLayout`] that travels on a result's `Meta` |
 | `mycelium_mlir::bitnet::KernelLayout::scheme` | fn | `crates/mycelium-mlir/src/bitnet.rs:72` | The packing scheme. |
-| `mycelium_mlir::budget` | mod | `crates/mycelium-mlir/src/lib.rs:46` | — |
+| `mycelium_mlir::budget` | mod | `crates/mycelium-mlir/src/lib.rs:56` | — |
 | `mycelium_mlir::budget::DEFAULT_PER_FRAME_BYTES:` | const | `crates/mycelium-mlir/src/budget.rs:44` | Conservative per-frame heap estimate (bytes). |
-| `mycelium_mlir::channel` | mod | `crates/mycelium-mlir/src/lib.rs:47` | — |
+| `mycelium_mlir::channel` | mod | `crates/mycelium-mlir/src/lib.rs:57` | — |
 | `mycelium_mlir::channel::Network::channel` | fn | `crates/mycelium-mlir/src/channel.rs:98` | Create a typed SPSC channel on this network with explicit, finite capacity `cap` (no |
 | `mycelium_mlir::channel::Network::epoch` | fn | `crates/mycelium-mlir/src/channel.rs:91` | The number of successful channel sends + recvs across this network so far — monotone, |
 | `mycelium_mlir::channel::Network::new` | fn | `crates/mycelium-mlir/src/channel.rs:82` | A fresh network with its progress clock at zero. |
@@ -1059,11 +1059,11 @@
 | `mycelium_mlir::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:131` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::compile_bitnet_dot_simd_tl1` | fn | `crates/mycelium-mlir/src/simd.rs:248` | Compile the hand-vectorized TL1 BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:595` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
-| `mycelium_mlir::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:323` | Compile the bit/trit-subset program to a shared object without calling it. |
+| `mycelium_mlir::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:326` | Compile the bit/trit-subset program to a shared object without calling it. |
 | `mycelium_mlir::compile_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:168` | Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load |
 | `mycelium_mlir::cross_backend_gate` | fn | `crates/mycelium-mlir/src/vr4.rs:195` | Run the **VR-4 cross-backend gate** over `node`: for every backend, produce its dumpable lowering |
 | `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:64` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
-| `mycelium_mlir::deploy` | mod | `crates/mycelium-mlir/src/lib.rs:48` | — |
+| `mycelium_mlir::deploy` | mod | `crates/mycelium-mlir/src/lib.rs:58` | — |
 | `mycelium_mlir::deploy::NativeArtifact::build` | fn | `crates/mycelium-mlir/src/deploy.rs:128` | Build the native-artifact descriptor for `node`. |
 | `mycelium_mlir::deploy::NativeArtifact::explain` | fn | `crates/mycelium-mlir/src/deploy.rs:192` | A human-readable `EXPLAIN` of the deployable artifact: its content identity, the carried-IR |
 | `mycelium_mlir::deploy::NativeArtifact::faithfulness` | fn | `crates/mycelium-mlir/src/deploy.rs:175` | The honest faithfulness strength — `Empirical` (the differentials), never `Proven` (VR-5). |
@@ -1071,7 +1071,7 @@
 | `mycelium_mlir::deploy::NativeArtifact::lowered_ir` | fn | `crates/mycelium-mlir/src/deploy.rs:163` | The dumpable lowered LLVM IR carried into the deployment (VR-4 evidence). |
 | `mycelium_mlir::deploy::NativeArtifact::same_identity_as` | fn | `crates/mycelium-mlir/src/deploy.rs:184` | Whether two artifacts have the **same content-addressed identity** (ADR-003) — i.e. |
 | `mycelium_mlir::deploy::NativeArtifact::vr4` | fn | `crates/mycelium-mlir/src/deploy.rs:169` | The VR-4 cross-backend attestation travelling with the deployed unit (no opaque pass anywhere). |
-| `mycelium_mlir::dialect` | mod | `crates/mycelium-mlir/src/lib.rs:49` | — |
+| `mycelium_mlir::dialect` | mod | `crates/mycelium-mlir/src/lib.rs:59` | — |
 | `mycelium_mlir::emit` | fn | `crates/mycelium-mlir/src/dialect.rs:90` | Emit the textual `ternary`-dialect module for `node` (one op per lowered binding). |
 | `mycelium_mlir::emit_bitnet_dot_ir` | fn | `crates/mycelium-mlir/src/bitnet.rs:147` | Emit the textual LLVM IR for the **I2_S** packed-ternary dot kernel — the default scheme. |
 | `mycelium_mlir::emit_bitnet_dot_ir_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:159` | Emit the textual LLVM IR for the packed-ternary dot kernel |
@@ -1081,7 +1081,7 @@
 | `mycelium_mlir::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:1924` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
 | `mycelium_mlir::emit_reclamation_plan` | fn | `crates/mycelium-mlir/src/rc_plan.rs:120` | Build and emit the MEM-4 reclamation plan for `node`, returning the number of records emitted. |
 | `mycelium_mlir::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:57` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
-| `mycelium_mlir::inject` | mod | `crates/mycelium-mlir/src/lib.rs:50` | — |
+| `mycelium_mlir::inject` | mod | `crates/mycelium-mlir/src/lib.rs:60` | — |
 | `mycelium_mlir::inject::Image::call` | fn | `crates/mycelium-mlir/src/inject.rs:185` | Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction). |
 | `mycelium_mlir::inject::Image::define` | fn | `crates/mycelium-mlir/src/inject.rs:135` | Register a definition **interpret-only** under its content hash (RFC-0001 §4.6), returning the |
 | `mycelium_mlir::inject::Image::defined_count` | fn | `crates/mycelium-mlir/src/inject.rs:210` | The number of known (interpretable) definitions. |
@@ -1090,21 +1090,21 @@
 | `mycelium_mlir::inject::Image::is_injected` | fn | `crates/mycelium-mlir/src/inject.rs:197` | Whether a compiled (injected) entry exists for `hash`. |
 | `mycelium_mlir::inject::Image::new` | fn | `crates/mycelium-mlir/src/inject.rs:118` | An empty image with the default reference interpreter. |
 | `mycelium_mlir::inject::Image::with_interpreter` | fn | `crates/mycelium-mlir/src/inject.rs:125` | Build an image with a specific interpreter for the fallback path (e.g. |
-| `mycelium_mlir::jit` | mod | `crates/mycelium-mlir/src/lib.rs:51` | — |
-| `mycelium_mlir::jit::JitArtifact::call` | fn | `crates/mycelium-mlir/src/jit.rs:113` | Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact` |
-| `mycelium_mlir::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:347` | Compile the program to a shared object and call it once, in-process. |
+| `mycelium_mlir::jit` | mod | `crates/mycelium-mlir/src/lib.rs:61` | — |
+| `mycelium_mlir::jit::JitArtifact::call` | fn | `crates/mycelium-mlir/src/jit.rs:116` | Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact` |
+| `mycelium_mlir::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:350` | Compile the program to a shared object and call it once, in-process. |
 | `mycelium_mlir::jit_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:205` | Convenience: specialize on `weights`, compile, and run the dot product against `activations` once. |
 | `mycelium_mlir::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:445` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
 | `mycelium_mlir::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:451` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
-| `mycelium_mlir::llvm` | mod | `crates/mycelium-mlir/src/lib.rs:52` | — |
+| `mycelium_mlir::llvm` | mod | `crates/mycelium-mlir/src/lib.rs:62` | — |
 | `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/llvm.rs:2420` | Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}` |
 | `mycelium_mlir::llvm::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:2454` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
 | `mycelium_mlir::llvm::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:2480` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
-| `mycelium_mlir::pack` | mod | `crates/mycelium-mlir/src/lib.rs:53` | — |
+| `mycelium_mlir::pack` | mod | `crates/mycelium-mlir/src/lib.rs:64` | — |
 | `mycelium_mlir::pack::PackError` | enum | `crates/mycelium-mlir/src/pack.rs:47` | A packing-codec error. |
 | `mycelium_mlir::pack::needed_bytes` | fn | `crates/mycelium-mlir/src/pack.rs:96` | Bytes required to hold `count` trits under `scheme` — the buffer-bound model. |
 | `mycelium_mlir::pack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:201` | Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer). |
-| `mycelium_mlir::rc_plan` | mod | `crates/mycelium-mlir/src/lib.rs:55` | — |
+| `mycelium_mlir::rc_plan` | mod | `crates/mycelium-mlir/src/lib.rs:66` | — |
 | `mycelium_mlir::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:226` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
 | `mycelium_mlir::relayout_trits` | fn | `crates/mycelium-mlir/src/pack.rs:291` | Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as** |
 | `mycelium_mlir::run` | fn | `crates/mycelium-mlir/src/aot.rs:213` | Run a Core IR program through the AOT path to a representation [`Value`]. |
@@ -1114,9 +1114,9 @@
 | `mycelium_mlir::run_core_with_fuel` | fn | `crates/mycelium-mlir/src/aot.rs:156` | [`run_core`] with an explicit `Fix`-unfold (fuel) budget and the dynamically-resolved depth ceiling. |
 | `mycelium_mlir::run_with_layout` | fn | `crates/mycelium-mlir/src/aot.rs:547` | Run a Core IR program through the AOT path **with a schedule-staged packing layout** (M-251; |
 | `mycelium_mlir::run_with_reclamation` | fn | `crates/mycelium-mlir/src/rc_plan.rs:163` | Run a Core IR program through the AOT path **and** emit its MEM-4 reclamation plan additively. |
-| `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:56` | — |
-| `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:57` | — |
-| `mycelium_mlir::specialize` | mod | `crates/mycelium-mlir/src/lib.rs:58` | — |
+| `mycelium_mlir::runtime` | mod | `crates/mycelium-mlir/src/lib.rs:67` | — |
+| `mycelium_mlir::simd` | mod | `crates/mycelium-mlir/src/lib.rs:68` | — |
+| `mycelium_mlir::specialize` | mod | `crates/mycelium-mlir/src/lib.rs:69` | — |
 | `mycelium_mlir::specialize::BoundSpecializedDot` | struct | `crates/mycelium-mlir/src/specialize.rs:139` | A [`SpecializedDotKernel`] with its entry point resolved into a lifetime-bound `Sym` (M-682). |
 | `mycelium_mlir::specialize::SpecializedDotKernel::bind` | fn | `crates/mycelium-mlir/src/specialize.rs:119` | **Bind once, call many** (M-682): resolve the `myc_bitnet_dot_spec` entry point a single time |
 | `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/specialize.rs:130` | Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the |
@@ -1124,7 +1124,7 @@
 | `mycelium_mlir::specialize::SpecializedDotKernel::nonzero` | fn | `crates/mycelium-mlir/src/specialize.rs:111` | The number of nonzero (surviving) lanes — the straight-line `add`/`sub` count, exposed for |
 | `mycelium_mlir::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:135` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
 | `mycelium_mlir::unpack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:243` | Decode `count` trits from `bytes` under `scheme`. |
-| `mycelium_mlir::vr4` | mod | `crates/mycelium-mlir/src/lib.rs:59` | — |
+| `mycelium_mlir::vr4` | mod | `crates/mycelium-mlir/src/lib.rs:70` | — |
 | `mycelium_mlir::vr4::Backend::all` | fn | `crates/mycelium-mlir/src/vr4.rs:67` | All backends, in lowering order — the exhaustive set the VR-4 gate must cover. |
 | `mycelium_mlir::vr4::Backend::name` | fn | `crates/mycelium-mlir/src/vr4.rs:80` | A stable human-readable name (for `EXPLAIN` / reports). |
 | `mycelium_mlir::vr4::BackendStage::explain` | fn | `crates/mycelium-mlir/src/vr4.rs:127` | A short `EXPLAIN` line: backend, covered/skipped, the faithfulness tag, and the dump size / |
@@ -4651,9 +4651,9 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::inject::Resolution::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::inject::Resolution::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::inject::recompile_closure` | dedup-alias: same definition as `mycelium_mlir::recompile_closure` at crates/mycelium-mlir/src/inject.rs:226 — one canonical row kept |
-| `mycelium_mlir::jit::JitArtifact` | dedup-alias: same definition as `mycelium_mlir::JitArtifact` at crates/mycelium-mlir/src/jit.rs:103 — one canonical row kept |
-| `mycelium_mlir::jit::compile_so` | dedup-alias: same definition as `mycelium_mlir::compile_so` at crates/mycelium-mlir/src/jit.rs:323 — one canonical row kept |
-| `mycelium_mlir::jit::jit_run` | dedup-alias: same definition as `mycelium_mlir::jit_run` at crates/mycelium-mlir/src/jit.rs:347 — one canonical row kept |
+| `mycelium_mlir::jit::JitArtifact` | dedup-alias: same definition as `mycelium_mlir::JitArtifact` at crates/mycelium-mlir/src/jit.rs:106 — one canonical row kept |
+| `mycelium_mlir::jit::compile_so` | dedup-alias: same definition as `mycelium_mlir::compile_so` at crates/mycelium-mlir/src/jit.rs:326 — one canonical row kept |
+| `mycelium_mlir::jit::jit_run` | dedup-alias: same definition as `mycelium_mlir::jit_run` at crates/mycelium-mlir/src/jit.rs:350 — one canonical row kept |
 | `mycelium_mlir::llvm::AotError` | dedup-alias: same definition as `mycelium_mlir::AotError` at crates/mycelium-mlir/src/llvm.rs:60 — one canonical row kept |
 | `mycelium_mlir::llvm::AotError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::llvm::AotError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |

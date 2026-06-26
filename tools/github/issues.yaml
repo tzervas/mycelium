@@ -4517,6 +4517,13 @@ issues:
       - src:crates/mycelium-l1/tests/std_fmt.rs
       - src:lib/std/fmt.myc
     body: |
+      WAVE-N2-P3 (2026-06-26): slicing DoD clause MET -- bytes_slice/bytes_concat SURFACED (M-799/DN-43);
+      FLAG-text-3 CLOSED. CORRECTION (VR-5): the p2 note below saying these "need their own surface prim"
+      was a MISDIAGNOSIS -- the kernel prims existed + were never-silent since M-750; only the surface
+      mapping (prim_kernel_name) was missing. text.myc now has slice/slice_opt/concat; out-of-range +
+      inverted slice refuse on all 3 paths. M-717 now meets ENCODING + SLICING; the only remainder is the
+      UTF-8 VALIDITY layer (overlong/surrogate/>U+10FFFF) -- a flagged increment.
+
       WAVE-N2-P2 (2026-06-26): multi-byte UTF-8 decode COMPLETE -- byte_at + decode_one now decode
       1/2/3/4-byte sequences three-way (via the width_cast prim, M-798); never-silent Err(Invalid(byte))
       on malformed lead/continuation (no U+FFFD). FLAG-text-1 (byte_at) + FLAG-text-2 (Binary{32}
@@ -4865,6 +4872,11 @@ issues:
       - src:crates/mycelium-mlir/src/jit.rs
       - corpus:DN-25
     body: |
+      IMPLEMENTED (2026-06-26, waveN2-p3): JIT exposed as a named ExecMode (Interpreter/Aot/Jit) with NO
+      Default/Auto/fallback arm -- reachable only by naming ExecMode::Jit (never-silently-selected, G2;
+      out-of-subset/toolchain-absent are explicit ModeError). Differential RAN: JIT==interp over the subset
+      + explicit-refusal-no-fallback. src/mode.rs. Empirical. Status stays ready until landed.
+
       FORMALIZE the in-process dlopen JIT (already implemented under M-340 in
       crates/mycelium-mlir/src/jit.rs; E6-1 `done`) as a first-class, never-silently-selected
       execution mode for dynamic VSA/HDC workloads. This is hardening, NOT a deferral lift:
@@ -4906,6 +4918,11 @@ issues:
       - src:crates/mycelium-mlir/src/lib.rs
       - corpus:DN-25
     body: |
+      IMPLEMENTED (2026-06-26, waveN2-p3): BitNet accel behind the bitnet-accel feature + runtime
+      BitnetCapability::detect(); absent => EXPLICIT recorded graceful degradation (AccelOutcome/DegradeReason,
+      EXPLAIN-able, never a silent slow path, G2). Differential RAN both branches: accel == reference.
+      src/accel.rs. Empirical. Status stays ready until landed.
+
       Implement BitNet-class packed-ternary acceleration (FR-C3) in crates/mycelium-mlir/.
       The acceleration must be: (1) behind an explicit capability flag -- never silently engaged
       on hardware that supports it; (2) correct -- the accelerated result must equal the
@@ -4943,6 +4960,11 @@ issues:
       - src:crates/mycelium-mlir/src/lib.rs
       - corpus:DN-25
     body: |
+      IMPLEMENTED (2026-06-26, waveN2-p3): unified interp == AOT == JIT three-way differential via the
+      shared M-210 ObservationalEquiv checker, mutant-WITNESSED (a codegen divergence is rejected by the
+      checker -- a witness test, not a mutants.toml edit; RFC-0029 §7.5). Differential RAN (toolchain present).
+      Empirical. Status stays ready until landed.
+
       Integration and durability gate for E15-1: verify the three-way differential agreement
       (interpreter == AOT == JIT) is mutant-witnessed -- meaning the test suite detectably
       catches a codegen divergence injected by cargo-mutants or cargo-fuzz. This is the closure
@@ -6346,3 +6368,26 @@ issues:
       - Widen Exact (lossless); narrow never-silent Overflow when high bits set (G2).
       - Three-way differential green incl. narrow-overflow refusal on all paths.
       - DN-41 ratified (Proposed -> Accepted); just check green.
+
+  - id: M-799
+    title: "M-799 -- surface bytes_slice/bytes_concat to .myc (close FLAG-text-3) [DN-43]"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:done]
+    epic: E13-1
+    depends_on: [M-750, M-717]
+    doc_refs:
+      - corpus:RFC-0032
+      - src:lib/std/text.myc
+      - src:crates/mycelium-l1/tests/std_bytes_slice.rs
+    body: |
+      DONE (2026-06-26, waveN2-p3; DN-43 Proposed -- maintainer ratifies -> Accepted). Surfaced the
+      already-landed never-silent kernel prims bytes.slice/bytes.concat (M-750) to the .myc surface as
+      bytes_slice(b,start,end)/bytes_concat(b1,b2) via prim_kernel_name (checkty.rs). text.myc gains
+      slice/slice_opt(->Option)/concat. Out-of-range or inverted slice => explicit refusal on all three
+      paths (G2, never a silent clamp). 11 three-way differential tests. This CLOSES FLAG-text-3 and
+      corrects the wave-n1 misdiagnosis (it was a surfacing gap, not a missing prim). No prims.rs change.
+
+      Definition of Done:
+      - bytes_slice/bytes_concat surface-callable + width/type-checked in mycelium-l1.
+      - Never-silent out-of-range/inverted slice (refusal on all paths, G2).
+      - Three-way differential green; FLAG-text-3 closed.
