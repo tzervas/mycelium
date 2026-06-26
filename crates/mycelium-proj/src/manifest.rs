@@ -89,8 +89,11 @@ pub struct Dependency {
     pub phylum: String,
     /// `version` — a human version requirement (e.g. `"^2"`), checked against the pinned hash's version.
     pub version: Option<String>,
-    /// `hash` — the content-addressed pin (`blake3:…`); authoritative (ADR-003).
-    pub hash: Option<String>,
+    /// `hash` — the content-addressed pin (`blake3:…`); authoritative (ADR-003). **Parsed, not
+    /// free-text** (DN-40 A3): a `ContentHash` is well-formed by construction (`Exact`), so a
+    /// malformed pin is rejected at manifest-build time (an explicit `ManifestError`, never silent —
+    /// G2) and can never flow downstream into a spore's identity edge.
+    pub hash: Option<mycelium_core::ContentHash>,
 }
 
 /// The typed `[spore]` table (M-368): how the project publishes as a deployable (ADR-013). v0 closed key
@@ -329,7 +332,11 @@ fn build_dependencies(kv: Vec<(String, Val, u32)>) -> Result<Vec<Dependency>, Ma
             match k.as_str() {
                 "phylum" => phylum = Some(as_str(v, "phylum", line)?),
                 "version" => version = Some(as_str(v, "version", line)?),
-                "hash" => hash = Some(as_str(v, "hash", line)?),
+                // Parse-don't-validate at the boundary that owns the input (DN-40 A3): the dependency
+                // hash is the identity-bearing edge of a spore (ADR-003), so it is parsed into a typed
+                // `ContentHash` here — a malformed pin is an explicit error (never-silent, G2), and a
+                // well-formed `ContentHash` is `Exact` by construction.
+                "hash" => hash = Some(as_content_hash(v, &name, line)?),
                 _ => unreachable!("key membership checked above"),
             }
         }
@@ -457,6 +464,45 @@ fn as_str(val: &Val, key: &str, line: u32) -> Result<String, ManifestError> {
             message: format!("`{key}` must be a string"),
         }),
     }
+}
+
+/// Parse a dependency `hash` into a typed [`mycelium_core::ContentHash`] (DN-40 A3 — parse,
+/// don't validate). The value must be a string and a well-formed content address (`<algo>:<digest>`,
+/// `ContentHash::parse`); for the kernel's fixed algorithm (`blake3`, M-103) the digest must
+/// additionally be a real digest — exactly **64 lowercase hex** (what `blake3::hash().to_hex()`
+/// emits), so a shape-valid-but-bogus stub like `"blake3:abc"` is rejected, not just `"blake3:"`.
+/// A malformed pin is an **explicit** `ManifestError` naming the offending dependency and the bad
+/// value (never silent — G2); a well-formed address is `Exact` by construction.
+fn as_content_hash(
+    val: &Val,
+    dep_name: &str,
+    line: u32,
+) -> Result<mycelium_core::ContentHash, ManifestError> {
+    let s = as_str(val, "hash", line)?;
+    let malformed = |detail: &str| ManifestError {
+        line,
+        message: format!(
+            "dependency `{dep_name}` has a malformed content-address `hash` {s:?} — {detail}; the \
+             pin is identity-bearing (ADR-003) and is checked, never accepted as free text \
+             (DN-40 A3 / G2)"
+        ),
+    };
+    // Shape: `<algo>:<digest>` with the address charset (`ContentHash::parse`).
+    let h = mycelium_core::ContentHash::parse(&s)
+        .ok_or_else(|| malformed("expected `<algo>:<digest>` (e.g. `blake3:<64-hex>`)"))?;
+    // Algorithm-specific digest check: a blake3 digest is exactly 64 lowercase hex (M-103). This is
+    // what makes a shaped-but-bogus stub like `blake3:abc` an error rather than a silent accept.
+    if h.algo() == "blake3" {
+        let d = h.digest();
+        let is_lower_hex = |b: u8| b.is_ascii_digit() || (b'a'..=b'f').contains(&b);
+        let is_blake3_digest = d.len() == 64 && d.bytes().all(is_lower_hex);
+        if !is_blake3_digest {
+            return Err(malformed(
+                "a `blake3` digest must be exactly 64 lowercase hex characters (M-103)",
+            ));
+        }
+    }
+    Ok(h)
 }
 
 fn checked_str(

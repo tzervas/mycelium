@@ -135,19 +135,25 @@ fn a_project_with_no_sources_is_refused() {
 
 #[test]
 fn a_resolved_dependency_is_pinned_and_explained() {
-    let m = "[project]\nname=\"x\"\nkind=\"phylum\"\n[surface]\nexports=[\"a\"]\n\
-             [dependencies]\nnumerics={ phylum=\"numerics\", version=\"^2\", hash=\"blake3:abc\" }\n";
+    // A real (64-hex) blake3 pin — the manifest reader now parses the dependency hash into a typed
+    // `ContentHash` and rejects a bogus stub like `blake3:abc` (DN-40 A3), so the fixture uses a
+    // well-formed digest.
+    const PIN: &str = "blake3:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    let m = format!(
+        "[project]\nname=\"x\"\nkind=\"phylum\"\n[surface]\nexports=[\"a\"]\n\
+         [dependencies]\nnumerics={{ phylum=\"numerics\", version=\"^2\", hash=\"{PIN}\" }}\n"
+    );
     let dir = scratch(
         "dep",
-        m,
+        &m,
         &[("a.myc", "nodule a\nfn f() -> Binary{8} = 0b0\n")],
     );
-    let s = build_spore(&manifest_from(m), &dir).expect("builds");
+    let s = build_spore(&manifest_from(&m), &dir).expect("builds");
     assert_eq!(s.deps.len(), 1);
-    assert_eq!(s.deps[0].hash, "blake3:abc");
+    assert_eq!(s.deps[0].hash, PIN);
     let ex = explain(&s);
     assert!(ex.contains("not identity — ADR-003"), "{ex}");
-    assert!(ex.contains("numerics → numerics blake3:abc"), "{ex}");
+    assert!(ex.contains(&format!("numerics → numerics {PIN}")), "{ex}");
 }
 
 // ─── M-789 / RFC-0034 §8: spore identity is independent of CertMode ──────────
