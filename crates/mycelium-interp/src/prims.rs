@@ -68,9 +68,10 @@ impl PrimRegistry {
     /// `bit.not/and/or/xor`), fixed-width balanced-ternary arithmetic (`trit.neg/add/sub/mul`,
     /// M-111), the reduce-to-`Bool` comparison prims (`cmp.eq`/`cmp.lt` → `Binary{1}`, RFC-0032 D1,
     /// M-747), never-silent fixed-width binary arithmetic (`bit.add`/`bit.sub`, RFC-0032 D2,
-    /// M-748), never-silent indexed-sequence access (`seq.len`/`seq.get`, RFC-0032 D3, M-749), and
-    /// never-silent byte-string access (`bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat`,
-    /// RFC-0032 D4, M-750).
+    /// M-748), the never-silent `Binary` width-cast (`bit.width_cast` — zero-extend widen / checked
+    /// narrow, DN-41, M-798), never-silent indexed-sequence access (`seq.len`/`seq.get`, RFC-0032 D3,
+    /// M-749), and never-silent byte-string access
+    /// (`bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat`, RFC-0032 D4, M-750).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -89,6 +90,8 @@ impl PrimRegistry {
         // RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic over `Binary{N}`.
         r.register("bit.add", prim_bit_add);
         r.register("bit.sub", prim_bit_sub);
+        // DN-41 (M-798): never-silent width-cast (zero-extend widen / checked narrow) over `Binary`.
+        r.register("bit.width_cast", prim_width_cast);
         // RFC-0032 D3 (M-749): never-silent indexed-sequence access over `Repr::Seq`.
         r.register("seq.len", prim_seq_len);
         r.register("seq.get", prim_seq_get);
@@ -488,6 +491,69 @@ fn prim_bit_add(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
 /// `bit.sub : (Binary{N}, Binary{N}) → Binary{N}` — never-silent unsigned subtraction (RFC-0032 D2).
 fn prim_bit_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     bin_arith(prim, args, true)
+}
+
+// --- DN-41 (M-798): never-silent `Binary` width-cast -------------------------------------------
+//
+// `bit.width_cast(value: Binary{N}, into: Binary{M}) -> Binary{M}` re-widths an unsigned `Binary`
+// value (MSB-first). Because `Binary` is **sign-free** (ADR-028), a re-width is purely a matter of
+// the unsigned magnitude:
+//   - **Widen** (`M > N`): **zero-extension** — pad `M − N` zero bits on the MSB side. Exact, total,
+//     lossless (the unsigned value is unchanged); the guarantee is `Exact`.
+//   - **Identity** (`M == N`): a copy. Exact.
+//   - **Narrow** (`M < N`): the value fits `Binary{M}` **iff** every dropped high bit (the top
+//     `N − M`) is zero. A fitting narrow is exact and lossless; a value that does **not** fit is a
+//     never-silent [`EvalError::Overflow`] — never a silent truncation (G2/VR-5), exactly mirroring
+//     the `bit.add`/`bit.sub` out-of-range contract.
+// **Width witness, not a value operand.** The target width `M` is carried by the *second* operand's
+// **width** (`into.repr()` = `Binary{M}`); its *bits are unused*. This threads `M` to the kernel
+// through the existing surface→kernel dispatch (`prim_kernel_name`) with no result-type plumbing —
+// the motivating call `lt(width_cast(idx8, len32), len32)` reuses the very `Binary{32}` length it is
+// about to compare against as the width witness (M-717: widen a `Binary{8}` byte index to compare it
+// against a `Binary{32}` `bytes_len`). The result inherits the *first* operand's guarantee/bound by
+// the standard `compose_result` threading (an approximate value is refused — width-cast has no
+// defined ε-rule; G2). A non-`Binary` operand on either side is an explicit type refusal.
+
+/// `bit.width_cast : (Binary{N}, Binary{M}) → Binary{M}` — never-silent unsigned width-cast (DN-41).
+/// The second operand is a **width witness** (only its `Binary{M}` width is read; its bits are
+/// ignored). Widening (`M > N`) zero-extends (Exact); narrowing (`M < N`) refuses with
+/// [`EvalError::Overflow`] when the value does not fit `M` bits — never a silent truncation (G2).
+fn prim_width_cast(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let value = as_bits(prim, args[0])?;
+    let witness = as_bits(prim, args[1])?;
+    let n = value.len();
+    let m = witness.len();
+    let out: Vec<bool> = if m >= n {
+        // Widen (or identity): zero-extend on the MSB side. `Binary` is sign-free (ADR-028), so the
+        // pad bits are always zero; the unsigned magnitude is preserved exactly.
+        let mut bits = vec![false; m - n];
+        bits.extend_from_slice(value);
+        bits
+    } else {
+        // Narrow: the value fits `Binary{M}` iff the dropped high `N − M` bits are all zero. A set
+        // high bit means the magnitude exceeds `2^M − 1`, so the narrow would lose information — an
+        // explicit never-silent refusal, never a silent truncation (G2/VR-5).
+        let (dropped, kept) = value.split_at(n - m);
+        if dropped.iter().any(|&b| b) {
+            return Err(EvalError::Overflow {
+                prim: prim.to_owned(),
+            });
+        }
+        kept.to_vec()
+    };
+    // Thread the result off the **value** operand only (the witness contributes its width, not its
+    // value/guarantee): compose over `[value]` so the result inherits the value's guarantee/bound
+    // (an approximate value is refused — width-cast has no defined ε-propagation rule; G2). The
+    // result `Repr` is the witness's own `Binary{M}` (cloned, never reconstructed from a `usize`
+    // cast) — its width is `M` by construction, so the output width matches the produced bits.
+    compose_result(
+        prim,
+        &args[..1],
+        args[1].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
 }
 
 // --- RFC-0032 D3 (M-749): indexed-sequence primitives ------------------------------------------

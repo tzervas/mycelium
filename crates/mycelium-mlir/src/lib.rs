@@ -40,7 +40,17 @@
 //!   atomicity hazard); the recompile set is the changed dependency-closure by hash reachability
 //!   ([`inject::recompile_closure`]). The injected-compiled path is M-210-checked against the
 //!   interpreter (NFR-7).
+//! - [`mode::run`] — the **explicit, never-silently-selected execution-mode** dispatcher (M-727;
+//!   RFC-0029 §7.3): one named [`mode::ExecMode`] (`Interpreter`/`Aot`/`Jit`) per call, no default
+//!   and no fallback arm, so the JIT is reachable *only* by naming it (G2). interp ≡ AOT ≡ JIT over
+//!   the subset is the M-729 three-way differential (`tests/threeway_codegen_differential.rs`).
+//! - [`accel::accelerated_ternary_dot`] — the **BitNet packed-ternary acceleration behind an explicit
+//!   capability flag** (M-728; FR-C3; RFC-0029 §7.4): engaged iff the `bitnet-accel` feature is ON
+//!   *and* the runtime capability ([`accel::BitnetCapability`]) is present; otherwise an **explicit,
+//!   recorded** graceful degradation to [`bitnet::ternary_dot_ref`] (the [`accel::AccelOutcome`]
+//!   carries which path ran + an `EXPLAIN`-able reason — never a silent slow path, G2).
 
+pub mod accel;
 pub mod aot;
 pub mod bitnet;
 pub mod budget;
@@ -50,13 +60,19 @@ pub mod dialect;
 pub mod inject;
 pub mod jit;
 pub mod llvm;
+pub mod mode;
 pub mod pack;
+pub mod passes;
 pub mod rc_plan;
 pub mod runtime;
 pub mod simd;
 pub mod specialize;
 pub mod vr4;
 
+pub use accel::{
+    accelerated_ternary_dot, AccelOutcome, BitnetCapability, DegradeReason, Path as AccelPath,
+    ACCEL_FEATURE_ENABLED,
+};
 pub use aot::{
     default_depth_budget, run, run_core, run_core_with_effects, run_core_with_fuel, run_with_layout,
 };
@@ -79,6 +95,7 @@ pub use dialect::native::{
 pub use inject::{recompile_closure, Image, InjectError, Resolution};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
+pub use mode::{run as run_mode, ExecMode, ModeError};
 pub use pack::{needed_bytes as needed_bytes_for, pack_trits, relayout_trits, unpack_trits};
 pub use rc_plan::{emit_reclamation_plan, run_with_reclamation, RcPlanError, RcRun};
 pub use runtime::{

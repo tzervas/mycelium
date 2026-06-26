@@ -12,19 +12,27 @@
 //! emits a never-silent `Residual` (G2).
 //!
 //! # Honesty tags
-//! - **`Exact`** — `byte_len` (delegates to `bytes_len`), `is_ascii_byte` (total via `lt`+match).
-//! - **`Declared`** — `decode_ascii` (type-level contract; never-silent by construction).
+//! - **`Exact`** — `byte_len` (delegates to `bytes_len`), `is_ascii_byte`/`is_cont_byte` (total via
+//!   `lt`+match), the `width_cast`/`lt`/`and`/`or`/`add_bin` bit ops the decode is assembled from.
+//! - **`Declared`** — `byte_at` (Option bounds-check contract), `decode_ascii`/`decode_one`
+//!   (never-silent type-level contracts; structural composition of Exact parts, not machine-proven).
 //! - **`Empirical`** — the three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT),
 //!   validated by trial on the programs below; not a machine-checked proof.
 //!
 //! # Scope / FLAGs (honest boundary — VR-5)
-//! - FLAG-text-1: `byte_at` (Option-returning bounds-checked access) not yet implemented —
-//!   `bytes_len` returns `Binary{32}`, index is `Binary{8}`, `lt` is width-typed; no surface
-//!   zero-extension prim available to perform the comparison.
-//! - FLAG-text-2: `decode_one` returning `Binary{32}` codepoints deferred — same zero-extension
-//!   blocker; `decode_ascii` returns `Binary{8}` (valid for U+0000–U+007F only).
-//! - FLAG-text-3: byte-cons slice/concat ops deferred — `bytes_slice`/`bytes_concat` are not
-//!   surface-callable; the `Bytes8` type is declared but slice/concat await a future prim surface.
+//! - FLAG-text-1: **CLOSED** (DN-41 / M-798). `byte_at` is now an Option-returning bounds-checked
+//!   access via `lt(width_cast(i, bytes_len(b)), bytes_len(b))` — the `width_cast` widen bridges the
+//!   `Binary{8}` index to the `Binary{32}` length, the gap wave-n1 flagged.
+//! - FLAG-text-2: **CLOSED** (DN-41 / M-798). `decode_one` returns the full `Binary{32}` codepoint
+//!   (1/2/3/4-byte UTF-8); `width_cast` lifts the masked payloads, shifts are repeated `add_bin`
+//!   doublings (no shift prim). `decode_ascii` is retained as the `Binary{8}` 1-byte fast path.
+//!   (NOT yet rejected, honestly: overlong forms, surrogates, codepoints > U+10FFFF — a further
+//!   increment; structural malformations DO surface never-silent.)
+//! - FLAG-text-3: **CLOSED** (DN-43 / M-799). `bytes_slice`/`bytes_concat` are now surface-callable
+//!   over the kernel `Bytes` (`text.myc`'s `slice`/`concat` delegate to them); three-way coverage
+//!   lives in `std_bytes_slice.rs`. The `Bytes8` cons-list type is now superseded (kept declared for
+//!   append-only minimalism). `decode_one` still returns a `Pair(codepoint, byte_width)` (the caller
+//!   advances by the width) — that is a decode convention, independent of slice availability.
 //!
 //! # Anchor
 //! Expected values are hand-computed and verified three-way (L1≡L0≡AOT). The Rust crate
@@ -279,4 +287,231 @@ fn decode_ascii_err_on_continuation_byte() {
         "{DECODE_REF_PREAMBLE}fn main() -> Result<Binary{{8}}, Utf8Error> = Err(Invalid(bytes_get(0x80_bf, 0b0000_0000)))"
     );
     assert_three_way("decode_ascii(0x80-continuation)=Err", &src, &expected);
+}
+
+// ── byte_at (FLAG-text-1 closed by DN-41 width_cast) ────────────────────────────────────────────────
+//
+// `byte_at(b, i)` bounds-checks the `Binary{8}` index `i` against the `Binary{32}` `bytes_len(b)` via
+// `lt(width_cast(i, bytes_len(b)), bytes_len(b))` — the exact DN-41/M-798 pattern. In range yields
+// `Some(byte)`; out of range yields `None` (never-silent, G2). Reference programs reuse `bytes_get`
+// (in range) so the wrapped value shares `Derived` provenance with the computed result; `None` is a
+// nullary constructor (no provenance to match). Both are pinned to `Option<Binary{8}>`.
+
+/// `byte_at(0x41_42_43, 0b0000_0001)` → `Some(bytes_get(…, 1))` (= Some(0x42='B'); Declared/Empirical).
+/// Index 1 of [0x41, 0x42, 0x43] is in range (1 < 3) → Some. Grounding: hand-computed, three-way verified.
+#[test]
+fn byte_at_some_in_range() {
+    let driver = "fn main() -> Option<Binary{8}> = byte_at(0x41_42_43, 0b0000_0001)";
+    let src = program(driver);
+    // Reference: Some(bytes_get(…, 1)) — Derived provenance to match the computed in-range byte.
+    let expected =
+        program("fn main() -> Option<Binary{8}> = Some(bytes_get(0x41_42_43, 0b0000_0001))");
+    assert_three_way("byte_at(ABC, 1)=Some(B)", &src, &expected);
+}
+
+/// `byte_at(0x41_42_43, 0b0000_0000)` → `Some(bytes_get(…, 0))` (= Some(0x41='A')) — boundary index 0.
+#[test]
+fn byte_at_some_at_zero() {
+    let driver = "fn main() -> Option<Binary{8}> = byte_at(0x41_42_43, 0b0000_0000)";
+    let src = program(driver);
+    let expected =
+        program("fn main() -> Option<Binary{8}> = Some(bytes_get(0x41_42_43, 0b0000_0000))");
+    assert_three_way("byte_at(ABC, 0)=Some(A)", &src, &expected);
+}
+
+/// `byte_at(0x41_42_43, 0b0000_0011)` → `None` — index 3 is out of range (3 is NOT < 3); never-silent.
+/// The out-of-range index is an explicit `None`, never a kernel refusal and never a silent wrap (G2).
+/// Grounding: hand-computed (len 3, index 3 past end), three-way verified.
+#[test]
+fn byte_at_none_out_of_range() {
+    let driver = "fn main() -> Option<Binary{8}> = byte_at(0x41_42_43, 0b0000_0011)";
+    let src = program(driver);
+    let expected = program("fn main() -> Option<Binary{8}> = None");
+    assert_three_way("byte_at(ABC, 3)=None (oob)", &src, &expected);
+}
+
+/// `byte_at(0x41_42_43, 0b1111_1111)` → `None` — index 255 (far past end) is out of range; never-silent.
+#[test]
+fn byte_at_none_far_out_of_range() {
+    let driver = "fn main() -> Option<Binary{8}> = byte_at(0x41_42_43, 0b1111_1111)";
+    let src = program(driver);
+    let expected = program("fn main() -> Option<Binary{8}> = None");
+    assert_three_way("byte_at(ABC, 255)=None (oob)", &src, &expected);
+}
+
+// ── decode_one — full multi-byte UTF-8 decode (FLAG-text-2 closed by DN-41 width_cast) ──────────────
+//
+// `decode_one(b, i)` returns `Ok(Pr(codepoint : Binary{32}, byte_width : Binary{8}))` for the UTF-8
+// sequence starting at `i`, or `Err(Invalid(byte))` on any structural malformation (never-silent, G2).
+// The codepoint is the full `Binary{32}` Unicode scalar (FLAG-text-2 was the `Binary{8}` cap; the
+// `width_cast` widen lifts it). Reference programs **recompute** the codepoint via the same nodule
+// helper expressions (`shl6`/`widen8`/`cont_payload`/`or` etc.) so the computed value shares its
+// `Derived` provenance with the reference — a literal codepoint would have `Root` provenance and would
+// not compare equal (Meta carries provenance). All expected values are hand-computed and cross-checked
+// against Python's UTF-8 decoder (é=233, €=8364, 😀=128512).
+
+/// `decode_one(0x41_42_43, 0b0000_0000)` → `Ok(Pr(widen8('A'), 1))` — 1-byte ASCII path.
+/// 0x41='A' < 0x80 → 1-byte; codepoint = widen8(0x41) = 65, width 1. Declared/Empirical.
+#[test]
+fn decode_one_ascii_one_byte() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0x41_42_43, 0b0000_0000)";
+    let src = program(driver);
+    // Reference: recompute via the same `widen8(bytes_get(…))` so the Binary{32} codepoint shares
+    // Derived provenance with decode_one's `widen8(lead)`.
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Ok(Pr(widen8(bytes_get(0x41_42_43, 0b0000_0000)), 0b0000_0001))",
+    );
+    assert_three_way("decode_one(A)=Ok(Pr(65,1))", &src, &expected);
+}
+
+/// `decode_one(0xc3_a9, 0b0000_0000)` → `Ok(Pr(233, 2))` — 2-byte path (é = U+00E9).
+/// Lead 0xC3 ∈ 0xC0..0xDF → 2-byte; cont 0xA9 is valid (0x80..0xBF). cp = (0xC3 & 0x1F)<<6 | (0xA9 &
+/// 0x3F) = 3<<6 | 41 = 192+41 = 233 = U+00E9. Hand-computed + Python-verified. Declared/Empirical.
+#[test]
+fn decode_one_two_byte_e_acute() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xc3_a9, 0b0000_0000)";
+    let src = program(driver);
+    // Reference: recompute the codepoint with the same assembly `decode_two` uses (matching provenance).
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(shl6(widen8(and(bytes_get(0xc3_a9, 0b0000_0000), 0b0001_1111))), cont_payload(bytes_get(0xc3_a9, 0b0000_0001))), 0b0000_0010))",
+    );
+    assert_three_way("decode_one(é)=Ok(Pr(233,2))", &src, &expected);
+}
+
+/// `decode_one(0xe2_82_ac, 0b0000_0000)` → `Ok(Pr(8364, 3))` — 3-byte path (€ = U+20AC).
+/// Lead 0xE2 ∈ 0xE0..0xEF → 3-byte; conts 0x82, 0xAC valid. cp = (0xE2 & 0x0F)<<12 | (0x82 & 0x3F)<<6
+/// | (0xAC & 0x3F) = 2<<12 | 2<<6 | 44 = 8192+128+44 = 8364 = U+20AC. Hand-computed + Python-verified.
+#[test]
+fn decode_one_three_byte_euro() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xe2_82_ac, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xe2_82_ac, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xe2_82_ac, 0b0000_0001)))), cont_payload(bytes_get(0xe2_82_ac, 0b0000_0010))), 0b0000_0011))",
+    );
+    assert_three_way("decode_one(€)=Ok(Pr(8364,3))", &src, &expected);
+}
+
+/// `decode_one(0xf0_9f_98_80, 0b0000_0000)` → `Ok(Pr(128512, 4))` — 4-byte path (😀 = U+1F600).
+/// Lead 0xF0 ∈ 0xF0..0xF7 → 4-byte; conts 0x9F, 0x98, 0x80 valid. cp = (0xF0 & 0x07)<<18 | (0x9F &
+/// 0x3F)<<12 | (0x98 & 0x3F)<<6 | (0x80 & 0x3F) = 0 | 31<<12 | 24<<6 | 0 = 126976+1536 = 128512 =
+/// U+1F600. Hand-computed + Python-verified. Declared/Empirical.
+#[test]
+fn decode_one_four_byte_emoji() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xf0_9f_98_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(or(or(shl18(widen8(and(bytes_get(0xf0_9f_98_80, 0b0000_0000), 0b0000_0111))), shl12(cont_payload(bytes_get(0xf0_9f_98_80, 0b0000_0001)))), shl6(cont_payload(bytes_get(0xf0_9f_98_80, 0b0000_0010)))), cont_payload(bytes_get(0xf0_9f_98_80, 0b0000_0011))), 0b0000_0100))",
+    );
+    assert_three_way("decode_one(😀)=Ok(Pr(128512,4))", &src, &expected);
+}
+
+// ── decode_one — never-silent malformations (G2) on all three lead paths ────────────────────────────
+//
+// Each malformed input produces `Err(Invalid(byte))` carrying the offending byte — never a U+FFFD
+// substitution, never a silent truncation/wrap. The reference reuses `bytes_get` so the offending byte
+// shares `Derived` provenance.
+
+/// `decode_one(0x80_41, 0b0000_0000)` → `Err(Invalid(0x80))` — a bare continuation byte cannot lead.
+/// 0x80 ∈ 0x80..0xBF (lt 0xC0 but not lt 0x80) → the "continuation as lead" Err arm; never-silent.
+#[test]
+fn decode_one_err_bare_continuation_lead() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0x80_41, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Invalid(bytes_get(0x80_41, 0b0000_0000)))",
+    );
+    assert_three_way("decode_one(0x80 lead)=Err(Invalid(0x80))", &src, &expected);
+}
+
+/// `decode_one(0xc3_41, 0b0000_0000)` → `Err(Invalid(0x41))` — 2-byte lead but the continuation slot
+/// holds 0x41 ('A'), which is NOT a continuation byte (0x41 < 0x80). Never-silent: the offending
+/// continuation byte is reported, never a half-decoded codepoint.
+#[test]
+fn decode_one_err_bad_continuation_two_byte() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xc3_41, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Invalid(bytes_get(0xc3_41, 0b0000_0001)))",
+    );
+    assert_three_way("decode_one(0xC3 0x41)=Err(Invalid(0x41))", &src, &expected);
+}
+
+/// `decode_one(0xc3, 0b0000_0000)` → `Err(Invalid(0xC3))` — a truncated 2-byte sequence (the
+/// continuation byte at index 1 is past the 1-byte input). `byte_at(b, 1)` is `None` → the lead byte
+/// is reported. Never-silent: a missing continuation is an explicit Err, never a kernel OOB refusal.
+#[test]
+fn decode_one_err_truncated_two_byte() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xc3, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Invalid(bytes_get(0xc3, 0b0000_0000)))",
+    );
+    assert_three_way(
+        "decode_one(0xC3 truncated)=Err(Invalid(0xC3))",
+        &src,
+        &expected,
+    );
+}
+
+/// `decode_one(0xe2_82, 0b0000_0000)` → `Err(Invalid(0x82))` — a 3-byte lead truncated after the first
+/// continuation (the second continuation at index 2 is past the 2-byte input). `byte_at(b, 2)` is
+/// `None` → the last-seen continuation 0x82 is reported. Never-silent on the 3-byte truncation path.
+#[test]
+fn decode_one_err_truncated_three_byte() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xe2_82, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Invalid(bytes_get(0xe2_82, 0b0000_0001)))",
+    );
+    assert_three_way(
+        "decode_one(0xE2 0x82 truncated)=Err(Invalid(0x82))",
+        &src,
+        &expected,
+    );
+}
+
+/// `decode_one(0xf8_80_80_80, 0b0000_0000)` → `Err(Invalid(0xF8))` — 0xF8 is not a valid UTF-8 lead
+/// (no 5+-byte form exists). The lead is in none of the 1/2/3/4-byte ranges → the final Err arm;
+/// never-silent (G2): the invalid lead is reported, never decoded as a phantom 5-byte sequence.
+#[test]
+fn decode_one_err_invalid_high_lead() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xf8_80_80_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Invalid(bytes_get(0xf8_80_80_80, 0b0000_0000)))",
+    );
+    assert_three_way("decode_one(0xF8 lead)=Err(Invalid(0xF8))", &src, &expected);
+}
+
+/// `decode_one(0x41, 0b0000_0001)` → `Err(Invalid(0b0000_0000))` — the start index `1` is past the end
+/// of the single-byte input (`byte_at(b, 1)` is `None`), so `decode_one`'s `None` arm reports the
+/// synthetic offending byte `0` (there is no byte to report). Never-silent (G2): an out-of-range start
+/// is an explicit `Err`, never a kernel OOB refusal leaking through. The reference uses the **literal**
+/// `Invalid(0b0000_0000)` to match the `Root` provenance of `decode_one`'s own literal `0` (unlike the
+/// `bytes_get`-derived bytes in the other Err cases).
+#[test]
+fn decode_one_err_oob_start_index() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0x41, 0b0000_0001)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Invalid(0b0000_0000))",
+    );
+    assert_three_way(
+        "decode_one(0x41, idx 1 oob)=Err(Invalid(0))",
+        &src,
+        &expected,
+    );
 }
