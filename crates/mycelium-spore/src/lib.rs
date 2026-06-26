@@ -189,10 +189,13 @@ pub fn build_spore(manifest: &Manifest, project_dir: &Path) -> Result<Spore, Spo
     })
 }
 
-/// The canonical, deterministic identity encoding (ADR-003). Metadata (`name`/`version`/`authors`/…) is
-/// **excluded** — only the code-by-hash DAG, the dependency hash edges, the germination surface, and the
-/// project kind bear identity. Two builds of the same code+deps yield the same spore hash.
-fn content_address(
+/// The canonical, deterministic identity encoding (ADR-003) — **the single source of truth for spore
+/// identity**. Metadata (`name`/`version`/`authors`/…) is **excluded** — only the code-by-hash DAG, the
+/// dependency hash edges, the germination surface, and the project kind bear identity. Two builds of the
+/// same code+deps yield the same spore hash. **Downstream verifiers (e.g. `mycelium-std-spore::verify`)
+/// MUST call this function — never re-implement the encoding:** a parallel copy is exactly how the
+/// `v0`/`v1` split arose (DRY; the verify path stamped a stale `v0` while `build_spore` stamped `v1`).
+pub fn content_address(
     kind: ProjectKind,
     surface: &[String],
     sources: &[SourceFile],
@@ -205,9 +208,10 @@ fn content_address(
     // crafted source path or dep field containing a space/newline could shift a field boundary and
     // alias two distinct DAGs onto one pre-image string (a second-pre-image collision; all three
     // `ResolvedDep` fields are free-text manifest strings, so this needed no preimage or filesystem).
-    // `v1` **length-prefixes every variable-length field** (`<bytelen>:<bytes>`) and prefixes each
-    // section's record count, so the byte boundaries are unambiguous and no embedded delimiter can
-    // forge structure — the encoding is injective by construction. Property-tested over adversarial
+    // `v1` **length-prefixes every variable-length field** (`<bytelen>:<bytes>`) — the load-bearing
+    // part: a field spans exactly its byte count, so no embedded space/newline can forge a boundary
+    // (netstring-style). Each section's record count is also recorded (defense-in-depth). Together the
+    // pre-image is uniquely decodable ⇒ the encoding is injective by construction. Property-tested over adversarial
     // inputs (paths/names with spaces/newlines) in `src/tests/lib_tests.rs`. The version header bumps
     // `v0 -> v1`, which **re-addresses every spore** (append-only supersession of the explicitly
     // provisional format; acceptable pre-1.0 — no live registry). KEEP-OUT of the kernel (KC-3):

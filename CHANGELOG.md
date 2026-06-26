@@ -19,10 +19,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   detection). All three `ResolvedDep` fields are free-text manifest strings, so the collision needed no
   hash-preimage or filesystem — **Proven** (a byte-identical `v0` pre-image for two distinct dep DAGs is
   exhibited in the regression tests). **Fix:** `v1` **length-prefixes every variable-length field**
-  (`<bytelen>:<bytes>`) and prefixes each section's record count, making the encoding injective by
-  construction; added adversarial injectivity property tests (`crates/mycelium-spore/src/tests/lib_tests.rs`
-  → `mod injectivity`). **Note:** the header bumps `v0 → v1`, which **re-addresses every spore**
-  (append-only supersession of the explicitly provisional format; acceptable pre-1.0 — no live registry).
+  (`<bytelen>:<bytes>`, the load-bearing part) plus per-section record counts (defense-in-depth), making
+  the encoding injective by construction; added adversarial injectivity property tests
+  (`crates/mycelium-spore/src/tests/lib_tests.rs` → `mod injectivity`).
+- **DRY unification (the real root cause):** spore identity was encoded in **two** places — the verify
+  path (`mycelium-std-spore::recompute_identity`) was a hand-copied duplicate that still stamped `v0`,
+  so a freshly-built `v1` spore failed `verify()` cross-crate. `content_address` is now the **single
+  `pub` canonical encoder**, and `recompute_identity` (hence `from_value`) delegates to it — divergence
+  is now structurally impossible. Verified green across the full reverse-dependent closure
+  (`mycelium-spore` 22, `mycelium-std-spore` 44, `mycelium-std-recover`/`mycelium-cert`/`mycelium-cli`).
+  **Note:** the header bumps `v0 → v1`, which **re-addresses every spore** (append-only supersession of
+  the explicitly provisional format; acceptable pre-1.0 — no live registry).
 - **KC-3 holds:** the right response to a verifiable encoding flaw is *more verification* (a property
   test), **not** promoting the encoding into the trusted core — identity is a deterministic, checkable
   function and must be *verified*, never *trusted* (VR-5 applied to the trust boundary). `mycelium-spore`
