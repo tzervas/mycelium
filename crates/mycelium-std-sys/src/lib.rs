@@ -52,3 +52,9 @@ pub mod math;
 pub mod rand;
 pub mod sys;
 pub mod time;
+
+// In-crate test modules (test-layout rule: logic files carry no test code). Migrated lazily
+// (M-797): `sys` lives here; the other modules still use inline `#[cfg(test)] mod tests` until
+// each is touched.
+#[cfg(test)]
+mod tests;

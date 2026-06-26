@@ -175,8 +175,8 @@ pub const MATRIX: &[MatrixRow] = &[
     MatrixRow {
         op: "sys::args",
         guarantee: GuaranteeTag::Declared,
-        fallibility: Fallibility::Total,
-        error_set: "",
+        fallibility: Fallibility::Fallible,
+        error_set: "Err(NonUtf8Arg) — non-UTF-8 arg named by index (never a silent drop, G2)",
         effects: "process",
     },
     // ── rand (M-723) — OS entropy (`/dev/urandom`), effect `entropy` ────────────────────────────
