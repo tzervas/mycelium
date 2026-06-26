@@ -148,6 +148,7 @@ deny-net-fix:
     @git config --global url."https://github.com/RustSec/".insteadOf "https://github.com/RustSec/" \
       && echo "  ok    scoped RustSec/advisory-db fetch enabled via allowed HTTPS path — \`just deny\` now runs reliably" \
       || echo "  FAIL  could not apply the scoped git-config override"
+
 # Editor-grammar drift gate (M-731; RFC-0026): committed tools/grammar/ must match a fresh
 # regeneration from the lexer keyword() table (G2 — never a silent divergence). Skip if python3 absent.
 drift-check:

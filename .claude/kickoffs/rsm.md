@@ -150,8 +150,8 @@ the critical 1.0 work is done and the language is fully working/usable, a delibe
 ## Swarm / ownership / sync discipline (standard)
 
 - Fire `/kickoff rsm` in a fresh session; branch off `dev`. Sonnet swarm default.
-- W1 (Rust L1 surgery) and W2 (docs/tracking) are **largely disjoint** — W1 owns `crates/mycelium-l1/**`
-  + `lib/std/**` + tests; W2 owns `docs/**` + `.claude/**` + `tools/github/**` + `docs/api-index/`. They
+- W1 (Rust L1 surgery) and W2 (docs/tracking) are **largely disjoint** — W1 owns `crates/mycelium-l1/**`,
+  `lib/std/**`, and tests; W2 owns `docs/**`, `.claude/**`, `tools/github/**`, `docs/api-index/`. They
   **can run in parallel** save for the shared release-surface files (CHANGELOG, Doc-Index, issues.yaml,
   api-index) which the **integrator reconciles once** (CLAUDE.md §Swarm file-ownership).
 - W3 is **capture-only**: stubs land in W2's docs territory; **no W3 implementation** in this wave.

@@ -58,8 +58,8 @@ developer to trip over. Operationalizing it — a standard disclosure block, and
 | Property | Mechanism (enforced) | Citation |
 |---|---|---|
 | **Trusted base is unsafe-free, by the compiler** | `#![forbid(unsafe_code)]` at crate root of `mycelium-core` / `-cert` / `-numerics` / `-vsa` | `crates/mycelium-core/src/lib.rs:11`, `-cert/src/lib.rs:20`, `-numerics/src/lib.rs:23`, `-vsa/src/lib.rs:20` |
-| **Interpreter + all stdlib are unsafe-free** | 29 crates total carry per-crate `forbid` (the reference interpreter + all 23 `mycelium-std-*`) | DN-21 §2 |
-| **The entire `unsafe` surface is 8 blocks, all confined + justified** | every `unsafe` is in `mycelium-mlir` (JIT `dlopen`/`dlsym`/`transmute`-call for the AOT path), each with an adjacent `// SAFETY:` | DN-21 §2; `crates/mycelium-mlir/src/jit.rs`, `bitnet.rs`, `specialize.rs` |
+| **Interpreter + all stdlib are unsafe-free** | **37 crates** carry `#![forbid(unsafe_code)]` (the trusted base + reference interpreter + **26** `mycelium-std-*`) — verified by `grep -rl '#![forbid(unsafe_code)]' crates/*/src/lib.rs` | (DN-21 §2's "29 / 23" was its as-of-writing snapshot, since expanded) |
+| **The entire `unsafe` surface is 8 blocks, all confined + justified** | every `unsafe` is in **`jit.rs` only** (JIT `dlopen`/`dlsym`/`transmute`-call for the AOT path), each with an adjacent `// SAFETY:`. **M-682** consolidated the former `bitnet.rs`/`specialize.rs` transmute-calls into safe `jit.rs` wrappers — both now carry `#![forbid(unsafe_code)]` | `crates/mycelium-mlir/src/jit.rs` (8 sites; `bitnet.rs:32` / `specialize.rs:36` are forbid-pinned); DN-21 §2 |
 | **Never-silent failability** | out-of-range / partial ops return `Option`/`Result`; arithmetic **panics on overflow, never silently wraps** (`overflow-checks = true`) | `Cargo.toml:88`; RFC-0001; lint.sh §comment |
 | **Memory-safe in *every* certification mode** | `fast` and `certified` are both memory-safe; `unsafe` reachable only via an explicit, per-use, source-visible escape | RFC-0034 §9 (Enacted) |
 | **Supply chain is pinned + permissive-only** | crates.io as the only registry; MIT + permissive license allow-list; RustSec (cargo-deny/audit) + OSV.dev (osv-scanner) | `deny.toml:6-48`; `osv-scanner.toml` |
@@ -99,16 +99,17 @@ The posture is a set of *deliberate* trade-offs, not an absolute. Naming them is
 
 1. **`unsafe` is permitted-but-warned, not globally forbidden** (ADR-014, sharpened by RFC-0034 §9). The
    trade: a *zero-unsafe* workspace would forbid the JIT/FFI the AOT performance path needs. Resolution —
-   forbid `unsafe` in the **trusted base + interpreter + all stdlib** (29 crates, compiler-enforced) and
+   forbid `unsafe` in the **trusted base + interpreter + all stdlib** (37 crates, compiler-enforced) and
    **confine** the unavoidable `unsafe` to one non-trusted crate (`mycelium-mlir`), per-use-escaped,
    `// SAFETY:`-justified, and grep-auditable. Performance is bought without putting the trusted base at risk.
 2. **Kernel arithmetic *panics* on overflow — it does not silently wrap, and it is not unwrap-free**
    (`overflow-checks = true`, `Cargo.toml:88`). Correctness + never-silent are ranked **above**
    panic-freedom: a wrong-but-quiet result is worse than a loud abort. Consequence: panic-freedom lints
    (`unwrap_used`/`expect_used`/`indexing_slicing`) are **advisory**, not blocking — a blanket `deny` would
-   fight this design and, under `-D warnings`, break the build. (Today: **47 logic-path sites** across the
-   trusted base — 22 `core`, 21 `vsa`, 1 `cert`, 0 `numerics` — most invariant-guaranteed; §6 is the path
-   to ratchet these down.)
+   fight this design and, under `-D warnings`, break the build. (Today: **47 logic-path sites** in the
+   combined `--lib` pass across the trusted base — concentrated in `core` and `vsa`, with `cert` minimal
+   and `numerics` clean (attributed by file location in that combined pass) — most invariant-guaranteed;
+   §6 is the path to ratchet these down.)
 3. **`bans` are `warn`, not `deny`** for duplicate versions and version-less path deps (`deny.toml:40-42`).
    The trade: a pre-1.0 dependency tree carries transitive duplicates outside our control, and the
    publishable `mycelium-std-*` crates legitimately use version-less intra-workspace path deps. `warn`
