@@ -15,6 +15,13 @@
 //!   by trial on the programs below; not a machine-checked proof.
 //! - **`Empirical`** — the `len`-fits-`Binary{8}` bound (add_bin refuses at 256 on every path —
 //!   the overflow test pins this; not a type-level proof).
+//!
+//! # Grounding
+//! Expected values are hand-computed and verified three-way (L1≡L0≡AOT). The Rust crate
+//! `crates/mycelium-std-collections` exists but is **Seq-backed** (a different representation): it
+//! shares the `is_empty`/`get`/`len`/`contains` semantics, but has no `head`/`tail`/`snoc`/`reverse`
+//! (those are cons-list ops of this `.myc` port). So it is a value oracle for the shared-semantics
+//! subset only — not a structural reference.
 
 use mycelium_cert::{check_core, BinaryTernarySwapEngine, CheckVerdict};
 use mycelium_core::GuaranteeStrength;
@@ -116,7 +123,7 @@ fn assert_three_way(label: &str, src: &str, expected_src: &str) {
 // ── Vec: is_empty ──────────────────────────────────────────────────────────────────────────────────
 
 /// `is_empty(Nil)` → `True` (Exact: the empty case always returns True).
-/// Reference: mycelium-std-collections Vec::is_empty on an empty list returns true.
+/// Expected (hand-computed, three-way verified): Vec::is_empty on an empty list returns true.
 #[test]
 fn is_empty_on_nil_returns_true() {
     let driver = "\
@@ -128,7 +135,7 @@ fn main() -> Bool = is_empty(mk_nil())";
 }
 
 /// `is_empty(Cons(x, Nil))` → `False` (Exact: the Cons arm always returns False).
-/// Reference: mycelium-std-collections Vec::is_empty on a non-empty list returns false.
+/// Expected (hand-computed, three-way verified): Vec::is_empty on a non-empty list returns false.
 #[test]
 fn is_empty_on_cons_returns_false() {
     let driver = "\
@@ -142,7 +149,7 @@ fn main() -> Bool = is_empty(mk_one())";
 // ── Vec: head ──────────────────────────────────────────────────────────────────────────────────────
 
 /// `head(Nil)` → `None` — never-silent (G2): empty Vec never fabricates a value. Declared.
-/// Reference: mycelium-std-collections Vec::head on empty returns None.
+/// Expected (hand-computed, three-way verified): Vec::head on empty returns None.
 #[test]
 fn head_on_nil_returns_none() {
     let driver = "\
@@ -155,7 +162,7 @@ fn main() -> Option<Binary{8}> = head(mk_nil())";
 }
 
 /// `head(Cons(x, rest))` → `Some(x)` — first element is returned. Declared.
-/// Reference: mycelium-std-collections Vec::head on Cons(0b0000_0001, Nil) returns Some(0b0000_0001).
+/// Expected (hand-computed, three-way verified): Vec::head on Cons(0b0000_0001, Nil) returns Some(0b0000_0001).
 #[test]
 fn head_on_cons_returns_some() {
     let driver = "\
@@ -169,7 +176,7 @@ fn main() -> Option<Binary{8}> = head(mk_one())";
 // ── Vec: tail ──────────────────────────────────────────────────────────────────────────────────────
 
 /// `tail(Nil)` → `None` — never-silent (G2). Declared.
-/// Reference: mycelium-std-collections Vec::tail on empty returns None.
+/// Expected (hand-computed, three-way verified): Vec::tail on empty returns None.
 #[test]
 fn tail_on_nil_returns_none() {
     let driver = "\
@@ -184,7 +191,7 @@ fn main() -> Option<Vec<Binary{8}>> = tail(mk_nil())";
 // ── Vec: len ───────────────────────────────────────────────────────────────────────────────────────
 
 /// `len` over a two-element list → `0b0000_0010`. O(n) spine-walk; Declared.
-/// Reference: mycelium-std-collections Vec::len on [1, 2] returns 2.
+/// Expected (hand-computed, three-way verified): Vec::len on [1, 2] returns 2.
 /// The reference program uses `add_bin` (not a literal) to match the `Derived` provenance produced
 /// by `len`'s `add_bin` spine — a literal `0b0000_0010` has `Root` provenance and fails `assert_eq`.
 /// `len([1,2]) = add_bin(1, add_bin(1, 0))`: same ops, same content hashes (value-based), same
@@ -202,7 +209,7 @@ fn main() -> Binary{8} = len(mk_two())";
 }
 
 /// `len` over a three-element list → `0b0000_0011`. Declared.
-/// Reference: mycelium-std-collections Vec::len on [1, 2, 3] returns 3.
+/// Expected (hand-computed, three-way verified): Vec::len on [1, 2, 3] returns 3.
 /// Same provenance-matching rationale: add_bin(1, add_bin(1, add_bin(1, 0))) = 3.
 #[test]
 fn len_of_three_element_list() {
@@ -227,7 +234,7 @@ fn main() -> Binary{8} = len(mk_three())";
 /// The `len` connection: `len(xs)` is `add_bin(1, len(rest))` — the 256th step would compute
 /// `add_bin(0b0000_0001, 0b1111_1111) = 256` which this test pins. Empirical.
 ///
-/// Reference: mycelium-std-collections Vec::len fails (add_bin overflows) on a > 255-element list.
+/// Expected (hand-computed, three-way verified): Vec::len fails (add_bin overflows) on a > 255-element list.
 #[test]
 fn len_bound_add_bin_overflow_refuses_on_every_path() {
     // add_bin(0b0000_0001, 0b1111_1111) = 256, which overflows Binary{8} — the exact operation
@@ -265,7 +272,7 @@ fn len_bound_add_bin_overflow_refuses_on_every_path() {
 // ── Vec: get ───────────────────────────────────────────────────────────────────────────────────────
 
 /// `get([1,2,3], 0)` → `Some(1)` — index 0 returns the head. Declared.
-/// Reference: mycelium-std-collections Vec::get on [1,2,3] at 0 returns Some(1).
+/// Expected (hand-computed, three-way verified): Vec::get on [1,2,3] at 0 returns Some(1).
 #[test]
 fn get_index_0_returns_head() {
     let driver = "\
@@ -277,7 +284,7 @@ fn main() -> Option<Binary{8}> = get(mk_three(), 0b0000_0000)";
 }
 
 /// `get([1,2,3], 1)` → `Some(2)` — index 1 returns the second element. Declared.
-/// Reference: mycelium-std-collections Vec::get on [1,2,3] at 1 returns Some(2).
+/// Expected (hand-computed, three-way verified): Vec::get on [1,2,3] at 1 returns Some(2).
 #[test]
 fn get_index_1_returns_second() {
     let driver = "\
@@ -289,7 +296,7 @@ fn main() -> Option<Binary{8}> = get(mk_three(), 0b0000_0001)";
 }
 
 /// `get([1,2,3], 5)` → `None` — OOB → None, never-silent (G2). Declared.
-/// Reference: mycelium-std-collections Vec::get on [1,2,3] at 5 returns None.
+/// Expected (hand-computed, three-way verified): Vec::get on [1,2,3] at 5 returns None.
 #[test]
 fn get_out_of_bounds_returns_none() {
     let driver = "\
@@ -304,7 +311,7 @@ fn main() -> Option<Binary{8}> = get(mk_three(), 0b0000_0101)";
 // ── Vec: snoc ──────────────────────────────────────────────────────────────────────────────────────
 
 /// `snoc([1,2], 3)` → `[1,2,3]` — appends at the end. Declared.
-/// Reference: mycelium-std-collections Vec::snoc on [1,2] with 3 returns [1,2,3] (Cons(1,Cons(2,Cons(3,Nil)))).
+/// Expected (hand-computed, three-way verified): Vec::snoc on [1,2] with 3 returns [1,2,3] (Cons(1,Cons(2,Cons(3,Nil)))).
 #[test]
 fn snoc_appends_at_end() {
     let driver = "\
@@ -320,7 +327,7 @@ fn main() -> Vec<Binary{8}> = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_00
 // ── Vec: reverse ───────────────────────────────────────────────────────────────────────────────────
 
 /// `reverse([1,2,3])` → `[3,2,1]` — accumulator recursion reverses the spine. Declared.
-/// Reference: mycelium-std-collections Vec::reverse on [1,2,3] returns [3,2,1].
+/// Expected (hand-computed, three-way verified): Vec::reverse on [1,2,3] returns [3,2,1].
 #[test]
 fn reverse_of_three_element_list() {
     let driver = "\
@@ -339,7 +346,7 @@ fn main() -> Vec<Binary{8}> = Cons(0b0000_0011, Cons(0b0000_0010, Cons(0b0000_00
 // Lookup is O(n) linear scan; first match wins; missing key → None (G2).
 
 /// `map_get(MCons(k,v, MNil), k)` → `Some(v)` — key present, hit on first entry. Declared.
-/// Reference: mycelium-std-collections Map::get on {1→10} with key 1 returns Some(10).
+/// Expected (hand-computed, three-way verified): Map::get on {1→10} with key 1 returns Some(10).
 #[test]
 fn map_get_hit_returns_some() {
     let driver = "\
@@ -352,7 +359,7 @@ fn main() -> Option<Binary{8}> = map_get(mk_map(), 0b0000_0001)";
 }
 
 /// `map_get(MCons(k,v, MNil), k2)` where `k2 ≠ k` → `None`. Never-silent (G2). Declared.
-/// Reference: mycelium-std-collections Map::get on {1→10} with key 2 returns None.
+/// Expected (hand-computed, three-way verified): Map::get on {1→10} with key 2 returns None.
 #[test]
 fn map_get_miss_returns_none() {
     let driver = "\
@@ -366,7 +373,7 @@ fn main() -> Option<Binary{8}> = map_get(mk_map(), 0b0000_0010)";
 }
 
 /// `map_get` with two entries, shadowed key: insert order wins (first MCons wins). Declared.
-/// Reference: mycelium-std-collections Map::get on {2→20, 1→10} with key 2 returns Some(20).
+/// Expected (hand-computed, three-way verified): Map::get on {2→20, 1→10} with key 2 returns Some(20).
 #[test]
 fn map_get_multi_entry_first_wins() {
     // map_insert(2, 20, map_insert(1, 10, map_empty)) = MCons(2, 20, MCons(1, 10, MNil))
@@ -385,7 +392,7 @@ fn main() -> Option<Binary{8}> = map_get(mk_map(), 0b0000_0010)";
 // set_contains is monomorphic at Binary{8} (same eq constraint as map_get). O(n) scan. Declared.
 
 /// `set_contains(SCons(x, SNil), x)` → `True` — element present. Declared.
-/// Reference: mycelium-std-collections Set::contains on {1} with 1 returns True.
+/// Expected (hand-computed, three-way verified): Set::contains on {1} with 1 returns True.
 #[test]
 fn set_contains_present_returns_true() {
     let driver = "\
@@ -397,7 +404,7 @@ fn main() -> Bool = set_contains(mk_set(), 0b0000_0001)";
 }
 
 /// `set_contains(SCons(x, SNil), y)` where `y ≠ x` → `False`. Never-silent (G2). Declared.
-/// Reference: mycelium-std-collections Set::contains on {1} with 2 returns False.
+/// Expected (hand-computed, three-way verified): Set::contains on {1} with 2 returns False.
 #[test]
 fn set_contains_absent_returns_false() {
     let driver = "\
@@ -409,7 +416,7 @@ fn main() -> Bool = set_contains(mk_set(), 0b0000_0010)";
 }
 
 /// `set_contains` on empty set → `False`. Never-silent (G2). Declared.
-/// Reference: mycelium-std-collections Set::contains on {} with any key returns False.
+/// Expected (hand-computed, three-way verified): Set::contains on {} with any key returns False.
 #[test]
 fn set_contains_empty_returns_false() {
     let driver = "\

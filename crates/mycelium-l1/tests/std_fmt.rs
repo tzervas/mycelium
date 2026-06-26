@@ -14,8 +14,9 @@
 //!   by trial on the programs below; not a machine-checked proof.
 //!
 //! # Anchor
-//! Expected values are grounded in the Rust reference: crates/mycelium-std-fmt (not yet landed).
-//! Until that crate exists, all values are hand-computed and documented inline.
+//! Expected values are hand-computed and verified three-way (L1≡L0≡AOT). The Rust crate
+//! crates/mycelium-std-fmt exists but exposes a different Ring-2 surface (no hex_digit/to_hex),
+//! so it is the value oracle for shared semantics only — not a structural reference.
 
 use mycelium_cert::{check_core, BinaryTernarySwapEngine, CheckVerdict};
 use mycelium_core::GuaranteeStrength;
@@ -232,7 +233,7 @@ fn nibble_lo_full_low_nibble() {
 //   nibble_hi(0b0100_0000) = 4   (masked=0x40 → 4)
 //   nibble_hi(0b1010_0101) = 10  (masked=0xa0 → 10)
 //   nibble_hi(0b1111_1111) = 15  (masked=0xf0 → 15)
-// Anchor: crates/mycelium-std-fmt (not yet landed).
+// Grounding: hand-computed, three-way verified; mycelium-std-fmt exists but is a different Ring-2 surface, not the oracle.
 
 /// `nibble_hi(0b0000_0101)` → `0b0000_0000` (= 0; masked=0x00; Exact).
 #[test]
@@ -287,13 +288,16 @@ fn nibble_hi_fifteen() {
 //
 // to_hex(x) = HP(hex_digit(nibble_hi(x)), hex_digit(nibble_lo(x))).
 //
-// The reference programs for `to_hex` tests must replicate the EXACT computation chain to produce
-// matching provenance hashes. `to_hex` composes `nibble_hi`/`nibble_lo`/`hex_digit` — the
-// intermediate values carry `Derived` provenance that varies with each function's ops and inputs.
-// The cleanest way to produce a matching reference: use the full FMT_SRC (with the nodule header
-// renamed to `nodule ref`) so the reference computes `to_hex(x)` through the EXACT same function
-// bodies, producing bit-for-bit identical provenance hashes. The three-way differential (L1 ≡ L0 ≡
-// AOT) is the real proof of correctness; the reference merely confirms the expected bit values.
+// The `to_hex` reference re-runs the SAME function bodies (FMT_SRC with the nodule header renamed
+// to `nodule ref`). This is forced by provenance-sensitive CoreValue equality: `to_hex` composes
+// `nibble_hi`/`nibble_lo`/`hex_digit`, whose results carry `Derived` provenance that a literal
+// `HP(..)` (Root provenance) cannot match — a literal value-pin would fail on provenance, not value.
+// CONSEQUENCE (honest, VR-5): `to_hex_ref` proves L1 ≡ L0 ≡ AOT cross-engine agreement + provenance
+// stability — it does NOT independently confirm bit values (a swapped-nibble composition bug would
+// replicate into the reference). Independent value-grounding comes from the dedicated
+// `hex_digit`/`nibble_lo`/`nibble_hi` tests above (hand-built `add_bin` oracles, not self-referential);
+// `to_hex` is the visible 1-line composition `HP(hex_digit(nibble_hi(x)), hex_digit(nibble_lo(x)))`,
+// and the per-case hand-computed values are documented just below.
 //
 // Hand-computed expected values (Declared; Empirical three-way):
 //   to_hex(0x00) = HP('0','0') = HP(0x30, 0x30)
@@ -301,11 +305,11 @@ fn nibble_hi_fifteen() {
 //   to_hex(0xff) = HP('f','f') = HP(0x66, 0x66)   nibble_hi=15→'f'; nibble_lo=15→'f'
 //   to_hex(0x0f) = HP('0','f') = HP(0x30, 0x66)   nibble_hi=0→'0'; nibble_lo=15→'f'
 //   to_hex(0xa0) = HP('a','0') = HP(0x61, 0x30)   nibble_hi=10→'a'; nibble_lo=0→'0'
-// Anchor: crates/mycelium-std-fmt (not yet landed).
+// Grounding: hand-computed, three-way verified; mycelium-std-fmt exists but is a different Ring-2 surface, not the oracle.
 
-/// Build a `to_hex` reference program by reusing the full FMT_SRC (nodule header renamed to
-/// `ref`) + the same driver. This ensures the intermediate computation chain (nibble_hi →
-/// hex_digit, nibble_lo → hex_digit) produces bit-identical provenance hashes to the test program.
+/// Build a `to_hex` reference by reusing the full FMT_SRC (nodule header renamed to `ref`) + the
+/// same driver. This matches the test program's `Derived` provenance (a literal `HP` cannot — see
+/// the note above), so it checks cross-engine agreement, NOT independent bit values.
 fn to_hex_ref(driver: &str) -> String {
     // Replace "nodule std.fmt" with "nodule ref" — all function definitions are preserved.
     format!(

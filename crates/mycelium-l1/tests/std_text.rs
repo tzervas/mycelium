@@ -26,8 +26,9 @@
 //!   surface-callable; the `Bytes8` type is declared but slice/concat await a future prim surface.
 //!
 //! # Anchor
-//! Expected values are grounded in the Rust reference: crates/mycelium-std-text (not yet landed).
-//! Until that crate exists, the reference values are hand-computed and documented inline.
+//! Expected values are hand-computed and verified three-way (L1≡L0≡AOT). The Rust crate
+//! crates/mycelium-std-text exists but exposes a different Ring-2 surface (no decode_ascii over a
+//! .myc port), so it is the value oracle for shared semantics only — not a structural reference.
 
 use mycelium_cert::{check_core, BinaryTernarySwapEngine, CheckVerdict};
 use mycelium_core::GuaranteeStrength;
@@ -131,7 +132,8 @@ fn assert_three_way(label: &str, src: &str, expected_src: &str) {
 /// `byte_len(0x48_65_6c_6c_6f)` → `Binary{32}(5)`.
 /// Reference: `bytes_len` on the UTF-8 encoding of "Hello" is exactly 5 (Exact).
 /// Hand-computed: 0x48=H, 0x65=e, 0x6c=l, 0x6c=l, 0x6f=o — 5 bytes.
-/// Anchor: crates/mycelium-std-text (not yet landed); grounded in enablement.rs bytes_len tests.
+/// Grounding: hand-computed + enablement.rs bytes_len tests; mycelium-std-text exists but is a
+/// different Ring-2 surface, not the oracle.
 #[test]
 fn byte_len_returns_count() {
     let driver = "fn main() -> Binary{32} = byte_len(0x48_65_6c_6c_6f)";
@@ -220,7 +222,7 @@ type Utf8Error = Invalid(Binary{8})\n";
 /// The byte at index 0 of [0x41, 0x42, 0x43] is 0x41 = 'A' — ASCII, so Ok.
 /// The reference program uses `bytes_get` to match the `Derived` provenance of the computed value
 /// (a literal `Ok(0b0100_0001)` would have `Root` provenance — see std_option.rs `map` comment).
-/// Anchor: crates/mycelium-std-text (not yet landed).
+/// Grounding: hand-computed, three-way verified; mycelium-std-text exists but is a different Ring-2 surface, not the oracle.
 #[test]
 fn decode_ascii_ok_on_valid_ascii() {
     let driver =
@@ -251,7 +253,7 @@ fn decode_ascii_ok_at_offset() {
 /// 0xc3 = 0b1100_0011 is the UTF-8 lead byte for U+00E9 (é); it has the high bit set → not ASCII.
 /// Never-silent: the malformed lead is returned as the offending byte, never U+FFFD.
 /// Hand-computed: is_ascii_byte(0xC3) = False → Err(Invalid(0xC3)).
-/// Anchor: crates/mycelium-std-text (not yet landed).
+/// Grounding: hand-computed, three-way verified; mycelium-std-text exists but is a different Ring-2 surface, not the oracle.
 #[test]
 fn decode_ascii_err_on_multibyte_lead() {
     // 0xc3_a9 is the UTF-8 encoding of 'é' (U+00E9). The lead byte 0xC3 has high bit set → Err.

@@ -17,12 +17,13 @@ nodule std.fmt
 // a right-shift prim. `to_hex` is Declared (structural composition of nibble_hi/nibble_lo +
 // hex_digit). Differential agreement (L1-eval ≡ L0-interp ≡ AOT) is Empirical (trials,
 // std_fmt.rs). Honesty boundary: no reflective `display(Value)` — .myc has no Value introspection;
-// fmt is first-order over concrete types only. Anchor: crates/mycelium-std-fmt (future reference
-// crate, not yet landed).
+// fmt is first-order over concrete types only. Grounding: hand-computed values, three-way verified
+// (L1≡L0≡AOT). crates/mycelium-std-fmt exists but exposes a different Ring-2 surface (no
+// hex_digit/to_hex) — it is not the structural oracle.
 // ── HexPair — the two ASCII hex-digit bytes of a byte encoding ────────────────────────────────────
 // HexPair: carries the high-nibble digit and the low-nibble digit as ASCII bytes (Binary{8}).
 // Used as the return type of `to_hex` so the result is a first-class value pair. (A Bytes return
-// would require bytes_concat which is not surface-callable — see FLAG-fmt-1 in text.myc.)
+// would require bytes_concat which is not surface-callable — see FLAG-text-3 in text.myc.)
 type HexPair = HP(Binary{8}, Binary{8})
 
 // ── hex_digit ─────────────────────────────────────────────────────────────────────────────────────
@@ -61,6 +62,7 @@ fn nibble_hi(x: Binary{8}) -> Binary{8} =
 // low nibble second). E.g. to_hex(0x4a) = HP(0x34, 0x61) = HP('4', 'a').
 // Guarantee: Declared (structural composition of Exact `nibble_hi`/`nibble_lo`/`hex_digit`);
 // differential agreement Empirical (std_fmt.rs). Total: every Binary{8} input has a defined
-// HexPair output. Anchor: crates/mycelium-std-fmt (future reference crate, not yet landed).
+// HexPair output. Grounding: hand-computed, three-way verified; crates/mycelium-std-fmt exists but
+// exposes a different Ring-2 surface (no to_hex) — not the structural oracle.
 fn to_hex(x: Binary{8}) -> HexPair =
   HP(hex_digit(nibble_hi(x)), hex_digit(nibble_lo(x)))

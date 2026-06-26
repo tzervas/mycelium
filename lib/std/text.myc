@@ -73,6 +73,7 @@ fn is_ascii_byte(x: Binary{8}) -> Bool =
 // FLAG-text-1: width mismatch Binary{32} vs Binary{8} for `lt`).
 //
 // Guarantee: Declared (type-level contract; three-way differential agreement Empirical, std_text.rs).
-// Anchor: crates/mycelium-std-text (future reference crate, not yet landed).
+// Grounding: hand-computed, three-way verified; crates/mycelium-std-text exists but exposes a
+// different Ring-2 surface (no decode_ascii) — not the structural oracle.
 fn decode_ascii(b: Bytes, i: Binary{8}) -> Result<Binary{8}, Utf8Error> =
   let byte0 = bytes_get(b, i) in match is_ascii_byte(byte0) { True => Ok(byte0), False => Err(Invalid(byte0)) }
