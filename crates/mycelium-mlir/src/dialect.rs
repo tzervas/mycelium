@@ -46,6 +46,10 @@ fn repr_attr(repr: &Repr) -> String {
         Repr::Ternary { trits } => format!("ternary<{trits}>"),
         Repr::Dense { dim, .. } => format!("dense<{dim}>"),
         Repr::Vsa { model, dim, .. } => format!("vsa<{model},{dim}>"),
+        // RFC-0032 D3 (M-749): the indexed sequence renders its element attr and declared length.
+        Repr::Seq { elem, len } => format!("seq<{},{len}>", repr_attr(elem)),
+        // RFC-0032 D4 (M-750): the byte string carries no static type parameter.
+        Repr::Bytes => "bytes".to_owned(),
     }
 }
 
@@ -62,6 +66,13 @@ fn payload_attr(p: &Payload) -> String {
             .collect(),
         Payload::Scalars(xs) => format!("{xs:?}"),
         Payload::Hypervector(xs) => format!("{xs:?}"),
+        // RFC-0032 D3 (M-749): a sequence payload renders its elements' attrs, comma-joined.
+        Payload::Seq(elems) => {
+            let inner: Vec<String> = elems.iter().map(|e| payload_attr(e.payload())).collect();
+            format!("[{}]", inner.join(","))
+        }
+        // RFC-0032 D4 (M-750): a byte payload renders as a lowercase-hex string.
+        Payload::Bytes(bytes) => bytes.iter().map(|b| format!("{b:02x}")).collect(),
     }
 }
 

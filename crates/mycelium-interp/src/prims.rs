@@ -67,8 +67,10 @@ impl PrimRegistry {
     /// The default registry: the exact built-ins — elementwise logical (`core.id`,
     /// `bit.not/and/or/xor`), fixed-width balanced-ternary arithmetic (`trit.neg/add/sub/mul`,
     /// M-111), the reduce-to-`Bool` comparison prims (`cmp.eq`/`cmp.lt` → `Binary{1}`, RFC-0032 D1,
-    /// M-747), and never-silent fixed-width binary arithmetic (`bit.add`/`bit.sub`, RFC-0032 D2,
-    /// M-748).
+    /// M-747), never-silent fixed-width binary arithmetic (`bit.add`/`bit.sub`, RFC-0032 D2,
+    /// M-748), never-silent indexed-sequence access (`seq.len`/`seq.get`, RFC-0032 D3, M-749), and
+    /// never-silent byte-string access (`bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat`,
+    /// RFC-0032 D4, M-750).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -87,6 +89,14 @@ impl PrimRegistry {
         // RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic over `Binary{N}`.
         r.register("bit.add", prim_bit_add);
         r.register("bit.sub", prim_bit_sub);
+        // RFC-0032 D3 (M-749): never-silent indexed-sequence access over `Repr::Seq`.
+        r.register("seq.len", prim_seq_len);
+        r.register("seq.get", prim_seq_get);
+        // RFC-0032 D4 (M-750): never-silent byte-string access over `Repr::Bytes`.
+        r.register("bytes.len", prim_bytes_len);
+        r.register("bytes.get", prim_bytes_get);
+        r.register("bytes.slice", prim_bytes_slice);
+        r.register("bytes.concat", prim_bytes_concat);
         r
     }
 
@@ -478,6 +488,207 @@ fn prim_bit_add(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
 /// `bit.sub : (Binary{N}, Binary{N}) → Binary{N}` — never-silent unsigned subtraction (RFC-0032 D2).
 fn prim_bit_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     bin_arith(prim, args, true)
+}
+
+// --- RFC-0032 D3 (M-749): indexed-sequence primitives ------------------------------------------
+//
+// `seq.get`/`seq.len` are the never-silent indexing surface over `Repr::Seq` (RFC-0032 D3). A kernel
+// prim returns a representation [`Value`], not a `.myc` data value, so:
+//   - `seq.len(s) -> Binary{32}` is the element count as an unsigned 32-bit value (the seq's `len`).
+//   - `seq.get(s, i) -> elem` returns the `i`-th element, with `i` an unsigned `Binary{N}` index. An
+//     **out-of-bounds index is an explicit [`EvalError::PrimType`]**, never a panic or a silent
+//     default (G2). The `.myc` `Vec::get` surface lifts this into the `Option` the spec names
+//     (`get(s, i) -> Option<elem>`); the never-silence is what makes that lift honest.
+// Guarantee **`Exact`**: total/decidable over the in-range domain.
+
+/// Interpret an unsigned `Binary{N}` value as a `usize` index (MSB-first bits). A non-Binary operand
+/// is an explicit error; a width that cannot fit `usize` (`> 64` here, conservatively the pointer
+/// width is ≥ 32) overflowing `usize` is also refused rather than silently truncated (G2).
+fn as_index(prim: &str, v: &Value) -> Result<usize, EvalError> {
+    let bits = as_bits(prim, v)?;
+    if bits.len() > usize::BITS as usize {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "index width {} exceeds the {}-bit usize index space",
+                bits.len(),
+                usize::BITS
+            ),
+        });
+    }
+    // MSB-first accumulate; the width guard above keeps this within `usize`.
+    let idx = bits
+        .iter()
+        .fold(0usize, |acc, &b| (acc << 1) | usize::from(b));
+    Ok(idx)
+}
+
+/// Extract the elements of a `Repr::Seq` operand; a non-sequence is an explicit error (G2).
+fn as_seq<'a>(prim: &str, v: &'a Value) -> Result<&'a [Value], EvalError> {
+    v.seq_elems().ok_or_else(|| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: "expected a Seq operand".to_owned(),
+    })
+}
+
+/// `seq.len : Seq<T, N> → Binary{32}` — the element count as an unsigned 32-bit value (RFC-0032 D3).
+fn prim_seq_len(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let elems = as_seq(prim, args[0])?;
+    // The seq's `len` is a `u32` field (well-formedness caps it at MAX_DIM ≤ 2^30), so 32 bits hold
+    // it exactly; render MSB-first.
+    let n = elems.len() as u32;
+    let out: Vec<bool> = (0..32).rev().map(|k| (n >> k) & 1 == 1).collect();
+    compose_result(
+        prim,
+        args,
+        Repr::Binary { width: 32 },
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `seq.get : (Seq<T, N>, Binary{W}) → T` — never-silent indexed access (RFC-0032 D3). An
+/// out-of-bounds index is an explicit [`EvalError::PrimType`] (the `.myc` surface lifts to `Option`),
+/// never a panic or a silent default (G2).
+fn prim_seq_get(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let elems = as_seq(prim, args[0])?;
+    let i = as_index(prim, args[1])?;
+    match elems.get(i) {
+        Some(e) => {
+            // The element is returned as-is (re-stamped with honest provenance). Exact inputs ⇒ an
+            // Exact result; there is no defined ε-composition rule for indexing an *approximate*
+            // sequence, so such an input is refused rather than fabricating a bound (G2/VR-5).
+            compose_result(
+                prim,
+                args,
+                e.repr().clone(),
+                e.payload().clone(),
+                ApproxRule::Refuse,
+            )
+        }
+        None => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "index {i} out of bounds for a sequence of length {}",
+                elems.len()
+            ),
+        }),
+    }
+}
+
+// --- RFC-0032 D4 (M-750): byte-string primitives -----------------------------------------------
+//
+// `bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat` are the never-silent byte surface over
+// `Repr::Bytes` (RFC-0032 D4). UTF-8 decode is written in `.myc` over these prims, never in the
+// kernel. Out-of-range access is an explicit refusal (the `.myc` surface lifts to `Option`); a
+// non-bytes operand is an explicit type refusal (G2). Guarantee **`Exact`**.
+
+/// Extract the bytes of a `Repr::Bytes` operand; a non-bytes value is an explicit error (G2).
+fn as_bytes_payload<'a>(prim: &str, v: &'a Value) -> Result<&'a [u8], EvalError> {
+    v.bytes().ok_or_else(|| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: "expected a Bytes operand".to_owned(),
+    })
+}
+
+/// Build a `Binary{32}` value from a `u32`, MSB-first (the never-silent length/index encoding).
+fn u32_as_binary32(prim: &str, inputs: &[&Value], n: u32) -> Result<Value, EvalError> {
+    let out: Vec<bool> = (0..32).rev().map(|k| (n >> k) & 1 == 1).collect();
+    compose_result(
+        prim,
+        inputs,
+        Repr::Binary { width: 32 },
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bytes.len : Bytes → Binary{32}` — the byte count (RFC-0032 D4).
+fn prim_bytes_len(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let bytes = as_bytes_payload(prim, args[0])?;
+    let n = u32::try_from(bytes.len()).map_err(|_| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: format!(
+            "byte length {} exceeds the 32-bit length encoding",
+            bytes.len()
+        ),
+    })?;
+    u32_as_binary32(prim, args, n)
+}
+
+/// `bytes.get : (Bytes, Binary{W}) → Binary{8}` — never-silent indexed byte access (RFC-0032 D4). An
+/// out-of-bounds index is an explicit refusal (the `.myc` surface lifts to `Option`), never a silent
+/// default (G2). The returned byte is a `Binary{8}` value (MSB-first).
+fn prim_bytes_get(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let bytes = as_bytes_payload(prim, args[0])?;
+    let i = as_index(prim, args[1])?;
+    match bytes.get(i) {
+        Some(&byte) => {
+            let out: Vec<bool> = (0..8).rev().map(|k| (byte >> k) & 1 == 1).collect();
+            compose_result(
+                prim,
+                args,
+                Repr::Binary { width: 8 },
+                Payload::Bits(out),
+                ApproxRule::Refuse,
+            )
+        }
+        None => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "byte index {i} out of bounds for a byte string of length {}",
+                bytes.len()
+            ),
+        }),
+    }
+}
+
+/// `bytes.slice : (Bytes, Binary{W}, Binary{W}) → Bytes` — never-silent sub-slice `[start, end)`
+/// (RFC-0032 D4). An out-of-range or inverted range is an explicit refusal, never a silently-clamped
+/// range (G2).
+fn prim_bytes_slice(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 3)?;
+    let bytes = as_bytes_payload(prim, args[0])?;
+    let start = as_index(prim, args[1])?;
+    let end = as_index(prim, args[2])?;
+    if start > end || end > bytes.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "slice range [{start}, {end}) is out of bounds or inverted for a byte string of \
+                 length {}",
+                bytes.len()
+            ),
+        });
+    }
+    compose_result(
+        prim,
+        args,
+        Repr::Bytes,
+        Payload::Bytes(bytes[start..end].to_vec()),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bytes.concat : (Bytes, Bytes) → Bytes` — byte concatenation (RFC-0032 D4). Total/`Exact`.
+fn prim_bytes_concat(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bytes_payload(prim, args[0])?;
+    let b = as_bytes_payload(prim, args[1])?;
+    let mut out = Vec::with_capacity(a.len() + b.len());
+    out.extend_from_slice(a);
+    out.extend_from_slice(b);
+    compose_result(
+        prim,
+        args,
+        Repr::Bytes,
+        Payload::Bytes(out),
+        ApproxRule::Refuse,
+    )
 }
 
 #[cfg(test)]

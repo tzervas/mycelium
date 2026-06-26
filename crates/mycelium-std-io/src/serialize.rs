@@ -83,6 +83,17 @@ fn check_json_representable(v: &Value) -> Result<(), SerError> {
     let scalars: &[f64] = match v.payload() {
         Payload::Scalars(s) | Payload::Hypervector(s) => s,
         Payload::Bits(_) | Payload::Trits(_) => return Ok(()),
+        // A sequence (RFC-0032 D3) has no flat f64 payload, but its elements might — recurse so a
+        // non-finite scalar nested inside a `Seq` is still caught, never silently emitted as null
+        // (G2). The first offending element propagates its `OutOfDomain` up.
+        Payload::Seq(elems) => {
+            for e in elems {
+                check_json_representable(e)?;
+            }
+            return Ok(());
+        }
+        // A byte string (RFC-0032 D4) carries no f64 — always JSON-representable here.
+        Payload::Bytes(_) => return Ok(()),
     };
     if let Some(pos) = scalars.iter().position(|x| !x.is_finite()) {
         return Err(SerError::OutOfDomain {

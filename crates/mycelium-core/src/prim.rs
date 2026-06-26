@@ -212,6 +212,28 @@ impl PrimTable {
         // RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic (width-uniform).
         t.insert("bit.add", exact(vec![Binary, Binary], Binary));
         t.insert("bit.sub", exact(vec![Binary, Binary], Binary));
+        // RFC-0032 D3 (M-749): never-silent indexed-sequence access. Both are `intrinsic = Exact`
+        // (total/decidable over the in-range domain). **Paradigm-model note (FLAG):** the Π paradigm
+        // model is `Binary`/`Ternary`/`Any` only — it has no first-class `Seq` paradigm, and a
+        // sequence-element result type cannot be expressed in it. So the seq operand and the
+        // `seq.get` element result are typed `Any` here (the table's existing paradigm-polymorphic
+        // escape hatch, as for `core.id`); the real never-silent typing — "operand must be a `Seq`",
+        // out-of-bounds refusal, the element repr of the result — is enforced by the interpreter prim
+        // (`prims.rs::{as_seq,as_index,prim_seq_get}`), not encoded in this coarse signature. A
+        // first-class `Seq` paradigm in `PrimParadigm` is a deliberate, RFC-unpinned extension left
+        // for the surface-typing work (it ripples into the checker + content-addressing).
+        t.insert("seq.len", exact(vec![Any], Binary));
+        t.insert("seq.get", exact(vec![Any, Binary], Any));
+        // RFC-0032 D4 (M-750): never-silent byte-string access. All `intrinsic = Exact`. Same
+        // paradigm-model FLAG as the seq prims: the Π model has no first-class `Bytes` paradigm, so
+        // the bytes operand/result are typed `Any` (the real "operand must be `Bytes`" + out-of-range
+        // refusals are enforced by the interpreter prims `prims.rs::{as_bytes_payload,prim_bytes_*}`).
+        // `bytes.len`/`bytes.get` produce a `Binary` (length / a `Binary{8}` byte); `bytes.slice`/
+        // `bytes.concat` produce `Bytes` (typed `Any` here).
+        t.insert("bytes.len", exact(vec![Any], Binary));
+        t.insert("bytes.get", exact(vec![Any, Binary], Binary));
+        t.insert("bytes.slice", exact(vec![Any, Binary, Binary], Any));
+        t.insert("bytes.concat", exact(vec![Any, Any], Any));
         t
     }
 
@@ -338,8 +360,25 @@ mod tests {
     fn builtins_are_present_and_resolvable() {
         let t = PrimTable::builtins();
         for name in [
-            "core.id", "bit.not", "bit.and", "bit.or", "bit.xor", "trit.neg", "trit.add",
-            "trit.sub", "trit.mul", "cmp.eq", "cmp.lt", "bit.add", "bit.sub",
+            "core.id",
+            "bit.not",
+            "bit.and",
+            "bit.or",
+            "bit.xor",
+            "trit.neg",
+            "trit.add",
+            "trit.sub",
+            "trit.mul",
+            "cmp.eq",
+            "cmp.lt",
+            "bit.add",
+            "bit.sub",
+            "seq.len",
+            "seq.get",
+            "bytes.len",
+            "bytes.get",
+            "bytes.slice",
+            "bytes.concat",
         ] {
             let r = t.prim_ref(name).expect("builtin registered");
             let d = t.resolve(&r).expect("ref resolves");
@@ -347,8 +386,9 @@ mod tests {
             assert_eq!(t.intrinsic(name), Some(GuaranteeStrength::Exact));
         }
         // `entries()` is the EXPLAIN surface: one inspectable entry per builtin (RFC-0032 D1/D2
-        // added cmp.eq/cmp.lt/bit.add/bit.sub to the original nine).
-        assert_eq!(t.entries().len(), 13);
+        // added cmp.eq/cmp.lt/bit.add/bit.sub to the original nine; D3/M-749 added seq.len/seq.get;
+        // D4/M-750 added bytes.len/get/slice/concat).
+        assert_eq!(t.entries().len(), 19);
     }
 
     #[test]
@@ -450,10 +490,11 @@ mod tests {
     fn names_returns_registered_sorted_names() {
         let t = PrimTable::builtins();
         let ns = t.names();
-        // Exactly 13 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub).
+        // Exactly 19 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
+        // seq.len/seq.get + D4 bytes.len/get/slice/concat).
         assert_eq!(
             ns.len(),
-            13,
+            19,
             "names() count must match the builtin count: {ns:?}"
         );
         // Sorted (BTreeMap iteration is sorted).
