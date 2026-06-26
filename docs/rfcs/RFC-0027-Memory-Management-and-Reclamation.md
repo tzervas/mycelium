@@ -38,7 +38,7 @@
 > `Proven` outright — §8). **(That Draft → Proposed move likewise required maintainer ratification
 > and must not have skipped to `Accepted` — house rule #3.)** The 2026-06-25 revision (this one)
 > resolves OQ-1 + OQ-4 via DN-32 and proposes the next stepped advance, Proposed → Accepted.
-
+>
 > **Posture (transparency/honesty rule / VR-5).** The original (2026-06-23) revision was a planning
 > stub — scope, user stories, and open questions only, all `Declared`. This (2026-06-24) revision
 > **advances the content** by incorporating the research-resolved design (§§7–11), tagging each

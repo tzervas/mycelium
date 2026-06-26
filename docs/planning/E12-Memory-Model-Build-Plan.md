@@ -19,8 +19,8 @@ blockers — systematically, never-silent (G2), honest tags (VR-5), small audita
   markdown/spell/python-fmt (corpus-wide, low priority).
 
 ## Blocker track (parallel, mechanical — clears the green-CI blockers)
-- **BLK-1 — api baselines:** regenerate the drifted committed baselines (std-sys, l1, lsp, std-sys-host, spore,
-  + add cli) so the `api` gate is green. Pure regeneration; no code change.
+- **BLK-1 — api baselines:** regenerate the drifted committed baselines (std-sys, l1, lsp, std-sys-host, spore, +
+  add cli) so the `api` gate is green. Pure regeneration; no code change.
 - **BLK-2 — myc-fmt:** `mycfmt --write` the non-canonical `lib/std/*.myc` so the `myc-fmt` gate is green.
 - *(BLK-3 markdown/spell/python-fmt — deferred, low value; `deny` is environmental.)*
 

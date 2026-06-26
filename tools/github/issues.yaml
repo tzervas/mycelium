@@ -4426,15 +4426,23 @@ issues:
   - id: M-716
     title: "collections in Mycelium: Vec/Map/Set as .myc with honest bounds"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:ready]
     epic: E13-1
     depends_on: [M-715, M-749]
     doc_refs:
-      - corpus:RFC-0031
       - corpus:RFC-0032
+      - corpus:RFC-0031
       - corpus:RFC-0016
       - corpus:DN-25
+      - src:crates/mycelium-l1/tests/enablement.rs
     body: |
+      PRECONDITION SATISFIED (2026-06-26): the M-749 kernel sequence repr landed (`Repr::Seq` +
+      `Payload::Seq` + never-silent `seq.get`/`seq.len`, RFC-0032 D3; Rust-first, RFC Accepted-not-Enacted)
+      with a `.myc` surface (`[..]` → `Seq{T,N}`) demonstrated three-way (L1-eval ≡ L0-interp ≡ AOT) in
+      `crates/mycelium-l1/tests/enablement.rs` (`seq_*_surface_three_way`). The indexed-collection
+      substrate this task needed now exists; status `blocked → ready` (the port itself is still to do,
+      and also rides M-715's Option/iter surface). Original blocking note retained below.
+
       BLOCKED (RFC-0031 §5 D4 Tier-2) on E19-1/M-749 (sequence/array value representation + indexing,
       gated by RFC-0032): efficient Vec/Map/Set self-hosting needs a kernel sequence/collection value
       + an indexing prim. The surface today bottoms out on bit.* / trit.* over fixed-width Binary{N}/
@@ -4471,15 +4479,24 @@ issues:
   - id: M-717
     title: "text + fmt in Mycelium: string handling + formatting as .myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:ready]
     epic: E13-1
     depends_on: [M-715, M-750]
     doc_refs:
-      - corpus:RFC-0031
       - corpus:RFC-0032
+      - corpus:RFC-0031
       - corpus:RFC-0016
       - corpus:DN-25
+      - src:crates/mycelium-l1/tests/enablement.rs
     body: |
+      PRECONDITION SATISFIED (2026-06-26): the M-750 kernel byte-string repr landed (`Repr::Bytes` +
+      `Payload::Bytes` + never-silent `bytes.{get,slice,len,concat}`, RFC-0032 D4; Rust-first, RFC
+      Accepted-not-Enacted) with a `.myc` surface (`0x…` hex → `Bytes`) demonstrated three-way
+      (L1-eval ≡ L0-interp ≡ AOT) in `crates/mycelium-l1/tests/enablement.rs` (`bytes_*_surface_three_way`).
+      UTF-8 decode is written in `.myc` over these byte prims (never in the kernel — D4). The byte
+      substrate this task needed now exists; status `blocked → ready` (the port itself is still to do,
+      and also rides M-715's Result/Option surface). Original blocking note retained below.
+
       BLOCKED (RFC-0031 §5 D4 Tier-2) on E19-1/M-750 (byte/string value representation + codepoint ops,
       gated by RFC-0032): text/fmt self-hosting needs a kernel string/byte-sequence value. The surface
       today has no string value (only fixed-width Binary{N}/Ternary{N} + bit/trit prims), so a .myc
@@ -5483,7 +5500,7 @@ issues:
   - id: M-749
     title: "M-749 -- sequence/array value representation + never-silent indexing"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746]
     doc_refs:
@@ -5507,7 +5524,7 @@ issues:
   - id: M-750
     title: "M-750 -- byte/string value representation + codepoint ops"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:todo]
+    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746, M-749]
     doc_refs:

@@ -9,13 +9,16 @@
 //!   completions. Guarantee: `Declared` (asserted capabilities, always flagged).
 //!
 //! Active keywords are drawn from the `keyword()` function in `mycelium-l1::token` — the
-//! authoritative source for which words lex as keywords today. Reserved-not-active words
-//! (`phylum` and the 8 remaining DN-03 runtime words `fuse`/`mesh`/`graft`/`cyst`/`xloc`/
-//! `forage`/`backbone`/`tier`/`reclaim` reserved by M-665) and ratified-not-yet-lexed words
-//! (`impl`, `consume`, `grow`) are intentionally excluded from keyword completions: offering them
-//! as if usable would violate the honesty rule (VR-5 / G2). `colony` and `hypha` were
-//! reserved-not-active through M-665; M-666 made them **active** (they now open real surface
-//! constructs — RFC-0008 §4.5/§4.7) and are offered here.
+//! authoritative source for which words lex as keywords today. Reserved-not-active words are
+//! intentionally excluded from keyword completions: they lex as keywords (never silent, G2) but
+//! no construct consumes them yet, so offering them as if usable would violate the honesty rule
+//! (VR-5 / G2). This set is `phylum`, the 8 remaining DN-03 §4 runtime words
+//! `fuse`/`mesh`/`graft`/`cyst`/`xloc`/`forage`/`backbone`/`tier`/`reclaim` (reserved by M-665),
+//! and the DN-03 §1 surface-tier words `consume`/`grow` (lexed, but the parser refuses them with a
+//! teaching diagnostic until their constructs land with M-664). `impl` graduated to a real, active
+//! keyword in M-659 and is offered. `colony` and `hypha` were reserved-not-active through M-665;
+//! M-666 made them **active** (they now open real surface constructs — RFC-0008 §4.5/§4.7) and are
+//! offered here.
 //!
 //! `matured` is offered as a keyword (it is reserved — using it at item position is an explicit
 //! parse error with a teaching diagnostic, RFC-0017 §4.1); its correct use is the header attribute
@@ -31,13 +34,13 @@
 use serde_json::{json, Value};
 
 /// LSP `CompletionItemKind` for a reserved keyword.
-const KIND_KEYWORD: u8 = 14;
+pub(crate) const KIND_KEYWORD: u8 = 14;
 /// LSP `CompletionItemKind` for a code scaffold snippet.
 const KIND_SNIPPET: u8 = 15;
 
 /// LSP `insertTextFormat`: plain text (`1`) vs snippet grammar (`2`).
-const FORMAT_PLAIN: u8 = 1;
-const FORMAT_SNIPPET: u8 = 2;
+pub(crate) const FORMAT_PLAIN: u8 = 1;
+pub(crate) const FORMAT_SNIPPET: u8 = 2;
 
 /// A single LSP completion item (minimal fields: `label`, `kind`, `insertText`,
 /// `insertTextFormat`, `detail`, `documentation`).
@@ -545,238 +548,4 @@ pub fn completion_list() -> Value {
         "isIncomplete": false,
         "items": items,
     })
-}
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // ----- keyword presence -----
-
-    #[test]
-    fn all_active_structural_keywords_are_offered() {
-        let labels: Vec<&str> = KEYWORD_COMPLETIONS.iter().map(|c| c.label).collect();
-        // These are all the active structural keywords (token.rs `keyword()` -- active set).
-        // `colony` and `hypha` were reserved-not-active until M-666; they are now active.
-        for kw in [
-            "nodule", "use", "type", "trait", "impl", "fn", "thaw", "let", "in", "if", "then",
-            "else", "match", "for", "swap", "default", "paradigm", "with", "wild", "spore", "to",
-            "policy", "matured", "colony", "hypha",
-        ] {
-            assert!(
-                labels.contains(&kw),
-                "active keyword `{kw}` missing from KEYWORD_COMPLETIONS"
-            );
-        }
-    }
-
-    #[test]
-    fn every_offered_keyword_is_a_real_active_lexer_keyword() {
-        // Forward drift guard: every keyword-kind completion is recognized by the lexer's
-        // authoritative `keyword()` set, so KEYWORD_COMPLETIONS cannot silently drift out of sync
-        // with mycelium_l1::token::keyword() (e.g. by offering a word that is not actually a keyword).
-        for c in KEYWORD_COMPLETIONS.iter() {
-            assert!(
-                mycelium_l1::token::keyword(c.label).is_some(),
-                "completion `{}` is offered as a keyword but mycelium_l1::token::keyword() does \
-                 not recognize it — remove it from KEYWORD_COMPLETIONS or fix the lexer",
-                c.label
-            );
-        }
-    }
-
-    #[test]
-    fn all_active_type_keywords_are_offered() {
-        let labels: Vec<&str> = KEYWORD_COMPLETIONS.iter().map(|c| c.label).collect();
-        for kw in [
-            "Binary",
-            "Ternary",
-            "Dense",
-            "VSA",
-            "Substrate",
-            "Sparse",
-            "F16",
-            "BF16",
-            "F32",
-            "F64",
-            "Exact",
-            "Proven",
-            "Empirical",
-            "Declared",
-        ] {
-            assert!(
-                labels.contains(&kw),
-                "active type/scalar/strength keyword `{kw}` missing from KEYWORD_COMPLETIONS"
-            );
-        }
-    }
-
-    #[test]
-    fn reserved_not_active_words_are_not_offered() {
-        // `phylum` and the 8 remaining DN-03 §4 runtime-vocabulary words (reserved by M-665,
-        // minus `colony`/`hypha` which became active in M-666) are reserved-not-active: they lex
-        // as keywords but no construct consumes them yet -- offering them as usable would violate
-        // the honesty rule (G2 / VR-5). `colony` and `hypha` are now offered (see above).
-        let labels: Vec<&str> = KEYWORD_COMPLETIONS
-            .iter()
-            .chain(SNIPPET_COMPLETIONS.iter())
-            .map(|c| c.label)
-            .collect();
-        for banned in [
-            "phylum", "fuse", "mesh", "graft", "cyst", "xloc", "forage", "backbone", "tier",
-            "reclaim",
-        ] {
-            assert!(
-                !labels.contains(&banned),
-                "reserved-not-active word `{banned}` must NOT appear in completions"
-            );
-            // These ARE in keyword() (lexed) but excluded from the offered set. If one is dropped
-            // from keyword(), this fails -- keeping the exclusion list and the lexer aligned.
-            assert!(
-                mycelium_l1::token::keyword(banned).is_some(),
-                "`{banned}` is reserved-not-active but no longer in keyword() -- update the \
-                 exclusion list + this test together"
-            );
-        }
-    }
-
-    #[test]
-    fn not_yet_lexed_words_are_not_offered() {
-        // `consume`/`grow` are ratified but not yet in keyword() -- offering them as active syntax
-        // would be dishonest (they currently lex as plain identifiers). `impl` graduated to a real,
-        // active keyword in M-659 (checker + coherence), so it moved to the offered set (mirroring
-        // `trait`) and is asserted by `all_active_structural_keywords_are_offered`; it is no longer
-        // tracked here. The 10 runtime words `hypha`…`reclaim` were ratified-not-yet-lexed too until
-        // M-665 reserved them; they are now covered by `reserved_not_active_words_are_not_offered`.
-        let labels: Vec<&str> = KEYWORD_COMPLETIONS
-            .iter()
-            .chain(SNIPPET_COMPLETIONS.iter())
-            .map(|c| c.label)
-            .collect();
-        for unlexed in ["consume", "grow"] {
-            assert!(
-                !labels.contains(&unlexed),
-                "ratified-not-yet-lexed word `{unlexed}` must NOT appear in completions"
-            );
-            // Enforce the stated intent against the lexer: these words are genuinely NOT in
-            // keyword() yet. If the lexer starts recognizing one, this fails — forcing the
-            // completion list + the "not yet lexed" claim to be updated together (never drift).
-            assert!(
-                mycelium_l1::token::keyword(unlexed).is_none(),
-                "`{unlexed}` is now a real keyword in mycelium_l1::token::keyword() — it is no \
-                 longer 'not yet lexed'; update the completion list + this test together"
-            );
-        }
-    }
-
-    // ----- snippet well-formedness -----
-
-    #[test]
-    fn all_snippets_have_snippet_format_and_contain_tab_stops() {
-        for snippet in SNIPPET_COMPLETIONS {
-            assert_eq!(
-                snippet.insert_text_format, FORMAT_SNIPPET,
-                "snippet `{}` must use FORMAT_SNIPPET (2)",
-                snippet.label
-            );
-            assert!(
-                snippet.insert_text.contains('$'),
-                "snippet `{}` has no tab stops (`$`)",
-                snippet.label
-            );
-        }
-    }
-
-    #[test]
-    fn nodule_header_snippet_contains_nodule_and_comment_marker() {
-        let nodule = SNIPPET_COMPLETIONS
-            .iter()
-            .find(|s| s.label == "nodule-header")
-            .expect("nodule-header snippet must exist");
-        assert!(nodule.insert_text.contains("// nodule:"));
-        assert!(nodule.insert_text.contains("nodule "));
-    }
-
-    #[test]
-    fn swap_snippet_contains_both_to_and_policy() {
-        // S1/WF2: both `to:` and `policy:` must always be present in a swap.
-        let swap = SNIPPET_COMPLETIONS
-            .iter()
-            .find(|s| s.label == "swap-expr")
-            .expect("swap-expr snippet must exist");
-        assert!(
-            swap.insert_text.contains("to:"),
-            "swap snippet must contain `to:` (S1)"
-        );
-        assert!(
-            swap.insert_text.contains("policy:"),
-            "swap snippet must contain `policy:` (S1/WF2)"
-        );
-    }
-
-    #[test]
-    fn fn_def_snippet_has_arrow_and_equals() {
-        let fn_def = SNIPPET_COMPLETIONS
-            .iter()
-            .find(|s| s.label == "fn-def")
-            .expect("fn-def snippet must exist");
-        assert!(fn_def.insert_text.contains("->"), "fn-def must have `->`");
-        assert!(fn_def.insert_text.contains('='), "fn-def must have `=`");
-    }
-
-    // ----- completion_list() shape -----
-
-    #[test]
-    fn completion_list_has_lsp_shape() {
-        let list = completion_list();
-        assert_eq!(
-            list["isIncomplete"], false,
-            "isIncomplete must be false for a static list"
-        );
-        let items = list["items"].as_array().expect("items must be an array");
-        assert!(
-            !items.is_empty(),
-            "completion list must have at least one item"
-        );
-        // Every item must have the required LSP CompletionItem fields.
-        for item in items {
-            assert!(item["label"].is_string(), "each item must have a `label`");
-            assert!(item["kind"].is_number(), "each item must have a `kind`");
-            assert!(
-                item["insertText"].is_string(),
-                "each item must have `insertText`"
-            );
-        }
-    }
-
-    #[test]
-    fn completion_list_total_count_matches_constants() {
-        let list = completion_list();
-        let items = list["items"].as_array().unwrap();
-        assert_eq!(
-            items.len(),
-            KEYWORD_COMPLETIONS.len() + SNIPPET_COMPLETIONS.len(),
-            "completion_list() must include every keyword and every snippet"
-        );
-    }
-
-    #[test]
-    fn keyword_completions_use_plain_format_and_kind_14() {
-        for kw in KEYWORD_COMPLETIONS {
-            assert_eq!(
-                kw.kind, KIND_KEYWORD,
-                "keyword `{}` must have kind=14 (Keyword)",
-                kw.label
-            );
-            assert_eq!(
-                kw.insert_text_format, FORMAT_PLAIN,
-                "keyword `{}` must use plain insert-text format",
-                kw.label
-            );
-        }
-    }
 }

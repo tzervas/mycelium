@@ -185,8 +185,8 @@ fn data_corpus() -> Vec<&'static str> {
          fn copy(n: Nat) -> Nat = match n { Z => Z, S(m) => S(copy(m)) }\n\
          fn main() -> Nat = copy(S(S(Z)))",
         // a `for` fold over a list spine (desugars to a synthesized Fix fold)
-        "nodule d\ntype Bytes = End | More(Binary{8}, Bytes)\n\
-         fn checksum(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
+        "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
+         fn checksum(bs: ByteList) -> Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
          fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
         // a recursive helper called by a non-recursive one (inlining + Fix coexist)
         "nodule d\ntype Nat = Z | S(Nat)\n\

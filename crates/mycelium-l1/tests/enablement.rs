@@ -21,11 +21,25 @@
 //! refusals on every path**, never a silent wrap or a silent `false` — pinned by the refusal tests.
 //!
 //! # Scope boundary
-//! The Tier-2 reprs (`Repr::Seq` / `Repr::Bytes`, M-749/M-750) are **not** exercised here — they are
-//! the KC-3-significant, maintainer-sign-off-gated additions and land separately; their conformance
-//! ports join this file when they do (never faked here — G2/VR-5).
+//! - **M-749** (`Repr::Seq`) — the **`.myc` surface is now wired** (lexer/parser/checker/elaborator:
+//!   the `Seq{T, N}` type, the `[e1, …]` list literal, and the `seq_get`/`seq_len` prims). The full
+//!   **three-way** (`L1-eval ≡ elaborate→L0-interp ≡ AOT`) differential over the surface runs in the
+//!   `seq_*_surface_*` tests below, alongside the original **prim-level** differential
+//!   (`seq.get`/`seq.len` over directly-built L0 `Node`s: **L0-interp ≡ AOT**) and the never-silent
+//!   out-of-bounds refusal on both paths. Both layers are real (no faked/upgraded basis — G2/VR-5).
+//! - **M-750** (`Repr::Bytes`) — the **`.myc` surface is now wired** (the `Bytes` type, the `0x…` hex
+//!   literal, and the `bytes_get`/`bytes_len` prims). The full **three-way** differential over the
+//!   surface runs in the `bytes_*_surface_*` tests below, alongside the original **prim-level**
+//!   differential (`bytes.get`/`bytes.len`/`bytes.slice`/`bytes.concat` over directly-built L0
+//!   `Node`s: **L0-interp ≡ AOT**) and the never-silent out-of-range/inverted-range refusals. UTF-8
+//!   decode is written in `.myc` over these byte prims (per RFC-0032 D4) and is not exercised here.
+//! - **Never-silent surface rejects** (G2): a **heterogeneous** list literal and an **odd-hex** `0x…`
+//!   literal are explicit refusals at check/parse time — pinned by the `*_rejects` tests below.
 
-use mycelium_core::{Payload, Repr};
+use mycelium_core::{
+    Bound, BoundBasis, BoundKind, GuaranteeStrength, Meta, Node, NormKind, Payload, Provenance,
+    Repr, Value,
+};
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::{check_nodule, elaborate, parse, Evaluator};
 
@@ -326,5 +340,511 @@ fn eq_concrete_operand_anchors_bare_decimal() {
         "nodule d\ndefault paradigm Binary\nfn main() -> Binary{1} = eq(4, 0b0000_0101)",
         &r,
         &p,
+    );
+}
+
+// ── M-749: indexed-sequence prims — prim-level differential (L0-interp ≡ AOT) ────────────────────
+//
+// `Repr::Seq` has no `.myc` surface literal yet (lexer/parser wiring deferred — FLAGGED in the
+// module header), so the three-way `.myc` path can't run. Instead we build the L0 `Node` tree
+// directly and exercise the achievable, trusted-base differential: the reference interpreter
+// (`L0-interp`) and the AOT env-machine (`mycelium_mlir::run_core`) dispatch `seq.get`/`seq.len`
+// through the *same* prim registry, so they must agree on the observable — and refuse an
+// out-of-bounds index identically (never-silent on both paths, G2).
+
+/// A `Binary{1}` value (a sequence element / an index bit-source).
+fn b1_val(truth: bool) -> Value {
+    Value::new(
+        Repr::Binary { width: 1 },
+        Payload::Bits(vec![truth]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed bit")
+}
+
+/// An unsigned `Binary{8}` index literal value (MSB-first).
+fn idx8(n: u8) -> Value {
+    let bits: Vec<bool> = (0..8).rev().map(|k| (n >> k) & 1 == 1).collect();
+    Value::new(
+        Repr::Binary { width: 8 },
+        Payload::Bits(bits),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed index")
+}
+
+/// A `Seq<Binary{1}, 3>` const value `[true, false, true]`.
+fn seq3() -> Value {
+    Value::new(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 1 }),
+            len: 3,
+        },
+        Payload::Seq(vec![b1_val(true), b1_val(false), b1_val(true)]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed seq")
+}
+
+/// Run a single-`Op` L0 program on **both** the reference interpreter and the AOT env-machine and
+/// return `(l0_interp, aot)` results (each a `Result`), so a test can assert agreement on success
+/// *and* on refusal.
+fn run_l0_and_aot(node: &Node) -> (Result<Value, String>, Result<Value, String>) {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+    let l0 = interp.eval(node).map_err(|e| format!("{e:?}"));
+    // `run` returns the repr `Value` (the seq prims always yield a repr value, never a data value).
+    let aot = mycelium_mlir::run(node, &prims, &engine).map_err(|e| format!("{e:?}"));
+    (l0, aot)
+}
+
+#[test]
+fn seq_get_in_range_l0_interp_equals_aot() {
+    // seq.get([t,f,t], 0) == t ; index 2 == t ; index 1 == f.
+    for (i, want) in [(0u8, true), (1, false), (2, true)] {
+        let node = Node::Op {
+            prim: "seq.get".to_owned(),
+            args: vec![Node::Const(seq3()), Node::Const(idx8(i))],
+        };
+        let (l0, aot) = run_l0_and_aot(&node);
+        let l0 = l0.unwrap_or_else(|e| panic!("seq.get({i}) L0-interp failed: {e}"));
+        let aot = aot.unwrap_or_else(|e| panic!("seq.get({i}) AOT failed: {e}"));
+        assert_eq!(
+            (l0.repr(), l0.payload()),
+            (aot.repr(), aot.payload()),
+            "seq.get({i}): L0-interp vs AOT diverged"
+        );
+        assert_eq!(l0.repr(), &Repr::Binary { width: 1 });
+        assert_eq!(l0.payload(), &Payload::Bits(vec![want]));
+    }
+}
+
+#[test]
+fn seq_len_l0_interp_equals_aot() {
+    let node = Node::Op {
+        prim: "seq.len".to_owned(),
+        args: vec![Node::Const(seq3())],
+    };
+    let (l0, aot) = run_l0_and_aot(&node);
+    let l0 = l0.expect("seq.len L0-interp");
+    let aot = aot.expect("seq.len AOT");
+    assert_eq!(
+        (l0.repr(), l0.payload()),
+        (aot.repr(), aot.payload()),
+        "seq.len: L0-interp vs AOT diverged"
+    );
+    // 3 as Binary{32}, MSB-first.
+    assert_eq!(l0.repr(), &Repr::Binary { width: 32 });
+    let want: Vec<bool> = (0..32).rev().map(|k| (3u32 >> k) & 1 == 1).collect();
+    assert_eq!(l0.payload(), &Payload::Bits(want));
+}
+
+/// Never-silent (G2): an out-of-bounds `seq.get` is an explicit refusal on **both** paths — never a
+/// panic, never a silent default. (`len == 3`, so index 3 is out of range.)
+#[test]
+fn seq_get_out_of_bounds_refuses_on_both_paths() {
+    let node = Node::Op {
+        prim: "seq.get".to_owned(),
+        args: vec![Node::Const(seq3()), Node::Const(idx8(3))],
+    };
+    let (l0, aot) = run_l0_and_aot(&node);
+    assert!(
+        l0.is_err(),
+        "L0-interp must refuse an out-of-bounds seq.get (never a silent default)"
+    );
+    assert!(
+        aot.is_err(),
+        "AOT must refuse an out-of-bounds seq.get (never a silent default)"
+    );
+}
+
+/// `seq.get`/`seq.len` over a **non-sequence** operand is an explicit type refusal on both paths
+/// (never a silent coercion).
+#[test]
+fn seq_prims_refuse_non_sequence_operand() {
+    let get_bad = Node::Op {
+        prim: "seq.get".to_owned(),
+        args: vec![Node::Const(b1_val(true)), Node::Const(idx8(0))],
+    };
+    let (l0, aot) = run_l0_and_aot(&get_bad);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "seq.get on a non-seq must refuse on both paths"
+    );
+
+    let len_bad = Node::Op {
+        prim: "seq.len".to_owned(),
+        args: vec![Node::Const(b1_val(true))],
+    };
+    let (l0, aot) = run_l0_and_aot(&len_bad);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "seq.len on a non-seq must refuse on both paths"
+    );
+}
+
+/// A `Binary{1}` value carrying a **`Declared`** guarantee (a user-asserted, unvalidated bound) — the
+/// pre-image for the VR-5 no-upgrade test below.
+fn b1_declared(truth: bool) -> Value {
+    let bound = Bound {
+        kind: BoundKind::Error {
+            eps: 0.1,
+            norm: NormKind::L2,
+        },
+        basis: BoundBasis::UserDeclared,
+    };
+    let meta = Meta::new(
+        Provenance::Root,
+        GuaranteeStrength::Declared,
+        Some(bound),
+        None,
+        None,
+        None,
+    )
+    .expect("well-formed Declared meta (M-I4)");
+    Value::new(Repr::Binary { width: 1 }, Payload::Bits(vec![truth]), meta)
+        .expect("well-formed declared bit")
+}
+
+/// VR-5 (regression for the pr-review Medium): `seq.get` must return the indexed element at **its
+/// own** established basis, never upgraded. A `Declared` element retrieved from an otherwise-`Exact`
+/// sequence+index must come back **`Declared`** (carrying its bound), not silently re-stamped `Exact`.
+/// Before the fix, `seq.get` propagated the guarantee from the container/index only and dropped the
+/// element's `Meta`, yielding an `Exact` result — a silent upgrade past basis.
+#[test]
+fn seq_get_preserves_a_declared_elements_guarantee() {
+    // An Exact-container `Seq<Binary{1}, 2>` whose element 0 is *Declared*, element 1 is Exact.
+    let seq = Value::new(
+        Repr::Seq {
+            elem: Box::new(Repr::Binary { width: 1 }),
+            len: 2,
+        },
+        Payload::Seq(vec![b1_declared(true), b1_val(false)]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed seq with a declared element");
+
+    // get(seq, 0) → the Declared element: guarantee stays Declared, bound carried, value preserved.
+    let node = Node::Op {
+        prim: "seq.get".to_owned(),
+        args: vec![Node::Const(seq.clone()), Node::Const(idx8(0))],
+    };
+    let (l0, aot) = run_l0_and_aot(&node);
+    let l0 = l0.expect("seq.get(declared elem) L0-interp");
+    let aot = aot.expect("seq.get(declared elem) AOT");
+    assert_eq!(
+        l0.meta().guarantee(),
+        GuaranteeStrength::Declared,
+        "VR-5: seq.get must NOT upgrade a Declared element to Exact"
+    );
+    assert!(
+        l0.meta().bound().is_some(),
+        "the Declared element's bound must carry through, never silently dropped (G2)"
+    );
+    assert_eq!(l0.payload(), &Payload::Bits(vec![true]), "value preserved");
+    assert_eq!(
+        l0.meta().guarantee(),
+        aot.meta().guarantee(),
+        "L0-interp and AOT must agree on the preserved guarantee"
+    );
+
+    // get(seq, 1) → the Exact element stays Exact (no spurious downgrade either).
+    let node1 = Node::Op {
+        prim: "seq.get".to_owned(),
+        args: vec![Node::Const(seq), Node::Const(idx8(1))],
+    };
+    let (l0_1, _) = run_l0_and_aot(&node1);
+    assert_eq!(
+        l0_1.expect("seq.get(exact elem)").meta().guarantee(),
+        GuaranteeStrength::Exact,
+        "an Exact element from an Exact container stays Exact"
+    );
+}
+
+// ── M-750: byte-string prims — prim-level differential (L0-interp ≡ AOT) ─────────────────────────
+//
+// As with the seq prims, `Repr::Bytes` has no `.myc` surface literal yet (FLAGGED), so we build the
+// L0 `Node` tree directly. The reference interpreter and the AOT env-machine dispatch
+// `bytes.{len,get,slice,concat}` through the same prim registry, so they must agree — and refuse an
+// out-of-range / inverted access identically (never-silent on both paths, G2).
+
+/// A `Repr::Bytes` const value over `bytes`.
+fn bytes_val(bytes: Vec<u8>) -> Value {
+    Value::new(
+        Repr::Bytes,
+        Payload::Bytes(bytes),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed bytes")
+}
+
+#[test]
+fn bytes_get_and_len_l0_interp_equal_aot() {
+    let bytes = bytes_val(vec![0x01, 0x02, 0x03]);
+
+    // bytes.len → Binary{32}(3).
+    let len_node = Node::Op {
+        prim: "bytes.len".to_owned(),
+        args: vec![Node::Const(bytes.clone())],
+    };
+    let (l0, aot) = run_l0_and_aot(&len_node);
+    let l0 = l0.expect("bytes.len L0-interp");
+    let aot = aot.expect("bytes.len AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(l0.repr(), &Repr::Binary { width: 32 });
+
+    // bytes.get(b, 1) → Binary{8}(0x02).
+    let get_node = Node::Op {
+        prim: "bytes.get".to_owned(),
+        args: vec![Node::Const(bytes), Node::Const(idx8(1))],
+    };
+    let (l0, aot) = run_l0_and_aot(&get_node);
+    let l0 = l0.expect("bytes.get L0-interp");
+    let aot = aot.expect("bytes.get AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(l0.repr(), &Repr::Binary { width: 8 });
+    // 0x02 == 0b0000_0010.
+    let want: Vec<bool> = (0..8).rev().map(|k| (0x02u8 >> k) & 1 == 1).collect();
+    assert_eq!(l0.payload(), &Payload::Bits(want));
+}
+
+#[test]
+fn bytes_slice_and_concat_l0_interp_equal_aot() {
+    let bytes = bytes_val(vec![0x0a, 0x0b, 0x0c, 0x0d]);
+
+    // bytes.slice(b, 1, 3) → Bytes(0x0b 0x0c).
+    let slice_node = Node::Op {
+        prim: "bytes.slice".to_owned(),
+        args: vec![
+            Node::Const(bytes.clone()),
+            Node::Const(idx8(1)),
+            Node::Const(idx8(3)),
+        ],
+    };
+    let (l0, aot) = run_l0_and_aot(&slice_node);
+    let l0 = l0.expect("bytes.slice L0-interp");
+    let aot = aot.expect("bytes.slice AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(l0.payload(), &Payload::Bytes(vec![0x0b, 0x0c]));
+
+    // bytes.concat(b, b) → 8 bytes.
+    let concat_node = Node::Op {
+        prim: "bytes.concat".to_owned(),
+        args: vec![Node::Const(bytes.clone()), Node::Const(bytes)],
+    };
+    let (l0, aot) = run_l0_and_aot(&concat_node);
+    let l0 = l0.expect("bytes.concat L0-interp");
+    let aot = aot.expect("bytes.concat AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(
+        l0.payload(),
+        &Payload::Bytes(vec![0x0a, 0x0b, 0x0c, 0x0d, 0x0a, 0x0b, 0x0c, 0x0d])
+    );
+}
+
+/// Never-silent (G2): an out-of-bounds `bytes.get` and an inverted/out-of-range `bytes.slice` are
+/// explicit refusals on **both** paths — never a panic, never a silently-clamped result.
+#[test]
+fn bytes_out_of_range_refuses_on_both_paths() {
+    let bytes = bytes_val(vec![0x01, 0x02, 0x03]); // len 3
+
+    // index 3 is out of range.
+    let get_oob = Node::Op {
+        prim: "bytes.get".to_owned(),
+        args: vec![Node::Const(bytes.clone()), Node::Const(idx8(3))],
+    };
+    let (l0, aot) = run_l0_and_aot(&get_oob);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "OOB bytes.get must refuse on both paths"
+    );
+
+    // slice [2, 1) is inverted; [0, 4) overruns len — both refuse.
+    let slice_inv = Node::Op {
+        prim: "bytes.slice".to_owned(),
+        args: vec![
+            Node::Const(bytes.clone()),
+            Node::Const(idx8(2)),
+            Node::Const(idx8(1)),
+        ],
+    };
+    let (l0, aot) = run_l0_and_aot(&slice_inv);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "inverted bytes.slice must refuse on both paths"
+    );
+
+    let slice_over = Node::Op {
+        prim: "bytes.slice".to_owned(),
+        args: vec![
+            Node::Const(bytes),
+            Node::Const(idx8(0)),
+            Node::Const(idx8(4)),
+        ],
+    };
+    let (l0, aot) = run_l0_and_aot(&slice_over);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "out-of-range bytes.slice must refuse on both paths"
+    );
+}
+
+/// `bytes.*` over a non-bytes operand is an explicit type refusal on both paths.
+#[test]
+fn bytes_prims_refuse_non_bytes_operand() {
+    let len_bad = Node::Op {
+        prim: "bytes.len".to_owned(),
+        args: vec![Node::Const(b1_val(true))],
+    };
+    let (l0, aot) = run_l0_and_aot(&len_bad);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "bytes.len on a non-bytes must refuse on both paths"
+    );
+}
+
+// ── M-749 surface: Seq{T,N} / `[..]` literal — full three-way differential (RFC-0032 D3) ─────────
+//
+// Now that the `.myc` surface exists (the `Seq{T, N}` type, the `[e1, …]` list literal, and the
+// `seq_get`/`seq_len` prims), the seq enabler runs the **full three-way** (L1-eval ≡
+// elaborate→L0-interp ≡ AOT) differential over a parsed `.myc` program — not only the prim-level
+// L0≡AOT layer above. `assert_three_way` checks all three paths agree AND equal the reference.
+
+/// The `Binary{32}` MSB-first encoding of `n` (the `seq_len`/`bytes_len` result shape).
+fn b32(n: u32) -> (Repr, Payload) {
+    let bits: Vec<bool> = (0..32).rev().map(|k| (n >> k) & 1 == 1).collect();
+    (Repr::Binary { width: 32 }, Payload::Bits(bits))
+}
+
+/// `[0b1, 0b0, 0b1]` ascribed to `Seq{Binary{1}, 3}` round-trips as a `Repr::Seq` value on all three
+/// paths — the first end-to-end proof the surface list literal builds a kernel sequence.
+#[test]
+fn seq_literal_surface_three_way() {
+    let expected_repr = Repr::Seq {
+        elem: Box::new(Repr::Binary { width: 1 }),
+        len: 3,
+    };
+    let expected_payload = Payload::Seq(vec![b1_val(true), b1_val(false), b1_val(true)]);
+    assert_three_way(
+        "seq literal [0b1,0b0,0b1]",
+        "nodule d\nfn main() -> Seq{Binary{1}, 3} = [0b1, 0b0, 0b1]",
+        &expected_repr,
+        &expected_payload,
+    );
+}
+
+/// `seq_get([0b1,0b0,0b1], i)` over the surface agrees on all three paths for each in-range index.
+/// The index is written as an explicit 8-bit `Binary{8}` literal (MSB-first).
+#[test]
+fn seq_get_surface_three_way() {
+    for (i, want) in [(0u8, true), (1, false), (2, true)] {
+        let (r, p) = b1(want);
+        let src =
+            format!("nodule d\nfn main() -> Binary{{1}} = seq_get([0b1, 0b0, 0b1], 0b{i:08b})");
+        assert_three_way(&format!("seq_get index {i}"), &src, &r, &p);
+    }
+}
+
+/// `seq_len([0b1,0b0,0b1])` over the surface is `Binary{32}(3)` on all three paths.
+#[test]
+fn seq_len_surface_three_way() {
+    let (r, p) = b32(3);
+    assert_three_way(
+        "seq_len",
+        "nodule d\nfn main() -> Binary{32} = seq_len([0b1, 0b0, 0b1])",
+        &r,
+        &p,
+    );
+}
+
+/// Never-silent (G2): a **heterogeneous** list literal is a static check refusal — the elements must
+/// be homogeneous, never silently coerced (RFC-0032 D3). `0b1` is `Binary{1}`, `0b00` is `Binary{2}`.
+#[test]
+fn seq_heterogeneous_elements_reject() {
+    let src = "nodule d\nfn main() -> Seq{Binary{1}, 2} = [0b1, 0b00]";
+    let err = check_nodule(&parse(src).expect("parses"))
+        .expect_err("a heterogeneous list literal must be a static check error, never a coercion");
+    assert!(
+        err.to_string().contains("homogeneous"),
+        "the refusal must name the homogeneity cause (never-silent): {err}"
+    );
+}
+
+/// Never-silent (G2): a list literal whose count disagrees with the ascribed `Seq{T, N}` length is a
+/// static refusal — never a silent truncation/padding (RFC-0032 D3).
+#[test]
+fn seq_length_mismatch_reject() {
+    let src = "nodule d\nfn main() -> Seq{Binary{1}, 5} = [0b1, 0b0, 0b1]";
+    let err = check_nodule(&parse(src).expect("parses"))
+        .expect_err("a list-length vs Seq{N} mismatch must be a static check error");
+    assert!(
+        err.to_string().contains("expected `Seq` length"),
+        "the refusal must name the length-mismatch cause (never-silent): {err}"
+    );
+}
+
+// ── M-750 surface: Bytes / `0x..` literal — full three-way differential (RFC-0032 D4) ────────────
+
+/// `0x48_65_6c_6c_6f` ("Hello") round-trips as a `Repr::Bytes` value on all three paths.
+#[test]
+fn bytes_literal_surface_three_way() {
+    let expected_payload = Payload::Bytes(vec![0x48, 0x65, 0x6c, 0x6c, 0x6f]);
+    assert_three_way(
+        "bytes literal 0x48_65_6c_6c_6f",
+        "nodule d\nfn main() -> Bytes = 0x48_65_6c_6c_6f",
+        &Repr::Bytes,
+        &expected_payload,
+    );
+}
+
+/// `bytes_get(0x_…, i)` over the surface is the indexed byte (`Binary{8}`) on all three paths.
+#[test]
+fn bytes_get_surface_three_way() {
+    // 0x01_02_03, index 1 → 0x02 == 0b0000_0010.
+    let want: Vec<bool> = (0..8).rev().map(|k| (0x02u8 >> k) & 1 == 1).collect();
+    assert_three_way(
+        "bytes_get index 1",
+        "nodule d\nfn main() -> Binary{8} = bytes_get(0x01_02_03, 0b0000_0001)",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits(want),
+    );
+}
+
+/// `bytes_len(0x01_02_03)` over the surface is `Binary{32}(3)` on all three paths.
+#[test]
+fn bytes_len_surface_three_way() {
+    let (r, p) = b32(3);
+    assert_three_way(
+        "bytes_len",
+        "nodule d\nfn main() -> Binary{32} = bytes_len(0x01_02_03)",
+        &r,
+        &p,
+    );
+}
+
+/// Never-silent (G2): an **odd-hex** `0x…` literal is a lex/parse refusal — a byte is two hex chars,
+/// never a silent half-byte (RFC-0032 D4). `0x123` has three hex digits.
+#[test]
+fn bytes_odd_hex_reject() {
+    let src = "nodule d\nfn main() -> Bytes = 0x123";
+    let err = parse(src).expect_err("an odd-hex `0x…` literal must be a parse error");
+    assert!(
+        err.to_string().contains("odd hex-digit count"),
+        "the refusal must name the odd-hex cause, never a silent half-byte: {err}"
+    );
+}
+
+/// Never-silent (G2): an empty `0x` (no hex digits) is a lex/parse refusal.
+#[test]
+fn bytes_empty_hex_reject() {
+    let src = "nodule d\nfn main() -> Bytes = 0x";
+    let err = parse(src).expect_err("an empty `0x` literal must be a parse error");
+    assert!(
+        err.to_string().contains("no hex digits"),
+        "the refusal must name the empty-hex cause: {err}"
     );
 }

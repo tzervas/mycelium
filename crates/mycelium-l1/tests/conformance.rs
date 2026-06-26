@@ -117,6 +117,17 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "19-grow-reserved-not-active.myc",
         "reserved surface keyword (DN-03 §1)",
     ),
+    (
+        // M-750 / RFC-0032 D4: a `0x..` byte-string literal with an odd hex-digit count is a
+        // never-silent lex refusal (a byte is two hex chars — never a silent half-byte).
+        "20-odd-hex-bytes.myc",
+        "odd hex-digit count",
+    ),
+    (
+        // M-750 / RFC-0032 D4: an empty `0x` literal (no hex digit) is a never-silent lex refusal.
+        "21-empty-hex-bytes.myc",
+        "no hex digits",
+    ),
 ];
 
 #[test]

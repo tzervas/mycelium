@@ -2,6 +2,6 @@
 ; Capture names are the ratified RFC-0026 §3.2 (Accepted) standard tree-sitter captures.
 
 ["backbone" "colony" "consume" "cyst" "default" "else" "fn" "for" "forage" "fuse" "graft" "grow" "hypha" "if" "impl" "in" "let" "match" "matured" "mesh" "nodule" "paradigm" "phylum" "policy" "pub" "reclaim" "spore" "swap" "thaw" "then" "tier" "to" "trait" "type" "use" "wild" "with" "xloc"] @keyword
-["Binary" "Dense" "Sparse" "Substrate" "Ternary" "VSA"] @type
+["Binary" "Bytes" "Dense" "Seq" "Sparse" "Substrate" "Ternary" "VSA"] @type
 ["BF16" "F16" "F32" "F64"] @type.builtin
 ["Declared" "Empirical" "Exact" "Proven"] @attribute

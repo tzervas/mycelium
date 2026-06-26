@@ -29,7 +29,7 @@ Honesty: source + Enacted RFCs are ground truth; tags below are per-claim.
   a product value. `args.len()` == ctor field count, checked above the kernel (`node.rs:69-75`).
 - `Node::Match { scrutinee, alts, default }` — a **flat**, single-level, coverage-checked match
   (WF7). Maranget usefulness algorithm (`crates/mycelium-l1/src/usefulness.rs`) checks exhaustiveness
-  + redundancy; the nested→flat decision tree stays an untrusted artifact above the kernel
+  - redundancy; the nested→flat decision tree stays an untrusted artifact above the kernel
   (`node.rs:76-87`; RFC-0011 §4.4).
 - These are L0 nodes as of RFC-0011 **Enacted r3** (`docs/rfcs/RFC-0011-...md:5`,
   `node.rs:12-13`). The 5-node L0 (`Const|Var|Let|Op|Swap`) grew to add `Construct|Match` (r3) and
@@ -104,7 +104,7 @@ body` across `crates/mycelium-l1/src` returns **zero matches**.
 | Monomorphization + static dispatch (elaboration that RUNS) | **Built** | `mono.rs`; `RFC-0019-...md:800-812`. `Empirical`. |
 | **Super-traits** (`trait Ord<A>: Eq<A>`) | **DEFERRED — not in v1** | RFC-0019 *designs* the dict layout (§4.3, `RFC-0019-...md:305-308`) but `TraitInfo` has no super-trait field (`checkty.rs:192-204`) and `parse_trait_decl` parses no `:` super-bound (`parse.rs:471-487`). **Not parsed, not checked.** Greenfield-to-implement. |
 | **Default method bodies** | **DEFERRED — not in v1** | Trait body is `fn_sig*` (signatures only); a sig has no `= body` (`parse.rs:475-480,489-492`). Every `impl` must supply **every** method (exact method-set conformance, `lang-lexicon-syntax.md:337`). **Not in the grammar.** Greenfield. |
-| Runtime-dictionary `Construct` form (dynamic dispatch §4.5) | **DEFERRED (normative target)** | `FieldSpec` is `Repr|Data` only — no function field (`data.rs:98-104`); literal dict record not v0-expressible (`RFC-0019-...md:799,808-811`). Gated on a trusted-core `FieldSpec` ADR. |
+| Runtime-dictionary `Construct` form (dynamic dispatch §4.5) | **DEFERRED (normative target)** | `FieldSpec` is `Repr\|Data` only — no function field (`data.rs:98-104`); literal dict record not v0-expressible (`RFC-0019-...md:799,808-811`). Gated on a trusted-core `FieldSpec` ADR. |
 | Associated types (`type Output = …`) | **DEFERRED → v2** | `RFC-0019-...md:663-665,677,861`. Greenfield. |
 | Multi-parameter traits (`trait Coerce<A,B>`) | **DEFERRED → v2** | `RFC-0019-...md:658-662,677,861`. Stage-1 is single-parameter (`checkty.rs:192-200`). |
 | Guarantee-indexed methods (LR-6) | **Stage-0 Declared only** | `RFC-0019-...md:482-503`. The `@ g` annotation parses; static grading is the future grading RFC. `Declared`. |

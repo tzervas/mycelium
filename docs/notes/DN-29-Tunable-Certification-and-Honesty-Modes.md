@@ -308,8 +308,8 @@ lattice, the M-210 checker. None of this is discarded; it is **gated behind the 
   always-on part; **consumption** is what's tuned — §3.1/§10.9.)*
 
 **Resolved (owner-steered, 2026-06-24 rev. 4 — folded into §3/§5/§10/§11):**
-- ~~Q4 **Axis-B opt-out**~~ → **expose the named `wrapping`/`fast` opt-out in v0** (cheap, expected; explicit
-  + named, never silent — §3.1).
+- ~~Q4 **Axis-B opt-out**~~ → **expose the named `wrapping`/`fast` opt-out in v0** (cheap, expected; explicit +
+  named, never silent — §3.1).
 - ~~Q5 **Per-op granularity**~~ → **ship v0 at global/phylum/nodule scope; defer the per-op `thaw`-style
   knob** (YAGNI until a use case demands it).
 - ~~Q6 **Form/sequencing**~~ → **two-step**: settle DN-29 (now done) → then **RFC-0034 + a superseding ADR**

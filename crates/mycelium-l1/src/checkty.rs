@@ -67,6 +67,14 @@ pub enum Ty {
     Data(String, Vec<Ty>),
     /// `Substrate{tag}` — the affine external-resource kind (LR-8). No value forms exist in v0.
     Substrate(String),
+    /// `Seq{T, N}` — a first-class indexed homogeneous sequence (RFC-0032 D3; M-749): `N` elements
+    /// each of element type `T`. Constructed by the `[e1, …]` list literal; the surface checks
+    /// elements are homogeneous and the count matches `N` (never-silent — G2). Guarantee: `Exact`
+    /// (a literal *is* its representation).
+    Seq(Box<Ty>, u32),
+    /// `Bytes` — a first-class byte string (RFC-0032 D4; M-750). Constructed by the `0x…` literal.
+    /// Guarantee: `Exact`.
+    Bytes,
     /// An **abstract type parameter** (a skolem variable) — in scope only while checking a generic
     /// declaration's constructors or a generic function's body (RFC-0007 §11.2). Two `Var`s are equal
     /// iff their names match; that structural equality is the engine of parametric checking. A
@@ -101,6 +109,8 @@ impl core::fmt::Display for Ty {
                 write!(f, ">")
             }
             Ty::Substrate(t) => write!(f, "Substrate{{{t}}}"),
+            Ty::Seq(elem, n) => write!(f, "Seq{{{elem}, {n}}}"),
+            Ty::Bytes => write!(f, "Bytes"),
             Ty::Var(v) => write!(f, "{v}"),
             // RFC-0024 §3: render as `A -> B` (right-associative). Parenthesize a function-typed
             // LHS so `(A -> B) -> C` is unambiguous in diagnostics, not `A -> B -> C` (Copilot #397).
@@ -120,7 +130,7 @@ pub struct CheckError {
 }
 
 impl CheckError {
-    fn new(site: &str, message: impl Into<String>) -> Self {
+    pub(crate) fn new(site: &str, message: impl Into<String>) -> Self {
         CheckError {
             site: site.to_owned(),
             message: message.into(),
@@ -232,6 +242,10 @@ pub fn type_head(ty: &Ty) -> Option<String> {
         Ty::Ternary(_) => "Ternary".to_owned(),
         Ty::Dense(_, _) => "Dense".to_owned(),
         Ty::Substrate(t) => format!("Substrate:{t}"),
+        // RFC-0032 D3/D4: the sequence/byte-string reprs key per head (width/elem erased like the
+        // scalar paradigms — a documented stage-1 coherence simplification).
+        Ty::Seq(_, _) => "Seq".to_owned(),
+        Ty::Bytes => "Bytes".to_owned(),
         Ty::Data(n, _) => format!("Data:{n}"),
         // `Ty::Var` and `Ty::Fn` are not legal instance heads in stage-1 — a blanket instance
         // over an abstract variable or a function type is refused explicitly (RFC-0024 §3 / RFC-0019 §4.5).
@@ -250,7 +264,12 @@ pub(crate) fn subst_ty(ty: &Ty, s: &BTreeMap<String, Ty>) -> Ty {
         // RFC-0024 §3: substitute into both sides of a function type (the param type and return type
         // may contain abstract type-variables — e.g. `f: A -> B` in a generic body).
         Ty::Fn(a, r) => Ty::Fn(Box::new(subst_ty(a, s)), Box::new(subst_ty(r, s))),
-        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => ty.clone(),
+        // RFC-0032 D3: substitute into the element type (it may mention an abstract variable in a
+        // generic context); the length is a structural constant, never substituted.
+        Ty::Seq(elem, n) => Ty::Seq(Box::new(subst_ty(elem, s)), *n),
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => {
+            ty.clone()
+        }
     }
 }
 
@@ -271,7 +290,9 @@ pub(crate) fn has_var(ty: &Ty) -> bool {
         Ty::Data(_, args) => args.iter().any(has_var),
         // RFC-0024 §3: a function type has a variable if either side does.
         Ty::Fn(a, r) => has_var(a) || has_var(r),
-        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => false,
+        // RFC-0032 D3: a sequence has a variable iff its element type does.
+        Ty::Seq(elem, _) => has_var(elem),
+        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => false,
     }
 }
 
@@ -319,6 +340,9 @@ pub(crate) fn unify(
             unify(site, a1, a2, s)?;
             unify(site, r1, r2, s)
         }
+        // RFC-0032 D3: two sequences unify iff their lengths are equal and their element types
+        // unify (never a silent length coercion — G2/VR-5).
+        (Ty::Seq(e1, n1), Ty::Seq(e2, n2)) if n1 == n2 => unify(site, e1, e2, s),
         _ if decl == actual => Ok(()),
         _ => Err(CheckError::new(
             site,
@@ -407,7 +431,7 @@ impl Env {
 
 /// The builtin prelude: `type Bool = False | True` (`if` scrutinizes it; RFC-0007 keeps `if` as
 /// elaboration-level sugar over `Match` on this registry entry).
-fn prelude() -> DataInfo {
+pub(crate) fn prelude() -> DataInfo {
     DataInfo {
         name: "Bool".to_owned(),
         params: vec![],
@@ -441,6 +465,13 @@ pub(crate) fn resolve_ty(
         BaseType::Ternary(m) => Ty::Ternary(*m),
         BaseType::Dense(d, s) => Ty::Dense(*d, *s),
         BaseType::Substrate(tag) => Ty::Substrate(tag.clone()),
+        // RFC-0032 D3/D4: the sequence + byte-string repr types. `Seq{T, N}` resolves its element
+        // type recursively under the same `tyvars` scope; `Bytes` is nullary.
+        BaseType::Seq { elem, len } => {
+            let (elem_ty, _) = resolve_ty(site, types, tyvars, elem)?;
+            Ty::Seq(Box::new(elem_ty), *len)
+        }
+        BaseType::Bytes => Ty::Bytes,
         BaseType::Vsa { .. } => {
             return Err(CheckError::new(
                 site,
@@ -728,9 +759,9 @@ fn info_is_pub_trait(nodule: &Nodule, name: &str) -> bool {
 /// iff its trait OR its `for`-type head is declared *somewhere* in the phylum, and that visibility is
 /// pub-blind (coherence is enforcement authority, not the `pub` namespace).
 #[derive(Debug, Default)]
-struct CoherenceView {
+pub(crate) struct CoherenceView {
     /// Every trait name declared anywhere in the phylum (pub-blind).
-    traits: BTreeSet<String>,
+    pub(crate) traits: BTreeSet<String>,
     /// Every data-type name declared anywhere in the phylum (pub-blind), excluding the prelude.
     types: BTreeSet<String>,
 }
@@ -1015,7 +1046,7 @@ pub fn check_and_resolve(nodule: &Nodule) -> Result<(Env, Nodule), CheckError> {
 /// per type first (so recursive field references resolve), then its constructors. Duplicate type
 /// parameters / duplicate type names are explicit refusals. Extracted (M-662) so the phylum can build
 /// its registries once and reuse them; behavior is byte-identical to the inlined Pass 1.
-fn register_types(
+pub(crate) fn register_types(
     types: &mut BTreeMap<String, DataInfo>,
     nodule: &Nodule,
 ) -> Result<(), CheckError> {
@@ -1381,7 +1412,7 @@ fn first_duplicate(xs: &[String]) -> Option<&String> {
 /// method signature *resolves* with the trait's params in scope as abstract type-variables (its
 /// value-param types and return type via [`resolve_ty`]). A trait is a registry entry, never a
 /// kernel node (KC-3). Every refusal is an explicit [`CheckError`] (G2).
-fn register_traits(
+pub(crate) fn register_traits(
     types: &BTreeMap<String, DataInfo>,
     nodule: &Nodule,
 ) -> Result<BTreeMap<String, TraitInfo>, CheckError> {
@@ -1481,7 +1512,7 @@ fn check_sig_resolves(
 ///
 /// Method *bodies* are not checked here (that is [`check_impl_methods`], after the whole instance
 /// set is known); method *presence* (exact-match against the trait's sigs) IS checked here.
-fn register_instances(
+pub(crate) fn register_instances(
     types: &BTreeMap<String, DataInfo>,
     traits: &BTreeMap<String, TraitInfo>,
     coherence: &CoherenceView,
@@ -1549,8 +1580,14 @@ fn register_instances(
         let trait_local = phylum_traits.contains(id.trait_name.as_str());
         let type_local = match &for_ty {
             Ty::Data(n, _) => phylum_types.contains(n.as_str()),
-            // Primitive repr types are "owned by the phylum" for stage-1 (RFC-0019 §4.5).
-            Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) => true,
+            // Primitive repr types are "owned by the phylum" for stage-1 (RFC-0019 §4.5) — the
+            // RFC-0032 sequence/byte-string reprs included.
+            Ty::Binary(_)
+            | Ty::Ternary(_)
+            | Ty::Dense(_, _)
+            | Ty::Substrate(_)
+            | Ty::Seq(_, _)
+            | Ty::Bytes => true,
             // `Ty::Var` and `Ty::Fn` are not legal instance heads; type_head() returns None for them,
             // so this arm is unreachable in practice (the coherence key check rejects them upstream).
             // Kept for exhaustiveness — never a silent accept (G2).
@@ -1956,6 +1993,12 @@ impl Cx<'_> {
                 let ty = lit_ty_of(self.site, &lit)?;
                 Ok((ty, Expr::Lit(lit)))
             }
+            // RFC-0032 D3 (M-749): a list literal `[e1, …]` constructs a `Seq{T, N}`. Element type is
+            // **inferred from the (homogeneous) elements**; `N` is the count. Checked here (not in the
+            // context-free `lit_ty_of`) because the elements are expressions needing the checking
+            // context. Never-silent (G2): a heterogeneous element, or a mismatch against an expected
+            // `Seq{T, N}`, is an explicit `CheckError`.
+            Expr::Lit(Literal::List(elems)) => self.check_list(scope, elems, expected),
             Expr::Lit(l) => Ok((self.lit_ty(l)?, Expr::Lit(l.clone()))),
             Expr::Path(p) => self.check_path(scope, p, e, expected),
             // The heavy, allocation-bearing arms are separate methods so this dispatch frame stays
@@ -2509,6 +2552,20 @@ impl Cx<'_> {
                 }
             }
             return Ok((Ty::Binary(1), app_node(head, rebuilt)));
+        }
+        // RFC-0032 D3/D4 (M-749/M-750): the never-silent indexing/length prims over `Seq`/`Bytes`.
+        // Their signatures are **not** width-preserving (they don't fit `prim_family`), so they are
+        // typed in a dedicated branch:
+        //   - `seq_len(s: Seq{T, N}) -> Binary{32}`   (the element count as an unsigned 32-bit value)
+        //   - `seq_get(s: Seq{T, N}, i: Binary{W}) -> T`   (the element type; out-of-bounds is a
+        //     never-silent *runtime* refusal, not a type error)
+        //   - `bytes_len(b: Bytes) -> Binary{32}`
+        //   - `bytes_get(b: Bytes, i: Binary{W}) -> Binary{8}`
+        // The index `i` is any `Binary{W}` (an unsigned magnitude); a bare-decimal index has no
+        // anchor here (the result is not the index width), so it must be written/ascribed explicitly
+        // (G2 — never a default width).
+        if let Some(ret) = self.try_check_seq_bytes_prim(scope, head, name, args)? {
+            return Ok(ret);
         }
         let Some(fam) = prim_family(name) else {
             return self.err(teach_unknown(
@@ -3139,9 +3196,156 @@ impl Cx<'_> {
         Ok(())
     }
 
+    /// Check a list literal `[e1, …]` into a [`Ty::Seq`] (RFC-0032 D3; M-749). The element type is
+    /// **inferred from the elements**, which must be **homogeneous** (a mismatch is a never-silent
+    /// [`CheckError`], never a silent coercion — G2); the length is the element count. When an
+    /// `expected` [`Ty::Seq`] type is supplied, each element is checked **against** its element type
+    /// and the count must match the expected length (never-silent). An empty `[]` against a
+    /// `Seq{T, 0}` is the well-formed empty sequence; an empty `[]` with **no** expected `Seq` type
+    /// has no inferable element type and is an explicit refusal (G2 — never a guessed element).
+    ///
+    /// Returns the resolved literal so any ambient bare-decimal element (resolved against the
+    /// element type) is rewritten to a concrete `Binary`/`Ternary` form for the evaluator/elaborator.
+    fn check_list(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        elems: &[Expr],
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        // The expected element type + length, when checking against a `Seq{T, N}`.
+        let expected_elem: Option<Ty> = match expected {
+            Some(Ty::Seq(elem, _)) => Some((**elem).clone()),
+            _ => None,
+        };
+        if let Some(Ty::Seq(_, n)) = expected {
+            if *n as usize != elems.len() {
+                return self.err(format!(
+                    "list literal has {} element(s) but the expected `Seq` length is {} \
+                     (RFC-0032 D3 — never a silent truncation/padding)",
+                    elems.len(),
+                    n
+                ));
+            }
+        }
+        let mut elem_ty: Option<Ty> = expected_elem.clone();
+        let mut rebuilt = Vec::with_capacity(elems.len());
+        for (i, e) in elems.iter().enumerate() {
+            // Drive each element against the running element type (expected or the first element's
+            // inferred type), so a bare-decimal element takes that width; the first element with no
+            // expected type synthesizes its own type and anchors the rest.
+            let (t, e2) = self.check(scope, e, elem_ty.as_ref())?;
+            match &elem_ty {
+                Some(want) if *want != t => {
+                    return self.err(format!(
+                        "list literal element {i} has type {t}, but the sequence's element type is \
+                         {want} — list elements must be homogeneous (RFC-0032 D3, never a silent \
+                         coercion)"
+                    ));
+                }
+                Some(_) => {}
+                None => elem_ty = Some(t),
+            }
+            rebuilt.push(e2);
+        }
+        let Some(elem) = elem_ty else {
+            return self.err(
+                "an empty list literal `[]` has no inferable element type here — ascribe it to a \
+                 `Seq{T, 0}` (RFC-0032 D3, never a guessed element type)",
+            );
+        };
+        let len = u32::try_from(rebuilt.len()).map_err(|_| {
+            CheckError::new(self.site, "list literal length exceeds u32 (RFC-0032 D3)")
+        })?;
+        Ok((
+            Ty::Seq(Box::new(elem), len),
+            Expr::Lit(Literal::List(rebuilt)),
+        ))
+    }
+
+    /// Type a `Seq`/`Bytes` indexing/length prim (RFC-0032 D3/D4; M-749/M-750), or `Ok(None)` if
+    /// `name` is not one of them (so the caller falls through to the width-preserving prim path).
+    /// The operands are checked, the receiver's repr type is verified (a non-`Seq`/`Bytes` receiver,
+    /// or a wrong arity, is an explicit never-silent refusal — G2), and the result type is returned.
+    fn try_check_seq_bytes_prim(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        name: &str,
+        args: &[Expr],
+    ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        // The index argument's type (any `Binary{W}`) is checked; a bare-decimal index has no anchor
+        // (the prim's result is not the index width), so it must be explicit.
+        let check_index = |scope: &mut Vec<(String, Ty)>, a: &Expr| -> Result<Expr, CheckError> {
+            let (ity, a2) = self.check(scope, a, None)?;
+            match ity {
+                Ty::Binary(_) => Ok(a2),
+                _ => self.err(format!(
+                    "`{name}` index must be a `Binary{{W}}` (unsigned magnitude), got {ity} \
+                     (RFC-0032 D3/D4)"
+                )),
+            }
+        };
+        let arity_err = |want: usize| -> Result<Option<(Ty, Expr)>, CheckError> {
+            self.err(format!(
+                "`{name}` takes {want} operand(s), got {} (RFC-0032 D3/D4)",
+                args.len()
+            ))
+        };
+        match name {
+            "seq_len" | "bytes_len" => {
+                if args.len() != 1 {
+                    return arity_err(1);
+                }
+                let (recv, recv2) = self.check(scope, &args[0], None)?;
+                let ok = match name {
+                    "seq_len" => matches!(recv, Ty::Seq(_, _)),
+                    _ => matches!(recv, Ty::Bytes),
+                };
+                if !ok {
+                    return self.err(format!(
+                        "`{name}` expects a {} operand, got {recv} (RFC-0032 D3/D4)",
+                        if name == "seq_len" { "Seq" } else { "Bytes" }
+                    ));
+                }
+                // Length is an unsigned 32-bit count (matches `prims.rs`).
+                Ok(Some((Ty::Binary(32), app_node(head, vec![recv2]))))
+            }
+            "seq_get" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (recv, recv2) = self.check(scope, &args[0], None)?;
+                let Ty::Seq(elem, _) = recv else {
+                    return self.err(format!(
+                        "`seq_get` expects a `Seq` operand, got {recv} (RFC-0032 D3)"
+                    ));
+                };
+                let idx2 = check_index(scope, &args[1])?;
+                // The result is the element type (out-of-bounds is a runtime refusal, not a type error).
+                Ok(Some((*elem, app_node(head, vec![recv2, idx2]))))
+            }
+            "bytes_get" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (recv, recv2) = self.check(scope, &args[0], None)?;
+                if !matches!(recv, Ty::Bytes) {
+                    return self.err(format!(
+                        "`bytes_get` expects a `Bytes` operand, got {recv} (RFC-0032 D4)"
+                    ));
+                }
+                let idx2 = check_index(scope, &args[1])?;
+                // A byte is a `Binary{8}` value.
+                Ok(Some((Ty::Binary(8), app_node(head, vec![recv2, idx2]))))
+            }
+            _ => Ok(None),
+        }
+    }
+
     /// Literal typing (Q6): a literal *is* its representation — a binary literal's width is its
-    /// digit count, a ternary literal's trit count its width. Bare integers and lists need
-    /// context v0 does not yet give them → explicit refusal, never a cross-family default.
+    /// digit count, a ternary literal's trit count its width. Bare integers need context v0 does not
+    /// yet give them → explicit refusal, never a cross-family default. (List literals are checked by
+    /// [`Self::check_list`], which has the element-expression context `lit_ty_of` lacks.)
     fn lit_ty(&self, l: &Literal) -> Result<Ty, CheckError> {
         lit_ty_of(self.site, l)
     }
@@ -3178,9 +3382,16 @@ pub(crate) fn lit_ty_of(site: &str, l: &Literal) -> Result<Ty, CheckError> {
             "internal: an unresolved ambient bare decimal reached `lit_ty_of` — the checker \
              resolves its width from context first (RFC-0012 §4.3)",
         )),
+        // RFC-0032 D4 (M-750): a `0x…` byte-string literal *is* a `Bytes` value.
+        Literal::Bytes(_) => Ok(Ty::Bytes),
+        // A list literal is checked in `Cx::check_list` (it needs the element-expression context).
+        // Reaching `lit_ty_of` means a `Literal::List` appeared where only context-free literals are
+        // expected — a **pattern** position (a `Seq` pattern is not a v0 surface). An explicit
+        // refusal, never a silent accept (G2).
         Literal::List(_) => Err(CheckError::new(
             site,
-            "list literals are deferred in v0 (Dense construction)",
+            "a list/sequence pattern is not supported in the v0 surface (RFC-0032 D3 — `[…]` is a \
+             constructor literal, not a pattern)",
         )),
     }
 }
@@ -3328,6 +3539,11 @@ fn literal_key(lit: &Literal) -> String {
         Literal::Trit(s) => format!("t:{s}"),
         Literal::Int(i) => format!("i:{i}"),
         Literal::AmbientInt(p, i) => format!("amb:{p}:{i}"),
+        // `Bytes`/`List` literal patterns are not a v0 surface (the type-check rejects them before
+        // here); a stable key keeps the function total without a silent collision (G2).
+        Literal::Bytes(s) => {
+            format!("by:{}", s.chars().filter(|c| *c != '_').collect::<String>())
+        }
         Literal::List(_) => "list".to_owned(),
     }
 }
@@ -3421,8 +3637,15 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
         Ty::Dense(_, _) => Some("Dense"),
-        // `Ty::Fn` is not a representation type — it has no paradigm (RFC-0024 §3).
-        Ty::Data(_, _) | Ty::Substrate(_) | Ty::Var(_) | Ty::Fn(_, _) => None,
+        // `Ty::Fn` is not a representation type — it has no paradigm (RFC-0024 §3). `Seq`/`Bytes`
+        // are first-class reprs but not *swap*-paradigms (no cross-paradigm swap edge), so they have
+        // no paradigm name here (RFC-0032 D3/D4).
+        Ty::Seq(_, _)
+        | Ty::Bytes
+        | Ty::Data(_, _)
+        | Ty::Substrate(_)
+        | Ty::Var(_)
+        | Ty::Fn(_, _) => None,
     }
 }
 
@@ -3585,264 +3808,16 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (returns `Binary{1}`).
         "eq" => "cmp.eq",
         "lt" => "cmp.lt",
+        // RFC-0032 D3/D4 (M-749/M-750): never-silent indexing/length over `Seq`/`Bytes` (the surface
+        // names are `_`-joined since a `.` is the path separator in the lexer).
+        "seq_len" => "seq.len",
+        "seq_get" => "seq.get",
+        "bytes_len" => "bytes.len",
+        "bytes_get" => "bytes.get",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",
         "neg" => "trit.neg",
         _ => return None,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::parse;
-
-    fn env(src: &str) -> Env {
-        check_nodule(&parse(src).expect("parses")).expect("checks")
-    }
-
-    /// Copilot #397: a function-typed LHS is parenthesized in `Ty::Fn`'s Display, so `(A -> B) -> C`
-    /// is unambiguous (not `A -> B -> C`); a simple `A -> B` and the right-associative RHS stay bare.
-    #[test]
-    fn ty_fn_display_parenthesizes_a_function_typed_lhs() {
-        let var = |n: &str| Ty::Var(n.to_owned());
-        let simple = Ty::Fn(Box::new(var("A")), Box::new(var("B")));
-        assert_eq!(format!("{simple}"), "A -> B");
-        let higher_order = Ty::Fn(
-            Box::new(Ty::Fn(Box::new(var("A")), Box::new(var("B")))),
-            Box::new(var("C")),
-        );
-        assert_eq!(format!("{higher_order}"), "(A -> B) -> C");
-        let right = Ty::Fn(
-            Box::new(var("A")),
-            Box::new(Ty::Fn(Box::new(var("B")), Box::new(var("C")))),
-        );
-        assert_eq!(format!("{right}"), "A -> B -> C");
-    }
-
-    fn check_err(src: &str) -> CheckError {
-        check_nodule(&parse(src).expect("parses")).expect_err("must fail to check")
-    }
-
-    // ---- M-662: the orphan-rule **arm** itself fires (non-vacuous), independent of resolution ----
-    //
-    // In the phylum-wide model a *resolvable* impl is never an orphan (resolving a name implies an
-    // in-phylum declaration ⇒ it is in the pub-blind coherence view). To prove the orphan ARM is not
-    // dead code, drive `register_instances` directly with a coherence view that does/does not contain
-    // the impl's heads — the mutant witness that the generalized check still fires + still accepts.
-
-    /// A one-`impl` nodule `impl Tr<Binary{8}> for Binary{8} { fn m(x: Binary{8}) -> Binary{8} = x }`
-    /// plus the registered `types`/`traits` for `Tr`, for driving `register_instances` directly.
-    fn impl_fixture() -> (
-        BTreeMap<String, DataInfo>,
-        BTreeMap<String, TraitInfo>,
-        Nodule,
-    ) {
-        // Parse a phylum-of-one so the surface `impl` + `trait` are real AST (then strip the trait so
-        // it is NOT in this nodule — the orphan scenario is "trait declared elsewhere / nowhere").
-        let n = parse(
-            "nodule d\ntrait Tr<A> { fn m(x: A) -> A }\n\
-             impl Tr<Binary{8}> for Binary{8} { fn m(x: Binary{8}) -> Binary{8} = x }",
-        )
-        .expect("parses");
-        let mut types = BTreeMap::new();
-        let p = prelude();
-        types.insert(p.name.clone(), p);
-        register_types(&mut types, &n).expect("types register");
-        let traits = register_traits(&types, &n).expect("traits register");
-        // The nodule passed to `register_instances` carries only the `impl` (its locality is decided
-        // by the supplied coherence view, not by this nodule's own items — M-662).
-        let impl_only = Nodule {
-            path: n.path.clone(),
-            std_sys: false,
-            items: n
-                .items
-                .iter()
-                .filter(|i| matches!(i, Item::Impl(_)))
-                .cloned()
-                .collect(),
-        };
-        (types, traits, impl_only)
-    }
-
-    #[test]
-    fn orphan_arm_rejects_when_neither_head_is_in_the_coherence_view() {
-        // Empty coherence view ⇒ `Tr` is not phylum-local and `Binary{8}` is a primitive (always
-        // phylum-owned) … so to force the orphan arm we must also deny the primitive. The primitive
-        // arm is unconditional, so the genuine orphan case is a `for`-type that is a non-local DATA
-        // type. Build that: `for Foreign` where `Foreign` is a registered data type NOT in coherence.
-        let n = parse(
-            "nodule d\ntrait Tr<A> { fn m(x: A) -> A }\ntype Foreign = Mk(Binary{8})\n\
-             impl Tr<Foreign> for Foreign { fn m(x: Foreign) -> Foreign = x }",
-        )
-        .expect("parses");
-        let mut types = BTreeMap::new();
-        let p = prelude();
-        types.insert(p.name.clone(), p);
-        register_types(&mut types, &n).expect("types");
-        let traits = register_traits(&types, &n).expect("traits");
-        let impl_only = Nodule {
-            path: n.path.clone(),
-            std_sys: false,
-            items: n
-                .items
-                .iter()
-                .filter(|i| matches!(i, Item::Impl(_)))
-                .cloned()
-                .collect(),
-        };
-        // Empty coherence view: neither `Tr` nor `Foreign` is phylum-local ⇒ orphan refusal (G2).
-        let empty = CoherenceView::default();
-        let err = register_instances(&types, &traits, &empty, &impl_only)
-            .expect_err("an impl with neither head in the phylum must orphan-reject");
-        assert!(
-            err.message.contains("orphan"),
-            "the orphan arm must fire, got: {}",
-            err.message
-        );
-    }
-
-    #[test]
-    fn orphan_arm_accepts_once_the_trait_is_in_the_coherence_view() {
-        // The non-vacuous control: add `Tr` to the (pub-blind) coherence view ⇒ the SAME impl is now
-        // in-phylum and registers. Proves the orphan generalization accepts a cross-nodule impl whose
-        // trait is declared elsewhere in the phylum.
-        let (types, traits, impl_only) = impl_fixture();
-        let mut coh = CoherenceView::default();
-        coh.traits.insert("Tr".to_owned());
-        let instances = register_instances(&types, &traits, &coh, &impl_only)
-            .expect("the impl registers once its trait is phylum-local");
-        assert!(
-            instances.contains_key(&("Tr".to_owned(), "Binary".to_owned())),
-            "the instance is keyed by (trait, type-head)"
-        );
-    }
-
-    // ---- M-666: `colony { hypha … }` type rule (RFC-0008 §4.7) ----
-
-    #[test]
-    fn a_colony_types_as_its_last_hypha() {
-        // The colony's result type is the LAST hypha's (the RT2 sequentialization's observable). Here
-        // the body must match the fn's `Binary{8}` return — the leading hyphae may be any type.
-        let e = env(
-            "nodule d\nfn compute(x: Binary{8}) -> Binary{8} = not(x)\n\
-             fn run() -> Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) }",
-        );
-        assert!(e.fn_decl("run").is_some());
-    }
-
-    #[test]
-    fn a_colony_whose_last_hypha_mistypes_is_an_explicit_error() {
-        // The last hypha carries the colony's type, so a `Ternary` last hypha under a `Binary{8}`
-        // return is a never-silent body mismatch (the bidirectional check catches it).
-        let err = check_err(
-            "nodule d\nfn run() -> Binary{8} = colony { hypha not(0b0000_0001), hypha <00+0> }",
-        );
-        assert!(
-            err.message.contains("body") || err.message.contains("expected"),
-            "a mistyped last hypha must be an explicit edge mismatch, got: {}",
-            err.message
-        );
-    }
-
-    #[test]
-    fn a_leading_hypha_that_does_not_type_check_is_still_an_error() {
-        // RT4/I1: a leading hypha's refusal is never silently dropped — an ill-typed leading hypha
-        // (an unknown name) fails the whole colony check.
-        let err = check_err(
-            "nodule d\nfn run() -> Binary{8} = colony { hypha nope(0b0), hypha not(0b0000_0001) }",
-        );
-        assert!(
-            err.message.contains("nope") || err.message.contains("unknown"),
-            "an ill-typed leading hypha must surface its error, got: {}",
-            err.message
-        );
-    }
-
-    #[test]
-    fn check_error_at_is_a_public_alias() {
-        // `::at` builds the same value the private `new` does (the canonical site+message struct).
-        assert_eq!(
-            CheckError::at("main", "boom"),
-            CheckError::new("main", "boom"),
-        );
-    }
-
-    #[test]
-    fn env_getters_mirror_the_public_maps() {
-        // A program with a data type and two functions, one recursive (so totality is filled).
-        let e = env("nodule d\ntype Nat = Z | S(Nat)\n\
-             fn count(n: Nat) -> Nat = match n { Z => Z, S(m) => S(count(m)) }\n\
-             fn main() -> Nat = count(S(Z))");
-        // type_info ⇔ types.get
-        assert_eq!(e.type_info("Nat"), e.types.get("Nat"));
-        assert!(e.type_info("Nat").is_some());
-        assert!(e.type_info("Nope").is_none());
-        // fn_decl ⇔ fns.get
-        assert_eq!(e.fn_decl("count"), e.fns.get("count"));
-        assert!(e.fn_decl("count").is_some());
-        assert!(e.fn_decl("absent").is_none());
-        // fn_totality ⇔ totality.get (copied)
-        assert_eq!(e.fn_totality("count"), e.totality.get("count").copied());
-        assert!(e.fn_totality("count").is_some());
-        assert!(e.fn_totality("absent").is_none());
-    }
-}
-
-#[cfg(test)]
-mod depth_budget_tests {
-    use super::*;
-    use crate::ast::{BaseType, Expr, FnDecl, FnSig, Item, Literal, Nodule, Path, TypeRef};
-
-    /// A `not(not(… not(0b0) …))` nest `depth` deep — built directly (the parser caps surface nesting
-    /// at `MAX_EXPR_DEPTH`, so a direct AST is the way to exercise the *checker's* own budget).
-    pub(crate) fn deep_not(depth: usize) -> Expr {
-        let mut e = Expr::Lit(Literal::Bin("0".to_string()));
-        for _ in 0..depth {
-            e = Expr::App {
-                head: Box::new(Expr::Path(Path(vec!["not".to_string()]))),
-                args: vec![e],
-            };
-        }
-        e
-    }
-
-    pub(crate) fn nodule_with_body(body: Expr) -> Nodule {
-        Nodule {
-            path: Path(vec!["d".to_string()]),
-            std_sys: false,
-            items: vec![Item::Fn(FnDecl {
-                vis: crate::ast::Vis::Private,
-                thaw: false,
-                sig: FnSig {
-                    name: "main".to_string(),
-                    params: vec![],
-                    value_params: vec![],
-                    ret: TypeRef {
-                        base: BaseType::Binary(1),
-                        guarantee: None,
-                    },
-                    effects: vec![],
-                },
-                body,
-            })],
-        }
-    }
-
-    #[test]
-    fn the_depth_budget_trips_cleanly_and_just_under_it_succeeds() {
-        // Just under the budget: the checker completes — the deep worker stack ([`mycelium_stack`])
-        // absorbs `MAX_CHECK_DEPTH` levels with large margin (measured physical ceiling ≫ budget).
-        let ok = check_nodule(&nodule_with_body(deep_not((MAX_CHECK_DEPTH - 5) as usize)));
-        assert!(ok.is_ok(), "just under the budget should check ok: {ok:?}");
-        // Past the budget: a clean, explicit refusal — never a host-stack overflow (banked guard 4).
-        let err = check_nodule(&nodule_with_body(deep_not((MAX_CHECK_DEPTH + 50) as usize)))
-            .expect_err("past the budget must refuse");
-        assert!(
-            err.message.contains("depth budget"),
-            "expected the explicit depth-budget refusal, got: {}",
-            err.message
-        );
-    }
 }

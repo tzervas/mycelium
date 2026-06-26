@@ -60,6 +60,18 @@ pub enum WfError {
     MalformedBound,
     /// A representation has a non-positive width/dim/trits or an empty VSA model id.
     MalformedRepr,
+    /// A representation declares a dimension above [`repr::MAX_DIM`] — rejected as an
+    /// over-allocation (DoS) guard before any value of that `Repr` is materialized. Names the
+    /// offending field, its declared value, and the cap (never-silent, G2). See
+    /// [`Repr::check_well_formed`](crate::Repr::check_well_formed).
+    DimensionTooLarge {
+        /// The offending dimension field (`"width"` / `"trits"` / `"dim"` / `"max_active"`).
+        field: &'static str,
+        /// The declared (rejected) value.
+        value: u32,
+        /// The enforced upper bound ([`repr::MAX_DIM`]).
+        cap: u32,
+    },
     /// A payload does not match its representation (paradigm or length).
     PayloadReprMismatch,
     /// A reconstruction manifest violates its schema invariants (RFC-0003 §6;
@@ -73,6 +85,15 @@ pub enum WfError {
 
 impl core::fmt::Display for WfError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        // `DimensionTooLarge` names the field/value/cap inline (never-silent, G2), so it can't use
+        // the static-string arm below.
+        if let WfError::DimensionTooLarge { field, value, cap } = self {
+            return write!(
+                f,
+                "representation dimension '{field}' = {value} exceeds the cap {cap} \
+                 (over-allocation guard)"
+            );
+        }
         let s = match self {
             WfError::GuaranteeBoundMismatch => "guarantee/bound inconsistency (M-I1..M-I4)",
             WfError::MalformedBound => "bound payload out of range",
@@ -84,6 +105,7 @@ impl core::fmt::Display for WfError {
                 "reconstruction manifest violates its schema invariants (RFC-0003 §6)"
             }
             WfError::MalformedSparsity => "sparsity observation out of range (density ∉ [0,1])",
+            WfError::DimensionTooLarge { .. } => unreachable!("handled above"),
         };
         f.write_str(s)
     }

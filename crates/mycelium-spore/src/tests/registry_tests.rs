@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use mycelium_proj::parse_manifest;
 
-use crate::registry::{artifact_hash, publish, resolve, RegistryError};
+use crate::registry::{artifact_hash, format_entry, parse_entry, publish, resolve, RegistryError};
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -210,4 +210,114 @@ fn registry_error_exit_codes_and_display() {
         assert_eq!(err.exit_code(), *code, "{err}");
         assert!(format!("{err}").contains(fragment), "{err}");
     }
+}
+
+// ─── parse_entry: total-and-strict index read-back (DN-40 §3) ─────────────────
+
+#[test]
+fn parse_entry_round_trips_a_well_formed_entry() {
+    // The happy path: format_entry → parse_entry recovers exactly the (spore_id, artifact) pair.
+    let id = artifact_hash(b"identity-dag-bytes");
+    let art = artifact_hash(b"descriptor-bytes");
+    let text = format_entry(&id, &art);
+    let (got_id, got_art) = parse_entry(&text).expect("a canonical entry parses");
+    assert_eq!(got_id, id);
+    assert_eq!(got_art, art);
+}
+
+#[test]
+fn parse_entry_rejects_a_duplicate_key_never_last_wins() {
+    // DN-40 §3(a): a second occurrence of a key must be a refused Integrity error, NOT silently the
+    // last value (never-silent last-wins; G2).
+    let id1 = artifact_hash(b"first-id");
+    let id2 = artifact_hash(b"second-id");
+    let art = artifact_hash(b"descriptor-bytes");
+    let dup = format!(
+        "spore_id = {}\nspore_id = {}\nartifact = {}\n",
+        id1.as_str(),
+        id2.as_str(),
+        art.as_str()
+    );
+    let err = parse_entry(&dup).expect_err("a duplicate key is refused, not last-wins");
+    assert_eq!(err.exit_code(), 5, "{err}");
+    assert!(format!("{err}").contains("duplicate"), "{err}");
+    assert!(format!("{err}").contains("spore_id"), "{err}");
+}
+
+#[test]
+fn parse_entry_rejects_an_unrecognized_line_never_silently_ignored() {
+    // DN-40 §3(b): a line that is neither blank nor a known key=value must be refused with an explicit
+    // error naming the bad line (never silently ignored; G2). Covers an unknown key AND a non-pair line.
+    let id = artifact_hash(b"identity");
+    let art = artifact_hash(b"descriptor");
+
+    // (i) an unrecognized key.
+    let unknown_key = format!(
+        "spore_id = {}\nartifact = {}\nmystery = 42\n",
+        id.as_str(),
+        art.as_str()
+    );
+    let e1 = parse_entry(&unknown_key).expect_err("an unrecognized key is refused");
+    assert_eq!(e1.exit_code(), 5, "{e1}");
+    assert!(format!("{e1}").contains("mystery"), "{e1}");
+
+    // (ii) a line that is not a `key = value` pair at all.
+    let junk_line = format!(
+        "spore_id = {}\nartifact = {}\nthis is not a pair\n",
+        id.as_str(),
+        art.as_str()
+    );
+    let e2 = parse_entry(&junk_line).expect_err("a non-pair line is refused");
+    assert_eq!(e2.exit_code(), 5, "{e2}");
+    assert!(format!("{e2}").contains("this is not a pair"), "{e2}");
+}
+
+#[test]
+fn parse_entry_rejects_missing_fields_and_bad_hashes() {
+    // A missing required field and a malformed hash value are both explicit refusals (G2), not defaults.
+    let id = artifact_hash(b"identity");
+    let art = artifact_hash(b"descriptor");
+
+    let missing_artifact = format!("spore_id = {}\n", id.as_str());
+    let e1 = parse_entry(&missing_artifact).expect_err("a missing artifact line is refused");
+    assert_eq!(e1.exit_code(), 5, "{e1}");
+    assert!(format!("{e1}").contains("artifact"), "{e1}");
+
+    let bad_hash = format!("spore_id = {}\nartifact = not-a-hash\n", id.as_str());
+    let e2 = parse_entry(&bad_hash).expect_err("a malformed hash value is refused");
+    assert_eq!(e2.exit_code(), 5, "{e2}");
+
+    // A blank interior line is benign padding and does not break a valid entry.
+    let with_blank = format!(
+        "spore_id = {}\n\nartifact = {}\n",
+        id.as_str(),
+        art.as_str()
+    );
+    let (got_id, got_art) = parse_entry(&with_blank).expect("a blank padding line is tolerated");
+    assert_eq!(got_id, id);
+    assert_eq!(got_art, art);
+}
+
+#[test]
+fn a_duplicate_keyed_index_entry_is_caught_on_resolve_not_last_wins() {
+    // End-to-end: a hand-corrupted index file with a duplicate key surfaces as an Integrity refusal at
+    // resolve, naming the offending entry — never silently resolved to the last value (G2).
+    let reg = scratch_registry("dupkey");
+    let (spore, descriptor) = demo_spore(
+        "dk",
+        "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+    );
+    let receipt = publish(&reg, &spore, &descriptor, "geo", "1.0.0").unwrap();
+
+    // Append a second, conflicting spore_id line to the index entry (simulating corruption / tamper).
+    let idx = reg.join("index").join("geo").join("1.0.0");
+    let mut entry = std::fs::read_to_string(&idx).unwrap();
+    let other = artifact_hash(b"a-different-identity");
+    entry.push_str(&format!("spore_id = {}\n", other.as_str()));
+    std::fs::write(&idx, entry).unwrap();
+    let _ = receipt; // keep the published object around for the resolve attempt.
+
+    let err = resolve(&reg, "geo", "1.0.0").unwrap_err();
+    assert_eq!(err.exit_code(), 5, "{err}");
+    assert!(format!("{err}").contains("duplicate"), "{err}");
 }

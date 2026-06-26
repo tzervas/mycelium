@@ -159,7 +159,9 @@ pub fn build_spore(manifest: &Manifest, project_dir: &Path) -> Result<Spore, Spo
     // 3. The dependency edges: each pinned by `hash` (authoritative, ADR-003); a hashless dep is refused.
     let mut deps = Vec::with_capacity(manifest.dependencies.len());
     for d in &manifest.dependencies {
-        let hash = d.hash.clone().ok_or_else(|| {
+        // The manifest reader has already parsed this into a typed, well-formed `ContentHash`
+        // (DN-40 A3) — here we only enforce that the pin is *present* (an unpinned dep is refused).
+        let hash = d.hash.as_ref().ok_or_else(|| {
             SporeError::Publish(format!(
                 "dependency `{}` has no `hash` — an unpinned dependency is not reproducible; pin it \
                  (`hash = \"blake3:…\"`, ADR-003/G2)",
@@ -169,7 +171,7 @@ pub fn build_spore(manifest: &Manifest, project_dir: &Path) -> Result<Spore, Spo
         deps.push(ResolvedDep {
             name: d.name.clone(),
             phylum: d.phylum.clone(),
-            hash,
+            hash: hash.as_str().to_owned(),
             version: d.version.clone(),
         });
     }
@@ -189,32 +191,61 @@ pub fn build_spore(manifest: &Manifest, project_dir: &Path) -> Result<Spore, Spo
     })
 }
 
-/// The canonical, deterministic identity encoding (ADR-003). Metadata (`name`/`version`/`authors`/…) is
-/// **excluded** — only the code-by-hash DAG, the dependency hash edges, the germination surface, and the
-/// project kind bear identity. Two builds of the same code+deps yield the same spore hash.
-fn content_address(
+/// The canonical, deterministic identity encoding (ADR-003) — **the single source of truth for spore
+/// identity**. Metadata (`name`/`version`/`authors`/…) is **excluded** — only the code-by-hash DAG, the
+/// dependency hash edges, the germination surface, and the project kind bear identity. Two builds of the
+/// same code+deps yield the same spore hash. **Downstream verifiers (e.g. `mycelium-std-spore::verify`)
+/// MUST call this function — never re-implement the encoding:** a parallel copy is exactly how the
+/// `v0`/`v1` split arose (DRY; the verify path stamped a stale `v0` while `build_spore` stamped `v1`).
+pub fn content_address(
     kind: ProjectKind,
     surface: &[String],
     sources: &[SourceFile],
     deps: &[ResolvedDep],
 ) -> ContentHash {
-    let mut s = String::from("mycelium-spore-v0\n");
+    // **Injectivity is the whole contract** (ADR-003): distinct (kind, surface, sources, deps) MUST
+    // map to distinct addresses, or the content-addressed supply chain (dep pinning, resolve-by-hash,
+    // immutability detection) can be substituted under. The original `v0` encoding emitted every
+    // author-influenced field space/newline-delimited with **no length-prefix or escaping** — so a
+    // crafted source path or dep field containing a space/newline could shift a field boundary and
+    // alias two distinct DAGs onto one pre-image string (a second-pre-image collision; all three
+    // `ResolvedDep` fields are free-text manifest strings, so this needed no preimage or filesystem).
+    // `v1` **length-prefixes every variable-length field** (`<bytelen>:<bytes>`) — the load-bearing
+    // part: a field spans exactly its byte count, so no embedded space/newline can forge a boundary
+    // (netstring-style). Each section's record count is also recorded (defense-in-depth). Together the
+    // pre-image is uniquely decodable ⇒ the encoding is injective by construction. Property-tested over adversarial
+    // inputs (paths/names with spaces/newlines) in `src/tests/lib_tests.rs`. The version header bumps
+    // `v0 -> v1`, which **re-addresses every spore** (append-only supersession of the explicitly
+    // provisional format; acceptable pre-1.0 — no live registry). KEEP-OUT of the kernel (KC-3):
+    // identity is a deterministic, *verifiable* encoding — it must be verified, never trusted.
+    let mut s = String::from("mycelium-spore-v1\n");
     s.push_str(&format!("kind:{}\n", kind_str(kind)));
-    s.push_str("surface:\n");
+    s.push_str(&format!("surface:{}\n", surface.len()));
     for name in surface {
-        s.push_str(&format!("  {name}\n"));
+        push_field(&mut s, name);
     }
-    s.push_str("code:\n");
+    s.push_str(&format!("code:{}\n", sources.len()));
     for f in sources {
-        s.push_str(&format!("  {} {}\n", f.path, f.hash.as_str()));
+        push_field(&mut s, &f.path);
+        push_field(&mut s, f.hash.as_str());
     }
-    s.push_str("deps:\n");
+    s.push_str(&format!("deps:{}\n", deps.len()));
     for d in deps {
         // The hash is identity; the version requirement is metadata and is excluded here.
-        s.push_str(&format!("  {} {} {}\n", d.name, d.phylum, d.hash));
+        push_field(&mut s, &d.name);
+        push_field(&mut s, &d.phylum);
+        push_field(&mut s, &d.hash);
     }
     let hex = blake3::hash(s.as_bytes()).to_hex();
     ContentHash::from_parts("blake3", hex.as_str()).expect("blake3 hex is a valid digest")
+}
+
+/// Append one length-prefixed field to the canonical pre-image: `<byte-length>:<bytes>\n`. The byte
+/// count removes all delimiter ambiguity — the field spans exactly `v.len()` bytes, so an embedded
+/// space or newline cannot forge a record/field boundary (netstring-style canonicalization). This is
+/// what makes [`content_address`]'s `v1` encoding **injective** where `v0` was not.
+fn push_field(s: &mut String, v: &str) {
+    s.push_str(&format!("{}:{}\n", v.len(), v));
 }
 
 /// The canonical `[project].kind` spelling.
@@ -227,15 +258,47 @@ pub fn kind_str(kind: ProjectKind) -> &'static str {
     }
 }
 
+/// The maximum directory nesting the source walk will descend before refusing (never-silent; G2).
+///
+/// A project tree this deep is **not** a legitimate `mycelium` layout — it is the signature of a
+/// pathological or adversarial input (a symlink cycle, or a generated tree built to exhaust the
+/// stack). The walk already refuses to follow symlinked directory entries (the primary cycle defence
+/// below), so this cap is the **defence-in-depth** bound that turns "unbounded recursion ⇒ stack
+/// overflow / infinite walk (build DoS)" into an **explicit, exit-coded refusal** (DN-40 §3). The
+/// value is far above any plausible real nodule hierarchy.
+const MAX_WALK_DEPTH: usize = 64;
+
 /// Collect every `.myc` source under `dir` (recursively), content-addressed by raw-byte BLAKE3. Skips
 /// hidden entries, `target/`, and the temp files a formatter might leave — deterministic and reproducible.
+///
+/// **Bounded + symlink-safe (DN-40 §3).** The walk **does not descend into symlinked directory
+/// entries** (a symlinked-directory cycle would otherwise be an unbounded/infinite walk — a build
+/// DoS), and it caps nesting at [`MAX_WALK_DEPTH`], returning an explicit [`SporeError::Publish`]
+/// (never-silent; G2) rather than overflowing the stack.
 fn collect_sources(dir: &Path) -> Result<Vec<SourceFile>, SporeError> {
     let mut out = Vec::new();
-    walk(dir, dir, &mut out)?;
+    walk(dir, dir, 0, &mut out)?;
     Ok(out)
 }
 
-fn walk(root: &Path, dir: &Path, out: &mut Vec<SourceFile>) -> Result<(), SporeError> {
+fn walk(
+    root: &Path,
+    dir: &Path,
+    depth: usize,
+    out: &mut Vec<SourceFile>,
+) -> Result<(), SporeError> {
+    // Defence-in-depth bound: an over-deep tree (the signature of a symlink cycle or an adversarial
+    // input built to exhaust the stack) is refused explicitly — never an unbounded recursion (G2).
+    if depth > MAX_WALK_DEPTH {
+        return Err(SporeError::Publish(format!(
+            "source tree under {} nests deeper than {MAX_WALK_DEPTH} directories at {} — refusing \
+             to recurse further (a tree this deep is not a valid layout; likely a symlink cycle or \
+             an adversarial input). Flatten the tree or remove the offending link (DN-40/G2)",
+            root.display(),
+            dir.display(),
+        )));
+    }
+
     let entries =
         std::fs::read_dir(dir).map_err(|e| SporeError::Io(format!("{}: {e}", dir.display())))?;
     let mut paths: Vec<PathBuf> = entries.filter_map(|e| e.ok().map(|e| e.path())).collect();
@@ -248,9 +311,23 @@ fn walk(root: &Path, dir: &Path, out: &mut Vec<SourceFile>) -> Result<(), SporeE
         if name.starts_with('.') || name == "target" {
             continue;
         }
-        if path.is_dir() {
-            walk(root, &path, out)?;
-        } else if path.extension().is_some_and(|x| x == "myc") {
+        // Classify the entry via `symlink_metadata` — which stats the **link itself**, not its
+        // target — so a symlink is detected as a symlink. `Path::is_dir()` (and `metadata`) follow
+        // the link and would report a symlinked-directory cycle as an ordinary directory, recursing
+        // forever. A symlinked entry is **skipped** here (deterministically), which by construction
+        // means no directory cycle can be re-entered (the only path back into an ancestor is via a
+        // link). Real directories and real files are handled exactly as before (DN-40 §3).
+        let meta = std::fs::symlink_metadata(&path)
+            .map_err(|e| SporeError::Io(format!("{}: {e}", path.display())))?;
+        if meta.file_type().is_symlink() {
+            // Never silently follow a symlink (cycle / tree-escape risk); a symlinked source is not
+            // part of the deterministic content-addressed tree. Skipped, not an error — a benign
+            // convenience link must not fail the build, but it is never traversed.
+            continue;
+        }
+        if meta.is_dir() {
+            walk(root, &path, depth + 1, out)?;
+        } else if meta.is_file() && path.extension().is_some_and(|x| x == "myc") {
             let bytes = std::fs::read(&path)
                 .map_err(|e| SporeError::Io(format!("{}: {e}", path.display())))?;
             let hex = blake3::hash(&bytes).to_hex();

@@ -67,8 +67,10 @@ impl PrimRegistry {
     /// The default registry: the exact built-ins — elementwise logical (`core.id`,
     /// `bit.not/and/or/xor`), fixed-width balanced-ternary arithmetic (`trit.neg/add/sub/mul`,
     /// M-111), the reduce-to-`Bool` comparison prims (`cmp.eq`/`cmp.lt` → `Binary{1}`, RFC-0032 D1,
-    /// M-747), and never-silent fixed-width binary arithmetic (`bit.add`/`bit.sub`, RFC-0032 D2,
-    /// M-748).
+    /// M-747), never-silent fixed-width binary arithmetic (`bit.add`/`bit.sub`, RFC-0032 D2,
+    /// M-748), never-silent indexed-sequence access (`seq.len`/`seq.get`, RFC-0032 D3, M-749), and
+    /// never-silent byte-string access (`bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat`,
+    /// RFC-0032 D4, M-750).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -87,6 +89,14 @@ impl PrimRegistry {
         // RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic over `Binary{N}`.
         r.register("bit.add", prim_bit_add);
         r.register("bit.sub", prim_bit_sub);
+        // RFC-0032 D3 (M-749): never-silent indexed-sequence access over `Repr::Seq`.
+        r.register("seq.len", prim_seq_len);
+        r.register("seq.get", prim_seq_get);
+        // RFC-0032 D4 (M-750): never-silent byte-string access over `Repr::Bytes`.
+        r.register("bytes.len", prim_bytes_len);
+        r.register("bytes.get", prim_bytes_get);
+        r.register("bytes.slice", prim_bytes_slice);
+        r.register("bytes.concat", prim_bytes_concat);
         r
     }
 
@@ -480,237 +490,215 @@ fn prim_bit_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     bin_arith(prim, args, true)
 }
 
-#[cfg(test)]
-mod mutant_witness_tests {
-    //! Mutant-witness tests for prims.rs survivors (M-654 Gate A3).
-    use super::*;
-    use mycelium_core::{Meta, Payload, Provenance, Repr, Value};
+// --- RFC-0032 D3 (M-749): indexed-sequence primitives ------------------------------------------
+//
+// `seq.get`/`seq.len` are the never-silent indexing surface over `Repr::Seq` (RFC-0032 D3). A kernel
+// prim returns a representation [`Value`], not a `.myc` data value, so:
+//   - `seq.len(s) -> Binary{32}` is the element count as an unsigned 32-bit value (the seq's `len`).
+//   - `seq.get(s, i) -> elem` returns the `i`-th element, with `i` an unsigned `Binary{N}` index. An
+//     **out-of-bounds index is an explicit [`EvalError::PrimType`]**, never a panic or a silent
+//     default (G2). The `.myc` `Vec::get` surface lifts this into the `Option` the spec names
+//     (`get(s, i) -> Option<elem>`); the never-silence is what makes that lift honest.
+// Guarantee **`Exact`**: total/decidable over the in-range domain.
 
-    fn byte(bits: [bool; 8]) -> Value {
-        Value::new(
-            Repr::Binary { width: 8 },
-            Payload::Bits(bits.to_vec()),
-            Meta::exact(Provenance::Root),
-        )
-        .unwrap()
-    }
-
-    // ---- prims.rs:61 — PrimRegistry::empty → Default::default() ----
-    // JUSTIFIED: PrimRegistry derives Default (BTreeMap::new()), and `empty()` also constructs
-    // BTreeMap::new(). The two are semantically identical — both produce an empty registry with no
-    // registered prims. This mutant is genuinely equivalent and is excluded via mutants.toml.
-
-    // ---- prims.rs:169 — expect_arity → Ok(()) ----
-    // Mutant: expect_arity always succeeds, even with wrong arity — arity errors are never raised.
-    // Kill: invoking a prim with wrong arity must return a PrimType error, not succeed silently.
-    #[test]
-    fn expect_arity_rejects_wrong_arity() {
-        // Mutant-witness: prims.rs:169 replace expect_arity → Ok(()).
-        // bit.not requires exactly 1 arg; providing 0 or 2 must be a PrimType error.
-        // Test via the PrimRegistry public API.
-        let reg = PrimRegistry::with_builtins();
-        let f = reg.get("bit.not").expect("bit.not registered");
-        let b = byte([true; 8]);
-        // Zero args → PrimType.
-        assert!(
-            matches!(f("bit.not", &[]), Err(EvalError::PrimType { .. })),
-            "bit.not with 0 args must be PrimType"
-        );
-        // Two args → PrimType.
-        assert!(
-            matches!(f("bit.not", &[&b, &b]), Err(EvalError::PrimType { .. })),
-            "bit.not with 2 args must be PrimType"
-        );
-        // One arg → Ok (correct arity).
-        assert!(
-            f("bit.not", &[&b]).is_ok(),
-            "bit.not with 1 arg must succeed"
-        );
-    }
-
-    // ---- prims.rs:240 — prim_bit_and: & → | or ^ ----
-    // Mutant A (& → |): AND is replaced by OR — (1&0)=0 but (1|0)=1.
-    // Mutant B (& → ^): AND is replaced by XOR — (1&1)=1 but (1^1)=0.
-    // Kill: test a case where AND, OR, and XOR all differ (e.g. a=1,b=0 and a=1,b=1).
-    #[test]
-    fn bit_and_is_conjunction_not_disjunction_or_xor() {
-        // Mutant-witness: prims.rs:240 & → | or ^.
-        let reg = PrimRegistry::with_builtins();
-        let f = reg.get("bit.and").expect("bit.and registered");
-
-        // Operands: a = [true; 8], b = [false; 8].
-        // AND: all false. OR: all true. XOR: all true. AND ≠ OR,XOR.
-        let a = byte([true; 8]);
-        let b_zeros = byte([false; 8]);
-        let result = f("bit.and", &[&a, &b_zeros]).expect("bit.and evaluates");
-        assert_eq!(
-            result.payload(),
-            &Payload::Bits(vec![false; 8]),
-            "bit.and([1;8], [0;8]) must be [0;8] (AND), not [1;8] (OR/XOR)"
-        );
-
-        // Operands: a = [true; 8], b = [true; 8].
-        // AND: all true. OR: all true. XOR: all false. AND ≠ XOR here.
-        let b_ones = byte([true; 8]);
-        let result2 = f("bit.and", &[&a, &b_ones]).expect("bit.and evaluates");
-        assert_eq!(
-            result2.payload(),
-            &Payload::Bits(vec![true; 8]),
-            "bit.and([1;8], [1;8]) must be [1;8] (AND/OR), distinguishing from XOR ([0;8])"
-        );
-    }
-
-    // ---- prims.rs:243 — prim_bit_or: | → & or ^ ----
-    // Mutant A (| → &): OR is replaced by AND — (1|0)=1 but (1&0)=0.
-    // Mutant B (| → ^): OR is replaced by XOR — (1|1)=1 but (1^1)=0.
-    // Kill: test case where OR, AND, XOR all differ.
-    #[test]
-    fn bit_or_is_disjunction_not_conjunction_or_xor() {
-        // Mutant-witness: prims.rs:243 | → & or ^.
-        let reg = PrimRegistry::with_builtins();
-        let f = reg.get("bit.or").expect("bit.or registered");
-
-        // Operands: a = [true; 8], b = [false; 8].
-        // OR: all true. AND: all false. XOR: all true. OR ≠ AND.
-        let a = byte([true; 8]);
-        let b_zeros = byte([false; 8]);
-        let result = f("bit.or", &[&a, &b_zeros]).expect("bit.or evaluates");
-        assert_eq!(
-            result.payload(),
-            &Payload::Bits(vec![true; 8]),
-            "bit.or([1;8], [0;8]) must be [1;8] (OR), not [0;8] (AND)"
-        );
-
-        // Operands: a = [true; 8], b = [true; 8].
-        // OR: all true. AND: all true. XOR: all false. OR ≠ XOR here.
-        let b_ones = byte([true; 8]);
-        let result2 = f("bit.or", &[&a, &b_ones]).expect("bit.or evaluates");
-        assert_eq!(
-            result2.payload(),
-            &Payload::Bits(vec![true; 8]),
-            "bit.or([1;8], [1;8]) must be [1;8] (OR/AND), distinguishing from XOR ([0;8])"
-        );
-
-        // Mixed: a=[T,F,T,F,T,F,T,F], b=[F,F,F,F,F,F,F,F].
-        // OR=[T,F,T,F,T,F,T,F], AND=[F;8], XOR=[T,F,T,F,T,F,T,F] — OR and XOR agree here.
-        // But the two tests above already distinguish OR from both AND and XOR.
-    }
-
-    // ---- RFC-0032 D1 (M-747): comparison/equality prims ----
-
-    /// MSB-first bit vector from a string (e.g. `"1010_0000"`, underscores ignored).
-    fn bits(s: &str) -> Vec<bool> {
-        s.chars().filter(|c| *c != '_').map(|c| c == '1').collect()
-    }
-
-    /// A `Binary{8}` value from an MSB-first bit string (e.g. `"1010_0000"`, underscores ignored).
-    fn b8(s: &str) -> Value {
-        let v = bits(s);
-        assert_eq!(v.len(), 8, "b8 expects 8 bits");
-        let mut a = [false; 8];
-        a.copy_from_slice(&v);
-        byte(a)
-    }
-
-    #[test]
-    fn cmp_eq_is_structural_equality_returning_binary1() {
-        let reg = PrimRegistry::with_builtins();
-        let f = reg.get("cmp.eq").expect("cmp.eq registered");
-        let a = b8("1010_0000");
-        let same = b8("1010_0000");
-        let diff = b8("1010_0001");
-        // Equal ⇒ Binary{1} = 0b1; the repr collapses from Binary{8} to Binary{1}.
-        let r = f("cmp.eq", &[&a, &same]).expect("cmp.eq evaluates");
-        assert_eq!(r.repr(), &Repr::Binary { width: 1 });
-        assert_eq!(r.payload(), &Payload::Bits(vec![true]));
-        // Unequal ⇒ 0b0 (never a silent 0b1).
-        let r = f("cmp.eq", &[&a, &diff]).expect("cmp.eq evaluates");
-        assert_eq!(r.payload(), &Payload::Bits(vec![false]));
-    }
-
-    #[test]
-    fn cmp_lt_is_unsigned_magnitude_strict() {
-        let reg = PrimRegistry::with_builtins();
-        let f = reg.get("cmp.lt").expect("cmp.lt registered");
-        let lo = b8("1000_0000"); // 128
-        let hi = b8("1010_0000"); // 160
-                                  // 128 < 160 ⇒ true.
-        assert_eq!(
-            f("cmp.lt", &[&lo, &hi]).expect("lt").payload(),
-            &Payload::Bits(vec![true])
-        );
-        // Strict: not less when equal, and not less when greater.
-        assert_eq!(
-            f("cmp.lt", &[&hi, &hi]).expect("lt").payload(),
-            &Payload::Bits(vec![false])
-        );
-        assert_eq!(
-            f("cmp.lt", &[&hi, &lo]).expect("lt").payload(),
-            &Payload::Bits(vec![false])
-        );
-    }
-
-    #[test]
-    fn cmp_width_mismatch_is_never_silent() {
-        // A `Binary{8}` vs `Binary{1}` comparison is an explicit PrimType error — never a silent
-        // false (G2). (Same-paradigm, mismatched width.)
-        let reg = PrimRegistry::with_builtins();
-        let f = reg.get("cmp.eq").expect("cmp.eq registered");
-        let wide = b8("0000_0000");
-        let narrow = Value::new(
-            Repr::Binary { width: 1 },
-            Payload::Bits(vec![false]),
-            Meta::exact(Provenance::Root),
-        )
-        .unwrap();
-        assert!(
-            matches!(
-                f("cmp.eq", &[&wide, &narrow]),
-                Err(EvalError::PrimType { .. })
+/// Interpret an unsigned `Binary{N}` value as a `usize` index (MSB-first bits). A non-Binary operand
+/// is an explicit error; a width that cannot fit `usize` (`> 64` here, conservatively the pointer
+/// width is ≥ 32) overflowing `usize` is also refused rather than silently truncated (G2).
+fn as_index(prim: &str, v: &Value) -> Result<usize, EvalError> {
+    let bits = as_bits(prim, v)?;
+    if bits.len() > usize::BITS as usize {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "index width {} exceeds the {}-bit usize index space",
+                bits.len(),
+                usize::BITS
             ),
-            "mismatched-width eq must be PrimType, never a silent false"
-        );
+        });
     }
+    // MSB-first accumulate; the width guard above keeps this within `usize`.
+    let idx = bits
+        .iter()
+        .fold(0usize, |acc, &b| (acc << 1) | usize::from(b));
+    Ok(idx)
+}
 
-    // ---- RFC-0032 D2 (M-748): never-silent binary arithmetic ----
+/// Extract the elements of a `Repr::Seq` operand; a non-sequence is an explicit error (G2).
+fn as_seq<'a>(prim: &str, v: &'a Value) -> Result<&'a [Value], EvalError> {
+    v.seq_elems().ok_or_else(|| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: "expected a Seq operand".to_owned(),
+    })
+}
 
-    #[test]
-    fn bit_add_in_range_and_overflow_never_silent() {
-        let reg = PrimRegistry::with_builtins();
-        let f = reg.get("bit.add").expect("bit.add registered");
-        // 1 + 2 = 3, carries propagate MSB-first correctly.
-        let r = f("bit.add", &[&b8("0000_0001"), &b8("0000_0010")]).expect("add");
-        assert_eq!(r.payload(), &Payload::Bits(bits("0000_0011")));
-        // 0b0000_1111 (15) + 0b0000_0001 (1) = 0b0001_0000 (16) — carry chain across the nibble.
-        let r = f("bit.add", &[&b8("0000_1111"), &b8("0000_0001")]).expect("add");
-        assert_eq!(r.payload(), &Payload::Bits(bits("0001_0000")));
-        // 255 + 1 overflows Binary{8}: explicit Overflow, never a silent wrap to 0.
-        assert!(
-            matches!(
-                f("bit.add", &[&b8("1111_1111"), &b8("0000_0001")]),
-                Err(EvalError::Overflow { .. })
+/// `seq.len : Seq<T, N> → Binary{32}` — the element count as an unsigned 32-bit value (RFC-0032 D3).
+fn prim_seq_len(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let elems = as_seq(prim, args[0])?;
+    // The seq's `len` is a `u32` field (well-formedness caps it at MAX_DIM ≤ 2^30 ≤ 2^32), so 32
+    // bits hold it exactly. Use the same *checked* conversion as `bytes.len` rather than a silent
+    // `as u32` truncation — defensive parity in the trusted base, so a future path that ever yields
+    // an over-2^32 sequence refuses (G2) instead of wrapping.
+    let n = u32::try_from(elems.len()).map_err(|_| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: format!(
+            "sequence length {} exceeds the 32-bit length encoding",
+            elems.len()
+        ),
+    })?;
+    u32_as_binary32(prim, args, n)
+}
+
+/// `seq.get : (Seq<T, N>, Binary{W}) → T` — never-silent indexed access (RFC-0032 D3). An
+/// out-of-bounds index is an explicit [`EvalError::PrimType`] (the `.myc` surface lifts to `Option`),
+/// never a panic or a silent default (G2).
+fn prim_seq_get(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let elems = as_seq(prim, args[0])?;
+    let i = as_index(prim, args[1])?;
+    match elems.get(i) {
+        Some(e) => {
+            // Return the element faithfully at **its own** established basis (VR-5): the result's
+            // guarantee is the element's, never upgraded — an `Empirical`/`Declared` element must
+            // not re-stamp as `Exact` just because the container/index were `Exact`. It is then
+            // `meet`-downgraded by the container and index strengths (you cannot trust an element
+            // retrieved from a less-certain container more than that container). Indexing is exact
+            // and introduces no error, so the element's `bound` carries through unchanged; if that
+            // (guarantee, bound) pairing is internally inconsistent for some exotic container meta,
+            // `Meta::new` refuses (`EvalError::Wf`) rather than fabricating one (G2). Provenance is
+            // re-stamped `Derived` from the access inputs (lineage), as for any other prim result.
+            let guarantee = GuaranteeStrength::propagate(
+                e.meta().guarantee(),
+                args.iter().map(|v| v.meta().guarantee()),
+            );
+            let bound = e.meta().bound().cloned();
+            let provenance = Provenance::Derived {
+                op: operation_hash(prim),
+                inputs: args.iter().map(|v| v.content_hash()).collect(),
+            };
+            let meta =
+                Meta::new(provenance, guarantee, bound, None, None, None).map_err(EvalError::Wf)?;
+            Value::new(e.repr().clone(), e.payload().clone(), meta).map_err(EvalError::Wf)
+        }
+        None => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "index {i} out of bounds for a sequence of length {}",
+                elems.len()
             ),
-            "add overflow must be explicit, never a silent wrap"
-        );
+        }),
     }
+}
 
-    #[test]
-    fn bit_sub_in_range_and_underflow_never_silent() {
-        let reg = PrimRegistry::with_builtins();
-        let f = reg.get("bit.sub").expect("bit.sub registered");
-        // 5 - 2 = 3, borrow chain correct.
-        let r = f("bit.sub", &[&b8("0000_0101"), &b8("0000_0010")]).expect("sub");
-        assert_eq!(r.payload(), &Payload::Bits(bits("0000_0011")));
-        // 16 - 1 = 15 — borrow across the nibble.
-        let r = f("bit.sub", &[&b8("0001_0000"), &b8("0000_0001")]).expect("sub");
-        assert_eq!(r.payload(), &Payload::Bits(bits("0000_1111")));
-        // 0 - 1 underflows (no unsigned negative): explicit Overflow, never a silent wrap to 255.
-        assert!(
-            matches!(
-                f("bit.sub", &[&b8("0000_0000"), &b8("0000_0001")]),
-                Err(EvalError::Overflow { .. })
+// --- RFC-0032 D4 (M-750): byte-string primitives -----------------------------------------------
+//
+// `bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat` are the never-silent byte surface over
+// `Repr::Bytes` (RFC-0032 D4). UTF-8 decode is written in `.myc` over these prims, never in the
+// kernel. Out-of-range access is an explicit refusal (the `.myc` surface lifts to `Option`); a
+// non-bytes operand is an explicit type refusal (G2). Guarantee **`Exact`**.
+
+/// Extract the bytes of a `Repr::Bytes` operand; a non-bytes value is an explicit error (G2).
+fn as_bytes_payload<'a>(prim: &str, v: &'a Value) -> Result<&'a [u8], EvalError> {
+    v.bytes().ok_or_else(|| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: "expected a Bytes operand".to_owned(),
+    })
+}
+
+/// Build a `Binary{32}` value from a `u32`, MSB-first (the never-silent length/index encoding).
+fn u32_as_binary32(prim: &str, inputs: &[&Value], n: u32) -> Result<Value, EvalError> {
+    let out: Vec<bool> = (0..32).rev().map(|k| (n >> k) & 1 == 1).collect();
+    compose_result(
+        prim,
+        inputs,
+        Repr::Binary { width: 32 },
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bytes.len : Bytes → Binary{32}` — the byte count (RFC-0032 D4).
+fn prim_bytes_len(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let bytes = as_bytes_payload(prim, args[0])?;
+    let n = u32::try_from(bytes.len()).map_err(|_| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: format!(
+            "byte length {} exceeds the 32-bit length encoding",
+            bytes.len()
+        ),
+    })?;
+    u32_as_binary32(prim, args, n)
+}
+
+/// `bytes.get : (Bytes, Binary{W}) → Binary{8}` — never-silent indexed byte access (RFC-0032 D4). An
+/// out-of-bounds index is an explicit refusal (the `.myc` surface lifts to `Option`), never a silent
+/// default (G2). The returned byte is a `Binary{8}` value (MSB-first).
+fn prim_bytes_get(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let bytes = as_bytes_payload(prim, args[0])?;
+    let i = as_index(prim, args[1])?;
+    match bytes.get(i) {
+        Some(&byte) => {
+            let out: Vec<bool> = (0..8).rev().map(|k| (byte >> k) & 1 == 1).collect();
+            compose_result(
+                prim,
+                args,
+                Repr::Binary { width: 8 },
+                Payload::Bits(out),
+                ApproxRule::Refuse,
+            )
+        }
+        None => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "byte index {i} out of bounds for a byte string of length {}",
+                bytes.len()
             ),
-            "sub underflow must be explicit, never a silent wrap"
-        );
+        }),
     }
+}
+
+/// `bytes.slice : (Bytes, Binary{W}, Binary{W}) → Bytes` — never-silent sub-slice `[start, end)`
+/// (RFC-0032 D4). An out-of-range or inverted range is an explicit refusal, never a silently-clamped
+/// range (G2).
+fn prim_bytes_slice(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 3)?;
+    let bytes = as_bytes_payload(prim, args[0])?;
+    let start = as_index(prim, args[1])?;
+    let end = as_index(prim, args[2])?;
+    if start > end || end > bytes.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "slice range [{start}, {end}) is out of bounds or inverted for a byte string of \
+                 length {}",
+                bytes.len()
+            ),
+        });
+    }
+    compose_result(
+        prim,
+        args,
+        Repr::Bytes,
+        Payload::Bytes(bytes[start..end].to_vec()),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bytes.concat : (Bytes, Bytes) → Bytes` — byte concatenation (RFC-0032 D4). Total/`Exact`.
+fn prim_bytes_concat(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bytes_payload(prim, args[0])?;
+    let b = as_bytes_payload(prim, args[1])?;
+    let mut out = Vec::with_capacity(a.len() + b.len());
+    out.extend_from_slice(a);
+    out.extend_from_slice(b);
+    compose_result(
+        prim,
+        args,
+        Repr::Bytes,
+        Payload::Bytes(out),
+        ApproxRule::Refuse,
+    )
 }

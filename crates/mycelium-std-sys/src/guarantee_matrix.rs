@@ -90,7 +90,16 @@ pub const MATRIX: &[MatrixRow] = &[
         op: "io::read_to_end",
         guarantee: GuaranteeTag::Declared,
         fallibility: Fallibility::Fallible,
-        error_set: "Err(io::Error) — OS read error (never a silent truncation, G2)",
+        error_set: "Err(io::Error) — OS read error (never a silent truncation, G2); \
+                    UNBOUNDED alloc (trusted-only — use read_to_end_capped for untrusted input)",
+        effects: "io",
+    },
+    MatrixRow {
+        op: "io::read_to_end_capped",
+        guarantee: GuaranteeTag::Declared,
+        fallibility: Fallibility::Fallible,
+        error_set: "Err(ReadCappedError) — OS read error / cap exceeded \
+                    (P3 bounded; refuses, never truncates, G2)",
         effects: "io",
     },
     MatrixRow {
@@ -175,8 +184,8 @@ pub const MATRIX: &[MatrixRow] = &[
     MatrixRow {
         op: "sys::args",
         guarantee: GuaranteeTag::Declared,
-        fallibility: Fallibility::Total,
-        error_set: "",
+        fallibility: Fallibility::Fallible,
+        error_set: "Err(NonUtf8Arg) — non-UTF-8 arg named by index (never a silent drop, G2)",
         effects: "process",
     },
     // ── rand (M-723) — OS entropy (`/dev/urandom`), effect `entropy` ────────────────────────────
@@ -322,6 +331,7 @@ mod tests {
     fn matrix_covers_every_floor_op_once() {
         let expected = [
             "io::read_to_end",
+            "io::read_to_end_capped",
             "io::read_line",
             "io::write_out",
             "io::write_err",

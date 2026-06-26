@@ -51,5 +51,5 @@ reviewed part of a change.
 
 ## Per-crate orientation
 
-Every crate also has a short `README.md` (see the [Crate Index](Crate-Index)) for a 30-second
+Every crate also has a short `README.md` (see the [Crate Index](Crate-Index.md)) for a 30-second
 orientation before diving into rustdoc.

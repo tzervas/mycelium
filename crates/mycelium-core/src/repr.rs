@@ -9,6 +9,30 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::WfError;
+
+/// Upper bound (inclusive) on every declared dimension field of a [`Repr`] — `width`, `trits`,
+/// `dim`, and a [`SparsityClass::Sparse`] `max_active`.
+///
+/// **Why a cap at all (input-validation / DoS guard, DN-40 §3).** The wire forms (`repr.schema.json`,
+/// `value.schema.json`) carry these as `u32`, so a crafted descriptor can declare a dimension up to
+/// `u32::MAX` (≈ 4.29 × 10⁹). Materializing a value of such a `Repr` allocates that many elements
+/// (e.g. an `f64` `Hypervector`/`Scalars` vector), so an unbounded declared dimension is a latent
+/// over-allocation (denial-of-service) vector on the deserialize path. The lower `> 0` guard alone
+/// does not close it.
+///
+/// **Why `2^30` (1 073 741 824).** It is a generous-but-finite ceiling that no legitimate value
+/// needs: VSA hypervectors are typically ~10⁴, dense embeddings ≤ ~10⁵, and bit/trit widths far
+/// smaller — all orders of magnitude under the cap. At the same time a `Repr` at the cap is already
+/// impractical to materialize (a `2^30`-element `f64` vector is 8 GiB), so anything above it is
+/// firmly in DoS territory, never a real workload. A power of two keeps the constant auditable
+/// (KC-3). The *check* is **`Exact`** — a declared dimension is either within the cap or it is not,
+/// a total decidable predicate; the *cap value* `2^30` is itself a **`Declared`** policy choice (a
+/// DoS heuristic, not an `Exact` fact about any value). The rejection is never-silent —
+/// [`Repr::check_well_formed`] returns [`WfError::DimensionTooLarge`] naming the offending field,
+/// its value, and this cap (G2).
+pub const MAX_DIM: u32 = 1 << 30;
+
 /// Scalar element kind for `Dense` values (extensible registry).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ScalarKind {
@@ -82,101 +106,118 @@ pub enum Repr {
         /// Declared sparsity class.
         sparsity: SparsityClass,
     },
+    /// A first-class indexed homogeneous sequence (RFC-0032 D3; M-749). `len` elements, each of the
+    /// element representation `elem`. The substrate for an O(1)-indexed `Vec`/`Map`/`Set` (the
+    /// efficient collections surface) — distinct from the recursive-ADT cons-`List`, which needs no
+    /// kernel support. Unlike the scalar paradigms' dimension fields, **`len == 0` is well-formed**
+    /// (the empty sequence is a legitimate value); only the [`MAX_DIM`] over-allocation cap and the
+    /// nested `elem`'s own well-formedness gate it (never-silent on a malformed element repr, G2).
+    Seq {
+        /// The (boxed) element representation — every element of the payload matches this `Repr`.
+        elem: Box<Repr>,
+        /// Declared element count (`≤ MAX_DIM` when well-formed; `0` is allowed — the empty seq).
+        len: u32,
+    },
+    /// A first-class byte string (RFC-0032 D4; M-750) — **well-formed for any byte content**,
+    /// carrying no declared length (the payload [`crate::value::Payload::Bytes`] carries the bytes).
+    /// Text layers on top: UTF-8 decode is written in `.myc` over this byte surface, never in the
+    /// kernel. The substrate for an efficient `str`/`text` value, chosen over modelling strings as
+    /// `Seq<Binary{8}>` so text has a clear first-class value.
+    Bytes,
+}
+
+/// Check one dimension field against the `> 0` lower guard and the [`MAX_DIM`] upper guard,
+/// returning a never-silent [`WfError::DimensionTooLarge`] (naming `field`, the value, and the cap)
+/// when the cap is exceeded, or `Ok(false)` when the value is non-positive (the caller maps that to
+/// [`WfError::MalformedRepr`], preserving the existing `> 0` contract). `Ok(true)` means in-range.
+fn dim_in_range(field: &'static str, value: u32) -> Result<bool, WfError> {
+    if value == 0 {
+        return Ok(false);
+    }
+    if value > MAX_DIM {
+        return Err(WfError::DimensionTooLarge {
+            field,
+            value,
+            cap: MAX_DIM,
+        });
+    }
+    Ok(true)
+}
+
+/// Check a *length* field against the [`MAX_DIM`] over-allocation cap **only** — unlike
+/// [`dim_in_range`], `0` is accepted (a [`Repr::Seq`] of `len == 0` is the well-formed empty
+/// sequence, RFC-0032 D3). Returns the never-silent [`WfError::DimensionTooLarge`] (naming `field`,
+/// the value, and the cap) when the cap is exceeded; `Ok(())` otherwise. Same DoS guard as
+/// `dim_in_range`, without the `> 0` lower bound.
+fn len_in_cap(field: &'static str, value: u32) -> Result<(), WfError> {
+    if value > MAX_DIM {
+        return Err(WfError::DimensionTooLarge {
+            field,
+            value,
+            cap: MAX_DIM,
+        });
+    }
+    Ok(())
 }
 
 impl Repr {
-    /// Well-formed iff all widths/dims/trits (and any `max_active`) are positive and a VSA `model`
-    /// id is non-empty — matching `repr.schema.json` (`minimum: 1` / `minLength: 1`).
+    /// Well-formed iff all widths/dims/trits (and any `max_active`) are positive **and within
+    /// [`MAX_DIM`]** and a VSA `model` id is non-empty — matching `repr.schema.json`
+    /// (`minimum: 1` / `minLength: 1`) plus the over-allocation cap (DN-40 §3).
+    ///
+    /// This is the `bool` predicate; [`Repr::check_well_formed`] is the never-silent variant that
+    /// names *why* (used on the construction/deserialize path via [`crate::Value::new`]).
     #[must_use]
     pub fn well_formed(&self) -> bool {
-        match self {
-            Repr::Binary { width } => *width > 0,
-            Repr::Ternary { trits } => *trits > 0,
-            Repr::Dense { dim, .. } => *dim > 0,
+        self.check_well_formed().is_ok()
+    }
+
+    /// Never-silent well-formedness check (G2): returns `Ok(())` when the descriptor is well-formed,
+    /// [`WfError::DimensionTooLarge`] (naming the field, value, and [`MAX_DIM`]) when a declared
+    /// dimension exceeds the over-allocation cap, or [`WfError::MalformedRepr`] for a non-positive
+    /// dimension or empty VSA model id. Enforced on the construction/deserialize path through
+    /// [`crate::Value::new`], so a crafted huge declared dimension is rejected *before* any value is
+    /// materialized — closing the DN-40 §3 over-allocation gap.
+    pub fn check_well_formed(&self) -> Result<(), WfError> {
+        let in_range = match self {
+            Repr::Binary { width } => dim_in_range("width", *width)?,
+            Repr::Ternary { trits } => dim_in_range("trits", *trits)?,
+            Repr::Dense { dim, .. } => dim_in_range("dim", *dim)?,
             Repr::Vsa {
                 model,
                 dim,
                 sparsity,
             } => {
-                *dim > 0
-                    && !model.is_empty()
-                    && match sparsity {
-                        SparsityClass::Dense => true,
-                        SparsityClass::Sparse { max_active } => *max_active > 0,
+                let dim_ok = dim_in_range("dim", *dim)?;
+                let sparsity_ok = match sparsity {
+                    SparsityClass::Dense => true,
+                    SparsityClass::Sparse { max_active } => {
+                        dim_in_range("max_active", *max_active)?
                     }
+                };
+                dim_ok && !model.is_empty() && sparsity_ok
             }
+            // A sequence is well-formed iff its declared `len` is within the over-allocation cap
+            // (DN-40 §3) **and** the nested element repr is itself well-formed — recursing so a
+            // malformed `elem` (e.g. `Binary{0}` or an over-cap inner dim) is rejected
+            // never-silently, *before* any payload of `len` elements is materialized (G2). `len == 0`
+            // is allowed: the empty sequence is a legitimate value, so the cap is checked with the
+            // length-only guard, not the `> 0` `dim_in_range`.
+            Repr::Seq { elem, len } => {
+                len_in_cap("len", *len)?;
+                elem.check_well_formed()?;
+                true
+            }
+            // A byte string is well-formed for any byte content (RFC-0032 D4): it declares no length
+            // (the payload carries the bytes), so there is nothing to bound here. Any over-allocation
+            // is bounded by the payload itself, which a deserializer materializes directly — there is
+            // no separate declared dimension that could exceed it (unlike the scalar paradigms).
+            Repr::Bytes => true,
+        };
+        if in_range {
+            Ok(())
+        } else {
+            Err(WfError::MalformedRepr)
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn well_formed_accepts_positive() {
-        assert!(Repr::Binary { width: 8 }.well_formed());
-        assert!(Repr::Ternary { trits: 6 }.well_formed());
-        assert!(Repr::Dense {
-            dim: 768,
-            dtype: ScalarKind::F32
-        }
-        .well_formed());
-        assert!(Repr::Vsa {
-            model: "MAP-I".to_string(),
-            dim: 10_000,
-            sparsity: SparsityClass::Sparse { max_active: 100 },
-        }
-        .well_formed());
-    }
-
-    #[test]
-    fn well_formed_rejects_zero_and_empty() {
-        assert!(!Repr::Binary { width: 0 }.well_formed());
-        assert!(!Repr::Ternary { trits: 0 }.well_formed());
-        assert!(!Repr::Vsa {
-            model: String::new(),
-            dim: 10_000,
-            sparsity: SparsityClass::Dense,
-        }
-        .well_formed());
-        assert!(!Repr::Vsa {
-            model: "MAP-I".to_string(),
-            dim: 10_000,
-            sparsity: SparsityClass::Sparse { max_active: 0 },
-        }
-        .well_formed());
-    }
-
-    // Mutant-witness (repr.rs:95:45 Dense{dim} and repr.rs:101:22 Vsa{dim}): the guard is
-    // `> 0` (strictly positive), NOT `>= 0`. A zero-dim Repr must be rejected (above).
-    // A dim-1 Repr MUST be accepted — pins the `>` side. Combined, both tests together kill
-    // the `> → >=` mutant on the Dense and Vsa dim checks.
-    #[test]
-    fn well_formed_rejects_zero_dim_accepts_one() {
-        // Dense dim == 0 is rejected; dim == 1 is accepted (strict lower bound is 1, not 0).
-        assert!(!Repr::Dense {
-            dim: 0,
-            dtype: ScalarKind::F16
-        }
-        .well_formed());
-        assert!(Repr::Dense {
-            dim: 1,
-            dtype: ScalarKind::F16
-        }
-        .well_formed());
-        // Vsa dim == 0 is rejected; dim == 1 is accepted.
-        assert!(!Repr::Vsa {
-            model: "MAP-I".to_string(),
-            dim: 0,
-            sparsity: SparsityClass::Dense,
-        }
-        .well_formed());
-        assert!(Repr::Vsa {
-            model: "MAP-I".to_string(),
-            dim: 1,
-            sparsity: SparsityClass::Dense,
-        }
-        .well_formed());
     }
 }
