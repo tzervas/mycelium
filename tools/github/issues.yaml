@@ -4384,6 +4384,17 @@ issues:
       - src:lib/std/cmp.myc
       - corpus:DN-25
     body: |
+      RE-FLAG (2026-06-27, rsm Session-2): two updates, kept honest and distinct (VR-5).
+      (1) The width-generic cmp<N> forms ARE NOW LANDED (M-718/M-753): cmp.myc's cmp/le/ge/max/min are
+      width-generic over Binary{N}, superseding the cmp_u8/... Binary{8} interim. That clause is CLOSED.
+      (2) The recursive-HOF / RFC-0024 defunctionalization gap REMAINS DEFERRED and was NOT re-attempted
+      this wave (per the rsm kickoff): the iter HOF combinators (map/filter/fold/any/find) still type-check
+      but mono refuses (never-silent Residual) -- recursive application of a function PARAMETER is outside
+      RFC-0024 (only named top-level fns resolve). IMPORTANT distinction: the M-718 "width-var pass-through"
+      (checkty.rs unify, which DID land and unblocks recursive WIDTH-generics like map_get) is a SEPARATE
+      mechanism from this function-PARAMETER recursion gap -- closing the former does NOT close the latter
+      (a higher-order value, not a width, is what fails to defunctionalize). Status stays in-progress.
+
       WAVE-N2-P1 (2026-06-26): lib/std/iter.myc (iterator surface) + cmp.myc width-typed Binary{8} helpers
       landed. EXECUTABLE three-way: iter length/is_empty + a fold-overflow refusal; cmp_u8/le/ge/max/min (10
       helpers). DEFERRED (flagged, VR-5): the iter HOF combinators (map/filter/fold/any/find) type-check but
@@ -4503,7 +4514,7 @@ issues:
   - id: M-717
     title: "text + fmt in Mycelium: string handling + formatting as .myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:in-progress]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:done]
     epic: E13-1
     depends_on: [M-715, M-750]
     doc_refs:
@@ -4517,6 +4528,15 @@ issues:
       - src:crates/mycelium-l1/tests/std_fmt.rs
       - src:lib/std/fmt.myc
     body: |
+      DONE (2026-06-27, rsm Session-2): UTF-8 VALIDITY layer CLOSED -- the last M-717 remainder. decode_one
+      now rejects overlong encodings, surrogate-range codepoints (U+D800..U+DFFF), and codepoints above
+      U+10FFFF via the reject_two/three/four gates (the assembled Binary{32} codepoint compared, Exact lt,
+      against the per-length minimum + the surrogate gap + the ceiling). Utf8Error gains Overlong/Surrogate/
+      TooLarge(Binary{8}) variants carrying the lead byte -- never-silent (G2), never U+FFFD. Boundary
+      values (U+0080, U+10FFFF) are accepted, not over-rejected. std_text.rs: 4 validity-rejection + 2
+      boundary-acceptance tests three-way (31 total green). With ENCODING + SLICING already met (WAVE-N2),
+      M-717's text scope is complete; decode_one now yields only well-formed Unicode scalar values (RFC-3629).
+
       WAVE-N2-P3 (2026-06-26): slicing DoD clause MET -- bytes_slice/bytes_concat SURFACED (M-799/DN-43);
       FLAG-text-3 CLOSED. CORRECTION (VR-5): the p2 note below saying these "need their own surface prim"
       was a MISDIAGNOSIS -- the kernel prims existed + were never-silent since M-750; only the surface
@@ -4589,7 +4609,7 @@ issues:
   - id: M-718
     title: "math + numerics surface in Mycelium: math ops + epsilon/delta surface as .myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:ready]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:done]
     epic: E13-1
     depends_on: [M-715, M-747, M-748, M-753]
     doc_refs:
@@ -4597,7 +4617,30 @@ issues:
       - corpus:RFC-0032
       - corpus:RFC-0016
       - corpus:DN-25
+      - src:lib/std/math.myc
+      - src:lib/std/cmp.myc
+      - src:lib/std/collections.myc
+      - src:crates/mycelium-l1/tests/std_math.rs
     body: |
+      DONE (2026-06-27, rsm Session-2; M-753 width-generics now landed). The WIDTH-GENERIC math/cmp
+      surface ships against the SURFACED prims only (VR-5/G2 -- nothing claimed ahead of a prim):
+      - std.cmp: cmp/le/ge/max/min are now width-generic over Binary{N} (supersede the wave-n1 cmp_u8/...
+        Binary{8} interim); le/ge/max/min delegate to cmp (DRY).
+      - NEW std.math: width-generic binary add/sub (badd/bsub, never-silent overflow via bit.add/bit.sub)
+        + bitwise band/bor/bxor/bnot (total), and balanced-ternary tadd/tsub/tmul/tneg over Ternary{M}
+        (never-silent overflow via trit.*). Each op Exact on its in-range result (grounded in prims.rs).
+      - std.collections: map_get<N,V> + set_contains<N> now width-generic over the key/element width
+        (the recursive linear scan rides the M-718 unify width-var pass-through), replacing the Binary{8}
+        interim; value type V stays fully generic.
+      Honest boundary (FLAGged, NOT faked): NO division or binary multiply (no surfaced prim) and NO
+      epsilon/delta Dense numerics surface (a Dense workstream, E2-1/E2-4) -- both future increments.
+      Enabling L1 fix: checkty.rs unify now binds a width var against another width var (the type-var
+      pass-through analog) so recursive/delegated width-generics check; mono resolves the concrete width.
+      Tests: std_math.rs (19), std_cmp.rs (38), std_collections.rs (+5), width_generic.rs (+4),
+      std_generic_conformance.rs (M-719, 4) -- full mycelium-l1 suite green (591 tests). The
+      numerics.myc / epsilon-delta clause of the original DoD is explicitly DEFERRED (no prim), not
+      claimed; M-718's math/cmp + generic-key-lookup scope is complete.
+
       BLOCKED (RFC-0031 §5 D4 Tier-1) on E19-1: width-typed comparison needs M-747 (reduce-to-Bool
       comparison prim); binary math needs M-748 (binary arithmetic surface); a GENERAL (non-fixed-
       width) math/cmp surface needs M-751 (width-generic fns) -- all gated by RFC-0032. The kernel
@@ -4638,13 +4681,23 @@ issues:
   - id: M-719
     title: "stdlib conformance + stability: differential tests + stable documented API"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:stdlib, priority:P1, status:needs-design]
+    labels: [phase:5, type:verification, area:stdlib, priority:P1, status:in-progress]
     epic: E13-1
     doc_refs:
       - corpus:RFC-0031
       - corpus:RFC-0016
       - corpus:DN-25
+      - src:crates/mycelium-l1/tests/std_generic_conformance.rs
     body: |
+      PARTIAL (2026-06-27, rsm Session-2): the "conformance over the new generic surface" clause is
+      DONE -- std_generic_conformance.rs is the named gate: the width-generic stdlib surface (std.cmp
+      cmp/le/max, std.math badd/tadd, std.collections map_get/set_contains) is checked three-way
+      (L1-eval == L0-interp == AOT) at >=2 widths each, plus a consolidated never-silent width-mismatch
+      refusal table. Per-module three-way coverage also lives in std_cmp/std_math/std_collections/
+      std_text/width_generic. STILL OPEN (not claimed -- VR-5): the BROADER M-719 closure -- retire or
+      deprecate the reference mycelium-std-* Rust crates, and freeze a documented stable public API per
+      RFC-0031 §5 D5 (the API-freeze + crate-retirement decision). Status stays in-progress.
+
       Integration and conformance gate for E13-1: verify that every ported .myc stdlib module
       (M-715...M-718) meets the RFC-0031 stability bar, retire or deprecate the corresponding
       mycelium-std-* Rust crates, and document a stable public API for each module. This is

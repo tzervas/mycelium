@@ -8,6 +8,41 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-27: rsm Session-2 — width-generic stdlib surface, UTF-8 validity, conformance gate)
+
+- **M-718 — width-generic math/cmp + generic-key collection lookup — DONE.** Built on the M-753
+  width-generics, the stdlib surface is now width-**polymorphic**, wrapping only the surfaced kernel
+  prims (VR-5/G2 — nothing claimed ahead of a prim):
+  - **`std.cmp`**: `cmp/le/ge/max/min` are width-generic over `Binary{N}` (supersede the wave-n1
+    `cmp_u8/…` Binary{8} interim); `le/ge/max/min` delegate to `cmp` (DRY).
+  - **`std.math` (new nodule)**: width-generic binary `badd`/`bsub` (never-silent overflow via
+    `bit.add`/`bit.sub`) + bitwise `band/bor/bxor/bnot` (total) over `Binary{N}`; balanced-ternary
+    `tadd/tsub/tmul/tneg` over `Ternary{M}` (never-silent overflow via `trit.*`). Each **Exact** on its
+    in-range result. **No** division / binary-multiply / epsilon-delta Dense numerics (no surfaced
+    prim) — FLAGged as future increments, never faked.
+  - **`std.collections`**: `map_get<N,V>` + `set_contains<N>` are now width-generic over the key/element
+    width (the recursive linear scan rides the new pass-through), replacing the `Binary{8}` interim; the
+    value type `V` stays fully generic.
+- **L1: width-var pass-through in `checkty.rs` `unify`** — the enabling fix. A width var unified against
+  another width var now **binds** (carrier holds a `Width::Var`), mirroring the type-var pass-through, so
+  a width-generic fn calling another (or **itself**) with a still-abstract width type-checks; `mono`
+  resolves the concrete width from the substituted scope. A conflicting prior binding is a never-silent
+  mismatch (VR-5/G2/S1). Before this, every recursive/delegated width-generic call was refused. Locked by
+  4 `width_generic.rs` mechanism tests (recursion + delegation at two widths).
+- **M-717 — UTF-8 validity layer CLOSED** (the last M-717 remainder). `std.text` `decode_one` now rejects
+  **overlong** encodings, **surrogate**-range codepoints (U+D800–DFFF), and codepoints above **U+10FFFF**
+  via the `reject_two/three/four` gates (assembled `Binary{32}` codepoint compared, Exact `lt`, against
+  the per-length minimum + surrogate gap + ceiling). `Utf8Error` gains `Overlong/Surrogate/TooLarge`
+  variants (carry the lead byte; never-silent G2, never U+FFFD). Boundary values (U+0080, U+10FFFF)
+  accepted, not over-rejected. `decode_one` now yields only well-formed Unicode scalar values (RFC-3629).
+- **M-719 — conformance over the generic surface (clause) — DONE.** `std_generic_conformance.rs` is the
+  named gate: the width-generic surface (cmp/math/collections) checked three-way (L1-eval ≡ L0-interp ≡
+  AOT) at ≥2 widths each + a consolidated never-silent width-mismatch refusal table (data-driven cases).
+  The **broader** M-719 closure (retire/deprecate the `mycelium-std-*` reference crates + freeze a
+  documented stable API) **remains open** — not claimed (VR-5). M-718 `ready`→`done`; M-717
+  `in-progress`→`done`; M-719 `needs-design`→`in-progress`; M-715 re-flagged (recursive-HOF gap still
+  deferred — distinct from the width-var pass-through). Full `mycelium-l1` suite green (591 tests).
+
 ### Added (2026-06-27: rsm Session-1 — M-753 width-generics, F1–F7 future-capture, branch-protection guard)
 
 - **M-753 — width-generic free functions (DN-42 Option A, v1 = free fns) — DONE.** Representation width
