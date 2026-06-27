@@ -20,7 +20,10 @@ use mycelium_cert::{
 use mycelium_core::{GuaranteeStrength, Payload, Repr, Value};
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::elab::build_registry;
-use mycelium_l1::{check_nodule, elaborate, monomorphize, parse, Evaluator, L1Error};
+use mycelium_l1::{
+    check_nodule, check_phylum, elaborate, monomorphize, parse, parse_phylum, ElabError, Evaluator,
+    L1Error,
+};
 use mycelium_numerics::Certificate;
 
 type Observable<'a> = (&'a Repr, &'a Payload, GuaranteeStrength);
@@ -1331,4 +1334,179 @@ fn a_wild_body_that_is_not_a_host_call_form_is_an_explicit_residual() {
         err.to_string().contains("host-call form"),
         "the refusal must explain the v0 wild-body grammar (RFC-0028 §4.2); got: {err}"
     );
+}
+
+// --- DN-52 FLAG-1 / W5 freeze-ledger: Dense swap is an Explicit-Residual on ALL paths -----------
+//
+// DN-52 census (§5, FLAG-1 → RESOLVED): Dense swap targets are accepted by the checker (RFC-0002 /
+// RFC-0005) but the standard three-way harness uses `BinaryTernarySwapEngine`, which only covers
+// Binary↔Ternary. The resolution (elab.rs Expr::Swap arm, freeze-ledger W5) is to emit an explicit
+// `Residual` in `elaborate` — so the elaborate path is consistent with L1-eval and L0-interp (which
+// already refuse explicitly via `EvalError::UnsupportedSwap`). The DN-50 narrow gate holds: a Dense
+// swap program is never "accepted but unrunnable silently" — every path is explicit (G2).
+//
+// Classification (Empirical — by test, not proof): Explicit-Residual.
+
+/// **DN-52 FLAG-1 RESOLVED — Dense swap is an Explicit-Residual on all paths (W5/freeze-ledger).**
+///
+/// The checker accepts `swap(…, to: Dense{4, F32})` (RFC-0002/RFC-0005). After the elab.rs fix
+/// (freeze-ledger W5), `elaborate` emits an explicit `Residual` — never an `Ok(Node::Swap{Dense})`
+/// that every downstream runner (L1-eval, L0-interp, AOT) would then refuse with an inconsistent
+/// error. L1-eval also refuses explicitly via `EvalError::UnsupportedSwap` (BinaryTernarySwapEngine).
+/// Every path is consistent and explicit: no silent accept-but-unrunnable (G2/DN-50/DN-52 §4).
+///
+/// Classification: Explicit-Residual. Evidence: Empirical (this test).
+#[test]
+fn dense_swap_is_an_explicit_residual_on_all_paths() {
+    // A checker-accepted program: Binary{8} → Dense{4, F32} swap.
+    // `Dense{d, s}` is accepted by the checker as a swap target (RFC-0002/RFC-0005 §4.3).
+    let src =
+        "nodule d\nfn main() -> Dense{4, F32} = swap(0b1011_0010, to: Dense{4, F32}, policy: rt)";
+
+    // The checker accepts this program — it is in the parsable-and-checked domain.
+    let env = check_nodule(&parse(src).expect("Dense swap program must parse"))
+        .expect("Dense swap must be accepted by the checker (RFC-0002/RFC-0005)");
+
+    // Path A: `elaborate` must now return an explicit Residual (never Ok) — the elab.rs fix.
+    // Before the fix, this returned Ok(Node::Swap{target: Repr::Dense{..}}) while every runner
+    // refused; after the fix it returns Err(Residual{..}) for consistency (G2/DN-50).
+    // Note: `elaborate` returns `Result<Node, ElabError>` (not L1Error) — matched directly.
+    let elab_err = elaborate(&env, "main").expect_err(
+        "elaborate must refuse Dense swap with an explicit Residual (DN-52 FLAG-1 → RESOLVED)",
+    );
+    assert!(
+        matches!(elab_err, ElabError::Residual { .. }),
+        "Dense swap elaborate error must be an explicit Residual, never an UnknownFn or other error; got: {elab_err}"
+    );
+    let msg = elab_err.to_string();
+    assert!(
+        msg.contains("Dense") || msg.contains("staged"),
+        "the Residual message must mention Dense/staging (DN-52 FLAG-1); got: {msg}"
+    );
+
+    // Path B: L1-eval refuses explicitly via the BinaryTernarySwapEngine (UnsupportedSwap).
+    let l1_err = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect_err("L1-eval must refuse Dense swap explicitly (EvalError::UnsupportedSwap)");
+    assert!(
+        matches!(l1_err, L1Error::Kernel(_)),
+        "L1-eval Dense swap error must be a kernel refusal (EvalError::UnsupportedSwap); got: {l1_err}"
+    );
+
+    // Both paths refuse explicitly and consistently — the DN-50 narrow gate holds for Dense (G2):
+    // elaborate ⇒ Err(Residual) AND L1-eval ⇒ Err(Kernel(UnsupportedSwap)).
+    // There is no path that silently accepts or produces a wrong-typed value.
+    // Classification: Explicit-Residual (Empirical — this test). DN-52 §5 FLAG-1 → RESOLVED.
+}
+
+// --- DN-52 FLAG-2 / W5 freeze-ledger: cross-nodule three-way differential ----------------------
+//
+// DN-52 census (§5, FLAG-2 → RESOLVED): a two-nodule phylum (A exports a fn, B imports + calls it)
+// was check-tested (`phylum.rs`) but NOT differential-tested. The question: does `elaborate` on
+// nodule B's env (which already contains A's imported fns — `check_nodule_with` merges them at
+// lines 1223-1224 of checkty.rs) run three-way (L1-eval ≡ L0-interp ≡ AOT)?
+//
+// Finding: YES — cross-nodule elaboration Runs. `PhylumEnv.nodules[i].1` is the merged Env for
+// nodule i, with all `use`d functions from other nodules already present in `.fns`. Calling
+// `elaborate(env_b, "main")` on nodule B's env therefore finds `helper` (from A) transparently.
+//
+// Classification (Empirical — by test, not proof): Runs.
+
+/// **DN-52 FLAG-2 RESOLVED — cross-nodule three-way differential runs (W5/freeze-ledger).**
+///
+/// A two-nodule phylum: nodule `a` exports `pub fn helper`, nodule `b` imports it with `use a::*`
+/// and calls it from `main`. `check_phylum` checks both; `PhylumEnv.nodules[1].1` (nodule B's env)
+/// contains `helper` in its `.fns` map (merged by `check_nodule_with` — importable fns are part of
+/// the merged env, RFC-0006 §4.3 / RFC-0007 §11). `elaborate(env_b, "main")` therefore finds the
+/// imported fn and lowers the call, producing a closed L0 term that L0-interp and AOT can run.
+/// L1-eval also runs the cross-nodule program directly (it evaluates on the merged env). All three
+/// paths agree on the observable — the three-way differential extends to cross-nodule programs.
+///
+/// Classification: Runs. Evidence: Empirical (this test).
+#[test]
+fn cross_nodule_program_runs_three_way() {
+    // A phylum with two nodules: A exports `helper`, B imports it from A and calls it in `main`.
+    // RFC-0006 §4.3: `pub fn` in A is visible to B via `use a.*` (the glob import form).
+    let src = "phylum app.cross\n\
+               nodule a\n\
+               pub fn helper(x: Binary{8}) -> Binary{8} = not(x)\n\
+               nodule b\n\
+               use a.*\n\
+               fn main() -> Binary{8} = helper(0b1011_0010)";
+
+    let phylum_env = check_phylum(&parse_phylum(src).expect("cross-nodule phylum must parse"))
+        .expect("cross-nodule phylum must type-check");
+
+    // Nodule B is the second nodule (index 1). Its env already contains `helper` from A (merged
+    // by check_nodule_with — imports.fns merged at lines 1223-1224 of checkty.rs).
+    let env_b = &phylum_env.nodules[1].1;
+    assert!(
+        env_b.fns.contains_key("helper"),
+        "nodule B env must contain `helper` from A after check_phylum (RFC-0006 §4.3)"
+    );
+
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+
+    // Path 1: L1-eval on nodule B's (merged) env — finds `helper` from A in env.fns.
+    let l1 = Evaluator::new(env_b)
+        .call("main", vec![])
+        .expect("L1-eval must run the cross-nodule program (helper from A is in env_b.fns)");
+    let l1_repr = l1
+        .as_repr()
+        .expect("L1 result must be a repr value")
+        .clone();
+
+    // Path 2: elaborate nodule B's env to L0, then run on the reference interpreter.
+    let node = elaborate(env_b, "main")
+        .expect("elaborate must run on the cross-nodule merged env (DN-52 FLAG-2 → Runs)");
+    let l0 = interp
+        .eval(&node)
+        .expect("L0-interp must run the elaborated cross-nodule term");
+
+    // Path 3: the same L0 term through the AOT env-machine.
+    let aot = mycelium_mlir::run(&node, &prims, &engine)
+        .expect("AOT must run the elaborated cross-nodule term");
+
+    // All three paths must agree on the observable (repr + payload + guarantee).
+    assert_eq!(
+        observable(&l1_repr),
+        observable(&l0),
+        "cross-nodule: L1-eval vs L0-interp diverged"
+    );
+    assert_eq!(
+        observable(&l0),
+        observable(&aot),
+        "cross-nodule: L0-interp vs AOT diverged"
+    );
+
+    // The shared M-210 checker validates each agreeing pair (never a vacuous pass).
+    for (a, b, pair) in [(&l1_repr, &l0, "L1↔interp"), (&l0, &aot, "interp↔AOT")] {
+        assert_eq!(
+            check(
+                a,
+                b,
+                RefinementRelation::ObservationalEquiv,
+                Certificate::exact(),
+                &Evidence::Observational,
+            ),
+            CheckVerdict::Validated {
+                strength: GuaranteeStrength::Exact
+            },
+            "cross-nodule: the shared checker must validate the {pair} pair"
+        );
+    }
+
+    // The value is not(0b1011_0010) = 0b0100_1101 (one's complement on Binary{8}).
+    assert_eq!(l0.repr(), &Repr::Binary { width: 8 });
+    assert_eq!(
+        l0.payload(),
+        &Payload::Bits(vec![false, true, false, false, true, true, false, true]),
+        "cross-nodule: helper(0b1011_0010) = not(0b1011_0010) = 0b0100_1101"
+    );
+    // DN-52 §5 FLAG-2 → RESOLVED: cross-nodule three-way = Runs (Empirical).
 }
