@@ -4589,7 +4589,7 @@ issues:
   - id: M-718
     title: "math + numerics surface in Mycelium: math ops + epsilon/delta surface as .myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:ready]
     epic: E13-1
     depends_on: [M-715, M-747, M-748, M-753]
     doc_refs:
@@ -5688,14 +5688,24 @@ issues:
   - id: M-753
     title: "M-753 -- width-generic functions (const-generic over representation width) [E11-1/s10]"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     epic: E11-1
     depends_on: [M-708]
     doc_refs:
       - corpus:RFC-0032
       - corpus:RFC-0030
       - src:crates/mycelium-l1/src/checkty.rs
+      - src:crates/mycelium-l1/tests/width_generic.rs
     body: |
+      DONE (2026-06-27, rsm W1; DN-42 Option A, v1 = free functions). Width is now a const-generic
+      parameter bound at monomorphization: Ty::Binary(Width)/Ty::Ternary(Width) with Width::{Lit,Var};
+      resolve_ty maps Binary{N} -> Width::Var; unify binds N same-paradigm-only (cross-paradigm + width
+      mismatch are explicit refusals, never a swap -- S1/G2); mono pins N per call site (undetermined N
+      -> Residual, never a default) and fragments specializations honestly (id_bits$Binary8/$Binary16).
+      Surface syntax = positional-by-use (maintainer-chosen). 11 three-way tests (Binary{8/16} +
+      Ternary{3/6} + delegation + refusals) + 3 white-box mono tests green; full mycelium-l1 suite green;
+      clippy clean. Unblocks M-718. Instance coherence (DN-42 §7 Q5) deferred past v1.
+
       Width-generic function parameters: const-generic over representation width, e.g.
       fn f<N>(x: Ternary{N}) -> Ternary{N}, so math/cmp can be width-POLYMORPHIC rather than fixed-width.
       Today width {N} is a concrete literal, not a generic parameter (the reason M-715/M-718 could not
