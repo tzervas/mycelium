@@ -4,8 +4,8 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal,
-    Nodule, Paradigm, Param, Path, Pattern, Phylum, Scalar, Sparsity, Strength, TraitDecl,
-    TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, Vis,
+    Nodule, Paradigm, Param, Path, ParamKind, Pattern, Phylum, Scalar, Sparsity, Strength,
+    TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, Vis, WidthRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -63,6 +63,105 @@ struct Parser {
     /// Current expression-nesting depth, bounded by [`MAX_EXPR_DEPTH`] (A4-02).
     depth: u32,
 }
+
+/// Walk a [`TypeRef`] collecting which param names appear in width-slot positions
+/// (`Binary{N}` / `Ternary{N}`) vs type-slot positions (`Named(N, [])`).
+/// Used by [`classify_params`] to disambiguate width vs type parameters (DN-42 / M-753 v1).
+fn collect_name_uses(
+    tr: &TypeRef,
+    params: &std::collections::BTreeSet<String>,
+    width_used: &mut std::collections::BTreeSet<String>,
+    type_used: &mut std::collections::BTreeSet<String>,
+) {
+    collect_base_name_uses(&tr.base, params, width_used, type_used);
+}
+
+fn collect_base_name_uses(
+    bt: &BaseType,
+    params: &std::collections::BTreeSet<String>,
+    width_used: &mut std::collections::BTreeSet<String>,
+    type_used: &mut std::collections::BTreeSet<String>,
+) {
+    match bt {
+        BaseType::Binary(WidthRef::Name(n)) | BaseType::Ternary(WidthRef::Name(n)) => {
+            if params.contains(n) {
+                width_used.insert(n.clone());
+            }
+        }
+        BaseType::Named(n, args) => {
+            if params.contains(n) {
+                type_used.insert(n.clone());
+            }
+            for a in args {
+                collect_name_uses(a, params, width_used, type_used);
+            }
+        }
+        BaseType::Seq { elem, .. } => collect_name_uses(elem, params, width_used, type_used),
+        BaseType::Fn(a, b) => {
+            collect_name_uses(a, params, width_used, type_used);
+            collect_name_uses(b, params, width_used, type_used);
+        }
+        _ => {}
+    }
+}
+
+/// Post-parse classification of `<…>` parameters as [`ParamKind::Type`] or [`ParamKind::Width`]
+/// by examining how each name is used in `value_params` and `ret` (DN-42 / M-753 v1).
+///
+/// **Refusals (never-silent — G2 / VR-5):**
+/// - A name in both a width slot (`Binary{N}`) and a type slot (`Named(N, [])`) → explicit error.
+/// - A bound on a width-classified param → explicit error (DN-42 §7: deferred).
+fn classify_params(
+    params: Vec<TypeParam>,
+    value_params: &[crate::ast::Param],
+    ret: &TypeRef,
+) -> Result<Vec<TypeParam>, crate::error::ParseError> {
+    use std::collections::BTreeSet;
+    let param_names: BTreeSet<String> = params.iter().map(|p| p.name.clone()).collect();
+    let mut width_used: BTreeSet<String> = BTreeSet::new();
+    let mut type_used: BTreeSet<String> = BTreeSet::new();
+    for vp in value_params {
+        collect_name_uses(&vp.ty, &param_names, &mut width_used, &mut type_used);
+    }
+    collect_name_uses(ret, &param_names, &mut width_used, &mut type_used);
+
+    let mut result = Vec::with_capacity(params.len());
+    for p in params {
+        let in_width = width_used.contains(&p.name);
+        let in_type = type_used.contains(&p.name);
+        let kind = match (in_width, in_type) {
+            (true, true) => {
+                return Err(crate::error::ParseError::new(
+                    crate::token::Pos { line: 0, col: 0 },
+                    format!(
+                        "parameter `{}` appears in both a width slot (`Binary{{N}}`/`Ternary{{N}}`)                          and a type slot — ambiguous: is it a width param or a type param? Use                          distinct names (DN-42 / M-753; never a silent guess)",
+                        p.name
+                    ),
+                ))
+            }
+            (true, false) => {
+                if !p.bounds.is_empty() {
+                    return Err(crate::error::ParseError::new(
+                        crate::token::Pos { line: 0, col: 0 },
+                        format!(
+                            "width parameter `{}` cannot carry trait bounds in v1 — bounds on width                              params are deferred (DN-42 §7; never a silent ignore)",
+                            p.name
+                        ),
+                    ));
+                }
+                ParamKind::Width
+            }
+            _ => ParamKind::Type,
+        };
+        result.push(TypeParam {
+            name: p.name,
+            kind,
+            bounds: p.bounds,
+        });
+    }
+    Ok(result)
+}
+
 
 impl Parser {
     fn cur(&self) -> &Tok {
@@ -552,13 +651,16 @@ impl Parser {
     /// ⇒ the empty (pure) effect set.
     fn parse_sig_tail(&mut self) -> Result<FnSig, ParseError> {
         let name = self.ident()?;
-        let params = self.parse_type_params_bounded()?;
+        let raw_params = self.parse_type_params_bounded()?;
         self.expect(&Tok::LParen, "`(` to open the parameter list")?;
         let value_params = self.parse_params_opt()?;
         self.expect(&Tok::RParen, "`)` to close the parameter list")?;
         self.expect(&Tok::Arrow, "`->` and a result type")?;
         let ret = self.parse_type_ref()?;
         let effects = self.parse_effects_opt()?;
+        // Post-parse classification: resolve which `<…>` names are width params vs type params
+        // (DN-42 / M-753 v1). For v0 programs (no width-param names used), this is a no-op.
+        let params = classify_params(raw_params, &value_params, &ret)?;
         Ok(FnSig {
             name,
             params,
@@ -660,7 +762,7 @@ impl Parser {
         } else {
             Vec::new()
         };
-        Ok(TypeParam { name, bounds })
+        Ok(TypeParam { name, kind: crate::ast::ParamKind::Type, bounds })
     }
 
     /// A trait bound `Ident type_args? ('+' Ident type_args?)*` — one or more trait references
@@ -763,12 +865,12 @@ impl Parser {
         match self.cur().clone() {
             Tok::Binary => {
                 self.bump();
-                let w = self.braced_u32()?;
+                let w = self.braced_width()?;
                 Ok(BaseType::Binary(w))
             }
             Tok::Ternary => {
                 self.bump();
-                let t = self.braced_u32()?;
+                let t = self.braced_width()?;
                 Ok(BaseType::Ternary(t))
             }
             Tok::Dense => {
@@ -878,6 +980,25 @@ impl Parser {
         let n = self.u32_lit()?;
         self.expect(&Tok::RBrace, "`}` to close the width")?;
         Ok(n)
+    }
+
+    /// `'{'` `(u32_lit | Ident)` `'}'` — parses the width slot of `Binary{…}` or `Ternary{…}`:
+    /// either a concrete literal (`Binary{8}`) or a width-parameter name (`Binary{N}` — DN-42 /
+    /// M-753 v1). Dense/VSA/Seq still use [`Self::braced_u32`] (literal-only; DN-42 §6).
+    fn braced_width(&mut self) -> Result<crate::ast::WidthRef, ParseError> {
+        self.expect(&Tok::LBrace, "`{` and a width")?;
+        let wr = match self.cur().clone() {
+            Tok::Ident(s) => {
+                self.bump();
+                crate::ast::WidthRef::Name(s)
+            }
+            _ => {
+                let v = self.u32_lit()?;
+                crate::ast::WidthRef::Lit(v)
+            }
+        };
+        self.expect(&Tok::RBrace, "`}` to close the width")?;
+        Ok(wr)
     }
 
     fn parse_type_args_opt(&mut self) -> Result<Vec<TypeRef>, ParseError> {

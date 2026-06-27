@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ambient::AmbientError;
 use crate::ast::{
     BaseType, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, Nodule, Paradigm, Path, Pattern,
-    Phylum, Scalar, Strength, TraitRef, TypeDecl, TypeRef, UsePath,
+    Phylum, Scalar, Strength, TraitRef, TypeDecl, TypeRef, UsePath, WidthRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -50,14 +50,34 @@ impl Drop for DepthGuard<'_> {
     }
 }
 
+/// A width argument in a [`Ty::Binary`] or [`Ty::Ternary`] — either a concrete literal or an
+/// abstract width parameter (DN-42 / M-753). Width variables (`Var`) are introduced in step (b)
+/// and survive only during generic-fn checking; they must not reach elaboration.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum Width {
+    /// A concrete width literal (e.g. `8` in `Binary{8}`).
+    Lit(u32),
+    /// An abstract width parameter (e.g. `N` in `fn f<N>(x: Binary{N})`; DN-42 / M-753 v1).
+    Var(String),
+}
+
+impl core::fmt::Display for Width {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Width::Lit(n) => write!(f, "{n}"),
+            Width::Var(v) => write!(f, "{v}"),
+        }
+    }
+}
+
 /// A checked type. Stage-0 is monomorphic; stage-1 (RFC-0007 §11) adds **type parameters as
 /// abstract variables** ([`Ty::Var`]) and **applied data types** ([`Ty::Data`] with arguments).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
     /// `Binary{n}`.
-    Binary(u32),
+    Binary(Width),
     /// `Ternary{m}`.
-    Ternary(u32),
+    Ternary(Width),
     /// `Dense{d, s}`.
     Dense(u32, Scalar),
     /// A registered data type applied to type arguments — `Data("List", [Binary(8)])` is
@@ -461,8 +481,10 @@ pub(crate) fn resolve_ty(
     t: &TypeRef,
 ) -> Result<(Ty, Option<Strength>), CheckError> {
     let base = match &t.base {
-        BaseType::Binary(n) => Ty::Binary(*n),
-        BaseType::Ternary(m) => Ty::Ternary(*m),
+        BaseType::Binary(WidthRef::Lit(n)) => Ty::Binary(Width::Lit(*n)),
+        BaseType::Binary(WidthRef::Name(v)) => Ty::Binary(Width::Var(v.clone())),
+        BaseType::Ternary(WidthRef::Lit(m)) => Ty::Ternary(Width::Lit(*m)),
+        BaseType::Ternary(WidthRef::Name(v)) => Ty::Ternary(Width::Var(v.clone())),
         BaseType::Dense(d, s) => Ty::Dense(*d, *s),
         BaseType::Substrate(tag) => Ty::Substrate(tag.clone()),
         // RFC-0032 D3/D4: the sequence + byte-string repr types. `Seq{T, N}` resolves its element
@@ -2551,7 +2573,7 @@ impl Cx<'_> {
                     ));
                 }
             }
-            return Ok((Ty::Binary(1), app_node(head, rebuilt)));
+            return Ok((Ty::Binary(Width::Lit(1)), app_node(head, rebuilt)));
         }
         // RFC-0032 D3/D4 (M-749/M-750): the never-silent indexing/length prims over `Seq`/`Bytes`.
         // Their signatures are **not** width-preserving (they don't fit `prim_family`), so they are
@@ -3155,8 +3177,8 @@ impl Cx<'_> {
         expected: Option<&Ty>,
     ) -> Result<Literal, CheckError> {
         match (p, expected) {
-            (Paradigm::Binary, Some(Ty::Binary(w))) => encode_binary(self.site, v, *w),
-            (Paradigm::Ternary, Some(Ty::Ternary(w))) => encode_balanced_ternary(self.site, v, *w),
+            (Paradigm::Binary, Some(Ty::Binary(Width::Lit(w)))) => encode_binary(self.site, v, *w),
+            (Paradigm::Ternary, Some(Ty::Ternary(Width::Lit(w)))) => encode_balanced_ternary(self.site, v, *w),
             (_, Some(other)) => self.err(format!(
                 "a bare `{p}` decimal cannot fill a {other} context — {} (RFC-0012 §4.3)",
                 match paradigm_name(other) {
@@ -3312,7 +3334,7 @@ impl Cx<'_> {
                     ));
                 }
                 // Length is an unsigned 32-bit count (matches `prims.rs`).
-                Ok(Some((Ty::Binary(32), app_node(head, vec![recv2]))))
+                Ok(Some((Ty::Binary(Width::Lit(32)), app_node(head, vec![recv2]))))
             }
             "seq_get" => {
                 if args.len() != 2 {
@@ -3340,7 +3362,7 @@ impl Cx<'_> {
                 }
                 let idx2 = check_index(scope, &args[1])?;
                 // A byte is a `Binary{8}` value.
-                Ok(Some((Ty::Binary(8), app_node(head, vec![recv2, idx2]))))
+                Ok(Some((Ty::Binary(Width::Lit(8)), app_node(head, vec![recv2, idx2]))))
             }
             // DN-43 (M-799): `bytes_slice(b: Bytes, start: Binary{W}, end: Binary{W}) -> Bytes` — the
             // never-silent half-open sub-slice `[start, end)` (RFC-0032 D4; the kernel prim already
@@ -3405,14 +3427,14 @@ impl Cx<'_> {
                     ));
                 }
                 let (wty, w2) = self.check(scope, &args[1], None)?;
-                let Ty::Binary(m) = wty else {
+                let Ty::Binary(Width::Lit(m)) = wty else {
                     return self.err(format!(
-                        "`width_cast` width witness must be a `Binary{{M}}` (only its width is used), \
-                         got {wty} (DN-41)"
+                        "`width_cast` width witness must be a concrete `Binary{{M}}` (only its width is used), \
+                         got {wty} (DN-41; a width-variable witness is refused — DN-42/M-753)"
                     ));
                 };
                 // The result is `Binary{M}` (the witness width); the value→M fit is a runtime contract.
-                Ok(Some((Ty::Binary(m), app_node(head, vec![v2, w2]))))
+                Ok(Some((Ty::Binary(Width::Lit(m)), app_node(head, vec![v2, w2]))))
             }
             _ => Ok(None),
         }
@@ -3437,14 +3459,14 @@ pub(crate) fn lit_ty_of(site: &str, l: &Literal) -> Result<Ty, CheckError> {
             if n == 0 {
                 return Err(CheckError::new(site, "empty binary literal"));
             }
-            Ok(Ty::Binary(u32::try_from(n).expect("digit count fits u32")))
+            Ok(Ty::Binary(Width::Lit(u32::try_from(n).expect("digit count fits u32"))))
         }
         Literal::Trit(s) => {
             if s.is_empty() {
                 return Err(CheckError::new(site, "empty ternary literal"));
             }
             Ok(Ty::Ternary(
-                u32::try_from(s.len()).expect("trit count fits u32"),
+                Width::Lit(u32::try_from(s.len()).expect("trit count fits u32")),
             ))
         }
         Literal::Int(_) => Err(CheckError::new(
@@ -3751,7 +3773,7 @@ impl PrimFam {
     /// The width of `t` if it is this family's representation type, else `None`.
     fn width_of(self, t: &Ty) -> Option<u32> {
         match (self, t) {
-            (PrimFam::Binary, Ty::Binary(w)) | (PrimFam::Ternary, Ty::Ternary(w)) => Some(*w),
+            (PrimFam::Binary, Ty::Binary(Width::Lit(w))) | (PrimFam::Ternary, Ty::Ternary(Width::Lit(w))) => Some(*w),
             _ => None,
         }
     }
@@ -3759,8 +3781,8 @@ impl PrimFam {
     /// This family's type at width `w`.
     fn ty(self, w: u32) -> Ty {
         match self {
-            PrimFam::Binary => Ty::Binary(w),
-            PrimFam::Ternary => Ty::Ternary(w),
+            PrimFam::Binary => Ty::Binary(Width::Lit(w)),
+            PrimFam::Ternary => Ty::Ternary(Width::Lit(w)),
         }
     }
 }
@@ -3854,17 +3876,17 @@ fn encode_balanced_ternary(site: &str, v: i64, width: u32) -> Result<Literal, Ch
 #[must_use]
 pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
     match (name, args) {
-        ("not", [Ty::Binary(n)]) => Some(Ty::Binary(*n)),
-        ("xor", [Ty::Binary(a), Ty::Binary(b)]) if a == b => Some(Ty::Binary(*a)),
+        ("not", [Ty::Binary(w)]) => Some(Ty::Binary(w.clone())),
+        ("xor", [Ty::Binary(a), Ty::Binary(b)]) if a == b => Some(Ty::Binary(a.clone())),
         // RFC-0032 D2 (M-748): width-preserving binary arithmetic/logical (never-silent overflow is
         // a runtime contract; the static signature is width-preserving like the trit arithmetic).
         ("and" | "or" | "add_bin" | "sub_bin", [Ty::Binary(a), Ty::Binary(b)]) if a == b => {
-            Some(Ty::Binary(*a))
+            Some(Ty::Binary(a.clone()))
         }
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
-            Some(Ty::Ternary(*a))
+            Some(Ty::Ternary(a.clone()))
         }
-        ("neg", [Ty::Ternary(m)]) => Some(Ty::Ternary(*m)),
+        ("neg", [Ty::Ternary(m)]) => Some(Ty::Ternary(m.clone())),
         _ => None,
     }
 }

@@ -1,4 +1,4 @@
-use crate::ast::{Item, Nodule};
+use crate::ast::{Item, Nodule, WidthRef};
 use crate::checkty::*;
 use crate::parse;
 use std::collections::BTreeMap;
@@ -223,7 +223,7 @@ mod depth_budget_tests {
                     params: vec![],
                     value_params: vec![],
                     ret: TypeRef {
-                        base: BaseType::Binary(1),
+                        base: BaseType::Binary(WidthRef::Lit(1)),
                         guarantee: None,
                     },
                     effects: vec![],

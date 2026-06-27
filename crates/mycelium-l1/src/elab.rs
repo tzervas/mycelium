@@ -36,7 +36,7 @@ use mycelium_core::{
     PolicyRef, Provenance, Repr, ScalarKind, Trit, Value,
 };
 
-use crate::ast::{Arm, BaseType, Expr, Literal, Path, Scalar, TypeRef};
+use crate::ast::{Arm, BaseType, Expr, Literal, Path, Scalar, TypeRef, WidthRef};
 use crate::checkty::{infer_type, normalize_pattern, prim_kernel_name, resolve_ty, Env, Ty};
 use crate::decision::{self, Head, Tree};
 
@@ -178,8 +178,22 @@ pub fn lit_value(site: &str, l: &Literal) -> Result<Value, ElabError> {
 /// resolve; named/data, VSA, and `Substrate` types are explicit refusals.
 pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
     match &t.base {
-        BaseType::Binary(n) => Ok(Repr::Binary { width: *n }),
-        BaseType::Ternary(m) => Ok(Repr::Ternary { trits: *m }),
+        BaseType::Binary(WidthRef::Lit(n)) => Ok(Repr::Binary { width: *n }),
+        BaseType::Binary(WidthRef::Name(v)) => Err(ElabError::Residual {
+            site: site.to_owned(),
+            what: format!(
+                "width variable `{v}` reached elaboration — must be monomorphized first \
+                 (DN-42 / M-753; Residual)"
+            ),
+        }),
+        BaseType::Ternary(WidthRef::Lit(m)) => Ok(Repr::Ternary { trits: *m }),
+        BaseType::Ternary(WidthRef::Name(v)) => Err(ElabError::Residual {
+            site: site.to_owned(),
+            what: format!(
+                "width variable `{v}` reached elaboration — must be monomorphized first \
+                 (DN-42 / M-753; Residual)"
+            ),
+        }),
         BaseType::Dense(d, s) => Ok(Repr::Dense {
             dim: *d,
             dtype: match s {
@@ -588,8 +602,8 @@ pub fn build_registry(env: &Env) -> Result<DataRegistry, ElabError> {
 /// (never a silent, half-monomorphized artifact — G2/VR-5).
 fn field_spec(ty: &Ty) -> Option<FieldSpec> {
     Some(match ty {
-        Ty::Binary(n) => FieldSpec::Repr(Repr::Binary { width: *n }),
-        Ty::Ternary(m) => FieldSpec::Repr(Repr::Ternary { trits: *m }),
+        Ty::Binary(crate::checkty::Width::Lit(n)) => FieldSpec::Repr(Repr::Binary { width: *n }),
+        Ty::Ternary(crate::checkty::Width::Lit(m)) => FieldSpec::Repr(Repr::Ternary { trits: *m }),
         Ty::Dense(d, s) => FieldSpec::Repr(Repr::Dense {
             dim: *d,
             dtype: scalar_kind(*s),
@@ -617,8 +631,8 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
 /// G2/VR-5).
 fn ty_to_repr(ty: &Ty) -> Option<Repr> {
     Some(match ty {
-        Ty::Binary(n) => Repr::Binary { width: *n },
-        Ty::Ternary(m) => Repr::Ternary { trits: *m },
+        Ty::Binary(crate::checkty::Width::Lit(n)) => Repr::Binary { width: *n },
+        Ty::Ternary(crate::checkty::Width::Lit(m)) => Repr::Ternary { trits: *m },
         Ty::Dense(d, s) => Repr::Dense {
             dim: *d,
             dtype: scalar_kind(*s),

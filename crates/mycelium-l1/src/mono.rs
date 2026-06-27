@@ -51,7 +51,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ast::{Arm, Expr, FnDecl, FnSig, Hypha, Param, Path, Pattern, Scalar, TypeRef};
 use crate::checkty::{
     has_var, infer_type, param_subst, resolve_ty, subst_ty, type_head, unify, CtorInfo, DataInfo,
-    Env, TraitInfo, Ty,
+    Env, TraitInfo, Ty, Width,
 };
 use crate::elab::ElabError;
 
@@ -1701,8 +1701,10 @@ fn unify_into(
 /// `Data("List",[Binary8])`→`List$Binary8`, nullary `Data("Bool",[])`→`Bool`.
 pub(crate) fn mangle_ty(t: &Ty) -> String {
     match t {
-        Ty::Binary(n) => format!("Binary{n}"),
-        Ty::Ternary(m) => format!("Ternary{m}"),
+        Ty::Binary(Width::Lit(n)) => format!("Binary{n}"),
+        Ty::Binary(Width::Var(v)) => format!("BinaryVAR_{v}"),
+        Ty::Ternary(Width::Lit(m)) => format!("Ternary{m}"),
+        Ty::Ternary(Width::Var(v)) => format!("TernaryVAR_{v}"),
         Ty::Dense(d, s) => format!("Dense{d}{}", scalar_tag(*s)),
         Ty::Substrate(tag) => format!("Substrate{tag}"),
         // RFC-0032 D3/D4: `Seq{T, N}` mangles to `SeqN$<elem>` (injective — the `$` separates the
@@ -1801,10 +1803,11 @@ fn mangle_ty_in_ty(t: &Ty) -> Ty {
 /// re-inference (`infer_type`), which resolves names against the **source** env. (Contrast
 /// [`ty_to_ref`], which produces the *mangled-nullary* output form for the emitted env.)
 fn ty_to_source_ref(t: &Ty) -> TypeRef {
-    use crate::ast::BaseType;
     let base = match t {
-        Ty::Binary(n) => BaseType::Binary(*n),
-        Ty::Ternary(m) => BaseType::Ternary(*m),
+        Ty::Binary(Width::Lit(n)) => BaseType::Binary(WidthRef::Lit(*n)),
+        Ty::Binary(Width::Var(v)) => BaseType::Binary(WidthRef::Name(v.clone())),
+        Ty::Ternary(Width::Lit(m)) => BaseType::Ternary(WidthRef::Lit(*m)),
+        Ty::Ternary(Width::Var(v)) => BaseType::Ternary(WidthRef::Name(v.clone())),
         Ty::Dense(d, s) => BaseType::Dense(*d, *s),
         Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
         // RFC-0032 D3/D4: round-trip the sequence/byte-string reprs to their surface forms.
@@ -1830,10 +1833,11 @@ fn ty_to_source_ref(t: &Ty) -> TypeRef {
 /// becomes the `Named` of its mangled name; a `Ty::Var` would be an internal error, surfaced as a
 /// distinctive `Named` so a leak is never silent (rather than a panic).
 fn ty_to_ref(t: &Ty) -> TypeRef {
-    use crate::ast::BaseType;
     let base = match t {
-        Ty::Binary(n) => BaseType::Binary(*n),
-        Ty::Ternary(m) => BaseType::Ternary(*m),
+        Ty::Binary(Width::Lit(n)) => BaseType::Binary(WidthRef::Lit(*n)),
+        Ty::Binary(Width::Var(v)) => BaseType::Binary(WidthRef::Name(v.clone())),
+        Ty::Ternary(Width::Lit(m)) => BaseType::Ternary(WidthRef::Lit(*m)),
+        Ty::Ternary(Width::Var(v)) => BaseType::Ternary(WidthRef::Name(v.clone())),
         Ty::Dense(d, s) => BaseType::Dense(*d, *s),
         Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
         // RFC-0032 D3/D4: round-trip the sequence/byte-string reprs (the element type is mono'd to a
