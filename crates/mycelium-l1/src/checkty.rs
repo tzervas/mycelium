@@ -134,8 +134,8 @@ impl core::fmt::Display for Ty {
             Ty::Var(v) => write!(f, "{v}"),
             // RFC-0024 §3: render as `A -> B` (right-associative). Parenthesize a function-typed
             // LHS so `(A -> B) -> C` is unambiguous in diagnostics, not `A -> B -> C` (Copilot #397).
-            Ty::Fn(a, r) if matches!(a.as_ref(), Ty::Fn(_, _)) => write!(f, "({a}) -> {r}"),
-            Ty::Fn(a, r) => write!(f, "{a} -> {r}"),
+            Ty::Fn(a, r) if matches!(a.as_ref(), Ty::Fn(_, _)) => write!(f, "({a}) => {r}"),
+            Ty::Fn(a, r) => write!(f, "{a} => {r}"),
         }
     }
 }

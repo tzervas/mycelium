@@ -7,27 +7,24 @@ fn env(src: &str) -> Env {
     check_nodule(&parse(src).expect("parses")).expect("checks")
 }
 
-/// Copilot #397: a function-typed LHS is parenthesized in `Ty::Fn`'s Display, so `(A -> B) -> C`
-/// is unambiguous (not `A -> B -> C`); a simple `A -> B` and the right-associative RHS stay bare.
+/// Copilot #397: a function-typed LHS is parenthesized in `Ty::Fn`'s Display, so `(A => B) => C`
+/// is unambiguous (not `A => B => C`); a simple `A => B` and the right-associative RHS stay bare.
+/// The `Ty::Fn` Display arrow is `=>` (RFC-0037 D4 — the internal pretty-printer matches the surface).
 #[test]
 fn ty_fn_display_parenthesizes_a_function_typed_lhs() {
     let var = |n: &str| Ty::Var(n.to_owned());
     let simple = Ty::Fn(Box::new(var("A")), Box::new(var("B")));
-    // NOTE: this asserts the type-checker's `Ty::Fn` *Display*, which still renders the
-    // function-type arrow as `->` (the `Ty::Display` impl in checkty.rs is owned by the
-    // parser/lexer epic, not migrated here; RFC-0037 D4 changed the *surface* arrow to `=>`,
-    // not this internal pretty-printer). Kept at `->` to match the current source behavior.
-    assert_eq!(format!("{simple}"), "A -> B");
+    assert_eq!(format!("{simple}"), "A => B");
     let higher_order = Ty::Fn(
         Box::new(Ty::Fn(Box::new(var("A")), Box::new(var("B")))),
         Box::new(var("C")),
     );
-    assert_eq!(format!("{higher_order}"), "(A -> B) -> C");
+    assert_eq!(format!("{higher_order}"), "(A => B) => C");
     let right = Ty::Fn(
         Box::new(var("A")),
         Box::new(Ty::Fn(Box::new(var("B")), Box::new(var("C")))),
     );
-    assert_eq!(format!("{right}"), "A -> B -> C");
+    assert_eq!(format!("{right}"), "A => B => C");
 }
 
 fn check_err(src: &str) -> CheckError {
