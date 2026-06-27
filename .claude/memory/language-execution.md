@@ -91,9 +91,17 @@ accepts. Ternary literal disambiguation (`<` = trit literal vs type-arg): lexer 
 
 ## Typechecker + totality
 
-`check_nodule` (checkty.rs) — v0 monomorphic typechecker (RFC-0007 §4.4). Every refusal is an
-explicit `CheckError {site, message}` (checkty.rs:43). Generics, `spore`, and `wild` blocks are
-refused with a reason, never guessed.
+`check_nodule` (checkty.rs) — bidirectional typechecker (RFC-0007 §4.4). Every refusal is an explicit
+`CheckError {site, message}` (checkty.rs:43); nothing is ever guessed (G2/VR-5). **Generics now check
+and monomorphize** (M-656/M-657): type-params infer by `unify`; **width-generics** (M-753/DN-42) make
+representation width a const-generic param — `Ty::Binary(Width)`/`Ty::Ternary(Width)` with `Width::{Lit,
+Var}`, bound **same-paradigm-only** (cross-paradigm + width-mismatch are explicit refusals, never a swap
+— S1), pinned per call site by `mono` (undetermined → never-silent `Residual`, never a default).
+**M-718 width-var pass-through:** `unify` binds a width var against another width var (the type-var
+pass-through analog), so **recursive / delegated** width-generics (e.g. self-hosted `map_get<N,V>`,
+`le<N>`→`cmp<N>`) check, with `mono` resolving the concrete width from the substituted scope. The
+recursive-HOF / RFC-0024 defunctionalization gap (recursion through a function *parameter*) is **distinct**
+and still deferred (M-715). `spore` and `wild` blocks are checker-validated per their own rules.
 
 `Totality` (totality.rs): `Total | Partial`. Classification is **sound, not complete** (Foetus-style
 structural descent; totality.rs:1–23) — a wrong verdict can mis-gate `matured` promotion, but

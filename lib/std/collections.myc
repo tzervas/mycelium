@@ -12,9 +12,11 @@ nodule std.collections
 // a Declared type-level contract; `len`'s "fits Binary{8}" bound is Empirical (add_bin refuses at
 // 256); three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT) is Empirical (trials,
 // std_collections.rs). Never-silent (G2): every fallible op returns Option — no panic, no sentinel.
-// Honesty boundary: Map/Set lookup use the `eq` kernel prim which is width-typed (Binary{N});
-// map_get and set_contains are therefore monomorphic at Binary{8} — width-generics (M-753) are not
-// yet landed. Vec ops are fully generic except len/get which use Binary{8} as the index width.
+// Map/Set lookup use the `eq` kernel prim (width-typed over Binary{N}): map_get and set_contains are
+// now WIDTH-GENERIC over the key/element width `N` (M-718/M-753 — the recursive linear scan is itself
+// width-generic, enabled by the width-var pass-through in checkty.rs `unify`), superseding the wave-n1
+// Binary{8}-monomorphic interim. Vec ops are fully generic except len/get which use Binary{8} as the
+// index width.
 // Option re-declaration: collections.myc is a self-contained nodule — test drivers append it
 // verbatim and expect Option and Bool in scope without a separate import step (mirrors option.myc
 // and result.myc self-containedness). The type parameter is named `Opt` (not `A`) to avoid
@@ -86,12 +88,12 @@ fn snoc<A>(xs: Vec<A>, x: A) -> Vec<A> =
 fn reverse<A>(xs: Vec<A>) -> Vec<A> =
   match xs { Nil => Nil, Cons(h, rest) => snoc(reverse(rest), h) }
 
-// ── Map — an association list keyed at Binary{8} ──────────────────────────────────────────────────
+// ── Map — an association list keyed by Binary{N} ──────────────────────────────────────────────────
 //
 // Rep: MNil | MCons(k, v, Map<K,V>)
-// Lookup uses the `eq` kernel prim which is width-typed. map_get is therefore monomorphic at
-// Binary{8} keys and values — width-generics (M-753) are not yet landed (FLAG: see report).
-// Missing key → None (never-silent, G2). All ops are O(n) (Declared).
+// Lookup uses the `eq` kernel prim (width-typed). map_get is WIDTH-GENERIC over the key width `N`
+// (M-718/M-753) and fully generic over the value type `V`. Missing key → None (never-silent, G2).
+// All ops are O(n) (Declared).
 type Map<K, V> = MNil | MCons(K, V, Map<K, V>)
 
 // map_empty: the empty Map. Total constructor (Exact).
@@ -104,16 +106,17 @@ fn map_insert<K, V>(k: K, v: V, m: Map<K, V>) -> Map<K, V> =
   MCons(k, v, m)
 
 // map_get: O(n) linear scan for key `k` in `m`. Returns Some(v) on the first match, None on miss.
-// Never-silent (G2): missing key → None, not a sentinel or panic. Monomorphic at Binary{8} (eq is
-// width-typed; width-generics are not landed — M-753). Declared.
-fn map_get(m: Map<Binary{8}, Binary{8}>, k: Binary{8}) -> Option<Binary{8}> =
+// Never-silent (G2): missing key → None, not a sentinel or panic. Width-GENERIC over the key width
+// `N` and fully generic over the value type `V` (M-718/M-753): the key is `Binary{N}` (compared by the
+// width-typed `eq` prim), the value `V` is opaque (only carried). Declared.
+fn map_get<N, V>(m: Map<Binary{N}, V>, k: Binary{N}) -> Option<V> =
   match m { MNil => None, MCons(k2, v, rest) => match eq(k, k2) { 0b1 => Some(v), _ => map_get(rest, k) } }
 
 // ── Set — an association list of keys ─────────────────────────────────────────────────────────────
 //
 // Rep: SNil | SCons(x, Set<A>)
-// set_contains is monomorphic at Binary{8} — same eq constraint as map_get. All ops are O(n)
-// (Declared). Constructors Exact.
+// set_contains is WIDTH-GENERIC over the element width `N` (M-718/M-753) — same width-typed `eq`
+// constraint as map_get. All ops are O(n) (Declared). Constructors Exact.
 type Set<A> = SNil | SCons(A, Set<A>)
 
 // set_empty: the empty Set. Total constructor (Exact).
@@ -126,6 +129,7 @@ fn set_add<A>(x: A, s: Set<A>) -> Set<A> =
   SCons(x, s)
 
 // set_contains: O(n) linear scan — True iff `x` appears in `s`. Never-silent (G2): absent → False,
-// not a sentinel. Monomorphic at Binary{8} (eq is width-typed; M-753). Declared.
-fn set_contains(s: Set<Binary{8}>, x: Binary{8}) -> Bool =
+// not a sentinel. Width-GENERIC over the element width `N` (M-718/M-753): the element is `Binary{N}`,
+// compared by the width-typed `eq` prim, monomorphized to the call-site width. Declared.
+fn set_contains<N>(s: Set<Binary{N}>, x: Binary{N}) -> Bool =
   match s { SNil => False, SCons(h, rest) => match eq(x, h) { 0b1 => True, _ => set_contains(rest, x) } }

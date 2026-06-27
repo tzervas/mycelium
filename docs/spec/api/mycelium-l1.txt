@@ -98,7 +98,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::AmbientParams
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::AmbientParams
 pub enum mycelium_l1::ast::BaseType
 pub mycelium_l1::ast::BaseType::Ambient(mycelium_l1::ast::AmbientParams)
-pub mycelium_l1::ast::BaseType::Binary(u32)
+pub mycelium_l1::ast::BaseType::Binary(mycelium_l1::ast::WidthRef)
 pub mycelium_l1::ast::BaseType::Bytes
 pub mycelium_l1::ast::BaseType::Dense(u32, mycelium_l1::ast::Scalar)
 pub mycelium_l1::ast::BaseType::Fn(alloc::boxed::Box<mycelium_l1::ast::TypeRef>, alloc::boxed::Box<mycelium_l1::ast::TypeRef>)
@@ -107,7 +107,7 @@ pub mycelium_l1::ast::BaseType::Seq
 pub mycelium_l1::ast::BaseType::Seq::elem: alloc::boxed::Box<mycelium_l1::ast::TypeRef>
 pub mycelium_l1::ast::BaseType::Seq::len: u32
 pub mycelium_l1::ast::BaseType::Substrate(alloc::string::String)
-pub mycelium_l1::ast::BaseType::Ternary(u32)
+pub mycelium_l1::ast::BaseType::Ternary(mycelium_l1::ast::WidthRef)
 pub mycelium_l1::ast::BaseType::Vsa
 pub mycelium_l1::ast::BaseType::Vsa::dim: u32
 pub mycelium_l1::ast::BaseType::Vsa::model: alloc::string::String
@@ -243,6 +243,24 @@ impl core::marker::Unpin for mycelium_l1::ast::Paradigm
 impl core::marker::UnsafeUnpin for mycelium_l1::ast::Paradigm
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Paradigm
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Paradigm
+pub enum mycelium_l1::ast::ParamKind
+pub mycelium_l1::ast::ParamKind::Type
+pub mycelium_l1::ast::ParamKind::Width
+impl core::clone::Clone for mycelium_l1::ast::ParamKind
+pub fn mycelium_l1::ast::ParamKind::clone(&self) -> mycelium_l1::ast::ParamKind
+impl core::cmp::Eq for mycelium_l1::ast::ParamKind
+impl core::cmp::PartialEq for mycelium_l1::ast::ParamKind
+pub fn mycelium_l1::ast::ParamKind::eq(&self, &mycelium_l1::ast::ParamKind) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::ParamKind
+pub fn mycelium_l1::ast::ParamKind::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::ParamKind
+impl core::marker::Freeze for mycelium_l1::ast::ParamKind
+impl core::marker::Send for mycelium_l1::ast::ParamKind
+impl core::marker::Sync for mycelium_l1::ast::ParamKind
+impl core::marker::Unpin for mycelium_l1::ast::ParamKind
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::ParamKind
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::ParamKind
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::ParamKind
 pub enum mycelium_l1::ast::Pattern
 pub mycelium_l1::ast::Pattern::Ctor(alloc::string::String, alloc::vec::Vec<mycelium_l1::ast::Pattern>)
 pub mycelium_l1::ast::Pattern::Ident(alloc::string::String)
@@ -351,6 +369,26 @@ impl core::marker::Unpin for mycelium_l1::ast::Vis
 impl core::marker::UnsafeUnpin for mycelium_l1::ast::Vis
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::Vis
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::Vis
+pub enum mycelium_l1::ast::WidthRef
+pub mycelium_l1::ast::WidthRef::Lit(u32)
+pub mycelium_l1::ast::WidthRef::Name(alloc::string::String)
+impl core::clone::Clone for mycelium_l1::ast::WidthRef
+pub fn mycelium_l1::ast::WidthRef::clone(&self) -> mycelium_l1::ast::WidthRef
+impl core::cmp::Eq for mycelium_l1::ast::WidthRef
+impl core::cmp::PartialEq for mycelium_l1::ast::WidthRef
+pub fn mycelium_l1::ast::WidthRef::eq(&self, &mycelium_l1::ast::WidthRef) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::WidthRef
+pub fn mycelium_l1::ast::WidthRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::ast::WidthRef
+pub fn mycelium_l1::ast::WidthRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::WidthRef
+impl core::marker::Freeze for mycelium_l1::ast::WidthRef
+impl core::marker::Send for mycelium_l1::ast::WidthRef
+impl core::marker::Sync for mycelium_l1::ast::WidthRef
+impl core::marker::Unpin for mycelium_l1::ast::WidthRef
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::WidthRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::WidthRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::WidthRef
 pub struct mycelium_l1::ast::Arm
 pub mycelium_l1::ast::Arm::body: mycelium_l1::ast::Expr
 pub mycelium_l1::ast::Arm::pattern: mycelium_l1::ast::Pattern
@@ -412,6 +450,7 @@ pub mycelium_l1::ast::FnSig::ret: mycelium_l1::ast::TypeRef
 pub mycelium_l1::ast::FnSig::value_params: alloc::vec::Vec<mycelium_l1::ast::Param>
 impl mycelium_l1::ast::FnSig
 pub fn mycelium_l1::ast::FnSig::param_names(&self) -> alloc::vec::Vec<alloc::string::String>
+pub fn mycelium_l1::ast::FnSig::width_param_names(&self) -> alloc::vec::Vec<alloc::string::String>
 impl core::clone::Clone for mycelium_l1::ast::FnSig
 pub fn mycelium_l1::ast::FnSig::clone(&self) -> mycelium_l1::ast::FnSig
 impl core::cmp::PartialEq for mycelium_l1::ast::FnSig
@@ -588,6 +627,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::TypeDecl
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::TypeDecl
 pub struct mycelium_l1::ast::TypeParam
 pub mycelium_l1::ast::TypeParam::bounds: alloc::vec::Vec<mycelium_l1::ast::TraitRef>
+pub mycelium_l1::ast::TypeParam::kind: mycelium_l1::ast::ParamKind
 pub mycelium_l1::ast::TypeParam::name: alloc::string::String
 impl core::clone::Clone for mycelium_l1::ast::TypeParam
 pub fn mycelium_l1::ast::TypeParam::clone(&self) -> mycelium_l1::ast::TypeParam
@@ -643,14 +683,14 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::UsePath
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::UsePath
 pub mod mycelium_l1::checkty
 pub enum mycelium_l1::checkty::Ty
-pub mycelium_l1::checkty::Ty::Binary(u32)
+pub mycelium_l1::checkty::Ty::Binary(mycelium_l1::checkty::Width)
 pub mycelium_l1::checkty::Ty::Bytes
 pub mycelium_l1::checkty::Ty::Data(alloc::string::String, alloc::vec::Vec<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::checkty::Ty::Dense(u32, mycelium_l1::ast::Scalar)
 pub mycelium_l1::checkty::Ty::Fn(alloc::boxed::Box<mycelium_l1::checkty::Ty>, alloc::boxed::Box<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::checkty::Ty::Seq(alloc::boxed::Box<mycelium_l1::checkty::Ty>, u32)
 pub mycelium_l1::checkty::Ty::Substrate(alloc::string::String)
-pub mycelium_l1::checkty::Ty::Ternary(u32)
+pub mycelium_l1::checkty::Ty::Ternary(mycelium_l1::checkty::Width)
 pub mycelium_l1::checkty::Ty::Var(alloc::string::String)
 impl core::clone::Clone for mycelium_l1::checkty::Ty
 pub fn mycelium_l1::checkty::Ty::clone(&self) -> mycelium_l1::checkty::Ty
@@ -669,6 +709,28 @@ impl core::marker::Unpin for mycelium_l1::checkty::Ty
 impl core::marker::UnsafeUnpin for mycelium_l1::checkty::Ty
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::Ty
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::Ty
+pub enum mycelium_l1::checkty::Width
+pub mycelium_l1::checkty::Width::Lit(u32)
+pub mycelium_l1::checkty::Width::Var(alloc::string::String)
+impl core::clone::Clone for mycelium_l1::checkty::Width
+pub fn mycelium_l1::checkty::Width::clone(&self) -> mycelium_l1::checkty::Width
+impl core::cmp::Eq for mycelium_l1::checkty::Width
+impl core::cmp::PartialEq for mycelium_l1::checkty::Width
+pub fn mycelium_l1::checkty::Width::eq(&self, &mycelium_l1::checkty::Width) -> bool
+impl core::fmt::Debug for mycelium_l1::checkty::Width
+pub fn mycelium_l1::checkty::Width::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_l1::checkty::Width
+pub fn mycelium_l1::checkty::Width::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_l1::checkty::Width
+pub fn mycelium_l1::checkty::Width::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_l1::checkty::Width
+impl core::marker::Freeze for mycelium_l1::checkty::Width
+impl core::marker::Send for mycelium_l1::checkty::Width
+impl core::marker::Sync for mycelium_l1::checkty::Width
+impl core::marker::Unpin for mycelium_l1::checkty::Width
+impl core::marker::UnsafeUnpin for mycelium_l1::checkty::Width
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::Width
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::Width
 pub struct mycelium_l1::checkty::CheckError
 pub mycelium_l1::checkty::CheckError::message: alloc::string::String
 pub mycelium_l1::checkty::CheckError::site: alloc::string::String
@@ -1439,14 +1501,14 @@ impl core::marker::UnsafeUnpin for mycelium_l1::totality::Totality
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::totality::Totality
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::totality::Totality
 pub enum mycelium_l1::Ty
-pub mycelium_l1::Ty::Binary(u32)
+pub mycelium_l1::Ty::Binary(mycelium_l1::checkty::Width)
 pub mycelium_l1::Ty::Bytes
 pub mycelium_l1::Ty::Data(alloc::string::String, alloc::vec::Vec<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::Ty::Dense(u32, mycelium_l1::ast::Scalar)
 pub mycelium_l1::Ty::Fn(alloc::boxed::Box<mycelium_l1::checkty::Ty>, alloc::boxed::Box<mycelium_l1::checkty::Ty>)
 pub mycelium_l1::Ty::Seq(alloc::boxed::Box<mycelium_l1::checkty::Ty>, u32)
 pub mycelium_l1::Ty::Substrate(alloc::string::String)
-pub mycelium_l1::Ty::Ternary(u32)
+pub mycelium_l1::Ty::Ternary(mycelium_l1::checkty::Width)
 pub mycelium_l1::Ty::Var(alloc::string::String)
 impl core::clone::Clone for mycelium_l1::checkty::Ty
 pub fn mycelium_l1::checkty::Ty::clone(&self) -> mycelium_l1::checkty::Ty

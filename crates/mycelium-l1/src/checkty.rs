@@ -402,29 +402,58 @@ pub(crate) fn unify(
         | (Ty::Ternary(Width::Var(v)), Ty::Ternary(Width::Lit(n))) => {
             let carrier = Ty::Binary(Width::Lit(*n));
             match s.get(v) {
-                Some(bound) if *bound != carrier => Err(CheckError::new(
-                    site,
-                    format!(
-                        "width parameter `{v}` would have to be both {} and {n} — a width mismatch, not a coercion (DN-42 §4 / VR-5)",
-                        if let Ty::Binary(Width::Lit(m)) = bound {
-                            *m
-                        } else {
-                            0
-                        }
-                    ),
-                )),
+                Some(bound) if *bound != carrier => {
+                    // Render the prior width HONESTLY (never-silent / G2): the carrier may be a
+                    // concrete `Width::Lit` (another argument pinned it) OR an abstract `Width::Var`
+                    // (the M-718 var-var arm bound it to the enclosing scope's width). Print the
+                    // carrier's width via its `Display` — never a phantom `0` for the abstract case.
+                    let prior = match bound {
+                        Ty::Binary(w) => w.to_string(),
+                        other => other.to_string(),
+                    };
+                    Err(CheckError::new(
+                        site,
+                        format!(
+                            "width parameter `{v}` would have to be both {prior} and {n} — a width mismatch, not a coercion (DN-42 §4 / VR-5)"
+                        ),
+                    ))
+                }
                 _ => {
                     s.insert(v.clone(), carrier);
                     Ok(())
                 }
             }
         }
-        // Same width var on both sides unifies trivially (e.g. `Binary{N} ~ Binary{N}`).
+        // DN-42 / M-753 / M-718: a width var unified against ANOTHER width var — a nested or recursive
+        // width-generic call inside a width-generic body (e.g. `map_get`'s recursive `map_get(rest, k)`
+        // over `Binary{N}`, or `le<N>` delegating to `cmp<N>`). BIND the declared var to the actual var
+        // (carrier holds a `Width::Var`), mirroring the type-var pass-through above (`Ty::Var` arm): this
+        // marks the callee's width param "determined by the enclosing scope" — it stays abstract here
+        // and is resolved to a concrete `Width::Lit` when the enclosing fn is monomorphized
+        // (`mono::infer_fn_targs` re-infers from the substituted scope). Before this binding the
+        // determination check in `check_app_generic_fn` refused every recursive/nested width-generic
+        // call (the width var was never inserted into `subst`). A prior binding to a *different*
+        // concrete width is a never-silent mismatch — never a silent coercion (VR-5/G2/S1).
         (Ty::Binary(Width::Var(v1)), Ty::Binary(Width::Var(v2)))
-        | (Ty::Ternary(Width::Var(v1)), Ty::Ternary(Width::Var(v2)))
-            if v1 == v2 =>
-        {
-            Ok(())
+        | (Ty::Ternary(Width::Var(v1)), Ty::Ternary(Width::Var(v2))) => {
+            let carrier = Ty::Binary(Width::Var(v2.clone()));
+            match s.get(v1) {
+                // A prior binding that differs from this carrier (a concrete `Width::Lit` from another
+                // argument, or a different width var) is a never-silent mismatch — exactly the type-var
+                // conflict logic above: the param cannot be two widths at once, and an abstract width is
+                // never silently coerced to a concrete one (DN-42 §4 / VR-5 / S1).
+                Some(bound) if *bound != carrier => Err(CheckError::new(
+                    site,
+                    format!(
+                        "width parameter `{v1}` would have to be both {bound} and the abstract width \
+                         `{v2}` — an undetermined width, not a coercion (DN-42 §4 / VR-5)"
+                    ),
+                )),
+                _ => {
+                    s.insert(v1.clone(), carrier);
+                    Ok(())
+                }
+            }
         }
         _ if decl == actual => Ok(()),
         _ => Err(CheckError::new(
