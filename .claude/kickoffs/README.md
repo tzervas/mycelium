@@ -30,12 +30,34 @@ feature/leaf  ──PR──▶  dev  ──PR──▶  integration  ──squa
 - **Fast-forward, not force** (CLAUDE.md mitigation #6): keep a session's *working* pointer clean;
   do work on feature/leaf branches; bring the tier branch up with `merge --ff-only` + a plain push.
 
+## Post-grammar semantic waves (sequenced; the current frontier — 2026-06-27)
+
+After the **RFC-0037 surface-grammar wave + DN-57 `;` terminator landed on `main`** (squash, 2026-06-27),
+the next work is the approved semantic-wave sequence plus the grammar-completion follow-on. **Every one
+of these references `.claude/kickoffs/_doc-maintenance.md` and maintains its docs as part of its
+Definition of Done** — the anti-drift contract, so sequential kickoffs never inherit stale docs.
+
+| UID | Kickoff | Wave | Owns | Order |
+|---|---|---|---|---|
+| **`r4v`** | `r4v.md` | R4 — runtime vocab (M-667/M-710: `fuse`/`reclaim`/`tier`) | `crates/mycelium-l1/**` (serial-on-L1) + `crates/mycelium-std-runtime/**` | **1st** |
+| **`hof`** | `hof.md` | R3 — closures / dynamic HOF (M-704) | `crates/mycelium-l1/**` (incl. `mono.rs`; serial-on-L1) | **2nd** |
+| **`obj`** | `obj.md` | DN-53 — `object` surface (M-811) | `crates/mycelium-l1/**` (serial-on-L1) | **3rd** |
+| **`low`** | `low.md` | DN-54 — `lower`/`derive` (M-812) | `crates/mycelium-l1/**` (serial-on-L1) | **4th** |
+| **`strm`** | `strm.md` | DN-57 follow-on — mandatory `;` + flatten/stream tooling | `crates/mycelium-l1/**` + `crates/mycelium-fmt/**` + CLI + corpus | parallel-ish (coord on `parse.rs`/`fmt`) |
+
+**`r4v`→`hof`→`obj`→`low` serialize on `crates/mycelium-l1/src/{checkty,elab}.rs`** (HIGH contention) —
+run strictly sequential, each landing green + promoted before the next (non-conflicting *by
+construction* = serialization, not parallel leaves; the rsm "do L1 surgery inline" rule). `strm` can
+overlap but coordinates on `parse.rs`/`mycelium-fmt`. The grammar follow-ons noted in the RFC-0037
+landing (D2-b short repr keywords; RFC-0025 operator wiring) fold into `strm` or a small follow-on.
+
 ## Parallel swarms — one kickoff per isolated tree
 
 Each active kickoff **owns a disjoint directory**, so its **Sonnet swarm** (default mode) runs in its
 own session/worktree without touching another's files. Fire each in a fresh session with `/kickoff
 <uid>`; each branches **off `dev`**, merges its result **into `dev`**, then `dev → integration →
-main` promotes it up.
+main` promotes it up. **Doc-maintenance is part of every kickoff's DoD** — see
+`.claude/kickoffs/_doc-maintenance.md` (anti-drift).
 
 | UID | Kickoff | Isolated tree (owns) | Swarm method | Depends on |
 |---|---|---|---|---|
