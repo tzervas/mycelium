@@ -1,10 +1,10 @@
 // nodule: std.text
-// @version: 0.2.0
+// @version: 0.3.0
 // @license: MIT
 // @authors: Tyler Zervas
 // @since: 2026-06-26
-// @updated: 2026-06-26
-// @summary: Self-hosted UTF-8 utilities: byte length, slice/concat over the kernel Bytes, ASCII/continuation classification, bounds-checked byte access, full multi-byte UTF-8 codepoint decode (1/2/3/4-byte).
+// @updated: 2026-06-27
+// @summary: Self-hosted UTF-8 utilities: byte length, slice/concat over the kernel Bytes, ASCII/continuation classification, bounds-checked byte access, full multi-byte UTF-8 codepoint decode (1/2/3/4-byte) WITH validity rejection (overlong / surrogate / >U+10FFFF — M-717 complete).
 nodule std.text
 
 // M-717 (E13-1, #462). UTF-8 over `bytes_get`/`bytes_len`/`width_cast`. Self-contained:
@@ -21,11 +21,14 @@ nodule std.text
 // - `byte_at` is total: the `width_cast`-widened index is `lt`-compared against `bytes_len`; in range
 //   yields `Some(bytes_get …)`, out of range yields `None` (Declared contract; never-silent G2).
 // - `decode_one` is Declared (the codepoint-assembly is a structural composition of Exact bit ops;
-//   correct for well-formed UTF-8 by construction, never machine-proven). Differential agreement
+//   correct for well-formed UTF-8 by construction, never machine-proven). It now also rejects
+//   non-canonical / non-scalar codepoints via the `reject_two/three/four` validity gates (overlong,
+//   surrogate U+D800–DFFF, > U+10FFFF — M-717 validity layer COMPLETE). Differential agreement
 //   (L1-eval ≡ L0-interp ≡ AOT) is Empirical (trials, std_text.rs).
 // Never-silent (G2): a malformed lead byte, a missing/short continuation, or a non-continuation in a
-//   continuation slot produces `Err(Invalid(byte))` carrying the offending byte — never U+FFFD
-//   substitution, never silent coercion, never a wrapped/truncated codepoint.
+//   continuation slot produces `Err(Invalid(byte))`; an overlong/surrogate/out-of-range codepoint
+//   produces `Err(Overlong/Surrogate/TooLarge(lead))` — never U+FFFD substitution, never silent
+//   coercion, never a wrapped/truncated codepoint.
 //
 // Codepoint assembly without a shift prim: the surface has no `shl`/`shr` (or Binary multiply), so a
 // left-shift-by-6k is expressed as repeated doubling `add_bin(v, v)` at Binary{32} width (each `dbl`
@@ -63,8 +66,17 @@ type Result<A, E> = Ok(A) | Err(E)
 type Pair<A, B> = Pr(A, B)
 
 // ── Error type ─────────────────────────────────────────────────────────────────────────────────────
-// Utf8Error: carries the offending byte — never-silent (G2), never U+FFFD substitution.
-type Utf8Error = Invalid(Binary{8})
+// Utf8Error: never-silent (G2), never U+FFFD substitution. Each variant carries the offending sequence's
+// LEAD byte as a diagnostic — the byte that started the malformed/invalid unit (the surrogate/overlong/
+// too-large codepoint value is reconstructable from the bytes; the lead identifies which sequence failed):
+// - Invalid:   a structural malformation — a bad lead byte, a missing/short continuation, or a
+//              non-continuation in a continuation slot (M-717 wave-n2; carries the offending byte).
+// - Overlong:  a sequence that encodes a value in MORE bytes than canonical (e.g. 0xC0 0x80 for U+0000).
+// - Surrogate: a codepoint in the UTF-16 surrogate range U+D800..U+DFFF — not a Unicode scalar value.
+// - TooLarge:  a codepoint above the Unicode ceiling U+10FFFF.
+// The last three (the UTF-8 well-formedness / RFC-3629 scalar-value constraints) are the M-717 validity
+// layer; structural malformations remain `Invalid`.
+type Utf8Error = Invalid(Binary{8}) | Overlong(Binary{8}) | Surrogate(Binary{8}) | TooLarge(Binary{8})
 
 // ── Byte cons-list (superseded by direct-`Bytes` slice/concat) ─────────────────────────────────────
 // Bytes8: a singly-linked cons-list of Binary{8} bytes — wave-n1's declared-only model for *future*
@@ -173,6 +185,35 @@ fn shl18(v: Binary{32}) -> Binary{32} =
 fn cont_payload(c: Binary{8}) -> Binary{32} =
   widen8(and(c, 0b0011_1111))
 
+// ── UTF-8 validity gates (M-717: overlong / surrogate / out-of-range rejection) ────────────────────
+//
+// reject_two/three/four take the ASSEMBLED codepoint `cp` (Binary{32}) and the sequence's lead byte,
+// and return Ok(Pr(cp, width)) iff `cp` is the CANONICAL well-formed encoding for that byte width —
+// else a never-silent Err carrying the lead byte (G2). They are the RFC-3629 well-formedness layer that
+// the structural decode_two/three/four delegate their final Ok to. Comparisons are Exact `lt` at the
+// common Binary{32} width; the bound constants are written as 32-bit BINARY literals (a `0x…` literal is
+// a `Bytes` value in this lexer, not a Binary{32} number — so the thresholds use `0b…` explicitly):
+//   0x80 = min 2-byte · 0x800 = min 3-byte · 0x10000 = min 4-byte (below ⇒ OVERLONG) ·
+//   0xD800..0xE000 = the surrogate gap (SURROGATE) · 0x10FFFF = the Unicode ceiling (above ⇒ TOOLARGE).
+// Guarantee: Declared (the Result wrapping is the never-silent contract; the predicate is Exact `lt`).
+
+// 2-byte: valid iff cp >= 0x80 (a 1-byte value here would be overlong). The 2-byte max (0x7FF) is below
+// both the surrogate gap and the ceiling, so only the overlong check applies. (0x80 = 1<<7.)
+fn reject_two(cp: Binary{32}, lead: Binary{8}) -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> =
+  match lt(cp, 0b0000_0000_0000_0000_0000_0000_1000_0000) { 0b1 => Err(Overlong(lead)), _ => Ok(Pr(cp, 0b0000_0010)) }
+
+// 3-byte: valid iff cp >= 0x800 (else overlong) AND cp not in 0xD800..0xDFFF (else a surrogate — not a
+// Unicode scalar value). The 3-byte max (0xFFFF) is below the ceiling, so no too-large check.
+// (0x800 = 1<<11; 0xD800 = surrogate-gap low; 0xE000 = surrogate-gap high+1.)
+fn reject_three(cp: Binary{32}, lead: Binary{8}) -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> =
+  match lt(cp, 0b0000_0000_0000_0000_0000_1000_0000_0000) { 0b1 => Err(Overlong(lead)), _ => match lt(cp, 0b0000_0000_0000_0000_1101_1000_0000_0000) { 0b1 => Ok(Pr(cp, 0b0000_0011)), _ => match lt(cp, 0b0000_0000_0000_0000_1110_0000_0000_0000) { 0b1 => Err(Surrogate(lead)), _ => Ok(Pr(cp, 0b0000_0011)) } } }
+
+// 4-byte: valid iff cp >= 0x10000 (else overlong) AND cp <= 0x10FFFF (else above the Unicode ceiling).
+// The 4-byte min (0x10000) is above the surrogate gap, so no surrogate check.
+// (0x10000 = 1<<16; 0x10FFFF = the maximum Unicode scalar value.)
+fn reject_four(cp: Binary{32}, lead: Binary{8}) -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> =
+  match lt(cp, 0b0000_0000_0000_0001_0000_0000_0000_0000) { 0b1 => Err(Overlong(lead)), _ => match lt(0b0000_0000_0001_0000_1111_1111_1111_1111, cp) { 0b1 => Err(TooLarge(lead)), _ => Ok(Pr(cp, 0b0000_0100)) } }
+
 // ── decode_ascii ───────────────────────────────────────────────────────────────────────────────────
 // decode_ascii: decode the byte at position `i` in `b` — ASCII (< 0x80) fast-path only, returning the
 // codepoint as Binary{8}. Retained as the 1-byte fast path; `decode_one` folds the same logic into its
@@ -196,16 +237,16 @@ fn decode_ascii(b: Bytes, i: Binary{8}) -> Result<Binary{8}, Utf8Error> =
 //
 // 2-byte: lead 0b110xxxxx, cont 0b10yyyyyy yields cp = (lead & 0x1F) << 6 | (cont & 0x3F).
 fn decode_two(b: Bytes, i: Binary{8}, lead: Binary{8}) -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> =
-  match byte_at(b, add_bin(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => Ok(Pr(or(shl6(widen8(and(lead, 0b0001_1111))), cont_payload(c1)), 0b0000_0010)) } }
+  match byte_at(b, add_bin(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => reject_two(or(shl6(widen8(and(lead, 0b0001_1111))), cont_payload(c1)), lead) } }
 
 // 3-byte: lead 0b1110xxxx, two conts yield cp = (lead & 0x0F) << 12 | (c1 & 0x3F) << 6 | (c2 & 0x3F).
 fn decode_three(b: Bytes, i: Binary{8}, lead: Binary{8}) -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> =
-  match byte_at(b, add_bin(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => match byte_at(b, add_bin(i, 0b0000_0010)) { None => Err(Invalid(c1)), Some(c2) => match is_cont_byte(c2) { False => Err(Invalid(c2)), True => Ok(Pr(or(or(shl12(widen8(and(lead, 0b0000_1111))), shl6(cont_payload(c1))), cont_payload(c2)), 0b0000_0011)) } } } }
+  match byte_at(b, add_bin(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => match byte_at(b, add_bin(i, 0b0000_0010)) { None => Err(Invalid(c1)), Some(c2) => match is_cont_byte(c2) { False => Err(Invalid(c2)), True => reject_three(or(or(shl12(widen8(and(lead, 0b0000_1111))), shl6(cont_payload(c1))), cont_payload(c2)), lead) } } } }
 
 // 4-byte: lead 0b11110xxx, three conts yield
 //   cp = (lead & 0x07) << 18 | (c1 & 0x3F) << 12 | (c2 & 0x3F) << 6 | (c3 & 0x3F).
 fn decode_four(b: Bytes, i: Binary{8}, lead: Binary{8}) -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> =
-  match byte_at(b, add_bin(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => match byte_at(b, add_bin(i, 0b0000_0010)) { None => Err(Invalid(c1)), Some(c2) => match is_cont_byte(c2) { False => Err(Invalid(c2)), True => match byte_at(b, add_bin(i, 0b0000_0011)) { None => Err(Invalid(c2)), Some(c3) => match is_cont_byte(c3) { False => Err(Invalid(c3)), True => Ok(Pr(or(or(or(shl18(widen8(and(lead, 0b0000_0111))), shl12(cont_payload(c1))), shl6(cont_payload(c2))), cont_payload(c3)), 0b0000_0100)) } } } } } }
+  match byte_at(b, add_bin(i, 0b0000_0001)) { None => Err(Invalid(lead)), Some(c1) => match is_cont_byte(c1) { False => Err(Invalid(c1)), True => match byte_at(b, add_bin(i, 0b0000_0010)) { None => Err(Invalid(c1)), Some(c2) => match is_cont_byte(c2) { False => Err(Invalid(c2)), True => match byte_at(b, add_bin(i, 0b0000_0011)) { None => Err(Invalid(c2)), Some(c3) => match is_cont_byte(c3) { False => Err(Invalid(c3)), True => reject_four(or(or(or(shl18(widen8(and(lead, 0b0000_0111))), shl12(cont_payload(c1))), shl6(cont_payload(c2))), cont_payload(c3)), lead) } } } } } }
 
 // ── decode_one ─────────────────────────────────────────────────────────────────────────────────────
 // decode_one: decode the UTF-8 sequence beginning at byte index `i` in `b`, returning
@@ -230,10 +271,13 @@ fn decode_four(b: Bytes, i: Binary{8}, lead: Binary{8}) -> Result<Pair<Binary{32
 // Grounding: hand-computed codepoints, three-way verified (L1≡L0≡AOT); crates/mycelium-std-text exists
 // but exposes a different Ring-2 surface (no decode_one) — not the structural oracle.
 //
-// NOTE (not faked): this does NOT reject overlong encodings, surrogate-range codepoints (U+D800–DFFF),
-// or codepoints above U+10FFFF — it decodes the bytes as written. Those validity checks are a further
-// increment (they need the assembled codepoint compared against per-length minimums via `lt`), tracked
-// as future work, not claimed here. The never-silent contract that IS met: structural malformations
-// (bad lead, missing/short continuation, bad continuation) all surface as `Err(Invalid(byte))`.
+// VALIDITY (M-717 — now CLOSED, the last M-717 remainder): the multi-byte arms reject OVERLONG
+// encodings (a value encodable in fewer bytes), SURROGATE-range codepoints (U+D800–DFFF), and
+// codepoints above U+10FFFF — each a never-silent `Err(Overlong/Surrogate/TooLarge(lead))` via the
+// `reject_two/three/four` gates (the assembled codepoint compared against the per-length minimum and
+// the surrogate/ceiling bounds with `lt` at Binary{32}). So `decode_one` yields only well-formed
+// Unicode scalar values (RFC-3629). Structural malformations (bad lead, missing/short continuation,
+// bad continuation) still surface as `Err(Invalid(byte))`. Boundary values (U+0080, U+0800, U+10000,
+// U+10FFFF) are accepted, not over-rejected (std_text.rs validity tests).
 fn decode_one(b: Bytes, i: Binary{8}) -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> =
   match byte_at(b, i) { None => Err(Invalid(0b0000_0000)), Some(lead) => match lt(lead, 0b1000_0000) { 0b1 => Ok(Pr(widen8(lead), 0b0000_0001)), _ => match lt(lead, 0b1100_0000) { 0b1 => Err(Invalid(lead)), _ => match lt(lead, 0b1110_0000) { 0b1 => decode_two(b, i, lead), _ => match lt(lead, 0b1111_0000) { 0b1 => decode_three(b, i, lead), _ => match lt(lead, 0b1111_1000) { 0b1 => decode_four(b, i, lead), _ => Err(Invalid(lead)) } } } } } }
