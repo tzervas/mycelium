@@ -40,6 +40,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   **adopt granular item-level `pub`** (func/method/value/var individually public, Rust-precedent) —
   supersedes the nodule-only model; a flagged follow-on is the exact granularity + surface form. Q6 row
   polymorphism out of scope; Q5/Q7 defer to the grammar/operator wave. Design only, no code.
+- **M-704 (full HOF) scheduled — closures via KC-3-safe Reynolds defunctionalization (RFC-0024 §7).**
+  Moves from indefinite Residual to near-term, gated behind the DN-31 grammar wave (closures need the
+  `lambda` keyword + delimiter rules first). Closures lower to a tagged data value (captured env) + a
+  generated `apply` dispatch in existing L0 — no new kernel node; multi-arg arrows + partial application
+  generalize from the same machinery. Closures first, then multi-arg/partial/true-`foldl`. Design only.
+- **DN-38 — macro story framed + open question recorded (maintainer raised).** Mycelium has no opaque macro
+  system (G2/no-black-boxes rules out text/token substitution); the roles split across inspectable features —
+  `derive` (generative lowering), `reveal` (inspector), `{N}` const params, and the layered-lowering passes.
+  New open question: is generative lowering a closed compiler-provided set or user-extensible (admissible only
+  if every user generation stays `reveal`-able + content-addressed)? Lean: closed/curated first. Vernacular
+  ("macro" likely avoided per DN-02's gate) settleable later. Captured, nothing decided. No code.
 
 - **DN-51 — accuracy-first `Binary{N}` width arithmetic (maintainer-ratified in-session).** Resolves the
   "what happens on mixed widths?" question DN-42 left as a conservative *refusal*: cross-width binary
