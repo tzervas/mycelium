@@ -30,8 +30,8 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
     concrete gate — minimal frozen L0 kernel; every construct (incl. user pseudo-macros) lowers transparently by
     construction; completeness criterion (every accept/reject/invariant enumerated, zero silent gaps) + the five-
     condition freeze gate. Synthesizes the wave; extends DN-39, complements RFC-0036, feeds ADR-021/022.
-  - **Lexicon reconciliation (M-813):** append-only DN-02/DN-03 + memory — `bin`/`tern`/`emb`/`hvec` + `lambda`
-    + `derive`/`via`/`reveal`; `vec` rejected (collides with `Vec`); ratified-pending-RFC-0037 (token.rs unchanged).
+  - **Lexicon reconciliation (M-813):** append-only DN-02/DN-03 + memory — `bin`/`tern`/`emb`/`hvec`, `lambda`,
+    and `derive`/`via`/`reveal`; `vec` rejected (collides with `Vec`); ratified-pending-RFC-0037 (token.rs unchanged).
   - Append-only supersession back-notes on RFC-0019/0025/0030; Doc-Index + issues.yaml (M-807 done; M-809–815 minted).
   All Proposed/Draft (design only; ratification pending); no guarantee `Proven`; no decision silently advanced. No code.
 
