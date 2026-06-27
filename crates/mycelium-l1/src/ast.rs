@@ -215,6 +215,40 @@ pub struct TraitRef {
     pub args: Vec<TypeRef>,
 }
 
+/// A width reference in a [`BaseType::Binary`] or [`BaseType::Ternary`] descriptor — either a
+/// concrete literal (`Binary{8}`) or a width-parameter name (`Binary{N}` where `N` is a width
+/// parameter of the enclosing `fn`; DN-42 / M-753 v1). Disambiguated from type parameters by the
+/// width-slot (brace) context.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WidthRef {
+    /// A concrete width literal (e.g. `8` in `Binary{8}`).
+    Lit(u32),
+    /// A width-parameter name (e.g. `N` in `Binary{N}`; DN-42 / M-753 v1 — free functions only).
+    Name(String),
+}
+
+impl core::fmt::Display for WidthRef {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            WidthRef::Lit(n) => write!(f, "{n}"),
+            WidthRef::Name(v) => write!(f, "{v}"),
+        }
+    }
+}
+
+/// The classification of a type parameter declared in a `fn` signature's `<…>` list (DN-42 /
+/// M-753 v1): either an ordinary **type** parameter (appears in type-slot positions) or a **width**
+/// parameter (appears only in brace-width slots — `Binary{N}` or `Ternary{N}`). The distinction is
+/// resolved post-parse by examining how the name is used in the value-parameter and return types.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParamKind {
+    /// Appears in type-slot positions (`Named(n, [])`) — the classic type parameter.
+    Type,
+    /// Appears only in width-slot positions (`Binary{N}` or `Ternary{N}`) — a width parameter.
+    /// Cannot carry trait bounds in v1 (explicit refusal; DN-42 §7).
+    Width,
+}
+
 /// A (possibly **bounded**) type parameter on a **function** — `T` or `T: Cmp + Ord<T>` (RFC-0019
 /// §4.1 `type_param`). Bounds live **only** on function type-params (the dictionary site); data/trait
 /// type-params stay unbounded names in stage-1 ([`TypeDecl::params`] / [`TraitDecl::params`]).
@@ -222,7 +256,12 @@ pub struct TraitRef {
 pub struct TypeParam {
     /// The parameter name.
     pub name: String,
-    /// Its trait bounds (empty for an unbounded parameter — the §11 identity case).
+    /// Whether this is a **type** parameter or a **width** parameter (DN-42 / M-753 v1). Set by a
+    /// post-parse classification pass in `parse_sig_tail` (`ParamKind::Type` is the default for
+    /// every v0 program — purely additive).
+    pub kind: ParamKind,
+    /// Its trait bounds (empty for an unbounded parameter — the §11 identity case). Width params
+    /// cannot carry bounds in v1 (explicit refusal at the classification pass; DN-42 §7).
     pub bounds: Vec<TraitRef>,
 }
 
@@ -250,13 +289,28 @@ pub struct FnSig {
 }
 
 impl FnSig {
-    /// The **names** of this signature's type parameters (dropping any bounds) — the form the
-    /// checker's `tyvars` scope and the §11 generic machinery consume (each name resolves to a
-    /// `Ty::Var`). Additive helper so callers need not reach through each [`TypeParam`] (DRY / Law
-    /// of Demeter); the bounds are read separately where instance-satisfiability is checked.
+    /// The **names** of this signature's type parameters (dropping any bounds and width params) —
+    /// the form the checker's `tyvars` scope and the §11 generic machinery consume (each name
+    /// resolves to a `Ty::Var`). Additive helper so callers need not reach through each
+    /// [`TypeParam`] (DRY / Law of Demeter); the bounds are read separately where
+    /// instance-satisfiability is checked.
     #[must_use]
     pub fn param_names(&self) -> Vec<String> {
-        self.params.iter().map(|p| p.name.clone()).collect()
+        self.params
+            .iter()
+            .filter(|p| p.kind == ParamKind::Type)
+            .map(|p| p.name.clone())
+            .collect()
+    }
+
+    /// The **names** of this signature's width parameters (DN-42 / M-753 v1). Empty for v0 programs.
+    #[must_use]
+    pub fn width_param_names(&self) -> Vec<String> {
+        self.params
+            .iter()
+            .filter(|p| p.kind == ParamKind::Width)
+            .map(|p| p.name.clone())
+            .collect()
     }
 }
 
@@ -323,10 +377,12 @@ impl TypeRef {
 /// A base (un-annotated) type.
 #[derive(Debug, Clone, PartialEq)]
 pub enum BaseType {
-    /// `Binary{width}`.
-    Binary(u32),
-    /// `Ternary{trits}`.
-    Ternary(u32),
+    /// `Binary{width}` — the width slot may be a concrete literal or a width-parameter name
+    /// (`Binary{N}`; DN-42 / M-753 v1). Use [`WidthRef::Lit`] for concrete programs; [`WidthRef::Name`]
+    /// for width-generic signatures (resolved to [`crate::checkty::Width::Var`] during checking).
+    Binary(WidthRef),
+    /// `Ternary{trits}` — same width-slot generalization as [`BaseType::Binary`] (DN-42 / M-753 v1).
+    Ternary(WidthRef),
     /// `Dense{dim, scalar}`.
     Dense(u32, Scalar),
     /// `VSA{model, dim, sparsity}`.

@@ -4,7 +4,7 @@ use std::hash::{Hash, Hasher};
 
 #[test]
 fn typeref_unguaranteed_matches_field_form() {
-    let base = BaseType::Binary(8);
+    let base = BaseType::Binary(WidthRef::Lit(8));
     assert_eq!(
         TypeRef::unguaranteed(base.clone()),
         TypeRef {
@@ -16,7 +16,7 @@ fn typeref_unguaranteed_matches_field_form() {
 
 #[test]
 fn typeref_with_guarantee_matches_field_form() {
-    let base = BaseType::Ternary(3);
+    let base = BaseType::Ternary(WidthRef::Lit(3));
     assert_eq!(
         TypeRef::with_guarantee(base.clone(), Strength::Exact),
         TypeRef {
@@ -127,6 +127,7 @@ fn fn_sig_param_names_drops_bounds() {
         params: vec![
             TypeParam {
                 name: "T".to_owned(),
+                kind: ParamKind::Type,
                 bounds: vec![TraitRef {
                     name: "Cmp".to_owned(),
                     args: vec![],
@@ -134,11 +135,12 @@ fn fn_sig_param_names_drops_bounds() {
             },
             TypeParam {
                 name: "U".to_owned(),
+                kind: ParamKind::Type,
                 bounds: vec![],
             },
         ],
         value_params: vec![],
-        ret: TypeRef::unguaranteed(BaseType::Binary(1)),
+        ret: TypeRef::unguaranteed(BaseType::Binary(WidthRef::Lit(1))),
         effects: vec![],
     };
     assert_eq!(sig.param_names(), vec!["T".to_owned(), "U".to_owned()]);

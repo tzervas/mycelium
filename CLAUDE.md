@@ -360,6 +360,39 @@ success regardless. The gap is invisible unless you count the result.
    and a manifest/index ↔ actual `diff` is empty). A green merge is **not** evidence the content
    arrived — count it. (This is the merge-time twin of mitigation #2's post-merge YAML dedup.)
 
+### 8. Lost intent on compaction — persist before you can't (standing policy, rsm 2026-06-26)
+**Pattern:** A session/agent approaching context compaction silently loses in-flight reasoning,
+decisions, and "where am I / what's next" state — the thread breaks mid-task and the next window
+can't recover the intent (only the code, if it was committed).
+**Mitigation:** Before you can't — when any agent (orchestrator/epic/leaf) nears compaction or a
+long handoff — **write working state to disc**: a scratch/memory file with working notes, decisions
+made, current position, and the next steps. Branches are the durable artifact for *code* (#5/#9);
+this note is the durable artifact for *intent*. This is **standing policy for every agent**, not just
+swarm runs (reinforces #6: the orchestrator's context budget is the scarcest resource — protect it).
+
+### 9. Unrecoverable work — commit + push frequently to a working branch (standing policy, rsm 2026-06-26)
+**Pattern:** An agent holding hours of uncommitted (or committed-but-unpushed) work loses **all** of
+it when orphaned on compaction (the Wave-4 mass-orphan durability lesson: worktree branches are the
+durable artifact; an unpushed tip is gone).
+**Mitigation:** Every agent commits in **small batches and pushes to its working branch** on the
+`wip(batch M/N)` cadence (#5) — no agent holds hours of uncommitted work, and worktree leaves
+**push before they complete**. If lost, the work is recoverable from the branch, not gone. This is
+**standing policy for every agent**. (#5 is the *visibility* twin of this *durability* rule.)
+
+### 10. Wrong-branch / commit-to-`main` — now ENFORCED, not just convention (standing policy, rsm 2026-06-27)
+**Pattern:** an agent (or an orphaned sub-agent) commits/pushes to a protected branch, or writes to
+the wrong working branch — the discipline below was documentation, so nothing actually *stopped* it.
+**Mitigation — the branch-guard (`/branch-guard`), three layers, idempotent + parameterized:**
+(1) a **Claude Code `PreToolUse(Bash)` hook** (`.claude/settings.json` → `scripts/hooks/claude-git-branch-guard.sh`)
+blocks an agent's `git commit`/`merge`/`cherry-pick`/`rebase` on, or push to, a protected branch, and
+any force-push, **before** the tool runs — the layer that stops agents; (2) **git pre-commit + pre-push
+hooks** (`.pre-commit-config.yaml`, `repo: local` → `scripts/checks/branch-guard.sh`) for direct git
+use; (3) the **`/branch-guard` skill + `just branch-guard`** checked step the workflows call.
+Protected set (`MYC_PROTECTED_BRANCHES`, default `main integration dev claude/head/*`) and the
+expected working branch (`CLAUDE_WORKING_BRANCH` / `--expect`) are **parameters**; the checks are pure
+reads (idempotent). Landing onto a protected branch is **via GitHub PR**, never local git — so the
+block is exactly correct. Never-silent (G2): a blocked op prints the protected/wrong branch + the fix.
+
 ## Autonomous PR workflow — review-before-merge, no human gate
 
 The merge gate is the agent's, not a human's. A parent (orchestrator/epic) **merges its children

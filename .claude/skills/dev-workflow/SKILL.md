@@ -35,7 +35,10 @@ How we build Mycelium. This operationalizes `CONTRIBUTING.md`; follow it while a
 6. **Ground every claim.** Normative statements cite `G1–G11 / A–E / R1–R8 / T0.x–T2.x`, or are
    marked open questions. Decisions are **append-only** — supersede, don't rewrite.
 7. **Verify locally, with parity.** Run `just check` (the same suite CI runs) before you commit.
-   Fix or explicitly skip; never hand off red. Add a property test for any new bound.
+   Fix or explicitly skip; never hand off red. Add a property test for any new bound. **Before
+   committing, the branch-guard asserts you are on your working branch, not a protected one**
+   (`/branch-guard` or `just branch-guard`; also enforced by the pre-commit + PreToolUse hooks) —
+   protected branches (`main`/`integration`/`dev`/`claude/head/*`) are PR-only, never a direct commit.
 8. **Record it.** Update the `CHANGELOG.md` and any doc's changelog footer / status (use the
    `changelog` skill). If you changed a public API, run `just api-baseline` (updates
    `docs/spec/api/`) AND `just docs-index` (updates `docs/api-index/`). Commit both deltas
