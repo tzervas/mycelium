@@ -135,16 +135,20 @@ that act.
 > width *is* a const-generic (DN-42), so `{8}`/`{N}` reading as "const" teaches the `[type]` vs `{const}`
 > distinction; (4) it **avoids** the alternative of putting type-args on `{}` (`List{T}`), which would
 > reintroduce the Rust `Name{block}`-vs-type-application footgun (types stay square ⇒ `List[T]` never collides
-> with a block). **§4-Q2 remains OPEN — newline-optional ergonomics required (maintainer correction,
-> 2026-06-27).** A newline/adjacency rule (line-leading `[` = list; same-line `Name[` = type-app) was
-> *considered* and is workable given Mycelium has no `arr[i]` indexing — **but the maintainer does NOT want
-> newlines *required* for disambiguation**: the language must not degrade into a series of single-line
-> function definitions; it must stay **human-ergonomic** (readable, comfortably multi-line) while remaining
-> a clean **stream for machine** parsing. So the type-app-vs-list edge must be disambiguated by a
-> **newline-OPTIONAL** rule — candidate mechanisms to weigh: the maintainer's earlier **`,`-delineation**
-> input, a space/adjacency cue, or a type-position-vs-value-position rule — and the **tradeoffs must be
-> deliberated before the grammar commits**. Q2 is the one gating ergonomics question still open.
-> **Guarantee model cross-ref:** the width-generic guarantee is
+> with a block). **§4-Q2 — resolution DIRECTION fixed: a LAYOUT-INDEPENDENT grammar (maintainer,
+> 2026-06-27).** Newlines are **formatting-only, never semantically required**: the *same* program parses
+> identically whether written as a dense **stream** ("a series of lambda functions and such") or — as in
+> practice — **formatted with line breaks for human readability**. Structural delineation is therefore by
+> **explicit delimiters** (the maintainer's **`,`-delineation**) plus the **type-position-vs-value-position**
+> distinction — **not** by whitespace. So the type-app-vs-list edge is settled without any newline rule: a
+> list `[…]` follows a delimiter / sits in value position; a type-or-size application `Name[…]` has `Name` in
+> type position (and Mycelium has no `arr[i]` indexing and no juxtaposition application, so there is no third
+> reading). The earlier "newline/adjacency rule" is therefore **withdrawn** — newlines must not be load-bearing.
+> The **exact delimiter set + adjacency rules** are the remaining spec detail for the binding grammar RFC; the
+> *principle* (layout-independent, explicit-delimiter, human-formatted-in-practice but stream-legal) is fixed.
+> **Lambdas are declared with an explicit `lambda` keyword** (not bare arrows), so a streamed lambda-chain stays
+> legible and unambiguous — a new reserved word to reconcile with **DN-02/DN-03** (lexicon) + `token.rs`, and
+> input to **M-704** (full higher-order functions / closures). **Guarantee model cross-ref:** the width-generic guarantee is
 > **per-instance** (DN-51 §2-D4 / the width-arithmetic decision), not a uniform tag. Still a **recorded
 > direction** — DN-31 stays **Draft**; the binding RFC/supersession (+ the grammar-supersession epic) is the
 > enacting act (VR-5 / G2).
