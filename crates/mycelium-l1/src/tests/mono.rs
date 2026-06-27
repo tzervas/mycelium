@@ -1,5 +1,5 @@
+use crate::ast::Scalar;
 use crate::ast::TypeRef;
-use crate::ast::{Scalar, WidthRef};
 use crate::checkty::check_nodule;
 use crate::checkty::{has_var, Env, Ty, Width};
 use crate::elab::ElabError;

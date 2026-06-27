@@ -142,17 +142,10 @@ fn width_generic_identity_ternary_3() {
 /// `Exact`: identity produces the input unchanged.
 #[test]
 fn width_generic_identity_ternary_6() {
-    // <00+0+-> is a Ternary{6} literal
-    let src = "nodule d\n\
-               fn id_trits<M>(x: Ternary{M}) -> Ternary{M} = x\n\
-               fn main() -> Ternary{6} = id_trits(<0+0+->)";
-    // <0+0+-> = 0*243 + 1*81 + 0*27 + 1*9 + (-1)*3 + 0*1 ... wait, 6 digits
-    // Actually: 0+0+- has 5 digits, we need 6: <0+0+->: wait that's only 5 after 0
-    // Let me use <00+0+-> (6 trits): 0*243 + 0*81 + 1*27 + 0*9 + 1*3 + (-1) = 29
+    // <00+0+-> (6 trits) = 0*243 + 0*81 + 1*27 + 0*9 + 1*3 + (-1)*1 = 29
     let src = "nodule d\n\
                fn id_trits<M>(x: Ternary{M}) -> Ternary{M} = x\n\
                fn main() -> Ternary{6} = id_trits(<00+0+->)";
-    // <00+0+-> = 0*243 + 0*81 + 1*27 + 0*9 + 1*3 + (-1)*1 = 29
     let (r, p) = trit(6, 29);
     assert_three_way("id_trits<6>", src, &r, &p);
 }

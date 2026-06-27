@@ -405,7 +405,7 @@ pub(crate) fn unify(
                 Some(bound) if *bound != carrier => Err(CheckError::new(
                     site,
                     format!(
-                        "width parameter `{v}` would have to be both {} and {n} —                          a width mismatch, not a coercion (DN-42 §4 / VR-5)",
+                        "width parameter `{v}` would have to be both {} and {n} — a width mismatch, not a coercion (DN-42 §4 / VR-5)",
                         if let Ty::Binary(Width::Lit(m)) = bound {
                             *m
                         } else {
@@ -2745,7 +2745,7 @@ impl Cx<'_> {
         for v in &callee_vars {
             if !subst.contains_key(v) {
                 return self.err(format!(
-                    "`{name}` is generic over `{v}`, but this call does not determine it —                      ascribe an argument or the result (RFC-0007 §11.3, never a guessed default)"
+                    "`{name}` is generic over `{v}`, but this call does not determine it — ascribe an argument or the result (RFC-0007 §11.3, never a guessed default)"
                 ));
             }
         }
@@ -2756,7 +2756,7 @@ impl Cx<'_> {
         for v in &callee_wvars {
             if !subst.contains_key(v) {
                 return self.err(format!(
-                    "`{name}` is width-generic over `{v}`, but this call does not determine the                      width — ascribe an argument (DN-42 §4, never a guessed default / VR-5)"
+                    "`{name}` is width-generic over `{v}`, but this call does not determine the width — ascribe an argument (DN-42 §4, never a guessed default / VR-5)"
                 ));
             }
         }
