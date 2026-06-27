@@ -42,7 +42,7 @@ verified, not by being minimal in a way that leaves gaps.
 
 2. **One kernel, or several?** Open structural question: is the right shape a single `mycelium`
    kernel, or a family — e.g. a `mycelium` kernel + a binary/ternary kernel + an embedding kernel
-   + a VSA/HDC kernel? The best approach is **TBD** (`Declared`); this RFC captures the question
+   - a VSA/HDC kernel? The best approach is **TBD** (`Declared`); this RFC captures the question
    and the considerations, decides nothing.
 
 ## §2 Relationship to existing docs

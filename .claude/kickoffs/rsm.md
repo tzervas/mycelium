@@ -34,7 +34,7 @@ Session-1 landed a consolidated increment to `main` (and synced down the tiers) 
 
 **REMAINING (Session-2 scope):**
 1. **W1 dev wave** (M-718 now unblocked): **M-718** width-generic `std.math`/`std.cmp` in `lib/std`
-   + generalize `map_get<N>`/`set_contains<N>` off the `Binary{8}` interim → **M-719** conformance over
+   - generalize `map_get<N>`/`set_contains<N>` off the `Binary{8}` interim → **M-719** conformance over
    the generic surface → **close M-717** (UTF-8 validity layer over the byte prims) → **re-flag M-715**
    (recursive-HOF / RFC-0024 defunctionalization — keep deferred, do NOT re-attempt this wave).
 2. **W2 docs-currency sweep**: refresh `.claude/agent-context.md` + `.claude/memory/*` (esp.
