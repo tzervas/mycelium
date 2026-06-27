@@ -162,6 +162,57 @@ Until ratified, the L1 prototype uses this set **provisionally** and flags it as
 
 ## Meta — changelog & maintenance
 
+- **2026-06-27 — Short repr type-keyword set ratified; `lambda` keyword ratified (DN-31 2026-06-27
+  kind-split revision; append-only).** The maintainer's in-session revision to DN-31 (revision
+  history "kind-split refinement, 2026-06-27") ratifies short ergonomic forms for the four paradigm
+  type-keywords in §4, each keeping its width/dims on `{}` (the kind-split: `{N}` = const/width
+  params, `[T]` = type params):
+
+  **Short repr type-keywords — gate verdicts (`Declared` — ratified-pending-RFC-0037):**
+
+  - **`Binary{N}` → `bin{N}`** (short form). T-map: `bin` is the universal abbreviation for binary;
+    maps accurately and directly to the binary-representation kind — no false implication. **Passes.**
+    T-illuminate: teaches "I am a binary value"; the width is still explicit on `{}`. **Passes.**
+    T-learn: `bin` is universally recognised by human and machine readers (assemblers, Rust `0b`,
+    C `0b`, electronics). **Passes.** Gate verdict: **adopt**.
+  - **`Ternary{N}` → `tern{N}`** (short form). T-map: `tern` is the clear abbreviation for ternary;
+    maps accurately to the balanced-ternary kind. **Passes.** T-illuminate: teaches "I am a ternary
+    value" with width explicit. **Passes.** T-learn: `tern` is an established abbreviation (electronics,
+    logic design). **Passes.** Gate verdict: **adopt**.
+  - **`Dense{…}` → `emb{…}`** (short form; mnemonic: embeddings). T-map: `emb` names the primary
+    use of Dense types — dense embedding vectors (ML / neural representations); accurate for the
+    target user population. Note: `emb` names the *use*, not the structural property (`Dense`);
+    acceptable because the intended workload is homogeneous. **Passes (T-map note recorded).** T-illuminate:
+    `emb` conveys "this is an embedding space" more directly than the structural `Dense`. **Passes.**
+    T-learn: `emb` is familiar in ML/NLP contexts (embedding layers, embedding dims). **Passes.**
+    Gate verdict: **adopt** (with the T-map note).
+  - **`VSA{…}` → `hvec{…}`** (short form; mnemonic: HDC hypervectors). T-map: `hvec` names
+    hypervectors accurately — high-dimensional vectors used in Hyperdimensional Computing / VSA
+    models. **Passes.** T-illuminate: `hvec` teaches "I am a hypervector" (the operative concept —
+    VSA is the framework; the value is a hypervector). **Passes.** T-learn: `hvec` is a compact,
+    pronounceable compound (`h`=hyper + `vec`=vector), familiar to the HDC/VSA literature. **Passes.**
+    Gate verdict: **adopt**.
+  - **`vec` REJECTED** — collides conceptually with `type Vec<A>` (the cons-list type in
+    `lib/std/collections.myc`). Although `vec` (keyword) and `Vec` (type constructor) are lexically
+    distinct (lowercase vs uppercase initial letter), making `vec` a reserved repr-type keyword
+    alongside a stdlib type named `Vec` would create a persistent teaching and readability confusion
+    for both human and machine readers. `hvec` avoids this entirely. Rejection is explicit (G2).
+
+  The long forms `Binary`/`Ternary`/`Dense`/`VSA` are **not removed** — they remain valid; the
+  short forms are ergonomic aliases. Status: **ratified-pending-RFC-0037** (`Declared` — the
+  direction is ratified in DN-31; the lexer and grammar artifacts are not changed until RFC-0037
+  binds the bracket grammar). `token.rs` reservation (`Tok::Binary`/`Ternary`/`Dense`/`Vsa`) is
+  unchanged; post-RFC implementation is tracked under M-664 scope. Append-only; §4 text left intact.
+
+  **`lambda` keyword — gate verdict (`Declared` — ratified-pending-RFC-0037):**
+  T-map: `lambda` is the precise PL-theory term for anonymous function abstraction (Church's
+  λ-calculus); maps accurately — no false implication. **Passes.** T-illuminate: teaches "this is
+  a first-class anonymous function"; a bare arrow does not convey this. **Passes.** T-learn:
+  `lambda` is universally recognised across language families (Python, Scheme, ML, Haskell, Lisp)
+  and by LLM readers. **Passes.** Gate verdict: **adopt** (conventional-clearest — not themed;
+  same precedent as `match`/`for`/`use`). Status: **ratified-pending-RFC-0037** (`Declared`);
+  lexer not changed until RFC-0037. Input to M-704 (closures / higher-order functions). Append-only.
+
 - **2026-06-16 — §2 `colony` line superseded by DN-06 (append-only).** DN-06 reassigns **`colony`**
   from its §2 static meaning ("Module / namespace of definitions") to a **dynamic runtime grouping of
   `hypha`** (RFC-0008 §4.7), moving the static role to the new term **`nodule`** (the basic unit) with
