@@ -213,6 +213,63 @@ fn width_generic_two_widths_same_function_16() {
     assert_three_way("two_widths get16", src, &r, &p);
 }
 
+// ── Recursive + delegated width-generics (the `unify` width-var pass-through — M-718) ─────────────
+//
+// A width-generic fn calling ANOTHER width-generic fn — or ITSELF — with a still-ABSTRACT width is the
+// case the M-718 `unify` pass-through enables: the callee's width var binds to the caller's (mirroring
+// the type-var pass-through) and is resolved to a concrete `Width::Lit` at monomorphization. Before
+// M-718 every such call was refused ("width does not determine the width"). These lock the capability
+// that the self-hosted recursive `map_get`/`set_contains` and the `le→cmp` delegation depend on.
+
+/// Width-generic DELEGATION: `wrap_id<N>` calls the width-generic `id_bits<N>` with its own abstract
+/// `x: Binary{N}`. The callee's width is determined by the enclosing scope, resolved to 8 at mono.
+/// `Empirical`: three-way agreement.
+#[test]
+fn width_generic_delegation_binary_8() {
+    let src = "nodule d\n\
+               fn id_bits<N>(x: Binary{N}) -> Binary{N} = x\n\
+               fn wrap_id<N>(x: Binary{N}) -> Binary{N} = id_bits(x)\n\
+               fn main() -> Binary{8} = wrap_id(0b1010_0101)";
+    let (r, p) = bin(8, 0b1010_0101);
+    assert_three_way("wrap_id<8>→id_bits<8>", src, &r, &p);
+}
+
+/// Width-generic delegation at a second width (Binary{16}) — proves the delegated call specialises
+/// per width, not once. `Empirical`.
+#[test]
+fn width_generic_delegation_binary_16() {
+    let src = "nodule d\n\
+               fn id_bits<N>(x: Binary{N}) -> Binary{N} = x\n\
+               fn wrap_id<N>(x: Binary{N}) -> Binary{N} = id_bits(x)\n\
+               fn main() -> Binary{16} = wrap_id(0b1100_1001_0111_1110)";
+    let (r, p) = bin(16, 0b1100_1001_0111_1110);
+    assert_three_way("wrap_id<16>→id_bits<16>", src, &r, &p);
+}
+
+/// RECURSIVE width-generic fn: `rec_id<N>(x, n)` returns `x` after `n` self-calls, recursing with its
+/// abstract `x: Binary{N}` (`n` is a concrete Binary{8} step counter). The recursive call runs at the
+/// abstract width before monomorphizing to N=8. `Empirical`: three-way agreement on the fixed point.
+#[test]
+fn width_generic_recursive_binary_8() {
+    let src = "nodule d\n\
+               fn rec_id<N>(x: Binary{N}, n: Binary{8}) -> Binary{N} = \
+               match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_bin(n, 0b0000_0001)) }\n\
+               fn main() -> Binary{8} = rec_id(0b0110_0110, 0b0000_0011)";
+    let (r, p) = bin(8, 0b0110_0110);
+    assert_three_way("rec_id<8>", src, &r, &p);
+}
+
+/// The same recursive width-generic fn at Binary{16} — the recursion is width-polymorphic. `Empirical`.
+#[test]
+fn width_generic_recursive_binary_16() {
+    let src = "nodule d\n\
+               fn rec_id<N>(x: Binary{N}, n: Binary{8}) -> Binary{N} = \
+               match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_bin(n, 0b0000_0001)) }\n\
+               fn main() -> Binary{16} = rec_id(0b1111_0000_0000_1111, 0b0000_0010)";
+    let (r, p) = bin(16, 0b1111_0000_0000_1111);
+    assert_three_way("rec_id<16>", src, &r, &p);
+}
+
 // ── Never-silent refusals (Declared / G2 / VR-5) ────────────────────────────────────────────────
 
 /// A call where the width param cannot be inferred from the value arguments is an explicit
@@ -257,5 +314,72 @@ fn width_mismatch_in_generic_call_refuses() {
     assert!(
         result.is_err(),
         "expected check to fail: Binary{{8}} inferred but Binary{{16}} declared, but check succeeded"
+    );
+}
+
+// ── Ternary path through the M-718 var-var unify arm (review finding #2 — coverage parity) ─────────
+//
+// The new `unify` width-var pass-through handles BOTH Binary and Ternary (`Ty::Ternary(Width::Var)`).
+// The Binary path is covered by the delegation/recursion tests above; this exercises the Ternary arm
+// directly via a Ternary{M}-generic fn delegating to another, so the comment's "mirrors for Ternary
+// too" parity claim is Empirically covered, not merely Declared.
+
+/// Width-generic Ternary DELEGATION: `wrap_trits<M>` calls `id_trits<M>` with its abstract
+/// `x: Ternary{M}` — the callee's width is determined by the enclosing scope, resolved to 3 at mono.
+/// `<0+->` = 0*9 + 1*3 + (-1)*1 = 2. `Empirical`: three-way agreement.
+#[test]
+fn width_generic_delegation_ternary_3() {
+    let src = "nodule d\n\
+               fn id_trits<M>(x: Ternary{M}) -> Ternary{M} = x\n\
+               fn wrap_trits<M>(x: Ternary{M}) -> Ternary{M} = id_trits(x)\n\
+               fn main() -> Ternary{3} = wrap_trits(<0+->)";
+    let (r, p) = trit(3, 2);
+    assert_three_way("wrap_trits<3>→id_trits<3>", src, &r, &p);
+}
+
+// ── Cross-argument width-conflict refusals — both orders (review findings #1 and #3) ───────────────
+//
+// When one argument pins a width param to a CONCRETE width and another argument leaves it ABSTRACT,
+// the two cannot be proven equal — a never-silent refusal (DN-42 §4 / VR-5 / S1), never a silent
+// coercion. The two argument orders hit two distinct `unify` arms; both are exercised here, and both
+// error messages must name the abstract width HONESTLY (never a phantom width `0` — the M-718 fix to
+// the var-vs-Lit conflict formatter).
+
+/// CONCRETE-then-ABSTRACT: `f(0b…8, x)` where `x: Binary{M}` is abstract. The first arg pins `N=8`,
+/// the second hits the var-var conflict arm (the callee's `N` is already `Lit(8)` ≠ abstract `M`).
+/// Refusal, never silent. The message names the abstract width `M`, not a phantom `0`.
+#[test]
+fn width_generic_concrete_then_abstract_refuses() {
+    let src = "nodule d\n\
+               fn f<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} = a\n\
+               fn outer<M>(x: Binary{M}) -> Binary{8} = f(0b0000_0000, x)\n\
+               fn main() -> Binary{8} = outer(0b0000_0001)";
+    let result = check_nodule(&parse(src).expect("parses"));
+    let err = result
+        .expect_err("expected a never-silent width-conflict refusal")
+        .to_string();
+    assert!(
+        err.contains('M') && !err.contains(" 0 "),
+        "conflict message must name the abstract width `M`, never a phantom `0`: {err}"
+    );
+}
+
+/// ABSTRACT-then-CONCRETE: `f(x, 0b…8)` where `x: Binary{M}` is abstract. The first arg binds `N` to
+/// the abstract carrier `Binary{Var(M)}` (var-var arm); the second hits the var-vs-Lit conflict arm
+/// with that abstract carrier already bound — the path whose formatter used to print a phantom `0`.
+/// After the M-718 fix it names `M`. Refusal, never silent.
+#[test]
+fn width_generic_abstract_then_concrete_refuses() {
+    let src = "nodule d\n\
+               fn f<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} = a\n\
+               fn outer<M>(x: Binary{M}) -> Binary{8} = f(x, 0b0000_0000)\n\
+               fn main() -> Binary{8} = outer(0b0000_0001)";
+    let result = check_nodule(&parse(src).expect("parses"));
+    let err = result
+        .expect_err("expected a never-silent width-conflict refusal")
+        .to_string();
+    assert!(
+        err.contains('M') && !err.contains(" 0 "),
+        "conflict message must name the abstract width `M`, never a phantom `0`: {err}"
     );
 }

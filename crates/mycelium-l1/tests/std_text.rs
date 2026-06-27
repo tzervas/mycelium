@@ -26,8 +26,10 @@
 //! - FLAG-text-2: **CLOSED** (DN-41 / M-798). `decode_one` returns the full `Binary{32}` codepoint
 //!   (1/2/3/4-byte UTF-8); `width_cast` lifts the masked payloads, shifts are repeated `add_bin`
 //!   doublings (no shift prim). `decode_ascii` is retained as the `Binary{8}` 1-byte fast path.
-//!   (NOT yet rejected, honestly: overlong forms, surrogates, codepoints > U+10FFFF — a further
-//!   increment; structural malformations DO surface never-silent.)
+//! - **UTF-8 validity layer (M-717 remainder): CLOSED.** `decode_one` now rejects overlong encodings,
+//!   surrogate-range codepoints (U+D800–DFFF), and codepoints > U+10FFFF via the `reject_two/three/four`
+//!   gates — each a never-silent `Err(Overlong/Surrogate/TooLarge(lead))`. Boundary values (U+0080,
+//!   U+10FFFF) are accepted, not over-rejected. Structural malformations remain `Err(Invalid(byte))`.
 //! - FLAG-text-3: **CLOSED** (DN-43 / M-799). `bytes_slice`/`bytes_concat` are now surface-callable
 //!   over the kernel `Bytes` (`text.myc`'s `slice`/`concat` delegate to them); three-way coverage
 //!   lives in `std_bytes_slice.rs`. The `Bytes8` cons-list type is now superseded (kept declared for
@@ -225,7 +227,7 @@ const DECODE_REF_PREAMBLE: &str = "\
 nodule ref\n\
 type Option<A> = Some(A) | None\n\
 type Result<A, E> = Ok(A) | Err(E)\n\
-type Utf8Error = Invalid(Binary{8})\n";
+type Utf8Error = Invalid(Binary{8}) | Overlong(Binary{8}) | Surrogate(Binary{8}) | TooLarge(Binary{8})\n";
 
 /// `decode_ascii(0x41_42_43, 0b0000_0000)` → `Ok(bytes_get(…, 0))` (= Ok(0x41='A'); Declared/Empirical).
 /// The byte at index 0 of [0x41, 0x42, 0x43] is 0x41 = 'A' — ASCII, so Ok.
@@ -514,4 +516,168 @@ fn decode_one_err_oob_start_index() {
         &src,
         &expected,
     );
+}
+
+// ── decode_one — UTF-8 validity rejection (M-717 validity layer) ────────────────────────────────────
+//
+// The structural decode is well-formed but a sequence may still encode a NON-canonical or NON-scalar
+// codepoint: an overlong form (fewer bytes would do), a surrogate (U+D800–DFFF), or a value above the
+// Unicode ceiling (U+10FFFF). Each is a never-silent `Err(Overlong/Surrogate/TooLarge(lead))` — the
+// lead byte is `Derived` (via `bytes_get`), so the reference reuses `bytes_get` to match provenance.
+// Hand-computed codepoints cross-checked against the UTF-8 well-formedness rules (RFC-3629).
+
+/// `decode_one(0xc0_80, 0)` → `Err(Overlong(0xC0))` — the classic overlong NUL: cp = (0xC0 & 0x1F)<<6 |
+/// (0x80 & 0x3F) = 0, which is < 0x80 (1 byte would suffice). Never-silent (G2): overlong is rejected,
+/// never decoded as U+0000.
+#[test]
+fn decode_one_rejects_overlong_two_byte() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xc0_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Overlong(bytes_get(0xc0_80, 0b0000_0000)))",
+    );
+    assert_three_way("decode_one(0xC0 0x80)=Err(Overlong)", &src, &expected);
+}
+
+/// `decode_one(0xe0_80_80, 0)` → `Err(Overlong(0xE0))` — overlong 3-byte: cp = 0 < 0x800.
+#[test]
+fn decode_one_rejects_overlong_three_byte() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xe0_80_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Overlong(bytes_get(0xe0_80_80, 0b0000_0000)))",
+    );
+    assert_three_way("decode_one(0xE0 0x80 0x80)=Err(Overlong)", &src, &expected);
+}
+
+/// `decode_one(0xed_a0_80, 0)` → `Err(Surrogate(0xED))` — U+D800 (the first UTF-16 high surrogate):
+/// cp = (0xED & 0x0F)<<12 | (0xA0 & 0x3F)<<6 | (0x80 & 0x3F) = 0xD000 | 0x800 = 0xD800, in the surrogate
+/// gap 0xD800..0xDFFF. Never-silent: a surrogate is not a Unicode scalar value, so it is rejected.
+#[test]
+fn decode_one_rejects_surrogate() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xed_a0_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Surrogate(bytes_get(0xed_a0_80, 0b0000_0000)))",
+    );
+    assert_three_way(
+        "decode_one(U+D800 surrogate)=Err(Surrogate)",
+        &src,
+        &expected,
+    );
+}
+
+/// `decode_one(0xf4_90_80_80, 0)` → `Err(TooLarge(0xF4))` — U+110000, one above the ceiling: cp =
+/// (0xF4 & 0x07)<<18 | (0x90 & 0x3F)<<12 | … = 0x100000 | 0x10000 = 0x110000 > 0x10FFFF. Never-silent.
+#[test]
+fn decode_one_rejects_above_max() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xf4_90_80_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(TooLarge(bytes_get(0xf4_90_80_80, 0b0000_0000)))",
+    );
+    assert_three_way("decode_one(U+110000)=Err(TooLarge)", &src, &expected);
+}
+
+// ── decode_one — validity BOUNDARIES are accepted (not over-rejected) ────────────────────────────────
+
+/// `decode_one(0xc2_80, 0)` → `Ok(Pr(0x80, 2))` — U+0080, the SMALLEST canonical 2-byte codepoint, is
+/// accepted (cp = 0x80 is NOT < 0x80). Proves the overlong gate does not over-reject the boundary.
+#[test]
+fn decode_one_accepts_min_two_byte_boundary() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xc2_80, 0b0000_0000)";
+    let src = program(driver);
+    // Reference recomputes via the decode_two assembly (matching Derived provenance).
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(shl6(widen8(and(bytes_get(0xc2_80, 0b0000_0000), 0b0001_1111))), cont_payload(bytes_get(0xc2_80, 0b0000_0001))), 0b0000_0010))",
+    );
+    assert_three_way("decode_one(U+0080 min 2-byte)=Ok", &src, &expected);
+}
+
+/// `decode_one(0xf4_8f_bf_bf, 0)` → `Ok(Pr(0x10FFFF, 4))` — U+10FFFF, the MAXIMUM Unicode scalar value,
+/// is accepted (cp = 0x10FFFF is NOT > 0x10FFFF). Proves the ceiling gate does not over-reject the
+/// boundary. cp = 0x100000 | 0xF000 | 0xFC0 | 0x3F = 0x10FFFF.
+#[test]
+fn decode_one_accepts_max_codepoint_boundary() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xf4_8f_bf_bf, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(or(or(shl18(widen8(and(bytes_get(0xf4_8f_bf_bf, 0b0000_0000), 0b0000_0111))), shl12(cont_payload(bytes_get(0xf4_8f_bf_bf, 0b0000_0001)))), shl6(cont_payload(bytes_get(0xf4_8f_bf_bf, 0b0000_0010)))), cont_payload(bytes_get(0xf4_8f_bf_bf, 0b0000_0011))), 0b0000_0100))",
+    );
+    assert_three_way("decode_one(U+10FFFF max)=Ok", &src, &expected);
+}
+
+// ── decode_one — validity boundary EDGES (review finding #4: surrogate upper edge + per-length mins) ─
+//
+// Complements the validity tests above by pinning the exact edges of each gate, so an off-by-one in a
+// threshold would be caught: the surrogate UPPER edge (U+DFFF rejects, U+E000 the first scalar after it
+// accepts) and the 3-/4-byte minimum codepoints (U+0800, U+10000 accept — not over-rejected as overlong).
+
+/// `decode_one(0xed_bf_bf, 0)` → `Err(Surrogate(0xED))` — U+DFFF, the LAST surrogate: cp = (0xED&0xF)<<12
+/// | (0xBF&0x3F)<<6 | (0xBF&0x3F) = 0xD000 | 0xFC0 | 0x3F = 0xDFFF, still in 0xD800..0xDFFF. Reject.
+#[test]
+fn decode_one_rejects_surrogate_upper_edge() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xed_bf_bf, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Surrogate(bytes_get(0xed_bf_bf, 0b0000_0000)))",
+    );
+    assert_three_way("decode_one(U+DFFF surrogate edge)=Err", &src, &expected);
+}
+
+/// `decode_one(0xee_80_80, 0)` → `Ok(Pr(0xE000, 3))` — U+E000, the FIRST scalar above the surrogate
+/// gap, is accepted (cp = 0xE000 is NOT < 0xE000... and NOT < 0xD800 so passes the surrogate gate). The
+/// edge just past the surrogate range must NOT be rejected.
+#[test]
+fn decode_one_accepts_first_scalar_after_surrogates() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xee_80_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xee_80_80, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xee_80_80, 0b0000_0001)))), cont_payload(bytes_get(0xee_80_80, 0b0000_0010))), 0b0000_0011))",
+    );
+    assert_three_way(
+        "decode_one(U+E000 first post-surrogate)=Ok",
+        &src,
+        &expected,
+    );
+}
+
+/// `decode_one(0xe0_a0_80, 0)` → `Ok(Pr(0x800, 3))` — U+0800, the SMALLEST canonical 3-byte codepoint,
+/// accepted (cp = 0x800 is NOT < 0x800). Proves the 3-byte overlong gate does not over-reject its min.
+#[test]
+fn decode_one_accepts_min_three_byte_boundary() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xe0_a0_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xe0_a0_80, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xe0_a0_80, 0b0000_0001)))), cont_payload(bytes_get(0xe0_a0_80, 0b0000_0010))), 0b0000_0011))",
+    );
+    assert_three_way("decode_one(U+0800 min 3-byte)=Ok", &src, &expected);
+}
+
+/// `decode_one(0xf0_90_80_80, 0)` → `Ok(Pr(0x10000, 4))` — U+10000, the SMALLEST canonical 4-byte
+/// codepoint, accepted (cp = 0x10000 is NOT < 0x10000). Proves the 4-byte overlong gate does not
+/// over-reject its min.
+#[test]
+fn decode_one_accepts_min_four_byte_boundary() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xf0_90_80_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(or(or(shl18(widen8(and(bytes_get(0xf0_90_80_80, 0b0000_0000), 0b0000_0111))), shl12(cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0001)))), shl6(cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0010)))), cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0011))), 0b0000_0100))",
+    );
+    assert_three_way("decode_one(U+10000 min 4-byte)=Ok", &src, &expected);
 }

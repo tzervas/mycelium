@@ -1,4 +1,88 @@
 pub mod mycelium_mlir
+pub mod mycelium_mlir::accel
+pub enum mycelium_mlir::accel::DegradeReason
+pub mycelium_mlir::accel::DegradeReason::FeatureDisabled
+pub mycelium_mlir::accel::DegradeReason::RuntimeUnavailable
+impl mycelium_mlir::accel::DegradeReason
+pub fn mycelium_mlir::accel::DegradeReason::explain(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::accel::DegradeReason
+pub fn mycelium_mlir::accel::DegradeReason::clone(&self) -> mycelium_mlir::accel::DegradeReason
+impl core::cmp::Eq for mycelium_mlir::accel::DegradeReason
+impl core::cmp::PartialEq for mycelium_mlir::accel::DegradeReason
+pub fn mycelium_mlir::accel::DegradeReason::eq(&self, &mycelium_mlir::accel::DegradeReason) -> bool
+impl core::fmt::Debug for mycelium_mlir::accel::DegradeReason
+pub fn mycelium_mlir::accel::DegradeReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::accel::DegradeReason
+impl core::marker::StructuralPartialEq for mycelium_mlir::accel::DegradeReason
+impl core::marker::Freeze for mycelium_mlir::accel::DegradeReason
+impl core::marker::Send for mycelium_mlir::accel::DegradeReason
+impl core::marker::Sync for mycelium_mlir::accel::DegradeReason
+impl core::marker::Unpin for mycelium_mlir::accel::DegradeReason
+impl core::marker::UnsafeUnpin for mycelium_mlir::accel::DegradeReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::accel::DegradeReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::accel::DegradeReason
+pub enum mycelium_mlir::accel::Path
+pub mycelium_mlir::accel::Path::Accelerated
+pub mycelium_mlir::accel::Path::Accelerated::scheme: mycelium_core::meta::PackScheme
+pub mycelium_mlir::accel::Path::Reference(mycelium_mlir::accel::DegradeReason)
+impl core::clone::Clone for mycelium_mlir::accel::Path
+pub fn mycelium_mlir::accel::Path::clone(&self) -> mycelium_mlir::accel::Path
+impl core::cmp::Eq for mycelium_mlir::accel::Path
+impl core::cmp::PartialEq for mycelium_mlir::accel::Path
+pub fn mycelium_mlir::accel::Path::eq(&self, &mycelium_mlir::accel::Path) -> bool
+impl core::fmt::Debug for mycelium_mlir::accel::Path
+pub fn mycelium_mlir::accel::Path::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::accel::Path
+impl core::marker::Freeze for mycelium_mlir::accel::Path
+impl core::marker::Send for mycelium_mlir::accel::Path
+impl core::marker::Sync for mycelium_mlir::accel::Path
+impl core::marker::Unpin for mycelium_mlir::accel::Path
+impl core::marker::UnsafeUnpin for mycelium_mlir::accel::Path
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::accel::Path
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::accel::Path
+pub struct mycelium_mlir::accel::AccelOutcome
+pub mycelium_mlir::accel::AccelOutcome::path: mycelium_mlir::accel::Path
+pub mycelium_mlir::accel::AccelOutcome::value: i64
+impl mycelium_mlir::accel::AccelOutcome
+pub fn mycelium_mlir::accel::AccelOutcome::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::accel::AccelOutcome::was_accelerated(&self) -> bool
+impl core::clone::Clone for mycelium_mlir::accel::AccelOutcome
+pub fn mycelium_mlir::accel::AccelOutcome::clone(&self) -> mycelium_mlir::accel::AccelOutcome
+impl core::cmp::Eq for mycelium_mlir::accel::AccelOutcome
+impl core::cmp::PartialEq for mycelium_mlir::accel::AccelOutcome
+pub fn mycelium_mlir::accel::AccelOutcome::eq(&self, &mycelium_mlir::accel::AccelOutcome) -> bool
+impl core::fmt::Debug for mycelium_mlir::accel::AccelOutcome
+pub fn mycelium_mlir::accel::AccelOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::accel::AccelOutcome
+impl core::marker::Freeze for mycelium_mlir::accel::AccelOutcome
+impl core::marker::Send for mycelium_mlir::accel::AccelOutcome
+impl core::marker::Sync for mycelium_mlir::accel::AccelOutcome
+impl core::marker::Unpin for mycelium_mlir::accel::AccelOutcome
+impl core::marker::UnsafeUnpin for mycelium_mlir::accel::AccelOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::accel::AccelOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::accel::AccelOutcome
+pub struct mycelium_mlir::accel::BitnetCapability
+impl mycelium_mlir::accel::BitnetCapability
+pub fn mycelium_mlir::accel::BitnetCapability::detect() -> Self
+pub fn mycelium_mlir::accel::BitnetCapability::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::accel::BitnetCapability::is_accelerated(&self) -> bool
+impl core::clone::Clone for mycelium_mlir::accel::BitnetCapability
+pub fn mycelium_mlir::accel::BitnetCapability::clone(&self) -> mycelium_mlir::accel::BitnetCapability
+impl core::cmp::Eq for mycelium_mlir::accel::BitnetCapability
+impl core::cmp::PartialEq for mycelium_mlir::accel::BitnetCapability
+pub fn mycelium_mlir::accel::BitnetCapability::eq(&self, &mycelium_mlir::accel::BitnetCapability) -> bool
+impl core::fmt::Debug for mycelium_mlir::accel::BitnetCapability
+pub fn mycelium_mlir::accel::BitnetCapability::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::accel::BitnetCapability
+impl core::marker::Freeze for mycelium_mlir::accel::BitnetCapability
+impl core::marker::Send for mycelium_mlir::accel::BitnetCapability
+impl core::marker::Sync for mycelium_mlir::accel::BitnetCapability
+impl core::marker::Unpin for mycelium_mlir::accel::BitnetCapability
+impl core::marker::UnsafeUnpin for mycelium_mlir::accel::BitnetCapability
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::accel::BitnetCapability
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::accel::BitnetCapability
+pub const mycelium_mlir::accel::ACCEL_FEATURE_ENABLED: bool
+pub fn mycelium_mlir::accel::accelerated_ternary_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<mycelium_mlir::accel::AccelOutcome, mycelium_mlir::llvm::AotError>
 pub mod mycelium_mlir::aot
 pub fn mycelium_mlir::aot::default_depth_budget() -> mycelium_mlir::budget::DepthResolution
 pub fn mycelium_mlir::aot::run(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
@@ -439,6 +523,55 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::llvm::CompiledArtif
 pub fn mycelium_mlir::llvm::compile(&mycelium_core::node::Node) -> core::result::Result<mycelium_mlir::llvm::CompiledArtifact, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::llvm::compile_and_run(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::llvm::emit_llvm_ir(&mycelium_core::node::Node) -> core::result::Result<alloc::string::String, mycelium_mlir::llvm::AotError>
+pub mod mycelium_mlir::mode
+#[non_exhaustive] pub enum mycelium_mlir::mode::ExecMode
+pub mycelium_mlir::mode::ExecMode::Aot
+pub mycelium_mlir::mode::ExecMode::Interpreter
+pub mycelium_mlir::mode::ExecMode::Jit
+impl mycelium_mlir::mode::ExecMode
+pub const mycelium_mlir::mode::ExecMode::ALL: [mycelium_mlir::mode::ExecMode; 3]
+pub fn mycelium_mlir::mode::ExecMode::is_always_available(self) -> bool
+pub fn mycelium_mlir::mode::ExecMode::name(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::mode::ExecMode
+pub fn mycelium_mlir::mode::ExecMode::clone(&self) -> mycelium_mlir::mode::ExecMode
+impl core::cmp::Eq for mycelium_mlir::mode::ExecMode
+impl core::cmp::PartialEq for mycelium_mlir::mode::ExecMode
+pub fn mycelium_mlir::mode::ExecMode::eq(&self, &mycelium_mlir::mode::ExecMode) -> bool
+impl core::fmt::Debug for mycelium_mlir::mode::ExecMode
+pub fn mycelium_mlir::mode::ExecMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_mlir::mode::ExecMode
+pub fn mycelium_mlir::mode::ExecMode::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_mlir::mode::ExecMode
+impl core::marker::StructuralPartialEq for mycelium_mlir::mode::ExecMode
+impl core::marker::Freeze for mycelium_mlir::mode::ExecMode
+impl core::marker::Send for mycelium_mlir::mode::ExecMode
+impl core::marker::Sync for mycelium_mlir::mode::ExecMode
+impl core::marker::Unpin for mycelium_mlir::mode::ExecMode
+impl core::marker::UnsafeUnpin for mycelium_mlir::mode::ExecMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::mode::ExecMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::mode::ExecMode
+#[non_exhaustive] pub enum mycelium_mlir::mode::ModeError
+pub mycelium_mlir::mode::ModeError::Eval
+pub mycelium_mlir::mode::ModeError::Eval::mode: mycelium_mlir::mode::ExecMode
+pub mycelium_mlir::mode::ModeError::Eval::source: mycelium_interp::EvalError
+pub mycelium_mlir::mode::ModeError::Jit(alloc::string::String)
+pub mycelium_mlir::mode::ModeError::Overflow(alloc::string::String)
+pub mycelium_mlir::mode::ModeError::ToolchainMissing(alloc::string::String)
+pub mycelium_mlir::mode::ModeError::Unsupported(alloc::string::String)
+impl core::error::Error for mycelium_mlir::mode::ModeError
+pub fn mycelium_mlir::mode::ModeError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for mycelium_mlir::mode::ModeError
+pub fn mycelium_mlir::mode::ModeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::mode::ModeError
+pub fn mycelium_mlir::mode::ModeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::mode::ModeError
+impl core::marker::Send for mycelium_mlir::mode::ModeError
+impl core::marker::Sync for mycelium_mlir::mode::ModeError
+impl core::marker::Unpin for mycelium_mlir::mode::ModeError
+impl core::marker::UnsafeUnpin for mycelium_mlir::mode::ModeError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::mode::ModeError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::mode::ModeError
+pub fn mycelium_mlir::mode::run(mycelium_mlir::mode::ExecMode, &mycelium_core::node::Node, mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<dyn mycelium_interp::swap::SwapEngine>) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::mode::ModeError>
 pub mod mycelium_mlir::pack
 pub enum mycelium_mlir::pack::PackError
 pub mycelium_mlir::pack::PackError::BufferTooShort
@@ -468,6 +601,203 @@ pub fn mycelium_mlir::pack::needed_bytes(mycelium_core::meta::PackScheme, usize)
 pub fn mycelium_mlir::pack::pack_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme) -> alloc::vec::Vec<u8>
 pub fn mycelium_mlir::pack::relayout_trits(&[mycelium_core::value::Trit], mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> alloc::vec::Vec<mycelium_core::value::Trit>
 pub fn mycelium_mlir::pack::unpack_trits(&[u8], mycelium_core::meta::PackScheme, usize) -> core::result::Result<alloc::vec::Vec<mycelium_core::value::Trit>, mycelium_mlir::pack::PackError>
+pub mod mycelium_mlir::passes
+pub mod mycelium_mlir::passes::cse
+pub fn mycelium_mlir::passes::cse::cse(&mycelium_mlir::passes::Program) -> (mycelium_mlir::passes::Program, mycelium_mlir::passes::TransformLog)
+pub mod mycelium_mlir::passes::dce
+pub fn mycelium_mlir::passes::dce::dce(&mycelium_mlir::passes::Program) -> (mycelium_mlir::passes::Program, mycelium_mlir::passes::TransformLog)
+pub mod mycelium_mlir::passes::inline
+pub fn mycelium_mlir::passes::inline::inline(&mycelium_mlir::passes::Program) -> (mycelium_mlir::passes::Program, mycelium_mlir::passes::TransformLog)
+pub enum mycelium_mlir::passes::Pass
+pub mycelium_mlir::passes::Pass::Cse
+pub mycelium_mlir::passes::Pass::Dce
+pub mycelium_mlir::passes::Pass::Inline
+impl mycelium_mlir::passes::Pass
+pub fn mycelium_mlir::passes::Pass::name(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::passes::Pass
+pub fn mycelium_mlir::passes::Pass::clone(&self) -> mycelium_mlir::passes::Pass
+impl core::cmp::Eq for mycelium_mlir::passes::Pass
+impl core::cmp::PartialEq for mycelium_mlir::passes::Pass
+pub fn mycelium_mlir::passes::Pass::eq(&self, &mycelium_mlir::passes::Pass) -> bool
+impl core::fmt::Debug for mycelium_mlir::passes::Pass
+pub fn mycelium_mlir::passes::Pass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::passes::Pass
+pub fn mycelium_mlir::passes::Pass::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_mlir::passes::Pass
+pub fn mycelium_mlir::passes::Pass::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_mlir::passes::Pass
+impl core::marker::StructuralPartialEq for mycelium_mlir::passes::Pass
+impl core::marker::Freeze for mycelium_mlir::passes::Pass
+impl core::marker::Send for mycelium_mlir::passes::Pass
+impl core::marker::Sync for mycelium_mlir::passes::Pass
+impl core::marker::Unpin for mycelium_mlir::passes::Pass
+impl core::marker::UnsafeUnpin for mycelium_mlir::passes::Pass
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::passes::Pass
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::passes::Pass
+pub enum mycelium_mlir::passes::PassAlt
+pub mycelium_mlir::passes::PassAlt::Ctor
+pub mycelium_mlir::passes::PassAlt::Ctor::binders: alloc::vec::Vec<mycelium_core::node::VarId>
+pub mycelium_mlir::passes::PassAlt::Ctor::body: mycelium_mlir::passes::Program
+pub mycelium_mlir::passes::PassAlt::Ctor::ctor: mycelium_core::data::CtorRef
+pub mycelium_mlir::passes::PassAlt::Lit
+pub mycelium_mlir::passes::PassAlt::Lit::body: mycelium_mlir::passes::Program
+pub mycelium_mlir::passes::PassAlt::Lit::value: mycelium_core::value::Value
+impl core::clone::Clone for mycelium_mlir::passes::PassAlt
+pub fn mycelium_mlir::passes::PassAlt::clone(&self) -> mycelium_mlir::passes::PassAlt
+impl core::cmp::PartialEq for mycelium_mlir::passes::PassAlt
+pub fn mycelium_mlir::passes::PassAlt::eq(&self, &mycelium_mlir::passes::PassAlt) -> bool
+impl core::fmt::Debug for mycelium_mlir::passes::PassAlt
+pub fn mycelium_mlir::passes::PassAlt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::passes::PassAlt
+impl core::marker::Freeze for mycelium_mlir::passes::PassAlt
+impl core::marker::Send for mycelium_mlir::passes::PassAlt
+impl core::marker::Sync for mycelium_mlir::passes::PassAlt
+impl core::marker::Unpin for mycelium_mlir::passes::PassAlt
+impl core::marker::UnsafeUnpin for mycelium_mlir::passes::PassAlt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::passes::PassAlt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::passes::PassAlt
+pub enum mycelium_mlir::passes::PassRhs
+pub mycelium_mlir::passes::PassRhs::Alias(mycelium_core::lower::Atom)
+pub mycelium_mlir::passes::PassRhs::App
+pub mycelium_mlir::passes::PassRhs::App::arg: mycelium_core::lower::Atom
+pub mycelium_mlir::passes::PassRhs::App::func: mycelium_core::lower::Atom
+pub mycelium_mlir::passes::PassRhs::Const(mycelium_core::value::Value)
+pub mycelium_mlir::passes::PassRhs::Construct
+pub mycelium_mlir::passes::PassRhs::Construct::args: alloc::vec::Vec<mycelium_core::lower::Atom>
+pub mycelium_mlir::passes::PassRhs::Construct::ctor: mycelium_core::data::CtorRef
+pub mycelium_mlir::passes::PassRhs::Fix
+pub mycelium_mlir::passes::PassRhs::Fix::body: mycelium_mlir::passes::Program
+pub mycelium_mlir::passes::PassRhs::Fix::name: mycelium_core::node::VarId
+pub mycelium_mlir::passes::PassRhs::FixGroup
+pub mycelium_mlir::passes::PassRhs::FixGroup::defs: alloc::vec::Vec<(mycelium_core::node::VarId, mycelium_mlir::passes::Program)>
+pub mycelium_mlir::passes::PassRhs::FixGroup::which: mycelium_core::node::VarId
+pub mycelium_mlir::passes::PassRhs::Lam
+pub mycelium_mlir::passes::PassRhs::Lam::body: mycelium_mlir::passes::Program
+pub mycelium_mlir::passes::PassRhs::Lam::param: mycelium_core::node::VarId
+pub mycelium_mlir::passes::PassRhs::Match
+pub mycelium_mlir::passes::PassRhs::Match::alts: alloc::vec::Vec<mycelium_mlir::passes::PassAlt>
+pub mycelium_mlir::passes::PassRhs::Match::default: core::option::Option<mycelium_mlir::passes::Program>
+pub mycelium_mlir::passes::PassRhs::Match::scrutinee: mycelium_core::lower::Atom
+pub mycelium_mlir::passes::PassRhs::Op
+pub mycelium_mlir::passes::PassRhs::Op::args: alloc::vec::Vec<mycelium_core::lower::Atom>
+pub mycelium_mlir::passes::PassRhs::Op::prim: alloc::string::String
+pub mycelium_mlir::passes::PassRhs::Swap
+pub mycelium_mlir::passes::PassRhs::Swap::policy: mycelium_core::id::ContentHash
+pub mycelium_mlir::passes::PassRhs::Swap::src: mycelium_core::lower::Atom
+pub mycelium_mlir::passes::PassRhs::Swap::target: mycelium_core::repr::Repr
+impl core::clone::Clone for mycelium_mlir::passes::PassRhs
+pub fn mycelium_mlir::passes::PassRhs::clone(&self) -> mycelium_mlir::passes::PassRhs
+impl core::cmp::PartialEq for mycelium_mlir::passes::PassRhs
+pub fn mycelium_mlir::passes::PassRhs::eq(&self, &mycelium_mlir::passes::PassRhs) -> bool
+impl core::fmt::Debug for mycelium_mlir::passes::PassRhs
+pub fn mycelium_mlir::passes::PassRhs::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::passes::PassRhs
+impl core::marker::Freeze for mycelium_mlir::passes::PassRhs
+impl core::marker::Send for mycelium_mlir::passes::PassRhs
+impl core::marker::Sync for mycelium_mlir::passes::PassRhs
+impl core::marker::Unpin for mycelium_mlir::passes::PassRhs
+impl core::marker::UnsafeUnpin for mycelium_mlir::passes::PassRhs
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::passes::PassRhs
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::passes::PassRhs
+pub struct mycelium_mlir::passes::PassBinding
+pub mycelium_mlir::passes::PassBinding::layout: core::option::Option<mycelium_core::meta::PhysicalLayout>
+pub mycelium_mlir::passes::PassBinding::name: mycelium_core::lower::Atom
+pub mycelium_mlir::passes::PassBinding::rhs: mycelium_mlir::passes::PassRhs
+impl core::clone::Clone for mycelium_mlir::passes::PassBinding
+pub fn mycelium_mlir::passes::PassBinding::clone(&self) -> mycelium_mlir::passes::PassBinding
+impl core::cmp::PartialEq for mycelium_mlir::passes::PassBinding
+pub fn mycelium_mlir::passes::PassBinding::eq(&self, &mycelium_mlir::passes::PassBinding) -> bool
+impl core::fmt::Debug for mycelium_mlir::passes::PassBinding
+pub fn mycelium_mlir::passes::PassBinding::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::passes::PassBinding
+impl core::marker::Freeze for mycelium_mlir::passes::PassBinding
+impl core::marker::Send for mycelium_mlir::passes::PassBinding
+impl core::marker::Sync for mycelium_mlir::passes::PassBinding
+impl core::marker::Unpin for mycelium_mlir::passes::PassBinding
+impl core::marker::UnsafeUnpin for mycelium_mlir::passes::PassBinding
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::passes::PassBinding
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::passes::PassBinding
+pub struct mycelium_mlir::passes::Program
+pub mycelium_mlir::passes::Program::bindings: alloc::vec::Vec<mycelium_mlir::passes::PassBinding>
+pub mycelium_mlir::passes::Program::result: mycelium_core::lower::Atom
+impl mycelium_mlir::passes::Program
+pub fn mycelium_mlir::passes::Program::from_anf(&mycelium_core::lower::Anf) -> Self
+pub fn mycelium_mlir::passes::Program::is_empty(&self) -> bool
+pub fn mycelium_mlir::passes::Program::len(&self) -> usize
+pub fn mycelium_mlir::passes::Program::lower(&mycelium_core::node::Node) -> Self
+pub fn mycelium_mlir::passes::Program::to_node(&self) -> mycelium_core::node::Node
+impl core::clone::Clone for mycelium_mlir::passes::Program
+pub fn mycelium_mlir::passes::Program::clone(&self) -> mycelium_mlir::passes::Program
+impl core::cmp::PartialEq for mycelium_mlir::passes::Program
+pub fn mycelium_mlir::passes::Program::eq(&self, &mycelium_mlir::passes::Program) -> bool
+impl core::fmt::Debug for mycelium_mlir::passes::Program
+pub fn mycelium_mlir::passes::Program::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::passes::Program
+impl core::marker::Freeze for mycelium_mlir::passes::Program
+impl core::marker::Send for mycelium_mlir::passes::Program
+impl core::marker::Sync for mycelium_mlir::passes::Program
+impl core::marker::Unpin for mycelium_mlir::passes::Program
+impl core::marker::UnsafeUnpin for mycelium_mlir::passes::Program
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::passes::Program
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::passes::Program
+pub struct mycelium_mlir::passes::TransformLog
+impl mycelium_mlir::passes::TransformLog
+pub fn mycelium_mlir::passes::TransformLog::by_pass(&self, mycelium_mlir::passes::Pass) -> alloc::vec::Vec<&mycelium_mlir::passes::TransformRecord>
+pub fn mycelium_mlir::passes::TransformLog::by_site(&self, &str) -> alloc::vec::Vec<&mycelium_mlir::passes::TransformRecord>
+pub fn mycelium_mlir::passes::TransformLog::entries(&self) -> &[mycelium_mlir::passes::TransformRecord]
+pub fn mycelium_mlir::passes::TransformLog::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::passes::TransformLog::extend(&mut self, mycelium_mlir::passes::TransformLog)
+pub fn mycelium_mlir::passes::TransformLog::fired(&self, mycelium_mlir::passes::Pass) -> bool
+pub fn mycelium_mlir::passes::TransformLog::is_empty(&self) -> bool
+pub fn mycelium_mlir::passes::TransformLog::len(&self) -> usize
+pub fn mycelium_mlir::passes::TransformLog::new() -> Self
+pub fn mycelium_mlir::passes::TransformLog::record(&mut self, mycelium_mlir::passes::TransformRecord)
+impl core::clone::Clone for mycelium_mlir::passes::TransformLog
+pub fn mycelium_mlir::passes::TransformLog::clone(&self) -> mycelium_mlir::passes::TransformLog
+impl core::cmp::Eq for mycelium_mlir::passes::TransformLog
+impl core::cmp::PartialEq for mycelium_mlir::passes::TransformLog
+pub fn mycelium_mlir::passes::TransformLog::eq(&self, &mycelium_mlir::passes::TransformLog) -> bool
+impl core::default::Default for mycelium_mlir::passes::TransformLog
+pub fn mycelium_mlir::passes::TransformLog::default() -> mycelium_mlir::passes::TransformLog
+impl core::fmt::Debug for mycelium_mlir::passes::TransformLog
+pub fn mycelium_mlir::passes::TransformLog::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::passes::TransformLog
+impl core::marker::Freeze for mycelium_mlir::passes::TransformLog
+impl core::marker::Send for mycelium_mlir::passes::TransformLog
+impl core::marker::Sync for mycelium_mlir::passes::TransformLog
+impl core::marker::Unpin for mycelium_mlir::passes::TransformLog
+impl core::marker::UnsafeUnpin for mycelium_mlir::passes::TransformLog
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::passes::TransformLog
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::passes::TransformLog
+pub struct mycelium_mlir::passes::TransformRecord
+pub mycelium_mlir::passes::TransformRecord::after: alloc::string::String
+pub mycelium_mlir::passes::TransformRecord::before: alloc::string::String
+pub mycelium_mlir::passes::TransformRecord::pass: mycelium_mlir::passes::Pass
+pub mycelium_mlir::passes::TransformRecord::reason: alloc::string::String
+pub mycelium_mlir::passes::TransformRecord::rule: &'static str
+pub mycelium_mlir::passes::TransformRecord::site: alloc::string::String
+impl core::clone::Clone for mycelium_mlir::passes::TransformRecord
+pub fn mycelium_mlir::passes::TransformRecord::clone(&self) -> mycelium_mlir::passes::TransformRecord
+impl core::cmp::Eq for mycelium_mlir::passes::TransformRecord
+impl core::cmp::PartialEq for mycelium_mlir::passes::TransformRecord
+pub fn mycelium_mlir::passes::TransformRecord::eq(&self, &mycelium_mlir::passes::TransformRecord) -> bool
+impl core::fmt::Debug for mycelium_mlir::passes::TransformRecord
+pub fn mycelium_mlir::passes::TransformRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::passes::TransformRecord
+pub fn mycelium_mlir::passes::TransformRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::passes::TransformRecord
+impl core::marker::Freeze for mycelium_mlir::passes::TransformRecord
+impl core::marker::Send for mycelium_mlir::passes::TransformRecord
+impl core::marker::Sync for mycelium_mlir::passes::TransformRecord
+impl core::marker::Unpin for mycelium_mlir::passes::TransformRecord
+impl core::marker::UnsafeUnpin for mycelium_mlir::passes::TransformRecord
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::passes::TransformRecord
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::passes::TransformRecord
+pub fn mycelium_mlir::passes::cse(&mycelium_mlir::passes::Program) -> (mycelium_mlir::passes::Program, mycelium_mlir::passes::TransformLog)
+pub fn mycelium_mlir::passes::dce(&mycelium_mlir::passes::Program) -> (mycelium_mlir::passes::Program, mycelium_mlir::passes::TransformLog)
+pub fn mycelium_mlir::passes::inline(&mycelium_mlir::passes::Program) -> (mycelium_mlir::passes::Program, mycelium_mlir::passes::TransformLog)
+pub fn mycelium_mlir::passes::optimize(&mycelium_core::node::Node) -> (mycelium_mlir::passes::Program, mycelium_mlir::passes::TransformLog)
+pub fn mycelium_mlir::passes::run_pipeline(&mycelium_mlir::passes::Program) -> (mycelium_mlir::passes::Program, mycelium_mlir::passes::TransformLog)
 pub mod mycelium_mlir::rc_plan
 pub enum mycelium_mlir::rc_plan::RcPlanError
 pub mycelium_mlir::rc_plan::RcPlanError::Emit(mycelium_mir_passes::emit::EmitError)
@@ -741,6 +1071,25 @@ impl core::marker::UnsafeUnpin for mycelium_mlir::vr4::CrossBackendGate
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::vr4::CrossBackendGate
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::vr4::CrossBackendGate
 pub fn mycelium_mlir::vr4::cross_backend_gate(&mycelium_core::node::Node) -> mycelium_mlir::vr4::CrossBackendGate
+pub enum mycelium_mlir::AccelPath
+pub mycelium_mlir::AccelPath::Accelerated
+pub mycelium_mlir::AccelPath::Accelerated::scheme: mycelium_core::meta::PackScheme
+pub mycelium_mlir::AccelPath::Reference(mycelium_mlir::accel::DegradeReason)
+impl core::clone::Clone for mycelium_mlir::accel::Path
+pub fn mycelium_mlir::accel::Path::clone(&self) -> mycelium_mlir::accel::Path
+impl core::cmp::Eq for mycelium_mlir::accel::Path
+impl core::cmp::PartialEq for mycelium_mlir::accel::Path
+pub fn mycelium_mlir::accel::Path::eq(&self, &mycelium_mlir::accel::Path) -> bool
+impl core::fmt::Debug for mycelium_mlir::accel::Path
+pub fn mycelium_mlir::accel::Path::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::accel::Path
+impl core::marker::Freeze for mycelium_mlir::accel::Path
+impl core::marker::Send for mycelium_mlir::accel::Path
+impl core::marker::Sync for mycelium_mlir::accel::Path
+impl core::marker::Unpin for mycelium_mlir::accel::Path
+impl core::marker::UnsafeUnpin for mycelium_mlir::accel::Path
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::accel::Path
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::accel::Path
 pub enum mycelium_mlir::AotError
 pub mycelium_mlir::AotError::Compile(alloc::string::String)
 pub mycelium_mlir::AotError::DepthLimit(alloc::string::String)
@@ -831,6 +1180,27 @@ impl core::marker::Unpin for mycelium_mlir::runtime::ColonyError
 impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::ColonyError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::ColonyError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::ColonyError
+pub enum mycelium_mlir::DegradeReason
+pub mycelium_mlir::DegradeReason::FeatureDisabled
+pub mycelium_mlir::DegradeReason::RuntimeUnavailable
+impl mycelium_mlir::accel::DegradeReason
+pub fn mycelium_mlir::accel::DegradeReason::explain(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::accel::DegradeReason
+pub fn mycelium_mlir::accel::DegradeReason::clone(&self) -> mycelium_mlir::accel::DegradeReason
+impl core::cmp::Eq for mycelium_mlir::accel::DegradeReason
+impl core::cmp::PartialEq for mycelium_mlir::accel::DegradeReason
+pub fn mycelium_mlir::accel::DegradeReason::eq(&self, &mycelium_mlir::accel::DegradeReason) -> bool
+impl core::fmt::Debug for mycelium_mlir::accel::DegradeReason
+pub fn mycelium_mlir::accel::DegradeReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::accel::DegradeReason
+impl core::marker::StructuralPartialEq for mycelium_mlir::accel::DegradeReason
+impl core::marker::Freeze for mycelium_mlir::accel::DegradeReason
+impl core::marker::Send for mycelium_mlir::accel::DegradeReason
+impl core::marker::Sync for mycelium_mlir::accel::DegradeReason
+impl core::marker::Unpin for mycelium_mlir::accel::DegradeReason
+impl core::marker::UnsafeUnpin for mycelium_mlir::accel::DegradeReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::accel::DegradeReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::accel::DegradeReason
 pub enum mycelium_mlir::DeployError
 pub mycelium_mlir::DeployError::NotDeployable(alloc::string::String)
 pub mycelium_mlir::DeployError::ToolchainMissing(alloc::string::String)
@@ -875,6 +1245,32 @@ impl core::marker::Unpin for mycelium_mlir::budget::DepthBasis
 impl core::marker::UnsafeUnpin for mycelium_mlir::budget::DepthBasis
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::DepthBasis
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::DepthBasis
+#[non_exhaustive] pub enum mycelium_mlir::ExecMode
+pub mycelium_mlir::ExecMode::Aot
+pub mycelium_mlir::ExecMode::Interpreter
+pub mycelium_mlir::ExecMode::Jit
+impl mycelium_mlir::mode::ExecMode
+pub const mycelium_mlir::mode::ExecMode::ALL: [mycelium_mlir::mode::ExecMode; 3]
+pub fn mycelium_mlir::mode::ExecMode::is_always_available(self) -> bool
+pub fn mycelium_mlir::mode::ExecMode::name(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::mode::ExecMode
+pub fn mycelium_mlir::mode::ExecMode::clone(&self) -> mycelium_mlir::mode::ExecMode
+impl core::cmp::Eq for mycelium_mlir::mode::ExecMode
+impl core::cmp::PartialEq for mycelium_mlir::mode::ExecMode
+pub fn mycelium_mlir::mode::ExecMode::eq(&self, &mycelium_mlir::mode::ExecMode) -> bool
+impl core::fmt::Debug for mycelium_mlir::mode::ExecMode
+pub fn mycelium_mlir::mode::ExecMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_mlir::mode::ExecMode
+pub fn mycelium_mlir::mode::ExecMode::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::Copy for mycelium_mlir::mode::ExecMode
+impl core::marker::StructuralPartialEq for mycelium_mlir::mode::ExecMode
+impl core::marker::Freeze for mycelium_mlir::mode::ExecMode
+impl core::marker::Send for mycelium_mlir::mode::ExecMode
+impl core::marker::Sync for mycelium_mlir::mode::ExecMode
+impl core::marker::Unpin for mycelium_mlir::mode::ExecMode
+impl core::marker::UnsafeUnpin for mycelium_mlir::mode::ExecMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::mode::ExecMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::mode::ExecMode
 pub enum mycelium_mlir::InjectError
 pub mycelium_mlir::InjectError::Compile(mycelium_mlir::llvm::AotError)
 pub mycelium_mlir::InjectError::DispatchMiss(mycelium_core::id::ContentHash)
@@ -915,6 +1311,27 @@ impl core::marker::Unpin for mycelium_mlir::budget::MemSource
 impl core::marker::UnsafeUnpin for mycelium_mlir::budget::MemSource
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::MemSource
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::MemSource
+#[non_exhaustive] pub enum mycelium_mlir::ModeError
+pub mycelium_mlir::ModeError::Eval
+pub mycelium_mlir::ModeError::Eval::mode: mycelium_mlir::mode::ExecMode
+pub mycelium_mlir::ModeError::Eval::source: mycelium_interp::EvalError
+pub mycelium_mlir::ModeError::Jit(alloc::string::String)
+pub mycelium_mlir::ModeError::Overflow(alloc::string::String)
+pub mycelium_mlir::ModeError::ToolchainMissing(alloc::string::String)
+pub mycelium_mlir::ModeError::Unsupported(alloc::string::String)
+impl core::error::Error for mycelium_mlir::mode::ModeError
+pub fn mycelium_mlir::mode::ModeError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
+impl core::fmt::Debug for mycelium_mlir::mode::ModeError
+pub fn mycelium_mlir::mode::ModeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::mode::ModeError
+pub fn mycelium_mlir::mode::ModeError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::mode::ModeError
+impl core::marker::Send for mycelium_mlir::mode::ModeError
+impl core::marker::Sync for mycelium_mlir::mode::ModeError
+impl core::marker::Unpin for mycelium_mlir::mode::ModeError
+impl core::marker::UnsafeUnpin for mycelium_mlir::mode::ModeError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::mode::ModeError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::mode::ModeError
 pub enum mycelium_mlir::Poll<T, E>
 pub mycelium_mlir::Poll::Pending
 pub mycelium_mlir::Poll::Ready(mycelium_interp::supervise::TaskOutcome<T, E>)
@@ -1063,6 +1480,27 @@ impl<V> core::marker::Unpin for mycelium_mlir::channel::TrySend<V> where V: core
 impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::TrySend<V> where V: core::marker::UnsafeUnpin
 impl<V> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::TrySend<V> where V: core::panic::unwind_safe::RefUnwindSafe
 impl<V> core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::TrySend<V> where V: core::panic::unwind_safe::UnwindSafe
+pub struct mycelium_mlir::AccelOutcome
+pub mycelium_mlir::AccelOutcome::path: mycelium_mlir::accel::Path
+pub mycelium_mlir::AccelOutcome::value: i64
+impl mycelium_mlir::accel::AccelOutcome
+pub fn mycelium_mlir::accel::AccelOutcome::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::accel::AccelOutcome::was_accelerated(&self) -> bool
+impl core::clone::Clone for mycelium_mlir::accel::AccelOutcome
+pub fn mycelium_mlir::accel::AccelOutcome::clone(&self) -> mycelium_mlir::accel::AccelOutcome
+impl core::cmp::Eq for mycelium_mlir::accel::AccelOutcome
+impl core::cmp::PartialEq for mycelium_mlir::accel::AccelOutcome
+pub fn mycelium_mlir::accel::AccelOutcome::eq(&self, &mycelium_mlir::accel::AccelOutcome) -> bool
+impl core::fmt::Debug for mycelium_mlir::accel::AccelOutcome
+pub fn mycelium_mlir::accel::AccelOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::accel::AccelOutcome
+impl core::marker::Freeze for mycelium_mlir::accel::AccelOutcome
+impl core::marker::Send for mycelium_mlir::accel::AccelOutcome
+impl core::marker::Sync for mycelium_mlir::accel::AccelOutcome
+impl core::marker::Unpin for mycelium_mlir::accel::AccelOutcome
+impl core::marker::UnsafeUnpin for mycelium_mlir::accel::AccelOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::accel::AccelOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::accel::AccelOutcome
 pub struct mycelium_mlir::AutoDepthBudget
 pub mycelium_mlir::AutoDepthBudget::ceil: usize
 pub mycelium_mlir::AutoDepthBudget::fallback: usize
@@ -1105,6 +1543,26 @@ impl core::marker::Unpin for mycelium_mlir::vr4::BackendStage
 impl core::marker::UnsafeUnpin for mycelium_mlir::vr4::BackendStage
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::vr4::BackendStage
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::vr4::BackendStage
+pub struct mycelium_mlir::BitnetCapability
+impl mycelium_mlir::accel::BitnetCapability
+pub fn mycelium_mlir::accel::BitnetCapability::detect() -> Self
+pub fn mycelium_mlir::accel::BitnetCapability::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::accel::BitnetCapability::is_accelerated(&self) -> bool
+impl core::clone::Clone for mycelium_mlir::accel::BitnetCapability
+pub fn mycelium_mlir::accel::BitnetCapability::clone(&self) -> mycelium_mlir::accel::BitnetCapability
+impl core::cmp::Eq for mycelium_mlir::accel::BitnetCapability
+impl core::cmp::PartialEq for mycelium_mlir::accel::BitnetCapability
+pub fn mycelium_mlir::accel::BitnetCapability::eq(&self, &mycelium_mlir::accel::BitnetCapability) -> bool
+impl core::fmt::Debug for mycelium_mlir::accel::BitnetCapability
+pub fn mycelium_mlir::accel::BitnetCapability::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::accel::BitnetCapability
+impl core::marker::Freeze for mycelium_mlir::accel::BitnetCapability
+impl core::marker::Send for mycelium_mlir::accel::BitnetCapability
+impl core::marker::Sync for mycelium_mlir::accel::BitnetCapability
+impl core::marker::Unpin for mycelium_mlir::accel::BitnetCapability
+impl core::marker::UnsafeUnpin for mycelium_mlir::accel::BitnetCapability
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::accel::BitnetCapability
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::accel::BitnetCapability
 pub struct mycelium_mlir::BitnetDotKernel
 impl mycelium_mlir::bitnet::BitnetDotKernel
 pub fn mycelium_mlir::bitnet::BitnetDotKernel::bind(&self) -> core::result::Result<mycelium_mlir::bitnet::BoundBitnetDot<'_>, mycelium_mlir::llvm::AotError>
@@ -1372,6 +1830,7 @@ impl<'a> core::marker::Unpin for mycelium_mlir::runtime::TaskCtx<'a>
 impl<'a> core::marker::UnsafeUnpin for mycelium_mlir::runtime::TaskCtx<'a>
 impl<'a> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::TaskCtx<'a>
 impl<'a> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::TaskCtx<'a>
+pub const mycelium_mlir::ACCEL_FEATURE_ENABLED: bool
 pub const mycelium_mlir::STATIC_FALLBACK_DEPTH: usize
 pub trait mycelium_mlir::DepthBudget
 pub fn mycelium_mlir::DepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
@@ -1383,6 +1842,7 @@ pub trait mycelium_mlir::Task
 pub type mycelium_mlir::Task::Error
 pub type mycelium_mlir::Task::Output
 pub fn mycelium_mlir::Task::poll(&mut self, &mut mycelium_mlir::runtime::TaskCtx<'_>) -> mycelium_mlir::runtime::Poll<Self::Output, Self::Error>
+pub fn mycelium_mlir::accelerated_ternary_dot(&[mycelium_core::value::Trit], &[i32]) -> core::result::Result<mycelium_mlir::accel::AccelOutcome, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::compile(&mycelium_core::node::Node) -> core::result::Result<mycelium_mlir::llvm::CompiledArtifact, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::compile_and_run(&mycelium_core::node::Node) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::compile_bitnet_dot() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
@@ -1416,6 +1876,7 @@ pub fn mycelium_mlir::run_colony(&[mycelium_core::node::Node], &mycelium_interp:
 pub fn mycelium_mlir::run_core(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_core_with_effects(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize, &mut mycelium_interp::budget::Budgets) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_core_with_fuel(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
+pub fn mycelium_mlir::run_mode(mycelium_mlir::mode::ExecMode, &mycelium_core::node::Node, mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<dyn mycelium_interp::swap::SwapEngine>) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::mode::ModeError>
 pub fn mycelium_mlir::run_with_layout(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_with_reclamation(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink) -> core::result::Result<mycelium_mlir::rc_plan::RcRun, mycelium_interp::EvalError>
 pub fn mycelium_mlir::ternary_dot_ref(&[mycelium_core::value::Trit], &[i32]) -> i64

@@ -10,6 +10,15 @@ The set is *fixed*: append new tasks rather than editing existing ones once a ba
 been recorded, or the SC-5b number stops being comparable (append-only, the changelog rule
 applied to a benchmark).
 
+Forced migration (2026-06-27, rsm Session-2): kc2-09/kc2-10 originally declared a user type named
+`Bytes`, which a later wave (M-750 / RFC-0032 D4) made a **reserved keyword** (the first-class
+byte-string repr-type) — so the frozen references no longer parsed. The type identifier was renamed
+`Bytes` → `ByteList` in both the prompt and the reference. This is a semantics-preserving keyword-
+collision migration, NOT a redesign: the acceptance criteria (`expect_main`/`expect_baseline`), the
+fold/recursion semantics, and the task difficulty are unchanged, so SC-5b stays materially comparable.
+The exception is recorded here rather than silently (the append-only rule's intent — never a hidden
+edit). Future reserved-word collisions should be handled the same way.
+
 Iteration pair (RFC-0007 §4.8): kc2-09 (the adopted `for` spelling, r3) and kc2-10 (the same
 semantics by explicit recursion) measure spelling sensitivity. The spelling decision is made
 (maintainer, 2026-06-10) — these tasks inform any future revisiting, they do not gate it; a
@@ -190,7 +199,7 @@ TASKS: tuple[Task, ...] = (
     Task(
         id="kc2-09-iterate-for",
         prompt=(
-            "Declare a list-shaped type `Bytes` (constructors: `End`, and `More` carrying one "
+            "Declare a list-shaped type `ByteList` (constructors: `End`, and `More` carrying one "
             "8-bit binary word and the rest of the list). Define a nullary function `main` that "
             "folds xor over the two-element list [1111_0000, 0000_1111] starting from "
             "0000_0000, using the language's bounded iteration form."
@@ -199,7 +208,7 @@ TASKS: tuple[Task, ...] = (
         expect_baseline=("bin", 8),
         reference_mycelium=(
             "nodule bench\n"
-            "type Bytes = End | More(Binary{8}, Bytes)\n"
+            "type ByteList = End | More(Binary{8}, ByteList)\n"
             "fn main() -> Binary{8} =\n"
             "    let bs = More(0b1111_0000, More(0b0000_1111, End)) in\n"
             "    for b in bs, acc = 0b0000_0000 => xor(acc, b)\n"
@@ -215,7 +224,7 @@ TASKS: tuple[Task, ...] = (
     Task(
         id="kc2-10-iterate-recursion",
         prompt=(
-            "Declare a list-shaped type `Bytes` (constructors: `End`, and `More` carrying one "
+            "Declare a list-shaped type `ByteList` (constructors: `End`, and `More` carrying one "
             "8-bit binary word and the rest of the list). Define a recursive function `checksum` "
             "that xors all elements together (empty list gives 0000_0000), by case analysis and "
             "recursion only, and a nullary `main` applying it to the two-element list "
@@ -225,8 +234,8 @@ TASKS: tuple[Task, ...] = (
         expect_baseline=("bin", 8),
         reference_mycelium=(
             "nodule bench\n"
-            "type Bytes = End | More(Binary{8}, Bytes)\n"
-            "fn checksum(bs: Bytes) -> Binary{8} =\n"
+            "type ByteList = End | More(Binary{8}, ByteList)\n"
+            "fn checksum(bs: ByteList) -> Binary{8} =\n"
             "    match bs { End => 0b0000_0000, More(b, rest) => xor(b, checksum(rest)) }\n"
             "fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))\n"
         ),

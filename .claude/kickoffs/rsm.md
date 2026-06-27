@@ -9,6 +9,20 @@
 
 ## ▶ Session-2 continuation (updated 2026-06-27 — READ THIS FIRST on resume)
 
+> **Session-2 STATUS (2026-06-27, on `claude/rsm-kickoff-dd5ssk`, pending PR→`main`):** W1 dev wave is
+> **DONE** and W2 docs-currency is in progress; **do not redo W1.**
+> - **M-718 DONE** — width-generic `std.cmp` (`cmp/le/ge/max/min` over `Binary{N}`), **new `std.math`**
+>   (width-generic binary add/sub + bitwise, ternary add/sub/mul/neg; never-silent overflow; **no**
+>   div/binary-mul/epsilon-delta — FLAGged), `std.collections` `map_get<N,V>`/`set_contains<N>`
+>   width-generic over the key. **L1 fix:** `checkty.rs` `unify` width-var→width-var pass-through →
+>   recursive/delegated width-generics check (`mono` resolves the concrete width).
+> - **M-717 DONE** — UTF-8 validity layer (overlong/surrogate/>U+10FFFF) closed; `Utf8Error` extended.
+> - **M-719 PARTIAL** — `std_generic_conformance.rs` gate (three-way ≥2 widths + refusals) DONE; the
+>   broader crate-retirement + API-freeze closure **remains open** (not claimed).
+> - **M-715 RE-FLAGGED** — recursive-HOF / RFC-0024 defunctionalization gap still **deferred** (NOT
+>   re-attempted); it is DISTINCT from the M-718 width-var pass-through.
+> - Full `mycelium-l1` suite green (591). **Remaining:** finish W2 (docs-index regen, this index) → land.
+
 Session-1 landed a consolidated increment to `main` (and synced down the tiers) — **do not redo it.**
 
 **DONE in Session-1 (on `main`):**
