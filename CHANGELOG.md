@@ -21,8 +21,6 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `[type]`-vs-`{const}` kind encoding; avoids the Rust `Name{block}` footgun). DN-31 stays **Draft**; the binding
   RFC/grammar-supersession epic is the enacting act. No code.
 
-
-
 - **DN-51 — accuracy-first `Binary{N}` width arithmetic (maintainer-ratified in-session).** Resolves the
   "what happens on mixed widths?" question DN-42 left as a conservative *refusal*: cross-width binary
   operands now **auto-widen to the wider** (DN-41 zero-extension, `Exact`/lossless — accuracy-first),
