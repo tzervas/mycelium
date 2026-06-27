@@ -13,6 +13,10 @@ fn env(src: &str) -> Env {
 fn ty_fn_display_parenthesizes_a_function_typed_lhs() {
     let var = |n: &str| Ty::Var(n.to_owned());
     let simple = Ty::Fn(Box::new(var("A")), Box::new(var("B")));
+    // NOTE: this asserts the type-checker's `Ty::Fn` *Display*, which still renders the
+    // function-type arrow as `->` (the `Ty::Display` impl in checkty.rs is owned by the
+    // parser/lexer epic, not migrated here; RFC-0037 D4 changed the *surface* arrow to `=>`,
+    // not this internal pretty-printer). Kept at `->` to match the current source behavior.
     assert_eq!(format!("{simple}"), "A -> B");
     let higher_order = Ty::Fn(
         Box::new(Ty::Fn(Box::new(var("A")), Box::new(var("B")))),
@@ -47,8 +51,8 @@ fn impl_fixture() -> (
     // Parse a phylum-of-one so the surface `impl` + `trait` are real AST (then strip the trait so
     // it is NOT in this nodule — the orphan scenario is "trait declared elsewhere / nowhere").
     let n = parse(
-        "nodule d\ntrait Tr<A> { fn m(x: A) -> A }\n\
-         impl Tr<Binary{8}> for Binary{8} { fn m(x: Binary{8}) -> Binary{8} = x }",
+        "nodule d\ntrait Tr[A] { fn m(x: A) => A }\n\
+         impl Tr[Binary{8}] for Binary{8} { fn m(x: Binary{8}) => Binary{8} = x }",
     )
     .expect("parses");
     let mut types = BTreeMap::new();
@@ -78,8 +82,8 @@ fn orphan_arm_rejects_when_neither_head_is_in_the_coherence_view() {
     // arm is unconditional, so the genuine orphan case is a `for`-type that is a non-local DATA
     // type. Build that: `for Foreign` where `Foreign` is a registered data type NOT in coherence.
     let n = parse(
-        "nodule d\ntrait Tr<A> { fn m(x: A) -> A }\ntype Foreign = Mk(Binary{8})\n\
-         impl Tr<Foreign> for Foreign { fn m(x: Foreign) -> Foreign = x }",
+        "nodule d\ntrait Tr[A] { fn m(x: A) => A }\ntype Foreign = Mk(Binary{8})\n\
+         impl Tr[Foreign] for Foreign { fn m(x: Foreign) => Foreign = x }",
     )
     .expect("parses");
     let mut types = BTreeMap::new();
@@ -131,8 +135,8 @@ fn a_colony_types_as_its_last_hypha() {
     // The colony's result type is the LAST hypha's (the RT2 sequentialization's observable). Here
     // the body must match the fn's `Binary{8}` return — the leading hyphae may be any type.
     let e = env(
-        "nodule d\nfn compute(x: Binary{8}) -> Binary{8} = not(x)\n\
-         fn run() -> Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) }",
+        "nodule d\nfn compute(x: Binary{8}) => Binary{8} = not(x)\n\
+         fn run() => Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) }",
     );
     assert!(e.fn_decl("run").is_some());
 }
@@ -142,7 +146,7 @@ fn a_colony_whose_last_hypha_mistypes_is_an_explicit_error() {
     // The last hypha carries the colony's type, so a `Ternary` last hypha under a `Binary{8}`
     // return is a never-silent body mismatch (the bidirectional check catches it).
     let err = check_err(
-        "nodule d\nfn run() -> Binary{8} = colony { hypha not(0b0000_0001), hypha <00+0> }",
+        "nodule d\nfn run() => Binary{8} = colony { hypha not(0b0000_0001), hypha 0t00+0 }",
     );
     assert!(
         err.message.contains("body") || err.message.contains("expected"),
@@ -156,7 +160,7 @@ fn a_leading_hypha_that_does_not_type_check_is_still_an_error() {
     // RT4/I1: a leading hypha's refusal is never silently dropped — an ill-typed leading hypha
     // (an unknown name) fails the whole colony check.
     let err = check_err(
-        "nodule d\nfn run() -> Binary{8} = colony { hypha nope(0b0), hypha not(0b0000_0001) }",
+        "nodule d\nfn run() => Binary{8} = colony { hypha nope(0b0), hypha not(0b0000_0001) }",
     );
     assert!(
         err.message.contains("nope") || err.message.contains("unknown"),
@@ -178,8 +182,8 @@ fn check_error_at_is_a_public_alias() {
 fn env_getters_mirror_the_public_maps() {
     // A program with a data type and two functions, one recursive (so totality is filled).
     let e = env("nodule d\ntype Nat = Z | S(Nat)\n\
-         fn count(n: Nat) -> Nat = match n { Z => Z, S(m) => S(count(m)) }\n\
-         fn main() -> Nat = count(S(Z))");
+         fn count(n: Nat) => Nat = match n { Z => Z, S(m) => S(count(m)) }\n\
+         fn main() => Nat = count(S(Z))");
     // type_info ⇔ types.get
     assert_eq!(e.type_info("Nat"), e.types.get("Nat"));
     assert!(e.type_info("Nat").is_some());

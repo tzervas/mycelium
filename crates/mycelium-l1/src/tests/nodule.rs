@@ -42,7 +42,7 @@ fn an_ordinary_first_comment_is_not_a_marker() {
 #[test]
 fn code_first_means_no_marker() {
     assert_eq!(
-        parse_nodule_header("nodule d\nfn f() -> Binary{8} = 0b0").unwrap(),
+        parse_nodule_header("nodule d\nfn f() => Binary{8} = 0b0").unwrap(),
         None
     );
 }

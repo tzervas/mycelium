@@ -11,9 +11,9 @@ fn env(src: &str) -> Env {
     check_nodule(&parse(src).expect("parses")).expect("checks")
 }
 
-const LIST: &str = "nodule d\ntype List<A> = Nil | Cons(A, List<A>)\n";
-const CMP_I8: &str = "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }\n\
-        impl Cmp<Binary{8}> for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) -> Binary{2} = 0b00 }\n";
+const LIST: &str = "nodule d\ntype List[A] = Nil | Cons(A, List[A])\n";
+const CMP_I8: &str = "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n\
+        impl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }\n";
 
 // ---- mangling: shape + injectivity / collision-freedom ------------------------------------
 
@@ -98,8 +98,8 @@ fn mangling_is_injective_and_surface_disjoint() {
 #[test]
 fn first_or_monomorphizes_to_closed_l0() {
     let env = env(&format!(
-        "{LIST}fn first_or<A>(xs: List<A>, d: A) -> A = match xs {{ Nil => d, Cons(x, _) => x }}\n\
-             fn main() -> Binary{{8}} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)"
+        "{LIST}fn first_or[A](xs: List[A], d: A) => A = match xs {{ Nil => d, Cons(x, _) => x }}\n\
+             fn main() => Binary{{8}} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)"
     ));
     let mono = monomorphize(&env, "main").expect("monomorphizes");
     // `main` stays `main` (nullary monomorphic, empty targs ⇒ unchanged).
@@ -141,7 +141,7 @@ fn a_generic_returning_a_datum_monomorphizes() {
     // `main` returns a `List<Binary{8}>` datum directly (no value-param to drive inference — the
     // return type drives it, via the bidirectional `expected`).
     let env = env(&format!(
-        "{LIST}fn main() -> List<Binary{{8}}> = Cons(0b0000_0001, Nil)"
+        "{LIST}fn main() => List[Binary{{8}}] = Cons(0b0000_0001, Nil)"
     ));
     let mono = monomorphize(&env, "main").expect("monomorphizes");
     assert!(mono.type_info("List$Binary8").is_some());
@@ -159,7 +159,7 @@ fn nested_generics_enqueue_inner_and_outer_instances() {
     // outer `List$List$Binary8` must be emitted (the inner is discovered when emitting the outer's
     // `Cons` field, RFC-0007 §11.2). The mangled-nullary field of the outer references the inner.
     let env = env(&format!(
-        "{LIST}fn main() -> List<List<Binary{{8}}>> = Cons(Cons(0b0000_0001, Nil), Nil)"
+        "{LIST}fn main() => List[List[Binary{{8}}]] = Cons(Cons(0b0000_0001, Nil), Nil)"
     ));
     let mono = monomorphize(&env, "main").expect("monomorphizes");
     assert!(
@@ -190,9 +190,9 @@ fn a_for_fold_over_a_generic_spine_instance_monomorphizes_and_runs() {
     // the spine type is re-inferred concrete, the element type read off the cons field, and the
     // `List$Binary8` instance enqueued. (The fn itself is monomorphic; the *data type* is generic.)
     let env = env(&format!(
-        "{LIST}fn checksum(bs: List<Binary{{8}}>) -> Binary{{8}} = \
+        "{LIST}fn checksum(bs: List[Binary{{8}}]) => Binary{{8}} = \
                 for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
-             fn main() -> Binary{{8}} = checksum(Cons(0b1111_0000, Cons(0b0000_1111, Nil)))"
+             fn main() => Binary{{8}} = checksum(Cons(0b1111_0000, Cons(0b0000_1111, Nil)))"
     ));
     let mono = monomorphize(&env, "main").expect("monomorphizes");
     assert!(mono.type_info("List$Binary8").is_some());
@@ -213,7 +213,7 @@ fn a_for_fold_over_a_generic_spine_instance_monomorphizes_and_runs() {
 #[test]
 fn a_trait_method_call_resolves_statically_with_an_explain_record() {
     let env = env(&format!(
-        "{CMP_I8}fn main() -> Binary{{2}} = cmp(0b0000_0001, 0b0000_0010)"
+        "{CMP_I8}fn main() => Binary{{2}} = cmp(0b0000_0001, 0b0000_0010)"
     ));
     let (mono, sel) = monomorphize_with_selections(&env, "main").expect("monomorphizes");
     // The trait method became a direct monomorphic fn.
@@ -236,8 +236,8 @@ fn a_trait_method_call_resolves_statically_with_an_explain_record() {
 fn a_bounded_generic_calling_a_trait_method_monomorphizes() {
     // `use_cmp<T: Cmp>(a,b) = cmp(a,b)` at `Binary{8}` → `use_cmp$Binary8` calling `cmp$Cmp$Binary8`.
     let env = env(&format!(
-        "{CMP_I8}fn use_cmp<T: Cmp>(a: T, b: T) -> Binary{{2}} = cmp(a, b)\n\
-             fn main() -> Binary{{2}} = use_cmp(0b0000_0001, 0b0000_0010)"
+        "{CMP_I8}fn use_cmp[T: Cmp](a: T, b: T) => Binary{{2}} = cmp(a, b)\n\
+             fn main() => Binary{{2}} = use_cmp(0b0000_0001, 0b0000_0010)"
     ));
     let mono = monomorphize(&env, "main").expect("monomorphizes");
     assert!(mono.fn_decl("use_cmp$Binary8").is_some());
@@ -253,10 +253,10 @@ fn two_widths_emit_two_distinct_specializations() {
     // both monomorphic. Identity fragmentation, recorded — not "one body". `main` reaches both
     // widths (it returns the Binary{8} result but also evaluates the Binary{4} one via a `let`).
     let env = env(&format!(
-        "{LIST}fn first_or<A>(xs: List<A>, d: A) -> A = match xs {{ Nil => d, Cons(x, _) => x }}\n\
-             fn lo() -> Binary{{4}} = first_or(Cons(0b0001, Nil), 0b0000)\n\
-             fn hi() -> Binary{{8}} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)\n\
-             fn main() -> Binary{{8}} = let _w = lo() in hi()"
+        "{LIST}fn first_or[A](xs: List[A], d: A) => A = match xs {{ Nil => d, Cons(x, _) => x }}\n\
+             fn lo() => Binary{{4}} = first_or(Cons(0b0001, Nil), 0b0000)\n\
+             fn hi() => Binary{{8}} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)\n\
+             fn main() => Binary{{8}} = let _w = lo() in hi()"
     ));
     let mono = monomorphize(&env, "main").expect("monomorphizes");
     assert!(mono.fn_decl("first_or$Binary8").is_some(), "Binary8 spec");
@@ -274,8 +274,8 @@ fn two_widths_emit_two_distinct_specializations() {
 #[test]
 fn monomorphize_is_deterministic_byte_for_byte() {
     let env = env(&format!(
-        "{CMP_I8}fn use_cmp<T: Cmp>(a: T, b: T) -> Binary{{2}} = cmp(a, b)\n\
-             fn main() -> Binary{{2}} = use_cmp(0b0000_0001, 0b0000_0010)"
+        "{CMP_I8}fn use_cmp[T: Cmp](a: T, b: T) => Binary{{2}} = cmp(a, b)\n\
+             fn main() => Binary{{2}} = use_cmp(0b0000_0001, 0b0000_0010)"
     ));
     let a = monomorphize(&env, "main").expect("a");
     let b = monomorphize(&env, "main").expect("b");
@@ -295,11 +295,11 @@ fn recursion_and_mutual_recursion_emit_a_finite_set() {
     // A recursive generic over `List` + a mutually-recursive generic pair → a finite emitted set
     // (the worklist dedups by mangled name; a recursive type/fn enqueues itself once).
     let env = env(&format!(
-            "{LIST}fn len_<A>(xs: List<A>) -> Binary{{8}} = \
+            "{LIST}fn len_[A](xs: List[A]) => Binary{{8}} = \
                 match xs {{ Nil => 0b0000_0000, Cons(_, r) => len_(r) }}\n\
-             fn ping<A>(xs: List<A>) -> Binary{{8}} = match xs {{ Nil => 0b0000_0000, Cons(_, r) => pong(r) }}\n\
-             fn pong<A>(xs: List<A>) -> Binary{{8}} = match xs {{ Nil => 0b0000_0001, Cons(_, r) => ping(r) }}\n\
-             fn main() -> Binary{{8}} = \
+             fn ping[A](xs: List[A]) => Binary{{8}} = match xs {{ Nil => 0b0000_0000, Cons(_, r) => pong(r) }}\n\
+             fn pong[A](xs: List[A]) => Binary{{8}} = match xs {{ Nil => 0b0000_0001, Cons(_, r) => ping(r) }}\n\
+             fn main() => Binary{{8}} = \
                 xor(len_(Cons(0b0000_0001, Nil)), ping(Cons(0b0000_0010, Nil)))"
         ));
     let mono = monomorphize(&env, "main").expect("terminates");
@@ -337,8 +337,8 @@ fn recursion_and_mutual_recursion_emit_a_finite_set() {
 #[test]
 fn n_calls_to_one_instantiation_emit_exactly_one_fn() {
     let env = env(&format!(
-        "{LIST}fn first_or<A>(xs: List<A>, d: A) -> A = match xs {{ Nil => d, Cons(x, _) => x }}\n\
-             fn main() -> Binary{{8}} = xor(xor(\
+        "{LIST}fn first_or[A](xs: List[A], d: A) => A = match xs {{ Nil => d, Cons(x, _) => x }}\n\
+             fn main() => Binary{{8}} = xor(xor(\
                 first_or(Cons(0b0000_0001, Nil), 0b0000_0000), \
                 first_or(Cons(0b0000_0010, Nil), 0b0000_0000)), \
                 first_or(Cons(0b0000_0011, Nil), 0b0000_0000))"
@@ -358,8 +358,8 @@ fn n_calls_to_one_instantiation_emit_exactly_one_fn() {
 fn width_sweep_each_width_monomorphizes_closed_and_runs() {
     for n in [1u32, 2, 4, 8, 16, 32] {
         let src = format!(
-                "{LIST}fn first_or<A>(xs: List<A>, d: A) -> A = match xs {{ Nil => d, Cons(x, _) => x }}\n\
-                 fn main() -> Binary{{{n}}} = first_or(Cons(0b{ones}, Nil), 0b{zeros})",
+                "{LIST}fn first_or[A](xs: List[A], d: A) => A = match xs {{ Nil => d, Cons(x, _) => x }}\n\
+                 fn main() => Binary{{{n}}} = first_or(Cons(0b{ones}, Nil), 0b{zeros})",
                 ones = "1".repeat(n as usize),
                 zeros = "0".repeat(n as usize),
             );
@@ -384,8 +384,8 @@ fn width_sweep_each_width_monomorphizes_closed_and_runs() {
 
 #[test]
 fn a_monomorphic_program_passes_through_unchanged() {
-    let env = env("nodule d\nfn flip(x: Binary{8}) -> Binary{8} = not(x)\n\
-             fn main() -> Binary{8} = flip(0b1010_1010)");
+    let env = env("nodule d\nfn flip(x: Binary{8}) => Binary{8} = not(x)\n\
+             fn main() => Binary{8} = flip(0b1010_1010)");
     let mono = monomorphize(&env, "main").expect("monomorphizes");
     // The fast pass-through returns a clone: identical fn/type tables.
     assert_eq!(format!("{:?}", env.fns), format!("{:?}", mono.fns));
@@ -398,7 +398,7 @@ fn a_monomorphic_program_passes_through_unchanged() {
 fn an_undetermined_type_parameter_is_a_residual_not_a_guess() {
     // The checker refuses an undetermined parameter at check time, so build the case at the entry
     // boundary: a *nullary generic* entry is refused by mono's `run` (never specialized blindly).
-    let env = env("nodule d\nfn g<A>() -> Binary{1} = 0b1");
+    let env = env("nodule d\nfn g[A]() => Binary{1} = 0b1");
     let err = monomorphize(&env, "g").unwrap_err();
     let ElabError::Residual { what, .. } = &err else {
         panic!("expected a Residual, got {err:?}");
@@ -453,12 +453,12 @@ fn no_fn_in_sig_params(env: &Env) -> bool {
 #[test]
 fn hof_map_mk_ok_double_specializes_to_closed_l0() {
     let src = "nodule d\n\
-            type Result<A, E> = Ok(A) | Err(E)\n\
-            fn map<A, B, E>(r: Result<A, E>, f: A -> B) -> Result<B, E> =\n\
+            type Result[A, E] = Ok(A) | Err(E)\n\
+            fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n\
               match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
-            fn double(x: Binary{8}) -> Binary{8} = not(x)\n\
-            fn mk_ok() -> Result<Binary{8}, Binary{8}> = Ok(0b0000_0001)\n\
-            fn main() -> Result<Binary{8}, Binary{8}> = map(mk_ok(), double)";
+            fn double(x: Binary{8}) => Binary{8} = not(x)\n\
+            fn mk_ok() => Result[Binary{8}, Binary{8}] = Ok(0b0000_0001)\n\
+            fn main() => Result[Binary{8}, Binary{8}] = map(mk_ok(), double)";
     let e = env(src);
     let (mono, sel) = monomorphize_with_selections(&e, "main").expect("monomorphizes");
 
@@ -593,9 +593,9 @@ fn hof_fn_arg_joint_mangling_is_injective() {
 fn hof_dynamic_fn_arg_is_a_residual() {
     // (a) Static fn arg — must succeed (control for the Residual test).
     let src_static = "nodule d\n\
-            fn apply(f: Binary{8} -> Binary{8}, x: Binary{8}) -> Binary{8} = f(x)\n\
-            fn flip(x: Binary{8}) -> Binary{8} = not(x)\n\
-            fn main() -> Binary{8} = apply(flip, 0b0000_0010)";
+            fn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} = f(x)\n\
+            fn flip(x: Binary{8}) => Binary{8} = not(x)\n\
+            fn main() => Binary{8} = apply(flip, 0b0000_0010)";
     let e_static = env(src_static);
     let mono_static = monomorphize(&e_static, "main").expect("static fn arg monomorphizes");
     assert!(
@@ -621,10 +621,10 @@ fn hof_dynamic_fn_arg_is_a_residual() {
     //
     // We test that the right kind of error surfaces (Residual), regardless of which gate fires.
     let src_dyn = "nodule d\n\
-            fn apply(f: Binary{8} -> Binary{8}, x: Binary{8}) -> Binary{8} = f(x)\n\
-            fn flip(x: Binary{8}) -> Binary{8} = not(x)\n\
-            fn outer(g: Binary{8} -> Binary{8}, v: Binary{8}) -> Binary{8} = apply(g, v)\n\
-            fn main() -> Binary{8} = outer(flip, 0b0000_0001)";
+            fn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} = f(x)\n\
+            fn flip(x: Binary{8}) => Binary{8} = not(x)\n\
+            fn outer(g: Binary{8} => Binary{8}, v: Binary{8}) => Binary{8} = apply(g, v)\n\
+            fn main() => Binary{8} = outer(flip, 0b0000_0001)";
     // `outer(flip, v)` should succeed — `flip` is static here.
     // `apply(g, v)` inside `outer` has `g` as a local binder of fn type; the mono pass must
     // handle this as a HOF-param-application (via fn_param_subst when outer is specialized
@@ -659,9 +659,9 @@ fn hof_dynamic_fn_arg_is_a_residual() {
 #[test]
 fn hof_monomorphize_is_deterministic() {
     let src = "nodule d\n\
-            fn apply(f: Binary{8} -> Binary{8}, x: Binary{8}) -> Binary{8} = f(x)\n\
-            fn flip(x: Binary{8}) -> Binary{8} = not(x)\n\
-            fn main() -> Binary{8} = apply(flip, 0b0000_0010)";
+            fn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} = f(x)\n\
+            fn flip(x: Binary{8}) => Binary{8} = not(x)\n\
+            fn main() => Binary{8} = apply(flip, 0b0000_0010)";
     let e = env(src);
     let a = monomorphize(&e, "main").expect("first mono");
     let b = monomorphize(&e, "main").expect("second mono");
@@ -679,9 +679,9 @@ fn hof_monomorphize_is_deterministic() {
 #[test]
 fn hof_monomorphic_apply_flip_runs_to_closed_l0() {
     let src = "nodule d\n\
-            fn apply(f: Binary{8} -> Binary{8}, x: Binary{8}) -> Binary{8} = f(x)\n\
-            fn flip(x: Binary{8}) -> Binary{8} = not(x)\n\
-            fn main() -> Binary{8} = apply(flip, 0b0000_0001)";
+            fn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} = f(x)\n\
+            fn flip(x: Binary{8}) => Binary{8} = not(x)\n\
+            fn main() => Binary{8} = apply(flip, 0b0000_0001)";
     let e = env(src);
     let mono = monomorphize(&e, "main").expect("monomorphizes");
 
@@ -717,14 +717,14 @@ fn hof_monomorphic_apply_flip_runs_to_closed_l0() {
 
 // ── Width-generic free functions (DN-42 / M-753 step-d white-box) ──────────────────────────────
 
-/// Width-generic `id_bits<N>` at N=8 produces a specialization `id_bits$Binary8` (identity
+/// Width-generic `id_bits{N}` at N=8 produces a specialization `id_bits$Binary8` (identity
 /// fragmentation: one distinct entry per concrete width, never a shared or unnamed alias — G2).
 /// `Empirical`: we monomorphize and assert the mangled name is present and the function is emitted.
 #[test]
 fn width_generic_monomorphizes_into_distinct_specialization_binary_8() {
     let src = "nodule d\n\
-               fn id_bits<N>(x: Binary{N}) -> Binary{N} = x\n\
-               fn main() -> Binary{8} = id_bits(0b0000_0000)";
+               fn id_bits{N}(x: Binary{N}) => Binary{N} = x\n\
+               fn main() => Binary{8} = id_bits(0b0000_0000)";
     let e = env(src);
     let mono = monomorphize(&e, "main").expect("monomorphizes");
     assert!(
@@ -742,18 +742,18 @@ fn width_generic_monomorphizes_into_distinct_specialization_binary_8() {
     );
 }
 
-/// `id_bits<N>` called at N=8 and N=16 from separate entries each produces a distinct
+/// `id_bits{N}` called at N=8 and N=16 from separate entries each produces a distinct
 /// specialization. Identity fragmentation: two widths → two distinct emitted functions, never a
 /// silent alias (G2). `Empirical`: each mono run independently produces the right specialization.
 #[test]
 fn width_generic_two_widths_produce_distinct_specializations() {
     // Two separate mono passes — one per entry — each traces the reachable width.
     let src8 = "nodule d\n\
-               fn id_bits<N>(x: Binary{N}) -> Binary{N} = x\n\
-               fn main() -> Binary{8} = id_bits(0b0000_0000)";
+               fn id_bits{N}(x: Binary{N}) => Binary{N} = x\n\
+               fn main() => Binary{8} = id_bits(0b0000_0000)";
     let src16 = "nodule d\n\
-               fn id_bits<N>(x: Binary{N}) -> Binary{N} = x\n\
-               fn main() -> Binary{16} = id_bits(0b0000_0000_0000_0000)";
+               fn id_bits{N}(x: Binary{N}) => Binary{N} = x\n\
+               fn main() => Binary{16} = id_bits(0b0000_0000_0000_0000)";
 
     let e8 = env(src8);
     let mono8 = monomorphize(&e8, "main").expect("monomorphizes at 8");
@@ -789,8 +789,8 @@ fn width_generic_two_widths_produce_distinct_specializations() {
 fn width_generic_undetermined_param_is_a_check_error() {
     // Width param `N` used only in the return type — cannot be inferred from call.
     let src = "nodule d\n\
-               fn phantom_n<N>(x: Binary{8}) -> Binary{8} = x\n\
-               fn main() -> Binary{8} = phantom_n(0b0000_0000)";
+               fn phantom_n{N}(x: Binary{8}) => Binary{8} = x\n\
+               fn main() => Binary{8} = phantom_n(0b0000_0000)";
     let result = crate::checkty::check_nodule(&crate::parse(src).expect("parses"));
     assert!(
         result.is_err(),
