@@ -48,9 +48,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 - **DN-38 — macro story framed + open question recorded (maintainer raised).** Mycelium has no opaque macro
   system (G2/no-black-boxes rules out text/token substitution); the roles split across inspectable features —
   `derive` (generative lowering), `reveal` (inspector), `{N}` const params, and the layered-lowering passes.
-  New open question: is generative lowering a closed compiler-provided set or user-extensible (admissible only
-  if every user generation stays `reveal`-able + content-addressed)? Lean: closed/curated first. Vernacular
-  ("macro" likely avoided per DN-02's gate) settleable later. Captured, nothing decided. No code.
+  **Extensibility RESOLVED (maintainer ruling): user-extensible, inspectable BY CONSTRUCTION.** A user extends
+  by defining new terms in Mycelium lexicon that map *directly* to their L0 lowered form — a user-authored
+  transparent lowering rule under the same lowering law as built-in passes, so every use is `reveal`-able by
+  construction (no opaque generation step). Full extensible-macro power with no black boxes — structurally, not
+  a bolted-on check; user lowerings held to the same §6 verification (differential + round-trip). Vernacular
+  ("macro" likely avoided per DN-02's gate, favoring `derive`/`generate`/`lower`) settleable later. No code.
 
 - **DN-51 — accuracy-first `Binary{N}` width arithmetic (maintainer-ratified in-session).** Resolves the
   "what happens on mixed widths?" question DN-42 left as a conservative *refusal*: cross-width binary
