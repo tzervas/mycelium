@@ -39,9 +39,7 @@ nodule std.math
 //   representation) is provided here. That surface (RFC-0031 §5 D4 Tier-2; the ε-propagation machinery,
 //   ApproxRule, in prims.rs) is a Dense-numerics workstream (E2-1/E2-4), not yet self-hostable from the
 //   surfaced prim set. Captured, not claimed.
-
 // ── Binary arithmetic over Binary{N} (never-silent overflow/underflow) ─────────────────────────────
-
 // badd<N>: unsigned width-preserving addition. Exact on the in-range result; an overflow (carry-out)
 // is a never-silent `Overflow` refusal — never a modular wrap (G2).
 fn badd<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} =
@@ -53,7 +51,6 @@ fn bsub<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} =
   sub_bin(a, b)
 
 // ── Binary bitwise logic over Binary{N} (total, Exact) ─────────────────────────────────────────────
-
 // band<N>: bitwise AND. Total, Exact over Binary{N} x Binary{N}.
 fn band<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} =
   and(a, b)
@@ -71,7 +68,6 @@ fn bnot<N>(a: Binary{N}) -> Binary{N} =
   not(a)
 
 // ── Balanced-ternary arithmetic over Ternary{M} (never-silent overflow) ────────────────────────────
-
 // tadd<M>: balanced-ternary addition. Exact on the in-range result; an out-of-range result is a
 // never-silent `Overflow` refusal (G2).
 fn tadd<M>(a: Ternary{M}, b: Ternary{M}) -> Ternary{M} =

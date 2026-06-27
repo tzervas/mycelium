@@ -402,17 +402,22 @@ pub(crate) fn unify(
         | (Ty::Ternary(Width::Var(v)), Ty::Ternary(Width::Lit(n))) => {
             let carrier = Ty::Binary(Width::Lit(*n));
             match s.get(v) {
-                Some(bound) if *bound != carrier => Err(CheckError::new(
-                    site,
-                    format!(
-                        "width parameter `{v}` would have to be both {} and {n} — a width mismatch, not a coercion (DN-42 §4 / VR-5)",
-                        if let Ty::Binary(Width::Lit(m)) = bound {
-                            *m
-                        } else {
-                            0
-                        }
-                    ),
-                )),
+                Some(bound) if *bound != carrier => {
+                    // Render the prior width HONESTLY (never-silent / G2): the carrier may be a
+                    // concrete `Width::Lit` (another argument pinned it) OR an abstract `Width::Var`
+                    // (the M-718 var-var arm bound it to the enclosing scope's width). Print the
+                    // carrier's width via its `Display` — never a phantom `0` for the abstract case.
+                    let prior = match bound {
+                        Ty::Binary(w) => w.to_string(),
+                        other => other.to_string(),
+                    };
+                    Err(CheckError::new(
+                        site,
+                        format!(
+                            "width parameter `{v}` would have to be both {prior} and {n} — a width mismatch, not a coercion (DN-42 §4 / VR-5)"
+                        ),
+                    ))
+                }
                 _ => {
                     s.insert(v.clone(), carrier);
                     Ok(())

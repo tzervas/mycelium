@@ -41,7 +41,14 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   The **broader** M-719 closure (retire/deprecate the `mycelium-std-*` reference crates + freeze a
   documented stable API) **remains open** — not claimed (VR-5). M-718 `ready`→`done`; M-717
   `in-progress`→`done`; M-719 `needs-design`→`in-progress`; M-715 re-flagged (recursive-HOF gap still
-  deferred — distinct from the width-var pass-through). Full `mycelium-l1` suite green (591 tests).
+  deferred — distinct from the width-var pass-through). Full `mycelium-l1` suite green (604 tests).
+- **Self-review polish (adversarial review pass).** Made the width-mismatch diagnostic name the prior
+  width honestly when it is an abstract width var (never a phantom `0` — a G2 legibility fix to the
+  `unify` var-vs-Lit conflict formatter); added the Ternary path through the M-718 var-var arm,
+  cross-argument width-conflict refusals (both orders), and UTF-8 validity boundary-edge tests
+  (surrogate upper edge U+DFFF rejects; U+E000/U+0800/U+10000 accept). Regenerated the
+  `mycelium-l1`/`mycelium-mlir` public-API baselines left stale by M-753 (`Ty::Binary(u32)` →
+  `Ty::Binary(Width)`); no other surface changed.
 
 ### Added (2026-06-27: rsm Session-1 — M-753 width-generics, F1–F7 future-capture, branch-protection guard)
 

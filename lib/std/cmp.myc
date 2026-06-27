@@ -69,7 +69,6 @@ fn ord_eq(a: Ordering, b: Ordering) -> Bool =
 // monomorphization. (Before M-718 this delegation was refused, so the wave-n1 `_u8` helpers inlined
 // `eq`/`lt`; that limitation is now CLOSED — the recursive width-generic `map_get`/`set_contains` ride
 // the same pass-through.)
-
 // cmp<N>: three-way comparison of two Binary{N} values (unsigned magnitude). Eq if equal, Lt if
 // a < b, Gt otherwise. Total over Binary{N} x Binary{N} for every concrete N (Exact: eq/lt are Exact
 // prims; every case is covered by the nested match).

@@ -614,3 +614,70 @@ fn decode_one_accepts_max_codepoint_boundary() {
     );
     assert_three_way("decode_one(U+10FFFF max)=Ok", &src, &expected);
 }
+
+// ── decode_one — validity boundary EDGES (review finding #4: surrogate upper edge + per-length mins) ─
+//
+// Complements the validity tests above by pinning the exact edges of each gate, so an off-by-one in a
+// threshold would be caught: the surrogate UPPER edge (U+DFFF rejects, U+E000 the first scalar after it
+// accepts) and the 3-/4-byte minimum codepoints (U+0800, U+10000 accept — not over-rejected as overlong).
+
+/// `decode_one(0xed_bf_bf, 0)` → `Err(Surrogate(0xED))` — U+DFFF, the LAST surrogate: cp = (0xED&0xF)<<12
+/// | (0xBF&0x3F)<<6 | (0xBF&0x3F) = 0xD000 | 0xFC0 | 0x3F = 0xDFFF, still in 0xD800..0xDFFF. Reject.
+#[test]
+fn decode_one_rejects_surrogate_upper_edge() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xed_bf_bf, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Surrogate(bytes_get(0xed_bf_bf, 0b0000_0000)))",
+    );
+    assert_three_way("decode_one(U+DFFF surrogate edge)=Err", &src, &expected);
+}
+
+/// `decode_one(0xee_80_80, 0)` → `Ok(Pr(0xE000, 3))` — U+E000, the FIRST scalar above the surrogate
+/// gap, is accepted (cp = 0xE000 is NOT < 0xE000... and NOT < 0xD800 so passes the surrogate gate). The
+/// edge just past the surrogate range must NOT be rejected.
+#[test]
+fn decode_one_accepts_first_scalar_after_surrogates() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xee_80_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xee_80_80, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xee_80_80, 0b0000_0001)))), cont_payload(bytes_get(0xee_80_80, 0b0000_0010))), 0b0000_0011))",
+    );
+    assert_three_way(
+        "decode_one(U+E000 first post-surrogate)=Ok",
+        &src,
+        &expected,
+    );
+}
+
+/// `decode_one(0xe0_a0_80, 0)` → `Ok(Pr(0x800, 3))` — U+0800, the SMALLEST canonical 3-byte codepoint,
+/// accepted (cp = 0x800 is NOT < 0x800). Proves the 3-byte overlong gate does not over-reject its min.
+#[test]
+fn decode_one_accepts_min_three_byte_boundary() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xe0_a0_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xe0_a0_80, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xe0_a0_80, 0b0000_0001)))), cont_payload(bytes_get(0xe0_a0_80, 0b0000_0010))), 0b0000_0011))",
+    );
+    assert_three_way("decode_one(U+0800 min 3-byte)=Ok", &src, &expected);
+}
+
+/// `decode_one(0xf0_90_80_80, 0)` → `Ok(Pr(0x10000, 4))` — U+10000, the SMALLEST canonical 4-byte
+/// codepoint, accepted (cp = 0x10000 is NOT < 0x10000). Proves the 4-byte overlong gate does not
+/// over-reject its min.
+#[test]
+fn decode_one_accepts_min_four_byte_boundary() {
+    let driver =
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = decode_one(0xf0_90_80_80, 0b0000_0000)";
+    let src = program(driver);
+    let expected = program(
+        "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = \
+         Ok(Pr(or(or(or(shl18(widen8(and(bytes_get(0xf0_90_80_80, 0b0000_0000), 0b0000_0111))), shl12(cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0001)))), shl6(cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0010)))), cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0011))), 0b0000_0100))",
+    );
+    assert_three_way("decode_one(U+10000 min 4-byte)=Ok", &src, &expected);
+}

@@ -196,7 +196,6 @@ fn cont_payload(c: Binary{8}) -> Binary{32} =
 //   0x80 = min 2-byte · 0x800 = min 3-byte · 0x10000 = min 4-byte (below ⇒ OVERLONG) ·
 //   0xD800..0xE000 = the surrogate gap (SURROGATE) · 0x10FFFF = the Unicode ceiling (above ⇒ TOOLARGE).
 // Guarantee: Declared (the Result wrapping is the never-silent contract; the predicate is Exact `lt`).
-
 // 2-byte: valid iff cp >= 0x80 (a 1-byte value here would be overlong). The 2-byte max (0x7FF) is below
 // both the surrogate gap and the ceiling, so only the overlong check applies. (0x80 = 1<<7.)
 fn reject_two(cp: Binary{32}, lead: Binary{8}) -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> =

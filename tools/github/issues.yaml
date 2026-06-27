@@ -4636,8 +4636,9 @@ issues:
       epsilon/delta Dense numerics surface (a Dense workstream, E2-1/E2-4) -- both future increments.
       Enabling L1 fix: checkty.rs unify now binds a width var against another width var (the type-var
       pass-through analog) so recursive/delegated width-generics check; mono resolves the concrete width.
-      Tests: std_math.rs (19), std_cmp.rs (38), std_collections.rs (+5), width_generic.rs (+4),
-      std_generic_conformance.rs (M-719, 4) -- full mycelium-l1 suite green (591 tests). The
+      Tests (new fns vs dev): std_math.rs (+19), std_cmp.rs (+7), std_collections.rs (+4),
+      width_generic.rs (+7), std_text.rs (+10), std_generic_conformance.rs (M-719, +4) -- full
+      mycelium-l1 suite green (604 tests). The
       numerics.myc / epsilon-delta clause of the original DoD is explicitly DEFERRED (no prim), not
       claimed; M-718's math/cmp + generic-key-lookup scope is complete.
 
