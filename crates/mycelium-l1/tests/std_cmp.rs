@@ -474,13 +474,22 @@ fn min_binary16_returns_smaller() {
 // The width-generic helpers refuse — explicitly, at check time — a call whose width cannot be
 // determined or whose operands disagree on width. Never a silent coercion or guessed default (S1).
 
-/// Build the full `cmp.myc` + driver program and assert `check_nodule` REFUSES it.
+/// Build the full `cmp.myc` + driver program and assert `check_nodule` REFUSES it *for the width
+/// mismatch specifically* — the error must name the offending width and carry the never-silent
+/// marker, not merely be `is_err()` (which an unrelated error would also satisfy).
 fn assert_check_refuses(label: &str, driver: &str) {
     let src = program(driver);
     let parsed = parse(&src).unwrap_or_else(|e| panic!("{label}: parse should succeed: {e}"));
+    let err = check_nodule(&parsed)
+        .err()
+        .unwrap_or_else(|| {
+            panic!("{label}: expected a never-silent width refusal, but check succeeded")
+        })
+        .to_string();
     assert!(
-        check_nodule(&parsed).is_err(),
-        "{label}: expected a never-silent width refusal, but check succeeded"
+        err.contains("Binary{16}")
+            && (err.contains("cannot match") || err.contains("width") || err.contains("swap")),
+        "{label}: refusal must name the width mismatch (never-silent), got: {err}"
     );
 }
 

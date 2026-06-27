@@ -250,9 +250,18 @@ fn generic_surface_width_mismatches_refuse() {
     for (label, nodule, driver) in REFUSAL_CASES {
         let src = format!("{nodule}\n{driver}");
         let parsed = parse(&src).unwrap_or_else(|e| panic!("{label}: parse should succeed: {e}"));
+        // Assert the refusal is specifically the width mismatch (names the offending Binary{16}
+        // width + the never-silent marker), not merely is_err() — which an unrelated error passes.
+        let err = check_nodule(&parsed)
+            .err()
+            .unwrap_or_else(|| {
+                panic!("{label}: expected a never-silent width refusal, but check succeeded")
+            })
+            .to_string();
         assert!(
-            check_nodule(&parsed).is_err(),
-            "{label}: expected a never-silent width refusal, but check succeeded"
+            err.contains("Binary{16}")
+                && (err.contains("cannot match") || err.contains("width") || err.contains("swap")),
+            "{label}: refusal must name the width mismatch (never-silent), got: {err}"
         );
     }
 }

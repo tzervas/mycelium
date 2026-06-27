@@ -498,8 +498,13 @@ fn mk_map() -> Map<Binary{8}, Binary{8}> = MCons(0b0000_0001, 0b0000_1010, MNil)
 fn main() -> Option<Binary{8}> = map_get(mk_map(), 0b0000_0001_0000_0000)";
     let src = program(driver);
     let parsed = parse(&src).expect("parse should succeed");
+    let err = check_nodule(&parsed)
+        .err()
+        .expect("expected a never-silent key-width-mismatch refusal, but check succeeded")
+        .to_string();
     assert!(
-        check_nodule(&parsed).is_err(),
-        "expected a never-silent key-width-mismatch refusal, but check succeeded"
+        err.contains("Binary{16}")
+            && (err.contains("cannot match") || err.contains("width") || err.contains("swap")),
+        "refusal must name the key-width mismatch (never-silent), got: {err}"
     );
 }
