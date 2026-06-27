@@ -4374,16 +4374,33 @@ issues:
   - id: M-715
     title: "core/prelude in Mycelium: Option/Result/cmp/Ord/Eq + iter traits as .myc"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:in-progress]
+    labels: [phase:5, type:feature, area:stdlib, priority:P1, status:done]
     epic: E13-1
     doc_refs:
       - corpus:RFC-0031
       - corpus:RFC-0016
+      - corpus:RFC-0024
+      - src:lib/std/iter.myc
+      - src:crates/mycelium-l1/src/mono.rs
+      - src:crates/mycelium-l1/tests/std_iter.rs
       - src:lib/std/result.myc
       - src:lib/std/option.myc
       - src:lib/std/cmp.myc
       - corpus:DN-25
     body: |
+      DONE (2026-06-27, rsm Session-3): the recursive-HOF clause is CLOSED — the last M-715 remainder.
+      lib/std/iter.myc's map/filter/foldl/any/all/find now EXECUTE three-way (L1-eval == L0-interp ==
+      AOT), not just type-check. The fix is a self-contained extension of stage-1 defunctionalization in
+      crates/mycelium-l1/src/mono.rs::resolve_fn_args (no kernel change, KC-3): when a HOF fn-valued
+      argument is a VALUE PARAMETER already bound to a static specialization in the current emit scope
+      (fn_param_subst), it is threaded through as the SAME specialization the outer call pinned — so the
+      recursive self-call `map(rest, f)` resolves to e.g. map$inc with the fn-arg dropped (no runtime
+      closure). std_iter.rs: 10 executable three-way tests replace the prior cannot-monomorphize
+      smoke-checks. Full mycelium-l1 suite green (610). With Option/Result, width-generic cmp (Session-2),
+      and the iter combinators all running three-way, M-715's core/prelude scope is complete. STILL
+      DEFERRED as a SEPARATE item (M-704, never faked): closures / lambdas, multi-arg arrows (a true
+      binary foldl f: A -> B -> B), and partial application — these are NOT part of M-715.
+
       RE-FLAG (2026-06-27, rsm Session-2): two updates, kept honest and distinct (VR-5).
       (1) The width-generic cmp<N> forms ARE NOW LANDED (M-718/M-753): cmp.myc's cmp/le/ge/max/min are
       width-generic over Binary{N}, superseding the cmp_u8/... Binary{8} interim. That clause is CLOSED.
