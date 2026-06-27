@@ -28,7 +28,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   artifact is **census now + a narrow standing gate** that forbids *only* the silent-gap class (accept ⇒
   runs OR explicit `Residual`/FLAG) — **not** a must-run gate; G2 applied to the implementation frontier
   (OQ-2). DN-50 is the whole-surface generalization of which M-719 is one slice (OQ-4). The census (M-807)
-  + the narrow gate are the remaining work; the design is decided. No code.
+  plus the narrow gate are the remaining work; the design is decided. No code.
 
 - **DN-51 — accuracy-first `Binary{N}` width arithmetic (maintainer-ratified in-session).** Resolves the
   "what happens on mixed widths?" question DN-42 left as a conservative *refusal*: cross-width binary
