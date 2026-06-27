@@ -364,6 +364,45 @@ nothing here moves another doc's status.
 
 ## Meta — changelog
 
+- **2026-06-27 — generative-lowering extensibility RESOLVED: user-extensible, inspectable BY CONSTRUCTION
+  (maintainer ruling, in-session; supersedes the "lean closed/curated first" recorded below).** The open
+  question recorded below is decided in favor of **user-extensibility** — and the footgun that motivated the
+  "closed-first" lean is **dissolved by construction, not by restriction**. The mechanism: a user extends
+  generative lowering by defining **new terms in actual Mycelium lexicon that map *directly* to their eventual
+  L0 lowered terms** — i.e. a user "macro" is a **user-authored transparent lowering rule**, subject to the
+  **same lowering law as the compiler's own passes** (§ "lowering law": small, IL-grammar-checked,
+  semantics-preserving, kernel-never-grows — KC-3). Because the extension *is* its lowering (surface term →
+  explicit L0), **every use is `reveal`-able by construction** — there is no opaque generation step where a
+  black box could hide. So Mycelium gets the **full power of an extensible macro/generative system with NO
+  black boxes — structurally, not as a bolted-on check**: users extend as they see fit, and inherent to the
+  language it **all translates to clear, inspectable, `reveal`-able L0** in the end. **Verification:** a
+  user-defined lowering is held to the **same §6 discipline** as a built-in one (differential + hygiene +
+  round-trip, tiered LOW/HIGH per DN-20; round-trip gated by `certified`) — its observational-identity claim is
+  earned, not asserted (VR-5). **Naming/vernacular** still settleable (DN-02's gate likely avoids "macro" in
+  favor of `derive`/`generate`/`lower`), but the *capability decision* — user-extensible, transparent-by-
+  construction — is **ratified**. Design only; enacts no code; the extension-definition surface + its checker
+  are a follow-on design task (gated on the DN-31 grammar wave + the §6 verification harness).
+
+- **2026-06-27 — macro story framed + the open question recorded (maintainer raised; append-only, no decision).**
+  The maintainer asked how **macros** fit. Recorded framing (a corollary of this note's own no-black-boxes /
+  inspectable-lowering thesis): Mycelium has **no opaque macro system** — the transparency rule (G2 / SC-3)
+  rules out C-preprocessor text substitution, Lombok-style invisible codegen, and unconstrained token-procedural
+  macros (each is a black box). The roles macros usually fill are split across *inspectable* features: boilerplate
+  trait impls → **`derive`** (§8.1 generative lowering, content-addressed L0-out); "see what was generated" →
+  **`reveal`**; compile-time constants / generic-over-size → **`{N}` const/width params** + monomorphization
+  (DN-42); syntactic sugar / mini-DSLs → the **layered lowering** atlas itself (named, grammar-checked,
+  semantics-preserving passes; kernel never grows — KC-3). So Mycelium's "macro layer" *is* disciplined,
+  `reveal`-able generative lowering over the typed AST/L0 (structural hygiene), never token munging.
+  **OPEN QUESTION (new, for the maintainer):** is generative lowering a **closed, compiler-provided set**
+  (`derive` for traits + a curated sugar list) or **user-extensible** (users define new `derive`-like transforms /
+  lowering rules)? Closed = KISS, zero opacity, less power; user-extensible = more power but the classic
+  black-box footgun — admissible **only** behind a design that *guarantees* every user-defined generation stays
+  `reveal`-able + content-addressed. **Lean: closed/curated first**, open later only under that guarantee.
+  **Vernacular:** DN-02's naming gate would likely **avoid "macro"** (it implies the opaque substitution Mycelium
+  does not do — a T-map failure), favoring `derive` / `generate` / `lower`; naming is settleable later. Nothing
+  decided here — captured so it is not lost; ties DN-03 §6 (the original `grow`/`derive`/macro flag) + RFC-0024
+  §5 (HOF residual) + M-704.
+
 - **2026-06-25 — Created (Draft, advisory) — authored.** Synthesises
   `research/25-layered-lowering-and-generative-sugar-prior-art-RECORD.md` (external prior art, primary-
   source-checked) with the landed corpus (RFC-0006 layering + S1–S6; RFC-0012 ambient = observationally

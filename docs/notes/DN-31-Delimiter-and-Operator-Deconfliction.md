@@ -111,3 +111,44 @@ that act.
 > design input to fold into that work:** (a) **better support for line-breaks / indentation** so syntax is
 > more **human-visible**, and (b) using **`,` to delineate syntax portions**. This is a **recorded direction**,
 > not an enactment — DN-31 stays **Draft**; the binding act is the future RFC/supersession (VR-5 / G2).
+>
+> **Revision — *2026-06-27 (kind-split refinement; Status unchanged — Draft/advisory).*** The maintainer
+> **refines §2/§3 in-session: repr/size types STAY on `{}`** (`Binary{8}` is **not** moved to `Binary[64]`),
+> adopting a **bracket-by-kind** principle rather than bracket-by-availability:
+> **`[T]`** = **type** params/args + list literals; **`{N}`** = **const/width** params **and** repr/size types;
+> **`<>`** = operators only; **`0t`** = trit literals; **`=>`** = return arrow; **`<=`/`>=`** → **`lte`/`gte`**.
+> A const/width param is declared **`f{N}`** (explicit, per kind — matching its use in `Binary{N}`); a type
+> param is `f[T]`; a function generic over both is `f[T]{N}` (e.g. `map_get[V]{N}(m: Map[Binary{N}, V], k:
+> Binary{N})`). This is the *smallest* migration from the landed `fn f<N>` (swap the bracket; the pervasive
+> `Binary{N}` repr surface — including the landed `Ty::Binary(Width)` — does **not** re-spell).
+> **Repr-keyword shortening (proposed, 2026-06-27 — maintainer):** the long paradigm type-keywords gain
+> short, ergonomic forms that keep their width/dims on `{}` — **`bin{N}`** (Binary), **`tern{N}`**
+> (Ternary), **`emb{…}`** (Dense / embeddings — dims + scalar kind), **`hvec{…}`** (VSA / HDC
+> hypervectors — element-space + dims). **`vec` is rejected — it collides with `Vec`** (the
+> `std.collections` cons-list, `lib/std/collections.myc`); `hvec` is used. This is a **lexicon amendment**
+> to reconcile with DN-02/DN-03 (the type-keyword set) and `crates/mycelium-l1/src/token.rs`
+> (`Tok::Binary`/`Ternary`/`Dense`/`Vsa`); captured here, ratification pending that reconciliation.
+> **Rationale (second-/third-order effects, recorded):** (1) it eliminates the corpus's **largest** migration
+> (repr `{}` is the most pervasive surface); (2) it adds **zero new `{}` ambiguity** — `Binary{8}` (type
+> position) already coexists with `{ block }` and `{k: v}` (expr position) by position, and `f{N}` sits in the
+> param-declaration slot, unambiguous against equals-bodied `fn f(…) = …`; (3) it is **honest about kind** —
+> width *is* a const-generic (DN-42), so `{8}`/`{N}` reading as "const" teaches the `[type]` vs `{const}`
+> distinction; (4) it **avoids** the alternative of putting type-args on `{}` (`List{T}`), which would
+> reintroduce the Rust `Name{block}`-vs-type-application footgun (types stay square ⇒ `List[T]` never collides
+> with a block). **§4-Q2 — resolution DIRECTION fixed: a LAYOUT-INDEPENDENT grammar (maintainer,
+> 2026-06-27).** Newlines are **formatting-only, never semantically required**: the *same* program parses
+> identically whether written as a dense **stream** ("a series of lambda functions and such") or — as in
+> practice — **formatted with line breaks for human readability**. Structural delineation is therefore by
+> **explicit delimiters** (the maintainer's **`,`-delineation**) plus the **type-position-vs-value-position**
+> distinction — **not** by whitespace. So the type-app-vs-list edge is settled without any newline rule: a
+> list `[…]` follows a delimiter / sits in value position; a type-or-size application `Name[…]` has `Name` in
+> type position (and Mycelium has no `arr[i]` indexing and no juxtaposition application, so there is no third
+> reading). The earlier "newline/adjacency rule" is therefore **withdrawn** — newlines must not be load-bearing.
+> The **exact delimiter set + adjacency rules** are the remaining spec detail for the binding grammar RFC; the
+> *principle* (layout-independent, explicit-delimiter, human-formatted-in-practice but stream-legal) is fixed.
+> **Lambdas are declared with an explicit `lambda` keyword** (not bare arrows), so a streamed lambda-chain stays
+> legible and unambiguous — a new reserved word to reconcile with **DN-02/DN-03** (lexicon) + `token.rs`, and
+> input to **M-704** (full higher-order functions / closures). **Guarantee model cross-ref:** the width-generic guarantee is
+> **per-instance** (DN-51 §2-D4 / the width-arithmetic decision), not a uniform tag. Still a **recorded
+> direction** — DN-31 stays **Draft**; the binding RFC/supersession (+ the grammar-supersession epic) is the
+> enacting act (VR-5 / G2).
