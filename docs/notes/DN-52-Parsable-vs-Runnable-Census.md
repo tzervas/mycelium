@@ -51,7 +51,7 @@ The three classification buckets:
 | Comparison/equality (`eq`, `lt`) over Binary/Ternary | **Runs** | `enablement.rs::eq_binary_width_typed`, `lt_binary_unsigned_magnitude` |
 | Infix/prefix operator sugar (`^`, `!`, `+`, `*`) | **Runs** | `differential.rs::corpus()` programs #6-9 (RFC-0025/M-705 sugar-word equivalence) |
 | `swap(x, to: T, policy: p)` — certified swap | **Runs** | `differential.rs::corpus()` program #10 (`Binary` to `Ternary`) |
-| `Dense{d, s}` type accepted by checker | **Undetermined** — `type_repr` resolves `Dense` at `elab.rs:197`; no three-way differential test exercises Dense. FLAG-1 in §5. | `check.rs:1031` coherence sweep; no `differential.rs` Dense program |
+| `Dense{d, s}` type accepted by checker | **Explicit-Residual** — `elaborate` emits an explicit `Residual` for Dense swap targets (`elab.rs` Expr::Swap arm, freeze-ledger W5): `BinaryTernarySwapEngine` does not cover Dense; a Dense-capable engine lands with E2-1/ADR-033. FLAG-1 **RESOLVED** in §5. | `differential.rs::dense_swap_is_an_explicit_residual_on_all_paths`; `runnable_gate.rs` standing-gate row; `elab.rs` Expr::Swap guard added W5 |
 | `Seq{T, N}` / `[e1, …]` literal | **Runs** | `enablement.rs::seq_literal_surface_three_way` (M-749 surface, full three-way) |
 | `seq_get` / `seq_len` over surface | **Runs** | `enablement.rs::seq_get_surface_three_way`, `seq_len_surface_three_way` |
 | `Bytes` / `0x…` literal | **Runs** | `enablement.rs::bytes_literal_surface_three_way` (M-750 surface, full three-way) |
@@ -157,7 +157,7 @@ The three classification buckets:
 | Cross-`use` of `pub fn` / `pub type` across nodules | **Runs** (check) | `phylum.rs::nodule_b_uses_a_pub_fn_from_nodule_a_and_type_checks` |
 | Cross-nodule `impl` (phylum orphan rule) | **Runs** (check) | `phylum.rs` orphan rule tests |
 | Phylum-of-one (bare nodule) | **Runs** | `phylum.rs::a_header_less_single_nodule_is_a_phylum_of_one` |
-| Full three-way over cross-nodule program | **Undetermined** — not yet tested. FLAG-2 in §5. | |
+| Full three-way over cross-nodule program | **Runs** — `elaborate(env_b, "main")` on nodule B's merged env finds `helper` from A (imported into `fns` by `check_nodule_with`); all three paths agree. FLAG-2 **RESOLVED** in §5. | `differential.rs::cross_nodule_program_runs_three_way` (W5/freeze-ledger) |
 
 ### 2.12 `spore` deployable artifact
 
@@ -261,21 +261,21 @@ The narrow scope above is correct and actionable immediately.
 
 ## §5 — FLAGs for the orchestrator
 
-**FLAG-1 (Dense three-way undetermined):** `Dense{d, s}` is accepted by the checker and
-`type_repr` in `elab.rs:197` resolves it to a kernel `Repr::Dense{…}`. However, no three-way
-differential test exercises Dense values end-to-end through L1-eval, L0-interp, and AOT. The
-`BinaryTernarySwapEngine` name implies it does not cover Dense swaps; if a Dense swap program
-entered the accept corpus, its runnable status would need verification. This is not a current
-SILENT-GAP (Dense programs are not in the grammar corpus) but is a risk if Dense joins the
-corpus before a Dense swap engine is registered. Classification: **Undetermined** (not Runs,
-not Residual — evidence gap). Recommend: add a targeted Dense three-way test or verify that
-`elaborate` + AOT refuse Dense with an explicit Residual (making it formally Explicit-Residual).
+**FLAG-1 (Dense three-way) — RESOLVED (W5/freeze-ledger, 2026-06-27):** `Dense{d, s}` swap
+targets were `Undetermined` because `elaborate` returned `Ok(Node::Swap{Dense})` while every
+runner (`BinaryTernarySwapEngine`, AOT) refused explicitly — an elaboration-level gap in the
+DN-50 narrow gate. Fix (freeze-ledger W5): the `Expr::Swap` elaboration arm in `elab.rs` now
+checks `if matches!(target_repr, Repr::Dense { .. }) { return residual(…) }`, making all paths
+consistent. Classification: **Explicit-Residual** (a Dense-capable swap engine lifts this with
+E2-1/ADR-033). Evidence: `Empirical` — `differential.rs::dense_swap_is_an_explicit_residual_on_all_paths`
+and the `runnable_gate.rs` standing-gate row.
 
-**FLAG-2 (Cross-nodule three-way gap):** Cross-nodule programs (phylum + cross-`use`) are fully
-check-tested (`phylum.rs`) but not three-way differentiated. Cross-`use` resolution happens at
-check time and the elaboration of each nodule is independent, so this is expected to be safe;
-but the gap in differential coverage means Explicit-Residual vs. Runs status for cross-nodule
-programs is unverified by the census. Not a current risk; worth a targeted test.
+**FLAG-2 (Cross-nodule three-way) — RESOLVED (W5/freeze-ledger, 2026-06-27):** Cross-nodule
+programs were `Undetermined` for the differential (check-tested but not three-way tested).
+Finding: `elaborate(env_b, "main")` on nodule B's merged env works correctly — `check_nodule_with`
+merges imported `pub` functions into `env.fns` (lines 1223-1224 of `checkty.rs`), so `elaborate`
+finds imported functions transparently. All three paths (L1-eval ≡ L0-interp ≡ AOT) agree.
+Classification: **Runs**. Evidence: `Empirical` — `differential.rs::cross_nodule_program_runs_three_way`.
 
 **FLAG-3 (Partial-recursion bi-modal status):** `Partial`-classified programs run on L1-eval
 (with explicit `FuelExhausted`) and emit an explicit `Residual` on elaboration (`elab.rs:307`).
@@ -306,3 +306,9 @@ standing gate in §4 must account for this: `elaborate(env, "spin")` on a Partia
   `mono.rs`, `checkty.rs`, and the full test corpus. No SILENT-GAP constructs found. Dense
   three-way and cross-nodule three-way gaps flagged as undetermined. Narrow standing-gate
   design sketched in §4. M-807 deliverable for DN-50 §5 DoD. Leaf agent LDW0-B.
+- **2026-06-27** — FLAG-1 and FLAG-2 **RESOLVED** (W5/freeze-ledger). FLAG-1 (Dense three-way):
+  elab.rs Expr::Swap arm now emits explicit `Residual` for Dense targets → classification updated
+  to `Explicit-Residual`. FLAG-2 (cross-nodule three-way): new three-way differential test
+  confirms cross-nodule programs **Run** (merged env works transparently). §5 updated with
+  resolution evidence and test refs. The narrow standing gate is wired in
+  `crates/mycelium-l1/tests/runnable_gate.rs` (DN-56 §5.1 freeze-gate condition #1). `Empirical`.

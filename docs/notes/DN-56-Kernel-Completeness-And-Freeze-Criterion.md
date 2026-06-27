@@ -124,10 +124,13 @@ a supersession, never an in-place growth; house rule #3.)
 ## 7. What remains before freeze (open, named — not hidden)
 
 - **ADR-033 FLAG-1** — the `FieldSpec::Fn` soundness/hashing question (the single open *primitive*).
-- **DN-52 `Undetermined` rows** — Dense three-way + cross-nodule three-way must enter the
-  differential corpus and resolve to *runs* or *explicit-Residual*.
-- **The narrow standing gate** (DN-50 OQ-2) — to be wired over the accept corpus (so the census
-  stays green automatically, not by one-time audit).
+- ~~**DN-52 `Undetermined` rows** — Dense three-way + cross-nodule three-way must enter the
+  differential corpus and resolve to *runs* or *explicit-Residual*.~~ **RESOLVED (W5/freeze-ledger,
+  2026-06-27):** Dense → `Explicit-Residual` (elab.rs fix + `differential.rs::dense_swap_is_an_explicit_residual_on_all_paths`);
+  cross-nodule → `Runs` (`differential.rs::cross_nodule_program_runs_three_way`). DN-52 §5 updated.
+- ~~**The narrow standing gate** (DN-50 OQ-2) — to be wired over the accept corpus.~~ **RESOLVED
+  (W5/freeze-ledger, 2026-06-27):** wired as `crates/mycelium-l1/tests/runnable_gate.rs::every_accepted_construct_elaborates_to_ok_or_explicit_residual`
+  — a representative data-driven table over construct categories, green. `Empirical`.
 - **RFC-0037 ratification + the grammar-supersession migration** — closes the *surface* side of the
   lowering surface.
 - **DN-54's extension-checker** — the mechanism that *enforces* transparent-by-construction on user
@@ -152,3 +155,4 @@ in action: the *path to* a no-black-box kernel is, fittingly, fully enumerated a
 | Date | Status | Note |
 |---|---|---|
 | 2026-06-27 | **Proposed** | Authored as the lang-design wave capstone (M-815). States the kernel-completeness criterion (every accept/reject/invariant enumerated, zero silent gaps, closed lowering surface incl. user extensions) and the **freeze gate** (five checkable conditions). Synthesizes DN-52 (census: no silent gaps), ADR-033 (the last kernel-touching primitive + its open soundness), DN-54 (extensions lower by construction), DN-55 (polymorphism zero-primitive). Extends DN-39; feeds ADR-021/022. **Enacts no code; declares no freeze** — defines when one is permissible (VR-5/G2). The kernel is not frozen today; §7 lists what remains, all named and tracked. |
+| 2026-06-27 | **Proposed** (updated) | W5/freeze-ledger: two §7 open items **RESOLVED**. (1) DN-52 `Undetermined` rows closed — Dense: elab.rs Expr::Swap guard + `differential.rs::dense_swap_is_an_explicit_residual_on_all_paths` → `Explicit-Residual`; cross-nodule: `differential.rs::cross_nodule_program_runs_three_way` → `Runs`. (2) DN-50 narrow standing gate wired — `runnable_gate.rs::every_accepted_construct_elaborates_to_ok_or_explicit_residual` (data-driven table, `Empirical`). Remaining in §7: ADR-033 FLAG-1, RFC-0037 migration, DN-54 extension-checker, reject-corpus audit. The kernel is still **not frozen** — §5 freeze-gate conditions #1 and the standing gate are now satisfied; #2–5 remain open. |
