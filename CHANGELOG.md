@@ -8,6 +8,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-27: maintainer ratifications — R1/R2/R5 review gates, 8 specs → Accepted; append-only, no code)
+
+- **R1 — binding grammar.** **RFC-0037** (surface-grammar deconfliction & layout-independence),
+  **DN-55** (static-specialization polymorphism model), and **RFC-0025** (operator sugar, already
+  implemented Rust-first) → **Accepted**. **RFC-0030** (concrete L3 grammar) Draft → **Accepted** with
+  an explicit **VR-5 caveat**: its `mycelium.ebnf` has not yet been regenerated against RFC-0037's
+  bracket/operator changes — that regeneration is the **Enacted** gate, so the committed EBNF still
+  lags RFC-0037 until the grammar epic lands.
+- **R2 — dynamic dispatch.** **ADR-033** (`FieldSpec::Fn` trusted-core extension) → **Accepted**, KC-3
+  growth (one enum variant) accepted. **FLAG-1** (arity-only-hashing soundness) stays **`Declared`**
+  (never upgraded, VR-5) and is an explicit **pre-`Enacted` proof gate** — a machine-checked basis or a
+  revised type-carrying hash is required before Enacted.
+- **R5 — object/lowering surface + freeze criterion.** **DN-53** (`object` keyword + granular item-level
+  `pub`; field-level deferred) and **DN-54** (`derive` user-extensible generative lowering) → **Accepted**.
+  **DN-56** freeze-criterion **framework** → **Accepted** — this does **not** declare the kernel frozen:
+  condition #1 (census/never-silent floor) is satisfied (W5), #3 (primitive set closed) is **contingent
+  on ADR-033 FLAG-1**, and #2/#4/#5 remain open.
+- **Next:** R3/R4 approved as the upcoming implementation waves — M-704 closures via Reynolds
+  defunctionalization (KC-3-safe) and M-667 fuse/reclaim/tier minimal surface. The **RFC-0037 grammar
+  epic** (lexer/parser/EBNF in `crates/mycelium-l1`) is the keystone that those and the EBNF regen depend on.
+
 ### Deprecated (2026-06-27: 84 stale branches slated for prune to the three protected tiers)
 
 - **All non-protected branches deprecated; repo retains only `main`/`integration`/`dev`** (maintainer-
