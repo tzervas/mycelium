@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **ADR** | 033 |
-| **Status** | **Proposed** (2026-06-27; design-phase; enacts no code; gated on maintainer ratification + KC-3 sign-off) |
+| **Status** | **Accepted** (2026-06-27) — *Proposed → Accepted, **ratified by the maintainer 2026-06-27** (R2 gate): the `FieldSpec::Fn` trusted-core extension for dynamic dispatch is approved, with KC-3 growth (one enum variant) accepted. **FLAG-1 (arity-only-hashing soundness) stays `Declared` — never upgraded (VR-5) — and is an explicit pre-`Enacted` gate:** a machine-checked soundness basis (or a revised type-carrying hash) is required before this moves to **Enacted**.* Prior: **Proposed** (2026-06-27). |
 | **Decides** | Extend the trusted-core `FieldSpec` enum with an **abstract function-typed field variant** (`FieldSpec::Fn`) so data values can carry method values (the record-of-method-values / dictionary form), making RFC-0019 §4.5 dynamic dispatch v0-expressible. This is a **deliberate, gated trusted-base growth** (KC-3). |
 | **Task** | M-810 |
 | **Date** | 2026-06-27 |
