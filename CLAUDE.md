@@ -360,6 +360,25 @@ success regardless. The gap is invisible unless you count the result.
    and a manifest/index ↔ actual `diff` is empty). A green merge is **not** evidence the content
    arrived — count it. (This is the merge-time twin of mitigation #2's post-merge YAML dedup.)
 
+### 8. Lost intent on compaction — persist before you can't (standing policy, rsm 2026-06-26)
+**Pattern:** A session/agent approaching context compaction silently loses in-flight reasoning,
+decisions, and "where am I / what's next" state — the thread breaks mid-task and the next window
+can't recover the intent (only the code, if it was committed).
+**Mitigation:** Before you can't — when any agent (orchestrator/epic/leaf) nears compaction or a
+long handoff — **write working state to disc**: a scratch/memory file with working notes, decisions
+made, current position, and the next steps. Branches are the durable artifact for *code* (#5/#9);
+this note is the durable artifact for *intent*. This is **standing policy for every agent**, not just
+swarm runs (reinforces #6: the orchestrator's context budget is the scarcest resource — protect it).
+
+### 9. Unrecoverable work — commit + push frequently to a working branch (standing policy, rsm 2026-06-26)
+**Pattern:** An agent holding hours of uncommitted (or committed-but-unpushed) work loses **all** of
+it when orphaned on compaction (the Wave-4 mass-orphan durability lesson: worktree branches are the
+durable artifact; an unpushed tip is gone).
+**Mitigation:** Every agent commits in **small batches and pushes to its working branch** on the
+`wip(batch M/N)` cadence (#5) — no agent holds hours of uncommitted work, and worktree leaves
+**push before they complete**. If lost, the work is recoverable from the branch, not gone. This is
+**standing policy for every agent**. (#5 is the *visibility* twin of this *durability* rule.)
+
 ## Autonomous PR workflow — review-before-merge, no human gate
 
 The merge gate is the agent's, not a human's. A parent (orchestrator/epic) **merges its children
