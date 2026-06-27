@@ -265,6 +265,9 @@ impl Gx<'_> {
             // `with paradigm` is stripped by the ambient pass before the checker. Defensive,
             // never-reached arms: grade the body conservatively rather than panic.
             Expr::Spore(_) => Ok(Strength::Declared),
+            // `lambda` is a deferred form (M-704; the checker already refuses it) — like `wild`/`spore`
+            // it carries the least-trusted `Declared` rather than panicking on this defensive arm.
+            Expr::Lambda { .. } => Ok(Strength::Declared),
             Expr::WithParadigm { body, .. } => self.grade(scope, body),
         }
     }

@@ -2,4 +2,4 @@
 // silently-empty token (RFC-0032 D4, M-750).
 nodule bad
 
-fn f() -> Bytes = 0x
+fn f() => Bytes = 0x

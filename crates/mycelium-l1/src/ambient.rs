@@ -41,8 +41,8 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, ImplDecl, Item, Literal, Nodule,
-    Paradigm, Param, Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam,
-    TypeRef, UsePath, Vis, WidthRef,
+    Paradigm, Param, ParamKind, Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl,
+    TypeParam, TypeRef, UsePath, Vis, WidthRef,
 };
 
 /// A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess.
@@ -467,6 +467,12 @@ impl Resolver {
             // value expression (deferred — E2-5/M-260), so it still resolves transparently.
             Expr::Wild(b) => Expr::Wild(b.clone()),
             Expr::Spore(b) => Expr::Spore(Box::new(self.expr(amb, site, b)?)),
+            // A `lambda` body flows transparently under the same ambient (no new ambient frame); the
+            // params carry their own explicit types. (Deferred form — M-704 — but resolved like any expr.)
+            Expr::Lambda { params, body } => Expr::Lambda {
+                params: params.clone(),
+                body: Box::new(self.expr(amb, site, body)?),
+            },
             // A `colony`'s ambient flows transparently into each `hypha` body (no new ambient frame;
             // RFC-0008 §4.7). Resolve every hypha body under the same `amb`.
             Expr::Colony(hyphae) => {
@@ -619,7 +625,8 @@ fn print_type_decl(td: &TypeDecl) -> String {
     let params = if td.params.is_empty() {
         String::new()
     } else {
-        format!("<{}>", td.params.join(", "))
+        // RFC-0037 D2: data type-parameters render in `[…]` (parsed by `parse_type_params_opt`).
+        format!("[{}]", td.params.join(", "))
     };
     let ctors: Vec<String> = td
         .ctors
@@ -646,7 +653,8 @@ fn print_trait_decl(td: &TraitDecl) -> String {
     let params = if td.params.is_empty() {
         String::new()
     } else {
-        format!("<{}>", td.params.join(", "))
+        // RFC-0037 D2: trait type-parameters render in `[…]` (parsed by `parse_type_params_opt`).
+        format!("[{}]", td.params.join(", "))
     };
     let mut s = format!("{}trait {}{} {{\n", pub_str(td.vis), td.name, params);
     for sig in &td.sigs {
@@ -667,11 +675,30 @@ fn print_fn_decl(fd: &FnDecl) -> String {
 }
 
 fn print_sig_tail(sig: &FnSig) -> String {
-    let tp = if sig.params.is_empty() {
+    // RFC-0037 D2: type parameters render in `[T]` (may carry bounds — the dictionary site),
+    // width/const parameters render in `{N}` (bare names). The two lists print in that order,
+    // matching `parse_sig_tail` (which reads `[…]` then `{…}`), so expand→reparse round-trips.
+    let type_ps: Vec<String> = sig
+        .params
+        .iter()
+        .filter(|p| p.kind == ParamKind::Type)
+        .map(print_type_param)
+        .collect();
+    let width_ps: Vec<String> = sig
+        .params
+        .iter()
+        .filter(|p| p.kind == ParamKind::Width)
+        .map(print_type_param)
+        .collect();
+    let tp = if type_ps.is_empty() {
         String::new()
     } else {
-        let ps: Vec<String> = sig.params.iter().map(print_type_param).collect();
-        format!("<{}>", ps.join(", "))
+        format!("[{}]", type_ps.join(", "))
+    };
+    let wp = if width_ps.is_empty() {
+        String::new()
+    } else {
+        format!("{{{}}}", width_ps.join(", "))
     };
     let ps: Vec<String> = sig
         .value_params
@@ -679,9 +706,10 @@ fn print_sig_tail(sig: &FnSig) -> String {
         .map(|p| format!("{}: {}", p.name, print_type_ref(&p.ty)))
         .collect();
     format!(
-        "{}{}({}) -> {}",
+        "{}{}{}({}) => {}",
         sig.name,
         tp,
+        wp,
         ps.join(", "),
         print_type_ref(&sig.ret)
     )
@@ -706,23 +734,23 @@ fn print_type_param(p: &TypeParam) -> String {
     }
 }
 
-/// Canonical surface form of a trait reference in a bound (`Cmp` or `Cmp<Binary{8}>`).
+/// Canonical surface form of a trait reference in a bound (`Cmp` or `Cmp[Binary{8}]`; RFC-0037 D2).
 fn print_trait_ref(tr: &TraitRef) -> String {
     if tr.args.is_empty() {
         tr.name.clone()
     } else {
         let args: Vec<String> = tr.args.iter().map(print_type_ref).collect();
-        format!("{}<{}>", tr.name, args.join(", "))
+        format!("{}[{}]", tr.name, args.join(", "))
     }
 }
 
-/// Canonical surface form of an `impl Trait<args> for T { fn … }` (RFC-0019 §4.1).
+/// Canonical surface form of an `impl Trait[args] for T { fn … }` (RFC-0019 §4.1 / RFC-0037 D2).
 fn print_impl_decl(id: &ImplDecl) -> String {
     let args = if id.trait_args.is_empty() {
         String::new()
     } else {
         let a: Vec<String> = id.trait_args.iter().map(print_type_ref).collect();
-        format!("<{}>", a.join(", "))
+        format!("[{}]", a.join(", "))
     };
     let mut s = format!(
         "impl {}{} for {} {{\n",
@@ -762,19 +790,21 @@ impl core::fmt::Display for DisplayBase<'_> {
             BaseType::Bytes => write!(f, "Bytes"),
             BaseType::Named(n, args) if args.is_empty() => write!(f, "{n}"),
             BaseType::Named(n, args) => {
+                // RFC-0037 D2: type arguments render in `[…]` (parsed by `parse_type_args_opt`).
                 let a: Vec<String> = args.iter().map(print_type_ref).collect();
-                write!(f, "{n}<{}>", a.join(", "))
+                write!(f, "{n}[{}]", a.join(", "))
             }
             BaseType::Ambient(params) => write!(f, "{{{}}}", ambient_params_str(params)),
-            // Function type: `A -> B` in canonical surface form (RFC-0024 §3, M-685).
+            // Function type: `A => B` in canonical surface form (RFC-0024 §3, M-685; RFC-0037 D4
+            // retired the `->` glyph in favour of `=>`).
             BaseType::Fn(arg, ret) => {
-                // Parenthesize a function-typed LHS so `(A -> B) -> C` round-trips unambiguously,
-                // not as `A -> B -> C` (Copilot #397).
+                // Parenthesize a function-typed LHS so `(A => B) => C` round-trips unambiguously,
+                // not as `A => B => C` (Copilot #397).
                 let lhs = print_type_ref(arg);
                 if matches!(arg.base, BaseType::Fn(_, _)) {
-                    write!(f, "({lhs}) -> {}", print_type_ref(ret))
+                    write!(f, "({lhs}) => {}", print_type_ref(ret))
                 } else {
-                    write!(f, "{lhs} -> {}", print_type_ref(ret))
+                    write!(f, "{lhs} => {}", print_type_ref(ret))
                 }
             }
         }
@@ -869,6 +899,15 @@ fn print_expr(e: &Expr) -> String {
         }
         Expr::Wild(b) => format!("wild {{ {} }}", print_expr(b)),
         Expr::Spore(b) => format!("spore({})", print_expr(b)),
+        Expr::Lambda { params, body } => format!(
+            "lambda({}) => {}",
+            params
+                .iter()
+                .map(|p| p.name.clone())
+                .collect::<Vec<_>>()
+                .join(", "),
+            print_expr(body)
+        ),
         Expr::Colony(hyphae) => {
             let hs: Vec<String> = hyphae
                 .iter()

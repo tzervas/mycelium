@@ -135,10 +135,10 @@ fn assert_three_way(label: &str, src: &str, expected_src: &str) {
 #[test]
 fn is_empty_l_on_nil_returns_true() {
     let driver = "\
-fn mk_nil() -> List<Binary{8}> = Nil\n\
-fn main() -> Bool = is_empty_l(mk_nil())";
+fn mk_nil() => List[Binary{8}] = Nil\n\
+fn main() => Bool = is_empty_l(mk_nil())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Bool = True";
+    let expected = "nodule ref\nfn main() => Bool = True";
     assert_three_way("is_empty_l(Nil)", &src, expected);
 }
 
@@ -147,10 +147,10 @@ fn main() -> Bool = is_empty_l(mk_nil())";
 #[test]
 fn is_empty_l_on_cons_returns_false() {
     let driver = "\
-fn mk_one() -> List<Binary{8}> = Cons(0b0000_0001, Nil)\n\
-fn main() -> Bool = is_empty_l(mk_one())";
+fn mk_one() => List[Binary{8}] = Cons(0b0000_0001, Nil)\n\
+fn main() => Bool = is_empty_l(mk_one())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Bool = False";
+    let expected = "nodule ref\nfn main() => Bool = False";
     assert_three_way("is_empty_l(Cons)", &src, expected);
 }
 
@@ -163,12 +163,12 @@ fn main() -> Bool = is_empty_l(mk_one())";
 #[test]
 fn length_of_two_element_list() {
     let driver = "\
-fn mk_two() -> List<Binary{8}> = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
-fn main() -> Binary{8} = length(mk_two())";
+fn mk_two() => List[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
+fn main() => Binary{8} = length(mk_two())";
     let src = program(driver);
     // length([e1, e2]) = add_bin(1, add_bin(1, 0)) = 2 — Derived provenance matches.
     let expected =
-        "nodule ref\nfn main() -> Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000))";
+        "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000))";
     assert_three_way("length([1,2])", &src, expected);
 }
 
@@ -177,10 +177,10 @@ fn main() -> Binary{8} = length(mk_two())";
 #[test]
 fn length_of_nil_is_zero() {
     let driver = "\
-fn mk_nil() -> List<Binary{8}> = Nil\n\
-fn main() -> Binary{8} = length(mk_nil())";
+fn mk_nil() => List[Binary{8}] = Nil\n\
+fn main() => Binary{8} = length(mk_nil())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b0000_0000";
+    let expected = "nodule ref\nfn main() => Binary{8} = 0b0000_0000";
     assert_three_way("length(Nil)", &src, expected);
 }
 
@@ -189,11 +189,11 @@ fn main() -> Binary{8} = length(mk_nil())";
 #[test]
 fn length_of_three_element_list() {
     let driver = "\
-fn mk_three() -> List<Binary{8}> = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))\n\
-fn main() -> Binary{8} = length(mk_three())";
+fn mk_three() => List[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))\n\
+fn main() => Binary{8} = length(mk_three())";
     let src = program(driver);
     // length([e1,e2,e3]) = add_bin(1, add_bin(1, add_bin(1, 0))) = 3
-    let expected = "nodule ref\nfn main() -> Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000)))";
+    let expected = "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000)))";
     assert_three_way("length([1,2,3])", &src, expected);
 }
 
@@ -202,7 +202,7 @@ fn main() -> Binary{8} = length(mk_three())";
 /// std_collections.rs::len_bound_add_bin_overflow_refuses_on_every_path. Empirical.
 #[test]
 fn length_bound_add_bin_overflow_refuses_on_every_path() {
-    let src = program("fn main() -> Binary{8} = add_bin(0b0000_0001, 0b1111_1111)");
+    let src = program("fn main() => Binary{8} = add_bin(0b0000_0001, 0b1111_1111)");
 
     let env =
         check_nodule(&parse(&src).expect("length_bound: parse must succeed (overflow is runtime)"))
@@ -239,21 +239,21 @@ fn length_bound_add_bin_overflow_refuses_on_every_path() {
 // original element (Root). Closures / multi-arg arrows stay deferred (M-704) — only NAMED fns here.
 
 // A reusable Binary{8} successor as a top-level fn (a valid RFC-0024 §4 defunctionalization target).
-const INC: &str = "fn inc(x: Binary{8}) -> Binary{8} = add_bin(x, 0b0000_0001)\n";
+const INC: &str = "fn inc(x: Binary{8}) => Binary{8} = add_bin(x, 0b0000_0001)\n";
 // A reusable Binary{8} predicate (== 0b10) as a top-level fn.
 const IS_TWO: &str =
-    "fn is_two(x: Binary{8}) -> Bool = match eq(x, 0b0000_0010) { 0b1 => True, _ => False }\n";
+    "fn is_two(x: Binary{8}) => Bool = match eq(x, 0b0000_0010) { 0b1 => True, _ => False }\n";
 
 /// `map([1,2], inc)` → `[2,3]`. The recursive `map(rest, f)` threads `inc` through. Declared/Empirical.
 #[test]
 fn map_applies_fn_to_each_element() {
     let src = program(&format!(
-        "{INC}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
-         fn main() -> List<Binary{{8}}> = map(mk(), inc)"
+        "{INC}fn mk() => List[Binary{{8}}] = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
+         fn main() => List[Binary{{8}}] = map(mk(), inc)"
     ));
     // Reference: recompute via the same add_bin so the mapped elements share Derived provenance.
     let expected = program(
-        "fn main() -> List<Binary{8}> = \
+        "fn main() => List[Binary{8}] = \
          Cons(add_bin(0b0000_0001, 0b0000_0001), Cons(add_bin(0b0000_0010, 0b0000_0001), Nil))",
     );
     assert_three_way("map([1,2], inc)=[2,3]", &src, &expected);
@@ -263,9 +263,9 @@ fn map_applies_fn_to_each_element() {
 #[test]
 fn map_over_nil_is_nil() {
     let src = program(&format!(
-        "{INC}fn mk() -> List<Binary{{8}}> = Nil\nfn main() -> List<Binary{{8}}> = map(mk(), inc)"
+        "{INC}fn mk() => List[Binary{{8}}] = Nil\nfn main() => List[Binary{{8}}] = map(mk(), inc)"
     ));
-    let expected = program("fn main() -> List<Binary{8}> = Nil");
+    let expected = program("fn main() => List[Binary{8}] = Nil");
     assert_three_way("map(Nil, inc)=Nil", &src, &expected);
 }
 
@@ -273,12 +273,12 @@ fn map_over_nil_is_nil() {
 #[test]
 fn filter_keeps_matching_elements() {
     let src = program(
-        "fn is_one(x: Binary{8}) -> Bool = match eq(x, 0b0000_0001) { 0b1 => True, _ => False }\n\
-         fn mk() -> List<Binary{8}> = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0001, Nil)))\n\
-         fn main() -> List<Binary{8}> = filter(mk(), is_one)",
+        "fn is_one(x: Binary{8}) => Bool = match eq(x, 0b0000_0001) { 0b1 => True, _ => False }\n\
+         fn mk() => List[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0001, Nil)))\n\
+         fn main() => List[Binary{8}] = filter(mk(), is_one)",
     );
     let expected =
-        program("fn main() -> List<Binary{8}> = Cons(0b0000_0001, Cons(0b0000_0001, Nil))");
+        program("fn main() => List[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0001, Nil))");
     assert_three_way("filter([1,2,1], is_one)=[1,1]", &src, &expected);
 }
 
@@ -287,10 +287,10 @@ fn filter_keeps_matching_elements() {
 #[test]
 fn foldl_returns_f_of_last_for_nonempty() {
     let src = program(&format!(
-        "{INC}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))\n\
-         fn main() -> Binary{{8}} = foldl(mk(), inc, 0b0000_0000)"
+        "{INC}fn mk() => List[Binary{{8}}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))\n\
+         fn main() => Binary{{8}} = foldl(mk(), inc, 0b0000_0000)"
     ));
-    let expected = program("fn main() -> Binary{8} = add_bin(0b0000_0011, 0b0000_0001)");
+    let expected = program("fn main() => Binary{8} = add_bin(0b0000_0011, 0b0000_0001)");
     assert_three_way("foldl([1,2,3], inc, 0)=inc(3)=4", &src, &expected);
 }
 
@@ -298,10 +298,10 @@ fn foldl_returns_f_of_last_for_nonempty() {
 #[test]
 fn foldl_over_nil_returns_initial_acc() {
     let src = program(&format!(
-        "{INC}fn mk() -> List<Binary{{8}}> = Nil\n\
-         fn main() -> Binary{{8}} = foldl(mk(), inc, 0b0000_0101)"
+        "{INC}fn mk() => List[Binary{{8}}] = Nil\n\
+         fn main() => Binary{{8}} = foldl(mk(), inc, 0b0000_0101)"
     ));
-    let expected = program("fn main() -> Binary{8} = 0b0000_0101");
+    let expected = program("fn main() => Binary{8} = 0b0000_0101");
     assert_three_way("foldl(Nil, inc, 5)=5", &src, &expected);
 }
 
@@ -309,13 +309,13 @@ fn foldl_over_nil_returns_initial_acc() {
 #[test]
 fn any_true_when_an_element_matches() {
     let src = program(&format!(
-        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
-         fn main() -> Bool = any(mk(), is_two)"
+        "{IS_TWO}fn mk() => List[Binary{{8}}] = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
+         fn main() => Bool = any(mk(), is_two)"
     ));
     assert_three_way(
         "any([1,2], is_two)=True",
         &src,
-        "nodule ref\nfn main() -> Bool = True",
+        "nodule ref\nfn main() => Bool = True",
     );
 }
 
@@ -323,13 +323,13 @@ fn any_true_when_an_element_matches() {
 #[test]
 fn any_false_when_no_element_matches() {
     let src = program(&format!(
-        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0011, Nil))\n\
-         fn main() -> Bool = any(mk(), is_two)"
+        "{IS_TWO}fn mk() => List[Binary{{8}}] = Cons(0b0000_0001, Cons(0b0000_0011, Nil))\n\
+         fn main() => Bool = any(mk(), is_two)"
     ));
     assert_three_way(
         "any([1,3], is_two)=False",
         &src,
-        "nodule ref\nfn main() -> Bool = False",
+        "nodule ref\nfn main() => Bool = False",
     );
 }
 
@@ -337,22 +337,22 @@ fn any_false_when_no_element_matches() {
 #[test]
 fn all_true_only_when_every_element_matches() {
     let yes = program(&format!(
-        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0010, Cons(0b0000_0010, Nil))\n\
-         fn main() -> Bool = all(mk(), is_two)"
+        "{IS_TWO}fn mk() => List[Binary{{8}}] = Cons(0b0000_0010, Cons(0b0000_0010, Nil))\n\
+         fn main() => Bool = all(mk(), is_two)"
     ));
     assert_three_way(
         "all([2,2], is_two)=True",
         &yes,
-        "nodule ref\nfn main() -> Bool = True",
+        "nodule ref\nfn main() => Bool = True",
     );
     let no = program(&format!(
-        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0010, Cons(0b0000_0001, Nil))\n\
-         fn main() -> Bool = all(mk(), is_two)"
+        "{IS_TWO}fn mk() => List[Binary{{8}}] = Cons(0b0000_0010, Cons(0b0000_0001, Nil))\n\
+         fn main() => Bool = all(mk(), is_two)"
     ));
     assert_three_way(
         "all([2,1], is_two)=False",
         &no,
-        "nodule ref\nfn main() -> Bool = False",
+        "nodule ref\nfn main() => Bool = False",
     );
 }
 
@@ -360,10 +360,10 @@ fn all_true_only_when_every_element_matches() {
 #[test]
 fn find_returns_first_match() {
     let src = program(&format!(
-        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))\n\
-         fn main() -> Option<Binary{{8}}> = find(mk(), is_two)"
+        "{IS_TWO}fn mk() => List[Binary{{8}}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))\n\
+         fn main() => Option[Binary{{8}}] = find(mk(), is_two)"
     ));
-    let expected = program("fn main() -> Option<Binary{8}> = Some(0b0000_0010)");
+    let expected = program("fn main() => Option[Binary{8}] = Some(0b0000_0010)");
     assert_three_way("find([1,2,3], is_two)=Some(2)", &src, &expected);
 }
 
@@ -371,10 +371,10 @@ fn find_returns_first_match() {
 #[test]
 fn find_miss_returns_none() {
     let src = program(&format!(
-        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0011, Nil))\n\
-         fn main() -> Option<Binary{{8}}> = find(mk(), is_two)"
+        "{IS_TWO}fn mk() => List[Binary{{8}}] = Cons(0b0000_0001, Cons(0b0000_0011, Nil))\n\
+         fn main() => Option[Binary{{8}}] = find(mk(), is_two)"
     ));
-    let expected = program("fn main() -> Option<Binary{8}> = None");
+    let expected = program("fn main() => Option[Binary{8}] = None");
     assert_three_way("find([1,3], is_two)=None", &src, &expected);
 }
 

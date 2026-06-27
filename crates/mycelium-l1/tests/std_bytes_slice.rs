@@ -109,7 +109,7 @@ fn lit32(n: u32) -> String {
 fn slice_in_range_preserves_value() {
     let (r, p) = bytes(&[0xAD, 0xBE]);
     let src = format!(
-        "nodule d\nfn main() -> Bytes = bytes_slice(0xDEADBEEF, {}, {})",
+        "nodule d\nfn main() => Bytes = bytes_slice(0xDEADBEEF, {}, {})",
         lit32(1),
         lit32(3)
     );
@@ -122,7 +122,7 @@ fn slice_in_range_preserves_value() {
 fn slice_full_span_is_identity() {
     let (r, p) = bytes(&[0xDE, 0xAD, 0xBE, 0xEF]);
     let src = format!(
-        "nodule d\nfn main() -> Bytes = bytes_slice(0xDEADBEEF, {}, {})",
+        "nodule d\nfn main() => Bytes = bytes_slice(0xDEADBEEF, {}, {})",
         lit32(0),
         lit32(4)
     );
@@ -133,7 +133,7 @@ fn slice_full_span_is_identity() {
 fn slice_empty_range_is_empty_bytes() {
     let (r, p) = bytes(&[]);
     let src = format!(
-        "nodule d\nfn main() -> Bytes = bytes_slice(0xDEADBEEF, {}, {})",
+        "nodule d\nfn main() => Bytes = bytes_slice(0xDEADBEEF, {}, {})",
         lit32(2),
         lit32(2)
     );
@@ -146,7 +146,7 @@ fn slice_empty_range_is_empty_bytes() {
 #[test]
 fn concat_two_literals() {
     let (r, p) = bytes(&[0xDE, 0xAD, 0xBE, 0xEF]);
-    let src = "nodule d\nfn main() -> Bytes = bytes_concat(0xDEAD, 0xBEEF)";
+    let src = "nodule d\nfn main() => Bytes = bytes_concat(0xDEAD, 0xBEEF)";
     assert_three_way("concat 0xDEAD ++ 0xBEEF", src, &r, &p);
 }
 
@@ -156,7 +156,7 @@ fn concat_with_empty_is_identity() {
     let (r, p) = bytes(&[0xDE, 0xAD]);
     // `0x` cannot be empty (lexer requires >=1 byte), so exercise identity via concat(x, slice(x,len,len)).
     let src = format!(
-        "nodule d\nfn main() -> Bytes = bytes_concat(0xDEAD, bytes_slice(0xDEAD, {}, {}))",
+        "nodule d\nfn main() => Bytes = bytes_concat(0xDEAD, bytes_slice(0xDEAD, {}, {}))",
         lit32(2),
         lit32(2)
     );
@@ -172,7 +172,7 @@ fn concat_with_empty_is_identity() {
 #[test]
 fn slice_out_of_range_refuses_on_every_path() {
     let src = format!(
-        "nodule d\nfn main() -> Bytes = bytes_slice(0xDEADBEEF, {}, {})",
+        "nodule d\nfn main() => Bytes = bytes_slice(0xDEADBEEF, {}, {})",
         lit32(2),
         lit32(9)
     );
@@ -218,7 +218,7 @@ fn slice_out_of_range_refuses_on_every_path() {
 #[test]
 fn slice_inverted_range_refuses_on_every_path() {
     let src = format!(
-        "nodule d\nfn main() -> Bytes = bytes_slice(0xDEADBEEF, {}, {})",
+        "nodule d\nfn main() => Bytes = bytes_slice(0xDEADBEEF, {}, {})",
         lit32(3),
         lit32(1)
     );
@@ -257,7 +257,7 @@ fn slice_inverted_range_refuses_on_every_path() {
 #[test]
 fn slice_non_bytes_receiver_refuses_statically() {
     let src = format!(
-        "nodule d\nfn main() -> Bytes = bytes_slice(0b0000_0000, {}, {})",
+        "nodule d\nfn main() => Bytes = bytes_slice(0b0000_0000, {}, {})",
         lit32(0),
         lit32(1)
     );
@@ -270,7 +270,7 @@ fn slice_non_bytes_receiver_refuses_statically() {
 /// `bytes_concat` over a non-`Bytes` operand is a static type refusal.
 #[test]
 fn concat_non_bytes_operand_refuses_statically() {
-    let src = "nodule d\nfn main() -> Bytes = bytes_concat(0xDEAD, 0b0000_0000)";
+    let src = "nodule d\nfn main() => Bytes = bytes_concat(0xDEAD, 0b0000_0000)";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
         "a Binary second operand to bytes_concat must be a static type error (DN-43/RFC-0032 D4)"
@@ -281,7 +281,7 @@ fn concat_non_bytes_operand_refuses_statically() {
 #[test]
 fn slice_wrong_arity_refuses() {
     let src = format!(
-        "nodule d\nfn main() -> Bytes = bytes_slice(0xDEAD, {})",
+        "nodule d\nfn main() => Bytes = bytes_slice(0xDEAD, {})",
         lit32(0)
     );
     assert!(
@@ -292,7 +292,7 @@ fn slice_wrong_arity_refuses() {
 
 #[test]
 fn concat_wrong_arity_refuses() {
-    let src = "nodule d\nfn main() -> Bytes = bytes_concat(0xDEAD)";
+    let src = "nodule d\nfn main() => Bytes = bytes_concat(0xDEAD)";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
         "bytes_concat requires two operands; one is a static error"
@@ -394,13 +394,13 @@ fn assert_three_way_opt(label: &str, src: &str, expected_src: &str) {
 #[test]
 fn slice_opt_in_range_is_some() {
     let driver = format!(
-        "fn main() -> Option<Bytes> = slice_opt(0xDEADBEEF, {}, {})",
+        "fn main() => Option[Bytes] = slice_opt(0xDEADBEEF, {}, {})",
         lit32(1),
         lit32(3)
     );
     let src = text_program(&driver);
     let expected = text_program(&format!(
-        "fn main() -> Option<Bytes> = Some(bytes_slice(0xDEADBEEF, {}, {}))",
+        "fn main() => Option[Bytes] = Some(bytes_slice(0xDEADBEEF, {}, {}))",
         lit32(1),
         lit32(3)
     ));
@@ -412,12 +412,12 @@ fn slice_opt_in_range_is_some() {
 #[test]
 fn slice_opt_inverted_range_is_none() {
     let driver = format!(
-        "fn main() -> Option<Bytes> = slice_opt(0xDEADBEEF, {}, {})",
+        "fn main() => Option[Bytes] = slice_opt(0xDEADBEEF, {}, {})",
         lit32(3),
         lit32(1)
     );
     let src = text_program(&driver);
-    let expected = text_program("fn main() -> Option<Bytes> = None");
+    let expected = text_program("fn main() => Option[Bytes] = None");
     assert_three_way_opt("slice_opt [3,1) inverted = None", &src, &expected);
 }
 
@@ -426,11 +426,11 @@ fn slice_opt_inverted_range_is_none() {
 #[test]
 fn slice_opt_out_of_range_is_none() {
     let driver = format!(
-        "fn main() -> Option<Bytes> = slice_opt(0xDEADBEEF, {}, {})",
+        "fn main() => Option[Bytes] = slice_opt(0xDEADBEEF, {}, {})",
         lit32(2),
         lit32(9)
     );
     let src = text_program(&driver);
-    let expected = text_program("fn main() -> Option<Bytes> = None");
+    let expected = text_program("fn main() => Option[Bytes] = None");
     assert_three_way_opt("slice_opt [2,9) oob = None", &src, &expected);
 }

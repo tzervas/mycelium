@@ -1,6 +1,6 @@
 // rejected: unbalanced brace — the match block is never closed
 nodule bad
 
-fn f(s: Sign) -> Sign =
+fn f(s: Sign) => Sign =
     match s {
         Pos => s

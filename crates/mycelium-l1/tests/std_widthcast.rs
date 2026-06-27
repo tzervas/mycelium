@@ -110,7 +110,7 @@ fn lit32(n: u32) -> String {
 fn widen_8_to_32_zero_extends_exactly() {
     let (r, p) = bin(32, 0xA5);
     let src = format!(
-        "nodule d\nfn main() -> Binary{{32}} = width_cast(0b1010_0101, {})",
+        "nodule d\nfn main() => Binary{{32}} = width_cast(0b1010_0101, {})",
         lit32(0)
     );
     assert_three_way("widen 8->32 (0xA5)", &src, &r, &p);
@@ -122,7 +122,7 @@ fn widen_8_to_32_zero_extends_exactly() {
 fn widen_8_to_32_preserves_max_byte() {
     let (r, p) = bin(32, 255);
     let src = format!(
-        "nodule d\nfn main() -> Binary{{32}} = width_cast(0b1111_1111, {})",
+        "nodule d\nfn main() => Binary{{32}} = width_cast(0b1111_1111, {})",
         lit32(0)
     );
     assert_three_way("widen 8->32 (255)", &src, &r, &p);
@@ -136,7 +136,7 @@ fn same_width_is_identity() {
     let (r, p) = bin(8, 0x3c);
     assert_three_way(
         "identity 8->8 (0x3c)",
-        "nodule d\nfn main() -> Binary{8} = width_cast(0b0011_1100, 0b0000_0000)",
+        "nodule d\nfn main() => Binary{8} = width_cast(0b0011_1100, 0b0000_0000)",
         &r,
         &p,
     );
@@ -150,7 +150,7 @@ fn same_width_is_identity() {
 fn narrow_32_to_8_fits_exactly() {
     let (r, p) = bin(8, 5);
     let src = format!(
-        "nodule d\nfn main() -> Binary{{8}} = width_cast({}, 0b0000_0000)",
+        "nodule d\nfn main() => Binary{{8}} = width_cast({}, 0b0000_0000)",
         lit32(5)
     );
     assert_three_way("narrow 32->8 (5 fits)", &src, &r, &p);
@@ -161,7 +161,7 @@ fn narrow_32_to_8_fits_exactly() {
 fn narrow_32_to_8_fits_at_boundary() {
     let (r, p) = bin(8, 255);
     let src = format!(
-        "nodule d\nfn main() -> Binary{{8}} = width_cast({}, 0b0000_0000)",
+        "nodule d\nfn main() => Binary{{8}} = width_cast({}, 0b0000_0000)",
         lit32(255)
     );
     assert_three_way("narrow 32->8 (255 boundary)", &src, &r, &p);
@@ -175,7 +175,7 @@ fn narrow_32_to_8_fits_at_boundary() {
 #[test]
 fn narrow_overflow_refuses_on_every_path() {
     let src = format!(
-        "nodule d\nfn main() -> Binary{{8}} = width_cast({}, 0b0000_0000)",
+        "nodule d\nfn main() => Binary{{8}} = width_cast({}, 0b0000_0000)",
         lit32(256)
     );
     // Check-first (the strengthening): the program **type-checks** — so the refusal below is a
@@ -219,7 +219,7 @@ fn narrow_overflow_refuses_on_every_path() {
 #[test]
 fn narrow_overflow_high_value_refuses_on_every_path() {
     let src = format!(
-        "nodule d\nfn main() -> Binary{{8}} = width_cast({}, 0b0000_0000)",
+        "nodule d\nfn main() => Binary{{8}} = width_cast({}, 0b0000_0000)",
         lit32(0xFFFF_FFFF)
     );
     let env = check_nodule(&parse(&src).expect("parses")).expect("checks");
@@ -246,7 +246,7 @@ fn narrow_overflow_high_value_refuses_on_every_path() {
 fn motivating_composite_index_lt_length_true() {
     let (r, p) = b1(true);
     let src = format!(
-        "nodule d\nfn main() -> Binary{{1}} = lt(width_cast(0b0000_0011, {len}), {len})",
+        "nodule d\nfn main() => Binary{{1}} = lt(width_cast(0b0000_0011, {len}), {len})",
         len = lit32(16)
     );
     assert_three_way("lt(width_cast(idx8,len32), len32) true", &src, &r, &p);
@@ -259,7 +259,7 @@ fn motivating_composite_index_lt_length_true() {
 fn motivating_composite_index_lt_length_false() {
     let (r, p) = b1(false);
     let src = format!(
-        "nodule d\nfn main() -> Binary{{1}} = lt(width_cast(0b0001_0100, {len}), {len})",
+        "nodule d\nfn main() => Binary{{1}} = lt(width_cast(0b0001_0100, {len}), {len})",
         len = lit32(16)
     );
     assert_three_way("lt(width_cast(idx8,len32), len32) false", &src, &r, &p);
@@ -272,7 +272,7 @@ fn motivating_composite_index_lt_length_false() {
 #[test]
 fn width_cast_non_binary_value_refuses_statically() {
     let src = format!(
-        "nodule d\nfn main() -> Binary{{32}} = width_cast(<00+->, {})",
+        "nodule d\nfn main() => Binary{{32}} = width_cast(0t00+-, {})",
         lit32(0)
     );
     assert!(
@@ -285,7 +285,7 @@ fn width_cast_non_binary_value_refuses_statically() {
 /// `Binary{M}` (it supplies the target width).
 #[test]
 fn width_cast_non_binary_witness_refuses_statically() {
-    let src = "nodule d\nfn main() -> Ternary{4} = width_cast(0b0000_0011, <00+->)";
+    let src = "nodule d\nfn main() => Ternary{4} = width_cast(0b0000_0011, 0t00+-)";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
         "a Ternary width witness to width_cast must be a static type error (DN-41)"
@@ -295,7 +295,7 @@ fn width_cast_non_binary_witness_refuses_statically() {
 /// Wrong arity is an explicit refusal (one operand is missing the width witness).
 #[test]
 fn width_cast_wrong_arity_refuses() {
-    let src = "nodule d\nfn main() -> Binary{8} = width_cast(0b0000_0011)";
+    let src = "nodule d\nfn main() => Binary{8} = width_cast(0b0000_0011)";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
         "width_cast requires two operands (value + width witness); one is a static error"

@@ -12,7 +12,7 @@ type Class = Low | High
 
 // A pure classifier: a single sample maps to a Low/High class. The literal arm matches the
 // all-zero byte; the wildcard arm covers every other byte (match exhaustiveness is checked).
-fn classify(sample: Binary{8}) -> Class =
+fn classify(sample: Binary{8}) => Class =
   match sample {
     0b00000000 => Low,
     _          => High,
@@ -21,11 +21,11 @@ fn classify(sample: Binary{8}) -> Class =
 // Sum the readings with a bounded `for` fold over the linearly-recursive `Reading` value. The
 // return type carries an honest guarantee tag: the running total is `Declared` (a stated
 // contract, not a proven bound — VR-5).
-fn total(rs: Reading) -> Binary{8} @ Declared =
+fn total(rs: Reading) => Binary{8} @ Declared =
   for r in rs, acc = 0b00000000 => add(acc, r)
 
 // Read a sample into the Ternary paradigm. The `!{io}` effect declares the side effect; the
 // representation change is a never-silent `swap` naming both its target and its policy.
-fn ingest(sample: Binary{8}) -> Ternary{6} !{io} =
+fn ingest(sample: Binary{8}) => Ternary{6} !{io} =
   let widened: Binary{8} = sample in
   swap(widened, to: Ternary{6}, policy: rt)

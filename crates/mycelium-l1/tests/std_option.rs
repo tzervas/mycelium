@@ -119,10 +119,10 @@ fn assert_three_way(label: &str, src: &str, expected_src: &str) {
 #[test]
 fn is_some_on_some_returns_true() {
     let driver = "\
-fn mk_some() -> Option<Binary{8}> = Some(0b0000_0001)\n\
-fn main() -> Bool = is_some(mk_some())";
+fn mk_some() => Option[Binary{8}] = Some(0b0000_0001)\n\
+fn main() => Bool =is_some(mk_some())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Bool = True";
+    let expected = "nodule ref\nfn main() => Bool =True";
     assert_three_way("is_some(Some)", &src, expected);
 }
 
@@ -130,10 +130,10 @@ fn main() -> Bool = is_some(mk_some())";
 #[test]
 fn is_some_on_none_returns_false() {
     let driver = "\
-fn mk_none() -> Option<Binary{8}> = None\n\
-fn main() -> Bool = is_some(mk_none())";
+fn mk_none() => Option[Binary{8}] = None\n\
+fn main() => Bool =is_some(mk_none())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Bool = False";
+    let expected = "nodule ref\nfn main() => Bool =False";
     assert_three_way("is_some(None)", &src, expected);
 }
 
@@ -141,10 +141,10 @@ fn main() -> Bool = is_some(mk_none())";
 #[test]
 fn is_none_on_some_returns_false() {
     let driver = "\
-fn mk_some() -> Option<Binary{8}> = Some(0b0000_0001)\n\
-fn main() -> Bool = is_none(mk_some())";
+fn mk_some() => Option[Binary{8}] = Some(0b0000_0001)\n\
+fn main() => Bool =is_none(mk_some())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Bool = False";
+    let expected = "nodule ref\nfn main() => Bool =False";
     assert_three_way("is_none(Some)", &src, expected);
 }
 
@@ -152,10 +152,10 @@ fn main() -> Bool = is_none(mk_some())";
 #[test]
 fn is_none_on_none_returns_true() {
     let driver = "\
-fn mk_none() -> Option<Binary{8}> = None\n\
-fn main() -> Bool = is_none(mk_none())";
+fn mk_none() => Option[Binary{8}] = None\n\
+fn main() => Bool =is_none(mk_none())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Bool = True";
+    let expected = "nodule ref\nfn main() => Bool =True";
     assert_three_way("is_none(None)", &src, expected);
 }
 
@@ -165,10 +165,10 @@ fn main() -> Bool = is_none(mk_none())";
 #[test]
 fn unwrap_or_on_some_returns_held_value() {
     let driver = "\
-fn mk_some() -> Option<Binary{8}> = Some(0b0000_0001)\n\
-fn main() -> Binary{8} = unwrap_or(mk_some(), 0b0000_0000)";
+fn mk_some() => Option[Binary{8}] = Some(0b0000_0001)\n\
+fn main() => Binary{8} =unwrap_or(mk_some(), 0b0000_0000)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b0000_0001";
+    let expected = "nodule ref\nfn main() => Binary{8} =0b0000_0001";
     assert_three_way("unwrap_or(Some)", &src, expected);
 }
 
@@ -177,10 +177,10 @@ fn main() -> Binary{8} = unwrap_or(mk_some(), 0b0000_0000)";
 #[test]
 fn unwrap_or_on_none_returns_fallback() {
     let driver = "\
-fn mk_none() -> Option<Binary{8}> = None\n\
-fn main() -> Binary{8} = unwrap_or(mk_none(), 0b0000_0000)";
+fn mk_none() => Option[Binary{8}] = None\n\
+fn main() => Binary{8} =unwrap_or(mk_none(), 0b0000_0000)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b0000_0000";
+    let expected = "nodule ref\nfn main() => Binary{8} =0b0000_0000";
     assert_three_way("unwrap_or(None)", &src, expected);
 }
 
@@ -195,12 +195,12 @@ fn main() -> Binary{8} = unwrap_or(mk_none(), 0b0000_0000)";
 #[test]
 fn map_on_some_applies_function() {
     let driver = "\
-fn not_val(x: Binary{8}) -> Binary{8} = not(x)\n\
-fn mk_some() -> Option<Binary{8}> = Some(0b0000_0001)\n\
-fn main() -> Option<Binary{8}> = map(mk_some(), not_val)";
+fn not_val(x: Binary{8}) => Binary{8} = not(x)\n\
+fn mk_some() => Option[Binary{8}] = Some(0b0000_0001)\n\
+fn main() => Option[Binary{8}] =map(mk_some(), not_val)";
     let src = program(driver);
     // Compute via not() so the reference shares the Derived provenance of the test result.
-    let expected = "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = Some(not(0b0000_0001))";
+    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] =Some(not(0b0000_0001))";
     assert_three_way("map(Some, not_val)", &src, expected);
 }
 
@@ -208,12 +208,12 @@ fn main() -> Option<Binary{8}> = map(mk_some(), not_val)";
 #[test]
 fn map_on_none_passes_through() {
     let driver = "\
-fn not_val(x: Binary{8}) -> Binary{8} = not(x)\n\
-fn mk_none() -> Option<Binary{8}> = None\n\
-fn main() -> Option<Binary{8}> = map(mk_none(), not_val)";
+fn not_val(x: Binary{8}) => Binary{8} = not(x)\n\
+fn mk_none() => Option[Binary{8}] = None\n\
+fn main() => Option[Binary{8}] =map(mk_none(), not_val)";
     let src = program(driver);
     let expected =
-        "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = None";
+        "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] =None";
     assert_three_way("map(None, not_val)", &src, expected);
 }
 
@@ -227,11 +227,11 @@ fn main() -> Option<Binary{8}> = map(mk_none(), not_val)";
 #[test]
 fn and_then_on_some_chains_step() {
     let driver = "\
-fn mk_some_inner(x: Binary{8}) -> Option<Binary{8}> = Some(not(x))\n\
-fn mk_some() -> Option<Binary{8}> = Some(0b0000_0001)\n\
-fn main() -> Option<Binary{8}> = and_then(mk_some(), mk_some_inner)";
+fn mk_some_inner(x: Binary{8}) => Option[Binary{8}] = Some(not(x))\n\
+fn mk_some() => Option[Binary{8}] = Some(0b0000_0001)\n\
+fn main() => Option[Binary{8}] =and_then(mk_some(), mk_some_inner)";
     let src = program(driver);
-    let expected = "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = Some(not(0b0000_0001))";
+    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] =Some(not(0b0000_0001))";
     assert_three_way("and_then(Some, mk_some_inner)", &src, expected);
 }
 
@@ -239,12 +239,12 @@ fn main() -> Option<Binary{8}> = and_then(mk_some(), mk_some_inner)";
 #[test]
 fn and_then_on_none_short_circuits() {
     let driver = "\
-fn mk_some_inner(x: Binary{8}) -> Option<Binary{8}> = Some(not(x))\n\
-fn mk_none() -> Option<Binary{8}> = None\n\
-fn main() -> Option<Binary{8}> = and_then(mk_none(), mk_some_inner)";
+fn mk_some_inner(x: Binary{8}) => Option[Binary{8}] = Some(not(x))\n\
+fn mk_none() => Option[Binary{8}] = None\n\
+fn main() => Option[Binary{8}] =and_then(mk_none(), mk_some_inner)";
     let src = program(driver);
     let expected =
-        "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = None";
+        "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] =None";
     assert_three_way("and_then(None, mk_some_inner)", &src, expected);
 }
 
@@ -259,11 +259,11 @@ fn main() -> Option<Binary{8}> = and_then(mk_none(), mk_some_inner)";
 #[test]
 fn fold_on_some_applies_on_some_branch() {
     let driver = "\
-fn id_val(x: Binary{8}) -> Binary{8} = x\n\
-fn mk_some() -> Option<Binary{8}> = Some(0b1010_1010)\n\
-fn main() -> Binary{8} = fold(mk_some(), id_val, 0b0000_0000)";
+fn id_val(x: Binary{8}) => Binary{8} = x\n\
+fn mk_some() => Option[Binary{8}] = Some(0b1010_1010)\n\
+fn main() => Binary{8} =fold(mk_some(), id_val, 0b0000_0000)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b1010_1010";
+    let expected = "nodule ref\nfn main() => Binary{8} =0b1010_1010";
     assert_three_way("fold(Some, id_val, d)", &src, expected);
 }
 
@@ -271,11 +271,11 @@ fn main() -> Binary{8} = fold(mk_some(), id_val, 0b0000_0000)";
 #[test]
 fn fold_on_none_returns_default() {
     let driver = "\
-fn id_val(x: Binary{8}) -> Binary{8} = x\n\
-fn mk_none() -> Option<Binary{8}> = None\n\
-fn main() -> Binary{8} = fold(mk_none(), id_val, 0b1111_0000)";
+fn id_val(x: Binary{8}) => Binary{8} = x\n\
+fn mk_none() => Option[Binary{8}] = None\n\
+fn main() => Binary{8} =fold(mk_none(), id_val, 0b1111_0000)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b1111_0000";
+    let expected = "nodule ref\nfn main() => Binary{8} =0b1111_0000";
     assert_three_way("fold(None, id_val, d)", &src, expected);
 }
 
@@ -285,11 +285,11 @@ fn main() -> Binary{8} = fold(mk_none(), id_val, 0b1111_0000)";
 #[test]
 fn or_else_on_some_keeps_value() {
     let driver = "\
-fn mk_some() -> Option<Binary{8}> = Some(0b0000_0001)\n\
-fn mk_alt() -> Option<Binary{8}> = Some(0b1111_1111)\n\
-fn main() -> Option<Binary{8}> = or_else(mk_some(), mk_alt())";
+fn mk_some() => Option[Binary{8}] = Some(0b0000_0001)\n\
+fn mk_alt() => Option[Binary{8}] = Some(0b1111_1111)\n\
+fn main() => Option[Binary{8}] =or_else(mk_some(), mk_alt())";
     let src = program(driver);
-    let expected = "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = Some(0b0000_0001)";
+    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] =Some(0b0000_0001)";
     assert_three_way("or_else(Some, alt)", &src, expected);
 }
 
@@ -297,11 +297,11 @@ fn main() -> Option<Binary{8}> = or_else(mk_some(), mk_alt())";
 #[test]
 fn or_else_on_none_takes_alternative() {
     let driver = "\
-fn mk_none() -> Option<Binary{8}> = None\n\
-fn mk_alt() -> Option<Binary{8}> = Some(0b1111_1111)\n\
-fn main() -> Option<Binary{8}> = or_else(mk_none(), mk_alt())";
+fn mk_none() => Option[Binary{8}] = None\n\
+fn mk_alt() => Option[Binary{8}] = Some(0b1111_1111)\n\
+fn main() => Option[Binary{8}] =or_else(mk_none(), mk_alt())";
     let src = program(driver);
-    let expected = "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = Some(0b1111_1111)";
+    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] =Some(0b1111_1111)";
     assert_three_way("or_else(None, alt)", &src, expected);
 }
 
@@ -311,10 +311,10 @@ fn main() -> Option<Binary{8}> = or_else(mk_none(), mk_alt())";
 #[test]
 fn flatten_some_some_yields_inner() {
     let driver = "\
-fn mk() -> Option<Option<Binary{8}>> = Some(Some(0b0000_0001))\n\
-fn main() -> Option<Binary{8}> = flatten(mk())";
+fn mk() => Option[Option[Binary{8}]] = Some(Some(0b0000_0001))\n\
+fn main() => Option[Binary{8}] =flatten(mk())";
     let src = program(driver);
-    let expected = "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = Some(0b0000_0001)";
+    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] =Some(0b0000_0001)";
     assert_three_way("flatten(Some(Some))", &src, expected);
 }
 
@@ -322,11 +322,11 @@ fn main() -> Option<Binary{8}> = flatten(mk())";
 #[test]
 fn flatten_some_none_yields_none() {
     let driver = "\
-fn mk() -> Option<Option<Binary{8}>> = Some(None)\n\
-fn main() -> Option<Binary{8}> = flatten(mk())";
+fn mk() => Option[Option[Binary{8}]] = Some(None)\n\
+fn main() => Option[Binary{8}] =flatten(mk())";
     let src = program(driver);
     let expected =
-        "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = None";
+        "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] =None";
     assert_three_way("flatten(Some(None))", &src, expected);
 }
 
@@ -334,10 +334,10 @@ fn main() -> Option<Binary{8}> = flatten(mk())";
 #[test]
 fn flatten_none_yields_none() {
     let driver = "\
-fn mk() -> Option<Option<Binary{8}>> = None\n\
-fn main() -> Option<Binary{8}> = flatten(mk())";
+fn mk() => Option[Option[Binary{8}]] = None\n\
+fn main() => Option[Binary{8}] =flatten(mk())";
     let src = program(driver);
     let expected =
-        "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{8}> = None";
+        "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] =None";
     assert_three_way("flatten(None)", &src, expected);
 }
