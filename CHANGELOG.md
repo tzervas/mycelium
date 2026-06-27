@@ -45,6 +45,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `lambda` keyword + delimiter rules first). Closures lower to a tagged data value (captured env) + a
   generated `apply` dispatch in existing L0 — no new kernel node; multi-arg arrows + partial application
   generalize from the same machinery. Closures first, then multi-arg/partial/true-`foldl`. Design only.
+- **Remaining open-question recommendations concurred (maintainer).** DN-51 §7 (promote-then-op for bitwise;
+  `widening_*`/`truncate` spelling deferred to grammar with semantics fixed; ternary same-model in direction,
+  carry/range at the ternary increment), DN-37 Q6 (row-poly out of scope), and the M-704 schedule are ratified.
+  Still genuinely open (design work, not closed by concurrence): DN-38 architectural calls and the flagged
+  follow-on tasks (honest object sugar, granular-`pub` form, dynamic-dispatch `FieldSpec` ADR, extension-
+  definition surface, binding grammar RFC, the M-807 census).
 - **DN-38 — macro story framed + open question recorded (maintainer raised).** Mycelium has no opaque macro
   system (G2/no-black-boxes rules out text/token substitution); the roles split across inspectable features —
   `derive` (generative lowering), `reveal` (inspector), `{N}` const params, and the layered-lowering passes.
