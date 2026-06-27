@@ -146,8 +146,8 @@ FFI is the M-541 follow-on).
    **self-hosted `.myc` prototypes** (RFC-0031 §5 D4, under the D5 stability bar — *not* the frozen
    migration) now **executes three-way** (L1-eval ≡ L0-interp ≡ AOT): `lib/std/iter.myc` first-order
    combinators (recursive-HOF closed, M-715) and the **width-generic** `lib/std/{cmp,math,collections}.myc`
-   + `lib/std/text.myc` validity surface (M-718, consuming M-753/DN-42). The Rust `mycelium-std-*` crates
-   in the table above stay the **differential oracle** (RFC-0031 D6); these prototypes do not retire them.
+   plus the `lib/std/text.myc` validity surface (M-718, consuming M-753/DN-42). The Rust `mycelium-std-*`
+   crates in the table above stay the **differential oracle** (RFC-0031 D6); they are not retired by these.
 
 ---
 
