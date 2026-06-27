@@ -859,9 +859,27 @@ impl Elab<'_> {
                 // is the endorsement point whose certificate is validated at elaboration/runtime
                 // (R18-Q4), not represented as a grade node in L0.
                 let src = self.expr(stack, scope, value)?;
+                let target_repr = type_repr(site, target)?;
+                // DN-52 FLAG-1 / freeze-ledger (W5): Dense is accepted by the checker (RFC-0002 /
+                // RFC-0005) and `type_repr` resolves it to `Repr::Dense{..}`, but the standard
+                // three-way harness uses `BinaryTernarySwapEngine` which only covers Binary↔Ternary.
+                // Without this guard, `elaborate` would return `Ok(Node::Swap{Dense})` while every
+                // runner (L0-interp, AOT, L1-eval) refuses explicitly — an elaboration-level silent
+                // gap in the DN-50 narrow gate. Resolution: emit an explicit `Residual` so EVERY path
+                // is consistent (never-silent, G2). A Dense-capable swap engine (E2-1 / ADR-033
+                // `FieldSpec::Fn` wave) lifts this `Residual` when it lands.
+                if matches!(target_repr, Repr::Dense { .. }) {
+                    return residual(
+                        site,
+                        "Dense swap targets are staged — the standard three-way harness \
+                         (BinaryTernarySwapEngine) does not cover Dense conversions; a Dense swap \
+                         engine lands with E2-1/ADR-033 (DN-52 FLAG-1 → Explicit-Residual; \
+                         freeze-ledger W5)",
+                    );
+                }
                 Ok(Node::Swap {
                     src: Box::new(src),
-                    target: type_repr(site, target)?,
+                    target: target_repr,
                     policy: policy_name_ref(policy),
                 })
             }
