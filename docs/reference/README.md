@@ -21,7 +21,10 @@ Every behavioural claim is grounded in a cited spec, the grammar, the conformanc
 interpreter — nothing is invented (G2 / VR-5). The tutorial's complete program is committed as a
 **parser-verified** conformance fixture (`accept/20-tutorial-classifier.myc`), parsed on every CI run
 by `crates/mycelium-l1/tests/conformance.rs`. Honest VR-5 notes mark surface that *type-checks but
-does not yet run* (generics/traits elaboration → M-673; effect annotations → M-677).
+does not yet run*: as of M-673 generics + single-parameter traits **now run** (monomorphization +
+dictionary-free static resolution, three-way), as do width-generics (M-753) and named-fn higher-order
+args (M-687/M-715); what still *checks-but-does-not-run* is closures / multi-arg arrows / partial
+application (M-704), multi-parameter traits / associated types, and effect annotations (checker-only → M-677).
 
 ## Related documentation
 

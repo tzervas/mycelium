@@ -8,6 +8,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-27: rsm S4 — documentation-alignment pass; no code change)
+
+- **Docs now reflect that generics + single-parameter traits EXECUTE (M-673), not just type-check.**
+  A docs-only currency pass correcting the corpus-wide stale claim that "generics and traits type-check
+  but do not yet run (staged → M-673)". M-673 (done 2026-06-23) landed monomorphization + **dictionary-free
+  static instance resolution**, so a concrete generic instantiation and a single-parameter trait /
+  bounded-generic call run three-way (L1-eval ≡ L0-interp ≡ AOT); width-generics run (M-753) and a
+  **named** higher-order argument runs via static defunctionalization (M-687/M-715). The *literal* RFC-0019
+  §4.5 runtime-dictionary records remain deferred (a separate trusted-core ADR), and closures / multi-arg
+  arrows / partial application (M-704) + multi-parameter traits / associated types stay `Residual` — all
+  kept explicit (VR-5/G2). Updated: `docs/reference/{language-reference,tutorial,README,stdlib-api}.md`,
+  `docs/Mycelium_Project_Foundation.md`, `docs/examples/README-https-downloader-layered.md`, and the
+  `.claude/memory/{language-execution,lang-lexicon-syntax,stdlib}.md` orientation files. (RFC-0019 + DN-14
+  were already current.)
+- **Self-hosted `.myc` prototypes recorded in the stdlib specs + enablement RFCs (append-only).** The
+  Session-2/3 self-hosted nodules (`lib/std/{iter,cmp,math,collections,text}.myc`) are noted — as *distinct
+  artifacts* from the Rust-first crate specs they prototype — in `docs/spec/stdlib/{iter,math,cmp,collections,text}.md`
+  changelogs, and in the `RFC-0024` (recursive-HOF re-pass), `RFC-0031` (Tier-0/Tier-1 surface runs three-way),
+  `RFC-0032` (D5 width-generics + D1/D2 prims consumed), and `DN-42` (M-753 landed) changelogs. `stdlib-api.md`
+  coverage updated from "exactly one module self-hosts" to the current **eight** self-hosted nodules. No
+  guarantee tag upgraded without a checked basis; specs/RFCs stay at their current status (no silent → Accepted/Enacted).
+
 ### Added (2026-06-27: rsm Session-3 — recursive-HOF defunctionalization, M-715 closed)
 
 - **M-715 — recursive-HOF iter combinators now EXECUTE three-way (the last M-715 remainder, closed).**
