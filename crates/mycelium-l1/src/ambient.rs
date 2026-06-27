@@ -42,7 +42,7 @@
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, ImplDecl, Item, Literal, Nodule,
     Paradigm, Param, Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam,
-    TypeRef, UsePath, Vis,
+    TypeRef, UsePath, Vis, WidthRef,
 };
 
 /// A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess.
@@ -566,8 +566,8 @@ fn fill_repr(site: &str, p: Paradigm, params: &AmbientParams) -> Result<BaseType
         detail: detail.to_owned(),
     };
     Ok(match (p, params) {
-        (Paradigm::Binary, AmbientParams::Size(n)) => BaseType::Binary(*n),
-        (Paradigm::Ternary, AmbientParams::Size(n)) => BaseType::Ternary(*n),
+        (Paradigm::Binary, AmbientParams::Size(n)) => BaseType::Binary(WidthRef::Lit(*n)),
+        (Paradigm::Ternary, AmbientParams::Size(n)) => BaseType::Ternary(WidthRef::Lit(*n)),
         (Paradigm::Dense, AmbientParams::Dense(d, s)) => BaseType::Dense(*d, *s),
         (
             Paradigm::Vsa,
@@ -744,8 +744,10 @@ struct DisplayBase<'a>(&'a BaseType);
 impl core::fmt::Display for DisplayBase<'_> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self.0 {
-            BaseType::Binary(n) => write!(f, "Binary{{{n}}}"),
-            BaseType::Ternary(m) => write!(f, "Ternary{{{m}}}"),
+            BaseType::Binary(WidthRef::Lit(n)) => write!(f, "Binary{{{n}}}"),
+            BaseType::Binary(WidthRef::Name(v)) => write!(f, "Binary{{{v}}}"),
+            BaseType::Ternary(WidthRef::Lit(m)) => write!(f, "Ternary{{{m}}}"),
+            BaseType::Ternary(WidthRef::Name(v)) => write!(f, "Ternary{{{v}}}"),
             BaseType::Dense(d, s) => write!(f, "Dense{{{d}, {}}}", scalar_str(*s)),
             BaseType::Vsa {
                 model,

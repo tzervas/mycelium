@@ -3,7 +3,7 @@
 #   install:  just hooks      (or: pre-commit install --install-hooks)
 #   run all:  just pre-commit (or: pre-commit run --all-files)
 minimum_pre_commit_version: "3.5.0"
-default_install_hook_types: [pre-commit]
+default_install_hook_types: [pre-commit, pre-push]
 
 repos:
   # Fast file-hygiene hooks (not covered by our scripts).
@@ -30,6 +30,22 @@ repos:
   # Substantive checks — delegate to our scripts so local == pre-commit == CI.
   - repo: local
     hooks:
+      # Branch-protection guard (rsm) — never commit on / push to a protected branch
+      # (main/integration/dev/claude/head/*). The git-level twin of the Claude PreToolUse hook.
+      - id: branch-guard
+        name: branch-protection guard (no commit on main/integration/dev/claude/head/*)
+        entry: scripts/checks/branch-guard.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+        stages: [pre-commit]
+      - id: branch-guard-push
+        name: branch-protection guard (no push to a protected branch)
+        entry: scripts/checks/branch-guard.sh --push
+        language: script
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
       - id: structured
         name: structured data parses
         entry: scripts/checks/structured.sh

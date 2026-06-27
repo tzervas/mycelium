@@ -10,7 +10,7 @@
 
 use mycelium_core::{PrimParadigm, PrimTable};
 use mycelium_l1::checkty::{prim_kernel_name, prim_sig};
-use mycelium_l1::Ty;
+use mycelium_l1::{checkty::Width, Ty};
 
 /// The paradigm a surface `Ty` operand presents to the kernel.
 fn paradigm_of(t: &Ty) -> PrimParadigm {
@@ -24,17 +24,57 @@ fn paradigm_of(t: &Ty) -> PrimParadigm {
 /// Each surface prim, with representative well-typed operands and the result `prim_sig` must yield.
 fn surface_cases() -> Vec<(&'static str, Vec<Ty>, Ty)> {
     vec![
-        ("not", vec![Ty::Binary(8)], Ty::Binary(8)),
-        ("xor", vec![Ty::Binary(8), Ty::Binary(8)], Ty::Binary(8)),
-        ("add", vec![Ty::Ternary(4), Ty::Ternary(4)], Ty::Ternary(4)),
-        ("sub", vec![Ty::Ternary(4), Ty::Ternary(4)], Ty::Ternary(4)),
-        ("mul", vec![Ty::Ternary(4), Ty::Ternary(4)], Ty::Ternary(4)),
-        ("neg", vec![Ty::Ternary(4)], Ty::Ternary(4)),
+        (
+            "not",
+            vec![Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
+        (
+            "xor",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
+        (
+            "add",
+            vec![Ty::Ternary(Width::Lit(4)), Ty::Ternary(Width::Lit(4))],
+            Ty::Ternary(Width::Lit(4)),
+        ),
+        (
+            "sub",
+            vec![Ty::Ternary(Width::Lit(4)), Ty::Ternary(Width::Lit(4))],
+            Ty::Ternary(Width::Lit(4)),
+        ),
+        (
+            "mul",
+            vec![Ty::Ternary(Width::Lit(4)), Ty::Ternary(Width::Lit(4))],
+            Ty::Ternary(Width::Lit(4)),
+        ),
+        (
+            "neg",
+            vec![Ty::Ternary(Width::Lit(4))],
+            Ty::Ternary(Width::Lit(4)),
+        ),
         // RFC-0032 D2 (M-748): width-uniform binary logical + never-silent arithmetic.
-        ("and", vec![Ty::Binary(8), Ty::Binary(8)], Ty::Binary(8)),
-        ("or", vec![Ty::Binary(8), Ty::Binary(8)], Ty::Binary(8)),
-        ("add_bin", vec![Ty::Binary(8), Ty::Binary(8)], Ty::Binary(8)),
-        ("sub_bin", vec![Ty::Binary(8), Ty::Binary(8)], Ty::Binary(8)),
+        (
+            "and",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
+        (
+            "or",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
+        (
+            "add_bin",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
+        (
+            "sub_bin",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
     ]
 }
 

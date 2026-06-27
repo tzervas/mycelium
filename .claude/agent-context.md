@@ -59,10 +59,29 @@ Validate: `python3 tools/github/doc_refs_check.py`
 
 ---
 
-## Current state (2026-06-22)
+## Current state (2026-06-27)
+
+> **Anti-drift note (2026-06-27):** entries below pre-dating this line are a *historical* log — much
+> has landed since. **Authoritative current state = `CHANGELOG.md` (top) + `.claude/kickoffs/rsm.md`
+> §Session-2 continuation.** Do NOT re-do anything marked DONE there.
 
 ### Recently landed (most recent first)
 
+- **rsm Session-1 — landed `2026-06-27` (on `main`):**
+  - **M-753 width-generics DONE** (DN-42 Option A, v1 free-fns): width is a const-generic param
+    bound at monomorphization (`Ty::Binary(Width{Lit,Var})`); `unify` binds same-paradigm-only; mono
+    pins per call (undetermined→`Residual`); positional-by-use syntax. 11 three-way tests green.
+    **Unblocks M-718.** Don't re-implement.
+  - **W3 capture DONE** — F1–F7 `Draft` stubs **DN-45..50 + RFC-0036**, epic **E23-1** / **M-800–807**.
+  - **Branch-protection guard DONE** — 3-layer (`.claude/settings.json` PreToolUse hook +
+    `scripts/checks/branch-guard.sh` git hooks + `/branch-guard` skill); **CLAUDE.md mitigation #10**.
+    Protected branches now hard-blocked from direct commit/push. Don't re-build.
+  - **CLAUDE.md operating procedures #8/#9/#10** added (durability + branch-guard).
+  - **Next (Session-2):** M-718 → M-719 → close M-717 → re-flag M-715; W2 docs-currency; land. **Do L1
+    work INLINE — never delegate to leaf agents** (Session-1 orphan-agent lesson; CLAUDE.md #8/#10).
+- **waveN2 / RFC-0032 Tier-2 / DN-40 — landed `2026-06-26` (#624/#626/#627):** `Repr::Seq`/`Repr::Bytes`
+  (M-749/M-750), M-716 collections, M-747/M-748 prims, DN-40 input-validation hardening, M-797 inline-
+  test extraction, DN-41 width-cast, DN-43 bytes slice/concat, DN-44 security posture (#639). All DONE.
 - **M-660 — effect annotations (landed `dfb7af5`, 2026-06-22):** surface `fn … -> T !{eff1, eff2}`
   (Koka-style `!`; effect names = kernel kinds `retry|alloc|io|cascade|time` + user `Named`; absent
   ⇒ pure; duplicate effect = never-silent **parse** refusal). AST `FnSig.effects: Vec<String>`,

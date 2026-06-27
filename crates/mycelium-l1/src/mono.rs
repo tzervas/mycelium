@@ -48,10 +48,12 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::ast::{Arm, Expr, FnDecl, FnSig, Hypha, Param, Path, Pattern, Scalar, TypeRef};
+use crate::ast::{
+    Arm, BaseType, Expr, FnDecl, FnSig, Hypha, Param, Path, Pattern, Scalar, TypeRef, WidthRef,
+};
 use crate::checkty::{
     has_var, infer_type, param_subst, resolve_ty, subst_ty, type_head, unify, CtorInfo, DataInfo,
-    Env, TraitInfo, Ty,
+    Env, TraitInfo, Ty, Width,
 };
 use crate::elab::ElabError;
 
@@ -221,6 +223,10 @@ enum Item {
     Fn {
         name: String,
         targs: Vec<Ty>,
+        /// Resolved width arguments in declaration order (DN-42 / M-753 step-c): one `Width::Lit`
+        /// per width parameter of the callee. Baked into the item key so two calls at different
+        /// widths produce distinct specializations (never a silent alias — G2/VR-5).
+        wargs: Vec<Width>,
         /// `(param_index, callee_mangled_name)` for each fn-typed value parameter, sorted by
         /// param index (deterministic). Baked into the item key so two different function
         /// arguments produce two distinct specializations (never a silent alias — G2).
@@ -315,6 +321,7 @@ impl<'e> Mono<'e> {
         self.enqueue(Item::Fn {
             name: entry.to_owned(),
             targs: vec![],
+            wargs: vec![], // entry is monomorphic (nullary, no width params)
             fn_args: vec![],
         });
         while let Some(item) = self.work.pop() {
@@ -322,8 +329,9 @@ impl<'e> Mono<'e> {
                 Item::Fn {
                     name,
                     targs,
+                    wargs,
                     fn_args,
-                } => self.emit_fn(&name, &targs, &fn_args)?,
+                } => self.emit_fn(&name, &targs, &wargs, &fn_args)?,
                 Item::Data { name, targs } => self.emit_data(&name, &targs)?,
                 Item::Method {
                     trait_name,
@@ -374,9 +382,10 @@ impl<'e> Mono<'e> {
         &mut self,
         name: &str,
         targs: &[Ty],
+        wargs: &[Width],
         fn_args: &[(usize, String)],
     ) -> Result<(), ElabError> {
-        let mangled = mangle_hof_decl(name, targs, fn_args);
+        let mangled = mangle_hof_decl(name, targs, wargs, fn_args);
         // Already emitted? (the worklist dedups, but a defensive check keeps emission idempotent.)
         if self.out_fns.contains_key(&mangled) {
             return Ok(());
@@ -398,7 +407,41 @@ impl<'e> Mono<'e> {
                 ),
             );
         }
-        let subst: BTreeMap<String, Ty> = param_subst(&tyvars, targs);
+        let mut subst: BTreeMap<String, Ty> = param_subst(&tyvars, targs);
+
+        // DN-42 / M-753 step-c: inject width-arg carriers into the shared subst map so that
+        // `subst_ty` resolves `Width::Var(v)` in parameter/return types to the concrete literal.
+        // Carrier convention: `var_name → Ty::Binary(Width::Lit(n))` regardless of paradigm —
+        // `subst_ty` extracts the right paradigm (Binary or Ternary) from the carrier. An
+        // undetermined width var at emit time is an internal invariant violation (VR-5).
+        let wvars = fd.sig.width_param_names();
+        if wvars.len() != wargs.len() {
+            return residual(
+                name,
+                format!(
+                    "internal: `{name}` has {} width parameter(s) but was queued with {} \
+                     width argument(s) — an invariant violation (DN-42 / M-753 step-c)",
+                    wvars.len(),
+                    wargs.len()
+                ),
+            );
+        }
+        for (v, w) in wvars.iter().zip(wargs.iter()) {
+            match w {
+                Width::Lit(n) => {
+                    subst.insert(v.clone(), Ty::Binary(Width::Lit(*n)));
+                }
+                Width::Var(wv) => {
+                    return residual(
+                        name,
+                        format!(
+                            "width param `{v}` of `{name}` is still a variable `{wv}` at emit \
+                             — undetermined width is never guessed (DN-42 §4 / VR-5)"
+                        ),
+                    );
+                }
+            }
+        }
 
         // Build the fn-parameter substitution map for HOF defunctionalization:
         //   fn_param_name → callee_mangled_name
@@ -874,6 +917,7 @@ impl<'e> Mono<'e> {
             self.enqueue(Item::Fn {
                 name: name.clone(),
                 targs: vec![],
+                wargs: vec![], // monomorphic path reference: no type or width params
                 fn_args: vec![],
             });
             return Ok(Expr::Path(Path(vec![mangle_decl(name, &[])])));
@@ -935,11 +979,14 @@ impl<'e> Mono<'e> {
         // (1) User function call (the head name is in scope as a fn). Clone the decl so the immutable
         // borrow of `self.src` does not outlive the `&mut self` calls below.
         if let Some(fd) = self.src.fns.get(name).cloned() {
-            let targs = if fd.sig.params.is_empty() {
-                vec![]
-            } else {
-                self.infer_fn_targs(site, scope, name, &fd, args)?
-            };
+            // DN-42 / M-753 step-c: call infer_fn_targs if the function has either
+            // type params OR width params. Both return types are bundled together.
+            let (targs, wargs) =
+                if fd.sig.params.is_empty() && fd.sig.width_param_names().is_empty() {
+                    (vec![], vec![])
+                } else {
+                    self.infer_fn_targs(site, scope, name, &fd, args)?
+                };
             // Detect fn-typed value parameters and resolve their actual arguments
             // (RFC-0024 §4, M-687 static defunctionalization).
             let fn_args = self.resolve_fn_args(site, scope, name, &fd, &targs, args)?;
@@ -958,10 +1005,11 @@ impl<'e> Mono<'e> {
                 }
                 args2.push(self.rewrite(site, scope, a, Some(exp))?);
             }
-            let mangled = mangle_hof_decl(name, &targs, &fn_args);
+            let mangled = mangle_hof_decl(name, &targs, &wargs, &fn_args);
             self.enqueue(Item::Fn {
                 name: name.clone(),
                 targs: targs.clone(),
+                wargs: wargs.clone(),
                 fn_args,
             });
             return Ok(Expr::App {
@@ -1021,7 +1069,7 @@ impl<'e> Mono<'e> {
         name: &str,
         fd: &FnDecl,
         args: &[Expr],
-    ) -> Result<Vec<Ty>, ElabError> {
+    ) -> Result<(Vec<Ty>, Vec<Width>), ElabError> {
         if fd.sig.value_params.len() != args.len() {
             return residual(
                 site,
@@ -1057,7 +1105,26 @@ impl<'e> Mono<'e> {
                 }
             }
         }
-        Ok(targs)
+        // DN-42 / M-753 step-c: also collect resolved width arguments (carrier convention —
+        // width var `N` was bound as `Ty::Binary(Width::Lit(n))` by unify). An unresolved width
+        // parameter is an explicit residual — never a guessed default (VR-5/G2).
+        let callee_wvars = fd.sig.width_param_names();
+        let mut wargs = Vec::with_capacity(callee_wvars.len());
+        for v in &callee_wvars {
+            match subst.get(v) {
+                Some(Ty::Binary(Width::Lit(n))) => wargs.push(Width::Lit(*n)),
+                _ => {
+                    return residual(
+                        site,
+                        format!(
+                            "`{name}` is width-generic over `{v}`, but this call does not \
+                             determine the width — undetermined width is never guessed (DN-42 §4 / VR-5)"
+                        ),
+                    )
+                }
+            }
+        }
+        Ok((targs, wargs))
     }
 
     /// The concrete data instance `(dname, targs)` of a **nullary** constructor used as a value — from
@@ -1412,6 +1479,7 @@ impl<'e> Mono<'e> {
             self.enqueue(Item::Fn {
                 name: fn_name.clone(),
                 targs: vec![],
+                wargs: vec![], // callee is monomorphic here (no width params)
                 fn_args: vec![],
             });
             fn_args.push((idx, callee_mangled));
@@ -1629,8 +1697,9 @@ fn item_key(item: &Item) -> String {
         Item::Fn {
             name,
             targs,
+            wargs,
             fn_args,
-        } => format!("fn:{}", mangle_hof_decl(name, targs, fn_args)),
+        } => format!("fn:{}", mangle_hof_decl(name, targs, wargs, fn_args)),
         Item::Data { name, targs } => format!("data:{}", mangle_decl(name, targs)),
         Item::Method {
             trait_name,
@@ -1655,16 +1724,42 @@ fn item_key(item: &Item) -> String {
 ///
 /// **Empty `fn_args` delegates to [`mangle_decl`]** — so a fn with no HOF params produces the
 /// exact same mangled name as before M-687 (backward-compatible with the existing corpus).
-pub(crate) fn mangle_hof_decl(name: &str, targs: &[Ty], fn_args: &[(usize, String)]) -> String {
+pub(crate) fn mangle_hof_decl(
+    name: &str,
+    targs: &[Ty],
+    wargs: &[Width],
+    fn_args: &[(usize, String)],
+) -> String {
+    // DN-42 / M-753 step-c: include width arguments in the mangled name so two calls at different
+    // widths produce distinct specializations (identity fragmentation; G2 / never-silent).
+    // Width args are appended after type args using the same `$` joint; Width::Lit(n) becomes
+    // `Binary{n}` via mangle_ty (consistent with type-arg mangling). Width::Var should never
+    // reach here (mono refuses undetermined params first).
+    let base = mangle_decl_with_wargs(name, targs, wargs);
     if fn_args.is_empty() {
-        return mangle_decl(name, targs);
+        return base;
     }
-    let mut s = mangle_decl(name, targs);
+    let mut s = base;
     for (idx, callee) in fn_args {
         s.push('%');
         s.push_str(&idx.to_string());
         s.push(':');
         s.push_str(callee);
+    }
+    s
+}
+
+/// Mangle a declaration name at concrete type arguments **and** width arguments (DN-42 / M-753
+/// step-c). Width args are appended after type args using `$` joints:
+/// `add<N>` at N=8 → `add$Binary8`. Width::Var should never reach here.
+fn mangle_decl_with_wargs(name: &str, targs: &[Ty], wargs: &[Width]) -> String {
+    let mut s = mangle_decl(name, targs);
+    for w in wargs {
+        s.push('$');
+        match w {
+            Width::Lit(n) => s.push_str(&format!("Binary{n}")),
+            Width::Var(v) => s.push_str(&format!("WVAR_{v}")), // should not reach here (VR-5)
+        }
     }
     s
 }
@@ -1701,8 +1796,10 @@ fn unify_into(
 /// `Data("List",[Binary8])`→`List$Binary8`, nullary `Data("Bool",[])`→`Bool`.
 pub(crate) fn mangle_ty(t: &Ty) -> String {
     match t {
-        Ty::Binary(n) => format!("Binary{n}"),
-        Ty::Ternary(m) => format!("Ternary{m}"),
+        Ty::Binary(Width::Lit(n)) => format!("Binary{n}"),
+        Ty::Binary(Width::Var(v)) => format!("BinaryVAR_{v}"),
+        Ty::Ternary(Width::Lit(m)) => format!("Ternary{m}"),
+        Ty::Ternary(Width::Var(v)) => format!("TernaryVAR_{v}"),
         Ty::Dense(d, s) => format!("Dense{d}{}", scalar_tag(*s)),
         Ty::Substrate(tag) => format!("Substrate{tag}"),
         // RFC-0032 D3/D4: `Seq{T, N}` mangles to `SeqN$<elem>` (injective — the `$` separates the
@@ -1801,10 +1898,11 @@ fn mangle_ty_in_ty(t: &Ty) -> Ty {
 /// re-inference (`infer_type`), which resolves names against the **source** env. (Contrast
 /// [`ty_to_ref`], which produces the *mangled-nullary* output form for the emitted env.)
 fn ty_to_source_ref(t: &Ty) -> TypeRef {
-    use crate::ast::BaseType;
     let base = match t {
-        Ty::Binary(n) => BaseType::Binary(*n),
-        Ty::Ternary(m) => BaseType::Ternary(*m),
+        Ty::Binary(Width::Lit(n)) => BaseType::Binary(WidthRef::Lit(*n)),
+        Ty::Binary(Width::Var(v)) => BaseType::Binary(WidthRef::Name(v.clone())),
+        Ty::Ternary(Width::Lit(m)) => BaseType::Ternary(WidthRef::Lit(*m)),
+        Ty::Ternary(Width::Var(v)) => BaseType::Ternary(WidthRef::Name(v.clone())),
         Ty::Dense(d, s) => BaseType::Dense(*d, *s),
         Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
         // RFC-0032 D3/D4: round-trip the sequence/byte-string reprs to their surface forms.
@@ -1830,10 +1928,11 @@ fn ty_to_source_ref(t: &Ty) -> TypeRef {
 /// becomes the `Named` of its mangled name; a `Ty::Var` would be an internal error, surfaced as a
 /// distinctive `Named` so a leak is never silent (rather than a panic).
 fn ty_to_ref(t: &Ty) -> TypeRef {
-    use crate::ast::BaseType;
     let base = match t {
-        Ty::Binary(n) => BaseType::Binary(*n),
-        Ty::Ternary(m) => BaseType::Ternary(*m),
+        Ty::Binary(Width::Lit(n)) => BaseType::Binary(WidthRef::Lit(*n)),
+        Ty::Binary(Width::Var(v)) => BaseType::Binary(WidthRef::Name(v.clone())),
+        Ty::Ternary(Width::Lit(m)) => BaseType::Ternary(WidthRef::Lit(*m)),
+        Ty::Ternary(Width::Var(v)) => BaseType::Ternary(WidthRef::Name(v.clone())),
         Ty::Dense(d, s) => BaseType::Dense(*d, *s),
         Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
         // RFC-0032 D3/D4: round-trip the sequence/byte-string reprs (the element type is mono'd to a
