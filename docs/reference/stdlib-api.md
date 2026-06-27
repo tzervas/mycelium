@@ -35,12 +35,25 @@ gate confirms every API statement traces to source and every gap is flagged.
 ## Current coverage (honest — gated on E13-1)
 
 The full-language 1.0.0 north star is a stdlib written **fully in Mycelium** (`.myc`) — epic
-**E13-1**. That migration is **in progress**: today exactly one stdlib module self-hosts, so the
-generated `.myc` API reference currently covers:
+**E13-1**. That migration is **in progress**: as of 2026-06-27, **eight** stdlib nodules self-host
+as `.myc` prototypes (RFC-0031 §5 D4, under the D5 stability bar — *not* the frozen migration), so
+the generated `.myc` API reference currently covers:
 
-| Nodule | Source | Public `fn`s | Doc state |
+| Nodule | Source | Public `fn`s | Status |
 |---|---|---|---|
-| `std.result` | `lib/std/result.myc` | `is_ok`, `is_err`, `unwrap_or`, `map`, `and_then`, `fold` | nodule `@summary` + `map`/`and_then`/`fold` documented from source; `is_ok`/`is_err`/`unwrap_or` flagged undocumented |
+| `std.result` | `lib/std/result.myc` | `is_ok`, `is_err`, `unwrap_or`, `map`, `and_then`, `fold`, `map_err`, `or_else` | runs three-way (M-649) |
+| `std.option` | `lib/std/option.myc` | `is_some`, `is_none`, `unwrap_or`, `map`, `and_then`, `fold`, `or_else`, `flatten` | runs three-way (Tier-0, M-715) |
+| `std.cmp` | `lib/std/cmp.myc` | `is_lt`/`is_eq`/`is_gt`, `reverse`, `bool_eq`/`bool_cmp`, `ord_eq`, **width-generic** `cmp`/`le`/`ge`/`max`/`min` | runs three-way (M-718; width-generic, M-753) |
+| `std.math` | `lib/std/math.myc` | **width-generic** `badd`/`bsub`/`band`/`bor`/`bxor`/`bnot` (`Binary{N}`), `tadd`/`tsub`/`tmul`/`tneg` (`Ternary{M}`) | runs three-way (M-718; primitive surface, RFC-0032 D2) |
+| `std.collections` | `lib/std/collections.myc` | `empty`/`push_front`/`is_empty`/`head`/`tail`/`len`/`get`/`snoc`/`reverse`, **width-generic** `map_*`/`set_*` (`map_get<N,V>`, `set_contains<N>`) | runs three-way (M-718; unblocks M-716) |
+| `std.iter` | `lib/std/iter.myc` | `is_empty_l`, `length`, recursive HOF `map`/`filter`/`foldl`/`any`/`all`/`find` | runs three-way (M-715 recursive-HOF; RFC-0024 §4) |
+| `std.text` | `lib/std/text.myc` | UTF-8 validity + decode surface (`byte_len`/`slice`/`is_ascii_byte`/`reject_two..four`/`decode_one..four`, …) | runs three-way (M-717 validity layer) |
+| `std.fmt` | `lib/std/fmt.myc` | `hex_digit`, `nibble_lo`/`nibble_hi`, `to_hex` | self-hosted projection surface |
+
+> **Honesty (VR-5).** "Runs three-way" = L1-eval ≡ L0-interp ≡ AOT agreement is `Empirical` (trials,
+> `crates/mycelium-l1/tests/std_*.rs` + `std_generic_conformance.rs`); nothing is `Proven`. These are
+> **prototypes** — the Rust `mycelium-std-*` crates remain the **differential oracle** (RFC-0031 D6)
+> and are **not** retired by them.
 
 The remaining standard-library modules are **Rust-first** today (`crates/mycelium-std-*`, with their
 specifications in `docs/spec/stdlib/`). They appear in this generated `.myc` API reference **as they

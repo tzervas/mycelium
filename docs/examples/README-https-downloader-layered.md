@@ -49,7 +49,7 @@ The first example took a review ding for calling a Draft *direction* "Accepted."
 
 | Tier | Tag | Constructs used here | Status — honest |
 |---|---|---|---|
-| **Enacted (landed today)** | `[enacted]` | `type` sum/record decls, `Binary{N}` **curly** sizing, `<A>` **angle-bracket** generics, `->` return arrow, `match`, `if/then/else`, `trait`/`impl`, `!{io}` effect annotation, `for … , acc = … => …` bounded iteration, `wild { }`, `and_then`/Result bind | Parses against today's `mycelium.ebnf`. **Caveats:** `trait`/`impl` **type-check only** — dictionary-passing L0 elaboration is **STAGED → M-673** (they do not yet RUN); `!{io}` is **checker-only** (M-660, no L0 node, does not run). So those carry a **`Declared`** posture, not a runtime claim. |
+| **Enacted (landed today)** | `[enacted]` | `type` sum/record decls, `Binary{N}` **curly** sizing, `<A>` **angle-bracket** generics, `->` return arrow, `match`, `if/then/else`, `trait`/`impl`, `!{io}` effect annotation, `for … , acc = … => …` bounded iteration, `wild { }`, `and_then`/Result bind | Parses against today's `mycelium.ebnf`. **Caveats:** `trait`/`impl` now **run** — **M-673 landed** the L0 lowering (monomorphization + dictionary-free static instance resolution), so a single-parameter `trait`/`impl` and a bounded-generic call execute three-way (L1-eval ≡ L0-interp ≡ AOT); the literal RFC-0019 §4.5 runtime-dictionary *records* remain deferred (a trusted-core ADR). `!{io}` is still **checker-only** (M-660, no L0 node, does not run). So the trait paths carry an **`Empirical`** (three-way trials) posture and `!{io}` a **`Declared`** one — neither a `Proven` claim. |
 | **Proposed (DN-31 direction, Draft/advisory)** | `[proposed:DN-31]` | `[]` for type args / sized types, `=>` as the return arrow, `0t`/`0b` literal sigils, `<>` freed for operators | The DN-31 **direction** — decided-as-direction, **NOT landed** (epic #27 is the binding act, still open). This file uses the **enacted** `<A>`/`{N}`/`->` forms for its spine and only **names** the DN-31 direction in comments — it does **not** silently adopt it. **Not `Accepted` as grammar.** |
 | **Designed (greenfield, not built)** | `[designed:DN-37]` / `[designed:DN-38]` | `via` delegation / DI, `derive` generative lowering, `reveal` inspector, super-traits, default method bodies, dynamic dispatch | Per DN-37 §2.2 / DN-38 §6 these are **`Declared` design proposals** with **no surface form in the parser today** (absence verified in those notes). Shown to illustrate the gradient; their presence is **not** a claim they parse. The §8.1 naming (`via` / `derive` / `reveal`) is the ratified *direction*, not landed syntax. |
 
@@ -68,9 +68,11 @@ Per-operation and never upgraded past its basis:
   length equality.
 - **Declared** — effectful / delegated / host-backed contracts: `fetch`, `http_get_capped`, the
   `via`-delegated TLS handshake and constant-time compare, the `!{io}` edges, `read_credential`'s
-  `wild` host read, the `derive`d `Deserialize`, and the cap-predicate rule in `checked_step`. Also
-  the `trait`/`impl` paths (elab STAGED → M-673) and `!{io}` (checker-only) carry a `Declared`
-  posture because they **type-check but do not run** today.
+  `wild` host read, the `derive`d `Deserialize`, and the cap-predicate rule in `checked_step`. The
+  `!{io}` edges are `Declared` because they are **checker-only** (M-660 — do not run). (The plain
+  `trait`/`impl` paths are no longer here: **M-673 landed**, so a single-parameter trait + bounded
+  generic now *run* three-way — an `Empirical` posture, not `Declared`; `via`/`derive` above stay
+  `Declared` as still-designed surface, not because traits don't run.)
 - **Proven** — **nothing.** No operation here has a theorem with checked side-conditions (VR-5).
 
 Never-silent throughout (G2): every partial step is an `Option`/`Result`; HTTPS-only is an explicit

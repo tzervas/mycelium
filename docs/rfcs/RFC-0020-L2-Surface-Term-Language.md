@@ -295,6 +295,15 @@ from RFC-0019's perspective (stated here): a `grow`-generated implementation mus
 **observationally equivalent** to the hand-written implementation a programmer would write for the
 same trait, and it must be **dumpable** — the developer can inspect the synthesized L1 term (S4).
 
+> **Note (2026-06-27 — keyword reconciled to `derive`; append-only, status unchanged).** The surface
+> keyword for this compiler-derived form is now **`derive`**, not `grow`: **DN-38 §8.1** (Accepted
+> 2026-06-26) ratified the conventional `derive` (over the coined `weave`), resolving the DN-03 §6
+> `grow`-vs-`derive` overlap (see DN-03's 2026-06-27 changelog entry). The **`reveal`** inspector is the
+> dumpability affordance referenced above (S4). The elaboration direction here is otherwise unchanged
+> (observationally-equivalent, inspectable, content-addressed L1) — only the spelling moves `grow → derive`.
+> §4.5 remains **carved-out/deferred** in this RFC's Accepted scope; normative elaboration still defers to
+> RFC-0019 + DN-38. Tracker M-664 is re-scoped accordingly.
+
 **`spore` expressions.** Already in the committed grammar:
 `spore_expr ::= 'spore' '(' expr ')'`. Elaboration: produces a reconstruction manifest for a
 value (RFC-0003 §6). The manifest is an L1 `Construct` value in the registry's manifest type. The

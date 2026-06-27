@@ -430,10 +430,18 @@ The self-bound `T: Cmp` is sugar for `T: Cmp<T>`. A bound that is not a trait na
 refusal (G2). **Coherence** is enforced: global uniqueness per `(trait, type-head)` plus the
 single-nodule (phylum-wide) orphan rule; method-set conformance is exact.
 
-> **Honesty (VR-5).** Generics and traits **type-check but do not yet run.** Monomorphization and
-> dictionary-passing elaboration are **STAGED → M-673**: the checker accepts them and emits an
-> explicit `Residual` placeholder rather than executable Core-IR. Do not claim generics or traits
-> *execute* — they are *checked*, not *run*, at this language version.
+> **Honesty (VR-5).** Generics and single-parameter traits now **monomorphize and execute** — the
+> L1-eval ≡ L0-interp ≡ AOT differential runs on the closed program (M-673, done). Monomorphization
+> resolves each generic instantiation and each unqualified trait-method call **statically** to the one
+> coherent instance's body — **dictionary-*free* static resolution, not dictionary-passing** (the
+> earlier "dictionary-passing" plan was superseded by static resolution). Width-generic functions
+> (`Binary{N}` / `Ternary{N}`) pin `N` per call site (M-753), and a higher-order argument that is a
+> **named** top-level function is specialized by static defunctionalization (M-687 / M-715, RFC-0024 §4)
+> — so recursive HOF combinators (`map`/`filter`/`foldl`/`any`/`all`/`find`) run three-way. What is
+> **still `Residual`** (never-silent — kept explicit, M-704 / M-664): an undetermined type parameter,
+> multi-parameter traits / associated types, higher-order generics beyond a named-fn argument (closures,
+> multi-arg arrows, partial application), and types with no v0 lowering (`Substrate`). Tag the executing
+> surface `Empirical` (three-way trials), never `Proven` without a checked theorem.
 
 ---
 

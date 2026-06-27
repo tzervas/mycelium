@@ -158,11 +158,14 @@ Three details above are the heart of Mycelium, and worth re-reading:
 - **`!{io}`** — you never hide a side effect. The effect set is declared and the checker enforces
   that declarations cover what is performed.
 
-> **What is still staged (VR-5 honesty).** At this language version, generics and traits *type-check*
-> but do not yet *run* (elaboration is staged → M-673), and effect annotations are *checker-only*
-> metadata that do not yet wire to the runtime budget (→ M-677). The tutorial program above uses only
-> constructs that run today. See the [language reference §8](./language-reference.md#8-generics-and-traits)
-> for the precise status of each.
+> **What is still staged (VR-5 honesty).** At this language version, generics and single-parameter
+> traits now *run* — they monomorphize to a closed program and execute three-way (L1-eval ≡ L0-interp ≡
+> AOT; M-673 done, width generics M-753, named-fn higher-order args via static defunctionalization
+> M-687 / M-715). What stays *checker-only* or explicitly `Residual`: higher-order generics beyond a
+> named-fn argument (closures, multi-arg arrows, partial application → M-704), multi-parameter traits /
+> associated types, and effect annotations — *checker-only* metadata that do not yet wire to the runtime
+> budget (→ M-677). See the [language reference §8](./language-reference.md#8-generics-and-traits) for
+> the precise status of each.
 
 ---
 
