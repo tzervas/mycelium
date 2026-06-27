@@ -359,8 +359,7 @@ fn badd_mixed_widths_refuses() {
     let src = program("fn main() -> Binary{16} = badd(0b0000_0001, 0b0000_0001_0000_0000)");
     let parsed = parse(&src).expect("parse should succeed");
     let err = check_nodule(&parsed)
-        .err()
-        .expect("expected a never-silent width-mismatch refusal, but check succeeded")
+        .expect_err("expected a never-silent width-mismatch refusal, but check succeeded")
         .to_string();
     assert!(
         err.contains("Binary{16}")

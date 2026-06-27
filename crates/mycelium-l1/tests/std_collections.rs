@@ -499,8 +499,7 @@ fn main() -> Option<Binary{8}> = map_get(mk_map(), 0b0000_0001_0000_0000)";
     let src = program(driver);
     let parsed = parse(&src).expect("parse should succeed");
     let err = check_nodule(&parsed)
-        .err()
-        .expect("expected a never-silent key-width-mismatch refusal, but check succeeded")
+        .expect_err("expected a never-silent key-width-mismatch refusal, but check succeeded")
         .to_string();
     assert!(
         err.contains("Binary{16}")
