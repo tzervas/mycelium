@@ -6391,3 +6391,186 @@ issues:
       - bytes_slice/bytes_concat surface-callable + width/type-checked in mycelium-l1.
       - Never-silent out-of-range/inverted slice (refusal on all paths, G2).
       - Three-way differential green; FLAG-text-3 closed.
+
+  - id: E23-1
+    title: "E23-1 (epic) -- Post-1.0 future-workstream capture (rsm F1-F6; design/decide later)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:epic, area:planning, priority:P3, status:todo]
+    epic: E23
+    doc_refs:
+      - corpus:DN-45
+      - corpus:DN-46
+      - corpus:DN-47
+      - corpus:DN-48
+      - corpus:DN-49
+      - corpus:RFC-0036
+    body: |
+      CAPTURE-ONLY grouping epic for the six future workstreams the maintainer recorded via the `rsm`
+      kickoff (W3). Each child is its own design/research decision, deliberately NOT decided here
+      (append-only -- these are open explorations, not ratified directions). The Draft DN/RFC stubs
+      (DN-45..49, RFC-0036) preserve the maintainer's framing; this epic tracks them so they are never
+      lost and so each can be researched/designed in a later wave.
+
+      Children: M-800 (F1 OSV-of-.myc / DN-45), M-801 + gate M-806 (F2 honest-insecurity disclosure /
+      DN-46), M-802 (F3 projection / DN-47), M-803 (F4 L4+reveal / DN-48), M-804 (F6 post-critical
+      quality passes / DN-49), M-805 (F5 kernel/primitives consolidation / RFC-0036).
+
+      Definition of Done (epic): all six stubs registered in Doc-Index + issues.yaml (done in rsm W3);
+      each child advances on its own gate (Draft -> Proposed) in a later wave. Nothing here pre-decided.
+
+  - id: M-800
+    title: "M-800 -- OSV scanning OF Mycelium programs (capture; DN-45 / rsm F1)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:spec, area:toolchain, priority:P3, status:todo]
+    epic: E23-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-45
+      - corpus:RFC-0035
+      - corpus:DN-44
+    body: |
+      CAPTURE-ONLY (rsm F1). Extend language/toolchain support so osv-scanner (+ the in-env supply-chain
+      posture, DN-44) can scan ACTUAL .myc implementations and give accurate security guidance on real
+      Mycelium code. Maintainer-set sequencing: high-level scanning becomes possible once the language is
+      fully implemented + usable (~full 1.0); low-level scanning once the language is fully self-hosted.
+      Plan-only now -- cannot be done accurately/fully until the language is there. Complements RFC-0035
+      (native scanning toolkit) + DN-44. All scope/mechanism are open questions (DN-45 §OQ).
+
+      User story: As a Mycelium program author, I want OSV/supply-chain scanning of my .myc dependencies,
+      so real Mycelium code gets accurate, honest security guidance -- not just Rust-implementation guidance.
+
+      Definition of Done (to leave Draft): research record + a DN that enumerates mechanism options and a
+      recommended sequencing; gated on the language reaching the stated maturity. NOTHING decided here.
+
+  - id: M-801
+    title: "M-801 -- operationalize honest-insecurity disclosure: standard block (capture; DN-46 / rsm F2)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:spec, area:toolchain, priority:P3, status:todo]
+    epic: E23-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-46
+      - corpus:DN-44
+    body: |
+      CAPTURE-ONLY (rsm F2; explicitly named in DN-44 §1.1 as a tracked follow-on). Operationalize the
+      never-silent residual-insecurity discipline into a STANDARD DISCLOSURE BLOCK (disclaimer + reasoning
+      /justification + program-author guidance) for every intentionally-unhardened or unpatchable-at-
+      language-level surface. Preference order is FIRM: fix it in the language/toolchain first; the
+      program-level workaround + disclosure is the FALLBACK. Block format/placement are open (DN-46 §OQ).
+
+      User story: As a security reviewer, I want every intentional-escape surface to carry a standard,
+      never-buried disclosure of residual risk + how to insulate against it, so residual insecurity is
+      accountable (G2) rather than a hidden trap.
+
+      Definition of Done (to leave Draft): a DN that fixes the disclosure-block format + placement; the
+      enforcing gate is M-806. Fix-in-language-first preference preserved. NOTHING decided here.
+
+  - id: M-806
+    title: "M-806 -- gate: assert every wild/FFI/intentional-escape surface carries a disclosure block (DN-46 / rsm F2)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:tooling, area:toolchain, priority:P3, status:todo]
+    epic: E23-1
+    depends_on: [M-801]
+    doc_refs:
+      - corpus:DN-46
+    body: |
+      CAPTURE-ONLY (rsm F2, gate half). A check (analogue of `just safety-check`) asserting every
+      wild/FFI/intentional-escape surface carries the standard disclosure block defined by M-801. Blocked
+      on M-801 fixing the block format. Never-silent (G2): a surface without a disclosure fails the gate.
+
+      Definition of Done (to leave Draft): gate spec'd once M-801 lands the block format; advisory-first
+      then ratcheted per the DN-44 §6 hardening-ratchet posture. NOTHING decided here.
+
+  - id: M-802
+    title: "M-802 -- projection in Mycelium: research + relationship to RFC-0021 (capture; DN-47 / rsm F3)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:research, area:language, priority:P3, status:todo]
+    epic: E23-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-47
+      - corpus:RFC-0021
+    body: |
+      CAPTURE-ONLY (rsm F3). Research what "projection" is in SE/PL broadly and how it works; whether
+      Mycelium has it. Primary open question: is RFC-0021 (Semantic-Level Projection Framework, Enacted)
+      the SAME notion, a SUBSET, or ADJACENT? If absent: do we want it, how would we implement it, what
+      would it comprise, drawbacks/considerations, and the 2nd/3rd/4th-and-beyond-order effects. If
+      present: can we PROVE it, and make it more economic/performant/safe/secure? (DN-47 §OQ.)
+
+      User story: As a language designer, I want a grounded account of projection (vs RFC-0021) so we know
+      whether a real capability is missing, redundant, or improvable -- before committing design effort.
+
+      Definition of Done (to leave Draft): a research record establishing the RFC-0021 relationship + a DN
+      taking a position; possibly an RFC. NOTHING decided here.
+
+  - id: M-803
+    title: "M-803 -- L3->L4 and the 'reveal' lowering: research (capture; DN-48 / rsm F4)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:research, area:language, priority:P3, status:todo]
+    epic: E23-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-48
+    body: |
+      CAPTURE-ONLY (rsm F4). Consider whether an L4 layer is appropriate -- what it would look like, what
+      it would mean, and how layers REVEAL (the maintainer's vernacular for lowering to the next-lower
+      level) downward. Open question: can L4 reveal STRAIGHT to L0? Rationale to explore: lowering is
+      mechanized/schematized/highly repeatable, and L4/L3/L2/L1 all lower to L0 for both interpretation-
+      and compile-time -- so a direct L4->L0 reveal may be coherent. (DN-48 §OQ.) Note: "reveal" is not
+      yet in the Glossary -- a lexicon entry is a maintainer call (FLAG from W3).
+
+      User story: As a language architect, I want the L4 question + the reveal model examined, so the
+      lowering architecture is decided on merit before more surface sugar accretes.
+
+      Definition of Done (to leave Draft): a DN/RFC + research record taking a position on L4 and the
+      reveal model. NOTHING decided here.
+
+  - id: M-804
+    title: "M-804 -- post-critical quality passes: capture (DN-49 / rsm F6)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:spec, area:planning, priority:P3, status:todo]
+    epic: E23-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-49
+      - src:CLAUDE.md
+    body: |
+      CAPTURE-ONLY (rsm F6). Once the critical 1.0 work is done and the language is fully usable, a
+      deliberate ORDERED set of passes: (1) TESTING REFACTOR FIRST -- parameterized/fixture-driven/dynamic
+      suite, an easy entry point for multiple test kinds + configs (incl. chaos testing) + surfacing all
+      metrics; tie to mapping every acceptable/rejecting variant & invariant, then deciding what needs
+      testing vs not (CLAUDE.md §Test-layout; M-797). (2) LANGUAGE-LEVEL DRY/EFFICIENCY -- remove
+      unnecessary repetition/redo while retaining tunable certification + explicit swap, making those more
+      organic + everything more performant/secure/memory-safe/ergonomic. (3) PUBLIC/PRIVATE no-black-boxes
+      -- resolve the white-box-in-crate src/tests/ visibility conflict across the board. (4) L3 review +
+      the L4 question (M-803/DN-48). Thresholds/triggers per pass are open (DN-49 §OQ).
+
+      Definition of Done (to leave Draft): each pass scoped + sequenced once the language is fully usable;
+      ties M-797. NOTHING decided here.
+
+  - id: M-805
+    title: "M-805 -- kernel & primitives consolidation; multi-kernel question (capture; RFC-0036 / rsm F5)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:spec, area:core, priority:P3, status:todo]
+    epic: E23-1
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0036
+      - corpus:DN-39
+      - corpus:RFC-0001
+      - corpus:RFC-0003
+    body: |
+      CAPTURE-ONLY (rsm F5). The kernel stays minimal, but the model is: ALL primitives live in the kernel,
+      and the kernel is the most heavily TESTED/BENCHMARKED/CHAOS-ENGINEERED artifact -- every condition +
+      error mapped/handled -- so it can be FROZEN/LOCKED/PINNED as the 1.0 kernel, rarely if ever touched
+      again. Small BECAUSE targeted: only primitives, only doing in primitives what should be; everything
+      else builds on top. Open structural question: ONE kernel, or SEVERAL (e.g. mycelium + binary/ternary
+      + embedding + VSA/HDC kernels)? Best approach TBD. Frames the "what must be a primitive vs built on
+      top" boundary review. (RFC-0036 §OQ.) Ties KC-3, DN-39 (zero promotions, boundary unchanged),
+      RFC-0001/0003.
+
+      User story: As a kernel maintainer, I want the primitive taxonomy + one-vs-many-kernel question
+      resolved before the 1.0 freeze, so the trusted core is locked deliberately, not by accretion.
+
+      Definition of Done (to leave Draft): an RFC + research enumerating the boundary + the one-vs-many
+      options with a recommendation. NOTHING decided here.
