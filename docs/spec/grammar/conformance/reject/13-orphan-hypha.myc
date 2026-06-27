@@ -4,6 +4,6 @@
 // expression position it is an explicit, never-silent parse error (G2), not a silent accept.
 nodule demo
 
-fn worker() -> Binary{8} = not(0b0000_0001)
+fn worker() => Binary{8} = not(0b0000_0001)
 
-fn run() -> Binary{8} = hypha worker()
+fn run() => Binary{8} = hypha worker()

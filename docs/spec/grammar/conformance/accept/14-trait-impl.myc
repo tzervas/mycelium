@@ -5,10 +5,10 @@
 // (trait, type-head)).
 nodule algebra
 
-trait Negate<A> {
-    fn negate(x: A) -> A
+trait Negate[A] {
+    fn negate(x: A) => A
 }
 
-impl Negate<Ternary{6}> for Ternary{6} {
-    fn negate(x: Ternary{6}) -> Ternary{6} = neg(x)
+impl Negate[Ternary{6}] for Ternary{6} {
+    fn negate(x: Ternary{6}) => Ternary{6} = neg(x)
 }

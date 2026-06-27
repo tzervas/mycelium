@@ -9,5 +9,5 @@
 nodule std.sys.fs @std-sys
 
 // SAFETY: foreign_read bottoms out in an audited host syscall; the result is a fixed-width byte.
-fn read_byte() -> Binary{8} !{ffi} =
+fn read_byte() => Binary{8} !{ffi} =
     wild { foreign_read() }
