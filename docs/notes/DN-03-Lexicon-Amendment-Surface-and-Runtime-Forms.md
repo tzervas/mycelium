@@ -101,12 +101,31 @@ the *right* names.
 ## 6. What is deliberately left open
 
 - **`grow` vs `derive`** spelling-overlap with the eventual macro/derive system — flagged, not
-  decided; revisit when generative features are specified.
+  decided; revisit when generative features are specified. **→ RESOLVED 2026-06-27 (DN-38 §8.1):** the
+  generative features are now specified and the maintainer ratified the **conventional `derive`** (over
+  the coined `weave`) as the generative-construct keyword, with `via` (delegation) and `reveal` (inspector)
+  as companions. The themed `grow` (§1) is **superseded for the generative construct** — see the changelog
+  entry below. The `consume`/affine-acquisition keyword (a *separate* construct) is **unaffected**.
 - **Activation** of any Runtime term — each needs its RFC-0008 implementation-stage RFC (R1/R2).
 
 ---
 
 ## Meta — changelog
+
+- **2026-06-27 — generative construct `grow` → `derive` (superseded by DN-38 §8.1; append-only).**
+  §1 adopted the themed **`grow`** for "derive-like / generative capability extension (`grow Debug for T`)"
+  *with a flagged "mild genericness" note*, and §6 explicitly deferred the **`grow` vs `derive`** overlap
+  "until generative features are specified." **DN-38 (Layered-Lowering Atlas, Accepted 2026-06-26)** specifies
+  them and §8.1 **ratifies the conventional `derive`** (legible from Rust `#[derive]` / Haskell `deriving`)
+  over the coined `weave`, alongside delegation **`via`** and inspector **`reveal`**. Per this note's own rule
+  ("superseding any term is a **new note**, not a rewrite"), the §1 `grow` adoption is **superseded for the
+  generative construct** by `derive`; the §1 row stays as the historical record. **Scope of the supersession:**
+  it touches *only* the generative/derive-like construct. **`consume`** (acquire + take exclusive ownership of an
+  affine `substrate`, LR-8) and **`impl`** (inherent-method blocks) are **unchanged** — `consume` is itself an
+  already-conventional PL term (Rust "consuming `self`"; affine/linear-types), not a generative form. Whether the
+  now-freed identifier `grow` stays a *reserved* word or is released is a downstream lexer detail (M-664), not
+  decided here. Implementation tracker **M-664** is re-scoped to `derive`/`reveal` accordingly. No code change
+  (M-664 is `needs-design`). Append-only.
 
 - **2026-06-18 — `thaw` reserved (Surface, conventional-clearest) via RFC-0017 §5; append-only.**
   RFC-0017 (Maturation Scope & De-maturation) adds **`thaw`** to the active Surface reserved set — the

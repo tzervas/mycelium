@@ -97,14 +97,15 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
   identifier — G2) but no construct consumes it yet: **only `phylum` and `colony`**.
 - **Ratified — not yet lexed** — a name ratified in DN-02/DN-03 but **not** in `keyword()`, so it
   currently lexes as an ordinary **identifier** (using it is *not* yet an error). The whole Runtime
-  tier plus `consume`/`grow`/`impl` are here — their lexer reservation lags the spec.
+  tier plus `consume`/`derive`/`impl` are here (the generative keyword reconciled `grow → derive`,
+  DN-38 §8.1) — their lexer reservation lags the spec.
 
 **Gap-closure tracking (2026-06-22):** the **Reserved-not-active** and **Ratified — not yet lexed**
 gaps are tracked under **E7-1** (L1 language features; issues M-656…M-664, Phase 5) and **E7-2**
 (runtime vocabulary; M-665…M-668, Phase 7). Progress: **M-656/657/658** (generics), **M-659** (traits;
-`Tok::Trait`/`Tok::Impl` active; elab STAGED → M-673), **M-660** (effects; `Tok::Bang`; checker-only,
+`Tok::Trait`/`Tok::Impl` active; elab **LANDED M-673** — runs three-way), **M-660** (effects; `Tok::Bang`; checker-only,
 no L0 node) — all LANDED. **Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phylum`/cross-nodule), M-663
-(grading), M-664 (`consume`/`grow`/`impl`). **E7-2 remaining:** M-667 (`fuse`/`reclaim`/`tier`), M-668
+(grading), M-664 (`consume`/`derive`/`impl`; `grow → derive` per DN-38 §8.1). **E7-2 remaining:** M-667 (`fuse`/`reclaim`/`tier`), M-668
 (R2). A status row flips only when its tracking issue lands and `just check` is green (VR-5).
 
 | Term | Layer | Status | Meaning | Normative source |
@@ -114,7 +115,7 @@ no L0 node) — all LANDED. **Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phyl
 | `colony` | Runtime | **Reserved-not-active** | Dynamic runtime grouping of active `hypha`; lexes as keyword, never a silent identifier; reassigned from its former static meaning | DN-06; RFC-0008 §4.7 |
 | `use` | L2 Surface | **Active** | Import (conventional) | DN-02 §3 |
 | `type` | L2 Surface | **Active** | Data-type (sum) declaration (conventional; `species` declined) | DN-02 §7 |
-| `trait` | L2 Surface | **Active** | Typeclass / behavior set (conventional; `guild` declined); `Tok::Trait` active; **trait checker + coherence LANDED M-659** — type-checks; dictionary-passing L0 lowering **STAGED → M-673** (does NOT yet RUN) | DN-02 §7; RFC-0019 |
+| `trait` | L2 Surface | **Active** | Typeclass / behavior set (conventional; `guild` declined); `Tok::Trait` active; **trait checker + coherence LANDED M-659**; **L0 lowering LANDED M-673** — single-param trait + bounded-generic calls RUN three-way via dictionary-free static instance resolution (literal RFC-0019 §4.5 runtime-dictionary records deferred to a trusted-core ADR) | DN-02 §7; RFC-0019 |
 | `fn` | L2 Surface | **Active** | Function definition (conventional; `spawn`/`grow` rejected on T-map) | DN-02 §3 |
 | `thaw` | L2 Surface | **Active** | De-maturation: keeps one `fn` interpreted inside a `matured` scope; `thaw fn f(…)` | RFC-0017 §4.3/§5; DN-03 changelog |
 | `let` | L2 Surface | **Active** | Local binding (conventional) | DN-02 §3 |
@@ -131,7 +132,7 @@ no L0 node) — all LANDED. **Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phyl
 | `to` | L2 Surface | **Active** | Swap target label (within `swap(…, to: …, policy: …)`) | grammar |
 | `policy` | L2 Surface | **Active** | Swap policy label (within `swap(…, to: …, policy: …)`) | grammar |
 | `matured` | L2 Surface | **Active (reserved keyword)** | Scope-level promotion to AOT-compiled, stable form; a `matured fn` at item position is a parse error with teaching diagnostic | RFC-0017; DN-02 §7 |
-| `impl` | L2 Surface | **Active** (`Tok::Impl` lexed, M-659) | Trait implementation block (`impl Trait<X> for Y { … }`); `Tok::Impl` in the lexer; inherent-impl `impl T { … }` uses the same token; dictionary-passing L0 lowering **STAGED → M-673** | DN-03 §1; RFC-0019; M-659 |
+| `impl` | L2 Surface | **Active** (`Tok::Impl` lexed, M-659) | Trait implementation block (`impl Trait<X> for Y { … }`); `Tok::Impl` in the lexer; inherent-impl `impl T { … }` uses the same token; **L0 lowering LANDED M-673** — a resolved impl method runs three-way (dictionary-free static resolution; literal RFC-0019 §4.5 runtime-dictionary records deferred). NB: the *surface keyword* `impl` per M-664 (DN-03 §1) is a separate, still-`needs-design` question | DN-03 §1; RFC-0019; M-659 |
 | `Binary` | Type | **Active** | N-bit binary representation type (`Binary{N}`) | RFC-0001; grammar |
 | `Ternary` | Type | **Active** | N-trit balanced-ternary type (`Ternary{N}`) | RFC-0001; grammar |
 | `Dense` | Type | **Active** | Dense embedding type (`Dense{N, scalar}`) | RFC-0001; grammar |
@@ -141,7 +142,7 @@ no L0 node) — all LANDED. **Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phyl
 | `F16`, `BF16`, `F32`, `F64` | Scalar kind | **Active** | Scalar type keywords for Dense | grammar |
 | `Exact`, `Proven`, `Empirical`, `Declared` | Formal / Honesty | **Active** | Guarantee strength tags; type-level index `T @ Exact` (LR-6) | RFC-0001; DN-02 §7 |
 | `consume` | L2 Surface (future) | **Ratified — not yet lexed** | Acquire exclusive ownership of an affine `substrate` (single-use semantics) | DN-03 §1 |
-| `grow` | L2 Surface (future) | **Ratified — not yet lexed** | Derive-like generative capability extension (`grow Debug for T`) | DN-03 §1 |
+| `derive` *(was `grow`)* | L2 Surface (future) | **Reconciled — not yet lexed** | Generative trait derivation (`derive Debug for T`) + `reveal` inspector. **Keyword `grow → derive`** per DN-38 §8.1 (Accepted 2026-06-26, conventional over themed `grow`); DN-03 2026-06-27 changelog records the supersession; M-664 re-scoped | DN-03 §1/§6; DN-38 §8.1 |
 | `hypha` | Runtime (future) | **Ratified — not yet lexed** | Single concurrent execution unit | DN-03 §4; RFC-0008 §4.5 |
 | `fuse` | Runtime (future) | **Ratified — not yet lexed** | Lawful state fusion: semilattice merge of two `hypha` states | DN-03 §4; RFC-0008 §4.5/RT6 |
 | `mesh` | Runtime (future) | **Ratified — not yet lexed** | Gossip/pub-sub overlay with honest probabilistic guarantees | DN-03 §4; RFC-0008 §4.5/RT5 |
@@ -330,13 +331,15 @@ for_expr       ::= 'for' Ident 'in' app_expr ',' Ident '=' app_expr '=>' expr
 
 **Landed surface — honesty notes (VR-5):**
 - **Generics** (`type List<A>`, `fn f<A>(…)`) — type-check via unification (`Ty::Var` + `Ty::Data(name,args)`).
-  **Elaboration STAGED → M-673**: generics type-check but **do not yet RUN** (explicit `Residual` placeholder).
+  **Elaboration LANDED M-673**: a concrete generic instantiation monomorphizes to closed L0 and **runs three-way**
+  (L1-eval ≡ L0-interp ≡ AOT); an *undetermined* type/width param is still an explicit never-silent `Residual`.
 - **Bounded generics** (`fn f<T: Cmp>(…)`, `fn f<T: Cmp + Eq>(…)`) — self-bound sugar `T: Cmp ≡ T: Cmp<T>`;
   a bound on a `type`/`trait` param that isn't a trait name is an explicit refusal (G2). LANDED M-659.
 - **Traits + impls** (`trait T<A> { fn … }`, `impl T<X> for Y { … }`) — coherence = global uniqueness per
   `(trait, type-head)` + single-nodule orphan rule; exact method-set conformance; bounded-call + unqualified
-  trait-method resolution. All refusals explicit. **Dictionary-passing L0 lowering STAGED → M-673** (traits
-  type-check but do NOT yet RUN). LANDED M-659.
+  trait-method resolution. All refusals explicit. **L0 lowering LANDED M-673** — dictionary-free static
+  instance resolution makes a single-param trait + bounded-generic call RUN three-way (the literal
+  RFC-0019 §4.5 runtime-dictionary records remain deferred to a trusted-core ADR). Checker LANDED M-659.
 - **Effect annotations** (`fn f(…) -> T !{retry, alloc}`) — effect names: kernel kinds
   `retry|alloc|io|cascade|time` + user `Named`; absent ⇒ pure; duplicate effect = never-silent parse
   refusal. Checker `check_effect_coverage`: declared ⊇ performed; performed = union of every callee's
@@ -443,9 +446,13 @@ operator in the grammar).
   one-or-more; `A | B` alternation; `(A B)` grouping; `/* */` comments (RFC-0006 §4.3 / T3.1-B).
 - **`tier` is an execution-mode switch, not a representation change.** Interpreted ↔ native is a
   `tier`. Dense ↔ sparse is a `swap` (S1). These are distinct operations (RFC-0008 §4.5 / DN-03 §4).
-- **Generics and traits type-check but do NOT yet run (elaboration STAGED → M-673).** `Ty::Var` unification
-  and trait coherence are implemented (M-656/M-657/M-659); the monomorphization + dictionary-passing L0
-  lowering is an explicit `Residual` placeholder pending M-673. Do not claim generics or traits execute.
+- **Generics and single-parameter traits now RUN (elaboration LANDED M-673).** `Ty::Var` unification +
+  trait coherence (M-656/M-657/M-659) plus monomorphization with **dictionary-free static instance
+  resolution** (M-673) lower a concrete generic instantiation and a single-param trait / bounded-generic
+  call to closed L0 that runs three-way (L1-eval ≡ L0-interp ≡ AOT); width-generics run (M-753) and a
+  **named** higher-order arg runs via static defunctionalization (M-687/M-715). Still `Residual` (do not
+  claim these run): closures / multi-arg arrows / partial application (M-704), multi-parameter traits /
+  associated types, and the literal RFC-0019 §4.5 runtime-dictionary records (a separate trusted-core ADR).
 - **Effect annotations are checker-only (no L0 lowering).** `fn f() -> T !{alloc}` is parsed and
   coverage-checked (M-660); the `!{…}` annotation does NOT add an L0 node and does NOT wire to the
   interpreter budget yet (that is M-677). Never state that effects "run" or "enforce at runtime" —

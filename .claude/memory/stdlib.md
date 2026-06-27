@@ -139,9 +139,15 @@ FFI is the M-541 follow-on).
    an explicit `SwapError`; no sentinel, no clamp.
 5. **`runtime` activates construct-by-construct at the Phase-7 gate** (ADR-020/RFC-0008 §8-Q4).
    Reserved vocabulary is not part of the v0 public API.
-6. **Self-hosting (M-502) is NOT established.** The Mycelium-lang migration half waits on a
-   concrete L3 authoring surface (KC-2-gated); `self-hosting-readiness.md` capability #3 flipped
-   `not-yet → ready` after DN-09, but the verdict is still `Draft (needs-design)` (post-1.0).
+6. **Self-hosting (M-502) is NOT established — but Tier-0/Tier-1 *prototypes* now execute.** The
+   full Mycelium-lang migration verdict is unchanged: it waits on a concrete L3 authoring surface
+   (KC-2-gated); `self-hosting-readiness.md` capability #3 flipped `not-yet → ready` after DN-09, but
+   the verdict is still `Draft (needs-design)` (post-1.0). Distinct from the migration, a set of
+   **self-hosted `.myc` prototypes** (RFC-0031 §5 D4, under the D5 stability bar — *not* the frozen
+   migration) now **executes three-way** (L1-eval ≡ L0-interp ≡ AOT): `lib/std/iter.myc` first-order
+   combinators (recursive-HOF closed, M-715) and the **width-generic** `lib/std/{cmp,math,collections}.myc`
+   plus the `lib/std/text.myc` validity surface (M-718, consuming M-753/DN-42). The Rust `mycelium-std-*`
+   crates in the table above stay the **differential oracle** (RFC-0031 D6); they are not retired by these.
 
 ---
 
