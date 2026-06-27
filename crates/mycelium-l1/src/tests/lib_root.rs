@@ -4,7 +4,7 @@ use crate::*;
 #[test]
 fn parses_a_nodule_with_a_swap() {
     let src =
-        "nodule demo\nfn f(x: Binary{8}) -> Ternary{6} =\n  swap(x, to: Ternary{6}, policy: rt)";
+        "nodule demo\nfn f(x: Binary{8}) => Ternary{6} =\n  swap(x, to: Ternary{6}, policy: rt)";
     let nodule = parse(src).expect("parses");
     assert_eq!(nodule.path.0, vec!["demo"]);
     assert_eq!(nodule.items.len(), 1);
@@ -19,14 +19,14 @@ fn parses_a_nodule_with_a_swap() {
 #[test]
 fn a_swap_without_policy_is_an_explicit_error() {
     // S1/WF2: the policy is mandatory; its absence is a diagnostic, never a silent accept.
-    let src = "nodule demo\nfn f(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6})";
+    let src = "nodule demo\nfn f(x: Binary{8}) => Ternary{6} = swap(x, to: Ternary{6})";
     let err = parse(src).unwrap_err();
     assert!(err.message.contains("policy"), "got: {}", err.message);
 }
 
 #[test]
 fn a_reserved_word_is_not_a_usable_identifier() {
-    let src = "nodule demo\nfn nodule(x: Binary{8}) -> Binary{8} = x";
+    let src = "nodule demo\nfn nodule(x: Binary{8}) => Binary{8} = x";
     assert!(parse(src).is_err());
 }
 
@@ -40,7 +40,7 @@ fn phylum_is_an_active_header_but_never_an_identifier() {
     // `parse` (the single-nodule entry) does not consume a `phylum` header:
     assert!(parse("phylum signals\nnodule demo\n").is_err());
     // …but `parse_phylum` does — `phylum <path>` + a `nodule` block is a well-formed phylum.
-    let ph = parse_phylum("phylum signals.demo\nnodule a\nfn f() -> Binary{8} = 0b0")
+    let ph = parse_phylum("phylum signals.demo\nnodule a\nfn f() => Binary{8} = 0b0")
         .expect("a phylum header + nodule parses (M-662)");
     assert_eq!(
         ph.path.as_ref().map(|p| p.0.clone()),
@@ -48,7 +48,7 @@ fn phylum_is_an_active_header_but_never_an_identifier() {
     );
     assert_eq!(ph.nodules.len(), 1);
     // `phylum` is still a keyword ⇒ never a usable identifier (G2).
-    assert!(parse("nodule demo\nfn phylum() -> Binary{8} = 0b0").is_err());
+    assert!(parse("nodule demo\nfn phylum() => Binary{8} = 0b0").is_err());
     // A `phylum` header with no following nodule is a never-silent error (a phylum groups nodules).
     assert!(parse_phylum("phylum signals\n").is_err());
 }
@@ -59,8 +59,8 @@ fn colony_and_hypha_are_active() {
     // A well-formed colony parses; `colony`/`hypha` are still keywords, so they can never be
     // identifiers (G2) — using either as a name remains an explicit error.
     let n = parse(
-            "nodule demo\nfn compute(x: Binary{8}) -> Binary{8} = not(x)\n\
-             fn run() -> Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) }",
+            "nodule demo\nfn compute(x: Binary{8}) => Binary{8} = not(x)\n\
+             fn run() => Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) }",
         )
         .expect("a well-formed colony parses (M-666)");
     let Item::Fn(run) = n
@@ -78,15 +78,15 @@ fn colony_and_hypha_are_active() {
 
     // `colony`/`hypha` are still keywords → never usable as identifiers (G2).
     assert!(
-        parse("nodule demo\nfn f(colony: Binary{8}) -> Binary{8} = colony").is_err(),
+        parse("nodule demo\nfn f(colony: Binary{8}) => Binary{8} = colony").is_err(),
         "`colony` as a param name must stay an error (still a keyword)"
     );
     assert!(
-        parse("nodule demo\nfn hypha() -> Binary{8} = 0b0").is_err(),
+        parse("nodule demo\nfn hypha() => Binary{8} = 0b0").is_err(),
         "`hypha` as a fn name must stay an error (still a keyword)"
     );
     // A bare `hypha` outside a colony is a never-silent error (RT7 — no orphan hypha).
-    let orphan = parse("nodule demo\nfn f() -> Binary{8} = hypha g(0b0)").unwrap_err();
+    let orphan = parse("nodule demo\nfn f() => Binary{8} = hypha g(0b0)").unwrap_err();
     assert!(
         orphan.message.contains("only valid inside a `colony"),
         "orphan hypha must teach the colony scoping, got: {}",
@@ -94,7 +94,7 @@ fn colony_and_hypha_are_active() {
     );
     // An empty colony is rejected at type-check (the parser requires ≥1 hypha at parse time —
     // an empty `colony { }` fails parsing because `hypha` is required for the first element).
-    let empty = parse("nodule demo\nfn f() -> Binary{8} = colony { }").unwrap_err();
+    let empty = parse("nodule demo\nfn f() => Binary{8} = colony { }").unwrap_err();
     assert!(
         empty.message.contains("hypha"),
         "empty colony must mention `hypha`, got: {}",
@@ -145,14 +145,14 @@ fn runtime_vocab_keywords_are_reserved_not_active() {
         // (b-name) fn-name slot expects an Ident: "expected an identifier" — explicit, not
         // the RFC-0008 message, because `parse_sig_tail` → `ident()` fires before `parse_item`.
         assert!(
-            parse(&format!("nodule demo\nfn {word}() -> Binary{{8}} = 0b0")).is_err(),
+            parse(&format!("nodule demo\nfn {word}() => Binary{{8}} = 0b0")).is_err(),
             "`{word}` as fn name must be an explicit error"
         );
 
         // (c) cannot be used as a parameter name (binder expects an Ident).
         assert!(
             parse(&format!(
-                "nodule demo\nfn f({word}: Binary{{8}}) -> Binary{{8}} = 0b0"
+                "nodule demo\nfn f({word}: Binary{{8}}) => Binary{{8}} = 0b0"
             ))
             .is_err(),
             "`{word}` as param name must be an error"
@@ -160,7 +160,7 @@ fn runtime_vocab_keywords_are_reserved_not_active() {
 
         // (d) at expression position, `parse_expr_inner` dispatches to the reserved-keyword
         // arm and produces the RFC-0008 teaching diagnostic.
-        let err = parse(&format!("nodule demo\nfn f() -> Binary{{8}} = {word}")).unwrap_err();
+        let err = parse(&format!("nodule demo\nfn f() => Binary{{8}} = {word}")).unwrap_err();
         assert!(
             err.message.contains("RFC-0008"),
             "`{word}` in expression position: teaching diagnostic must mention RFC-0008, got: {}",
@@ -192,19 +192,19 @@ fn surface_keywords_consume_grow_are_reserved_not_active() {
 
         // (c) cannot be a fn name / param name (binder expects an Ident) — explicit, never silent.
         assert!(
-            parse(&format!("nodule demo\nfn {word}() -> Binary{{8}} = 0b0")).is_err(),
+            parse(&format!("nodule demo\nfn {word}() => Binary{{8}} = 0b0")).is_err(),
             "`{word}` as fn name must be an explicit error"
         );
         assert!(
             parse(&format!(
-                "nodule demo\nfn f({word}: Binary{{8}}) -> Binary{{8}} = 0b0"
+                "nodule demo\nfn f({word}: Binary{{8}}) => Binary{{8}} = 0b0"
             ))
             .is_err(),
             "`{word}` as param name must be an error"
         );
 
         // (d) expression position → the DN-03 §1 teaching diagnostic.
-        let err = parse(&format!("nodule demo\nfn f() -> Binary{{8}} = {word}")).unwrap_err();
+        let err = parse(&format!("nodule demo\nfn f() => Binary{{8}} = {word}")).unwrap_err();
         assert!(
             err.message.contains("DN-03 §1") && err.message.contains(word),
             "`{word}` in expression position: diagnostic must name DN-03 §1 + the word, got: {}",
@@ -215,15 +215,22 @@ fn surface_keywords_consume_grow_are_reserved_not_active() {
 
 #[test]
 fn a_malformed_ternary_literal_is_explicit() {
-    let src = "nodule demo\nfn f() -> Ternary{3} = <+x->";
+    // RFC-0037 D4: trit literals are the `0t…` prefix form (lexed whole, like `0b…`). The lexer
+    // accepts only the `+`/`0`/`-` glyphs and stops at anything else, so a malformed trit can no
+    // longer carry a stray non-trit char. The never-silent (G2) malformed-ternary case is now a
+    // *bare* `0t` with no glyph — an explicit lex error surfaced through `parse`, never a
+    // silently-empty literal. (The former `<+x->`/"non-trit" parse path is retired with the angle
+    // form; the residual "non-trit" elab check on a `Literal::Trit` is now unreachable from surface
+    // syntax — the lexer prevents it upstream.)
+    let src = "nodule demo\nfn f() => Ternary{3} = 0t";
     let err = parse(src).unwrap_err();
-    assert!(err.message.contains("non-trit"), "got: {}", err.message);
+    assert!(err.message.contains("no trits"), "got: {}", err.message);
 }
 
 #[test]
 fn thaw_fn_parses_and_sets_thaw_true() {
     // RFC-0017 §4.3: `thaw fn` is the de-maturation marker; the field must be `true`.
-    let src = "nodule demo\nthaw fn k() -> Binary{8} = 0b1011_0010";
+    let src = "nodule demo\nthaw fn k() => Binary{8} = 0b1011_0010";
     let nodule = parse(src).unwrap();
     let Item::Fn(f) = &nodule.items[0] else {
         panic!("fn");
@@ -237,7 +244,7 @@ fn matured_fn_at_item_position_is_a_parse_error_with_teaching_diagnostic() {
     // RFC-0017 §4.1: `matured fn` at item position is retired — the parser must return an
     // explicit error whose message teaches the scope form (`// @matured: true` header /
     // `thaw fn`). `matured` stays a reserved keyword token, so this is never a silent accept.
-    let src = "nodule demo\nmatured fn k() -> Binary{8} = 0b00000000";
+    let src = "nodule demo\nmatured fn k() => Binary{8} = 0b00000000";
     let err = parse(src).unwrap_err();
     assert!(
         err.message.contains("maturation"),

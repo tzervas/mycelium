@@ -271,6 +271,8 @@ impl Parser {
                 }
             }
             items.push(parse_one(self)?);
+            // DN-57: an optional `;` terminates a component (whitespace-independent / streamable).
+            self.eat(&Tok::Semi);
         }
         Ok(items)
     }
@@ -398,6 +400,7 @@ impl Parser {
         // Stop at the next `nodule` (the start of a sibling nodule in a phylum) or EOF.
         while !self.at(&Tok::Eof) && !self.at(&Tok::Nodule) {
             items.push(self.parse_item()?);
+            self.eat(&Tok::Semi); // DN-57: optional component terminator
         }
         Ok(Nodule {
             path,
@@ -490,6 +493,26 @@ impl Parser {
                  `nodule` block, not at item position (RFC-0006 §4.3; phylum is a grouping, not a \
                  `phylum { … }` container)"
                     .to_owned(),
+            )),
+            // RFC-0037 D5: `lambda` is an expression keyword, not a top-level item (teaching, G2).
+            Tok::Lambda => Err(ParseError::new(
+                self.pos(),
+                "`lambda(…) => …` is an expression (RFC-0037 D5), not a top-level item — write it \
+                 inside a `fn` body"
+                    .to_owned(),
+            )),
+            // DN-53/DN-54: `object`/`lower` are reserved-not-active surface keywords (lexed so they
+            // are never silent identifiers, G2); their constructs land with M-811/M-812.
+            t @ (Tok::Object | Tok::Lower) => Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "`{word}` is a reserved surface keyword ({src}), not yet active — its construct \
+                     lands with {task}; it cannot open a program or be used as an identifier at this \
+                     language version",
+                    word = if matches!(t, Tok::Object) { "object" } else { "lower" },
+                    src = if matches!(t, Tok::Object) { "DN-53" } else { "DN-54" },
+                    task = if matches!(t, Tok::Object) { "M-811" } else { "M-812" },
+                ),
             )),
             _ => self.err(
                 "a top-level item (`use`, `pub`, `default paradigm`, `type`, `trait`, `impl`, `fn`, \
@@ -610,6 +633,7 @@ impl Parser {
         let mut sigs = Vec::new();
         while !self.at(&Tok::RBrace) {
             sigs.push(self.parse_fn_sig()?);
+            self.eat(&Tok::Semi); // DN-57: optional component terminator
         }
         self.expect(&Tok::RBrace, "`}` to close the trait body")?;
         Ok(TraitDecl {
@@ -650,15 +674,28 @@ impl Parser {
     /// ⇒ the empty (pure) effect set.
     fn parse_sig_tail(&mut self) -> Result<FnSig, ParseError> {
         let name = self.ident()?;
-        let raw_params = self.parse_type_params_bounded()?;
+        // RFC-0037 D2: type parameters in `[T]` (may carry bounds — the dictionary site), const/width
+        // parameters in `{N}` (bare names). Both collect into one `params` list; their `[…]`/`{…}`
+        // bracket is the surface kind hint, and `classify_params` resolves the authoritative kind by
+        // usage (a `[T]` used only in a width slot is a never-silent error, not a silent reclassify).
+        let mut raw_params = self.parse_type_params_bounded()?;
+        raw_params.extend(self.parse_const_params_opt()?);
+        let names: Vec<String> = raw_params.iter().map(|p| p.name.clone()).collect();
+        if let Some(dup) = first_duplicate_str(&names) {
+            return Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "parameter `{dup}` is declared twice across the `[…]`/`{{…}}` lists — each \
+                     type/const parameter name is unique (RFC-0037 D2; never a silent shadow, G2)"
+                ),
+            ));
+        }
         self.expect(&Tok::LParen, "`(` to open the parameter list")?;
         let value_params = self.parse_params_opt()?;
         self.expect(&Tok::RParen, "`)` to close the parameter list")?;
-        self.expect(&Tok::Arrow, "`->` and a result type")?;
+        self.expect_return_arrow()?;
         let ret = self.parse_type_ref()?;
         let effects = self.parse_effects_opt()?;
-        // Post-parse classification: resolve which `<…>` names are width params vs type params
-        // (DN-42 / M-753 v1). For v0 programs (no width-param names used), this is a no-op.
         let params = classify_params(raw_params, &value_params, &ret)?;
         Ok(FnSig {
             name,
@@ -666,6 +703,79 @@ impl Parser {
             value_params,
             ret,
             effects,
+        })
+    }
+
+    /// Expect the `=>` return/function arrow (RFC-0037 D4). A leftover `->` (still lexed as
+    /// [`Tok::Arrow`]) gets an explicit teaching reject rather than a confusing token error (G2).
+    fn expect_return_arrow(&mut self) -> Result<(), ParseError> {
+        if self.at(&Tok::Arrow) {
+            return Err(ParseError::new(
+                self.pos(),
+                "the arrow is now `=>`, not `->` (RFC-0037 D4 retired the `->` glyph)".to_owned(),
+            ));
+        }
+        self.expect(&Tok::FatArrow, "`=>` and a result type")?;
+        Ok(())
+    }
+
+    /// `{ Ident (',' Ident)* }?` — const/width parameter declarations (RFC-0037 D2). Each is a bare
+    /// name (no bounds — width params cannot carry trait bounds in v1, DN-42 §7), tagged
+    /// [`ParamKind::Width`] as a hint (`classify_params` confirms by usage). This `{…}` is a distinct
+    /// position from the `Binary{N}` width *slot* inside a type (parsed in `parse_base_type`), so the
+    /// two `{…}` uses never collide — a const-param list is only ever right after the fn name (and an
+    /// optional `[…]`), before `(`.
+    fn parse_const_params_opt(&mut self) -> Result<Vec<TypeParam>, ParseError> {
+        let mut params = Vec::new();
+        if self.eat(&Tok::LBrace) {
+            params = self.comma_separated(None, |p| {
+                let name = p.ident()?;
+                if p.at(&Tok::Colon) {
+                    return Err(ParseError::new(
+                        p.pos(),
+                        "const/width parameters cannot carry trait bounds in v1 (DN-42 §7; bounds \
+                         live only on `[T]` type parameters) — never a silent drop"
+                            .to_owned(),
+                    ));
+                }
+                Ok(TypeParam {
+                    name,
+                    kind: crate::ast::ParamKind::Width,
+                    bounds: Vec::new(),
+                })
+            })?;
+            self.expect(&Tok::RBrace, "`}` to close the const/width parameters")?;
+        }
+        Ok(params)
+    }
+
+    /// `lambda(params) => body` (RFC-0037 D5). Parses the typed parameter list and the body
+    /// expression into an [`Expr::Lambda`] node. **Closure semantics (capture, partial application,
+    /// dynamic fn-flow) are deferred to M-704 / RFC-0024 §5** — the checker/elaborator emit a
+    /// never-silent `Residual` for this node (G2), so it parses but does not yet evaluate. Type/const
+    /// parameters on a lambda (`lambda[T]{N}(…)`) are an explicit never-silent refusal here (the
+    /// syntax is reserved by RFC-0037 D5 but the form lands with M-704), not a silent accept.
+    fn parse_lambda(&mut self) -> Result<Expr, ParseError> {
+        self.expect_keyword(&Tok::Lambda)?;
+        if self.at(&Tok::LBracket) || self.at(&Tok::LBrace) {
+            return Err(ParseError::new(
+                self.pos(),
+                "type/const parameters on a `lambda` (`lambda[T]{N}(…)`) land with M-704 (RFC-0037 \
+                 D5 reserves the syntax; full closures are RFC-0024 §5) — never a silent accept"
+                    .to_owned(),
+            ));
+        }
+        self.expect(&Tok::LParen, "`(` to open the lambda parameter list")?;
+        let params = self.parse_params_opt()?;
+        self.expect(&Tok::RParen, "`)` to close the lambda parameter list")?;
+        self.expect(
+            &Tok::FatArrow,
+            "`=>` between the lambda parameter list and its body (RFC-0037 D5)",
+        )?;
+        let body = self.parse_expr()?;
+        Ok(Expr::Lambda {
+            params,
+            body: Box::new(body),
         })
     }
 
@@ -722,7 +832,7 @@ impl Parser {
     /// silently dropped — bounds belong only on function type-params (the dictionary site).
     fn parse_type_params_opt(&mut self) -> Result<Vec<String>, ParseError> {
         let mut params = Vec::new();
-        if self.eat(&Tok::LAngle) {
+        if self.eat(&Tok::LBracket) {
             params = self.comma_separated(None, |p| {
                 let name = p.ident()?;
                 if p.at(&Tok::Colon) {
@@ -736,7 +846,7 @@ impl Parser {
                 }
                 Ok(name)
             })?;
-            self.expect(&Tok::RAngle, "`>` to close the type parameters")?;
+            self.expect(&Tok::RBracket, "`]` to close the type parameters")?;
         }
         Ok(params)
     }
@@ -746,9 +856,9 @@ impl Parser {
     /// `TypeParam { bounds: [] }` (the §11 identity, so every v0 program still parses).
     fn parse_type_params_bounded(&mut self) -> Result<Vec<TypeParam>, ParseError> {
         let mut params = Vec::new();
-        if self.eat(&Tok::LAngle) {
+        if self.eat(&Tok::LBracket) {
             params = self.comma_separated(None, Self::parse_type_param)?;
-            self.expect(&Tok::RAngle, "`>` to close the type parameters")?;
+            self.expect(&Tok::RBracket, "`]` to close the type parameters")?;
         }
         Ok(params)
     }
@@ -811,6 +921,7 @@ impl Parser {
                 ));
             }
             methods.push(self.parse_fn_decl(Vis::Private)?);
+            self.eat(&Tok::Semi); // DN-57: optional component terminator
         }
         self.expect(&Tok::RBrace, "`}` to close the `impl` body")?;
         Ok(ImplDecl {
@@ -838,8 +949,15 @@ impl Parser {
         // becomes the argument of a function type and we parse the RHS recursively
         // (right-associative; `@` binds tighter than `->` — RFC-0024 §3).
         let lhs = self.parse_type_ref_atom()?;
-        if self.eat(&Tok::Arrow) {
-            // Right-associative: recurse for the result type (which may itself be `A -> B`).
+        if self.at(&Tok::Arrow) {
+            // RFC-0037 D4: `->` is retired; the function-type arrow is `=>` too. Teaching reject (G2).
+            return Err(ParseError::new(
+                self.pos(),
+                "the function-type arrow is now `=>`, not `->` (RFC-0037 D4)".to_owned(),
+            ));
+        }
+        if self.eat(&Tok::FatArrow) {
+            // Right-associative: recurse for the result type (which may itself be `A => B`).
             let rhs = self.parse_type_ref()?;
             Ok(TypeRef::unguaranteed(BaseType::Fn(
                 Box::new(lhs),
@@ -1006,9 +1124,9 @@ impl Parser {
 
     fn parse_type_args_opt(&mut self) -> Result<Vec<TypeRef>, ParseError> {
         let mut args = Vec::new();
-        if self.eat(&Tok::LAngle) {
+        if self.eat(&Tok::LBracket) {
             args = self.comma_separated(None, Self::parse_type_ref)?;
-            self.expect(&Tok::RAngle, "`>` to close the type arguments")?;
+            self.expect(&Tok::RBracket, "`]` to close the type arguments")?;
         }
         Ok(args)
     }
@@ -1127,6 +1245,19 @@ impl Parser {
             Tok::Wild => self.parse_wild(),
             Tok::Spore => self.parse_spore(),
             Tok::Colony => self.parse_colony(),
+            // RFC-0037 D5: an anonymous-function expression (parses; semantics deferred to M-704).
+            Tok::Lambda => self.parse_lambda(),
+            // DN-53/DN-54: reserved-not-active surface keywords at expression position (teaching, G2).
+            t @ (Tok::Object | Tok::Lower) => Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "`{word}` is a reserved surface keyword ({src}), not yet active — its construct \
+                     lands with {task}; it cannot be used as an identifier here",
+                    word = if matches!(t, Tok::Object) { "object" } else { "lower" },
+                    src = if matches!(t, Tok::Object) { "DN-53" } else { "DN-54" },
+                    task = if matches!(t, Tok::Object) { "M-811" } else { "M-812" },
+                ),
+            )),
             // RFC-0025 / M-705: the infix-operator layer. A non-keyword expression is an operator
             // expression over unary/applicative operands; each operator desugars to its canonical
             // word function. The keyword-led forms above (let/if/match/…) are statements, not

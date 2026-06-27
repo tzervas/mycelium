@@ -30,7 +30,7 @@ fn assert_token_stream_equiv(src: &str) {
 /// (the lexer's "no carriage-return" contract; LF/CRLF round-trip parity).
 #[test]
 fn comment_capture_strips_trailing_cr_on_crlf() {
-    let (_toks, comments) = lex_with_comments("nodule d\r\nfn f() -> Binary{1} = 0b1 // why\r\n")
+    let (_toks, comments) = lex_with_comments("nodule d\r\nfn f() => Binary{1} = 0b1 // why\r\n")
         .expect("lex_with_comments succeeded");
     let last = comments.last().expect("a comment was captured");
     assert_eq!(
@@ -49,7 +49,7 @@ fn comment_capture_strips_trailing_cr_on_crlf() {
 /// than routing every parse/check through comment allocation.
 #[test]
 fn lex_fast_path_skips_comments_capture_path_keeps_them() {
-    let src = "// doc: why\nnodule demo  // trailing why\nfn f() -> Binary{1} = 0b1 // more";
+    let src = "// doc: why\nnodule demo  // trailing why\nfn f() => Binary{1} = 0b1 // more";
     let fast = lex(src).expect("lex (fast path) succeeded");
     let (cap, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert_eq!(
@@ -288,7 +288,7 @@ fn comment_capture_empty_comment_body() {
 #[test]
 fn comment_capture_no_comments_gives_empty_vec() {
     // Source with no comments yields an empty comment vec.
-    let src = "nodule demo\nfn f() -> Binary{8} = 0b0";
+    let src = "nodule demo\nfn f() => Binary{8} = 0b0";
     let (_toks, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert!(
         comments.is_empty(),
@@ -322,7 +322,7 @@ fn lex_binary_only_separator_is_a_lex_error() {
 /// rather than emitting an empty token (never-silent).
 #[test]
 fn lex_binary_empty_literal_in_context_is_a_lex_error() {
-    lex("fn f() -> Binary{1} = 0b").expect_err("trailing `0b` with no digit must be a lex error");
+    lex("fn f() => Binary{1} = 0b").expect_err("trailing `0b` with no digit must be a lex error");
 }
 
 /// Valid binary literals still lex to a `BinLit` carrying their digits (regression guard).
@@ -403,16 +403,39 @@ fn lex_seq_and_bytes_keywords() {
     assert_eq!(toks("Bytes"), vec![Tok::Bytes, Tok::Eof]);
 }
 
-/// Trit literals use the `<…>` angle form (not a `0t` prefix); the empty case `<>` is already
-/// safe (it falls through to `LAngle`, never an empty `TritLit`). Valid trit literals still lex.
-/// (See FLAG in the leaf report: this lexer has no `0t` literal; `0t` lexes as int `0` + ident.)
+/// RFC-0037 D4: trit literals use the `0t…` prefix (lexed whole like `0b…`/`0x…`); the former
+/// `<…>` angle form is retired. Valid trit literals lex to a `TritLit` carrying their inner glyphs.
 #[test]
 fn lex_trit_valid_literals_still_lex() {
     assert_eq!(
-        toks("<+-0>"),
+        toks("0t+-0"),
         vec![Tok::TritLit("+-0".to_owned()), Tok::Eof]
     );
-    assert_eq!(toks("<0>"), vec![Tok::TritLit("0".to_owned()), Tok::Eof]);
-    // `<>` is NOT a trit literal: lookahead fails, so it lexes as the `<`/`>` angle pair.
+    assert_eq!(toks("0t0"), vec![Tok::TritLit("0".to_owned()), Tok::Eof]);
+    assert_eq!(toks("0t-"), vec![Tok::TritLit("-".to_owned()), Tok::Eof]);
+    assert_eq!(toks("0t+"), vec![Tok::TritLit("+".to_owned()), Tok::Eof]);
+}
+
+/// RFC-0037 D1: `<` is now operator-only — the type-arg and trit-disambiguation roles are gone.
+/// `<>` lexes as the `<`/`>` angle pair (no trit lookahead), and a `<+` is `LAngle` then `Plus`
+/// (never a trit literal — the `0t…` prefix is the only trit path now).
+#[test]
+fn lex_angle_is_always_operator_not_a_trit() {
+    // `<>` is the `<`/`>` angle pair (operators), never an (empty) trit literal.
     assert_eq!(toks("<>"), vec![Tok::LAngle, Tok::RAngle, Tok::Eof]);
+    // `<+` no longer starts a trit literal: it is `LAngle` then the `+` operator.
+    assert_eq!(toks("<+"), vec![Tok::LAngle, Tok::Plus, Tok::Eof]);
+}
+
+/// Never-silent (G2): a bare `0t` with no trit glyph is an explicit lex error — never a
+/// silently-empty `TritLit` (mirrors the empty-`0b`/`0x` rejections above).
+#[test]
+fn lex_trit_empty_literal_is_a_lex_error() {
+    let err = lex("0t").expect_err("`0t` alone must be a lex error");
+    assert!(
+        err.to_string().contains("no trits"),
+        "error must name the empty-trit-literal cause: {err}"
+    );
+    // `0t` in a larger source still errors before EOF (no glyph), rather than emitting an empty token.
+    lex("fn f() => Ternary{1} = 0t").expect_err("trailing `0t` with no glyph must be a lex error");
 }

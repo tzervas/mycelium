@@ -10,4 +10,4 @@
 // runs the parser. RFC-0014 I3.)
 nodule demo
 
-fn a() -> Binary{8} !{io, io} = 0b00000000
+fn a() => Binary{8} !{io, io} = 0b00000000

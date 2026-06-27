@@ -325,12 +325,25 @@ fn build_comment_plan(
     // nodule/default), skipping the nodule header itself.
     let item_first_token_lines = item_first_lines(nodule, tokens);
 
-    // Collect the source-order line numbers of every FatArrow token (match arms).
-    let fat_arrow_lines: Vec<u32> = tokens
-        .iter()
-        .filter(|s| s.tok == Tok::FatArrow)
-        .map(|s| s.pos.line)
-        .collect();
+    // Collect the source-order line numbers of every MATCH-ARM FatArrow token. Since RFC-0037 D4
+    // the **return** arrow is also `=>` (FatArrow), but it sits in the fn signature at brace-depth 0
+    // (before the return type); match-arm `=>` live inside a `match { … }` block (depth ≥ 1). So we
+    // track `{`/`}` depth and count only FatArrows at depth ≥ 1 — the return arrow (depth 0) is
+    // excluded, so a trailing comment on a signature line is correctly a fn-body comment, not an
+    // orphaned arm comment (the regression RFC-0037's arrow-unification would otherwise cause).
+    let fat_arrow_lines: Vec<u32> = {
+        let mut arm_lines = Vec::new();
+        let mut depth: i32 = 0;
+        for s in tokens {
+            match s.tok {
+                Tok::LBrace => depth += 1,
+                Tok::RBrace => depth -= 1,
+                Tok::FatArrow if depth >= 1 => arm_lines.push(s.pos.line),
+                _ => {}
+            }
+        }
+        arm_lines
+    };
 
     // -----------------------------------------------------------------------
     // Step 1: classify header-region comments.
@@ -853,6 +866,16 @@ fn collect_match_arm_comments(
                 depth,
             )?;
         }
+        Expr::Lambda { body, .. } => {
+            collect_match_arm_comments(
+                item_idx,
+                body,
+                remaining,
+                arm_trailing,
+                fat_arrow_lines,
+                depth,
+            )?;
+        }
         // Leaves: Lit, Path — no subexpressions to recurse into.
         Expr::Lit(_) | Expr::Path(_) => {}
     }
@@ -1063,7 +1086,7 @@ fn render_impl_with_comments(
         String::new()
     } else {
         let a: Vec<String> = id.trait_args.iter().map(render_type_ref).collect();
-        format!("<{}>", a.join(", "))
+        format!("[{}]", a.join(", "))
     };
     let mut s = format!(
         "impl {}{} for {} {{\n",
@@ -1094,6 +1117,18 @@ fn render_expr_canonical(e: &Expr) -> String {
     match e {
         Expr::Lit(l) => render_literal(l),
         Expr::Path(p) => p.0.join("."),
+        // RFC-0037 D5 lambda. Closure semantics are deferred to M-704; this canonical render mirrors
+        // ambient.rs `print_expr` (param names + `=>` body). Lambdas are absent from the v0 corpus,
+        // so the comment-aware token path (not this fallback) drives all current conformance.
+        Expr::Lambda { params, body } => format!(
+            "lambda({}) => {}",
+            params
+                .iter()
+                .map(|p| p.name.clone())
+                .collect::<Vec<_>>()
+                .join(", "),
+            render_expr_canonical(body)
+        ),
         Expr::Let {
             name,
             ty,
@@ -1244,7 +1279,8 @@ fn render_literal(l: &mycelium_l1::ast::Literal) -> String {
     use mycelium_l1::ast::Literal;
     match l {
         Literal::Bin(s) => format!("0b{s}"),
-        Literal::Trit(s) => format!("<{s}>"),
+        // RFC-0037 D4: balanced-ternary literals render with the `0t…` prefix (the `<…>` form is retired).
+        Literal::Trit(s) => format!("0t{s}"),
         // RFC-0032 D4 (M-750): a `0x…` byte-string literal round-trips to its source form.
         Literal::Bytes(s) => format!("0x{s}"),
         Literal::Int(i) => format!("{i}"),
@@ -1279,14 +1315,15 @@ fn render_type_ref(t: &mycelium_l1::ast::TypeRef) -> String {
         BaseType::Bytes => "Bytes".to_owned(),
         BaseType::Named(n, args) if args.is_empty() => n.clone(),
         BaseType::Named(n, args) => {
+            // RFC-0037 D1: type arguments in `[…]` (was `<…>`).
             let a: Vec<String> = args.iter().map(render_type_ref).collect();
-            format!("{n}<{}>", a.join(", "))
+            format!("{n}[{}]", a.join(", "))
         }
         BaseType::Ambient(params) => format!("{{{}}}", ambient_params_str(params)),
-        // RFC-0024 §3: function type `A -> B` (right-associative). The parser builds `Fn(atom, rhs)`
-        // where the left is always a non-`Fn` atom, so rendering both sides recursively and joining
-        // with ` -> ` round-trips without parentheses (C1).
-        BaseType::Fn(a, b) => format!("{} -> {}", render_type_ref(a), render_type_ref(b)),
+        // RFC-0037 D4: function type `A => B` (right-associative; the `->` glyph is retired). The
+        // parser builds `Fn(atom, rhs)` where the left is always a non-`Fn` atom, so rendering both
+        // sides recursively and joining with ` => ` round-trips without parentheses (C1).
+        BaseType::Fn(a, b) => format!("{} => {}", render_type_ref(a), render_type_ref(b)),
     };
     match t.guarantee {
         Some(g) => format!("{base} @ {g:?}"),
@@ -1295,11 +1332,29 @@ fn render_type_ref(t: &mycelium_l1::ast::TypeRef) -> String {
 }
 
 fn render_sig_tail(sig: &mycelium_l1::ast::FnSig) -> String {
-    let tp = if sig.params.is_empty() {
+    use mycelium_l1::ast::ParamKind;
+    // RFC-0037 D2: type parameters render in `[…]`, const/width parameters in `{…}` (kind-split).
+    let type_ps: Vec<String> = sig
+        .params
+        .iter()
+        .filter(|p| p.kind == ParamKind::Type)
+        .map(render_type_param)
+        .collect();
+    let const_ps: Vec<String> = sig
+        .params
+        .iter()
+        .filter(|p| p.kind == ParamKind::Width)
+        .map(|p| p.name.clone())
+        .collect();
+    let tp = if type_ps.is_empty() {
         String::new()
     } else {
-        let ps: Vec<String> = sig.params.iter().map(render_type_param).collect();
-        format!("<{}>", ps.join(", "))
+        format!("[{}]", type_ps.join(", "))
+    };
+    let cp = if const_ps.is_empty() {
+        String::new()
+    } else {
+        format!("{{{}}}", const_ps.join(", "))
     };
     let ps: Vec<String> = sig
         .value_params
@@ -1311,10 +1366,12 @@ fn render_sig_tail(sig: &mycelium_l1::ast::FnSig) -> String {
     } else {
         format!(" !{{{}}}", sig.effects.join(", "))
     };
+    // RFC-0037 D4: return arrow `=>` (the `->` glyph is retired).
     format!(
-        "{}{}({}) -> {}{}",
+        "{}{}{}({}) => {}{}",
         sig.name,
         tp,
+        cp,
         ps.join(", "),
         render_type_ref(&sig.ret),
         eff
@@ -1335,7 +1392,7 @@ fn render_trait_ref(tr: &mycelium_l1::ast::TraitRef) -> String {
         tr.name.clone()
     } else {
         let args: Vec<String> = tr.args.iter().map(render_type_ref).collect();
-        format!("{}<{}>", tr.name, args.join(", "))
+        format!("{}[{}]", tr.name, args.join(", "))
     }
 }
 

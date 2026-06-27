@@ -3,5 +3,5 @@
 // @summary: A second nodule in the phylum, exercising a ternary literal.
 nodule hello.greeting
 
-fn wave() -> Ternary{4} =
-  <+0-0>
+fn wave() => Ternary{4} =
+  0t+0-0

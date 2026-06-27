@@ -5,4 +5,4 @@
 // never a silent accept. (De-maturation of one def uses `thaw fn …`; RFC-0017 §4.3.)
 nodule kernel
 
-matured fn identity(x: Binary{8}) -> Binary{8} = x
+matured fn identity(x: Binary{8}) => Binary{8} = x

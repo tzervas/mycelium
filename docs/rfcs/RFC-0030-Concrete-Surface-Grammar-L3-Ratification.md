@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0030 |
-| **Status** | **Accepted** (2026-06-27) — *Draft → Accepted, **ratified by the maintainer 2026-06-27** (R1 gate): the L3 grammar's structure + open-question resolutions (Q3 discharged via RFC-0018; Q8 `wild {…}` spelling) are settled. **CAVEAT (VR-5, never-silent):** the concrete `docs/spec/grammar/mycelium.ebnf` has **not** yet been regenerated against RFC-0037's bracket/operator changes — that regeneration (in the RFC-0037 grammar epic) is the **Enacted** gate; until it lands the committed EBNF lags RFC-0037 and must not be cited as the final grammar.* Prior: **Draft** (2026-06-23). |
+| **Status** | **Enacted** (2026-06-27) — *Draft → Accepted → **Enacted**: the `mycelium.ebnf` was regenerated against RFC-0037 in the grammar epic (the Enacted gate this status previously flagged is now met; the committed EBNF matches the landed parser, conformance corpus green). Prior chain — ratified by the maintainer 2026-06-27 (R1 gate): the L3 grammar's structure + open-question resolutions (Q3 discharged via RFC-0018; Q8 `wild {…}` spelling) are settled. **CAVEAT (VR-5, never-silent):** the concrete `docs/spec/grammar/mycelium.ebnf` has **not** yet been regenerated against RFC-0037's bracket/operator changes — that regeneration (in the RFC-0037 grammar epic) is the **Enacted** gate; until it lands the committed EBNF lags RFC-0037 and must not be cited as the final grammar.* Prior: **Draft** (2026-06-23). |
 | **Type** | Normative / foundational (once Accepted) — grammar spec + conformance; no L0 or L1 kernel change |
 | **Date** | 2026-06-23 |
 | **Feeds** | E11-1 (surface-language completeness, M-706) |

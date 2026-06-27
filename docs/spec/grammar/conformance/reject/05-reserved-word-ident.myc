@@ -2,4 +2,4 @@
 // 'phylum'/'colony'; DN-06)
 nodule bad
 
-fn nodule(x: Binary{8}) -> Binary{8} = x
+fn nodule(x: Binary{8}) => Binary{8} = x
