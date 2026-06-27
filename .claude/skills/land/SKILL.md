@@ -102,7 +102,9 @@ just check              # re-verify after the pull-down
 
 Squash-only into `main`. Internal swarm merges (leaf → epic → orch) stay
 octopus / `--no-ff` to preserve lineage; **only the final landing on `main`
-squashes**.
+squashes**. The landing is a **GitHub PR squash-merge**, not a local `git push`/`merge` to `main` —
+the branch-guard (PreToolUse + pre-push hooks; `/branch-guard`) **blocks** any local commit/merge/push
+to `main`/`integration`/`dev`/`claude/head/*`, which is exactly correct: protected branches are PR-only.
 
 Write a clear, self-contained squash commit — subject + body describing the
 *net* change. Never let the auto-concatenated WIP / `wip(batch …)` / fixup /

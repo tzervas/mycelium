@@ -104,6 +104,12 @@ secrets:
 safety-check:
     @bash scripts/checks/safety.sh
 alias safety := safety-check
+# Branch-protection guard (rsm): refuse work on a protected branch (main/integration/dev/claude/head/*)
+# and keep commits on the working branch. Idempotent + parameterized; also wired as a git
+# pre-commit/pre-push hook (.pre-commit-config.yaml) + a Claude PreToolUse hook (.claude/settings.json).
+branch-guard:
+    @bash scripts/checks/branch-guard.sh
+alias bg := branch-guard
 # Per-use unsafe escape gate (M-793; RFC-0034 §9; sharpens ADR-014): (A) trusted-kernel crates
 # (`mycelium-core`, `-cert`, `-numerics`, `-vsa`) must retain `#![forbid(unsafe_code)]`; (B) every
 # non-kernel `unsafe` site must carry a per-use `#[allow(unsafe_code)]` (or `cfg_attr` form) within

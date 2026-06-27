@@ -379,6 +379,20 @@ durable artifact; an unpushed tip is gone).
 **push before they complete**. If lost, the work is recoverable from the branch, not gone. This is
 **standing policy for every agent**. (#5 is the *visibility* twin of this *durability* rule.)
 
+### 10. Wrong-branch / commit-to-`main` — now ENFORCED, not just convention (standing policy, rsm 2026-06-27)
+**Pattern:** an agent (or an orphaned sub-agent) commits/pushes to a protected branch, or writes to
+the wrong working branch — the discipline below was documentation, so nothing actually *stopped* it.
+**Mitigation — the branch-guard (`/branch-guard`), three layers, idempotent + parameterized:**
+(1) a **Claude Code `PreToolUse(Bash)` hook** (`.claude/settings.json` → `scripts/hooks/claude-git-branch-guard.sh`)
+blocks an agent's `git commit`/`merge`/`cherry-pick`/`rebase` on, or push to, a protected branch, and
+any force-push, **before** the tool runs — the layer that stops agents; (2) **git pre-commit + pre-push
+hooks** (`.pre-commit-config.yaml`, `repo: local` → `scripts/checks/branch-guard.sh`) for direct git
+use; (3) the **`/branch-guard` skill + `just branch-guard`** checked step the workflows call.
+Protected set (`MYC_PROTECTED_BRANCHES`, default `main integration dev claude/head/*`) and the
+expected working branch (`CLAUDE_WORKING_BRANCH` / `--expect`) are **parameters**; the checks are pure
+reads (idempotent). Landing onto a protected branch is **via GitHub PR**, never local git — so the
+block is exactly correct. Never-silent (G2): a blocked op prints the protected/wrong branch + the fix.
+
 ## Autonomous PR workflow — review-before-merge, no human gate
 
 The merge gate is the agent's, not a human's. A parent (orchestrator/epic) **merges its children

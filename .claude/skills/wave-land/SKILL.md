@@ -31,4 +31,7 @@ the shared files once** (`issues.yaml` dedup, `CHANGELOG`, `Doc-Index`, workspac
 the full `just check`, then squash-PR to `main` and sync-heads down.
 
 **Invariants:** `main` + `claude/head/*` are PR-gated & protected; only `main` squashes; honesty +
-append-only hold (VR-5/G2) at every boundary.
+append-only hold (VR-5/G2) at every boundary. The protected bases are **enforced**, not just
+convention: the branch-guard (`/branch-guard`; PreToolUse + pre-commit/pre-push hooks) blocks any
+local commit/merge/push to `main`/`integration`/`dev`/`claude/head/*` — every landing onto them goes
+through a GitHub PR (squash for `main`, `--no-ff` for a head).
