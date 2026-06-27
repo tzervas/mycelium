@@ -8,6 +8,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-27: planning-execution housekeeping — issues.yaml status reconciled to code, no code change)
+
+- **Runtime epic E12-1 statuses reconciled from stale `in-progress` to `done` (VR-5: verified before claiming).**
+  An anti-redo reconciliation audit (source tree = ground truth) found three runtime tasks whose code + tests had
+  landed via the runtime waves but whose `issues.yaml` labels lagged. Each `done` flip is grounded in the green
+  `mycelium-std-runtime` suite (104 tests, 0 failed) and its named DoD property tests:
+  - **M-709** (real OS-thread scheduler) — RT2 differential `parallel_run_equals_sequential_reference`,
+    OS-thread completion, bounded backpressure `ready_queue_never_exceeds_capacity`. Guarantee `Empirical`.
+  - **M-711** (deadlock-freedom) — `stalled_network_is_explicit_deadlock_never_hangs` (+scheduled variant),
+    `sweep_direction_is_determinism_invariant`; Kahn honestly `Empirical`-not-`Proven`.
+  - **M-713** (structured-concurrency supervision) — cascade cancellation, no-silent-drop outcome collection,
+    external propagation, restart policy live + EXPLAIN-able.
+- **M-712 (reclamation) blocker un-staled (append-only).** RFC-0027 was ratified `Accepted` (2026-06-25), so the
+  RFC-0027 gate in M-712's DoD is met and the reclamation *mechanism* is landed Rust-first; the remaining
+  `reclaim` L1-elaboration stays `blocked` — corrected from the stale "RFC-0027 Draft" to **M-667 (L1 surface,
+  needs-design)**, tracked jointly with M-710. (Flag, don't guess — VR-5/G2.)
+- Audit also confirmed **E19-1/kpr (M-747–753)**, **E13-1/lib10 (M-715–718)**, **E14-1 FFI**, **E16-1 toolchain**
+  already landed and in-sync — no redo. Open remainders are honestly flagged: M-719 broader stability closure,
+  M-752 multi-byte UTF-8 slice (width-cast surface), and the Proposed/Draft grammar/dispatch specs (review-gated).
+
 ### Fixed (2026-06-27: rsm W5 freeze-ledger — a real never-silent (G2) gap found + closed)
 
 - **Dense swap was a silent elaboration-level gap — now an explicit `Residual` (G2/DN-50).** Closing the
