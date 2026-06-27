@@ -69,10 +69,10 @@ type Channel = Stable | Beta | Nightly
 // record (positional fields): (channel, max_retries, body_cap_bytes, etag).
 type Config = Config(Channel, Binary{32}, Binary{64}, Bytes)
 
-fn config_channel(c: Config)  -> Channel    = match c { Config(ch, _, _, _) => ch }
-fn config_retries(c: Config)  -> Binary{32} = match c { Config(_, r, _, _) => r }
-fn config_cap(c: Config)      -> Binary{64} = match c { Config(_, _, n, _) => n }
-fn config_etag(c: Config)     -> Bytes      = match c { Config(_, _, _, e) => e }
+fn config_channel(c: Config)  => Channel    = match c { Config(ch, _, _, _) => ch }
+fn config_retries(c: Config)  => Binary{32} = match c { Config(_, r, _, _) => r }
+fn config_cap(c: Config)      => Binary{64} = match c { Config(_, _, n, _) => n }
+fn config_etag(c: Config)     => Bytes      = match c { Config(_, _, _, e) => e }
 
 // ── derive — generative lowering of boilerplate (DN-38 §4) ────────────────────
 // `derive` takes a terse intent and GENERATES an explicit, inspectable,
@@ -97,10 +97,10 @@ derive Eq, Show, Deserialize for Config
 // [enacted] `trait`/`impl` parse + type-check today; coherence checked (M-659).
 //   ELAB STAGED → M-673 (they type-check but do not yet RUN — lexicon Gotchas).
 //   So the guarantee here is Declared-pending-elab, not a runtime claim.
-trait Rank<A> { fn rank(a: A) -> Binary{8} }
+trait Rank[A] { fn rank(a: A) => Binary{8} }
 
-impl Rank<Channel> for Channel {
-  fn rank(a: Channel) -> Binary{8} =
+impl Rank[Channel] for Channel {
+  fn rank(a: Channel) => Binary{8} =
     match a {
       Stable  => 0,
       Beta    => 1,
@@ -128,12 +128,12 @@ type Clock     = Clock(Binary{64})                 // a monotonic now() reading 
 type Budget    = Budget(Binary{64}, Binary{64})    // (timeout_ms, max_bytes) — both mandatory, finite
 type Deps      = Deps(TlsPolicy, Clock, Budget)
 
-fn deps_tls(d: Deps)    -> TlsPolicy = match d { Deps(t, _, _) => t }
-fn deps_clock(d: Deps)  -> Clock     = match d { Deps(_, c, _) => c }
-fn deps_budget(d: Deps) -> Budget    = match d { Deps(_, _, b) => b }
+fn deps_tls(d: Deps)    => TlsPolicy = match d { Deps(t, _, _) => t }
+fn deps_clock(d: Deps)  => Clock     = match d { Deps(_, c, _) => c }
+fn deps_budget(d: Deps) => Budget    = match d { Deps(_, _, b) => b }
 
-fn budget_timeout_ms(b: Budget) -> Binary{64} = match b { Budget(t, _) => t }
-fn budget_max_bytes(b: Budget)  -> Binary{64} = match b { Budget(_, m) => m }
+fn budget_timeout_ms(b: Budget) => Binary{64} = match b { Budget(t, _) => t }
+fn budget_max_bytes(b: Budget)  => Binary{64} = match b { Budget(_, m) => m }
 
 // A trait the fetcher delegates its host calls THROUGH. In the sugared call site
 // below, `via deps` injects a concrete `Deps` so `fetch` never hard-codes a TLS
@@ -141,16 +141,16 @@ fn budget_max_bytes(b: Budget)  -> Binary{64} = match b { Budget(_, m) => m }
 //
 // [designed:DN-37] super-trait-free single trait (super-traits are designed-not-
 //   built, DN-37 §3.2); the `via deps` delegation header is the greenfield piece.
-trait HostAccess<D> {
-  fn tls(d: D)    -> TlsPolicy
-  fn now_ms(d: D) -> Binary{64}
-  fn cap(d: D)    -> Binary{64}
+trait HostAccess[D] {
+  fn tls(d: D)    => TlsPolicy
+  fn now_ms(d: D) => Binary{64}
+  fn cap(d: D)    => Binary{64}
 }
 
-impl HostAccess<Deps> for Deps {
-  fn tls(d: Deps)    -> TlsPolicy  = deps_tls(d)
-  fn now_ms(d: Deps) -> Binary{64} = match deps_clock(d) { Clock(t) => t }
-  fn cap(d: Deps)    -> Binary{64} = budget_max_bytes(deps_budget(d))
+impl HostAccess[Deps] for Deps {
+  fn tls(d: Deps)    => TlsPolicy  = deps_tls(d)
+  fn now_ms(d: Deps) => Binary{64} = match deps_clock(d) { Clock(t) => t }
+  fn cap(d: Deps)    => Binary{64} = budget_max_bytes(deps_budget(d))
 }
 
 // ── The error vocabulary — a closed sum, never a generic "failed" (G2) ────────
@@ -178,7 +178,7 @@ type FetchError =
 // Guarantee: Declared — an effectful multi-step contract; it composes Exact and
 // Declared sub-steps and never claims more than its weakest member (VR-5).
 fn fetch(raw_url: Bytes, expected_etag: Bytes, deps: Deps)
-    -> Result<Config, FetchError> !{ io } via deps =
+    => Result[Config, FetchError] !{ io } via deps =
   and_then(parse_https_url(raw_url), url =>
   and_then(http_get_capped(url, deps), body =>
   and_then(parse_manifest(body), cfg =>
@@ -190,7 +190,7 @@ fn fetch(raw_url: Bytes, expected_etag: Bytes, deps: Deps)
 // explicit Err, never a silent upgrade. Declared (a stated string-prefix rule).
 type Url = Url(Bytes)
 
-fn parse_https_url(raw: Bytes) -> Result<Url, FetchError> =
+fn parse_https_url(raw: Bytes) => Result[Url, FetchError] =
   if starts_with(raw, "https://") then Ok(Url(raw))
   else Err(NotHttps)
 
@@ -199,7 +199,7 @@ fn parse_https_url(raw: Bytes) -> Result<Url, FetchError> =
 //
 // [designed:DN-38] uses the derived `Deserialize`; the `<- deserialize` call is
 //   illustrative surface, not a parser claim.
-fn parse_manifest(body: Bytes) -> Result<Config, FetchError> =
+fn parse_manifest(body: Bytes) => Result[Config, FetchError] =
   match parse_toml(body) {
     Some(cfg) => Ok(cfg),
     None      => Err(MalformedManifest),    // never silently accept a half-parsed config
@@ -231,7 +231,7 @@ fn parse_manifest(body: Bytes) -> Result<Config, FetchError> =
 type CapError = WouldOverflow | OverCap(Binary{64})
 
 fn checked_step(acc: Binary{64}, chunk: Binary{64}, cap: Binary{64})
-    -> Result<Binary{64}, CapError> =
+    => Result[Binary{64}, CapError] =
   let next: Binary{64} = add(acc, chunk) in
   // Carry-out check: an unsigned wrap means the sum dropped below an addend.
   if lt(next, acc) then Err(WouldOverflow)        // never wrap the counter silently
@@ -252,7 +252,7 @@ fn checked_step(acc: Binary{64}, chunk: Binary{64}, cap: Binary{64})
 //   §"for_expr"; RFC-0007 §4.8). Guarantee: Declared (inherits checked_step's
 //   Declared cap contract; the finite-spine fold itself is Total/Exact).
 fn read_capped(chunks: ByteChunks, cap: Binary{64})
-    -> Result<Binary{64}, CapError> =
+    => Result[Binary{64}, CapError] =
   for c in chunks, acc = Ok(0) =>
     match acc {
       Err(e)  => Err(e),                          // already failed — propagate, do not read on
@@ -271,7 +271,7 @@ fn read_capped(chunks: ByteChunks, cap: Binary{64})
 //
 // Guarantee: Declared — an effectful streaming contract; the cap predicate is a
 // stated rule (Part B's read_capped), the handshake/GET are delegated.
-fn http_get_capped(url: Url, deps: Deps) -> Result<Bytes, FetchError> !{ io } =
+fn http_get_capped(url: Url, deps: Deps) => Result[Bytes, FetchError] !{ io } =
   // `via` injects the TLS policy + budget; the handshake yields TlsFailed on any
   // verify failure (never a downgrade to plaintext/unverified).
   match via platform_tls.connect(url, deps_tls(deps), budget_timeout_ms(deps_budget(deps))) {
@@ -303,7 +303,7 @@ fn http_get_capped(url: Url, deps: Deps) -> Result<Bytes, FetchError> !{ io } =
 // [enacted] `match`, byte equality (`bytes_eq`), explicit arms — all parse today.
 //   We DECLINE [designed:DN-38] `derive Deserialize` here on purpose. Total over a
 //   finite set of byte-string arms with a catch-all → Exact (a total selection).
-fn parse_channel(s: Bytes) -> Channel =
+fn parse_channel(s: Bytes) => Channel =
   // Hand-written, arm-by-arm — the custom fail-safe default lives in the last arm.
   if bytes_eq(s, "stable")  then Stable
   else if bytes_eq(s, "beta")    then Beta
@@ -323,7 +323,7 @@ fn parse_channel(s: Bytes) -> Channel =
 // over its finite input → Exact (a deterministic, total byte transform).
 //
 // [enacted] `Binary{64}`, `byte_len`, byte ops; the `++` concat is assumed std.
-fn canonical_etag(raw: Bytes) -> Bytes =
+fn canonical_etag(raw: Bytes) => Bytes =
   let n: Binary{64} = byte_len(raw) in
   be64_bytes(n) ++ raw                            // length-prefix: frame-independent identity
 
@@ -333,7 +333,7 @@ fn canonical_etag(raw: Bytes) -> Bytes =
 // audited primitive (Declared — asserted constant-time, not proven here, VR-5).
 //
 // [enacted] equality/`if`; [designed:DN-37] the `via` compare delegation.
-fn check_etag(cfg: Config, expected: Bytes) -> Result<Config, FetchError> =
+fn check_etag(cfg: Config, expected: Bytes) => Result[Config, FetchError] =
   let got: Bytes = canonical_etag(config_etag(cfg)) in
   let want: Bytes = canonical_etag(expected) in
   if via bytes_eq_ct(got, want) then Ok(cfg)
@@ -349,7 +349,7 @@ fn check_etag(cfg: Config, expected: Bytes) -> Result<Config, FetchError> =
 //
 // [enacted] `wild { }` parses today (lexicon §"wild_expr"). Guarantee: Declared —
 //   the host read is asserted, never proven; absence of the var is never-silent.
-fn read_credential(env_var: Bytes) -> Result<Bytes, FetchError> !{ io } =
+fn read_credential(env_var: Bytes) => Result[Bytes, FetchError] !{ io } =
   wild {
     // Inside `wild` is the only place a raw host capability may be exercised. We
     // STILL return a never-silent Result — a missing credential is an explicit
@@ -381,7 +381,7 @@ fn read_credential(env_var: Bytes) -> Result<Bytes, FetchError> !{ io } =
 //   the Mycelium `reveal` is `Declared`). The L0 sketch below is ILLUSTRATIVE of
 //   the SHAPE (Fix/Match/App over a finite spine — RFC-0007 §3 five L1 nodes), not
 //   a verbatim dump from a tool that does not exist yet.
-fn reveal_the_fold(chunks: ByteChunks, cap: Binary{64}) -> Result<Binary{64}, CapError> =
+fn reveal_the_fold(chunks: ByteChunks, cap: Binary{64}) => Result[Binary{64}, CapError] =
   reveal {
     // SUGARED (── L2/L3 ──), the same form read_capped uses:
     for c in chunks, acc = Ok(0) =>
@@ -414,5 +414,5 @@ fn reveal_the_fold(chunks: ByteChunks, cap: Binary{64}) -> Result<Binary{64}, Ca
 // are mandatory and finite (the unbounded transfer is unrepresentable).
 //
 // [enacted] all literals + ctors parse today.
-fn default_deps() -> Deps =
+fn default_deps() => Deps =
   Deps(SystemRoots, Clock(0), Budget(30000, 16777216))   // 30_000 ms ; 16 * 1024 * 1024 bytes

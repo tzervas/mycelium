@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0037 |
-| **Status** | **Accepted** (2026-06-27) — *Proposed → Accepted, **ratified by the maintainer 2026-06-27** (R1 binding-grammar gate). Enactment = the grammar epic in `crates/mycelium-l1` (lexer/parser/`mycelium.ebnf`) — moves to **Enacted** when that lands; FLAG-2 (delimiter rule, rec. Option B) and FLAG-3 (short-keyword status) resolved at epic time. Prior status preserved (append-only):* **Proposed** (2026-06-27) — the bracket kind-split, operator reallocation, return-arrow change, trit-literal reprefix, and layout-independence principle are normative; enacts no code. |
+| **Status** | **Enacted** (2026-06-27) — *Proposed → Accepted → **Enacted**: the grammar epic landed in `crates/mycelium-l1` + `mycelium-fmt` (full corpus migrated; `mycelium-l1` 615 + `mycelium-fmt` 11 green; `mycelium.ebnf`/editor-grammars/api-index regenerated). **Remaining follow-ons** (not blockers): D2-b short repr keywords, RFC-0025 operator wiring. Prior chain — ratified by the maintainer 2026-06-27 (R1 binding-grammar gate); enactment = the grammar epic in `crates/mycelium-l1` (lexer/parser/`mycelium.ebnf`) — moves to **Enacted** when that lands; FLAG-2 (delimiter rule, rec. Option B) and FLAG-3 (short-keyword status) resolved at epic time. Prior status preserved (append-only):* **Proposed** (2026-06-27) — the bracket kind-split, operator reallocation, return-arrow change, trit-literal reprefix, and layout-independence principle are normative; enacts no code. |
 | **Type** | Normative / foundational (once Accepted) — surface grammar supersession; no L0 or L1 kernel change |
 | **Date** | 2026-06-27 |
 | **Task** | M-809 |

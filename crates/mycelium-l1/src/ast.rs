@@ -595,6 +595,18 @@ pub enum Expr {
     /// Both paths refuse outside the evaluation-complete fragment with a never-silent
     /// [`crate::elab::ElabError::Residual`] (G2), never a fabricated accept.
     Colony(Vec<Hypha>),
+    /// `lambda(params) => body` — an anonymous-function expression (RFC-0037 D5). The grammar + AST
+    /// node land with the RFC-0037 grammar epic; **full closure semantics (environment capture,
+    /// partial application, dynamic fn-flow) are deferred to M-704 / RFC-0024 §5** — the checker
+    /// ([`crate::checkty`]) and elaborator ([`crate::elab`]) emit a **never-silent `Residual`** for a
+    /// lambda until then (G2), so the surface parses but does not yet evaluate. v0 params are typed
+    /// (`name: type`); inferred-type params are part of the M-704 work.
+    Lambda {
+        /// The (typed) value parameters.
+        params: Vec<Param>,
+        /// The body expression.
+        body: Box<Expr>,
+    },
     /// A function/constructor application `head(args)` (possibly nested), or a bare head.
     App {
         /// The applied head.
@@ -656,7 +668,7 @@ pub enum Pattern {
 pub enum Literal {
     /// `0b…` (the digit/`_` string, verbatim).
     Bin(String),
-    /// `<…>` (the inner `+0-` string, MSB-first).
+    /// `0t…` (the inner `+0-` string, MSB-first; RFC-0037 D4 — the former `<…>` form is retired).
     Trit(String),
     /// A decimal integer.
     Int(i64),
