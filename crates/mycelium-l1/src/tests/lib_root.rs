@@ -1,4 +1,4 @@
-use crate::ast::{BaseType, Expr, Item, Literal};
+use crate::ast::{BaseType, Expr, Item, Literal, WidthRef};
 use crate::*;
 
 #[test]
@@ -13,7 +13,7 @@ fn parses_a_nodule_with_a_swap() {
     };
     assert!(!f.thaw);
     assert!(matches!(f.body, Expr::Swap { .. }));
-    assert_eq!(f.sig.ret.base, BaseType::Ternary(6));
+    assert_eq!(f.sig.ret.base, BaseType::Ternary(WidthRef::Lit(6)));
 }
 
 #[test]

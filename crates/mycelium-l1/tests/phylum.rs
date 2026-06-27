@@ -264,7 +264,10 @@ fn own_decl_shadows_an_imported_glob_name_deterministically() {
     // `b`'s `id` is the Ternary one (own), not the imported Binary one.
     let id = b.fn_decl("id").expect("id present");
     assert!(
-        matches!(id.sig.ret.base, mycelium_l1::ast::BaseType::Ternary(6)),
+        matches!(
+            id.sig.ret.base,
+            mycelium_l1::ast::BaseType::Ternary(mycelium_l1::ast::WidthRef::Lit(6))
+        ),
         "own `id` (Ternary) must shadow the imported (Binary) one"
     );
 }

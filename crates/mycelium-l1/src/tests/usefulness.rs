@@ -1,4 +1,4 @@
-use crate::checkty::{CtorInfo, DataInfo, Ty};
+use crate::checkty::{CtorInfo, DataInfo, Ty, Width};
 use crate::usefulness::*;
 
 fn nat_registry() -> std::collections::BTreeMap<String, DataInfo> {
@@ -85,10 +85,16 @@ fn literal_column_needs_a_default() {
     // A Binary{1} column with literal rows 0b0, 0b1 but no default is still non-exhaustive: the
     // value domain is never enumerated (M-320), so `_` stays useful.
     let rows = vec![vec![Pat::Lit("b:0".into())], vec![Pat::Lit("b:1".into())]];
-    assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Binary(1)]).is_some());
+    assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Binary(Width::Lit(1))]).is_some());
     // With a default, `_` is no longer useful.
     let with_default = vec![vec![Pat::Lit("b:0".into())], vec![Pat::Wild]];
-    assert!(useful(&t, &with_default, &[Pat::Wild], &[Ty::Binary(1)]).is_none());
+    assert!(useful(
+        &t,
+        &with_default,
+        &[Pat::Wild],
+        &[Ty::Binary(Width::Lit(1))]
+    )
+    .is_none());
 }
 
 // --- M-641: the shared `SpecializeRow` specialization over two row types ---------------------
