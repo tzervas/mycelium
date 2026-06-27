@@ -24,7 +24,7 @@ human and machine readers. The gate is three tests from **DN-02 §1**.
 | Document | Role |
 |---|---|
 | `docs/notes/DN-02-Fungal-Lexicon-and-Reserved-Words.md` | Naming LAW + three-test gate; the original reserved-word set (Resolved 2026-06-10) |
-| `docs/notes/DN-03-Lexicon-Amendment-Surface-and-Runtime-Forms.md` | Surface additions (`consume`, `grow`, `thaw`); runtime names (one per concept); one-name-per-term rule (Resolved 2026-06-10) |
+| `docs/notes/DN-03-Lexicon-Amendment-Surface-and-Runtime-Forms.md` | Surface additions (`consume`, `thaw`, `derive`/`via`/`reveal`); runtime names (one per concept); one-name-per-term rule (Resolved 2026-06-10); `grow → derive` supersession 2026-06-27; short repr keywords + `lambda` cross-reference 2026-06-27 |
 | `docs/notes/DN-06-Static-Organization-and-Dynamic-Grouping-Lexicon.md` | `phylum` / `nodule` / `colony` (load-bearing; Resolved 2026-06-16); `// nodule:` header rule; M-358 migration |
 | `docs/Glossary.md` | The dedicated term reference (Index + per-term detail, 2026-06-16) |
 | `docs/notes/Lexicon-Reference.md` | Terse catalog with mnemonics and tier table (Draft v0.4) |
@@ -97,16 +97,22 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
   identifier — G2) but no construct consumes it yet: **only `phylum` and `colony`**.
 - **Ratified — not yet lexed** — a name ratified in DN-02/DN-03 but **not** in `keyword()`, so it
   currently lexes as an ordinary **identifier** (using it is *not* yet an error). The whole Runtime
-  tier plus `consume`/`derive`/`impl` are here (the generative keyword reconciled `grow → derive`,
-  DN-38 §8.1) — their lexer reservation lags the spec.
+  tier plus `consume`/`derive`/`impl` are here — their lexer reservation lags the spec.
+- **Ratified-pending-RFC-0037** — ratified in DN-02 2026-06-27 changelog (direction fixed by DN-31
+  kind-split revision) but **lexer reservation deferred to RFC-0037** (the binding bracket/keyword
+  grammar RFC). The short repr keywords (`bin`/`tern`/`emb`/`hvec`) and `lambda` are in this class.
+  Guarantee: `Declared` (direction ratified; no token.rs change yet). Do not claim these keywords
+  are active or lexed.
 
-**Gap-closure tracking (2026-06-22):** the **Reserved-not-active** and **Ratified — not yet lexed**
-gaps are tracked under **E7-1** (L1 language features; issues M-656…M-664, Phase 5) and **E7-2**
-(runtime vocabulary; M-665…M-668, Phase 7). Progress: **M-656/657/658** (generics), **M-659** (traits;
-`Tok::Trait`/`Tok::Impl` active; elab **LANDED M-673** — runs three-way), **M-660** (effects; `Tok::Bang`; checker-only,
-no L0 node) — all LANDED. **Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phylum`/cross-nodule), M-663
-(grading), M-664 (`consume`/`derive`/`impl`; `grow → derive` per DN-38 §8.1). **E7-2 remaining:** M-667 (`fuse`/`reclaim`/`tier`), M-668
-(R2). A status row flips only when its tracking issue lands and `just check` is green (VR-5).
+**Gap-closure tracking (2026-06-22, updated 2026-06-27):** the **Reserved-not-active** and
+**Ratified — not yet lexed** gaps are tracked under **E7-1** (L1 language features; issues
+M-656…M-664, Phase 5) and **E7-2** (runtime vocabulary; M-665…M-668, Phase 7). Progress:
+**M-656/657/658** (generics), **M-659** (traits; `Tok::Trait`/`Tok::Impl` active; elab **LANDED
+M-673** — runs three-way), **M-660** (effects; `Tok::Bang`; checker-only, no L0 node) — all LANDED.
+**Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phylum`/cross-nodule), M-663 (grading), M-664
+(`consume`/`derive`/`impl`; `grow → derive` per DN-38 §8.1; `bin`/`tern`/`emb`/`hvec`/`lambda`
+pending RFC-0037). **E7-2 remaining:** M-667 (`fuse`/`reclaim`/`tier`), M-668 (R2). A status row
+flips only when its tracking issue lands and `just check` is green (VR-5).
 
 | Term | Layer | Status | Meaning | Normative source |
 |---|---|---|---|---|
@@ -116,7 +122,7 @@ no L0 node) — all LANDED. **Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phyl
 | `use` | L2 Surface | **Active** | Import (conventional) | DN-02 §3 |
 | `type` | L2 Surface | **Active** | Data-type (sum) declaration (conventional; `species` declined) | DN-02 §7 |
 | `trait` | L2 Surface | **Active** | Typeclass / behavior set (conventional; `guild` declined); `Tok::Trait` active; **trait checker + coherence LANDED M-659**; **L0 lowering LANDED M-673** — single-param trait + bounded-generic calls RUN three-way via dictionary-free static instance resolution (literal RFC-0019 §4.5 runtime-dictionary records deferred to a trusted-core ADR) | DN-02 §7; RFC-0019 |
-| `fn` | L2 Surface | **Active** | Function definition (conventional; `spawn`/`grow` rejected on T-map) | DN-02 §3 |
+| `fn` | L2 Surface | **Active** | Function definition (conventional; `spawn` rejected on T-map — implies concurrency; `grow` rejected on T-map — used for generative construct) | DN-02 §3 |
 | `thaw` | L2 Surface | **Active** | De-maturation: keeps one `fn` interpreted inside a `matured` scope; `thaw fn f(…)` | RFC-0017 §4.3/§5; DN-03 changelog |
 | `let` | L2 Surface | **Active** | Local binding (conventional) | DN-02 §3 |
 | `in` | L2 Surface | **Active** | Binding body separator (`let x = e in body`) | grammar |
@@ -133,16 +139,23 @@ no L0 node) — all LANDED. **Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phyl
 | `policy` | L2 Surface | **Active** | Swap policy label (within `swap(…, to: …, policy: …)`) | grammar |
 | `matured` | L2 Surface | **Active (reserved keyword)** | Scope-level promotion to AOT-compiled, stable form; a `matured fn` at item position is a parse error with teaching diagnostic | RFC-0017; DN-02 §7 |
 | `impl` | L2 Surface | **Active** (`Tok::Impl` lexed, M-659) | Trait implementation block (`impl Trait<X> for Y { … }`); `Tok::Impl` in the lexer; inherent-impl `impl T { … }` uses the same token; **L0 lowering LANDED M-673** — a resolved impl method runs three-way (dictionary-free static resolution; literal RFC-0019 §4.5 runtime-dictionary records deferred). NB: the *surface keyword* `impl` per M-664 (DN-03 §1) is a separate, still-`needs-design` question | DN-03 §1; RFC-0019; M-659 |
-| `Binary` | Type | **Active** | N-bit binary representation type (`Binary{N}`) | RFC-0001; grammar |
-| `Ternary` | Type | **Active** | N-trit balanced-ternary type (`Ternary{N}`) | RFC-0001; grammar |
-| `Dense` | Type | **Active** | Dense embedding type (`Dense{N, scalar}`) | RFC-0001; grammar |
-| `VSA` | Type | **Active** | Hypervector type (`VSA{model, dim, sparsity}`) | RFC-0001; grammar |
+| `Binary` | Type | **Active** | N-bit binary representation type (`Binary{N}`); long form remains valid | RFC-0001; grammar |
+| `bin` *(short for `Binary`)* | Type | **Ratified-pending-RFC-0037** (`Declared`) | Short form: `bin{N}` — ergonomic alias for `Binary{N}`; keeps width on `{}` (kind-split). `vec` rejected — conceptual collision with `type Vec<A>` (cons-list in `lib/std/collections.myc`). Gate: T-map/T-illuminate/T-learn all pass (DN-02 2026-06-27). Lexer not changed until RFC-0037 | DN-02 2026-06-27 changelog; DN-31 kind-split revision |
+| `Ternary` | Type | **Active** | N-trit balanced-ternary type (`Ternary{N}`); long form remains valid | RFC-0001; grammar |
+| `tern` *(short for `Ternary`)* | Type | **Ratified-pending-RFC-0037** (`Declared`) | Short form: `tern{N}` — ergonomic alias for `Ternary{N}`; keeps width on `{}`. Gate: all three tests pass (DN-02 2026-06-27). Lexer not changed until RFC-0037 | DN-02 2026-06-27 changelog; DN-31 kind-split revision |
+| `Dense` | Type | **Active** | Dense embedding type (`Dense{N, scalar}`); long form remains valid | RFC-0001; grammar |
+| `emb` *(short for `Dense`)* | Type | **Ratified-pending-RFC-0037** (`Declared`) | Short form: `emb{…}` — ergonomic alias for `Dense{…}`; mnemonic: embeddings (the ML workload). T-map note: `emb` names the use, not the structural property — acceptable for the homogeneous ML target. Gate: all three tests pass with T-map note (DN-02 2026-06-27). Lexer not changed until RFC-0037 | DN-02 2026-06-27 changelog; DN-31 kind-split revision |
+| `VSA` | Type | **Active** | Hypervector type (`VSA{model, dim, sparsity}`); long form remains valid | RFC-0001; grammar |
+| `hvec` *(short for `VSA`)* | Type | **Ratified-pending-RFC-0037** (`Declared`) | Short form: `hvec{…}` — ergonomic alias for `VSA{…}`; mnemonic: HDC hypervectors (`h`=hyper+`vec`=vector). `vec` REJECTED — conceptual collision with `type Vec<A>` stdlib cons-list. Gate: all three tests pass (DN-02 2026-06-27). Lexer not changed until RFC-0037 | DN-02 2026-06-27 changelog; DN-31 kind-split revision |
+| `lambda` | L2 Surface (closure) | **Ratified-pending-RFC-0037** (`Declared`) | Explicit keyword for closure/anonymous-function declaration. Conventional-clearest (PL-theory term — not themed; same precedent as `match`/`for`). Gate: T-map (accurate — Church λ-calculus), T-illuminate (teaches "first-class anon fn"), T-learn (universally recognised) — all pass (DN-02 2026-06-27). Input to M-704 (closures). Lexer not changed until RFC-0037 | DN-02 2026-06-27 changelog; DN-31 kind-split revision |
 | `Substrate` | Type | **Active** | Affine external resource kind (`Substrate{Name}`); consumed exactly once | DN-02 §2; LR-8 |
 | `Sparse` | Type qualifier | **Active** | Sparsity qualifier for VSA (`Sparse{N}`) | grammar |
 | `F16`, `BF16`, `F32`, `F64` | Scalar kind | **Active** | Scalar type keywords for Dense | grammar |
 | `Exact`, `Proven`, `Empirical`, `Declared` | Formal / Honesty | **Active** | Guarantee strength tags; type-level index `T @ Exact` (LR-6) | RFC-0001; DN-02 §7 |
 | `consume` | L2 Surface (future) | **Ratified — not yet lexed** | Acquire exclusive ownership of an affine `substrate` (single-use semantics) | DN-03 §1 |
-| `derive` *(was `grow`)* | L2 Surface (future) | **Reconciled — not yet lexed** | Generative trait derivation (`derive Debug for T`) + `reveal` inspector. **Keyword `grow → derive`** per DN-38 §8.1 (Accepted 2026-06-26, conventional over themed `grow`); DN-03 2026-06-27 changelog records the supersession; M-664 re-scoped | DN-03 §1/§6; DN-38 §8.1 |
+| `derive` *(was `grow`)* | L2 Surface (future) | **Reconciled — not yet lexed** | Generative trait derivation (`derive Debug for T`) — the active generative keyword. **`grow` is superseded for this construct** per DN-38 §8.1 (Accepted 2026-06-26); DN-03 2026-06-27 changelog records the supersession; M-664 re-scoped. Companions: `via` (delegation, DN-37/DN-38) and `reveal` (inspector, DN-38). `grow` reservation status is a downstream lexer detail (M-664) | DN-03 §1/§6; DN-38 §8.1 |
+| `via` | L2 Surface (future) | **Ratified — not yet lexed** | Delegation keyword (`via field: TraitName`) — value-semantic forwarding to a held field; no late binding, no prototype chain (DN-37 §3.3, DN-38 §8.1). The companion to `derive`/`reveal` | DN-37; DN-38 §8.1 |
+| `reveal` | L2/tooling (future) | **Ratified — not yet lexed** | Inspector: shows the desugared L0 term for a surface form; round-trip discipline in `certified` mode. Never silent (G2 applied to the inspector itself — shows actual binding structure). Companion to `derive`/`via` | DN-38 §4/§5/§8.1 |
 | `hypha` | Runtime (future) | **Ratified — not yet lexed** | Single concurrent execution unit | DN-03 §4; RFC-0008 §4.5 |
 | `fuse` | Runtime (future) | **Ratified — not yet lexed** | Lawful state fusion: semilattice merge of two `hypha` states | DN-03 §4; RFC-0008 §4.5/RT6 |
 | `mesh` | Runtime (future) | **Ratified — not yet lexed** | Gossip/pub-sub overlay with honest probabilistic guarantees | DN-03 §4; RFC-0008 §4.5/RT5 |
@@ -392,9 +405,12 @@ operator in the grammar).
   reserves only the **Active** and **Reserved-not-active** rows — `nodule`, `phylum`, `colony`, and
   the L1/L2/type/scalar/strength words. The Runtime-tier words (`hypha`, `fuse`, `mesh`, …) **and**
   `consume`/`grow`/`impl` are **not** in `keyword()`, so they currently lex as ordinary identifiers
-  and are marked **Ratified — not yet lexed** (their lexer reservation lags the DN-03 spec; using one
-  as an identifier is not yet an error). Source is ground truth — re-verify against `token.rs` after
-  any lexer change.
+  and are marked **Ratified — not yet lexed**. The new short repr keywords (`bin`/`tern`/`emb`/`hvec`)
+  and `lambda` are **also not** in `keyword()` — they are marked **Ratified-pending-RFC-0037**
+  (`Declared`); their lexer reservation follows RFC-0037, not this reconciliation (this note records
+  intent only). Source is ground truth — re-verify against `token.rs` after any lexer change.
+  **`grow`** is not in `keyword()` and its reservation status (released or kept) is a downstream
+  lexer detail (M-664). `derive` is not in `keyword()` (lexer reservation lags the spec).
 
 ---
 
@@ -446,6 +462,8 @@ operator in the grammar).
   one-or-more; `A | B` alternation; `(A B)` grouping; `/* */` comments (RFC-0006 §4.3 / T3.1-B).
 - **`tier` is an execution-mode switch, not a representation change.** Interpreted ↔ native is a
   `tier`. Dense ↔ sparse is a `swap` (S1). These are distinct operations (RFC-0008 §4.5 / DN-03 §4).
+- **Short repr keywords (`bin`/`tern`/`emb`/`hvec`) and `lambda` are ratified-pending-RFC-0037, NOT yet active.** These are ergonomic short forms for the four paradigm type-keywords and a new closure keyword, ratified in DN-02's 2026-06-27 changelog (direction from DN-31 kind-split revision). They are `Declared` design direction — the lexer (`token.rs`) is NOT changed; they lex as ordinary identifiers today. The binding grammar RFC (RFC-0037) is the enacting act. Do NOT claim these keywords are reserved or active until RFC-0037 lands. **`vec` was explicitly rejected** — conceptual collision with `type Vec<A>` in `lib/std/collections.myc`.
+- **The generative keyword is `derive`, not `grow`.** DN-38 §8.1 (Accepted 2026-06-26) ratified `derive` over the coined `grow`; DN-03's 2026-06-27 changelog records the supersession. The DN-03 §1 `grow` row is the historical record — the active term for the generative construct is `derive`, with `via` (delegation) and `reveal` (inspector) as companions. `grow` is NOT the generative keyword.
 - **Generics and single-parameter traits now RUN (elaboration LANDED M-673).** `Ty::Var` unification +
   trait coherence (M-656/M-657/M-659) plus monomorphization with **dictionary-free static instance
   resolution** (M-673) lower a concrete generic instantiation and a single-param trait / bounded-generic

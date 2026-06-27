@@ -112,6 +112,28 @@ the *right* names.
 
 ## Meta — changelog
 
+- **2026-06-27 — Short repr type-keywords + `lambda` reconciled with DN-02 (DN-31 kind-split; cross-reference entry; append-only).**
+  DN-02's 2026-06-27 changelog records the ratification of short ergonomic forms for the four paradigm
+  type-keywords (`bin{N}`, `tern{N}`, `emb{…}`, `hvec{…}`) and the new `lambda` keyword for closure
+  declaration — all ratified-pending-RFC-0037 (the binding grammar RFC). This entry records their
+  intersection with this note's scope:
+
+  **Active surface keyword set consistency:** the generative keyword is now **`derive`** (superseded
+  from `grow` — see 2026-06-27 entry below), with **`via`** (delegation) and **`reveal`** (inspector)
+  as companions per DN-38 §8.1 (Accepted 2026-06-26). No row in this note's §1 or §4 table implies
+  `grow` is still the active generative keyword — the §1 `grow` row is the historical record; `derive`
+  is the current ratified term. **`via`** and **`reveal`** are not explicitly added to §4's Runtime
+  table (they are Surface-tier generative constructs, not runtime-model vocabulary) — they are listed
+  in DN-38 §8.1 (their ratifying source) and in the lang-lexicon-syntax memory file. Tracked M-664.
+
+  **`lambda`** is a new Surface reserved word (ratified-pending-RFC-0037, DN-02 2026-06-27 changelog).
+  It is **not** a Runtime-tier name and is not added to §4's Runtime table — its scope is Surface-tier
+  closure declaration; it resides in the DN-02 reserved-word set. Cross-reference only. Input to M-704.
+
+  **Reserved-word set consistency note:** the short repr keywords (`bin`/`tern`/`emb`/`hvec`) and
+  `lambda` are pending lexer reservation in RFC-0037. The `grow` keyword's reservation status (released
+  or kept) is a downstream lexer detail (M-664), not decided here (see the entry below). Append-only.
+
 - **2026-06-27 — generative construct `grow` → `derive` (superseded by DN-38 §8.1; append-only).**
   §1 adopted the themed **`grow`** for "derive-like / generative capability extension (`grow Debug for T`)"
   *with a flagged "mild genericness" note*, and §6 explicitly deferred the **`grow` vs `derive`** overlap

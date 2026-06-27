@@ -239,6 +239,7 @@ three-path agreement is **Empirical** (differential trials). The word-function n
 
 ## Meta — changelog
 
+- **2026-06-27 — §4.3 deferred ordering/shift operators resolved by RFC-0037 (M-745; append-only, status unchanged).** The §4.3 deferral of the angle-bracket ordering/shift operators (`< <= > >= << >>`, the M-745 gate) is **resolved by RFC-0037** (the grammar deconfliction RFC, Proposed): type params/args move `<…>` → `[…]`, freeing `<>` for `< > << >>` with **no disambiguation machinery**; `<=`/`>=` **retire as glyphs → word operators `lte`/`gte`** (asymmetric with `<`/`>` — the documented tradeoff that keeps `<>` single-loaded). The desugaring map extends accordingly. No change to this RFC's word-canonical model; the surface allocation now lives in RFC-0037. Append-only.
 - **2026-06-23 — Draft → Proposed (M-705).** Adopts DN-23's hybrid: a frontend-only infix/prefix
   operator sugar layer desugaring to canonical word functions. Adds the binding precedence table
   (§4.1, Rust-derived), the desugaring map (§4.2), the EXPLAIN/audit decision (§4.4), and the
