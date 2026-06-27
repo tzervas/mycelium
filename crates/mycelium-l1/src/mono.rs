@@ -48,7 +48,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use crate::ast::{Arm, Expr, FnDecl, FnSig, Hypha, Param, Path, Pattern, Scalar, TypeRef};
+use crate::ast::{Arm, BaseType, Expr, FnDecl, FnSig, Hypha, Param, Path, Pattern, Scalar, TypeRef, WidthRef};
 use crate::checkty::{
     has_var, infer_type, param_subst, resolve_ty, subst_ty, type_head, unify, CtorInfo, DataInfo,
     Env, TraitInfo, Ty, Width,

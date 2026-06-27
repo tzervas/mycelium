@@ -127,6 +127,7 @@ fn fn_sig_param_names_drops_bounds() {
         params: vec![
             TypeParam {
                 name: "T".to_owned(),
+                kind: ParamKind::Type,
                 bounds: vec![TraitRef {
                     name: "Cmp".to_owned(),
                     args: vec![],
@@ -134,6 +135,7 @@ fn fn_sig_param_names_drops_bounds() {
             },
             TypeParam {
                 name: "U".to_owned(),
+                kind: ParamKind::Type,
                 bounds: vec![],
             },
         ],

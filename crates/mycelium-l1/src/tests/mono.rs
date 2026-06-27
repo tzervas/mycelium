@@ -1,7 +1,7 @@
-use crate::ast::Scalar;
+use crate::ast::{Scalar, WidthRef};
 use crate::ast::TypeRef;
 use crate::checkty::check_nodule;
-use crate::checkty::{has_var, Env, Ty};
+use crate::checkty::{has_var, Env, Ty, Width};
 use crate::elab::ElabError;
 use crate::mono::*;
 use crate::parse;
@@ -19,21 +19,21 @@ const CMP_I8: &str = "nodule d\ntrait Cmp<A> { fn cmp(a: A, b: A) -> Binary{2} }
 
 #[test]
 fn mangle_ty_shapes() {
-    assert_eq!(mangle_ty(&Ty::Binary(8)), "Binary8");
-    assert_eq!(mangle_ty(&Ty::Ternary(6)), "Ternary6");
+    assert_eq!(mangle_ty(&Ty::Binary(Width::Lit(8))), "Binary8");
+    assert_eq!(mangle_ty(&Ty::Ternary(Width::Lit(6))), "Ternary6");
     assert_eq!(mangle_ty(&Ty::Dense(16, Scalar::F32)), "Dense16F32");
     // A nullary data type tags with `#` so it can never collide with a repr mangle (M-673
     // injectivity fix); the bare name is still used to *register/reference* the type.
     assert_eq!(mangle_ty(&Ty::Data("Bool".into(), vec![])), "Bool#");
     assert_eq!(
-        mangle_ty(&Ty::Data("List".into(), vec![Ty::Binary(8)])),
+        mangle_ty(&Ty::Data("List".into(), vec![Ty::Binary(Width::Lit(8))])),
         "List$Binary8"
     );
     // nested generic recurses
     assert_eq!(
         mangle_ty(&Ty::Data(
             "List".into(),
-            vec![Ty::Data("List".into(), vec![Ty::Binary(8)])]
+            vec![Ty::Data("List".into(), vec![Ty::Binary(Width::Lit(8))])]
         )),
         "List$List$Binary8"
     );
@@ -44,11 +44,11 @@ fn mangle_decl_empty_targs_is_the_identity() {
     // Empty type arguments ⇒ the original name, byte-for-byte (monomorphic passthrough).
     assert_eq!(mangle_decl("main", &[]), "main");
     assert_eq!(
-        mangle_decl("first_or", &[Ty::Binary(8)]),
+        mangle_decl("first_or", &[Ty::Binary(Width::Lit(8))]),
         "first_or$Binary8"
     );
     assert_eq!(mangle_ctor("Cons", &[]), "Cons");
-    assert_eq!(mangle_ctor("Cons", &[Ty::Binary(8)]), "Cons$Binary8");
+    assert_eq!(mangle_ctor("Cons", &[Ty::Binary(Width::Lit(8))]), "Cons$Binary8");
 }
 
 #[test]
@@ -56,25 +56,25 @@ fn mangling_is_injective_and_surface_disjoint() {
     // `$` separates only mangle joints and `#` tags a nullary data type; `%` is the elaborator's
     // fresh-var char and must never arise from mangling. A monomorphic (surface) name is
     // `$`/`#`/`%`-free — so a mangled name is collision-free with surface names and fresh vars.
-    let m = mangle_method("cmp", "Cmp", &Ty::Binary(8));
+    let m = mangle_method("cmp", "Cmp", &Ty::Binary(Width::Lit(8)));
     assert_eq!(m, "cmp$Cmp$Binary8");
     assert!(!m.contains('%'), "no fresh-var char in a mangled name");
     // Two different instantiations of the same fn are DISTINCT names (identity fragmentation).
     assert_ne!(
-        mangle_decl("first_or", &[Ty::Binary(8)]),
-        mangle_decl("first_or", &[Ty::Binary(4)])
+        mangle_decl("first_or", &[Ty::Binary(Width::Lit(8))]),
+        mangle_decl("first_or", &[Ty::Binary(Width::Lit(4))])
     );
     // Injectivity over a set of type args INCLUDING the adversarial repr/data-name boundary: a
     // data type whose name equals a repr mangle must NOT collide with the repr (the M-673 fix —
     // before it, `Data("Binary8",[])` and `Binary(8)` both mangled to "Binary8" → a silent drop).
     let tys = [
-        Ty::Binary(1),
-        Ty::Binary(8),
-        Ty::Ternary(8),
+        Ty::Binary(Width::Lit(1)),
+        Ty::Binary(Width::Lit(8)),
+        Ty::Ternary(Width::Lit(8)),
         Ty::Dense(8, Scalar::F32),
         Ty::Dense(8, Scalar::F64),
         Ty::Data("Bool".into(), vec![]),
-        Ty::Data("List".into(), vec![Ty::Binary(8)]),
+        Ty::Data("List".into(), vec![Ty::Binary(Width::Lit(8))]),
         Ty::Data("Binary8".into(), vec![]),
         Ty::Data("List".into(), vec![Ty::Data("Binary8".into(), vec![])]),
     ];
@@ -84,7 +84,7 @@ fn mangling_is_injective_and_surface_disjoint() {
     }
     // Explicit: the repr and the like-named data type are distinct mangles (the closed hole).
     assert_ne!(
-        mangle_ty(&Ty::Binary(8)),
+        mangle_ty(&Ty::Binary(Width::Lit(8))),
         mangle_ty(&Ty::Data("Binary8".into(), vec![])),
         "a data type named `Binary8` must not collide with the repr Binary{{8}}"
     );
@@ -225,7 +225,7 @@ fn a_trait_method_call_resolves_statically_with_an_explain_record() {
     assert_eq!(sel.len(), 1, "exactly one instance selected");
     let s = sel.get("cmp$Cmp$Binary8").expect("selection recorded");
     assert_eq!(s.trait_name, "Cmp");
-    assert_eq!(s.for_ty, Ty::Binary(8));
+    assert_eq!(s.for_ty, Ty::Binary(Width::Lit(8)));
     assert_eq!(s.impl_mangled, "cmp$Cmp$Binary8");
 }
 
@@ -557,8 +557,8 @@ fn hof_fn_arg_joint_mangling_is_injective() {
     assert_ne!(n1, n4, "one vs two fn-args are distinct");
 
     // With type args: distinct from without.
-    let n5 = mangle_hof_decl("map", &[Ty::Binary(8)], &[(0, "double".to_owned())]);
-    let n6 = mangle_hof_decl("map", &[Ty::Binary(4)], &[(0, "double".to_owned())]);
+    let n5 = mangle_hof_decl("map", &[Ty::Binary(Width::Lit(8))], &[(0, "double".to_owned())]);
+    let n6 = mangle_hof_decl("map", &[Ty::Binary(Width::Lit(4))], &[(0, "double".to_owned())]);
     assert_ne!(
         n5, n6,
         "different type args are distinct even at same fn-arg"

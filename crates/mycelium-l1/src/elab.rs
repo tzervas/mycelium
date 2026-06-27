@@ -603,7 +603,9 @@ pub fn build_registry(env: &Env) -> Result<DataRegistry, ElabError> {
 fn field_spec(ty: &Ty) -> Option<FieldSpec> {
     Some(match ty {
         Ty::Binary(crate::checkty::Width::Lit(n)) => FieldSpec::Repr(Repr::Binary { width: *n }),
+        Ty::Binary(crate::checkty::Width::Var(_)) => return None, // width-var must not reach elab
         Ty::Ternary(crate::checkty::Width::Lit(m)) => FieldSpec::Repr(Repr::Ternary { trits: *m }),
+        Ty::Ternary(crate::checkty::Width::Var(_)) => return None, // width-var must not reach elab
         Ty::Dense(d, s) => FieldSpec::Repr(Repr::Dense {
             dim: *d,
             dtype: scalar_kind(*s),
@@ -632,7 +634,9 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
 fn ty_to_repr(ty: &Ty) -> Option<Repr> {
     Some(match ty {
         Ty::Binary(crate::checkty::Width::Lit(n)) => Repr::Binary { width: *n },
+        Ty::Binary(crate::checkty::Width::Var(_)) => return None, // width-var must not reach elab
         Ty::Ternary(crate::checkty::Width::Lit(m)) => Repr::Ternary { trits: *m },
+        Ty::Ternary(crate::checkty::Width::Var(_)) => return None, // width-var must not reach elab
         Ty::Dense(d, s) => Repr::Dense {
             dim: *d,
             dtype: scalar_kind(*s),
