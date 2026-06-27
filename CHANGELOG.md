@@ -8,6 +8,40 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-27: rsm Session-1 — M-753 width-generics, F1–F7 future-capture, branch-protection guard)
+
+- **M-753 — width-generic free functions (DN-42 Option A, v1 = free fns) — DONE.** Representation width
+  is now a **const-generic parameter bound at monomorphization**: `Ty::Binary(Width)`/`Ty::Ternary(Width)`
+  with `Width::{Lit,Var}` (+ `ast::WidthRef`/`ParamKind`); `resolve_ty` maps `Binary{N}`→`Width::Var`;
+  `unify` binds `N` **same-paradigm-only** (cross-paradigm + `Binary{8}` vs `Binary{16}` are explicit
+  refusals, never a swap — S1/G2); the monomorphizer **pins** `N` per call site (undetermined → never-
+  silent `Residual`, never a default) and fragments specializations honestly (`id_bits$Binary8`/
+  `$Binary16`). Surface syntax = **positional-by-use** (`fn f<N>(x: Binary{N})`; maintainer-chosen,
+  DN-42 §7 Q1). Tags inherited per-specialization, never upgraded (VR-5). `tests/width_generic.rs` 11
+  three-way (Binary{8/16} + Ternary{3/6} + prim delegation + undetermined/mismatch refusals) + 3
+  white-box mono tests; full `mycelium-l1` suite green; clippy clean. **Unblocks M-718.** Instance
+  coherence (DN-42 §7 Q5) deferred past v1. M-718 `blocked`→`ready`.
+- **Future-workstream capture F1–F7 (rsm W3) — `Draft` stubs, capture-only.** DN-45 (OSV scanning of
+  `.myc` programs), DN-46 (operationalize the DN-44 §1.1 honest-insecurity disclosure + gate), DN-47
+  (projection vs RFC-0021), DN-48 (L3→L4 + the `reveal` lowering), **RFC-0036** (kernel & primitives
+  consolidation / multi-kernel question), DN-49 (post-critical quality passes), **DN-50** (parsable-vs-
+  runnable gap analysis — the accept↔instantiate frontier). Registered in `Doc-Index` + `issues.yaml`
+  (epic **E23-1**, tasks **M-800–M-807**); each preserves the maintainer's framing and is marked
+  open/not-yet-decided (append-only — nothing pre-decided).
+- **Branch-protection guard — enforce CLAUDE.md branch discipline (3 idempotent, parameterized layers).**
+  An agent (or orphaned sub-agent) can no longer commit/merge/push to a protected branch
+  (`main`/`integration`/`dev`/`claude/head/*`) or land on the wrong working branch: (1) a Claude Code
+  `PreToolUse(Bash)` hook (`.claude/settings.json` → `scripts/hooks/claude-git-branch-guard.sh`) that
+  inspects command structure (quoted content stripped) and blocks `git commit`/`merge`/`cherry-pick`/
+  `rebase` on, or push to, a protected branch + any force-push, **before** the tool runs; (2) git
+  pre-commit + pre-push hooks (`.pre-commit-config.yaml` `repo: local` → `scripts/checks/branch-guard.sh`);
+  (3) the **`/branch-guard`** skill + `just branch-guard`, wired into `/dev-workflow`/`/land`/`/wave-land`.
+  Parameters: `MYC_PROTECTED_BRANCHES`, `CLAUDE_WORKING_BRANCH`/`--expect`. Landing onto protected
+  branches stays via GitHub PR (the block is correct). CLAUDE.md **mitigation #10**.
+- **CLAUDE.md operating procedures promoted (swarm mitigations #8/#9/#10)** — #8 persist-intent-before-
+  compaction, #9 commit+push-frequently-to-working-branch, #10 branch-protection-now-enforced — standing
+  policy for every agent (from the rsm kickoff + the Session-1 orphan-agent durability lesson).
+
 ### Added (2026-06-26: DN-44 codebase security posture + supply-chain `deny` artifact disposition)
 
 - **DN-44 — Codebase Security Posture (Proposed)** — a consolidating reference for the *implementation's* security posture (Rust kernel + interpreter + toolchain), tying ADR-014/RFC-0034/RFC-0035/Security-Checks-Contract/DN-21 into one grounded map: the **thesis** (the only vulnerabilities are developer-introduced; nothing inherent to Mycelium), the **hardening floor** (trusted base compiler-enforced `forbid(unsafe)`; the entire `unsafe` surface = 8 confined+justified JIT/FFI blocks in `mycelium-mlir`; never-silent failability), the **gate map**, the **explicit trade-offs** (unsafe-confined-not-globally-forbidden for the AOT path; panic-on-overflow ranked above panic-freedom; `bans=warn` pre-1.0; fast-default/certified-on-request), and a **hardening ratchet** (§6). Makes NO new normative decision (cites the Enacted basis); registered in `Doc-Index`. Task M-678.

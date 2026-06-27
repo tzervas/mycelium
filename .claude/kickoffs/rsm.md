@@ -5,6 +5,55 @@
 > kickoff is the **durable record** of the maintainer's forward direction (so it survives any context
 > reset) **plus** the executable next wave. Fire in a fresh session with `/kickoff rsm`.
 
+---
+
+## ▶ Session-2 continuation (updated 2026-06-27 — READ THIS FIRST on resume)
+
+Session-1 landed a consolidated increment to `main` (and synced down the tiers) — **do not redo it.**
+
+**DONE in Session-1 (on `main`):**
+- **W1 · M-753 width-generics — DONE** (DN-42 Option A, v1 = free functions). Width is a const-generic
+  param bound at monomorphization: `Ty::Binary(Width{Lit,Var})`/`Ty::Ternary(...)`; `resolve_ty`
+  maps `Binary{N}`→`Width::Var`; `unify` binds `N` **same-paradigm-only** (cross-paradigm + width
+  mismatch are explicit refusals, never a swap); mono pins `N` per call (undetermined → `Residual`,
+  never a default) + fragments specializations (`id_bits$Binary8/$Binary16`). Surface syntax =
+  **positional-by-use** (maintainer-chosen). 11 three-way tests (`tests/width_generic.rs`) + 3
+  white-box mono tests + full `mycelium-l1` suite green; clippy clean. **Unblocks M-718.** Instance
+  coherence (DN-42 §7 Q5) deferred past v1.
+- **W3 · capture — DONE.** F1–F7 as `Draft` stubs, registered in Doc-Index + issues.yaml (epic
+  **E23-1**, **M-800–M-807**): DN-45 OSV-of-`.myc`, DN-46 honest-insecurity-disclosure gate, DN-47
+  projection (vs RFC-0021), DN-48 L4/`reveal`, RFC-0036 kernel/primitives consolidation, DN-49
+  post-critical quality passes, **DN-50 parsable-vs-runnable gap (F7)**. Capture-only; nothing decided.
+- **Branch-protection guard — DONE** (maintainer-requested). 3 layers: `.claude/settings.json`
+  PreToolUse(Bash) hook → `scripts/hooks/claude-git-branch-guard.sh`; git pre-commit/pre-push →
+  `scripts/checks/branch-guard.sh`; `/branch-guard` skill + `just branch-guard`; CLAUDE.md
+  **mitigation #10**. Protected branches (`main`/`integration`/`dev`/`claude/head/*`) are now
+  **hard-blocked** from direct commit/merge/push (PR-only). Idempotent + parameterized.
+- **W2 (partial) — DONE.** CLAUDE.md operating procedures **#8** (persist-before-compaction) / **#9**
+  (commit+push-frequently) / **#10** (branch-guard); issues.yaml currency (M-753 done, M-718 ready).
+
+**REMAINING (Session-2 scope):**
+1. **W1 dev wave** (M-718 now unblocked): **M-718** width-generic `std.math`/`std.cmp` in `lib/std`
+   + generalize `map_get<N>`/`set_contains<N>` off the `Binary{8}` interim → **M-719** conformance over
+   the generic surface → **close M-717** (UTF-8 validity layer over the byte prims) → **re-flag M-715**
+   (recursive-HOF / RFC-0024 defunctionalization — keep deferred, do NOT re-attempt this wave).
+2. **W2 docs-currency sweep**: refresh `.claude/agent-context.md` + `.claude/memory/*` (esp.
+   `language-execution.md` for width-generics); `just docs-index` regen (M-753 changed the public
+   `Ty`); idmap reconcile; planning docs.
+3. **Land** Session-2 `dev → integration → main`.
+
+**Execution discipline for Session-2 (hard lessons from Session-1 — see CLAUDE.md #8/#9/#10):**
+- **DO NOT delegate L1 surgery to leaf agents.** Session-1's leaves delegated to sub-agents that
+  **orphaned** on TaskStop and raced the main tree for hours (work recovered, but very expensive). Do
+  L1 checker/mono work **inline**, or via **one monitored worktree leaf** — never fan-out for
+  tightly-coupled checkty/mono/parse/elab edits.
+- **Stale cargo cache** during concurrent worktree builds yields false errors — confirm with md5
+  stability + a cache-bust (`touch` a `src` file) before trusting `cargo check`.
+- The **branch guard is active** — stay on your working branch; protected branches are PR-only.
+- M-718 is `.myc` + tests (largely disjoint from L1 Rust) — lower collision risk than M-753.
+
+---
+
 ## What this kickoff is (and isn't)
 
 A **cross-cutting coordination kickoff**, not a single isolated tree. It sequences three concerns —

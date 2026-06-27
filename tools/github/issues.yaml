@@ -6612,3 +6612,34 @@ issues:
       Definition of Done (to leave Draft): a research/audit record fixing the "runnable" definition,
       producing the frontier census, and recommending whether a standing gate is warranted. Generalizes
       M-719 (one slice). NOTHING decided here.
+
+  - id: M-808
+    title: "M-808 -- branch-protection guard: enforce no-commit/push-to-protected-branch (rsm)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:tooling, area:tooling, priority:P1, status:done]
+    depends_on: []
+    doc_refs:
+      - src:scripts/checks/branch-guard.sh
+      - src:scripts/hooks/claude-git-branch-guard.sh
+      - src:.claude/settings.json
+      - src:CLAUDE.md
+    body: |
+      DONE (2026-06-27, rsm Session-1; maintainer-requested). Enforces the CLAUDE.md branch discipline
+      (protected branches main/integration/dev/claude/head/* are PR-only) so an agent or orphaned
+      sub-agent can never commit/merge/push to them or land on the wrong working branch -- the failure
+      mode that derailed Session-1. Three idempotent, parameterized layers:
+      (1) HARNESS -- .claude/settings.json PreToolUse(Bash) hook -> scripts/hooks/claude-git-branch-guard.sh
+          (inspects command STRUCTURE, quoted content stripped so commit messages do not false-positive;
+          blocks git commit/merge/cherry-pick/rebase on, or push to, a protected branch + any force-push,
+          before the tool runs -- the layer that stops agents);
+      (2) GIT -- .pre-commit-config.yaml repo:local pre-commit + pre-push -> scripts/checks/branch-guard.sh;
+      (3) WORKFLOW -- /branch-guard skill + `just branch-guard`, wired into /dev-workflow,/land,/wave-land.
+      Parameters: MYC_PROTECTED_BRANCHES (default "main integration dev claude/head/*"),
+      CLAUDE_WORKING_BRANCH / --expect. Pure-read checks (idempotent). Landing onto protected branches
+      stays via GitHub PR -- so the block is correct. CLAUDE.md mitigation #10 documents it. shellcheck
+      clean; verified blocks main/integration + force-push, allows working-branch ops.
+
+      Definition of Done:
+      - PreToolUse + git pre-commit/pre-push hooks + /branch-guard skill + just recipe all present + wired.
+      - Blocks commit/merge/push to protected branches + force-push; allows working-branch ops (verified).
+      - CLAUDE.md mitigation #10 + agent-context + kickoff continuation record it (anti-drift).
