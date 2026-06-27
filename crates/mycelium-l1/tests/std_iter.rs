@@ -14,24 +14,22 @@
 //! - **`Empirical`** — the three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT), validated
 //!   by trial on the programs below; not a machine-checked proof.
 //!
-//! # FLAG: recursive HOF combinators cannot execute three-way (dropped, not shipped as type-check-only)
-//! `map`, `filter`, `foldl`, `any`, `all`, `find` — all recursive HOF combinators — are defined in
-//! `iter.myc` and type-check correctly, but CANNOT execute three-way via the monomorphize +
-//! elaborate pipeline. The root cause: the stage-1 defunctionalization (RFC-0024 §4, M-687) handles
-//! *saturated* HOF application (`f(x)` where `f` is in `fn_param_subst`), but does NOT handle a
-//! *recursive call that re-passes a HOF parameter* (e.g. `map(rest, f)` inside `map`'s body passes
-//! `f` — an Expr::Path naming a parameter — as a HOF argument; `mono::resolve_fn_args` looks up
-//! `"f"` in `self.src.fns` and correctly refuses because `f` is a parameter, not a top-level fn).
-//! This is never-silent (G2): the monomorphizer returns `ElabError::Residual` with an explicit
-//! message. The combinators are retained in the nodule as design-phase surface (RFC-0031 §5 D4
-//! Tier-0 design intent); three-way differential coverage awaits recursive HOF support (M-753 era
-//! or a future stage-1 extension). Per the task requirement: "Anything that won't execute
-//! three-way: drop it + FLAG with the reason." — these tests are dropped, not type-check-only stubs.
+//! # Recursive HOF combinators now execute three-way (M-715 closed — rsm S3)
+//! `map`, `filter`, `foldl`, `any`, `all`, `find` — all recursive HOF combinators — now execute
+//! three-way (L1-eval ≡ L0-interp ≡ AOT). The previously-flagged gap is CLOSED: stage-1
+//! defunctionalization (RFC-0024 §4, M-687) handled *saturated* HOF application (`f(x)`) but not a
+//! *recursive call that re-passes a HOF parameter* (`map(rest, f)`). M-715 extends
+//! `mono::resolve_fn_args`: when the fn-valued argument is a HOF VALUE PARAMETER already bound to a
+//! static specialization in the current emit scope (`fn_param_subst`), it is threaded through as the
+//! SAME specialization the outer call pinned (so the recursive self-call resolves to e.g. `map$inc`,
+//! the fn-arg dropped — no runtime closure). Still deferred (M-704, never faked): closures / lambdas,
+//! multi-arg arrows (a true binary `foldl` f: A -> B -> B), and partial application.
 //!
 //! # What three-way covers
 //! - `is_empty_l` — total discriminator (Exact), three-way green
-//! - `length` — O(n) spine-walk (Declared), three-way green
-//! - `length` never-silent overflow bound (Empirical), three-way green
+//! - `length` — O(n) spine-walk (Declared), three-way green; never-silent add_bin overflow (Empirical)
+//! - `map` / `filter` / `foldl` / `any` / `all` / `find` — recursive HOF combinators over a named
+//!   top-level fn arg (Declared contract; Empirical three-way agreement)
 
 use mycelium_cert::{check_core, BinaryTernarySwapEngine, CheckVerdict};
 use mycelium_core::GuaranteeStrength;
@@ -232,86 +230,155 @@ fn length_bound_add_bin_overflow_refuses_on_every_path() {
     );
 }
 
-// ── Smoke-check: recursive HOF combinators type-check (but cannot monomorphize) ─────────────────
+// ── Recursive HOF combinators — executable three-way (M-715 closed) ─────────────────────────────────
 //
-// FLAG: map/filter/foldl/any/all/find are self-hosted in iter.myc and PASS the type-checker
-// (check_nodule succeeds). They cannot proceed to the three-way differential because the
-// stage-1 monomorphizer (RFC-0024 §4) cannot defunctionalize recursive HOF calls where a
-// function parameter is re-passed at a recursive call site (see file-level FLAG comment above).
-// These smoke-checks pin that the nodule is well-typed and that the refusal is in monomorphize,
-// not in check — this is the never-silent (G2) contract for the defunctionalization boundary.
+// map/filter/foldl/any/all/find now run three-way (L1-eval ≡ L0-interp ≡ AOT) over a single named
+// top-level fn argument. The recursive re-pass of the HOF parameter (`map(rest, f)` etc.) is threaded
+// as the same static specialization (mono::resolve_fn_args). References share Derived/Root provenance
+// with the computed value: `map`'s elements are `add_bin(h, 1)` (Derived); `filter`/`find` return the
+// original element (Root). Closures / multi-arg arrows stay deferred (M-704) — only NAMED fns here.
 
-/// `map` type-checks in the nodule (Exact: the type is structurally sound). Mono refuses it
-/// at the recursive-HOF boundary (never-silent, G2 — `ElabError::Residual` with explicit message).
+// A reusable Binary{8} successor as a top-level fn (a valid RFC-0024 §4 defunctionalization target).
+const INC: &str = "fn inc(x: Binary{8}) -> Binary{8} = add_bin(x, 0b0000_0001)\n";
+// A reusable Binary{8} predicate (== 0b10) as a top-level fn.
+const IS_TWO: &str =
+    "fn is_two(x: Binary{8}) -> Bool = match eq(x, 0b0000_0010) { 0b1 => True, _ => False }\n";
+
+/// `map([1,2], inc)` → `[2,3]`. The recursive `map(rest, f)` threads `inc` through. Declared/Empirical.
 #[test]
-fn map_typechecks_but_recursive_hof_cannot_monomorphize() {
-    // A driver that calls map with a HOF — type-checks, but mono refuses.
-    let src = program(
-        "fn not_el(x: Binary{8}) -> Binary{8} = not(x)\n\
-         fn mk_one() -> List<Binary{8}> = Cons(0b0000_0001, Nil)\n\
-         fn main() -> List<Binary{8}> = map(mk_one(), not_el)",
+fn map_applies_fn_to_each_element() {
+    let src = program(&format!(
+        "{INC}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
+         fn main() -> List<Binary{{8}}> = map(mk(), inc)"
+    ));
+    // Reference: recompute via the same add_bin so the mapped elements share Derived provenance.
+    let expected = program(
+        "fn main() -> List<Binary{8}> = \
+         Cons(add_bin(0b0000_0001, 0b0000_0001), Cons(add_bin(0b0000_0010, 0b0000_0001), Nil))",
     );
-    // Step 1: the nodule + driver must type-check.
-    let env = check_nodule(&parse(&src).expect("parse"))
-        .expect("map: check_nodule must succeed — the nodule is well-typed");
-    // Step 2: monomorphize explicitly refuses at the recursive-HOF boundary (never-silent, G2).
-    let err = monomorphize(&env, "main")
-        .expect_err("map: monomorphize must refuse (recursive HOF re-pass not yet supported)");
-    // The refusal must name the HOF/defunctionalization cause — not a silent generic failure.
-    let msg = format!("{err}");
-    assert!(
-        msg.contains("function-valued argument")
-            || msg.contains("HOF")
-            || msg.contains("defunctionalize")
-            || msg.contains("top-level function"),
-        "map: mono refusal must name the HOF boundary cause (never-silent), got: {msg}"
+    assert_three_way("map([1,2], inc)=[2,3]", &src, &expected);
+}
+
+/// `map(Nil, inc)` → `Nil` — empty passes through (never-silent). Exact.
+#[test]
+fn map_over_nil_is_nil() {
+    let src = program(&format!(
+        "{INC}fn mk() -> List<Binary{{8}}> = Nil\nfn main() -> List<Binary{{8}}> = map(mk(), inc)"
+    ));
+    let expected = program("fn main() -> List<Binary{8}> = Nil");
+    assert_three_way("map(Nil, inc)=Nil", &src, &expected);
+}
+
+/// `filter([1,2,1], is_one)` → `[1,1]` — keeps the matching ORIGINAL elements (Root provenance).
+#[test]
+fn filter_keeps_matching_elements() {
+    let src = program(
+        "fn is_one(x: Binary{8}) -> Bool = match eq(x, 0b0000_0001) { 0b1 => True, _ => False }\n\
+         fn mk() -> List<Binary{8}> = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0001, Nil)))\n\
+         fn main() -> List<Binary{8}> = filter(mk(), is_one)",
+    );
+    let expected =
+        program("fn main() -> List<Binary{8}> = Cons(0b0000_0001, Cons(0b0000_0001, Nil))");
+    assert_three_way("filter([1,2,1], is_one)=[1,1]", &src, &expected);
+}
+
+/// `foldl([1,2,3], inc, 0)` → `inc(3)` = `4`. Per the nodule contract, the `f: A -> B` foldl discards
+/// the accumulator and returns `f(last)` for a non-empty list (Derived). Empirical.
+#[test]
+fn foldl_returns_f_of_last_for_nonempty() {
+    let src = program(&format!(
+        "{INC}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))\n\
+         fn main() -> Binary{{8}} = foldl(mk(), inc, 0b0000_0000)"
+    ));
+    let expected = program("fn main() -> Binary{8} = add_bin(0b0000_0011, 0b0000_0001)");
+    assert_three_way("foldl([1,2,3], inc, 0)=inc(3)=4", &src, &expected);
+}
+
+/// `foldl(Nil, inc, 5)` → `5` — the initial acc is returned on the empty list (never-silent). Root.
+#[test]
+fn foldl_over_nil_returns_initial_acc() {
+    let src = program(&format!(
+        "{INC}fn mk() -> List<Binary{{8}}> = Nil\n\
+         fn main() -> Binary{{8}} = foldl(mk(), inc, 0b0000_0101)"
+    ));
+    let expected = program("fn main() -> Binary{8} = 0b0000_0101");
+    assert_three_way("foldl(Nil, inc, 5)=5", &src, &expected);
+}
+
+/// `any([1,2], is_two)` → `True` (the second element matches). Declared/Empirical.
+#[test]
+fn any_true_when_an_element_matches() {
+    let src = program(&format!(
+        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
+         fn main() -> Bool = any(mk(), is_two)"
+    ));
+    assert_three_way(
+        "any([1,2], is_two)=True",
+        &src,
+        "nodule ref\nfn main() -> Bool = True",
     );
 }
 
-/// `filter` type-checks but cannot monomorphize (same recursive-HOF boundary as `map`).
+/// `any([1,3], is_two)` → `False`; and `any(Nil, is_two)` → `False` (never a fabricated True).
 #[test]
-fn filter_typechecks_but_recursive_hof_cannot_monomorphize() {
-    let src = program(
-        "fn is_nonzero(x: Binary{8}) -> Bool = match eq(x, 0b0000_0000) { 0b1 => False, _ => True }\n\
-         fn mk_one() -> List<Binary{8}> = Cons(0b0000_0001, Nil)\n\
-         fn main() -> List<Binary{8}> = filter(mk_one(), is_nonzero)",
-    );
-    let env =
-        check_nodule(&parse(&src).expect("parse")).expect("filter: check_nodule must succeed");
-    assert!(
-        monomorphize(&env, "main").is_err(),
-        "filter: monomorphize must refuse (recursive HOF re-pass not yet supported)"
+fn any_false_when_no_element_matches() {
+    let src = program(&format!(
+        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0011, Nil))\n\
+         fn main() -> Bool = any(mk(), is_two)"
+    ));
+    assert_three_way(
+        "any([1,3], is_two)=False",
+        &src,
+        "nodule ref\nfn main() -> Bool = False",
     );
 }
 
-/// `any` type-checks but cannot monomorphize (same recursive-HOF boundary).
+/// `all([2,2], is_two)` → `True`; `all([2,1], is_two)` → `False` (short-circuits at the first miss).
 #[test]
-fn any_typechecks_but_recursive_hof_cannot_monomorphize() {
-    let src = program(
-        "fn is_nonzero(x: Binary{8}) -> Bool = match eq(x, 0b0000_0000) { 0b1 => False, _ => True }\n\
-         fn mk_one() -> List<Binary{8}> = Cons(0b0000_0001, Nil)\n\
-         fn main() -> Bool = any(mk_one(), is_nonzero)",
+fn all_true_only_when_every_element_matches() {
+    let yes = program(&format!(
+        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0010, Cons(0b0000_0010, Nil))\n\
+         fn main() -> Bool = all(mk(), is_two)"
+    ));
+    assert_three_way(
+        "all([2,2], is_two)=True",
+        &yes,
+        "nodule ref\nfn main() -> Bool = True",
     );
-    let env = check_nodule(&parse(&src).expect("parse")).expect("any: check_nodule must succeed");
-    assert!(
-        monomorphize(&env, "main").is_err(),
-        "any: monomorphize must refuse (recursive HOF re-pass not yet supported)"
+    let no = program(&format!(
+        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0010, Cons(0b0000_0001, Nil))\n\
+         fn main() -> Bool = all(mk(), is_two)"
+    ));
+    assert_three_way(
+        "all([2,1], is_two)=False",
+        &no,
+        "nodule ref\nfn main() -> Bool = False",
     );
 }
 
-/// `find` type-checks but cannot monomorphize (same recursive-HOF boundary).
-/// Never-silent (G2): find's None case is self-hosted correctly; the refusal is in mono, not the
-/// nodule design.
+/// `find([1,2,3], is_two)` → `Some(2)` — the first matching ORIGINAL element (Root). Never-silent.
 #[test]
-fn find_typechecks_but_recursive_hof_cannot_monomorphize() {
-    let src = program(
-        "fn is_nonzero(x: Binary{8}) -> Bool = match eq(x, 0b0000_0000) { 0b1 => False, _ => True }\n\
-         fn mk_one() -> List<Binary{8}> = Cons(0b0000_0001, Nil)\n\
-         fn main() -> Option<Binary{8}> = find(mk_one(), is_nonzero)",
-    );
-    let env = check_nodule(&parse(&src).expect("parse")).expect("find: check_nodule must succeed");
-    assert!(
-        monomorphize(&env, "main").is_err(),
-        "find: monomorphize must refuse (recursive HOF re-pass not yet supported)"
-    );
+fn find_returns_first_match() {
+    let src = program(&format!(
+        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))\n\
+         fn main() -> Option<Binary{{8}}> = find(mk(), is_two)"
+    ));
+    let expected = program("fn main() -> Option<Binary{8}> = Some(0b0000_0010)");
+    assert_three_way("find([1,2,3], is_two)=Some(2)", &src, &expected);
 }
+
+/// `find([1,3], is_two)` → `None` — a miss is an explicit None, never a fabricated element (G2).
+#[test]
+fn find_miss_returns_none() {
+    let src = program(&format!(
+        "{IS_TWO}fn mk() -> List<Binary{{8}}> = Cons(0b0000_0001, Cons(0b0000_0011, Nil))\n\
+         fn main() -> Option<Binary{{8}}> = find(mk(), is_two)"
+    ));
+    let expected = program("fn main() -> Option<Binary{8}> = None");
+    assert_three_way("find([1,3], is_two)=None", &src, &expected);
+}
+
+// Note (M-704 boundary, documented not tested): the M-715 fix threads a NAMED top-level fn and its
+// recursive re-pass only. Closures / lambdas, multi-arg arrows, and partial application remain
+// deferred (RFC-0024 §5 / M-704) — they are not constructable in the stage-1 surface, so there is no
+// program to exercise; the deferral is recorded in iter.myc's per-fn FLAGs, never silently claimed.
