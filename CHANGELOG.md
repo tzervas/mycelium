@@ -8,6 +8,33 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-27: rsm lang-design wave — 7 design artifacts via conflict-free octopus-merge swarm; no code)
+
+- **Conflict-free octopus-merge swarm (7 disjoint-file leaves) authored the language-completion design layer.**
+  Each leaf owned a disjoint file; the orchestrator owned the shared registries + cross-refs and reconciled once.
+  - **RFC-0037 — Surface-Grammar Deconfliction & Layout-Independence (Proposed, M-809):** the binding enactment
+    of DN-31 — kind-split `[T]`/`{N}` (repr stays `{}`; short keywords `bin`/`tern`/`emb`/`hvec`, `vec` rejected),
+    `<>` operators-only (`<=`/`>=` → `lte`/`gte`), `->` → `=>`, trit `0t`, `lambda`, and a layout-independent
+    grammar (newlines formatting-only, `,`-delineation). Supersedes RFC-0019 §4.1; updates RFC-0030/0025 (M-745).
+  - **ADR-033 — `FieldSpec::Fn` abstract-function-field for dynamic dispatch (Proposed, M-810):** the trusted-core
+    extension unblocking RFC-0019 §4.5 (DN-37 Q3). KC-3-significant; FLAG-1 soundness (arity-only hashing) open.
+  - **DN-52 — Parsable-vs-Runnable Census (M-807, closes the DN-50 DoD):** ~50 categories classified;
+    **no silent-gaps found** — the never-silent floor holds; two Undetermined rows (Dense, cross-nodule three-way).
+  - **DN-53 — Object-Composition Surface & Granular Visibility (Proposed, M-811):** honest `object` keyword
+    (no OOP `class`); granular item-level `pub` (field-level deferred).
+  - **DN-54 — User-Extensible Generative-Lowering Surface (Proposed, M-812):** `lower` keyword; user extensions
+    are transparent surface→L0 rules, `reveal`-able by construction; same verification as built-in passes.
+  - **DN-55 — Static Specialization, the polymorphism model (Proposed, M-814):** "static comp" — type/width/bounded
+    params all monomorphize to closed L0; **zero kernel primitives**; dynamic dispatch the one escape. Zig-`comptime`.
+  - **DN-56 — Kernel-Completeness & Freeze Criterion (Proposed, M-815, capstone):** the no-black-boxes thesis as a
+    concrete gate — minimal frozen L0 kernel; every construct (incl. user pseudo-macros) lowers transparently by
+    construction; completeness criterion (every accept/reject/invariant enumerated, zero silent gaps) + the five-
+    condition freeze gate. Synthesizes the wave; extends DN-39, complements RFC-0036, feeds ADR-021/022.
+  - **Lexicon reconciliation (M-813):** append-only DN-02/DN-03 + memory — `bin`/`tern`/`emb`/`hvec` + `lambda`
+    + `derive`/`via`/`reveal`; `vec` rejected (collides with `Vec`); ratified-pending-RFC-0037 (token.rs unchanged).
+  - Append-only supersession back-notes on RFC-0019/0025/0030; Doc-Index + issues.yaml (M-807 done; M-809–815 minted).
+  All Proposed/Draft (design only; ratification pending); no guarantee `Proven`; no decision silently advanced. No code.
+
 ### Added (2026-06-27: rsm deliberation — open-decision rulings; design only, no code)
 
 - **DN-31 refined — `repr` stays `{}` (kind-split brackets); §4-Q2 resolved (maintainer-ratified in-session).**

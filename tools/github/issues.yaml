@@ -6660,11 +6660,13 @@ issues:
   - id: M-807
     title: "M-807 -- parsable-vs-runnable gap analysis (capture; DN-50 / rsm F7)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:research, area:language, priority:P3, status:todo]
+    labels: [phase:6, type:research, area:language, priority:P3, status:done]
     epic: E23-1
     depends_on: []
+    landed_basis: "DONE (2026-06-27, lang-design wave). The census deliverable landed as DN-52 (docs/notes/DN-52-Parsable-vs-Runnable-Census.md): ~50 construct categories classified runs / explicit-Residual / silent-gap. KEY: NO silent-gaps found -- the never-silent (G2) floor holds across the v0 surface; two Undetermined rows (Dense three-way, cross-nodule three-way -- not yet in the differential corpus). Recommends a narrow standing gate (accept => runs OR explicit Residual). Census record is Draft/Empirical."
     doc_refs:
       - corpus:DN-50
+      - corpus:DN-52
       - corpus:RFC-0024
     body: |
       CAPTURE-ONLY (rsm F7; from the maintainer's observation during M-753). Systematically analyze,
@@ -6684,6 +6686,107 @@ issues:
       Definition of Done (to leave Draft): a research/audit record fixing the "runnable" definition,
       producing the frontier census, and recommending whether a standing gate is warranted. Generalizes
       M-719 (one slice). NOTHING decided here.
+
+  - id: M-809
+    title: "M-809 -- RFC-0037: binding surface-grammar deconfliction + layout-independence (enacts DN-31)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P1, status:done]
+    epic: E11-1
+    depends_on: []
+    landed_basis: "DONE (2026-06-27, lang-design wave) -- the binding-grammar RFC AUTHORED (docs/rfcs/RFC-0037-*.md, status Proposed; enacts no code, ratification pending). Formalizes DN-31's kind-split (`[T]` type/list, `{N}` const/width+repr unchanged), short repr keywords bin/tern/emb/hvec (vec rejected), <> operators only (<=/>= -> lte/gte), -> => , trit 0t, lambda keyword, layout-independent grammar (newlines formatting-only, ,-delineation). Supersedes RFC-0019 §4.1; updates RFC-0030/0025 (M-745). §7 open: exact delimiter set, short-keyword lexer status, full lambda semantics. The lexer/parser/corpus migration is the follow-on epic."
+    doc_refs:
+      - src:docs/rfcs/RFC-0037-Surface-Grammar-Deconfliction-and-Layout-Independence.md
+      - corpus:DN-31
+    body: |
+      Authors the binding grammar RFC enacting DN-31's ratified scheme (lang-design wave). Status Proposed
+      -- the enacting act for the grammar wave; the lexer/parser/tree-sitter/conformance-corpus migration
+      is a follow-on epic gated on maintainer ratification. Design only; no code.
+
+  - id: M-810
+    title: "M-810 -- ADR-033: FieldSpec abstract-function-field for dynamic dispatch (trusted-core, KC-3)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core-ir, priority:P2, status:done]
+    epic: E11-1
+    depends_on: [M-673]
+    landed_basis: "DONE (2026-06-27, lang-design wave) -- ADR-033 AUTHORED (docs/adr/ADR-033-*.md, status Proposed; enacts no code, gated on maintainer KC-3 sign-off). Designs the FieldSpec::Fn abstract-function-typed field that unblocks the RFC-0019 §4.5 runtime-dictionary form (dynamic dispatch). DN-37 Q3 plan-ahead. FLAG-1 (soundness): arity-only encoding hashes two diff fn-types identically -- the ADR requires a written soundness argument (elaborator type discipline sufficient) OR a minimal type descriptor in FieldSpec::Fn before Enacted. KC-3-significant trusted-base growth -- deliberate, sign-off-gated. No impl before ratification."
+    doc_refs:
+      - src:docs/adr/ADR-033-Abstract-Function-Field-For-Dynamic-Dispatch.md
+      - corpus:DN-37
+    body: |
+      Authors the trusted-core ADR for dynamic dispatch (DN-37 Q3 "defer-but-plan-ahead"). Status Proposed;
+      gated on maintainer ratification + KC-3 sign-off (grows the trusted core). FLAG-1 soundness concern
+      (arity-only hashing) must be resolved before Enacted. Design only; no code.
+
+  - id: M-811
+    title: "M-811 -- DN-53: object-composition surface (honest `object` sugar) + granular item-level pub"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P2, status:done]
+    epic: E7-1
+    depends_on: [M-659]
+    landed_basis: "DONE (2026-06-27, lang-design wave) -- DN-53 AUTHORED (docs/notes/DN-53-*.md, status Proposed). DN-37 Q1 follow-on: object-composition sugar keyword `object` (passes the DN-02 three-test gate where class/struct/record fail; one-to-one desugar to type+impl+via, KC-3, reveal-able). DN-37 Q4: granular item-level pub (pub fn/method/let; field-level pub DEFERRED -- fields are positional/unnamed in v0). Gated on the grammar wave (RFC-0037) for surface forms."
+    doc_refs:
+      - src:docs/notes/DN-53-Object-Composition-Surface-And-Granular-Visibility.md
+      - corpus:DN-37
+    body: |
+      Authors the object-composition + granular-visibility design (DN-37 Q1/Q4 follow-ons). Status Proposed;
+      `object` keyword + item-level pub recommended; field-level pub deferred until named fields. Design only.
+
+  - id: M-812
+    title: "M-812 -- DN-54: user-extensible generative-lowering surface + checker (inspectable by construction)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P2, status:done]
+    epic: E7-1
+    depends_on: []
+    landed_basis: "DONE (2026-06-27, lang-design wave) -- DN-54 AUTHORED (docs/notes/DN-54-*.md, status Proposed). Operationalizes DN-38's ruling that user-extensible generative lowering is transparent BY CONSTRUCTION: a user defines a surface->L0 lowering rule (recommended keyword `lower`; `macro` fails T-map) whose RHS is explicit typed L0, so reveal works on every user extension automatically -- no opaque step. Held to the same §6 verification (differential + hygiene + round-trip) as built-in passes; no kernel node (KC-3). Gated on RFC-0037 + the verification harness."
+    doc_refs:
+      - src:docs/notes/DN-54-User-Extensible-Generative-Lowering-Surface.md
+      - corpus:DN-38
+    body: |
+      Authors the user-extensible generative-lowering design (DN-38 extensibility ruling). Status Proposed;
+      keyword `lower` recommended; transparent-by-construction; same verification as built-in lowerings. Design only.
+
+  - id: M-813
+    title: "M-813 -- lexicon reconciliation: bin/tern/emb/hvec + lambda + derive/via/reveal (DN-02/DN-03)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P2, status:done]
+    epic: E7-1
+    depends_on: []
+    landed_basis: "DONE (2026-06-27, lang-design wave) -- append-only lexicon amendment to DN-02/DN-03 + .claude/memory/lang-lexicon-syntax.md. Short repr keywords bin{N}/tern{N}/emb{…}/hvec{…} (vec rejected -- collides with Vec cons-list); lambda for closures; derive/via/reveal the active generative triple. All Declared, ratified-pending-RFC-0037 (token.rs unchanged). Gate verdicts recorded (emb has a T-map note, acceptable). No additional collisions beyond vec/Vec."
+    doc_refs:
+      - corpus:DN-02
+      - corpus:DN-03
+    body: |
+      Append-only lexicon reconciliation recording the ratified keyword set (lang-design wave). Status: the
+      amendment landed; lexer (token.rs) reservation deferred to RFC-0037. Design/docs only; no code.
+
+  - id: M-814
+    title: "M-814 -- DN-55: static specialization -- the polymorphism model (zero kernel primitives)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P2, status:done]
+    epic: E11-1
+    depends_on: [M-673, M-753]
+    landed_basis: "DONE (2026-06-27, lang-design wave) -- DN-55 AUTHORED (docs/notes/DN-55-*.md, status Proposed). Names Mycelium's single polymorphism mechanism `static specialization` (`static comp`): type [A] / width {N} / bounded [A: Trait] all resolve via mono.rs to closed monomorphic L0, dictionary-free. LOAD-BEARING: polymorphism costs ZERO kernel primitives (pure frontend; mycelium-core untouched) -- the one exception is dynamic dispatch (ADR-033). Documents the EXISTING M-673/M-753 mechanism (Empirical, three-way) + names the model; Zig-comptime analogue; conventional surface terms. Feeds the DN-56 freeze capstone."
+    doc_refs:
+      - src:docs/notes/DN-55-Static-Specialization-The-Polymorphism-Model.md
+      - corpus:DN-42
+    body: |
+      Authors the polymorphism model note (maintainer ratified "static comp"). Status Proposed; documents the
+      existing monomorphization mechanism + establishes polymorphism as a zero-kernel-primitive feature. Design only.
+
+  - id: M-815
+    title: "M-815 -- DN-56: kernel-completeness & freeze criterion (the orchestrator capstone)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core-ir, priority:P1, status:done]
+    epic: E11-1
+    depends_on: [M-807, M-810, M-812, M-814]
+    landed_basis: "DONE (2026-06-27, lang-design wave) -- DN-56 AUTHORED (docs/notes/DN-56-*.md, status Proposed). The capstone thesis: a minimal, FROZEN L0 kernel such that every construct (incl. user pseudo-macros) lowers transparently by construction, no gaps. Synthesizes the wave: DN-52 census (no silent gaps -- evidence), ADR-033 (a kernel-touching primitive accounted), DN-54 (extensions lower by construction), DN-55 (polymorphism zero-primitive). Defines the minimal primitive set, the completeness criterion (all accepts/rejects/invariants enumerated, zero silent gaps), and the FREEZE gate. Extends DN-39; feeds ADR-021/022."
+    doc_refs:
+      - src:docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md
+      - corpus:DN-39
+    body: |
+      The orchestrator capstone synthesizing the lang-design wave into the kernel-completeness-and-freeze
+      criterion (the maintainer's no-black-boxes / minimal-frozen-kernel thesis as a concrete gate). Status
+      Proposed; extends DN-39, feeds the ADR-021/022 release gates. Design only; no code.
 
   - id: M-808
     title: "M-808 -- branch-protection guard: enforce no-commit/push-to-protected-branch (rsm)"

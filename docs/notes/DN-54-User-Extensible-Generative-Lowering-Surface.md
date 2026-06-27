@@ -371,9 +371,11 @@ the verification evidence (VR-5 — no upgrade past the basis).
 
 1. **Grammar wave gate.** The `lower` keyword and `derive` use-site syntax ride the
    DN-31/RFC-0037 grammar wave. This note cannot be implemented before that wave lands.
-   `FLAG: RFC-0037 does not yet exist — the grammar wave is the `[]`-delimiter wave
-   (DN-31/RFC-0030/epic #27); the user-extensible lowering surface will need its own RFC
-   (or an extension of RFC-0030) once this DN is accepted.`
+   **Note (orchestrator, integration 2026-06-27):** RFC-0037 (the binding grammar
+   deconfliction + layout-independence RFC) was authored in this same wave, so the `lower`
+   keyword and `derive` use-site syntax now ride RFC-0037 / DN-31 / RFC-0030. The
+   user-extensible lowering surface itself will still need its own enacting RFC (or an
+   extension of RFC-0030) once this DN is accepted.
 
 2. **Verification harness gate.** The §7 differential + hygiene + round-trip checks require
    the DN-38 §7 verification harness to exist. This DN's DoD cannot be met before the
