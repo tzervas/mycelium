@@ -8,6 +8,18 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Deprecated (2026-06-27: 84 stale branches slated for prune to the three protected tiers)
+
+- **All non-protected branches deprecated; repo retains only `main`/`integration`/`dev`** (maintainer-
+  directed). The 84 `claude/*` (+ `reconcile/*`, `revert-*`, `worktree-agent-*`) branches are stale
+  artifacts of completed/landed waves. Tracked as **M-816**. The deletion is an **external action** —
+  remote ref deletion is platform-gated for the Claude-Code-web session (git relay 403 on delete;
+  direct GitHub API/CLI 403: "GitHub access is not enabled for this session…"; no MCP delete-ref tool).
+  Recovery is consolidated + retained on branch `claude/recovery/stale-branch-archive-2026-06-27`
+  (`recovery/`: full git bundle of every unique commit, per-branch manifest, runnable prune script,
+  `DEPRECATION.md`). Run `recovery/prune-stale-branches.sh` from a local clone, or have an org admin
+  connect the Claude GitHub App with delete permission. (Never-silent record — G2.)
+
 ### Changed (2026-06-27: planning-execution housekeeping — issues.yaml status reconciled to code, no code change)
 
 - **Runtime epic E12-1 statuses reconciled from stale `in-progress` to `done` (VR-5: verified before claiming).**
