@@ -1,16 +1,16 @@
 [project]
 name        = "std"
 kind        = "phylum"
-version     = "0.1.0"
+version     = "0.2.0"
 license     = "MIT"
 authors     = ["Tyler Zervas"]
 since       = "2026-06-23"
-summary     = "Mycelium-language standard library (self-hosted): core/prelude nodules std.result (M-649), std.option + std.cmp (M-715); collections std.collections (M-716, #461); text/format std.text + std.fmt (M-717, #462, partial — ASCII decode + hex fmt; multi-byte/slice deferred)."
+summary     = "Mycelium-language standard library (self-hosted): core/prelude nodules std.result (M-649), std.option + std.cmp (M-715, cmp now WIDTH-GENERIC over Binary{N}, M-718); collections std.collections (M-716, #461, Map/Set lookup now width-generic over the key, M-718); width-generic arithmetic/logic std.math (M-718 — binary add/sub + bitwise + ternary add/sub/mul/neg over Binary{N}/Ternary{M}); text/format std.text + std.fmt (M-717, #462 — multi-byte UTF-8 decode + validity + slice/concat, hex fmt)."
 keywords    = ["stdlib", "self-hosting"]
 lang        = "mycelium-0"
 
 [surface]
-exports     = ["std.result", "std.option", "std.cmp", "std.collections", "std.text", "std.fmt"]
+exports     = ["std.result", "std.option", "std.cmp", "std.collections", "std.math", "std.text", "std.fmt"]
 
 [toolchain]
 format      = "mycfmt-0"
