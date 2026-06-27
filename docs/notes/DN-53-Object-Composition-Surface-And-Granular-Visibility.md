@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-53 |
-| **Status** | **Proposed** (2026-06-27; design DN; enacts no code) |
+| **Status** | **Accepted** (2026-06-27; **ratified by the maintainer 2026-06-27**, R5 gate) — the `object` keyword (desugars to `type`+`impl`+`via`; no OOP `class`) and granular item-level `pub` are approved; field-level `pub` remains deferred. Enacts no code; surface forms gated on the RFC-0037 grammar epic. Prior: **Proposed** (2026-06-27). |
 | **Task** | M-811 |
 | **Feeds** | the **object-composition surface** (DN-37 Q1 follow-on: honest sugar for `type` + traits + `via`-delegation, transparent about what it really is) and **granular item-level `pub`** (DN-37 Q4 follow-on: `pub` at item granularity, superseding the nodule-only model); both are pre-implementation design gated on the grammar wave (RFC-0037 / DN-31 / RFC-0030 / epic #27) for their surface forms. |
 | **Date** | June 27, 2026 |
