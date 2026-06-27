@@ -129,10 +129,10 @@ fn assert_three_way(label: &str, src: &str, expected_src: &str) {
 /// `hex_digit(0)` → `add_bin(0, 0x30)` = '0' = 0x30 (Exact: 0 < 10, add_bin(0, 0x30)).
 #[test]
 fn hex_digit_zero() {
-    let driver = "fn main() -> Binary{8} = hex_digit(0b0000_0000)";
+    let driver = "fn main() => Binary{8} = hex_digit(0b0000_0000)";
     let src = program(driver);
     // Reference: add_bin(0b0000_0000, 0b0011_0000) — Derived provenance to match computed result.
-    let expected = "nodule ref\nfn main() -> Binary{8} = add_bin(0b0000_0000, 0b0011_0000)";
+    let expected = "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_0000, 0b0011_0000)";
     assert_three_way("hex_digit(0)='0'", &src, expected);
 }
 
@@ -140,9 +140,9 @@ fn hex_digit_zero() {
 #[test]
 fn hex_digit_nine() {
     // 0b0000_1001 = 9; '9'=0x39=57. Reference: add_bin(0b0000_1001, 0b0011_0000).
-    let driver = "fn main() -> Binary{8} = hex_digit(0b0000_1001)";
+    let driver = "fn main() => Binary{8} = hex_digit(0b0000_1001)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = add_bin(0b0000_1001, 0b0011_0000)";
+    let expected = "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_1001, 0b0011_0000)";
     assert_three_way("hex_digit(9)='9'", &src, expected);
 }
 
@@ -150,9 +150,9 @@ fn hex_digit_nine() {
 #[test]
 fn hex_digit_ten() {
     // 0b0000_1010 = 10; 'a'=0x61=97. Reference: add_bin(0b0000_1010, 0b0101_0111).
-    let driver = "fn main() -> Binary{8} = hex_digit(0b0000_1010)";
+    let driver = "fn main() => Binary{8} = hex_digit(0b0000_1010)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = add_bin(0b0000_1010, 0b0101_0111)";
+    let expected = "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_1010, 0b0101_0111)";
     assert_three_way("hex_digit(10)='a'", &src, expected);
 }
 
@@ -160,9 +160,9 @@ fn hex_digit_ten() {
 #[test]
 fn hex_digit_fifteen() {
     // 0b0000_1111 = 15; 'f'=0x66=102. Reference: add_bin(0b0000_1111, 0b0101_0111).
-    let driver = "fn main() -> Binary{8} = hex_digit(0b0000_1111)";
+    let driver = "fn main() => Binary{8} = hex_digit(0b0000_1111)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = add_bin(0b0000_1111, 0b0101_0111)";
+    let expected = "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_1111, 0b0101_0111)";
     assert_three_way("hex_digit(15)='f'", &src, expected);
 }
 
@@ -170,9 +170,9 @@ fn hex_digit_fifteen() {
 #[test]
 fn hex_digit_five() {
     // 0b0000_0101 = 5; '5'=0x35=53. Reference: add_bin(0b0000_0101, 0b0011_0000).
-    let driver = "fn main() -> Binary{8} = hex_digit(0b0000_0101)";
+    let driver = "fn main() => Binary{8} = hex_digit(0b0000_0101)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = add_bin(0b0000_0101, 0b0011_0000)";
+    let expected = "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_0101, 0b0011_0000)";
     assert_three_way("hex_digit(5)='5'", &src, expected);
 }
 
@@ -182,9 +182,9 @@ fn hex_digit_five() {
 fn hex_digit_out_of_range_returns_fallback() {
     // 0b0001_0000 = 16; not a valid nibble → fallback '?'=0x3F=63=0b0011_1111.
     // The fallback arm is a literal: Root provenance, same as the reference literal.
-    let driver = "fn main() -> Binary{8} = hex_digit(0b0001_0000)";
+    let driver = "fn main() => Binary{8} = hex_digit(0b0001_0000)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b0011_1111"; // '?'=0x3F, Root provenance
+    let expected = "nodule ref\nfn main() => Binary{8} = 0b0011_1111"; // '?'=0x3F, Root provenance
     assert_three_way("hex_digit(16)='?'", &src, expected);
 }
 
@@ -197,27 +197,27 @@ fn hex_digit_out_of_range_returns_fallback() {
 #[test]
 fn nibble_lo_extracts_low_bits() {
     // 0b1010_0101 = 0xa5; low nibble = 0b0000_0101 = 5.
-    let driver = "fn main() -> Binary{8} = nibble_lo(0b1010_0101)";
+    let driver = "fn main() => Binary{8} = nibble_lo(0b1010_0101)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = and(0b1010_0101, 0b0000_1111)";
+    let expected = "nodule ref\nfn main() => Binary{8} = and(0b1010_0101, 0b0000_1111)";
     assert_three_way("nibble_lo(0xa5)=5", &src, expected);
 }
 
 /// `nibble_lo(0b1111_0000)` → `and(0b1111_0000, 0b0000_1111)` = 0 (Exact).
 #[test]
 fn nibble_lo_zero_low_nibble() {
-    let driver = "fn main() -> Binary{8} = nibble_lo(0b1111_0000)";
+    let driver = "fn main() => Binary{8} = nibble_lo(0b1111_0000)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = and(0b1111_0000, 0b0000_1111)";
+    let expected = "nodule ref\nfn main() => Binary{8} = and(0b1111_0000, 0b0000_1111)";
     assert_three_way("nibble_lo(0xf0)=0", &src, expected);
 }
 
 /// `nibble_lo(0b0000_1111)` → `and(0b0000_1111, 0b0000_1111)` = 15 (Exact).
 #[test]
 fn nibble_lo_full_low_nibble() {
-    let driver = "fn main() -> Binary{8} = nibble_lo(0b0000_1111)";
+    let driver = "fn main() => Binary{8} = nibble_lo(0b0000_1111)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = and(0b0000_1111, 0b0000_1111)";
+    let expected = "nodule ref\nfn main() => Binary{8} = and(0b0000_1111, 0b0000_1111)";
     assert_three_way("nibble_lo(0x0f)=15", &src, expected);
 }
 
@@ -238,9 +238,9 @@ fn nibble_lo_full_low_nibble() {
 /// `nibble_hi(0b0000_0101)` → `0b0000_0000` (= 0; masked=0x00; Exact).
 #[test]
 fn nibble_hi_zero_high_nibble() {
-    let driver = "fn main() -> Binary{8} = nibble_hi(0b0000_0101)";
+    let driver = "fn main() => Binary{8} = nibble_hi(0b0000_0101)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b0000_0000";
+    let expected = "nodule ref\nfn main() => Binary{8} = 0b0000_0000";
     assert_three_way("nibble_hi(0x05)=0", &src, expected);
 }
 
@@ -248,9 +248,9 @@ fn nibble_hi_zero_high_nibble() {
 #[test]
 fn nibble_hi_one() {
     // 0b0001_0111 = 0x17; masked=0x10 → nibble 1.
-    let driver = "fn main() -> Binary{8} = nibble_hi(0b0001_0111)";
+    let driver = "fn main() => Binary{8} = nibble_hi(0b0001_0111)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b0000_0001";
+    let expected = "nodule ref\nfn main() => Binary{8} = 0b0000_0001";
     assert_three_way("nibble_hi(0x17)=1", &src, expected);
 }
 
@@ -258,9 +258,9 @@ fn nibble_hi_one() {
 #[test]
 fn nibble_hi_four() {
     // 0b0100_1010 = 0x4a; masked=0x40 → nibble 4.
-    let driver = "fn main() -> Binary{8} = nibble_hi(0b0100_1010)";
+    let driver = "fn main() => Binary{8} = nibble_hi(0b0100_1010)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b0000_0100";
+    let expected = "nodule ref\nfn main() => Binary{8} = 0b0000_0100";
     assert_three_way("nibble_hi(0x4a)=4", &src, expected);
 }
 
@@ -268,9 +268,9 @@ fn nibble_hi_four() {
 #[test]
 fn nibble_hi_ten() {
     // 0b1010_0101 = 0xa5; masked=0xa0 → nibble 10.
-    let driver = "fn main() -> Binary{8} = nibble_hi(0b1010_0101)";
+    let driver = "fn main() => Binary{8} = nibble_hi(0b1010_0101)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b0000_1010";
+    let expected = "nodule ref\nfn main() => Binary{8} = 0b0000_1010";
     assert_three_way("nibble_hi(0xa5)=10", &src, expected);
 }
 
@@ -278,9 +278,9 @@ fn nibble_hi_ten() {
 #[test]
 fn nibble_hi_fifteen() {
     // 0b1111_1111 = 0xFF; masked=0xf0 → nibble 15.
-    let driver = "fn main() -> Binary{8} = nibble_hi(0b1111_1111)";
+    let driver = "fn main() => Binary{8} = nibble_hi(0b1111_1111)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() -> Binary{8} = 0b0000_1111";
+    let expected = "nodule ref\nfn main() => Binary{8} = 0b0000_1111";
     assert_three_way("nibble_hi(0xFF)=15", &src, expected);
 }
 
@@ -323,7 +323,7 @@ fn to_hex_ref(driver: &str) -> String {
 /// nibble_hi(0x00)=0→'0'=0x30; nibble_lo(0x00)=0→'0'=0x30.
 #[test]
 fn to_hex_zero() {
-    let driver = "fn main() -> HexPair = to_hex(0b0000_0000)";
+    let driver = "fn main() => HexPair = to_hex(0b0000_0000)";
     let src = program(driver);
     let expected = to_hex_ref(driver);
     assert_three_way("to_hex(0x00)=HP('0','0')", &src, &expected);
@@ -334,7 +334,7 @@ fn to_hex_zero() {
 #[test]
 fn to_hex_0x4a() {
     // 0b0100_1010 = 0x4a.
-    let driver = "fn main() -> HexPair = to_hex(0b0100_1010)";
+    let driver = "fn main() => HexPair = to_hex(0b0100_1010)";
     let src = program(driver);
     let expected = to_hex_ref(driver);
     assert_three_way("to_hex(0x4a)=HP('4','a')", &src, &expected);
@@ -345,7 +345,7 @@ fn to_hex_0x4a() {
 #[test]
 fn to_hex_0xff() {
     // 0b1111_1111 = 0xff.
-    let driver = "fn main() -> HexPair = to_hex(0b1111_1111)";
+    let driver = "fn main() => HexPair = to_hex(0b1111_1111)";
     let src = program(driver);
     let expected = to_hex_ref(driver);
     assert_three_way("to_hex(0xff)=HP('f','f')", &src, &expected);
@@ -356,7 +356,7 @@ fn to_hex_0xff() {
 #[test]
 fn to_hex_0x0f() {
     // 0b0000_1111 = 0x0f.
-    let driver = "fn main() -> HexPair = to_hex(0b0000_1111)";
+    let driver = "fn main() => HexPair = to_hex(0b0000_1111)";
     let src = program(driver);
     let expected = to_hex_ref(driver);
     assert_three_way("to_hex(0x0f)=HP('0','f')", &src, &expected);
@@ -367,7 +367,7 @@ fn to_hex_0x0f() {
 #[test]
 fn to_hex_0xa0() {
     // 0b1010_0000 = 0xa0.
-    let driver = "fn main() -> HexPair = to_hex(0b1010_0000)";
+    let driver = "fn main() => HexPair = to_hex(0b1010_0000)";
     let src = program(driver);
     let expected = to_hex_ref(driver);
     assert_three_way("to_hex(0xa0)=HP('a','0')", &src, &expected);

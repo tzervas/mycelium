@@ -117,8 +117,8 @@ fn assert_three_way(label: &str, src: &str, expected_src: &str) {
 
 /// A `main` of the given `ret` type calling `call`; the reference recomputes via `ref_body`.
 fn assert_op(label: &str, ret: &str, call: &str, ref_body: &str) {
-    let src = program(&format!("fn main() -> {ret} = {call}"));
-    let expected = format!("nodule ref\nfn main() -> {ret} = {ref_body}");
+    let src = program(&format!("fn main() => {ret} = {call}"));
+    let expected = format!("nodule ref\nfn main() => {ret} = {ref_body}");
     assert_three_way(label, &src, &expected);
 }
 
@@ -245,8 +245,8 @@ fn tadd_ternary3() {
     assert_op(
         "tadd3",
         "Ternary{3}",
-        "tadd(<00+>, <00->)",
-        "add(<00+>, <00->)",
+        "tadd(0t00+, 0t00-)",
+        "add(0t00+, 0t00-)",
     );
 }
 
@@ -256,8 +256,8 @@ fn tsub_ternary3() {
     assert_op(
         "tsub3",
         "Ternary{3}",
-        "tsub(<00+>, <00->)",
-        "sub(<00+>, <00->)",
+        "tsub(0t00+, 0t00-)",
+        "sub(0t00+, 0t00-)",
     );
 }
 
@@ -267,15 +267,15 @@ fn tmul_ternary3() {
     assert_op(
         "tmul3",
         "Ternary{3}",
-        "tmul(<00+>, <0+->)",
-        "mul(<00+>, <0+->)",
+        "tmul(0t00+, 0t0+-)",
+        "mul(0t00+, 0t0+-)",
     );
 }
 
 /// `tneg(<0+->)` at Ternary{3} → -(+2) = -2 = <0-+>. Exact (digit-wise sign flip).
 #[test]
 fn tneg_ternary3() {
-    assert_op("tneg3", "Ternary{3}", "tneg(<0+->)", "neg(<0+->)");
+    assert_op("tneg3", "Ternary{3}", "tneg(0t0+-)", "neg(0t0+-)");
 }
 
 /// `tadd` at Ternary{6} — the same definition at a second width. Exact.
@@ -284,15 +284,15 @@ fn tadd_ternary6() {
     assert_op(
         "tadd6",
         "Ternary{6}",
-        "tadd(<00+0+->, <00000+>)",
-        "add(<00+0+->, <00000+>)",
+        "tadd(0t00+0+-, 0t00000+)",
+        "add(0t00+0+-, 0t00000+)",
     );
 }
 
 /// `tneg` at Ternary{6} — second width. Exact.
 #[test]
 fn tneg_ternary6() {
-    assert_op("tneg6", "Ternary{6}", "tneg(<00+0+->)", "neg(<00+0+->)");
+    assert_op("tneg6", "Ternary{6}", "tneg(0t00+0+-)", "neg(0t00+0+-)");
 }
 
 // ── Never-silent overflow/underflow refusals (G2) on every path ─────────────────────────────────────
@@ -336,7 +336,7 @@ fn assert_eval_refuses(label: &str, driver: &str) {
 fn badd_overflow_refuses_on_every_path() {
     assert_eval_refuses(
         "badd(255,1) overflow",
-        "fn main() -> Binary{8} = badd(0b1111_1111, 0b0000_0001)",
+        "fn main() => Binary{8} = badd(0b1111_1111, 0b0000_0001)",
     );
 }
 
@@ -346,7 +346,7 @@ fn badd_overflow_refuses_on_every_path() {
 fn bsub_underflow_refuses_on_every_path() {
     assert_eval_refuses(
         "bsub(0,1) underflow",
-        "fn main() -> Binary{8} = bsub(0b0000_0000, 0b0000_0001)",
+        "fn main() => Binary{8} = bsub(0b0000_0000, 0b0000_0001)",
     );
 }
 
@@ -356,7 +356,7 @@ fn bsub_underflow_refuses_on_every_path() {
 /// width param `N` cannot be both 8 and 16 (DN-42 §4 / VR-5 / S1). Never a silent widen.
 #[test]
 fn badd_mixed_widths_refuses() {
-    let src = program("fn main() -> Binary{16} = badd(0b0000_0001, 0b0000_0001_0000_0000)");
+    let src = program("fn main() => Binary{16} = badd(0b0000_0001, 0b0000_0001_0000_0000)");
     let parsed = parse(&src).expect("parse should succeed");
     let err = check_nodule(&parsed)
         .expect_err("expected a never-silent width-mismatch refusal, but check succeeded")
