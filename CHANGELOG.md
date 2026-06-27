@@ -8,6 +8,72 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-27: rsm deliberation — open-decision rulings; design only, no code)
+
+- **DN-31 refined — `repr` stays `{}` (kind-split brackets); §4-Q2 resolved (maintainer-ratified in-session).**
+  The delimiter scheme is refined from "move everything spare onto `[]`" to **bracket-by-kind**: `[T]` = type
+  params/args + list literals; **`{N}` = const/width params AND repr/size types — `Binary{8}` stays `Binary{8}`**
+  (no repr migration; the landed `Ty::Binary(Width)` surface is preserved); `<>` = operators only; `=>` return
+  arrow; `0t` trit literals; `<=`/`>=` → `lte`/`gte`. A const/width param is declared `f{N}` (explicit, per
+  kind), a type param `f[T]`. **Repr-keyword shortening (proposed):** `bin{N}`/`tern{N}`/`emb{…}`/`hvec{…}`
+  (Binary/Ternary/Dense·embeddings/VSA·HDC) — `vec` rejected (collides with `Vec`); a lexicon amendment to
+  reconcile with DN-02/DN-03 + token.rs. **§4-Q2 direction fixed: a LAYOUT-INDEPENDENT grammar** — newlines
+  are formatting-only (never semantically required); the same program parses identically as a dense stream or
+  line-broken for readability. Delineation is by explicit delimiters (`,`-delineation) + type-vs-value
+  position, so the type-app-vs-list edge needs no newline rule (the earlier newline/adjacency rule is
+  withdrawn); exact delimiters → the binding grammar RFC. **Lambdas declared with an explicit `lambda`
+  keyword** (new reserved word — reconcile with DN-02/DN-03 + token.rs; input to M-704). Rationale for the
+  kind-split recorded in DN-31's revision history (eliminates the largest
+  migration; zero new `{}` ambiguity; honest `[type]`-vs-`{const}` kind encoding; avoids the Rust
+  `Name{block}` footgun). DN-31 stays **Draft**; the binding RFC/grammar-supersession epic is the enacting act. No code.
+- **DN-50 — parsable-vs-runnable frontier: OQ-1 + OQ-2 ratified (maintainer-confirmed in-session).**
+  "Runnable" = elaborates to closed L0 and executes three-way (L1≡L0≡AOT) on ≥1 instantiation (OQ-1). The
+  artifact is **census now + a narrow standing gate** that forbids *only* the silent-gap class (accept ⇒
+  runs OR explicit `Residual`/FLAG) — **not** a must-run gate; G2 applied to the implementation frontier
+  (OQ-2). DN-50 is the whole-surface generalization of which M-719 is one slice (OQ-4). The census (M-807)
+  plus the narrow gate are the remaining work; the design is decided. No code.
+- **DN-37 — object-model §8 open questions ruled (maintainer-confirmed in-session).** Q1: **no `class`
+  keyword** — objects stay `type`+traits+`via`-delegation (a `class` keyword would mislead toward OOP);
+  a flagged follow-on is to design honest, non-OOP-misleading composition sugar. Q2: build order ratified
+  (default methods + super-traits first). Q3: **defer dynamic dispatch but plan ahead** — design the
+  trusted-core `FieldSpec` ADR and implement in the near future, before complete dogfooding (not now). Q4:
+  **adopt granular item-level `pub`** (func/method/value/var individually public, Rust-precedent) —
+  supersedes the nodule-only model; a flagged follow-on is the exact granularity + surface form. Q6 row
+  polymorphism out of scope; Q5/Q7 defer to the grammar/operator wave. Design only, no code.
+- **M-704 (full HOF) scheduled — closures via KC-3-safe Reynolds defunctionalization (RFC-0024 §7).**
+  Moves from indefinite Residual to near-term, gated behind the DN-31 grammar wave (closures need the
+  `lambda` keyword + delimiter rules first). Closures lower to a tagged data value (captured env) + a
+  generated `apply` dispatch in existing L0 — no new kernel node; multi-arg arrows + partial application
+  generalize from the same machinery. Closures first, then multi-arg/partial/true-`foldl`. Design only.
+- **Remaining open-question recommendations concurred (maintainer).** DN-51 §7 (promote-then-op for bitwise;
+  `widening_*`/`truncate` spelling deferred to grammar with semantics fixed; ternary same-model in direction,
+  carry/range at the ternary increment), DN-37 Q6 (row-poly out of scope), and the M-704 schedule are ratified.
+  Still genuinely open (design work, not closed by concurrence): DN-38 architectural calls and the flagged
+  follow-on tasks (honest object sugar, granular-`pub` form, dynamic-dispatch `FieldSpec` ADR, extension-
+  definition surface, binding grammar RFC, the M-807 census).
+- **DN-38 — macro story framed + open question recorded (maintainer raised).** Mycelium has no opaque macro
+  system (G2/no-black-boxes rules out text/token substitution); the roles split across inspectable features —
+  `derive` (generative lowering), `reveal` (inspector), `{N}` const params, and the layered-lowering passes.
+  **Extensibility RESOLVED (maintainer ruling): user-extensible, inspectable BY CONSTRUCTION.** A user extends
+  by defining new terms in Mycelium lexicon that map *directly* to their L0 lowered form — a user-authored
+  transparent lowering rule under the same lowering law as built-in passes, so every use is `reveal`-able by
+  construction (no opaque generation step). Full extensible-macro power with no black boxes — structurally, not
+  a bolted-on check; user lowerings held to the same §6 verification (differential + round-trip). Vernacular
+  ("macro" likely avoided per DN-02's gate, favoring `derive`/`generate`/`lower`) settleable later. No code.
+
+- **DN-51 — accuracy-first `Binary{N}` width arithmetic (maintainer-ratified in-session).** Resolves the
+  "what happens on mixed widths?" question DN-42 left as a conservative *refusal*: cross-width binary
+  operands now **auto-widen to the wider** (DN-41 zero-extension, `Exact`/lossless — accuracy-first),
+  with a **hybrid overflow** rule (promotion-only default keeps the never-silent `Overflow` refusal;
+  `widening_*` growth-to-fit is an explicit opt-in that can't overflow) and **explicit narrowing** in two
+  named forms (DN-41 checked-narrow + a new explicit `truncate` — truncation only ever via the named op,
+  so never silent). Also resolves the width-generic **guarantee model** to **per-instance** (each
+  monomorphized instance carries its actual op's tag; widen/growth/in-range `Exact`, `truncate` lossy;
+  genericity never upgrades — VR-5). Extends DN-41; **supersedes the DN-42 §4 mixed-width refusal for
+  arithmetic** (follow-on impl, E11-1/E13-1). Honestly records that it softens two prior positions
+  (auto-widen makes the cast implicit-but-reified; `truncate` adds a lossy narrow alongside the checked
+  one) without breaching never-silent. Append-only cross-refs added to DN-41/DN-42/Doc-Index. No code.
+
 ### Changed (2026-06-27: rsm S4 — documentation-alignment pass; no code change)
 
 - **Docs now reflect that generics + single-parameter traits EXECUTE (M-673), not just type-check.**

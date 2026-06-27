@@ -403,6 +403,32 @@ VR-5; G2.
 
 ## Meta — changelog
 
+- **2026-06-27 — §8 open questions ruled by the maintainer in-session (append-only; design — no code).**
+  - **Q1 (first-class `class` vs implicit) → IMPLICIT, no `class` keyword.** Objects are emulated with
+    `type` + traits + `via`-delegation; a `class` keyword would mislead toward OOP semantics the language
+    rejects (mutable self, inheritance, dynamic dispatch) — a T-map failure (DN-02). **Follow-on design task
+    (flagged):** find the *right ergonomic sugar* for object-composition that is **clear and transparent
+    about what it really is** (trait + static composition over a value), **without** borrowing OOP-`class`
+    connotations. The sugar must teach the honest model, not paper an OOP veneer over it.
+  - **Q2 (build order) → ratified.** Default methods (§3.1) + super-traits (§3.2) are the cheap first wins
+    (small adds to the trait machinery); then delegation `via`/`~>` + decorator `@` + embedding; dynamic
+    dispatch last (gated, see Q3).
+  - **Q3 (dynamic dispatch) → DEFER but PLAN AHEAD; implement in the *near* future, before complete
+    dogfooding (not now).** Monomorphization stays the only dispatch for now, but dynamic dispatch is **not**
+    indefinitely deferred: the trusted-core `FieldSpec`-abstract-function-field ADR (RFC-0019 §4.5; KC-3-
+    significant — grows the kernel) is to be **designed ahead** and **dug into at the appropriate stage,
+    prior to the language's complete self-hosting/dogfooding**. Scheduled, not speculative.
+  - **Q4 (encapsulation) → adopt GRANULAR, item-level visibility.** Not strictly nodule-level: a function /
+    method / value / variable (and, to be specified, a field) can be made `pub` **individually**, cleanly and
+    in alignment with the rest of the language (item-granular `pub`, Rust-precedent). This **supersedes the
+    nodule-only `pub` model** as the target. **Follow-on design task (flagged):** the exact granularity (down
+    to fields?) + the surface form, folded into the encapsulation/grammar work.
+  - **Q6 (row polymorphism) → out of scope** (default; not contested) — in tension with coherence; revisit
+    only if a concrete contract-free-record need appears. **Q5 (`~` operator-vs-fn) / Q7 (sequencing)** defer
+    to the operator-syntax + `[]`-grammar wave. No guarantee upgraded (VR-5); the menu/sugar stay `Declared`
+    until built. The two flagged follow-on design tasks (honest object sugar; granular-`pub` form) are
+    pre-implementation design, gated on the grammar wave (DN-31).
+
 - **2026-06-25 — Created (Draft, advisory) — authored.** Synthesises
   `research/23-object-behavior-model-internal-RECORD.md` (repo ground truth) and
   `research/24-object-behavior-model-prior-art-RECORD.md` (external prior art, primary-source-checked)
