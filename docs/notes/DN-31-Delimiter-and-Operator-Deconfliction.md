@@ -111,3 +111,29 @@ that act.
 > design input to fold into that work:** (a) **better support for line-breaks / indentation** so syntax is
 > more **human-visible**, and (b) using **`,` to delineate syntax portions**. This is a **recorded direction**,
 > not an enactment — DN-31 stays **Draft**; the binding act is the future RFC/supersession (VR-5 / G2).
+>
+> **Revision — *2026-06-27 (kind-split refinement; Status unchanged — Draft/advisory).*** The maintainer
+> **refines §2/§3 in-session: repr/size types STAY on `{}`** (`Binary{8}` is **not** moved to `Binary[64]`),
+> adopting a **bracket-by-kind** principle rather than bracket-by-availability:
+> **`[T]`** = **type** params/args + list literals; **`{N}`** = **const/width** params **and** repr/size types;
+> **`<>`** = operators only; **`0t`** = trit literals; **`=>`** = return arrow; **`<=`/`>=`** → **`lte`/`gte`**.
+> A const/width param is declared **`f{N}`** (explicit, per kind — matching its use in `Binary{N}`); a type
+> param is `f[T]`; a function generic over both is `f[T]{N}` (e.g. `map_get[V]{N}(m: Map[Binary{N}, V], k:
+> Binary{N})`). This is the *smallest* migration from the landed `fn f<N>` (swap the bracket; the pervasive
+> `Binary{N}` repr surface — including the landed `Ty::Binary(Width)` — does **not** re-spell).
+> **Rationale (second-/third-order effects, recorded):** (1) it eliminates the corpus's **largest** migration
+> (repr `{}` is the most pervasive surface); (2) it adds **zero new `{}` ambiguity** — `Binary{8}` (type
+> position) already coexists with `{ block }` and `{k: v}` (expr position) by position, and `f{N}` sits in the
+> param-declaration slot, unambiguous against equals-bodied `fn f(…) = …`; (3) it is **honest about kind** —
+> width *is* a const-generic (DN-42), so `{8}`/`{N}` reading as "const" teaches the `[type]` vs `{const}`
+> distinction; (4) it **avoids** the alternative of putting type-args on `{}` (`List{T}`), which would
+> reintroduce the Rust `Name{block}`-vs-type-application footgun (types stay square ⇒ `List[T]` never collides
+> with a block). **§4-Q2 RESOLVED** (the precondition for committing the grammar): the only residual `[]`
+> collision — type-application vs list-literal at statement start — is settled by the **newline/adjacency
+> rule**: `Name[…]` is a type/size application **only when `[` is on the same line, adjacent to the name**;
+> a `[` that **begins a line** is a list literal (Mycelium has no `arr[i]` indexing and no juxtaposition
+> application, so there is no third reading). This rule *is* the (a) line-break-sensitive, human-visible
+> discipline the maintainer asked to fold in. **Guarantee model cross-ref:** the width-generic guarantee is
+> **per-instance** (DN-51 §2-D4 / the width-arithmetic decision), not a uniform tag. Still a **recorded
+> direction** — DN-31 stays **Draft**; the binding RFC/supersession (+ the grammar-supersession epic) is the
+> enacting act (VR-5 / G2).

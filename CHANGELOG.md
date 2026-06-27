@@ -8,7 +8,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
-### Added (2026-06-27: rsm deliberation — DN-51 Binary width-arithmetic model; design only, no code)
+### Added (2026-06-27: rsm deliberation — open-decision rulings; design only, no code)
+
+- **DN-31 refined — `repr` stays `{}` (kind-split brackets); §4-Q2 resolved (maintainer-ratified in-session).**
+  The delimiter scheme is refined from "move everything spare onto `[]`" to **bracket-by-kind**: `[T]` = type
+  params/args + list literals; **`{N}` = const/width params AND repr/size types — `Binary{8}` stays `Binary{8}`**
+  (no repr migration; the landed `Ty::Binary(Width)` surface is preserved); `<>` = operators only; `=>` return
+  arrow; `0t` trit literals; `<=`/`>=` → `lte`/`gte`. A const/width param is declared `f{N}` (explicit, per
+  kind), a type param `f[T]`. **§4-Q2** (the precondition for committing the grammar) is **resolved** by the
+  newline/adjacency rule (`Name[` same-line = type-app; line-leading `[` = list; no `arr[i]` indexing). Rationale
+  recorded in DN-31's revision history (eliminates the largest migration; zero new `{}` ambiguity; honest
+  `[type]`-vs-`{const}` kind encoding; avoids the Rust `Name{block}` footgun). DN-31 stays **Draft**; the binding
+  RFC/grammar-supersession epic is the enacting act. No code.
+
+
 
 - **DN-51 — accuracy-first `Binary{N}` width arithmetic (maintainer-ratified in-session).** Resolves the
   "what happens on mixed widths?" question DN-42 left as a conservative *refusal*: cross-width binary
