@@ -11,11 +11,13 @@
 //! - **`Empirical`** — the three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT), validated by
 //!   trial on the programs below.
 //!
-//! # Scope boundary (RFC-0031 §5 D4)
-//! Equality/ordering over the *width* types `Binary{N}`/`Ternary{N}` is intentionally absent: the
-//! kernel surfaces `bit.not`/`bit.xor` + ternary arithmetic but no reduce-to-`Bool` comparison prim,
-//! so a width-typed `eq`/`cmp` cannot be honestly self-hosted yet (it would have nothing to bottom
-//! out on). That port lands when the comparison prim is surfaced — never faked here (G2/VR-5).
+//! # Width-generic comparison (M-718)
+//! The `cmp`/`le`/`ge`/`max`/`min` helpers are now WIDTH-GENERIC over `Binary{N}` (M-753 width-
+//! generics + the M-747 `cmp.eq`/`cmp.lt` prims), superseding the wave-n1 `cmp_u8/…` Binary{8}
+//! interim. They are driven below at `Binary{8}` AND `Binary{16}` — the same single definition
+//! monomorphizes to each width the call site pins (`Exact` per width). A call whose inferred width
+//! conflicts with the expected type, or whose width is undetermined, is a never-silent refusal
+//! (`width_generic_*_refuses` — G2/VR-5); the prims are never faked for an unsupported case.
 
 use mycelium_cert::{check_core, BinaryTernarySwapEngine, CheckVerdict};
 use mycelium_core::GuaranteeStrength;
@@ -211,101 +213,102 @@ fn bool_cmp_eq_agrees_with_bool_eq() {
     assert_bool("consistency(T,F)", "is_eq(bool_cmp(True, False))", "False");
 }
 
-// ── Width-typed comparison helpers at Binary{8} ───────────────────────────────────────────────────
+// ── Width-generic comparison helpers, driven at Binary{8} (M-718) ──────────────────────────────────
 //
-// cmp_u8/le_u8/ge_u8/max_u8/min_u8 wrap the `eq`/`lt` kernel prims into the Ordering surface at
-// Binary{8}. These are Exact over the finite Binary{8} domain (eq/lt are Exact prims). Three-way
-// agreement is Empirical (trials below). FLAG: width-generic versions (cmp<N>) await M-753.
+// cmp/le/ge/max/min are width-generic over Binary{N} (M-753); these tests pin N=8 from the operand
+// literals. They wrap the `eq`/`lt` kernel prims into the Ordering surface — Exact over the finite
+// Binary{8} domain (eq/lt are Exact prims). Three-way agreement is Empirical (trials below). The
+// Binary{16} specialisations of the same definitions are covered further down.
 //
-// Test strategy: cover all three arms of cmp_u8 (Lt/Eq/Gt) and the edge cases (min/max with
-// equal inputs; le/ge boundary). Values chosen as recognisable unsigned magnitudes: 0b0000_0001
-// (1), 0b0000_0010 (2), 0b0000_0011 (3), 0b0000_0000 (0), 0b1111_1111 (255).
+// Test strategy: cover all three arms of cmp (Lt/Eq/Gt) and the edge cases (min/max with equal
+// inputs; le/ge boundary). Values chosen as recognisable unsigned magnitudes: 0b0000_0001 (1),
+// 0b0000_0010 (2), 0b0000_0011 (3), 0b0000_0000 (0), 0b1111_1111 (255).
 
 // ── cmp_u8 ───────────────────────────────────────────────────────────────────────────────────────
 
-/// `cmp_u8(1, 2)` → `Lt` — 1 < 2 unsigned. Exact (eq/lt prims over Binary{8}).
+/// `cmp(1, 2)` → `Lt` — 1 < 2 unsigned. Exact (eq/lt prims over Binary{8}).
 /// Expected (hand-computed, three-way verified).
 #[test]
 fn cmp_u8_lt_arm() {
-    assert_ordering("cmp_u8(1,2)", "cmp_u8(0b0000_0001, 0b0000_0010)", "Lt");
+    assert_ordering("cmp(1,2)", "cmp(0b0000_0001, 0b0000_0010)", "Lt");
 }
 
-/// `cmp_u8(2, 2)` → `Eq` — equal values. Exact.
+/// `cmp(2, 2)` → `Eq` — equal values. Exact.
 /// Expected (hand-computed, three-way verified).
 #[test]
 fn cmp_u8_eq_arm() {
-    assert_ordering("cmp_u8(2,2)", "cmp_u8(0b0000_0010, 0b0000_0010)", "Eq");
+    assert_ordering("cmp(2,2)", "cmp(0b0000_0010, 0b0000_0010)", "Eq");
 }
 
-/// `cmp_u8(3, 1)` → `Gt` — 3 > 1 unsigned. Exact.
+/// `cmp(3, 1)` → `Gt` — 3 > 1 unsigned. Exact.
 /// Expected (hand-computed, three-way verified).
 #[test]
 fn cmp_u8_gt_arm() {
-    assert_ordering("cmp_u8(3,1)", "cmp_u8(0b0000_0011, 0b0000_0001)", "Gt");
+    assert_ordering("cmp(3,1)", "cmp(0b0000_0011, 0b0000_0001)", "Gt");
 }
 
-/// Edge: `cmp_u8(0, 255)` → `Lt` — minimum vs maximum unsigned. Exact.
+/// Edge: `cmp(0, 255)` → `Lt` — minimum vs maximum unsigned. Exact.
 /// Expected (hand-computed, three-way verified).
 #[test]
 fn cmp_u8_min_vs_max() {
-    assert_ordering("cmp_u8(0,255)", "cmp_u8(0b0000_0000, 0b1111_1111)", "Lt");
+    assert_ordering("cmp(0,255)", "cmp(0b0000_0000, 0b1111_1111)", "Lt");
 }
 
-/// `cmp_u8` involution under `reverse`: `reverse(cmp_u8(a,b)) == cmp_u8(b,a)` for a sample pair.
-/// Hand-computed: cmp_u8(1,3) = Lt; reverse(Lt) = Gt; cmp_u8(3,1) = Gt. Empirical cross-op.
+/// `cmp_u8` involution under `reverse`: `reverse(cmp(a,b)) == cmp(b,a)` for a sample pair.
+/// Hand-computed: cmp(1,3) = Lt; reverse(Lt) = Gt; cmp(3,1) = Gt. Empirical cross-op.
 #[test]
 fn cmp_u8_reverse_symmetry() {
     assert_ordering(
-        "reverse(cmp_u8(1,3))",
-        "reverse(cmp_u8(0b0000_0001, 0b0000_0011))",
+        "reverse(cmp(1,3))",
+        "reverse(cmp(0b0000_0001, 0b0000_0011))",
         "Gt",
     );
 }
 
 // ── le_u8 / ge_u8 ────────────────────────────────────────────────────────────────────────────────
 
-/// `le_u8(1, 2)` → `True` — strict less satisfies le. Exact.
+/// `le(1, 2)` → `True` — strict less satisfies le. Exact.
 #[test]
 fn le_u8_strict_less() {
-    assert_bool("le_u8(1,2)", "le_u8(0b0000_0001, 0b0000_0010)", "True");
+    assert_bool("le(1,2)", "le(0b0000_0001, 0b0000_0010)", "True");
 }
 
-/// `le_u8(2, 2)` → `True` — equal satisfies le. Exact.
+/// `le(2, 2)` → `True` — equal satisfies le. Exact.
 #[test]
 fn le_u8_equal() {
-    assert_bool("le_u8(2,2)", "le_u8(0b0000_0010, 0b0000_0010)", "True");
+    assert_bool("le(2,2)", "le(0b0000_0010, 0b0000_0010)", "True");
 }
 
-/// `le_u8(3, 2)` → `False` — greater does not satisfy le. Exact.
+/// `le(3, 2)` → `False` — greater does not satisfy le. Exact.
 #[test]
 fn le_u8_greater_is_false() {
-    assert_bool("le_u8(3,2)", "le_u8(0b0000_0011, 0b0000_0010)", "False");
+    assert_bool("le(3,2)", "le(0b0000_0011, 0b0000_0010)", "False");
 }
 
-/// `ge_u8(3, 2)` → `True` — strict greater satisfies ge. Exact.
+/// `ge(3, 2)` → `True` — strict greater satisfies ge. Exact.
 #[test]
 fn ge_u8_strict_greater() {
-    assert_bool("ge_u8(3,2)", "ge_u8(0b0000_0011, 0b0000_0010)", "True");
+    assert_bool("ge(3,2)", "ge(0b0000_0011, 0b0000_0010)", "True");
 }
 
-/// `ge_u8(2, 2)` → `True` — equal satisfies ge. Exact.
+/// `ge(2, 2)` → `True` — equal satisfies ge. Exact.
 #[test]
 fn ge_u8_equal() {
-    assert_bool("ge_u8(2,2)", "ge_u8(0b0000_0010, 0b0000_0010)", "True");
+    assert_bool("ge(2,2)", "ge(0b0000_0010, 0b0000_0010)", "True");
 }
 
-/// `ge_u8(1, 2)` → `False` — lesser does not satisfy ge. Exact.
+/// `ge(1, 2)` → `False` — lesser does not satisfy ge. Exact.
 #[test]
 fn ge_u8_lesser_is_false() {
-    assert_bool("ge_u8(1,2)", "ge_u8(0b0000_0001, 0b0000_0010)", "False");
+    assert_bool("ge(1,2)", "ge(0b0000_0001, 0b0000_0010)", "False");
 }
 
-/// Cross-op: `le_u8(a,b)` and `ge_u8(b,a)` always agree (antisymmetry). Sample: a=1, b=3.
-/// Hand-computed: le_u8(1,3) = True; ge_u8(3,1) = True. Empirical cross-op check.
+/// Cross-op: `le(a,b)` and `ge(b,a)` always agree (antisymmetry). Sample: a=1, b=3.
+/// Hand-computed: le(1,3) = True; ge(3,1) = True. Empirical cross-op check.
 #[test]
 fn le_ge_antisymmetry() {
-    assert_bool("le_u8(1,3)", "le_u8(0b0000_0001, 0b0000_0011)", "True");
-    assert_bool("ge_u8(3,1)", "ge_u8(0b0000_0011, 0b0000_0001)", "True");
+    assert_bool("le(1,3)", "le(0b0000_0001, 0b0000_0011)", "True");
+    assert_bool("ge(3,1)", "ge(0b0000_0011, 0b0000_0001)", "True");
 }
 
 // ── max_u8 / min_u8 ──────────────────────────────────────────────────────────────────────────────
@@ -321,119 +324,222 @@ fn assert_u8(label: &str, call: &str, expected_lit: &str) {
     assert_three_way(label, &src, &expected);
 }
 
-/// `max_u8(1, 3)` → `3` (0b0000_0011). Exact.
+/// `max(1, 3)` → `3` (0b0000_0011). Exact.
 /// Expected (hand-computed, three-way verified).
 #[test]
 fn max_u8_returns_larger() {
     assert_u8(
-        "max_u8(1,3)",
-        "max_u8(0b0000_0001, 0b0000_0011)",
+        "max(1,3)",
+        "max(0b0000_0001, 0b0000_0011)",
         "0b0000_0011",
     );
 }
 
-/// `max_u8(3, 1)` → `3` — order-independent. Exact.
+/// `max(3, 1)` → `3` — order-independent. Exact.
 #[test]
 fn max_u8_order_independent() {
     assert_u8(
-        "max_u8(3,1)",
-        "max_u8(0b0000_0011, 0b0000_0001)",
+        "max(3,1)",
+        "max(0b0000_0011, 0b0000_0001)",
         "0b0000_0011",
     );
 }
 
-/// `max_u8(2, 2)` → `2` — equal inputs; returns the second (b) by definition. Exact.
+/// `max(2, 2)` → `2` — equal inputs; returns the second (b) by definition. Exact.
 /// (max_u8 is defined as: Eq => b, consistent with the nodule source.)
 #[test]
 fn max_u8_equal_inputs() {
     assert_u8(
-        "max_u8(2,2)",
-        "max_u8(0b0000_0010, 0b0000_0010)",
+        "max(2,2)",
+        "max(0b0000_0010, 0b0000_0010)",
         "0b0000_0010",
     );
 }
 
-/// `min_u8(1, 3)` → `1` (0b0000_0001). Exact.
+/// `min(1, 3)` → `1` (0b0000_0001). Exact.
 /// Expected (hand-computed, three-way verified).
 #[test]
 fn min_u8_returns_smaller() {
     assert_u8(
-        "min_u8(1,3)",
-        "min_u8(0b0000_0001, 0b0000_0011)",
+        "min(1,3)",
+        "min(0b0000_0001, 0b0000_0011)",
         "0b0000_0001",
     );
 }
 
-/// `min_u8(3, 1)` → `1` — order-independent. Exact.
+/// `min(3, 1)` → `1` — order-independent. Exact.
 #[test]
 fn min_u8_order_independent() {
     assert_u8(
-        "min_u8(3,1)",
-        "min_u8(0b0000_0011, 0b0000_0001)",
+        "min(3,1)",
+        "min(0b0000_0011, 0b0000_0001)",
         "0b0000_0001",
     );
 }
 
-/// `min_u8(2, 2)` → `2` — equal inputs; returns the first (a) by definition. Exact.
+/// `min(2, 2)` → `2` — equal inputs; returns the first (a) by definition. Exact.
 /// (min_u8 is defined as: Eq => a, consistent with the nodule source.)
 #[test]
 fn min_u8_equal_inputs() {
     assert_u8(
-        "min_u8(2,2)",
-        "min_u8(0b0000_0010, 0b0000_0010)",
+        "min(2,2)",
+        "min(0b0000_0010, 0b0000_0010)",
         "0b0000_0010",
     );
 }
 
-/// Cross-op consistency: `max_u8(a,b)` and `min_u8(a,b)` together cover the domain —
-/// for unequal a,b: max_u8(1,3) = 3, min_u8(1,3) = 1. Neither equals the other. Empirical.
+/// Cross-op consistency: `max(a,b)` and `min(a,b)` together cover the domain —
+/// for unequal a,b: max(1,3) = 3, min(1,3) = 1. Neither equals the other. Empirical.
 #[test]
 fn max_min_complementary() {
     assert_u8(
-        "max_u8(1,3)",
-        "max_u8(0b0000_0001, 0b0000_0011)",
+        "max(1,3)",
+        "max(0b0000_0001, 0b0000_0011)",
         "0b0000_0011",
     );
     assert_u8(
-        "min_u8(1,3)",
-        "min_u8(0b0000_0001, 0b0000_0011)",
+        "min(1,3)",
+        "min(0b0000_0001, 0b0000_0011)",
         "0b0000_0001",
     );
 }
 
-/// Edge: `max_u8(0, 255)` → `255`; `min_u8(0, 255)` → `0`. Covers the full Binary{8} range. Exact.
+/// Edge: `max(0, 255)` → `255`; `min(0, 255)` → `0`. Covers the full Binary{8} range. Exact.
 #[test]
 fn max_min_full_range_edge() {
     assert_u8(
-        "max_u8(0,255)",
-        "max_u8(0b0000_0000, 0b1111_1111)",
+        "max(0,255)",
+        "max(0b0000_0000, 0b1111_1111)",
         "0b1111_1111",
     );
     assert_u8(
-        "min_u8(0,255)",
-        "min_u8(0b0000_0000, 0b1111_1111)",
+        "min(0,255)",
+        "min(0b0000_0000, 0b1111_1111)",
         "0b0000_0000",
     );
 }
 
-/// Consistency: `is_lt(cmp_u8(a,b))` agrees with `le_u8(a,b) && !le_u8(b,a)` — structural
-/// cross-check of cmp_u8 and le_u8 on a pair where a < b. Hand-computed: cmp_u8(1,2) = Lt,
-/// is_lt(Lt) = True; le_u8(1,2) = True, le_u8(2,1) = False (its negation is True). Empirical.
+/// Consistency: `is_lt(cmp(a,b))` agrees with `le(a,b) && !le(b,a)` — structural
+/// cross-check of cmp_u8 and le_u8 on a pair where a < b. Hand-computed: cmp(1,2) = Lt,
+/// is_lt(Lt) = True; le(1,2) = True, le(2,1) = False (its negation is True). Empirical.
 #[test]
 fn cmp_u8_is_lt_agrees_with_le_u8_strict() {
     assert_bool(
-        "is_lt(cmp_u8(1,2))",
-        "is_lt(cmp_u8(0b0000_0001, 0b0000_0010))",
+        "is_lt(cmp(1,2))",
+        "is_lt(cmp(0b0000_0001, 0b0000_0010))",
         "True",
     );
     assert_bool(
-        "le_u8(1,2)-strict",
-        "le_u8(0b0000_0001, 0b0000_0010)",
+        "le(1,2)-strict",
+        "le(0b0000_0001, 0b0000_0010)",
         "True",
     );
     assert_bool(
-        "le_u8(2,1)-inverted",
-        "le_u8(0b0000_0010, 0b0000_0001)",
+        "le(2,1)-inverted",
+        "le(0b0000_0010, 0b0000_0001)",
         "False",
+    );
+}
+
+// ── Width-generic: the SAME definitions specialised at Binary{16} (M-718) ───────────────────────────
+//
+// The same `cmp`/`le`/`ge`/`max`/`min` definitions, exercised at `Binary{16}`. The operand literals
+// carry 16 bits, so the call site pins `N=16` — proving the surface is genuinely width-POLYMORPHIC,
+// not a renamed Binary{8} monomorph. Values: 0x0001 (1), 0x0002 (2), 0x0100 (256, > any Binary{8}),
+// 0xFFFF (65535, the Binary{16} max — unrepresentable at Binary{8}).
+
+/// A `main` returning `Binary{16}`; `expected` is the reference Binary{16} literal.
+fn assert_u16(label: &str, call: &str, expected_lit: &str) {
+    let src = program(&format!("fn main() -> Binary{{16}} = {call}"));
+    let expected = format!("nodule ref\nfn main() -> Binary{{16}} = {expected_lit}");
+    assert_three_way(label, &src, &expected);
+}
+
+/// `cmp(256, 2)` at Binary{16} → `Gt` — 256 > 2 (256 is unrepresentable at Binary{8}, so this can
+/// only be the Binary{16} specialisation). Exact.
+#[test]
+fn cmp_binary16_gt_arm() {
+    assert_ordering(
+        "cmp16(256,2)",
+        "cmp(0b0000_0001_0000_0000, 0b0000_0000_0000_0010)",
+        "Gt",
+    );
+}
+
+/// `cmp(65535, 65535)` at Binary{16} → `Eq` — the Binary{16} maximum compared with itself. Exact.
+#[test]
+fn cmp_binary16_eq_at_max() {
+    assert_ordering(
+        "cmp16(max,max)",
+        "cmp(0b1111_1111_1111_1111, 0b1111_1111_1111_1111)",
+        "Eq",
+    );
+}
+
+/// `le(1, 256)` at Binary{16} → `True` — strict less across the Binary{8} boundary. Exact.
+#[test]
+fn le_binary16_across_byte_boundary() {
+    assert_bool(
+        "le16(1,256)",
+        "le(0b0000_0000_0000_0001, 0b0000_0001_0000_0000)",
+        "True",
+    );
+}
+
+/// `ge(65535, 256)` at Binary{16} → `True` — strict greater. Exact.
+#[test]
+fn ge_binary16_strict_greater() {
+    assert_bool(
+        "ge16(65535,256)",
+        "ge(0b1111_1111_1111_1111, 0b0000_0001_0000_0000)",
+        "True",
+    );
+}
+
+/// `max(1, 256)` at Binary{16} → `256` (0x0100). The result is a Binary{16} value > 255, so the
+/// Binary{8} monomorph could not produce it. Exact.
+#[test]
+fn max_binary16_returns_larger() {
+    assert_u16(
+        "max16(1,256)",
+        "max(0b0000_0000_0000_0001, 0b0000_0001_0000_0000)",
+        "0b0000_0001_0000_0000",
+    );
+}
+
+/// `min(65535, 256)` at Binary{16} → `256` (0x0100). Exact.
+#[test]
+fn min_binary16_returns_smaller() {
+    assert_u16(
+        "min16(65535,256)",
+        "min(0b1111_1111_1111_1111, 0b0000_0001_0000_0000)",
+        "0b0000_0001_0000_0000",
+    );
+}
+
+// ── Never-silent refusals over the generic surface (G2 / VR-5 / DN-42 §4) ───────────────────────────
+//
+// The width-generic helpers refuse — explicitly, at check time — a call whose width cannot be
+// determined or whose operands disagree on width. Never a silent coercion or guessed default (S1).
+
+/// Build the full `cmp.myc` + driver program and assert `check_nodule` REFUSES it.
+fn assert_check_refuses(label: &str, driver: &str) {
+    let src = program(driver);
+    let parsed = parse(&src).unwrap_or_else(|e| panic!("{label}: parse should succeed: {e}"));
+    assert!(
+        check_nodule(&parsed).is_err(),
+        "{label}: expected a never-silent width refusal, but check succeeded"
+    );
+}
+
+/// `cmp` called with a `Binary{8}` and a `Binary{16}` operand is a width-mismatch refusal — the
+/// single width param `N` cannot be both 8 and 16 (DN-42 §4 / VR-5 / S1). Never a silent widen.
+/// (The undetermined-width refusal — a width param not pinnable from the operands — is proven at the
+/// mechanism level in `width_generic.rs::width_generic_undetermined_param_refuses`.)
+#[test]
+fn cmp_mixed_widths_refuses() {
+    assert_check_refuses(
+        "cmp(Binary{8}, Binary{16})",
+        "fn main() -> Ordering = cmp(0b0000_0001, 0b0000_0001_0000_0000)",
     );
 }
