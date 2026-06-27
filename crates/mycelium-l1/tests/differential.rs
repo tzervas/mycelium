@@ -1360,7 +1360,8 @@ fn a_wild_body_that_is_not_a_host_call_form_is_an_explicit_residual() {
 fn dense_swap_is_an_explicit_residual_on_all_paths() {
     // A checker-accepted program: Binary{8} → Dense{4, F32} swap.
     // `Dense{d, s}` is accepted by the checker as a swap target (RFC-0002/RFC-0005 §4.3).
-    let src = "nodule d\nfn main() -> Dense{4, F32} = swap(0b1011_0010, to: Dense{4, F32}, policy: rt)";
+    let src =
+        "nodule d\nfn main() -> Dense{4, F32} = swap(0b1011_0010, to: Dense{4, F32}, policy: rt)";
 
     // The checker accepts this program — it is in the parsable-and-checked domain.
     let env = check_nodule(&parse(src).expect("Dense swap program must parse"))
@@ -1370,8 +1371,9 @@ fn dense_swap_is_an_explicit_residual_on_all_paths() {
     // Before the fix, this returned Ok(Node::Swap{target: Repr::Dense{..}}) while every runner
     // refused; after the fix it returns Err(Residual{..}) for consistency (G2/DN-50).
     // Note: `elaborate` returns `Result<Node, ElabError>` (not L1Error) — matched directly.
-    let elab_err = elaborate(&env, "main")
-        .expect_err("elaborate must refuse Dense swap with an explicit Residual (DN-52 FLAG-1 → RESOLVED)");
+    let elab_err = elaborate(&env, "main").expect_err(
+        "elaborate must refuse Dense swap with an explicit Residual (DN-52 FLAG-1 → RESOLVED)",
+    );
     assert!(
         matches!(elab_err, ElabError::Residual { .. }),
         "Dense swap elaborate error must be an explicit Residual, never an UnknownFn or other error; got: {elab_err}"
@@ -1443,7 +1445,10 @@ fn cross_nodule_program_runs_three_way() {
         "nodule B env must contain `helper` from A after check_phylum (RFC-0006 §4.3)"
     );
 
-    let interp = Interpreter::new(PrimRegistry::with_builtins(), Box::new(BinaryTernarySwapEngine));
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
     let prims = PrimRegistry::with_builtins();
     let engine = BinaryTernarySwapEngine;
 
@@ -1451,12 +1456,17 @@ fn cross_nodule_program_runs_three_way() {
     let l1 = Evaluator::new(env_b)
         .call("main", vec![])
         .expect("L1-eval must run the cross-nodule program (helper from A is in env_b.fns)");
-    let l1_repr = l1.as_repr().expect("L1 result must be a repr value").clone();
+    let l1_repr = l1
+        .as_repr()
+        .expect("L1 result must be a repr value")
+        .clone();
 
     // Path 2: elaborate nodule B's env to L0, then run on the reference interpreter.
     let node = elaborate(env_b, "main")
         .expect("elaborate must run on the cross-nodule merged env (DN-52 FLAG-2 → Runs)");
-    let l0 = interp.eval(&node).expect("L0-interp must run the elaborated cross-nodule term");
+    let l0 = interp
+        .eval(&node)
+        .expect("L0-interp must run the elaborated cross-nodule term");
 
     // Path 3: the same L0 term through the AOT env-machine.
     let aot = mycelium_mlir::run(&node, &prims, &engine)
