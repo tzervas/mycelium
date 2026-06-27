@@ -853,6 +853,16 @@ fn collect_match_arm_comments(
                 depth,
             )?;
         }
+        Expr::Lambda { body, .. } => {
+            collect_match_arm_comments(
+                item_idx,
+                body,
+                remaining,
+                arm_trailing,
+                fat_arrow_lines,
+                depth,
+            )?;
+        }
         // Leaves: Lit, Path — no subexpressions to recurse into.
         Expr::Lit(_) | Expr::Path(_) => {}
     }
@@ -1094,6 +1104,18 @@ fn render_expr_canonical(e: &Expr) -> String {
     match e {
         Expr::Lit(l) => render_literal(l),
         Expr::Path(p) => p.0.join("."),
+        // RFC-0037 D5 lambda. Closure semantics are deferred to M-704; this canonical render mirrors
+        // ambient.rs `print_expr` (param names + `=>` body). Lambdas are absent from the v0 corpus,
+        // so the comment-aware token path (not this fallback) drives all current conformance.
+        Expr::Lambda { params, body } => format!(
+            "lambda({}) => {}",
+            params
+                .iter()
+                .map(|p| p.name.clone())
+                .collect::<Vec<_>>()
+                .join(", "),
+            render_expr_canonical(body)
+        ),
         Expr::Let {
             name,
             ty,
@@ -1244,7 +1266,8 @@ fn render_literal(l: &mycelium_l1::ast::Literal) -> String {
     use mycelium_l1::ast::Literal;
     match l {
         Literal::Bin(s) => format!("0b{s}"),
-        Literal::Trit(s) => format!("<{s}>"),
+        // RFC-0037 D4: balanced-ternary literals render with the `0t…` prefix (the `<…>` form is retired).
+        Literal::Trit(s) => format!("0t{s}"),
         // RFC-0032 D4 (M-750): a `0x…` byte-string literal round-trips to its source form.
         Literal::Bytes(s) => format!("0x{s}"),
         Literal::Int(i) => format!("{i}"),
