@@ -287,7 +287,26 @@ pub(crate) fn subst_ty(ty: &Ty, s: &BTreeMap<String, Ty>) -> Ty {
         // RFC-0032 D3: substitute into the element type (it may mention an abstract variable in a
         // generic context); the length is a structural constant, never substituted.
         Ty::Seq(elem, n) => Ty::Seq(Box::new(subst_ty(elem, s)), *n),
-        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => {
+        // DN-42 / M-753 step-b: width-variable substitution — Binary/Ternary carrying a Width::Var
+        // look up the var name in `s` via the carrier convention: a width-var binding is stored as
+        // `var_name → Ty::Binary(Width::Lit(n))` regardless of paradigm (Binary or Ternary). On
+        // extraction, we produce Binary or Ternary as appropriate. A var with no binding is left
+        // as-is (still in scope — e.g. while checking the generic body). Never-silent (G2/VR-5).
+        Ty::Binary(Width::Var(v)) => s
+            .get(v)
+            .map(|carrier| match carrier {
+                Ty::Binary(Width::Lit(n)) => Ty::Binary(Width::Lit(*n)),
+                _ => ty.clone(), // unrecognised carrier: leave as-is (defensive; should not occur)
+            })
+            .unwrap_or_else(|| ty.clone()),
+        Ty::Ternary(Width::Var(v)) => s
+            .get(v)
+            .map(|carrier| match carrier {
+                Ty::Binary(Width::Lit(n)) => Ty::Ternary(Width::Lit(*n)), // extract width from carrier
+                _ => ty.clone(),
+            })
+            .unwrap_or_else(|| ty.clone()),
+        Ty::Binary(Width::Lit(_)) | Ty::Ternary(Width::Lit(_)) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => {
             ty.clone()
         }
     }
@@ -312,7 +331,10 @@ pub(crate) fn has_var(ty: &Ty) -> bool {
         Ty::Fn(a, r) => has_var(a) || has_var(r),
         // RFC-0032 D3: a sequence has a variable iff its element type does.
         Ty::Seq(elem, _) => has_var(elem),
-        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => false,
+        // DN-42 / M-753 step-b: a width-var is abstract — it makes the type have a variable.
+        // A concrete width-lit is not abstract (Width::Lit is already resolved).
+        Ty::Binary(Width::Var(_)) | Ty::Ternary(Width::Var(_)) => true,
+        Ty::Binary(Width::Lit(_)) | Ty::Ternary(Width::Lit(_)) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => false,
     }
 }
 
@@ -363,6 +385,41 @@ pub(crate) fn unify(
         // RFC-0032 D3: two sequences unify iff their lengths are equal and their element types
         // unify (never a silent length coercion — G2/VR-5).
         (Ty::Seq(e1, n1), Ty::Seq(e2, n2)) if n1 == n2 => unify(site, e1, e2, s),
+        // DN-42 / M-753 step-b: width-variable unification.
+        // A width var on the declared side unifies against a concrete literal width on either side.
+        // The binding is encoded as `var_name → Ty::Binary(Width::Lit(n))` in the shared subst map
+        // (carrier convention — always Binary, never Ternary, so `subst_ty` can extract the `u32`
+        // for either paradigm). A conflicting second binding is a never-silent error (VR-5/G2).
+        (Ty::Binary(Width::Var(v)), Ty::Binary(Width::Lit(n)))
+        | (Ty::Binary(Width::Var(v)), Ty::Ternary(Width::Lit(n)))
+        | (Ty::Ternary(Width::Var(v)), Ty::Binary(Width::Lit(n)))
+        | (Ty::Ternary(Width::Var(v)), Ty::Ternary(Width::Lit(n))) => {
+            let carrier = Ty::Binary(Width::Lit(*n));
+            match s.get(v) {
+                Some(bound) if *bound != carrier => Err(CheckError::new(
+                    site,
+                    format!(
+                        "width parameter `{v}` would have to be both {} and {n} —                          a width mismatch, not a coercion (DN-42 §4 / VR-5)",
+                        if let Ty::Binary(Width::Lit(m)) = bound {
+                            *m
+                        } else {
+                            0
+                        }
+                    ),
+                )),
+                _ => {
+                    s.insert(v.clone(), carrier);
+                    Ok(())
+                }
+            }
+        }
+        // Same width var on both sides unifies trivially (e.g. `Binary{N} ~ Binary{N}`).
+        (Ty::Binary(Width::Var(v1)), Ty::Binary(Width::Var(v2)))
+        | (Ty::Ternary(Width::Var(v1)), Ty::Ternary(Width::Var(v2)))
+            if v1 == v2 =>
+        {
+            Ok(())
+        }
         _ if decl == actual => Ok(()),
         _ => Err(CheckError::new(
             site,
