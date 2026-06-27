@@ -3841,7 +3841,7 @@ issues:
   - id: M-709
     title: "M-709 — feat(runtime): real scheduler — hypha/colony execution on OS threads, fairness + backpressure"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:in-progress]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:done]
     depends_on: [E7-2]
     epic: E12-1
     doc_refs: [corpus:RFC-0008, corpus:RFC-0027, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
@@ -3869,6 +3869,13 @@ issues:
       - RT2 sequentialization differential holds (in-repo property test, tagged Empirical).
       - Backpressure is demand-signalled, never a silent unbounded buffer (G2).
       - just check green for crates/mycelium-std-runtime; guarantee matrix updated.
+
+      Status (2026-06-27): DONE — OS-thread scheduler landed (crates/mycelium-std-runtime/src/
+      scheduler.rs). DoD property tests green (104-test crate suite, 0 failed): RT2 sequentialization
+      differential `parallel_run_equals_sequential_reference`; OS-thread completion
+      `scheduled_satisfiable_network_completes_on_os_threads`; bounded backpressure
+      `ready_queue_never_exceeds_capacity`. Guarantee Empirical (trial-tested). Status reconciled from
+      a stale in-progress label (code+tests had landed via the runtime waves; issues.yaml lagged).
 
   - id: M-710
     title: "M-710 — feat(l1+runtime): runtime vocabulary execution — fuse/reclaim/tier/mesh/xloc/cyst end-to-end"
@@ -3911,7 +3918,7 @@ issues:
   - id: M-711
     title: "M-711 — verify(runtime): deadlock-freedom — RFC-0008 sweep-order property checked/enforced, never-silent"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:verification, area:execution, priority:P1, status:in-progress]
+    labels: [phase:7, type:verification, area:execution, priority:P1, status:done]
     depends_on: [M-709]
     epic: E12-1
     doc_refs: [corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
@@ -3935,6 +3942,12 @@ issues:
       - Sweep-order invariant is checked across OS threads (not just cooperative path).
       - Guarantee tag: Empirical if property test covers real scheduler; Declared otherwise.
       - just check green.
+
+      Status (2026-06-27): DONE — deadlock-freedom verified never-silent: `stalled_network_is_explicit_
+      deadlock_never_hangs` + scheduled variant `scheduled_stalled_network_is_explicit_deadlock_never_
+      hangs`; sweep-order determinism `sweep_direction_is_determinism_invariant`. Guarantee honestly
+      Empirical, not Proven (`kahn_determinism_is_empirical_not_proven`, VR-5). Crate suite green
+      (104/0). Status reconciled from a stale in-progress label.
 
   - id: M-712
     title: "M-712 — feat(runtime): memory management & reclamation (RFC-0027) — reclaim model + lifetime guarantees, EXPLAIN-able"
@@ -3971,10 +3984,18 @@ issues:
       RFC-0027, then elaborate `reclaim` to the runtime reclamation path (EXPLAIN record; cascade
       respects the sweep order).
 
+      Status (2026-06-27): RFC-0027 was ratified Draft→Accepted (2026-06-25) — the RFC-0027-Accepted
+      gate in this DoD is now MET. The reclamation MECHANISM is landed Rust-first and green: RcCell +
+      ReclamationRecord/EXPLAIN sink, region/scope_region sweep-ordered teardown (crates/mycelium-std-
+      runtime, 104-test suite green). REMAINING (still status:blocked): elaborating the L1 `reclaim`
+      construct to this runtime path requires the fuse/reclaim/tier L1 surface — gated on M-667
+      (status:needs-design), the same surface M-710 awaits. Blocker corrected from "RFC-0027 Draft"
+      (now stale) to "M-667 L1 surface". Tracked jointly with M-710. (Flag, don't guess — VR-5/G2.)
+
   - id: M-713
     title: "M-713 — feat(runtime): structured-concurrency supervision + cancellation with never-silent failure propagation"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:in-progress]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-709]
     epic: E12-1
     doc_refs: [corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
@@ -3999,6 +4020,13 @@ issues:
       - A never-silent property test covers cancel + outcome collection.
       - Supervision policy (at least one restart strategy) is live and EXPLAIN-able.
       - just check green.
+
+      Status (2026-06-27): DONE — structured-concurrency supervision landed (crates/mycelium-std-
+      runtime/src/supervision.rs). DoD property tests green: cascade cancellation
+      `cancel_tree_cascades_to_every_descendant_never_silently`; outcome collection with no silent drop
+      `run_supervised_collects_every_outcome_no_silent_drop`; external propagation
+      `external_cancel_propagates_to_all_tasks`; restart policy `supervise_with_restart` live +
+      EXPLAIN-able. Guarantee Empirical. Status reconciled from a stale in-progress label.
 
   - id: E14-1
     title: "E14-1 (epic) — FFI & system interface"
