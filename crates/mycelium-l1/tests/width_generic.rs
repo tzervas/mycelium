@@ -54,7 +54,11 @@ fn assert_three_way(label: &str, src: &str, expected_repr: &Repr, expected_paylo
 
     for (path, v) in [("L1-eval", &l1), ("L0-interp", &l0), ("AOT", &aot)] {
         assert_eq!(v.repr(), expected_repr, "{label}: {path} repr mismatch");
-        assert_eq!(v.payload(), expected_payload, "{label}: {path} payload mismatch");
+        assert_eq!(
+            v.payload(),
+            expected_payload,
+            "{label}: {path} payload mismatch"
+        );
     }
     assert_eq!(
         (l1.repr(), l1.payload()),
@@ -237,7 +241,10 @@ fn width_generic_undetermined_param_refuses() {
     );
     let err = result.unwrap_err().to_string();
     assert!(
-        err.contains('N') || err.contains("width") || err.contains("undetermined") || err.contains("phantom_n"),
+        err.contains('N')
+            || err.contains("width")
+            || err.contains("undetermined")
+            || err.contains("phantom_n"),
         "error message should mention the problematic parameter or undetermined width: {err}"
     );
 }
