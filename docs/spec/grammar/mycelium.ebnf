@@ -54,7 +54,12 @@
  *)
 
 program        ::= phylum_header? nodule_block+
-nodule_block   ::= nodule_header item*
+/* DN-57: an optional `;` **terminates** a component (an item; likewise a trait/impl method —
+ * see fn_sig/fn_item callers). `;` terminates, `,` separates siblings, `:` ascribes. Optional in
+ * v0 (a never-required terminator that adds no AST node); it makes whitespace-independent /
+ * streamable source legal. The mandatory-everywhere form (the full streaming guarantee) + the
+ * nodule-header terminator + corpus migration are the DN-57 follow-on. */
+nodule_block   ::= nodule_header (item ';'?)*
 
 /* A phylum (M-662; RFC-0006; DN-06 §6) groups one-or-more nodules in a single source file under an
  * optional 'phylum <path>' header — a metadata grouping parallel to the `nodule` header (identity

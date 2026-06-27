@@ -544,3 +544,25 @@ fn fn_type_in_return_position_parses() {
         fd.sig.ret.base
     );
 }
+
+/// DN-57: an optional `;` **terminates a component** (top-level item / trait + impl method). A
+/// program written with `;` terminators parses to the **same AST** as the newline-delimited form —
+/// the `;` is a never-required terminator that adds no AST node, so it enables whitespace-independent
+/// / streamable source without changing meaning. (`,` separates siblings; `;` terminates a component.)
+#[test]
+fn dn57_optional_semicolon_terminates_components_ast_transparent() {
+    // Item terminators: two fns on one line, separated only by `;` (no newline) == the newline form.
+    let semi = "nodule d\nfn a() => Binary{8} = 0b0; fn b(x: Binary{8}) => Binary{8} = x;";
+    let plain = "nodule d\nfn a() => Binary{8} = 0b0\nfn b(x: Binary{8}) => Binary{8} = x";
+    assert_eq!(
+        parse(semi).expect("`;`-terminated items parse"),
+        parse(plain).expect("newline-delimited items parse"),
+        "the optional `;` adds no AST node — same tree either way",
+    );
+    // A trailing `;` on the final item is accepted (it terminates, it does not separate).
+    assert!(parse("nodule d\nfn a() => Binary{8} = 0b0;").is_ok());
+    // Method terminators inside trait + impl bodies parse.
+    let methods = "nodule d\ntrait T { fn f(x: Binary{8}) => Binary{8}; }\n\
+                   impl T for Binary{8} { fn f(x: Binary{8}) => Binary{8} = x; }";
+    assert!(parse(methods).is_ok(), "`;`-terminated trait/impl methods parse");
+}

@@ -161,6 +161,9 @@ impl Lexer {
                 '@' => self.lex_at(),
                 ':' => self.single(Tok::Colon),
                 ',' => self.single(Tok::Comma),
+                // `;` — the DN-57 component/operation terminator (optional in v0; whitespace-free /
+                // streamable source). `,` separates siblings within a component; `;` terminates one.
+                ';' => self.single(Tok::Semi),
                 '.' => self.single(Tok::Dot),
                 // `|` is the sum-type constructor separator (`type T = A | B`) and the bitwise-`bor`
                 // operator (RFC-0025 / M-705); `||` is the logical-`or` operator. The parser

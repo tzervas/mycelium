@@ -271,6 +271,8 @@ impl Parser {
                 }
             }
             items.push(parse_one(self)?);
+            // DN-57: an optional `;` terminates a component (whitespace-independent / streamable).
+            self.eat(&Tok::Semi);
         }
         Ok(items)
     }
@@ -398,6 +400,7 @@ impl Parser {
         // Stop at the next `nodule` (the start of a sibling nodule in a phylum) or EOF.
         while !self.at(&Tok::Eof) && !self.at(&Tok::Nodule) {
             items.push(self.parse_item()?);
+            self.eat(&Tok::Semi); // DN-57: optional component terminator
         }
         Ok(Nodule {
             path,
@@ -630,6 +633,7 @@ impl Parser {
         let mut sigs = Vec::new();
         while !self.at(&Tok::RBrace) {
             sigs.push(self.parse_fn_sig()?);
+            self.eat(&Tok::Semi); // DN-57: optional component terminator
         }
         self.expect(&Tok::RBrace, "`}` to close the trait body")?;
         Ok(TraitDecl {
@@ -917,6 +921,7 @@ impl Parser {
                 ));
             }
             methods.push(self.parse_fn_decl(Vis::Private)?);
+            self.eat(&Tok::Semi); // DN-57: optional component terminator
         }
         self.expect(&Tok::RBrace, "`}` to close the `impl` body")?;
         Ok(ImplDecl {

@@ -215,10 +215,15 @@ pub enum Tok {
     /// the `-sys` tail) still lexes as `Tok::At` + `Tok::Ident("std")`, so this special case is
     /// maximally narrow.
     AtStdSys,
-    /// `:`.
+    /// `:` — **ascription/binding** (`name : type`; DN-57 role: `:` ascribes). Unchanged.
     Colon,
-    /// `,`.
+    /// `,` — **sibling separation** within a component (args, fields, params, list elements; DN-57).
     Comma,
+    /// `;` — the **component/operation terminator** (DN-57): marks the end of a top-level item or a
+    /// trait/impl method (`fn … = …;`). **Optional in v0** (a never-required terminator — the mandatory
+    /// streamable form is the DN-57 follow-on); accepting it makes whitespace-independent / streamable
+    /// source legal. Role split: `,` separates siblings *within* a component, `;` terminates one.
+    Semi,
     /// `.`.
     Dot,
     /// `|`.
