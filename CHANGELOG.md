@@ -29,6 +29,14 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `RFC-0032` (D5 width-generics + D1/D2 prims consumed), and `DN-42` (M-753 landed) changelogs. `stdlib-api.md`
   coverage updated from "exactly one module self-hosts" to the current **eight** self-hosted nodules. No
   guarantee tag upgraded without a checked basis; specs/RFCs stay at their current status (no silent → Accepted/Enacted).
+- **Generative-construct keyword reconciled `grow → derive` (DN-38 §8.1; maintainer-confirmed).** Excavation of
+  the `consume`/`grow` lexicon found the corpus had *already* ratified the conventional **`derive`** (DN-38 §8.1,
+  Accepted 2026-06-26 — over the coined `weave`, with `via`/`reveal` companions) while DN-03 §1, M-664, and
+  RFC-0020 §4.5 still said `grow`. Append-only reconciliation closing the DN-03 §6 `grow`-vs-`derive` flag:
+  DN-03 changelog records the supersession (the §1 row kept as history per its own "new note, not a rewrite"
+  rule); RFC-0020 §4.5 gets a keyword note; **M-664 re-scoped** to `consume`/`derive`/`impl` (+ `reveal`);
+  `Lexicon-Reference.md` + `.claude/memory/lang-lexicon-syntax.md` updated. **`consume`** (affine `substrate`
+  acquisition — itself an already-conventional PL term) and **`impl`** are **unchanged**. No code (M-664 is `needs-design`).
 
 ### Added (2026-06-27: rsm Session-3 — recursive-HOF defunctionalization, M-715 closed)
 

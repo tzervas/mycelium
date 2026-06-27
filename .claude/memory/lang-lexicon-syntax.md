@@ -97,14 +97,15 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
   identifier — G2) but no construct consumes it yet: **only `phylum` and `colony`**.
 - **Ratified — not yet lexed** — a name ratified in DN-02/DN-03 but **not** in `keyword()`, so it
   currently lexes as an ordinary **identifier** (using it is *not* yet an error). The whole Runtime
-  tier plus `consume`/`grow`/`impl` are here — their lexer reservation lags the spec.
+  tier plus `consume`/`derive`/`impl` are here (the generative keyword reconciled `grow → derive`,
+  DN-38 §8.1) — their lexer reservation lags the spec.
 
 **Gap-closure tracking (2026-06-22):** the **Reserved-not-active** and **Ratified — not yet lexed**
 gaps are tracked under **E7-1** (L1 language features; issues M-656…M-664, Phase 5) and **E7-2**
 (runtime vocabulary; M-665…M-668, Phase 7). Progress: **M-656/657/658** (generics), **M-659** (traits;
 `Tok::Trait`/`Tok::Impl` active; elab **LANDED M-673** — runs three-way), **M-660** (effects; `Tok::Bang`; checker-only,
 no L0 node) — all LANDED. **Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phylum`/cross-nodule), M-663
-(grading), M-664 (`consume`/`grow`/`impl`). **E7-2 remaining:** M-667 (`fuse`/`reclaim`/`tier`), M-668
+(grading), M-664 (`consume`/`derive`/`impl`; `grow → derive` per DN-38 §8.1). **E7-2 remaining:** M-667 (`fuse`/`reclaim`/`tier`), M-668
 (R2). A status row flips only when its tracking issue lands and `just check` is green (VR-5).
 
 | Term | Layer | Status | Meaning | Normative source |
@@ -141,7 +142,7 @@ no L0 node) — all LANDED. **Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phyl
 | `F16`, `BF16`, `F32`, `F64` | Scalar kind | **Active** | Scalar type keywords for Dense | grammar |
 | `Exact`, `Proven`, `Empirical`, `Declared` | Formal / Honesty | **Active** | Guarantee strength tags; type-level index `T @ Exact` (LR-6) | RFC-0001; DN-02 §7 |
 | `consume` | L2 Surface (future) | **Ratified — not yet lexed** | Acquire exclusive ownership of an affine `substrate` (single-use semantics) | DN-03 §1 |
-| `grow` | L2 Surface (future) | **Ratified — not yet lexed** | Derive-like generative capability extension (`grow Debug for T`) | DN-03 §1 |
+| `derive` *(was `grow`)* | L2 Surface (future) | **Reconciled — not yet lexed** | Generative trait derivation (`derive Debug for T`) + `reveal` inspector. **Keyword `grow → derive`** per DN-38 §8.1 (Accepted 2026-06-26, conventional over themed `grow`); DN-03 2026-06-27 changelog records the supersession; M-664 re-scoped | DN-03 §1/§6; DN-38 §8.1 |
 | `hypha` | Runtime (future) | **Ratified — not yet lexed** | Single concurrent execution unit | DN-03 §4; RFC-0008 §4.5 |
 | `fuse` | Runtime (future) | **Ratified — not yet lexed** | Lawful state fusion: semilattice merge of two `hypha` states | DN-03 §4; RFC-0008 §4.5/RT6 |
 | `mesh` | Runtime (future) | **Ratified — not yet lexed** | Gossip/pub-sub overlay with honest probabilistic guarantees | DN-03 §4; RFC-0008 §4.5/RT5 |
