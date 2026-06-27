@@ -162,6 +162,16 @@ gap. (No AOT limitation to flag.)
 
 ## Meta — changelog
 
+- **2026-06-27 — extended by DN-51 (auto-widen-in-arithmetic + explicit `truncate`); append-only.**
+  This prim stays exactly as designed (explicit `width_cast`; widen=zero-extension `Exact`; checked
+  narrow refuses on out-of-range). **DN-51** (Accepted 2026-06-27) builds on it two ways: (1) it makes
+  the widen **automatic inside binary arithmetic** when operands differ in width (still lossless +
+  reified/`EXPLAIN`-able, so never *silent* — a deliberate, recorded softening of "casts are explicit");
+  and (2) it **adds** an explicit **`truncate`** narrow (intentional high-bit drop) *alongside* this
+  prim's checked-narrow — truncation only ever via the named op, so "never a *silent* truncation"
+  (this note's decision #5) is preserved. DN-51 does not change this prim's semantics or status; it is a
+  forward pointer. Grounding caveat carried forward: the zero-extension widen relies on **ADR-028**
+  (Binary sign-free), still *Proposed* but committed-in-practice here.
 - **2026-06-26 — Created (Proposed) — authored (M-798, E19-1 `kpr` follow-on).** Designs the
   never-silent `Binary` width-cast kernel prim `bit.width_cast` (surface `width_cast`) that wave-n1
   flagged as missing: the width-bridge `lt`/comparison needs to compare a narrow `Binary{N}` index

@@ -8,6 +8,21 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-27: rsm deliberation — DN-51 Binary width-arithmetic model; design only, no code)
+
+- **DN-51 — accuracy-first `Binary{N}` width arithmetic (maintainer-ratified in-session).** Resolves the
+  "what happens on mixed widths?" question DN-42 left as a conservative *refusal*: cross-width binary
+  operands now **auto-widen to the wider** (DN-41 zero-extension, `Exact`/lossless — accuracy-first),
+  with a **hybrid overflow** rule (promotion-only default keeps the never-silent `Overflow` refusal;
+  `widening_*` growth-to-fit is an explicit opt-in that can't overflow) and **explicit narrowing** in two
+  named forms (DN-41 checked-narrow + a new explicit `truncate` — truncation only ever via the named op,
+  so never silent). Also resolves the width-generic **guarantee model** to **per-instance** (each
+  monomorphized instance carries its actual op's tag; widen/growth/in-range `Exact`, `truncate` lossy;
+  genericity never upgrades — VR-5). Extends DN-41; **supersedes the DN-42 §4 mixed-width refusal for
+  arithmetic** (follow-on impl, E11-1/E13-1). Honestly records that it softens two prior positions
+  (auto-widen makes the cast implicit-but-reified; `truncate` adds a lossy narrow alongside the checked
+  one) without breaching never-silent. Append-only cross-refs added to DN-41/DN-42/Doc-Index. No code.
+
 ### Changed (2026-06-27: rsm S4 — documentation-alignment pass; no code change)
 
 - **Docs now reflect that generics + single-parameter traits EXECUTE (M-673), not just type-check.**
