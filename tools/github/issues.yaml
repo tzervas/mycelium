@@ -6574,3 +6574,31 @@ issues:
 
       Definition of Done (to leave Draft): an RFC + research enumerating the boundary + the one-vs-many
       options with a recommendation. NOTHING decided here.
+
+  - id: M-807
+    title: "M-807 -- parsable-vs-runnable gap analysis (capture; DN-50 / rsm F7)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:research, area:language, priority:P3, status:todo]
+    epic: E23-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-50
+      - corpus:RFC-0024
+    body: |
+      CAPTURE-ONLY (rsm F7; from the maintainer's observation during M-753). Systematically analyze,
+      parse, and determine the GAP between code that is parsable/checkable and code that is actually
+      runnable/instantiable -- the frontier where the parser/checker ACCEPTS a construct but the
+      elaborator/monomorphizer/runtime cannot yet RUN it three-way (L1-eval == L0-interp == AOT) or
+      instantiate it at a concrete type/width. Generalizes the recurring "type-checks but doesn't run"
+      pattern: traits before M-673 elaboration; iter HOFs (M-715) that type-check but don't monomorphize;
+      width-generics (M-753) that parse but don't instantiate without unify width-binding. Never-silent
+      (G2) applied to the implementation frontier: every accepted construct either runs three-way OR
+      carries an explicit Residual/FLAG -- never a silent accept-but-unrunnable. (DN-50 §OQ.)
+
+      User story: As a maintainer, I want a census of the accept<->instantiate frontier (runs /
+      explicit-Residual / silent-gap) so the implementation gap is mapped and deliberate, never mistaken
+      for "done because it parses."
+
+      Definition of Done (to leave Draft): a research/audit record fixing the "runnable" definition,
+      producing the frontier census, and recommending whether a standing gate is warranted. Generalizes
+      M-719 (one slice). NOTHING decided here.
