@@ -32,6 +32,14 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   runs OR explicit `Residual`/FLAG) — **not** a must-run gate; G2 applied to the implementation frontier
   (OQ-2). DN-50 is the whole-surface generalization of which M-719 is one slice (OQ-4). The census (M-807)
   plus the narrow gate are the remaining work; the design is decided. No code.
+- **DN-37 — object-model §8 open questions ruled (maintainer-confirmed in-session).** Q1: **no `class`
+  keyword** — objects stay `type`+traits+`via`-delegation (a `class` keyword would mislead toward OOP);
+  a flagged follow-on is to design honest, non-OOP-misleading composition sugar. Q2: build order ratified
+  (default methods + super-traits first). Q3: **defer dynamic dispatch but plan ahead** — design the
+  trusted-core `FieldSpec` ADR and implement in the near future, before complete dogfooding (not now). Q4:
+  **adopt granular item-level `pub`** (func/method/value/var individually public, Rust-precedent) —
+  supersedes the nodule-only model; a flagged follow-on is the exact granularity + surface form. Q6 row
+  polymorphism out of scope; Q5/Q7 defer to the grammar/operator wave. Design only, no code.
 
 - **DN-51 — accuracy-first `Binary{N}` width arithmetic (maintainer-ratified in-session).** Resolves the
   "what happens on mixed widths?" question DN-42 left as a conservative *refusal*: cross-width binary
