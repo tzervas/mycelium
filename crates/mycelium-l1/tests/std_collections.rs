@@ -355,8 +355,10 @@ fn main() -> Vec<Binary{8}> = Cons(0b0000_0011, Cons(0b0000_0010, Cons(0b0000_00
 
 // ── Map: map_get ───────────────────────────────────────────────────────────────────────────────────
 //
-// map_get is monomorphic at Binary{8} (eq is width-typed; M-753 width-generics not yet landed).
-// Lookup is O(n) linear scan; first match wins; missing key → None (G2).
+// map_get is WIDTH-GENERIC over the key width N and fully generic over the value type V (M-718/M-753).
+// These drivers pin N=8, V=Binary{8} from the concrete map; the Binary{16}-key and non-Binary{8}-value
+// specialisations are covered below. Lookup is O(n) linear scan; first match wins; missing key → None
+// (G2). The recursive scan is itself width-generic — enabled by the width-var pass-through in `unify`.
 
 /// `map_get(MCons(k,v, MNil), k)` → `Some(v)` — key present, hit on first entry. Declared.
 /// Expected (hand-computed, three-way verified): Map::get on {1→10} with key 1 returns Some(10).
@@ -402,7 +404,8 @@ fn main() -> Option<Binary{8}> = map_get(mk_map(), 0b0000_0010)";
 
 // ── Set: set_contains ──────────────────────────────────────────────────────────────────────────────
 //
-// set_contains is monomorphic at Binary{8} (same eq constraint as map_get). O(n) scan. Declared.
+// set_contains is WIDTH-GENERIC over the element width N (M-718/M-753; same width-typed eq constraint
+// as map_get). These drivers pin N=8; the Binary{16} specialisation is covered below. O(n) scan. Declared.
 
 /// `set_contains(SCons(x, SNil), x)` → `True` — element present. Declared.
 /// Expected (hand-computed, three-way verified): Set::contains on {1} with 1 returns True.
@@ -438,4 +441,65 @@ fn main() -> Bool = set_contains(mk_empty(), 0b0000_0001)";
     let src = program(driver);
     let expected = "nodule ref\nfn main() -> Bool = False";
     assert_three_way("set_contains(empty)", &src, expected);
+}
+
+// ── Width-generic key/value specialisations (M-718) ─────────────────────────────────────────────────
+//
+// The SAME recursive map_get/set_contains definitions, specialised to a DIFFERENT key width and to a
+// non-Binary{8} value type — proving they are genuinely width-generic over the key (not a renamed
+// Binary{8} monomorph) and fully generic over the value. The recursive linear scan over an abstract
+// width is what the `unify` width-var pass-through (M-718) enables.
+
+/// `map_get` with `Binary{16}` keys — a two-entry map scanned past the first entry (so the RECURSIVE
+/// call executes at the abstract width before monomorphizing to N=16). Key 256 → Some(512). Declared.
+/// Hand-computed: {1→10, 256→512} get 256 = Some(512); 256/512 are unrepresentable at Binary{8}.
+#[test]
+fn map_get_binary16_key_recurses() {
+    let driver = "\
+fn mk_map() -> Map<Binary{16}, Binary{16}> = MCons(0b0000_0000_0000_0001, 0b0000_0000_0000_1010, MCons(0b0000_0001_0000_0000, 0b0000_0010_0000_0000, MNil))\n\
+fn main() -> Option<Binary{16}> = map_get(mk_map(), 0b0000_0001_0000_0000)";
+    let src = program(driver);
+    // map_get({1→10, 256→512}, 256) = Some(512) = Some(0b0000_0010_0000_0000)
+    let expected = "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Binary{16}> = Some(0b0000_0010_0000_0000)";
+    assert_three_way("map_get(Binary{16} key, recurse)", &src, expected);
+}
+
+/// `map_get` with a NON-Binary{8} value type (`V = Bool`) at `Binary{8}` keys — proves the value type
+/// is fully generic (only carried, never compared). Key 2 present → Some(False). Declared.
+#[test]
+fn map_get_bool_value_is_generic() {
+    let driver = "\
+fn mk_map() -> Map<Binary{8}, Bool> = MCons(0b0000_0001, True, MCons(0b0000_0010, False, MNil))\n\
+fn main() -> Option<Bool> = map_get(mk_map(), 0b0000_0010)";
+    let src = program(driver);
+    let expected =
+        "nodule ref\ntype Option<A> = Some(A) | None\nfn main() -> Option<Bool> = Some(False)";
+    assert_three_way("map_get(Bool value)", &src, expected);
+}
+
+/// `set_contains` with `Binary{16}` elements — scanned past the first element so the RECURSIVE call
+/// runs at the abstract width before monomorphizing to N=16. Element 256 present → True. Declared.
+#[test]
+fn set_contains_binary16_recurses() {
+    let driver = "\
+fn mk_set() -> Set<Binary{16}> = SCons(0b0000_0000_0000_0001, SCons(0b0000_0001_0000_0000, SNil))\n\
+fn main() -> Bool = set_contains(mk_set(), 0b0000_0001_0000_0000)";
+    let src = program(driver);
+    let expected = "nodule ref\nfn main() -> Bool = True";
+    assert_three_way("set_contains(Binary{16}, recurse)", &src, expected);
+}
+
+/// `map_get` mixing a `Binary{8}` key map with a `Binary{16}` lookup key is a never-silent width
+/// mismatch — the key width `N` cannot be both 8 and 16 (DN-42 §4 / VR-5 / S1). Never a silent widen.
+#[test]
+fn map_get_mixed_key_widths_refuses() {
+    let driver = "\
+fn mk_map() -> Map<Binary{8}, Binary{8}> = MCons(0b0000_0001, 0b0000_1010, MNil)\n\
+fn main() -> Option<Binary{8}> = map_get(mk_map(), 0b0000_0001_0000_0000)";
+    let src = program(driver);
+    let parsed = parse(&src).expect("parse should succeed");
+    assert!(
+        check_nodule(&parsed).is_err(),
+        "expected a never-silent key-width-mismatch refusal, but check succeeded"
+    );
 }

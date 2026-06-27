@@ -213,6 +213,63 @@ fn width_generic_two_widths_same_function_16() {
     assert_three_way("two_widths get16", src, &r, &p);
 }
 
+// ── Recursive + delegated width-generics (the `unify` width-var pass-through — M-718) ─────────────
+//
+// A width-generic fn calling ANOTHER width-generic fn — or ITSELF — with a still-ABSTRACT width is the
+// case the M-718 `unify` pass-through enables: the callee's width var binds to the caller's (mirroring
+// the type-var pass-through) and is resolved to a concrete `Width::Lit` at monomorphization. Before
+// M-718 every such call was refused ("width does not determine the width"). These lock the capability
+// that the self-hosted recursive `map_get`/`set_contains` and the `le→cmp` delegation depend on.
+
+/// Width-generic DELEGATION: `wrap_id<N>` calls the width-generic `id_bits<N>` with its own abstract
+/// `x: Binary{N}`. The callee's width is determined by the enclosing scope, resolved to 8 at mono.
+/// `Empirical`: three-way agreement.
+#[test]
+fn width_generic_delegation_binary_8() {
+    let src = "nodule d\n\
+               fn id_bits<N>(x: Binary{N}) -> Binary{N} = x\n\
+               fn wrap_id<N>(x: Binary{N}) -> Binary{N} = id_bits(x)\n\
+               fn main() -> Binary{8} = wrap_id(0b1010_0101)";
+    let (r, p) = bin(8, 0b1010_0101);
+    assert_three_way("wrap_id<8>→id_bits<8>", src, &r, &p);
+}
+
+/// Width-generic delegation at a second width (Binary{16}) — proves the delegated call specialises
+/// per width, not once. `Empirical`.
+#[test]
+fn width_generic_delegation_binary_16() {
+    let src = "nodule d\n\
+               fn id_bits<N>(x: Binary{N}) -> Binary{N} = x\n\
+               fn wrap_id<N>(x: Binary{N}) -> Binary{N} = id_bits(x)\n\
+               fn main() -> Binary{16} = wrap_id(0b1100_1001_0111_1110)";
+    let (r, p) = bin(16, 0b1100_1001_0111_1110);
+    assert_three_way("wrap_id<16>→id_bits<16>", src, &r, &p);
+}
+
+/// RECURSIVE width-generic fn: `rec_id<N>(x, n)` returns `x` after `n` self-calls, recursing with its
+/// abstract `x: Binary{N}` (`n` is a concrete Binary{8} step counter). The recursive call runs at the
+/// abstract width before monomorphizing to N=8. `Empirical`: three-way agreement on the fixed point.
+#[test]
+fn width_generic_recursive_binary_8() {
+    let src = "nodule d\n\
+               fn rec_id<N>(x: Binary{N}, n: Binary{8}) -> Binary{N} = \
+               match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_bin(n, 0b0000_0001)) }\n\
+               fn main() -> Binary{8} = rec_id(0b0110_0110, 0b0000_0011)";
+    let (r, p) = bin(8, 0b0110_0110);
+    assert_three_way("rec_id<8>", src, &r, &p);
+}
+
+/// The same recursive width-generic fn at Binary{16} — the recursion is width-polymorphic. `Empirical`.
+#[test]
+fn width_generic_recursive_binary_16() {
+    let src = "nodule d\n\
+               fn rec_id<N>(x: Binary{N}, n: Binary{8}) -> Binary{N} = \
+               match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_bin(n, 0b0000_0001)) }\n\
+               fn main() -> Binary{16} = rec_id(0b1111_0000_0000_1111, 0b0000_0010)";
+    let (r, p) = bin(16, 0b1111_0000_0000_1111);
+    assert_three_way("rec_id<16>", src, &r, &p);
+}
+
 // ── Never-silent refusals (Declared / G2 / VR-5) ────────────────────────────────────────────────
 
 /// A call where the width param cannot be inferred from the value arguments is an explicit

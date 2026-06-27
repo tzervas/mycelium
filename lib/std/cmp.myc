@@ -62,13 +62,13 @@ fn ord_eq(a: Ordering, b: Ordering) -> Bool =
 // two widths (e.g. `cmp(x: Binary{8}, y: Binary{16})`) is a width-mismatch refusal, never a silent
 // coercion. The `eq`/`lt` result is `Binary{1}` regardless of `N`, so the Bool-bridge is width-free.
 //
-// FLAG (honest L1 limitation, VR-5 — not a fabrication; sibling to the recursive-HOF gap, M-715):
-// `le/ge/max/min` bottom out DIRECTLY on the `eq`/`lt` prims rather than delegating to `cmp`, because
-// a width-generic fn calling ANOTHER width-generic fn with a still-abstract width is refused by the
-// monomorphizer — the callee's width var cannot be determined from an abstract-width caller argument
-// (unify binds a width var only against a concrete `Width::Lit`, not var→var; checkty.rs `unify`).
-// Type-generic delegation IS supported (the decl-side `Ty::Var` binds to the caller's var); the
-// width-var analog is a future increment. So each helper is one self-contained `eq`/`lt` form.
+// DRY: `le/ge/max/min` are defined as projections of `cmp` — width-generic-to-width-generic delegation
+// (one width-generic fn calling another with a still-ABSTRACT width) is supported as of M-718: the
+// `unify` width-var pass-through binds the callee's width var to the caller's, mirroring the type-var
+// pass-through, so the callee's width is "determined by the enclosing scope" and resolved at
+// monomorphization. (Before M-718 this delegation was refused, so the wave-n1 `_u8` helpers inlined
+// `eq`/`lt`; that limitation is now CLOSED — the recursive width-generic `map_get`/`set_contains` ride
+// the same pass-through.)
 
 // cmp<N>: three-way comparison of two Binary{N} values (unsigned magnitude). Eq if equal, Lt if
 // a < b, Gt otherwise. Total over Binary{N} x Binary{N} for every concrete N (Exact: eq/lt are Exact
@@ -76,21 +76,19 @@ fn ord_eq(a: Ordering, b: Ordering) -> Bool =
 fn cmp<N>(a: Binary{N}, b: Binary{N}) -> Ordering =
   match eq(a, b) { 0b1 => Eq, _ => match lt(a, b) { 0b1 => Lt, _ => Gt } }
 
-// le<N>: True iff a <= b. a <= b iff NOT (b < a) — one `lt` (Exact; total over Binary{N} x Binary{N}).
+// le<N>: True iff a <= b — a projection of cmp (Exact; total over Binary{N} x Binary{N}).
 fn le<N>(a: Binary{N}, b: Binary{N}) -> Bool =
-  match lt(b, a) { 0b1 => False, _ => True }
+  match cmp(a, b) { Lt => True, Eq => True, Gt => False }
 
-// ge<N>: True iff a >= b. a >= b iff NOT (a < b) — one `lt` (Exact; total).
+// ge<N>: True iff a >= b — a projection of cmp (Exact; total).
 fn ge<N>(a: Binary{N}, b: Binary{N}) -> Bool =
-  match lt(a, b) { 0b1 => False, _ => True }
+  match cmp(a, b) { Lt => False, Eq => True, Gt => True }
 
-// max<N>: the larger of a and b. `a < b ? b : a` — on equality (a == b, bit-identical) the `_` arm
-// returns a; the choice is observationally irrelevant since equal Binary{N} values are identical
-// (Exact; total).
+// max<N>: the larger of a and b; returns b when equal (arbitrary but total — equal Binary{N} values
+// are bit-identical, so the tie-break is observationally irrelevant). Exact.
 fn max<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} =
-  match lt(a, b) { 0b1 => b, _ => a }
+  match cmp(a, b) { Lt => b, Eq => b, Gt => a }
 
-// min<N>: the smaller of a and b. `a < b ? a : b` — on equality returns b (again irrelevant: equal
-// values are identical) (Exact; total).
+// min<N>: the smaller of a and b; returns a when equal (irrelevant tie-break, as max). Exact.
 fn min<N>(a: Binary{N}, b: Binary{N}) -> Binary{N} =
-  match lt(a, b) { 0b1 => a, _ => b }
+  match cmp(a, b) { Lt => a, Eq => a, Gt => b }
