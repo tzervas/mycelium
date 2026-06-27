@@ -6356,6 +6356,41 @@ issues:
         -- depends on the @certification resolution (M-790) + the testing toolkit; may extend into its own
         surface-phase follow-on if the toolkit work outgrows this leaf (flag at design time, don't guess).
 
+  - id: M-816
+    title: "M-816 -- prune 84 deprecated stale branches to the three protected tiers (external action)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:tooling, priority:P2, status:blocked]
+    epic: E21-1
+    depends_on: []
+    doc_refs:
+      - src:CHANGELOG.md
+      - src:CLAUDE.md
+    body: |
+      MAINTAINER-DIRECTED (2026-06-27): the repo should retain only the three protected tiers.
+      Recovery artifacts live on branch `claude/recovery/stale-branch-archive-2026-06-27` under
+      `recovery/` (not on dev; see CHANGELOG "Deprecated" entry).
+      `main`/`integration`/`dev`. The 84 non-protected branches (all `claude/*` plus
+      `reconcile/main-to-integration`, `revert-532-fix/*`, `worktree-agent-*`) are stale artifacts of
+      completed/landed waves and are DEPRECATED for deletion.
+
+      BLOCKED in-session (never-silent record — G2): remote ref deletion is platform-gated for the
+      Claude-Code-web session. `git push --delete` via the session git relay -> 403; direct
+      api.github.com / github.com (token auth, egress proxy) -> 403 ("GitHub access is not enabled for
+      this session. An org admin must connect the Claude GitHub App for this organization"); GitHub MCP
+      exposes no delete-ref tool. Normal pushes work (additive); only deletion is blocked.
+
+      DONE (in-session, durable): recovery consolidated + retained on branch
+      `claude/recovery/stale-branch-archive-2026-06-27` -> `recovery/`:
+      `pruned-branches-backup.bundle` (every commit unique to the 84), `branch-prune-manifest.tsv`
+      (tip SHA + merge status per branch), `prune-stale-branches.sh` (runnable deleter), `DEPRECATION.md`.
+
+      Definition of Done (the remaining EXTERNAL step):
+      - An org admin connects the Claude GitHub App for `tzervas` with branch-deletion permission, OR
+        the maintainer runs `bash recovery/prune-stale-branches.sh` from a local clone / uses the
+        GitHub branches UI.
+      - Only `main`, `integration`, `dev`, and the recovery branch remain.
+      - Then this task -> done; the recovery branch may be removed once the maintainer is satisfied.
+
   - id: M-797
     title: "M-797 -- extract inline #[cfg(test)] tests to in-crate src/tests/ (no tests in logic files)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
