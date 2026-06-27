@@ -97,11 +97,16 @@ and monomorphize** (M-656/M-657): type-params infer by `unify`; **width-generics
 representation width a const-generic param — `Ty::Binary(Width)`/`Ty::Ternary(Width)` with `Width::{Lit,
 Var}`, bound **same-paradigm-only** (cross-paradigm + width-mismatch are explicit refusals, never a swap
 — S1), pinned per call site by `mono` (undetermined → never-silent `Residual`, never a default).
-**M-718 width-var pass-through:** `unify` binds a width var against another width var (the type-var
+**M-753 width-var pass-through:** `unify` binds a width var against another width var (the type-var
 pass-through analog), so **recursive / delegated** width-generics (e.g. self-hosted `map_get<N,V>`,
-`le<N>`→`cmp<N>`) check, with `mono` resolving the concrete width from the substituted scope. The
-recursive-HOF / RFC-0024 defunctionalization gap (recursion through a function *parameter*) is **distinct**
-and still deferred (M-715). `spore` and `wild` blocks are checker-validated per their own rules.
+`le<N>`→`cmp<N>`) check, with `mono` resolving the concrete width from the substituted scope. (M-718 is
+the *stdlib surface* that consumes this feature, not the feature itself.) The recursive-HOF / RFC-0024
+defunctionalization gap (recursion through a function *parameter*) is **distinct** and is now **CLOSED**
+(M-715, rsm S3): a HOF parameter re-passed at a recursive call site (`map(rest, f)`) is threaded through
+`mono::resolve_fn_args` as the **same** static specialization, so the self-hosted `lib/std/iter.myc`
+combinators (`map`/`filter`/`foldl`/`any`/`all`/`find`) run three-way. Still deferred (M-704): closures,
+multi-arg arrows, partial application, dynamically-flowing fn values. `spore` and `wild` blocks are
+checker-validated per their own rules.
 
 `Totality` (totality.rs): `Total | Partial`. Classification is **sound, not complete** (Foetus-style
 structural descent; totality.rs:1–23) — a wrong verdict can mis-gate `matured` promotion, but

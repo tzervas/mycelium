@@ -94,3 +94,9 @@ here). It references RFC-0019 §4.4 (monomorphization as the shared elaboration 
 r4 (the `Lam`/`App` nodes that stay unused). Multi-argument arrows, closures, and full
 defunctionalization remain future work (a v2 of this RFC). Operator-as-value (DN-23) is unblocked as a
 side benefit: a word operator (`add`) is a named fn, hence a first-class value once this lands.
+
+## 7. Changelog
+
+| Date | Status | Note |
+|---|---|---|
+| 2026-06-27 | **implemented (Rust-first), pending ratification** (status unchanged) | **M-715 (rsm S3) — recursive-HOF re-pass.** Extends §4 to the case the base landing did not close: a higher-order parameter **re-passed at a recursive call site** (e.g. `fn map(xs, f) = … Cons(f(h), map(rest, f))`). `mono::resolve_fn_args` now threads a re-passed HOF parameter through `fn_param_subst` as the **same** static specialization, so the recursive callee resolves to the already-specialized function instead of refusing with `Residual`. This makes the self-hosted `lib/std/iter.myc` combinators (`map`/`filter`/`foldl`/`any`/`all`/`find`) execute three-way (L1-eval ≡ L0-interp ≡ AOT; `crates/mycelium-l1/tests/std_iter.rs`). Still `Residual` (§5 unchanged): closures, dynamically-flowing fn values, partial application, multi-arg arrows, and a true binary `foldl` (`f: A -> B -> B`) — deferred to **M-704**. Guarantee unchanged: `Declared` contract + `Empirical` three-way agreement; nothing upgraded to `Proven` (VR-5). No `mycelium-core` node added (KC-3). RFC stays **Proposed / implemented (Rust-first), pending ratification** (not silently Accepted). |
