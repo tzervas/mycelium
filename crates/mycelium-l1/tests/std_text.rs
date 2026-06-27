@@ -563,7 +563,11 @@ fn decode_one_rejects_surrogate() {
     let expected = program(
         "fn main() -> Result<Pair<Binary{32}, Binary{8}>, Utf8Error> = Err(Surrogate(bytes_get(0xed_a0_80, 0b0000_0000)))",
     );
-    assert_three_way("decode_one(U+D800 surrogate)=Err(Surrogate)", &src, &expected);
+    assert_three_way(
+        "decode_one(U+D800 surrogate)=Err(Surrogate)",
+        &src,
+        &expected,
+    );
 }
 
 /// `decode_one(0xf4_90_80_80, 0)` → `Err(TooLarge(0xF4))` — U+110000, one above the ceiling: cp =

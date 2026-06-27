@@ -300,10 +300,11 @@ fn tneg_ternary6() {
 /// Run the generic surface program and assert all three paths REFUSE (never-silent overflow / G2).
 fn assert_eval_refuses(label: &str, driver: &str) {
     let src = program(driver);
-    let env = check_nodule(
-        &parse(&src).unwrap_or_else(|e| panic!("{label}: parse must succeed: {e}")),
-    )
-    .unwrap_or_else(|e| panic!("{label}: check must succeed (overflow is runtime, not static): {e}"));
+    let env =
+        check_nodule(&parse(&src).unwrap_or_else(|e| panic!("{label}: parse must succeed: {e}")))
+            .unwrap_or_else(|e| {
+                panic!("{label}: check must succeed (overflow is runtime, not static): {e}")
+            });
     let mono = monomorphize(&env, "main")
         .unwrap_or_else(|e| panic!("{label}: monomorphize must succeed: {e}"));
 

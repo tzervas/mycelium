@@ -27,10 +27,18 @@ use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::elab::build_registry;
 use mycelium_l1::{check_nodule, elaborate, monomorphize, parse, Evaluator};
 
-const CMP_SRC: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../lib/std/cmp.myc"));
-const MATH_SRC: &str = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../lib/std/math.myc"));
-const COLLECTIONS_SRC: &str =
-    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../lib/std/collections.myc"));
+const CMP_SRC: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../lib/std/cmp.myc"
+));
+const MATH_SRC: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../lib/std/math.myc"
+));
+const COLLECTIONS_SRC: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../lib/std/collections.myc"
+));
 
 /// One three-way conformance case: a nodule source, a `main` driver appended to it, and a reference
 /// program whose interpreted value the three paths must equal.
@@ -100,8 +108,8 @@ fn run_case(c: &Case) {
         &parse(c.reference).unwrap_or_else(|e| panic!("{label}: ref parse failed: {e}")),
     )
     .unwrap_or_else(|e| panic!("{label}: ref check failed: {e}"));
-    let ref_node =
-        elaborate(&ref_env, "main").unwrap_or_else(|e| panic!("{label}: ref elaborate failed: {e}"));
+    let ref_node = elaborate(&ref_env, "main")
+        .unwrap_or_else(|e| panic!("{label}: ref elaborate failed: {e}"));
     let expected = interp
         .eval_core(&ref_node)
         .unwrap_or_else(|e| panic!("{label}: ref eval failed: {e}"));

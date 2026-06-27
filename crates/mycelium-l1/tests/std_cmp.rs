@@ -328,95 +328,55 @@ fn assert_u8(label: &str, call: &str, expected_lit: &str) {
 /// Expected (hand-computed, three-way verified).
 #[test]
 fn max_u8_returns_larger() {
-    assert_u8(
-        "max(1,3)",
-        "max(0b0000_0001, 0b0000_0011)",
-        "0b0000_0011",
-    );
+    assert_u8("max(1,3)", "max(0b0000_0001, 0b0000_0011)", "0b0000_0011");
 }
 
 /// `max(3, 1)` → `3` — order-independent. Exact.
 #[test]
 fn max_u8_order_independent() {
-    assert_u8(
-        "max(3,1)",
-        "max(0b0000_0011, 0b0000_0001)",
-        "0b0000_0011",
-    );
+    assert_u8("max(3,1)", "max(0b0000_0011, 0b0000_0001)", "0b0000_0011");
 }
 
 /// `max(2, 2)` → `2` — equal inputs; returns the second (b) by definition. Exact.
 /// (max_u8 is defined as: Eq => b, consistent with the nodule source.)
 #[test]
 fn max_u8_equal_inputs() {
-    assert_u8(
-        "max(2,2)",
-        "max(0b0000_0010, 0b0000_0010)",
-        "0b0000_0010",
-    );
+    assert_u8("max(2,2)", "max(0b0000_0010, 0b0000_0010)", "0b0000_0010");
 }
 
 /// `min(1, 3)` → `1` (0b0000_0001). Exact.
 /// Expected (hand-computed, three-way verified).
 #[test]
 fn min_u8_returns_smaller() {
-    assert_u8(
-        "min(1,3)",
-        "min(0b0000_0001, 0b0000_0011)",
-        "0b0000_0001",
-    );
+    assert_u8("min(1,3)", "min(0b0000_0001, 0b0000_0011)", "0b0000_0001");
 }
 
 /// `min(3, 1)` → `1` — order-independent. Exact.
 #[test]
 fn min_u8_order_independent() {
-    assert_u8(
-        "min(3,1)",
-        "min(0b0000_0011, 0b0000_0001)",
-        "0b0000_0001",
-    );
+    assert_u8("min(3,1)", "min(0b0000_0011, 0b0000_0001)", "0b0000_0001");
 }
 
 /// `min(2, 2)` → `2` — equal inputs; returns the first (a) by definition. Exact.
 /// (min_u8 is defined as: Eq => a, consistent with the nodule source.)
 #[test]
 fn min_u8_equal_inputs() {
-    assert_u8(
-        "min(2,2)",
-        "min(0b0000_0010, 0b0000_0010)",
-        "0b0000_0010",
-    );
+    assert_u8("min(2,2)", "min(0b0000_0010, 0b0000_0010)", "0b0000_0010");
 }
 
 /// Cross-op consistency: `max(a,b)` and `min(a,b)` together cover the domain —
 /// for unequal a,b: max(1,3) = 3, min(1,3) = 1. Neither equals the other. Empirical.
 #[test]
 fn max_min_complementary() {
-    assert_u8(
-        "max(1,3)",
-        "max(0b0000_0001, 0b0000_0011)",
-        "0b0000_0011",
-    );
-    assert_u8(
-        "min(1,3)",
-        "min(0b0000_0001, 0b0000_0011)",
-        "0b0000_0001",
-    );
+    assert_u8("max(1,3)", "max(0b0000_0001, 0b0000_0011)", "0b0000_0011");
+    assert_u8("min(1,3)", "min(0b0000_0001, 0b0000_0011)", "0b0000_0001");
 }
 
 /// Edge: `max(0, 255)` → `255`; `min(0, 255)` → `0`. Covers the full Binary{8} range. Exact.
 #[test]
 fn max_min_full_range_edge() {
-    assert_u8(
-        "max(0,255)",
-        "max(0b0000_0000, 0b1111_1111)",
-        "0b1111_1111",
-    );
-    assert_u8(
-        "min(0,255)",
-        "min(0b0000_0000, 0b1111_1111)",
-        "0b0000_0000",
-    );
+    assert_u8("max(0,255)", "max(0b0000_0000, 0b1111_1111)", "0b1111_1111");
+    assert_u8("min(0,255)", "min(0b0000_0000, 0b1111_1111)", "0b0000_0000");
 }
 
 /// Consistency: `is_lt(cmp(a,b))` agrees with `le(a,b) && !le(b,a)` — structural
@@ -429,16 +389,8 @@ fn cmp_u8_is_lt_agrees_with_le_u8_strict() {
         "is_lt(cmp(0b0000_0001, 0b0000_0010))",
         "True",
     );
-    assert_bool(
-        "le(1,2)-strict",
-        "le(0b0000_0001, 0b0000_0010)",
-        "True",
-    );
-    assert_bool(
-        "le(2,1)-inverted",
-        "le(0b0000_0010, 0b0000_0001)",
-        "False",
-    );
+    assert_bool("le(1,2)-strict", "le(0b0000_0001, 0b0000_0010)", "True");
+    assert_bool("le(2,1)-inverted", "le(0b0000_0010, 0b0000_0001)", "False");
 }
 
 // ── Width-generic: the SAME definitions specialised at Binary{16} (M-718) ───────────────────────────
