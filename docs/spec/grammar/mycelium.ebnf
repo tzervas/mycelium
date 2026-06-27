@@ -54,7 +54,12 @@
  *)
 
 program        ::= phylum_header? nodule_block+
-nodule_block   ::= nodule_header item*
+/* DN-57: an optional `;` **terminates** a component (an item; likewise a trait/impl method —
+ * see fn_sig/fn_item callers). `;` terminates, `,` separates siblings, `:` ascribes. Optional in
+ * v0 (a never-required terminator that adds no AST node); it makes whitespace-independent /
+ * streamable source legal. The mandatory-everywhere form (the full streaming guarantee) + the
+ * nodule-header terminator + corpus migration are the DN-57 follow-on. */
+nodule_block   ::= nodule_header (item ';'?)*
 
 /* A phylum (M-662; RFC-0006; DN-06 §6) groups one-or-more nodules in a single source file under an
  * optional 'phylum <path>' header — a metadata grouping parallel to the `nodule` header (identity
@@ -106,21 +111,29 @@ paradigm       ::= 'Binary' | 'Ternary' | 'Dense' | 'VSA'
  * optional `pub` (M-662) exports the type to sibling nodules of the phylum; absent ⇒ private to its
  * nodule (visible intra-nodule, never cross-nodule without a matching `pub` + `use`). */
 type_item      ::= 'pub'? 'type' Ident type_params? '=' constructor ('|' constructor)*
-type_params    ::= '<' Ident (',' Ident)* '>'
+/* RFC-0037 D1/D2: type parameters in `[…]` (a fn type-param may carry `: bound`, RFC-0019 §4.1);
+ * const/width parameters in `{…}` (bare names — DN-42/M-753). A fn generic over both is `[T]{N}`. */
+type_params    ::= '[' Ident (',' Ident)* ']'
+const_params   ::= '{' Ident (',' Ident)* '}'
 constructor    ::= Ident ('(' type_ref (',' type_ref)* ')')?
 
 /* Trait = a named set of function signatures (LR-2; conventional term, DN-02). Optional `pub`
  * (M-662) exports the trait to sibling nodules of the phylum. */
 trait_item     ::= 'pub'? 'trait' Ident type_params? '{' fn_sig* '}'
-fn_sig         ::= 'fn' Ident '(' params? ')' '->' type_ref effects?
+fn_sig         ::= 'fn' Ident type_params? const_params? '(' params? ')' '=>' type_ref effects?
 
 /* Function. Optional 'thaw' DE-matures one definition — keeps it interpreted inside an
  * otherwise-matured scope (RFC-0017 §4.3; the rare iterate/debug escape hatch). Maturation itself is
  * NOT a fn modifier — it is declared per `nodule`/`phylum`/program in the header/manifest (RFC-0017
  * §4.1). A bare `matured fn …` is a parse error with a teaching diagnostic. */
-fn_item        ::= 'pub'? 'thaw'? 'fn' Ident type_params? '(' params? ')' '->' type_ref effects? '=' expr
+fn_item        ::= 'pub'? 'thaw'? 'fn' Ident type_params? const_params? '(' params? ')' '=>' type_ref effects? '=' expr
 params         ::= param (',' param)*
 param          ::= Ident ':' type_ref
+
+/* Anonymous function (RFC-0037 D5). The grammar is reserved and parses; full closure semantics
+ * (capture, partial application, dynamic fn-flow) are deferred to M-704 / RFC-0024 §5 — the checker
+ * and elaborator emit a never-silent Residual for it (G2). `=>` (D4) separates params from body. */
+lambda_expr    ::= 'lambda' '(' params? ')' '=>' expr
 
 /* Effect annotation (RFC-0014 §3.4/§4.5 I3; M-660). Optional `!{ … }` after the return type
  * declaring a fn's effect set; ABSENT ⇒ pure (the empty set, RFC-0014 I5), and the explicit `!{}`
@@ -146,7 +159,7 @@ base_type      ::= 'Binary'  '{' Int '}'
 ambient_params ::= Int                                        /* Binary width / Ternary trit count */
                  | Int ',' scalar                             /* Dense shape */
                  | Ident ',' Int ',' sparsity                 /* VSA shape */
-type_args      ::= '<' type_ref (',' type_ref)* '>'
+type_args      ::= '[' type_ref (',' type_ref)* ']'         /* RFC-0037 D1: type arguments in [] (was <…>) */
 sparsity       ::= 'Dense' | 'Sparse' '{' Int '}'
 scalar         ::= 'F16' | 'BF16' | 'F32' | 'F64'
 strength       ::= 'Exact' | 'Proven' | 'Empirical' | 'Declared'
@@ -253,7 +266,7 @@ ListLit        ::= '[' (expr (',' expr)*)? ']'       /* constructs a Seq{T, N} (
 BinLit         ::= '0b' ('0' | '1' | '_')+
 BytesLit       ::= '0x' HexDigit (HexDigit | '_')*   /* even hex-digit count required (RFC-0032 D4) */
 HexDigit       ::= [0-9a-fA-F]
-TritLit        ::= '<' Trit+ '>'                     /* MSB-first balanced trits, compact */
+TritLit        ::= '0t' Trit+                        /* MSB-first balanced trits (RFC-0037 D4; the `<…>` form is retired, `<` is operator-only) */
 Trit           ::= '+' | '0' | '-'
 Int            ::= '-'? [0-9]+
 Ident          ::= (Letter | '_') (Letter | [0-9] | '_')*

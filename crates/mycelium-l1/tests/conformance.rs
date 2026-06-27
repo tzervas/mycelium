@@ -56,11 +56,15 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
     ("02-swap-missing-policy.myc", "a swap is never silent"),
     ("03-unclosed-brace.myc", "expected `}` to close the match"),
     (
+        // RFC-0037 D4: a `0t…` literal whose first glyph is not a trit (`0tx`) leaves the literal
+        // empty — the lexer scans only `+`/`0`/`-`, so a non-trit glyph is a never-silent "no trits"
+        // lex refusal (the angle form `<+x->` was retired with D4).
         "04-bad-trit.myc",
-        "balanced-ternary literal has non-trit glyph",
+        "balanced-ternary literal `0t` has no trits",
     ),
     ("05-reserved-word-ident.myc", "expected an identifier"),
-    ("06-missing-arrow.myc", "expected `->` and a result type"),
+    // RFC-0037 D4: the return arrow is now `=>` (the diagnostic names the new glyph).
+    ("06-missing-arrow.myc", "expected `=>` and a result type"),
     (
         "07-empty.myc",
         "expected a `nodule` header to open the program",
@@ -127,6 +131,30 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         // M-750 / RFC-0032 D4: an empty `0x` literal (no hex digit) is a never-silent lex refusal.
         "21-empty-hex-bytes.myc",
         "no hex digits",
+    ),
+    (
+        // RFC-0037 D4: the return arrow `->` is retired in favour of `=>`. A leftover `->` (still
+        // lexed) gets the explicit teaching reject, never a silent acceptance of the old glyph (G2).
+        "22-old-arrow-retired.myc",
+        "the arrow is now `=>`, not `->`",
+    ),
+    (
+        // RFC-0037 D1: angle-bracket type params `fn f<T>(…)` are retired (use `fn f[T](…)`). With
+        // `<` now operator-only, a `<` where `(` is expected is a never-silent parse refusal (G2).
+        "23-old-fn-typeparam-retired.myc",
+        "expected `(` to open the parameter list",
+    ),
+    (
+        // RFC-0037 D1: angle-bracket type params on a `trait` (`trait T<A> { … }`) are retired (use
+        // `trait T[A]`). A `<` where the trait body `{` is expected is a never-silent refusal (G2).
+        "24-old-trait-typeparam-retired.myc",
+        "expected `{` to open the trait body",
+    ),
+    (
+        // RFC-0037 D4: the angle balanced-ternary literal `<+0->` is retired (use `0t+0-`). With `<`
+        // operator-only, the old trit at expression position is a never-silent parse refusal (G2).
+        "25-old-angle-trit-retired.myc",
+        "expected an expression",
     ),
 ];
 

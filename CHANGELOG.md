@@ -8,6 +8,25 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-27: RFC-0037 grammar enactment + DN-57 `;` terminator — the surface-grammar wave)
+
+- **RFC-0037 enacted** in `crates/mycelium-l1` + `mycelium-fmt`: the bracket kind-split (`[T]` type
+  args/params · `{N}` const/width params · repr `{}` unchanged), `=>` return + function-type arrows
+  (`->` retired, teaching-reject), `0t…` trit-literal prefix (`<…>` retired), `<` operator-only, and the
+  `lambda` keyword (parses → never-silent `Residual`; closure semantics deferred to M-704). `object`/
+  `lower` reserved (DN-53/54 pre-stage). The **whole corpus migrated** (62 `.myc` + every test corpus +
+  conformance accept/reject, with new fixtures pinning the retired forms); `mycelium.ebnf`, editor
+  grammars, and `docs/api-index/` regenerated. **Green:** `mycelium-l1` 615 + `mycelium-fmt` 11; clippy/
+  fmt/drift gates pass. (The `cargo public-api` gate needs a nightly toolchain absent here — an
+  environmental skip, not a regression.) Deferred follow-ons: D2-b short repr keywords; RFC-0025
+  operator wiring (`<`/`>` → `lt`/`gt`).
+- **DN-57 `;` component terminator (Accepted) — implemented Rust-first, optional form.** Delimiter role
+  split: **`:` ascribes · `,` separates siblings · `;` terminates a component** (top-level item /
+  trait+impl method). The optional `;` is **AST-transparent** (adds no node), so whitespace-free /
+  **streamable** source is legal alongside the human-readable multi-line form — author in the indented
+  form, flatten to a delimiter-driven stream, and back. Mandatory form + nodule-header terminator +
+  formatter emission + corpus migration are the DN-57 follow-on.
+
 ### Changed (2026-06-27: maintainer ratifications — R1/R2/R5 review gates, 8 specs → Accepted; append-only, no code)
 
 - **R1 — binding grammar.** **RFC-0037** (surface-grammar deconfliction & layout-independence),

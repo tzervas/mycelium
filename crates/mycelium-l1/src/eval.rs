@@ -569,6 +569,12 @@ impl<'e> Evaluator<'e> {
                 what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
                     .to_owned(),
             }),
+            Expr::Lambda { .. } => Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what: "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 — RFC-0037 D5 \
+                       reserves the surface, it does not yet evaluate"
+                    .to_owned(),
+            }),
 
             // `colony { hypha e1, …, hypha eN }` (RFC-0008 §4.7; M-666). The trusted base evaluates
             // the **RT2 spawn-order sequentialization** — the reference semantics of any deterministic

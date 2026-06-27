@@ -4,12 +4,12 @@
 nodule signals.ambient
 default paradigm Binary
 
-fn mask(x: {8}, m: {8}) -> {8} =
+fn mask(x: {8}, m: {8}) => {8} =
   xor(x, m)
 
-fn widen(x: {8}) -> Ternary{6} =
+fn widen(x: {8}) => Ternary{6} =
   with paradigm Ternary {
     swap(x, to: {6}, policy: roundtrip)
   }
 
-fn ones() -> {8} = 255
+fn ones() => {8} = 255

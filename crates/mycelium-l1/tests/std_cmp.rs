@@ -116,17 +116,17 @@ fn assert_three_way(label: &str, src: &str, expected_src: &str) {
 
 /// A `main` returning `Bool`; `expected` is the reference Bool literal.
 fn assert_bool(label: &str, call: &str, expected_bool: &str) {
-    let src = program(&format!("fn main() -> Bool = {call}"));
-    let expected = format!("nodule ref\nfn main() -> Bool = {expected_bool}");
+    let src = program(&format!("fn main() => Bool = {call}"));
+    let expected = format!("nodule ref\nfn main() => Bool = {expected_bool}");
     assert_three_way(label, &src, &expected);
 }
 
 /// A `main` returning `Ordering`; `expected` is the reference Ordering constructor.
 fn assert_ordering(label: &str, call: &str, expected_ord: &str) {
-    let src = program(&format!("fn main() -> Ordering = {call}"));
+    let src = program(&format!("fn main() => Ordering = {call}"));
     // The reference program redeclares Ordering so the constructor resolves.
     let expected =
-        format!("nodule ref\ntype Ordering = Lt | Eq | Gt\nfn main() -> Ordering = {expected_ord}");
+        format!("nodule ref\ntype Ordering = Lt | Eq | Gt\nfn main() => Ordering = {expected_ord}");
     assert_three_way(label, &src, &expected);
 }
 
@@ -319,8 +319,8 @@ fn le_ge_antisymmetry() {
 
 /// A `main` returning `Binary{8}`; `expected` is the reference Binary{8} literal.
 fn assert_u8(label: &str, call: &str, expected_lit: &str) {
-    let src = program(&format!("fn main() -> Binary{{8}} = {call}"));
-    let expected = format!("nodule ref\nfn main() -> Binary{{8}} = {expected_lit}");
+    let src = program(&format!("fn main() => Binary{{8}} = {call}"));
+    let expected = format!("nodule ref\nfn main() => Binary{{8}} = {expected_lit}");
     assert_three_way(label, &src, &expected);
 }
 
@@ -402,8 +402,8 @@ fn cmp_u8_is_lt_agrees_with_le_u8_strict() {
 
 /// A `main` returning `Binary{16}`; `expected` is the reference Binary{16} literal.
 fn assert_u16(label: &str, call: &str, expected_lit: &str) {
-    let src = program(&format!("fn main() -> Binary{{16}} = {call}"));
-    let expected = format!("nodule ref\nfn main() -> Binary{{16}} = {expected_lit}");
+    let src = program(&format!("fn main() => Binary{{16}} = {call}"));
+    let expected = format!("nodule ref\nfn main() => Binary{{16}} = {expected_lit}");
     assert_three_way(label, &src, &expected);
 }
 
@@ -501,6 +501,6 @@ fn assert_check_refuses(label: &str, driver: &str) {
 fn cmp_mixed_widths_refuses() {
     assert_check_refuses(
         "cmp(Binary{8}, Binary{16})",
-        "fn main() -> Ordering = cmp(0b0000_0001, 0b0000_0001_0000_0000)",
+        "fn main() => Ordering = cmp(0b0000_0001, 0b0000_0001_0000_0000)",
     );
 }

@@ -12,5 +12,5 @@ nodule tour.iter
 // cons-list case, distinct from the kernel `Bytes`/`Seq` reprs.
 type ByteList = End | More(Binary{8}, ByteList)
 
-fn checksum(bs: ByteList) -> Binary{8} =
+fn checksum(bs: ByteList) => Binary{8} =
   for b in bs, acc = 0b0000_0000 => xor(acc, b)

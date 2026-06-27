@@ -5,4 +5,4 @@
 // (instances) and `impl T { … }` (inherent methods) productions land with M-659 / M-664.
 nodule demo
 
-fn impl(x: Binary{8}) -> Binary{8} = x
+fn impl(x: Binary{8}) => Binary{8} = x

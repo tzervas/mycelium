@@ -859,6 +859,10 @@ impl<'e> Mono<'e> {
                 "wild/FFI has no L0 form in v0 — monomorphization does not change that (M-661)",
             ),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
+            Expr::Lambda { .. } => residual(
+                site,
+                "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 (RFC-0037 D5 reserves the surface)",
+            ),
             Expr::WithParadigm { .. } => residual(
                 site,
                 "internal: a `with paradigm` block reached monomorphization — the ambient \

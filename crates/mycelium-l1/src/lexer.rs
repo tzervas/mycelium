@@ -1,11 +1,9 @@
 //! The L1 lexer (RFC-0006; DN-02). Hand-written, no dependencies (house style). Produces a token
 //! stream or an explicit [`ParseError`] — never a silent skip of an unrecognized character.
 //!
-//! The one subtlety is `<`: it opens both a balanced-ternary literal (`<+0->`) and a type-argument
-//! list (`List<Ternary{6}>`). They are disambiguated by one character of lookahead — a `<`
-//! immediately followed by a trit glyph (`+`, `-`, `0`) is a ternary literal (scanned whole),
-//! anything else is the [`Tok::LAngle`] punctuation. A literal with a non-trit glyph before its
-//! closing `>` is an explicit error (`reject/04`), never a silent truncation.
+//! After RFC-0037 D1/D4 there is no `<` subtlety: type arguments use `[…]` and balanced-ternary
+//! literals use the `0t…` prefix (lexed whole like `0b…`/`0x…`), so `<` is always the operator
+//! [`Tok::LAngle`]. A `0t` with no trit glyph is an explicit error, never a silent empty literal.
 //!
 //! ## Comment capture
 //!
@@ -163,6 +161,9 @@ impl Lexer {
                 '@' => self.lex_at(),
                 ':' => self.single(Tok::Colon),
                 ',' => self.single(Tok::Comma),
+                // `;` — the DN-57 component/operation terminator (optional in v0; whitespace-free /
+                // streamable source). `,` separates siblings within a component; `;` terminates one.
+                ';' => self.single(Tok::Semi),
                 '.' => self.single(Tok::Dot),
                 // `|` is the sum-type constructor separator (`type T = A | B`) and the bitwise-`bor`
                 // operator (RFC-0025 / M-705); `||` is the logical-`or` operator. The parser
@@ -191,13 +192,17 @@ impl Lexer {
                 '^' => self.single(Tok::Caret),
                 // `&` (band) / `&&` (and): bitwise- and logical-and operators (RFC-0025 / M-705).
                 '&' => self.lex_amp(),
-                '<' => self.lex_angle_or_trit(pos)?,
+                // `<` is operator-only (RFC-0037 D1): type-args moved to `[…]` and trit literals to
+                // `0t…`, so a `<` is always the [`Tok::LAngle`] comparison/shift glyph now.
+                '<' => self.single(Tok::LAngle),
                 '=' => self.lex_eq(),
                 '-' => self.lex_dash(),
                 '0' if self.peek2() == Some('b') => self.lex_binary(pos)?,
                 // `0x…` is a byte-string literal (RFC-0032 D4, M-750), lexed whole like `0b…`. The
-                // `0x` prefix is unambiguous: a bare `0` not followed by `b`/`x` is an int.
+                // `0x` prefix is unambiguous: a bare `0` not followed by `b`/`x`/`t` is an int.
                 '0' if self.peek2() == Some('x') => self.lex_hex_bytes(pos)?,
+                // `0t…` is a balanced-ternary literal (RFC-0037 D4), lexed whole like `0b…`/`0x…`.
+                '0' if self.peek2() == Some('t') => self.lex_trit(pos)?,
                 c if c.is_ascii_digit() => self.lex_int(pos)?,
                 c if is_ident_start(c) => self.lex_ident(),
                 other => {
@@ -264,7 +269,8 @@ impl Lexer {
         self.bump(); // '-'
         if self.peek() == Some('>') {
             self.bump();
-            // `->` is the function-type arrow (RFC-0024 §3).
+            // `->` is the **retired** return arrow (RFC-0037 D4 → `=>`); still lexed as [`Tok::Arrow`]
+            // so the parser can emit a teaching reject rather than a confusing token error (G2).
             Tok::Arrow
         } else {
             // A bare `-` is the infix sub / unary neg operator (RFC-0025 / M-705); the parser
@@ -306,37 +312,31 @@ impl Lexer {
         }
     }
 
-    fn lex_angle_or_trit(&mut self, pos: Pos) -> Result<Tok, ParseError> {
-        // One-char lookahead disambiguates trit-literal from type-args open.
-        if matches!(self.peek2(), Some('+' | '-' | '0')) {
-            self.bump(); // '<'
-            let mut trits = String::new();
-            loop {
-                match self.peek() {
-                    Some('>') => {
-                        self.bump();
-                        return Ok(Tok::TritLit(trits));
-                    }
-                    Some(t @ ('+' | '-' | '0')) => {
-                        trits.push(t);
-                        self.bump();
-                    }
-                    Some(bad) => {
-                        return Err(ParseError::new(
-                            self.pos(),
-                            format!("balanced-ternary literal has non-trit glyph {bad:?}"),
-                        ))
-                    }
-                    None => {
-                        return Err(ParseError::new(
-                            pos,
-                            "unterminated balanced-ternary literal (missing '>')".to_owned(),
-                        ))
-                    }
-                }
+    /// Lex a balanced-ternary literal `0t…` (RFC-0037 D4), mirroring [`Self::lex_binary`]/
+    /// [`Self::lex_hex_bytes`]: scan the trit glyphs (`+`/`0`/`-`) verbatim into the inner string
+    /// (the same MSB-first `+0-` content the AST/parser expect). Never-silent (G2): an empty `0t`
+    /// (no trit glyph) is an explicit [`ParseError`] naming the position — never a silently-empty
+    /// literal. (The former `<…>` angle form is retired; `<` is now operator-only.)
+    fn lex_trit(&mut self, pos: Pos) -> Result<Tok, ParseError> {
+        self.bump(); // '0'
+        self.bump(); // 't'
+        let mut trits = String::new();
+        while let Some(c) = self.peek() {
+            if matches!(c, '+' | '-' | '0') {
+                trits.push(c);
+                self.bump();
+            } else {
+                break;
             }
         }
-        Ok(self.single(Tok::LAngle))
+        if trits.is_empty() {
+            return Err(ParseError::new(
+                pos,
+                "balanced-ternary literal `0t` has no trits (expected at least one of `+`/`0`/`-`)"
+                    .to_owned(),
+            ));
+        }
+        Ok(Tok::TritLit(trits))
     }
 
     fn lex_binary(&mut self, pos: Pos) -> Result<Tok, ParseError> {

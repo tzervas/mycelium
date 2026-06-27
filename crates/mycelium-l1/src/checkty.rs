@@ -134,8 +134,8 @@ impl core::fmt::Display for Ty {
             Ty::Var(v) => write!(f, "{v}"),
             // RFC-0024 §3: render as `A -> B` (right-associative). Parenthesize a function-typed
             // LHS so `(A -> B) -> C` is unambiguous in diagnostics, not `A -> B -> C` (Copilot #397).
-            Ty::Fn(a, r) if matches!(a.as_ref(), Ty::Fn(_, _)) => write!(f, "({a}) -> {r}"),
-            Ty::Fn(a, r) => write!(f, "{a} -> {r}"),
+            Ty::Fn(a, r) if matches!(a.as_ref(), Ty::Fn(_, _)) => write!(f, "({a}) => {r}"),
+            Ty::Fn(a, r) => write!(f, "{a} => {r}"),
         }
     }
 }
@@ -2143,6 +2143,10 @@ impl Cx<'_> {
                 self.err("`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)")
             }
             Expr::Colony(hyphae) => self.check_colony(scope, hyphae, expected),
+            Expr::Lambda { .. } => self.err(
+                "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 — the surface parses \
+                 (RFC-0037 D5) but does not yet type-check (never a silent accept, G2)",
+            ),
             Expr::WithParadigm { .. } => self.err(
                 "internal: a `with paradigm` block reached the checker — the ambient resolution \
                  pass should have stripped it (RFC-0012 §4.4)",

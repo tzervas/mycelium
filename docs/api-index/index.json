@@ -6464,7 +6464,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 615,
+      "line": 627,
       "summary": "A `match` arm.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6552,7 +6552,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 629,
+      "line": 641,
       "summary": "One `hypha <expr>` spawn inside a [`Expr::Colony`] block — a single concurrent execution unit",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6585,7 +6585,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 682,
+      "line": 694,
       "summary": "A binary literal from its verbatim digit/`_` string (the `…` of `0b…`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6596,7 +6596,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 690,
+      "line": 702,
       "summary": "A ternary literal from its verbatim `+0-` string, MSB-first (the inner text of `<…>`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6651,7 +6651,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 636,
+      "line": 648,
       "summary": "A pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7069,7 +7069,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4010,
+      "line": 4014,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7080,7 +7080,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 3991,
+      "line": 3995,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7322,7 +7322,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::lexer",
       "file": "crates/mycelium-l1/src/lexer.rs",
-      "line": 32,
+      "line": 30,
       "summary": "A captured `//` line comment, produced by [`lex_with_comments`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7333,7 +7333,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::lexer",
       "file": "crates/mycelium-l1/src/lexer.rs",
-      "line": 70,
+      "line": 68,
       "summary": "Tokenize `src` into a [`Spanned`] stream terminated by [`Tok::Eof`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7344,7 +7344,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::lexer",
       "file": "crates/mycelium-l1/src/lexer.rs",
-      "line": 84,
+      "line": 82,
       "summary": "Tokenize `src`, returning the [`Spanned`] token stream **and** an ordered [`Vec<Comment>`]",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7586,7 +7586,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 270,
+      "line": 288,
       "summary": "Scalar-kind keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7597,7 +7597,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 296,
+      "line": 314,
       "summary": "A token with its starting position.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7608,7 +7608,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 283,
+      "line": 301,
       "summary": "Guarantee-strength keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7630,7 +7630,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 305,
+      "line": 323,
       "summary": "Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier.",
       "guarantee_tag": null,
       "corpus_refs": []
