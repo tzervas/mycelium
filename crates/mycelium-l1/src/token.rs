@@ -130,6 +130,19 @@ pub enum Tok {
     /// `policy` — the swap policy label.
     Policy,
 
+    // --- RFC-0037 surface keywords (ratified R1, 2026-06-27) ---
+    /// `lambda` — the anonymous-function expression keyword (RFC-0037 D5). The grammar + parse target
+    /// land here; full closure semantics are **deferred to M-704/RFC-0024** — the checker/elaborator
+    /// emit a never-silent `Residual` until then (G2). Reserved so it can never be a silent identifier.
+    Lambda,
+    /// `object` — the object-composition surface keyword (DN-53, Accepted). **Reserved, not yet
+    /// active**: lexes as a keyword (G2); the `object … { … }` desugaring to `type`+`impl`+`via`
+    /// lands with M-811.
+    Object,
+    /// `lower` — the user-extensible generative-lowering rule keyword (DN-54, Accepted). **Reserved,
+    /// not yet active**: lexes as a keyword (G2); the `lower Name[…] = …` production lands with M-812.
+    Lower,
+
     // --- type keywords ---
     /// `Binary`.
     Binary,
@@ -166,7 +179,8 @@ pub enum Tok {
     /// RFC-0032 D4, M-750). The lexer enforces an even number of hex digits (one byte per two hex
     /// chars) — an odd count, a non-hex digit, or an empty `0x` is a never-silent [`crate::error::ParseError`] (G2).
     BytesLit(String),
-    /// A balanced-ternary literal `<…>` (the inner `+0-` string, MSB-first).
+    /// A balanced-ternary literal `0t…` (the inner `+0-` string, MSB-first; RFC-0037 D4 — the
+    /// former `<…>` angle form is retired, mirroring the `0b…`/`0x…` literal prefixes).
     TritLit(String),
     /// A non-negative decimal integer literal.
     Int(i64),
@@ -180,11 +194,13 @@ pub enum Tok {
     LBrace,
     /// `}`.
     RBrace,
-    /// `[`.
+    /// `[` — list-literal open (value position) **and** type-argument/parameter open (type position;
+    /// RFC-0037 D1, the kind-split target that replaced the former `<…>` type-arg role).
     LBracket,
     /// `]`.
     RBracket,
-    /// `<` (type-args open; trit literals are lexed whole).
+    /// `<` — operator-only (RFC-0037 D1: type-args moved to `[…]`; trit literals moved to `0t…`).
+    /// At expression position it is the **lt**/shift operator; it no longer opens a type-arg list.
     LAngle,
     /// `>`.
     RAngle,
@@ -242,9 +258,11 @@ pub enum Tok {
     /// RFC-0025 / M-705). `=` (single) stays the binder/definition glyph; `==` never collides
     /// with it (the binder is always a single `=`).
     EqEq,
-    /// `->`.
+    /// `->` — **retired** as the return arrow (RFC-0037 D4 → `=>`). Still lexed so the parser can
+    /// emit a teaching reject ("the return arrow is now `=>`, not `->`") instead of a confusing
+    /// token-level error — never a silent accept (G2).
     Arrow,
-    /// `=>`.
+    /// `=>` — the function/lambda return arrow (RFC-0037 D4; supersedes `->`).
     FatArrow,
     /// `!` — context-dependent: it opens the effect annotation `!{ … }` on a fn signature
     /// (RFC-0014 §3.4; M-660), and at expression position it is the unary bitwise-**not** operator
@@ -325,6 +343,12 @@ pub fn keyword(word: &str) -> Option<Tok> {
         // silent identifiers (G2); the constructs land with M-664's surface step.
         "consume" => Tok::Consume,
         "grow" => Tok::Grow,
+        // RFC-0037 surface keywords (ratified R1, 2026-06-27). `lambda` parses (semantics deferred to
+        // M-704); `object`/`lower` are reserved-not-active (constructs land with M-811/M-812). `derive`
+        // is intentionally NOT reserved here — the grow→derive reconciliation (DN-38 §8.1) owns it.
+        "lambda" => Tok::Lambda,
+        "object" => Tok::Object,
+        "lower" => Tok::Lower,
         "use" => Tok::Use,
         // `pub` — the M-662 cross-nodule export marker (reserved so it is never a silent identifier).
         "pub" => Tok::Pub,
