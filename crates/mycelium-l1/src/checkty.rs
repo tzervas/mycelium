@@ -306,9 +306,11 @@ pub(crate) fn subst_ty(ty: &Ty, s: &BTreeMap<String, Ty>) -> Ty {
                 _ => ty.clone(),
             })
             .unwrap_or_else(|| ty.clone()),
-        Ty::Binary(Width::Lit(_)) | Ty::Ternary(Width::Lit(_)) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => {
-            ty.clone()
-        }
+        Ty::Binary(Width::Lit(_))
+        | Ty::Ternary(Width::Lit(_))
+        | Ty::Dense(_, _)
+        | Ty::Substrate(_)
+        | Ty::Bytes => ty.clone(),
     }
 }
 
@@ -334,7 +336,11 @@ pub(crate) fn has_var(ty: &Ty) -> bool {
         // DN-42 / M-753 step-b: a width-var is abstract — it makes the type have a variable.
         // A concrete width-lit is not abstract (Width::Lit is already resolved).
         Ty::Binary(Width::Var(_)) | Ty::Ternary(Width::Var(_)) => true,
-        Ty::Binary(Width::Lit(_)) | Ty::Ternary(Width::Lit(_)) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => false,
+        Ty::Binary(Width::Lit(_))
+        | Ty::Ternary(Width::Lit(_))
+        | Ty::Dense(_, _)
+        | Ty::Substrate(_)
+        | Ty::Bytes => false,
     }
 }
 
@@ -386,13 +392,13 @@ pub(crate) fn unify(
         // unify (never a silent length coercion — G2/VR-5).
         (Ty::Seq(e1, n1), Ty::Seq(e2, n2)) if n1 == n2 => unify(site, e1, e2, s),
         // DN-42 / M-753 step-b: width-variable unification.
-        // A width var on the declared side unifies against a concrete literal width on either side.
+        // A width var on the declared side unifies against a concrete literal width of the SAME
+        // paradigm. Cross-paradigm (Binary var ~ Ternary lit) falls through to the mismatch error
+        // below — never a silent swap (G2/VR-5).
         // The binding is encoded as `var_name → Ty::Binary(Width::Lit(n))` in the shared subst map
-        // (carrier convention — always Binary, never Ternary, so `subst_ty` can extract the `u32`
+        // (carrier convention — always Binary, so `subst_ty` can extract the `u32`
         // for either paradigm). A conflicting second binding is a never-silent error (VR-5/G2).
         (Ty::Binary(Width::Var(v)), Ty::Binary(Width::Lit(n)))
-        | (Ty::Binary(Width::Var(v)), Ty::Ternary(Width::Lit(n)))
-        | (Ty::Ternary(Width::Var(v)), Ty::Binary(Width::Lit(n)))
         | (Ty::Ternary(Width::Var(v)), Ty::Ternary(Width::Lit(n))) => {
             let carrier = Ty::Binary(Width::Lit(*n));
             match s.get(v) {
@@ -2739,8 +2745,18 @@ impl Cx<'_> {
         for v in &callee_vars {
             if !subst.contains_key(v) {
                 return self.err(format!(
-                    "`{name}` is generic over `{v}`, but this call does not determine it — \
-                     ascribe an argument or the result (RFC-0007 §11.3, never a guessed default)"
+                    "`{name}` is generic over `{v}`, but this call does not determine it —                      ascribe an argument or the result (RFC-0007 §11.3, never a guessed default)"
+                ));
+            }
+        }
+        // DN-42 / M-753 step-b: also check that every width parameter is resolved.
+        // A width var is bound as `var_name → Ty::Binary(Width::Lit(n))` in the same subst map.
+        // An undetermined width parameter is an explicit error — never a guessed default (G2/VR-5).
+        let callee_wvars = fd.sig.width_param_names();
+        for v in &callee_wvars {
+            if !subst.contains_key(v) {
+                return self.err(format!(
+                    "`{name}` is width-generic over `{v}`, but this call does not determine the                      width — ascribe an argument (DN-42 §4, never a guessed default / VR-5)"
                 ));
             }
         }
@@ -3391,7 +3407,10 @@ impl Cx<'_> {
                     ));
                 }
                 // Length is an unsigned 32-bit count (matches `prims.rs`).
-                Ok(Some((Ty::Binary(Width::Lit(32)), app_node(head, vec![recv2]))))
+                Ok(Some((
+                    Ty::Binary(Width::Lit(32)),
+                    app_node(head, vec![recv2]),
+                )))
             }
             "seq_get" => {
                 if args.len() != 2 {
@@ -3419,7 +3438,10 @@ impl Cx<'_> {
                 }
                 let idx2 = check_index(scope, &args[1])?;
                 // A byte is a `Binary{8}` value.
-                Ok(Some((Ty::Binary(Width::Lit(8)), app_node(head, vec![recv2, idx2]))))
+                Ok(Some((
+                    Ty::Binary(Width::Lit(8)),
+                    app_node(head, vec![recv2, idx2]),
+                )))
             }
             // DN-43 (M-799): `bytes_slice(b: Bytes, start: Binary{W}, end: Binary{W}) -> Bytes` — the
             // never-silent half-open sub-slice `[start, end)` (RFC-0032 D4; the kernel prim already
@@ -3491,7 +3513,10 @@ impl Cx<'_> {
                     ));
                 };
                 // The result is `Binary{M}` (the witness width); the value→M fit is a runtime contract.
-                Ok(Some((Ty::Binary(Width::Lit(m)), app_node(head, vec![v2, w2]))))
+                Ok(Some((
+                    Ty::Binary(Width::Lit(m)),
+                    app_node(head, vec![v2, w2]),
+                )))
             }
             _ => Ok(None),
         }
@@ -3516,15 +3541,17 @@ pub(crate) fn lit_ty_of(site: &str, l: &Literal) -> Result<Ty, CheckError> {
             if n == 0 {
                 return Err(CheckError::new(site, "empty binary literal"));
             }
-            Ok(Ty::Binary(Width::Lit(u32::try_from(n).expect("digit count fits u32"))))
+            Ok(Ty::Binary(Width::Lit(
+                u32::try_from(n).expect("digit count fits u32"),
+            )))
         }
         Literal::Trit(s) => {
             if s.is_empty() {
                 return Err(CheckError::new(site, "empty ternary literal"));
             }
-            Ok(Ty::Ternary(
-                Width::Lit(u32::try_from(s.len()).expect("trit count fits u32")),
-            ))
+            Ok(Ty::Ternary(Width::Lit(
+                u32::try_from(s.len()).expect("trit count fits u32"),
+            )))
         }
         Literal::Int(_) => Err(CheckError::new(
             site,
@@ -3830,7 +3857,8 @@ impl PrimFam {
     /// The width of `t` if it is this family's representation type, else `None`.
     fn width_of(self, t: &Ty) -> Option<u32> {
         match (self, t) {
-            (PrimFam::Binary, Ty::Binary(Width::Lit(w))) | (PrimFam::Ternary, Ty::Ternary(Width::Lit(w))) => Some(*w),
+            (PrimFam::Binary, Ty::Binary(Width::Lit(w)))
+            | (PrimFam::Ternary, Ty::Ternary(Width::Lit(w))) => Some(*w),
             _ => None,
         }
     }

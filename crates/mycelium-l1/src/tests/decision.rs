@@ -198,7 +198,13 @@ fn literal_match_with_default_compiles_and_switches_with_a_default() {
     // value domain is open).
     let arms = [Pat::Lit("b:0".into()), Pat::Wild];
     let matrix: Vec<Vec<Pat>> = arms.iter().cloned().map(|p| vec![p]).collect();
-    let tree = compile(&t, &matrix, &[0, 1], &[vec![]], &[Ty::Binary(Width::Lit(1))]);
+    let tree = compile(
+        &t,
+        &matrix,
+        &[0, 1],
+        &[vec![]],
+        &[Ty::Binary(Width::Lit(1))],
+    );
     match &tree {
         Tree::Switch { cases, default, .. } => {
             assert_eq!(cases.len(), 1);

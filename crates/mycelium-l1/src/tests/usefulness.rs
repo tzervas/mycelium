@@ -88,7 +88,13 @@ fn literal_column_needs_a_default() {
     assert!(useful(&t, &rows, &[Pat::Wild], &[Ty::Binary(Width::Lit(1))]).is_some());
     // With a default, `_` is no longer useful.
     let with_default = vec![vec![Pat::Lit("b:0".into())], vec![Pat::Wild]];
-    assert!(useful(&t, &with_default, &[Pat::Wild], &[Ty::Binary(Width::Lit(1))]).is_none());
+    assert!(useful(
+        &t,
+        &with_default,
+        &[Pat::Wild],
+        &[Ty::Binary(Width::Lit(1))]
+    )
+    .is_none());
 }
 
 // --- M-641: the shared `SpecializeRow` specialization over two row types ---------------------

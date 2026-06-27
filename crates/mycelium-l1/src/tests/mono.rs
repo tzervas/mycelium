@@ -1,5 +1,5 @@
-use crate::ast::{Scalar, WidthRef};
 use crate::ast::TypeRef;
+use crate::ast::{Scalar, WidthRef};
 use crate::checkty::check_nodule;
 use crate::checkty::{has_var, Env, Ty, Width};
 use crate::elab::ElabError;
@@ -48,7 +48,10 @@ fn mangle_decl_empty_targs_is_the_identity() {
         "first_or$Binary8"
     );
     assert_eq!(mangle_ctor("Cons", &[]), "Cons");
-    assert_eq!(mangle_ctor("Cons", &[Ty::Binary(Width::Lit(8))]), "Cons$Binary8");
+    assert_eq!(
+        mangle_ctor("Cons", &[Ty::Binary(Width::Lit(8))]),
+        "Cons$Binary8"
+    );
 }
 
 #[test]
@@ -530,19 +533,19 @@ fn hof_map_mk_ok_double_specializes_to_closed_l0() {
 #[test]
 fn hof_fn_arg_joint_mangling_is_injective() {
     // `mangle_hof_decl("apply", [], [(0, "foo")])` vs `(0, "bar")` — different callees.
-    let n1 = mangle_hof_decl("apply", &[], &[(0, "foo".to_owned())]);
-    let n2 = mangle_hof_decl("apply", &[], &[(0, "bar".to_owned())]);
+    let n1 = mangle_hof_decl("apply", &[], &[], &[(0, "foo".to_owned())]);
+    let n2 = mangle_hof_decl("apply", &[], &[], &[(0, "bar".to_owned())]);
     assert_ne!(
         n1, n2,
         "different fn-args must produce different mangled names"
     );
 
     // vs. a non-HOF (no fn-args) name — must be distinct.
-    let n0 = mangle_hof_decl("apply", &[], &[]);
+    let n0 = mangle_hof_decl("apply", &[], &[], &[]);
     assert_ne!(n0, n1, "HOF and non-HOF mangles are distinct");
 
     // A fn-arg at param 0 is different from one at param 1.
-    let n3 = mangle_hof_decl("apply", &[], &[(1, "foo".to_owned())]);
+    let n3 = mangle_hof_decl("apply", &[], &[], &[(1, "foo".to_owned())]);
     assert_ne!(
         n1, n3,
         "different param indices produce different mangled names"
@@ -552,13 +555,24 @@ fn hof_fn_arg_joint_mangling_is_injective() {
     let n4 = mangle_hof_decl(
         "apply",
         &[],
+        &[],
         &[(0, "foo".to_owned()), (1, "bar".to_owned())],
     );
     assert_ne!(n1, n4, "one vs two fn-args are distinct");
 
     // With type args: distinct from without.
-    let n5 = mangle_hof_decl("map", &[Ty::Binary(Width::Lit(8))], &[(0, "double".to_owned())]);
-    let n6 = mangle_hof_decl("map", &[Ty::Binary(Width::Lit(4))], &[(0, "double".to_owned())]);
+    let n5 = mangle_hof_decl(
+        "map",
+        &[Ty::Binary(Width::Lit(8))],
+        &[],
+        &[(0, "double".to_owned())],
+    );
+    let n6 = mangle_hof_decl(
+        "map",
+        &[Ty::Binary(Width::Lit(4))],
+        &[],
+        &[(0, "double".to_owned())],
+    );
     assert_ne!(
         n5, n6,
         "different type args are distinct even at same fn-arg"
@@ -698,5 +712,88 @@ fn hof_monomorphic_apply_flip_runs_to_closed_l0() {
         v.payload(),
         &mycelium_core::Payload::Bits(vec![true, true, true, true, true, true, true, false]),
         "apply(flip, 0b0000_0001) = not(0b0000_0001) = 0b1111_1110"
+    );
+}
+
+// ── Width-generic free functions (DN-42 / M-753 step-d white-box) ──────────────────────────────
+
+/// Width-generic `id_bits<N>` at N=8 produces a specialization `id_bits$Binary8` (identity
+/// fragmentation: one distinct entry per concrete width, never a shared or unnamed alias — G2).
+/// `Empirical`: we monomorphize and assert the mangled name is present and the function is emitted.
+#[test]
+fn width_generic_monomorphizes_into_distinct_specialization_binary_8() {
+    let src = "nodule d\n\
+               fn id_bits<N>(x: Binary{N}) -> Binary{N} = x\n\
+               fn main() -> Binary{8} = id_bits(0b0000_0000)";
+    let e = env(src);
+    let mono = monomorphize(&e, "main").expect("monomorphizes");
+    assert!(
+        mono.fns.contains_key("id_bits$Binary8"),
+        "id_bits$Binary8 must be present after monomorphization at N=8; \
+         got keys: {:?}",
+        mono.fns.keys().collect::<Vec<_>>()
+    );
+    // The specialization must not have any type/width params remaining (it is monomorphic).
+    let fd = mono.fns.get("id_bits$Binary8").unwrap();
+    assert!(
+        fd.sig.params.is_empty(),
+        "monomorphized specialization must have no params: {:?}",
+        fd.sig.params
+    );
+}
+
+/// `id_bits<N>` called at N=8 and N=16 from separate entries each produces a distinct
+/// specialization. Identity fragmentation: two widths → two distinct emitted functions, never a
+/// silent alias (G2). `Empirical`: each mono run independently produces the right specialization.
+#[test]
+fn width_generic_two_widths_produce_distinct_specializations() {
+    // Two separate mono passes — one per entry — each traces the reachable width.
+    let src8 = "nodule d\n\
+               fn id_bits<N>(x: Binary{N}) -> Binary{N} = x\n\
+               fn main() -> Binary{8} = id_bits(0b0000_0000)";
+    let src16 = "nodule d\n\
+               fn id_bits<N>(x: Binary{N}) -> Binary{N} = x\n\
+               fn main() -> Binary{16} = id_bits(0b0000_0000_0000_0000)";
+
+    let e8 = env(src8);
+    let mono8 = monomorphize(&e8, "main").expect("monomorphizes at 8");
+    assert!(
+        mono8.fns.contains_key("id_bits$Binary8"),
+        "id_bits$Binary8 must be present at width-8 entry; keys: {:?}",
+        mono8.fns.keys().collect::<Vec<_>>()
+    );
+    assert!(
+        !mono8.fns.contains_key("id_bits$Binary16"),
+        "id_bits$Binary16 must NOT be present (unreachable from main@8)"
+    );
+
+    let e16 = env(src16);
+    let mono16 = monomorphize(&e16, "main").expect("monomorphizes at 16");
+    assert!(
+        mono16.fns.contains_key("id_bits$Binary16"),
+        "id_bits$Binary16 must be present at width-16 entry; keys: {:?}",
+        mono16.fns.keys().collect::<Vec<_>>()
+    );
+    assert!(
+        !mono16.fns.contains_key("id_bits$Binary8"),
+        "id_bits$Binary8 must NOT be present (unreachable from main@16)"
+    );
+
+    // The mangled names are distinct (identity fragmentation — never a silent alias).
+    assert_ne!("id_bits$Binary8", "id_bits$Binary16");
+}
+
+/// An undetermined width param (not used in value params) is an explicit refusal at the checker.
+/// `Declared`: never a guessed default width (DN-42 §4 / VR-5 / G2).
+#[test]
+fn width_generic_undetermined_param_is_a_check_error() {
+    // Width param `N` used only in the return type — cannot be inferred from call.
+    let src = "nodule d\n\
+               fn phantom_n<N>(x: Binary{8}) -> Binary{8} = x\n\
+               fn main() -> Binary{8} = phantom_n(0b0000_0000)";
+    let result = crate::checkty::check_nodule(&crate::parse(src).expect("parses"));
+    assert!(
+        result.is_err(),
+        "expected check to fail for undetermined width param `N`, but succeeded"
     );
 }

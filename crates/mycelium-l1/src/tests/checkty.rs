@@ -195,7 +195,9 @@ fn env_getters_mirror_the_public_maps() {
 }
 
 mod depth_budget_tests {
-    use crate::ast::{BaseType, Expr, FnDecl, FnSig, Item, Literal, Nodule, Path, TypeRef, WidthRef};
+    use crate::ast::{
+        BaseType, Expr, FnDecl, FnSig, Item, Literal, Nodule, Path, TypeRef, WidthRef,
+    };
     use crate::checkty::*;
 
     /// A `not(not(… not(0b0) …))` nest `depth` deep — built directly (the parser caps surface nesting

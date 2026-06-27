@@ -4,7 +4,7 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal,
-    Nodule, Paradigm, Param, Path, ParamKind, Pattern, Phylum, Scalar, Sparsity, Strength,
+    Nodule, Paradigm, Param, ParamKind, Path, Pattern, Phylum, Scalar, Sparsity, Strength,
     TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, Vis, WidthRef,
 };
 use crate::error::ParseError;
@@ -161,7 +161,6 @@ fn classify_params(
     }
     Ok(result)
 }
-
 
 impl Parser {
     fn cur(&self) -> &Tok {
@@ -762,7 +761,11 @@ impl Parser {
         } else {
             Vec::new()
         };
-        Ok(TypeParam { name, kind: crate::ast::ParamKind::Type, bounds })
+        Ok(TypeParam {
+            name,
+            kind: crate::ast::ParamKind::Type,
+            bounds,
+        })
     }
 
     /// A trait bound `Ident type_args? ('+' Ident type_args?)*` — one or more trait references
