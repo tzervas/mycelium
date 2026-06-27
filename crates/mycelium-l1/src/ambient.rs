@@ -467,6 +467,12 @@ impl Resolver {
             // value expression (deferred — E2-5/M-260), so it still resolves transparently.
             Expr::Wild(b) => Expr::Wild(b.clone()),
             Expr::Spore(b) => Expr::Spore(Box::new(self.expr(amb, site, b)?)),
+            // A `lambda` body flows transparently under the same ambient (no new ambient frame); the
+            // params carry their own explicit types. (Deferred form — M-704 — but resolved like any expr.)
+            Expr::Lambda { params, body } => Expr::Lambda {
+                params: params.clone(),
+                body: Box::new(self.expr(amb, site, body)?),
+            },
             // A `colony`'s ambient flows transparently into each `hypha` body (no new ambient frame;
             // RFC-0008 §4.7). Resolve every hypha body under the same `amb`.
             Expr::Colony(hyphae) => {
@@ -869,6 +875,15 @@ fn print_expr(e: &Expr) -> String {
         }
         Expr::Wild(b) => format!("wild {{ {} }}", print_expr(b)),
         Expr::Spore(b) => format!("spore({})", print_expr(b)),
+        Expr::Lambda { params, body } => format!(
+            "lambda({}) => {}",
+            params
+                .iter()
+                .map(|p| p.name.clone())
+                .collect::<Vec<_>>()
+                .join(", "),
+            print_expr(body)
+        ),
         Expr::Colony(hyphae) => {
             let hs: Vec<String> = hyphae
                 .iter()

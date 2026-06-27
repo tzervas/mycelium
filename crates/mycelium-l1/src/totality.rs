@@ -179,6 +179,9 @@ pub(crate) fn walk_expr(e: &Expr, f: &mut impl FnMut(&Expr)) {
         // E2-5/M-260), so it recurses transparently.
         Expr::Wild(_) => {}
         Expr::Spore(b) => walk_expr(b, f),
+        // A `lambda` body is deferred (M-704; never executes in v0), but walk it transparently so
+        // any calls inside are still seen by the call-set/totality collectors (conservative).
+        Expr::Lambda { body, .. } => walk_expr(body, f),
         // A `colony` block's calls are exactly the calls inside its `hypha` bodies (RFC-0008 §4.7).
         // Each hypha body is walked transparently so the call-set / totality collectors see them.
         Expr::Colony(hyphae) => {
@@ -360,6 +363,9 @@ fn descend_walk(
         // structural-descent check, mirroring `walk_expr` (the opacity invariant is uniform — VR-5).
         Expr::Wild(_) => {}
         Expr::Spore(b) => descend_walk(b, pos, param, smaller, ok),
+        // A `lambda` introduces its own parameter binders and is a deferred form (M-704); walk its
+        // body transparently (it adds no recursive-descent of the enclosing fn's parameter).
+        Expr::Lambda { body, .. } => descend_walk(body, pos, param, smaller, ok),
         // A `colony`'s hyphae introduce no binders; walk each body transparently so a recursive call
         // inside a hypha is still subject to the structural-descent check (A4-01).
         Expr::Colony(hyphae) => {

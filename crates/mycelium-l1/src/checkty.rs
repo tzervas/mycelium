@@ -2143,6 +2143,10 @@ impl Cx<'_> {
                 self.err("`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)")
             }
             Expr::Colony(hyphae) => self.check_colony(scope, hyphae, expected),
+            Expr::Lambda { .. } => self.err(
+                "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 — the surface parses \
+                 (RFC-0037 D5) but does not yet type-check (never a silent accept, G2)",
+            ),
             Expr::WithParadigm { .. } => self.err(
                 "internal: a `with paradigm` block reached the checker — the ambient resolution \
                  pass should have stripped it (RFC-0012 §4.4)",
