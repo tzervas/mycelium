@@ -8,6 +8,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-27: rsm Session-3 — recursive-HOF defunctionalization, M-715 closed)
+
+- **M-715 — recursive-HOF iter combinators now EXECUTE three-way (the last M-715 remainder, closed).**
+  `lib/std/iter.myc`'s `map`/`filter`/`foldl`/`any`/`all`/`find` previously type-checked but the
+  monomorphizer refused them at the recursive-HOF re-pass (`map(rest, f)` passes the HOF *parameter* `f`,
+  which `mono::resolve_fn_args` couldn't resolve as a top-level fn). **Fix** (self-contained to
+  `crates/mycelium-l1/src/mono.rs`, no kernel change — KC-3): when a fn-valued argument is a HOF value
+  parameter already bound to a static specialization in the current emit scope (`fn_param_subst`), thread
+  it through as the **same** specialization the outer call pinned — so the recursive self-call resolves to
+  e.g. `map$inc` with the fn-arg dropped (no runtime closure; RFC-0024 §4 defunctionalization, extended).
+  All six combinators now run three-way (L1-eval ≡ L0-interp ≡ AOT) over a named top-level fn argument.
+  `std_iter.rs`: 10 executable three-way tests replace the prior cannot-monomorphize smoke-checks; full
+  `mycelium-l1` suite green (610). **Still deferred as the separate M-704 item** (never faked): closures /
+  lambdas, multi-arg arrows (a true binary `foldl`), and partial application. M-715 → `done`; this
+  unblocks E13-1's core/prelude tier toward executably self-hosted stdlib.
+
 ### Added (2026-06-27: rsm Session-2 — width-generic stdlib surface, UTF-8 validity, conformance gate)
 
 - **M-718 — width-generic math/cmp + generic-key collection lookup — DONE.** Built on the M-753

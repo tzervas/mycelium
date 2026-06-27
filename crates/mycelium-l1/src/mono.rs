@@ -1448,6 +1448,18 @@ impl<'e> Mono<'e> {
                 );
             }
             let fn_name = &p.0[0];
+            // M-715 (recursive-HOF re-pass): `fn_name` may be a HOF VALUE PARAMETER already bound to a
+            // static specialization in the current emit scope (`fn_param_subst`) — e.g. the recursive
+            // call `map(rest, f)` inside `map`'s defunctionalized body re-passes the fn-param `f`, and
+            // `foldl(rest, f, f(h))` re-passes `f` alongside applying it. Thread it through as the SAME
+            // specialization the outer call pinned (RFC-0024 §4; that callee fn was already enqueued at
+            // the outer site, so no re-enqueue is needed). Checked BEFORE the top-level lookup so a
+            // parameter correctly shadows any same-named top-level fn (lexical scope). Never a silent
+            // guess (G2): an unbound fn-valued name still falls through to the explicit residual below.
+            if let Some(mangled) = self.fn_param_subst.get(fn_name) {
+                fn_args.push((idx, mangled.clone()));
+                continue;
+            }
             let callee_fd = self
                 .src
                 .fns
