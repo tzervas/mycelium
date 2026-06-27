@@ -8,6 +8,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Fixed (2026-06-27: rsm W5 freeze-ledger — a real never-silent (G2) gap found + closed)
+
+- **Dense swap was a silent elaboration-level gap — now an explicit `Residual` (G2/DN-50).** Closing the
+  DN-52 census's two `Undetermined` rows surfaced a real defect: `elaborate` was returning
+  `Ok(Node::Swap{target: Repr::Dense{..}})` while **every** execution path (L1-eval, L0-interp, AOT) refused —
+  so the DN-50 gate would misread an unrunnable construct as "Runs." Fixed in `crates/mycelium-l1/src/elab.rs`
+  (`Expr::Swap` arm): a Dense swap target now emits an explicit `Residual` so every path is consistent
+  (never-silent); the guard lifts when a Dense swap engine lands (E2-1/ADR-033). DN-52 §2.1 row →
+  **Explicit-Residual**.
+- **Cross-nodule programs confirmed to run three-way.** DN-52 §2.11 row → **Runs** (a two-nodule phylum
+  differential test; `use a.*` imports merge into `env.fns`, so `elaborate` resolves them transparently).
+- **DN-50 narrow standing gate wired (`crates/mycelium-l1/tests/runnable_gate.rs`).** 18 construct categories,
+  each asserted to elaborate to `Ok` (Runs) **or** an explicit `Residual` — never a silent accept-but-unrunnable.
+  This makes the never-silent floor an *automatic* check, advancing DN-56 freeze-condition #1. `Empirical`
+  (tests); `cargo test -p mycelium-l1` + `cargo clippy -D warnings` + `just check` green. DN-52/DN-56 §7 updated.
+
 ### Added (2026-06-27: rsm lang-design wave — 7 design artifacts via conflict-free octopus-merge swarm; no code)
 
 - **Conflict-free octopus-merge swarm (7 disjoint-file leaves) authored the language-completion design layer.**
