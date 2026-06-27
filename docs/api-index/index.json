@@ -10023,6 +10023,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::ACCEL_FEATURE_ENABLED:",
+      "kind": "const",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/accel.rs",
+      "line": 37,
+      "summary": "Whether this build was compiled with the `bitnet-accel` capability opted in (the compile-time half",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::AccelOutcome",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/accel.rs",
+      "line": 153,
+      "summary": "The result of [`accelerated_ternary_dot`]: the dot-product **value** plus the **recorded path** that",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::AotError",
       "kind": "enum",
       "crate": "mycelium-mlir",
@@ -10063,6 +10085,17 @@
       "file": "crates/mycelium-mlir/src/vr4.rs",
       "line": 114,
       "summary": "One backend's VR-4 obligation result: the backend, its dumpable-stage status, and the honest",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::BitnetCapability",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/accel.rs",
+      "line": 45,
+      "summary": "The **runtime capability** to run the BitNet packed-ternary kernel (M-728; RFC-0029 §7.4).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -10129,6 +10162,17 @@
       "file": "crates/mycelium-mlir/src/runtime.rs",
       "line": 106,
       "summary": "A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::DegradeReason",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/accel.rs",
+      "line": 127,
+      "summary": "Why the reference path was chosen instead of the accelerator — the recorded, inspectable basis for",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -10448,6 +10492,83 @@
       "file": "crates/mycelium-mlir/src/channel.rs",
       "line": 128,
       "summary": "Why a [`Sender::try_send`] could not complete *right now*.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::accel",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/lib.rs",
+      "line": 53,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::accel::AccelOutcome::explain",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::accel::AccelOutcome",
+      "file": "crates/mycelium-mlir/src/accel.rs",
+      "line": 77,
+      "summary": "An `EXPLAIN` of the capability state — *why* the accelerated path will or won't run, so the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::accel::AccelOutcome::was_accelerated",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::accel::AccelOutcome",
+      "file": "crates/mycelium-mlir/src/accel.rs",
+      "line": 163,
+      "summary": "Whether the accelerated kernel produced this value (vs.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability::detect",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::accel::BitnetCapability",
+      "file": "crates/mycelium-mlir/src/accel.rs",
+      "line": 58,
+      "summary": "**Detect** the BitNet acceleration capability — the explicit runtime query (RFC-0029 §7.4:",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability::is_accelerated",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::accel::BitnetCapability",
+      "file": "crates/mycelium-mlir/src/accel.rs",
+      "line": 69,
+      "summary": "Whether the **accelerated** path will be taken: the build opted in **and** the runtime",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::accel::Path",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::accel",
+      "file": "crates/mycelium-mlir/src/accel.rs",
+      "line": 114,
+      "summary": "Which execution path produced an [`AccelOutcome`]'s value — recorded so a degradation is **never",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::accelerated_ternary_dot",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/accel.rs",
+      "line": 207,
+      "summary": "**Run the ternary dot product `Σ digit(wᵢ)·xᵢ` through the BitNet capability gate** (M-728;",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -11189,6 +11310,61 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_mlir::mode",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/lib.rs",
+      "line": 63,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ExecMode::ALL:",
+      "kind": "const",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::mode::ExecMode",
+      "file": "crates/mycelium-mlir/src/mode.rs",
+      "line": 77,
+      "summary": "Every named mode, in a stable order — for tooling, differential parameterization, and an",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ExecMode::is_always_available",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::mode::ExecMode",
+      "file": "crates/mycelium-mlir/src/mode.rs",
+      "line": 95,
+      "summary": "Whether this mode can run **without an external toolchain**.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ExecMode::name",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::mode::ExecMode",
+      "file": "crates/mycelium-mlir/src/mode.rs",
+      "line": 82,
+      "summary": "The stable, human-readable name of this mode (for `EXPLAIN`/diagnostics/logs — so a record of",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::mode::run",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::mode",
+      "file": "crates/mycelium-mlir/src/mode.rs",
+      "line": 194,
+      "summary": "**Run `node` under the explicitly named `mode`** (M-727; RFC-0029 §7.3) — the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_mlir::pack",
       "kind": "mod",
       "crate": "mycelium-mlir",
@@ -11229,6 +11405,336 @@
       "file": "crates/mycelium-mlir/src/pack.rs",
       "line": 201,
       "summary": "Encode `trits` to bytes under `scheme` (bijective; the AOT path's physical buffer).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir",
+      "file": "crates/mycelium-mlir/src/lib.rs",
+      "line": 65,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Pass",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 397,
+      "summary": "Which optimization pass produced a [`TransformRecord`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Pass::name",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::Pass",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 409,
+      "summary": "The pass's stable short name (for the EXPLAIN dump / queries).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassAlt",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 126,
+      "summary": "One alternative of a [`PassRhs::Match`] — the pass-IR mirror of [`AnfAlt`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassBinding",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 147,
+      "summary": "One lowered binding in the pass IR.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassRhs",
+      "kind": "enum",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 57,
+      "summary": "A right-hand side in the pass IR — a structural mirror of [`mycelium_core::lower::Rhs`], owned so",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Program",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 160,
+      "summary": "A flat (A-normal-form) pass-IR program: an ordered binding list and a result operand.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Program::from_anf",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::Program",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 171,
+      "summary": "Lift the genuine lowered IR ([`Anf`]) into the owned pass IR (read via the public accessors).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Program::is_empty",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::Program",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 211,
+      "summary": "Whether there are no bindings.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Program::len",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::Program",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 205,
+      "summary": "The number of bindings (for tests/tooling).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Program::lower",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::Program",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 181,
+      "summary": "Lower a Core IR [`Node`] to the pass IR, by lowering to ANF first (`lower::lower_to_anf`) then",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Program::to_node",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::Program",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 191,
+      "summary": "Reconstruct a Core IR [`Node`] from this pass IR (the inverse of [`Program::lower`] over the",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 457,
+      "summary": "The reified, queryable log of every transform a pass (or the pipeline) performed — the EXPLAIN",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::by_pass",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::TransformLog",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 494,
+      "summary": "The records produced by a given pass (an EXPLAIN query: \"show me every CSE decision\").",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::by_site",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::TransformLog",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 501,
+      "summary": "The records that acted on a given binding name (an EXPLAIN query: \"why did binding `%3`",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::entries",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::TransformLog",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 476,
+      "summary": "Every recorded transform, in the order performed.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::explain",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::TransformLog",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 519,
+      "summary": "A multi-line EXPLAIN dump of every recorded decision (one `TransformRecord` per line).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::extend",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::TransformLog",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 513,
+      "summary": "Merge another log's entries into this one, preserving order (used by the pipeline to",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::fired",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::TransformLog",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 507,
+      "summary": "Whether any record was produced by `pass` (a quick \"did inlining fire?\" query).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::new",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::TransformLog",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 464,
+      "summary": "An empty log.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::record",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes::TransformLog",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 470,
+      "summary": "Record one transform decision (the only mutator — every change flows through here, so a pass",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformRecord",
+      "kind": "struct",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 428,
+      "summary": "One reified optimization decision — the `(pass, rule, site, before → after, reason)` tuple of",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::cse",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 43,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::cse",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/cse.rs",
+      "line": 36,
+      "summary": "Run the CSE pass: a pure `Program -> (Program, TransformLog)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::dce",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 44,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::dce",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/dce.rs",
+      "line": 37,
+      "summary": "Run the DCE pass: a pure `Program -> (Program, TransformLog)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::inline",
+      "kind": "mod",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 45,
+      "summary": null,
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::inline",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/inline.rs",
+      "line": 40,
+      "summary": "Run the inlining pass: a pure `Program -> (Program, TransformLog)`.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::optimize",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 549,
+      "summary": "Lower a [`Node`], run the full pipeline, and return the optimized pass IR + the merged log.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_mlir::passes::run_pipeline",
+      "kind": "fn",
+      "crate": "mycelium-mlir",
+      "module": "mycelium_mlir::passes",
+      "file": "crates/mycelium-mlir/src/passes/mod.rs",
+      "line": 535,
+      "summary": "Run the full sanctioned pipeline — **inline → CSE → DCE** — over a pass-IR program, accumulating",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -31959,6 +32465,10 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_mlir::AccelPath",
+      "reason": "definition not found via regex heuristic (kind='enum', name='AccelPath') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_mlir::Task::Error",
       "reason": "definition not found via regex heuristic (kind='type', name='Error') — possibly macro-generated or cfg-gated"
     },
@@ -31969,6 +32479,138 @@
     {
       "symbol": "mycelium_mlir::Task::poll",
       "reason": "definition not found via regex heuristic (kind='fn', name='poll') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::ACCEL_FEATURE_ENABLED:",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::ACCEL_FEATURE_ENABLED:` at crates/mycelium-mlir/src/accel.rs:37 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::AccelOutcome",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::AccelOutcome` at crates/mycelium-mlir/src/accel.rs:153 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::AccelOutcome::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::AccelOutcome::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::AccelOutcome::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::AccelOutcome::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::AccelOutcome::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::AccelOutcome::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::BitnetCapability` at crates/mycelium-mlir/src/accel.rs:45 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability::explain",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::accel::AccelOutcome::explain` at crates/mycelium-mlir/src/accel.rs:77 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability::explain",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::accel::AccelOutcome::explain` at crates/mycelium-mlir/src/accel.rs:77 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::BitnetCapability::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::DegradeReason",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::DegradeReason` at crates/mycelium-mlir/src/accel.rs:127 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::DegradeReason::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::DegradeReason::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::DegradeReason::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::DegradeReason::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::DegradeReason::explain",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::accel::AccelOutcome::explain` at crates/mycelium-mlir/src/accel.rs:77 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::DegradeReason::explain",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::accel::AccelOutcome::explain` at crates/mycelium-mlir/src/accel.rs:77 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::DegradeReason::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::DegradeReason::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::Path::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::Path::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::Path::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::Path::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::Path::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::Path::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::accel::accelerated_ternary_dot",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::accelerated_ternary_dot` at crates/mycelium-mlir/src/accel.rs:207 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::aot::default_depth_budget",
@@ -32623,6 +33265,62 @@
       "reason": "dedup-alias: same definition as `mycelium_mlir::emit_llvm_ir` at crates/mycelium-mlir/src/llvm.rs:1924 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_mlir::mode::ExecMode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ExecMode::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ExecMode::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ExecMode::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ExecMode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ExecMode::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ExecMode::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ExecMode::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ModeError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ModeError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ModeError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ModeError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ModeError::source",
+      "reason": "definition not found via regex heuristic (kind='fn', name='source') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::mode::ModeError::source",
+      "reason": "definition not found via regex heuristic (kind='fn', name='source') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_mlir::needed_bytes_for",
       "reason": "definition not found via regex heuristic (kind='fn', name='needed_bytes_for') — possibly macro-generated or cfg-gated"
     },
@@ -32653,6 +33351,126 @@
     {
       "symbol": "mycelium_mlir::pack::unpack_trits",
       "reason": "dedup-alias: same definition as `mycelium_mlir::unpack_trits` at crates/mycelium-mlir/src/pack.rs:243 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Pass::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Pass::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Pass::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Pass::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Pass::hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassAlt::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassAlt::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassAlt::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassBinding::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassBinding::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassBinding::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassRhs::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassRhs::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::PassRhs::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Program::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Program::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::Program::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::default",
+      "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::is_empty",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::passes::Program::is_empty` at crates/mycelium-mlir/src/passes/mod.rs:211 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformLog::len",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::passes::Program::len` at crates/mycelium-mlir/src/passes/mod.rs:205 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformRecord::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformRecord::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::TransformRecord::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::cse::cse",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::passes::cse` at crates/mycelium-mlir/src/passes/cse.rs:36 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::dce::dce",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::passes::dce` at crates/mycelium-mlir/src/passes/dce.rs:37 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_mlir::passes::inline::inline",
+      "reason": "dedup-alias: same definition as `mycelium_mlir::passes::inline` at crates/mycelium-mlir/src/passes/inline.rs:40 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::rc_plan::RcPlanError",
@@ -32737,6 +33555,10 @@
     {
       "symbol": "mycelium_mlir::run",
       "reason": "ambiguous: short name 'run' is defined in multiple modules; attributed to crates/mycelium-mlir/src/aot.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_mlir::run_mode",
+      "reason": "definition not found via regex heuristic (kind='fn', name='run_mode') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_mlir::runtime::Colony",
