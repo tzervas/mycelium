@@ -15,11 +15,20 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   params/args + list literals; **`{N}` = const/width params AND repr/size types — `Binary{8}` stays `Binary{8}`**
   (no repr migration; the landed `Ty::Binary(Width)` surface is preserved); `<>` = operators only; `=>` return
   arrow; `0t` trit literals; `<=`/`>=` → `lte`/`gte`. A const/width param is declared `f{N}` (explicit, per
-  kind), a type param `f[T]`. **§4-Q2** (the precondition for committing the grammar) is **resolved** by the
-  newline/adjacency rule (`Name[` same-line = type-app; line-leading `[` = list; no `arr[i]` indexing). Rationale
-  recorded in DN-31's revision history (eliminates the largest migration; zero new `{}` ambiguity; honest
-  `[type]`-vs-`{const}` kind encoding; avoids the Rust `Name{block}` footgun). DN-31 stays **Draft**; the binding
-  RFC/grammar-supersession epic is the enacting act. No code.
+  kind), a type param `f[T]`. **Repr-keyword shortening (proposed):** `bin{N}`/`tern{N}`/`emb{…}`/`hvec{…}`
+  (Binary/Ternary/Dense·embeddings/VSA·HDC) — `vec` rejected (collides with `Vec`); a lexicon amendment to
+  reconcile with DN-02/DN-03 + token.rs. **§4-Q2 (type-app vs list-literal) remains OPEN** — a newline rule
+  was considered but the maintainer wants **newline-OPTIONAL, human-ergonomic** disambiguation (no forced
+  single-line functions; stream-friendly for machines); the tradeoffs are deliberated before the grammar
+  commits. Rationale for the kind-split recorded in DN-31's revision history (eliminates the largest
+  migration; zero new `{}` ambiguity; honest `[type]`-vs-`{const}` kind encoding; avoids the Rust
+  `Name{block}` footgun). DN-31 stays **Draft**; the binding RFC/grammar-supersession epic is the enacting act. No code.
+- **DN-50 — parsable-vs-runnable frontier: OQ-1 + OQ-2 ratified (maintainer-confirmed in-session).**
+  "Runnable" = elaborates to closed L0 and executes three-way (L1≡L0≡AOT) on ≥1 instantiation (OQ-1). The
+  artifact is **census now + a narrow standing gate** that forbids *only* the silent-gap class (accept ⇒
+  runs OR explicit `Residual`/FLAG) — **not** a must-run gate; G2 applied to the implementation frontier
+  (OQ-2). DN-50 is the whole-surface generalization of which M-719 is one slice (OQ-4). The census (M-807)
+  + the narrow gate are the remaining work; the design is decided. No code.
 
 - **DN-51 — accuracy-first `Binary{N}` width arithmetic (maintainer-ratified in-session).** Resolves the
   "what happens on mixed widths?" question DN-42 left as a conservative *refusal*: cross-width binary

@@ -84,5 +84,17 @@ direction so it is not lost.
 
 ## Changelog
 
+- **2026-06-27 — OQ-1 + OQ-2 ratified by the maintainer in-session (the design questions resolve; the
+  census remains the work).** **OQ-1 (definition):** a construct is **runnable** when it elaborates to
+  closed L0 and **executes three-way** (L1-eval ≡ L0-interp ≡ AOT) on at least one instantiation — the
+  existing `differential.rs` bar; no new machinery. **OQ-2 (artifact):** **both, sequenced** — a one-time
+  **census** first (classify every accepted construct *runs* / *explicit-`Residual`* / **silent-gap**),
+  then a **narrow standing gate** that forbids **only** the silent-gap class (checker accepts ⇒ either it
+  runs **or** it hits an explicit `Residual`/FLAG). The gate is **not** a *must-run* gate (that would block
+  legitimate staged work); it is **G2 applied to the implementation frontier** — never a *silent*
+  accept-but-unrunnable. **OQ-4:** confirmed — DN-50 is the whole-surface generalization of which **M-719**
+  (width-generic conformance) is one slice. The remaining §5 DoD item is the **census** (the M-807 audit
+  work) + wiring the narrow gate over the accept corpus; the design is now decided. Append-only; the Status
+  header's "decides nothing" framing is superseded by this entry for OQ-1/OQ-2 (the census itself is still TODO).
 - **2026-06-27** — Created (Draft, capture-only). `rsm` kickoff F7, from the maintainer's observation
   during M-753 that parsable code and runnable/instantiable code form a gap worth auditing as a class.

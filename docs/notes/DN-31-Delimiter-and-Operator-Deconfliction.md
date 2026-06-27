@@ -121,6 +121,13 @@ that act.
 > param is `f[T]`; a function generic over both is `f[T]{N}` (e.g. `map_get[V]{N}(m: Map[Binary{N}, V], k:
 > Binary{N})`). This is the *smallest* migration from the landed `fn f<N>` (swap the bracket; the pervasive
 > `Binary{N}` repr surface — including the landed `Ty::Binary(Width)` — does **not** re-spell).
+> **Repr-keyword shortening (proposed, 2026-06-27 — maintainer):** the long paradigm type-keywords gain
+> short, ergonomic forms that keep their width/dims on `{}` — **`bin{N}`** (Binary), **`tern{N}`**
+> (Ternary), **`emb{…}`** (Dense / embeddings — dims + scalar kind), **`hvec{…}`** (VSA / HDC
+> hypervectors — element-space + dims). **`vec` is rejected — it collides with `Vec`** (the
+> `std.collections` cons-list, `lib/std/collections.myc`); `hvec` is used. This is a **lexicon amendment**
+> to reconcile with DN-02/DN-03 (the type-keyword set) and `crates/mycelium-l1/src/token.rs`
+> (`Tok::Binary`/`Ternary`/`Dense`/`Vsa`); captured here, ratification pending that reconciliation.
 > **Rationale (second-/third-order effects, recorded):** (1) it eliminates the corpus's **largest** migration
 > (repr `{}` is the most pervasive surface); (2) it adds **zero new `{}` ambiguity** — `Binary{8}` (type
 > position) already coexists with `{ block }` and `{k: v}` (expr position) by position, and `f{N}` sits in the
@@ -128,12 +135,16 @@ that act.
 > width *is* a const-generic (DN-42), so `{8}`/`{N}` reading as "const" teaches the `[type]` vs `{const}`
 > distinction; (4) it **avoids** the alternative of putting type-args on `{}` (`List{T}`), which would
 > reintroduce the Rust `Name{block}`-vs-type-application footgun (types stay square ⇒ `List[T]` never collides
-> with a block). **§4-Q2 RESOLVED** (the precondition for committing the grammar): the only residual `[]`
-> collision — type-application vs list-literal at statement start — is settled by the **newline/adjacency
-> rule**: `Name[…]` is a type/size application **only when `[` is on the same line, adjacent to the name**;
-> a `[` that **begins a line** is a list literal (Mycelium has no `arr[i]` indexing and no juxtaposition
-> application, so there is no third reading). This rule *is* the (a) line-break-sensitive, human-visible
-> discipline the maintainer asked to fold in. **Guarantee model cross-ref:** the width-generic guarantee is
+> with a block). **§4-Q2 remains OPEN — newline-optional ergonomics required (maintainer correction,
+> 2026-06-27).** A newline/adjacency rule (line-leading `[` = list; same-line `Name[` = type-app) was
+> *considered* and is workable given Mycelium has no `arr[i]` indexing — **but the maintainer does NOT want
+> newlines *required* for disambiguation**: the language must not degrade into a series of single-line
+> function definitions; it must stay **human-ergonomic** (readable, comfortably multi-line) while remaining
+> a clean **stream for machine** parsing. So the type-app-vs-list edge must be disambiguated by a
+> **newline-OPTIONAL** rule — candidate mechanisms to weigh: the maintainer's earlier **`,`-delineation**
+> input, a space/adjacency cue, or a type-position-vs-value-position rule — and the **tradeoffs must be
+> deliberated before the grammar commits**. Q2 is the one gating ergonomics question still open.
+> **Guarantee model cross-ref:** the width-generic guarantee is
 > **per-instance** (DN-51 §2-D4 / the width-arithmetic decision), not a uniform tag. Still a **recorded
 > direction** — DN-31 stays **Draft**; the binding RFC/supersession (+ the grammar-supersession epic) is the
 > enacting act (VR-5 / G2).
