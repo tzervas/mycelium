@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-55 |
-| **Status** | **Proposed** (2026-06-27; ratified in-session — formalizes the model name and the zero-primitive kernel consequence; enacts no code) |
+| **Status** | **Accepted** (2026-06-27; **ratified by the maintainer 2026-06-27**, R1 gate) — formalizes the static-specialization model name and the zero-primitive kernel consequence; enacts no code. Prior: **Proposed** (2026-06-27). |
 | **Date** | June 27, 2026 |
 | **Decides** | *Formalizes the already-implemented model.* Names and unifies Mycelium's single polymorphism mechanism — **static specialization** (short form: **static comp**) — and records its most important downstream consequence: polymorphism consumes **zero kernel primitives** (KC-3). Documents the one escape hatch (dynamic dispatch, ADR-033) and the surface distinction between the three parameter axes. Feeds the kernel-completeness-and-freeze criterion that a forthcoming orchestrator capstone note will close. |
 | **Task** | M-814 |
