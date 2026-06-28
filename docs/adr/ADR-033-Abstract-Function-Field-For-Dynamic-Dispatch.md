@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **ADR** | 033 |
-| **Status** | **Accepted** (2026-06-27) — *Proposed → Accepted, **ratified by the maintainer 2026-06-27** (R2 gate): the `FieldSpec::Fn` trusted-core extension for dynamic dispatch is approved, with KC-3 growth (one enum variant) accepted. **FLAG-1 (arity-only-hashing soundness) stays `Declared` — never upgraded (VR-5) — and is an explicit pre-`Enacted` gate:** a machine-checked soundness basis (or a revised type-carrying hash) is required before this moves to **Enacted**.* Prior: **Proposed** (2026-06-27). |
+| **Status** | **Accepted** (2026-06-27) — *Proposed → Accepted, **ratified by the maintainer 2026-06-27** (R2 gate): the `FieldSpec::Fn` trusted-core extension for dynamic dispatch is approved, with KC-3 growth (one enum variant) accepted. **FLAG-1 (arity-only-hashing soundness) stays `Declared` — never upgraded (VR-5) — and is an explicit pre-`Enacted` gate:** a machine-checked soundness basis (or a revised type-carrying hash) is required before this moves to **Enacted**.* Prior: **Proposed** (2026-06-27). **FLAG-1 resolution PROPOSED (2026-06-28, §10 below) — pending maintainer ratification → then `Enacted`; status stays `Accepted` until ratified (VR-5/append-only #3).** Recommendation: **Path A (type-carrying hash)** — `FieldSpec::Fn { arity, sig }`, encoding a minimal resolved type signature into the dispatch key so distinct fn types cannot collide on identity. **Path B (arity-only machine-checked argument) is NOT recommended:** the kernel-level soundness invariant it would need cannot be established without the elaborator's type discipline being part of the *trusted* core (§10.4), which violates KC-3's trusted-boundary placement; the resolution argument is `Declared`-with-argument, **not** `Proven` (no mechanization yet — VR-5). |
 | **Decides** | Extend the trusted-core `FieldSpec` enum with an **abstract function-typed field variant** (`FieldSpec::Fn`) so data values can carry method values (the record-of-method-values / dictionary form), making RFC-0019 §4.5 dynamic dispatch v0-expressible. This is a **deliberate, gated trusted-base growth** (KC-3). |
 | **Task** | M-810 |
 | **Date** | 2026-06-27 |
@@ -472,6 +472,228 @@ This ADR moves **Accepted → Enacted** when:
 | Acyclicity preserved (no `fix`-over-`self`) | `Declared` | Argument: dictionary `Construct` is bottom-up, no cycle back-edge; LR-8/LR-9 structural |
 | DN-37 Q3 ruling to design-ahead and implement before dogfooding | `Exact` | DN-37 changelog 2026-06-27 (append-only; maintainer-ratified) |
 | KC-3 trusted-base growth is deliberate and gated | `Declared` | This ADR §1.3; maintainer decision, not implementer discretion |
+| FLAG-1: arity-only encoding collides distinct same-arity fn types on content identity | `Exact` | `data.rs:328–345` (`encode_decl` emits `FIELD_FN`+`u32` arity only — no signature); `content.rs:212` (`Canon::repr`) shows the `Repr` distinction the field hash drops |
+| FLAG-1 Path A (type-carrying hash) is kernel-encodable; signature recursion is well-founded | `Declared` | §10.2 — leaves are `Repr` (`Canon::repr`, already injective) / `Data(hash)` (`Canon::hash`); nesting strips one `Fn` layer per step, terminates at `Repr`/`Data` |
+| FLAG-1 Path B (arity-only soundness theorem INV-AO) cannot be established | `Declared` | §10.4 — its single-producer side-condition is false at the L0 trusted-input boundary (ADR-003/RFC-0007 admit hand-/fuzz-authored `Construct`s); making it true moves the elaborator into the trusted core, inverting KC-3 |
+| FLAG-1 resolution recommends Path A; tag stays `Declared` (not `Proven`) until mechanized | `Declared` | §10.5 — argument is §10.1–10.4; injectivity-over-typed-structure is unmechanized; VR-5 forbids upgrade without a checked basis |
+
+---
+
+## 10. FLAG-1 resolution — type-carrying hash vs arity-only soundness argument
+
+*Status: **proposed resolution**, awaiting maintainer ratification → then `Enacted`. This section is
+appended (append-only #3); §6 FLAG-1 is left intact as the original open statement. The argument
+below is `Declared`-with-argument throughout — it is **not** `Proven`: no part of it is mechanized,
+so VR-5 forbids the upgrade until a checked proof (or a passing differential that exercises the
+collision case) exists. This resolves G4+G5 of the ratification map and DN-56 kernel-freeze
+condition #3 only **once ratified** — proposing it does not freeze the kernel.*
+
+### 10.1 The soundness hole, stated precisely
+
+`FieldSpec::Fn { arity }` (§2.1) encodes **only** the parameter count into the identity-bearing
+content hash. The hash tag scheme (§2.2) is `c.tag(FIELD_FN); c.u32(arity)`. Two function-typed
+fields therefore receive the **same** `FieldSpec`-level encoding whenever their arities match,
+regardless of their parameter or return *types*.
+
+Concretely, with the kernel's `Repr` set (`crates/mycelium-core/src/repr.rs`: `Binary{width}`,
+`Ternary{trits}`, `Dense{dim,dtype}`, `Vsa{model,dim,sparsity}`):
+
+- `field_equal : (Binary{8},  Binary{8})  -> Binary{1}` — `Fn { arity: 2 }`
+- `field_equal : (Binary{16}, Binary{16}) -> Binary{1}` — `Fn { arity: 2 }`
+
+These two semantically distinct function types **hash identically** at the field level. Two
+dictionary declarations `MkDict_Eq8` and `MkDict_Eq16` that differ *only* in these field types are
+therefore the **same content-addressed declaration** (`#T#0` is identical). That is the precise
+failure: **content-addressed identity is no longer injective over the program's *typed* structure**
+— it is injective only over (arity, data-edges, repr-edges), with the function *signature* erased.
+
+**What can actually go wrong (the exploit shape).** Content identity is load-bearing in three
+places the kernel trusts: (i) `DataRegistry` keying (`decls: BTreeMap<ContentHash, DataDecl>`,
+data.rs:154) — two distinct typed dictionaries deduplicate to one entry; (ii) `CtorRef` equality —
+a `Match`/`project` written against `MkDict_Eq16` will match a value built as `MkDict_Eq8` because
+their `CtorRef`s are equal; (iii) the three-way differential (§5) compares results under *one*
+`CtorRef` set, so an L1/L0/AOT path that silently accepts the cross-typed value will agree with
+itself and the differential will **not** catch it. The kernel's only remaining check on a `Fn`
+field is **saturation** (arity — §5.2 property 4), which both `Eq8` and `Eq16` pass identically.
+
+So if the elaborator ever emits — through a bug, or through an adversarially crafted L0 term that
+bypasses the elaborator entirely (the L0 fragment is a *trusted-input* surface; a hand-written or
+fuzzed `Construct` is admissible input to the registry) — a value that projects `MkDict_Eq8`'s
+field and applies it to `Binary{16}` arguments, **the kernel cannot reject it**. The result is a
+type-confused application: the `Binary{8}` method body executes over `Binary{16}` operands. Whether
+that is *memory*-unsafe depends on the downstream lowering, but it is unconditionally a **silent
+type-soundness violation** at the kernel boundary — exactly what G2 (never-silent) forbids the
+kernel to permit.
+
+### 10.2 Path A — the type-carrying hash (RECOMMENDED)
+
+**Encode a minimal, resolved type signature into the dispatch key**, so two distinct fn types can
+never collide on identity. The variant becomes:
+
+```rust
+pub enum FieldSpec {
+    Repr(Repr),
+    Data(String),
+    /// A function-typed field: `arity` explicit parameters with the given resolved signature.
+    /// `sig` carries each parameter type and the return type, so two function types that differ
+    /// in any parameter/return type hash distinctly (FLAG-1 resolution, ADR-033 §10).
+    Fn { arity: u32, sig: FnSig },
+}
+
+/// A resolved function signature: parameter types in order, then the return type.
+/// `arity == params.len()` is a well-formedness invariant checked at build (never-silent on
+/// mismatch — RegistryError::FnArityMismatch).
+pub struct FnSig { pub params: Vec<FieldTyRef>, pub ret: Box<FieldTyRef> }
+
+/// A type that can appear as a function parameter or return: the same leaf set a data field can
+/// hold, plus nested functions. Bottoms out in `Repr` / `Data(hash)` — no unbounded recursion.
+pub enum FieldTyRef {
+    Repr(Repr),              // encodes via the existing c.repr() — already injective
+    Data(String),            // a data-decl reference by build-name → resolves to ContentHash
+    Fn(Box<FnSig>),          // nested function type (higher-order method) — finite, well-founded
+}
+```
+
+**Why this is kernel-encodable (the key correction to §7.1).** §7.1 argued a full function type
+would "conflate the data registry with a type registry" and force "a self-referential encoding that
+either loops or requires a separate type-level registry." That argument is **too strong** and is
+the load-bearing reason FLAG-1 looked unresolvable-without-cost. It is wrong on the mechanics: every
+leaf of a resolved signature is *already* a kernel-encodable term —
+
+- a `Repr` parameter encodes via the existing `Canon::repr` (`content.rs:212`), which is already
+  injective over `Repr` (it is exactly how `FieldSpec::Repr` hashes today);
+- a `Data` parameter resolves (dependencies-first, exactly as `FieldSpec::Data` does today,
+  data.rs:334–343) to a `ContentHash` and encodes via `Canon::hash` — already injective by hash;
+- a nested `Fn` parameter recurses, and the recursion is **well-founded**: each nesting strips one
+  `Fn` layer and the leaves are `Repr`/`Data`, so the encoding terminates (no fixpoint, no
+  type-registry — the recursion is over the *finite* signature term the elaborator already holds).
+
+The new content tag is `FIELD_FN` plus `c.u32(arity)` plus a structural encode of `sig`
+(`FN_SIG_PARAMS` count, each param's `FieldTyRef` tagged `FTR_REPR`/`FTR_DATA`/`FTR_FN`, then
+`FN_SIG_RET`). Fresh tags, disjoint from `FIELD_REPR`/`FIELD_DATA`/`FIELD_CYCLE`/`FIELD_FN`, so
+injectivity is preserved by the same disjoint-tag argument as §2.3. **Cycle interaction:** a `Data`
+leaf *inside* a signature is a genuine declaration edge and **must** be threaded through the same
+in-cycle placeholder scheme (`FIELD_CYCLE`) as a top-level `Data` field — otherwise a dictionary
+whose method takes a recursive data type would mis-hash. This widens FLAG-3's SCC `succ` change:
+`succ` must traverse `Data` edges **inside `Fn` signatures** too, not only top-level `Data` fields.
+That is a real, bounded cost and is called out as sub-question Q3 below.
+
+**What Path A buys.** The collision of §10.1 is **closed at the kernel level**: `Fn(Binary{8}…)`
+and `Fn(Binary{16}…)` now hash distinctly, so `MkDict_Eq8 ≠ MkDict_Eq16` as content-addressed
+declarations, their `CtorRef`s differ, and a `Match` written against one **cannot** match a value
+of the other — the kernel rejects the type-confused projection by construction (a `Match` on a
+`CtorRef` that does not equal the value's `CtorRef` is already a never-silent no-match → explicit
+error). Type-soundness for dictionary dispatch no longer *depends on the elaborator being
+bug-free*; it is enforced by the trusted core, which is where KC-3 wants a soundness-critical
+invariant to live.
+
+**Cost (stated honestly, KC-3).** Path A grows the trusted base by more than one `u32`: it adds
+`FnSig`/`FieldTyRef` to the identity-bearing surface, three-or-four new content tags, the
+recursive encode arm, the build-time `arity == params.len()` well-formedness check
+(`RegistryError::FnArityMismatch`, never-silent), and the FLAG-3 SCC traversal into signatures.
+This is a larger KC-3 increment than §1.3 scoped for the `arity`-only variant. The trade is
+explicit: **a bounded, one-time trusted-core growth in exchange for moving the dictionary-dispatch
+soundness invariant from `Declared`-elaborator-discipline into a kernel-checked property.** That is
+the correct side of the KC-3 line — KC-3 is *small auditable kernel*, not *minimal kernel at the
+cost of an unchecked soundness obligation*; an auditable kernel that **cannot** express the
+soundness check is not the cheaper option, it is the unsound one.
+
+### 10.3 Path B — a machine-checked argument that arity-only is sufficient
+
+Path B keeps `FieldSpec::Fn { arity }` unchanged and instead discharges FLAG-1 with a checked
+soundness theorem of the shape:
+
+> **Claimed invariant (INV-AO).** For every well-formed program `P` admitted by the kernel, and
+> every dictionary value `d` of declaration `#T` projected at field `i` and applied to arguments
+> `a̅`, the function value `f` resolved at `(#T, i)` has a parameter type list whose `Repr`/`Data`
+> shape matches the runtime shapes of `a̅` — *even though the kernel hash records only `arity`*.
+
+For INV-AO to hold **as a kernel guarantee**, the following side-conditions would all have to be
+*checked* (transparency rule: `Proven` needs checked side-conditions):
+
+1. **Single-producer.** Every `Fn`-fielded `Construct` value reaching the registry/interpreter was
+   produced by the type-checking elaborator — i.e. the L0 fragment is **not** an independent
+   trusted-input surface for `Fn`-fielded constructs.
+2. **Elaborator type-preservation.** The elaborator's instantiation of a dictionary at a concrete
+   type is type-correct (it never binds a `Binary{8}` method into a slot used at `Binary{16}`).
+3. **No post-elaboration retyping.** No pass between elaboration and execution (mono, swap
+   insertion, AOT lowering) can substitute a same-arity-different-type method into a dictionary
+   slot.
+
+### 10.4 Why Path B cannot be established (and therefore Path A is recommended)
+
+I cannot establish INV-AO, and I will not assert it (G2/VR-5 — say "unproven" plainly). The
+obstruction is **side-condition 1, and it is structural, not merely unproven-yet**:
+
+- The L0 term model is, by the project's own framing, a **trusted-input fragment**: ADR-003 /
+  RFC-0007 treat a `Construct` as admissible kernel input independent of how it was produced (the
+  three-way differential in §5 exists precisely because the L0 interpreter is a *trusted base* run
+  directly, not only as the elaborator's output). A hand-authored, fuzzed, or
+  third-party-tool-emitted `Construct` of a `Fn`-fielded declaration is therefore an input the
+  kernel **must** judge on its own content — and on its own content, `Eq8` and `Eq16` are
+  *indistinguishable*. So side-condition 1 is **false** as stated for the kernel boundary; making
+  it true would require declaring the type-checking elaborator part of the **trusted** core, which
+  (a) inverts KC-3's placement of the trusted boundary (the elaborator is explicitly the *untrusted*
+  layer, §2.1) and (b) is a far larger trusted-base growth than Path A's encoding.
+
+- Even setting that aside, conditions 2–3 are `Empirical` at best (they would rest on the
+  elaborator/mono test suite, not a theorem), so the *strongest* honest tag INV-AO could carry is
+  `Empirical`-modulo-an-unprovable-side-condition. That is **not** a soundness basis the freeze
+  gate (DN-56 condition #3) should accept: DN-56 §3 names FLAG-1 as "a soundness item that must be
+  resolved before this primitive can be frozen," and a freeze cannot rest on an invariant whose
+  premise (single-producer) the trusted boundary contradicts.
+
+Therefore Path B does not close the hole at the layer where the hole lives. **Per the task's own
+instruction — "if you cannot establish them, say so plainly and prefer A" — I recommend Path A.**
+
+### 10.5 Recommendation and tag
+
+**Adopt Path A (type-carrying hash).** It moves dictionary-dispatch type-soundness from an
+unprovable elaborator-discipline obligation into a kernel-checked injectivity property, at a
+bounded, explicit, one-time KC-3 cost. **Tag: `Declared`-with-argument** — the argument is §10.1–10.4
+(disjoint-tag injectivity + well-founded signature recursion + the structural impossibility of
+Path B's single-producer premise). It is **not `Proven`**: the injectivity-over-typed-structure
+claim and the "kernel rejects the type-confused projection" claim are unmechanized. The upgrade path
+to a higher tag is explicit: a property test that two same-arity-different-`Repr` `Fn` fields
+produce **distinct** `DataDecl` hashes (the §5.2 property 1/2 extended to signatures), plus a
+differential case that builds `MkDict_Eq8` and projects it under an `Eq16`-typed `Match` and
+asserts a **never-silent no-match error** — both green — would lift this to `Empirical`; a
+mechanized injectivity proof over the encoding would lift it to `Proven`. Until then it stays
+`Declared` (VR-5).
+
+### 10.6 Open sub-questions (for maintainer ratification)
+
+- **Q1 — minimality of `sig`.** Must the *return* type be encoded, or do parameter types suffice
+  for soundness? Encoding params-only closes the §10.1 argument-side confusion but leaves two fields
+  that differ *only* in return type colliding. I recommend encoding **both** params and return (full
+  signature) — half a signature is a smaller, subtler version of the same hole — but a maintainer
+  may judge return-type confusion unreachable given how dictionaries are projected-then-applied. This
+  is a `Declared` judgement either way until tested.
+- **Q2 — `Repr`-only vs full `FieldTyRef` leaves.** A cheaper Path A encodes only the *`Repr`* of
+  each parameter (ignoring `Data` and nested `Fn` leaves), betting that data-typed and higher-order
+  method parameters are rare in v0 dictionaries. This shrinks the KC-3 increment but reintroduces a
+  (narrower) collision for `Data`-typed parameters. I do **not** recommend it (it is a partial fix
+  wearing a full-fix label — a transparency hazard), but it is the maintainer's KC-3 call.
+- **Q3 — FLAG-3 SCC widening.** Path A requires the SCC `succ` (data.rs:378) and
+  `canonical_cycle_order` to traverse `Data` edges **inside** `Fn` signatures, and the in-cycle
+  `FIELD_CYCLE` placeholder scheme to apply to in-signature `Data` leaves. This is a bounded but
+  real extension of FLAG-3's scope; it must be coded and property-tested (a dictionary whose method
+  takes the enclosing recursive data type must hash deterministically and not loop).
+- **Q4 — interaction with the Swift-existential AOT layout (§7.3).** A type-carrying `FieldSpec::Fn`
+  gives the eventual existential-layout ADR the parameter `Repr`s it needs for VWT/PWT sizing *for
+  free* (they are now in the kernel identity). This is a side-benefit, not a requirement, but it
+  argues further for Path A over Path B. `Declared`.
+
+### 10.7 Effect on the Definition of Done (§8)
+
+If Path A is ratified, the §8 `Accepted → Enacted` checklist item *"FLAG-1 is resolved with a
+written argument added to this ADR"* is satisfied by **this §10** (append-only), and the remaining
+`Enacted` gates gain: (i) `FieldSpec::Fn { arity, sig }` + `FieldTy::Fn` + `FnSig`/`FieldTyRef` land
+with their `FIELD_FN`/`FN_SIG_*`/`FTR_*` tags; (ii) the build-time `arity == params.len()`
+never-silent check; (iii) the FLAG-3 SCC widening (Q3); (iv) the two new tests of §10.5 (distinct
+hashes for distinct signatures; never-silent no-match on cross-typed projection) green. **§8 is not
+rewritten here** (append-only #3) — these are the deltas a future Enacted transition must satisfy;
+the maintainer folds them into §8 at ratification, or supersedes this resolution.
 
 ---
 
@@ -479,4 +701,5 @@ This ADR moves **Accepted → Enacted** when:
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-28 | **Accepted** (unchanged) | **FLAG-1 resolution proposed** (new §10): analyzed both candidate paths and **recommend Path A (type-carrying hash — `FieldSpec::Fn { arity, sig }`)** over Path B (arity-only machine-checked argument). Stated the soundness hole precisely (§10.1: same-arity-different-type fn fields collide on content identity → kernel cannot reject a type-confused dictionary projection, a silent G2 violation). Showed Path A *is* kernel-encodable — every signature leaf bottoms out in `Repr` (already `Canon::repr`-injective) or `Data(hash)`, recursion well-founded — correcting §7.1's over-strong "would conflate a type registry" claim. Showed Path B **cannot** be established: its single-producer side-condition is structurally false at the L0 trusted-input boundary, and adopting it would move the type-checking elaborator into the *trusted* core (inverting KC-3). Tagged the resolution **`Declared`-with-argument, NOT `Proven`** (unmechanized — VR-5); named the test/proof upgrade path. **Status stays `Accepted`** — this is a proposal pending maintainer ratification → then `Enacted` (append-only #3; §6 FLAG-1 left intact; §8 DoD not rewritten — deltas noted in §10.7). Resolves G4+G5 of the ratification map / DN-56 kernel-freeze condition #3 **only once ratified**. FLAGs raised (cannot edit): Doc-Index, CHANGELOG, issues.yaml, DN-56, `docs/adr/README.md` index — all orchestrator/owner-owned. (VR-5; G2; KC-3.) |
 | 2026-06-27 | **Proposed** | Initial design. Authored as the trusted-core `FieldSpec`-abstract-function-field ADR called for by DN-37 §8 Q3 (2026-06-27 maintainer ruling) and RFC-0019 §4.5 changelog (M-673 deferred normative target). Enacts no code; moves no spec status. CHANGELOG / Doc-Index / issues.yaml / docs/api-index owned by the integrating orchestrator. (Append-only; VR-5; G2.) |
