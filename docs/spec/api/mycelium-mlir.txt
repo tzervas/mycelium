@@ -878,6 +878,25 @@ impl<T, E> core::marker::Unpin for mycelium_mlir::runtime::Poll<T, E> where T: c
 impl<T, E> core::marker::UnsafeUnpin for mycelium_mlir::runtime::Poll<T, E> where T: core::marker::UnsafeUnpin, E: core::marker::UnsafeUnpin
 impl<T, E> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Poll<T, E> where T: core::panic::unwind_safe::RefUnwindSafe, E: core::panic::unwind_safe::RefUnwindSafe
 impl<T, E> core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Poll<T, E> where T: core::panic::unwind_safe::UnwindSafe, E: core::panic::unwind_safe::UnwindSafe
+pub enum mycelium_mlir::runtime::ReclaimError
+pub mycelium_mlir::runtime::ReclaimError::Policy(mycelium_interp::EvalError)
+pub mycelium_mlir::runtime::ReclaimError::Supervised
+pub mycelium_mlir::runtime::ReclaimError::Supervised::failure: mycelium_std_runtime::supervision::SupervisedFailure
+pub mycelium_mlir::runtime::ReclaimError::Supervised::trace: alloc::vec::Vec<mycelium_std_runtime::supervision::SupervisionRecord>
+impl core::clone::Clone for mycelium_mlir::runtime::ReclaimError
+pub fn mycelium_mlir::runtime::ReclaimError::clone(&self) -> mycelium_mlir::runtime::ReclaimError
+impl core::error::Error for mycelium_mlir::runtime::ReclaimError
+impl core::fmt::Debug for mycelium_mlir::runtime::ReclaimError
+pub fn mycelium_mlir::runtime::ReclaimError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::runtime::ReclaimError
+pub fn mycelium_mlir::runtime::ReclaimError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::runtime::ReclaimError
+impl core::marker::Send for mycelium_mlir::runtime::ReclaimError
+impl core::marker::Sync for mycelium_mlir::runtime::ReclaimError
+impl core::marker::Unpin for mycelium_mlir::runtime::ReclaimError
+impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::ReclaimError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::ReclaimError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::ReclaimError
 pub enum mycelium_mlir::runtime::SweepOrder
 pub mycelium_mlir::runtime::SweepOrder::Ascending
 pub mycelium_mlir::runtime::SweepOrder::Descending
@@ -914,6 +933,20 @@ impl core::marker::Unpin for mycelium_mlir::runtime::Deadlock
 impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::Deadlock
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Deadlock
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::Deadlock
+pub struct mycelium_mlir::runtime::ReclaimRun
+pub mycelium_mlir::runtime::ReclaimRun::trace: alloc::vec::Vec<mycelium_std_runtime::supervision::SupervisionRecord>
+pub mycelium_mlir::runtime::ReclaimRun::value: mycelium_core::datum::CoreValue
+impl core::clone::Clone for mycelium_mlir::runtime::ReclaimRun
+pub fn mycelium_mlir::runtime::ReclaimRun::clone(&self) -> mycelium_mlir::runtime::ReclaimRun
+impl core::fmt::Debug for mycelium_mlir::runtime::ReclaimRun
+pub fn mycelium_mlir::runtime::ReclaimRun::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::runtime::ReclaimRun
+impl core::marker::Send for mycelium_mlir::runtime::ReclaimRun
+impl core::marker::Sync for mycelium_mlir::runtime::ReclaimRun
+impl core::marker::Unpin for mycelium_mlir::runtime::ReclaimRun
+impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::ReclaimRun
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::ReclaimRun
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::ReclaimRun
 pub struct mycelium_mlir::runtime::Scope<'a, T, E>
 impl<'a, T, E> mycelium_mlir::runtime::Scope<'a, T, E>
 pub fn mycelium_mlir::runtime::Scope<'a, T, E>::cancel_token(&self) -> mycelium_interp::supervise::CancelToken
@@ -947,6 +980,7 @@ pub type mycelium_mlir::runtime::Task::Error
 pub type mycelium_mlir::runtime::Task::Output
 pub fn mycelium_mlir::runtime::Task::poll(&mut self, &mut mycelium_mlir::runtime::TaskCtx<'_>) -> mycelium_mlir::runtime::Poll<Self::Output, Self::Error>
 pub fn mycelium_mlir::runtime::run_colony(&[mycelium_core::node::Node], &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_mlir::runtime::ColonyError>
+pub fn mycelium_mlir::runtime::run_reclaim(&mycelium_core::node::Node, &mycelium_core::node::Node, mycelium_interp::supervise::RestartIntensity, u64, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize) -> core::result::Result<mycelium_mlir::runtime::ReclaimRun, mycelium_mlir::runtime::ReclaimError>
 pub type mycelium_mlir::runtime::Colony<'a, T, E> = mycelium_mlir::runtime::Scope<'a, T, E>
 pub mod mycelium_mlir::simd
 pub fn mycelium_mlir::simd::compile_bitnet_dot_simd() -> core::result::Result<mycelium_mlir::bitnet::BitnetDotKernel, mycelium_mlir::llvm::AotError>
@@ -1367,6 +1401,25 @@ impl core::marker::Unpin for mycelium_mlir::rc_plan::RcPlanError
 impl core::marker::UnsafeUnpin for mycelium_mlir::rc_plan::RcPlanError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::rc_plan::RcPlanError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::rc_plan::RcPlanError
+pub enum mycelium_mlir::ReclaimError
+pub mycelium_mlir::ReclaimError::Policy(mycelium_interp::EvalError)
+pub mycelium_mlir::ReclaimError::Supervised
+pub mycelium_mlir::ReclaimError::Supervised::failure: mycelium_std_runtime::supervision::SupervisedFailure
+pub mycelium_mlir::ReclaimError::Supervised::trace: alloc::vec::Vec<mycelium_std_runtime::supervision::SupervisionRecord>
+impl core::clone::Clone for mycelium_mlir::runtime::ReclaimError
+pub fn mycelium_mlir::runtime::ReclaimError::clone(&self) -> mycelium_mlir::runtime::ReclaimError
+impl core::error::Error for mycelium_mlir::runtime::ReclaimError
+impl core::fmt::Debug for mycelium_mlir::runtime::ReclaimError
+pub fn mycelium_mlir::runtime::ReclaimError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::runtime::ReclaimError
+pub fn mycelium_mlir::runtime::ReclaimError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::runtime::ReclaimError
+impl core::marker::Send for mycelium_mlir::runtime::ReclaimError
+impl core::marker::Sync for mycelium_mlir::runtime::ReclaimError
+impl core::marker::Unpin for mycelium_mlir::runtime::ReclaimError
+impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::ReclaimError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::ReclaimError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::ReclaimError
 pub enum mycelium_mlir::Resolution
 pub mycelium_mlir::Resolution::Compiled
 pub mycelium_mlir::Resolution::Interpreted
@@ -1761,6 +1814,20 @@ impl<V> core::marker::Unpin for mycelium_mlir::channel::Receiver<V>
 impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::Receiver<V>
 impl<V> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Receiver<V>
 impl<V> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Receiver<V>
+pub struct mycelium_mlir::ReclaimRun
+pub mycelium_mlir::ReclaimRun::trace: alloc::vec::Vec<mycelium_std_runtime::supervision::SupervisionRecord>
+pub mycelium_mlir::ReclaimRun::value: mycelium_core::datum::CoreValue
+impl core::clone::Clone for mycelium_mlir::runtime::ReclaimRun
+pub fn mycelium_mlir::runtime::ReclaimRun::clone(&self) -> mycelium_mlir::runtime::ReclaimRun
+impl core::fmt::Debug for mycelium_mlir::runtime::ReclaimRun
+pub fn mycelium_mlir::runtime::ReclaimRun::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::runtime::ReclaimRun
+impl core::marker::Send for mycelium_mlir::runtime::ReclaimRun
+impl core::marker::Sync for mycelium_mlir::runtime::ReclaimRun
+impl core::marker::Unpin for mycelium_mlir::runtime::ReclaimRun
+impl core::marker::UnsafeUnpin for mycelium_mlir::runtime::ReclaimRun
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::ReclaimRun
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::ReclaimRun
 pub struct mycelium_mlir::Scope<'a, T, E>
 impl<'a, T, E> mycelium_mlir::runtime::Scope<'a, T, E>
 pub fn mycelium_mlir::runtime::Scope<'a, T, E>::cancel_token(&self) -> mycelium_interp::supervise::CancelToken
@@ -1877,6 +1944,7 @@ pub fn mycelium_mlir::run_core(&mycelium_core::node::Node, &mycelium_interp::pri
 pub fn mycelium_mlir::run_core_with_effects(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize, &mut mycelium_interp::budget::Budgets) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_core_with_fuel(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64) -> core::result::Result<mycelium_core::datum::CoreValue, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_mode(mycelium_mlir::mode::ExecMode, &mycelium_core::node::Node, mycelium_interp::prims::PrimRegistry, alloc::boxed::Box<dyn mycelium_interp::swap::SwapEngine>) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::mode::ModeError>
+pub fn mycelium_mlir::run_reclaim(&mycelium_core::node::Node, &mycelium_core::node::Node, mycelium_interp::supervise::RestartIntensity, u64, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize) -> core::result::Result<mycelium_mlir::runtime::ReclaimRun, mycelium_mlir::runtime::ReclaimError>
 pub fn mycelium_mlir::run_with_layout(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_with_reclamation(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink) -> core::result::Result<mycelium_mlir::rc_plan::RcRun, mycelium_interp::EvalError>
 pub fn mycelium_mlir::ternary_dot_ref(&[mycelium_core::value::Trit], &[i32]) -> i64

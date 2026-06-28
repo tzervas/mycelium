@@ -64,7 +64,7 @@ pub use checkty::{
     check_and_resolve, check_nodule, check_nodule_matured, check_phylum, check_phylum_matured,
     CheckError, Env, PhylumEnv, Ty,
 };
-pub use elab::{elaborate, elaborate_colony, ElabError};
+pub use elab::{elaborate, elaborate_colony, elaborate_reclaim, ElabError};
 pub use error::ParseError;
 pub use eval::{Evaluator, L1Error, L1Value};
 pub use mono::{monomorphize, monomorphize_with_selections, InstanceSelection, MonoSelections};

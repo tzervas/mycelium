@@ -3911,10 +3911,10 @@ issues:
   - id: M-710
     title: "M-710 — feat(l1+runtime): runtime vocabulary execution — fuse/reclaim/tier/mesh/xloc/cyst end-to-end"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:in-progress]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:done]
     depends_on: [E7-2, M-709]
     epic: E12-1
-    partial_basis: "IN-PROGRESS/PARTIAL (2026-06-28, r4v integration wave) — fuse repr-type execution is three-way Empirical (fuse expression executes via Fuse-instance dispatch through the differential; Empirical via `tests/differential.rs`). RESIDUAL: reclaim runtime supervision wiring (the `run_supervised`/`supervise_with_restart` dispatch into `mycelium-std-runtime`) is a never-silent Residual stub; data-type fuse primitive registration in the runtime registry is not yet wired. Follow-on: M-817 (wire reclaim:supervised + fuse_join:data prims into the runtime registry). VR-5: execution is partial — NOT Enacted."
+    partial_basis: "DONE (2026-06-28, prm wave — M-817 closes the residual). fuse + reclaim now execute END-TO-END three-way (L1-eval ≡ L0-interp ≡ AOT), Empirical via `crates/mycelium-l1/tests/differential.rs`: (1) Binary repr fuse runs via the registered `fuse_join:binary` meet prim (bitwise-AND + canonical `Derived{op:\"fuse_join\"}` provenance, DN-58 §A.5); (2) Data-type fuse desugars (monomorphization) to the resolved `Fuse::join` call and runs three-way (the user-merge case); (3) reclaim runs as its sequential reference (`Let{_ = policy, body}`), and the REAL RT7 supervision dispatch (bounded restart cascade + `SupervisionRecord` EXPLAIN trail) is the runtime-tier driver `mycelium_mlir::run_reclaim` over the lazy body node (`elaborate_reclaim`), validated equal to the reference on success. KC-3: no new L0 node (meet reuses `Op`, reference reuses `Let`, supervision layered over unchanged body eval like `run_colony`). Non-`Binary` repr meets remain an honest residual (DN-58 §A.6 F-A3 — no committed meet); policy→bounds mapping awaits F-B2. tier execution (RFC-0004 ExecutionMode) was already non-semantic. VR-5: tags Empirical (differential + M-713 property tests, not a mechanized theorem)."
     doc_refs: [corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs, src:crates/mycelium-mlir/src/runtime.rs]
     body: |
       E7-2's leaves (M-666/M-667) activate fuse/reclaim/tier as L1 surface constructs with
@@ -6424,38 +6424,47 @@ issues:
       - Then this task -> done; the recovery branch may be removed once the maintainer is satisfied.
 
   - id: M-817
-    title: "M-817 — feat(l1+runtime): wire reclaim:supervised + fuse_join:data prims into runtime registry"
+    title: "M-817 — feat(l1+runtime): execute fuse (data) + reclaim three-way (close M-710)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P2, status:todo]
+    labels: [phase:7, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-667, M-710]
     epic: E12-1
+    completed_basis: "DONE (2026-06-28, prm wave). MECHANISM CORRECTION (grounded in ratified DN-58 §A.5/§B.4 + the dep graph + the M-666 colony precedent — flagged to + approved by maintainer): the original 'register fuse_join:data + reclaim:supervised prims in PrimRegistry::with_builtins()' framing was NOT implementable honestly — (a) DN-58 §A.5 (ratified) says fuse elaborates to a resolved `Fuse::join` CALL, not an opaque prim; (b) `mycelium-interp` cannot depend on `mycelium-std-runtime` (cycle), so reclaim supervision cannot be an interp prim; (c) a bare `PrimFn` has no env access (cannot resolve a user `join`) and eager args (cannot supervise a lazy body); a 'supervised' prim that does no supervision is a black box (G2). IMPLEMENTED: (1) `fuse_join:binary` registered as a pure meet prim (bitwise-AND + canonical `Derived{op:\"fuse_join\"}` provenance) in interp + core PrimTable; (2) data-type fuse desugared in `mono.rs` to the resolved `Fuse::join` call (records the instance selection — EXPLAIN, no black box); (3) reclaim elaborates to its sequential reference `Let{_ = policy, body}` (runs three-way), and `mycelium_l1::elaborate_reclaim` + `mycelium_mlir::run_reclaim` provide the REAL RT7 supervision driver (`supervise_with_restart` + `SupervisionRecord` EXPLAIN), validated equal to the reference on success — the run_colony pattern. Four three-way differential tests + generic_corpus case green. KC-3: no new L0 node. VR-5: Empirical."
     doc_refs:
       - corpus:RFC-0008
       - corpus:DN-58
+      - corpus:RFC-0027
       - src:crates/mycelium-l1/src/elab.rs
-      - src:crates/mycelium-std-runtime/src/lib.rs
+      - src:crates/mycelium-l1/src/mono.rs
+      - src:crates/mycelium-interp/src/prims.rs
+      - src:crates/mycelium-mlir/src/runtime.rs
+      - src:crates/mycelium-std-runtime/src/supervision.rs
     body: |
-      Follow-on to the r4v wave (M-667 DONE, M-710 PARTIAL): the fuse/reclaim/tier surface is ACTIVE
-      in mycelium-l1 (parse+checkty+elab dispatch) but two execution paths remain Residual stubs:
+      Follow-on to the r4v wave (M-667 DONE, M-710 PARTIAL): close the execution residual so fuse +
+      reclaim RUN three-way (L1-eval ≡ L0-interp ≡ AOT) and DN-58 can move toward Enacted.
 
-      1. `reclaim(policy) { body }` elaborates to a Residual (never-silent G2) — the dispatch into
-         `mycelium-std-runtime::supervision::run_supervised` / `supervise_with_restart` with the policy
-         is not yet wired. The supervision machinery is landed (M-713); only the elab→runtime hook is missing.
+      RESOLVED (mechanism corrected vs the original prim-registration framing — see completed_basis;
+      the correction is grounded in ratified DN-58 §A.5/§B.4, the crate dependency graph, and the
+      landed M-666 `colony` two-path precedent, and was flagged to + approved by the maintainer):
 
-      2. `fuse(a, b)` repr-type execution is Empirical (three-way differential green); data-type fuse
-         primitive registration in the runtime registry is not yet wired — a `Fuse` instance for
-         non-Repr types currently hits the Residual path.
+      1. `reclaim(policy) { body }` runs three-way via its sequential reference (`Let{_ = policy,
+         body}`); the real RT7 supervision (bounded restart cascade + `SupervisionRecord` EXPLAIN
+         trail) is the runtime-tier driver `mycelium_mlir::run_reclaim` over the lazy body node
+         (`mycelium_l1::elaborate_reclaim`), validated equal to the reference on success. The trusted
+         base (`mycelium-interp`/`-l1`) cannot depend on `mycelium-std-runtime`, so the dispatch lives
+         in the runtime tier — exactly like the concurrent `colony` executor. (NOT an interp prim.)
 
-      Issues to resolve:
-      - Threading `SupervisionRecord` from elab into `run_supervised` call (RFC-0027 §9 schema).
-      - The `Fuse` trait implementation hook for data types in the `DataRegistry`.
-      - Property tests extending the three-way differential to at least one reclaim + one data-fuse case.
+      2. `fuse(a, b)`: Binary repr executes via the registered `fuse_join:binary` meet prim (bitwise-
+         AND + canonical `Derived{op:"fuse_join"}` provenance, DN-58 §A.5); a Data type with a `Fuse`
+         instance desugars (monomorphization) to the resolved `Fuse::join` call and runs three-way —
+         the user-merge case. Non-Binary repr meets stay an honest residual (DN-58 §A.6 F-A3).
 
-      Definition of Done:
-      - `reclaim(policy) { body }` elaborates to `run_supervised` dispatch (no Residual); property test green.
-      - At least one data-type `Fuse` instance wired through the registry; differential case green.
-      - `just check` green for affected crates; guarantee tags Empirical (trial-tested, VR-5).
-      - M-710 → done (closes the partial; the end-to-end verification item).
+      Definition of Done (met):
+      - Data-type `fuse` + `reclaim` run three-way (Empirical); the supervision driver dispatches with
+        the `SupervisionRecord` EXPLAIN trail (never-silent restart/escalation, G2). No new L0 node (KC-3).
+      - Four three-way differential tests (`fuse_repr`, `fuse_data`, `reclaim_sequential_reference`,
+        `reclaim_real_supervision_driver`) + a `generic_corpus` data-fuse case; `just check` green.
+      - DN-58 → propose Enacted (surface + execution landed); M-710 → done.
 
   - id: M-797
     title: "M-797 -- extract inline #[cfg(test)] tests to in-crate src/tests/ (no tests in logic files)"

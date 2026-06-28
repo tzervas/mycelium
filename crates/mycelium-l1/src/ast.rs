@@ -729,8 +729,12 @@ pub enum Expr {
     /// `reclaim(policy) { <body> }` — attach a reified reclamation/supervision policy to a
     /// structured scope (DN-58 §B; RFC-0008 RT7). `policy` is a supervision-policy value
     /// (e.g. a `RestartIntensity`/`Supervisor` from `std.runtime`); the body is a scope
-    /// expression (typically a `colony { … }`). Elaborates to `mycelium_std_runtime::supervision`
-    /// dispatch threading a `SupervisionRecord` EXPLAIN trail — **no new L0 node** (KC-3).
+    /// expression (typically a `colony { … }`). The trusted base elaborates it to its **sequential
+    /// reference** — `Let{_ = policy, body}` (evaluate the policy for effect, then yield the body) —
+    /// which runs three-way with **no new L0 node** (KC-3); the **real** RT7 supervision (restart
+    /// cascade + `SupervisionRecord` EXPLAIN trail) is the runtime-tier driver
+    /// `mycelium_mlir::run_reclaim` over the lazy body node (`elaborate_reclaim`), validated equal to
+    /// the reference on success — the same layering the concurrent `colony` executor uses (M-817).
     /// Never-silent on reclamation/restart (G2). Guarantee: `Empirical` (M-713 property-tested).
     Reclaim {
         /// The reified supervision/reclamation policy.

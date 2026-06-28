@@ -874,6 +874,14 @@ fn generic_corpus() -> Vec<&'static str> {
         "nodule d\ntype Bit = O | I\ntype Box[A] = Wrap(A)\n\
          fn unbox(b: Box[Bit]) => Bit = match b { Wrap(x) => x }\n\
          fn main() => Bit = unbox(Wrap(I))",
+        // (8) DN-58 §A.5 (M-817): a **Data**-type `fuse` desugars (monomorphization) to the resolved
+        //     `Fuse::join` call — an ordinary inlined trait-method call that runs three-way. `Flag`'s
+        //     `join` is the absorbing-`On` OR (a commutative/associative/idempotent join-semilattice);
+        //     `fuse(On, Off)` = `join(On, Off)` = `On`. This is the user-merge case the brief targets.
+        "nodule d\ntrait Fuse[A] { fn join(a: A, b: A) => A }\n\
+         type Flag = Off | On\n\
+         impl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b } }\n\
+         fn main() => Flag = fuse(On, Off)",
     ]
 }
 
@@ -1519,78 +1527,262 @@ fn cross_nodule_program_runs_three_way() {
     // DN-52 §5 FLAG-2 → RESOLVED: cross-nodule three-way = Runs (Empirical).
 }
 
-// --- DN-58 §A (M-667): fuse/reclaim/tier runtime-vocabulary wave ----------------------------
+// --- DN-58 §A/§B (M-817): fuse (repr + data) and reclaim run three-way (closes M-710) ----------
 //
-// DN-58 §A: `fuse(a, b)` — lawful binary merge over the Fuse semilattice (RFC-0008 RT6).
-// The L1 evaluator runs `bit.and` for repr types (the semilattice meet); the L0 elaboration
-// produces `Node::Op { prim: "fuse_join:binary", … }`. The `fuse_join:*` prim namespace is not
-// yet wired in the PrimRegistry (FLAG F-A1 — follow-on M-713), so the L0-interp/AOT paths
-// refuse explicitly (never silently produce a wrong value — G2).
-//
-// This test therefore exercises:
-//   1. Parse + type-check succeeds.
-//   2. L1-eval runs and returns the correct semilattice meet (Binary bit-and).
-//   3. elaborate produces a Node::Op with prim "fuse_join:binary" (the correct L0 encoding).
-//   4. L0-interp refuses (unknown prim) — explicit, not a hang or a silent wrong value (G2).
-//
-// Classification: Empirical (L1-eval path is tested; the L0/AOT three-way is deferred to
-// FLAG F-A1 / M-713 — documented here, not silently skipped).
+// M-817 closes the r4v execution residual. `fuse` now **runs** three-way (L1-eval ≡ L0-interp ≡ AOT):
+//   - **repr** `fuse` lowers to the registered `fuse_join:binary` meet prim (bitwise-AND, the `Binary`
+//     semilattice greatest-lower-bound) — the *same* prim on all three arms, carrying the canonical
+//     `Derived{op:"fuse_join"}` provenance (DN-58 §A.5; RFC-0027 §10.6). [FLAG F-A1 → RESOLVED.]
+//   - **data** `fuse` desugars (monomorphization) to the resolved `Fuse::join` call — an ordinary
+//     inlined call that runs three-way (DN-58 §A.5), exercised by the `generic_corpus` (case 8) above.
+// `reclaim(policy) { body }` lowers to its sequential reference (`Let{_ = policy, body}`) and runs
+// three-way; the **real** RT7 supervision — restart cascade + `SupervisionRecord` EXPLAIN trail — is
+// the runtime driver `mycelium_mlir::run_reclaim`, validated equal to the reference on success
+// (`elaborate_reclaim` supplies the lazy policy/body nodes). [FLAG F-B1 → RESOLVED.]
+// Classification: **Empirical** (a differential over these shapes + the M-713 property tests, not a
+// mechanized theorem; VR-5). KC-3: no new L0 node — the meet reuses `Op`, the reference reuses `Let`.
 
-/// **DN-58 §A: `fuse` parses, type-checks, and L1-eval returns the semilattice meet.**
-///
-/// For Binary repr, the Fuse meet is bitwise-and (`bit.and`).
-/// `fuse(0b1011_0010, 0b1100_1111)` = `0b1011_0010 & 0b1100_1111` = `0b1000_0010`.
-///
-/// The L0 elaborate path produces `Node::Op { prim: "fuse_join:binary", … }`.
-/// FLAG F-A1: `fuse_join:*` prims are not yet registered in `PrimRegistry::with_builtins()`.
-/// L0-interp refuses explicitly (unknown prim) — documented here, not silently skipped (G2).
-/// Classification: L1-eval = Runs (Empirical); L0/AOT three-way = deferred to M-713.
+/// **DN-58 §A.5 (M-817): `fuse` on `Binary` repr runs three-way (the semilattice meet).**
+/// `fuse(0b1011_0010, 0b1100_1111)` = `0b1011_0010 & 0b1100_1111` = `0b1000_0010`. The L1 evaluator,
+/// the `elaborate→L0-interp` path, and the AOT env-machine must all produce that value via the same
+/// `fuse_join:binary` prim, with the canonical `Derived{op:"fuse_join"}` provenance.
 #[test]
-fn fuse_differential_three_way_empirical() {
-    // Nullary main with literal operands — consistent with the corpus pattern above.
-    // fuse(0b1011_0010, 0b1100_1111) = bit.and(0b1011_0010, 0b1100_1111) = 0b1000_0010.
+fn fuse_repr_differential_three_way_empirical() {
     let src = "nodule d\nfn main() => Binary{8} = fuse(0b1011_0010, 0b1100_1111)";
+    let env = check_nodule(&parse(src).expect("fuse(lit, lit) parses (DN-58 §A)"))
+        .expect("fuse on Binary{8} type-checks (DN-58 §A)");
 
-    // Step 1: parse must succeed (fuse is now an active keyword, not reserved-not-active).
-    let nodule = parse(src).expect("fuse(lit, lit) must parse (DN-58 §A M-667)");
+    // The expected meet: 0b1011_0010 & 0b1100_1111 = 0b1000_0010 (MSB-first: bits[0] is the MSB).
+    let expected = Payload::Bits(vec![true, false, false, false, false, false, true, false]);
 
-    // Step 2: type-check must succeed (Binary{8} is fusible — repr types need no Fuse instance).
-    let env = check_nodule(&nodule).expect("fuse on Binary{8} must type-check (DN-58 §A)");
-
-    // Step 3: L1-eval runs the fuse as `bit.and` (semilattice meet for repr types).
-    // 0b1011_0010 & 0b1100_1111 = 0b1000_0010 (MSB first: bits[0] is the most-significant bit).
-    let l1_result = Evaluator::new(&env)
+    // Path 1: L1-eval (now via the `fuse_join:binary` meet prim — M-817).
+    let l1 = Evaluator::new(&env)
         .call("main", vec![])
-        .expect("L1-eval must run fuse on Binary{8} literals (bit.and path — DN-58 §A.3)");
-    let l1_repr = l1_result
-        .as_repr()
-        .expect("L1 fuse result must be a repr value")
-        .clone();
-    // Verify the correct meet value: 0b1011_0010 & 0b1100_1111 = 0b1000_0010.
-    // Bit layout (MSB → LSB): 1,0,0,0,0,0,1,0
-    assert_eq!(l1_repr.repr(), &Repr::Binary { width: 8 });
+        .expect("L1-eval runs the Binary fuse meet (DN-58 §A.3; M-817)");
+    let l1 = l1.as_repr().expect("a repr fuse result").clone();
+    assert_eq!(l1.repr(), &Repr::Binary { width: 8 });
     assert_eq!(
-        l1_repr.payload(),
-        &Payload::Bits(vec![true, false, false, false, false, false, true, false]),
-        "fuse(0b1011_0010, 0b1100_1111) must = 0b1000_0010 (bit.and meet — DN-58 §A)"
+        l1.payload(),
+        &expected,
+        "fuse meet = 0b1000_0010 (bitwise-AND)"
     );
 
-    // Step 4: elaborate produces `Node::Op { prim: "fuse_join:binary", args: [a, b] }`.
-    // FLAG F-A1: `fuse_join:*` is not yet registered in PrimRegistry::with_builtins() — the
-    // L0-interp refuses (unknown prim), never silently produces a wrong value (G2).
-    // This is the documented state until M-713 registers the prims.
-    let node = elaborate(&env, "main")
-        .expect("elaborate must produce a fuse_join:binary Op node (DN-58 §A.4, KC-3)");
+    // Path 2: elaborate → L0-interp (the registered `fuse_join:binary` prim — FLAG F-A1 resolved).
+    let node = elaborate(&env, "main").expect("fuse elaborates to the fuse_join:binary Op (M-817)");
     let interp = Interpreter::new(
         PrimRegistry::with_builtins(),
         Box::new(BinaryTernarySwapEngine),
     );
-    // L0-interp refuses explicitly on the unknown fuse_join:binary prim (FLAG F-A1).
-    // Once M-713 registers fuse_join:* in the prim registry, promote this to a full
-    // three-way differential (assert the interp result matches l1_repr above).
-    let l0_err = interp.eval(&node).expect_err(
-        "L0-interp must refuse fuse_join:binary (not yet registered — FLAG F-A1/M-713)",
+    let l0 = interp
+        .eval(&node)
+        .expect("L0-interp runs fuse_join:binary (M-817 — FLAG F-A1 resolved)");
+
+    // Path 3: the same L0 term through the AOT env-machine.
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    let aot =
+        mycelium_mlir::run(&node, &prims, &engine).expect("AOT runs fuse_join:binary (M-817)");
+
+    // All three agree on the observable (repr + payload + guarantee).
+    assert_eq!(
+        observable(&l0),
+        observable(&l1),
+        "L0-interp ≡ L1-eval (fuse meet)"
     );
-    let _ = l0_err; // The refusal is explicit and expected — never a silent wrong value (G2).
-                    // FLAG F-A1 → open (M-713 follow-on): promote to three-way when fuse_join:* is registered.
+    assert_eq!(
+        observable(&aot),
+        observable(&l1),
+        "AOT ≡ L1-eval (fuse meet)"
+    );
+
+    // DN-58 §A.5 / RFC-0027 §10.6: the result carries the canonical `Derived{op:"fuse_join", …}` node
+    // (the merge identity the δ-CRDT anti-entropy story reads), not the per-paradigm prim name.
+    match l0.meta().provenance() {
+        mycelium_core::Provenance::Derived { op, inputs } => {
+            assert_eq!(
+                *op,
+                mycelium_core::operation_hash("fuse_join"),
+                "fuse provenance is Derived{{op:\"fuse_join\"}} (DN-58 §A.5)"
+            );
+            assert_eq!(inputs.len(), 2, "fuse_join derives from both operands");
+        }
+        other => panic!("fuse result must be Derived{{op:\"fuse_join\"}}, got {other:?}"),
+    }
+}
+
+/// **DN-58 §A.5 (M-817): a Data-type `fuse` runs three-way as the resolved `Fuse::join` call.**
+/// This is the user-merge case the `prm` kickoff targets. `Flag`'s `join` is the absorbing-`On` OR (a
+/// commutative/associative/idempotent join-semilattice); `fuse(On, Off)` = `join(On, Off)` = `On`. The
+/// L1 evaluator runs on the **monomorphized** env (it has no trait dispatch — `eval_app`); `elaborate`
+/// (which monomorphizes internally) and the AOT env-machine run the same resolved call. The broader
+/// `generic_corpus` test exercises this shape in the uniform harness; this names the DoD value.
+#[test]
+fn fuse_data_differential_three_way_empirical() {
+    let src = "nodule d\ntrait Fuse[A] { fn join(a: A, b: A) => A }\n\
+               type Flag = Off | On\n\
+               impl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b } }\n\
+               fn main() => Flag = fuse(On, Off)";
+    let env = check_nodule(&parse(src).expect("data fuse parses")).expect("data fuse type-checks");
+
+    // The mono'd env desugars `fuse(On, Off)` to the resolved `join` call — the form L1-eval runs.
+    let mono = monomorphize(&env, "main").expect("the Fuse program monomorphizes (DN-58 §A.5)");
+    let registry = build_registry(&mono).expect("the mono'd data registry builds");
+
+    // Path 1: L1-eval on the monomorphized env (the trait call is now a direct call).
+    let l1 = Evaluator::new(&mono)
+        .call("main", vec![])
+        .expect("L1-eval runs the desugared Fuse::join (M-817)");
+    let l1_core = l1
+        .to_core(&mono, &registry)
+        .expect("the Flag result is in the r3 data fragment");
+
+    // Path 2 + 3: elaborate→L0-interp and AOT, both over the resolved-join L0 term.
+    let node = elaborate(&env, "main").expect("data fuse elaborates to the resolved join call");
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    let l0_core = interp
+        .eval_core(&node)
+        .expect("L0-interp runs the resolved Fuse::join");
+    let aot_core = mycelium_mlir::run_core(
+        &node,
+        &PrimRegistry::with_builtins(),
+        &BinaryTernarySwapEngine,
+    )
+    .expect("AOT runs the resolved Fuse::join");
+
+    // All three agree on the merged datum.
+    assert_eq!(l1_core, l0_core, "data fuse: L1-eval(mono) ≡ L0-interp");
+    assert_eq!(l0_core, aot_core, "data fuse: L0-interp ≡ AOT");
+
+    // Oracle: the merge value must be `On` (the absorbing element — join(On, Off) = On, DN-58 §A.1).
+    // Compare against a bare `On` over the *same* `Flag` definition (its `#T#i` identity is content-
+    // addressed by the type, so an identical `type Flag` yields the identical constructor identity).
+    let on_src = "nodule d\ntype Flag = Off | On\nfn main() => Flag = On";
+    let on_env = check_nodule(&parse(on_src).expect("parses")).expect("checks");
+    let on_node = elaborate(&on_env, "main").expect("a bare `On` elaborates");
+    let on_core = interp.eval_core(&on_node).expect("the `On` oracle runs");
+    assert_eq!(
+        l0_core, on_core,
+        "fuse(On, Off) = On (the absorbing element — DN-58 §A.1)"
+    );
+
+    // The shared M-210 checker validates the equivalence (a mislabeled lowering is explicit, not silent).
+    assert_eq!(
+        check_core(&l1_core, &aot_core),
+        CheckVerdict::Validated {
+            strength: GuaranteeStrength::Exact
+        },
+        "the shared checker validates the data-fuse L1↔AOT pair"
+    );
+}
+
+/// **DN-58 §B (M-817): `reclaim(policy) { body }` runs three-way via its sequential reference.**
+/// The trusted base lowers `reclaim` to `Let{_ = policy, body}` — evaluate the policy for its effect,
+/// then yield the body — so L1-eval, `elaborate→L0-interp`, and the AOT env-machine all produce the
+/// body's value. Here `reclaim(0b0000_0001) { not(0b1010_1010) }` yields `not(0b1010_1010)` = `0b0101_0101`.
+#[test]
+fn reclaim_sequential_reference_runs_three_way() {
+    let src = "nodule d\nfn main() => Binary{8} = reclaim(0b0000_0001) { not(0b1010_1010) }";
+    let env = check_nodule(&parse(src).expect("reclaim parses (DN-58 §B)"))
+        .expect("reclaim type-checks (the body type is the result type)");
+
+    // not(0b1010_1010) = 0b0101_0101 (MSB-first).
+    let expected = Payload::Bits(vec![false, true, false, true, false, true, false, true]);
+
+    let l1 = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect("L1-eval runs reclaim (policy for effect, then body — DN-58 §B)");
+    let l1 = l1.as_repr().expect("a repr reclaim result").clone();
+    assert_eq!(
+        l1.payload(),
+        &expected,
+        "reclaim body = not(0b1010_1010) = 0b0101_0101"
+    );
+
+    let node =
+        elaborate(&env, "main").expect("reclaim elaborates to Let{_ = policy, body} (M-817)");
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    let l0 = interp
+        .eval(&node)
+        .expect("L0-interp runs the reclaim sequential reference");
+    let aot = mycelium_mlir::run(
+        &node,
+        &PrimRegistry::with_builtins(),
+        &BinaryTernarySwapEngine,
+    )
+    .expect("AOT runs the reclaim sequential reference");
+
+    assert_eq!(
+        observable(&l0),
+        observable(&l1),
+        "reclaim: L0-interp ≡ L1-eval"
+    );
+    assert_eq!(observable(&aot), observable(&l1), "reclaim: AOT ≡ L1-eval");
+}
+
+/// **DN-58 §B (M-817): the real RT7 supervision driver (`mycelium_mlir::run_reclaim`).**
+/// `elaborate_reclaim` yields the (policy, body) as **lazy** L0 nodes; the driver runs the body under
+/// `mycelium-std-runtime::supervise_with_restart`, threading the `SupervisionRecord` EXPLAIN trail.
+/// - **Success:** a body that succeeds resolves on the first attempt — the value equals the sequential
+///   reference and the EXPLAIN trace is empty (no supervision decision was needed).
+/// - **Bounded failure:** a body that deterministically refuses (a fixed-width add overflow) is
+///   restarted under the bounded cascade and then **escalates** — an explicit outcome with a recorded
+///   trace, never an unbounded restart storm and never a silent drop (RT4/RT7; G2).
+#[test]
+fn reclaim_real_supervision_driver_dispatches_with_explain() {
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    let intensity = mycelium_interp::RestartIntensity {
+        max_restarts: 100,
+        window_ticks: 1_000,
+    };
+
+    // (a) Success: the supervised observable equals the sequential reference, with an empty trace.
+    let ok_src = "nodule d\nfn main() => Binary{8} = reclaim(0b0000_0001) { not(0b1010_1010) }";
+    let ok_env = check_nodule(&parse(ok_src).expect("parses")).expect("checks");
+    let (policy, body) = mycelium_l1::elaborate_reclaim(&ok_env, "main")
+        .expect("reclaim elaborates to its (policy, body) closed L0 programs");
+    let run = mycelium_mlir::run_reclaim(
+        &policy, &body, intensity, 2, &prims, &engine, 1_000_000, 1_000_000,
+    )
+    .expect("the supervised body succeeds (first attempt)");
+    assert!(
+        run.trace.is_empty(),
+        "a first-attempt success records no supervision decisions (EXPLAIN)"
+    );
+    // The supervised value equals the sequential reference (elaborate → Let → L0-interp).
+    let ref_node = elaborate(&ok_env, "main").expect("sequential reference elaborates");
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    let ref_core = interp.eval_core(&ref_node).expect("the reference runs");
+    assert_eq!(
+        run.value, ref_core,
+        "supervised success ≡ the sequential reference (DN-58 §B)"
+    );
+
+    // (b) Bounded failure: a deterministically-refusing body (add overflow) escalates with an EXPLAIN
+    // trace — `add_bin(0b1111_1111, 0b0000_0001)` overflows `Binary{8}` (never a silent wrap — G2).
+    let bad_src =
+        "nodule d\nfn main() => Binary{8} = reclaim(0b0000_0001) { add_bin(0b1111_1111, 0b0000_0001) }";
+    let bad_env = check_nodule(&parse(bad_src).expect("parses")).expect("checks");
+    let (policy, body) = mycelium_l1::elaborate_reclaim(&bad_env, "main")
+        .expect("reclaim elaborates to its (policy, body) programs");
+    let err = mycelium_mlir::run_reclaim(
+        &policy, &body, intensity, 2, &prims, &engine, 1_000_000, 1_000_000,
+    )
+    .expect_err("a deterministically-failing body escalates under the bounded cascade");
+    match err {
+        mycelium_mlir::ReclaimError::Supervised { trace, .. } => assert!(
+            !trace.is_empty(),
+            "an escalation records its restart/escalation decisions (EXPLAIN — no black box)"
+        ),
+        other => panic!("expected a bounded supervised escalation, got: {other}"),
+    }
 }

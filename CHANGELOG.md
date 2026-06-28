@@ -8,6 +8,39 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-28: prm wave — `fuse` (data) + `reclaim` EXECUTE three-way; DN-58 → Enacted, M-710/M-817 done)
+
+- **`fuse` and `reclaim` now RUN end-to-end three-way (L1-eval ≡ L0-interp ≡ AOT, `Empirical`) — the
+  r4v execution residual is closed (M-817, closes M-710; DN-58 §A/§B → Enacted).**
+  - **`fuse` (repr):** the `Binary` `Fuse` semilattice meet executes via a new registered
+    `fuse_join:binary` prim (`mycelium-interp` + the `mycelium-core` `PrimTable`) — bitwise-AND, the
+    boolean-lattice greatest-lower-bound, carrying the canonical `Derived{op:"fuse_join"}` provenance
+    (DN-58 §A.5 / RFC-0027 §10.6). The L1 evaluator, L0 interpreter, and AOT env-machine all dispatch
+    the same prim. Non-`Binary` repr meets stay an honest never-silent residual (no committed meet —
+    DN-58 §A.6 F-A3).
+  - **`fuse` (data):** a user `Data` type with a `Fuse` instance — `fuse(a, b)` desugars at
+    **monomorphization** (`mycelium-l1/src/mono.rs`) to the resolved `Fuse::join` call (the coherent
+    instance recorded as an EXPLAIN selection — no black box), an ordinary inlined call that runs
+    three-way (DN-58 §A.5). This is the user-merge case the `prm` kickoff targeted.
+  - **`reclaim`:** the trusted base lowers `reclaim(policy) { body }` to its **sequential reference**
+    (`Let{_ = policy, body}` — runs three-way, no new L0 node). The **real** RT7 supervision —
+    bounded restart cascade + `SupervisionRecord` EXPLAIN trail — is a new runtime-tier driver
+    `mycelium_mlir::run_reclaim` (+ `ReclaimRun`/`ReclaimError`, fed by the new
+    `mycelium_l1::elaborate_reclaim`'s lazy policy/body nodes), dispatching to
+    `mycelium-std-runtime::supervise_with_restart` and validated equal to the sequential reference on
+    success — the same layering the `colony` executor (M-666) uses over unchanged per-task L0 terms.
+  - **Mechanism note (transparency / VR-5):** this refines the M-817 brief's "register two prims"
+    sketch. The trusted base (`mycelium-interp`/`-l1`) cannot depend on `mycelium-std-runtime` (cycle)
+    and a bare `PrimFn` can resolve neither a user `join` nor a lazy supervised body, while DN-58 §A.5
+    already specified a `join` *call* — so the data-fuse is an elaboration desugar and the reclaim
+    supervision is a runtime-tier driver (only the `Binary` repr meet is a pure prim). Flagged to and
+    approved by the maintainer before landing. **KC-3: no new L0 node.**
+  - **Tests:** four three-way differential tests (`fuse_repr`, `fuse_data`,
+    `reclaim_sequential_reference`, `reclaim_real_supervision_driver` — incl. bounded escalation with
+    the EXPLAIN trace) + a `generic_corpus` data-fuse case; `PrimTable` parity updated. `just check`
+    green. Honestly deferred (VR-5): non-`Binary` meets (F-A3), the policy-value → restart-bounds
+    mapping (F-B2), and restart-recovers-a-transient-failure (needs effectful bodies).
+
 ### Changed (2026-06-28: `hrd` — DN-40 A1/A2/A3 doc-drift closure; code already landed, docs reconciled)
 
 - **Doc reconciliation, no code change.** The DN-40 **A1** (CRITICAL parser type-subgrammar DoS),

@@ -235,10 +235,20 @@ Examples using them remain illustrations of intent (ADR-012 §7.3's marking stan
 **R1 activation note (2026-06-28, append-only — VR-5 / never-silent):** `fuse`, `reclaim`, and
 `tier` are now **ACTIVE** in `mycelium-l1` (r4v wave, M-667; DN-58 ratified the surface — §A/§B/§C).
 The status rule above applies only to the **remaining** six R1/R2 names (`mesh`, `graft`, `cyst`,
-`xloc`, `forage`, `backbone`). Execution status is **partial**: repr-type `fuse` executes three-way
-(`Empirical`); `reclaim` elab dispatches to a Residual stub (runtime supervision wiring pending
-M-817); data-type fuse prim registration pending M-817. **NOT fully Enacted** (VR-5). This RFC
-status stays **`Accepted`** — no RFC-level status change is warranted for a partial R1 implementation.
+`xloc`, `forage`, `backbone`).
+**Execution update (2026-06-28, prm wave — M-817 landed, M-710 closed; append-only):** `fuse` and
+`reclaim` now **execute** end-to-end three-way (L1-eval ≡ L0-interp ≡ AOT, `Empirical`). **RT6 `fuse`**
+runs: the `Binary` semilattice meet via the registered `fuse_join:binary` prim (bitwise-AND + canonical
+`Derived{op:"fuse_join"}` provenance), and a user `Data` type's merge via the resolved `Fuse::join`
+call (desugared at monomorphization). **RT7 `reclaim`** runs: its sequential reference in the trusted
+base (`Let{_ = policy, body}`), with the real bounded-restart supervision + `SupervisionRecord` EXPLAIN
+trail as the runtime-tier driver `mycelium_mlir::run_reclaim` (over the M-356/M-713 `supervise_with_restart`
+machinery in `mycelium-std-runtime`), validated equal to the reference on success — the same layering
+the `colony` executor (M-666) uses; **no new L0 node (KC-3)**. DN-58 → **Enacted** for this executable
+surface. Honestly **still deferred** (VR-5): a committed meet for the non-`Binary` reprs (DN-58 §A.6
+F-A3), the `policy`-value → restart-bounds mapping (F-B2), and restart-recovers-a-transient-failure
+(needs effectful bodies). This RFC status stays **`Accepted`** — the runtime model is unchanged; the
+construct enactment is tracked at the DN-58 / M-710 / M-817 level, not by an RFC-level status change.
 
 ### 4.6 Staging
 
@@ -381,6 +391,18 @@ diffing them is `EXPLAIN` over history); native-ternary nodes joining the mesh a
 substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
+
+- **2026-06-28 — R1 execution update (prm wave, append-only; M-817 landed, M-710 closed):** `fuse`
+  and `reclaim` now **execute** end-to-end three-way (L1-eval ≡ L0-interp ≡ AOT, `Empirical`). RT6
+  `fuse`: the `Binary` meet via the registered `fuse_join:binary` prim (bitwise-AND + canonical
+  `Derived{op:"fuse_join"}` provenance), and a user `Data` type's merge via the resolved `Fuse::join`
+  call (desugared at monomorphization). RT7 `reclaim`: the sequential reference in the trusted base
+  (`Let{_ = policy, body}`) + the real bounded-restart supervision (`SupervisionRecord` EXPLAIN) as
+  the runtime-tier driver `mycelium_mlir::run_reclaim`, validated equal to the reference on success —
+  the `colony` (M-666) layering; no new L0 node (KC-3). DN-58 → Enacted for this executable surface.
+  Still deferred (VR-5): non-`Binary` repr meets (F-A3), policy-value → restart-bounds (F-B2),
+  restart-recovers-a-transient (needs effectful bodies). RFC-0008 status **unchanged** (Accepted) —
+  the runtime model is unchanged; enactment is tracked at the DN-58 / M-710 / M-817 level.
 
 - **2026-06-28 — R1 activation note (append-only; VR-5 — never-silent, partial execution):**
   `fuse`, `reclaim`, `@tier` are now ACTIVE in `mycelium-l1` (r4v wave, M-667; DN-58 Accepted).
