@@ -280,8 +280,8 @@ silently Accepted/Enacted (house rule #3 / VR-5).
 - **In scope:** named top-level functions as first-class values, **statically resolved at the call site**.
 - **Specified (this change, §4A), pending impl — `Residual` until M-704 lands:** **closures/lambdas**
   (environment-capturing), a function value that flows **dynamically** (out of a `match`, a data field,
-  or a fn return), **partial application**, and the full **Reynolds defunctionalization** (a fn-tag sum
-  + an `apply` dispatch) — **now specified in §4A** as the design-draft generalization (`Declared`-with-
+  or a fn return), **partial application**, and the full **Reynolds defunctionalization** (a fn-tag sum +
+  an `apply` dispatch) — **now specified in §4A** as the design-draft generalization (`Declared`-with-
   argument). The surface still emits a never-silent `Residual` at every stage until M-704 wires the §4A
   lowering (G2 — the surface parses, does not yet evaluate). Status of these cases moves from *deferred /
   unspecified* to **"specified, pending impl (M-704)"**.
