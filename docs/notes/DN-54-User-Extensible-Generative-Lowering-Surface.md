@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-54 |
-| **Status** | **Accepted** (2026-06-27; **ratified by the maintainer 2026-06-27**, R5 gate) — captures the extension-definition surface, inspectability-by-construction argument, the compiler checker, the verification discipline, and the KC-3 invariant for **user-extensible generative lowering** (`derive`). Enacts no code; → **Enacted** gated on the RFC-0037 grammar epic and the §6 verification harness (DN-38 §7). Prior: **Proposed** (2026-06-27). |
+| **Status** | **Implemented (Rust-first, surface + structural checks), KC-3 + IL-grammar + RHS-elaboration pending — pending ratification** (2026-06-28; M-812 in `mycelium-l1`) — **what landed:** the `lower Name[params] = <rhs>` definition surface and `derive Name for T` use-site surface are **active** keywords (parse + AST `Item::Lower`/`Item::Derive` + `LowerDecl`/`DeriveDecl`), and the checker performs the **structural** validations (§4.2/§4.6 partial): `lower`-rule **name uniqueness**, **param-name uniqueness**, and `derive` **rule-name resolution** — all **never-silent** (`CheckError`, G2). The rule is registered in `Env::lower_rules`. **What is NOT yet implemented (deferred to M-812-cont; held `Declared`, VR-5):** (1) the **RHS elaboration to L0** — `crate::elab` does not yet read `Env::lower_rules`, so a `derive` currently emits **no L0 term** (an honest never-silent residual, *not* a fabricated accept — pinned by `tests/checkty.rs::lower_derive_items_add_no_l0_to_an_unrelated_entry`); (2) the **§4.1 IL-grammar RHS type-check** (infer-type the RHS, reject `wild`/mutation/ill-formed terms); (3) the **§6 KC-3 kernel-growth guard** (the elaborated RHS must lower to existing L0 nodes only); (4) **§4.2 cross-rule acyclicity** (only same-nodule name-uniqueness is enforced today); (5) the **§7 verification discipline** (differential / hygiene / round-trip harness). Guards (2)/(3) are only *meaningful* once (1) lands — landing them now would be vacuous no-ops (VR-5: no upgrade past basis). → **Enacted** still gated on the §6/§7 verification harness (DN-38 §7) **and** these completions. Prior: **Accepted** (2026-06-27, ratified by maintainer, R5 gate); **Proposed** (2026-06-27). |
 | **Feeds** | The generative-lowering row of the DN-38 §6 Lowering Map; the `derive` + `reveal` RFC track; the grammar wave (DN-31/RFC-0037); the verification harness (DN-20 tiers); KC-3 invariant tracking. |
 | **Date** | June 27, 2026 |
 | **Decides** | *Design proposal (all `Declared`; no code):* (1) the **extension-definition surface** — how a user declares a generative-lowering rule written in Mycelium lexicon with an explicit L0/surface RHS; (2) **inspectability-by-construction** — why there is no opaque step; (3) the **checker** — what the compiler enforces on every user-defined lowering; (4) the **verification discipline** — the same §6 differential + hygiene + round-trip the built-in lowerings hold to; (5) the **KC-3 invariant** — user extensions add no kernel node. |
@@ -493,3 +493,25 @@ doc's status.
   **(8)** guarantee posture (§9 — Declared throughout; DoD stated). Enacts nothing; moves no
   status; CHANGELOG / Doc-Index / issues.yaml / docs/api-index owned by integrating parent.
   (Append-only; VR-5; G2.)
+- **2026-06-28 — Implemented (Rust-first, surface + structural checks); KC-3 + IL-grammar +
+  RHS-elaboration deferred — pending ratification.** M-812 partial landing in `mycelium-l1`
+  (obj+low integration wave). **Landed:** `Tok::Lower` + `Tok::Derive` become **active** keywords
+  (settling the `grow → derive` reconciliation, DN-38 §8.1 — `grow` at item position now emits a
+  teaching diagnostic pointing at `derive`); AST `Item::Lower(LowerDecl)` + `Item::Derive(DeriveDecl)`
+  (`ast.rs`); `parse_lower_decl` (`lower Name[params]? = <rhs>`) + `parse_derive_decl`
+  (`derive Name for T`) at item position, both **rejected at expression position** with teaching
+  diagnostics (`parse.rs`, G2); ambient pass-through + surface re-render (`print_lower_decl` /
+  `print_derive_decl`, `ambient.rs`); checker Pass 3e (`check_lower_decl` / `check_derive_application`,
+  `checkty.rs`) — **never-silent structural** checks: rule-name uniqueness, param-name uniqueness,
+  `derive` name-resolution; rule registered in `Env::lower_rules`; conformance fixtures
+  `accept/22-lower-derive.myc`, `reject/26-lower-missing-eq.myc`, `reject/27-derive-missing-for.myc`,
+  and the `reject/19-grow-reserved-not-active.myc` update; unit tests in `src/tests/{parse,checkty}.rs`
+  (22 sections green). **Deferred (M-812-cont; held `Declared`, VR-5 — named, not buried, G2):**
+  (1) **RHS elaboration to L0** — `crate::elab` does not yet read `Env::lower_rules`, so a `derive`
+  emits **no L0 term** today (an honest never-silent residual, not a fabricated accept — pinned by
+  the integration guard tests `lower_derive_items_add_no_l0_to_an_unrelated_entry` +
+  `lower_rule_rhs_is_stored_not_elaborated`); (2) the **§4.1 IL-grammar RHS type-check**;
+  (3) the **§6 KC-3 kernel-growth guard**; (4) **§4.2 cross-rule acyclicity**; (5) the **§7
+  verification harness** (differential / hygiene / round-trip). Guards (2)/(3) are meaningful only
+  once (1) lands. CHANGELOG / Doc-Index / issues.yaml / docs/api-index reconciled by the integrating
+  parent. (Append-only; VR-5; G2.)
