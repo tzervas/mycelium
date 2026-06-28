@@ -61,7 +61,7 @@ none yet lexed). Depends on the **M-659 trait checker** (landed) and the **M-673
 | # | Issue(s) | What | Status |
 |---|---|---|---|
 | 1 | **M-664** (#323) | `consume`/`grow`/`impl` surface keywords (+ lexicon-legend fix); tightly-scoped Sonnet leaf; serial-on-L1 | **active — ▶ first** |
-| 2 | **M-667** (#327) | E7-2 R1 remaining: `fuse` (semilattice merge — RT6), `reclaim` (supervision reclamation — RT7/M-356), `tier` (RFC-0004 `ExecutionMode` switch). After M-665/M-666 (`hypha`/`colony`, landed). Each: L1 surface + check pass + elaboration. Rebase onto post-M-664. Tightly-scoped Sonnet leaf; serial-on-L1 | next |
+| 2 | **M-667** (#327) | `fuse`/`reclaim`/`tier` L1 surface (RT6/RT7/`ExecutionMode`). **DONE** — landed via the `r4v` wave 2026-06-28 (archived). Listed here only for chain context; **not remaining work** | ✅ done |
 | 3 | **M-668** (#328) | E7-2 R2 **planning** (docs only): decompose `xloc`/`mesh`/`cyst`/`graft`/`forage`/`backbone` into per-construct implementation RFCs with honest guarantee tags + gates (a design note / DN-11 append). Gated on R1 (M-667). Parallel Sonnet leaf (docs-only; disjoint from L1 code) | last (or parallel with M-664/M-667) |
 
 For M-667: a non-associative `fuse` merge is a `CheckError` (declared semilattice constraint);
