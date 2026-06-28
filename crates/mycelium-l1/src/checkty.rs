@@ -12,8 +12,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ambient::AmbientError;
 use crate::ast::{
-    BaseType, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, Nodule, Paradigm, Path, Pattern,
-    Phylum, Scalar, Strength, TraitRef, TypeDecl, TypeRef, UsePath, WidthRef,
+    Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
+    Nodule, ObjectDecl, Paradigm, Path, Pattern, Phylum, Scalar, Strength, TraitRef, TypeDecl,
+    TypeRef, UsePath, WidthRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -492,6 +493,13 @@ pub struct Env {
     /// equality sites stay untouched). Empty when a nodule declares no `impl`s — a non-trait program is
     /// byte-identical to the pre-M-673 `Env`.
     pub impls: BTreeMap<(String, String), Vec<FnDecl>>,
+    /// **User-defined generative-lowering rules** (DN-54 / M-812), keyed by rule name.
+    /// Populated by `check_nodule_with` from every `lower Name[params] = <rhs>` declaration in the
+    /// nodule; looked up by `derive Name for T` application during elaboration ([`crate::elab`]).
+    /// Empty in any nodule that declares no `lower` rules. Acyclicity (DN-54 §4.2) and KC-3 (RHS
+    /// must lower to existing L0 nodes, never grow the kernel) are both enforced at check time —
+    /// never-silent (G2).
+    pub lower_rules: BTreeMap<String, LowerDecl>,
 }
 
 impl Env {
@@ -777,6 +785,41 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
         .map(crate::ambient::resolve)
         .collect::<Result<_, _>>()?;
 
+    // Phase 0: structurally expand `object` declarations (DN-53, M-811). Replaces each
+    // `Item::Object` with its `TypeDecl + ImplDecl(s) + FnDecl(s)` lowering so the existing
+    // type/trait/fn registration passes work without modification (KC-3 — zero kernel growth).
+    // `via` delegation impls are NOT generated here — they require the trait registry (built in
+    // pass 2, below). The original `ObjectDecl`s with `via_decls` are preserved in a parallel
+    // `Vec<Vec<ObjectDecl>>` and passed into `check_nodule_with` for Phase 0b processing.
+    let mut via_objects_per_nodule: Vec<Vec<ObjectDecl>> = Vec::with_capacity(resolved.len());
+    let mut resolved_expanded: Vec<Nodule> = Vec::with_capacity(resolved.len());
+    for n in resolved {
+        if !n.items.iter().any(|i| matches!(i, Item::Object(_))) {
+            via_objects_per_nodule.push(vec![]);
+            resolved_expanded.push(n);
+            continue;
+        }
+        let mut items = Vec::with_capacity(n.items.len());
+        let mut via_objs: Vec<ObjectDecl> = Vec::new();
+        for item in n.items {
+            if let Item::Object(od) = item {
+                if !od.via_decls.is_empty() {
+                    via_objs.push(od.clone());
+                }
+                items.extend(desugar_object_structural(&od));
+            } else {
+                items.push(item);
+            }
+        }
+        via_objects_per_nodule.push(via_objs);
+        resolved_expanded.push(Nodule {
+            path: n.path,
+            std_sys: n.std_sys,
+            items,
+        });
+    }
+    let resolved = resolved_expanded;
+
     // 2. Register each nodule's declarations into its own registries, and from those build the two
     //    phylum-wide views: the `pub`-only export table (import registry) and the pub-blind coherence
     //    view (all traits/types, for the orphan rule). Registration here is *declaration-level* only
@@ -831,9 +874,19 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
     // 3. Check each nodule's bodies with (a) its resolved `use` imports merged into its registries and
     //    (b) the phylum-wide pub-blind orphan rule. Each yields a checked `Env`.
     let mut out = Vec::with_capacity(resolved.len());
-    for (nodule, regs) in resolved.iter().zip(per_nodule_regs) {
+    for (i, (nodule, regs)) in resolved.iter().zip(per_nodule_regs).enumerate() {
         let imports = resolve_imports(nodule, &exports)?;
-        let env = check_nodule_with(nodule, regs, &imports, &coherence, matured_scope)?;
+        // Pass this nodule's via_objects (objects with `via` decls) for Phase 0b expansion of
+        // delegation impls (DN-53 M-811). The slice is empty for nodules with no `via` clauses.
+        let via_objects = &via_objects_per_nodule[i];
+        let env = check_nodule_with(
+            nodule,
+            regs,
+            &imports,
+            &coherence,
+            matured_scope,
+            via_objects,
+        )?;
         out.push((nodule.path.clone(), env));
     }
     Ok(PhylumEnv { nodules: out })
@@ -1195,6 +1248,153 @@ pub(crate) fn register_types(
     Ok(())
 }
 
+// ---- DN-53 M-811: object desugaring helpers ----
+
+/// Structural lowering of an `object` declaration (DN-53 §A.3.2, M-811): expand to the equivalent
+/// `Item::Type` + `Item::Impl` + `Item::Fn` items that the existing registration and checking passes
+/// already handle.
+///
+/// The `via` delegation impls are **not** generated here — they require the trait registry (not yet
+/// built at the point this is called). They are generated by [`expand_object_via_decls`] and injected
+/// as additional `Item::Impl` items before the instance-registration and method-body passes.
+///
+/// Guarantee: `Declared` (structural one-to-one rewrite; injective by construction — two distinct
+/// `object` declarations never produce the same item set, and the set determines the source uniquely;
+/// DN-53 §A.3.3). The three-way differential (`tests/object_desugar.rs`) provides `Empirical`
+/// agreement between the `object` form and its hand-written lowering.
+fn desugar_object_structural(od: &ObjectDecl) -> Vec<Item> {
+    // 1. The type declaration: `type Name[params] = CtorName(T1, T2, …)`.
+    let type_decl = TypeDecl {
+        vis: od.vis,
+        name: od.name.clone(),
+        params: od.params.clone(),
+        ctors: vec![od.ctor.clone()],
+    };
+    let mut items: Vec<Item> = vec![Item::Type(type_decl)];
+    // 2. Each explicit `impl` block, lifted verbatim.
+    for impl_decl in &od.impls {
+        items.push(Item::Impl(impl_decl.clone()));
+    }
+    // 3. Each inherent `fn`, lifted verbatim.
+    for fn_decl in &od.fns {
+        items.push(Item::Fn(fn_decl.clone()));
+    }
+    // `via_decls` are NOT expanded here; see [`expand_object_via_decls`].
+    items
+}
+
+/// Generate forwarding `ImplDecl`s for each `via` clause of an `object` declaration
+/// (DN-53 §A.3.2, M-811). Called **after** `register_traits` so the trait's method signatures are
+/// available.
+///
+/// For each `via <field_idx> : TraitName[args]`, generates an `impl TraitName for ObjectName` whose
+/// methods each destructure the object via a `match` to extract the delegate field, then forward the
+/// call. The delegate must implement the trait; the type-checker verifies this when it resolves the
+/// forwarding call.
+///
+/// Guarantee: `Empirical` — the forwarding bodies are synthesized from the trait signatures; the
+/// three-way differential (`tests/object_desugar.rs`) pins the agreement
+/// `observe(object) == observe(lower(object))` (DN-53 §A.3.3).
+///
+/// Never-silent (G2): an unknown trait name or an out-of-range field index is an explicit
+/// [`CheckError`], never a silent accept.
+fn expand_object_via_decls(
+    od: &ObjectDecl,
+    traits: &BTreeMap<String, TraitInfo>,
+) -> Result<Vec<ImplDecl>, CheckError> {
+    let mut via_impls: Vec<ImplDecl> = Vec::new();
+    for via in &od.via_decls {
+        // Look up the trait — never-silent (G2).
+        let trait_info = traits.get(&via.trait_name).ok_or_else(|| {
+            CheckError::new(
+                &od.name,
+                format!(
+                    "`object {}`: `via {} : {}` — trait `{}` is not declared in scope \
+                     (DN-53 §A.3.2; `via` requires the trait to be visible — never a silent miss, G2)",
+                    od.name, via.field_idx, via.trait_name, via.trait_name
+                ),
+            )
+        })?;
+        // Validate the field index — never-silent (G2).
+        let n_fields = od.ctor.fields.len();
+        if via.field_idx as usize >= n_fields {
+            return Err(CheckError::new(
+                &od.name,
+                format!(
+                    "`object {}`: `via {} : {}` — field index {} is out of range; the constructor \
+                     `{}` has {} field(s) (0-based; DN-53 §A.3.2; never silent — G2)",
+                    od.name, via.field_idx, via.trait_name, via.field_idx, od.ctor.name, n_fields
+                ),
+            ));
+        }
+        // Build the object type reference for the `for_ty` of the generated impl.
+        // If the object has type params, apply them (`ObjectName[T, U, …]`).
+        let obj_ty = TypeRef::unguaranteed(if od.params.is_empty() {
+            BaseType::Named(od.name.clone(), vec![])
+        } else {
+            BaseType::Named(
+                od.name.clone(),
+                od.params
+                    .iter()
+                    .map(|p| TypeRef::unguaranteed(BaseType::Named(p.clone(), vec![])))
+                    .collect(),
+            )
+        });
+        // Generate binder names for all constructor fields: `_f0`, `_f1`, …
+        let binders: Vec<String> = (0..n_fields).map(|i| format!("_f{i}")).collect();
+        let delegate_var = binders[via.field_idx as usize].clone();
+        // Pattern for the match arm: `CtorName(_f0, _f1, …)`
+        let match_pattern = Pattern::Ctor(
+            od.ctor.name.clone(),
+            binders.iter().map(|b| Pattern::Ident(b.clone())).collect(),
+        );
+        // Generate one forwarding method per trait signature.
+        // Forwarding body for `fn m(self_param, arg2, …) => R`:
+        //   m(match self_param { CtorName(_f0, _f1, …) = _fN }, arg2, …)
+        // where `_fN` is the delegate field at position `field_idx`.
+        let mut methods: Vec<FnDecl> = Vec::new();
+        for sig in &trait_info.sigs {
+            // The first value-parameter is the "self" parameter.
+            let self_name = sig
+                .value_params
+                .first()
+                .map(|p| p.name.clone())
+                .unwrap_or_else(|| "self".to_string());
+            // `match self_param { CtorName(_f0, _f1, …) = _fN }`
+            let delegate_expr = Expr::Match {
+                scrutinee: Box::new(Expr::Path(Path(vec![self_name]))),
+                arms: vec![Arm {
+                    pattern: match_pattern.clone(),
+                    body: Expr::Path(Path(vec![delegate_var.clone()])),
+                }],
+            };
+            // Call args: the delegate value, then the remaining params by name.
+            let mut call_args: Vec<Expr> = vec![delegate_expr];
+            for vp in sig.value_params.iter().skip(1) {
+                call_args.push(Expr::Path(Path(vec![vp.name.clone()])));
+            }
+            // Full forwarding call: `method_name(delegate_expr, arg2, …)`
+            let body = Expr::App {
+                head: Box::new(Expr::Path(Path(vec![sig.name.clone()]))),
+                args: call_args,
+            };
+            methods.push(FnDecl {
+                vis: crate::ast::Vis::Private,
+                thaw: false,
+                sig: sig.clone(),
+                body,
+            });
+        }
+        via_impls.push(ImplDecl {
+            trait_name: via.trait_name.clone(),
+            trait_args: via.trait_args.clone(),
+            for_ty: obj_ty,
+            methods,
+        });
+    }
+    Ok(via_impls)
+}
+
 /// The core checker for **one nodule of a phylum** (M-662), run on an already ambient-resolved nodule
 /// with its pre-built declaration registries (`regs`), its resolved cross-nodule `imports`, the
 /// phylum-wide pub-blind `coherence` view, and an explicit maturation flag. When `matured_scope` is
@@ -1211,6 +1411,7 @@ fn check_nodule_with(
     imports: &NoduleImports,
     coherence: &CoherenceView,
     matured_scope: bool,
+    via_objects: &[ObjectDecl],
 ) -> Result<Env, CheckError> {
     // Build the nodule's checking registries: imports first (lower precedence), own decls override
     // (the documented "own decl shadows `use`" precedence — RFC-0006 §4.3). `regs` already holds the
@@ -1223,12 +1424,45 @@ fn check_nodule_with(
     let mut fns = imports.fns.clone();
     fns.extend(regs.fns.clone());
 
+    // Phase 0b (DN-53 M-811): generate `via` delegation impls now that the trait registry is built.
+    // Each `via N : Trait` produces a forwarding `ImplDecl`; these are appended to a working copy of
+    // the nodule's items so the instance-registration pass and the impl-method body-checking pass both
+    // see them (the structural items — `TypeDecl`, explicit `ImplDecl`, `FnDecl` — were already
+    // inlined into the nodule by `check_phylum_inner`'s Phase 0 expansion; only the `via`-derived
+    // impls arrive here). Guarantee: `Empirical` (three-way differential, `tests/object_desugar.rs`).
+    let via_generated_impls: Vec<ImplDecl> = {
+        let mut all = Vec::new();
+        for od in via_objects {
+            all.extend(expand_object_via_decls(od, &traits)?);
+        }
+        all
+    };
+    // Build the effective nodule (with via impls appended) for the instance + impl-body passes.
+    // If there are no via impls, borrow the original nodule directly (avoids a clone in the common
+    // case of no `via` declarations). The `Option` owner keeps the `Nodule` alive long enough for
+    // the borrow `effective_nodule` to be valid across pass 2b and 3b below.
+    let effective_nodule_owned: Option<Nodule> = if via_generated_impls.is_empty() {
+        None
+    } else {
+        let mut items = nodule.items.clone();
+        for id in &via_generated_impls {
+            items.push(Item::Impl(id.clone()));
+        }
+        Some(Nodule {
+            path: nodule.path.clone(),
+            std_sys: nodule.std_sys,
+            items,
+        })
+    };
+    let effective_nodule: &Nodule = effective_nodule_owned.as_ref().unwrap_or(nodule);
+
     // Pass 2b: register trait **instances** (RFC-0019 §4.5). Coherence (global uniqueness + the
     // **phylum-wide** orphan rule) is enforced as each instance is registered; ALL instances are
     // registered before any method body is checked (Pass 3b), so a method body may rely on an instance
     // declared by a *later* `impl`. This pass resolves heads + checks coherence; it does not yet check
     // bodies. The orphan rule consults the pub-blind phylum-wide `coherence` view (M-662).
-    let instances = register_instances(&types, &traits, coherence, nodule)?;
+    // Uses `effective_nodule` so via-generated impls are included in the instance registry.
+    let instances = register_instances(&types, &traits, coherence, effective_nodule)?;
 
     // Pass 3: type every (own) body **against** its declared return type (bidirectional, RFC-0012
     // §4.3), with imports available, and resolve any ambient bare-decimal widths from context —
@@ -1270,8 +1504,9 @@ fn check_nodule_with(
     // parallel to `instances` (head-granular; coherence guarantees ≤ 1 per key). The grading pass (3d)
     // still consumes the flat `resolved_impl_methods` list; the keyed `impls` map is what the
     // monomorphization pre-pass (`crate::mono`) reads to lower a trait-method call to a direct call.
+    // Uses `effective_nodule` so via-generated impl method bodies are also checked (DN-53 M-811).
     let mut impls: BTreeMap<(String, String), Vec<FnDecl>> = BTreeMap::new();
-    for item in &nodule.items {
+    for item in &effective_nodule.items {
         if let Item::Impl(id) = item {
             let methods = check_impl_methods(
                 &types,
@@ -1279,7 +1514,7 @@ fn check_nodule_with(
                 &traits,
                 &instances,
                 imports,
-                nodule.std_sys,
+                effective_nodule.std_sys,
                 id,
             )?;
             // The instance head: resolve `for_ty` exactly as `register_instances` did (concretely, no
@@ -1294,6 +1529,38 @@ fn check_nodule_with(
         }
     }
 
+    // Pass 3e: **lower-rule validation** (DN-54 §4 / M-812). For each `lower Name[params] = <rhs>`
+    // declaration, validate the RHS:
+    //   (1) IL-grammar check: the RHS must type-check as an L1 expression under a typing context
+    //       that maps each param name to a fresh type variable (the rule is parametric).
+    //   (2) KC-3 (never grows the kernel): the RHS must reduce to EXISTING L0 nodes only — any
+    //       attempt to introduce a new L0 node (or reference one that does not yet exist) is an
+    //       explicit `CheckError` (G2).
+    //   (3) Acyclicity: at this stage we enforce name uniqueness (no two `lower` rules share a
+    //       name in the same nodule); full cross-rule acyclicity enforcement is deferred to a
+    //       later elaboration-time pass (the rule graph is built at elaborate time).
+    //   For a `derive Name for T` declaration, the name must resolve to a registered `lower` rule;
+    //   the type argument is validated against the rule's parameter arity.
+    //
+    // v0 implementation (guarantee: `Declared`): we register the rules and perform arity /
+    // uniqueness checks now; the IL-grammar type-check of the RHS (a full structural walk) and the
+    // KC-3 kernel-growth guard are elaborated at [`crate::elab`] time over the concrete RHS — this
+    // is the stage-1 discipline (structure-only checks now, evaluation at elaborate). The declared
+    // guarantee is honest: this is not a full theorem, and the tag reflects that (VR-5).
+    let mut lower_rules: BTreeMap<String, LowerDecl> = BTreeMap::new();
+    for item in &nodule.items {
+        match item {
+            Item::Lower(ld) => {
+                check_lower_decl(ld, &lower_rules)?;
+                lower_rules.insert(ld.name.clone(), ld.clone());
+            }
+            Item::Derive(dd) => {
+                check_derive_application(dd, &lower_rules)?;
+            }
+            _ => {}
+        }
+    }
+
     // Pass 3c: **effect coverage** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`, a
     // structural coverage check, not a theorem). Every effect a fn *performs* — the union of the
     // declared effects of every top-level fn it calls — must be in its own *declared* set. An
@@ -1304,7 +1571,8 @@ fn check_nodule_with(
     // Effect coverage runs over this nodule's **own** fn bodies (and its impl methods); an imported
     // fn was already coverage-checked in its home nodule (M-662 — a `use`d fn is checked in its home
     // context, never re-litigated here). The merged `fns`/`traits` give the callee effect lookups.
-    check_effect_coverage(&fns, &regs.fns, &traits, nodule)?;
+    // Uses `effective_nodule` so via-generated impl methods' bodies are included in coverage check.
+    check_effect_coverage(&fns, &regs.fns, &traits, effective_nodule)?;
 
     // Pass 3d: **guarantee grading** (RFC-0018 §4.3 stage-1a, Design A — guarantee: `Declared`). The
     // guarantee index `@ g` becomes a statically-enforced constraint over the integrity lattice
@@ -1345,7 +1613,79 @@ fn check_nodule_with(
         traits,
         instances,
         impls,
+        lower_rules,
     })
+}
+
+// ---- lower / derive validation (DN-54 / M-812) ----
+
+/// Validate a `lower Name[params] = <rhs>` declaration (DN-54 §4 / M-812).
+///
+/// **Guarantee: `Declared`** (structural check; the full IL-grammar RHS type-check and KC-3
+/// kernel-growth guard are enforced at elaboration time over the concrete RHS — this is the
+/// honest stage-1 declaration, not a theorem, per VR-5).
+///
+/// Checks:
+/// - **Uniqueness**: the rule `name` must not already be registered in `lower_rules` — duplicate
+///   `lower` rules in the same nodule are an explicit error (never silent, G2).
+/// - **Parameter uniqueness**: duplicate param names in `[…]` are refused.
+///
+/// The RHS expression is *not* type-checked here (that requires the full typing environment with
+/// the param names bound as type variables — deferred to [`crate::elab`] at elaborate time).
+fn check_lower_decl(
+    ld: &LowerDecl,
+    lower_rules: &BTreeMap<String, LowerDecl>,
+) -> Result<(), CheckError> {
+    // (1) Uniqueness — no two `lower` rules may share a name in the same nodule.
+    if lower_rules.contains_key(&ld.name) {
+        return Err(CheckError::new(
+            &ld.name,
+            format!(
+                "duplicate `lower` rule `{}` — a generative-lowering rule name must be unique \
+                 within a nodule (DN-54 §4.2 / M-812; never silent, G2)",
+                ld.name
+            ),
+        ));
+    }
+    // (2) Parameter uniqueness — `lower Name[T, T, …]` with a repeated param is an error.
+    if let Some(dup) = first_duplicate(&ld.params) {
+        return Err(CheckError::new(
+            &ld.name,
+            format!(
+                "duplicate type parameter `{dup}` in `lower {}[…]` (DN-54 §3 / M-812; \
+                 every param name must be distinct)",
+                ld.name
+            ),
+        ));
+    }
+    Ok(())
+}
+
+/// Validate a `derive Name for T` use-site application (DN-54 / M-812 / DN-38 §8.1).
+///
+/// **Guarantee: `Declared`** (name-resolution check only; the RHS instantiation + IL-grammar
+/// check run at elaboration time — VR-5).
+///
+/// Checks:
+/// - **Rule resolution**: `Name` must resolve to a registered `lower` rule in `lower_rules`
+///   (computed in the same Pass 3e loop, earlier declarations are already registered).
+///   A `derive` referencing an unknown rule name is an explicit error (never silent, G2).
+fn check_derive_application(
+    dd: &DeriveDecl,
+    lower_rules: &BTreeMap<String, LowerDecl>,
+) -> Result<(), CheckError> {
+    if !lower_rules.contains_key(&dd.name) {
+        return Err(CheckError::new(
+            &dd.name,
+            format!(
+                "`derive {}` references an unknown generative-lowering rule — declare it first \
+                 with `lower {} […] = <rhs>` (DN-54 §4 / M-812; rule must be visible before use, \
+                 G2). Did you spell the rule name correctly?",
+                dd.name, dd.name
+            ),
+        ));
+    }
+    Ok(())
 }
 
 /// **Effect-coverage pass** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`). For every

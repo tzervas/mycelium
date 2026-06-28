@@ -8,6 +8,40 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-28: obj+low integration wave — `object`/`via` + `lower`/`derive` surface, Rust-first)
+
+- **DN-53 object-composition surface (M-811) — implemented Rust-first, pending ratification.** `object`
+  and `via` are now **active** keywords in `crates/mycelium-l1`: `object Name[params] { Ctor(…); via N :
+  Trait; impl …; fn … }` parses at item position and **desugars in the checker** to `type` + `impl`
+  (+ generated `via`-forwarding impls) + `fn` — the honest non-OOP model (no `class`/mutable-self/
+  inheritance/implicit-dynamic-dispatch). **Zero kernel growth (KC-3); `reveal`-able (DN-38 §5).** Phase-0
+  structural desugar + Phase-0b `via` forwarding-impl generation (never-silent: unknown trait /
+  out-of-range field index → `CheckError`, G2); full ambient resolution + surface re-render. Three-way
+  Empirical differential (`observe(object) == observe(lower(object))`, `tests/object_desugar.rs`).
+  Item-level `pub fn` inside the object body deferred (conservative). DN-53 → *Implemented (Rust-first),
+  pending ratification*.
+- **DN-54 user-extensible generative-lowering surface (M-812) — implemented Rust-first PARTIAL; the
+  load-bearing KC-3 safety deferred (M-812-cont).** `lower` and `derive` are now **active** keywords:
+  `lower Name[params]? = <rhs>` defines a generative-lowering rule, `derive Name for T` applies one
+  (settling the `grow → derive` reconciliation, DN-38 §8.1 — `grow` now emits a teaching diagnostic
+  pointing at `derive`). **Landed:** parse + AST (`Item::Lower`/`Item::Derive`) + the checker's
+  **structural** validations — rule-name uniqueness, param-name uniqueness, `derive` name-resolution —
+  all **never-silent** (G2); rule registered in `Env::lower_rules`. **Deferred (M-812-cont; held
+  `Declared`, VR-5):** (1) **RHS elaboration to L0** — `crate::elab` does not yet read `Env::lower_rules`,
+  so a `derive` currently emits **no L0 term** (an honest never-silent residual, *not* a fabricated
+  accept — pinned by two integration guard tests); (2) the **§4.1 IL-grammar RHS type-check**; (3) the
+  **§6 KC-3 kernel-growth guard**; (4) §4.2 cross-rule acyclicity; (5) the §7 verification harness.
+  Guards (2)/(3) are meaningful only once (1) lands. DN-54 → *Implemented (Rust-first, surface +
+  structural checks), KC-3 + IL-grammar + RHS-elaboration pending — pending ratification* (**NOT
+  Enacted**).
+- **Shared-surface reconciliation (integration).** `mycelium.ebnf` gains `object_item`/`lower_item`/
+  `derive_item` productions; editor grammars regenerated (`just grammar-gen` — `derive`/`via` now lexed;
+  drift gate green); `docs/api-index/` regenerated for the new AST/API; Glossary §2.10.2 + DN-02/DN-03
+  lexicon flips (`object`/`via`/`lower`/`derive` → active); `issues.yaml` M-811 done, M-812 partial with
+  honest note, **M-812-cont** added (todo) tracking the deferred safety. Conformance fixtures renumbered
+  at integration to deconflict (object `accept/22`→`23`, `reject/26`→`28`; DN-54 keeps `accept/22-lower-derive`
+  plus `reject/26`/`27`). `mycelium-l1` builds + tests green with **both** features present.
+
 ### Added (2026-06-28: maintainer ratification — 8 design vehicles → Accepted, decisions recorded)
 - **Maintainer ratification batch (2026-06-28, in-session):** 8 design-vehicle drafts from the 2026-06-27 batch are now **Accepted**, with maintainer decisions incorporated (append-only; house rule #3; VR-5):
   - **RFC-0024** → **Accepted**: (a) currying for multi-arg arrows IN SCOPE for M-704; (b) still-generic-fn-as-arg IN SCOPE for M-704 (no longer deferred). §5 updated. → Enacted once M-704 lands.

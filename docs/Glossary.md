@@ -31,6 +31,7 @@ Alphabetical; the **Detail** column names each term's §2 subsection. *(L)* = pa
 | `colony` ⟂ *(L)* | a **dynamic** runtime grouping of active `hypha` | Runtime | §2.2 |
 | `cyst` ⟂ *(L)* | a content-addressed checkpoint of a dormable computation | Runtime | §2.3 |
 | Declared *(H)* | weakest guarantee tag: asserted, always flagged | Formal | §2.4 |
+| `derive` *(L)* | generative-lowering **use-site** (`derive Name for T`); applies a `lower` rule | Surface | §2.10.2 |
 | Empirical *(H)* | guarantee tag from trials (≥1, with a method) | Formal | §2.4 |
 | EXPLAIN *(H)* | the mandate that selections/conversions are inspectable | Formal | §2.5 |
 | Exact *(H)* | strongest guarantee tag: exact, no error | Formal | §2.4 |
@@ -39,11 +40,13 @@ Alphabetical; the **Detail** column names each term's §2 subsection. *(L)* = pa
 | `graft` ⟂ *(L)* | a capability contract with external infrastructure | Runtime | §2.8 |
 | guarantee lattice *(H)* | `Exact ⊐ Proven ⊐ Empirical ⊐ Declared` | Formal | §2.4 |
 | `hypha` ⟂ *(L)* | a single structurally-scoped concurrent execution unit | Runtime | §2.9 |
+| `lower` *(L)* | generative-lowering **definition** (`lower Name[…] = <rhs>`); applied by `derive` | Surface | §2.10.2 |
 | `matured` *(L)* | a compiled-and-frozen **scope** (nodule/phylum/program; header/manifest, not a fn modifier) | Surface | §2.10 |
 | `mesh` ⟂ *(L)* | gossip/pub-sub overlay with probabilistic guarantees | Runtime | §2.11 |
 | `Meta` *(H)* | the metadata a `Value` carries (guarantee, provenance, …) | Formal | §2.12 |
 | never-silent (G2) *(H)* | no silent failure/swap; refusal is always explicit | Formal | §2.13 |
 | `nodule` *(L)* | the **basic** static unit (replaces "module") | Surface | §2.14 |
+| `object` *(L)* | object-composition surface sugar (desugars to `type`+`impl`+`via`; no OOP `class`) | Surface | §2.10.2 |
 | `phylum` ⟂ *(L)* | a content-addressed **library-scale** static unit | Surface | §2.15 |
 | Proven *(H)* | guarantee tag from a theorem with *checked* side-conditions | Formal | §2.4 |
 | `reclaim` ⟂ *(L)* | supervision-tree reclamation of stale runtime units | Runtime | §2.16 |
@@ -54,6 +57,7 @@ Alphabetical; the **Detail** column names each term's §2 subsection. *(L)* = pa
 | `thaw` *(L)* | de-maturation: keep one def interpreted inside a `matured` scope | Surface | §2.10.1 |
 | `tier` ⟂ *(L)* | an execution-mode switch (interpreted ↔ native) | Runtime | §2.20 |
 | `Value` *(H)* | an immutable `(Repr, Payload, Meta)` — the only thing that moves | Formal | §2.12 |
+| `via` *(L)* | delegation keyword inside `object` (`via N : Trait`); value-semantic forwarding | Surface | §2.10.2 |
 | `wild` *(L)* | the denied-by-default unsafe block (FFI / raw memory) | Surface | §2.21 |
 | `xloc` ⟂ *(L)* | explicit, fallible, `Meta`-preserving value movement | Runtime | §2.22 |
 
@@ -143,6 +147,28 @@ NFR-7), and is never-silent + `EXPLAIN`-able. Conventional-clearest (the themed 
 spore-germination, ADR-013). Active Surface tier. **Defining doc:** RFC-0017 §4.3/§5 (the name, DN-02
 three-test gate); DN-03 (changelog pointer). *Usage:* "`thaw fn experimental_shear(…)` — stays
 interpreted while the nodule around it is matured."
+
+### 2.10.2 `object` / `via` / `lower` / `derive` — composition + generative-lowering surface
+Four **active** surface keywords (lexed + parsed in `mycelium-l1`; **implemented Rust-first, pending
+ratification** — M-811/M-812). All four are **pure surface sugar that lowers to existing constructs —
+zero kernel growth (KC-3), `reveal`-able by construction (DN-38 §5)**; none adds an L0 node.
+- **`object`** — object-composition surface: `object Name[params] { Ctor(…); via N : Trait; impl …; fn … }`
+  groups a record type with its trait `impl`s, `via`-delegation, and inherent `fn`s. It **desugars** in
+  the checker to `type` + `impl` (+ generated `via`-forwarding impls) + `fn` — the honest non-OOP model
+  (no `class`, no mutable self, no inheritance, no implicit dynamic dispatch). DN-53 / M-811.
+- **`via`** — delegation inside an `object` body: `via N : Trait` forwards `Trait` to the field at index
+  `N` (value-semantic forwarding; **no late binding**, no prototype chain — DN-37 §3.3). DN-53 / M-811.
+- **`lower`** — generative-lowering **definition**: `lower Name[params]? = <rhs>` declares a rule whose
+  RHS is an explicit typed term. DN-54 / M-812.
+- **`derive`** — generative-lowering **use-site**: `derive Name for T` applies a `lower` rule at type `T`
+  (the conventional keyword settled over the coined `grow`, DN-38 §8.1; `grow` now emits a teaching
+  diagnostic pointing here). DN-54 / M-812.
+
+**Honest scope (VR-5):** `object`/`via` desugar fully today; `lower`/`derive` have their **structural**
+checks (rule-name + param uniqueness, `derive` name-resolution — never-silent, G2), but **RHS
+elaboration to L0, the IL-grammar RHS type-check, and the KC-3 kernel-growth guard are deferred**
+(M-812-cont) — so a `derive` currently **emits no L0** (an honest never-silent residual, not a
+fabricated accept). **Defining docs:** DN-53 (`object`/`via`); DN-54 + DN-38 §8.1 (`lower`/`derive`).
 
 ### 2.11 `mesh` ⟂
 The **common mycorrhizal network**: gossip/pub-sub overlay coordination whose delivery/convergence
@@ -234,3 +260,9 @@ tier. **Defining doc:** RFC-0008 §4.5 (T4.3; invariants RT1/RT4). Reserved.
   Meta, swap). A *synthesis* that cites each term's normative source — on conflict the source wins.
   Maintained separately from the RFCs (per maintainer direction, 2026-06-16). Living; reserved-not-active
   terms marked ⟂. Append-only in spirit (a rename is a supersession, never an edit — DN-02's law).
+- **2026-06-28 — Added `object`/`via`/`lower`/`derive` (active surface keywords; M-811/M-812).** New
+  index rows + a grouped detail subsection (§2.10.2) for the object-composition surface (`object`/`via`,
+  DN-53) and the generative-lowering surface (`lower`/`derive`, DN-54 / DN-38 §8.1) — now lexed + parsed
+  in `mycelium-l1` (implemented Rust-first, pending ratification). Honest scope recorded: `object`/`via`
+  desugar fully; `lower`/`derive` have structural checks only, with RHS elaboration + IL-grammar + KC-3
+  guard deferred (M-812-cont, so `derive` emits no L0 yet — an honest residual). Append-only; VR-5; G2.

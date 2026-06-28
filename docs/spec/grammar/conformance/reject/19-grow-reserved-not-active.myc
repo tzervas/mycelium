@@ -1,7 +1,7 @@
-// rejected: 'grow' is a DN-03 §1 surface-tier reserved keyword (derive-like generative capability
-// extension — `grow Trait for Type { … }`). It is reserved-not-active: it lexes as a keyword (never
-// a silent identifier, G2) but no L1 construct consumes it yet, so it cannot appear at item
-// position. The parser emits a teaching diagnostic naming DN-03 §1. Its construct lands with
-// M-664's surface step. ('consume' is reserved the same way; see fixture 18.)
+// rejected: 'grow' is superseded by 'derive' (DN-38 §8.1 / M-812 — the grow→derive
+// reconciliation). The keyword still lexes (reserved, never a silent identifier, G2) but
+// produces a teaching diagnostic pointing at `derive Name for T` (the active form) or
+// `lower Name[params] = <rhs>` (to define a rule), distinct from the plain DN-03 §1
+// "not yet active" message for `consume`. Its diagnostic names DN-38 (not DN-03 §1).
 nodule demo
 grow worker

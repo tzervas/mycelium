@@ -564,5 +564,110 @@ fn dn57_optional_semicolon_terminates_components_ast_transparent() {
     // Method terminators inside trait + impl bodies parse.
     let methods = "nodule d\ntrait T { fn f(x: Binary{8}) => Binary{8}; }\n\
                    impl T for Binary{8} { fn f(x: Binary{8}) => Binary{8} = x; }";
-    assert!(parse(methods).is_ok(), "`;`-terminated trait/impl methods parse");
+    assert!(
+        parse(methods).is_ok(),
+        "`;`-terminated trait/impl methods parse"
+    );
+}
+
+// ---- DN-54 / M-812: lower / derive parse -------------------------------------------------------
+
+/// A zero-param `lower` rule parses to `Item::Lower` with the correct name and empty params.
+#[test]
+fn lower_no_params_parses() {
+    let n = parse("nodule d\nlower Trivial = true").expect("parses");
+    let item = &n.items[0];
+    let crate::ast::Item::Lower(ld) = item else {
+        panic!("expected Item::Lower, got {item:?}");
+    };
+    assert_eq!(ld.name, "Trivial");
+    assert!(ld.params.is_empty());
+}
+
+/// A parametric `lower` rule with two params parses correctly.
+#[test]
+fn lower_with_params_parses() {
+    let n = parse("nodule d\nlower Pair[A, B] = true").expect("parses");
+    let crate::ast::Item::Lower(ld) = &n.items[0] else {
+        panic!("expected Item::Lower");
+    };
+    assert_eq!(ld.name, "Pair");
+    assert_eq!(ld.params, vec!["A".to_owned(), "B".to_owned()]);
+}
+
+/// A `derive` application parses to `Item::Derive` with the correct name and target type.
+#[test]
+fn derive_decl_parses() {
+    let n = parse("nodule d\nderive Trivial for Binary{8}").expect("parses");
+    let crate::ast::Item::Derive(dd) = &n.items[0] else {
+        panic!("expected Item::Derive");
+    };
+    assert_eq!(dd.name, "Trivial");
+    // `for_ty` base must be Binary{8}
+    let crate::ast::BaseType::Binary(w) = &dd.for_ty.base else {
+        panic!("expected BaseType::Binary, got {:?}", dd.for_ty.base);
+    };
+    // Width 8 (the width ref)
+    let crate::ast::WidthRef::Lit(8) = w else {
+        panic!("expected width 8, got {w:?}");
+    };
+}
+
+/// `lower` without `=` is an explicit parse error (G2 / DN-54 §3).
+#[test]
+fn lower_missing_eq_is_refused() {
+    let err = parse("nodule d\nlower Trivial true").unwrap_err();
+    assert!(
+        err.message.contains("="),
+        "expected missing-`=` error, got: {}",
+        err.message
+    );
+}
+
+/// `derive` without `for` is an explicit parse error (G2 / DN-54 §4).
+#[test]
+fn derive_missing_for_is_refused() {
+    let err = parse("nodule d\nderive Trivial Binary{8}").unwrap_err();
+    assert!(
+        err.message.contains("for"),
+        "expected missing-`for` error, got: {}",
+        err.message
+    );
+}
+
+/// `lower` or `derive` at expression position is an explicit parse error (top-level only, G2).
+#[test]
+fn lower_at_expr_position_is_refused() {
+    let err = parse("nodule d\nfn f() => Binary{8} = lower Trivial = true").unwrap_err();
+    assert!(
+        err.message.contains("top-level"),
+        "`lower` at expr position must say it's a top-level declaration, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn derive_at_expr_position_is_refused() {
+    let err = parse("nodule d\nfn f() => Binary{8} = derive Trivial for Binary{8}").unwrap_err();
+    assert!(
+        err.message.contains("top-level"),
+        "`derive` at expr position must say it's a top-level declaration, got: {}",
+        err.message
+    );
+}
+
+/// `grow` at item position produces a teaching diagnostic referencing `derive` (DN-38 §8.1).
+#[test]
+fn grow_at_item_position_points_to_derive() {
+    let err = parse("nodule d\ngrow something").unwrap_err();
+    assert!(
+        err.message.contains("derive"),
+        "`grow` at item position must mention `derive` in the teaching diagnostic, got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("DN-38"),
+        "`grow` diagnostic must cite DN-38, got: {}",
+        err.message
+    );
 }

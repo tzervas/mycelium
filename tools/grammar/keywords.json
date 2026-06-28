@@ -9,6 +9,7 @@
       "consume",
       "cyst",
       "default",
+      "derive",
       "else",
       "fn",
       "for",
@@ -42,6 +43,7 @@
       "trait",
       "type",
       "use",
+      "via",
       "wild",
       "with",
       "xloc"

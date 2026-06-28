@@ -1,0 +1,15 @@
+// accepted: 'lower' and 'derive' are the DN-54 / M-812 generative-lowering surface.
+// 'lower Name[params] = <rhs>' defines a user-extensible lowering rule (registers it);
+// 'derive Name for T' applies a rule to a concrete type. Both are top-level items.
+// Settles the grow→derive reconciliation: DN-38 §8.1 / M-812.
+nodule demo
+
+// A simple zero-param lowering rule whose RHS is a boolean literal (trivial — the
+// type-checker validates the full RHS at elaborate time; parse-only gate checks form).
+lower Trivial = true
+
+// A parametric rule with one type param.
+lower Wrap[T] = true
+
+// A derive application references a rule by name (resolved at check time).
+derive Trivial for Binary{8}
