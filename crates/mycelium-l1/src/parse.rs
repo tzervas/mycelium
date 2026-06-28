@@ -3,9 +3,9 @@
 //! (never a panic, never a silent accept — S5/G2). v0 covers the L1-facing core.
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal,
-    Nodule, Paradigm, Param, ParamKind, Path, Pattern, Phylum, Scalar, Sparsity, Strength,
-    TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, Vis, WidthRef,
+    AmbientParams, Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item,
+    Literal, LowerDecl, Nodule, Paradigm, Param, ParamKind, Path, Pattern, Phylum, Scalar,
+    Sparsity, Strength, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, Vis, WidthRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -473,17 +473,22 @@ impl Parser {
                     word = runtime_keyword_spelling(t)
                 ),
             )),
-            // DN-03 §1: the surface-tier reserved keywords. Lexed (never silent, G2) but their
-            // constructs (`consume <expr>`, `grow Trait for Type { … }`) land with M-664's surface
-            // step — a teaching diagnostic until then, never a silent accept.
-            t @ (Tok::Consume | Tok::Grow) => Err(ParseError::new(
+            // DN-03 §1: `consume` is still a reserved-not-active surface keyword (M-664). `grow` is
+            // superseded by `derive` (DN-38 §8.1 / M-812) — its teaching diagnostic now points at
+            // `derive Name for T` (never a silent accept, G2).
+            Tok::Consume => Err(ParseError::new(
                 self.pos(),
-                format!(
-                    "`{word}` is a reserved surface keyword (DN-03 §1), not yet active — its \
-                     construct lands with M-664; it cannot open a program or be used as an \
-                     identifier at this language version",
-                    word = surface_reserved_spelling(t)
-                ),
+                "`consume` is a reserved surface keyword (DN-03 §1), not yet active — its construct \
+                 lands with M-664; it cannot open a program or be used as an identifier at this \
+                 language version"
+                    .to_owned(),
+            )),
+            Tok::Grow => Err(ParseError::new(
+                self.pos(),
+                "`grow` is superseded by `derive` (DN-38 §8.1 / M-812) — write `derive Name for T` \
+                 to apply a generative-lowering rule, or `lower Name[params] = <rhs>` to define one; \
+                 `grow` can no longer open a program or be used as an identifier (G2)"
+                    .to_owned(),
             )),
             // M-662: a `phylum` header must be the *first* token of the program (before the nodule
             // blocks); reaching one at item position means it was misplaced after a nodule began.
@@ -501,22 +506,23 @@ impl Parser {
                  inside a `fn` body"
                     .to_owned(),
             )),
-            // DN-53/DN-54: `object`/`lower` are reserved-not-active surface keywords (lexed so they
-            // are never silent identifiers, G2); their constructs land with M-811/M-812.
-            t @ (Tok::Object | Tok::Lower) => Err(ParseError::new(
+            // DN-53: `object` is still a reserved-not-active surface keyword; its construct lands
+            // with M-811.
+            Tok::Object => Err(ParseError::new(
                 self.pos(),
-                format!(
-                    "`{word}` is a reserved surface keyword ({src}), not yet active — its construct \
-                     lands with {task}; it cannot open a program or be used as an identifier at this \
-                     language version",
-                    word = if matches!(t, Tok::Object) { "object" } else { "lower" },
-                    src = if matches!(t, Tok::Object) { "DN-53" } else { "DN-54" },
-                    task = if matches!(t, Tok::Object) { "M-811" } else { "M-812" },
-                ),
+                "`object` is a reserved surface keyword (DN-53), not yet active — its construct \
+                 lands with M-811; it cannot open a program or be used as an identifier at this \
+                 language version"
+                    .to_owned(),
             )),
+            // DN-54 / M-812: `lower` and `derive` are now **active** (settles the grow→derive
+            // reconciliation per DN-38 §8.1). `lower Name[params] = <rhs>` defines a rule;
+            // `derive Name for T` applies one.
+            Tok::Lower => self.parse_lower_decl().map(Item::Lower),
+            Tok::Derive => self.parse_derive_decl().map(Item::Derive),
             _ => self.err(
-                "a top-level item (`use`, `pub`, `default paradigm`, `type`, `trait`, `impl`, `fn`, \
-                 or `thaw fn`)",
+                "a top-level item (`use`, `pub`, `default paradigm`, `type`, `trait`, `impl`, \
+                 `fn`, `thaw fn`, `lower`, or `derive`)",
             ),
         }
     }
@@ -932,6 +938,55 @@ impl Parser {
         })
     }
 
+    // ---- lower / derive (DN-54 / M-812) ----
+
+    /// `lower Name [params]? = <rhs>` — a user-defined generative-lowering rule (DN-54 §3).
+    ///
+    /// Grammar:
+    /// ```text
+    /// lower_decl ::= 'lower' Ident ( '[' ident_list ']' )? '=' expr
+    /// ```
+    ///
+    /// The `lower` keyword is consumed by the caller (`parse_item`); this method starts at the
+    /// rule name. The `params` are unbound type-variable names in the RHS — no bounds at this
+    /// stage (KC-3: the checker validates the RHS is IL-grammar-clean and lowers only to existing
+    /// L0 nodes). Never silent: a missing `=` or a missing name is an explicit [`ParseError`] (G2).
+    fn parse_lower_decl(&mut self) -> Result<LowerDecl, ParseError> {
+        self.expect(&Tok::Lower, "`lower`")?;
+        let name = self.ident()?;
+        // Optional type-parameter list `[T, U, …]` — reuses the existing `[…]` form.
+        let params = self.parse_type_params_opt()?;
+        self.expect(
+            &Tok::Eq,
+            "`=` after the rule name/params in a `lower` declaration (DN-54 §3)",
+        )?;
+        // The RHS is a full expression — type-checked against the IL grammar at check time.
+        let rhs = self.parse_expr()?;
+        Ok(LowerDecl { name, params, rhs })
+    }
+
+    /// `derive Name for T` — use-site application of a generative-lowering rule (DN-54 / DN-38
+    /// §8.1 / M-812; settles the `grow → derive` reconciliation).
+    ///
+    /// Grammar:
+    /// ```text
+    /// derive_decl ::= 'derive' Ident 'for' type_ref
+    /// ```
+    ///
+    /// The `derive` keyword is consumed by the caller (`parse_item`). The `name` must resolve to a
+    /// `lower`-declared rule in scope; `for_ty` is the target type the rule is instantiated over.
+    /// Never silent: a missing `for` or an unknown rule name is an explicit error at check time (G2).
+    fn parse_derive_decl(&mut self) -> Result<DeriveDecl, ParseError> {
+        self.expect(&Tok::Derive, "`derive`")?;
+        let name = self.ident()?;
+        self.expect(
+            &Tok::For,
+            "`for` after the rule name in a `derive` application (DN-54 §4; `derive Name for T`)",
+        )?;
+        let for_ty = self.parse_type_ref()?;
+        Ok(DeriveDecl { name, for_ty })
+    }
+
     // ---- types ----
 
     fn parse_type_ref(&mut self) -> Result<TypeRef, ParseError> {
@@ -1223,16 +1278,25 @@ impl Parser {
                 ),
             ));
         }
-        // DN-03 §1: the surface-tier reserved keywords, at expression position (never silent, G2).
-        if let t @ (Tok::Consume | Tok::Grow) = self.cur() {
+        // DN-03 §1: `consume` is a reserved-not-active surface keyword; teaching diagnostic (G2).
+        if self.at(&Tok::Consume) {
             return Err(ParseError::new(
                 self.pos(),
-                format!(
-                    "`{word}` is a reserved surface keyword (DN-03 §1), not yet active — its \
-                     construct lands with M-664; it cannot open a program or be used as an \
-                     identifier at this language version",
-                    word = surface_reserved_spelling(t)
-                ),
+                "`consume` is a reserved surface keyword (DN-03 §1), not yet active — its \
+                 construct lands with M-664; it cannot be used as an identifier at this language \
+                 version"
+                    .to_owned(),
+            ));
+        }
+        // DN-38 §8.1 / M-812: `grow` is superseded by `derive` — teaching diagnostic points to
+        // `derive Name for T` at item position (never a silent accept, G2).
+        if self.at(&Tok::Grow) {
+            return Err(ParseError::new(
+                self.pos(),
+                "`grow` is superseded by `derive` (DN-38 §8.1 / M-812) — write `derive Name for T` \
+                 at item position to apply a generative-lowering rule, or `lower Name[params] = <rhs>` \
+                 to define one; `grow` cannot be used as an identifier (G2)"
+                    .to_owned(),
             ));
         }
         match self.cur() {
@@ -1247,16 +1311,26 @@ impl Parser {
             Tok::Colony => self.parse_colony(),
             // RFC-0037 D5: an anonymous-function expression (parses; semantics deferred to M-704).
             Tok::Lambda => self.parse_lambda(),
-            // DN-53/DN-54: reserved-not-active surface keywords at expression position (teaching, G2).
-            t @ (Tok::Object | Tok::Lower) => Err(ParseError::new(
+            // DN-53: `object` is reserved-not-active at expression position (teaching, G2).
+            Tok::Object => Err(ParseError::new(
                 self.pos(),
-                format!(
-                    "`{word}` is a reserved surface keyword ({src}), not yet active — its construct \
-                     lands with {task}; it cannot be used as an identifier here",
-                    word = if matches!(t, Tok::Object) { "object" } else { "lower" },
-                    src = if matches!(t, Tok::Object) { "DN-53" } else { "DN-54" },
-                    task = if matches!(t, Tok::Object) { "M-811" } else { "M-812" },
-                ),
+                "`object` is a reserved surface keyword (DN-53), not yet active — its construct \
+                 lands with M-811; it cannot be used as an identifier here"
+                    .to_owned(),
+            )),
+            // DN-54 / M-812: `lower` and `derive` are top-level declaration forms — they cannot
+            // appear at expression position (teaching, never silent, G2).
+            Tok::Lower => Err(ParseError::new(
+                self.pos(),
+                "`lower Name[params] = <rhs>` is a top-level declaration (DN-54 §3 / M-812), not \
+                 an expression — move it to item position (outside any `fn` body)"
+                    .to_owned(),
+            )),
+            Tok::Derive => Err(ParseError::new(
+                self.pos(),
+                "`derive Name for T` is a top-level declaration (DN-54 / M-812), not an expression \
+                 — move it to item position (outside any `fn` body)"
+                    .to_owned(),
             )),
             // RFC-0025 / M-705: the infix-operator layer. A non-keyword expression is an operator
             // expression over unary/applicative operands; each operator desugars to its canonical
@@ -1689,16 +1763,5 @@ fn runtime_keyword_spelling(tok: &Tok) -> &'static str {
         Tok::Tier => "tier",
         Tok::Reclaim => "reclaim",
         _ => "<runtime-keyword>",
-    }
-}
-
-/// Return the surface spelling for a DN-03 §1 surface-tier reserved keyword token (`consume`/`grow`).
-/// Used in teaching diagnostics so the message names the actual word; the `_` arm is unreachable in
-/// practice (callers only pass the two surface arms) but keeps this panic-free (G2).
-fn surface_reserved_spelling(tok: &Tok) -> &'static str {
-    match tok {
-        Tok::Consume => "consume",
-        Tok::Grow => "grow",
-        _ => "<surface-keyword>",
     }
 }

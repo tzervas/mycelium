@@ -68,9 +68,18 @@ pub enum Tok {
     /// `consume` — **reserved, not yet active** (DN-03 §1). Acquire + take *exclusive* ownership of an
     /// affine `Substrate` (`consume <expr>`; the fungus consumes its substrate exactly once — affinity).
     Consume,
-    /// `grow` — **reserved, not yet active** (DN-03 §1). Derive-like *generative* capability extension
-    /// (`grow Trait for Type { … }`; the system *grows* a new capability).
+    /// `grow` — **superseded, still reserved** (DN-38 §8.1, reconciled 2026-06-28; M-812). The
+    /// generative-lowering use-site keyword is now **`derive`** (conventional over the themed `grow`;
+    /// DN-38 §8.1). `grow` is kept as a reserved keyword (never a silent identifier — G2); its parser
+    /// arm now emits a teaching diagnostic pointing at `derive Name for T`. The construct itself lands
+    /// as `derive` (M-812/DN-54).
     Grow,
+
+    /// `derive` — **active** (M-812 / DN-54 / DN-38 §8.1). The use-site keyword for user-defined
+    /// generative-lowering rules: `derive Name for T` applies a rule declared with `lower Name[…] = …`.
+    /// Settles the `grow → derive` reconciliation (DN-38 §8.1 — conventional preferred over themed).
+    /// Reserved so it can never silently become an identifier (G2).
+    Derive,
 
     /// `use` — import (conventional).
     Use,
@@ -349,11 +358,13 @@ pub fn keyword(word: &str) -> Option<Tok> {
         "consume" => Tok::Consume,
         "grow" => Tok::Grow,
         // RFC-0037 surface keywords (ratified R1, 2026-06-27). `lambda` parses (semantics deferred to
-        // M-704); `object`/`lower` are reserved-not-active (constructs land with M-811/M-812). `derive`
-        // is intentionally NOT reserved here — the grow→derive reconciliation (DN-38 §8.1) owns it.
+        // M-704); `object` is reserved-not-active (construct lands with M-811). `lower`/`derive` are
+        // now active (M-812 / DN-54 / DN-38 §8.1): `lower` declares a rule; `derive` applies one.
         "lambda" => Tok::Lambda,
         "object" => Tok::Object,
         "lower" => Tok::Lower,
+        // M-812 / DN-38 §8.1: `derive` is now active (settles the grow→derive reconciliation).
+        "derive" => Tok::Derive,
         "use" => Tok::Use,
         // `pub` — the M-662 cross-nodule export marker (reserved so it is never a silent identifier).
         "pub" => Tok::Pub,
