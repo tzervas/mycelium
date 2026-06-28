@@ -308,7 +308,7 @@ allocation or copy:
 > substitute for input validation). These are not this RFC's fixes — they live in
 > `mycelium-l1/src/parse.rs` and `mycelium-proj/src/manifest.rs` — but E14-1/M-722 is blocked on
 > their landing per DN-40 §8 OQ-1.
-
+>
 > **CLOSURE (2026-06-28, `hrd`): A1/A2/A3 LANDED — the FLAG above is now historical.** Verification
 > this session found all three fixes already on `dev`, landed *before* this §4.4 sign-off, so the
 > must-fix-before-E14-1 sequencing was in fact met (E14-1 and M-722 are `status:done` and landed

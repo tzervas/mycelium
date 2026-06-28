@@ -17,7 +17,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `dev` 2026-06-26** (`4456bd3`; A3 `e7e705f`/`3f55eaa`) — recorded in §Security (2026-06-26: DN-40
   input-validation hardening) further down. Re-verified green this session: the `mycelium-l1`
   crash-refused depth regressions (`tests/check.rs::deeply_nested_{type_arrow,type_args,ctor_pattern}_is_refused_not_a_crash`
-  + `parse::deep_operator_nesting_is_refused_not_crashed`, shared `MAX_EXPR_DEPTH = 256` budget) and
+  and `parse::deep_operator_nesting_is_refused_not_crashed`; shared `MAX_EXPR_DEPTH = 256` budget) and
   the `mycelium-proj` typed-`ContentHash` manifest tests. Reconciled the lagging docs **append-only**
   (house rule #3): RFC-0028 status row + §4.4 status-note + §4.4.4 closure note, and the DN-40 status
   closure note — the historical commissioning entries are preserved as the as-signed-off record.
