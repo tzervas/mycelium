@@ -156,6 +156,13 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "25-old-angle-trit-retired.myc",
         "expected an expression",
     ),
+    (
+        // DN-53 / M-811: an `object` body must start with a constructor clause; an empty body is a
+        // never-silent parse refusal (DN-53 §A.3.1). The constructor provides the data form for the
+        // `TypeDecl` the `object` desugars to; without it the desugar has no `Ctor` (never-silent, G2).
+        "26-object-empty-body.myc",
+        "must have at least one constructor clause",
+    ),
 ];
 
 #[test]

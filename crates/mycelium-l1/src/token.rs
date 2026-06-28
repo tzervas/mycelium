@@ -135,10 +135,15 @@ pub enum Tok {
     /// land here; full closure semantics are **deferred to M-704/RFC-0024** — the checker/elaborator
     /// emit a never-silent `Residual` until then (G2). Reserved so it can never be a silent identifier.
     Lambda,
-    /// `object` — the object-composition surface keyword (DN-53, Accepted). **Reserved, not yet
-    /// active**: lexes as a keyword (G2); the `object … { … }` desugaring to `type`+`impl`+`via`
-    /// lands with M-811.
+    /// `object` — the object-composition surface keyword (DN-53, M-811). Now **active**: the
+    /// `object Name[params] { ctor; via FieldIdx : Trait; impl … { … }; fn … }` form desugars
+    /// at check time (in `checkty.rs`) to `type`+`impl`+forwarding-impls; zero kernel growth (KC-3).
     Object,
+    /// `via` — the object-composition delegation keyword (DN-53, M-811). Inside an `object { … }`
+    /// body, `via <field_idx> : <TraitName>` generates a forwarding `impl TraitName for ObjectName`
+    /// whose methods delegate each call to the value at that positional field. Reserved so it is never
+    /// a silent identifier (G2); it is also active at item position inside `object` bodies.
+    Via,
     /// `lower` — the user-extensible generative-lowering rule keyword (DN-54, Accepted). **Reserved,
     /// not yet active**: lexes as a keyword (G2); the `lower Name[…] = …` production lands with M-812.
     Lower,
@@ -353,6 +358,9 @@ pub fn keyword(word: &str) -> Option<Tok> {
         // is intentionally NOT reserved here — the grow→derive reconciliation (DN-38 §8.1) owns it.
         "lambda" => Tok::Lambda,
         "object" => Tok::Object,
+        // `via` — the object-composition delegation keyword (DN-53, M-811). Active inside `object`
+        // bodies; reserved everywhere else (never a silent identifier — G2).
+        "via" => Tok::Via,
         "lower" => Tok::Lower,
         "use" => Tok::Use,
         // `pub` — the M-662 cross-nodule export marker (reserved so it is never a silent identifier).

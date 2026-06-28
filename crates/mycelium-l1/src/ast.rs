@@ -130,6 +130,44 @@ pub enum AmbientParams {
     },
 }
 
+/// A delegation clause inside an `object` body: `via <field_idx> : <TraitName>` (DN-53 M-811).
+/// Generates a forwarding `impl TraitName for ObjectName` whose methods delegate each call to the
+/// value at the positional field index `field_idx`. Guarantee: `Declared` (DN-53 §A.3.2 — the
+/// forwarding is one-to-one structural; out-of-range field index is an explicit `CheckError` at
+/// desugar time — never-silent, G2).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ViaDecl {
+    /// The positional field index (0-based) to delegate through.
+    pub field_idx: u32,
+    /// The trait to forward.
+    pub trait_name: String,
+    /// The trait's type arguments (e.g. `via 0 : Cmp[Binary{8}]`). Empty = bare trait reference.
+    pub trait_args: Vec<TypeRef>,
+}
+
+/// An `object Name[params] { Ctor(T1, T2); via …; impl …; fn … }` composition surface
+/// (DN-53, M-811). Pure frontend desugaring: lowers to `TypeDecl + ImplDecl(s) + FnDecl(s)` in
+/// `checkty.rs` — the elaborator only sees the lowered forms. Zero kernel growth (KC-3);
+/// `reveal`-able per DN-38 §5. Guarantee: `Declared` (structural one-to-one rewrite; confirmed
+/// by the three-way differential in `tests/object_desugar.rs`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ObjectDecl {
+    /// Cross-nodule visibility (`pub object` exports the type name; M-662).
+    pub vis: Vis,
+    /// Object name (also the type name in the desugared `TypeDecl`).
+    pub name: String,
+    /// Type parameters (unbounded names; same as `TypeDecl::params`).
+    pub params: Vec<String>,
+    /// The single data constructor (same syntax as a `TypeDecl` constructor).
+    pub ctor: Ctor,
+    /// Delegation clauses: `via <field_idx> : <Trait>` (zero or more).
+    pub via_decls: Vec<ViaDecl>,
+    /// Explicit trait `impl` blocks inside the object body.
+    pub impls: Vec<ImplDecl>,
+    /// Inherent functions (top-level fns scoped to this type).
+    pub fns: Vec<FnDecl>,
+}
+
 /// A top-level item.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Item {
@@ -147,6 +185,11 @@ pub enum Item {
     Impl(ImplDecl),
     /// A function definition.
     Fn(FnDecl),
+    /// An `object` composition declaration (DN-53, M-811). Desugars in `checkty.rs` to a
+    /// `TypeDecl` + `ImplDecl`s + `FnDecl`s; the elaborator sees only the lowered forms (zero
+    /// kernel growth, KC-3). The `via` delegation impls are generated after the trait registry is
+    /// built, from the field index and trait signatures.
+    Object(ObjectDecl),
 }
 
 /// `type Name<params> = Ctor | Ctor(field, …) | …` (LR-1). An optional leading `pub` marks the type
