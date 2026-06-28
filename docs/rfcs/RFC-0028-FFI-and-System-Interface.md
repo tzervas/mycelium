@@ -74,8 +74,10 @@ the gate was in place; this RFC defines, and M-720…M-724 implement, what is be
 ## 3. Scope
 
 **In scope (decided here):** the capability model (§4.1); the `wild` body grammar + elaboration
-(§4.2); the execution host (§4.3); ABI honesty + the `// SAFETY:` protocol (§4.4); the syscall
-binding strategy (§4.5); the guarantee-tag policy (§4.6); the `just safety-check` scope (§4.7).
+(§4.2); the execution host (§4.3); the host-encoding validation bridge (§4.4, **pending maintainer
+sign-off — appended 2026-06-28, G11**); ABI honesty + the `// SAFETY:` protocol (§4.5); the
+syscall binding strategy (§4.6); the guarantee-tag policy (§4.7); the `just safety-check` scope
+(§4.8).
 
 **Out of scope (deferred):**
 
@@ -110,7 +112,7 @@ property (runtime sandboxing) that no shipped consumer needs yet. It is **deferr
 value *in addition to* the `@std-sys` gate without invalidating any program this RFC admits).
 
 *Audit trail.* Because the gate is lexical, the audit trail is static and grep-able: every host
-contact is a `wild` block in a `@std-sys` nodule (§4.7), and `EXPLAIN` over an FFI-backed value
+contact is a `wild` block in a `@std-sys` nodule (§4.8), and `EXPLAIN` over an FFI-backed value
 reports the `wild:`-namespaced operation it came from (§4.3).
 
 ### 4.2 The `wild` body grammar and elaboration (M-720)
@@ -162,19 +164,196 @@ already thread. The registry **is** the capability handle (the "host dispatch ta
   `prims` parameter).
 - A host op is a `PrimFn` — `fn(prim: &str, args: &[&Value]) -> Result<Value, EvalError>` — i.e.
   it converts in-scope Mycelium `Value`s to/from its native effect. Real syscalls live in the
-  single audited `mycelium-std-sys` phylum (LR-9; §4.5) and are wired into a registry by a host
-  registration bridge.
+  single audited `mycelium-std-sys` phylum (LR-9; §4.6) and are wired into a registry by a host
+  registration bridge that must implement the encoding discipline specified in §4.4.
 
 *Chosen over a Rust trampoline baked into the interpreter* because the registry-as-handle is
 composable (the host chooses which ops to grant), testable (a deterministic mock host op can be
 injected into the differential), and keeps the interpreter free of a hard-coded syscall set.
 
-### 4.4 ABI honesty and the `// SAFETY:` protocol (M-720/M-724)
+### 4.4 Host-encoding validation bridge (M-722 / E14-1) — **pending maintainer sign-off**
 
-- The `wild` body's argument-to-host encoding is **deferred to the `@std-sys` author** (the body
-  is the trusted escape): the host `PrimFn` owns the `Value`↔native conversion and is responsible
-  for its ABI contract. v0 does **not** impose a canonical value-to-C encoding — the syscall
-  surface (§4.5) is native Rust `std`/`libc`-level, not arbitrary C structs.
+> **Status note (append-only; 2026-06-28).** This subsection adds a normative host-encoding
+> validation spec for the `wild`/FFI boundary, closing the DN-40 M2 finding and the G11 ratification
+> gap. It is proposed for maintainer sign-off; the parent RFC remains **Accepted**. No existing
+> decision is modified or superseded — this is an append-only addition to §4 per the
+> Blocked-Decisions Ratification Map group G11 ("must-fix before E14-1"). Each point below is
+> `Declared` design direction (the architecture) citing `Proven` exhibited gaps (A1/A2/A3 from
+> DN-40 §3) that must close before E14-1 ships (DN-40 §8 OQ-1, Ratification Map G11 ⚠ note).
+> Guarantee tags are held at the finding's own honest basis throughout (VR-5). `FLAG-ENCODING-SPEC`
+> tracks the pending sign-off in `mycelium-std-sys` host-bridge code.
+
+The original §4.4 ABI boundary clause ("encoding deferred to the `@std-sys` author; the host
+`PrimFn` owns the `Value`↔native conversion") was the right initial answer for a staged design.
+But DN-40 identifies this deferral as the **hardest, least-specified boundary in the stack** (DN-40
+§Feeds / M2 finding), and the Ratification Map (G11) flags it as a **CRITICAL/HIGH must-fix before
+E14-1**. This subsection specifies the **three normative obligations** the host-encoding bridge must
+satisfy before any production `wild:` op is wired into the registry.
+
+#### 4.4.1 Parse-into-typed — untrusted host bytes enter as a typed Mycelium value
+
+*(`Declared` design mandate; basis: DN-40 §2 P1/P6, §4 architecture, §7 principle — the "parse,
+don't validate" maxim; the underlying refinement-type reasoning is `Proven` in type theory.)*
+
+Every native→`Value` decode path in the host bridge **must** be a total, named, never-silent
+function of the form:
+
+```rust
+fn decode_<op>(native_output: &[u8]) -> Result<Value, EvalError>
+```
+
+- **Never trusted raw.** Untrusted host bytes are **never** cast, transmuted, or string-coerced
+  into a `Value` directly; they always pass through a recognizer that constructs the typed `Value`
+  via `Value::new` / an existing smart constructor (e.g. `ContentHash::parse` for identity-bearing
+  results). The `Value`/`Payload`/`ContentHash` `Deserialize` implementations already enforce this
+  (`deny_unknown_fields` + re-run `Value::new` — DN-40 §4) and are the reference pattern.
+- **The constructor is the sole gate.** Illegal states must be unrepresentable: use newtypes with
+  private fields and smart constructors (DN-40 §2 P6) so downstream code cannot hold a `Value`
+  that did not pass the recognizer. No `From<RawBytes>` or `unsafe { transmute }` back-doors.
+- **Closed-grammar allowlist.** Each decode function accepts exactly the bytes that belong to its
+  grammar (the intended language) and returns an explicit `EvalError::BadHostBytes { op, reason }`
+  naming the offending input on any failure — never a silent default or a fallback fill (G2/P5).
+- **Re-enter the recognizer on deserialization.** Any path that reconstitutes a typed value from
+  persisted or transferred bytes (e.g. a host op that caches its result) re-runs the decode
+  function — the immutability guarantee depends on true re-validation, not a trusting blob-load
+  (DN-40 §5 limit 2).
+
+**Honest caveat:** the architecture is `Declared` (a mandated design direction, not yet
+implemented). The `Value::new` / `ContentHash::parse` re-entry discipline is `Empirical` — it is
+present in the current code (DN-40 §4) but the **production `wild:` host bridge itself does not
+exist yet** (DN-40 M2 finding: only `wild:echo` test fixtures exist as of this writing); the
+guarantee tags are therefore `Declared` until a validation corpus runs against a real bridge.
+
+#### 4.4.2 Injective-encode — `Value`→host encoding is injective and escaped
+
+*(`Declared` design mandate; basis: DN-40 §2 P2, §4 canonicalization discipline; reference:
+Bernstein netstrings, spec-level `Declared`; the quasi-encoding/injection bug class is `Empirical`
+from prior art.)*
+
+Every `Value`→native encode path in the host bridge **must** be injective: two distinct `Value`s
+must encode to distinct byte strings, and the encoding must be decodable to the original `Value`
+(i.e. `decode(encode(v)) == v` for every `v` in the bridge's domain, and `decode(x)` fails unless
+`encode(decode(x)) == x` byte-for-byte).
+
+- **Length-prefix or escape every variable-length field.** No delimiter can be embedded in a
+  field; the v1 spore `push_field` discipline (`<len>:<bytes>\n`) and the kernel `Canon` hasher
+  (DN-40 §4) are the canonical reference encoders. Any new host-bridge pre-image copies this
+  pattern, with a property test asserting round-trip canonicality.
+- **Per-field injectivity is necessary but not sufficient.** Injectivity of the encoding faithfully
+  commits whatever it is handed — if the input is unvalidated (§4.4.1), a garbage `Value` is
+  injectively encoded into garbage bytes. The two obligations (parse-into-typed + injective-encode)
+  are independent and both required (DN-40 §4 critical caveat; the A3 finding is the live proof:
+  `ContentHash` encodes injectively but the unvalidated dep-hash `String` was its input).
+- **The encoding is injective, not an oracle.** The bridge encodes into the host's ABI
+  representation (e.g. a C string, a byte buffer, a length-width integer) — it is not expected to
+  produce a fully canonicalized universal serialization. The requirement is that the particular
+  encoding function has no injection vulnerabilities (no delimiter confusion, no truncation, no
+  silent reinterpretation of control bytes). Shell injection, path traversal, and SQL injection are
+  the textbook failure modes; the `Value`→native bridge must be verified clean against each
+  applicable class.
+- **A `// SAFETY:` (or `// ENCODING:`) comment at each encode site** names the ABI contract and
+  asserts injectivity, analogous to the Rust `// SAFETY:` requirement at `unsafe` sites (§4.5).
+
+**Honest caveat:** injective-encode is `Declared` for the bridge (unbuilt). The reference encoders
+(`push_field`, `Canon`) are model-grade (`Empirical` — present in the codebase) but a new bridge
+must be verified independently; no host-bridge encode path is `Empirical` or `Proven` before
+adversarial property tests run.
+
+#### 4.4.3 Bounded — length and resource bounds enforced, never-silent on overflow
+
+*(`Declared` design mandate; basis: DN-40 §2 P3, §3 M1 finding: `read_to_end()` + bare `&Path`
+pass-through at `mycelium-std-sys/src/io.rs:35-39` and `src/fs.rs:18-50`, severity MEDIUM `Proven`;
+the A1/A2 parser-DoS pattern, severity CRITICAL/HIGH `Proven`; G2 never-silent.*)*
+
+Every input-driven allocation or buffer read in the host bridge **must** be capped **before** the
+allocation or copy:
+
+- **Read cap before any buffer alloc/copy.** A `wild:read` op reads at most `CAP` bytes (an
+  explicit, documented constant per op) into a pre-sized buffer; if the host returns more, the
+  bridge returns `EvalError::TooLarge { cap, op }` — never a silent truncation and never an
+  unbounded `Vec` growth. The M1 finding (`read_to_end` → unbounded stdin `Vec`) is the cautionary
+  anti-pattern (DN-40 §3 M1; MEDIUM `Proven`).
+- **Length-check before pointer arithmetic.** A buffer/length/pointer-shaped return value from a
+  host call is bounds-checked against an explicit cap before any indexing, copy, or slice
+  construction — no `unsafe` pointer arithmetic on untrusted lengths.
+- **Path confinement for filesystem ops.** `wild:fs_*` ops pass `&Path` through an explicit root-
+  confinement step: canonicalize the path, verify the prefix is in the allowed roots, and reject
+  traversal (`./../`) and symlink-escape with a named `EvalError` before the call reaches
+  `std::fs` (DN-40 §3 M1 fix direction). No bare `&Path` pass-through is ever the boundary.
+- **Never-silent on overflow (G2).** Any overflow, out-of-range, or resource-limit breach is an
+  explicit `EvalError` naming the operation and the limit — never a silent wrap, truncation, or
+  default fill. This is the parser's own contract (parse.rs:14-20 G2) applied to the host bridge.
+- **Resource caps are documented constants**, not magic numbers: named as `BRIDGE_READ_CAP`,
+  `BRIDGE_PATH_DEPTH`, etc., with a `// RESOURCE-BOUND:` comment stating the chosen ceiling and
+  the reasoning (analogous to `MAX_EXPR_DEPTH` at parse.rs:20).
+
+**Honest caveat:** the bounds discipline is `Declared` (mandated, unimplemented). The M1 finding
+(unbounded `read_to_end`, bare path pass-through at named lines in `mycelium-std-sys`) is `Proven`
+— the code exists and has no cap. The fix direction above is `Declared`; the chosen cap values are
+`Declared` until measured and justified.
+
+#### 4.4.4 How §4.4.1–4.4.3 close the DN-40 A1/A2/A3 input-validation gaps
+
+> **FLAG (CRITICAL/HIGH must-fix before E14-1):** DN-40 A1/A2/A3 are active gaps in the current
+> codebase. A1 (type-subgrammar parser DoS, CRITICAL `Proven`) and A2 (pattern-subgrammar parser
+> DoS, HIGH `Proven`-by-structure) must be fixed before any FFI work ships, per DN-40 §8 OQ-1 and
+> the Ratification Map G11 ⚠ annotation. A3 (dep-hash parse-don't-validate, HIGH `Proven`) must
+> close before the encoding bridge is built (the A3 lesson is that injective encoding does not
+> substitute for input validation). These are not this RFC's fixes — they live in
+> `mycelium-l1/src/parse.rs` and `mycelium-proj/src/manifest.rs` — but E14-1/M-722 is blocked on
+> their landing per DN-40 §8 OQ-1.
+
+The relationship between §4.4 and the three DN-40 priority gaps:
+
+- **A1 (parse.rs type-subgrammar overflow, CRITICAL `Proven`).** The host bridge (§4.4.3) mandates
+  bounded recursion / capped input at the `wild`/FFI boundary. But the L1 parser's own never-crash
+  contract (parse.rs:14-20) must hold *before* a Mycelium source file can reach a `wild` block —
+  and A1 breaks that contract today. The §4.4.3 resource-bound discipline at the bridge is a
+  separate, independent gate; it does not substitute for the A1 parser fix.
+- **A2 (parse.rs pattern-subgrammar overflow, HIGH `Proven`-by-structure).** Same dependency as
+  A1: A2 is the same overflow class on `parse_pattern`, must land with A1, and is a precondition
+  for any FFI-backed op to be reached safely by a user-supplied source file.
+- **A3 (dep-hash parse-don't-validate, HIGH `Proven`).** The §4.4.1 parse-into-typed mandate
+  directly closes the class A3 belongs to — *encoding does not substitute for input validation*.
+  The A3 fix (route `Dependency.hash` through `ContentHash::parse` at the manifest boundary,
+  `Dependency.hash: ContentHash` not `Option<String>`) must land **before** the host bridge is
+  built, so the lesson is not merely documented but enforced. Once A3 is fixed, the bridge's
+  parse-into-typed discipline (§4.4.1) extends the same pattern to the foreign boundary.
+
+The §4.4 spec closes **the M2 finding** (DN-40 §3 M2, MEDIUM `Declared`): the "deferred
+encoding" clause is replaced by these three normative obligations. The A1/A2/A3 fixes are tracked
+separately and are gated blockers for E14-1 per DN-40 §8 OQ-1. **This RFC does not re-open or
+re-decide A1/A2/A3 — it notes the sequencing constraint and delegates to their own issues/PRs.**
+
+#### 4.4.5 Guarantee tag posture at the validation boundary
+
+*(`Declared` tag basis; per-finding tags held at DN-40's own honest basis — no upgrade without a
+checked basis; VR-5.)*
+
+- **The host-encoding bridge is `Declared`** in v0: the bridge is unbuilt; the three obligations
+  above are mandated design directions, not verified properties.
+- **The bridge earns `Empirical`** when a validation corpus — adversarial property tests covering
+  (1) parse-into-typed round-trip, (2) injective-encode round-trip with delimiter-injection
+  adversaries, and (3) bounded-read/path-confinement limits — runs against the real implementation
+  and passes. Each property test, when green, constitutes a recorded `Empirical` basis for its
+  respective obligation. The corpus passes being the gate mirrors the in-repo three-way differential
+  as the basis for `Empirical` on deterministic `wild:` ops (§4.7, formerly §4.6).
+- **The bridge is never `Proven`** without a mechanized theorem over the implementation (deferred,
+  per §4.7/§4.8's guarantee-tag policy; future work).
+- **FFI residual insecurity is `Declared` and disclosed per DN-44 §1.1.** The `wild`/FFI surface
+  is an intentional escape hatch — it cannot be made fully transparent at the language level.
+  Wherever a host op cannot be fully confined (e.g. a future network call, a platform ABI nuance),
+  the disclosure discipline from DN-44 §1.1 applies: the gap is documented co-located with the
+  surface, with a justification and practical guidance for the `.myc` program author — never silent
+  (G2).
+
+### 4.5 ABI honesty and the `// SAFETY:` protocol (M-720/M-724)
+
+- The `wild` body's argument-to-host encoding is **governed by the three obligations of §4.4**
+  (parse-into-typed / injective-encode / bounded — pending maintainer sign-off); the host `PrimFn`
+  implements those obligations and is responsible for its ABI contract. v0 does **not** impose a
+  canonical value-to-C encoding — the syscall surface (§4.6) is native Rust `std`/`libc`-level,
+  not arbitrary C structs.
 - **Never-silent ABI claims.** A host `PrimFn` that cannot honour its ascribed result type returns
   an explicit `EvalError` (or the syscall's `Result::Err`), never a silently wrong-typed `Value`
   (G2). The `wild` block's *result* type is the ascribed Mycelium type (M-661); a host op that
@@ -182,9 +361,9 @@ injected into the differential), and keeps the interpreter free of a hard-coded 
 - **The `// SAFETY:` protocol.** Every `wild` site in a `@std-sys` `.myc` nodule must carry a
   `// SAFETY:` comment stating the ABI/host contract it relies on, and every Rust `unsafe` block in
   the FFI host layer must carry the ADR-014 `// SAFETY:` justification (`scripts/checks/safety.sh`,
-  M-681). `just safety-check` verifies both (§4.7).
+  M-681). `just safety-check` verifies both (§4.8).
 
-### 4.5 Syscall binding strategy (M-722/M-723)
+### 4.6 Syscall binding strategy (M-722/M-723)
 
 All host/OS contact is confined to the **single audited `mycelium-std-sys` phylum** (LR-9 /
 RFC-0016 §8-Q6) — the pure `std-*` crates stay `wild`-free and may keep `#![forbid(unsafe_code)]`.
@@ -206,10 +385,10 @@ an explicit `Result::Err`/`Option::None` — never a silent discard (G2).
 > **Clarification (2026-06-25, append-only).** The v0 `std.rand` source is `/dev/urandom` **via
 > `std::fs`** only; `getrandom(2)` is **deferred** (`FLAG-GETRANDOM` in `mycelium-std-sys/src/rand.rs`)
 > to avoid a workspace dependency and preserve `#![forbid(unsafe_code)]`. The `Declared` tag and
-> never-silent behavior are unchanged; only the named mechanism is narrower than the table's
+> never-silent behavior are unchanged; only the named mechanism is narrower than the §4.6 table's
 > "`getrandom(2)`" implies. Status remains **Accepted** (no decision change).
 
-### 4.6 Guarantee-tag policy (VR-5)
+### 4.7 Guarantee-tag policy (VR-5)
 
 - **`Declared`** is the v0 tag for every syscall-backed operation (the host body is audited, not
   verified — no theorem, no measured bound).
@@ -217,9 +396,11 @@ an explicit `Result::Err`/`Option::None` — never a silent discard (G2).
   **deterministic** host op whose L1-eval ≡ L0-interp ≡ AOT agreement is asserted) earns
   **`Empirical`** for that operation only — the differential is the recorded basis. Non-deterministic
   syscalls (entropy, clock) cannot be covered by an equality differential and stay `Declared`.
+- For the host-encoding bridge specifically: the bridge earns `Empirical` per §4.4.5 once a
+  validation corpus passes; until then the bridge tag is `Declared`.
 - No FFI claim is `Proven`. Promotion requires a checked basis recorded at the site (VR-5).
 
-### 4.7 `just safety-check` scope (M-724)
+### 4.8 `just safety-check` scope (M-724)
 
 `safety-check` performs **two** audits — a Rust-level one (existing) and a Mycelium-level one (new):
 
@@ -236,15 +417,20 @@ an explicit `Result::Err`/`Option::None` — never a silent discard (G2).
 ## 5. Definition of Done
 
 - [x] A normative FFI model is specified: capability model (§4.1), `wild` body + elaboration
-  (§4.2), execution host (§4.3), ABI protocol (§4.4).
-- [x] Guarantee tags assigned per FFI-backed operation category (§4.6): `Declared` baseline,
+  (§4.2), execution host (§4.3), ABI protocol (§4.5).
+- [x] Guarantee tags assigned per FFI-backed operation category (§4.7): `Declared` baseline,
   `Empirical` only for a differentially-covered deterministic op.
 - [x] The `wild` elaboration path is specified: lower to `Op { prim: "wild:…" }` (no new node);
   the three-way differential extends to a `wild`-backed operation.
 - [x] The capability model is specified well enough to implement M-720/M-721 (§4.1–4.3).
-- [x] The `// SAFETY:` audit protocol is normative (§4.4/§4.7).
-- [x] The `std.{io,fs,sys,rand,time}` binding strategy is decided (§4.5).
+- [x] The `// SAFETY:` audit protocol is normative (§4.5/§4.8).
+- [x] The `std.{io,fs,sys,rand,time}` binding strategy is decided (§4.6).
 - [x] Status advances `Draft → Accepted` (this revision), maintainer sign-off recorded (§Meta).
+- [ ] **Host-encoding validation bridge spec (§4.4) — pending maintainer sign-off (2026-06-28).**
+  Three normative obligations specified: parse-into-typed (§4.4.1), injective-encode (§4.4.2),
+  bounded (§4.4.3). DN-40 A1/A2/A3 closure sequencing noted (§4.4.4). Guarantee tag posture stated
+  (§4.4.5). This item is open until the maintainer ratifies §4.4 — at which point the DoD row is
+  checked and a §Meta changelog entry is appended.
 
 ---
 
@@ -255,11 +441,13 @@ The five Draft-stage open questions are resolved as follows (maintainer sign-off
 - **Capability model depth** → build-time `@std-sys` gate; no runtime `Capability<io>` in v0 (§4.1).
 - **`wild` execution host** → capability handle = the prim registry, shared across the three paths
   (§4.3).
-- **ABI boundary** → encoding deferred to the `@std-sys` author; the host `PrimFn` owns it (§4.4).
+- **ABI boundary** → encoding initially deferred to the `@std-sys` author; the host `PrimFn` owns
+  it (§4.5). The encoding discipline is **now further specified** in §4.4 (parse-into-typed /
+  injective-encode / bounded — pending maintainer sign-off; G11 must-fix before E14-1).
 - **Guarantee tag for `wild`** → `Declared`, except `Empirical` for a differentially-covered
-  deterministic op (§4.6).
+  deterministic op (§4.7); bridge earns `Empirical` after validation corpus passes (§4.4.5).
 - **`just safety-check` scope** → full Mycelium-level audit (SAFETY comment + `@std-sys` + `!{ffi}`)
-  *and* the existing Rust-level adjacency check (§4.7).
+  *and* the existing Rust-level adjacency check (§4.8).
 
 ## 7. Deferred — runtime capability + `xloc` (flagged to avoid retroactive incompatibility)
 
@@ -285,6 +473,18 @@ calls surface their host op and refuse explicitly); VR-5 (no tag upgrade without
 kernel — the FFI surface adds **no** new Core-IR node, reusing `Node::Op`); LR-9 (`wild` is the
 single permitted language-level FFI escape; all else is refused, not ignored).
 
+For §4.4 (host-encoding validation bridge, 2026-06-28): DN-40 (input-validation architecture —
+`Accepted` 2026-06-26; the M2 finding's fix mandate and A1/A2/A3 sequencing constraint; §4 "only-
+intended-inputs" architecture; §7 generalizable principle; §8 OQ-1); DN-44 §1.1 (residual-insecurity
+disclosure discipline — the honesty corollary; `Proposed`); Blocked-Decisions Ratification Map §G11
+(axis: "host-encoding validation bridge, A1/A2/A3 input-validation gaps"; must-fix-before-E14-1 ⚠);
+DN-39 §5 (spore `content_address` v0→v1 injective encoding, the canonical reference pattern —
+`FIXED` PR #617); G2 (never-silent — `EvalError::BadHostBytes`, `EvalError::TooLarge`, path-
+confinement errors); VR-5 (bridge is `Declared` until validation corpus passes; residual insecurity
+`Declared` + disclosed per DN-44 §1.1); KC-3 (no new bridge abstraction beyond what §4.3 already
+specifies — the bridge is the `PrimFn` registration host, §4.3 plus the three obligations of §4.4);
+E14-1 / M-722 as the consuming epic/task.
+
 Implementation references: `crates/mycelium-l1/src/elab.rs` (the `wild → Op` lowering, M-720);
 `crates/mycelium-l1/src/eval.rs` + `crates/mycelium-interp/src/{lib,prims}.rs` (the host dispatch,
 M-721); `crates/mycelium-std-sys/src/` (the syscall floor, M-722/M-723);
@@ -295,12 +495,29 @@ M-721); `crates/mycelium-std-sys/src/` (the syscall floor, M-722/M-723);
 
 ## Meta — changelog
 
-- **2026-06-25 — §4.5 clarification (append-only; no status move).** Per an alignment audit, noted
-  that v0 `std.rand` entropy is `/dev/urandom` via `std::fs` only; `getrandom(2)` is deferred
-  (`FLAG-GETRANDOM`, `mycelium-std-sys/src/rand.rs`) to avoid a workspace dep and keep
-  `#![forbid(unsafe_code)]`. The `Declared` tag and never-silent behavior are unchanged; only the
-  named mechanism is narrower than the §4.5 table implied. Status remains **Accepted**. (Append-only;
-  VR-5; G2.)
+- **2026-06-28 — §4.4 host-encoding validation bridge added (append-only; pending maintainer
+  sign-off; G11 must-fix before E14-1).** Adds RFC-0028 §4.4 specifying the three normative
+  obligations for the `wild`/FFI boundary: (1) §4.4.1 parse-into-typed — untrusted host bytes
+  enter via a total named `decode_<op>` function producing a typed `Value`, never trusted raw;
+  (2) §4.4.2 injective-encode — every `Value`→native encode path is injective/length-prefixed,
+  with a `// ENCODING:` justification comment at the site; (3) §4.4.3 bounded — every
+  input-driven alloc/read is capped before the alloc, path-confined, never-silent on overflow
+  (`EvalError::TooLarge`/`EvalError::BadHostBytes`). §4.4.4 traces the closure of the DN-40 M2
+  finding and the **CRITICAL/HIGH sequencing constraint** (A1 parser DoS, A2 pattern DoS, A3
+  dep-hash parse-don't-validate must land **before** E14-1). §4.4.5 states the honest guarantee
+  tag posture: bridge is `Declared` until a validation corpus passes → `Empirical`; FFI residual
+  insecurity `Declared` + disclosed per DN-44 §1.1; never `Proven` without a mechanized theorem.
+  The existing §4.4–4.7 renumbered to §4.5–4.8 (scope table, DoD, §6, §8 updated accordingly).
+  The parent RFC remains **Accepted**; §4.4 is **pending maintainer sign-off** (flagged in scope
+  table, DoD, and §4.4 opening note). No existing decision modified or superseded. Grounded in:
+  DN-40 (Accepted), DN-44 §1.1 (Proposed), Ratification Map §G11, DN-39 §5, G2, VR-5, KC-3.
+  (Append-only; house rule #3.)
+- **2026-06-25 — §4.6 clarification (append-only; no status move; was §4.5 prior to
+  2026-06-28 renumbering).** Per an alignment audit, noted that v0 `std.rand` entropy is
+  `/dev/urandom` via `std::fs` only; `getrandom(2)` is deferred (`FLAG-GETRANDOM`,
+  `mycelium-std-sys/src/rand.rs`) to avoid a workspace dep and keep `#![forbid(unsafe_code)]`.
+  The `Declared` tag and never-silent behavior are unchanged; only the named mechanism is narrower
+  than the §4.6 table implies. Status remains **Accepted**. (Append-only; VR-5; G2.)
 - **2026-06-23 — Accepted.** Resolved all five Draft open questions (maintainer sign-off): build-time
   `@std-sys` capability gate (no runtime `Capability` value in v0); the prim registry as the
   capability handle / execution host; `wild` lowers to `Op { prim: "wild:…" }` (no new Core-IR node,

@@ -108,12 +108,14 @@ prefix operator is **right-associative** and binds tighter than every binary ope
 | 1 (tightest) | unary `-`, unary `!` | prefix (right) | negation / bitwise-not |
 | 2 | `*` `/` `%` | left | multiplicative |
 | 3 | `+` `-` | left | additive |
-| 4 | `&` | left | bitwise-and |
-| 5 | `^` | left | bitwise-xor |
-| 6 | `\|` | left | bitwise-or |
-| 7 | `==` `!=` | left | equality |
-| 8 | `&&` | left | logical-and |
-| 9 (loosest) | `\|\|` | left | logical-or |
+| 4 | `<<` `>>` | left | shift *(added — RFC-0037 §5-S2/D1, M-745 resolved; `Declared`)* |
+| 5 | `&` | left | bitwise-and |
+| 6 | `^` | left | bitwise-xor |
+| 7 | `\|` | left | bitwise-or |
+| 8 | `<` `>` | left | comparison *(added — RFC-0037 §5-S2/D1, M-745 resolved; `<=`/`>=` retire as glyphs → word-only `lte`/`gte`; `Declared`)* |
+| 9 | `==` `!=` | left | equality |
+| 10 | `&&` | left | logical-and |
+| 11 (loosest) | `\|\|` | left | logical-or |
 
 Type ascription (`: T`) and the guarantee annotation (`@ strength`) bind **tighter** than every
 infix operator — they are postfix on the applicative atom — so `a + b : Binary{8} @ Exact` parses
@@ -133,6 +135,24 @@ Each operator desugars to the named word function below (grounded in the existin
 | `a / b` | `div(a, b)` | `-a` | `neg(a)` | `a \|\| b` | `or(a, b)` |
 | `a % b` | `rem(a, b)` | `!a` | `not(a)` | | |
 
+**Added by RFC-0037 §5-S2 (M-745 resolved; `Declared`):**
+
+| Operator | Word | Note |
+|---|---|---|
+| `a < b` | `lt(a, b)` | Glyph operator — freed by RFC-0037 kind-split (D1) |
+| `a > b` | `gt(a, b)` | Glyph operator — freed by RFC-0037 kind-split (D1) |
+| `a << b` | `shl(a, b)` | Glyph operator — freed by RFC-0037 kind-split (D1) |
+| `a >> b` | `shr(a, b)` | Glyph operator — freed by RFC-0037 kind-split (D1) |
+| `lte(a, b)` | `lte(a, b)` | **Word-form only** — `<=` glyph retired by RFC-0037 D1 (type-arg edge) |
+| `gte(a, b)` | `gte(a, b)` | **Word-form only** — `>=` glyph retired by RFC-0037 D1 (type-arg edge) |
+
+`lte` and `gte` are **word operators only** — they have no glyph sugar. The asymmetry (single-char
+`<`/`>` have glyphs; two-char `<=`/`>=` do not) is intentional: the two-character glyphs are the
+ones that produce the most severe parsing ambiguity following a type argument (`f[T]` and `f[T]=…`),
+even after the kind-split (RFC-0037 §4-D1 rationale). Word-canonical form is always available and
+is the desugaring target for the glyph operators — `lte`/`gte` are already word-canonical and
+require no desugaring step.
+
 **Honesty boundary (G2/VR-5):** the desugaring is **purely syntactic** — it produces the word-call
 AST regardless of whether the target function exists. The targets that resolve to a kernel prim
 **today** are `add`/`sub`/`mul`/`neg` (`trit.*`) and `xor`/`not` (`bit.*`); these are exercised
@@ -140,7 +160,10 @@ end-to-end through all three execution paths (the M-705 differential corpus). Th
 (`div`, `rem`, `band`, `bor`, `eq`, `ne`, `and`, `or`) parse and desugar correctly but currently
 surface an **explicit** "unknown function/prim" refusal downstream (never silent) until their
 stdlib/kernel definitions land — they are reserved in the table so the grammar is complete and the
-sugar is stable as those prims arrive.
+sugar is stable as those prims arrive. The RFC-0037-added targets (`lt`, `gt`, `shl`, `shr`,
+`lte`, `gte`) are likewise reserved in this map; their stdlib/kernel definitions arrive with the
+RFC-0037 grammar-supersession epic (M-809) — until then, word form calls produce an explicit
+"unknown function/prim" refusal, never silent (G2).
 
 ### 4.3 Deferred: the angle-bracket operators
 
@@ -150,6 +173,20 @@ expression `a < b` from a generic instantiation needs contextual lexing or specu
 self-contained follow-up. The desugaring map reserves their word targets (`lt`/`le`/`gt`/`ge`/
 `shl`/`shr`) so the extension is purely additive when M-745 lands. Until then, the comparison words
 remain available in their function form (never silently refused — G2).
+
+> **Resolution note — M-745 closed by RFC-0037 (append-only, 2026-06-28).**
+> The collision above is resolved by RFC-0037 §4-D1 (bracket kind-split): type parameters and type
+> arguments move from `<…>` to `[…]`, leaving `<>` **operators-only**. With no type-argument role,
+> `a < b` is unambiguously a comparison expression — no contextual lexing required. The §4.1
+> precedence table is extended with Tiers 4 (`<<`/`>>` shift) and 8 (`<`/`>` comparison), and the
+> §4.2 desugaring map gains `lt`/`gt`/`shl`/`shr` as glyph-operator entries. The `<=`/`>=` glyphs
+> are **retired** (RFC-0037 D1 rationale: the two-character forms are the most ambiguous in
+> post-type-arg position even after the kind-split); their word-canonical forms `lte`/`gte` remain
+> valid everywhere. The original word-target reservation (`le`/`ge`) is superseded by the
+> RFC-0037-specified names `lte`/`gte`. See §4.2 second table and §4.1 updated tier list.
+> M-745 gate: **met**. This RFC (Accepted) → **Enacted** once the grammar-supersession epic
+> (RFC-0037 §8 / M-809) lands the updated `mycelium.ebnf` and parser.
+> `Declared` (RFC-0037's collision-freedom claim is construction-argument, not mechanically verified).
 
 ### 4.4 EXPLAIN / audit trail (resolves Q5)
 
@@ -171,6 +208,9 @@ retained below for the record (append-only).
 2. **Which operators in v1?** → Arithmetic (`+ - * / %`), bitwise (`& ^ |`), equality (`== !=`),
    logical (`&& ||`), and unary (`- !`). Ordering/shift (`< <= > >= << >>`) **deferred** (§4.3,
    M-745). Word targets without a prim yet still parse (never-silent downstream refusal).
+   *Update (2026-06-28, RFC-0037):* M-745 is now resolved. Glyph operators `<`/`>`/`<<`/`>>` are
+   added (§4.1 Tiers 4 and 8; §4.2 second table). `<=`/`>=` retire as glyphs; `lte`/`gte` are
+   word-only. The §4.3 deferral is lifted; see §4.3 resolution note.
 3. **Precedence source?** → **Rust** (§4.1), cited explicitly (implementation language, adjacent
    surface).
 4. **User-defined infix?** → **Deferred** (conservative). The v1 table is fixed; operator
@@ -198,8 +238,10 @@ retained below for the record (append-only).
 - [x] RFC-0025 status **Draft → Proposed** (this change). **Proposed → Accepted** awaits maintainer
   ratification — never skipping steps (house rule #3).
 - [x] DN-23 untouched (append-only); this RFC is the binding forward record.
-- [ ] **Deferred (M-745):** the angle-bracket operators `< <= > >= << >>` (type-arg disambiguation;
-  §4.3).
+- [x] **M-745 — RESOLVED by RFC-0037 (2026-06-28):** the angle-bracket operators `<`/`>`/`<<`/`>>`
+  are added to the precedence table (§4.1 Tiers 4 and 8) and desugaring map (§4.2). `<=`/`>=`
+  retire as glyphs; `lte`/`gte` are word-only (§4.3 resolution note). This RFC → **Enacted** once
+  the grammar-supersession epic (M-809) lands the updated `mycelium.ebnf` + parser.
 
 ---
 
@@ -239,6 +281,7 @@ three-path agreement is **Empirical** (differential trials). The word-function n
 
 ## Meta — changelog
 
+- **2026-06-28 — §4.1/§4.2/§4.3 updated: M-745 residue wired in (RFC-0037 Enacted; design-draft for review).** After RFC-0037 was promoted to Enacted (grammar-supersession epic landed), this RFC's body is updated to close the M-745 residue: (1) §4.1 precedence table extended with Tier 4 (`<<`/`>>` shift) and Tier 8 (`<`/`>` comparison), renumbering former Tiers 4–9 → 5–11; (2) §4.2 desugaring map gains second table with `lt`/`gt`/`shl`/`shr` glyph entries and `lte`/`gte` word-only entries (supersedes the §4.3 reservation of `le`/`ge` → RFC-0037 specifies `lte`/`gte`); (3) §4.3 resolution note added (M-745 met; Enacted gate = M-809 grammar-supersession epic); (4) §5 Q2 and §6 DoD updated accordingly. Guarantee tag `Declared` throughout (RFC-0037's collision-freedom is a construction argument, not mechanically verified). STATUS UNCHANGED — this is a design-draft update for maintainer review; no status move proposed here (house rule #3). FLAGs to maintainer: **FLAG-A** (M-745 close: issues.yaml M-745 status update + M-706 depends_on update needed — orchestrator-owned, not touched here); **FLAG-B** (EBNF regen: `mycelium.ebnf` needs the `cmp_expr`/`shift_expr` productions from RFC-0037 §6 and the updated `op_expr` chain — tied to M-809 grammar-supersession epic, not this doc update); **FLAG-C** (RFC-0025 Enacted gate: once M-809 lands, this RFC's status moves Accepted → Enacted — maintainer ratification step needed; never skip Accepted); **FLAG-D** (word-target naming: §4.3 originally reserved `le`/`ge`; RFC-0037 specifies `lte`/`gte` — confirmed supersession recorded in §4.3 resolution note and §4.2 second table; no ambiguity in the corpus).
 - **2026-06-27 — §4.3 deferred ordering/shift operators resolved by RFC-0037 (M-745; append-only, status unchanged).** The §4.3 deferral of the angle-bracket ordering/shift operators (`< <= > >= << >>`, the M-745 gate) is **resolved by RFC-0037** (the grammar deconfliction RFC, Proposed): type params/args move `<…>` → `[…]`, freeing `<>` for `< > << >>` with **no disambiguation machinery**; `<=`/`>=` **retire as glyphs → word operators `lte`/`gte`** (asymmetric with `<`/`>` — the documented tradeoff that keeps `<>` single-loaded). The desugaring map extends accordingly. No change to this RFC's word-canonical model; the surface allocation now lives in RFC-0037. Append-only.
 - **2026-06-23 — Draft → Proposed (M-705).** Adopts DN-23's hybrid: a frontend-only infix/prefix
   operator sugar layer desugaring to canonical word functions. Adds the binding precedence table
