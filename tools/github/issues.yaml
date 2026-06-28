@@ -2374,6 +2374,7 @@ issues:
     milestone: "Phase 5 — Self-Hosting & Core Library"
     labels: [phase:5, type:feature, area:execution, priority:P2, status:needs-design]
     depends_on: [M-660]
+    epic: E12-1
     doc_refs: [corpus:RFC-0014, src:crates/mycelium-l1/src/checkty.rs]
     body: |
       M-660 landed the effect-annotation SURFACE + the checker-side coverage check (declared ⊇ performed); it does NOT wire declared effects into the runtime. This issue: (1) thread a fn's declared effect set through elaboration to the L0 evaluator so the `mycelium-interp::budget` ledger (M-353) is primed/consumed per declared effect; (2) add the per-effect BUDGET surface syntax (`!{retry(<=3), alloc(<=64KiB)}` — RFC-0014 §3.4/I4) that M-660 left out (M-660 parses the effect SET only); (3) an overrun yields the explicit `EffectBudgetExhausted` (RFC-0014 I4), never a hang/OOM. No new L0 node (KC-3) — effects stay metadata threaded as budgets. Acceptance: a budgeted effectful fn runs under its budget and yields `EffectBudgetExhausted` on overrun; the M-210 three-way differential agrees; property test for budget monotonicity.
@@ -2799,7 +2800,7 @@ issues:
   - id: E7-5
     title: "E7-5 (epic) — Operator syntax: words canonical, optional symbol sugar (DN-23 -> RFC-0025)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P2, status:needs-design]
+    labels: [phase:5, type:epic, area:language, priority:P2, status:done]
     depends_on: [E7-3]
     epic: E7
     doc_refs: [corpus:DN-23, corpus:RFC-0007]
@@ -2816,7 +2817,7 @@ issues:
   - id: M-692
     title: "M-692 — spec+feat: operator syntax (RFC-0025 — symbolic sugar -> word functions)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P2, status:needs-design]
+    labels: [phase:5, type:spec, area:language, priority:P2, status:done]
     depends_on: [E7-3]
     epic: E7-5
     doc_refs: [corpus:DN-23, corpus:RFC-0007, src:docs/notes/DN-23-Operator-Syntax.md]
