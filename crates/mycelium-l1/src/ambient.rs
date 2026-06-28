@@ -40,9 +40,9 @@
 //! (RFC-0001 §4.6) and is fully recoverable here. See the RFC-0012 changelog (append-only).
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, ImplDecl, Item, Literal, Nodule,
-    Paradigm, Param, ParamKind, Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl,
-    TypeParam, TypeRef, UsePath, Vis, WidthRef,
+    AmbientParams, Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, ImplDecl, Item, Literal,
+    LowerDecl, Nodule, Paradigm, Param, ParamKind, Pattern, Phylum, Scalar, Sparsity, TraitDecl,
+    TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, Vis, WidthRef,
 };
 
 /// A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess.
@@ -174,6 +174,11 @@ pub fn resolve_report(nodule: &Nodule) -> Result<Resolved, AmbientError> {
             Item::Trait(td) => items.push(Item::Trait(r.trait_decl(default, td)?)),
             Item::Impl(id) => items.push(Item::Impl(r.impl_decl(default, id)?)),
             Item::Fn(fd) => items.push(Item::Fn(r.fn_decl(default, fd)?)),
+            // DN-54 / M-812: `lower`/`derive` declarations carry no ambient-paradigm parameters —
+            // the rule's RHS is a typed L1 term that is already unambiguous (no bare repr, no
+            // ambient integer). Pass through unchanged; the type-checker validates the RHS.
+            Item::Lower(ld) => items.push(Item::Lower(ld.clone())),
+            Item::Derive(dd) => items.push(Item::Derive(dd.clone())),
         }
     }
     Ok(Resolved {
@@ -214,6 +219,10 @@ pub fn expand_to_source(nodule: &Nodule) -> String {
             Item::Trait(td) => out.push_str(&print_trait_decl(td)),
             Item::Impl(id) => out.push_str(&print_impl_decl(id)),
             Item::Fn(fd) => out.push_str(&print_fn_decl(fd)),
+            // DN-54 / M-812: `lower`/`derive` declarations round-trip verbatim through the
+            // ambient expansion pass (no ambient state to fill; rule RHS has no bare reprs).
+            Item::Lower(ld) => out.push_str(&print_lower_decl(ld)),
+            Item::Derive(dd) => out.push_str(&print_derive_decl(dd)),
         }
     }
     out
@@ -950,4 +959,20 @@ fn print_literal(l: &Literal) -> String {
             format!("[{}]", s.join(", "))
         }
     }
+}
+
+/// Round-trip a `lower Name[params] = <rhs>` declaration (DN-54 / M-812).
+/// The RHS is printed via [`print_expr`]; no ambient state to fill.
+fn print_lower_decl(ld: &LowerDecl) -> String {
+    let params = if ld.params.is_empty() {
+        String::new()
+    } else {
+        format!("[{}]", ld.params.join(", "))
+    };
+    format!("lower {}{} = {}\n", ld.name, params, print_expr(&ld.rhs))
+}
+
+/// Round-trip a `derive Name for T` declaration (DN-54 / M-812 / DN-38 §8.1).
+fn print_derive_decl(dd: &DeriveDecl) -> String {
+    format!("derive {} for {}\n", dd.name, print_type_ref(&dd.for_ty))
 }
