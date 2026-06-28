@@ -3361,13 +3361,35 @@ issues:
   - id: M-745
     title: "M-745 — Operator syntax: angle-bracket operators (< <= > >= << >>) with type-arg disambiguation"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
-    depends_on: [M-705]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    depends_on: [M-705, M-809]
     epic: E11-1
     doc_refs:
       - corpus:RFC-0025
+      - corpus:RFC-0037
       - src:crates/mycelium-l1/src/lexer.rs
       - src:crates/mycelium-l1/src/parse.rs
+      - src:docs/spec/grammar/mycelium.ebnf
+    landed_basis: |
+      DONE (2026-06-28, ops kickoff): the angle/shift operators are WIRED. The original type-arg
+      ambiguity (which made this "needs-design") was dissolved upstream by RFC-0037 D1 (M-809): type
+      arguments moved `<...>` -> `[...]`, so `<`/`>` are operator-only and need NO contextual lexing
+      or speculative parse. Implementation (frontend-only, no L0/L1 change — KC-3):
+      - lexer.rs: `<<`/`>>` lex whole as `Tok::Shl`/`Tok::Shr` (`lex_langle`/`lex_rangle`); `<`/`>`
+        stay `Tok::LAngle`/`Tok::RAngle`. No nested-generic `>>` hazard (type args use `[…]`).
+      - parse.rs `infix_op`: `<`/`>` -> lt/gt at bp 25 (RFC-0025 §4.1 Tier 8, between bor=30 and
+        eq=20); `<<`/`>>` -> shl/shr at bp 55 (Tier 4, between add=60 and band=50). Follows the
+        ratified §4.1 table (= Rust), NOT RFC-0037 §6's illustrative sketch (which nested shift
+        looser than bitwise — flagged inconsistent; corrected in mycelium.ebnf + RFC-0025 changelog).
+      - mycelium.ebnf: `cmp_expr` (Tier 8) and `shift_expr` (Tier 4) productions added with the
+        precedence-correct nesting; the §4.3 deferral note retired.
+      - Tests: src/tests/parse.rs (desugar + precedence + left-assoc for the new tiers),
+        src/tests/lexer.rs (`<<`/`>>` whole-token lexing), accept/20-operator-syntax.myc parse cases.
+      `<=`/`>=` have NO glyph (retired by RFC-0037 D1); word forms `lte`/`gte` are ordinary calls.
+      The new word targets (lt/gt/shl/shr/lte/gte) parse + desugar but surface an explicit
+      "unknown function/prim" refusal downstream until their prims land (M-809), never silent (G2).
+      RFC-0025 stays Accepted pending the maintainer's Accepted -> Enacted ratification (the RFC body
+      explicitly reserves that step — "do NOT self-Enact"); this closes the M-745 wiring gate only.
     body: |
       M-705 landed the infix/prefix operator sugar but DEFERRED the angle-bracket operators —
       ordering (`<`, `<=`, `>`, `>=`) and shift (`<<`, `>>`) — because `<`/`>` collide with the

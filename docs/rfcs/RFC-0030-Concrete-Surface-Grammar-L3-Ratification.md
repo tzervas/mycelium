@@ -149,6 +149,15 @@ This RFC cannot honestly move Draft → Proposed (a *complete, ratified* L3 gram
 > M-745 gate: **met**. M-707 remains open. This RFC's move to Proposed is unblocked on M-745 and
 > waits only on M-707 (RFC-0020 L2 carve-outs). The 2026-06-27 changelog entry records the fuller
 > supersession context.
+>
+> **Gate status update — M-745 wiring IMPLEMENTED (append-only, 2026-06-28, ops kickoff).**
+> The operator wiring is now landed in `mycelium-l1` (M-745 → done): `mycelium.ebnf` gains the
+> `cmp_expr` (Tier 8) and `shift_expr` (Tier 4) productions and the lexer/parser desugar `<`/`>` →
+> `lt`/`gt` and `<<`/`>>` → `shl`/`shr` per the **ratified RFC-0025 §4.1** tiers. Note the EBNF
+> nesting follows §4.1 (shift tighter than the bitwise ops), **not** RFC-0037 §6's illustrative
+> sketch, which inverted it — see RFC-0025 changelog **FLAG-E**. So the M-745 half of this RFC's
+> Proposed gate is satisfied **by landed code**, not just by RFC-0037's design argument; M-707
+> (RFC-0020 L2 carve-outs) remains the sole open gate.
 
 What **is** already integrated into `docs/spec/grammar/mycelium.ebnf` and need not wait: the
 operator-expression grammar (`op_expr` … `unary_expr`; RFC-0025/M-705), effect annotations (`!{…}`),
@@ -223,6 +232,13 @@ choice is made here (VR-5).
 
 ## Meta — changelog
 
+- **2026-06-28 — M-745 wiring IMPLEMENTED (ops kickoff; no status move).** The commissioned operator
+  wiring landed in `mycelium-l1`: `mycelium.ebnf` gains the `cmp_expr` (Tier 8) and `shift_expr`
+  (Tier 4) productions and the lexer/parser desugar `<`/`>`/`<<`/`>>` per the ratified RFC-0025 §4.1
+  tiers (NOT RFC-0037 §6's inverted illustrative sketch — see §4.3 gate note + RFC-0025 FLAG-E). So
+  the M-745 half of §4.3's Draft→Proposed gate is now satisfied **by landed code**; M-707 (RFC-0020
+  L2 carve-outs) remains the sole open gate. M-745 close is an implementation task, not a status
+  move. (Append-only; VR-5; G2.)
 - **2026-06-28 — operator residue ratified; M-745 wiring COMMISSIONED (in-session).** The M-745 operator wiring (lt/gt/shl/shr/lte/gte, via the M-809 grammar-supersession epic) is COMMISSIONED for implementation. EBNF regen for `cmp_expr`/`shift_expr` productions required. RFC stays **Enacted**; M-745 close is an implementation task, not a status move. (Append-only; VR-5; G2.)
 - **2026-06-27 — the grammar-supersession wave landed as RFC-0037 (append-only, Status unchanged — Draft).** The DN-31 grammar-surface resolution the 2026-06-25 note sequenced this RFC behind is now an explicit RFC: **RFC-0037** (Surface-Grammar Deconfliction & Layout-Independence, Proposed) — kind-split `[T]`/`{N}` (repr stays `{}`), `<>` operators-only, `=>`/`0t`/`lambda`, and a layout-independent grammar. RFC-0030's full L3 grammar is **regenerated against RFC-0037** (the `[]`-type-args + position split + the layout-independent delimiter rules) before it can move to Proposed; the committed `mycelium.ebnf` stays the normative oracle until that migration lands. The M-745 gate is satisfied by RFC-0037. No change to RFC-0030's §4 prose here. Append-only (VR-5 / house rule #3).
 - **2026-06-25 — Sequencing note (D6/D7; post corpus-alignment audit; Status unchanged — Draft).** The **Draft → Proposed** move is now **sequenced behind the D7 grammar-surface resolution** (DN-31, maintainer 2026-06-24/25): the type-argument surface is **being changed** — **`[]` is adopted for type-arguments** (freeing `<>` for the comparison/shift operators `< > << >>`, resolving the M-745 collision), **superseding this RFC's current `<>`-based direction** (and RFC-0019 §4.1's `<…>` type params, via supersession). The M-707 + M-745 gate named in §4.3 is therefore subsumed by that grammar-supersession wave: RFC-0030's full L3 grammar is regenerated against `[]`-type-args + the `[]`-vs-list-literal position split (DN-31 §2–§4) before it can move to Proposed. No change is made to RFC-0030's §4 prose here; the committed `mycelium.ebnf` stays the normative oracle until that wave lands (append-only; VR-5 / house rule #3).

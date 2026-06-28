@@ -214,10 +214,20 @@ pub enum Tok {
     /// `]`.
     RBracket,
     /// `<` — operator-only (RFC-0037 D1: type-args moved to `[…]`; trit literals moved to `0t…`).
-    /// At expression position it is the **lt**/shift operator; it no longer opens a type-arg list.
+    /// The infix **`lt`** comparison operator (RFC-0025 §4.1 Tier 8; M-745); it no longer opens a
+    /// type-arg list. A doubled `<<` lexes whole as [`Tok::Shl`], so a bare `LAngle` is always the
+    /// single-char comparison glyph.
     LAngle,
-    /// `>`.
+    /// `>` — the infix **`gt`** comparison operator (RFC-0025 §4.1 Tier 8; M-745). A doubled `>>`
+    /// lexes whole as [`Tok::Shr`]; there is no nested-generic `>>` hazard because type arguments
+    /// moved to `[…]` (RFC-0037 D1), so `>>` is unambiguously the shift glyph.
     RAngle,
+    /// `<<` — the infix **`shl`** left-shift operator (RFC-0025 §4.1 Tier 4; M-745). Lexed as one
+    /// whole token (`lex_langle`), never two `LAngle`s.
+    Shl,
+    /// `>>` — the infix **`shr`** right-shift operator (RFC-0025 §4.1 Tier 4; M-745). Lexed as one
+    /// whole token (`lex_rangle`), never two `RAngle`s.
+    Shr,
     /// `@` — guarantee annotation.
     At,
     /// `@std-sys` — the explicit **nodule-header marker** for the audited FFI-floor context

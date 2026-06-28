@@ -281,6 +281,27 @@ three-path agreement is **Empirical** (differential trials). The word-function n
 
 ## Meta — changelog
 
+- **2026-06-28 — M-745 operator wiring LANDED (ops kickoff; status UNCHANGED — Accepted).** The
+  commissioned wiring is implemented Rust-first in `mycelium-l1` (frontend-only, no L0/L1 change —
+  KC-3): the lexer lexes `<<`/`>>` whole as `Tok::Shl`/`Tok::Shr` (`<`/`>` stay `LAngle`/`RAngle`);
+  `parse.rs::infix_op` desugars `<`/`>` → `lt`/`gt` at the §4.1 Tier-8 slot (bp 25) and `<<`/`>>` →
+  `shl`/`shr` at the Tier-4 slot (bp 55); `mycelium.ebnf` gains the `cmp_expr`/`shift_expr`
+  productions; parse/lexer unit tests + the `accept/20-operator-syntax.myc` oracle cover the new
+  glyphs (precedence, left-associativity, whole-token shift lexing). `lte`/`gte` remain word-only
+  (no glyph). M-745 → **done**; RFC-0030 §4.3 gate **met (implemented)**. The new word targets
+  (`lt`/`gt`/`shl`/`shr`/`lte`/`gte`) parse + desugar but surface an explicit "unknown function/prim"
+  refusal downstream until their prims land (M-809) — never silent (G2). **STATUS STAYS Accepted:**
+  per this RFC's own Status guard and FLAG-C, the Accepted → Enacted move is a **maintainer
+  ratification step** — *not* self-applied here even though the wiring is now in (house rule #3;
+  VR-5 — assent is not upgraded past its basis). **FLAG-E (§4.1 vs RFC-0037 §6 precedence
+  inconsistency):** RFC-0037 §6's *illustrative* EBNF sketch nests `cmp_expr ::= shift_expr` /
+  `shift_expr ::= bor_expr`, which would place shift **looser** than the bitwise ops — contradicting
+  this RFC's ratified §4.1 table (shift Tier 4 = *tighter* than `& ^ |`; comparison Tier 8 = looser
+  than `|`, tighter than `==`) and Rust (§4.1's cited source of truth). The implementation and the
+  regenerated `mycelium.ebnf` follow the **ratified §4.1 tiers** (the binding source), not the §6
+  sketch; the §6 sketch is non-normative ("illustrative; the normative EBNF artifact is updated by
+  the grammar-supersession epic"). RFC-0037 §6 should be corrected append-only to match §4.1.
+  (Append-only; VR-5; G2.)
 - **2026-06-28 — operator residue ratified; M-745 wiring COMMISSIONED (in-session).** Operator residue (lt/gt/shl/shr/lte/gte) ratified by maintainer. M-745 operator wiring is COMMISSIONED for implementation (M-745 close + M-809 grammar-supersession epic). → Enacted once M-745 wiring lands (maintainer ratification required — do NOT self-Enact; house rule #3). (Append-only; VR-5; G2.)
 - **2026-06-28 — §4.1/§4.2/§4.3 updated: M-745 residue wired in (RFC-0037 Enacted; design-draft for review).** After RFC-0037 was promoted to Enacted (grammar-supersession epic landed), this RFC's body is updated to close the M-745 residue: (1) §4.1 precedence table extended with Tier 4 (`<<`/`>>` shift) and Tier 8 (`<`/`>` comparison), renumbering former Tiers 4–9 → 5–11; (2) §4.2 desugaring map gains second table with `lt`/`gt`/`shl`/`shr` glyph entries and `lte`/`gte` word-only entries (supersedes the §4.3 reservation of `le`/`ge` → RFC-0037 specifies `lte`/`gte`); (3) §4.3 resolution note added (M-745 met; Enacted gate = M-809 grammar-supersession epic); (4) §5 Q2 and §6 DoD updated accordingly. Guarantee tag `Declared` throughout (RFC-0037's collision-freedom is a construction argument, not mechanically verified). STATUS UNCHANGED — this is a design-draft update for maintainer review; no status move proposed here (house rule #3). FLAGs to maintainer: **FLAG-A** (M-745 close: issues.yaml M-745 status update + M-706 depends_on update needed — orchestrator-owned, not touched here); **FLAG-B** (EBNF regen: `mycelium.ebnf` needs the `cmp_expr`/`shift_expr` productions from RFC-0037 §6 and the updated `op_expr` chain — tied to M-809 grammar-supersession epic, not this doc update); **FLAG-C** (RFC-0025 Enacted gate: once M-809 lands, this RFC's status moves Accepted → Enacted — maintainer ratification step needed; never skip Accepted); **FLAG-D** (word-target naming: §4.3 originally reserved `le`/`ge`; RFC-0037 specifies `lte`/`gte` — confirmed supersession recorded in §4.3 resolution note and §4.2 second table; no ambiguity in the corpus).
 - **2026-06-27 — §4.3 deferred ordering/shift operators resolved by RFC-0037 (M-745; append-only, status unchanged).** The §4.3 deferral of the angle-bracket ordering/shift operators (`< <= > >= << >>`, the M-745 gate) is **resolved by RFC-0037** (the grammar deconfliction RFC, Proposed): type params/args move `<…>` → `[…]`, freeing `<>` for `< > << >>` with **no disambiguation machinery**; `<=`/`>=` **retire as glyphs → word operators `lte`/`gte`** (asymmetric with `<`/`>` — the documented tradeoff that keeps `<>` single-loaded). The desugaring map extends accordingly. No change to this RFC's word-canonical model; the surface allocation now lives in RFC-0037. Append-only.

@@ -39,6 +39,14 @@ fn infix_sugar_desugars_to_the_word_call() {
     assert_eq!(op_body("a != b"), op_body("ne(a, b)"));
     assert_eq!(op_body("a && b"), op_body("and(a, b)"));
     assert_eq!(op_body("a || b"), op_body("or(a, b)"));
+    // RFC-0037 D1 + RFC-0025 §4.1 (M-745): the angle/shift glyphs freed by the bracket kind-split
+    // (`<`/`>` no longer open a type-arg list). Each desugars to its canonical word call exactly
+    // like the arithmetic/bitwise glyphs above. `<=`/`>=` have no glyph — their word forms
+    // `lte`/`gte` are ordinary calls (RFC-0037 retired the two-char glyphs).
+    assert_eq!(op_body("a < b"), op_body("lt(a, b)"));
+    assert_eq!(op_body("a > b"), op_body("gt(a, b)"));
+    assert_eq!(op_body("a << b"), op_body("shl(a, b)"));
+    assert_eq!(op_body("a >> b"), op_body("shr(a, b)"));
 }
 
 #[test]
@@ -67,10 +75,42 @@ fn precedence_follows_the_rust_table() {
 }
 
 #[test]
+fn comparison_and_shift_tiers_follow_the_rust_table() {
+    // RFC-0025 §4.1 (M-745), grounded in Rust's table (the cited source of truth): shift binds
+    // *tighter* than the bitwise ops, comparison *looser* than them. This pins the precedence to
+    // the ratified §4.1 tiers — NOT RFC-0037 §6's illustrative sketch, which nested shift adjacent
+    // to comparison (shift looser than `|`), contradicting §4.1 (see the parse.rs `infix_op` note).
+    //
+    // Shift (Tier 4, bp 55): tighter than `&`/`^`/`|` (50/40/30), looser than `+`/`-` (60).
+    //   `a + b << c & d` ≡ band(shl(add(a, b), c), d).
+    assert_eq!(
+        op_body("a + b << c & d"),
+        op_body("band(shl(add(a, b), c), d)")
+    );
+    // Comparison (Tier 8, bp 25): looser than `|` (30), tighter than `==`/`!=` (20).
+    //   `a | b < c == d` ≡ eq(lt(bor(a, b), c), d).
+    assert_eq!(
+        op_body("a | b < c == d"),
+        op_body("eq(lt(bor(a, b), c), d)")
+    );
+    // Shift is strictly tighter than comparison (Tier 4 vs Tier 8):
+    //   `a << b < c >> d` ≡ lt(shl(a, b), shr(c, d)).
+    assert_eq!(
+        op_body("a << b < c >> d"),
+        op_body("lt(shl(a, b), shr(c, d))")
+    );
+}
+
+#[test]
 fn binary_operators_are_left_associative() {
     // `a - b - c` ≡ `sub(sub(a, b), c)`, NOT `sub(a, sub(b, c))`.
     assert_eq!(op_body("a - b - c"), op_body("sub(sub(a, b), c)"));
     assert_eq!(op_body("a + b + c"), op_body("add(add(a, b), c)"));
+    // The M-745 tiers are left-associative too. Note `a < b < c` ≡ `lt(lt(a, b), c)`: RFC-0025
+    // §4.1 makes *every* binary operator left-associative, so comparison chains (unlike Rust's
+    // non-associative `<`) parse without error rather than being rejected.
+    assert_eq!(op_body("a << b << c"), op_body("shl(shl(a, b), c)"));
+    assert_eq!(op_body("a < b < c"), op_body("lt(lt(a, b), c)"));
 }
 
 #[test]
