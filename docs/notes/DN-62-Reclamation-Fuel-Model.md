@@ -3,11 +3,11 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-62 |
-| **Status** | **Draft** (2026-06-28) — research and measurement note. Commissioned by DN-59 §6 / FLAG-1 to attempt lifting RFC-0027 OQ-3's drop-latency SLO from `Declared` to `Empirical`. No guarantee is upgraded here; the upgrade is the *goal* of the measurement plan (§4). Promotion to **Resolved** requires the §5 Definition of Done. |
-| **Feeds** | **DN-59 §6(d)** (the one genuinely-open G3 axis — drop-latency SLO / fuel-bound commissioned here); **RFC-0027 §11 OQ-3** (mitigated-not-closed: "Can the fuel model bound the RC-cascade drop latency, lifting latency `Declared → Empirical / Proven`? A dedicated research note is warranted."); the forward build epic **E12 Increment 3** (real env-machine reclamation — DN-35 §9). |
+| **Status** | **Draft** (2026-06-28) — research and measurement note. Commissioned by **DN-59** (the ratified reclamation-strategy note that left the drop-latency / fuel-bound axis open) to attempt lifting RFC-0027 OQ-3's drop-latency SLO from `Declared` to `Empirical`. *FLAG-1: DN-59 is not present on this branch's `origin/dev` base — its specific section numbers cannot be verified here; the verified commission anchor is RFC-0027 §11 OQ-3 (`RFC-0027:493`).* No guarantee is upgraded here; the upgrade is the *goal* of the measurement plan (§4). Promotion to **Resolved** requires the §5 Definition of Done. |
+| **Feeds** | **DN-59** (the commissioning note — the one genuinely-open drop-latency SLO / fuel-bound axis; *see FLAG-1: not on this `origin/dev` base*); **RFC-0027 §11 OQ-3** (mitigated-not-closed, verified `RFC-0027:483-494`: "Can the fuel model bound the cascade, lifting latency `Declared → Empirical / Proven`? … A dedicated research note is warranted."); the forward build epic **E12 Increment 3** (real env-machine reclamation — DN-35 §9). |
 | **Date** | 2026-06-28 |
 | **Decides** | When resolved: (a) whether a per-epoch fuel budget can bound RC-cascade drop latency in the deferred-reclamation model (Layer-3, DN-32 §2.3); (b) what the concrete fuel unit is (nodes reclaimed / RC decrements / region sweeps) and how the budget is computed; (c) what pass/fail SLO thresholds — if any — can be honestly tagged `Empirical` rather than `Declared`; (d) whether "no silent GC pause" can be promoted from an honesty stance to a measured latency bound, or whether `Declared` is the durable honest tag. This note **moves no other doc's status** and **enacts no code**. |
-| **Task** | commissioned (DN-59 FLAG-1 / RFC-0027 OQ-3) |
+| **Task** | commissioned (DN-59 — see FLAG-1; verified anchor RFC-0027 §11 OQ-3) |
 
 > **Posture (transparency rule / VR-5 / G2).** This note is a **research framing**. Every claim in it
 > is either a **confirm-the-record** re-statement of an already-Accepted decision (held at its source
@@ -46,9 +46,10 @@ RFC-0027 §12). The mitigation moves the worst case from an *inherent limitation
 honest, and measurable — lifting the latency SLO from `Declared` (design intent) to `Empirical`
 (measured, reproducible, with a recorded pass/fail threshold)?
 
-RFC-0027 §11 OQ-3 is explicit: "Can the fuel model (RFC-0014 §4.8) bound the cascade, lifting
-latency `Declared → Empirical / Proven`?" and "A dedicated research note is warranted." This is that
-note. (DN-59 §6(d) FLAG-1 confirms the commission.)
+RFC-0027 §11 OQ-3 is explicit (verified `RFC-0027:491-493`): "Can the fuel model (RFC-0014 §4.8) bound
+the cascade, lifting latency `Declared → Empirical / Proven`?" and "A dedicated research note is
+warranted." This is that note. (DN-59 commissioned it; *FLAG-1 — DN-59's own text is not on this base,
+so the verified commission anchor is OQ-3 above, not a DN-59 subsection.*)
 
 **Honest scope.** This note does *not* claim the fuel model works. It frames the candidate model,
 states what must be measured to evaluate it honestly, and identifies the pass/fail criterion that
@@ -81,10 +82,10 @@ The sweep-epoch model (DN-32 §9 R-4): deferred reclamation can *spread* the Sco
 epochs. Instead of one large ScopeExit sweep at scope-close, the sweep runs incrementally, epoch by
 epoch, each epoch consuming a bounded fuel quantum.
 
-### §2.3 The "no silent GC pause" ratification (DN-59 §6(d), Draft; RFC-0027 §11 OQ-3, mitigated)
+### §2.3 The "no silent GC pause" stance (RFC-0027 §1, ratified; carried by DN-59)
 
-DN-59 §6(d) **proposes, for ratification:** "No silent GC pause" is an honesty stance, not a
-latency SLO. This means every reclamation event must be `EXPLAIN`-recorded (G2) — but it does *not*
+RFC-0027 §1 (verified `RFC-0027:67`,`:123-124`) codifies — and DN-59 (the commissioning note) carries
+forward — that **"No silent GC pause" is an honesty stance, not a latency SLO.** This means every reclamation event must be `EXPLAIN`-recorded (G2) — but it does *not*
 mean the event completes in sub-millisecond time. The acceptable pause is a *bounded, logged,
 never-silent* event (RFC-0027 §3/§9). Any future construct introducing a silent pause must supersede
 RFC-0027 (append-only). The SLO is `Declared` until a methodology'd benchmark exists.
@@ -319,7 +320,7 @@ DN-62 moves **Draft → Resolved** when:
    honest-baseline format — release build, reproducible commands, caveats load-bearing.
 4. **One of two outcomes is recorded honestly:**
    - **(A) Upgrade:** measured P99 ≤ *T* across W1/W2/W3; debt bounded; results support upgrading
-     the SLO from `Declared` to `Empirical`. DN-59 §6(d) and RFC-0027 §11 OQ-3 are updated
+     the SLO from `Declared` to `Empirical`. DN-59 and RFC-0027 §11 OQ-3 are updated
      (append-only) to reflect the new `Empirical` tag.
    - **(B) Durable `Declared`:** measurement reveals that the fuel model cannot bound P99 ≤ *T* under
      the tested conditions, or that *T* is not achievable for the R1 fragment; `Declared` is
@@ -387,8 +388,10 @@ These are not decisions — they are honest residuals the measurement plan must 
   (the `eval_machine` seam); §6 (RC ⊕ region exactly-once coupling); §8 (open-question ledger);
   §9 (increment sequencing — Increment 1 is real free for the straight-line fragment, the immediate
   predecessor to fuel-model work).
-- **DN-59** (Draft, 2026-06-28): §6(d) (the one genuinely-open G3 axis — fuel-model commission,
-  FLAG-1); §11 (FLAGS — FLAG-1 is this note's commission).
+- **DN-59** (the commissioning note — drop-latency / fuel-bound axis). *FLAG-1: DN-59 is **not present
+  on this branch's `origin/dev` base**; its specific section numbers cannot be verified here. The
+  verified, in-tree commission anchor is RFC-0027 §11 OQ-3 (`RFC-0027:493`). The integrating parent must
+  reconcile DN-59's actual section references once DN-59 lands on the shared base.*
 - **Measurements:** `docs/measurements/DN-35-baseline-2026-06-26.md` — the baseline captured before
   real env-machine reclamation work. The fuel-model measurement (§4) builds on this baseline.
 
@@ -411,13 +414,14 @@ note is the commission, not the result.
 ## Meta — changelog
 
 - **2026-06-28 — Created (Draft).** Research-framing and measurement-plan note for the
-  **reclamation fuel model** — commissioned by **DN-59 §6(d) FLAG-1** and **RFC-0027 §11 OQ-3**
+  **reclamation fuel model** — commissioned by **DN-59** (the ratified reclamation-strategy note; *FLAG-1:
+  not on this `origin/dev` base — verified commission anchor is* **RFC-0027 §11 OQ-3**, `RFC-0027:493`)
   ("Can the fuel model bound the RC-cascade drop latency? A dedicated research note is warranted.")
   to attempt lifting the drop-latency SLO from `Declared` to `Empirical`. **Four sections:**
   (§1) the question — what bounds per-epoch deferred-reclamation work so drop-latency is honest,
   not a silent GC pause; (§2) confirm-the-record from the Accepted cluster (RFC-0027 RC mechanism,
-  DN-32 Layer-3 region batching + sweep-epoch spreading, DN-59 "no silent GC pause" honesty stance,
-  DN-35 RC ⊕ region exactly-once coupling) — no tag upgraded (VR-5); (§3) the candidate fuel model
+  DN-32 Layer-3 region batching + sweep-epoch spreading, the RFC-0027 §1 "no silent GC pause" honesty
+  stance carried by DN-59, DN-35 RC ⊕ region exactly-once coupling) — no tag upgraded (VR-5); (§3) the candidate fuel model
   — **`Declared` throughout**: three fuel-unit candidates (nodes reclaimed / RC decrements / region
   sweeps; `Declared` recommendation is nodes reclaimed for R1), fixed/proportional/latency-feedback
   budget options (fixed for R1), partial-sweep deferral with never-silent debt visibility (G2), and
