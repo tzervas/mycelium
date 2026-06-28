@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0028 |
-| **Status** | **Accepted** (maintainer sign-off, 2026-06-23; §4.4 host-encoding **signed off 2026-06-28** — in-session ratification). DN-40 A1 (CRITICAL), A2 (HIGH), A3 (HIGH) fixes are **COMMISSIONED for implementation** (must land before E14-1; tracked under M-722 / E14-1). |
+| **Status** | **Accepted** (maintainer sign-off, 2026-06-23; §4.4 host-encoding **signed off 2026-06-28** — in-session ratification). DN-40 A1 (CRITICAL), A2 (HIGH), A3 (HIGH) fixes were **COMMISSIONED for implementation** (must land before E14-1) and are now **CLOSED — landed 2026-06-26 (`4456bd3`; A3 `e7e705f`/`3f55eaa`), verified green 2026-06-28 (`hrd`); see the §4.4.4 closure note**. |
 | **Feeds** | E14-1 (FFI & system interface) |
 | **Decides** | The capability-based Mycelium↔C/Rust FFI model; the `wild`/`@std-sys` host-execution floor that previously type-checked but did not execute (DN-14 row 9); the syscall binding strategy for `std.io`/`std.fs`/`std.sys`/`std.rand`/`std.time`; the ADR-014 unsafe-floor confinement for the FFI surface. |
 | **Date** | June 23, 2026 |
@@ -183,6 +183,11 @@ injected into the differential), and keeps the interpreter free of a hard-coded 
 > DN-40 §3) that must close before E14-1 ships (DN-40 §8 OQ-1, Ratification Map G11 ⚠ note).
 > Guarantee tags are held at the finding's own honest basis throughout (VR-5). `FLAG-ENCODING-SPEC`
 > tracks the pending sign-off in `mycelium-std-sys` host-bridge code.
+>
+> **CLOSURE (2026-06-28, `hrd`):** the COMMISSIONED A1/A2/A3 input-validation fixes are now
+> **landed + re-verified green** (see the §4.4.4 closure note — they were already on `dev` from the
+> 2026-06-26 DN-40 hardening release). The host-encoding *bridge* spec below (§4.4.1–4.4.3, M-722)
+> is the separate, still-`Declared` deliverable; only the A1/A2/A3 gaps are closed by this note.
 
 The original §4.4 ABI boundary clause ("encoding deferred to the `@std-sys` author; the host
 `PrimFn` owns the `Value`↔native conversion") was the right initial answer for a staged design.
@@ -303,6 +308,27 @@ allocation or copy:
 > substitute for input validation). These are not this RFC's fixes — they live in
 > `mycelium-l1/src/parse.rs` and `mycelium-proj/src/manifest.rs` — but E14-1/M-722 is blocked on
 > their landing per DN-40 §8 OQ-1.
+
+> **CLOSURE (2026-06-28, `hrd`): A1/A2/A3 LANDED — the FLAG above is now historical.** Verification
+> this session found all three fixes already on `dev`, landed *before* this §4.4 sign-off, so the
+> must-fix-before-E14-1 sequencing was in fact met (E14-1 and M-722 are `status:done` and landed
+> *after* them):
+> - **A1 + A2** — the shared recursion-depth guard (`enter_depth`/`leave_depth`, `MAX_EXPR_DEPTH =
+>   256`, never-silent `ParseError`; charged at `parse_type_ref` and `parse_pattern` in `parse.rs`),
+>   landed `4456bd3` (2026-06-26 DN-40 hardening release). Crash-refused regressions
+>   `mycelium-l1/tests/check.rs::deeply_nested_{type_arrow,type_args,ctor_pattern}_is_refused_not_a_crash`
+>   re-run green this session. **Tag: the bound is `Proven`-by-construction (every recursive entry
+>   charges a finite budget); the `256` limit *value* stays `Declared` — no upgrade without a
+>   measured basis (VR-5).**
+> - **A3** — `Dependency.hash: Option<ContentHash>` parsed at the manifest boundary (malformed pin →
+>   explicit `ManifestError`), landed `e7e705f`/`3f55eaa`; `mycelium-proj` manifest tests re-run
+>   green. The §4.4.1 parse-into-typed lesson the FLAG demanded is enforced in code, not merely
+>   documented.
+>
+> Recorded in `CHANGELOG.md` §Security (2026-06-26: DN-40 input-validation hardening — full gap
+> ledger). Append-only (house rule #3): the FLAG and the per-gap analysis below are preserved as the
+> as-signed-off record; this note supersedes only their *open/active* framing — the host-encoding
+> *bridge* spec (§4.4.1–4.4.3, M-722) remains the separate, still-`Declared` deliverable.
 
 The relationship between §4.4 and the three DN-40 priority gaps:
 
@@ -496,6 +522,7 @@ M-721); `crates/mycelium-std-sys/src/` (the syscall floor, M-722/M-723);
 
 ## Meta — changelog
 
+- **2026-06-28 — DN-40 A1/A2/A3 CLOSED (drift closure; `hrd`).** The A1/A2/A3 fixes COMMISSIONED in the entry below were verified already-landed on `dev` from the 2026-06-26 DN-40 hardening release (A1/A2 shared parser depth-guard `MAX_EXPR_DEPTH = 256` / never-silent `ParseError`, `4456bd3`; A3 typed `Dependency.hash: Option<ContentHash>`, `e7e705f`/`3f55eaa`). Crash-refused L1 depth tests + `mycelium-proj` manifest tests re-run green this session. Reconciled the status row, §4.4 status-note, and §4.4.4 (closure note) — append-only; the commissioning entries are preserved. The host-encoding *bridge* (§4.4.1–4.4.3, M-722) stays the separate, still-`Declared` deliverable. Bound `Proven`-by-construction; `256` value `Declared` (VR-5). (Append-only; house rule #3; VR-5.)
 - **2026-06-28 — §4.4 signed off; DN-40 A1/A2/A3 COMMISSIONED (in-session ratification).** §4.4 host-encoding validation bridge spec is accepted; DN-40 A1 (CRITICAL: type-subgrammar parser DoS), A2 (HIGH: pattern-subgrammar parser DoS), A3 (HIGH: dep-hash parse-don't-validate gap) are COMMISSIONED for implementation — must land before E14-1. (Append-only; house rule #3; VR-5.)
 - **2026-06-28 — §4.4 host-encoding validation bridge added (append-only; pending maintainer
   sign-off; G11 must-fix before E14-1).** Adds RFC-0028 §4.4 specifying the three normative
