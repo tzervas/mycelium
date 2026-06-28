@@ -97,7 +97,9 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
   identifier — G2) but no construct consumes it yet: **only `phylum` and `colony`**.
 - **Ratified — not yet lexed** — a name ratified in DN-02/DN-03 but **not** in `keyword()`, so it
   currently lexes as an ordinary **identifier** (using it is *not* yet an error). The whole Runtime
-  tier plus `consume`/`derive`/`impl` are here — their lexer reservation lags the spec.
+  tier plus `consume`/`reveal`/`impl` (the surface `impl` keyword, M-664) are here — their lexer
+  reservation lags the spec. (`object`/`via`/`lower`/`derive` have **left** this class — now Active,
+  M-811/M-812.)
 - **Ratified-pending-RFC-0037** — ratified in DN-02 2026-06-27 changelog (direction fixed by DN-31
   kind-split revision) but **lexer reservation deferred to RFC-0037** (the binding bracket/keyword
   grammar RFC). The short repr keywords (`bin`/`tern`/`emb`/`hvec`) and `lambda` are in this class.
@@ -109,9 +111,11 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
 M-656…M-664, Phase 5) and **E7-2** (runtime vocabulary; M-665…M-668, Phase 7). Progress:
 **M-656/657/658** (generics), **M-659** (traits; `Tok::Trait`/`Tok::Impl` active; elab **LANDED
 M-673** — runs three-way), **M-660** (effects; `Tok::Bang`; checker-only, no L0 node) — all LANDED.
-**Remaining E7-1:** M-661 (`wild`/FFI), M-662 (`phylum`/cross-nodule), M-663 (grading), M-664
-(`consume`/`derive`/`impl`; `grow → derive` per DN-38 §8.1; `bin`/`tern`/`emb`/`hvec`/`lambda`
-pending RFC-0037). **E7-2 remaining:** M-667 (`fuse`/`reclaim`/`tier`), M-668 (R2). A status row
+**M-811** (`object`/`via` active — object-composition surface, Rust-first) and **M-812** (`lower`/`derive`
+active — generative-lowering surface + structural checks, Rust-first; RHS elab + KC-3 guard deferred to
+**M-812-cont**) — LANDED (obj+low integration wave). **Remaining E7-1:** M-661 (`wild`/FFI), M-662
+(`phylum`/cross-nodule), M-663 (grading), M-664 (`consume`/`reveal`/surface-`impl`;
+`bin`/`tern`/`emb`/`hvec` pending RFC-0037). **E7-2 remaining:** M-667 (`fuse`/`reclaim`/`tier`), M-668 (R2). A status row
 flips only when its tracking issue lands and `just check` is green (VR-5).
 
 | Term | Layer | Status | Meaning | Normative source |
@@ -153,8 +157,10 @@ flips only when its tracking issue lands and `just check` is green (VR-5).
 | `F16`, `BF16`, `F32`, `F64` | Scalar kind | **Active** | Scalar type keywords for Dense | grammar |
 | `Exact`, `Proven`, `Empirical`, `Declared` | Formal / Honesty | **Active** | Guarantee strength tags; type-level index `T @ Exact` (LR-6) | RFC-0001; DN-02 §7 |
 | `consume` | L2 Surface (future) | **Ratified — not yet lexed** | Acquire exclusive ownership of an affine `substrate` (single-use semantics) | DN-03 §1 |
-| `derive` *(was `grow`)* | L2 Surface (future) | **Reconciled — not yet lexed** | Generative trait derivation (`derive Debug for T`) — the active generative keyword. **`grow` is superseded for this construct** per DN-38 §8.1 (Accepted 2026-06-26); DN-03 2026-06-27 changelog records the supersession; M-664 re-scoped. Companions: `via` (delegation, DN-37/DN-38) and `reveal` (inspector, DN-38). `grow` reservation status is a downstream lexer detail (M-664) | DN-03 §1/§6; DN-38 §8.1 |
-| `via` | L2 Surface (future) | **Ratified — not yet lexed** | Delegation keyword (`via field: TraitName`) — value-semantic forwarding to a held field; no late binding, no prototype chain (DN-37 §3.3, DN-38 §8.1). The companion to `derive`/`reveal` | DN-37; DN-38 §8.1 |
+| `derive` *(was `grow`)* | L2 Surface | **Active** (`Tok::Derive` lexed, M-812) | Generative-lowering **use-site** (`derive Name for T`) — applies a rule declared with `lower`. **`grow` is superseded for this construct** per DN-38 §8.1; `grow` now lexes to `Tok::Grow` and emits a teaching diagnostic pointing at `derive`. **SURFACE + STRUCTURAL checks LANDED (M-812)**; RHS elaboration to L0 + IL-grammar check + KC-3 kernel-growth guard DEFERRED (M-812-cont) — `derive` emits no L0 yet (honest residual). Companions: `via` (delegation), `reveal` (inspector, not-yet-lexed) | DN-03 §1/§6; DN-38 §8.1; DN-54; M-812 |
+| `via` | L2 Surface | **Active** (`Tok::Via` lexed, M-811) | Delegation keyword. Inside an `object { … }` body: `via N : Trait` forwards trait `Trait` to the held field at index `N` (value-semantic forwarding; no late binding, no prototype chain — DN-37 §3.3, DN-38 §8.1). **LANDED M-811** (object-surface desugar generates the forwarding impls). Companion to `derive`/`reveal` | DN-37; DN-38 §8.1; DN-53; M-811 |
+| `object` | L2 Surface | **Active** (`Tok::Object` lexed, M-811) | Object-composition surface (`object Name[params] { Ctor(…); via N : Trait; impl …; fn … }`). Pure frontend sugar: desugars to `type`+`impl`+`via`-forwarding-impls+`fn` (KC-3, `reveal`-able). **LANDED M-811** (Rust-first); item-level `pub fn` inside the body deferred | DN-53; M-811 |
+| `lower` | L2 Surface | **Active** (`Tok::Lower` lexed, M-812) | Generative-lowering **definition** (`lower Name[params]? = <rhs>`) — defines a rule applied at the use site by `derive`. **SURFACE + STRUCTURAL checks LANDED (M-812)** — rule-name + param-name uniqueness, never-silent (G2); rule registered in `Env::lower_rules`. RHS elaboration + IL-grammar/KC-3 guards DEFERRED (M-812-cont) | DN-54; DN-38; M-812 |
 | `reveal` | L2/tooling (future) | **Ratified — not yet lexed** | Inspector: shows the desugared L0 term for a surface form; round-trip discipline in `certified` mode. Never silent (G2 applied to the inspector itself — shows actual binding structure). Companion to `derive`/`via` | DN-38 §4/§5/§8.1 |
 | `hypha` | Runtime (future) | **Ratified — not yet lexed** | Single concurrent execution unit | DN-03 §4; RFC-0008 §4.5 |
 | `fuse` | Runtime (future) | **Ratified — not yet lexed** | Lawful state fusion: semilattice merge of two `hypha` states | DN-03 §4; RFC-0008 §4.5/RT6 |
@@ -403,14 +409,15 @@ operator in the grammar).
 - **Honesty of this file:** the reserved-word table above is verified against
   `crates/mycelium-l1/src/token.rs` (the `keyword()` function + `Tok` enum). Confirmed: `keyword()`
   reserves only the **Active** and **Reserved-not-active** rows — `nodule`, `phylum`, `colony`, and
-  the L1/L2/type/scalar/strength words. The Runtime-tier words (`hypha`, `fuse`, `mesh`, …) **and**
-  `consume`/`grow`/`impl` are **not** in `keyword()`, so they currently lex as ordinary identifiers
-  and are marked **Ratified — not yet lexed**. The new short repr keywords (`bin`/`tern`/`emb`/`hvec`)
-  and `lambda` are **also not** in `keyword()` — they are marked **Ratified-pending-RFC-0037**
-  (`Declared`); their lexer reservation follows RFC-0037, not this reconciliation (this note records
-  intent only). Source is ground truth — re-verify against `token.rs` after any lexer change.
-  **`grow`** is not in `keyword()` and its reservation status (released or kept) is a downstream
-  lexer detail (M-664). `derive` is not in `keyword()` (lexer reservation lags the spec).
+  the L1/L2/type/scalar/strength words. **`object`/`via`/`lower`/`derive` ARE now in `keyword()`**
+  (`Tok::Object`/`Tok::Via`/`Tok::Lower`/`Tok::Derive`, M-811/M-812) — they are **Active** (parsed as
+  item-position constructs). **`grow`** is also in `keyword()` (`Tok::Grow`), but only to emit a
+  teaching diagnostic pointing at `derive` (DN-38 §8.1) — it opens no construct. The Runtime-tier words
+  (`hypha`, `fuse`, `mesh`, …) **and** `consume`/`reveal`/`impl` (the surface `impl` keyword, M-664)
+  are **not** in `keyword()`, so they currently lex as ordinary identifiers and are marked **Ratified —
+  not yet lexed**. The new short repr keywords (`bin`/`tern`/`emb`/`hvec`) and `lambda` follow RFC-0037;
+  `lambda` is lexed (RFC-0037), the short repr keywords are **Ratified-pending-RFC-0037** (`Declared`).
+  Source is ground truth — re-verify against `token.rs` after any lexer change.
 
 ---
 

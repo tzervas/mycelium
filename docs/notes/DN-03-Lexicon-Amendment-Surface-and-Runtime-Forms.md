@@ -112,6 +112,18 @@ the *right* names.
 
 ## Meta — changelog
 
+- **2026-06-28 — `object`/`via`/`lower`/`derive` now ACTIVE (lexed) — implemented Rust-first (M-811/M-812; append-only).**
+  The generative + composition surface keywords this note tracks are now lexed and parsed in
+  `mycelium-l1`: **`object`** + **`via`** (object-composition surface, M-811 / DN-53) and **`lower`** +
+  **`derive`** (user-extensible generative lowering, M-812 / DN-54). `grow` lexes to `Tok::Grow` solely
+  to emit a teaching diagnostic pointing at `derive` (the §6 supersession, recorded 2026-06-27, is now
+  enforced by the lexer). **Honest scope:** the `object` surface fully desugars (`type`+`impl`+`via`);
+  the `lower`/`derive` surface has its **structural** checks (uniqueness, param-uniqueness, derive
+  name-resolution — never-silent, G2), but RHS elaboration to L0 + the IL-grammar RHS check + the KC-3
+  kernel-growth guard are **deferred** (M-812-cont) — so `derive` emits no L0 yet (an honest residual).
+  `reveal` remains ratified-not-yet-lexed. DN-53/DN-54 status → *Implemented (Rust-first), pending
+  ratification*; this note records the lexicon flip only (the constructs are specified in DN-53/DN-54).
+  Append-only; VR-5; G2.
 - **2026-06-27 — Short repr type-keywords + `lambda` reconciled with DN-02 (DN-31 kind-split; cross-reference entry; append-only).**
   DN-02's 2026-06-27 changelog records the ratification of short ergonomic forms for the four paradigm
   type-keywords (`bin{N}`, `tern{N}`, `emb{…}`, `hvec{…}`) and the new `lambda` keyword for closure
