@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-61 |
-| **Status** | **Part A: Accepted** (2026-06-28, in-session ratification) · **Part B: Draft** (open research agenda) — **Part A (R1 scheduler normativity) RATIFIED by maintainer 2026-06-28**: RT2 + fuel-compatible cooperative stepping + RT7 normative commitment accepted. Part B (R2 distributed agenda: clocks R8-Q3, Byzantine R8-Q4, distributed reclamation RFC-0027 OQ-2, network-xloc, concurrent fuse-merge) stays **Draft** — needs dedicated research passes before it is ratifiable. The A/B split is explicit: Part A is the near-term implementation gate; Part B is the bounded forward agenda for a dedicated R2 RFC. All tags stay `Declared` (VR-5). |
+| **Status** | **Accepted** (Part A — R1 scheduler normativity; 2026-06-28, in-session ratification) · Part B remains **Draft** (open research agenda) — **Part A (R1 scheduler normativity) RATIFIED by maintainer 2026-06-28**: RT2 + fuel-compatible cooperative stepping + RT7 normative commitment accepted. Part B (R2 distributed agenda: clocks R8-Q3, Byzantine R8-Q4, distributed reclamation RFC-0027 OQ-2, network-xloc, concurrent fuse-merge) stays **Draft** — needs dedicated research passes before it is ratifiable. The A/B split is explicit: Part A is the near-term implementation gate; Part B is the bounded forward agenda for a dedicated R2 RFC. All tags stay `Declared` (VR-5). |
 | **Feeds** | **RFC-0008** (the normative R1 runtime — scheduler-normativity question R8-Q1); a future **R2 distributed-execution RFC** (closes R8-Q3/Q4 + RFC-0027 OQ-2 + RFC-0028 §7 + RFC-0023 R23-Q2); **DN-58** (fuse surface — the `fuse` semilattice merge ties concurrent-session-merge to the G1 surface). |
 | **Date** | June 28, 2026 |
 | **Decides** | *Proposes, for ratification:* **(Part A)** how much of the R1 single-node scheduler is normative within RFC-0008's RT1–RT7 frame — the scheduler-normativity question (R8-Q1). **(Part B)** captures the open distributed-execution questions (R8-Q3, R8-Q4, RFC-0027 OQ-2, RFC-0028 §7 `xloc`, RFC-0023 R23-Q2) as a bounded forward agenda for a dedicated R2 RFC. Part B does **not** resolve these questions; it names what each needs. |
@@ -358,8 +358,8 @@ decision (DN-59/RFC-0027 follow-on) as its starting point. B.5 requires DN-58 (G
 (clocks) has no upstream corpus blocker but needs research. B.2 (Byzantine) and B.4
 (xloc/FFI) similarly need research and the R1 `xloc` implementation respectively.
 
-The natural launch order for the R2 RFC is: confirm B.3's R1 prerequisite is settled (DN-59
-+ RFC-0027 follow-on), do the B.1/B.2 research passes in parallel, and draft the R2 RFC once
+The natural launch order for the R2 RFC is: confirm B.3's R1 prerequisite is settled (DN-59 +
+RFC-0027 follow-on), do the B.1/B.2 research passes in parallel, and draft the R2 RFC once
 B.1/B.2 are `Empirical`-grounded. B.4 and B.5 are design-time questions that the R2 RFC
 drafts and delivers after their respective R1/G1 gates land.
 
