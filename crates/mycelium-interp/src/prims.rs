@@ -100,6 +100,11 @@ impl PrimRegistry {
         r.register("bytes.get", prim_bytes_get);
         r.register("bytes.slice", prim_bytes_slice);
         r.register("bytes.concat", prim_bytes_concat);
+        // DN-58 §A (M-817): the `Binary` `Fuse` semilattice meet (bitwise-AND). The user-`Data` fuse
+        // does **not** register a prim — it elaborates to the resolved `Fuse::join` call (DN-58 §A.5);
+        // the non-`Binary` reprs have no committed canonical meet in v0 (DN-58 §A.6 F-A3), so only the
+        // `Binary` meet is a built-in here. (RFC-0008 RT6; RFC-0027 §10.6 provenance shape.)
+        r.register("fuse_join:binary", prim_fuse_join_binary);
         r
     }
 
@@ -767,4 +772,68 @@ fn prim_bytes_concat(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
         Payload::Bytes(out),
         ApproxRule::Refuse,
     )
+}
+
+// --- DN-58 §A (M-817): the `Binary` `Fuse` semilattice meet ------------------------------------
+//
+// `fuse(a, b)` is a lawful binary merge over a declared commutative/associative/idempotent meet
+// (RFC-0008 RT6). For the `Binary` paradigm the meet is **bitwise-AND** — the greatest-lower-bound of
+// the boolean lattice, idempotent (`a ∧ a = a`), commutative, and associative. This is the executable
+// **repr** case; the user-`Data` case elaborates instead to the resolved `Fuse::join` call (DN-58
+// §A.5), and the non-`Binary` reprs have no committed canonical meet in v0 (DN-58 §A.6 F-A3).
+//
+// **Provenance shape (DN-58 §A.5 / RFC-0027 §10.6).** A `fuse` result's provenance is the canonical
+// `Derived{op:"fuse_join", inputs:[hash(a), hash(b)]}` — the merge node the δ-CRDT Merkle anti-entropy
+// story reads downstream — **not** the per-paradigm prim name, so every fusible paradigm shares one
+// merge-op identity. The guarantee is the `meet` of the inputs' guarantees (RFC-0001 §4.7); the meet
+// op is intrinsically `Exact` (a total greatest-lower-bound). The semilattice laws are **`Empirical`**
+// (property-tested over bit-vectors, not mechanized-`Proven` here — VR-5).
+
+/// Compose a `fuse_join` result: the `meet` of the input guarantees + the canonical
+/// `Derived{op:"fuse_join", …}` provenance (DN-58 §A.5). The meet op introduces no error, so an
+/// **exact** pair yields an exact result with no bound; an **approximate** input has no defined
+/// ε-propagation rule for the meet (as for `bit.and`), so it is refused — never a fabricated bound
+/// (G2/VR-5).
+fn fuse_join_result(
+    prim: &str,
+    inputs: &[&Value],
+    repr: Repr,
+    payload: Payload,
+) -> Result<Value, EvalError> {
+    let strength = GuaranteeStrength::propagate(
+        GuaranteeStrength::Exact,
+        inputs.iter().map(|v| v.meta().guarantee()),
+    );
+    if strength != GuaranteeStrength::Exact {
+        // No committed ε-rule for the meet over an approximate input — refuse honestly (G2/VR-5),
+        // exactly as the underlying `bit.and` does.
+        return Err(EvalError::ApproxCompositionUnsupported {
+            prim: prim.to_owned(),
+        });
+    }
+    let provenance = Provenance::Derived {
+        op: operation_hash("fuse_join"),
+        inputs: inputs.iter().map(|v| v.content_hash()).collect(),
+    };
+    let meta = Meta::new(provenance, GuaranteeStrength::Exact, None, None, None, None)
+        .map_err(EvalError::Wf)?;
+    Value::new(repr, payload, meta).map_err(EvalError::Wf)
+}
+
+/// `fuse_join:binary : (Binary{N}, Binary{N}) → Binary{N}` — the `Binary` `Fuse` meet (bitwise-AND;
+/// DN-58 §A). Commutative/associative/idempotent (`Empirical`). A width/paradigm mismatch is an
+/// explicit [`EvalError::PrimType`], never a silent coercion (G2). The result carries the canonical
+/// `fuse_join` provenance (DN-58 §A.5).
+fn prim_fuse_join_binary(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let b = as_bits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), b.len()),
+        });
+    }
+    let out: Vec<bool> = a.iter().zip(b).map(|(&x, &y)| x & y).collect();
+    fuse_join_result(prim, args, args[0].repr().clone(), Payload::Bits(out))
 }

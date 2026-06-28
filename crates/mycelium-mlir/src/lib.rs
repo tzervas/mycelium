@@ -99,7 +99,8 @@ pub use mode::{run as run_mode, ExecMode, ModeError};
 pub use pack::{needed_bytes as needed_bytes_for, pack_trits, relayout_trits, unpack_trits};
 pub use rc_plan::{emit_reclamation_plan, run_with_reclamation, RcPlanError, RcRun};
 pub use runtime::{
-    run_colony, Colony, ColonyError, Deadlock, Poll, Scope, SweepOrder, Task, TaskCtx,
+    run_colony, run_reclaim, Colony, ColonyError, Deadlock, Poll, ReclaimError, ReclaimRun, Scope,
+    SweepOrder, Task, TaskCtx,
 };
 pub use simd::{
     compile_bitnet_dot_simd, compile_bitnet_dot_simd_tl1, compile_bitnet_dot_simd_tl2,

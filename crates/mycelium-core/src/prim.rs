@@ -246,6 +246,11 @@ impl PrimTable {
         t.insert("bytes.get", exact(vec![Any, Binary], Binary));
         t.insert("bytes.slice", exact(vec![Any, Binary, Binary], Any));
         t.insert("bytes.concat", exact(vec![Any, Any], Any));
+        // DN-58 §A (M-817): the `Binary` `Fuse` semilattice meet (bitwise-AND). `intrinsic = Exact`
+        // (a total greatest-lower-bound). The user-`Data` fuse registers no prim — it elaborates to the
+        // resolved `Fuse::join` call (DN-58 §A.5) — and the non-`Binary` reprs have no committed meet
+        // (DN-58 §A.6 F-A3), so this is the only `fuse_join:*` kernel prim.
+        t.insert("fuse_join:binary", exact(vec![Binary, Binary], Binary));
         t
     }
 
