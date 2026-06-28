@@ -2313,7 +2313,7 @@ issues:
   - id: M-675
     title: "M-675 — tooling: reconcile idmap.tsv against live GitHub for all Phase-5/6/7/8 issues"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:infra, area:project, priority:P2, status:needs-design]
+    labels: [phase:5, type:infra, area:project, priority:P2, status:done]
     depends_on: []
     doc_refs: [src:tools/github/idmap.tsv, src:tools/github/gh-issues-sync.py]
     body: |
@@ -3249,7 +3249,7 @@ issues:
   - id: M-704
     title: "M-704 — Full higher-order functions: closures, partial application, dynamic fn-flow"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:ready]
     depends_on: [E7-3]
     epic: E11-1
     doc_refs:
@@ -3984,7 +3984,7 @@ issues:
   - id: M-712
     title: "M-712 — feat(runtime): memory management & reclamation (RFC-0027) — reclaim model + lifetime guarantees, EXPLAIN-able"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:blocked]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:ready]
     depends_on: [M-709]
     epic: E12-1
     doc_refs: [corpus:RFC-0027, corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
@@ -6990,3 +6990,72 @@ issues:
       - PreToolUse + git pre-commit/pre-push hooks + /branch-guard skill + just recipe all present + wired.
       - Blocks commit/merge/push to protected branches + force-push; allows working-branch ops (verified).
       - CLAUDE.md mitigation #10 + agent-context + kickoff continuation record it (anti-drift).
+
+  - id: E24-1
+    title: "E24-1 (epic) -- DN-57 enactment: mandatory ; terminator + human<->stream tooling"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P2, status:todo]
+    epic: E24
+    depends_on: []
+    doc_refs:
+      - corpus:DN-57
+      - corpus:RFC-0037
+      - src:crates/mycelium-l1/src/parse.rs
+    body: |
+      Enact DN-57 (Accepted): move the ; component-terminator from OPTIONAL (parser eat(&Tok::Semi))
+      to MANDATORY (expect), and add the human<->stream tooling a mandatory terminator enables. DN-57 ->
+      Enacted on completion. Owns crates/mycelium-l1/src/parse.rs + crates/mycelium-fmt/** + the CLI +
+      the .myc corpus. SERIAL-ON-L1 (shares parse.rs with s10/srf/hof/r10-M712). Kickoff: strm.
+      Children: M-818 (mandatory ;), M-819 (mycfmt --flatten), M-820 (myc --stream), M-821 (corpus migration).
+
+  - id: M-818
+    title: "M-818 -- Enforce mandatory ; component terminator in the L1 parser (DN-57 enactment)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    epic: E24-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-57
+      - src:crates/mycelium-l1/src/parse.rs
+    body: |
+      Change the component terminator from optional (eat(&Tok::Semi)) to mandatory (expect) at every
+      component boundary DN-57 specifies, with a never-silent teaching error (G2). Add reject fixtures
+      for a missing ;. Regenerate mycelium.ebnf. Serial-on-L1.
+
+  - id: M-819
+    title: "M-819 -- mycfmt --flatten: canonical ;-emission + single-line stream form (DN-57)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    epic: E24-1
+    depends_on: [M-818]
+    doc_refs:
+      - corpus:DN-57
+      - src:crates/mycelium-fmt/src/lib.rs
+    body: |
+      mycfmt emits ; canonically; add a --flatten mode producing the single-line human<->stream form
+      that mandatory ; makes unambiguous. Disjoint from parse.rs (fmt crate) once M-818 lands.
+
+  - id: M-820
+    title: "M-820 -- myc --stream: streaming-parse CLI entry over ;-delimited input (DN-57)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    epic: E24-1
+    depends_on: [M-818]
+    doc_refs:
+      - corpus:DN-57
+      - src:crates/mycelium-cli/src/bin/myc.rs
+    body: |
+      A streaming-parse CLI entry consuming ;-terminated components from a stream, never-silent on
+      malformed input. CLI crate; disjoint from parse.rs once M-818 lands.
+
+  - id: M-821
+    title: "M-821 -- Corpus migration to mandatory ; + DN-57 -> Enacted"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:language, priority:P2, status:todo]
+    epic: E24-1
+    depends_on: [M-818]
+    doc_refs:
+      - corpus:DN-57
+    body: |
+      Mechanical: migrate every .myc file + conformance fixture + expected output to mandatory ;. Then
+      move DN-57 Accepted -> Enacted (append-only). Gated on M-818.

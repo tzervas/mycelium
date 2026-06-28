@@ -98,10 +98,11 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
   runtime-vocabulary names** (`mesh`, `graft`, `cyst`, `xloc`, `forage`, `backbone`). Note: `fuse`,
   `reclaim`, and `tier` **left** this set with M-667 (now Active).
 - **Ratified — not yet lexed** — a name ratified in DN-02/DN-03 but **not** in `keyword()`, so it
-  currently lexes as an ordinary **identifier** (using it is *not* yet an error). The whole Runtime
-  tier plus `consume`/`reveal`/`impl` (the surface `impl` keyword, M-664) are here — their lexer
-  reservation lags the spec. (`object`/`via`/`lower`/`derive` have **left** this class — now Active,
-  M-811/M-812.)
+  currently lexes as an ordinary **identifier** (using it is *not* yet an error). **`reveal`** is the
+  main remaining member. (`consume`/`grow`/`impl`/`object`/`via`/`lower`/`derive` have **left** this
+  class — all now lexed: `consume`/`grow` Reserved-not-active (`Tok::Consume`/`Tok::Grow`), `impl`
+  Active (`Tok::Impl`; the *inherent*-`impl` construct is M-664), the rest Active — M-811/M-812. The
+  runtime-vocabulary names are Reserved-not-active, not "not yet lexed".)
 - **Ratified-pending-RFC-0037** — ratified in DN-02 2026-06-27 changelog (direction fixed by DN-31
   kind-split revision) but **lexer reservation deferred to RFC-0037** (the binding bracket/keyword
   grammar RFC). The short repr keywords (`bin`/`tern`/`emb`/`hvec`) and `lambda` are in this class.
