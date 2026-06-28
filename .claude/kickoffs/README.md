@@ -53,26 +53,26 @@ tree**, branches **off `dev`**, merges into `dev`, then promotes `dev → integr
 *(T5 FFI = `ffi10` and T7 toolchain = `tool10` are **complete → archived**. T6 native AOT = `aot10` is
 **post-1.0 / 1.1**, below.)*
 
-### Kernel-enablement & cross-cutting
+### Kernel-enablement
 
 | UID | Scope | Owns | Status / remaining |
 |---|---|---|---|
 | **`kpr`** | E19-1 — value reprs + prims that unblock E13-1 (RFC-0032) | `crates/mycelium-interp/src/prims.rs` · `crates/mycelium-core/**` (coord `c10`) | **in progress**; M-746/747/748/749/750/751 landed; remaining **M-752** (Tier-2 enablement smoke ports — now unblocked) |
-| **`rsm`** | cross-cutting coordination (W1 L1 · W2 docs-currency · W3 capture) | W1 `crates/mycelium-l1/**`+tests ∥ W2 `docs/**`·`.claude/**`·`tools/github/**` | **in progress (Session-2)**; W1 (M-753/718/717) landed; remaining **M-719** close + **W2 docs-currency sweep** |
 
 ### Surface follow-ons (serialize on `crates/mycelium-l1/src/{parse,checkty,elab}.rs`)
 
 | UID | Scope | Owns | Status / remaining |
 |---|---|---|---|
 | **`srf`** | E7-2 lexicon tail | `crates/mycelium-l1/**` · `.claude/memory/lang-lexicon-syntax.md` | **in progress**; M-665/666/667 landed; remaining **M-664** (`consume` parse/check/elab + inherent `impl T { … }`) ∥ **M-668** (R2 planning doc: xloc/mesh/cyst/graft/forage/backbone) |
-| **`hof`** | R3 — closures / dynamic HOF (M-704) | `crates/mycelium-l1/**` (incl. `mono.rs`) | **design-ready** (RFC-0024 Accepted §4A full Reynolds); impl pending — `Expr::Lambda` still lowers to `Residual` |
-| **`strm`** | DN-57 follow-on — mandatory `;` + flatten/stream tooling | `crates/mycelium-l1/**` · `crates/mycelium-fmt/**` · CLI · corpus | **pending**; optional `;` landed; remaining: mandatory-`;` enforcement, `mycfmt --flatten`, streaming-parse CLI, corpus migration, DN-57 → Enacted (needs new M-ids minted) |
+| **`hof`** | R3 — closures / dynamic HOF (M-704, now `ready`) | `crates/mycelium-l1/**` (incl. `mono.rs`) | **design-ready** (RFC-0024 Accepted §4A full Reynolds); impl pending — `Expr::Lambda` still lowers to `Residual` |
+| **`lwd`** | DN-54 — `lower`/`derive` **elaboration** + KC-3 guard (**M-812-cont**) | `crates/mycelium-l1/src/{elab,checkty}.rs` | **ready**; `low` landed surface+structural; this lands RHS→L0 elaboration + the KC-3 kernel-growth guard + acyclicity + §7 harness → DN-54 Enacted |
+| **`strm`** | DN-57 follow-on — mandatory `;` + flatten/stream tooling (**E24-1**, M-818–821 minted) | `crates/mycelium-l1/src/parse.rs` · `crates/mycelium-fmt/**` · CLI · corpus | **ready**; optional `;` landed; remaining: **M-818** mandatory-`;` (serial-on-L1) → **M-819** `mycfmt --flatten` ∥ **M-820** `myc --stream` (disjoint) → **M-821** corpus migration → DN-57 Enacted |
 
 ### PM tooling & post-1.0
 
 | UID | Scope | Status / remaining |
 |---|---|---|
-| **`tul`** | GitHub PM tooling | `idmap.tsv` reconcile (M-675) landed-in-practice; **M-676** (Projects-v2 Area field) deferrable/secondary |
+| **`tul`** | GitHub PM tooling | M-675 (`idmap.tsv` reconcile) **done**; only **M-676** (Projects-v2 Area field) remains — deferrable/secondary (P3) |
 | **`aot10`** | T6 — native AOT maturity (E15-1) | **POST-1.0 / 1.1** — ADR-022 §8 Q4 un-gated it as QoL/perf, *not* a 1.0.0 blocker; RFC-0029 Accepted, M-725…729 `ready` |
 | **`dfb`** | **the dogfooding boundary** — `crates/mycelium-web` + `crates/mycelium-adk` (NEW) | ⏸ **SHELVED** behind the L1-surface-completeness wave (HOF/`hof` · comment-preserving `mycfmt` · operators). Research gate (`dfr`) discharged; resume once the surface is complete + ergonomic |
 
@@ -97,20 +97,62 @@ any) are owned by the still-current kickoff noted.
 | **`tool10`** | E16-1 toolchain, IDE & package distribution (M-730–734) | — |
 | **`ffi10`** | E14-1 FFI & system interface — `wild`/`@std-sys` execution + syscall floor (M-720–724) | — |
 | **`dfr`** | RP-10/RP-9 web/ADK research gate discharged; RFC-0022/0023 → Accepted (#344) | `dfb` (builds, shelved) |
+| **`rsm`** | cross-cutting Session-2 — W1 (M-753/718/717) + W2 docs-currency + W3 capture (DN-45–50, M-800–807 stubs) all landed | M-719 close → `lib10` |
 
-## Parallelism & deconfliction (durable rules)
+## Parallelization & sequencing guide
 
-- **One kickoff per disjoint tree.** Each owns a directory; the only shared collision surface is
-  reconciled by the integrator (workspace `Cargo.toml`, `CHANGELOG.md`, `docs/Doc-Index.md`,
-  `tools/github/issues.yaml`+`idmap.tsv`, `docs/api-index/`). Kickoffs treat those **read-only** and
-  **FLAG up**; the integrator reconciles once at `dev → integration`.
-- **The `crates/mycelium-l1/src/{parse,checkty,elab}.rs` track is HIGH-contention — serialize it.**
-  `s10`, `srf`, `hof`, `strm`, and `r10`'s M-710/M-712 all touch L1; run them **sequentially**, each
-  landing green + promoted before the next (the "do L1 surgery inline, never delegate to leaves"
-  rule — CLAUDE.md #8/#10). Disjoint trees (`c10` core, `lib10` `.myc`, `rsm` W2 docs) run in
-  parallel with it.
-- **Cross-work continuity rides the issues** (`issues.yaml` `depends_on` + body notes), never by
-  touching another tree's files.
+Collision-free-by-construction means **one kickoff owns one disjoint directory**. The only contended
+file is `crates/mycelium-l1/src/{parse,checkty,elab,mono}.rs` (the L1 frontend) — everything that edits
+it **must serialize**; everything else is **parallel by construction**.
+
+### The one serial lane — `crates/mycelium-l1/src/{parse,checkty,elab,mono}.rs`
+
+These all surgery the same L1 frontend files, so **exactly one is in flight at a time** (land + promote
+green before the next — "do L1 surgery inline, never delegate to parallel leaves", CLAUDE.md #8/#10).
+Recommended order (cheapest-unblocks-most first; any order is valid as long as it's serial):
+
+```
+srf(M-664) → s10(M-707 → M-706) → hof(M-704) → lwd(M-812-cont) → strm(M-818) → r10(M-712)
+```
+
+- **`srf` M-664** (`consume`/inherent-`impl`) and **`s10` M-707/M-706** (RFC-0020/RFC-0030) are the
+  surface-completeness core. **`hof` M-704** (closures) touches `mono.rs`. **`lwd`** (M-812-cont) touches
+  `elab.rs`/`checkty.rs`. **`strm` M-818** (mandatory `;`) touches `parse.rs`. **`r10` M-712** (reclaim
+  elaboration) touches `elab.rs`. `srf` M-668 (R2 planning, docs-only) is **not** on this lane — see
+  parallel set.
+
+### Parallel by construction — disjoint trees (run concurrently, with each other AND the serial lane)
+
+| Kickoff | Disjoint tree it owns | Why no collision |
+|---|---|---|
+| **`lib10`** | `lib/std/**` (`.myc`) | Mycelium-source, not Rust; consumes the L1 surface read-only |
+| **`kpr`** (M-752) | `crates/mycelium-interp/src/prims.rs` + `crates/mycelium-l1/tests/**` (smoke ports) | prims + test files; coordinates with `c10` on `crates/mycelium-core/**` (flag-don't-guess) |
+| **`rel10`** | `docs/**`, `crates/mycelium-doc/**`, the release notes | docs/release; cites code read-only |
+| **`aot10`** | `crates/mycelium-mlir/**` | native-codegen; **POST-1.0/1.1**, run after the release |
+| **`tul`** (M-676) | `tools/github/**` | PM tooling only |
+| **`srf` M-668** | `docs/notes/**` (R2 planning DN) | docs-only leaf; parallel with its own M-664 |
+| **`strm` M-819/M-820** | `crates/mycelium-fmt/**` · `crates/mycelium-cli/**` | fmt/CLI; parallel **after** M-818 lands |
+
+### Sequenced by dependency (cannot start until a gate clears) — *not* parallelizable yet
+
+- **`boot10`** (E18-1 self-hosting) — blocked on **E11-1 (`s10`)** + **E13-1 (`lib10`)** landing.
+- **`c10` M-703** (cut core tag) — gated on **E19-1 (`kpr` M-752)** + maintainer (reserved).
+- **`rel10` M-738** (release act) — gated on every 1.0.0 track green; runs **last**.
+- **`dfb`** (dogfooding) — **shelved** behind L1-surface completeness (`srf`/`s10`/`hof` + ergonomic
+  `mycfmt`); the dogfood boundary, not pre-dogfood work.
+
+### The integrator's shared-file rule
+
+Kickoffs treat these **read-only** and **FLAG up**; the integrator reconciles them once at
+`dev → integration`: workspace `Cargo.toml`, `CHANGELOG.md`, `docs/Doc-Index.md`,
+`tools/github/issues.yaml` + `idmap.tsv`, `docs/api-index/` (regenerated, never hand-merged). Cross-work
+continuity rides `issues.yaml` `depends_on` + body notes — never by touching another tree's files.
+
+### One-line scheduler
+
+Run **one** L1-lane kickoff at a time (`srf`→`s10`→`hof`→`lwd`→`strm`→`r10`); run **`lib10` + `rel10` +
+`kpr` + `tul`** fully in parallel alongside it; hold **`boot10`/`c10`-tag/`rel10`-M738/`dfb`** until
+their gates clear; `aot10` is post-1.0.
 
 ## Reserved (maintainer-only; excluded from every kickoff)
 **M-655 / M-703** (cut the 1.0.0 tag) · **M-381 / M-646** (LLM local runs).
