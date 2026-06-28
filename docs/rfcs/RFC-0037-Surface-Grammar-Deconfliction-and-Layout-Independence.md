@@ -355,10 +355,20 @@ Trit           ::= '+' | '0' | '-'
 lambda_expr    ::= 'lambda' type_params? const_params? '(' params? ')' '=>' expr
 
 (* D1/S2: operator grammar gains comparison and shift tiers (resolves M-745).
- * Inserted between eq_expr and bor_expr; lte/gte are word-only, not glyph operators. *)
-eq_expr        ::= cmp_expr (('==' | '!=') cmp_expr)*
-cmp_expr       ::= shift_expr (('<' | '>') shift_expr)*
-shift_expr     ::= bor_expr (('<<' | '>>') bor_expr)*
+ * CORRECTED 2026-06-28 (FLAG-E, append-only — RFC-0025 changelog). The original illustrative
+ * sketch placed BOTH new tiers contiguously between eq_expr and bor_expr:
+ *     cmp_expr   ::= shift_expr (('<' | '>') shift_expr)*
+ *     shift_expr ::= bor_expr  (('<<' | '>>') bor_expr)*
+ * That makes shift LOOSER than the bitwise ops — contradicting the ratified RFC-0025 §4.1
+ * precedence table (and Rust, its cited source), where shift is Tier 4 (TIGHTER than `& ^ |`)
+ * and comparison is Tier 8 (looser than `|`, tighter than `== !=`). This sketch was non-normative
+ * ("the normative EBNF artifact is updated by the grammar-supersession epic"); the binding
+ * `docs/spec/grammar/mycelium.ebnf` was wired (M-745) to follow §4.1, and the productions below are
+ * corrected to match it. lte/gte are word-only, not glyph operators. *)
+eq_expr        ::= cmp_expr (('==' | '!=') cmp_expr)*      (* Tier 9 over Tier 8 *)
+cmp_expr       ::= bor_expr (('<' | '>') bor_expr)*        (* Tier 8 (lt/gt) — over bitwise-or *)
+band_expr      ::= shift_expr ('&' shift_expr)*            (* Tier 5 — band's operand becomes shift *)
+shift_expr     ::= add_expr (('<<' | '>>') add_expr)*      (* Tier 4 (shl/shr) — over additive *)
 
 (* impl_item: type_args use new [] form. *)
 impl_item      ::= 'impl' Ident type_args? 'for' type_ref '{' impl_method* '}'
@@ -493,4 +503,5 @@ The grammar-supersession **epic (implementation)** is complete when:
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-28 | **Enacted** (unchanged) | **§6 EBNF-sketch correction (FLAG-E; append-only, no status/decision change).** The illustrative comparison/shift productions nested shift *looser* than the bitwise ops (cmp over shift, shift over bor), contradicting the ratified RFC-0025 §4.1 tiers — shift is Tier 4 (tighter than the bitwise ops), comparison is Tier 8. The sketch was non-normative; the binding grammar artifact follows §4.1 (wired by M-745, PR #723). §6 now shows the precedence-correct productions (comparison over bitwise-or; band's operand becomes shift; shift over additive) with the original quoted inline. No RFC-0037 decision (D1–D5) changes — only the §6 cross-reference to RFC-0025's tiers is fixed. |
 | 2026-06-27 | **Proposed** | Initial RFC. D1–D5 proposed (kind-split, const/width params, layout-independence, return arrow, trit prefix, `lambda`); supersessions S1–S4 recorded; EBNF sketch in §6; open sub-details in §7 (FLAG-2 delimiter set, FLAG-3 short keyword lexer status, FLAG-4 lambda semantics). Task: M-809. |
