@@ -170,47 +170,90 @@ fn runtime_vocab_keywords_are_reserved_not_active() {
 }
 
 #[test]
-fn surface_keywords_consume_grow_are_reserved_not_active() {
-    // DN-03 §1 / M-664: `consume` + `grow` are reserved surface keywords — they lex as keywords
-    // (never silent identifiers, G2) but no L1 construct consumes them yet. Closing the lexical
-    // gap (they were previously NOT-YET-LEXED). The teaching diagnostic names DN-03 §1, not the
-    // RFC-0008 runtime message — they are surface-tier, not runtime-vocabulary.
-    for word in ["consume", "grow"] {
-        // (a) lexes as a keyword, not a plain Ident.
-        assert!(
-            crate::token::keyword(word).is_some(),
-            "`{word}` must resolve to a keyword token (keyword() must return Some)"
-        );
+fn surface_keyword_consume_is_reserved_not_active() {
+    // DN-03 §1 / M-664: `consume` is a reserved surface keyword — it lexes as a keyword
+    // (never a silent identifier, G2) but no L1 construct consumes it yet. The teaching
+    // diagnostic names DN-03 §1, not the RFC-0008 runtime message — it is surface-tier, not
+    // runtime-vocabulary.
+    let word = "consume";
 
-        // (b-item) item position → the DN-03 §1 teaching diagnostic.
-        let err = parse(&format!("nodule demo\n{word} worker")).unwrap_err();
-        assert!(
-            err.message.contains("DN-03 §1") && err.message.contains(word),
-            "`{word}` at item position: diagnostic must name DN-03 §1 + the word, got: {}",
-            err.message
-        );
+    // (a) lexes as a keyword, not a plain Ident.
+    assert!(
+        crate::token::keyword(word).is_some(),
+        "`{word}` must resolve to a keyword token (keyword() must return Some)"
+    );
 
-        // (c) cannot be a fn name / param name (binder expects an Ident) — explicit, never silent.
-        assert!(
-            parse(&format!("nodule demo\nfn {word}() => Binary{{8}} = 0b0")).is_err(),
-            "`{word}` as fn name must be an explicit error"
-        );
-        assert!(
-            parse(&format!(
-                "nodule demo\nfn f({word}: Binary{{8}}) => Binary{{8}} = 0b0"
-            ))
-            .is_err(),
-            "`{word}` as param name must be an error"
-        );
+    // (b-item) item position → the DN-03 §1 teaching diagnostic.
+    let err = parse(&format!("nodule demo\n{word} worker")).unwrap_err();
+    assert!(
+        err.message.contains("DN-03 §1") && err.message.contains(word),
+        "`{word}` at item position: diagnostic must name DN-03 §1 + the word, got: {}",
+        err.message
+    );
 
-        // (d) expression position → the DN-03 §1 teaching diagnostic.
-        let err = parse(&format!("nodule demo\nfn f() => Binary{{8}} = {word}")).unwrap_err();
-        assert!(
-            err.message.contains("DN-03 §1") && err.message.contains(word),
-            "`{word}` in expression position: diagnostic must name DN-03 §1 + the word, got: {}",
-            err.message
-        );
-    }
+    // (c) cannot be a fn name / param name (binder expects an Ident) — explicit, never silent.
+    assert!(
+        parse(&format!("nodule demo\nfn {word}() => Binary{{8}} = 0b0")).is_err(),
+        "`{word}` as fn name must be an explicit error"
+    );
+    assert!(
+        parse(&format!(
+            "nodule demo\nfn f({word}: Binary{{8}}) => Binary{{8}} = 0b0"
+        ))
+        .is_err(),
+        "`{word}` as param name must be an error"
+    );
+
+    // (d) expression position → the DN-03 §1 teaching diagnostic.
+    let err = parse(&format!("nodule demo\nfn f() => Binary{{8}} = {word}")).unwrap_err();
+    assert!(
+        err.message.contains("DN-03 §1") && err.message.contains(word),
+        "`{word}` in expression position: diagnostic must name DN-03 §1 + the word, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn grow_is_superseded_by_derive_teaching_diagnostic() {
+    // DN-38 §8.1 / M-812: `grow` is superseded by `derive` — the keyword still lexes (reserved,
+    // never a silent identifier, G2) but produces a *teaching* diagnostic pointing at `derive`,
+    // distinct from the plain DN-03 §1 "not yet active" message for `consume`.
+    let word = "grow";
+
+    // (a) lexes as a keyword, not a plain Ident.
+    assert!(
+        crate::token::keyword(word).is_some(),
+        "`grow` must resolve to a keyword token"
+    );
+
+    // (b-item) item position → DN-38 §8.1 / M-812 teaching diagnostic mentioning `derive`.
+    let err = parse(&format!("nodule demo\n{word} worker")).unwrap_err();
+    assert!(
+        err.message.contains("DN-38") && err.message.contains("derive"),
+        "`grow` at item position: diagnostic must name DN-38 + `derive`, got: {}",
+        err.message
+    );
+
+    // (c) cannot be a fn name / param name.
+    assert!(
+        parse(&format!("nodule demo\nfn {word}() => Binary{{8}} = 0b0")).is_err(),
+        "`grow` as fn name must be an explicit error"
+    );
+    assert!(
+        parse(&format!(
+            "nodule demo\nfn f({word}: Binary{{8}}) => Binary{{8}} = 0b0"
+        ))
+        .is_err(),
+        "`grow` as param name must be an error"
+    );
+
+    // (d) expression position → DN-38 §8.1 / M-812 teaching diagnostic mentioning `derive`.
+    let err = parse(&format!("nodule demo\nfn f() => Binary{{8}} = {word}")).unwrap_err();
+    assert!(
+        err.message.contains("DN-38") && err.message.contains("derive"),
+        "`grow` in expression position: diagnostic must name DN-38 + `derive`, got: {}",
+        err.message
+    );
 }
 
 #[test]

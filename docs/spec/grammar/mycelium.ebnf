@@ -93,6 +93,9 @@ item           ::= use_item
                  | type_item
                  | trait_item
                  | fn_item
+                 | object_item
+                 | lower_item
+                 | derive_item
 
 /* Import (M-662): a specific `use a.b.X` binds the single name `X`; a glob `use a.b.*` binds every
  * `pub` name directly under the prefix `a.b`. Precedence (highest first): a local declaration, then
@@ -129,6 +132,29 @@ fn_sig         ::= 'fn' Ident type_params? const_params? '(' params? ')' '=>' ty
 fn_item        ::= 'pub'? 'thaw'? 'fn' Ident type_params? const_params? '(' params? ')' '=>' type_ref effects? '=' expr
 params         ::= param (',' param)*
 param          ::= Ident ':' type_ref
+
+/* Object-composition surface (DN-53 / M-811; implemented Rust-first in mycelium-l1, pending
+ * ratification). An `object` groups one constructor with its trait `impl`s, `via` delegation
+ * clauses, and inherent `fn`s. It is PURE FRONTEND SUGAR: the checker desugars it to `type` +
+ * `impl` (+ generated `via`-forwarding impls) + `fn` — zero kernel growth (KC-3), `reveal`-able
+ * (DN-38 §5). The body MUST open with exactly one constructor clause (terminated by `;`); an empty
+ * body is a never-silent parse refusal (G2). `via N : Trait` — `N` is a decimal field index (not an
+ * identifier). `pub` inside the body is refused (the object's own `pub` governs the composed type). */
+object_item    ::= 'pub'? 'object' Ident type_params? '{' constructor ';' object_member* '}'
+object_member  ::= via_clause | trait_item_impl | fn_item
+via_clause     ::= 'via' Int ':' Ident type_args? ';'?            /* delegate to a held field by index */
+trait_item_impl ::= /* a trait-instance `impl` block, same grammar as a top-level impl */
+                   'impl' Ident type_args? 'for' type_ref '{' fn_item* '}' ';'?
+
+/* User-extensible generative lowering (DN-54 / M-812; implemented Rust-first, SURFACE + STRUCTURAL
+ * checks only — pending ratification). `lower Name[params]? = <rhs>` DEFINES a generative-lowering
+ * rule whose RHS is an explicit typed term; `derive Name for T` APPLIES one at a type. The checker
+ * validates rule-name uniqueness, param-name uniqueness, and `derive` name-resolution — all
+ * never-silent (G2). NOT YET IMPLEMENTED (deferred, M-812-cont): RHS elaboration to L0, the §4.1
+ * IL-grammar RHS type-check, and the §6 KC-3 kernel-growth guard — so `derive` currently emits no L0
+ * (an honest never-silent residual). `grow` is reserved-but-superseded-by-`derive` (DN-38 §8.1). */
+lower_item     ::= 'lower' Ident type_params? '=' expr
+derive_item    ::= 'derive' Ident 'for' type_ref
 
 /* Anonymous function (RFC-0037 D5). The grammar is reserved and parses; full closure semantics
  * (capture, partial application, dynamic fn-flow) are deferred to M-704 / RFC-0024 §5 — the checker
