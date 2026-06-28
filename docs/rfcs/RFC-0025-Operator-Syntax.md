@@ -281,6 +281,13 @@ three-path agreement is **Empirical** (differential trials). The word-function n
 
 ## Meta — changelog
 
+- **2026-06-28 — FLAG-E RESOLVED (RFC-0037 §6 corrected, append-only).** The precedence
+  inconsistency flagged below — RFC-0037 §6's illustrative EBNF sketch nesting shift *looser* than
+  the bitwise ops — is now corrected in RFC-0037 §6 (append-only, status unchanged): the sketch
+  shows the precedence-correct productions (`cmp_expr ::= bor_expr`, `band_expr ::= shift_expr`,
+  `shift_expr ::= add_expr`) matching this RFC's binding §4.1 tiers, with the original quoted inline.
+  No decision changed in either RFC — only §6's cross-reference to §4.1 was fixed. FLAG-E closed.
+  (Append-only; VR-5; G2.)
 - **2026-06-28 — Accepted → ENACTED (maintainer ratified in-session).** With the M-745 wiring landed
   and green (PR #723), the maintainer ratified the Accepted → Enacted move that this RFC's Status
   guard reserved for them ("do NOT self-Enact"). The §4.1 precedence table and §4.2 desugaring map
