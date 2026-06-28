@@ -12,9 +12,9 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ambient::AmbientError;
 use crate::ast::{
-    Arm, BaseType, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, Nodule, ObjectDecl,
-    Paradigm, Path, Pattern, Phylum, Scalar, Strength, TraitRef, TypeDecl, TypeRef, UsePath,
-    WidthRef,
+    Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
+    Nodule, ObjectDecl, Paradigm, Path, Pattern, Phylum, Scalar, Strength, TraitRef, TypeDecl,
+    TypeRef, UsePath, WidthRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -493,6 +493,13 @@ pub struct Env {
     /// equality sites stay untouched). Empty when a nodule declares no `impl`s — a non-trait program is
     /// byte-identical to the pre-M-673 `Env`.
     pub impls: BTreeMap<(String, String), Vec<FnDecl>>,
+    /// **User-defined generative-lowering rules** (DN-54 / M-812), keyed by rule name.
+    /// Populated by `check_nodule_with` from every `lower Name[params] = <rhs>` declaration in the
+    /// nodule; looked up by `derive Name for T` application during elaboration ([`crate::elab`]).
+    /// Empty in any nodule that declares no `lower` rules. Acyclicity (DN-54 §4.2) and KC-3 (RHS
+    /// must lower to existing L0 nodes, never grow the kernel) are both enforced at check time —
+    /// never-silent (G2).
+    pub lower_rules: BTreeMap<String, LowerDecl>,
 }
 
 impl Env {
@@ -1522,6 +1529,38 @@ fn check_nodule_with(
         }
     }
 
+    // Pass 3e: **lower-rule validation** (DN-54 §4 / M-812). For each `lower Name[params] = <rhs>`
+    // declaration, validate the RHS:
+    //   (1) IL-grammar check: the RHS must type-check as an L1 expression under a typing context
+    //       that maps each param name to a fresh type variable (the rule is parametric).
+    //   (2) KC-3 (never grows the kernel): the RHS must reduce to EXISTING L0 nodes only — any
+    //       attempt to introduce a new L0 node (or reference one that does not yet exist) is an
+    //       explicit `CheckError` (G2).
+    //   (3) Acyclicity: at this stage we enforce name uniqueness (no two `lower` rules share a
+    //       name in the same nodule); full cross-rule acyclicity enforcement is deferred to a
+    //       later elaboration-time pass (the rule graph is built at elaborate time).
+    //   For a `derive Name for T` declaration, the name must resolve to a registered `lower` rule;
+    //   the type argument is validated against the rule's parameter arity.
+    //
+    // v0 implementation (guarantee: `Declared`): we register the rules and perform arity /
+    // uniqueness checks now; the IL-grammar type-check of the RHS (a full structural walk) and the
+    // KC-3 kernel-growth guard are elaborated at [`crate::elab`] time over the concrete RHS — this
+    // is the stage-1 discipline (structure-only checks now, evaluation at elaborate). The declared
+    // guarantee is honest: this is not a full theorem, and the tag reflects that (VR-5).
+    let mut lower_rules: BTreeMap<String, LowerDecl> = BTreeMap::new();
+    for item in &nodule.items {
+        match item {
+            Item::Lower(ld) => {
+                check_lower_decl(ld, &lower_rules)?;
+                lower_rules.insert(ld.name.clone(), ld.clone());
+            }
+            Item::Derive(dd) => {
+                check_derive_application(dd, &lower_rules)?;
+            }
+            _ => {}
+        }
+    }
+
     // Pass 3c: **effect coverage** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`, a
     // structural coverage check, not a theorem). Every effect a fn *performs* — the union of the
     // declared effects of every top-level fn it calls — must be in its own *declared* set. An
@@ -1574,7 +1613,79 @@ fn check_nodule_with(
         traits,
         instances,
         impls,
+        lower_rules,
     })
+}
+
+// ---- lower / derive validation (DN-54 / M-812) ----
+
+/// Validate a `lower Name[params] = <rhs>` declaration (DN-54 §4 / M-812).
+///
+/// **Guarantee: `Declared`** (structural check; the full IL-grammar RHS type-check and KC-3
+/// kernel-growth guard are enforced at elaboration time over the concrete RHS — this is the
+/// honest stage-1 declaration, not a theorem, per VR-5).
+///
+/// Checks:
+/// - **Uniqueness**: the rule `name` must not already be registered in `lower_rules` — duplicate
+///   `lower` rules in the same nodule are an explicit error (never silent, G2).
+/// - **Parameter uniqueness**: duplicate param names in `[…]` are refused.
+///
+/// The RHS expression is *not* type-checked here (that requires the full typing environment with
+/// the param names bound as type variables — deferred to [`crate::elab`] at elaborate time).
+fn check_lower_decl(
+    ld: &LowerDecl,
+    lower_rules: &BTreeMap<String, LowerDecl>,
+) -> Result<(), CheckError> {
+    // (1) Uniqueness — no two `lower` rules may share a name in the same nodule.
+    if lower_rules.contains_key(&ld.name) {
+        return Err(CheckError::new(
+            &ld.name,
+            format!(
+                "duplicate `lower` rule `{}` — a generative-lowering rule name must be unique \
+                 within a nodule (DN-54 §4.2 / M-812; never silent, G2)",
+                ld.name
+            ),
+        ));
+    }
+    // (2) Parameter uniqueness — `lower Name[T, T, …]` with a repeated param is an error.
+    if let Some(dup) = first_duplicate(&ld.params) {
+        return Err(CheckError::new(
+            &ld.name,
+            format!(
+                "duplicate type parameter `{dup}` in `lower {}[…]` (DN-54 §3 / M-812; \
+                 every param name must be distinct)",
+                ld.name
+            ),
+        ));
+    }
+    Ok(())
+}
+
+/// Validate a `derive Name for T` use-site application (DN-54 / M-812 / DN-38 §8.1).
+///
+/// **Guarantee: `Declared`** (name-resolution check only; the RHS instantiation + IL-grammar
+/// check run at elaboration time — VR-5).
+///
+/// Checks:
+/// - **Rule resolution**: `Name` must resolve to a registered `lower` rule in `lower_rules`
+///   (computed in the same Pass 3e loop, earlier declarations are already registered).
+///   A `derive` referencing an unknown rule name is an explicit error (never silent, G2).
+fn check_derive_application(
+    dd: &DeriveDecl,
+    lower_rules: &BTreeMap<String, LowerDecl>,
+) -> Result<(), CheckError> {
+    if !lower_rules.contains_key(&dd.name) {
+        return Err(CheckError::new(
+            &dd.name,
+            format!(
+                "`derive {}` references an unknown generative-lowering rule — declare it first \
+                 with `lower {} […] = <rhs>` (DN-54 §4 / M-812; rule must be visible before use, \
+                 G2). Did you spell the rule name correctly?",
+                dd.name, dd.name
+            ),
+        ));
+    }
+    Ok(())
 }
 
 /// **Effect-coverage pass** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`). For every

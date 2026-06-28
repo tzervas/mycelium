@@ -117,9 +117,11 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "reserved surface keyword (DN-03 §1)",
     ),
     (
-        // M-664 / DN-03 §1: `grow` — reserved the same way as `consume` (see fixture 18).
+        // M-812 / DN-38 §8.1: `grow` is superseded by `derive` — the grow→derive reconciliation.
+        // Its diagnostic points at `derive Name for T` (the active form), naming DN-38 §8.1.
+        // This is distinct from the DN-03 §1 "not yet active" message for `consume` (fixture 18).
         "19-grow-reserved-not-active.myc",
-        "reserved surface keyword (DN-03 §1)",
+        "DN-38",
     ),
     (
         // M-750 / RFC-0032 D4: a `0x..` byte-string literal with an odd hex-digit count is a
@@ -157,10 +159,23 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "expected an expression",
     ),
     (
+        // DN-54 §3 / M-812: a `lower` declaration without `=` is a never-silent parse refusal (G2).
+        // The parser expects `lower Name[params]? = <rhs>`.
+        "26-lower-missing-eq.myc",
+        "expected `=` after the rule name/params in a `lower` declaration",
+    ),
+    (
+        // DN-54 §4 / M-812 / DN-38 §8.1: a `derive` application without `for` is a never-silent
+        // parse refusal (G2). The parser expects `derive Name for T`.
+        "27-derive-missing-for.myc",
+        "expected `for` after the rule name in a `derive` application",
+    ),
+    (
         // DN-53 / M-811: an `object` body must start with a constructor clause; an empty body is a
         // never-silent parse refusal (DN-53 §A.3.1). The constructor provides the data form for the
         // `TypeDecl` the `object` desugars to; without it the desugar has no `Ctor` (never-silent, G2).
-        "26-object-empty-body.myc",
+        // (Renumbered 26→28 at integration to avoid the 26-* number collision with DN-54's fixture.)
+        "28-object-empty-body.myc",
         "must have at least one constructor clause",
     ),
 ];
