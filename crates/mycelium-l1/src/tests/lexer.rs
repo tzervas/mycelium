@@ -427,6 +427,32 @@ fn lex_angle_is_always_operator_not_a_trit() {
     assert_eq!(toks("<+"), vec![Tok::LAngle, Tok::Plus, Tok::Eof]);
 }
 
+/// RFC-0025 §4.1 / M-745: `<<`/`>>` lex as the single shift tokens `Shl`/`Shr`; the single-char
+/// `<`/`>` stay the `lt`/`gt` comparison glyphs (`LAngle`/`RAngle`). There is no nested-generic
+/// `>>` hazard because type arguments moved to `[…]` (RFC-0037 D1), so the greedy doubled lex is
+/// unambiguous.
+#[test]
+fn lex_shift_operators_are_whole_tokens() {
+    assert_eq!(toks("<<"), vec![Tok::Shl, Tok::Eof]);
+    assert_eq!(toks(">>"), vec![Tok::Shr, Tok::Eof]);
+    // Single glyphs are still the comparison operators (greedy `<<`/`>>` does not eat a lone `<`).
+    assert_eq!(toks("< >"), vec![Tok::LAngle, Tok::RAngle, Tok::Eof]);
+    // `<<<` is `Shl` then a lone `LAngle` (two-then-one), never three separate angles.
+    assert_eq!(toks("<<<"), vec![Tok::Shl, Tok::LAngle, Tok::Eof]);
+    // In context: `a << b >> c` is three idents around the two shift glyphs.
+    assert_eq!(
+        toks("a << b >> c"),
+        vec![
+            Tok::Ident("a".to_owned()),
+            Tok::Shl,
+            Tok::Ident("b".to_owned()),
+            Tok::Shr,
+            Tok::Ident("c".to_owned()),
+            Tok::Eof,
+        ]
+    );
+}
+
 /// Never-silent (G2): a bare `0t` with no trit glyph is an explicit lex error — never a
 /// silently-empty `TritLit` (mirrors the empty-`0b`/`0x` rejections above).
 #[test]

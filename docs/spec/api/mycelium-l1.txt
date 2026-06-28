@@ -1274,6 +1274,8 @@ pub mycelium_l1::token::Tok::RParen
 pub mycelium_l1::token::Tok::Reclaim
 pub mycelium_l1::token::Tok::Scalar(mycelium_l1::token::ScalarTok)
 pub mycelium_l1::token::Tok::Seq
+pub mycelium_l1::token::Tok::Shl
+pub mycelium_l1::token::Tok::Shr
 pub mycelium_l1::token::Tok::Slash
 pub mycelium_l1::token::Tok::Sparse
 pub mycelium_l1::token::Tok::Spore
