@@ -140,6 +140,16 @@ This RFC cannot honestly move Draft → Proposed (a *complete, ratified* L3 gram
 - **M-745** — the angle-bracket operators `< <= > >= << >>` (RFC-0025 §4.3), so the operator grammar
   is whole.
 
+> **Gate status update — M-745 met by RFC-0037 (append-only, 2026-06-28).**
+> RFC-0037 (Enacted 2026-06-27) closed M-745 by the bracket kind-split (D1): type-argument brackets
+> moved `<…>` → `[…]`, freeing `<>` for comparison/shift operators `<`/`>`/`<<`/`>>` with no
+> disambiguation machinery. The RFC-0037 grammar-supersession epic (M-809) updates `mycelium.ebnf`
+> with the new `cmp_expr`/`shift_expr` productions (RFC-0037 §6) and the RFC-0025 desugaring map
+> extension (`lt`/`gt`/`shl`/`shr` entries; `<=`/`>=` retired as glyphs → `lte`/`gte` word-only).
+> M-745 gate: **met**. M-707 remains open. This RFC's move to Proposed is unblocked on M-745 and
+> waits only on M-707 (RFC-0020 L2 carve-outs). The 2026-06-27 changelog entry records the fuller
+> supersession context.
+
 What **is** already integrated into `docs/spec/grammar/mycelium.ebnf` and need not wait: the
 operator-expression grammar (`op_expr` … `unary_expr`; RFC-0025/M-705), effect annotations (`!{…}`),
 the phylum/nodule organization (`phylum`/`pub`/`use` glob; M-662), the `for` sugar, the `colony`
