@@ -8,6 +8,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-28: maintainer ratification — 8 design vehicles → Accepted, decisions recorded)
+- **Maintainer ratification batch (2026-06-28, in-session):** 8 design-vehicle drafts from the 2026-06-27 batch are now **Accepted**, with maintainer decisions incorporated (append-only; house rule #3; VR-5):
+  - **RFC-0024** → **Accepted**: (a) currying for multi-arg arrows IN SCOPE for M-704; (b) still-generic-fn-as-arg IN SCOPE for M-704 (no longer deferred). §5 updated. → Enacted once M-704 lands.
+  - **ADR-033** → **FLAG-1 RESOLVED (Path A selected)**: full function signature (params+return) encoded in `FieldSpec::Fn` dispatch hash; FLAG-1 moves to resolved-pending-implementation. → Enacted once full-sig encoding lands (sub-task M-810). Soundness tag stays `Declared` (VR-5).
+  - **RFC-0036** → **Accepted**: single frozen L0 kernel (Option A); 9/10 nodes irreducibly primitive; `FixGroup` FLAG-B still open (derivability check before freeze); zero new VSA/HDC primitives. → Enacted once FLAG-B resolved + freeze mechanism implemented.
+  - **RFC-0028** §4.4 → **signed off**: host-encoding validation bridge accepted; DN-40 A1 (CRITICAL), A2 (HIGH), A3 (HIGH) fixes COMMISSIONED for implementation (must land before E14-1).
+  - **RFC-0025 + RFC-0030** → operator residue ratified; **M-745 wiring (lt/gt/shl/shr/lte/gte) COMMISSIONED** (M-809 grammar-supersession epic). RFC-0025 stays Accepted (Enacted after impl); RFC-0030 stays Enacted with commissioning note.
+  - **DN-59** → **Accepted**: G3 reclamation strategy accepted (7 axes); **DN-62 (fuel-model research note) COMMISSIONED** (being drafted in parallel; FLAG-1 drop-latency question to be addressed there).
+  - **DN-60** → **Accepted**: G6 effect-system Phase-2 direction (D1/D2/D3) accepted; **new RFC-0014 revision COMMISSIONED** (being drafted in parallel).
+  - **DN-61** → **Part A (R1 scheduler normativity) Accepted**; **Part B (R2 distributed agenda) stays Draft** — open research agenda (R8-Q3/Q4, RFC-0027 OQ-2, xloc, fuse-merge). Split explicit in status field.
+
 ### Added (2026-06-27: rsm ratification-vehicle batch — 8 design drafts for the blocked-decision groups; design only, no code)
 - A batch of design-vehicle drafts (all **Draft/Proposed**, for maintainer ratification — never self-accepted) addressing the blocked-decision groups catalogued in `docs/planning/Blocked-Decisions-Ratification-Map.md`:
   - **RFC-0024** §4A — the full Reynolds defunctionalization construction for closures/partial-application/dynamic-fn-flow (fn-tag sum + generated `apply`, **no new L0 node**, KC-3) — G2.

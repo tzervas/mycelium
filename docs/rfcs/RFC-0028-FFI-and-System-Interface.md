@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0028 |
-| **Status** | **Accepted** (maintainer sign-off, 2026-06-23) |
+| **Status** | **Accepted** (maintainer sign-off, 2026-06-23; §4.4 host-encoding **signed off 2026-06-28** — in-session ratification). DN-40 A1 (CRITICAL), A2 (HIGH), A3 (HIGH) fixes are **COMMISSIONED for implementation** (must land before E14-1; tracked under M-722 / E14-1). |
 | **Feeds** | E14-1 (FFI & system interface) |
 | **Decides** | The capability-based Mycelium↔C/Rust FFI model; the `wild`/`@std-sys` host-execution floor that previously type-checked but did not execute (DN-14 row 9); the syscall binding strategy for `std.io`/`std.fs`/`std.sys`/`std.rand`/`std.time`; the ADR-014 unsafe-floor confinement for the FFI surface. |
 | **Date** | June 23, 2026 |
@@ -171,11 +171,12 @@ already thread. The registry **is** the capability handle (the "host dispatch ta
 composable (the host chooses which ops to grant), testable (a deterministic mock host op can be
 injected into the differential), and keeps the interpreter free of a hard-coded syscall set.
 
-### 4.4 Host-encoding validation bridge (M-722 / E14-1) — **pending maintainer sign-off**
+### 4.4 Host-encoding validation bridge (M-722 / E14-1) — **signed off 2026-06-28 (in-session); DN-40 A1/A2/A3 COMMISSIONED**
 
 > **Status note (append-only; 2026-06-28).** This subsection adds a normative host-encoding
 > validation spec for the `wild`/FFI boundary, closing the DN-40 M2 finding and the G11 ratification
-> gap. It is proposed for maintainer sign-off; the parent RFC remains **Accepted**. No existing
+> gap. **SIGNED OFF by maintainer 2026-06-28 (in-session).** DN-40 A1/A2/A3 fixes are COMMISSIONED
+> for implementation (must land before E14-1). The parent RFC remains **Accepted**. No existing
 > decision is modified or superseded — this is an append-only addition to §4 per the
 > Blocked-Decisions Ratification Map group G11 ("must-fix before E14-1"). Each point below is
 > `Declared` design direction (the architecture) citing `Proven` exhibited gaps (A1/A2/A3 from
@@ -426,7 +427,7 @@ an explicit `Result::Err`/`Option::None` — never a silent discard (G2).
 - [x] The `// SAFETY:` audit protocol is normative (§4.5/§4.8).
 - [x] The `std.{io,fs,sys,rand,time}` binding strategy is decided (§4.6).
 - [x] Status advances `Draft → Accepted` (this revision), maintainer sign-off recorded (§Meta).
-- [ ] **Host-encoding validation bridge spec (§4.4) — pending maintainer sign-off (2026-06-28).**
+- [x] **Host-encoding validation bridge spec (§4.4) — signed off by maintainer 2026-06-28 (in-session).**
   Three normative obligations specified: parse-into-typed (§4.4.1), injective-encode (§4.4.2),
   bounded (§4.4.3). DN-40 A1/A2/A3 closure sequencing noted (§4.4.4). Guarantee tag posture stated
   (§4.4.5). This item is open until the maintainer ratifies §4.4 — at which point the DoD row is
@@ -495,6 +496,7 @@ M-721); `crates/mycelium-std-sys/src/` (the syscall floor, M-722/M-723);
 
 ## Meta — changelog
 
+- **2026-06-28 — §4.4 signed off; DN-40 A1/A2/A3 COMMISSIONED (in-session ratification).** §4.4 host-encoding validation bridge spec is accepted; DN-40 A1 (CRITICAL: type-subgrammar parser DoS), A2 (HIGH: pattern-subgrammar parser DoS), A3 (HIGH: dep-hash parse-don't-validate gap) are COMMISSIONED for implementation — must land before E14-1. (Append-only; house rule #3; VR-5.)
 - **2026-06-28 — §4.4 host-encoding validation bridge added (append-only; pending maintainer
   sign-off; G11 must-fix before E14-1).** Adds RFC-0028 §4.4 specifying the three normative
   obligations for the `wild`/FFI boundary: (1) §4.4.1 parse-into-typed — untrusted host bytes

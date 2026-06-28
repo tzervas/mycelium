@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-61 |
-| **Status** | **Draft** (2026-06-28) |
+| **Status** | **Part A: Accepted** (2026-06-28, in-session ratification) · **Part B: Draft** (open research agenda) — **Part A (R1 scheduler normativity) RATIFIED by maintainer 2026-06-28**: RT2 + fuel-compatible cooperative stepping + RT7 normative commitment accepted. Part B (R2 distributed agenda: clocks R8-Q3, Byzantine R8-Q4, distributed reclamation RFC-0027 OQ-2, network-xloc, concurrent fuse-merge) stays **Draft** — needs dedicated research passes before it is ratifiable. The A/B split is explicit: Part A is the near-term implementation gate; Part B is the bounded forward agenda for a dedicated R2 RFC. All tags stay `Declared` (VR-5). |
 | **Feeds** | **RFC-0008** (the normative R1 runtime — scheduler-normativity question R8-Q1); a future **R2 distributed-execution RFC** (closes R8-Q3/Q4 + RFC-0027 OQ-2 + RFC-0028 §7 + RFC-0023 R23-Q2); **DN-58** (fuse surface — the `fuse` semilattice merge ties concurrent-session-merge to the G1 surface). |
 | **Date** | June 28, 2026 |
 | **Decides** | *Proposes, for ratification:* **(Part A)** how much of the R1 single-node scheduler is normative within RFC-0008's RT1–RT7 frame — the scheduler-normativity question (R8-Q1). **(Part B)** captures the open distributed-execution questions (R8-Q3, R8-Q4, RFC-0027 OQ-2, RFC-0028 §7 `xloc`, RFC-0023 R23-Q2) as a bounded forward agenda for a dedicated R2 RFC. Part B does **not** resolve these questions; it names what each needs. |
@@ -407,6 +407,7 @@ This DN is **Enacted** when:
 
 ## Meta — changelog
 
+- **2026-06-28 — Part A: Accepted (ratified by maintainer, in-session); Part B: stays Draft (open research agenda).** Part A (R1 scheduler normativity — RT2 + fuel-compatible cooperative stepping + RT7) ratified. Part B (R2 distributed: clocks R8-Q3, Byzantine R8-Q4, distributed reclamation RFC-0027 OQ-2, network-xloc, concurrent fuse-merge) explicitly recorded as open research agenda — not ratifiable until dedicated research passes. Status split made explicit in the Status field. (Append-only; VR-5; G2.)
 - **2026-06-28 — Draft created.** Part A: scheduler-normativity proposal (R8-Q1), tagged
   `Declared`-with-argument, grounded in RFC-0008 RT2/RT7 and M-357 differential baseline.
   Part B: five-item distributed-execution agenda (R8-Q3 clocks, R8-Q4 Byzantine, RFC-0027

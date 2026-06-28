@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-60 |
-| **Status** | **Draft** (2026-06-28) — Phase-2 direction-capture only. Records the design direction for enriching the effect system past the v0 declared-set. **NOT a ratification of any decision.** All directions here are `Declared` (design intent, not theorem). A future RFC (extends RFC-0014) is the ratification vehicle. |
+| **Status** | **Accepted** (2026-06-28) — **ratified by maintainer 2026-06-28 (in-session)**. G6 effect-system direction accepted: D1 (dynamic effect budgets), D2 (effect-row polymorphism), D3 (hypha in effect row) recorded as the Phase-2 RFC-0014 revision direction. New RFC-0014 effect-system version COMMISSIONED (being drafted in parallel). Tags stay `Declared` (VR-5 — no implementation yet). Prior status chain (append-only): **Draft** (2026-06-28) — Phase-2 direction-capture only. Records the design direction for enriching the effect system past the v0 declared-set. NOT a ratification of any decision. All directions here are `Declared` (design intent, not theorem). A future RFC (extends RFC-0014) is the ratification vehicle. |
 | **Feeds** | the G6 group in the Blocked-Decisions Ratification Map · RFC-0014 (Phase-2 follow-on RFC) · RFC-0008 R8-Q2 · RFC-0018 §9 graded-effect interaction |
 | **Date** | 2026-06-28 |
 | **Grounding** | RFC-0014 §4.5/§4.8/§8/§9 · RFC-0008 §4.5/§6/§8 R8-Q2 · RFC-0018 §9/§4.5 note · Ratification Map §G6 |
@@ -330,6 +330,7 @@ now; the RFC itself must ground each point at `Empirical` or better.
 
 ## Meta — changelog
 
+- **2026-06-28 — Accepted (ratified by maintainer, in-session).** G6 effect-system direction (D1/D2/D3) accepted. New RFC-0014 revision COMMISSIONED (being drafted in parallel) as the Phase-2 ratification vehicle. Tags stay `Declared` until the RFC lands (VR-5). (Append-only; G2.)
 - **2026-06-28 — Draft.** Created to capture the Phase-2 direction for the G6 group
   (Blocked-Decisions Ratification Map §G6) of deferred effect-system decisions: **(D1)** surface
   budget syntax for per-effect bounds (RFC-0014 §3.4 / §4.8 deferred); **(D2)** effect-row
