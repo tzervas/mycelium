@@ -258,6 +258,8 @@
 | `mycelium_core::DecodeSpec` | struct | `crates/mycelium-core/src/recon.rs:79` | Decoding procedure + parameters: a cleanup threshold (indexed/cleanup) or a resonator factor |
 | `mycelium_core::FieldSpec` | enum | `crates/mycelium-core/src/data.rs:171` | A build-time field spec: a representation field, a data field referencing another declaration |
 | `mycelium_core::FieldTy` | enum | `crates/mycelium-core/src/data.rs:107` | A field type within a resolved declaration: a representation type, a (possibly cyclic) data |
+| `mycelium_core::FieldTyRef` | enum | `crates/mycelium-core/src/data.rs:145` | A build-time field-type reference for function signatures: the same leaf set as a data field |
+| `mycelium_core::FnSig` | struct | `crates/mycelium-core/src/data.rs:158` | A build-time function signature: the parameter types (in order) and the return type. |
 | `mycelium_core::GuaranteeStrength` | enum | `crates/mycelium-core/src/guarantee.rs:16` | How trustworthy a value's representation/bound is. |
 | `mycelium_core::InitStrategy` | enum | `crates/mycelium-core/src/recon.rs:68` | The resonator initialisation strategy (RFC-0003 §6.1; RFC-0009 §9 Q1). |
 | `mycelium_core::Meta` | struct | `crates/mycelium-core/src/meta.rs:90` | Runtime, queryable metadata (RFC-0001 §4.3). |
@@ -280,6 +282,8 @@
 | `mycelium_core::ReconMode` | enum | `crates/mycelium-core/src/recon.rs:30` | Which capability the manifest supports (RFC-0003 §6). |
 | `mycelium_core::RegistryError` | enum | `crates/mycelium-core/src/data.rs:204` | Why building a [`DataRegistry`] from specs failed — always explicit (never a silent drop). |
 | `mycelium_core::Repr` | enum | `crates/mycelium-core/src/repr.rs:81` | The four closed paradigm kinds (RFC-0001 §4.1). |
+| `mycelium_core::ResolvedFieldTyRef` | enum | `crates/mycelium-core/src/data.rs:83` | A resolved field-type reference that can appear inside a function signature: a `Repr` leaf, a |
+| `mycelium_core::ResolvedFnSig` | struct | `crates/mycelium-core/src/data.rs:96` | A resolved function signature: the parameter types (in order) and the return type. |
 | `mycelium_core::ScalarKind` | enum | `crates/mycelium-core/src/repr.rs:38` | Scalar element kind for `Dense` values (extensible registry). |
 | `mycelium_core::SparsityClass` | enum | `crates/mycelium-core/src/repr.rs:68` | Declared sparsity class of a VSA value (RFC-0001 §4.1; RFC-0003 §5). |
 | `mycelium_core::SparsityObs` | struct | `crates/mycelium-core/src/meta.rs:36` | Measured (dynamic) sparsity — distinct from the declared [`crate::repr::SparsityClass`]. |
@@ -3125,6 +3129,20 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::data::FieldTy::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_core::data::FieldTy::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::data::FieldTy::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FieldTyRef` | dedup-alias: same definition as `mycelium_core::FieldTyRef` at crates/mycelium-core/src/data.rs:145 — one canonical row kept |
+| `mycelium_core::data::FieldTyRef::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FieldTyRef::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FieldTyRef::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FieldTyRef::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FieldTyRef::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FieldTyRef::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FnSig` | dedup-alias: same definition as `mycelium_core::FnSig` at crates/mycelium-core/src/data.rs:158 — one canonical row kept |
+| `mycelium_core::data::FnSig::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FnSig::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FnSig::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FnSig::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FnSig::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::FnSig::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::data::RegistryError` | dedup-alias: same definition as `mycelium_core::RegistryError` at crates/mycelium-core/src/data.rs:204 — one canonical row kept |
 | `mycelium_core::data::RegistryError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::data::RegistryError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -3134,6 +3152,20 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_core::data::RegistryError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::data::RegistryError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::data::RegistryError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFieldTyRef` | dedup-alias: same definition as `mycelium_core::ResolvedFieldTyRef` at crates/mycelium-core/src/data.rs:83 — one canonical row kept |
+| `mycelium_core::data::ResolvedFieldTyRef::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFieldTyRef::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFieldTyRef::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFieldTyRef::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFieldTyRef::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFieldTyRef::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFnSig` | dedup-alias: same definition as `mycelium_core::ResolvedFnSig` at crates/mycelium-core/src/data.rs:96 — one canonical row kept |
+| `mycelium_core::data::ResolvedFnSig::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFnSig::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFnSig::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFnSig::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFnSig::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_core::data::ResolvedFnSig::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_core::datum::CoreValue` | dedup-alias: same definition as `mycelium_core::CoreValue` at crates/mycelium-core/src/datum.rs:90 — one canonical row kept |
 | `mycelium_core::datum::CoreValue::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_core::datum::CoreValue::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |

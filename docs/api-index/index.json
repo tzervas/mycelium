@@ -2433,6 +2433,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_core::FieldTyRef",
+      "kind": "enum",
+      "crate": "mycelium-core",
+      "module": "mycelium_core",
+      "file": "crates/mycelium-core/src/data.rs",
+      "line": 145,
+      "summary": "A build-time field-type reference for function signatures: the same leaf set as a data field",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::FnSig",
+      "kind": "struct",
+      "crate": "mycelium-core",
+      "module": "mycelium_core",
+      "file": "crates/mycelium-core/src/data.rs",
+      "line": 158,
+      "summary": "A build-time function signature: the parameter types (in order) and the return type.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_core::GuaranteeStrength",
       "kind": "enum",
       "crate": "mycelium-core",
@@ -2671,6 +2693,28 @@
       "file": "crates/mycelium-core/src/repr.rs",
       "line": 81,
       "summary": "The four closed paradigm kinds (RFC-0001 §4.1).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::ResolvedFieldTyRef",
+      "kind": "enum",
+      "crate": "mycelium-core",
+      "module": "mycelium_core",
+      "file": "crates/mycelium-core/src/data.rs",
+      "line": 83,
+      "summary": "A resolved field-type reference that can appear inside a function signature: a `Repr` leaf, a",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_core::ResolvedFnSig",
+      "kind": "struct",
+      "crate": "mycelium-core",
+      "module": "mycelium_core",
+      "file": "crates/mycelium-core/src/data.rs",
+      "line": 96,
+      "summary": "A resolved function signature: the parameter types (in order) and the return type.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26784,6 +26828,62 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_core::data::FieldTyRef",
+      "reason": "dedup-alias: same definition as `mycelium_core::FieldTyRef` at crates/mycelium-core/src/data.rs:145 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_core::data::FieldTyRef::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FieldTyRef::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FieldTyRef::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FieldTyRef::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FieldTyRef::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FieldTyRef::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FnSig",
+      "reason": "dedup-alias: same definition as `mycelium_core::FnSig` at crates/mycelium-core/src/data.rs:158 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_core::data::FnSig::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FnSig::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FnSig::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FnSig::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FnSig::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::FnSig::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_core::data::RegistryError",
       "reason": "dedup-alias: same definition as `mycelium_core::RegistryError` at crates/mycelium-core/src/data.rs:204 — one canonical row kept"
     },
@@ -26817,6 +26917,62 @@
     },
     {
       "symbol": "mycelium_core::data::RegistryError::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFieldTyRef",
+      "reason": "dedup-alias: same definition as `mycelium_core::ResolvedFieldTyRef` at crates/mycelium-core/src/data.rs:83 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFieldTyRef::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFieldTyRef::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFieldTyRef::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFieldTyRef::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFieldTyRef::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFieldTyRef::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFnSig",
+      "reason": "dedup-alias: same definition as `mycelium_core::ResolvedFnSig` at crates/mycelium-core/src/data.rs:96 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFnSig::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFnSig::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFnSig::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFnSig::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFnSig::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_core::data::ResolvedFnSig::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
