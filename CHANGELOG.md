@@ -8,6 +8,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-27: rsm ratification-vehicle batch — 8 design drafts for the blocked-decision groups; design only, no code)
+- A batch of design-vehicle drafts (all **Draft/Proposed**, for maintainer ratification — never self-accepted) addressing the blocked-decision groups catalogued in `docs/planning/Blocked-Decisions-Ratification-Map.md`:
+  - **RFC-0024** §4A — the full Reynolds defunctionalization construction for closures/partial-application/dynamic-fn-flow (fn-tag sum + generated `apply`, **no new L0 node**, KC-3) — G2.
+  - **ADR-033** §10 — proposes resolving **FLAG-1** via a type-carrying dispatch hash (Path A), finding the arity-only encoding hashes distinct fn-types identically (a silent kernel-boundary type-confusion); kept `Declared`, status stays Accepted — G4/G5.
+  - **RFC-0036** §5 — proposed kernel-primitive position (9/10 L0 nodes irreducibly primitive; zero new VSA/HDC primitives; single frozen L0 recommended) — G5.
+  - **RFC-0028** §4.4 — host-encoding validation bridge (parse-into-typed / injective-encode / bounded), sequencing the DN-40 A1/A2/A3 must-fix-before-E14-1 gaps — G11.
+  - **RFC-0025/RFC-0030** — operator/grammar residue after RFC-0037 (precedence-table shift/cmp tiers + `lt`/`gt`/`shl`/`shr`/`lte`/`gte` desugaring) — G9.
+  - **DN-59** (new) — reclamation strategy + cross-hypha sharing (mostly confirm-the-record; one open axis: drop-latency SLO/fuel) — G3.
+  - **DN-60** (new) — effect-system surface direction (Phase-2 direction-capture; not a 1.0 gate) — G6.
+  - **DN-61** (new) — concurrency/distribution: R1 scheduler normativity (ratifiable) + R2 distributed agenda (research-pass items) — G8.
+
 ### Added (2026-06-27: RFC-0037 grammar enactment + DN-57 `;` terminator — the surface-grammar wave)
 
 - **RFC-0037 enacted** in `crates/mycelium-l1` + `mycelium-fmt`: the bracket kind-split (`[T]` type
