@@ -4,8 +4,8 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal,
-    Nodule, Paradigm, Param, ParamKind, Path, Pattern, Phylum, Scalar, Sparsity, Strength,
-    TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, Vis, WidthRef,
+    Nodule, ObjectDecl, Paradigm, Param, ParamKind, Path, Pattern, Phylum, Scalar, Sparsity,
+    Strength, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, ViaDecl, Vis, WidthRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -318,6 +318,9 @@ impl Parser {
             Tok::Wild => "wild",
             Tok::Spore => "spore",
             Tok::Colony => "colony",
+            // DN-53, M-811: `object` is now an active keyword; `via` is active inside object bodies.
+            Tok::Object => "object",
+            Tok::Via => "via",
             other => return self.expect(kw, &format!("{other:?}")),
         };
         self.expect(kw, &format!("`{spelling}`"))
@@ -501,18 +504,17 @@ impl Parser {
                  inside a `fn` body"
                     .to_owned(),
             )),
-            // DN-53/DN-54: `object`/`lower` are reserved-not-active surface keywords (lexed so they
-            // are never silent identifiers, G2); their constructs land with M-811/M-812.
-            t @ (Tok::Object | Tok::Lower) => Err(ParseError::new(
+            // DN-53 / M-811: `object` is now ACTIVE — `object Name[params] { Ctor(…); via …; impl
+            // …; fn … }` is a composition surface that desugars to `type`+`impl`+forwarding-impls
+            // at check time. Zero kernel growth (KC-3); `reveal`-able per DN-38 §5.
+            Tok::Object => self.parse_object_decl(Vis::Private).map(Item::Object),
+            // DN-54: `lower` is still reserved-not-active (its construct lands with M-812).
+            Tok::Lower => Err(ParseError::new(
                 self.pos(),
-                format!(
-                    "`{word}` is a reserved surface keyword ({src}), not yet active — its construct \
-                     lands with {task}; it cannot open a program or be used as an identifier at this \
-                     language version",
-                    word = if matches!(t, Tok::Object) { "object" } else { "lower" },
-                    src = if matches!(t, Tok::Object) { "DN-53" } else { "DN-54" },
-                    task = if matches!(t, Tok::Object) { "M-811" } else { "M-812" },
-                ),
+                "`lower` is a reserved surface keyword (DN-54), not yet active — its construct \
+                 lands with M-812; it cannot open a program or be used as an identifier at this \
+                 language version"
+                    .to_owned(),
             )),
             _ => self.err(
                 "a top-level item (`use`, `pub`, `default paradigm`, `type`, `trait`, `impl`, `fn`, \
@@ -532,6 +534,8 @@ impl Parser {
             Tok::Type => self.parse_type_decl(Vis::Pub).map(Item::Type),
             Tok::Trait => self.parse_trait_decl(Vis::Pub).map(Item::Trait),
             Tok::Fn | Tok::Thaw => self.parse_fn_decl(Vis::Pub).map(Item::Fn),
+            // DN-53 / M-811: `pub object` exports the composed type name to other nodules (M-662).
+            Tok::Object => self.parse_object_decl(Vis::Pub).map(Item::Object),
             Tok::Use => Err(ParseError::new(
                 self.pos(),
                 "`pub use` is not a form — a `use` imports a name into this nodule, it does not \
@@ -551,8 +555,8 @@ impl Parser {
                     .to_owned(),
             )),
             _ => self.err(
-                "`pub` must be followed by `fn`, `trait`, `type`, or `thaw fn` (M-662 — only those \
-                 top-level items are exportable)",
+                "`pub` must be followed by `fn`, `trait`, `type`, `object`, or `thaw fn` \
+                 (M-662 — only those top-level items are exportable)",
             ),
         }
     }
@@ -932,6 +936,142 @@ impl Parser {
         })
     }
 
+    /// `object Name[params]? { Ctor(T1, T2); (via N : Trait[args]?)* (impl …)* (fn …)* }`
+    ///
+    /// Parses an object composition surface declaration (DN-53, M-811). The body must open with
+    /// exactly one constructor clause (same syntax as a `TypeDecl` constructor, followed by `;`),
+    /// then zero-or-more `via` delegation clauses, zero-or-more `impl` blocks, and zero-or-more
+    /// `fn` definitions, in any order after the constructor — the constructor must come first.
+    ///
+    /// `via N : Trait[args]?` — `N` is a decimal field-index literal (`u32`), not an identifier.
+    /// `impl` and `fn` clauses follow the same grammar as top-level `impl`/`fn` items.
+    ///
+    /// Never silent (G2): a duplicate constructor, out-of-range field index (checked at check time),
+    /// and unknown body keywords are all explicit parse errors.
+    fn parse_object_decl(&mut self, vis: Vis) -> Result<ObjectDecl, ParseError> {
+        self.expect_keyword(&Tok::Object)?;
+        let name = self.ident()?;
+        let params = self.parse_type_params_opt()?;
+        self.expect(&Tok::LBrace, "`{` to open the `object` body")?;
+
+        // The first element must be the constructor clause: `Name(T1, T2)` followed by `;`.
+        // An `object` body with no constructor is an explicit error — the name is the type name,
+        // not a constructor (G2: never-silent).
+        if self.at(&Tok::RBrace) {
+            return Err(ParseError::new(
+                self.pos(),
+                "an `object` body must have at least one constructor clause (`Name(T1, T2);`) \
+                 before any `via`, `impl`, or `fn` items (DN-53 §A.2.1; never-silent, G2)"
+                    .to_owned(),
+            ));
+        }
+        let ctor = self.parse_ctor()?;
+        // The constructor is terminated by a mandatory `;` (it is not an expression statement).
+        self.expect(
+            &Tok::Semi,
+            "`;` after the constructor clause in an `object` body (DN-53 §A.2.1)",
+        )?;
+
+        // Remaining body items: `via`, `impl`, `fn` (in any order, each terminated by `;`/`}`)
+        let mut via_decls: Vec<ViaDecl> = Vec::new();
+        let mut impls: Vec<ImplDecl> = Vec::new();
+        let mut fns: Vec<FnDecl> = Vec::new();
+
+        while !self.at(&Tok::RBrace) {
+            match self.cur() {
+                // `via N : Trait[args]?` — delegation clause (DN-53 §A.3.2).
+                Tok::Via => {
+                    self.bump(); // consume `via`
+                                 // The field index is a decimal integer literal (never a name — positional, G2).
+                    let field_idx = match self.cur().clone() {
+                        Tok::Int(n) if n >= 0 => {
+                            let idx = u32::try_from(n).map_err(|_| {
+                                ParseError::new(
+                                    self.pos(),
+                                    format!(
+                                        "`via` field index `{n}` overflows u32 — field indices \
+                                         must fit in a u32 (DN-53 §A.3.2; G2)"
+                                    ),
+                                )
+                            })?;
+                            self.bump();
+                            idx
+                        }
+                        Tok::Int(n) => {
+                            return Err(ParseError::new(
+                                self.pos(),
+                                format!(
+                                    "`via` field index must be a non-negative integer; got `{n}` \
+                                     (DN-53 §A.3.2; G2)"
+                                ),
+                            ));
+                        }
+                        _ => {
+                            return Err(ParseError::new(
+                                self.pos(),
+                                "expected a non-negative decimal field index after `via` \
+                                 (e.g. `via 0 : Trait`) — got a non-integer token (DN-53 §A.3.2; G2)"
+                                    .to_owned(),
+                            ));
+                        }
+                    };
+                    self.expect(
+                        &Tok::Colon,
+                        "`:` after the field index in a `via` clause (`via N : Trait`)",
+                    )?;
+                    let trait_name = self.ident()?;
+                    let trait_args = self.parse_type_args_opt()?;
+                    self.eat(&Tok::Semi); // DN-57: optional component terminator
+                    via_decls.push(ViaDecl {
+                        field_idx,
+                        trait_name,
+                        trait_args,
+                    });
+                }
+                // `impl Trait for …` — explicit trait instance inside the object body.
+                Tok::Impl => {
+                    impls.push(self.parse_impl_decl()?);
+                    self.eat(&Tok::Semi); // DN-57: optional component terminator
+                }
+                // `fn …` / `thaw fn …` — inherent function.
+                Tok::Fn | Tok::Thaw => {
+                    fns.push(self.parse_fn_decl(Vis::Private)?);
+                    self.eat(&Tok::Semi); // DN-57: optional component terminator
+                }
+                // `pub` inside an object body is not supported — methods/impl items are not
+                // re-exported independently; the object itself carries its `pub` vis (G2).
+                Tok::Pub => {
+                    return Err(ParseError::new(
+                        self.pos(),
+                        "`pub` inside an `object` body is not valid — the object's own `pub` \
+                         governs visibility of the composed type name; individual `fn`/`impl` \
+                         items inside the body are not independently exported (DN-53 §A.2.1; G2)"
+                            .to_owned(),
+                    ));
+                }
+                _ => {
+                    return Err(ParseError::new(
+                        self.pos(),
+                        "unexpected token inside `object` body — expected `via`, `impl`, `fn`, \
+                         `thaw`, or `}` (DN-53 §A.2.1)"
+                            .to_owned(),
+                    ));
+                }
+            }
+        }
+
+        self.expect(&Tok::RBrace, "`}` to close the `object` body")?;
+        Ok(ObjectDecl {
+            vis,
+            name,
+            params,
+            ctor,
+            via_decls,
+            impls,
+            fns,
+        })
+    }
+
     // ---- types ----
 
     fn parse_type_ref(&mut self) -> Result<TypeRef, ParseError> {
@@ -1247,16 +1387,21 @@ impl Parser {
             Tok::Colony => self.parse_colony(),
             // RFC-0037 D5: an anonymous-function expression (parses; semantics deferred to M-704).
             Tok::Lambda => self.parse_lambda(),
-            // DN-53/DN-54: reserved-not-active surface keywords at expression position (teaching, G2).
-            t @ (Tok::Object | Tok::Lower) => Err(ParseError::new(
+            // DN-53 / M-811: `object` is active at **item** position (top-level declarations) but is
+            // NOT a valid expression form — it cannot appear in value/expression contexts (G2).
+            Tok::Object => Err(ParseError::new(
                 self.pos(),
-                format!(
-                    "`{word}` is a reserved surface keyword ({src}), not yet active — its construct \
-                     lands with {task}; it cannot be used as an identifier here",
-                    word = if matches!(t, Tok::Object) { "object" } else { "lower" },
-                    src = if matches!(t, Tok::Object) { "DN-53" } else { "DN-54" },
-                    task = if matches!(t, Tok::Object) { "M-811" } else { "M-812" },
-                ),
+                "`object` opens a composition-surface declaration (DN-53/M-811) — it is valid only \
+                 at item position (top level of a nodule), not in expression context; \
+                 if you want a value of an object type, construct it with the named constructor"
+                    .to_owned(),
+            )),
+            // DN-54: `lower` is still reserved-not-active (its construct lands with M-812).
+            Tok::Lower => Err(ParseError::new(
+                self.pos(),
+                "`lower` is a reserved surface keyword (DN-54), not yet active — its construct \
+                 lands with M-812; it cannot be used as an identifier here"
+                    .to_owned(),
             )),
             // RFC-0025 / M-705: the infix-operator layer. A non-keyword expression is an operator
             // expression over unary/applicative operands; each operator desugars to its canonical

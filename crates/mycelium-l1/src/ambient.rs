@@ -41,8 +41,8 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, Expr, FnDecl, FnSig, ImplDecl, Item, Literal, Nodule,
-    Paradigm, Param, ParamKind, Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl,
-    TypeParam, TypeRef, UsePath, Vis, WidthRef,
+    ObjectDecl, Paradigm, Param, ParamKind, Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef,
+    TypeDecl, TypeParam, TypeRef, UsePath, Vis, WidthRef,
 };
 
 /// A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess.
@@ -174,6 +174,14 @@ pub fn resolve_report(nodule: &Nodule) -> Result<Resolved, AmbientError> {
             Item::Trait(td) => items.push(Item::Trait(r.trait_decl(default, td)?)),
             Item::Impl(id) => items.push(Item::Impl(r.impl_decl(default, id)?)),
             Item::Fn(fd) => items.push(Item::Fn(r.fn_decl(default, fd)?)),
+            // DN-53 M-811: resolve ambient representation inside the object body — constructor
+            // field types, `via` trait arguments, explicit `impl` method bodies, and inherent `fn`
+            // bodies — so that `check_phylum_inner`'s Phase 0 structural expansion produces
+            // already-resolved `Item::Type`/`Item::Impl`/`Item::Fn` items. Without this pass the
+            // expanded items would carry unresolved paradigm-less repr sites (a never-silent defect
+            // — G2). The ambient for the object body is the same nodule-level ambient as for any
+            // top-level declaration (there is no inner ambient scope inside an `object` body).
+            Item::Object(od) => items.push(Item::Object(r.object_decl(default, od)?)),
         }
     }
     Ok(Resolved {
@@ -214,6 +222,11 @@ pub fn expand_to_source(nodule: &Nodule) -> String {
             Item::Trait(td) => out.push_str(&print_trait_decl(td)),
             Item::Impl(id) => out.push_str(&print_impl_decl(id)),
             Item::Fn(fd) => out.push_str(&print_fn_decl(fd)),
+            // `object` declarations are rendered in surface form (not desugared) — the LSP
+            // "expand ambient" shows the source as-written with paradigms filled in. After
+            // Phase 0 expansion in the checker the desugared items (type + impls + fns) are in
+            // scope; here we emit the pre-desugar surface so the round-trip is stable.
+            Item::Object(od) => out.push_str(&print_object_decl(od)),
         }
     }
     out
@@ -334,6 +347,61 @@ impl Resolver {
             thaw: fd.thaw,
             sig,
             body,
+        })
+    }
+
+    /// Resolve an `object` composition surface declaration (DN-53, M-811): ambient-fill the
+    /// constructor field types, the `via` trait arguments, and the bodies of every explicit `impl`
+    /// and inherent `fn` in the body. Visibility and structural names are surface metadata,
+    /// untouched by ambient resolution.
+    fn object_decl(
+        &mut self,
+        amb: Option<Paradigm>,
+        od: &ObjectDecl,
+    ) -> Result<ObjectDecl, AmbientError> {
+        let site = &od.name;
+        // Resolve the constructor field types.
+        let ctor = {
+            let mut fields = Vec::with_capacity(od.ctor.fields.len());
+            for f in &od.ctor.fields {
+                fields.push(self.type_ref(amb, site, f)?);
+            }
+            Ctor {
+                name: od.ctor.name.clone(),
+                fields,
+            }
+        };
+        // Resolve `via` trait arguments.
+        let mut via_decls = Vec::with_capacity(od.via_decls.len());
+        for via in &od.via_decls {
+            let mut trait_args = Vec::with_capacity(via.trait_args.len());
+            for a in &via.trait_args {
+                trait_args.push(self.type_ref(amb, site, a)?);
+            }
+            via_decls.push(crate::ast::ViaDecl {
+                field_idx: via.field_idx,
+                trait_name: via.trait_name.clone(),
+                trait_args,
+            });
+        }
+        // Resolve explicit `impl` blocks.
+        let mut impls = Vec::with_capacity(od.impls.len());
+        for id in &od.impls {
+            impls.push(self.impl_decl(amb, id)?);
+        }
+        // Resolve inherent `fn` declarations.
+        let mut fns = Vec::with_capacity(od.fns.len());
+        for fd in &od.fns {
+            fns.push(self.fn_decl(amb, fd)?);
+        }
+        Ok(ObjectDecl {
+            vis: od.vis,
+            name: od.name.clone(),
+            params: od.params.clone(),
+            ctor,
+            via_decls,
+            impls,
+            fns,
         })
     }
 
@@ -609,6 +677,57 @@ fn pub_str(vis: Vis) -> &'static str {
     } else {
         ""
     }
+}
+
+/// Render an `object` composition declaration back to canonical surface text (DN-53, M-811).
+/// This is the "expand ambient" projection of an `object` — it prints the surface form, not the
+/// desugared lowering. The desugared form (type + impls + fns) is visible after Phase 0 expansion
+/// in the checker; the surface form here supports the LSP round-trip and `expand_to_source`.
+fn print_object_decl(od: &ObjectDecl) -> String {
+    let params = if od.params.is_empty() {
+        String::new()
+    } else {
+        format!("[{}]", od.params.join(", "))
+    };
+    // Ctor: `CtorName(T1, T2, …)` or `CtorName` for nullary.
+    let ctor_str = if od.ctor.fields.is_empty() {
+        od.ctor.name.clone()
+    } else {
+        let fs: Vec<String> = od.ctor.fields.iter().map(print_type_ref).collect();
+        format!("{}({})", od.ctor.name, fs.join(", "))
+    };
+    let mut s = format!(
+        "{}object {}{} {{\n  {};\n",
+        pub_str(od.vis),
+        od.name,
+        params,
+        ctor_str
+    );
+    for vd in &od.via_decls {
+        let args = if vd.trait_args.is_empty() {
+            String::new()
+        } else {
+            let a: Vec<String> = vd.trait_args.iter().map(print_type_ref).collect();
+            format!("[{}]", a.join(", "))
+        };
+        s.push_str(&format!(
+            "  via {} : {}{};\n",
+            vd.field_idx, vd.trait_name, args
+        ));
+    }
+    for id in &od.impls {
+        // Re-use print_impl_decl but indent each line by 2 spaces.
+        for line in print_impl_decl(id).lines() {
+            s.push_str(&format!("  {line}\n"));
+        }
+    }
+    for fd in &od.fns {
+        for line in print_fn_decl(fd).lines() {
+            s.push_str(&format!("  {line}\n"));
+        }
+    }
+    s.push_str("}\n");
+    s
 }
 
 /// Render a `use` import (specific `use a.b.Item` or glob `use a.b.*`; M-662). Re-emitting the `.*`

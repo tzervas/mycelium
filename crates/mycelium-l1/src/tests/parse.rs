@@ -564,5 +564,8 @@ fn dn57_optional_semicolon_terminates_components_ast_transparent() {
     // Method terminators inside trait + impl bodies parse.
     let methods = "nodule d\ntrait T { fn f(x: Binary{8}) => Binary{8}; }\n\
                    impl T for Binary{8} { fn f(x: Binary{8}) => Binary{8} = x; }";
-    assert!(parse(methods).is_ok(), "`;`-terminated trait/impl methods parse");
+    assert!(
+        parse(methods).is_ok(),
+        "`;`-terminated trait/impl methods parse"
+    );
 }
