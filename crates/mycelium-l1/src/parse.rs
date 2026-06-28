@@ -5,8 +5,8 @@
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item,
     Literal, LowerDecl, Nodule, ObjectDecl, Paradigm, Param, ParamKind, Path, Pattern, Phylum,
-    Scalar, Sparsity, Strength, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, ViaDecl,
-    Vis, WidthRef,
+    Scalar, Sparsity, Strength, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath,
+    ViaDecl, Vis, WidthRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;

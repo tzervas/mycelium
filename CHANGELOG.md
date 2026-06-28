@@ -40,7 +40,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   lexicon flips (`object`/`via`/`lower`/`derive` → active); `issues.yaml` M-811 done, M-812 partial with
   honest note, **M-812-cont** added (todo) tracking the deferred safety. Conformance fixtures renumbered
   at integration to deconflict (object `accept/22`→`23`, `reject/26`→`28`; DN-54 keeps `accept/22-lower-derive`
-  + `reject/26`/`27`). `mycelium-l1` builds + tests green with **both** features present.
+  plus `reject/26`/`27`). `mycelium-l1` builds + tests green with **both** features present.
 
 ### Added (2026-06-27: RFC-0037 grammar enactment + DN-57 `;` terminator — the surface-grammar wave)
 

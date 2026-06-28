@@ -28,7 +28,7 @@ in flight as **DN-58 / PR #685**.
 
 ### G1 · Runtime-vocabulary surface forms (`fuse` / `reclaim` / `tier` / reserved keywords)
 - **Axis:** concrete L1 surface spelling + activation of the reserved-not-active runtime vocabulary, *on top of already-ratified semantics* (RT6 semilattice, RT7 supervision, tier mode). "Name + surface, mechanism settled."
-- **Vehicle:** **DN-58 (Draft, in flight — PR #685)** — promote to Accepted, resolving F-A* (fuse trait/op), **F-B1/F-B2 (reclaim form + policy type — the deferred surface)**, F-C* (tier attribute/words). Then per-construct implementation RFCs for the rest of the vocabulary (hypha/colony/mesh/cyst/forage), gated on DN-58 + DN-03.
+- **Vehicle:** **DN-58 (Draft, in flight — PR #685)** — promote to Accepted, resolving F-A\* (fuse trait/op), **F-B1/F-B2 (reclaim form + policy type — the deferred surface)**, F-C\* (tier attribute/words). Then per-construct implementation RFCs for the rest of the vocabulary (hypha/colony/mesh/cyst/forage), gated on DN-58 + DN-03.
 - **Unblocks:** M-667, M-710, the `r4v` wave, ADR-020 reclaim activation, Phase-7 std-vs-runtime-phylum sequencing, and the `lambda` keyword-reservation tail.
 - **Sources:** DN-58 §A/§B/§C · RFC-0008 §4.5 · RFC-0027 §10.5 (×2) · ADR-020 · RFC-0037 §7 FLAG-4 · RFC-0016 §8 Q4 · RFC-0031 §5.
 

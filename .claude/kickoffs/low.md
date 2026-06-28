@@ -28,7 +28,7 @@ here, coordinating with the still-reserved `grow`.)
   `corpus:DN-38` (§6 Lowering Map + §7 harness; §8.1 `grow→derive`).
 - `src:crates/mycelium-l1/src/parse.rs` (the `lower` reserved teaching-arm) · `…/ast.rs` (`Item::Lower`)
   · `…/checkty.rs` (`check_lower_decl` + `Env.lower_rules` registry) · `…/elab.rs` (`derive` rule lookup
-  + instantiation at elaborate).
+  with instantiation at elaborate).
 
 ## Approach (serial-on-L1, inline)
 parse.rs `parse_lower_decl` → ast.rs `Item::Lower(LowerDecl)` → checkty.rs validate RHS (`infer_type`,
