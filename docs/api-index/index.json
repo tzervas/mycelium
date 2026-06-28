@@ -7696,7 +7696,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 307,
+      "line": 317,
       "summary": "Scalar-kind keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7707,7 +7707,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 333,
+      "line": 343,
       "summary": "A token with its starting position.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7718,7 +7718,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 320,
+      "line": 330,
       "summary": "Guarantee-strength keyword payload.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7740,7 +7740,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::token",
       "file": "crates/mycelium-l1/src/token.rs",
-      "line": 342,
+      "line": 352,
       "summary": "Resolve an identifier-shaped lexeme to its keyword token, or `None` if it is a plain identifier.",
       "guarantee_tag": null,
       "corpus_refs": []

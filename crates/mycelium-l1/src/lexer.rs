@@ -153,7 +153,10 @@ impl Lexer {
                 '}' => self.single(Tok::RBrace),
                 '[' => self.single(Tok::LBracket),
                 ']' => self.single(Tok::RBracket),
-                '>' => self.single(Tok::RAngle),
+                // `>` (gt) / `>>` (shr): comparison and right-shift operators (RFC-0025 §4.1
+                // Tiers 8/4; M-745). Lexed whole — no nested-generic `>>` hazard now that type args
+                // moved to `[…]` (RFC-0037 D1).
+                '>' => self.lex_rangle(),
                 // `@` is the guarantee-annotation glyph (`T @ Exact`), but `@std-sys` is the atomic
                 // nodule-header FFI-floor marker (M-661): `-` is not an identifier char, so `@std-sys`
                 // could never lex as `@` + an identifier — it must be recognized whole here. Only the
@@ -193,8 +196,9 @@ impl Lexer {
                 // `&` (band) / `&&` (and): bitwise- and logical-and operators (RFC-0025 / M-705).
                 '&' => self.lex_amp(),
                 // `<` is operator-only (RFC-0037 D1): type-args moved to `[…]` and trit literals to
-                // `0t…`, so a `<` is always the [`Tok::LAngle`] comparison/shift glyph now.
-                '<' => self.single(Tok::LAngle),
+                // `0t…`, so a `<` is always a comparison/shift glyph now — `<` (lt) or, when
+                // doubled, `<<` (shl) (RFC-0025 §4.1 Tiers 8/4; M-745).
+                '<' => self.lex_langle(),
                 '=' => self.lex_eq(),
                 '-' => self.lex_dash(),
                 '0' if self.peek2() == Some('b') => self.lex_binary(pos)?,
@@ -298,6 +302,28 @@ impl Lexer {
             Tok::PipePipe
         } else {
             Tok::Pipe
+        }
+    }
+    /// `<` (lt, RFC-0025 §4.1 Tier 8) / `<<` (shl, Tier 4) — M-745. The doubled form lexes whole;
+    /// post-RFC-0037 D1 there is no type-argument `<…>` role, so `<<` is never two type-arg opens.
+    fn lex_langle(&mut self) -> Tok {
+        self.bump(); // '<'
+        if self.peek() == Some('<') {
+            self.bump();
+            Tok::Shl
+        } else {
+            Tok::LAngle
+        }
+    }
+    /// `>` (gt, RFC-0025 §4.1 Tier 8) / `>>` (shr, Tier 4) — M-745. The doubled form lexes whole;
+    /// no nested-generic `>>` hazard now that type arguments use `[…]` (RFC-0037 D1).
+    fn lex_rangle(&mut self) -> Tok {
+        self.bump(); // '>'
+        if self.peek() == Some('>') {
+            self.bump();
+            Tok::Shr
+        } else {
+            Tok::RAngle
         }
     }
 

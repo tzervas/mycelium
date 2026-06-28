@@ -56,6 +56,14 @@ fn corpus() -> Vec<&'static str> {
         "nodule d\nfn main() => Ternary{4} = 0t00+0 * 0t00-0",
         // precedence: `*` binds tighter than `+`, so `a + b * c` ≡ `add(a, mul(b, c))`.
         "nodule d\nfn main() => Ternary{4} = 0t000+ + 0t00+0 * 0t00-0",
+        // RFC-0025 §4.1 / M-745: the angle/shift glyphs (`<`/`>`/`<<`/`>>` → lt/gt/shl/shr) are
+        // NOT in this three-path corpus on purpose — their word targets have no kernel/stdlib prim
+        // yet (they arrive with M-809), so a program using them does not *resolve* end-to-end.
+        // Their desugaring is instead pinned at the AST level by the parse-equivalence tests
+        // (`src/tests/parse.rs::infix_sugar_desugars_to_the_word_call` — `a < b` ≡ `lt(a, b)`,
+        // etc.), which is the honest oracle for a frontend-only rewrite (§4.4: the desugared `App`
+        // node IS the record). They join this corpus when their prims land (G2 — never silent on
+        // the coverage boundary).
         // the certified binary→ternary swap
         "nodule d\nfn main() => Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)",
         // a call, inlined (acyclic call graph)
