@@ -23,6 +23,14 @@
 //! The surface→registry *elaboration* of mutual recursion stays deferred (the L1 prototype accepts
 //! only self-recursion), but the **identity** of a mutually-recursive group is now correct, not
 //! provisional — so when the surface grows mutual recursion, the hashes do not change underneath it.
+//!
+//! # ADR-033 FLAG-1 Path A — full function signature encoding (`Empirical` post-test, `Declared` claim)
+//! `FieldSpec::Fn` carries a full `FnSig` (all parameter types + return type) so two function-typed
+//! fields with different signatures hash to distinct content addresses. The soundness gap described
+//! in ADR-033 §10.1 is closed at the kernel level: `MkDict_Eq8 ≠ MkDict_Eq16` as content-addressed
+//! declarations, so a type-confused `Match`/projection is a **never-silent no-match** by
+//! construction (G2). Tag: `Empirical` (tested — `src/tests/data.rs`); NOT `Proven` (no mechanized
+//! injectivity proof; VR-5 forbids the upgrade).
 
 use std::collections::BTreeMap;
 
@@ -66,14 +74,50 @@ impl core::fmt::Display for CtorRef {
     }
 }
 
-/// A field type within a resolved declaration: a representation type, or a (possibly cyclic) data
-/// type reference. This is the *identity-bearing* field shape (RFC-0007 §4.2).
+// --- Resolved field-type references for function signatures ------------------------------------
+
+/// A resolved field-type reference that can appear inside a function signature: a `Repr` leaf, a
+/// `Data` leaf (resolved to its declaration hash), or a nested function type. This is the resolved
+/// analogue of [`FieldTyRef`] (ADR-033 §10 PATH-A).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ResolvedFieldTyRef {
+    /// A representation-typed parameter/return (`Binary{n}` | `Ternary{m}` | …).
+    Repr(Repr),
+    /// A data-typed parameter/return, resolved to the referenced declaration's content hash.
+    Data(ContentHash),
+    /// A nested function type — a higher-order parameter or return.
+    Fn(Box<ResolvedFnSig>),
+}
+
+/// A resolved function signature: the parameter types (in order) and the return type.
+/// `arity == params.len()` always holds in a resolved signature (`Declared` well-formedness
+/// invariant, checked at build time — [`RegistryError::FnArityMismatch`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ResolvedFnSig {
+    /// Parameter types, in declaration order (`arity == params.len()`).
+    pub params: Vec<ResolvedFieldTyRef>,
+    /// Return type.
+    pub ret: Box<ResolvedFieldTyRef>,
+}
+
+/// A field type within a resolved declaration: a representation type, a (possibly cyclic) data
+/// type reference, or a function-typed field (ADR-033). This is the *identity-bearing* field shape
+/// (RFC-0007 §4.2).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldTy {
     /// A representation-typed field (`Binary{n}` | `Ternary{m}` | `Dense{…}` | `VSA{…}`).
     Repr(Repr),
     /// A data-typed field, referencing another (or the same, recursively) declaration by hash.
     Data(ContentHash),
+    /// A function-typed field with a resolved full signature (ADR-033 §10 PATH-A).
+    /// The signature encodes all parameter types + return type so distinct fn types hash
+    /// distinctly — closing the soundness gap described in ADR-033 §10.1.
+    Fn {
+        /// The arity (== `sig.params.len()`).
+        arity: u32,
+        /// The resolved full signature.
+        sig: ResolvedFnSig,
+    },
 }
 
 /// One constructor of a resolved declaration: its field types, in declaration order.
@@ -93,14 +137,52 @@ pub struct DataDecl {
 
 // --- Build-time specs (names are build keys, never hashed) ------------------------------------
 
-/// A build-time field spec: a representation field, or a data field referencing another declaration
-/// **by name** (the name is a build key for resolving references — it is *not* hashed).
+/// A build-time field-type reference for function signatures: the same leaf set as a data field
+/// can hold, plus nested functions. Every leaf bottoms out in `Repr` (already injective via
+/// `Canon::repr`) or `Data(name)` (resolved to `ContentHash` at build time) — no unbounded
+/// recursion. `Declared`-with-argument: recursion is well-founded (ADR-033 §10.2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FieldTyRef {
+    /// A representation-typed parameter/return.
+    Repr(Repr),
+    /// A data-typed parameter/return, referenced by build-time name.
+    Data(String),
+    /// A nested function type (higher-order parameter or return).
+    Fn(Box<FnSig>),
+}
+
+/// A build-time function signature: the parameter types (in order) and the return type.
+/// `arity == params.len()` is the well-formedness invariant; a mismatch is an explicit
+/// [`RegistryError::FnArityMismatch`] (never silent — G2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FnSig {
+    /// Explicit (non-dictionary) parameter count — must equal `params.len()`.
+    pub arity: u32,
+    /// Parameter types, in declaration order.
+    pub params: Vec<FieldTyRef>,
+    /// Return type.
+    pub ret: Box<FieldTyRef>,
+}
+
+/// A build-time field spec: a representation field, a data field referencing another declaration
+/// **by name**, or a function-typed field with its full signature (ADR-033 §10 PATH-A).
+/// The name is a build key for resolving references — it is *not* hashed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum FieldSpec {
     /// A representation-typed field.
     Repr(Repr),
     /// A data-typed field, by the referenced declaration's build-time name.
     Data(String),
+    /// A function-typed field with full resolved signature (ADR-033 §10 PATH-A — FLAG-1 fix).
+    /// Two function fields with different parameter/return types produce different content hashes,
+    /// so `MkDict_Eq8 ≠ MkDict_Eq16` at the kernel level. `Empirical` guarantee (tested).
+    Fn {
+        /// Explicit parameter count — must equal `sig.params.len()` (checked at build;
+        /// mismatch → [`RegistryError::FnArityMismatch`]).
+        arity: u32,
+        /// The full function signature (params + return).
+        sig: FnSig,
+    },
 }
 
 /// A build-time constructor spec: its fields, in declaration order.
@@ -127,6 +209,17 @@ pub enum RegistryError {
         /// The unresolved referenced name.
         missing: String,
     },
+    /// A `FieldSpec::Fn` (or a `FieldTyRef::Fn` inside a signature) has `arity ≠ params.len()`.
+    /// The `arity` field is the stated count; `params_len` is the actual length of `params`.
+    /// Never-silent (G2): both values are named so the caller can report the exact mismatch.
+    FnArityMismatch {
+        /// The declaration containing the malformed field.
+        in_decl: String,
+        /// The stated arity.
+        arity: u32,
+        /// The actual number of parameter types in `sig.params`.
+        params_len: usize,
+    },
 }
 
 impl core::fmt::Display for RegistryError {
@@ -135,6 +228,15 @@ impl core::fmt::Display for RegistryError {
             RegistryError::UnknownTypeRef { in_decl, missing } => write!(
                 f,
                 "data declaration `{in_decl}` references unknown type `{missing}`"
+            ),
+            RegistryError::FnArityMismatch {
+                in_decl,
+                arity,
+                params_len,
+            } => write!(
+                f,
+                "data declaration `{in_decl}` has a Fn field with arity {arity} \
+                 but {params_len} parameter type(s) in its signature"
             ),
         }
     }
@@ -159,20 +261,15 @@ pub struct DataRegistry {
 impl DataRegistry {
     /// Build the registry from a set of named declaration specs, computing every declaration's
     /// content hash (cycle-aware: self-references hash as a placeholder, RFC-0007 §4.2). Returns an
-    /// explicit [`RegistryError`] for any dangling reference — never a partial registry.
+    /// explicit [`RegistryError`] for any dangling reference or arity mismatch — never a partial
+    /// registry.
     pub fn build(specs: &BTreeMap<String, DeclSpec>) -> Result<Self, RegistryError> {
-        // Validate references first (never proceed on a dangling ref).
+        // Validate references and arity invariants first (never proceed on a dangling ref or
+        // arity mismatch — G2/never-silent).
         for (name, decl) in specs {
             for ctor in &decl.ctors {
                 for field in &ctor.fields {
-                    if let FieldSpec::Data(r) = field {
-                        if !specs.contains_key(r) {
-                            return Err(RegistryError::UnknownTypeRef {
-                                in_decl: name.clone(),
-                                missing: r.clone(),
-                            });
-                        }
-                    }
+                    validate_field_spec(name, field, specs)?;
                 }
             }
         }
@@ -283,6 +380,82 @@ impl DataRegistry {
     }
 }
 
+// --- Validation helpers -----------------------------------------------------------------------
+
+/// Validate a single [`FieldSpec`] (and, recursively, any [`FieldTyRef`] nodes inside `Fn`
+/// signatures): check that all `Data` references name existing declarations, and that every `Fn`'s
+/// `arity == sig.params.len()`. Never-silent on either violation (G2).
+fn validate_field_spec(
+    in_decl: &str,
+    field: &FieldSpec,
+    specs: &BTreeMap<String, DeclSpec>,
+) -> Result<(), RegistryError> {
+    match field {
+        FieldSpec::Repr(_) => Ok(()),
+        FieldSpec::Data(r) => {
+            if !specs.contains_key(r) {
+                Err(RegistryError::UnknownTypeRef {
+                    in_decl: in_decl.to_owned(),
+                    missing: r.clone(),
+                })
+            } else {
+                Ok(())
+            }
+        }
+        FieldSpec::Fn { arity, sig } => {
+            // Well-formedness: arity == params.len() (never-silent — RegistryError::FnArityMismatch).
+            if *arity as usize != sig.params.len() {
+                return Err(RegistryError::FnArityMismatch {
+                    in_decl: in_decl.to_owned(),
+                    arity: *arity,
+                    params_len: sig.params.len(),
+                });
+            }
+            // Validate each param and the return type recursively.
+            for param in &sig.params {
+                validate_field_ty_ref(in_decl, param, specs)?;
+            }
+            validate_field_ty_ref(in_decl, &sig.ret, specs)
+        }
+    }
+}
+
+/// Validate a [`FieldTyRef`] (parameter or return inside a `Fn` signature) recursively.
+fn validate_field_ty_ref(
+    in_decl: &str,
+    ty_ref: &FieldTyRef,
+    specs: &BTreeMap<String, DeclSpec>,
+) -> Result<(), RegistryError> {
+    match ty_ref {
+        FieldTyRef::Repr(_) => Ok(()),
+        FieldTyRef::Data(r) => {
+            if !specs.contains_key(r) {
+                Err(RegistryError::UnknownTypeRef {
+                    in_decl: in_decl.to_owned(),
+                    missing: r.clone(),
+                })
+            } else {
+                Ok(())
+            }
+        }
+        FieldTyRef::Fn(nested) => {
+            if nested.arity as usize != nested.params.len() {
+                return Err(RegistryError::FnArityMismatch {
+                    in_decl: in_decl.to_owned(),
+                    arity: nested.arity,
+                    params_len: nested.params.len(),
+                });
+            }
+            for param in &nested.params {
+                validate_field_ty_ref(in_decl, param, specs)?;
+            }
+            validate_field_ty_ref(in_decl, &nested.ret, specs)
+        }
+    }
+}
+
+// --- Encoding ---------------------------------------------------------------------------------
+
 /// The **canonical, name-independent order** of a strongly-connected declaration group (the Unison
 /// cycle recipe, RFC-0007 §4.2; R7-Q3). Each member is keyed by a *local* hash computed with all
 /// in-cycle references collapsed to one shared placeholder — so the ordering depends only on
@@ -315,6 +488,9 @@ fn canonical_cycle_order(
 /// Encode a declaration's identity-bearing structure into `c`: each constructor (order significant)
 /// and its fields (order significant), with names excluded. In-cycle data references become a
 /// placeholder index; out-of-cycle data references become the referenced hash.
+///
+/// For `FieldSpec::Fn`, the full signature (params + return) is encoded with fresh tags
+/// (`FIELD_FN`, `FN_SIG_*`, `FTR_*`) so distinct fn types never collide (ADR-033 §10 PATH-A).
 fn encode_decl(
     c: &mut Canon,
     decl: &DeclSpec,
@@ -326,29 +502,97 @@ fn encode_decl(
     for ctor in &decl.ctors {
         c.u64(ctor.fields.len() as u64);
         for field in &ctor.fields {
-            match field {
-                FieldSpec::Repr(r) => {
-                    c.tag(crate::content::tag::FIELD_REPR);
-                    c.repr(r);
-                }
-                FieldSpec::Data(name) => {
-                    if let Some(&idx) = in_cycle.get(name.as_str()) {
-                        c.tag(crate::content::tag::FIELD_CYCLE);
-                        c.u32(idx as u32);
-                    } else {
-                        c.tag(crate::content::tag::FIELD_DATA);
-                        // Resolved earlier (dependencies-first); a reference inside the validated
-                        // spec set with a non-cycle target always has a hash by now.
-                        c.hash(&by_name[name]);
-                    }
-                }
-            }
+            encode_field_spec(c, field, in_cycle, by_name);
         }
     }
 }
 
-/// Build the resolved [`DataDecl`] for `decl`, with each data field carrying the referenced
-/// declaration's (now-computed) hash.
+/// Encode a single [`FieldSpec`] into `c`, cycle-aware.
+fn encode_field_spec(
+    c: &mut Canon,
+    field: &FieldSpec,
+    in_cycle: &BTreeMap<&str, usize>,
+    by_name: &BTreeMap<String, ContentHash>,
+) {
+    match field {
+        FieldSpec::Repr(r) => {
+            c.tag(crate::content::tag::FIELD_REPR);
+            c.repr(r);
+        }
+        FieldSpec::Data(name) => {
+            if let Some(&idx) = in_cycle.get(name.as_str()) {
+                c.tag(crate::content::tag::FIELD_CYCLE);
+                c.u32(idx as u32);
+            } else {
+                c.tag(crate::content::tag::FIELD_DATA);
+                // Resolved earlier (dependencies-first); a reference inside the validated
+                // spec set with a non-cycle target always has a hash by now.
+                c.hash(&by_name[name]);
+            }
+        }
+        FieldSpec::Fn { arity, sig } => {
+            // ADR-033 §10 PATH-A: emit FIELD_FN + arity + full signature.
+            // The arity is redundant with sig.params.len() (validated at build), but is encoded
+            // separately so the saturation invariant is readable without parsing the signature.
+            c.tag(crate::content::tag::FIELD_FN);
+            c.u32(*arity);
+            encode_fn_sig(c, sig, in_cycle, by_name);
+        }
+    }
+}
+
+/// Encode a [`FnSig`] (params + return) into `c`, cycle-aware.
+/// Tag layout: `FN_SIG_PARAMS u64(count) [param]… FN_SIG_RET [ret]`
+fn encode_fn_sig(
+    c: &mut Canon,
+    sig: &FnSig,
+    in_cycle: &BTreeMap<&str, usize>,
+    by_name: &BTreeMap<String, ContentHash>,
+) {
+    c.tag(crate::content::tag::FN_SIG_PARAMS);
+    c.u64(sig.params.len() as u64);
+    for param in &sig.params {
+        encode_field_ty_ref(c, param, in_cycle, by_name);
+    }
+    c.tag(crate::content::tag::FN_SIG_RET);
+    encode_field_ty_ref(c, &sig.ret, in_cycle, by_name);
+}
+
+/// Encode a [`FieldTyRef`] (a param or return leaf) into `c`, cycle-aware.
+fn encode_field_ty_ref(
+    c: &mut Canon,
+    ty_ref: &FieldTyRef,
+    in_cycle: &BTreeMap<&str, usize>,
+    by_name: &BTreeMap<String, ContentHash>,
+) {
+    match ty_ref {
+        FieldTyRef::Repr(r) => {
+            c.tag(crate::content::tag::FTR_REPR);
+            c.repr(r);
+        }
+        FieldTyRef::Data(name) => {
+            // A `Data` leaf inside a signature is a genuine declaration edge: if it names an
+            // in-cycle declaration, it must use the placeholder, not the (circular) final hash —
+            // exactly the same rule as a top-level `FieldSpec::Data` (FLAG-3, ADR-033 §10.2 Q3).
+            if let Some(&idx) = in_cycle.get(name.as_str()) {
+                c.tag(crate::content::tag::FTR_DATA_CYCLE);
+                c.u32(idx as u32);
+            } else {
+                c.tag(crate::content::tag::FTR_DATA);
+                c.hash(&by_name[name]);
+            }
+        }
+        FieldTyRef::Fn(nested) => {
+            c.tag(crate::content::tag::FTR_FN);
+            encode_fn_sig(c, nested, in_cycle, by_name);
+        }
+    }
+}
+
+// --- Resolution -------------------------------------------------------------------------------
+
+/// Build the resolved [`DataDecl`] for `decl`, with each data field (and each `Data` leaf inside
+/// `Fn` signatures) carrying the referenced declaration's (now-computed) hash.
 fn resolve_decl(decl: &DeclSpec, by_name: &BTreeMap<String, ContentHash>) -> DataDecl {
     DataDecl {
         ctors: decl
@@ -358,32 +602,61 @@ fn resolve_decl(decl: &DeclSpec, by_name: &BTreeMap<String, ContentHash>) -> Dat
                 fields: ctor
                     .fields
                     .iter()
-                    .map(|f| match f {
-                        FieldSpec::Repr(r) => FieldTy::Repr(r.clone()),
-                        FieldSpec::Data(name) => FieldTy::Data(by_name[name].clone()),
-                    })
+                    .map(|f| resolve_field_spec(f, by_name))
                     .collect(),
             })
             .collect(),
     }
 }
 
+fn resolve_field_spec(field: &FieldSpec, by_name: &BTreeMap<String, ContentHash>) -> FieldTy {
+    match field {
+        FieldSpec::Repr(r) => FieldTy::Repr(r.clone()),
+        FieldSpec::Data(name) => FieldTy::Data(by_name[name].clone()),
+        FieldSpec::Fn { arity, sig } => FieldTy::Fn {
+            arity: *arity,
+            sig: resolve_fn_sig(sig, by_name),
+        },
+    }
+}
+
+fn resolve_fn_sig(sig: &FnSig, by_name: &BTreeMap<String, ContentHash>) -> ResolvedFnSig {
+    ResolvedFnSig {
+        params: sig
+            .params
+            .iter()
+            .map(|p| resolve_field_ty_ref(p, by_name))
+            .collect(),
+        ret: Box::new(resolve_field_ty_ref(&sig.ret, by_name)),
+    }
+}
+
+fn resolve_field_ty_ref(
+    ty_ref: &FieldTyRef,
+    by_name: &BTreeMap<String, ContentHash>,
+) -> ResolvedFieldTyRef {
+    match ty_ref {
+        FieldTyRef::Repr(r) => ResolvedFieldTyRef::Repr(r.clone()),
+        FieldTyRef::Data(name) => ResolvedFieldTyRef::Data(by_name[name].clone()),
+        FieldTyRef::Fn(nested) => ResolvedFieldTyRef::Fn(Box::new(resolve_fn_sig(nested, by_name))),
+    }
+}
+
+// --- SCC (Tarjan) -----------------------------------------------------------------------------
+
 /// Tarjan's strongly-connected components over the declaration dependency graph (an edge `A → B`
-/// when `A` has a data field of type `B`). Returns the SCCs in **reverse-topological order**
-/// (dependencies before dependents), which is exactly the order [`DataRegistry::build`] needs so
-/// every out-of-cycle reference is hashed first. Member order within an SCC is the specs' iteration
-/// (name) order — a provisional tie-break for multi-member cycles (R7-Q3, deferred to r4).
+/// when `A` has a data field of type `B`, **or** when a `Fn` signature inside `A` has a `Data`
+/// parameter/return referencing `B` — FLAG-3, ADR-033 §10.2 Q3). Returns the SCCs in
+/// **reverse-topological order** (dependencies before dependents).
 fn strongly_connected_components(specs: &BTreeMap<String, DeclSpec>) -> Vec<Vec<String>> {
-    // Successors: the distinct data-typed field references of each declaration.
+    // Successors: the distinct data-declaration references reachable from each declaration,
+    // including those inside `Fn` signatures (FLAG-3: Data edges inside sigs are genuine
+    // declaration deps and must participate in the SCC graph — ADR-033 §10.2 Q3).
     let succ = |name: &str| -> Vec<String> {
         let mut out: Vec<String> = Vec::new();
         for ctor in &specs[name].ctors {
             for field in &ctor.fields {
-                if let FieldSpec::Data(r) = field {
-                    if !out.contains(r) {
-                        out.push(r.clone());
-                    }
-                }
+                collect_data_refs_field_spec(field, &mut out);
             }
         }
         out
@@ -454,267 +727,41 @@ fn strongly_connected_components(specs: &BTreeMap<String, DeclSpec>) -> Vec<Vec<
     t.out
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn nat_spec() -> BTreeMap<String, DeclSpec> {
-        // type Nat = Z | S(Nat)
-        let mut m = BTreeMap::new();
-        m.insert(
-            "Nat".to_owned(),
-            DeclSpec {
-                ctors: vec![
-                    CtorSpec { fields: vec![] },
-                    CtorSpec {
-                        fields: vec![FieldSpec::Data("Nat".to_owned())],
-                    },
-                ],
-            },
-        );
-        m
-    }
-
-    #[test]
-    fn self_recursive_decl_hashes_without_looping() {
-        let reg = DataRegistry::build(&nat_spec()).expect("builds");
-        let z = reg.ctor_ref("Nat", 0).expect("Z");
-        let s = reg.ctor_ref("Nat", 1).expect("S");
-        assert_eq!(z.decl(), s.decl(), "same declaration");
-        assert_eq!(z.index(), 0);
-        assert_eq!(s.index(), 1);
-        assert_eq!(reg.field_count(&z), Some(0));
-        assert_eq!(reg.field_count(&s), Some(1));
-        assert_eq!(reg.ctor_count(&s), Some(2));
-    }
-
-    #[test]
-    fn identity_is_structural_not_nominal() {
-        // The same structure under a different *name* gets the same declaration hash (names are not
-        // identity — ADR-003).
-        let mut renamed = BTreeMap::new();
-        renamed.insert(
-            "Peano".to_owned(),
-            DeclSpec {
-                ctors: vec![
-                    CtorSpec { fields: vec![] },
-                    CtorSpec {
-                        fields: vec![FieldSpec::Data("Peano".to_owned())],
-                    },
-                ],
-            },
-        );
-        let nat = DataRegistry::build(&nat_spec()).unwrap();
-        let peano = DataRegistry::build(&renamed).unwrap();
-        assert_eq!(
-            nat.decl_hash("Nat"),
-            peano.decl_hash("Peano"),
-            "α-equivalent declarations collide regardless of name"
-        );
-    }
-
-    #[test]
-    fn constructor_order_is_identity_bearing() {
-        // Z | S(Nat)  vs  S(Nat) | Z  are different declarations (order significant).
-        let mut swapped = BTreeMap::new();
-        swapped.insert(
-            "Nat".to_owned(),
-            DeclSpec {
-                ctors: vec![
-                    CtorSpec {
-                        fields: vec![FieldSpec::Data("Nat".to_owned())],
-                    },
-                    CtorSpec { fields: vec![] },
-                ],
-            },
-        );
-        let a = DataRegistry::build(&nat_spec()).unwrap();
-        let b = DataRegistry::build(&swapped).unwrap();
-        assert_ne!(a.decl_hash("Nat"), b.decl_hash("Nat"));
-    }
-
-    #[test]
-    fn field_repr_is_identity_bearing() {
-        // type B8 = Wrap(Binary{8})  vs  type B8 = Wrap(Binary{4}) differ.
-        let mk = |w| {
-            let mut m = BTreeMap::new();
-            m.insert(
-                "W".to_owned(),
-                DeclSpec {
-                    ctors: vec![CtorSpec {
-                        fields: vec![FieldSpec::Repr(Repr::Binary { width: w })],
-                    }],
-                },
-            );
-            DataRegistry::build(&m).unwrap()
-        };
-        assert_ne!(mk(8).decl_hash("W"), mk(4).decl_hash("W"));
-    }
-
-    #[test]
-    fn a_dangling_reference_is_an_explicit_error() {
-        let mut m = BTreeMap::new();
-        m.insert(
-            "Tree".to_owned(),
-            DeclSpec {
-                ctors: vec![CtorSpec {
-                    fields: vec![FieldSpec::Data("Forest".to_owned())], // not declared
-                }],
-            },
-        );
-        assert_eq!(
-            DataRegistry::build(&m).unwrap_err(),
-            RegistryError::UnknownTypeRef {
-                in_decl: "Tree".to_owned(),
-                missing: "Forest".to_owned(),
+/// Collect distinct data-declaration names reachable from a [`FieldSpec`] — including those nested
+/// inside `Fn` signatures (FLAG-3, ADR-033 §10.2 Q3). Appends to `out`; deduplicates.
+fn collect_data_refs_field_spec(field: &FieldSpec, out: &mut Vec<String>) {
+    match field {
+        FieldSpec::Repr(_) => {}
+        FieldSpec::Data(r) => {
+            if !out.contains(r) {
+                out.push(r.clone());
             }
-        );
+        }
+        FieldSpec::Fn { sig, .. } => {
+            collect_data_refs_fn_sig(sig, out);
+        }
     }
+}
 
-    #[test]
-    fn mutual_recursion_orders_canonically_and_name_independently() {
-        // type Tree = Leaf | Node(Forest);  type Forest = Empty | Cons(Tree, Forest)
-        // A mutually-recursive 2-cycle. Building it under two different *name* sets for the same
-        // structure must yield the same group identity (R7-Q3: names are not identity, ADR-003).
-        let mk = |t: &str, f: &str| {
-            let mut m = BTreeMap::new();
-            m.insert(
-                t.to_owned(),
-                DeclSpec {
-                    ctors: vec![
-                        CtorSpec { fields: vec![] },
-                        CtorSpec {
-                            fields: vec![FieldSpec::Data(f.to_owned())],
-                        },
-                    ],
-                },
-            );
-            m.insert(
-                f.to_owned(),
-                DeclSpec {
-                    ctors: vec![
-                        CtorSpec { fields: vec![] },
-                        CtorSpec {
-                            fields: vec![
-                                FieldSpec::Data(t.to_owned()),
-                                FieldSpec::Data(f.to_owned()),
-                            ],
-                        },
-                    ],
-                },
-            );
-            DataRegistry::build(&m).unwrap()
-        };
-        let a = mk("Tree", "Forest");
-        let b = mk("Arbol", "Bosque");
-        // The structurally-corresponding declarations collide across the renaming.
-        assert_eq!(a.decl_hash("Tree"), b.decl_hash("Arbol"));
-        assert_eq!(a.decl_hash("Forest"), b.decl_hash("Bosque"));
-        // Building twice is deterministic.
-        assert_eq!(a.decl_hash("Tree"), mk("Tree", "Forest").decl_hash("Tree"));
+/// Collect data-declaration names reachable from a [`FnSig`] (params + return).
+fn collect_data_refs_fn_sig(sig: &FnSig, out: &mut Vec<String>) {
+    for param in &sig.params {
+        collect_data_refs_field_ty_ref(param, out);
     }
+    collect_data_refs_field_ty_ref(&sig.ret, out);
+}
 
-    #[test]
-    fn out_of_cycle_reference_resolves_dependencies_first() {
-        // type Byte = MkByte(Binary{8});  type Pair = MkPair(Byte, Byte) — no cycle, Byte first.
-        let mut m = BTreeMap::new();
-        m.insert(
-            "Byte".to_owned(),
-            DeclSpec {
-                ctors: vec![CtorSpec {
-                    fields: vec![FieldSpec::Repr(Repr::Binary { width: 8 })],
-                }],
-            },
-        );
-        m.insert(
-            "Pair".to_owned(),
-            DeclSpec {
-                ctors: vec![CtorSpec {
-                    fields: vec![
-                        FieldSpec::Data("Byte".to_owned()),
-                        FieldSpec::Data("Byte".to_owned()),
-                    ],
-                }],
-            },
-        );
-        let reg = DataRegistry::build(&m).expect("builds");
-        let pair = reg.ctor_ref("Pair", 0).expect("MkPair");
-        let byte_decl = reg.decl_hash("Byte").unwrap().clone();
-        // The Pair constructor's two fields both resolve to the Byte declaration hash.
-        let decl = reg.ctor(&pair).unwrap();
-        assert_eq!(
-            decl.fields,
-            vec![FieldTy::Data(byte_decl.clone()), FieldTy::Data(byte_decl)]
-        );
-    }
-
-    // Mutant-witnesses for data.rs:65:9 (CtorRef::fmt → Ok(Default::default())) and
-    // data.rs:134:9 (RegistryError::fmt → Ok(Default::default())):
-    // A Display returning an empty string is undetectable if never formatted and asserted.
-    #[test]
-    fn ctor_ref_display_is_hash_prefixed_and_non_empty() {
-        let nat = DataRegistry::build(&nat_spec()).expect("builds");
-        let z = nat.ctor_ref("Nat", 0).expect("Z constructor");
-        let s_ref = format!("{z}");
-        // CtorRef formats as "#<declhash>#<index>" — must start with '#' and be non-empty.
-        assert!(!s_ref.is_empty(), "CtorRef Display must not be empty");
-        assert!(
-            s_ref.starts_with('#'),
-            "CtorRef Display must start with '#': got {s_ref:?}"
-        );
-        // Index 0 appears in the ref; index 1 gives a different display.
-        let s = nat.ctor_ref("Nat", 1).expect("S constructor");
-        let s_str = format!("{s}");
-        assert_ne!(s_ref, s_str, "Z and S CtorRef must display differently");
-    }
-
-    #[test]
-    fn registry_error_display_is_non_empty() {
-        let err = RegistryError::UnknownTypeRef {
-            in_decl: "Tree".to_owned(),
-            missing: "Forest".to_owned(),
-        };
-        let msg = format!("{err}");
-        assert!(!msg.is_empty(), "RegistryError Display must not be empty");
-        assert!(
-            msg.contains("Tree"),
-            "must mention the declaring type: {msg:?}"
-        );
-        assert!(
-            msg.contains("Forest"),
-            "must mention the missing type: {msg:?}"
-        );
-    }
-
-    // Mutant-witness for data.rs:252:29 (`<` → `<=` in DataRegistry::ctor_ref):
-    // `if (index as usize) < decl.ctors.len()` — with `<=`, an out-of-range index
-    // (= len) would be returned as Some, creating an invalid CtorRef.
-    #[test]
-    fn ctor_ref_out_of_range_index_returns_none() {
-        let nat = DataRegistry::build(&nat_spec()).expect("builds");
-        // Nat has exactly 2 constructors (index 0 and 1).
-        assert!(nat.ctor_ref("Nat", 0).is_some(), "index 0 must exist");
-        assert!(nat.ctor_ref("Nat", 1).is_some(), "index 1 must exist");
-        // index 2 is out of range; must return None (not Some with an invalid index).
-        assert_eq!(
-            nat.ctor_ref("Nat", 2),
-            None,
-            "index 2 (== ctor count) must return None"
-        );
-    }
-
-    // Mutant-witness for data.rs:262:9 (`DataRegistry::decl` → always None):
-    // If decl() always returns None, looking up a registered declaration fails.
-    #[test]
-    fn decl_returns_some_for_registered_hash() {
-        let nat = DataRegistry::build(&nat_spec()).expect("builds");
-        let hash = nat.decl_hash("Nat").expect("Nat is registered");
-        let decl = nat.decl(hash);
-        assert!(
-            decl.is_some(),
-            "decl() must return Some for a registered hash"
-        );
-        // Must have exactly 2 constructors (Z and S).
-        assert_eq!(decl.unwrap().ctors.len(), 2, "Nat must have 2 constructors");
+/// Collect data-declaration names reachable from a [`FieldTyRef`] leaf.
+fn collect_data_refs_field_ty_ref(ty_ref: &FieldTyRef, out: &mut Vec<String>) {
+    match ty_ref {
+        FieldTyRef::Repr(_) => {}
+        FieldTyRef::Data(r) => {
+            if !out.contains(r) {
+                out.push(r.clone());
+            }
+        }
+        FieldTyRef::Fn(nested) => {
+            collect_data_refs_fn_sig(nested, out);
+        }
     }
 }

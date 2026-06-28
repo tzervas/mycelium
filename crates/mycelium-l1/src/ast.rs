@@ -396,6 +396,21 @@ impl FnSig {
     }
 }
 
+/// The execution-mode request for a definition (DN-58 §C; RFC-0004 `ExecutionMode`). Recorded on
+/// the definition's metadata by an `@tier(mode)` attribute. Mode selection is **non-semantic**
+/// (NFR-7: interpreted ↔ compiled is observable-equivalent per the RFC-0004 §3 certificate
+/// checker); it is a performance **hint**, not a behavioural switch. Never-silent on an ineligible
+/// compiled request — the checker emits an EXPLAIN record, falls back to interpreted (G2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExecutionMode {
+    /// `@tier(interpreted)` — always use the L1 / interpreter path (the default; always available).
+    Interpreted,
+    /// `@tier(compiled)` — request AOT compilation when the definition is AOT-eligible
+    /// (RFC-0004 §4 stable-component gate). If ineligible, the checker falls back to `Interpreted`
+    /// with a never-silent EXPLAIN record (G2).
+    Compiled,
+}
+
 /// A function definition. `thaw` de-matures this def — keeps it interpreted inside a matured
 /// scope; RFC-0017 §4.3. Maturation itself is a scope/header attribute, not a per-fn modifier.
 #[derive(Debug, Clone, PartialEq)]
@@ -407,6 +422,9 @@ pub struct FnDecl {
     pub vis: Vis,
     /// `thaw` de-matures this def — keeps it interpreted inside a matured scope; RFC-0017 §4.3.
     pub thaw: bool,
+    /// `@tier(mode)` execution-mode request (DN-58 §C; RFC-0004 `ExecutionMode`). `None` = no
+    /// explicit request (the default is interpreted). Never a behavioural switch — NFR-7.
+    pub tier: Option<ExecutionMode>,
     /// Its signature.
     pub sig: FnSig,
     /// Its body expression.
@@ -695,6 +713,30 @@ pub enum Expr {
         head: Box<Expr>,
         /// The arguments.
         args: Vec<Expr>,
+    },
+    /// `fuse(a, b)` — lawful binary merge over a declared `Fuse` semilattice instance (DN-58 §A;
+    /// RFC-0008 RT6). The merge op is carried by the type (`T: Fuse`), not spelled at the call
+    /// site. Result type = `T`; `Meta = meet(meta(a), meta(b))`; provenance =
+    /// `Derived{op:"fuse_join", inputs:[root(a), root(b)]}`. No `Fuse` instance ⇒ `CheckError`
+    /// (never-silent, G2). Elaborates to a `join` call + meta-meet + provenance node — **no new
+    /// L0 node** (KC-3). Guarantee: `Empirical` (three-way differential, DN-58 §A.5).
+    Fuse {
+        /// Left operand.
+        left: Box<Expr>,
+        /// Right operand.
+        right: Box<Expr>,
+    },
+    /// `reclaim(policy) { <body> }` — attach a reified reclamation/supervision policy to a
+    /// structured scope (DN-58 §B; RFC-0008 RT7). `policy` is a supervision-policy value
+    /// (e.g. a `RestartIntensity`/`Supervisor` from `std.runtime`); the body is a scope
+    /// expression (typically a `colony { … }`). Elaborates to `mycelium_std_runtime::supervision`
+    /// dispatch threading a `SupervisionRecord` EXPLAIN trail — **no new L0 node** (KC-3).
+    /// Never-silent on reclamation/restart (G2). Guarantee: `Empirical` (M-713 property-tested).
+    Reclaim {
+        /// The reified supervision/reclamation policy.
+        policy: Box<Expr>,
+        /// The supervised scope body.
+        body: Box<Expr>,
     },
     /// A path/variable reference.
     Path(Path),
