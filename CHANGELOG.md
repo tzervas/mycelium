@@ -32,10 +32,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   - `<=`/`>=` have **no glyph** (retired by RFC-0037 D1); word forms `lte`/`gte` are ordinary calls.
     The new word targets (`lt`/`gt`/`shl`/`shr`/`lte`/`gte`) parse + desugar but surface an explicit
     "unknown function/prim" refusal downstream until their prims land (M-809) — never silent (G2).
-  - **RFC-0025 stays Accepted** (status unchanged): the Accepted → Enacted move is a maintainer
-    ratification step the RFC body explicitly reserves ("do NOT self-Enact"; house rule #3 / VR-5).
-    Docs reconciled: `issues.yaml` M-745 → done; RFC-0025 + RFC-0030 §4.3 append-only notes;
-    `.claude/memory/lang-lexicon-syntax.md` operator table.
+  - **RFC-0025 Accepted → ENACTED** (maintainer ratified in-session, 2026-06-28): with the wiring
+    landed + green, the maintainer made the Accepted → Enacted move the RFC reserved for them ("do
+    NOT self-Enact"; house rule #3 — stepped through Accepted, not skipped). Enacted covers the
+    surface wiring + desugaring; word targets lacking a prim still refuse explicitly until M-809
+    (G2). Docs reconciled: `issues.yaml` M-745 → done; RFC-0025 status + changelog (Enacted) +
+    RFC-0030 §4.3 append-only notes; `.claude/memory/lang-lexicon-syntax.md` operator table.
 
 ### Added (2026-06-28: r4v + ADR-033 FLAG-1 integration wave — fuse/reclaim/tier L1 surface ACTIVE; ADR-033 full-sig encoding landed)
 

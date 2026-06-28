@@ -157,7 +157,10 @@ This RFC cannot honestly move Draft → Proposed (a *complete, ratified* L3 gram
 > nesting follows §4.1 (shift tighter than the bitwise ops), **not** RFC-0037 §6's illustrative
 > sketch, which inverted it — see RFC-0025 changelog **FLAG-E**. So the M-745 half of this RFC's
 > Proposed gate is satisfied **by landed code**, not just by RFC-0037's design argument; M-707
-> (RFC-0020 L2 carve-outs) remains the sole open gate.
+> (RFC-0020 L2 carve-outs) remains the sole open gate. **Update (same day): RFC-0025 itself moved
+> Accepted → Enacted** (maintainer ratified in-session, on the landed+green wiring), so §4.3's
+> reference to "RFC-0025 (Accepted) → Enacted once M-809 lands" is discharged for RFC-0025. This
+> does **not** move RFC-0030 — still gated on M-707.
 
 What **is** already integrated into `docs/spec/grammar/mycelium.ebnf` and need not wait: the
 operator-expression grammar (`op_expr` … `unary_expr`; RFC-0025/M-705), effect annotations (`!{…}`),

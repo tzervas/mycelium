@@ -3388,8 +3388,11 @@ issues:
       `<=`/`>=` have NO glyph (retired by RFC-0037 D1); word forms `lte`/`gte` are ordinary calls.
       The new word targets (lt/gt/shl/shr/lte/gte) parse + desugar but surface an explicit
       "unknown function/prim" refusal downstream until their prims land (M-809), never silent (G2).
-      RFC-0025 stays Accepted pending the maintainer's Accepted -> Enacted ratification (the RFC body
-      explicitly reserves that step — "do NOT self-Enact"); this closes the M-745 wiring gate only.
+      RFC-0025 Accepted -> ENACTED (maintainer ratified in-session 2026-06-28, after the wiring
+      landed green): the maintainer made the Accepted -> Enacted move the RFC reserved for them
+      ("do NOT self-Enact"; stepped through Accepted — house rule #3). This closes the M-745 wiring
+      gate; Enacted covers the surface wiring + desugaring (word targets lacking a prim still refuse
+      explicitly until M-809 — G2).
     body: |
       M-705 landed the infix/prefix operator sugar but DEFERRED the angle-bracket operators —
       ordering (`<`, `<=`, `>`, `>=`) and shift (`<<`, `>>`) — because `<`/`>` collide with the

@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0025 |
-| **Status** | **Accepted** (2026-06-28 — operator residue ratified; M-745 wiring COMMISSIONED) — **operator residue ratified by maintainer 2026-06-28 (in-session)**: the M-745 operator wiring (lt/gt/shl/shr/lte/gte) is COMMISSIONED for implementation (M-745 close + M-809 grammar-supersession epic). → **Enacted** once the M-745 wiring implementation lands. Do NOT self-Enact — Enacted requires maintainer ratification after implementation (house rule #3). Prior status chain (append-only): **Accepted** (2026-06-27) — *Proposed → Accepted, **ratified by the maintainer 2026-06-27** (R1 gate); the angle-bracket-operator deferral (M-745) is lifted by RFC-0037's operator reallocation. Already implemented Rust-first (M-705); → **Enacted** once the desugaring map is updated for RFC-0037 (`<=`/`>=` → `lte`/`gte`, add `lt`/`gt`/`shl`/`shr`).* **Proposed** (2026-06-23) — adopts DN-23's **hybrid** recommendation: a frontend-only infix/prefix sugar layer desugaring to canonical word functions, no L0/L1 kernel change (KC-3). Binding precedence table (§4.1), desugaring map (§4.2), grammar extension normative; implemented Rust-first (M-705 — `crates/mycelium-l1` lexer+parser + `docs/spec/grammar/mycelium.ebnf` + `accept/20-operator-syntax.myc`; sugar↔word agreement L1-eval ≡ L0-interp ≡ AOT **Empirical**). |
+| **Status** | **Enacted** (2026-06-28 — **ratified by the maintainer in-session**: the M-745 operator wiring landed Rust-first in `crates/mycelium-l1` and is green (`just check`, PR #723) — `<`/`>`→`lt`/`gt`, `<<`/`>>`→`shl`/`shr` at the §4.1 Tier-8/Tier-4 slots, `lte`/`gte` word-only, frontend-only/no L0/L1 change (KC-3). Stepped through **Accepted** first (house rule #3 — never skipped). The desugaring map (§4.2) and precedence table (§4.1) are now both binding **and implemented**; the EBNF follows §4.1, not RFC-0037 §6's illustrative sketch (FLAG-E — §6 to be corrected append-only). The remaining word targets without a prim (`div`/`rem`/`band`/`bor`/`eq`/`ne`/`and`/`or`/`lt`/`gt`/`shl`/`shr`/`lte`/`gte`) still refuse explicitly downstream until their prims land (M-809) — never silent (G2); Enacted is over the **surface wiring**, not those pending prim definitions.) Prior status chain (append-only): **Accepted** (2026-06-28 — operator residue ratified; M-745 wiring COMMISSIONED) — **operator residue ratified by maintainer 2026-06-28 (in-session)**: the M-745 operator wiring (lt/gt/shl/shr/lte/gte) is COMMISSIONED for implementation (M-745 close + M-809 grammar-supersession epic). → **Enacted** once the M-745 wiring implementation lands. Do NOT self-Enact — Enacted requires maintainer ratification after implementation (house rule #3). **Accepted** (2026-06-27) — *Proposed → Accepted, **ratified by the maintainer 2026-06-27** (R1 gate); the angle-bracket-operator deferral (M-745) is lifted by RFC-0037's operator reallocation. Already implemented Rust-first (M-705); → **Enacted** once the desugaring map is updated for RFC-0037 (`<=`/`>=` → `lte`/`gte`, add `lt`/`gt`/`shl`/`shr`).* **Proposed** (2026-06-23) — adopts DN-23's **hybrid** recommendation: a frontend-only infix/prefix sugar layer desugaring to canonical word functions, no L0/L1 kernel change (KC-3). Binding precedence table (§4.1), desugaring map (§4.2), grammar extension normative; implemented Rust-first (M-705 — `crates/mycelium-l1` lexer+parser + `docs/spec/grammar/mycelium.ebnf` + `accept/20-operator-syntax.myc`; sugar↔word agreement L1-eval ≡ L0-interp ≡ AOT **Empirical**). |
 | **Type** | Surface / normative (once Accepted) — frontend-only; no L0 or L1 kernel change |
 | **Date** | 2026-06-23 |
 | **Feeds** | E7-5 (operator-syntax leg); E11-1 (surface-language completeness) |
@@ -281,6 +281,16 @@ three-path agreement is **Empirical** (differential trials). The word-function n
 
 ## Meta — changelog
 
+- **2026-06-28 — Accepted → ENACTED (maintainer ratified in-session).** With the M-745 wiring landed
+  and green (PR #723), the maintainer ratified the Accepted → Enacted move that this RFC's Status
+  guard reserved for them ("do NOT self-Enact"). The §4.1 precedence table and §4.2 desugaring map
+  are now binding **and implemented** in `crates/mycelium-l1` (frontend-only, KC-3); the operator
+  surface (`+ - * / % & ^ | << >> < > == != && ||`, unary `- !`, word-only `lte`/`gte`) is complete
+  and stable. Stepped through Accepted first (house rule #3 — not skipped). Scope of Enacted = the
+  **surface wiring + desugaring**; word targets lacking a kernel/stdlib prim still refuse explicitly
+  downstream until M-809 (never silent — G2). **FLAG-E stands** (RFC-0037 §6's illustrative EBNF
+  sketch contradicts the binding §4.1 tiers; §6 to be corrected append-only — the implementation
+  follows §4.1). (Append-only; VR-5; G2.)
 - **2026-06-28 — M-745 operator wiring LANDED (ops kickoff; status UNCHANGED — Accepted).** The
   commissioned wiring is implemented Rust-first in `mycelium-l1` (frontend-only, no L0/L1 change —
   KC-3): the lexer lexes `<<`/`>>` whole as `Tok::Shl`/`Tok::Shr` (`<`/`>` stay `LAngle`/`RAngle`);
