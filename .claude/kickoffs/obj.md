@@ -28,8 +28,8 @@ forms), so it is **zero kernel growth** and `reveal`-able. Field-level `pub` sta
 
 ## Approach (serial-on-L1, inline)
 parse.rs `parse_object_decl` (reuse `parse_type_ref`/`parse_impl_decl`) → ast.rs `Item::Object(ObjectDecl)`
-+ `ViaDecl` → checkty.rs desugar to TypeDecl + ImplDecl(s) + FnDecl(s) (delegating to existing checkers)
-+ granular `pub` (additive over the `Vis` model; never-silent access refusal). elab.rs: no change. Add
+plus `ViaDecl` → checkty.rs desugar to TypeDecl + ImplDecl(s) + FnDecl(s) (delegating to existing checkers),
+plus granular `pub` (additive over the `Vis` model; never-silent access refusal). elab.rs: no change. Add
 accept/reject conformance fixtures + a three-way differential on a desugared object.
 
 ## Definition of Done

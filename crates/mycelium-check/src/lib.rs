@@ -246,7 +246,7 @@ mod tests {
     fn a_clean_program_checks_ok() {
         let r = check_sources(&[(
             "ok.myc".to_owned(),
-            "nodule d\nfn f(x: Binary{8}) -> Binary{8} = x\n".to_owned(),
+            "nodule d\nfn f(x: Binary{8}) => Binary{8} = x\n".to_owned(),
         )]);
         assert!(r.is_ok(), "{:?}", r.findings);
         assert_eq!(r.exit_code(), 0);
@@ -256,7 +256,7 @@ mod tests {
     fn a_parse_error_is_an_explicit_finding_exit_2() {
         let r = check_sources(&[(
             "bad.myc".to_owned(),
-            "nodule d\nfn f(x: Binary{8}) -> Ternary{6} = swap(x, to: Ternary{6})".to_owned(),
+            "nodule d\nfn f(x: Binary{8}) => Ternary{6} = swap(x, to: Ternary{6})".to_owned(),
         )]);
         assert_eq!(r.findings.len(), 1);
         assert_eq!(r.findings[0].kind, FindingKind::Parse);
@@ -268,7 +268,7 @@ mod tests {
         // An undefined name is a check refusal (UnresolvedName-class), routed at the baseline level.
         let r = check_sources(&[(
             "c.myc".to_owned(),
-            "nodule d\nfn f() -> Binary{8} = nope(0b0)\n".to_owned(),
+            "nodule d\nfn f() => Binary{8} = nope(0b0)\n".to_owned(),
         )]);
         assert_eq!(r.exit_code(), 3, "{:?}", r.findings);
         let c = r
@@ -286,11 +286,11 @@ mod tests {
         let r = check_sources(&[
             (
                 "b.myc".to_owned(),
-                "nodule d\nfn f() -> Binary{8} = nope(0b0)\n".to_owned(),
+                "nodule d\nfn f() => Binary{8} = nope(0b0)\n".to_owned(),
             ),
             (
                 "a.myc".to_owned(),
-                "nodule d\nfn g() -> Binary{8} = also_nope(0b0)\n".to_owned(),
+                "nodule d\nfn g() => Binary{8} = also_nope(0b0)\n".to_owned(),
             ),
         ]);
         // Both files reported, sorted by name (a before b).
@@ -307,7 +307,7 @@ mod tests {
         let mut out = Vec::new();
         check_source_default(
             "a.myc",
-            "nodule d\nfn g() -> Binary{8} = also_nope(0b0)\n",
+            "nodule d\nfn g() => Binary{8} = also_nope(0b0)\n",
             &mut out,
         );
         assert!(

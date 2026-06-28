@@ -40,7 +40,7 @@ mod tests {
 
     #[test]
     fn expands_a_binary_ambient_to_longhand() {
-        let src = "nodule d\ndefault paradigm Binary\nfn main() -> {8} = not(0b1011_0010)";
+        let src = "nodule d\ndefault paradigm Binary\nfn main() => {8} = not(0b1011_0010)";
         let out = expand_ambient(src).expect("expands");
         assert!(out.contains("Binary{8}"), "{out}");
         assert!(!out.contains("default paradigm"), "{out}");
@@ -49,7 +49,7 @@ mod tests {
     #[test]
     fn a_check_failure_is_reported_not_partially_rendered() {
         // A paradigm-less repr with no ambient cannot be expanded — it is an explicit diagnostic.
-        let err = expand_ambient("nodule d\nfn main() -> {8} = 0b1011_0010").unwrap_err();
+        let err = expand_ambient("nodule d\nfn main() => {8} = 0b1011_0010").unwrap_err();
         assert!(err.contains("no enclosing ambient"), "{err}");
     }
 
@@ -57,7 +57,7 @@ mod tests {
     fn a_valid_nodule_header_marker_is_preserved() {
         // DN-06 §6: the `// nodule:` marker survives the canonical re-print (M-142), even though
         // comments are otherwise dropped.
-        let src = "// nodule: signals.demo\nnodule signals.demo\ndefault paradigm Binary\nfn main() -> {8} = not(0b1011_0010)";
+        let src = "// nodule: signals.demo\nnodule signals.demo\ndefault paradigm Binary\nfn main() => {8} = not(0b1011_0010)";
         let out = expand_ambient(src).expect("expands");
         assert!(out.starts_with("// nodule: signals.demo\n"), "{out}");
         assert!(out.contains("Binary{8}"), "{out}");
@@ -65,7 +65,7 @@ mod tests {
 
     #[test]
     fn a_malformed_header_marker_is_reported() {
-        let err = expand_ambient("// nodule: 9bad\nnodule d\nfn main() -> Binary{8} = not(0b0)")
+        let err = expand_ambient("// nodule: 9bad\nnodule d\nfn main() => Binary{8} = not(0b0)")
             .unwrap_err();
         assert!(err.contains("nodule"), "{err}");
     }

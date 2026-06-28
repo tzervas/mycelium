@@ -130,6 +130,44 @@ pub enum AmbientParams {
     },
 }
 
+/// A delegation clause inside an `object` body: `via <field_idx> : <TraitName>` (DN-53 M-811).
+/// Generates a forwarding `impl TraitName for ObjectName` whose methods delegate each call to the
+/// value at the positional field index `field_idx`. Guarantee: `Declared` (DN-53 §A.3.2 — the
+/// forwarding is one-to-one structural; out-of-range field index is an explicit `CheckError` at
+/// desugar time — never-silent, G2).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ViaDecl {
+    /// The positional field index (0-based) to delegate through.
+    pub field_idx: u32,
+    /// The trait to forward.
+    pub trait_name: String,
+    /// The trait's type arguments (e.g. `via 0 : Cmp[Binary{8}]`). Empty = bare trait reference.
+    pub trait_args: Vec<TypeRef>,
+}
+
+/// An `object Name[params] { Ctor(T1, T2); via …; impl …; fn … }` composition surface
+/// (DN-53, M-811). Pure frontend desugaring: lowers to `TypeDecl + ImplDecl(s) + FnDecl(s)` in
+/// `checkty.rs` — the elaborator only sees the lowered forms. Zero kernel growth (KC-3);
+/// `reveal`-able per DN-38 §5. Guarantee: `Declared` (structural one-to-one rewrite; confirmed
+/// by the three-way differential in `tests/object_desugar.rs`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct ObjectDecl {
+    /// Cross-nodule visibility (`pub object` exports the type name; M-662).
+    pub vis: Vis,
+    /// Object name (also the type name in the desugared `TypeDecl`).
+    pub name: String,
+    /// Type parameters (unbounded names; same as `TypeDecl::params`).
+    pub params: Vec<String>,
+    /// The single data constructor (same syntax as a `TypeDecl` constructor).
+    pub ctor: Ctor,
+    /// Delegation clauses: `via <field_idx> : <Trait>` (zero or more).
+    pub via_decls: Vec<ViaDecl>,
+    /// Explicit trait `impl` blocks inside the object body.
+    pub impls: Vec<ImplDecl>,
+    /// Inherent functions (top-level fns scoped to this type).
+    pub fns: Vec<FnDecl>,
+}
+
 /// A top-level item.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Item {
@@ -147,6 +185,50 @@ pub enum Item {
     Impl(ImplDecl),
     /// A function definition.
     Fn(FnDecl),
+    /// An `object` composition declaration (DN-53, M-811). Desugars in `checkty.rs` to a
+    /// `TypeDecl` + `ImplDecl`s + `FnDecl`s; the elaborator sees only the lowered forms (zero
+    /// kernel growth, KC-3). The `via` delegation impls are generated after the trait registry is
+    /// built, from the field index and trait signatures.
+    Object(ObjectDecl),
+    /// A user-defined generative-lowering rule `lower Name[params] = <rhs>` (DN-54 / M-812). The
+    /// rule is IL-grammar-checked at definition time; its RHS is a typed Mycelium expression. The
+    /// checker registers it in `Env.lower_rules` and enforces KC-3 (never-silent, G2).
+    Lower(LowerDecl),
+    /// A `derive Name for T` use-site application (DN-54 / M-812 / DN-38 §8.1). Looks up the rule
+    /// registered by the matching `lower` declaration, instantiates the RHS for type `T`, and checks
+    /// the result. Never silent — a missing or rejected rule is an explicit refusal (G2).
+    Derive(DeriveDecl),
+}
+
+/// A user-defined generative-lowering rule: `lower Name[params] = <rhs>` (DN-54 §3.2 / M-812).
+///
+/// The `params` are **type-parameter names** (the rule's abstraction over the type being derived
+/// for); the `rhs` is the explicit lowered term (an [`Expr`]) the rule expands to when applied.
+/// The checker enforces: IL-grammar / type-correctness of the RHS (§4.1), acyclicity (§4.2),
+/// no `wild` blocks (§4.3 hygiene/pureness), RHS lowers to existing L0 nodes — KC-3 (§6).
+/// All refusals are never-silent (G2).
+#[derive(Debug, Clone, PartialEq)]
+pub struct LowerDecl {
+    /// The rule name (e.g. `Checksum` in `lower Checksum[T] = …`).
+    pub name: String,
+    /// The type-parameter names the rule abstracts over (e.g. `["T"]` for `lower Foo[T] = …`).
+    /// Empty means a nullary rule. Each name is unbound at the declaration; the checker introduces
+    /// them as [`crate::checkty::Ty::Var`] while checking the RHS.
+    pub params: Vec<String>,
+    /// The explicit lowered term — a typed Mycelium expression that the rule expands to when
+    /// applied via `derive Name for T`. The RHS is checked against the parameter scope.
+    pub rhs: Expr,
+}
+
+/// A `derive Name for T` application (DN-54 §3.2 / DN-38 §8.1 / M-812). The checker looks up the
+/// `lower` rule named `name`, verifies the rule was accepted, instantiates its RHS at the concrete
+/// type `for_ty`, and checks the result. A missing or rejected rule is an explicit refusal (G2).
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeriveDecl {
+    /// The rule name (e.g. `Checksum` in `derive Checksum for T`).
+    pub name: String,
+    /// The type the rule is applied to (e.g. `Binary{8}` in `derive Checksum for Binary{8}`).
+    pub for_ty: TypeRef,
 }
 
 /// `type Name<params> = Ctor | Ctor(field, …) | …` (LR-1). An optional leading `pub` marks the type

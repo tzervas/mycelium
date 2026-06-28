@@ -4,13 +4,13 @@ markdown fences, no comments (Mycelium has NO comment syntax; every line is code
 
 Structure — a program is a `nodule <name>` header, then one or more declarations:
   nodule bench
-  fn main() -> Binary{8} = not(0b0110_1001)
-Functions: fn name(p: Type, ...) -> RetType = <expr>   (the body is ONE expression after `=`).
-`matured fn ... = ...` marks a promoted, total component, e.g. matured fn unit() -> Ternary{1} = <0>
+  fn main() => Binary{8} = not(0b0110_1001)
+Functions: fn name(p: Type, ...) => RetType = <expr>   (the body is ONE expression after `=`).
+`matured fn ... = ...` marks a promoted, total component, e.g. matured fn unit() => Ternary{1} = 0t0
 
 Types and literals (most-significant digit first):
 - Binary{N}  — N-bit word.   Literal: 0b0110_1001  (the `0b` prefix is REQUIRED; `_` optional)
-- Ternary{N} — N-trit word.  Literal: <+-0>        (trit glyphs + 0 - inside angle brackets)
+- Ternary{N} — N-trit word.  Literal: 0t+-0        (trit glyphs + 0 - after the `0t` prefix)
 
 Operators (use these EXACT forms):
 - not(x)                               complement of one Binary (same width)
@@ -21,21 +21,21 @@ Operators (use these EXACT forms):
 
 Sum types + match (match MUST be exhaustive — one arm per constructor, or a final `_`):
   type Bit = Off | On
-  fn pick(x: Bit) -> Binary{8} = match x { Off => 0b0000_0000, On => 0b1111_1111 }
+  fn pick(x: Bit) => Binary{8} = match x { Off => 0b0000_0000, On => 0b1111_1111 }
 
 Recursive data, recursion, bounded fold, and let:
   type Bytes = End | More(Binary{8}, Bytes)
-  fn head(bs: Bytes) -> Binary{8} = match bs { End => 0b0000_0000, More(b, rest) => b }
-  fn fold(bs: Bytes) -> Binary{8} = for b in bs, acc = 0b1111_1111 => xor(acc, b)
-  fn run() -> Binary{8} = let bs = More(0b0110_1001, End) in fold(bs)
+  fn head(bs: Bytes) => Binary{8} = match bs { End => 0b0000_0000, More(b, rest) => b }
+  fn fold(bs: Bytes) => Binary{8} = for b in bs, acc = 0b1111_1111 => xor(acc, b)
+  fn run() => Binary{8} = let bs = More(0b0110_1001, End) in fold(bs)
 
 Two COMPLETE valid programs to study (these are NOT answers to your task — they show the
 shape and how the pieces fit; write your own program for the task you are given):
 
 nodule demo
-fn twice_xor(x: Binary{8}) -> Binary{8} = xor(xor(x, 0b0000_1111), 0b0000_1111)
-fn main() -> Binary{8} = twice_xor(0b1010_0101)
+fn twice_xor(x: Binary{8}) => Binary{8} = xor(xor(x, 0b0000_1111), 0b0000_1111)
+fn main() => Binary{8} = twice_xor(0b1010_0101)
 
 nodule demo
 type Nat = Z | S(Nat)
-fn weigh(n: Nat) -> Ternary{4} = match n { Z => <0000>, S(m) => add(weigh(m), <000+>) }
+fn weigh(n: Nat) => Ternary{4} = match n { Z => 0t0000, S(m) => add(weigh(m), 0t000+) }

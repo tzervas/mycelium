@@ -76,7 +76,7 @@ TASKS: tuple[Task, ...] = (
         prompt="Define a nullary function `main` returning the 8-bit binary constant 1011_0010.",
         expect_main="Binary{8}",
         expect_baseline=("bin", 8),
-        reference_mycelium="nodule bench\nfn main() -> Binary{8} = 0b1011_0010\n",
+        reference_mycelium="nodule bench\nfn main() => Binary{8} = 0b1011_0010\n",
         reference_baseline="def main():\n    return Bin('1011_0010')\n",
         expect_value=-78,
     ),
@@ -88,7 +88,7 @@ TASKS: tuple[Task, ...] = (
         ),
         expect_main="Binary{8}",
         expect_baseline=("bin", 8),
-        reference_mycelium="nodule bench\nfn main() -> Binary{8} = not(0b1011_0010)\n",
+        reference_mycelium="nodule bench\nfn main() => Binary{8} = not(0b1011_0010)\n",
         reference_baseline="def main():\n    return bnot(Bin('1011_0010'))\n",
         expect_value=77,
     ),
@@ -101,7 +101,7 @@ TASKS: tuple[Task, ...] = (
         expect_main="Binary{8}",
         expect_baseline=("bin", 8),
         reference_mycelium=(
-            "nodule bench\nfn main() -> Binary{8} = xor(0b1011_0010, 0b1111_1111)\n"
+            "nodule bench\nfn main() => Binary{8} = xor(0b1011_0010, 0b1111_1111)\n"
         ),
         reference_baseline=("def main():\n    return xor(Bin('1011_0010'), Bin('1111_1111'))\n"),
         expect_value=77,
@@ -114,7 +114,7 @@ TASKS: tuple[Task, ...] = (
         ),
         expect_main="Ternary{4}",
         expect_baseline=("tern", 4),
-        reference_mycelium="nodule bench\nfn main() -> Ternary{4} = add(<00+->, <0+0->)\n",
+        reference_mycelium="nodule bench\nfn main() => Ternary{4} = add(0t00+-, 0t0+0-)\n",
         reference_baseline="def main():\n    return tadd(Tern('00+-'), Tern('0+0-'))\n",
         expect_value=10,
     ),
@@ -128,7 +128,7 @@ TASKS: tuple[Task, ...] = (
         expect_main="Ternary{6}",
         expect_baseline=("tern", 6),
         reference_mycelium=(
-            "nodule bench\nfn main() -> Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)\n"
+            "nodule bench\nfn main() => Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)\n"
         ),
         reference_baseline=(
             "def main():\n    return swap(Bin('1011_0010'), to=('tern', 6), policy='rt')\n"
@@ -146,8 +146,8 @@ TASKS: tuple[Task, ...] = (
         expect_baseline=("bin", 8),
         reference_mycelium=(
             "nodule bench\n"
-            "fn flip(x: Binary{8}) -> Binary{8} = not(x)\n"
-            "fn main() -> Binary{8} = flip(flip(0b1010_1010))\n"
+            "fn flip(x: Binary{8}) => Binary{8} = not(x)\n"
+            "fn main() => Binary{8} = flip(flip(0b1010_1010))\n"
         ),
         reference_baseline=(
             "def flip(x):\n    return bnot(x)\n\ndef main():\n    return flip(flip(Bin('1010_1010')))\n"
@@ -166,9 +166,9 @@ TASKS: tuple[Task, ...] = (
         reference_mycelium=(
             "nodule bench\n"
             "type Sign = Neg | Zero | Pos\n"
-            "fn label(s: Sign) -> Ternary{1} =\n"
-            "    match s { Neg => <->, Zero => <0>, _ => <+> }\n"
-            "fn main() -> Ternary{1} = label(Zero)\n"
+            "fn label(s: Sign) => Ternary{1} =\n"
+            "    match s { Neg => 0t-, Zero => 0t0, _ => 0t+ }\n"
+            "fn main() => Ternary{1} = label(Zero)\n"
         ),
         reference_baseline=(
             "from enum import Enum\n"
@@ -193,7 +193,7 @@ TASKS: tuple[Task, ...] = (
         ),
         expect_main="Binary{8}",
         expect_baseline=("bin", 8),
-        reference_mycelium="// nodule: bench\n// @matured: true\nnodule bench\nfn main() -> Binary{8} = 0b0000_1111\n",
+        reference_mycelium="// nodule: bench\n// @matured: true\nnodule bench\nfn main() => Binary{8} = 0b0000_1111\n",
         reference_baseline="def main():\n    return Bin('0000_1111')\n",
     ),
     Task(
@@ -209,7 +209,7 @@ TASKS: tuple[Task, ...] = (
         reference_mycelium=(
             "nodule bench\n"
             "type ByteList = End | More(Binary{8}, ByteList)\n"
-            "fn main() -> Binary{8} =\n"
+            "fn main() => Binary{8} =\n"
             "    let bs = More(0b1111_0000, More(0b0000_1111, End)) in\n"
             "    for b in bs, acc = 0b0000_0000 => xor(acc, b)\n"
         ),
@@ -235,9 +235,9 @@ TASKS: tuple[Task, ...] = (
         reference_mycelium=(
             "nodule bench\n"
             "type ByteList = End | More(Binary{8}, ByteList)\n"
-            "fn checksum(bs: ByteList) -> Binary{8} =\n"
+            "fn checksum(bs: ByteList) => Binary{8} =\n"
             "    match bs { End => 0b0000_0000, More(b, rest) => xor(b, checksum(rest)) }\n"
-            "fn main() -> Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))\n"
+            "fn main() => Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))\n"
         ),
         reference_baseline=(
             "def checksum(bs):\n"

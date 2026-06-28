@@ -358,6 +358,9 @@ impl<'e> Mono<'e> {
             traits: BTreeMap::new(),
             instances: BTreeMap::new(),
             impls: BTreeMap::new(),
+            // DN-54 / M-812: monomorphized specializations do not carry lower rules (the rule
+            // registry is a pre-mono artefact — rules are expanded before/at elaborate time).
+            lower_rules: BTreeMap::new(),
         };
         (
             env,
