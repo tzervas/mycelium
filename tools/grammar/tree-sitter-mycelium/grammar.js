@@ -34,6 +34,7 @@ module.exports = grammar({
       'consume',
       'cyst',
       'default',
+      'derive',
       'else',
       'fn',
       'for',
@@ -67,6 +68,7 @@ module.exports = grammar({
       'trait',
       'type',
       'use',
+      'via',
       'wild',
       'with',
       'xloc'

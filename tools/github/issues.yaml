@@ -6786,13 +6786,15 @@ issues:
     labels: [phase:5, type:design, area:language, priority:P2, status:done]
     epic: E7-1
     depends_on: [M-659]
-    landed_basis: "DONE (2026-06-27, lang-design wave) -- DN-53 AUTHORED (docs/notes/DN-53-*.md, status Proposed). DN-37 Q1 follow-on: object-composition sugar keyword `object` (passes the DN-02 three-test gate where class/struct/record fail; one-to-one desugar to type+impl+via, KC-3, reveal-able). DN-37 Q4: granular item-level pub (pub fn/method/let; field-level pub DEFERRED -- fields are positional/unnamed in v0). Gated on the grammar wave (RFC-0037) for surface forms."
+    landed_basis: "DONE (2026-06-28, obj+low integration wave) -- DN-53 AUTHORED + IMPLEMENTED (Rust-first) in mycelium-l1. Surface: `object` is an active item-position keyword; `via` an active keyword. AST Item::Object/ObjectDecl/ViaDecl; parse_object_decl; checker Phase-0 structural desugar (object -> type+impl+fn) + Phase-0b via forwarding-impl generation (never-silent: unknown trait / out-of-range field idx -> CheckError, G2); ambient resolution + surface re-render. Conformance: accept/23-object-composition.myc, reject/28-object-empty-body.myc (renumbered from 22/26 to deconflict with DN-54). Three-way Empirical differential (tests/object_desugar.rs). KC-3: zero kernel growth (desugar to existing nodes). Item-level pub fn inside object body DEFERRED (conservative). DN-53 status: Implemented (Rust-first), pending ratification. Prior: DONE (2026-06-27, lang-design wave) -- DN-53 AUTHORED, status Proposed."
     doc_refs:
       - src:docs/notes/DN-53-Object-Composition-Surface-And-Granular-Visibility.md
       - corpus:DN-37
     body: |
-      Authors the object-composition + granular-visibility design (DN-37 Q1/Q4 follow-ons). Status Proposed;
-      `object` keyword + item-level pub recommended; field-level pub deferred until named fields. Design only.
+      Object-composition + granular-visibility (DN-37 Q1/Q4 follow-ons). DESIGN done + IMPLEMENTED Rust-first
+      in mycelium-l1 (M-811, obj+low integration wave): `object`/`via` active keywords, structural desugar to
+      type+impl+via, never-silent via refusals, three-way differential. Item-level pub fn inside object body
+      deferred (conservative). DN-53 status: Implemented (Rust-first), pending ratification.
 
   - id: M-812
     title: "M-812 -- DN-54: user-extensible generative-lowering surface + checker (inspectable by construction)"
@@ -6800,13 +6802,45 @@ issues:
     labels: [phase:5, type:design, area:language, priority:P2, status:done]
     epic: E7-1
     depends_on: []
-    landed_basis: "DONE (2026-06-27, lang-design wave) -- DN-54 AUTHORED (docs/notes/DN-54-*.md, status Proposed). Operationalizes DN-38's ruling that user-extensible generative lowering is transparent BY CONSTRUCTION: a user defines a surface->L0 lowering rule (recommended keyword `lower`; `macro` fails T-map) whose RHS is explicit typed L0, so reveal works on every user extension automatically -- no opaque step. Held to the same §6 verification (differential + hygiene + round-trip) as built-in passes; no kernel node (KC-3). Gated on RFC-0037 + the verification harness."
+    landed_basis: "DESIGN DONE + IMPLEMENTED PARTIAL (Rust-first) (2026-06-28, obj+low integration wave). DESIGN: DN-54 AUTHORED + ratified-pending (docs/notes/DN-54-*.md). IMPLEMENTED (surface + STRUCTURAL checks only): `lower`/`derive` active keywords (settling grow->derive, DN-38 §8.1); AST Item::Lower/Item::Derive + LowerDecl/DeriveDecl; parse_lower_decl/parse_derive_decl (item position; rejected at expr position, G2); checker Pass-3e structural checks -- rule-name uniqueness, param-name uniqueness, derive name-resolution -- all never-silent (CheckError, G2); rule registered in Env::lower_rules. Conformance accept/22-lower-derive + reject/26-lower-missing-eq + reject/27-derive-missing-for. DEFERRED to M-812-cont (held Declared, VR-5): (1) RHS elaboration to L0 -- derive emits NO L0 today (honest never-silent residual, pinned by guard tests); (2) §4.1 IL-grammar RHS type-check; (3) §6 KC-3 kernel-growth guard; (4) §4.2 cross-rule acyclicity; (5) §7 verification harness. Guards (2)/(3) meaningful only once (1) lands. DN-54 status: Implemented (Rust-first, surface + structural checks), remaining pending -- pending ratification. Prior: DONE (2026-06-27, lang-design wave) -- DN-54 AUTHORED, status Proposed."
     doc_refs:
       - src:docs/notes/DN-54-User-Extensible-Generative-Lowering-Surface.md
       - corpus:DN-38
     body: |
-      Authors the user-extensible generative-lowering design (DN-38 extensibility ruling). Status Proposed;
-      keyword `lower` recommended; transparent-by-construction; same verification as built-in lowerings. Design only.
+      User-extensible generative-lowering (DN-38 extensibility ruling). DESIGN done; IMPLEMENTED PARTIAL Rust-first
+      (M-812, obj+low integration wave): `lower`/`derive` active keywords + STRUCTURAL checks (uniqueness,
+      param-uniqueness, derive name-resolution -- never-silent). The load-bearing SAFETY work -- RHS elaboration
+      to L0, the §4.1 IL-grammar RHS type-check, and the §6 KC-3 kernel-growth guard -- is DEFERRED to M-812-cont
+      (derive emits no L0 today; honest residual, not a fabricated accept). Held Declared (VR-5).
+
+  - id: M-812-cont
+    title: "M-812-cont -- DN-54 derive elaboration + KC-3 kernel-growth guard + IL-grammar RHS check (the load-bearing safety)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:impl, area:language, priority:P2, status:todo]
+    epic: E7-1
+    depends_on: [M-812]
+    landed_basis: "TODO -- the deferred completion of M-812. M-812 landed the lower/derive SURFACE + STRUCTURAL checks; this issue lands the parts that only become meaningful once derive actually elaborates to L0. Until then, derive is an honest never-silent residual (emits no L0; pinned by mycelium-l1 src/tests/checkty.rs::lower_derive_items_add_no_l0_to_an_unrelated_entry). DN-54 stays Implemented (Rust-first, surface+structural), NOT Enacted, until this lands + the §7 harness exists."
+    doc_refs:
+      - src:docs/notes/DN-54-User-Extensible-Generative-Lowering-Surface.md
+      - src:crates/mycelium-l1/src/elab.rs
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Deferred load-bearing safety for DN-54 user-extensible generative lowering (continuation of M-812).
+      M-812 shipped the `lower`/`derive` surface + structural checks (uniqueness, param-uniqueness,
+      derive name-resolution -- all never-silent). This issue lands, in order:
+      (1) RHS ELABORATION TO L0 -- teach crate::elab to instantiate a `lower` rule's RHS at the `derive`
+          target type and splice the resulting L0 into the program (today crate::elab never reads
+          Env::lower_rules, so derive emits no L0 -- an honest residual).
+      (2) IL-GRAMMAR RHS TYPE-CHECK (DN-54 §4.1) -- infer_type the (instantiated) RHS; reject `wild`/FFI,
+          mutation, and ill-formed terms at definition time (never-silent, G2).
+      (3) KC-3 KERNEL-GROWTH GUARD (DN-54 §6) -- the elaborated RHS must lower to EXISTING L0 nodes only;
+          a RHS that would require a new kernel node is a structural refusal (G2). Meaningful once (1) lands.
+      (4) CROSS-RULE ACYCLICITY (DN-54 §4.2) -- reject cycles in the lower-rule dependency graph (today only
+          same-nodule name-uniqueness is enforced).
+      (5) VERIFICATION DISCIPLINE (DN-54 §7) -- differential (observe(surface)==observe(lower)), hygiene
+          (no free-var capture), round-trip (certified mode) over a generated corpus; tiered (DN-20).
+      On completion, revisit the residual-posture guard tests in src/tests/checkty.rs and move DN-54 toward
+      Enacted. Tags stay Declared until each piece has a checked basis (VR-5).
 
   - id: M-813
     title: "M-813 -- lexicon reconciliation: bin/tern/emb/hvec + lambda + derive/via/reveal (DN-02/DN-03)"
