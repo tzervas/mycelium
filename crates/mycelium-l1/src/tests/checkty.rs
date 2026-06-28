@@ -252,3 +252,80 @@ mod depth_budget_tests {
         );
     }
 }
+
+// ---- DN-54 / M-812: lower / derive validation (check-time) ----------------------------------
+
+/// A `lower` rule is registered in `Env::lower_rules` after a successful check.
+#[test]
+fn lower_rule_is_registered_in_env() {
+    let e = env("nodule d\nlower Trivial = true");
+    assert!(
+        e.lower_rules.contains_key("Trivial"),
+        "`lower Trivial = true` must register the rule name in Env::lower_rules"
+    );
+}
+
+/// A parametric `lower` rule with one type param is registered.
+#[test]
+fn lower_rule_with_param_is_registered() {
+    let e = env("nodule d\nlower Wrap[T] = true");
+    assert!(
+        e.lower_rules.contains_key("Wrap"),
+        "`lower Wrap[T] = true` must register the rule name in Env::lower_rules"
+    );
+    assert_eq!(
+        e.lower_rules["Wrap"].params,
+        vec!["T".to_owned()],
+        "params must be `[T]`"
+    );
+}
+
+/// A `derive` application referencing a declared rule must check successfully.
+#[test]
+fn derive_referencing_known_rule_checks() {
+    // `derive Trivial for Binary{8}` must check when `lower Trivial = true` is declared first.
+    let _ = env("nodule d\nlower Trivial = true\nderive Trivial for Binary{8}");
+}
+
+/// A duplicate `lower` rule name in the same nodule is a never-silent check error (G2).
+#[test]
+fn lower_duplicate_rule_name_is_refused() {
+    let err = check_err("nodule d\nlower Trivial = true\nlower Trivial = false");
+    assert!(
+        err.message.contains("duplicate"),
+        "expected duplicate-rule error, got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("Trivial"),
+        "expected rule name in error, got: {}",
+        err.message
+    );
+}
+
+/// Duplicate parameter names in `lower Name[T, T, …]` is a never-silent check error (G2).
+#[test]
+fn lower_duplicate_param_is_refused() {
+    let err = check_err("nodule d\nlower Bad[T, T] = true");
+    assert!(
+        err.message.contains("duplicate"),
+        "expected duplicate-param error, got: {}",
+        err.message
+    );
+}
+
+/// A `derive` referencing an unknown rule name is a never-silent check error (G2).
+#[test]
+fn derive_unknown_rule_name_is_refused() {
+    let err = check_err("nodule d\nderive UnknownRule for Binary{8}");
+    assert!(
+        err.message.contains("unknown"),
+        "expected unknown-rule error, got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("UnknownRule"),
+        "expected rule name in error, got: {}",
+        err.message
+    );
+}

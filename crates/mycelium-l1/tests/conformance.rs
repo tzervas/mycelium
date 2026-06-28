@@ -117,9 +117,11 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "reserved surface keyword (DN-03 §1)",
     ),
     (
-        // M-664 / DN-03 §1: `grow` — reserved the same way as `consume` (see fixture 18).
+        // M-812 / DN-38 §8.1: `grow` is superseded by `derive` — the grow→derive reconciliation.
+        // Its diagnostic points at `derive Name for T` (the active form), naming DN-38 §8.1.
+        // This is distinct from the DN-03 §1 "not yet active" message for `consume` (fixture 18).
         "19-grow-reserved-not-active.myc",
-        "reserved surface keyword (DN-03 §1)",
+        "DN-38",
     ),
     (
         // M-750 / RFC-0032 D4: a `0x..` byte-string literal with an odd hex-digit count is a
@@ -155,6 +157,18 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         // operator-only, the old trit at expression position is a never-silent parse refusal (G2).
         "25-old-angle-trit-retired.myc",
         "expected an expression",
+    ),
+    (
+        // DN-54 §3 / M-812: a `lower` declaration without `=` is a never-silent parse refusal (G2).
+        // The parser expects `lower Name[params]? = <rhs>`.
+        "26-lower-missing-eq.myc",
+        "expected `=` after the rule name/params in a `lower` declaration",
+    ),
+    (
+        // DN-54 §4 / M-812 / DN-38 §8.1: a `derive` application without `for` is a never-silent
+        // parse refusal (G2). The parser expects `derive Name for T`.
+        "27-derive-missing-for.myc",
+        "expected `for` after the rule name in a `derive` application",
     ),
 ];
 
