@@ -48,8 +48,27 @@ Definition of Done** — the anti-drift contract, so sequential kickoffs never i
 **`r4v`→`hof`→`obj`→`low` serialize on `crates/mycelium-l1/src/{checkty,elab}.rs`** (HIGH contention) —
 run strictly sequential, each landing green + promoted before the next (non-conflicting *by
 construction* = serialization, not parallel leaves; the rsm "do L1 surgery inline" rule). `strm` can
-overlap but coordinates on `parse.rs`/`mycelium-fmt`. The grammar follow-ons noted in the RFC-0037
-landing (D2-b short repr keywords; RFC-0025 operator wiring) fold into `strm` or a small follow-on.
+overlap but coordinates on `parse.rs`/`mycelium-fmt`.
+
+**Landed (2026-06-28):** `r4v` (M-667 surface + partial M-710 — repr-fuse executes; reclaim/data-fuse
+residual → `prm`), `obj` (DN-53/M-811), `low` (DN-54/M-812, honest partial). **Pending:** `hof` (R3
+closures), `strm` (mandatory `;`).
+
+## Code-stream follow-ons (sequenced; the current frontier — 2026-06-28)
+
+The implementation follow-ons that fell out of the obj+low and r4v waves + the 2026-06-28 ratification
+batch. Each references `_doc-maintenance.md` and maintains its docs in its DoD. **They serialize on
+`parse.rs`/the runtime** — run sequentially, each landing green before the next.
+
+| UID | Kickoff | Work | Owns | Priority |
+|---|---|---|---|---|
+| **`hrd`** | `hrd.md` | RFC-0028 §4.4 A1/A2/A3 input-validation hardening — the **CRITICAL** parser recursion-guard DoS fix + typed dep-hash | `crates/mycelium-l1/src/parse.rs` + `crates/mycelium-proj/**` | **CRITICAL — 1st** (active parser DoS; gates E14-1) |
+| **`ops`** | `ops.md` | RFC-0025/0030 operator wiring (M-745) — `lt`/`gt`/`shl`/`shr`/`lte`/`gte` precedence + desugar | `crates/mycelium-l1/src/parse.rs` + desugar + `mycelium.ebnf` | 2nd |
+| **`prm`** | `prm.md` | M-817 runtime prim wiring — `reclaim:supervised` + `fuse_join:data` (closes M-710; → DN-58 Enacted) | `crates/mycelium-l1/src/elab.rs` + runtime registry + `mycelium-std-runtime` | 3rd |
+
+`hrd` and `ops` both touch `parse.rs` (serialize); `prm` is the runtime registry + `elab.rs` (largely
+disjoint from the parser, but sequence it after to keep one wave in flight at a time). Fire each in a
+**fresh session** via `/kickoff <uid>` for a clean context budget (anti-drift).
 
 ## Parallel swarms — one kickoff per isolated tree
 
