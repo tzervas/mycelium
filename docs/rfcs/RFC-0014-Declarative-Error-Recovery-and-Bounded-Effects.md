@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0014 |
-| **Status** | **Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design and all §8 dispositions are normative. **Enacted 2026-06-16 — M-352** (#116): the reified recovery subsystem — the result-sum error value, the closed recovery-action set, the registry-shared `on <ErrorClass> => <action>` recovery policy, declared + budgeted effects with a graceful `EffectBudgetExhausted`, the no-undeclared-effect check, and the never-silent `handle` (every error recovered or re-propagated, never dropped) — is code in `crates/mycelium-lsp/src/recover`; the L0-`Match`-over-error-sums lowering target is differentially verified in `mycelium-l1` (no new kernel node, KC-3). Wiring effect-budget enforcement into the AOT env-machine was the RFC-0008 integration — **completed in M-353** (§4.8 changelog entry; the ledger lifted into `mycelium-interp`, an overrun is `EvalError::EffectBudget`).) |
+| **Status** | **Enacted** (drafted 2026-06-16; ratified 2026-06-16 — maintainer sign-off; the §4 design and all §8 dispositions are normative. **Enacted 2026-06-16 — M-352** (#116): the reified recovery subsystem — the result-sum error value, the closed recovery-action set, the registry-shared `on <ErrorClass> => <action>` recovery policy, declared + budgeted effects with a graceful `EffectBudgetExhausted`, the no-undeclared-effect check, and the never-silent `handle` (every error recovered or re-propagated, never dropped) — is code in `crates/mycelium-lsp/src/recover`; the L0-`Match`-over-error-sums lowering target is differentially verified in `mycelium-l1` (no new kernel node, KC-3). Wiring effect-budget enforcement into the AOT env-machine was the RFC-0008 integration — **completed in M-353** (§4.8 changelog entry; the ledger lifted into `mycelium-interp`, an overrun is `EvalError::EffectBudget`).) **r2 (§10) — Phase-2 effect-system enrichment: Proposed (2026-06-28).** Drafted append-only from DN-60's G6 directions: surface budget syntax (D1), effect-row polymorphism + minimal-set inference (D2), hypha-creation in the effect row via Position B+ (D3). No existing v0 content altered. Ratification (Proposed → Accepted) is the maintainer's gate. |
 | **Type** | Foundational / normative (once Accepted) — a **separable** surface + runtime subsystem; minimal/no kernel change (KC-3) |
 | **Date** | 2026-06-16 |
 | **Feeds** | RFC-0006 (the optional recovery/effect surface); RFC-0008 (runtime — where effect budgets are enforced, alongside fuel/depth); RFC-0013 (the diagnostic *presentation* of an error this RFC *acts on*); the stdlib (a `result`/`effect` module candidate, M-346) |
@@ -451,8 +451,364 @@ feedback loop consumes). When the subsystem lands, the invariants I1–I5 are ve
 - **Self-hosting** — the recovery/effect runtime eventually written in Mycelium-lang, consuming its own
   bounded-effect machinery.
 
+## 10. r2 — Phase-2 effect-system enrichment (Proposed, 2026-06-28)
+
+> **Posture (VR-5 / G2 / append-only).** This section is an **additive revision** — it does not
+> alter any prior v0 content (§1–§9, the Meta changelog). Every design decision it records is
+> **`Declared`** (design argument, not a theorem) unless stated otherwise. Nothing here activates
+> any surface, supersedes any v0 invariant (I1–I5), or advances RFC-0014's status: the revision is
+> **Proposed** and awaits maintainer ratification. Grounded in DN-60 §2–§5, RFC-0008 §4.5/§6/§8
+> R8-Q2, RFC-0018 §4.5. Disconfirming evidence and open tensions are flagged in each sub-section.
+
+This revision turns the G6 group of deferred directions (DN-60, 2026-06-28) into a concrete
+Proposed design. The three directions are:
+
+| Direction | v0 locus deferred | r2 §10 design |
+|---|---|---|
+| **D1 — Surface budget syntax** | §3.4 / §4.8 / §8 "budget vocabulary" | §10.1 — O1 static literals first; budget composition semantics |
+| **D2 — Effect-row polymorphism + minimal-set inference** | §8 "effect inference" / §9 "richer effect typing" | §10.2 — effect variables (O1 target), inference-with-shown-output |
+| **D3 — Hypha-creation in the effect row** | §9 "concurrency interaction" / RFC-0008 R8-Q2 | §10.3 — Position B+ (scope-level boundary) |
+
+**What this revision does NOT change:**
+
+- v0 invariants I1 (never-silent recovery), I2 (honest guarantees), I3 (no undeclared effects),
+  I4 (budget overrun is explicit and graceful), and I5 (default tightly scoped; broader opt-in) are
+  **unchanged and non-negotiable**. Every r2 direction must extend, never weaken, these invariants.
+- The v0 `!{…}` surface (M-660), the runtime budget ledger (M-353, `mycelium_interp::budget`), and
+  the compositional coverage check (M-660) remain the live, active mechanism. r2 adds **on top of**
+  them.
+- KC-3 applies: effect rows and inference are checker/surface metadata — **zero new L0 nodes**.
+  Any direction that would require L0 support must be explicitly justified as a KC-3 exception
+  through the kernel-freeze gate (DN-56 §4, condition #3 / ADR-033 precedent).
+
+---
+
+### 10.1 D1 — Surface budget syntax for per-effect bounds (Proposed)
+
+#### 10.1.1 Motivation and current state
+
+The v0 effect system declares effect *kinds* (`retry`, `alloc`, `io`, `cascade`, `time`,
+user-declared `Named`) but does not yet place budget bounds in the signature surface. The
+illustrative form in §3.4:
+
+```text
+fn save(r: Record) -> Result<Unit> !{ retry(<=3), alloc(<=64KiB) } = ...
+```
+
+— is not yet parsed by the M-660 frontend (§3.4 append-only note, 2026-06-22 records this
+explicitly). The runtime budget ledger (M-353 `mycelium_interp::budget`) enforces bounds
+dynamically; the *caller* cannot statically see *how bounded* a callee's effects are. This is an
+I3-completeness gap: the "no undeclared effects" check verifies kind but not magnitude (`Declared`).
+
+#### 10.1.2 Design decision — O1 (static literal bounds) first
+
+**Adopted (Proposed): Option O1 — static literal bounds.** The budget bound is a compile-time
+literal in the effect annotation:
+
+```text
+fn save(r: Record) -> Result<Unit> !{ retry(<=3), alloc(<=64KiB) } = ...
+fn process(data: Data) -> Result<Unit> !{ io, cascade(<=2) } = ...
+```
+
+- `retry(<=N)` — the maximum number of attempts; `N` is a non-negative integer literal.
+- `alloc(<=B)` — memory ceiling; `B` is a byte-count literal (e.g. `64KiB`, `1MiB`).
+- `cascade(<=D)` — maximum handler-cascade depth; `D` is a non-negative integer literal.
+- `time` and `io` carry no static literal bound (their quantities are not statically knowable);
+  a future budget parameter form (O2, §10.1.4) may add them.
+- A bare effect name without a bound (`retry` without `<=N`) is an **error** if that kind
+  requires a bound — consistent with I4 (every potentially-unbounded effect must be bounded).
+
+A missing bound where one is required is a `CheckError` naming the effect kind and the missing
+bound, never silent (G2). `Declared` — the structural budget-coverage check is declared, not proven.
+
+**Rationale (KISS/YAGNI, DN-60 §2.2):** O1 is the simplest mechanism that closes the
+I3-completeness gap and delivers the SC-3 transparency property (a caller can see how bounded a
+callee is). O2 (budget parameters) adds significant signature surface and is deferred to a
+follow-on increment. O3 (policy-reference budgets) is a §9-class future.
+
+**Disconfirming tension:** O1 cannot express DN-05-style dynamic resolution (a budget derived from
+a runtime signal, e.g. available memory). The v0 runtime ledger already supports this; O1 simply
+does not surface it statically. A developer who needs dynamic budget resolution today uses the
+runtime API directly (declared as an effect without a static bound — honesty requires marking it
+`Declared`). O2 would unlock static dynamic resolution; this revision defers it.
+
+#### 10.1.3 Budget composition semantics (Proposed)
+
+v0 checks that a caller's declared effects are a superset of its callees' effects (I3). With
+bounds in the surface, the composition rule must specify what "superset" means for a bounded effect:
+
+**Rule (Proposed):** When a fn `f` calls `g !{ retry(<=M) }` and `h !{ retry(<=N) }`, `f`'s
+declared retry bound must satisfy:
+
+```
+f's declared retry(<=K) where K >= max(M, N)
+```
+
+The **outer bound must dominate** (be at least as large as) the largest callee bound. The
+rationale: `f` can call `g` *or* `h` (or both, sequentially) — the worst case is whichever is
+larger. Summing bounds (K >= M + N) is a conservative option but over-approximates for a fn that
+calls `g` *or* `h`, not both simultaneously; the max-dominance rule is the tightest sound choice
+for a single-pass checker without call-graph reachability. `Declared` — this is a design argument,
+not a mechanized proof.
+
+**Open tension (flagged for ratification):** For a fn that calls `g` and `h` *sequentially*
+(both will execute), the max rule under-approximates the total budget consumed. Whether the Phase-2
+RFC adopts max-dominance or call-graph-path-sum requires a concrete operational semantics decision.
+The budget ledger deducts per-invocation at runtime (M-353); the static annotation is a *contract*
+(upper bound on what can be consumed in one top-level invocation), not an exact count. This
+distinction must be made explicit in the ratification. `Declared` direction; `Empirical` grounding
+minimum for ratification (DN-60 §5 DoD item 1).
+
+**Per-task boundary (RFC-0008 §4.7 C1, DN-60 §2.3, Proposed):** A fn-level budget annotation is
+a **static property of the fn's body**; the per-hypha budget ledger (RFC-0008 §4.7 C1) is a
+**dynamic property of the created task**. These remain **separate concerns** (DN-60 §2.3 direction):
+the spawn form receives a per-hypha budget as a runtime argument or scope default, not conflated
+with the spawning fn's own effect signature. The fn's `!{ … }` annotation does not propagate to
+the spawned hypha's ledger; the hypha's ledger is configured at spawn time. `Declared`.
+
+#### 10.1.4 O2 (budget parameters) — deferred follow-on
+
+O2 (budget parameters in fn signatures, e.g. `fn f<const N: usize>() -> T !{ retry(<=N) }`)
+is **explicitly deferred**: it requires extending fn signatures with budget parameters and deciding
+how they interact with the M-660 trait/impl coverage check (impl-must-equal-trait for effects;
+a budget parameter would require parametric trait methods). O2 is the natural next increment if
+DN-05-style surface resolution is needed; it is not adopted here (YAGNI).
+
+---
+
+### 10.2 D2 — Effect-row polymorphism and minimal-set inference (Proposed)
+
+#### 10.2.1 Motivation
+
+v0 higher-order functions (HOFs) must conservatively **over-declare** the effects of their
+function arguments, or restrict arguments to pure functions. Example:
+
+```text
+-- v0: over-declares; a pure argument triggers a spurious io check
+fn map<T, U>(f: fn(T) -> U !{ io }, list: List<T>) -> List<U> !{ io } = ...
+```
+
+Without effect-row polymorphism a HOF cannot express "I carry whatever effects my argument
+carries" — every stdlib combinator must pick a concrete effect set or pure. This blocks
+effect-polymorphic stdlib APIs (the G6 "unblocks" in the Ratification Map).
+
+#### 10.2.2 D2a — Effect variables (Proposed, direction O1)
+
+**Target direction (Proposed): O1 — effect variables.** A function may be universally quantified
+over an effect row `!E`:
+
+```text
+fn map<T, U, !E>(f: fn(T) -> U !{!E}, list: List<T>) -> List<U> !{!E} = ...
+```
+
+`!E` is an **effect row variable** — it stands for any set of effects. At each call site,
+`!E` is instantiated to the concrete effects of the argument:
+
+```text
+map(pure_fn, xs)          -- !E = {} (pure); map's declared effect = {}
+map(io_fn, xs)            -- !E = {io}; map's declared effect = {io}
+map(retry3_fn, xs)        -- !E = {retry(<=3)}; map's declared effect = {retry(<=3)}
+```
+
+**Extension without weakening I3–I5 (obligation):** Effect variables must not let an effect
+become implicit. Instantiation is always explicit at each call site (the checker infers the
+instantiation from the argument's declared effect set — it is not hidden). An uninstantiated `!E`
+defaults to the **empty set** (pure), not to an unconstrained open set. `Declared` direction.
+
+**KC-3 check (Proposed):** Effect variables are **checker metadata** — they remain in the type
+checker and the `!{…}` surface; they do not require new L0 nodes. The L0 term language sees only
+the concrete (instantiated) effect sets after elaboration. `Declared` — confirmed by the v0
+design: the M-660 coverage check does not lower effects to L0, and this extension would not
+change that. If any L0 node is needed, it must go through the kernel-freeze gate (ADR-033
+precedent) — that is an explicit stop condition for this revision.
+
+**O2 (bounded effect quantification) as a simpler fallback (Proposed):** If O1's implementation
+cost or interaction with the G4 (RFC-0019) polymorphism surface proves prohibitive, O2 —
+bounded row quantification `!{!E, io}` (at least `io`, polymorphic over `!E`) — is an acceptable
+simpler alternative. O3 (named effect groups) is a last-resort fallback with limited HOF
+ergonomics. The Phase-2 RFC must decide which option and justify it. `Declared`.
+
+**Disconfirming tension (flagged):** RFC-0019 (traits and parametric polymorphism) is the G4
+group (a separate ratification cluster). Adding effect variables before G4 is settled risks
+surface-level inconsistency between value type parameters and effect row parameters. The Phase-2
+RFC must either (a) coordinate with RFC-0019 ratification, or (b) explicitly scope effect
+variables as syntactically distinct from value type parameters and justify the separation.
+`Declared` — open sub-question for the maintainer.
+
+#### 10.2.3 RFC-0018 §4.5 Design A soundness precondition — mandatory obligation
+
+RFC-0018 §4.5 (ratified, Design A) records a **load-bearing precondition** (`research/09` T9.6):
+
+> *"Design A's sufficiency rests on the calculus being pure; when observable effects land, they
+> must become graded outputs (RFC-0014, route i) or carry a local `pc` (route ii)."*
+
+**Route i (Proposed):** Observable effects that produce results visible to the caller must become
+**graded outputs** — the result type carries the effect's guarantee grade (via meet, RFC-0018
+§4.1). This is the existing mechanism: `TaskOutcome` (RFC-0008 §4.7 C3) is already a graded
+output for concurrency; the same route applies to effect-row-polymorphic operations. A fn
+`!{!E}` whose argument `f` has effects produces a result whose grade is the meet of the input
+grades and the effect row's observable grade.
+
+**Why route ii is not adopted (Proposed):** Route ii (a local `pc` at each effect site) was
+considered but rejected: it reintroduces the `pc` index at effect boundaries, significantly
+increasing annotation burden and checker complexity (the same objection that led to ratifying
+Design A over Design B for grading — RFC-0018 §4.5). Route i is the simpler, existing mechanism.
+`Declared`.
+
+**Obligation for ratification (non-negotiable, DN-60 §3.2):** This precondition discharge
+**cannot** be `Declared` in the Phase-2 RFC. It requires at minimum `Empirical` grounds
+(a worked-out argument for how effect-row polymorphism satisfies route i, with distinguishing
+examples). A `Proven` tag (mechanized) is the ideal; `Empirical` (worked argument + examples)
+is the minimum for ratifiability. This is a stop condition: a Phase-2 RFC that marks this
+precondition `Declared` is not ratifiable without an upgrade to the grounding.
+
+#### 10.2.4 D2b — Minimal-set inference (Proposed)
+
+**Adopted direction (Proposed): inference-with-shown-output.** The checker may *infer* the
+minimal effect set from the call graph (the union of all reachable callee effects), but the
+inferred set is **always shown explicitly** — on inspect, explain, and hover — and the developer
+is never surprised by an implicit effect. An undeclared effect is never silently permitted (I3).
+
+- **Explicit manual annotations remain legal.** A developer who writes `!{ io, retry(<=3) }`
+  explicitly is not forced to remove it if inference agrees or over-approximates. Manual
+  over-declaration continues to be legal (I5: opt-in broader effects).
+- **When inference disagrees with a manual annotation:**
+  - If the inferred set is a **subset** of the manual annotation, the manual annotation stands
+    (it is a legal over-declaration per I5). The checker may emit an advisory (non-error) note
+    that the annotation is broader than required.
+  - If the inferred set **exceeds** the manual annotation (inference finds an undeclared effect),
+    the checker emits a `CheckError` — exactly as in v0. The developer must either add the effect
+    to the annotation or fix the call graph.
+- **Completeness tag obligation:** The Phase-2 RFC must specify the inference algorithm and tag
+  its completeness claim. A flow-analysis over the call graph is `Empirical`; a proven type
+  inference algorithm with completeness theorem is `Proven`. The revision cannot claim `Proven`
+  for an algorithm that is not mechanized. `Declared` direction; `Empirical` minimum for
+  ratification (DN-60 §5 DoD item 3).
+
+**Disconfirming tension (flagged):** Inference-with-shown-output weakens the "I wrote what my fn
+does" property (RFC-0014 §8 explicit reasoning: "explicit is honest"). An inferred annotation
+that the developer did not write is honest if always surfaced, but it shifts the annotation
+source from "developer intent" to "checker derivation." The Phase-2 RFC should explicitly
+address this tension and state whether inference is opt-in (per-fn or per-nodule) or the
+default. This revision does not settle that question — it defers it to the maintainer.
+
+---
+
+### 10.3 D3 — Hypha-creation in the effect row (Proposed)
+
+#### 10.3.1 The open question (RFC-0008 R8-Q2)
+
+RFC-0008 §8 R8-Q2 asks: does hypha creation (spawning a hypha via the structured concurrency
+form) appear in the effect row of a function's signature?
+
+The three positions (Position A: `spawn` as an effect kind; Position B: RT7 structure alone;
+Position B+: scope-level boundary — described in full in DN-60 §4.2).
+
+#### 10.3.2 Adopted design — Position B+ (scope-level boundary) (Proposed)
+
+**Adopted direction (Proposed): Position B+.** Hypha-creation is **not** a per-fn effect kind
+that propagates through the `!{…}` row of individual functions. Instead, the structured
+concurrency scope (a `colony { … }` block, DN-06/RFC-0008 §4.7, or an equivalent scope-level
+construct) is the **syntactic boundary** that enables spawning within it.
+
+Under B+:
+
+1. **`spawn` does not appear in the `!{…}` effect row.** Individual functions that create hyphae
+   do not carry `spawn` in their signature. The spawning capability is granted by the enclosing
+   scope, not per-fn.
+
+2. **The structured scope is the spawning boundary.** A `colony { … }` block (or equivalent
+   future construct) syntactically declares that hypha creation may occur within it. Code outside
+   a structured scope cannot spawn — this is the RT7 structural invariant (RFC-0008 §4.1),
+   unchanged.
+
+3. **Rationale (Proposed, `Declared`):**
+   - Position A (`spawn` as a per-fn effect) would require `spawn` to propagate up the entire
+     call graph above any spawning function — the verbosity problem (§6 "declared effects can be
+     verbose"), amplified for deeply-nested call graphs. RT7 already provides the structural
+     invariant; per-fn `spawn` is redundant.
+   - Position B (RT7 alone, no annotation) under-communicates: a caller cannot see from a fn's
+     signature whether it may spawn. B+ is a middle path: the spawning *context* is explicit at
+     the scope level, which is where it matters to a reader.
+   - KC-3: B+ requires no new L0 node. The `colony` block is already designed (DN-06/RFC-0008
+     §4.7); B+ adds only a checker rule ("spawning outside a structured scope is a `CheckError`").
+
+4. **RFC-0018 §4.5 Design A precondition — already satisfied (Proposed, `Declared`):**
+   RFC-0008 §4.7 C3 (Enacted, M-356) established `TaskOutcome` as the graded output of a spawned
+   hypha's result. Under B+, the spawned task's result is already on route i (graded output via
+   `TaskOutcome` — RFC-0018 §4.5's route i). No additional grading rule for `spawn` is needed at
+   the per-fn level; the grade of the scope's result is the meet of the `TaskOutcome`'s grades
+   (RFC-0018's meet-composition rule, §4.1 G-App). The Design A precondition is therefore
+   satisfied by the existing `TaskOutcome` mechanism. `Declared` — grounding at `Empirical` or
+   better is the Phase-2 RFC's obligation (DN-60 §5 DoD item 4).
+
+5. **Composition with grading (Proposed, `Declared`):**
+   A `colony { … }` block that spawns hyphae yields a scope result of grade = meet of each
+   `TaskOutcome` grade (RFC-0018 §4.1 meet rule). The scope itself carries no special effect
+   annotation; the grading flows through the value result, consistent with v0 grading and route i.
+
+6. **`cascade` effect kind (unchanged):** The v0 `cascade(<=D)` effect kind (§4.5 I4/I5) bounds
+   re-entrant spawning patterns (bounded restart cascades). B+ does not add a new budget concern
+   for task creation; `cascade` already serves the bounded re-entry obligation. The per-hypha
+   budget ledger (RFC-0008 §4.7 C1; M-353 per-task) is configured at spawn time, not via the
+   spawning fn's effect annotation. `Declared`.
+
+#### 10.3.3 D2/D3 interaction — open sub-question (flagged)
+
+**Flagged tension (DN-60 §4.3):** If D2 (effect variables, O1) is adopted, the interaction
+with B+ must be addressed. Under B+, `spawn` is not a row element and cannot appear in an
+effect variable `!E`; under Position A, it can. The Phase-2 RFC must decide D2 and D3
+**jointly** — or explicitly scope one out and record the rationale. Deciding D3 before D2 is
+settled (as this revision does) is acceptable *for the Proposed status* but is not ratifiable
+until the joint treatment is resolved. `Declared` open sub-question for the maintainer.
+
+---
+
+### 10.4 Definition of Done (ratification gate for r2)
+
+Per house rule #6, this revision carries an explicit Definition of Done. **Ratification
+(Proposed → Accepted) requires the following, all discharged:**
+
+1. **D1 — Budget surface:** The normative surface spelling is fixed (extending M-660's grammar).
+   The budget-composition rule (max-dominance or call-graph-path-sum) is decided with an
+   `Empirical`-or-better operational semantics argument. The trait/impl interaction for bounded
+   effects (impl-must-equal-trait extended to bounds) is specified. The per-hypha budget
+   separation (§10.1.3) is confirmed as correct by operational argument.
+
+2. **D2a — Effect-row polymorphism:** Which option (O1/O2/O3) is normative, with justification.
+   The RFC-0018 §4.5 Design A soundness precondition (§10.2.3) is discharged at **`Empirical`
+   minimum** (route i argument + distinguishing examples). KC-3: zero new L0 nodes confirmed.
+   Interaction with RFC-0019 (G4 group) is resolved or explicitly scoped out with rationale.
+
+3. **D2b — Minimal-set inference:** Adopted or not; if adopted, the inference algorithm is
+   specified and its completeness claim is tagged honestly (`Empirical`/`Proven`). The
+   "inference-with-shown-output" behavior is specified (what the developer sees, when, in what
+   form). Whether inference is opt-in or default is decided.
+
+4. **D3 — Position B+:** The surface form for a spawn-enabling scope (colony block or equivalent)
+   is normative. The RFC-0018 Design A precondition (route i via `TaskOutcome`) is discharged at
+   `Empirical`-or-better. D2 and D3 are jointly decided or independently scoped with explicit
+   rationale.
+
+5. **Invariant preservation (non-negotiable):** A verification argument (at minimum `Declared`)
+   that I3 (no undeclared effects), I4 (budget overrun is explicit and graceful), and I5 (default
+   tightly scoped; broader is opt-in) hold under every adopted direction.
+
+6. **KC-3:** Effect rows, variables, and inference remain checker/surface metadata. If any
+   direction requires a new L0 node, it is explicitly justified through the kernel-freeze gate
+   (DN-56 §4, condition #3 / ADR-033 precedent) — and this is a blocker if not resolved.
+
+7. **Implementation path:** A concrete implementation scope (crate, issue ID) and a `just check`
+   green state (or a stated reason for no code at ratification) are recorded.
+
+**This revision is Proposed.** None of the DoD items above are discharged here; that is the
+work the Phase-2 RFC ratification process entails.
+
+---
+
 ## Meta — changelog
 
+- **2026-06-28 — §10 r2 Phase-2 effect-system enrichment added (Proposed; append-only, VR-5).** Added §10 as an append-only revision section covering the three G6 deferred directions from DN-60: **(D1)** surface budget syntax — O1 static literal bounds first (normative form `retry(<=N)`, `alloc(<=B)`, `cascade(<=D)`), max-dominance composition rule (pending `Empirical` ratification), per-hypha budget kept separate (DN-60 §2.3); **(D2a)** effect-row polymorphism — O1 effect variables (`!E`) as target, instantiation at call-site, KC-3 (no L0 node), RFC-0018 §4.5 Design A precondition via route i (`TaskOutcome`, RFC-0008 §4.7 C3), with O2 bounded quantification as fallback; **(D2b)** minimal-set inference — inference-with-shown-output, explicit-annotation-wins on over-declaration, completeness tag obligation for the Phase-2 RFC; **(D3)** hypha-creation — Position B+ (scope-level boundary, not per-fn effect kind), `colony { … }` as the spawning-enabling scope, RFC-0018 Design A precondition satisfied by existing `TaskOutcome`, `cascade(<=D)` unchanged for re-entry bounds. §10.4 carries the Definition of Done (7 items for Proposed→Accepted). Status header updated append-only to note the r2 Proposed revision. All directions `Declared`; ground-floor obligations for ratification are `Empirical`-minimum (DN-60 §5 DoD). No v0 content altered. No Doc-Index/CHANGELOG/issues.yaml changes — **FLAG to orchestrator/owning parent** for update. Append-only.
 - **2026-06-22 — §3.4 effect-annotation *surface* pinned for the L1 stage-1 frontend; coverage check implemented Rust-first (M-660; append-only, VR-5).** §3.4's previously-**illustrative** `!{…}` effect-annotation form (the §3 banner: "Syntax below is illustrative, not normative … concrete surface syntax is KC-2-gated") is now **pinned as the normative L1 stage-1 surface** — a maintainer decision on the spelling (2026-06-22) — and **implemented Rust-first in `crates/mycelium-l1/`** (pending RFC-0006 ratification of the surface; status header **unchanged — still `Enacted`**, this records an implementation + a surface-spelling pin, not a status move). **Surface:** an **optional** `!{ eff1, eff2 }` after a fn signature's return type — `fn name<params>(value_params) -> ret !{eff1, eff2}`; **absent ⇒ pure** (the empty set; RFC-0014 I5 default-tightly-scoped), and the explicit `!{}` is the same empty/pure set. Effect names are **plain identifiers** (NOT reserved words) — the closed kernel effect kinds `retry|alloc|io|cascade|time` (§4.5) plus user-declared `Named` effects; a **duplicate** name in one annotation is a never-silent **parse** refusal (G2). **Coverage check (I3):** a fn's **declared** effects must be a **superset** of the effects it **performs**, where *performing* = the union of the declared effects of every callee it invokes — a top-level fn OR an unqualified trait method (the latter's effects from the trait registry) — checked over fn bodies **and** impl-method bodies (the §8 "manual-declare + compositional-check" line — the checker *composes* declared effects up the call graph as a **check**, never *infers* an undeclared one; checking impl-method bodies too is what keeps a trait-method/impl effect from being hidden from a caller). **Under-declaration** (performing an undeclared effect) is an explicit `CheckError` naming the effect + the callee; **over-declaration is allowed** (a declaration is a contract — I5). A **trait method** carries effects too: an `impl` method's declared effect set must **equal** the trait method's (exact match in stage-1; an unannotated trait method ⇒ the impl method is pure). **No new L0 node** — effects are **checker metadata** (KC-3); they do **not** lower, and the **runtime budget ledger stays the separate M-353** `mycelium_interp::budget` concern (not wired by this frontend work). Guarantee on the pass: **`Declared`** (a structural coverage check, not a theorem — I3). **Effect *sources* expand later:** `wild`-sourced effects arrive with **M-661** (`wild` stays rejected here), and richer effect typing (rows/inference) remains the §9 future — this frontend lands the **annotation + compositional-coverage** mechanism only. Verified in `mycelium-l1` (`tests/check.rs` effect suite incl. a monotonicity property sweep + the trait/impl effect-conformance cases; `tests/parse.rs` grammar; `accept/16`/`reject/17` conformance fixtures). Append-only.
 - **2026-06-20 — status spelling normalized.** Status header `Accepted — Enacted` → **`Enacted`** (the now-canonical standalone token, per the ratified `Draft/Proposed → Accepted → Enacted → Superseded` lattice, #236); semantics unchanged. Append-only.
 - **2026-06-18 — Append-only note to §4.7 (RFC-0017 Accepted): maturation is now a scope attribute.**

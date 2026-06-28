@@ -42,6 +42,28 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   at integration to deconflict (object `accept/22`→`23`, `reject/26`→`28`; DN-54 keeps `accept/22-lower-derive`
   plus `reject/26`/`27`). `mycelium-l1` builds + tests green with **both** features present.
 
+### Added (2026-06-28: maintainer ratification — 8 design vehicles → Accepted, decisions recorded)
+- **Maintainer ratification batch (2026-06-28, in-session):** 8 design-vehicle drafts from the 2026-06-27 batch are now **Accepted**, with maintainer decisions incorporated (append-only; house rule #3; VR-5):
+  - **RFC-0024** → **Accepted**: (a) currying for multi-arg arrows IN SCOPE for M-704; (b) still-generic-fn-as-arg IN SCOPE for M-704 (no longer deferred). §5 updated. → Enacted once M-704 lands.
+  - **ADR-033** → **FLAG-1 RESOLVED (Path A selected)**: full function signature (params+return) encoded in `FieldSpec::Fn` dispatch hash; FLAG-1 moves to resolved-pending-implementation. → Enacted once full-sig encoding lands (sub-task M-810). Soundness tag stays `Declared` (VR-5).
+  - **RFC-0036** → **Accepted**: single frozen L0 kernel (Option A); 9/10 nodes irreducibly primitive; `FixGroup` FLAG-B still open (derivability check before freeze); zero new VSA/HDC primitives. → Enacted once FLAG-B resolved + freeze mechanism implemented.
+  - **RFC-0028** §4.4 → **signed off**: host-encoding validation bridge accepted; DN-40 A1 (CRITICAL), A2 (HIGH), A3 (HIGH) fixes COMMISSIONED for implementation (must land before E14-1).
+  - **RFC-0025 + RFC-0030** → operator residue ratified; **M-745 wiring (lt/gt/shl/shr/lte/gte) COMMISSIONED** (M-809 grammar-supersession epic). RFC-0025 stays Accepted (Enacted after impl); RFC-0030 stays Enacted with commissioning note.
+  - **DN-59** → **Accepted**: G3 reclamation strategy accepted (7 axes); **DN-62 (fuel-model research note) COMMISSIONED** (being drafted in parallel; FLAG-1 drop-latency question to be addressed there).
+  - **DN-60** → **Accepted**: G6 effect-system Phase-2 direction (D1/D2/D3) accepted; **new RFC-0014 revision COMMISSIONED** (being drafted in parallel).
+  - **DN-61** → **Part A (R1 scheduler normativity) Accepted**; **Part B (R2 distributed agenda) stays Draft** — open research agenda (R8-Q3/Q4, RFC-0027 OQ-2, xloc, fuse-merge). Split explicit in status field.
+
+### Added (2026-06-27: rsm ratification-vehicle batch — 8 design drafts for the blocked-decision groups; design only, no code)
+- A batch of design-vehicle drafts (all **Draft/Proposed**, for maintainer ratification — never self-accepted) addressing the blocked-decision groups catalogued in `docs/planning/Blocked-Decisions-Ratification-Map.md`:
+  - **RFC-0024** §4A — the full Reynolds defunctionalization construction for closures/partial-application/dynamic-fn-flow (fn-tag sum + generated `apply`, **no new L0 node**, KC-3) — G2.
+  - **ADR-033** §10 — proposes resolving **FLAG-1** via a type-carrying dispatch hash (Path A), finding the arity-only encoding hashes distinct fn-types identically (a silent kernel-boundary type-confusion); kept `Declared`, status stays Accepted — G4/G5.
+  - **RFC-0036** §5 — proposed kernel-primitive position (9/10 L0 nodes irreducibly primitive; zero new VSA/HDC primitives; single frozen L0 recommended) — G5.
+  - **RFC-0028** §4.4 — host-encoding validation bridge (parse-into-typed / injective-encode / bounded), sequencing the DN-40 A1/A2/A3 must-fix-before-E14-1 gaps — G11.
+  - **RFC-0025/RFC-0030** — operator/grammar residue after RFC-0037 (precedence-table shift/cmp tiers + `lt`/`gt`/`shl`/`shr`/`lte`/`gte` desugaring) — G9.
+  - **DN-59** (new) — reclamation strategy + cross-hypha sharing (mostly confirm-the-record; one open axis: drop-latency SLO/fuel) — G3.
+  - **DN-60** (new) — effect-system surface direction (Phase-2 direction-capture; not a 1.0 gate) — G6.
+  - **DN-61** (new) — concurrency/distribution: R1 scheduler normativity (ratifiable) + R2 distributed agenda (research-pass items) — G8.
+
 ### Added (2026-06-27: RFC-0037 grammar enactment + DN-57 `;` terminator — the surface-grammar wave)
 
 - **RFC-0037 enacted** in `crates/mycelium-l1` + `mycelium-fmt`: the bracket kind-split (`[T]` type
