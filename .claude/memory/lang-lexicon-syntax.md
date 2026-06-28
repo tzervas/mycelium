@@ -379,6 +379,35 @@ representation families (Q6 resolved):
 **Guarantee annotation** at the type level: `Ternary{6} @ Exact` (LR-6; `@` is a reserved
 operator in the grammar).
 
+**Infix/prefix operators (RFC-0025; frontend-only sugar → canonical word calls, KC-3).** Each
+glyph desugars at parse time to a word function — the desugared `App` node *is* the EXPLAIN record
+(§4.4), so `a + b` and `add(a, b)` are structurally identical. Tiers are tightest-first per the
+ratified §4.1 table (Rust's precedence); every binary op is **left-associative**, prefix ops bind
+tighter than all binary ops. Angle/shift glyphs landed with **M-745** (RFC-0037 D1 made `<`/`>`
+operator-only):
+
+| Tier | Glyph(s) | Word(s) | Class |
+|---|---|---|---|
+| 1 (tightest) | `-a` `!a` | `neg` `not` | prefix (right-assoc) |
+| 2 | `*` `/` `%` | `mul` `div` `rem` | multiplicative |
+| 3 | `+` `-` | `add` `sub` | additive |
+| 4 | `<<` `>>` | `shl` `shr` | **shift (M-745)** |
+| 5 | `&` | `band` | bitwise-and |
+| 6 | `^` | `xor` | bitwise-xor |
+| 7 | `\|` | `bor` | bitwise-or |
+| 8 | `<` `>` | `lt` `gt` | **comparison (M-745)** |
+| 9 | `==` `!=` | `eq` `ne` | equality |
+| 10 | `&&` | `and` | logical-and |
+| 11 (loosest) | `\|\|` | `or` | logical-or |
+
+`<=`/`>=` have **no glyph** (retired by RFC-0037 D1); their word forms `lte`/`gte` are ordinary
+calls, valid everywhere (the sugar is additive — words stay canonical). Word targets without a
+kernel/stdlib prim yet (`div`/`rem`/`band`/`bor`/`eq`/`ne`/`and`/`or` and the M-745 set
+`lt`/`gt`/`shl`/`shr`/`lte`/`gte`) parse + desugar but surface an explicit "unknown function/prim"
+refusal downstream (never silent — G2) until their prims land (M-809). *(Note: RFC-0037 §6's
+illustrative EBNF sketch nested shift looser than the bitwise ops; the ratified §4.1 table above —
+shift Tier 4, tighter — is the binding source. RFC-0025 changelog FLAG-E.)*
+
 **Singular/plural forms** (prose only — plurals are never reserved identifiers):
 
 | Singular (reserved) | Plural (prose) |
