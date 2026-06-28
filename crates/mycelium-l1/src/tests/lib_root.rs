@@ -106,7 +106,8 @@ fn colony_and_hypha_are_active() {
 fn runtime_vocab_keywords_are_reserved_not_active() {
     // DN-03 §4 / RFC-0008 §4.5 / M-665: the Runtime-tier names are reserved keywords — they lex
     // as keywords (never silent identifiers, G2) but no L1 construct consumes them. `hypha`
-    // **left** this set with M-666 (it is now active inside a `colony`); the remaining nine stay
+    // **left** this set with M-666 (it is now active inside a `colony`); `fuse`/`reclaim`/`tier`
+    // left with M-667 / DN-58 (they are now active constructs). The remaining six stay
     // reserved-not-active until their own constructs land (RFC-0008 §4.6 R1/R2).
     //
     // Honesty (Declared): the RFC-0008 teaching diagnostic fires when the runtime keyword is
@@ -115,9 +116,7 @@ fn runtime_vocab_keywords_are_reserved_not_active() {
     // fn-name slot, param binders, or program opener) it raises the standard "expected an
     // identifier / expected a `nodule` header" error — still explicit and non-silent (G2),
     // just without the RFC-0008 reference, because the never-active guard fires earlier.
-    let words = [
-        "fuse", "mesh", "graft", "cyst", "xloc", "forage", "backbone", "tier", "reclaim",
-    ];
+    let words = ["mesh", "graft", "cyst", "xloc", "forage", "backbone"];
     for word in words {
         // Sanity: `keyword(w)` returns Some — the word lexes as a keyword, not a plain Ident.
         assert!(

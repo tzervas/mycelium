@@ -94,7 +94,9 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
 **Status legend (be precise — this is the highest-value correctness surface):**
 - **Active** — in the lexer's `keyword()` *and* consumed by a construct (it forms/opens programs).
 - **Reserved-not-active** — in `keyword()` (lexes as a keyword, so it can *never* be a silent
-  identifier — G2) but no construct consumes it yet: **only `phylum` and `colony`**.
+  identifier — G2) but no construct consumes it yet: **`phylum`, `colony`, and the six remaining
+  runtime-vocabulary names** (`mesh`, `graft`, `cyst`, `xloc`, `forage`, `backbone`). Note: `fuse`,
+  `reclaim`, and `tier` **left** this set with M-667 (now Active).
 - **Ratified — not yet lexed** — a name ratified in DN-02/DN-03 but **not** in `keyword()`, so it
   currently lexes as an ordinary **identifier** (using it is *not* yet an error). The whole Runtime
   tier plus `consume`/`reveal`/`impl` (the surface `impl` keyword, M-664) are here — their lexer
@@ -115,7 +117,7 @@ M-673** — runs three-way), **M-660** (effects; `Tok::Bang`; checker-only, no L
 active — generative-lowering surface + structural checks, Rust-first; RHS elab + KC-3 guard deferred to
 **M-812-cont**) — LANDED (obj+low integration wave). **Remaining E7-1:** M-661 (`wild`/FFI), M-662
 (`phylum`/cross-nodule), M-663 (grading), M-664 (`consume`/`reveal`/surface-`impl`;
-`bin`/`tern`/`emb`/`hvec` pending RFC-0037). **E7-2 remaining:** M-667 (`fuse`/`reclaim`/`tier`), M-668 (R2). A status row
+`bin`/`tern`/`emb`/`hvec` pending RFC-0037). **E7-2 remaining:** **M-667 DONE** (`fuse`/`reclaim`/`tier` — ACTIVE; r4v wave 2026-06-28; surface + repr-fuse execution Empirical; reclaim + data-fuse pending M-817), M-668 (R2). A status row
 flips only when its tracking issue lands and `just check` is green (VR-5).
 
 | Term | Layer | Status | Meaning | Normative source |
@@ -163,15 +165,15 @@ flips only when its tracking issue lands and `just check` is green (VR-5).
 | `lower` | L2 Surface | **Active** (`Tok::Lower` lexed, M-812) | Generative-lowering **definition** (`lower Name[params]? = <rhs>`) — defines a rule applied at the use site by `derive`. **SURFACE + STRUCTURAL checks LANDED (M-812)** — rule-name + param-name uniqueness, never-silent (G2); rule registered in `Env::lower_rules`. RHS elaboration + IL-grammar/KC-3 guards DEFERRED (M-812-cont) | DN-54; DN-38; M-812 |
 | `reveal` | L2/tooling (future) | **Ratified — not yet lexed** | Inspector: shows the desugared L0 term for a surface form; round-trip discipline in `certified` mode. Never silent (G2 applied to the inspector itself — shows actual binding structure). Companion to `derive`/`via` | DN-38 §4/§5/§8.1 |
 | `hypha` | Runtime (future) | **Ratified — not yet lexed** | Single concurrent execution unit | DN-03 §4; RFC-0008 §4.5 |
-| `fuse` | Runtime (future) | **Ratified — not yet lexed** | Lawful state fusion: semilattice merge of two `hypha` states | DN-03 §4; RFC-0008 §4.5/RT6 |
+| `fuse` | Runtime | **Active** (`Tok::Fuse` lexed, M-667) | Lawful binary merge over a declared `Fuse` semilattice instance (RFC-0008 RT6). `fuse(a, b)` — homogeneous operands; checker verifies `Fuse` instance. **LANDED M-667** (r4v wave, 2026-06-28); repr-type execution Empirical (three-way differential); data-type fuse prim registration pending M-817 | DN-03 §4; RFC-0008 §4.5/RT6; DN-58 §A |
 | `mesh` | Runtime (future) | **Ratified — not yet lexed** | Gossip/pub-sub overlay with honest probabilistic guarantees | DN-03 §4; RFC-0008 §4.5/RT5 |
 | `graft` | Runtime (future) | **Ratified — not yet lexed** | Capability contract with external infrastructure | DN-03 §4; RFC-0008 §4.5/RT4 |
 | `cyst` | Runtime (future) | **Ratified — not yet lexed** | Content-addressed checkpoint of a dormable computation | DN-03 §4; RFC-0008 §4.5/RT2 |
 | `xloc` | Runtime (future) | **Ratified — not yet lexed** | Explicit, fallible, Meta-preserving value movement ("trans-locate") | DN-03 §4; RFC-0008 §4.5/RT1/RT4 |
 | `forage` | Runtime (future) | **Ratified — not yet lexed** | Adaptive placement policy (reified RFC-0005 selection) | DN-03 §4; RFC-0008 §4.5/RT3 |
 | `backbone` | Runtime (future) | **Ratified — not yet lexed** | Declared high-bandwidth transport path (placement artifact, semantics-free) | DN-03 §4; RFC-0008 §4.5/RT3 |
-| `tier` | Runtime (future) | **Ratified — not yet lexed** | Execution-mode switch (interpreted vs native); distinct from a `swap` (Repr change) | DN-03 §4; RFC-0008 §4.5 |
-| `reclaim` | Runtime (future) | **Ratified — not yet lexed** | Supervision-tree reclamation of stale runtime units (never memory — LR-9 makes memory automatic) | DN-03 §4; RFC-0008 §4.5/RT7 |
+| `tier` | Runtime | **Active** (`Tok::Tier` lexed, M-667; used as `@tier(mode)` attribute) | Execution-mode hint on a `fn` definition (`@tier(compiled)` / `@tier(interpreted)`); non-semantic (NFR-7 — never a behavioural switch; distinct from a `swap` which is a Repr change). **LANDED M-667** (r4v wave, 2026-06-28) | DN-03 §4; RFC-0008 §4.5; DN-58 §C |
+| `reclaim` | Runtime | **Active** (`Tok::Reclaim` lexed, M-667) | Reified supervision/reclamation policy attached to a structured scope (`reclaim(policy) { body }` — RFC-0008 RT7). Reclaims stale *runtime units*, never memory (LR-9 makes memory automatic). **LANDED M-667 (surface + parse + checkty)** — elab dispatches to Residual stub pending M-817 runtime registry wiring. Never memory-reclamation (LR-9 invariant upheld). | DN-03 §4; RFC-0008 §4.5/RT7; DN-58 §B |
 
 **Reserved-not-active words lex as keywords — they can never be silent identifiers.** Using
 `phylum` or `colony` as a function name is a parse error (verified in

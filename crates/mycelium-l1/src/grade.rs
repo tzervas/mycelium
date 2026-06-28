@@ -269,6 +269,22 @@ impl Gx<'_> {
             // it carries the least-trusted `Declared` rather than panicking on this defensive arm.
             Expr::Lambda { .. } => Ok(Strength::Declared),
             Expr::WithParadigm { body, .. } => self.grade(scope, body),
+            // DN-58 §A/§B (M-667): `fuse(a, b)` — the grade is the *meet* of both operands' grades
+            // (RFC-0018 §4.1: composition takes the weakest). This matches how `op_call`/`App` grades
+            // binary operations (G-App). Guarantee: `Empirical` (three-way differential, DN-58 §A.5).
+            Expr::Fuse { left, right } => {
+                let lg = self.grade(scope, left)?;
+                let rg = self.grade(scope, right)?;
+                Ok(lg.meet(rg))
+            }
+            // DN-58 §B (M-667): `reclaim(policy) { body }` — the result's grade is the body's grade.
+            // The policy expression affects supervision (a runtime concern), not the result's
+            // honesty provenance. The policy is still graded to surface any policy-grade violations
+            // (never-silent — G2), then the body's grade propagates.
+            Expr::Reclaim { policy, body } => {
+                let _ = self.grade(scope, policy)?;
+                self.grade(scope, body)
+            }
         }
     }
 

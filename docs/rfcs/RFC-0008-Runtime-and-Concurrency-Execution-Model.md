@@ -232,6 +232,14 @@ ratified the *names* (above) through the DN-02 three-test gate, but activation s
 implementation RFC committing each construct's typing and elaboration per RFC-0006 §4.3.
 Examples using them remain illustrations of intent (ADR-012 §7.3's marking stands).
 
+**R1 activation note (2026-06-28, append-only — VR-5 / never-silent):** `fuse`, `reclaim`, and
+`tier` are now **ACTIVE** in `mycelium-l1` (r4v wave, M-667; DN-58 ratified the surface — §A/§B/§C).
+The status rule above applies only to the **remaining** six R1/R2 names (`mesh`, `graft`, `cyst`,
+`xloc`, `forage`, `backbone`). Execution status is **partial**: repr-type `fuse` executes three-way
+(`Empirical`); `reclaim` elab dispatches to a Residual stub (runtime supervision wiring pending
+M-817); data-type fuse prim registration pending M-817. **NOT fully Enacted** (VR-5). This RFC
+status stays **`Accepted`** — no RFC-level status change is warranted for a partial R1 implementation.
+
 ### 4.6 Staging
 
 - **R0 (this RFC):** the model and invariants. No syntax, no implementation obligation.
@@ -373,6 +381,14 @@ diffing them is `EXPLAIN` over history); native-ternary nodes joining the mesh a
 substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
+
+- **2026-06-28 — R1 activation note (append-only; VR-5 — never-silent, partial execution):**
+  `fuse`, `reclaim`, `@tier` are now ACTIVE in `mycelium-l1` (r4v wave, M-667; DN-58 Accepted).
+  `fuse` repr-type execution is three-way Empirical (differential green). `reclaim` elab is a
+  Residual stub (runtime supervision wiring pending M-817). Data-type fuse prim registration pending
+  M-817. NOT Enacted at the RFC level — execution partial; the R1 vocabulary status rule (§4.5) is
+  narrowed to the six remaining reserved-not-active names (`mesh`/`graft`/`cyst`/`xloc`/`forage`/
+  `backbone`). Append-only; RFC-0008 status unchanged (Accepted).
 
 - **2026-06-18 — Append-only note: `matured` is now a *scope* attribute (RFC-0017 Accepted).**
   **RFC-0017** lifts `matured` from per-definition to **scope** granularity (nodule/phylum header

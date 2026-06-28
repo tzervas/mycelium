@@ -76,6 +76,21 @@ pub(crate) mod tag {
     pub const FIELD_CYCLE: u8 = 0x54; // an in-cycle data field: continues with a placeholder index
     pub const CTOR_REF: u8 = 0x55;
     pub const DATUM: u8 = 0x56;
+    /// ADR-033 §10 (FLAG-1 Path A): a function-typed field with full signature encoding.
+    /// Precedes `c.u32(arity)` then the `FnSig` encoding. Disjoint from all prior tags.
+    pub const FIELD_FN: u8 = 0x57;
+    /// Count of parameters in a `FnSig` (precedes each param `FieldTyRef` encoding).
+    pub const FN_SIG_PARAMS: u8 = 0x58;
+    /// Return-type marker in a `FnSig` (precedes the return `FieldTyRef` encoding).
+    pub const FN_SIG_RET: u8 = 0x59;
+    /// A `FieldTyRef::Repr` leaf inside a `FnSig` (continues with `Canon::repr`).
+    pub const FTR_REPR: u8 = 0x5a;
+    /// A `FieldTyRef::Data` leaf (out-of-cycle) inside a `FnSig` (continues with decl hash).
+    pub const FTR_DATA: u8 = 0x5b;
+    /// A `FieldTyRef::Data` leaf (in-cycle) inside a `FnSig` (continues with placeholder index).
+    pub const FTR_DATA_CYCLE: u8 = 0x5c;
+    /// A `FieldTyRef::Fn` leaf inside a `FnSig` (continues with a nested `FnSig` encoding).
+    pub const FTR_FN: u8 = 0x5d;
 
     // r4 (RFC-0001 r4; RFC-0007 §4.1): the function/recursion nodes.
     pub const LAM: u8 = 0x0a;

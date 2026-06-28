@@ -34,20 +34,24 @@
  * `colony_expr`, below) — the dynamic runtime grouping of `hypha` execution units; the reference
  * semantics is the spawn-order sequentialization (RT2). They are no longer reserved-not-active.
  *
- * RESERVED, NOT YET ACTIVE (DN-03 §4; RFC-0008 §4.5): the remaining nine runtime-vocabulary names
+ * ACTIVE (M-667; DN-58 §A/§B/§C; RFC-0008 §4.6 R1): `fuse`, `reclaim`, and `@tier` are now
+ * active constructs — they LEFT the reserved-not-active set with M-667 (the r4v wave, 2026-06-28):
+ *   fuse       — lawful binary merge (RFC-0008 RT6): `fuse ( expr , expr )` → `fuse_expr` below
+ *   reclaim    — supervised scope (RFC-0008 RT7): `reclaim ( expr ) block` → `reclaim_expr` below
+ *   tier       — execution-mode hint (RFC-0004 ExecutionMode): `@tier(compiled|interpreted) fn …`
+ *                  → `tier_fn_item` below (non-semantic, NFR-7; never a behavioural switch)
+ *
+ * RESERVED, NOT YET ACTIVE (DN-03 §4; RFC-0008 §4.5): the remaining SIX runtime-vocabulary names
  * are reserved keywords — they lex as keywords (never silent identifiers, G2) but no production
  * consumes them, so they cannot open a program or appear in identifier position at this language
  * version (see conformance/reject/12). They activate when their runtime-model constructs land
- * (RFC-0008 §4.6 R1/R2):
- *   fuse       — lawful state fusion / CRDT join (RFC-0008 RT6)
+ * (RFC-0008 §4.6 R2):
  *   mesh       — decentralized gossip/pub-sub overlay (RFC-0008 RT5)
  *   graft      — capability contract with infrastructure (RFC-0008 RT4)
  *   cyst       — durable checkpoint / dormant resumable form (RFC-0008 RT2)
  *   xloc       — explicit value movement / trans-locate
  *   forage     — adaptive placement policy (RFC-0008 RT3)
  *   backbone   — priority transport path (RFC-0008 RT3)
- *   tier       — execution-mode switch (interpreted ↔ native)
- *   reclaim    — runtime-unit reclamation (stale units only, never memory; RFC-0008 RT7)
  *
  * This is v0 — it covers the L1-facing core (RFC-0006 §3 L1); abstraction/recursion typing,
  * the full trait/guild machinery (LR-2), and L2 sugar layer above it.
@@ -129,7 +133,14 @@ fn_sig         ::= 'fn' Ident type_params? const_params? '(' params? ')' '=>' ty
  * otherwise-matured scope (RFC-0017 §4.3; the rare iterate/debug escape hatch). Maturation itself is
  * NOT a fn modifier — it is declared per `nodule`/`phylum`/program in the header/manifest (RFC-0017
  * §4.1). A bare `matured fn …` is a parse error with a teaching diagnostic. */
-fn_item        ::= 'pub'? 'thaw'? 'fn' Ident type_params? const_params? '(' params? ')' '=>' type_ref effects? '=' expr
+fn_item        ::= tier_fn_item
+                 | 'pub'? 'thaw'? 'fn' Ident type_params? const_params? '(' params? ')' '=>' type_ref effects? '=' expr
+/* DN-58 §C (M-667): `@tier(compiled|interpreted)` execution-mode hint on a function definition.
+ * Non-semantic (NFR-7: the chosen mode never changes observable semantics). Not a reserved-word
+ * expression — it is an attribute that precedes a `fn` declaration. Teaching diagnostic for bare
+ * `tier` at item position (write `@tier(compiled) fn …` instead). */
+tier_fn_item   ::= 'pub'? '@' 'tier' '(' tier_mode ')' 'thaw'? 'fn' Ident type_params? const_params? '(' params? ')' '=>' type_ref effects? '=' expr
+tier_mode      ::= 'compiled' | 'interpreted'   /* RFC-0004 ExecutionMode surface spelling (DN-58 §C F-C2) */
 params         ::= param (',' param)*
 param          ::= Ident ':' type_ref
 
@@ -200,6 +211,8 @@ expr           ::= let_expr
                  | wild_expr
                  | spore_expr
                  | colony_expr
+                 | fuse_expr
+                 | reclaim_expr
                  | op_expr
 
 /* with paradigm: a block-scope ambient override (RFC-0012 §4.4; M-344). Not a conversion — it
@@ -247,6 +260,24 @@ spore_expr     ::= 'spore' '(' expr ')'
  * (`Scope`/`Colony`/`Task`, M-357), a performance path validated against the RT2 sequentialization. */
 colony_expr    ::= 'colony' '{' hypha (',' hypha)* ','? '}'
 hypha          ::= 'hypha' app_expr
+
+/* fuse: lawful binary merge (DN-58 §A / M-667; RFC-0008 RT6). Homogeneous operands; the
+ * checker verifies a `Fuse` semilattice instance exists for the operand type. Result type = operand
+ * type. Meta = meet of input guarantees (never silently upgraded — RFC-0001 §4.7). A non-fusible
+ * type is a never-silent CheckError (G2). The `Fuse` semilattice-law obligation (commutativity/
+ * associativity/idempotence) is carried by the type's declared instance, not by the grammar.
+ * Execution: repr-type fuse is Empirical (three-way differential green); data-type fuse prim
+ * registration is a Residual stub pending M-817. */
+fuse_expr      ::= 'fuse' '(' expr ',' expr ')'
+
+/* reclaim: reified supervision/reclamation policy attached to a structured scope (DN-58 §B / M-667;
+ * RFC-0008 RT7). The `policy` expression is any expression (a reified RT3 policy value from
+ * `std.runtime`). The `body` is any block expression (typically a `colony { … }`). Elaborates to
+ * `mycelium-std-runtime::supervision::run_supervised` + `SupervisionRecord` threading (never-silent
+ * G2 on reclamation/restart events). Execution: Residual stub pending M-817 runtime registry wiring.
+ * VR-5 — claimed as a surface with honest Residual, not a fabricated accept. */
+reclaim_expr   ::= 'reclaim' '(' expr ')' block
+block          ::= '{' expr '}'
 
 /* Operator-expression layer (RFC-0025 / M-705). Symbolic infix/prefix operators are FRONTEND-ONLY
  * sugar: each desugars to a canonical word-function call (`a + b` -> `add(a, b)`, `-a` -> `neg(a)`),

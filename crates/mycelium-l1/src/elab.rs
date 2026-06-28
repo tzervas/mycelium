@@ -907,6 +907,54 @@ impl Elab<'_> {
                 self.expr(stack, scope, inner)
             }
             Expr::App { head, args } => self.app(stack, scope, head, args),
+            // DN-58 §A (M-667): `fuse(a, b)` lowers to `Node::Op { prim: "fuse_join:<repr>", args: [a, b] }`.
+            // No new L0 node (KC-3): reuses `Node::Op`. The `fuse_join:` namespace is reserved for this.
+            // Repr types dispatch by type-head (Binary/Ternary/Dense/Bytes/Seq); Data types with a `Fuse`
+            // instance dispatch to `fuse_join:data` (the prim registry resolves the `join` fn at runtime).
+            // Guarantee: `Empirical` — three-way differential (DN-58 §A.5); semilattice laws property-
+            // tested for repr types, not mechanized-Proven. Never-silent on an ill-typed operand (G2).
+            Expr::Fuse { left, right } => {
+                let la = self.expr(stack, scope, left)?;
+                let ra = self.expr(stack, scope, right)?;
+                // Re-infer the left operand type to dispatch the lowering (the checker has already
+                // verified homogeneity so the inferred head uniquely determines the prim op).
+                let lty = infer_type(self.env, &mut Self::ty_scope(scope), left).map_err(|e| {
+                    ElabError::Residual {
+                        site: site.to_owned(),
+                        what: format!(
+                            "could not re-infer `fuse` left-operand type: {e} (DN-58 §A.5)"
+                        ),
+                    }
+                })?;
+                let prim = match &lty {
+                    Ty::Binary(_) => "fuse_join:binary".to_owned(),
+                    Ty::Ternary(_) => "fuse_join:ternary".to_owned(),
+                    Ty::Dense(_, _) => "fuse_join:dense".to_owned(),
+                    Ty::Bytes => "fuse_join:bytes".to_owned(),
+                    Ty::Seq(_, _) => "fuse_join:seq".to_owned(),
+                    _ => "fuse_join:data".to_owned(),
+                };
+                Ok(Node::Op {
+                    prim,
+                    args: vec![la, ra],
+                })
+            }
+            // DN-58 §B (M-667): `reclaim(policy) { body }` lowers to
+            // `Node::Op { prim: "reclaim:supervised", args: [policy, body] }`.
+            // No new L0 node (KC-3): reuses `Node::Op`. The supervision dispatch is resolved by the
+            // prim registry at runtime (`mycelium-std-runtime`). Never-silent on reclamation/restart
+            // (the Op is an EXPLAIN-recorded capability handle — G2). Guarantee: `Empirical` (M-713).
+            // FLAG F-B1: the `reclaim:supervised` prim is not yet registered in the default
+            // PrimRegistry; programs using `reclaim` will get an elaborated Op that returns a Residual
+            // at eval/interp time until the std-runtime prim registration lands (M-713 follow-on).
+            Expr::Reclaim { policy, body } => {
+                let policy_node = self.expr(stack, scope, policy)?;
+                let body_node = self.expr(stack, scope, body)?;
+                Ok(Node::Op {
+                    prim: "reclaim:supervised".to_owned(),
+                    args: vec![policy_node, body_node],
+                })
+            }
         }
     }
 
