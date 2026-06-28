@@ -8,6 +8,89 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-28: prm wave — `fuse` (data) + `reclaim` EXECUTE three-way; DN-58 → Enacted, M-710/M-817 done)
+
+- **`fuse` and `reclaim` now RUN end-to-end three-way (L1-eval ≡ L0-interp ≡ AOT, `Empirical`) — the
+  r4v execution residual is closed (M-817, closes M-710; DN-58 §A/§B → Enacted).**
+  - **`fuse` (repr):** the `Binary` `Fuse` semilattice meet executes via a new registered
+    `fuse_join:binary` prim (`mycelium-interp` + the `mycelium-core` `PrimTable`) — bitwise-AND, the
+    boolean-lattice greatest-lower-bound, carrying the canonical `Derived{op:"fuse_join"}` provenance
+    (DN-58 §A.5 / RFC-0027 §10.6). The L1 evaluator, L0 interpreter, and AOT env-machine all dispatch
+    the same prim. Non-`Binary` repr meets stay an honest never-silent residual (no committed meet —
+    DN-58 §A.6 F-A3).
+  - **`fuse` (data):** a user `Data` type with a `Fuse` instance — `fuse(a, b)` desugars at
+    **monomorphization** (`mycelium-l1/src/mono.rs`) to the resolved `Fuse::join` call (the coherent
+    instance recorded as an EXPLAIN selection — no black box), an ordinary inlined call that runs
+    three-way (DN-58 §A.5). This is the user-merge case the `prm` kickoff targeted.
+  - **`reclaim`:** the trusted base lowers `reclaim(policy) { body }` to its **sequential reference**
+    (`Let{_ = policy, body}` — runs three-way, no new L0 node). The **real** RT7 supervision —
+    bounded restart cascade + `SupervisionRecord` EXPLAIN trail — is a new runtime-tier driver
+    `mycelium_mlir::run_reclaim` (+ `ReclaimRun`/`ReclaimError`, fed by the new
+    `mycelium_l1::elaborate_reclaim`'s lazy policy/body nodes), dispatching to
+    `mycelium-std-runtime::supervise_with_restart` and validated equal to the sequential reference on
+    success — the same layering the `colony` executor (M-666) uses over unchanged per-task L0 terms.
+  - **Mechanism note (transparency / VR-5):** this refines the M-817 brief's "register two prims"
+    sketch. The trusted base (`mycelium-interp`/`-l1`) cannot depend on `mycelium-std-runtime` (cycle)
+    and a bare `PrimFn` can resolve neither a user `join` nor a lazy supervised body, while DN-58 §A.5
+    already specified a `join` *call* — so the data-fuse is an elaboration desugar and the reclaim
+    supervision is a runtime-tier driver (only the `Binary` repr meet is a pure prim). Flagged to and
+    approved by the maintainer before landing. **KC-3: no new L0 node.**
+  - **Tests:** four three-way differential tests (`fuse_repr`, `fuse_data`,
+    `reclaim_sequential_reference`, `reclaim_real_supervision_driver` — incl. bounded escalation with
+    the EXPLAIN trace) + a `generic_corpus` data-fuse case; `PrimTable` parity updated. `just check`
+    green. Honestly deferred (VR-5): non-`Binary` meets (F-A3), the policy-value → restart-bounds
+    mapping (F-B2), and restart-recovers-a-transient-failure (needs effectful bodies).
+
+### Changed (2026-06-28: `hrd` — DN-40 A1/A2/A3 doc-drift closure; code already landed, docs reconciled)
+
+- **Doc reconciliation, no code change.** The DN-40 **A1** (CRITICAL parser type-subgrammar DoS),
+  **A2** (HIGH pattern-subgrammar DoS), and **A3** (HIGH dep-hash parse-don't-validate) fixes that
+  RFC-0028 §4.4 (signed off 2026-06-28) and the 2026-06-28 ratification batch below describe as
+  **COMMISSIONED / "active gaps in the current codebase"** were found to have **already landed on
+  `dev` 2026-06-26** (`4456bd3`; A3 `e7e705f`/`3f55eaa`) — recorded in §Security (2026-06-26: DN-40
+  input-validation hardening) further down. Re-verified green this session: the `mycelium-l1`
+  crash-refused depth regressions (`tests/check.rs::deeply_nested_{type_arrow,type_args,ctor_pattern}_is_refused_not_a_crash`
+  and `parse::deep_operator_nesting_is_refused_not_crashed`; shared `MAX_EXPR_DEPTH = 256` budget) and
+  the `mycelium-proj` typed-`ContentHash` manifest tests. Reconciled the lagging docs **append-only**
+  (house rule #3): RFC-0028 status row + §4.4 status-note + §4.4.4 closure note, and the DN-40 status
+  closure note — the historical commissioning entries are preserved as the as-signed-off record.
+  **Tags:** the recursion bound is `Proven`-by-construction; the `256` limit value stays `Declared`
+  (VR-5). `issues.yaml` needed no change — E14-1 and M-722 are already `status:done` and landed
+  *after* A1/A2/A3, so the must-fix-before-E14-1 sequencing was met. `cargo-fuzz` is not installed in
+  this environment, so the `fuzz_l1_parse` smoke skipped gracefully (local↔CI skip-on-absent policy);
+  its no-panic invariant is exercised by the crash-refused tests above.
+
+### Added (2026-06-28: ops kickoff — M-745 angle/shift operators wired in `mycelium-l1`)
+
+- **M-745 done: the comparison and shift operators `<` `>` `<<` `>>` are now wired (RFC-0025 §4.1;
+  RFC-0030 §4.3 gate met).** Frontend-only sugar desugaring to canonical word functions — **no
+  L0/L1 kernel change (KC-3)**. The original type-arg disambiguation that made M-745 "needs-design"
+  was dissolved upstream by RFC-0037 D1 (type arguments moved `<…>` → `[…]`), so `<`/`>` are
+  operator-only and need no contextual lexing.
+  - **Lexer** (`crates/mycelium-l1/src/lexer.rs`): `<<`/`>>` lex whole as `Tok::Shl`/`Tok::Shr`
+    (`lex_langle`/`lex_rangle`); `<`/`>` stay `Tok::LAngle`/`Tok::RAngle`. No nested-generic `>>`
+    hazard now that type args use `[…]`.
+  - **Parser** (`parse.rs::infix_op`): `<`/`>` → `lt`/`gt` at bp 25 (§4.1 **Tier 8**, between `bor`
+    and `eq`); `<<`/`>>` → `shl`/`shr` at bp 55 (**Tier 4**, between `add` and `band`). Precedence
+    follows the **ratified §4.1 table (= Rust)**: shift tighter than the bitwise ops, comparison
+    looser than them — **not** RFC-0037 §6's illustrative sketch, which inverted shift vs bitwise
+    (flagged inconsistent — RFC-0025 changelog **FLAG-E**; the EBNF here is precedence-correct).
+  - **Grammar** (`docs/spec/grammar/mycelium.ebnf`): `cmp_expr` (Tier 8) + `shift_expr` (Tier 4)
+    productions added; the §4.3 deferral note retired. `just grammar-gen`/drift: operators are not
+    keyword-derived, so the editor grammars are unchanged (drift green).
+  - **Tests:** `src/tests/parse.rs` (desugar equivalence, the new-tier precedence, left-assoc for
+    `<<`/`<`); `src/tests/lexer.rs` (`<<`/`>>` whole-token lexing); `accept/20-operator-syntax.myc`
+    parse-oracle cases. **`cargo test -p mycelium-l1` green.**
+  - `<=`/`>=` have **no glyph** (retired by RFC-0037 D1); word forms `lte`/`gte` are ordinary calls.
+    The new word targets (`lt`/`gt`/`shl`/`shr`/`lte`/`gte`) parse + desugar but surface an explicit
+    "unknown function/prim" refusal downstream until their prims land (M-809) — never silent (G2).
+  - **RFC-0025 Accepted → ENACTED** (maintainer ratified in-session, 2026-06-28): with the wiring
+    landed + green, the maintainer made the Accepted → Enacted move the RFC reserved for them ("do
+    NOT self-Enact"; house rule #3 — stepped through Accepted, not skipped). Enacted covers the
+    surface wiring + desugaring; word targets lacking a prim still refuse explicitly until M-809
+    (G2). Docs reconciled: `issues.yaml` M-745 → done; RFC-0025 status + changelog (Enacted) +
+    RFC-0030 §4.3 append-only notes; `.claude/memory/lang-lexicon-syntax.md` operator table.
+
 ### Added (2026-06-28: r4v + ADR-033 FLAG-1 integration wave — fuse/reclaim/tier L1 surface ACTIVE; ADR-033 full-sig encoding landed)
 
 - **r4v wave (M-667 done; M-710 in-progress/partial): `fuse`, `reclaim`, `@tier` are now ACTIVE

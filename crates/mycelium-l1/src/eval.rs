@@ -625,11 +625,17 @@ impl<'e> Evaluator<'e> {
                 let rv = self.eval(fuel, depth, site, scope, right)?;
                 match (&lv, &rv) {
                     (L1Value::Repr(lrepr), L1Value::Repr(rrepr)) => {
-                        // Repr fuse = bitwise-and (the semilattice meet). Use `bit.and` prim.
-                        let f = self.prims.get("bit.and").ok_or_else(|| {
-                            L1Error::Kernel(KernelError::UnknownPrim("bit.and".to_owned()))
+                        // Repr fuse = the `Binary` semilattice meet (bitwise-AND), via the
+                        // `fuse_join:binary` kernel prim — the *same* prim the L0/AOT paths dispatch
+                        // (DN-58 §A.5; M-817), so all three arms agree on the value **and** the
+                        // canonical `Derived{op:"fuse_join"}` provenance (RFC-0027 §10.6). A
+                        // non-`Binary` repr has no committed meet (DN-58 §A.6 F-A3): `fuse_join:binary`
+                        // refuses it never-silently via its operand check, exactly as `elab`
+                        // residuals it — a consistent refusal across paths (G2).
+                        let f = self.prims.get("fuse_join:binary").ok_or_else(|| {
+                            L1Error::Kernel(KernelError::UnknownPrim("fuse_join:binary".to_owned()))
                         })?;
-                        Ok(L1Value::Repr(f("bit.and", &[lrepr, rrepr])?))
+                        Ok(L1Value::Repr(f("fuse_join:binary", &[lrepr, rrepr])?))
                     }
                     (L1Value::Data { ty, ctor: _, fields: _ }, _) => {
                         // Data type: dispatch through the `join` function (user-declared Fuse impl).
@@ -651,20 +657,22 @@ impl<'e> Evaluator<'e> {
                 }
             }
 
-            // DN-58 §B (M-667): `reclaim(policy) { body }` — supervised scope. In the trusted base
-            // (the sequential evaluator), supervision is a runtime concern: the body is evaluated
-            // directly, like any expression. The policy is evaluated for its effect (it may perform
-            // registration); then the body runs under its scope. The `SupervisionRecord` EXPLAIN trail
-            // is a runtime/prim concern — not tracked here in the L1 trusted base.
-            // FLAG F-B1: in v0 the `reclaim:supervised` prim is not yet wired; the L1 evaluator runs
-            // the body directly (transparent fallback — G2: a supervision failure in v0 propagates
-            // through the normal error path, not a specialized recovery trace). The AOT/prim path
-            // may differ once the prim registry registers `reclaim:supervised` (M-713 follow-on).
-            // Guarantee: `Empirical` (the body evaluation is faithful; the supervision wire-up is deferred).
+            // DN-58 §B (M-667/M-817): `reclaim(policy) { body }` — supervised scope. In the trusted
+            // base (this sequential evaluator), supervision is a runtime concern: the policy is
+            // evaluated for its effect, then the body runs directly — the **sequential reference**
+            // (exactly the `Let{_ = policy, body}` form `elab` lowers to, so L1-eval ≡ L0-interp ≡ AOT
+            // on the observable). The **real** RT7 supervision — the bounded restart cascade + the
+            // `SupervisionRecord` EXPLAIN trail — is the runtime-tier driver `mycelium_mlir::run_reclaim`
+            // (M-817; over the lazy body node from `elaborate_reclaim`), validated equal to this
+            // reference on success, the same layering the concurrent `colony` executor uses. KC-3: no
+            // L0 supervision node here. Never-silent (G2): a body failure propagates through the normal
+            // error path here, and is exactly what the supervisor restarts on there. [FLAG F-B1 →
+            // RESOLVED.] Guarantee: `Empirical` (M-713).
             Expr::Reclaim { policy, body } => {
-                // Evaluate the policy (for side-effects — e.g. registering a supervision callback).
+                // Evaluate the policy (for its effect), then the body — the supervised scope's
+                // observable. This *is* the sequential reference the runtime supervisor is validated
+                // against (DN-58 §B).
                 let _ = self.eval(fuel, depth, site, scope, policy)?;
-                // Evaluate the body: the result is the supervised scope's observable.
                 self.eval(fuel, depth, site, scope, body)
             }
         }

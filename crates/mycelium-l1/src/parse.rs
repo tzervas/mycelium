@@ -1982,9 +1982,21 @@ fn infix_op(tok: &Tok) -> Option<(u8, &'static str)> {
         Tok::Percent => (70, "rem"),
         Tok::Plus => (60, "add"),
         Tok::Minus => (60, "sub"),
+        // Shift (RFC-0025 §4.1 Tier 4; M-745): binds tighter than the bitwise ops and looser than
+        // `+`/`-` — the bp slot (55) reserved between `add` (60) and `band` (50). This follows the
+        // ratified §4.1 table (Rust's precedence, the cited source of truth: shift is tighter than
+        // `& ^ |`), NOT RFC-0037 §6's *illustrative* sketch, which nested shift adjacent to
+        // comparison (looser than `|`) — an internal inconsistency flagged for the spec.
+        Tok::Shl => (55, "shl"),
+        Tok::Shr => (55, "shr"),
         Tok::Amp => (50, "band"),
         Tok::Caret => (40, "xor"),
         Tok::Pipe => (30, "bor"),
+        // Comparison (RFC-0025 §4.1 Tier 8; M-745): looser than the bitwise ops, tighter than
+        // equality — the bp slot (25) reserved between `bor` (30) and `eq` (20). `<=`/`>=` have no
+        // glyph (retired by RFC-0037 D1); their word forms `lte`/`gte` are ordinary calls.
+        Tok::LAngle => (25, "lt"),
+        Tok::RAngle => (25, "gt"),
         Tok::EqEq => (20, "eq"),
         Tok::BangEq => (20, "ne"),
         Tok::AmpAmp => (11, "and"),

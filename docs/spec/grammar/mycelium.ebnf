@@ -286,18 +286,28 @@ block          ::= '{' expr '}'
  * operands of an operator; to use one as an operand, parenthesize it. Precedence follows Rust's
  * table (the implementation language; RFC-0025 §4); every binary operator is LEFT-associative, the
  * prefix operators are right-associative and bind tighter than every binary operator. The tiers are
- * written highest-binding (innermost) outward. The ANGLE-BRACKET operators (`<`, `<=`, `>`, `>=`,
- * `<<`, `>>`) are DEFERRED (RFC-0025 §3; tracked by M-745): `<`/`>` collide with the type-argument
- * `<...>` grammar and need contextual lexing to disambiguate. A desugared word target whose prim/
- * stdlib function does not yet exist (`div`/`rem`/`band`/`bor`/`eq`/`ne`/`and`/`or`) still PARSES
- * here and surfaces an explicit "unknown function/prim" refusal downstream (never silent — G2). */
+ * written highest-binding (innermost) outward. The ANGLE-BRACKET operators are now WIRED (M-745,
+ * RFC-0025 §4.1): RFC-0037 D1 moved type arguments `<...>` -> `[...]`, so `<`/`>` no longer collide
+ * with a type-arg list and need no contextual lexing. `<<`/`>>` (shl/shr) are Tier 4 (tighter than
+ * the bitwise ops, looser than `+`/`-`); `<`/`>` (lt/gt) are Tier 8 (looser than the bitwise ops,
+ * tighter than `==`/`!=`) — matching Rust's table per §4.1. The two-char `<=`/`>=` glyphs are
+ * RETIRED (RFC-0037 D1: most ambiguous in post-type-arg position); their word forms `lte`/`gte`
+ * have NO glyph and parse as ordinary `app_expr` calls. (Note: RFC-0037 §6's illustrative sketch
+ * nested `cmp_expr ::= shift_expr` / `shift_expr ::= bor_expr`, which would place shift LOOSER than
+ * the bitwise ops; that contradicts the ratified §4.1 tiers (and Rust) and is superseded here by
+ * the precedence-correct nesting below — see the RFC-0025 changelog FLAG.) A desugared word target
+ * whose prim/stdlib function does not yet exist (`div`/`rem`/`band`/`bor`/`eq`/`ne`/`and`/`or`, and
+ * the M-745 set `lt`/`gt`/`shl`/`shr`/`lte`/`gte` until M-809) still PARSES here and surfaces an
+ * explicit "unknown function/prim" refusal downstream (never silent — G2). */
 op_expr        ::= or_expr
 or_expr        ::= and_expr ('||' and_expr)*
 and_expr       ::= eq_expr ('&&' eq_expr)*
-eq_expr        ::= bor_expr (('==' | '!=') bor_expr)*
+eq_expr        ::= cmp_expr (('==' | '!=') cmp_expr)*
+cmp_expr       ::= bor_expr (('<' | '>') bor_expr)*          /* Tier 8 (lt/gt); M-745 */
 bor_expr       ::= xor_expr ('|' xor_expr)*
 xor_expr       ::= band_expr ('^' band_expr)*
-band_expr      ::= add_expr ('&' add_expr)*
+band_expr      ::= shift_expr ('&' shift_expr)*
+shift_expr     ::= add_expr (('<<' | '>>') add_expr)*        /* Tier 4 (shl/shr); M-745 */
 add_expr       ::= mul_expr (('+' | '-') mul_expr)*
 mul_expr       ::= unary_expr (('*' | '/' | '%') unary_expr)*
 unary_expr     ::= ('-' | '!') unary_expr

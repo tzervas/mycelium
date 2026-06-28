@@ -341,6 +341,51 @@ fn elaborate_colony_inner(env: &Env, entry: &str) -> Result<Vec<Node>, ElabError
     Ok(programs)
 }
 
+/// **Policy + body elaboration of a `reclaim` entry** for the *real-supervision* execution path
+/// (DN-58 §B; RFC-0008 RT7; M-817). Where [`elaborate`] produces the single L0 `Node` whose body is
+/// the **sequential reference** (a `Let{_ = policy, body}` — evaluate the policy for its effect, then
+/// yield the body; the deterministic reference the supervised run is validated against), this produces
+/// the **policy** and **body** as two **closed L0 `Node`s**, each elaborated under the entry's scope
+/// and wrapped in the **same** recursive-binder prelude (so each may call the nodule's recursive
+/// functions). The `mycelium-mlir` reclaim driver ([`mycelium_mlir::run_reclaim`]) runs the body under
+/// `mycelium-std-runtime::supervise_with_restart` (re-evaluating it per restart — which is why the body
+/// is returned as an unevaluated node, not a value), threads a `SupervisionRecord` EXPLAIN trail, and
+/// validates the supervised observable **equals** the sequential reference on success (RT7). This adds
+/// **no L0 supervision node** — the trusted base stays sequential (KC-3); supervision is scheduling
+/// layered *over* unchanged body evaluation, exactly as the concurrent `colony` driver layers over
+/// per-hypha L0 terms.
+///
+/// Refuses with an explicit [`ElabError::Residual`] (never a fabricated accept) when the entry body is
+/// **not** a `reclaim`, or when the policy/body is outside the evaluation-complete fragment.
+pub fn elaborate_reclaim(env: &Env, entry: &str) -> Result<(Node, Node), ElabError> {
+    mycelium_stack::with_deep_stack(|| elaborate_reclaim_inner(env, entry))
+}
+
+fn elaborate_reclaim_inner(env: &Env, entry: &str) -> Result<(Node, Node), ElabError> {
+    // M-673: monomorphize first (see [`elaborate`]); the policy/body lowering then runs unchanged over
+    // the closed monomorphic env. A reclaim entry is nullary monomorphic, so its name is preserved.
+    let mono_env = crate::mono::monomorphize(env, entry)?;
+    let (mut el, binders, fd) = elab_prelude(&mono_env, entry)?;
+    let Expr::Reclaim { policy, body } = &fd.body else {
+        return residual(
+            entry,
+            "the entry body is not a `reclaim` — `elaborate_reclaim` lowers a reclaim to its \
+             (policy, body) closed L0 programs (the supervised path); use `elaborate` for the \
+             sequential-reference form",
+        );
+    };
+    let mut stack = vec![entry.to_owned()];
+    // The policy and body, each elaborated under the entry scope and wrapped in the *shared* recursive
+    // prelude (binders cloned so the two programs are independent). The driver evaluates the policy
+    // once (for its effect) and re-evaluates the body per supervised restart (RT7).
+    let policy_node = el.expr(&mut stack, &[], policy)?;
+    let body_node = el.expr(&mut stack, &[], body)?;
+    Ok((
+        wrap_in_binders(binders.clone(), policy_node),
+        wrap_in_binders(binders, body_node),
+    ))
+}
+
 /// Shared front-end of [`elaborate`]/[`elaborate_colony`]: validate the entry is a closed (nullary,
 /// no dynamic guarantee) definition, build the data registry, decompose the reachable call graph into
 /// callee-first recursive SCCs (Tarjan), and elaborate each SCC's recursive binder. Returns the
@@ -907,17 +952,17 @@ impl Elab<'_> {
                 self.expr(stack, scope, inner)
             }
             Expr::App { head, args } => self.app(stack, scope, head, args),
-            // DN-58 §A (M-667): `fuse(a, b)` lowers to `Node::Op { prim: "fuse_join:<repr>", args: [a, b] }`.
-            // No new L0 node (KC-3): reuses `Node::Op`. The `fuse_join:` namespace is reserved for this.
-            // Repr types dispatch by type-head (Binary/Ternary/Dense/Bytes/Seq); Data types with a `Fuse`
-            // instance dispatch to `fuse_join:data` (the prim registry resolves the `join` fn at runtime).
-            // Guarantee: `Empirical` — three-way differential (DN-58 §A.5); semilattice laws property-
-            // tested for repr types, not mechanized-Proven. Never-silent on an ill-typed operand (G2).
+            // DN-58 §A.5 (M-667/M-817): `fuse(a, b)`. The **Data** case is desugared upstream by
+            // monomorphization to the resolved `Fuse::join` call (`mono.rs` — so it runs three-way as
+            // an ordinary inlined call), so a `Fuse` node reaching here is a **repr** fuse. The
+            // `Binary` meet is the registered `fuse_join:binary` prim (bitwise-AND, the boolean-lattice
+            // greatest-lower-bound — runs three-way; `Empirical` semilattice laws). The other reprs
+            // have **no committed canonical meet** in v0 (DN-58 §A.6 F-A3), and a Data `Fuse` node here
+            // means mono did not resolve the instance — both are explicit never-silent residuals, never
+            // a fabricated lowering (G2). No new L0 node (KC-3): the meet reuses `Node::Op`.
             Expr::Fuse { left, right } => {
-                let la = self.expr(stack, scope, left)?;
-                let ra = self.expr(stack, scope, right)?;
                 // Re-infer the left operand type to dispatch the lowering (the checker has already
-                // verified homogeneity so the inferred head uniquely determines the prim op).
+                // verified homogeneity so the inferred head uniquely determines the meet).
                 let lty = infer_type(self.env, &mut Self::ty_scope(scope), left).map_err(|e| {
                     ElabError::Residual {
                         site: site.to_owned(),
@@ -926,33 +971,55 @@ impl Elab<'_> {
                         ),
                     }
                 })?;
-                let prim = match &lty {
-                    Ty::Binary(_) => "fuse_join:binary".to_owned(),
-                    Ty::Ternary(_) => "fuse_join:ternary".to_owned(),
-                    Ty::Dense(_, _) => "fuse_join:dense".to_owned(),
-                    Ty::Bytes => "fuse_join:bytes".to_owned(),
-                    Ty::Seq(_, _) => "fuse_join:seq".to_owned(),
-                    _ => "fuse_join:data".to_owned(),
-                };
-                Ok(Node::Op {
-                    prim,
-                    args: vec![la, ra],
-                })
+                match &lty {
+                    Ty::Binary(_) => {
+                        let la = self.expr(stack, scope, left)?;
+                        let ra = self.expr(stack, scope, right)?;
+                        Ok(Node::Op {
+                            prim: "fuse_join:binary".to_owned(),
+                            args: vec![la, ra],
+                        })
+                    }
+                    Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Bytes | Ty::Seq(_, _) => residual(
+                        site,
+                        format!(
+                            "`fuse` over `{lty}` has no committed semilattice-meet prim in v0 — only \
+                             the `Binary` repr meet (`fuse_join:binary`, bitwise-AND) and a user \
+                             `Data` type with a `Fuse` instance execute (DN-58 §A.6 F-A3 defers the \
+                             other paradigm meets); declare an `impl Fuse` or fuse `Binary` values \
+                             (never a fabricated meet — G2)"
+                        ),
+                    ),
+                    _ => residual(
+                        site,
+                        format!(
+                            "internal: a Data-type `fuse` over `{lty}` reached elaboration — \
+                             monomorphization desugars a Data `fuse` to the resolved `Fuse::join` \
+                             call (DN-58 §A.5); a `Fuse` node here means the instance was not resolved \
+                             (never a fabricated lowering — G2)"
+                        ),
+                    ),
+                }
             }
-            // DN-58 §B (M-667): `reclaim(policy) { body }` lowers to
-            // `Node::Op { prim: "reclaim:supervised", args: [policy, body] }`.
-            // No new L0 node (KC-3): reuses `Node::Op`. The supervision dispatch is resolved by the
-            // prim registry at runtime (`mycelium-std-runtime`). Never-silent on reclamation/restart
-            // (the Op is an EXPLAIN-recorded capability handle — G2). Guarantee: `Empirical` (M-713).
-            // FLAG F-B1: the `reclaim:supervised` prim is not yet registered in the default
-            // PrimRegistry; programs using `reclaim` will get an elaborated Op that returns a Residual
-            // at eval/interp time until the std-runtime prim registration lands (M-713 follow-on).
+            // DN-58 §B (M-667/M-817): `reclaim(policy) { body }`. The **trusted base** lowers it to its
+            // sequential reference — evaluate `policy` for its effect, then yield `body` — exactly as
+            // the L1 evaluator runs it (`eval.rs`) and exactly as `colony` keeps the base sequential
+            // (M-666): a `Let` binding the policy to a discarded binder, with the body as the result.
+            // This runs **three-way** (L1-eval ≡ L0-interp ≡ AOT) with **no new L0 node** (KC-3) and
+            // **no prim** (the trusted base cannot depend on `mycelium-std-runtime`). The **real** RT7
+            // supervision — the bounded-restart cascade + the `SupervisionRecord` EXPLAIN trail — is a
+            // runtime-tier driver (`mycelium-mlir::run_reclaim`, over the lazy body node from
+            // `elaborate_reclaim`), validated equal to this reference on success — the same layering
+            // the concurrent `colony` executor uses over unchanged per-hypha L0 terms. Never-silent: a
+            // body failure propagates through the normal error path here, and is precisely what the
+            // supervisor restarts on there (G2). Guarantee: `Empirical` (M-713).
             Expr::Reclaim { policy, body } => {
                 let policy_node = self.expr(stack, scope, policy)?;
                 let body_node = self.expr(stack, scope, body)?;
-                Ok(Node::Op {
-                    prim: "reclaim:supervised".to_owned(),
-                    args: vec![policy_node, body_node],
+                Ok(Node::Let {
+                    id: self.fresh("reclaim_policy"),
+                    bound: Box::new(policy_node),
+                    body: Box::new(body_node),
                 })
             }
         }
