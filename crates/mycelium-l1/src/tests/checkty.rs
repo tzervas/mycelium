@@ -329,3 +329,67 @@ fn derive_unknown_rule_name_is_refused() {
         err.message
     );
 }
+
+// ---- DN-54 / M-812 INTEGRATION GUARD: the honest "residual" posture (KC-3 by absence) --------
+//
+// **Load-bearing safety check for the obj+low integration (DN-54 §4.1/§4.6/§6).** DN-54's checker
+// does the *structural* checks (rule-name uniqueness, param uniqueness, `derive` name-resolution),
+// but it **does not yet elaborate** a `lower`/`derive` rule to real L0 — `crate::elab` never reads
+// `Env::lower_rules`, so a `derive` produces **no** L0 term. The two deferred completions
+// (M-812-cont) are exactly the guards that would matter *once derive elaborates*:
+//   (1) the **IL-grammar RHS type-check** (infer_type the RHS, reject mutation/FFI/`wild`), and
+//   (2) the **KC-3 kernel-growth guard** (the elaborated RHS must lower to existing L0 nodes only).
+// Neither is implementable-yet-meaningful while derive emits nothing; landing them as no-ops would
+// over-claim (VR-5). Instead these tests **pin the honest posture** so a future change that starts
+// elaborating `derive` cannot silently skip the guards: they assert derive adds *no* L0 today, and
+// that the structural refusals are never-silent (G2). DN-54's tag stays `Declared` accordingly.
+
+/// `lower`/`derive` items add **no** L0 to an entry that does not reference them: an entry's
+/// elaborated L0 is byte-identical with and without a `lower`+`derive` pair in the same nodule.
+/// This pins KC-3-by-absence — derive is a structural-check-only residual, it emits no kernel node
+/// (DN-54 §6). When derive *does* start elaborating (M-812-cont), this test must be revisited
+/// alongside the KC-3 / IL-grammar guards — it is the canary that the residual posture changed.
+#[test]
+fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
+    let plain = env("nodule d\nfn main() => Binary{8} = 0b00000001");
+    let with_rules = env(
+        "nodule d\nlower Trivial = true\nderive Trivial for Binary{8}\n\
+         fn main() => Binary{8} = 0b00000001",
+    );
+    let node_plain = crate::elab::elaborate(&plain, "main").expect("plain entry elaborates");
+    let node_rules =
+        crate::elab::elaborate(&with_rules, "main").expect("entry elaborates with rules present");
+    assert_eq!(
+        format!("{node_plain:?}"),
+        format!("{node_rules:?}"),
+        "a `lower`/`derive` pair must add NO L0 to an unrelated entry (DN-54 §6, KC-3 by absence; \
+         derive is a structural-check-only residual — it elaborates to no kernel node)"
+    );
+}
+
+/// The `lower` RHS is **registered verbatim** but **never elaborated** — there is no path from
+/// `crate::elab::elaborate` into `Env::lower_rules`. We assert the stored RHS round-trips
+/// unchanged (the rule is data, not yet code), documenting that RHS IL-grammar checking + KC-3
+/// kernel-growth checking are the deferred completions (M-812-cont), held at `Declared` (VR-5).
+#[test]
+fn lower_rule_rhs_is_stored_not_elaborated() {
+    // The RHS as it parses standalone (a path expression `true`) — the rule must store *this exact*
+    // tree, un-elaborated and un-rewritten.
+    let standalone = parse("nodule d\nfn r() => Binary{8} = true").expect("parses");
+    let crate::ast::Item::Fn(fd) = &standalone.items[0] else {
+        panic!("expected a fn item");
+    };
+    let rhs_as_parsed = fd.body.clone();
+
+    let e = env("nodule d\nlower Trivial = true");
+    let ld = e
+        .lower_rules
+        .get("Trivial")
+        .expect("Trivial rule is registered");
+    // The `lower` RHS is stored verbatim (data), not lowered and not IL-grammar-type-checked yet
+    // (those are the M-812-cont completions; held at `Declared`, VR-5).
+    assert_eq!(
+        ld.rhs, rhs_as_parsed,
+        "the `lower` RHS must be stored verbatim (data), confirming it is not yet elaborated to L0"
+    );
+}
