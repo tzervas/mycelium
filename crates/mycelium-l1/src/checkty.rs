@@ -1381,6 +1381,7 @@ fn expand_object_via_decls(
             methods.push(FnDecl {
                 vis: crate::ast::Vis::Private,
                 thaw: false,
+                tier: None,
                 sig: sig.clone(),
                 body,
             });
@@ -1486,6 +1487,7 @@ fn check_nodule_with(
             FnDecl {
                 vis: fd.vis,
                 thaw: fd.thaw,
+                tier: fd.tier,
                 sig: fd.sig.clone(),
                 body,
             },
@@ -2246,6 +2248,7 @@ fn check_impl_methods(
         resolved.push(FnDecl {
             vis: method.vis,
             thaw: method.thaw,
+            tier: method.tier,
             sig: method.sig.clone(),
             body,
         });
@@ -2493,6 +2496,10 @@ impl Cx<'_> {
             ),
             Expr::Ascribe(inner, t) => self.check_ascribe(scope, inner, t),
             Expr::App { head, args } => self.check_app(scope, head, args, expected),
+            // DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice.
+            Expr::Fuse { left, right } => self.check_fuse(scope, left, right, expected),
+            // DN-58 §B (M-667): `reclaim(policy) { body }` — supervised scope.
+            Expr::Reclaim { policy, body } => self.check_reclaim(scope, policy, body, expected),
         }
     }
 
@@ -2796,6 +2803,95 @@ impl Cx<'_> {
         let (rty, last_body2) = self.check(scope, &last.body, expected)?;
         checked.push(Hypha { body: last_body2 });
         Ok((rty, Expr::Colony(checked)))
+    }
+
+    /// DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice instance
+    /// carried by the type. Both operands must have the same type `T`; the result type is also `T`.
+    /// Repr types (Binary/Ternary/Dense/Bytes/Seq) are always fusible — the semilattice join is
+    /// bitwise-and for Binary/Ternary (commutative/associative/idempotent by semantics — Empirical).
+    /// Named Data types require a `Fuse` trait instance; absent one the error is never-silent (G2).
+    ///
+    /// Guarantee: `Empirical` — the type-homogeneity check is Exact; the "repr types are fusible"
+    /// claim is Empirical (bitwise-and semilattice laws are property-tested, not mechanized-Proven
+    /// here). The Data-type Fuse-instance check is Declared (trait registry lookup, not a proof).
+    /// FLAG F-A1: in v0 the Fuse trait is not yet in the prelude — a user must `declare trait Fuse`
+    /// and `impl Fuse for T` for named Data types. No built-in Fuse instance registry exists yet.
+    /// FLAG F-A2: the semilattice law checker (commutativity/associativity/idempotence) is not yet
+    /// wired — the instance check is structural-only in v0 (DN-58 §A.6 deferred check).
+    fn check_fuse(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        left: &Expr,
+        right: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        // Check the left operand under the expected type.
+        let (lty, left2) = self.check(scope, left, expected)?;
+        // Check the right operand against the left's type (homogeneity — DN-58 §A.4).
+        let (rty, right2) = self.check(scope, right, Some(&lty))?;
+        if lty != rty {
+            return self.err(format!(
+                "`fuse` requires both operands to have the same type; left is `{lty}`, right is \
+                 `{rty}` (DN-58 §A.4 — the lawful-merge instance is per type; RFC-0008 RT6; \
+                 never-silent — G2)"
+            ));
+        }
+        // Fusibility check (Empirical for repr types; Declared for Data types with a Fuse instance).
+        let fusible = matches!(
+            &lty,
+            Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Bytes | Ty::Seq(_, _)
+        );
+        if !fusible {
+            // For Data types: look up a `Fuse` instance in the trait registry (Declared).
+            let has_fuse_instance = if let Some(head) = type_head(&lty) {
+                self.instances
+                    .contains_key(&("Fuse".to_owned(), head.clone()))
+            } else {
+                false
+            };
+            if !has_fuse_instance {
+                return self.err(format!(
+                    "`fuse` requires a `Fuse` semilattice instance for `{lty}` — declare \
+                     `trait Fuse {{ fn join(self, other: Self) => Self }}` and \
+                     `impl Fuse for {lty} {{ fn join(self, other: {lty}) => {lty} = … }}` with a \
+                     commutative/associative/idempotent `join`; RFC-0008 RT6 / DN-58 §A.4 \
+                     (never-silent — G2; FLAG F-A1: the built-in prelude Fuse instance for repr \
+                     types is deferred)"
+                ));
+            }
+        }
+        Ok((
+            lty,
+            Expr::Fuse {
+                left: Box::new(left2),
+                right: Box::new(right2),
+            },
+        ))
+    }
+
+    /// DN-58 §B (M-667): `reclaim(policy) { body }` — attach a reified reclamation/supervision
+    /// policy to a structured scope. `policy` is any expression (the policy type is open in v0 —
+    /// FLAG F-B2: the `SupervisionPolicy` surface type is not yet committed in the type system);
+    /// `body` is the supervised expression. The result type is the body's type. Never-silent on an
+    /// ill-typed `policy` or `body` (G2). Guarantee: `Empirical` (M-713 property-tested).
+    fn check_reclaim(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        policy: &Expr,
+        body: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        // The policy is any well-typed expression; its type is unconstrained in v0 (FLAG F-B2).
+        let (_, policy2) = self.check(scope, policy, None)?;
+        // The body is checked under the expected type.
+        let (bty, body2) = self.check(scope, body, expected)?;
+        Ok((
+            bty,
+            Expr::Reclaim {
+                policy: Box::new(policy2),
+                body: Box::new(body2),
+            },
+        ))
     }
 
     fn check_ascribe(

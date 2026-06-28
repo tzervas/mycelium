@@ -196,6 +196,16 @@ pub(crate) fn walk_expr(e: &Expr, f: &mut impl FnMut(&Expr)) {
             }
         }
         Expr::Ascribe(b, _) => walk_expr(b, f),
+        // DN-58 §A/§B (M-667): `fuse(a, b)` and `reclaim(policy) { body }` — walk sub-expressions
+        // transparently so the call-set / totality collectors see any recursive calls inside.
+        Expr::Fuse { left, right } => {
+            walk_expr(left, f);
+            walk_expr(right, f);
+        }
+        Expr::Reclaim { policy, body } => {
+            walk_expr(policy, f);
+            walk_expr(body, f);
+        }
         Expr::Path(_) | Expr::Lit(_) => {}
     }
 }
@@ -374,6 +384,17 @@ fn descend_walk(
             }
         }
         Expr::Ascribe(b, _) => descend_walk(b, pos, param, smaller, ok),
+        // DN-58 §A/§B (M-667): `fuse(a, b)` and `reclaim(policy) { body }` — walk sub-expressions
+        // transparently so recursive calls inside fuse/reclaim are subject to structural-descent
+        // analysis (A4-01; neither `fuse` nor `reclaim` introduces binders, so no shadowing).
+        Expr::Fuse { left, right } => {
+            descend_walk(left, pos, param, smaller, ok);
+            descend_walk(right, pos, param, smaller, ok);
+        }
+        Expr::Reclaim { policy, body } => {
+            descend_walk(policy, pos, param, smaller, ok);
+            descend_walk(body, pos, param, smaller, ok);
+        }
         Expr::Path(_) | Expr::Lit(_) => {}
     }
 }

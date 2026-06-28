@@ -3,10 +3,10 @@
 //! (never a panic, never a silent accept — S5/G2). v0 covers the L1-facing core.
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item,
-    Literal, LowerDecl, Nodule, ObjectDecl, Paradigm, Param, ParamKind, Path, Pattern, Phylum,
-    Scalar, Sparsity, Strength, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath,
-    ViaDecl, Vis, WidthRef,
+    AmbientParams, Arm, BaseType, Ctor, DeriveDecl, ExecutionMode, Expr, FnDecl, FnSig, Hypha,
+    ImplDecl, Item, Literal, LowerDecl, Nodule, ObjectDecl, Paradigm, Param, ParamKind, Path,
+    Pattern, Phylum, Scalar, Sparsity, Strength, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef,
+    UsePath, ViaDecl, Vis, WidthRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -422,6 +422,17 @@ impl Parser {
         if self.at(&Tok::Pub) {
             return self.parse_pub_item();
         }
+        // DN-58 §C (M-667): `@tier(mode)` is a per-definition execution-mode hint that precedes a
+        // `fn` declaration. It is parsed here (before the general `match`) so that `@tier` opens a
+        // function item at both private and pub-prefixed positions. The `@` that opens `@tier` is
+        // the same token as the guarantee-annotation `@` in type position, so we must look ahead:
+        // `@` followed by `tier` → parse the tier attribute + fn decl; any other `@` is a syntax
+        // error (no other item-level `@` attribute exists in v0 — teaching, never silent, G2).
+        if self.at(&Tok::At) {
+            return self
+                .parse_tier_fn_decl(crate::ast::Vis::Private)
+                .map(Item::Fn);
+        }
         match self.cur() {
             Tok::Use => self.parse_use().map(Item::Use),
             Tok::Default => {
@@ -436,6 +447,11 @@ impl Parser {
             // consumes it.
             Tok::Impl => self.parse_impl_decl().map(Item::Impl),
             Tok::Fn | Tok::Thaw => self.parse_fn_decl(Vis::Private).map(Item::Fn),
+            // DN-58 §C (M-667): `@tier(compiled)` / `@tier(interpreted)` before a `fn` declaration.
+            // The `@` at item position is unambiguous — guarantee annotations only appear in type
+            // contexts, not at item position. The `@tier` attribute is parsed here and threaded into
+            // `FnDecl.tier` (never-silent on a bad mode name — G2).
+            Tok::At => self.parse_tier_fn_decl(Vis::Private).map(Item::Fn),
             Tok::Matured => Err(ParseError::new(
                 self.pos(),
                 "maturation is declared per `nodule`/`phylum` in the header \
@@ -460,22 +476,42 @@ impl Parser {
             )),
             // DN-03 §4 / RFC-0008 §4.5: the remaining runtime-vocabulary reserved words. They lex as
             // keywords (never silent identifiers, G2) but no L1 construct consumes them yet — teaching
-            // diagnostic, never a silent accept. (`hypha`/`colony` left the set with M-666.)
-            t @ (Tok::Fuse
-            | Tok::Mesh
+            // diagnostic, never a silent accept. (`hypha`/`colony` left the set with M-666;
+            // `fuse`/`reclaim`/`tier` left the set with M-667 / DN-58 — they are now active.)
+            t @ (Tok::Mesh
             | Tok::Graft
             | Tok::Cyst
             | Tok::Xloc
             | Tok::Forage
-            | Tok::Backbone
-            | Tok::Tier
-            | Tok::Reclaim) => Err(ParseError::new(
+            | Tok::Backbone) => Err(ParseError::new(
                 self.pos(),
                 format!(
                     "`{word}` is reserved for the runtime model (RFC-0008), not yet active — \
                      it cannot open a program or be used as an identifier at this language version",
                     word = runtime_keyword_spelling(t)
                 ),
+            )),
+            // DN-58 §C (M-667): `tier` as a bare item is a teaching diagnostic — `@tier` attaches
+            // to a `fn` declaration (write `@tier(compiled)` or `@tier(interpreted)` before `fn`).
+            Tok::Tier => Err(ParseError::new(
+                self.pos(),
+                "`tier` is the DN-58 §C execution-mode hint — write `@tier(compiled)` or \
+                 `@tier(interpreted)` before a `fn` declaration (not as a bare item); \
+                 e.g. `@tier(compiled) fn hot_path(…) => … = …` (never-silent — G2)"
+                    .to_owned(),
+            )),
+            // DN-58 §A/§B (M-667): `fuse` and `reclaim` are expressions, not top-level items.
+            Tok::Fuse => Err(ParseError::new(
+                self.pos(),
+                "`fuse(a, b)` is an expression (DN-58 §A — lawful binary merge over the Fuse \
+                 semilattice; RFC-0008 RT6), not a top-level item — write it inside a `fn` body"
+                    .to_owned(),
+            )),
+            Tok::Reclaim => Err(ParseError::new(
+                self.pos(),
+                "`reclaim(policy) { body }` is an expression (DN-58 §B — supervised scope; \
+                 RFC-0008 RT7), not a top-level item — write it inside a `fn` body"
+                    .to_owned(),
             )),
             // DN-03 §1: `consume` is still a reserved-not-active surface keyword (M-664). `grow` is
             // superseded by `derive` (DN-38 §8.1 / M-812) — its teaching diagnostic now points at
@@ -537,6 +573,8 @@ impl Parser {
             Tok::Type => self.parse_type_decl(Vis::Pub).map(Item::Type),
             Tok::Trait => self.parse_trait_decl(Vis::Pub).map(Item::Trait),
             Tok::Fn | Tok::Thaw => self.parse_fn_decl(Vis::Pub).map(Item::Fn),
+            // DN-58 §C (M-667): `pub @tier(mode) fn …` — execution-mode hint on a pub fn.
+            Tok::At => self.parse_tier_fn_decl(Vis::Pub).map(Item::Fn),
             // DN-53 / M-811: `pub object` exports the composed type name to other nodules (M-662).
             Tok::Object => self.parse_object_decl(Vis::Pub).map(Item::Object),
             Tok::Use => Err(ParseError::new(
@@ -668,8 +706,88 @@ impl Parser {
         Ok(FnDecl {
             vis,
             thaw,
+            tier: None,
             sig,
             body,
+        })
+    }
+
+    /// DN-58 §C (M-667): `@tier(compiled)` / `@tier(interpreted)` followed by a function
+    /// declaration. Syntax: `@tier ( compiled | interpreted ) thaw? fn …`. The mode is recorded on
+    /// `FnDecl.tier` (non-semantic / NFR-7 — never a behavioural switch, only a performance hint).
+    /// Never-silent on a bad mode name: `compiled` and `interpreted` are the only valid modes (G2).
+    ///
+    /// The `@` at item position is unambiguous — guarantee annotations live inside type refs, not at
+    /// the top-level item grammar — so `@` here means "execution-mode tier attribute" (DN-58 §C).
+    fn parse_tier_fn_decl(&mut self, vis: Vis) -> Result<FnDecl, ParseError> {
+        self.expect(&Tok::At, "`@` before the `tier` attribute")?;
+        self.expect_keyword(&Tok::Tier)?;
+        self.expect(&Tok::LParen, "`(` to open the `@tier` mode argument")?;
+        let mode = match self.cur().clone() {
+            Tok::Ident(ref s) if s == "compiled" => {
+                self.bump();
+                ExecutionMode::Compiled
+            }
+            Tok::Ident(ref s) if s == "interpreted" => {
+                self.bump();
+                ExecutionMode::Interpreted
+            }
+            _ => {
+                return Err(ParseError::new(
+                    self.pos(),
+                    "`@tier` mode must be `compiled` or `interpreted` (DN-58 §C; RFC-0004 \
+                     ExecutionMode — never-silent on a bad mode name, G2)"
+                        .to_owned(),
+                ));
+            }
+        };
+        self.expect(&Tok::RParen, "`)` to close the `@tier` mode argument")?;
+        let thaw = self.eat(&Tok::Thaw);
+        self.expect(&Tok::Fn, "`fn` after `@tier(mode)`")?;
+        let sig = self.parse_sig_tail()?;
+        self.expect(&Tok::Eq, "`=` before the function body")?;
+        let body = self.parse_expr()?;
+        Ok(FnDecl {
+            vis,
+            thaw,
+            tier: Some(mode),
+            sig,
+            body,
+        })
+    }
+
+    /// DN-58 §A (M-667): `fuse ( <left> , <right> )` — lawful binary merge over the `Fuse`
+    /// semilattice instance (RFC-0008 RT6). Both operands are expressions; the checker verifies type
+    /// homogeneity and fusibility (never-silent on a missing `Fuse` instance, G2). Syntax sugar —
+    /// no new L0 node (KC-3).
+    fn parse_fuse_expr(&mut self) -> Result<Expr, ParseError> {
+        self.expect_keyword(&Tok::Fuse)?;
+        self.expect(&Tok::LParen, "`(` to open `fuse` operands")?;
+        let left = self.parse_expr()?;
+        self.expect(&Tok::Comma, "`,` between `fuse` operands")?;
+        let right = self.parse_expr()?;
+        self.expect(&Tok::RParen, "`)` to close `fuse` operands")?;
+        Ok(Expr::Fuse {
+            left: Box::new(left),
+            right: Box::new(right),
+        })
+    }
+
+    /// DN-58 §B (M-667): `reclaim ( <policy> ) { <body> }` — attach a reified supervision/
+    /// reclamation policy to a structured scope (RFC-0008 RT7). The `policy` is an expression
+    /// evaluating to a supervision policy; the `body` is any expression (typically a `colony { … }`
+    /// block). Braces are required for `body` clarity (G2 / never-silent on malformed syntax).
+    fn parse_reclaim_expr(&mut self) -> Result<Expr, ParseError> {
+        self.expect_keyword(&Tok::Reclaim)?;
+        self.expect(&Tok::LParen, "`(` to open the `reclaim` policy argument")?;
+        let policy = self.parse_expr()?;
+        self.expect(&Tok::RParen, "`)` to close the `reclaim` policy argument")?;
+        self.expect(&Tok::LBrace, "`{` to open the `reclaim` supervised body")?;
+        let body = self.parse_expr()?;
+        self.expect(&Tok::RBrace, "`}` to close the `reclaim` supervised body")?;
+        Ok(Expr::Reclaim {
+            policy: Box::new(policy),
+            body: Box::new(body),
         })
     }
 
@@ -1395,16 +1513,9 @@ impl Parser {
         }
         // DN-03 §4 / RFC-0008 §4.5: the remaining runtime-vocabulary reserved words produce a
         // teaching diagnostic at expression position (never a silent accept, G2). (`hypha`/`colony`
-        // left the reserved set with M-666 — `colony` is dispatched below; `hypha` is handled above.)
-        if let t @ (Tok::Fuse
-        | Tok::Mesh
-        | Tok::Graft
-        | Tok::Cyst
-        | Tok::Xloc
-        | Tok::Forage
-        | Tok::Backbone
-        | Tok::Tier
-        | Tok::Reclaim) = self.cur()
+        // left the reserved set with M-666; `fuse`/`reclaim`/`tier` left with M-667 / DN-58.)
+        if let t @ (Tok::Mesh | Tok::Graft | Tok::Cyst | Tok::Xloc | Tok::Forage | Tok::Backbone) =
+            self.cur()
         {
             return Err(ParseError::new(
                 self.pos(),
@@ -1413,6 +1524,16 @@ impl Parser {
                      it cannot open a program or be used as an identifier at this language version",
                     word = runtime_keyword_spelling(t)
                 ),
+            ));
+        }
+        // DN-58 §C (M-667): `tier` at expression position — teaching diagnostic.
+        if self.at(&Tok::Tier) {
+            return Err(ParseError::new(
+                self.pos(),
+                "`tier` is the DN-58 §C execution-mode hint — write `@tier(compiled)` or \
+                 `@tier(interpreted)` before a `fn` declaration at item position; it cannot appear \
+                 in expression context (never-silent — G2)"
+                    .to_owned(),
             ));
         }
         // DN-03 §1: `consume` is a reserved-not-active surface keyword; teaching diagnostic (G2).
@@ -1471,6 +1592,14 @@ impl Parser {
                  — move it to item position (outside any `fn` body)"
                     .to_owned(),
             )),
+            // DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice
+            // instance (RFC-0008 RT6). Both operands must have the same type; the checker verifies
+            // the type homogeneity and fusibility. Never-silent on type mismatch (G2).
+            Tok::Fuse => self.parse_fuse_expr(),
+            // DN-58 §B (M-667): `reclaim(policy) { body }` — attach a reified supervision/
+            // reclamation policy to a structured scope (RFC-0008 RT7). The checker verifies the
+            // body is well-typed; the policy type is open in v0 (FLAG F-B2). Never-silent (G2).
+            Tok::Reclaim => self.parse_reclaim_expr(),
             // RFC-0025 / M-705: the infix-operator layer. A non-keyword expression is an operator
             // expression over unary/applicative operands; each operator desugars to its canonical
             // word function. The keyword-led forms above (let/if/match/…) are statements, not

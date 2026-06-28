@@ -221,6 +221,7 @@ mod depth_budget_tests {
             items: vec![Item::Fn(FnDecl {
                 vis: crate::ast::Vis::Private,
                 thaw: false,
+                tier: None,
                 sig: FnSig {
                     name: "main".to_string(),
                     params: vec![],
