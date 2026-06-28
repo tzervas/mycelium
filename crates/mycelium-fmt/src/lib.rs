@@ -624,6 +624,11 @@ fn item_first_lines(nodule: &Nodule, tokens: &[Spanned]) -> Vec<u32> {
                 Item::Trait(_) => matches!(s.tok, Tok::Trait | Tok::Pub),
                 Item::Impl(_) => s.tok == Tok::Impl,
                 Item::Fn(_) => matches!(s.tok, Tok::Fn | Tok::Pub | Tok::Thaw),
+                // DN-53 / M-811: `object` opens at item position (optionally `pub object`).
+                Item::Object(_) => matches!(s.tok, Tok::Object | Tok::Pub),
+                // DN-54 / M-812: `lower`/`derive` open at item position.
+                Item::Lower(_) => s.tok == Tok::Lower,
+                Item::Derive(_) => s.tok == Tok::Derive,
             };
             if is_opener {
                 result.push(s.pos.line);
