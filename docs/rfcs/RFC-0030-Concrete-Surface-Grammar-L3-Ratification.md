@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0030 |
-| **Status** | **Enacted** (2026-06-27) — *Draft → Accepted → **Enacted**: the `mycelium.ebnf` was regenerated against RFC-0037 in the grammar epic (the Enacted gate this status previously flagged is now met; the committed EBNF matches the landed parser, conformance corpus green). Prior chain — ratified by the maintainer 2026-06-27 (R1 gate): the L3 grammar's structure + open-question resolutions (Q3 discharged via RFC-0018; Q8 `wild {…}` spelling) are settled. **CAVEAT (VR-5, never-silent):** the concrete `docs/spec/grammar/mycelium.ebnf` has **not** yet been regenerated against RFC-0037's bracket/operator changes — that regeneration (in the RFC-0037 grammar epic) is the **Enacted** gate; until it lands the committed EBNF lags RFC-0037 and must not be cited as the final grammar.* Prior: **Draft** (2026-06-23). |
+| **Status** | **Enacted** (2026-06-27); **operator residue ratified 2026-06-28 (in-session)** — the M-745 operator wiring (lt/gt/shl/shr/lte/gte) is **COMMISSIONED for implementation** (M-809 grammar-supersession epic; EBNF regen for `cmp_expr`/`shift_expr` productions — see §4.3 gate-status note). Prior Enacted chain (append-only): *Draft → Accepted → **Enacted**: the `mycelium.ebnf` was regenerated against RFC-0037 in the grammar epic (the Enacted gate this status previously flagged is now met; the committed EBNF matches the landed parser, conformance corpus green). Prior chain — ratified by the maintainer 2026-06-27 (R1 gate): the L3 grammar's structure + open-question resolutions (Q3 discharged via RFC-0018; Q8 `wild {…}` spelling) are settled. **CAVEAT (VR-5, never-silent):** the concrete `docs/spec/grammar/mycelium.ebnf` has **not** yet been regenerated against RFC-0037's bracket/operator changes — that regeneration (in the RFC-0037 grammar epic) is the **Enacted** gate; until it lands the committed EBNF lags RFC-0037 and must not be cited as the final grammar.* Prior: **Draft** (2026-06-23).* |
 | **Type** | Normative / foundational (once Accepted) — grammar spec + conformance; no L0 or L1 kernel change |
 | **Date** | 2026-06-23 |
 | **Feeds** | E11-1 (surface-language completeness, M-706) |
@@ -140,6 +140,16 @@ This RFC cannot honestly move Draft → Proposed (a *complete, ratified* L3 gram
 - **M-745** — the angle-bracket operators `< <= > >= << >>` (RFC-0025 §4.3), so the operator grammar
   is whole.
 
+> **Gate status update — M-745 met by RFC-0037 (append-only, 2026-06-28).**
+> RFC-0037 (Enacted 2026-06-27) closed M-745 by the bracket kind-split (D1): type-argument brackets
+> moved `<…>` → `[…]`, freeing `<>` for comparison/shift operators `<`/`>`/`<<`/`>>` with no
+> disambiguation machinery. The RFC-0037 grammar-supersession epic (M-809) updates `mycelium.ebnf`
+> with the new `cmp_expr`/`shift_expr` productions (RFC-0037 §6) and the RFC-0025 desugaring map
+> extension (`lt`/`gt`/`shl`/`shr` entries; `<=`/`>=` retired as glyphs → `lte`/`gte` word-only).
+> M-745 gate: **met**. M-707 remains open. This RFC's move to Proposed is unblocked on M-745 and
+> waits only on M-707 (RFC-0020 L2 carve-outs). The 2026-06-27 changelog entry records the fuller
+> supersession context.
+
 What **is** already integrated into `docs/spec/grammar/mycelium.ebnf` and need not wait: the
 operator-expression grammar (`op_expr` … `unary_expr`; RFC-0025/M-705), effect annotations (`!{…}`),
 the phylum/nodule organization (`phylum`/`pub`/`use` glob; M-662), the `for` sugar, the `colony`
@@ -213,6 +223,7 @@ choice is made here (VR-5).
 
 ## Meta — changelog
 
+- **2026-06-28 — operator residue ratified; M-745 wiring COMMISSIONED (in-session).** The M-745 operator wiring (lt/gt/shl/shr/lte/gte, via the M-809 grammar-supersession epic) is COMMISSIONED for implementation. EBNF regen for `cmp_expr`/`shift_expr` productions required. RFC stays **Enacted**; M-745 close is an implementation task, not a status move. (Append-only; VR-5; G2.)
 - **2026-06-27 — the grammar-supersession wave landed as RFC-0037 (append-only, Status unchanged — Draft).** The DN-31 grammar-surface resolution the 2026-06-25 note sequenced this RFC behind is now an explicit RFC: **RFC-0037** (Surface-Grammar Deconfliction & Layout-Independence, Proposed) — kind-split `[T]`/`{N}` (repr stays `{}`), `<>` operators-only, `=>`/`0t`/`lambda`, and a layout-independent grammar. RFC-0030's full L3 grammar is **regenerated against RFC-0037** (the `[]`-type-args + position split + the layout-independent delimiter rules) before it can move to Proposed; the committed `mycelium.ebnf` stays the normative oracle until that migration lands. The M-745 gate is satisfied by RFC-0037. No change to RFC-0030's §4 prose here. Append-only (VR-5 / house rule #3).
 - **2026-06-25 — Sequencing note (D6/D7; post corpus-alignment audit; Status unchanged — Draft).** The **Draft → Proposed** move is now **sequenced behind the D7 grammar-surface resolution** (DN-31, maintainer 2026-06-24/25): the type-argument surface is **being changed** — **`[]` is adopted for type-arguments** (freeing `<>` for the comparison/shift operators `< > << >>`, resolving the M-745 collision), **superseding this RFC's current `<>`-based direction** (and RFC-0019 §4.1's `<…>` type params, via supersession). The M-707 + M-745 gate named in §4.3 is therefore subsumed by that grammar-supersession wave: RFC-0030's full L3 grammar is regenerated against `[]`-type-args + the `[]`-vs-list-literal position split (DN-31 §2–§4) before it can move to Proposed. No change is made to RFC-0030's §4 prose here; the committed `mycelium.ebnf` stays the normative oracle until that wave lands (append-only; VR-5 / house rule #3).
 - **2026-06-23 — Partial decision (M-706; stays Draft).** Integrated the M-705 operator grammar
