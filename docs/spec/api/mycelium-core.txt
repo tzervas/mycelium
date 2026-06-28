@@ -169,6 +169,9 @@ pub fn mycelium_core::content::operation_hash(&str) -> mycelium_core::id::Conten
 pub mod mycelium_core::data
 pub enum mycelium_core::data::FieldSpec
 pub mycelium_core::data::FieldSpec::Data(alloc::string::String)
+pub mycelium_core::data::FieldSpec::Fn
+pub mycelium_core::data::FieldSpec::Fn::arity: u32
+pub mycelium_core::data::FieldSpec::Fn::sig: mycelium_core::data::FnSig
 pub mycelium_core::data::FieldSpec::Repr(mycelium_core::repr::Repr)
 impl core::clone::Clone for mycelium_core::data::FieldSpec
 pub fn mycelium_core::data::FieldSpec::clone(&self) -> mycelium_core::data::FieldSpec
@@ -187,6 +190,9 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldSpec
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldSpec
 pub enum mycelium_core::data::FieldTy
 pub mycelium_core::data::FieldTy::Data(mycelium_core::id::ContentHash)
+pub mycelium_core::data::FieldTy::Fn
+pub mycelium_core::data::FieldTy::Fn::arity: u32
+pub mycelium_core::data::FieldTy::Fn::sig: mycelium_core::data::ResolvedFnSig
 pub mycelium_core::data::FieldTy::Repr(mycelium_core::repr::Repr)
 impl core::clone::Clone for mycelium_core::data::FieldTy
 pub fn mycelium_core::data::FieldTy::clone(&self) -> mycelium_core::data::FieldTy
@@ -203,7 +209,30 @@ impl core::marker::Unpin for mycelium_core::data::FieldTy
 impl core::marker::UnsafeUnpin for mycelium_core::data::FieldTy
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldTy
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldTy
+pub enum mycelium_core::data::FieldTyRef
+pub mycelium_core::data::FieldTyRef::Data(alloc::string::String)
+pub mycelium_core::data::FieldTyRef::Fn(alloc::boxed::Box<mycelium_core::data::FnSig>)
+pub mycelium_core::data::FieldTyRef::Repr(mycelium_core::repr::Repr)
+impl core::clone::Clone for mycelium_core::data::FieldTyRef
+pub fn mycelium_core::data::FieldTyRef::clone(&self) -> mycelium_core::data::FieldTyRef
+impl core::cmp::Eq for mycelium_core::data::FieldTyRef
+impl core::cmp::PartialEq for mycelium_core::data::FieldTyRef
+pub fn mycelium_core::data::FieldTyRef::eq(&self, &mycelium_core::data::FieldTyRef) -> bool
+impl core::fmt::Debug for mycelium_core::data::FieldTyRef
+pub fn mycelium_core::data::FieldTyRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::FieldTyRef
+impl core::marker::Freeze for mycelium_core::data::FieldTyRef
+impl core::marker::Send for mycelium_core::data::FieldTyRef
+impl core::marker::Sync for mycelium_core::data::FieldTyRef
+impl core::marker::Unpin for mycelium_core::data::FieldTyRef
+impl core::marker::UnsafeUnpin for mycelium_core::data::FieldTyRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldTyRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldTyRef
 pub enum mycelium_core::data::RegistryError
+pub mycelium_core::data::RegistryError::FnArityMismatch
+pub mycelium_core::data::RegistryError::FnArityMismatch::arity: u32
+pub mycelium_core::data::RegistryError::FnArityMismatch::in_decl: alloc::string::String
+pub mycelium_core::data::RegistryError::FnArityMismatch::params_len: usize
 pub mycelium_core::data::RegistryError::UnknownTypeRef
 pub mycelium_core::data::RegistryError::UnknownTypeRef::in_decl: alloc::string::String
 pub mycelium_core::data::RegistryError::UnknownTypeRef::missing: alloc::string::String
@@ -225,6 +254,25 @@ impl core::marker::Unpin for mycelium_core::data::RegistryError
 impl core::marker::UnsafeUnpin for mycelium_core::data::RegistryError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::RegistryError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::RegistryError
+pub enum mycelium_core::data::ResolvedFieldTyRef
+pub mycelium_core::data::ResolvedFieldTyRef::Data(mycelium_core::id::ContentHash)
+pub mycelium_core::data::ResolvedFieldTyRef::Fn(alloc::boxed::Box<mycelium_core::data::ResolvedFnSig>)
+pub mycelium_core::data::ResolvedFieldTyRef::Repr(mycelium_core::repr::Repr)
+impl core::clone::Clone for mycelium_core::data::ResolvedFieldTyRef
+pub fn mycelium_core::data::ResolvedFieldTyRef::clone(&self) -> mycelium_core::data::ResolvedFieldTyRef
+impl core::cmp::Eq for mycelium_core::data::ResolvedFieldTyRef
+impl core::cmp::PartialEq for mycelium_core::data::ResolvedFieldTyRef
+pub fn mycelium_core::data::ResolvedFieldTyRef::eq(&self, &mycelium_core::data::ResolvedFieldTyRef) -> bool
+impl core::fmt::Debug for mycelium_core::data::ResolvedFieldTyRef
+pub fn mycelium_core::data::ResolvedFieldTyRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::ResolvedFieldTyRef
+impl core::marker::Freeze for mycelium_core::data::ResolvedFieldTyRef
+impl core::marker::Send for mycelium_core::data::ResolvedFieldTyRef
+impl core::marker::Sync for mycelium_core::data::ResolvedFieldTyRef
+impl core::marker::Unpin for mycelium_core::data::ResolvedFieldTyRef
+impl core::marker::UnsafeUnpin for mycelium_core::data::ResolvedFieldTyRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::ResolvedFieldTyRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::ResolvedFieldTyRef
 pub struct mycelium_core::data::CtorDecl
 pub mycelium_core::data::CtorDecl::fields: alloc::vec::Vec<mycelium_core::data::FieldTy>
 impl core::clone::Clone for mycelium_core::data::CtorDecl
@@ -347,6 +395,43 @@ impl core::marker::Unpin for mycelium_core::data::DeclSpec
 impl core::marker::UnsafeUnpin for mycelium_core::data::DeclSpec
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::DeclSpec
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::DeclSpec
+pub struct mycelium_core::data::FnSig
+pub mycelium_core::data::FnSig::arity: u32
+pub mycelium_core::data::FnSig::params: alloc::vec::Vec<mycelium_core::data::FieldTyRef>
+pub mycelium_core::data::FnSig::ret: alloc::boxed::Box<mycelium_core::data::FieldTyRef>
+impl core::clone::Clone for mycelium_core::data::FnSig
+pub fn mycelium_core::data::FnSig::clone(&self) -> mycelium_core::data::FnSig
+impl core::cmp::Eq for mycelium_core::data::FnSig
+impl core::cmp::PartialEq for mycelium_core::data::FnSig
+pub fn mycelium_core::data::FnSig::eq(&self, &mycelium_core::data::FnSig) -> bool
+impl core::fmt::Debug for mycelium_core::data::FnSig
+pub fn mycelium_core::data::FnSig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::FnSig
+impl core::marker::Freeze for mycelium_core::data::FnSig
+impl core::marker::Send for mycelium_core::data::FnSig
+impl core::marker::Sync for mycelium_core::data::FnSig
+impl core::marker::Unpin for mycelium_core::data::FnSig
+impl core::marker::UnsafeUnpin for mycelium_core::data::FnSig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FnSig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FnSig
+pub struct mycelium_core::data::ResolvedFnSig
+pub mycelium_core::data::ResolvedFnSig::params: alloc::vec::Vec<mycelium_core::data::ResolvedFieldTyRef>
+pub mycelium_core::data::ResolvedFnSig::ret: alloc::boxed::Box<mycelium_core::data::ResolvedFieldTyRef>
+impl core::clone::Clone for mycelium_core::data::ResolvedFnSig
+pub fn mycelium_core::data::ResolvedFnSig::clone(&self) -> mycelium_core::data::ResolvedFnSig
+impl core::cmp::Eq for mycelium_core::data::ResolvedFnSig
+impl core::cmp::PartialEq for mycelium_core::data::ResolvedFnSig
+pub fn mycelium_core::data::ResolvedFnSig::eq(&self, &mycelium_core::data::ResolvedFnSig) -> bool
+impl core::fmt::Debug for mycelium_core::data::ResolvedFnSig
+pub fn mycelium_core::data::ResolvedFnSig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::ResolvedFnSig
+impl core::marker::Freeze for mycelium_core::data::ResolvedFnSig
+impl core::marker::Send for mycelium_core::data::ResolvedFnSig
+impl core::marker::Sync for mycelium_core::data::ResolvedFnSig
+impl core::marker::Unpin for mycelium_core::data::ResolvedFnSig
+impl core::marker::UnsafeUnpin for mycelium_core::data::ResolvedFnSig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::ResolvedFnSig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::ResolvedFnSig
 pub mod mycelium_core::datum
 pub enum mycelium_core::datum::CoreValue
 pub mycelium_core::datum::CoreValue::Data(mycelium_core::datum::Datum)
@@ -1579,6 +1664,9 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::DecodePro
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::DecodeProcedure
 pub enum mycelium_core::FieldSpec
 pub mycelium_core::FieldSpec::Data(alloc::string::String)
+pub mycelium_core::FieldSpec::Fn
+pub mycelium_core::FieldSpec::Fn::arity: u32
+pub mycelium_core::FieldSpec::Fn::sig: mycelium_core::data::FnSig
 pub mycelium_core::FieldSpec::Repr(mycelium_core::repr::Repr)
 impl core::clone::Clone for mycelium_core::data::FieldSpec
 pub fn mycelium_core::data::FieldSpec::clone(&self) -> mycelium_core::data::FieldSpec
@@ -1597,6 +1685,9 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldSpec
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldSpec
 pub enum mycelium_core::FieldTy
 pub mycelium_core::FieldTy::Data(mycelium_core::id::ContentHash)
+pub mycelium_core::FieldTy::Fn
+pub mycelium_core::FieldTy::Fn::arity: u32
+pub mycelium_core::FieldTy::Fn::sig: mycelium_core::data::ResolvedFnSig
 pub mycelium_core::FieldTy::Repr(mycelium_core::repr::Repr)
 impl core::clone::Clone for mycelium_core::data::FieldTy
 pub fn mycelium_core::data::FieldTy::clone(&self) -> mycelium_core::data::FieldTy
@@ -1613,6 +1704,25 @@ impl core::marker::Unpin for mycelium_core::data::FieldTy
 impl core::marker::UnsafeUnpin for mycelium_core::data::FieldTy
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldTy
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldTy
+pub enum mycelium_core::FieldTyRef
+pub mycelium_core::FieldTyRef::Data(alloc::string::String)
+pub mycelium_core::FieldTyRef::Fn(alloc::boxed::Box<mycelium_core::data::FnSig>)
+pub mycelium_core::FieldTyRef::Repr(mycelium_core::repr::Repr)
+impl core::clone::Clone for mycelium_core::data::FieldTyRef
+pub fn mycelium_core::data::FieldTyRef::clone(&self) -> mycelium_core::data::FieldTyRef
+impl core::cmp::Eq for mycelium_core::data::FieldTyRef
+impl core::cmp::PartialEq for mycelium_core::data::FieldTyRef
+pub fn mycelium_core::data::FieldTyRef::eq(&self, &mycelium_core::data::FieldTyRef) -> bool
+impl core::fmt::Debug for mycelium_core::data::FieldTyRef
+pub fn mycelium_core::data::FieldTyRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::FieldTyRef
+impl core::marker::Freeze for mycelium_core::data::FieldTyRef
+impl core::marker::Send for mycelium_core::data::FieldTyRef
+impl core::marker::Sync for mycelium_core::data::FieldTyRef
+impl core::marker::Unpin for mycelium_core::data::FieldTyRef
+impl core::marker::UnsafeUnpin for mycelium_core::data::FieldTyRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldTyRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldTyRef
 pub enum mycelium_core::GuaranteeStrength
 pub mycelium_core::GuaranteeStrength::Declared
 pub mycelium_core::GuaranteeStrength::Empirical
@@ -1892,6 +2002,10 @@ impl core::marker::UnsafeUnpin for mycelium_core::recon::ReconMode
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::ReconMode
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::ReconMode
 pub enum mycelium_core::RegistryError
+pub mycelium_core::RegistryError::FnArityMismatch
+pub mycelium_core::RegistryError::FnArityMismatch::arity: u32
+pub mycelium_core::RegistryError::FnArityMismatch::in_decl: alloc::string::String
+pub mycelium_core::RegistryError::FnArityMismatch::params_len: usize
 pub mycelium_core::RegistryError::UnknownTypeRef
 pub mycelium_core::RegistryError::UnknownTypeRef::in_decl: alloc::string::String
 pub mycelium_core::RegistryError::UnknownTypeRef::missing: alloc::string::String
@@ -1951,6 +2065,25 @@ impl core::marker::Unpin for mycelium_core::repr::Repr
 impl core::marker::UnsafeUnpin for mycelium_core::repr::Repr
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::Repr
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::Repr
+pub enum mycelium_core::ResolvedFieldTyRef
+pub mycelium_core::ResolvedFieldTyRef::Data(mycelium_core::id::ContentHash)
+pub mycelium_core::ResolvedFieldTyRef::Fn(alloc::boxed::Box<mycelium_core::data::ResolvedFnSig>)
+pub mycelium_core::ResolvedFieldTyRef::Repr(mycelium_core::repr::Repr)
+impl core::clone::Clone for mycelium_core::data::ResolvedFieldTyRef
+pub fn mycelium_core::data::ResolvedFieldTyRef::clone(&self) -> mycelium_core::data::ResolvedFieldTyRef
+impl core::cmp::Eq for mycelium_core::data::ResolvedFieldTyRef
+impl core::cmp::PartialEq for mycelium_core::data::ResolvedFieldTyRef
+pub fn mycelium_core::data::ResolvedFieldTyRef::eq(&self, &mycelium_core::data::ResolvedFieldTyRef) -> bool
+impl core::fmt::Debug for mycelium_core::data::ResolvedFieldTyRef
+pub fn mycelium_core::data::ResolvedFieldTyRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::ResolvedFieldTyRef
+impl core::marker::Freeze for mycelium_core::data::ResolvedFieldTyRef
+impl core::marker::Send for mycelium_core::data::ResolvedFieldTyRef
+impl core::marker::Sync for mycelium_core::data::ResolvedFieldTyRef
+impl core::marker::Unpin for mycelium_core::data::ResolvedFieldTyRef
+impl core::marker::UnsafeUnpin for mycelium_core::data::ResolvedFieldTyRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::ResolvedFieldTyRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::ResolvedFieldTyRef
 pub enum mycelium_core::ScalarKind
 pub mycelium_core::ScalarKind::Bf16
 pub mycelium_core::ScalarKind::F16
@@ -2302,6 +2435,25 @@ impl core::marker::Unpin for mycelium_core::recon::DecodeSpec
 impl core::marker::UnsafeUnpin for mycelium_core::recon::DecodeSpec
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::DecodeSpec
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::DecodeSpec
+pub struct mycelium_core::FnSig
+pub mycelium_core::FnSig::arity: u32
+pub mycelium_core::FnSig::params: alloc::vec::Vec<mycelium_core::data::FieldTyRef>
+pub mycelium_core::FnSig::ret: alloc::boxed::Box<mycelium_core::data::FieldTyRef>
+impl core::clone::Clone for mycelium_core::data::FnSig
+pub fn mycelium_core::data::FnSig::clone(&self) -> mycelium_core::data::FnSig
+impl core::cmp::Eq for mycelium_core::data::FnSig
+impl core::cmp::PartialEq for mycelium_core::data::FnSig
+pub fn mycelium_core::data::FnSig::eq(&self, &mycelium_core::data::FnSig) -> bool
+impl core::fmt::Debug for mycelium_core::data::FnSig
+pub fn mycelium_core::data::FnSig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::FnSig
+impl core::marker::Freeze for mycelium_core::data::FnSig
+impl core::marker::Send for mycelium_core::data::FnSig
+impl core::marker::Sync for mycelium_core::data::FnSig
+impl core::marker::Unpin for mycelium_core::data::FnSig
+impl core::marker::UnsafeUnpin for mycelium_core::data::FnSig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FnSig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FnSig
 pub struct mycelium_core::Meta
 impl mycelium_core::meta::Meta
 pub fn mycelium_core::meta::Meta::bound(&self) -> core::option::Option<&mycelium_core::bound::Bound>
@@ -2510,6 +2662,24 @@ impl core::marker::Unpin for mycelium_core::recon::ReconInfo
 impl core::marker::UnsafeUnpin for mycelium_core::recon::ReconInfo
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::ReconInfo
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::ReconInfo
+pub struct mycelium_core::ResolvedFnSig
+pub mycelium_core::ResolvedFnSig::params: alloc::vec::Vec<mycelium_core::data::ResolvedFieldTyRef>
+pub mycelium_core::ResolvedFnSig::ret: alloc::boxed::Box<mycelium_core::data::ResolvedFieldTyRef>
+impl core::clone::Clone for mycelium_core::data::ResolvedFnSig
+pub fn mycelium_core::data::ResolvedFnSig::clone(&self) -> mycelium_core::data::ResolvedFnSig
+impl core::cmp::Eq for mycelium_core::data::ResolvedFnSig
+impl core::cmp::PartialEq for mycelium_core::data::ResolvedFnSig
+pub fn mycelium_core::data::ResolvedFnSig::eq(&self, &mycelium_core::data::ResolvedFnSig) -> bool
+impl core::fmt::Debug for mycelium_core::data::ResolvedFnSig
+pub fn mycelium_core::data::ResolvedFnSig::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_core::data::ResolvedFnSig
+impl core::marker::Freeze for mycelium_core::data::ResolvedFnSig
+impl core::marker::Send for mycelium_core::data::ResolvedFnSig
+impl core::marker::Sync for mycelium_core::data::ResolvedFnSig
+impl core::marker::Unpin for mycelium_core::data::ResolvedFnSig
+impl core::marker::UnsafeUnpin for mycelium_core::data::ResolvedFnSig
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::ResolvedFnSig
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::ResolvedFnSig
 pub struct mycelium_core::SparsityObs
 pub mycelium_core::SparsityObs::active: u64
 pub mycelium_core::SparsityObs::density: f64

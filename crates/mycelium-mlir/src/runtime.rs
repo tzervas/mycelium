@@ -32,6 +32,13 @@
 
 use mycelium_core::{CoreValue, Node};
 use mycelium_interp::{Budgets, CancelToken, EvalError, PrimRegistry, SwapEngine, TaskOutcome};
+// DN-58 §B (M-817): the `reclaim` driver dispatches to the M-713 supervision machinery. The trusted
+// base (`mycelium-interp`/`-l1`) cannot depend on `mycelium-std-runtime`, so the dispatch lives here
+// in the runtime tier — the same crate that holds the real `colony` executor.
+use mycelium_std_runtime::supervision::{
+    supervise_with_restart, RestartIntensity, SupervisedFailure, SupervisedRun, SupervisionRecord,
+    Supervisor,
+};
 
 /// The result of advancing a task one cooperative step.
 pub enum Poll<T, E> {
@@ -498,6 +505,150 @@ pub fn run_colony(
         other => Err(ColonyError::HyphaFailed {
             index: last,
             outcome: format!("{other:?}"),
+        }),
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// The `reclaim` driver: real RT7 supervision of an L1 `reclaim(policy) { body }` scope (DN-58 §B;
+// M-817 — closes M-710). Validated equal to its sequential reference on success; the bounded restart
+// cascade + the `SupervisionRecord` EXPLAIN trail is the RT7 value-add on failure. KC-3: **no** L0
+// supervision node — supervision is scheduling layered *over* the unchanged body L0 term, exactly as
+// `run_colony` layers concurrency over per-hypha terms. The supervision machinery itself is
+// `mycelium-std-runtime::supervision` (M-713), which the trusted base (`mycelium-interp`/`-l1`) cannot
+// depend on — so the dispatch lives here, in the runtime tier, never in a kernel prim.
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+
+/// The result of supervising a `reclaim(policy) { body }` scope: the body's value plus the EXPLAIN
+/// trace of every supervision decision (empty when the body succeeded on its first attempt — DN-58
+/// §B; RFC-0008 RT7).
+#[derive(Debug, Clone)]
+pub struct ReclaimRun {
+    /// The supervised scope's observable — the body's value. Validated equal to the **sequential
+    /// reference** (`mycelium_l1::elaborate` → `Let{_ = policy, body}`); the supervisor's restarts do
+    /// not change a *successful* observable (the RT7 cascade only acts on failure).
+    pub value: CoreValue,
+    /// Every restart/escalation decision the supervisor made, in order — a reified, inspectable record
+    /// (no black boxes; ADR-006).
+    pub trace: Vec<SupervisionRecord>,
+}
+
+/// Why running a `reclaim` scope through the supervisor refused — always explicit, never a silent
+/// drop/pause (G2/RT7). Carries the EXPLAIN trace so the decision history stays inspectable (ADR-006).
+#[derive(Debug, Clone)]
+pub enum ReclaimError {
+    /// Evaluating the reclamation/supervision **policy** itself refused (an explicit evaluator error —
+    /// never a silent default policy; G2). The body was not run.
+    Policy(EvalError),
+    /// The supervised **body** did not resolve to a value: the bounded restart cascade escalated, or
+    /// the scope was cancelled (RT7). Carries the EXPLAIN trace of every restart/escalation decision —
+    /// a non-recovered failure is explicit, never an unbounded restart storm and never a silent drop.
+    Supervised {
+        /// The explicit terminal failure (escalation when the cascade bound is hit, or cancellation).
+        failure: SupervisedFailure,
+        /// The EXPLAIN trace — every restart/escalation decision in order (no black boxes; ADR-006).
+        trace: Vec<SupervisionRecord>,
+    },
+}
+
+impl core::fmt::Display for ReclaimError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ReclaimError::Policy(e) => write!(
+                f,
+                "reclaim: the supervision policy itself refused: {e} (an explicit evaluator error — \
+                 the body was not run; never a silent default policy — G2)"
+            ),
+            ReclaimError::Supervised { failure, trace } => write!(
+                f,
+                "reclaim: the supervised body did not resolve ({failure:?}) after {} recorded \
+                 supervision decision(s) — an explicit bounded outcome, never an unbounded restart \
+                 storm and never a silent drop (RT4/RT7; G2)",
+                trace.len()
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ReclaimError {}
+
+/// Run an L1 `reclaim(policy) { body }` as **real RT7 supervision**, validated equal to its sequential
+/// reference on success (DN-58 §B; RFC-0008 RT7; M-817).
+///
+/// `policy` and `body` are the reclaim entry's closed L0 programs (`mycelium_l1::elaborate_reclaim`).
+/// The driver:
+/// 1. evaluates `policy` once (for its effect / well-formedness) — a policy refusal is an explicit
+///    [`ReclaimError::Policy`], never a silent default (G2);
+/// 2. runs `body` under [`mycelium_std_runtime::supervision::supervise_with_restart`], **re-evaluating
+///    the body node per restart** (which is why the body is a node, not a value): a `Done` body
+///    succeeds; a `Failed` body is restarted under the bounded cascade until it succeeds or the
+///    supervisor escalates (never an unbounded storm — RT4/RT7);
+/// 3. returns the body's value + the EXPLAIN trace, or an explicit [`ReclaimError`] (escalation /
+///    cancellation) **with** the trace — never a silent drop.
+///
+/// **Honesty (per-op).** The supervised observable equals the sequential reference (`elaborate` →
+/// `Let{_ = policy, body}`) on success — the same value the L1 evaluator and the L0 interpreter
+/// produce (the three-way differential, DN-58 §B); the restart cascade is the RT7 enhancement on
+/// *failure*, not a different success value. The guarantee is **`Empirical`** (the supervision
+/// machinery is property-tested, M-713); the restart **bound** is `Exact` (inherited from
+/// [`Supervisor`]). Adds **no L0 supervision node** — the trusted base stays sequential (KC-3).
+///
+/// **Determinism note (honest).** A closed L0 body is *deterministic*, so a restart cannot turn a
+/// failing body into a succeeding one (no transient effects in the pure fragment yet): a successful
+/// body resolves on the first attempt (empty trace), and a failing body is restarted until the bounded
+/// cascade escalates (a recorded trace). Restart-*recovers-a-transient-failure* awaits effectful
+/// bodies — flagged, never silently implied (G2/VR-5).
+///
+/// **Policy interpretation (v0 — DN-58 §B.6 F-B2).** The `policy` surface *type* is not yet committed,
+/// so the driver cannot yet map a policy *value* to concrete restart bounds; it evaluates the policy
+/// for its effect and supervises under the caller-supplied [`RestartIntensity`] + cascade budget.
+/// Threading the policy value into the bounds lands with F-B2 — flagged here, never fabricated (G2).
+#[allow(clippy::too_many_arguments)] // the driver threads the body's eval budgets + the RT7 policy
+pub fn run_reclaim(
+    policy: &Node,
+    body: &Node,
+    intensity: RestartIntensity,
+    cascade_budget: u64,
+    prims: &PrimRegistry,
+    swap: &dyn SwapEngine,
+    fuel: u64,
+    max_depth: usize,
+) -> Result<ReclaimRun, ReclaimError> {
+    // (1) Evaluate the policy once, for its effect / well-formedness. A refusal is explicit (G2) — the
+    // body is never run under an ill-formed policy.
+    let mut policy_budgets = Budgets::new();
+    crate::run_core_with_effects(policy, prims, swap, fuel, max_depth, &mut policy_budgets)
+        .map_err(ReclaimError::Policy)?;
+
+    // (2) Supervise the body: each attempt re-evaluates the body node from a fresh budget (a restart
+    // re-runs the scope — RT7). The bounded cascade guarantees termination: a deterministic failing
+    // body escalates after `cascade_budget` restarts (never an unbounded storm).
+    let mut supervisor = Supervisor::new(intensity, cascade_budget);
+    let run: SupervisedRun<CoreValue> =
+        supervise_with_restart::<CoreValue, EvalError>(&mut supervisor, || {
+            let mut body_budgets = Budgets::new();
+            match crate::run_core_with_effects(
+                body,
+                prims,
+                swap,
+                fuel,
+                max_depth,
+                &mut body_budgets,
+            ) {
+                Ok(v) => TaskOutcome::Done(v),
+                Err(e) => TaskOutcome::Failed(e),
+            }
+        });
+
+    // (3) Resolve: the body's value + the EXPLAIN trace, or an explicit failure carrying the trace.
+    match run.result {
+        Ok(value) => Ok(ReclaimRun {
+            value,
+            trace: run.trace,
+        }),
+        Err(failure) => Err(ReclaimError::Supervised {
+            failure,
+            trace: run.trace,
         }),
     }
 }

@@ -862,12 +862,36 @@ impl<'e> Mono<'e> {
             // (the checker verified homogeneity); any lingering type-variable inside an operand
             // is a monomorphization concern handled transparently here.
             Expr::Fuse { left, right } => {
-                let left2 = self.rewrite(site, scope, left, None)?;
-                let right2 = self.rewrite(site, scope, right, None)?;
-                Ok(Expr::Fuse {
-                    left: Box::new(left2),
-                    right: Box::new(right2),
-                })
+                // DN-58 §A.5 (M-817): a **Data**-type `fuse(a, b)` desugars to the resolved
+                // `Fuse::join` trait-method call — exactly the form the L1 evaluator dispatches
+                // (`eval.rs` builds `join(left, right)`), and the form that makes the user merge
+                // **run** three-way (the coherent instance method is emitted as a direct fn and
+                // inlined by `elab`). A **repr**-type `fuse` has no user `join`; its meet is a
+                // built-in (the `Binary` meet is `fuse_join:binary`), so it stays an `Expr::Fuse`
+                // for `elab` to lower to the meet prim. The checker (`check_fuse`) has already
+                // verified a coherent `Fuse` instance exists for the Data case, so the resolution
+                // below cannot be a guess (G2/VR-5).
+                let lty = self.infer(site, scope, left)?;
+                let is_repr = matches!(
+                    &lty,
+                    Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Bytes | Ty::Seq(_, _)
+                );
+                if is_repr {
+                    let left2 = self.rewrite(site, scope, left, None)?;
+                    let right2 = self.rewrite(site, scope, right, None)?;
+                    Ok(Expr::Fuse {
+                        left: Box::new(left2),
+                        right: Box::new(right2),
+                    })
+                } else {
+                    // `fuse(a, b) ≡ join(a, b)` (left ↦ `self`, right ↦ `other` — DN-58 §A.2
+                    // canonical `Fuse::join`). Route through the trait-method resolver so the
+                    // coherent instance is *selected and recorded* (EXPLAIN — house rule #2), never
+                    // guessed. The expected type seeds return-driven receiver inference; the operand
+                    // types pin it regardless.
+                    let join_args = [left.as_ref().clone(), right.as_ref().clone()];
+                    self.rewrite_trait_method_call(site, scope, "join", &join_args, expected)
+                }
             }
             Expr::Reclaim { policy, body } => {
                 let policy2 = self.rewrite(site, scope, policy, None)?;

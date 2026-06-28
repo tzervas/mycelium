@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-58 |
-| **Status** | **Accepted** (2026-06-28; **ratified by the maintainer 2026-06-28**) — the L1 *surface forms* for `fuse`, `reclaim`, `tier` (which RFC-0027 §10.5 / ADR-020 deferred) are approved. Maintainer decisions: **§A `fuse`** and **§B `reclaim`** accepted as proposed (the `Fuse` lawful-merge trait + bare `fuse(a,b)`; the `reclaim(policy) { scope }` modifier dispatching to `std.runtime` supervision). **§C `tier`** with three explicit calls — **F-C1 = attribute form** (`@tier(…)`), **F-C2 = `compiled`/`interpreted`** mode vocabulary (not `native`), **F-C3 = per-definition hint** (decoupled from build-target profiles). ~~Enacts no code~~ — **implemented (Rust-first, 2026-06-28):** surface + type-check + elaboration landed (M-667, r4v wave); repr-type `fuse` executes three-way (`Empirical`); reclaim runtime supervision wiring + data-type fuse prim registration are **residual** (follow-on M-817). **NOT `Enacted`** — execution is partial (VR-5); → `Enacted` gated on M-817 landing + M-710 closed. Prior: **Draft** (2026-06-27). |
+| **Status** | **Enacted** (2026-06-28, prm wave — M-817 landed, M-710 closed) — the §A `fuse` and §B `reclaim` **executable surface now runs three-way** (L1-eval ≡ L0-interp ≡ AOT, `Empirical`): Binary repr `fuse` via the registered `fuse_join:binary` meet prim (bitwise-AND + canonical `Derived{op:"fuse_join"}` provenance); Data-type `fuse` desugared (monomorphization) to the resolved `Fuse::join` call; `reclaim` via its sequential reference (`Let{_ = policy, body}`) with the **real** RT7 supervision dispatch as the runtime-tier driver `mycelium_mlir::run_reclaim` (`supervise_with_restart` + `SupervisionRecord` EXPLAIN). KC-3: no new L0 node. **Honest scope of the enactment (VR-5):** what was *Accepted as proposed* now executes; the explicitly **flagged-deferred** sub-questions remain open as future-dev and are **not** claimed Enacted — **F-A3** (a committed canonical meet for the non-`Binary` reprs — these stay an honest residual), **F-B2** (the `policy` surface *type*, so the driver maps a policy *value* to concrete restart bounds — currently caller-supplied), and restart-*recovers-a-transient-failure* (needs effectful bodies; the pure fragment is deterministic). Prior: **Accepted** (2026-06-28; **ratified by the maintainer 2026-06-28**) — the L1 *surface forms* for `fuse`, `reclaim`, `tier` (which RFC-0027 §10.5 / ADR-020 deferred) approved. Maintainer decisions: **§A `fuse`** and **§B `reclaim`** accepted as proposed (the `Fuse` lawful-merge trait + bare `fuse(a,b)`; the `reclaim(policy) { scope }` modifier dispatching to `std.runtime` supervision). **§C `tier`** with three explicit calls — **F-C1 = attribute form** (`@tier(…)`), **F-C2 = `compiled`/`interpreted`** mode vocabulary (not `native`), **F-C3 = per-definition hint** (decoupled from build-target profiles). Implemented (Rust-first, 2026-06-28): surface + type-check + elaboration landed (M-667, r4v wave); repr-type `fuse` executed three-way (`Empirical`); reclaim runtime supervision wiring + data-type fuse execution were **residual** (follow-on M-817, now landed). Prior: **Draft** (2026-06-27). |
 | **Task** | M-667 (L1 surface) · M-710 (execution end-to-end) |
 | **Feeds** | the RFC-0008 §4.6 R1 vocabulary activation — the construct-by-construct path ADR-020 §"For Phase-7 construct activation" lays out: this note is step (1) "an implementation RFC commits the construct's typing + elaboration (per RFC-0006 §4.3)" for `fuse`/`reclaim`/`tier`. Unblocks the `r4v` wave (kickoff) and E12-1/T3. |
 | **Date** | June 27, 2026 |
@@ -307,6 +307,24 @@ RFC-0004 §3 (certificate checker) + §4 (stable component) + §9 (the interpret
 ---
 
 ## Meta — changelog
+- **2026-06-28 — Accepted → Enacted (prm wave, M-817 landed / M-710 closed)**: the §A `fuse` and §B
+  `reclaim` executable surface now **runs three-way** (L1-eval ≡ L0-interp ≡ AOT, `Empirical`). §A.5
+  realized: Binary repr `fuse` → the registered `fuse_join:binary` meet prim (bitwise-AND + canonical
+  `Derived{op:"fuse_join"}` provenance); Data-type `fuse` → desugared in `mono.rs` to the resolved
+  `Fuse::join` call (the instance selection recorded — EXPLAIN, no black box). §B realized: `reclaim`
+  → its sequential reference `Let{_ = policy, body}` in the trusted base, with the **real** RT7
+  supervision dispatch as the runtime-tier driver `mycelium_mlir::run_reclaim` (over the lazy body
+  node from `mycelium_l1::elaborate_reclaim`) — `supervise_with_restart` + the `SupervisionRecord`
+  EXPLAIN trail, validated equal to the sequential reference on success (the `run_colony` two-path
+  pattern). **Mechanism note (VR-5 / transparency):** this refines the M-817 brief's "register two
+  prims" sketch — the trusted base cannot depend on `mycelium-std-runtime` (cycle) and DN-58 §A.5
+  already specified a `join` *call*, so the data-fuse is an elaboration desugar and the reclaim
+  supervision is a runtime-tier driver (not interp prims); only the Binary repr meet is a pure prim.
+  KC-3: no new L0 node (meet reuses `Op`, reference reuses `Let`, supervision layered over unchanged
+  body eval). **Honestly NOT Enacted (flagged-deferred, future-dev):** F-A3 (non-`Binary` repr meets
+  — honest residual), F-B2 (policy *value* → restart bounds — caller-supplied for now), and
+  restart-recovers-a-transient-failure (needs effectful bodies). Tests: four three-way differential
+  tests + a `generic_corpus` data-fuse case. Append-only.
 - **2026-06-28 — implemented (Rust-first), Accepted → NOT YET Enacted (partial, VR-5)**:
   `fuse`/`reclaim`/`@tier` surface ACTIVE in `mycelium-l1` (r4v wave, M-667 done). Parse +
   AST + checker + elab dispatch landed. Repr-type `fuse` executes three-way (`Empirical`).
