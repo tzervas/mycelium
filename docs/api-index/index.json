@@ -2317,7 +2317,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 81,
+      "line": 125,
       "summary": "One constructor of a resolved declaration: its field types, in declaration order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2328,7 +2328,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 37,
+      "line": 45,
       "summary": "A constructor reference `#T#i` (RFC-0007 §4.2): the content hash of a data declaration and the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2339,7 +2339,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 108,
+      "line": 190,
       "summary": "A build-time constructor spec: its fields, in declaration order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2350,7 +2350,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 89,
+      "line": 133,
       "summary": "A resolved, content-addressed data declaration: its constructors in declaration order (the index",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2361,7 +2361,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 152,
+      "line": 254,
       "summary": "The content-addressed data registry `Σ` (RFC-0001 §4.3 r3): the resolved declarations keyed by",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2383,7 +2383,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 115,
+      "line": 197,
       "summary": "A build-time declaration spec: its constructors, in declaration order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2416,8 +2416,8 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 99,
-      "summary": "A build-time field spec: a representation field, or a data field referencing another declaration",
+      "line": 171,
+      "summary": "A build-time field spec: a representation field, a data field referencing another declaration",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -2427,8 +2427,8 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 72,
-      "summary": "A field type within a resolved declaration: a representation type, or a (possibly cyclic) data",
+      "line": 107,
+      "summary": "A field type within a resolved declaration: a representation type, a (possibly cyclic) data",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -2471,7 +2471,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/content.rs",
-      "line": 495,
+      "line": 510,
       "summary": "The separable `hash ↔ name` side-table (RFC-0001 §4.6, \"names-as-metadata\").",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2658,7 +2658,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 122,
+      "line": 204,
       "summary": "Why building a [`DataRegistry`] from specs failed — always explicit (never a silent drop).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2911,7 +2911,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::content::Names",
       "file": "crates/mycelium-core/src/content.rs",
-      "line": 510,
+      "line": 525,
       "summary": "Bind a human name to a content hash, returning any previous name for that hash.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2922,7 +2922,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::content::Names",
       "file": "crates/mycelium-core/src/content.rs",
-      "line": 528,
+      "line": 543,
       "summary": "Whether the table is empty.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2933,7 +2933,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::content::Names",
       "file": "crates/mycelium-core/src/content.rs",
-      "line": 522,
+      "line": 537,
       "summary": "Number of bound names.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2944,7 +2944,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::content::Names",
       "file": "crates/mycelium-core/src/content.rs",
-      "line": 516,
+      "line": 531,
       "summary": "The name bound to `hash`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2955,7 +2955,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::content::Names",
       "file": "crates/mycelium-core/src/content.rs",
-      "line": 502,
+      "line": 517,
       "summary": "An empty name table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2977,7 +2977,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::data::CtorRef",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 51,
+      "line": 59,
       "summary": "The referenced data declaration's content hash (`#T`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2988,7 +2988,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::data::CtorRef",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 57,
+      "line": 65,
       "summary": "The constructor's index within its declaration (`#i`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2999,7 +2999,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::data::CtorRef",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 45,
+      "line": 53,
       "summary": "Build a constructor reference from a declaration hash and a constructor index.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3010,7 +3010,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::data::DataRegistry",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 163,
+      "line": 266,
       "summary": "Build the registry from a set of named declaration specs, computing every declaration's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3021,7 +3021,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::data::DataRegistry",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 267,
+      "line": 364,
       "summary": "The constructor declaration a [`CtorRef`] points at, if registered and in range.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3032,7 +3032,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::data::DataRegistry",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 281,
+      "line": 378,
       "summary": "The number of constructors of the data type the [`CtorRef`] belongs to (for WF7 coverage).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3043,7 +3043,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::data::DataRegistry",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 249,
+      "line": 346,
       "summary": "A [`CtorRef`] for constructor `index` of the declaration named `name`, if the declaration is",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3054,7 +3054,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::data::DataRegistry",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 242,
+      "line": 339,
       "summary": "The content hash of the declaration registered under build-time name `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3065,7 +3065,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::data::DataRegistry",
       "file": "crates/mycelium-core/src/data.rs",
-      "line": 275,
+      "line": 372,
       "summary": "The number of fields the referenced constructor takes (its saturation arity, WF6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3736,7 +3736,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core::node::Node",
       "file": "crates/mycelium-core/src/content.rs",
-      "line": 459,
+      "line": 474,
       "summary": "The content hash of this value's *identity-bearing* content: its [`Repr`] and payload, with",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -3769,7 +3769,7 @@
       "crate": "mycelium-core",
       "module": "mycelium_core",
       "file": "crates/mycelium-core/src/content.rs",
-      "line": 484,
+      "line": 499,
       "summary": "The content address of a *primitive operation* identified by its name — for the `op` field of a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7069,7 +7069,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4438,
+      "line": 4450,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7080,7 +7080,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4419,
+      "line": 4431,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -26374,7 +26374,7 @@
     },
     {
       "symbol": "mycelium_core::content::Names",
-      "reason": "dedup-alias: same definition as `mycelium_core::Names` at crates/mycelium-core/src/content.rs:495 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::Names` at crates/mycelium-core/src/content.rs:510 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::content::Names::clone",
@@ -26410,11 +26410,11 @@
     },
     {
       "symbol": "mycelium_core::content::operation_hash",
-      "reason": "dedup-alias: same definition as `mycelium_core::operation_hash` at crates/mycelium-core/src/content.rs:484 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::operation_hash` at crates/mycelium-core/src/content.rs:499 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::CtorDecl",
-      "reason": "dedup-alias: same definition as `mycelium_core::CtorDecl` at crates/mycelium-core/src/data.rs:81 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::CtorDecl` at crates/mycelium-core/src/data.rs:125 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::CtorDecl::clone",
@@ -26442,7 +26442,7 @@
     },
     {
       "symbol": "mycelium_core::data::CtorRef",
-      "reason": "dedup-alias: same definition as `mycelium_core::CtorRef` at crates/mycelium-core/src/data.rs:37 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::CtorRef` at crates/mycelium-core/src/data.rs:45 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::CtorRef::clone",
@@ -26502,7 +26502,7 @@
     },
     {
       "symbol": "mycelium_core::data::CtorSpec",
-      "reason": "dedup-alias: same definition as `mycelium_core::CtorSpec` at crates/mycelium-core/src/data.rs:108 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::CtorSpec` at crates/mycelium-core/src/data.rs:190 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::CtorSpec::clone",
@@ -26530,7 +26530,7 @@
     },
     {
       "symbol": "mycelium_core::data::DataDecl",
-      "reason": "dedup-alias: same definition as `mycelium_core::DataDecl` at crates/mycelium-core/src/data.rs:89 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::DataDecl` at crates/mycelium-core/src/data.rs:133 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::DataDecl::clone",
@@ -26558,7 +26558,7 @@
     },
     {
       "symbol": "mycelium_core::data::DataRegistry",
-      "reason": "dedup-alias: same definition as `mycelium_core::DataRegistry` at crates/mycelium-core/src/data.rs:152 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::DataRegistry` at crates/mycelium-core/src/data.rs:254 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::DataRegistry::clone",
@@ -26570,11 +26570,11 @@
     },
     {
       "symbol": "mycelium_core::data::DataRegistry::decl",
-      "reason": "dedup-alias: same definition as `mycelium_core::data::CtorRef::decl` at crates/mycelium-core/src/data.rs:51 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::data::CtorRef::decl` at crates/mycelium-core/src/data.rs:59 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::DataRegistry::decl",
-      "reason": "dedup-alias: same definition as `mycelium_core::data::CtorRef::decl` at crates/mycelium-core/src/data.rs:51 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::data::CtorRef::decl` at crates/mycelium-core/src/data.rs:59 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::DataRegistry::default",
@@ -26602,7 +26602,7 @@
     },
     {
       "symbol": "mycelium_core::data::DeclSpec",
-      "reason": "dedup-alias: same definition as `mycelium_core::DeclSpec` at crates/mycelium-core/src/data.rs:115 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::DeclSpec` at crates/mycelium-core/src/data.rs:197 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::DeclSpec::clone",
@@ -26630,7 +26630,7 @@
     },
     {
       "symbol": "mycelium_core::data::FieldSpec",
-      "reason": "dedup-alias: same definition as `mycelium_core::FieldSpec` at crates/mycelium-core/src/data.rs:99 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::FieldSpec` at crates/mycelium-core/src/data.rs:171 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::FieldSpec::clone",
@@ -26658,7 +26658,7 @@
     },
     {
       "symbol": "mycelium_core::data::FieldTy",
-      "reason": "dedup-alias: same definition as `mycelium_core::FieldTy` at crates/mycelium-core/src/data.rs:72 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::FieldTy` at crates/mycelium-core/src/data.rs:107 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::FieldTy::clone",
@@ -26686,7 +26686,7 @@
     },
     {
       "symbol": "mycelium_core::data::RegistryError",
-      "reason": "dedup-alias: same definition as `mycelium_core::RegistryError` at crates/mycelium-core/src/data.rs:122 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::RegistryError` at crates/mycelium-core/src/data.rs:204 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::data::RegistryError::clone",
@@ -28110,11 +28110,11 @@
     },
     {
       "symbol": "mycelium_core::value::Value::content_hash",
-      "reason": "dedup-alias: same definition as `mycelium_core::node::Node::content_hash` at crates/mycelium-core/src/content.rs:459 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::node::Node::content_hash` at crates/mycelium-core/src/content.rs:474 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::value::Value::content_hash",
-      "reason": "dedup-alias: same definition as `mycelium_core::node::Node::content_hash` at crates/mycelium-core/src/content.rs:459 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::node::Node::content_hash` at crates/mycelium-core/src/content.rs:474 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::value::Value::deserialize",
@@ -28194,11 +28194,11 @@
     },
     {
       "symbol": "mycelium_core::wrapping::WrappingOpt::new",
-      "reason": "dedup-alias: same definition as `mycelium_core::content::Names::new` at crates/mycelium-core/src/content.rs:502 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::content::Names::new` at crates/mycelium-core/src/content.rs:517 — one canonical row kept"
     },
     {
       "symbol": "mycelium_core::wrapping::WrappingOpt::new",
-      "reason": "dedup-alias: same definition as `mycelium_core::content::Names::new` at crates/mycelium-core/src/content.rs:502 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_core::content::Names::new` at crates/mycelium-core/src/content.rs:517 — one canonical row kept"
     },
     {
       "symbol": "mycelium_dense::DenseError::clone",

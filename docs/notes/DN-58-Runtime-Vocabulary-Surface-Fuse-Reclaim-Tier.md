@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-58 |
-| **Status** | **Accepted** (2026-06-28; **ratified by the maintainer 2026-06-28**) — the L1 *surface forms* for `fuse`, `reclaim`, `tier` (which RFC-0027 §10.5 / ADR-020 deferred) are approved. Maintainer decisions: **§A `fuse`** and **§B `reclaim`** accepted as proposed (the `Fuse` lawful-merge trait + bare `fuse(a,b)`; the `reclaim(policy) { scope }` modifier dispatching to `std.runtime` supervision). **§C `tier`** with three explicit calls — **F-C1 = attribute form** (`@tier(…)`), **F-C2 = `compiled`/`interpreted`** mode vocabulary (not `native`), **F-C3 = per-definition hint** (decoupled from build-target profiles). **Enacts no code** — unblocks the `r4v` wave (M-667/M-710) to implement against this ratified surface; → **Enacted** once `r4v` lands. Prior: **Draft** (2026-06-27). |
+| **Status** | **Accepted** (2026-06-28; **ratified by the maintainer 2026-06-28**) — the L1 *surface forms* for `fuse`, `reclaim`, `tier` (which RFC-0027 §10.5 / ADR-020 deferred) are approved. Maintainer decisions: **§A `fuse`** and **§B `reclaim`** accepted as proposed (the `Fuse` lawful-merge trait + bare `fuse(a,b)`; the `reclaim(policy) { scope }` modifier dispatching to `std.runtime` supervision). **§C `tier`** with three explicit calls — **F-C1 = attribute form** (`@tier(…)`), **F-C2 = `compiled`/`interpreted`** mode vocabulary (not `native`), **F-C3 = per-definition hint** (decoupled from build-target profiles). ~~Enacts no code~~ — **implemented (Rust-first, 2026-06-28):** surface + type-check + elaboration landed (M-667, r4v wave); repr-type `fuse` executes three-way (`Empirical`); reclaim runtime supervision wiring + data-type fuse prim registration are **residual** (follow-on M-817). **NOT `Enacted`** — execution is partial (VR-5); → `Enacted` gated on M-817 landing + M-710 closed. Prior: **Draft** (2026-06-27). |
 | **Task** | M-667 (L1 surface) · M-710 (execution end-to-end) |
 | **Feeds** | the RFC-0008 §4.6 R1 vocabulary activation — the construct-by-construct path ADR-020 §"For Phase-7 construct activation" lays out: this note is step (1) "an implementation RFC commits the construct's typing + elaboration (per RFC-0006 §4.3)" for `fuse`/`reclaim`/`tier`. Unblocks the `r4v` wave (kickoff) and E12-1/T3. |
 | **Date** | June 27, 2026 |
@@ -307,6 +307,15 @@ RFC-0004 §3 (certificate checker) + §4 (stable component) + §9 (the interpret
 ---
 
 ## Meta — changelog
+- **2026-06-28 — implemented (Rust-first), Accepted → NOT YET Enacted (partial, VR-5)**:
+  `fuse`/`reclaim`/`@tier` surface ACTIVE in `mycelium-l1` (r4v wave, M-667 done). Parse +
+  AST + checker + elab dispatch landed. Repr-type `fuse` executes three-way (`Empirical`).
+  RESIDUAL: `reclaim` elab stub + data-type fuse prim registration → follow-on M-817.
+  NOT `Enacted` — execution partial; → `Enacted` gated on M-817 + M-710 closed. Status stays
+  **`Accepted`** with this implementation note (append-only). Append-only.
+- **2026-06-28 — moved from `Draft` to `Accepted`**: ratified by the maintainer (in-session).
+  Maintainer decisions recorded (§A/§B/§C). Enacts no code; surface tagged `Declared`-with-argument.
+  Append-only.
 - **2026-06-27 — created at `Draft`**: proposes the L1 surface forms for `fuse`/`reclaim`/`tier`
   (the follow-on RFC-0027 §10.5 calls for, scoped to L1 surface), to unblock the `r4v` wave
   (M-667/M-710) against a ratified surface rather than a guessed one. Enacts no code; all proposed

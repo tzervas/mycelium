@@ -8,6 +8,42 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-28: r4v + ADR-033 FLAG-1 integration wave — fuse/reclaim/tier L1 surface ACTIVE; ADR-033 full-sig encoding landed)
+
+- **r4v wave (M-667 done; M-710 in-progress/partial): `fuse`, `reclaim`, `@tier` are now ACTIVE
+  constructs in `crates/mycelium-l1` — no longer reserved-not-active (DN-58 §A/§B/§C).** Parse:
+  `parse_fuse_expr` (`fuse(a, b)` — lawful binary merge over the `Fuse` semilattice, RFC-0008 RT6);
+  `parse_reclaim_expr` (`reclaim(policy) { body }` — supervised scope, RFC-0008 RT7); `@tier(compiled
+  | interpreted)` attribute path on `fn` items (per-definition execution-mode hint, RFC-0004
+  `ExecutionMode`, NFR-7 non-semantic). AST: `Expr::Fuse { left, right }`, `Expr::Reclaim { policy,
+  body }`, `FnDecl.tier: Option<TierMode>`. Checker: homogeneity + `Fuse`-instance check for `fuse`;
+  policy-expression check for `reclaim`; attribute validation for `@tier` — **all never-silent (G2)**.
+  Conformance: `accept/24-fuse-reclaim-tier.myc` added; `reject/12` updated (`mesh`/`graft`/`cyst`/
+  `xloc`/`forage`/`backbone` remain reserved-not-active). `mycelium-fmt` gains `fuse`/`reclaim`/`@tier`
+  display arms. **`cargo test -p mycelium-l1` 201 green.**
+
+  Execution status (honest, VR-5): **`fuse` repr-type execution is Empirical** — three-way
+  differential (`tests/differential.rs`) runs green for repr-typed operands. **RESIDUAL — never-silent
+  (G2):** `reclaim` elab dispatches to a Residual stub (the `run_supervised` hook into
+  `mycelium-std-runtime` is not yet wired); data-type `fuse` prim registration in the runtime
+  registry is not yet wired. Follow-on: **M-817** (wire reclaim:supervised + fuse_join:data prims
+  into the runtime registry). **M-710 remains in-progress/partial** (the end-to-end execution
+  verification closes M-710).
+
+- **ADR-033 FLAG-1 Path A — full function signature in `FieldSpec::Fn` dispatch hash (M-810,
+  `mycelium-core`). Empirical via distinct-hash property test + no-match differential.**
+  `FieldSpec::Fn { arity }` → `FieldSpec::Fn { sig: FnSig }` with a `FieldTyRef` per param + return
+  type. `encode_decl` gains a full-signature encoding arm (`FIELD_FN` / `FN_SIG_*` / `FTR_*` tags —
+  injective over typed structure). A `Fn { arity: 2, sig: (Binary{8},Binary{8})→Binary{8} }` field
+  hashes **distinctly** from a `Fn { arity: 2, sig: (Binary{16},Binary{16})→Binary{16} }` field —
+  closing the FLAG-1 type-confusion hole at the kernel level (silent G2 violation: two same-arity
+  but different-type fn fields previously collided on content identity). `FieldTy::Fn` resolved
+  analogue matches. `cargo test -p mycelium-core` 233+11 green. **Soundness tag: `Empirical`** (the
+  injectivity property is trial-tested via distinct-hash property test + no-match differential; it
+  is **not `Proven`** — unmechanized VR-5). FLAG-1 → **resolved (implemented)**. ADR-033 → propose
+  **`Enacted`** (pending maintainer's final nod): the full-sig encoding landed and verified; the
+  KC-3 growth is deliberate and bounded.
+
 ### Added (2026-06-28: obj+low integration wave — `object`/`via` + `lower`/`derive` surface, Rust-first)
 
 - **DN-53 object-composition surface (M-811) — implemented Rust-first, pending ratification.** `object`
