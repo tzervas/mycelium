@@ -11,7 +11,7 @@
 |---|---|
 | **UID** | `kpr` |
 | **Head branch** | `claude/head/kpr` |
-| **Status** | **gate cleared** — M-746 done (RFC-0032 **Accepted**, §5 D1–D7); the implementation leaves M-747…M-750 are `todo` and ready to start |
+| **Status** | **in progress** — M-746 (RFC-0032 **Accepted**, §5 D1–D7) + M-747/748/749/750/751 **done** (prims `cmp.*`/`bit.*`, `Repr::Seq`/`Repr::Bytes`, width-generics→M-753); **only M-752** (Tier-2 enablement smoke ports) remains. Closing M-752 → E19-1 `done` → unblocks **c10** M-703 |
 | **Swarm mode** | Sonnet |
 | **Depends on** | E13-1 §5 D4 (RFC-0031, **Accepted** — names the blockers); **gate: RFC-0032/M-746 must reach Accepted first**. Coordinates with `c10` (mycelium-core / kernel-T1 ownership) and `s10` (mycelium-l1 type system / width-generics). |
 
