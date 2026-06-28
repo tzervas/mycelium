@@ -154,5 +154,21 @@ Run **one** L1-lane kickoff at a time (`srf`→`s10`→`hof`→`lwd`→`strm`→
 `kpr` + `tul`** fully in parallel alongside it; hold **`boot10`/`c10`-tag/`rel10`-M738/`dfb`** until
 their gates clear; `aot10` is post-1.0.
 
+## Coverage — the current set IS comprehensive for pre-dogfooding
+
+A reverse-coverage audit (2026-06-28) confirmed every **open pre-dogfooding** task maps to a current
+kickoff above. The following open items are **deliberately *not* kickoffs** (excluded from the
+pre-dogfood set), so the next session doesn't chase them:
+
+- **Done, just status-lag:** **E7-5 / M-692** (operator syntax) — satisfied by the landed M-745 (`ops`,
+  RFC-0025 Enacted); flipped to `done`. **M-724** (FFI safety verify) — E14-1 is `done`; label-lag only.
+- **Routed into an existing kickoff:** **M-677** (declared-effects → interp budget) → `r10`.
+- **Design-pending (kickoff only *after* the RFC is ratified):** **E20-1** (collections / RFC-0033,
+  `proposed`), **E21-1** (tunable-cert / RFC-0034, `proposed`), **E22-1** (security-scan / RFC-0035).
+- **Post-1.0 / release-engineering (Phase 8):** **E9-1** editor highlighting + **M-697** · **M-743**
+  MIT-licensing audit · **M-744** issue-dedup. Plus `aot10` (T6 native AOT).
+- **Housekeeping / ongoing hardening (not feature kickoffs):** **M-674** (explicit-budget robustness) ·
+  **M-797** (inline-test retrofit) · **M-816** (stale-branch pruning).
+
 ## Reserved (maintainer-only; excluded from every kickoff)
 **M-655 / M-703** (cut the 1.0.0 tag) · **M-381 / M-646** (LLM local runs).
