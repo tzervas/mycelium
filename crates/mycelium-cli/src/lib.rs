@@ -301,7 +301,7 @@ fn scaffold_nodule(name: &str) -> String {
          // @summary: {name} — scaffolded by `myc init`; replace with your own definitions.\n\
          nodule {name}\n\
          \n\
-         fn answer() -> Binary{{8}} =\n  \
+         fn answer() => Binary{{8}} =\n  \
          0b0010_1010\n"
     )
 }
