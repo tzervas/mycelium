@@ -8,6 +8,25 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-28: `hrd` — DN-40 A1/A2/A3 doc-drift closure; code already landed, docs reconciled)
+
+- **Doc reconciliation, no code change.** The DN-40 **A1** (CRITICAL parser type-subgrammar DoS),
+  **A2** (HIGH pattern-subgrammar DoS), and **A3** (HIGH dep-hash parse-don't-validate) fixes that
+  RFC-0028 §4.4 (signed off 2026-06-28) and the 2026-06-28 ratification batch below describe as
+  **COMMISSIONED / "active gaps in the current codebase"** were found to have **already landed on
+  `dev` 2026-06-26** (`4456bd3`; A3 `e7e705f`/`3f55eaa`) — recorded in §Security (2026-06-26: DN-40
+  input-validation hardening) further down. Re-verified green this session: the `mycelium-l1`
+  crash-refused depth regressions (`tests/check.rs::deeply_nested_{type_arrow,type_args,ctor_pattern}_is_refused_not_a_crash`
+  and `parse::deep_operator_nesting_is_refused_not_crashed`; shared `MAX_EXPR_DEPTH = 256` budget) and
+  the `mycelium-proj` typed-`ContentHash` manifest tests. Reconciled the lagging docs **append-only**
+  (house rule #3): RFC-0028 status row + §4.4 status-note + §4.4.4 closure note, and the DN-40 status
+  closure note — the historical commissioning entries are preserved as the as-signed-off record.
+  **Tags:** the recursion bound is `Proven`-by-construction; the `256` limit value stays `Declared`
+  (VR-5). `issues.yaml` needed no change — E14-1 and M-722 are already `status:done` and landed
+  *after* A1/A2/A3, so the must-fix-before-E14-1 sequencing was met. `cargo-fuzz` is not installed in
+  this environment, so the `fuzz_l1_parse` smoke skipped gracefully (local↔CI skip-on-absent policy);
+  its no-panic invariant is exercised by the crash-refused tests above.
+
 ### Added (2026-06-28: ops kickoff — M-745 angle/shift operators wired in `mycelium-l1`)
 
 - **M-745 done: the comparison and shift operators `<` `>` `<<` `>>` are now wired (RFC-0025 §4.1;
