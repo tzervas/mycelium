@@ -881,6 +881,45 @@ fn collect_match_arm_comments(
                 depth,
             )?;
         }
+        // DN-58 §A/§B (M-667): `fuse(a, b)` and `reclaim(policy) { body }` — recurse into
+        // sub-expressions to collect any match arm comments inside them. Neither form introduces
+        // match-arm structure itself; they recurse transparently.
+        Expr::Fuse { left, right } => {
+            collect_match_arm_comments(
+                item_idx,
+                left,
+                remaining,
+                arm_trailing,
+                fat_arrow_lines,
+                depth,
+            )?;
+            collect_match_arm_comments(
+                item_idx,
+                right,
+                remaining,
+                arm_trailing,
+                fat_arrow_lines,
+                depth,
+            )?;
+        }
+        Expr::Reclaim { policy, body } => {
+            collect_match_arm_comments(
+                item_idx,
+                policy,
+                remaining,
+                arm_trailing,
+                fat_arrow_lines,
+                depth,
+            )?;
+            collect_match_arm_comments(
+                item_idx,
+                body,
+                remaining,
+                arm_trailing,
+                fat_arrow_lines,
+                depth,
+            )?;
+        }
         // Leaves: Lit, Path — no subexpressions to recurse into.
         Expr::Lit(_) | Expr::Path(_) => {}
     }
@@ -1217,6 +1256,18 @@ fn render_expr_canonical(e: &Expr) -> String {
         Expr::Ascribe(inner, t) => {
             format!("{} : {}", render_expr_canonical(inner), render_type_ref(t))
         }
+        // DN-58 §A/§B (M-667): canonical rendering for `fuse(a, b)` and `reclaim(pol) { body }`.
+        // Mirrors `print_expr` in ambient.rs.
+        Expr::Fuse { left, right } => format!(
+            "fuse({}, {})",
+            render_expr_canonical(left),
+            render_expr_canonical(right)
+        ),
+        Expr::Reclaim { policy, body } => format!(
+            "reclaim({}) {{ {} }}",
+            render_expr_canonical(policy),
+            render_expr_canonical(body)
+        ),
     }
 }
 

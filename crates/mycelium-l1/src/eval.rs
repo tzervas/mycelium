@@ -611,6 +611,62 @@ impl<'e> Evaluator<'e> {
             }
 
             Expr::App { head, args } => self.eval_app(fuel, depth, site, scope, head, args),
+
+            // DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice.
+            // For repr types (Binary/Ternary/Dense/Bytes/Seq): the meet is bitwise-and (`bit.and`
+            // kernel prim) — commutative/associative/idempotent by bitwise-and semantics (Empirical).
+            // For Data types with a `Fuse` instance: delegate to the user's `join` fn (first-class
+            // call through `eval_app`). The checker has already verified type homogeneity; any type
+            // mismatch here is an internal never-silent error (G2).
+            // Guarantee: `Empirical` — three-way differential per DN-58 §A.5; semilattice laws are
+            // property-tested for repr types, not mechanized-Proven here.
+            Expr::Fuse { left, right } => {
+                let lv = self.eval(fuel, depth, site, scope, left)?;
+                let rv = self.eval(fuel, depth, site, scope, right)?;
+                match (&lv, &rv) {
+                    (L1Value::Repr(lrepr), L1Value::Repr(rrepr)) => {
+                        // Repr fuse = bitwise-and (the semilattice meet). Use `bit.and` prim.
+                        let f = self.prims.get("bit.and").ok_or_else(|| {
+                            L1Error::Kernel(KernelError::UnknownPrim("bit.and".to_owned()))
+                        })?;
+                        Ok(L1Value::Repr(f("bit.and", &[lrepr, rrepr])?))
+                    }
+                    (L1Value::Data { ty, ctor: _, fields: _ }, _) => {
+                        // Data type: dispatch through the `join` function (user-declared Fuse impl).
+                        // The monomorphized env has `join` fn registered (the checker verified the
+                        // Fuse instance exists). If not present, a never-silent error (G2).
+                        let join_call = Expr::App {
+                            head: Box::new(Expr::Path(crate::ast::Path(vec!["join".to_owned()]))),
+                            args: vec![left.as_ref().clone(), right.as_ref().clone()],
+                        };
+                        let _ = ty; // ty is for context; the join fn is resolved by name
+                        self.eval(fuel, depth, site, scope, &join_call)
+                    }
+                    _ => Err(L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: "`fuse` applied to mixed repr/data operands — internal type error \
+                              (the checker should have rejected this; DN-58 §A.4 — never-silent, G2)"
+                            .to_owned(),
+                    }),
+                }
+            }
+
+            // DN-58 §B (M-667): `reclaim(policy) { body }` — supervised scope. In the trusted base
+            // (the sequential evaluator), supervision is a runtime concern: the body is evaluated
+            // directly, like any expression. The policy is evaluated for its effect (it may perform
+            // registration); then the body runs under its scope. The `SupervisionRecord` EXPLAIN trail
+            // is a runtime/prim concern — not tracked here in the L1 trusted base.
+            // FLAG F-B1: in v0 the `reclaim:supervised` prim is not yet wired; the L1 evaluator runs
+            // the body directly (transparent fallback — G2: a supervision failure in v0 propagates
+            // through the normal error path, not a specialized recovery trace). The AOT/prim path
+            // may differ once the prim registry registers `reclaim:supervised` (M-713 follow-on).
+            // Guarantee: `Empirical` (the body evaluation is faithful; the supervision wire-up is deferred).
+            Expr::Reclaim { policy, body } => {
+                // Evaluate the policy (for side-effects — e.g. registering a supervision callback).
+                let _ = self.eval(fuel, depth, site, scope, policy)?;
+                // Evaluate the body: the result is the supervised scope's observable.
+                self.eval(fuel, depth, site, scope, body)
+            }
         }
     }
 

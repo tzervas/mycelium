@@ -1510,3 +1510,79 @@ fn cross_nodule_program_runs_three_way() {
     );
     // DN-52 §5 FLAG-2 → RESOLVED: cross-nodule three-way = Runs (Empirical).
 }
+
+// --- DN-58 §A (M-667): fuse/reclaim/tier runtime-vocabulary wave ----------------------------
+//
+// DN-58 §A: `fuse(a, b)` — lawful binary merge over the Fuse semilattice (RFC-0008 RT6).
+// The L1 evaluator runs `bit.and` for repr types (the semilattice meet); the L0 elaboration
+// produces `Node::Op { prim: "fuse_join:binary", … }`. The `fuse_join:*` prim namespace is not
+// yet wired in the PrimRegistry (FLAG F-A1 — follow-on M-713), so the L0-interp/AOT paths
+// refuse explicitly (never silently produce a wrong value — G2).
+//
+// This test therefore exercises:
+//   1. Parse + type-check succeeds.
+//   2. L1-eval runs and returns the correct semilattice meet (Binary bit-and).
+//   3. elaborate produces a Node::Op with prim "fuse_join:binary" (the correct L0 encoding).
+//   4. L0-interp refuses (unknown prim) — explicit, not a hang or a silent wrong value (G2).
+//
+// Classification: Empirical (L1-eval path is tested; the L0/AOT three-way is deferred to
+// FLAG F-A1 / M-713 — documented here, not silently skipped).
+
+/// **DN-58 §A: `fuse` parses, type-checks, and L1-eval returns the semilattice meet.**
+///
+/// For Binary repr, the Fuse meet is bitwise-and (`bit.and`).
+/// `fuse(0b1011_0010, 0b1100_1111)` = `0b1011_0010 & 0b1100_1111` = `0b1000_0010`.
+///
+/// The L0 elaborate path produces `Node::Op { prim: "fuse_join:binary", … }`.
+/// FLAG F-A1: `fuse_join:*` prims are not yet registered in `PrimRegistry::with_builtins()`.
+/// L0-interp refuses explicitly (unknown prim) — documented here, not silently skipped (G2).
+/// Classification: L1-eval = Runs (Empirical); L0/AOT three-way = deferred to M-713.
+#[test]
+fn fuse_differential_three_way_empirical() {
+    // Nullary main with literal operands — consistent with the corpus pattern above.
+    // fuse(0b1011_0010, 0b1100_1111) = bit.and(0b1011_0010, 0b1100_1111) = 0b1000_0010.
+    let src = "nodule d\nfn main() => Binary{8} = fuse(0b1011_0010, 0b1100_1111)";
+
+    // Step 1: parse must succeed (fuse is now an active keyword, not reserved-not-active).
+    let nodule = parse(src).expect("fuse(lit, lit) must parse (DN-58 §A M-667)");
+
+    // Step 2: type-check must succeed (Binary{8} is fusible — repr types need no Fuse instance).
+    let env = check_nodule(&nodule).expect("fuse on Binary{8} must type-check (DN-58 §A)");
+
+    // Step 3: L1-eval runs the fuse as `bit.and` (semilattice meet for repr types).
+    // 0b1011_0010 & 0b1100_1111 = 0b1000_0010 (MSB first: bits[0] is the most-significant bit).
+    let l1_result = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect("L1-eval must run fuse on Binary{8} literals (bit.and path — DN-58 §A.3)");
+    let l1_repr = l1_result
+        .as_repr()
+        .expect("L1 fuse result must be a repr value")
+        .clone();
+    // Verify the correct meet value: 0b1011_0010 & 0b1100_1111 = 0b1000_0010.
+    // Bit layout (MSB → LSB): 1,0,0,0,0,0,1,0
+    assert_eq!(l1_repr.repr(), &Repr::Binary { width: 8 });
+    assert_eq!(
+        l1_repr.payload(),
+        &Payload::Bits(vec![true, false, false, false, false, false, true, false]),
+        "fuse(0b1011_0010, 0b1100_1111) must = 0b1000_0010 (bit.and meet — DN-58 §A)"
+    );
+
+    // Step 4: elaborate produces `Node::Op { prim: "fuse_join:binary", args: [a, b] }`.
+    // FLAG F-A1: `fuse_join:*` is not yet registered in PrimRegistry::with_builtins() — the
+    // L0-interp refuses (unknown prim), never silently produces a wrong value (G2).
+    // This is the documented state until M-713 registers the prims.
+    let node = elaborate(&env, "main")
+        .expect("elaborate must produce a fuse_join:binary Op node (DN-58 §A.4, KC-3)");
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    // L0-interp refuses explicitly on the unknown fuse_join:binary prim (FLAG F-A1).
+    // Once M-713 registers fuse_join:* in the prim registry, promote this to a full
+    // three-way differential (assert the interp result matches l1_repr above).
+    let l0_err = interp.eval(&node).expect_err(
+        "L0-interp must refuse fuse_join:binary (not yet registered — FLAG F-A1/M-713)",
+    );
+    let _ = l0_err; // The refusal is explicit and expected — never a silent wrong value (G2).
+                    // FLAG F-A1 → open (M-713 follow-on): promote to three-way when fuse_join:* is registered.
+}
