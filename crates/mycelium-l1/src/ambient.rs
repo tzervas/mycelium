@@ -354,6 +354,8 @@ impl Resolver {
             // Visibility is surface metadata, untouched by ambient resolution (M-662).
             vis: fd.vis,
             thaw: fd.thaw,
+            // `@tier` is surface metadata too — pass it through unchanged (DN-58 §C; M-667).
+            tier: fd.tier,
             sig,
             body,
         })
@@ -575,6 +577,16 @@ impl Resolver {
                 Box::new(self.expr(amb, site, inner)?),
                 self.type_ref(amb, site, t)?,
             ),
+            // DN-58 §A/§B (M-667): `fuse(a, b)` and `reclaim(policy) { body }` — both operands
+            // flow under the same ambient frame (no new paradigm context). Resolve transparently.
+            Expr::Fuse { left, right } => Expr::Fuse {
+                left: Box::new(self.expr(amb, site, left)?),
+                right: Box::new(self.expr(amb, site, right)?),
+            },
+            Expr::Reclaim { policy, body } => Expr::Reclaim {
+                policy: Box::new(self.expr(amb, site, policy)?),
+                body: Box::new(self.expr(amb, site, body)?),
+            },
         })
     }
 
@@ -1048,6 +1060,13 @@ fn print_expr(e: &Expr) -> String {
             format!("{}({})", print_expr(head), args.join(", "))
         }
         Expr::Ascribe(inner, t) => format!("{} : {}", print_expr(inner), print_type_ref(t)),
+        // DN-58 §A/§B (M-667): `fuse` and `reclaim` print forms.
+        Expr::Fuse { left, right } => {
+            format!("fuse({}, {})", print_expr(left), print_expr(right))
+        }
+        Expr::Reclaim { policy, body } => {
+            format!("reclaim({}) {{ {} }}", print_expr(policy), print_expr(body))
+        }
     }
 }
 

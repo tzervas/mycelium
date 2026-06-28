@@ -35,8 +35,8 @@ pub use bound::{Bound, BoundBasis, BoundKind, NormKind};
 pub use cert_mode::CertMode;
 pub use content::{operation_hash, Names};
 pub use data::{
-    CtorDecl, CtorRef, CtorSpec, DataDecl, DataRegistry, DeclSpec, FieldSpec, FieldTy,
-    RegistryError,
+    CtorDecl, CtorRef, CtorSpec, DataDecl, DataRegistry, DeclSpec, FieldSpec, FieldTy, FieldTyRef,
+    FnSig, RegistryError, ResolvedFieldTyRef, ResolvedFnSig,
 };
 pub use datum::{CoreValue, Datum};
 pub use guarantee::GuaranteeStrength;

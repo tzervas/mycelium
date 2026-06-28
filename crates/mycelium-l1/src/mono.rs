@@ -523,6 +523,7 @@ impl<'e> Mono<'e> {
             FnDecl {
                 vis: fd.vis,
                 thaw: fd.thaw,
+                tier: fd.tier,
                 sig: new_sig,
                 body: new_body,
             },
@@ -686,6 +687,7 @@ impl<'e> Mono<'e> {
             FnDecl {
                 vis: md.vis,
                 thaw: md.thaw,
+                tier: md.tier,
                 sig: FnSig {
                     name: mangled.clone(),
                     params: vec![],
@@ -854,6 +856,26 @@ impl<'e> Mono<'e> {
                     });
                 }
                 Ok(Expr::Colony(out))
+            }
+            // DN-58 §A/§B (M-667): `fuse(a, b)` and `reclaim(policy) { body }` — rewrite both
+            // operands/policy/body through monomorphization. These constructs are type-concrete
+            // (the checker verified homogeneity); any lingering type-variable inside an operand
+            // is a monomorphization concern handled transparently here.
+            Expr::Fuse { left, right } => {
+                let left2 = self.rewrite(site, scope, left, None)?;
+                let right2 = self.rewrite(site, scope, right, None)?;
+                Ok(Expr::Fuse {
+                    left: Box::new(left2),
+                    right: Box::new(right2),
+                })
+            }
+            Expr::Reclaim { policy, body } => {
+                let policy2 = self.rewrite(site, scope, policy, None)?;
+                let body2 = self.rewrite(site, scope, body, expected)?;
+                Ok(Expr::Reclaim {
+                    policy: Box::new(policy2),
+                    body: Box::new(body2),
+                })
             }
             // Constructs with no v0 lowering regardless of generics — kept as explicit residuals so the
             // elaborator's own refusal still fires (defense in depth; never a fabricated artifact).

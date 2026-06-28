@@ -3,6 +3,7 @@
 
 mod cert_mode;
 mod content;
+mod data;
 mod id;
 #[path = "lib.rs"]
 mod lib_root;
