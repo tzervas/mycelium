@@ -58,7 +58,8 @@
  *)
 
 program        ::= phylum_header? nodule_block+
-/* DN-57 §3 (ENACTED, M-818): `;` is the **MANDATORY** component terminator — `;` terminates,
+/* DN-57 §3 (Accepted; mandatory `;` landed M-818, Enacted gated on M-819/M-820): `;` is the
+ * **MANDATORY** component terminator — `;` terminates,
  * `,` separates siblings, `:` ascribes. Every component ends with exactly one `;`, *uniformly and
  * regardless of how its body ends*: a `}`-closed block (`trait`/`impl`/`object`) still takes the
  * trailing `;` (NOT Rust's "`}` ends the block, no `;"). The **nodule header itself** is a

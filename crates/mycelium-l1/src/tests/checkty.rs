@@ -400,6 +400,23 @@ fn lower_rules_mutual_cycle_is_refused() {
     );
 }
 
+/// §4.2 regression (M-812-cont review): a single-segment RHS path that *resolves as a constructor*
+/// is an ordinary value reference, not a rule expansion — so it must **not** count as a rule-graph
+/// edge even when a `lower` rule shares the constructor's name. Here `Mk` is both a registered
+/// constructor (of `T`) and a `lower` rule; `lower Mk`'s RHS constructs via the ctor `Mk`. Before the
+/// ctor/fn exclusion in `check_lower_rule_acyclicity`, this was a **false-positive** self-cycle
+/// ("`lower Mk` references itself"); the edge filter now narrows to true rule-refs, so the valid
+/// program is accepted. Safe-direction (the filter only *removes* spurious edges; a genuine rule→rule
+/// reference is, by §4.1 RHS type-check, never a ctor/fn of the same spelling).
+#[test]
+fn a_lower_rule_named_like_a_ctor_does_not_self_cycle() {
+    let e = env("nodule d;\ntype T = Mk(Binary{8});\nlower Mk = Mk(0b0000_0001);");
+    assert!(
+        e.lower_rules.contains_key("Mk"),
+        "the `lower Mk` rule registers despite sharing the ctor name `Mk` (no false self-cycle)"
+    );
+}
+
 // ---- DN-54 §6 KC-3 + RHS elaboration to L0 (M-812-cont) -------------------------------------
 //
 // `low` (M-812) landed `lower`/`derive` as a structural-check-only **residual** (`crate::elab`

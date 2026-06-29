@@ -189,3 +189,59 @@ fn multi_argument_lambda_is_an_explicit_refusal() {
         "a multi-argument lambda must be refused (tuple-gated — RFC-0024 §4A.8), not silently accepted"
     );
 }
+
+/// **Regression (M-704 / mono.rs `rewrite_lambda` capture filter).** A statically-specialized HOF
+/// value-parameter (baked into `fn_param_subst` and *dropped* from the emitted signature, yet still
+/// present in `scope` for inference) must **not** be added to an inner lambda's capture list: it is a
+/// compile-time-baked constant, not a runtime capture. Trigger: a static named fn (`negate`) passed
+/// to a HOF (`apply_wrap`) whose body contains an inner lambda that captures the HOF's fn-param (`f`).
+/// Before the fix, `f` was spuriously captured → the closure ctor `Clo$...(f)` referenced a param with
+/// no runtime value (elaboration error, or a silent wrong-entity if a ctor/fn named `f` existed — G2).
+/// We pin the concrete three-way value: `apply_wrap(negate, 0b0000_0001) == not(0b0000_0001) =
+/// 0b1111_1110`. All three paths must agree (Empirical — VR-5).
+#[test]
+fn a_static_fn_param_baked_by_specialization_is_not_captured_by_an_inner_lambda() {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    let src = "nodule d;\n\
+        fn apply_wrap(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} =\n\
+          let g = lambda(y: Binary{8}) => f(y) in g(x);\n\
+        fn negate(x: Binary{8}) => Binary{8} = not(x);\n\
+        fn main() => Binary{8} = apply_wrap(negate, 0b0000_0001);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+    let mono = monomorphize(&env, "main").expect("monomorphizes + defunctionalizes");
+    let registry = build_registry(&mono).expect("the mono'd data registry builds");
+
+    // Path 1: L1 evaluator on the monomorphized + defunctionalized env.
+    let l1 = Evaluator::new(&mono)
+        .call("main", vec![])
+        .expect("L1-eval(mono) — a baked static fn-param must not become a spurious capture");
+    let l1_core = l1
+        .to_core(&mono, &registry)
+        .expect("L1 result is in the r3 data fragment");
+
+    // Path 2: elaborate → L0 reference interpreter.
+    let node = elaborate(&env, "main").expect("elaborates");
+    let l0_core = interp.eval_core(&node).expect("L0-interp");
+
+    // Path 3: the same L0 term through the AOT env-machine.
+    let aot_core = mycelium_mlir::run_core(&node, &prims, &engine).expect("AOT run_core");
+
+    // Pin the concrete value and the three-way agreement: not(0b0000_0001) = 0b1111_1110.
+    assert_eq!(
+        l1_core, l0_core,
+        "L1-eval(mono) vs elaborate→L0-interp diverged"
+    );
+    assert_eq!(l0_core, aot_core, "L0-interp vs AOT env-machine diverged");
+    assert_eq!(
+        check_core(&l1_core, &l0_core),
+        CheckVerdict::Validated {
+            strength: GuaranteeStrength::Exact
+        },
+        "the shared checker validates the L1↔interp pair"
+    );
+}

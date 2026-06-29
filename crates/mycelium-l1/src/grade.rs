@@ -265,11 +265,15 @@ impl Gx<'_> {
             // `with paradigm` is stripped by the ambient pass before the checker. Defensive,
             // never-reached arms: grade the body conservatively rather than panic.
             Expr::Spore(_) => Ok(Strength::Declared),
-            // M-664: `consume` of a `Substrate` is a `Declared`-grade construct — its single-use
-            // affinity is asserted, not checked (no v0 affine-usage tracker), so it can attest no
-            // more than `Declared` (VR-5). The operand carries its own grade demands, but `consume`
-            // itself never *upgrades* past `Declared`.
-            Expr::Consume(_) => Ok(Strength::Declared),
+            // M-664: `consume <expr>` is a **move** — it transfers the operand value unchanged, so it
+            // is grade-**transparent**: the result carries exactly the operand's grade. This both
+            // *enforces* the operand's own grade demands (by grading it) and *propagates* its grade —
+            // so `consume s` of a `@ Exact` substrate stays `Exact` (returning `Declared` here would
+            // false-reject a valid `=> … @ Exact` body). `consume` neither upgrades nor downgrades the
+            // attestation (VR-5: no upgrade past a checked basis; the operand's basis is preserved).
+            // The single-use affinity it asserts is a *usage* discipline, orthogonal to the value's
+            // accuracy grade.
+            Expr::Consume(b) => self.grade(scope, b),
             // RFC-0024 §4A (M-704): a `lambda` (closure) is a `Declared`-grade construct — its
             // lowering is a structural rewrite + a type-level contract (the three-way differential is
             // `Empirical`, but the construct itself attests no more than `Declared`; VR-5). Grading
