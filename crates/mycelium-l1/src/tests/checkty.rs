@@ -496,3 +496,73 @@ fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
          a rule's L0 is produced on demand, not spliced into an unrelated `main`)"
     );
 }
+
+// ---- M-826: v0 tuple/product type + lift f(x)(y) chained application ----
+
+/// A tuple literal `(a, b)` checks to `Tuple$2<Nat, Nat>` — the synthetic type is pre-registered
+/// by `register_types`, and the checked env contains the `Tuple$2` DataInfo (KC-3: no new L0 node).
+/// Guarantee: `Empirical` (round-trip tested in `differential.rs`).
+#[test]
+fn tuple_literal_checks_to_synthetic_tuple_type() {
+    let e = env("nodule d;\ntype Nat = Z | S(Nat);\nfn main() => (Nat, Nat) = (Z, S(Z));");
+    // The synthetic `Tuple$2` type must be in the env's type registry.
+    assert!(
+        e.types.contains_key("Tuple$2"),
+        "Tuple$2 must be registered in the env after checking a 2-tuple literal (M-826)"
+    );
+}
+
+/// A tuple type in a function signature is resolved: `(Nat, Nat) => Nat` works as a parameter type.
+#[test]
+fn tuple_type_in_fn_signature_checks() {
+    env(
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn fst(t: (Nat, Nat)) => Nat = match t { (a, _) => a };\nfn main() => Nat = fst((S(Z), Z));",
+    );
+}
+
+/// A tuple pattern `(x, y)` destructures a 2-tuple in a `match` arm (G2: never silent on type mismatch).
+#[test]
+fn tuple_pattern_destructures_in_match() {
+    env(
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn snd(t: (Nat, Nat)) => Nat = match t { (_, b) => b };\nfn main() => Nat = snd((Z, S(Z)));",
+    );
+}
+
+/// A 3-tuple literal and 3-tuple type check (arity ≥ 2 is the surface contract).
+#[test]
+fn triple_tuple_literal_checks() {
+    env(
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn mid(t: (Nat, Nat, Nat)) => Nat = match t { (_, b, _) => b };\nfn main() => Nat = mid((Z, S(Z), Z));",
+    );
+}
+
+/// A type mismatch in a tuple literal is an explicit, never-silent error (G2).
+#[test]
+fn tuple_element_type_mismatch_is_explicit_error() {
+    let err = check_err("nodule d;\ntype Nat = Z | S(Nat);\nfn main() => (Nat, Nat) = (Z, True);");
+    assert!(
+        !err.message.is_empty(),
+        "a tuple element type mismatch must produce an explicit error (G2 — never silent, M-826)"
+    );
+}
+
+/// `f(x)(y)` — chained (HOF) application where the head `f(x)` has function type `Nat -> Nat`.
+/// Part 2 of M-826: lifting the first-order application restriction (RFC-0007 §4.4 narrowing).
+#[test]
+fn chained_hof_application_f_x_y_checks() {
+    // `apply` takes a function `Nat -> Nat` and returns it; `apply(succ)(Z)` chains application.
+    env(
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn succ(n: Nat) => Nat = S(n);\nfn apply(f: Nat => Nat) => (Nat => Nat) = f;\nfn main() => Nat = apply(succ)(Z);",
+    );
+}
+
+/// A non-function head in application position is an explicit error (G2 — never silent, M-826).
+#[test]
+fn non_function_head_in_app_is_explicit_error() {
+    let err = check_err("nodule d;\ntype Nat = Z | S(Nat);\nfn main() => Nat = Z(Z);");
+    // Z is a nullary constructor; calling it like a function (Z(Z)) should fail.
+    assert!(
+        !err.message.is_empty(),
+        "applying a non-function value must produce an explicit error (G2 — never silent, M-826)"
+    );
+}

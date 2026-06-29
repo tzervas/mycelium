@@ -297,6 +297,11 @@ impl Gx<'_> {
                 let _ = self.grade(scope, policy)?;
                 self.grade(scope, body)
             }
+            // M-826: a tuple literal `(a, b, …)` is rewritten by the checker to `App(MkTuple$N,
+            // elems)` before grading runs on the checked/monomorphized AST. If this arm is reached,
+            // grade each element and take the meet (the provenance of a tuple is the weakest element —
+            // `Empirical` guarantee). Never-silent: element grading errors propagate (G2).
+            Expr::TupleLit(elems) => self.meet_all(scope, elems),
         }
     }
 
@@ -399,6 +404,16 @@ impl Gx<'_> {
                 1
             }
             Pattern::Ctor(_, subs) => {
+                let mut n = 0;
+                for s in subs {
+                    n += self.bind_pattern(scope, s, g_s);
+                }
+                n
+            }
+            // M-826: a tuple pattern `(x, y, …)` binds each sub-pattern at the scrutinee's grade.
+            // The checker rewrites these to `Ctor(MkTuple$N, subs)` during checking, so this arm
+            // handles any surface-form pattern that reaches grading directly.
+            Pattern::Tuple(subs) => {
                 let mut n = 0;
                 for s in subs {
                     n += self.bind_pattern(scope, s, g_s);

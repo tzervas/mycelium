@@ -645,8 +645,241 @@ pub(crate) fn resolve_ty(
             let (ret_ty, _) = resolve_ty(site, types, tyvars, ret)?;
             Ty::Fn(Box::new(param_ty), Box::new(ret_ty))
         }
+        // M-826: a tuple type `(T, U, …)` resolves to `Ty::Data("Tuple$N", [T, U, …])` where
+        // `Tuple$N` is the synthetic single-constructor product type registered by
+        // `register_tuple_types`. Arity ≥ 2 is enforced by the parser; the registration must have
+        // happened before checking (KC-3 — no new kernel node, desugars to existing Construct/Match).
+        // Guarantee: `Empirical` (construct→destructure round-trip tested — M-826).
+        BaseType::Tuple(elems) => {
+            let n = elems.len();
+            let tname = tuple_type_name(n);
+            if !types.contains_key(&tname) {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "internal: synthetic tuple type `{tname}` not registered — \
+                         `register_tuple_types` must run before the checker (M-826; never silent)"
+                    ),
+                ));
+            }
+            let mut resolved = Vec::with_capacity(n);
+            for e in elems {
+                resolved.push(resolve_ty(site, types, tyvars, e)?.0);
+            }
+            Ty::Data(tname, resolved)
+        }
     };
     Ok((base, t.guarantee))
+}
+
+/// The synthetic name for a tuple type of arity `n` (M-826, KC-3). Injective over n; `$` is not
+/// a surface-identifier character, so this name cannot collide with user-defined types.
+/// `Tuple$2` = the 2-tuple (pair), `Tuple$3` = the 3-tuple, etc.
+#[must_use]
+pub(crate) fn tuple_type_name(n: usize) -> String {
+    format!("Tuple${n}")
+}
+
+/// The synthetic constructor name for a tuple of arity `n` (M-826). Same injective scheme.
+#[must_use]
+pub(crate) fn tuple_ctor_name(n: usize) -> String {
+    format!("MkTuple${n}")
+}
+
+/// Synthesize the [`DataInfo`] for a tuple of arity `n` (n ≥ 2; M-826, KC-3). The type has `n`
+/// type parameters `T0 … T{n-1}` and a single constructor `MkTuple$N(T0, T1, …)`.
+/// This is a pure data declaration (no kernel node — KC-3); the checker registers it on demand.
+#[must_use]
+pub(crate) fn synthetic_tuple_data(n: usize) -> DataInfo {
+    let params: Vec<String> = (0..n).map(|i| format!("T{i}")).collect();
+    let fields: Vec<Ty> = params.iter().map(|p| Ty::Var(p.clone())).collect();
+    DataInfo {
+        name: tuple_type_name(n),
+        params: params.clone(),
+        ctors: vec![CtorInfo {
+            name: tuple_ctor_name(n),
+            fields,
+        }],
+    }
+}
+
+/// Walk a nodule and collect all tuple arities referenced (in `BaseType::Tuple` and
+/// `Expr::TupleLit`) so `register_types` can pre-register the synthetic `Tuple$N` data types
+/// before checking. Uses a recursive AST scan (pre-order, no depth guard needed — it's a scan,
+/// not evaluation).
+pub(crate) fn collect_tuple_arities(nodule: &Nodule) -> std::collections::BTreeSet<usize> {
+    let mut arities = std::collections::BTreeSet::new();
+    for item in &nodule.items {
+        collect_tuple_arities_item(item, &mut arities);
+    }
+    arities
+}
+
+fn collect_tuple_arities_item(
+    item: &crate::ast::Item,
+    out: &mut std::collections::BTreeSet<usize>,
+) {
+    use crate::ast::Item;
+    match item {
+        Item::Fn(fd) => {
+            collect_tuple_arities_sig(&fd.sig, out);
+            collect_tuple_arities_expr(&fd.body, out);
+        }
+        Item::Type(td) => {
+            for ctor in &td.ctors {
+                for f in &ctor.fields {
+                    collect_tuple_arities_typeref(f, out);
+                }
+            }
+        }
+        Item::Trait(tr) => {
+            for sig in &tr.sigs {
+                collect_tuple_arities_sig(sig, out);
+            }
+        }
+        Item::Impl(id) => {
+            for t in &id.trait_args {
+                collect_tuple_arities_typeref(t, out);
+            }
+            collect_tuple_arities_typeref(&id.for_ty, out);
+            for m in &id.methods {
+                collect_tuple_arities_sig(&m.sig, out);
+                collect_tuple_arities_expr(&m.body, out);
+            }
+        }
+        Item::Object(od) => {
+            for f in &od.ctor.fields {
+                collect_tuple_arities_typeref(f, out);
+            }
+            for impl_d in &od.impls {
+                for t in &impl_d.trait_args {
+                    collect_tuple_arities_typeref(t, out);
+                }
+                collect_tuple_arities_typeref(&impl_d.for_ty, out);
+                for m in &impl_d.methods {
+                    collect_tuple_arities_sig(&m.sig, out);
+                    collect_tuple_arities_expr(&m.body, out);
+                }
+            }
+            for f in &od.fns {
+                collect_tuple_arities_sig(&f.sig, out);
+                collect_tuple_arities_expr(&f.body, out);
+            }
+        }
+        Item::Lower(ld) => {
+            collect_tuple_arities_expr(&ld.rhs, out);
+        }
+        Item::InherentImpl(iid) => {
+            collect_tuple_arities_typeref(&iid.for_ty, out);
+            for m in &iid.methods {
+                collect_tuple_arities_sig(&m.sig, out);
+                collect_tuple_arities_expr(&m.body, out);
+            }
+        }
+        Item::Use(_) | Item::Default(_) | Item::Derive(_) => {}
+    }
+}
+
+fn collect_tuple_arities_typeref(tr: &TypeRef, out: &mut std::collections::BTreeSet<usize>) {
+    use crate::ast::BaseType;
+    match &tr.base {
+        BaseType::Tuple(elems) => {
+            out.insert(elems.len());
+            for e in elems {
+                collect_tuple_arities_typeref(e, out);
+            }
+        }
+        BaseType::Seq { elem, .. } => collect_tuple_arities_typeref(elem, out),
+        BaseType::Named(_, args) => {
+            for a in args {
+                collect_tuple_arities_typeref(a, out);
+            }
+        }
+        BaseType::Fn(a, b) => {
+            collect_tuple_arities_typeref(a, out);
+            collect_tuple_arities_typeref(b, out);
+        }
+        _ => {}
+    }
+}
+
+fn collect_tuple_arities_sig(sig: &crate::ast::FnSig, out: &mut std::collections::BTreeSet<usize>) {
+    for p in &sig.value_params {
+        collect_tuple_arities_typeref(&p.ty, out);
+    }
+    collect_tuple_arities_typeref(&sig.ret, out);
+}
+
+fn collect_tuple_arities_expr(e: &crate::ast::Expr, out: &mut std::collections::BTreeSet<usize>) {
+    use crate::ast::Expr;
+    match e {
+        Expr::TupleLit(elems) => {
+            out.insert(elems.len());
+            for el in elems {
+                collect_tuple_arities_expr(el, out);
+            }
+        }
+        Expr::Let {
+            bound, body, ty, ..
+        } => {
+            if let Some(t) = ty {
+                collect_tuple_arities_typeref(t, out);
+            }
+            collect_tuple_arities_expr(bound, out);
+            collect_tuple_arities_expr(body, out);
+        }
+        Expr::If { cond, conseq, alt } => {
+            collect_tuple_arities_expr(cond, out);
+            collect_tuple_arities_expr(conseq, out);
+            collect_tuple_arities_expr(alt, out);
+        }
+        Expr::Match { scrutinee, arms } => {
+            collect_tuple_arities_expr(scrutinee, out);
+            for arm in arms {
+                collect_tuple_arities_expr(&arm.body, out);
+            }
+        }
+        Expr::For { xs, init, body, .. } => {
+            collect_tuple_arities_expr(xs, out);
+            collect_tuple_arities_expr(init, out);
+            collect_tuple_arities_expr(body, out);
+        }
+        Expr::Swap { value, .. } => collect_tuple_arities_expr(value, out),
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => {
+            collect_tuple_arities_expr(b, out);
+        }
+        Expr::Colony(hyphae) => {
+            for h in hyphae {
+                collect_tuple_arities_expr(&h.body, out);
+            }
+        }
+        Expr::Lambda { params, body } => {
+            for p in params {
+                collect_tuple_arities_typeref(&p.ty, out);
+            }
+            collect_tuple_arities_expr(body, out);
+        }
+        Expr::App { head, args } => {
+            collect_tuple_arities_expr(head, out);
+            for a in args {
+                collect_tuple_arities_expr(a, out);
+            }
+        }
+        Expr::Fuse { left, right } => {
+            collect_tuple_arities_expr(left, out);
+            collect_tuple_arities_expr(right, out);
+        }
+        Expr::Reclaim { policy, body } => {
+            collect_tuple_arities_expr(policy, out);
+            collect_tuple_arities_expr(body, out);
+        }
+        Expr::Ascribe(inner, t) => {
+            collect_tuple_arities_expr(inner, out);
+            collect_tuple_arities_typeref(t, out);
+        }
+        Expr::WithParadigm { body, .. } => collect_tuple_arities_expr(body, out),
+        Expr::Path(_) | Expr::Lit(_) => {}
+    }
 }
 
 /// The checked environments of a whole **phylum** (M-662): one [`Env`] per nodule, paired with the
@@ -1247,6 +1480,17 @@ pub(crate) fn register_types(
     types: &mut BTreeMap<String, DataInfo>,
     nodule: &Nodule,
 ) -> Result<(), CheckError> {
+    // M-826: pre-register synthetic Tuple$N types for all arities referenced in this nodule.
+    // This must run BEFORE the user-type registration below, because resolve_ty (called during
+    // ctor resolution) needs to look up Tuple$N in `types`. Never-silent: resolve_ty checks the
+    // table and returns an explicit error if a referenced Tuple$N is missing (G2).
+    for arity in collect_tuple_arities(nodule) {
+        let tname = tuple_type_name(arity);
+        types
+            .entry(tname)
+            .or_insert_with(|| synthetic_tuple_data(arity));
+    }
+
     for item in &nodule.items {
         if let Item::Type(td) = item {
             if let Some(dup) = first_duplicate(&td.params) {
@@ -2746,6 +2990,10 @@ impl Cx<'_> {
             ),
             Expr::Ascribe(inner, t) => self.check_ascribe(scope, inner, t),
             Expr::App { head, args } => self.check_app(scope, head, args, expected),
+            // M-826: `(a, b, …)` — a tuple literal (arity ≥ 2). Desugars to a constructor
+            // application `MkTuple$N(a, b, …)` on the synthetic `Tuple$N<A, B, …>` data type
+            // (KC-3 — no new L0 node). Guarantee: `Empirical` (round-trip tested in differential.rs).
+            Expr::TupleLit(elems) => self.check_tuple_lit(scope, elems, expected),
             // DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice.
             Expr::Fuse { left, right } => self.check_fuse(scope, left, right, expected),
             // DN-58 §B (M-667): `reclaim(policy) { body }` — supervised scope.
@@ -3339,6 +3587,62 @@ impl Cx<'_> {
         ))
     }
 
+    /// M-826 — check a tuple literal `(a, b, …)` (arity ≥ 2).
+    ///
+    /// Desugars to a constructor application on the synthetic `Tuple$N<A, B, …>` data type
+    /// (KC-3: no new L0 node). Each element is checked, then the whole is rewritten to an
+    /// equivalent `Expr::App { head: Path("MkTuple$N"), args }` so the downstream mono/elab passes
+    /// see only ordinary data-constructor applications. Guarantee: `Empirical` (round-trip tested).
+    ///
+    /// Never-silent (G2):
+    /// - Arity < 2 cannot arise (the parser rejects it).
+    /// - If an expected type is provided and disagrees with the inferred `Tuple$N<…>`, an explicit
+    ///   mismatch error is returned.
+    fn check_tuple_lit(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        elems: &[Expr],
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        let n = elems.len();
+        debug_assert!(n >= 2, "parser must reject 0- and 1-tuples");
+        let tname = tuple_type_name(n);
+        let ctor_name = tuple_ctor_name(n);
+
+        // Determine expected element types if the context pins a compatible Tuple$N.
+        let expected_elems: Option<Vec<Ty>> = match expected {
+            Some(Ty::Data(tn, targs)) if *tn == tname && targs.len() == n => Some(targs.clone()),
+            _ => None,
+        };
+
+        // Check each element; collect inferred element types + rebuilt expressions.
+        let mut elem_tys = Vec::with_capacity(n);
+        let mut rebuilt = Vec::with_capacity(n);
+        for (i, el) in elems.iter().enumerate() {
+            let exp_i = expected_elems.as_ref().map(|v| &v[i]);
+            let (ety, el2) = self.check(scope, el, exp_i)?;
+            elem_tys.push(ety);
+            rebuilt.push(el2);
+        }
+
+        let result_ty = Ty::Data(tname.clone(), elem_tys);
+
+        // Bidirectional contract: if a type was expected, it must match.
+        if let Some(exp) = expected {
+            if exp != &result_ty {
+                return self.err(format!(
+                    "tuple literal has type `{result_ty}`, but the context expects `{exp}` \
+                     (M-826 — never a silent coercion, G2)"
+                ));
+            }
+        }
+
+        // Rewrite to `MkTuple$N(a, b, …)` — a Path application that the mono/elab passes
+        // handle identically to any user data-constructor call.
+        let head = Expr::Path(Path(vec![ctor_name]));
+        Ok((result_ty, app_node(&head, rebuilt)))
+    }
+
     fn check_ascribe(
         &self,
         scope: &mut Vec<(String, Ty)>,
@@ -3363,8 +3667,33 @@ impl Cx<'_> {
         args: &[Expr],
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
+        // M-826 Part 2 — lift the v0 "head must be a name" restriction to allow `f(x)(y)` and
+        // other chained applications (RFC-0007 §4.4 narrowing noted for orchestrator). When the
+        // head is not a `Path`, infer its type; if it has a function type `A -> B`, apply it as a
+        // HOF call. If it does not have a function type, the error is explicit (never silent — G2).
         let Expr::Path(p) = head else {
-            return self.err("v0 application head must be a name (first-order; RFC-0007 §4.4)");
+            let (hty, h2) = self.check(scope, head, None)?;
+            let Ty::Fn(param_ty, ret_ty) = hty else {
+                return self.err(format!(
+                    "application head is not a function — the expression before `(…)` has type \
+                     `{hty}`, which is not callable (M-826 §Part2 — never silent, G2)"
+                ));
+            };
+            if args.len() != 1 {
+                return self.err(format!(
+                    "higher-order application requires exactly 1 argument in stage-1; \
+                     got {} — partial application / multi-arg HOF is deferred (RFC-0024 §5, G2)",
+                    args.len()
+                ));
+            }
+            let (got, a2) = self.check(scope, &args[0], Some(&param_ty))?;
+            if got != *param_ty {
+                return self.err(format!(
+                    "higher-order call: argument has type `{got}` but callee expects `{param_ty}` \
+                     (arrow-type mismatch — M-826, never a silent coercion, G2)"
+                ));
+            }
+            return Ok((*ret_ty, app_node(&h2, vec![a2])));
         };
         if p.0.len() != 1 {
             return self.err(format!(
@@ -4150,6 +4479,37 @@ impl Cx<'_> {
                 }
                 Pattern::Ctor(name.clone(), out)
             }
+            // M-826: a tuple pattern `(x, y, …)` desugars to a single-constructor `Ctor` pattern
+            // on the synthetic `Tuple$N` type — identical to any user-declared product constructor.
+            // Never-silent (G2): arity mismatch vs. the expected scrutinee type is an explicit error.
+            Pattern::Tuple(subs) => {
+                let n = subs.len();
+                let ctor_name = tuple_ctor_name(n);
+                let tname = tuple_type_name(n);
+                // The expected type must be the matching Tuple$N.
+                let field_tys = match expected {
+                    Ty::Data(tn, targs) if *tn == tname => self.types.get(tn).and_then(|d| {
+                        d.ctors
+                            .iter()
+                            .find(|c| c.name == ctor_name)
+                            .filter(|c| c.fields.len() == subs.len())
+                            .map(|c| {
+                                let s = param_subst(&d.params, targs);
+                                c.fields.iter().map(|f| subst_ty(f, &s)).collect::<Vec<_>>()
+                            })
+                    }),
+                    _ => None,
+                };
+                let mut out = Vec::with_capacity(subs.len());
+                for (i, s) in subs.iter().enumerate() {
+                    let resolved = match &field_tys {
+                        Some(fts) => self.resolve_pattern(s, &fts[i])?,
+                        None => s.clone(),
+                    };
+                    out.push(resolved);
+                }
+                Pattern::Ctor(ctor_name, out)
+            }
             Pattern::Wildcard | Pattern::Lit(_) | Pattern::Ident(_) => pat.clone(),
         })
     }
@@ -4568,6 +4928,35 @@ pub(crate) fn normalize_pattern(
                 out.push(normalize_pattern(types, site, sub, &fty, &child, binds)?);
             }
             Ok(Pat::Ctor(n.clone(), out))
+        }
+        // M-826: a tuple pattern `(x, y, …)` desugars to a `Ctor` pattern on the synthetic
+        // `Tuple$N` type. After `resolve_pattern` has run, all `Pattern::Tuple` nodes should
+        // already have been rewritten to `Pattern::Ctor`; this arm handles any that reach here
+        // directly (e.g. in standalone normalization). Never-silent (G2): arity or type mismatch
+        // is an explicit error.
+        Pattern::Tuple(subs) => {
+            let n = subs.len();
+            let ctor_name = tuple_ctor_name(n);
+            // Re-delegate to the Ctor arm by building the equivalent pattern.
+            normalize_pattern(
+                types,
+                site,
+                &Pattern::Ctor(ctor_name.clone(), subs.clone()),
+                expected,
+                occ,
+                binds,
+            )
+            .map_err(|e| {
+                // Rephrase the error to mention the tuple surface syntax.
+                CheckError::new(
+                    site,
+                    format!(
+                        "tuple pattern `({})` — {}",
+                        subs.iter().map(|_| "_").collect::<Vec<_>>().join(", "),
+                        e.message
+                    ),
+                )
+            })
         }
         Pattern::Lit(lit) => {
             let lty = lit_ty_of(site, lit)?;

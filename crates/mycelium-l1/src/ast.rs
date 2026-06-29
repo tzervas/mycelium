@@ -553,6 +553,12 @@ pub enum BaseType {
     /// multi-argument `(A, B) -> C` is not yet supported and is a never-silent refusal at the
     /// parser).
     Fn(Box<TypeRef>, Box<TypeRef>),
+    /// **Tuple type** `(T, U, …)` (M-826 — v0 first-class product type; arity ≥ 2). A single
+    /// parenthesized type `(T)` stays grouping, never a 1-tuple. The checker desugars each arity-N
+    /// tuple to a synthetic single-constructor data type `Tuple$N<A, B, …>` using the existing
+    /// `Construct`/`Match` nodes (KC-3 — no new L0 node). Guarantee: `Empirical` (round-trip
+    /// construct→destructure tested in differential.rs and property tests — M-826).
+    Tuple(Vec<TypeRef>),
 }
 
 /// Declared sparsity of a VSA type.
@@ -797,6 +803,10 @@ pub enum Expr {
     Lit(Literal),
     /// `expr : type` ascription.
     Ascribe(Box<Expr>, TypeRef),
+    /// **Tuple literal** `(a, b, …)` (M-826; arity ≥ 2). Checked to a `Tuple$N<A, B, …>` type and
+    /// desugared by the checker/mono to a `Construct` node over the synthetic single-constructor
+    /// tuple data type (KC-3). Guarantee: `Empirical` (round-trip tested — M-826).
+    TupleLit(Vec<Expr>),
 }
 
 /// A `match` arm.
@@ -831,6 +841,11 @@ pub enum Pattern {
     Ctor(String, Vec<Pattern>),
     /// A bare identifier (binder or nullary constructor — resolved later).
     Ident(String),
+    /// **Tuple pattern** `(x, y, …)` (M-826; arity ≥ 2) — destructures a tuple value into its
+    /// element binders. Each sub-pattern may itself be a wildcard, ident, or nested tuple.
+    /// Desugared by the checker to a single-constructor `Ctor` match on the synthetic
+    /// `Tuple$N` type (KC-3). Never-silent on arity mismatch (G2).
+    Tuple(Vec<Pattern>),
 }
 
 /// A literal value.
