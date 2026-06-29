@@ -234,6 +234,13 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
             "function types (`A -> B`) are not a representation type and cannot be a swap target \
              (RFC-0024 §3, HOF stage 1 — defunctionalization is M-687)",
         ),
+        // M-826: tuple types are surface-only (KC-3 desugar to data); a tuple type as a swap
+        // target is an explicit refusal — tuples have no monomorphic kernel Repr.
+        BaseType::Tuple(_) => residual(
+            site,
+            "tuple types are not a representation type and cannot be a swap target (M-826 KC-3: \
+             tuples desugar to synthetic data — no kernel Repr)",
+        ),
     }
 }
 
@@ -736,6 +743,10 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
         // stage-1 elaboration (defunctionalization is M-687). A `Ty::Fn` in a field position
         // returns `None` (staged residual — never a silent, half-elaborated artifact; G2/VR-5).
         Ty::Fn(_, _) => return None,
+        // M-826: `Ty::Tuple` is a checker-internal form; mono desugars it to `Ty::Data` before
+        // elaboration (KC-3). A `Ty::Tuple` reaching here is an internal error — stage as `None`
+        // (explicit staged residual, never a silent artifact; G2/VR-5).
+        Ty::Tuple(_) => return None,
     })
 }
 
@@ -759,7 +770,10 @@ fn ty_to_repr(ty: &Ty) -> Option<Repr> {
             len: *n,
         },
         Ty::Bytes => Repr::Bytes,
-        Ty::Data(_, _) | Ty::Var(_) | Ty::Substrate(_) | Ty::Fn(_, _) => return None,
+        // M-826: `Ty::Tuple` must not reach repr conversion — mono desugars it first (KC-3).
+        Ty::Data(_, _) | Ty::Var(_) | Ty::Substrate(_) | Ty::Fn(_, _) | Ty::Tuple(_) => {
+            return None
+        }
     })
 }
 
@@ -1105,6 +1119,14 @@ impl Elab<'_> {
                     body: Box::new(body_node),
                 })
             }
+            // M-826: `Expr::Tuple` is desugared by mono before elaboration (KC-3 — no new L0 node).
+            // A `Tuple` node reaching the elaborator is an internal error (mono must run first);
+            // surface it as an explicit `Residual` — never a silent artifact (G2/VR-5).
+            Expr::Tuple(_) => residual(
+                site,
+                "internal: `Expr::Tuple` reached elaboration — mono must desugar tuple literals \
+                 to `Expr::App { head: Tuple$N$0, … }` before elaboration (M-826 KC-3)",
+            ),
         }
     }
 

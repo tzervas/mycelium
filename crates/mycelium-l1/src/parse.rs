@@ -1555,6 +1555,33 @@ impl Parser {
             // Dense `{N, scalar}` vs VSA `{model, dim, sparsity}`) is disambiguated by lookahead;
             // whether it *fits* the ambient paradigm is the resolution pass's never-silent check.
             Tok::LBrace => self.parse_ambient_repr().map(BaseType::Ambient),
+            // M-826: tuple type `(T, U, …)` — arity ≥ 2; `(T)` is a parenthesized type (grouping).
+            Tok::LParen => {
+                self.bump();
+                let first = self.parse_type_ref()?;
+                if self.eat(&Tok::Comma) {
+                    // Tuple type: (T, U, …)
+                    let mut elems = vec![first];
+                    loop {
+                        if self.at(&Tok::RParen) {
+                            break;
+                        }
+                        elems.push(self.parse_type_ref()?);
+                        if !self.eat(&Tok::Comma) {
+                            break;
+                        }
+                    }
+                    self.expect(&Tok::RParen, "`)` to close the tuple type")?;
+                    if elems.len() < 2 {
+                        return self.err("tuple type requires arity ≥ 2 (M-826)");
+                    }
+                    Ok(BaseType::Tuple(elems))
+                } else {
+                    // Parenthesized type: `(T)` — plain grouping, not a 1-tuple.
+                    self.expect(&Tok::RParen, "`)` to close the parenthesized type")?;
+                    Ok(first.base)
+                }
+            }
             _ => self.err("a type"),
         }
     }
@@ -1982,6 +2009,28 @@ impl Parser {
             Tok::BinLit(_) | Tok::TritLit(_) | Tok::BytesLit(_) | Tok::Int(_) | Tok::LBracket => {
                 Ok(Pattern::Lit(self.parse_literal()?))
             }
+            // M-826: tuple pattern `(x, y, …)` — arity ≥ 2; requires a comma to distinguish from
+            // other patterns (there is no 1-tuple pattern — `(x)` is a grouping error at the surface).
+            Tok::LParen => {
+                self.bump();
+                let first = self.parse_pattern()?;
+                self.expect(
+                    &Tok::Comma,
+                    "`,` — a tuple pattern requires arity ≥ 2 (M-826); `(x)` is not a 1-tuple",
+                )?;
+                let mut subs = vec![first];
+                loop {
+                    if self.at(&Tok::RParen) {
+                        break;
+                    }
+                    subs.push(self.parse_pattern()?);
+                    if !self.eat(&Tok::Comma) {
+                        break;
+                    }
+                }
+                self.expect(&Tok::RParen, "`)` to close the tuple pattern")?;
+                Ok(Pattern::Tuple(subs))
+            }
             _ => self.err("a pattern"),
         }
     }
@@ -2117,8 +2166,27 @@ impl Parser {
             Tok::LParen => {
                 self.bump();
                 let e = self.parse_expr()?;
-                self.expect(&Tok::RParen, "`)` to close the parenthesized expression")?;
-                Ok(e)
+                if self.eat(&Tok::Comma) {
+                    // Tuple literal (arity ≥ 2; M-826): `(a, b, …)`. `(a)` is plain grouping.
+                    let mut elems = vec![e];
+                    loop {
+                        if self.at(&Tok::RParen) {
+                            break;
+                        }
+                        elems.push(self.parse_expr()?);
+                        if !self.eat(&Tok::Comma) {
+                            break;
+                        }
+                    }
+                    self.expect(&Tok::RParen, "`)` to close the tuple literal")?;
+                    if elems.len() < 2 {
+                        return self.err("tuple literal requires arity ≥ 2 (M-826)");
+                    }
+                    Ok(Expr::Tuple(elems))
+                } else {
+                    self.expect(&Tok::RParen, "`)` to close the parenthesized expression")?;
+                    Ok(e)
+                }
             }
             _ => self.err("an expression"),
         }
