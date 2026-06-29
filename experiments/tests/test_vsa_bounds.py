@@ -344,3 +344,304 @@ def test_multihop_sweep_single_hop_matches_single_sweep() -> None:
     assert 0.0 <= r.measured_rate <= 1.0
     assert r.h == 1
     assert r.guarantee == "Empirical"
+
+
+# ---------------------------------------------------------------------------
+# candidate_bound.py — required_dim_multihop and fit_and_validate
+# ---------------------------------------------------------------------------
+
+
+def test_required_dim_multihop_h1_parity_model_A() -> None:
+    """required_dim_multihop at h=1 collapses to required_dim(F*k, delta) for bind_chain.
+
+    Model A: m_eff = F * k^h = F * k^1 = F * k.
+    So required_dim_multihop(F, k, h=1, delta) == required_dim(F*k, delta).
+    This is the single-hop parity property.
+    """
+    from mycelium_experiments.vsa_bounds.candidate_bound import required_dim_multihop
+    from mycelium_experiments.vsa_bounds.capacity import MARGIN_MU, required_dim
+
+    F, k, delta = 2, 4, 0.02
+    req_multi = required_dim_multihop(
+        "bind_chain", F, k, h=1, delta=delta, eff_m_model="A_exponential"
+    )
+    req_single = required_dim(F * k, delta, MARGIN_MU)
+    assert req_multi == req_single, (
+        f"h=1 parity failed for model A: multihop={req_multi} single={req_single}"
+    )
+
+
+def test_required_dim_multihop_h1_parity_model_B() -> None:
+    """required_dim_multihop at h=1 collapses to required_dim(F*k, delta) for bind_chain.
+
+    Model B: m_eff = F * k * h = F * k * 1 = F * k. Same as Model A at h=1.
+    """
+    from mycelium_experiments.vsa_bounds.candidate_bound import required_dim_multihop
+    from mycelium_experiments.vsa_bounds.capacity import MARGIN_MU, required_dim
+
+    F, k, delta = 3, 8, 0.02
+    req_multi = required_dim_multihop("bind_chain", F, k, h=1, delta=delta, eff_m_model="B_linear")
+    req_single = required_dim(F * k, delta, MARGIN_MU)
+    assert req_multi == req_single, (
+        f"h=1 parity failed for model B: multihop={req_multi} single={req_single}"
+    )
+
+
+def test_required_dim_multihop_monotone_in_h() -> None:
+    """required_dim_multihop is non-decreasing in h for models A and B (more hops, more dim).
+
+    This is a necessary (but not sufficient) property for a valid bound: deeper compositions
+    should require at least as much dimension.
+    """
+    from mycelium_experiments.vsa_bounds.candidate_bound import required_dim_multihop
+
+    F, k, delta = 2, 4, 0.02
+    for model in ("A_exponential", "B_linear"):
+        req_h1 = required_dim_multihop("bind_chain", F, k, h=1, delta=delta, eff_m_model=model)  # type: ignore[arg-type]
+        req_h2 = required_dim_multihop("bind_chain", F, k, h=2, delta=delta, eff_m_model=model)  # type: ignore[arg-type]
+        req_h3 = required_dim_multihop("bind_chain", F, k, h=3, delta=delta, eff_m_model=model)  # type: ignore[arg-type]
+        assert req_h1 <= req_h2, f"model {model}: required_dim_multihop not monotone h=1 to h=2"
+        assert req_h2 <= req_h3, f"model {model}: required_dim_multihop not monotone h=2 to h=3"
+
+
+def test_effective_m_models_agree_at_h1() -> None:
+    """All three effective-m models produce the same m_eff at h=1 for bind_chain.
+
+    At h=1: A gives F*k^1 = F*k; B gives F*k*1 = F*k; C gives ceil(F*k*sqrt(1)) = F*k.
+    They should all agree.
+    """
+    from mycelium_experiments.vsa_bounds.candidate_bound import effective_m
+
+    F, k = 3, 8
+    m_a = effective_m("bind_chain", F, k, h=1, model="A_exponential")
+    m_b = effective_m("bind_chain", F, k, h=1, model="B_linear")
+    m_c = effective_m("bind_chain", F, k, h=1, model="C_sqrt")
+    assert m_a == m_b == m_c == F * k, (
+        f"All models should give F*k={F * k} at h=1; got A={m_a} B={m_b} C={m_c}"
+    )
+
+
+def test_fit_and_validate_returns_all_models() -> None:
+    """fit_and_validate returns a CandidateResult for each requested model."""
+    from mycelium_experiments.vsa_bounds.candidate_bound import fit_and_validate
+    from mycelium_experiments.vsa_bounds.sweeps import run_multihop_sweep
+
+    results = run_multihop_sweep(
+        models=["mapi"],
+        compositions=["bind_chain"],
+        F_values=[2],
+        k_values=[4],
+        d_values=[512, 1024],
+        h_values=[1, 2],
+        delta=0.02,
+        trials_per_point=30,
+        progress=False,
+    )
+    candidates = fit_and_validate(results, eff_m_models=["A_exponential", "B_linear"])
+    assert len(candidates) == 2, f"expected 2 candidates, got {len(candidates)}"
+    models_returned = {c.eff_m_model for c in candidates}
+    assert "A_exponential" in models_returned
+    assert "B_linear" in models_returned
+
+
+def test_fit_and_validate_never_stamps_proven() -> None:
+    """fit_and_validate guarantee tags are always Empirical+Declared, never Proven."""
+    from mycelium_experiments.vsa_bounds.candidate_bound import fit_and_validate
+    from mycelium_experiments.vsa_bounds.sweeps import run_multihop_sweep
+
+    results = run_multihop_sweep(
+        models=["mapi"],
+        compositions=["bind_chain"],
+        F_values=[2],
+        k_values=[4],
+        d_values=[512, 2048],
+        h_values=[1],
+        delta=0.02,
+        trials_per_point=20,
+        progress=False,
+    )
+    candidates = fit_and_validate(results)
+    for c in candidates:
+        assert "Proven" not in c.guarantee, (
+            f"candidate {c.eff_m_model} must not claim Proven; got: {c.guarantee}"
+        )
+        for p in c.all_points:
+            assert p.guarantee_measurement == "Empirical"
+            assert p.guarantee_candidate == "Declared"
+            assert "Proven" not in p.guarantee_measurement
+            assert "Proven" not in p.guarantee_candidate
+
+
+def test_fit_and_validate_candidate_is_upper_bound_on_large_d() -> None:
+    """For large d (well above candidate_dim), all three models should not be refuted.
+
+    At d=8192 and h=1, the effective m (even Model A = F*k=2*4=8) gives
+    required_dim(8, 0.02) = 1382 — well below d=8192, so the bound should hold
+    and measured_rate should be low (Empirical).
+    """
+    from mycelium_experiments.vsa_bounds.candidate_bound import fit_and_validate
+    from mycelium_experiments.vsa_bounds.sweeps import run_multihop_sweep
+
+    results = run_multihop_sweep(
+        models=["mapi"],
+        compositions=["bind_chain"],
+        F_values=[2],
+        k_values=[4],
+        d_values=[8192],
+        h_values=[1],
+        delta=0.02,
+        trials_per_point=100,
+        progress=False,
+    )
+
+    candidates = fit_and_validate(results, eff_m_models=["A_exponential"])
+    assert len(candidates) == 1
+    c = candidates[0]
+    # At large d with h=1, Model A should be an empirical upper bound (not refuted).
+    assert c.n_candidate_holds >= 1, (
+        "At d=8192, h=1: at least one point should be in-regime for Model A"
+    )
+    # The candidate should not be refuted (Empirical validation).
+    assert c.n_refuted == 0 or c.n_candidate_holds == 0, (
+        f"Model A refuted at {c.n_refuted} points at d=8192, h=1 — unexpected"
+    )
+
+
+# ---------------------------------------------------------------------------
+# proof_obligation.py — SMT-LIB and LH skeleton emitters
+# ---------------------------------------------------------------------------
+
+
+def test_emit_smt2_produces_parseable_output(tmp_path) -> None:
+    """emit_smt2 produces a parseable SMT-LIB 2 file."""
+    from mycelium_experiments.vsa_bounds.candidate_bound import fit_and_validate
+    from mycelium_experiments.vsa_bounds.proof_obligation import emit_smt2
+    from mycelium_experiments.vsa_bounds.sweeps import run_multihop_sweep
+
+    results = run_multihop_sweep(
+        models=["mapi"],
+        compositions=["bind_chain"],
+        F_values=[2],
+        k_values=[4],
+        d_values=[512, 2048, 8192],
+        h_values=[1, 2],
+        delta=0.02,
+        trials_per_point=30,
+        progress=False,
+    )
+    candidates = fit_and_validate(results, eff_m_models=["A_exponential"])
+    assert candidates
+
+    smt2_path = tmp_path / "test_obligation.smt2"
+    emit_smt2(candidates[0], "bind_chain", smt2_path)
+    assert smt2_path.exists(), "smt2 file was not created"
+
+    content = smt2_path.read_text(encoding="utf-8")
+    # Minimal structure checks: header, logic declaration, check-sat.
+    assert "(set-logic" in content, "SMT-LIB 2 logic declaration missing"
+    assert "(check-sat)" in content, "check-sat missing"
+    # Should contain assert statements for in-regime points or a NOTE if none.
+    assert "assert" in content.lower() or "NOTE" in content
+
+
+def test_emit_smt2_contains_declared_marker(tmp_path) -> None:
+    """emit_smt2 always marks the file as Declared (never Proven)."""
+    from mycelium_experiments.vsa_bounds.candidate_bound import fit_and_validate
+    from mycelium_experiments.vsa_bounds.proof_obligation import emit_smt2
+    from mycelium_experiments.vsa_bounds.sweeps import run_multihop_sweep
+
+    results = run_multihop_sweep(
+        models=["mapi"],
+        compositions=["bind_chain"],
+        F_values=[2],
+        k_values=[4],
+        d_values=[1024],
+        h_values=[1],
+        delta=0.02,
+        trials_per_point=20,
+        progress=False,
+    )
+    candidates = fit_and_validate(results)
+    smt2_path = tmp_path / "test_declared.smt2"
+    emit_smt2(candidates[0], "bind_chain", smt2_path)
+    content = smt2_path.read_text(encoding="utf-8")
+    assert "Declared" in content, "SMT2 file must contain Declared marker"
+    # "Proven" may appear in honest context (e.g. "before claiming Proven") but must
+    # not be assigned as a guarantee for the multi-hop result.
+    assert "Guarantee: Proven" not in content, (
+        "SMT2 file must not assign Proven guarantee to the multi-hop obligation"
+    )
+
+
+def test_emit_lh_skeleton_is_well_formed(tmp_path) -> None:
+    """emit_lh_skeleton produces a well-formed Haskell module text."""
+    from mycelium_experiments.vsa_bounds.candidate_bound import fit_and_validate
+    from mycelium_experiments.vsa_bounds.proof_obligation import emit_lh_skeleton
+    from mycelium_experiments.vsa_bounds.sweeps import run_multihop_sweep
+
+    results = run_multihop_sweep(
+        models=["mapi"],
+        compositions=["bind_chain"],
+        F_values=[2],
+        k_values=[4],
+        d_values=[512, 2048, 8192],
+        h_values=[1, 2],
+        delta=0.02,
+        trials_per_point=30,
+        progress=False,
+    )
+    candidates = fit_and_validate(results, eff_m_models=["A_exponential"])
+    assert candidates
+
+    lh_path = tmp_path / "test_lh_skeleton.hs"
+    emit_lh_skeleton(candidates[0], "bind_chain", lh_path)
+    assert lh_path.exists(), "LH skeleton file was not created"
+
+    content = lh_path.read_text(encoding="utf-8")
+    # Structural checks for valid Haskell module.
+    assert "module MultihopBound_" in content, "module declaration missing"
+    assert "requiredDimMultihop" in content, "requiredDimMultihop function missing"
+    assert "candidateCapacityThm" in content, "axiom missing"
+    assert "assume" in content, "assume annotation missing"
+    assert "Declared" in content, "Declared marker missing"
+
+
+def test_emit_obligations_creates_expected_files(tmp_path) -> None:
+    """emit_obligations creates SMT2, LH, and PROOF-SUMMARY files."""
+    from mycelium_experiments.vsa_bounds.candidate_bound import fit_and_validate
+    from mycelium_experiments.vsa_bounds.proof_obligation import emit_obligations
+    from mycelium_experiments.vsa_bounds.sweeps import run_multihop_sweep
+
+    results = run_multihop_sweep(
+        models=["mapi"],
+        compositions=["bind_chain"],
+        F_values=[2],
+        k_values=[4],
+        d_values=[512, 2048],
+        h_values=[1],
+        delta=0.02,
+        trials_per_point=20,
+        progress=False,
+    )
+    candidates = fit_and_validate(results, eff_m_models=["A_exponential"])
+    emitted = emit_obligations(candidates, out_dir=tmp_path, run_id="test", backend="numpy-cpu")
+
+    # PROOF-SUMMARY.md must be present.
+    assert "PROOF-SUMMARY" in emitted, "PROOF-SUMMARY key missing from emitted"
+    summary_path = emitted["PROOF-SUMMARY"]
+    assert summary_path.exists(), "PROOF-SUMMARY.md not created"
+    summary_text = summary_path.read_text(encoding="utf-8")
+    assert "Declared" in summary_text, "PROOF-SUMMARY must contain Declared marker"
+    # The word "Proven" may appear in honest context (e.g. "the Proven verdict requires...")
+    # but must NOT appear as an assigned guarantee claim for the multi-hop result.
+    assert "Guarantee: Proven" not in summary_text, (
+        "PROOF-SUMMARY must not assign Proven guarantee to multi-hop results"
+    )
+
+    # At least one SMT2 file should be created.
+    smt2_files = [p for k, p in emitted.items() if k.endswith("_smt2")]
+    assert len(smt2_files) > 0, "No SMT2 files emitted"
+
+    # At least one LH file should be created.
+    lh_files = [p for k, p in emitted.items() if k.endswith("_lh")]
+    assert len(lh_files) > 0, "No LH skeleton files emitted"

@@ -12,10 +12,22 @@ Quick start (GPU, default sizes):
 CPU-only / quick profile:
     python -m mycelium_experiments.vsa_bounds --sweep both --quick
 
+Proof-discovery mode (emits candidate bounds and checkable proof obligations):
+    python -m mycelium_experiments.vsa_bounds --proof
+    python -m mycelium_experiments.vsa_bounds --proof --quick
+    python -m mycelium_experiments.vsa_bounds --proof --emit-obligations --results-dir results/
+
+The --proof mode runs the multihop sweep, fits candidate closed-form bounds,
+validates them empirically, and emits:
+  - A PROOF-SUMMARY.md with the best candidate theorem and emitted obligations.
+  - SMT-LIB 2 (.smt2) files for Z3 to discharge.
+  - Liquid Haskell skeleton (.hs) files mirroring proofs/lh-bundle/.
+
 Results land in experiments/results/ (default) or --results-dir DIR.
 
-VR-5: measured RATES only.  Never-silent (G2): backend printed at startup,
-unavailable GPU falls back loudly.
+VR-5: measured RATES only; candidate bounds are Declared; Proven is NEVER stamped here.
+Never-silent (G2): backend printed at startup, unavailable GPU falls back loudly,
+refuted candidates are reported, not hidden.
 """
 
 from __future__ import annotations
@@ -85,6 +97,35 @@ def _build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Force numpy-cpu backend even if torch/CUDA is available.",
     )
+    # Proof-discovery mode.
+    p.add_argument(
+        "--proof",
+        action="store_true",
+        help=(
+            "Proof-discovery mode: run the multihop sweep, fit candidate closed-form "
+            "multi-hop bounds (Declared), validate them empirically, and emit checkable "
+            "proof obligations (SMT-LIB + LH skeleton).  Implies --sweep multihop.  "
+            "VR-5: no Proven claims are made; the obligations are Declared stubs."
+        ),
+    )
+    p.add_argument(
+        "--emit-obligations",
+        action="store_true",
+        help=(
+            "Emit SMT-LIB (.smt2) and Liquid Haskell (.hs) proof obligation files "
+            "alongside the PROOF-SUMMARY.md (implies --proof).  "
+            "Also copies obligations to proofs/vsa-multihop-bound/ stubs if present."
+        ),
+    )
+    p.add_argument(
+        "--eff-m-model",
+        choices=["A_exponential", "B_linear", "C_sqrt", "all"],
+        default="all",
+        help=(
+            "Effective-m model(s) to test in proof-discovery mode "
+            "(default: all three; see candidate_bound.py for descriptions)."
+        ),
+    )
     # GPU-tuning knobs
     p.add_argument(
         "--d-values",
@@ -128,6 +169,9 @@ def main() -> int:
     from .sweeps import run_multihop_sweep, run_single_sweep
 
     args = _build_parser().parse_args()
+
+    # --proof and --emit-obligations both imply the proof-discovery path.
+    proof_mode = args.proof or args.emit_obligations
 
     # Backend selection — never-silent (G2).
     be = _be.select(force_numpy=args.numpy_only)
@@ -176,8 +220,13 @@ def main() -> int:
     trials_single = args.trials if args.trials is not None else default_trials_single
     trials_multi = args.trials if args.trials is not None else default_trials_multi
 
-    do_single = args.sweep in ("single", "both")
-    do_multi = args.sweep in ("multihop", "both")
+    # Proof mode implies multihop sweep.
+    if proof_mode:
+        do_single = False
+        do_multi = True
+    else:
+        do_single = args.sweep in ("single", "both")
+        do_multi = args.sweep in ("multihop", "both")
 
     single_results = []
     multihop_results = []
@@ -231,6 +280,75 @@ def main() -> int:
 
     write_summary(single_results, multihop_results, results_dir, prefix=prefix, backend=be)
 
+    # ---------------------------------------------------------------------------
+    # Proof-discovery mode: fit candidate bounds and emit obligations.
+    # ---------------------------------------------------------------------------
+    if proof_mode and multihop_results:
+        from .candidate_bound import EffMModel, fit_and_validate, summarize_candidates
+        from .proof_obligation import emit_obligations
+
+        print(
+            "\n[vsa_bounds] proof-discovery mode: fitting candidate multi-hop bounds ...",
+            file=sys.stderr,
+        )
+
+        # Resolve effective-m models to test.
+        if args.eff_m_model == "all":
+            eff_models: list[EffMModel] = ["A_exponential", "B_linear", "C_sqrt"]
+        else:
+            eff_models = [args.eff_m_model]  # type: ignore[list-item]
+
+        candidates = fit_and_validate(multihop_results, eff_m_models=eff_models)
+
+        if not candidates:
+            print(
+                "[vsa_bounds] proof-discovery: no candidates — multihop sweep produced no data.",
+                file=sys.stderr,
+            )
+        else:
+            # Print candidate summary.
+            summary_text = summarize_candidates(candidates)
+            print(summary_text, file=sys.stderr)
+
+            # Emit obligations.
+            proof_dir = results_dir
+            obligations = emit_obligations(
+                candidates,
+                out_dir=proof_dir,
+                run_id=run_id,
+                backend=be,
+                delta=args.delta,
+            )
+
+            proof_summary_path = obligations.get("PROOF-SUMMARY")
+            if proof_summary_path:
+                print(
+                    f"[vsa_bounds] PROOF-SUMMARY: {proof_summary_path.resolve()}",
+                    file=sys.stderr,
+                )
+
+            # Report emitted files.
+            for key, path in sorted(obligations.items()):
+                if key != "PROOF-SUMMARY":
+                    print(
+                        f"[vsa_bounds] obligation emitted: {path.name}",
+                        file=sys.stderr,
+                    )
+
+            # Optionally copy obligation stubs into proofs/vsa-multihop-bound/.
+            # (Only if the directory exists — the orchestrator owns it; we just populate.)
+            proofs_dir = Path("..") / "proofs" / "vsa-multihop-bound"
+            if proofs_dir.exists():
+                import shutil  # noqa: PLC0415
+
+                for key, path in obligations.items():
+                    dest = proofs_dir / path.name
+                    shutil.copy2(path, dest)
+                    print(
+                        f"[vsa_bounds] copied to proofs/vsa-multihop-bound/: {dest.name}",
+                        file=sys.stderr,
+                    )
+
     print(
         f"\n[vsa_bounds] done.  Results in: {results_dir.resolve()}",
         file=sys.stderr,
@@ -239,6 +357,11 @@ def main() -> int:
         f"  SUMMARY: {results_dir.resolve()}/{prefix}SUMMARY.md",
         file=sys.stderr,
     )
+    if proof_mode:
+        print(
+            "  Run with --proof to discover candidate bounds and emit proof obligations.",
+            file=sys.stderr,
+        )
     return 0
 
 
