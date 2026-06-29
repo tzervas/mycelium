@@ -206,7 +206,7 @@ fn multi_arg_lambda_currying_typechecks_and_lowers() {
     // Note: `lambda() => 0b0000_0001` has 0 params — currently parse yields a zero-param lambda
     // which checkty refuses with a clear error. The exact parse surface for a zero-arg lambda may
     // not be parseable at all (parse_params_opt requires at least one param in the grammar); if
-    // the zero-param form is simply unparseable, the check below will not be reached — either way
+    // the zero-param form is simply unparsable, the check below will not be reached — either way
     // the pipeline never silently accepts it (G2 / M-822).
     // (FLAG: if zero-param lambda syntax parses, add an explicit rejection test here — M-822.)
 }
