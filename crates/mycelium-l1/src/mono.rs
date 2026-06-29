@@ -2386,6 +2386,14 @@ impl<'e> Mono<'e> {
                 let ctor_name = crate::checkty::tuple_ctor_name(n);
                 self.rewrite_pattern(site, &Pattern::Ctor(ctor_name, subs.clone()), sty, scope)
             }
+            // `Pattern::Or` is desugared in `check_match` before monomorphization; reaching here
+            // means the program was not checked — a never-silent explicit error (G2).
+            Pattern::Or(_) => Err(ElabError::Residual {
+                site: site.to_owned(),
+                what: "internal: Pattern::Or reached monomorphization — or-patterns must be \
+                       desugared by the checker (invariant violation — report this)"
+                    .to_owned(),
+            }),
         }
     }
 
@@ -2678,6 +2686,13 @@ fn pattern_binders(pat: &Pattern, bound: &mut BTreeSet<String>, added: &mut Vec<
                 pattern_binders(s, bound, added);
             }
         }
+        // `Pattern::Or` is desugared in `check_match` before monomorphization; reaching here
+        // means the program was not checked — an invariant violation (G2: never silent).
+        Pattern::Or(_) => panic!(
+            "internal: Pattern::Or reached mono::pattern_binders — or-patterns must be \
+             desugared by the checker before any downstream pass \
+             (invariant violation — report this)"
+        ),
     }
 }
 

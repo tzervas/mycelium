@@ -81,6 +81,14 @@ fn corpus() -> Vec<&'static str> {
         // is the last hypha's value (no v0 product type). Determinism: the value is independent of
         // any scheduling — the sequentialization is the meaning.
         "nodule d;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\nfn main() => Binary{8} =\n  colony { hypha compute(0b0000_1111), hypha compute(0b1010_1010), hypha xor(0b1111_0000, 0b0000_1111) };",
+        // --- RFC-0020 §9 / R20-Q5: list-literal element-type inference from return-type context ---
+        // The return type `Seq{Binary{8}, 3}` flows into the list literal `[…]` bidirectionally as
+        // the `expected` type in `check_list` — the element type `Binary{8}` is NOT determined
+        // bottom-up from the elements (which here are explicit bit-literals anyway), but the return
+        // annotation *would* be necessary for bare-decimal elements. All three paths must agree on
+        // the `Seq` repr value (L1-eval, elaborate→L0-interp, AOT). The observable is the full
+        // `Seq{Binary{8}, 3}` payload.
+        "nodule d;\nfn main() => Seq{Binary{8}, 3} = [0b1111_0000, 0b0000_1111, 0b1010_1010];",
     ]
 }
 
@@ -193,6 +201,13 @@ fn data_corpus() -> Vec<&'static str> {
         "nodule d;\ntype Nat = Z | S(Nat);\nfn f(n: Nat) => Nat = match n { Z => Z, S(m) => S(g(m)) };\nfn g(n: Nat) => Nat = match n { Z => Z, S(m) => f(m) };\nfn main() => Nat = f(S(S(S(Z))));",
         // a three-function mutual cycle (f → g → h → f) returning a datum
         "nodule d;\ntype Nat = Z | S(Nat);\nfn f3(n: Nat) => Nat = match n { Z => Z, S(m) => g3(m) };\nfn g3(n: Nat) => Nat = match n { Z => Z, S(m) => h3(m) };\nfn h3(n: Nat) => Nat = match n { Z => Z, S(m) => f3(m) };\nfn main() => Nat = f3(S(S(S(S(Z)))));",
+        // --- RFC-0020 §9 / R20-Q3: or-patterns ---
+        // An or-pattern `Neg | Pos => body` desugars (KC-3) to two arms sharing the same body.
+        // All three paths (L1-eval ≡ elaborate→L0-interp ≡ AOT) must agree on the desugared form.
+        // The desugar is checker-level only — zero new L0 node (uses the existing Match/Alt).
+        "nodule d;\ntype Sign = Neg | Zero | Pos;\nfn classify(s: Sign) => Ternary{1} = match s { Neg | Pos => 0t-, Zero => 0t0 };\nfn main() => Ternary{1} = classify(Neg);",
+        // A three-alternative or-pattern — all alts share the same body; exhaustive.
+        "nodule d;\ntype Bit = Zero | One;\nfn always_one(b: Bit) => Binary{1} = match b { Zero | One => 0b1 };\nfn main() => Binary{1} = always_one(Zero);",
         // --- M-391 (R7-Q3 surface): two further surface-written mutual-recursion shapes ---
         // a mutual pair returning a REPR (not a datum): hi(SS Z) ⟶ lo(S Z) ⟶ hi(Z) ⟶ 0b1111_1111
         "nodule d;\ntype Nat = Z | S(Nat);\nfn hi(n: Nat) => Binary{8} = match n { Z => 0b1111_1111, S(m) => lo(m) };\nfn lo(n: Nat) => Binary{8} = match n { Z => 0b0000_0000, S(m) => hi(m) };\nfn main() => Binary{8} = hi(S(S(Z)));",

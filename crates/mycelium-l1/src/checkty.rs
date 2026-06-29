@@ -4337,11 +4337,75 @@ impl Cx<'_> {
         if arms.is_empty() {
             return self.err("a match needs at least one arm");
         }
+        // Or-pattern desugar (RFC-0020 §9 / R20-Q3, KC-3 — zero kernel growth): expand each
+        // surface arm whose pattern is `Pattern::Or(alts)` into `|alts|` plain arms that share
+        // the same body. Binding-consistency check (never-silent G2): every alternative in an
+        // or-pattern must bind the same set of variable names at the same types — a mismatch is a
+        // `CheckError`, never a silent accept. After desugar, `Pattern::Or` never appears in the
+        // arms the downstream loop sees, so `resolve_pattern`/`check_pattern`/the evaluator/the
+        // elaborator all stay Or-free (their never-silent guards below confirm this invariant).
+        let flat_arms: Vec<crate::ast::Arm> =
+            arms.iter().try_fold(Vec::new(), |mut acc, arm| {
+                match &arm.pattern {
+                    Pattern::Or(alts) => {
+                        // Validate: the or-pattern must have ≥ 2 alternatives (the parser only
+                        // builds a `Pattern::Or` when it sees at least one `|`, so ≥ 2 is
+                        // guaranteed by construction — this check defends against API misuse).
+                        if alts.len() < 2 {
+                            return self.err(
+                                "internal: Pattern::Or must have at least 2 alternatives \
+                                 (or-pattern invariant violation — report this)",
+                            );
+                        }
+                        // Check binding consistency across all alternatives.
+                        // Each alternative is resolved + typed against the scrutinee type; their
+                        // binder sets must agree (same names, same types — G2/never-silent).
+                        // We collect the binders of the FIRST alternative as the reference set,
+                        // then verify each subsequent alternative against it.
+                        let mut ref_binds: Option<Vec<(String, Ty)>> = None;
+                        for (alt_idx, alt) in alts.iter().enumerate() {
+                            let resolved = self.resolve_pattern(alt, &sty)?;
+                            let mut binds: Vec<(String, Ty, Vec<usize>)> = Vec::new();
+                            self.check_pattern(&resolved, &sty, &mut binds)?;
+                            let binder_sig: Vec<(String, Ty)> = binds
+                                .iter()
+                                .map(|(n, t, _)| (n.clone(), t.clone()))
+                                .collect();
+                            match &ref_binds {
+                                None => ref_binds = Some(binder_sig),
+                                Some(ref_sig) => {
+                                    // Same names + types required (order-insensitive: sort by name).
+                                    let mut got = binder_sig.clone();
+                                    let mut want = ref_sig.clone();
+                                    got.sort_by(|a, b| a.0.cmp(&b.0));
+                                    want.sort_by(|a, b| a.0.cmp(&b.0));
+                                    if got != want {
+                                        return self.err(format!(
+                                            "or-pattern alternative {alt_idx} binds {got:?} but \
+                                             alternative 0 binds {ref_sig:?} — every alternative \
+                                             of an or-pattern must bind the same variable names at \
+                                             the same types (RFC-0020 §9 / R20-Q3, never-silent G2)"
+                                        ));
+                                    }
+                                }
+                            }
+                            // Expand into a plain arm sharing the body.
+                            acc.push(crate::ast::Arm {
+                                pattern: resolved,
+                                body: arm.body.clone(),
+                            });
+                        }
+                    }
+                    _ => acc.push(arm.clone()),
+                }
+                Ok(acc)
+            })?;
+
         let col = [sty.clone()];
         let mut rows: Vec<Vec<crate::usefulness::Pat>> = Vec::new();
         let mut result: Option<Ty> = None;
-        let mut arms2: Vec<crate::ast::Arm> = Vec::with_capacity(arms.len());
-        for arm in arms {
+        let mut arms2: Vec<crate::ast::Arm> = Vec::with_capacity(flat_arms.len());
+        for arm in &flat_arms {
             // Normalize the pattern against the scrutinee/field types first — resolve ambient
             // bare-decimal literals to concrete ones, and rewrite nullary-ctor idents to explicit
             // `Ctor(name, [])` — so the matrix, the evaluator, the elaborator, and the type-free
@@ -4511,6 +4575,15 @@ impl Cx<'_> {
                 Pattern::Ctor(ctor_name, out)
             }
             Pattern::Wildcard | Pattern::Lit(_) | Pattern::Ident(_) => pat.clone(),
+            // `Pattern::Or` is desugared in `check_match` before `resolve_pattern` is called;
+            // reaching here means the invariant was violated — an explicit never-silent refusal (G2).
+            Pattern::Or(_) => {
+                return Err(CheckError::new(
+                    self.site,
+                    "internal: Pattern::Or reached resolve_pattern — or-patterns must be desugared \
+                     in check_match before any downstream pass (invariant violation — report this)",
+                ));
+            }
         })
     }
 
@@ -4971,6 +5044,13 @@ pub(crate) fn normalize_pattern(
             }
             Ok(Pat::Lit(literal_key(lit)))
         }
+        // `Pattern::Or` is desugared in `check_match` before `normalize_pattern` is ever called;
+        // reaching here means the invariant was violated — an explicit never-silent refusal (G2).
+        Pattern::Or(_) => Err(CheckError::new(
+            site,
+            "internal: Pattern::Or reached normalize_pattern — or-patterns must be desugared \
+             in check_match before any downstream pass (invariant violation — report this)",
+        )),
     }
 }
 

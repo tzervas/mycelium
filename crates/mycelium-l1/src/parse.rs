@@ -1976,7 +1976,25 @@ impl Parser {
     }
 
     fn parse_arm(&mut self) -> Result<Arm, ParseError> {
-        let pattern = self.parse_pattern()?;
+        // Parse the first (and possibly only) alternative pattern.
+        let first = self.parse_pattern()?;
+        // Or-pattern (RFC-0020 §9 / R20-Q3): if `|` follows, parse additional alternatives
+        // (`A | B | C => body`). In pattern position `|` is unambiguously the or-separator
+        // (not the bitwise-or expression operator `bor`, which is lexed at the same `Tok::Pipe`
+        // but can only appear after a full expression, never immediately after a pattern before
+        // `=>`). If there are multiple alternatives, they are gathered into `Pattern::Or`, which
+        // the checker desugars into repeated arms sharing the same body (KC-3 — zero kernel
+        // growth). Never-silent (G2): a `|` in a pattern with no following alternative is an
+        // explicit `ParseError`.
+        let pattern = if self.at(&Tok::Pipe) {
+            let mut alts = vec![first];
+            while self.eat(&Tok::Pipe) {
+                alts.push(self.parse_pattern()?);
+            }
+            Pattern::Or(alts)
+        } else {
+            first
+        };
         self.expect(&Tok::FatArrow, "`=>` in the match arm")?;
         let body = self.parse_expr()?;
         Ok(Arm { pattern, body })
