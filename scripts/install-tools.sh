@@ -38,6 +38,45 @@ cd "$REPO_ROOT" || exit 1
 # them on PATH for later sessions, so no per-session PATH wiring is needed.
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
+# ── APT FAST-PATH: batch-install every check tool AVAILABLE VIA APT in one transaction ───────────
+# apt (or nala) ships prebuilt static binaries for most gate tools — installing them here takes
+# *seconds* (vs compiling via uv/cargo), and the resulting /usr packages are captured by the cloud
+# filesystem **snapshot**, so later sessions skip setup entirely. This is the lever that kills the
+# ~10-15 min per-instance build: the apt subset is fast + guaranteed + snapshot-persisted, and the
+# uv/npx/cargo steps below all probe-first (`have <bin>`), so once apt provides a tool they no-op.
+# Tools with NO apt package (check-jsonschema, markdownlint-cli2, cargo-deny/audit/nextest/
+# public-api) fall through to their own installers below. Best-effort + never-silent (G2): no apt /
+# no permission ⇒ a skip line and the per-tool installers still run.
+#
+# `nodejs` is deliberately EXCLUDED — the distro nodejs (18 on 24.04) is below the Node>=20 floor the
+# markdown gate needs (the base image / the node step below provides a current Node). `nala` IS in the
+# batch (an apt front-end with parallel downloads) so subsequent apt work — and the snapshot — get it;
+# it is auto-preferred over apt-get when present (the user's "apt or nala, whichever is faster").
+section "apt fast-path (snapshot-persisted prebuilt check tools)"
+# package → the binary it provides (probe by binary so a re-run is pure gap-fill).
+declare -A APT_BIN=(
+  [shellcheck]=shellcheck [codespell]=codespell [yamllint]=yamllint [graphviz]=dot
+  [gitleaks]=gitleaks [just]=just [pre-commit]=pre-commit [python3-pip]=pip3 [nala]=nala
+)
+if have apt-get; then
+  # Prefer nala (parallel downloads) when already present; else apt-get. Root needs no sudo.
+  APT=(apt-get); have nala && APT=(nala)
+  SUDO=(); [[ ${EUID:-$(id -u)} -ne 0 ]] && have sudo && SUDO=(sudo)
+  apt_missing=()
+  for p in "${!APT_BIN[@]}"; do have "${APT_BIN[$p]}" || apt_missing+=("$p"); done
+  if [[ ${#apt_missing[@]} -eq 0 ]]; then
+    ok "apt: all apt-available check tools present"
+  elif "${SUDO[@]}" "${APT[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1 \
+    || { "${SUDO[@]}" "${APT[@]}" update -qq >/dev/null 2>&1 \
+         && "${SUDO[@]}" "${APT[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1; }; then
+    ok "apt: installed ${apt_missing[*]}"
+  else
+    skip "apt batch install failed (offline / restricted / no permission) — the uv/cargo/npx installers below will fill these"
+  fi
+else
+  skip "no apt-get — the uv/cargo/npx installers below handle every tool"
+fi
+
 section "bootstrap gating tools (just / pre-commit / yamllint)"
 # These are the tools the local↔CI check spine assumes exist (`just check` routes through them).
 # install-tools.sh can't rely on `just` to install `just` (chicken-and-egg), so bootstrap them
