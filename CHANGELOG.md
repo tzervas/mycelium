@@ -8,6 +8,18 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-29: DN-64 — language-design synthesis exploration note, research aside)
+
+- **DN-64 — Mycelium Language Design: Synthesis Exploration Note (`Draft`, advisory).** A research
+  synthesis (commissioned aside) over five parallel corpus sweeps — surface ergonomics, Mycelium-unique
+  types/constructs, unique application capabilities, the hot-inject security model, and conventions —
+  produced by a small Haiku/Sonnet research swarm. Maps each unique construct (never-silent repr swap,
+  the guarantee lattice as a type-level property, provenance/`Meta`, `substrate`, bounded effects) to a
+  traditional paradigm and frames it as an extension; sketches small apps only Mycelium makes natural;
+  and proposes a signed/cert-gated **hot-inject** model with `loose`/`sealed` modes as a new RFC-0034
+  axis orthogonal to the fast/certified swap-cert axis. **Proposes nothing normatively** — every claim
+  `Declared`, with 5 recommendations and 8 open questions surfaced for maintainer ratification (VR-5/G2).
+
 ### Changed (2026-06-29: DN-57 → Enacted — delimiter semantics surface complete)
 
 - **DN-57 advances `Accepted → Enacted` (append-only; house rule 3).** The delimiter-semantics
