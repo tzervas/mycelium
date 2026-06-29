@@ -150,10 +150,17 @@ fn lower_rule_differential_equals_hand_lowered() {
     }
 }
 
-/// **§6 KC-3 by construction (non-vacuous).** Every case's elaborated rule (including the swap one)
-/// lies entirely within the frozen v0 L0 node set (`Node::is_aot_lowerable` is total over
-/// `mycelium_core::Node`), so a `lower` rule introduces no kernel node. A rule that somehow produced
-/// an out-of-fragment node would fail this — the never-silent KC-3 confirmation.
+/// **§6 KC-3 — structural confirmation (the substantive guard is by-construction).** Honesty note
+/// (VR-5): the *real* KC-3 enforcement is the **closed-enum type boundary** — `elaborate_lower_rule`
+/// returns `mycelium_core::Node`, a finite Rust enum, so a `lower` rule *cannot* construct a node
+/// outside the frozen v0 kernel set; the type system forbids it (Proven-by-construction; this wave
+/// makes no `mycelium-core` change). This test is therefore **NOT an independent KC-3 witness**:
+/// `Node::is_aot_lowerable` is *total* over the v0 node set (it returns `true` for every variant), so
+/// the assertion is a tautology that confirms each rule elaborates to a well-formed `Node` without
+/// panicking. It would only become a *discriminating* witness if a future, deliberately
+/// non-lowerable `Node` variant were added (then `is_aot_lowerable` must return `false` for it). The
+/// genuine derive↔hand-lowered equivalence is pinned by
+/// `lower_rule_elaboration_structurally_equals_hand_lowered` above.
 #[test]
 fn lower_rule_elaboration_stays_in_the_frozen_kernel_kc3() {
     for c in structural_corpus() {
@@ -162,7 +169,9 @@ fn lower_rule_elaboration_stays_in_the_frozen_kernel_kc3() {
             .unwrap_or_else(|e| panic!("[{}] rule elaboration failed: {e}", c.name));
         assert!(
             node.is_aot_lowerable(),
-            "[{}] §6/KC-3: the elaborated rule must stay within the frozen v0 L0 node set",
+            "[{}] §6/KC-3: the elaborated rule must be a well-formed v0 L0 node (elaboration \
+             succeeds; the substantive KC-3 guard is the closed-enum type boundary — a `lower` rule \
+             cannot construct a node outside `mycelium_core::Node`)",
             c.name
         );
     }

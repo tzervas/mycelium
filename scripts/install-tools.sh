@@ -77,6 +77,9 @@ if have apt-get; then
     # (python3-apt) binding is broken (ABI/path mismatch) — `have nala` is true but `nala` aborts.
     nala_ok() { command -v nala >/dev/null 2>&1 && nala --version >/dev/null 2>&1; }
     # Step 1 — best-effort install nala (fastest front-end) + its python3-apt (apt_pkg) dep via apt-get.
+    # The trailing `|| true` is a *graceful fallback, not a swallowed error* (never-silent reading):
+    # a failed nala bootstrap is non-fatal because Step 2's `nala_ok` probe then drives the batch with
+    # apt-get instead — the tools still install, just without nala's parallelism.
     if ! command -v nala >/dev/null 2>&1; then
       "${SUDO[@]}" apt-get install -y nala python3-apt >/dev/null 2>&1 \
         || { "${SUDO[@]}" apt-get update -qq >/dev/null 2>&1 \
