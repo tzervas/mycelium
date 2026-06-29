@@ -1,0 +1,10 @@
+-- Cabal project for the VSA multi-hop bound LH probes (M-832 / OQ-F).
+-- Mirrors proofs/lh-bundle/cabal.project.
+-- Status: Declared stub — populate src/*.hs via:
+--   cd experiments && python -m mycelium_experiments.vsa_bounds --proof --emit-obligations
+
+packages: .
+
+-- LiquidHaskell plugin configuration (mirrors lh-bundle).
+package vsa-multihop-bound
+  ghc-options: -fplugin=LiquidHaskell
