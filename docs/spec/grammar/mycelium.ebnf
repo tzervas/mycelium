@@ -194,9 +194,10 @@ derive_item    ::= 'derive' Ident 'for' type_ref
 /* Anonymous function / closure (RFC-0037 D5). Implemented (M-704 / RFC-0024 §4A): the closure
  * type-checks (Ty::Fn) and lowers + runs via Reynolds defunctionalization in monomorphization (a
  * tag-sum struct + a generated `apply` dispatcher; no new L0 kernel node — KC-3). `=>` (D4)
- * separates params from body. Stage-1 is SINGLE-ARGUMENT: a multi-parameter lambda needs the
- * tuple/product type the v0 surface lacks, so it is a never-silent refusal (tuple-gated, §4A.8) —
- * the `params?` here admits >1 param syntactically, but the checker refuses arity ≠ 1 (G2). */
+ * separates params from body. A multi-parameter lambda now CURRIES (M-822, RFC-0024 §4A.5/§4A.8):
+ * the checker desugars `lambda(x, y) => e` to nested single-param closures `lambda(x) => lambda(y) =>
+ * e`, so applying fewer arguments yields a partially-applied function value. A zero-parameter lambda
+ * has no v0 form and is a never-silent refusal (G2). */
 lambda_expr    ::= 'lambda' '(' params? ')' '=>' expr
 
 /* Effect annotation (RFC-0014 §3.4/§4.5 I3; M-660). Optional `!{ … }` after the return type
@@ -216,6 +217,9 @@ base_type      ::= 'Binary'  '{' Int '}'
                  | 'Substrate' '{' Ident '}'                  /* affine external resource (LR-8) */
                  | 'Seq'     '{' type_ref ',' Int '}'         /* indexed homogeneous sequence (RFC-0032 D3) */
                  | 'Bytes'                                    /* first-class byte string (RFC-0032 D4) */
+                 | '(' type_ref ',' type_ref (',' type_ref)* ')'  /* tuple/product type (M-826, arity >= 2);
+                                                                   * desugars to a synthetic single-ctor data
+                                                                   * type (KC-3 — no new L0 node) */
                  | Ident type_args?                           /* named type or type variable */
                  | '{' ambient_params '}'                     /* paradigm-less repr (RFC-0012 §4.2) */
 /* A paradigm-less repr writes the size/shape only; the enclosing ambient supplies the paradigm.
@@ -259,9 +263,12 @@ match_expr     ::= 'match' expr '{' arm (',' arm)* ','? '}'
  * `return` are NOT forms and NOT reserved (they get teaching diagnostics where they already
  * error). */
 for_expr       ::= 'for' Ident 'in' app_expr ',' Ident '=' app_expr '=>' expr
-arm            ::= pattern '=>' expr
+arm            ::= pattern ('|' pattern)* '=>' expr   /* or-patterns: A | B => e (M-823 / R20-Q3); the
+                                                       * alternatives must bind the same names at the same
+                                                       * types (checker gate, G2); desugars to one arm each */
 pattern        ::= '_'
                  | literal
+                 | '(' pattern ',' pattern (',' pattern)* ')'   /* tuple pattern (M-826, arity >= 2) */
                  | Ident ('(' pattern (',' pattern)* ')')?    /* constructor / binder */
 
 /* swap: the never-silent representation change — target and policy ALWAYS lexical (S1/WF2). */
@@ -291,8 +298,9 @@ consume_expr   ::= 'consume' app_expr
  * a `hypha` is ONLY expressible inside a `colony` ("an orphan hypha is not expressible") — there is
  * no free `hypha` production. Deterministic R1 fragment only (RFC-0008 §4.6 R1); the reference
  * semantics is the spawn-order sequentialization (RT2), so the colony's observable value is its
- * children run in order (the v0 surface has no product type, so the colony yields the LAST hypha's
- * value — a join-result product is later work). The arbitration/placement RT3 constructs (select/
+ * children run in order, and the colony yields the LAST hypha's value — wiring a join-result product
+ * of all hyphae's values (now expressible via the v0 tuple type, M-826) is later work). The
+ * arbitration/placement RT3 constructs (select/
  * merge, `forage`) are separate. The runtime realization is `mycelium-mlir::runtime`
  * (`Scope`/`Colony`/`Task`, M-357), a performance path validated against the RT2 sequentialization. */
 colony_expr    ::= 'colony' '{' hypha (',' hypha)* ','? '}'
@@ -355,6 +363,8 @@ app_expr       ::= primary ('(' args? ')')* (':' type_ref)?
 args           ::= expr (',' expr)*
 primary        ::= literal
                  | path
+                 | '(' expr ',' expr (',' expr)* ')'  /* tuple literal (M-826, arity >= 2); the comma
+                                                        * distinguishes it from the grouping form below */
                  | '(' expr ')'
 
 path           ::= Ident ('.' Ident)*

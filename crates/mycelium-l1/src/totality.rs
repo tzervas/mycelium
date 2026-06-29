@@ -209,6 +209,14 @@ pub(crate) fn walk_expr(e: &Expr, f: &mut impl FnMut(&Expr)) {
             walk_expr(policy, f);
             walk_expr(body, f);
         }
+        // M-826: walk each element for recursive-call detection; the checker rewrites TupleLit
+        // to App(MkTuple$N, elems) before totality runs, but handle any surface-form TupleLit
+        // that reaches here directly (e.g. in intermediate passes or tests).
+        Expr::TupleLit(elems) => {
+            for el in elems {
+                walk_expr(el, f);
+            }
+        }
         Expr::Path(_) | Expr::Lit(_) => {}
     }
 }
@@ -401,6 +409,12 @@ fn descend_walk(
             descend_walk(policy, pos, param, smaller, ok);
             descend_walk(body, pos, param, smaller, ok);
         }
+        // M-826: a tuple literal's elements are all value positions; walk each for recursive calls.
+        Expr::TupleLit(elems) => {
+            for el in elems {
+                descend_walk(el, pos, param, smaller, ok);
+            }
+        }
         Expr::Path(_) | Expr::Lit(_) => {}
     }
 }
@@ -415,6 +429,20 @@ fn pattern_binders(p: &Pattern, out: &mut Vec<String>) {
                 pattern_binders(s, out);
             }
         }
+        // M-826: a tuple pattern `(x, y, …)` binds each sub-pattern's variable.
+        Pattern::Tuple(subs) => {
+            for s in subs {
+                pattern_binders(s, out);
+            }
+        }
         Pattern::Wildcard | Pattern::Lit(_) => {}
+        // `Pattern::Or` is desugared in `check_match` before totality analysis; reaching here means
+        // the program was not checked — a never-silent panic (invariant violation; G2).
+        Pattern::Or(_) => {
+            panic!(
+                "internal: Pattern::Or reached totality::pattern_binders — or-patterns must be \
+                 desugared by the checker before any downstream pass (invariant violation)"
+            )
+        }
     }
 }

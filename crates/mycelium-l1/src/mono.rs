@@ -245,6 +245,8 @@ fn body_has_fn_value(env: &Env, e: &Expr) -> bool {
             body_has_fn_value(env, policy) || body_has_fn_value(env, body)
         }
         Expr::Ascribe(inner, _) => body_has_fn_value(env, inner),
+        // M-826: a tuple literal is a value-forming expression; its elements may reference fn values.
+        Expr::TupleLit(elems) => elems.iter().any(|x| body_has_fn_value(env, x)),
     }
 }
 
@@ -273,6 +275,8 @@ fn body_has_lambda(e: &Expr) -> bool {
         Expr::Fuse { left, right } => body_has_lambda(left) || body_has_lambda(right),
         Expr::Reclaim { policy, body } => body_has_lambda(policy) || body_has_lambda(body),
         Expr::Ascribe(inner, _) => body_has_lambda(inner),
+        // M-826: a tuple literal may contain lambda expressions in its elements.
+        Expr::TupleLit(elems) => elems.iter().any(body_has_lambda),
     }
 }
 
@@ -1220,6 +1224,14 @@ impl<'e> Mono<'e> {
                     body: Box::new(body2),
                 })
             }
+            // M-826: `TupleLit` nodes are rewritten to `App { head: Path(MkTuple$N), args }` by
+            // the checker (`check_tuple_lit`), so this arm should never be reached on a well-checked
+            // AST. Treat a surviving `TupleLit` as a residual (defense in depth — G2: never silent).
+            Expr::TupleLit(_) => residual(
+                site,
+                "internal: TupleLit survived to monomorphization — the checker should have \
+                 rewritten it to a constructor App (M-826; never silent, G2)",
+            ),
             // Constructs with no v0 lowering regardless of generics — kept as explicit residuals so the
             // elaborator's own refusal still fires (defense in depth; never a fabricated artifact).
             Expr::Wild(_) => residual(
@@ -1311,14 +1323,52 @@ impl<'e> Mono<'e> {
                 let b = self.concrete_ty(site, &[], &BTreeMap::new(), &fd.sig.ret)?;
                 return self.wrap_named_fn_as_closure(name, &a, &b);
             }
-            // A nullary or multi-param fn referenced as a bare value: not a single-arg fn value.
+            // Multi-parameter fn used as a first-class value (M-822 / RFC-0024 §4A.5): desugar to
+            // a curried lambda wrapper `lambda(p1: A) => lambda(p2: B) => … => name(p1, …, pN)`.
+            // This is the mono-side mirror of `check_path`'s multi-param currying. Only
+            // monomorphic (no type params) fns are supported here — generic multi-param fns still
+            // produce a residual (need full type-arg inference machinery — never silent, G2).
+            if fd.sig.value_params.len() > 1 {
+                let vparams = fd.sig.value_params.clone();
+                let ret_ty_ref = fd.sig.ret.clone();
+                // Resolve concrete types for each param and the return.
+                let mut param_tys: Vec<Ty> = Vec::with_capacity(vparams.len());
+                for p in &vparams {
+                    param_tys.push(self.concrete_ty(site, &[], &BTreeMap::new(), &p.ty)?);
+                }
+                let ret_ty = self.concrete_ty(site, &[], &BTreeMap::new(), &ret_ty_ref)?;
+                // Build the innermost call: `name(p1, p2, …, pN)`.
+                let call = Expr::App {
+                    head: Box::new(Expr::Path(p.clone())),
+                    args: vparams
+                        .iter()
+                        .map(|p| Expr::Path(Path(vec![p.name.clone()])))
+                        .collect(),
+                };
+                // Build curried nested lambdas (inner-first): lambda(pN) => … => lambda(p1) => call.
+                let mut body: Expr = call;
+                for (vp, _ty) in vparams.iter().zip(param_tys.iter()).rev() {
+                    body = Expr::Lambda {
+                        params: vec![vp.clone()],
+                        body: Box::new(body),
+                    };
+                }
+                // Build the curried arrow type A -> (B -> (… -> Z)) and lower via rewrite_lambda.
+                let curried_ty = param_tys
+                    .iter()
+                    .rev()
+                    .fold(ret_ty, |acc, t| Ty::Fn(Box::new(t.clone()), Box::new(acc)));
+                // Rewrite the outer lambda (which recurses into the inner) — a mut scope is needed.
+                let mut empty_scope: Vec<(String, Ty)> = Vec::new();
+                return self.rewrite(site, &mut empty_scope, &body, Some(&curried_ty));
+            }
+            // Nullary fn referenced as a bare value: not a function value — never-silent (G2).
             return residual(
                 site,
                 format!(
-                    "function `{name}` has {} value parameter(s) and cannot be used as a single-\
-                     argument fn value (RFC-0024 §4A.8 — multi-arg / partial application is tuple-\
-                     gated; a nullary fn is not a value, apply it) — never a silent coercion (G2)",
-                    fd.sig.value_params.len()
+                    "function `{name}` has 0 value parameters and cannot be used as a function \
+                     value — a nullary fn must be applied directly, not used as a value \
+                     (RFC-0024 §4A, never a silent coercion — G2)"
                 ),
             );
         }
@@ -1338,8 +1388,48 @@ impl<'e> Mono<'e> {
         args: &[Expr],
         expected: Option<&Ty>,
     ) -> Result<Expr, ElabError> {
+        // M-826 Part 2 — lift the first-order restriction for chained HOF application `f(x)(y)`:
+        // when the head is not a Path (e.g. `App{head: apply, args: [succ]}`), infer its type;
+        // if it has a function type `A -> B`, rewrite via the dynamic closure dispatcher (the same
+        // `apply$<arrow>` path dynamic HOF values use — §4A.5). Never-silent (G2): a non-function
+        // head is an explicit Residual.
+        if !matches!(head, Expr::Path(_)) {
+            let hty = self.infer(site, scope, head)?;
+            let Ty::Fn(param_ty, _) = &hty else {
+                return residual(
+                    site,
+                    format!(
+                        "application head is not a function — the expression has type `{hty}`, \
+                         which is not callable (M-826 §Part2 — never silent, G2)"
+                    ),
+                );
+            };
+            if args.len() != 1 {
+                return residual(
+                    site,
+                    format!(
+                        "higher-order application requires exactly 1 argument in stage-1; \
+                         got {} — partial application / multi-arg HOF is deferred (RFC-0024 §5, G2)",
+                        args.len()
+                    ),
+                );
+            }
+            // Rewrite the head (e.g. the inner App), then route through the `apply$<arrow>`
+            // dispatcher — the same dynamic closure application path as closure values.
+            let head2 = self.rewrite(site, scope, head, None)?;
+            let arg2 = self.rewrite(site, scope, &args[0], Some(param_ty))?;
+            let arrow = mangle_arrow(param_ty, &{
+                let Ty::Fn(_, ret) = &hty else { unreachable!() };
+                ret.as_ref().clone()
+            });
+            let dispatcher = format!("apply${arrow}");
+            return Ok(Expr::App {
+                head: Box::new(Expr::Path(Path(vec![dispatcher]))),
+                args: vec![head2, arg2],
+            });
+        }
         let Expr::Path(p) = head else {
-            return residual(site, "v0 application head must be a name (first-order)");
+            unreachable!("non-Path head handled above")
         };
         if p.0.len() != 1 {
             return residual(site, format!("dotted call `{}`", p.0.join(".")));
@@ -1937,18 +2027,37 @@ impl<'e> Mono<'e> {
         body: &Expr,
         expected: Option<&Ty>,
     ) -> Result<Expr, ElabError> {
-        // Stage-1: exactly one parameter (multi-arg is tuple-gated — §4A.8). The checker already
-        // refused otherwise; this defensive guard keeps mono never-silent (G2).
-        let [param] = params else {
+        // Zero-parameter lambda: never-silent refusal (G2) — mirrors `check_lambda` (the checker
+        // already refused; this keeps mono never-silent as a defensive guard).
+        if params.is_empty() {
             return residual(
                 site,
-                format!(
-                    "a `lambda` takes exactly 1 parameter in stage-1; got {} — multi-argument \
-                     lambdas need the tuple-type prerequisite (RFC-0024 §4A.8, FLAG: multi-arg/\
-                     partial-application is tuple-gated — never a silent accept)",
-                    params.len()
-                ),
+                "a `lambda` requires at least 1 parameter — a zero-argument lambda has no type \
+                 without a unit/nullary type (never a silent accept — G2)"
+                    .to_owned(),
             );
+        }
+        // Multi-argument currying (M-822 / RFC-0024 §4A.5/§4A.8): desugar `lambda(p1, p2, …) =>
+        // body` to `lambda(p1) => lambda(p2) => … => body` before lowering. The checker already
+        // transformed these into nested single-param lambdas; this guard ensures mono never
+        // silently accepts a multi-param lambda that slips through (G2 — never-silent).
+        if params.len() > 1 {
+            let (first, rest) = params.split_first().expect("len > 1");
+            let inner_body = Expr::Lambda {
+                params: rest.to_vec(),
+                body: Box::new(body.clone()),
+            };
+            return self.rewrite_lambda(
+                site,
+                scope,
+                std::slice::from_ref(first),
+                &inner_body,
+                expected,
+            );
+        }
+        // Exactly one parameter — the base case.
+        let [param] = params else {
+            unreachable!("len == 1 after the multi-arg and zero-arg branches above")
         };
         // The concrete parameter type (lambda params are always ascribed). Re-infer the body type
         // under `scope ∪ {param}` to pin the codomain — mirrors `check_lambda`. An `expected` arrow
@@ -2269,6 +2378,22 @@ impl<'e> Mono<'e> {
                 }
                 Ok(Pattern::Ctor(mangle_ctor(cname, &targs), subs2))
             }
+            // M-826: a tuple pattern `(x, y, …)` is rewritten by the checker to
+            // `Pattern::Ctor(MkTuple$N, subs)` before mono runs. A surviving `Pattern::Tuple`
+            // here is rewritten to the equivalent Ctor pattern and delegated — never-silent (G2).
+            Pattern::Tuple(subs) => {
+                let n = subs.len();
+                let ctor_name = crate::checkty::tuple_ctor_name(n);
+                self.rewrite_pattern(site, &Pattern::Ctor(ctor_name, subs.clone()), sty, scope)
+            }
+            // `Pattern::Or` is desugared in `check_match` before monomorphization; reaching here
+            // means the program was not checked — a never-silent explicit error (G2).
+            Pattern::Or(_) => Err(ElabError::Residual {
+                site: site.to_owned(),
+                what: "internal: Pattern::Or reached monomorphization — or-patterns must be \
+                       desugared by the checker (invariant violation — report this)"
+                    .to_owned(),
+            }),
         }
     }
 
@@ -2527,6 +2652,12 @@ pub(crate) fn free_vars(
             free_vars(body, bound, seen, out);
         }
         Expr::Ascribe(inner, _) => free_vars(inner, bound, seen, out),
+        // M-826: a tuple literal's elements are all value positions; walk each for free variables.
+        Expr::TupleLit(elems) => {
+            for el in elems {
+                free_vars(el, bound, seen, out);
+            }
+        }
     }
 }
 
@@ -2549,6 +2680,19 @@ fn pattern_binders(pat: &Pattern, bound: &mut BTreeSet<String>, added: &mut Vec<
                 pattern_binders(s, bound, added);
             }
         }
+        // M-826: a tuple pattern `(x, y, …)` binds each sub-pattern element.
+        Pattern::Tuple(subs) => {
+            for s in subs {
+                pattern_binders(s, bound, added);
+            }
+        }
+        // `Pattern::Or` is desugared in `check_match` before monomorphization; reaching here
+        // means the program was not checked — an invariant violation (G2: never silent).
+        Pattern::Or(_) => panic!(
+            "internal: Pattern::Or reached mono::pattern_binders — or-patterns must be \
+             desugared by the checker before any downstream pass \
+             (invariant violation — report this)"
+        ),
     }
 }
 

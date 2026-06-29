@@ -250,6 +250,23 @@ F-A3), the `policy`-value → restart-bounds mapping (F-B2), and restart-recover
 (needs effectful bodies). This RFC status stays **`Accepted`** — the runtime model is unchanged; the
 construct enactment is tracked at the DN-58 / M-710 / M-817 level, not by an RFC-level status change.
 
+**`backbone` declared-vs-promoted resolved → runtime-dynamic promoted (2026-06-29, maintainer decision,
+M-825; append-only; `Declared`):** The `backbone` row in the vocabulary table above reads
+"declared/promoted" — an ambiguity DN-63 FLAG-15 surfaced: is `backbone` a per-phylum manifest-level
+declaration (in the `spore` manifest, alongside `graft`) or a runtime-dynamic promotion (established
+dynamically at runtime, analogous to how `forage` policies consult live mesh signals)? **Maintainer
+decision (2026-06-29): `backbone` is runtime-dynamic promoted.** A transport path is not declared
+statically in the phylum manifest; it is established and promoted dynamically at runtime — a
+placement-policy artifact that the runtime may recognize, name, and expose as a `BackboneRef` when a
+high-bandwidth path becomes available or is negotiated. This framing aligns `backbone` with the
+live-signal posture of `forage` (RT3: nondeterminism is reified, named, and explained) rather than the
+static-manifest posture of `graft`. The `backbone` implementation RFC proceeds on the promoted-dynamic
+model; "declared" in the table entry is understood as "promoted and then declared to the policy layer"
+(the RFC-0005 EXPLAIN requirement applies once a backbone is established — it must be inspectable and
+non-silent, G2/RT3). **Guarantee tag: `Declared`** — the mechanism is unbuilt; RT3 bounds for backbone
+promotion are to be specified by the backbone implementation RFC. DN-63 FLAG-15 → resolved. RFC-0008
+status remains **`Accepted`** (unchanged); the `backbone` row is not rewritten (append-only).
+
 ### 4.6 Staging
 
 - **R0 (this RFC):** the model and invariants. No syntax, no implementation obligation.
@@ -391,6 +408,12 @@ diffing them is `EXPLAIN` over history); native-ternary nodes joining the mesh a
 substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
+
+- **2026-06-29 — `backbone` declared-vs-promoted resolved (M-825, append-only):** Maintainer decision:
+  `backbone` is runtime-dynamic **promoted** (not manifest-level declared). Append-only note added in
+  §4.5 resolving DN-63 FLAG-15; the `backbone` implementation RFC proceeds on the promoted-dynamic model.
+  RFC-0008 status unchanged (Accepted). Guarantee tag: `Declared` (mechanism unbuilt; RT3 bounds TBD
+  by backbone implementation RFC).
 
 - **2026-06-28 — R1 execution update (prm wave, append-only; M-817 landed, M-710 closed):** `fuse`
   and `reclaim` now **execute** end-to-end three-way (L1-eval ≡ L0-interp ≡ AOT, `Empirical`). RT6
