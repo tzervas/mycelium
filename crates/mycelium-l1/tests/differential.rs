@@ -1685,7 +1685,12 @@ fn m677_budgeted_fn_under_budget_is_differential_observable_equivalent() {
     let engine = BinaryTernarySwapEngine;
     let mut budgets = Budgets::new().with(EffectBudget::Bytes(1 << 30));
     let aot_core = mycelium_mlir::run_core_with_effects(
-        &node, &prims, &engine, 1_000_000, 1_000_000, &mut budgets,
+        &node,
+        &prims,
+        &engine,
+        1_000_000,
+        1_000_000,
+        &mut budgets,
     )
     .expect("AOT env-machine runs the budgeted fn under an ample ledger");
     let mycelium_core::CoreValue::Repr(aot_repr) = aot_core else {
