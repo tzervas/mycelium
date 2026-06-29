@@ -1,4 +1,4 @@
-# Research Record 27 — DN-64 Ergonomics R&D Planning: OQ-B/G/I/J/R/T Dispositions
+# Research Record 27 — DN-64 Ergonomics R&D Planning: OQ-B/G/H/I/J/R/T Dispositions
 
 > **What this file is.** A durable R&D planning record for the six open questions from
 > DN-64 §6 that the maintainer dispositioned (OQ-B, OQ-G, OQ-I, OQ-J, OQ-R, OQ-T), each
@@ -543,7 +543,45 @@ basis for the existing practice; `Declared` for the generalization.)
 
 ---
 
-## 8. Honest-uncertainty register
+## 8. OQ-H — Record-literal shorthand shadowing (M-846)
+
+### 8.1 Maintainer decision (faithful)
+
+OQ-H disposition (maintainer 2026-06-29, supplied after the initial 19): **"R&D."** Research the
+`{x, y}` → `{x: x, y: y}` deterministic shadowing rules — whether the readability win justifies the
+shadowing discipline; the local-vs-field disambiguation must be explicit and never-silent (G2).
+
+### 8.2 Grounded analysis
+
+DN-64 §2.2 lists record-literal shorthand as a `Declared` sugar candidate that "requires careful
+shadowing rules (the bound `x` must deterministically refer to the record field)," and §6 OQ-H frames
+the open part: "If both a local binding and a record field share the name, the disambiguation rule
+must be explicit and never silent." The candidate must satisfy the §2.1 ratified S-invariants:
+S3 (identity over elaborated L1 — the shorthand changes no content address), S4 (inspectable
+elaboration — `{x}`→`{x: x}` must be dumpable via the stage channel, M-140), and G2 (no silent
+choice). (`Exact` for the S-invariants; `Declared` for the candidate.)
+
+Prior art converges on one rule: the shorthand RHS is the **lexically in-scope binding of that name**.
+Rust field-init shorthand (`Foo { x }` ≡ `Foo { x: x }`), ES6 object shorthand (`{x}` ≡ `{x: x}`),
+OCaml record punning (`{ x; y }`), and Swift all resolve the value position by ordinary lexical
+scoping — the field name on the LHS and the value expression on the RHS occupy different namespaces,
+so there is no genuine field-vs-local ambiguity, only the ordinary question of which binding of `x` is
+in scope. The never-silent obligation is therefore mild: the elaboration is a fixed rewrite and the
+stage-dump (S4) already shows the resolved `{x: x}`; the residual risk is a reader *misreading* `{x}`
+as a field reference rather than a value capture. The real cost/benefit is small-readability-win versus
+one-more-rule-to-teach — which is exactly why the maintainer dispositioned it **R&D** rather than
+adopt-or-reject. A secondary open question: whether Mycelium records even admit field names distinct
+from the in-scope bindings in the common case (if not, the win shrinks further). (`Declared`.)
+
+### 8.3 Recommended next steps
+
+- **M-846**: confirm the lexical-resolution rule (shorthand RHS = in-scope binding) against the
+  S3/S4/G2 invariants; decide adopt vs reject on the readability-win-vs-teaching-cost trade; if
+  adopted, specify the rule + its stage-dump form in RFC-0006/RFC-0020 append-only. Default to
+  **reject** if the win does not clearly exceed the added rule (YAGNI / KISS, CLAUDE.md house-rule 5).
+- Tag stays `Declared` until ratified; no surface form ships that hides which binding `{x}` captures.
+
+## 9. Honest-uncertainty register
 
 - **All proposals in this record are `Declared`** — design directions for maintainer
   consideration, not accepted designs. No claim upgrades past its checked basis.
@@ -575,3 +613,4 @@ basis for the existing practice; `Declared` for the generalization.)
 | Date | Change |
 |---|---|
 | 2026-06-29 | Created. R&D planning record for DN-64 §7 OQ-B/G/I/J/R/T maintainer dispositions, tasks M-828/833/834/835/843/845. Six sections covering forage/backbone activation and mechanized SelectionPolicy capture; guard clauses and guarantee propagation via the meet rule; short-keyword scope limited to type literals; ergonomic wrappers for stage-1a grade annotation burden; composite-operation guarantee aggregation clarification; and proposal-time three-test gate extension. All proposals `Declared`. Append-only. |
+| 2026-06-29 | Added §8 OQ-H (record-literal shorthand shadowing, M-846) — maintainer R&D disposition supplied after the initial set; lexical-resolution rule surveyed against S3/S4/G2; default-reject on YAGNI/KISS unless the win is clear. Register §8→§9. Append-only. |

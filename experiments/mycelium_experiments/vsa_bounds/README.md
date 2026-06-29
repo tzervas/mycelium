@@ -44,7 +44,7 @@ Expected runtime on a mid-range NVIDIA GPU (RTX 3080 / 4080 class):
 - `single` sweep: ~2-5 min (m in {3,5,10,20,50}, d in {512..16384}, 1000 trials each)
 - `multihop` sweep: ~20-60 min depending on GPU speed
   (models=mapi+mapb, F in {2,3}, k in {4,8,16}, h in {1,2,3}, d in {512..16384},
-  500 trials each — 6 compositions * 2 models * 2*3*3*6 = 648 points)
+  500 trials each — 6 compositions × 2 models × 2×3×3×6 = 648 points)
 
 Total: ~1-2 hours at full size.  Use `--quick` for a 5-minute sanity check first.
 
