@@ -655,8 +655,7 @@ impl<'e> Mono<'e> {
         // (the §4 static path). The §4A dynamic params are KEPT (typed `Fn$<arrow>`).
         let dropped_indices: BTreeSet<usize> = fn_args.iter().map(|(i, _)| *i).collect();
         // RFC-0024 §4A (M-704): `param_index → arrow_mangle` for kept dynamic closure params.
-        let dyn_by_idx: BTreeMap<usize, String> =
-            dyn_fns.iter().cloned().map(|(i, a)| (i, a)).collect();
+        let dyn_by_idx: BTreeMap<usize, String> = dyn_fns.iter().cloned().collect();
         // `param_name → arrow_mangle` for kept dynamic closure params (the body-rewrite map).
         let mut dyn_param_map: BTreeMap<String, String> = BTreeMap::new();
 
