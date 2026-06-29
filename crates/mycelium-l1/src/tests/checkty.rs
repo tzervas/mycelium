@@ -226,6 +226,7 @@ mod depth_budget_tests {
                         guarantee: None,
                     },
                     effects: vec![],
+                    effect_budgets: std::collections::BTreeMap::new(),
                 },
                 body,
             })],

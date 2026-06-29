@@ -696,3 +696,94 @@ fn grow_at_item_position_points_to_derive() {
         err.message
     );
 }
+
+// --- M-677 / RFC-0014 §3.4 I4: per-effect budget annotations `!{eff(<=N<unit>?)}` parse ---
+
+#[test]
+fn effect_with_integer_budget_parses_into_effect_budgets() {
+    // `!{retry(<=3)}` — retry bound of 3 units. The effects vec gets the effect name, and
+    // effect_budgets maps it to the ceiling (M-677, RFC-0014 §4.5 I4).
+    let n = parse("nodule d;\nfn f() => Binary{8} !{retry(<=3)} = 0b00000000;").expect("parses");
+    let Item::Fn(f) = &n.items[0] else {
+        panic!("fn")
+    };
+    assert_eq!(f.sig.effects, vec!["retry".to_owned()]);
+    assert_eq!(f.sig.effect_budgets.get("retry").copied(), Some(3));
+}
+
+#[test]
+fn effect_with_kib_budget_parses_into_effect_budgets() {
+    // `!{alloc(<=64KiB)}` — alloc bound of 64 × 1024 = 65536 bytes (M-677, RFC-0014 §4.5 I4).
+    let n =
+        parse("nodule d;\nfn f() => Binary{8} !{alloc(<=64KiB)} = 0b00000000;").expect("parses");
+    let Item::Fn(f) = &n.items[0] else {
+        panic!("fn")
+    };
+    assert_eq!(f.sig.effects, vec!["alloc".to_owned()]);
+    assert_eq!(f.sig.effect_budgets.get("alloc").copied(), Some(65536));
+}
+
+#[test]
+fn effect_with_mib_budget_parses_into_effect_budgets() {
+    // `!{alloc(<=1MiB)}` — alloc bound of 1 × 1048576 bytes.
+    let n = parse("nodule d;\nfn f() => Binary{8} !{alloc(<=1MiB)} = 0b00000000;").expect("parses");
+    let Item::Fn(f) = &n.items[0] else {
+        panic!("fn")
+    };
+    assert_eq!(f.sig.effect_budgets.get("alloc").copied(), Some(1_048_576));
+}
+
+#[test]
+fn mixed_budgeted_and_unbounded_effects_parse_correctly() {
+    // `!{retry(<=3), io}` — one budgeted, one unbounded. The effects vec lists both;
+    // effect_budgets only maps the budgeted one.
+    let n =
+        parse("nodule d;\nfn f() => Binary{8} !{retry(<=3), io} = 0b00000000;").expect("parses");
+    let Item::Fn(f) = &n.items[0] else {
+        panic!("fn")
+    };
+    assert_eq!(f.sig.effects, vec!["retry".to_owned(), "io".to_owned()]);
+    assert_eq!(f.sig.effect_budgets.get("retry").copied(), Some(3));
+    assert!(
+        f.sig.effect_budgets.get("io").is_none(),
+        "unbounded `io` must have no budget entry"
+    );
+}
+
+#[test]
+fn effect_budget_zero_is_refused() {
+    // A ceiling of zero is a never-silent error (G2): a zero budget would exhaust before any work.
+    let err = parse("nodule d;\nfn f() => Binary{8} !{retry(<=0)} = 0b00000000;")
+        .expect_err("zero budget must be refused");
+    assert!(
+        err.message.contains("zero"),
+        "expected zero-budget error, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn effect_budget_duplicate_effect_is_refused() {
+    // A duplicate effect name in the set is a never-silent error (G2).
+    let err = parse("nodule d;\nfn f() => Binary{8} !{retry, retry} = 0b00000000;")
+        .expect_err("duplicate effect must be refused");
+    assert!(
+        err.message.contains("duplicate") || err.message.contains("retry"),
+        "expected duplicate-effect error, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn effect_annotation_without_budget_still_parses() {
+    // An unbounded `!{io}` still has an empty `effect_budgets` map — backward compat (M-660).
+    let n = parse("nodule d;\nfn f() => Binary{8} !{io} = 0b00000000;").expect("parses");
+    let Item::Fn(f) = &n.items[0] else {
+        panic!("fn")
+    };
+    assert_eq!(f.sig.effects, vec!["io".to_owned()]);
+    assert!(
+        f.sig.effect_budgets.is_empty(),
+        "unbounded effect must have an empty effect_budgets map"
+    );
+}
