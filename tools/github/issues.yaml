@@ -3991,11 +3991,13 @@ issues:
   - id: M-712
     title: "M-712 — feat(runtime): memory management & reclamation (RFC-0027) — reclaim model + lifetime guarantees, EXPLAIN-able"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-709]
     epic: E12-1
-    doc_refs: [corpus:RFC-0027, corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
+    landed_basis: "status:done — the M-712 DoD is met by landed work: (1) RFC-0027 Accepted (2026-06-25, gate); (2) the L1 `reclaim` construct ELABORATES to the runtime reclamation/supervision path with an EXPLAIN trail — `mycelium_l1::elaborate_reclaim` (elab.rs) feeds `mycelium_mlir::run_reclaim` → `mycelium-std-runtime::supervise_with_restart`, the bounded restart cascade + `SupervisionRecord` EXPLAIN landed via M-817 (DN-58 §B → Enacted); (3) the reclamation mechanism (RcCell + ReclamationRecord/EXPLAIN sink, region/scope_region sweep-ordered teardown) is landed + green in mycelium-std-runtime. The M-667 L1 surface this previously awaited landed (r4v); M-710/M-817 wired execution. Verified: `tests/differential.rs::reclaim_sequential_reference_runs_three_way` + `::reclaim_real_supervision_driver_dispatches_with_explain` pass. NOTE: the adjacent routed M-677 (declared-effect → interp budget ledger + per-effect `retry(<=3)` SURFACE syntax) is a SEPARATE, still-partial item — the budget *mechanism* exists (`mycelium-interp/src/budget.rs`) but the per-effect surface syntax is not yet parsed; it is NOT part of this M-712 DoD."
+    doc_refs: [corpus:RFC-0027, corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs, src:crates/mycelium-l1/src/elab.rs]
     body: |
+      DONE 2026-06-29 (r10, status reconciliation): the L1 `reclaim`→runtime elaboration gate (the remaining M-712 gate per the r10 kickoff) is MET. `elaborate_reclaim` (elab.rs) lowers `reclaim(policy) { body }` to its sequential reference AND feeds the real RT7 supervision driver `mycelium_mlir::run_reclaim` (bounded restart cascade + `SupervisionRecord` EXPLAIN trail), dispatching to `mycelium-std-runtime::supervise_with_restart` — landed via M-817 (closes M-710; DN-58 §B → Enacted). Reclamation mechanism (RcCell + ReclamationRecord/EXPLAIN, region sweep-ordered teardown) landed + green in mycelium-std-runtime. Three-way reclaim differential tests pass. Honest scope (VR-5): the adjacent M-677 (effect→budget surface syntax `retry(<=3)`) is a SEPARATE partial item — mechanism exists (budget.rs), surface syntax not yet wired; flagged on M-677, not closed here.
       Implement the runtime memory management and reclamation model as specified by RFC-0027
       (once Accepted). The reclaim surface construct (reserved in ADR-020) must elaborate to
       a real runtime path: EXPLAIN records for reclamation events, cascade respects RFC-0008
