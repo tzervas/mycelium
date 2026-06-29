@@ -149,7 +149,11 @@ An `inoculated` image refuses injection of any compiled `.so` artifact whose `Co
 not accompanied by a valid `InjectCert` from a trusted `SignerId`. This closes the attack
 vector in §1: a malicious artifact minted by an attacker cannot be injected without a valid
 signature from the project's preparation-phase key, even if the attacker can write to the
-Image node. (`Declared` — mechanism unbuilt; threat model `Exact`-cited from DN-64 §4.1/§4.5.)
+Image node. Two distinct never-silent refusals carry the rejection: **`InjectError::UnsignedCode(
+ContentHash)`** (no cert at all) and **`InjectError::BadSignature(ContentHash, SignerId)`** (a cert
+whose signature does not verify against a trusted public key in the `TrustRoot` — wrong/untrusted
+signer). Both carry the exact hash that was rejected (§8.7). (`Declared` — mechanism unbuilt;
+threat model `Exact`-cited from DN-64 §4.1/§4.5.)
 
 ### §5.2 What the gate does not close (G2 / DN-44 §1.1)
 
@@ -323,6 +327,84 @@ Three candidate locations for the project signing key:
 
 These are the design space; the selection among them is open R&D (§K.2).
 
+### §8.4 Enforcement granularity — the grain of checking (`Declared`, maintainer direction 2026-06-29)
+
+The mode axis (`loose`/`inoculated`) says **whether** a signed artifact is required. A second,
+**orthogonal granularity axis** says **at what grain** the requirement is checked. The two are
+independent knobs: a developer sets a *mode* and, within it, a *granularity*. **`inoculated` does
+not mean "verify every call" by default** — that is the costly extreme, opt-in, not the baseline.
+
+| Granularity | What is checked | When | Typical fit |
+|---|---|---|---|
+| **`whole`** (application/spore signature) | the full deployed spore is signed by a trusted key — one assertion, then its calls are trusted | once, at **compile/load** time | the **default for an `inoculated` application** |
+| **`module`** (per-phylum / per-nodule) | each phylum/nodule's spore component is signed | at load / first dispatch into the unit | mixed-trust composition (a signed app loading a separately-signed plugin phylum) |
+| **`call`** (per-dispatch) | every `Image::call()` re-verifies the cert before dispatch | on **every call** | trusted-computing / high-assurance — provenance over performance |
+
+The granularity is `Declared` and never-silent (G2): the chosen grain is mode-tagged and
+EXPLAIN-able, so a reviewer can read "this image enforces `inoculated`/`whole` — the application
+signature is checked at load, not per call." Coarser grain is a **performance/assurance trade the
+developer chooses**, never a hidden weakening: `whole` asserts the application boundary is signed;
+it does not claim per-call provenance it is not paying for.
+
+### §8.5 Scope resolution, auto-decoration, and the deviation manifest (`Declared`) — gives OQ-M (§M) its direction
+
+The posture (a *mode* × *granularity* pair) is **set at a scope** in a containment hierarchy, and
+**resolves inward**, so a developer configures one knob rather than annotating N sites:
+
+```
+global  ⊃  project  ⊃  colony  ⊃  phylum/module  ⊃  nodule/file/script  ⊃  function  ⊃  line
+```
+
+- **Auto-decoration (set-once, applies-beneath).** Setting a posture at a scope **automatically
+  wraps/decorates everything beneath it** at that tier. Set `inoculated`/`whole` at the project
+  level and the whole project inherits it — no per-nodule ceremony.
+- **Selective override (open or lock-down, granularly).** Any finer scope may **override** the
+  inherited posture — `un-decorate` a specific nodule to run it `loose` for fast iteration, or
+  **harden** a single function/line to `inoculated`/`call` in an otherwise-`whole` app. Overrides
+  are explicit and reversible.
+- **The deviation manifest (never-silent, G2).** The effective policy is always rendered as **a
+  declared default plus an enumerated list of deviations**: "globally `inoculated`/`whole`; the
+  following sites differ — `nodule X` runs `loose`, `fn Y` runs `inoculated`/`call`." A coarse,
+  not-per-call setting is **declared as such**, and every site that departs from the project-level
+  norm is listed by location (nodule/function/line). `EXPLAIN` surfaces the default and the
+  deviation set; no site's posture is silent or surprising. This is the §M scoping question's
+  resolved direction: **one scope hierarchy, inward resolution, auto-decoration, granular override,
+  and an explicit default-plus-deviations manifest.** The residual R&D (§K.2/§M) narrows to the
+  exact resolution algorithm and the config surface (a manifest table vs. an `@inject` annotation
+  vs. a germination parameter), not whether scoping works this way.
+
+### §8.6 Defaults by project kind and maturity (`Declared`)
+
+Defaults track the scope-of-work grade (§8.2) and project maturity so the gate is **proportionate**:
+early/interpreted/script work is not burdened, production work is gated, and full-bore is one knob
+away.
+
+| Project kind / maturity | Default mode | Default granularity | Rationale |
+|---|---|---|---|
+| script · rapid-dev · early project · interpreted | `loose` | n/a (unsigned permitted, G2-tagged) | do not slam early work with certification; iterate fast |
+| library (phylum) | `inoculated` (configurable) | `module` | a published API is signed at its phylum boundary |
+| application | `inoculated` | `whole` (compile/load-time application signature) | verify the full app is signed once; trust its calls |
+| trusted-computing / high-assurance | `inoculated` | `call` (opt-in) | maximum provenance/trust; performance cost accepted by choice |
+
+A developer raises or lowers this default at any scope (§8.5). The principle: **reasonable defaults
+that are not overbearing, with an ergonomic path both up (full per-call) and down (`loose`).**
+
+### §8.7 Interpreted path and colony posture (`Declared`) — refines OQ-O / OQ-Q
+
+- **Interpreted path.** Interpreted execution defaults `loose` (it is the common case for scripts
+  and rapid development; ADR-007 runs in the trusted reference interpreter, no `dlopen`). But a
+  developer may **opt a single injection into signed-and-verified** even in an otherwise-`loose`
+  context: the developer's **private key signs the injectable**; the runtime/colony **`TrustRoot`
+  holds the trusted public key**; a signature that does not match a trusted public key is **bad,
+  untrusted code** and is **blocked, never-silent** — a proposed **`InjectError::BadSignature(
+  ContentHash, SignerId)`** alongside `UnsignedCode` (unsigned vs. wrong-signer are distinct,
+  explicit refusals). So granularity also runs *per-inject*, not only per-scope.
+- **Colony / distributed posture.** Each colony/participant in a mesh sets **its own** posture
+  (mode × granularity), at minimum project-level, finer if it chooses — consistent with the
+  own-`TrustRoot` verification of §7.2 (a colony never inherits a peer's trust). The decentralized
+  model means each node chooses its own trust/provenance/performance trade; the ergonomic controls
+  (§8.5) make that a knob, not a rewrite.
+
 ---
 
 ## §9 Open R&D items (explicitly open — G2/VR-5)
@@ -386,6 +468,15 @@ inject-mode configuration.
 
 The interaction with RFC-0034 §6 mode resolution must be carefully specified to avoid ambiguity
 (I5 — the two axes are independent; their scoping mechanisms must not entangle them).
+
+**Direction now given (maintainer 2026-06-29, §8.5).** The *shape* of inject-mode scoping is
+resolved: a single containment hierarchy (`global ⊃ project ⊃ colony ⊃ module ⊃ nodule ⊃ function ⊃
+line`) with **inward resolution**, **auto-decoration** (set-once-applies-beneath), **granular
+override**, and a never-silent **default-plus-deviations manifest** (§8.5), plus the orthogonal
+**enforcement-granularity** knob (§8.4). What remains R&D under §M is narrowed to the *config
+surface and resolution algorithm* — a manifest table vs. an `@inject` annotation vs. a germination
+parameter (and whether to reuse `@certification` scoping, still subject to I5) — not whether scoping
+is hierarchical/override-able, which it is.
 
 ---
 
@@ -493,3 +584,4 @@ Until Implementation DoD is met, all mechanism claims stay `Declared` (VR-5/G2).
 | Date | Status | Note |
 |---|---|---|
 | 2026-06-29 | **Proposed** | Initial draft — ratifies the hot-inject security axis from DN-64 §7 OQ-K…OQ-Q (2026-06-29 maintainer dispositions). Introduces the `loose`/`inoculated` inject modes as an axis orthogonal to RFC-0034's cert axis; defines `InjectCert` as the spore's signature component (ADR-013 §2 comp. 4); specifies `TrustRoot` semantics and cross-colony trust (OQ-Q); extends `Resolution` with `inject_mode`; names three open R&D items (§K.2 key-management detail, §L replay/expiry, §M scoping hierarchy) explicitly — none silently closed (G2/VR-5). Feeds ADR-013, ADR-017, RFC-0008 R8-Q4 (out of scope), RFC-0034 §4/§8 (independent). Commissioned under M-836…M-842. |
+| 2026-06-29 | **Proposed** | §8.4–§8.7 added (maintainer direction) — the **enforcement-granularity** axis (`whole`/`module`/`call`; `inoculated` is NOT per-call by default — `whole`-app compile/load-time signature is the application default), the **scope-resolution hierarchy** (global ⊃ … ⊃ line) with **auto-decoration**, **granular override**, and a never-silent **default-plus-deviations manifest** (gives §M/OQ-M its shape — residual R&D narrowed to the config surface), **defaults by project kind/maturity** (scripts/interpreted → `loose`; app → `inoculated`/`whole`; trusted-computing → `inoculated`/`call` opt-in), and **interpreted/colony posture** (interpreted defaults `loose` with opt-in per-inject signing; `InjectError::BadSignature` added for wrong/untrusted signer alongside `UnsignedCode`). Advances M-836/M-838/M-840. All `Declared`; enacts nothing. |

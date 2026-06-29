@@ -7337,6 +7337,10 @@ issues:
       As a colony operator, I want the inject-mode (loose/inoculated) knob scoped correctly — a runtime
       security policy, not a per-nodule authoring choice — so that the gate cannot be locally weakened.
       R&D whether to reuse RFC-0034 §6 @certification scoping or live at image/colony/runtime level.
+      Direction given (maintainer 2026-06-29, RFC-0038 §8.5; tracked as M-847): the scoping SHAPE is
+      resolved — a containment hierarchy (global > project > colony > module > nodule > function > line)
+      with inward resolution, auto-decoration, granular override, and a never-silent default-plus-deviations
+      manifest. The residual R&D here narrows to the config surface + resolution algorithm.
       DoD: a chosen scope specified in RFC-0038 §M.
   - id: M-839
     title: "M-839 -- InjectCert = the spore's signature component (myc-prepare signs a spore)"
@@ -7465,3 +7469,30 @@ issues:
       a name) and whether the convenience is worth it.
       DoD: a specified, never-silent shadowing rule (or a decision not to adopt the shorthand), recorded in
       RFC-0006/RFC-0020 append-only. See research/27-dn64-ergonomics-rnd-RECORD.md.
+  - id: M-847
+    title: "M-847 -- Inject enforcement granularity + scope resolution + deviation manifest (RFC-0038 §8.4-§8.7)"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:execution, priority:P2, status:needs-design]
+    depends_on: [M-836, M-838, M-840]
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:RFC-0034
+      - corpus:DN-64
+    body: |
+      DN-64 §7 OQ-K/M/O refinement (maintainer direction 2026-06-29, RFC-0038 §8.4-§8.7): make the
+      inject/signing security posture an ergonomic, developer-adjustable spectrum — not per-call by default.
+      As a Mycelium developer, I want to set the signing/verification posture (mode x enforcement
+      granularity) once at a scope and have it auto-apply, with easy granular override, so that security/
+      provenance/performance is tunable without being overbearing.
+      Direction (Declared): (1) an ENFORCEMENT-GRANULARITY axis orthogonal to loose/inoculated —
+      `whole` (application/spore signature, checked once at compile/load; the application DEFAULT, not
+      per-call), `module` (per-phylum/nodule), `call` (per-dispatch; opt-in trusted-computing extreme);
+      (2) a SCOPE-RESOLUTION hierarchy (global > project > colony > module > nodule > function > line) with
+      inward resolution + AUTO-DECORATION (set-once-applies-beneath) + granular OVERRIDE; (3) a never-silent
+      DEVIATION MANIFEST (G2) — the declared default plus an enumerated list of sites that differ, EXPLAIN-able;
+      (4) DEFAULTS by project kind/maturity (scripts/interpreted/early -> loose; library -> inoculated/module;
+      application -> inoculated/whole; trusted-computing -> inoculated/call opt-in); (5) interpreted defaults
+      loose with opt-in per-inject signing (private key signs, TrustRoot public key verifies; BadSignature
+      on mismatch); (6) per-colony posture in a mesh (own TrustRoot). Gives M-838 (OQ-M scoping) its shape.
+      DoD: RFC-0038 §8.4-§8.7 ratified; the config surface + resolution algorithm chosen (the residual R&D
+      under §K.2/§M); the granularity/scope/override + deviation-manifest realized Rust-first; never-silent.
