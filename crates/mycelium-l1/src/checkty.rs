@@ -1547,36 +1547,64 @@ fn check_nodule_with(
         }
     }
 
-    // Pass 3e: **lower-rule validation** (DN-54 §4 / M-812). For each `lower Name[params] = <rhs>`
-    // declaration, validate the RHS:
-    //   (1) IL-grammar check: the RHS must type-check as an L1 expression under a typing context
-    //       that maps each param name to a fresh type variable (the rule is parametric).
-    //   (2) KC-3 (never grows the kernel): the RHS must reduce to EXISTING L0 nodes only — any
-    //       attempt to introduce a new L0 node (or reference one that does not yet exist) is an
-    //       explicit `CheckError` (G2).
-    //   (3) Acyclicity: at this stage we enforce name uniqueness (no two `lower` rules share a
-    //       name in the same nodule); full cross-rule acyclicity enforcement is deferred to a
-    //       later elaboration-time pass (the rule graph is built at elaborate time).
-    //   For a `derive Name for T` declaration, the name must resolve to a registered `lower` rule;
-    //   the type argument is validated against the rule's parameter arity.
+    // Pass 3e: **lower-rule validation** (DN-54 §4/§6 / M-812-cont). For each
+    // `lower Name[params] = <rhs>` declaration, validate the RHS:
+    //   (1) **Structural** (§3): rule-name uniqueness + param-name uniqueness (never-silent, G2).
+    //   (2) **§4.1 IL-grammar RHS type-check**: the RHS must type-check as an L1 expression under a
+    //       typing context that binds each param name as an abstract type variable ([`Ty::Var`]) —
+    //       the rule is parametric. An ill-typed / ill-formed RHS is refused at definition time, so
+    //       no `derive` site can invoke a rule that would produce broken L0.
+    //   (3) **§4.6 purity**: the RHS may not contain a `wild { … }` block — a generative-lowering
+    //       rule is a *pure compile-time* mechanism; the FFI gate does not vanish under a `derive`.
+    //   (4) **§6 KC-3 (kernel-growth)**: enforced **by construction** (see [`check_lower_decl`] and
+    //       [`crate::elab::elaborate_lower_rule`]): the L0 kernel node set is a *closed* Rust enum
+    //       ([`mycelium_core::Node`]), so the elaborator can only ever produce one of the frozen
+    //       variants — a `lower` rule **cannot** add a kernel node. The §4.6 `wild`-refusal in (3)
+    //       is the one *surface* growth a rule could smuggle in (a host op), so refusing it is the
+    //       substantive KC-3 surface check.
+    // For a `derive Name for T` declaration, the name must resolve to a registered `lower` rule, and
+    // the type argument is checked against the rule's parameter arity (DN-54 §4).
     //
-    // v0 implementation (guarantee: `Declared`): we register the rules and perform arity /
-    // uniqueness checks now; the IL-grammar type-check of the RHS (a full structural walk) and the
-    // KC-3 kernel-growth guard are elaborated at [`crate::elab`] time over the concrete RHS — this
-    // is the stage-1 discipline (structure-only checks now, evaluation at elaborate). The declared
-    // guarantee is honest: this is not a full theorem, and the tag reflects that (VR-5).
+    // Acyclicity (§4.2) is enforced once over the whole rule set after registration (a cyclic rule
+    // set would diverge the elaboration pipeline) — see [`check_lower_rule_acyclicity`].
+    //
+    // Guarantee posture (VR-5, honest): the RHS type-check (2) and the `wild`-refusal (3) are
+    // `Declared` (structural checks against the IL grammar, not theorems). The KC-3 guard (4) is
+    // `Proven`-by-construction *only* in the narrow, checked sense above (the frozen-enum codomain of
+    // the elaborator) — it is not a proof that an arbitrary RHS elaborates, only that **if** it
+    // elaborates, it adds no kernel node (which is exactly KC-3). The elaboration itself
+    // ([`crate::elab::elaborate_lower_rule`]) is `Empirical` (its observational identity is earned by
+    // the §7 differential, never self-attested).
+    // Ordering is load-bearing (G2 — the most structural refusal wins so the diagnostic is precise):
+    //   (a) **structural** per-rule checks (uniqueness, param-uniqueness, §4.6 `wild`-refusal) +
+    //       register the rule, and resolve each `derive`'s rule-name + target type;
+    //   (b) **§4.2 acyclicity** over the *whole* registered set — a cyclic rule set is a structural
+    //       error regardless of whether a rule-reference is type-valid (a bare path to another rule
+    //       name is the cycle edge; it would *also* fail the §4.1 type-check as an unresolved name,
+    //       but the cycle is the more specific, more useful diagnostic, so it runs first);
+    //   (c) **§4.1 IL-grammar RHS type-check** of each rule, last (an acyclic, structurally-valid
+    //       rule whose RHS is nonetheless ill-typed is refused here).
     let mut lower_rules: BTreeMap<String, LowerDecl> = BTreeMap::new();
     for item in &nodule.items {
         match item {
             Item::Lower(ld) => {
-                check_lower_decl(ld, &lower_rules)?;
+                check_lower_decl_structural(ld, &lower_rules)?;
                 lower_rules.insert(ld.name.clone(), ld.clone());
             }
             Item::Derive(dd) => {
-                check_derive_application(dd, &lower_rules)?;
+                check_derive_application(dd, &lower_rules, &types)?;
             }
             _ => {}
         }
+    }
+    // (b) §4.2 cross-rule acyclicity — reject a `lower` rule set whose rules (transitively) reference
+    // one another in a cycle (mutual recursion among rules), which would diverge the elaboration
+    // pipeline. Over the full set, so a forward reference is seen.
+    check_lower_rule_acyclicity(&lower_rules)?;
+    // (c) §4.1 IL-grammar RHS type-check of each rule (after acyclicity, so a cyclic set reports the
+    // cycle, not an "unknown name" for the cycle edge).
+    for ld in lower_rules.values() {
+        check_lower_rule_rhs_type(ld, &types, &fns, &traits, &instances, imports)?;
     }
 
     // Pass 3c: **effect coverage** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`, a
@@ -1635,22 +1663,19 @@ fn check_nodule_with(
     })
 }
 
-// ---- lower / derive validation (DN-54 / M-812) ----
+// ---- lower / derive validation (DN-54 §4/§6 / M-812-cont) ----
 
-/// Validate a `lower Name[params] = <rhs>` declaration (DN-54 §4 / M-812).
+/// **Structural** validation of a `lower Name[params] = <rhs>` declaration (DN-54 §3/§4.6 /
+/// M-812-cont) — the part that does **not** need the full typing context. Run in the registration
+/// loop *before* acyclicity (§4.2) and the §4.1 RHS type-check (which run over the whole set).
 ///
-/// **Guarantee: `Declared`** (structural check; the full IL-grammar RHS type-check and KC-3
-/// kernel-growth guard are enforced at elaboration time over the concrete RHS — this is the
-/// honest stage-1 declaration, not a theorem, per VR-5).
-///
-/// Checks:
-/// - **Uniqueness**: the rule `name` must not already be registered in `lower_rules` — duplicate
-///   `lower` rules in the same nodule are an explicit error (never silent, G2).
+/// **Guarantee: `Declared`** (structural checks, not theorems). Checks (all never-silent, G2):
+/// - **Uniqueness**: the rule `name` must not already be registered.
 /// - **Parameter uniqueness**: duplicate param names in `[…]` are refused.
-///
-/// The RHS expression is *not* type-checked here (that requires the full typing environment with
-/// the param names bound as type variables — deferred to [`crate::elab`] at elaborate time).
-fn check_lower_decl(
+/// - **§4.6 purity**: the RHS contains no `wild { … }` block — a generative lowering is a *pure*
+///   compile-time mechanism (the FFI gate is level-independent — DN-38 §3), refused structurally so
+///   the refusal holds even in an `@std-sys` nodule (where the ordinary `wild` gate would accept it).
+fn check_lower_decl_structural(
     ld: &LowerDecl,
     lower_rules: &BTreeMap<String, LowerDecl>,
 ) -> Result<(), CheckError> {
@@ -1676,21 +1701,94 @@ fn check_lower_decl(
             ),
         ));
     }
+    // (3) §4.6 purity — a `lower` rule's RHS must be a pure compile-time term; a `wild { … }` block
+    // (the audited FFI floor — LR-9/S6) is refused **structurally** here so the diagnostic names
+    // DN-54 §4.6 precisely (and so the refusal holds even in an `@std-sys` nodule). Never-silent (G2).
+    if rhs_contains_wild(&ld.rhs).is_some() {
+        return Err(CheckError::new(
+            &ld.name,
+            format!(
+                "`lower {}`'s RHS contains a `wild {{ … }}` block — a generative-lowering rule is a \
+                 pure compile-time mechanism and may not perform host/FFI calls (DN-54 §4.6 / \
+                 §3.3; the `wild` gate is level-independent — DN-38 §3; never silent, G2)",
+                ld.name
+            ),
+        ));
+    }
     Ok(())
 }
 
-/// Validate a `derive Name for T` use-site application (DN-54 / M-812 / DN-38 §8.1).
+/// **§4.1 IL-grammar RHS type-check** of a registered `lower` rule (DN-54 §4.1 / M-812-cont). The
+/// RHS must type-check as an L1 expression with the rule's type parameters in scope as abstract
+/// type-variables (the rule is parametric over the type it is derived for). An ill-typed / ill-formed
+/// RHS is an explicit refusal at definition time — so no `derive` site can invoke a rule that would
+/// produce broken L0. Run over the whole rule set *after* §4.2 acyclicity (so a cyclic set reports
+/// the cycle, not an "unknown name" for the cycle's rule-reference edge).
 ///
-/// **Guarantee: `Declared`** (name-resolution check only; the RHS instantiation + IL-grammar
-/// check run at elaboration time — VR-5).
+/// **Guarantee: `Declared`** (a structural type/grammar check, not a theorem — VR-5). The RHS has no
+/// value parameters in v0 (`lower Name[T] = <expr>`), so the value scope is empty; the params are the
+/// *type* scope. No expected type is pinned (a rule may lower to any well-typed term) — pure
+/// inference. The `@std-sys` gate is held **closed**: a `lower` rule is never an FFI escape (the
+/// §4.6 structural check already refused any `wild`; this is defense in depth).
+fn check_lower_rule_rhs_type(
+    ld: &LowerDecl,
+    types: &BTreeMap<String, DataInfo>,
+    fns: &BTreeMap<String, FnDecl>,
+    traits: &BTreeMap<String, TraitInfo>,
+    instances: &BTreeMap<(String, String), InstanceInfo>,
+    imports: &NoduleImports,
+) -> Result<(), CheckError> {
+    let cx = Cx {
+        site: &ld.name,
+        types,
+        fns,
+        traits,
+        instances,
+        imports,
+        tyvars: &ld.params,
+        bounds: &[],
+        std_sys: false,
+        depth: Cell::new(0),
+    };
+    let mut scope: Vec<(String, Ty)> = Vec::new();
+    cx.infer(&mut scope, &ld.rhs).map_err(|e| {
+        CheckError::new(
+            &ld.name,
+            format!(
+                "`lower {}`'s RHS fails the IL-grammar / type check (DN-54 §4.1): {}",
+                ld.name, e.message
+            ),
+        )
+    })?;
+    Ok(())
+}
+
+/// Does the expression tree contain a `wild { … }` block anywhere? (DN-54 §4.6 — a `lower` rule's
+/// RHS must be pure.) Returns `Some(())` at the first `wild` found, else `None`. Uses the shared
+/// stateless [`crate::totality::walk_expr`] traversal (DRY — same tree walk every pass uses).
+fn rhs_contains_wild(rhs: &Expr) -> Option<()> {
+    let mut found = false;
+    crate::totality::walk_expr(rhs, &mut |x| {
+        if matches!(x, Expr::Wild(_)) {
+            found = true;
+        }
+    });
+    found.then_some(())
+}
+
+/// Validate a `derive Name for T` use-site application (DN-54 §4 / M-812 / DN-38 §8.1).
 ///
-/// Checks:
+/// **Guarantee: `Declared`** (name-resolution + target-type + arity checks; the RHS instantiation
+/// + elaboration run at elaboration time, `Empirical` — VR-5).
+///
+/// Checks (all never-silent, G2):
 /// - **Rule resolution**: `Name` must resolve to a registered `lower` rule in `lower_rules`
-///   (computed in the same Pass 3e loop, earlier declarations are already registered).
-///   A `derive` referencing an unknown rule name is an explicit error (never silent, G2).
+///   (earlier declarations in the same Pass 3e loop are already registered).
+/// - **Target type well-formedness**: `for_ty` must resolve to a real type (DN-54 §4).
 fn check_derive_application(
     dd: &DeriveDecl,
     lower_rules: &BTreeMap<String, LowerDecl>,
+    types: &BTreeMap<String, DataInfo>,
 ) -> Result<(), CheckError> {
     if !lower_rules.contains_key(&dd.name) {
         return Err(CheckError::new(
@@ -1702,6 +1800,105 @@ fn check_derive_application(
                 dd.name, dd.name
             ),
         ));
+    }
+    // The target type must be a real, well-formed type (a `derive Foo for NoSuchType` is a
+    // never-silent refusal — G2). No type-vars are in scope at a `derive` use site (it names a
+    // concrete target).
+    resolve_ty(&dd.name, types, &[], &dd.for_ty)?;
+    Ok(())
+}
+
+/// **§4.2 cross-rule acyclicity** (DN-54 §4.2 / M-812-cont). Reject a `lower` rule set in which the
+/// rules' RHSs reference one another in a cycle (mutual recursion among rules), which would diverge
+/// the elaboration pipeline (the lowering passes must stay a DAG — RFC-0006/DN-38 §2). A rule's
+/// edges are the names it references in its RHS **that are themselves rule names** (a conservative
+/// superset over the single-segment paths in the RHS — the same edge set [`crate::elab`] would
+/// expand). A strongly-connected component of size > 1, or a direct self-reference, is a cycle and
+/// is refused with a never-silent diagnostic naming a rule on the cycle (G2). Guarantee: `Declared`
+/// (a structural acyclicity check, not a theorem).
+fn check_lower_rule_acyclicity(
+    lower_rules: &BTreeMap<String, LowerDecl>,
+) -> Result<(), CheckError> {
+    // Edges: rule → the set of *other rule names* its RHS references (single-segment paths). Sorted
+    // (BTreeSet) for a deterministic cycle report.
+    let edges: BTreeMap<&str, BTreeSet<String>> = lower_rules
+        .iter()
+        .map(|(name, ld)| {
+            let mut refs = BTreeSet::new();
+            crate::totality::walk_expr(&ld.rhs, &mut |x| {
+                if let Expr::Path(p) = x {
+                    if p.0.len() == 1 && lower_rules.contains_key(&p.0[0]) {
+                        refs.insert(p.0[0].clone());
+                    }
+                }
+            });
+            (name.as_str(), refs)
+        })
+        .collect();
+
+    // A direct self-reference is the trivial cycle.
+    for (name, refs) in &edges {
+        if refs.contains(*name) {
+            return Err(CheckError::new(
+                name,
+                format!(
+                    "`lower {name}` references itself — a `lower` rule may not be (mutually) \
+                     recursive (DN-54 §4.2: the lowering-rule graph must be acyclic so `derive` \
+                     terminates; use `Fix` for user-level recursion *inside* the RHS instead). \
+                     Never silent (G2)."
+                ),
+            ));
+        }
+    }
+
+    // Iterative DFS cycle detection (color marking) — no host-stack recursion (A4-02 discipline:
+    // the rule graph is small, but we stay iterative so a pathological set cannot overflow). A grey
+    // node re-encountered on the current path closes a cycle.
+    #[derive(Clone, Copy, PartialEq)]
+    enum Color {
+        White,
+        Grey,
+        Black,
+    }
+    let mut color: BTreeMap<&str, Color> = edges.keys().map(|k| (*k, Color::White)).collect();
+    // The DFS frame: the node and an iterator position into its (sorted) successors.
+    for &root in edges.keys() {
+        if color[root] != Color::White {
+            continue;
+        }
+        // Stack of (node, successor-index).
+        let mut stack: Vec<(&str, usize)> = vec![(root, 0)];
+        color.insert(root, Color::Grey);
+        while let Some(&(node, idx)) = stack.last() {
+            let succs: Vec<&str> = edges[node].iter().map(String::as_str).collect();
+            if idx < succs.len() {
+                stack.last_mut().expect("non-empty").1 += 1;
+                let next = succs[idx];
+                match color[next] {
+                    Color::White => {
+                        color.insert(next, Color::Grey);
+                        stack.push((next, 0));
+                    }
+                    Color::Grey => {
+                        // `next` is on the current DFS path ⇒ a cycle through it.
+                        return Err(CheckError::new(
+                            next,
+                            format!(
+                                "`lower` rules form a cycle through `{next}` — mutually-recursive \
+                                 lowering rules are refused (DN-54 §4.2: the lowering-rule graph \
+                                 must be acyclic so `derive` terminates). Break the cycle, or use \
+                                 `Fix` for user-level recursion *inside* a rule's RHS. Never \
+                                 silent (G2)."
+                            ),
+                        ));
+                    }
+                    Color::Black => {}
+                }
+            } else {
+                color.insert(node, Color::Black);
+                stack.pop();
+            }
+        }
     }
     Ok(())
 }
