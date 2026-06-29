@@ -574,6 +574,45 @@ this section records the extension obligation so M-142's design accommodates it.
 > (R20-Q4 mutual recursion; surface front-end is M-391). The §4.9 conformance corpus is a *testing*
 > deliverable that follows ratification, not a gate. The original split is retained below verbatim
 > (append-only).
+>
+> **ENACTMENT UPDATE (2026-06-29, M-707 / s10; append-only — no carve-out text above is rewritten,
+> house rule #3).** The carve-outs are reconciled against the now-landed RFC-0018 / RFC-0019 /
+> RFC-0001-r5 implementations. What has since landed:
+>
+> - **§4.2 polymorphic instantiation — ENACTED.** A generic declaration's type arguments are
+>   **inferred from the call-site argument types** (unification-based; M-657 checker + M-673
+>   monomorphization), removing the v0 "explicit annotation or deferred-error" restriction. An
+>   *undetermined* instantiation stays a never-silent error (G2 / RFC-0007 §11.3) — the honest "not a
+>   guess" posture is preserved; only the determinable case is now inferred. Guarantee `Empirical`
+>   (three-way differential over the generic corpus). Acceptance:
+>   `tests/check.rs::rfc0020_4_2_polymorphic_instantiation_is_inferred_at_call_site`.
+> - **R20-Q1 (poly-inference boundary with RFC-0019) — RESOLVED.** The interface: the checker infers
+>   type arguments from argument types and discharges trait obligations by **dictionary-free static
+>   monomorphization** (M-659 coherence + M-673), not a deferred unification variable handed to a
+>   separate resolver. Ambiguous/undetermined ⇒ explicit `CheckError`, never a guess.
+> - **R20-Q2 (grade inference under RFC-0018) — RESOLVED.** Grade inference is a **separate pass**
+>   (`crates/mycelium-l1/src/grade.rs`, M-663) after monomorphic type inference, not interleaved.
+>   Grades stay `Declared` where unproven (VR-5 — never upgraded without a checked basis).
+> - **R20-Q4 (mutual-recursion elaboration) — ENACTED.** A mutually-recursive `fn` group is inferred
+>   from the call graph and materialized as a `FixGroup` L1 node (RFC-0001 r5; M-343 / surface M-391),
+>   content-addressed per RFC-0007 §4.2. The `MutualRecursionDeferred` refusal is **retired**.
+>   Acceptance: `tests/check.rs::rfc0020_r20q4_mutual_recursion_elaborates_not_deferred` + the
+>   `tests/differential.rs` FixGroup cases.
+> - **§4.5 derived-trait forms (`grow → derive`) — PARTIALLY ENACTED.** The use-site `derive Name
+>   for T` + the rule-defining `lower Name[…] = …` **surface + structural checks** landed (M-812 /
+>   DN-54 / DN-38 §8.1); the RHS elaboration to L0 + the KC-3 kernel-growth guard remain deferred to
+>   **M-812-cont** (honest residual pinned by a checker test). Stays carved-out until M-812-cont.
+> - **R20-Q3 (or-patterns) — RE-DEFERRED.** Not adopted in v0; remains the reserved §9 future
+>   direction (Maranget body-sharing). No surface or-pattern is silently accepted (G2). Forward ref: §9.
+> - **R20-Q5 (list-literal bidirectional inference with a `for`-body) — RE-DEFERRED.** The
+>   conservative v0 answer stands: a list literal's element type is inferred from its (homogeneous)
+>   elements (RFC-0032 D3 `Seq`, M-749) or ascribed; the two-pass relaxation letting a `for`-body's
+>   expected type flow back into the literal remains a tracked improvement (§9).
+>
+> **Net:** §4.2 / R20-Q1 / R20-Q2 / R20-Q4 enacted; §4.5 partial (→ M-812-cont); R20-Q3 / R20-Q5
+> deferred. RFC-0020 therefore **remains Accepted (scoped)** — not yet fully `Enacted` — with its
+> carve-out set materially reduced. (Step-through discipline, house rule #3: Enacted awaits §4.5
+> completion + an or-pattern decision.)
 
 This is a **Draft**. Ratification is a maintainer decision, append-only. The split of what is
 ready for ratification vs. what is explicitly deferred:
@@ -634,3 +673,15 @@ elaboration are explicitly deferred.*
   inference, §4.5 `grow`, R20-Q1…Q5) are carved out — each now unblocking via the same-day-Accepted
   RFC-0018/RFC-0019 and the enacted RFC-0001 r5 `FixGroup`. The §4.9 conformance corpus follows
   ratification (a testing deliverable, not a gate). Append-only.
+- **2026-06-29 — Carve-out enactment reconciled (M-707 / s10; append-only, status unchanged —
+  Accepted (scoped)).** With RFC-0018 (grading), RFC-0019 (traits/generics), and RFC-0001 r5
+  (`FixGroup`) landed in `crates/mycelium-l1`, the carve-outs are reconciled (full detail in §10
+  enactment update): **§4.2 polymorphic instantiation ENACTED** (type args inferred from call-site
+  argument types — M-657/M-673; undetermined ⇒ never-silent error), **R20-Q1 RESOLVED** (dictionary-free
+  static monomorphization interface), **R20-Q2 RESOLVED** (grade inference = a separate `grade.rs`
+  pass, grades stay `Declared`; M-663), **R20-Q4 ENACTED** (`FixGroup`; M-343/M-391 — the
+  `MutualRecursionDeferred` refusal retired). **§4.5 derived forms PARTIAL** — `derive`/`lower`
+  surface + structural checks landed (M-812/DN-54), RHS-elaboration + KC-3 guard → M-812-cont.
+  **R20-Q3 (or-patterns) and R20-Q5 (list-literal/`for` bidirectional inference) RE-DEFERRED** (§9
+  tracked directions; no silent accept, G2). Grounded by `tests/check.rs::rfc0020_*` (executable,
+  `Empirical`). Full `Enacted` awaits §4.5 completion (M-812-cont) + an or-pattern decision.

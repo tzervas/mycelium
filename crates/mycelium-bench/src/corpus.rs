@@ -106,102 +106,89 @@ pub fn corpus() -> Vec<Case> {
         // ── Bit subset: lowerable by every backend (the speed WIN/LOSS surface) ──────────────────
         Case {
             id: "bit-literal",
-            src: "nodule d\nfn main() => Binary{8} = 0b1011_0010",
+            src: "nodule d;\nfn main() => Binary{8} = 0b1011_0010;",
             fragment: Fragment::BitSubset,
             note: "a bare 8-bit literal — the most trivial kernel (spawn-bound for compiled paths)",
         },
         Case {
             id: "bit-not",
-            src: "nodule d\nfn main() => Binary{8} = not(0b1011_0010)",
+            src: "nodule d;\nfn main() => Binary{8} = not(0b1011_0010);",
             fragment: Fragment::BitSubset,
             note: "single unary bit op",
         },
         Case {
             id: "bit-xor-not",
-            src: "nodule d\nfn main() => Binary{8} = not(xor(0b1011_0010, 0b1111_1111))",
+            src: "nodule d;\nfn main() => Binary{8} = not(xor(0b1011_0010, 0b1111_1111));",
             fragment: Fragment::BitSubset,
             note: "a small straight-line bit pipeline (the xtask-e1 §2 shape)",
         },
         Case {
             id: "bit-let-chain",
-            src: "nodule d\nfn main() => Binary{8} =\n  let a = 0b1011_0010 in let b = xor(a, 0b0000_1111) in not(xor(b, a))",
+            src: "nodule d;\nfn main() => Binary{8} =\n  let a = 0b1011_0010 in let b = xor(a, 0b0000_1111) in not(xor(b, a));",
             fragment: Fragment::BitSubset,
             note: "let-bound straight-line bit computation (a few surface ops: not/xor only)",
         },
         Case {
             id: "trit-neg",
-            src: "nodule d\nfn main() => Ternary{4} = neg(0t00+-)",
+            src: "nodule d;\nfn main() => Ternary{4} = neg(0t00+-);",
             fragment: Fragment::BitSubset,
             note: "element-wise trit negation (the only trit op the MLIR-dialect path lowers)",
         },
         Case {
             id: "trit-add",
-            src: "nodule d\nfn main() => Ternary{4} = add(0t00+-, 0t0+0-)",
+            src: "nodule d;\nfn main() => Ternary{4} = add(0t00+-, 0t0+0-);",
             fragment: Fragment::BitSubset,
             note: "balanced-ternary ripple-carry add (direct-LLVM lowers it; MLIR-dialect does NOT — a capability split)",
         },
         // ── Swap: certified binary<->ternary — interp + AOT only ─────────────────────────────────
         Case {
             id: "swap-roundtrip",
-            src: "nodule d\nfn main() => Binary{8} =\n  let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt)",
+            src: "nodule d;\nfn main() => Binary{8} =\n  let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt);",
             fragment: Fragment::Swap,
             note: "a binary->ternary->binary certified round-trip (compiled paths route Swap to the interpreter — capability loss)",
         },
         // ── Data: Construct/Match — interp + AOT env-machine only ─────────────────────────────────
         Case {
             id: "data-match-repr",
-            src: "nodule d\ntype Sign = Neg | Zero | Pos\n\
-                   fn label(s: Sign) => Ternary{1} = match s { Neg => 0t-, Zero => 0t0, _ => 0t+ }\n\
-                   fn main() => Ternary{1} = label(Zero)",
+            src: "nodule d;\ntype Sign = Neg | Zero | Pos;\nfn label(s: Sign) => Ternary{1} = match s { Neg => 0t-, Zero => 0t0, _ => 0t+ };\nfn main() => Ternary{1} = label(Zero);",
             fragment: Fragment::Data,
             note: "a flat non-recursive data match returning a repr — a data case the compiled \
                    backends MAY still lower (measured, not assumed)",
         },
         Case {
             id: "data-construct",
-            src: "nodule d\ntype Nat = Z | S(Nat)\nfn main() => Nat = S(S(Z))",
+            src: "nodule d;\ntype Nat = Z | S(Nat);\nfn main() => Nat = S(S(Z));",
             fragment: Fragment::Data,
             note: "a datum result (the program evaluates to constructed data)",
         },
         Case {
             id: "data-nested-match",
-            src: "nodule d\ntype Nat = Z | S(Nat)\n\
-                   fn pred2(n: Nat) => Nat = match n { Z => Z, S(Z) => Z, S(S(m)) => m }\n\
-                   fn main() => Nat = pred2(S(S(S(Z))))",
+            src: "nodule d;\ntype Nat = Z | S(Nat);\nfn pred2(n: Nat) => Nat = match n { Z => Z, S(Z) => Z, S(S(m)) => m };\nfn main() => Nat = pred2(S(S(S(Z))));",
             fragment: Fragment::Data,
             note: "nested (Maranget) patterns returning a datum",
         },
         // ── Recursion: Fix / FixGroup — interp + AOT env-machine only ─────────────────────────────
         Case {
             id: "rec-self",
-            src: "nodule d\ntype Nat = Z | S(Nat)\n\
-                   fn drop_(n: Nat) => Nat = match n { Z => Z, S(m) => drop_(m) }\n\
-                   fn main() => Nat = drop_(S(S(S(Z))))",
+            src: "nodule d;\ntype Nat = Z | S(Nat);\nfn drop_(n: Nat) => Nat = match n { Z => Z, S(m) => drop_(m) };\nfn main() => Nat = drop_(S(S(S(Z))));",
             fragment: Fragment::Recursion,
             note: "self-recursion consuming a Nat (Fix + App + Match)",
         },
         Case {
             id: "rec-build",
-            src: "nodule d\ntype Nat = Z | S(Nat)\n\
-                   fn copy(n: Nat) => Nat = match n { Z => Z, S(m) => S(copy(m)) }\n\
-                   fn main() => Nat = copy(S(S(Z)))",
+            src: "nodule d;\ntype Nat = Z | S(Nat);\nfn copy(n: Nat) => Nat = match n { Z => Z, S(m) => S(copy(m)) };\nfn main() => Nat = copy(S(S(Z)));",
             fragment: Fragment::Recursion,
             note: "self-recursion building data on the way back",
         },
         Case {
             id: "rec-mutual",
-            src: "nodule d\ntype Nat = Z | S(Nat)\n\
-                   fn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) }\n\
-                   fn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) }\n\
-                   fn main() => Nat = ping(S(S(Z)))",
+            src: "nodule d;\ntype Nat = Z | S(Nat);\nfn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) };\nfn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) };\nfn main() => Nat = ping(S(S(Z)));",
             fragment: Fragment::Recursion,
             note: "mutual recursion (a FixGroup)",
         },
         Case {
             id: "rec-fold",
-            src: "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
-                   fn checksum(bs: ByteList) => Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
-                   fn main() => Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
+            src: "nodule d;\ntype ByteList = End | More(Binary{8}, ByteList);\nfn checksum(bs: ByteList) => Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b);\nfn main() => Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)));",
             fragment: Fragment::Recursion,
             note: "a `for` fold over a list spine (a synthesized Fix fold) returning a repr",
         },

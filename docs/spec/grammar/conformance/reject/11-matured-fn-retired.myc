@@ -3,6 +3,5 @@
 // the unit of maturation is the SCOPE, not the function. The diagnostic teaches the scope form.
 // `matured` stays a reserved word (the header key), so this is a reserved-word-misuse parse error,
 // never a silent accept. (De-maturation of one def uses `thaw fn …`; RFC-0017 §4.3.)
-nodule kernel
-
+nodule kernel;
 matured fn identity(x: Binary{8}) => Binary{8} = x

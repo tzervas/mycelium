@@ -2,7 +2,8 @@ use crate::*;
 
 #[test]
 fn formats_a_minimal_nodule_and_is_idempotent() {
-    let src = "// exercises: nodule header + use import\nnodule signals.demo\n\nuse core.binary\n";
+    let src =
+        "// exercises: nodule header + use import\nnodule signals.demo;\n\nuse core.binary;\n";
     let r = format_source(src, None).expect("formats");
     // Leading comment preserved, body canonical, identity preserved.
     assert!(
@@ -42,7 +43,7 @@ fn a_malformed_header_is_an_explicit_error() {
 fn an_interior_comment_is_preserved_not_refused() {
     // A trailing comment in the body is now preserved (M-690 Stage 2 — behavior change, not a
     // tag upgrade; VR-5).  The old refusal test is updated to assert preservation.
-    let src = "nodule d\nfn f(x: Binary{8}) => Binary{8} = x // identity\n";
+    let src = "nodule d;\nfn f(x: Binary{8}) => Binary{8} = x; // identity\n";
     let r = format_source(src, None).expect("must now preserve, not refuse");
     // The comment must appear in the output.
     assert!(
@@ -61,7 +62,7 @@ fn an_interior_comment_is_preserved_not_refused() {
 
 #[test]
 fn a_toolchain_format_pin_mismatch_is_refused() {
-    let src = "nodule d\nfn f(x: Binary{8}) => Binary{8} = x\n";
+    let src = "nodule d;\nfn f(x: Binary{8}) => Binary{8} = x;\n";
     let err = format_source(src, Some("mycfmt-99")).unwrap_err();
     assert_eq!(err.exit_code(), 4);
     assert!(format!("{err}").contains("hard pin"), "{err}");
@@ -72,7 +73,7 @@ fn a_toolchain_format_pin_mismatch_is_refused() {
 #[test]
 fn the_structured_header_is_re_emitted_canonically() {
     let src = "// nodule: geometry.shapes\n// @version: 1.2.0\n// @license: Apache-2.0\n\
-               nodule geometry.shapes\n\nfn area_unit() => Binary{8} = 0b0000_0001\n";
+               nodule geometry.shapes;\n\nfn area_unit() => Binary{8} = 0b0000_0001;\n";
     let r = format_source(src, None).expect("formats");
     assert!(
         r.output.starts_with(
@@ -90,7 +91,7 @@ fn the_structured_header_is_re_emitted_canonically() {
 /// first item (M-690 Stage 2 — behavior change, not a tag upgrade; VR-5).
 #[test]
 fn a_stray_comment_in_the_header_region_is_preserved_not_refused() {
-    let src = "// nodule: g\n// a stray non-key comment\n// @license: MIT\nnodule g\nfn f() => Binary{8} = 0b0\n";
+    let src = "// nodule: g\n// a stray non-key comment\n// @license: MIT\nnodule g;\nfn f() => Binary{8} = 0b0;\n";
     let r = format_source(src, None).expect("must now preserve, not refuse");
     // The stray comment must appear in the output.
     assert!(
@@ -120,7 +121,7 @@ fn formatted_default_and_from_are_additive_ergonomics() {
 /// New (M-690 Stage 2): a multi-line docstring above a fn is preserved as a leading block.
 #[test]
 fn docstring_above_fn_is_preserved() {
-    let src = "nodule d\n\n// Computes the identity.\n// Returns its argument unchanged.\nfn f(x: Binary{8}) => Binary{8} = x\n";
+    let src = "nodule d;\n\n// Computes the identity.\n// Returns its argument unchanged.\nfn f(x: Binary{8}) => Binary{8} = x;\n";
     let r = format_source(src, None).expect("formats");
     assert!(
         r.output.contains("// Computes the identity."),
@@ -146,10 +147,10 @@ fn docstring_above_fn_is_preserved() {
 #[test]
 fn trailing_comment_on_match_arm_is_preserved_and_idempotent() {
     let src = concat!(
-        "nodule d\n",
+        "nodule d;\n",
         "fn classify(x: Binary{8}) => Binary{8} =\n",
         "  match x { 0b0 => 0b0 // zero case\n",
-        "  | _ => 0b1 }\n",
+        "  | _ => 0b1 };\n",
     );
     // If parsing succeeds, the match arm comment must be preserved and idempotent.
     match format_source(src, None) {
@@ -180,7 +181,7 @@ fn trailing_comment_on_match_arm_is_preserved_and_idempotent() {
 fn match_arm_trailing_comment_canonical_syntax() {
     // Use a type + match that will actually parse in Mycelium L1.
     // match on Binary{1}: 0b0 and 0b1 are the two arms.
-    let src = "nodule d\nfn classify(x: Binary{1}) => Binary{1} = match x { 0b0 => 0b0 // zero\n, _ => 0b1 }\n";
+    let src = "nodule d;\nfn classify(x: Binary{1}) => Binary{1} = match x { 0b0 => 0b0 // zero\n, _ => 0b1 };\n";
     match format_source(src, None) {
         Ok(r) => {
             // Comment preserved.

@@ -5,7 +5,7 @@
 // @since: 2026-06-23
 // @updated: 2026-06-27
 // @summary: Self-hosted ordering/equality surface — the Ordering type (Lt | Eq | Gt), its
-nodule std.cmp
+nodule std.cmp;
 
 // projections (is_lt/is_eq/is_gt, reverse), and the structural equality/total-order functions over
 // finite kernel types (Bool, Ordering), plus WIDTH-GENERIC comparison helpers over Binary{N} (M-715
@@ -17,35 +17,35 @@ nodule std.cmp
 // cannot compare — the surface only covers types it can decide structurally or via the surfaced
 // prims; an undetermined width is an explicit monomorphization refusal, never a guessed default.
 // The three-valued total-order result. Total and finite: every comparison lands in exactly one arm.
-type Ordering = Lt | Eq | Gt
+type Ordering = Lt | Eq | Gt;
 
 // is_lt / is_eq / is_gt: project an Ordering to Bool. Total over the finite Ordering domain (Exact).
 fn is_lt(o: Ordering) => Bool =
-  match o { Lt => True, Eq => False, Gt => False }
+  match o { Lt => True, Eq => False, Gt => False };
 
 fn is_eq(o: Ordering) => Bool =
-  match o { Lt => False, Eq => True, Gt => False }
+  match o { Lt => False, Eq => True, Gt => False };
 
 fn is_gt(o: Ordering) => Bool =
-  match o { Lt => False, Eq => False, Gt => True }
+  match o { Lt => False, Eq => False, Gt => True };
 
 // reverse: swap Lt <-> Gt, fix Eq — the order-reversal that turns an ascending comparator into a
 // descending one. An involution; total over Ordering (Exact).
 fn reverse(o: Ordering) => Ordering =
-  match o { Lt => Gt, Eq => Eq, Gt => Lt }
+  match o { Lt => Gt, Eq => Eq, Gt => Lt };
 
 // bool_eq: structural equality on Bool, match-defined (no kernel eq prim needed). Total (Exact).
 fn bool_eq(a: Bool, b: Bool) => Bool =
-  match a { True => match b { True => True, False => False }, False => match b { True => False, False => True } }
+  match a { True => match b { True => True, False => False }, False => match b { True => False, False => True } };
 
 // bool_cmp: the canonical total order on Bool with False < True. Total over Bool x Bool (Exact).
 fn bool_cmp(a: Bool, b: Bool) => Ordering =
-  match a { False => match b { False => Eq, True => Lt }, True => match b { False => Gt, True => Eq } }
+  match a { False => match b { False => Eq, True => Lt }, True => match b { False => Gt, True => Eq } };
 
 // ord_eq: structural equality on Ordering itself (a finite enum). Total (Exact). Useful for asserting
 // a comparator's result without re-matching at every call site.
 fn ord_eq(a: Ordering, b: Ordering) => Bool =
-  match a { Lt => match b { Lt => True, Eq => False, Gt => False }, Eq => match b { Lt => False, Eq => True, Gt => False }, Gt => match b { Lt => False, Eq => False, Gt => True } }
+  match a { Lt => match b { Lt => True, Eq => False, Gt => False }, Eq => match b { Lt => False, Eq => True, Gt => False }, Gt => match b { Lt => False, Eq => False, Gt => True } };
 
 // ── Width-generic comparison helpers over Binary{N} (M-718; supersedes the Binary{8} interim) ──────
 //
@@ -73,21 +73,21 @@ fn ord_eq(a: Ordering, b: Ordering) => Bool =
 // a < b, Gt otherwise. Total over Binary{N} x Binary{N} for every concrete N (Exact: eq/lt are Exact
 // prims; every case is covered by the nested match).
 fn cmp{N}(a: Binary{N}, b: Binary{N}) => Ordering =
-  match eq(a, b) { 0b1 => Eq, _ => match lt(a, b) { 0b1 => Lt, _ => Gt } }
+  match eq(a, b) { 0b1 => Eq, _ => match lt(a, b) { 0b1 => Lt, _ => Gt } };
 
 // le<N>: True iff a <= b — a projection of cmp (Exact; total over Binary{N} x Binary{N}).
 fn le{N}(a: Binary{N}, b: Binary{N}) => Bool =
-  match cmp(a, b) { Lt => True, Eq => True, Gt => False }
+  match cmp(a, b) { Lt => True, Eq => True, Gt => False };
 
 // ge<N>: True iff a >= b — a projection of cmp (Exact; total).
 fn ge{N}(a: Binary{N}, b: Binary{N}) => Bool =
-  match cmp(a, b) { Lt => False, Eq => True, Gt => True }
+  match cmp(a, b) { Lt => False, Eq => True, Gt => True };
 
 // max<N>: the larger of a and b; returns b when equal (arbitrary but total — equal Binary{N} values
 // are bit-identical, so the tie-break is observationally irrelevant). Exact.
 fn max{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
-  match cmp(a, b) { Lt => b, Eq => b, Gt => a }
+  match cmp(a, b) { Lt => b, Eq => b, Gt => a };
 
 // min<N>: the smaller of a and b; returns a when equal (irrelevant tie-break, as max). Exact.
 fn min{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
-  match cmp(a, b) { Lt => a, Eq => a, Gt => b }
+  match cmp(a, b) { Lt => a, Eq => a, Gt => b };

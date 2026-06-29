@@ -140,9 +140,11 @@ pub enum Tok {
     Policy,
 
     // --- RFC-0037 surface keywords (ratified R1, 2026-06-27) ---
-    /// `lambda` — the anonymous-function expression keyword (RFC-0037 D5). The grammar + parse target
-    /// land here; full closure semantics are **deferred to M-704/RFC-0024** — the checker/elaborator
-    /// emit a never-silent `Residual` until then (G2). Reserved so it can never be a silent identifier.
+    /// `lambda` — the anonymous-function (closure) expression keyword (RFC-0037 D5). **Active**: the
+    /// closure form now type-checks (`Ty::Fn`) and **lowers + runs** via Reynolds defunctionalization
+    /// in monomorphization (RFC-0024 §4A, M-704) — a tag-sum struct + a generated `apply` dispatcher,
+    /// no new L0 node (KC-3). Multi-argument lambdas / partial application stay a never-silent
+    /// tuple-gated `Residual` (§4A.8). Reserved so it can never be a silent identifier.
     Lambda,
     /// `object` — the object-composition surface keyword (DN-53, M-811). Now **active**: the
     /// `object Name[params] { ctor; via FieldIdx : Trait; impl … { … }; fn … }` form desugars

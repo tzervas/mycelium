@@ -31,6 +31,7 @@ small and auditable (KC-3): `mycfmt` is a thin CLI over already-landed, already-
 | **`// nodule:` marker** (DN-06 §6) | re-emit in canonical spelling (`mycelium_l1::NoduleHeader::canonical`) as the first line | drop it, invent one, or rename the nodule |
 | **`// @key:` structured header** (M-359) | re-emit the present keys in the **canonical key order** (§4) with canonical `// @key: value` spacing | add keys, drop keys, reorder values within a key, or "fix"/fabricate a value (VR-5) |
 | **Definition body** | re-print from the parsed AST via the surface printer — canonical indentation, spacing, operator/keyword layout | expand the ambient, insert/remove `Swap`, change literals, change names that are part of identity |
+| **`;` component terminator** (DN-57 §3 / M-818) | **emit `;` canonically** after the nodule header and every component (item, trait signature, `impl`/object member) — *uniformly*, incl. after a `}`-closed block (`trait`/`impl`/`object`) | drop a `;`, or move it before the closing `}` (Rust-style) — the terminator is **mandatory** and uniform (the surface re-parses + round-trips, C1, only with it) |
 | **Comments inside the body** | *(v0)* preserved-or-refused — see §7 (comments are lexer trivia; the AST does not carry them) | silently delete a body comment |
 
 **The load-bearing subtlety (recorded so it cannot be re-introduced as a bug):** the surface printer

@@ -38,6 +38,86 @@ cd "$REPO_ROOT" || exit 1
 # them on PATH for later sessions, so no per-session PATH wiring is needed.
 export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
+# ── APT FAST-PATH: batch-install every check tool AVAILABLE VIA APT in one transaction ───────────
+# apt (or nala) ships prebuilt static binaries for most gate tools — installing them here takes
+# *seconds* (vs compiling via uv/cargo), and the resulting /usr packages are captured by the cloud
+# filesystem **snapshot**, so later sessions skip setup entirely. This is the lever that kills the
+# ~10-15 min per-instance build: the apt subset is fast + guaranteed + snapshot-persisted, and the
+# uv/npx/cargo steps below all probe-first (`have <bin>`), so once apt provides a tool they no-op.
+# Tools with NO apt package (check-jsonschema, markdownlint-cli2, cargo-deny/audit/nextest/
+# public-api) fall through to their own installers below. Best-effort + never-silent (G2): no apt /
+# no permission ⇒ a skip line and the per-tool installers still run.
+#
+# `nodejs` is deliberately EXCLUDED — the distro nodejs (18 on 24.04) is below the Node>=20 floor the
+# markdown gate needs (the base image / the node step below provides a current Node).
+#
+# **nala is the driver, not a fallback.** nala is the fastest front-end — it auto-resolves the
+# nearest mirrors (`nala fetch`) and parallelizes downloads across them — so we (1) install nala FIRST
+# (one small apt-get package on a cold container), (2) `nala fetch --auto --https-only` to pick the
+# fastest **HTTPS-only** mirrors, then (3) drive the bulk batch through nala. Once snapshotted, nala +
+# its fetched sources are already present and reused. This is the user's directive: "nala first, with
+# auto source resolution over https, is the fastest solution." apt-get is only nala's bootstrap and
+# the fallback when nala is unavailable OR **non-functional** — some containers ship nala whose
+# `apt_pkg` (python3-apt) binding is broken (ABI/path mismatch), so we probe nala's functionality
+# (`nala --version`), not mere presence, and fall back to apt-get when it can't run.
+section "apt/nala fast-path (snapshot-persisted prebuilt check tools)"
+# package → the binary it provides (probe by binary so a re-run is pure gap-fill).
+# nala itself is NOT listed here: it is bootstrapped in Step 1 below (the driver install), so adding it
+# to the batch set would make it re-appear in `apt_missing` and be reinstalled in Step 3 (harmless but
+# redundant — DRY).
+declare -A APT_BIN=(
+  [shellcheck]=shellcheck [codespell]=codespell [yamllint]=yamllint [graphviz]=dot
+  [gitleaks]=gitleaks [just]=just [pre-commit]=pre-commit [python3-pip]=pip3
+)
+if have apt-get; then
+  apt_missing=()
+  for p in "${!APT_BIN[@]}"; do have "${APT_BIN[$p]}" || apt_missing+=("$p"); done
+  if [[ ${#apt_missing[@]} -eq 0 ]]; then
+    ok "apt/nala: all apt-available check tools present"
+  else
+    SUDO=(); [[ ${EUID:-$(id -u)} -ne 0 ]] && have sudo && SUDO=(sudo)
+    # nala must be FUNCTIONAL, not merely present: some containers ship nala whose apt_pkg
+    # (python3-apt) binding is broken (ABI/path mismatch) — `have nala` is true but `nala` aborts.
+    nala_ok() { command -v nala >/dev/null 2>&1 && nala --version >/dev/null 2>&1; }
+    # Step 1 — best-effort install nala (fastest front-end) + its python3-apt (apt_pkg) dep via apt-get.
+    # The trailing `|| true` is a *graceful fallback, not a swallowed error* (never-silent reading):
+    # a failed nala bootstrap is non-fatal because Step 2's `nala_ok` probe then drives the batch with
+    # apt-get instead — the tools still install, just without nala's parallelism.
+    if ! command -v nala >/dev/null 2>&1; then
+      "${SUDO[@]}" apt-get install -y nala python3-apt >/dev/null 2>&1 \
+        || { "${SUDO[@]}" apt-get update -qq >/dev/null 2>&1 \
+             && "${SUDO[@]}" apt-get install -y nala python3-apt >/dev/null 2>&1; } || true
+    fi
+    # Step 2 — choose the driver: nala IF it actually runs (then auto-resolve the fastest HTTPS
+    # mirrors first), else apt-get. `nala fetch --auto -y` is non-interactive (the `-y`/assume-yes is
+    # required: `--auto` alone still PROMPTS on overwrite when a nala-sources.list already exists, and
+    # `|| true` does not rescue a blocked `input()` prompt unless stdin is /dev/null); `--https-only`
+    # keeps the transport secure (the repo's no-plaintext-fetch posture). Best-effort + never-silent
+    # (G2): a restricted/proxied net that can't reach the mirror master list leaves sources untouched
+    # (|| true).
+    PM=(apt-get)
+    if nala_ok; then
+      "${SUDO[@]}" nala fetch --auto --https-only -y >/dev/null 2>&1 || true
+      PM=(nala)
+    fi
+    # Step 3 — batch-install via the chosen driver; on ANY failure fall back to a fresh apt-get install
+    # (apt-get is the universal hard fallback — proven to work even where nala is broken/absent).
+    # Try the chosen driver first; only on its failure does the apt-get hard fallback run. Report which
+    # path actually installed (the prior single message claimed an "apt-get fallback" even on the nala
+    # success path — counterfactual; split it so the `ok` line names the real driver — never-silent G2).
+    if "${SUDO[@]}" "${PM[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1; then
+      ok "${PM[0]}: installed ${apt_missing[*]}"
+    elif "${SUDO[@]}" apt-get update -qq >/dev/null 2>&1 \
+         && "${SUDO[@]}" apt-get install -y "${apt_missing[@]}" >/dev/null 2>&1; then
+      ok "apt-get: installed ${apt_missing[*]} (fallback — the ${PM[0]} driver failed)"
+    else
+      skip "apt/nala batch install failed (offline / restricted / no permission) — the uv/cargo/npx installers below will fill these"
+    fi
+  fi
+else
+  skip "no apt-get — the uv/cargo/npx installers below handle every tool"
+fi
+
 section "bootstrap gating tools (just / pre-commit / yamllint)"
 # These are the tools the local↔CI check spine assumes exist (`just check` routes through them).
 # install-tools.sh can't rely on `just` to install `just` (chicken-and-egg), so bootstrap them
@@ -118,8 +198,10 @@ else
 fi
 
 # gitleaks (C1-09): best-effort install so secrets.sh runs the full scan, not just the narrow
-# fallback. No pip package; try cargo (gitleaks has a Rust port? no — use the Go binary if go is
-# present) else leave it to the system package manager. Skip-if-missing in all cases.
+# fallback. The **apt/nala fast-path above is now the primary installer** (gitleaks is in `APT_BIN`),
+# so by here gitleaks is usually already present; this block is the **non-apt fallback** — build the Go
+# binary if `go` is present (no pip package, no Rust port), else leave it to the system package manager.
+# Skip-if-missing in all cases.
 if have gitleaks; then
   ok "gitleaks present"
 elif have go; then
