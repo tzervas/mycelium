@@ -19,9 +19,9 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   accept set). The `--flatten --write` combination is refused explicitly.
 - **`myc --stream` — streaming-parse CLI entry (M-820; DN-57 §2).** Consumes `;`-terminated
   components from stdin or a file. The splitter is token-driven: it lexes via
-  `mycelium_l1::lexer::lex`, segments on the `Tok::Semi` terminator, and groups components into nodule
-  units by the `nodule` keyword token, so a `nodule` or `;` inside a comment or string literal can
-  never mis-split (comment-safe by construction, `Empirical`). Never-silent on malformed input —
+  `mycelium_l1::lexer::lex`, segments the token stream at `Tok::Nodule` header tokens, and checks each
+  segment ends with the `Tok::Semi` terminator, so a `nodule` or `;` inside a comment or string literal
+  can never mis-split (comment-safe by construction, `Empirical`). Never-silent on malformed input —
   explicit located `myc-stream-lex` / `-parse` / `-eof` / `-empty` diagnostics, and a failed component
   does not abort the good ones (G2). v0 buffers the whole input (`Declared`); true per-component
   incremental I/O awaits a resumable parser entry in `mycelium-l1` (flagged follow-up).

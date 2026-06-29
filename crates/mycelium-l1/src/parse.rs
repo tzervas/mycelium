@@ -995,13 +995,17 @@ impl Parser {
                                 "a non-negative integer as the effect budget (e.g. `retry(<=3)`)",
                             ),
                         };
+                    // Reject non-positive budgets *before* the `as u64` cast below: a zero budget
+                    // would exhaust before any work fires, and guarding `< 0` here keeps a negative
+                    // `i64` (defensive — should not arise from `Tok::Int`) from wrapping to a huge
+                    // `u64`. Either way it is an explicit, never-silent error (RFC-0014 §4.5 I4, G2).
                     if raw <= 0 {
                         return Err(ParseError::new(
                             budget_start,
                             format!(
-                                "effect budget `{raw}` must be positive (> 0) — a zero or \
-                                 negative budget would exhaust immediately or be invalid \
-                                 (RFC-0014 §4.5 I4; never a silent trap, G2)"
+                                "effect budget `{raw}` must be positive (> 0) — a zero budget would \
+                                 exhaust immediately (and a negative budget is rejected before the \
+                                 unsigned cast) (RFC-0014 §4.5 I4; never a silent trap, G2)"
                             ),
                         ));
                     }

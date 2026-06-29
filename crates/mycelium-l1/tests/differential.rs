@@ -1639,8 +1639,11 @@ fn reclaim_real_supervision_driver_dispatches_with_explain() {
 /// that is never overrun must produce the **same observable** from L1-eval as from
 /// elaborate→L0-interp — the budget plumbing is meaning-preserving when under budget (NFR-7).
 ///
-/// Guarantee: `Empirical` (three-way differential, not a mechanized proof — same basis as the
-/// M-353 test above which covers the L0-level budget threading).
+/// Guarantee: `Empirical` (a genuine three-way differential — L1-eval ≡ elaborate→L0-interp ≡
+/// AOT env-machine with the effect ledger threaded — not a mechanized proof; VR-5). The AOT arm
+/// threads an ample ledger via `run_core_with_effects`, the same observable-transparency basis as
+/// the M-353 test above (an under-budget ledger perturbs nothing; the overrun refusal is tested on
+/// the `mycelium-mlir` runtime path).
 #[test]
 fn m677_budgeted_fn_under_budget_is_differential_observable_equivalent() {
     // A straight-line (elaboratable) fn with `!{retry(<=1)}` — the ceiling will never be
@@ -1672,5 +1675,25 @@ fn m677_budgeted_fn_under_budget_is_differential_observable_equivalent() {
         observable(&l1_repr),
         observable(&l0_repr),
         "M-677: budgeted fn under budget must agree on the observable (L1-eval == L0-interp, NFR-7)"
+    );
+
+    // Path 3: the same L0 term through the AOT env-machine with the effect ledger threaded
+    // (`run_core_with_effects`, M-353/M-677). An ample ledger never overruns, so threading it is
+    // observable-transparent (NFR-7) — the AOT observable must match the other two paths.
+    use mycelium_interp::{Budgets, EffectBudget};
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    let mut budgets = Budgets::new().with(EffectBudget::Bytes(1 << 30));
+    let aot_core = mycelium_mlir::run_core_with_effects(
+        &node, &prims, &engine, 1_000_000, 1_000_000, &mut budgets,
+    )
+    .expect("AOT env-machine runs the budgeted fn under an ample ledger");
+    let mycelium_core::CoreValue::Repr(aot_repr) = aot_core else {
+        panic!("expected repr from the AOT env-machine")
+    };
+    assert_eq!(
+        observable(&l0_repr),
+        observable(&aot_repr),
+        "M-677: budgeted fn under budget must agree on the observable (L0-interp == AOT, NFR-7)"
     );
 }

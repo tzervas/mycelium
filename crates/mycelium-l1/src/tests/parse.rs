@@ -745,7 +745,7 @@ fn mixed_budgeted_and_unbounded_effects_parse_correctly() {
     assert_eq!(f.sig.effects, vec!["retry".to_owned(), "io".to_owned()]);
     assert_eq!(f.sig.effect_budgets.get("retry").copied(), Some(3));
     assert!(
-        f.sig.effect_budgets.get("io").is_none(),
+        !f.sig.effect_budgets.contains_key("io"),
         "unbounded `io` must have no budget entry"
     );
 }
