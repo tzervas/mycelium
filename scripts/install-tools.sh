@@ -49,29 +49,41 @@ export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 # no permission ⇒ a skip line and the per-tool installers still run.
 #
 # `nodejs` is deliberately EXCLUDED — the distro nodejs (18 on 24.04) is below the Node>=20 floor the
-# markdown gate needs (the base image / the node step below provides a current Node). `nala` IS in the
-# batch (an apt front-end with parallel downloads) so subsequent apt work — and the snapshot — get it;
-# it is auto-preferred over apt-get when present (the user's "apt or nala, whichever is faster").
-section "apt fast-path (snapshot-persisted prebuilt check tools)"
+# markdown gate needs (the base image / the node step below provides a current Node).
+#
+# **nala is the driver, not a fallback.** nala is the fastest front-end — it parallelizes downloads
+# across multiple mirrors — so we install nala FIRST (one small apt-get package on a cold container),
+# then drive the bulk batch through nala. Once snapshotted, nala is already present and reused. This
+# is the user's directive: "nala first, then the rest is the fastest solution." apt-get is only the
+# bootstrap-of-nala and the fallback if nala is unavailable.
+section "apt/nala fast-path (snapshot-persisted prebuilt check tools)"
 # package → the binary it provides (probe by binary so a re-run is pure gap-fill).
 declare -A APT_BIN=(
   [shellcheck]=shellcheck [codespell]=codespell [yamllint]=yamllint [graphviz]=dot
   [gitleaks]=gitleaks [just]=just [pre-commit]=pre-commit [python3-pip]=pip3 [nala]=nala
 )
 if have apt-get; then
-  # Prefer nala (parallel downloads) when already present; else apt-get. Root needs no sudo.
-  APT=(apt-get); have nala && APT=(nala)
-  SUDO=(); [[ ${EUID:-$(id -u)} -ne 0 ]] && have sudo && SUDO=(sudo)
   apt_missing=()
   for p in "${!APT_BIN[@]}"; do have "${APT_BIN[$p]}" || apt_missing+=("$p"); done
   if [[ ${#apt_missing[@]} -eq 0 ]]; then
-    ok "apt: all apt-available check tools present"
-  elif "${SUDO[@]}" "${APT[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1 \
-    || { "${SUDO[@]}" "${APT[@]}" update -qq >/dev/null 2>&1 \
-         && "${SUDO[@]}" "${APT[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1; }; then
-    ok "apt: installed ${apt_missing[*]}"
+    ok "apt/nala: all apt-available check tools present"
   else
-    skip "apt batch install failed (offline / restricted / no permission) — the uv/cargo/npx installers below will fill these"
+    SUDO=(); [[ ${EUID:-$(id -u)} -ne 0 ]] && have sudo && SUDO=(sudo)
+    # Step 1 — ensure nala (the fastest, parallel-download front-end) FIRST, via apt-get.
+    if ! have nala; then
+      "${SUDO[@]}" apt-get install -y nala >/dev/null 2>&1 \
+        || { "${SUDO[@]}" apt-get update -qq >/dev/null 2>&1 \
+             && "${SUDO[@]}" apt-get install -y nala >/dev/null 2>&1; } || true
+    fi
+    # Step 2 — drive the bulk batch through nala (parallel); fall back to apt-get only if nala absent.
+    PM=(apt-get); have nala && PM=(nala)
+    if "${SUDO[@]}" "${PM[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1 \
+      || { "${SUDO[@]}" "${PM[@]}" update >/dev/null 2>&1 \
+           && "${SUDO[@]}" "${PM[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1; }; then
+      ok "${PM[0]}: installed ${apt_missing[*]}"
+    else
+      skip "apt/nala batch install failed (offline / restricted / no permission) — the uv/cargo/npx installers below will fill these"
+    fi
   fi
 else
   skip "no apt-get — the uv/cargo/npx installers below handle every tool"
