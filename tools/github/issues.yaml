@@ -7222,6 +7222,7 @@ issues:
       - corpus:RFC-0009
       - corpus:DN-64
       - src:experiments/mycelium_experiments/vsa_bounds
+      - src:proofs/vsa-multihop-bound
     body: |
       DN-64 OQ-F disposition: "must be r&d'd on gpu" (maintainer desktop). Build runnable experiments
       mapping the tractable subset of multi-hop VSA programs admitting `Proven` capacity bounds.
@@ -7229,7 +7230,15 @@ issues:
       closed-form bound still upper-bounds the measured failure rate (candidate `Proven` subset).
       Harness: experiments/mycelium_experiments/vsa_bounds/ (numpy reference + optional torch/CUDA;
       never-silent backend; VR-5 — measures rates, never asserts `Proven`; verdict is maintainer analysis).
-      DoD: maintainer runs the sweep locally; SUMMARY.md presents data + candidate regimes for ratification.
+      Extended (maintainer follow-up) toward the MECHANICAL PROOF (the OQ-A/M-827 bridge): the harness
+      now DISCOVERS candidate closed-form multi-hop bounds (candidate_bound.py — effective-m models
+      A_exponential/B_linear/C_sqrt, fit + never-silent regime validation) and EMITS checkable proof
+      obligations (proof_obligation.py — SMT-LIB + Liquid-Haskell skeletons mirroring proofs/lh-bundle +
+      capacity.rs's checked-instantiation), scaffolded under proofs/vsa-multihop-bound/. VR-5 absolute:
+      it proposes a theorem + emits the obligation a prover must discharge; it NEVER stamps `Proven`.
+      DoD: maintainer runs the sweep locally; SUMMARY.md + PROOF-SUMMARY.md present data, candidate
+      regimes, and the emitted obligations for ratification; the `Proven` upgrade requires a proof
+      assistant to discharge the obligation AND the underlying multi-hop theorem to be established (M-827).
   - id: M-833
     title: "M-833 -- Ratify guard clauses (when <cond>) + guarantee propagation to the arm"
     milestone: "Phase 5 — Self-Hosting & Core Library"

@@ -37,8 +37,14 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   at exact parity and sweeps `single` (bundle-capacity, the `Proven` anchor) and `multihop`
   (bind-chain / bundle-of-binds / nested-unbind) failure rates across `{model, F, k, d, h, δ}` to map
   where a closed-form bound still tracks the measured rate. VR-5: it measures rates only — the
-  "this subset admits `Proven` bounds" verdict stays the maintainer's, from `SUMMARY.md` plus plots. 18
-  CI tests green (no torch required); `uv sync --group gpu` enables the GPU path.
+  "this subset admits `Proven` bounds" verdict stays the maintainer's, from `SUMMARY.md` plus plots.
+  **Extended toward the mechanical proof (the OQ-A bridge):** a `--proof` mode discovers candidate
+  closed-form multi-hop bounds (`candidate_bound.py` — effective-`m` models, fit plus never-silent
+  regime validation) and emits checkable proof obligations (`proof_obligation.py` — SMT-LIB and
+  Liquid-Haskell skeletons mirroring `proofs/lh-bundle/` and `capacity.rs`'s checked-instantiation),
+  scaffolded under `proofs/vsa-multihop-bound/`. It proposes a theorem and emits the obligation a
+  prover must discharge — it never stamps `Proven`. 29 CI tests green (no torch required); `uv sync
+  --group gpu` enables the GPU path.
 
 ### Added (2026-06-29: serial-lane closeout — M-822 partial application, M-826 tuple type, M-823 or-patterns + R20-Q5, M-824 DN-54 design-pass, M-825 backbone)
 

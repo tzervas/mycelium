@@ -92,19 +92,21 @@ This is the **same pattern** as the single-hop M-001 probe:
 ```
 proofs/vsa-multihop-bound/
   README.md                          -- this file (Declared scaffold)
+  .gitignore                         -- ignores the timestamped emitted obligations below
   cabal.project                      -- Cabal project for LH probes (stub)
   vsa-multihop-bound.cabal           -- Cabal package manifest (stub)
   src/
-    MultihopBound_bindchain_A_exponential.hs   -- LH skeleton: bind_chain, Model A
-    MultihopBound_bundleofbinds_A_exponential.hs
-    MultihopBound_nestedunbind_A_exponential.hs
-  *.smt2                             -- SMT-LIB 2 obligations (populated by --proof run)
-  PROOF-SUMMARY.md                   -- discovery run summary (populated by --proof run)
+    MultihopBound_bindchain_Aexponential.hs    -- representative LH skeleton (bind_chain, Model A)
+  <run-id>-multihop-<composition>-<model>.smt2 -- emitted SMT-LIB obligation (gitignored run-output)
+  <run-id>-multihop-<composition>-<model>.hs   -- emitted LH probe         (gitignored run-output)
+  <run-id>-PROOF-SUMMARY.md                    -- discovery-run summary     (gitignored run-output)
 ```
 
-The `.smt2` and `.hs` files in `src/` are **populated by the GPU experiment**
-(`python -m mycelium_experiments.vsa_bounds --proof --emit-obligations`).
-The stub files here are the initial scaffolding; the experiment overwrites them.
+The committed scaffold is `README.md` plus the Cabal stubs plus the representative `src/`
+skeleton. The timestamped `<run-id>-…` obligations are **run-outputs** of
+`python -m mycelium_experiments.vsa_bounds --proof --emit-obligations` — regenerated per sweep
+(and empty unless the sweep has in-regime points), so they are **gitignored**, not committed. To
+keep a representative populated obligation from a real GPU run, add it with `git add -f`.
 
 ---
 
@@ -121,7 +123,9 @@ python -m mycelium_experiments.vsa_bounds --proof --quick
 python -m mycelium_experiments.vsa_bounds --proof --sweep multihop
 ```
 
-Results land in `experiments/results/` and are copied to `proofs/vsa-multihop-bound/`.
+Results land in `experiments/results/` and the obligations are copied to
+`proofs/vsa-multihop-bound/` (gitignored — regenerated per run; promote a representative one
+with `git add -f` if you want it committed).
 
 ### Step 2: Discharge the SMT-LIB obligations
 
