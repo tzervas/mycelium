@@ -16,6 +16,15 @@ allowed-tools: Bash(just:*), Bash(git diff:*), Bash(git status:*), Read, Grep, G
 
 How we build Mycelium. This operationalizes `CONTRIBUTING.md`; follow it while authoring.
 
+**Workspace prep + scoped PRs (DN-65).** *Before* authoring a unit: **sync off the latest tip**
+(`git fetch`; branch from / ff to current `dev`/head — never a stale base) and **pre-install the
+toolchain your change-kind needs** (Rust → `just setup`; Python → `uv sync --group <g>`; docs →
+markdownlint + `doc_refs_check.py`; proofs → `z3`/LH/Lean) so nothing surprises you mid-flight. Do
+the work at whatever scale it takes, but **land it as logical, closely-scoped PRs** (~1–2k-LOC soft
+target — cohesion over a line count; a big effort lands as a fan/sequence of small, individually
+`/pr-review`'d PRs). When PRs share files, land sequentially and pull the merged base down between
+them. Full policy + the change-kind→toolchain map: `docs/notes/DN-65-…md`.
+
 ## The loop
 1. **Anchor the work.** Find the issue/task (`M-xxx`/`E*`) and the `FR/NFR/VR/SC/KC` it
    advances, and the governing RFC/ADR. If none exists, the design is the first deliverable —

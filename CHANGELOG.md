@@ -8,6 +8,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-29: DN-65 — scoped-PR decomposition & per-PR toolchain scoping workflow policy, M-848)
+
+- **DN-65 — scoped-PR decomposition & workspace prep (`Accepted` workflow policy; maintainer-directed).**
+  Large work is **done at any scale but lands as logical, closely-scoped PRs** (soft ~1–2k-LOC-delta
+  rule of thumb — cohesion over a line count; a 50k-line wave lands as a fan/sequence of small,
+  individually `/pr-review`'d PRs). Before working a unit: **sync off the latest tip** and
+  **pre-install the toolchain the change-kind needs** (the DN-65 §2.3 change-kind→tool map: Rust →
+  `just setup`; Python → `uv sync`; docs → markdownlint/`doc_refs`; proofs → `z3`/LH/Lean) — workspace
+  prep, so nothing surprises mid-flight. The PR-landing twin of DN-20 (change-scoping) and the swarm
+  file-ownership partition. Distilled into CLAUDE.md (Commits & PRs), CONTRIBUTING.md, and the skills
+  `/dev-workflow`/`/land`/`/kickoff`; the scoped-setup automation (`just setup-scoped`) is tracked as
+  **M-848**.
+
 ### Changed (2026-06-29: RFC-0038 §8.4–§8.7 — enforcement granularity, scope resolution, and the deviation manifest, M-847)
 
 - **RFC-0038 enforcement-granularity model (`Proposed`; maintainer direction).** Adds an

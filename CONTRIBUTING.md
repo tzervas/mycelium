@@ -102,6 +102,15 @@ GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo t
   `main` (so it can never fast-forward), abandon it and branch a **fresh** one off current `main`,
   re-applying only the unlanded work. See `CLAUDE.md` §Commits & PRs for the agent-facing form of this
   rule.
+- **Scoped PRs and workspace prep (DN-65).** Land work as **logical, closely-scoped PRs** — group by
+  what they touch and aim for a soft **~1–2k-line delta** per PR (a rule of thumb for *where to
+  split*, not a hard limit; keep a cohesive change together rather than fragmenting it). Do the work
+  at whatever scale it takes — a large effort still **lands as a sequence/fan of small, reviewable
+  PRs**, each closely related to its change, so it is easy to review and integrate. Before starting a
+  unit, **update off the latest tip** and **install the toolchain your change needs** (Rust →
+  `just setup`; Python → `uv sync`; docs → the markdown/`doc_refs` checks; proofs → `z3`/LH/Lean) so
+  you are not surprised mid-flight. When PRs share files, land them in order and pull the merged base
+  down before the next. Full policy plus the change-kind→toolchain map: `docs/notes/DN-65-…md`.
 
 ---
 

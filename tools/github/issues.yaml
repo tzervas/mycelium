@@ -7496,3 +7496,22 @@ issues:
       on mismatch); (6) per-colony posture in a mesh (own TrustRoot). Gives M-838 (OQ-M scoping) its shape.
       DoD: RFC-0038 §8.4-§8.7 ratified; the config surface + resolution algorithm chosen (the residual R&D
       under §K.2/§M); the granularity/scope/override + deviation-manifest realized Rust-first; never-silent.
+  - id: M-848
+    title: "M-848 -- Scoped-toolchain setup automation (just setup-scoped) per DN-65"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:toolchain, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:DN-65
+      - src:justfile
+    body: |
+      DN-65 §2.3 automation: turn the change-kind -> toolchain map into a runnable workspace-prep step.
+      As an agent (or contributor) about to work a scoped PR, I want one command that determines which
+      toolchain components my change-kind needs beyond the default and installs exactly those, so that I
+      have the right tools for the work with no mid-flight surprises.
+      Direction: a `just setup-scoped <profile>` recipe (or a per-kind probe) that, given the change scope
+      (rust / python / docs / proofs / mixed), emits + runs the precise setup commands (cargo-nextest/
+      cargo-public-api; uv sync --group <g>; markdownlint + doc_refs; z3/LH/Lean), layered on `just setup`.
+      Pairs with the sync-off-tip step (already a standing rule). Never-silent: prints what it installed/
+      skipped + why.
+      DoD: the recipe lands; DN-65 §2.3 references it; a scoped PR's agent can prep its env in one step.
