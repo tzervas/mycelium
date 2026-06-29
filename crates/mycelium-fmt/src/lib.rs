@@ -1144,20 +1144,6 @@ fn collect_match_arm_comments(
                 depth,
             )?;
         }
-        // A tuple groups sub-expressions — recurse into each (like `App` args) to catch any
-        // nested match-arm comments inside an element.
-        Expr::Tuple(elems) => {
-            for e in elems {
-                collect_match_arm_comments(
-                    item_idx,
-                    e,
-                    remaining,
-                    arm_trailing,
-                    fat_arrow_lines,
-                    depth,
-                )?;
-            }
-        }
         // Leaves: Lit, Path — no subexpressions to recurse into.
         Expr::Lit(_) | Expr::Path(_) => {}
     }
@@ -1411,12 +1397,6 @@ fn render_expr_canonical(e: &Expr) -> String {
     match e {
         Expr::Lit(l) => render_literal(l),
         Expr::Path(p) => p.0.join("."),
-        // v0 tuple literal (M-826): `(a, b, …)`. Desugars to a synthetic `Tuple$N` constructor in
-        // the checker/mono, but the surface form round-trips as the parenthesized, comma-separated list.
-        Expr::Tuple(elems) => {
-            let s: Vec<String> = elems.iter().map(render_expr_canonical).collect();
-            format!("({})", s.join(", "))
-        }
         // RFC-0037 D5 lambda. Closure semantics are deferred to M-704; this canonical render mirrors
         // ambient.rs `print_expr` (param names + `=>` body). Lambdas are absent from the v0 corpus,
         // so the comment-aware token path (not this fallback) drives all current conformance.
@@ -1581,11 +1561,6 @@ fn render_pattern(p: &Pattern) -> String {
     match p {
         Pattern::Wildcard => "_".to_owned(),
         Pattern::Lit(l) => render_literal(l),
-        // v0 tuple pattern (M-826): `(p1, p2, …)` — desugars to a `Tuple$N$0` ctor pattern in the checker.
-        Pattern::Tuple(subs) => {
-            let s: Vec<String> = subs.iter().map(render_pattern).collect();
-            format!("({})", s.join(", "))
-        }
         Pattern::Ctor(n, subs) => {
             let s: Vec<String> = subs.iter().map(render_pattern).collect();
             format!("{n}({})", s.join(", "))
@@ -1621,11 +1596,6 @@ fn render_type_ref(t: &mycelium_l1::ast::TypeRef) -> String {
         BaseType::Binary(n) => format!("Binary{{{n}}}"),
         BaseType::Ternary(m) => format!("Ternary{{{m}}}"),
         BaseType::Dense(d, s) => format!("Dense{{{d}, {}}}", scalar_str(*s)),
-        // v0 tuple type (M-826): `(T, U, …)`.
-        BaseType::Tuple(elems) => {
-            let s: Vec<String> = elems.iter().map(render_type_ref).collect();
-            format!("({})", s.join(", "))
-        }
         BaseType::Vsa {
             model,
             dim,
