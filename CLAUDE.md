@@ -92,6 +92,21 @@ always runs everything.
 Checks **skip gracefully** when a tool or language isn't present yet (most code doesn't exist
 yet). Never hand off a red `just check` without explaining the skip.
 
+**Pre-commit in repo-scoped remote sessions — `--no-verify` is permitted, gates run out-of-band.**
+In a Claude-Code-on-the-web / GitHub-Action session whose GitHub access is **scoped to this repo**,
+`pre-commit` cannot fetch its *external* hook repos (`pre-commit/pre-commit-hooks`, `gitleaks` — the
+scoped proxy 403s them), which aborts the **entire** hook run before any local hook executes, blocking
+every `git commit`/`git push`. In that environment **`git commit --no-verify` / `git push --no-verify`
+is the sanctioned path** — it is pre-allowed in `.claude/settings.json` (`permissions.allow`), scoped
+to exactly the `--no-verify` forms. This is **not** a license to skip checks: before each such commit,
+run the equivalent gates **out-of-band** — `cargo fmt` · `cargo clippy -D warnings` · `cargo test`
+(or `just check`) · `scripts/checks/branch-guard.sh` · `scripts/checks/secrets.sh` — and the
+harness-level **PreToolUse branch-guard hook stays armed** regardless of `--no-verify`, so the
+protected-branch block still holds (mitigation #10). Local sessions where pre-commit *can* fetch its
+hooks keep using the normal verified path. Never use `--no-verify` to skip a gate that *would* have
+caught a real failure — only to route around the unreachable-external-repo abort (G2: the bypass is
+documented + conditioned, never silent).
+
 ## Test layout — no tests in logic files (in-crate `src/tests/`)
 **Logic files carry no test code.** Every `#[cfg(test)]` unit test lives in a dedicated **in-crate**
 test module, not inline in the `.rs` it tests: `#[cfg(test)] mod tests;` in `lib.rs` → `src/tests/`
