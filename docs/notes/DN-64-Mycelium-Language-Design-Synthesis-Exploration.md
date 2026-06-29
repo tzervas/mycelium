@@ -797,8 +797,67 @@ the design phase — is the gate applied at proposal time or only at ratificatio
 
 ---
 
+## §7 Maintainer dispositions (2026-06-29)
+
+Append-only resolution of the §6 open questions. The maintainer ruled on **all 20 OQs** (OQ-H's
+R&D disposition was supplied 2026-06-29, after the initial 19; recorded here, not back-dated — G2).
+Each disposition is recorded at
+the strength the maintainer set it to; **none is upgraded past its basis** (VR-5). A disposition of
+**R&D-commission** means the question is *answered as "research it"* — the decision is to investigate,
+not a design commitment; the resulting findings stay `Declared` until a checked basis exists. A
+disposition of **Direct** means a design direction is now chosen (still `Declared` until enacted via
+its feeding ADR/RFC). Nothing in this section is `Enacted`; this note remains **Draft**. The
+maintainer's standing rule binds the whole table: *"unless it can be mechanically proven, it must drop
+to `Declared`"* (OQ-G generalized — VR-5).
+
+Tracking ids (`M-827`…`M-846`) are minted here and registered in `tools/github/issues.yaml`; the
+deeper artifacts they commission are: the **VSA compositional-bounds GPU experiment** (`experiments/
+mycelium_experiments/vsa_bounds/`, OQ-F), **RFC-0038 — the inject-mode security axis** (the hot-inject
+cluster OQ-K…OQ-Q), and two R&D records (`research/26-…`, `research/27-…`).
+
+| OQ | Facet | Maintainer decision (faithful) | Disposition | Feeds |
+|---|---|---|---|---|
+| **A** | graded type soundness | **Yes — R&D and enact** the machine-checked noninterference proof for `Γ ⊢ e : τ @ g`. | Direct + R&D-commission (M-827) | RFC-0018 §11; `research/26` |
+| **B** | SelectionPolicy / R2 vocab | **`forage` and `backbone` must be made *active*.** Selection-policy + swap machinery must support **mechanized capture & setting** to improve ergonomics **while retaining transparency, provenance, explainability**. | Direct + R&D-commission (M-828) | RFC-0005, RFC-0008 RT3, DN-63; `research/27` |
+| **C** | chained approximation | **Define a tractable composition rule for bounds** (the E2-1 input-bound ⊕ swap-ε rule). | R&D-commission (M-829) | RFC-0002 `SwapError::ApproximateSource`; `research/26` |
+| **D** | three-layer memory model | **Build to ensure & guarantee the "stupid easy" ergonomics** (affine / RC / region). | Direct + R&D-commission (M-830) | DN-32, RFC-0027; `research/26` |
+| **E** | substrate/hypha reclaim | **Investigate, R&D and plan** the reclaim interaction (LR-8 affine × RT7 lifetime × RFC-0014 recovery). | R&D-commission (M-831) | DN-59, future `graft` R2 RFC; `research/26` |
+| **F** | VSA multi-hop `Proven` | **R&D on GPU** (maintainer's desktop, tonight). Build runnable experiments to map the tractable `Proven`-bound subset and feed insight. | R&D-commission + **build experiment** (M-832) | `experiments/mycelium_experiments/vsa_bounds/`; RFC-0009 |
+| **G** | guard clauses | **Yes, ratify guards.** A guard's tag propagates to the arm: **unless mechanically proven, the arm drops to `Declared`** (VR-5). | Direct (M-833) | RFC-0020 §4.1 S2; `research/27` |
+| **H** | record-literal shadowing | **R&D** the `{x, y}` → `{x: x, y: y}` deterministic shadowing rules — whether the readability win justifies the shadowing discipline; the local-vs-field disambiguation must be explicit and never-silent (G2). | R&D-commission (M-846) | RFC-0006, RFC-0020; `research/27` |
+| **I** | short-keyword scope | **Split trait methods and associated types** for clarity / **one-canonical-form** discipline; ergonomics is key. Short keywords (`bin{N}` …) **bind to type literals only**, not to methods/associated types. | Direct (M-834) | RFC-0037 D2-b, DN-31, DN-03 §3; `research/27` |
+| **J** | annotation burden | For the stringent doctrine, provide **wrappers/decorators and/or tooling/ergonomic implementations** that ease use **without degrading** the guarantees. | Direct + R&D-commission (M-835) | RFC-0018 §5; `research/27` |
+| **K** | inject signing authority | **Research.** Instinct: the signing scope **depends on what the dev is building** (script / nodule / library / application / other) — **scoped to their project, graded and dev-configurable by scope of work.** | Direct + R&D-commission (M-836) | RFC-0038 §K; RFC-0008 §R8-Q4 |
+| **L** | InjectCert replay/expiry | **R&D.** | R&D-commission (M-837) | RFC-0038 §L |
+| **M** | inject-mode scoping | **R&D.** | R&D-commission (M-838) | RFC-0038 §M |
+| **N** | relation to spore signing | **The same** — the `InjectCert` **is** the spore's signature component (ADR-013 §2 comp. 4). `myc-prepare` produces a **signed spore** that is both the deployable unit **and** the inject gate (the note's "cleanest design"). | Direct (M-839) | RFC-0038 §N; ADR-013 |
+| **O** | interpreter fallback in sealed | **In `inoculated` mode, yes** — interpreted definitions **also require a cert**. `inoculated` is the **secured, strictly-enforced production tier**. | Direct (M-840) | RFC-0038 §O |
+| **P** | mode naming | **`inoculated` replaces `sealed`** (production tier). `loose` retained (local-dev). All forward references read `sealed` → **`inoculated`**; §4 above is preserved as the commissioning draft (append-only). | Direct (M-841) | RFC-0038 (naming); DN-02 §1 three-test gate |
+| **Q** | cross-colony inject (mesh) | The receiving colony **verifies the `InjectCert` is valid, trusted, and not expired or superseded by the trusted signer** (verify against its **own** trust, never inherit the sender's). | Direct + R&D-commission (M-842) | RFC-0038 §Q; RFC-0008 §R8-Q4 |
+| **R** | composite-op aggregation | **R&D.** | R&D-commission (M-843) | RFC-0001; `research/27` |
+| **S** | grade through monomorphization | **Yes** — each monomorphized instantiation **carries its own guarantee-tag context.** | Direct (M-844) | RFC-0019 §4.4, RFC-0018 §4; `research/26` |
+| **T** | proposal-time naming gate | **Apply the same three-test gate** (T-map / T-illuminate / T-learn) at **proposal time**, not only at ratification. | Direct (M-845) | DN-02 §7, DN-03 §3; `research/27` |
+
+**Naming note (OQ-P, ratified).** The production inject mode is **`inoculated`** — the biological term
+for introducing a *verified* organism into a substrate, on-brand with the fungal lexicon and earning
+its three-test gate (T-map: a sealed/verified admission; T-illuminate: teaches "only verified code is
+admitted"; T-learn: human- and LLM-legible). `loose` (local-dev, unsigned permitted, G2-tagged) is
+retained. Wherever §4 / OQ-P above wrote `sealed`, read **`inoculated`**; RFC-0038 carries the
+ratified naming forward.
+
+**Hot-inject cluster (OQ-K…OQ-Q) → RFC-0038.** The firm directions (N: InjectCert = spore signature;
+O: interpreted path also gated in `inoculated`; P: `inoculated`/`loose`; Q: verify valid/trusted/
+unexpired/unsuperseded against own trust; K: project-scoped, graded, dev-configurable signing) are
+captured as the ratified core of **RFC-0038 (Draft/Proposed)**; the still-`R&D` sub-parts (K key-
+management detail, L replay/expiry mechanism, M inject-mode scoping) are named there as explicit open
+items, not silently closed.
+
+---
+
 ## Changelog
 
 | Date | Change |
 |---|---|
 | 2026-06-29 | Initial draft — five-facet synthesis exploration note commissioned and drafted. |
+| 2026-06-29 | §7 — maintainer dispositions on 19/20 OQs (OQ-H left open); `sealed`→`inoculated` ratified; hot-inject cluster routed to RFC-0038; M-827…M-845 minted. Append-only; note stays Draft. |
+| 2026-06-29 | §7 — OQ-H R&D disposition supplied (record-literal shadowing → research it); M-846 minted; all 20 OQs now ruled. Append-only. |

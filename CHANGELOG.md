@@ -8,6 +8,44 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-29: DN-64 §7 maintainer dispositions — RFC-0038 inject-mode security axis, research/26+27 R&D records, VSA-bounds GPU experiment, M-827…M-846)
+
+- **DN-64 §7 — maintainer dispositions on all 20 open questions (OQ-A…OQ-T).** Each OQ recorded at
+  the strength the maintainer set it to, none upgraded past its basis (VR-5); OQ-H's R&D disposition
+  was supplied after the initial 19. Ratifies the production hot-inject mode rename `sealed` to
+  **`inoculated`** (`loose` retained for local-dev); routes the hot-inject cluster (OQ-K…OQ-Q) to
+  RFC-0038; mints tracking issues M-827…M-846. Append-only; DN-64 stays `Draft`.
+- **RFC-0038 — Inject-Mode Security Axis (`Proposed`; enacts no code).** A hot-inject security axis
+  **orthogonal** to the fast/certified cert axis (RFC-0034 §8): `loose` (unsigned injection permitted,
+  every injected call G2-tagged) vs `inoculated` (a valid `InjectCert` required, never-silent
+  `InjectError::UnsignedCode` refusal, gating the interpreter-fallback path too). The `InjectCert`
+  **is** the spore's signature component (ADR-013 §2 comp. 4) — `myc-prepare` signs a spore that is
+  both deployable unit and inject gate, fusing the gate with the VR-4 no-opaque-lowering attestation
+  (DN-18/M-630; ADR-006 for EXPLAIN-ability). A colony verifies the cert valid/trusted/unexpired/unsuperseded against its **own**
+  `TrustRoot`; signing authority is project-scoped and graded by scope-of-work. Key-management detail,
+  replay/expiry, and inject-mode scoping (§K.2/§L/§M) are named open R&D. References RFC-0034/ADR-013/
+  ADR-017 without changing them (append-only).
+- **Research Records 26 + 27 — DN-64 R&D planning.** `research/26` (type system — graded-soundness
+  proof path, E2-1 bound composition, three-layer memory ergonomics, substrate/hypha reclamation,
+  per-instantiation grades) and `research/27` (ergonomics — `forage`/`backbone` activation plus
+  mechanized EXPLAIN-able policy capture, guard clauses, short-keyword scope, annotation-burden
+  wrappers, composite aggregation, proposal-time naming gate, record-literal shadowing). All proposals
+  `Declared`; external mechanisms `Empirical` at source.
+- **VSA compositional-`Proven`-bounds GPU experiment (M-832, OQ-F).** A runnable harness at
+  `experiments/mycelium_experiments/vsa_bounds/` — numpy reference path (always runs) plus an optional
+  torch/CUDA accelerator, never-silent backend selection — that reimplements `capacity.rs::required_dim`
+  at exact parity and sweeps `single` (bundle-capacity, the `Proven` anchor) and `multihop`
+  (bind-chain / bundle-of-binds / nested-unbind) failure rates across `{model, F, k, d, h, δ}` to map
+  where a closed-form bound still tracks the measured rate. VR-5: it measures rates only — the
+  "this subset admits `Proven` bounds" verdict stays the maintainer's, from `SUMMARY.md` plus plots.
+  **Extended toward the mechanical proof (the OQ-A bridge):** a `--proof` mode discovers candidate
+  closed-form multi-hop bounds (`candidate_bound.py` — effective-`m` models, fit plus never-silent
+  regime validation) and emits checkable proof obligations (`proof_obligation.py` — SMT-LIB and
+  Liquid-Haskell skeletons mirroring `proofs/lh-bundle/` and `capacity.rs`'s checked-instantiation),
+  scaffolded under `proofs/vsa-multihop-bound/`. It proposes a theorem and emits the obligation a
+  prover must discharge — it never stamps `Proven`. 29 CI tests green (no torch required); `uv sync
+  --group gpu` enables the GPU path.
+
 ### Added (2026-06-29: serial-lane closeout — M-822 partial application, M-826 tuple type, M-823 or-patterns + R20-Q5, M-824 DN-54 design-pass, M-825 backbone)
 
 - **Multi-argument partial application via currying (M-822; RFC-0024 §4A.8).** A multi-param `lambda`

@@ -1,0 +1,27 @@
+cabal-version:      3.0
+name:               vsa-multihop-bound
+version:            0.1.0
+synopsis:           LH probes for VSA multi-hop capacity bound (M-832 / OQ-F)
+description:
+    Liquid Haskell skeleton for the candidate multi-hop VSA capacity theorem.
+    Mirrors proofs/lh-bundle/ in structure: axiomatizes the candidate theorem
+    and asks Z3 to discharge the concrete arithmetic instantiation.
+    Status: Declared — see README.md for the proof strategy and next steps.
+license:            MIT
+author:             Mycelium contributors
+maintainer:         see CONTRIBUTING.md
+
+library
+    exposed-modules:
+        -- Representative committed skeleton (bind_chain, Model A_exponential).
+        -- Additional modules are emitted by:
+        --   python -m mycelium_experiments.vsa_bounds --proof --emit-obligations
+        -- and are gitignored (run-outputs). Promote one with `git add -f` to commit it.
+        -- Module naming: MultihopBound_<composition>_<model>.
+        MultihopBound_bindchain_Aexponential
+    build-depends:
+        base >= 4.18 && < 5,
+        liquidhaskell >= 0.9.8
+    hs-source-dirs:   src
+    default-language: Haskell2010
+    ghc-options:      -fplugin=LiquidHaskell
