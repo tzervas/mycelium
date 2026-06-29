@@ -8,6 +8,32 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-29: s10 — RFC-0020 carve-out enactment (M-707) + RFC-0030 grammar completeness (M-706))
+
+- **RFC-0020 L2 carve-outs reconciled (M-707 done; RFC-0020 §10 enactment update, append-only).** The
+  carve-outs were deferred *pending* RFC-0018/RFC-0019/RFC-0001-r5 — all since landed — so most are now
+  **enacted**, the rest explicitly re-deferred (honest, grounded in `tests/check.rs::rfc0020_*`):
+  - **§4.2 polymorphic instantiation — ENACTED:** a generic's type arguments are inferred from the
+    call-site argument types (M-657 unification + M-673 monomorphization); an undetermined
+    instantiation stays a never-silent error (G2). **R20-Q1 RESOLVED** (dictionary-free static
+    monomorphization interface).
+  - **R20-Q2 (grade inference) — RESOLVED:** a separate `grade.rs` pass (M-663); grades stay
+    `Declared` where unproven (VR-5).
+  - **R20-Q4 (mutual recursion) — ENACTED:** elaborates to `FixGroup` (M-343/M-391); the
+    `MutualRecursionDeferred` refusal is retired.
+  - **§4.5 derived forms (`derive`) — PARTIAL:** surface + structural checks landed (M-812/DN-54);
+    RHS-elaboration + KC-3 guard deferred to **M-812-cont**.
+  - **R20-Q3 (or-patterns) + R20-Q5 (list-literal/`for` bidirectional inference) — RE-DEFERRED**
+    (RFC-0020 §9; no silent accept, G2). RFC-0020 stays **Accepted (scoped)** — full `Enacted` awaits
+    §4.5 completion + an or-pattern decision.
+- **RFC-0030 grammar completeness (M-706 done; RFC-0030 already Enacted).** The dependency gate
+  (M-705/M-745/M-707) cleared; an EBNF audit against the landed parser closed three genuine gaps the
+  grammar omitted but the parser accepts (never-silent defect, G2): the top-level **`impl_item`** (trait
+  + inherent forms) was entirely missing from `item`; **`consume_expr`** was missing from `expr`; and
+  **`lambda_expr`** was defined but unreferenced in `expr`. `just drift-check` + conformance green.
+- **Verified:** `cargo test -p mycelium-l1` green; `just drift-check` green. Advances **E11-1**
+  (surface-language completeness). `issues.yaml` (M-706, M-707 → done) reconciled.
+
 ### Added (2026-06-28: srf — M-664 `consume` expression + inherent `impl T { … }` blocks)
 
 - **`consume <expr>` is now an ACTIVE surface expression (DN-03 §1 / LR-8; M-664 done).** It acquires

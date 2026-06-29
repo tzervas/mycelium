@@ -225,6 +225,7 @@ expr           ::= let_expr
                  | colony_expr
                  | fuse_expr
                  | reclaim_expr
+                 | lambda_expr
                  | op_expr
 
 /* with paradigm: a block-scope ambient override (RFC-0012 §4.4; M-344). Not a conversion — it

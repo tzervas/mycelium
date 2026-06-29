@@ -3427,15 +3427,17 @@ issues:
   - id: M-706
     title: "M-706 — Concrete surface grammar / L3 ratification (RFC-0030)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: [M-705, M-707, M-745]
     epic: E11-1
+    landed_basis: "status:done — RFC-0030 is Enacted (2026-06-27; mycelium.ebnf regenerated against RFC-0037, conformance corpus green). M-706 close (s10, 2026-06-29): the dependency gate cleared (M-705/M-745 done; M-707 enacted this session) and an EBNF-completeness audit closed three genuine gaps the parser accepted but the grammar omitted — the top-level `impl_item` (trait + inherent forms; M-664), `consume_expr` (M-664), and `lambda_expr` (defined but unreferenced in `expr`). `just drift-check` green; conformance accept/reject green."
     doc_refs:
       - corpus:RFC-0030
       - corpus:RFC-0006
       - corpus:DN-25
       - src:docs/spec/grammar/mycelium.ebnf
     body: |
+      DONE 2026-06-29 (M-706 close, s10): RFC-0030 is **Enacted** (since 2026-06-27 — Q8 = `wild {…}`; Q3 corrected/discharged via RFC-0018 + RFC-0012; `mycelium.ebnf` regenerated against RFC-0037; operator residue M-745/M-809 commissioned). The M-706 dependency gate (M-705 ✓, M-745 ✓, M-707 ✓ enacted this session) is now cleared. An EBNF-completeness audit against the parser closed three real gaps that "Enacted" had not caught: the top-level `impl_item` production was entirely MISSING from `item ::=` (added — trait + inherent forms, M-664), `consume_expr` was missing (added, M-664), and `lambda_expr` was defined but never referenced in `expr ::=` (added). `just drift-check` + conformance accept/reject green. Honest note (VR-5): or-patterns + the R20-Q5 relaxation stay deferred (RFC-0020 §9), so the surface grammar is "complete for the landed surface", not "frozen for all future surface".
       PARTIAL (2026-06-23): RFC-0030 advanced (stays Draft — full L3 ratification is GATED). Done
       this session: (1) the M-705 operator grammar is integrated into mycelium.ebnf (op_expr…
       unary_expr); (2) RFC-0030 §4.1 PROPOSES the RFC-0006 Q8 resolution = ratify `wild { … }` as the
@@ -3484,14 +3486,16 @@ issues:
   - id: M-707
     title: "M-707 — RFC-0020 L2 surface term language enactment"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [E7-1]
     epic: E11-1
+    landed_basis: "status:done — RFC-0020 carve-outs reconciled against the now-landed RFC-0018/RFC-0019/RFC-0001-r5 work (RFC-0020 §10 enactment update, 2026-06-29; append-only): §4.2 polymorphic instantiation ENACTED (type args inferred from call-site arg types — M-657/M-673), R20-Q1 RESOLVED (dictionary-free static monomorphization), R20-Q2 RESOLVED (grade inference = separate grade.rs pass, M-663), R20-Q4 ENACTED (FixGroup, M-343/M-391). §4.5 derive PARTIAL (surface+structural M-812; RHS-elab+KC-3 → M-812-cont). R20-Q3 (or-patterns) + R20-Q5 (list/for bidirectional) RE-DEFERRED (RFC-0020 §9). Grounded by tests/check.rs::rfc0020_* (Empirical). RFC-0020 stays Accepted (scoped) — full Enacted awaits §4.5 + or-pattern decision."
     doc_refs:
       - corpus:RFC-0020
       - corpus:DN-25
       - src:crates/mycelium-l1/src/checkty.rs
     body: |
+      DONE 2026-06-29 (M-707, s10): the RFC-0020 carve-outs are reconciled — most are now ENACTED by landed work (the carve-outs were deferred *pending* RFC-0018/RFC-0019/RFC-0001-r5, which have since landed), the rest explicitly RE-DEFERRED. §4.2 polymorphic instantiation: ENACTED (call-site type-arg inference, M-657/M-673; undetermined ⇒ never-silent error). R20-Q1: RESOLVED (dictionary-free static monomorphization interface). R20-Q2: RESOLVED (grade inference is a separate grade.rs pass, grades stay Declared; M-663). R20-Q4: ENACTED (mutual recursion → FixGroup, M-343/M-391; MutualRecursionDeferred retired). §4.5 derive: PARTIAL (surface+structural M-812; RHS-elaboration + KC-3 guard → M-812-cont). R20-Q3 (or-patterns), R20-Q5 (list-literal/for bidirectional inference): RE-DEFERRED to RFC-0020 §9 (never-silent, G2). Acceptance tests: tests/check.rs::rfc0020_4_2_polymorphic_instantiation_is_inferred_at_call_site + rfc0020_r20q4_mutual_recursion_elaborates_not_deferred. RFC-0020 §10 + meta changelog updated append-only; RFC-0020 stays Accepted (scoped).
       RE-DEFERRED (2026-06-23, surface-stabilization wave): the RFC-0020 carve-outs are NOT enacted
       this session and are explicitly re-deferred with this issue (M-707) as their forward ref —
       §4.2 (polymorphic-instantiation inference sugar), §4.5 (grow-derived trait forms), and

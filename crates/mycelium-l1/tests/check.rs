@@ -1802,3 +1802,34 @@ fn trait_impl_without_for_is_refused() {
         "a malformed `impl` head must be an explicit parse error"
     );
 }
+
+// ---- M-707 (s10 / RFC-0020): carve-out enactment acceptance ----
+// These pin the RFC-0020 §10 carve-outs that the now-landed RFC-0018/RFC-0019/RFC-0001-r5 work
+// enacted, so the spec's enactment note is grounded in executable evidence (VR-5), not asserted.
+
+#[test]
+fn rfc0020_4_2_polymorphic_instantiation_is_inferred_at_call_site() {
+    // §4.2 / R20-Q1: a generic fn's type arguments are INFERRED from the call-site argument types —
+    // no explicit instantiation annotation required (the carve-out's "deferred = error" v0 posture
+    // is superseded by M-657 unification + M-673 monomorphization). An UNDETERMINED instantiation
+    // remains a never-silent error (G2), preserving the honest "not a guess" stance.
+    let env = check(
+        "nodule d\nfn id[A](x: A) => A = x\nfn use_id(b: Binary{8}) => Binary{8} = id(b)",
+    )
+    .expect("polymorphic instantiation inferred from the argument type");
+    assert_eq!(env.totality["use_id"], Totality::Total);
+}
+
+#[test]
+fn rfc0020_r20q4_mutual_recursion_elaborates_not_deferred() {
+    // R20-Q4: a mutually-recursive group elaborates to a `FixGroup` (M-343/M-391) — it is no longer
+    // the `MutualRecursionDeferred` refusal the carve-out recorded. (Total-ness is RFC-0007 §4.5's
+    // mutual-descent classification; here we only assert the group type-checks + classifies.)
+    let env = check(
+        "nodule d\ntype Nat = Z | S(Nat)\n\
+         fn ev(n: Nat) => Nat = match n { Z => Z, S(m) => od(m) }\n\
+         fn od(n: Nat) => Nat = match n { Z => Z, S(m) => ev(m) }",
+    )
+    .expect("a mutually-recursive group elaborates (FixGroup), never `MutualRecursionDeferred`");
+    assert_eq!(env.totality["ev"], Totality::Total);
+}
