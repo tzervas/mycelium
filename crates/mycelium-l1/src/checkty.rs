@@ -2853,14 +2853,66 @@ impl Cx<'_> {
         // its type arguments is a never-silent refusal (G2/VR-5); a multi-value-param function is
         // refused explicitly (partial application is out-of-scope per RFC-0024 §5).
         if let Some(fd) = self.fns.get(name) {
-            // Multi-param or zero-param (nullary) functions: partial application is deferred (RFC-0024 §5).
-            if fd.sig.value_params.len() != 1 {
+            // Nullary fn: not a value — cannot be used in function-value position (G2).
+            if fd.sig.value_params.is_empty() {
                 return self.err(format!(
-                    "`{name}` has {} value parameter(s) — only single-argument functions can be \
-                     used as first-class values in stage-1; partial application is deferred \
-                     (RFC-0024 §5, never a silent coercion)",
-                    fd.sig.value_params.len()
+                    "`{name}` takes 0 value parameters — a nullary function is not a \
+                     first-class value; apply it directly (never a silent coercion — G2)"
                 ));
+            }
+            // Multi-parameter monomorphic fn (M-822 / RFC-0024 §4A.5): used as a first-class value,
+            // synthesize the curried type `A -> B -> … -> Z` and return a curried lambda expression
+            // wrapping the saturated call. Zero-param is refused above; generic multi-param fns
+            // need type-arg context from the expected type — deferred (never a silent accept, G2).
+            if fd.sig.value_params.len() > 1 {
+                if !fd.sig.params.is_empty() {
+                    return self.err(format!(
+                        "`{name}` is generic and multi-parameter — using a generic multi-parameter \
+                         function as a first-class value requires type arguments from context; \
+                         ascribe the value (RFC-0024 §4A.5, never a silent coercion — G2)"
+                    ));
+                }
+                // Monomorphic multi-param fn: compute the curried type and return the
+                // lambda wrapper expression. `check_path` has a read-only scope, so we build
+                // the final checked expression structurally (no re-checking needed for a monomorphic
+                // fn — all types are concrete from the declaration).
+                let vparams = fd.sig.value_params.clone();
+                // Resolve each parameter type and the return type.
+                let mut param_tys: Vec<Ty> = Vec::with_capacity(vparams.len());
+                for p in &vparams {
+                    param_tys.push(resolve_ty(self.site, self.types, &[], &p.ty)?.0);
+                }
+                let ret_ty = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?.0;
+                // Build the curried type: A -> (B -> (… -> Z)) (right-associative).
+                let curried_ty = param_tys.iter().rev().fold(ret_ty.clone(), |acc, t| {
+                    Ty::Fn(Box::new(t.clone()), Box::new(acc))
+                });
+                // Bidirectional: if an expected type is given, it must match (never a coercion).
+                if let Some(exp) = expected {
+                    if exp != &curried_ty {
+                        return self.err(format!(
+                            "`{name}` has curried type `{curried_ty}`, but the context expects \
+                             `{exp}` (type mismatch — RFC-0024 §4A.5, never a silent coercion)"
+                        ));
+                    }
+                }
+                // Build the saturated call inside the innermost lambda.
+                let call = Expr::App {
+                    head: Box::new(e.clone()),
+                    args: vparams
+                        .iter()
+                        .map(|p| Expr::Path(Path(vec![p.name.clone()])))
+                        .collect(),
+                };
+                // Build curried lambda: lambda(p1: A) => lambda(p2: B) => … => name(p1…pN).
+                let mut body: Expr = call;
+                for p in vparams.iter().rev() {
+                    body = Expr::Lambda {
+                        params: vec![p.clone()],
+                        body: Box::new(body),
+                    };
+                }
+                return Ok((curried_ty, body));
             }
             // Monomorphic callee: resolve the param and return types directly.
             if fd.sig.params.is_empty() {
@@ -2954,9 +3006,12 @@ impl Cx<'_> {
     /// which reuses this typing via re-inference (`infer_type`) — no new `Ty` variant here (the closure
     /// struct is an ordinary `Ty::Data` post-mono; §4A.6).
     ///
-    /// **Single-argument only in stage-1.** A zero- or multi-parameter lambda needs the tuple-type
-    /// prerequisite (§4A.8 — the v0 surface has no product type), so it is an **explicit refusal**
-    /// (FLAG: multi-arg/partial application is tuple-gated), never a silent accept (G2/VR-5).
+    /// **Multi-argument currying (M-822 / RFC-0024 §4A.5/§4A.8).** A multi-parameter lambda
+    /// `lambda(p1: A, p2: B, …, pN: Z) => body` is treated as curried:
+    /// `lambda(p1: A) => lambda(p2: B) => … => lambda(pN: Z) => body`. This is the RFC-0024 §4A.5
+    /// partial-application path — each arrow in the curried chain lowers by the existing §4A single-arg
+    /// machinery. Zero-parameter lambdas are a never-silent refusal (G2) — a zero-arg closure has
+    /// no type without a unit type, which is a separate surface decision.
     ///
     /// **Bidirectional.** When the context supplies an expected `Ty::Fn(ea, er)`, the written param
     /// type must equal `ea` (a mismatch is a never-silent refusal, not a coercion), and the body is
@@ -2969,14 +3024,37 @@ impl Cx<'_> {
         body: &Expr,
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
-        // Stage-1: exactly one parameter (multi-arg arrows are tuple-gated — §4A.8).
+        // Zero-parameter lambda: no type without a unit type — never-silent refusal (G2).
+        if params.is_empty() {
+            return self.err(
+                "a `lambda` requires at least 1 parameter — a zero-argument lambda has no type \
+                 without a unit/nullary type, which is a separate surface decision (never a silent \
+                 accept — G2)"
+                    .to_owned(),
+            );
+        }
+        // Multi-argument currying (M-822 / RFC-0024 §4A.5/§4A.8): `lambda(p1, p2, …) => body`
+        // desugars to `lambda(p1) => lambda(p2) => … => body`. Build the inner curried body and
+        // check this as a single-param lambda whose body is the inner lambda. The curried type
+        // is `A -> B -> … -> Z` (right-associative), which is exactly the §4A single-arg arrow
+        // machinery applied recursively — no new mechanism needed (Declared; RFC-0024 §4A.5).
+        if params.len() > 1 {
+            let (first, rest) = params.split_first().expect("len > 1");
+            // Build the inner curried lambda: `lambda(rest…) => body`.
+            let inner_body = Expr::Lambda {
+                params: rest.to_vec(),
+                body: Box::new(body.clone()),
+            };
+            // The expected type for the outer one-param wrapper. If context provides
+            // `Ty::Fn(ea, inner_expected)`, pass `inner_expected` to the inner recursion. A
+            // non-arrow expected type is refused by the single-param path below (never silent, G2).
+            // We do NOT extract `inner_expected` here — we pass `expected` as-is to the outer
+            // single-param wrapper so the bidirectional domain-check fires for the first param.
+            return self.check_lambda(scope, std::slice::from_ref(first), &inner_body, expected);
+        }
+        // Exactly one parameter — the base case.
         let [param] = params else {
-            return self.err(format!(
-                "a `lambda` takes exactly 1 parameter in stage-1; got {} — multi-argument lambdas \
-                 need the tuple-type prerequisite (RFC-0024 §4A.8), a separate surface decision \
-                 (never a silent accept — G2/VR-5)",
-                params.len()
-            ));
+            unreachable!("len == 1 after the multi-arg and zero-arg branches above")
         };
         // The written parameter type (lambda params are always ascribed — `parse_params_opt`).
         let (param_ty, _) = resolve_ty(self.site, self.types, self.tyvars, &param.ty)?;
