@@ -166,6 +166,22 @@ not add `on: push` / `on: pull_request` auto-triggers without an explicit decisi
   subject + body describing the *net* change; **never** let the auto-concatenated WIP /
   `wip(batch …)` / fixup / merge trail stand as the squash message. The commit left on `main` is the
   permanent record — keep it clean and legible, not cluttered.
+- **Scoped-PR decomposition & workspace prep (DN-65).** Land work as **logical, closely-scoped PRs**
+  grouped by what they touch — a soft **≈1–2k-LOC-delta** rule of thumb (target, *not* a hard cap;
+  cohesion wins over a line count — never fragment into dozens of trivial PRs). **Total delta is
+  unbounded; PR size is bounded:** a 50k-line wave still lands as a fan/sequence of scoped,
+  individually-reviewed PRs, each closely related to the work it names (easier to integrate, easier
+  to review). Decompose along the swarm's disjoint-ownership seams (crates / dirs / doc clusters);
+  reconcile shared files (`CHANGELOG`/`Doc-Index`/`issues.yaml`) per-PR. When PRs share files, land
+  **sequentially** and **pull the freshly-merged base down before the next** (mitigation #6). Each PR
+  gets its **own `/pr-review`** pass (the rubric and the toolchain). **Workspace prep before working a
+  scoped unit:** (1) **sync off the latest tip** (`git fetch`; branch from / ff to current `dev`/head
+  so every agent shares the same head and tips match — no stale base); (2) **scope and pre-install the
+  toolchain** for the change-kind so there are no mid-flight surprises — Rust → `just setup` (incl.
+  `cargo-nextest`/`cargo-public-api`); Python → `uv sync --group <g>`; docs → markdownlint plus
+  `doc_refs_check.py`; proofs → `z3`/LH/Lean per the `proofs/*/README.md`. The scoped-setup
+  automation (`just setup-scoped`) is tracked as **M-848**; until then the DN-65 §2.3 mapping is the
+  manual checklist.
 
 ## Swarm development — octopus-merge pattern (parallel agents, zero collision)
 When a wave decomposes into several **tightly-scoped, independent** tasks (e.g. one stdlib
