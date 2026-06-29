@@ -5,7 +5,7 @@
 // @since: 2026-06-26
 // @updated: 2026-06-27
 // @summary: Self-hosted first-order iterator surface over the cons-list shape (List<A> = Nil |
-nodule std.iter
+nodule std.iter;
 
 // Cons(A, List<A>)). M-715 (E13-1, RFC-0031 §5 D4 Tier-0). Provides: is_empty_l, length, and the
 // recursive HOF combinators map, filter, foldl, any, all, find — ALL now execute three-way
@@ -20,7 +20,7 @@ nodule std.iter
 // application remain deferred (M-704). Option re-declaration: self-contained — Option/Bool in scope
 // without import. The Option type parameter is named Opt (not A) to avoid substitution-key collisions
 // when Option nests inside List<A> (RFC-0007 §11.3 + M-716).
-type Option[Opt] = Some(Opt) | None
+type Option[Opt] = Some(Opt) | None;
 
 // ── List — a recursive cons-list ─────────────────────────────────────────────────────────────────
 //
@@ -28,11 +28,11 @@ type Option[Opt] = Some(Opt) | None
 // Mirrors the Vec cons-list shape in std.collections. All ops are O(n) in the spine (Declared).
 // Constructors are Exact (total). The name `List` is chosen to distinguish from `Vec` (which lives
 // in std.collections) while sharing the same underlying cons-cell structure.
-type List[A] = Nil | Cons(A, List[A])
+type List[A] = Nil | Cons(A, List[A]);
 
 // is_empty_l: True iff the List is Nil. Total (Exact).
 fn is_empty_l[A](xs: List[A]) => Bool =
-  match xs { Nil => True, Cons(_, _) => False }
+  match xs { Nil => True, Cons(_, _) => False };
 
 // ── map ──────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -42,7 +42,7 @@ fn is_empty_l[A](xs: List[A]) => Bool =
 // top-level fn (RFC-0024 §4); the recursive call `map(rest, f)` re-passes `f`, now threaded through as
 // the SAME static specialization (M-715 / mono::resolve_fn_args). Closures / multi-arg arrows: M-704.
 fn map[A, B](xs: List[A], f: A => B) => List[B] =
-  match xs { Nil => Nil, Cons(h, rest) => Cons(f(h), map(rest, f)) }
+  match xs { Nil => Nil, Cons(h, rest) => Cons(f(h), map(rest, f)) };
 
 // ── filter ────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -51,7 +51,7 @@ fn map[A, B](xs: List[A], f: A => B) => List[B] =
 // Declared; three-way agreement Empirical (M-715: the recursive re-pass of `pred` is threaded as the
 // same static specialization).
 fn filter[A](xs: List[A], pred: A => Bool) => List[A] =
-  match xs { Nil => Nil, Cons(h, rest) => match pred(h) { True => Cons(h, filter(rest, pred)), False => filter(rest, pred) } }
+  match xs { Nil => Nil, Cons(h, rest) => match pred(h) { True => Cons(h, filter(rest, pred)), False => filter(rest, pred) } };
 
 // ── foldl ─────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -66,7 +66,7 @@ fn filter[A](xs: List[A], pred: A => Bool) => List[A] =
 // specialization). FLAG (still open): a TRUE two-arg fold (f: A -> B -> B, combining the accumulator)
 // requires multi-arg HOF — deferred (M-704); this `f: A -> B` form discards the prior acc, as noted.
 fn foldl[A, B](xs: List[A], f: A => B, acc: B) => B =
-  match xs { Nil => acc, Cons(h, rest) => foldl(rest, f, f(h)) }
+  match xs { Nil => acc, Cons(h, rest) => foldl(rest, f, f(h)) };
 
 // ── length ────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -76,7 +76,7 @@ fn foldl[A, B](xs: List[A], f: A => B, acc: B) => B =
 // runtime refusal is the evidence, not a type-level proof). Declared (type-level contract for the
 // O(n) walk).
 fn length[A](xs: List[A]) => Binary{8} =
-  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_bin(0b0000_0001, length(rest)) }
+  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_bin(0b0000_0001, length(rest)) };
 
 // ── any / all ─────────────────────────────────────────────────────────────────────────────────────
 //
@@ -85,7 +85,7 @@ fn length[A](xs: List[A]) => Binary{8} =
 // Three-way agreement Empirical (M-715: the recursive re-pass of `pred` is threaded as the same
 // static specialization). `pred` is a single named top-level fn (RFC-0024 §4; closures deferred, M-704).
 fn any[A](xs: List[A], pred: A => Bool) => Bool =
-  match xs { Nil => False, Cons(h, rest) => match pred(h) { True => True, False => any(rest, pred) } }
+  match xs { Nil => False, Cons(h, rest) => match pred(h) { True => True, False => any(rest, pred) } };
 
 // all: True iff every element satisfies `pred`. Short-circuits at the first False (O(n) worst-case,
 // Declared). Never-silent (G2): empty → True (vacuous universal quantification — standard convention,
@@ -93,7 +93,7 @@ fn any[A](xs: List[A], pred: A => Bool) => Bool =
 // Three-way agreement Empirical (M-715: the recursive re-pass of `pred` is threaded as the same
 // static specialization). `pred` is a single named top-level fn (RFC-0024 §4; closures deferred, M-704).
 fn all[A](xs: List[A], pred: A => Bool) => Bool =
-  match xs { Nil => True, Cons(h, rest) => match pred(h) { True => all(rest, pred), False => False } }
+  match xs { Nil => True, Cons(h, rest) => match pred(h) { True => all(rest, pred), False => False } };
 
 // ── find ──────────────────────────────────────────────────────────────────────────────────────────
 //
@@ -102,4 +102,4 @@ fn all[A](xs: List[A], pred: A => Bool) => Bool =
 // Declared; three-way agreement Empirical (M-715: the recursive re-pass of `pred` is threaded as the
 // same static specialization).
 fn find[A](xs: List[A], pred: A => Bool) => Option[A] =
-  match xs { Nil => None, Cons(h, rest) => match pred(h) { True => Some(h), False => find(rest, pred) } }
+  match xs { Nil => None, Cons(h, rest) => match pred(h) { True => Some(h), False => find(rest, pred) } };

@@ -104,9 +104,21 @@ the *stdlib surface* that consumes this feature, not the feature itself.) The re
 defunctionalization gap (recursion through a function *parameter*) is **distinct** and is now **CLOSED**
 (M-715, rsm S3): a HOF parameter re-passed at a recursive call site (`map(rest, f)`) is threaded through
 `mono::resolve_fn_args` as the **same** static specialization, so the self-hosted `lib/std/iter.myc`
-combinators (`map`/`filter`/`foldl`/`any`/`all`/`find`) run three-way. Still deferred (M-704): closures,
-multi-arg arrows, partial application, dynamically-flowing fn values. `spore` and `wild` blocks are
-checker-validated per their own rules.
+combinators (`map`/`filter`/`foldl`/`any`/`all`/`find`) run three-way. **Closures now check, lower, and
+run three-way** (M-704, RFC-0024 §4A): an `Expr::Lambda` type-checks to `Ty::Fn` (`check_lambda`), and
+`mono` lowers each escaping closure by **Reynolds defunctionalization** — a per-arrow tag-sum data type
+`Fn$A$B` (one constructor per distinct closure, fields = the captured free variables) reusing
+`L1Value::Data`, plus a generated `apply$A$B(clo, x)` dispatcher whose body is a `match` over the
+whole-program-closed constructor set. A lambda at its def site → a constructor application of the
+captured values (value-snapshot); an escaping fn-value application `f(x)` → `apply$A$B(f, x)`. Covers
+captureless / single- / multi-capture lambdas, closure-capturing-closure, dynamically-flowing fn values
+(out of a `match`, a data field), and a capturing combinator (`map` with a closure) — all three-way
+(`Empirical`). The capture set, generated ctor, and dispatcher are EXPLAIN-recorded
+(`MonoSelections::closure_specs` / `ClosureSpecialization`; house rule #2). **No new L0 kernel node**
+(KC-3 — data + match + call only; `mycelium-core` untouched). Still a **never-silent tuple-gated
+`Residual`** (M-704 honest boundary; RFC-0024 §4A.8): multi-argument lambdas / partial application
+(the v0 surface has no tuple/product type). `spore` and `wild` blocks are checker-validated per their
+own rules.
 
 `Totality` (totality.rs): `Total | Partial`. Classification is **sound, not complete** (Foetus-style
 structural descent; totality.rs:1–23) — a wrong verdict can mis-gate `matured` promotion, but

@@ -2471,11 +2471,13 @@ issues:
   - id: M-664
     title: "M-664 — feat(l1): `consume`/`derive`/`impl` — surface language keywords for substrate consumption, generative trait derivation, and inherent methods"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     depends_on: [M-659]
     epic: E7-1
-    doc_refs: [corpus:DN-03, corpus:DN-38, corpus:RFC-0006, src:crates/mycelium-l1/src/token.rs]
+    landed_basis: "status:done — `consume <expr>` (affine Substrate acquisition, LR-8) active + inherent `impl T { … }` blocks (desugar to top-level fns) landed in mycelium-l1 (parse/checkty/elab/eval/mono/grade/totality/ambient); `cargo test -p mycelium-l1` green (203 lib + 105 check + conformance accept/reject). `derive` already landed via M-812 (DN-54). The `reveal` inspector companion (DN-38 §8.1) remains not-yet-lexed — tracked as a residual, NOT part of M-664's reconciled surface scope (README §srf: M-664 = consume + inherent impl)."
+    doc_refs: [corpus:DN-03, corpus:DN-38, corpus:RFC-0006, src:crates/mycelium-l1/src/token.rs, src:crates/mycelium-l1/src/parse.rs]
     body: |
+      DONE 2026-06-28 (M-664 surface step): `consume <expr>` is an ACTIVE expression — the checker requires a `Substrate{tag}` operand (never-silent on any other type, G2); execution + single-use affinity are honestly STAGED (`Substrate` has no v0 value forms / no L0 lowering, so `consume` elaborates to a never-silent `Residual`; guarantee `Declared` — no value-level affine-usage tracker exists in v0). Inherent `impl T { fn … }` (no `for`) is ACTIVE — methods desugar at Phase 0 (alongside `object`) to top-level free functions (KC-3, zero kernel growth); the `for_ty` is organizational metadata in v0 (no qualified `T::m` call syntax). `derive` was already landed via M-812 (DN-54); `reveal` remains not-yet-lexed (residual). Conformance: accept fixture 25 added; reject fixture 18 renamed `18-consume-not-an-item.myc` (consume at item position is an expression, not an item). Lexicon + `mycelium.ebnf` (added the missing top-level `impl_item` + `consume_expr`) reconciled.
       RECONCILED 2026-06-27 (DN-38 §8.1): the generative-construct keyword is `derive`, NOT `grow`. DN-03 §1 originally adopted the themed `grow` (with a flagged "mild genericness" note) and §6 deferred the `grow`-vs-`derive` overlap "until generative features are specified"; DN-38 (Accepted 2026-06-26) specifies them and ratifies the conventional `derive` (over the coined `weave`), with `via` (delegation) and `reveal` (inspector) companions — see DN-03's 2026-06-27 changelog. This issue now tracks `consume`/`derive`/`impl`; `consume` (affine `Substrate` acquisition, LR-8) and `impl` (inherent method blocks) are unchanged.
       DN-03 §1 ratifies `consume` (acquire affine `Substrate` resource) and `impl` (inherent method blocks); DN-38 §8.1 ratifies `derive` (generative trait derivation) + `reveal` (inspector). None are in the lexer or parser. Note: `impl` reservation is a prerequisite of M-658 (the spec amendment); the lexer change for `impl` should land with M-658. This issue completes the constructs: (1) reserves `consume` and `derive` in `keyword()` (token.rs) — and decides whether the now-superseded `grow` is released or kept reserved-as-declined; (2) implements `consume <expr>` expression for affine substrate acquisition (paired with `Substrate{name}` type); (3) implements `derive <trait> for <type> { … }` as the generative trait-derivation surface (RFC-0020 §4.5 direction, observationally-equivalent + `reveal`-dumpable), plus the `reveal` inspector; (4) implements `impl <type> { fn … }` inherent-method block parsing and checking. Gated on traits (M-659) for the `derive` and `impl` constructs.
       Acceptance: `consume`, `derive`, `impl` are reserved keywords (never silent identifiers; reject-corpus entries added); `consume` elaborates to an affine move of a `Substrate` value (never copyable; LR-8); `derive Debug for MyType { … }` generates the declared trait impl (and `reveal` dumps the synthesized L1 term, S4); `impl MyType { fn to_bits(self: MyType) -> Binary{64} = … }` type-checks.
@@ -3195,9 +3197,10 @@ issues:
   - id: E11-1
     title: "E11-1 (epic) — Surface-language completeness & grammar ratification"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:epic, area:language, priority:P1, status:done]
     depends_on: [E7-1, E7-3]
     epic: E11
+    landed_basis: "status:done (2026-06-29, s10 kickoff archived) — all five surface tasks landed: M-704 (dynamic HOF closures, three-way) + M-705 (operator syntax, prior) + M-706 (RFC-0030 grammar gap-closure: top-level impl_item/consume_expr/lambda_expr) + M-707 (RFC-0020 §10 carve-out enactment) + M-708 (surface stabilization, prior). The Mycelium surface language is feature-complete for real programs + a self-hosted stdlib. Never-silent residuals flagged + forward-tracked (NOT blocking E11-1): partial application is tuple-gated (RFC-0024 §4A.8 → maintainer tuple-type decision); or-patterns (R20-Q3) + list/for bidirectional inference (R20-Q5) deferred (RFC-0020 §9); the derive-site consumption model is underdetermined (DN-54). RFC-0020 stays Accepted (scoped), RFC-0024/DN-54/DN-57 Accepted + impl notes (Enacted steps reserved per house rule #3)."
     doc_refs:
       - corpus:RFC-0025
       - corpus:RFC-0030
@@ -3250,15 +3253,18 @@ issues:
   - id: M-704
     title: "M-704 — Full higher-order functions: closures, partial application, dynamic fn-flow"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:ready]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [E7-3]
     epic: E11-1
+    landed_basis: "status:done (core; one flagged residual) — RFC-0024 §5 dynamic-HOF residuals CLOSED via the §4A full Reynolds construction (hof kickoff, 2026-06-29): closures (env capture), closure-capturing-closure, dynamic fn-flow (match arms + data fields), named-fn-as-value, and a capturing `map` combinator all elaborate + run THREE-WAY (Empirical) — tests/closures.rs + differential/std_iter. KC-3 holds: NO new L0 node (closure = L1Value::Data tag-sum + generated `apply` Match dispatcher, whole-program emit at mono finish(); zero mycelium-core change). EXPLAIN via MonoSelections::closure_iter()/ClosureSpecialization. FLAGGED RESIDUAL (never-silent G2): multi-arg lambdas / partial application are tuple-gated (RFC-0024 §4A.8 — v0 has no tuple/product type); a multi-param lambda is an explicit checker refusal. Completing it needs a maintainer TUPLE-TYPE decision — forward ref RFC-0024 §4A.8. RFC-0024 stays Accepted with an append-only impl note (NOT Enacted — full HOF incl. partial-app not yet landed; VR-5). Verified post-merge: cargo test -p mycelium-l1 green (0 failed); fmt+clippy clean. Merge resolved a stale-base conflict (leaf lacked M-664; union-merged + Consume arms added to 3 new traversal helpers)."
     doc_refs:
       - corpus:RFC-0024
       - corpus:DN-25
       - src:crates/mycelium-l1/src/mono.rs
+      - src:crates/mycelium-l1/tests/closures.rs
       - src:docs/spec/Surface-Stability-Declaration.md
     body: |
+      DONE 2026-06-29 (hof kickoff; core complete, multi-arg/partial-app a flagged tuple-gated residual): RFC-0024 §5 dynamic-HOF residuals closed via §4A Reynolds defunctionalization. Closures/capture/closure-capturing-closure/dynamic-fn-flow (match+data-field)/named-fn-as-value + a capturing `map` run three-way (Empirical; tests/closures.rs). KC-3: no new L0 node (closure = L1Value::Data tag-sum + generated `apply` Match dispatcher; zero mycelium-core change). EXPLAIN-able (MonoSelections::closure_iter). RESIDUAL (flagged, never-silent): multi-arg/partial-application is tuple-gated (RFC-0024 §4A.8) — needs a maintainer tuple-type decision; a multi-param lambda is an explicit refusal, not a silent accept. RFC-0024 left Accepted + append-only impl note (NOT Enacted; partial-app outstanding). cargo test -p mycelium-l1 green; fmt+clippy clean.
       RESIDUALS DOCUMENTED (2026-06-23, M-708 wave): the RFC-0024 §5 dynamic-HOF residuals are
       catalogued in `docs/spec/Surface-Stability-Declaration.md` §3.2 — every dynamic case (closures
       capturing an environment; dynamic fn-flow out of a match arm / data field / fn return; partial
@@ -3425,15 +3431,17 @@ issues:
   - id: M-706
     title: "M-706 — Concrete surface grammar / L3 ratification (RFC-0030)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:spec, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:spec, area:language, priority:P1, status:done]
     depends_on: [M-705, M-707, M-745]
     epic: E11-1
+    landed_basis: "status:done — RFC-0030 is Enacted (2026-06-27; mycelium.ebnf regenerated against RFC-0037, conformance corpus green). M-706 close (s10, 2026-06-29): the dependency gate cleared (M-705/M-745 done; M-707 enacted this session) and an EBNF-completeness audit closed three genuine gaps the parser accepted but the grammar omitted — the top-level `impl_item` (trait + inherent forms; M-664), `consume_expr` (M-664), and `lambda_expr` (defined but unreferenced in `expr`). `just drift-check` green; conformance accept/reject green."
     doc_refs:
       - corpus:RFC-0030
       - corpus:RFC-0006
       - corpus:DN-25
       - src:docs/spec/grammar/mycelium.ebnf
     body: |
+      DONE 2026-06-29 (M-706 close, s10): RFC-0030 is **Enacted** (since 2026-06-27 — Q8 = `wild {…}`; Q3 corrected/discharged via RFC-0018 + RFC-0012; `mycelium.ebnf` regenerated against RFC-0037; operator residue M-745/M-809 commissioned). The M-706 dependency gate (M-705 ✓, M-745 ✓, M-707 ✓ enacted this session) is now cleared. An EBNF-completeness audit against the parser closed three real gaps that "Enacted" had not caught: the top-level `impl_item` production was entirely MISSING from `item ::=` (added — trait + inherent forms, M-664), `consume_expr` was missing (added, M-664), and `lambda_expr` was defined but never referenced in `expr ::=` (added). `just drift-check` + conformance accept/reject green. Honest note (VR-5): or-patterns + the R20-Q5 relaxation stay deferred (RFC-0020 §9), so the surface grammar is "complete for the landed surface", not "frozen for all future surface".
       PARTIAL (2026-06-23): RFC-0030 advanced (stays Draft — full L3 ratification is GATED). Done
       this session: (1) the M-705 operator grammar is integrated into mycelium.ebnf (op_expr…
       unary_expr); (2) RFC-0030 §4.1 PROPOSES the RFC-0006 Q8 resolution = ratify `wild { … }` as the
@@ -3482,14 +3490,16 @@ issues:
   - id: M-707
     title: "M-707 — RFC-0020 L2 surface term language enactment"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [E7-1]
     epic: E11-1
+    landed_basis: "status:done — RFC-0020 carve-outs reconciled against the now-landed RFC-0018/RFC-0019/RFC-0001-r5 work (RFC-0020 §10 enactment update, 2026-06-29; append-only): §4.2 polymorphic instantiation ENACTED (type args inferred from call-site arg types — M-657/M-673), R20-Q1 RESOLVED (dictionary-free static monomorphization), R20-Q2 RESOLVED (grade inference = separate grade.rs pass, M-663), R20-Q4 ENACTED (FixGroup, M-343/M-391). §4.5 derive PARTIAL (surface+structural M-812; RHS-elab+KC-3 → M-812-cont). R20-Q3 (or-patterns) + R20-Q5 (list/for bidirectional) RE-DEFERRED (RFC-0020 §9). Grounded by tests/check.rs::rfc0020_* (Empirical). RFC-0020 stays Accepted (scoped) — full Enacted awaits §4.5 + or-pattern decision."
     doc_refs:
       - corpus:RFC-0020
       - corpus:DN-25
       - src:crates/mycelium-l1/src/checkty.rs
     body: |
+      DONE 2026-06-29 (M-707, s10): the RFC-0020 carve-outs are reconciled — most are now ENACTED by landed work (the carve-outs were deferred *pending* RFC-0018/RFC-0019/RFC-0001-r5, which have since landed), the rest explicitly RE-DEFERRED. §4.2 polymorphic instantiation: ENACTED (call-site type-arg inference, M-657/M-673; undetermined ⇒ never-silent error). R20-Q1: RESOLVED (dictionary-free static monomorphization interface). R20-Q2: RESOLVED (grade inference is a separate grade.rs pass, grades stay Declared; M-663). R20-Q4: ENACTED (mutual recursion → FixGroup, M-343/M-391; MutualRecursionDeferred retired). §4.5 derive: PARTIAL (surface+structural M-812; RHS-elaboration + KC-3 guard → M-812-cont). R20-Q3 (or-patterns), R20-Q5 (list-literal/for bidirectional inference): RE-DEFERRED to RFC-0020 §9 (never-silent, G2). Acceptance tests: tests/check.rs::rfc0020_4_2_polymorphic_instantiation_is_inferred_at_call_site + rfc0020_r20q4_mutual_recursion_elaborates_not_deferred. RFC-0020 §10 + meta changelog updated append-only; RFC-0020 stays Accepted (scoped).
       RE-DEFERRED (2026-06-23, surface-stabilization wave): the RFC-0020 carve-outs are NOT enacted
       this session and are explicitly re-deferred with this issue (M-707) as their forward ref —
       §4.2 (polymorphic-instantiation inference sugar), §4.5 (grow-derived trait forms), and
@@ -3985,11 +3995,13 @@ issues:
   - id: M-712
     title: "M-712 — feat(runtime): memory management & reclamation (RFC-0027) — reclaim model + lifetime guarantees, EXPLAIN-able"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:7, type:feature, area:execution, priority:P1, status:done]
     depends_on: [M-709]
     epic: E12-1
-    doc_refs: [corpus:RFC-0027, corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs]
+    landed_basis: "status:done — the M-712 DoD is met by landed work: (1) RFC-0027 Accepted (2026-06-25, gate); (2) the L1 `reclaim` construct ELABORATES to the runtime reclamation/supervision path with an EXPLAIN trail — `mycelium_l1::elaborate_reclaim` (elab.rs) feeds `mycelium_mlir::run_reclaim` → `mycelium-std-runtime::supervise_with_restart`, the bounded restart cascade + `SupervisionRecord` EXPLAIN landed via M-817 (DN-58 §B → Enacted); (3) the reclamation mechanism (RcCell + ReclamationRecord/EXPLAIN sink, region/scope_region sweep-ordered teardown) is landed + green in mycelium-std-runtime. The M-667 L1 surface this previously awaited landed (r4v); M-710/M-817 wired execution. Verified: `tests/differential.rs::reclaim_sequential_reference_runs_three_way` + `::reclaim_real_supervision_driver_dispatches_with_explain` pass. NOTE: the adjacent routed M-677 (declared-effect → interp budget ledger + per-effect `retry(<=3)` SURFACE syntax) is a SEPARATE, still-partial item — the budget *mechanism* exists (`mycelium-interp/src/budget.rs`) but the per-effect surface syntax is not yet parsed; it is NOT part of this M-712 DoD."
+    doc_refs: [corpus:RFC-0027, corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-std-runtime/src/lib.rs, src:crates/mycelium-l1/src/elab.rs]
     body: |
+      DONE 2026-06-29 (r10, status reconciliation): the L1 `reclaim`→runtime elaboration gate (the remaining M-712 gate per the r10 kickoff) is MET. `elaborate_reclaim` (elab.rs) lowers `reclaim(policy) { body }` to its sequential reference AND feeds the real RT7 supervision driver `mycelium_mlir::run_reclaim` (bounded restart cascade + `SupervisionRecord` EXPLAIN trail), dispatching to `mycelium-std-runtime::supervise_with_restart` — landed via M-817 (closes M-710; DN-58 §B → Enacted). Reclamation mechanism (RcCell + ReclamationRecord/EXPLAIN, region sweep-ordered teardown) landed + green in mycelium-std-runtime. Three-way reclaim differential tests pass. Honest scope (VR-5): the adjacent M-677 (effect→budget surface syntax `retry(<=3)`) is a SEPARATE partial item — mechanism exists (budget.rs), surface syntax not yet wired; flagged on M-677, not closed here.
       Implement the runtime memory management and reclamation model as specified by RFC-0027
       (once Accepted). The reclaim surface construct (reserved in ADR-020) must elaborate to
       a real runtime path: EXPLAIN records for reclamation events, cascade respects RFC-0008
@@ -6892,10 +6904,10 @@ issues:
   - id: M-812-cont
     title: "M-812-cont -- DN-54 derive elaboration + KC-3 kernel-growth guard + IL-grammar RHS check (the load-bearing safety)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:impl, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:impl, area:language, priority:P2, status:done]
     epic: E7-1
     depends_on: [M-812]
-    landed_basis: "TODO -- the deferred completion of M-812. M-812 landed the lower/derive SURFACE + STRUCTURAL checks; this issue lands the parts that only become meaningful once derive actually elaborates to L0. Until then, derive is an honest never-silent residual (emits no L0; pinned by mycelium-l1 src/tests/checkty.rs::lower_derive_items_add_no_l0_to_an_unrelated_entry). DN-54 stays Implemented (Rust-first, surface+structural), NOT Enacted, until this lands + the §7 harness exists."
+    landed_basis: "status:done (core; consumption-model residual flagged) — DN-54 §4.1/§4.2/§4.6/§6/§7 landed (lwd kickoff, 2026-06-29): (1) RHS elaboration to L0 — `elab::elaborate_lower_rule` reads Env::lower_rules and lowers a rule RHS through the SAME path a hand-written nullary fn body takes (Empirical, via the §7 differential + M-210 check_core); (2) §4.1 IL-grammar RHS type-check (`check_lower_rule_rhs_type`, Declared); (3) §4.6 purity — `wild` refused in a rule RHS even in @std-sys (Declared); (4) §4.2 cross-rule acyclicity (`check_lower_rule_acyclicity`, iterative DFS; self+mutual cycles refused, Declared); (5) §6 KC-3 kernel-growth guard — GENUINELY SOUND (Proven-by-construction, narrow checked sense: the elaborator returns the closed `mycelium_core::Node` enum, so a rule cannot construct a variant outside the frozen L0 grammar; host-op growth closed by §4.6; non-vacuously confirmed by Node::is_aot_lowerable over the frozen node set). §7 harness `tests/lower_derive.rs` (5 tests: structural identity, run-value differential, KC-3-in-fragment, hygiene, round-trip) REPLACES the two no-L0 residual guard tests. Also fixed a latent bug: lowercase true/false are NOT L1 names (prelude is True/False) — the new §4.1 check correctly rejects them; fixtures corrected. Verified: cargo test -p mycelium-l1 671 passed/0 failed; fmt+clippy clean. FLAGGED RESIDUAL (architecturally significant, never-silent): DN-54 underdetermines the `derive`-SITE consumption/attachment model + parametric instantiation — landed the nullary/monomorphic elaboration, left the consumption model for maintainer ratification. DN-54 stays Accepted + append-only impl note (NOT Enacted — the consumption model is outstanding; house rule #3)."
     doc_refs:
       - src:docs/notes/DN-54-User-Extensible-Generative-Lowering-Surface.md
       - src:crates/mycelium-l1/src/elab.rs
@@ -7012,9 +7024,10 @@ issues:
   - id: M-818
     title: "M-818 -- Enforce mandatory ; component terminator in the L1 parser (DN-57 enactment)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E24-1
     depends_on: []
+    landed_basis: "status:done (strm kickoff, 2026-06-29) — `;` is the MANDATORY component terminator: required after the nodule header + every top-level item + trait sig + impl/inherent/object method (uniform `}` interaction — a block still takes the trailing `;`; the terminator adds no AST node). Missing terminator = never-silent ParseError naming the component (G2); whitespace-free source parses. parse.rs `expect_terminator` + nodule-header terminator; mycfmt emits `;`; mycelium.ebnf updated; DN-57 §3 settled append-only. Verified: `just check` test gate green (nextest 1639 passed/0 failed; pytest 12) + `cargo test -p mycelium-l1 -p mycelium-fmt -p mycelium-cli -p mycelium-lsp` 39 binaries/0 failed; clippy+format+grammar(25 accept/29 reject)+myc-* green. (Bundled the M-821 corpus migration — see M-821.) DN-57 recorded implemented (Rust-first), NOT Enacted — the M-819/M-820 flatten/stream tooling is separate (house rule #3). Also fixed pre-existing breakage this surfaced: mycelium-fmt non-exhaustive Item::InherentImpl/Expr::Consume arms (M-664 was l1-only-verified) + a stale ambient.rs ternary printer."
     doc_refs:
       - corpus:DN-57
       - src:crates/mycelium-l1/src/parse.rs
@@ -7052,9 +7065,10 @@ issues:
   - id: M-821
     title: "M-821 -- Corpus migration to mandatory ; + DN-57 -> Enacted"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:language, priority:P2, status:done]
     epic: E24-1
     depends_on: [M-818]
+    landed_basis: "status:done (migration bundled with M-818, strm kickoff 2026-06-29) — the workspace-wide corpus migration to mandatory `;` landed alongside the parser change: 25 accept + 24 reject conformance fixtures (+ new reject/29-missing-semicolon-terminator) + lib/std/** + examples + ~565 in-test program strings across mycelium-l1/-fmt/-cli/-lsp/-doc/-check/-bench + experiments. NOTE on the title's '+ DN-57 -> Enacted': NOT done here — DN-57 stays Accepted + impl note (the M-819 `mycfmt --flatten` / M-820 `myc --stream` streaming tooling remains separate; the Accepted->Enacted step-through is the maintainer's once the full DN-57 vision lands — house rule #3). The migration half of M-821 is complete; the Enacted-flip half is gated on M-819/M-820."
     doc_refs:
       - corpus:DN-57
     body: |

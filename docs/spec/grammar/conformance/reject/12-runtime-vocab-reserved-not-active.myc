@@ -5,5 +5,5 @@
 // forage, backbone) are reserved the same way (see unit tests).
 // ('hypha'/'colony' LEFT this reserved set with M-666; 'fuse'/'reclaim'/'tier' LEFT with M-667
 // / DN-58 — they are now active constructs. See accept/24-fuse-reclaim-tier.myc.)
-nodule demo
+nodule demo;
 mesh worker

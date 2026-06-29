@@ -214,7 +214,7 @@ mod tests {
 
     #[test]
     fn a_clean_nodule_has_no_diagnostics() {
-        let src = "nodule d\nfn main() => Binary{8} = not(0b1011_0010)";
+        let src = "nodule d;\nfn main() => Binary{8} = not(0b1011_0010);";
         assert!(source_diagnostics(src).is_empty());
     }
 
@@ -233,7 +233,7 @@ mod tests {
     #[test]
     fn a_type_error_is_located_at_its_function_with_a_breadcrumb() {
         // `add` over Binary is a type error (it expects Ternary) — a check diagnostic at `fn bad`.
-        let src = "nodule d\nfn bad() => Binary{8} = add(0b0000_0001, 0b0000_0010)";
+        let src = "nodule d;\nfn bad() => Binary{8} = add(0b0000_0001, 0b0000_0010);";
         let diags = source_diagnostics(src);
         assert_eq!(diags.len(), 1);
         assert_eq!(diags[0]["code"], "check");
@@ -246,10 +246,10 @@ mod tests {
     fn the_store_tracks_open_and_closed_documents() {
         let mut store = DocumentStore::new();
         assert!(store.is_empty());
-        store.set("mem://a", "nodule d");
-        assert_eq!(store.text("mem://a"), Some("nodule d"));
-        store.set("mem://a", "nodule d2"); // didChange replaces (full sync)
-        assert_eq!(store.text("mem://a"), Some("nodule d2"));
+        store.set("mem://a", "nodule d;");
+        assert_eq!(store.text("mem://a"), Some("nodule d;"));
+        store.set("mem://a", "nodule d2;"); // didChange replaces (full sync)
+        assert_eq!(store.text("mem://a"), Some("nodule d2;"));
         store.remove("mem://a");
         assert!(store.is_empty());
     }
@@ -288,10 +288,10 @@ mod tests {
         // The guard changes nothing on the normal paths: a clean nodule still yields no diagnostics,
         // and a type error still yields the same `check` diagnostic as the unguarded analysis.
         assert!(resilient_source_diagnostics(
-            "nodule d\nfn main() => Binary{8} = not(0b1011_0010)"
+            "nodule d;\nfn main() => Binary{8} = not(0b1011_0010);"
         )
         .is_empty());
-        let bad = "nodule d\nfn bad() => Binary{8} = add(0b0000_0001, 0b0000_0010)";
+        let bad = "nodule d;\nfn bad() => Binary{8} = add(0b0000_0001, 0b0000_0010);";
         assert_eq!(resilient_source_diagnostics(bad), source_diagnostics(bad));
     }
 
@@ -299,7 +299,7 @@ mod tests {
     fn publish_for_source_has_the_lsp_notification_shape() {
         let note = publish_for_source(
             "mem://demo",
-            "nodule d\nfn main() => Binary{8} = 0b0000_0000",
+            "nodule d;\nfn main() => Binary{8} = 0b0000_0000;",
         );
         assert_eq!(note["method"], "textDocument/publishDiagnostics");
         assert_eq!(note["params"]["uri"], "mem://demo");

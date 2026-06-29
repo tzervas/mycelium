@@ -13,8 +13,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ambient::AmbientError;
 use crate::ast::{
     Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
-    Nodule, ObjectDecl, Paradigm, Path, Pattern, Phylum, Scalar, Strength, TraitRef, TypeDecl,
-    TypeRef, UsePath, WidthRef,
+    Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Phylum, Scalar, Strength, TraitRef,
+    TypeDecl, TypeRef, UsePath, WidthRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -794,7 +794,11 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
     let mut via_objects_per_nodule: Vec<Vec<ObjectDecl>> = Vec::with_capacity(resolved.len());
     let mut resolved_expanded: Vec<Nodule> = Vec::with_capacity(resolved.len());
     for n in resolved {
-        if !n.items.iter().any(|i| matches!(i, Item::Object(_))) {
+        if !n
+            .items
+            .iter()
+            .any(|i| matches!(i, Item::Object(_) | Item::InherentImpl(_)))
+        {
             via_objects_per_nodule.push(vec![]);
             resolved_expanded.push(n);
             continue;
@@ -802,13 +806,39 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
         let mut items = Vec::with_capacity(n.items.len());
         let mut via_objs: Vec<ObjectDecl> = Vec::new();
         for item in n.items {
-            if let Item::Object(od) = item {
-                if !od.via_decls.is_empty() {
-                    via_objs.push(od.clone());
+            match item {
+                Item::Object(od) => {
+                    if !od.via_decls.is_empty() {
+                        via_objs.push(od.clone());
+                    }
+                    items.extend(desugar_object_structural(&od));
                 }
-                items.extend(desugar_object_structural(&od));
-            } else {
-                items.push(item);
+                // M-664: an inherent `impl T { fn … }` block lowers to its methods as top-level
+                // `Item::Fn`s, lifted verbatim — methods are ordinary explicitly-typed free
+                // functions (the `object` inherent-`fn` model; KC-3 — zero kernel growth). The
+                // `for_ty` is organizational metadata in v0 (no qualified `T::m` call syntax yet —
+                // `check_path` refuses multi-segment paths), so the association is advisory; a
+                // name collision with another top-level fn is caught by the duplicate-fn check (G2).
+                //
+                // KNOWN GAP (intentional in v0, never-silent by documentation): `for_ty` is **not**
+                // validated to resolve to a known type here, so `impl NoSuchType { … }` is accepted
+                // (the unknown head is dropped, the methods still check). This is a deliberate scope
+                // boundary, not an oversight: at this Phase-0 desugar the type registries do **not**
+                // yet exist (`register_nodule_decls`, pass 2, runs *after* this loop — see below), so
+                // resolving `for_ty` would require either a separate type-name pre-pass or deferring
+                // the entire impl desugar past registration — both larger than the v0 payoff while
+                // `for_ty` carries no semantic weight (it is unreachable: no `T::m` call form binds to
+                // it). The accepted consequence: an unknown `for_ty` is a no-op, not a refusal. When a
+                // qualified-call surface lands (`T::m`), `for_ty` becomes load-bearing and MUST be
+                // resolved against the (then-available) registry — at that point this becomes a real
+                // never-silent gap to close (G2). Behaviour pinned by
+                // `inherent_impl_on_an_unknown_for_ty_is_accepted_in_v0` (tests/check.rs).
+                Item::InherentImpl(id) => {
+                    for m in id.methods {
+                        items.push(Item::Fn(m));
+                    }
+                }
+                other => items.push(other),
             }
         }
         via_objects_per_nodule.push(via_objs);
@@ -1531,36 +1561,64 @@ fn check_nodule_with(
         }
     }
 
-    // Pass 3e: **lower-rule validation** (DN-54 §4 / M-812). For each `lower Name[params] = <rhs>`
-    // declaration, validate the RHS:
-    //   (1) IL-grammar check: the RHS must type-check as an L1 expression under a typing context
-    //       that maps each param name to a fresh type variable (the rule is parametric).
-    //   (2) KC-3 (never grows the kernel): the RHS must reduce to EXISTING L0 nodes only — any
-    //       attempt to introduce a new L0 node (or reference one that does not yet exist) is an
-    //       explicit `CheckError` (G2).
-    //   (3) Acyclicity: at this stage we enforce name uniqueness (no two `lower` rules share a
-    //       name in the same nodule); full cross-rule acyclicity enforcement is deferred to a
-    //       later elaboration-time pass (the rule graph is built at elaborate time).
-    //   For a `derive Name for T` declaration, the name must resolve to a registered `lower` rule;
-    //   the type argument is validated against the rule's parameter arity.
+    // Pass 3e: **lower-rule validation** (DN-54 §4/§6 / M-812-cont). For each
+    // `lower Name[params] = <rhs>` declaration, validate the RHS:
+    //   (1) **Structural** (§3): rule-name uniqueness + param-name uniqueness (never-silent, G2).
+    //   (2) **§4.1 IL-grammar RHS type-check**: the RHS must type-check as an L1 expression under a
+    //       typing context that binds each param name as an abstract type variable ([`Ty::Var`]) —
+    //       the rule is parametric. An ill-typed / ill-formed RHS is refused at definition time, so
+    //       no `derive` site can invoke a rule that would produce broken L0.
+    //   (3) **§4.6 purity**: the RHS may not contain a `wild { … }` block — a generative-lowering
+    //       rule is a *pure compile-time* mechanism; the FFI gate does not vanish under a `derive`.
+    //   (4) **§6 KC-3 (kernel-growth)**: enforced **by construction** (see [`check_lower_decl`] and
+    //       [`crate::elab::elaborate_lower_rule`]): the L0 kernel node set is a *closed* Rust enum
+    //       ([`mycelium_core::Node`]), so the elaborator can only ever produce one of the frozen
+    //       variants — a `lower` rule **cannot** add a kernel node. The §4.6 `wild`-refusal in (3)
+    //       is the one *surface* growth a rule could smuggle in (a host op), so refusing it is the
+    //       substantive KC-3 surface check.
+    // For a `derive Name for T` declaration, the name must resolve to a registered `lower` rule, and
+    // the type argument is checked against the rule's parameter arity (DN-54 §4).
     //
-    // v0 implementation (guarantee: `Declared`): we register the rules and perform arity /
-    // uniqueness checks now; the IL-grammar type-check of the RHS (a full structural walk) and the
-    // KC-3 kernel-growth guard are elaborated at [`crate::elab`] time over the concrete RHS — this
-    // is the stage-1 discipline (structure-only checks now, evaluation at elaborate). The declared
-    // guarantee is honest: this is not a full theorem, and the tag reflects that (VR-5).
+    // Acyclicity (§4.2) is enforced once over the whole rule set after registration (a cyclic rule
+    // set would diverge the elaboration pipeline) — see [`check_lower_rule_acyclicity`].
+    //
+    // Guarantee posture (VR-5, honest): the RHS type-check (2) and the `wild`-refusal (3) are
+    // `Declared` (structural checks against the IL grammar, not theorems). The KC-3 guard (4) is
+    // `Proven`-by-construction *only* in the narrow, checked sense above (the frozen-enum codomain of
+    // the elaborator) — it is not a proof that an arbitrary RHS elaborates, only that **if** it
+    // elaborates, it adds no kernel node (which is exactly KC-3). The elaboration itself
+    // ([`crate::elab::elaborate_lower_rule`]) is `Empirical` (its observational identity is earned by
+    // the §7 differential, never self-attested).
+    // Ordering is load-bearing (G2 — the most structural refusal wins so the diagnostic is precise):
+    //   (a) **structural** per-rule checks (uniqueness, param-uniqueness, §4.6 `wild`-refusal) +
+    //       register the rule, and resolve each `derive`'s rule-name + target type;
+    //   (b) **§4.2 acyclicity** over the *whole* registered set — a cyclic rule set is a structural
+    //       error regardless of whether a rule-reference is type-valid (a bare path to another rule
+    //       name is the cycle edge; it would *also* fail the §4.1 type-check as an unresolved name,
+    //       but the cycle is the more specific, more useful diagnostic, so it runs first);
+    //   (c) **§4.1 IL-grammar RHS type-check** of each rule, last (an acyclic, structurally-valid
+    //       rule whose RHS is nonetheless ill-typed is refused here).
     let mut lower_rules: BTreeMap<String, LowerDecl> = BTreeMap::new();
     for item in &nodule.items {
         match item {
             Item::Lower(ld) => {
-                check_lower_decl(ld, &lower_rules)?;
+                check_lower_decl_structural(ld, &lower_rules)?;
                 lower_rules.insert(ld.name.clone(), ld.clone());
             }
             Item::Derive(dd) => {
-                check_derive_application(dd, &lower_rules)?;
+                check_derive_application(dd, &lower_rules, &types)?;
             }
             _ => {}
         }
+    }
+    // (b) §4.2 cross-rule acyclicity — reject a `lower` rule set whose rules (transitively) reference
+    // one another in a cycle (mutual recursion among rules), which would diverge the elaboration
+    // pipeline. Over the full set, so a forward reference is seen.
+    check_lower_rule_acyclicity(&lower_rules, &types, &fns)?;
+    // (c) §4.1 IL-grammar RHS type-check of each rule (after acyclicity, so a cyclic set reports the
+    // cycle, not an "unknown name" for the cycle edge).
+    for ld in lower_rules.values() {
+        check_lower_rule_rhs_type(ld, &types, &fns, &traits, &instances, imports)?;
     }
 
     // Pass 3c: **effect coverage** (RFC-0014 §3.4/§4.5 I3; M-660 — guarantee: `Declared`, a
@@ -1619,22 +1677,19 @@ fn check_nodule_with(
     })
 }
 
-// ---- lower / derive validation (DN-54 / M-812) ----
+// ---- lower / derive validation (DN-54 §4/§6 / M-812-cont) ----
 
-/// Validate a `lower Name[params] = <rhs>` declaration (DN-54 §4 / M-812).
+/// **Structural** validation of a `lower Name[params] = <rhs>` declaration (DN-54 §3/§4.6 /
+/// M-812-cont) — the part that does **not** need the full typing context. Run in the registration
+/// loop *before* acyclicity (§4.2) and the §4.1 RHS type-check (which run over the whole set).
 ///
-/// **Guarantee: `Declared`** (structural check; the full IL-grammar RHS type-check and KC-3
-/// kernel-growth guard are enforced at elaboration time over the concrete RHS — this is the
-/// honest stage-1 declaration, not a theorem, per VR-5).
-///
-/// Checks:
-/// - **Uniqueness**: the rule `name` must not already be registered in `lower_rules` — duplicate
-///   `lower` rules in the same nodule are an explicit error (never silent, G2).
+/// **Guarantee: `Declared`** (structural checks, not theorems). Checks (all never-silent, G2):
+/// - **Uniqueness**: the rule `name` must not already be registered.
 /// - **Parameter uniqueness**: duplicate param names in `[…]` are refused.
-///
-/// The RHS expression is *not* type-checked here (that requires the full typing environment with
-/// the param names bound as type variables — deferred to [`crate::elab`] at elaborate time).
-fn check_lower_decl(
+/// - **§4.6 purity**: the RHS contains no `wild { … }` block — a generative lowering is a *pure*
+///   compile-time mechanism (the FFI gate is level-independent — DN-38 §3), refused structurally so
+///   the refusal holds even in an `@std-sys` nodule (where the ordinary `wild` gate would accept it).
+fn check_lower_decl_structural(
     ld: &LowerDecl,
     lower_rules: &BTreeMap<String, LowerDecl>,
 ) -> Result<(), CheckError> {
@@ -1660,21 +1715,94 @@ fn check_lower_decl(
             ),
         ));
     }
+    // (3) §4.6 purity — a `lower` rule's RHS must be a pure compile-time term; a `wild { … }` block
+    // (the audited FFI floor — LR-9/S6) is refused **structurally** here so the diagnostic names
+    // DN-54 §4.6 precisely (and so the refusal holds even in an `@std-sys` nodule). Never-silent (G2).
+    if rhs_contains_wild(&ld.rhs).is_some() {
+        return Err(CheckError::new(
+            &ld.name,
+            format!(
+                "`lower {}`'s RHS contains a `wild {{ … }}` block — a generative-lowering rule is a \
+                 pure compile-time mechanism and may not perform host/FFI calls (DN-54 §4.6 / \
+                 §3.3; the `wild` gate is level-independent — DN-38 §3; never silent, G2)",
+                ld.name
+            ),
+        ));
+    }
     Ok(())
 }
 
-/// Validate a `derive Name for T` use-site application (DN-54 / M-812 / DN-38 §8.1).
+/// **§4.1 IL-grammar RHS type-check** of a registered `lower` rule (DN-54 §4.1 / M-812-cont). The
+/// RHS must type-check as an L1 expression with the rule's type parameters in scope as abstract
+/// type-variables (the rule is parametric over the type it is derived for). An ill-typed / ill-formed
+/// RHS is an explicit refusal at definition time — so no `derive` site can invoke a rule that would
+/// produce broken L0. Run over the whole rule set *after* §4.2 acyclicity (so a cyclic set reports
+/// the cycle, not an "unknown name" for the cycle's rule-reference edge).
 ///
-/// **Guarantee: `Declared`** (name-resolution check only; the RHS instantiation + IL-grammar
-/// check run at elaboration time — VR-5).
+/// **Guarantee: `Declared`** (a structural type/grammar check, not a theorem — VR-5). The RHS has no
+/// value parameters in v0 (`lower Name[T] = <expr>`), so the value scope is empty; the params are the
+/// *type* scope. No expected type is pinned (a rule may lower to any well-typed term) — pure
+/// inference. The `@std-sys` gate is held **closed**: a `lower` rule is never an FFI escape (the
+/// §4.6 structural check already refused any `wild`; this is defense in depth).
+fn check_lower_rule_rhs_type(
+    ld: &LowerDecl,
+    types: &BTreeMap<String, DataInfo>,
+    fns: &BTreeMap<String, FnDecl>,
+    traits: &BTreeMap<String, TraitInfo>,
+    instances: &BTreeMap<(String, String), InstanceInfo>,
+    imports: &NoduleImports,
+) -> Result<(), CheckError> {
+    let cx = Cx {
+        site: &ld.name,
+        types,
+        fns,
+        traits,
+        instances,
+        imports,
+        tyvars: &ld.params,
+        bounds: &[],
+        std_sys: false,
+        depth: Cell::new(0),
+    };
+    let mut scope: Vec<(String, Ty)> = Vec::new();
+    cx.infer(&mut scope, &ld.rhs).map_err(|e| {
+        CheckError::new(
+            &ld.name,
+            format!(
+                "`lower {}`'s RHS fails the IL-grammar / type check (DN-54 §4.1): {}",
+                ld.name, e.message
+            ),
+        )
+    })?;
+    Ok(())
+}
+
+/// Does the expression tree contain a `wild { … }` block anywhere? (DN-54 §4.6 — a `lower` rule's
+/// RHS must be pure.) Returns `Some(())` at the first `wild` found, else `None`. Uses the shared
+/// stateless [`crate::totality::walk_expr`] traversal (DRY — same tree walk every pass uses).
+fn rhs_contains_wild(rhs: &Expr) -> Option<()> {
+    let mut found = false;
+    crate::totality::walk_expr(rhs, &mut |x| {
+        if matches!(x, Expr::Wild(_)) {
+            found = true;
+        }
+    });
+    found.then_some(())
+}
+
+/// Validate a `derive Name for T` use-site application (DN-54 §4 / M-812 / DN-38 §8.1).
 ///
-/// Checks:
+/// **Guarantee: `Declared`** (name-resolution + target-type + arity checks; the RHS instantiation
+/// + elaboration run at elaboration time, `Empirical` — VR-5).
+///
+/// Checks (all never-silent, G2):
 /// - **Rule resolution**: `Name` must resolve to a registered `lower` rule in `lower_rules`
-///   (computed in the same Pass 3e loop, earlier declarations are already registered).
-///   A `derive` referencing an unknown rule name is an explicit error (never silent, G2).
+///   (earlier declarations in the same Pass 3e loop are already registered).
+/// - **Target type well-formedness**: `for_ty` must resolve to a real type (DN-54 §4).
 fn check_derive_application(
     dd: &DeriveDecl,
     lower_rules: &BTreeMap<String, LowerDecl>,
+    types: &BTreeMap<String, DataInfo>,
 ) -> Result<(), CheckError> {
     if !lower_rules.contains_key(&dd.name) {
         return Err(CheckError::new(
@@ -1686,6 +1814,122 @@ fn check_derive_application(
                 dd.name, dd.name
             ),
         ));
+    }
+    // The target type must be a real, well-formed type (a `derive Foo for NoSuchType` is a
+    // never-silent refusal — G2). No type-vars are in scope at a `derive` use site (it names a
+    // concrete target).
+    resolve_ty(&dd.name, types, &[], &dd.for_ty)?;
+    Ok(())
+}
+
+/// **§4.2 cross-rule acyclicity** (DN-54 §4.2 / M-812-cont). Reject a `lower` rule set in which the
+/// rules' RHSs reference one another in a cycle (mutual recursion among rules), which would diverge
+/// the elaboration pipeline (the lowering passes must stay a DAG — RFC-0006/DN-38 §2). A rule's
+/// edges are the names it references in its RHS **that are themselves rule names** (a conservative
+/// superset over the single-segment paths in the RHS — the same edge set [`crate::elab`] would
+/// expand). A strongly-connected component of size > 1, or a direct self-reference, is a cycle and
+/// is refused with a never-silent diagnostic naming a rule on the cycle (G2). Guarantee: `Declared`
+/// (a structural acyclicity check, not a theorem).
+fn check_lower_rule_acyclicity(
+    lower_rules: &BTreeMap<String, LowerDecl>,
+    types: &BTreeMap<String, DataInfo>,
+    fns: &BTreeMap<String, FnDecl>,
+) -> Result<(), CheckError> {
+    // A single-segment path is a **rule-reference edge** only if it names a `lower` rule AND does not
+    // *also* resolve as a constructor or a top-level fn. Without this guard a rule that shares a name
+    // with a ctor/fn used in another rule's RHS would manufacture a spurious edge → a false-positive
+    // cycle that rejects a *valid* program (a niche naming coincidence). A ctor/fn occurrence is an
+    // ordinary value reference, never a rule expansion, so it is not an edge. (Safe both ways: this
+    // *narrows* the edge set to true rule-refs — it never drops a real rule→rule edge, since a name
+    // that is a genuine rule reference is, by §4.1 RHS type-check, not a ctor/fn of the same spelling.)
+    let is_ctor = |name: &str| -> bool {
+        types
+            .values()
+            .any(|d| d.ctors.iter().any(|c| c.name == name))
+    };
+    let is_rule_edge = |name: &str| -> bool {
+        lower_rules.contains_key(name) && !fns.contains_key(name) && !is_ctor(name)
+    };
+    // Edges: rule → the set of *other rule names* its RHS references (single-segment paths). Sorted
+    // (BTreeSet) for a deterministic cycle report.
+    let edges: BTreeMap<&str, BTreeSet<String>> = lower_rules
+        .iter()
+        .map(|(name, ld)| {
+            let mut refs = BTreeSet::new();
+            crate::totality::walk_expr(&ld.rhs, &mut |x| {
+                if let Expr::Path(p) = x {
+                    if p.0.len() == 1 && is_rule_edge(&p.0[0]) {
+                        refs.insert(p.0[0].clone());
+                    }
+                }
+            });
+            (name.as_str(), refs)
+        })
+        .collect();
+
+    // A direct self-reference is the trivial cycle.
+    for (name, refs) in &edges {
+        if refs.contains(*name) {
+            return Err(CheckError::new(
+                name,
+                format!(
+                    "`lower {name}` references itself — a `lower` rule may not be (mutually) \
+                     recursive (DN-54 §4.2: the lowering-rule graph must be acyclic so `derive` \
+                     terminates; use `Fix` for user-level recursion *inside* the RHS instead). \
+                     Never silent (G2)."
+                ),
+            ));
+        }
+    }
+
+    // Iterative DFS cycle detection (color marking) — no host-stack recursion (A4-02 discipline:
+    // the rule graph is small, but we stay iterative so a pathological set cannot overflow). A grey
+    // node re-encountered on the current path closes a cycle.
+    #[derive(Clone, Copy, PartialEq)]
+    enum Color {
+        White,
+        Grey,
+        Black,
+    }
+    let mut color: BTreeMap<&str, Color> = edges.keys().map(|k| (*k, Color::White)).collect();
+    // The DFS frame: the node and an iterator position into its (sorted) successors.
+    for &root in edges.keys() {
+        if color[root] != Color::White {
+            continue;
+        }
+        // Stack of (node, successor-index).
+        let mut stack: Vec<(&str, usize)> = vec![(root, 0)];
+        color.insert(root, Color::Grey);
+        while let Some(&(node, idx)) = stack.last() {
+            let succs: Vec<&str> = edges[node].iter().map(String::as_str).collect();
+            if idx < succs.len() {
+                stack.last_mut().expect("non-empty").1 += 1;
+                let next = succs[idx];
+                match color[next] {
+                    Color::White => {
+                        color.insert(next, Color::Grey);
+                        stack.push((next, 0));
+                    }
+                    Color::Grey => {
+                        // `next` is on the current DFS path ⇒ a cycle through it.
+                        return Err(CheckError::new(
+                            next,
+                            format!(
+                                "`lower` rules form a cycle through `{next}` — mutually-recursive \
+                                 lowering rules are refused (DN-54 §4.2: the lowering-rule graph \
+                                 must be acyclic so `derive` terminates). Break the cycle, or use \
+                                 `Fix` for user-level recursion *inside* a rule's RHS. Never \
+                                 silent (G2)."
+                            ),
+                        ));
+                    }
+                    Color::Black => {}
+                }
+            } else {
+                color.insert(node, Color::Black);
+                stack.pop();
+            }
+        }
     }
     Ok(())
 }
@@ -2485,11 +2729,17 @@ impl Cx<'_> {
             Expr::Spore(_) => {
                 self.err("`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)")
             }
+            // DN-03 §1 / M-664: `consume <expr>` — affine acquisition of a `Substrate` value (LR-8).
+            Expr::Consume(operand) => self.check_consume(scope, operand, expected),
             Expr::Colony(hyphae) => self.check_colony(scope, hyphae, expected),
-            Expr::Lambda { .. } => self.err(
-                "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 — the surface parses \
-                 (RFC-0037 D5) but does not yet type-check (never a silent accept, G2)",
-            ),
+            // RFC-0024 §4A (M-704): a `lambda(p: A) => body` checks to `Ty::Fn(A, B)` where
+            // `B = infer(body)` under `scope ∪ {p: A}`. The closure's *capture set* (free variables
+            // of the body, bound in the enclosing scope) is implicit here — it is computed and lowered
+            // by monomorphization (`mono.rs`), which reuses this same re-inference. No new `Ty` variant
+            // (the closure struct is an ordinary `Ty::Data` after lowering — §4A.6). Single-argument
+            // only in stage-1; a multi-argument lambda needs the tuple-type prerequisite (§4A.8) and is
+            // a never-silent refusal (FLAG, never a silent accept — G2).
+            Expr::Lambda { params, body } => self.check_lambda(scope, params, body, expected),
             Expr::WithParadigm { .. } => self.err(
                 "internal: a `with paradigm` block reached the checker — the ambient resolution \
                  pass should have stripped it (RFC-0012 §4.4)",
@@ -2501,6 +2751,44 @@ impl Cx<'_> {
             // DN-58 §B (M-667): `reclaim(policy) { body }` — supervised scope.
             Expr::Reclaim { policy, body } => self.check_reclaim(scope, policy, body, expected),
         }
+    }
+
+    /// `consume <expr>` (DN-03 §1 / LR-8 / M-664) — affine acquisition of a `Substrate` value. The
+    /// operand must have a `Substrate{tag}` type; any other operand type is an explicit refusal
+    /// (never silent — G2). The result is the moved substrate (`Substrate{tag}`), now exclusively
+    /// owned by the consumer.
+    ///
+    /// Guarantee `Declared` (recorded in [`crate::grade`]): v0 has **no value-level affine-usage
+    /// tracker** (only pattern-binder linearity — `check_linear`), so the *single-use* property of
+    /// `consume` is asserted by the construct, not yet checked. The type rule itself is exact — only
+    /// a `Substrate` operand is admitted — so this is honest: the type discipline is checked, the
+    /// affinity is staged.
+    fn check_consume(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        operand: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        let (oty, oexpr) = self.check(scope, operand, None)?;
+        let Ty::Substrate(tag) = &oty else {
+            return self.err(format!(
+                "`consume` requires an affine `Substrate{{…}}` operand (DN-03 §1 / LR-8), but its \
+                 operand has type `{oty}` — only a `Substrate` value can be consumed \
+                 (never silent — G2)"
+            ));
+        };
+        let ty = Ty::Substrate(tag.clone());
+        // Bidirectional contract: if a result type is expected, it must equal the moved substrate's
+        // type — a mismatch is an explicit refusal, never a silent coercion (G2).
+        if let Some(exp) = expected {
+            if exp != &ty {
+                return self.err(format!(
+                    "`consume` of `{ty}` yields `{ty}`, but the context expects `{exp}` \
+                     (never silent — G2)"
+                ));
+            }
+        }
+        Ok((ty, Expr::Consume(Box::new(oexpr))))
     }
 
     fn check_path(
@@ -2652,6 +2940,85 @@ impl Cx<'_> {
                 name: name.to_owned(),
                 ty: ty.cloned(),
                 bound: Box::new(bound2),
+                body: Box::new(body2),
+            },
+        ))
+    }
+
+    /// **Lambda / closure typing** (RFC-0024 §4A.6, M-704). A `lambda(p: A) => body` checks to
+    /// `Ty::Fn(A, B)` where `B = infer(body)` under `scope ∪ {p: A}`. The capture set (free variables
+    /// of `body` bound in the enclosing `scope`) is well-typed *by construction* — each free name is
+    /// looked up in `scope` during body checking, so an unbound free variable is a never-silent
+    /// `unknown name` refusal from `check_path` (G2), not a guess. The closure's *lowering* (the
+    /// tag-sum struct + the generated `apply` dispatcher) is performed by monomorphization (`mono.rs`),
+    /// which reuses this typing via re-inference (`infer_type`) — no new `Ty` variant here (the closure
+    /// struct is an ordinary `Ty::Data` post-mono; §4A.6).
+    ///
+    /// **Single-argument only in stage-1.** A zero- or multi-parameter lambda needs the tuple-type
+    /// prerequisite (§4A.8 — the v0 surface has no product type), so it is an **explicit refusal**
+    /// (FLAG: multi-arg/partial application is tuple-gated), never a silent accept (G2/VR-5).
+    ///
+    /// **Bidirectional.** When the context supplies an expected `Ty::Fn(ea, er)`, the written param
+    /// type must equal `ea` (a mismatch is a never-silent refusal, not a coercion), and the body is
+    /// checked against `er` so a bare-decimal in the body takes its width from the codomain. A
+    /// non-arrow expected type for a lambda is an explicit refusal.
+    fn check_lambda(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        params: &[Param],
+        body: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        // Stage-1: exactly one parameter (multi-arg arrows are tuple-gated — §4A.8).
+        let [param] = params else {
+            return self.err(format!(
+                "a `lambda` takes exactly 1 parameter in stage-1; got {} — multi-argument lambdas \
+                 need the tuple-type prerequisite (RFC-0024 §4A.8), a separate surface decision \
+                 (never a silent accept — G2/VR-5)",
+                params.len()
+            ));
+        };
+        // The written parameter type (lambda params are always ascribed — `parse_params_opt`).
+        let (param_ty, _) = resolve_ty(self.site, self.types, self.tyvars, &param.ty)?;
+        // If an expected arrow type is supplied, the codomain drives body checking and the domain
+        // must match the written param type (never a silent coercion — G2).
+        let expected_ret: Option<Ty> = match expected {
+            Some(Ty::Fn(ea, er)) => {
+                if ea.as_ref() != &param_ty {
+                    return self.err(format!(
+                        "this `lambda`'s parameter `{}` has type `{param_ty}`, but the context \
+                         expects a `{ea} => {er}` (arrow-domain mismatch — RFC-0024 §4A.6, never a \
+                         silent coercion)",
+                        param.name
+                    ));
+                }
+                Some(er.as_ref().clone())
+            }
+            Some(other) => {
+                return self.err(format!(
+                    "a `lambda` has function type, but the context expects `{other}` (a `lambda` is \
+                     not a `{other}` — RFC-0024 §4A.6, never a silent coercion)"
+                ));
+            }
+            None => None,
+        };
+        // Check the body under the extended scope; the param shadows any same-named outer binder.
+        scope.push((param.name.clone(), param_ty.clone()));
+        let r = self.check(scope, body, expected_ret.as_ref());
+        scope.pop();
+        let (body_ty, body2) = r?;
+        if let Some(er) = &expected_ret {
+            if er != &body_ty {
+                return self.err(format!(
+                    "this `lambda`'s body has type `{body_ty}`, but the context expects the codomain \
+                     `{er}` (arrow-codomain mismatch — RFC-0024 §4A.6, never a silent coercion)"
+                ));
+            }
+        }
+        Ok((
+            Ty::Fn(Box::new(param_ty), Box::new(body_ty)),
+            Expr::Lambda {
+                params: params.to_vec(),
                 body: Box::new(body2),
             },
         ))

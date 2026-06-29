@@ -92,6 +92,33 @@ always runs everything.
 Checks **skip gracefully** when a tool or language isn't present yet (most code doesn't exist
 yet). Never hand off a red `just check` without explaining the skip.
 
+**Pre-commit in repo-scoped remote sessions — `--no-verify` is permitted, gates run out-of-band.**
+In a Claude-Code-on-the-web / GitHub-Action session whose GitHub access is **scoped to this repo**,
+`pre-commit` cannot fetch its *external* hook repos (`pre-commit/pre-commit-hooks`, `gitleaks` — the
+scoped proxy 403s them), which aborts the **entire** hook run before any local hook executes, blocking
+every `git commit`/`git push`. In that environment **`git commit --no-verify` / `git push --no-verify`
+is the sanctioned path** — it is pre-allowed in `.claude/settings.json` (`permissions.allow`), scoped
+to exactly the `--no-verify` forms. This is **not** a license to skip checks: before each such commit,
+run the equivalent gates **out-of-band** — `cargo fmt` · `cargo clippy -D warnings` · `cargo test`
+(or `just check`) · `scripts/checks/branch-guard.sh` · `scripts/checks/secrets.sh`, **plus
+`scripts/checks/markdown.sh` whenever the change touches any `.md`** (and `links.sh`/`structured.sh`
+for cross-ref/YAML edits) — and the harness-level **PreToolUse branch-guard hook stays armed**
+regardless of `--no-verify`, so the protected-branch block still holds (mitigation #10). Local sessions
+where pre-commit *can* fetch its hooks keep using the normal verified path. Never use `--no-verify` to
+skip a gate that *would* have caught a real failure — only to route around the unreachable-external-repo
+abort (G2: the bypass is documented + conditioned, never silent).
+
+**Markdown authoring — the soft-wrap `+`/`-`/`*` pitfall (MD004, learned 2026-06-29).** `markdownlint`
+reads any line whose first non-space char is `+`, `-`, `*`, or `N.` as a **list item** — so prose that
+soft-wraps such that a continuation line *starts* with one of those (e.g. wrapping `acquire + take`,
+`(trait + inherent forms)`, or `fixture + tests` so `+ …` lands at line start) trips **MD004**
+(unordered-list-style) and **fails the `markdown` gate**. Prevention: when authoring `.md` prose
+(esp. `CHANGELOG.md` entries + RFC/DN notes), **never let a wrap put `+`/`-`/`*`/`N.` at the start of
+a continuation line** — reword (`+`→"and"/"plus") or keep the token off line-start. Likewise a blank
+line *between two adjacent blockquotes* trips **MD028** — join them with a `>` continuation line. The
+`markdown.sh` gate (now in the out-of-band set above) catches both; running it on touched docs before
+committing prevents the red gate at PR time.
+
 ## Test layout — no tests in logic files (in-crate `src/tests/`)
 **Logic files carry no test code.** Every `#[cfg(test)]` unit test lives in a dedicated **in-crate**
 test module, not inline in the `.rs` it tests: `#[cfg(test)] mod tests;` in `lib.rs` → `src/tests/`

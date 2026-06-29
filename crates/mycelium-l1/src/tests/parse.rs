@@ -20,7 +20,7 @@ fn fn_body(src: &str) -> Expr {
 
 /// The body of `fn main() => T = <expr>` for an operator-sugar fixture.
 fn op_body(expr: &str) -> Expr {
-    fn_body(&format!("nodule d\nfn main() => Binary{{8}} = {expr}"))
+    fn_body(&format!("nodule d;\nfn main() => Binary{{8}} = {expr};"))
 }
 
 #[test]
@@ -125,7 +125,7 @@ fn deep_operator_nesting_is_refused_not_crashed() {
     // recursion (parse_unary) and the precedence recursion (parse_binexpr) participate in the
     // shared MAX_EXPR_DEPTH budget.
     let prefix = "!".repeat(2000);
-    let src = format!("nodule d\nfn main() => Binary{{8}} = {prefix}0b0000_0000");
+    let src = format!("nodule d;\nfn main() => Binary{{8}} = {prefix}0b0000_0000;");
     let err = parse(&src).expect_err("a 2000-deep prefix chain must be refused");
     assert!(
         err.message.contains("refusing to recurse"),
@@ -138,7 +138,7 @@ fn deep_operator_nesting_is_refused_not_crashed() {
         .map(|_| "0b0000_0000")
         .collect::<Vec<_>>()
         .join(" ^ ");
-    let ok = format!("nodule d\nfn main() => Binary{{8}} = {flat}");
+    let ok = format!("nodule d;\nfn main() => Binary{{8}} = {flat};");
     parse(&ok).expect("a long FLAT operator chain parses (loop, not recursion)");
 }
 
@@ -152,7 +152,7 @@ fn word_form_remains_valid_alongside_sugar() {
 #[test]
 fn empty_list_literal_parses_to_no_elems() {
     // `comma_separated_until(RBracket)` empty path.
-    let Expr::Lit(Literal::List(elems)) = fn_body("nodule d\nfn main() => Binary{1} = []") else {
+    let Expr::Lit(Literal::List(elems)) = fn_body("nodule d;\nfn main() => Binary{1} = [];") else {
         panic!("expected a list literal");
     };
     assert!(elems.is_empty());
@@ -160,12 +160,12 @@ fn empty_list_literal_parses_to_no_elems() {
 
 #[test]
 fn single_and_multi_element_list_literals() {
-    let one = fn_body("nodule d\nfn main() => Binary{1} = [0b0]");
+    let one = fn_body("nodule d;\nfn main() => Binary{1} = [0b0];");
     let Expr::Lit(Literal::List(e1)) = one else {
         panic!("list")
     };
     assert_eq!(e1.len(), 1);
-    let many = fn_body("nodule d\nfn main() => Binary{1} = [0b0, 0b1, 0b0]");
+    let many = fn_body("nodule d;\nfn main() => Binary{1} = [0b0, 0b1, 0b0];");
     let Expr::Lit(Literal::List(e3)) = many else {
         panic!("list")
     };
@@ -175,12 +175,12 @@ fn single_and_multi_element_list_literals() {
 #[test]
 fn call_args_empty_single_multi() {
     // `comma_separated_until(RParen)` for application args.
-    let zero = fn_body("nodule d\nfn main() => Binary{1} = f()");
+    let zero = fn_body("nodule d;\nfn main() => Binary{1} = f();");
     let Expr::App { args, .. } = zero else {
         panic!("app")
     };
     assert_eq!(args.len(), 0);
-    let two = fn_body("nodule d\nfn main() => Binary{1} = f(0b0, 0b1)");
+    let two = fn_body("nodule d;\nfn main() => Binary{1} = f(0b0, 0b1);");
     let Expr::App { args, .. } = two else {
         panic!("app")
     };
@@ -191,8 +191,7 @@ fn call_args_empty_single_multi() {
 fn ctor_fields_and_type_params_and_args() {
     // Constructor fields (`comma_separated` after `(`), type params/args (`<…>`).
     let n = parse(
-        "nodule d\ntype Pair[A, B] = MkPair(A, B)\n\
-             fn id(x: Pair[Binary{1}, Binary{1}]) => Pair[Binary{1}, Binary{1}] = x",
+        "nodule d;\ntype Pair[A, B] = MkPair(A, B);\nfn id(x: Pair[Binary{1}, Binary{1}]) => Pair[Binary{1}, Binary{1}] = x;",
     )
     .expect("parses");
     let Item::Type(td) = &n.items[0] else {
@@ -205,12 +204,13 @@ fn ctor_fields_and_type_params_and_args() {
 
 #[test]
 fn value_params_empty_and_nonempty() {
-    let zero = parse("nodule d\nfn main() => Binary{1} = 0b0").expect("parses");
+    let zero = parse("nodule d;\nfn main() => Binary{1} = 0b0;").expect("parses");
     let Item::Fn(fd) = &zero.items[0] else {
         panic!("fn")
     };
     assert_eq!(fd.sig.value_params.len(), 0);
-    let two = parse("nodule d\nfn g(a: Binary{1}, b: Binary{1}) => Binary{1} = a").expect("parses");
+    let two =
+        parse("nodule d;\nfn g(a: Binary{1}, b: Binary{1}) => Binary{1} = a;").expect("parses");
     let Item::Fn(fd) = &two.items[0] else {
         panic!("fn")
     };
@@ -221,14 +221,14 @@ fn value_params_empty_and_nonempty() {
 fn match_arms_tolerate_a_trailing_comma() {
     // `comma_separated(Some(RBrace))` trailing-comma path — same arm count with or without it.
     let with = fn_body(
-        "nodule d\ntype B = F | T\nfn m(x: B) => Binary{1} = match x { F => 0b0, T => 0b1, }",
+        "nodule d;\ntype B = F | T;\nfn m(x: B) => Binary{1} = match x { F => 0b0, T => 0b1, };",
     );
     let Expr::Match { arms, .. } = with else {
         panic!("match")
     };
     assert_eq!(arms.len(), 2);
     let without = fn_body(
-        "nodule d\ntype B = F | T\nfn m(x: B) => Binary{1} = match x { F => 0b0, T => 0b1 }",
+        "nodule d;\ntype B = F | T;\nfn m(x: B) => Binary{1} = match x { F => 0b0, T => 0b1 };",
     );
     let Expr::Match { arms, .. } = without else {
         panic!("match")
@@ -240,7 +240,7 @@ fn match_arms_tolerate_a_trailing_comma() {
 fn empty_match_is_still_an_explicit_error() {
     // The non-empty invariant of match arms must survive the factoring: `match x { }` parses the
     // first arm and fails on the pattern — never silently an empty arm list.
-    let err = parse("nodule d\ntype B = F\nfn m(x: B) => Binary{1} = match x { }")
+    let err = parse("nodule d;\ntype B = F;\nfn m(x: B) => Binary{1} = match x { };")
         .expect_err("empty match must be rejected");
     assert!(err.message.contains("a pattern"), "{}", err.message);
 }
@@ -249,7 +249,7 @@ fn empty_match_is_still_an_explicit_error() {
 fn a_bare_list_rejects_a_trailing_comma() {
     // Constructor fields take no trailing comma (`comma_separated(None)`): a dangling `,` makes
     // the helper try to parse another field and fail explicitly — behavior unchanged by M-640.
-    let err = parse("nodule d\ntype T = C(Binary{1},)")
+    let err = parse("nodule d;\ntype T = C(Binary{1},)")
         .expect_err("trailing comma in ctor fields must be rejected");
     assert!(err.message.contains("expected a type"), "{}", err.message);
 }
@@ -258,7 +258,7 @@ fn a_bare_list_rejects_a_trailing_comma() {
 fn keyword_opener_diagnostic_is_the_backtick_spelling() {
     // `expect_keyword` must reproduce the exact `` `let` `` (etc.) message of the old inline
     // form. A `let` body that is truncated right where a keyword opener is required surfaces it.
-    let err = parse("nodule d\nfn main() => Binary{1} = if 0b0 then 0b1 els 0b0")
+    let err = parse("nodule d;\nfn main() => Binary{1} = if 0b0 then 0b1 els 0b0")
         .expect_err("malformed if must be rejected");
     // `els` is an identifier where `else` is required.
     assert!(err.message.contains("`else`"), "{}", err.message);
@@ -269,9 +269,7 @@ fn keyword_opener_diagnostic_is_the_backtick_spelling() {
 #[test]
 fn an_impl_decl_parses_with_trait_args_for_type_and_methods() {
     let n = parse(
-        "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n\
-             impl Cmp[Binary{8}] for Binary{8} \
-             { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }",
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\nimpl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00; };",
     )
     .expect("an impl parses");
     let Item::Impl(id) = n
@@ -290,7 +288,7 @@ fn an_impl_decl_parses_with_trait_args_for_type_and_methods() {
 
 #[test]
 fn an_impl_without_for_is_an_explicit_error() {
-    let err = parse("nodule d\nimpl Cmp[Binary{8}] Binary{8} { }")
+    let err = parse("nodule d;\nimpl Cmp[Binary{8}] Binary{8} { }")
         .expect_err("impl missing `for` must be rejected");
     assert!(err.message.contains("`for`"), "{}", err.message);
 }
@@ -298,11 +296,8 @@ fn an_impl_without_for_is_an_explicit_error() {
 #[test]
 fn a_bounded_fn_type_param_parses_with_a_self_bound_and_a_plus_list() {
     // `[T: Cmp]` (single self-bound) and `[T: A + B[T]]` (a `+`-list with type-args) both parse.
-    let n = parse(
-        "nodule d\nfn f[T: Cmp](x: T) => T = x\n\
-             fn g[T: A + B[T]](x: T) => T = x",
-    )
-    .expect("bounded type-params parse");
+    let n = parse("nodule d;\nfn f[T: Cmp](x: T) => T = x;\nfn g[T: A + B[T]](x: T) => T = x;")
+        .expect("bounded type-params parse");
     let Item::Fn(f) = &n.items[0] else {
         panic!("fn")
     };
@@ -322,7 +317,7 @@ fn a_bounded_fn_type_param_parses_with_a_self_bound_and_a_plus_list() {
 fn an_unbounded_fn_type_param_still_parses_the_identity_case() {
     // The §11 identity: `[A]` with no bound is `TypeParam { bounds: [] }` — every v0 program
     // that parsed before this extension still parses.
-    let n = parse("nodule d\nfn id[A](x: A) => A = x").expect("unbounded parses");
+    let n = parse("nodule d;\nfn id[A](x: A) => A = x;").expect("unbounded parses");
     let Item::Fn(f) = &n.items[0] else {
         panic!("fn")
     };
@@ -334,7 +329,7 @@ fn an_unbounded_fn_type_param_still_parses_the_identity_case() {
 fn a_bound_on_a_type_decl_param_is_an_explicit_parse_refusal() {
     // Stage-1: bounds live only on fn type-params. A bound on a `type` param is rejected, never
     // silently dropped (G2). (Conformance reject/15 pins this at the corpus level too.)
-    let err = parse("nodule d\ntype Box[A: Cmp] = Wrap(A)")
+    let err = parse("nodule d;\ntype Box[A: Cmp] = Wrap(A)")
         .expect_err("a bound on a type-decl param must be rejected");
     assert!(err.message.contains("deferred"), "{}", err.message);
 }
@@ -344,7 +339,7 @@ fn a_bound_on_a_type_decl_param_is_an_explicit_parse_refusal() {
 #[test]
 fn an_effect_annotation_parses_into_the_signature_effect_set() {
     // `!{io, time}` after the return type lands as the signature's effect set, in source order.
-    let n = parse("nodule d\nfn a() => Binary{8} !{io, time} = 0b00000000").expect("parses");
+    let n = parse("nodule d;\nfn a() => Binary{8} !{io, time} = 0b00000000;").expect("parses");
     let Item::Fn(f) = &n.items[0] else {
         panic!("fn")
     };
@@ -355,12 +350,12 @@ fn an_effect_annotation_parses_into_the_signature_effect_set() {
 fn an_unannotated_fn_has_an_empty_effect_set_and_an_explicit_empty_set_too() {
     // Unannotated ⇒ pure (empty set); the explicit written `!{}` is also the empty set — both
     // mean "declares no effects" (RFC-0014 I5).
-    let plain = parse("nodule d\nfn a() => Binary{8} = 0b00000000").expect("parses");
+    let plain = parse("nodule d;\nfn a() => Binary{8} = 0b00000000;").expect("parses");
     let Item::Fn(f) = &plain.items[0] else {
         panic!("fn")
     };
     assert!(f.sig.effects.is_empty());
-    let empty = parse("nodule d\nfn a() => Binary{8} !{} = 0b00000000").expect("parses");
+    let empty = parse("nodule d;\nfn a() => Binary{8} !{} = 0b00000000;").expect("parses");
     let Item::Fn(f) = &empty.items[0] else {
         panic!("fn")
     };
@@ -371,7 +366,7 @@ fn an_unannotated_fn_has_an_empty_effect_set_and_an_explicit_empty_set_too() {
 fn a_trait_method_requirement_carries_an_effect_annotation() {
     // The effect annotation is part of the shared signature tail, so a trait method requirement
     // (no body) carries it too (the impl-vs-trait effect conformance check consumes it — M-660).
-    let n = parse("nodule d\ntrait T[A] { fn m(x: A) => A !{io} }").expect("parses");
+    let n = parse("nodule d;\ntrait T[A] { fn m(x: A) => A !{io}; };").expect("parses");
     let Item::Trait(td) = &n.items[0] else {
         panic!("trait")
     };
@@ -382,7 +377,7 @@ fn a_trait_method_requirement_carries_an_effect_annotation() {
 fn a_bare_bang_without_an_effect_brace_is_an_explicit_error() {
     // `!` only ever opens an effect set; a `!` not followed by `{` is a never-silent parse error
     // (v0 has no negation/`not` operator — logical ops are named prims; G2).
-    let err = parse("nodule d\nfn a() => Binary{8} ! = 0b00000000")
+    let err = parse("nodule d;\nfn a() => Binary{8} ! = 0b00000000")
         .expect_err("a bare `!` must be rejected");
     assert!(err.message.contains("effect set"), "got: {}", err.message);
 }
@@ -393,10 +388,10 @@ fn a_bare_bang_without_an_effect_brace_is_an_explicit_error() {
 fn the_std_sys_header_marker_sets_the_nodule_flag() {
     // `nodule <path> @std-sys` sets `Nodule.std_sys`; a plain `nodule <path>` leaves it false.
     // The marker is an attribute on the header, parsed after the path (M-661).
-    let marked = parse("nodule std.sys.fs @std-sys\nfn f() => Binary{1} = 0b0").expect("parses");
+    let marked = parse("nodule std.sys.fs @std-sys;\nfn f() => Binary{1} = 0b0;").expect("parses");
     assert!(marked.std_sys, "the @std-sys marker must set std_sys");
     assert_eq!(marked.path.0, vec!["std", "sys", "fs"]);
-    let plain = parse("nodule d\nfn f() => Binary{1} = 0b0").expect("parses");
+    let plain = parse("nodule d;\nfn f() => Binary{1} = 0b0;").expect("parses");
     assert!(!plain.std_sys, "an unmarked nodule is not std-sys");
 }
 
@@ -404,7 +399,7 @@ fn the_std_sys_header_marker_sets_the_nodule_flag() {
 fn a_std_sys_nodule_parses_a_wild_block_in_a_fn_body() {
     // The marker + a `wild` block parse together (the context gate + effect coverage are CHECKER
     // concerns, not parse concerns — this only pins that the surface admits both).
-    let n = parse("nodule std.sys.x @std-sys\nfn f() => Binary{8} !{ffi} = wild { host_call() }")
+    let n = parse("nodule std.sys.x @std-sys;\nfn f() => Binary{8} !{ffi} = wild { host_call() };")
         .expect("a @std-sys nodule with a wild block parses");
     assert!(n.std_sys);
     let Item::Fn(fd) = &n.items[0] else {
@@ -432,7 +427,7 @@ fn first_param_ty(src: &str) -> TypeRef {
 fn simple_fn_type_parses_to_basetype_fn() {
     // `f: A => B` in a parameter builds `BaseType::Fn(Named("A"), Named("B"))`.
     // Use a single-param fn so `first_param_ty` finds the fn-typed one directly.
-    let ty = first_param_ty("nodule d\nfn apply[A, B](f: A => B) => B = f");
+    let ty = first_param_ty("nodule d;\nfn apply[A, B](f: A => B) => B = f;");
     let BaseType::Fn(arg, ret) = ty.base else {
         panic!("expected BaseType::Fn, got {:?}", ty.base);
     };
@@ -452,7 +447,7 @@ fn simple_fn_type_parses_to_basetype_fn() {
 #[test]
 fn fn_type_is_right_associative() {
     // `A => B => C` must parse as `A => (B => C)`.
-    let ty = first_param_ty("nodule d\nfn f[A, B, C](g: A => B => C) => A = g");
+    let ty = first_param_ty("nodule d;\nfn f[A, B, C](g: A => B => C) => A = g;");
     // Outer is `Fn(A, B => C)`.
     let BaseType::Fn(arg, ret) = ty.base else {
         panic!("expected outer BaseType::Fn");
@@ -472,7 +467,7 @@ fn fn_type_is_right_associative() {
 #[test]
 fn guarantee_binds_tighter_than_arrow() {
     // `A @ Exact => B` must parse as `(A @ Exact) => B`.
-    let ty = first_param_ty("nodule d\nfn f[A, B](g: A @ Exact => B) => B = g");
+    let ty = first_param_ty("nodule d;\nfn f[A, B](g: A @ Exact => B) => B = g;");
     let BaseType::Fn(arg, _ret) = ty.base else {
         panic!("expected BaseType::Fn");
     };
@@ -490,10 +485,7 @@ fn rfc_0024_map_snippet_parses() {
     // RFC-0024 §3's canonical snippet: `fn map[A, B, E](r: Result[A,E], f: A => B) => Result[B,E]`.
     // Structural check: two value params, second has type `BaseType::Fn`.
     let n = parse(
-        "nodule d\n\
-             type Result[A, E] = Ok(A) | Err(E)\n\
-             fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\
-               match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }",
+        "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };",
     )
     .expect("RFC-0024 §3 map snippet parses");
     let Item::Fn(fd) = n
@@ -519,13 +511,7 @@ fn bare_fn_name_in_value_position_parses_as_path() {
     // `map(mk_ok(), double)` — `double` in value (non-call) position is `Expr::Path`, not
     // `Expr::App`.  This confirms fn-as-value needs no parser change (RFC-0024 §3).
     let n = parse(
-        "nodule d\n\
-             type Result[A, E] = Ok(A) | Err(E)\n\
-             fn double[A](x: A) => A = x\n\
-             fn mk_ok[A](x: A) => Result[A, A] = Ok(x)\n\
-             fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\
-               match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
-             fn main() => Result[Binary{8}, Binary{8}] = map(mk_ok(0b00000000), double)",
+        "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn double[A](x: A) => A = x;\nfn mk_ok[A](x: A) => Result[A, A] = Ok(x);\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };\nfn main() => Result[Binary{8}, Binary{8}] = map(mk_ok(0b00000000), double);",
     )
     .expect("parses");
     // Find the `main` fn and inspect its body.
@@ -560,7 +546,7 @@ fn bare_fn_name_in_value_position_parses_as_path() {
 fn malformed_arrow_missing_rhs_is_explicit_error() {
     // `A =>` with no right-hand type must be an explicit `ParseError` — never silently accepted
     // (G2 / house rule #2: never-silent).
-    let err = parse("nodule d\nfn f[A](g: A =>) => A = g")
+    let err = parse("nodule d;\nfn f[A](g: A =>) => A = g")
         .expect_err("a bare `A =>` with no rhs must be rejected");
     // The error should describe what was missing — a type is expected after `=>`.
     assert!(
@@ -574,7 +560,7 @@ fn malformed_arrow_missing_rhs_is_explicit_error() {
 fn fn_type_in_return_position_parses() {
     // A function may return a function type: `fn make_fn[A, B]() => A => B = ...`
     // The `=>` in the return type is also right-associative and fully parsed.
-    let n = parse("nodule d\nfn make_fn[A, B](x: A) => A => B = x").expect("parses");
+    let n = parse("nodule d;\nfn make_fn[A, B](x: A) => A => B = x;").expect("parses");
     let Item::Fn(fd) = &n.items[0] else {
         panic!("fn")
     };
@@ -592,18 +578,17 @@ fn fn_type_in_return_position_parses() {
 #[test]
 fn dn57_optional_semicolon_terminates_components_ast_transparent() {
     // Item terminators: two fns on one line, separated only by `;` (no newline) == the newline form.
-    let semi = "nodule d\nfn a() => Binary{8} = 0b0; fn b(x: Binary{8}) => Binary{8} = x;";
-    let plain = "nodule d\nfn a() => Binary{8} = 0b0\nfn b(x: Binary{8}) => Binary{8} = x";
+    let semi = "nodule d;\nfn a() => Binary{8} = 0b0; fn b(x: Binary{8}) => Binary{8} = x;";
+    let plain = "nodule d;\nfn a() => Binary{8} = 0b0;\nfn b(x: Binary{8}) => Binary{8} = x;";
     assert_eq!(
         parse(semi).expect("`;`-terminated items parse"),
         parse(plain).expect("newline-delimited items parse"),
         "the optional `;` adds no AST node — same tree either way",
     );
     // A trailing `;` on the final item is accepted (it terminates, it does not separate).
-    assert!(parse("nodule d\nfn a() => Binary{8} = 0b0;").is_ok());
+    assert!(parse("nodule d;\nfn a() => Binary{8} = 0b0;").is_ok());
     // Method terminators inside trait + impl bodies parse.
-    let methods = "nodule d\ntrait T { fn f(x: Binary{8}) => Binary{8}; }\n\
-                   impl T for Binary{8} { fn f(x: Binary{8}) => Binary{8} = x; }";
+    let methods = "nodule d;\ntrait T { fn f(x: Binary{8}) => Binary{8}; };\nimpl T for Binary{8} { fn f(x: Binary{8}) => Binary{8} = x; };";
     assert!(
         parse(methods).is_ok(),
         "`;`-terminated trait/impl methods parse"
@@ -615,7 +600,7 @@ fn dn57_optional_semicolon_terminates_components_ast_transparent() {
 /// A zero-param `lower` rule parses to `Item::Lower` with the correct name and empty params.
 #[test]
 fn lower_no_params_parses() {
-    let n = parse("nodule d\nlower Trivial = true").expect("parses");
+    let n = parse("nodule d;\nlower Trivial = true;").expect("parses");
     let item = &n.items[0];
     let crate::ast::Item::Lower(ld) = item else {
         panic!("expected Item::Lower, got {item:?}");
@@ -627,7 +612,7 @@ fn lower_no_params_parses() {
 /// A parametric `lower` rule with two params parses correctly.
 #[test]
 fn lower_with_params_parses() {
-    let n = parse("nodule d\nlower Pair[A, B] = true").expect("parses");
+    let n = parse("nodule d;\nlower Pair[A, B] = true;").expect("parses");
     let crate::ast::Item::Lower(ld) = &n.items[0] else {
         panic!("expected Item::Lower");
     };
@@ -638,7 +623,7 @@ fn lower_with_params_parses() {
 /// A `derive` application parses to `Item::Derive` with the correct name and target type.
 #[test]
 fn derive_decl_parses() {
-    let n = parse("nodule d\nderive Trivial for Binary{8}").expect("parses");
+    let n = parse("nodule d;\nderive Trivial for Binary{8};").expect("parses");
     let crate::ast::Item::Derive(dd) = &n.items[0] else {
         panic!("expected Item::Derive");
     };
@@ -656,7 +641,7 @@ fn derive_decl_parses() {
 /// `lower` without `=` is an explicit parse error (G2 / DN-54 §3).
 #[test]
 fn lower_missing_eq_is_refused() {
-    let err = parse("nodule d\nlower Trivial true").unwrap_err();
+    let err = parse("nodule d;\nlower Trivial true").unwrap_err();
     assert!(
         err.message.contains("="),
         "expected missing-`=` error, got: {}",
@@ -667,7 +652,7 @@ fn lower_missing_eq_is_refused() {
 /// `derive` without `for` is an explicit parse error (G2 / DN-54 §4).
 #[test]
 fn derive_missing_for_is_refused() {
-    let err = parse("nodule d\nderive Trivial Binary{8}").unwrap_err();
+    let err = parse("nodule d;\nderive Trivial Binary{8}").unwrap_err();
     assert!(
         err.message.contains("for"),
         "expected missing-`for` error, got: {}",
@@ -678,7 +663,7 @@ fn derive_missing_for_is_refused() {
 /// `lower` or `derive` at expression position is an explicit parse error (top-level only, G2).
 #[test]
 fn lower_at_expr_position_is_refused() {
-    let err = parse("nodule d\nfn f() => Binary{8} = lower Trivial = true").unwrap_err();
+    let err = parse("nodule d;\nfn f() => Binary{8} = lower Trivial = true").unwrap_err();
     assert!(
         err.message.contains("top-level"),
         "`lower` at expr position must say it's a top-level declaration, got: {}",
@@ -688,7 +673,7 @@ fn lower_at_expr_position_is_refused() {
 
 #[test]
 fn derive_at_expr_position_is_refused() {
-    let err = parse("nodule d\nfn f() => Binary{8} = derive Trivial for Binary{8}").unwrap_err();
+    let err = parse("nodule d;\nfn f() => Binary{8} = derive Trivial for Binary{8}").unwrap_err();
     assert!(
         err.message.contains("top-level"),
         "`derive` at expr position must say it's a top-level declaration, got: {}",
@@ -699,7 +684,7 @@ fn derive_at_expr_position_is_refused() {
 /// `grow` at item position produces a teaching diagnostic referencing `derive` (DN-38 §8.1).
 #[test]
 fn grow_at_item_position_points_to_derive() {
-    let err = parse("nodule d\ngrow something").unwrap_err();
+    let err = parse("nodule d;\ngrow something").unwrap_err();
     assert!(
         err.message.contains("derive"),
         "`grow` at item position must mention `derive` in the teaching diagnostic, got: {}",

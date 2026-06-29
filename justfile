@@ -19,6 +19,16 @@ setup:
 setup-mlir:
     @bash scripts/setup-mlir.sh
 
+# Install gitleaks (the secret-scan tool) via apt — KEPT OUT of `just setup` (same ADR-019 principle
+# as setup-mlir: the default never apt-installs or sudo-prompts). Use in environments where the
+# GitHub-release install is blocked — e.g. a repo-scoped Claude-Code-on-the-web session, where the
+# proxy 403s the release download — so the secret-scan gate gets FULL gitleaks coverage instead of
+# `scripts/checks/secrets.sh`'s minimal fallback. Best-effort + idempotent (no-op if already present).
+setup-secrets:
+    @command -v gitleaks >/dev/null 2>&1 && echo "gitleaks already installed ($(gitleaks version 2>/dev/null))" || \
+      { (command -v sudo >/dev/null 2>&1 && sudo apt-get install -y gitleaks) || apt-get install -y gitleaks; } \
+      || echo "gitleaks install skipped (no apt/permission) — secret-scan uses the minimal fallback"
+
 # Full-repo secret scan — gitleaks in --redact mode (allowlist/scope in .gitleaks.toml).
 secrets-scan:
     @gitleaks detect --redact --no-banner -c .gitleaks.toml --source .

@@ -569,11 +569,26 @@ impl<'e> Evaluator<'e> {
                 what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
                     .to_owned(),
             }),
+            // M-664: `consume` of a `Substrate` has no v0 evaluation — `Substrate` has no value
+            // forms (LR-8; DN-03 §1). Never-silent (G2): an explicit `Unsupported`, never a guess.
+            Expr::Consume(_) => Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what: "`consume` of an affine `Substrate` is staged — `Substrate` has no v0 value \
+                       forms to consume (LR-8; DN-03 §1; M-664)"
+                    .to_owned(),
+            }),
+            // RFC-0024 §4A (M-704): the L1 evaluator runs on the **monomorphized** env, where every
+            // closure has been lowered (`mono.rs`) to an ordinary `L1Value::Data` constructor value +
+            // an `apply` dispatch fn — so a raw `Expr::Lambda` never reaches eval. This arm is a
+            // **defensive, never-silent** invariant (G2): a lambda here is an internal staging bug
+            // (eval was handed an un-monomorphized env), surfaced explicitly, never a silent guess.
             Expr::Lambda { .. } => Err(L1Error::Unsupported {
                 site: site.to_owned(),
-                what: "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 — RFC-0037 D5 \
-                       reserves the surface, it does not yet evaluate"
-                    .to_owned(),
+                what:
+                    "internal: an `Expr::Lambda` reached the evaluator — closures are lowered by \
+                       monomorphization (RFC-0024 §4A / M-704); run eval on the monomorphized env \
+                       (never a silent accept, G2)"
+                        .to_owned(),
             }),
 
             // `colony { hypha e1, …, hypha eN }` (RFC-0008 §4.7; M-666). The trusted base evaluates

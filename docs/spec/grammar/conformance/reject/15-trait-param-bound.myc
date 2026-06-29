@@ -3,6 +3,5 @@
 // are unbounded abstractions. Writing `[A: Cmp]` on a `type` is a never-silent parse refusal (the
 // bound is never silently dropped — G2), teaching the author to put the bound on the bounded `fn`.
 // (The `impl … for …` / bounded-`fn` productions land with the trait checker, M-659.)
-nodule demo
-
+nodule demo;
 type Box[A: Cmp] = Wrap(A)
