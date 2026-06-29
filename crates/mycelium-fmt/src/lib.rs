@@ -1658,7 +1658,20 @@ fn render_sig_tail(sig: &mycelium_l1::ast::FnSig) -> String {
     let eff = if sig.effects.is_empty() {
         String::new()
     } else {
-        format!(" !{{{}}}", sig.effects.join(", "))
+        // RFC-0014 §4.5 I4 (M-677): render each effect with its budget bound when present —
+        // `name(<=N)`. The parser folds any `KiB`/`MiB`/`GiB` suffix into a unit-less byte
+        // count (`effect_budgets: BTreeMap<String, u64>`), so the canonical surface is the raw
+        // `<=N`; this round-trips AST-equal — parse(render(sig)) yields the same effect_budgets.
+        // (Surface unit preservation would require the AST to retain the suffix — out of scope.)
+        let rendered: Vec<String> = sig
+            .effects
+            .iter()
+            .map(|e| match sig.effect_budgets.get(e) {
+                Some(n) => format!("{e}(<={n})"),
+                None => e.clone(),
+            })
+            .collect();
+        format!(" !{{{}}}", rendered.join(", "))
     };
     // RFC-0037 D4: return arrow `=>` (the `->` glyph is retired).
     format!(

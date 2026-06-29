@@ -39,6 +39,13 @@ const FLATTEN_CORPUS: &[(&str, &str)] = &[
         "already-flat-roundtrips",
         "nodule d; fn f(x: Binary{8}) => Binary{8} = x;\n",
     ),
+    (
+        // M-677 + M-819 integration: a fn carrying per-effect budgets (`!{retry(<=3), …}`)
+        // must round-trip. The parser normalizes unit suffixes to a byte count, so the
+        // canonical surface is the raw `<=N` (`64KiB` → `65536`) — AST-equal either way.
+        "budgeted-effects-roundtrips",
+        "nodule d;\nfn f() => Binary{8} !{retry(<=3), alloc(<=64KiB)} = 0b0000_0000;\n",
+    ),
 ];
 
 /// Core round-trip property (M-819 / DN-57 §2):
@@ -161,6 +168,36 @@ fn flatten_strips_comments_explicitly() {
         f.notes.iter().any(|n| n.contains("stripped")),
         "notes must explain that comments/header were stripped: {:?}",
         f.notes
+    );
+}
+
+/// M-677 + M-819 integration regression: flatten must PRESERVE per-effect budgets.
+/// This compares against the ORIGINAL parsed AST (not the canonical render) — because both
+/// flatten and canonical share one renderer, a flatten-vs-canonical check alone would pass
+/// even if both dropped the budgets. The bug this guards: fmt rendered only `sig.effects`
+/// (`!{retry, alloc}`), silently dropping the `(<=N)` bounds.
+#[test]
+fn flatten_preserves_effect_budgets_against_original() {
+    let src = "nodule d;\nfn f() => Binary{8} !{retry(<=3), alloc(<=64KiB)} = 0b0000_0000;\n";
+    let original = parse(src).expect("original parses");
+    let flat = flatten_source(src, None).expect("flattens");
+    let flat_ast = parse(&flat.output).expect("flattened source parses");
+    // AST-equal vs the original (Empirical): the budgets survive the round-trip.
+    assert_eq!(
+        original, flat_ast,
+        "flatten changed the AST — effect budgets were dropped\nflat: {:?}",
+        flat.output
+    );
+    // And the bounds are visible in the surface (the parser normalizes 64KiB → 65536 bytes).
+    assert!(
+        flat.output.contains("retry(<=3)"),
+        "retry budget missing from flat output: {:?}",
+        flat.output
+    );
+    assert!(
+        flat.output.contains("alloc(<=65536)"),
+        "alloc budget (normalized to bytes) missing from flat output: {:?}",
+        flat.output
     );
 }
 
