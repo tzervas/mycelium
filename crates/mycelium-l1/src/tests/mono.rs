@@ -800,3 +800,124 @@ fn width_generic_undetermined_param_is_a_check_error() {
         "expected check to fail for undetermined width param `N`, but succeeded"
     );
 }
+
+// ---- RFC-0024 §4A (M-704) closures: arrow mangling + capture-set analysis ------------------
+
+/// Closure **arrow mangling** is injective and surface-disjoint (RFC-0024 §4A.4 / G2): distinct
+/// arrows produce distinct tag-sum names; the dispatcher name shares the arrow's suffix; a nested
+/// arrow recurses. No silent alias.
+#[test]
+fn closure_arrow_mangling_is_injective_and_surface_disjoint() {
+    let b8 = Ty::Binary(Width::Lit(8));
+    let b16 = Ty::Binary(Width::Lit(16));
+    let a1 = mangle_arrow(&b8, &b8); // Fn$Binary8$Binary8
+    let a2 = mangle_arrow(&b8, &b16); // Fn$Binary8$Binary16
+    let a3 = mangle_arrow(&b16, &b8); // Fn$Binary16$Binary8
+    assert_eq!(a1, "Fn$Binary8$Binary8");
+    assert_ne!(a1, a2, "distinct codomains ⇒ distinct arrows");
+    assert_ne!(a2, a3, "distinct domain/codomain order ⇒ distinct arrows");
+    // The dispatcher name shares the arrow's `A$B` suffix (queryable identity).
+    assert_eq!(apply_fn_name(&a1), "apply$Binary8$Binary8");
+    // A nested arrow `(B8 => B8) => B8` recurses into its inner arrow.
+    let nested = mangle_arrow(&Ty::Fn(Box::new(b8.clone()), Box::new(b8.clone())), &b8);
+    assert_eq!(nested, "Fn$Fn$Binary8$Binary8$Binary8");
+    assert_ne!(
+        nested, a1,
+        "a higher-order arrow is distinct from its first-order base"
+    );
+    // Surface-disjoint: `$` is not a surface-identifier character (the lexer never produces it).
+    assert!(a1.contains('$'));
+}
+
+/// **Capture-set analysis** (RFC-0024 §4A.3): `free_vars` collects the body's free single-segment
+/// names not bound within it, in first-occurrence order, each once — and an inner binder (`let`,
+/// `match` arm, the lambda param) shadows. This is the property the closure lowering relies on
+/// (`capture(λ) = freevars(body) \ (params ∪ toplevel)`); a bug here would silently mis-capture (G2).
+#[test]
+fn free_vars_respects_binders_and_first_occurrence_order() {
+    use crate::ast::{Arm, Expr, Param, Path, Pattern, TypeRef, WidthRef};
+    // body ≡ `and(and(x, c), let y = b in and(y, c))`
+    //   free (in occurrence order): x, c, b   — `y` is bound by the inner `let`, so not free.
+    let b8 = || TypeRef::unguaranteed(crate::ast::BaseType::Binary(WidthRef::Lit(8)));
+    let path = |n: &str| Expr::Path(Path(vec![n.to_owned()]));
+    let call = |f: &str, args: Vec<Expr>| Expr::App {
+        head: Box::new(path(f)),
+        args,
+    };
+    let inner_let = Expr::Let {
+        name: "y".to_owned(),
+        ty: Some(b8()),
+        bound: Box::new(path("b")),
+        body: Box::new(call("and", vec![path("y"), path("c")])),
+    };
+    let body = call(
+        "and",
+        vec![call("and", vec![path("x"), path("c")]), inner_let],
+    );
+    // Seed `bound` with the lambda parameter `x` ⇒ `x` is NOT captured (it is a param, not free).
+    let mut bound: BTreeSet<String> = BTreeSet::new();
+    bound.insert("x".to_owned());
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    let mut out: Vec<String> = Vec::new();
+    free_vars(&body, &mut bound, &mut seen, &mut out);
+    // `free_vars` is the raw structural set: it includes the call-head name `and` (filtering
+    // top-level names to find actual *captures* is `rewrite_lambda`'s scope-membership step). The
+    // param `x` is excluded (seeded into `bound`), and the inner `let y` shadows `y`. Order =
+    // first-occurrence: `and` (head) then `c` then `b`.
+    assert_eq!(
+        out,
+        vec!["and".to_owned(), "c".to_owned(), "b".to_owned()],
+        "free vars (param `x` excluded, inner `let y` shadowed) in first-occurrence order"
+    );
+
+    // A `match` arm pattern binds: `match s { Mk(z) => and(z, c) }` ⇒ `z` bound, `s` and `c` free.
+    let m = Expr::Match {
+        scrutinee: Box::new(path("s")),
+        arms: vec![Arm {
+            pattern: Pattern::Ctor("Mk".to_owned(), vec![Pattern::Ident("z".to_owned())]),
+            body: call("and", vec![path("z"), path("c")]),
+        }],
+    };
+    let mut bound2: BTreeSet<String> = BTreeSet::new();
+    let mut seen2: BTreeSet<String> = BTreeSet::new();
+    let mut out2: Vec<String> = Vec::new();
+    free_vars(&m, &mut bound2, &mut seen2, &mut out2);
+    // `z` is bound by the arm pattern (shadowed); `s` (scrutinee), the head `and`, and `c` are free.
+    assert_eq!(out2, vec!["s".to_owned(), "and".to_owned(), "c".to_owned()]);
+    let _ = Param {
+        name: String::new(),
+        ty: b8(),
+    }; // keep `Param` import meaningful if the builder changes
+}
+
+/// **α-renaming invariance** of `free_vars` (RFC-0024 §4A.9 property): renaming a bound variable
+/// leaves the free-variable *set* unchanged. We rename the `let` binder `y`→`w` and assert the free
+/// set is identical (the bound name never appears free either way).
+#[test]
+fn free_vars_is_invariant_under_alpha_renaming_of_bound_vars() {
+    use crate::ast::{Expr, Path, TypeRef, WidthRef};
+    let b8 = || TypeRef::unguaranteed(crate::ast::BaseType::Binary(WidthRef::Lit(8)));
+    let path = |n: &str| Expr::Path(Path(vec![n.to_owned()]));
+    let call = |f: &str, args: Vec<Expr>| Expr::App {
+        head: Box::new(path(f)),
+        args,
+    };
+    let make = |binder: &str| Expr::Let {
+        name: binder.to_owned(),
+        ty: Some(b8()),
+        bound: Box::new(path("a")),
+        body: Box::new(call("and", vec![path(binder), path("c")])),
+    };
+    let fv = |e: &Expr| {
+        let mut b = BTreeSet::new();
+        let mut s = BTreeSet::new();
+        let mut o = Vec::new();
+        free_vars(e, &mut b, &mut s, &mut o);
+        o.into_iter().collect::<BTreeSet<String>>()
+    };
+    assert_eq!(
+        fv(&make("y")),
+        fv(&make("w")),
+        "free-var set is invariant under α-renaming of the bound `let` variable"
+    );
+}

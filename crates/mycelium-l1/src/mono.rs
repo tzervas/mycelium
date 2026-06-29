@@ -743,10 +743,20 @@ impl<'e> Mono<'e> {
                         ),
                     );
                 }
-                // Enqueue any data instance the field references, and rewrite it to its mangled-nullary
-                // form so the registry/`field_spec` consumes the already-working `Ty::Data(n, [])` arm.
-                self.enqueue_tys_in(&cf);
-                fields.push(mangle_ty_in_ty(&cf));
+                // RFC-0024 §4A (M-704): a **fn-typed field** (a data type storing a closure — the
+                // dynamic-fn-as-field shape) lowers to the closure tag-sum `Fn$<arrow>` (an ordinary
+                // nullary `Ty::Data`). Register the arrow so its sum + `apply` are emitted, exactly as
+                // a fn-typed parameter does. Non-fn fields take the existing mangled-nullary form.
+                if let Ty::Fn(a, b) = &cf {
+                    let arrow = self.register_arrow(a, b);
+                    fields.push(Ty::Data(arrow, vec![]));
+                } else {
+                    // Enqueue any data instance the field references, and rewrite it to its
+                    // mangled-nullary form so the registry/`field_spec` consumes the already-working
+                    // `Ty::Data(n, [])` arm.
+                    self.enqueue_tys_in(&cf);
+                    fields.push(mangle_ty_in_ty(&cf));
+                }
             }
             ctors.push(CtorInfo {
                 name: mangle_ctor(&c.name, targs),
@@ -2269,7 +2279,7 @@ fn closure_param_ref(t: &Ty) -> TypeRef {
 ///
 /// This is a pure structural walk — never silent, never a guess (G2): every binder the AST exposes
 /// is respected, so `freevars` is invariant under α-renaming of bound variables (the §4A.9 property).
-fn free_vars(
+pub(crate) fn free_vars(
     e: &Expr,
     bound: &mut BTreeSet<String>,
     seen: &mut BTreeSet<String>,
