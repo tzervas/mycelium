@@ -13,8 +13,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ambient::AmbientError;
 use crate::ast::{
     Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
-    Nodule, ObjectDecl, Paradigm, Path, Pattern, Phylum, Scalar, Strength, TraitRef, TypeDecl,
-    TypeRef, UsePath, WidthRef,
+    Nodule, ObjectDecl, Param, Paradigm, Path, Pattern, Phylum, Scalar, Strength, TraitRef,
+    TypeDecl, TypeRef, UsePath, WidthRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -2486,10 +2486,14 @@ impl Cx<'_> {
                 self.err("`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)")
             }
             Expr::Colony(hyphae) => self.check_colony(scope, hyphae, expected),
-            Expr::Lambda { .. } => self.err(
-                "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 — the surface parses \
-                 (RFC-0037 D5) but does not yet type-check (never a silent accept, G2)",
-            ),
+            // RFC-0024 §4A (M-704): a `lambda(p: A) => body` checks to `Ty::Fn(A, B)` where
+            // `B = infer(body)` under `scope ∪ {p: A}`. The closure's *capture set* (free variables
+            // of the body, bound in the enclosing scope) is implicit here — it is computed and lowered
+            // by monomorphization (`mono.rs`), which reuses this same re-inference. No new `Ty` variant
+            // (the closure struct is an ordinary `Ty::Data` after lowering — §4A.6). Single-argument
+            // only in stage-1; a multi-argument lambda needs the tuple-type prerequisite (§4A.8) and is
+            // a never-silent refusal (FLAG, never a silent accept — G2).
+            Expr::Lambda { params, body } => self.check_lambda(scope, params, body, expected),
             Expr::WithParadigm { .. } => self.err(
                 "internal: a `with paradigm` block reached the checker — the ambient resolution \
                  pass should have stripped it (RFC-0012 §4.4)",
@@ -2652,6 +2656,85 @@ impl Cx<'_> {
                 name: name.to_owned(),
                 ty: ty.cloned(),
                 bound: Box::new(bound2),
+                body: Box::new(body2),
+            },
+        ))
+    }
+
+    /// **Lambda / closure typing** (RFC-0024 §4A.6, M-704). A `lambda(p: A) => body` checks to
+    /// `Ty::Fn(A, B)` where `B = infer(body)` under `scope ∪ {p: A}`. The capture set (free variables
+    /// of `body` bound in the enclosing `scope`) is well-typed *by construction* — each free name is
+    /// looked up in `scope` during body checking, so an unbound free variable is a never-silent
+    /// `unknown name` refusal from `check_path` (G2), not a guess. The closure's *lowering* (the
+    /// tag-sum struct + the generated `apply` dispatcher) is performed by monomorphization (`mono.rs`),
+    /// which reuses this typing via re-inference (`infer_type`) — no new `Ty` variant here (the closure
+    /// struct is an ordinary `Ty::Data` post-mono; §4A.6).
+    ///
+    /// **Single-argument only in stage-1.** A zero- or multi-parameter lambda needs the tuple-type
+    /// prerequisite (§4A.8 — the v0 surface has no product type), so it is an **explicit refusal**
+    /// (FLAG: multi-arg/partial application is tuple-gated), never a silent accept (G2/VR-5).
+    ///
+    /// **Bidirectional.** When the context supplies an expected `Ty::Fn(ea, er)`, the written param
+    /// type must equal `ea` (a mismatch is a never-silent refusal, not a coercion), and the body is
+    /// checked against `er` so a bare-decimal in the body takes its width from the codomain. A
+    /// non-arrow expected type for a lambda is an explicit refusal.
+    fn check_lambda(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        params: &[Param],
+        body: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        // Stage-1: exactly one parameter (multi-arg arrows are tuple-gated — §4A.8).
+        let [param] = params else {
+            return self.err(format!(
+                "a `lambda` takes exactly 1 parameter in stage-1; got {} — multi-argument lambdas \
+                 need the tuple-type prerequisite (RFC-0024 §4A.8), a separate surface decision \
+                 (never a silent accept — G2/VR-5)",
+                params.len()
+            ));
+        };
+        // The written parameter type (lambda params are always ascribed — `parse_params_opt`).
+        let (param_ty, _) = resolve_ty(self.site, self.types, self.tyvars, &param.ty)?;
+        // If an expected arrow type is supplied, the codomain drives body checking and the domain
+        // must match the written param type (never a silent coercion — G2).
+        let expected_ret: Option<Ty> = match expected {
+            Some(Ty::Fn(ea, er)) => {
+                if ea.as_ref() != &param_ty {
+                    return self.err(format!(
+                        "this `lambda`'s parameter `{}` has type `{param_ty}`, but the context \
+                         expects a `{ea} => {er}` (arrow-domain mismatch — RFC-0024 §4A.6, never a \
+                         silent coercion)",
+                        param.name
+                    ));
+                }
+                Some(er.as_ref().clone())
+            }
+            Some(other) => {
+                return self.err(format!(
+                    "a `lambda` has function type, but the context expects `{other}` (a `lambda` is \
+                     not a `{other}` — RFC-0024 §4A.6, never a silent coercion)"
+                ));
+            }
+            None => None,
+        };
+        // Check the body under the extended scope; the param shadows any same-named outer binder.
+        scope.push((param.name.clone(), param_ty.clone()));
+        let r = self.check(scope, body, expected_ret.as_ref());
+        scope.pop();
+        let (body_ty, body2) = r?;
+        if let Some(er) = &expected_ret {
+            if er != &body_ty {
+                return self.err(format!(
+                    "this `lambda`'s body has type `{body_ty}`, but the context expects the codomain \
+                     `{er}` (arrow-codomain mismatch — RFC-0024 §4A.6, never a silent coercion)"
+                ));
+            }
+        }
+        Ok((
+            Ty::Fn(Box::new(param_ty), Box::new(body_ty)),
+            Expr::Lambda {
+                params: params.to_vec(),
                 body: Box::new(body2),
             },
         ))
