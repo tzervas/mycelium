@@ -57,7 +57,7 @@ fn a_small_corpus_builds_emits_and_passes_the_quality_bar() {
     write(
         &root,
         "examples/demo/demo.myc",
-        "// nodule: demo\n// @summary: A demo nodule.\nnodule demo\n\nfn id(x: Binary{8}) => Binary{8} =\n  x\n",
+        "// nodule: demo\n// @summary: A demo nodule.\nnodule demo;\n\nfn id(x: Binary{8}) => Binary{8} =\n  x;\n",
     );
 
     let input = BuildInput::conventional(&root);
