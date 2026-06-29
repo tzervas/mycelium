@@ -1053,9 +1053,6 @@ impl Parser {
         Ok(TraitRef { name, args })
     }
 
-    /// `impl Ident type_args? 'for' type_ref '{' fn_decl* '}'` — a trait instance (RFC-0019 §4.1;
-    /// RFC-0007 §12.1). The `<…>` are the trait's **type arguments** (concrete `TypeRef`s, reusing
-    /// the existing type-arg parser), not parameter names; the methods are full `fn … = body` defs.
     /// Top-level `impl` dispatcher (M-664). Disambiguates the **trait-instance** form
     /// `impl Trait[args]? for T { … }` (RFC-0019 §4.1 → [`Item::Impl`]) from the **inherent**
     /// method block `impl T { … }` (DN-03 §1 → [`Item::InherentImpl`]) by parsing the head type
@@ -1949,7 +1946,12 @@ impl Parser {
     fn parse_consume_expr(&mut self) -> Result<Expr, ParseError> {
         self.expect_keyword(&Tok::Consume)?;
         self.enter_depth()?;
-        let operand = self.parse_unary();
+        // `consume_expr ::= 'consume' app_expr` (mycelium.ebnf): the operand is an **applicative**
+        // expression, matching the doc above and the `for`/`hypha` prefix-operand siblings
+        // (`parse_app`). This is narrower than the prior `parse_unary` (which also admitted `neg`/`not`
+        // operands like `consume -s`); the grammar does not include those, so `parse_app` is the
+        // grammar-faithful production — never-more-permissive (no G2 break).
+        let operand = self.parse_app();
         self.leave_depth();
         operand.map(|o| Expr::Consume(Box::new(o)))
     }

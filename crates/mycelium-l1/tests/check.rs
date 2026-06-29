@@ -1590,6 +1590,35 @@ fn consume_of_a_substrate_param_typechecks() {
 }
 
 #[test]
+fn consume_is_grade_transparent_and_preserves_an_exact_operand() {
+    // M-664 (grade.rs `Expr::Consume`): `consume` is a **move** — grade-transparent. The result
+    // carries exactly the operand's grade, so an `@ Exact` substrate param flowing through
+    // `consume s` still satisfies an `@ Exact` return demand. (Before the transparency fix this arm
+    // returned `Declared`, which false-rejected this valid body — VR-5: no downgrade of a checked
+    // basis.)
+    let env = check(
+        "nodule d;\nfn take(s: Substrate{Sock} @ Exact) => Substrate{Sock} @ Exact = consume s;",
+    )
+    .expect("consume is grade-transparent — an Exact operand stays Exact");
+    assert_eq!(env.totality["take"], Totality::Total);
+}
+
+#[test]
+fn consume_enforces_the_operands_own_grade_demand() {
+    // The transparent arm still *grades the operand*, so a too-weak operand under an `@ Exact`
+    // return is a never-silent refusal (the grade discipline is enforced, not bypassed — G2/VR-5).
+    let err = check(
+        "nodule d;\nfn take(s: Substrate{Sock} @ Empirical) => Substrate{Sock} @ Exact = consume s;",
+    )
+    .unwrap_err();
+    assert!(
+        !err.message.is_empty(),
+        "an Empirical operand under an Exact return must be an explicit grade refusal, got: {}",
+        err.message
+    );
+}
+
+#[test]
 fn consume_of_a_non_substrate_is_refused() {
     // Never-silent (G2): only a `Substrate` value can be consumed — a `Binary{8}` operand is an
     // explicit refusal naming `Substrate`.
@@ -1628,6 +1657,23 @@ fn inherent_impl_methods_lift_to_callable_free_fns() {
 }
 
 #[test]
+fn inherent_impl_on_an_unknown_for_ty_is_accepted_in_v0() {
+    // M-664 KNOWN GAP (documented, intentional): the inherent-impl `for_ty` is NOT validated to
+    // resolve to a known type — at Phase-0 desugar the type registries don't exist yet, and `for_ty`
+    // carries no semantic weight in v0 (no `T::m` qualified-call form binds to it). So `impl
+    // NoSuchType { … }` is accepted: the unknown head is a no-op, the lifted methods still check.
+    // This pins the *current* behaviour (not an endorsement) — when a qualified-call surface lands,
+    // `for_ty` becomes load-bearing and this must become a never-silent refusal (G2). See the
+    // Phase-0 desugar comment in checkty.rs.
+    let env = check(
+        "nodule d;\nimpl NoSuchType { fn id8(x: Binary{8}) => Binary{8} = x; };\nfn caller(x: Binary{8}) => Binary{8} = id8(x);",
+    )
+    .expect("v0: an unknown inherent `for_ty` is accepted (advisory metadata; documented gap)");
+    assert_eq!(env.totality["id8"], Totality::Total);
+    assert_eq!(env.totality["caller"], Totality::Total);
+}
+
+#[test]
 fn inherent_impl_method_name_collision_is_refused() {
     // The lifted methods share the top-level fn namespace; a collision with another top-level fn
     // is caught by the existing duplicate-fn check (never silent, G2).
@@ -1636,8 +1682,9 @@ fn inherent_impl_method_name_collision_is_refused() {
     )
     .unwrap_err();
     assert!(
-        !err.message.is_empty(),
-        "a duplicate inherent-method name must be an explicit error"
+        err.message.contains("duplicate"),
+        "a duplicate inherent-method name must be the explicit duplicate-fn refusal, got: {}",
+        err.message
     );
 }
 
@@ -1655,11 +1702,13 @@ fn inherent_impl_on_repr_type_checks() {
 #[test]
 fn trait_impl_without_for_is_refused() {
     // Disambiguation guard: `impl Cmp { … }` (a trait name with no `for`) is treated as an
-    // inherent block on type `Cmp` — which is fine to parse, but `impl Cmp for` with a missing
-    // body opener is a never-silent parse error. Here we assert the trait form still requires
-    // `for`/`{` after the head (never a silent accept, G2).
+    // inherent block on type `Cmp` — which is fine to parse, but `impl Cmp Binary{8} { … }` (a head
+    // `impl <trait> <type>` with no `for` between them) is a never-silent parse error. The header
+    // carries its mandatory `;` (M-818/DN-57 §3), so the refusal is the **malformed impl head**, not
+    // a missing-header-`;` (the source is otherwise well-formed up to the impl). Never a silent accept
+    // (G2).
     let err = parse(
-        "nodule d\nimpl Cmp Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }",
+        "nodule d;\nimpl Cmp Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }",
     )
     .unwrap_err();
     assert!(

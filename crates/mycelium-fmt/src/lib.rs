@@ -842,7 +842,7 @@ fn collect_match_arm_comments(
                 depth,
             )?;
         }
-        // `consume(e)` (DN-… surface keyword) wraps a single sub-expression — recurse through it
+        // `consume e` (DN-03 §1 surface keyword) wraps a single sub-expression — recurse through it
         // transparently to catch any nested match-arm comments.
         Expr::Consume(inner) => {
             collect_match_arm_comments(
@@ -1035,16 +1035,17 @@ fn render_non_fn_item(item: &Item) -> String {
     // extracting the item's text.  This avoids duplicating the printer logic while staying
     // correct.
     //
-    // CAVEAT: `expand_to_source` always outputs `nodule <path>\n\n<item>\n`.  We strip the
-    // header.
+    // CAVEAT: `expand_to_source` always outputs `nodule <path>;\n\n<item>\n` (DN-57 §3 / M-818: the
+    // header is a component, so it carries its mandatory `;`). We strip the header line.
     let synthetic = mycelium_l1::ast::Nodule {
         path: mycelium_l1::ast::Path(vec!["_".to_owned()]),
         std_sys: false,
         items: vec![item.clone()],
     };
     let full = expand_to_source(&synthetic);
-    // `full` is `nodule _\n\n<item text>\n`; we want just `<item text>\n`.
-    // Strip "nodule _\n\n" from the front.
+    // `full` is `nodule _;\n\n<item text>\n`; we want just `<item text>\n`.
+    // Strip the header line + the blank line (`nodule _;\n\n`) from the front: `splitn(3, '\n')`
+    // yields `["nodule _;", "", "<item text>\n"]`, and `nth(2)` is the item text.
     full.splitn(3, '\n')
         .nth(2)
         .map(str::to_owned)

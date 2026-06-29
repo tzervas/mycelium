@@ -16,7 +16,8 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   whitespace-free source (`nodule d;fn a()=>…;fn b()=>…;`) now parses. **DN-57 §3 settled**
   (append-only): uniform rule — a `}`-closed block still takes the trailing `;` (deliberately not
   Rust's "`}` ends the item"); the terminator adds no AST node. `mycfmt` emits `;` canonically.
-  `mycelium.ebnf` updated (`nodule_block ::= nodule_header (item ';')+`).
+  `mycelium.ebnf` updated (`nodule_block ::= nodule_header ';' (item ';')*` — the header carries its
+  own mandatory `;`, and a header-only nodule is well-formed).
 - **Workspace-wide corpus migration (closes M-821):** every `.myc` source and in-test Mycelium
   program string gained its `;` — 25 accept + 24 reject conformance fixtures (+ new
   `reject/29-missing-semicolon-terminator.myc`), `lib/std/**`, the examples, and ~565 in-test
