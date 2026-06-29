@@ -101,7 +101,7 @@ Stage 1a (monomorphic, pure, call-by-value — the current RFC-0018 Enacted scop
 
 - Formalize the L1 v0 syntax (terms, types, graded contexts) as an inductive Lean 4 type.
 - Formalize the graded typing judgment `⊢ e : τ @ g` as an indexed inductive proposition
-  matching the seven rules (G-Const, G-Op, G-Con, G-Let, G-App, G-Match/A, G-Swap,
+  matching the eight rules (G-Const, G-Op, G-Con, G-Let, G-App, G-Match/A, G-Swap,
   G-Fix).
 - State and prove the **grade preservation** lemma (T9.4 part i) by structural induction
   on the derivation.
@@ -392,7 +392,7 @@ consumed, dormanted, or escalated? The disposition routes this to DN-59 and a fu
 
 **(a) LR-8 / `substrate`.** RFC-0006 LR-8: "values are immutable." The `substrate` is
 the affine, external-resource-capability handle (`graft` — an affine `substrate` handle,
-RFC-0008 §4.1 table, `crates/mycelium-cert` surface). A `substrate` is affine: it cannot
+RFC-0008 §4.5 table, `crates/mycelium-cert` surface). A `substrate` is affine: it cannot
 be duplicated; it must be either **consumed** (via `consume`) or transferred. Dropping it
 without consuming is an explicit protocol violation (RFC-0027 OQ-5 records this as
 `substrate/graft drop-without-consume protocol — depends on the graft implementation RFC`).
@@ -594,7 +594,7 @@ tractable VSA program class should be:
   staged interaction), §4.9 (polymorphic typing judgment).
 - **RFC-0027** §7 (RC mechanism), §8 (guarantee tags), §11 (OQ-1..OQ-6), §12 (three-layer
   hybrid pointer, honest-scope note on AOT-env-machine gap).
-- **RFC-0008** RT7 (structured lifetimes, scope-exit, reclaim), §4.1 table (`graft`/
+- **RFC-0008** RT7 (structured lifetimes, scope-exit, reclaim), §4.5 table (`graft`/
   `substrate`/`reclaim` vocabulary).
 - **RFC-0002** §2–§5 (swap certificates, `SwapError::ApproximateSource`, E2-1 placeholder).
 - **RFC-0014** (bounded-effects recovery, effect budget; §10.1 D1 Proposed).

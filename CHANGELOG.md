@@ -21,7 +21,7 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `InjectError::UnsignedCode` refusal, gating the interpreter-fallback path too). The `InjectCert`
   **is** the spore's signature component (ADR-013 §2 comp. 4) — `myc-prepare` signs a spore that is
   both deployable unit and inject gate, fusing the gate with the VR-4 no-opaque-lowering attestation
-  (ADR-006). A colony verifies the cert valid/trusted/unexpired/unsuperseded against its **own**
+  (DN-18/M-630; ADR-006 for EXPLAIN-ability). A colony verifies the cert valid/trusted/unexpired/unsuperseded against its **own**
   `TrustRoot`; signing authority is project-scoped and graded by scope-of-work. Key-management detail,
   replay/expiry, and inject-mode scoping (§K.2/§L/§M) are named open R&D. References RFC-0034/ADR-013/
   ADR-017 without changing them (append-only).

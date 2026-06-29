@@ -3,11 +3,11 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0038 |
-| **Status** | **Draft (Proposed)** — ratified design direction (DN-64 §7 OQ-K…OQ-Q, 2026-06-29). Enacts nothing; named open R&D items are explicit, not silently closed (G2/VR-5). Advances to Accepted when the maintainer ratifies this document; to Enacted when the inject-mode mechanism lands Rust-first. |
+| **Status** | **Proposed** — ratified design direction (DN-64 §7 OQ-K…OQ-Q, 2026-06-29). Enacts nothing; named open R&D items are explicit, not silently closed (G2/VR-5). Advances to Accepted when the maintainer ratifies this document; to Enacted when the inject-mode mechanism lands Rust-first. |
 | **Type** | Normative / foundational (once Accepted) — introduces the inject-security axis as a first-class, independently configurable policy orthogonal to the certification axis (RFC-0034) |
 | **Date** | 2026-06-29 |
 | **Task** | M-836…M-842 (DN-64 §7 OQ-K…OQ-Q disposition tasks) |
-| **Feeds** | ADR-013 §2 component 4 (spore signature — deferred; this RFC is the design vehicle); ADR-017 (hot-inject mechanism; this RFC adds the security gate on top); RFC-0008 §R8-Q4 (adversarial mesh — out of scope here; named) |
+| **Feeds** | ADR-013 §2 component 4 (spore signature — deferred; this RFC is the design vehicle); ADR-017 (hot-inject mechanism; this RFC adds the security gate on top); RFC-0008 R8-Q4 (adversarial mesh — out of scope here; named) |
 | **Depends on** | ADR-003 (content-addressed identity — the dispatch key); ADR-013 (spore as deployable unit — `InjectCert` is its signature component); ADR-016 (ABI dispatch table); ADR-017 (hot-inject mechanism); ADR-006 (EXPLAIN-able dispatch — extended here with inject-mode dimension); DN-18/M-620/M-630 (`NativeArtifact` + VR-4 cross-backend attestation); RFC-0008 §4 (germination — `TrustRoot` set at image start); RFC-0034 §4/§8 (knob matrix + orthogonality — the cert axis is independent); DN-44 §1.1 (disclosed-and-guided residual insecurity) |
 | **Does NOT change status of** | RFC-0034 (Enacted — with code), ADR-013 (Accepted), ADR-016 (Accepted), ADR-017 (Accepted), RFC-0008 (Accepted). All references are cross-references, never rewrites (house rule #3 — append-only). |
 
@@ -26,7 +26,7 @@
 ADR-017 (Accepted) establishes hot-inject as a **correctness and atomicity** mechanism:
 content-addressing dissolves the atomicity hazard (a change is a new hash, never an in-place
 mutation), and `Image::call()` refuses unknown hashes with an explicit
-`InjectError::DispatchMiss` (`Exact` — ADR-017 §decision 5). **No signing requirement or
+`InjectError::DispatchMiss` (`Exact` — ADR-017 Decision item 5). **No signing requirement or
 unsigned-code refusal is present in the current corpus.**
 
 The gap: a content hash is collision-resistant identity but not authentication. An attacker who
@@ -77,7 +77,7 @@ RFC is Accepted; until then they are the design target (`Declared`).
 - **I2 — Unsigned code yields an explicit refusal in `inoculated` mode.** `InjectError::UnsignedCode(ContentHash)`
   is the designated variant — explicit, carrying the exact rejected hash, never swallowed. The
   pattern is structurally isomorphic to the existing `InjectError::DispatchMiss` (ADR-017
-  §decision 5). (`Declared` — no code yet; the pattern is `Exact`-cited from ADR-017.)
+  Decision item 5). (`Declared` — no code yet; the pattern is `Exact`-cited from ADR-017.)
 - **I3 — `TrustRoot` is immutable after germination.** A `TrustRoot` set at image start (the
   germination point — RFC-0008 §4) cannot be changed at runtime. An attempt to change it is an
   explicit error, never a silent downgrade. An empty `TrustRoot` means `loose` mode.
@@ -86,8 +86,9 @@ RFC is Accepted; until then they are the design target (`Declared`).
   It never inherits or proxies the sender's trust. (`Declared` — direction set by OQ-Q.)
 - **I5 — Inject-mode is independently configurable from cert mode.** The two axes are
   orthogonal: `fast`+`inoculated` is valid; `certified`+`loose` is valid. No coupling by
-  design (RFC-0034 §8). (`Exact` — RFC-0034 §8 establishes the orthogonality; the inject-mode
-  extension is `Declared`.)
+  design (RFC-0034 §8). (RFC-0034 §8 establishes the dispatch mechanism is independent of
+  cert-mode — `Exact`; the orthogonality of the *inject-security axis* is a design property of
+  this RFC — `Declared`.)
 - **I6 — The interpreter fallback path is also gated in `inoculated` mode.** An interpreted
   definition injected into an `inoculated` image requires a valid `InjectCert` — uniform
   enforcement, no back-door through the interpreter path. (Direction: OQ-O, `Declared`;
@@ -102,8 +103,9 @@ RFC is Accepted; until then they are the design target (`Declared`).
 
 The cert axis (RFC-0034) governs swap-certificate emission and checking. The inject-security
 axis governs whether injection requires a signed artifact. They are **orthogonal axes**:
-independent knobs that compose freely. (`Exact` — RFC-0034 §8 establishes no coupling exists;
-the inject axis is `Declared` here.)
+independent knobs that compose freely. (RFC-0034 §8 establishes the dispatch mechanism is
+independent of cert-mode — `Exact`; that the inject-security axis composes freely with the cert
+axis is a design property of this RFC — `Declared`.)
 
 ### §4.1 Extended knob matrix
 
@@ -157,7 +159,7 @@ The following are **explicitly outside scope** — named, not buried:
   nullifies the gate. Key rotation and revocation machinery are open R&D (§L).
 - **Byzantine or adversarial injection from a peer colony in a mesh.** Cross-colony injection
   is addressed structurally by I4 (verify against own TrustRoot), but Byzantine-fault-tolerant
-  mesh hardening is deferred (RFC-0008 §R8-Q4 — its own future RFC).
+  mesh hardening is deferred (RFC-0008 R8-Q4 — its own future RFC).
 - **Content-addressed identity replay.** A content hash is not a timestamp. An attacker with
   access to a valid `InjectCert` for a known-vulnerable prior version of a definition can
   inject that prior version. The replay/expiry mechanism is open R&D (§L); until it lands,
@@ -243,8 +245,10 @@ analogous to a release-signing step. (`Declared`.)
 
 `TrustRoot` is the set of trusted `SignerId`s associated with an image. It is:
 
-- Set at germination (the image start event — RFC-0008 §4; `Declared` that this is the right
-  point; RFC-0008 §4 is `Exact` for germination as the initialization event).
+- Set at germination (the image start event — RFC-0008 §4.4 uses "germinating" descriptively;
+  the germination *contract* is an open question per RFC-0008 §8 R8-Q5). That `TrustRoot` is set
+  at germination, and that germination is the right initialization point, are both `Declared`
+  here (a sensible direction, not a fact RFC-0008 §4 establishes).
 - **Immutable** after germination. Any attempt to change it at runtime is an explicit error,
   never a silent downgrade (I3 / G2).
 - An **empty `TrustRoot`** means `loose` mode: no signing requirement is enforced. This is
@@ -393,9 +397,9 @@ Several existing corpus elements are load-bearing for this RFC. All citations ar
 |---|---|---|
 | Spore signature component named | ADR-013 §2 component 4 | Names the slot; design deferred — this RFC fills it |
 | `NativeArtifact` with VR-4 attestation | DN-18/M-620 (`crates/mycelium-mlir/src/deploy.rs`) | The concrete artifact type `InjectCert` wraps; `CrossBackendGate` is the `vr4_attestation` type |
-| `InjectError::DispatchMiss` | ADR-017 §decision 5 / `crates/mycelium-mlir/src/inject.rs:185-193` | Precedent for the never-silent refusal pattern; `UnsignedCode(ContentHash)` is a structural extension |
-| Dispatch table `ContentHash` to `entry` | ADR-016 / ADR-017 §decision 1 | The inject point; `content_hash` in `InjectCert` is this same key |
-| `Resolution` enum | ADR-006 / ADR-017 §decision 5 | Extended with `inject_mode` dimension (§7.3) |
+| `InjectError::DispatchMiss` | ADR-017 Decision item 5 / `crates/mycelium-mlir/src/inject.rs:185-193` | Precedent for the never-silent refusal pattern; `UnsignedCode(ContentHash)` is a structural extension |
+| Dispatch table `ContentHash` to `entry` | ADR-016 / ADR-017 Decision item 1 | The inject point; `content_hash` in `InjectCert` is this same key |
+| `Resolution` enum | ADR-006 / ADR-017 Decision item 5 | Extended with `inject_mode` dimension (§7.3) |
 | `@certification` scoping | RFC-0034 §6 | Potential reuse for inject-mode scoping (§M) |
 | Germination as initialization event | RFC-0008 §4 | The point at which `TrustRoot` is set (I3) |
 | R8-Q4 (trust scope) | RFC-0008 §8 | Cross-colony adversarial mesh — explicitly deferred here (§5.2) |
@@ -418,9 +422,10 @@ Several existing corpus elements are load-bearing for this RFC. All citations ar
   `InjectCert`. The cert is not just "from an authorized party" but "from an authorized party
   whose lowering is auditable (no black-box pass)" — fusing security and transparency per
   ADR-006.
-- **The gate is independent of the swap-cert mode** (`Exact` — RFC-0034 §8): a `fast` runtime
-  can enforce `inoculated` injection; a `certified` runtime can operate in `loose` mode. The
-  two axes are independently configurable.
+- **The gate is independent of the swap-cert mode** (`Declared` — by this RFC's design; grounded
+  in RFC-0034 §8, which establishes the dispatch mechanism is `Exact`-ly independent of cert-mode):
+  a `fast` runtime can enforce `inoculated` injection; a `certified` runtime can operate in `loose`
+  mode. The two axes are independently configurable.
 
 ---
 
@@ -472,7 +477,7 @@ Until Implementation DoD is met, all mechanism claims stay `Declared` (VR-5/G2).
 
 ## §14 Residual / open (non-R&D)
 
-- The cross-colony mesh hardening (RFC-0008 §R8-Q4) is not addressed here; §5.2 names it.
+- The cross-colony mesh hardening (RFC-0008 R8-Q4) is not addressed here; §5.2 names it.
 - The interaction between inject-mode and the `@certification` scoping mechanism (§M) remains
   to be specified in a follow-on once §M R&D resolves.
 - The `myc-prepare` UX and key-generation tooling surface are deferred to the §K.2 R&D
@@ -487,4 +492,4 @@ Until Implementation DoD is met, all mechanism claims stay `Declared` (VR-5/G2).
 
 | Date | Status | Note |
 |---|---|---|
-| 2026-06-29 | **Draft (Proposed)** | Initial draft — ratifies the hot-inject security axis from DN-64 §7 OQ-K…OQ-Q (2026-06-29 maintainer dispositions). Introduces the `loose`/`inoculated` inject modes as an axis orthogonal to RFC-0034's cert axis; defines `InjectCert` as the spore's signature component (ADR-013 §2 comp. 4); specifies `TrustRoot` semantics and cross-colony trust (OQ-Q); extends `Resolution` with `inject_mode`; names three open R&D items (§K.2 key-management detail, §L replay/expiry, §M scoping hierarchy) explicitly — none silently closed (G2/VR-5). Feeds ADR-013, ADR-017, RFC-0008 §R8-Q4 (out of scope), RFC-0034 §4/§8 (independent). Commissioned under M-836…M-842. |
+| 2026-06-29 | **Proposed** | Initial draft — ratifies the hot-inject security axis from DN-64 §7 OQ-K…OQ-Q (2026-06-29 maintainer dispositions). Introduces the `loose`/`inoculated` inject modes as an axis orthogonal to RFC-0034's cert axis; defines `InjectCert` as the spore's signature component (ADR-013 §2 comp. 4); specifies `TrustRoot` semantics and cross-colony trust (OQ-Q); extends `Resolution` with `inject_mode`; names three open R&D items (§K.2 key-management detail, §L replay/expiry, §M scoping hierarchy) explicitly — none silently closed (G2/VR-5). Feeds ADR-013, ADR-017, RFC-0008 R8-Q4 (out of scope), RFC-0034 §4/§8 (independent). Commissioned under M-836…M-842. |

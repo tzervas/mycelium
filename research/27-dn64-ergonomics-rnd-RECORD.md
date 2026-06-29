@@ -1,8 +1,9 @@
 # Research Record 27 — DN-64 Ergonomics R&D Planning: OQ-B/G/H/I/J/R/T Dispositions
 
-> **What this file is.** A durable R&D planning record for the six open questions from
-> DN-64 §6 that the maintainer dispositioned (OQ-B, OQ-G, OQ-I, OQ-J, OQ-R, OQ-T), each
-> mapped to a minted M-task (M-828, M-833, M-834, M-835, M-843, M-845 — minted in DN-64 §7).
+> **What this file is.** A durable R&D planning record for the seven open questions from
+> DN-64 §6 that the maintainer dispositioned (OQ-B, OQ-G, OQ-H, OQ-I, OQ-J, OQ-R, OQ-T — OQ-H
+> the record-literal shorthand, added at integration), each mapped to a minted M-task
+> (M-828, M-833, M-846, M-834, M-835, M-843, M-845 — minted in DN-64 §7).
 > Conducted 2026-06-29 from DN-64 §2/§5/§6, RFC-0005, RFC-0008 RT3/§4.5, RFC-0018 §4/§5,
 > RFC-0020 §4.1/§4.4, RFC-0025, RFC-0037 D2-b, RFC-0001 §4.7, RFC-0013 §4.6, DN-02 §1/§7,
 > DN-03 §3, DN-31 §2, DN-63 §2/§3.5/§3.6, ADR-006.
@@ -70,8 +71,10 @@ RFC-0005-conformant value, not an opaque handle. The provenance DAG (RFC-0001 §
 which captured policy drove which placement decision. EXPLAIN must remain answerable even after
 a mechanized-set policy is active.
 
-**Dependency ordering (`Declared`).** M-828 depends on R2 gate opening (RFC-0008 §4.6 — R1
-must complete before R2 activates; M-667 is the predecessor per DN-63 §1). The mechanized
+**Dependency ordering (`Declared`).** M-828's direct `depends_on` is **[M-825, M-668]**
+(`issues.yaml`): M-825 (the backbone design decision) and M-668 (the R2 planning gate). M-668 in
+turn depends on M-667 (the R1 completion gate, RFC-0008 §4.6 — R1 must complete before R2
+activates), so M-667 is a *transitive* predecessor of M-828, not its immediate one. The mechanized
 capture and setter surface is R2-tier work; it cannot advance to Accepted until R1 is done.
 The SelectionPolicy language (RFC-0005) is already Accepted and its three-site unification
 is the design basis; M-828 is an activation-and-ergonomics task within that design, not a
@@ -195,13 +198,15 @@ to trait methods or associated types.
 
 ### 4.2 Grounded analysis
 
-**Current status of short keywords (`Exact`).** RFC-0037 D2-b (Enacted 2026-06-27) specifies
-`bin{N}`, `tern{N}`, `emb{D,S}`, `hvec{E,D,Sp}` as syntactic aliases for `Binary{N}`,
-`Ternary{N}`, `Dense{D,S}`, `VSA{E,D,Sp}`. These appear in the committed EBNF as
-`repr_type` alternatives. RFC-0037 §4 (D2-b paragraph) records FLAG-3 (short keyword lexer
-status: reserved keyword vs soft keyword) as open and notes the open question of their scope
-— type literals only vs. also trait methods/associated types. (`Exact` — RFC-0037 D2-b,
-the EBNF §6.)
+**Current status of short keywords (`Declared`).** RFC-0037 D2-b (a **remaining follow-on**,
+not in RFC-0037's Enacted scope) proposes `bin{N}`, `tern{N}`, `emb{D,S}`, `hvec{E,D,Sp}` as
+syntactic aliases for `Binary{N}`, `Ternary{N}`, `Dense{D,S}`, `VSA{E,D,Sp}`. They appear in
+RFC-0037's **proposed** `base_type` grammar (its normative §6 EBNF) but are **not yet in the
+committed `docs/spec/grammar/mycelium.ebnf`** (whose `base_type` production carries only the long
+forms). RFC-0037 §4 (D2-b paragraph) records FLAG-3 (short keyword lexer status: reserved keyword
+vs soft keyword) as open and notes the open question of their scope — type literals only vs. also
+trait methods/associated types. (`Declared` — RFC-0037 D2-b is a proposed follow-on; only the
+long-form `base_type` production is `Exact` in the committed EBNF.)
 
 **Why type-literal binding only is correct (`Declared` direction, grounded in corpus).**
 The one-canonical-form discipline (DN-03 §3, DN-64 §5.8) holds that each concept has exactly
