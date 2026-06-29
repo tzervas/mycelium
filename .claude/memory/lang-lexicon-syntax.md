@@ -288,27 +288,40 @@ lang    = "mycelium-0"   # surface-language edition (MSRV-analogue)
 numerics = { phylum = "numerics", version = "^2", hash = "blake3:..." }
 ```
 
+### The `;` component terminator is MANDATORY (DN-57 §3, M-818)
+
+The delimiter triad: **`:` ascribes · `,` separates siblings · `;` terminates a component.** `;` is
+**required** at the end of **every** component — the **nodule header**, every top-level item, every
+trait signature, every `impl`/inherent method, and every `object` member. The rule is **uniform**: a
+`}`-closed block (`trait { … }`, `impl { … }`, `object { … }`) **still** takes the trailing `;` after
+the `}` (this is *not* Rust's "`}` ends the block"). A missing terminator is a never-silent parse error
+(G2) naming the component. Because the boundary is a *token* (not a newline / the absence of tokens),
+fully whitespace-free source is legal (`nodule d; fn a() => … = …;`) and the surface is streamable.
+`match` arms stay `,`-separated/`}`-delimited (`,` is internal, `;` is terminal). The terminator adds
+**no AST node**. (`mycfmt` emits `;` canonically, so a hand-omitted `;` is a one-line auto-fix.)
+
 ### Example: a minimal nodule with a swap
 
 ```mycelium
 // nodule: demo
-nodule demo
-fn f(x: Binary{8}) -> Ternary{6} =
-  swap(x, to: Ternary{6}, policy: rt)
+nodule demo;
+fn f(x: Binary{8}) => Ternary{6} =
+  swap(x, to: Ternary{6}, policy: rt);
 ```
 
 Both `to:` and `policy:` are mandatory in `swap(…)`. Omitting `policy` is a parse error (S1/WF2).
+Every component (the `nodule` header and the `fn`) ends with `;` (DN-57 §3 / M-818).
 
 ### Example: matured scope + `thaw` exception
 
 ```mycelium
 // nodule: ml.inference
 // @matured: true
-nodule ml.inference
+nodule ml.inference;
 
-fn inference_pipeline(input: Dense{1024, F32}) -> Dense{1024, F32} = input
+fn inference_pipeline(input: Dense{1024, F32}) => Dense{1024, F32} = input;
 
-thaw fn experimental_kernel(input: Dense{1024, F32}) -> Dense{1024, F32} = input
+thaw fn experimental_kernel(input: Dense{1024, F32}) => Dense{1024, F32} = input;
 ```
 
 `// @matured: true` in the header (or in `mycelium-proj.toml`) promotes the whole scope to AOT.
@@ -319,16 +332,16 @@ with a teaching diagnostic (RFC-0017 §4.1).
 
 ```mycelium
 // nodule: geometry.shapes
-nodule geometry.shapes
+nodule geometry.shapes;
 
-type Shape = Circle(Binary{8}) | Square(Binary{8}) | Triangle(Binary{8}, Binary{8})
+type Shape = Circle(Binary{8}) | Square(Binary{8}) | Triangle(Binary{8}, Binary{8});
 
-fn area(s: Shape) -> Binary{16} =
+fn area(s: Shape) => Binary{16} =
   match s {
     Circle(r)    => r,
     Square(w)    => w,
     Triangle(b, h) => b,
-  }
+  };
 ```
 
 Match coverage is checked by the **Maranget usefulness algorithm** (`crates/mycelium-l1/src/usefulness.rs`)
@@ -341,12 +354,15 @@ Match coverage is checked by the **Maranget usefulness algorithm** (`crates/myce
 The EBNF in `docs/spec/grammar/mycelium.ebnf` is the normative oracle. Key productions:
 
 ```ebnf
-program        ::= nodule_header item*
-nodule_header  ::= 'nodule' path
-item           ::= use_item | default_item | type_item | trait_item | impl_item | fn_item
-fn_item        ::= 'thaw'? 'fn' Ident type_params? '(' params? ')' '->' type_ref effect_ann? '=' expr
-type_params    ::= '<' type_param (',' type_param)* '>'
-type_param     ::= Ident (':' bound ('+' bound)*)?   /* bounded type param; bound = trait name */
+/* DN-57 §3 (M-818): `;` MANDATORY after the nodule header and every item (uniform — a `}`-closed
+ * block still takes the trailing `;`). RFC-0037: return arrow `=>`, type params `[…]`. */
+program        ::= phylum_header? nodule_block+
+nodule_block   ::= nodule_header ';' (item ';')*
+nodule_header  ::= 'nodule' path '@std-sys'?
+item           ::= use_item | default_item | type_item | trait_item | impl_item | fn_item | object_item | lower_item | derive_item
+fn_item        ::= 'pub'? 'thaw'? 'fn' Ident type_params? const_params? '(' params? ')' '=>' type_ref effect_ann? '=' expr
+type_params    ::= '[' Ident (',' Ident)* ']'         /* RFC-0037 D1: square brackets, not '<>' */
+const_params   ::= '{' Ident (',' Ident)* '}'         /* width/const params (DN-42) */
 effect_ann     ::= '!' '{' (Ident (',' Ident)*)? '}'  /* absent = pure; '!{}' = explicit pure */
 trait_item     ::= 'trait' Ident type_params? '{' fn_sig* '}'
 impl_item      ::= 'impl' Ident type_args? 'for' type_ref '{' fn_item* '}'   /* trait instance */
