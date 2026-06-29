@@ -2,4 +2,4 @@
 nodule numerics;
 
 fn certified(x: Dense{768, F32}) => Dense{768, BF16} @ Proven =
-  swap(x, to: Dense{768, BF16}, policy: bf16_round);
+    swap(x, to: Dense{768, BF16}, policy: bf16_round);

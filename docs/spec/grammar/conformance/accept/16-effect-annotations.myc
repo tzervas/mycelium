@@ -8,17 +8,12 @@
 // explicit empty set `!{}`; `plain` is unannotated — both are pure.
 nodule effects;
 
-fn source() => Binary{8} =
-  0b00000000;
+fn source() => Binary{8} !{io} = 0b00000000;
 
-fn relay() => Binary{8} =
-  source();
+fn relay() => Binary{8} !{io} = source();
 
-fn wide() => Binary{8} =
-  source();
+fn wide() => Binary{8} !{io, time} = source();
 
-fn pure_one() => Binary{8} =
-  0b00000000;
+fn pure_one() => Binary{8} !{} = 0b00000000;
 
-fn plain() => Binary{8} =
-  0b00000000;
+fn plain() => Binary{8} = 0b00000000;

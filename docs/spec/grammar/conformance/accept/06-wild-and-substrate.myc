@@ -2,4 +2,4 @@
 nodule io;
 
 fn read(h: Substrate{Handle}) => Binary{8} =
-  wild { foreign_read(h) };
+    wild { foreign_read(h) };

@@ -147,19 +147,19 @@ fn assert_three_way(label: &str, src: &str, expected_src: &str) {
 /// different Ring-2 surface, not the oracle.
 #[test]
 fn byte_len_returns_count() {
-    let driver = "fn main() => Binary{32} = byte_len(0x48_65_6c_6c_6f)";
+    let driver = "fn main() => Binary{32} = byte_len(0x48_65_6c_6c_6f);";
     let src = program(driver);
     // Binary{32}(5) MSB-first: 0b00000000_00000000_00000000_00000101
-    let expected = "nodule ref;\n\nfn main() => Binary{32} =\n  bytes_len(0x48_65_6c_6c_6f);";
+    let expected = "nodule ref;\nfn main() => Binary{32} = bytes_len(0x48_65_6c_6c_6f);";
     assert_three_way("byte_len(Hello)", &src, expected);
 }
 
 /// `byte_len(0x01_02_03)` → `Binary{32}(3)` — mirrors enablement.rs bytes_len_surface_three_way.
 #[test]
 fn byte_len_three_byte_input() {
-    let driver = "fn main() => Binary{32} = byte_len(0x01_02_03)";
+    let driver = "fn main() => Binary{32} = byte_len(0x01_02_03);";
     let src = program(driver);
-    let expected = "nodule ref;\n\nfn main() => Binary{32} =\n  bytes_len(0x01_02_03);";
+    let expected = "nodule ref;\nfn main() => Binary{32} = bytes_len(0x01_02_03);";
     assert_three_way("byte_len(3 bytes)", &src, expected);
 }
 
@@ -170,18 +170,18 @@ fn byte_len_three_byte_input() {
 #[test]
 fn is_ascii_byte_true_for_ascii() {
     // 0b0100_0001 = 0x41 = 'A': high bit clear → ASCII.
-    let driver = "fn main() => Bool = is_ascii_byte(0b0100_0001)";
+    let driver = "fn main() => Bool = is_ascii_byte(0b0100_0001);";
     let src = program(driver);
-    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
+    let expected = "nodule ref;\nfn main() => Bool = True;";
     assert_three_way("is_ascii_byte(0x41=A → True)", &src, expected);
 }
 
 /// `is_ascii_byte(0b0000_0000)` → `True` (NUL byte = 0x00; Exact).
 #[test]
 fn is_ascii_byte_true_for_nul() {
-    let driver = "fn main() => Bool = is_ascii_byte(0b0000_0000)";
+    let driver = "fn main() => Bool = is_ascii_byte(0b0000_0000);";
     let src = program(driver);
-    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
+    let expected = "nodule ref;\nfn main() => Bool = True;";
     assert_three_way("is_ascii_byte(0x00=NUL → True)", &src, expected);
 }
 
@@ -189,9 +189,9 @@ fn is_ascii_byte_true_for_nul() {
 #[test]
 fn is_ascii_byte_true_for_max_ascii() {
     // 0b0111_1111 = 0x7F = 127: last valid ASCII value.
-    let driver = "fn main() => Bool = is_ascii_byte(0b0111_1111)";
+    let driver = "fn main() => Bool = is_ascii_byte(0b0111_1111);";
     let src = program(driver);
-    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
+    let expected = "nodule ref;\nfn main() => Bool = True;";
     assert_three_way("is_ascii_byte(0x7F → True)", &src, expected);
 }
 
@@ -200,18 +200,18 @@ fn is_ascii_byte_true_for_max_ascii() {
 #[test]
 fn is_ascii_byte_false_for_continuation() {
     // 0b1000_0000 = 0x80: the first byte with the high bit set — a 2-byte UTF-8 lead range start.
-    let driver = "fn main() => Bool = is_ascii_byte(0b1000_0000)";
+    let driver = "fn main() => Bool = is_ascii_byte(0b1000_0000);";
     let src = program(driver);
-    let expected = "nodule ref;\n\nfn main() => Bool =\n  False;";
+    let expected = "nodule ref;\nfn main() => Bool = False;";
     assert_three_way("is_ascii_byte(0x80 → False)", &src, expected);
 }
 
 /// `is_ascii_byte(0b1111_1111)` → `False` (= 0xFF; Exact).
 #[test]
 fn is_ascii_byte_false_for_0xff() {
-    let driver = "fn main() => Bool = is_ascii_byte(0b1111_1111)";
+    let driver = "fn main() => Bool = is_ascii_byte(0b1111_1111);";
     let src = program(driver);
-    let expected = "nodule ref;\n\nfn main() => Bool =\n  False;";
+    let expected = "nodule ref;\nfn main() => Bool = False;";
     assert_three_way("is_ascii_byte(0xFF → False)", &src, expected);
 }
 
@@ -223,7 +223,7 @@ fn is_ascii_byte_false_for_0xff() {
 
 /// Reference program preamble for decode_ascii tests: re-declare the local types so that
 /// `eval_core` produces a compatible CoreValue (same type ContentHash as the test program).
-const DECODE_REF_PREAMBLE: &str = "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\ntype Utf8Error = Invalid(Binary{8}) | Overlong(Binary{8}) | Surrogate(Binary{8}) | TooLarge(Binary{8});\n";
+const DECODE_REF_PREAMBLE: &str = "nodule ref;\ntype Option[A] = Some(A) | None;\ntype Result[A, E] = Ok(A) | Err(E);\ntype Utf8Error = Invalid(Binary{8}) | Overlong(Binary{8}) | Surrogate(Binary{8}) | TooLarge(Binary{8});\n";
 
 /// `decode_ascii(0x41_42_43, 0b0000_0000)` → `Ok(bytes_get(…, 0))` (= Ok(0x41='A'); Declared/Empirical).
 /// The byte at index 0 of [0x41, 0x42, 0x43] is 0x41 = 'A' — ASCII, so Ok.
@@ -233,11 +233,11 @@ const DECODE_REF_PREAMBLE: &str = "nodule ref;\n\ntype Option[A] = Some(A) | Non
 #[test]
 fn decode_ascii_ok_on_valid_ascii() {
     let driver =
-        "fn main() => Result[Binary{8}, Utf8Error] = decode_ascii(0x41_42_43, 0b0000_0000)";
+        "fn main() => Result[Binary{8}, Utf8Error] = decode_ascii(0x41_42_43, 0b0000_0000);";
     let src = program(driver);
     // Reference: Ok wrapping the same bytes_get call to share Derived provenance.
     let expected = format!(
-        "{DECODE_REF_PREAMBLE}fn main() => Result[Binary{{8}}, Utf8Error] = Ok(bytes_get(0x41_42_43, 0b0000_0000))"
+        "{DECODE_REF_PREAMBLE}fn main() => Result[Binary{{8}}, Utf8Error] = Ok(bytes_get(0x41_42_43, 0b0000_0000));"
     );
     assert_three_way("decode_ascii(ABC, 0)=Ok(A)", &src, &expected);
 }
@@ -247,11 +247,11 @@ fn decode_ascii_ok_on_valid_ascii() {
 #[test]
 fn decode_ascii_ok_at_offset() {
     let driver =
-        "fn main() => Result[Binary{8}, Utf8Error] = decode_ascii(0x43_44_45, 0b0000_0010)";
+        "fn main() => Result[Binary{8}, Utf8Error] = decode_ascii(0x43_44_45, 0b0000_0010);";
     let src = program(driver);
     // Reference: Ok(bytes_get(…, 2)) — Derived provenance to match computed result.
     let expected = format!(
-        "{DECODE_REF_PREAMBLE}fn main() => Result[Binary{{8}}, Utf8Error] = Ok(bytes_get(0x43_44_45, 0b0000_0010))"
+        "{DECODE_REF_PREAMBLE}fn main() => Result[Binary{{8}}, Utf8Error] = Ok(bytes_get(0x43_44_45, 0b0000_0010));"
     );
     assert_three_way("decode_ascii(CDE, 2)=Ok(E)", &src, &expected);
 }
@@ -264,11 +264,11 @@ fn decode_ascii_ok_at_offset() {
 #[test]
 fn decode_ascii_err_on_multibyte_lead() {
     // 0xc3_a9 is the UTF-8 encoding of 'é' (U+00E9). The lead byte 0xC3 has high bit set → Err.
-    let driver = "fn main() => Result[Binary{8}, Utf8Error] = decode_ascii(0xc3_a9, 0b0000_0000)";
+    let driver = "fn main() => Result[Binary{8}, Utf8Error] = decode_ascii(0xc3_a9, 0b0000_0000);";
     let src = program(driver);
     // Reference: Err(Invalid(bytes_get(…, 0))) — Derived provenance to match computed result.
     let expected = format!(
-        "{DECODE_REF_PREAMBLE}fn main() => Result[Binary{{8}}, Utf8Error] = Err(Invalid(bytes_get(0xc3_a9, 0b0000_0000)))"
+        "{DECODE_REF_PREAMBLE}fn main() => Result[Binary{{8}}, Utf8Error] = Err(Invalid(bytes_get(0xc3_a9, 0b0000_0000)));"
     );
     assert_three_way("decode_ascii(é-lead)=Err(Invalid(0xC3))", &src, &expected);
 }
@@ -278,11 +278,11 @@ fn decode_ascii_err_on_multibyte_lead() {
 #[test]
 fn decode_ascii_err_on_continuation_byte() {
     // 0x80 = 0b1000_0000: bare continuation byte — invalid lead, non-ASCII.
-    let driver = "fn main() => Result[Binary{8}, Utf8Error] = decode_ascii(0x80_bf, 0b0000_0000)";
+    let driver = "fn main() => Result[Binary{8}, Utf8Error] = decode_ascii(0x80_bf, 0b0000_0000);";
     let src = program(driver);
     // Reference: Err(Invalid(bytes_get(…, 0))) — Derived provenance to match computed result.
     let expected = format!(
-        "{DECODE_REF_PREAMBLE}fn main() => Result[Binary{{8}}, Utf8Error] = Err(Invalid(bytes_get(0x80_bf, 0b0000_0000)))"
+        "{DECODE_REF_PREAMBLE}fn main() => Result[Binary{{8}}, Utf8Error] = Err(Invalid(bytes_get(0x80_bf, 0b0000_0000)));"
     );
     assert_three_way("decode_ascii(0x80-continuation)=Err", &src, &expected);
 }
@@ -299,21 +299,21 @@ fn decode_ascii_err_on_continuation_byte() {
 /// Index 1 of [0x41, 0x42, 0x43] is in range (1 < 3) → Some. Grounding: hand-computed, three-way verified.
 #[test]
 fn byte_at_some_in_range() {
-    let driver = "fn main() => Option[Binary{8}] = byte_at(0x41_42_43, 0b0000_0001)";
+    let driver = "fn main() => Option[Binary{8}] = byte_at(0x41_42_43, 0b0000_0001);";
     let src = program(driver);
     // Reference: Some(bytes_get(…, 1)) — Derived provenance to match the computed in-range byte.
     let expected =
-        program("fn main() => Option[Binary{8}] = Some(bytes_get(0x41_42_43, 0b0000_0001))");
+        program("fn main() => Option[Binary{8}] = Some(bytes_get(0x41_42_43, 0b0000_0001));");
     assert_three_way("byte_at(ABC, 1)=Some(B)", &src, &expected);
 }
 
 /// `byte_at(0x41_42_43, 0b0000_0000)` → `Some(bytes_get(…, 0))` (= Some(0x41='A')) — boundary index 0.
 #[test]
 fn byte_at_some_at_zero() {
-    let driver = "fn main() => Option[Binary{8}] = byte_at(0x41_42_43, 0b0000_0000)";
+    let driver = "fn main() => Option[Binary{8}] = byte_at(0x41_42_43, 0b0000_0000);";
     let src = program(driver);
     let expected =
-        program("fn main() => Option[Binary{8}] = Some(bytes_get(0x41_42_43, 0b0000_0000))");
+        program("fn main() => Option[Binary{8}] = Some(bytes_get(0x41_42_43, 0b0000_0000));");
     assert_three_way("byte_at(ABC, 0)=Some(A)", &src, &expected);
 }
 
@@ -322,18 +322,18 @@ fn byte_at_some_at_zero() {
 /// Grounding: hand-computed (len 3, index 3 past end), three-way verified.
 #[test]
 fn byte_at_none_out_of_range() {
-    let driver = "fn main() => Option[Binary{8}] = byte_at(0x41_42_43, 0b0000_0011)";
+    let driver = "fn main() => Option[Binary{8}] = byte_at(0x41_42_43, 0b0000_0011);";
     let src = program(driver);
-    let expected = program("fn main() => Option[Binary{8}] = None");
+    let expected = program("fn main() => Option[Binary{8}] = None;");
     assert_three_way("byte_at(ABC, 3)=None (oob)", &src, &expected);
 }
 
 /// `byte_at(0x41_42_43, 0b1111_1111)` → `None` — index 255 (far past end) is out of range; never-silent.
 #[test]
 fn byte_at_none_far_out_of_range() {
-    let driver = "fn main() => Option[Binary{8}] = byte_at(0x41_42_43, 0b1111_1111)";
+    let driver = "fn main() => Option[Binary{8}] = byte_at(0x41_42_43, 0b1111_1111);";
     let src = program(driver);
-    let expected = program("fn main() => Option[Binary{8}] = None");
+    let expected = program("fn main() => Option[Binary{8}] = None;");
     assert_three_way("byte_at(ABC, 255)=None (oob)", &src, &expected);
 }
 
@@ -353,12 +353,12 @@ fn byte_at_none_far_out_of_range() {
 #[test]
 fn decode_one_ascii_one_byte() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0x41_42_43, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0x41_42_43, 0b0000_0000);";
     let src = program(driver);
     // Reference: recompute via the same `widen8(bytes_get(…))` so the Binary{32} codepoint shares
     // Derived provenance with decode_one's `widen8(lead)`.
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Ok(Pr(widen8(bytes_get(0x41_42_43, 0b0000_0000)), 0b0000_0001))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Ok(Pr(widen8(bytes_get(0x41_42_43, 0b0000_0000)), 0b0000_0001));",
     );
     assert_three_way("decode_one(A)=Ok(Pr(65,1))", &src, &expected);
 }
@@ -369,12 +369,11 @@ fn decode_one_ascii_one_byte() {
 #[test]
 fn decode_one_two_byte_e_acute() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xc3_a9, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xc3_a9, 0b0000_0000);";
     let src = program(driver);
     // Reference: recompute the codepoint with the same assembly `decode_two` uses (matching provenance).
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = \
-         Ok(Pr(or(shl6(widen8(and(bytes_get(0xc3_a9, 0b0000_0000), 0b0001_1111))), cont_payload(bytes_get(0xc3_a9, 0b0000_0001))), 0b0000_0010))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Ok(Pr(or(shl6(widen8(and(bytes_get(0xc3_a9, 0b0000_0000), 0b0001_1111))), cont_payload(bytes_get(0xc3_a9, 0b0000_0001))), 0b0000_0010));",
     );
     assert_three_way("decode_one(é)=Ok(Pr(233,2))", &src, &expected);
 }
@@ -385,11 +384,10 @@ fn decode_one_two_byte_e_acute() {
 #[test]
 fn decode_one_three_byte_euro() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xe2_82_ac, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xe2_82_ac, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = \
-         Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xe2_82_ac, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xe2_82_ac, 0b0000_0001)))), cont_payload(bytes_get(0xe2_82_ac, 0b0000_0010))), 0b0000_0011))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xe2_82_ac, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xe2_82_ac, 0b0000_0001)))), cont_payload(bytes_get(0xe2_82_ac, 0b0000_0010))), 0b0000_0011));",
     );
     assert_three_way("decode_one(€)=Ok(Pr(8364,3))", &src, &expected);
 }
@@ -401,11 +399,10 @@ fn decode_one_three_byte_euro() {
 #[test]
 fn decode_one_four_byte_emoji() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xf0_9f_98_80, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xf0_9f_98_80, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = \
-         Ok(Pr(or(or(or(shl18(widen8(and(bytes_get(0xf0_9f_98_80, 0b0000_0000), 0b0000_0111))), shl12(cont_payload(bytes_get(0xf0_9f_98_80, 0b0000_0001)))), shl6(cont_payload(bytes_get(0xf0_9f_98_80, 0b0000_0010)))), cont_payload(bytes_get(0xf0_9f_98_80, 0b0000_0011))), 0b0000_0100))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Ok(Pr(or(or(or(shl18(widen8(and(bytes_get(0xf0_9f_98_80, 0b0000_0000), 0b0000_0111))), shl12(cont_payload(bytes_get(0xf0_9f_98_80, 0b0000_0001)))), shl6(cont_payload(bytes_get(0xf0_9f_98_80, 0b0000_0010)))), cont_payload(bytes_get(0xf0_9f_98_80, 0b0000_0011))), 0b0000_0100));",
     );
     assert_three_way("decode_one(😀)=Ok(Pr(128512,4))", &src, &expected);
 }
@@ -421,10 +418,10 @@ fn decode_one_four_byte_emoji() {
 #[test]
 fn decode_one_err_bare_continuation_lead() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0x80_41, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0x80_41, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(bytes_get(0x80_41, 0b0000_0000)))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(bytes_get(0x80_41, 0b0000_0000)));",
     );
     assert_three_way("decode_one(0x80 lead)=Err(Invalid(0x80))", &src, &expected);
 }
@@ -435,10 +432,10 @@ fn decode_one_err_bare_continuation_lead() {
 #[test]
 fn decode_one_err_bad_continuation_two_byte() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xc3_41, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xc3_41, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(bytes_get(0xc3_41, 0b0000_0001)))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(bytes_get(0xc3_41, 0b0000_0001)));",
     );
     assert_three_way("decode_one(0xC3 0x41)=Err(Invalid(0x41))", &src, &expected);
 }
@@ -449,10 +446,10 @@ fn decode_one_err_bad_continuation_two_byte() {
 #[test]
 fn decode_one_err_truncated_two_byte() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xc3, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xc3, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(bytes_get(0xc3, 0b0000_0000)))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(bytes_get(0xc3, 0b0000_0000)));",
     );
     assert_three_way(
         "decode_one(0xC3 truncated)=Err(Invalid(0xC3))",
@@ -467,10 +464,10 @@ fn decode_one_err_truncated_two_byte() {
 #[test]
 fn decode_one_err_truncated_three_byte() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xe2_82, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xe2_82, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(bytes_get(0xe2_82, 0b0000_0001)))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(bytes_get(0xe2_82, 0b0000_0001)));",
     );
     assert_three_way(
         "decode_one(0xE2 0x82 truncated)=Err(Invalid(0x82))",
@@ -485,10 +482,10 @@ fn decode_one_err_truncated_three_byte() {
 #[test]
 fn decode_one_err_invalid_high_lead() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xf8_80_80_80, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xf8_80_80_80, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(bytes_get(0xf8_80_80_80, 0b0000_0000)))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(bytes_get(0xf8_80_80_80, 0b0000_0000)));",
     );
     assert_three_way("decode_one(0xF8 lead)=Err(Invalid(0xF8))", &src, &expected);
 }
@@ -502,10 +499,10 @@ fn decode_one_err_invalid_high_lead() {
 #[test]
 fn decode_one_err_oob_start_index() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0x41, 0b0000_0001)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0x41, 0b0000_0001);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(0b0000_0000))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Invalid(0b0000_0000));",
     );
     assert_three_way(
         "decode_one(0x41, idx 1 oob)=Err(Invalid(0))",
@@ -528,10 +525,10 @@ fn decode_one_err_oob_start_index() {
 #[test]
 fn decode_one_rejects_overlong_two_byte() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xc0_80, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xc0_80, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Overlong(bytes_get(0xc0_80, 0b0000_0000)))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Overlong(bytes_get(0xc0_80, 0b0000_0000)));",
     );
     assert_three_way("decode_one(0xC0 0x80)=Err(Overlong)", &src, &expected);
 }
@@ -540,10 +537,10 @@ fn decode_one_rejects_overlong_two_byte() {
 #[test]
 fn decode_one_rejects_overlong_three_byte() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xe0_80_80, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xe0_80_80, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Overlong(bytes_get(0xe0_80_80, 0b0000_0000)))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Overlong(bytes_get(0xe0_80_80, 0b0000_0000)));",
     );
     assert_three_way("decode_one(0xE0 0x80 0x80)=Err(Overlong)", &src, &expected);
 }
@@ -554,10 +551,10 @@ fn decode_one_rejects_overlong_three_byte() {
 #[test]
 fn decode_one_rejects_surrogate() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xed_a0_80, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xed_a0_80, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Surrogate(bytes_get(0xed_a0_80, 0b0000_0000)))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Surrogate(bytes_get(0xed_a0_80, 0b0000_0000)));",
     );
     assert_three_way(
         "decode_one(U+D800 surrogate)=Err(Surrogate)",
@@ -571,10 +568,10 @@ fn decode_one_rejects_surrogate() {
 #[test]
 fn decode_one_rejects_above_max() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xf4_90_80_80, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xf4_90_80_80, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(TooLarge(bytes_get(0xf4_90_80_80, 0b0000_0000)))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(TooLarge(bytes_get(0xf4_90_80_80, 0b0000_0000)));",
     );
     assert_three_way("decode_one(U+110000)=Err(TooLarge)", &src, &expected);
 }
@@ -586,12 +583,11 @@ fn decode_one_rejects_above_max() {
 #[test]
 fn decode_one_accepts_min_two_byte_boundary() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xc2_80, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xc2_80, 0b0000_0000);";
     let src = program(driver);
     // Reference recomputes via the decode_two assembly (matching Derived provenance).
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = \
-         Ok(Pr(or(shl6(widen8(and(bytes_get(0xc2_80, 0b0000_0000), 0b0001_1111))), cont_payload(bytes_get(0xc2_80, 0b0000_0001))), 0b0000_0010))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Ok(Pr(or(shl6(widen8(and(bytes_get(0xc2_80, 0b0000_0000), 0b0001_1111))), cont_payload(bytes_get(0xc2_80, 0b0000_0001))), 0b0000_0010));",
     );
     assert_three_way("decode_one(U+0080 min 2-byte)=Ok", &src, &expected);
 }
@@ -602,11 +598,10 @@ fn decode_one_accepts_min_two_byte_boundary() {
 #[test]
 fn decode_one_accepts_max_codepoint_boundary() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xf4_8f_bf_bf, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xf4_8f_bf_bf, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = \
-         Ok(Pr(or(or(or(shl18(widen8(and(bytes_get(0xf4_8f_bf_bf, 0b0000_0000), 0b0000_0111))), shl12(cont_payload(bytes_get(0xf4_8f_bf_bf, 0b0000_0001)))), shl6(cont_payload(bytes_get(0xf4_8f_bf_bf, 0b0000_0010)))), cont_payload(bytes_get(0xf4_8f_bf_bf, 0b0000_0011))), 0b0000_0100))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Ok(Pr(or(or(or(shl18(widen8(and(bytes_get(0xf4_8f_bf_bf, 0b0000_0000), 0b0000_0111))), shl12(cont_payload(bytes_get(0xf4_8f_bf_bf, 0b0000_0001)))), shl6(cont_payload(bytes_get(0xf4_8f_bf_bf, 0b0000_0010)))), cont_payload(bytes_get(0xf4_8f_bf_bf, 0b0000_0011))), 0b0000_0100));",
     );
     assert_three_way("decode_one(U+10FFFF max)=Ok", &src, &expected);
 }
@@ -622,10 +617,10 @@ fn decode_one_accepts_max_codepoint_boundary() {
 #[test]
 fn decode_one_rejects_surrogate_upper_edge() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xed_bf_bf, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xed_bf_bf, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Surrogate(bytes_get(0xed_bf_bf, 0b0000_0000)))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Err(Surrogate(bytes_get(0xed_bf_bf, 0b0000_0000)));",
     );
     assert_three_way("decode_one(U+DFFF surrogate edge)=Err", &src, &expected);
 }
@@ -636,11 +631,10 @@ fn decode_one_rejects_surrogate_upper_edge() {
 #[test]
 fn decode_one_accepts_first_scalar_after_surrogates() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xee_80_80, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xee_80_80, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = \
-         Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xee_80_80, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xee_80_80, 0b0000_0001)))), cont_payload(bytes_get(0xee_80_80, 0b0000_0010))), 0b0000_0011))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xee_80_80, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xee_80_80, 0b0000_0001)))), cont_payload(bytes_get(0xee_80_80, 0b0000_0010))), 0b0000_0011));",
     );
     assert_three_way(
         "decode_one(U+E000 first post-surrogate)=Ok",
@@ -654,11 +648,10 @@ fn decode_one_accepts_first_scalar_after_surrogates() {
 #[test]
 fn decode_one_accepts_min_three_byte_boundary() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xe0_a0_80, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xe0_a0_80, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = \
-         Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xe0_a0_80, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xe0_a0_80, 0b0000_0001)))), cont_payload(bytes_get(0xe0_a0_80, 0b0000_0010))), 0b0000_0011))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Ok(Pr(or(or(shl12(widen8(and(bytes_get(0xe0_a0_80, 0b0000_0000), 0b0000_1111))), shl6(cont_payload(bytes_get(0xe0_a0_80, 0b0000_0001)))), cont_payload(bytes_get(0xe0_a0_80, 0b0000_0010))), 0b0000_0011));",
     );
     assert_three_way("decode_one(U+0800 min 3-byte)=Ok", &src, &expected);
 }
@@ -669,11 +662,10 @@ fn decode_one_accepts_min_three_byte_boundary() {
 #[test]
 fn decode_one_accepts_min_four_byte_boundary() {
     let driver =
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xf0_90_80_80, 0b0000_0000)";
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = decode_one(0xf0_90_80_80, 0b0000_0000);";
     let src = program(driver);
     let expected = program(
-        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = \
-         Ok(Pr(or(or(or(shl18(widen8(and(bytes_get(0xf0_90_80_80, 0b0000_0000), 0b0000_0111))), shl12(cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0001)))), shl6(cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0010)))), cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0011))), 0b0000_0100))",
+        "fn main() => Result[Pair[Binary{32}, Binary{8}], Utf8Error] = Ok(Pr(or(or(or(shl18(widen8(and(bytes_get(0xf0_90_80_80, 0b0000_0000), 0b0000_0111))), shl12(cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0001)))), shl6(cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0010)))), cont_payload(bytes_get(0xf0_90_80_80, 0b0000_0011))), 0b0000_0100));",
     );
     assert_three_way("decode_one(U+10000 min 4-byte)=Ok", &src, &expected);
 }

@@ -1,42 +1,88 @@
-//! M-818 one-shot corpus migrator: read a `.myc` (or extracted program) file with the lenient
-//! optional-`;` parser, re-emit it with the mandatory-`;` canonical printer. Preserves the leading
-//! `//` comment banner verbatim (the conformance fixtures carry an `// exercises:` header). Phylum
-//! sources round-trip through `expand_phylum_to_source`; single-nodule through `expand_to_source`.
+//! M-818 one-shot `.myc` corpus migrator (layout-preserving): insert the now-mandatory `;`
+//! component terminators (DN-57 §3) into each file in place, **without** reformatting (comments,
+//! blank lines, indentation preserved). Uses `parse_phylum_lenient_points` to locate each missing
+//! `;` and inserts it at the end of the preceding component.
 //!
 //! Usage: `cargo run -p mycelium-l1 --example mig818 -- <file.myc> ...`
-//! Exits non-zero (and prints to stderr) on any file that does not lenient-parse, so a fixture the
+//! Exits non-zero (and reports to stderr) on any file that does not lenient-parse, so a fixture the
 //! migrator cannot handle is never silently left un-migrated (G2).
 
 use std::fs;
 
-fn migrate_one(path: &str) -> Result<(), String> {
-    let src = fs::read_to_string(path).map_err(|e| format!("read {path}: {e}"))?;
-
-    // Split off the leading comment/blank banner so it survives the printer (which drops comments).
-    let mut banner = String::new();
-    let mut body_start = 0usize;
-    for line in src.split_inclusive('\n') {
-        let trimmed = line.trim_start();
-        if trimmed.starts_with("//") || trimmed.is_empty() {
-            banner.push_str(line);
-            body_start += line.len();
-        } else {
-            break;
+fn offset_of(src: &str, line: u32, col: u32) -> usize {
+    let mut cur_line = 1u32;
+    let mut idx = 0usize;
+    for (i, ch) in src.char_indices() {
+        if cur_line == line {
+            let mut c = 1u32;
+            let mut j = i;
+            for (k, _) in src[i..].char_indices() {
+                if c == col {
+                    return i + k;
+                }
+                c += 1;
+                j = i + k;
+            }
+            return j + 1;
+        }
+        if ch == '\n' {
+            cur_line += 1;
+            idx = i + 1;
         }
     }
-    let body = &src[body_start..];
+    idx
+}
 
-    // Lenient-parse the body, then re-emit terminated. Prefer the phylum entry (superset).
-    let rendered = match mycelium_l1::parse_phylum_lenient(body) {
-        Ok(ph) => mycelium_l1::expand_phylum_to_source(&ph),
-        Err(e) => return Err(format!("{path}: lenient phylum parse failed: {e}")),
-    };
-
-    let mut out = banner;
-    if !out.is_empty() && !out.ends_with('\n') {
-        out.push('\n');
+fn end_of_preceding(src: &str, at: usize) -> usize {
+    let bytes = src.as_bytes();
+    let mut i = at;
+    loop {
+        while i > 0 && (bytes[i - 1] as char).is_whitespace() {
+            i -= 1;
+        }
+        let line_start = src[..i].rfind('\n').map_or(0, |p| p + 1);
+        let line = &src[line_start..i];
+        let trimmed = line.trim_start();
+        if trimmed.starts_with("//") {
+            i = line_start;
+            if i == 0 {
+                break;
+            }
+            continue;
+        }
+        if let Some(pos) = line.find("//") {
+            let real_end = line_start + pos;
+            let mut e = real_end;
+            while e > line_start && (bytes[e - 1] as char).is_whitespace() {
+                e -= 1;
+            }
+            return e;
+        }
+        break;
     }
-    out.push_str(&rendered);
+    i
+}
+
+fn migrate_one(path: &str) -> Result<(), String> {
+    let src = fs::read_to_string(path).map_err(|e| format!("read {path}: {e}"))?;
+    let points = mycelium_l1::parse_phylum_lenient_points(&src)
+        .map_err(|e| format!("{path}: lenient parse failed: {e}"))?;
+    if points.is_empty() {
+        return Ok(());
+    }
+    let mut offsets: Vec<usize> = points
+        .iter()
+        .map(|p| end_of_preceding(&src, offset_of(&src, p.line, p.col)))
+        .collect();
+    offsets.sort_unstable();
+    offsets.dedup();
+    let mut out = src.clone();
+    for off in offsets.into_iter().rev() {
+        if out.as_bytes().get(off.wrapping_sub(1)) == Some(&b';') {
+            continue;
+        }
+        out.insert(off, ';');
+    }
     fs::write(path, out).map_err(|e| format!("write {path}: {e}"))?;
     Ok(())
 }

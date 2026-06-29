@@ -5,8 +5,6 @@
 // @matured: true
 nodule geometry.kernel;
 
-fn rotate(p: Dense{2, F32}) => Dense{2, F32} =
-  p;
+fn rotate(p: Dense{2, F32}) => Dense{2, F32} = p;
 
-thaw fn experimental_shear(p: Dense{2, F32}) => Dense{2, F32} =
-  p;
+thaw fn experimental_shear(p: Dense{2, F32}) => Dense{2, F32} = p;

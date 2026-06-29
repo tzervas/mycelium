@@ -2,4 +2,4 @@
 nodule signals;
 
 fn widen(x: Binary{8}) => Ternary{6} =
-  swap(x, to: Ternary{6}, policy: roundtrip);
+    swap(x, to: Ternary{6}, policy: roundtrip);

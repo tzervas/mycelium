@@ -108,7 +108,7 @@ fn trit(w: u32, v: i64) -> (Repr, Payload) {
 /// `Exact`: identity produces the input unchanged.
 #[test]
 fn width_generic_identity_binary_8() {
-    let src = "nodule d;\n\nfn id_bits{N}(x: Binary{N}) => Binary{N} =\n  x;\n\nfn main() => Binary{8} =\n  id_bits(0b1010_0101);";
+    let src = "nodule d;\nfn id_bits{N}(x: Binary{N}) => Binary{N} = x;\nfn main() => Binary{8} = id_bits(0b1010_0101);";
     let (r, p) = bin(8, 0b1010_0101);
     assert_three_way("id_bits<8>", src, &r, &p);
 }
@@ -117,7 +117,7 @@ fn width_generic_identity_binary_8() {
 /// `Exact`: identity produces the input unchanged.
 #[test]
 fn width_generic_identity_binary_16() {
-    let src = "nodule d;\n\nfn id_bits{N}(x: Binary{N}) => Binary{N} =\n  x;\n\nfn main() => Binary{16} =\n  id_bits(0b1100_1001_0111_1110);";
+    let src = "nodule d;\nfn id_bits{N}(x: Binary{N}) => Binary{N} = x;\nfn main() => Binary{16} = id_bits(0b1100_1001_0111_1110);";
     let (r, p) = bin(16, 0b1100_1001_0111_1110);
     assert_three_way("id_bits<16>", src, &r, &p);
 }
@@ -127,7 +127,7 @@ fn width_generic_identity_binary_16() {
 /// `Exact`: identity produces the input unchanged.
 #[test]
 fn width_generic_identity_ternary_3() {
-    let src = "nodule d;\n\nfn id_trits{M}(x: Ternary{M}) => Ternary{M} =\n  x;\n\nfn main() => Ternary{3} =\n  id_trits(<0+->);";
+    let src = "nodule d;\nfn id_trits{M}(x: Ternary{M}) => Ternary{M} = x;\nfn main() => Ternary{3} = id_trits(0t0+-);";
     let (r, p) = trit(3, 2); // <0+-> = 0*9 + 1*3 + (-1)*1 = 2
     assert_three_way("id_trits<3>", src, &r, &p);
 }
@@ -137,7 +137,7 @@ fn width_generic_identity_ternary_3() {
 #[test]
 fn width_generic_identity_ternary_6() {
     // <00+0+-> (6 trits) = 0*243 + 0*81 + 1*27 + 0*9 + 1*3 + (-1)*1 = 29
-    let src = "nodule d;\n\nfn id_trits{M}(x: Ternary{M}) => Ternary{M} =\n  x;\n\nfn main() => Ternary{6} =\n  id_trits(<00+0+->);";
+    let src = "nodule d;\nfn id_trits{M}(x: Ternary{M}) => Ternary{M} = x;\nfn main() => Ternary{6} = id_trits(0t00+0+-);";
     let (r, p) = trit(6, 29);
     assert_three_way("id_trits<6>", src, &r, &p);
 }
@@ -148,7 +148,7 @@ fn width_generic_identity_ternary_6() {
 /// `Empirical`: three-way agreement — each path agrees with the reference 3+5=8.
 #[test]
 fn width_generic_add_binary_8() {
-    let src = "nodule d;\n\nfn add_n{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =\n  add_bin(a, b);\n\nfn main() => Binary{8} =\n  add_n(0b0000_0011, 0b0000_0101);";
+    let src = "nodule d;\nfn add_n{N}(a: Binary{N}, b: Binary{N}) => Binary{N} = add_bin(a, b);\nfn main() => Binary{8} = add_n(0b0000_0011, 0b0000_0101);";
     let (r, p) = bin(8, 3 + 5); // 3 + 5 = 8
     assert_three_way("add_n<8>", src, &r, &p);
 }
@@ -157,7 +157,7 @@ fn width_generic_add_binary_8() {
 /// `Empirical`: three-way agreement — each path agrees with the reference 1+2=3.
 #[test]
 fn width_generic_add_binary_16() {
-    let src = "nodule d;\n\nfn add_n{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =\n  add_bin(a, b);\n\nfn main() => Binary{16} =\n  add_n(0b0000_0000_0000_0001, 0b0000_0000_0000_0010);";
+    let src = "nodule d;\nfn add_n{N}(a: Binary{N}, b: Binary{N}) => Binary{N} = add_bin(a, b);\nfn main() => Binary{16} = add_n(0b0000_0000_0000_0001, 0b0000_0000_0000_0010);";
     let (r, p) = bin(16, 1 + 2); // 1 + 2 = 3
     assert_three_way("add_n<16>", src, &r, &p);
 }
@@ -166,7 +166,7 @@ fn width_generic_add_binary_16() {
 /// `<00+>` = +1, `<00->` = -1; sum = 0 = `<000>`. `Empirical`: three-way agreement.
 #[test]
 fn width_generic_add_ternary_3() {
-    let src = "nodule d;\n\nfn add_trits{M}(a: Ternary{M}, b: Ternary{M}) => Ternary{M} =\n  add(a, b);\n\nfn main() => Ternary{3} =\n  add_trits(<00+>, <00->);";
+    let src = "nodule d;\nfn add_trits{M}(a: Ternary{M}, b: Ternary{M}) => Ternary{M} = add(a, b);\nfn main() => Ternary{3} = add_trits(0t00+, 0t00-);";
     let (r, p) = trit(3, 0); // +1 + (-1) = 0
     assert_three_way("add_trits<3>", src, &r, &p);
 }
@@ -178,7 +178,7 @@ fn width_generic_add_ternary_3() {
 /// `Empirical`: three-way differentials agree.
 #[test]
 fn width_generic_two_widths_same_function_8() {
-    let src = "nodule d;\n\nfn id_bits{N}(x: Binary{N}) => Binary{N} =\n  x;\n\nfn get8() => Binary{8} =\n  id_bits(0b1111_0000);\n\nfn get16() => Binary{16} =\n  id_bits(0b1111_0000_1111_0000);\n\nfn main() => Binary{8} =\n  get8();";
+    let src = "nodule d;\nfn id_bits{N}(x: Binary{N}) => Binary{N} = x;\nfn get8() => Binary{8} = id_bits(0b1111_0000);\nfn get16() => Binary{16} = id_bits(0b1111_0000_1111_0000);\nfn main() => Binary{8} = get8();";
     let (r, p) = bin(8, 0b1111_0000);
     assert_three_way("two_widths get8", src, &r, &p);
 }
@@ -186,7 +186,7 @@ fn width_generic_two_widths_same_function_8() {
 /// The Binary{16} path of the same two-width nodule.
 #[test]
 fn width_generic_two_widths_same_function_16() {
-    let src = "nodule d;\n\nfn id_bits{N}(x: Binary{N}) => Binary{N} =\n  x;\n\nfn get8() => Binary{8} =\n  id_bits(0b1111_0000);\n\nfn get16() => Binary{16} =\n  id_bits(0b1111_0000_1111_0000);\n\nfn main() => Binary{16} =\n  get16();";
+    let src = "nodule d;\nfn id_bits{N}(x: Binary{N}) => Binary{N} = x;\nfn get8() => Binary{8} = id_bits(0b1111_0000);\nfn get16() => Binary{16} = id_bits(0b1111_0000_1111_0000);\nfn main() => Binary{16} = get16();";
     let (r, p) = bin(16, 0b1111_0000_1111_0000);
     assert_three_way("two_widths get16", src, &r, &p);
 }
@@ -204,7 +204,7 @@ fn width_generic_two_widths_same_function_16() {
 /// `Empirical`: three-way agreement.
 #[test]
 fn width_generic_delegation_binary_8() {
-    let src = "nodule d;\n\nfn id_bits{N}(x: Binary{N}) => Binary{N} =\n  x;\n\nfn wrap_id{N}(x: Binary{N}) => Binary{N} =\n  id_bits(x);\n\nfn main() => Binary{8} =\n  wrap_id(0b1010_0101);";
+    let src = "nodule d;\nfn id_bits{N}(x: Binary{N}) => Binary{N} = x;\nfn wrap_id{N}(x: Binary{N}) => Binary{N} = id_bits(x);\nfn main() => Binary{8} = wrap_id(0b1010_0101);";
     let (r, p) = bin(8, 0b1010_0101);
     assert_three_way("wrap_id<8>→id_bits<8>", src, &r, &p);
 }
@@ -213,7 +213,7 @@ fn width_generic_delegation_binary_8() {
 /// per width, not once. `Empirical`.
 #[test]
 fn width_generic_delegation_binary_16() {
-    let src = "nodule d;\n\nfn id_bits{N}(x: Binary{N}) => Binary{N} =\n  x;\n\nfn wrap_id{N}(x: Binary{N}) => Binary{N} =\n  id_bits(x);\n\nfn main() => Binary{16} =\n  wrap_id(0b1100_1001_0111_1110);";
+    let src = "nodule d;\nfn id_bits{N}(x: Binary{N}) => Binary{N} = x;\nfn wrap_id{N}(x: Binary{N}) => Binary{N} = id_bits(x);\nfn main() => Binary{16} = wrap_id(0b1100_1001_0111_1110);";
     let (r, p) = bin(16, 0b1100_1001_0111_1110);
     assert_three_way("wrap_id<16>→id_bits<16>", src, &r, &p);
 }
@@ -223,7 +223,7 @@ fn width_generic_delegation_binary_16() {
 /// abstract width before monomorphizing to N=8. `Empirical`: three-way agreement on the fixed point.
 #[test]
 fn width_generic_recursive_binary_8() {
-    let src = "nodule d;\n\nfn rec_id{N}(x: Binary{N}, n: Binary{8}) => Binary{N} =\n  match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_bin(n, 0b0000_0001)) };\n\nfn main() => Binary{8} =\n  rec_id(0b0110_0110, 0b0000_0011);";
+    let src = "nodule d;\nfn rec_id{N}(x: Binary{N}, n: Binary{8}) => Binary{N} = match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_bin(n, 0b0000_0001)) };\nfn main() => Binary{8} = rec_id(0b0110_0110, 0b0000_0011);";
     let (r, p) = bin(8, 0b0110_0110);
     assert_three_way("rec_id<8>", src, &r, &p);
 }
@@ -231,7 +231,7 @@ fn width_generic_recursive_binary_8() {
 /// The same recursive width-generic fn at Binary{16} — the recursion is width-polymorphic. `Empirical`.
 #[test]
 fn width_generic_recursive_binary_16() {
-    let src = "nodule d;\n\nfn rec_id{N}(x: Binary{N}, n: Binary{8}) => Binary{N} =\n  match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_bin(n, 0b0000_0001)) };\n\nfn main() => Binary{16} =\n  rec_id(0b1111_0000_0000_1111, 0b0000_0010);";
+    let src = "nodule d;\nfn rec_id{N}(x: Binary{N}, n: Binary{8}) => Binary{N} = match eq(n, 0b0000_0000) { 0b1 => x, _ => rec_id(x, sub_bin(n, 0b0000_0001)) };\nfn main() => Binary{16} = rec_id(0b1111_0000_0000_1111, 0b0000_0010);";
     let (r, p) = bin(16, 0b1111_0000_0000_1111);
     assert_three_way("rec_id<16>", src, &r, &p);
 }
@@ -245,7 +245,7 @@ fn width_generic_recursive_binary_16() {
 /// call `phantom_n(0b0)` provides no argument that pins `N`, so the checker refuses.
 #[test]
 fn width_generic_undetermined_param_refuses() {
-    let src = "nodule d;\n\nfn phantom_n{N}(x: Binary{8}) => Binary{N} =\n  x;\n\nfn main() => Binary{8} =\n  phantom_n(0b0000_0000);";
+    let src = "nodule d;\nfn phantom_n{N}(x: Binary{8}) => Binary{N} = x;\nfn main() => Binary{8} = phantom_n(0b0000_0000);";
     let parsed = parse(src).expect("parses");
     let result = check_nodule(&parsed);
     assert!(
@@ -270,7 +270,7 @@ fn width_generic_undetermined_param_refuses() {
 fn width_mismatch_in_generic_call_refuses() {
     // `id_bits<N>` infers N=8 from the argument `0b0000_0000`, but `main()` declares `Binary{16}`
     // as the return type. The inferred return `Binary{8}` ≠ `Binary{16}` — type error.
-    let src = "nodule d;\n\nfn id_bits{N}(x: Binary{N}) => Binary{N} =\n  x;\n\nfn main() => Binary{16} =\n  id_bits(0b0000_0000);";
+    let src = "nodule d;\nfn id_bits{N}(x: Binary{N}) => Binary{N} = x;\nfn main() => Binary{16} = id_bits(0b0000_0000);";
     let parsed = parse(src).expect("parses");
     let result = check_nodule(&parsed);
     assert!(
@@ -291,7 +291,7 @@ fn width_mismatch_in_generic_call_refuses() {
 /// `<0+->` = 0*9 + 1*3 + (-1)*1 = 2. `Empirical`: three-way agreement.
 #[test]
 fn width_generic_delegation_ternary_3() {
-    let src = "nodule d;\n\nfn id_trits{M}(x: Ternary{M}) => Ternary{M} =\n  x;\n\nfn wrap_trits{M}(x: Ternary{M}) => Ternary{M} =\n  id_trits(x);\n\nfn main() => Ternary{3} =\n  wrap_trits(<0+->);";
+    let src = "nodule d;\nfn id_trits{M}(x: Ternary{M}) => Ternary{M} = x;\nfn wrap_trits{M}(x: Ternary{M}) => Ternary{M} = id_trits(x);\nfn main() => Ternary{3} = wrap_trits(0t0+-);";
     let (r, p) = trit(3, 2);
     assert_three_way("wrap_trits<3>→id_trits<3>", src, &r, &p);
 }
@@ -309,7 +309,7 @@ fn width_generic_delegation_ternary_3() {
 /// Refusal, never silent. The message names the abstract width `M`, not a phantom `0`.
 #[test]
 fn width_generic_concrete_then_abstract_refuses() {
-    let src = "nodule d;\n\nfn f{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =\n  a;\n\nfn outer{M}(x: Binary{M}) => Binary{8} =\n  f(0b0000_0000, x);\n\nfn main() => Binary{8} =\n  outer(0b0000_0001);";
+    let src = "nodule d;\nfn f{N}(a: Binary{N}, b: Binary{N}) => Binary{N} = a;\nfn outer{M}(x: Binary{M}) => Binary{8} = f(0b0000_0000, x);\nfn main() => Binary{8} = outer(0b0000_0001);";
     let result = check_nodule(&parse(src).expect("parses"));
     let err = result
         .expect_err("expected a never-silent width-conflict refusal")
@@ -326,7 +326,7 @@ fn width_generic_concrete_then_abstract_refuses() {
 /// After the M-718 fix it names `M`. Refusal, never silent.
 #[test]
 fn width_generic_abstract_then_concrete_refuses() {
-    let src = "nodule d;\n\nfn f{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =\n  a;\n\nfn outer{M}(x: Binary{M}) => Binary{8} =\n  f(x, 0b0000_0000);\n\nfn main() => Binary{8} =\n  outer(0b0000_0001);";
+    let src = "nodule d;\nfn f{N}(a: Binary{N}, b: Binary{N}) => Binary{N} = a;\nfn outer{M}(x: Binary{M}) => Binary{8} = f(x, 0b0000_0000);\nfn main() => Binary{8} = outer(0b0000_0001);";
     let result = check_nodule(&parse(src).expect("parses"));
     let err = result
         .expect_err("expected a never-silent width-conflict refusal")

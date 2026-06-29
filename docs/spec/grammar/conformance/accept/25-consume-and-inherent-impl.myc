@@ -5,11 +5,10 @@
 nodule resources;
 
 fn take(s: Substrate{Socket}) => Substrate{Socket} =
-  consume s;
+    consume s;
 
 type Wrapped = Mk(Binary{8});
 
 impl Wrapped {
-  fn unwrap(w: Wrapped) => Binary{8} =
-  match w { Mk(b) => b };
+    fn unwrap(w: Wrapped) => Binary{8} = match w { Mk(b) => b };
 };

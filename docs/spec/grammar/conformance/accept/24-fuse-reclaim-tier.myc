@@ -11,14 +11,20 @@
 //     (RFC-0004 ExecutionMode). Non-semantic (NFR-7: never a behavioural switch).
 nodule demo;
 
+// §A: fuse expression — parses and type-checks if operands are fusible.
+// (Checker enforces type homogeneity + Fuse instance; this fixture tests the parser surface only.)
 fn fuse_demo(x: Binary{8}, y: Binary{8}) => Binary{8} =
   fuse(x, y);
 
+// §B: reclaim expression — supervision policy attached to a body expression.
+// Note: `policy` is a keyword (swap policy label), so we use `sup` for the supervision argument.
 fn reclaim_demo(sup: Binary{8}, task: Binary{8}) => Binary{8} =
   reclaim(sup) { task };
 
-fn hot_path(x: Binary{8}) => Binary{8} =
+// §C: @tier(compiled) attribute on a fn declaration.
+@tier(compiled) fn hot_path(x: Binary{8}) => Binary{8} =
   x;
 
-fn cold_path(x: Binary{8}) => Binary{8} =
+// §C: @tier(interpreted) attribute on a fn declaration.
+@tier(interpreted) fn cold_path(x: Binary{8}) => Binary{8} =
   x;

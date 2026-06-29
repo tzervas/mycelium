@@ -31,6 +31,7 @@ pub fn parse(src: &str) -> Result<Nodule, ParseError> {
         i: 0,
         depth: 0,
         lenient_terminator: false,
+        missing_terminators: Vec::new(),
     };
     let nodule = p.parse_nodule()?;
     p.expect(&Tok::Eof, "end of input")?;
@@ -52,6 +53,7 @@ pub fn parse_lenient(src: &str) -> Result<Nodule, ParseError> {
         i: 0,
         depth: 0,
         lenient_terminator: true,
+        missing_terminators: Vec::new(),
     };
     let nodule = p.parse_nodule()?;
     p.expect(&Tok::Eof, "end of input")?;
@@ -70,10 +72,44 @@ pub fn parse_phylum_lenient(src: &str) -> Result<Phylum, ParseError> {
         i: 0,
         depth: 0,
         lenient_terminator: true,
+        missing_terminators: Vec::new(),
     };
     let phylum = p.parse_phylum()?;
     p.expect(&Tok::Eof, "end of input")?;
     Ok(phylum)
+}
+
+/// **Migration-only** lenient phylum parse returning the `(line, col)` of every position where a
+/// mandatory `;` was missing (M-818). Used by the layout-preserving minimal-insertion migrator: it
+/// inserts a `;` at the end of the component preceding each point, leaving comments + formatting
+/// untouched (unlike the reformatting `expand_phylum_to_source` path). Tries the phylum entry first,
+/// falling back to the single-nodule entry, so both program shapes are covered.
+///
+/// # Errors
+/// As [`parse_phylum`], minus the missing-terminator refusal.
+pub fn parse_phylum_lenient_points(src: &str) -> Result<Vec<Pos>, ParseError> {
+    let toks = lex(src)?;
+    // Phylum first (superset), then single-nodule fallback.
+    let mut p = Parser {
+        toks: toks.clone(),
+        i: 0,
+        depth: 0,
+        lenient_terminator: true,
+        missing_terminators: Vec::new(),
+    };
+    if p.parse_phylum().is_ok() && p.expect(&Tok::Eof, "end of input").is_ok() {
+        return Ok(p.missing_terminators);
+    }
+    let mut p2 = Parser {
+        toks,
+        i: 0,
+        depth: 0,
+        lenient_terminator: true,
+        missing_terminators: Vec::new(),
+    };
+    p2.parse_nodule()?;
+    p2.expect(&Tok::Eof, "end of input")?;
+    Ok(p2.missing_terminators)
 }
 
 /// Parse a complete **phylum** program (M-662; RFC-0006 §4.3): an optional `phylum <path>` header
@@ -93,6 +129,7 @@ pub fn parse_phylum(src: &str) -> Result<Phylum, ParseError> {
         i: 0,
         depth: 0,
         lenient_terminator: false,
+        missing_terminators: Vec::new(),
     };
     let phylum = p.parse_phylum()?;
     p.expect(&Tok::Eof, "end of input")?;
@@ -109,6 +146,11 @@ struct Parser {
     /// surface contract is mandatory `;` (DN-57 §3). Set only by [`parse_lenient`] /
     /// [`parse_phylum_lenient`] for the one-shot corpus migration.
     lenient_terminator: bool,
+    /// **Migration-only** (M-818): in lenient mode, each `(line, col)` where a `;` was *missing* (the
+    /// position of the token that should have followed the `;`). The minimal-insertion migrator maps
+    /// these back to byte offsets and inserts `;` at the end of the preceding component, preserving
+    /// layout + comments (unlike the reformatting `expand_to_source` path).
+    missing_terminators: Vec<Pos>,
 }
 
 /// Walk a [`TypeRef`] collecting which param names appear in width-slot positions
@@ -272,7 +314,9 @@ impl Parser {
             Ok(())
         } else if self.lenient_terminator {
             // Migration-only tolerance (M-818): accept a missing `;` so the one-shot corpus
-            // migration can read pre-`;` source. The default grammar path never sets this flag.
+            // migration can read pre-`;` source, recording where the `;` belongs (the position of
+            // the token that should have followed it). The default grammar path never sets this flag.
+            self.missing_terminators.push(self.pos());
             Ok(())
         } else {
             Err(ParseError::new(

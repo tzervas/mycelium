@@ -1150,7 +1150,10 @@ fn print_pattern(p: &Pattern) -> String {
 fn print_literal(l: &Literal) -> String {
     match l {
         Literal::Bin(s) => format!("0b{s}"),
-        Literal::Trit(s) => format!("<{s}>"),
+        // RFC-0037 D4: balanced-ternary literals use the `0t…` prefix (the angle form `<…>` was
+        // retired with D4 — `<` is operator-only). The printer must emit the active form so the
+        // round-trip `parse → expand_to_source → parse` is stable (M-818 exposed the stale `<…>`).
+        Literal::Trit(s) => format!("0t{s}"),
         // RFC-0032 D4: a `0x…` byte-string literal round-trips to its source form.
         Literal::Bytes(s) => format!("0x{s}"),
         Literal::Int(i) => format!("{i}"),

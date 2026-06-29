@@ -4,4 +4,8 @@ nodule shapes;
 type Sign = Neg | Zero | Pos;
 
 fn label(s: Sign) => Ternary{1} =
-  match s { Neg => <->, Zero => <0>, _ => <+> };
+    match s {
+        Neg => 0t-,
+        Zero => 0t0,
+        _ => 0t+
+    };

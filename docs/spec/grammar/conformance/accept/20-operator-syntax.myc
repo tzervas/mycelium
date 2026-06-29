@@ -7,26 +7,36 @@
 // refusal downstream until their stdlib/kernel prims land (M-809).
 nodule operators;
 
+// arithmetic: `*` binds tighter than `+`/`-`; binary operators are left-associative
 fn arith(a: Ternary{4}, b: Ternary{4}, c: Ternary{4}) => Ternary{4} =
-  sub(add(a, mul(b, c)), a);
+    a + b * c - a;
 
+// bitwise: `&` > `^` > `|` (Rust's table); xor resolves to a prim today
 fn bits(a: Binary{8}, b: Binary{8}, c: Binary{8}) => Binary{8} =
-  bor(a, xor(b, band(c, a)));
+    a | b ^ c & a;
 
+// prefix operators: unary `-` (neg) and `!` (not), right-associative, tighter than any binary op
 fn prefix(a: Binary{8}) => Binary{8} =
-  not(a);
+    !a;
 
 fn negate(a: Ternary{4}) => Ternary{4} =
-  add(neg(a), a);
+    -a + a;
 
+// comparison / equality and logical operators (parse-level; word targets pending their prims)
 fn compare(a: Binary{8}, b: Binary{8}) => Binary{8} =
-  or(and(eq(a, b), ne(a, b)), band(a, b));
+    a == b && a != b || a & b;
 
+// M-745 (RFC-0025 §4.1 / RFC-0037 D1): the angle/shift glyphs freed by the bracket kind-split.
+// Shift (`<<`/`>>`, Tier 4) binds tighter than the bitwise ops; comparison (`<`/`>`, Tier 8) binds
+// looser than them and tighter than equality — so `a << b < c | d` ≡ lt(shl(a,b), bor(c,d)).
 fn shift_and_compare(a: Binary{8}, b: Binary{8}, c: Binary{8}, d: Binary{8}) => Binary{8} =
-  lt(shl(a, b), bor(c, d));
+    a << b < c | d;
 
+// `<=`/`>=` have no glyph (retired by RFC-0037 D1); the word forms `lte`/`gte` are ordinary calls
+// and stay valid everywhere (additive — words are canonical).
 fn ordered(a: Binary{8}, b: Binary{8}) => Binary{8} =
-  and(lte(a, b), gte(b, a));
+    lte(a, b) && gte(b, a);
 
+// parentheses override precedence; the word form stays valid alongside the sugar
 fn mixed(a: Ternary{4}, b: Ternary{4}) => Ternary{4} =
-  mul(add(a, b), add(a, b));
+    (a + b) * add(a, b);

@@ -2,4 +2,4 @@
 nodule signals;
 
 fn flip(x: Binary{8}) => Binary{8} =
-  let y = not(x) in y;
+    let y = not(x) in y;

@@ -4,8 +4,14 @@
 // Settles the grow→derive reconciliation: DN-38 §8.1 / M-812.
 nodule demo;
 
+// A simple zero-param lowering rule whose RHS is the prelude `Bool` constructor `True`.
+// (M-812-cont: the RHS is now IL-grammar type-checked — DN-54 §4.1 — so it must be a real
+// L1 term; `True`/`False` are the Bool constructors, not lowercase `true`/`false`.)
 lower Trivial = True;
 
+// A parametric rule with one type param; its RHS does not mention the param, so it
+// type-checks under the param scope.
 lower Wrap[T] = True;
 
+// A derive application references a rule by name (resolved at check time).
 derive Trivial for Binary{8};

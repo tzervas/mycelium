@@ -35,7 +35,7 @@ fn check_err(src: &str) -> String {
 #[test]
 fn a_phylum_header_with_two_nodules_parses_into_two_nodule_blocks() {
     let ph = parse_phylum(
-        "phylum app.core\n\nnodule a;\n\nfn f() => Binary{8} =\n  0b0000_0000;\n\nnodule b;\n\nfn g() => Binary{8} =\n  0b0000_0001;",
+        "phylum app.core\nnodule a;\nfn f() => Binary{8} = 0b0000_0000;\nnodule b;\nfn g() => Binary{8} = 0b0000_0001;",
     )
     .expect("parses");
     assert_eq!(
@@ -53,7 +53,7 @@ fn a_phylum_header_with_two_nodules_parses_into_two_nodule_blocks() {
 #[test]
 fn a_header_less_single_nodule_is_a_phylum_of_one() {
     // `parse_phylum` is a strict superset of `parse`: a bare nodule parses to `path: None`.
-    let ph = parse_phylum("nodule solo;\n\nfn f() => Binary{8} =\n  0b0;").expect("parses");
+    let ph = parse_phylum("nodule solo;\nfn f() => Binary{8} = 0b0;").expect("parses");
     assert!(ph.path.is_none(), "no header ⇒ phylum-of-one (path None)");
     assert_eq!(ph.nodules.len(), 1);
 }
@@ -78,7 +78,7 @@ fn nodule_b_uses_a_pub_fn_from_nodule_a_and_type_checks() {
     // Cross-`use` accept (the headline deliverable): `a` exports `pub fn id`; `b` imports it and
     // calls it. The call types because the imported `pub` signature is in `b`'s checking registry.
     let penv = check(
-        "phylum p\n\nnodule a;\n\npub fn id(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.id;\n\nfn use_it(y: Binary{8}) => Binary{8} =\n  id(y);",
+        "phylum p\nnodule a;\npub fn id(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.id;\nfn use_it(y: Binary{8}) => Binary{8} = id(y);",
     )
     .expect("a cross-`use` of a pub fn type-checks");
     // `b`'s env resolves `use_it` and sees the imported `id`.
@@ -94,7 +94,7 @@ fn nodule_b_uses_a_pub_fn_from_nodule_a_and_type_checks() {
 fn nodule_b_uses_a_pub_type_from_nodule_a_and_type_checks() {
     // A `pub type` crosses too: `b` imports `Flag` and uses it as a parameter type + constructor.
     check(
-        "phylum p\n\nnodule a;\n\npub type Flag = Off | On;\n\nnodule b;\n\nuse a.Flag;\n\nfn f(x: Flag) => Flag =\n  On;",
+        "phylum p\nnodule a;\npub type Flag = Off | On;\nnodule b;\nuse a.Flag;\nfn f(x: Flag) => Flag = On;",
     )
     .expect("a cross-`use` of a pub type type-checks");
 }
@@ -103,7 +103,7 @@ fn nodule_b_uses_a_pub_type_from_nodule_a_and_type_checks() {
 fn intra_nodule_a_private_name_is_still_visible_within_its_own_nodule() {
     // `pub` gates ONLY cross-nodule visibility: a *private* fn is fully usable inside its own nodule.
     check(
-        "phylum p\n\nnodule a;\n\nfn helper(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn main() => Binary{8} =\n  helper(0b0000_0001);",
+        "phylum p\nnodule a;\nfn helper(x: Binary{8}) => Binary{8} = not(x);\nfn main() => Binary{8} = helper(0b0000_0001);",
     )
     .expect("a private fn is visible intra-nodule");
 }
@@ -117,7 +117,7 @@ fn use_of_a_private_name_is_a_never_silent_error_distinguishing_private_from_abs
     // `a.secret` exists but is NOT pub ⇒ the refusal must say "exists but is not `pub`" (honest +
     // helpful — distinct from "no such name"), never a silent skip (G2).
     let msg = check_err(
-        "phylum p\n\nnodule a;\n\nfn secret(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.secret;\n\nfn f(y: Binary{8}) => Binary{8} =\n  secret(y);",
+        "phylum p\nnodule a;\nfn secret(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.secret;\nfn f(y: Binary{8}) => Binary{8} = secret(y);",
     );
     assert!(
         msg.contains("not `pub`") && msg.contains("secret"),
@@ -130,7 +130,7 @@ fn control_the_same_name_made_pub_resolves() {
     // The non-vacuous control for the private-import refusal: marking `secret` `pub` makes the very
     // same program check. (Proves the refusal above is about `pub`-ness, not the name/shape.)
     check(
-        "phylum p\n\nnodule a;\n\npub fn secret(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.secret;\n\nfn f(y: Binary{8}) => Binary{8} =\n  secret(y);",
+        "phylum p\nnodule a;\npub fn secret(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.secret;\nfn f(y: Binary{8}) => Binary{8} = secret(y);",
     )
     .expect("the same import resolves once the name is pub");
 }
@@ -139,7 +139,7 @@ fn control_the_same_name_made_pub_resolves() {
 fn use_of_a_non_existent_name_is_a_never_silent_error() {
     // `a.nope` is declared by no nodule ⇒ "no such name" (distinct from private), never silent (G2).
     let msg = check_err(
-        "phylum p\n\nnodule a;\n\npub fn id(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.nope;\n\nfn f(y: Binary{8}) => Binary{8} =\n  id(y);",
+        "phylum p\nnodule a;\npub fn id(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.nope;\nfn f(y: Binary{8}) => Binary{8} = id(y);",
     );
     assert!(
         msg.contains("no such name") && msg.contains("nope"),
@@ -152,7 +152,7 @@ fn two_explicit_uses_binding_the_same_name_is_a_duplicate_import_error() {
     // Two explicit `use`s bind `id` ⇒ never-silent duplicate-import refusal (G2). Both `a.id` and
     // `c.id` are pub, so neither is unknown/private — the refusal is specifically the duplicate.
     let msg = check_err(
-        "phylum p\n\nnodule a;\n\npub fn id(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule c;\n\npub fn id(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.id;\n\nuse c.id;\n\nfn f(y: Binary{8}) => Binary{8} =\n  id(y);",
+        "phylum p\nnodule a;\npub fn id(x: Binary{8}) => Binary{8} = x;\nnodule c;\npub fn id(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.id;\nuse c.id;\nfn f(y: Binary{8}) => Binary{8} = id(y);",
     );
     assert!(
         msg.contains("duplicate import") && msg.contains("id"),
@@ -168,7 +168,7 @@ fn two_explicit_uses_binding_the_same_name_is_a_duplicate_import_error() {
 fn a_glob_use_brings_in_pub_names_and_type_checks() {
     // `use a.*` imports every pub name under `a` (here `id`). The reference `id(y)` resolves.
     check(
-        "phylum p\n\nnodule a;\n\npub fn id(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.*;\n\nfn f(y: Binary{8}) => Binary{8} =\n  id(y);",
+        "phylum p\nnodule a;\npub fn id(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.*;\nfn f(y: Binary{8}) => Binary{8} = id(y);",
     )
     .expect("a glob import brings in pub names");
 }
@@ -179,7 +179,7 @@ fn a_glob_skips_private_names_but_imports_the_pub_ones() {
     // brings `id` (usable) but not `secret` (a reference to it is the normal unresolved-name error,
     // not a silent import). Here we only exercise that the pub one resolved.
     check(
-        "phylum p\n\nnodule a;\n\npub fn id(x: Binary{8}) => Binary{8} =\n  x;\n\nfn secret(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.*;\n\nfn f(y: Binary{8}) => Binary{8} =\n  id(y);",
+        "phylum p\nnodule a;\npub fn id(x: Binary{8}) => Binary{8} = x;\nfn secret(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.*;\nfn f(y: Binary{8}) => Binary{8} = id(y);",
     )
     .expect("a glob imports the pub names");
 }
@@ -189,7 +189,7 @@ fn glob_vs_glob_ambiguity_on_a_referenced_name_is_a_never_silent_error() {
     // `a` and `c` both export a pub `dup`; `b` globs both and REFERENCES `dup` ⇒ never-silent
     // ambiguity (G2 — never a silent winner). The error must name the ambiguity + suggest explicit.
     let msg = check_err(
-        "phylum p\n\nnodule a;\n\npub fn dup(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule c;\n\npub fn dup(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.*;\n\nuse c.*;\n\nfn f(y: Binary{8}) => Binary{8} =\n  dup(y);",
+        "phylum p\nnodule a;\npub fn dup(x: Binary{8}) => Binary{8} = x;\nnodule c;\npub fn dup(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.*;\nuse c.*;\nfn f(y: Binary{8}) => Binary{8} = dup(y);",
     );
     assert!(
         msg.contains("ambiguous") && msg.contains("dup"),
@@ -202,7 +202,7 @@ fn control_glob_ambiguity_is_resolved_by_an_explicit_use() {
     // The non-vacuous control: the same two globs, but an explicit `use a.dup` shadows them — the
     // explicit binding wins deterministically (documented precedence), so `dup(y)` resolves.
     check(
-        "phylum p\n\nnodule a;\n\npub fn dup(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule c;\n\npub fn dup(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.*;\n\nuse c.*;\n\nuse a.dup;\n\nfn f(y: Binary{8}) => Binary{8} =\n  dup(y);",
+        "phylum p\nnodule a;\npub fn dup(x: Binary{8}) => Binary{8} = x;\nnodule c;\npub fn dup(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.*;\nuse c.*;\nuse a.dup;\nfn f(y: Binary{8}) => Binary{8} = dup(y);",
     )
     .expect("an explicit use disambiguates the glob-vs-glob collision");
 }
@@ -212,7 +212,7 @@ fn control_an_unreferenced_glob_ambiguity_is_not_an_error() {
     // Ambiguity fires only on a *reference* (G2 wording): two globs collide on `dup`, but `b` never
     // references `dup`, so the program checks. (The collision is latent, refused only if used.)
     check(
-        "phylum p\n\nnodule a;\n\npub fn dup(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule c;\n\npub fn dup(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.*;\n\nuse c.*;\n\nfn f(y: Binary{8}) => Binary{8} =\n  not(y);",
+        "phylum p\nnodule a;\npub fn dup(x: Binary{8}) => Binary{8} = x;\nnodule c;\npub fn dup(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.*;\nuse c.*;\nfn f(y: Binary{8}) => Binary{8} = not(y);",
     )
     .expect("an unreferenced glob collision is latent, not an error");
 }
@@ -223,7 +223,7 @@ fn own_decl_shadows_an_imported_glob_name_deterministically() {
     // `id` — its own wins, deterministically (documented shadowing, not a silent swap). The own
     // `id` returns Ternary, so a body typed against it proves the own decl is the one in scope.
     let penv = check(
-        "phylum p\n\nnodule a;\n\npub fn id(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse a.*;\n\nfn id(x: Ternary{6}) => Ternary{6} =\n  x;\n\nfn f(y: Ternary{6}) => Ternary{6} =\n  id(y);",
+        "phylum p\nnodule a;\npub fn id(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse a.*;\nfn id(x: Ternary{6}) => Ternary{6} = x;\nfn f(y: Ternary{6}) => Ternary{6} = id(y);",
     )
     .expect("own decl shadows the glob import");
     let b = penv.nodule(&path(&["b"])).expect("nodule b;");
@@ -249,7 +249,7 @@ fn a_cross_nodule_impl_is_accepted_trait_in_a_type_in_b_impl_in_b() {
     // declared in the phylum (pub-blind coherence) and `T` is local to `b`. `b` imports the trait
     // name to reference it.
     check(
-        "phylum p\n\nnodule a;\n\npub trait Negate[A] {\n  fn negate(x: A) => A;\n};\n\nnodule b;\n\nuse a.Negate;\n\ntype T = Mk(Binary{8});\n\nimpl Negate[T] for T {\n  fn negate(x: T) => T =\n  x;\n};",
+        "phylum p\nnodule a;\npub trait Negate[A] { fn negate(x: A) => A; };\nnodule b;\nuse a.Negate;\ntype T = Mk(Binary{8});\nimpl Negate[T] for T { fn negate(x: T) => T = x; };",
     )
     .expect("a cross-nodule impl (trait in a, type in b) is accepted phylum-wide");
 }
@@ -259,7 +259,7 @@ fn a_cross_nodule_impl_on_a_primitive_for_a_phylum_trait_is_accepted() {
     // Trait `Show` in `a` (pub), impl for the primitive `Binary{8}` in `b`. The trait is phylum-local
     // (coherence pub-blind), so even on a primitive `for`-type the impl is in-phylum ⇒ accepted.
     check(
-        "phylum p\n\nnodule a;\n\npub trait Show[A] {\n  fn show(x: A) => A;\n};\n\nnodule b;\n\nuse a.Show;\n\nimpl Show[Binary{8}] for Binary{8} {\n  fn show(x: Binary{8}) => Binary{8} =\n  x;\n};",
+        "phylum p\nnodule a;\npub trait Show[A] { fn show(x: A) => A; };\nnodule b;\nuse a.Show;\nimpl Show[Binary{8}] for Binary{8} { fn show(x: Binary{8}) => Binary{8} = x; };",
     )
     .expect("an impl for a primitive of a phylum-local trait is accepted");
 }
@@ -270,7 +270,7 @@ fn the_coherence_view_is_pub_blind_a_private_trait_still_satisfies_the_orphan_ru
     // (coherence is enforcement authority, not the pub namespace). The impl lives in `a` (same
     // nodule), so no `use` is needed; this isolates "private trait + orphan rule sees it".
     check(
-        "phylum p\n\nnodule a;\n\ntrait Negate[A] {\n  fn negate(x: A) => A;\n};\n\nimpl Negate[Binary{8}] for Binary{8} {\n  fn negate(x: Binary{8}) => Binary{8} =\n  not(x);\n};\n\nnodule b;\n\nfn f() => Binary{8} =\n  0b0000_0000;",
+        "phylum p\nnodule a;\ntrait Negate[A] { fn negate(x: A) => A; };\nimpl Negate[Binary{8}] for Binary{8} { fn negate(x: Binary{8}) => Binary{8} = not(x); };\nnodule b;\nfn f() => Binary{8} = 0b0000_0000;",
     )
     .expect("a private trait still satisfies the orphan rule (coherence is pub-blind)");
 }
@@ -285,7 +285,7 @@ fn control_an_impl_whose_trait_and_type_are_both_outside_the_phylum_is_a_never_s
     // unit test, since it is unreachable through resolvable surface names; see
     // `checkty::tests` orphan-arm coverage.)
     let msg = check_err(
-        "phylum p\n\nnodule b;\n\nimpl Ext[Binary{8}] for Binary{8} {\n  fn e(x: Binary{8}) => Binary{8} =\n  x;\n};",
+        "phylum p\nnodule b;\nimpl Ext[Binary{8}] for Binary{8} { fn e(x: Binary{8}) => Binary{8} = x; };",
     );
     assert!(
         msg.contains("unknown trait") || msg.contains("orphan"),
@@ -299,7 +299,7 @@ fn control_an_impl_whose_trait_and_type_are_both_outside_the_phylum_is_a_never_s
 
 #[test]
 fn pub_phylum_header_and_use_round_trip_through_expand() {
-    let src = "phylum app.core\n\nnodule a;\n\npub fn id(x: Binary{8}) => Binary{8} =\n  x;\n\npub type Flag = Off | On;\n\nnodule b;\n\nuse a.id;\n\nuse a.*;\n\nfn f(y: Binary{8}) => Binary{8} =\n  id(y);";
+    let src = "phylum app.core\nnodule a;\npub fn id(x: Binary{8}) => Binary{8} = x;\npub type Flag = Off | On;\nnodule b;\nuse a.id;\nuse a.*;\nfn f(y: Binary{8}) => Binary{8} = id(y);";
     let ph1 = parse_phylum(src).expect("parses");
     let printed = expand_phylum_to_source(&ph1);
     // The longhand twin must carry the phylum header, the `pub` markers, and both `use` forms.
@@ -316,11 +316,11 @@ fn pub_phylum_header_and_use_round_trip_through_expand() {
         "pub type re-emitted:\n{printed}"
     );
     assert!(
-        printed.contains("use a.id\n"),
+        printed.contains("use a.id;\n"),
         "specific use re-emitted:\n{printed}"
     );
     assert!(
-        printed.contains("use a.*\n"),
+        printed.contains("use a.*;\n"),
         "glob use re-emitted:\n{printed}"
     );
     // Re-parsing the printed form yields a structurally-equal phylum (round-trip stable).
@@ -331,7 +331,7 @@ fn pub_phylum_header_and_use_round_trip_through_expand() {
 #[test]
 fn a_header_less_phylum_does_not_gain_a_phylum_line() {
     // An unmarked (header-less) phylum-of-one must NOT sprout a `phylum` line (never invented).
-    let ph = parse_phylum("nodule solo;\n\npub fn f() => Binary{8} =\n  0b0;").expect("parses");
+    let ph = parse_phylum("nodule solo;\npub fn f() => Binary{8} = 0b0;").expect("parses");
     let printed = expand_phylum_to_source(&ph);
     assert!(
         !printed.contains("phylum "),
@@ -350,7 +350,7 @@ fn a_header_less_phylum_does_not_gain_a_phylum_line() {
 #[test]
 fn check_phylum_of_one_matches_check_nodule() {
     let src =
-        "nodule d;\n\nfn widen(x: Binary{8}) => Ternary{6} =\n  swap(x, to: Ternary{6}, policy: rt);";
+        "nodule d;\nfn widen(x: Binary{8}) => Ternary{6} = swap(x, to: Ternary{6}, policy: rt);";
     let nodule = mycelium_l1::parse(src).expect("parses");
     let via_nodule = mycelium_l1::check_nodule(&nodule).expect("checks");
     let via_phylum = check_phylum(&Phylum::of_one(nodule.clone())).expect("checks");
@@ -368,7 +368,7 @@ fn a_private_cross_nodule_call_without_a_use_is_a_never_silent_unresolved_name()
     // Without a `use`, a name from another nodule is simply not in scope: a reference is the normal
     // never-silent unknown-name error (cross-nodule visibility requires an explicit import — G2).
     let msg = check_err(
-        "phylum p\n\nnodule a;\n\npub fn id(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nfn f(y: Binary{8}) => Binary{8} =\n  id(y);",
+        "phylum p\nnodule a;\npub fn id(x: Binary{8}) => Binary{8} = x;\nnodule b;\nfn f(y: Binary{8}) => Binary{8} = id(y);",
     );
     assert!(
         msg.contains("id") && (msg.contains("unknown") || msg.contains("prim")),
@@ -381,7 +381,7 @@ fn a_single_segment_use_is_a_never_silent_teaching_refusal() {
     // M-662 (Copilot #369): `use X` names no nodule — a never-silent refusal with a teaching diagnostic
     // (qualify it as `use <nodule>.X`), NOT the confusing downstream "no such name" miss (G2).
     let msg = check_err(
-        "phylum p\n\nnodule a;\n\npub fn id(x: Binary{8}) => Binary{8} =\n  x;\n\nnodule b;\n\nuse id;\n\nfn f(y: Binary{8}) => Binary{8} =\n  id(y);",
+        "phylum p\nnodule a;\npub fn id(x: Binary{8}) => Binary{8} = x;\nnodule b;\nuse id;\nfn f(y: Binary{8}) => Binary{8} = id(y);",
     );
     assert!(
         msg.contains("nodule-qualified") && msg.contains("id"),

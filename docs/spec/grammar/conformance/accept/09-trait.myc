@@ -2,5 +2,5 @@
 nodule algebra;
 
 trait Negate[T] {
-  fn negate(x: T) => T;
+    fn negate(x: T) => T;
 };

@@ -49,30 +49,30 @@ fn corpus() -> Vec<Case> {
         Case {
             name: "binary literal",
             rule: "Eight",
-            rule_src: "nodule d;\n\nlower Eight = 0b0000_0001;",
+            rule_src: "nodule d;\nlower Eight = 0b0000_0001;",
             hand_entry: "eight",
-            hand_src: "nodule d;\n\nfn eight() => Binary{8} =\n  0b0000_0001;",
+            hand_src: "nodule d;\nfn eight() => Binary{8} = 0b0000_0001;",
         },
         Case {
             name: "ternary literal",
             rule: "Trits",
-            rule_src: "nodule d;\n\nlower Trits = <00+->;",
+            rule_src: "nodule d;\nlower Trits = 0t00+-;",
             hand_entry: "trits",
-            hand_src: "nodule d;\n\nfn trits() => Ternary{4} =\n  <00+->;",
+            hand_src: "nodule d;\nfn trits() => Ternary{4} = 0t00+-;",
         },
         Case {
             name: "Bool ctor",
             rule: "Yes",
-            rule_src: "nodule d;\n\nlower Yes = True;",
+            rule_src: "nodule d;\nlower Yes = True;",
             hand_entry: "yes",
-            hand_src: "nodule d;\n\nfn yes() => Bool =\n  True;",
+            hand_src: "nodule d;\nfn yes() => Bool = True;",
         },
         Case {
             name: "let-bound repr op",
             rule: "Flip",
-            rule_src: "nodule d;\n\nlower Flip = let a = 0b1011_0010 in not(a);",
+            rule_src: "nodule d;\nlower Flip = let a = 0b1011_0010 in not(a);",
             hand_entry: "flip",
-            hand_src: "nodule d;\n\nfn flip() => Binary{8} =\n  let a = 0b1011_0010 in not(a);",
+            hand_src: "nodule d;\nfn flip() => Binary{8} = let a = 0b1011_0010 in not(a);",
         },
     ]
     // NOTE: a `swap`-bearing rule (`lower Widen = swap(…, policy: rt)`) is exercised by the
@@ -92,10 +92,10 @@ fn structural_corpus() -> Vec<Case> {
     v.push(Case {
         name: "certified swap (structural only)",
         rule: "Widen",
-        rule_src: "nodule d;\n\nlower Widen = swap(0b1011_0010, to: Ternary{6}, policy: rt);",
+        rule_src: "nodule d;\nlower Widen = swap(0b1011_0010, to: Ternary{6}, policy: rt);",
         hand_entry: "widen",
         hand_src:
-            "nodule d;\n\nfn widen() => Ternary{6} =\n  swap(0b1011_0010, to: Ternary{6}, policy: rt);",
+            "nodule d;\nfn widen() => Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt);",
     });
     v
 }
@@ -177,7 +177,7 @@ fn lower_rule_elaboration_stays_in_the_frozen_kernel_kc3() {
 #[test]
 fn lower_rule_elaboration_is_hygienic_no_capture() {
     let env = check_nodule(
-        &parse("nodule d;\n\nlower Flip = let a = 0b1011_0010 in not(a);").expect("parses"),
+        &parse("nodule d;\nlower Flip = let a = 0b1011_0010 in not(a);").expect("parses"),
     )
     .expect("checks");
     let node = elaborate_lower_rule(&env, "Flip").expect("elaborates");
