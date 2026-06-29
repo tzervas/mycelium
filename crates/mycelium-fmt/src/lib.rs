@@ -1590,6 +1590,12 @@ fn render_pattern(p: &Pattern) -> String {
             let s: Vec<String> = subs.iter().map(render_pattern).collect();
             format!("{n}({})", s.join(", "))
         }
+        // v0 or-pattern (M-823 / R20-Q3): `A | B | …` — desugars in the checker to one arm per
+        // alternative; the surface round-trips as the `|`-separated list of alternatives.
+        Pattern::Or(alts) => {
+            let s: Vec<String> = alts.iter().map(render_pattern).collect();
+            s.join(" | ")
+        }
         Pattern::Ident(n) => n.clone(),
     }
 }
