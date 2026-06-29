@@ -17,16 +17,20 @@
 //! dedicated `.myc` unit-test *runner* does not exist yet (it does not pretend to have run tests
 //! that were never written). `run` is **not yet wired** — the project→interpreter pipeline is later
 //! work — and says so with an actionable [`Report`] instead of a stub that silently does nothing.
-//! `--stream` is a **per-component-incremental** driver: it scans for `;` terminators as bytes
-//! arrive, parse each component the moment its terminator lands, and never buffers the entire input
-//! before starting — but the per-component parse is a batch call to [`mycelium_l1::parse`] once the
-//! component's text is complete. True token-level incremental parsing would require the L1 parser to
-//! expose an incremental API (`Declared`); the current driver bounds state to one component at a
-//! time, which is the DN-57 streaming-parse guarantee.
+//! `--stream` is a **token-driven** component splitter: it lexes the source once
+//! ([`mycelium_l1::lexer::lex`]), segments the token stream at `nodule` header tokens (`;` as
+//! `Tok::Semi` is the per-item terminator — DN-57), and parse each component slice with
+//! [`mycelium_l1::parse`]. Splitting on *tokens* (not raw text) makes it comment-/string-safe by
+//! construction: a `nodule`/`;` inside a `//` comment is never a token, so it can never mis-split
+//! (DN-57 §2). The per-component parse bounds parse state to one component at a time. **v0 I/O is
+//! whole-input-buffered** (`Declared`); true per-`;`-component incremental I/O would require a
+//! resumable L1 token-stream API that does not exist yet (flagged future work).
 
 use std::io::Read as StdRead;
 use std::path::{Path, PathBuf};
 
+use mycelium_l1::lexer::lex;
+use mycelium_l1::token::{Pos, Spanned, Tok};
 use mycelium_l1::{check_nodule, parse, ParseError};
 use mycelium_proj::parse_manifest;
 use mycelium_spore::{build_spore, explain, Spore};
@@ -242,29 +246,37 @@ pub type StreamComponent = Result<usize, Report>;
 
 /// `myc --stream` — parse a `;`-delimited Mycelium component stream from `reader` (M-820 / DN-57).
 ///
-/// ## Streaming semantics (`Declared`)
-/// **v0 is whole-input-buffered.** The entire reader is read into a `String` first, then the text
-/// is split into per-nodule components at `nodule` keyword boundaries and each component is parsed
+/// ## Streaming semantics (`Declared` for the I/O strategy; `Empirical` for the split)
+/// **v0 is whole-input-buffered for I/O.** The entire reader is read into a `String` first, then
+/// the source is **lexer-split** into per-nodule components and each component is parsed
 /// independently. This bounds the *parse* state to one component at a time (the per-component parse
-/// is a `mycelium_l1::parse` call on the component's text slice, not the full input), but the
-/// *I/O* is fully buffered. True per-component-incremental I/O would require the L1 lexer to
-/// expose a resumable/incremental API; that is flagged as future work (`Declared`).
+/// is a [`mycelium_l1::parse`] call on the component's source slice, not the whole input), but the
+/// *I/O* is fully buffered. True per-`;`-component **incremental** I/O would require the L1 lexer to
+/// expose a resumable/incremental token-stream API (one does not exist yet); that is flagged as
+/// future work (`Declared`). The *split* itself is `Empirical` — it is token-accurate (see below)
+/// and tested, including comment-/string-safety.
 ///
-/// ## Component granularity
-/// Each "component" is a complete Mycelium nodule block — from its `nodule <name>;` header through
-/// all its `;`-terminated items, up to (but not including) the next `nodule` keyword. This matches
-/// the DN-57 streaming rationale: the `;` terminator on each item within a nodule makes the block
-/// boundary unambiguous, and the `nodule` keyword at the start of the next block is the
-/// inter-component delimiter. Each component is passed to [`mycelium_l1::parse`] individually.
+/// ## Component granularity — token-driven, comment-safe (DN-57 §2)
+/// The source is tokenized once via [`mycelium_l1::lexer::lex`]; the token stream is then segmented
+/// at [`mycelium_l1::token::Tok::Nodule`] keyword tokens. Each "component" is a complete Mycelium
+/// nodule block — from its `nodule` header token through all its `;`-terminated
+/// ([`Tok::Semi`](mycelium_l1::token::Tok::Semi)) items, up to (but not including) the next `nodule`
+/// header token. Crucially this is **not** a raw-text keyword scan: a `nodule` or `;` appearing
+/// inside a `//` comment (or a future string literal) is **not** a `Tok::Nodule`/`Tok::Semi` token,
+/// so it can never cause a mis-split (DN-57 §2: "the end-of-component is a *token*, not the *absence*
+/// of more tokens" — a streaming parser must not scan ahead for the next item-opening *keyword text*).
 ///
 /// ## Never-silent error contract (G2)
+/// - A **lex** failure surfaces as an outer `Err(Report)` (`myc-stream-lex`) with the source
+///   position — a lexically invalid stream is never silently truncated.
 /// - A malformed component yields a [`Report`] (`myc-stream-parse`) with the 1-based component
 ///   index, the parse-error position within that component, and an actionable `help:` line. The
 ///   remaining components are still attempted — one bad component does not abort the stream.
-/// - A trailing non-empty chunk after the last complete component (i.e., content that starts a new
-///   nodule but has no items ending with `;` before EOF) is an explicit `myc-stream-eof` error.
-/// - An entirely empty stream (no `nodule` components found) is an explicit `myc-stream-empty`
-///   error — never silently succeeded.
+/// - A component whose last token before the next `nodule`/EOF is **not** `Tok::Semi` is an
+///   unterminated component: an explicit `myc-stream-eof` error (DN-57 §3.1 — mandatory `;`), never
+///   a silent partial accept.
+/// - An entirely empty stream (no tokens) or one with no `nodule` header is an explicit
+///   `myc-stream-empty` / per-component error — never silently succeeded.
 ///
 /// ## I/O errors
 /// An I/O failure reading `reader` is returned as an outer `Err(Report)` (`myc-stream-io`, exit 66)
@@ -272,11 +284,11 @@ pub type StreamComponent = Result<usize, Report>;
 ///
 /// ## Return value
 /// Returns `Ok(Vec<StreamComponent>)` — one entry per component. `Err(report)` entries are
-/// per-component parse failures; `Ok(n)` entries confirm success. The outer `Result` carries I/O
-/// or empty-stream errors that prevent any parsing.
+/// per-component parse / unterminated failures; `Ok(n)` entries confirm success. The outer `Result`
+/// carries I/O, lex, or empty-stream errors that prevent any per-component parsing.
 ///
 /// # Errors
-/// Returns `Err(Report)` for a fatal I/O failure on `reader` or an empty stream.
+/// Returns `Err(Report)` for a fatal I/O failure on `reader`, a lex failure, or an empty stream.
 pub fn stream_parse(
     mut reader: impl StdRead,
     source_name: &str,
@@ -288,20 +300,27 @@ pub fn stream_parse(
             .help("check that the input source is readable and produces valid UTF-8")
     })?;
 
-    // --- Step 2: split into nodule-components at `nodule` keyword boundaries ---
-    // Find the byte offsets where each `nodule` keyword starts. We do a text-level scan:
-    // a `nodule` occurrence is valid as a component start when it appears as a whole word
-    // (preceded by start-of-input, whitespace, or a newline). This is safe for the current
-    // Mycelium grammar: `nodule` is a reserved keyword that cannot appear inside expressions,
-    // types, or string literals (v0 Mycelium has no string literals). `Declared`: if the grammar
-    // evolves to support string literals containing the substring "nodule", this scanner must
-    // become token-aware.
-    let split_positions = find_nodule_starts(&src);
+    // --- Step 2: lex once (never-silent: a lex error surfaces explicitly, G2) ---
+    let toks = lex(&src).map_err(|ParseError { pos, message }| {
+        Report::new(
+            "myc-stream-lex",
+            format!("`{source_name}` failed to lex: {message}"),
+            65,
+        )
+        .at(format!("{source_name}:{}:{}", pos.line, pos.col))
+        .help("fix the lexically invalid token at the indicated position")
+    })?;
 
-    if split_positions.is_empty() {
-        // No `nodule` keywords found — either empty input or input with no valid components.
-        let s = src.trim();
-        if s.is_empty() {
+    // --- Step 3: segment the token stream at `nodule` header tokens (comment-safe by construction) ---
+    // A `nodule`/`;` inside a `//` comment is never a `Tok::Nodule`/`Tok::Semi`, so this split is
+    // immune to comment/string-literal mis-splits (DN-57 §2).
+    let segments = segment_nodule_components(&toks);
+
+    if segments.is_empty() {
+        // No `nodule` header token — either an empty stream (only `Eof`) or content with no header.
+        // Distinguish: a stream that is only `Eof` is empty; otherwise it is one malformed component.
+        let non_eof = toks.iter().any(|s| s.tok != Tok::Eof);
+        if !non_eof {
             return Err(Report::new(
                 "myc-stream-empty",
                 format!("`{source_name}` is empty — no components to parse"),
@@ -312,109 +331,142 @@ pub fn stream_parse(
                  check that the input is non-empty",
             ));
         }
-        // Non-empty but no `nodule` header — the whole thing is one malformed component.
-        // Parse it and surface the error explicitly.
-        let result = parse_component(s, 1, source_name);
-        let results = vec![result];
-        return Ok(results);
+        // Tokens present but no `nodule` header — surface as one explicit malformed component.
+        return Ok(vec![parse_component(src.trim(), 1, source_name)]);
     }
 
-    // --- Step 3: extract component text slices and check for unterminated trailing content ---
-    let mut results: Vec<StreamComponent> = Vec::with_capacity(split_positions.len());
-    for (comp_idx, window) in split_positions.windows(2).enumerate() {
-        let chunk = &src[window[0]..window[1]];
-        let trimmed = chunk.trim();
-        results.push(parse_component(trimmed, comp_idx + 1, source_name));
-    }
+    // --- Step 4: per-segment, slice the source and parse (or report unterminated) ---
+    // Build a line-start byte index so a token `Pos` (1-based line/col) maps to a byte offset.
+    let line_starts = line_start_offsets(&src);
+    let mut results: Vec<StreamComponent> = Vec::with_capacity(segments.len());
 
-    // The last component runs from its start to the end of the source.
-    let last_start = *split_positions.last().unwrap();
-    let last_chunk = src[last_start..].trim();
-    let comp_idx = split_positions.len();
+    for (comp_idx, seg) in segments.iter().enumerate() {
+        let one_based = comp_idx + 1;
+        // The segment's source slice runs from its first token's byte offset to its end byte offset.
+        let start_byte = pos_to_byte(&line_starts, &src, seg.start_pos);
+        let end_byte = seg
+            .end_pos
+            .map_or(src.len(), |p| pos_to_byte(&line_starts, &src, p));
+        let slice = src.get(start_byte..end_byte).unwrap_or("").trim();
 
-    // Never-silent: the last component must end with `;` (the DN-57 mandatory terminator).
-    // If it doesn't, that is an unterminated component — an explicit error, not silent truncation.
-    if !ends_with_semicolon(last_chunk) && !last_chunk.is_empty() {
-        results.push(Err(Report::new(
-            "myc-stream-eof",
-            format!(
-                "component {comp_idx} in `{source_name}` is unterminated: \
-                 the last nodule-component has no trailing `;` before EOF"
-            ),
-            65,
-        )
-        .help(
-            "every Mycelium component must end with `;` after its last item (DN-57 §3.1); \
-             add `;` at the end of the last component",
-        )));
-    } else {
-        results.push(parse_component(last_chunk, comp_idx, source_name));
-    }
-
-    if results.is_empty() {
-        return Err(Report::new(
-            "myc-stream-empty",
-            format!("`{source_name}` contains no parseable components"),
-            65,
-        )
-        .help(
-            "a Mycelium stream must contain at least one `;`-terminated `nodule` component (DN-57)",
-        ));
+        if !seg.terminated {
+            // Never-silent: the last token before the boundary is not `Tok::Semi` (DN-57 §3.1).
+            results.push(Err(Report::new(
+                "myc-stream-eof",
+                format!(
+                    "component {one_based} in `{source_name}` is unterminated: \
+                     its last item has no `;` terminator before the next component / EOF"
+                ),
+                65,
+            )
+            .at(format!(
+                "{source_name}:{one_based}:{}:{}",
+                seg.start_pos.line, seg.start_pos.col
+            ))
+            .help(
+                "every Mycelium component must end with `;` after its last item (DN-57 §3.1); \
+                 add `;` at the end of the component",
+            )));
+        } else {
+            results.push(parse_component(slice, one_based, source_name));
+        }
     }
 
     Ok(results)
 }
 
-/// Find the byte-offset positions in `src` where each `nodule` keyword starts, as a
-/// component-boundary marker. A `nodule` occurrence counts as a boundary when it appears as a
-/// whole identifier word (preceded by start-of-input or whitespace/newline, followed by whitespace
-/// or end-of-input — not embedded inside another word like `inodule`).
-///
-/// Returns a sorted `Vec<usize>` of byte offsets. An empty vec means no `nodule` was found.
-///
-/// Guarantee: `Empirical` — the word-boundary check (ASCII whitespace / start-of-input) is
-/// validated by the stream tests. The implementation does NOT skip `//` comments; a `nodule`
-/// inside a comment would be treated as a boundary. In practice, comments before a `nodule` are
-/// unusual, but this is a known limitation (`Declared`).
-fn find_nodule_starts(src: &str) -> Vec<usize> {
-    let needle = "nodule";
-    let bytes = src.as_bytes();
-    let mut positions = Vec::new();
+/// One lexer-segmented nodule-component: where its `nodule` header token starts, where the next
+/// component (or EOF) starts, and whether its final token is the mandatory `;` terminator.
+struct NoduleSegment {
+    /// Source position of the segment's opening `nodule` token (1-based line/col).
+    start_pos: Pos,
+    /// Source position of the *next* segment's opening `nodule` token, or `None` for the last
+    /// segment (which runs to end-of-source).
+    end_pos: Option<Pos>,
+    /// Whether the last non-`Eof` token of this segment is `Tok::Semi` (DN-57 mandatory terminator).
+    terminated: bool,
+}
 
-    let mut i = 0;
-    while i + needle.len() <= bytes.len() {
-        // Does `needle` start at position `i`?
-        if bytes[i..].starts_with(needle.as_bytes()) {
-            // Check it is a whole-word occurrence (not part of a longer identifier).
-            let preceded_by_word_boundary = i == 0
-                || bytes[i - 1].is_ascii_whitespace()
-                || bytes[i - 1] == b';'
-                || bytes[i - 1] == b'}';
-            let followed_by_word_boundary = {
-                let after = i + needle.len();
-                after >= bytes.len()
-                    || bytes[after].is_ascii_whitespace()
-                    || !bytes[after].is_ascii_alphanumeric() && bytes[after] != b'_'
-            };
-            if preceded_by_word_boundary && followed_by_word_boundary {
-                positions.push(i);
-                i += needle.len(); // skip past this occurrence
-                continue;
-            }
-        }
-        i += 1;
+/// Segment a token stream into per-nodule components at `Tok::Nodule` header boundaries.
+///
+/// Each segment runs from one `Tok::Nodule` token up to (but not including) the next `Tok::Nodule`
+/// token (or `Tok::Eof`). A segment is `terminated` iff its last non-`Eof` token is `Tok::Semi` —
+/// the DN-57 mandatory component terminator. Comment-safe by construction: comments are never in the
+/// token stream, so a `nodule`/`;` inside a comment cannot start or terminate a segment.
+///
+/// Guarantee: `Empirical` — validated by the stream tests (including comment-/string-safety).
+fn segment_nodule_components(toks: &[Spanned]) -> Vec<NoduleSegment> {
+    // Collect the indices of every `nodule` header token.
+    let nodule_idxs: Vec<usize> = toks
+        .iter()
+        .enumerate()
+        .filter(|(_, s)| s.tok == Tok::Nodule)
+        .map(|(i, _)| i)
+        .collect();
+
+    let mut segments = Vec::with_capacity(nodule_idxs.len());
+    for (n, &start_idx) in nodule_idxs.iter().enumerate() {
+        // The token range of this segment: [start_idx, next_nodule_idx) — or to the end otherwise.
+        let next_nodule_idx = nodule_idxs.get(n + 1).copied();
+        let end_idx = next_nodule_idx.unwrap_or(toks.len());
+
+        // The boundary position (start of the next component) — `None` for the last segment.
+        let end_pos = next_nodule_idx.map(|i| toks[i].pos);
+
+        // Terminated iff the last non-`Eof` token in [start_idx, end_idx) is `Tok::Semi`.
+        let terminated = toks[start_idx..end_idx]
+            .iter()
+            .rev()
+            .find(|s| s.tok != Tok::Eof)
+            .is_some_and(|s| s.tok == Tok::Semi);
+
+        segments.push(NoduleSegment {
+            start_pos: toks[start_idx].pos,
+            end_pos,
+            terminated,
+        });
     }
-
-    positions
+    segments
 }
 
-/// Whether `text` (trimmed) ends with a `;` token — the mandatory component terminator (DN-57).
-/// Checks the last non-whitespace character.
-fn ends_with_semicolon(text: &str) -> bool {
-    text.trim_end().ends_with(';')
+/// Byte offsets of the start of each 1-based source line (`line_starts[0]` = 0 = start of line 1).
+/// Used to map a token [`Pos`](mycelium_l1::token::Pos) (1-based line/col) to a byte offset.
+fn line_start_offsets(src: &str) -> Vec<usize> {
+    let mut starts = vec![0usize];
+    for (i, b) in src.bytes().enumerate() {
+        if b == b'\n' {
+            starts.push(i + 1);
+        }
+    }
+    starts
 }
 
-/// Parse a single component text as a Mycelium nodule.
+/// Map a 1-based `Pos` (line/col) to a byte offset in `src`, using a precomputed `line_starts`.
+///
+/// The lexer counts `col` in characters (1-based), so we walk `col - 1` chars from the line start to
+/// land on the correct byte offset (handles multi-byte UTF-8). A position past end-of-line clamps to
+/// the source length — never panics (G2).
+fn pos_to_byte(line_starts: &[usize], src: &str, pos: Pos) -> usize {
+    let line_idx = (pos.line as usize).saturating_sub(1);
+    let Some(&line_byte) = line_starts.get(line_idx) else {
+        return src.len();
+    };
+    // Walk `col - 1` characters from the line start.
+    let col_offset = (pos.col as usize).saturating_sub(1);
+    let rest = &src[line_byte..];
+    match rest.char_indices().nth(col_offset) {
+        Some((byte_in_line, _)) => line_byte + byte_in_line,
+        None => {
+            // `col` is past the last char of the line — clamp to the line end (next line start - 1)
+            // or the source length for the final line.
+            line_starts
+                .get(line_idx + 1)
+                .map_or(src.len(), |&next| next.saturating_sub(1))
+        }
+    }
+}
+
+/// Parse a single component's source slice as a Mycelium nodule.
 ///
 /// Returns `Ok(component_idx)` on success; `Err(Report)` with a fully-located diagnostic on any
 /// parse failure (G2: never silent, never panics — backed by [`mycelium_l1::parse`]'s own contract).

@@ -135,15 +135,16 @@ fn cmd_test(manifest: &Path) -> ExitCode {
 /// `myc --stream [<file>]` — parse a `;`-terminated Mycelium component stream (M-820 / DN-57).
 ///
 /// Without a file argument, reads from stdin (`<stdin>`). With a file argument, opens and reads
-/// that file. Each `;`-terminated chunk is parsed as a Mycelium nodule the moment its terminator
-/// arrives — per-component-incremental (bounded state per component; `Declared` — see
-/// [`mycelium_cli::stream_parse`] for the honesty note on what incremental means here).
+/// that file. The source is lexed once and the token stream is segmented at `nodule` header tokens
+/// into per-nodule components, each parsed with `mycelium_l1::parse`. The split is token-driven,
+/// so it is comment-/string-safe by construction (a `nodule`/`;` inside a comment is never a token;
+/// DN-57 §2). v0 I/O is whole-input-buffered (`Declared` — see [`mycelium_cli::stream_parse`]).
 ///
 /// Every malformed component surfaces an explicit error with a component:line:col location (G2).
-/// An unterminated trailing component (EOF before `;`) is likewise an explicit error, never a
-/// silent partial accept (G2 / DN-57 §1).
+/// An unterminated component (its last item has no `;` before the next `nodule`/EOF) is likewise an
+/// explicit error, never a silent partial accept (G2 / DN-57 §3.1).
 ///
-/// Exit 0 on all-green; exit 65 if any component failed; exit 66 on I/O error.
+/// Exit 0 on all-green; exit 65 if any component failed (or on lex error); exit 66 on I/O error.
 fn cmd_stream(rest: &[String]) -> ExitCode {
     // Parse the optional file argument; reject anything else (unknown flags) as usage.
     let (reader, source_name): (Box<dyn std::io::Read>, String) = match rest {

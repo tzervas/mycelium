@@ -2,14 +2,21 @@
 //
 // Coverage:
 //  - A well-formed multi-component stream parses to N clean components (data-driven).
-//  - A malformed component within a stream yields an explicit, located error; stream continues.
+//  - A malformed (lexically-valid, syntactically-invalid) component yields an explicit, located
+//    `myc-stream-parse` error and the stream CONTINUES (good components after it still parse).
+//  - A lexically-invalid stream yields an explicit OUTER `myc-stream-lex` error (whole-stream lex).
 //  - EOF mid-component (unterminated last component) yields an explicit error.
 //  - An empty stream (no `;`-terminated components) yields an explicit error.
 //  - A single-component stream (trivial case) parses cleanly.
+//  - COMMENT-SAFETY: a `//` comment containing the words `nodule` and `;` must NOT cause a
+//    mis-split (the token-driven splitter ignores comments — DN-57 §2).
 //
 // Guarantee tags:
+//  - split correctness: `Empirical` — the splitter is token-driven (lex once, segment on
+//    `Tok::Nodule`/`Tok::Semi`), so it is comment-/string-safe *by construction* and that safety is
+//    proven by `comment_with_nodule_and_semicolon_does_not_mis_split` below.
 //  - parse correctness: `Empirical` (backed by the same `mycelium-l1::parse` oracle the tests exercise).
-//  - never-silent errors: `Empirical` (every error path asserted below).
+//  - never-silent errors: `Empirical` (every error path — parse, eof, empty — asserted below).
 //  - I/O error: `Declared` (the `myc-stream-io` path is not exercised here — I/O fault injection
 //    would require a mock reader; left for integration-level tests).
 use crate::{run_stream_parse, stream_parse};
@@ -40,18 +47,25 @@ const WELL_FORMED_CORPUS: &[(&str, &str, usize, usize)] = &[
 ];
 
 /// Each entry: (label, input, expected_ok_count, expected_err_count, error_code).
+///
+/// IMPORTANT: these components are **lexically valid** but **syntactically invalid**, so the
+/// whole-stream lex succeeds and the failure is isolated to one component's `parse` — which is what
+/// proves *per-component* error continuation. (A lexically-invalid character like `§` aborts the
+/// single whole-stream lex; that distinct path is covered by `lex_error_is_an_explicit_outer_error`
+/// below.)
 const MALFORMED_CORPUS: &[(&str, &str, usize, usize, &str)] = &[
     (
         "one malformed component in a two-component stream",
-        // First component is broken (bad token §); second is fine.
-        "nodule bad; fn f() = §;\nnodule good; fn g() => Binary{8} = 0b1111_1111;",
+        // First component lexes but does not parse (empty body after `=`); second is fine.
+        "nodule bad; fn f() = ;\nnodule good; fn g() => Binary{8} = 0b1111_1111;",
         1,
         1,
         "myc-stream-parse",
     ),
     (
         "first component malformed, rest clean",
-        "nodule x; fn f() = §;\nnodule y;",
+        // `fn ;` lexes (keyword + terminator) but does not parse; second nodule is header-only OK.
+        "nodule x; fn ;\nnodule y;",
         1,
         1,
         "myc-stream-parse",
@@ -81,6 +95,54 @@ fn well_formed_multi_component_stream_parses_all() {
             report.failures
         );
     }
+}
+
+// --- comment-safety test (the spec-fidelity fix: token-driven, not raw-text, splitting) -------
+
+#[test]
+fn comment_with_nodule_and_semicolon_does_not_mis_split() {
+    // A `//` comment that literally contains the word `nodule` AND a `;` semicolon. A raw-text
+    // keyword/`;` scanner would mis-split here (treating the comment's `nodule` as a new component
+    // boundary and the comment's `;` as a terminator). The token-driven splitter lexes first, so
+    // comments are never in the token stream and CANNOT cause a mis-split (DN-57 §2).
+    //
+    // This is ONE nodule with ONE item; correct behavior is exactly 1 clean component.
+    let input = "nodule a; \
+                 // this comment mentions a nodule and ends with a ; here\n\
+                 fn f() => Binary{8} = 0b0000_0000;";
+    let report = run_stream_parse(input.as_bytes(), "<comment-safety>")
+        .expect("comment-bearing stream must not fail fatally");
+    assert_eq!(
+        report.parsed_ok, 1,
+        "a `//` comment containing `nodule`/`;` must NOT create extra components; \
+         expected exactly 1 clean component, got {} ok / {} err (failures: {:?})",
+        report.parsed_ok, report.parsed_err, report.failures
+    );
+    assert_eq!(
+        report.parsed_err, 0,
+        "comment-bearing single nodule must have no errors; failures: {:?}",
+        report.failures
+    );
+    assert!(report.ok());
+}
+
+#[test]
+fn leading_comment_block_before_nodule_header_does_not_mis_split() {
+    // A multi-line leading comment block (as in docs/spec/grammar/conformance/accept/*.myc) that
+    // mentions `nodule` before the real header. The token-driven splitter must see exactly one
+    // component. A raw-text scanner would have split at the comment's `nodule`.
+    let input = "// exercises: a leading comment block that says the word nodule; and has a ;\n\
+                 // a second comment line also naming nodule and a ; terminator\n\
+                 nodule doc; fn id[T](x: T) => T = x;";
+    let report = run_stream_parse(input.as_bytes(), "<leading-comment>")
+        .expect("leading-comment stream must not fail fatally");
+    assert_eq!(
+        report.parsed_ok, 1,
+        "leading comment naming `nodule`/`;` must not create extra components; \
+         got {} ok / {} err (failures: {:?})",
+        report.parsed_ok, report.parsed_err, report.failures
+    );
+    assert_eq!(report.parsed_err, 0, "failures: {:?}", report.failures);
 }
 
 // --- malformed-component tests ----------------------------------------------------------------
@@ -160,6 +222,22 @@ fn empty_stream_is_an_explicit_error_not_silent() {
     let err = result.expect_err("empty stream must return Err");
     assert_eq!(err.code, "myc-stream-empty");
     assert!(err.help.is_some(), "empty-stream error must carry help");
+}
+
+// --- lex-error test (whole-stream lex; never-silent outer error) ------------------------------
+
+#[test]
+fn lex_error_is_an_explicit_outer_error() {
+    // A lexically-invalid character (`§`) cannot be tokenized. Because the stream is lexed once
+    // (the spec-mandated token-driven split), this surfaces as an explicit OUTER `myc-stream-lex`
+    // error with a position — never a silent skip/truncation (G2). This is distinct from the
+    // per-component `myc-stream-parse` path (a lexically-valid component that does not parse).
+    let input = "nodule a; fn f() = §;";
+    let err = run_stream_parse(input.as_bytes(), "<lex-fail>")
+        .expect_err("a lexically-invalid stream must return an outer Err");
+    assert_eq!(err.code, "myc-stream-lex");
+    assert!(err.location.is_some(), "lex error must carry a position");
+    assert!(err.help.is_some(), "lex error must carry a help line");
 }
 
 // --- single-component stream ------------------------------------------------------------------
