@@ -8,6 +8,19 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-29: DN-57 → Enacted — delimiter semantics surface complete)
+
+- **DN-57 advances `Accepted → Enacted` (append-only; house rule 3).** The delimiter-semantics
+  surface is now fully implemented and green on `main`: **M-818** (the mandatory `;` component
+  terminator, the nodule-header terminator, `mycfmt`/`expand_to_source` `;`-emission, and the corpus
+  migration), **M-819** (`mycfmt --flatten` single-line stream form), and **M-820** (`myc --stream`
+  token-driven streaming
+  parse). The §2/§5 streaming, comment-safety, and never-silent ergonomics claims that were `Declared`
+  are now `Empirical` for the implemented surface (M-820's comment-safe splitter with explicit
+  lex/parse/eof/empty errors; M-819's AST-equal round-trip); claims about not-yet-built variants (true
+  incremental I/O, the on-the-wire encoding) stay `Declared`. The terminator still adds **no AST node**,
+  so Enactment introduces no kernel growth (KC-3). Recorded in DN-57 §6; no `§1–§5` content rewritten.
+
 ### Added (2026-06-29: next-wave — M-819 `mycfmt --flatten`, M-820 `myc --stream`, M-677 effect budgets, M-668 DN-63 R2 planning)
 
 - **`mycfmt --flatten` — single-line human↔stream form (M-819; DN-57 §2).** A new formatter mode
