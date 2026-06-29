@@ -94,6 +94,14 @@ fn closure_corpus() -> Vec<Shape> {
                   fn main() => Result[Binary{8},Binary{8}] =\n  \
                     let c = 0b0000_1111 in map(mk_ok(), lambda(x: Binary{8}) => and(x, c))",
         },
+        // (8) named fn as an escaping value (RFC-0024 §4A.4 — a bare named fn becomes a NULLARY
+        // closure constructor): `let f = negate in f(x)`. not(0b0000_0011) = 0b1111_1100.
+        Shape {
+            name: "named-fn-as-value",
+            src: "nodule d\n\
+                  fn negate(x: Binary{8}) => Binary{8} = not(x)\n\
+                  fn main() => Binary{8} = let f = negate in f(0b0000_0011)",
+        },
     ]
 }
 

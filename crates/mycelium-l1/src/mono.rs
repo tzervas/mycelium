@@ -191,14 +191,61 @@ fn is_already_monomorphic(env: &Env) -> bool {
                 .value_params
                 .iter()
                 .all(|p| !param_has_fn_type(&env.types, &fd.sig.param_names(), &p.ty))
-            // RFC-0024 §4A (M-704): a body containing a `lambda` needs closure lowering — it is
-            // **not** mono's identity (the pass-through would leave an `Expr::Lambda` for the
-            // elaborator/evaluator to refuse). Detected by a structural walk over the body.
+            // RFC-0024 §4A (M-704): a body containing a `lambda`, or a **named fn used as an escaping
+            // value** (a single-segment top-level fn name in value position, not as a call head),
+            // needs closure lowering — it is **not** mono's identity (the pass-through would leave a
+            // construct the elaborator/evaluator cannot run). Detected by a structural walk.
             && !body_has_lambda(&fd.body)
+            && !body_has_fn_value(env, &fd.body)
     }) && env.types.values().all(|d| d.params.is_empty())
         && env.traits.is_empty()
         && env.instances.is_empty()
         && env.impls.is_empty()
+}
+
+/// RFC-0024 §4A.4 (M-704): true iff `e` references a top-level **function name as a value** — a
+/// single-segment `Expr::Path` naming a fn, occurring **not** as an application head (an applied fn
+/// `f(x)` is an ordinary first-order call, not a fn value). Such a reference needs the closure
+/// lowering (a named-fn-as-escaping-value becomes a nullary closure constructor), so the program is
+/// **not** mono's fast-path identity. Over-detection is safe — it only ever widens to the full pass.
+fn body_has_fn_value(env: &Env, e: &Expr) -> bool {
+    match e {
+        // A bare path naming a top-level fn, in value position.
+        Expr::Path(p) => p.0.len() == 1 && env.fns.contains_key(&p.0[0]),
+        Expr::Lit(Literal::List(elems)) => elems.iter().any(|x| body_has_fn_value(env, x)),
+        Expr::Lit(_) => false,
+        Expr::Let { bound, body, .. } => {
+            body_has_fn_value(env, bound) || body_has_fn_value(env, body)
+        }
+        Expr::If { cond, conseq, alt } => {
+            body_has_fn_value(env, cond)
+                || body_has_fn_value(env, conseq)
+                || body_has_fn_value(env, alt)
+        }
+        Expr::Match { scrutinee, arms } => {
+            body_has_fn_value(env, scrutinee)
+                || arms.iter().any(|a| body_has_fn_value(env, &a.body))
+        }
+        Expr::For { xs, init, body, .. } => {
+            body_has_fn_value(env, xs)
+                || body_has_fn_value(env, init)
+                || body_has_fn_value(env, body)
+        }
+        Expr::Swap { value, .. } => body_has_fn_value(env, value),
+        Expr::WithParadigm { body, .. } => body_has_fn_value(env, body),
+        Expr::Wild(b) | Expr::Spore(b) => body_has_fn_value(env, b),
+        Expr::Colony(hyphae) => hyphae.iter().any(|h| body_has_fn_value(env, &h.body)),
+        Expr::Lambda { body, .. } => body_has_fn_value(env, body),
+        // The head of an application is a *call target*, not a fn value — do NOT descend into it as a
+        // value. Only the arguments are value positions (a fn name passed as an arg is the §4/§4A
+        // HOF-argument case, handled by `resolve_fn_args` — but it still means "not the identity").
+        Expr::App { head: _, args } => args.iter().any(|x| body_has_fn_value(env, x)),
+        Expr::Fuse { left, right } => body_has_fn_value(env, left) || body_has_fn_value(env, right),
+        Expr::Reclaim { policy, body } => {
+            body_has_fn_value(env, policy) || body_has_fn_value(env, body)
+        }
+        Expr::Ascribe(inner, _) => body_has_fn_value(env, inner),
+    }
 }
 
 /// True iff `e` contains an `Expr::Lambda` anywhere (RFC-0024 §4A, M-704) — the gate that keeps a
@@ -1228,9 +1275,11 @@ impl<'e> Mono<'e> {
                 format!("constructor `{name}` referenced without saturation (W6)"),
             );
         }
-        // A bare reference to a (recursive) function. Monomorphic fns mangle to themselves; a generic
-        // fn cannot be referenced as a bare value in the first-order surface (it would need arguments).
-        if let Some(fd) = self.src.fns.get(name) {
+        // A bare reference to a (recursive) function. `rewrite_path` is reached only for a path in
+        // **value position** (a call head goes through `rewrite_app`; a statically-resolved HOF
+        // argument is consumed by `resolve_fn_args` and never rewritten here) — so a fn name here is
+        // a fn **value**.
+        if let Some(fd) = self.src.fns.get(name).cloned() {
             if !fd.sig.params.is_empty() {
                 return residual(
                     site,
@@ -1240,14 +1289,29 @@ impl<'e> Mono<'e> {
                     ),
                 );
             }
-            self.enqueue(Item::Fn {
-                name: name.clone(),
-                targs: vec![],
-                wargs: vec![], // monomorphic path reference: no type or width params
-                fn_args: vec![],
-                dyn_fns: vec![],
-            });
-            return Ok(Expr::Path(Path(vec![mangle_decl(name, &[])])));
+            // RFC-0024 §4A.4 (M-704): a **named monomorphic fn used as an escaping value** (e.g.
+            // `let f = negate in f(x)`) becomes a **nullary closure constructor** of its arrow type
+            // (`apply` then calls the named fn). This is the "a bare named fn becomes a nullary
+            // constructor" case (§4A.4) — the same lowering as a captureless lambda. A single-value-
+            // parameter monomorphic fn has a concrete arrow `A => B`; anything else (nullary / multi-
+            // param) cannot be a single-arg fn value and is a never-silent refusal (G2; partial
+            // application is tuple-gated — §4A.8).
+            if fd.sig.value_params.len() == 1 {
+                let a =
+                    self.concrete_ty(site, &[], &BTreeMap::new(), &fd.sig.value_params[0].ty)?;
+                let b = self.concrete_ty(site, &[], &BTreeMap::new(), &fd.sig.ret)?;
+                return self.wrap_named_fn_as_closure(name, &a, &b);
+            }
+            // A nullary or multi-param fn referenced as a bare value: not a single-arg fn value.
+            return residual(
+                site,
+                format!(
+                    "function `{name}` has {} value parameter(s) and cannot be used as a single-\
+                     argument fn value (RFC-0024 §4A.8 — multi-arg / partial application is tuple-\
+                     gated; a nullary fn is not a value, apply it) — never a silent coercion (G2)",
+                    fd.sig.value_params.len()
+                ),
+            );
         }
         // Unresolved here means a free name; the checker would have refused it. Keep it verbatim so the
         // elaborator's own "unresolved name" residual fires (never silently dropped).
@@ -1769,6 +1833,66 @@ impl<'e> Mono<'e> {
             head: Box::new(Expr::Path(Path(vec![mangled]))),
             args: args2,
         })
+    }
+
+    /// RFC-0024 §4A.4 (M-704): lower a **named monomorphic fn used as an escaping value** to a
+    /// **nullary** closure constructor of its arrow `a => b` — the dispatcher arm calls the named fn
+    /// directly (`callee_mangled(%fnarg)`). This is the "a bare named fn becomes a nullary
+    /// constructor" case (§4A.4). The named fn is enqueued so it is emitted; the ctor is deduplicated
+    /// by content key (two `let f = double` sites share one constructor — identity fragmentation, G2).
+    fn wrap_named_fn_as_closure(
+        &mut self,
+        fn_name: &str,
+        a: &Ty,
+        b: &Ty,
+    ) -> Result<Expr, ElabError> {
+        let arrow = self.register_arrow(a, b);
+        let callee_mangled = mangle_decl(fn_name, &[]);
+        self.enqueue(Item::Fn {
+            name: fn_name.to_owned(),
+            targs: vec![],
+            wargs: vec![],
+            fn_args: vec![],
+            dyn_fns: vec![],
+        });
+        // The dispatcher body for this constructor is a direct call to the named fn on the apply
+        // argument: `callee_mangled(<param>)`. Use the canonical apply-param name as the lambda
+        // parameter so the `Let` the dispatcher wraps (`let <param> = %fnarg in body`) is the
+        // identity binding `let %fnarg = %fnarg in callee(%fnarg)` — well-formed and inert.
+        let body = Expr::App {
+            head: Box::new(Expr::Path(Path(vec![callee_mangled]))),
+            args: vec![Expr::Path(Path(vec![APPLY_PARAM.to_owned()]))],
+        };
+        let content_key = format!("{arrow}|named:{fn_name}");
+        let sum = self
+            .closures
+            .get_mut(&arrow)
+            .expect("arrow registered above");
+        let ctor_name = if let Some(&idx) = sum.by_key.get(&content_key) {
+            sum.ctors[idx].ctor_name.clone()
+        } else {
+            let n = sum.ctors.len();
+            let ctor_name = format!("Clo${arrow}${n}");
+            sum.ctors.push(ClosureCtor {
+                ctor_name: ctor_name.clone(),
+                captures: Vec::new(),
+                param_name: APPLY_PARAM.to_owned(),
+                body,
+            });
+            sum.by_key.insert(content_key, n);
+            self.closure_specs.insert(
+                ctor_name.clone(),
+                ClosureSpecialization {
+                    arrow: arrow.clone(),
+                    ctor_name: ctor_name.clone(),
+                    captures: Vec::new(),
+                    apply_fn: apply_fn_name(&arrow),
+                },
+            );
+            ctor_name
+        };
+        // A nullary constructor value is a bare `Path` (no fields to apply).
+        Ok(Expr::Path(Path(vec![ctor_name])))
     }
 
     /// RFC-0024 §4A (M-704): register a closure tag-sum for the arrow `a => b` (idempotently), and
