@@ -436,5 +436,13 @@ fn pattern_binders(p: &Pattern, out: &mut Vec<String>) {
             }
         }
         Pattern::Wildcard | Pattern::Lit(_) => {}
+        // `Pattern::Or` is desugared in `check_match` before totality analysis; reaching here means
+        // the program was not checked — a never-silent panic (invariant violation; G2).
+        Pattern::Or(_) => {
+            panic!(
+                "internal: Pattern::Or reached totality::pattern_binders — or-patterns must be \
+                 desugared by the checker before any downstream pass (invariant violation)"
+            )
+        }
     }
 }

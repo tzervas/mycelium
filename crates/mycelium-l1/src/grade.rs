@@ -420,6 +420,14 @@ impl Gx<'_> {
                 }
                 n
             }
+            // `Pattern::Or` is desugared in `check_match` before grading; reaching here means the
+            // program was not checked — a never-silent panic (invariant violation; G2).
+            Pattern::Or(_) => {
+                panic!(
+                    "internal: Pattern::Or reached grade::bind_pattern — or-patterns must be \
+                     desugared by the checker before any downstream pass (invariant violation)"
+                )
+            }
         }
     }
 

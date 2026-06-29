@@ -846,6 +846,17 @@ pub enum Pattern {
     /// Desugared by the checker to a single-constructor `Ctor` match on the synthetic
     /// `Tuple$N` type (KC-3). Never-silent on arity mismatch (G2).
     Tuple(Vec<Pattern>),
+    /// An or-pattern `p₁ | p₂ | …` (RFC-0020 §9 / R20-Q3). Surface sugar only — the checker
+    /// ([`crate::checkty`]) desugars it into multiple arms sharing the same body BEFORE any
+    /// downstream pass sees it. Zero kernel growth (KC-3): no L0 node and no new elaboration
+    /// path; the existing `Match`/`Alt` machinery handles each expanded arm. An `Or` that
+    /// survives into any post-desugar pass is an internal invariant violation — the downstream
+    /// passes guard against it with an explicit never-silent refusal (G2).
+    ///
+    /// **Binding consistency (never-silent G2):** every alternative must bind the **same set of
+    /// variable names at the same types** — a mismatch is a [`crate::checkty::CheckError`],
+    /// never a silent accept (enforced in [`crate::checkty::Cx::check_match`]).
+    Or(Vec<Pattern>),
 }
 
 /// A literal value.

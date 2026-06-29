@@ -716,6 +716,17 @@ impl Resolver {
                 Pattern::Tuple(out)
             }
             Pattern::Wildcard | Pattern::Ident(_) => p.clone(),
+            // `Pattern::Or` alternatives are surface syntax (RFC-0020 §9 / R20-Q3): the ambient
+            // pass runs BEFORE the checker (which desugars `Or` into flat arms), so we walk each
+            // alternative and apply ambient literal resolution to it — the same transformation
+            // applied to any other pattern. The `Or` node itself carries no ambient information.
+            Pattern::Or(alts) => {
+                let mut resolved = Vec::with_capacity(alts.len());
+                for alt in alts {
+                    resolved.push(self.pattern(amb, site, alt)?);
+                }
+                Pattern::Or(resolved)
+            }
         })
     }
 }
@@ -1178,6 +1189,13 @@ fn print_pattern(p: &Pattern) -> String {
             let s: Vec<String> = subs.iter().map(print_pattern).collect();
             format!("({})", s.join(", "))
         }
+        // `Pattern::Or` is surface syntax (RFC-0020 §9 / R20-Q3). The ambient printer runs before
+        // the checker desugars `Or`, so round-trip it as `p1 | p2 | …` (the surface form).
+        Pattern::Or(alts) => alts
+            .iter()
+            .map(print_pattern)
+            .collect::<Vec<_>>()
+            .join(" | "),
     }
 }
 

@@ -939,6 +939,14 @@ impl<'e> Evaluator<'e> {
                 let desugared = Pattern::Ctor(ctor_name, subs.clone());
                 self.try_match(site, &desugared, val, binds)
             }
+            // `Pattern::Or` is desugared in `check_match` before evaluation; reaching here means
+            // the program was not checked — an explicit never-silent refusal (G2).
+            Pattern::Or(_) => Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: "internal: Pattern::Or reached the evaluator — or-patterns must be \
+                      desugared by the checker before evaluation (invariant violation)"
+                    .to_owned(),
+            }),
         }
     }
 
