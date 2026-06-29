@@ -1971,9 +1971,18 @@ impl<'e> Mono<'e> {
         let mut seen_free: BTreeSet<String> = BTreeSet::new();
         free_vars(body, &mut bound_in_body, &mut seen_free, &mut free);
         // Keep only those that are locals in the enclosing scope (captured); a name resolving to a
-        // top-level fn/ctor/prim is NOT captured (§4A.3 — handled by `rewrite_path`/§4).
+        // top-level fn/ctor/prim is NOT captured (§4A.3 — handled by `rewrite_path`/§4). A HOF
+        // value-parameter that was statically specialized (`fn_param_subst`, e.g. `f→negate` — M-687/
+        // M-715) is also NOT captured: it is a **compile-time-baked constant** dropped from the emitted
+        // signature, with no runtime value (it lingers in `scope` only for inference). `rewrite_path`
+        // resolves such a name to the baked callee inside the body, so capturing it would build a
+        // closure ctor referencing a param with no value (a Stuck `unresolved name`, or a silent
+        // wrong-entity if a ctor/fn shared the name — G2). Exclude it here.
         let mut captures: Vec<(String, Ty)> = Vec::new();
         for v in &free {
+            if self.fn_param_subst.contains_key(v) {
+                continue;
+            }
             if let Some((_, ty)) = scope.iter().rev().find(|(n, _)| n == v) {
                 captures.push((v.clone(), ty.clone()));
             }
@@ -2080,7 +2089,7 @@ impl<'e> Mono<'e> {
     fn resolve_fn_args(
         &mut self,
         site: &str,
-        _scope: &[(String, Ty)], // available for diagnostics
+        scope: &[(String, Ty)], // read below to classify a fn-typed arg as a scope-bound closure
         callee_name: &str,
         fd: &FnDecl,
         targs: &[Ty],
@@ -2114,7 +2123,7 @@ impl<'e> Mono<'e> {
                         continue;
                     }
                     // A closure binder in scope (a `let f = lambda… in map(xs, f)`) — dynamic.
-                    let is_scope_closure = _scope
+                    let is_scope_closure = scope
                         .iter()
                         .rev()
                         .find(|(n, _)| n == fn_name)
