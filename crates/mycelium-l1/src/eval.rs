@@ -569,6 +569,14 @@ impl<'e> Evaluator<'e> {
                 what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
                     .to_owned(),
             }),
+            // M-664: `consume` of a `Substrate` has no v0 evaluation — `Substrate` has no value
+            // forms (LR-8; DN-03 §1). Never-silent (G2): an explicit `Unsupported`, never a guess.
+            Expr::Consume(_) => Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what: "`consume` of an affine `Substrate` is staged — `Substrate` has no v0 value \
+                       forms to consume (LR-8; DN-03 §1; M-664)"
+                    .to_owned(),
+            }),
             Expr::Lambda { .. } => Err(L1Error::Unsupported {
                 site: site.to_owned(),
                 what: "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 — RFC-0037 D5 \

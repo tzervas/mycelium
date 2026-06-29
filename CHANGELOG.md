@@ -8,6 +8,36 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-28: srf — M-664 `consume` expression + inherent `impl T { … }` blocks)
+
+- **`consume <expr>` is now an ACTIVE surface expression (DN-03 §1 / LR-8; M-664 done).** It acquires
+  + takes exclusive ownership of an affine `Substrate` value. The type rule is **checked** — the
+  operand must have a `Substrate{tag}` type, and any other operand type (or a mismatched result
+  context) is a never-silent `CheckError` (G2). Execution and single-use *affinity* are honestly
+  **staged** (`Declared`): `Substrate` has no v0 value forms / no L0 representation lowering (it is an
+  external-resource kind, not a repr type), so `consume` elaborates to a never-silent `Residual` —
+  exactly like every other `Substrate` site (VR-5: the type discipline is checked, the runtime
+  behavior deferred, no over-claim). v0 has no value-level affine-usage tracker (only pattern-binder
+  linearity), so single-use is asserted by the construct, not yet enforced — recorded in `grade.rs`.
+- **Inherent `impl T { fn … }` method blocks are now ACTIVE (DN-03 §1; M-664 done).** Distinct from a
+  trait instance (`impl Trait for T`), an inherent block groups ordinary explicitly-typed functions
+  with a type. It desugars at check time (Phase 0, alongside `object`) to its methods lifted verbatim
+  as top-level `Item::Fn`s — the same model the `object` inherent-`fn` lowering uses, so all existing
+  registration / checking / monomorphization / elaboration apply unchanged (**KC-3 — zero kernel
+  growth**). A name collision with another top-level fn is caught by the existing duplicate-fn check
+  (never silent, G2). The `for_ty` is organizational metadata in v0 (no qualified `T::m` call syntax
+  yet). The top-level `impl` parser now disambiguates trait-instance vs inherent on the `for`/`{`
+  follower; any other follower is an explicit parse error.
+- **AST:** `Expr::Consume(Box<Expr>)` and `Item::InherentImpl(InherentImplDecl)` added; handled across
+  `parse`/`checkty`/`elab`/`eval`/`mono`/`grade`/`totality`/`ambient` (compiler-enforced exhaustiveness).
+- **Conformance:** accept fixture `25-consume-and-inherent-impl.myc` added; reject fixture renamed
+  `18-consume-reserved-not-active.myc` → `18-consume-not-an-item.myc` (with `consume` now active, the
+  remaining reject is *item-position* use — an expression is not a top-level item). `grammar/mycelium.ebnf`
+  gains the previously-missing top-level `impl_item` (trait + inherent forms) and `consume_expr`.
+- **Verified:** `cargo test -p mycelium-l1` green (203 lib + 105 check + conformance + all targets);
+  `cargo fmt` + `cargo clippy -p mycelium-l1 -D warnings` clean. Advances **E7-1** (FR — surface
+  completeness). `.claude/memory/lang-lexicon-syntax.md` + `issues.yaml` (M-664 → done) reconciled.
+
 ### Added (2026-06-28: prm wave — `fuse` (data) + `reclaim` EXECUTE three-way; DN-58 → Enacted, M-710/M-817 done)
 
 - **`fuse` and `reclaim` now RUN end-to-end three-way (L1-eval ≡ L0-interp ≡ AOT, `Empirical`) — the

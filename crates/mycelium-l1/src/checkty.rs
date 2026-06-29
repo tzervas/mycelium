@@ -794,7 +794,11 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
     let mut via_objects_per_nodule: Vec<Vec<ObjectDecl>> = Vec::with_capacity(resolved.len());
     let mut resolved_expanded: Vec<Nodule> = Vec::with_capacity(resolved.len());
     for n in resolved {
-        if !n.items.iter().any(|i| matches!(i, Item::Object(_))) {
+        if !n
+            .items
+            .iter()
+            .any(|i| matches!(i, Item::Object(_) | Item::InherentImpl(_)))
+        {
             via_objects_per_nodule.push(vec![]);
             resolved_expanded.push(n);
             continue;
@@ -802,13 +806,25 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
         let mut items = Vec::with_capacity(n.items.len());
         let mut via_objs: Vec<ObjectDecl> = Vec::new();
         for item in n.items {
-            if let Item::Object(od) = item {
-                if !od.via_decls.is_empty() {
-                    via_objs.push(od.clone());
+            match item {
+                Item::Object(od) => {
+                    if !od.via_decls.is_empty() {
+                        via_objs.push(od.clone());
+                    }
+                    items.extend(desugar_object_structural(&od));
                 }
-                items.extend(desugar_object_structural(&od));
-            } else {
-                items.push(item);
+                // M-664: an inherent `impl T { fn … }` block lowers to its methods as top-level
+                // `Item::Fn`s, lifted verbatim — methods are ordinary explicitly-typed free
+                // functions (the `object` inherent-`fn` model; KC-3 — zero kernel growth). The
+                // `for_ty` is organizational metadata in v0 (no qualified `T::m` call syntax yet —
+                // `check_path` refuses multi-segment paths), so the association is advisory; a
+                // name collision with another top-level fn is caught by the duplicate-fn check (G2).
+                Item::InherentImpl(id) => {
+                    for m in id.methods {
+                        items.push(Item::Fn(m));
+                    }
+                }
+                other => items.push(other),
             }
         }
         via_objects_per_nodule.push(via_objs);
@@ -2485,6 +2501,8 @@ impl Cx<'_> {
             Expr::Spore(_) => {
                 self.err("`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)")
             }
+            // DN-03 §1 / M-664: `consume <expr>` — affine acquisition of a `Substrate` value (LR-8).
+            Expr::Consume(operand) => self.check_consume(scope, operand, expected),
             Expr::Colony(hyphae) => self.check_colony(scope, hyphae, expected),
             Expr::Lambda { .. } => self.err(
                 "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 — the surface parses \
@@ -2501,6 +2519,44 @@ impl Cx<'_> {
             // DN-58 §B (M-667): `reclaim(policy) { body }` — supervised scope.
             Expr::Reclaim { policy, body } => self.check_reclaim(scope, policy, body, expected),
         }
+    }
+
+    /// `consume <expr>` (DN-03 §1 / LR-8 / M-664) — affine acquisition of a `Substrate` value. The
+    /// operand must have a `Substrate{tag}` type; any other operand type is an explicit refusal
+    /// (never silent — G2). The result is the moved substrate (`Substrate{tag}`), now exclusively
+    /// owned by the consumer.
+    ///
+    /// Guarantee `Declared` (recorded in [`crate::grade`]): v0 has **no value-level affine-usage
+    /// tracker** (only pattern-binder linearity — `check_linear`), so the *single-use* property of
+    /// `consume` is asserted by the construct, not yet checked. The type rule itself is exact — only
+    /// a `Substrate` operand is admitted — so this is honest: the type discipline is checked, the
+    /// affinity is staged.
+    fn check_consume(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        operand: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        let (oty, oexpr) = self.check(scope, operand, None)?;
+        let Ty::Substrate(tag) = &oty else {
+            return self.err(format!(
+                "`consume` requires an affine `Substrate{{…}}` operand (DN-03 §1 / LR-8), but its \
+                 operand has type `{oty}` — only a `Substrate` value can be consumed \
+                 (never silent — G2)"
+            ));
+        };
+        let ty = Ty::Substrate(tag.clone());
+        // Bidirectional contract: if a result type is expected, it must equal the moved substrate's
+        // type — a mismatch is an explicit refusal, never a silent coercion (G2).
+        if let Some(exp) = expected {
+            if exp != &ty {
+                return self.err(format!(
+                    "`consume` of `{ty}` yields `{ty}`, but the context expects `{exp}` \
+                     (never silent — G2)"
+                ));
+            }
+        }
+        Ok((ty, Expr::Consume(Box::new(oexpr))))
     }
 
     fn check_path(

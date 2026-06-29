@@ -1704,3 +1704,101 @@ fn main() => Result[Binary{8}, Binary{8}] = map(mk_ok(), two_args)",
         err.message
     );
 }
+
+// ---- M-664: `consume` (affine Substrate acquisition) + inherent `impl T { … }` ----
+
+#[test]
+fn consume_of_a_substrate_param_typechecks() {
+    // DN-03 §1 / LR-8 / M-664: `consume <expr>` over a `Substrate`-typed value type-checks and
+    // yields the moved substrate (`Substrate{tag}`). Execution stays staged (an elab `Residual`,
+    // since `Substrate` has no v0 value forms) — the *type* discipline is what is checked here.
+    let env = check("nodule d\nfn take(s: Substrate{Sock}) => Substrate{Sock} = consume s")
+        .expect("consume of a Substrate value checks");
+    assert_eq!(env.totality["take"], Totality::Total);
+}
+
+#[test]
+fn consume_of_a_non_substrate_is_refused() {
+    // Never-silent (G2): only a `Substrate` value can be consumed — a `Binary{8}` operand is an
+    // explicit refusal naming `Substrate`.
+    let err = check("nodule d\nfn bad(x: Binary{8}) => Binary{8} = consume x").unwrap_err();
+    assert!(
+        err.message.contains("consume") && err.message.contains("Substrate"),
+        "refusal must name `consume` + `Substrate`, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn consume_result_type_mismatch_is_refused() {
+    // The result of `consume s : Substrate{Sock}` is `Substrate{Sock}`; a context expecting a
+    // different type is a never-silent refusal (no silent coercion, G2).
+    let err =
+        check("nodule d\nfn bad(s: Substrate{Sock}) => Substrate{Plug} = consume s").unwrap_err();
+    assert!(
+        err.message.contains("Substrate") || err.message.contains("type"),
+        "result mismatch must be explicit, got: {}",
+        err.message
+    );
+}
+
+#[test]
+fn inherent_impl_methods_lift_to_callable_free_fns() {
+    // M-664: `impl T { fn … }` (no `for`) is an inherent method block — its methods desugar to
+    // top-level free functions (the object-inherent-`fn` model), so they type-check and are
+    // callable by name.
+    let env = check(
+        "nodule d\n\
+         type Foo = Mk(Binary{8})\n\
+         impl Foo { fn unwrap(f: Foo) => Binary{8} = match f { Mk(b) => b } }\n\
+         fn use_it(f: Foo) => Binary{8} = unwrap(f)",
+    )
+    .expect("inherent impl method checks and is callable");
+    assert_eq!(env.totality["unwrap"], Totality::Total);
+    assert_eq!(env.totality["use_it"], Totality::Total);
+}
+
+#[test]
+fn inherent_impl_method_name_collision_is_refused() {
+    // The lifted methods share the top-level fn namespace; a collision with another top-level fn
+    // is caught by the existing duplicate-fn check (never silent, G2).
+    let err = check(
+        "nodule d\n\
+         type Foo = Mk(Binary{8})\n\
+         fn unwrap(f: Foo) => Binary{8} = match f { Mk(b) => b }\n\
+         impl Foo { fn unwrap(f: Foo) => Binary{8} = match f { Mk(b) => b } }",
+    )
+    .unwrap_err();
+    assert!(
+        !err.message.is_empty(),
+        "a duplicate inherent-method name must be an explicit error"
+    );
+}
+
+#[test]
+fn inherent_impl_on_repr_type_checks() {
+    // The inherent target may be a repr type (`impl Binary{8} { … }`) — the head parses as a base
+    // type and the methods lift verbatim.
+    let env = check(
+        "nodule d\nimpl Binary{8} { fn id8(x: Binary{8}) => Binary{8} = x }\n\
+         fn caller(x: Binary{8}) => Binary{8} = id8(x)",
+    )
+    .expect("inherent impl on a repr type checks");
+    assert_eq!(env.totality["id8"], Totality::Total);
+}
+
+#[test]
+fn trait_impl_without_for_is_refused() {
+    // Disambiguation guard: `impl Cmp { … }` (a trait name with no `for`) is treated as an
+    // inherent block on type `Cmp` — which is fine to parse, but `impl Cmp for` with a missing
+    // body opener is a never-silent parse error. Here we assert the trait form still requires
+    // `for`/`{` after the head (never a silent accept, G2).
+    let err = parse(
+        "nodule d\nimpl Cmp Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }",
+    )
+    .unwrap_err();
+    assert!(
+        !err.message.is_empty(),
+        "a malformed `impl` head must be an explicit parse error"
+    );
+}

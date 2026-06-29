@@ -265,6 +265,11 @@ impl Gx<'_> {
             // `with paradigm` is stripped by the ambient pass before the checker. Defensive,
             // never-reached arms: grade the body conservatively rather than panic.
             Expr::Spore(_) => Ok(Strength::Declared),
+            // M-664: `consume` of a `Substrate` is a `Declared`-grade construct — its single-use
+            // affinity is asserted, not checked (no v0 affine-usage tracker), so it can attest no
+            // more than `Declared` (VR-5). The operand carries its own grade demands, but `consume`
+            // itself never *upgrades* past `Declared`.
+            Expr::Consume(_) => Ok(Strength::Declared),
             // `lambda` is a deferred form (M-704; the checker already refuses it) — like `wild`/`spore`
             // it carries the least-trusted `Declared` rather than panicking on this defensive arm.
             Expr::Lambda { .. } => Ok(Strength::Declared),

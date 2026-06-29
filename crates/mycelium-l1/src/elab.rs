@@ -940,6 +940,14 @@ impl Elab<'_> {
             // artifact (G2).
             Expr::Wild(body) => self.elab_wild(stack, scope, body),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
+            // M-664: `consume` of an affine `Substrate` — `Substrate` has no v0 value/representation
+            // lowering (LR-8; it is an external-resource kind, never a repr type), so its execution
+            // is a never-silent `Residual`, exactly like every other `Substrate` site (G2/VR-5).
+            Expr::Consume(_) => residual(
+                site,
+                "`consume` of an affine `Substrate` is staged — `Substrate` has no v0 \
+                 value/representation lowering (LR-8; DN-03 §1; M-664)",
+            ),
             Expr::Colony(hyphae) => self.elab_colony(stack, scope, hyphae),
             Expr::Lambda { .. } => residual(
                 site,

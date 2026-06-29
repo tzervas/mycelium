@@ -111,10 +111,11 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "duplicate effect",
     ),
     (
-        // M-664 / DN-03 §1: `consume` is a reserved surface keyword, not yet active — reserved so it
-        // can never be a silent identifier (G2); its construct lands with M-664's surface step.
-        "18-consume-reserved-not-active.myc",
-        "reserved surface keyword (DN-03 §1)",
+        // M-664 / DN-03 §1: `consume <expr>` is now an ACTIVE expression (affine `Substrate`
+        // acquisition, LR-8). At *item* position it is rejected — it is an expression, not a
+        // top-level item; the diagnostic points into a `fn` body (never a silent accept, G2).
+        "18-consume-not-an-item.myc",
+        "not a top-level item",
     ),
     (
         // M-812 / DN-38 §8.1: `grow` is superseded by `derive` — the grow→derive reconciliation.

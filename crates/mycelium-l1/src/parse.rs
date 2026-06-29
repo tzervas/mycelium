@@ -4,9 +4,9 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, DeriveDecl, ExecutionMode, Expr, FnDecl, FnSig, Hypha,
-    ImplDecl, Item, Literal, LowerDecl, Nodule, ObjectDecl, Paradigm, Param, ParamKind, Path,
-    Pattern, Phylum, Scalar, Sparsity, Strength, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef,
-    UsePath, ViaDecl, Vis, WidthRef,
+    ImplDecl, InherentImplDecl, Item, Literal, LowerDecl, Nodule, ObjectDecl, Paradigm, Param,
+    ParamKind, Path, Pattern, Phylum, Scalar, Sparsity, Strength, TraitDecl, TraitRef, TypeDecl,
+    TypeParam, TypeRef, UsePath, ViaDecl, Vis, WidthRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -445,7 +445,9 @@ impl Parser {
             // M-659 / RFC-0019 §4.1: `impl Trait<args> for T { fn … }` (the trait-instance
             // production). `impl` was reserved by M-658 (RFC-0007 §12.2); this is the production that
             // consumes it.
-            Tok::Impl => self.parse_impl_decl().map(Item::Impl),
+            // M-664: `impl Trait for T { … }` (trait instance) and `impl T { … }` (inherent method
+            // block) share this dispatcher, which disambiguates on the `for`/`{` follower.
+            Tok::Impl => self.parse_impl_item(),
             Tok::Fn | Tok::Thaw => self.parse_fn_decl(Vis::Private).map(Item::Fn),
             // DN-58 §C (M-667): `@tier(compiled)` / `@tier(interpreted)` before a `fn` declaration.
             // The `@` at item position is unambiguous — guarantee annotations only appear in type
@@ -513,14 +515,13 @@ impl Parser {
                  RFC-0008 RT7), not a top-level item — write it inside a `fn` body"
                     .to_owned(),
             )),
-            // DN-03 §1: `consume` is still a reserved-not-active surface keyword (M-664). `grow` is
-            // superseded by `derive` (DN-38 §8.1 / M-812) — its teaching diagnostic now points at
-            // `derive Name for T` (never a silent accept, G2).
+            // DN-03 §1 / M-664: `consume <expr>` is an **expression** (affine acquisition of a
+            // `Substrate`, LR-8), not a top-level item — teaching diagnostic points into a fn body
+            // (never a silent accept, G2). `grow` is superseded by `derive` (DN-38 §8.1 / M-812).
             Tok::Consume => Err(ParseError::new(
                 self.pos(),
-                "`consume` is a reserved surface keyword (DN-03 §1), not yet active — its construct \
-                 lands with M-664; it cannot open a program or be used as an identifier at this \
-                 language version"
+                "`consume <expr>` is an expression (DN-03 §1 / M-664 — affine acquisition of a \
+                 `Substrate` value, LR-8), not a top-level item — write it inside a `fn` body"
                     .to_owned(),
             )),
             Tok::Grow => Err(ParseError::new(
@@ -1023,6 +1024,60 @@ impl Parser {
     /// `impl Ident type_args? 'for' type_ref '{' fn_decl* '}'` — a trait instance (RFC-0019 §4.1;
     /// RFC-0007 §12.1). The `<…>` are the trait's **type arguments** (concrete `TypeRef`s, reusing
     /// the existing type-arg parser), not parameter names; the methods are full `fn … = body` defs.
+    /// Top-level `impl` dispatcher (M-664). Disambiguates the **trait-instance** form
+    /// `impl Trait[args]? for T { … }` (RFC-0019 §4.1 → [`Item::Impl`]) from the **inherent**
+    /// method block `impl T { … }` (DN-03 §1 → [`Item::InherentImpl`]) by parsing the head type
+    /// once and branching on the following `for` (trait) vs `{` (inherent). Never silent (G2): any
+    /// other follower is an explicit parse error naming both forms.
+    fn parse_impl_item(&mut self) -> Result<Item, ParseError> {
+        self.expect(&Tok::Impl, "`impl`")?;
+        // The head is a base type: a trait ref `Trait[args]?` parses as `Named(trait, args)`, and an
+        // inherent target `T` (`Binary{8}`, `Foo[X]`, …) parses as its own base type. Disambiguate
+        // *after* the head by the follower.
+        let head = self.parse_base_type()?;
+        if self.at(&Tok::For) {
+            // Trait-instance: `impl Trait[args]? for T { … }`. The head before `for` must be a
+            // trait *name* (a `Named` base type) — never silent if it is a repr/structural type (G2).
+            self.bump(); // `for`
+            let (trait_name, trait_args) = match head {
+                BaseType::Named(name, args) => (name, args),
+                _ => {
+                    return Err(ParseError::new(
+                        self.pos(),
+                        "the item before `for` in a trait `impl … for …` must be a trait name \
+                         (e.g. `impl Cmp[Binary{8}] for T`), not a repr/structural type \
+                         (RFC-0019 §4.1; never silent — G2)"
+                            .to_owned(),
+                    ));
+                }
+            };
+            let for_ty = self.parse_type_ref()?;
+            let methods = self.parse_impl_body()?;
+            Ok(Item::Impl(ImplDecl {
+                trait_name,
+                trait_args,
+                for_ty,
+                methods,
+            }))
+        } else if self.at(&Tok::LBrace) {
+            // Inherent block: `impl T { fn … }` (M-664). The head *is* the target type.
+            let for_ty = TypeRef::unguaranteed(head);
+            let methods = self.parse_impl_body()?;
+            Ok(Item::InherentImpl(InherentImplDecl { for_ty, methods }))
+        } else {
+            Err(ParseError::new(
+                self.pos(),
+                "expected `for` (a trait instance: `impl Trait for T { … }`) or `{` (an inherent \
+                 method block: `impl T { … }`) after the type in an `impl` (RFC-0019 §4.1 / \
+                 DN-03 §1; never silent — G2)"
+                    .to_owned(),
+            ))
+        }
+    }
+
+    /// Parse a trait-instance `impl Trait[args]? for T { … }` (RFC-0019 §4.1 → [`ImplDecl`]). Used
+    /// where only the trait form is valid — inside an `object` body and the `parse_impl_item`
+    /// trait branch share the `{ … }` body via [`Self::parse_impl_body`].
     fn parse_impl_decl(&mut self) -> Result<ImplDecl, ParseError> {
         self.expect(&Tok::Impl, "`impl`")?;
         let trait_name = self.ident()?;
@@ -1032,16 +1087,27 @@ impl Parser {
             "`for` after the trait in an `impl` (RFC-0019 §4.1)",
         )?;
         let for_ty = self.parse_type_ref()?;
+        let methods = self.parse_impl_body()?;
+        Ok(ImplDecl {
+            trait_name,
+            trait_args,
+            for_ty,
+            methods,
+        })
+    }
+
+    /// Parse an `impl` body `{ fn … }` (shared by trait-instance and inherent impls; M-664). A
+    /// `pub` on a method is an explicit refusal (M-662 — method visibility follows the trait/type,
+    /// not the impl; never silent — G2). Methods are parsed with `Vis::Private` (the field is inert).
+    fn parse_impl_body(&mut self) -> Result<Vec<FnDecl>, ParseError> {
         self.expect(&Tok::LBrace, "`{` to open the `impl` body")?;
         let mut methods = Vec::new();
         while !self.at(&Tok::RBrace) {
-            // An impl method is never `pub`-gated (M-662): a `pub` here is an explicit refusal, never
-            // a silent accept (G2). Methods are parsed with `Vis::Private` (the field is inert).
             if self.at(&Tok::Pub) {
                 return Err(ParseError::new(
                     self.pos(),
-                    "an `impl` method is not `pub`-gated — visibility of a trait method follows the \
-                     trait, not the impl (M-662); drop the `pub`"
+                    "an `impl` method is not `pub`-gated — visibility of a method follows the \
+                     trait/type, not the impl (M-662); drop the `pub`"
                         .to_owned(),
                 ));
             }
@@ -1049,12 +1115,7 @@ impl Parser {
             self.eat(&Tok::Semi); // DN-57: optional component terminator
         }
         self.expect(&Tok::RBrace, "`}` to close the `impl` body")?;
-        Ok(ImplDecl {
-            trait_name,
-            trait_args,
-            for_ty,
-            methods,
-        })
+        Ok(methods)
     }
 
     /// `object Name[params]? { Ctor(T1, T2); (via N : Trait[args]?)* (impl …)* (fn …)* }`
@@ -1536,16 +1597,6 @@ impl Parser {
                     .to_owned(),
             ));
         }
-        // DN-03 §1: `consume` is a reserved-not-active surface keyword; teaching diagnostic (G2).
-        if self.at(&Tok::Consume) {
-            return Err(ParseError::new(
-                self.pos(),
-                "`consume` is a reserved surface keyword (DN-03 §1), not yet active — its \
-                 construct lands with M-664; it cannot be used as an identifier at this language \
-                 version"
-                    .to_owned(),
-            ));
-        }
         // DN-38 §8.1 / M-812: `grow` is superseded by `derive` — teaching diagnostic points to
         // `derive Name for T` at item position (never a silent accept, G2).
         if self.at(&Tok::Grow) {
@@ -1566,6 +1617,8 @@ impl Parser {
             Tok::With => self.parse_with_paradigm(),
             Tok::Wild => self.parse_wild(),
             Tok::Spore => self.parse_spore(),
+            // DN-03 §1 / M-664: `consume <expr>` — affine acquisition of a `Substrate` value (LR-8).
+            Tok::Consume => self.parse_consume_expr(),
             Tok::Colony => self.parse_colony(),
             // RFC-0037 D5: an anonymous-function expression (parses; semantics deferred to M-704).
             Tok::Lambda => self.parse_lambda(),
@@ -1855,6 +1908,18 @@ impl Parser {
         let value = Box::new(self.parse_expr()?);
         self.expect(&Tok::RParen, "`)` to close `spore(…)`")?;
         Ok(Expr::Spore(value))
+    }
+
+    /// `consume <expr>` (DN-03 §1; LR-8; M-664) — affine acquisition of a `Substrate` value. A
+    /// prefix form (like the unary `neg`/`not`): the operand is an applicative expression
+    /// (`consume s`, `consume f(x)`), depth-guarded so a crafted nesting is an explicit error, never
+    /// a host-stack overflow (G2). The operand-type check (`Substrate{tag}`) is the checker's job.
+    fn parse_consume_expr(&mut self) -> Result<Expr, ParseError> {
+        self.expect_keyword(&Tok::Consume)?;
+        self.enter_depth()?;
+        let operand = self.parse_unary();
+        self.leave_depth();
+        operand.map(|o| Expr::Consume(Box::new(o)))
     }
 
     /// `colony { hypha e1, hypha e2, … }` — the structured-concurrency scope (RFC-0008 §4.7; DN-06

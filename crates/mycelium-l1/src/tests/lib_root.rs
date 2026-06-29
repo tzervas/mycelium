@@ -169,11 +169,11 @@ fn runtime_vocab_keywords_are_reserved_not_active() {
 }
 
 #[test]
-fn surface_keyword_consume_is_reserved_not_active() {
-    // DN-03 §1 / M-664: `consume` is a reserved surface keyword — it lexes as a keyword
-    // (never a silent identifier, G2) but no L1 construct consumes it yet. The teaching
-    // diagnostic names DN-03 §1, not the RFC-0008 runtime message — it is surface-tier, not
-    // runtime-vocabulary.
+fn surface_keyword_consume_is_active_expression() {
+    // DN-03 §1 / M-664: `consume <expr>` is now an **active expression** (affine acquisition of a
+    // `Substrate` value, LR-8). It still lexes as a keyword (never a silent identifier, G2); at
+    // item position it is a teaching error (an expression, not a top-level item); at expression
+    // position it parses.
     let word = "consume";
 
     // (a) lexes as a keyword, not a plain Ident.
@@ -182,11 +182,11 @@ fn surface_keyword_consume_is_reserved_not_active() {
         "`{word}` must resolve to a keyword token (keyword() must return Some)"
     );
 
-    // (b-item) item position → the DN-03 §1 teaching diagnostic.
+    // (b-item) item position → teaching diagnostic: `consume` is an expression, not a top-level item.
     let err = parse(&format!("nodule demo\n{word} worker")).unwrap_err();
     assert!(
-        err.message.contains("DN-03 §1") && err.message.contains(word),
-        "`{word}` at item position: diagnostic must name DN-03 §1 + the word, got: {}",
+        err.message.contains("expression") && err.message.contains("M-664"),
+        "`{word}` at item position: diagnostic must say it is an expression (M-664), got: {}",
         err.message
     );
 
@@ -203,12 +203,14 @@ fn surface_keyword_consume_is_reserved_not_active() {
         "`{word}` as param name must be an error"
     );
 
-    // (d) expression position → the DN-03 §1 teaching diagnostic.
-    let err = parse(&format!("nodule demo\nfn f() => Binary{{8}} = {word}")).unwrap_err();
+    // (d) expression position → `consume <operand>` now PARSES (type-checking the `Substrate`
+    // operand is a separate pass, exercised in `tests/check.rs`).
     assert!(
-        err.message.contains("DN-03 §1") && err.message.contains(word),
-        "`{word}` in expression position: diagnostic must name DN-03 §1 + the word, got: {}",
-        err.message
+        parse(&format!(
+            "nodule demo\nfn f(s: Substrate{{Sock}}) => Substrate{{Sock}} = {word} s"
+        ))
+        .is_ok(),
+        "`{word} s` in expression position must parse (M-664 — consume is an active expression)"
     );
 }
 

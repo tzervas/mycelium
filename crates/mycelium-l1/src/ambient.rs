@@ -40,9 +40,10 @@
 //! (RFC-0001 §4.6) and is fully recoverable here. See the RFC-0012 changelog (append-only).
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, ImplDecl, Item, Literal,
-    LowerDecl, Nodule, ObjectDecl, Paradigm, Param, ParamKind, Pattern, Phylum, Scalar, Sparsity,
-    TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, Vis, WidthRef,
+    AmbientParams, Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, ImplDecl,
+    InherentImplDecl, Item, Literal, LowerDecl, Nodule, ObjectDecl, Paradigm, Param, ParamKind,
+    Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath,
+    Vis, WidthRef,
 };
 
 /// A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess.
@@ -187,6 +188,11 @@ pub fn resolve_report(nodule: &Nodule) -> Result<Resolved, AmbientError> {
             // ambient integer). Pass through unchanged; the type-checker validates the RHS.
             Item::Lower(ld) => items.push(Item::Lower(ld.clone())),
             Item::Derive(dd) => items.push(Item::Derive(dd.clone())),
+            // M-664: an inherent `impl T { fn … }` block — resolve the target type + method bodies
+            // (Phase 0 desugars it to its `Item::Fn`s afterward).
+            Item::InherentImpl(id) => {
+                items.push(Item::InherentImpl(r.inherent_impl_decl(default, id)?));
+            }
         }
     }
     Ok(Resolved {
@@ -236,6 +242,9 @@ pub fn expand_to_source(nodule: &Nodule) -> String {
             // ambient expansion pass (no ambient state to fill; rule RHS has no bare reprs).
             Item::Lower(ld) => out.push_str(&print_lower_decl(ld)),
             Item::Derive(dd) => out.push_str(&print_derive_decl(dd)),
+            // M-664: an inherent method block round-trips in surface form (pre-desugar), like
+            // `object` — the Phase 0 desugar to `Item::Fn`s happens later in the checker.
+            Item::InherentImpl(id) => out.push_str(&print_inherent_impl_decl(id)),
         }
     }
     out
@@ -343,6 +352,23 @@ impl Resolver {
             for_ty,
             methods,
         })
+    }
+
+    /// Resolve an inherent method block `impl T { fn … }` (M-664): ambient-fill the target type and
+    /// every method body, mirroring [`Self::impl_decl`] minus the trait reference. The desugar in
+    /// `checkty.rs` Phase 0 then sees already-resolved `for_ty`/methods.
+    fn inherent_impl_decl(
+        &mut self,
+        amb: Option<Paradigm>,
+        id: &InherentImplDecl,
+    ) -> Result<InherentImplDecl, AmbientError> {
+        let site = "impl";
+        let for_ty = self.type_ref(amb, site, &id.for_ty)?;
+        let mut methods = Vec::with_capacity(id.methods.len());
+        for m in &id.methods {
+            methods.push(self.fn_decl(amb, m)?);
+        }
+        Ok(InherentImplDecl { for_ty, methods })
     }
 
     fn fn_decl(&mut self, amb: Option<Paradigm>, fd: &FnDecl) -> Result<FnDecl, AmbientError> {
@@ -546,6 +572,9 @@ impl Resolver {
             // value expression (deferred — E2-5/M-260), so it still resolves transparently.
             Expr::Wild(b) => Expr::Wild(b.clone()),
             Expr::Spore(b) => Expr::Spore(Box::new(self.expr(amb, site, b)?)),
+            // M-664: `consume <expr>` — resolve the operand's ambient (the operand is an ordinary
+            // value expression; the `Substrate`-type check is the checker's job).
+            Expr::Consume(b) => Expr::Consume(Box::new(self.expr(amb, site, b)?)),
             // A `lambda` body flows transparently under the same ambient (no new ambient frame); the
             // params carry their own explicit types. (Deferred form — M-704 — but resolved like any expr.)
             Expr::Lambda { params, body } => Expr::Lambda {
@@ -905,6 +934,16 @@ fn print_impl_decl(id: &ImplDecl) -> String {
     s
 }
 
+/// Canonical surface form of an inherent method block `impl T { fn … }` (DN-03 §1 / M-664).
+fn print_inherent_impl_decl(id: &InherentImplDecl) -> String {
+    let mut s = format!("impl {} {{\n", print_type_ref(&id.for_ty));
+    for m in &id.methods {
+        s.push_str(&format!("  {}", print_fn_decl(m)));
+    }
+    s.push_str("}\n");
+    s
+}
+
 /// A [`Display`] for [`BaseType`] in canonical surface form (shared by the printer and the
 /// provenance notes).
 struct DisplayBase<'a>(&'a BaseType);
@@ -1039,6 +1078,7 @@ fn print_expr(e: &Expr) -> String {
         }
         Expr::Wild(b) => format!("wild {{ {} }}", print_expr(b)),
         Expr::Spore(b) => format!("spore({})", print_expr(b)),
+        Expr::Consume(b) => format!("consume {}", print_expr(b)),
         Expr::Lambda { params, body } => format!(
             "lambda({}) => {}",
             params

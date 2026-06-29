@@ -96,10 +96,21 @@ item           ::= use_item
                  | default_item
                  | type_item
                  | trait_item
+                 | impl_item
                  | fn_item
                  | object_item
                  | lower_item
                  | derive_item
+
+/* Implementation blocks (RFC-0019 §4.1 / DN-03 §1; M-659/M-664). The TRAIT-instance form
+ * `impl Trait[args]? for T { … }` provides a trait's methods for a type (coherence: global
+ * uniqueness per (trait, type-head) + single-nodule orphan rule). The INHERENT form `impl T { … }`
+ * (no `for`) groups ordinary explicitly-typed functions with a type; it desugars to top-level
+ * `fn`s (the `object` inherent-`fn` model — KC-3, zero kernel growth). The two are disambiguated
+ * after the head by the `for` (trait) vs `{` (inherent) follower; any other follower is a
+ * never-silent parse error (G2). */
+impl_item      ::= 'impl' Ident type_args? 'for' type_ref '{' fn_item* '}'   /* trait instance */
+                 | 'impl' base_type '{' fn_item* '}'                          /* inherent (M-664) */
 
 /* Import (M-662): a specific `use a.b.X` binds the single name `X`; a glob `use a.b.*` binds every
  * `pub` name directly under the prefix `a.b`. Precedence (highest first): a local declaration, then
@@ -210,6 +221,7 @@ expr           ::= let_expr
                  | with_expr
                  | wild_expr
                  | spore_expr
+                 | consume_expr
                  | colony_expr
                  | fuse_expr
                  | reclaim_expr
@@ -247,6 +259,14 @@ wild_expr      ::= 'wild' '{' expr '}'
 
 /* spore: build a reconstruction manifest for a value (RFC-0003 §6; DN-02 themed term). */
 spore_expr     ::= 'spore' '(' expr ')'
+
+/* consume: acquire + take EXCLUSIVE ownership of an affine `Substrate` value (DN-03 §1 / LR-8;
+ * M-664). A prefix form (like unary `-`/`!`): the operand is an applicative expression. The checker
+ * requires the operand's type to be `Substrate{tag}` (never silent on any other type — G2); the
+ * result is the moved substrate. Execution + single-use affinity are STAGED (guarantee `Declared`):
+ * `Substrate` has no v0 value forms / no L0 lowering, so `consume` elaborates to a never-silent
+ * `Residual` — the type discipline is checked, the runtime behavior honestly deferred (VR-5). */
+consume_expr   ::= 'consume' app_expr
 
 /* colony / hypha: the structured-concurrency scope (RFC-0008 §4.7; DN-06 §1.3; M-666). A `colony`
  * is the dynamic runtime grouping of `hypha` execution units; its body is a NON-EMPTY list of

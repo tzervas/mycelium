@@ -908,6 +908,13 @@ impl<'e> Mono<'e> {
                 "wild/FFI has no L0 form in v0 — monomorphization does not change that (M-661)",
             ),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
+            // M-664: `consume` of a `Substrate` has no L0 form in v0 (LR-8) — monomorphization does
+            // not change that; an explicit residual (defense in depth) mirrors the elaborator's
+            // refusal, never a fabricated artifact (G2).
+            Expr::Consume(_) => residual(
+                site,
+                "`consume` of an affine `Substrate` has no L0 form in v0 (LR-8; DN-03 §1; M-664)",
+            ),
             Expr::Lambda { .. } => residual(
                 site,
                 "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 (RFC-0037 D5 reserves the surface)",
