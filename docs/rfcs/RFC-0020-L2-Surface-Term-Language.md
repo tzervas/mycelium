@@ -574,7 +574,7 @@ this section records the extension obligation so M-142's design accommodates it.
 > (R20-Q4 mutual recursion; surface front-end is M-391). The §4.9 conformance corpus is a *testing*
 > deliverable that follows ratification, not a gate. The original split is retained below verbatim
 > (append-only).
-
+>
 > **ENACTMENT UPDATE (2026-06-29, M-707 / s10; append-only — no carve-out text above is rewritten,
 > house rule #3).** The carve-outs are reconciled against the now-landed RFC-0018 / RFC-0019 /
 > RFC-0001-r5 implementations. What has since landed:
