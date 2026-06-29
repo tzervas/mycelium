@@ -44,8 +44,8 @@ tree**, branches **off `dev`**, merges into `dev`, then promotes `dev → integr
 | UID | Track | Owns | Status / remaining |
 |---|---|---|---|
 | **`c10`** | T1 — core/kernel 1.0.0 sub-gate (E10-1) | `crates/mycelium-core/**` · kernel T1 scope | **gate-met / tag-ready**; only **M-703** (cut the tag) remains — **maintainer-reserved** |
-| **`s10`** | T2 — surface-language completeness & grammar (E11-1) | `crates/mycelium-l1/**` · `docs/spec/grammar/**` | **in progress**; remaining **M-707** (RFC-0020 L2 carve-outs) → **M-706** (RFC-0030 grammar ratification); **M-704** dynamic HOF tracked under `hof` |
-| **`r10`** | T3 — runtime & concurrency execution maturity (E12-1) | `crates/mycelium-std-runtime/**` · `crates/mycelium-mlir/src/runtime.rs` | **in progress**; M-709/711/713 + M-710 landed; remaining **M-712** (L1 `reclaim`→runtime reclamation; RFC-0027 Accepted — gate now the L1 surface) |
+| **`s10`** | T2 — surface-language completeness & grammar (E11-1) | `crates/mycelium-l1/**` · `docs/spec/grammar/**` | ✅ **DONE → archived** (2026-06-29): M-704 (dynamic HOF) · M-705/M-708 (ops/stabilization, prior) · **M-706** (RFC-0030 grammar gaps) · **M-707** (RFC-0020 §10 carve-out enactment) all landed. **E11-1 surface-language complete.** Flagged residuals (RFC-0020 §9 / RFC-0024 §4A.8): or-patterns (R20-Q3), list/`for` bidirectional inference (R20-Q5), and partial application (tuple-gated) — all never-silent, forward-tracked |
+| **`r10`** | T3 — runtime & concurrency execution maturity (E12-1) | `crates/mycelium-std-runtime/**` · `crates/mycelium-mlir/src/runtime.rs` | **near-done**; M-709/710/711/712/713 **all landed** (**M-712** L1 `reclaim`→runtime elaboration + EXPLAIN reconciled 2026-06-29 — landed via M-817). Remaining: **M-677** (declared-effect → interp budget ledger + per-effect `retry(<=3)` *surface syntax* — mechanism exists in `mycelium-interp/src/budget.rs`, syntax not yet wired; `needs-design`) |
 | **`lib10`** | T4 — standard library in Mycelium (E13-1) | `lib/std/**` · `crates/mycelium-std-*/**` | **in progress (long pole)**; M-715/716/717/718 landed; remaining **M-719** (API-freeze + Rust-crate retirement; post-1.0 acceptable per RFC-0031) |
 | **`rel10`** | T8 — documentation, stability & 1.0.0 release (E17-1) | `docs/**` · `CHANGELOG.md` · stability/release scope | **in progress**; M-735/736/737 landed; remaining **M-738** (release act — gated on the other tracks; cuts the tag) |
 | **`boot10`** | T9 — self-hosting capstone (E18-1) | `lib/std/**` · `crates/mycelium-l1/**` · self-hosting | **blocked** on E11-1 (`s10`) + E13-1 (`lib10`); M-739…M-742 `needs-design` |
@@ -63,10 +63,10 @@ tree**, branches **off `dev`**, merges into `dev`, then promotes `dev → integr
 
 | UID | Scope | Owns | Status / remaining |
 |---|---|---|---|
-| **`srf`** | E7-2 lexicon tail | `crates/mycelium-l1/**` · `.claude/memory/lang-lexicon-syntax.md` | **in progress**; M-665/666/667 landed; remaining **M-664** (`consume` parse/check/elab + inherent `impl T { … }`) ∥ **M-668** (R2 planning doc: xloc/mesh/cyst/graft/forage/backbone) |
-| **`hof`** | R3 — closures / dynamic HOF (M-704, now `ready`) | `crates/mycelium-l1/**` (incl. `mono.rs`) | **design-ready** (RFC-0024 Accepted §4A full Reynolds); impl pending — `Expr::Lambda` still lowers to `Residual` |
-| **`lwd`** | DN-54 — `lower`/`derive` **elaboration** + KC-3 guard (**M-812-cont**) | `crates/mycelium-l1/src/{elab,checkty}.rs` | **ready**; `low` landed surface+structural; this lands RHS→L0 elaboration + the KC-3 kernel-growth guard + acyclicity + §7 harness → DN-54 Enacted |
-| **`strm`** | DN-57 follow-on — mandatory `;` + flatten/stream tooling (**E24-1**, M-818–821 minted) | `crates/mycelium-l1/src/parse.rs` · `crates/mycelium-fmt/**` · CLI · corpus | **ready**; optional `;` landed; remaining: **M-818** mandatory-`;` (serial-on-L1) → **M-819** `mycfmt --flatten` ∥ **M-820** `myc --stream` (disjoint) → **M-821** corpus migration → DN-57 Enacted |
+| **`srf`** | E7-2 lexicon tail | `crates/mycelium-l1/**` · `.claude/memory/lang-lexicon-syntax.md` | **near-done**; M-664 (`consume` + inherent `impl`) landed 2026-06-29 (joins M-665/666/667); **only remaining: M-668** (R2 planning doc: xloc/mesh/cyst/graft/forage/backbone — docs-only, parallel, not serial-on-L1) |
+| **`hof`** | R3 — closures / dynamic HOF (M-704) | `crates/mycelium-l1/**` (incl. `mono.rs`) | ✅ **DONE → archived** (2026-06-29): closures (capture/closure-capturing-closure/dynamic-fn-flow/named-fn-value/capturing `map`) elaborate + run three-way; KC-3 (no new L0 node). Residual: multi-arg/**partial application is tuple-gated** (RFC-0024 §4A.8) — flagged for a maintainer tuple-type decision |
+| **`lwd`** | DN-54 — `lower`/`derive` **elaboration** + KC-3 guard (M-812-cont) | `crates/mycelium-l1/src/{elab,checkty}.rs` | ✅ **DONE → archived** (2026-06-29): `derive`→L0 elaboration + §4.1 RHS type-check + §4.2 acyclicity + §6 **sound** KC-3 kernel-growth guard (Proven-by-construction via the closed `Node` enum) + §7 harness. Residual: DN-54 underdetermines the `derive`-**site** consumption/attachment model — flagged for maintainer ratification; DN-54 stays Accepted (not Enacted) |
+| **`strm`** | DN-57 follow-on — mandatory `;` + flatten/stream tooling (**E24-1**) | `crates/mycelium-l1/src/parse.rs` · `crates/mycelium-fmt/**` · CLI · corpus | **near-done**; **M-818** mandatory-`;` + **M-821** workspace corpus migration **landed** 2026-06-29 (DN-57 §3 settled). Remaining: **M-819** `mycfmt --flatten` ∥ **M-820** `myc --stream` (disjoint fmt/CLI; parallel) → then DN-57 → Enacted |
 
 ### PM tooling & post-1.0
 
@@ -98,6 +98,9 @@ any) are owned by the still-current kickoff noted.
 | **`ffi10`** | E14-1 FFI & system interface — `wild`/`@std-sys` execution + syscall floor (M-720–724) | — |
 | **`dfr`** | RP-10/RP-9 web/ADK research gate discharged; RFC-0022/0023 → Accepted (#344) | `dfb` (builds, shelved) |
 | **`rsm`** | cross-cutting Session-2 — W1 (M-753/718/717) + W2 docs-currency + W3 capture (DN-45–50, M-800–807 stubs) all landed | M-719 close → `lib10` |
+| **`s10`** | E11-1 surface-language completeness — M-704 (HOF) · M-706 (RFC-0030 grammar gaps) · M-707 (RFC-0020 §10 carve-out enactment) landed (joins prior M-705/M-708). Residuals flagged: or-patterns (R20-Q3), R20-Q5, partial-app (tuple-gated) | — (residuals in RFC-0020 §9 / RFC-0024 §4A.8) |
+| **`hof`** | M-704 dynamic HOF — closures/capture/dynamic-fn-flow + capturing `map` run three-way; KC-3 (no new L0 node) | partial-app tuple-gated residual → maintainer tuple-type decision |
+| **`lwd`** | M-812-cont DN-54 `derive`→L0 elaboration + §4.1/§4.2 checks + sound §6 KC-3 guard + §7 harness | `derive`-site consumption model → maintainer ratification (DN-54 stays Accepted) |
 
 ## Parallelization & sequencing guide
 
@@ -109,17 +112,19 @@ it **must serialize**; everything else is **parallel by construction**.
 
 These all surgery the same L1 frontend files, so **exactly one is in flight at a time** (land + promote
 green before the next — "do L1 surgery inline, never delegate to parallel leaves", CLAUDE.md #8/#10).
-Recommended order (cheapest-unblocks-most first; any order is valid as long as it's serial):
 
-```
-srf(M-664) → s10(M-707 → M-706) → hof(M-704) → lwd(M-812-cont) → strm(M-818) → r10(M-712)
-```
+> ✅ **The L1 serial lane is COMPLETE (landed 2026-06-29 on `claude/sequential-kickoff-workflow-qbdigb`,
+> PR #750):** `srf(M-664) → s10(M-707 → M-706) → hof(M-704) → lwd(M-812-cont) → strm(M-818) → r10(M-712)`
+> all landed (run by a serial Opus swarm: one isolated-worktree leaf per task, sync-first off the
+> pushed tip, octopus-merged + orchestrator-reconciled). **Flagged residuals carried forward** (all
+> never-silent, none blocking): `hof` partial-application is tuple-gated (RFC-0024 §4A.8); `lwd`
+> `derive`-site consumption model is underdetermined by DN-54; `s10` or-patterns (R20-Q3) + R20-Q5
+> stay deferred (RFC-0020 §9). **The next serial L1 wave** is just `r10`'s **M-677** (effect→budget
+> *surface syntax*) + `strm`'s **M-819/M-820** (fmt/CLI — actually disjoint, parallel) + `srf`'s
+> **M-668** (docs-only). When those touch the L1 frontend, serialize them; otherwise they parallelize.
 
-- **`srf` M-664** (`consume`/inherent-`impl`) and **`s10` M-707/M-706** (RFC-0020/RFC-0030) are the
-  surface-completeness core. **`hof` M-704** (closures) touches `mono.rs`. **`lwd`** (M-812-cont) touches
-  `elab.rs`/`checkty.rs`. **`strm` M-818** (mandatory `;`) touches `parse.rs`. **`r10` M-712** (reclaim
-  elaboration) touches `elab.rs`. `srf` M-668 (R2 planning, docs-only) is **not** on this lane — see
-  parallel set.
+Recommended order for a *fresh* serial lane (cheapest-unblocks-most first; any order is valid as long
+as it's serial). The completed lane above is kept for the method/record.
 
 ### Parallel by construction — disjoint trees (run concurrently, with each other AND the serial lane)
 

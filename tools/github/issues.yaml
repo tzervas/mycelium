@@ -3197,9 +3197,10 @@ issues:
   - id: E11-1
     title: "E11-1 (epic) — Surface-language completeness & grammar ratification"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P1, status:in-progress]
+    labels: [phase:5, type:epic, area:language, priority:P1, status:done]
     depends_on: [E7-1, E7-3]
     epic: E11
+    landed_basis: "status:done (2026-06-29, s10 kickoff archived) — all five surface tasks landed: M-704 (dynamic HOF closures, three-way) + M-705 (operator syntax, prior) + M-706 (RFC-0030 grammar gap-closure: top-level impl_item/consume_expr/lambda_expr) + M-707 (RFC-0020 §10 carve-out enactment) + M-708 (surface stabilization, prior). The Mycelium surface language is feature-complete for real programs + a self-hosted stdlib. Never-silent residuals flagged + forward-tracked (NOT blocking E11-1): partial application is tuple-gated (RFC-0024 §4A.8 → maintainer tuple-type decision); or-patterns (R20-Q3) + list/for bidirectional inference (R20-Q5) deferred (RFC-0020 §9); the derive-site consumption model is underdetermined (DN-54). RFC-0020 stays Accepted (scoped), RFC-0024/DN-54/DN-57 Accepted + impl notes (Enacted steps reserved per house rule #3)."
     doc_refs:
       - corpus:RFC-0025
       - corpus:RFC-0030
