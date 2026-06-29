@@ -270,8 +270,11 @@ impl Gx<'_> {
             // more than `Declared` (VR-5). The operand carries its own grade demands, but `consume`
             // itself never *upgrades* past `Declared`.
             Expr::Consume(_) => Ok(Strength::Declared),
-            // `lambda` is a deferred form (M-704; the checker already refuses it) — like `wild`/`spore`
-            // it carries the least-trusted `Declared` rather than panicking on this defensive arm.
+            // RFC-0024 §4A (M-704): a `lambda` (closure) is a `Declared`-grade construct — its
+            // lowering is a structural rewrite + a type-level contract (the three-way differential is
+            // `Empirical`, but the construct itself attests no more than `Declared`; VR-5). Grading
+            // runs on the source env (pre-mono), so a `lambda` is reachable here; it carries
+            // `Declared` (never upgraded past its basis).
             Expr::Lambda { .. } => Ok(Strength::Declared),
             Expr::WithParadigm { body, .. } => self.grade(scope, body),
             // DN-58 §A/§B (M-667): `fuse(a, b)` — the grade is the *meet* of both operands' grades

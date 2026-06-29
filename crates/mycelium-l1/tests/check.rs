@@ -1813,10 +1813,9 @@ fn rfc0020_4_2_polymorphic_instantiation_is_inferred_at_call_site() {
     // no explicit instantiation annotation required (the carve-out's "deferred = error" v0 posture
     // is superseded by M-657 unification + M-673 monomorphization). An UNDETERMINED instantiation
     // remains a never-silent error (G2), preserving the honest "not a guess" stance.
-    let env = check(
-        "nodule d\nfn id[A](x: A) => A = x\nfn use_id(b: Binary{8}) => Binary{8} = id(b)",
-    )
-    .expect("polymorphic instantiation inferred from the argument type");
+    let env =
+        check("nodule d\nfn id[A](x: A) => A = x\nfn use_id(b: Binary{8}) => Binary{8} = id(b)")
+            .expect("polymorphic instantiation inferred from the argument type");
     assert_eq!(env.totality["use_id"], Totality::Total);
 }
 

@@ -876,11 +876,13 @@ impl Parser {
     }
 
     /// `lambda(params) => body` (RFC-0037 D5). Parses the typed parameter list and the body
-    /// expression into an [`Expr::Lambda`] node. **Closure semantics (capture, partial application,
-    /// dynamic fn-flow) are deferred to M-704 / RFC-0024 §5** — the checker/elaborator emit a
-    /// never-silent `Residual` for this node (G2), so it parses but does not yet evaluate. Type/const
-    /// parameters on a lambda (`lambda[T]{N}(…)`) are an explicit never-silent refusal here (the
-    /// syntax is reserved by RFC-0037 D5 but the form lands with M-704), not a silent accept.
+    /// expression into an [`Expr::Lambda`] node. **Closure semantics — environment capture and
+    /// dynamic fn-flow — are implemented (M-704 / RFC-0024 §4A):** the checker types it to `Ty::Fn`
+    /// and monomorphization lowers it by Reynolds defunctionalization (a tag-sum struct + a generated
+    /// `apply` dispatcher), so it parses, type-checks, **and evaluates**. Multi-argument lambdas /
+    /// partial application stay tuple-gated (§4A.8) — refused downstream, never a silent accept.
+    /// Type/const parameters on a lambda (`lambda[T]{N}(…)`) are an explicit never-silent refusal here
+    /// (the syntax is reserved by RFC-0037 D5 but the form is not yet wired), not a silent accept.
     fn parse_lambda(&mut self) -> Result<Expr, ParseError> {
         self.expect_keyword(&Tok::Lambda)?;
         if self.at(&Tok::LBracket) || self.at(&Tok::LBrace) {

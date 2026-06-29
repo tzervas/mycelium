@@ -949,10 +949,17 @@ impl Elab<'_> {
                  value/representation lowering (LR-8; DN-03 §1; M-664)",
             ),
             Expr::Colony(hyphae) => self.elab_colony(stack, scope, hyphae),
+            // RFC-0024 §4A (M-704): closures are **lowered by monomorphization** (`mono.rs`) — a
+            // lambda becomes a tag-sum constructor application + a generated `apply` dispatcher, so a
+            // raw `Expr::Lambda` never survives into elaboration (`elaborate` monomorphizes first).
+            // This arm is kept as a **defensive, never-silent** invariant (G2): a lambda reaching
+            // elaboration is an internal staging bug, surfaced as an explicit `Residual`, never a
+            // fabricated artifact.
             Expr::Lambda { .. } => residual(
                 site,
-                "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 — RFC-0037 D5 reserves the \
-                 surface, there is no L0 form yet (never a fabricated artifact, G2)",
+                "internal: an `Expr::Lambda` reached elaboration — closures are lowered by \
+                 monomorphization before elaborate (RFC-0024 §4A / M-704); this is a staging \
+                 invariant break, never a silent accept (G2)",
             ),
             Expr::Ascribe(inner, _t) => {
                 // The type part is static and already checked — elaboration is transparent. RFC-0018

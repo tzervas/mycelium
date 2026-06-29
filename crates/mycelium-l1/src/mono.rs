@@ -49,7 +49,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ast::{
-    Arm, BaseType, Expr, FnDecl, FnSig, Hypha, Param, Path, Pattern, Scalar, TypeRef, WidthRef,
+    Arm, BaseType, Expr, FnDecl, FnSig, Hypha, Literal, Param, Path, Pattern, Scalar, TypeRef,
+    WidthRef,
 };
 use crate::checkty::{
     has_var, infer_type, param_subst, resolve_ty, subst_ty, type_head, unify, CtorInfo, DataInfo,
@@ -87,6 +88,9 @@ pub struct MonoSelections {
     /// HOF defunctionalization records (RFC-0024 §4, M-687): keyed by the mangled HOF
     /// specialization name (e.g. `map$Binary8$Binary8%1:double`).
     pub(crate) hof_specs: BTreeMap<String, HofSpecialization>,
+    /// RFC-0024 §4A (M-704; house rule #2): per-closure lowering records, keyed by the generated
+    /// constructor name (`Clo$<arrow>$<n>`) — the capture set + generated apply dispatcher.
+    pub(crate) closure_specs: BTreeMap<String, ClosureSpecialization>,
 }
 
 impl MonoSelections {
@@ -126,6 +130,18 @@ impl MonoSelections {
     /// Every recorded HOF specialization, in deterministic (mangled-name) order.
     pub fn hof_iter(&self) -> impl Iterator<Item = (&String, &HofSpecialization)> {
         self.hof_specs.iter()
+    }
+
+    /// The closure-lowering record for the generated constructor `ctor_name`, if any (RFC-0024 §4A,
+    /// M-704) — the capture set + the generated apply dispatcher (house rule #2).
+    #[must_use]
+    pub fn closure(&self, ctor_name: &str) -> Option<&ClosureSpecialization> {
+        self.closure_specs.get(ctor_name)
+    }
+
+    /// Every recorded closure lowering, in deterministic (constructor-name) order.
+    pub fn closure_iter(&self) -> impl Iterator<Item = (&String, &ClosureSpecialization)> {
+        self.closure_specs.iter()
     }
 }
 
@@ -175,10 +191,89 @@ fn is_already_monomorphic(env: &Env) -> bool {
                 .value_params
                 .iter()
                 .all(|p| !param_has_fn_type(&env.types, &fd.sig.param_names(), &p.ty))
+            // RFC-0024 §4A (M-704): a body containing a `lambda`, or a **named fn used as an escaping
+            // value** (a single-segment top-level fn name in value position, not as a call head),
+            // needs closure lowering — it is **not** mono's identity (the pass-through would leave a
+            // construct the elaborator/evaluator cannot run). Detected by a structural walk.
+            && !body_has_lambda(&fd.body)
+            && !body_has_fn_value(env, &fd.body)
     }) && env.types.values().all(|d| d.params.is_empty())
         && env.traits.is_empty()
         && env.instances.is_empty()
         && env.impls.is_empty()
+}
+
+/// RFC-0024 §4A.4 (M-704): true iff `e` references a top-level **function name as a value** — a
+/// single-segment `Expr::Path` naming a fn, occurring **not** as an application head (an applied fn
+/// `f(x)` is an ordinary first-order call, not a fn value). Such a reference needs the closure
+/// lowering (a named-fn-as-escaping-value becomes a nullary closure constructor), so the program is
+/// **not** mono's fast-path identity. Over-detection is safe — it only ever widens to the full pass.
+fn body_has_fn_value(env: &Env, e: &Expr) -> bool {
+    match e {
+        // A bare path naming a top-level fn, in value position.
+        Expr::Path(p) => p.0.len() == 1 && env.fns.contains_key(&p.0[0]),
+        Expr::Lit(Literal::List(elems)) => elems.iter().any(|x| body_has_fn_value(env, x)),
+        Expr::Lit(_) => false,
+        Expr::Let { bound, body, .. } => {
+            body_has_fn_value(env, bound) || body_has_fn_value(env, body)
+        }
+        Expr::If { cond, conseq, alt } => {
+            body_has_fn_value(env, cond)
+                || body_has_fn_value(env, conseq)
+                || body_has_fn_value(env, alt)
+        }
+        Expr::Match { scrutinee, arms } => {
+            body_has_fn_value(env, scrutinee)
+                || arms.iter().any(|a| body_has_fn_value(env, &a.body))
+        }
+        Expr::For { xs, init, body, .. } => {
+            body_has_fn_value(env, xs)
+                || body_has_fn_value(env, init)
+                || body_has_fn_value(env, body)
+        }
+        Expr::Swap { value, .. } => body_has_fn_value(env, value),
+        Expr::WithParadigm { body, .. } => body_has_fn_value(env, body),
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => body_has_fn_value(env, b),
+        Expr::Colony(hyphae) => hyphae.iter().any(|h| body_has_fn_value(env, &h.body)),
+        Expr::Lambda { body, .. } => body_has_fn_value(env, body),
+        // The head of an application is a *call target*, not a fn value — do NOT descend into it as a
+        // value. Only the arguments are value positions (a fn name passed as an arg is the §4/§4A
+        // HOF-argument case, handled by `resolve_fn_args` — but it still means "not the identity").
+        Expr::App { head: _, args } => args.iter().any(|x| body_has_fn_value(env, x)),
+        Expr::Fuse { left, right } => body_has_fn_value(env, left) || body_has_fn_value(env, right),
+        Expr::Reclaim { policy, body } => {
+            body_has_fn_value(env, policy) || body_has_fn_value(env, body)
+        }
+        Expr::Ascribe(inner, _) => body_has_fn_value(env, inner),
+    }
+}
+
+/// True iff `e` contains an `Expr::Lambda` anywhere (RFC-0024 §4A, M-704) — the gate that keeps a
+/// closure-bearing program out of mono's fast pass-through (it needs the §4A lowering).
+fn body_has_lambda(e: &Expr) -> bool {
+    match e {
+        Expr::Lambda { .. } => true,
+        Expr::Lit(Literal::List(elems)) => elems.iter().any(body_has_lambda),
+        Expr::Lit(_) | Expr::Path(_) => false,
+        Expr::Let { bound, body, .. } => body_has_lambda(bound) || body_has_lambda(body),
+        Expr::If { cond, conseq, alt } => {
+            body_has_lambda(cond) || body_has_lambda(conseq) || body_has_lambda(alt)
+        }
+        Expr::Match { scrutinee, arms } => {
+            body_has_lambda(scrutinee) || arms.iter().any(|a| body_has_lambda(&a.body))
+        }
+        Expr::For { xs, init, body, .. } => {
+            body_has_lambda(xs) || body_has_lambda(init) || body_has_lambda(body)
+        }
+        Expr::Swap { value, .. } => body_has_lambda(value),
+        Expr::WithParadigm { body, .. } => body_has_lambda(body),
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => body_has_lambda(b),
+        Expr::Colony(hyphae) => hyphae.iter().any(|h| body_has_lambda(&h.body)),
+        Expr::App { head, args } => body_has_lambda(head) || args.iter().any(body_has_lambda),
+        Expr::Fuse { left, right } => body_has_lambda(left) || body_has_lambda(right),
+        Expr::Reclaim { policy, body } => body_has_lambda(policy) || body_has_lambda(body),
+        Expr::Ascribe(inner, _) => body_has_lambda(inner),
+    }
 }
 
 /// True iff the parameter type `t` resolves to (or contains) a `Ty::Fn` — meaning this parameter
@@ -231,6 +326,13 @@ enum Item {
         /// param index (deterministic). Baked into the item key so two different function
         /// arguments produce two distinct specializations (never a silent alias — G2).
         fn_args: Vec<(usize, String)>,
+        /// RFC-0024 §4A (M-704): `(param_index, arrow_mangle)` for each fn-typed value parameter
+        /// that is **kept** as a dynamic closure value (it received a lambda or a dynamically-flowing
+        /// fn value — §4's static resolution does not apply). Such a parameter stays in the emitted
+        /// signature typed `Fn$<arrow>`; an application of it inside the body lowers to
+        /// `apply$<arrow>(f, x)`. Sorted by index (deterministic), baked into the item key so a HOF
+        /// specialized dynamically is distinct from its static (or un-)specialization (G2).
+        dyn_fns: Vec<(usize, String)>,
     },
     /// A data-type instance: the source type `name` at concrete `targs`.
     Data { name: String, targs: Vec<Ty> },
@@ -283,6 +385,71 @@ struct Mono<'e> {
     /// Populated by [`emit_fn`] when `fn_args` is non-empty; cleared after each emission. Only
     /// consulted in [`rewrite_hof_app`].
     fn_param_subst: BTreeMap<String, String>,
+    /// RFC-0024 §4A (M-704): the accumulating per-arrow **closure tag-sums**. Keyed by the arrow
+    /// mangle (`Fn$<A>$<B>`); each value holds the arrow's domain/codomain and one constructor per
+    /// distinct escaping closure of that arrow (the §4A.4 fn-tag sum). Emitted **once per arrow** at
+    /// [`Self::finish`] (after the worklist drains — the whole-program closure set is then complete,
+    /// §4A.5; no open-world fallback arm). Reuses the existing data + match + call L0 constructs, so
+    /// **no `mycelium-core` node is added** (KC-3).
+    closures: BTreeMap<String, ClosureSum>,
+    /// RFC-0024 §4A (M-704; house rule #2): per-closure EXPLAIN records — the capture set + the
+    /// generated constructor + apply dispatcher, keyed by the closure constructor name. The dynamic
+    /// dispatch is thus a reified, inspectable record, never a black box.
+    closure_specs: BTreeMap<String, ClosureSpecialization>,
+    /// Active **dynamic** fn-parameter map during a HOF specialization emission (M-704): maps a
+    /// value-parameter name whose type is `Ty::Fn` and which is **kept** as a closure value (it
+    /// received a non-statically-known argument — a lambda or a dynamic fn value) to its arrow mangle.
+    /// An application `f(x)` of such a parameter rewrites to `apply$<arrow>(f, x)`. Populated by
+    /// [`Self::emit_fn`]; cleared after each emission. Disjoint from `fn_param_subst` (static params).
+    dyn_fn_param: BTreeMap<String, String>,
+}
+
+/// RFC-0024 §4A.4 (M-704): one closure **tag-sum** for a single arrow type `A => B`. Accumulates a
+/// constructor per distinct escaping closure of that arrow (deduplicated by a content key), plus the
+/// arrow's concrete domain/codomain so [`Mono::finish`] can emit the sum's `DataInfo` and the
+/// `apply$A$B` dispatcher (`emit_data`/`emit_fn` — existing emitters; no new L0 node, KC-3).
+#[derive(Debug, Clone)]
+struct ClosureSum {
+    /// The arrow's domain type `A` (concrete).
+    arrow_a: Ty,
+    /// The arrow's codomain type `B` (concrete).
+    arrow_b: Ty,
+    /// One constructor per distinct closure, in deterministic registration order.
+    ctors: Vec<ClosureCtor>,
+    /// Content-key → constructor index, for deduplication (two structurally identical closures of the
+    /// same arrow share one constructor — the §4 identity-fragmentation discipline; G2).
+    by_key: BTreeMap<String, usize>,
+}
+
+/// RFC-0024 §4A.4 (M-704): one constructor of a closure tag-sum — a single escaping closure's
+/// captured environment + its (rewritten) body. The dispatcher arm binds the captures, binds the
+/// lambda's parameter to the dispatcher's argument, then evaluates the body.
+#[derive(Debug, Clone)]
+struct ClosureCtor {
+    /// The constructor name (`Clo$<arrow>$<n>` — injective via the `$` joints; §4 mangling ground).
+    ctor_name: String,
+    /// The captured free variables, `(name, concrete type)`, in deterministic (first-occurrence)
+    /// order. Empty for a captureless lambda or a bare named fn (a nullary constructor).
+    captures: Vec<(String, Ty)>,
+    /// The lambda's single parameter name (stage-1 single-arg — §4A.8 gates multi-arg on tuples).
+    param_name: String,
+    /// The (already-rewritten) lambda body. References the captures (bound by the dispatcher's match
+    /// arm) and `param_name` (bound to the dispatcher's argument via a `Let`).
+    body: Expr,
+}
+
+/// RFC-0024 §4A.6 (M-704; house rule #2): the EXPLAIN record of one closure lowering — which arrow,
+/// which captured variables, which generated constructor + dispatcher. Mirrors [`HofSpecialization`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClosureSpecialization {
+    /// The arrow mangle (`Fn$<A>$<B>`) this closure inhabits.
+    pub arrow: String,
+    /// The generated constructor name (`Clo$<arrow>$<n>`).
+    pub ctor_name: String,
+    /// The captured free variables, `(name, type-display)`, in capture order.
+    pub captures: Vec<(String, String)>,
+    /// The generated apply-dispatcher's name (`apply$<A>$<B>`).
+    pub apply_fn: String,
 }
 
 impl<'e> Mono<'e> {
@@ -296,6 +463,9 @@ impl<'e> Mono<'e> {
             selections: BTreeMap::new(),
             hof_specs: BTreeMap::new(),
             fn_param_subst: BTreeMap::new(),
+            closures: BTreeMap::new(),
+            closure_specs: BTreeMap::new(),
+            dyn_fn_param: BTreeMap::new(),
         }
     }
 
@@ -323,6 +493,7 @@ impl<'e> Mono<'e> {
             targs: vec![],
             wargs: vec![], // entry is monomorphic (nullary, no width params)
             fn_args: vec![],
+            dyn_fns: vec![],
         });
         while let Some(item) = self.work.pop() {
             match item {
@@ -331,7 +502,8 @@ impl<'e> Mono<'e> {
                     targs,
                     wargs,
                     fn_args,
-                } => self.emit_fn(&name, &targs, &wargs, &fn_args)?,
+                    dyn_fns,
+                } => self.emit_fn(&name, &targs, &wargs, &fn_args, &dyn_fns)?,
                 Item::Data { name, targs } => self.emit_data(&name, &targs)?,
                 Item::Method {
                     trait_name,
@@ -340,6 +512,10 @@ impl<'e> Mono<'e> {
                 } => self.emit_method(&trait_name, &method, &for_ty)?,
             }
         }
+        // RFC-0024 §4A.5/§4A.7 (M-704): the worklist has drained, so the whole-program closure set
+        // is now complete (every reachable lambda/dynamic-fn has contributed its constructor). Emit
+        // each arrow's tag-sum + `apply` dispatcher — closed first-order L0, no open-world arm.
+        self.emit_closures()?;
         Ok(())
     }
 
@@ -367,6 +543,7 @@ impl<'e> Mono<'e> {
             MonoSelections {
                 by_mangled: self.selections,
                 hof_specs: self.hof_specs,
+                closure_specs: self.closure_specs,
             },
         )
     }
@@ -381,14 +558,21 @@ impl<'e> Mono<'e> {
     /// passed at the call site. The specialized body replaces every application of that fn-param
     /// with a direct call to the callee, and the fn-param is **dropped** from the emitted
     /// value-parameter list — producing a closed first-order signature (no `Ty::Fn` in params).
+    ///
+    /// When `dyn_fns` is non-empty (RFC-0024 §4A, M-704): each `(param_index, arrow_mangle)` pair
+    /// names a fn-typed value-parameter **kept** as a closure value — its emitted type becomes the
+    /// closure tag-sum `Fn$<arrow>` (an ordinary `Ty::Data`), and every application of it inside the
+    /// body is rewritten to `apply$<arrow>(f, x)`. The parameter is **not** dropped (the closure is
+    /// passed at the call site).
     fn emit_fn(
         &mut self,
         name: &str,
         targs: &[Ty],
         wargs: &[Width],
         fn_args: &[(usize, String)],
+        dyn_fns: &[(usize, String)],
     ) -> Result<(), ElabError> {
-        let mangled = mangle_hof_decl(name, targs, wargs, fn_args);
+        let mangled = mangle_hof_decl(name, targs, wargs, fn_args, dyn_fns);
         // Already emitted? (the worklist dedups, but a defensive check keeps emission idempotent.)
         if self.out_fns.contains_key(&mangled) {
             return Ok(());
@@ -467,8 +651,13 @@ impl<'e> Mono<'e> {
             })
             .collect::<Result<_, ElabError>>()?;
 
-        // Set of param indices that are fn-typed and will be dropped from the emitted signature.
+        // Set of param indices that are fn-typed and will be dropped from the emitted signature
+        // (the §4 static path). The §4A dynamic params are KEPT (typed `Fn$<arrow>`).
         let dropped_indices: BTreeSet<usize> = fn_args.iter().map(|(i, _)| *i).collect();
+        // RFC-0024 §4A (M-704): `param_index → arrow_mangle` for kept dynamic closure params.
+        let dyn_by_idx: BTreeMap<usize, String> = dyn_fns.iter().cloned().collect();
+        // `param_name → arrow_mangle` for kept dynamic closure params (the body-rewrite map).
+        let mut dyn_param_map: BTreeMap<String, String> = BTreeMap::new();
 
         // The concrete value-parameter scope (param name → substituted concrete type), for
         // re-inferring sub-expression types while walking the body. Fn-typed params that are being
@@ -485,30 +674,43 @@ impl<'e> Mono<'e> {
                 self.enqueue_tys_in(&cty);
             }
             scope.push((p.name.clone(), cty.clone()));
-            // Drop fn-typed params that are being defunctionalized from the emitted signature.
-            if !dropped_indices.contains(&idx) {
+            if dropped_indices.contains(&idx) {
+                // §4 static: defunctionalized away — not emitted.
+                continue;
+            }
+            if let Some(arrow) = dyn_by_idx.get(&idx) {
+                // §4A dynamic: kept, but its emitted type is the closure tag-sum `Fn$<arrow>` (an
+                // ordinary nullary `Ty::Data`); the worklist already scheduled the sum + `apply`.
+                dyn_param_map.insert(p.name.clone(), arrow.clone());
                 new_params.push(Param {
                     name: p.name.clone(),
-                    ty: ty_to_ref(&cty),
+                    ty: ty_to_ref(&Ty::Data(arrow.clone(), vec![])),
                 });
+                continue;
             }
+            new_params.push(Param {
+                name: p.name.clone(),
+                ty: ty_to_ref(&cty),
+            });
         }
         let ret_cty = self.concrete_ty(name, &tyvars, &subst, &fd.sig.ret)?;
         self.enqueue_tys_in(&ret_cty);
 
-        // Install the HOF fn-param substitution map for the duration of this body rewrite.
+        // Install the HOF fn-param substitution maps for the duration of this body rewrite.
         debug_assert!(
-            self.fn_param_subst.is_empty(),
-            "fn_param_subst must be empty before entering emit_fn (invariant)"
+            self.fn_param_subst.is_empty() && self.dyn_fn_param.is_empty(),
+            "fn_param_subst / dyn_fn_param must be empty before entering emit_fn (invariant)"
         );
         self.fn_param_subst = fn_arg_map;
+        self.dyn_fn_param = dyn_param_map;
 
         // The declared return type drives return-position inference (e.g. a bare nullary generic
         // ctor, or a return-driven trait-method receiver), mirroring the checker's `expected`.
         let body_result = self.rewrite(name, &mut scope, &fd.body, Some(&ret_cty));
 
-        // Always clear the substitution map — even on error.
+        // Always clear the substitution maps — even on error.
         self.fn_param_subst.clear();
+        self.dyn_fn_param.clear();
 
         let new_body = body_result?;
         let new_sig = FnSig {
@@ -528,8 +730,10 @@ impl<'e> Mono<'e> {
                 body: new_body,
             },
         );
-        // EXPLAIN: if this was a HOF specialization, record it (house rule #2 — no black boxes).
-        if !fn_args.is_empty() {
+        // EXPLAIN: if this was a HOF specialization (static §4 or dynamic §4A), record it (house
+        // rule #2 — no black boxes). The `fn_args` capture the statically-baked callees; the dynamic
+        // closure dispatch is additionally recorded per-closure in `closure_specs`.
+        if !fn_args.is_empty() || !dyn_fns.is_empty() {
             self.hof_specs.insert(
                 mangled.clone(),
                 HofSpecialization {
@@ -585,10 +789,20 @@ impl<'e> Mono<'e> {
                         ),
                     );
                 }
-                // Enqueue any data instance the field references, and rewrite it to its mangled-nullary
-                // form so the registry/`field_spec` consumes the already-working `Ty::Data(n, [])` arm.
-                self.enqueue_tys_in(&cf);
-                fields.push(mangle_ty_in_ty(&cf));
+                // RFC-0024 §4A (M-704): a **fn-typed field** (a data type storing a closure — the
+                // dynamic-fn-as-field shape) lowers to the closure tag-sum `Fn$<arrow>` (an ordinary
+                // nullary `Ty::Data`). Register the arrow so its sum + `apply` are emitted, exactly as
+                // a fn-typed parameter does. Non-fn fields take the existing mangled-nullary form.
+                if let Ty::Fn(a, b) = &cf {
+                    let arrow = self.register_arrow(a, b);
+                    fields.push(Ty::Data(arrow, vec![]));
+                } else {
+                    // Enqueue any data instance the field references, and rewrite it to its
+                    // mangled-nullary form so the registry/`field_spec` consumes the already-working
+                    // `Ty::Data(n, [])` arm.
+                    self.enqueue_tys_in(&cf);
+                    fields.push(mangle_ty_in_ty(&cf));
+                }
             }
             ctors.push(CtorInfo {
                 name: mangle_ctor(&c.name, targs),
@@ -708,6 +922,108 @@ impl<'e> Mono<'e> {
                 impl_mangled: mangled,
             },
         );
+        Ok(())
+    }
+
+    /// RFC-0024 §4A.4/§4A.7 (M-704): emit, once per registered arrow, the closure **tag-sum** data
+    /// type (`emit_data`'s node — a `DataInfo`) and the **`apply` dispatcher** fn (`emit_fn`'s node —
+    /// an ordinary `FnDecl` whose body is an `Expr::Match`). Both are constructs the trusted
+    /// elaborator / `mycelium-core` registry already lower **unchanged** — **no new L0 node** (KC-3).
+    /// Run after the worklist drains, so the whole-program closure set is complete (§4A.5): the sum's
+    /// constructors are exactly the program's reachable closures of that arrow — closed, no
+    /// open-world fallback arm.
+    fn emit_closures(&mut self) -> Result<(), ElabError> {
+        // Clone the accumulated arrows out so the emission can borrow `self` mutably (the `closures`
+        // map is finalized — the worklist has drained, so no new closure can be registered now).
+        let arrows: Vec<(String, ClosureSum)> = self
+            .closures
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        for (arrow, sum) in arrows {
+            // (1) The tag-sum `DataInfo`: one constructor per distinct closure; fields = capture
+            // types (a fn-typed capture is its own closure data type `Fn$<inner-arrow>`).
+            let ctors: Vec<CtorInfo> = sum
+                .ctors
+                .iter()
+                .map(|c| CtorInfo {
+                    name: c.ctor_name.clone(),
+                    fields: c
+                        .captures
+                        .iter()
+                        .map(|(_, t)| closure_field_ty(t))
+                        .collect(),
+                })
+                .collect();
+            self.out_types.insert(
+                arrow.clone(),
+                DataInfo {
+                    name: arrow.clone(),
+                    params: vec![],
+                    ctors,
+                },
+            );
+
+            // (2) The `apply$A$B(clo: Fn$A$B, %fnarg: A) -> B` dispatcher: `match clo { Clo_i(caps…)
+            // => let <param_i> = %fnarg in body_i }`. The arm binds the captures by their original
+            // names (so the body's capture references resolve), then binds the lambda's parameter to
+            // the dispatcher's argument via a `Let` (robust to shadowing inside the body — no rename).
+            let apply_name = apply_fn_name(&arrow);
+            let arms: Vec<Arm> = sum
+                .ctors
+                .iter()
+                .map(|c| {
+                    let subs: Vec<Pattern> = c
+                        .captures
+                        .iter()
+                        .map(|(n, _)| Pattern::Ident(n.clone()))
+                        .collect();
+                    let arm_body = Expr::Let {
+                        name: c.param_name.clone(),
+                        ty: None,
+                        bound: Box::new(Expr::Path(Path(vec![APPLY_PARAM.to_owned()]))),
+                        body: Box::new(c.body.clone()),
+                    };
+                    Arm {
+                        pattern: Pattern::Ctor(c.ctor_name.clone(), subs),
+                        body: arm_body,
+                    }
+                })
+                .collect();
+            // A sum with zero reachable closures cannot be applied (no producer ⇒ no consumer reached
+            // it); emit an empty `match` so the elaborator's exhaustiveness/usefulness pass governs it
+            // (it is unreachable — never a fabricated arm, G2).
+            let body = Expr::Match {
+                scrutinee: Box::new(Expr::Path(Path(vec!["%clo".to_owned()]))),
+                arms,
+            };
+            let sig = FnSig {
+                name: apply_name.clone(),
+                params: vec![],
+                value_params: vec![
+                    Param {
+                        name: "%clo".to_owned(),
+                        ty: ty_to_ref(&Ty::Data(arrow.clone(), vec![])),
+                    },
+                    Param {
+                        name: APPLY_PARAM.to_owned(),
+                        ty: closure_param_ref(&sum.arrow_a),
+                    },
+                ],
+                ret: closure_param_ref(&sum.arrow_b),
+                effects: vec![],
+            };
+            self.out_fns.insert(
+                apply_name.clone(),
+                FnDecl {
+                    vis: crate::ast::Vis::Private,
+                    thaw: false,
+                    tier: None,
+                    sig,
+                    body,
+                },
+            );
+        }
         Ok(())
     }
 
@@ -915,10 +1231,13 @@ impl<'e> Mono<'e> {
                 site,
                 "`consume` of an affine `Substrate` has no L0 form in v0 (LR-8; DN-03 §1; M-664)",
             ),
-            Expr::Lambda { .. } => residual(
-                site,
-                "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 (RFC-0037 D5 reserves the surface)",
-            ),
+            // RFC-0024 §4A.4 (M-704): a `lambda` lowers to a **closure-constructor application** — its
+            // captured environment, snapshotted by value at this definition site (value-semantics).
+            // The closure tag-sum + the `apply$<arrow>` dispatcher are emitted once per arrow at
+            // `finish()`. No new L0 node (the result is an ordinary `Expr::App` of a data ctor; KC-3).
+            Expr::Lambda { params, body } => {
+                self.rewrite_lambda(site, scope, params, body, expected)
+            }
             Expr::WithParadigm { .. } => residual(
                 site,
                 "internal: a `with paradigm` block reached monomorphization — the ambient \
@@ -962,9 +1281,11 @@ impl<'e> Mono<'e> {
                 format!("constructor `{name}` referenced without saturation (W6)"),
             );
         }
-        // A bare reference to a (recursive) function. Monomorphic fns mangle to themselves; a generic
-        // fn cannot be referenced as a bare value in the first-order surface (it would need arguments).
-        if let Some(fd) = self.src.fns.get(name) {
+        // A bare reference to a (recursive) function. `rewrite_path` is reached only for a path in
+        // **value position** (a call head goes through `rewrite_app`; a statically-resolved HOF
+        // argument is consumed by `resolve_fn_args` and never rewritten here) — so a fn name here is
+        // a fn **value**.
+        if let Some(fd) = self.src.fns.get(name).cloned() {
             if !fd.sig.params.is_empty() {
                 return residual(
                     site,
@@ -974,13 +1295,29 @@ impl<'e> Mono<'e> {
                     ),
                 );
             }
-            self.enqueue(Item::Fn {
-                name: name.clone(),
-                targs: vec![],
-                wargs: vec![], // monomorphic path reference: no type or width params
-                fn_args: vec![],
-            });
-            return Ok(Expr::Path(Path(vec![mangle_decl(name, &[])])));
+            // RFC-0024 §4A.4 (M-704): a **named monomorphic fn used as an escaping value** (e.g.
+            // `let f = negate in f(x)`) becomes a **nullary closure constructor** of its arrow type
+            // (`apply` then calls the named fn). This is the "a bare named fn becomes a nullary
+            // constructor" case (§4A.4) — the same lowering as a captureless lambda. A single-value-
+            // parameter monomorphic fn has a concrete arrow `A => B`; anything else (nullary / multi-
+            // param) cannot be a single-arg fn value and is a never-silent refusal (G2; partial
+            // application is tuple-gated — §4A.8).
+            if fd.sig.value_params.len() == 1 {
+                let a =
+                    self.concrete_ty(site, &[], &BTreeMap::new(), &fd.sig.value_params[0].ty)?;
+                let b = self.concrete_ty(site, &[], &BTreeMap::new(), &fd.sig.ret)?;
+                return self.wrap_named_fn_as_closure(name, &a, &b);
+            }
+            // A nullary or multi-param fn referenced as a bare value: not a single-arg fn value.
+            return residual(
+                site,
+                format!(
+                    "function `{name}` has {} value parameter(s) and cannot be used as a single-\
+                     argument fn value (RFC-0024 §4A.8 — multi-arg / partial application is tuple-\
+                     gated; a nullary fn is not a value, apply it) — never a silent coercion (G2)",
+                    fd.sig.value_params.len()
+                ),
+            );
         }
         // Unresolved here means a free name; the checker would have refused it. Keep it verbatim so the
         // elaborator's own "unresolved name" residual fires (never silently dropped).
@@ -1036,6 +1373,52 @@ impl<'e> Mono<'e> {
             });
         }
 
+        // (0b) RFC-0024 §4A (M-704): **dynamic closure application** — `f(x)` where `f` is a closure
+        // VALUE (either a kept dynamic HOF parameter, or any in-scope binder of arrow type `A => B`:
+        // a `let`-bound lambda, a fn value out of a `match`/field/return). Rewrite to a call to the
+        // generated dispatcher `apply$<arrow>(f, x)`. The dispatcher's `match` over the closed
+        // whole-program constructor set IS the dynamic dispatch (§4A.5). Single-argument only in
+        // stage-1 (multi-arg/partial is tuple-gated, §4A.8) — never silent (G2).
+        let dyn_arrow: Option<String> = self.dyn_fn_param.get(name).cloned().or_else(|| {
+            scope
+                .iter()
+                .rev()
+                .find(|(n, _)| n == name)
+                .and_then(|(_, t)| {
+                    if let Ty::Fn(a, b) = t {
+                        Some(mangle_arrow(a, b))
+                    } else {
+                        None
+                    }
+                })
+        });
+        if let Some(arrow) = dyn_arrow {
+            if args.len() != 1 {
+                return residual(
+                    site,
+                    format!(
+                        "closure value `{name}` applied to {} argument(s); only 1 is supported in \
+                         stage-1 (RFC-0024 §4A.8 — multi-arg / partial application is tuple-gated, \
+                         never a silent coercion)",
+                        args.len()
+                    ),
+                );
+            }
+            // Register the arrow so the sum + `apply` dispatcher are scheduled (idempotent). For a
+            // scope-binder closure the arrow types come from the binder's `Ty::Fn`; for a kept
+            // dynamic param the arrow was already registered at the outer call site.
+            if let Some((_, Ty::Fn(a, b))) = scope.iter().rev().find(|(n, _)| n == name) {
+                let (a, b) = (a.as_ref().clone(), b.as_ref().clone());
+                let _ = self.register_arrow(&a, &b);
+            }
+            let apply_name = apply_fn_name(&arrow);
+            let arg2 = self.rewrite(site, scope, &args[0], None)?;
+            return Ok(Expr::App {
+                head: Box::new(Expr::Path(Path(vec![apply_name]))),
+                args: vec![Expr::Path(Path(vec![name.clone()])), arg2],
+            });
+        }
+
         // (1) User function call (the head name is in scope as a fn). Clone the decl so the immutable
         // borrow of `self.src` does not outlive the `&mut self` calls below.
         if let Some(fd) = self.src.fns.get(name).cloned() {
@@ -1047,30 +1430,36 @@ impl<'e> Mono<'e> {
                 } else {
                     self.infer_fn_targs(site, scope, name, &fd, args)?
                 };
-            // Detect fn-typed value parameters and resolve their actual arguments
-            // (RFC-0024 §4, M-687 static defunctionalization).
-            let fn_args = self.resolve_fn_args(site, scope, name, &fd, &targs, args)?;
+            // Detect fn-typed value parameters and classify each actual argument: §4 static
+            // (M-687 — baked + dropped) or §4A dynamic (M-704 — kept as a closure value).
+            let (fn_args, dyn_fns) = self.resolve_fn_args(site, scope, name, &fd, &targs, args)?;
             let want_tys = self.fn_value_param_tys(site, &fd, &targs)?;
-            // Rewrite only the non-fn-typed arguments (fn-typed args are baked into the
-            // specialization key and dropped from the call; they are not emitted in args2).
-            let fn_arg_indices: BTreeSet<usize> = fn_args.iter().map(|(i, _)| *i).collect();
+            // Static fn-args are dropped from the call (baked into the key); dynamic fn-args are
+            // KEPT (the closure value is passed). Build the index sets for each.
+            let static_indices: BTreeSet<usize> = fn_args.iter().map(|(i, _)| *i).collect();
+            let dyn_indices: BTreeSet<usize> = dyn_fns.iter().map(|(i, _)| *i).collect();
             let mut args2 = Vec::with_capacity(args.len());
             for (idx, (a, exp)) in args.iter().zip(want_tys.iter()).enumerate() {
-                if fn_arg_indices.contains(&idx) {
-                    // This argument is a function value — it is baked into the specialization key
-                    // and not passed at the call site (defunctionalized away). Skip it.
-                    // But still enqueue the callee fn so it is emitted (it may not be reachable
-                    // from any other path).
+                if static_indices.contains(&idx) {
+                    // §4 static: defunctionalized away (baked into the key, not passed). Skip.
+                    continue;
+                }
+                if dyn_indices.contains(&idx) {
+                    // §4A dynamic: the argument is a closure value of `exp` (a `Ty::Fn`). Rewriting
+                    // it lowers a lambda to a closure-constructor application, or threads a closure
+                    // binder / dynamic fn value through unchanged. Pass it at the call site.
+                    args2.push(self.rewrite(site, scope, a, Some(exp))?);
                     continue;
                 }
                 args2.push(self.rewrite(site, scope, a, Some(exp))?);
             }
-            let mangled = mangle_hof_decl(name, &targs, &wargs, &fn_args);
+            let mangled = mangle_hof_decl(name, &targs, &wargs, &fn_args, &dyn_fns);
             self.enqueue(Item::Fn {
                 name: name.clone(),
                 targs: targs.clone(),
                 wargs: wargs.clone(),
                 fn_args,
+                dyn_fns,
             });
             return Ok(Expr::App {
                 head: Box::new(Expr::Path(Path(vec![mangled]))),
@@ -1452,17 +1841,242 @@ impl<'e> Mono<'e> {
         })
     }
 
+    /// RFC-0024 §4A.4 (M-704): lower a **named monomorphic fn used as an escaping value** to a
+    /// **nullary** closure constructor of its arrow `a => b` — the dispatcher arm calls the named fn
+    /// directly (`callee_mangled(%fnarg)`). This is the "a bare named fn becomes a nullary
+    /// constructor" case (§4A.4). The named fn is enqueued so it is emitted; the ctor is deduplicated
+    /// by content key (two `let f = double` sites share one constructor — identity fragmentation, G2).
+    fn wrap_named_fn_as_closure(
+        &mut self,
+        fn_name: &str,
+        a: &Ty,
+        b: &Ty,
+    ) -> Result<Expr, ElabError> {
+        let arrow = self.register_arrow(a, b);
+        let callee_mangled = mangle_decl(fn_name, &[]);
+        self.enqueue(Item::Fn {
+            name: fn_name.to_owned(),
+            targs: vec![],
+            wargs: vec![],
+            fn_args: vec![],
+            dyn_fns: vec![],
+        });
+        // The dispatcher body for this constructor is a direct call to the named fn on the apply
+        // argument: `callee_mangled(<param>)`. Use the canonical apply-param name as the lambda
+        // parameter so the `Let` the dispatcher wraps (`let <param> = %fnarg in body`) is the
+        // identity binding `let %fnarg = %fnarg in callee(%fnarg)` — well-formed and inert.
+        let body = Expr::App {
+            head: Box::new(Expr::Path(Path(vec![callee_mangled]))),
+            args: vec![Expr::Path(Path(vec![APPLY_PARAM.to_owned()]))],
+        };
+        let content_key = format!("{arrow}|named:{fn_name}");
+        let sum = self
+            .closures
+            .get_mut(&arrow)
+            .expect("arrow registered above");
+        let ctor_name = if let Some(&idx) = sum.by_key.get(&content_key) {
+            sum.ctors[idx].ctor_name.clone()
+        } else {
+            let n = sum.ctors.len();
+            let ctor_name = format!("Clo${arrow}${n}");
+            sum.ctors.push(ClosureCtor {
+                ctor_name: ctor_name.clone(),
+                captures: Vec::new(),
+                param_name: APPLY_PARAM.to_owned(),
+                body,
+            });
+            sum.by_key.insert(content_key, n);
+            self.closure_specs.insert(
+                ctor_name.clone(),
+                ClosureSpecialization {
+                    arrow: arrow.clone(),
+                    ctor_name: ctor_name.clone(),
+                    captures: Vec::new(),
+                    apply_fn: apply_fn_name(&arrow),
+                },
+            );
+            ctor_name
+        };
+        // A nullary constructor value is a bare `Path` (no fields to apply).
+        Ok(Expr::Path(Path(vec![ctor_name])))
+    }
+
+    /// RFC-0024 §4A (M-704): register a closure tag-sum for the arrow `a => b` (idempotently), and
+    /// schedule its `apply$<arrow>` dispatcher fn so `finish()` emits both. Returns the arrow mangle.
+    /// The sum's `DataInfo` and the dispatcher are built at `finish()` (the whole-program closure set
+    /// is complete only after the worklist drains — §4A.5).
+    fn register_arrow(&mut self, a: &Ty, b: &Ty) -> String {
+        let arrow = mangle_arrow(a, b);
+        self.closures
+            .entry(arrow.clone())
+            .or_insert_with(|| ClosureSum {
+                arrow_a: a.clone(),
+                arrow_b: b.clone(),
+                ctors: Vec::new(),
+                by_key: BTreeMap::new(),
+            });
+        arrow
+    }
+
+    /// RFC-0024 §4A.3/§4A.4 (M-704): lower a `lambda(p: A) => body` at its **definition site** to a
+    /// closure-constructor application of its captured environment. Computes the capture set (free
+    /// variables of `body`, bound in the enclosing `scope`, minus the lambda's parameter and all
+    /// top-level names — §4A.3), registers (deduplicated by content key) one constructor of the
+    /// arrow's tag-sum whose fields are the captured types, rewrites the body under
+    /// `captures ∪ {param}`, and returns `Clo$<arrow>$<n>(cap1, …, capk)` — the value-snapshot
+    /// capture binding (§4A.4). The closure value is an ordinary `Expr::App` of a data constructor
+    /// (no new L0 node — KC-3).
+    fn rewrite_lambda(
+        &mut self,
+        site: &str,
+        scope: &mut Vec<(String, Ty)>,
+        params: &[Param],
+        body: &Expr,
+        expected: Option<&Ty>,
+    ) -> Result<Expr, ElabError> {
+        // Stage-1: exactly one parameter (multi-arg is tuple-gated — §4A.8). The checker already
+        // refused otherwise; this defensive guard keeps mono never-silent (G2).
+        let [param] = params else {
+            return residual(
+                site,
+                format!(
+                    "a `lambda` takes exactly 1 parameter in stage-1; got {} — multi-argument \
+                     lambdas need the tuple-type prerequisite (RFC-0024 §4A.8, FLAG: multi-arg/\
+                     partial-application is tuple-gated — never a silent accept)",
+                    params.len()
+                ),
+            );
+        };
+        // The concrete parameter type (lambda params are always ascribed). Re-infer the body type
+        // under `scope ∪ {param}` to pin the codomain — mirrors `check_lambda`. An `expected` arrow
+        // pins the codomain when the body's type is context-driven (e.g. a bare nullary ctor).
+        let param_ty = self.concrete_ty(site, &[], &BTreeMap::new(), &param.ty)?;
+        let expected_ret: Option<Ty> = match expected {
+            Some(Ty::Fn(_, er)) => Some(er.as_ref().clone()),
+            _ => None,
+        };
+        scope.push((param.name.clone(), param_ty.clone()));
+        let body_ty_res = self.infer_against(site, scope, body, expected_ret.as_ref());
+        scope.pop();
+        let body_ty = body_ty_res?;
+        let arrow = self.register_arrow(&param_ty, &body_ty);
+
+        // §4A.3 capture set: free variables of `body` (single-segment paths not bound inside `body`)
+        // that are **locals in the enclosing `scope`** (so not top-level names) and not the param.
+        // Order = first-occurrence (a total deterministic order — §4A.3 / G2). Each capture's type
+        // comes from the enclosing scope (mono runs post-check, so every binder type is known).
+        let mut bound_in_body: BTreeSet<String> = BTreeSet::new();
+        bound_in_body.insert(param.name.clone());
+        let mut free: Vec<String> = Vec::new();
+        let mut seen_free: BTreeSet<String> = BTreeSet::new();
+        free_vars(body, &mut bound_in_body, &mut seen_free, &mut free);
+        // Keep only those that are locals in the enclosing scope (captured); a name resolving to a
+        // top-level fn/ctor/prim is NOT captured (§4A.3 — handled by `rewrite_path`/§4).
+        let mut captures: Vec<(String, Ty)> = Vec::new();
+        for v in &free {
+            if let Some((_, ty)) = scope.iter().rev().find(|(n, _)| n == v) {
+                captures.push((v.clone(), ty.clone()));
+            }
+        }
+
+        // Rewrite the body under a fresh scope of exactly the captures + the parameter (so captured
+        // locals stay `Path`, the param stays `Path`, and top-level names resolve via `rewrite_path`).
+        let mut body_scope: Vec<(String, Ty)> = captures.clone();
+        body_scope.push((param.name.clone(), param_ty.clone()));
+        let rewritten_body = self.rewrite(
+            site,
+            &mut body_scope,
+            body,
+            expected_ret.as_ref().or(Some(&body_ty)),
+        )?;
+
+        // Content key for dedup: arrow + capture names/types + the param name + the rewritten body.
+        // Two structurally identical closures of one arrow share a constructor (§4 identity
+        // fragmentation; G2). The body's `Debug` is a stable structural fingerprint.
+        let cap_sig: String = captures
+            .iter()
+            .map(|(n, t)| format!("{n}:{}", mangle_ty_or_fn(t)))
+            .collect::<Vec<_>>()
+            .join(",");
+        let content_key = format!("{}|{}|{}|{:?}", arrow, cap_sig, param.name, rewritten_body);
+
+        // Register the constructor (idempotent by content key).
+        let sum = self
+            .closures
+            .get_mut(&arrow)
+            .expect("arrow registered above");
+        let ctor_name = if let Some(&idx) = sum.by_key.get(&content_key) {
+            sum.ctors[idx].ctor_name.clone()
+        } else {
+            let n = sum.ctors.len();
+            let ctor_name = format!("Clo${arrow}${n}");
+            sum.ctors.push(ClosureCtor {
+                ctor_name: ctor_name.clone(),
+                captures: captures.clone(),
+                param_name: param.name.clone(),
+                body: rewritten_body,
+            });
+            sum.by_key.insert(content_key, n);
+            // EXPLAIN (house rule #2): record the closure lowering.
+            self.closure_specs.insert(
+                ctor_name.clone(),
+                ClosureSpecialization {
+                    arrow: arrow.clone(),
+                    ctor_name: ctor_name.clone(),
+                    captures: captures
+                        .iter()
+                        .map(|(n, t)| (n.clone(), format!("{t}")))
+                        .collect(),
+                    apply_fn: apply_fn_name(&arrow),
+                },
+            );
+            ctor_name
+        };
+
+        // Enqueue any generic data instance a capture type names (so a type captured but not otherwise
+        // reachable is still emitted; dedup makes it idempotent). Skip `Ty::Fn` (closure-typed captures
+        // are themselves lowered to their own `Fn$<arrow>` data type, registered when that arrow is).
+        for (_, ty) in &captures {
+            if !matches!(ty, Ty::Fn(_, _)) {
+                self.enqueue_tys_in(ty);
+            }
+        }
+
+        // The capture binding: `Clo$arrow$n(cap1, …, capk)` — the captured *current* values by name
+        // (their bindings in the enclosing scope). A captureless lambda is a nullary constructor.
+        let cap_args: Vec<Expr> = captures
+            .iter()
+            .map(|(n, _)| Expr::Path(Path(vec![n.clone()])))
+            .collect();
+        if cap_args.is_empty() {
+            Ok(Expr::Path(Path(vec![ctor_name])))
+        } else {
+            Ok(Expr::App {
+                head: Box::new(Expr::Path(Path(vec![ctor_name]))),
+                args: cap_args,
+            })
+        }
+    }
+
     /// Resolve the **function-argument identities** for a call to `name` at `targs`, for any
-    /// value-parameter whose (substituted) type is `Ty::Fn` (RFC-0024 §4, M-687). For each such
-    /// parameter, the corresponding actual argument must be an `Expr::Path` naming a statically-
-    /// known top-level function — anything else is a never-silent `Residual` (G2):
-    /// - a closure / lambda: out of scope (RFC-0024 §5)
-    /// - a fn value from a `match` / data field / fn return: dynamic — not statically resolvable
-    /// - a generic function referenced bare (still-generic callee): deferred (FLAG)
+    /// value-parameter whose (substituted) type is `Ty::Fn` (RFC-0024 §4/§4A). For each such
+    /// parameter, classify the actual argument into the §4 **static** path or the §4A **dynamic**
+    /// (closure) path (the hybrid — §4A.2, "try §4 first"):
+    /// - an `Expr::Path` to a statically-known **monomorphic** top-level function → **static**
+    ///   (M-687): bake its identity, drop the param, direct-call inside the body.
+    /// - a HOF value-parameter already bound to a static specialization (`fn_param_subst`) → **static**
+    ///   (M-715 recursive re-pass).
+    /// - a `lambda`, a dynamically-flowing fn value (match/field/return), or a closure binder in scope
+    ///   → **dynamic** (M-704, RFC-0024 §4A): the param is **kept** as a `Fn$<arrow>` closure value;
+    ///   the argument lowers to a closure value; an application of the param inside the body becomes
+    ///   `apply$<arrow>(f, x)`.
+    /// - a still-generic top-level function as a value → deferred (FLAG — RFC-0024 §5).
     ///
-    /// Returns `(param_index, callee_mangled_name)` pairs, sorted by index (deterministic). Also
-    /// enqueues each resolved callee as an `Item::Fn` so it is emitted even if unreachable from
-    /// other paths.
+    /// Returns `(static_fn_args, dyn_fns)`: `static_fn_args` are `(idx, callee_mangled)` (dropped,
+    /// baked); `dyn_fns` are `(idx, arrow_mangle)` (kept, lowered to a closure). Both sorted by index
+    /// (deterministic). Enqueues each resolved static callee so it is emitted even if otherwise
+    /// unreachable. The dynamic arrow is registered (and its `apply`/sum scheduled) lazily.
+    #[allow(clippy::type_complexity)]
     fn resolve_fn_args(
         &mut self,
         site: &str,
@@ -1471,95 +2085,91 @@ impl<'e> Mono<'e> {
         fd: &FnDecl,
         targs: &[Ty],
         args: &[Expr],
-    ) -> Result<Vec<(usize, String)>, ElabError> {
+    ) -> Result<(Vec<(usize, String)>, Vec<(usize, String)>), ElabError> {
         let tyvars = fd.sig.param_names();
         let subst = param_subst(&tyvars, targs);
         let mut fn_args: Vec<(usize, String)> = Vec::new();
+        let mut dyn_fns: Vec<(usize, String)> = Vec::new();
         for (idx, (pm, actual)) in fd.sig.value_params.iter().zip(args).enumerate() {
             let (abstract_ty, _) =
                 resolve_ty(site, &self.src.types, &tyvars, &pm.ty).map_err(|e| res_err(site, e))?;
             let cty = subst_ty(&abstract_ty, &subst);
-            if !matches!(cty, Ty::Fn(_, _)) {
+            let Ty::Fn(arr_a, arr_b) = &cty else {
                 continue; // not a fn-typed parameter — nothing to defunctionalize
-            }
-            // This parameter has type `Ty::Fn(a, b)` — the actual argument must be a statically-
-            // known top-level function name (RFC-0024 §4/§5).
-            let Expr::Path(p) = actual else {
-                return residual(
-                    site,
-                    format!(
-                        "call `{callee_name}` argument #{idx} (parameter `{}`) has function type \
-                         `{cty}` — the actual argument must be a top-level function name (a path), \
-                         not a complex expression; closures / dynamic fn values are deferred \
-                         (RFC-0024 §5 — never a silent coercion)",
-                        pm.name
-                    ),
-                );
             };
-            if p.0.len() != 1 {
-                return residual(
-                    site,
-                    format!(
-                        "function-valued argument `{}` is a dotted path — only top-level \
-                         (single-segment) names are first-class function values in stage-1 \
-                         (RFC-0024 §3, never a silent coercion)",
-                        p.0.join(".")
-                    ),
-                );
+            // §4 static path: a bare top-level monomorphic function name, or a re-passed static HOF
+            // parameter. Anything else routes to the §4A dynamic (closure) path.
+            if let Expr::Path(p) = actual {
+                if p.0.len() == 1 {
+                    let fn_name = &p.0[0];
+                    // M-715 recursive re-pass: a static HOF value-parameter already pinned.
+                    if let Some(mangled) = self.fn_param_subst.get(fn_name) {
+                        fn_args.push((idx, mangled.clone()));
+                        continue;
+                    }
+                    // M-704: a *dynamic* (closure) HOF value-parameter re-passed — thread it through
+                    // as the dynamic closure value of the same arrow (do NOT statically resolve it).
+                    if let Some(arrow) = self.dyn_fn_param.get(fn_name).cloned() {
+                        dyn_fns.push((idx, arrow));
+                        continue;
+                    }
+                    // A closure binder in scope (a `let f = lambda… in map(xs, f)`) — dynamic.
+                    let is_scope_closure = _scope
+                        .iter()
+                        .rev()
+                        .find(|(n, _)| n == fn_name)
+                        .is_some_and(|(_, t)| matches!(t, Ty::Fn(_, _)));
+                    if !is_scope_closure {
+                        if let Some(callee_fd) = self.src.fns.get(fn_name) {
+                            // A still-generic top-level function as a value: deferred (FLAG).
+                            if !callee_fd.sig.params.is_empty() {
+                                return residual(
+                                    site,
+                                    format!(
+                                        "function-valued argument `{fn_name}` for parameter `{}` of \
+                                         `{callee_name}` is still generic (has type parameters) — a \
+                                         generic fn as a value requires type-argument context to \
+                                         defunctionalize; this case is deferred (RFC-0024 §5, FLAG: \
+                                         generic-fn-as-arg — never a silent guess)",
+                                        pm.name
+                                    ),
+                                );
+                            }
+                            // §4 static: a monomorphic top-level function — bake its identity, drop it.
+                            let callee_mangled = mangle_decl(fn_name, &[]);
+                            self.enqueue(Item::Fn {
+                                name: fn_name.clone(),
+                                targs: vec![],
+                                wargs: vec![],
+                                fn_args: vec![],
+                                dyn_fns: vec![],
+                            });
+                            fn_args.push((idx, callee_mangled));
+                            continue;
+                        }
+                        // An unbound fn-valued name — never silent (G2).
+                        return residual(
+                            site,
+                            format!(
+                                "function-valued argument `{fn_name}` for parameter `{}` of \
+                                 `{callee_name}` is not a top-level function nor a closure binder in \
+                                 scope (RFC-0024 §3/§4A — never a silent coercion)",
+                                pm.name
+                            ),
+                        );
+                    }
+                    // else: a closure binder — fall through to the dynamic path below.
+                }
             }
-            let fn_name = &p.0[0];
-            // M-715 (recursive-HOF re-pass): `fn_name` may be a HOF VALUE PARAMETER already bound to a
-            // static specialization in the current emit scope (`fn_param_subst`) — e.g. the recursive
-            // call `map(rest, f)` inside `map`'s defunctionalized body re-passes the fn-param `f`, and
-            // `foldl(rest, f, f(h))` re-passes `f` alongside applying it. Thread it through as the SAME
-            // specialization the outer call pinned (RFC-0024 §4; that callee fn was already enqueued at
-            // the outer site, so no re-enqueue is needed). Checked BEFORE the top-level lookup so a
-            // parameter correctly shadows any same-named top-level fn (lexical scope). Never a silent
-            // guess (G2): an unbound fn-valued name still falls through to the explicit residual below.
-            if let Some(mangled) = self.fn_param_subst.get(fn_name) {
-                fn_args.push((idx, mangled.clone()));
-                continue;
-            }
-            let callee_fd = self
-                .src
-                .fns
-                .get(fn_name)
-                .ok_or_else(|| ElabError::Residual {
-                    site: site.to_owned(),
-                    what: format!(
-                    "function-valued argument `{fn_name}` for parameter `{}` of `{callee_name}` \
-                     is not a top-level function in scope — only named top-level functions are \
-                     first-class values in stage-1 (RFC-0024 §3)",
-                    pm.name
-                ),
-                })?;
-            // A still-generic function as a value argument is deferred (FLAG — RFC-0024 §5).
-            if !callee_fd.sig.params.is_empty() {
-                return residual(
-                    site,
-                    format!(
-                        "function-valued argument `{fn_name}` for parameter `{}` of `{callee_name}` \
-                         is still generic (has type parameters) — a generic fn as a value requires \
-                         type-argument context to defunctionalize; this case is deferred \
-                         (RFC-0024 §5, FLAG: generic-fn-as-arg — never a silent guess)",
-                        pm.name
-                    ),
-                );
-            }
-            // Monomorphic callee — enqueue it and record the resolved identity.
-            let callee_mangled = mangle_decl(fn_name, &[]);
-            self.enqueue(Item::Fn {
-                name: fn_name.clone(),
-                targs: vec![],
-                wargs: vec![], // callee is monomorphic here (no width params)
-                fn_args: vec![],
-            });
-            fn_args.push((idx, callee_mangled));
+            // §4A dynamic path: a lambda, a dynamically-flowing fn value, or a closure binder — the
+            // parameter is kept as a closure value of this arrow. Register the arrow so its sum +
+            // `apply` are emitted at `finish()`.
+            let arrow = self.register_arrow(arr_a, arr_b);
+            dyn_fns.push((idx, arrow));
         }
-        // Sort by index for determinism (already in index order since we iterate params in order,
-        // but make it explicit).
         fn_args.sort_by_key(|(i, _)| *i);
-        Ok(fn_args)
+        dyn_fns.sort_by_key(|(i, _)| *i);
+        Ok((fn_args, dyn_fns))
     }
 
     /// Rewrite a `match` — re-infer the (concrete) scrutinee type, rewrite the scrutinee, then each
@@ -1762,6 +2372,174 @@ impl<'e> Mono<'e> {
 
 // ----- free helpers ----------------------------------------------------------------------------
 
+/// RFC-0024 §4A.2 (M-704): the canonical name of the generated `apply` dispatcher's value argument
+/// (the `x` in `apply(clo, x)`). Uses the `%` fresh-variable character (never a surface-identifier
+/// char — `crate::elab`), so it can never collide with a captured variable or the lambda's parameter.
+const APPLY_PARAM: &str = "%fnarg";
+
+/// RFC-0024 §4A.4 (M-704): the **field type** of a captured variable inside a closure tag-sum's
+/// constructor. A fn-typed capture (a closure capturing a closure) becomes its own arrow tag-sum
+/// `Fn$<inner>` (a nullary `Ty::Data`); everything else takes the existing mangled-nullary form
+/// ([`mangle_ty_in_ty`]) the registry/`field_spec` already consume.
+fn closure_field_ty(t: &Ty) -> Ty {
+    match t {
+        Ty::Fn(a, b) => Ty::Data(mangle_arrow(a, b), vec![]),
+        _ => mangle_ty_in_ty(t),
+    }
+}
+
+/// RFC-0024 §4A.2 (M-704): the surface [`TypeRef`] for an `apply` dispatcher's param/return type. A
+/// fn-typed position (a higher-order arrow `(B => C) => D` etc.) is the closure data type
+/// `Fn$<inner>`; everything else round-trips via [`ty_to_ref`].
+fn closure_param_ref(t: &Ty) -> TypeRef {
+    match t {
+        Ty::Fn(a, b) => ty_to_ref(&Ty::Data(mangle_arrow(a, b), vec![])),
+        _ => ty_to_ref(t),
+    }
+}
+
+/// RFC-0024 §4A.3 (M-704): the **free-variable walk** for closure capture analysis. Collects the
+/// single-segment `Expr::Path` names occurring in `e` that are **not** bound by an enclosing binder
+/// *within* `e` (`Let`, `Match` arm patterns, `For`, inner `Lambda` params) — appended to `out` in
+/// **first-occurrence order** (a total deterministic order — §4A.3 / G2), each once (`seen` dedups).
+/// `bound` carries the names currently in scope inside `e` (seeded with the lambda's own parameter
+/// by the caller); a name in `bound` is local, not free. Whether a *free* name is actually
+/// *captured* (a local of the enclosing scope) vs. a top-level reference is decided by the caller
+/// against the enclosing scope (`rewrite_lambda`).
+///
+/// This is a pure structural walk — never silent, never a guess (G2): every binder the AST exposes
+/// is respected, so `freevars` is invariant under α-renaming of bound variables (the §4A.9 property).
+pub(crate) fn free_vars(
+    e: &Expr,
+    bound: &mut BTreeSet<String>,
+    seen: &mut BTreeSet<String>,
+    out: &mut Vec<String>,
+) {
+    match e {
+        Expr::Path(p) => {
+            if p.0.len() == 1 {
+                let n = &p.0[0];
+                if !bound.contains(n) && seen.insert(n.clone()) {
+                    out.push(n.clone());
+                }
+            }
+        }
+        Expr::Lit(Literal::List(elems)) => {
+            for el in elems {
+                free_vars(el, bound, seen, out);
+            }
+        }
+        Expr::Lit(_) => {}
+        Expr::Let {
+            name,
+            bound: b,
+            body,
+            ..
+        } => {
+            free_vars(b, bound, seen, out);
+            // `name` is bound in `body` only (let is non-recursive at the surface). Respect shadowing.
+            let was = bound.insert(name.clone());
+            free_vars(body, bound, seen, out);
+            if was {
+                bound.remove(name);
+            }
+        }
+        Expr::If { cond, conseq, alt } => {
+            free_vars(cond, bound, seen, out);
+            free_vars(conseq, bound, seen, out);
+            free_vars(alt, bound, seen, out);
+        }
+        Expr::Match { scrutinee, arms } => {
+            free_vars(scrutinee, bound, seen, out);
+            for arm in arms {
+                let mut added: Vec<String> = Vec::new();
+                pattern_binders(&arm.pattern, bound, &mut added);
+                free_vars(&arm.body, bound, seen, out);
+                for n in added {
+                    bound.remove(&n);
+                }
+            }
+        }
+        Expr::For {
+            x,
+            xs,
+            acc,
+            init,
+            body,
+        } => {
+            free_vars(xs, bound, seen, out);
+            free_vars(init, bound, seen, out);
+            let ax = bound.insert(x.clone());
+            let aacc = bound.insert(acc.clone());
+            free_vars(body, bound, seen, out);
+            if aacc {
+                bound.remove(acc);
+            }
+            if ax {
+                bound.remove(x);
+            }
+        }
+        Expr::Swap { value, .. } => free_vars(value, bound, seen, out),
+        Expr::WithParadigm { body, .. } => free_vars(body, bound, seen, out),
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => free_vars(b, bound, seen, out),
+        Expr::Colony(hyphae) => {
+            for h in hyphae {
+                free_vars(&h.body, bound, seen, out);
+            }
+        }
+        Expr::Lambda { params, body } => {
+            // An inner lambda's params shadow inside its body (nested closures — §4A.3).
+            let mut added: Vec<String> = Vec::new();
+            for p in params {
+                if bound.insert(p.name.clone()) {
+                    added.push(p.name.clone());
+                }
+            }
+            free_vars(body, bound, seen, out);
+            for n in added {
+                bound.remove(&n);
+            }
+        }
+        Expr::App { head, args } => {
+            free_vars(head, bound, seen, out);
+            for a in args {
+                free_vars(a, bound, seen, out);
+            }
+        }
+        Expr::Fuse { left, right } => {
+            free_vars(left, bound, seen, out);
+            free_vars(right, bound, seen, out);
+        }
+        Expr::Reclaim { policy, body } => {
+            free_vars(policy, bound, seen, out);
+            free_vars(body, bound, seen, out);
+        }
+        Expr::Ascribe(inner, _) => free_vars(inner, bound, seen, out),
+    }
+}
+
+/// Collect a pattern's binders into `bound` (inserting each newly-bound name), recording the
+/// newly-added names in `added` so the caller can pop them after the arm body. A `Pattern::Ident` is
+/// a binder; a `Pattern::Ctor` recurses into sub-patterns; `Wildcard`/`Lit` bind nothing. (A nullary
+/// constructor written as a bare `Ident` is conservatively treated as a binder here — over-binding
+/// only ever *removes* a name from the capture set, never adds a spurious capture, so it is safe for
+/// the free-variable analysis; the real ctor/binder distinction is the checker's, already done.)
+fn pattern_binders(pat: &Pattern, bound: &mut BTreeSet<String>, added: &mut Vec<String>) {
+    match pat {
+        Pattern::Wildcard | Pattern::Lit(_) => {}
+        Pattern::Ident(n) => {
+            if bound.insert(n.clone()) {
+                added.push(n.clone());
+            }
+        }
+        Pattern::Ctor(_, subs) => {
+            for s in subs {
+                pattern_binders(s, bound, added);
+            }
+        }
+    }
+}
+
 /// The canonical dedup key of a work item — a kind-tagged string so a function and a data type that
 /// happen to mangle to the same name never alias, and `Ty` needs no `Ord` (just its `Display`).
 fn item_key(item: &Item) -> String {
@@ -1771,7 +2549,11 @@ fn item_key(item: &Item) -> String {
             targs,
             wargs,
             fn_args,
-        } => format!("fn:{}", mangle_hof_decl(name, targs, wargs, fn_args)),
+            dyn_fns,
+        } => format!(
+            "fn:{}",
+            mangle_hof_decl(name, targs, wargs, fn_args, dyn_fns)
+        ),
         Item::Data { name, targs } => format!("data:{}", mangle_decl(name, targs)),
         Item::Method {
             trait_name,
@@ -1801,6 +2583,7 @@ pub(crate) fn mangle_hof_decl(
     targs: &[Ty],
     wargs: &[Width],
     fn_args: &[(usize, String)],
+    dyn_fns: &[(usize, String)],
 ) -> String {
     // DN-42 / M-753 step-c: include width arguments in the mangled name so two calls at different
     // widths produce distinct specializations (identity fragmentation; G2 / never-silent).
@@ -1808,7 +2591,7 @@ pub(crate) fn mangle_hof_decl(
     // `Binary{n}` via mangle_ty (consistent with type-arg mangling). Width::Var should never
     // reach here (mono refuses undetermined params first).
     let base = mangle_decl_with_wargs(name, targs, wargs);
-    if fn_args.is_empty() {
+    if fn_args.is_empty() && dyn_fns.is_empty() {
         return base;
     }
     let mut s = base;
@@ -1817,6 +2600,16 @@ pub(crate) fn mangle_hof_decl(
         s.push_str(&idx.to_string());
         s.push(':');
         s.push_str(callee);
+    }
+    // RFC-0024 §4A (M-704): dynamic (kept-as-closure) fn parameters get a distinct `~` joint so a
+    // dynamically-specialized HOF is never confused with a statically-specialized one (`%`) or a
+    // plain specialization (neither). `~` is not a surface-identifier character (the lexer never
+    // produces it), preserving the injective, surface-disjoint mangling property (G2).
+    for (idx, arrow) in dyn_fns {
+        s.push('~');
+        s.push_str(&idx.to_string());
+        s.push(':');
+        s.push_str(arrow);
     }
     s
 }
@@ -1942,6 +2735,32 @@ pub(crate) fn mangle_ctor(name: &str, targs: &[Ty]) -> String {
 /// receiver), which is the honest queryable identity of the resolved dispatch.
 pub(crate) fn mangle_method(method: &str, trait_name: &str, for_ty: &Ty) -> String {
     format!("{method}${trait_name}${}", mangle_ty(for_ty))
+}
+
+/// RFC-0024 §4A.4 (M-704): mangle a closure arrow type `A => B` to the tag-sum data name
+/// `Fn$<A>$<B>` — the same injective, surface-disjoint scheme as [`mangle_decl`] (`$` joints, the
+/// `#` nullary-data tag inside [`mangle_ty`]). A nested arrow recurses ([`mangle_ty_or_fn`]), so a
+/// closure-capturing-closure's arrow names its inner arrow's tag-sum. Distinct arrows ⇒ distinct
+/// names (no silent alias — G2).
+pub(crate) fn mangle_arrow(a: &Ty, b: &Ty) -> String {
+    format!("Fn${}${}", mangle_ty_or_fn(a), mangle_ty_or_fn(b))
+}
+
+/// The generated dispatcher fn name for an arrow mangle `Fn$A$B` → `apply$A$B` (RFC-0024 §4A.2). The
+/// `Fn$`-prefix is stripped so the dispatcher and its sum share the `A$B` suffix (queryable identity).
+pub(crate) fn apply_fn_name(arrow: &str) -> String {
+    let suffix = arrow.strip_prefix("Fn$").unwrap_or(arrow);
+    format!("apply${suffix}")
+}
+
+/// Like [`mangle_ty`] but mangles a `Ty::Fn` to its arrow tag-sum name (`Fn$A$B`) rather than the
+/// loud `HOF_FN_…` leak marker — used inside closure mangling where a fn-typed capture/codomain is a
+/// real, lowered closure type (RFC-0024 §4A). Non-fn types delegate to [`mangle_ty`].
+pub(crate) fn mangle_ty_or_fn(t: &Ty) -> String {
+    match t {
+        Ty::Fn(a, b) => mangle_arrow(a, b),
+        _ => mangle_ty(t),
+    }
 }
 
 /// Rewrite a concrete `Ty` so every applied data type becomes its **mangled-nullary** form
