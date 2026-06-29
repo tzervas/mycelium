@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-29: RFC-0038 §8.4–§8.7 — enforcement granularity, scope resolution, and the deviation manifest, M-847)
+
+- **RFC-0038 enforcement-granularity model (`Proposed`; maintainer direction).** Adds an
+  **enforcement-granularity** axis orthogonal to the `loose`/`inoculated` mode: `whole`
+  (application/spore signature checked once at compile/load — the **application default**, NOT
+  per-call), `module` (per-phylum/nodule), and `call` (per-dispatch — the opt-in trusted-computing
+  extreme). A **scope-resolution hierarchy** (`global ⊃ project ⊃ colony ⊃ module ⊃ nodule ⊃
+  function ⊃ line`) sets the posture once and **auto-decorates everything beneath**, with **granular
+  override** (open up or lock down a specific site) and a never-silent **default-plus-deviations
+  manifest** (G2 — the declared default plus an enumerated list of the sites that differ). **Defaults
+  scale to project kind/maturity** (scripts/interpreted/early → `loose`; library → `inoculated`/
+  `module`; application → `inoculated`/`whole`; trusted-computing → `inoculated`/`call` opt-in). The
+  interpreted path defaults `loose` but supports **opt-in per-inject signing** (dev private key signs,
+  `TrustRoot` public key verifies; `InjectError::BadSignature` added for a wrong/untrusted signer
+  alongside `UnsignedCode`). Gives §M/OQ-M its shape (residual R&D narrowed to the config surface);
+  advances M-836/M-838/M-840. All `Declared`; enacts nothing.
+
 ### Added (2026-06-29: VSA proof-discovery — all three effective-`m` models + both Lean 4 and Liquid Haskell, M-832)
 
 - **All three effective-`m` models, comparatively (M-832 / OQ-F).** The `--proof` mode now discovers
