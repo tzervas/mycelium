@@ -297,9 +297,6 @@ impl Gx<'_> {
                 let _ = self.grade(scope, policy)?;
                 self.grade(scope, body)
             }
-            // M-826: a tuple literal `(a, b, …)` is a constructor application — G-Con applies:
-            // the result grade is the meet of its elements' grades (RFC-0018 §4.6).
-            Expr::Tuple(elems) => self.meet_all(scope, elems),
         }
     }
 
@@ -402,15 +399,6 @@ impl Gx<'_> {
                 1
             }
             Pattern::Ctor(_, subs) => {
-                let mut n = 0;
-                for s in subs {
-                    n += self.bind_pattern(scope, s, g_s);
-                }
-                n
-            }
-            // M-826: a tuple pattern `(x, y, …)` desugars to a constructor pattern; each
-            // sub-binder is bound at the scrutinee's grade (same rule as `Ctor`).
-            Pattern::Tuple(subs) => {
                 let mut n = 0;
                 for s in subs {
                     n += self.bind_pattern(scope, s, g_s);

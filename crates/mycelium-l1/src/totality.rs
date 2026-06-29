@@ -210,14 +210,6 @@ pub(crate) fn walk_expr(e: &Expr, f: &mut impl FnMut(&Expr)) {
             walk_expr(body, f);
         }
         Expr::Path(_) | Expr::Lit(_) => {}
-        // M-826: a tuple literal `(a, b, …)` walks each element transparently — the elements may
-        // contain recursive calls or fn values (structural-descent / call-set analysis must see
-        // them). Tuples introduce no binders, so no shadowing is needed here.
-        Expr::Tuple(elems) => {
-            for el in elems {
-                walk_expr(el, f);
-            }
-        }
     }
 }
 
@@ -410,12 +402,6 @@ fn descend_walk(
             descend_walk(body, pos, param, smaller, ok);
         }
         Expr::Path(_) | Expr::Lit(_) => {}
-        // M-826: tuple literal — walk each element; no binders introduced.
-        Expr::Tuple(elems) => {
-            for el in elems {
-                descend_walk(el, pos, param, smaller, ok);
-            }
-        }
     }
 }
 
@@ -425,13 +411,6 @@ fn pattern_binders(p: &Pattern, out: &mut Vec<String>) {
     match p {
         Pattern::Ident(b) => out.push(b.clone()),
         Pattern::Ctor(_, subs) => {
-            for s in subs {
-                pattern_binders(s, out);
-            }
-        }
-        // M-826: a tuple pattern `(x, y, …)` recurses into its sub-patterns; the binders are
-        // exactly the binders of the sub-patterns (tuples themselves introduce no new binders).
-        Pattern::Tuple(subs) => {
             for s in subs {
                 pattern_binders(s, out);
             }
