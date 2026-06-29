@@ -51,11 +51,15 @@ export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 # `nodejs` is deliberately EXCLUDED — the distro nodejs (18 on 24.04) is below the Node>=20 floor the
 # markdown gate needs (the base image / the node step below provides a current Node).
 #
-# **nala is the driver, not a fallback.** nala is the fastest front-end — it parallelizes downloads
-# across multiple mirrors — so we install nala FIRST (one small apt-get package on a cold container),
-# then drive the bulk batch through nala. Once snapshotted, nala is already present and reused. This
-# is the user's directive: "nala first, then the rest is the fastest solution." apt-get is only the
-# bootstrap-of-nala and the fallback if nala is unavailable.
+# **nala is the driver, not a fallback.** nala is the fastest front-end — it auto-resolves the
+# nearest mirrors (`nala fetch`) and parallelizes downloads across them — so we (1) install nala FIRST
+# (one small apt-get package on a cold container), (2) `nala fetch --auto --https-only` to pick the
+# fastest **HTTPS-only** mirrors, then (3) drive the bulk batch through nala. Once snapshotted, nala +
+# its fetched sources are already present and reused. This is the user's directive: "nala first, with
+# auto source resolution over https, is the fastest solution." apt-get is only nala's bootstrap and
+# the fallback when nala is unavailable OR **non-functional** — some containers ship nala whose
+# `apt_pkg` (python3-apt) binding is broken (ABI/path mismatch), so we probe nala's functionality
+# (`nala --version`), not mere presence, and fall back to apt-get when it can't run.
 section "apt/nala fast-path (snapshot-persisted prebuilt check tools)"
 # package → the binary it provides (probe by binary so a re-run is pure gap-fill).
 declare -A APT_BIN=(
@@ -69,18 +73,30 @@ if have apt-get; then
     ok "apt/nala: all apt-available check tools present"
   else
     SUDO=(); [[ ${EUID:-$(id -u)} -ne 0 ]] && have sudo && SUDO=(sudo)
-    # Step 1 — ensure nala (the fastest, parallel-download front-end) FIRST, via apt-get.
-    if ! have nala; then
-      "${SUDO[@]}" apt-get install -y nala >/dev/null 2>&1 \
+    # nala must be FUNCTIONAL, not merely present: some containers ship nala whose apt_pkg
+    # (python3-apt) binding is broken (ABI/path mismatch) — `have nala` is true but `nala` aborts.
+    nala_ok() { command -v nala >/dev/null 2>&1 && nala --version >/dev/null 2>&1; }
+    # Step 1 — best-effort install nala (fastest front-end) + its python3-apt (apt_pkg) dep via apt-get.
+    if ! command -v nala >/dev/null 2>&1; then
+      "${SUDO[@]}" apt-get install -y nala python3-apt >/dev/null 2>&1 \
         || { "${SUDO[@]}" apt-get update -qq >/dev/null 2>&1 \
-             && "${SUDO[@]}" apt-get install -y nala >/dev/null 2>&1; } || true
+             && "${SUDO[@]}" apt-get install -y nala python3-apt >/dev/null 2>&1; } || true
     fi
-    # Step 2 — drive the bulk batch through nala (parallel); fall back to apt-get only if nala absent.
-    PM=(apt-get); have nala && PM=(nala)
+    # Step 2 — choose the driver: nala IF it actually runs (then auto-resolve the fastest HTTPS
+    # mirrors first), else apt-get. `nala fetch --auto` is non-interactive; `--https-only` keeps the
+    # transport secure (the repo's no-plaintext-fetch posture). Best-effort + never-silent (G2): a
+    # restricted/proxied net that can't reach the mirror master list leaves sources untouched (|| true).
+    PM=(apt-get)
+    if nala_ok; then
+      "${SUDO[@]}" nala fetch --auto --https-only >/dev/null 2>&1 || true
+      PM=(nala)
+    fi
+    # Step 3 — batch-install via the chosen driver; on ANY failure fall back to a fresh apt-get install
+    # (apt-get is the universal hard fallback — proven to work even where nala is broken/absent).
     if "${SUDO[@]}" "${PM[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1 \
-      || { "${SUDO[@]}" "${PM[@]}" update >/dev/null 2>&1 \
-           && "${SUDO[@]}" "${PM[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1; }; then
-      ok "${PM[0]}: installed ${apt_missing[*]}"
+      || { "${SUDO[@]}" apt-get update -qq >/dev/null 2>&1 \
+           && "${SUDO[@]}" apt-get install -y "${apt_missing[@]}" >/dev/null 2>&1; }; then
+      ok "${PM[0]}: installed ${apt_missing[*]} (apt-get fallback if the driver failed)"
     else
       skip "apt/nala batch install failed (offline / restricted / no permission) — the uv/cargo/npx installers below will fill these"
     fi
