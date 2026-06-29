@@ -67,8 +67,20 @@ Validate: `python3 tools/github/doc_refs_check.py`
 
 ### Recently landed (most recent first)
 
-- **L1 surface lane — landed `2026-06-29` (branch `claude/sequential-kickoff-workflow-qbdigb`, PR #750
-  into `dev`; pending merge→`main`+backprop):** the full serial `srf→s10→hof→lwd→strm→r10` lane, run as
+- **Follow-on wave — landed `2026-06-29` on `main` (branch `claude/sequential-kickoff-workflow-qbdigb`;
+  PRs #755→#757 squash to `main`, #758/#759 backprop):** cleared the L1 surface lane's remaining tasks.
+  **M-677** (r10 — declared-effect→`mycelium-interp` budget ledger plus `!{retry(<=3), alloc(<=64KiB)}`
+  surface syntax; overrun→explicit `EffectBudgetExhausted`; KC-3, no new L0 node; three-way differential),
+  **M-819** (`mycfmt --flatten`), **M-820** (`myc --stream`, token-driven and comment-safe), **M-668**
+  (DN-63 R2 planning). 4-leaf Sonnet swarm, octopus-merged, self-reviewed (one Medium VR-5 fix: added
+  the missing AOT differential arm; plus a `mycfmt` budget-render integration fix for the M-677↔M-819
+  round-trip). **DN-57 → Enacted** (#760→#762; surface M-818/M-819/M-820 complete). All gates green
+  including `api` and `doc-index` (nightly now available in-env; baselines refreshed). **The
+  `crates/mycelium-l1` frontend serial lane is now CLEAR → next is the parallel phase (`lib10` long
+  pole, with `rel10`/`kpr`/`tul`).** Open maintainer decisions: `backbone` declared-vs-promoted (R2);
+  partial-application tuple type; `derive`-site consumption model (DN-54); or-patterns/R20-Q5.
+- **L1 surface lane — landed `2026-06-29` (branch `claude/sequential-kickoff-workflow-qbdigb`, PR #750;
+  landed on `main` + backpropped):** the full serial `srf→s10→hof→lwd→strm→r10` lane, run as
   a serial Opus swarm (one isolated-worktree leaf per task, sync-first, octopus-merge + orchestrator
   reconcile). All green (`cargo test -p mycelium-l1` etc.; markdown/drift/doc_refs clean).
   - **M-664 (srf):** `consume <expr>` active expression (operand must be `Substrate`; staged `Residual`

@@ -400,6 +400,14 @@ require a declared `graft` capability on both ends (e.g. `NetworkIO`).
   fits the "declared" framing; the runtime dynamic path fits the "promoted" framing. Both
   appear in RFC-0008 §4.5 ("declared/promoted") — the implementation RFC must choose.
   `Declared` open; maintainer decision needed.
+
+  **FLAG-15 RESOLVED (2026-06-29, maintainer decision M-825; append-only):** `backbone` is
+  **runtime-dynamic promoted**. A transport path is not declared statically in the phylum manifest
+  but is established and promoted dynamically at runtime. The `backbone` implementation RFC proceeds
+  on the promoted-dynamic model. RFC-0008 §4.5 carries the authoritative append-only note. The
+  backbone implementation RFC must specify the promotion mechanism and the `BackboneRef` lifecycle;
+  FLAG-16 below remains open.
+
 - FLAG-16: Is `BackboneRef` affine (like a `graft` capability handle) or freely shareable?
   If a transport path can be used by multiple hyphae simultaneously, it is not affine. But
   if it carries a bounded-capacity guarantee, affinity (or a counted access token) may be
@@ -550,7 +558,7 @@ Consolidated list of all FLAGs raised in §3 and §4:
 | FLAG-12 | §3.4 | Can two `graft`-acquired handles of the same kind be `fuse`-merged? | `graft` implementation RFC; LR-8 interaction |
 | FLAG-13 | §3.5 | What node-level `Meta` signals are available to `PlacementPolicy`? | `forage` implementation RFC |
 | FLAG-14 | §3.5 | What is the result when the `PlacementPolicy` has no valid node candidate? | `forage` implementation RFC |
-| FLAG-15 | §3.6 | Is `backbone` a per-phylum manifest declaration or a runtime dynamic declaration? | **Maintainer decision needed** — the RFC-0008 §4.5 description ("declared/promoted") allows both |
+| FLAG-15 | §3.6 | Is `backbone` a per-phylum manifest declaration or a runtime dynamic declaration? | **RESOLVED 2026-06-29 (M-825):** runtime-dynamic promoted — see §3.6 and RFC-0008 §4.5 append note |
 | FLAG-16 | §3.6 | Is `BackboneRef` affine or freely shareable? | `backbone` implementation RFC |
 
 **Orchestrator FLAGs:**
@@ -583,6 +591,12 @@ This DN is **Resolved** when:
 ---
 
 ## Meta — changelog
+
+- **2026-06-29 — FLAG-15 resolved: `backbone` = runtime-dynamic promoted (M-825, append-only).**
+  Maintainer decision recorded in §3.6 (FLAG-15 resolution note) and §8 FLAG table. `backbone` is
+  runtime-dynamic promoted — not a per-phylum manifest declaration. RFC-0008 §4.5 carries the
+  authoritative append-only note. The backbone implementation RFC proceeds on this basis; FLAG-16
+  (affinity of `BackboneRef`) remains open. DN-63 status unchanged (Draft).
 
 - **2026-06-29 — Draft created (M-668).** Initial R2 decomposition planning capture.
   Per-construct typing and elaboration strategies for `xloc` (§3.1), `mesh` (§3.2), `cyst`

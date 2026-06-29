@@ -1561,18 +1561,22 @@ fn hof_generic_fn_as_value_without_context_is_refused() {
 }
 
 #[test]
-fn hof_multi_param_fn_as_value_is_refused() {
-    // Negative: a multi-parameter function cannot be used as a first-class value in stage-1
-    // (partial application is deferred — RFC-0024 §5, never silently coerced).
+fn hof_multi_param_fn_as_value_arity_mismatch_is_refused() {
+    // Negative: a two-parameter function used where a single-argument fn `A => B` is expected
+    // is a type mismatch even with M-822 currying. M-822 / RFC-0024 §4A.5: `two_args` in value
+    // position gets the curried type `Binary{8} => Binary{8} => Binary{8}` (i.e., `A => (B => C)`),
+    // but the HOF `map` expects `A => B`. Passing the curried value yields
+    // `Result[Binary{8} => Binary{8}, Binary{8}]` rather than `Result[Binary{8}, Binary{8}]`
+    // — a concrete type mismatch, never silently coerced (G2 / VR-5).
     let err = check(
         "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn two_args(x: Binary{8}, y: Binary{8}) => Binary{8} = xor(x, y);\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };\nfn mk_ok() => Result[Binary{8}, Binary{8}] = Ok(0b0000_0001);\nfn main() => Result[Binary{8}, Binary{8}] = map(mk_ok(), two_args);",
     )
-    .expect_err("multi-param fn-as-value must be refused (RFC-0024 §5)");
+    .expect_err("curried two-arg fn where single-arg fn is expected must be a type mismatch");
     assert!(
-        err.message.contains("parameter")
-            || err.message.contains("partial application")
-            || err.message.contains("single-argument"),
-        "refusal must mention partial application / single-arg restriction, got: {}",
+        err.message.contains("type")
+            || err.message.contains("mismatch")
+            || err.message.contains("expected"),
+        "refusal must mention a type or mismatch, got: {}",
         err.message
     );
 }

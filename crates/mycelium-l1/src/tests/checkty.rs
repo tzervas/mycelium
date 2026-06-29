@@ -496,3 +496,224 @@ fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
          a rule's L0 is produced on demand, not spliced into an unrelated `main`)"
     );
 }
+
+// ---- M-826: v0 tuple/product type + lift f(x)(y) chained application ----
+
+/// A tuple literal `(a, b)` checks to `Tuple$2<Nat, Nat>` — the synthetic type is pre-registered
+/// by `register_types`, and the checked env contains the `Tuple$2` DataInfo (KC-3: no new L0 node).
+/// Guarantee: `Empirical` (round-trip tested in `differential.rs`).
+#[test]
+fn tuple_literal_checks_to_synthetic_tuple_type() {
+    let e = env("nodule d;\ntype Nat = Z | S(Nat);\nfn main() => (Nat, Nat) = (Z, S(Z));");
+    // The synthetic `Tuple$2` type must be in the env's type registry.
+    assert!(
+        e.types.contains_key("Tuple$2"),
+        "Tuple$2 must be registered in the env after checking a 2-tuple literal (M-826)"
+    );
+}
+
+/// A tuple type in a function signature is resolved: `(Nat, Nat) => Nat` works as a parameter type.
+#[test]
+fn tuple_type_in_fn_signature_checks() {
+    env(
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn fst(t: (Nat, Nat)) => Nat = match t { (a, _) => a };\nfn main() => Nat = fst((S(Z), Z));",
+    );
+}
+
+/// A tuple pattern `(x, y)` destructures a 2-tuple in a `match` arm (G2: never silent on type mismatch).
+#[test]
+fn tuple_pattern_destructures_in_match() {
+    env(
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn snd(t: (Nat, Nat)) => Nat = match t { (_, b) => b };\nfn main() => Nat = snd((Z, S(Z)));",
+    );
+}
+
+/// A 3-tuple literal and 3-tuple type check (arity ≥ 2 is the surface contract).
+#[test]
+fn triple_tuple_literal_checks() {
+    env(
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn mid(t: (Nat, Nat, Nat)) => Nat = match t { (_, b, _) => b };\nfn main() => Nat = mid((Z, S(Z), Z));",
+    );
+}
+
+/// A type mismatch in a tuple literal is an explicit, never-silent error (G2).
+#[test]
+fn tuple_element_type_mismatch_is_explicit_error() {
+    let err = check_err("nodule d;\ntype Nat = Z | S(Nat);\nfn main() => (Nat, Nat) = (Z, True);");
+    assert!(
+        !err.message.is_empty(),
+        "a tuple element type mismatch must produce an explicit error (G2 — never silent, M-826)"
+    );
+}
+
+/// `f(x)(y)` — chained (HOF) application where the head `f(x)` has function type `Nat -> Nat`.
+/// Part 2 of M-826: lifting the first-order application restriction (RFC-0007 §4.4 narrowing).
+#[test]
+fn chained_hof_application_f_x_y_checks() {
+    // `apply` takes a function `Nat -> Nat` and returns it; `apply(succ)(Z)` chains application.
+    env(
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn succ(n: Nat) => Nat = S(n);\nfn apply(f: Nat => Nat) => (Nat => Nat) = f;\nfn main() => Nat = apply(succ)(Z);",
+    );
+}
+
+/// A non-function head in application position is an explicit error (G2 — never silent, M-826).
+#[test]
+fn non_function_head_in_app_is_explicit_error() {
+    let err = check_err("nodule d;\ntype Nat = Z | S(Nat);\nfn main() => Nat = Z(Z);");
+    // Z is a nullary constructor; calling it like a function (Z(Z)) should fail.
+    assert!(
+        !err.message.is_empty(),
+        "applying a non-function value must produce an explicit error (G2 — never silent, M-826)"
+    );
+}
+
+// ---- RFC-0020 §9 / R20-Q3: or-patterns — checker desugar + binding-consistency ----------------
+
+/// A two-alternative or-pattern desugars to two plain arms sharing the same body. The checker
+/// expands `A | B => e` into `A => e, B => e` before coverage/exhaustiveness analysis.
+/// After desugar the checked program is functionally equivalent to writing the arms separately
+/// (KC-3: zero L0 kernel growth — uses the existing Match/Alt machinery).
+#[test]
+fn or_pattern_two_alts_checks_and_desugars() {
+    // `Zero | One => 0b1` is the only arm — exhaustive because both constructors are covered.
+    let _ = env(
+        "nodule d;\ntype Bit = Zero | One;\nfn classify(b: Bit) => Binary{1} = \
+         match b { Zero | One => 0b1 };",
+    );
+}
+
+/// A three-alternative or-pattern with a wildcard arm checks exhaustively.
+#[test]
+fn or_pattern_three_alts_checks() {
+    let _ = env(
+        "nodule d;\ntype Sign = Neg | Zero | Pos;\nfn is_zero(s: Sign) => Binary{1} = \
+         match s { Zero => 0b1, Neg | Pos => 0b0 };",
+    );
+}
+
+/// Or-pattern is equivalent to separate arms: `A | B => e` must type-check to the same result as
+/// `A => e, B => e`. Both programs must be accepted by the checker.
+#[test]
+fn or_pattern_equivalent_to_two_separate_arms() {
+    // or-pattern form
+    let _ = env(
+        "nodule d;\ntype Bit = Zero | One;\nfn f(b: Bit) => Binary{2} = \
+         match b { Zero | One => 0b00 };",
+    );
+    // explicit two-arm form (same semantics)
+    let _ = env(
+        "nodule d;\ntype Bit = Zero | One;\nfn f(b: Bit) => Binary{2} = \
+         match b { Zero => 0b00, One => 0b00 };",
+    );
+}
+
+/// Binding-consistency check (G2 / never-silent): every alternative of an or-pattern must bind
+/// the same set of variable names at the same types. A mismatch is a `CheckError`.
+#[test]
+fn or_pattern_binding_inconsistency_is_refused() {
+    // `Pair` has two fields; `Mk(a, b) | Mk(a, _)` binds `{a, b}` vs `{a}` — mismatch.
+    let err = check_err(
+        "nodule d;\ntype Pair = Mk(Binary{8}, Binary{8});\nfn f(p: Pair) => Binary{8} = \
+         match p { Mk(a, b) | Mk(a, _) => a };",
+    );
+    // The error must cite or-pattern binding consistency (G2).
+    assert!(
+        err.message.contains("or-pattern") || err.message.contains("alternative"),
+        "expected binding-consistency error, got: {}",
+        err.message
+    );
+}
+
+/// Or-pattern bodies must agree on type. `Zero | One => 0b1` is a single body (correct);
+/// separate arms with different body types is an arm-agreement error (different code path).
+/// This test pins that the or-pattern desugared arms still produce a check-time type error when
+/// the ARM types disagree (no separate body per alternative — the body is shared, so this is
+/// actually impossible via or-pattern alone; test the separate-arm disagreement path instead).
+#[test]
+fn or_pattern_arms_type_disagreement_is_refused() {
+    // The two arms have different result types: `Zero => 0b0` (Binary{8}), `One => 0t0` (Ternary{1}).
+    let err = check_err(
+        "nodule d;\ntype Bit = Zero | One;\nfn f(b: Bit) => Binary{8} = \
+         match b { Zero => 0b0000_0000, One => 0t0 };",
+    );
+    assert!(
+        err.message.contains("disagree") || err.message.contains("arm"),
+        "expected arm-type-disagreement error, got: {}",
+        err.message
+    );
+}
+
+// ---- RFC-0020 §9 / R20-Q5: list-literal bidirectional inference from context ------------------
+//
+// R20-Q5 status (RFC-0020 §9 changelog):
+// - **Already works**: a list literal `[e1, …]` checked against an expected `Seq{T, N}` type (from
+//   a function parameter annotation, a `let` binding annotation, or a return-type context) receives
+//   the element type `T` bidirectionally — bare-decimal literals resolve to `T`, heterogeneous
+//   elements are refused (never-silent, G2).
+// - **Still conservative**: the two-pass feedback from a `for`-body constraining the list-literal
+//   spine's element type (the original R20-Q5 circular case) is NOT implemented — a list literal
+//   used as the `xs` spine of a `for` loop with only body-derived element-type information still
+//   requires an explicit element type (via explicit literals or a typed parameter). The two-pass
+//   relaxation remains a tracked improvement (RFC-0020 §9).
+//
+// These tests pin the already-working cases and the conservative rejection.
+
+/// A list literal checked against a `Seq{Binary{8}, N}` parameter type: the `Binary{8}` element
+/// type flows into the literal bidirectionally (element type from context, not bottom-up). Bare
+/// explicit bit-literals work; the function return type drives the whole flow.
+#[test]
+fn list_literal_element_type_from_seq_param_context() {
+    // `xs: Seq{Binary{8}, 3}` — the call site `[0b1111_0000, 0b0000_1111, 0b1010_1010]` is typed
+    // against `Seq{Binary{8}, 3}`: the element type `Binary{8}` flows into each element
+    // bidirectionally (the list literal's `expected` is `Some(Seq{Binary{8}, 3})`).
+    let _ = env(
+        "nodule d;\nfn id(xs: Seq{Binary{8}, 3}) => Seq{Binary{8}, 3} = xs;\n\
+         fn main() => Seq{Binary{8}, 3} = id([0b1111_0000, 0b0000_1111, 0b1010_1010]);",
+    );
+}
+
+/// A list literal whose length disagrees with the expected `Seq{T, N}` length is a never-silent
+/// check error (G2 / RFC-0032 D3 — never a silent truncation or padding).
+#[test]
+fn list_literal_length_mismatch_against_expected_seq_is_refused() {
+    let err = check_err(
+        "nodule d;\nfn id(xs: Seq{Binary{8}, 3}) => Seq{Binary{8}, 3} = xs;\n\
+         fn main() => Seq{Binary{8}, 3} = id([0b1111_0000, 0b0000_1111]);",
+    );
+    assert!(
+        err.message.contains("length") || err.message.contains("Seq"),
+        "expected length-mismatch error, got: {}",
+        err.message
+    );
+}
+
+/// A heterogeneous list literal (mixing `Binary{8}` and `Ternary{1}` elements) is a never-silent
+/// check error (G2 / RFC-0032 D3 — list elements must be homogeneous).
+#[test]
+fn list_literal_heterogeneous_elements_are_refused() {
+    let err = check_err(
+        "nodule d;\nfn f(xs: Seq{Binary{8}, 2}) => Seq{Binary{8}, 2} = xs;\n\
+         fn main() => Seq{Binary{8}, 2} = f([0b0000_0000, 0t0]);",
+    );
+    assert!(
+        err.message.contains("element")
+            || err.message.contains("homogeneous")
+            || err.message.contains("type"),
+        "expected element-heterogeneity error, got: {}",
+        err.message
+    );
+}
+
+/// An empty list literal `[]` with no expected `Seq{T, N}` type and no elements is a never-silent
+/// error — the element type is undetermined (G2 / RFC-0032 D3).
+#[test]
+fn empty_list_literal_without_context_is_refused() {
+    let err = check_err("nodule d;\nfn f() => Binary{8} = let _ = [] in 0b0000_0000;");
+    assert!(
+        err.message.contains("empty")
+            || err.message.contains("element type")
+            || err.message.contains("Seq"),
+        "expected undetermined-element-type error for empty `[]`, got: {}",
+        err.message
+    );
+}

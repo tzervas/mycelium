@@ -637,6 +637,16 @@ impl Resolver {
                 policy: Box::new(self.expr(amb, site, policy)?),
                 body: Box::new(self.expr(amb, site, body)?),
             },
+            // M-826: propagate the ambient paradigm into each element of a tuple literal.
+            // A tuple literal `(a, b, …)` may contain repr literals (e.g. bare decimals); each
+            // element gets the same ambient as the enclosing context.
+            Expr::TupleLit(elems) => {
+                let mut out = Vec::with_capacity(elems.len());
+                for el in elems {
+                    out.push(self.expr(amb, site, el)?);
+                }
+                Expr::TupleLit(out)
+            }
         })
     }
 
@@ -697,7 +707,26 @@ impl Resolver {
                 }
                 Pattern::Ctor(name.clone(), out)
             }
+            // M-826: propagate the ambient paradigm into sub-patterns of a tuple pattern.
+            Pattern::Tuple(subs) => {
+                let mut out = Vec::with_capacity(subs.len());
+                for s in subs {
+                    out.push(self.pattern(amb, site, s)?);
+                }
+                Pattern::Tuple(out)
+            }
             Pattern::Wildcard | Pattern::Ident(_) => p.clone(),
+            // `Pattern::Or` alternatives are surface syntax (RFC-0020 §9 / R20-Q3): the ambient
+            // pass runs BEFORE the checker (which desugars `Or` into flat arms), so we walk each
+            // alternative and apply ambient literal resolution to it — the same transformation
+            // applied to any other pattern. The `Or` node itself carries no ambient information.
+            Pattern::Or(alts) => {
+                let mut resolved = Vec::with_capacity(alts.len());
+                for alt in alts {
+                    resolved.push(self.pattern(amb, site, alt)?);
+                }
+                Pattern::Or(resolved)
+            }
         })
     }
 }
@@ -1012,6 +1041,11 @@ impl core::fmt::Display for DisplayBase<'_> {
                     write!(f, "{lhs} => {}", print_type_ref(ret))
                 }
             }
+            // M-826: tuple type `(T, U, …)` — rendered in canonical surface form.
+            BaseType::Tuple(elems) => {
+                let parts: Vec<String> = elems.iter().map(print_type_ref).collect();
+                write!(f, "({})", parts.join(", "))
+            }
         }
     }
 }
@@ -1133,6 +1167,11 @@ fn print_expr(e: &Expr) -> String {
         Expr::Reclaim { policy, body } => {
             format!("reclaim({}) {{ {} }}", print_expr(policy), print_expr(body))
         }
+        // M-826: tuple literal `(a, b, …)`.
+        Expr::TupleLit(elems) => {
+            let parts: Vec<String> = elems.iter().map(print_expr).collect();
+            format!("({})", parts.join(", "))
+        }
     }
 }
 
@@ -1145,6 +1184,18 @@ fn print_pattern(p: &Pattern) -> String {
             format!("{n}({})", s.join(", "))
         }
         Pattern::Ident(n) => n.clone(),
+        // M-826: tuple pattern `(x, y, …)`.
+        Pattern::Tuple(subs) => {
+            let s: Vec<String> = subs.iter().map(print_pattern).collect();
+            format!("({})", s.join(", "))
+        }
+        // `Pattern::Or` is surface syntax (RFC-0020 §9 / R20-Q3). The ambient printer runs before
+        // the checker desugars `Or`, so round-trip it as `p1 | p2 | …` (the surface form).
+        Pattern::Or(alts) => alts
+            .iter()
+            .map(print_pattern)
+            .collect::<Vec<_>>()
+            .join(" | "),
     }
 }
 

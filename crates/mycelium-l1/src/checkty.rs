@@ -645,8 +645,272 @@ pub(crate) fn resolve_ty(
             let (ret_ty, _) = resolve_ty(site, types, tyvars, ret)?;
             Ty::Fn(Box::new(param_ty), Box::new(ret_ty))
         }
+        // M-826: a tuple type `(T, U, …)` resolves to `Ty::Data("Tuple$N", [T, U, …])` where
+        // `Tuple$N` is the synthetic single-constructor product type registered by
+        // `register_tuple_types`. Arity ≥ 2 is enforced by the parser; the registration must have
+        // happened before checking (KC-3 — no new kernel node, desugars to existing Construct/Match).
+        // Guarantee: `Empirical` (construct→destructure round-trip tested — M-826).
+        BaseType::Tuple(elems) => {
+            let n = elems.len();
+            let tname = tuple_type_name(n);
+            if !types.contains_key(&tname) {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "internal: synthetic tuple type `{tname}` not registered — \
+                         `register_tuple_types` must run before the checker (M-826; never silent)"
+                    ),
+                ));
+            }
+            let mut resolved = Vec::with_capacity(n);
+            for e in elems {
+                resolved.push(resolve_ty(site, types, tyvars, e)?.0);
+            }
+            Ty::Data(tname, resolved)
+        }
     };
     Ok((base, t.guarantee))
+}
+
+/// The synthetic name for a tuple type of arity `n` (M-826, KC-3). Injective over n; `$` is not
+/// a surface-identifier character, so this name cannot collide with user-defined types.
+/// `Tuple$2` = the 2-tuple (pair), `Tuple$3` = the 3-tuple, etc.
+#[must_use]
+pub(crate) fn tuple_type_name(n: usize) -> String {
+    format!("Tuple${n}")
+}
+
+/// The synthetic constructor name for a tuple of arity `n` (M-826). Same injective scheme.
+#[must_use]
+pub(crate) fn tuple_ctor_name(n: usize) -> String {
+    format!("MkTuple${n}")
+}
+
+/// Synthesize the [`DataInfo`] for a tuple of arity `n` (n ≥ 2; M-826, KC-3). The type has `n`
+/// type parameters `T0 … T{n-1}` and a single constructor `MkTuple$N(T0, T1, …)`.
+/// This is a pure data declaration (no kernel node — KC-3); the checker registers it on demand.
+#[must_use]
+pub(crate) fn synthetic_tuple_data(n: usize) -> DataInfo {
+    let params: Vec<String> = (0..n).map(|i| format!("T{i}")).collect();
+    let fields: Vec<Ty> = params.iter().map(|p| Ty::Var(p.clone())).collect();
+    DataInfo {
+        name: tuple_type_name(n),
+        params: params.clone(),
+        ctors: vec![CtorInfo {
+            name: tuple_ctor_name(n),
+            fields,
+        }],
+    }
+}
+
+/// Walk a nodule and collect all tuple arities referenced (in `BaseType::Tuple` and
+/// `Expr::TupleLit`) so `register_types` can pre-register the synthetic `Tuple$N` data types
+/// before checking. Uses a recursive AST scan (pre-order, no depth guard needed — it's a scan,
+/// not evaluation).
+pub(crate) fn collect_tuple_arities(nodule: &Nodule) -> std::collections::BTreeSet<usize> {
+    let mut arities = std::collections::BTreeSet::new();
+    for item in &nodule.items {
+        collect_tuple_arities_item(item, &mut arities);
+    }
+    arities
+}
+
+fn collect_tuple_arities_item(
+    item: &crate::ast::Item,
+    out: &mut std::collections::BTreeSet<usize>,
+) {
+    use crate::ast::Item;
+    match item {
+        Item::Fn(fd) => {
+            collect_tuple_arities_sig(&fd.sig, out);
+            collect_tuple_arities_expr(&fd.body, out);
+        }
+        Item::Type(td) => {
+            for ctor in &td.ctors {
+                for f in &ctor.fields {
+                    collect_tuple_arities_typeref(f, out);
+                }
+            }
+        }
+        Item::Trait(tr) => {
+            for sig in &tr.sigs {
+                collect_tuple_arities_sig(sig, out);
+            }
+        }
+        Item::Impl(id) => {
+            for t in &id.trait_args {
+                collect_tuple_arities_typeref(t, out);
+            }
+            collect_tuple_arities_typeref(&id.for_ty, out);
+            for m in &id.methods {
+                collect_tuple_arities_sig(&m.sig, out);
+                collect_tuple_arities_expr(&m.body, out);
+            }
+        }
+        Item::Object(od) => {
+            for f in &od.ctor.fields {
+                collect_tuple_arities_typeref(f, out);
+            }
+            for impl_d in &od.impls {
+                for t in &impl_d.trait_args {
+                    collect_tuple_arities_typeref(t, out);
+                }
+                collect_tuple_arities_typeref(&impl_d.for_ty, out);
+                for m in &impl_d.methods {
+                    collect_tuple_arities_sig(&m.sig, out);
+                    collect_tuple_arities_expr(&m.body, out);
+                }
+            }
+            for f in &od.fns {
+                collect_tuple_arities_sig(&f.sig, out);
+                collect_tuple_arities_expr(&f.body, out);
+            }
+        }
+        Item::Lower(ld) => {
+            collect_tuple_arities_expr(&ld.rhs, out);
+        }
+        Item::InherentImpl(iid) => {
+            collect_tuple_arities_typeref(&iid.for_ty, out);
+            for m in &iid.methods {
+                collect_tuple_arities_sig(&m.sig, out);
+                collect_tuple_arities_expr(&m.body, out);
+            }
+        }
+        Item::Use(_) | Item::Default(_) | Item::Derive(_) => {}
+    }
+}
+
+fn collect_tuple_arities_typeref(tr: &TypeRef, out: &mut std::collections::BTreeSet<usize>) {
+    use crate::ast::BaseType;
+    match &tr.base {
+        BaseType::Tuple(elems) => {
+            out.insert(elems.len());
+            for e in elems {
+                collect_tuple_arities_typeref(e, out);
+            }
+        }
+        BaseType::Seq { elem, .. } => collect_tuple_arities_typeref(elem, out),
+        BaseType::Named(_, args) => {
+            for a in args {
+                collect_tuple_arities_typeref(a, out);
+            }
+        }
+        BaseType::Fn(a, b) => {
+            collect_tuple_arities_typeref(a, out);
+            collect_tuple_arities_typeref(b, out);
+        }
+        _ => {}
+    }
+}
+
+fn collect_tuple_arities_sig(sig: &crate::ast::FnSig, out: &mut std::collections::BTreeSet<usize>) {
+    for p in &sig.value_params {
+        collect_tuple_arities_typeref(&p.ty, out);
+    }
+    collect_tuple_arities_typeref(&sig.ret, out);
+}
+
+/// Scan a pattern for tuple arities (M-826) — a `Pattern::Tuple` of arity N requires the synthetic
+/// `Tuple$N` data type to be registered before checking, even when no `TupleLit` of that arity is
+/// constructed in the nodule. Recurses through constructor sub-patterns and or-pattern alternatives.
+fn collect_tuple_arities_pattern(p: &Pattern, out: &mut std::collections::BTreeSet<usize>) {
+    match p {
+        Pattern::Tuple(subs) => {
+            out.insert(subs.len());
+            for sub in subs {
+                collect_tuple_arities_pattern(sub, out);
+            }
+        }
+        Pattern::Ctor(_, subs) => {
+            for sub in subs {
+                collect_tuple_arities_pattern(sub, out);
+            }
+        }
+        Pattern::Or(alts) => {
+            for alt in alts {
+                collect_tuple_arities_pattern(alt, out);
+            }
+        }
+        Pattern::Wildcard | Pattern::Lit(_) | Pattern::Ident(_) => {}
+    }
+}
+
+fn collect_tuple_arities_expr(e: &crate::ast::Expr, out: &mut std::collections::BTreeSet<usize>) {
+    use crate::ast::Expr;
+    match e {
+        Expr::TupleLit(elems) => {
+            out.insert(elems.len());
+            for el in elems {
+                collect_tuple_arities_expr(el, out);
+            }
+        }
+        Expr::Let {
+            bound, body, ty, ..
+        } => {
+            if let Some(t) = ty {
+                collect_tuple_arities_typeref(t, out);
+            }
+            collect_tuple_arities_expr(bound, out);
+            collect_tuple_arities_expr(body, out);
+        }
+        Expr::If { cond, conseq, alt } => {
+            collect_tuple_arities_expr(cond, out);
+            collect_tuple_arities_expr(conseq, out);
+            collect_tuple_arities_expr(alt, out);
+        }
+        Expr::Match { scrutinee, arms } => {
+            collect_tuple_arities_expr(scrutinee, out);
+            for arm in arms {
+                // M-826 (self-review M1): a tuple pattern that is only ever *destructured* — never
+                // constructed as a `TupleLit` nor named in a type annotation elsewhere in the nodule —
+                // still needs its synthetic `Tuple$N` arity registered, or the checker hits an internal
+                // "tuple type not registered" panic instead of a user diagnostic. Scan the arm pattern,
+                // not just its body.
+                collect_tuple_arities_pattern(&arm.pattern, out);
+                collect_tuple_arities_expr(&arm.body, out);
+            }
+        }
+        Expr::For { xs, init, body, .. } => {
+            collect_tuple_arities_expr(xs, out);
+            collect_tuple_arities_expr(init, out);
+            collect_tuple_arities_expr(body, out);
+        }
+        Expr::Swap { value, .. } => collect_tuple_arities_expr(value, out),
+        Expr::Wild(b) | Expr::Spore(b) | Expr::Consume(b) => {
+            collect_tuple_arities_expr(b, out);
+        }
+        Expr::Colony(hyphae) => {
+            for h in hyphae {
+                collect_tuple_arities_expr(&h.body, out);
+            }
+        }
+        Expr::Lambda { params, body } => {
+            for p in params {
+                collect_tuple_arities_typeref(&p.ty, out);
+            }
+            collect_tuple_arities_expr(body, out);
+        }
+        Expr::App { head, args } => {
+            collect_tuple_arities_expr(head, out);
+            for a in args {
+                collect_tuple_arities_expr(a, out);
+            }
+        }
+        Expr::Fuse { left, right } => {
+            collect_tuple_arities_expr(left, out);
+            collect_tuple_arities_expr(right, out);
+        }
+        Expr::Reclaim { policy, body } => {
+            collect_tuple_arities_expr(policy, out);
+            collect_tuple_arities_expr(body, out);
+        }
+        Expr::Ascribe(inner, t) => {
+            collect_tuple_arities_expr(inner, out);
+            collect_tuple_arities_typeref(t, out);
+        }
+        Expr::WithParadigm { body, .. } => collect_tuple_arities_expr(body, out),
+        Expr::Path(_) | Expr::Lit(_) => {}
+    }
 }
 
 /// The checked environments of a whole **phylum** (M-662): one [`Env`] per nodule, paired with the
@@ -1247,6 +1511,17 @@ pub(crate) fn register_types(
     types: &mut BTreeMap<String, DataInfo>,
     nodule: &Nodule,
 ) -> Result<(), CheckError> {
+    // M-826: pre-register synthetic Tuple$N types for all arities referenced in this nodule.
+    // This must run BEFORE the user-type registration below, because resolve_ty (called during
+    // ctor resolution) needs to look up Tuple$N in `types`. Never-silent: resolve_ty checks the
+    // table and returns an explicit error if a referenced Tuple$N is missing (G2).
+    for arity in collect_tuple_arities(nodule) {
+        let tname = tuple_type_name(arity);
+        types
+            .entry(tname)
+            .or_insert_with(|| synthetic_tuple_data(arity));
+    }
+
     for item in &nodule.items {
         if let Item::Type(td) = item {
             if let Some(dup) = first_duplicate(&td.params) {
@@ -2746,6 +3021,10 @@ impl Cx<'_> {
             ),
             Expr::Ascribe(inner, t) => self.check_ascribe(scope, inner, t),
             Expr::App { head, args } => self.check_app(scope, head, args, expected),
+            // M-826: `(a, b, …)` — a tuple literal (arity ≥ 2). Desugars to a constructor
+            // application `MkTuple$N(a, b, …)` on the synthetic `Tuple$N<A, B, …>` data type
+            // (KC-3 — no new L0 node). Guarantee: `Empirical` (round-trip tested in differential.rs).
+            Expr::TupleLit(elems) => self.check_tuple_lit(scope, elems, expected),
             // DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice.
             Expr::Fuse { left, right } => self.check_fuse(scope, left, right, expected),
             // DN-58 §B (M-667): `reclaim(policy) { body }` — supervised scope.
@@ -2853,14 +3132,66 @@ impl Cx<'_> {
         // its type arguments is a never-silent refusal (G2/VR-5); a multi-value-param function is
         // refused explicitly (partial application is out-of-scope per RFC-0024 §5).
         if let Some(fd) = self.fns.get(name) {
-            // Multi-param or zero-param (nullary) functions: partial application is deferred (RFC-0024 §5).
-            if fd.sig.value_params.len() != 1 {
+            // Nullary fn: not a value — cannot be used in function-value position (G2).
+            if fd.sig.value_params.is_empty() {
                 return self.err(format!(
-                    "`{name}` has {} value parameter(s) — only single-argument functions can be \
-                     used as first-class values in stage-1; partial application is deferred \
-                     (RFC-0024 §5, never a silent coercion)",
-                    fd.sig.value_params.len()
+                    "`{name}` takes 0 value parameters — a nullary function is not a \
+                     first-class value; apply it directly (never a silent coercion — G2)"
                 ));
+            }
+            // Multi-parameter monomorphic fn (M-822 / RFC-0024 §4A.5): used as a first-class value,
+            // synthesize the curried type `A -> B -> … -> Z` and return a curried lambda expression
+            // wrapping the saturated call. Zero-param is refused above; generic multi-param fns
+            // need type-arg context from the expected type — deferred (never a silent accept, G2).
+            if fd.sig.value_params.len() > 1 {
+                if !fd.sig.params.is_empty() {
+                    return self.err(format!(
+                        "`{name}` is generic and multi-parameter — using a generic multi-parameter \
+                         function as a first-class value requires type arguments from context; \
+                         ascribe the value (RFC-0024 §4A.5, never a silent coercion — G2)"
+                    ));
+                }
+                // Monomorphic multi-param fn: compute the curried type and return the
+                // lambda wrapper expression. `check_path` has a read-only scope, so we build
+                // the final checked expression structurally (no re-checking needed for a monomorphic
+                // fn — all types are concrete from the declaration).
+                let vparams = fd.sig.value_params.clone();
+                // Resolve each parameter type and the return type.
+                let mut param_tys: Vec<Ty> = Vec::with_capacity(vparams.len());
+                for p in &vparams {
+                    param_tys.push(resolve_ty(self.site, self.types, &[], &p.ty)?.0);
+                }
+                let ret_ty = resolve_ty(self.site, self.types, &[], &fd.sig.ret)?.0;
+                // Build the curried type: A -> (B -> (… -> Z)) (right-associative).
+                let curried_ty = param_tys.iter().rev().fold(ret_ty.clone(), |acc, t| {
+                    Ty::Fn(Box::new(t.clone()), Box::new(acc))
+                });
+                // Bidirectional: if an expected type is given, it must match (never a coercion).
+                if let Some(exp) = expected {
+                    if exp != &curried_ty {
+                        return self.err(format!(
+                            "`{name}` has curried type `{curried_ty}`, but the context expects \
+                             `{exp}` (type mismatch — RFC-0024 §4A.5, never a silent coercion)"
+                        ));
+                    }
+                }
+                // Build the saturated call inside the innermost lambda.
+                let call = Expr::App {
+                    head: Box::new(e.clone()),
+                    args: vparams
+                        .iter()
+                        .map(|p| Expr::Path(Path(vec![p.name.clone()])))
+                        .collect(),
+                };
+                // Build curried lambda: lambda(p1: A) => lambda(p2: B) => … => name(p1…pN).
+                let mut body: Expr = call;
+                for p in vparams.iter().rev() {
+                    body = Expr::Lambda {
+                        params: vec![p.clone()],
+                        body: Box::new(body),
+                    };
+                }
+                return Ok((curried_ty, body));
             }
             // Monomorphic callee: resolve the param and return types directly.
             if fd.sig.params.is_empty() {
@@ -2954,9 +3285,12 @@ impl Cx<'_> {
     /// which reuses this typing via re-inference (`infer_type`) — no new `Ty` variant here (the closure
     /// struct is an ordinary `Ty::Data` post-mono; §4A.6).
     ///
-    /// **Single-argument only in stage-1.** A zero- or multi-parameter lambda needs the tuple-type
-    /// prerequisite (§4A.8 — the v0 surface has no product type), so it is an **explicit refusal**
-    /// (FLAG: multi-arg/partial application is tuple-gated), never a silent accept (G2/VR-5).
+    /// **Multi-argument currying (M-822 / RFC-0024 §4A.5/§4A.8).** A multi-parameter lambda
+    /// `lambda(p1: A, p2: B, …, pN: Z) => body` is treated as curried:
+    /// `lambda(p1: A) => lambda(p2: B) => … => lambda(pN: Z) => body`. This is the RFC-0024 §4A.5
+    /// partial-application path — each arrow in the curried chain lowers by the existing §4A single-arg
+    /// machinery. Zero-parameter lambdas are a never-silent refusal (G2) — a zero-arg closure has
+    /// no type without a unit type, which is a separate surface decision.
     ///
     /// **Bidirectional.** When the context supplies an expected `Ty::Fn(ea, er)`, the written param
     /// type must equal `ea` (a mismatch is a never-silent refusal, not a coercion), and the body is
@@ -2969,14 +3303,37 @@ impl Cx<'_> {
         body: &Expr,
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
-        // Stage-1: exactly one parameter (multi-arg arrows are tuple-gated — §4A.8).
+        // Zero-parameter lambda: no type without a unit type — never-silent refusal (G2).
+        if params.is_empty() {
+            return self.err(
+                "a `lambda` requires at least 1 parameter — a zero-argument lambda has no type \
+                 without a unit/nullary type, which is a separate surface decision (never a silent \
+                 accept — G2)"
+                    .to_owned(),
+            );
+        }
+        // Multi-argument currying (M-822 / RFC-0024 §4A.5/§4A.8): `lambda(p1, p2, …) => body`
+        // desugars to `lambda(p1) => lambda(p2) => … => body`. Build the inner curried body and
+        // check this as a single-param lambda whose body is the inner lambda. The curried type
+        // is `A -> B -> … -> Z` (right-associative), which is exactly the §4A single-arg arrow
+        // machinery applied recursively — no new mechanism needed (Declared; RFC-0024 §4A.5).
+        if params.len() > 1 {
+            let (first, rest) = params.split_first().expect("len > 1");
+            // Build the inner curried lambda: `lambda(rest…) => body`.
+            let inner_body = Expr::Lambda {
+                params: rest.to_vec(),
+                body: Box::new(body.clone()),
+            };
+            // The expected type for the outer one-param wrapper. If context provides
+            // `Ty::Fn(ea, inner_expected)`, pass `inner_expected` to the inner recursion. A
+            // non-arrow expected type is refused by the single-param path below (never silent, G2).
+            // We do NOT extract `inner_expected` here — we pass `expected` as-is to the outer
+            // single-param wrapper so the bidirectional domain-check fires for the first param.
+            return self.check_lambda(scope, std::slice::from_ref(first), &inner_body, expected);
+        }
+        // Exactly one parameter — the base case.
         let [param] = params else {
-            return self.err(format!(
-                "a `lambda` takes exactly 1 parameter in stage-1; got {} — multi-argument lambdas \
-                 need the tuple-type prerequisite (RFC-0024 §4A.8), a separate surface decision \
-                 (never a silent accept — G2/VR-5)",
-                params.len()
-            ));
+            unreachable!("len == 1 after the multi-arg and zero-arg branches above")
         };
         // The written parameter type (lambda params are always ascribed — `parse_params_opt`).
         let (param_ty, _) = resolve_ty(self.site, self.types, self.tyvars, &param.ty)?;
@@ -3261,6 +3618,62 @@ impl Cx<'_> {
         ))
     }
 
+    /// M-826 — check a tuple literal `(a, b, …)` (arity ≥ 2).
+    ///
+    /// Desugars to a constructor application on the synthetic `Tuple$N<A, B, …>` data type
+    /// (KC-3: no new L0 node). Each element is checked, then the whole is rewritten to an
+    /// equivalent `Expr::App { head: Path("MkTuple$N"), args }` so the downstream mono/elab passes
+    /// see only ordinary data-constructor applications. Guarantee: `Empirical` (round-trip tested).
+    ///
+    /// Never-silent (G2):
+    /// - Arity < 2 cannot arise (the parser rejects it).
+    /// - If an expected type is provided and disagrees with the inferred `Tuple$N<…>`, an explicit
+    ///   mismatch error is returned.
+    fn check_tuple_lit(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        elems: &[Expr],
+        expected: Option<&Ty>,
+    ) -> Result<(Ty, Expr), CheckError> {
+        let n = elems.len();
+        debug_assert!(n >= 2, "parser must reject 0- and 1-tuples");
+        let tname = tuple_type_name(n);
+        let ctor_name = tuple_ctor_name(n);
+
+        // Determine expected element types if the context pins a compatible Tuple$N.
+        let expected_elems: Option<Vec<Ty>> = match expected {
+            Some(Ty::Data(tn, targs)) if *tn == tname && targs.len() == n => Some(targs.clone()),
+            _ => None,
+        };
+
+        // Check each element; collect inferred element types + rebuilt expressions.
+        let mut elem_tys = Vec::with_capacity(n);
+        let mut rebuilt = Vec::with_capacity(n);
+        for (i, el) in elems.iter().enumerate() {
+            let exp_i = expected_elems.as_ref().map(|v| &v[i]);
+            let (ety, el2) = self.check(scope, el, exp_i)?;
+            elem_tys.push(ety);
+            rebuilt.push(el2);
+        }
+
+        let result_ty = Ty::Data(tname.clone(), elem_tys);
+
+        // Bidirectional contract: if a type was expected, it must match.
+        if let Some(exp) = expected {
+            if exp != &result_ty {
+                return self.err(format!(
+                    "tuple literal has type `{result_ty}`, but the context expects `{exp}` \
+                     (M-826 — never a silent coercion, G2)"
+                ));
+            }
+        }
+
+        // Rewrite to `MkTuple$N(a, b, …)` — a Path application that the mono/elab passes
+        // handle identically to any user data-constructor call.
+        let head = Expr::Path(Path(vec![ctor_name]));
+        Ok((result_ty, app_node(&head, rebuilt)))
+    }
+
     fn check_ascribe(
         &self,
         scope: &mut Vec<(String, Ty)>,
@@ -3285,8 +3698,33 @@ impl Cx<'_> {
         args: &[Expr],
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
+        // M-826 Part 2 — lift the v0 "head must be a name" restriction to allow `f(x)(y)` and
+        // other chained applications (RFC-0007 §4.4 narrowing noted for orchestrator). When the
+        // head is not a `Path`, infer its type; if it has a function type `A -> B`, apply it as a
+        // HOF call. If it does not have a function type, the error is explicit (never silent — G2).
         let Expr::Path(p) = head else {
-            return self.err("v0 application head must be a name (first-order; RFC-0007 §4.4)");
+            let (hty, h2) = self.check(scope, head, None)?;
+            let Ty::Fn(param_ty, ret_ty) = hty else {
+                return self.err(format!(
+                    "application head is not a function — the expression before `(…)` has type \
+                     `{hty}`, which is not callable (M-826 §Part2 — never silent, G2)"
+                ));
+            };
+            if args.len() != 1 {
+                return self.err(format!(
+                    "higher-order application requires exactly 1 argument in stage-1; \
+                     got {} — partial application / multi-arg HOF is deferred (RFC-0024 §5, G2)",
+                    args.len()
+                ));
+            }
+            let (got, a2) = self.check(scope, &args[0], Some(&param_ty))?;
+            if got != *param_ty {
+                return self.err(format!(
+                    "higher-order call: argument has type `{got}` but callee expects `{param_ty}` \
+                     (arrow-type mismatch — M-826, never a silent coercion, G2)"
+                ));
+            }
+            return Ok((*ret_ty, app_node(&h2, vec![a2])));
         };
         if p.0.len() != 1 {
             return self.err(format!(
@@ -3930,11 +4368,75 @@ impl Cx<'_> {
         if arms.is_empty() {
             return self.err("a match needs at least one arm");
         }
+        // Or-pattern desugar (RFC-0020 §9 / R20-Q3, KC-3 — zero kernel growth): expand each
+        // surface arm whose pattern is `Pattern::Or(alts)` into `|alts|` plain arms that share
+        // the same body. Binding-consistency check (never-silent G2): every alternative in an
+        // or-pattern must bind the same set of variable names at the same types — a mismatch is a
+        // `CheckError`, never a silent accept. After desugar, `Pattern::Or` never appears in the
+        // arms the downstream loop sees, so `resolve_pattern`/`check_pattern`/the evaluator/the
+        // elaborator all stay Or-free (their never-silent guards below confirm this invariant).
+        let flat_arms: Vec<crate::ast::Arm> =
+            arms.iter().try_fold(Vec::new(), |mut acc, arm| {
+                match &arm.pattern {
+                    Pattern::Or(alts) => {
+                        // Validate: the or-pattern must have ≥ 2 alternatives (the parser only
+                        // builds a `Pattern::Or` when it sees at least one `|`, so ≥ 2 is
+                        // guaranteed by construction — this check defends against API misuse).
+                        if alts.len() < 2 {
+                            return self.err(
+                                "internal: Pattern::Or must have at least 2 alternatives \
+                                 (or-pattern invariant violation — report this)",
+                            );
+                        }
+                        // Check binding consistency across all alternatives.
+                        // Each alternative is resolved + typed against the scrutinee type; their
+                        // binder sets must agree (same names, same types — G2/never-silent).
+                        // We collect the binders of the FIRST alternative as the reference set,
+                        // then verify each subsequent alternative against it.
+                        let mut ref_binds: Option<Vec<(String, Ty)>> = None;
+                        for (alt_idx, alt) in alts.iter().enumerate() {
+                            let resolved = self.resolve_pattern(alt, &sty)?;
+                            let mut binds: Vec<(String, Ty, Vec<usize>)> = Vec::new();
+                            self.check_pattern(&resolved, &sty, &mut binds)?;
+                            let binder_sig: Vec<(String, Ty)> = binds
+                                .iter()
+                                .map(|(n, t, _)| (n.clone(), t.clone()))
+                                .collect();
+                            match &ref_binds {
+                                None => ref_binds = Some(binder_sig),
+                                Some(ref_sig) => {
+                                    // Same names + types required (order-insensitive: sort by name).
+                                    let mut got = binder_sig.clone();
+                                    let mut want = ref_sig.clone();
+                                    got.sort_by(|a, b| a.0.cmp(&b.0));
+                                    want.sort_by(|a, b| a.0.cmp(&b.0));
+                                    if got != want {
+                                        return self.err(format!(
+                                            "or-pattern alternative {alt_idx} binds {got:?} but \
+                                             alternative 0 binds {ref_sig:?} — every alternative \
+                                             of an or-pattern must bind the same variable names at \
+                                             the same types (RFC-0020 §9 / R20-Q3, never-silent G2)"
+                                        ));
+                                    }
+                                }
+                            }
+                            // Expand into a plain arm sharing the body.
+                            acc.push(crate::ast::Arm {
+                                pattern: resolved,
+                                body: arm.body.clone(),
+                            });
+                        }
+                    }
+                    _ => acc.push(arm.clone()),
+                }
+                Ok(acc)
+            })?;
+
         let col = [sty.clone()];
         let mut rows: Vec<Vec<crate::usefulness::Pat>> = Vec::new();
         let mut result: Option<Ty> = None;
-        let mut arms2: Vec<crate::ast::Arm> = Vec::with_capacity(arms.len());
-        for arm in arms {
+        let mut arms2: Vec<crate::ast::Arm> = Vec::with_capacity(flat_arms.len());
+        for arm in &flat_arms {
             // Normalize the pattern against the scrutinee/field types first — resolve ambient
             // bare-decimal literals to concrete ones, and rewrite nullary-ctor idents to explicit
             // `Ctor(name, [])` — so the matrix, the evaluator, the elaborator, and the type-free
@@ -4072,7 +4574,47 @@ impl Cx<'_> {
                 }
                 Pattern::Ctor(name.clone(), out)
             }
+            // M-826: a tuple pattern `(x, y, …)` desugars to a single-constructor `Ctor` pattern
+            // on the synthetic `Tuple$N` type — identical to any user-declared product constructor.
+            // Never-silent (G2): arity mismatch vs. the expected scrutinee type is an explicit error.
+            Pattern::Tuple(subs) => {
+                let n = subs.len();
+                let ctor_name = tuple_ctor_name(n);
+                let tname = tuple_type_name(n);
+                // The expected type must be the matching Tuple$N.
+                let field_tys = match expected {
+                    Ty::Data(tn, targs) if *tn == tname => self.types.get(tn).and_then(|d| {
+                        d.ctors
+                            .iter()
+                            .find(|c| c.name == ctor_name)
+                            .filter(|c| c.fields.len() == subs.len())
+                            .map(|c| {
+                                let s = param_subst(&d.params, targs);
+                                c.fields.iter().map(|f| subst_ty(f, &s)).collect::<Vec<_>>()
+                            })
+                    }),
+                    _ => None,
+                };
+                let mut out = Vec::with_capacity(subs.len());
+                for (i, s) in subs.iter().enumerate() {
+                    let resolved = match &field_tys {
+                        Some(fts) => self.resolve_pattern(s, &fts[i])?,
+                        None => s.clone(),
+                    };
+                    out.push(resolved);
+                }
+                Pattern::Ctor(ctor_name, out)
+            }
             Pattern::Wildcard | Pattern::Lit(_) | Pattern::Ident(_) => pat.clone(),
+            // `Pattern::Or` is desugared in `check_match` before `resolve_pattern` is called;
+            // reaching here means the invariant was violated — an explicit never-silent refusal (G2).
+            Pattern::Or(_) => {
+                return Err(CheckError::new(
+                    self.site,
+                    "internal: Pattern::Or reached resolve_pattern — or-patterns must be desugared \
+                     in check_match before any downstream pass (invariant violation — report this)",
+                ));
+            }
         })
     }
 
@@ -4491,6 +5033,35 @@ pub(crate) fn normalize_pattern(
             }
             Ok(Pat::Ctor(n.clone(), out))
         }
+        // M-826: a tuple pattern `(x, y, …)` desugars to a `Ctor` pattern on the synthetic
+        // `Tuple$N` type. After `resolve_pattern` has run, all `Pattern::Tuple` nodes should
+        // already have been rewritten to `Pattern::Ctor`; this arm handles any that reach here
+        // directly (e.g. in standalone normalization). Never-silent (G2): arity or type mismatch
+        // is an explicit error.
+        Pattern::Tuple(subs) => {
+            let n = subs.len();
+            let ctor_name = tuple_ctor_name(n);
+            // Re-delegate to the Ctor arm by building the equivalent pattern.
+            normalize_pattern(
+                types,
+                site,
+                &Pattern::Ctor(ctor_name.clone(), subs.clone()),
+                expected,
+                occ,
+                binds,
+            )
+            .map_err(|e| {
+                // Rephrase the error to mention the tuple surface syntax.
+                CheckError::new(
+                    site,
+                    format!(
+                        "tuple pattern `({})` — {}",
+                        subs.iter().map(|_| "_").collect::<Vec<_>>().join(", "),
+                        e.message
+                    ),
+                )
+            })
+        }
         Pattern::Lit(lit) => {
             let lty = lit_ty_of(site, lit)?;
             if lty != *expected {
@@ -4504,6 +5075,13 @@ pub(crate) fn normalize_pattern(
             }
             Ok(Pat::Lit(literal_key(lit)))
         }
+        // `Pattern::Or` is desugared in `check_match` before `normalize_pattern` is ever called;
+        // reaching here means the invariant was violated — an explicit never-silent refusal (G2).
+        Pattern::Or(_) => Err(CheckError::new(
+            site,
+            "internal: Pattern::Or reached normalize_pattern — or-patterns must be desugared \
+             in check_match before any downstream pass (invariant violation — report this)",
+        )),
     }
 }
 

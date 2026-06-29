@@ -108,6 +108,7 @@ pub mycelium_l1::ast::BaseType::Seq::elem: alloc::boxed::Box<mycelium_l1::ast::T
 pub mycelium_l1::ast::BaseType::Seq::len: u32
 pub mycelium_l1::ast::BaseType::Substrate(alloc::string::String)
 pub mycelium_l1::ast::BaseType::Ternary(mycelium_l1::ast::WidthRef)
+pub mycelium_l1::ast::BaseType::Tuple(alloc::vec::Vec<mycelium_l1::ast::TypeRef>)
 pub mycelium_l1::ast::BaseType::Vsa
 pub mycelium_l1::ast::BaseType::Vsa::dim: u32
 pub mycelium_l1::ast::BaseType::Vsa::model: alloc::string::String
@@ -186,6 +187,7 @@ pub mycelium_l1::ast::Expr::Swap
 pub mycelium_l1::ast::Expr::Swap::policy: mycelium_l1::ast::Path
 pub mycelium_l1::ast::Expr::Swap::target: mycelium_l1::ast::TypeRef
 pub mycelium_l1::ast::Expr::Swap::value: alloc::boxed::Box<mycelium_l1::ast::Expr>
+pub mycelium_l1::ast::Expr::TupleLit(alloc::vec::Vec<mycelium_l1::ast::Expr>)
 pub mycelium_l1::ast::Expr::Wild(alloc::boxed::Box<mycelium_l1::ast::Expr>)
 pub mycelium_l1::ast::Expr::WithParadigm
 pub mycelium_l1::ast::Expr::WithParadigm::body: alloc::boxed::Box<mycelium_l1::ast::Expr>
@@ -298,6 +300,8 @@ pub enum mycelium_l1::ast::Pattern
 pub mycelium_l1::ast::Pattern::Ctor(alloc::string::String, alloc::vec::Vec<mycelium_l1::ast::Pattern>)
 pub mycelium_l1::ast::Pattern::Ident(alloc::string::String)
 pub mycelium_l1::ast::Pattern::Lit(mycelium_l1::ast::Literal)
+pub mycelium_l1::ast::Pattern::Or(alloc::vec::Vec<mycelium_l1::ast::Pattern>)
+pub mycelium_l1::ast::Pattern::Tuple(alloc::vec::Vec<mycelium_l1::ast::Pattern>)
 pub mycelium_l1::ast::Pattern::Wildcard
 impl core::clone::Clone for mycelium_l1::ast::Pattern
 pub fn mycelium_l1::ast::Pattern::clone(&self) -> mycelium_l1::ast::Pattern
