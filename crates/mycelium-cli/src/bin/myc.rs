@@ -6,6 +6,7 @@
 //! myc check [--config <manifest>]  # parse + type-check every .myc source
 //! myc test  [--config <manifest>]  # run the available verification (check)
 //! myc run   [--config <manifest>]  # (not yet wired — reports so, never silent)
+//! myc --stream [<file>]            # parse a `;`-terminated component stream (M-820/DN-57)
 //! ```
 //!
 //! Every failure is a DN-22 structured [`Report`](mycelium_cli::Report) — `error[<code>]: …` with a
@@ -16,7 +17,7 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use mycelium_cli::{build, check_project, init, run, Report};
+use mycelium_cli::{build, check_project, init, run, run_stream_parse, Report};
 
 fn usage() -> ExitCode {
     eprintln!(
@@ -25,7 +26,8 @@ fn usage() -> ExitCode {
          myc build [--config <manifest>]\n  \
          myc check [--config <manifest>]\n  \
          myc test  [--config <manifest>]\n  \
-         myc run   [--config <manifest>]"
+         myc run   [--config <manifest>]\n  \
+         myc --stream [<file>]"
     );
     ExitCode::from(64)
 }
@@ -65,6 +67,7 @@ fn main() -> ExitCode {
             Ok(()) => ExitCode::SUCCESS,
             Err(r) => fail(&r),
         }),
+        "--stream" => cmd_stream(&rest),
         _ => usage(),
     }
 }
@@ -127,4 +130,55 @@ fn cmd_test(manifest: &Path) -> ExitCode {
          future work (no user tests were discovered or executed)."
     );
     code
+}
+
+/// `myc --stream [<file>]` — parse a `;`-terminated Mycelium component stream (M-820 / DN-57).
+///
+/// Without a file argument, reads from stdin (`<stdin>`). With a file argument, opens and reads
+/// that file. Each `;`-terminated chunk is parsed as a Mycelium nodule the moment its terminator
+/// arrives — per-component-incremental (bounded state per component; `Declared` — see
+/// [`mycelium_cli::stream_parse`] for the honesty note on what incremental means here).
+///
+/// Every malformed component surfaces an explicit error with a component:line:col location (G2).
+/// An unterminated trailing component (EOF before `;`) is likewise an explicit error, never a
+/// silent partial accept (G2 / DN-57 §1).
+///
+/// Exit 0 on all-green; exit 65 if any component failed; exit 66 on I/O error.
+fn cmd_stream(rest: &[String]) -> ExitCode {
+    // Parse the optional file argument; reject anything else (unknown flags) as usage.
+    let (reader, source_name): (Box<dyn std::io::Read>, String) = match rest {
+        [] => (Box::new(std::io::stdin()), "<stdin>".to_owned()),
+        [path] if !path.starts_with('-') => match std::fs::File::open(path) {
+            Ok(f) => (Box::new(f), path.clone()),
+            Err(e) => {
+                let r = Report::new("myc-stream-io", format!("{path}: {e}"), 66)
+                    .help("check that the file path is correct and the file is readable");
+                return fail(&r);
+            }
+        },
+        _ => return usage(),
+    };
+
+    match run_stream_parse(reader, &source_name) {
+        Err(r) => fail(&r),
+        Ok(report) => {
+            // Print any failures to stderr, each as a structured DN-22 report.
+            for f in &report.failures {
+                eprintln!("{}\n", f.render());
+            }
+            if report.ok() {
+                eprintln!(
+                    "myc: stream `{}` — {} component(s) parsed clean",
+                    report.source_name, report.parsed_ok,
+                );
+                ExitCode::SUCCESS
+            } else {
+                eprintln!(
+                    "myc: stream `{}` — {} ok, {} failed",
+                    report.source_name, report.parsed_ok, report.parsed_err,
+                );
+                ExitCode::from(65)
+            }
+        }
+    }
 }
