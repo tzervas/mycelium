@@ -235,16 +235,20 @@ fn the_closure_differential_distinguishes_different_captured_environments() {
     );
 }
 
-/// **Multi-argument lambda is a never-silent refusal (RFC-0024 §4A.8 — tuple-gated).** A two-parameter
-/// `lambda` needs the tuple-type prerequisite the v0 surface lacks; the checker refuses it explicitly
-/// (G2/VR-5), never a silent accept. This pins the honest scope boundary (FLAG: multi-arg/partial).
+/// **Multi-argument lambda now curries (M-822; RFC-0024 §4A.5/§4A.8).** A two-parameter `lambda`
+/// desugars to nested single-param closures (type `B8 -> B8 -> B8`); applying one argument yields a
+/// *partially-applied* closure. Here `f(0b1111_1111)` therefore has type `B8 -> B8` (a function), but
+/// `main` declares `=> Binary{8}`, so the checker reports an explicit **type mismatch** (a function
+/// value where a `Binary{8}` is required) — never a silent accept (G2/VR-5). The multi-arg lambda
+/// itself is accepted; this pins that partial application is a first-class function-typed value.
 #[test]
-fn multi_argument_lambda_is_an_explicit_refusal() {
+fn multi_argument_lambda_curries_and_partial_application_is_a_function_value() {
     let src = "nodule d;\nfn main() => Binary{8} =\n  let f = lambda(x: Binary{8}, y: Binary{8}) => and(x, y) in f(0b1111_1111);";
     let r = check_nodule(&parse(src).expect("parses — the grammar admits a 2-param lambda"));
     assert!(
         r.is_err(),
-        "a multi-argument lambda must be refused (tuple-gated — RFC-0024 §4A.8), not silently accepted"
+        "f(arg) is a partially-applied `B8 -> B8` function, not the declared `Binary{{8}}` return — \
+         an explicit type-mismatch error (G2), not a silent accept"
     );
 }
 

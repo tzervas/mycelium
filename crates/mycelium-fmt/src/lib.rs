@@ -1581,7 +1581,7 @@ fn render_pattern(p: &Pattern) -> String {
     match p {
         Pattern::Wildcard => "_".to_owned(),
         Pattern::Lit(l) => render_literal(l),
-        // v0 tuple pattern (M-826): `(p1, p2, …)` — desugars to a `Tuple$N$0` ctor pattern in the checker.
+        // v0 tuple pattern (M-826): `(p1, p2, …)` — desugars to a `MkTuple$N` ctor pattern in the checker.
         Pattern::Tuple(subs) => {
             let s: Vec<String> = subs.iter().map(render_pattern).collect();
             format!("({})", s.join(", "))

@@ -810,6 +810,31 @@ fn collect_tuple_arities_sig(sig: &crate::ast::FnSig, out: &mut std::collections
     collect_tuple_arities_typeref(&sig.ret, out);
 }
 
+/// Scan a pattern for tuple arities (M-826) — a `Pattern::Tuple` of arity N requires the synthetic
+/// `Tuple$N` data type to be registered before checking, even when no `TupleLit` of that arity is
+/// constructed in the nodule. Recurses through constructor sub-patterns and or-pattern alternatives.
+fn collect_tuple_arities_pattern(p: &Pattern, out: &mut std::collections::BTreeSet<usize>) {
+    match p {
+        Pattern::Tuple(subs) => {
+            out.insert(subs.len());
+            for sub in subs {
+                collect_tuple_arities_pattern(sub, out);
+            }
+        }
+        Pattern::Ctor(_, subs) => {
+            for sub in subs {
+                collect_tuple_arities_pattern(sub, out);
+            }
+        }
+        Pattern::Or(alts) => {
+            for alt in alts {
+                collect_tuple_arities_pattern(alt, out);
+            }
+        }
+        Pattern::Wildcard | Pattern::Lit(_) | Pattern::Ident(_) => {}
+    }
+}
+
 fn collect_tuple_arities_expr(e: &crate::ast::Expr, out: &mut std::collections::BTreeSet<usize>) {
     use crate::ast::Expr;
     match e {
@@ -836,6 +861,12 @@ fn collect_tuple_arities_expr(e: &crate::ast::Expr, out: &mut std::collections::
         Expr::Match { scrutinee, arms } => {
             collect_tuple_arities_expr(scrutinee, out);
             for arm in arms {
+                // M-826 (self-review M1): a tuple pattern that is only ever *destructured* — never
+                // constructed as a `TupleLit` nor named in a type annotation elsewhere in the nodule —
+                // still needs its synthetic `Tuple$N` arity registered, or the checker hits an internal
+                // "tuple type not registered" panic instead of a user diagnostic. Scan the arm pattern,
+                // not just its body.
+                collect_tuple_arities_pattern(&arm.pattern, out);
                 collect_tuple_arities_expr(&arm.body, out);
             }
         }

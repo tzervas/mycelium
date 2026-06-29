@@ -194,9 +194,10 @@ derive_item    ::= 'derive' Ident 'for' type_ref
 /* Anonymous function / closure (RFC-0037 D5). Implemented (M-704 / RFC-0024 §4A): the closure
  * type-checks (Ty::Fn) and lowers + runs via Reynolds defunctionalization in monomorphization (a
  * tag-sum struct + a generated `apply` dispatcher; no new L0 kernel node — KC-3). `=>` (D4)
- * separates params from body. Stage-1 is SINGLE-ARGUMENT: a multi-parameter lambda needs the
- * tuple/product type the v0 surface lacks, so it is a never-silent refusal (tuple-gated, §4A.8) —
- * the `params?` here admits >1 param syntactically, but the checker refuses arity ≠ 1 (G2). */
+ * separates params from body. A multi-parameter lambda now CURRIES (M-822, RFC-0024 §4A.5/§4A.8):
+ * the checker desugars `lambda(x, y) => e` to nested single-param closures `lambda(x) => lambda(y) =>
+ * e`, so applying fewer arguments yields a partially-applied function value. A zero-parameter lambda
+ * has no v0 form and is a never-silent refusal (G2). */
 lambda_expr    ::= 'lambda' '(' params? ')' '=>' expr
 
 /* Effect annotation (RFC-0014 §3.4/§4.5 I3; M-660). Optional `!{ … }` after the return type
@@ -297,8 +298,9 @@ consume_expr   ::= 'consume' app_expr
  * a `hypha` is ONLY expressible inside a `colony` ("an orphan hypha is not expressible") — there is
  * no free `hypha` production. Deterministic R1 fragment only (RFC-0008 §4.6 R1); the reference
  * semantics is the spawn-order sequentialization (RT2), so the colony's observable value is its
- * children run in order (the v0 surface has no product type, so the colony yields the LAST hypha's
- * value — a join-result product is later work). The arbitration/placement RT3 constructs (select/
+ * children run in order, and the colony yields the LAST hypha's value — wiring a join-result product
+ * of all hyphae's values (now expressible via the v0 tuple type, M-826) is later work). The
+ * arbitration/placement RT3 constructs (select/
  * merge, `forage`) are separate. The runtime realization is `mycelium-mlir::runtime`
  * (`Scope`/`Colony`/`Task`, M-357), a performance path validated against the RT2 sequentialization. */
 colony_expr    ::= 'colony' '{' hypha (',' hypha)* ','? '}'
