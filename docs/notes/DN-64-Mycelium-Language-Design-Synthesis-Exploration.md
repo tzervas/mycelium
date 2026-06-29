@@ -799,8 +799,9 @@ the design phase — is the gate applied at proposal time or only at ratificatio
 
 ## §7 Maintainer dispositions (2026-06-29)
 
-Append-only resolution of the §6 open questions. The maintainer ruled on 19 of the 20 OQs
-(**OQ-H is left explicitly open** — not silently resolved, G2). Each disposition is recorded at
+Append-only resolution of the §6 open questions. The maintainer ruled on **all 20 OQs** (OQ-H's
+R&D disposition was supplied 2026-06-29, after the initial 19; recorded here, not back-dated — G2).
+Each disposition is recorded at
 the strength the maintainer set it to; **none is upgraded past its basis** (VR-5). A disposition of
 **R&D-commission** means the question is *answered as "research it"* — the decision is to investigate,
 not a design commitment; the resulting findings stay `Declared` until a checked basis exists. A
@@ -809,7 +810,7 @@ its feeding ADR/RFC). Nothing in this section is `Enacted`; this note remains **
 maintainer's standing rule binds the whole table: *"unless it can be mechanically proven, it must drop
 to `Declared`"* (OQ-G generalized — VR-5).
 
-Tracking ids (`M-827`…`M-845`) are minted here and registered in `tools/github/issues.yaml`; the
+Tracking ids (`M-827`…`M-846`) are minted here and registered in `tools/github/issues.yaml`; the
 deeper artifacts they commission are: the **VSA compositional-bounds GPU experiment** (`experiments/
 mycelium_experiments/vsa_bounds/`, OQ-F), **RFC-0038 — the inject-mode security axis** (the hot-inject
 cluster OQ-K…OQ-Q), and two R&D records (`research/26-…`, `research/27-…`).
@@ -823,7 +824,7 @@ cluster OQ-K…OQ-Q), and two R&D records (`research/26-…`, `research/27-…`)
 | **E** | substrate/hypha reclaim | **Investigate, R&D and plan** the reclaim interaction (LR-8 affine × RT7 lifetime × RFC-0014 recovery). | R&D-commission (M-831) | DN-59, future `graft` R2 RFC; `research/26` |
 | **F** | VSA multi-hop `Proven` | **R&D on GPU** (maintainer's desktop, tonight). Build runnable experiments to map the tractable `Proven`-bound subset and feed insight. | R&D-commission + **build experiment** (M-832) | `experiments/mycelium_experiments/vsa_bounds/`; RFC-0009 |
 | **G** | guard clauses | **Yes, ratify guards.** A guard's tag propagates to the arm: **unless mechanically proven, the arm drops to `Declared`** (VR-5). | Direct (M-833) | RFC-0020 §4.1 S2; `research/27` |
-| **H** | record-literal shadowing | *(no decision — left open, G2.)* | **Open** | — |
+| **H** | record-literal shadowing | **R&D** the `{x, y}` → `{x: x, y: y}` deterministic shadowing rules — whether the readability win justifies the shadowing discipline; the local-vs-field disambiguation must be explicit and never-silent (G2). | R&D-commission (M-846) | RFC-0006, RFC-0020; `research/27` |
 | **I** | short-keyword scope | **Split trait methods and associated types** for clarity / **one-canonical-form** discipline; ergonomics is key. Short keywords (`bin{N}` …) **bind to type literals only**, not to methods/associated types. | Direct (M-834) | RFC-0037 D2-b, DN-31, DN-03 §3; `research/27` |
 | **J** | annotation burden | For the stringent doctrine, provide **wrappers/decorators and/or tooling/ergonomic implementations** that ease use **without degrading** the guarantees. | Direct + R&D-commission (M-835) | RFC-0018 §5; `research/27` |
 | **K** | inject signing authority | **Research.** Instinct: the signing scope **depends on what the dev is building** (script / nodule / library / application / other) — **scoped to their project, graded and dev-configurable by scope of work.** | Direct + R&D-commission (M-836) | RFC-0038 §K; RFC-0008 §R8-Q4 |
@@ -859,3 +860,4 @@ items, not silently closed.
 |---|---|
 | 2026-06-29 | Initial draft — five-facet synthesis exploration note commissioned and drafted. |
 | 2026-06-29 | §7 — maintainer dispositions on 19/20 OQs (OQ-H left open); `sealed`→`inoculated` ratified; hot-inject cluster routed to RFC-0038; M-827…M-845 minted. Append-only; note stays Draft. |
+| 2026-06-29 | §7 — OQ-H R&D disposition supplied (record-literal shadowing → research it); M-846 minted; all 20 OQs now ruled. Append-only. |

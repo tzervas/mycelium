@@ -7432,3 +7432,21 @@ issues:
       library names — may a phylum export both `add` and `plus`?).
       DoD: the proposal-time gate process recorded in DN-02 §7; the library-alias rule decided in DN-03.
       See research/27-dn64-ergonomics-rnd-RECORD.md.
+  - id: M-846
+    title: "M-846 -- Record-literal shorthand {x,y} deterministic shadowing rules"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:research, area:language, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0006
+      - corpus:RFC-0020
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-H disposition (maintainer 2026-06-29, supplied after the initial 19): "R&D."
+      As a Mycelium author, I want record-literal shorthand `{x, y}` elaborating to `{x: x, y: y}`, so that
+      record construction is concise — but only if the local-binding-vs-field disambiguation is explicit and
+      never-silent (G2) and the readability win justifies the shadowing discipline.
+      R&D the deterministic shadowing rule (which `x`/`y` is in scope when a local binding and a field share
+      a name) and whether the convenience is worth it.
+      DoD: a specified, never-silent shadowing rule (or a decision not to adopt the shorthand), recorded in
+      RFC-0006/RFC-0020 append-only. See research/27-dn64-ergonomics-rnd-RECORD.md.
