@@ -826,8 +826,9 @@ impl Parser {
     /// function's type-parameters may carry **trait bounds** (`<T: Cmp + Ord<T>>`; RFC-0019 §4.1) —
     /// the dictionary site — so this uses
     /// [`parse_type_params_bounded`](Self::parse_type_params_bounded). The optional
-    /// `!{ eff1, eff2 }` **effect annotation** (RFC-0014 §3.4; M-660) follows the return type; absent
-    /// ⇒ the empty (pure) effect set.
+    /// `!{ eff1, eff2 }` **effect annotation** (RFC-0014 §3.4; M-660/M-677) follows the return type;
+    /// absent ⇒ the empty (pure) effect set. Each effect may carry an optional budget bound
+    /// `eff(<=N)` (M-677; RFC-0014 §4.5 I4); `N` may carry a unit suffix (`KiB`, `MiB`, `GiB`).
     fn parse_sig_tail(&mut self) -> Result<FnSig, ParseError> {
         let name = self.ident()?;
         // RFC-0037 D2: type parameters in `[T]` (may carry bounds — the dictionary site), const/width
@@ -851,7 +852,7 @@ impl Parser {
         self.expect(&Tok::RParen, "`)` to close the parameter list")?;
         self.expect_return_arrow()?;
         let ret = self.parse_type_ref()?;
-        let effects = self.parse_effects_opt()?;
+        let (effects, effect_budgets) = self.parse_effects_opt()?;
         let params = classify_params(raw_params, &value_params, &ret)?;
         Ok(FnSig {
             name,
@@ -859,6 +860,7 @@ impl Parser {
             value_params,
             ret,
             effects,
+            effect_budgets,
         })
     }
 
@@ -937,17 +939,27 @@ impl Parser {
         })
     }
 
-    /// `!{ eff (, eff)* }?` — the optional **effect annotation** after a signature's return type
-    /// (RFC-0014 §3.4/§4.5 I3; M-660). When the next token is `!`, consume `!{` … `}` and parse a
-    /// comma-separated list of effect **names** (plain identifiers — the closed kernel kinds
-    /// `retry|alloc|io|cascade|time` plus user `Named` effects; RFC-0014 §4.5); the empty set `!{}`
-    /// is allowed (an explicit, written "pure" annotation). When there is no `!`, return `vec![]`
-    /// (the implicit pure default — RFC-0014 I5). A **duplicate** effect name in one annotation is an
-    /// explicit refusal (never a silent dedup — G2): a repeated effect is a written redundancy the
-    /// author should fix, not something the parser quietly collapses.
-    fn parse_effects_opt(&mut self) -> Result<Vec<String>, ParseError> {
+    /// `!{ eff(<=N)? (, eff(<=N)?)* }?` — the optional **effect annotation** after a signature's
+    /// return type (RFC-0014 §3.4/§4.5 I3/I4; M-660/M-677). When the next token is `!`, consume
+    /// `!{` … `}` and parse a comma-separated list of effect entries. Each entry is an effect
+    /// **name** (plain identifier — the closed kernel kinds `retry|alloc|io|cascade|time` plus user
+    /// `Named` effects; RFC-0014 §4.5) followed by an **optional budget bound** `(<=N<unit>?)` where
+    /// `N` is a positive integer and `unit` is an optional binary-size suffix (`KiB` = 1024,
+    /// `MiB` = 1048576, `GiB` = 1073741824; M-677). The `<=` is parsed as the two-token sequence
+    /// `<` `=` (RFC-0037 D1 retired `<=` as an infix operator glyph; in the effect-annotation
+    /// context it is a bound delimiter, never an operator).
+    ///
+    /// The empty set `!{}` is valid (an explicit "declares no effects"). Absent `!` ⇒ pure (empty
+    /// set — RFC-0014 I5). A **duplicate** effect name is an explicit refusal (G2 — never silently
+    /// deduped). A **zero budget** `(<=0)` is an explicit refusal (a zero budget would exhaust
+    /// immediately — never a silent trap). A **negative** budget literal is refused (budgets are
+    /// non-negative). Returns the effect name list (in source order) and a separate budget map
+    /// (keyed by name, present only for budgeted effects).
+    fn parse_effects_opt(
+        &mut self,
+    ) -> Result<(Vec<String>, std::collections::BTreeMap<String, u64>), ParseError> {
         if !self.eat(&Tok::Bang) {
-            return Ok(Vec::new());
+            return Ok((Vec::new(), std::collections::BTreeMap::new()));
         }
         self.expect(
             &Tok::LBrace,
@@ -955,11 +967,95 @@ impl Parser {
         )?;
         // The empty written set `!{}` is valid (an explicit "declares no effects").
         let set_start = self.pos();
-        let effects = if self.at(&Tok::RBrace) {
-            Vec::new()
-        } else {
-            self.comma_separated(None, Self::ident)?
-        };
+        let mut effects: Vec<String> = Vec::new();
+        let mut effect_budgets: std::collections::BTreeMap<String, u64> =
+            std::collections::BTreeMap::new();
+        if !self.at(&Tok::RBrace) {
+            // Parse comma-separated `eff (<=N unit?)?` entries.
+            loop {
+                let eff_name = self.ident()?;
+                // Optional budget bound `(<=N<unit>?)`.
+                if self.eat(&Tok::LParen) {
+                    // Expect `<=` (two tokens: `<` then `=`; RFC-0037 D1 note above).
+                    if !self.eat(&Tok::LAngle) {
+                        return self.err("`<=` to open the budget bound (e.g. `retry(<=3)`)");
+                    }
+                    if !self.eat(&Tok::Eq) {
+                        return self.err("`=` after `<` to form the `<=` bound operator in an effect budget (RFC-0014 §4.5 I4)");
+                    }
+                    let budget_start = self.pos();
+                    // Parse the numeric value.
+                    let raw: i64 =
+                        match *self.cur() {
+                            Tok::Int(n) => {
+                                self.bump();
+                                n
+                            }
+                            _ => return self.err(
+                                "a non-negative integer as the effect budget (e.g. `retry(<=3)`)",
+                            ),
+                        };
+                    // Reject non-positive budgets *before* the `as u64` cast below: a zero budget
+                    // would exhaust before any work fires, and guarding `< 0` here keeps a negative
+                    // `i64` (defensive — should not arise from `Tok::Int`) from wrapping to a huge
+                    // `u64`. Either way it is an explicit, never-silent error (RFC-0014 §4.5 I4, G2).
+                    if raw <= 0 {
+                        return Err(ParseError::new(
+                            budget_start,
+                            format!(
+                                "effect budget `{raw}` must be positive (> 0) — a zero budget would \
+                                 exhaust immediately (and a negative budget is rejected before the \
+                                 unsigned cast) (RFC-0014 §4.5 I4; never a silent trap, G2)"
+                            ),
+                        ));
+                    }
+                    let raw_u64 = raw as u64;
+                    // Optional unit suffix (KiB / MiB / GiB — RFC-0014 §3.4 example `alloc(<=64KiB)`).
+                    let budget: u64 = if let Tok::Ident(unit) = self.cur().clone() {
+                        let multiplier: u64 = match unit.as_str() {
+                            "KiB" => 1024,
+                            "MiB" => 1024 * 1024,
+                            "GiB" => 1024 * 1024 * 1024,
+                            other => return Err(ParseError::new(
+                                self.pos(),
+                                format!(
+                                    "unknown budget unit `{other}` — supported units are `KiB` \
+                                     (1024), `MiB` (1048576), `GiB` (1073741824); omit the unit \
+                                     for a plain count (RFC-0014 §4.5 I4; never a silent default, G2)"
+                                ),
+                            )),
+                        };
+                        self.bump();
+                        raw_u64.checked_mul(multiplier).ok_or_else(|| {
+                            ParseError::new(
+                                budget_start,
+                                format!(
+                                "effect budget `{raw_u64}{unit}` overflows u64 — use a smaller \
+                                 budget (RFC-0014 §4.5 I4)"
+                            ),
+                            )
+                        })?
+                    } else {
+                        raw_u64
+                    };
+                    self.expect(&Tok::RParen, "`)` to close the effect budget bound")?;
+                    effect_budgets.insert(eff_name.clone(), budget);
+                }
+                effects.push(eff_name);
+                if !self.eat(&Tok::Comma) {
+                    break;
+                }
+                // Trailing comma before `}` is not allowed (keep it strict — G2).
+                if self.at(&Tok::RBrace) {
+                    return Err(ParseError::new(
+                        self.pos(),
+                        "trailing comma before `}` in an effect annotation is not allowed — \
+                         remove the trailing `,` (RFC-0014 §4.5; never a silent accept)"
+                            .to_owned(),
+                    ));
+                }
+            }
+        }
         self.expect(&Tok::RBrace, "`}` to close the effect set")?;
         if let Some(dup) = first_duplicate_str(&effects) {
             // Point at the effect set itself (not after the closing `}`) for a clearer diagnostic.
@@ -972,7 +1068,7 @@ impl Parser {
                 ),
             ));
         }
-        Ok(effects)
+        Ok((effects, effect_budgets))
     }
 
     fn parse_params_opt(&mut self) -> Result<Vec<Param>, ParseError> {

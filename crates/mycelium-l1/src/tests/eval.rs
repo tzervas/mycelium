@@ -487,3 +487,65 @@ fn raised_depth_budget_completes_on_deep_worker_stack_and_trips_cleanly_past_it(
         "expected DepthExceeded(limit=4), got {err_small:?}"
     );
 }
+
+// --- M-677 / RFC-0014 §4.5 I4: per-effect budget ledger wiring --------------------------------
+
+// A recursive counter-down fn declaring `!{retry(<=3)}`. Each call to `count_down` consumes one
+// unit from the shared budget ledger for the top-level `call` invocation.
+//
+// `count_down(S(Z))` recurses once (S(Z) → Z) = 2 total invocations → 2 consumed of 3 → ok.
+// `count_down(S(S(Z)))` = 3 invocations → 3 consumed of 3 → exactly at budget → ok.
+// `count_down(S(S(S(Z))))` = 4 invocations → 4th consume finds 0 remaining → EffectBudgetExhausted.
+//
+// `main_*` calls count_down, so it must declare `retry` too (effect coverage M-660); its own
+// invoke does NOT prime a budget (no bound in `main_*`'s effect_budgets), so it only charges via
+// count_down's invocations. (Guarantee: `Empirical` — v0 per-call model, RFC-0014 §9.)
+const BUDGET_SRC: &str = "nodule d;\n\
+    type Nat = Z | S(Nat);\n\
+    fn count_down(n: Nat) => Binary{1} !{retry(<=3)} = \
+      match n { Z => 0b1, S(m) => count_down(m) };\n\
+    fn main_under() => Binary{1} !{retry} = count_down(S(Z));\n\
+    fn main_at() => Binary{1} !{retry} = count_down(S(S(Z)));\n\
+    fn main_over() => Binary{1} !{retry} = count_down(S(S(S(Z))));";
+
+#[test]
+fn budgeted_fn_under_budget_returns_value() {
+    // `count_down(S(Z))` — 2 invocations, ceiling 3 → 2 consumed → success.
+    // Guarantee: `Empirical` — per-call consumption, v0 approximation (RFC-0014 §9).
+    let e = check_nodule(&parse(BUDGET_SRC).expect("parses")).expect("checks");
+    let v = Evaluator::new(&e)
+        .call("main_under", vec![])
+        .expect("under budget — must succeed");
+    let L1Value::Repr(r) = v else {
+        panic!("expected repr, got {v:?}")
+    };
+    assert_eq!(r.payload(), &Payload::Bits(vec![true]));
+}
+
+#[test]
+fn budgeted_fn_at_budget_returns_value() {
+    // `count_down(S(S(Z)))` — 3 invocations, ceiling 3 → budget reaches 0 after last consume,
+    // but the last is the base case which returns immediately before a 4th invoke → success.
+    let e = check_nodule(&parse(BUDGET_SRC).expect("parses")).expect("checks");
+    let v = Evaluator::new(&e)
+        .call("main_at", vec![])
+        .expect("at budget — must succeed");
+    let L1Value::Repr(r) = v else {
+        panic!("expected repr, got {v:?}")
+    };
+    assert_eq!(r.payload(), &Payload::Bits(vec![true]));
+}
+
+#[test]
+fn budgeted_fn_over_budget_returns_effect_budget_exhausted() {
+    // `count_down(S(S(S(Z))))` — 4 invocations, ceiling 3 → 4th consume finds 0 remaining →
+    // explicit `L1Error::EffectBudget` (RFC-0014 §4.5 I4). Graceful, never a hang or OOM (G2).
+    let e = check_nodule(&parse(BUDGET_SRC).expect("parses")).expect("checks");
+    let err = Evaluator::new(&e)
+        .call("main_over", vec![])
+        .expect_err("over budget — must return EffectBudgetExhausted");
+    assert!(
+        matches!(err, L1Error::EffectBudget(_)),
+        "expected L1Error::EffectBudget, got {err:?}"
+    );
+}

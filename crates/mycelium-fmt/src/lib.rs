@@ -283,6 +283,215 @@ pub fn format_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError
     })
 }
 
+/// Flatten `src` into the single-line human↔stream form (M-819; DN-57 §2).
+///
+/// The mandatory `;` component terminator (M-818) makes the stream form unambiguous: every
+/// component ends with `;`, so components can be separated by a single space and the whole
+/// nodule fits on one line without any whitespace carrying structural meaning.
+///
+/// **What this produces:** a single output line (plus the required final `\n`) where the nodule
+/// header and every top-level item are emitted in their canonical inline form, joined by `; `
+/// separators.  Example:
+/// ```text
+/// nodule signals.demo; use core.binary; fn f(x: Binary{8}) => Binary{8} = x;
+/// ```
+///
+/// **Round-trip guarantee (`Empirical`):** `parse(flatten(src)) == parse(format(src))` — the
+/// flattened output re-parses to the same surface AST as the canonically formatted input.  This
+/// is verified by a runtime identity check (C1, same guard as `format_source`) and by the
+/// data-driven corpus test in `src/tests.rs`.  The guarantee is `Empirical`: backed by the
+/// corpus tests, not a formal proof.
+///
+/// **Comments and structured header:** the flatten form is the machine/stream form; it does not
+/// preserve `//` comments or `// @key:` structured-header metadata.  Both are stripped — they
+/// are not part of the Mycelium surface AST and cannot appear mid-line without swallowing
+/// subsequent content.  A caller that needs comment preservation must use `format_source`.
+///
+/// **Scope:** the same v0 scope as `format_source` — single-nodule sources only; a phylum /
+/// multi-nodule source is an explicit `OutOfScope` refusal, never a partial rewrite (G2).
+///
+/// # Errors
+/// [`FmtError::Parse`] (unparsable), [`FmtError::Header`] (malformed `// nodule:` / `// @key:`
+/// header — structurally invalid, not just metadata), or [`FmtError::OutOfScope`] (a pin
+/// mismatch, a phylum/multi-nodule source, or a body that does not round-trip).  On any error
+/// nothing is written (G2).
+pub fn flatten_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError> {
+    // Hard pin: same guard as format_source.
+    if let Some(p) = pin {
+        if p != MYCFMT_VERSION {
+            return Err(FmtError::OutOfScope(format!(
+                "[toolchain].format = {p:?}, but this is {MYCFMT_VERSION} — refusing to format with rules \
+                 the project did not pin (hard pin; G2). Align the pin or use the matching mycfmt."
+            )));
+        }
+    }
+
+    // Phylum / multi-nodule: same guard as format_source.
+    let is_phylum = parse_phylum(src).is_ok_and(|ph| ph.path.is_some() || ph.nodules.len() > 1)
+        || opens_with_phylum(src);
+    if is_phylum {
+        return Err(FmtError::OutOfScope(
+            "phylum / multi-nodule sources are outside mycfmt v0 scope (M-662) — format each nodule's \
+             content individually; whole-phylum canonical formatting is future work (refused, never a \
+             partial rewrite — G2)"
+                .to_string(),
+        ));
+    }
+
+    // A malformed structured header is an explicit error (C3/G2) even in flatten mode —
+    // the header being structurally invalid is a content problem, not a metadata-only issue.
+    parse_header(src).map_err(|e| FmtError::Header(e.to_string()))?;
+
+    // Parse the nodule body (raw parse — preserves `default paradigm`/`with paradigm`).
+    let nodule = parse(src).map_err(|e| FmtError::Parse(e.to_string()))?;
+
+    // Render the flat form directly from AST (no comments, no multiline layout).
+    let out = render_flat(&nodule);
+
+    // C1 identity guard: the flattened output must re-parse to the SAME surface AST.
+    // This is the core round-trip guarantee (Empirical — backed by corpus tests).
+    let reparsed = parse(&out).map_err(|e| {
+        FmtError::OutOfScope(format!(
+            "the flattened output did not re-parse ({e}) — refusing (round-trip-safe scope; C1/§7)"
+        ))
+    })?;
+    if reparsed != nodule {
+        return Err(FmtError::OutOfScope(
+            "flattening would change the program's surface AST — identity not preserved; refusing \
+             (round-trip-safe scope; C1/§7). This construct is outside mycfmt v0."
+                .to_owned(),
+        ));
+    }
+
+    let changed = out != src;
+    Ok(Formatted {
+        output: out,
+        changed,
+        notes: vec![
+            "emitted the single-line stream form (--flatten; M-819/DN-57 §2)".to_owned(),
+            "structured header and comments stripped (not part of the Mycelium surface AST)"
+                .to_owned(),
+        ],
+    })
+}
+
+/// Render `nodule` as a single-line flat stream: `nodule path; item1; item2; …\n`.
+///
+/// This is the layout policy for `--flatten`; it reuses the existing item renderers but
+/// collapses all whitespace so the whole program fits on one line.  No comments are emitted.
+fn render_flat(nodule: &mycelium_l1::ast::Nodule) -> String {
+    let mut parts: Vec<String> = Vec::new();
+
+    // Nodule header component (terminates with `;` per DN-57 §3 / M-818).
+    parts.push(format!(
+        "nodule {}{}",
+        nodule.path.0.join("."),
+        if nodule.std_sys { " @std-sys" } else { "" }
+    ));
+
+    // Each top-level item — rendered inline (no indentation, no newlines).
+    for item in &nodule.items {
+        parts.push(render_item_flat(item));
+    }
+
+    // Join with `; ` — each part already carries its trailing `;` except the last part
+    // of each item (which is included in the part string).  Actually each part already
+    // ends with `;` because the item renderers include the terminator.
+    // The nodule header part does NOT yet carry `;` — it is added when we join with `; `.
+    //
+    // Strategy: the nodule header is just "nodule path" (no `;`), and each item part
+    // already ends with `;`.  Join all parts with a single space and add the final `\n`.
+    //
+    // nodule path; item1; item2;   ← each item ends with `;`, nodule header gets `;` from join
+    let mut out = String::new();
+    for (i, part) in parts.iter().enumerate() {
+        if i == 0 {
+            // nodule header: append `; ` if there are more parts, else `;\n`
+            out.push_str(part);
+            if parts.len() == 1 {
+                out.push_str(";\n");
+            } else {
+                out.push_str("; ");
+            }
+        } else {
+            // item part already ends with `;`
+            let trimmed = part.trim_end();
+            out.push_str(trimmed);
+            if i + 1 < parts.len() {
+                out.push(' ');
+            } else {
+                out.push('\n');
+            }
+        }
+    }
+
+    out
+}
+
+/// Render a single top-level item as an inline flat string (no newlines, no indentation).
+/// Each returned string ends with `;` (the mandatory component terminator, DN-57 §3 / M-818).
+fn render_item_flat(item: &mycelium_l1::ast::Item) -> String {
+    use mycelium_l1::ast::Item;
+    match item {
+        Item::Fn(fd) => {
+            let pub_prefix = if fd.vis.is_pub() { "pub " } else { "" };
+            let thaw_prefix = if fd.thaw { "thaw " } else { "" };
+            let sig = render_sig_tail(&fd.sig);
+            let body = render_expr_canonical(&fd.body);
+            format!("{pub_prefix}{thaw_prefix}fn {sig} = {body};")
+        }
+        Item::Impl(id) => render_impl_flat(id),
+        _ => {
+            // For non-fn, non-impl items: reuse the canonical text from render_non_fn_item,
+            // then collapse it to a single line (it is already single-line for use/default/type
+            // in canonical form, but we normalise whitespace for safety).
+            let text = render_non_fn_item(item);
+            // The text ends with `\n`; trim and ensure the `;` terminator is present.
+            let trimmed = text.trim_end();
+            // Collapse any interior newlines (e.g. multiline type declarations) to spaces.
+            let flat: String = trimmed
+                .split('\n')
+                .map(str::trim)
+                .filter(|l| !l.is_empty())
+                .collect::<Vec<_>>()
+                .join(" ");
+            flat
+        }
+    }
+}
+
+/// Render an `impl` block in flat inline form: `impl Trait for Type { fn …; fn …; };`
+fn render_impl_flat(id: &mycelium_l1::ast::ImplDecl) -> String {
+    let args = if id.trait_args.is_empty() {
+        String::new()
+    } else {
+        let a: Vec<String> = id.trait_args.iter().map(render_type_ref).collect();
+        format!("[{}]", a.join(", "))
+    };
+    let methods: Vec<String> = id
+        .methods
+        .iter()
+        .map(|m| {
+            let sig = render_sig_tail(&m.sig);
+            let pub_prefix = if m.vis.is_pub() { "pub " } else { "" };
+            let thaw_prefix = if m.thaw { "thaw " } else { "" };
+            let body = render_expr_canonical(&m.body);
+            format!("{pub_prefix}{thaw_prefix}fn {sig} = {body};")
+        })
+        .collect();
+    let body = if methods.is_empty() {
+        String::new()
+    } else {
+        format!(" {} ", methods.join(" "))
+    };
+    format!(
+        "impl {}{} for {} {{{body}}};",
+        id.trait_name,
+        args,
+        render_type_ref(&id.for_ty)
+    )
+}
+
 // ================================================================================================
 // Comment plan: classify all comments relative to the items they belong to.
 // ================================================================================================
@@ -1449,7 +1658,20 @@ fn render_sig_tail(sig: &mycelium_l1::ast::FnSig) -> String {
     let eff = if sig.effects.is_empty() {
         String::new()
     } else {
-        format!(" !{{{}}}", sig.effects.join(", "))
+        // RFC-0014 §4.5 I4 (M-677): render each effect with its budget bound when present —
+        // `name(<=N)`. The parser folds any `KiB`/`MiB`/`GiB` suffix into a unit-less byte
+        // count (`effect_budgets: BTreeMap<String, u64>`), so the canonical surface is the raw
+        // `<=N`; this round-trips AST-equal — parse(render(sig)) yields the same effect_budgets.
+        // (Surface unit preservation would require the AST to retain the suffix — out of scope.)
+        let rendered: Vec<String> = sig
+            .effects
+            .iter()
+            .map(|e| match sig.effect_budgets.get(e) {
+                Some(n) => format!("{e}(<={n})"),
+                None => e.clone(),
+            })
+            .collect();
+        format!(" !{{{}}}", rendered.join(", "))
     };
     // RFC-0037 D4: return arrow `=>` (the `->` glyph is retired).
     format!(

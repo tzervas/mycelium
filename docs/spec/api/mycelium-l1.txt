@@ -151,6 +151,7 @@ pub mycelium_l1::ast::Expr::App::args: alloc::vec::Vec<mycelium_l1::ast::Expr>
 pub mycelium_l1::ast::Expr::App::head: alloc::boxed::Box<mycelium_l1::ast::Expr>
 pub mycelium_l1::ast::Expr::Ascribe(alloc::boxed::Box<mycelium_l1::ast::Expr>, mycelium_l1::ast::TypeRef)
 pub mycelium_l1::ast::Expr::Colony(alloc::vec::Vec<mycelium_l1::ast::Hypha>)
+pub mycelium_l1::ast::Expr::Consume(alloc::boxed::Box<mycelium_l1::ast::Expr>)
 pub mycelium_l1::ast::Expr::For
 pub mycelium_l1::ast::Expr::For::acc: alloc::string::String
 pub mycelium_l1::ast::Expr::For::body: alloc::boxed::Box<mycelium_l1::ast::Expr>
@@ -208,6 +209,7 @@ pub mycelium_l1::ast::Item::Default(mycelium_l1::ast::Paradigm)
 pub mycelium_l1::ast::Item::Derive(mycelium_l1::ast::DeriveDecl)
 pub mycelium_l1::ast::Item::Fn(mycelium_l1::ast::FnDecl)
 pub mycelium_l1::ast::Item::Impl(mycelium_l1::ast::ImplDecl)
+pub mycelium_l1::ast::Item::InherentImpl(mycelium_l1::ast::InherentImplDecl)
 pub mycelium_l1::ast::Item::Lower(mycelium_l1::ast::LowerDecl)
 pub mycelium_l1::ast::Item::Object(mycelium_l1::ast::ObjectDecl)
 pub mycelium_l1::ast::Item::Trait(mycelium_l1::ast::TraitDecl)
@@ -492,6 +494,7 @@ impl core::marker::UnsafeUnpin for mycelium_l1::ast::FnDecl
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::FnDecl
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::FnDecl
 pub struct mycelium_l1::ast::FnSig
+pub mycelium_l1::ast::FnSig::effect_budgets: alloc::collections::btree::map::BTreeMap<alloc::string::String, u64>
 pub mycelium_l1::ast::FnSig::effects: alloc::vec::Vec<alloc::string::String>
 pub mycelium_l1::ast::FnSig::name: alloc::string::String
 pub mycelium_l1::ast::FnSig::params: alloc::vec::Vec<mycelium_l1::ast::TypeParam>
@@ -549,6 +552,23 @@ impl core::marker::Unpin for mycelium_l1::ast::ImplDecl
 impl core::marker::UnsafeUnpin for mycelium_l1::ast::ImplDecl
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::ImplDecl
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::ImplDecl
+pub struct mycelium_l1::ast::InherentImplDecl
+pub mycelium_l1::ast::InherentImplDecl::for_ty: mycelium_l1::ast::TypeRef
+pub mycelium_l1::ast::InherentImplDecl::methods: alloc::vec::Vec<mycelium_l1::ast::FnDecl>
+impl core::clone::Clone for mycelium_l1::ast::InherentImplDecl
+pub fn mycelium_l1::ast::InherentImplDecl::clone(&self) -> mycelium_l1::ast::InherentImplDecl
+impl core::cmp::PartialEq for mycelium_l1::ast::InherentImplDecl
+pub fn mycelium_l1::ast::InherentImplDecl::eq(&self, &mycelium_l1::ast::InherentImplDecl) -> bool
+impl core::fmt::Debug for mycelium_l1::ast::InherentImplDecl
+pub fn mycelium_l1::ast::InherentImplDecl::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::ast::InherentImplDecl
+impl core::marker::Freeze for mycelium_l1::ast::InherentImplDecl
+impl core::marker::Send for mycelium_l1::ast::InherentImplDecl
+impl core::marker::Sync for mycelium_l1::ast::InherentImplDecl
+impl core::marker::Unpin for mycelium_l1::ast::InherentImplDecl
+impl core::marker::UnsafeUnpin for mycelium_l1::ast::InherentImplDecl
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::ast::InherentImplDecl
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::ast::InherentImplDecl
 pub struct mycelium_l1::ast::LowerDecl
 pub mycelium_l1::ast::LowerDecl::name: alloc::string::String
 pub mycelium_l1::ast::LowerDecl::params: alloc::vec::Vec<alloc::string::String>
@@ -1013,6 +1033,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::elab::ElabError
 pub fn mycelium_l1::elab::build_registry(&mycelium_l1::checkty::Env) -> core::result::Result<mycelium_core::data::DataRegistry, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::elaborate(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::elaborate_colony(&mycelium_l1::checkty::Env, &str) -> core::result::Result<alloc::vec::Vec<mycelium_core::node::Node>, mycelium_l1::elab::ElabError>
+pub fn mycelium_l1::elab::elaborate_lower_rule(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::elaborate_reclaim(&mycelium_l1::checkty::Env, &str) -> core::result::Result<(mycelium_core::node::Node, mycelium_core::node::Node), mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::lit_value(&str, &mycelium_l1::ast::Literal) -> core::result::Result<mycelium_core::value::Value, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elab::policy_name_ref(&mycelium_l1::ast::Path) -> mycelium_core::node::PolicyRef
@@ -1046,6 +1067,7 @@ pub mod mycelium_l1::eval
 pub enum mycelium_l1::eval::L1Error
 pub mycelium_l1::eval::L1Error::DepthExceeded
 pub mycelium_l1::eval::L1Error::DepthExceeded::limit: u32
+pub mycelium_l1::eval::L1Error::EffectBudget(mycelium_interp::budget::EffectBudgetExhausted)
 pub mycelium_l1::eval::L1Error::FuelExhausted
 pub mycelium_l1::eval::L1Error::GuaranteeTooWeak
 pub mycelium_l1::eval::L1Error::GuaranteeTooWeak::actual: mycelium_core::guarantee::GuaranteeStrength
@@ -1064,6 +1086,8 @@ impl core::cmp::PartialEq for mycelium_l1::eval::L1Error
 pub fn mycelium_l1::eval::L1Error::eq(&self, &mycelium_l1::eval::L1Error) -> bool
 impl core::convert::From<mycelium_interp::EvalError> for mycelium_l1::eval::L1Error
 pub fn mycelium_l1::eval::L1Error::from(mycelium_interp::EvalError) -> Self
+impl core::convert::From<mycelium_interp::budget::EffectBudgetExhausted> for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::from(mycelium_interp::budget::EffectBudgetExhausted) -> Self
 impl core::error::Error for mycelium_l1::eval::L1Error
 impl core::fmt::Debug for mycelium_l1::eval::L1Error
 pub fn mycelium_l1::eval::L1Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1164,6 +1188,26 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::lexer::Comment
 pub fn mycelium_l1::lexer::lex(&str) -> core::result::Result<alloc::vec::Vec<mycelium_l1::token::Spanned>, mycelium_l1::error::ParseError>
 pub fn mycelium_l1::lexer::lex_with_comments(&str) -> core::result::Result<(alloc::vec::Vec<mycelium_l1::token::Spanned>, alloc::vec::Vec<mycelium_l1::lexer::Comment>), mycelium_l1::error::ParseError>
 pub mod mycelium_l1::mono
+pub struct mycelium_l1::mono::ClosureSpecialization
+pub mycelium_l1::mono::ClosureSpecialization::apply_fn: alloc::string::String
+pub mycelium_l1::mono::ClosureSpecialization::arrow: alloc::string::String
+pub mycelium_l1::mono::ClosureSpecialization::captures: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
+pub mycelium_l1::mono::ClosureSpecialization::ctor_name: alloc::string::String
+impl core::clone::Clone for mycelium_l1::mono::ClosureSpecialization
+pub fn mycelium_l1::mono::ClosureSpecialization::clone(&self) -> mycelium_l1::mono::ClosureSpecialization
+impl core::cmp::Eq for mycelium_l1::mono::ClosureSpecialization
+impl core::cmp::PartialEq for mycelium_l1::mono::ClosureSpecialization
+pub fn mycelium_l1::mono::ClosureSpecialization::eq(&self, &mycelium_l1::mono::ClosureSpecialization) -> bool
+impl core::fmt::Debug for mycelium_l1::mono::ClosureSpecialization
+pub fn mycelium_l1::mono::ClosureSpecialization::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::mono::ClosureSpecialization
+impl core::marker::Freeze for mycelium_l1::mono::ClosureSpecialization
+impl core::marker::Send for mycelium_l1::mono::ClosureSpecialization
+impl core::marker::Sync for mycelium_l1::mono::ClosureSpecialization
+impl core::marker::Unpin for mycelium_l1::mono::ClosureSpecialization
+impl core::marker::UnsafeUnpin for mycelium_l1::mono::ClosureSpecialization
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::mono::ClosureSpecialization
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::mono::ClosureSpecialization
 pub struct mycelium_l1::mono::HofSpecialization
 pub mycelium_l1::mono::HofSpecialization::fn_args: alloc::vec::Vec<(usize, alloc::string::String)>
 pub mycelium_l1::mono::HofSpecialization::mangled: alloc::string::String
@@ -1205,6 +1249,8 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::mono::InstanceSele
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::mono::InstanceSelection
 pub struct mycelium_l1::mono::MonoSelections
 impl mycelium_l1::mono::MonoSelections
+pub fn mycelium_l1::mono::MonoSelections::closure(&self, &str) -> core::option::Option<&mycelium_l1::mono::ClosureSpecialization>
+pub fn mycelium_l1::mono::MonoSelections::closure_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&alloc::string::String, &mycelium_l1::mono::ClosureSpecialization)>
 pub fn mycelium_l1::mono::MonoSelections::get(&self, &str) -> core::option::Option<&mycelium_l1::mono::InstanceSelection>
 pub fn mycelium_l1::mono::MonoSelections::hof(&self, &str) -> core::option::Option<&mycelium_l1::mono::HofSpecialization>
 pub fn mycelium_l1::mono::MonoSelections::hof_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&alloc::string::String, &mycelium_l1::mono::HofSpecialization)>
@@ -1544,6 +1590,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::elab::ElabError
 pub enum mycelium_l1::L1Error
 pub mycelium_l1::L1Error::DepthExceeded
 pub mycelium_l1::L1Error::DepthExceeded::limit: u32
+pub mycelium_l1::L1Error::EffectBudget(mycelium_interp::budget::EffectBudgetExhausted)
 pub mycelium_l1::L1Error::FuelExhausted
 pub mycelium_l1::L1Error::GuaranteeTooWeak
 pub mycelium_l1::L1Error::GuaranteeTooWeak::actual: mycelium_core::guarantee::GuaranteeStrength
@@ -1562,6 +1609,8 @@ impl core::cmp::PartialEq for mycelium_l1::eval::L1Error
 pub fn mycelium_l1::eval::L1Error::eq(&self, &mycelium_l1::eval::L1Error) -> bool
 impl core::convert::From<mycelium_interp::EvalError> for mycelium_l1::eval::L1Error
 pub fn mycelium_l1::eval::L1Error::from(mycelium_interp::EvalError) -> Self
+impl core::convert::From<mycelium_interp::budget::EffectBudgetExhausted> for mycelium_l1::eval::L1Error
+pub fn mycelium_l1::eval::L1Error::from(mycelium_interp::budget::EffectBudgetExhausted) -> Self
 impl core::error::Error for mycelium_l1::eval::L1Error
 impl core::fmt::Debug for mycelium_l1::eval::L1Error
 pub fn mycelium_l1::eval::L1Error::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -1690,6 +1739,26 @@ impl core::marker::Unpin for mycelium_l1::checkty::CheckError
 impl core::marker::UnsafeUnpin for mycelium_l1::checkty::CheckError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::checkty::CheckError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::checkty::CheckError
+pub struct mycelium_l1::ClosureSpecialization
+pub mycelium_l1::ClosureSpecialization::apply_fn: alloc::string::String
+pub mycelium_l1::ClosureSpecialization::arrow: alloc::string::String
+pub mycelium_l1::ClosureSpecialization::captures: alloc::vec::Vec<(alloc::string::String, alloc::string::String)>
+pub mycelium_l1::ClosureSpecialization::ctor_name: alloc::string::String
+impl core::clone::Clone for mycelium_l1::mono::ClosureSpecialization
+pub fn mycelium_l1::mono::ClosureSpecialization::clone(&self) -> mycelium_l1::mono::ClosureSpecialization
+impl core::cmp::Eq for mycelium_l1::mono::ClosureSpecialization
+impl core::cmp::PartialEq for mycelium_l1::mono::ClosureSpecialization
+pub fn mycelium_l1::mono::ClosureSpecialization::eq(&self, &mycelium_l1::mono::ClosureSpecialization) -> bool
+impl core::fmt::Debug for mycelium_l1::mono::ClosureSpecialization
+pub fn mycelium_l1::mono::ClosureSpecialization::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_l1::mono::ClosureSpecialization
+impl core::marker::Freeze for mycelium_l1::mono::ClosureSpecialization
+impl core::marker::Send for mycelium_l1::mono::ClosureSpecialization
+impl core::marker::Sync for mycelium_l1::mono::ClosureSpecialization
+impl core::marker::Unpin for mycelium_l1::mono::ClosureSpecialization
+impl core::marker::UnsafeUnpin for mycelium_l1::mono::ClosureSpecialization
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::mono::ClosureSpecialization
+impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::mono::ClosureSpecialization
 pub struct mycelium_l1::Env
 pub mycelium_l1::Env::fns: alloc::collections::btree::map::BTreeMap<alloc::string::String, mycelium_l1::ast::FnDecl>
 pub mycelium_l1::Env::impls: alloc::collections::btree::map::BTreeMap<(alloc::string::String, alloc::string::String), alloc::vec::Vec<mycelium_l1::ast::FnDecl>>
@@ -1752,6 +1821,8 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_l1::mono::InstanceSele
 impl core::panic::unwind_safe::UnwindSafe for mycelium_l1::mono::InstanceSelection
 pub struct mycelium_l1::MonoSelections
 impl mycelium_l1::mono::MonoSelections
+pub fn mycelium_l1::mono::MonoSelections::closure(&self, &str) -> core::option::Option<&mycelium_l1::mono::ClosureSpecialization>
+pub fn mycelium_l1::mono::MonoSelections::closure_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&alloc::string::String, &mycelium_l1::mono::ClosureSpecialization)>
 pub fn mycelium_l1::mono::MonoSelections::get(&self, &str) -> core::option::Option<&mycelium_l1::mono::InstanceSelection>
 pub fn mycelium_l1::mono::MonoSelections::hof(&self, &str) -> core::option::Option<&mycelium_l1::mono::HofSpecialization>
 pub fn mycelium_l1::mono::MonoSelections::hof_iter(&self) -> impl core::iter::traits::iterator::Iterator<Item = (&alloc::string::String, &mycelium_l1::mono::HofSpecialization)>
@@ -1935,6 +2006,7 @@ pub fn mycelium_l1::check_phylum(&mycelium_l1::ast::Phylum) -> core::result::Res
 pub fn mycelium_l1::check_phylum_matured(&mycelium_l1::ast::Phylum, bool) -> core::result::Result<mycelium_l1::checkty::PhylumEnv, mycelium_l1::checkty::CheckError>
 pub fn mycelium_l1::elaborate(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elaborate_colony(&mycelium_l1::checkty::Env, &str) -> core::result::Result<alloc::vec::Vec<mycelium_core::node::Node>, mycelium_l1::elab::ElabError>
+pub fn mycelium_l1::elaborate_lower_rule(&mycelium_l1::checkty::Env, &str) -> core::result::Result<mycelium_core::node::Node, mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::elaborate_reclaim(&mycelium_l1::checkty::Env, &str) -> core::result::Result<(mycelium_core::node::Node, mycelium_core::node::Node), mycelium_l1::elab::ElabError>
 pub fn mycelium_l1::expand_phylum_to_source(&mycelium_l1::ast::Phylum) -> alloc::string::String
 pub fn mycelium_l1::expand_to_source(&mycelium_l1::ast::Nodule) -> alloc::string::String

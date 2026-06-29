@@ -5,16 +5,22 @@
 //! any refusal leaves the file exactly as it was.
 //!
 //! ```text
-//! mycfmt [--check | --write] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->...
+//! mycfmt [--check | --write] [--flatten] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->...
 //! ```
 //!
 //! Exit codes (contract §5): 0 ok · 1 `--check` would reformat · 2 parse error · 3 header error ·
 //! 4 out-of-scope refusal (incl. a `[toolchain].format` pin mismatch) · 64 usage · 66 I/O.
+//!
+//! **`--flatten`** emits the single-line human↔stream form (M-819; DN-57 §2): the whole nodule on one
+//! line, components separated by `; `.  The mandatory `;` terminator (M-818) makes this unambiguous.
+//! Comments and structured-header metadata are stripped (not part of the surface AST).  The output
+//! re-parses to the same surface AST as the canonical form (`Empirical` round-trip guarantee).
+//! `--flatten` is incompatible with `--write` (the stream form is for stdout / pipe use).
 
 use std::process::ExitCode;
 
 use mycelium_cli_common::{read_source, Args};
-use mycelium_fmt::{format_source, Formatted};
+use mycelium_fmt::{flatten_source, format_source, Formatted};
 use mycelium_proj::parse_manifest;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -29,13 +35,14 @@ enum Mode {
 
 fn usage() -> ExitCode {
     eprintln!(
-        "usage: mycfmt [--check | --write] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->..."
+        "usage: mycfmt [--check | --write] [--flatten] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->..."
     );
     ExitCode::from(64) // EX_USAGE
 }
 
 fn main() -> ExitCode {
     let mut mode = Mode::Stdout;
+    let mut flatten = false;
     let mut explain = false;
     let mut config: Option<String> = None;
     let mut paths: Vec<String> = Vec::new();
@@ -45,6 +52,7 @@ fn main() -> ExitCode {
         match a.as_str() {
             "--check" => mode = Mode::Check,
             "--write" => mode = Mode::Write,
+            "--flatten" => flatten = true,
             "--explain" => explain = true,
             "--config" => match args.value() {
                 Some(p) => config = Some(p),
@@ -62,6 +70,14 @@ fn main() -> ExitCode {
         eprintln!("mycfmt: --write cannot rewrite stdin; use the default (stdout) for `-`");
         return usage();
     }
+    // --flatten is for stdout / pipe use; --write with --flatten is rejected (G2: never silent).
+    if flatten && mode == Mode::Write {
+        eprintln!(
+            "mycfmt: --flatten cannot be used with --write; the stream form is stdout-only \
+             (pipe it to a file if needed)"
+        );
+        return usage();
+    }
 
     // The `[toolchain].format` hard pin (M-364 §10.3), if a manifest is given/discoverable. A manifest
     // that does not parse is an explicit error — we never silently format ignoring a malformed pin (G2).
@@ -72,7 +88,7 @@ fn main() -> ExitCode {
 
     let mut worst = 0u8; // highest exit code seen
     for path in &paths {
-        let code = run_one(path, mode, explain, pin.as_deref());
+        let code = run_one(path, mode, flatten, explain, pin.as_deref());
         worst = worst.max(code);
     }
     ExitCode::from(worst)
@@ -127,7 +143,7 @@ fn discover_manifest(start: &std::path::Path) -> Option<std::path::PathBuf> {
 }
 
 /// Format one path; return its exit code (contract §5).
-fn run_one(path: &str, mode: Mode, explain: bool, pin: Option<&str>) -> u8 {
+fn run_one(path: &str, mode: Mode, flatten: bool, explain: bool, pin: Option<&str>) -> u8 {
     // `read_source` prints the same `mycfmt: io-error: …` line the local copy did; a refusal maps to
     // the contract's I/O exit code 66 (EX_IOERR) here, where the exit-code newtype lives.
     let src = match read_source("mycfmt: io-error", path) {
@@ -135,7 +151,13 @@ fn run_one(path: &str, mode: Mode, explain: bool, pin: Option<&str>) -> u8 {
         Err(_) => return 66,
     };
 
-    match format_source(&src, pin) {
+    let result = if flatten {
+        flatten_source(&src, pin)
+    } else {
+        format_source(&src, pin)
+    };
+
+    match result {
         Ok(formatted) => emit(path, &src, &formatted, mode, explain),
         Err(e) => {
             eprintln!("mycfmt: {path}: {e}");
