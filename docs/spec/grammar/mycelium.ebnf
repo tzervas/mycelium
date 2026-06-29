@@ -167,9 +167,12 @@ trait_item_impl ::= /* a trait-instance `impl` block, same grammar as a top-leve
 lower_item     ::= 'lower' Ident type_params? '=' expr
 derive_item    ::= 'derive' Ident 'for' type_ref
 
-/* Anonymous function (RFC-0037 D5). The grammar is reserved and parses; full closure semantics
- * (capture, partial application, dynamic fn-flow) are deferred to M-704 / RFC-0024 §5 — the checker
- * and elaborator emit a never-silent Residual for it (G2). `=>` (D4) separates params from body. */
+/* Anonymous function / closure (RFC-0037 D5). Implemented (M-704 / RFC-0024 §4A): the closure
+ * type-checks (Ty::Fn) and lowers + runs via Reynolds defunctionalization in monomorphization (a
+ * tag-sum struct + a generated `apply` dispatcher; no new L0 kernel node — KC-3). `=>` (D4)
+ * separates params from body. Stage-1 is SINGLE-ARGUMENT: a multi-parameter lambda needs the
+ * tuple/product type the v0 surface lacks, so it is a never-silent refusal (tuple-gated, §4A.8) —
+ * the `params?` here admits >1 param syntactically, but the checker refuses arity ≠ 1 (G2). */
 lambda_expr    ::= 'lambda' '(' params? ')' '=>' expr
 
 /* Effect annotation (RFC-0014 §3.4/§4.5 I3; M-660). Optional `!{ … }` after the return type

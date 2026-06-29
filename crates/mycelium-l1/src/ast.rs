@@ -695,12 +695,17 @@ pub enum Expr {
     /// Both paths refuse outside the evaluation-complete fragment with a never-silent
     /// [`crate::elab::ElabError::Residual`] (G2), never a fabricated accept.
     Colony(Vec<Hypha>),
-    /// `lambda(params) => body` — an anonymous-function expression (RFC-0037 D5). The grammar + AST
-    /// node land with the RFC-0037 grammar epic; **full closure semantics (environment capture,
-    /// partial application, dynamic fn-flow) are deferred to M-704 / RFC-0024 §5** — the checker
-    /// ([`crate::checkty`]) and elaborator ([`crate::elab`]) emit a **never-silent `Residual`** for a
-    /// lambda until then (G2), so the surface parses but does not yet evaluate. v0 params are typed
-    /// (`name: type`); inferred-type params are part of the M-704 work.
+    /// `lambda(params) => body` — an anonymous-function (closure) expression (RFC-0037 D5). The
+    /// checker ([`crate::checkty::Cx::check_lambda`]) types it to [`crate::checkty::Ty::Fn`], and
+    /// **monomorphization** ([`crate::mono`]) lowers each escaping closure by **Reynolds
+    /// defunctionalization** (RFC-0024 §4A, M-704): a per-arrow tag-sum data type `Fn$A$B` (one
+    /// constructor per distinct closure, fields = the captured free variables) reusing
+    /// [`crate::eval::L1Value::Data`], plus a generated `apply$A$B(clo, x)` dispatcher whose body is a
+    /// `match` over the whole-program-closed constructor set — **no new L0 kernel node** (KC-3). A raw
+    /// `Lambda` therefore never survives into elaboration/evaluation (those stages keep a defensive,
+    /// never-silent `Residual` as a staging invariant — G2). v0 params are typed (`name: type`).
+    /// **Multi-argument lambdas / partial application** stay a never-silent tuple-gated `Residual`
+    /// (RFC-0024 §4A.8 — the v0 surface has no tuple/product type).
     Lambda {
         /// The (typed) value parameters.
         params: Vec<Param>,

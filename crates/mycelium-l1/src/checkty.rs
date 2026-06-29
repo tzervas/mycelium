@@ -13,7 +13,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ambient::AmbientError;
 use crate::ast::{
     Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
-    Nodule, ObjectDecl, Param, Paradigm, Path, Pattern, Phylum, Scalar, Strength, TraitRef,
+    Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Phylum, Scalar, Strength, TraitRef,
     TypeDecl, TypeRef, UsePath, WidthRef,
 };
 
