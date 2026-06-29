@@ -2009,7 +2009,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 147,
+      "line": 159,
       "summary": "The outcome of [`check_project`]: which nodules type-checked, and the structured failures.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2020,7 +2020,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli::CheckReport",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 157,
+      "line": 169,
       "summary": "Whether every checked file passed.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2031,7 +2031,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 30,
+      "line": 42,
       "summary": "A structured, actionable diagnostic (the DN-22 quality bar; a projection of an RFC-0013",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2042,7 +2042,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli::Report",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 58,
+      "line": 70,
       "summary": "Attach a `path:line:col` (or `path`) location.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2053,7 +2053,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli::Report",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 65,
+      "line": 77,
       "summary": "Attach an actionable `help:` line.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2064,7 +2064,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli::Report",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 46,
+      "line": 58,
       "summary": "A report with a code, message and exit code (no location/help).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2075,7 +2075,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli::Report",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 72,
+      "line": 84,
       "summary": "Render the multi-line, structured form (no trailing newline).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2086,7 +2086,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 133,
+      "line": 145,
       "summary": "`myc build` — build the content-addressed spore for the project at `manifest_path`, returning the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2097,7 +2097,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 170,
+      "line": 182,
       "summary": "`myc check` — parse and type-check every `.myc` source under the project directory containing",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2108,7 +2108,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 100,
+      "line": 112,
       "summary": "`myc init <name>` — scaffold a new phylum named `name` under `parent`, returning the created",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -2119,7 +2119,7 @@
       "crate": "mycelium-cli",
       "module": "mycelium_cli",
       "file": "crates/mycelium-cli/src/lib.rs",
-      "line": 216,
+      "line": 228,
       "summary": "`myc run` — **not yet wired** (honest, never-silent).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6288,7 +6288,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 260,
+      "line": 275,
       "summary": "The L1 evaluator over a checked [`Env`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6310,7 +6310,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 93,
+      "line": 96,
       "summary": "Why L1 evaluation could not produce a value — always explicit (S5/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6321,7 +6321,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 42,
+      "line": 45,
       "summary": "An L1 runtime value: an L0 representation value, or a constructed datum.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6508,7 +6508,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 795,
+      "line": 804,
       "summary": "A `match` arm.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6519,7 +6519,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 500,
+      "line": 509,
       "summary": "A base (un-annotated) type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6552,7 +6552,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 426,
+      "line": 435,
       "summary": "The execution-mode request for a definition (DN-58 §C; RFC-0004 `ExecutionMode`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6563,7 +6563,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 625,
+      "line": 634,
       "summary": "An expression.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6574,7 +6574,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 438,
+      "line": 447,
       "summary": "A function definition.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6596,7 +6596,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::FnSig",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 401,
+      "line": 410,
       "summary": "The **names** of this signature's type parameters (dropping any bounds and width params) —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6607,7 +6607,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::FnSig",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 411,
+      "line": 420,
       "summary": "The **names** of this signature's width parameters (DN-42 / M-753 v1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6618,7 +6618,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 809,
+      "line": 818,
       "summary": "One `hypha <expr>` spawn inside a [`Expr::Colony`] block — a single concurrent execution unit",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6651,7 +6651,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 862,
+      "line": 871,
       "summary": "A binary literal from its verbatim digit/`_` string (the `…` of `0b…`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6662,7 +6662,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Literal",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 870,
+      "line": 879,
       "summary": "A ternary literal from its verbatim `+0-` string, MSB-first (the inner text of `<…>`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6706,7 +6706,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 457,
+      "line": 466,
       "summary": "A value parameter `name: type`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6739,7 +6739,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 816,
+      "line": 825,
       "summary": "A pattern.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6761,7 +6761,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 560,
+      "line": 569,
       "summary": "A scalar element kind.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6772,7 +6772,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 551,
+      "line": 560,
       "summary": "Declared sparsity of a VSA type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6783,7 +6783,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 573,
+      "line": 582,
       "summary": "A guarantee-lattice strength.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6794,7 +6794,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 605,
+      "line": 614,
       "summary": "The **meet** `g₁ ∧ g₂` — the *weaker* (less trusted) of the two grades (RFC-0018 §4.1: the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6805,7 +6805,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 590,
+      "line": 599,
       "summary": "The **trust rank** on the integrity lattice `Exact ⊐ Proven ⊐ Empirical ⊐ Declared`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6816,7 +6816,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::Strength",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 618,
+      "line": 627,
       "summary": "`self ⊒ demand` — is `self` **at least as trusted** as `demand`? The honesty rule as a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6871,7 +6871,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 466,
+      "line": 475,
       "summary": "A type with an optional guarantee-strength index (`T @ Exact`; LR-6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6882,7 +6882,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::TypeRef",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 479,
+      "line": 488,
       "summary": "A type with **no** written guarantee index — the surface `T` form (the index is then",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6893,7 +6893,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ast::TypeRef",
       "file": "crates/mycelium-l1/src/ast.rs",
-      "line": 490,
+      "line": 499,
       "summary": "A type carrying an explicit guarantee-strength index — the surface `T @ g` form.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6937,7 +6937,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1224,
+      "line": 1238,
       "summary": "Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6959,7 +6959,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1165,
+      "line": 1179,
       "summary": "Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7168,7 +7168,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4786,
+      "line": 4817,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7179,7 +7179,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 4767,
+      "line": 4798,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7212,7 +7212,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 687,
+      "line": 688,
       "summary": "Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7333,7 +7333,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 217,
+      "line": 232,
       "summary": "The tunable **budgets** of an [`Evaluator`] — the step (`fuel`) and recursion-depth guards — as",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7344,7 +7344,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval::EvaluatorOpts",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 247,
+      "line": 262,
       "summary": "Set the recursion-depth budget (builder-style), leaving `fuel` untouched.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7355,7 +7355,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval::EvaluatorOpts",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 240,
+      "line": 255,
       "summary": "Set the step budget (builder-style), leaving `depth` untouched.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7366,7 +7366,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval::L1Value",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 59,
+      "line": 62,
       "summary": "The underlying L0 value, if this is a representation value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7377,7 +7377,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval::L1Value",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 74,
+      "line": 77,
       "summary": "Project this L1 value onto the L0 [`CoreValue`] domain, resolving each constructor's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7388,7 +7388,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::eval",
       "file": "crates/mycelium-l1/src/eval.rs",
-      "line": 175,
+      "line": 190,
       "summary": "The surface strength keyword's kernel lattice point.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -30381,7 +30381,7 @@
     },
     {
       "symbol": "mycelium_l1::checkty::check_and_resolve",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:1224 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:1238 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule",
@@ -30389,7 +30389,7 @@
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:1165 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:1179 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum",
@@ -30533,7 +30533,7 @@
     },
     {
       "symbol": "mycelium_l1::eval::Evaluator",
-      "reason": "dedup-alias: same definition as `mycelium_l1::Evaluator` at crates/mycelium-l1/src/eval.rs:260 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::Evaluator` at crates/mycelium-l1/src/eval.rs:275 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::eval::EvaluatorOpts::clone",
@@ -30553,7 +30553,7 @@
     },
     {
       "symbol": "mycelium_l1::eval::L1Error",
-      "reason": "dedup-alias: same definition as `mycelium_l1::L1Error` at crates/mycelium-l1/src/eval.rs:93 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::L1Error` at crates/mycelium-l1/src/eval.rs:96 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::eval::L1Error::clone",
@@ -30597,7 +30597,7 @@
     },
     {
       "symbol": "mycelium_l1::eval::L1Value",
-      "reason": "dedup-alias: same definition as `mycelium_l1::L1Value` at crates/mycelium-l1/src/eval.rs:42 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::L1Value` at crates/mycelium-l1/src/eval.rs:45 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::eval::L1Value::clone",

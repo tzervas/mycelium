@@ -2372,7 +2372,7 @@ issues:
   - id: M-677
     title: "M-677 — feat(runtime): wire declared effects → mycelium-interp budget ledger + per-effect budget syntax"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:5, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-660]
     epic: E12-1
     doc_refs: [corpus:RFC-0014, src:crates/mycelium-l1/src/checkty.rs]
@@ -2547,7 +2547,7 @@ issues:
   - id: M-668
     title: "M-668 — design: RFC-0008 R2 planning — `xloc`, `mesh`, `cyst`, `graft`, `forage`, `backbone`"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:design, area:execution, priority:P3, status:needs-design]
+    labels: [phase:7, type:design, area:execution, priority:P3, status:done]
     depends_on: [M-667]
     epic: E7-2
     doc_refs: [corpus:RFC-0008, corpus:DN-03, corpus:RFC-0005]
@@ -7039,7 +7039,7 @@ issues:
   - id: M-819
     title: "M-819 -- mycfmt --flatten: canonical ;-emission + single-line stream form (DN-57)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:done]
     epic: E24-1
     depends_on: [M-818]
     doc_refs:
@@ -7052,7 +7052,7 @@ issues:
   - id: M-820
     title: "M-820 -- myc --stream: streaming-parse CLI entry over ;-delimited input (DN-57)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P3, status:todo]
+    labels: [phase:5, type:feature, area:tooling, priority:P3, status:done]
     epic: E24-1
     depends_on: [M-818]
     doc_refs:

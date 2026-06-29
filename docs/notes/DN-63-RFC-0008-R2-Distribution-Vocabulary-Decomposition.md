@@ -380,7 +380,7 @@ policy decision table).
 
 **Semantics-free (`Declared`):** using a `backbone` transport path changes no observable — it
 is a performance hint. The implementation RFC must specify the fall-back (if the declared
-backbone is unavailable, the result is `backbone_fallback: Err(BackboneError::Unavailable)` 
+backbone is unavailable, the result is `backbone_fallback: Err(BackboneError::Unavailable)`
 and the policy falls back to the default transport — never a silent hang, RT4).
 
 **Elaboration strategy (`Declared`):** `backbone` elaborates to a transport-hint binding on
