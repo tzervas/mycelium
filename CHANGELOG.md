@@ -8,6 +8,37 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-29: hof — M-704 dynamic higher-order functions / closures, RFC-0024 §4A)
+
+- **Closures, environment capture, and dynamic fn-flow now elaborate + run three-way (M-704).** The
+  RFC-0024 §5 residuals are closed via the full Reynolds construction (§4A): a `lambda` becomes a
+  tagged closure struct (its captured free variables, deterministic first-occurrence order) and
+  `apply` becomes a generated first-order dispatcher (`match` on the closure value). **KC-3 holds —
+  no new L0 kernel node**: a closure is an ordinary `L1Value::Data` tag-sum, `apply` an ordinary
+  `FnDecl` whose body is a `Match`, both lowered unchanged by the existing elaborator/registry
+  (zero `mycelium-core` change). The per-arrow tag-sum + dispatcher are emitted once at
+  monomorphization `finish()` time, after the whole-program closure set is known (no open-world
+  fallback arm). Closure defunctionalization is `EXPLAIN`-able (`MonoSelections::closure_iter()` /
+  `ClosureSpecialization`; house rule #2).
+  - **Shapes running three-way (`Empirical`):** captureless lambda, single- and multi-capture,
+    closure-capturing-closure, dynamic-fn-out-of-`match`, dynamic-fn-as-data-field, a capturing
+    `map` combinator (the consuming proof), and named-fn-as-escaping-value (→ nullary closure ctor,
+    §4A.4). The `Expr::Lambda` `Residual` is gone from checkty/mono (elab/eval keep it only as a
+    defensive never-silent staging invariant).
+  - **Honest residual (flagged, never-silent G2):** multi-argument lambdas / partial application are
+    **tuple-gated** (RFC-0024 §4A.8 — v0 has no tuple/product type). A multi-param `lambda` is an
+    explicit checker refusal, not a silent accept. Completing it needs a maintainer **tuple-type
+    decision** — tracked forward on RFC-0024 §4A.8 / M-704.
+  - RFC-0024 stays **Accepted** with an append-only "implemented (Rust-first), §5 residual resolved"
+    note (NOT flipped to `Enacted` — full HOF incl. partial application is not yet landed; VR-5 /
+    house rule #3). `mycelium.ebnf` lambda production + `.claude/memory/language-execution.md`
+    updated.
+- **Integration note (transparency):** the M-704 leaf was developed in an isolated worktree that
+  branched from a stale base (CLAUDE.md mitigation #5/#7), so it lacked M-664's `Expr::Consume` /
+  `Item::InherentImpl`; the orchestrator resolved the eval/grade/mono match-arm conflicts to the
+  union and added `Consume` arms to the three new closure-traversal helpers. Verified green
+  post-merge (206 lib + 107 check + closures + differential + all targets; fmt + clippy clean).
+
 ### Changed (2026-06-29: s10 — RFC-0020 carve-out enactment (M-707) + RFC-0030 grammar completeness (M-706))
 
 - **RFC-0020 L2 carve-outs reconciled (M-707 done; RFC-0020 §10 enactment update, append-only).** The

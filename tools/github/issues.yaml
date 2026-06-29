@@ -3252,15 +3252,18 @@ issues:
   - id: M-704
     title: "M-704 — Full higher-order functions: closures, partial application, dynamic fn-flow"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:ready]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
     depends_on: [E7-3]
     epic: E11-1
+    landed_basis: "status:done (core; one flagged residual) — RFC-0024 §5 dynamic-HOF residuals CLOSED via the §4A full Reynolds construction (hof kickoff, 2026-06-29): closures (env capture), closure-capturing-closure, dynamic fn-flow (match arms + data fields), named-fn-as-value, and a capturing `map` combinator all elaborate + run THREE-WAY (Empirical) — tests/closures.rs + differential/std_iter. KC-3 holds: NO new L0 node (closure = L1Value::Data tag-sum + generated `apply` Match dispatcher, whole-program emit at mono finish(); zero mycelium-core change). EXPLAIN via MonoSelections::closure_iter()/ClosureSpecialization. FLAGGED RESIDUAL (never-silent G2): multi-arg lambdas / partial application are tuple-gated (RFC-0024 §4A.8 — v0 has no tuple/product type); a multi-param lambda is an explicit checker refusal. Completing it needs a maintainer TUPLE-TYPE decision — forward ref RFC-0024 §4A.8. RFC-0024 stays Accepted with an append-only impl note (NOT Enacted — full HOF incl. partial-app not yet landed; VR-5). Verified post-merge: cargo test -p mycelium-l1 green (0 failed); fmt+clippy clean. Merge resolved a stale-base conflict (leaf lacked M-664; union-merged + Consume arms added to 3 new traversal helpers)."
     doc_refs:
       - corpus:RFC-0024
       - corpus:DN-25
       - src:crates/mycelium-l1/src/mono.rs
+      - src:crates/mycelium-l1/tests/closures.rs
       - src:docs/spec/Surface-Stability-Declaration.md
     body: |
+      DONE 2026-06-29 (hof kickoff; core complete, multi-arg/partial-app a flagged tuple-gated residual): RFC-0024 §5 dynamic-HOF residuals closed via §4A Reynolds defunctionalization. Closures/capture/closure-capturing-closure/dynamic-fn-flow (match+data-field)/named-fn-as-value + a capturing `map` run three-way (Empirical; tests/closures.rs). KC-3: no new L0 node (closure = L1Value::Data tag-sum + generated `apply` Match dispatcher; zero mycelium-core change). EXPLAIN-able (MonoSelections::closure_iter). RESIDUAL (flagged, never-silent): multi-arg/partial-application is tuple-gated (RFC-0024 §4A.8) — needs a maintainer tuple-type decision; a multi-param lambda is an explicit refusal, not a silent accept. RFC-0024 left Accepted + append-only impl note (NOT Enacted; partial-app outstanding). cargo test -p mycelium-l1 green; fmt+clippy clean.
       RESIDUALS DOCUMENTED (2026-06-23, M-708 wave): the RFC-0024 §5 dynamic-HOF residuals are
       catalogued in `docs/spec/Surface-Stability-Declaration.md` §3.2 — every dynamic case (closures
       capturing an environment; dynamic fn-flow out of a match arm / data field / fn return; partial
