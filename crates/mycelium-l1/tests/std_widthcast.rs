@@ -136,7 +136,7 @@ fn same_width_is_identity() {
     let (r, p) = bin(8, 0x3c);
     assert_three_way(
         "identity 8->8 (0x3c)",
-        "nodule d\nfn main() => Binary{8} = width_cast(0b0011_1100, 0b0000_0000)",
+        "nodule d;\n\nfn main() => Binary{8} =\n  width_cast(0b0011_1100, 0b0000_0000);",
         &r,
         &p,
     );
@@ -285,7 +285,7 @@ fn width_cast_non_binary_value_refuses_statically() {
 /// `Binary{M}` (it supplies the target width).
 #[test]
 fn width_cast_non_binary_witness_refuses_statically() {
-    let src = "nodule d\nfn main() => Ternary{4} = width_cast(0b0000_0011, 0t00+-)";
+    let src = "nodule d;\n\nfn main() => Ternary{4} =\n  width_cast(0b0000_0011, <00+->);";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
         "a Ternary width witness to width_cast must be a static type error (DN-41)"
@@ -295,7 +295,7 @@ fn width_cast_non_binary_witness_refuses_statically() {
 /// Wrong arity is an explicit refusal (one operand is missing the width witness).
 #[test]
 fn width_cast_wrong_arity_refuses() {
-    let src = "nodule d\nfn main() => Binary{8} = width_cast(0b0000_0011)";
+    let src = "nodule d;\n\nfn main() => Binary{8} =\n  width_cast(0b0000_0011);";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
         "width_cast requires two operands (value + width witness); one is a static error"

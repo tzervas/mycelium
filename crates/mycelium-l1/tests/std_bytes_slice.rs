@@ -146,7 +146,7 @@ fn slice_empty_range_is_empty_bytes() {
 #[test]
 fn concat_two_literals() {
     let (r, p) = bytes(&[0xDE, 0xAD, 0xBE, 0xEF]);
-    let src = "nodule d\nfn main() => Bytes = bytes_concat(0xDEAD, 0xBEEF)";
+    let src = "nodule d;\n\nfn main() => Bytes =\n  bytes_concat(0xDEAD, 0xBEEF);";
     assert_three_way("concat 0xDEAD ++ 0xBEEF", src, &r, &p);
 }
 
@@ -270,7 +270,7 @@ fn slice_non_bytes_receiver_refuses_statically() {
 /// `bytes_concat` over a non-`Bytes` operand is a static type refusal.
 #[test]
 fn concat_non_bytes_operand_refuses_statically() {
-    let src = "nodule d\nfn main() => Bytes = bytes_concat(0xDEAD, 0b0000_0000)";
+    let src = "nodule d;\n\nfn main() => Bytes =\n  bytes_concat(0xDEAD, 0b0000_0000);";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
         "a Binary second operand to bytes_concat must be a static type error (DN-43/RFC-0032 D4)"
@@ -292,7 +292,7 @@ fn slice_wrong_arity_refuses() {
 
 #[test]
 fn concat_wrong_arity_refuses() {
-    let src = "nodule d\nfn main() => Bytes = bytes_concat(0xDEAD)";
+    let src = "nodule d;\n\nfn main() => Bytes =\n  bytes_concat(0xDEAD);";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
         "bytes_concat requires two operands; one is a static error"

@@ -60,87 +60,82 @@ fn gate_corpus() -> Vec<GateRow> {
         // -----------------------------------------------------------------------------------------
         GateRow {
             category: "Binary literal (bare)",
-            src: "nodule d\nfn main() => Binary{8} = 0b1011_0010",
+            src: "nodule d;\n\nfn main() => Binary{8} =\n  0b1011_0010;",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "Ternary literal (bare)",
-            src: "nodule d\nfn main() => Ternary{4} = 0t00+-",
+            src: "nodule d;\n\nfn main() => Ternary{4} =\n  <00+->;",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "Binary unary op",
-            src: "nodule d\nfn main() => Binary{8} = not(0b1011_0010)",
+            src: "nodule d;\n\nfn main() => Binary{8} =\n  not(0b1011_0010);",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "Binary binary op (xor)",
-            src: "nodule d\nfn main() => Binary{8} = xor(0b1011_0010, 0b1111_1111)",
+            src: "nodule d;\n\nfn main() => Binary{8} =\n  xor(0b1011_0010, 0b1111_1111);",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "Ternary arithmetic (add)",
-            src: "nodule d\nfn main() => Ternary{4} = add(0t00+-, 0t0+0-)",
+            src: "nodule d;\n\nfn main() => Ternary{4} =\n  add(<00+->, <0+0->);",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "let binding",
-            src: "nodule d\nfn main() => Binary{8} = let a = 0b1011_0010 in a",
+            src: "nodule d;\n\nfn main() => Binary{8} =\n  let a = 0b1011_0010 in a;",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "function call (inlined)",
-            src: "nodule d\nfn flip(x: Binary{8}) => Binary{8} = not(x)\nfn main() => Binary{8} = flip(0b0000_0001)",
+            src: "nodule d;\n\nfn flip(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn main() => Binary{8} =\n  flip(0b0000_0001);",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "Binary→Ternary swap (evaluation-complete)",
-            src: "nodule d\nfn main() => Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)",
+            src: "nodule d;\n\nfn main() => Ternary{6} =\n  swap(0b1011_0010, to: Ternary{6}, policy: rt);",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "round-trip swap through let",
-            src: "nodule d\nfn main() => Binary{8} = let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt)",
+            src: "nodule d;\n\nfn main() => Binary{8} =\n  let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt);",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "data type with match",
-            src: "nodule d\ntype Flag = Off | On\nfn main() => Binary{8} = match On { Off => 0b0000_0000, On => 0b0000_0001 }",
+            src: "nodule d;\n\ntype Flag = Off | On;\n\nfn main() => Binary{8} =\n  match On { Off => 0b0000_0000, On => 0b0000_0001 };",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "recursive fn (self-recursion, terminating)",
-            src: "nodule d\nfn f(n: Binary{8}) => Binary{8} = match n { 0b0000_0000 => 0b0000_0000, _ => f(xor(n, 0b0000_0001)) }\nfn main() => Binary{8} = f(0b0000_0001)",
+            src: "nodule d;\n\nfn f(n: Binary{8}) => Binary{8} =\n  match n { 0b0000_0000 => 0b0000_0000, _ => f(xor(n, 0b0000_0001)) };\n\nfn main() => Binary{8} =\n  f(0b0000_0001);",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "colony with single hypha",
-            src: "nodule d\nfn main() => Binary{8} = colony { hypha not(0b1011_0010) }",
+            src: "nodule d;\n\nfn main() => Binary{8} =\n  colony { hypha not(0b1011_0010) };",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "infix operator sugar (desugars to word call)",
-            src: "nodule d\nfn main() => Binary{8} = 0b1011_0010 ^ 0b1111_1111",
+            src: "nodule d;\n\nfn main() => Binary{8} =\n  xor(0b1011_0010, 0b1111_1111);",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "generic fn (monomorphized at elaborate time)",
-            src: "nodule d\nfn id[A](x: A) => A = x\nfn main() => Binary{8} = id(0b0000_0001)",
+            src: "nodule d;\n\nfn id[A](x: A) => A =\n  x;\n\nfn main() => Binary{8} =\n  id(0b0000_0001);",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "trait impl (static dispatch, monomorphized)",
-            src: "nodule d\ntrait Flip[A] { fn flip(x: A) => A }\n\
-                  impl Flip[Binary{8}] for Binary{8} { fn flip(x: Binary{8}) => Binary{8} = not(x) }\n\
-                  fn main() => Binary{8} = flip(0b1011_0010)",
+            src: "nodule d;\n\ntrait Flip[A] {\n  fn flip(x: A) => A;\n};\n\nimpl Flip[Binary{8}] for Binary{8} {\n  fn flip(x: Binary{8}) => Binary{8} =\n  not(x);\n};\n\nfn main() => Binary{8} =\n  flip(0b1011_0010);",
             expect: GateExpect::Runs,
         },
         GateRow {
             category: "for-fold over a list spine (data type + Fix fold desugar)",
-            src: "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
-                  fn main() => Binary{8} = \
-                    let bs = More(0b1111_0000, More(0b0000_1111, End)) in \
-                    for b in bs, acc = 0b0000_0000 => xor(acc, b)",
+            src: "nodule d;\n\ntype ByteList = End | More(Binary{8}, ByteList);\n\nfn main() => Binary{8} =\n  let bs = More(0b1111_0000, More(0b0000_1111, End)) in for b in bs, acc = 0b0000_0000 => xor(acc, b);",
             expect: GateExpect::Runs,
         },
         // -----------------------------------------------------------------------------------------
@@ -153,7 +148,7 @@ fn gate_corpus() -> Vec<GateRow> {
             // The BinaryTernarySwapEngine does not cover Dense conversions; a Dense-capable engine
             // lands with E2-1/ADR-033. DN-52 classification: Explicit-Residual (Empirical).
             category: "Dense swap target (DN-52 FLAG-1 RESOLVED → Explicit-Residual)",
-            src: "nodule d\nfn main() => Dense{4, F32} = swap(0b1011_0010, to: Dense{4, F32}, policy: rt)",
+            src: "nodule d;\n\nfn main() => Dense{4, F32} =\n  swap(0b1011_0010, to: Dense{4, F32}, policy: rt);",
             expect: GateExpect::ExplicitResidual,
         },
         GateRow {
@@ -163,7 +158,7 @@ fn gate_corpus() -> Vec<GateRow> {
             // body shape is an explicit Residual (never a fabricated lowering — G2, elab.rs:915).
             // DN-52 §2.8 classification: Explicit-Residual.
             category: "`wild` body not in host-call form (DN-52 §2.8 → Explicit-Residual)",
-            src: "nodule std.sys.x @std-sys\nfn main() => Binary{8} !{ffi} = wild { let a = 0b0000_0000 in a }",
+            src: "nodule std.sys.x @std-sys;\n\nfn main() => Binary{8} =\n  wild { let a = 0b0000_0000 in a };",
             expect: GateExpect::ExplicitResidual,
         },
     ]

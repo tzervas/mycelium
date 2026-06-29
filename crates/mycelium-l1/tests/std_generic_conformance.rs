@@ -124,25 +124,25 @@ const CMP_CASES: &[Case] = &[
         label: "cmp@8: cmp(1,2)=Lt",
         nodule: CMP_SRC,
         driver: "fn main() => Ordering = cmp(0b0000_0001, 0b0000_0010)",
-        reference: "nodule ref\ntype Ordering = Lt | Eq | Gt\nfn main() => Ordering = Lt",
+        reference: "nodule ref;\n\ntype Ordering = Lt | Eq | Gt;\n\nfn main() => Ordering =\n  Lt;",
     },
     Case {
         label: "cmp@16: cmp(256,2)=Gt",
         nodule: CMP_SRC,
         driver: "fn main() => Ordering = cmp(0b0000_0001_0000_0000, 0b0000_0000_0000_0010)",
-        reference: "nodule ref\ntype Ordering = Lt | Eq | Gt\nfn main() => Ordering = Gt",
+        reference: "nodule ref;\n\ntype Ordering = Lt | Eq | Gt;\n\nfn main() => Ordering =\n  Gt;",
     },
     Case {
         label: "le@8: le(2,2)=True",
         nodule: CMP_SRC,
         driver: "fn main() => Bool = le(0b0000_0010, 0b0000_0010)",
-        reference: "nodule ref\nfn main() => Bool = True",
+        reference: "nodule ref;\n\nfn main() => Bool =\n  True;",
     },
     Case {
         label: "max@16: max(1,256)=256",
         nodule: CMP_SRC,
         driver: "fn main() => Binary{16} = max(0b0000_0000_0000_0001, 0b0000_0001_0000_0000)",
-        reference: "nodule ref\nfn main() => Binary{16} = 0b0000_0001_0000_0000",
+        reference: "nodule ref;\n\nfn main() => Binary{16} =\n  0b0000_0001_0000_0000;",
     },
 ];
 
@@ -152,7 +152,7 @@ const MATH_CASES: &[Case] = &[
         label: "badd@8: badd(3,5)=8",
         nodule: MATH_SRC,
         driver: "fn main() => Binary{8} = badd(0b0000_0011, 0b0000_0101)",
-        reference: "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_0011, 0b0000_0101)",
+        reference: "nodule ref;\n\nfn main() => Binary{8} =\n  add_bin(0b0000_0011, 0b0000_0101);",
     },
     Case {
         label: "badd@16: badd(256,1)=257",
@@ -160,13 +160,13 @@ const MATH_CASES: &[Case] = &[
         driver:
             "fn main() => Binary{16} = badd(0b0000_0001_0000_0000, 0b0000_0000_0000_0001)",
         reference:
-            "nodule ref\nfn main() => Binary{16} = add_bin(0b0000_0001_0000_0000, 0b0000_0000_0000_0001)",
+            "nodule ref;\n\nfn main() => Binary{16} =\n  add_bin(0b0000_0001_0000_0000, 0b0000_0000_0000_0001);",
     },
     Case {
         label: "tadd@3: tadd(+1,-1)=0",
         nodule: MATH_SRC,
         driver: "fn main() => Ternary{3} = tadd(0t00+, 0t00-)",
-        reference: "nodule ref\nfn main() => Ternary{3} = add(0t00+, 0t00-)",
+        reference: "nodule ref;\n\nfn main() => Ternary{3} =\n  add(<00+>, <00->);",
     },
 ];
 
@@ -179,7 +179,7 @@ const COLLECTIONS_CASES: &[Case] = &[
 fn mk() => Map[Binary{8}, Binary{8}] = MCons(0b0000_0001, 0b0000_1010, MNil)\n\
 fn main() => Option[Binary{8}] = map_get(mk(), 0b0000_0001)",
         reference:
-            "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] = Some(0b0000_1010)",
+            "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{8}] =\n  Some(0b0000_1010);",
     },
     Case {
         label: "map_get@16: hit after recurse",
@@ -188,7 +188,7 @@ fn main() => Option[Binary{8}] = map_get(mk(), 0b0000_0001)",
 fn mk() => Map[Binary{16}, Binary{16}] = MCons(0b0000_0000_0000_0001, 0b0000_0000_0000_1010, MCons(0b0000_0001_0000_0000, 0b0000_0010_0000_0000, MNil))\n\
 fn main() => Option[Binary{16}] = map_get(mk(), 0b0000_0001_0000_0000)",
         reference:
-            "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{16}] = Some(0b0000_0010_0000_0000)",
+            "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{16}] =\n  Some(0b0000_0010_0000_0000);",
     },
     Case {
         label: "set_contains@16: present after recurse",
@@ -196,7 +196,7 @@ fn main() => Option[Binary{16}] = map_get(mk(), 0b0000_0001_0000_0000)",
         driver: "\
 fn mk() => Set[Binary{16}] = SCons(0b0000_0000_0000_0001, SCons(0b0000_0001_0000_0000, SNil))\n\
 fn main() => Bool = set_contains(mk(), 0b0000_0001_0000_0000)",
-        reference: "nodule ref\nfn main() => Bool = True",
+        reference: "nodule ref;\n\nfn main() => Bool =\n  True;",
     },
 ];
 

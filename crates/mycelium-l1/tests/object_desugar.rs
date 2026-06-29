@@ -15,37 +15,39 @@ use mycelium_l1::{check_nodule, parse};
 /// The `object` surface form (DN-53 §A.3.1).
 /// Nodule path: `composition.test` — no keyword segments.
 /// Constructor `;` is mandatory per DN-53 §A.2.1 / RFC-0037 D2.
-const OBJECT_SRC: &str = r#"
-nodule composition.test
+const OBJECT_SRC: &str = r#"nodule composition.test;
 
 trait Wrap[A] {
-    fn wrap(x: A) => A
-}
+  fn wrap(x: A) => A;
+};
 
 object BoxVal {
-    Mk(Binary{8});
-    impl Wrap[Binary{8}] for BoxVal {
-        fn wrap(x: Binary{8}) => Binary{8} = x
-    }
-    fn unbox(b: BoxVal) => Binary{8} = match b { Mk(v) => v }
-}
+  Mk(Binary{8});
+  impl Wrap[Binary{8}] for BoxVal {
+    fn wrap(x: Binary{8}) => Binary{8} =
+    x;
+  };
+  fn unbox(b: BoxVal) => Binary{8} =
+    match b { Mk(v) => v };
+};
 "#;
 
 /// The equivalent hand-written lowered form (what the `object` desugars to — DN-53 §A.3.2).
-const LOWERED_SRC: &str = r#"
-nodule composition.test
+const LOWERED_SRC: &str = r#"nodule composition.test;
 
 trait Wrap[A] {
-    fn wrap(x: A) => A
-}
+  fn wrap(x: A) => A;
+};
 
-type BoxVal = Mk(Binary{8})
+type BoxVal = Mk(Binary{8});
 
 impl Wrap[Binary{8}] for BoxVal {
-    fn wrap(x: Binary{8}) => Binary{8} = x
-}
+  fn wrap(x: Binary{8}) => Binary{8} =
+  x;
+};
 
-fn unbox(b: BoxVal) => Binary{8} = match b { Mk(v) => v }
+fn unbox(b: BoxVal) => Binary{8} =
+  match b { Mk(v) => v };
 "#;
 
 /// Three-way equivalence: `object` and hand-written lowering produce the same `Env` (same type,
@@ -128,14 +130,15 @@ fn object_with_no_constructor_is_refused() {
 #[test]
 fn pub_object_is_parsed_and_typechecks() {
     // Note: `pub` and `object` are both keywords and cannot appear in nodule paths.
-    let src = r#"
-nodule counter.test
+    let src = r#"nodule counter.test;
 
 pub object Counter {
-    Mk(Binary{8});
-    fn make(v: Binary{8}) => Counter = Mk(v)
-    fn get(c: Counter) => Binary{8} = match c { Mk(v) => v }
-}
+  Mk(Binary{8});
+  fn make(v: Binary{8}) => Counter =
+    Mk(v);
+  fn get(c: Counter) => Binary{8} =
+    match c { Mk(v) => v };
+};
 "#;
     let nodule = mycelium_l1::parse(src).expect("`pub object` should parse");
     let env = check_nodule(&nodule).expect("`pub object` should type-check");
@@ -152,17 +155,16 @@ pub object Counter {
 fn via_delegation_out_of_range_is_refused() {
     // `BoxVal2` has one field (at index 0); `via 1` is out of range → explicit CheckError.
     // Note: `via` is now a keyword; `bad.delegation` uses no keyword path segments.
-    let bad_src = r#"
-nodule bad.delegation
+    let bad_src = r#"nodule bad.delegation;
 
 trait Wrap[A] {
-    fn wrap(x: A) => A
-}
+  fn wrap(x: A) => A;
+};
 
 object BoxVal2 {
-    Mk(Binary{8});
-    via 1 : Wrap;
-}
+  Mk(Binary{8});
+  via 1 : Wrap;
+};
 "#;
     let nodule = mycelium_l1::parse(bad_src).expect("parses OK");
     let err = check_nodule(&nodule).unwrap_err();
@@ -177,13 +179,12 @@ object BoxVal2 {
 #[test]
 fn via_unknown_trait_is_refused() {
     // Note: `via` is now a keyword; `bad.unknown` uses no keyword path segments.
-    let bad_src = r#"
-nodule bad.unknown
+    let bad_src = r#"nodule bad.unknown;
 
 object BoxVal3 {
-    Mk(Binary{8});
-    via 0 : NoSuchTrait;
-}
+  Mk(Binary{8});
+  via 0 : NoSuchTrait;
+};
 "#;
     let nodule = mycelium_l1::parse(bad_src).expect("parses OK");
     let err = check_nodule(&nodule).unwrap_err();

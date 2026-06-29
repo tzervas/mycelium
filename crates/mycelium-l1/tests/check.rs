@@ -17,7 +17,7 @@ fn check_matured(src: &str) -> Result<mycelium_l1::Env, mycelium_l1::CheckError>
 #[test]
 fn well_typed_swap_fn_checks() {
     let env = check(
-        "nodule d\nfn widen(x: Binary{8}) => Ternary{6} = swap(x, to: Ternary{6}, policy: rt)",
+        "nodule d;\n\nfn widen(x: Binary{8}) => Ternary{6} =\n  swap(x, to: Ternary{6}, policy: rt);",
     )
     .expect("checks");
     assert_eq!(env.totality["widen"], Totality::Total);
@@ -29,7 +29,7 @@ fn type_mismatch_is_explicit() {
     // edge is sharpened from a generic mismatch to an explicit `MissingConversion` that names the
     // from/to reprs and points at writing a `swap` — still never-silent, now more actionable.
     let err =
-        check("nodule d\nfn f(x: Binary{8}) => Binary{8} = swap(x, to: Ternary{6}, policy: rt)")
+        check("nodule d;\n\nfn f(x: Binary{8}) => Binary{8} =\n  swap(x, to: Ternary{6}, policy: rt);")
             .unwrap_err();
     assert!(
         err.message.contains("MissingConversion") && err.message.contains("swap"),
@@ -42,7 +42,7 @@ fn type_mismatch_is_explicit() {
 fn same_paradigm_width_mismatch_is_a_plain_type_error() {
     // A same-paradigm mismatch (two Binary widths) is *not* a MissingConversion — no conversion
     // would bridge it — so it keeps the plain "type" wording (RFC-0012 §4.4 boundary).
-    let err = check("nodule d\nfn f(x: Binary{8}) => Binary{6} = not(x)").unwrap_err();
+    let err = check("nodule d;\n\nfn f(x: Binary{8}) => Binary{6} =\n  not(x);").unwrap_err();
     assert!(
         err.message.contains("type") && !err.message.contains("MissingConversion"),
         "got: {}",
@@ -52,10 +52,10 @@ fn same_paradigm_width_mismatch_is_a_plain_type_error() {
 
 #[test]
 fn exhaustive_match_checks_and_nonexhaustive_is_refused() {
-    let ok = "nodule d\ntype Sign = Neg | Zero | Pos\nfn f(s: Sign) => Sign = match s { Neg => s, Zero => s, Pos => s }";
+    let ok = "nodule d;\n\ntype Sign = Neg | Zero | Pos;\n\nfn f(s: Sign) => Sign =\n  match s { Neg => s, Zero => s, Pos => s };";
     assert!(check(ok).is_ok());
 
-    let bad = "nodule d\ntype Sign = Neg | Zero | Pos\nfn f(s: Sign) => Sign = match s { Neg => s, Pos => s }";
+    let bad = "nodule d;\n\ntype Sign = Neg | Zero | Pos;\n\nfn f(s: Sign) => Sign =\n  match s { Neg => s, Pos => s };";
     let err = check(bad).unwrap_err();
     assert!(
         err.message.contains("non-exhaustive"),
@@ -64,7 +64,7 @@ fn exhaustive_match_checks_and_nonexhaustive_is_refused() {
     );
 }
 
-const NAT: &str = "nodule d\ntype Nat = Z | S(Nat)\n";
+const NAT: &str = "nodule d;\n\ntype Nat = Z | S(Nat);\n";
 
 #[test]
 fn nested_pattern_match_typechecks() {
@@ -117,9 +117,7 @@ fn nested_binder_drives_structural_descent_for_matured() {
 fn structural_recursion_is_total_and_gates_matured() {
     // RFC-0017 §4.2: a structurally-decreasing self-recursion over a Peano-like type is classified
     // Total and admitted by a matured scope.
-    let src = "nodule d\n\
-               type Nat = Z | S(Nat)\n\
-               fn count(n: Nat) => Nat = match n { Z => n, S(m) => count(m) }";
+    let src = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn count(n: Nat) => Nat =\n  match n { Z => n, S(m) => count(m) };";
     let env = check_matured(src).expect("checks");
     assert_eq!(env.totality["count"], Totality::Total);
 }
@@ -129,9 +127,7 @@ fn non_decreasing_recursion_cannot_be_matured() {
     // Mutant-witness for RFC-0017 §4.2 / RFC-0007 §4.5: the recursive call passes the parameter
     // unchanged → not structurally smaller → Partial. In a matured scope, a non-total non-thaw fn
     // must be refused.
-    let src = "nodule d\n\
-               type Nat = Z | S(Nat)\n\
-               fn spin(n: Nat) => Nat = match n { Z => n, S(m) => spin(n) }";
+    let src = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn spin(n: Nat) => Nat =\n  match n { Z => n, S(m) => spin(n) };";
     let err = check_matured(src).unwrap_err();
     assert!(
         err.message.contains("matured") || err.message.contains("total"),
@@ -144,9 +140,7 @@ fn non_decreasing_recursion_cannot_be_matured() {
 fn thaw_fn_is_exempt_from_matured_scope_gate() {
     // Mutant-witness for RFC-0017 §4.3: a partial fn marked `thaw` is exempt from the matured
     // scope totality gate. Without the `thaw` exemption, this would be refused.
-    let src = "nodule d\n\
-               type Nat = Z | S(Nat)\n\
-               thaw fn spin(n: Nat) => Nat = match n { Z => n, S(m) => spin(n) }";
+    let src = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nthaw fn spin(n: Nat) => Nat =\n  match n { Z => n, S(m) => spin(n) };";
     let env = check_matured(src)
         .expect("thaw fn must be accepted even in a matured scope (RFC-0017 §4.3)");
     assert_eq!(env.totality["spin"], Totality::Partial);
@@ -155,9 +149,7 @@ fn thaw_fn_is_exempt_from_matured_scope_gate() {
 #[test]
 fn non_decreasing_recursion_is_allowed_when_not_matured() {
     // Same body without `matured` checks fine — partiality is an honest classification, not an error.
-    let src = "nodule d\n\
-               type Nat = Z | S(Nat)\n\
-               fn spin(n: Nat) => Nat = match n { Z => n, S(m) => spin(n) }";
+    let src = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn spin(n: Nat) => Nat =\n  match n { Z => n, S(m) => spin(n) };";
     let env = check(src).expect("checks");
     assert_eq!(env.totality["spin"], Totality::Partial);
 }
@@ -192,17 +184,13 @@ fn shadowing_rebind_does_not_leak_smallness() {
 fn mutual_recursion_with_structural_descent_is_total() {
     // ping/pong descend on position 0 across the group, so the FixGroup is `Total` and `matured`
     // is admissible — the M-343 loose end: before mutual-descent classification this was `Partial`.
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-               fn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) }\n\
-               fn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) }";
+    let src = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn ping(n: Nat) => Nat =\n  match n { Z => Z, S(m) => pong(m) };\n\nfn pong(n: Nat) => Nat =\n  match n { Z => Z, S(m) => ping(m) };";
     let env = check(src).expect("checks");
     assert_eq!(env.totality["ping"], Totality::Total);
     assert_eq!(env.totality["pong"], Totality::Total);
 
     // The whole group may therefore be admitted by a matured scope (RFC-0017 §4.2).
-    let matured = "nodule d\ntype Nat = Z | S(Nat)\n\
-                   fn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) }\n\
-                   fn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) }";
+    let matured = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn ping(n: Nat) => Nat =\n  match n { Z => Z, S(m) => pong(m) };\n\nfn pong(n: Nat) => Nat =\n  match n { Z => Z, S(m) => ping(m) };";
     check_matured(matured).expect("a totally-descending mutual group admits a matured scope");
 }
 
@@ -211,17 +199,13 @@ fn non_productive_mutual_cycle_is_partial() {
     // `a(n) = b(n)` / `b(n) = a(n)` never decreases anything — an unproductive cycle. Honest
     // `Partial` (still runnable, fuel-clocked), and `matured` is refused. Mutant-witness: a checker
     // that classified *any* mutual group `Total` would wrongly mature this non-terminating pair.
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-               fn a(n: Nat) => Nat = b(n)\n\
-               fn b(n: Nat) => Nat = a(n)";
+    let src = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn a(n: Nat) => Nat =\n  b(n);\n\nfn b(n: Nat) => Nat =\n  a(n);";
     let env = check(src).expect("checks");
     assert_eq!(env.totality["a"], Totality::Partial);
     assert_eq!(env.totality["b"], Totality::Partial);
 
     // Mutant-witness for RFC-0017 §4.2: a matured scope must refuse partial fns.
-    let matured = "nodule d\ntype Nat = Z | S(Nat)\n\
-                   fn a(n: Nat) => Nat = b(n)\n\
-                   fn b(n: Nat) => Nat = a(n)";
+    let matured = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn a(n: Nat) => Nat =\n  b(n);\n\nfn b(n: Nat) => Nat =\n  a(n);";
     let err = check_matured(matured).unwrap_err();
     assert!(
         err.message.contains("matured") || err.message.contains("total"),
@@ -234,9 +218,7 @@ fn non_productive_mutual_cycle_is_partial() {
 fn partial_descent_in_a_mutual_group_is_partial() {
     // Descent must hold on *every* inter-member call. Here `ping` decreases but `pong` re-calls
     // `ping(n)` with the parameter unchanged, so no assignment witnesses descent → `Partial`.
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-               fn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) }\n\
-               fn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(n) }";
+    let src = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn ping(n: Nat) => Nat =\n  match n { Z => Z, S(m) => pong(m) };\n\nfn pong(n: Nat) => Nat =\n  match n { Z => Z, S(m) => ping(n) };";
     let env = check(src).expect("checks");
     assert_eq!(env.totality["ping"], Totality::Partial);
     assert_eq!(env.totality["pong"], Totality::Partial);
@@ -245,10 +227,7 @@ fn partial_descent_in_a_mutual_group_is_partial() {
 #[test]
 fn three_function_mutual_cycle_descends() {
     // f → g → h → f, each peeling one constructor: a productive 3-cycle is `Total`.
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-               fn f(n: Nat) => Nat = match n { Z => Z, S(m) => g(m) }\n\
-               fn g(n: Nat) => Nat = match n { Z => Z, S(m) => h(m) }\n\
-               fn h(n: Nat) => Nat = match n { Z => Z, S(m) => f(m) }";
+    let src = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn f(n: Nat) => Nat =\n  match n { Z => Z, S(m) => g(m) };\n\nfn g(n: Nat) => Nat =\n  match n { Z => Z, S(m) => h(m) };\n\nfn h(n: Nat) => Nat =\n  match n { Z => Z, S(m) => f(m) };";
     let env = check(src).expect("checks");
     assert_eq!(env.totality["f"], Totality::Total);
     assert_eq!(env.totality["g"], Totality::Total);
@@ -260,9 +239,7 @@ fn mutual_descent_on_different_argument_positions() {
     // The designated descent position can differ per member: `f` descends on position 0, `g` on
     // position 1. This exercises the position-assignment search (not just a single shared index),
     // and is `Total` because the structural size strictly decreases around the whole cycle.
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-               fn f(a: Nat, b: Nat) => Nat = match a { Z => b, S(m) => g(b, m) }\n\
-               fn g(x: Nat, y: Nat) => Nat = match y { Z => x, S(k) => f(k, x) }";
+    let src = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn f(a: Nat, b: Nat) => Nat =\n  match a { Z => b, S(m) => g(b, m) };\n\nfn g(x: Nat, y: Nat) => Nat =\n  match y { Z => x, S(k) => f(k, x) };";
     let env = check(src).expect("checks");
     assert_eq!(env.totality["f"], Totality::Total);
     assert_eq!(env.totality["g"], Totality::Total);
@@ -354,7 +331,7 @@ fn deeply_nested_ctor_pattern_is_refused_not_a_crash() {
 fn wild_is_denied_outside_a_std_sys_nodule() {
     // M-661: a `wild` block in a non-`@std-sys` nodule is a HARD `CheckError` (the audited FFI floor
     // lives only in `std-sys` — RFC-0016 §8-Q6 / LR-9; never a silent escape — G2). Not a lint.
-    let src = "nodule d\nfn f(x: Binary{8}) => Binary{8} !{ffi} = wild { x }";
+    let src = "nodule d;\n\nfn f(x: Binary{8}) => Binary{8} =\n  wild { x };";
     let err = check(src).unwrap_err();
     assert!(
         err.message.contains("wild") && err.message.contains("std-sys"),
@@ -377,8 +354,7 @@ fn a_wild_block_in_a_std_sys_nodule_type_checks_with_an_opaque_body() {
     // type-checks. The body (`foreign_read()`) is opaque — `foreign_read` is NOT a declared fn, yet
     // the block still checks, because the body is the trusted FFI escape (not recursively checked).
     let env = check(
-        "nodule std.sys.fs @std-sys\n\
-         fn read_byte() => Binary{8} !{ffi} = wild { foreign_read() }",
+        "nodule std.sys.fs @std-sys;\n\nfn read_byte() => Binary{8} =\n  wild { foreign_read() };",
     )
     .expect("a wild block in a @std-sys nodule, with !{ffi} declared, type-checks (opaque body)");
     // The fn is recorded with its `ffi` effect (EXPLAIN / future wiring).
@@ -395,8 +371,7 @@ fn a_wild_body_is_not_recursively_type_checked() {
     // accepted, because the checker does not descend into it — it conforms to the expected type by
     // ascription. This is the load-bearing "opaque body" property.
     let env = check(
-        "nodule std.sys.x @std-sys\n\
-         fn f() => Binary{8} !{ffi} = wild { totally_undefined_ffi(does, not, exist) }",
+        "nodule std.sys.x @std-sys;\n\nfn f() => Binary{8} =\n  wild { totally_undefined_ffi(does, not, exist) };",
     )
     .expect("the wild body is opaque — not recursively checked, so an unknown callee is fine");
     assert!(env.fn_decl("f").is_some());
@@ -408,8 +383,7 @@ fn a_wild_in_a_std_sys_nodule_without_declaring_ffi_is_a_coverage_refusal() {
     // Here the nodule IS `@std-sys` (so the context gate passes), but the fn omits `!{ffi}` — the
     // effect-coverage pass refuses it, naming `ffi` and framing it as an under-declaration (G2).
     let err = check(
-        "nodule std.sys.fs @std-sys\n\
-         fn read_byte() => Binary{8} = wild { foreign_read() }",
+        "nodule std.sys.fs @std-sys;\n\nfn read_byte() => Binary{8} =\n  wild { foreign_read() };",
     )
     .expect_err("a wild block whose enclosing fn does not declare !{ffi} must be refused");
     assert!(
@@ -429,9 +403,7 @@ fn effects_inside_an_opaque_wild_body_do_not_leak_into_the_enclosing_fn() {
     // it is inside a `wild` block needs just `!{ffi}` — `io` must NOT be required (audited, not
     // verified — VR-5/ADR-014). Before the fix this was a false under-declaration refusal.
     let env = check(
-        "nodule std.sys.x @std-sys\n\
-         fn noisy() => Binary{8} !{io} = 0b00000000\n\
-         fn f() => Binary{8} !{ffi} = wild { noisy() }",
+        "nodule std.sys.x @std-sys;\n\nfn noisy() => Binary{8} =\n  0b00000000;\n\nfn f() => Binary{8} =\n  wild { noisy() };",
     )
     .expect(
         "an effect performed only inside an opaque wild body must not leak to the enclosing fn",
@@ -441,9 +413,7 @@ fn effects_inside_an_opaque_wild_body_do_not_leak_into_the_enclosing_fn() {
     // Non-vacuous: the SAME call OUTSIDE a `wild` *does* leak `io` (proving `noisy` genuinely performs
     // it — so the accept above is the opacity invariant at work, not a coincidence of an inert callee).
     let err = check(
-        "nodule std.sys.x @std-sys\n\
-         fn noisy() => Binary{8} !{io} = 0b00000000\n\
-         fn g() => Binary{8} !{ffi} = noisy()",
+        "nodule std.sys.x @std-sys;\n\nfn noisy() => Binary{8} =\n  0b00000000;\n\nfn g() => Binary{8} =\n  noisy();",
     )
     .expect_err(
         "calling `noisy` directly (not inside a wild) must require declaring its `io` effect",
@@ -461,8 +431,7 @@ fn a_wild_in_synthesis_position_demands_an_ascription() {
     // `let` bound with no annotation, whose bound expr must self-synthesize — the checker refuses with
     // an explicit "ascribe" message, never a guessed type (G2).
     let err = check(
-        "nodule std.sys.x @std-sys\n\
-         fn f() => Binary{8} !{ffi} = let v = wild { foreign() } in v",
+        "nodule std.sys.x @std-sys;\n\nfn f() => Binary{8} =\n  let v = wild { foreign() } in v;",
     )
     .expect_err("a wild block in a synthesis position must demand an ascription");
     // The message says "Ascribe …" (capitalized at the sentence start) — match case-insensitively.
@@ -480,8 +449,7 @@ fn an_ascribed_wild_in_a_let_bound_position_type_checks() {
     // known expected type and the opaque `wild` body conforms to it — the program checks. (The
     // annotation is on the binding, the surface form the bidirectional checker threads as `expected`.)
     let env = check(
-        "nodule std.sys.x @std-sys\n\
-         fn f() => Binary{8} !{ffi} = let v: Binary{8} = wild { foreign() } in v",
+        "nodule std.sys.x @std-sys;\n\nfn f() => Binary{8} =\n  let v: Binary{8} = wild { foreign() } in v;",
     )
     .expect("an annotated let-binding supplies the wild bound's type and checks");
     assert!(env.fn_decl("f").is_some());
@@ -495,8 +463,7 @@ fn the_parenthesized_ascription_the_synthesis_refusal_suggests_actually_parses_a
     // form it suggests parses and type-checks (so the message can never drift back to a non-parsing
     // suggestion — a self-policing diagnostic-quality guard).
     let env = check(
-        "nodule std.sys.x @std-sys\n\
-         fn f() => Binary{8} !{ffi} = (wild { foreign() }) : Binary{8}",
+        "nodule std.sys.x @std-sys;\n\nfn f() => Binary{8} =\n  wild { foreign() } : Binary{8};",
     )
     .expect("the parenthesized ascription the refusal suggests must parse + type-check");
     assert!(env.fn_decl("f").is_some());
@@ -507,8 +474,7 @@ fn over_declaring_ffi_without_a_wild_block_is_allowed() {
     // Symmetry with M-660 I5: declaring `!{ffi}` is a contract — a fn may reserve it without (yet)
     // containing a `wild` block. A pure-bodied `@std-sys` fn declaring `!{ffi}` checks (over-decl OK).
     let env = check(
-        "nodule std.sys.x @std-sys\n\
-         fn f() => Binary{8} !{ffi} = 0b00000000",
+        "nodule std.sys.x @std-sys;\n\nfn f() => Binary{8} =\n  0b00000000;",
     )
     .expect("over-declaring `ffi` without a wild block is allowed (a declaration is a contract)");
     assert_eq!(
@@ -523,9 +489,7 @@ fn a_wild_inside_an_impl_method_is_gated_by_the_nodule_std_sys_context() {
     // inside an impl method is the same hard refusal as in a top-level fn (the context gate is the
     // nodule's, not the item's). This pins the impl-method threading of `std_sys`.
     let err = check(
-        "nodule d\n\
-         trait Ffi[A] { fn raw(x: A) => A !{ffi} }\n\
-         impl Ffi[Binary{8}] for Binary{8} { fn raw(x: Binary{8}) => Binary{8} !{ffi} = wild { host(x) } }",
+        "nodule d;\n\ntrait Ffi[A] {\n  fn raw(x: A) => A;\n};\n\nimpl Ffi[Binary{8}] for Binary{8} {\n  fn raw(x: Binary{8}) => Binary{8} =\n  wild { host(x) };\n};",
     )
     .expect_err("a wild inside an impl method of a non-@std-sys nodule must be refused");
     assert!(
@@ -544,7 +508,7 @@ fn a_wild_in_a_std_sys_nodule_lowers_to_a_host_dispatch_op() {
     // body refuses at *elaboration* — both tested in `tests/differential.rs`.
     use mycelium_core::Node;
     let nodule = parse(
-        "nodule std.sys.fs @std-sys\nfn read_byte() => Binary{8} !{ffi} = wild { foreign_read() }",
+        "nodule std.sys.fs @std-sys;\n\nfn read_byte() => Binary{8} =\n  wild { foreign_read() };",
     )
     .expect("parses");
     let env = check_nodule(&nodule).expect("type-checks");
@@ -561,17 +525,17 @@ fn the_std_sys_marker_is_parsed_off_the_header() {
     // The `@std-sys` marker is a parsed header attribute (not a naming convention): a nodule named
     // `std.sys.fs` WITHOUT the marker is NOT std-sys, and any nodule WITH the marker is — the name is
     // irrelevant. This pins that the gate keys on the marker, never on the path.
-    let with_marker = parse("nodule anything.at.all @std-sys\nfn f() => Binary{1} = 0b0")
+    let with_marker = parse("nodule anything.at.all @std-sys;\n\nfn f() => Binary{1} =\n  0b0;")
         .expect("parses with marker");
     assert!(with_marker.std_sys, "the @std-sys marker must set std_sys");
     let no_marker =
-        parse("nodule std.sys.fs\nfn f() => Binary{1} = 0b0").expect("parses without marker");
+        parse("nodule std.sys.fs;\n\nfn f() => Binary{1} =\n  0b0;").expect("parses without marker");
     assert!(
         !no_marker.std_sys,
         "a `std.sys.*`-named nodule WITHOUT the marker is not std-sys (attribute, not convention)"
     );
     // Consequently a `wild` in the marker-less `std.sys.*` nodule is still refused.
-    let err = check("nodule std.sys.fs\nfn f() => Binary{8} !{ffi} = wild { x }")
+    let err = check("nodule std.sys.fs;\n\nfn f() => Binary{8} =\n  wild { x };")
         .expect_err("no marker ⇒ wild refused even under a std.sys.* name");
     assert!(err.message.contains("std-sys"), "got: {}", err.message);
 }
@@ -582,7 +546,7 @@ fn the_std_sys_marker_is_parsed_off_the_header() {
 // stays an explicit refusal: wrong arity, a representation-specific op on a type parameter (the
 // Repr-polymorphism restriction, RFC-0019 §4.6), and an undetermined type parameter — never a guess.
 
-const LIST: &str = "nodule d\ntype List[A] = Nil | Cons(A, List[A])\n";
+const LIST: &str = "nodule d;\n\ntype List[A] = Nil | Cons(A, List[A]);\n";
 
 #[test]
 fn a_generic_data_type_and_a_total_generic_fn_check() {
@@ -610,8 +574,7 @@ fn a_generic_fn_instantiates_at_a_concrete_type() {
 fn the_wrong_type_argument_arity_is_explicit_never_a_guess() {
     // `Pair` takes two type arguments; applying it to one is a clean error (RFC-0007 §11.3), not a
     // silently-defaulted second argument.
-    let src = "nodule d\ntype Pair[A, B] = MkPair(A, B)\n\
-               fn f(p: Pair[Binary{8}]) => Binary{8} = match p { MkPair(a, b) => a }";
+    let src = "nodule d;\n\ntype Pair[A, B] = MkPair(A, B);\n\nfn f(p: Pair[Binary{8}]) => Binary{8} =\n  match p { MkPair(a, b) => a };";
     let err = check(src).unwrap_err();
     assert!(
         err.message.contains("type argument") && err.message.contains("got 1"),
@@ -638,7 +601,7 @@ fn a_representation_specific_op_on_a_type_parameter_is_refused() {
 fn an_undetermined_type_parameter_is_explicit_not_a_guess() {
     // `g<A>()` mentions `A` nowhere in its value parameters, so a call cannot determine it — an
     // explicit "does not determine it" error, never a guessed default (G2/VR-5).
-    let src = "nodule d\nfn g[A]() => Binary{1} = 0b1\nfn main() => Binary{1} = g()";
+    let src = "nodule d;\n\nfn g[A]() => Binary{1} =\n  0b1;\n\nfn main() => Binary{1} =\n  g();";
     let err = check(src).unwrap_err();
     assert!(
         err.message.contains("does not determine"),
@@ -665,7 +628,7 @@ fn generic_instantiation_type_checks_across_widths_a_property_bound() {
 
 // --- bounded iteration (RFC-0007 §4.8, r2) ---
 
-const BYTES: &str = "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n";
+const BYTES: &str = "nodule d;\n\ntype ByteList = End | More(Binary{8}, ByteList);\n";
 
 #[test]
 fn a_for_fold_typechecks_and_is_total() {
@@ -688,7 +651,7 @@ fn a_for_fold_typechecks_and_is_total() {
 fn for_over_a_non_linear_type_is_an_explicit_refusal() {
     // A branching (tree) type is outside the v0 linear-recursion shape.
     let err = check(
-        "nodule d\ntype Tree = Leaf | Node(Tree, Tree)\nfn f(t: Tree) => Binary{8} =\n    for x in t, acc = 0b0000_0000 => acc",
+        "nodule d;\n\ntype Tree = Leaf | Node(Tree, Tree);\n\nfn f(t: Tree) => Binary{8} =\n  for x in t, acc = 0b0000_0000 => acc;",
     )
     .unwrap_err();
     assert!(
@@ -709,7 +672,7 @@ fn for_body_must_yield_the_accumulator_type() {
 
 #[test]
 fn for_over_a_repr_value_is_an_explicit_refusal() {
-    let err = check("nodule d\nfn f(x: Binary{8}) => Binary{8} = for b in x, acc = x => acc")
+    let err = check("nodule d;\n\nfn f(x: Binary{8}) => Binary{8} =\n  for b in x, acc = x => acc;")
         .unwrap_err();
     assert!(err.message.contains("data value"), "got: {}", err.message);
 }
@@ -724,7 +687,7 @@ fn imperative_words_get_teaching_diagnostics() {
         perr.message
     );
     // Call-shaped use fails name resolution — the check error teaches too.
-    let cerr = check("nodule d\nfn f(x: Binary{8}) => Binary{8} = loop(x)").unwrap_err();
+    let cerr = check("nodule d;\n\nfn f(x: Binary{8}) => Binary{8} =\n  loop(x);").unwrap_err();
     assert!(
         cerr.message.contains("not a Mycelium form"),
         "got: {}",
@@ -741,10 +704,9 @@ fn imperative_words_get_teaching_diagnostics() {
 // theorem; RFC-0019's coherence result is Declared-with-argument — VR-5).
 
 /// `Cmp<A>` — a one-method, single-parameter trait used across the M-659 tests.
-const CMP: &str = "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n";
+const CMP: &str = "nodule d;\n\ntrait Cmp[A] {\n  fn cmp(a: A, b: A) => Binary{2};\n};\n";
 /// `Cmp<A>` plus the canonical `impl Cmp<Binary{8}> for Binary{8}` (the M-659 acceptance instance).
-const CMP_I8: &str = "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n\
-     impl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }\n";
+const CMP_I8: &str = "nodule d;\n\ntrait Cmp[A] {\n  fn cmp(a: A, b: A) => Binary{2};\n};\n\nimpl Cmp[Binary{8}] for Binary{8} {\n  fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} =\n  0b00;\n};\n";
 
 #[test]
 fn a_trait_and_impl_check() {
@@ -763,7 +725,7 @@ fn a_trait_and_impl_check() {
 fn a_trait_method_sig_must_resolve() {
     // A trait method referencing an unknown type is an explicit refusal (the trait pass resolves
     // each method sig with the trait params in scope).
-    let err = check("nodule d\ntrait T[A] { fn f(x: Nope) => A }").unwrap_err();
+    let err = check("nodule d;\n\ntrait T[A] {\n  fn f(x: Nope) => A;\n};").unwrap_err();
     assert!(err.message.contains("unknown type"), "got: {}", err.message);
 }
 
@@ -816,8 +778,7 @@ fn a_duplicate_instance_on_the_same_head_is_a_coherence_error() {
 #[test]
 fn an_impl_missing_a_method_is_an_explicit_error() {
     let err = check(
-        "nodule d\ntrait Two[A] { fn f(x: A) => A\n fn g(x: A) => A }\n\
-         impl Two[Binary{8}] for Binary{8} { fn f(x: Binary{8}) => Binary{8} = x }",
+        "nodule d;\n\ntrait Two[A] {\n  fn f(x: A) => A;\n  fn g(x: A) => A;\n};\n\nimpl Two[Binary{8}] for Binary{8} {\n  fn f(x: Binary{8}) => Binary{8} =\n  x;\n};",
     )
     .unwrap_err();
     assert!(
@@ -830,9 +791,7 @@ fn an_impl_missing_a_method_is_an_explicit_error() {
 #[test]
 fn an_impl_with_an_extra_method_is_an_explicit_error() {
     let err = check(
-        "nodule d\ntrait One[A] { fn f(x: A) => A }\n\
-         impl One[Binary{8}] for Binary{8} \
-         { fn f(x: Binary{8}) => Binary{8} = x\n fn h(x: Binary{8}) => Binary{8} = x }",
+        "nodule d;\n\ntrait One[A] {\n  fn f(x: A) => A;\n};\n\nimpl One[Binary{8}] for Binary{8} {\n  fn f(x: Binary{8}) => Binary{8} =\n  x;\n  fn h(x: Binary{8}) => Binary{8} =\n  x;\n};",
     )
     .unwrap_err();
     assert!(
@@ -847,9 +806,7 @@ fn an_impl_method_with_the_wrong_signature_is_an_explicit_error() {
     // The method body's declared return (`Binary{4}`) disagrees with the trait's required return
     // (`Binary{2}` after substituting the impl's trait arg) — an explicit edge mismatch.
     let err = check(
-        "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n\
-         impl Cmp[Binary{8}] for Binary{8} \
-         { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{4} = 0b0000 }",
+        "nodule d;\n\ntrait Cmp[A] {\n  fn cmp(a: A, b: A) => Binary{2};\n};\n\nimpl Cmp[Binary{8}] for Binary{8} {\n  fn cmp(a: Binary{8}, b: Binary{8}) => Binary{4} =\n  0b0000;\n};",
     )
     .unwrap_err();
     assert!(
@@ -862,7 +819,7 @@ fn an_impl_method_with_the_wrong_signature_is_an_explicit_error() {
 #[test]
 fn an_impl_for_an_unknown_trait_is_an_explicit_error() {
     let err = check(
-        "nodule d\nimpl Nope[Binary{8}] for Binary{8} { fn f(x: Binary{8}) => Binary{8} = x }",
+        "nodule d;\n\nimpl Nope[Binary{8}] for Binary{8} {\n  fn f(x: Binary{8}) => Binary{8} =\n  x;\n};",
     )
     .unwrap_err();
     assert!(
@@ -876,9 +833,7 @@ fn an_impl_for_an_unknown_trait_is_an_explicit_error() {
 fn an_impl_with_the_wrong_trait_arg_arity_is_an_explicit_error() {
     // `Cmp` takes one type argument; supplying two is a clean arity error (never a guess).
     let err = check(
-        "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n\
-         impl Cmp[Binary{8}, Binary{8}] for Binary{8} \
-         { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }",
+        "nodule d;\n\ntrait Cmp[A] {\n  fn cmp(a: A, b: A) => Binary{2};\n};\n\nimpl Cmp[Binary{8}, Binary{8}] for Binary{8} {\n  fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} =\n  0b00;\n};",
     )
     .unwrap_err();
     assert!(
@@ -914,8 +869,7 @@ fn an_ambiguous_trait_method_call_is_an_explicit_error_never_a_guess() {
     // The method name `m` is declared by two traits — with no qualified-call syntax in stage-1 this
     // is ambiguous, an explicit refusal, never a silent pick (RFC-0019 §4.4; G2/VR-5).
     let err = check(
-        "nodule d\ntrait A1[X] { fn m(x: X) => X }\ntrait A2[X] { fn m(x: X) => X }\n\
-         fn f() => Binary{8} = m(0b0000_0001)",
+        "nodule d;\n\ntrait A1[X] {\n  fn m(x: X) => X;\n};\n\ntrait A2[X] {\n  fn m(x: X) => X;\n};\n\nfn f() => Binary{8} =\n  m(0b0000_0001);",
     )
     .unwrap_err();
     assert!(err.message.contains("ambiguous"), "got: {}", err.message);
@@ -927,7 +881,7 @@ fn an_undetermined_trait_method_call_is_an_explicit_error() {
     // `mk` returns `A` but takes no `A` argument, so a bare call cannot determine the receiver — an
     // explicit "does not determine" refusal, never a guessed instance.
     let err =
-        check("nodule d\ntrait Mk[A] { fn mk() => A }\nfn f() => Binary{8} = mk()").unwrap_err();
+        check("nodule d;\n\ntrait Mk[A] {\n  fn mk() => A;\n};\n\nfn f() => Binary{8} =\n  mk();").unwrap_err();
     assert!(
         err.message.contains("does not determine") || err.message.contains("no instance"),
         "got: {}",
@@ -937,7 +891,7 @@ fn an_undetermined_trait_method_call_is_an_explicit_error() {
 
 #[test]
 fn a_duplicate_trait_declaration_is_an_explicit_error() {
-    let err = check("nodule d\ntrait T[A] { fn f(x: A) => A }\ntrait T[A] { fn g(x: A) => A }")
+    let err = check("nodule d;\n\ntrait T[A] {\n  fn f(x: A) => A;\n};\n\ntrait T[A] {\n  fn g(x: A) => A;\n};")
         .unwrap_err();
     assert!(
         err.message.contains("duplicate trait"),
@@ -948,7 +902,7 @@ fn a_duplicate_trait_declaration_is_an_explicit_error() {
 
 #[test]
 fn a_duplicate_method_in_a_trait_is_an_explicit_error() {
-    let err = check("nodule d\ntrait T[A] { fn f(x: A) => A\n fn f(x: A) => A }").unwrap_err();
+    let err = check("nodule d;\n\ntrait T[A] {\n  fn f(x: A) => A;\n  fn f(x: A) => A;\n};").unwrap_err();
     assert!(
         err.message.contains("duplicate method"),
         "got: {}",
@@ -958,7 +912,7 @@ fn a_duplicate_method_in_a_trait_is_an_explicit_error() {
 
 #[test]
 fn a_bound_on_an_unknown_trait_is_an_explicit_error() {
-    let err = check("nodule d\nfn f[T: Nope](x: T) => T = x").unwrap_err();
+    let err = check("nodule d;\n\nfn f[T: Nope](x: T) => T =\n  x;").unwrap_err();
     assert!(
         err.message.contains("unknown trait"),
         "got: {}",
@@ -998,16 +952,14 @@ fn an_orphan_instance_for_a_foreign_type_and_trait_is_refused() {
     // here we pin that a `Data` instance whose type is undeclared is rejected (unknown type), the
     // single-nodule stand-in for "you don't own this type".
     let err = check(
-        "nodule d\ntrait T[A] { fn f(x: A) => A }\n\
-         impl T[Foreign] for Foreign { fn f(x: Foreign) => Foreign = x }",
+        "nodule d;\n\ntrait T[A] {\n  fn f(x: A) => A;\n};\n\nimpl T[Foreign] for Foreign {\n  fn f(x: Foreign) => Foreign =\n  x;\n};",
     )
     .unwrap_err();
     assert!(err.message.contains("unknown type"), "got: {}", err.message);
     // And a locally declared data type *is* a legal instance head (orphan rule satisfied via the
     // type's locality).
     let ok = check(
-        "nodule d\ntype Pt = P(Binary{8})\ntrait T[A] { fn f(x: A) => A }\n\
-         impl T[Pt] for Pt { fn f(x: Pt) => Pt = x }",
+        "nodule d;\n\ntype Pt = P(Binary{8});\n\ntrait T[A] {\n  fn f(x: A) => A;\n};\n\nimpl T[Pt] for Pt {\n  fn f(x: Pt) => Pt =\n  x;\n};",
     );
     assert!(
         ok.is_ok(),
@@ -1062,10 +1014,7 @@ fn an_instance_on_the_same_head_but_a_different_width_does_not_satisfy_a_call() 
     // Coherence keys per type-head, but RESOLUTION must match the FULL concrete type: a `Binary{8}`
     // instance must NOT satisfy a trait-method call whose receiver is `Binary{4}` (same head). This
     // is over-rejection-for-duplicates / never-over-acceptance-for-missing (RFC-0019 §4.5; G2).
-    let src = "nodule d\n\
-        trait Tr[A] { fn f(x: A) => A }\n\
-        impl Tr[Binary{8}] for Binary{8} { fn f(x: Binary{8}) => Binary{8} = x }\n\
-        fn g(x: Binary{4}) => Binary{4} = f(x)";
+    let src = "nodule d;\n\ntrait Tr[A] {\n  fn f(x: A) => A;\n};\n\nimpl Tr[Binary{8}] for Binary{8} {\n  fn f(x: Binary{8}) => Binary{8} =\n  x;\n};\n\nfn g(x: Binary{4}) => Binary{4} =\n  f(x);";
     let e = check(src).expect_err("a Binary{4} call must not reuse the Binary{8} instance");
     assert!(
         e.message.contains("no instance") && e.message.contains("declared for"),
@@ -1087,7 +1036,7 @@ fn an_effect_annotated_fn_parses_and_checks() {
     // `a` over-declares `io` with a pure (literal) body — allowed (the declaration is a contract,
     // RFC-0014 I5; a fn may reserve an effect its body does not yet perform). It must check, and the
     // declared set must be recorded on the fn's signature for EXPLAIN / future wiring.
-    let env = check("nodule d\nfn a() => Binary{8} !{io} = 0b00000000").expect("checks");
+    let env = check("nodule d;\n\nfn a() => Binary{8} =\n  0b00000000;").expect("checks");
     assert_eq!(
         env.fn_decl("a").expect("fn a").sig.effects,
         vec!["io".to_owned()],
@@ -1101,8 +1050,7 @@ fn an_unannotated_caller_of_an_effectful_fn_is_a_check_error() {
     // pure, RFC-0014 I5), so it PERFORMS `io` without DECLARING it — an explicit under-declaration
     // refusal naming the effect and the callee (RFC-0014 I3; never silent — G2).
     let err = check(
-        "nodule d\nfn a() => Binary{8} !{io} = 0b00000000\n\
-         fn b() => Binary{8} = a()",
+        "nodule d;\n\nfn a() => Binary{8} =\n  0b00000000;\n\nfn b() => Binary{8} =\n  a();",
     )
     .expect_err("an unannotated caller of an effectful fn must be refused");
     assert!(
@@ -1122,8 +1070,7 @@ fn a_caller_that_declares_the_callees_effect_checks() {
     // `c` declares `io`, the effect its callee `a` performs — coverage holds (declared ⊇ performed),
     // so it checks. The compositional-check line of RFC-0014 §8 (manual-declare + compositional-check).
     let env = check(
-        "nodule d\nfn a() => Binary{8} !{io} = 0b00000000\n\
-         fn c() => Binary{8} !{io} = a()",
+        "nodule d;\n\nfn a() => Binary{8} =\n  0b00000000;\n\nfn c() => Binary{8} =\n  a();",
     )
     .expect("a caller that declares the callee's effect checks");
     assert_eq!(
@@ -1137,8 +1084,7 @@ fn over_declaration_is_allowed() {
     // `d` declares `!{io, time}` but only calls `a` (which performs `io`) — declaring the unused
     // `time` is fine (a contract, never an error/lint — RFC-0014 I5). Coverage is a SUPERSET check.
     let env = check(
-        "nodule d\nfn a() => Binary{8} !{io} = 0b00000000\n\
-         fn d() => Binary{8} !{io, time} = a()",
+        "nodule d;\n\nfn a() => Binary{8} =\n  0b00000000;\n\nfn d() => Binary{8} =\n  a();",
     )
     .expect("over-declaration is allowed");
     assert_eq!(
@@ -1152,8 +1098,7 @@ fn an_empty_written_effect_set_is_pure_and_equals_unannotated() {
     // `!{}` is an explicit "declares no effects" — identical in meaning to an unannotated (pure) fn.
     // A pure-bodied fn with `!{}` checks; both record the empty effect set.
     let env = check(
-        "nodule d\nfn p() => Binary{8} !{} = 0b00000000\n\
-         fn q() => Binary{8} = 0b00000000",
+        "nodule d;\n\nfn p() => Binary{8} =\n  0b00000000;\n\nfn q() => Binary{8} =\n  0b00000000;",
     )
     .expect("an explicit empty effect set is pure");
     assert!(env.fn_decl("p").expect("fn p").sig.effects.is_empty());
@@ -1240,9 +1185,7 @@ fn effect_coverage_accounts_for_trait_method_calls_and_impl_method_bodies() {
     // The coverage check must see effects performed through a TRAIT-METHOD call (not only direct fn
     // calls) and inside an IMPL-METHOD body — otherwise an effect could be hidden from a caller,
     // breaking the RFC-0014 invariant "an effect a function performs is visible in its signature".
-    const LOG: &str = "nodule d\n\
-        trait Log[A] { fn log(x: A) => A !{io} }\n\
-        impl Log[Binary{8}] for Binary{8} { fn log(x: Binary{8}) => Binary{8} !{io} = x }\n";
+    const LOG: &str = "nodule d;\n\ntrait Log[A] {\n  fn log(x: A) => A;\n};\n\nimpl Log[Binary{8}] for Binary{8} {\n  fn log(x: Binary{8}) => Binary{8} =\n  x;\n};\n";
     // (1) A fn calling the effectful trait method `log` performs `io` and must declare it.
     let bad = format!("{LOG}fn f(x: Binary{{8}}) => Binary{{8}} = log(x)");
     let e = check(&bad)
@@ -1263,10 +1206,7 @@ fn effect_coverage_accounts_for_trait_method_calls_and_impl_method_bodies() {
     // (2) An IMPL-METHOD body that performs an effect its declared set (== the trait method's) does
     // not cover is refused — here `m` declares `time` (matching the trait) but its body performs `io`
     // via the top-level `ioop`, so the effect would be hidden if impl bodies were not checked.
-    let bad_impl = "nodule d\n\
-        fn ioop() => Binary{8} !{io} = 0b00000000\n\
-        trait T[A] { fn m(x: A) => Binary{8} !{time} }\n\
-        impl T[Binary{8}] for Binary{8} { fn m(x: Binary{8}) => Binary{8} !{time} = let _y = ioop() in x }";
+    let bad_impl = "nodule d;\n\nfn ioop() => Binary{8} =\n  0b00000000;\n\ntrait T[A] {\n  fn m(x: A) => Binary{8};\n};\n\nimpl T[Binary{8}] for Binary{8} {\n  fn m(x: Binary{8}) => Binary{8} =\n  let _y = ioop() in x;\n};";
     let e2 = check(bad_impl)
         .expect_err("an impl method performing an effect it does not declare must be refused");
     assert!(
@@ -1282,8 +1222,7 @@ fn a_trait_method_with_effects_an_impl_with_different_effects_is_refused() {
     // trait method's. Here the trait declares `cmp` with `!{io}` but the impl method declares `!{}`
     // (pure) — an explicit refusal (never a silent widen/narrow — G2).
     let err = check(
-        "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} !{io} }\n\
-         impl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }",
+        "nodule d;\n\ntrait Cmp[A] {\n  fn cmp(a: A, b: A) => Binary{2};\n};\n\nimpl Cmp[Binary{8}] for Binary{8} {\n  fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} =\n  0b00;\n};",
     )
     .expect_err("an impl method whose effects differ from the trait's must be refused");
     assert!(
@@ -1298,9 +1237,7 @@ fn a_trait_method_with_matching_effects_in_the_impl_checks() {
     // The dual of the refusal: an impl method declaring the SAME effects as the trait method checks
     // (exact-match conformance — RFC-0014 §4.5). The trait and impl both declare `!{io}`.
     let env = check(
-        "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} !{io} }\n\
-         impl Cmp[Binary{8}] for Binary{8} \
-         { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} !{io} = 0b00 }",
+        "nodule d;\n\ntrait Cmp[A] {\n  fn cmp(a: A, b: A) => Binary{2};\n};\n\nimpl Cmp[Binary{8}] for Binary{8} {\n  fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} =\n  0b00;\n};",
     )
     .expect("an impl method whose effects match the trait's checks");
     assert!(env.trait_info("Cmp").is_some());
@@ -1312,9 +1249,7 @@ fn an_effect_carrying_call_through_a_transitive_chain_must_be_declared() {
     // `io`-effectful `leaf`, so `mid` must declare `io`; `top` calls `mid` (which declares `io`), so
     // `top` must declare `io` too. With every link declaring `io`, the chain checks.
     let env = check(
-        "nodule d\nfn leaf() => Binary{8} !{io} = 0b00000000\n\
-         fn mid() => Binary{8} !{io} = leaf()\n\
-         fn top() => Binary{8} !{io} = mid()",
+        "nodule d;\n\nfn leaf() => Binary{8} =\n  0b00000000;\n\nfn mid() => Binary{8} =\n  leaf();\n\nfn top() => Binary{8} =\n  mid();",
     )
     .expect("a fully-declared effect chain checks");
     assert_eq!(
@@ -1324,9 +1259,7 @@ fn an_effect_carrying_call_through_a_transitive_chain_must_be_declared() {
 
     // Break the middle link: `mid` performs `io` (via `leaf`) but does not declare it → refusal.
     let err = check(
-        "nodule d\nfn leaf() => Binary{8} !{io} = 0b00000000\n\
-         fn mid() => Binary{8} = leaf()\n\
-         fn top() => Binary{8} !{io} = mid()",
+        "nodule d;\n\nfn leaf() => Binary{8} =\n  0b00000000;\n\nfn mid() => Binary{8} =\n  leaf();\n\nfn top() => Binary{8} =\n  mid();",
     )
     .expect_err("an undeclared middle link must be refused");
     assert!(
@@ -1347,7 +1280,7 @@ fn an_effect_carrying_call_through_a_transitive_chain_must_be_declared() {
 fn an_exact_to_exact_fn_type_checks() {
     // The headline acceptance: `fn f(x: Binary{8} @ Exact) -> Binary{8} @ Exact = x` grades, because
     // `x` is bound at `Exact` (its param demand) and the body grade `Exact ⊒ Exact` (the return).
-    check("nodule d\nfn f(x: Binary{8} @ Exact) => Binary{8} @ Exact = x")
+    check("nodule d;\n\nfn f(x: Binary{8} @ Exact) => Binary{8} @ Exact =\n  x;")
         .expect("an Exact-demanding, Exact-returning identity grades");
 }
 
@@ -1356,10 +1289,7 @@ fn passing_a_weaker_graded_value_to_an_exact_param_is_refused() {
     // `g` advertises `@ Empirical`; `f` demands `@ Exact`. Calling `f(g(x))` must be refused —
     // `Empirical` does not satisfy the `Exact` demand (the honesty rule at the call site, VR-5).
     let err = check(
-        "nodule d\n\
-         fn g(x: Binary{8} @ Empirical) => Binary{8} @ Empirical = x\n\
-         fn f(y: Binary{8} @ Exact) => Binary{8} @ Exact = y\n\
-         fn use_it(z: Binary{8} @ Empirical) => Binary{8} @ Exact = f(g(z))",
+        "nodule d;\n\nfn g(x: Binary{8} @ Empirical) => Binary{8} @ Empirical =\n  x;\n\nfn f(y: Binary{8} @ Exact) => Binary{8} @ Exact =\n  y;\n\nfn use_it(z: Binary{8} @ Empirical) => Binary{8} @ Exact =\n  f(g(z));",
     )
     .expect_err("an Empirical argument must not satisfy an Exact parameter demand");
     assert!(
@@ -1375,7 +1305,7 @@ fn passing_a_weaker_graded_value_to_an_exact_param_is_refused() {
 fn a_body_too_weak_for_its_declared_return_is_refused() {
     // The body's grade must satisfy the declared return demand. Here the param is `@ Empirical`, so the
     // identity body grades `Empirical`, which does NOT satisfy the declared `@ Exact` return.
-    let err = check("nodule d\nfn f(x: Binary{8} @ Empirical) => Binary{8} @ Exact = x")
+    let err = check("nodule d;\n\nfn f(x: Binary{8} @ Empirical) => Binary{8} @ Exact =\n  x;")
         .expect_err("an Empirical body cannot satisfy an Exact return demand");
     assert!(
         err.message.contains("guarantee") && err.message.contains("Exact"),
@@ -1388,7 +1318,7 @@ fn a_body_too_weak_for_its_declared_return_is_refused() {
 fn weakening_an_exact_value_to_a_declared_return_is_allowed() {
     // VR-5: annotation may only weaken. An `Exact` body satisfies any weaker return demand — here a
     // literal (Exact) returned as `@ Declared` grades fine (`Exact ⊒ Declared`).
-    check("nodule d\nfn k() => Binary{8} @ Declared = 0b00000000")
+    check("nodule d;\n\nfn k() => Binary{8} @ Declared =\n  0b00000000;")
         .expect("an Exact literal weakens to a Declared return");
 }
 
@@ -1398,9 +1328,7 @@ fn a_swap_endorses_to_satisfy_a_strong_return_demand() {
     // type level, so it satisfies a strong `@ Proven` return demand even from an unannotated source.
     // (Certificate validity is discharged at elaboration/runtime, never silently — G2.)
     check(
-        "nodule d\n\
-         fn certified(x: Dense{768, F32}) => Dense{768, BF16} @ Proven = \
-            swap(x, to: Dense{768, BF16}, policy: bf16_round)",
+        "nodule d;\n\nfn certified(x: Dense{768, F32}) => Dense{768, BF16} @ Proven =\n  swap(x, to: Dense{768, BF16}, policy: bf16_round);",
     )
     .expect("a swap endorses to satisfy a Proven return demand (cert trusted at the type level)");
 }
@@ -1410,9 +1338,7 @@ fn an_exact_arg_satisfies_a_weaker_param_demand() {
     // G-Sub: a more-trusted value satisfies a less-trusted demand. An `Exact` literal passed to an
     // `@ Empirical` parameter grades fine (`Exact ⊒ Empirical`).
     check(
-        "nodule d\n\
-         fn sink(x: Binary{8} @ Empirical) => Binary{8} @ Empirical = x\n\
-         fn feed() => Binary{8} @ Empirical = sink(0b00000001)",
+        "nodule d;\n\nfn sink(x: Binary{8} @ Empirical) => Binary{8} @ Empirical =\n  x;\n\nfn feed() => Binary{8} @ Empirical =\n  sink(0b00000001);",
     )
     .expect("an Exact argument satisfies an Empirical parameter demand");
 }
@@ -1423,10 +1349,7 @@ fn unannotated_code_is_unaffected_by_grading() {
     // (unannotated returns advertise the bottom `Declared`, which any body satisfies). This is the
     // backward-compatibility guarantee — grading only "bites" where an `@ g` is written.
     check(
-        "nodule d\n\
-         type ByteList = End | More(Binary{8}, ByteList)\n\
-         fn checksum(bs: ByteList) => Binary{8} = for b in bs, acc = 0b00000000 => xor(acc, b)\n\
-         fn main() => Binary{8} = checksum(More(0b11110000, More(0b00001111, End)))",
+        "nodule d;\n\ntype ByteList = End | More(Binary{8}, ByteList);\n\nfn checksum(bs: ByteList) => Binary{8} =\n  for b in bs, acc = 0b00000000 => xor(acc, b);\n\nfn main() => Binary{8} =\n  checksum(More(0b11110000, More(0b00001111, End)));",
     )
     .expect("fully un-annotated code is unaffected by guarantee grading");
 }
@@ -1436,10 +1359,7 @@ fn a_let_ascription_can_only_weaken() {
     // G-Weaken in `let`: the bound's grade must satisfy the ascribed `@ g`. An `Empirical`-graded
     // bound ascribed `@ Exact` in a `let` is a refusal (the ascription cannot upgrade — VR-5).
     let err = check(
-        "nodule d\n\
-         fn src(x: Binary{8} @ Empirical) => Binary{8} @ Empirical = x\n\
-         fn f(z: Binary{8} @ Empirical) => Binary{8} @ Declared = \
-            let y: Binary{8} @ Exact = src(z) in y",
+        "nodule d;\n\nfn src(x: Binary{8} @ Empirical) => Binary{8} @ Empirical =\n  x;\n\nfn f(z: Binary{8} @ Empirical) => Binary{8} @ Declared =\n  let y: Binary{8} @ Exact = src(z) in y;",
     )
     .expect_err("a let ascription `@ Exact` cannot strengthen an Empirical bound");
     assert!(
@@ -1458,11 +1378,7 @@ fn a_for_fold_accumulator_demanding_a_strong_grade_is_refused() {
     // with `acc` at its initial `Exact` would be an unsound miss. We bind `acc` at the bottom grade,
     // catching the violation (never a silent accept — G2/VR-5).
     let err = check(
-        "nodule d\n\
-         type ByteList = End | More(Binary{8}, ByteList)\n\
-         fn weaken(a: Binary{8} @ Exact) => Binary{8} @ Empirical = a\n\
-         fn fold(bs: ByteList) => Binary{8} @ Empirical = \
-            for b in bs, acc = 0b00000000 => weaken(acc)",
+        "nodule d;\n\ntype ByteList = End | More(Binary{8}, ByteList);\n\nfn weaken(a: Binary{8} @ Exact) => Binary{8} @ Empirical =\n  a;\n\nfn fold(bs: ByteList) => Binary{8} @ Empirical =\n  for b in bs, acc = 0b00000000 => weaken(acc);",
     )
     .expect_err("a for-body demanding @ Exact on a re-weakened accumulator must be refused");
     assert!(
@@ -1480,9 +1396,7 @@ fn a_nullary_ctor_pattern_does_not_shadow_the_ctor_grade_in_the_arm() {
     // `@ Declared` but each arm returns the nullary ctor `End` (grade `Exact`), so the match grades
     // `Exact` and satisfies the `@ Exact` return demand.
     check(
-        "nodule d\n\
-         type T = End | More(Binary{8}, T)\n\
-         fn f(x: T @ Declared) => T @ Exact = match x { End => End, _ => End }",
+        "nodule d;\n\ntype T = End | More(Binary{8}, T);\n\nfn f(x: T @ Declared) => T @ Exact =\n  match x { End => End, _ => End };",
     )
     .expect("a nullary-ctor pattern must not degrade the ctor's grade in the arm body");
 }
@@ -1493,9 +1407,7 @@ fn a_real_binder_pattern_still_carries_the_scrutinee_grade() {
     // grade — so returning it under a strong demand is correctly refused. `x` is `@ Declared`; the
     // bound tail `m` is `Declared`, which cannot satisfy the `@ Exact` return.
     let err = check(
-        "nodule d\n\
-         type T = End | More(Binary{8}, T)\n\
-         fn f(x: T @ Declared) => T @ Exact = match x { End => End, More(b, m) => m }",
+        "nodule d;\n\ntype T = End | More(Binary{8}, T);\n\nfn f(x: T @ Declared) => T @ Exact =\n  match x { End => End, More(b, m) => m };",
     )
     .expect_err(
         "a destructured field binder carries the scrutinee grade — a Declared tail fails @ Exact",
@@ -1517,10 +1429,7 @@ fn a_binder_colliding_with_an_unrelated_types_nullary_ctor_is_still_a_binder() {
     // correctly refused against the `@ Exact` return. A global scan would mis-classify `End` as a ctor,
     // drop the binding, and let the body grade `Exact` — an unsound grade *upgrade* (a wrong accept).
     let err = check(
-        "nodule d\n\
-         type Other = End\n\
-         type T = Leaf | Node(Binary{8}, T)\n\
-         fn f(x: T @ Declared) => T @ Exact = match x { End => End }",
+        "nodule d;\n\ntype Other = End;\n\ntype T = Leaf | Node(Binary{8}, T);\n\nfn f(x: T @ Declared) => T @ Exact =\n  match x { End => End };",
     )
     .expect_err(
         "a binder colliding with an unrelated type's nullary ctor carries the scrutinee grade — \
@@ -1541,9 +1450,7 @@ fn monomorphize_specializes_first_or_to_a_closed_env() {
     // type parameters and a mangled `first_or$Binary8` whose params are empty — a closed monomorphic
     // env the elaborator runs unchanged.
     let env = check(
-        "nodule d\ntype List[A] = Nil | Cons(A, List[A])\n\
-         fn first_or[A](xs: List[A], d: A) => A = match xs { Nil => d, Cons(x, _) => x }\n\
-         fn main() => Binary{8} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)",
+        "nodule d;\n\ntype List[A] = Nil | Cons(A, List[A]);\n\nfn first_or[A](xs: List[A], d: A) => A =\n  match xs { Nil => d, Cons(x, _) => x };\n\nfn main() => Binary{8} =\n  first_or(Cons(0b0000_0001, Nil), 0b0000_0000);",
     )
     .expect("a generic program checks");
     let mono = monomorphize(&env, "main").expect("monomorphizes");
@@ -1575,12 +1482,7 @@ fn monomorphize_specializes_first_or_to_a_closed_env() {
 /// Shared helper: a minimal `Result<A, E>` data type + typical HOF helpers used by multiple
 /// M-686 tests. `double_bits` XORs `x` with itself (always zero — chosen because `xor` is the
 /// available Binary prim; `add` is Ternary-only in stage-1).
-const RESULT_PREAMBLE: &str = "\
-nodule d
-type Result[A, E] = Ok(A) | Err(E)
-fn double_bits(x: Binary{8}) => Binary{8} = xor(x, x)
-fn mk_ok() => Result[Binary{8}, Binary{8}] = Ok(0b0000_0001)
-fn identity_err(e: Binary{8}) => Binary{8} = e\n";
+const RESULT_PREAMBLE: &str = "nodule d;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn double_bits(x: Binary{8}) => Binary{8} =\n  xor(x, x);\n\nfn mk_ok() => Result[Binary{8}, Binary{8}] =\n  Ok(0b0000_0001);\n\nfn identity_err(e: Binary{8}) => Binary{8} =\n  e;\n";
 
 #[test]
 fn hof_map_typechecks_with_fn_as_value() {
@@ -1598,14 +1500,7 @@ fn main() => Result[Binary{{8}}, Binary{{8}}] = map(mk_ok(), double_bits)"
 #[test]
 fn hof_and_then_typechecks_with_fn_as_value() {
     // RFC-0024 §3 acceptance: `and_then` takes `f: A -> Result<B, E>`; `pass_through` fits.
-    let src = "\
-nodule d
-type Result[A, E] = Ok(A) | Err(E)
-fn pass_through(x: Binary{8}) => Result[Binary{8}, Binary{8}] = Ok(x)
-fn mk_ok() => Result[Binary{8}, Binary{8}] = Ok(0b0000_0001)
-fn and_then[A, B, E](r: Result[A, E], f: A => Result[B, E]) => Result[B, E] =
-  match r { Ok(x) => f(x), Err(e) => Err(e) }
-fn main() => Result[Binary{8}, Binary{8}] = and_then(mk_ok(), pass_through)";
+    let src = "nodule d;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn pass_through(x: Binary{8}) => Result[Binary{8}, Binary{8}] =\n  Ok(x);\n\nfn mk_ok() => Result[Binary{8}, Binary{8}] =\n  Ok(0b0000_0001);\n\nfn and_then[A, B, E](r: Result[A, E], f: A => Result[B, E]) => Result[B, E] =\n  match r { Ok(x) => f(x), Err(e) => Err(e) };\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  and_then(mk_ok(), pass_through);";
     check(src).expect("and_then with fn-as-value type-checks (RFC-0024 §3, M-686)");
 }
 
@@ -1626,11 +1521,7 @@ fn main() => Binary{{8}} = fold(mk_ok(), double_bits, identity_err)"
 fn hof_fn_typed_param_application_inside_body_typechecks() {
     // Inside a HOF body: applying `f` (a scope binder of type `A -> B`) to `x` type-checks —
     // the new HOF branch in `check_app` handles this (M-686).
-    let src = "\
-nodule d
-fn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} = f(x)
-fn flip_bits(x: Binary{8}) => Binary{8} = not(x)
-fn main() => Binary{8} = apply(flip_bits, 0b00000001)";
+    let src = "nodule d;\n\nfn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} =\n  f(x);\n\nfn flip_bits(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn main() => Binary{8} =\n  apply(flip_bits, 0b00000001);";
     check(src).expect("HOF application inside body type-checks (M-686)");
 }
 
@@ -1639,13 +1530,7 @@ fn hof_arrow_type_mismatch_is_refused() {
     // Negative: passing a `Binary{8} -> Binary{8}` fn where `Binary{8} -> Result<Binary{8},Binary{8}>`
     // is needed is a never-silent type error (RFC-0024 §3, G2).
     let err = check(
-        "nodule d
-type Result[A, E] = Ok(A) | Err(E)
-fn wrong_return_type(x: Binary{8}) => Binary{8} = not(x)
-fn mk_ok() => Result[Binary{8}, Binary{8}] = Ok(0b0000_0001)
-fn and_then[A, B, E](r: Result[A, E], f: A => Result[B, E]) => Result[B, E] =
-  match r { Ok(x) => f(x), Err(e) => Err(e) }
-fn main() => Result[Binary{8}, Binary{8}] = and_then(mk_ok(), wrong_return_type)",
+        "nodule d;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn wrong_return_type(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn mk_ok() => Result[Binary{8}, Binary{8}] =\n  Ok(0b0000_0001);\n\nfn and_then[A, B, E](r: Result[A, E], f: A => Result[B, E]) => Result[B, E] =\n  match r { Ok(x) => f(x), Err(e) => Err(e) };\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  and_then(mk_ok(), wrong_return_type);",
     )
     .expect_err("arrow-type mismatch must be refused (RFC-0024 §3, G2)");
     assert!(
@@ -1663,13 +1548,7 @@ fn hof_generic_fn_as_value_without_context_is_refused() {
     // Negative: referencing a GENERIC function bare without a context that fixes its type args
     // is a never-silent refusal (RFC-0024 §5, RFC-0007 §11.3, G2/VR-5).
     let err = check(
-        "nodule d
-type Result[A, E] = Ok(A) | Err(E)
-fn identity[A](x: A) => A = x
-fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =
-  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }
-fn mk_ok() => Result[Binary{8}, Binary{8}] = Ok(0b0000_0001)
-fn main() => Result[Binary{8}, Binary{8}] = map(mk_ok(), identity)",
+        "nodule d;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn identity[A](x: A) => A =\n  x;\n\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };\n\nfn mk_ok() => Result[Binary{8}, Binary{8}] =\n  Ok(0b0000_0001);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  map(mk_ok(), identity);",
     )
     .expect_err("generic fn-as-value without determined type args must be refused (RFC-0024 §5)");
     assert!(
@@ -1687,13 +1566,7 @@ fn hof_multi_param_fn_as_value_is_refused() {
     // Negative: a multi-parameter function cannot be used as a first-class value in stage-1
     // (partial application is deferred — RFC-0024 §5, never silently coerced).
     let err = check(
-        "nodule d
-type Result[A, E] = Ok(A) | Err(E)
-fn two_args(x: Binary{8}, y: Binary{8}) => Binary{8} = xor(x, y)
-fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =
-  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }
-fn mk_ok() => Result[Binary{8}, Binary{8}] = Ok(0b0000_0001)
-fn main() => Result[Binary{8}, Binary{8}] = map(mk_ok(), two_args)",
+        "nodule d;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn two_args(x: Binary{8}, y: Binary{8}) => Binary{8} =\n  xor(x, y);\n\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };\n\nfn mk_ok() => Result[Binary{8}, Binary{8}] =\n  Ok(0b0000_0001);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  map(mk_ok(), two_args);",
     )
     .expect_err("multi-param fn-as-value must be refused (RFC-0024 §5)");
     assert!(
@@ -1712,7 +1585,7 @@ fn consume_of_a_substrate_param_typechecks() {
     // DN-03 §1 / LR-8 / M-664: `consume <expr>` over a `Substrate`-typed value type-checks and
     // yields the moved substrate (`Substrate{tag}`). Execution stays staged (an elab `Residual`,
     // since `Substrate` has no v0 value forms) — the *type* discipline is what is checked here.
-    let env = check("nodule d\nfn take(s: Substrate{Sock}) => Substrate{Sock} = consume s")
+    let env = check("nodule d;\n\nfn take(s: Substrate{Sock}) => Substrate{Sock} =\n  consume s;")
         .expect("consume of a Substrate value checks");
     assert_eq!(env.totality["take"], Totality::Total);
 }
@@ -1721,7 +1594,7 @@ fn consume_of_a_substrate_param_typechecks() {
 fn consume_of_a_non_substrate_is_refused() {
     // Never-silent (G2): only a `Substrate` value can be consumed — a `Binary{8}` operand is an
     // explicit refusal naming `Substrate`.
-    let err = check("nodule d\nfn bad(x: Binary{8}) => Binary{8} = consume x").unwrap_err();
+    let err = check("nodule d;\n\nfn bad(x: Binary{8}) => Binary{8} =\n  consume x;").unwrap_err();
     assert!(
         err.message.contains("consume") && err.message.contains("Substrate"),
         "refusal must name `consume` + `Substrate`, got: {}",
@@ -1734,7 +1607,7 @@ fn consume_result_type_mismatch_is_refused() {
     // The result of `consume s : Substrate{Sock}` is `Substrate{Sock}`; a context expecting a
     // different type is a never-silent refusal (no silent coercion, G2).
     let err =
-        check("nodule d\nfn bad(s: Substrate{Sock}) => Substrate{Plug} = consume s").unwrap_err();
+        check("nodule d;\n\nfn bad(s: Substrate{Sock}) => Substrate{Plug} =\n  consume s;").unwrap_err();
     assert!(
         err.message.contains("Substrate") || err.message.contains("type"),
         "result mismatch must be explicit, got: {}",
@@ -1748,10 +1621,7 @@ fn inherent_impl_methods_lift_to_callable_free_fns() {
     // top-level free functions (the object-inherent-`fn` model), so they type-check and are
     // callable by name.
     let env = check(
-        "nodule d\n\
-         type Foo = Mk(Binary{8})\n\
-         impl Foo { fn unwrap(f: Foo) => Binary{8} = match f { Mk(b) => b } }\n\
-         fn use_it(f: Foo) => Binary{8} = unwrap(f)",
+        "nodule d;\n\ntype Foo = Mk(Binary{8});\n\nimpl Foo {\n  fn unwrap(f: Foo) => Binary{8} =\n  match f { Mk(b) => b };\n};\n\nfn use_it(f: Foo) => Binary{8} =\n  unwrap(f);",
     )
     .expect("inherent impl method checks and is callable");
     assert_eq!(env.totality["unwrap"], Totality::Total);
@@ -1763,10 +1633,7 @@ fn inherent_impl_method_name_collision_is_refused() {
     // The lifted methods share the top-level fn namespace; a collision with another top-level fn
     // is caught by the existing duplicate-fn check (never silent, G2).
     let err = check(
-        "nodule d\n\
-         type Foo = Mk(Binary{8})\n\
-         fn unwrap(f: Foo) => Binary{8} = match f { Mk(b) => b }\n\
-         impl Foo { fn unwrap(f: Foo) => Binary{8} = match f { Mk(b) => b } }",
+        "nodule d;\n\ntype Foo = Mk(Binary{8});\n\nfn unwrap(f: Foo) => Binary{8} =\n  match f { Mk(b) => b };\n\nimpl Foo {\n  fn unwrap(f: Foo) => Binary{8} =\n  match f { Mk(b) => b };\n};",
     )
     .unwrap_err();
     assert!(
@@ -1780,8 +1647,7 @@ fn inherent_impl_on_repr_type_checks() {
     // The inherent target may be a repr type (`impl Binary{8} { … }`) — the head parses as a base
     // type and the methods lift verbatim.
     let env = check(
-        "nodule d\nimpl Binary{8} { fn id8(x: Binary{8}) => Binary{8} = x }\n\
-         fn caller(x: Binary{8}) => Binary{8} = id8(x)",
+        "nodule d;\n\nimpl Binary{8} {\n  fn id8(x: Binary{8}) => Binary{8} =\n  x;\n};\n\nfn caller(x: Binary{8}) => Binary{8} =\n  id8(x);",
     )
     .expect("inherent impl on a repr type checks");
     assert_eq!(env.totality["id8"], Totality::Total);
@@ -1814,7 +1680,7 @@ fn rfc0020_4_2_polymorphic_instantiation_is_inferred_at_call_site() {
     // is superseded by M-657 unification + M-673 monomorphization). An UNDETERMINED instantiation
     // remains a never-silent error (G2), preserving the honest "not a guess" stance.
     let env =
-        check("nodule d\nfn id[A](x: A) => A = x\nfn use_id(b: Binary{8}) => Binary{8} = id(b)")
+        check("nodule d;\n\nfn id[A](x: A) => A =\n  x;\n\nfn use_id(b: Binary{8}) => Binary{8} =\n  id(b);")
             .expect("polymorphic instantiation inferred from the argument type");
     assert_eq!(env.totality["use_id"], Totality::Total);
 }
@@ -1825,9 +1691,7 @@ fn rfc0020_r20q4_mutual_recursion_elaborates_not_deferred() {
     // the `MutualRecursionDeferred` refusal the carve-out recorded. (Total-ness is RFC-0007 §4.5's
     // mutual-descent classification; here we only assert the group type-checks + classifies.)
     let env = check(
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn ev(n: Nat) => Nat = match n { Z => Z, S(m) => od(m) }\n\
-         fn od(n: Nat) => Nat = match n { Z => Z, S(m) => ev(m) }",
+        "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn ev(n: Nat) => Nat =\n  match n { Z => Z, S(m) => od(m) };\n\nfn od(n: Nat) => Nat =\n  match n { Z => Z, S(m) => ev(m) };",
     )
     .expect("a mutually-recursive group elaborates (FixGroup), never `MutualRecursionDeferred`");
     assert_eq!(env.totality["ev"], Totality::Total);

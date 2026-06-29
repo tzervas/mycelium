@@ -130,7 +130,7 @@ fn is_empty_on_nil_returns_true() {
 fn mk_nil() => Vec[Binary{8}] = Nil\n\
 fn main() => Bool = is_empty(mk_nil())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = True";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
     assert_three_way("is_empty(Nil)", &src, expected);
 }
 
@@ -142,7 +142,7 @@ fn is_empty_on_cons_returns_false() {
 fn mk_one() => Vec[Binary{8}] = Cons(0b0000_0001, Nil)\n\
 fn main() => Bool = is_empty(mk_one())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = False";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  False;";
     assert_three_way("is_empty(Cons)", &src, expected);
 }
 
@@ -157,7 +157,7 @@ fn mk_nil() => Vec[Binary{8}] = Nil\n\
 fn main() => Option[Binary{8}] = head(mk_nil())";
     let src = program(driver);
     let expected =
-        "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] = None";
+        "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{8}] =\n  None;";
     assert_three_way("head(Nil)", &src, expected);
 }
 
@@ -169,7 +169,7 @@ fn head_on_cons_returns_some() {
 fn mk_one() => Vec[Binary{8}] = Cons(0b0000_0001, Nil)\n\
 fn main() => Option[Binary{8}] = head(mk_one())";
     let src = program(driver);
-    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] = Some(0b0000_0001)";
+    let expected = "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{8}] =\n  Some(0b0000_0001);";
     assert_three_way("head(Cons)", &src, expected);
 }
 
@@ -184,7 +184,7 @@ fn mk_nil() => Vec[Binary{8}] = Nil\n\
 fn main() => Option[Vec[Binary{8}]] = tail(mk_nil())";
     let src = program(driver);
     // The inner Vec is the empty Nil — Option<Vec<Binary{8}>> = None.
-    let expected = "nodule ref\ntype Vec[A] = Nil | Cons(A, Vec[A])\ntype Option[A] = Some(A) | None\nfn main() => Option[Vec[Binary{8}]] = None";
+    let expected = "nodule ref;\n\ntype Vec[A] = Nil | Cons(A, Vec[A]);\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Vec[Binary{8}]] =\n  None;";
     assert_three_way("tail(Nil)", &src, expected);
 }
 
@@ -196,7 +196,7 @@ fn tail_on_cons_returns_some() {
 fn mk_two() => Vec[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
 fn main() => Option[Vec[Binary{8}]] = tail(mk_two())";
     let src = program(driver);
-    let expected = "nodule ref\ntype Vec[A] = Nil | Cons(A, Vec[A])\ntype Option[A] = Some(A) | None\nfn main() => Option[Vec[Binary{8}]] = Some(Cons(0b0000_0010, Nil))";
+    let expected = "nodule ref;\n\ntype Vec[A] = Nil | Cons(A, Vec[A]);\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Vec[Binary{8}]] =\n  Some(Cons(0b0000_0010, Nil));";
     assert_three_way("tail(Cons)", &src, expected);
 }
 
@@ -217,7 +217,7 @@ fn main() => Binary{8} = len(mk_two())";
     let src = program(driver);
     // add_bin(1, add_bin(1, 0)) = 2 via the same op tree as len([e1, e2])
     let expected =
-        "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000))";
+        "nodule ref;\n\nfn main() => Binary{8} =\n  add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000));";
     assert_three_way("len([1,2])", &src, expected);
 }
 
@@ -231,7 +231,7 @@ fn mk_three() => Vec[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b000
 fn main() => Binary{8} = len(mk_three())";
     let src = program(driver);
     // add_bin(1, add_bin(1, add_bin(1, 0))) = 3
-    let expected = "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000)))";
+    let expected = "nodule ref;\n\nfn main() => Binary{8} =\n  add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000)));";
     assert_three_way("len([1,2,3])", &src, expected);
 }
 
@@ -292,7 +292,7 @@ fn get_index_0_returns_head() {
 fn mk_three() => Vec[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))\n\
 fn main() => Option[Binary{8}] = get(mk_three(), 0b0000_0000)";
     let src = program(driver);
-    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] = Some(0b0000_0001)";
+    let expected = "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{8}] =\n  Some(0b0000_0001);";
     assert_three_way("get([1,2,3], 0)", &src, expected);
 }
 
@@ -304,7 +304,7 @@ fn get_index_1_returns_second() {
 fn mk_three() => Vec[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))\n\
 fn main() => Option[Binary{8}] = get(mk_three(), 0b0000_0001)";
     let src = program(driver);
-    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] = Some(0b0000_0010)";
+    let expected = "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{8}] =\n  Some(0b0000_0010);";
     assert_three_way("get([1,2,3], 1)", &src, expected);
 }
 
@@ -317,7 +317,7 @@ fn mk_three() => Vec[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b000
 fn main() => Option[Binary{8}] = get(mk_three(), 0b0000_0101)";
     let src = program(driver);
     let expected =
-        "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] = None";
+        "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{8}] =\n  None;";
     assert_three_way("get([1,2,3], OOB)", &src, expected);
 }
 
@@ -332,8 +332,7 @@ fn mk_two() => Vec[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Nil))\n\
 fn main() => Vec[Binary{8}] = snoc(mk_two(), 0b0000_0011)";
     let src = program(driver);
     // snoc([1,2], 3) = [1,2,3] = Cons(1, Cons(2, Cons(3, Nil)))
-    let expected = "nodule ref\ntype Vec[A] = Nil | Cons(A, Vec[A])\n\
-fn main() => Vec[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)))";
+    let expected = "nodule ref;\n\ntype Vec[A] = Nil | Cons(A, Vec[A]);\n\nfn main() => Vec[Binary{8}] =\n  Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)));";
     assert_three_way("snoc([1,2], 3)", &src, expected);
 }
 
@@ -348,8 +347,7 @@ fn mk_three() => Vec[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b000
 fn main() => Vec[Binary{8}] = reverse(mk_three())";
     let src = program(driver);
     // reverse([1,2,3]) = [3,2,1] = Cons(3, Cons(2, Cons(1, Nil)))
-    let expected = "nodule ref\ntype Vec[A] = Nil | Cons(A, Vec[A])\n\
-fn main() => Vec[Binary{8}] = Cons(0b0000_0011, Cons(0b0000_0010, Cons(0b0000_0001, Nil)))";
+    let expected = "nodule ref;\n\ntype Vec[A] = Nil | Cons(A, Vec[A]);\n\nfn main() => Vec[Binary{8}] =\n  Cons(0b0000_0011, Cons(0b0000_0010, Cons(0b0000_0001, Nil)));";
     assert_three_way("reverse([1,2,3])", &src, expected);
 }
 
@@ -369,7 +367,7 @@ fn mk_map() => Map[Binary{8}, Binary{8}] = MCons(0b0000_0001, 0b0000_1010, MNil)
 fn main() => Option[Binary{8}] = map_get(mk_map(), 0b0000_0001)";
     let src = program(driver);
     // map_get({1→10}, 1) = Some(10) = Some(0b0000_1010)
-    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] = Some(0b0000_1010)";
+    let expected = "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{8}] =\n  Some(0b0000_1010);";
     assert_three_way("map_get(hit)", &src, expected);
 }
 
@@ -383,7 +381,7 @@ fn main() => Option[Binary{8}] = map_get(mk_map(), 0b0000_0010)";
     let src = program(driver);
     // map_get({1→10}, 2) = None
     let expected =
-        "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] = None";
+        "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{8}] =\n  None;";
     assert_three_way("map_get(miss)", &src, expected);
 }
 
@@ -398,7 +396,7 @@ fn mk_map() => Map[Binary{8}, Binary{8}] = MCons(0b0000_0010, 0b0001_0100, MCons
 fn main() => Option[Binary{8}] = map_get(mk_map(), 0b0000_0010)";
     let src = program(driver);
     // map_get({2→20, 1→10}, 2) = Some(20) = Some(0b0001_0100)
-    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{8}] = Some(0b0001_0100)";
+    let expected = "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{8}] =\n  Some(0b0001_0100);";
     assert_three_way("map_get(multi, first-wins)", &src, expected);
 }
 
@@ -415,7 +413,7 @@ fn set_contains_present_returns_true() {
 fn mk_set() => Set[Binary{8}] = SCons(0b0000_0001, SNil)\n\
 fn main() => Bool = set_contains(mk_set(), 0b0000_0001)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = True";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
     assert_three_way("set_contains(present)", &src, expected);
 }
 
@@ -427,7 +425,7 @@ fn set_contains_absent_returns_false() {
 fn mk_set() => Set[Binary{8}] = SCons(0b0000_0001, SNil)\n\
 fn main() => Bool = set_contains(mk_set(), 0b0000_0010)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = False";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  False;";
     assert_three_way("set_contains(absent)", &src, expected);
 }
 
@@ -439,7 +437,7 @@ fn set_contains_empty_returns_false() {
 fn mk_empty() => Set[Binary{8}] = SNil\n\
 fn main() => Bool = set_contains(mk_empty(), 0b0000_0001)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = False";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  False;";
     assert_three_way("set_contains(empty)", &src, expected);
 }
 
@@ -460,7 +458,7 @@ fn mk_map() => Map[Binary{16}, Binary{16}] = MCons(0b0000_0000_0000_0001, 0b0000
 fn main() => Option[Binary{16}] = map_get(mk_map(), 0b0000_0001_0000_0000)";
     let src = program(driver);
     // map_get({1→10, 256→512}, 256) = Some(512) = Some(0b0000_0010_0000_0000)
-    let expected = "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Binary{16}] = Some(0b0000_0010_0000_0000)";
+    let expected = "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Binary{16}] =\n  Some(0b0000_0010_0000_0000);";
     assert_three_way("map_get(Binary{16} key, recurse)", &src, expected);
 }
 
@@ -473,7 +471,7 @@ fn mk_map() => Map[Binary{8}, Bool] = MCons(0b0000_0001, True, MCons(0b0000_0010
 fn main() => Option[Bool] = map_get(mk_map(), 0b0000_0010)";
     let src = program(driver);
     let expected =
-        "nodule ref\ntype Option[A] = Some(A) | None\nfn main() => Option[Bool] = Some(False)";
+        "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\nfn main() => Option[Bool] =\n  Some(False);";
     assert_three_way("map_get(Bool value)", &src, expected);
 }
 
@@ -485,7 +483,7 @@ fn set_contains_binary16_recurses() {
 fn mk_set() => Set[Binary{16}] = SCons(0b0000_0000_0000_0001, SCons(0b0000_0001_0000_0000, SNil))\n\
 fn main() => Bool = set_contains(mk_set(), 0b0000_0001_0000_0000)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = True";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
     assert_three_way("set_contains(Binary{16}, recurse)", &src, expected);
 }
 

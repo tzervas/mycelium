@@ -142,7 +142,7 @@ fn is_ok_on_ok_returns_true() {
 fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)\n\
 fn main() => Bool = is_ok(mk_ok())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = True";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
     assert_three_way("is_ok(Ok)", &src, expected);
 }
 
@@ -153,7 +153,7 @@ fn is_ok_on_err_returns_false() {
 fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_1111)\n\
 fn main() => Bool = is_ok(mk_err())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = False";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  False;";
     assert_three_way("is_ok(Err)", &src, expected);
 }
 
@@ -166,7 +166,7 @@ fn is_err_on_ok_returns_false() {
 fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)\n\
 fn main() => Bool = is_err(mk_ok())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = False";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  False;";
     assert_three_way("is_err(Ok)", &src, expected);
 }
 
@@ -177,7 +177,7 @@ fn is_err_on_err_returns_true() {
 fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_1111)\n\
 fn main() => Bool = is_err(mk_err())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = True";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
     assert_three_way("is_err(Err)", &src, expected);
 }
 
@@ -192,7 +192,7 @@ fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)\n\
 fn main() => Binary{8} = unwrap_or(mk_ok(), 0b0000_0000)";
     let src = program(driver);
     // Expected: the wrapped value 0b0000_0001, not the default 0b0000_0000.
-    let expected = "nodule ref\nfn main() => Binary{8} = 0b0000_0001";
+    let expected = "nodule ref;\n\nfn main() => Binary{8} =\n  0b0000_0001;";
     assert_three_way("unwrap_or(Ok)", &src, expected);
 }
 
@@ -205,7 +205,7 @@ fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_1111)\n\
 fn main() => Binary{8} = unwrap_or(mk_err(), 0b0000_0000)";
     let src = program(driver);
     // Expected: the default 0b0000_0000, not the discarded error 0b1111_1111.
-    let expected = "nodule ref\nfn main() => Binary{8} = 0b0000_0000";
+    let expected = "nodule ref;\n\nfn main() => Binary{8} =\n  0b0000_0000;";
     assert_three_way("unwrap_or(Err)", &src, expected);
 }
 
@@ -218,7 +218,7 @@ fn unwrap_or_on_err_with_same_default_as_error() {
 fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_1111)\n\
 fn main() => Binary{8} = unwrap_or(mk_err(), 0b1111_1111)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Binary{8} = 0b1111_1111";
+    let expected = "nodule ref;\n\nfn main() => Binary{8} =\n  0b1111_1111;";
     assert_three_way("unwrap_or(Err, d=e)", &src, expected);
 }
 
@@ -246,7 +246,7 @@ fn main() => Result[Binary{8},Binary{8}] = map(mk_ok(), not_val)";
     let src = program(driver);
     // Expected: Ok wrapping the computed value not(0b0000_0001). The reference program computes via
     // not() to match the Derived provenance of the test result (literal 0b1111_1110 would be Root).
-    let expected = "nodule ref\ntype Result[A,E] = Ok(A) | Err(E)\nfn main() => Result[Binary{8},Binary{8}] = Ok(not(0b0000_0001))";
+    let expected = "nodule ref;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  Ok(not(0b0000_0001));";
     assert_three_way("map(Ok, not_val)", &src, expected);
 }
 
@@ -260,7 +260,7 @@ fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_1111)\n\
 fn main() => Result[Binary{8},Binary{8}] = map(mk_err(), not_val)";
     let src = program(driver);
     // Expected: the original Err is preserved; not_val is not applied.
-    let expected = "nodule ref\ntype Result[A,E] = Ok(A) | Err(E)\nfn main() => Result[Binary{8},Binary{8}] = Err(0b1111_1111)";
+    let expected = "nodule ref;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  Err(0b1111_1111);";
     assert_three_way("map(Err, not_val)", &src, expected);
 }
 
@@ -283,7 +283,7 @@ fn main() => Result[Binary{8},Binary{8}] = and_then(mk_ok(), mk_ok_inner)";
     let src = program(driver);
     // Expected: the chained step returns Ok(not(0b0000_0001)). The reference program computes via
     // not() to match the Derived provenance of the test result (literal would be Root).
-    let expected = "nodule ref\ntype Result[A,E] = Ok(A) | Err(E)\nfn main() => Result[Binary{8},Binary{8}] = Ok(not(0b0000_0001))";
+    let expected = "nodule ref;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  Ok(not(0b0000_0001));";
     assert_three_way("and_then(Ok, mk_ok_inner)", &src, expected);
 }
 
@@ -297,7 +297,7 @@ fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_1111)\n\
 fn main() => Result[Binary{8},Binary{8}] = and_then(mk_err(), mk_ok_inner)";
     let src = program(driver);
     // Expected: the Err propagates unchanged; mk_ok_inner is never called.
-    let expected = "nodule ref\ntype Result[A,E] = Ok(A) | Err(E)\nfn main() => Result[Binary{8},Binary{8}] = Err(0b1111_1111)";
+    let expected = "nodule ref;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  Err(0b1111_1111);";
     assert_three_way("and_then(Err, mk_ok_inner)", &src, expected);
 }
 
@@ -322,7 +322,7 @@ fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b1010_1010)\n\
 fn main() => Binary{8} = fold(mk_ok(), id_val, const_zero)";
     let src = program(driver);
     // Expected: the success value 0b1010_1010 (on_ok branch; const_zero never called).
-    let expected = "nodule ref\nfn main() => Binary{8} = 0b1010_1010";
+    let expected = "nodule ref;\n\nfn main() => Binary{8} =\n  0b1010_1010;";
     assert_three_way("fold(Ok, id_val, const_zero)", &src, expected);
 }
 
@@ -338,7 +338,7 @@ fn main() => Binary{8} = fold(mk_err(), id_val, const_zero)";
     let src = program(driver);
     // Expected: xor(0b1111_0000, 0b1111_0000). The reference program computes via xor() to match the
     // Derived provenance of the test result (literal 0b0000_0000 would be Root).
-    let expected = "nodule ref\nfn main() => Binary{8} = xor(0b1111_0000, 0b1111_0000)";
+    let expected = "nodule ref;\n\nfn main() => Binary{8} =\n  xor(0b1111_0000, 0b1111_0000);";
     assert_three_way("fold(Err, id_val, const_zero)", &src, expected);
 }
 
@@ -356,7 +356,7 @@ fn not_val(e: Binary{8}) => Binary{8} = not(e)\n\
 fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)\n\
 fn main() => Result[Binary{8},Binary{8}] = map_err(mk_ok(), not_val)";
     let src = program(driver);
-    let expected = "nodule ref\ntype Result[A,E] = Ok(A) | Err(E)\nfn main() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)";
+    let expected = "nodule ref;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  Ok(0b0000_0001);";
     assert_three_way("map_err(Ok, not_val)", &src, expected);
 }
 
@@ -369,7 +369,7 @@ fn not_val(e: Binary{8}) => Binary{8} = not(e)\n\
 fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b0000_1111)\n\
 fn main() => Result[Binary{8},Binary{8}] = map_err(mk_err(), not_val)";
     let src = program(driver);
-    let expected = "nodule ref\ntype Result[A,E] = Ok(A) | Err(E)\nfn main() => Result[Binary{8},Binary{8}] = Err(not(0b0000_1111))";
+    let expected = "nodule ref;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  Err(not(0b0000_1111));";
     assert_three_way("map_err(Err, not_val)", &src, expected);
 }
 
@@ -387,7 +387,7 @@ fn recover(e: Binary{8}) => Result[Binary{8},Binary{8}] = Ok(not(e))\n\
 fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)\n\
 fn main() => Result[Binary{8},Binary{8}] = or_else(mk_ok(), recover)";
     let src = program(driver);
-    let expected = "nodule ref\ntype Result[A,E] = Ok(A) | Err(E)\nfn main() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)";
+    let expected = "nodule ref;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  Ok(0b0000_0001);";
     assert_three_way("or_else(Ok, recover)", &src, expected);
 }
 
@@ -400,6 +400,6 @@ fn recover(e: Binary{8}) => Result[Binary{8},Binary{8}] = Ok(not(e))\n\
 fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b0000_1111)\n\
 fn main() => Result[Binary{8},Binary{8}] = or_else(mk_err(), recover)";
     let src = program(driver);
-    let expected = "nodule ref\ntype Result[A,E] = Ok(A) | Err(E)\nfn main() => Result[Binary{8},Binary{8}] = Ok(not(0b0000_1111))";
+    let expected = "nodule ref;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  Ok(not(0b0000_1111));";
     assert_three_way("or_else(Err, recover)", &src, expected);
 }

@@ -11,9 +11,8 @@ fn env(src: &str) -> Env {
     check_nodule(&parse(src).expect("parses")).expect("checks")
 }
 
-const LIST: &str = "nodule d\ntype List[A] = Nil | Cons(A, List[A])\n";
-const CMP_I8: &str = "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n\
-        impl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }\n";
+const LIST: &str = "nodule d;\n\ntype List[A] = Nil | Cons(A, List[A]);\n";
+const CMP_I8: &str = "nodule d;\n\ntrait Cmp[A] {\n  fn cmp(a: A, b: A) => Binary{2};\n};\n\nimpl Cmp[Binary{8}] for Binary{8} {\n  fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} =\n  0b00;\n};\n";
 
 // ---- mangling: shape + injectivity / collision-freedom ------------------------------------
 
@@ -384,8 +383,7 @@ fn width_sweep_each_width_monomorphizes_closed_and_runs() {
 
 #[test]
 fn a_monomorphic_program_passes_through_unchanged() {
-    let env = env("nodule d\nfn flip(x: Binary{8}) => Binary{8} = not(x)\n\
-             fn main() => Binary{8} = flip(0b1010_1010)");
+    let env = env("nodule d;\n\nfn flip(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn main() => Binary{8} =\n  flip(0b1010_1010);");
     let mono = monomorphize(&env, "main").expect("monomorphizes");
     // The fast pass-through returns a clone: identical fn/type tables.
     assert_eq!(format!("{:?}", env.fns), format!("{:?}", mono.fns));
@@ -398,7 +396,7 @@ fn a_monomorphic_program_passes_through_unchanged() {
 fn an_undetermined_type_parameter_is_a_residual_not_a_guess() {
     // The checker refuses an undetermined parameter at check time, so build the case at the entry
     // boundary: a *nullary generic* entry is refused by mono's `run` (never specialized blindly).
-    let env = env("nodule d\nfn g[A]() => Binary{1} = 0b1");
+    let env = env("nodule d;\n\nfn g[A]() => Binary{1} =\n  0b1;");
     let err = monomorphize(&env, "g").unwrap_err();
     let ElabError::Residual { what, .. } = &err else {
         panic!("expected a Residual, got {err:?}");
@@ -452,13 +450,7 @@ fn no_fn_in_sig_params(env: &Env) -> bool {
 /// shape is what matters for HOF, not the specific arithmetic.
 #[test]
 fn hof_map_mk_ok_double_specializes_to_closed_l0() {
-    let src = "nodule d\n\
-            type Result[A, E] = Ok(A) | Err(E)\n\
-            fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n\
-              match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
-            fn double(x: Binary{8}) => Binary{8} = not(x)\n\
-            fn mk_ok() => Result[Binary{8}, Binary{8}] = Ok(0b0000_0001)\n\
-            fn main() => Result[Binary{8}, Binary{8}] = map(mk_ok(), double)";
+    let src = "nodule d;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };\n\nfn double(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn mk_ok() => Result[Binary{8}, Binary{8}] =\n  Ok(0b0000_0001);\n\nfn main() => Result[Binary{8}, Binary{8}] =\n  map(mk_ok(), double);";
     let e = env(src);
     let (mono, sel) = monomorphize_with_selections(&e, "main").expect("monomorphizes");
 
@@ -595,10 +587,7 @@ fn hof_fn_arg_joint_mangling_is_injective() {
 #[test]
 fn hof_dynamic_fn_arg_is_a_residual() {
     // (a) Static fn arg — must succeed (control for the Residual test).
-    let src_static = "nodule d\n\
-            fn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} = f(x)\n\
-            fn flip(x: Binary{8}) => Binary{8} = not(x)\n\
-            fn main() => Binary{8} = apply(flip, 0b0000_0010)";
+    let src_static = "nodule d;\n\nfn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} =\n  f(x);\n\nfn flip(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn main() => Binary{8} =\n  apply(flip, 0b0000_0010);";
     let e_static = env(src_static);
     let mono_static = monomorphize(&e_static, "main").expect("static fn arg monomorphizes");
     assert!(
@@ -623,11 +612,7 @@ fn hof_dynamic_fn_arg_is_a_residual() {
     // rejects this, the Residual comes from the checker, not mono; that is still G2-compliant.
     //
     // We test that the right kind of error surfaces (Residual), regardless of which gate fires.
-    let src_dyn = "nodule d\n\
-            fn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} = f(x)\n\
-            fn flip(x: Binary{8}) => Binary{8} = not(x)\n\
-            fn outer(g: Binary{8} => Binary{8}, v: Binary{8}) => Binary{8} = apply(g, v)\n\
-            fn main() => Binary{8} = outer(flip, 0b0000_0001)";
+    let src_dyn = "nodule d;\n\nfn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} =\n  f(x);\n\nfn flip(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn outer(g: Binary{8} => Binary{8}, v: Binary{8}) => Binary{8} =\n  apply(g, v);\n\nfn main() => Binary{8} =\n  outer(flip, 0b0000_0001);";
     // `outer(flip, v)` should succeed — `flip` is static here.
     // `apply(g, v)` inside `outer` has `g` as a local binder of fn type; the mono pass must
     // handle this as a HOF-param-application (via fn_param_subst when outer is specialized
@@ -661,10 +646,7 @@ fn hof_dynamic_fn_arg_is_a_residual() {
 /// Determinism: two calls to `monomorphize` on the same HOF program produce byte-equal results.
 #[test]
 fn hof_monomorphize_is_deterministic() {
-    let src = "nodule d\n\
-            fn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} = f(x)\n\
-            fn flip(x: Binary{8}) => Binary{8} = not(x)\n\
-            fn main() => Binary{8} = apply(flip, 0b0000_0010)";
+    let src = "nodule d;\n\nfn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} =\n  f(x);\n\nfn flip(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn main() => Binary{8} =\n  apply(flip, 0b0000_0010);";
     let e = env(src);
     let a = monomorphize(&e, "main").expect("first mono");
     let b = monomorphize(&e, "main").expect("second mono");
@@ -681,10 +663,7 @@ fn hof_monomorphize_is_deterministic() {
 /// `flip(x) = not(x)` so `apply(flip, 0b0000_0001) = not(0b0000_0001) = 0b1111_1110`.
 #[test]
 fn hof_monomorphic_apply_flip_runs_to_closed_l0() {
-    let src = "nodule d\n\
-            fn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} = f(x)\n\
-            fn flip(x: Binary{8}) => Binary{8} = not(x)\n\
-            fn main() => Binary{8} = apply(flip, 0b0000_0001)";
+    let src = "nodule d;\n\nfn apply(f: Binary{8} => Binary{8}, x: Binary{8}) => Binary{8} =\n  f(x);\n\nfn flip(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn main() => Binary{8} =\n  apply(flip, 0b0000_0001);";
     let e = env(src);
     let mono = monomorphize(&e, "main").expect("monomorphizes");
 
@@ -725,9 +704,7 @@ fn hof_monomorphic_apply_flip_runs_to_closed_l0() {
 /// `Empirical`: we monomorphize and assert the mangled name is present and the function is emitted.
 #[test]
 fn width_generic_monomorphizes_into_distinct_specialization_binary_8() {
-    let src = "nodule d\n\
-               fn id_bits{N}(x: Binary{N}) => Binary{N} = x\n\
-               fn main() => Binary{8} = id_bits(0b0000_0000)";
+    let src = "nodule d;\n\nfn id_bits{N}(x: Binary{N}) => Binary{N} =\n  x;\n\nfn main() => Binary{8} =\n  id_bits(0b0000_0000);";
     let e = env(src);
     let mono = monomorphize(&e, "main").expect("monomorphizes");
     assert!(
@@ -751,12 +728,8 @@ fn width_generic_monomorphizes_into_distinct_specialization_binary_8() {
 #[test]
 fn width_generic_two_widths_produce_distinct_specializations() {
     // Two separate mono passes — one per entry — each traces the reachable width.
-    let src8 = "nodule d\n\
-               fn id_bits{N}(x: Binary{N}) => Binary{N} = x\n\
-               fn main() => Binary{8} = id_bits(0b0000_0000)";
-    let src16 = "nodule d\n\
-               fn id_bits{N}(x: Binary{N}) => Binary{N} = x\n\
-               fn main() => Binary{16} = id_bits(0b0000_0000_0000_0000)";
+    let src8 = "nodule d;\n\nfn id_bits{N}(x: Binary{N}) => Binary{N} =\n  x;\n\nfn main() => Binary{8} =\n  id_bits(0b0000_0000);";
+    let src16 = "nodule d;\n\nfn id_bits{N}(x: Binary{N}) => Binary{N} =\n  x;\n\nfn main() => Binary{16} =\n  id_bits(0b0000_0000_0000_0000);";
 
     let e8 = env(src8);
     let mono8 = monomorphize(&e8, "main").expect("monomorphizes at 8");
@@ -791,9 +764,7 @@ fn width_generic_two_widths_produce_distinct_specializations() {
 #[test]
 fn width_generic_undetermined_param_is_a_check_error() {
     // Width param `N` used only in the return type — cannot be inferred from call.
-    let src = "nodule d\n\
-               fn phantom_n{N}(x: Binary{8}) => Binary{8} = x\n\
-               fn main() => Binary{8} = phantom_n(0b0000_0000)";
+    let src = "nodule d;\n\nfn phantom_n[N](x: Binary{8}) => Binary{8} =\n  x;\n\nfn main() => Binary{8} =\n  phantom_n(0b0000_0000);";
     let result = crate::checkty::check_nodule(&crate::parse(src).expect("parses"));
     assert!(
         result.is_err(),

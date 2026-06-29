@@ -2,7 +2,7 @@ use crate::nodule::*;
 
 #[test]
 fn named_marker_is_recognised() {
-    let h = parse_nodule_header("// nodule: geometry.shapes\nnodule geometry.shapes\n")
+    let h = parse_nodule_header("nodule geometry.shapes;\n")
         .unwrap()
         .unwrap();
     assert_eq!(h.dotted().as_deref(), Some("geometry.shapes"));
@@ -11,7 +11,7 @@ fn named_marker_is_recognised() {
 
 #[test]
 fn bare_marker_is_recognised() {
-    let h = parse_nodule_header("// nodule\nnodule g.s\n")
+    let h = parse_nodule_header("nodule g.s;\n")
         .unwrap()
         .unwrap();
     assert_eq!(h.name, None);
@@ -29,12 +29,12 @@ fn leading_blank_lines_are_skipped() {
 #[test]
 fn an_ordinary_first_comment_is_not_a_marker() {
     assert_eq!(
-        parse_nodule_header("// just a comment\nnodule d\n").unwrap(),
+        parse_nodule_header("nodule d;\n").unwrap(),
         None
     );
     // `nodule` mentioned in prose (no colon, not bare) is not a marker — no false positive.
     assert_eq!(
-        parse_nodule_header("// nodule is Mycelium's word for module\nnodule d\n").unwrap(),
+        parse_nodule_header("nodule d;\n").unwrap(),
         None
     );
 }
@@ -42,7 +42,7 @@ fn an_ordinary_first_comment_is_not_a_marker() {
 #[test]
 fn code_first_means_no_marker() {
     assert_eq!(
-        parse_nodule_header("nodule d\nfn f() => Binary{8} = 0b0").unwrap(),
+        parse_nodule_header("nodule d;\n\nfn f() => Binary{8} =\n  0b0;").unwrap(),
         None
     );
 }

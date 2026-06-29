@@ -48,8 +48,7 @@ fn impl_fixture() -> (
     // Parse a phylum-of-one so the surface `impl` + `trait` are real AST (then strip the trait so
     // it is NOT in this nodule — the orphan scenario is "trait declared elsewhere / nowhere").
     let n = parse(
-        "nodule d\ntrait Tr[A] { fn m(x: A) => A }\n\
-         impl Tr[Binary{8}] for Binary{8} { fn m(x: Binary{8}) => Binary{8} = x }",
+        "nodule d;\n\ntrait Tr[A] {\n  fn m(x: A) => A;\n};\n\nimpl Tr[Binary{8}] for Binary{8} {\n  fn m(x: Binary{8}) => Binary{8} =\n  x;\n};",
     )
     .expect("parses");
     let mut types = BTreeMap::new();
@@ -79,8 +78,7 @@ fn orphan_arm_rejects_when_neither_head_is_in_the_coherence_view() {
     // arm is unconditional, so the genuine orphan case is a `for`-type that is a non-local DATA
     // type. Build that: `for Foreign` where `Foreign` is a registered data type NOT in coherence.
     let n = parse(
-        "nodule d\ntrait Tr[A] { fn m(x: A) => A }\ntype Foreign = Mk(Binary{8})\n\
-         impl Tr[Foreign] for Foreign { fn m(x: Foreign) => Foreign = x }",
+        "nodule d;\n\ntrait Tr[A] {\n  fn m(x: A) => A;\n};\n\ntype Foreign = Mk(Binary{8});\n\nimpl Tr[Foreign] for Foreign {\n  fn m(x: Foreign) => Foreign =\n  x;\n};",
     )
     .expect("parses");
     let mut types = BTreeMap::new();
@@ -132,8 +130,7 @@ fn a_colony_types_as_its_last_hypha() {
     // The colony's result type is the LAST hypha's (the RT2 sequentialization's observable). Here
     // the body must match the fn's `Binary{8}` return — the leading hyphae may be any type.
     let e = env(
-        "nodule d\nfn compute(x: Binary{8}) => Binary{8} = not(x)\n\
-         fn run() => Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) }",
+        "nodule d;\n\nfn compute(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn run() => Binary{8} =\n  colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) };",
     );
     assert!(e.fn_decl("run").is_some());
 }
@@ -143,7 +140,7 @@ fn a_colony_whose_last_hypha_mistypes_is_an_explicit_error() {
     // The last hypha carries the colony's type, so a `Ternary` last hypha under a `Binary{8}`
     // return is a never-silent body mismatch (the bidirectional check catches it).
     let err = check_err(
-        "nodule d\nfn run() => Binary{8} = colony { hypha not(0b0000_0001), hypha 0t00+0 }",
+        "nodule d;\n\nfn run() => Binary{8} =\n  colony { hypha not(0b0000_0001), hypha <00+0> };",
     );
     assert!(
         err.message.contains("body") || err.message.contains("expected"),
@@ -157,7 +154,7 @@ fn a_leading_hypha_that_does_not_type_check_is_still_an_error() {
     // RT4/I1: a leading hypha's refusal is never silently dropped — an ill-typed leading hypha
     // (an unknown name) fails the whole colony check.
     let err = check_err(
-        "nodule d\nfn run() => Binary{8} = colony { hypha nope(0b0), hypha not(0b0000_0001) }",
+        "nodule d;\n\nfn run() => Binary{8} =\n  colony { hypha nope(0b0), hypha not(0b0000_0001) };",
     );
     assert!(
         err.message.contains("nope") || err.message.contains("unknown"),
@@ -178,9 +175,7 @@ fn check_error_at_is_a_public_alias() {
 #[test]
 fn env_getters_mirror_the_public_maps() {
     // A program with a data type and two functions, one recursive (so totality is filled).
-    let e = env("nodule d\ntype Nat = Z | S(Nat)\n\
-         fn count(n: Nat) => Nat = match n { Z => Z, S(m) => S(count(m)) }\n\
-         fn main() => Nat = count(S(Z))");
+    let e = env("nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn count(n: Nat) => Nat =\n  match n { Z => Z, S(m) => S(count(m)) };\n\nfn main() => Nat =\n  count(S(Z));");
     // type_info ⇔ types.get
     assert_eq!(e.type_info("Nat"), e.types.get("Nat"));
     assert!(e.type_info("Nat").is_some());
@@ -264,7 +259,7 @@ mod depth_budget_tests {
 /// A `lower` rule is registered in `Env::lower_rules` after a successful check.
 #[test]
 fn lower_rule_is_registered_in_env() {
-    let e = env("nodule d\nlower Trivial = True");
+    let e = env("nodule d;\n\nlower Trivial = True;");
     assert!(
         e.lower_rules.contains_key("Trivial"),
         "`lower Trivial = True` must register the rule name in Env::lower_rules"
@@ -275,7 +270,7 @@ fn lower_rule_is_registered_in_env() {
 /// the type param, so it type-checks under the param scope (DN-54 §4.1).
 #[test]
 fn lower_rule_with_param_is_registered() {
-    let e = env("nodule d\nlower Wrap[T] = True");
+    let e = env("nodule d;\n\nlower Wrap[T] = True;");
     assert!(
         e.lower_rules.contains_key("Wrap"),
         "`lower Wrap[T] = True` must register the rule name in Env::lower_rules"
@@ -291,13 +286,13 @@ fn lower_rule_with_param_is_registered() {
 #[test]
 fn derive_referencing_known_rule_checks() {
     // `derive Trivial for Binary{8}` must check when `lower Trivial = True` is declared first.
-    let _ = env("nodule d\nlower Trivial = True\nderive Trivial for Binary{8}");
+    let _ = env("nodule d;\n\nlower Trivial = True;\n\nderive Trivial for Binary{8};");
 }
 
 /// A duplicate `lower` rule name in the same nodule is a never-silent check error (G2).
 #[test]
 fn lower_duplicate_rule_name_is_refused() {
-    let err = check_err("nodule d\nlower Trivial = True\nlower Trivial = False");
+    let err = check_err("nodule d;\n\nlower Trivial = True;\n\nlower Trivial = False;");
     assert!(
         err.message.contains("duplicate"),
         "expected duplicate-rule error, got: {}",
@@ -313,7 +308,7 @@ fn lower_duplicate_rule_name_is_refused() {
 /// Duplicate parameter names in `lower Name[T, T, …]` is a never-silent check error (G2).
 #[test]
 fn lower_duplicate_param_is_refused() {
-    let err = check_err("nodule d\nlower Bad[T, T] = True");
+    let err = check_err("nodule d;\n\nlower Bad[T, T] = True;");
     assert!(
         err.message.contains("duplicate"),
         "expected duplicate-param error, got: {}",
@@ -324,7 +319,7 @@ fn lower_duplicate_param_is_refused() {
 /// A `derive` referencing an unknown rule name is a never-silent check error (G2).
 #[test]
 fn derive_unknown_rule_name_is_refused() {
-    let err = check_err("nodule d\nderive UnknownRule for Binary{8}");
+    let err = check_err("nodule d;\n\nderive UnknownRule for Binary{8};");
     assert!(
         err.message.contains("unknown"),
         "expected unknown-rule error, got: {}",
@@ -343,7 +338,7 @@ fn derive_unknown_rule_name_is_refused() {
 /// scope, so the RHS fails the IL-grammar / type check — no `derive` site can invoke a broken rule.
 #[test]
 fn lower_rule_with_ill_typed_rhs_is_refused() {
-    let err = check_err("nodule d\nlower Bad = nope");
+    let err = check_err("nodule d;\n\nlower Bad = nope;");
     assert!(
         err.message.contains("IL-grammar") || err.message.contains("type check"),
         "expected an IL-grammar/type-check refusal, got: {}",
@@ -354,7 +349,7 @@ fn lower_rule_with_ill_typed_rhs_is_refused() {
 /// §4.1: a RHS that uses an in-scope name typed correctly is accepted — here a real L1 literal.
 #[test]
 fn lower_rule_with_well_typed_literal_rhs_is_accepted() {
-    let e = env("nodule d\nlower Eight = 0b0000_0001");
+    let e = env("nodule d;\n\nlower Eight = 0b0000_0001;");
     assert!(e.lower_rules.contains_key("Eight"));
 }
 
@@ -368,7 +363,7 @@ fn lower_rule_with_well_typed_literal_rhs_is_accepted() {
 /// never-silent rejections of the rule, which is the load-bearing property).
 #[test]
 fn lower_rule_with_wild_rhs_is_refused() {
-    let err = check_err("nodule d\nlower Impure = wild { host_call() }");
+    let err = check_err("nodule d;\n\nlower Impure = wild { host_call() };");
     assert!(
         err.message.contains("wild")
             || err.message.contains("§4.6")
@@ -385,7 +380,7 @@ fn lower_rule_with_wild_rhs_is_refused() {
 /// `Loop`, which is a registered rule name ⇒ a self-edge.
 #[test]
 fn lower_rule_self_reference_is_refused() {
-    let err = check_err("nodule d\nlower Loop = Loop");
+    let err = check_err("nodule d;\n\nlower Loop = Loop;");
     assert!(
         err.message.contains("cycle") || err.message.contains("itself"),
         "expected an acyclicity (self-reference) refusal, got: {}",
@@ -397,7 +392,7 @@ fn lower_rule_self_reference_is_refused() {
 /// names `B` and `B`'s RHS names `A` — a 2-cycle in the rule graph.
 #[test]
 fn lower_rules_mutual_cycle_is_refused() {
-    let err = check_err("nodule d\nlower A = B\nlower B = A");
+    let err = check_err("nodule d;\n\nlower A = B;\n\nlower B = A;");
     assert!(
         err.message.contains("cycle"),
         "expected a mutual-cycle refusal, got: {}",
@@ -420,10 +415,10 @@ fn lower_rules_mutual_cycle_is_refused() {
 /// completion. The rule's RHS lowers through the same path a hand-written fn would (DRY).
 #[test]
 fn lower_rule_elaborates_its_rhs_to_l0() {
-    let e = env("nodule d\nlower Eight = 0b0000_0001");
+    let e = env("nodule d;\n\nlower Eight = 0b0000_0001;");
     let node = crate::elab::elaborate_lower_rule(&e, "Eight").expect("rule RHS elaborates to L0");
     // The hand-lowered equivalent: a fn whose body is the same RHS.
-    let hand = env("nodule d\nfn eight() => Binary{8} = 0b0000_0001");
+    let hand = env("nodule d;\n\nfn eight() => Binary{8} =\n  0b0000_0001;");
     let hand_node = crate::elab::elaborate(&hand, "eight").expect("hand-lowered fn elaborates");
     assert_eq!(
         format!("{node:?}"),
@@ -441,7 +436,7 @@ fn lower_rule_elaborates_its_rhs_to_l0() {
 /// non-vacuous, never-silent assertion that no out-of-kernel form was synthesised.
 #[test]
 fn lower_rule_elaboration_adds_no_kernel_node_kc3() {
-    let e = env("nodule d\nlower Eight = 0b0000_0001");
+    let e = env("nodule d;\n\nlower Eight = 0b0000_0001;");
     let node = crate::elab::elaborate_lower_rule(&e, "Eight").expect("rule RHS elaborates");
     // The node is one of the frozen L0 variants (closed enum) — KC-3 by construction.
     assert!(
@@ -454,7 +449,7 @@ fn lower_rule_elaboration_adds_no_kernel_node_kc3() {
 /// fabricated artifact (G2).
 #[test]
 fn elaborate_lower_rule_unknown_is_refused() {
-    let e = env("nodule d\nlower Eight = 0b0000_0001");
+    let e = env("nodule d;\n\nlower Eight = 0b0000_0001;");
     let err = crate::elab::elaborate_lower_rule(&e, "Nope").expect_err("unknown rule must refuse");
     assert!(
         matches!(err, crate::elab::ElabError::UnknownFn(ref n) if n == "Nope"),
@@ -469,10 +464,9 @@ fn elaborate_lower_rule_unknown_is_refused() {
 /// that does not derive it.
 #[test]
 fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
-    let plain = env("nodule d\nfn main() => Binary{8} = 0b00000001");
+    let plain = env("nodule d;\n\nfn main() => Binary{8} =\n  0b00000001;");
     let with_rules = env(
-        "nodule d\nlower Trivial = True\nderive Trivial for Binary{8}\n\
-         fn main() => Binary{8} = 0b00000001",
+        "nodule d;\n\nlower Trivial = True;\n\nderive Trivial for Binary{8};\n\nfn main() => Binary{8} =\n  0b00000001;",
     );
     let node_plain = crate::elab::elaborate(&plain, "main").expect("plain entry elaborates");
     let node_rules =

@@ -150,7 +150,7 @@ fn byte_len_returns_count() {
     let driver = "fn main() => Binary{32} = byte_len(0x48_65_6c_6c_6f)";
     let src = program(driver);
     // Binary{32}(5) MSB-first: 0b00000000_00000000_00000000_00000101
-    let expected = "nodule ref\nfn main() => Binary{32} = bytes_len(0x48_65_6c_6c_6f)";
+    let expected = "nodule ref;\n\nfn main() => Binary{32} =\n  bytes_len(0x48_65_6c_6c_6f);";
     assert_three_way("byte_len(Hello)", &src, expected);
 }
 
@@ -159,7 +159,7 @@ fn byte_len_returns_count() {
 fn byte_len_three_byte_input() {
     let driver = "fn main() => Binary{32} = byte_len(0x01_02_03)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Binary{32} = bytes_len(0x01_02_03)";
+    let expected = "nodule ref;\n\nfn main() => Binary{32} =\n  bytes_len(0x01_02_03);";
     assert_three_way("byte_len(3 bytes)", &src, expected);
 }
 
@@ -172,7 +172,7 @@ fn is_ascii_byte_true_for_ascii() {
     // 0b0100_0001 = 0x41 = 'A': high bit clear → ASCII.
     let driver = "fn main() => Bool = is_ascii_byte(0b0100_0001)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = True";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
     assert_three_way("is_ascii_byte(0x41=A → True)", &src, expected);
 }
 
@@ -181,7 +181,7 @@ fn is_ascii_byte_true_for_ascii() {
 fn is_ascii_byte_true_for_nul() {
     let driver = "fn main() => Bool = is_ascii_byte(0b0000_0000)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = True";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
     assert_three_way("is_ascii_byte(0x00=NUL → True)", &src, expected);
 }
 
@@ -191,7 +191,7 @@ fn is_ascii_byte_true_for_max_ascii() {
     // 0b0111_1111 = 0x7F = 127: last valid ASCII value.
     let driver = "fn main() => Bool = is_ascii_byte(0b0111_1111)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = True";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
     assert_three_way("is_ascii_byte(0x7F → True)", &src, expected);
 }
 
@@ -202,7 +202,7 @@ fn is_ascii_byte_false_for_continuation() {
     // 0b1000_0000 = 0x80: the first byte with the high bit set — a 2-byte UTF-8 lead range start.
     let driver = "fn main() => Bool = is_ascii_byte(0b1000_0000)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = False";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  False;";
     assert_three_way("is_ascii_byte(0x80 → False)", &src, expected);
 }
 
@@ -211,7 +211,7 @@ fn is_ascii_byte_false_for_continuation() {
 fn is_ascii_byte_false_for_0xff() {
     let driver = "fn main() => Bool = is_ascii_byte(0b1111_1111)";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = False";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  False;";
     assert_three_way("is_ascii_byte(0xFF → False)", &src, expected);
 }
 
@@ -223,11 +223,7 @@ fn is_ascii_byte_false_for_0xff() {
 
 /// Reference program preamble for decode_ascii tests: re-declare the local types so that
 /// `eval_core` produces a compatible CoreValue (same type ContentHash as the test program).
-const DECODE_REF_PREAMBLE: &str = "\
-nodule ref\n\
-type Option[A] = Some(A) | None\n\
-type Result[A, E] = Ok(A) | Err(E)\n\
-type Utf8Error = Invalid(Binary{8}) | Overlong(Binary{8}) | Surrogate(Binary{8}) | TooLarge(Binary{8})\n";
+const DECODE_REF_PREAMBLE: &str = "nodule ref;\n\ntype Option[A] = Some(A) | None;\n\ntype Result[A, E] = Ok(A) | Err(E);\n\ntype Utf8Error = Invalid(Binary{8}) | Overlong(Binary{8}) | Surrogate(Binary{8}) | TooLarge(Binary{8});\n";
 
 /// `decode_ascii(0x41_42_43, 0b0000_0000)` → `Ok(bytes_get(…, 0))` (= Ok(0x41='A'); Declared/Empirical).
 /// The byte at index 0 of [0x41, 0x42, 0x43] is 0x41 = 'A' — ASCII, so Ok.

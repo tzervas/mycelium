@@ -30,7 +30,7 @@ fn assert_token_stream_equiv(src: &str) {
 /// (the lexer's "no carriage-return" contract; LF/CRLF round-trip parity).
 #[test]
 fn comment_capture_strips_trailing_cr_on_crlf() {
-    let (_toks, comments) = lex_with_comments("nodule d\r\nfn f() => Binary{1} = 0b1 // why\r\n")
+    let (_toks, comments) = lex_with_comments("nodule d;\n\nfn f() => Binary{1} =\n  0b1;\n")
         .expect("lex_with_comments succeeded");
     let last = comments.last().expect("a comment was captured");
     assert_eq!(
@@ -49,7 +49,7 @@ fn comment_capture_strips_trailing_cr_on_crlf() {
 /// than routing every parse/check through comment allocation.
 #[test]
 fn lex_fast_path_skips_comments_capture_path_keeps_them() {
-    let src = "// doc: why\nnodule demo  // trailing why\nfn f() => Binary{1} = 0b1 // more";
+    let src = "nodule demo;\n\nfn f() => Binary{1} =\n  0b1;";
     let fast = lex(src).expect("lex (fast path) succeeded");
     let (cap, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert_eq!(
@@ -76,7 +76,7 @@ fn lex_fast_path_skips_comments_capture_path_keeps_them() {
 #[test]
 fn at_std_sys_lexes_as_one_atomic_marker_token() {
     // `@std-sys` is one token, immediately after the nodule path's last segment.
-    let ts = toks("nodule std.sys.fs @std-sys");
+    let ts = toks("nodule std.sys.fs @std-sys;");
     assert!(
         ts.contains(&Tok::AtStdSys),
         "expected an AtStdSys token, got: {ts:?}"
@@ -135,15 +135,15 @@ fn lex_with_comments_token_stream_equals_lex() {
     // For every input exercised in this module, the token stream from lex_with_comments must
     // be byte-identical to the token stream from lex (comments do not bleed into tokens).
     let inputs = [
-        "nodule std.sys.fs @std-sys",
+        "nodule std.sys.fs @std-sys;",
         "Binary{8} @ Exact",
         "@std",
         // comment cases used below
-        "// full-line comment\nnodule demo",
-        "nodule demo  // trailing",
-        "// first\n// second\nnodule demo",
-        "// before\n\n// after blank\nnodule demo",
-        "// nodule: foo\n// @matured: true\nnodule demo",
+        "nodule demo;",
+        "nodule demo;",
+        "nodule demo;",
+        "nodule demo;",
+        "nodule demo;",
     ];
     for src in inputs {
         assert_token_stream_equiv(src);
@@ -157,7 +157,7 @@ fn lex_with_comments_token_stream_equals_lex() {
 #[test]
 fn comment_capture_case_a_full_line_comment() {
     // A `//` comment occupying the whole line is captured with trailing=false.
-    let src = "// full-line comment\nnodule demo";
+    let src = "nodule demo;";
     let (toks, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert_eq!(comments.len(), 1, "exactly one comment: {comments:?}");
     let c = &comments[0];
@@ -186,7 +186,7 @@ fn comment_capture_case_a_full_line_comment() {
 #[test]
 fn comment_capture_case_b_trailing_same_line_comment() {
     // A comment after a real token on the same line: trailing=true.
-    let src = "nodule demo  // trailing";
+    let src = "nodule demo;";
     let (_toks, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert_eq!(comments.len(), 1, "exactly one comment: {comments:?}");
     let c = &comments[0];
@@ -205,7 +205,7 @@ fn comment_capture_case_b_trailing_same_line_comment() {
 #[test]
 fn comment_capture_case_c_consecutive_leading_comments() {
     // Two `//` lines in a row: both captured, both trailing=false, in source order.
-    let src = "// first\n// second\nnodule demo";
+    let src = "nodule demo;";
     let (_toks, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert_eq!(comments.len(), 2, "two comments expected: {comments:?}");
     assert_eq!(comments[0].text, "// first");
@@ -224,7 +224,7 @@ fn comment_capture_case_c_consecutive_leading_comments() {
 fn comment_capture_case_d_comment_after_blank_line() {
     // A comment on line 1, a blank line 2, a comment on line 3, then code.
     // Both comments are captured; neither is trailing.
-    let src = "// before\n\n// after blank\nnodule demo";
+    let src = "nodule demo;";
     let (_toks, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert_eq!(comments.len(), 2, "two comments expected: {comments:?}");
     assert_eq!(comments[0].text, "// before");
@@ -247,7 +247,7 @@ fn comment_capture_case_e_structured_header_comments() {
     // Header-style comments (`// nodule:`, `// @matured: true`) are captured verbatim.
     // Their placement (before/after the `nodule` declaration) is for the formatter to decide;
     // the lexer just captures them all without interpretation.
-    let src = "// nodule: foo\n// @matured: true\nnodule demo";
+    let src = "nodule demo;";
     let (_toks, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert_eq!(comments.len(), 2, "two header comments: {comments:?}");
     assert_eq!(comments[0].text, "// nodule: foo");
@@ -265,7 +265,7 @@ fn comment_capture_case_e_structured_header_comments() {
 #[test]
 fn comment_capture_eof_without_trailing_newline() {
     // A comment at end-of-file (no trailing newline) is still captured.
-    let src = "nodule demo\n// last line no newline";
+    let src = "nodule demo;";
     let (_toks, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert_eq!(comments.len(), 1, "one comment: {comments:?}");
     assert_eq!(comments[0].text, "// last line no newline");
@@ -275,7 +275,7 @@ fn comment_capture_eof_without_trailing_newline() {
 #[test]
 fn comment_capture_empty_comment_body() {
     // `//` with nothing after it (just a newline) stores exactly `"//"`.
-    let src = "//\nnodule demo";
+    let src = "nodule demo;";
     let (_toks, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert_eq!(comments.len(), 1);
     assert_eq!(
@@ -288,7 +288,7 @@ fn comment_capture_empty_comment_body() {
 #[test]
 fn comment_capture_no_comments_gives_empty_vec() {
     // Source with no comments yields an empty comment vec.
-    let src = "nodule demo\nfn f() => Binary{8} = 0b0";
+    let src = "nodule demo;\n\nfn f() => Binary{8} =\n  0b0;";
     let (_toks, comments) = lex_with_comments(src).expect("lex_with_comments succeeded");
     assert!(
         comments.is_empty(),

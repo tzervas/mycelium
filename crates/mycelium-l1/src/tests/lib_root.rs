@@ -4,7 +4,7 @@ use crate::*;
 #[test]
 fn parses_a_nodule_with_a_swap() {
     let src =
-        "nodule demo\nfn f(x: Binary{8}) => Ternary{6} =\n  swap(x, to: Ternary{6}, policy: rt)";
+        "nodule demo;\n\nfn f(x: Binary{8}) => Ternary{6} =\n  swap(x, to: Ternary{6}, policy: rt);";
     let nodule = parse(src).expect("parses");
     assert_eq!(nodule.path.0, vec!["demo"]);
     assert_eq!(nodule.items.len(), 1);
@@ -38,9 +38,9 @@ fn phylum_is_an_active_header_but_never_an_identifier() {
     // keyword, so it can never be a silent identifier (G2). (`colony` activated as an *expression*
     // with M-666 — see `colony_and_hypha_are_active`; `phylum` activates here as a *header*.)
     // `parse` (the single-nodule entry) does not consume a `phylum` header:
-    assert!(parse("phylum signals\nnodule demo\n").is_err());
+    assert!(parse("phylum signals\n\nnodule demo;\n").is_err());
     // …but `parse_phylum` does — `phylum <path>` + a `nodule` block is a well-formed phylum.
-    let ph = parse_phylum("phylum signals.demo\nnodule a\nfn f() => Binary{8} = 0b0")
+    let ph = parse_phylum("phylum signals.demo\n\nnodule a;\n\nfn f() => Binary{8} =\n  0b0;")
         .expect("a phylum header + nodule parses (M-662)");
     assert_eq!(
         ph.path.as_ref().map(|p| p.0.clone()),
@@ -59,8 +59,7 @@ fn colony_and_hypha_are_active() {
     // A well-formed colony parses; `colony`/`hypha` are still keywords, so they can never be
     // identifiers (G2) — using either as a name remains an explicit error.
     let n = parse(
-            "nodule demo\nfn compute(x: Binary{8}) => Binary{8} = not(x)\n\
-             fn run() => Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) }",
+            "nodule demo;\n\nfn compute(x: Binary{8}) => Binary{8} =\n  not(x);\n\nfn run() => Binary{8} =\n  colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) };",
         )
         .expect("a well-formed colony parses (M-666)");
     let Item::Fn(run) = n
@@ -274,7 +273,7 @@ fn a_malformed_ternary_literal_is_explicit() {
 #[test]
 fn thaw_fn_parses_and_sets_thaw_true() {
     // RFC-0017 §4.3: `thaw fn` is the de-maturation marker; the field must be `true`.
-    let src = "nodule demo\nthaw fn k() => Binary{8} = 0b1011_0010";
+    let src = "nodule demo;\n\nthaw fn k() => Binary{8} =\n  0b1011_0010;";
     let nodule = parse(src).unwrap();
     let Item::Fn(f) = &nodule.items[0] else {
         panic!("fn");

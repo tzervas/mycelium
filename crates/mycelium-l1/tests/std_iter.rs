@@ -138,7 +138,7 @@ fn is_empty_l_on_nil_returns_true() {
 fn mk_nil() => List[Binary{8}] = Nil\n\
 fn main() => Bool = is_empty_l(mk_nil())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = True";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  True;";
     assert_three_way("is_empty_l(Nil)", &src, expected);
 }
 
@@ -150,7 +150,7 @@ fn is_empty_l_on_cons_returns_false() {
 fn mk_one() => List[Binary{8}] = Cons(0b0000_0001, Nil)\n\
 fn main() => Bool = is_empty_l(mk_one())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Bool = False";
+    let expected = "nodule ref;\n\nfn main() => Bool =\n  False;";
     assert_three_way("is_empty_l(Cons)", &src, expected);
 }
 
@@ -168,7 +168,7 @@ fn main() => Binary{8} = length(mk_two())";
     let src = program(driver);
     // length([e1, e2]) = add_bin(1, add_bin(1, 0)) = 2 — Derived provenance matches.
     let expected =
-        "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000))";
+        "nodule ref;\n\nfn main() => Binary{8} =\n  add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000));";
     assert_three_way("length([1,2])", &src, expected);
 }
 
@@ -180,7 +180,7 @@ fn length_of_nil_is_zero() {
 fn mk_nil() => List[Binary{8}] = Nil\n\
 fn main() => Binary{8} = length(mk_nil())";
     let src = program(driver);
-    let expected = "nodule ref\nfn main() => Binary{8} = 0b0000_0000";
+    let expected = "nodule ref;\n\nfn main() => Binary{8} =\n  0b0000_0000;";
     assert_three_way("length(Nil)", &src, expected);
 }
 
@@ -193,7 +193,7 @@ fn mk_three() => List[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b00
 fn main() => Binary{8} = length(mk_three())";
     let src = program(driver);
     // length([e1,e2,e3]) = add_bin(1, add_bin(1, add_bin(1, 0))) = 3
-    let expected = "nodule ref\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000)))";
+    let expected = "nodule ref;\n\nfn main() => Binary{8} =\n  add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000)));";
     assert_three_way("length([1,2,3])", &src, expected);
 }
 
@@ -315,7 +315,7 @@ fn any_true_when_an_element_matches() {
     assert_three_way(
         "any([1,2], is_two)=True",
         &src,
-        "nodule ref\nfn main() => Bool = True",
+        "nodule ref;\n\nfn main() => Bool =\n  True;",
     );
 }
 
@@ -329,7 +329,7 @@ fn any_false_when_no_element_matches() {
     assert_three_way(
         "any([1,3], is_two)=False",
         &src,
-        "nodule ref\nfn main() => Bool = False",
+        "nodule ref;\n\nfn main() => Bool =\n  False;",
     );
 }
 
@@ -343,7 +343,7 @@ fn all_true_only_when_every_element_matches() {
     assert_three_way(
         "all([2,2], is_two)=True",
         &yes,
-        "nodule ref\nfn main() => Bool = True",
+        "nodule ref;\n\nfn main() => Bool =\n  True;",
     );
     let no = program(&format!(
         "{IS_TWO}fn mk() => List[Binary{{8}}] = Cons(0b0000_0010, Cons(0b0000_0001, Nil))\n\
@@ -352,7 +352,7 @@ fn all_true_only_when_every_element_matches() {
     assert_three_way(
         "all([2,1], is_two)=False",
         &no,
-        "nodule ref\nfn main() => Bool = False",
+        "nodule ref;\n\nfn main() => Bool =\n  False;",
     );
 }
 

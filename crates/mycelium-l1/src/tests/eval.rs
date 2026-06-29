@@ -19,7 +19,7 @@ fn run(src: &str) -> Result<L1Value, L1Error> {
 #[test]
 fn literals_lets_and_prims_evaluate() {
     let v =
-        run("nodule d\nfn main() => Binary{8} = let a = 0b1010_1010 in not(a)").expect("evaluates");
+        run("nodule d;\n\nfn main() => Binary{8} =\n  let a = 0b1010_1010 in not(a);").expect("evaluates");
     let L1Value::Repr(v) = v else { panic!("repr") };
     assert_eq!(
         v.payload(),
@@ -31,7 +31,7 @@ fn literals_lets_and_prims_evaluate() {
 #[test]
 fn data_match_and_if_evaluate() {
     let v = run(
-            "nodule d\ntype Sign = Neg | Zero | Pos\nfn label(s: Sign) => Ternary{1} =\n  match s { Neg => 0t-, Zero => 0t0, _ => 0t+ }\nfn main() => Ternary{1} = label(Zero)",
+            "nodule d;\n\ntype Sign = Neg | Zero | Pos;\n\nfn label(s: Sign) => Ternary{1} =\n  match s { Neg => <->, Zero => <0>, _ => <+> };\n\nfn main() => Ternary{1} =\n  label(Zero);",
         )
         .expect("evaluates");
     let L1Value::Repr(v) = v else { panic!("repr") };
@@ -43,7 +43,7 @@ fn data_match_and_if_evaluate() {
 
 // --- nested patterns (Maranget) ----------------------------------------------------------
 
-const NAT: &str = "nodule d\ntype Nat = Z | S(Nat)\n";
+const NAT: &str = "nodule d;\n\ntype Nat = Z | S(Nat);\n";
 
 #[test]
 fn nested_pattern_match_evaluates() {
@@ -91,9 +91,7 @@ fn nested_match_falls_through_to_the_right_arm() {
 
 // --- M-320: literal-pattern match over Binary/Ternary scrutinees -------------------------
 
-const CLASSIFY: &str = "nodule d\nfn classify(b: Binary{4}) => Ternary{1} = \
-        match b { 0b0000 => 0t0, 0b1111 => 0t+, _ => 0t- }\n\
-        fn main() => Ternary{1} = classify(0b1111)";
+const CLASSIFY: &str = "nodule d;\n\nfn classify(b: Binary{4}) => Ternary{1} =\n  match b { 0b0000 => <0>, 0b1111 => <+>, _ => <-> };\n\nfn main() => Ternary{1} =\n  classify(0b1111);";
 
 #[test]
 fn literal_match_over_binary_selects_the_matching_arm() {
@@ -119,8 +117,7 @@ fn literal_match_falls_through_to_the_default() {
 fn literal_match_without_a_default_is_non_exhaustive() {
     // Mutant-witness: dropping the mandatory-default check would let a literal match silently
     // assume coverage of the 2^4 domain (W7 violation).
-    let src = "nodule d\nfn classify(b: Binary{4}) => Ternary{1} = \
-            match b { 0b0000 => 0t0, 0b1111 => 0t+ }\nfn main() => Ternary{1} = classify(0b1111)";
+    let src = "nodule d;\n\nfn classify(b: Binary{4}) => Ternary{1} =\n  match b { 0b0000 => <0>, 0b1111 => <+> };\n\nfn main() => Ternary{1} =\n  classify(0b1111);";
     let err = check_nodule(&parse(src).expect("parses")).expect_err("must reject");
     assert!(
         err.message.contains("non-exhaustive"),
@@ -134,8 +131,7 @@ fn duplicate_literal_pattern_is_rejected() {
     // Mutant-witness: a duplicate literal arm is a redundant (unreachable) arm — the Maranget
     // usefulness check must reject it, never silently accept it (W7). `0b0000` and `0b00_00` are
     // the same literal (the `_` separator is canonicalized away), so the second is unreachable.
-    let src = "nodule d\nfn classify(b: Binary{4}) => Ternary{1} = \
-            match b { 0b0000 => 0t0, 0b00_00 => 0t+, _ => 0t- }\nfn main() => Ternary{1} = classify(0b0000)";
+    let src = "nodule d;\n\nfn classify(b: Binary{4}) => Ternary{1} =\n  match b { 0b0000 => <0>, 0b00_00 => <+>, _ => <-> };\n\nfn main() => Ternary{1} =\n  classify(0b0000);";
     let err = check_nodule(&parse(src).expect("parses")).expect_err("must reject");
     assert!(err.message.contains("unreachable"), "got: {}", err.message);
 }
@@ -144,8 +140,7 @@ fn duplicate_literal_pattern_is_rejected() {
 fn literal_pattern_width_must_match_the_scrutinee() {
     // Mutant-witness: dropping the width check would let a 2-bit literal match a Binary{4}
     // scrutinee — a payload-length mismatch that could never fire (or panic downstream).
-    let src = "nodule d\nfn classify(b: Binary{4}) => Ternary{1} = \
-            match b { 0b00 => 0t0, _ => 0t- }\nfn main() => Ternary{1} = classify(0b0000)";
+    let src = "nodule d;\n\nfn classify(b: Binary{4}) => Ternary{1} =\n  match b { 0b00 => <0>, _ => <-> };\n\nfn main() => Ternary{1} =\n  classify(0b0000);";
     let err = check_nodule(&parse(src).expect("parses")).expect_err("must reject");
     assert!(
         err.message.contains("literal pattern has type"),
@@ -158,7 +153,7 @@ fn literal_pattern_width_must_match_the_scrutinee() {
 fn structural_recursion_terminates_within_fuel() {
     // `drop_` is classified Total (structural descent) — and indeed terminates.
     let v = run(
-            "nodule d\ntype Nat = Z | S(Nat)\nfn drop_(n: Nat) => Nat = match n { Z => Z, S(m) => drop_(m) }\nfn main() => Nat = drop_(S(S(Z)))",
+            "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn drop_(n: Nat) => Nat =\n  match n { Z => Z, S(m) => drop_(m) };\n\nfn main() => Nat =\n  drop_(S(S(Z)));",
         )
         .expect("terminates");
     assert_eq!(
@@ -175,7 +170,7 @@ fn structural_recursion_terminates_within_fuel() {
 fn an_unproductive_recursion_is_an_explicit_fuel_exhaustion() {
     // With the clock tighter than the depth guard, the *semantic* budget trips first.
     let env = env(
-            "nodule d\ntype Nat = Z | S(Nat)\nfn spin(n: Nat) => Nat = spin(n)\nfn main() => Nat = spin(Z)",
+            "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn spin(n: Nat) => Nat =\n  spin(n);\n\nfn main() => Nat =\n  spin(Z);",
         );
     let err = Evaluator::new(&env)
         .with_fuel(50)
@@ -188,7 +183,7 @@ fn an_unproductive_recursion_is_an_explicit_fuel_exhaustion() {
 fn deep_recursion_trips_the_host_stack_guard_explicitly() {
     // With ample fuel, the depth guard refuses explicitly — never a host stack overflow.
     let env = env(
-            "nodule d\ntype Nat = Z | S(Nat)\nfn spin(n: Nat) => Nat = spin(n)\nfn main() => Nat = spin(Z)",
+            "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn spin(n: Nat) => Nat =\n  spin(n);\n\nfn main() => Nat =\n  spin(Z);",
         );
     let err = Evaluator::new(&env).call("main", vec![]).unwrap_err();
     assert!(
@@ -224,7 +219,7 @@ fn deeply_nested_expression_trips_the_depth_guard_without_any_recursive_call() {
 
     // And the same nest within the depth budget evaluates fine (200 nested `not`s exceed 64;
     // a small nest does not) — confirming the guard refuses *only* genuine over-nesting.
-    let shallow = env("nodule d\nfn main() => Binary{8} = not(not(0b0000_0001))");
+    let shallow = env("nodule d;\n\nfn main() => Binary{8} =\n  not(not(0b0000_0001));");
     Evaluator::new(&shallow)
         .call("main", vec![])
         .expect("a shallow nest is well within the depth budget");
@@ -234,9 +229,7 @@ fn deeply_nested_expression_trips_the_depth_guard_without_any_recursive_call() {
 fn a_for_fold_evaluates_head_to_tail() {
     // checksum(More(0b1111_0000, More(0b0000_1111, End))) = 0b1111_1111 (xor-fold).
     let v = run(
-            "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
-             fn checksum(bs: ByteList) => Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
-             fn main() => Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
+            "nodule d;\n\ntype ByteList = End | More(Binary{8}, ByteList);\n\nfn checksum(bs: ByteList) => Binary{8} =\n  for b in bs, acc = 0b0000_0000 => xor(acc, b);\n\nfn main() => Binary{8} =\n  checksum(More(0b1111_0000, More(0b0000_1111, End)));",
         )
         .expect("evaluates");
     let L1Value::Repr(v) = v else { panic!("repr") };
@@ -246,9 +239,7 @@ fn a_for_fold_evaluates_head_to_tail() {
 #[test]
 fn a_for_fold_over_nil_is_the_initial_accumulator() {
     let v = run(
-            "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
-             fn checksum(bs: ByteList) => Binary{8} =\n    for b in bs, acc = 0b1010_1010 => xor(acc, b)\n\
-             fn main() => Binary{8} = checksum(End)",
+            "nodule d;\n\ntype ByteList = End | More(Binary{8}, ByteList);\n\nfn checksum(bs: ByteList) => Binary{8} =\n  for b in bs, acc = 0b1010_1010 => xor(acc, b);\n\nfn main() => Binary{8} =\n  checksum(End);",
         )
         .expect("evaluates");
     let L1Value::Repr(v) = v else { panic!("repr") };
@@ -264,8 +255,7 @@ fn a_long_for_fold_costs_fuel_not_host_stack() {
     // spine walk is iterative and must not (RFC-0007 §4.8). The list value is built
     // programmatically — a 200-deep nested *expression* would itself be depth-guarded.
     let env = env(
-            "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
-             fn checksum(bs: ByteList) => Binary{8} =\n    for b in bs, acc = 0b0000_0000 => xor(acc, b)",
+            "nodule d;\n\ntype ByteList = End | More(Binary{8}, ByteList);\n\nfn checksum(bs: ByteList) => Binary{8} =\n  for b in bs, acc = 0b0000_0000 => xor(acc, b);",
         );
     let byte = || {
         L1Value::Repr(
@@ -301,7 +291,7 @@ fn a_long_for_fold_costs_fuel_not_host_stack() {
 fn the_certified_swap_runs_and_a_weakening_assertion_passes() {
     // The in-range binary→ternary swap is Exact; asserting `@ Proven` weakens — allowed.
     let v = run(
-            "nodule d\nfn main() => Ternary{6} @ Proven = swap(0b0000_0010, to: Ternary{6}, policy: rt)",
+            "nodule d;\n\nfn main() => Ternary{6} @ Proven =\n  swap(0b0000_0010, to: Ternary{6}, policy: rt);",
         )
         .expect("evaluates");
     let L1Value::Repr(v) = v else { panic!("repr") };
@@ -331,7 +321,7 @@ fn asserting_stronger_than_actual_is_an_explicit_error() {
         .expect("well-formed meta"),
     )
     .expect("well-formed value");
-    let env = env("nodule d\nfn main() => Binary{8} = 0b0000_0000");
+    let env = env("nodule d;\n\nfn main() => Binary{8} =\n  0b0000_0000;");
     let ev = Evaluator::new(&env);
     let err = ev
         .assert_guarantee("t", &L1Value::Repr(declared), Strength::Exact)
@@ -346,7 +336,7 @@ fn an_ungranted_wild_host_op_is_an_explicit_refusal() {
     // without the host capability is an explicit `Kernel(UnknownPrim)` refusal — never silent
     // (G2). Drive the evaluator directly on an unchecked nodule (the checker would also gate the
     // `@std-sys` context) to confirm the refusal is the evaluator's own.
-    let nodule = parse("nodule d\nfn main() => Binary{8} = wild { foreign(0b0000_0001) }").unwrap();
+    let nodule = parse("nodule d;\n\nfn main() => Binary{8} =\n  wild { foreign(0b0000_0001) };").unwrap();
     let env = Env {
         types: std::collections::BTreeMap::new(),
         fns: nodule
@@ -376,7 +366,7 @@ fn an_ungranted_wild_host_op_is_an_explicit_refusal() {
 fn evaluator_opts_default_matches_new_budgets() {
     // `with_opts(default)` is a no-op: same observable result as plain `new` on a program that
     // runs well inside both budgets.
-    let e = env("nodule d\nfn main() => Binary{8} = not(0b0000_0000)");
+    let e = env("nodule d;\n\nfn main() => Binary{8} =\n  not(0b0000_0000);");
     let baseline = Evaluator::new(&e).call("main", vec![]).expect("evaluates");
     let via_opts = Evaluator::new(&e)
         .with_opts(EvaluatorOpts::default())
@@ -389,7 +379,7 @@ fn evaluator_opts_default_matches_new_budgets() {
 fn evaluator_opts_apply_the_fuel_budget() {
     // A starvation-level fuel budget supplied via `with_opts` must take effect — proving the
     // opts struct is actually applied (each node costs one unit; 1 unit cannot finish `not(_)`).
-    let e = env("nodule d\nfn main() => Binary{8} = not(0b0000_0000)");
+    let e = env("nodule d;\n\nfn main() => Binary{8} =\n  not(0b0000_0000);");
     let err = Evaluator::new(&e)
         .with_opts(EvaluatorOpts::default().fuel(1))
         .call("main", vec![])
@@ -404,7 +394,7 @@ fn evaluator_opts_builder_sets_both_fields() {
     assert_eq!(o.depth, 7);
     // `with_opts` is exactly the `with_fuel`+`with_depth` chain (same observable behavior under a
     // generous budget — both evaluate the program), checked here via the no-op-on-success path.
-    let e = env("nodule d\nfn main() => Binary{8} = not(0b1111_0000)");
+    let e = env("nodule d;\n\nfn main() => Binary{8} =\n  not(0b1111_0000);");
     let chained = Evaluator::new(&e)
         .with_fuel(1_000)
         .with_depth(64)
@@ -446,12 +436,7 @@ fn raised_depth_budget_completes_on_deep_worker_stack_and_trips_cleanly_past_it(
     // `eval` frames (the function body, the argument expression, etc.). At depth budget 4,096
     // that's many hundreds of recursive calls — way past a normal 2 MiB thread stack but
     // within the 256 MiB worker stack.
-    let src = "\
-nodule d
-type Nat = Z | S(Nat)
-fn spin(n: Nat) => Nat = ping(n)
-fn ping(n: Nat) => Nat = spin(n)
-fn main() => Nat = spin(Z)";
+    let src = "nodule d;\n\ntype Nat = Z | S(Nat);\n\nfn spin(n: Nat) => Nat =\n  ping(n);\n\nfn ping(n: Nat) => Nat =\n  spin(n);\n\nfn main() => Nat =\n  spin(Z);";
     let deep_env = env(src);
 
     // Part A: within the raised budget — the fuel budget trips before the depth budget
