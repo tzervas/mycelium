@@ -62,9 +62,12 @@ export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 # (`nala --version`), not mere presence, and fall back to apt-get when it can't run.
 section "apt/nala fast-path (snapshot-persisted prebuilt check tools)"
 # package → the binary it provides (probe by binary so a re-run is pure gap-fill).
+# nala itself is NOT listed here: it is bootstrapped in Step 1 below (the driver install), so adding it
+# to the batch set would make it re-appear in `apt_missing` and be reinstalled in Step 3 (harmless but
+# redundant — DRY).
 declare -A APT_BIN=(
   [shellcheck]=shellcheck [codespell]=codespell [yamllint]=yamllint [graphviz]=dot
-  [gitleaks]=gitleaks [just]=just [pre-commit]=pre-commit [python3-pip]=pip3 [nala]=nala
+  [gitleaks]=gitleaks [just]=just [pre-commit]=pre-commit [python3-pip]=pip3
 )
 if have apt-get; then
   apt_missing=()
@@ -86,20 +89,27 @@ if have apt-get; then
              && "${SUDO[@]}" apt-get install -y nala python3-apt >/dev/null 2>&1; } || true
     fi
     # Step 2 — choose the driver: nala IF it actually runs (then auto-resolve the fastest HTTPS
-    # mirrors first), else apt-get. `nala fetch --auto` is non-interactive; `--https-only` keeps the
-    # transport secure (the repo's no-plaintext-fetch posture). Best-effort + never-silent (G2): a
-    # restricted/proxied net that can't reach the mirror master list leaves sources untouched (|| true).
+    # mirrors first), else apt-get. `nala fetch --auto -y` is non-interactive (the `-y`/assume-yes is
+    # required: `--auto` alone still PROMPTS on overwrite when a nala-sources.list already exists, and
+    # `|| true` does not rescue a blocked `input()` prompt unless stdin is /dev/null); `--https-only`
+    # keeps the transport secure (the repo's no-plaintext-fetch posture). Best-effort + never-silent
+    # (G2): a restricted/proxied net that can't reach the mirror master list leaves sources untouched
+    # (|| true).
     PM=(apt-get)
     if nala_ok; then
-      "${SUDO[@]}" nala fetch --auto --https-only >/dev/null 2>&1 || true
+      "${SUDO[@]}" nala fetch --auto --https-only -y >/dev/null 2>&1 || true
       PM=(nala)
     fi
     # Step 3 — batch-install via the chosen driver; on ANY failure fall back to a fresh apt-get install
     # (apt-get is the universal hard fallback — proven to work even where nala is broken/absent).
-    if "${SUDO[@]}" "${PM[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1 \
-      || { "${SUDO[@]}" apt-get update -qq >/dev/null 2>&1 \
-           && "${SUDO[@]}" apt-get install -y "${apt_missing[@]}" >/dev/null 2>&1; }; then
-      ok "${PM[0]}: installed ${apt_missing[*]} (apt-get fallback if the driver failed)"
+    # Try the chosen driver first; only on its failure does the apt-get hard fallback run. Report which
+    # path actually installed (the prior single message claimed an "apt-get fallback" even on the nala
+    # success path — counterfactual; split it so the `ok` line names the real driver — never-silent G2).
+    if "${SUDO[@]}" "${PM[@]}" install -y "${apt_missing[@]}" >/dev/null 2>&1; then
+      ok "${PM[0]}: installed ${apt_missing[*]}"
+    elif "${SUDO[@]}" apt-get update -qq >/dev/null 2>&1 \
+         && "${SUDO[@]}" apt-get install -y "${apt_missing[@]}" >/dev/null 2>&1; then
+      ok "apt-get: installed ${apt_missing[*]} (fallback — the ${PM[0]} driver failed)"
     else
       skip "apt/nala batch install failed (offline / restricted / no permission) — the uv/cargo/npx installers below will fill these"
     fi
@@ -188,8 +198,10 @@ else
 fi
 
 # gitleaks (C1-09): best-effort install so secrets.sh runs the full scan, not just the narrow
-# fallback. No pip package; try cargo (gitleaks has a Rust port? no — use the Go binary if go is
-# present) else leave it to the system package manager. Skip-if-missing in all cases.
+# fallback. The **apt/nala fast-path above is now the primary installer** (gitleaks is in `APT_BIN`),
+# so by here gitleaks is usually already present; this block is the **non-apt fallback** — build the Go
+# binary if `go` is present (no pip package, no Rust port), else leave it to the system package manager.
+# Skip-if-missing in all cases.
 if have gitleaks; then
   ok "gitleaks present"
 elif have go; then
