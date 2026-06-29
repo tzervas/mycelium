@@ -637,6 +637,15 @@ impl Resolver {
                 policy: Box::new(self.expr(amb, site, policy)?),
                 body: Box::new(self.expr(amb, site, body)?),
             },
+            // M-826: a tuple literal `(a, b, …)` — resolve each element under the same ambient
+            // (no new paradigm frame; the elements are ordinary value expressions).
+            Expr::Tuple(elems) => {
+                let mut out = Vec::with_capacity(elems.len());
+                for e in elems {
+                    out.push(self.expr(amb, site, e)?);
+                }
+                Expr::Tuple(out)
+            }
         })
     }
 
@@ -698,6 +707,14 @@ impl Resolver {
                 Pattern::Ctor(name.clone(), out)
             }
             Pattern::Wildcard | Pattern::Ident(_) => p.clone(),
+            // M-826: a tuple pattern `(x, y, …)` — resolve each sub-pattern under the same ambient.
+            Pattern::Tuple(subs) => {
+                let mut out = Vec::with_capacity(subs.len());
+                for s in subs {
+                    out.push(self.pattern(amb, site, s)?);
+                }
+                Pattern::Tuple(out)
+            }
         })
     }
 }
@@ -1012,6 +1029,11 @@ impl core::fmt::Display for DisplayBase<'_> {
                     write!(f, "{lhs} => {}", print_type_ref(ret))
                 }
             }
+            // M-826: a tuple type `(T, U, …)` in canonical surface form.
+            BaseType::Tuple(elems) => {
+                let parts: Vec<String> = elems.iter().map(print_type_ref).collect();
+                write!(f, "({})", parts.join(", "))
+            }
         }
     }
 }
@@ -1133,6 +1155,11 @@ fn print_expr(e: &Expr) -> String {
         Expr::Reclaim { policy, body } => {
             format!("reclaim({}) {{ {} }}", print_expr(policy), print_expr(body))
         }
+        // M-826: a tuple literal `(a, b, …)`.
+        Expr::Tuple(elems) => {
+            let parts: Vec<String> = elems.iter().map(print_expr).collect();
+            format!("({})", parts.join(", "))
+        }
     }
 }
 
@@ -1145,6 +1172,11 @@ fn print_pattern(p: &Pattern) -> String {
             format!("{n}({})", s.join(", "))
         }
         Pattern::Ident(n) => n.clone(),
+        // M-826: a tuple pattern `(x, y, …)`.
+        Pattern::Tuple(subs) => {
+            let s: Vec<String> = subs.iter().map(print_pattern).collect();
+            format!("({})", s.join(", "))
+        }
     }
 }
 

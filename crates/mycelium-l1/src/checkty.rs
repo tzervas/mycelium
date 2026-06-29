@@ -110,6 +110,13 @@ pub enum Ty {
     ///
     /// Guarantee: `Declared` (a type-level contract; no theorem — VR-5).
     Fn(Box<Ty>, Box<Ty>),
+    /// A **tuple type** `(T, U, …)` (arity ≥ 2; M-826). The checker uses this during type-checking;
+    /// mono desugars it to `Ty::Data("Tuple$N", [])` with a synthetic `DataInfo` (KC-3 — no new L0
+    /// node). `$` is not a surface identifier character so synthetic names cannot collide with user
+    /// types.
+    ///
+    /// Guarantee: `Declared` (a type-level contract for the product — VR-5).
+    Tuple(Vec<Ty>),
 }
 
 impl core::fmt::Display for Ty {
@@ -137,6 +144,17 @@ impl core::fmt::Display for Ty {
             // LHS so `(A -> B) -> C` is unambiguous in diagnostics, not `A -> B -> C` (Copilot #397).
             Ty::Fn(a, r) if matches!(a.as_ref(), Ty::Fn(_, _)) => write!(f, "({a}) => {r}"),
             Ty::Fn(a, r) => write!(f, "{a} => {r}"),
+            // M-826: render tuple types as `(T, U, …)`.
+            Ty::Tuple(elems) => {
+                write!(f, "(")?;
+                for (i, e) in elems.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{e}")?;
+                }
+                write!(f, ")")
+            }
         }
     }
 }
@@ -268,9 +286,10 @@ pub fn type_head(ty: &Ty) -> Option<String> {
         Ty::Seq(_, _) => "Seq".to_owned(),
         Ty::Bytes => "Bytes".to_owned(),
         Ty::Data(n, _) => format!("Data:{n}"),
-        // `Ty::Var` and `Ty::Fn` are not legal instance heads in stage-1 — a blanket instance
-        // over an abstract variable or a function type is refused explicitly (RFC-0024 §3 / RFC-0019 §4.5).
-        Ty::Var(_) | Ty::Fn(_, _) => return None,
+        // `Ty::Var`, `Ty::Fn`, and `Ty::Tuple` are not legal instance heads in stage-1 — a blanket
+        // instance over an abstract variable, a function type, or a tuple is refused explicitly
+        // (RFC-0024 §3 / RFC-0019 §4.5 / M-826).
+        Ty::Var(_) | Ty::Fn(_, _) | Ty::Tuple(_) => return None,
     })
 }
 
@@ -307,12 +326,29 @@ pub(crate) fn subst_ty(ty: &Ty, s: &BTreeMap<String, Ty>) -> Ty {
                 _ => ty.clone(),
             })
             .unwrap_or_else(|| ty.clone()),
+        // M-826: substitute into each element of a tuple type.
+        Ty::Tuple(elems) => Ty::Tuple(elems.iter().map(|e| subst_ty(e, s)).collect()),
         Ty::Binary(Width::Lit(_))
         | Ty::Ternary(Width::Lit(_))
         | Ty::Dense(_, _)
         | Ty::Substrate(_)
         | Ty::Bytes => ty.clone(),
     }
+}
+
+/// The **synthetic type name** for an N-ary tuple (M-826). Uses `$` which is not a surface
+/// identifier character, so these names cannot collide with user-defined types. The name is the
+/// stable key in a locally-extended types map during `check_match`.
+///
+/// Guarantee: `Declared` — a naming convention; the caller is responsible for injecting the
+/// synthetic `DataInfo` into a local types map before use.
+pub(crate) fn tuple_type_name(arity: usize) -> String {
+    format!("Tuple${arity}")
+}
+
+/// The **synthetic constructor name** for an N-ary tuple (M-826 — singleton constructor per arity).
+pub(crate) fn tuple_ctor_name(arity: usize) -> String {
+    format!("Tuple${arity}$0")
 }
 
 /// Build the parameter→argument substitution for a data type's constructor fields (RFC-0007 §11.2):
@@ -337,6 +373,8 @@ pub(crate) fn has_var(ty: &Ty) -> bool {
         // DN-42 / M-753 step-b: a width-var is abstract — it makes the type have a variable.
         // A concrete width-lit is not abstract (Width::Lit is already resolved).
         Ty::Binary(Width::Var(_)) | Ty::Ternary(Width::Var(_)) => true,
+        // M-826: a tuple has a variable iff any element type does.
+        Ty::Tuple(elems) => elems.iter().any(has_var),
         Ty::Binary(Width::Lit(_))
         | Ty::Ternary(Width::Lit(_))
         | Ty::Dense(_, _)
@@ -644,6 +682,21 @@ pub(crate) fn resolve_ty(
             let (param_ty, _) = resolve_ty(site, types, tyvars, param)?;
             let (ret_ty, _) = resolve_ty(site, types, tyvars, ret)?;
             Ty::Fn(Box::new(param_ty), Box::new(ret_ty))
+        }
+        // M-826: tuple types `(T, U, …)` — arity ≥ 2. Resolve each element type recursively.
+        BaseType::Tuple(elems) => {
+            if elems.len() < 2 {
+                return Err(CheckError::new(
+                    site,
+                    "tuple type requires arity ≥ 2 (M-826)",
+                ));
+            }
+            let mut resolved = Vec::with_capacity(elems.len());
+            for e in elems {
+                let (t, _) = resolve_ty(site, types, tyvars, e)?;
+                resolved.push(t);
+            }
+            Ty::Tuple(resolved)
         }
     };
     Ok((base, t.guarantee))
@@ -2288,10 +2341,10 @@ pub(crate) fn register_instances(
             | Ty::Substrate(_)
             | Ty::Seq(_, _)
             | Ty::Bytes => true,
-            // `Ty::Var` and `Ty::Fn` are not legal instance heads; type_head() returns None for them,
-            // so this arm is unreachable in practice (the coherence key check rejects them upstream).
-            // Kept for exhaustiveness — never a silent accept (G2).
-            Ty::Var(_) | Ty::Fn(_, _) => false,
+            // `Ty::Var`, `Ty::Fn`, and `Ty::Tuple` are not legal instance heads; type_head()
+            // returns None for them, so these arms are unreachable in practice (the coherence key
+            // check rejects them upstream). Kept for exhaustiveness — never a silent accept (G2).
+            Ty::Var(_) | Ty::Fn(_, _) | Ty::Tuple(_) => false,
         };
         if !trait_local && !type_local {
             return Err(CheckError::new(
@@ -2740,6 +2793,33 @@ impl Cx<'_> {
             // only in stage-1; a multi-argument lambda needs the tuple-type prerequisite (§4A.8) and is
             // a never-silent refusal (FLAG, never a silent accept — G2).
             Expr::Lambda { params, body } => self.check_lambda(scope, params, body, expected),
+            // M-826: a tuple literal `(a, b, …)` checks to `Ty::Tuple([t_a, t_b, …])`. Each element
+            // is checked against the corresponding element type from the expected `Ty::Tuple` (if any),
+            // or inferred. A single-element `Expr::Tuple` cannot be produced by the parser, so arity
+            // ≥ 2 is guaranteed. Never a silent accept for a type mismatch (G2/VR-5).
+            Expr::Tuple(elems) => {
+                let exp_tys: Option<Vec<Ty>> = match expected {
+                    Some(Ty::Tuple(ts)) if ts.len() == elems.len() => Some(ts.clone()),
+                    Some(Ty::Tuple(ts)) => {
+                        return self.err(format!(
+                            "tuple literal has {} element(s) but the expected tuple type has {} \
+                             (M-826 — arity must match exactly, never a silent truncation)",
+                            elems.len(),
+                            ts.len()
+                        ));
+                    }
+                    _ => None,
+                };
+                let mut out_elems = Vec::with_capacity(elems.len());
+                let mut out_tys = Vec::with_capacity(elems.len());
+                for (i, el) in elems.iter().enumerate() {
+                    let exp_i = exp_tys.as_ref().map(|ts| &ts[i]);
+                    let (t, e2) = self.check(scope, el, exp_i)?;
+                    out_elems.push(e2);
+                    out_tys.push(t);
+                }
+                Ok((Ty::Tuple(out_tys), Expr::Tuple(out_elems)))
+            }
             Expr::WithParadigm { .. } => self.err(
                 "internal: a `with paradigm` block reached the checker — the ambient resolution \
                  pass should have stripped it (RFC-0012 §4.4)",
@@ -3363,9 +3443,37 @@ impl Cx<'_> {
         args: &[Expr],
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
-        let Expr::Path(p) = head else {
-            return self.err("v0 application head must be a name (first-order; RFC-0007 §4.4)");
-        };
+        // M-826 Part 2: lift the `Expr::Path`-only restriction to allow chained application
+        // `f(x)(y)` where the head is itself an `App` (or any expression) that evaluates to a
+        // `Ty::Fn`. Check the head expression first; if it produces a `Ty::Fn`, apply it directly.
+        // A non-Path, non-Fn head is still refused never-silently (G2).
+        if !matches!(head, Expr::Path(_)) {
+            let (hty, head2) = self.check(scope, head, None)?;
+            if let Ty::Fn(param_ty, ret_ty) = hty {
+                if args.len() != 1 {
+                    return self.err(format!(
+                        "a chained application `(…)(args)` takes exactly 1 argument in stage-1 \
+                         (RFC-0024 §5 — partial application / multi-arg HOF is deferred); \
+                         got {} (M-826 Part 2, never a silent coercion)",
+                        args.len()
+                    ));
+                }
+                let (got, a2) = self.check(scope, &args[0], Some(&param_ty))?;
+                if got != *param_ty {
+                    return self.err(format!(
+                        "chained application: head has type `{param_ty} => {ret_ty}`; argument \
+                         has type `{got}` (type mismatch — M-826 Part 2, never a silent coercion)"
+                    ));
+                }
+                return Ok((*ret_ty, app_node(&head2, vec![a2])));
+            }
+            return self.err(format!(
+                "application head has type `{hty}` — only a function type `A => B` can be applied \
+                 (M-826 Part 2; non-function application is never-silent — G2)"
+            ));
+        }
+
+        let Expr::Path(p) = head else { unreachable!() };
         if p.0.len() != 1 {
             return self.err(format!(
                 "dotted call `{}` does not resolve — multi-segment qualified-path *syntax* is \
@@ -4000,14 +4108,46 @@ impl Cx<'_> {
         expected: Option<&Ty>,
     ) -> Result<(Ty, Expr), CheckError> {
         let (sty, scrut2) = self.check(scope, scrutinee, None)?;
-        if !matches!(sty, Ty::Data(_, _) | Ty::Binary(_) | Ty::Ternary(_)) {
+        if !matches!(
+            sty,
+            Ty::Data(_, _) | Ty::Binary(_) | Ty::Ternary(_) | Ty::Tuple(_)
+        ) {
             return self.err(format!(
-                "match scrutinee must be a data, Binary, or Ternary type, got {sty}"
+                "match scrutinee must be a data, Binary, Ternary, or tuple type, got {sty}"
             ));
         }
         if arms.is_empty() {
             return self.err("a match needs at least one arm");
         }
+        // M-826: if the scrutinee is a `Tuple`, synthesize a singleton-ctor `DataInfo` and build
+        // a locally-extended types map so all downstream pattern-checking (normalize_pattern,
+        // usefulness, decision-tree) work without modification. The synthetic DataInfo is cheap to
+        // build (small arity); cloning the types map is the simplest extension strategy given that
+        // `Cx::types` is an immutable borrow (Declared — the clone is bounded by the arity and the
+        // match body size, which are already checked against MAX_CHECK_DEPTH).
+        let (sty, local_types_opt): (Ty, Option<BTreeMap<String, DataInfo>>) =
+            if let Ty::Tuple(ref ts) = sty {
+                let n = ts.len();
+                let tname = tuple_type_name(n);
+                let ctor_name = tuple_ctor_name(n);
+                let data_info = DataInfo {
+                    name: tname.clone(),
+                    params: vec![],
+                    ctors: vec![CtorInfo {
+                        name: ctor_name,
+                        fields: ts.clone(),
+                    }],
+                };
+                let mut m = self.types.clone();
+                m.insert(tname.clone(), data_info);
+                (Ty::Data(tname, vec![]), Some(m))
+            } else {
+                (sty, None)
+            };
+        let effective_types: &BTreeMap<String, DataInfo> = match &local_types_opt {
+            Some(m) => m,
+            None => self.types,
+        };
         let col = [sty.clone()];
         let mut rows: Vec<Vec<crate::usefulness::Pat>> = Vec::new();
         let mut result: Option<Ty> = None;
@@ -4017,13 +4157,14 @@ impl Cx<'_> {
             // bare-decimal literals to concrete ones, and rewrite nullary-ctor idents to explicit
             // `Ctor(name, [])` — so the matrix, the evaluator, the elaborator, and the type-free
             // grading/totality passes all see one canonical, unambiguous checked pattern.
-            let pattern = self.resolve_pattern(&arm.pattern, &sty)?;
+            let pattern = self.resolve_pattern_with_types(effective_types, &arm.pattern, &sty)?;
             // Type the (possibly nested) pattern against the scrutinee type, collecting its binders.
             let mut binds: Vec<(String, Ty, Vec<usize>)> = Vec::new();
-            let pat = self.check_pattern(&pattern, &sty, &mut binds)?;
+            let pat =
+                normalize_pattern(effective_types, self.site, &pattern, &sty, &[], &mut binds)?;
             self.check_linear(&binds)?;
             // Redundancy (W7): an arm covered by the earlier rows is unreachable.
-            if crate::usefulness::useful(self.types, &rows, std::slice::from_ref(&pat), &col)
+            if crate::usefulness::useful(effective_types, &rows, std::slice::from_ref(&pat), &col)
                 .is_none()
             {
                 return self.err(
@@ -4057,9 +4198,12 @@ impl Cx<'_> {
             });
         }
         // Exhaustiveness (W7): a wildcard must not be useful — else its witness is a missing case.
-        if let Some(witness) =
-            crate::usefulness::useful(self.types, &rows, &[crate::usefulness::Pat::Wild], &col)
-        {
+        if let Some(witness) = crate::usefulness::useful(
+            effective_types,
+            &rows,
+            &[crate::usefulness::Pat::Wild],
+            &col,
+        ) {
             return self.err(format!(
                 "non-exhaustive match on {sty}: missing {} (W7 — coverage is checked, never assumed)",
                 crate::usefulness::render(&witness[0])
@@ -4072,7 +4216,7 @@ impl Cx<'_> {
         // its leaves as L0 kernel nodes awaits the RFC-0001 revision (RFC-0007 §4.6).
         let arm_ix: Vec<usize> = (0..rows.len()).collect();
         let occ = [Vec::<usize>::new()];
-        let tree = crate::decision::compile(self.types, &rows, &arm_ix, &occ, &col);
+        let tree = crate::decision::compile(effective_types, &rows, &arm_ix, &occ, &col);
         if crate::decision::has_reachable_fail(&tree) {
             return self.err(
                 "internal: an exhaustive match compiled to a decision tree with a reachable Fail \
@@ -4107,7 +4251,25 @@ impl Cx<'_> {
     ///    for this resolution, mirroring [`normalize_pattern`]; a binder whose name merely collides
     ///    with a nullary ctor of an *unrelated* type stays a binder (no global ctor scan — that
     ///    over-broad scan was an unsound grade-upgrade, M-663 / Copilot review).
+    // M-826: this wrapper is kept for non-tuple call sites that don't need the extended types map
+    // (it will be called once Pattern::Tuple arms exist outside check_match). Suppressed here to
+    // unblock clippy; remove the allow when the first external call site is wired up.
+    #[allow(dead_code)]
+    #[allow(dead_code)]
     fn resolve_pattern(&self, pat: &Pattern, expected: &Ty) -> Result<Pattern, CheckError> {
+        self.resolve_pattern_with_types(self.types, pat, expected)
+    }
+
+    /// Resolve a surface [`Pattern`] against its `expected` type — same as [`Self::resolve_pattern`]
+    /// but takes an explicit `types` map so `check_match` can pass its locally-extended map (which
+    /// includes the synthetic `Tuple$N` entry for M-826 tuple patterns). The two-method split keeps
+    /// the common single-nodule call site clean while allowing the tuple extension.
+    fn resolve_pattern_with_types(
+        &self,
+        types: &BTreeMap<String, DataInfo>,
+        pat: &Pattern,
+        expected: &Ty,
+    ) -> Result<Pattern, CheckError> {
         Ok(match pat {
             Pattern::Lit(Literal::AmbientInt(p, v)) => {
                 Pattern::Lit(self.resolve_ambient_int(*p, *v, Some(expected))?)
@@ -4116,7 +4278,7 @@ impl Cx<'_> {
             // *scrutinee's own* data type; otherwise it is a binder (left as `Ident`).
             Pattern::Ident(name)
                 if matches!(expected, Ty::Data(tn, _)
-                    if self.types.get(tn).is_some_and(|d|
+                    if types.get(tn).is_some_and(|d|
                         d.ctors.iter().any(|c| c.name == *name && c.fields.is_empty()))) =>
             {
                 Pattern::Ctor(name.clone(), vec![])
@@ -4129,7 +4291,7 @@ impl Cx<'_> {
                     // The declared field types are abstract over the type's parameters; substitute
                     // the scrutinee's type arguments so a generic field recurses at its concrete
                     // type (RFC-0007 §11.2).
-                    Ty::Data(tn, targs) => self.types.get(tn).and_then(|d| {
+                    Ty::Data(tn, targs) => types.get(tn).and_then(|d| {
                         d.ctors
                             .iter()
                             .find(|c| c.name == *name)
@@ -4144,11 +4306,33 @@ impl Cx<'_> {
                 let mut out = Vec::with_capacity(subs.len());
                 for (i, s) in subs.iter().enumerate() {
                     match &field_tys {
-                        Some(fts) => out.push(self.resolve_pattern(s, &fts[i])?),
+                        Some(fts) => out.push(self.resolve_pattern_with_types(types, s, &fts[i])?),
                         None => out.push(s.clone()),
                     }
                 }
                 Pattern::Ctor(name.clone(), out)
+            }
+            // M-826: a tuple pattern `(x, y, …)` against a `Ty::Data("Tuple$N", [])` expected type
+            // (already desugared by check_match). Validate arity and convert to a `Ctor` pattern with
+            // the synthetic constructor name so `normalize_pattern` can handle it uniformly.
+            Pattern::Tuple(subs) => {
+                if let Ty::Data(tn, _) = expected {
+                    if let Some(d) = types.get(tn) {
+                        if let Some(ci) = d.ctors.first() {
+                            if subs.len() == ci.fields.len() {
+                                let mut out = Vec::with_capacity(subs.len());
+                                for (s, ft) in subs.iter().zip(ci.fields.iter()) {
+                                    out.push(self.resolve_pattern_with_types(types, s, ft)?);
+                                }
+                                return Ok(Pattern::Ctor(ci.name.clone(), out));
+                            }
+                        }
+                    }
+                }
+                return self.err(format!(
+                    "tuple pattern arity {} does not match the scrutinee type {expected} (M-826)",
+                    subs.len()
+                ));
             }
             Pattern::Wildcard | Pattern::Lit(_) | Pattern::Ident(_) => pat.clone(),
         })
@@ -4186,6 +4370,10 @@ impl Cx<'_> {
     /// `binds`, and return the normalized [`crate::usefulness::Pat`] for the coverage matrix.
     /// Delegates to the free [`normalize_pattern`] (shared with the elaborator), starting at the root
     /// occurrence `[]`.
+    // M-826: kept for call sites outside check_match (which uses effective_types directly).
+    // Suppressed until the first external call site is wired up.
+    #[allow(dead_code)]
+    #[allow(dead_code)]
     fn check_pattern(
         &self,
         pat: &Pattern,
@@ -4582,6 +4770,50 @@ pub(crate) fn normalize_pattern(
             }
             Ok(Pat::Lit(literal_key(lit)))
         }
+        // M-826: a tuple pattern `(x, y, …)` at this point has `expected = Ty::Data("Tuple$N", [])`
+        // (the scrutinee type was rebound in `check_match` after injecting the synthetic DataInfo).
+        // Treat it as a constructor pattern against the single `Tuple$N$0` constructor so the
+        // usefulness/exhaustiveness machinery sees it uniformly as a `Pat::Ctor`.
+        Pattern::Tuple(subs) => {
+            let n = subs.len();
+            let ctor_name = tuple_ctor_name(n);
+            let Ty::Data(tn, _) = expected else {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "tuple pattern `({n} fields)` on a {expected} scrutinee (M-826: \
+                         the scrutinee must be `Ty::Data(Tuple${n}, [])` after desugar)"
+                    ),
+                ));
+            };
+            let d = types
+                .get(tn)
+                .expect("registered synthetic tuple type")
+                .clone();
+            let Some(c) = d.ctors.iter().find(|c| c.name == ctor_name) else {
+                return Err(CheckError::new(
+                    site,
+                    format!("internal: synthetic ctor `{ctor_name}` not found in `{tn}` (M-826)"),
+                ));
+            };
+            if subs.len() != c.fields.len() {
+                return Err(CheckError::new(
+                    site,
+                    format!(
+                        "tuple pattern binds {} field(s) but the scrutinee has {} (M-826 W7)",
+                        subs.len(),
+                        c.fields.len()
+                    ),
+                ));
+            }
+            let mut out = Vec::with_capacity(subs.len());
+            for (i, (sub, fty)) in subs.iter().zip(&c.fields).enumerate() {
+                let mut child = occ.to_vec();
+                child.push(i);
+                out.push(normalize_pattern(types, site, sub, fty, &child, binds)?);
+            }
+            Ok(Pat::Ctor(ctor_name, out))
+        }
     }
 }
 
@@ -4735,13 +4967,15 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Dense(_, _) => Some("Dense"),
         // `Ty::Fn` is not a representation type — it has no paradigm (RFC-0024 §3). `Seq`/`Bytes`
         // are first-class reprs but not *swap*-paradigms (no cross-paradigm swap edge), so they have
-        // no paradigm name here (RFC-0032 D3/D4).
+        // no paradigm name here (RFC-0032 D3/D4). `Ty::Tuple` is checker-internal (M-826 KC-3 —
+        // desugared to `Ty::Data`); it has no paradigm.
         Ty::Seq(_, _)
         | Ty::Bytes
         | Ty::Data(_, _)
         | Ty::Substrate(_)
         | Ty::Var(_)
-        | Ty::Fn(_, _) => None,
+        | Ty::Fn(_, _)
+        | Ty::Tuple(_) => None,
     }
 }
 

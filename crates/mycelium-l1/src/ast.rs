@@ -553,6 +553,11 @@ pub enum BaseType {
     /// multi-argument `(A, B) -> C` is not yet supported and is a never-silent refusal at the
     /// parser).
     Fn(Box<TypeRef>, Box<TypeRef>),
+    /// A **tuple type** `(T, U, …)` (arity ≥ 2; M-826). `(T)` is grouping only — not a 1-tuple.
+    /// Desugars in the checker and mono to a synthetic data type `Tuple$N` via `Construct` + `Match`
+    /// (KC-3 — no new L0 node). `$` is not a surface identifier character so the synthetic names
+    /// cannot collide with user-defined types.
+    Tuple(Vec<TypeRef>),
 }
 
 /// Declared sparsity of a VSA type.
@@ -739,6 +744,10 @@ pub enum Expr {
     /// Both paths refuse outside the evaluation-complete fragment with a never-silent
     /// [`crate::elab::ElabError::Residual`] (G2), never a fabricated accept.
     Colony(Vec<Hypha>),
+    /// A **tuple literal** `(a, b, …)` (arity ≥ 2; M-826). `(a)` is grouping only — not a 1-tuple.
+    /// Desugars in mono to a synthetic `Construct` node for the `Tuple$N$0` constructor (KC-3 — no
+    /// new L0 node). The checker types it to [`crate::checkty::Ty::Tuple`].
+    Tuple(Vec<Expr>),
     /// `lambda(params) => body` — an anonymous-function (closure) expression (RFC-0037 D5). The
     /// checker ([`crate::checkty::Cx::check_lambda`]) types it to [`crate::checkty::Ty::Fn`], and
     /// **monomorphization** ([`crate::mono`]) lowers each escaping closure by **Reynolds
@@ -748,8 +757,7 @@ pub enum Expr {
     /// `match` over the whole-program-closed constructor set — **no new L0 kernel node** (KC-3). A raw
     /// `Lambda` therefore never survives into elaboration/evaluation (those stages keep a defensive,
     /// never-silent `Residual` as a staging invariant — G2). v0 params are typed (`name: type`).
-    /// **Multi-argument lambdas / partial application** stay a never-silent tuple-gated `Residual`
-    /// (RFC-0024 §4A.8 — the v0 surface has no tuple/product type).
+    /// **Multi-argument lambdas / partial application** are now supported via tuple types (M-826).
     Lambda {
         /// The (typed) value parameters.
         params: Vec<Param>,
@@ -831,6 +839,10 @@ pub enum Pattern {
     Ctor(String, Vec<Pattern>),
     /// A bare identifier (binder or nullary constructor — resolved later).
     Ident(String),
+    /// A **tuple pattern** `(x, y, …)` (arity ≥ 2; M-826). Desugars to a `Ctor` pattern over the
+    /// synthetic `Tuple$N$0` constructor during type-checking. `(x)` is not a 1-tuple — the parser
+    /// requires a comma to distinguish grouping from a tuple.
+    Tuple(Vec<Pattern>),
 }
 
 /// A literal value.

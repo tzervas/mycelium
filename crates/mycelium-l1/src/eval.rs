@@ -690,6 +690,26 @@ impl<'e> Evaluator<'e> {
 
             Expr::App { head, args } => self.eval_app(fuel, depth, ledger, site, scope, head, args),
 
+            // M-826: a tuple literal `(a, b, …)` should not reach the evaluator — mono desugars it
+            // to a `Tuple$N$0` constructor application (`Expr::App`). If it does reach here (e.g. in
+            // a pre-mono eval path), evaluate each element and build a synthetic Data value so the
+            // program does not silently fail. Never silent (G2): a residual would also be correct;
+            // the Data-construction path is the honest pre-mono reference behavior.
+            Expr::Tuple(elems) => {
+                let n = elems.len();
+                let tname = crate::checkty::tuple_type_name(n);
+                let ctor = crate::checkty::tuple_ctor_name(n);
+                let mut fields = Vec::with_capacity(n);
+                for el in elems {
+                    fields.push(self.eval(fuel, depth, ledger, site, scope, el)?);
+                }
+                Ok(L1Value::Data {
+                    ty: tname,
+                    ctor,
+                    fields,
+                })
+            }
+
             // DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice.
             // For repr types (Binary/Ternary/Dense/Bytes/Seq): the meet is bitwise-and (`bit.and`
             // kernel prim) — commutative/associative/idempotent by bitwise-and semantics (Empirical).
@@ -915,6 +935,22 @@ impl<'e> Evaluator<'e> {
                     Ok(lv.repr() == v.repr() && lv.payload() == v.payload())
                 }
                 L1Value::Data { .. } => Ok(false),
+            },
+            // M-826: a tuple pattern `(x, y, …)` is only reachable on the pre-mono eval path (after
+            // mono, `Expr::Tuple` has been desugared to `Expr::App { head: Tuple$N$0, … }` and the
+            // pattern to `Pattern::Ctor`). Match against the synthetic `Tuple$N$0` constructor.
+            Pattern::Tuple(subs) => match val {
+                L1Value::Data { ctor, fields, .. }
+                    if ctor == &crate::checkty::tuple_ctor_name(subs.len()) =>
+                {
+                    for (sub, fv) in subs.iter().zip(fields) {
+                        if !self.try_match(site, sub, fv, binds)? {
+                            return Ok(false);
+                        }
+                    }
+                    Ok(true)
+                }
+                _ => Ok(false),
             },
         }
     }

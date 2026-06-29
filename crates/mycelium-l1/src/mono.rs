@@ -245,6 +245,8 @@ fn body_has_fn_value(env: &Env, e: &Expr) -> bool {
             body_has_fn_value(env, policy) || body_has_fn_value(env, body)
         }
         Expr::Ascribe(inner, _) => body_has_fn_value(env, inner),
+        // M-826: a tuple literal's elements are value positions — fn references inside them count.
+        Expr::Tuple(elems) => elems.iter().any(|x| body_has_fn_value(env, x)),
     }
 }
 
@@ -273,6 +275,8 @@ fn body_has_lambda(e: &Expr) -> bool {
         Expr::Fuse { left, right } => body_has_lambda(left) || body_has_lambda(right),
         Expr::Reclaim { policy, body } => body_has_lambda(policy) || body_has_lambda(body),
         Expr::Ascribe(inner, _) => body_has_lambda(inner),
+        // M-826: a tuple literal — check its elements for lambdas.
+        Expr::Tuple(elems) => elems.iter().any(body_has_lambda),
     }
 }
 
@@ -1220,6 +1224,45 @@ impl<'e> Mono<'e> {
                     body: Box::new(body2),
                 })
             }
+            // M-826: a tuple literal `(a, b, …)` desugars to a `Construct` application of the
+            // synthetic `Tuple$N$0` constructor. Each element is rewritten recursively, then the
+            // result is an ordinary `Expr::App` whose head is the mangled constructor name (KC-3 —
+            // no new L0 node). The corresponding data type `Tuple$N` is registered at mono finish
+            // via the enqueued `Item::Data` — the same injection the checker's `check_match`
+            // performs locally for pattern checking.
+            Expr::Tuple(elems) => {
+                // Re-infer the element types so we can build the synthetic DataInfo.
+                let mut elem_tys: Vec<Ty> = Vec::with_capacity(elems.len());
+                for el in elems.iter() {
+                    elem_tys.push(self.infer(site, scope, el)?);
+                }
+                let n = elems.len();
+                let tname = crate::checkty::tuple_type_name(n);
+                let ctor_name = crate::checkty::tuple_ctor_name(n);
+                // Inject the synthetic DataInfo for this arity (idempotent — already in the
+                // registry if seen before).
+                if !self.out_types.contains_key(&tname) {
+                    let di = DataInfo {
+                        name: tname.clone(),
+                        params: vec![],
+                        ctors: vec![CtorInfo {
+                            name: ctor_name.clone(),
+                            fields: elem_tys.clone(),
+                        }],
+                    };
+                    self.out_types.insert(tname.clone(), di);
+                }
+                // Rewrite each element.
+                let mut out_elems = Vec::with_capacity(n);
+                for (el, ty) in elems.iter().zip(elem_tys.iter()) {
+                    out_elems.push(self.rewrite(site, scope, el, Some(ty))?);
+                }
+                // Desugar to an application: `Tuple$N$0(e1, e2, …)`.
+                Ok(Expr::App {
+                    head: Box::new(Expr::Path(Path(vec![ctor_name]))),
+                    args: out_elems,
+                })
+            }
             // Constructs with no v0 lowering regardless of generics — kept as explicit residuals so the
             // elaborator's own refusal still fires (defense in depth; never a fabricated artifact).
             Expr::Wild(_) => residual(
@@ -1376,9 +1419,47 @@ impl<'e> Mono<'e> {
         args: &[Expr],
         expected: Option<&Ty>,
     ) -> Result<Expr, ElabError> {
-        let Expr::Path(p) = head else {
-            return residual(site, "v0 application head must be a name (first-order)");
-        };
+        // M-826 Part 2: lift the `Expr::Path`-only restriction for chained application `f(x)(y)`.
+        // If the head is not a bare path, it must be an expression that types to `Ty::Fn`. Rewrite
+        // the head recursively; if the inferred type is `Ty::Fn`, dispatch through the generated
+        // `apply$A$B` dispatcher (same defunctionalization path as dynamic closure application in
+        // case (0b) — the head evaluates to a closure DATA value, so a nested `App` head would be
+        // unreachable by the first-order evaluator).
+        if !matches!(head, Expr::Path(_)) {
+            let hty = self.infer(site, scope, head)?;
+            if let Ty::Fn(ref a, ref b) = hty {
+                if args.len() != 1 {
+                    return residual(
+                        site,
+                        format!(
+                            "chained application `(…)(args)` takes exactly 1 argument in stage-1 \
+                             (M-826 Part 2); got {}",
+                            args.len()
+                        ),
+                    );
+                }
+                // Register the arrow so the closure-sum type and `apply$A$B` dispatcher are
+                // scheduled (idempotent — same as dynamic closure application, §4A.5/M-704).
+                let arrow = self.register_arrow(a, b);
+                let apply_name = apply_fn_name(&arrow);
+                let head2 = self.rewrite(site, scope, head, None)?;
+                let arg2 = self.rewrite(site, scope, &args[0], None)?;
+                // Emit `apply$A$B(head2, arg2)` — the dispatcher resolves the closure value.
+                return Ok(Expr::App {
+                    head: Box::new(Expr::Path(Path(vec![apply_name]))),
+                    args: vec![head2, arg2],
+                });
+            }
+            return residual(
+                site,
+                format!(
+                    "application head has type `{hty}` — only a function type can be applied \
+                     (M-826 Part 2)"
+                ),
+            );
+        }
+
+        let Expr::Path(p) = head else { unreachable!() };
         if p.0.len() != 1 {
             return residual(site, format!("dotted call `{}`", p.0.join(".")));
         }
@@ -2326,6 +2407,33 @@ impl<'e> Mono<'e> {
                 }
                 Ok(Pattern::Ctor(mangle_ctor(cname, &targs), subs2))
             }
+            // M-826: a tuple pattern should already have been desugared by the checker to a
+            // `Pattern::Ctor` against the synthetic `Tuple$N$0` constructor before mono runs.
+            // If one reaches here (pre-mono eval path), convert it to its ctor form using the
+            // scrutinee type (a `Ty::Data("Tuple$N", [])` after checker desugaring).
+            Pattern::Tuple(subs) => {
+                let n = subs.len();
+                let ctor_name = crate::checkty::tuple_ctor_name(n);
+                let field_tys = match sty {
+                    Ty::Data(dname, targs) => {
+                        self.ctor_field_tys(site, dname, &ctor_name, targs)?
+                    }
+                    other => {
+                        return residual(
+                            site,
+                            format!(
+                                "tuple pattern ({n} fields) against non-data type {other} \
+                                 (M-826 KC-3: tuples must be desugared before mono)"
+                            ),
+                        )
+                    }
+                };
+                let mut subs2 = Vec::with_capacity(n);
+                for (sub, fty) in subs.iter().zip(&field_tys) {
+                    subs2.push(self.rewrite_pattern(site, sub, fty, scope)?);
+                }
+                Ok(Pattern::Ctor(ctor_name, subs2))
+            }
         }
     }
 
@@ -2584,6 +2692,12 @@ pub(crate) fn free_vars(
             free_vars(body, bound, seen, out);
         }
         Expr::Ascribe(inner, _) => free_vars(inner, bound, seen, out),
+        // M-826: a tuple literal — walk each element for free variables (no new binders).
+        Expr::Tuple(elems) => {
+            for el in elems {
+                free_vars(el, bound, seen, out);
+            }
+        }
     }
 }
 
@@ -2602,6 +2716,12 @@ fn pattern_binders(pat: &Pattern, bound: &mut BTreeSet<String>, added: &mut Vec<
             }
         }
         Pattern::Ctor(_, subs) => {
+            for s in subs {
+                pattern_binders(s, bound, added);
+            }
+        }
+        // M-826: a tuple pattern recurses into its sub-patterns for binder collection.
+        Pattern::Tuple(subs) => {
             for s in subs {
                 pattern_binders(s, bound, added);
             }
@@ -2764,6 +2884,12 @@ pub(crate) fn mangle_ty(t: &Ty) -> String {
         // A `Ty::Fn` reaching mangling before M-687 is a bug — use a distinctive, non-collidable
         // marker so the leak surfaces loudly (never silently — G2/VR-5).
         Ty::Fn(a, r) => format!("HOF_FN_{}__TO__{}", mangle_ty(a), mangle_ty(r)),
+        // M-826: `Ty::Tuple` is a checker-internal form desugared by mono before this point (KC-3).
+        // A leak here is an internal error — a distinctive marker so it surfaces loudly (G2/VR-5).
+        Ty::Tuple(ts) => {
+            let parts: Vec<String> = ts.iter().map(mangle_ty).collect();
+            format!("TUPLE_{}", parts.join("_"))
+        }
     }
 }
 
@@ -2849,6 +2975,9 @@ fn mangle_ty_in_ty(t: &Ty) -> Ty {
         // RFC-0024 §4 / M-687: function types pass through un-mangled; the defunctionalization
         // rewrite in M-687 will eliminate them before any fn mangle/registry step.
         Ty::Fn(_, _) => t.clone(),
+        // M-826: `Ty::Tuple` is checker-internal (desugared before mangling); pass through so the
+        // mangle_ty marker above makes any leak observable (G2/VR-5).
+        Ty::Tuple(_) => t.clone(),
     }
 }
 
@@ -2878,6 +3007,9 @@ fn ty_to_source_ref(t: &Ty) -> TypeRef {
         // RFC-0024 §4 / M-687: function types round-trip as `BaseType::Fn`. Used only for re-inference
         // context threading; defunctionalization (M-687) rewrites them before any registry step.
         Ty::Fn(a, r) => BaseType::Fn(Box::new(ty_to_source_ref(a)), Box::new(ty_to_source_ref(r))),
+        // M-826: tuple types are checker-internal; round-trip as `BaseType::Tuple` for re-inference
+        // context threading (the checker that produces the Ty::Tuple will consume it right back).
+        Ty::Tuple(ts) => BaseType::Tuple(ts.iter().map(ty_to_source_ref).collect()),
     };
     TypeRef::unguaranteed(base)
 }
@@ -2910,6 +3042,9 @@ fn ty_to_ref(t: &Ty) -> TypeRef {
         // in M-687 will eliminate these. Preserve as `BaseType::Fn` so the AST stays structurally
         // sound (never a silent drop or panic — G2/VR-5).
         Ty::Fn(a, r) => BaseType::Fn(Box::new(ty_to_ref(a)), Box::new(ty_to_ref(r))),
+        // M-826: `Ty::Tuple` is checker-internal (desugared by `rewrite` before reaching
+        // `ty_to_ref`). A leak is an internal error — render distinctively (G2/VR-5).
+        Ty::Tuple(ts) => BaseType::Tuple(ts.iter().map(ty_to_ref).collect()),
     };
     TypeRef::unguaranteed(base)
 }
