@@ -8,6 +8,32 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-29: lwd — M-812-cont DN-54 `lower`/`derive` elaboration + KC-3 kernel-growth guard)
+
+- **`derive` now elaborates to L0; the load-bearing DN-54 safety lands (M-812-cont).** `low` (M-812)
+  shipped the `lower`/`derive` surface + structural checks; this lands the parts that only matter once
+  `derive` actually elaborates:
+  - **RHS elaboration to L0** — `elab::elaborate_lower_rule` reads `Env::lower_rules` and lowers a
+    rule RHS through the **same code path** a hand-written nullary fn body takes (`Empirical`, via the
+    §7 differential + the M-210 `check_core` validation). No longer a never-silent residual.
+  - **§4.1 IL-grammar RHS type-check** (`check_lower_rule_rhs_type`) + **§4.6 purity** (`wild` refused
+    in a rule RHS, even in `@std-sys`) + **§4.2 cross-rule acyclicity** (`check_lower_rule_acyclicity`
+    — self- and mutual-cycles refused). All `Declared`, all never-silent (G2).
+  - **§6 KC-3 kernel-growth guard — genuinely sound (`Proven`-by-construction, narrow checked
+    sense).** The elaborator returns the closed `mycelium_core::Node` enum (the frozen L0 grammar), so
+    a `lower` rule *cannot* construct a node outside the kernel set; the one surface-growth path (a
+    host op) is closed by §4.6. Confirmed non-vacuously by `Node::is_aot_lowerable` over the frozen
+    set — not a theatrical guard.
+  - **§7 verification harness** (`tests/lower_derive.rs`, 5 tests) **replaces** the two `low`-era no-L0
+    residual guard tests.
+  - **Honest residual (flagged, never-silent):** DN-54 underdetermines the `derive`-**site**
+    consumption/attachment model + parametric instantiation — the nullary/monomorphic elaboration
+    landed; the consumption model is left for **maintainer ratification**. DN-54 stays **Accepted**
+    with an append-only impl note (NOT `Enacted` — consumption model outstanding; VR-5 / house rule #3).
+  - **Latent bug fixed:** lowercase `true`/`false` are not L1 names (the prelude `Bool` ctors are
+    `True`/`False`); the new §4.1 type-check correctly rejects `lower X = true` — conformance fixture
+    + tests corrected. Verified: `cargo test -p mycelium-l1` 671 passed / 0 failed; fmt + clippy clean.
+
 ### Added (2026-06-29: hof — M-704 dynamic higher-order functions / closures, RFC-0024 §4A)
 
 - **Closures, environment capture, and dynamic fn-flow now elaborate + run three-way (M-704).** The
