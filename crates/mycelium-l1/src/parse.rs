@@ -911,8 +911,11 @@ impl Parser {
     /// expression into an [`Expr::Lambda`] node. **Closure semantics — environment capture and
     /// dynamic fn-flow — are implemented (M-704 / RFC-0024 §4A):** the checker types it to `Ty::Fn`
     /// and monomorphization lowers it by Reynolds defunctionalization (a tag-sum struct + a generated
-    /// `apply` dispatcher), so it parses, type-checks, **and evaluates**. Multi-argument lambdas /
-    /// partial application stay tuple-gated (§4A.8) — refused downstream, never a silent accept.
+    /// `apply` dispatcher), so it parses, type-checks, **and evaluates**. **Multi-argument lambdas
+    /// are now supported via currying (M-822 / RFC-0024 §4A.5/§4A.8):** a `lambda(p1, p2) => body`
+    /// desugars downstream to `lambda(p1) => lambda(p2) => body`; partial application (fn-as-value)
+    /// likewise yields a curried arrow `A -> B -> Z`. Zero-parameter lambdas are a never-silent
+    /// refusal downstream (no type without a unit/nullary type — G2).
     /// Type/const parameters on a lambda (`lambda[T]{N}(…)`) are an explicit never-silent refusal here
     /// (the syntax is reserved by RFC-0037 D5 but the form is not yet wired), not a silent accept.
     fn parse_lambda(&mut self) -> Result<Expr, ParseError> {
