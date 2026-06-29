@@ -310,7 +310,8 @@ def write_summary(
             f"{sum(r.naive_bound_holds for r in multihop)}"
         )
         lines.append(
-            f"Candidate Proven subset (formula holds AND rate<=delta): {len(candidate_proven)}"
+            f"Candidate regime (formula holds AND rate<=delta — Empirical evidence): "
+            f"{len(candidate_proven)}"
         )
         lines.append(f"Formula diverges (holds but rate>delta): {len(diverging)}")
         lines.append("")

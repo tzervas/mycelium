@@ -66,6 +66,8 @@ def select(force_numpy: bool = False) -> str:
 
     _import_numpy()
 
+    reason: str | None = None  # set to a non-None string to use numpy-cpu with a reason
+
     if not force_numpy:
         torch = _try_import_torch()
         if torch is not None:
@@ -75,23 +77,25 @@ def select(force_numpy: bool = False) -> str:
                 print(f"[vsa_bounds] backend: {_BACKEND}", file=sys.stderr)
                 return _BACKEND
             else:
-                # torch present but no CUDA — fall through to check why.
-                reason = "torch present but torch.cuda.is_available() == False"
+                # torch present but no CUDA — set backend and return immediately.
+                reason_str = "torch present but torch.cuda.is_available() == False"
                 _BACKEND = "torch-cpu"
                 print(
-                    f"[vsa_bounds] backend: torch-cpu  (GPU unavailable — {reason})",
+                    f"[vsa_bounds] backend: torch-cpu  (GPU unavailable — {reason_str})",
                     file=sys.stderr,
                 )
                 return _BACKEND
         else:
-            print(
-                "[vsa_bounds] backend: numpy-cpu  (torch not installed; "
-                "run `uv sync --group gpu` for GPU acceleration)",
-                file=sys.stderr,
-            )
+            reason = "torch not installed; run `uv sync --group gpu` for GPU acceleration"
 
     _BACKEND = "numpy-cpu"
-    print(f"[vsa_bounds] backend: {_BACKEND}", file=sys.stderr)
+    if reason is not None:
+        print(
+            f"[vsa_bounds] backend: numpy-cpu  ({reason})",
+            file=sys.stderr,
+        )
+    else:
+        print(f"[vsa_bounds] backend: {_BACKEND}", file=sys.stderr)
     return _BACKEND
 
 

@@ -13,9 +13,12 @@ maintainer:         see CONTRIBUTING.md
 
 library
     exposed-modules:
-        -- Populated by: python -m mycelium_experiments.vsa_bounds --proof --emit-obligations
-        -- Modules are named MultihopBound_<composition>_<model>.
-        -- See README.md for layout.
+        -- Representative committed skeleton (bind_chain, Model A_exponential).
+        -- Additional modules are emitted by:
+        --   python -m mycelium_experiments.vsa_bounds --proof --emit-obligations
+        -- and are gitignored (run-outputs). Promote one with `git add -f` to commit it.
+        -- Module naming: MultihopBound_<composition>_<model>.
+        MultihopBound_bindchain_Aexponential
     build-depends:
         base >= 4.18 && < 5,
         liquidhaskell >= 0.9.8

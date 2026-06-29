@@ -261,8 +261,8 @@ class CandidateResult:
         is_empirical_upper_bound: True iff n_refuted == 0 (no refutation found).
         regime_envelope: descriptive string of the swept regime where the candidate held.
         refuted_points: subset of all_points where refuted=True (non-empty iff refuted).
-        min_safety_margin: minimum (measured_rate_at_boundary - delta) across valid points;
-            negative means a near-miss even where the candidate holds.
+        min_safety_margin: minimum (delta - measured_rate) across valid in-regime points;
+            positive means slack; negative means a near-miss where the candidate holds.
         goodness_of_fit_note: qualitative note on fit quality.
 
     Guarantee: Empirical (based on sweep data) + Declared (candidate form).
@@ -368,9 +368,11 @@ def fit_and_validate(
 
         refuted_pts = [p for p in points if p.refuted]
 
-        # Safety margin: for in-regime points, delta - measured_rate.
-        # Positive = slack; negative = near-miss (candidate under-predicts needed dim).
-        in_regime = [p for p in points if p.candidate_holds]
+        # Safety margin: for genuine in-regime (holds AND not refuted) points only.
+        # Excluding refuted points ensures min_margin cannot go negative due to refutations
+        # — refutations are already counted in n_refuted / refuted_points (never-silent, G2).
+        # Positive = slack; negative = near-miss (candidate barely clears the rate threshold).
+        in_regime = [p for p in points if p.candidate_holds and not p.refuted]
         if in_regime:
             safety_margins = [p.delta - p.measured_rate for p in in_regime]
             min_margin = min(safety_margins)
