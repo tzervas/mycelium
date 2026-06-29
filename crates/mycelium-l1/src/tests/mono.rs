@@ -533,19 +533,19 @@ fn hof_map_mk_ok_double_specializes_to_closed_l0() {
 #[test]
 fn hof_fn_arg_joint_mangling_is_injective() {
     // `mangle_hof_decl("apply", [], [(0, "foo")])` vs `(0, "bar")` — different callees.
-    let n1 = mangle_hof_decl("apply", &[], &[], &[(0, "foo".to_owned())]);
-    let n2 = mangle_hof_decl("apply", &[], &[], &[(0, "bar".to_owned())]);
+    let n1 = mangle_hof_decl("apply", &[], &[], &[(0, "foo".to_owned())], &[]);
+    let n2 = mangle_hof_decl("apply", &[], &[], &[(0, "bar".to_owned())], &[]);
     assert_ne!(
         n1, n2,
         "different fn-args must produce different mangled names"
     );
 
     // vs. a non-HOF (no fn-args) name — must be distinct.
-    let n0 = mangle_hof_decl("apply", &[], &[], &[]);
+    let n0 = mangle_hof_decl("apply", &[], &[], &[], &[]);
     assert_ne!(n0, n1, "HOF and non-HOF mangles are distinct");
 
     // A fn-arg at param 0 is different from one at param 1.
-    let n3 = mangle_hof_decl("apply", &[], &[], &[(1, "foo".to_owned())]);
+    let n3 = mangle_hof_decl("apply", &[], &[], &[(1, "foo".to_owned())], &[]);
     assert_ne!(
         n1, n3,
         "different param indices produce different mangled names"
@@ -557,6 +557,7 @@ fn hof_fn_arg_joint_mangling_is_injective() {
         &[],
         &[],
         &[(0, "foo".to_owned()), (1, "bar".to_owned())],
+        &[],
     );
     assert_ne!(n1, n4, "one vs two fn-args are distinct");
 
@@ -566,12 +567,14 @@ fn hof_fn_arg_joint_mangling_is_injective() {
         &[Ty::Binary(Width::Lit(8))],
         &[],
         &[(0, "double".to_owned())],
+        &[],
     );
     let n6 = mangle_hof_decl(
         "map",
         &[Ty::Binary(Width::Lit(4))],
         &[],
         &[(0, "double".to_owned())],
+        &[],
     );
     assert_ne!(
         n5, n6,

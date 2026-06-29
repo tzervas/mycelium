@@ -67,7 +67,10 @@ pub use checkty::{
 pub use elab::{elaborate, elaborate_colony, elaborate_reclaim, ElabError};
 pub use error::ParseError;
 pub use eval::{Evaluator, L1Error, L1Value};
-pub use mono::{monomorphize, monomorphize_with_selections, InstanceSelection, MonoSelections};
+pub use mono::{
+    monomorphize, monomorphize_with_selections, ClosureSpecialization, InstanceSelection,
+    MonoSelections,
+};
 pub use nodule::{parse_nodule_header, NoduleHeader, NoduleHeaderError};
 pub use parse::{parse, parse_phylum};
 pub use totality::Totality;
