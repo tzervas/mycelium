@@ -19,6 +19,7 @@ VR-5 / G2:
 from __future__ import annotations
 
 import dataclasses
+import sys
 import time
 from typing import Literal
 
@@ -162,6 +163,14 @@ def run_single_sweep(
         List of SingleResult, one per (m, d) pair.
 
     Guarantee: Empirical — trial-measured rates only (VR-5).
+
+    EXPLAIN (n_distractors=100): each trial draws 100 non-member atoms and counts
+    failure if ANY distractor similarity exceeds the true-member similarity.  This is
+    more stringent than the single-distractor Clarkson/Thomas bound; at
+    d >> required_dim the probability of even one distractor winning is negligible,
+    so 100 distractors amplifies the sensitivity at the boundary without inflating
+    the failure rate at comfortable dimensions.  The amplification is why the test
+    asserts rate <= 5*delta (not delta) at 2x required_dim (test_proven_formula_anchor).
     """
     results: list[SingleResult] = []
     for m in m_values:
@@ -424,14 +433,15 @@ def run_multihop_sweep(
         trials_per_point: Monte-Carlo trials per parameter combination.
         salt: base LCG seed.
         progress: print progress to stderr.
+        Note: the n_distractors=100 used in single-hop trials is not exposed here;
+        multi-hop trials do not use the distractor model (they use cleanup_exact on
+        a finite codebook). The sweep counts failures as wrong-atom recoveries (EXPLAIN-able).
 
     Returns:
         List of MultihopResult, one per parameter combination.
 
     Guarantee: Empirical — all rates are trial-measured (VR-5).
     """
-    import sys  # noqa: PLC0415
-
     if models is None:
         models = ["mapi", "mapb"]
     if compositions is None:
@@ -444,6 +454,16 @@ def run_multihop_sweep(
         d_values = [512, 1024, 2048, 4096, 8192]
     if h_values is None:
         h_values = [1, 2, 3]
+
+    # Deterministic integer lookup tables for finite string-valued parameters.
+    # Using hash() on strings is randomized per process (PYTHONHASHSEED); these
+    # lookup tables give fixed, portable integers — G2 / "Deterministic LCG seeds".
+    _MODEL_ID: dict[str, int] = {"mapi": 0, "mapb": 1, "hrr": 2, "fhrr": 3}
+    _COMP_ID: dict[str, int] = {
+        "bind_chain": 0,
+        "bundle_of_binds": 1,
+        "nested_unbind": 2,
+    }
 
     results: list[MultihopResult] = []
     total = (
@@ -470,8 +490,17 @@ def run_multihop_sweep(
                                 "nested_unbind": _nested_unbind_trial,
                             }[comp]
                             for trial in range(trials_per_point):
+                                # Deterministic arithmetic seed — no hash() of strings
+                                # (Python hash() is randomized per-process unless
+                                # PYTHONHASHSEED=0; this lookup + arithmetic is portable).
                                 seed = salt ^ (
-                                    hash((model, comp, F, k, h, d, trial)) & 0xFFFF_FFFF_FFFF_FFFF
+                                    _MODEL_ID[model] * 1_000_000_007
+                                    + _COMP_ID[comp] * 100_003_003
+                                    + F * 9_999_991
+                                    + k * 999_983
+                                    + h * 99_991
+                                    + d * 7
+                                    + trial
                                 )
                                 lcg = Lcg(seed)
                                 if trial_fn(F, k, d, h, model, lcg):

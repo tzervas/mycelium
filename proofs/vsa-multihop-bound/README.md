@@ -75,8 +75,10 @@ The strategy is the **axiomatize + checked-instantiation** pattern from ADR-010:
 
 1. **Axiomatize** the candidate capacity theorem: `assume candidateCapacityThm` in LH
    (the theorem's truth is asserted, not proven by the type system).
-2. **Discharge the concrete arithmetic**: for each swept in-regime point, assert
-   `d >= requiredDimMultihop(m_eff)` and have Z3 confirm it — purely integer arithmetic.
+2. **Discharge the concrete arithmetic** via the **refutation pattern**: for each swept
+   in-regime point, assert the NEGATION `(not (>= d req_dim))` and expect `unsat` from
+   Z3 — meaning no counterexample exists and `d >= requiredDimMultihop(m_eff)` holds.
+   This mirrors `proofs/binary-ternary-roundtrip/roundtrip_8x6.smt2`. `unsat` = passing.
 3. **The open question** is step 1: the axiom must be formally proven (Lean 4 / LH / Agda)
    or cited to a published theorem that covers the multi-hop case.
 
@@ -132,10 +134,14 @@ with `git add -f` if you want it committed).
 ```bash
 # From repo root:
 z3 -smt2 proofs/vsa-multihop-bound/<run-id>-multihop-bind_chain-A_exponential.smt2
-# Expected output: sat  (all probes pass)
+# Expected output per probe: unsat  (refutation pattern — negation is unsatisfiable)
 ```
 
-If `sat`: the concrete arithmetic is machine-confirmed for the swept points.
+Each probe uses the **refutation pattern**: it asserts `(not (>= d req_dim))` and expects
+`unsat`. `unsat` means no counterexample exists — the candidate holds for that swept point.
+`sat` means a refuting instance was found and the candidate must be investigated.
+
+If all probes return `unsat`: the concrete arithmetic is machine-confirmed for the swept points.
 
 ### Step 3: Discharge the Liquid Haskell skeleton
 

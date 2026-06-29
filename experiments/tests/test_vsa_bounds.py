@@ -87,6 +87,63 @@ def test_lcg_matches_rust_profile() -> None:
     assert np.all((v == 1.0) | (v == -1.0)), "non-bipolar component in LCG output"
 
 
+def test_lcg_parity_with_rust_constants() -> None:
+    """Lcg.next_u64() matches the Rust resonator_profile.rs LCG constants exactly.
+
+    Rust Lcg (crates/mycelium-vsa/tests/resonator_profile.rs):
+      new(seed):   state = seed.wrapping_mul(0x9E3779B97F4A7C15).wrapping_add(1)
+      next_u64():  state = state.wrapping_mul(6364136223846793005)
+                                .wrapping_add(1442695040888963407)
+      (all operations mod 2^64)
+
+    This test independently computes the first 5 next_u64() values for seed=42 using
+    the Rust constants with explicit 64-bit masking, then asserts the Python Lcg
+    produces the identical sequence. Upgrades "same constants as Rust" from Declared
+    to Empirical (VR-5).
+
+    Also asserts the bipolar mapping uses bit 63 (sign bit), matching Rust:
+      1.0 if (state >> 63) & 1 else -1.0
+    """
+    from mycelium_experiments.vsa_bounds.algebra import Lcg
+
+    _U64 = 0xFFFF_FFFF_FFFF_FFFF
+    _MUL = 6364136223846793005
+    _ADD = 1442695040888963407
+    _INIT_MUL = 0x9E3779B97F4A7C15
+    _INIT_ADD = 1
+
+    seed = 42
+    # Compute initial state exactly as Rust: state = seed * INIT_MUL + 1  (mod 2^64)
+    state = ((seed * _INIT_MUL) + _INIT_ADD) & _U64
+
+    expected: list[int] = []
+    for _ in range(5):
+        state = (state * _MUL + _ADD) & _U64
+        expected.append(state)
+
+    lcg = Lcg(seed)
+    for i, exp in enumerate(expected):
+        got = lcg.next_u64()
+        assert got == exp, (
+            f"next_u64() step {i + 1}: Python Lcg returned {got:#018x}, "
+            f"Rust constants give {exp:#018x} — cross-language LCG parity failed"
+        )
+
+    # Verify the bipolar mapping: bit 63 of the LAST state produced above.
+    # Re-run from scratch so we can check the sign mapping directly.
+    lcg2 = Lcg(seed)
+    u = lcg2.next_u64()
+    expected_sign = 1.0 if (u >> 63) & 1 else -1.0
+    # bipolar(1) draws one element using that same u64 value.
+    # We need to re-create the exact lcg state: start fresh and call bipolar(1).
+    lcg3 = Lcg(seed)
+    v = lcg3.bipolar(1)
+    assert v[0] == expected_sign, (
+        f"bipolar mapping does not use bit 63: u64={u:#018x}, bit63={(u >> 63) & 1}, "
+        f"expected {expected_sign}, got {v[0]}"
+    )
+
+
 def test_lcg_deterministic() -> None:
     """Same seed produces identical output (determinism for recorded runs)."""
     from mycelium_experiments.vsa_bounds.algebra import Lcg
@@ -155,7 +212,8 @@ def test_mapi_bundle_member_beats_distractor() -> None:
 
     assert n_beats == 0, (
         f"at d={d} >> required_dim={req}, {n_beats}/50 distractors beat the member "
-        f"(member sim={sim_member:.4f}) — Empirical evidence against the formula (flag)"
+        f"(member sim={sim_member:.4f}) — hard failure, investigate "
+        f"(Empirical evidence against the Proven formula at comfortable dimension)"
     )
 
 
@@ -251,8 +309,12 @@ def test_single_sweep_proven_formula_anchor() -> None:
     well above required_dim).
 
     Empirical: with 200 trials at d >> required_dim the rate should be very low.
-    The assertion is conservative (rate <= 0.10 = 5*delta) to accommodate the 100-distractor
-    test regime.
+    The assertion threshold is <= 0.05 (2.5*delta): the 100-distractor regime amplifies
+    the raw Clarkson/Thomas per-distractor probability by roughly 100x, but at 2x
+    required_dim the single-distractor probability is already negligible, so the full
+    100-distractor failure probability remains well below 5% at this generous dimension.
+    (0.05 is the correct tight threshold reflecting 100-distractor amplification, not
+    a formula relaxation — tighter than the old 0.15 guard.)
     """
     from mycelium_experiments.vsa_bounds.capacity import MARGIN_MU, required_dim
     from mycelium_experiments.vsa_bounds.sweeps import run_single_sweep
@@ -272,9 +334,10 @@ def test_single_sweep_proven_formula_anchor() -> None:
     assert len(results) == 1
     r = results[0]
     assert r.bound_holds, f"expected bound to hold at d={d} >= req={req}"
-    assert r.measured_rate <= 0.15, (
+    # Tight threshold: 0.05 reflects the 100-distractor amplification at 2x required_dim.
+    assert r.measured_rate <= 0.05, (
         f"at d={d} (2x required_dim={req}), measured rate {r.measured_rate:.4f} "
-        f"is surprisingly high — Empirical evidence against formula (flag)"
+        f"exceeds 0.05 — hard failure, investigate (Empirical evidence against formula)"
     )
 
 
@@ -497,13 +560,16 @@ def test_fit_and_validate_candidate_is_upper_bound_on_large_d() -> None:
     candidates = fit_and_validate(results, eff_m_models=["A_exponential"])
     assert len(candidates) == 1
     c = candidates[0]
-    # At large d with h=1, Model A should be an empirical upper bound (not refuted).
+    # At d=8192, h=1, F=2, k=4: m_eff (Model A) = 2*4^1 = 8, required_dim(8, 0.02) = 1382
+    # << d=8192 — there MUST be in-regime points (candidate_holds=True for this point).
     assert c.n_candidate_holds >= 1, (
-        "At d=8192, h=1: at least one point should be in-regime for Model A"
+        f"At d=8192, h=1 (bind_chain F=2 k=4): Model A m_eff=8, req_dim=1382 << 8192; "
+        f"expected at least 1 in-regime point, got {c.n_candidate_holds}"
     )
-    # The candidate should not be refuted (Empirical validation).
-    assert c.n_refuted == 0 or c.n_candidate_holds == 0, (
-        f"Model A refuted at {c.n_refuted} points at d=8192, h=1 — unexpected"
+    # With in-regime points confirmed, the candidate must not be refuted (Empirical).
+    assert c.n_refuted == 0, (
+        f"Model A refuted at {c.n_refuted} points at d=8192, h=1 — unexpected "
+        f"(rate exceeded delta at large dimension; hard failure, investigate)"
     )
 
 

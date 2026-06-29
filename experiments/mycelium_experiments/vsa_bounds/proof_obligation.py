@@ -62,57 +62,66 @@ _SMTLIB_HEADER = """\
 ; Status: Declared — this file is the checkable artifact that a solver must
 ;   discharge before the maintainer may upgrade to Proven (VR-5 / ADR-032).
 ;
-; Strategy (mirrors proofs/lh-bundle/ and proofs/binary-ternary-roundtrip/):
+; Strategy (mirrors proofs/lh-bundle/ and proofs/binary-ternary-roundtrip/roundtrip_8x6.smt2):
 ;   - AXIOMATIZE the capacity theorem (same Clarkson/Thomas result, extended to multi-hop).
-;   - The solver discharges only the concrete ARITHMETIC:  d >= requiredDim(m_eff, delta).
+;   - The solver discharges only the concrete ARITHMETIC via REFUTATION PATTERN:
+;     assert the NEGATION of the property (NOT (>= d req_dim)) and expect 'unsat'.
+;   - 'unsat' means: NO counterexample exists for the swept in-regime points — the
+;     candidate HOLDS for all of them. 'sat' means a refuting point was found.
 ;   - This does NOT re-prove the concentration inequality — only the instantiation.
 ;
 ; Citation: {citation}
 ; Effective-m formula: m_eff = {m_eff_formula}
 ;
-; Expected solver output: sat  (the assertions ARE satisfiable — d >= requiredDim for each point)
-; If any assertion returns unsat, the concrete point REFUTES the candidate.
+; Expected solver output: unsat  (the negation is unsatisfiable — d >= requiredDim holds
+;                                 for ALL swept in-regime points; no counterexample exists)
+; If solver returns sat, a specific point refutes the candidate — investigate.
 ;
 ; Run with:
 ;   z3 -smt2 {filename}
 ;
-; Guarantee: Declared (pending discharge).  Do NOT stamp Proven until solver confirms.
+; Guarantee: Declared (pending discharge).  Do NOT stamp Proven until solver confirms unsat.
 
 (set-logic QF_LIA)
 
 ; requiredDimMultihop(m_eff, delta_scaled) approximates ceil(200 * ln(m_eff / delta)).
 ; Because QF_LIA cannot express logarithms directly, we use the PRECOMPUTED integer
 ; values of required_dim for each concrete (m_eff, delta) pair in the swept regime.
-; The solver checks d >= precomputed_value — purely integer arithmetic, no log needed.
+; The solver checks the NEGATION of d >= precomputed_value — purely integer arithmetic.
 ; (The precomputed values are produced by candidate_bound.py::required_dim_multihop.)
 ;
-; This is exactly the same strategy as proofs/lh-bundle/: axiomatize the formula,
-; pre-compute its concrete values, have the solver discharge d >= value.
+; This is the REFUTATION PATTERN from proofs/binary-ternary-roundtrip/roundtrip_8x6.smt2:
+; assert (not (property)) and expect unsat — a counterexample search that found none.
+; Compare: the tautological pattern (assert property, expect sat) confirms nothing new
+; for points already filtered to satisfy the property.
 
 """
 
 _SMTLIB_PROBE_TEMPLATE = """\
 ; Probe {idx}: {composition} F={F} k={k} h={h} d={d} delta={delta}
 ;   m_eff = {m_eff}  required_dim_multihop = {req_dim}  d >= req_dim? {holds}
-(assert (>= {d} {req_dim}))  ; d={d} >= required_dim_multihop({m_eff}, {delta}) = {req_dim}
+;   REFUTATION CHECK: assert NOT (d >= req_dim); expect unsat (no counterexample).
+(push 1)
+(assert (not (>= {d} {req_dim})))  ; negation: d={d} < required_dim_multihop({m_eff}, {delta})={req_dim}
+(check-sat)  ; expect: unsat
+(pop 1)
 
 """
 
 _SMTLIB_FOOTER = """\
-; All probes pass iff (check-sat) = sat.
-; Each (assert (>= d req_dim)) is trivially true for the given concrete values.
-; The solver discharges: for each swept point, d was at or above the candidate threshold.
+; All probes PASS iff every (check-sat) above returns 'unsat'.
+; 'unsat' = the negation is unsatisfiable = the candidate holds for that point.
+; 'sat'   = a refuting point exists — investigate before proceeding.
 ;
 ; NEXT STEP (maintainer):
-;   1. Run: z3 -smt2 {filename}  — expect 'sat' for all probes.
-;   2. If sat: the arithmetic instantiation is machine-confirmed for the swept points.
+;   1. Run: z3 -smt2 <this-file>  — expect 'unsat' for every probe.
+;   2. If all unsat: the arithmetic instantiation is machine-confirmed for swept points.
 ;   3. A theorem connecting m_eff to the actual multi-hop confusion probability must
 ;      then be established (the axiomatized part — see the LH skeleton).
 ;   4. Only after BOTH: (a) theorem axiomatized + LH/Z3 confirms SAFE, AND
 ;      (b) the theorem itself is proven or cited — does Proven become warranted.
 ;
 ; Guarantee: Declared (pending discharge).
-(check-sat)
 """
 
 
@@ -177,12 +186,16 @@ def emit_smt2(
     )
 
     if not valid_points:
+        # NOTE (G2 / never-silent): no in-regime non-refuted points for this composition.
+        # An empty obligation file is honest — it cannot be discharged until points exist.
         lines.append(
             f"; NOTE: No in-regime non-refuted points found for composition={composition!r}.\n"
         )
-        lines.append("; This obligation file is empty — see PROOF-SUMMARY.md for details.\n")
-        lines.append("; Guarantee: Declared (no discharge needed — no valid probes).\n")
-        lines.append("(check-sat)\n")
+        lines.append("; This obligation file has no probes — see PROOF-SUMMARY.md for details.\n")
+        lines.append("; Guarantee: Declared (no probes to discharge — obligation is vacuous).\n")
+        lines.append(
+            "; When the experiment produces in-regime points, re-run --emit-obligations.\n"
+        )
     else:
         # Deduplicate on (F, k, h, d) — keep unique parameter combinations.
         seen: set[tuple[int, int, int, int]] = set()
@@ -229,7 +242,7 @@ def emit_smt2(
                 )
             lines.append("\n")
 
-        lines.append(_SMTLIB_FOOTER.format(filename=filename))
+        lines.append(_SMTLIB_FOOTER)
 
     out_path.write_text("".join(lines), encoding="utf-8")
     return out_path
@@ -402,14 +415,18 @@ def emit_lh_skeleton(
         return out_path
 
     # Compute unique (m_eff, req_dim) pairs for the lookup table.
-    seen_m: set[int] = set()
-    table_entries: list[tuple[int, int, float]] = []  # (m_eff, req_dim, delta)
+    # When multiple points share the same m_eff but differ in delta, keep the entry
+    # with the LARGEST req_dim (= smallest delta) — conservative, never under-dims.
+    best_by_m: dict[int, tuple[int, float]] = {}  # m_eff -> (req_dim, delta)
     for p in valid_points:
         m_eff_val = effective_m(composition, p.F, p.k, p.h, eff_m_model)
-        if m_eff_val not in seen_m:
-            seen_m.add(m_eff_val)
-            req_dim_val = required_dim(m_eff_val, p.delta, MARGIN_MU)
-            table_entries.append((m_eff_val, req_dim_val, p.delta))
+        req_dim_val = required_dim(m_eff_val, p.delta, MARGIN_MU)
+        if m_eff_val not in best_by_m or req_dim_val > best_by_m[m_eff_val][0]:
+            best_by_m[m_eff_val] = (req_dim_val, p.delta)
+    table_entries: list[tuple[int, int, float]] = [  # (m_eff, req_dim, delta)
+        (m_eff_val, req_dim_val, pt_delta)
+        for m_eff_val, (req_dim_val, pt_delta) in best_by_m.items()
+    ]
 
     # Sort by m_eff ascending.
     table_entries.sort(key=lambda t: t[0])
@@ -573,7 +590,11 @@ def emit_proof_summary(
     if smt2_paths:
         lines.append("### SMT-LIB 2 obligations (`.smt2`)")
         lines.append("")
-        lines.append("Run with: `z3 -smt2 <file>` — expect `sat` for all probes.")
+        lines.append(
+            "Run with: `z3 -smt2 <file>` — expect `unsat` for every probe "
+            "(refutation pattern: asserts NOT property; `unsat` = no counterexample found = "
+            "candidate holds for all swept in-regime points)."
+        )
         lines.append("")
         for key, path in sorted(smt2_paths.items()):
             lines.append(f"- `{path.name}` — {key}")
@@ -612,10 +633,14 @@ def emit_proof_summary(
         "1. **Run the SMT-LIB obligations:** `z3 -smt2 <file>.smt2` for each emitted file."
     )
     lines.append(
-        "   - If `sat`: the concrete arithmetic instantiation is machine-confirmed "
-        "for the swept points."
+        "   Uses the **refutation pattern**: each probe asserts `(not (>= d req_dim))` "
+        "and expects `unsat` — meaning no counterexample exists and the candidate holds."
     )
-    lines.append("   - If `unsat`: a specific point refutes the candidate — investigate.")
+    lines.append(
+        "   - If `unsat`: the concrete arithmetic instantiation is machine-confirmed "
+        "for the swept points (no refuting counterexample found)."
+    )
+    lines.append("   - If `sat`: a specific point refutes the candidate — investigate.")
     lines.append("2. **Run the LH skeleton:** `cabal build` in `proofs/vsa-multihop-bound/`.")
     lines.append(
         "   - If `LIQUID: SAFE`: Z3 confirms the arithmetic. "
@@ -703,35 +728,18 @@ def emit_obligations(
     compositions: list[CompositionKind] = ["bind_chain", "bundle_of_binds", "nested_unbind"]
 
     for comp in compositions:
-        # Check if there are valid points for this composition.
-        valid = [
-            p
-            for p in best.all_points
-            if p.composition == comp and p.candidate_holds and p.rate_respects_delta
-        ]
-        if not valid:
-            # Emit a stub noting no in-regime points.
-            smt2_key = f"{comp}_{best.eff_m_model}_smt2"
-            lh_key = f"{comp}_{best.eff_m_model}_lh"
-            smt2_path = out_dir / f"{prefix}multihop-{comp}-{best.eff_m_model}.smt2"
-            lh_path = out_dir / f"{prefix}multihop-{comp}-{best.eff_m_model}.hs"
-            emit_smt2(best, comp, smt2_path, delta=delta)
-            emit_lh_skeleton(best, comp, lh_path, delta=delta)
-            smt2_paths[smt2_key] = smt2_path
-            lh_paths[lh_key] = lh_path
-            emitted[smt2_key] = smt2_path
-            emitted[lh_key] = lh_path
-        else:
-            smt2_key = f"{comp}_{best.eff_m_model}_smt2"
-            lh_key = f"{comp}_{best.eff_m_model}_lh"
-            smt2_path = out_dir / f"{prefix}multihop-{comp}-{best.eff_m_model}.smt2"
-            lh_path = out_dir / f"{prefix}multihop-{comp}-{best.eff_m_model}.hs"
-            emit_smt2(best, comp, smt2_path, delta=delta)
-            emit_lh_skeleton(best, comp, lh_path, delta=delta)
-            smt2_paths[smt2_key] = smt2_path
-            lh_paths[lh_key] = lh_path
-            emitted[smt2_key] = smt2_path
-            emitted[lh_key] = lh_path
+        # Emit for every composition; emit_smt2 / emit_lh_skeleton handle the
+        # empty-no-in-regime-points case internally (never-silent NOTE, G2).
+        smt2_key = f"{comp}_{best.eff_m_model}_smt2"
+        lh_key = f"{comp}_{best.eff_m_model}_lh"
+        smt2_path = out_dir / f"{prefix}multihop-{comp}-{best.eff_m_model}.smt2"
+        lh_path = out_dir / f"{prefix}multihop-{comp}-{best.eff_m_model}.hs"
+        emit_smt2(best, comp, smt2_path, delta=delta)
+        emit_lh_skeleton(best, comp, lh_path, delta=delta)
+        smt2_paths[smt2_key] = smt2_path
+        lh_paths[lh_key] = lh_path
+        emitted[smt2_key] = smt2_path
+        emitted[lh_key] = lh_path
 
     # PROOF-SUMMARY.md.
     summary_path = out_dir / f"{prefix}PROOF-SUMMARY.md"
