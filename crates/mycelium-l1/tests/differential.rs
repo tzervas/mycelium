@@ -793,6 +793,14 @@ fn generic_corpus() -> Vec<&'static str> {
         //     `join` is the absorbing-`On` OR (a commutative/associative/idempotent join-semilattice);
         //     `fuse(On, Off)` = `join(On, Off)` = `On`. This is the user-merge case the brief targets.
         "nodule d;\ntrait Fuse[A] { fn join(a: A, b: A) => A; };\ntype Flag = Off | On;\nimpl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b }; };\nfn main() => Flag = fuse(On, Off);",
+        // --- M-826: tuple/product type round-trip through monomorphization (KC-3 / three-way diff) ---
+        // (9) 2-tuple `fst` — checks, monos, and all three paths agree on `Nat` result.
+        //     Tuple$2<Nat, Nat> monomorphizes to Tuple$2[Nat] (a closed type); `fst` extracts field 0.
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn fst(t: (Nat, Nat)) => Nat = match t { (a, _) => a };\nfn main() => Nat = fst((S(Z), Z));",
+        // (10) 2-tuple `snd` — extract field 1 to pin field ordering end-to-end.
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn snd(t: (Nat, Nat)) => Nat = match t { (_, b) => b };\nfn main() => Nat = snd((Z, S(Z)));",
+        // (11) 3-tuple mid-element — pins the 3-arity synthetic `Tuple$3<Nat, Nat, Nat>`.
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn mid(t: (Nat, Nat, Nat)) => Nat = match t { (_, b, _) => b };\nfn main() => Nat = mid((Z, S(Z), Z));",
     ]
 }
 

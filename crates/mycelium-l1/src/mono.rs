@@ -245,6 +245,8 @@ fn body_has_fn_value(env: &Env, e: &Expr) -> bool {
             body_has_fn_value(env, policy) || body_has_fn_value(env, body)
         }
         Expr::Ascribe(inner, _) => body_has_fn_value(env, inner),
+        // M-826: a tuple literal is a value-forming expression; its elements may reference fn values.
+        Expr::TupleLit(elems) => elems.iter().any(|x| body_has_fn_value(env, x)),
     }
 }
 
@@ -273,6 +275,8 @@ fn body_has_lambda(e: &Expr) -> bool {
         Expr::Fuse { left, right } => body_has_lambda(left) || body_has_lambda(right),
         Expr::Reclaim { policy, body } => body_has_lambda(policy) || body_has_lambda(body),
         Expr::Ascribe(inner, _) => body_has_lambda(inner),
+        // M-826: a tuple literal may contain lambda expressions in its elements.
+        Expr::TupleLit(elems) => elems.iter().any(body_has_lambda),
     }
 }
 
@@ -1220,6 +1224,14 @@ impl<'e> Mono<'e> {
                     body: Box::new(body2),
                 })
             }
+            // M-826: `TupleLit` nodes are rewritten to `App { head: Path(MkTuple$N), args }` by
+            // the checker (`check_tuple_lit`), so this arm should never be reached on a well-checked
+            // AST. Treat a surviving `TupleLit` as a residual (defense in depth — G2: never silent).
+            Expr::TupleLit(_) => residual(
+                site,
+                "internal: TupleLit survived to monomorphization — the checker should have \
+                 rewritten it to a constructor App (M-826; never silent, G2)",
+            ),
             // Constructs with no v0 lowering regardless of generics — kept as explicit residuals so the
             // elaborator's own refusal still fires (defense in depth; never a fabricated artifact).
             Expr::Wild(_) => residual(
@@ -1338,8 +1350,48 @@ impl<'e> Mono<'e> {
         args: &[Expr],
         expected: Option<&Ty>,
     ) -> Result<Expr, ElabError> {
+        // M-826 Part 2 — lift the first-order restriction for chained HOF application `f(x)(y)`:
+        // when the head is not a Path (e.g. `App{head: apply, args: [succ]}`), infer its type;
+        // if it has a function type `A -> B`, rewrite via the dynamic closure dispatcher (the same
+        // `apply$<arrow>` path dynamic HOF values use — §4A.5). Never-silent (G2): a non-function
+        // head is an explicit Residual.
+        if !matches!(head, Expr::Path(_)) {
+            let hty = self.infer(site, scope, head)?;
+            let Ty::Fn(param_ty, _) = &hty else {
+                return residual(
+                    site,
+                    format!(
+                        "application head is not a function — the expression has type `{hty}`, \
+                         which is not callable (M-826 §Part2 — never silent, G2)"
+                    ),
+                );
+            };
+            if args.len() != 1 {
+                return residual(
+                    site,
+                    format!(
+                        "higher-order application requires exactly 1 argument in stage-1; \
+                         got {} — partial application / multi-arg HOF is deferred (RFC-0024 §5, G2)",
+                        args.len()
+                    ),
+                );
+            }
+            // Rewrite the head (e.g. the inner App), then route through the `apply$<arrow>`
+            // dispatcher — the same dynamic closure application path as closure values.
+            let head2 = self.rewrite(site, scope, head, None)?;
+            let arg2 = self.rewrite(site, scope, &args[0], Some(param_ty))?;
+            let arrow = mangle_arrow(param_ty, &{
+                let Ty::Fn(_, ret) = &hty else { unreachable!() };
+                ret.as_ref().clone()
+            });
+            let dispatcher = format!("apply${arrow}");
+            return Ok(Expr::App {
+                head: Box::new(Expr::Path(Path(vec![dispatcher]))),
+                args: vec![head2, arg2],
+            });
+        }
         let Expr::Path(p) = head else {
-            return residual(site, "v0 application head must be a name (first-order)");
+            unreachable!("non-Path head handled above")
         };
         if p.0.len() != 1 {
             return residual(site, format!("dotted call `{}`", p.0.join(".")));
@@ -2269,6 +2321,14 @@ impl<'e> Mono<'e> {
                 }
                 Ok(Pattern::Ctor(mangle_ctor(cname, &targs), subs2))
             }
+            // M-826: a tuple pattern `(x, y, …)` is rewritten by the checker to
+            // `Pattern::Ctor(MkTuple$N, subs)` before mono runs. A surviving `Pattern::Tuple`
+            // here is rewritten to the equivalent Ctor pattern and delegated — never-silent (G2).
+            Pattern::Tuple(subs) => {
+                let n = subs.len();
+                let ctor_name = crate::checkty::tuple_ctor_name(n);
+                self.rewrite_pattern(site, &Pattern::Ctor(ctor_name, subs.clone()), sty, scope)
+            }
         }
     }
 
@@ -2527,6 +2587,12 @@ pub(crate) fn free_vars(
             free_vars(body, bound, seen, out);
         }
         Expr::Ascribe(inner, _) => free_vars(inner, bound, seen, out),
+        // M-826: a tuple literal's elements are all value positions; walk each for free variables.
+        Expr::TupleLit(elems) => {
+            for el in elems {
+                free_vars(el, bound, seen, out);
+            }
+        }
     }
 }
 
@@ -2545,6 +2611,12 @@ fn pattern_binders(pat: &Pattern, bound: &mut BTreeSet<String>, added: &mut Vec<
             }
         }
         Pattern::Ctor(_, subs) => {
+            for s in subs {
+                pattern_binders(s, bound, added);
+            }
+        }
+        // M-826: a tuple pattern `(x, y, …)` binds each sub-pattern element.
+        Pattern::Tuple(subs) => {
             for s in subs {
                 pattern_binders(s, bound, added);
             }

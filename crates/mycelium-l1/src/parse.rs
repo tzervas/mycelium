@@ -1552,6 +1552,35 @@ impl Parser {
             // Dense `{N, scalar}` vs VSA `{model, dim, sparsity}`) is disambiguated by lookahead;
             // whether it *fits* the ambient paradigm is the resolution pass's never-silent check.
             Tok::LBrace => self.parse_ambient_repr().map(BaseType::Ambient),
+            // M-826: `(T, U, …)` is a tuple type (arity ≥ 2); a single `(T)` is grouping.
+            // A single-element parenthesized type `(T)` stays a bare type (grouping only).
+            Tok::LParen => {
+                self.bump(); // consume `(`
+                let first = self.parse_type_ref()?;
+                if self.eat(&Tok::Comma) {
+                    let mut elems = vec![first];
+                    while !self.at(&Tok::RParen) {
+                        elems.push(self.parse_type_ref()?);
+                        if !self.eat(&Tok::Comma) {
+                            break;
+                        }
+                    }
+                    self.expect(&Tok::RParen, "`)` to close the tuple type")?;
+                    if elems.len() < 2 {
+                        return Err(ParseError::new(
+                            self.pos(),
+                            "a tuple type requires arity ≥ 2; a single-element parenthesized \
+                             type `(T)` is grouping, not a 1-tuple (M-826)"
+                                .to_owned(),
+                        ));
+                    }
+                    Ok(BaseType::Tuple(elems))
+                } else {
+                    // Single-element — grouping; return the inner type's base unchanged.
+                    self.expect(&Tok::RParen, "`)` to close the parenthesized type")?;
+                    Ok(first.base)
+                }
+            }
             _ => self.err("a type"),
         }
     }
@@ -1979,6 +2008,32 @@ impl Parser {
             Tok::BinLit(_) | Tok::TritLit(_) | Tok::BytesLit(_) | Tok::Int(_) | Tok::LBracket => {
                 Ok(Pattern::Lit(self.parse_literal()?))
             }
+            // M-826: `(x, y, …)` is a tuple pattern (arity ≥ 2). A single `(_)` is grouping.
+            Tok::LParen => {
+                self.bump();
+                let first = self.parse_pattern()?;
+                if self.eat(&Tok::Comma) {
+                    let mut subs = vec![first];
+                    while !self.at(&Tok::RParen) {
+                        subs.push(self.parse_pattern()?);
+                        if !self.eat(&Tok::Comma) {
+                            break;
+                        }
+                    }
+                    self.expect(&Tok::RParen, "`)` to close the tuple pattern")?;
+                    if subs.len() < 2 {
+                        return Err(ParseError::new(
+                            self.pos(),
+                            "a tuple pattern requires arity ≥ 2 (M-826)".to_owned(),
+                        ));
+                    }
+                    Ok(Pattern::Tuple(subs))
+                } else {
+                    // Single-element — grouping; unwrap the inner pattern.
+                    self.expect(&Tok::RParen, "`)` to close the parenthesized pattern")?;
+                    Ok(first)
+                }
+            }
             _ => self.err("a pattern"),
         }
     }
@@ -2112,10 +2167,35 @@ impl Parser {
             }
             Tok::Ident(_) => Ok(Expr::Path(self.parse_path()?)),
             Tok::LParen => {
+                // M-826: `(e, e2, …)` is a tuple literal (arity ≥ 2); `(e)` is grouping.
                 self.bump();
-                let e = self.parse_expr()?;
-                self.expect(&Tok::RParen, "`)` to close the parenthesized expression")?;
-                Ok(e)
+                let first = self.parse_expr()?;
+                if self.eat(&Tok::Comma) {
+                    // At least two elements — a tuple literal.
+                    let mut elems = vec![first];
+                    // parse remaining elements (trailing comma before `)` is tolerated)
+                    while !self.at(&Tok::RParen) {
+                        elems.push(self.parse_expr()?);
+                        if !self.eat(&Tok::Comma) {
+                            break;
+                        }
+                    }
+                    self.expect(&Tok::RParen, "`)` to close the tuple literal")?;
+                    if elems.len() < 2 {
+                        return Err(ParseError::new(
+                            self.pos(),
+                            "a tuple literal requires arity ≥ 2; a single-element parenthesized \
+                             expression `(e)` is grouping, not a 1-tuple (M-826 — FLAG: unit `()` \
+                             and 1-tuples are deferred surface decisions)"
+                                .to_owned(),
+                        ));
+                    }
+                    Ok(Expr::TupleLit(elems))
+                } else {
+                    // Single element — grouping, not a tuple.
+                    self.expect(&Tok::RParen, "`)` to close the parenthesized expression")?;
+                    Ok(first)
+                }
             }
             _ => self.err("an expression"),
         }

@@ -753,6 +753,19 @@ impl<'e> Evaluator<'e> {
                 let _ = self.eval(fuel, depth, ledger, site, scope, policy)?;
                 self.eval(fuel, depth, ledger, site, scope, body)
             }
+
+            // M-826: `TupleLit` nodes are rewritten to `App { head: Path(MkTuple$N), args }` by
+            // the checker (`check_tuple_lit`) so a well-monomorphized env never contains a raw
+            // `TupleLit`. This arm is a defensive, never-silent invariant (G2): a surviving
+            // `TupleLit` here is an internal staging bug (eval was handed an un-checked expr),
+            // surfaced explicitly, never a silent accept.
+            Expr::TupleLit(_) => Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what: "internal: a TupleLit reached the evaluator — tuple literals are lowered by \
+                       the checker to constructor applications (M-826); run eval on a checked, \
+                       monomorphized env (never a silent accept, G2)"
+                    .to_owned(),
+            }),
         }
     }
 
@@ -916,6 +929,16 @@ impl<'e> Evaluator<'e> {
                 }
                 L1Value::Data { .. } => Ok(false),
             },
+            // M-826: a tuple pattern `(x, y, …)` desugars to `Ctor(MkTuple$N, subs)` during
+            // checking/resolve. A raw `Pattern::Tuple` here means the evaluator was handed an
+            // un-checked pattern (staging bug). Never-silent (G2): fall back to the `Ctor` path
+            // by re-calling with the equivalent desugared pattern.
+            Pattern::Tuple(subs) => {
+                let n = subs.len();
+                let ctor_name = crate::checkty::tuple_ctor_name(n);
+                let desugared = Pattern::Ctor(ctor_name, subs.clone());
+                self.try_match(site, &desugared, val, binds)
+            }
         }
     }
 
