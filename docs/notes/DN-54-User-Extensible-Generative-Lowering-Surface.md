@@ -515,3 +515,49 @@ doc's status.
   verification harness** (differential / hygiene / round-trip). Guards (2)/(3) are meaningful only
   once (1) lands. CHANGELOG / Doc-Index / issues.yaml / docs/api-index reconciled by the integrating
   parent. (Append-only; VR-5; G2.)
+- **2026-06-29 — Implemented (Rust-first): RHS elaboration + KC-3 guard + §4.1/§4.2/§4.6 + §7
+  harness landed — pending ratification.** M-812-cont landing in `mycelium-l1` (the `lwd` kickoff),
+  closing the five deferred completions from the 2026-06-28 entry. **Landed:**
+  **(1) RHS elaboration to L0** — `crate::elab::elaborate_lower_rule(env, rule_name)` now **reads
+  `Env::lower_rules`** and lowers a rule's RHS to a closed L0 `Node` by running it through the **same**
+  path a hand-written nullary `fn` body takes (a `%`-prefixed synthetic entry inserted into a cloned
+  `Env`, fed to the existing `elaborate`), so the §7.1 differential holds *by construction*. Tag:
+  **`Empirical`** (observational identity earned by the §7 trials + the M-210 `check_core` validation,
+  never self-attested). **(2) §4.1 IL-grammar RHS type-check** — `check_lower_rule_rhs_type` runs the
+  v0 checker (`infer_type`) over each rule's RHS with the rule's params in scope as `Ty::Var`; an
+  ill-typed RHS is refused at definition time (`Declared`, G2). *Discovery (G2 — surfaced, not
+  buried):* the prior structural-only check accepted `lower X = true`, but lowercase `true`/`false`
+  are **not** L1 names — that RHS is ill-typed; it now refuses, and the fixtures/tests were corrected
+  to the real prelude `Bool` constructors `True`/`False`. **(3) §6 KC-3 kernel-growth guard** —
+  **`Proven`-by-construction** in the narrow, *checked* sense: the elaborator's codomain is the
+  **closed** Rust enum `mycelium_core::Node` (the frozen L0 grammar), so a `lower` rule can introduce
+  **no new kernel node** — the type system is the checked side-condition. The one *surface*-growth a
+  rule could otherwise smuggle in (a host op) is closed by **(5) §4.6 purity** — `check_lower_decl_
+  structural` + `rhs_contains_wild` refuse a `wild { … }` block in a rule RHS structurally (so the
+  refusal holds even in an `@std-sys` nodule). The harness confirms KC-3 non-vacuously via
+  `Node::is_aot_lowerable` (total over the frozen node set). **(4) §4.2 cross-rule acyclicity** —
+  `check_lower_rule_acyclicity` builds the rule-reference graph (a rule's edges are the single-segment
+  paths in its RHS that name *other rules*) and refuses self- and mutual-reference cycles via an
+  iterative DFS (`Declared`, G2). **(5) §7 verification harness** — `tests/lower_derive.rs`:
+  structural identity, run-value differential (through M-210 `check_core`), KC-3-stays-in-fragment,
+  §7.2 hygiene (`%`-fresh binders ⇒ no capture), §7.3 value round-trip. The two `low`-era residual
+  guard tests (`lower_derive_items_add_no_l0_to_an_unrelated_entry`,
+  `lower_rule_rhs_is_stored_not_elaborated`) are **replaced** by the real elaboration + guard tests.
+  `cargo test -p mycelium-l1` green (all suites); `cargo fmt` + `clippy -D warnings` clean.
+  **FLAG — `derive`-site consumption / attachment semantics UNDERDETERMINED (held `Declared`; G2,
+  not guessed).** DN-54 specifies *what a rule produces* (an explicit L0 term — now landed) but **not
+  how a `derive Name for T` use site's instantiated L0 attaches to / is referenced by the surrounding
+  program**: v0 `elaborate(env, entry)` produces *one* L0 `Node` from a nullary entry fn, with no
+  registry-of-derived-impls consumption path, and the note's §3.2 worked-example RHS is an `impl`
+  block — an **item**, not an `Expr`, so it is **not expressible** as a v0 rule RHS (which
+  `parse_expr` requires). Two facets are open: **(a)** the *attachment* model (where a `derive`'s L0
+  lives in a program); **(b)** *parametric instantiation* — a `lower Name[T]` whose RHS mentions `T`
+  has no monomorphic L0 until a `derive` instantiates `T`, which the present elaboration surfaces as
+  the ordinary generic `ElabError::Residual` (never-silent). Per the maintainer's standing rule (a
+  correct partial landing beats a guessed elaboration — G2/VR-5), the **nullary/monomorphic** rule
+  elaboration is landed and the attachment + parametric-instantiation model is **left for maintainer
+  ratification** (this is the residual that supersedes the 2026-06-28 deferred set, narrowed to
+  consumption-semantics only). **Status NOT advanced here** (Accepted→Enacted is the maintainer's /
+  integrating parent's step through `Accepted` — house rule #3); this entry records the impl
+  Rust-first and resolves the deferred-safety boundary. CHANGELOG / Doc-Index / issues.yaml /
+  docs/api-index reconciled by the integrating parent. (Append-only; VR-5; G2.)
