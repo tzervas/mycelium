@@ -8,6 +8,5 @@
 // is rejected by `check_nodule`. That under-declaration case is exercised in `tests/check.rs`
 // (`an_unannotated_caller_of_an_effectful_fn_is_a_check_error`), since this conformance gate only
 // runs the parser. RFC-0014 I3.)
-nodule demo
-
+nodule demo;
 fn a() => Binary{8} !{io, io} = 0b00000000

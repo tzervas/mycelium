@@ -235,6 +235,18 @@ choice is made here (VR-5).
 
 ## Meta — changelog
 
+- **2026-06-29 — EBNF-completeness reconciliation (M-706 close, s10; append-only, Status unchanged —
+  Enacted).** An audit of the committed `docs/spec/grammar/mycelium.ebnf` against the landed
+  `mycelium-l1` parser closed three genuine gaps that the prior "Enacted" regeneration had not
+  caught — each a production the parser *accepts* but the grammar *omitted* (a never-silent defect,
+  G2): (1) the **top-level `impl_item`** production was entirely missing from `item ::=` — added with
+  both the trait-instance (`impl Trait[args]? for T { … }`) and the inherent (`impl T { … }`, M-664)
+  forms; (2) **`consume_expr`** (`consume <app_expr>`, M-664) added to `expr ::=`; (3) **`lambda_expr`**
+  was *defined* but never *referenced* in `expr ::=` — now wired in. `just drift-check` (keyword-table
+  generator) + the conformance accept/reject corpus stay green. This is the M-706 completeness close:
+  the dependency gate (M-705 ✓ / M-745 ✓ / M-707 ✓ enacted 2026-06-29) is cleared. Honest scope
+  (VR-5): the grammar is *complete for the landed surface*; or-patterns + the RFC-0020 R20-Q5
+  relaxation remain deferred (RFC-0020 §9), so it is not frozen against all future surface growth.
 - **2026-06-28 — M-745 wiring IMPLEMENTED (ops kickoff; no status move).** The commissioned operator
   wiring landed in `mycelium-l1`: `mycelium.ebnf` gains the `cmp_expr` (Tier 8) and `shift_expr`
   (Tier 4) productions and the lexer/parser desugar `<`/`>`/`<<`/`>>` per the ratified RFC-0025 §4.1

@@ -198,6 +198,27 @@ pub enum Item {
     /// registered by the matching `lower` declaration, instantiates the RHS for type `T`, and checks
     /// the result. Never silent — a missing or rejected rule is an explicit refusal (G2).
     Derive(DeriveDecl),
+    /// An **inherent** method block `impl T { fn … }` (DN-03 §1; M-664) — methods *associated with*
+    /// a type but **not** part of any trait. Desugars in `checkty.rs` (Phase 0, alongside `object`)
+    /// to its `Item::Fn`s lifted verbatim — methods are ordinary explicitly-typed free functions
+    /// (the same model the `object` inherent-`fn` lowering uses), so all existing fn registration,
+    /// checking, monomorphization and elaboration apply unchanged (KC-3 — zero kernel growth). A
+    /// name collision with another top-level fn is caught by the existing duplicate-fn check
+    /// (never silent, G2).
+    InherentImpl(InherentImplDecl),
+}
+
+/// An inherent method block `impl T { fn … }` (DN-03 §1 / RFC-0007 §12; M-664) — associates a set
+/// of ordinary functions with a type without going through a trait. Distinct from [`ImplDecl`],
+/// which is a *trait*-instance (`impl Trait for T`). The methods are full `fn` definitions whose
+/// parameters are explicitly typed (there is no implicit `self` in v0 — the receiver, when present,
+/// is just the first explicitly-typed value parameter).
+#[derive(Debug, Clone, PartialEq)]
+pub struct InherentImplDecl {
+    /// The type the methods are associated with (`impl Binary{8} { … }` ⇒ `Binary{8}`).
+    pub for_ty: TypeRef,
+    /// The method definitions, lifted verbatim to top-level `fn`s at desugar time.
+    pub methods: Vec<FnDecl>,
 }
 
 /// A user-defined generative-lowering rule: `lower Name[params] = <rhs>` (DN-54 §3.2 / M-812).
@@ -673,6 +694,20 @@ pub enum Expr {
     Wild(Box<Expr>),
     /// `spore(value)` — reconstruction-manifest construction.
     Spore(Box<Expr>),
+    /// `consume <expr>` — acquire + take **exclusive** ownership of an affine `Substrate` value
+    /// (DN-03 §1; LR-8; M-664). The operand must have a `Substrate{tag}` type — the checker
+    /// ([`crate::checkty`]) refuses any other operand type (never silent, G2); the result is the
+    /// moved substrate (`Substrate{tag}`), now exclusively owned by the consumer.
+    ///
+    /// Honesty (`Declared`): `Substrate` has **no value forms / no v0 representation lowering**
+    /// (it is an external-resource kind, not a repr type — see [`crate::checkty::Ty::Substrate`]),
+    /// so `consume` elaborates to a never-silent [`crate::elab::ElabError::Residual`] exactly as
+    /// every other `Substrate` site does. The keyword is *active at the surface* (it parses,
+    /// type-checks, and is `EXPLAIN`-able) while its runtime behavior is honestly staged until a
+    /// substrate value model exists. Full affine *single-use* enforcement is likewise staged: v0
+    /// has no value-level affine-usage tracker (only pattern-binder linearity), so single-use is a
+    /// `Declared` property of the construct, not yet a checked one.
+    Consume(Box<Expr>),
     /// `colony { hypha e1, hypha e2, … }` — the **structured-concurrency scope** (RFC-0008 §4.7;
     /// DN-06 §1.3): a dynamic runtime grouping of cooperating `hypha`. The block body is a
     /// **non-empty** list of `hypha` spawns; the colony does not exit until every child has joined
@@ -695,12 +730,17 @@ pub enum Expr {
     /// Both paths refuse outside the evaluation-complete fragment with a never-silent
     /// [`crate::elab::ElabError::Residual`] (G2), never a fabricated accept.
     Colony(Vec<Hypha>),
-    /// `lambda(params) => body` — an anonymous-function expression (RFC-0037 D5). The grammar + AST
-    /// node land with the RFC-0037 grammar epic; **full closure semantics (environment capture,
-    /// partial application, dynamic fn-flow) are deferred to M-704 / RFC-0024 §5** — the checker
-    /// ([`crate::checkty`]) and elaborator ([`crate::elab`]) emit a **never-silent `Residual`** for a
-    /// lambda until then (G2), so the surface parses but does not yet evaluate. v0 params are typed
-    /// (`name: type`); inferred-type params are part of the M-704 work.
+    /// `lambda(params) => body` — an anonymous-function (closure) expression (RFC-0037 D5). The
+    /// checker ([`crate::checkty::Cx::check_lambda`]) types it to [`crate::checkty::Ty::Fn`], and
+    /// **monomorphization** ([`crate::mono`]) lowers each escaping closure by **Reynolds
+    /// defunctionalization** (RFC-0024 §4A, M-704): a per-arrow tag-sum data type `Fn$A$B` (one
+    /// constructor per distinct closure, fields = the captured free variables) reusing
+    /// [`crate::eval::L1Value::Data`], plus a generated `apply$A$B(clo, x)` dispatcher whose body is a
+    /// `match` over the whole-program-closed constructor set — **no new L0 kernel node** (KC-3). A raw
+    /// `Lambda` therefore never survives into elaboration/evaluation (those stages keep a defensive,
+    /// never-silent `Residual` as a staging invariant — G2). v0 params are typed (`name: type`).
+    /// **Multi-argument lambdas / partial application** stay a never-silent tuple-gated `Residual`
+    /// (RFC-0024 §4A.8 — the v0 surface has no tuple/product type).
     Lambda {
         /// The (typed) value parameters.
         params: Vec<Param>,

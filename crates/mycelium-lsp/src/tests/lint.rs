@@ -147,8 +147,8 @@ fn scoping_respected_in_nested_lets() {
 
 #[test]
 fn nodule_header_clean_on_valid_or_absent_marker() {
-    assert!(lint_nodule_header("// nodule: geometry.shapes\nnodule geometry.shapes\n").is_empty());
-    assert!(lint_nodule_header("// nodule\nnodule g\n").is_empty());
+    assert!(lint_nodule_header("// nodule: geometry.shapes\nnodule geometry.shapes;\n").is_empty());
+    assert!(lint_nodule_header("// nodule\nnodule g;\n").is_empty());
     assert!(lint_nodule_header("nodule g\nfn f() -> Binary{8} = 0b0").is_empty());
 }
 

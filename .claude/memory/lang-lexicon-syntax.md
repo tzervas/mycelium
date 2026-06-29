@@ -100,9 +100,11 @@ Verified against `crates/mycelium-l1/src/token.rs` and `docs/spec/grammar/myceli
 - **Ratified — not yet lexed** — a name ratified in DN-02/DN-03 but **not** in `keyword()`, so it
   currently lexes as an ordinary **identifier** (using it is *not* yet an error). **`reveal`** is the
   main remaining member. (`consume`/`grow`/`impl`/`object`/`via`/`lower`/`derive` have **left** this
-  class — all now lexed: `consume`/`grow` Reserved-not-active (`Tok::Consume`/`Tok::Grow`), `impl`
-  Active (`Tok::Impl`; the *inherent*-`impl` construct is M-664), the rest Active — M-811/M-812. The
-  runtime-vocabulary names are Reserved-not-active, not "not yet lexed".)
+  class — all now lexed: `consume` **Active** (`Tok::Consume`; the `consume <expr>` expression
+  LANDED M-664 — affine `Substrate` acquisition, LR-8), `grow` Reserved-not-active (`Tok::Grow`,
+  superseded by `derive`), `impl` Active (`Tok::Impl`; the *inherent*-`impl T { … }` construct
+  LANDED M-664), the rest Active — M-811/M-812. The runtime-vocabulary names are Reserved-not-active,
+  not "not yet lexed".)
 - **Ratified-pending-RFC-0037** — ratified in DN-02 2026-06-27 changelog (direction fixed by DN-31
   kind-split revision) but **lexer reservation deferred to RFC-0037** (the binding bracket/keyword
   grammar RFC). The short repr keywords (`bin`/`tern`/`emb`/`hvec`) and `lambda` are in this class.
@@ -115,10 +117,13 @@ M-656…M-664, Phase 5) and **E7-2** (runtime vocabulary; M-665…M-668, Phase 7
 **M-656/657/658** (generics), **M-659** (traits; `Tok::Trait`/`Tok::Impl` active; elab **LANDED
 M-673** — runs three-way), **M-660** (effects; `Tok::Bang`; checker-only, no L0 node) — all LANDED.
 **M-811** (`object`/`via` active — object-composition surface, Rust-first) and **M-812** (`lower`/`derive`
-active — generative-lowering surface + structural checks, Rust-first; RHS elab + KC-3 guard deferred to
-**M-812-cont**) — LANDED (obj+low integration wave). **Remaining E7-1:** M-661 (`wild`/FFI), M-662
-(`phylum`/cross-nodule), M-663 (grading), M-664 (`consume`/`reveal`/surface-`impl`;
-`bin`/`tern`/`emb`/`hvec` pending RFC-0037). **E7-2 remaining:** **M-667 DONE** (`fuse`/`reclaim`/`tier` — ACTIVE; r4v wave 2026-06-28; surface + repr-fuse execution Empirical; reclaim + data-fuse pending M-817), M-668 (R2). A status row
+active — generative-lowering surface + structural checks, Rust-first) — LANDED (obj+low integration
+wave); **M-812-cont** (RHS elaboration to L0 via `elab::elaborate_lower_rule` + §4.1 RHS type-check +
+§4.6 purity + §4.2 acyclicity + §6 KC-3 guard `Proven`-by-construction over the closed `Node` enum +
+§7 harness) — LANDED (`lwd` kickoff; `derive`-site consumption/attachment model FLAGGED underdetermined
+in DN-54, held `Declared`). **Remaining E7-1:** M-661 (`wild`/FFI), M-662
+(`phylum`/cross-nodule), M-663 (grading), **M-664 DONE** (`consume` expression + inherent-`impl`;
+`reveal` + `bin`/`tern`/`emb`/`hvec` remain — `reveal` not-yet-lexed, the short reprs pending RFC-0037). **E7-2 remaining:** **M-667 DONE** (`fuse`/`reclaim`/`tier` — ACTIVE; r4v wave 2026-06-28; surface + repr-fuse execution Empirical; reclaim + data-fuse pending M-817), M-668 (R2). A status row
 flips only when its tracking issue lands and `just check` is green (VR-5).
 
 | Term | Layer | Status | Meaning | Normative source |
@@ -145,7 +150,7 @@ flips only when its tracking issue lands and `just check` is green (VR-5).
 | `to` | L2 Surface | **Active** | Swap target label (within `swap(…, to: …, policy: …)`) | grammar |
 | `policy` | L2 Surface | **Active** | Swap policy label (within `swap(…, to: …, policy: …)`) | grammar |
 | `matured` | L2 Surface | **Active (reserved keyword)** | Scope-level promotion to AOT-compiled, stable form; a `matured fn` at item position is a parse error with teaching diagnostic | RFC-0017; DN-02 §7 |
-| `impl` | L2 Surface | **Active** (`Tok::Impl` lexed, M-659) | Trait implementation block (`impl Trait<X> for Y { … }`); `Tok::Impl` in the lexer; inherent-impl `impl T { … }` uses the same token; **L0 lowering LANDED M-673** — a resolved impl method runs three-way (dictionary-free static resolution; literal RFC-0019 §4.5 runtime-dictionary records deferred). NB: the *surface keyword* `impl` per M-664 (DN-03 §1) is a separate, still-`needs-design` question | DN-03 §1; RFC-0019; M-659 |
+| `impl` | L2 Surface | **Active** (`Tok::Impl` lexed, M-659) | Trait implementation block (`impl Trait<X> for Y { … }`); `Tok::Impl` in the lexer; **L0 lowering LANDED M-673** — a resolved impl method runs three-way (dictionary-free static resolution; literal RFC-0019 §4.5 runtime-dictionary records deferred). **Inherent-`impl T { … }` LANDED M-664** (DN-03 §1) — methods desugar to top-level free functions (the `object` inherent-`fn` model; KC-3, zero kernel growth); the `for_ty` is organizational metadata in v0 (no qualified `T::m` call syntax yet) | DN-03 §1; RFC-0019; M-659; M-664 |
 | `Binary` | Type | **Active** | N-bit binary representation type (`Binary{N}`); long form remains valid | RFC-0001; grammar |
 | `bin` *(short for `Binary`)* | Type | **Ratified-pending-RFC-0037** (`Declared`) | Short form: `bin{N}` — ergonomic alias for `Binary{N}`; keeps width on `{}` (kind-split). `vec` rejected — conceptual collision with `type Vec<A>` (cons-list in `lib/std/collections.myc`). Gate: T-map/T-illuminate/T-learn all pass (DN-02 2026-06-27). Lexer not changed until RFC-0037 | DN-02 2026-06-27 changelog; DN-31 kind-split revision |
 | `Ternary` | Type | **Active** | N-trit balanced-ternary type (`Ternary{N}`); long form remains valid | RFC-0001; grammar |
@@ -159,11 +164,11 @@ flips only when its tracking issue lands and `just check` is green (VR-5).
 | `Sparse` | Type qualifier | **Active** | Sparsity qualifier for VSA (`Sparse{N}`) | grammar |
 | `F16`, `BF16`, `F32`, `F64` | Scalar kind | **Active** | Scalar type keywords for Dense | grammar |
 | `Exact`, `Proven`, `Empirical`, `Declared` | Formal / Honesty | **Active** | Guarantee strength tags; type-level index `T @ Exact` (LR-6) | RFC-0001; DN-02 §7 |
-| `consume` | L2 Surface | **Reserved-not-active** — lexed (`Tok::Consume`, `token.rs`), construct lands with M-664 | Acquire exclusive ownership of an affine `substrate` (single-use semantics) | DN-03 §1 |
-| `derive` *(was `grow`)* | L2 Surface | **Active** (`Tok::Derive` lexed, M-812) | Generative-lowering **use-site** (`derive Name for T`) — applies a rule declared with `lower`. **`grow` is superseded for this construct** per DN-38 §8.1; `grow` now lexes to `Tok::Grow` and emits a teaching diagnostic pointing at `derive`. **SURFACE + STRUCTURAL checks LANDED (M-812)**; RHS elaboration to L0 + IL-grammar check + KC-3 kernel-growth guard DEFERRED (M-812-cont) — `derive` emits no L0 yet (honest residual). Companions: `via` (delegation), `reveal` (inspector, not-yet-lexed) | DN-03 §1/§6; DN-38 §8.1; DN-54; M-812 |
+| `consume` | L2 Surface | **Active** (`Tok::Consume` lexed; `consume <expr>` expression LANDED M-664) | Acquire + take exclusive ownership of an affine `Substrate` (`consume <expr>`; LR-8). The type rule is checked (operand must be `Substrate{tag}`, never-silent on any other type); execution + single-use affinity are honestly **staged** — `Substrate` has no v0 value forms / no L0 lowering, so `consume` elaborates to a never-silent `Residual` (guarantee `Declared`) | DN-03 §1; LR-8; M-664 |
+| `derive` *(was `grow`)* | L2 Surface | **Active** (`Tok::Derive` lexed, M-812) | Generative-lowering **use-site** (`derive Name for T`) — applies a rule declared with `lower`. **`grow` is superseded for this construct** per DN-38 §8.1; `grow` now lexes to `Tok::Grow` and emits a teaching diagnostic pointing at `derive`. **SURFACE + STRUCTURAL checks LANDED (M-812)**; **RHS elaboration to L0 + §4.1 IL-grammar check + §4.2 acyclicity + §6 KC-3 guard + §7 harness LANDED (M-812-cont)** — a rule's RHS lowers to closed L0 via `elab::elaborate_lower_rule` (`Empirical`); KC-3 `Proven`-by-construction (closed `Node` enum). **FLAG:** the `derive`-site consumption/attachment model (where an instantiated L0 lives, parametric instantiation) is underdetermined by DN-54 — held `Declared`, maintainer ratification pending. Companions: `via` (delegation), `reveal` (inspector, not-yet-lexed) | DN-03 §1/§6; DN-38 §8.1; DN-54; M-812 |
 | `via` | L2 Surface | **Active** (`Tok::Via` lexed, M-811) | Delegation keyword. Inside an `object { … }` body: `via N : Trait` forwards trait `Trait` to the held field at index `N` (value-semantic forwarding; no late binding, no prototype chain — DN-37 §3.3, DN-38 §8.1). **LANDED M-811** (object-surface desugar generates the forwarding impls). Companion to `derive`/`reveal` | DN-37; DN-38 §8.1; DN-53; M-811 |
 | `object` | L2 Surface | **Active** (`Tok::Object` lexed, M-811) | Object-composition surface (`object Name[params] { Ctor(…); via N : Trait; impl …; fn … }`). Pure frontend sugar: desugars to `type`+`impl`+`via`-forwarding-impls+`fn` (KC-3, `reveal`-able). **LANDED M-811** (Rust-first); item-level `pub fn` inside the body deferred | DN-53; M-811 |
-| `lower` | L2 Surface | **Active** (`Tok::Lower` lexed, M-812) | Generative-lowering **definition** (`lower Name[params]? = <rhs>`) — defines a rule applied at the use site by `derive`. **SURFACE + STRUCTURAL checks LANDED (M-812)** — rule-name + param-name uniqueness, never-silent (G2); rule registered in `Env::lower_rules`. RHS elaboration + IL-grammar/KC-3 guards DEFERRED (M-812-cont) | DN-54; DN-38; M-812 |
+| `lower` | L2 Surface | **Active** (`Tok::Lower` lexed, M-812) | Generative-lowering **definition** (`lower Name[params]? = <rhs>`) — defines a rule applied at the use site by `derive`. **SURFACE + STRUCTURAL checks LANDED (M-812)** — rule-name + param-name uniqueness, never-silent (G2); rule registered in `Env::lower_rules`. **RHS elaboration + §4.1 IL-grammar check + §4.6 purity (`wild`-refusal) + §4.2 acyclicity + §6 KC-3 guard + §7 harness LANDED (M-812-cont)** — RHS lowers through the same path a hand-written fn body takes; KC-3 `Proven`-by-construction (closed `Node` enum). NB: the RHS is a real L1 *expression* (the prelude `Bool` ctors are `True`/`False`, not `true`/`false`) | DN-54; DN-38; M-812 |
 | `reveal` | L2/tooling (future) | **Ratified — not yet lexed** | Inspector: shows the desugared L0 term for a surface form; round-trip discipline in `certified` mode. Never silent (G2 applied to the inspector itself — shows actual binding structure). Companion to `derive`/`via` | DN-38 §4/§5/§8.1 |
 | `hypha` | Runtime (future) | **Ratified — not yet lexed** | Single concurrent execution unit | DN-03 §4; RFC-0008 §4.5 |
 | `fuse` | Runtime | **Active** (`Tok::Fuse` lexed, M-667) | Lawful binary merge over a declared `Fuse` semilattice instance (RFC-0008 RT6). `fuse(a, b)` — homogeneous operands; checker verifies `Fuse` instance. **LANDED M-667** (r4v wave, 2026-06-28); repr-type execution Empirical (three-way differential); data-type fuse prim registration pending M-817 | DN-03 §4; RFC-0008 §4.5/RT6; DN-58 §A |
@@ -283,27 +288,40 @@ lang    = "mycelium-0"   # surface-language edition (MSRV-analogue)
 numerics = { phylum = "numerics", version = "^2", hash = "blake3:..." }
 ```
 
+### The `;` component terminator is MANDATORY (DN-57 §3, M-818)
+
+The delimiter triad: **`:` ascribes · `,` separates siblings · `;` terminates a component.** `;` is
+**required** at the end of **every** component — the **nodule header**, every top-level item, every
+trait signature, every `impl`/inherent method, and every `object` member. The rule is **uniform**: a
+`}`-closed block (`trait { … }`, `impl { … }`, `object { … }`) **still** takes the trailing `;` after
+the `}` (this is *not* Rust's "`}` ends the block"). A missing terminator is a never-silent parse error
+(G2) naming the component. Because the boundary is a *token* (not a newline / the absence of tokens),
+fully whitespace-free source is legal (`nodule d; fn a() => … = …;`) and the surface is streamable.
+`match` arms stay `,`-separated/`}`-delimited (`,` is internal, `;` is terminal). The terminator adds
+**no AST node**. (`mycfmt` emits `;` canonically, so a hand-omitted `;` is a one-line auto-fix.)
+
 ### Example: a minimal nodule with a swap
 
 ```mycelium
 // nodule: demo
-nodule demo
-fn f(x: Binary{8}) -> Ternary{6} =
-  swap(x, to: Ternary{6}, policy: rt)
+nodule demo;
+fn f(x: Binary{8}) => Ternary{6} =
+  swap(x, to: Ternary{6}, policy: rt);
 ```
 
 Both `to:` and `policy:` are mandatory in `swap(…)`. Omitting `policy` is a parse error (S1/WF2).
+Every component (the `nodule` header and the `fn`) ends with `;` (DN-57 §3 / M-818).
 
 ### Example: matured scope + `thaw` exception
 
 ```mycelium
 // nodule: ml.inference
 // @matured: true
-nodule ml.inference
+nodule ml.inference;
 
-fn inference_pipeline(input: Dense{1024, F32}) -> Dense{1024, F32} = input
+fn inference_pipeline(input: Dense{1024, F32}) => Dense{1024, F32} = input;
 
-thaw fn experimental_kernel(input: Dense{1024, F32}) -> Dense{1024, F32} = input
+thaw fn experimental_kernel(input: Dense{1024, F32}) => Dense{1024, F32} = input;
 ```
 
 `// @matured: true` in the header (or in `mycelium-proj.toml`) promotes the whole scope to AOT.
@@ -314,16 +332,16 @@ with a teaching diagnostic (RFC-0017 §4.1).
 
 ```mycelium
 // nodule: geometry.shapes
-nodule geometry.shapes
+nodule geometry.shapes;
 
-type Shape = Circle(Binary{8}) | Square(Binary{8}) | Triangle(Binary{8}, Binary{8})
+type Shape = Circle(Binary{8}) | Square(Binary{8}) | Triangle(Binary{8}, Binary{8});
 
-fn area(s: Shape) -> Binary{16} =
+fn area(s: Shape) => Binary{16} =
   match s {
     Circle(r)    => r,
     Square(w)    => w,
     Triangle(b, h) => b,
-  }
+  };
 ```
 
 Match coverage is checked by the **Maranget usefulness algorithm** (`crates/mycelium-l1/src/usefulness.rs`)
@@ -336,17 +354,22 @@ Match coverage is checked by the **Maranget usefulness algorithm** (`crates/myce
 The EBNF in `docs/spec/grammar/mycelium.ebnf` is the normative oracle. Key productions:
 
 ```ebnf
-program        ::= nodule_header item*
-nodule_header  ::= 'nodule' path
-item           ::= use_item | default_item | type_item | trait_item | impl_item | fn_item
-fn_item        ::= 'thaw'? 'fn' Ident type_params? '(' params? ')' '->' type_ref effect_ann? '=' expr
-type_params    ::= '<' type_param (',' type_param)* '>'
-type_param     ::= Ident (':' bound ('+' bound)*)?   /* bounded type param; bound = trait name */
+/* DN-57 §3 (M-818): `;` MANDATORY after the nodule header and every item (uniform — a `}`-closed
+ * block still takes the trailing `;`). RFC-0037: return arrow `=>`, type params `[…]`. */
+program        ::= phylum_header? nodule_block+
+nodule_block   ::= nodule_header ';' (item ';')*
+nodule_header  ::= 'nodule' path '@std-sys'?
+item           ::= use_item | default_item | type_item | trait_item | impl_item | fn_item | object_item | lower_item | derive_item
+fn_item        ::= 'pub'? 'thaw'? 'fn' Ident type_params? const_params? '(' params? ')' '=>' type_ref effect_ann? '=' expr
+type_params    ::= '[' Ident (',' Ident)* ']'         /* RFC-0037 D1: square brackets, not '<>' */
+const_params   ::= '{' Ident (',' Ident)* '}'         /* width/const params (DN-42) */
 effect_ann     ::= '!' '{' (Ident (',' Ident)*)? '}'  /* absent = pure; '!{}' = explicit pure */
 trait_item     ::= 'trait' Ident type_params? '{' fn_sig* '}'
-impl_item      ::= 'impl' Ident type_args? 'for' type_ref '{' fn_item* '}'
+impl_item      ::= 'impl' Ident type_args? 'for' type_ref '{' fn_item* '}'   /* trait instance */
+                 | 'impl' base_type '{' fn_item* '}'                        /* inherent (M-664)  */
 type_ref       ::= base_type ('@' strength)?
 swap_expr      ::= 'swap' '(' expr ',' 'to' ':' type_ref ',' 'policy' ':' path ')'
+consume_expr   ::= 'consume' app_expr   /* affine Substrate acquisition (LR-8; M-664) */
 wild_expr      ::= 'wild' '{' expr '}'
 for_expr       ::= 'for' Ident 'in' app_expr ',' Ident '=' app_expr '=>' expr
 ```

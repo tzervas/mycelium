@@ -386,6 +386,73 @@ fn elaborate_reclaim_inner(env: &Env, entry: &str) -> Result<(Node, Node), ElabE
     ))
 }
 
+/// **Elaborate a user-defined generative-lowering rule's RHS to a closed L0 [`Node`]** (DN-54
+/// §4.1/§6 / M-812-cont). This is the `crate::elab` site that **reads [`Env::lower_rules`]** — the
+/// completion the `low` (M-812) landing deferred: a `lower Name[…] = <rhs>` rule is no longer mere
+/// stored data, it elaborates to real L0.
+///
+/// The mechanism is **DRY and observation-faithful by construction**: the rule's RHS is given the
+/// **exact same** lowering path a hand-written nullary `fn <rule>%rhs() = <rhs>` would take — it is
+/// inserted as a synthetic nullary fn into a *clone* of `env` and run through the ordinary
+/// [`elaborate`]. So the §7 differential `observe(derive Name for T) == observe(hand-lowered Name)`
+/// holds **because the two go through one code path**, and the rule's observational identity is
+/// `Empirical` (earned by running, never self-attested — VR-5).
+///
+/// **§6 KC-3 (kernel-growth) — `Proven`-by-construction (narrow, checked sense):** the return type
+/// is [`Node`], a *closed* Rust enum (the frozen L0 grammar — `mycelium_core::node`). The elaborator
+/// can only ever *construct* one of those variants, so a `lower` rule **cannot** introduce a new
+/// kernel node — the type system is the side-condition that makes this `Proven`. (The checker's
+/// §4.6 `wild`-refusal closes the one *surface*-growth a rule could otherwise smuggle in.) This
+/// function does **not** *prove* an arbitrary RHS elaborates — only that **if** it does, it adds no
+/// kernel node, which is exactly KC-3.
+///
+/// **Scope / honest residual (DN-54 underdetermination — FLAGGED).** v0 elaborates a **nullary,
+/// monomorphic** rule (the landed surface — `lower Name = <expr>`): its RHS is a closed term. A
+/// **parametric** rule (`lower Name[T] = <rhs over T>`) whose RHS mentions the type parameter `T`
+/// has no monomorphic L0 form until `derive Name for <concrete>` *instantiates* `T` — and **how a
+/// `derive` site's instantiated L0 attaches to / is referenced by the surrounding program is
+/// underdetermined by DN-54** (the note's worked example RHS is an `impl` block, which is an *item*,
+/// not an [`Expr`], so it is not even expressible as a v0 rule RHS). Rather than invent that
+/// consumption semantics (G2/VR-5: a correct partial landing beats a guessed elaboration), this
+/// elaborates the rule's RHS *as written* (the param-instantiation of a non-nullary RHS surfaces as
+/// the ordinary generic [`ElabError::Residual`] from [`elaborate`]) and leaves the attachment model
+/// for the maintainer to ratify. See DN-54 §3.2/§5 and the M-812-cont FLAG.
+///
+/// # Errors
+/// [`ElabError::UnknownFn`] if `rule_name` is not a registered `lower` rule; [`ElabError::Residual`]
+/// if the RHS is outside the evaluation-complete fragment (e.g. it mentions an un-instantiated type
+/// parameter, or a `wild`/`spore`/`Substrate` site — never a fabricated artifact, G2).
+pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabError> {
+    let Some(rule) = env.lower_rules.get(rule_name) else {
+        return Err(ElabError::UnknownFn(rule_name.to_owned()));
+    };
+    // The synthetic entry name is `%`-prefixed: `%` is not a surface identifier character (the lexer
+    // forbids it), so this can never collide with a real fn / rule / constructor name (G2 — no
+    // silent shadowing). The RHS becomes its body verbatim.
+    let entry = format!("%lower-rhs%{rule_name}");
+    let synth = crate::ast::FnDecl {
+        vis: crate::ast::Vis::Private,
+        thaw: false,
+        tier: None,
+        sig: crate::ast::FnSig {
+            name: entry.clone(),
+            params: vec![],
+            value_params: vec![],
+            // The RHS may have any well-typed result; v0 elaboration does not consult the synthetic
+            // entry's declared return type (it elaborates the body), so a placeholder return type is
+            // immaterial. Use `Binary{0}` as an inert, always-valid placeholder; the checker has
+            // already validated the RHS at definition time (DN-54 §4.1), so this synthetic fn is not
+            // re-checked — it is fed straight to `elaborate`.
+            ret: crate::ast::TypeRef::unguaranteed(BaseType::Binary(WidthRef::Lit(0))),
+            effects: vec![],
+        },
+        body: rule.rhs.clone(),
+    };
+    let mut env2 = env.clone();
+    env2.fns.insert(entry.clone(), synth);
+    elaborate(&env2, &entry)
+}
+
 /// Shared front-end of [`elaborate`]/[`elaborate_colony`]: validate the entry is a closed (nullary,
 /// no dynamic guarantee) definition, build the data registry, decompose the reachable call graph into
 /// callee-first recursive SCCs (Tarjan), and elaborate each SCC's recursive binder. Returns the
@@ -940,11 +1007,26 @@ impl Elab<'_> {
             // artifact (G2).
             Expr::Wild(body) => self.elab_wild(stack, scope, body),
             Expr::Spore(_) => residual(site, "`spore` is deferred (E2-5/M-260)"),
+            // M-664: `consume` of an affine `Substrate` — `Substrate` has no v0 value/representation
+            // lowering (LR-8; it is an external-resource kind, never a repr type), so its execution
+            // is a never-silent `Residual`, exactly like every other `Substrate` site (G2/VR-5).
+            Expr::Consume(_) => residual(
+                site,
+                "`consume` of an affine `Substrate` is staged — `Substrate` has no v0 \
+                 value/representation lowering (LR-8; DN-03 §1; M-664)",
+            ),
             Expr::Colony(hyphae) => self.elab_colony(stack, scope, hyphae),
+            // RFC-0024 §4A (M-704): closures are **lowered by monomorphization** (`mono.rs`) — a
+            // lambda becomes a tag-sum constructor application + a generated `apply` dispatcher, so a
+            // raw `Expr::Lambda` never survives into elaboration (`elaborate` monomorphizes first).
+            // This arm is kept as a **defensive, never-silent** invariant (G2): a lambda reaching
+            // elaboration is an internal staging bug, surfaced as an explicit `Residual`, never a
+            // fabricated artifact.
             Expr::Lambda { .. } => residual(
                 site,
-                "`lambda` (closures) is deferred to M-704 / RFC-0024 §5 — RFC-0037 D5 reserves the \
-                 surface, there is no L0 form yet (never a fabricated artifact, G2)",
+                "internal: an `Expr::Lambda` reached elaboration — closures are lowered by \
+                 monomorphization before elaborate (RFC-0024 §4A / M-704); this is a staging \
+                 invariant break, never a silent accept (G2)",
             ),
             Expr::Ascribe(inner, _t) => {
                 // The type part is static and already checked — elaboration is transparent. RFC-0018

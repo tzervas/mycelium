@@ -117,8 +117,8 @@ fn assert_three_way(label: &str, src: &str, expected_src: &str) {
 
 /// A `main` of the given `ret` type calling `call`; the reference recomputes via `ref_body`.
 fn assert_op(label: &str, ret: &str, call: &str, ref_body: &str) {
-    let src = program(&format!("fn main() => {ret} = {call}"));
-    let expected = format!("nodule ref\nfn main() => {ret} = {ref_body}");
+    let src = program(&format!("fn main() => {ret} = {call};"));
+    let expected = format!("nodule ref;\nfn main() => {ret} = {ref_body};");
     assert_three_way(label, &src, &expected);
 }
 
@@ -336,7 +336,7 @@ fn assert_eval_refuses(label: &str, driver: &str) {
 fn badd_overflow_refuses_on_every_path() {
     assert_eval_refuses(
         "badd(255,1) overflow",
-        "fn main() => Binary{8} = badd(0b1111_1111, 0b0000_0001)",
+        "fn main() => Binary{8} = badd(0b1111_1111, 0b0000_0001);",
     );
 }
 
@@ -346,7 +346,7 @@ fn badd_overflow_refuses_on_every_path() {
 fn bsub_underflow_refuses_on_every_path() {
     assert_eval_refuses(
         "bsub(0,1) underflow",
-        "fn main() => Binary{8} = bsub(0b0000_0000, 0b0000_0001)",
+        "fn main() => Binary{8} = bsub(0b0000_0000, 0b0000_0001);",
     );
 }
 
@@ -356,7 +356,7 @@ fn bsub_underflow_refuses_on_every_path() {
 /// width param `N` cannot be both 8 and 16 (DN-42 §4 / VR-5 / S1). Never a silent widen.
 #[test]
 fn badd_mixed_widths_refuses() {
-    let src = program("fn main() => Binary{16} = badd(0b0000_0001, 0b0000_0001_0000_0000)");
+    let src = program("fn main() => Binary{16} = badd(0b0000_0001, 0b0000_0001_0000_0000);");
     let parsed = parse(&src).expect("parse should succeed");
     let err = check_nodule(&parsed)
         .expect_err("expected a never-silent width-mismatch refusal, but check succeeded")

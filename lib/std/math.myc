@@ -4,7 +4,7 @@
 // @authors: Tyler Zervas
 // @since: 2026-06-27
 // @summary: Self-hosted width-generic arithmetic/logic surface — binary add/sub + bitwise and/or/xor/not
-nodule std.math
+nodule std.math;
 
 // over Binary{N}, and balanced-ternary add/sub/mul/neg over Ternary{M} (M-718, E13-1, RFC-0031 §5 D4
 // Tier-1; DN-42 width-generics, RFC-0032 D2). Each op is WIDTH-GENERIC: one definition, monomorphized
@@ -43,47 +43,47 @@ nodule std.math
 // badd<N>: unsigned width-preserving addition. Exact on the in-range result; an overflow (carry-out)
 // is a never-silent `Overflow` refusal — never a modular wrap (G2).
 fn badd{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
-  add_bin(a, b)
+  add_bin(a, b);
 
 // bsub<N>: unsigned width-preserving subtraction. Exact on the in-range result; an underflow
 // (borrow-out below 0) is a never-silent `Overflow` refusal — never a wrap to a large value (G2).
 fn bsub{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
-  sub_bin(a, b)
+  sub_bin(a, b);
 
 // ── Binary bitwise logic over Binary{N} (total, Exact) ─────────────────────────────────────────────
 // band<N>: bitwise AND. Total, Exact over Binary{N} x Binary{N}.
 fn band{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
-  and(a, b)
+  and(a, b);
 
 // bor<N>: bitwise OR. Total, Exact.
 fn bor{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
-  or(a, b)
+  or(a, b);
 
 // bxor<N>: bitwise XOR. Total, Exact.
 fn bxor{N}(a: Binary{N}, b: Binary{N}) => Binary{N} =
-  xor(a, b)
+  xor(a, b);
 
 // bnot<N>: bitwise NOT (one's complement). Total, Exact over Binary{N}.
 fn bnot{N}(a: Binary{N}) => Binary{N} =
-  not(a)
+  not(a);
 
 // ── Balanced-ternary arithmetic over Ternary{M} (never-silent overflow) ────────────────────────────
 // tadd<M>: balanced-ternary addition. Exact on the in-range result; an out-of-range result is a
 // never-silent `Overflow` refusal (G2).
 fn tadd{M}(a: Ternary{M}, b: Ternary{M}) => Ternary{M} =
-  add(a, b)
+  add(a, b);
 
 // tsub<M>: balanced-ternary subtraction. Exact on the in-range result; out-of-range is never-silent
 // `Overflow` (G2).
 fn tsub{M}(a: Ternary{M}, b: Ternary{M}) => Ternary{M} =
-  sub(a, b)
+  sub(a, b);
 
 // tmul<M>: balanced-ternary multiplication. Exact on the in-range result; out-of-range is never-silent
 // `Overflow` (G2).
 fn tmul{M}(a: Ternary{M}, b: Ternary{M}) => Ternary{M} =
-  mul(a, b)
+  mul(a, b);
 
 // tneg<M>: balanced-ternary negation (digit-wise sign flip). Always in range, Exact — value(-t) =
 // -value(t) (balanced ternary has no sign asymmetry).
 fn tneg{M}(a: Ternary{M}) => Ternary{M} =
-  neg(a)
+  neg(a);

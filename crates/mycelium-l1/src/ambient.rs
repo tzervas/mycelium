@@ -40,9 +40,10 @@
 //! (RFC-0001 §4.6) and is fully recoverable here. See the RFC-0012 changelog (append-only).
 
 use crate::ast::{
-    AmbientParams, Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, ImplDecl, Item, Literal,
-    LowerDecl, Nodule, ObjectDecl, Paradigm, Param, ParamKind, Pattern, Phylum, Scalar, Sparsity,
-    TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath, Vis, WidthRef,
+    AmbientParams, Arm, BaseType, Ctor, DeriveDecl, Expr, FnDecl, FnSig, ImplDecl,
+    InherentImplDecl, Item, Literal, LowerDecl, Nodule, ObjectDecl, Paradigm, Param, ParamKind,
+    Pattern, Phylum, Scalar, Sparsity, TraitDecl, TraitRef, TypeDecl, TypeParam, TypeRef, UsePath,
+    Vis, WidthRef,
 };
 
 /// A never-silent refusal from the resolution pass (§4.3/§4.4) — always explicit, never a guess.
@@ -187,6 +188,11 @@ pub fn resolve_report(nodule: &Nodule) -> Result<Resolved, AmbientError> {
             // ambient integer). Pass through unchanged; the type-checker validates the RHS.
             Item::Lower(ld) => items.push(Item::Lower(ld.clone())),
             Item::Derive(dd) => items.push(Item::Derive(dd.clone())),
+            // M-664: an inherent `impl T { fn … }` block — resolve the target type + method bodies
+            // (Phase 0 desugars it to its `Item::Fn`s afterward).
+            Item::InherentImpl(id) => {
+                items.push(Item::InherentImpl(r.inherent_impl_decl(default, id)?));
+            }
         }
     }
     Ok(Resolved {
@@ -213,32 +219,55 @@ pub fn expand_to_source(nodule: &Nodule) -> String {
     // Re-emit the `@std-sys` FFI-floor marker (M-661) when present: dropping it would silently
     // relocate audited `wild` code into a non-`@std-sys` context (changing program meaning — G2),
     // so the longhand twin must round-trip the header attribute.
+    //
+    // DN-57 §3 (M-818): the nodule header is a component — it ends with a mandatory `;`. The
+    // header/body boundary is the `;` token, so the canonical form is whitespace-independent and
+    // re-parses under the mandatory-terminator grammar.
     out.push_str(&format!(
-        "nodule {}{}\n",
+        "nodule {}{};\n",
         path_str(&nodule.path),
         if nodule.std_sys { " @std-sys" } else { "" }
     ));
     for item in &nodule.items {
         out.push('\n');
-        match item {
-            Item::Use(u) => out.push_str(&print_use(u)),
-            Item::Default(p) => out.push_str(&format!("default paradigm {p}\n")),
-            Item::Type(td) => out.push_str(&print_type_decl(td)),
-            Item::Trait(td) => out.push_str(&print_trait_decl(td)),
-            Item::Impl(id) => out.push_str(&print_impl_decl(id)),
-            Item::Fn(fd) => out.push_str(&print_fn_decl(fd)),
+        // Each `print_*` emits the item text ending in `\n`; DN-57 §3 (M-818) appends the mandatory
+        // `;` component terminator via `terminate_item`, *uniformly* — a `}`-closed block (`trait`,
+        // `impl`, `object`) still gets the trailing `;`.
+        let item_text = match item {
+            Item::Use(u) => print_use(u),
+            Item::Default(p) => format!("default paradigm {p}\n"),
+            Item::Type(td) => print_type_decl(td),
+            Item::Trait(td) => print_trait_decl(td),
+            Item::Impl(id) => print_impl_decl(id),
+            Item::Fn(fd) => print_fn_decl(fd),
             // `object` declarations are rendered in surface form (not desugared) — the LSP
             // "expand ambient" shows the source as-written with paradigms filled in. After
             // Phase 0 expansion in the checker the desugared items (type + impls + fns) are in
             // scope; here we emit the pre-desugar surface so the round-trip is stable.
-            Item::Object(od) => out.push_str(&print_object_decl(od)),
+            Item::Object(od) => print_object_decl(od),
             // DN-54 / M-812: `lower`/`derive` declarations round-trip verbatim through the
             // ambient expansion pass (no ambient state to fill; rule RHS has no bare reprs).
-            Item::Lower(ld) => out.push_str(&print_lower_decl(ld)),
-            Item::Derive(dd) => out.push_str(&print_derive_decl(dd)),
-        }
+            Item::Lower(ld) => print_lower_decl(ld),
+            Item::Derive(dd) => print_derive_decl(dd),
+            // M-664: an inherent method block round-trips in surface form (pre-desugar), like
+            // `object` — the Phase 0 desugar to `Item::Fn`s happens later in the checker.
+            Item::InherentImpl(id) => print_inherent_impl_decl(id),
+        };
+        out.push_str(&terminate_item(&item_text));
     }
     out
+}
+
+/// Append the mandatory `;` component terminator (DN-57 §3, M-818) to a rendered item. Each
+/// `print_*` produces text ending in a single trailing `\n`; this replaces that `\n` with `;\n` so
+/// the item ends in exactly one `;` (uniform across expression items and `}`-closed blocks). The
+/// terminator goes *after* the closing `}` of a block item (`trait`/`impl`/`object`), matching the
+/// parser's `expect_terminator` after `}` consumption.
+fn terminate_item(item_text: &str) -> String {
+    match item_text.strip_suffix('\n') {
+        Some(body) => format!("{body};\n"),
+        None => format!("{item_text};"),
+    }
 }
 
 /// Render a whole [`Phylum`] back to canonical surface text (M-662): the optional `phylum <path>`
@@ -343,6 +372,23 @@ impl Resolver {
             for_ty,
             methods,
         })
+    }
+
+    /// Resolve an inherent method block `impl T { fn … }` (M-664): ambient-fill the target type and
+    /// every method body, mirroring [`Self::impl_decl`] minus the trait reference. The desugar in
+    /// `checkty.rs` Phase 0 then sees already-resolved `for_ty`/methods.
+    fn inherent_impl_decl(
+        &mut self,
+        amb: Option<Paradigm>,
+        id: &InherentImplDecl,
+    ) -> Result<InherentImplDecl, AmbientError> {
+        let site = "impl";
+        let for_ty = self.type_ref(amb, site, &id.for_ty)?;
+        let mut methods = Vec::with_capacity(id.methods.len());
+        for m in &id.methods {
+            methods.push(self.fn_decl(amb, m)?);
+        }
+        Ok(InherentImplDecl { for_ty, methods })
     }
 
     fn fn_decl(&mut self, amb: Option<Paradigm>, fd: &FnDecl) -> Result<FnDecl, AmbientError> {
@@ -546,6 +592,9 @@ impl Resolver {
             // value expression (deferred — E2-5/M-260), so it still resolves transparently.
             Expr::Wild(b) => Expr::Wild(b.clone()),
             Expr::Spore(b) => Expr::Spore(Box::new(self.expr(amb, site, b)?)),
+            // M-664: `consume <expr>` — resolve the operand's ambient (the operand is an ordinary
+            // value expression; the `Substrate`-type check is the checker's job).
+            Expr::Consume(b) => Expr::Consume(Box::new(self.expr(amb, site, b)?)),
             // A `lambda` body flows transparently under the same ambient (no new ambient frame); the
             // params carry their own explicit types. (Deferred form — M-704 — but resolved like any expr.)
             Expr::Lambda { params, body } => Expr::Lambda {
@@ -737,13 +786,15 @@ fn print_object_decl(od: &ObjectDecl) -> String {
         ));
     }
     for id in &od.impls {
-        // Re-use print_impl_decl but indent each line by 2 spaces.
-        for line in print_impl_decl(id).lines() {
+        // Re-use print_impl_decl but indent each line by 2 spaces; DN-57 §3 (M-818): the object
+        // `impl` member is a component — terminated by `;` after its closing `}`.
+        for line in terminate_item(&print_impl_decl(id)).lines() {
             s.push_str(&format!("  {line}\n"));
         }
     }
     for fd in &od.fns {
-        for line in print_fn_decl(fd).lines() {
+        // DN-57 §3 (M-818): each object `fn` member is a component — terminated by `;`.
+        for line in terminate_item(&print_fn_decl(fd)).lines() {
             s.push_str(&format!("  {line}\n"));
         }
     }
@@ -798,7 +849,8 @@ fn print_trait_decl(td: &TraitDecl) -> String {
     };
     let mut s = format!("{}trait {}{} {{\n", pub_str(td.vis), td.name, params);
     for sig in &td.sigs {
-        s.push_str(&format!("  fn {}\n", print_sig_tail(sig)));
+        // DN-57 §3 (M-818): each trait signature is a component — terminated by `;`.
+        s.push_str(&format!("  fn {};\n", print_sig_tail(sig)));
     }
     s.push_str("}\n");
     s
@@ -899,7 +951,19 @@ fn print_impl_decl(id: &ImplDecl) -> String {
         print_type_ref(&id.for_ty)
     );
     for m in &id.methods {
-        s.push_str(&format!("  {}", print_fn_decl(m)));
+        // DN-57 §3 (M-818): each impl method is a component — terminated by `;`.
+        s.push_str(&format!("  {}", terminate_item(&print_fn_decl(m))));
+    }
+    s.push_str("}\n");
+    s
+}
+
+/// Canonical surface form of an inherent method block `impl T { fn … }` (DN-03 §1 / M-664).
+fn print_inherent_impl_decl(id: &InherentImplDecl) -> String {
+    let mut s = format!("impl {} {{\n", print_type_ref(&id.for_ty));
+    for m in &id.methods {
+        // DN-57 §3 (M-818): each inherent method is a component — terminated by `;`.
+        s.push_str(&format!("  {}", terminate_item(&print_fn_decl(m))));
     }
     s.push_str("}\n");
     s
@@ -1039,6 +1103,7 @@ fn print_expr(e: &Expr) -> String {
         }
         Expr::Wild(b) => format!("wild {{ {} }}", print_expr(b)),
         Expr::Spore(b) => format!("spore({})", print_expr(b)),
+        Expr::Consume(b) => format!("consume {}", print_expr(b)),
         Expr::Lambda { params, body } => format!(
             "lambda({}) => {}",
             params
@@ -1085,7 +1150,10 @@ fn print_pattern(p: &Pattern) -> String {
 fn print_literal(l: &Literal) -> String {
     match l {
         Literal::Bin(s) => format!("0b{s}"),
-        Literal::Trit(s) => format!("<{s}>"),
+        // RFC-0037 D4: balanced-ternary literals use the `0t…` prefix (the angle form `<…>` was
+        // retired with D4 — `<` is operator-only). The printer must emit the active form so the
+        // round-trip `parse → expand_to_source → parse` is stable (M-818 exposed the stale `<…>`).
+        Literal::Trit(s) => format!("0t{s}"),
         // RFC-0032 D4: a `0x…` byte-string literal round-trips to its source form.
         Literal::Bytes(s) => format!("0x{s}"),
         Literal::Int(i) => format!("{i}"),

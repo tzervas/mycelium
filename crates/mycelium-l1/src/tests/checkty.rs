@@ -48,8 +48,7 @@ fn impl_fixture() -> (
     // Parse a phylum-of-one so the surface `impl` + `trait` are real AST (then strip the trait so
     // it is NOT in this nodule — the orphan scenario is "trait declared elsewhere / nowhere").
     let n = parse(
-        "nodule d\ntrait Tr[A] { fn m(x: A) => A }\n\
-         impl Tr[Binary{8}] for Binary{8} { fn m(x: Binary{8}) => Binary{8} = x }",
+        "nodule d;\ntrait Tr[A] { fn m(x: A) => A; };\nimpl Tr[Binary{8}] for Binary{8} { fn m(x: Binary{8}) => Binary{8} = x; };",
     )
     .expect("parses");
     let mut types = BTreeMap::new();
@@ -79,8 +78,7 @@ fn orphan_arm_rejects_when_neither_head_is_in_the_coherence_view() {
     // arm is unconditional, so the genuine orphan case is a `for`-type that is a non-local DATA
     // type. Build that: `for Foreign` where `Foreign` is a registered data type NOT in coherence.
     let n = parse(
-        "nodule d\ntrait Tr[A] { fn m(x: A) => A }\ntype Foreign = Mk(Binary{8})\n\
-         impl Tr[Foreign] for Foreign { fn m(x: Foreign) => Foreign = x }",
+        "nodule d;\ntrait Tr[A] { fn m(x: A) => A; };\ntype Foreign = Mk(Binary{8});\nimpl Tr[Foreign] for Foreign { fn m(x: Foreign) => Foreign = x; };",
     )
     .expect("parses");
     let mut types = BTreeMap::new();
@@ -132,8 +130,7 @@ fn a_colony_types_as_its_last_hypha() {
     // The colony's result type is the LAST hypha's (the RT2 sequentialization's observable). Here
     // the body must match the fn's `Binary{8}` return — the leading hyphae may be any type.
     let e = env(
-        "nodule d\nfn compute(x: Binary{8}) => Binary{8} = not(x)\n\
-         fn run() => Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) }",
+        "nodule d;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\nfn run() => Binary{8} = colony { hypha compute(0b0000_0001), hypha compute(0b0000_0010) };",
     );
     assert!(e.fn_decl("run").is_some());
 }
@@ -143,7 +140,7 @@ fn a_colony_whose_last_hypha_mistypes_is_an_explicit_error() {
     // The last hypha carries the colony's type, so a `Ternary` last hypha under a `Binary{8}`
     // return is a never-silent body mismatch (the bidirectional check catches it).
     let err = check_err(
-        "nodule d\nfn run() => Binary{8} = colony { hypha not(0b0000_0001), hypha 0t00+0 }",
+        "nodule d;\nfn run() => Binary{8} = colony { hypha not(0b0000_0001), hypha 0t00+0 };",
     );
     assert!(
         err.message.contains("body") || err.message.contains("expected"),
@@ -157,7 +154,7 @@ fn a_leading_hypha_that_does_not_type_check_is_still_an_error() {
     // RT4/I1: a leading hypha's refusal is never silently dropped — an ill-typed leading hypha
     // (an unknown name) fails the whole colony check.
     let err = check_err(
-        "nodule d\nfn run() => Binary{8} = colony { hypha nope(0b0), hypha not(0b0000_0001) }",
+        "nodule d;\nfn run() => Binary{8} = colony { hypha nope(0b0), hypha not(0b0000_0001) };",
     );
     assert!(
         err.message.contains("nope") || err.message.contains("unknown"),
@@ -178,9 +175,7 @@ fn check_error_at_is_a_public_alias() {
 #[test]
 fn env_getters_mirror_the_public_maps() {
     // A program with a data type and two functions, one recursive (so totality is filled).
-    let e = env("nodule d\ntype Nat = Z | S(Nat)\n\
-         fn count(n: Nat) => Nat = match n { Z => Z, S(m) => S(count(m)) }\n\
-         fn main() => Nat = count(S(Z))");
+    let e = env("nodule d;\ntype Nat = Z | S(Nat);\nfn count(n: Nat) => Nat = match n { Z => Z, S(m) => S(count(m)) };\nfn main() => Nat = count(S(Z));");
     // type_info ⇔ types.get
     assert_eq!(e.type_info("Nat"), e.types.get("Nat"));
     assert!(e.type_info("Nat").is_some());
@@ -254,25 +249,31 @@ mod depth_budget_tests {
     }
 }
 
-// ---- DN-54 / M-812: lower / derive validation (check-time) ----------------------------------
+// ---- DN-54 / M-812-cont: lower / derive validation (check-time) ------------------------------
+//
+// Note on RHS spelling: a `lower` rule's RHS is a real L1 expression, now **type-checked** (DN-54
+// §4.1). The boolean constant is the prelude `Bool` constructor `True`/`False` (capitalised) — the
+// lowercase `true`/`false` are *not* L1 names (M-812-cont discovery: the prior structural-only check
+// accepted `lower X = true`, but that RHS is ill-typed — it now refuses, as it must).
 
 /// A `lower` rule is registered in `Env::lower_rules` after a successful check.
 #[test]
 fn lower_rule_is_registered_in_env() {
-    let e = env("nodule d\nlower Trivial = true");
+    let e = env("nodule d;\nlower Trivial = True;");
     assert!(
         e.lower_rules.contains_key("Trivial"),
-        "`lower Trivial = true` must register the rule name in Env::lower_rules"
+        "`lower Trivial = True` must register the rule name in Env::lower_rules"
     );
 }
 
-/// A parametric `lower` rule with one type param is registered.
+/// A parametric `lower` rule with one type param is registered. The RHS (`True`) does not mention
+/// the type param, so it type-checks under the param scope (DN-54 §4.1).
 #[test]
 fn lower_rule_with_param_is_registered() {
-    let e = env("nodule d\nlower Wrap[T] = true");
+    let e = env("nodule d;\nlower Wrap[T] = True;");
     assert!(
         e.lower_rules.contains_key("Wrap"),
-        "`lower Wrap[T] = true` must register the rule name in Env::lower_rules"
+        "`lower Wrap[T] = True` must register the rule name in Env::lower_rules"
     );
     assert_eq!(
         e.lower_rules["Wrap"].params,
@@ -284,14 +285,14 @@ fn lower_rule_with_param_is_registered() {
 /// A `derive` application referencing a declared rule must check successfully.
 #[test]
 fn derive_referencing_known_rule_checks() {
-    // `derive Trivial for Binary{8}` must check when `lower Trivial = true` is declared first.
-    let _ = env("nodule d\nlower Trivial = true\nderive Trivial for Binary{8}");
+    // `derive Trivial for Binary{8}` must check when `lower Trivial = True` is declared first.
+    let _ = env("nodule d;\nlower Trivial = True;\nderive Trivial for Binary{8};");
 }
 
 /// A duplicate `lower` rule name in the same nodule is a never-silent check error (G2).
 #[test]
 fn lower_duplicate_rule_name_is_refused() {
-    let err = check_err("nodule d\nlower Trivial = true\nlower Trivial = false");
+    let err = check_err("nodule d;\nlower Trivial = True;\nlower Trivial = False;");
     assert!(
         err.message.contains("duplicate"),
         "expected duplicate-rule error, got: {}",
@@ -307,7 +308,7 @@ fn lower_duplicate_rule_name_is_refused() {
 /// Duplicate parameter names in `lower Name[T, T, …]` is a never-silent check error (G2).
 #[test]
 fn lower_duplicate_param_is_refused() {
-    let err = check_err("nodule d\nlower Bad[T, T] = true");
+    let err = check_err("nodule d;\nlower Bad[T, T] = True;");
     assert!(
         err.message.contains("duplicate"),
         "expected duplicate-param error, got: {}",
@@ -318,7 +319,7 @@ fn lower_duplicate_param_is_refused() {
 /// A `derive` referencing an unknown rule name is a never-silent check error (G2).
 #[test]
 fn derive_unknown_rule_name_is_refused() {
-    let err = check_err("nodule d\nderive UnknownRule for Binary{8}");
+    let err = check_err("nodule d;\nderive UnknownRule for Binary{8};");
     assert!(
         err.message.contains("unknown"),
         "expected unknown-rule error, got: {}",
@@ -331,31 +332,158 @@ fn derive_unknown_rule_name_is_refused() {
     );
 }
 
-// ---- DN-54 / M-812 INTEGRATION GUARD: the honest "residual" posture (KC-3 by absence) --------
-//
-// **Load-bearing safety check for the obj+low integration (DN-54 §4.1/§4.6/§6).** DN-54's checker
-// does the *structural* checks (rule-name uniqueness, param uniqueness, `derive` name-resolution),
-// but it **does not yet elaborate** a `lower`/`derive` rule to real L0 — `crate::elab` never reads
-// `Env::lower_rules`, so a `derive` produces **no** L0 term. The two deferred completions
-// (M-812-cont) are exactly the guards that would matter *once derive elaborates*:
-//   (1) the **IL-grammar RHS type-check** (infer_type the RHS, reject mutation/FFI/`wild`), and
-//   (2) the **KC-3 kernel-growth guard** (the elaborated RHS must lower to existing L0 nodes only).
-// Neither is implementable-yet-meaningful while derive emits nothing; landing them as no-ops would
-// over-claim (VR-5). Instead these tests **pin the honest posture** so a future change that starts
-// elaborating `derive` cannot silently skip the guards: they assert derive adds *no* L0 today, and
-// that the structural refusals are never-silent (G2). DN-54's tag stays `Declared` accordingly.
+// ---- DN-54 §4.1 IL-grammar RHS type-check (M-812-cont) ---------------------------------------
 
-/// `lower`/`derive` items add **no** L0 to an entry that does not reference them: an entry's
-/// elaborated L0 is byte-identical with and without a `lower`+`derive` pair in the same nodule.
-/// This pins KC-3-by-absence — derive is a structural-check-only residual, it emits no kernel node
-/// (DN-54 §6). When derive *does* start elaborating (M-812-cont), this test must be revisited
-/// alongside the KC-3 / IL-grammar guards — it is the canary that the residual posture changed.
+/// §4.1: an **ill-typed** `lower` RHS is refused at definition time (G2). `nope` is not a name in
+/// scope, so the RHS fails the IL-grammar / type check — no `derive` site can invoke a broken rule.
+#[test]
+fn lower_rule_with_ill_typed_rhs_is_refused() {
+    let err = check_err("nodule d;\nlower Bad = nope;");
+    assert!(
+        err.message.contains("IL-grammar") || err.message.contains("type check"),
+        "expected an IL-grammar/type-check refusal, got: {}",
+        err.message
+    );
+}
+
+/// §4.1: a RHS that uses an in-scope name typed correctly is accepted — here a real L1 literal.
+#[test]
+fn lower_rule_with_well_typed_literal_rhs_is_accepted() {
+    let e = env("nodule d;\nlower Eight = 0b0000_0001;");
+    assert!(e.lower_rules.contains_key("Eight"));
+}
+
+// ---- DN-54 §4.6 purity: no `wild` in a lowering rule's RHS (M-812-cont) ----------------------
+
+/// §4.6: a `lower` rule's RHS may not contain a `wild { … }` block — a generative-lowering rule is
+/// a pure compile-time mechanism (the FFI gate is level-independent — DN-38 §3). The refusal is
+/// **structural** and names DN-54 §4.6, so it holds even in an `@std-sys` nodule (G2). We assert
+/// the refusal fires; the diagnostic cites §4.6 (it may surface as the explicit `wild`-refusal or,
+/// for a non-`@std-sys` nodule, as the §4.1 type-check refusal of the `wild` gate — both are
+/// never-silent rejections of the rule, which is the load-bearing property).
+#[test]
+fn lower_rule_with_wild_rhs_is_refused() {
+    let err = check_err("nodule d;\nlower Impure = wild { host_call() };");
+    assert!(
+        err.message.contains("wild")
+            || err.message.contains("§4.6")
+            || err.message.contains("IL-grammar"),
+        "expected a never-silent refusal of a `wild`-bearing lower rule, got: {}",
+        err.message
+    );
+}
+
+// ---- DN-54 §4.2 cross-rule acyclicity (M-812-cont) ------------------------------------------
+
+/// §4.2: a `lower` rule whose RHS references **itself** is refused (the trivial cycle) — the
+/// lowering-rule graph must be acyclic so `derive` terminates (G2). `Loop`'s RHS is a bare path to
+/// `Loop`, which is a registered rule name ⇒ a self-edge.
+#[test]
+fn lower_rule_self_reference_is_refused() {
+    let err = check_err("nodule d;\nlower Loop = Loop;");
+    assert!(
+        err.message.contains("cycle") || err.message.contains("itself"),
+        "expected an acyclicity (self-reference) refusal, got: {}",
+        err.message
+    );
+}
+
+/// §4.2: two `lower` rules that reference each other form a cycle and are refused (G2). `A`'s RHS
+/// names `B` and `B`'s RHS names `A` — a 2-cycle in the rule graph.
+#[test]
+fn lower_rules_mutual_cycle_is_refused() {
+    let err = check_err("nodule d;\nlower A = B;\nlower B = A;");
+    assert!(
+        err.message.contains("cycle"),
+        "expected a mutual-cycle refusal, got: {}",
+        err.message
+    );
+}
+
+/// §4.2 regression (M-812-cont review): a single-segment RHS path that *resolves as a constructor*
+/// is an ordinary value reference, not a rule expansion — so it must **not** count as a rule-graph
+/// edge even when a `lower` rule shares the constructor's name. Here `Mk` is both a registered
+/// constructor (of `T`) and a `lower` rule; `lower Mk`'s RHS constructs via the ctor `Mk`. Before the
+/// ctor/fn exclusion in `check_lower_rule_acyclicity`, this was a **false-positive** self-cycle
+/// ("`lower Mk` references itself"); the edge filter now narrows to true rule-refs, so the valid
+/// program is accepted. Safe-direction (the filter only *removes* spurious edges; a genuine rule→rule
+/// reference is, by §4.1 RHS type-check, never a ctor/fn of the same spelling).
+#[test]
+fn a_lower_rule_named_like_a_ctor_does_not_self_cycle() {
+    let e = env("nodule d;\ntype T = Mk(Binary{8});\nlower Mk = Mk(0b0000_0001);");
+    assert!(
+        e.lower_rules.contains_key("Mk"),
+        "the `lower Mk` rule registers despite sharing the ctor name `Mk` (no false self-cycle)"
+    );
+}
+
+// ---- DN-54 §6 KC-3 + RHS elaboration to L0 (M-812-cont) -------------------------------------
+//
+// `low` (M-812) landed `lower`/`derive` as a structural-check-only **residual** (`crate::elab`
+// never read `Env::lower_rules`, so a `derive` emitted no L0). M-812-cont lands the load-bearing
+// safety + the elaboration: `elaborate_lower_rule` reads `Env::lower_rules` and lowers a rule's RHS
+// to a closed L0 `Node` via the **same** path a hand-written nullary fn takes (so the §7
+// differential holds by construction; honest tag `Empirical`). KC-3 is `Proven`-by-construction in
+// the narrow checked sense: the elaborator's codomain is the *closed* enum `mycelium_core::Node`, so
+// a rule cannot add a kernel node — see the assertion below.
+
+/// **RHS elaboration**: a nullary, monomorphic `lower` rule now elaborates to a closed L0 `Node`
+/// (no longer a residual). `elaborate_lower_rule` reads `Env::lower_rules` — the M-812-cont
+/// completion. The rule's RHS lowers through the same path a hand-written fn would (DRY).
+#[test]
+fn lower_rule_elaborates_its_rhs_to_l0() {
+    let e = env("nodule d;\nlower Eight = 0b0000_0001;");
+    let node = crate::elab::elaborate_lower_rule(&e, "Eight").expect("rule RHS elaborates to L0");
+    // The hand-lowered equivalent: a fn whose body is the same RHS.
+    let hand = env("nodule d;\nfn eight() => Binary{8} = 0b0000_0001;");
+    let hand_node = crate::elab::elaborate(&hand, "eight").expect("hand-lowered fn elaborates");
+    assert_eq!(
+        format!("{node:?}"),
+        format!("{hand_node:?}"),
+        "DN-54 §7 differential (structural): `elaborate_lower_rule(Eight)` must equal the \
+         hand-lowered `fn eight() = 0b0000_0001` — they go through one code path"
+    );
+}
+
+/// **KC-3 by construction (DN-54 §6)**: the elaborated L0 of a `lower` rule contains **only** the
+/// frozen `mycelium_core::Node` variants — a rule adds no new kernel node. The codomain of the
+/// elaborator is the closed `Node` enum (the type system is the checked side-condition), so this is
+/// `Proven`-by-construction. We confirm the produced node is one of the frozen variants and that its
+/// whole tree is in the AOT-lowerable v0 fragment (a total predicate over the frozen node set) — a
+/// non-vacuous, never-silent assertion that no out-of-kernel form was synthesised.
+#[test]
+fn lower_rule_elaboration_adds_no_kernel_node_kc3() {
+    let e = env("nodule d;\nlower Eight = 0b0000_0001;");
+    let node = crate::elab::elaborate_lower_rule(&e, "Eight").expect("rule RHS elaborates");
+    // The node is one of the frozen L0 variants (closed enum) — KC-3 by construction.
+    assert!(
+        node.is_aot_lowerable(),
+        "the elaborated rule must lie entirely within the frozen v0 L0 node set (DN-54 §6 / KC-3)"
+    );
+}
+
+/// An **unknown** rule name passed to `elaborate_lower_rule` is a never-silent `UnknownFn`, never a
+/// fabricated artifact (G2).
+#[test]
+fn elaborate_lower_rule_unknown_is_refused() {
+    let e = env("nodule d;\nlower Eight = 0b0000_0001;");
+    let err = crate::elab::elaborate_lower_rule(&e, "Nope").expect_err("unknown rule must refuse");
+    assert!(
+        matches!(err, crate::elab::ElabError::UnknownFn(ref n) if n == "Nope"),
+        "expected UnknownFn(\"Nope\"), got: {err:?}"
+    );
+}
+
+/// **KC-3 by absence still holds for an unrelated entry**: a `lower`/`derive` pair adds no L0 to an
+/// entry that does not reference it (the rule's L0 is produced *on demand* by
+/// `elaborate_lower_rule`, never spliced into an unrelated `main`). This is the descendant of the
+/// `low`-era residual guard test — the elaboration is now real, but it stays *out* of any entry
+/// that does not derive it.
 #[test]
 fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
-    let plain = env("nodule d\nfn main() => Binary{8} = 0b00000001");
+    let plain = env("nodule d;\nfn main() => Binary{8} = 0b00000001;");
     let with_rules = env(
-        "nodule d\nlower Trivial = true\nderive Trivial for Binary{8}\n\
-         fn main() => Binary{8} = 0b00000001",
+        "nodule d;\nlower Trivial = True;\nderive Trivial for Binary{8};\nfn main() => Binary{8} = 0b00000001;",
     );
     let node_plain = crate::elab::elaborate(&plain, "main").expect("plain entry elaborates");
     let node_rules =
@@ -364,33 +492,6 @@ fn lower_derive_items_add_no_l0_to_an_unrelated_entry() {
         format!("{node_plain:?}"),
         format!("{node_rules:?}"),
         "a `lower`/`derive` pair must add NO L0 to an unrelated entry (DN-54 §6, KC-3 by absence; \
-         derive is a structural-check-only residual — it elaborates to no kernel node)"
-    );
-}
-
-/// The `lower` RHS is **registered verbatim** but **never elaborated** — there is no path from
-/// `crate::elab::elaborate` into `Env::lower_rules`. We assert the stored RHS round-trips
-/// unchanged (the rule is data, not yet code), documenting that RHS IL-grammar checking + KC-3
-/// kernel-growth checking are the deferred completions (M-812-cont), held at `Declared` (VR-5).
-#[test]
-fn lower_rule_rhs_is_stored_not_elaborated() {
-    // The RHS as it parses standalone (a path expression `true`) — the rule must store *this exact*
-    // tree, un-elaborated and un-rewritten.
-    let standalone = parse("nodule d\nfn r() => Binary{8} = true").expect("parses");
-    let crate::ast::Item::Fn(fd) = &standalone.items[0] else {
-        panic!("expected a fn item");
-    };
-    let rhs_as_parsed = fd.body.clone();
-
-    let e = env("nodule d\nlower Trivial = true");
-    let ld = e
-        .lower_rules
-        .get("Trivial")
-        .expect("Trivial rule is registered");
-    // The `lower` RHS is stored verbatim (data), not lowered and not IL-grammar-type-checked yet
-    // (those are the M-812-cont completions; held at `Declared`, VR-5).
-    assert_eq!(
-        ld.rhs, rhs_as_parsed,
-        "the `lower` RHS must be stored verbatim (data), confirming it is not yet elaborated to L0"
+         a rule's L0 is produced on demand, not spliced into an unrelated `main`)"
     );
 }
