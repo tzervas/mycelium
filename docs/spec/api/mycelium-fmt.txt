@@ -47,4 +47,5 @@ impl core::marker::UnsafeUnpin for mycelium_fmt::Formatted
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_fmt::Formatted
 impl core::panic::unwind_safe::UnwindSafe for mycelium_fmt::Formatted
 pub const mycelium_fmt::MYCFMT_VERSION: &str
+pub fn mycelium_fmt::flatten_source(&str, core::option::Option<&str>) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>
 pub fn mycelium_fmt::format_source(&str, core::option::Option<&str>) -> core::result::Result<mycelium_fmt::Formatted, mycelium_fmt::FmtError>

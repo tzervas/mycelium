@@ -8,6 +8,50 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-29: next-wave — M-819 `mycfmt --flatten`, M-820 `myc --stream`, M-677 effect budgets, M-668 DN-63 R2 planning)
+
+- **`mycfmt --flatten` — single-line human↔stream form (M-819; DN-57 §2).** A new formatter mode
+  emits a whole nodule on one line (`nodule d; item1; item2;`), the unambiguous stream form that the
+  mandatory `;` (M-818) makes well-defined. Renders from the AST via the existing canonical machinery
+  (a layout-policy switch, not a parallel formatter); comments and `// @key:` structured-header
+  metadata are stripped, recorded explicitly in the result notes (G2, never silent). Round-trip
+  `parse(flatten(src)) == parse(canonical(src))` is `Empirical` (corpus plus conformance over the full
+  accept set). The `--flatten --write` combination is refused explicitly.
+- **`myc --stream` — streaming-parse CLI entry (M-820; DN-57 §2).** Consumes `;`-terminated
+  components from stdin or a file. The splitter is token-driven: it lexes via
+  `mycelium_l1::lexer::lex`, segments the token stream at `Tok::Nodule` header tokens, and checks each
+  segment ends with the `Tok::Semi` terminator, so a `nodule` or `;` inside a comment or string literal
+  can never mis-split (comment-safe by construction, `Empirical`). Never-silent on malformed input —
+  explicit located `myc-stream-lex` / `-parse` / `-eof` / `-empty` diagnostics, and a failed component
+  does not abort the good ones (G2). v0 buffers the whole input (`Declared`); true per-component
+  incremental I/O awaits a resumable parser entry in `mycelium-l1` (flagged follow-up).
+- **Declared effects now consume a runtime budget ledger, plus per-effect budget syntax (M-677;
+  RFC-0014 §3.4/§4.5 I4).** A fn's declared effects are threaded through evaluation into the
+  `mycelium-interp` budget ledger (M-353): the ledger is primed per invocation with the fn's ceiling,
+  one unit is consumed per budgeted effect, and an overrun yields the explicit `EffectBudgetExhausted`
+  (`L1Error::EffectBudget`), never a hang or OOM (G2). Surface syntax extends the effect annotation
+  with an optional bound — `!{retry(<=3), alloc(<=64KiB)}` — parsed as `eff(<=N)` with an optional
+  binary-size suffix (`KiB`/`MiB`/`GiB`, folded to a byte count); a zero budget and a duplicate effect
+  name are explicit refusals. **KC-3 preserved: no new L0 node** — the budget is a
+  `FnSig.effect_budgets` field threaded as metadata, with `mycelium-core` untouched. Budget
+  monotonicity and the under/at/over-budget paths are tested, and the M-210 three-way differential
+  agrees (`Empirical`, v0 per-call model).
+- **Integration fix (M-677 with M-819): `mycfmt` now renders the budget bounds.** The formatter
+  emitted only the effect names (`!{retry, alloc}`), which would have silently dropped the `(<=N)`
+  bounds and broken round-trip for budgeted fns; it now renders `name(<=N)` (raw byte count,
+  AST-equal), with a regression test that compares against the original parsed AST.
+- **DN-63 — RFC-0008 R2 distribution-vocabulary planning (M-668, `Draft`).** New design note
+  decomposing the six R2 constructs (`xloc`, `mesh`, `cyst`, `graft`, `forage`, `backbone`) into
+  per-construct implementation-RFC tracks with dependency ordering
+  (`forage` then `backbone` then `mesh` then `graft` then `xloc` then `cyst`), per-construct
+  typing/elaboration sketches, and honest guarantee tags (all `Declared` at planning stage; `mesh`
+  probabilistic RT5/T4.2, `xloc` fallible RT4). R2 is explicitly gated on R1 completion (M-667).
+  Surfaces a maintainer decision — `backbone` declared-vs-promoted (manifest-level vs runtime) — to
+  settle before its implementation RFC.
+- **Verified:** `cargo build --workspace` clean (the M-677 `FnSig` field is additive, so no fmt/cli
+  exhaustive-match break); `cargo test` green for `mycelium-l1`/`-fmt`/`-cli`/`-interp`; clippy
+  `-D warnings` clean. Full `just check` run at the dev landing.
+
 ### Changed (2026-06-29: strm — M-818 mandatory `;` component terminator (DN-57); closes M-821)
 
 - **`;` is now the MANDATORY component terminator (DN-57 follow-on; M-818).** Required after the

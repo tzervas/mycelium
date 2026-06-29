@@ -22,7 +22,7 @@ use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::elab::build_registry;
 use mycelium_l1::{
     check_nodule, check_phylum, elaborate, monomorphize, parse, parse_phylum, ElabError, Evaluator,
-    L1Error,
+    L1Error, L1Value,
 };
 use mycelium_numerics::Certificate;
 
@@ -1633,4 +1633,72 @@ fn reclaim_real_supervision_driver_dispatches_with_explain() {
         ),
         other => panic!("expected a bounded supervised escalation, got: {other}"),
     }
+}
+
+/// **M-677 (RFC-0014 §4.5 I4) differential:** a budgeted fn with an `effect_budgets` ceiling
+/// that is never overrun must produce the **same observable** from L1-eval as from
+/// elaborate→L0-interp — the budget plumbing is meaning-preserving when under budget (NFR-7).
+///
+/// Guarantee: `Empirical` (a genuine three-way differential — L1-eval ≡ elaborate→L0-interp ≡
+/// AOT env-machine with the effect ledger threaded — not a mechanized proof; VR-5). The AOT arm
+/// threads an ample ledger via `run_core_with_effects`, the same observable-transparency basis as
+/// the M-353 test above (an under-budget ledger perturbs nothing; the overrun refusal is tested on
+/// the `mycelium-mlir` runtime path).
+#[test]
+fn m677_budgeted_fn_under_budget_is_differential_observable_equivalent() {
+    // A straight-line (elaboratable) fn with `!{retry(<=1)}` — the ceiling will never be
+    // exceeded because the L1-eval's fresh-ledger-per-call model primes retry=1 and consumes
+    // 1 → 0 remaining on this single invocation. Observable: not(0b1011_0010) = 0b0100_1101.
+    let src = "nodule d;\nfn main() => Binary{8} !{retry(<=1)} = not(0b1011_0010);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+    let node = elaborate(&env, "main").expect("elaborates — pure straight-line is in the fragment");
+
+    // L1-eval path (with budget ledger wired, M-677).
+    let l1_v = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect("under budget — succeeds");
+    let L1Value::Repr(l1_repr) = l1_v else {
+        panic!("expected repr value from L1-eval")
+    };
+
+    // L0-interp path (no budget ledger — the reference semantics).
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    let l0_core = interp.eval_core(&node).expect("L0-interp runs");
+    let mycelium_core::CoreValue::Repr(l0_repr) = l0_core else {
+        panic!("expected repr from L0-interp")
+    };
+
+    assert_eq!(
+        observable(&l1_repr),
+        observable(&l0_repr),
+        "M-677: budgeted fn under budget must agree on the observable (L1-eval == L0-interp, NFR-7)"
+    );
+
+    // Path 3: the same L0 term through the AOT env-machine with the effect ledger threaded
+    // (`run_core_with_effects`, M-353/M-677). An ample ledger never overruns, so threading it is
+    // observable-transparent (NFR-7) — the AOT observable must match the other two paths.
+    use mycelium_interp::{Budgets, EffectBudget};
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+    let mut budgets = Budgets::new().with(EffectBudget::Bytes(1 << 30));
+    let aot_core = mycelium_mlir::run_core_with_effects(
+        &node,
+        &prims,
+        &engine,
+        1_000_000,
+        1_000_000,
+        &mut budgets,
+    )
+    .expect("AOT env-machine runs the budgeted fn under an ample ledger");
+    let mycelium_core::CoreValue::Repr(aot_repr) = aot_core else {
+        panic!("expected repr from the AOT env-machine")
+    };
+    assert_eq!(
+        observable(&l0_repr),
+        observable(&aot_repr),
+        "M-677: budgeted fn under budget must agree on the observable (L0-interp == AOT, NFR-7)"
+    );
 }

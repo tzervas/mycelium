@@ -142,6 +142,7 @@ fn fn_sig_param_names_drops_bounds() {
         value_params: vec![],
         ret: TypeRef::unguaranteed(BaseType::Binary(WidthRef::Lit(1))),
         effects: vec![],
+        effect_budgets: std::collections::BTreeMap::new(),
     };
     assert_eq!(sig.param_names(), vec!["T".to_owned(), "U".to_owned()]);
 }
