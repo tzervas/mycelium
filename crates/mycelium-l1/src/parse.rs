@@ -209,6 +209,34 @@ impl Parser {
         }
     }
 
+    /// Consume the **mandatory** `;` component terminator (DN-57 §3, enacted M-818). Every
+    /// component — a top-level item, a trait signature, an `impl`/object method, an object `via`
+    /// clause, **and the nodule header itself** — ends with exactly one `;`, *uniformly and
+    /// regardless of how its body ends*: a `}`-terminated component (`trait { … }`, `impl { … }`,
+    /// `object { … }`) still requires the trailing `;`. This makes the end-of-component a single
+    /// terminal *token* (never the *absence* of more tokens / a newline), so whitespace-free source
+    /// (`nodule d; fn a() => … = …;`) is legal and a streaming parser can emit a completed
+    /// component the instant it sees `;` — the full streaming guarantee.
+    ///
+    /// Never-silent (G2): a missing terminator is an explicit [`ParseError`] naming the component
+    /// and where the `;` belongs — never a silently-accepted run-on. `what` is the component name
+    /// (e.g. `"function definition"`).
+    fn expect_terminator(&mut self, what: &str) -> Result<(), ParseError> {
+        if self.eat(&Tok::Semi) {
+            Ok(())
+        } else {
+            Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "expected `;` to terminate this {what} (DN-57: `;` is the mandatory \
+                     component terminator — every component ends with `;`, including a \
+                     `}}`-closed block), found {:?}",
+                    self.cur()
+                ),
+            ))
+        }
+    }
+
     // ---- recursion budget (A4-02 / DN-40 A1·A2) ----
     //
     // Every recursive-descent entry point that can nest on the *host* stack — the expression
@@ -272,8 +300,6 @@ impl Parser {
                 }
             }
             items.push(parse_one(self)?);
-            // DN-57: an optional `;` terminates a component (whitespace-independent / streamable).
-            self.eat(&Tok::Semi);
         }
         Ok(items)
     }
@@ -400,11 +426,15 @@ impl Parser {
         // Optional `@std-sys` FFI-floor header marker (M-661). It is the audited-FFI *context* gate;
         // it carries no further syntax (no `: true`/`: false` — its mere presence is the attribute).
         let std_sys = self.eat(&Tok::AtStdSys);
+        // DN-57 §3 (M-818): the nodule header is itself a component — it ends with a mandatory `;`.
+        // This is what makes fully whitespace-free source (`nodule d; fn a() => … = …;`) legal: the
+        // header/body boundary is the `;` token, not a newline.
+        self.expect_terminator("nodule header")?;
         let mut items = Vec::new();
         // Stop at the next `nodule` (the start of a sibling nodule in a phylum) or EOF.
         while !self.at(&Tok::Eof) && !self.at(&Tok::Nodule) {
             items.push(self.parse_item()?);
-            self.eat(&Tok::Semi); // DN-57: optional component terminator
+            self.expect_terminator("item")?; // DN-57 §3 (M-818): mandatory component terminator
         }
         Ok(Nodule {
             path,
@@ -679,7 +709,7 @@ impl Parser {
         let mut sigs = Vec::new();
         while !self.at(&Tok::RBrace) {
             sigs.push(self.parse_fn_sig()?);
-            self.eat(&Tok::Semi); // DN-57: optional component terminator
+            self.expect_terminator("trait signature")?; // DN-57 §3 (M-818)
         }
         self.expect(&Tok::RBrace, "`}` to close the trait body")?;
         Ok(TraitDecl {
@@ -1114,7 +1144,7 @@ impl Parser {
                 ));
             }
             methods.push(self.parse_fn_decl(Vis::Private)?);
-            self.eat(&Tok::Semi); // DN-57: optional component terminator
+            self.expect_terminator("impl method")?; // DN-57 §3 (M-818)
         }
         self.expect(&Tok::RBrace, "`}` to close the `impl` body")?;
         Ok(methods)
@@ -1205,7 +1235,7 @@ impl Parser {
                     )?;
                     let trait_name = self.ident()?;
                     let trait_args = self.parse_type_args_opt()?;
-                    self.eat(&Tok::Semi); // DN-57: optional component terminator
+                    self.expect_terminator("`via` delegation clause")?; // DN-57 §3 (M-818)
                     via_decls.push(ViaDecl {
                         field_idx,
                         trait_name,
@@ -1215,12 +1245,12 @@ impl Parser {
                 // `impl Trait for …` — explicit trait instance inside the object body.
                 Tok::Impl => {
                     impls.push(self.parse_impl_decl()?);
-                    self.eat(&Tok::Semi); // DN-57: optional component terminator
+                    self.expect_terminator("object `impl` member")?; // DN-57 §3 (M-818)
                 }
                 // `fn …` / `thaw fn …` — inherent function.
                 Tok::Fn | Tok::Thaw => {
                     fns.push(self.parse_fn_decl(Vis::Private)?);
-                    self.eat(&Tok::Semi); // DN-57: optional component terminator
+                    self.expect_terminator("object `fn` member")?; // DN-57 §3 (M-818)
                 }
                 // `pub` inside an object body is not supported — methods/impl items are not
                 // re-exported independently; the object itself carries its `pub` vis (G2).

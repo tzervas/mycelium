@@ -37,25 +37,25 @@ fn observable(v: &Value) -> Observable<'_> {
 fn corpus() -> Vec<&'static str> {
     vec![
         // bare literal
-        "nodule d\nfn main() => Binary{8} = 0b1011_0010",
+        "nodule d;\nfn main() => Binary{8} = 0b1011_0010;",
         // let / var
-        "nodule d\nfn main() => Binary{8} = let a = 0b1011_0010 in a",
+        "nodule d;\nfn main() => Binary{8} = let a = 0b1011_0010 in a;",
         // unary + binary bit ops
-        "nodule d\nfn main() => Binary{8} = not(0b1011_0010)",
-        "nodule d\nfn main() => Binary{8} = xor(0b1011_0010, 0b1111_1111)",
+        "nodule d;\nfn main() => Binary{8} = not(0b1011_0010);",
+        "nodule d;\nfn main() => Binary{8} = xor(0b1011_0010, 0b1111_1111);",
         // balanced-ternary arithmetic (in range — never a silent wrap)
-        "nodule d\nfn main() => Ternary{4} = add(0t00+-, 0t0+0-)",
-        "nodule d\nfn main() => Ternary{4} = mul(0t00+0, 0t00-0)",
+        "nodule d;\nfn main() => Ternary{4} = add(0t00+-, 0t0+0-);",
+        "nodule d;\nfn main() => Ternary{4} = mul(0t00+0, 0t00-0);",
         // RFC-0025 / M-705: the SAME programs written with infix/prefix operator sugar. Each
         // desugars (frontend-only, KC-3) to the canonical word call above, so all three paths
         // (L1-eval ≡ L0-interp ≡ AOT) must agree on it exactly as on the word form — pinning the
         // sugar↔word equivalence end-to-end through the trusted prim registry.
-        "nodule d\nfn main() => Binary{8} = 0b1011_0010 ^ 0b1111_1111",
-        "nodule d\nfn main() => Binary{8} = !0b1011_0010",
-        "nodule d\nfn main() => Ternary{4} = 0t00+- + 0t0+0-",
-        "nodule d\nfn main() => Ternary{4} = 0t00+0 * 0t00-0",
+        "nodule d;\nfn main() => Binary{8} = 0b1011_0010 ^ 0b1111_1111;",
+        "nodule d;\nfn main() => Binary{8} = !0b1011_0010;",
+        "nodule d;\nfn main() => Ternary{4} = 0t00+- + 0t0+0-;",
+        "nodule d;\nfn main() => Ternary{4} = 0t00+0 * 0t00-0;",
         // precedence: `*` binds tighter than `+`, so `a + b * c` ≡ `add(a, mul(b, c))`.
-        "nodule d\nfn main() => Ternary{4} = 0t000+ + 0t00+0 * 0t00-0",
+        "nodule d;\nfn main() => Ternary{4} = 0t000+ + 0t00+0 * 0t00-0;",
         // RFC-0025 §4.1 / M-745: the angle/shift glyphs (`<`/`>`/`<<`/`>>` → lt/gt/shl/shr) are
         // NOT in this three-path corpus on purpose — their word targets have no kernel/stdlib prim
         // yet (they arrive with M-809), so a program using them does not *resolve* end-to-end.
@@ -65,23 +65,22 @@ fn corpus() -> Vec<&'static str> {
         // node IS the record). They join this corpus when their prims land (G2 — never silent on
         // the coverage boundary).
         // the certified binary→ternary swap
-        "nodule d\nfn main() => Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt)",
+        "nodule d;\nfn main() => Ternary{6} = swap(0b1011_0010, to: Ternary{6}, policy: rt);",
         // a call, inlined (acyclic call graph)
-        "nodule d\nfn flip(x: Binary{8}) => Binary{8} = not(x)\nfn main() => Binary{8} = flip(flip(0b1010_1010))",
+        "nodule d;\nfn flip(x: Binary{8}) => Binary{8} = not(x);\nfn main() => Binary{8} = flip(flip(0b1010_1010));",
         // round-trip swap through a let
-        "nodule d\nfn main() => Binary{8} =\n  let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt)",
+        "nodule d;\nfn main() => Binary{8} =\n  let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt);",
         // an op feeding a swap, through a helper
-        "nodule d\nfn widen(x: Binary{8}) => Ternary{6} = swap(not(x), to: Ternary{6}, policy: rt)\nfn main() => Ternary{6} = widen(0b1011_0010)",
+        "nodule d;\nfn widen(x: Binary{8}) => Ternary{6} = swap(not(x), to: Ternary{6}, policy: rt);\nfn main() => Ternary{6} = widen(0b1011_0010);",
         // --- M-666: the `colony { hypha … }` structured-concurrency surface (RFC-0008 §4.7) ---
         // The reference semantics is the RT2 spawn-order sequentialization (RFC-0008 §4.2), so all
         // three execution paths (L1-eval ≡ elaborate→L0-interp ≡ AOT) must agree on it like any
         // other in-fragment program — a single-hypha colony is exactly its body.
-        "nodule d\nfn main() => Binary{8} = colony { hypha not(0b1011_0010) }",
+        "nodule d;\nfn main() => Binary{8} = colony { hypha not(0b1011_0010) };",
         // A multi-hypha colony: leading hyphae are evaluated for effect (here pure), the observable
         // is the last hypha's value (no v0 product type). Determinism: the value is independent of
         // any scheduling — the sequentialization is the meaning.
-        "nodule d\nfn compute(x: Binary{8}) => Binary{8} = not(x)\n\
-         fn main() => Binary{8} =\n  colony { hypha compute(0b0000_1111), hypha compute(0b1010_1010), hypha xor(0b1111_0000, 0b0000_1111) }",
+        "nodule d;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\nfn main() => Binary{8} =\n  colony { hypha compute(0b0000_1111), hypha compute(0b1010_1010), hypha xor(0b1111_0000, 0b0000_1111) };",
     ]
 }
 
@@ -158,88 +157,49 @@ fn l1_eval_l0_interp_and_aot_agree_on_the_fragment() {
 fn data_corpus() -> Vec<&'static str> {
     vec![
         // a flat data match returning a repr value
-        "nodule d\ntype Sign = Neg | Zero | Pos\n\
-         fn label(s: Sign) => Ternary{1} = match s { Neg => 0t-, Zero => 0t0, _ => 0t+ }\n\
-         fn main() => Ternary{1} = label(Zero)",
+        "nodule d;\ntype Sign = Neg | Zero | Pos;\nfn label(s: Sign) => Ternary{1} = match s { Neg => 0t-, Zero => 0t0, _ => 0t+ };\nfn main() => Ternary{1} = label(Zero);",
         // a data RESULT (the program evaluates to a datum)
-        "nodule d\ntype Nat = Z | S(Nat)\nfn main() => Nat = S(S(Z))",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn main() => Nat = S(S(Z));",
         // nested patterns (Maranget) returning a datum
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn pred2(n: Nat) => Nat = match n { Z => Z, S(Z) => Z, S(S(m)) => m }\n\
-         fn main() => Nat = pred2(S(S(S(Z))))",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn pred2(n: Nat) => Nat = match n { Z => Z, S(Z) => Z, S(S(m)) => m };\nfn main() => Nat = pred2(S(S(S(Z))));",
         // a literal-pattern match over a Binary scrutinee
-        "nodule d\nfn classify(b: Binary{4}) => Ternary{1} = \
-         match b { 0b0000 => 0t0, 0b1111 => 0t+, _ => 0t- }\n\
-         fn main() => Ternary{1} = classify(0b1111)",
+        "nodule d;\nfn classify(b: Binary{4}) => Ternary{1} = match b { 0b0000 => 0t0, 0b1111 => 0t+, _ => 0t- };\nfn main() => Ternary{1} = classify(0b1111);",
         // a data value with a repr field, destructured (binds a field, runs a prim on it)
-        "nodule d\ntype Box = Mk(Binary{8})\n\
-         fn flip(x: Box) => Binary{8} = match x { Mk(b) => not(b) }\n\
-         fn main() => Binary{8} = flip(Mk(0b1010_1010))",
+        "nodule d;\ntype Box = Mk(Binary{8});\nfn flip(x: Box) => Binary{8} = match x { Mk(b) => not(b) };\nfn main() => Binary{8} = flip(Mk(0b1010_1010));",
         // `if` desugaring to a Bool match
-        "nodule d\nfn pick(b: Bool) => Binary{8} = if b then 0b1111_1111 else 0b0000_0000\n\
-         fn main() => Binary{8} = pick(True)",
+        "nodule d;\nfn pick(b: Bool) => Binary{8} = if b then 0b1111_1111 else 0b0000_0000;\nfn main() => Binary{8} = pick(True);",
         // a constructed result carrying a computed repr field
-        "nodule d\ntype Box = Mk(Binary{8})\nfn main() => Box = Mk(not(0b0000_1111))",
+        "nodule d;\ntype Box = Mk(Binary{8});\nfn main() => Box = Mk(not(0b0000_1111));",
         // a multi-field constructor matched with a NESTED wildcard at a non-root occurrence
         // (M-320 Maranget: column ordering over two fields + a `_` at occurrence [1]) — the kind of
         // decision tree the flat Nat cases don't stress; all three paths must still agree
-        "nodule d\ntype Pair = Mk(Bool, Bool)\n\
-         fn both(p: Pair) => Bool = match p { Mk(True, b) => b, Mk(False, _) => False }\n\
-         fn main() => Bool = both(Mk(True, False))",
+        "nodule d;\ntype Pair = Mk(Bool, Bool);\nfn both(p: Pair) => Bool = match p { Mk(True, b) => b, Mk(False, _) => False };\nfn main() => Bool = both(Mk(True, False));",
         // --- r4: functions + recursion (Lam/App/Fix), now in the fragment ---
         // self-recursion returning a datum (Fix + App + Match)
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn drop_(n: Nat) => Nat = match n { Z => Z, S(m) => drop_(m) }\n\
-         fn main() => Nat = drop_(S(S(S(Z))))",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn drop_(n: Nat) => Nat = match n { Z => Z, S(m) => drop_(m) };\nfn main() => Nat = drop_(S(S(S(Z))));",
         // self-recursion building data on the way back (a recursive copy)
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn copy(n: Nat) => Nat = match n { Z => Z, S(m) => S(copy(m)) }\n\
-         fn main() => Nat = copy(S(S(Z)))",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn copy(n: Nat) => Nat = match n { Z => Z, S(m) => S(copy(m)) };\nfn main() => Nat = copy(S(S(Z)));",
         // a `for` fold over a list spine (desugars to a synthesized Fix fold)
-        "nodule d\ntype ByteList = End | More(Binary{8}, ByteList)\n\
-         fn checksum(bs: ByteList) => Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b)\n\
-         fn main() => Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)))",
+        "nodule d;\ntype ByteList = End | More(Binary{8}, ByteList);\nfn checksum(bs: ByteList) => Binary{8} = for b in bs, acc = 0b0000_0000 => xor(acc, b);\nfn main() => Binary{8} = checksum(More(0b1111_0000, More(0b0000_1111, End)));",
         // a recursive helper called by a non-recursive one (inlining + Fix coexist)
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn drop_(n: Nat) => Nat = match n { Z => Z, S(m) => drop_(m) }\n\
-         fn twice_drop(n: Nat) => Nat = drop_(drop_(n))\n\
-         fn main() => Nat = twice_drop(S(S(Z)))",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn drop_(n: Nat) => Nat = match n { Z => Z, S(m) => drop_(m) };\nfn twice_drop(n: Nat) => Nat = drop_(drop_(n));\nfn main() => Nat = twice_drop(S(S(Z)));",
         // --- r5: mutual recursion (FixGroup), M-343 ---
         // a mutually-recursive pair returning a datum: ping(SS Z) ⟶ pong(S Z) ⟶ ping(Z) ⟶ Z
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) }\n\
-         fn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) }\n\
-         fn main() => Nat = ping(S(S(Z)))",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) };\nfn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) };\nfn main() => Nat = ping(S(S(Z)));",
         // mutual recursion over a Bool result (even/odd): even(SSS Z) ⟶ odd(SS Z) ⟶ … ⟶ False
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn even(n: Nat) => Bool = match n { Z => True, S(m) => odd(m) }\n\
-         fn odd(n: Nat) => Bool = match n { Z => False, S(m) => even(m) }\n\
-         fn main() => Bool = even(S(S(S(Z))))",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn even(n: Nat) => Bool = match n { Z => True, S(m) => odd(m) };\nfn odd(n: Nat) => Bool = match n { Z => False, S(m) => even(m) };\nfn main() => Bool = even(S(S(S(Z))));",
         // mutual recursion that BUILDS data on the way back (constructive through the group):
         // f(SSS Z) ⟶ S(g(SS Z)) ⟶ S(f(S Z)) ⟶ S(S(g(Z))) ⟶ S(S(Z))
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn f(n: Nat) => Nat = match n { Z => Z, S(m) => S(g(m)) }\n\
-         fn g(n: Nat) => Nat = match n { Z => Z, S(m) => f(m) }\n\
-         fn main() => Nat = f(S(S(S(Z))))",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn f(n: Nat) => Nat = match n { Z => Z, S(m) => S(g(m)) };\nfn g(n: Nat) => Nat = match n { Z => Z, S(m) => f(m) };\nfn main() => Nat = f(S(S(S(Z))));",
         // a three-function mutual cycle (f → g → h → f) returning a datum
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn f3(n: Nat) => Nat = match n { Z => Z, S(m) => g3(m) }\n\
-         fn g3(n: Nat) => Nat = match n { Z => Z, S(m) => h3(m) }\n\
-         fn h3(n: Nat) => Nat = match n { Z => Z, S(m) => f3(m) }\n\
-         fn main() => Nat = f3(S(S(S(S(Z)))))",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn f3(n: Nat) => Nat = match n { Z => Z, S(m) => g3(m) };\nfn g3(n: Nat) => Nat = match n { Z => Z, S(m) => h3(m) };\nfn h3(n: Nat) => Nat = match n { Z => Z, S(m) => f3(m) };\nfn main() => Nat = f3(S(S(S(S(Z)))));",
         // --- M-391 (R7-Q3 surface): two further surface-written mutual-recursion shapes ---
         // a mutual pair returning a REPR (not a datum): hi(SS Z) ⟶ lo(S Z) ⟶ hi(Z) ⟶ 0b1111_1111
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn hi(n: Nat) => Binary{8} = match n { Z => 0b1111_1111, S(m) => lo(m) }\n\
-         fn lo(n: Nat) => Binary{8} = match n { Z => 0b0000_0000, S(m) => hi(m) }\n\
-         fn main() => Binary{8} = hi(S(S(Z)))",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn hi(n: Nat) => Binary{8} = match n { Z => 0b1111_1111, S(m) => lo(m) };\nfn lo(n: Nat) => Binary{8} = match n { Z => 0b0000_0000, S(m) => hi(m) };\nfn main() => Binary{8} = hi(S(S(Z)));",
         // a mutual pair destructuring a MULTI-FIELD constructor (Maranget over two fields, inside a
         // FixGroup): shrink(Mk(S Z, S Z)) ⟶ expand(Mk(Z, S Z)) ⟶ shrink(Mk(Z, Z)) ⟶ Z.
         // (`expand`, not `grow` — `grow` is a DN-03 §1 reserved surface keyword as of M-664.)
-        "nodule d\ntype Nat = Z | S(Nat)\ntype Two = Mk(Nat, Nat)\n\
-         fn shrink(t: Two) => Nat = match t { Mk(Z, b) => b, Mk(S(a), b) => expand(Mk(a, b)) }\n\
-         fn expand(t: Two) => Nat = match t { Mk(a, Z) => a, Mk(a, S(b)) => shrink(Mk(a, b)) }\n\
-         fn main() => Nat = shrink(Mk(S(Z), S(Z)))",
+        "nodule d;\ntype Nat = Z | S(Nat);\ntype Two = Mk(Nat, Nat);\nfn shrink(t: Two) => Nat = match t { Mk(Z, b) => b, Mk(S(a), b) => expand(Mk(a, b)) };\nfn expand(t: Two) => Nat = match t { Mk(a, Z) => a, Mk(a, S(b)) => shrink(Mk(a, b)) };\nfn main() => Nat = shrink(Mk(S(Z), S(Z)));",
     ]
 }
 
@@ -370,10 +330,7 @@ fn fixgroup_arities(n: &mycelium_core::Node) -> Vec<usize> {
 /// "surface-written ≡ programmatic" is pinned here against that canonical path.
 #[test]
 fn surface_mutual_recursion_lowers_to_the_canonical_fixgroup() {
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-        fn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) }\n\
-        fn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) }\n\
-        fn main() => Nat = ping(S(S(Z)))";
+    let src = "nodule d;\ntype Nat = Z | S(Nat);\nfn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) };\nfn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) };\nfn main() => Nat = ping(S(S(Z)));";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
     // Determinism: the lowering (fresh-name numbering, group member order) is reproducible, so the
@@ -401,10 +358,7 @@ fn surface_mutual_recursion_lowers_to_the_canonical_fixgroup() {
 /// `pong`; the program must be REJECTED at check time, not elaborated.
 #[test]
 fn an_undefined_reference_is_an_explicit_error_not_a_silent_mutual_group() {
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-        fn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pongg(m) }\n\
-        fn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) }\n\
-        fn main() => Nat = ping(S(Z))";
+    let src = "nodule d;\ntype Nat = Z | S(Nat);\nfn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pongg(m) };\nfn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) };\nfn main() => Nat = ping(S(Z));";
     let nodule = parse(src).expect("parses");
     let err = check_nodule(&nodule).expect_err("an undefined reference must be rejected");
     let msg = err.to_string();
@@ -422,8 +376,8 @@ fn an_undefined_reference_is_an_explicit_error_not_a_silent_mutual_group() {
 fn the_data_differential_distinguishes_divergent_elaborations() {
     let env = |src| check_nodule(&parse(src).unwrap()).unwrap();
     let reg = |e: &mycelium_l1::Env| build_registry(e).unwrap();
-    let e1 = env("nodule d\ntype Nat = Z | S(Nat)\nfn main() => Nat = S(Z)");
-    let e2 = env("nodule d\ntype Nat = Z | S(Nat)\nfn main() => Nat = S(S(Z))");
+    let e1 = env("nodule d;\ntype Nat = Z | S(Nat);\nfn main() => Nat = S(Z);");
+    let e2 = env("nodule d;\ntype Nat = Z | S(Nat);\nfn main() => Nat = S(S(Z));");
     let a = Evaluator::new(&e1)
         .call("main", vec![])
         .unwrap()
@@ -448,8 +402,8 @@ fn the_data_differential_distinguishes_divergent_elaborations() {
 #[test]
 fn the_differential_distinguishes_different_programs() {
     let env = |src| check_nodule(&parse(src).unwrap()).unwrap();
-    let e1 = env("nodule d\nfn main() => Binary{8} = 0b1011_0010");
-    let e2 = env("nodule d\nfn main() => Binary{8} = 0b1111_1111");
+    let e1 = env("nodule d;\nfn main() => Binary{8} = 0b1011_0010;");
+    let e2 = env("nodule d;\nfn main() => Binary{8} = 0b1111_1111;");
     let a = Evaluator::new(&e1).call("main", vec![]).unwrap();
     let b = Evaluator::new(&e2).call("main", vec![]).unwrap();
     let verdict = check(
@@ -470,9 +424,7 @@ fn the_differential_distinguishes_different_programs() {
 /// the L1 evaluator too; the two paths agree on the L0 value.
 #[test]
 fn self_recursion_elaborates_and_agrees() {
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-               fn drop_(n: Nat) => Nat = match n { Z => Z, S(m) => drop_(m) }\n\
-               fn main() => Nat = drop_(S(S(Z)))";
+    let src = "nodule d;\ntype Nat = Z | S(Nat);\nfn drop_(n: Nat) => Nat = match n { Z => Z, S(m) => drop_(m) };\nfn main() => Nat = drop_(S(S(Z)));";
     let env = check_nodule(&parse(src).unwrap()).unwrap();
     let registry = build_registry(&env).unwrap();
     assert_eq!(env.totality["drop_"], mycelium_l1::Totality::Total);
@@ -501,10 +453,7 @@ fn self_recursion_elaborates_and_agrees() {
 fn mutual_recursion_elaborates_and_all_three_paths_agree() {
     let prims = PrimRegistry::with_builtins();
     let engine = BinaryTernarySwapEngine;
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-               fn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) }\n\
-               fn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) }\n\
-               fn main() => Nat = ping(S(S(Z)))";
+    let src = "nodule d;\ntype Nat = Z | S(Nat);\nfn ping(n: Nat) => Nat = match n { Z => Z, S(m) => pong(m) };\nfn pong(n: Nat) => Nat = match n { Z => Z, S(m) => ping(m) };\nfn main() => Nat = ping(S(S(Z)));";
     let env = check_nodule(&parse(src).unwrap()).unwrap();
     let registry = build_registry(&env).unwrap();
 
@@ -556,10 +505,7 @@ fn recovery_match_over_a_result_sum_agrees_three_ways() {
     let engine = BinaryTernarySwapEngine;
     // Written in the existing data+match surface (no new syntax) — the lowering target of a recovery
     // handling site: match the result sum, recover the `Err` case with an explicit fallback.
-    let src = "nodule d\n\
-               type Result = Ok(Binary{8}) | Err(Binary{8})\n\
-               fn recover(r: Result) => Binary{8} = match r { Ok(v) => v, Err(e) => 0b0000_0000 }\n\
-               fn main() => Binary{8} = recover(Err(0b1111_1111))";
+    let src = "nodule d;\ntype Result = Ok(Binary{8}) | Err(Binary{8});\nfn recover(r: Result) => Binary{8} = match r { Ok(v) => v, Err(e) => 0b0000_0000 };\nfn main() => Binary{8} = recover(Err(0b1111_1111));";
     let env = check_nodule(&parse(src).unwrap()).unwrap();
     let registry = build_registry(&env).unwrap();
     let node = elaborate(&env, "main").expect("a recovery match elaborates (no new kernel node)");
@@ -603,10 +549,7 @@ fn the_effect_ledger_is_meaning_preserving_on_the_recovery_match() {
     use mycelium_interp::{Budgets, EffectBudget};
     let prims = PrimRegistry::with_builtins();
     let engine = BinaryTernarySwapEngine;
-    let src = "nodule d\n\
-               type Result = Ok(Binary{8}) | Err(Binary{8})\n\
-               fn recover(r: Result) => Binary{8} = match r { Ok(v) => v, Err(e) => 0b0000_0000 }\n\
-               fn main() => Binary{8} = recover(Err(0b1111_1111))";
+    let src = "nodule d;\ntype Result = Ok(Binary{8}) | Err(Binary{8});\nfn recover(r: Result) => Binary{8} = match r { Ok(v) => v, Err(e) => 0b0000_0000 };\nfn main() => Binary{8} = recover(Err(0b1111_1111));";
     let env = check_nodule(&parse(src).unwrap()).unwrap();
     let node = elaborate(&env, "main").unwrap();
 
@@ -632,8 +575,7 @@ fn the_effect_ledger_is_meaning_preserving_on_the_recovery_match() {
 /// an explicit `FuelExhausted`, never a hang (§4.5).
 #[test]
 fn a_partial_program_exhausts_fuel_explicitly() {
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-               fn spin(n: Nat) => Nat = spin(n)\nfn main() => Nat = spin(Z)";
+    let src = "nodule d;\ntype Nat = Z | S(Nat);\nfn spin(n: Nat) => Nat = spin(n);\nfn main() => Nat = spin(Z);";
     let env = check_nodule(&parse(src).unwrap()).unwrap();
     assert_eq!(env.totality["spin"], mycelium_l1::Totality::Partial);
     let err = Evaluator::new(&env)
@@ -681,22 +623,14 @@ fn colony_concurrent_run_equals_the_sequential_reference_rt2() {
     // Colonies of varied shapes: a single hypha (degenerate), pure multi-hypha, hyphae that call a
     // helper and a recursive function (exercising the shared recursive-binder prelude per hypha).
     let corpus = [
-        "nodule d\nfn main() => Binary{8} = colony { hypha not(0b1011_0010) }",
-        "nodule d\nfn compute(x: Binary{8}) => Binary{8} = not(x)\n\
-         fn main() => Binary{8} =\n  \
-         colony { hypha compute(0b0000_1111), hypha compute(0b1010_1010), hypha xor(0b1111_0000, 0b0000_1111) }",
+        "nodule d;\nfn main() => Binary{8} = colony { hypha not(0b1011_0010) };",
+        "nodule d;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\nfn main() => Binary{8} =\n  colony { hypha compute(0b0000_1111), hypha compute(0b1010_1010), hypha xor(0b1111_0000, 0b0000_1111) };",
         // a hypha that drives a recursive (Total) function — the per-hypha prelude must carry the `Fix`
-        "nodule d\ntype Nat = Z | S(Nat)\n\
-         fn depth(n: Nat) => Binary{8} = match n { Z => 0b0000_0000, S(m) => not(depth(m)) }\n\
-         fn main() => Binary{8} =\n  \
-         colony { hypha depth(S(S(Z))), hypha not(0b0000_0001), hypha depth(S(Z)) }",
+        "nodule d;\ntype Nat = Z | S(Nat);\nfn depth(n: Nat) => Binary{8} = match n { Z => 0b0000_0000, S(m) => not(depth(m)) };\nfn main() => Binary{8} =\n  colony { hypha depth(S(S(Z))), hypha not(0b0000_0001), hypha depth(S(Z)) };",
         // a swap reached through a helper call — the colony spans the repr-conversion fragment too.
         // (A hypha body is an `app_expr`, the prior M-666 surface — KEEP; the `swap` keyword form is
         // wrapped in `widen`, exactly the existing differential corpus's `widen` pattern.)
-        "nodule d\nfn widen(x: Binary{8}) => Ternary{6} = swap(x, to: Ternary{6}, policy: rt)\n\
-         fn keep(x: Ternary{6}) => Ternary{6} = x\n\
-         fn main() => Ternary{6} =\n  \
-         colony { hypha keep(0t00+0-+), hypha widen(0b1011_0010) }",
+        "nodule d;\nfn widen(x: Binary{8}) => Ternary{6} = swap(x, to: Ternary{6}, policy: rt);\nfn keep(x: Ternary{6}) => Ternary{6} = x;\nfn main() => Ternary{6} =\n  colony { hypha keep(0t00+0-+), hypha widen(0b1011_0010) };",
     ];
 
     for (i, src) in corpus.iter().enumerate() {
@@ -770,7 +704,7 @@ fn prop_colony_concurrent_value_is_its_last_hypha_for_any_leading_count() {
             hyphae.push_str(&format!("hypha not(0b{bits}), "));
         }
         hyphae.push_str("hypha not(0b0101_0101)");
-        let src = format!("nodule d\nfn main() => Binary{{8}} = colony {{ {hyphae} }}");
+        let src = format!("nodule d;\nfn main() => Binary{{8}} = colony {{ {hyphae} }};");
         let env = check_nodule(&parse(&src).expect("parses")).expect("checks");
 
         let concurrent = run_colony_concurrent(&env, "main");
@@ -805,10 +739,7 @@ fn a_failing_hypha_is_an_explicit_colony_error_not_a_silent_drop() {
     let engine = BinaryTernarySwapEngine;
     // A Total recursion that needs more than the tiny fuel we give it → an explicit FuelExhausted in
     // that hypha's L0 evaluation; the colony must surface it, not return the last hypha's value.
-    let src = "nodule d\ntype Nat = Z | S(Nat)\n\
-               fn depth(n: Nat) => Binary{8} = match n { Z => 0b0000_0000, S(m) => not(depth(m)) }\n\
-               fn main() => Binary{8} =\n  \
-               colony { hypha depth(S(S(S(S(S(Z)))))), hypha not(0b0000_0001) }";
+    let src = "nodule d;\ntype Nat = Z | S(Nat);\nfn depth(n: Nat) => Binary{8} = match n { Z => 0b0000_0000, S(m) => not(depth(m)) };\nfn main() => Binary{8} =\n  colony { hypha depth(S(S(S(S(S(Z)))))), hypha not(0b0000_0001) };";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
     let hyphae = mycelium_l1::elaborate_colony(&env, "main").expect("elaborates per-hypha");
     // Starve fuel so the recursive hypha #0 cannot finish — an explicit, graceful refusal.
@@ -843,45 +774,25 @@ fn a_failing_hypha_is_an_explicit_colony_error_not_a_silent_drop() {
 fn generic_corpus() -> Vec<&'static str> {
     vec![
         // (1) `List<A>` + `first_or` → closed L0 (the M-673 acceptance fixture)
-        "nodule d\ntype List[A] = Nil | Cons(A, List[A])\n\
-         fn first_or[A](xs: List[A], d: A) => A = match xs { Nil => d, Cons(x, _) => x }\n\
-         fn main() => Binary{8} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)",
+        "nodule d;\ntype List[A] = Nil | Cons(A, List[A]);\nfn first_or[A](xs: List[A], d: A) => A = match xs { Nil => d, Cons(x, _) => x };\nfn main() => Binary{8} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000);",
         // (2) a generic returning a datum (the program evaluates to a `List<Binary{8}>`)
-        "nodule d\ntype List[A] = Nil | Cons(A, List[A])\n\
-         fn main() => List[Binary{8}] = Cons(0b0000_0001, Nil)",
+        "nodule d;\ntype List[A] = Nil | Cons(A, List[A]);\nfn main() => List[Binary{8}] = Cons(0b0000_0001, Nil);",
         // (3) a trait + impl, the method called directly (static resolution to a direct call)
-        "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n\
-         impl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }\n\
-         fn main() => Binary{2} = cmp(0b0000_0001, 0b0000_0010)",
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\nimpl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00; };\nfn main() => Binary{2} = cmp(0b0000_0001, 0b0000_0010);",
         // (4) a bounded generic `use_cmp<T: Cmp>` calling the trait method through its bound, at Binary{8}
-        "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n\
-         impl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }\n\
-         fn use_cmp[T: Cmp](a: T, b: T) => Binary{2} = cmp(a, b)\n\
-         fn main() => Binary{2} = use_cmp(0b0000_0001, 0b0000_0010)",
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\nimpl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00; };\nfn use_cmp[T: Cmp](a: T, b: T) => Binary{2} = cmp(a, b);\nfn main() => Binary{2} = use_cmp(0b0000_0001, 0b0000_0010);",
         // (5) fragmentation witness — `first_or` at Binary{8} AND Binary{4} reachable from one main
-        "nodule d\ntype List[A] = Nil | Cons(A, List[A])\n\
-         fn first_or[A](xs: List[A], d: A) => A = match xs { Nil => d, Cons(x, _) => x }\n\
-         fn lo() => Binary{4} = first_or(Cons(0b0001, Nil), 0b0000)\n\
-         fn hi() => Binary{8} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000)\n\
-         fn main() => Binary{8} = let _w = lo() in hi()",
+        "nodule d;\ntype List[A] = Nil | Cons(A, List[A]);\nfn first_or[A](xs: List[A], d: A) => A = match xs { Nil => d, Cons(x, _) => x };\nfn lo() => Binary{4} = first_or(Cons(0b0001, Nil), 0b0000);\nfn hi() => Binary{8} = first_or(Cons(0b0000_0001, Nil), 0b0000_0000);\nfn main() => Binary{8} = let _w = lo() in hi();",
         // (6) a generic recursive fold over a generic spine (Fix over List<Binary{8}>)
-        "nodule d\ntype List[A] = Nil | Cons(A, List[A])\n\
-         fn sum_(xs: List[Binary{8}]) => Binary{8} = \
-           match xs { Nil => 0b0000_0000, Cons(x, r) => xor(x, sum_(r)) }\n\
-         fn main() => Binary{8} = sum_(Cons(0b0000_1111, Cons(0b1111_0000, Nil)))",
+        "nodule d;\ntype List[A] = Nil | Cons(A, List[A]);\nfn sum_(xs: List[Binary{8}]) => Binary{8} = match xs { Nil => 0b0000_0000, Cons(x, r) => xor(x, sum_(r)) };\nfn main() => Binary{8} = sum_(Cons(0b0000_1111, Cons(0b1111_0000, Nil)));",
         // (7) a generic instantiated at a USER DATA TYPE as the type arg (not just reprs) — exercises
         //     the repr/data-name mangling boundary end-to-end (the locus of the M-673 injectivity fix)
-        "nodule d\ntype Bit = O | I\ntype Box[A] = Wrap(A)\n\
-         fn unbox(b: Box[Bit]) => Bit = match b { Wrap(x) => x }\n\
-         fn main() => Bit = unbox(Wrap(I))",
+        "nodule d;\ntype Bit = O | I;\ntype Box[A] = Wrap(A);\nfn unbox(b: Box[Bit]) => Bit = match b { Wrap(x) => x };\nfn main() => Bit = unbox(Wrap(I));",
         // (8) DN-58 §A.5 (M-817): a **Data**-type `fuse` desugars (monomorphization) to the resolved
         //     `Fuse::join` call — an ordinary inlined trait-method call that runs three-way. `Flag`'s
         //     `join` is the absorbing-`On` OR (a commutative/associative/idempotent join-semilattice);
         //     `fuse(On, Off)` = `join(On, Off)` = `On`. This is the user-merge case the brief targets.
-        "nodule d\ntrait Fuse[A] { fn join(a: A, b: A) => A }\n\
-         type Flag = Off | On\n\
-         impl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b } }\n\
-         fn main() => Flag = fuse(On, Off)",
+        "nodule d;\ntrait Fuse[A] { fn join(a: A, b: A) => A; };\ntype Flag = Off | On;\nimpl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b }; };\nfn main() => Flag = fuse(On, Off);",
     ]
 }
 
@@ -995,14 +906,10 @@ fn the_monomorphized_differential_distinguishes_divergent_instances() {
     };
     // Same trait + call shape, different impl method body (`0b00` vs `0b11`) ⇒ different L0 results.
     let a = run(
-        "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n\
-         impl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00 }\n\
-         fn main() => Binary{2} = cmp(0b0000_0001, 0b0000_0010)",
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\nimpl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b00; };\nfn main() => Binary{2} = cmp(0b0000_0001, 0b0000_0010);",
     );
     let b = run(
-        "nodule d\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2} }\n\
-         impl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b11 }\n\
-         fn main() => Binary{2} = cmp(0b0000_0001, 0b0000_0010)",
+        "nodule d;\ntrait Cmp[A] { fn cmp(a: A, b: A) => Binary{2}; };\nimpl Cmp[Binary{8}] for Binary{8} { fn cmp(a: Binary{8}, b: Binary{8}) => Binary{2} = 0b11; };\nfn main() => Binary{2} = cmp(0b0000_0001, 0b0000_0010);",
     );
     assert_ne!(
         a, b,
@@ -1033,55 +940,17 @@ fn the_monomorphized_differential_distinguishes_divergent_instances() {
 fn hof_corpus() -> Vec<&'static str> {
     vec![
         // (1) map Ok: map(Ok(0b0000_0001), not_val) → Ok(not(0b0000_0001)) = Ok(0b1111_1110)
-        "nodule d\n\
-         type Result[A, E] = Ok(A) | Err(E)\n\
-         fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  \
-           match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
-         fn not_val(x: Binary{8}) => Binary{8} = not(x)\n\
-         fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)\n\
-         fn main() => Result[Binary{8},Binary{8}] = map(mk_ok(), not_val)",
+        "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };\nfn not_val(x: Binary{8}) => Binary{8} = not(x);\nfn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001);\nfn main() => Result[Binary{8},Binary{8}] = map(mk_ok(), not_val);",
         // (2) map Err: map(Err(0b1111_1111), not_val) → Err(0b1111_1111) [Err passes through]
-        "nodule d\n\
-         type Result[A, E] = Ok(A) | Err(E)\n\
-         fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  \
-           match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
-         fn not_val(x: Binary{8}) => Binary{8} = not(x)\n\
-         fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_1111)\n\
-         fn main() => Result[Binary{8},Binary{8}] = map(mk_err(), not_val)",
+        "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };\nfn not_val(x: Binary{8}) => Binary{8} = not(x);\nfn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_1111);\nfn main() => Result[Binary{8},Binary{8}] = map(mk_err(), not_val);",
         // (3) and_then Ok: and_then(Ok(0b0000_0001), mk_ok_inner) → Ok(not(0b0000_0001)) = Ok(0b1111_1110)
-        "nodule d\n\
-         type Result[A, E] = Ok(A) | Err(E)\n\
-         fn and_then[A, B, E](r: Result[A, E], f: A => Result[B, E]) => Result[B, E] =\n  \
-           match r { Ok(x) => f(x), Err(e) => Err(e) }\n\
-         fn mk_ok_inner(x: Binary{8}) => Result[Binary{8},Binary{8}] = Ok(not(x))\n\
-         fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)\n\
-         fn main() => Result[Binary{8},Binary{8}] = and_then(mk_ok(), mk_ok_inner)",
+        "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn and_then[A, B, E](r: Result[A, E], f: A => Result[B, E]) => Result[B, E] =\n  match r { Ok(x) => f(x), Err(e) => Err(e) };\nfn mk_ok_inner(x: Binary{8}) => Result[Binary{8},Binary{8}] = Ok(not(x));\nfn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001);\nfn main() => Result[Binary{8},Binary{8}] = and_then(mk_ok(), mk_ok_inner);",
         // (4) and_then Err: and_then(Err(0b1111_1111), mk_ok_inner) → Err(0b1111_1111) [short-circuits]
-        "nodule d\n\
-         type Result[A, E] = Ok(A) | Err(E)\n\
-         fn and_then[A, B, E](r: Result[A, E], f: A => Result[B, E]) => Result[B, E] =\n  \
-           match r { Ok(x) => f(x), Err(e) => Err(e) }\n\
-         fn mk_ok_inner(x: Binary{8}) => Result[Binary{8},Binary{8}] = Ok(not(x))\n\
-         fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_1111)\n\
-         fn main() => Result[Binary{8},Binary{8}] = and_then(mk_err(), mk_ok_inner)",
+        "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn and_then[A, B, E](r: Result[A, E], f: A => Result[B, E]) => Result[B, E] =\n  match r { Ok(x) => f(x), Err(e) => Err(e) };\nfn mk_ok_inner(x: Binary{8}) => Result[Binary{8},Binary{8}] = Ok(not(x));\nfn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_1111);\nfn main() => Result[Binary{8},Binary{8}] = and_then(mk_err(), mk_ok_inner);",
         // (5) fold Ok: fold(Ok(0b1010_1010), id_val, const_zero) → id_val(0b1010_1010) = 0b1010_1010
-        "nodule d\n\
-         type Result[A, E] = Ok(A) | Err(E)\n\
-         fn fold[A, E, B](r: Result[A, E], on_ok: A => B, on_err: E => B) => B =\n  \
-           match r { Ok(x) => on_ok(x), Err(e) => on_err(e) }\n\
-         fn id_val(x: Binary{8}) => Binary{8} = x\n\
-         fn const_zero(e: Binary{8}) => Binary{8} = xor(e, e)\n\
-         fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b1010_1010)\n\
-         fn main() => Binary{8} = fold(mk_ok(), id_val, const_zero)",
+        "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn fold[A, E, B](r: Result[A, E], on_ok: A => B, on_err: E => B) => B =\n  match r { Ok(x) => on_ok(x), Err(e) => on_err(e) };\nfn id_val(x: Binary{8}) => Binary{8} = x;\nfn const_zero(e: Binary{8}) => Binary{8} = xor(e, e);\nfn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b1010_1010);\nfn main() => Binary{8} = fold(mk_ok(), id_val, const_zero);",
         // (6) fold Err: fold(Err(0b1111_0000), id_val, const_zero) → xor(0b1111_0000,0b1111_0000) = 0b0000_0000
-        "nodule d\n\
-         type Result[A, E] = Ok(A) | Err(E)\n\
-         fn fold[A, E, B](r: Result[A, E], on_ok: A => B, on_err: E => B) => B =\n  \
-           match r { Ok(x) => on_ok(x), Err(e) => on_err(e) }\n\
-         fn id_val(x: Binary{8}) => Binary{8} = x\n\
-         fn const_zero(e: Binary{8}) => Binary{8} = xor(e, e)\n\
-         fn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_0000)\n\
-         fn main() => Binary{8} = fold(mk_err(), id_val, const_zero)",
+        "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn fold[A, E, B](r: Result[A, E], on_ok: A => B, on_err: E => B) => B =\n  match r { Ok(x) => on_ok(x), Err(e) => on_err(e) };\nfn id_val(x: Binary{8}) => Binary{8} = x;\nfn const_zero(e: Binary{8}) => Binary{8} = xor(e, e);\nfn mk_err() => Result[Binary{8},Binary{8}] = Err(0b1111_0000);\nfn main() => Binary{8} = fold(mk_err(), id_val, const_zero);",
     ]
 }
 
@@ -1185,20 +1054,8 @@ fn the_hof_differential_distinguishes_different_named_fn_arguments() {
     };
     // Same map call, different fn argument: not_val vs id_val — must give different L0 results on
     // input 0b0000_0001 (not(0b0000_0001) = 0b1111_1110 ≠ 0b0000_0001 = id_val(0b0000_0001)).
-    let with_not = run("nodule d\n\
-         type Result[A, E] = Ok(A) | Err(E)\n\
-         fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  \
-           match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
-         fn not_val(x: Binary{8}) => Binary{8} = not(x)\n\
-         fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)\n\
-         fn main() => Result[Binary{8},Binary{8}] = map(mk_ok(), not_val)");
-    let with_id = run("nodule d\n\
-         type Result[A, E] = Ok(A) | Err(E)\n\
-         fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  \
-           match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
-         fn id_val(x: Binary{8}) => Binary{8} = x\n\
-         fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)\n\
-         fn main() => Result[Binary{8},Binary{8}] = map(mk_ok(), id_val)");
+    let with_not = run("nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };\nfn not_val(x: Binary{8}) => Binary{8} = not(x);\nfn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001);\nfn main() => Result[Binary{8},Binary{8}] = map(mk_ok(), not_val);");
+    let with_id = run("nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };\nfn id_val(x: Binary{8}) => Binary{8} = x;\nfn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001);\nfn main() => Result[Binary{8},Binary{8}] = map(mk_ok(), id_val);");
     assert_ne!(
         with_not, with_id,
         "map with not_val vs id_val must yield different L0 values (the HOF differential discriminates)"
@@ -1246,8 +1103,8 @@ fn wild_ffi_execution_agrees_three_ways() {
     let engine = BinaryTernarySwapEngine;
     let interp = Interpreter::new(host_registry(), Box::new(BinaryTernarySwapEngine));
 
-    let src = "nodule std.sys.x @std-sys\n\
-               fn main() => Binary{8} !{ffi} = wild { echo(0b1011_0010) }";
+    let src =
+        "nodule std.sys.x @std-sys;\nfn main() => Binary{8} !{ffi} = wild { echo(0b1011_0010) };";
     let env = check_nodule(&parse(src).expect("parses")).expect("@std-sys wild checks");
 
     // M-720: the wild block elaborates to a host-dispatch Op (no Residual), in the `wild:` namespace.
@@ -1310,8 +1167,8 @@ fn wild_ffi_execution_agrees_three_ways() {
 /// fabricated value. The refusal names the ungranted host op (both on L0-interp and L1-eval).
 #[test]
 fn an_ungranted_wild_host_op_is_an_explicit_refusal() {
-    let src = "nodule std.sys.x @std-sys\n\
-               fn main() => Binary{8} !{ffi} = wild { echo(0b1011_0010) }";
+    let src =
+        "nodule std.sys.x @std-sys;\nfn main() => Binary{8} !{ffi} = wild { echo(0b1011_0010) };";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
     let node = elaborate(&env, "main").expect("elaborates to a host-dispatch Op");
 
@@ -1340,8 +1197,7 @@ fn an_ungranted_wild_host_op_is_an_explicit_refusal() {
 /// type-checks (the body is the opaque, audited escape — M-661); only its *lowering* refuses.
 #[test]
 fn a_wild_body_that_is_not_a_host_call_form_is_an_explicit_residual() {
-    let src = "nodule std.sys.x @std-sys\n\
-               fn main() => Binary{8} !{ffi} = wild { let a = 0b0000_0000 in a }";
+    let src = "nodule std.sys.x @std-sys;\nfn main() => Binary{8} !{ffi} = wild { let a = 0b0000_0000 in a };";
     let env =
         check_nodule(&parse(src).expect("parses")).expect("the opaque body still type-checks");
     let err = elaborate(&env, "main")
@@ -1377,7 +1233,7 @@ fn dense_swap_is_an_explicit_residual_on_all_paths() {
     // A checker-accepted program: Binary{8} → Dense{4, F32} swap.
     // `Dense{d, s}` is accepted by the checker as a swap target (RFC-0002/RFC-0005 §4.3).
     let src =
-        "nodule d\nfn main() => Dense{4, F32} = swap(0b1011_0010, to: Dense{4, F32}, policy: rt)";
+        "nodule d;\nfn main() => Dense{4, F32} = swap(0b1011_0010, to: Dense{4, F32}, policy: rt);";
 
     // The checker accepts this program — it is in the parsable-and-checked domain.
     let env = check_nodule(&parse(src).expect("Dense swap program must parse"))
@@ -1443,12 +1299,7 @@ fn dense_swap_is_an_explicit_residual_on_all_paths() {
 fn cross_nodule_program_runs_three_way() {
     // A phylum with two nodules: A exports `helper`, B imports it from A and calls it in `main`.
     // RFC-0006 §4.3: `pub fn` in A is visible to B via `use a.*` (the glob import form).
-    let src = "phylum app.cross\n\
-               nodule a\n\
-               pub fn helper(x: Binary{8}) => Binary{8} = not(x)\n\
-               nodule b\n\
-               use a.*\n\
-               fn main() => Binary{8} = helper(0b1011_0010)";
+    let src = "phylum app.cross\nnodule a;\npub fn helper(x: Binary{8}) => Binary{8} = not(x);\nnodule b;\nuse a.*;\nfn main() => Binary{8} = helper(0b1011_0010);";
 
     let phylum_env = check_phylum(&parse_phylum(src).expect("cross-nodule phylum must parse"))
         .expect("cross-nodule phylum must type-check");
@@ -1548,7 +1399,7 @@ fn cross_nodule_program_runs_three_way() {
 /// `fuse_join:binary` prim, with the canonical `Derived{op:"fuse_join"}` provenance.
 #[test]
 fn fuse_repr_differential_three_way_empirical() {
-    let src = "nodule d\nfn main() => Binary{8} = fuse(0b1011_0010, 0b1100_1111)";
+    let src = "nodule d;\nfn main() => Binary{8} = fuse(0b1011_0010, 0b1100_1111);";
     let env = check_nodule(&parse(src).expect("fuse(lit, lit) parses (DN-58 §A)"))
         .expect("fuse on Binary{8} type-checks (DN-58 §A)");
 
@@ -1618,10 +1469,7 @@ fn fuse_repr_differential_three_way_empirical() {
 /// `generic_corpus` test exercises this shape in the uniform harness; this names the DoD value.
 #[test]
 fn fuse_data_differential_three_way_empirical() {
-    let src = "nodule d\ntrait Fuse[A] { fn join(a: A, b: A) => A }\n\
-               type Flag = Off | On\n\
-               impl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b } }\n\
-               fn main() => Flag = fuse(On, Off)";
+    let src = "nodule d;\ntrait Fuse[A] { fn join(a: A, b: A) => A; };\ntype Flag = Off | On;\nimpl Fuse[Flag] for Flag { fn join(a: Flag, b: Flag) => Flag = match a { On => On, Off => b }; };\nfn main() => Flag = fuse(On, Off);";
     let env = check_nodule(&parse(src).expect("data fuse parses")).expect("data fuse type-checks");
 
     // The mono'd env desugars `fuse(On, Off)` to the resolved `join` call — the form L1-eval runs.
@@ -1659,7 +1507,7 @@ fn fuse_data_differential_three_way_empirical() {
     // Oracle: the merge value must be `On` (the absorbing element — join(On, Off) = On, DN-58 §A.1).
     // Compare against a bare `On` over the *same* `Flag` definition (its `#T#i` identity is content-
     // addressed by the type, so an identical `type Flag` yields the identical constructor identity).
-    let on_src = "nodule d\ntype Flag = Off | On\nfn main() => Flag = On";
+    let on_src = "nodule d;\ntype Flag = Off | On;\nfn main() => Flag = On;";
     let on_env = check_nodule(&parse(on_src).expect("parses")).expect("checks");
     let on_node = elaborate(&on_env, "main").expect("a bare `On` elaborates");
     let on_core = interp.eval_core(&on_node).expect("the `On` oracle runs");
@@ -1684,7 +1532,7 @@ fn fuse_data_differential_three_way_empirical() {
 /// body's value. Here `reclaim(0b0000_0001) { not(0b1010_1010) }` yields `not(0b1010_1010)` = `0b0101_0101`.
 #[test]
 fn reclaim_sequential_reference_runs_three_way() {
-    let src = "nodule d\nfn main() => Binary{8} = reclaim(0b0000_0001) { not(0b1010_1010) }";
+    let src = "nodule d;\nfn main() => Binary{8} = reclaim(0b0000_0001) { not(0b1010_1010) };";
     let env = check_nodule(&parse(src).expect("reclaim parses (DN-58 §B)"))
         .expect("reclaim type-checks (the body type is the result type)");
 
@@ -1743,7 +1591,7 @@ fn reclaim_real_supervision_driver_dispatches_with_explain() {
     };
 
     // (a) Success: the supervised observable equals the sequential reference, with an empty trace.
-    let ok_src = "nodule d\nfn main() => Binary{8} = reclaim(0b0000_0001) { not(0b1010_1010) }";
+    let ok_src = "nodule d;\nfn main() => Binary{8} = reclaim(0b0000_0001) { not(0b1010_1010) };";
     let ok_env = check_nodule(&parse(ok_src).expect("parses")).expect("checks");
     let (policy, body) = mycelium_l1::elaborate_reclaim(&ok_env, "main")
         .expect("reclaim elaborates to its (policy, body) closed L0 programs");
@@ -1770,7 +1618,7 @@ fn reclaim_real_supervision_driver_dispatches_with_explain() {
     // (b) Bounded failure: a deterministically-refusing body (add overflow) escalates with an EXPLAIN
     // trace — `add_bin(0b1111_1111, 0b0000_0001)` overflows `Binary{8}` (never a silent wrap — G2).
     let bad_src =
-        "nodule d\nfn main() => Binary{8} = reclaim(0b0000_0001) { add_bin(0b1111_1111, 0b0000_0001) }";
+        "nodule d;\nfn main() => Binary{8} = reclaim(0b0000_0001) { add_bin(0b1111_1111, 0b0000_0001) };";
     let bad_env = check_nodule(&parse(bad_src).expect("parses")).expect("checks");
     let (policy, body) = mycelium_l1::elaborate_reclaim(&bad_env, "main")
         .expect("reclaim elaborates to its (policy, body) programs");

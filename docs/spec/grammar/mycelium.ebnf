@@ -58,12 +58,16 @@
  *)
 
 program        ::= phylum_header? nodule_block+
-/* DN-57: an optional `;` **terminates** a component (an item; likewise a trait/impl method —
- * see fn_sig/fn_item callers). `;` terminates, `,` separates siblings, `:` ascribes. Optional in
- * v0 (a never-required terminator that adds no AST node); it makes whitespace-independent /
- * streamable source legal. The mandatory-everywhere form (the full streaming guarantee) + the
- * nodule-header terminator + corpus migration are the DN-57 follow-on. */
-nodule_block   ::= nodule_header (item ';'?)*
+/* DN-57 §3 (ENACTED, M-818): `;` is the **MANDATORY** component terminator — `;` terminates,
+ * `,` separates siblings, `:` ascribes. Every component ends with exactly one `;`, *uniformly and
+ * regardless of how its body ends*: a `}`-closed block (`trait`/`impl`/`object`) still takes the
+ * trailing `;` (NOT Rust's "`}` ends the block, no `;"). The **nodule header itself** is a
+ * component, so it too ends with `;` — this is what makes fully whitespace-free source legal
+ * (`nodule d; fn a() => … = …;`). A missing terminator is a never-silent parse error (G2) naming
+ * the component. The terminator adds NO AST node (it is purely a boundary token), so a streaming
+ * parser emits a completed component the instant it sees `;` (the streaming guarantee). The earlier
+ * v0 form made `;` OPTIONAL; M-818 makes it mandatory and migrates the whole corpus. */
+nodule_block   ::= nodule_header ';' (item ';')*
 
 /* A phylum (M-662; RFC-0006; DN-06 §6) groups one-or-more nodules in a single source file under an
  * optional 'phylum <path>' header — a metadata grouping parallel to the `nodule` header (identity
@@ -109,8 +113,11 @@ item           ::= use_item
  * `fn`s (the `object` inherent-`fn` model — KC-3, zero kernel growth). The two are disambiguated
  * after the head by the `for` (trait) vs `{` (inherent) follower; any other follower is a
  * never-silent parse error (G2). */
-impl_item      ::= 'impl' Ident type_args? 'for' type_ref '{' fn_item* '}'   /* trait instance */
-                 | 'impl' base_type '{' fn_item* '}'                          /* inherent (M-664) */
+/* DN-57 §3 (M-818): each block member (method) is itself a component, so it carries the mandatory
+ * `;` — `(fn_item ';')*`; and the whole `impl_item` is in turn terminated by a `;` at its use site
+ * in `nodule_block` (the trailing `;` after the closing `}`). */
+impl_item      ::= 'impl' Ident type_args? 'for' type_ref '{' (fn_item ';')* '}'  /* trait instance */
+                 | 'impl' base_type '{' (fn_item ';')* '}'                        /* inherent (M-664) */
 
 /* Import (M-662): a specific `use a.b.X` binds the single name `X`; a glob `use a.b.*` binds every
  * `pub` name directly under the prefix `a.b`. Precedence (highest first): a local declaration, then
@@ -136,8 +143,9 @@ const_params   ::= '{' Ident (',' Ident)* '}'
 constructor    ::= Ident ('(' type_ref (',' type_ref)* ')')?
 
 /* Trait = a named set of function signatures (LR-2; conventional term, DN-02). Optional `pub`
- * (M-662) exports the trait to sibling nodules of the phylum. */
-trait_item     ::= 'pub'? 'trait' Ident type_params? '{' fn_sig* '}'
+ * (M-662) exports the trait to sibling nodules of the phylum. DN-57 §3 (M-818): each signature is a
+ * component, terminated by `;` — `(fn_sig ';')*`. */
+trait_item     ::= 'pub'? 'trait' Ident type_params? '{' (fn_sig ';')* '}'
 fn_sig         ::= 'fn' Ident type_params? const_params? '(' params? ')' '=>' type_ref effects?
 
 /* Function. Optional 'thaw' DE-matures one definition — keeps it interpreted inside an
@@ -162,11 +170,15 @@ param          ::= Ident ':' type_ref
  * (DN-38 §5). The body MUST open with exactly one constructor clause (terminated by `;`); an empty
  * body is a never-silent parse refusal (G2). `via N : Trait` — `N` is a decimal field index (not an
  * identifier). `pub` inside the body is refused (the object's own `pub` governs the composed type). */
-object_item    ::= 'pub'? 'object' Ident type_params? '{' constructor ';' object_member* '}'
+/* DN-57 §3 (M-818): the constructor clause AND every subsequent object member are components, each
+ * terminated by a mandatory `;` (the constructor `;` was already required; M-818 makes the member
+ * `;` mandatory too — `(object_member ';')*`). The whole `object_item` is terminated by the trailing
+ * `;` at its `nodule_block` use site (after the closing `}`). */
+object_item    ::= 'pub'? 'object' Ident type_params? '{' constructor ';' (object_member ';')* '}'
 object_member  ::= via_clause | trait_item_impl | fn_item
-via_clause     ::= 'via' Int ':' Ident type_args? ';'?            /* delegate to a held field by index */
+via_clause     ::= 'via' Int ':' Ident type_args?                 /* delegate to a held field by index */
 trait_item_impl ::= /* a trait-instance `impl` block, same grammar as a top-level impl */
-                   'impl' Ident type_args? 'for' type_ref '{' fn_item* '}' ';'?
+                   'impl' Ident type_args? 'for' type_ref '{' (fn_item ';')* '}'
 
 /* User-extensible generative lowering (DN-54 / M-812; implemented Rust-first, SURFACE + STRUCTURAL
  * checks only — pending ratification). `lower Name[params]? = <rhs>` DEFINES a generative-lowering

@@ -559,7 +559,7 @@ mod tests {
 
     fn small_model() -> DocModel {
         let mut a = AnchorAlloc::new();
-        let src = "# Doc\n\nLead summary.\n\n## Sec\n\nBody.\n\n```myc-checked\nnodule ex\nfn f() => Binary{8} = 0b0000_0000\n```\n";
+        let src = "# Doc\n\nLead summary.\n\n## Sec\n\nBody.\n\n```myc-checked\nnodule ex;\nfn f() => Binary{8} = 0b0000_0000;\n```\n";
         DocModel::new(vec![ingest(
             "docs/spec/d.md",
             src,

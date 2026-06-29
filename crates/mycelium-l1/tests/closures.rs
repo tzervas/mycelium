@@ -32,75 +32,43 @@ fn closure_corpus() -> Vec<Shape> {
         // (1) captureless lambda, applied through a `let` binder: not(0b0000_0001) = 0b1111_1110.
         Shape {
             name: "captureless",
-            src: "nodule d\n\
-                  fn main() => Binary{8} =\n  \
-                    let f = lambda(x: Binary{8}) => not(x) in f(0b0000_0001)",
+            src: "nodule d;\nfn main() => Binary{8} =\n  let f = lambda(x: Binary{8}) => not(x) in f(0b0000_0001);",
         },
         // (2) single-capture: captures `c`; and(0b1010_1010, 0b0000_1111) = 0b0000_1010.
         Shape {
             name: "single-capture",
-            src: "nodule d\n\
-                  fn main() => Binary{8} =\n  \
-                    let c = 0b0000_1111 in\n  \
-                    let f = lambda(x: Binary{8}) => and(x, c) in f(0b1010_1010)",
+            src: "nodule d;\nfn main() => Binary{8} =\n  let c = 0b0000_1111 in\n  let f = lambda(x: Binary{8}) => and(x, c) in f(0b1010_1010);",
         },
         // (3) multi-capture: captures `a` and `b`; and(and(0xFF, a), b).
         Shape {
             name: "multi-capture",
-            src: "nodule d\n\
-                  fn main() => Binary{8} =\n  \
-                    let a = 0b0000_1111 in let b = 0b1100_1100 in\n  \
-                    let f = lambda(x: Binary{8}) => and(and(x, a), b) in f(0b1111_1111)",
+            src: "nodule d;\nfn main() => Binary{8} =\n  let a = 0b0000_1111 in let b = 0b1100_1100 in\n  let f = lambda(x: Binary{8}) => and(and(x, a), b) in f(0b1111_1111);",
         },
         // (4) closure-capturing-closure: `h` captures the closure `inc` and applies it via `apply2`.
         Shape {
             name: "closure-capturing-closure",
-            src: "nodule d\n\
-                  fn apply2(g: Binary{8} => Binary{8}, y: Binary{8}) => Binary{8} = g(y)\n\
-                  fn main() => Binary{8} =\n  \
-                    let inc = lambda(x: Binary{8}) => not(x) in\n  \
-                    let h = lambda(z: Binary{8}) => apply2(inc, z) in h(0b0000_0001)",
+            src: "nodule d;\nfn apply2(g: Binary{8} => Binary{8}, y: Binary{8}) => Binary{8} = g(y);\nfn main() => Binary{8} =\n  let inc = lambda(x: Binary{8}) => not(x) in\n  let h = lambda(z: Binary{8}) => apply2(inc, z) in h(0b0000_0001);",
         },
         // (5) dynamic-fn-out-of-match: the closure is chosen in a `match`, then applied.
         Shape {
             name: "dyn-fn-out-of-match",
-            src: "nodule d\n\
-                  type Bit = Hi | Lo\n\
-                  fn main() => Binary{8} =\n  \
-                    let sel = Hi in\n  \
-                    let f = match sel {\n    \
-                      Hi => lambda(x: Binary{8}) => not(x),\n    \
-                      Lo => lambda(x: Binary{8}) => x\n  \
-                    } in f(0b0000_0001)",
+            src: "nodule d;\ntype Bit = Hi | Lo;\nfn main() => Binary{8} =\n  let sel = Hi in\n  let f = match sel {\n    Hi => lambda(x: Binary{8}) => not(x),\n    Lo => lambda(x: Binary{8}) => x\n  } in f(0b0000_0001);",
         },
         // (6) dynamic-fn-as-field: a closure stored in a data field, applied after destructuring.
         Shape {
             name: "dyn-fn-as-field",
-            src: "nodule d\n\
-                  type Box = Mk(Binary{8} => Binary{8})\n\
-                  fn run(b: Box, v: Binary{8}) => Binary{8} = match b { Mk(f) => f(v) }\n\
-                  fn main() => Binary{8} =\n  \
-                    let c = 0b0000_1111 in\n  \
-                    run(Mk(lambda(x: Binary{8}) => and(x, c)), 0b1010_1010)",
+            src: "nodule d;\ntype Box = Mk(Binary{8} => Binary{8});\nfn run(b: Box, v: Binary{8}) => Binary{8} = match b { Mk(f) => f(v) };\nfn main() => Binary{8} =\n  let c = 0b0000_1111 in\n  run(Mk(lambda(x: Binary{8}) => and(x, c)), 0b1010_1010);",
         },
         // (7) capturing stdlib combinator: `map` over Result with a CLOSURE (the consuming proof).
         Shape {
             name: "map-with-closure",
-            src: "nodule d\n\
-                  type Result[A, E] = Ok(A) | Err(E)\n\
-                  fn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  \
-                    match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) }\n\
-                  fn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001)\n\
-                  fn main() => Result[Binary{8},Binary{8}] =\n  \
-                    let c = 0b0000_1111 in map(mk_ok(), lambda(x: Binary{8}) => and(x, c))",
+            src: "nodule d;\ntype Result[A, E] = Ok(A) | Err(E);\nfn map[A, B, E](r: Result[A, E], f: A => B) => Result[B, E] =\n  match r { Ok(x) => Ok(f(x)), Err(e) => Err(e) };\nfn mk_ok() => Result[Binary{8},Binary{8}] = Ok(0b0000_0001);\nfn main() => Result[Binary{8},Binary{8}] =\n  let c = 0b0000_1111 in map(mk_ok(), lambda(x: Binary{8}) => and(x, c));",
         },
         // (8) named fn as an escaping value (RFC-0024 §4A.4 — a bare named fn becomes a NULLARY
         // closure constructor): `let f = negate in f(x)`. not(0b0000_0011) = 0b1111_1100.
         Shape {
             name: "named-fn-as-value",
-            src: "nodule d\n\
-                  fn negate(x: Binary{8}) => Binary{8} = not(x)\n\
-                  fn main() => Binary{8} = let f = negate in f(0b0000_0011)",
+            src: "nodule d;\nfn negate(x: Binary{8}) => Binary{8} = not(x);\nfn main() => Binary{8} = let f = negate in f(0b0000_0011);",
         },
     ]
 }
@@ -201,14 +169,8 @@ fn the_closure_differential_distinguishes_different_captured_environments() {
         .eval_core(&node)
         .unwrap()
     };
-    let with_low = run("nodule d\n\
-         fn main() => Binary{8} =\n  \
-           let c = 0b0000_1111 in\n  \
-           let f = lambda(x: Binary{8}) => and(x, c) in f(0b1111_1111)");
-    let with_high = run("nodule d\n\
-         fn main() => Binary{8} =\n  \
-           let c = 0b1111_0000 in\n  \
-           let f = lambda(x: Binary{8}) => and(x, c) in f(0b1111_1111)");
+    let with_low = run("nodule d;\nfn main() => Binary{8} =\n  let c = 0b0000_1111 in\n  let f = lambda(x: Binary{8}) => and(x, c) in f(0b1111_1111);");
+    let with_high = run("nodule d;\nfn main() => Binary{8} =\n  let c = 0b1111_0000 in\n  let f = lambda(x: Binary{8}) => and(x, c) in f(0b1111_1111);");
     assert_ne!(
         with_low, with_high,
         "different captured environments must yield different results — the dispatch reads the capture"
@@ -220,9 +182,7 @@ fn the_closure_differential_distinguishes_different_captured_environments() {
 /// (G2/VR-5), never a silent accept. This pins the honest scope boundary (FLAG: multi-arg/partial).
 #[test]
 fn multi_argument_lambda_is_an_explicit_refusal() {
-    let src = "nodule d\n\
-               fn main() => Binary{8} =\n  \
-                 let f = lambda(x: Binary{8}, y: Binary{8}) => and(x, y) in f(0b1111_1111)";
+    let src = "nodule d;\nfn main() => Binary{8} =\n  let f = lambda(x: Binary{8}, y: Binary{8}) => and(x, y) in f(0b1111_1111);";
     let r = check_nodule(&parse(src).expect("parses — the grammar admits a 2-param lambda"));
     assert!(
         r.is_err(),

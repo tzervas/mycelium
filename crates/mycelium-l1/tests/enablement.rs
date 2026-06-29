@@ -108,14 +108,14 @@ fn eq_binary_width_typed() {
     let (r, p) = b1(true);
     assert_three_way(
         "eq Binary equal",
-        "nodule d\nfn main() => Binary{1} = eq(0b1010_0000, 0b1010_0000)",
+        "nodule d;\nfn main() => Binary{1} = eq(0b1010_0000, 0b1010_0000);",
         &r,
         &p,
     );
     let (r, p) = b1(false);
     assert_three_way(
         "eq Binary unequal",
-        "nodule d\nfn main() => Binary{1} = eq(0b1010_0000, 0b1010_0001)",
+        "nodule d;\nfn main() => Binary{1} = eq(0b1010_0000, 0b1010_0001);",
         &r,
         &p,
     );
@@ -126,14 +126,14 @@ fn eq_ternary_width_typed() {
     let (r, p) = b1(true);
     assert_three_way(
         "eq Ternary equal",
-        "nodule d\nfn main() => Binary{1} = eq(0t00+-, 0t00+-)",
+        "nodule d;\nfn main() => Binary{1} = eq(0t00+-, 0t00+-);",
         &r,
         &p,
     );
     let (r, p) = b1(false);
     assert_three_way(
         "eq Ternary unequal",
-        "nodule d\nfn main() => Binary{1} = eq(0t00+-, 0t0+0-)",
+        "nodule d;\nfn main() => Binary{1} = eq(0t00+-, 0t0+0-);",
         &r,
         &p,
     );
@@ -145,7 +145,7 @@ fn lt_binary_unsigned_magnitude() {
     let (r, p) = b1(true);
     assert_three_way(
         "lt Binary true",
-        "nodule d\nfn main() => Binary{1} = lt(0b1000_0000, 0b1010_0000)",
+        "nodule d;\nfn main() => Binary{1} = lt(0b1000_0000, 0b1010_0000);",
         &r,
         &p,
     );
@@ -153,7 +153,7 @@ fn lt_binary_unsigned_magnitude() {
     let (r, p) = b1(false);
     assert_three_way(
         "lt Binary equal-is-false",
-        "nodule d\nfn main() => Binary{1} = lt(0b1010_0000, 0b1010_0000)",
+        "nodule d;\nfn main() => Binary{1} = lt(0b1010_0000, 0b1010_0000);",
         &r,
         &p,
     );
@@ -165,7 +165,7 @@ fn lt_ternary_balanced_value() {
     let (r, p) = b1(true);
     assert_three_way(
         "lt Ternary true",
-        "nodule d\nfn main() => Binary{1} = lt(0t00+-, 0t0+0-)",
+        "nodule d;\nfn main() => Binary{1} = lt(0t00+-, 0t0+0-);",
         &r,
         &p,
     );
@@ -173,7 +173,7 @@ fn lt_ternary_balanced_value() {
     let (r, p) = b1(false);
     assert_three_way(
         "lt Ternary negative-false",
-        "nodule d\nfn main() => Binary{1} = lt(0t00+-, 0t0-00)",
+        "nodule d;\nfn main() => Binary{1} = lt(0t00+-, 0t0-00);",
         &r,
         &p,
     );
@@ -184,8 +184,7 @@ fn lt_ternary_balanced_value() {
 #[test]
 fn bool_bridge_from_comparison_bit() {
     // `match eq(a, b) { 0b1 => True, _ => False }` ≡ the data value `True`.
-    let src = "nodule d\n\
-               fn main() => Bool = match eq(0b1010_0000, 0b1010_0000) { 0b1 => True, _ => False }";
+    let src = "nodule d;\nfn main() => Bool = match eq(0b1010_0000, 0b1010_0000) { 0b1 => True, _ => False };";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
     let val = Evaluator::new(&env).call("main", vec![]).expect("L1-eval");
     // The result is the `True` data constructor (the lift succeeded).
@@ -202,13 +201,13 @@ fn bool_bridge_from_comparison_bit() {
 fn and_or_surfaced() {
     assert_three_way(
         "and",
-        "nodule d\nfn main() => Binary{8} = and(0b1100_1010, 0b1010_1010)",
+        "nodule d;\nfn main() => Binary{8} = and(0b1100_1010, 0b1010_1010);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("10001010".chars().map(|c| c == '1').collect()),
     );
     assert_three_way(
         "or",
-        "nodule d\nfn main() => Binary{8} = or(0b1100_1010, 0b1010_1010)",
+        "nodule d;\nfn main() => Binary{8} = or(0b1100_1010, 0b1010_1010);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("11101010".chars().map(|c| c == '1').collect()),
     );
@@ -219,7 +218,7 @@ fn add_bin_in_range() {
     // 0b0000_0001 + 0b0000_0010 = 0b0000_0011 (1 + 2 = 3).
     assert_three_way(
         "add_bin",
-        "nodule d\nfn main() => Binary{8} = add_bin(0b0000_0001, 0b0000_0010)",
+        "nodule d;\nfn main() => Binary{8} = add_bin(0b0000_0001, 0b0000_0010);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
     );
@@ -230,7 +229,7 @@ fn sub_bin_in_range() {
     // 0b0000_0101 - 0b0000_0010 = 0b0000_0011 (5 - 2 = 3).
     assert_three_way(
         "sub_bin",
-        "nodule d\nfn main() => Binary{8} = sub_bin(0b0000_0101, 0b0000_0010)",
+        "nodule d;\nfn main() => Binary{8} = sub_bin(0b0000_0101, 0b0000_0010);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
     );
@@ -242,7 +241,7 @@ fn sub_bin_in_range() {
 /// never a silent wrap to `0`. (The program type-checks: overflow is a runtime contract, D2.)
 #[test]
 fn add_bin_overflow_refuses_on_every_path() {
-    let src = "nodule d\nfn main() => Binary{8} = add_bin(0b1111_1111, 0b0000_0001)";
+    let src = "nodule d;\nfn main() => Binary{8} = add_bin(0b1111_1111, 0b0000_0001);";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
     let interp = Interpreter::new(
@@ -271,7 +270,7 @@ fn add_bin_overflow_refuses_on_every_path() {
 /// three** paths — never a silent wrap to `255` — exactly like the overflow test above.
 #[test]
 fn sub_bin_underflow_refuses_on_every_path() {
-    let src = "nodule d\nfn main() => Binary{8} = sub_bin(0b0000_0000, 0b0000_0001)";
+    let src = "nodule d;\nfn main() => Binary{8} = sub_bin(0b0000_0000, 0b0000_0001);";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
     let interp = Interpreter::new(
@@ -300,7 +299,7 @@ fn sub_bin_underflow_refuses_on_every_path() {
 /// at check time, never a silent `false` (RFC-0032 D1).
 #[test]
 fn eq_cross_paradigm_refuses_statically() {
-    let src = "nodule d\nfn main() => Binary{1} = eq(0b0000_0001, 0t00+-)";
+    let src = "nodule d;\nfn main() => Binary{1} = eq(0b0000_0001, 0t00+-);";
     let err = check_nodule(&parse(src).expect("parses"));
     assert!(
         err.is_err(),
@@ -314,7 +313,7 @@ fn eq_cross_paradigm_refuses_statically() {
 /// width unknown), so this exercises the width-anchor refusal specifically.
 #[test]
 fn eq_both_bare_decimals_refuse() {
-    let src = "nodule d\ndefault paradigm Binary\nfn main() => Binary{1} = eq(5, 6)";
+    let src = "nodule d;\ndefault paradigm Binary;\nfn main() => Binary{1} = eq(5, 6);";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
         "a both-bare-decimal `eq` must refuse (no width anchor), never a default width"
@@ -329,7 +328,7 @@ fn eq_concrete_operand_anchors_bare_decimal() {
     let (r, p) = b1(true);
     assert_three_way(
         "eq concrete anchors bare decimal",
-        "nodule d\ndefault paradigm Binary\nfn main() => Binary{1} = eq(0b0000_0101, 5)",
+        "nodule d;\ndefault paradigm Binary;\nfn main() => Binary{1} = eq(0b0000_0101, 5);",
         &r,
         &p,
     );
@@ -337,7 +336,7 @@ fn eq_concrete_operand_anchors_bare_decimal() {
     let (r, p) = b1(false);
     assert_three_way(
         "eq bare-first anchored false",
-        "nodule d\ndefault paradigm Binary\nfn main() => Binary{1} = eq(4, 0b0000_0101)",
+        "nodule d;\ndefault paradigm Binary;\nfn main() => Binary{1} = eq(4, 0b0000_0101);",
         &r,
         &p,
     );
@@ -731,7 +730,7 @@ fn seq_literal_surface_three_way() {
     let expected_payload = Payload::Seq(vec![b1_val(true), b1_val(false), b1_val(true)]);
     assert_three_way(
         "seq literal [0b1,0b0,0b1]",
-        "nodule d\nfn main() => Seq{Binary{1}, 3} = [0b1, 0b0, 0b1]",
+        "nodule d;\nfn main() => Seq{Binary{1}, 3} = [0b1, 0b0, 0b1];",
         &expected_repr,
         &expected_payload,
     );
@@ -744,7 +743,7 @@ fn seq_get_surface_three_way() {
     for (i, want) in [(0u8, true), (1, false), (2, true)] {
         let (r, p) = b1(want);
         let src =
-            format!("nodule d\nfn main() => Binary{{1}} = seq_get([0b1, 0b0, 0b1], 0b{i:08b})");
+            format!("nodule d;\nfn main() => Binary{{1}} = seq_get([0b1, 0b0, 0b1], 0b{i:08b});");
         assert_three_way(&format!("seq_get index {i}"), &src, &r, &p);
     }
 }
@@ -755,7 +754,7 @@ fn seq_len_surface_three_way() {
     let (r, p) = b32(3);
     assert_three_way(
         "seq_len",
-        "nodule d\nfn main() => Binary{32} = seq_len([0b1, 0b0, 0b1])",
+        "nodule d;\nfn main() => Binary{32} = seq_len([0b1, 0b0, 0b1]);",
         &r,
         &p,
     );
@@ -765,7 +764,7 @@ fn seq_len_surface_three_way() {
 /// be homogeneous, never silently coerced (RFC-0032 D3). `0b1` is `Binary{1}`, `0b00` is `Binary{2}`.
 #[test]
 fn seq_heterogeneous_elements_reject() {
-    let src = "nodule d\nfn main() => Seq{Binary{1}, 2} = [0b1, 0b00]";
+    let src = "nodule d;\nfn main() => Seq{Binary{1}, 2} = [0b1, 0b00];";
     let err = check_nodule(&parse(src).expect("parses"))
         .expect_err("a heterogeneous list literal must be a static check error, never a coercion");
     assert!(
@@ -778,7 +777,7 @@ fn seq_heterogeneous_elements_reject() {
 /// static refusal — never a silent truncation/padding (RFC-0032 D3).
 #[test]
 fn seq_length_mismatch_reject() {
-    let src = "nodule d\nfn main() => Seq{Binary{1}, 5} = [0b1, 0b0, 0b1]";
+    let src = "nodule d;\nfn main() => Seq{Binary{1}, 5} = [0b1, 0b0, 0b1];";
     let err = check_nodule(&parse(src).expect("parses"))
         .expect_err("a list-length vs Seq{N} mismatch must be a static check error");
     assert!(
@@ -795,7 +794,7 @@ fn bytes_literal_surface_three_way() {
     let expected_payload = Payload::Bytes(vec![0x48, 0x65, 0x6c, 0x6c, 0x6f]);
     assert_three_way(
         "bytes literal 0x48_65_6c_6c_6f",
-        "nodule d\nfn main() => Bytes = 0x48_65_6c_6c_6f",
+        "nodule d;\nfn main() => Bytes = 0x48_65_6c_6c_6f;",
         &Repr::Bytes,
         &expected_payload,
     );
@@ -808,7 +807,7 @@ fn bytes_get_surface_three_way() {
     let want: Vec<bool> = (0..8).rev().map(|k| (0x02u8 >> k) & 1 == 1).collect();
     assert_three_way(
         "bytes_get index 1",
-        "nodule d\nfn main() => Binary{8} = bytes_get(0x01_02_03, 0b0000_0001)",
+        "nodule d;\nfn main() => Binary{8} = bytes_get(0x01_02_03, 0b0000_0001);",
         &Repr::Binary { width: 8 },
         &Payload::Bits(want),
     );
@@ -820,7 +819,7 @@ fn bytes_len_surface_three_way() {
     let (r, p) = b32(3);
     assert_three_way(
         "bytes_len",
-        "nodule d\nfn main() => Binary{32} = bytes_len(0x01_02_03)",
+        "nodule d;\nfn main() => Binary{32} = bytes_len(0x01_02_03);",
         &r,
         &p,
     );
