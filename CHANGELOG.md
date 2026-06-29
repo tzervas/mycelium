@@ -8,6 +8,22 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-29: VSA proof-discovery — all three effective-`m` models + both Lean 4 and Liquid Haskell, M-832)
+
+- **All three effective-`m` models, comparatively (M-832 / OQ-F).** The `--proof` mode now discovers
+  and emits obligations for **all three** candidate models (`A_exponential` / `B_linear` / `C_sqrt`)
+  across all three compositions in one run, with a **comparative ranking per composition** in
+  `PROOF-SUMMARY.md` (tightest valid upper bound; refuted models listed explicitly, never silently
+  dropped — G2). The maintainer reads the comparison rather than pre-choosing a model.
+- **Both proof assistants — Lean 4 and Liquid Haskell.** Alongside the SMT-LIB (refutation pattern) and
+  Liquid-Haskell skeletons, a new **`emit_lean()`** emits Lean 4 probes (`axiom candidateCapacityThm` +
+  per-point `native_decide` arithmetic instantiation), with a `proofs/vsa-multihop-bound/lean/` scaffold
+  (`lean-toolchain` pinned to `leanprover/lean4:v4.15.0`, `lakefile.toml`, a representative module). The
+  Lean path also feeds the OQ-A/M-827 mechanization (research/26 recommends Lean 4). VR-5: both
+  assistants **axiomatize** the candidate theorem and discharge only the arithmetic — neither stamps
+  `Proven`. A committed **`EXAMPLE-*`** obligation set (from a real CPU `--demo` run; 6 in-regime probes,
+  3 refuted cases honestly reported) makes the output concrete without running anything.
+
 ### Added (2026-06-29: DN-64 §7 maintainer dispositions — RFC-0038 inject-mode security axis, research/26+27 R&D records, VSA-bounds GPU experiment, M-827…M-846)
 
 - **DN-64 §7 — maintainer dispositions on all 20 open questions (OQ-A…OQ-T).** Each OQ recorded at

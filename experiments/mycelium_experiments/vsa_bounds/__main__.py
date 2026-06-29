@@ -12,6 +12,9 @@ Quick start (GPU, default sizes):
 CPU-only / quick profile:
     python -m mycelium_experiments.vsa_bounds --sweep both --quick
 
+Demo profile (CPU-feasible, produces in-regime obligations for small-m cases):
+    python -m mycelium_experiments.vsa_bounds --demo --numpy-only --no-plots
+
 Proof-discovery mode (emits candidate bounds and checkable proof obligations):
     python -m mycelium_experiments.vsa_bounds --proof
     python -m mycelium_experiments.vsa_bounds --proof --quick
@@ -19,9 +22,10 @@ Proof-discovery mode (emits candidate bounds and checkable proof obligations):
 
 The --proof mode runs the multihop sweep, fits candidate closed-form bounds,
 validates them empirically, and emits:
-  - A PROOF-SUMMARY.md with the best candidate theorem and emitted obligations.
-  - SMT-LIB 2 (.smt2) files for Z3 to discharge.
+  - A PROOF-SUMMARY.md with comparative ranking per composition and emitted obligations.
+  - SMT-LIB 2 (.smt2) files for Z3 to discharge (all models x compositions).
   - Liquid Haskell skeleton (.hs) files mirroring proofs/lh-bundle/.
+  - Lean 4 skeleton (.lean) files for the OQ-A/M-827 mechanization path.
 
 Results land in experiments/results/ (default) or --results-dir DIR.
 
@@ -71,6 +75,18 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     p.add_argument(
+        "--demo",
+        action="store_true",
+        help=(
+            "Demo/CPU profile: raises d up to ~8192 with reduced trial counts (~50) "
+            "to produce non-empty in-regime obligations without GPU.  "
+            "Uses F=[2], k=[4], h=[1,2] — smallest-m cases where the candidate_dim "
+            "is well below d=8192.  Implies --proof.  "
+            "Suitable for generating committed EXAMPLE artifacts.  "
+            "Guarantee: Empirical (trial-measured rates at these d values)."
+        ),
+    )
+    p.add_argument(
         "--trials",
         type=int,
         default=None,
@@ -104,7 +120,8 @@ def _build_parser() -> argparse.ArgumentParser:
         help=(
             "Proof-discovery mode: run the multihop sweep, fit candidate closed-form "
             "multi-hop bounds (Declared), validate them empirically, and emit checkable "
-            "proof obligations (SMT-LIB + LH skeleton).  Implies --sweep multihop.  "
+            "proof obligations (SMT-LIB + LH skeleton + Lean 4 skeleton).  "
+            "Implies --sweep multihop.  "
             "VR-5: no Proven claims are made; the obligations are Declared stubs."
         ),
     )
@@ -112,8 +129,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "--emit-obligations",
         action="store_true",
         help=(
-            "Emit SMT-LIB (.smt2) and Liquid Haskell (.hs) proof obligation files "
-            "alongside the PROOF-SUMMARY.md (implies --proof).  "
+            "Emit SMT-LIB (.smt2), Liquid Haskell (.hs), and Lean 4 (.lean) proof "
+            "obligation files alongside the PROOF-SUMMARY.md (implies --proof).  "
+            "Emits all models x all compositions.  "
             "Also copies obligations to proofs/vsa-multihop-bound/ stubs if present."
         ),
     )
@@ -170,8 +188,10 @@ def main() -> int:
 
     args = _build_parser().parse_args()
 
+    # --demo implies --proof (and --emit-obligations for convenience).
+    demo_mode = args.demo
     # --proof and --emit-obligations both imply the proof-discovery path.
-    proof_mode = args.proof or args.emit_obligations
+    proof_mode = args.proof or args.emit_obligations or demo_mode
 
     # Backend selection — never-silent (G2).
     be = _be.select(force_numpy=args.numpy_only)
@@ -193,7 +213,27 @@ def main() -> int:
         models = [args.model]
 
     # Dimension values.
-    if args.quick:
+    # --demo: CPU-feasible profile designed to produce in-regime points.
+    # The key insight: for Model A/B/C at h=1, F=2, k=4:
+    #   m_eff = F*k^1 = 2*4 = 8 → required_dim(8, 0.02) ≈ 1382
+    #   At d=8192 >> 1382 → in-regime. (Empirical)
+    # For h=2, F=2, k=4 (Model B):
+    #   m_eff = F*k*h = 2*4*2 = 16 → required_dim(16, 0.02) ≈ 1659
+    #   Also well within d=8192. (Empirical)
+    if demo_mode:
+        default_d = [1024, 2048, 4096, 8192]
+        default_m = [3, 5, 10]
+        default_F = [2]
+        default_k = [4]
+        default_h = [1, 2]
+        default_trials_single = 50
+        default_trials_multi = 50
+        print(
+            "[vsa_bounds] --demo profile: d=[1024,2048,4096,8192] F=[2] k=[4] h=[1,2] "
+            "trials=50 (CPU-feasible, designed to produce in-regime obligations).",
+            file=sys.stderr,
+        )
+    elif args.quick:
         default_d = [256, 512, 1024]
         default_m = [3, 5, 10]
         default_F = [2]
@@ -310,7 +350,7 @@ def main() -> int:
             summary_text = summarize_candidates(candidates)
             print(summary_text, file=sys.stderr)
 
-            # Emit obligations.
+            # Emit obligations (all models x all compositions x SMT2 + LH + Lean).
             proof_dir = results_dir
             obligations = emit_obligations(
                 candidates,
@@ -335,14 +375,22 @@ def main() -> int:
                         file=sys.stderr,
                     )
 
-            # Optionally copy obligation stubs into proofs/vsa-multihop-bound/.
-            # (Only if the directory exists — the orchestrator owns it; we just populate.)
+            # Copy obligation stubs into proofs/vsa-multihop-bound/ if the directory exists.
+            # (The orchestrator owns it; we populate run-outputs only.)
+            # SMT2 and HS go to root; Lean goes to lean/ subdir.
             proofs_dir = Path("..") / "proofs" / "vsa-multihop-bound"
             if proofs_dir.exists():
                 import shutil  # noqa: PLC0415
 
+                lean_dir = proofs_dir / "lean"
                 for key, path in obligations.items():
-                    dest = proofs_dir / path.name
+                    if key == "PROOF-SUMMARY":
+                        dest = proofs_dir / path.name
+                    elif path.suffix == ".lean":
+                        lean_dir.mkdir(parents=True, exist_ok=True)
+                        dest = lean_dir / path.name
+                    else:
+                        dest = proofs_dir / path.name
                     shutil.copy2(path, dest)
                     print(
                         f"[vsa_bounds] copied to proofs/vsa-multihop-bound/: {dest.name}",

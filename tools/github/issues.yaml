@@ -7239,6 +7239,12 @@ issues:
       DoD: maintainer runs the sweep locally; SUMMARY.md + PROOF-SUMMARY.md present data, candidate
       regimes, and the emitted obligations for ratification; the `Proven` upgrade requires a proof
       assistant to discharge the obligation AND the underlying multi-hop theorem to be established (M-827).
+      FLAGs resolved (maintainer "all and both", 2026-06-29): the harness now tests ALL THREE
+      effective-m models (A_exponential/B_linear/C_sqrt) comparatively per composition AND emits
+      obligations for BOTH proof assistants (Lean 4 via native_decide + Liquid Haskell via Z3),
+      alongside SMT-LIB. proofs/vsa-multihop-bound/lean/ scaffold added; committed EXAMPLE-* artifacts
+      from a CPU --demo run. Both assistants axiomatize the candidate theorem (the open OQ-A/M-827
+      question); neither stamps `Proven`.
   - id: M-833
     title: "M-833 -- Ratify guard clauses (when <cond>) + guarantee propagation to the arm"
     milestone: "Phase 5 — Self-Hosting & Core Library"

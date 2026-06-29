@@ -2,8 +2,13 @@
 #   python -m mycelium_experiments.vsa_bounds --proof --emit-obligations
 # They are regenerated per sweep (and are empty unless the sweep has in-regime
 # points), so they are NOT committed. The committed scaffold is README.md +
-# cabal + src/ (the LH skeleton). To keep a representative populated obligation
-# from a real GPU run, add it explicitly with `git add -f`.
+# cabal + src/ (the LH skeleton) + lean/ (the Lean 4 skeleton).
+# To keep a representative populated obligation from a real GPU run, add it
+# explicitly with `git add -f`.
 *-multihop-*.smt2
 *-multihop-*.hs
+*-multihop-*.lean
 *PROOF-SUMMARY.md
+# Lean 4 build outputs (lake build artifacts)
+lean/.lake/
+lean/lake-manifest.json
