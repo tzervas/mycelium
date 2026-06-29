@@ -475,6 +475,272 @@ doc's status.
 
 ---
 
+## §10 Derive-site attachment — design options (addendum, 2026-06-29, M-824)
+
+> **Design-pass posture (VR-5 / G2).** This section is a **design pass for maintainer
+> ratification**. DN-54 remains `Accepted`; no status is advanced here. All new claims are
+> `Declared` (design, not ratified). Every normative claim cites its corpus basis. This section
+> is append-only: §§1–9 are not modified.
+
+---
+
+### §10.1 The underdetermined residual — what is open
+
+The M-812-cont landing (2026-06-29 changelog entry) surfaces two tightly coupled open facets:
+
+**(a) Attachment model.** `lower` defines *what* the generated L0 is. `derive Name for T`
+instantiates it. But **where does the resulting L0 live in the program?** The v0 elaborator
+(`elaborate(env, entry)`) produces one L0 `Node` from one nullary function entry — a
+self-contained lambda value. A `derive` application must place its output somewhere so that
+code that uses `derive Checksum for MyPacket` can refer to the resulting checksum
+implementation. Two broad candidate models are identified here (§10.3); others are named as
+open (§10.6).
+
+**(b) Item-not-Expr RHS gap.** The §3.2 worked example has a `lower` rule whose RHS is:
+
+```mycelium
+lower Checksum[T: Bytes] =
+  impl Checksum for T {
+    fn checksum(self) -> Binary{32} = …
+  }
+```
+
+An `impl` block is an **item** (a declaration), not an **expression**. The v0 parser
+(`parse_lower_decl`) calls `parse_expr` for the RHS, which cannot accept an `impl` item.
+This is not a bug in the landed code — the landed nullary elaboration correctly handles
+expression-shaped RHS — but it is a **structural gap between the design intent (§3.2) and
+the v0 grammar capability**: the canonical motivating use case (derive a trait implementation)
+is not yet expressible. This addendum designs paths to close it.
+
+**(c) Parametric instantiation.** A `lower Name[T]` rule whose RHS references `T` has no
+monomorphic L0 until a `derive Name for ConcreteType` instantiates `T`. The current
+elaboration of such rules produces `ElabError::Residual` (never-silent, G2). The residual
+is correct; the question is how the attachment model and the monomorphization path
+(`mono.rs::emit_fn` — RFC-0019 / DN-55) compose at the derive site.
+
+---
+
+### §10.2 Framing: what a satisfactory model must do
+
+Before enumerating candidates, the criteria (`Declared` — design gates, not ratified):
+
+1. **The generated L0 must be named and reachable** — call sites of `derive Checksum for
+   MyPacket` must be able to resolve `Checksum` for `MyPacket` without re-running the rule.
+   This is a content-addressability constraint (ADR-003): equal `derive` applications must
+   deduplicate, and the identity must be derivable from `(rule_name, concrete_type_args)`.
+
+2. **No new L0 node (KC-3).** The attachment mechanism may add **no** new L0 node. Models
+   that require a new "impl slot" node or a "derived-instance pointer" node are rejected by
+   the same structural guard that enforces §6. (`Declared` — follows from KC-3 + §6.)
+
+3. **Coherence-compatible (RFC-0019).** The trait-impl coherence system (RFC-0019 §4.2 —
+   orphan rule, global uniqueness) must still hold. A `derive` application that generates an
+   `impl` must be treated by the coherence checker identically to a hand-written `impl`.
+   (`Declared` — follows from RFC-0019.)
+
+4. **Never-silent (G2).** A `derive` application that conflicts with an existing `impl`
+   (coherence violation) or whose RHS does not type-check at the concrete type must be an
+   explicit error, never a silent accept or silent discard.
+
+5. **Reveal-able (§4.5).** The attachment must not hide the generated L0. `reveal` must show
+   the same L0 term regardless of which attachment model is chosen. (`Declared` — follows from
+   §4.5 + DN-38 §5.)
+
+---
+
+### §10.3 Candidate attachment models
+
+Two primary candidates are enumerated below, with a third noted as an open extension (§10.6).
+
+---
+
+#### Model A — Sibling-item injection
+
+**Mechanism (`Declared`):** `derive Name for T` is elaborated as if the user had written the
+RHS as a sibling item in the same nodule, with `T` substituted for the rule's type parameter.
+The elaborator — after monomorphizing the rule's RHS at `T` — inserts the resulting item
+(e.g. an `impl` block) into the nodule's item list at the derive site, as a co-equal sibling
+declaration. The generated item is content-addressed from `(rule_name, T)` and registered in
+`Env` under the same namespace as hand-written `impl` blocks.
+
+**How it addresses the item-not-Expr gap (`Declared`):** The RHS of a `lower` rule, when
+the rule is item-shaped, is parsed as an **item template** rather than an expression. A new
+`parse_lower_item_rhs` arm in the parser accepts item-shaped RHS forms (currently: `impl …
+for …` with a concrete body parameterized over the rule's type vars). At elaboration time, the
+monomorphizer substitutes `T` throughout the item body — exactly as `mono.rs` substitutes a
+type parameter into a function body (RFC-0019 §4.3 / DN-55 §2.1). The resulting closed item
+is inserted as a sibling.
+
+**How it handles parametric instantiation (`Declared`):** Monomorphization (`mono.rs`) is the
+natural vehicle. The rule's type parameter `T` is treated exactly like a generic function's
+type parameter: the `derive` use site provides the concrete type, and `mono.rs` produces the
+closed item. If `T` is undetermined at the `derive` site, the elaborator emits
+`ElabError::Residual` — never-silent, the same behavior as today (G2/VR-5).
+
+**Coherence (RFC-0019 §4.2 / Declared):** The injected `impl` is visible to the coherence
+checker as a sibling item, so global-uniqueness holds: a second `derive Checksum for MyPacket`
+in the same program is a duplicate `impl Checksum for MyPacket` — caught by the existing
+coherence pass, never-silent.
+
+**`reveal` (§4.5 / Declared):** `reveal` shows the content-addressed L0 of the injected
+item. No special case needed: the sibling item is a real program item that went through the
+full elaboration pipeline.
+
+**KC-3 impact (`Declared`):** No new L0 node. The injected `impl` lowers to existing
+`Construct`, `Lam`, `App`, `Match`, `Fix` nodes (RFC-0007 §4.1). The injection mechanism
+itself is an elaboration-phase rewrite, not a new kernel concept.
+
+**Machinery cost (`Declared`):** Requires:
+- A `parse_lower_item_rhs` parser variant to accept item-shaped RHS.
+- An `elaborate_derive_as_sibling` elaboration path that calls `mono.rs` on the RHS and
+  inserts the result as a new `Item` in the nodule's item list.
+- A de-duplication guard: if a monomorphic result is already in `Env`, the `derive` is a
+  no-op (or a coherence error if the existing item differs). Content-addressing (ADR-003)
+  provides the de-dup key.
+
+---
+
+#### Model B — Registry-of-derived-impls (derived-impl table)
+
+**Mechanism (`Declared`):** `derive Name for T` does **not** inject a sibling item. Instead,
+a separate **derived-impl table** (a side-structure in `Env` or a companion data structure) is
+populated with an entry `(rule_name, concrete_T) → L0_node`. The consuming path — trait
+method dispatch, `reveal` queries — looks up the derived-impl table in addition to the
+hand-written `impl` namespace.
+
+**How it addresses the item-not-Expr gap (`Declared`):** Same parser variant needed as Model
+A for item-shaped RHS. The difference is purely in the output: instead of injecting a sibling
+item, the elaborator stores the monomorphized L0 in the derived-impl table under the content-
+addressed key.
+
+**How it handles parametric instantiation (`Declared`):** Same monomorphization path as Model
+A. The derived-impl table entry is keyed on `(rule_name, monomorphized_type_args)`. Residual
+on undetermined `T` — same never-silent behavior.
+
+**Coherence (`Declared`):** Requires coherence checking to cover *both* the hand-written
+`impl` namespace *and* the derived-impl table. A `derive` whose entry would conflict with an
+existing hand-written `impl` must be a coherence error. This is an additional checking surface
+not required by Model A (where the injected `impl` is already in the normal coherence path).
+
+**`reveal` (§4.5 / `Declared`):** Requires `reveal` to query the derived-impl table. The L0
+term is available (it was stored); the mechanism is a lookup rather than re-elaboration.
+
+**KC-3 impact (`Declared`):** The derived-impl table is an elaboration-phase data structure,
+not a kernel node — KC-3 is satisfied. However, the **consumption path** (how a call site
+resolves `impl Checksum for MyPacket` when the only source is a derived entry) requires the
+trait-dispatch machinery to be aware of the table. This is more elaboration-phase surface than
+Model A, which simply makes the derived impl a peer of hand-written impls.
+
+**Machinery cost (`Declared`):** Requires:
+- The same `parse_lower_item_rhs` parser variant.
+- A `DerivedImplTable` structure in `Env` (a new data structure, not a new L0 node).
+- Extended coherence checking that covers both namespaces.
+- Extended trait-dispatch that queries the table.
+- Extended `reveal` that queries the table.
+
+---
+
+### §10.4 Honest tradeoff table
+
+All entries `Declared`.
+
+| Criterion | Model A — Sibling injection | Model B — Derived-impl registry |
+|---|---|---|
+| **KC-3 impact** | None — no new L0 node; no new `Env` data structure for dispatch | None — the registry is an elaboration artifact, but dispatch and coherence must be extended to cover it |
+| **New machinery** | `parse_lower_item_rhs` (parser); `elaborate_derive_as_sibling` (elab); de-dup guard (trivial via ADR-003 content key) | `parse_lower_item_rhs`; `DerivedImplTable` (new `Env` field); extended coherence + dispatch + reveal |
+| **Coherence integration** | Free — injected `impl` enters the existing coherence pass unchanged | Requires coherence to cover two namespaces; explicit dual-lookup invariant |
+| **`reveal` integration** | Free — the injected item is a first-class item in the elaborated nodule | Requires `reveal` to query the registry; a new query arm |
+| **Ergonomics** | Derived impls behave exactly like hand-written impls — no "second class" split | Derived impls are a separate namespace; user-visible distinction possible (good for debuggability, bad for simplicity) |
+| **Never-silent (G2)** | Coherence error on duplicate — same path as hand-written impls | Coherence error requires explicit dual-namespace check; more surface for a missed case |
+| **KISS / KC-3 preference** | Strongly favored — fewer concepts, uses existing elaboration paths | Weaker — adds a new data structure and three new query/check arms |
+| **Debuggability** | `reveal` shows a real program item; the injected item is browsable in the elaborated item list | `reveal` shows a registry entry; not a "real" item unless promotion is added |
+
+---
+
+### §10.5 Recommendation (for maintainer ratification)
+
+**Recommended: Model A — sibling-item injection** (`Declared` — design recommendation,
+not ratified).
+
+Rationale:
+- Model A has strictly less new machinery. The three extension points Model B requires
+  (extended coherence, extended dispatch, extended `reveal`) are all eliminated because
+  the injected impl is a peer of hand-written impls in the existing elaboration paths.
+- KC-3 preference (house rule #5): fewer concepts, composition over novel structure. A
+  new `DerivedImplTable` in `Env` is a new concept that must be maintained across the
+  elaboration, coherence, dispatch, and `reveal` surfaces. Model A adds no such concept.
+- Coherence by construction (RFC-0019): Model A makes the coherence invariant hold
+  structurally — a derived impl *is* an impl entry, so the existing global-uniqueness check
+  covers it without extension.
+- Reveals are already exact (§4.5) — the injected item went through the full elaboration
+  pipeline, so `reveal` needs no special case.
+- The item-not-Expr parser gap is equally addressed by both models; the parser extension
+  (`parse_lower_item_rhs`) is shared.
+
+**Disconfirming argument (stated, not buried — VR-5):** Model B has one advantage: it
+preserves an explicit record of *which impls came from `derive`* vs hand-written, which
+could be useful for tooling (e.g. IDE "this impl was generated by `lower Checksum`"). Model
+A discards that provenance once the impl is injected. Counter: content-addressing (ADR-003)
+means the impl's hash encodes its origin; `reveal` can reconstruct the rule-name from the
+generation path if the provenance is recorded in metadata (RFC-0001 §4.3 — `provenance`
+field). This is `Declared` — the provenance-metadata path is not designed in detail here;
+it is recorded as an **open question for the implementing RFC** (§10.6 OQ-A).
+
+---
+
+### §10.6 Open questions for the implementing RFC
+
+**OQ-A. Provenance metadata (`Declared` — open).** Should `derive`-generated impls carry a
+`provenance` tag (RFC-0001 §4.3) that records `(rule_name, instantiation_args)` so that
+tools can distinguish them from hand-written impls? The metadata field exists; the question
+is whether the elaborator populates it and whether the surface grammar exposes a query.
+
+**OQ-B. Item-RHS parser scope (`Declared` — open).** Which item forms are legal as a `lower`
+rule RHS? The minimum needed for the §3.2 use case is `impl Trait for T { … }`. A broader
+set (e.g. `type` aliases, standalone `fn` items) may be useful but carries more parser
+surface. The implementing RFC should enumerate the supported set explicitly (G2 — no silent
+over-generalization).
+
+**OQ-C. Mixed expr-and-item rules (`Declared` — open).** Should a `lower` rule be able to
+generate *both* an expression-shaped result *and* one or more sibling items? E.g. a rule
+that generates both a helper `type` alias and an `impl`. This is a future extension; the
+v1 design should support it if the parser architecture does not preclude it.
+
+**OQ-D. Cross-phylum derive and coherence scope (`Declared` — open, carries §8 Q6 forward).**
+DN-54 §8 Q6 notes that cross-phylum `derive` is the expected use case. Under Model A,
+sibling injection in a *different* phylum from the rule definition is an inter-phylum item
+insertion — the coherence and namespace model must specify where the injected item "lives."
+This is the phylum-level attachment scope question; the implementing RFC must settle it.
+
+**OQ-E. Effect annotation on item-RHS rules (`Declared` — open, carries §8 Q5 forward).**
+A `lower` rule whose item-shaped RHS contains effectful methods (using `!{io}`, RFC-0014)
+must declare its effect signature. The item-RHS case may interact with effect-budget
+propagation differently from the expression-RHS case. Recorded for the implementing RFC.
+
+---
+
+### §10.7 Sequencing gate and Definition of Done for this addendum
+
+This section is a **design pass for ratification**. DN-54 remains `Accepted`. This addendum
+is complete (as a design document) when the maintainer has reviewed and signalled one of:
+
+- Accept Model A (or Model B, or a maintainer-chosen variant) → the attachment model is
+  ratified and the implementing RFC can proceed.
+- Request a revised design pass with different candidate models or criteria.
+- Flag specific open questions (§10.6) as blocking before ratification.
+
+The **implementing RFC** (a new RFC, or an extension of RFC-0030/RFC-0037 — to be decided)
+carries the normative item-RHS parser, the sibling-injection elaboration path, and the
+updated coherence and `reveal` surfaces. That RFC is the gate for status advancement toward
+`Enacted` — not this addendum.
+
+**This section does NOT advance DN-54 toward `Enacted`** (house rule #3: status must step
+through `Accepted`; `Enacted` requires the implementing RFC and the §7 verification harness
+to be both green and ratified). It resolves the FLAG recorded in the 2026-06-29 changelog
+entry by offering a grounded, ratifiable design position.
+
+---
+
 ## Meta — changelog
 
 - **2026-06-27 — Created (Proposed) — authored.** Operationalizes the DN-38 2026-06-27
@@ -561,3 +827,15 @@ doc's status.
   integrating parent's step through `Accepted` — house rule #3); this entry records the impl
   Rust-first and resolves the deferred-safety boundary. CHANGELOG / Doc-Index / issues.yaml /
   docs/api-index reconciled by the integrating parent. (Append-only; VR-5; G2.)
+- **2026-06-29 — Design-pass addendum (M-824): §10 derive-site attachment — design options.**
+  Appended §10 (this addendum) to resolve the FLAG in the 2026-06-29 impl entry. Enumerates
+  two candidate attachment models — **(A) sibling-item injection** (derive produces a sibling
+  `impl` item in the nodule, entering the existing coherence and dispatch paths) and **(B)
+  derived-impl registry** (a side-table in `Env`, extended coherence and dispatch). Includes an
+  honest tradeoff table and a recommendation to ratify Model A (fewer new concepts, KC-3-
+  preferred, coherence by construction). Identifies `parse_lower_item_rhs` as the shared parser
+  extension needed for item-shaped RHS. Records five open questions (provenance metadata,
+  item-RHS parser scope, mixed expr-and-item rules, cross-phylum attach scope, effect annotation)
+  for the implementing RFC. **DN-54 remains `Accepted`; no status advanced.** All new claims are
+  `Declared` (design pass — VR-5). CHANGELOG / Doc-Index / issues.yaml reconciled by the
+  integrating parent. (Append-only; VR-5; G2.)

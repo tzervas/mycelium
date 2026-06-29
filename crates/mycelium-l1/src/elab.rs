@@ -234,6 +234,12 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
             "function types (`A -> B`) are not a representation type and cannot be a swap target \
              (RFC-0024 §3, HOF stage 1 — defunctionalization is M-687)",
         ),
+        // M-826: tuple types are not representation types and cannot be swap targets (a swap must
+        // target a Binary/Ternary/Dense/Bytes/Seq repr — never a product type; never silent, G2).
+        BaseType::Tuple(_) => residual(
+            site,
+            "tuple types are not a representation type and cannot be a swap target (M-826; G2)",
+        ),
     }
 }
 
@@ -1105,6 +1111,15 @@ impl Elab<'_> {
                     body: Box::new(body_node),
                 })
             }
+
+            // M-826: `TupleLit` nodes are rewritten to `App { head: Path(MkTuple$N), args }` by
+            // the checker (`check_tuple_lit`) and then the App is lowered by the `app` arm above.
+            // A surviving `TupleLit` in elaboration is a staging bug — never silent (G2).
+            Expr::TupleLit(_) => residual(
+                site,
+                "internal: TupleLit survived to elaboration — the checker should have rewritten \
+                 it to a constructor App (M-826; never silent, G2)",
+            ),
         }
     }
 

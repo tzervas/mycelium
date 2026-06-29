@@ -787,3 +787,127 @@ fn effect_annotation_without_budget_still_parses() {
         "unbounded effect must have an empty effect_budgets map"
     );
 }
+
+// ---- RFC-0020 §9 / R20-Q3: or-patterns (`A | B => body`) parse --------------------------------
+
+/// A two-alternative or-pattern `A | B => e` parses to a single arm whose pattern is
+/// `Pattern::Or([A, B])`. The or-pattern is pure surface sugar: the checker desugars it (KC-3).
+#[test]
+fn or_pattern_two_alts_parses_to_pattern_or() {
+    use crate::ast::{Arm, Pattern};
+    // A match arm `Zero | One => body` — both alts are bare idents (nullary-ctor or binder; the
+    // checker distinguishes them; the parser sees an identifier pattern in either case).
+    let n = parse(
+        "nodule d;\ntype Bit = Zero | One;\nfn classify(b: Bit) => Binary{1} = match b { Zero | One => 0b1 };",
+    )
+    .expect("or-pattern parses");
+    let Item::Fn(fd) = n
+        .items
+        .iter()
+        .find(|i| matches!(i, Item::Fn(_)))
+        .expect("fn")
+    else {
+        panic!("fn");
+    };
+    let Expr::Match { arms, .. } = &fd.body else {
+        panic!("expected match, got {:?}", fd.body);
+    };
+    assert_eq!(
+        arms.len(),
+        1,
+        "one surface arm (or-pattern, not expanded yet)"
+    );
+    let Arm {
+        pattern: Pattern::Or(alts),
+        ..
+    } = &arms[0]
+    else {
+        panic!("expected Pattern::Or, got {:?}", arms[0].pattern);
+    };
+    assert_eq!(alts.len(), 2);
+    assert!(
+        matches!(&alts[0], Pattern::Ident(n) if n == "Zero"),
+        "first alt"
+    );
+    assert!(
+        matches!(&alts[1], Pattern::Ident(n) if n == "One"),
+        "second alt"
+    );
+}
+
+/// Three-alternative or-pattern `A | B | C => e` parses to `Pattern::Or([A, B, C])`.
+#[test]
+fn or_pattern_three_alts_parses_correctly() {
+    use crate::ast::Pattern;
+    let n = parse(
+        "nodule d;\ntype Sign = Neg | Zero | Pos;\nfn any_sign(s: Sign) => Binary{1} = match s { Neg | Zero | Pos => 0b1 };",
+    )
+    .expect("three-alt or-pattern parses");
+    let Item::Fn(fd) = n
+        .items
+        .iter()
+        .find(|i| matches!(i, Item::Fn(_)))
+        .expect("fn")
+    else {
+        panic!("fn");
+    };
+    let Expr::Match { arms, .. } = &fd.body else {
+        panic!("expected match");
+    };
+    assert_eq!(arms.len(), 1);
+    let Pattern::Or(alts) = &arms[0].pattern else {
+        panic!("expected Pattern::Or");
+    };
+    assert_eq!(alts.len(), 3);
+}
+
+/// A match with an or-pattern arm AND a plain arm both parse correctly.
+#[test]
+fn or_pattern_mixed_with_plain_arm_parses() {
+    use crate::ast::Pattern;
+    let n = parse(
+        "nodule d;\ntype Sign = Neg | Zero | Pos;\nfn is_nonzero(s: Sign) => Binary{1} = match s { Neg | Pos => 0b1, Zero => 0b0 };",
+    )
+    .expect("mixed or-pattern + plain arm parses");
+    let Item::Fn(fd) = n
+        .items
+        .iter()
+        .find(|i| matches!(i, Item::Fn(_)))
+        .expect("fn")
+    else {
+        panic!("fn");
+    };
+    let Expr::Match { arms, .. } = &fd.body else {
+        panic!("expected match");
+    };
+    assert_eq!(arms.len(), 2, "two surface arms");
+    // First arm has an or-pattern.
+    assert!(
+        matches!(&arms[0].pattern, Pattern::Or(_)),
+        "first arm is or-pattern"
+    );
+    // Second arm is a plain ident pattern.
+    assert!(
+        matches!(&arms[1].pattern, Pattern::Ident(_)),
+        "second arm is plain ident"
+    );
+}
+
+/// `a | b` in expression position is NOT parsed as an or-pattern — it desugars to `bor(a, b)`
+/// (infix bitwise-or). The disambiguation is by grammar position: `|` after a pattern before `=>`
+/// is an or-separator; `|` after an expression is bitwise-or. The two must never mix silently (G2).
+#[test]
+fn pipe_in_expr_position_is_bitwise_or_not_or_pattern() {
+    // `fn f(x: Binary{8}) => Binary{8} = x | 0b0000_0001` — `|` is bitwise-or here.
+    let n = parse("nodule d;\nfn f(x: Binary{8}) => Binary{8} = x | 0b0000_0001;")
+        .expect("bitwise-or in expr position parses");
+    let Item::Fn(fd) = &n.items[0] else {
+        panic!("fn");
+    };
+    // Body must be App(bor, [x, 0b0000_0001]) — desugared by the parser, not a Pattern::Or.
+    assert!(
+        matches!(&fd.body, Expr::App { head, .. } if matches!(head.as_ref(), Expr::Path(p) if p.0 == vec!["bor"])),
+        "pipe in expression position desugars to bor(), not an or-pattern; got {:?}",
+        fd.body
+    );
+}
