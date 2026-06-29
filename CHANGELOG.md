@@ -8,6 +8,38 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-29: serial-lane closeout — M-822 partial application, M-826 tuple type, M-823 or-patterns + R20-Q5, M-824 DN-54 design-pass, M-825 backbone)
+
+- **Multi-argument partial application via currying (M-822; RFC-0024 §4A.8).** A multi-param `lambda`
+  or named fn used as a value curries into nested single-param closures, reusing the M-704 Reynolds
+  defunctionalization machinery; `f(x)` yields a partially-applied closure. The "tuple-gated" premise
+  proved unnecessary — currying needs no tuple type. KC-3 preserved (no new L0 node); three-way
+  differential agreement (`Empirical`).
+- **v0 tuple/product type + `f(x)(y)` chained application (M-826).** A first-class tuple type usable
+  wherever any type appears: tuple literals `(a, b)`, tuple types `(T, U)`, tuple patterns and `let`/
+  `match` destructuring, nested tuples, and multi-value return. Desugars to a synthetic single-ctor
+  `Tuple$N` `Construct` (KC-3 — `mycelium-core` untouched). The first-order application restriction is
+  lifted so inline `f(x)(y)` works (routes through the §4A.5 apply dispatcher). Verified **three-way**
+  (L1-eval ≡ L0-interp ≡ AOT) — the differential caught and forced the fix of a desugar-completeness bug
+  (tuples must desugar through mono even for non-generic programs). Flagged for a later maintainer call
+  (non-blocking): positional projection (`t.0`) is destructure-only; unit `()` is arity-≥2-only.
+- **Or-patterns + list bidirectional inference (M-823; RFC-0020 §9).** Match arms accept or-patterns
+  `A | B => e`, desugared at the checker to one arm per alternative (KC-3 — no new L0 node) with a
+  never-silent binding-consistency check (alternatives must bind the same names at the same types) and
+  union exhaustiveness. List literals get bidirectional element-type inference from context (R20-Q5);
+  the `for`-body→spine two-pass feedback remains a flagged open item (RFC-0020 §9, never-silent).
+  Three-way differential for both.
+- **DN-54 §10 — derive-site attachment design-pass (M-824, `Draft` addendum).** Enumerates two
+  attachment models (sibling-item injection vs derived-impl registry) with an honest tradeoff and a
+  recommendation (Model A); DN-54 stays `Accepted` (design only, not implemented). Surfaces five open
+  questions for the implementing RFC.
+- **`backbone` = runtime-dynamic promoted (M-825).** Records the maintainer decision in RFC-0008 §4.5
+  (append-only) and resolves DN-63 FLAG-15; the future `backbone` implementation RFC proceeds on the
+  promoted-dynamic model. `Declared`; RFC-0008 status unchanged.
+- **Integration:** `mycelium-fmt`/`mycelium-check` render the new tuple and or-pattern AST variants;
+  `mycelium.ebnf` gains the tuple type/literal/pattern and or-pattern productions. KC-3 held across the
+  whole wave (`mycelium-core` untouched). Full `just check` at the dev landing.
+
 ### Added (2026-06-29: DN-64 — language-design synthesis exploration note, research aside)
 
 - **DN-64 — Mycelium Language Design: Synthesis Exploration Note (`Draft`, advisory).** A research

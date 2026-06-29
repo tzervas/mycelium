@@ -216,6 +216,9 @@ base_type      ::= 'Binary'  '{' Int '}'
                  | 'Substrate' '{' Ident '}'                  /* affine external resource (LR-8) */
                  | 'Seq'     '{' type_ref ',' Int '}'         /* indexed homogeneous sequence (RFC-0032 D3) */
                  | 'Bytes'                                    /* first-class byte string (RFC-0032 D4) */
+                 | '(' type_ref ',' type_ref (',' type_ref)* ')'  /* tuple/product type (M-826, arity >= 2);
+                                                                   * desugars to a synthetic single-ctor data
+                                                                   * type (KC-3 — no new L0 node) */
                  | Ident type_args?                           /* named type or type variable */
                  | '{' ambient_params '}'                     /* paradigm-less repr (RFC-0012 §4.2) */
 /* A paradigm-less repr writes the size/shape only; the enclosing ambient supplies the paradigm.
@@ -259,9 +262,12 @@ match_expr     ::= 'match' expr '{' arm (',' arm)* ','? '}'
  * `return` are NOT forms and NOT reserved (they get teaching diagnostics where they already
  * error). */
 for_expr       ::= 'for' Ident 'in' app_expr ',' Ident '=' app_expr '=>' expr
-arm            ::= pattern '=>' expr
+arm            ::= pattern ('|' pattern)* '=>' expr   /* or-patterns: A | B => e (M-823 / R20-Q3); the
+                                                       * alternatives must bind the same names at the same
+                                                       * types (checker gate, G2); desugars to one arm each */
 pattern        ::= '_'
                  | literal
+                 | '(' pattern ',' pattern (',' pattern)* ')'   /* tuple pattern (M-826, arity >= 2) */
                  | Ident ('(' pattern (',' pattern)* ')')?    /* constructor / binder */
 
 /* swap: the never-silent representation change — target and policy ALWAYS lexical (S1/WF2). */
@@ -355,6 +361,8 @@ app_expr       ::= primary ('(' args? ')')* (':' type_ref)?
 args           ::= expr (',' expr)*
 primary        ::= literal
                  | path
+                 | '(' expr ',' expr (',' expr)* ')'  /* tuple literal (M-826, arity >= 2); the comma
+                                                        * distinguishes it from the grouping form below */
                  | '(' expr ')'
 
 path           ::= Ident ('.' Ident)*

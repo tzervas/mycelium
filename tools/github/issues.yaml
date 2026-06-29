@@ -7074,3 +7074,57 @@ issues:
     body: |
       Mechanical: migrate every .myc file + conformance fixture + expected output to mandatory ;. Then
       move DN-57 Accepted -> Enacted (append-only). Gated on M-818.
+  - id: M-822
+    title: "M-822 -- Multi-argument partial application via currying (RFC-0024 4A.8)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E7-3
+    depends_on: [M-704]
+    doc_refs:
+      - corpus:RFC-0024
+    landed_basis: "status:done (serial-lane closeout, 2026-06-29). A multi-param lambda or named-fn-value curries into nested single-param closures, reusing the M-704 Reynolds defunctionalization; f(x) yields a partially-applied closure. The RFC-0024 4A.8 tuple-gated premise proved unnecessary (currying needs no tuple type). KC-3 (no new L0 node); three-way differential (Empirical). The standalone tuple type landed separately as M-826."
+    body: |
+      Complete RFC-0024 4A multi-arg partial application via the 4A.5/4A.8 currying route.
+  - id: M-823
+    title: "M-823 -- Or-patterns (R20-Q3) + list-literal bidirectional inference (R20-Q5)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P3, status:done]
+    epic: E11-1
+    depends_on: [M-707]
+    doc_refs:
+      - corpus:RFC-0020
+    landed_basis: "status:done (serial-lane closeout, 2026-06-29). Or-patterns A|B=>e desugar at the checker to one arm per alternative (KC-3, no new L0 node) with never-silent binding-consistency + union exhaustiveness. List-literal bidirectional element-type inference from context (R20-Q5); the for-body two-pass spine feedback remains a flagged open item (RFC-0020 9, never-silent). Three-way differential for both. fmt Pattern::Or rendering + ebnf productions integrated."
+    body: |
+      Land the RFC-0020 9 deferred set: or-patterns + list/for bidirectional inference.
+  - id: M-824
+    title: "M-824 -- DN-54 10 derive-site attachment design-pass addendum"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:design, area:language, priority:P3, status:done]
+    depends_on: [M-812]
+    doc_refs:
+      - corpus:DN-54
+    landed_basis: "status:done (serial-lane closeout, 2026-06-29). Appended DN-54 10 enumerating two derive-site attachment models (sibling-item injection vs derived-impl registry) with an honest tradeoff + recommendation (Model A); five open questions for the implementing RFC. Design only — DN-54 stays Accepted (not Enacted). All claims Declared."
+    body: |
+      Commission the DN-54 derive-site attachment design-pass the maintainer requested.
+  - id: M-825
+    title: "M-825 -- Record backbone = runtime-dynamic promoted (RFC-0008 4.5 + DN-63 FLAG-15)"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:design, area:execution, priority:P3, status:done]
+    depends_on: [M-668]
+    doc_refs:
+      - corpus:RFC-0008
+      - corpus:DN-63
+    landed_basis: "status:done (serial-lane closeout, 2026-06-29). Maintainer decision recorded append-only in RFC-0008 4.5 and DN-63 FLAG-15 resolved: backbone is a runtime-dynamic promoted transport path (not a static manifest declaration). The future backbone implementation RFC proceeds on this basis. Declared; RFC-0008 status unchanged."
+    body: |
+      Record the maintainer backbone declared-vs-promoted decision (resolved: runtime-promoted).
+  - id: M-826
+    title: "M-826 -- v0 tuple/product type + lift f(x)(y) chained application"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E7-3
+    depends_on: [M-822]
+    doc_refs:
+      - corpus:RFC-0024
+    landed_basis: "status:done (serial-lane closeout, 2026-06-29). First-class tuple type: literals (a,b), types (T,U), patterns + let/match destructuring, nested tuples, multi-value return — desugars to a synthetic single-ctor Tuple-N Construct (KC-3, mycelium-core untouched). The first-order application restriction lifted so inline f(x)(y) routes through the 4A.5 apply dispatcher. Verified three-way (L1-eval == L0-interp == AOT) — the differential caught + forced fix of a desugar-completeness bug. Flagged (non-blocking, maintainer): positional projection (.0) destructure-only; unit () arity>=2 only."
+    body: |
+      Add a first-class tuple/product type + lift f(x)(y), per the maintainer decision after M-822.
