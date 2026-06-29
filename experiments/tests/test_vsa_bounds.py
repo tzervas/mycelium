@@ -711,3 +711,235 @@ def test_emit_obligations_creates_expected_files(tmp_path) -> None:
     # At least one LH file should be created.
     lh_files = [p for k, p in emitted.items() if k.endswith("_lh")]
     assert len(lh_files) > 0, "No LH skeleton files emitted"
+
+
+def test_emit_lean_is_well_formed(tmp_path) -> None:
+    """emit_lean produces a well-formed Lean 4 module with required structural elements."""
+    from mycelium_experiments.vsa_bounds.candidate_bound import fit_and_validate
+    from mycelium_experiments.vsa_bounds.proof_obligation import emit_lean
+    from mycelium_experiments.vsa_bounds.sweeps import run_multihop_sweep
+
+    results = run_multihop_sweep(
+        models=["mapi"],
+        compositions=["bind_chain"],
+        F_values=[2],
+        k_values=[4],
+        d_values=[512, 2048, 8192],
+        h_values=[1, 2],
+        delta=0.02,
+        trials_per_point=30,
+        progress=False,
+    )
+    candidates = fit_and_validate(results, eff_m_models=["A_exponential"])
+    assert candidates
+
+    lean_path = tmp_path / "test_lean_skeleton.lean"
+    emit_lean(candidates[0], "bind_chain", lean_path)
+    assert lean_path.exists(), "Lean skeleton file was not created"
+
+    content = lean_path.read_text(encoding="utf-8")
+    # Required structural elements:
+    assert "axiom candidateCapacityThm" in content, "candidateCapacityThm axiom missing"
+    assert "requiredDimMultihop" in content, "requiredDimMultihop def missing"
+    # At least one `native_decide` probe (in-regime points exist at d>=2048).
+    # Check for the probe pattern `:= by native_decide`, not just comments.
+    assert ":= by native_decide" in content or ":= by decide" in content, (
+        "No native_decide/decide probe emitted for non-empty in-regime case"
+    )
+    assert "Declared" in content, "Declared marker missing from Lean skeleton"
+    # Regression guard: the requiredDimMultihop lookup table must be a valid Lean
+    # if / else-if / else chain. A bare `if m ≤ … then …` with no `else` is a Lean
+    # type error and fails `lake build` (which CI cannot run here). Every table case
+    # after the first must chain with `else if`, so at most one *leading* `if m ≤`.
+    bare_if = [ln for ln in content.splitlines() if ln.lstrip().startswith("if m ≤")]
+    assert len(bare_if) <= 1, (
+        f"Lean requiredDimMultihop has {len(bare_if)} leading `if m ≤` lines — table "
+        "cases must chain with `else if` (bare if/then without else is invalid Lean 4)"
+    )
+
+
+def test_emit_lean_empty_path_has_NOTE(tmp_path) -> None:
+    """emit_lean on a candidate with no in-regime points emits a NOTE, never crashes."""
+    from mycelium_experiments.vsa_bounds.candidate_bound import CandidateResult
+    from mycelium_experiments.vsa_bounds.proof_obligation import emit_lean
+
+    # Construct a minimal synthetic candidate with no points (all zero, no refutations).
+    # This exercises the empty-path branch in emit_lean (G2 / never-silent check).
+    empty_candidate = CandidateResult(
+        eff_m_model="A_exponential",
+        description="synthetic empty candidate for test",
+        all_points=[],
+        n_total=0,
+        n_candidate_holds=0,
+        n_upper_bounded=0,
+        n_refuted=0,
+        n_out_of_regime=0,
+        is_empirical_upper_bound=True,
+        regime_envelope="none",
+        refuted_points=[],
+        min_safety_margin=float("nan"),
+        goodness_of_fit_note="synthetic",
+    )
+    lean_path = tmp_path / "empty_lean.lean"
+    emit_lean(empty_candidate, "bind_chain", lean_path)
+    assert lean_path.exists(), "Lean file not created for empty candidate"
+
+    content = lean_path.read_text(encoding="utf-8")
+    # Must contain a NOTE about no in-regime points (G2 / never-silent).
+    assert "NOTE" in content, "Empty-path Lean file missing NOTE comment"
+    # Must still emit the axiom stub (well-formed skeleton even when empty).
+    assert "axiom candidateCapacityThm" in content, "axiom missing from empty-path Lean skeleton"
+    # Must NOT contain any `example : ... := by native_decide` probe lines.
+    # (The word "native_decide" may appear in documentation comments — only the
+    # probe pattern `:= by native_decide` indicates an actual discharged probe.)
+    assert ":= by native_decide" not in content, (
+        "native_decide probe unexpectedly present in empty-path Lean skeleton"
+    )
+
+
+def test_emit_obligations_all_models(tmp_path) -> None:
+    """emit_obligations emits Lean files for all three eff_m models."""
+    from mycelium_experiments.vsa_bounds.candidate_bound import fit_and_validate
+    from mycelium_experiments.vsa_bounds.proof_obligation import emit_obligations
+    from mycelium_experiments.vsa_bounds.sweeps import run_multihop_sweep
+
+    results = run_multihop_sweep(
+        models=["mapi"],
+        compositions=["bind_chain"],
+        F_values=[2],
+        k_values=[4],
+        d_values=[512, 2048],
+        h_values=[1],
+        delta=0.02,
+        trials_per_point=20,
+        progress=False,
+    )
+    # Request all three models.
+    candidates = fit_and_validate(results, eff_m_models=["A_exponential", "B_linear", "C_sqrt"])
+    emitted = emit_obligations(candidates, out_dir=tmp_path, run_id="test_all", backend="numpy-cpu")
+
+    # All three models must produce lean files (one per model x one composition = 3 files
+    # for the bind_chain composition; emit_obligations iterates all compositions though).
+    lean_keys = [k for k in emitted if k.endswith("_lean")]
+    lean_model_names = {k for k in lean_keys}
+    assert any("A_exponential" in k for k in lean_model_names), (
+        "A_exponential Lean file not emitted"
+    )
+    assert any("B_linear" in k for k in lean_model_names), "B_linear Lean file not emitted"
+    assert any("C_sqrt" in k for k in lean_model_names), "C_sqrt Lean file not emitted"
+    # All lean files must exist on disk.
+    for k in lean_keys:
+        p = emitted[k]
+        assert p.exists(), f"Lean file {k} was not written to disk: {p}"
+
+
+def test_comparative_ranking_per_composition() -> None:
+    """_comparative_ranking_per_composition ranks valid models before refuted ones."""
+    from mycelium_experiments.vsa_bounds.candidate_bound import (
+        CandidateResult,
+        PointValidation,
+    )
+    from mycelium_experiments.vsa_bounds.proof_obligation import (
+        _comparative_ranking_per_composition,
+    )
+
+    # Build two synthetic candidates: A_exponential (not refuted), B_linear (refuted).
+    def make_pv(
+        composition: str,
+        d: int,
+        F: int,
+        k: int,
+        h: int,
+        rate: float,
+        delta: float = 0.02,
+        refuted: bool = False,
+        candidate_holds: bool = True,
+        rate_respects_delta: bool = True,
+        eff_m_model: str = "A_exponential",
+        m_eff: int = 8,
+        candidate_dim: int = 1200,
+    ) -> PointValidation:
+        return PointValidation(
+            model_vsa="mapi",
+            composition=composition,
+            F=F,
+            k=k,
+            d=d,
+            h=h,
+            delta=delta,
+            eff_m_model=eff_m_model,
+            m_eff=m_eff,
+            candidate_dim=candidate_dim,
+            measured_rate=rate,
+            trials=50,
+            candidate_holds=candidate_holds,
+            rate_respects_delta=rate_respects_delta,
+            candidate_is_upper_bound=(candidate_holds and rate_respects_delta),
+            out_of_regime=(not candidate_holds and not rate_respects_delta),
+            refuted=refuted,
+        )
+
+    # A_exponential: 2 in-regime valid points, no refutations.
+    good_pts = [
+        make_pv("bind_chain", 2048, 2, 4, 1, rate=0.005, eff_m_model="A_exponential"),
+        make_pv("bind_chain", 4096, 2, 4, 1, rate=0.003, eff_m_model="A_exponential"),
+    ]
+    # B_linear: 1 in-regime point + 1 refuted point.
+    bad_pts = [
+        make_pv("bind_chain", 2048, 2, 4, 1, rate=0.005, eff_m_model="B_linear"),
+        make_pv(
+            "bind_chain",
+            512,
+            2,
+            4,
+            2,
+            rate=0.95,
+            refuted=True,
+            candidate_holds=True,
+            rate_respects_delta=False,
+            eff_m_model="B_linear",
+        ),
+    ]
+
+    cand_a = CandidateResult(
+        eff_m_model="A_exponential",
+        description="A_exp test candidate",
+        all_points=good_pts,
+        n_total=2,
+        n_candidate_holds=2,
+        n_upper_bounded=2,
+        n_refuted=0,
+        n_out_of_regime=0,
+        is_empirical_upper_bound=True,
+        regime_envelope="test",
+        refuted_points=[],
+        min_safety_margin=0.015,
+        goodness_of_fit_note="synthetic",
+    )
+    cand_b = CandidateResult(
+        eff_m_model="B_linear",
+        description="B_lin test candidate",
+        all_points=bad_pts,
+        n_total=2,
+        n_candidate_holds=2,
+        n_upper_bounded=1,
+        n_refuted=1,
+        n_out_of_regime=0,
+        is_empirical_upper_bound=False,
+        regime_envelope="test",
+        refuted_points=[bad_pts[1]],
+        min_safety_margin=-0.93,
+        goodness_of_fit_note="synthetic",
+    )
+
+    lines = _comparative_ranking_per_composition([cand_a, cand_b], ["bind_chain"])
+    text = "\n".join(lines)
+
+    # A_exponential must appear before B_linear (valid before refuted).
+    pos_a = text.index("A_exponential")
+    pos_b = text.index("B_linear")
+    assert pos_a < pos_b, "A_exponential (no refutations) must rank before B_linear (1 refutation)"
+    # Refuted model must be explicitly flagged as REFUTED (never-silent, G2).
+    assert "REFUTED" in text, "Refuted model must be marked REFUTED in ranking table"
+    # Valid UB must be identified.
+    assert "YES (not refuted)" in text, "Valid upper bound marker missing from ranking"

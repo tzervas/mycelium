@@ -1,0 +1,12 @@
+name = "vsa-multihop-bound"
+version = "0.1.0"
+defaultTargets = ["VsaMultihopBound"]
+
+[[lean_lib]]
+name = "VsaMultihopBound"
+
+# Dependencies: Lean 4 core (Std4 available via stdlib).
+# No external dependencies needed — the probes use only `native_decide` / `decide`
+# over concrete Nat inequalities (kernel-checked, no mathlib required).
+# Toolchain pin: lean-toolchain (leanprover/lean4:v4.15.0).
+# To install: elan install leanprover/lean4:v4.15.0 && elan override set leanprover/lean4:v4.15.0
