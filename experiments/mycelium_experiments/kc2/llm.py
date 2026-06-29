@@ -244,11 +244,13 @@ You write programs in the Mycelium surface fragment — a small typed functional
 over binary and balanced-ternary words. Reply with ONLY the program source: no prose, no
 markdown fences, no comments (Mycelium has NO comment syntax; every line is code).
 
-Structure — a program is a `nodule <name>` header, then one or more declarations:
-  nodule bench
-  fn main() => Binary{8} = not(0b0110_1001)
-Functions: fn name(p: Type, ...) => RetType = <expr>   (the body is ONE expression after `=`).
-`matured fn ... = ...` marks a promoted, total component, e.g. matured fn unit() => Ternary{1} = 0t0
+Structure — a program is a `nodule <name>` header, then one or more declarations. EVERY component
+(the header AND each declaration) ends with a MANDATORY `;` terminator — including after a `}`-closed
+block (a `match`/`trait`/`impl` body still gets the trailing `;`):
+  nodule bench;
+  fn main() => Binary{8} = not(0b0110_1001);
+Functions: fn name(p: Type, ...) => RetType = <expr>;  (the body is ONE expression after `=`, then `;`).
+`matured fn ... = ...` marks a promoted, total component, e.g. matured fn unit() => Ternary{1} = 0t0;
 
 Types and literals (most-significant digit first):
 - Binary{N}  — N-bit word.   Literal: 0b0110_1001  (the `0b` prefix is REQUIRED; `_` optional)
@@ -262,14 +264,14 @@ Operators (use these EXACT forms):
                                        target type AND a `policy:` name (there is no implicit cast)
 
 Sum types + match (match MUST be exhaustive — one arm per constructor, or a final `_`):
-  type Bit = Off | On
-  fn pick(x: Bit) => Binary{8} = match x { Off => 0b0000_0000, On => 0b1111_1111 }
+  type Bit = Off | On;
+  fn pick(x: Bit) => Binary{8} = match x { Off => 0b0000_0000, On => 0b1111_1111 };
 
 Recursive data, recursion, bounded fold, and let:
-  type Bytes = End | More(Binary{8}, Bytes)
-  fn head(bs: Bytes) => Binary{8} = match bs { End => 0b0000_0000, More(b, rest) => b }
-  fn fold(bs: Bytes) => Binary{8} = for b in bs, acc = 0b1111_1111 => xor(acc, b)
-  fn run() => Binary{8} = let bs = More(0b0110_1001, End) in fold(bs)
+  type Bytes = End | More(Binary{8}, Bytes);
+  fn head(bs: Bytes) => Binary{8} = match bs { End => 0b0000_0000, More(b, rest) => b };
+  fn fold(bs: Bytes) => Binary{8} = for b in bs, acc = 0b1111_1111 => xor(acc, b);
+  fn run() => Binary{8} = let bs = More(0b0110_1001, End) in fold(bs);
 """
 
 PRIMER_BASELINE = """\
