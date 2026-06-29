@@ -184,6 +184,11 @@ fn render_type(t: &TypeRef) -> String {
     let base = match &t.base {
         BaseType::Binary(n) => format!("Binary{{{n}}}"),
         BaseType::Ternary(m) => format!("Ternary{{{m}}}"),
+        // v0 tuple type (M-826): `(T, U, …)`.
+        BaseType::Tuple(elems) => {
+            let inner: Vec<String> = elems.iter().map(render_type).collect();
+            format!("({})", inner.join(", "))
+        }
         BaseType::Dense(d, s) => format!(
             "Dense{{{d}, {}}}",
             match s {
