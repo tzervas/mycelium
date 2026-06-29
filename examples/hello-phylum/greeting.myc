@@ -1,7 +1,7 @@
 // nodule: hello.greeting
 // @updated: 2026-06-17
 // @summary: A second nodule in the phylum, exercising a ternary literal.
-nodule hello.greeting
+nodule hello.greeting;
 
 fn wave() => Ternary{4} =
-  0t+0-0
+  <+0-0>;

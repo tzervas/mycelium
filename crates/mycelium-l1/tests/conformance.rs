@@ -179,6 +179,13 @@ const REJECT_EXPECTED: &[(&str, &str)] = &[
         "28-object-empty-body.myc",
         "must have at least one constructor clause",
     ),
+    (
+        // DN-57 §3 / M-818: the `;` component terminator is now MANDATORY. An item not terminated
+        // by `;` (the first `fn` running into the second) is a never-silent parse refusal (G2). The
+        // diagnostic names the unterminated component and points at where the `;` belongs.
+        "29-missing-semicolon-terminator.myc",
+        "expected `;` to terminate this item",
+    ),
 ];
 
 #[test]

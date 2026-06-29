@@ -6,8 +6,7 @@
 // `crates/mycelium-l1/tests/check.rs` (the M-660-style parse/check split). The wild body is the
 // trusted/opaque FFI escape (audited, not verified — ADR-014/VR-5), so `foreign_read` need not be
 // a declared fn. `wild` performs the `ffi` effect, so the fn declares `!{ffi}` (M-660 binding).
-nodule std.sys.fs @std-sys
+nodule std.sys.fs @std-sys;
 
-// SAFETY: foreign_read bottoms out in an audited host syscall; the result is a fixed-width byte.
-fn read_byte() => Binary{8} !{ffi} =
-    wild { foreign_read() }
+fn read_byte() => Binary{8} =
+  wild { foreign_read() };

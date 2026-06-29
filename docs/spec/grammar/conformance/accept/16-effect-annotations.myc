@@ -6,14 +6,19 @@
 // declared effects). Here `source` declares `io`, `relay` declares `io` and calls `source` (covered),
 // and `wide` over-declares `io, time` (allowed — a declaration is a contract). `pure_one` writes the
 // explicit empty set `!{}`; `plain` is unannotated — both are pure.
-nodule effects
+nodule effects;
 
-fn source() => Binary{8} !{io} = 0b00000000
+fn source() => Binary{8} =
+  0b00000000;
 
-fn relay() => Binary{8} !{io} = source()
+fn relay() => Binary{8} =
+  source();
 
-fn wide() => Binary{8} !{io, time} = source()
+fn wide() => Binary{8} =
+  source();
 
-fn pure_one() => Binary{8} !{} = 0b00000000
+fn pure_one() => Binary{8} =
+  0b00000000;
 
-fn plain() => Binary{8} = 0b00000000
+fn plain() => Binary{8} =
+  0b00000000;

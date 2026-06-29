@@ -3,12 +3,13 @@
 // production and a single-parameter trait both parse; the instance is coherent (orphan rule
 // satisfied — both the trait and the type are local; global uniqueness holds: one instance per
 // (trait, type-head)).
-nodule algebra
+nodule algebra;
 
 trait Negate[A] {
-    fn negate(x: A) => A
-}
+  fn negate(x: A) => A;
+};
 
 impl Negate[Ternary{6}] for Ternary{6} {
-    fn negate(x: Ternary{6}) => Ternary{6} = neg(x)
-}
+  fn negate(x: Ternary{6}) => Ternary{6} =
+  neg(x);
+};
