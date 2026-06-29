@@ -2081,6 +2081,28 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_cli::StreamComponent",
+      "kind": "type",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 245,
+      "summary": "The outcome of a single nodule-component parse in [`stream_parse`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::StreamReport",
+      "kind": "struct",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 497,
+      "summary": "The result of [`stream_parse`] summarised for the CLI.",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_cli::build",
       "kind": "fn",
       "crate": "mycelium-cli",
@@ -2121,6 +2143,28 @@
       "file": "crates/mycelium-cli/src/lib.rs",
       "line": 228,
       "summary": "`myc run` — **not yet wired** (honest, never-silent).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::run_stream_parse",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 523,
+      "summary": "Drive [`stream_parse`] and collect results into a [`StreamReport`].",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_cli::stream_parse",
+      "kind": "fn",
+      "crate": "mycelium-cli",
+      "module": "mycelium_cli",
+      "file": "crates/mycelium-cli/src/lib.rs",
+      "line": 292,
+      "summary": "`myc --stream` — parse a `;`-delimited Mycelium component stream from `reader` (M-820 / DN-57).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -5711,6 +5755,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_fmt::flatten_source",
+      "kind": "fn",
+      "crate": "mycelium-fmt",
+      "module": "mycelium_fmt",
+      "file": "crates/mycelium-fmt/src/lib.rs",
+      "line": 318,
+      "summary": "Flatten `src` into the single-line human↔stream form (M-819; DN-57 §2).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_fmt::format_source",
       "kind": "fn",
       "crate": "mycelium-fmt",
@@ -6261,6 +6316,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::ClosureSpecialization",
+      "kind": "struct",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 444,
+      "summary": "RFC-0024 §4A.6 (M-704; house rule #2): the EXPLAIN record of one closure lowering — which arrow,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::ElabError",
       "kind": "enum",
       "crate": "mycelium-l1",
@@ -6631,6 +6697,17 @@
       "file": "crates/mycelium-l1/src/ast.rs",
       "line": 299,
       "summary": "A trait-instance declaration `impl Trait<args> for T { fn … }` (RFC-0019 §4.1; RFC-0007 §12.1).",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::ast::InherentImplDecl",
+      "kind": "struct",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::ast",
+      "file": "crates/mycelium-l1/src/ast.rs",
+      "line": 217,
+      "summary": "An inherent method block `impl T { fn … }` (DN-03 §1 / RFC-0007 §12; M-664) — associates a set",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -7273,6 +7350,17 @@
       "corpus_refs": []
     },
     {
+      "symbol": "mycelium_l1::elaborate_lower_rule",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1",
+      "file": "crates/mycelium-l1/src/elab.rs",
+      "line": 425,
+      "summary": "**Elaborate a user-defined generative-lowering rule's RHS to a closed L0 [`Node`]** (DN-54",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
       "symbol": "mycelium_l1::elaborate_reclaim",
       "kind": "fn",
       "crate": "mycelium-l1",
@@ -7478,6 +7566,28 @@
       "file": "crates/mycelium-l1/src/mono.rs",
       "line": 353,
       "summary": "The **EXPLAIN record** of a single HOF defunctionalization (RFC-0024 §4, M-687): which",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::mono::MonoSelections::closure",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::mono::MonoSelections",
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 138,
+      "summary": "The closure-lowering record for the generated constructor `ctor_name`, if any (RFC-0024 §4A,",
+      "guarantee_tag": null,
+      "corpus_refs": []
+    },
+    {
+      "symbol": "mycelium_l1::mono::MonoSelections::closure_iter",
+      "kind": "fn",
+      "crate": "mycelium-l1",
+      "module": "mycelium_l1::mono::MonoSelections",
+      "file": "crates/mycelium-l1/src/mono.rs",
+      "line": 143,
+      "summary": "Every recorded closure lowering, in deterministic (constructor-name) order.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -26260,6 +26370,22 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_cli::StreamReport::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::StreamReport::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::StreamReport::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_cli::StreamReport::ok",
+      "reason": "dedup-alias: same definition as `mycelium_cli::CheckReport::ok` at crates/mycelium-cli/src/lib.rs:169 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_cli_common::ReadError::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -29828,6 +29954,18 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_l1::ast::InherentImplDecl::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::ast::InherentImplDecl::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::ast::InherentImplDecl::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_l1::ast::Item::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -30444,6 +30582,10 @@
       "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:309 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_l1::elab::elaborate_lower_rule",
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:425 — one canonical row kept"
+    },
+    {
       "symbol": "mycelium_l1::elab::elaborate_reclaim",
       "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:360 — one canonical row kept"
     },
@@ -30596,6 +30738,14 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_l1::eval::L1Error::from",
+      "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::eval::L1Error::from",
+      "reason": "definition not found via regex heuristic (kind='fn', name='from') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_l1::eval::L1Value",
       "reason": "dedup-alias: same definition as `mycelium_l1::L1Value` at crates/mycelium-l1/src/eval.rs:45 — one canonical row kept"
     },
@@ -30633,6 +30783,34 @@
     },
     {
       "symbol": "mycelium_l1::lexer::Comment::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::mono::ClosureSpecialization",
+      "reason": "dedup-alias: same definition as `mycelium_l1::ClosureSpecialization` at crates/mycelium-l1/src/mono.rs:444 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_l1::mono::ClosureSpecialization::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::mono::ClosureSpecialization::clone",
+      "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::mono::ClosureSpecialization::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::mono::ClosureSpecialization::eq",
+      "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::mono::ClosureSpecialization::fmt",
+      "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_l1::mono::ClosureSpecialization::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
