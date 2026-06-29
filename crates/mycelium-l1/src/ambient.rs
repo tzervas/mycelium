@@ -476,9 +476,10 @@ impl Resolver {
             params: s.params.clone(),
             value_params,
             ret,
-            // Effects are checker metadata with no ambient/paradigm resolution — they carry through
-            // the ambient pass verbatim (M-660; RFC-0014 §4.5).
+            // Effects and their budgets are checker/runtime metadata with no ambient/paradigm
+            // resolution — they carry through the ambient pass verbatim (M-660/M-677; RFC-0014 §4.5).
             effects: s.effects.clone(),
+            effect_budgets: s.effect_budgets.clone(),
         })
     }
 

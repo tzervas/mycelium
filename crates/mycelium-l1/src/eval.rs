@@ -29,7 +29,10 @@
 
 use mycelium_cert::BinaryTernarySwapEngine;
 use mycelium_core::{CoreValue, DataRegistry, Datum, GuaranteeStrength, Value};
-use mycelium_interp::{EvalError as KernelError, PrimRegistry, SwapEngine};
+use mycelium_interp::{
+    Budgets, EffectBudget, EffectBudgetExhausted, EvalError as KernelError, PrimRegistry,
+    SwapEngine,
+};
 
 use crate::ast::{Expr, Literal, Pattern, Strength};
 use crate::checkty::{prim_kernel_name, Env};
@@ -132,6 +135,11 @@ pub enum L1Error {
         /// What went wrong.
         why: String,
     },
+    /// A declared per-effect budget was exceeded (RFC-0014 §4.5 I4; M-677). The effect analogue
+    /// of [`L1Error::FuelExhausted`]: graceful, explicit, never a hang or OOM. The budget is
+    /// primed from `FnSig::effect_budgets` at the call site and consumed once per declared effect
+    /// per invocation.
+    EffectBudget(EffectBudgetExhausted),
 }
 
 impl core::fmt::Display for L1Error {
@@ -158,6 +166,7 @@ impl core::fmt::Display for L1Error {
                 f,
                 "in `{site}`: stuck — {why} (the typechecker should have refused this program)"
             ),
+            L1Error::EffectBudget(e) => write!(f, "{e}"),
         }
     }
 }
@@ -167,6 +176,12 @@ impl std::error::Error for L1Error {}
 impl From<KernelError> for L1Error {
     fn from(e: KernelError) -> Self {
         L1Error::Kernel(e)
+    }
+}
+
+impl From<EffectBudgetExhausted> for L1Error {
+    fn from(e: EffectBudgetExhausted) -> Self {
+        L1Error::EffectBudget(e)
     }
 }
 
@@ -332,15 +347,42 @@ impl<'e> Evaluator<'e> {
         // `PrimRegistry` — a `BTreeMap<String, fn(…)>` — and `Box<dyn SwapEngine + Send + Sync>`).
         mycelium_stack::with_deep_stack(|| {
             let mut fuel = self.fuel;
-            self.invoke(&mut fuel, self.depth, name, args)
+            let mut ledger = Budgets::new();
+            self.invoke(&mut fuel, self.depth, &mut ledger, name, args)
         })
     }
 
-    /// One function invocation: bind parameters, evaluate the body, check the return index.
+    /// Map a surface effect name to its [`EffectKind`] and create the corresponding
+    /// [`EffectBudget`] variant with the given ceiling (RFC-0014 §4.5 I3/I4; M-677).
+    /// The mapping is closed: the five built-in kinds plus a fall-through `Named` bucket for any
+    /// user-declared name. `"retry"` → `Attempts`, `"alloc"` → `Bytes`, `"io"` → `Ops`,
+    /// `"cascade"` → `Depth`, `"time"` → `Fuel`, any other → `Named`.
+    fn effect_name_to_budget(name: &str, ceiling: u64) -> EffectBudget {
+        match name {
+            "retry" => EffectBudget::Attempts(ceiling),
+            "alloc" => EffectBudget::Bytes(ceiling),
+            "io" => EffectBudget::Ops(ceiling),
+            "cascade" => EffectBudget::Depth(ceiling),
+            "time" => EffectBudget::Fuel(ceiling),
+            other => EffectBudget::Named(other.to_owned(), ceiling),
+        }
+    }
+
+    /// One function invocation: bind parameters, consume from the shared effect-budget ledger,
+    /// evaluate the body, check the return index.
+    ///
+    /// **Budget wiring (M-677 / RFC-0014 §4.5 I4):** the shared `ledger` (threaded from `call`)
+    /// is primed lazily on first encounter — each budgeted effect in `FnSig::effect_budgets` sets
+    /// the ceiling in the ledger the first time this fn is entered, then consumes 1 unit per
+    /// invocation. This models "the declared budget is the total number of times this effect may
+    /// fire across all invocations within the top-level `call`" (the v0 per-call approximation,
+    /// `Empirical`). An overrun returns `L1Error::EffectBudget` — explicit, graceful, never a hang
+    /// (G2/RFC-0014 §4.5).
     fn invoke(
         &self,
         fuel: &mut u64,
         depth: u32,
+        ledger: &mut Budgets,
         name: &str,
         args: Vec<L1Value>,
     ) -> Result<L1Value, L1Error> {
@@ -360,6 +402,26 @@ impl<'e> Evaluator<'e> {
                 ),
             });
         }
+
+        // Prime the shared ledger for any budgeted effects declared in this fn's signature
+        // (M-677). A budget is set only if the effect has not yet been registered — so the
+        // first invocation of any fn that declares `retry(<=3)` sets the ceiling at 3 in the
+        // shared ledger; subsequent invocations of any fn declaring `retry` (with any ceiling)
+        // find it already primed and just consume. This is the v0 model: the declared ceiling
+        // is the **call-count** budget for the top-level `call` invocation (`Empirical`).
+        for (eff_name, &ceiling) in &fd.sig.effect_budgets {
+            let budget = Self::effect_name_to_budget(eff_name, ceiling);
+            // Only prime once: if already registered (remaining != None), leave it.
+            if ledger.remaining(&budget.kind()).is_none() {
+                ledger.set(budget);
+            }
+        }
+        // Consume 1 unit per declared budgeted effect — the per-call charge (Empirical).
+        for eff_name in fd.sig.effect_budgets.keys() {
+            let kind = Self::effect_name_to_budget(eff_name, 0).kind();
+            ledger.consume(kind, 1).map_err(L1Error::EffectBudget)?;
+        }
+
         let mut scope: Vec<(String, L1Value)> = fd
             .sig
             .value_params
@@ -367,7 +429,7 @@ impl<'e> Evaluator<'e> {
             .map(|p| p.name.clone())
             .zip(args)
             .collect();
-        let result = self.eval(fuel, depth, name, &mut scope, &fd.body)?;
+        let result = self.eval(fuel, depth, ledger, name, &mut scope, &fd.body)?;
         if let Some(g) = fd.sig.ret.guarantee {
             self.assert_guarantee(name, &result, g)?;
         }
@@ -395,6 +457,7 @@ impl<'e> Evaluator<'e> {
         &self,
         fuel: &mut u64,
         depth: u32,
+        ledger: &mut Budgets,
         site: &str,
         scope: &mut Vec<(String, L1Value)>,
         e: &Expr,
@@ -422,7 +485,7 @@ impl<'e> Evaluator<'e> {
             Expr::Lit(Literal::List(elems)) => {
                 let mut vals = Vec::with_capacity(elems.len());
                 for el in elems {
-                    let v = self.eval(fuel, depth, site, scope, el)?;
+                    let v = self.eval(fuel, depth, ledger, site, scope, el)?;
                     match v.as_repr() {
                         Some(rv) => vals.push(rv.clone()),
                         None => {
@@ -492,24 +555,24 @@ impl<'e> Evaluator<'e> {
                 bound,
                 body,
             } => {
-                let bv = self.eval(fuel, depth, site, scope, bound)?;
+                let bv = self.eval(fuel, depth, ledger, site, scope, bound)?;
                 if let Some(g) = ty.as_ref().and_then(|t| t.guarantee) {
                     self.assert_guarantee(site, &bv, g)?;
                 }
                 scope.push((name.clone(), bv));
-                let r = self.eval(fuel, depth, site, scope, body);
+                let r = self.eval(fuel, depth, ledger, site, scope, body);
                 scope.pop();
                 r
             }
 
             Expr::If { cond, conseq, alt } => {
-                let c = self.eval(fuel, depth, site, scope, cond)?;
+                let c = self.eval(fuel, depth, ledger, site, scope, cond)?;
                 match c {
                     L1Value::Data { ref ctor, .. } if ctor == "True" => {
-                        self.eval(fuel, depth, site, scope, conseq)
+                        self.eval(fuel, depth, ledger, site, scope, conseq)
                     }
                     L1Value::Data { ref ctor, .. } if ctor == "False" => {
-                        self.eval(fuel, depth, site, scope, alt)
+                        self.eval(fuel, depth, ledger, site, scope, alt)
                     }
                     other => Err(L1Error::Stuck {
                         site: site.to_owned(),
@@ -519,7 +582,7 @@ impl<'e> Evaluator<'e> {
             }
 
             Expr::Match { scrutinee, arms } => {
-                self.eval_match(fuel, depth, site, scope, scrutinee, arms)
+                self.eval_match(fuel, depth, ledger, site, scope, scrutinee, arms)
             }
 
             Expr::For {
@@ -528,14 +591,14 @@ impl<'e> Evaluator<'e> {
                 acc,
                 init,
                 body,
-            } => self.eval_for(fuel, depth, site, scope, x, xs, acc, init, body),
+            } => self.eval_for(fuel, depth, ledger, site, scope, x, xs, acc, init, body),
 
             Expr::Swap {
                 value,
                 target,
                 policy,
             } => {
-                let v = self.eval(fuel, depth, site, scope, value)?;
+                let v = self.eval(fuel, depth, ledger, site, scope, value)?;
                 let Some(src) = v.as_repr() else {
                     return Err(L1Error::Stuck {
                         site: site.to_owned(),
@@ -563,7 +626,7 @@ impl<'e> Evaluator<'e> {
             // an ungranted host op is an explicit, never-silent refusal (G2). This mirrors the
             // elaborator's `wild → Op{wild:…}` lowering, so the L1 surface evaluator and the
             // L0/AOT paths agree on a `wild`-backed operation (the three-way differential).
-            Expr::Wild(body) => self.eval_wild(fuel, depth, site, scope, body),
+            Expr::Wild(body) => self.eval_wild(fuel, depth, ledger, site, scope, body),
             Expr::Spore(_) => Err(L1Error::Unsupported {
                 site: site.to_owned(),
                 what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
@@ -612,20 +675,20 @@ impl<'e> Evaluator<'e> {
                 // any one propagates (never silently dropped — RT4/I1). Their values are not the
                 // colony's observable in this no-product v0 (only the last hypha's is).
                 for h in leading {
-                    self.eval(fuel, depth, site, scope, &h.body)?;
+                    self.eval(fuel, depth, ledger, site, scope, &h.body)?;
                 }
-                self.eval(fuel, depth, site, scope, &last.body)
+                self.eval(fuel, depth, ledger, site, scope, &last.body)
             }
 
             Expr::Ascribe(inner, t) => {
-                let v = self.eval(fuel, depth, site, scope, inner)?;
+                let v = self.eval(fuel, depth, ledger, site, scope, inner)?;
                 if let Some(g) = t.guarantee {
                     self.assert_guarantee(site, &v, g)?;
                 }
                 Ok(v)
             }
 
-            Expr::App { head, args } => self.eval_app(fuel, depth, site, scope, head, args),
+            Expr::App { head, args } => self.eval_app(fuel, depth, ledger, site, scope, head, args),
 
             // DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice.
             // For repr types (Binary/Ternary/Dense/Bytes/Seq): the meet is bitwise-and (`bit.and`
@@ -636,8 +699,8 @@ impl<'e> Evaluator<'e> {
             // Guarantee: `Empirical` — three-way differential per DN-58 §A.5; semilattice laws are
             // property-tested for repr types, not mechanized-Proven here.
             Expr::Fuse { left, right } => {
-                let lv = self.eval(fuel, depth, site, scope, left)?;
-                let rv = self.eval(fuel, depth, site, scope, right)?;
+                let lv = self.eval(fuel, depth, ledger, site, scope, left)?;
+                let rv = self.eval(fuel, depth, ledger, site, scope, right)?;
                 match (&lv, &rv) {
                     (L1Value::Repr(lrepr), L1Value::Repr(rrepr)) => {
                         // Repr fuse = the `Binary` semilattice meet (bitwise-AND), via the
@@ -661,7 +724,7 @@ impl<'e> Evaluator<'e> {
                             args: vec![left.as_ref().clone(), right.as_ref().clone()],
                         };
                         let _ = ty; // ty is for context; the join fn is resolved by name
-                        self.eval(fuel, depth, site, scope, &join_call)
+                        self.eval(fuel, depth, ledger, site, scope, &join_call)
                     }
                     _ => Err(L1Error::Stuck {
                         site: site.to_owned(),
@@ -687,8 +750,8 @@ impl<'e> Evaluator<'e> {
                 // Evaluate the policy (for its effect), then the body — the supervised scope's
                 // observable. This *is* the sequential reference the runtime supervisor is validated
                 // against (DN-58 §B).
-                let _ = self.eval(fuel, depth, site, scope, policy)?;
-                self.eval(fuel, depth, site, scope, body)
+                let _ = self.eval(fuel, depth, ledger, site, scope, policy)?;
+                self.eval(fuel, depth, ledger, site, scope, body)
             }
         }
     }
@@ -702,6 +765,7 @@ impl<'e> Evaluator<'e> {
         &self,
         fuel: &mut u64,
         depth: u32,
+        ledger: &mut Budgets,
         site: &str,
         scope: &mut Vec<(String, L1Value)>,
         x: &str,
@@ -710,8 +774,8 @@ impl<'e> Evaluator<'e> {
         init: &Expr,
         body: &Expr,
     ) -> Result<L1Value, L1Error> {
-        let mut spine = self.eval(fuel, depth, site, scope, xs)?;
-        let mut accv = self.eval(fuel, depth, site, scope, init)?;
+        let mut spine = self.eval(fuel, depth, ledger, site, scope, xs)?;
+        let mut accv = self.eval(fuel, depth, ledger, site, scope, init)?;
         loop {
             let L1Value::Data { ty, ctor, fields } = spine else {
                 return Err(L1Error::Stuck {
@@ -756,7 +820,7 @@ impl<'e> Evaluator<'e> {
             *fuel = fuel.checked_sub(1).ok_or(L1Error::FuelExhausted)?;
             scope.push((x.to_owned(), elem));
             scope.push((acc.to_owned(), accv));
-            let next = self.eval(fuel, depth, site, scope, body);
+            let next = self.eval(fuel, depth, ledger, site, scope, body);
             scope.pop();
             scope.pop();
             accv = next?;
@@ -766,16 +830,18 @@ impl<'e> Evaluator<'e> {
 
     /// The W7 flat-match machine (split out of [`Self::eval`] to keep the recursion frame small —
     /// the depth guard's budget is host stack, so frame size is part of the contract).
+    #[allow(clippy::too_many_arguments)] // the machine threads its budgets + the form's parts
     fn eval_match(
         &self,
         fuel: &mut u64,
         depth: u32,
+        ledger: &mut Budgets,
         site: &str,
         scope: &mut Vec<(String, L1Value)>,
         scrutinee: &Expr,
         arms: &[crate::ast::Arm],
     ) -> Result<L1Value, L1Error> {
-        let sv = self.eval(fuel, depth, site, scope, scrutinee)?;
+        let sv = self.eval(fuel, depth, ledger, site, scope, scrutinee)?;
         // The checker has verified exhaustiveness, redundancy, types, and arity (W7), so the first
         // arm whose (possibly nested) pattern matches fires. The trailing `Stuck` is unreachable for
         // checked programs but kept as the honest never-silent fallback (G2).
@@ -784,7 +850,7 @@ impl<'e> Evaluator<'e> {
             if self.try_match(site, &arm.pattern, &sv, &mut binds)? {
                 let mark = scope.len();
                 scope.extend(binds);
-                let r = self.eval(fuel, depth, site, scope, &arm.body);
+                let r = self.eval(fuel, depth, ledger, site, scope, &arm.body);
                 scope.truncate(mark);
                 return r;
             }
@@ -865,6 +931,7 @@ impl<'e> Evaluator<'e> {
         &self,
         fuel: &mut u64,
         depth: u32,
+        ledger: &mut Budgets,
         site: &str,
         scope: &mut Vec<(String, L1Value)>,
         body: &Expr,
@@ -893,7 +960,7 @@ impl<'e> Evaluator<'e> {
         // CBV: the host-call arguments evaluate left-to-right before dispatch.
         let mut argv = Vec::with_capacity(args.len());
         for a in args {
-            argv.push(self.eval(fuel, depth, site, scope, a)?);
+            argv.push(self.eval(fuel, depth, ledger, site, scope, a)?);
         }
         let vals: Vec<&Value> = argv
             .iter()
@@ -913,10 +980,12 @@ impl<'e> Evaluator<'e> {
 
     /// First-order application: user functions, saturated constructors (W6), and prims — split
     /// out of [`Self::eval`] for the same frame-size reason as [`Self::eval_match`].
+    #[allow(clippy::too_many_arguments)] // the machine threads its budgets + the form's parts
     fn eval_app(
         &self,
         fuel: &mut u64,
         depth: u32,
+        ledger: &mut Budgets,
         site: &str,
         scope: &mut Vec<(String, L1Value)>,
         head: &Expr,
@@ -938,10 +1007,10 @@ impl<'e> Evaluator<'e> {
         // CBV: arguments evaluate left-to-right before any application.
         let mut argv = Vec::with_capacity(args.len());
         for a in args {
-            argv.push(self.eval(fuel, depth, site, scope, a)?);
+            argv.push(self.eval(fuel, depth, ledger, site, scope, a)?);
         }
         if self.env.fns.contains_key(name) {
-            return self.invoke(fuel, depth, name, argv);
+            return self.invoke(fuel, depth, ledger, name, argv);
         }
         if let Some((d, i)) = self.env.ctor(name) {
             if d.ctors[i].fields.len() != argv.len() {

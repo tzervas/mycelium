@@ -50,7 +50,32 @@ impl core::marker::Unpin for mycelium_cli::Report
 impl core::marker::UnsafeUnpin for mycelium_cli::Report
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cli::Report
 impl core::panic::unwind_safe::UnwindSafe for mycelium_cli::Report
+pub struct mycelium_cli::StreamReport
+pub mycelium_cli::StreamReport::failures: alloc::vec::Vec<mycelium_cli::Report>
+pub mycelium_cli::StreamReport::parsed_err: usize
+pub mycelium_cli::StreamReport::parsed_ok: usize
+pub mycelium_cli::StreamReport::source_name: alloc::string::String
+impl mycelium_cli::StreamReport
+pub fn mycelium_cli::StreamReport::ok(&self) -> bool
+impl core::clone::Clone for mycelium_cli::StreamReport
+pub fn mycelium_cli::StreamReport::clone(&self) -> mycelium_cli::StreamReport
+impl core::cmp::Eq for mycelium_cli::StreamReport
+impl core::cmp::PartialEq for mycelium_cli::StreamReport
+pub fn mycelium_cli::StreamReport::eq(&self, &mycelium_cli::StreamReport) -> bool
+impl core::fmt::Debug for mycelium_cli::StreamReport
+pub fn mycelium_cli::StreamReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_cli::StreamReport
+impl core::marker::Freeze for mycelium_cli::StreamReport
+impl core::marker::Send for mycelium_cli::StreamReport
+impl core::marker::Sync for mycelium_cli::StreamReport
+impl core::marker::Unpin for mycelium_cli::StreamReport
+impl core::marker::UnsafeUnpin for mycelium_cli::StreamReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_cli::StreamReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_cli::StreamReport
 pub fn mycelium_cli::build(&std::path::Path) -> core::result::Result<(mycelium_spore::Spore, alloc::string::String), mycelium_cli::Report>
 pub fn mycelium_cli::check_project(&std::path::Path) -> core::result::Result<mycelium_cli::CheckReport, mycelium_cli::Report>
 pub fn mycelium_cli::init(&std::path::Path, &str) -> core::result::Result<alloc::vec::Vec<std::path::PathBuf>, mycelium_cli::Report>
 pub fn mycelium_cli::run(&std::path::Path) -> core::result::Result<(), mycelium_cli::Report>
+pub fn mycelium_cli::run_stream_parse(impl std::io::Read, &str) -> core::result::Result<mycelium_cli::StreamReport, mycelium_cli::Report>
+pub fn mycelium_cli::stream_parse(impl std::io::Read, &str) -> core::result::Result<alloc::vec::Vec<mycelium_cli::StreamComponent>, mycelium_cli::Report>
+pub type mycelium_cli::StreamComponent = core::result::Result<usize, mycelium_cli::Report>
