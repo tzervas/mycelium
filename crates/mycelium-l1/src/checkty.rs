@@ -819,6 +819,20 @@ fn check_phylum_inner(phylum: &Phylum, matured_scope: bool) -> Result<PhylumEnv,
                 // `for_ty` is organizational metadata in v0 (no qualified `T::m` call syntax yet —
                 // `check_path` refuses multi-segment paths), so the association is advisory; a
                 // name collision with another top-level fn is caught by the duplicate-fn check (G2).
+                //
+                // KNOWN GAP (intentional in v0, never-silent by documentation): `for_ty` is **not**
+                // validated to resolve to a known type here, so `impl NoSuchType { … }` is accepted
+                // (the unknown head is dropped, the methods still check). This is a deliberate scope
+                // boundary, not an oversight: at this Phase-0 desugar the type registries do **not**
+                // yet exist (`register_nodule_decls`, pass 2, runs *after* this loop — see below), so
+                // resolving `for_ty` would require either a separate type-name pre-pass or deferring
+                // the entire impl desugar past registration — both larger than the v0 payoff while
+                // `for_ty` carries no semantic weight (it is unreachable: no `T::m` call form binds to
+                // it). The accepted consequence: an unknown `for_ty` is a no-op, not a refusal. When a
+                // qualified-call surface lands (`T::m`), `for_ty` becomes load-bearing and MUST be
+                // resolved against the (then-available) registry — at that point this becomes a real
+                // never-silent gap to close (G2). Behaviour pinned by
+                // `inherent_impl_on_an_unknown_for_ty_is_accepted_in_v0` (tests/check.rs).
                 Item::InherentImpl(id) => {
                     for m in id.methods {
                         items.push(Item::Fn(m));
@@ -1600,7 +1614,7 @@ fn check_nodule_with(
     // (b) §4.2 cross-rule acyclicity — reject a `lower` rule set whose rules (transitively) reference
     // one another in a cycle (mutual recursion among rules), which would diverge the elaboration
     // pipeline. Over the full set, so a forward reference is seen.
-    check_lower_rule_acyclicity(&lower_rules)?;
+    check_lower_rule_acyclicity(&lower_rules, &types, &fns)?;
     // (c) §4.1 IL-grammar RHS type-check of each rule (after acyclicity, so a cyclic set reports the
     // cycle, not an "unknown name" for the cycle edge).
     for ld in lower_rules.values() {
@@ -1818,7 +1832,24 @@ fn check_derive_application(
 /// (a structural acyclicity check, not a theorem).
 fn check_lower_rule_acyclicity(
     lower_rules: &BTreeMap<String, LowerDecl>,
+    types: &BTreeMap<String, DataInfo>,
+    fns: &BTreeMap<String, FnDecl>,
 ) -> Result<(), CheckError> {
+    // A single-segment path is a **rule-reference edge** only if it names a `lower` rule AND does not
+    // *also* resolve as a constructor or a top-level fn. Without this guard a rule that shares a name
+    // with a ctor/fn used in another rule's RHS would manufacture a spurious edge → a false-positive
+    // cycle that rejects a *valid* program (a niche naming coincidence). A ctor/fn occurrence is an
+    // ordinary value reference, never a rule expansion, so it is not an edge. (Safe both ways: this
+    // *narrows* the edge set to true rule-refs — it never drops a real rule→rule edge, since a name
+    // that is a genuine rule reference is, by §4.1 RHS type-check, not a ctor/fn of the same spelling.)
+    let is_ctor = |name: &str| -> bool {
+        types
+            .values()
+            .any(|d| d.ctors.iter().any(|c| c.name == name))
+    };
+    let is_rule_edge = |name: &str| -> bool {
+        lower_rules.contains_key(name) && !fns.contains_key(name) && !is_ctor(name)
+    };
     // Edges: rule → the set of *other rule names* its RHS references (single-segment paths). Sorted
     // (BTreeSet) for a deterministic cycle report.
     let edges: BTreeMap<&str, BTreeSet<String>> = lower_rules
@@ -1827,7 +1858,7 @@ fn check_lower_rule_acyclicity(
             let mut refs = BTreeSet::new();
             crate::totality::walk_expr(&ld.rhs, &mut |x| {
                 if let Expr::Path(p) = x {
-                    if p.0.len() == 1 && lower_rules.contains_key(&p.0[0]) {
+                    if p.0.len() == 1 && is_rule_edge(&p.0[0]) {
                         refs.insert(p.0[0].clone());
                     }
                 }
