@@ -389,6 +389,15 @@ pub struct FnSig {
     /// `mycelium_interp::budget::EffectKind` is the *runtime* ledger's concern — M-353 — out of the L1
     /// frontend's scope). These are checker metadata only: effects lower to **no** L0 node (KC-3).
     pub effects: Vec<String>,
+    /// Per-effect **budget bounds** (RFC-0014 §3.4/§4.5 I4; M-677) — the optional `<=N` ceiling
+    /// parsed from `!{retry(<=3), alloc(<=64KiB)}`. Present **only** for effects whose annotation
+    /// carries a bound; effects without a bound have no entry here. Keyed by the same surface name
+    /// as [`effects`]. These are runtime metadata: the L1 evaluator primes a
+    /// [`mycelium_interp::budget::Budgets`] ledger from this map on each fn invocation (M-677).
+    /// **No L0 node** (KC-3): these are checker/runtime annotations, not kernel calculus.
+    ///
+    /// [`effects`]: FnSig::effects
+    pub effect_budgets: std::collections::BTreeMap<String, u64>,
 }
 
 impl FnSig {

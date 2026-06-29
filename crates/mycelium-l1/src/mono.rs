@@ -719,6 +719,7 @@ impl<'e> Mono<'e> {
             value_params: new_params,
             ret: ty_to_ref(&ret_cty),
             effects: fd.sig.effects.clone(),
+            effect_budgets: fd.sig.effect_budgets.clone(),
         };
         self.out_fns.insert(
             mangled.clone(),
@@ -908,6 +909,7 @@ impl<'e> Mono<'e> {
                     value_params: new_params,
                     ret: ty_to_ref(&ret_cty),
                     effects: md.sig.effects.clone(),
+                    effect_budgets: md.sig.effect_budgets.clone(),
                 },
                 body: new_body,
             },
@@ -1012,6 +1014,7 @@ impl<'e> Mono<'e> {
                 ],
                 ret: closure_param_ref(&sum.arrow_b),
                 effects: vec![],
+                effect_budgets: std::collections::BTreeMap::new(),
             };
             self.out_fns.insert(
                 apply_name.clone(),

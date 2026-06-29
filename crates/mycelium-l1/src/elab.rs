@@ -445,6 +445,7 @@ pub fn elaborate_lower_rule(env: &Env, rule_name: &str) -> Result<Node, ElabErro
             // re-checked — it is fed straight to `elaborate`.
             ret: crate::ast::TypeRef::unguaranteed(BaseType::Binary(WidthRef::Lit(0))),
             effects: vec![],
+            effect_budgets: std::collections::BTreeMap::new(),
         },
         body: rule.rhs.clone(),
     };

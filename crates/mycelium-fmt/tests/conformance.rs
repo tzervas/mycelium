@@ -2,10 +2,13 @@
 //! WebAssembly-spec pattern): every `accept/` program must format to a **same-identity** program (C1) and
 //! be a **fixed point** under a second format (C2); every `reject/` program must be an explicit error,
 //! never a rewrite (G2). Header preservation (C3) is checked against the M-358/M-359 fixtures.
+//!
+//! M-819 / DN-57 §2: `--flatten` conformance — every `accept/` program that formats successfully
+//! must also flatten to a **same-identity, single-line** output, and flattening must be idempotent.
 
 use std::path::{Path, PathBuf};
 
-use mycelium_fmt::{format_source, FmtError};
+use mycelium_fmt::{flatten_source, format_source, FmtError};
 use mycelium_l1::parse;
 
 fn corpus_dir(which: &str) -> PathBuf {
@@ -140,5 +143,69 @@ fn a_malformed_phylum_is_refused_out_of_scope_not_a_parse_error() {
             )
         }
         other => panic!("a malformed phylum must be OutOfScope, not {other:?}"),
+    }
+}
+
+/// M-819 / DN-57 §2: `--flatten` conformance over the accept corpus.
+///
+/// Every `accept/` program that can be canonically formatted must also flatten to a
+/// **same-identity, single-line** output that re-parses to the same surface AST.  Flattening
+/// must be idempotent (a second flatten is byte-for-byte identical).
+///
+/// Guarantee: `Empirical` — the corpus is the evidence base.
+#[test]
+fn every_accept_program_flattens_with_preserved_identity_and_is_idempotent() {
+    let dir = corpus_dir("accept");
+    let files = myc_files(&dir);
+    assert!(!files.is_empty(), "no accept/ corpus found at {dir:?}");
+
+    for f in files {
+        let src = std::fs::read_to_string(&f).unwrap();
+        let name = f.file_name().unwrap().to_string_lossy().into_owned();
+
+        // Skip sources that the canonical formatter cannot handle (phylum / out-of-scope).
+        match format_source(&src, None) {
+            Err(FmtError::OutOfScope(_)) => continue,
+            Err(other) => panic!("{name}: accept/ program errored on canonical format: {other}"),
+            Ok(_) => {}
+        }
+
+        let flat = match flatten_source(&src, None) {
+            Ok(r) => r,
+            Err(FmtError::OutOfScope(msg)) => {
+                eprintln!("note: {name} is outside flatten v0 scope (refused): {msg}");
+                continue;
+            }
+            Err(other) => panic!("{name}: accept/ program errored on flatten: {other}"),
+        };
+
+        // C1: the flat output re-parses to the same surface AST as the input.
+        let before = parse(&src).expect("accept/ parses");
+        let after = parse(&flat.output).unwrap_or_else(|e| {
+            panic!(
+                "{name}: flat output did not re-parse: {e}\nflat: {:?}",
+                flat.output
+            )
+        });
+        assert_eq!(
+            before, after,
+            "{name}: flattening changed the surface AST (C1)"
+        );
+
+        // Single-line invariant: no interior newlines in the flat output.
+        let without_final = flat.output.trim_end_matches('\n');
+        assert!(
+            !without_final.contains('\n'),
+            "{name}: flat output contains interior newlines: {:?}",
+            flat.output
+        );
+
+        // Idempotent: a second flatten is byte-for-byte identical.
+        let again = flatten_source(&flat.output, None)
+            .unwrap_or_else(|e| panic!("{name}: second flatten failed: {e}"));
+        assert_eq!(
+            again.output, flat.output,
+            "{name}: flatten is not idempotent"
+        );
     }
 }

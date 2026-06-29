@@ -22,7 +22,7 @@ use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::elab::build_registry;
 use mycelium_l1::{
     check_nodule, check_phylum, elaborate, monomorphize, parse, parse_phylum, ElabError, Evaluator,
-    L1Error,
+    L1Error, L1Value,
 };
 use mycelium_numerics::Certificate;
 
@@ -1633,4 +1633,44 @@ fn reclaim_real_supervision_driver_dispatches_with_explain() {
         ),
         other => panic!("expected a bounded supervised escalation, got: {other}"),
     }
+}
+
+/// **M-677 (RFC-0014 §4.5 I4) differential:** a budgeted fn with an `effect_budgets` ceiling
+/// that is never overrun must produce the **same observable** from L1-eval as from
+/// elaborate→L0-interp — the budget plumbing is meaning-preserving when under budget (NFR-7).
+///
+/// Guarantee: `Empirical` (three-way differential, not a mechanized proof — same basis as the
+/// M-353 test above which covers the L0-level budget threading).
+#[test]
+fn m677_budgeted_fn_under_budget_is_differential_observable_equivalent() {
+    // A straight-line (elaboratable) fn with `!{retry(<=1)}` — the ceiling will never be
+    // exceeded because the L1-eval's fresh-ledger-per-call model primes retry=1 and consumes
+    // 1 → 0 remaining on this single invocation. Observable: not(0b1011_0010) = 0b0100_1101.
+    let src = "nodule d;\nfn main() => Binary{8} !{retry(<=1)} = not(0b1011_0010);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+    let node = elaborate(&env, "main").expect("elaborates — pure straight-line is in the fragment");
+
+    // L1-eval path (with budget ledger wired, M-677).
+    let l1_v = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect("under budget — succeeds");
+    let L1Value::Repr(l1_repr) = l1_v else {
+        panic!("expected repr value from L1-eval")
+    };
+
+    // L0-interp path (no budget ledger — the reference semantics).
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    let l0_core = interp.eval_core(&node).expect("L0-interp runs");
+    let mycelium_core::CoreValue::Repr(l0_repr) = l0_core else {
+        panic!("expected repr from L0-interp")
+    };
+
+    assert_eq!(
+        observable(&l1_repr),
+        observable(&l0_repr),
+        "M-677: budgeted fn under budget must agree on the observable (L1-eval == L0-interp, NFR-7)"
+    );
 }
