@@ -8,14 +8,18 @@ Cross-validation: the four (m, delta) pairs from `capacity.rs`'s test
 `required_dim_matches_the_m001_probe_table` are reproduced exactly in
 `test_vsa_bounds.py::test_required_dim_parity`.
 
-Guarantee tag: `Proven` via cited theorem (same basis as the Rust impl — M-131;
-RFC-0003 §5; Clarkson/Thomas).  This module ONLY computes the formula; it does NOT
-issue Proven verdicts on multi-hop compositions — that is an open research question (OQ-F).
+Guarantee tag: `Proven` via cited theorem — but ONLY for single-hop bundle decode when
+the returned dimension >= the argument AND mu == MARGIN_MU (same basis as the Rust impl —
+M-131; RFC-0003 §5; Clarkson/Thomas; checked instantiation in proofs/lh-bundle/).
+Multi-hop callers (e.g. candidate_bound.py) plug an effective_m value derived from
+heuristic models — their results are `Declared` (candidate) + `Empirical` (swept), NOT
+`Proven`. The `Proven` tag does NOT propagate to multi-hop compositions (OQ-F).
 """
 
 from __future__ import annotations
 
 import math
+import sys
 
 # The illustrative margin mu used in the M-001 LH probe and capacity.rs (MARGIN_MU = 0.1).
 MARGIN_MU: float = 0.1
@@ -42,12 +46,13 @@ def required_dim(items: int, delta: float, mu: float = MARGIN_MU) -> int:
     Returns:
         Sufficient dimension as an integer, or sys.maxsize for invalid inputs.
 
-    Guarantee: `Proven` via cited theorem when mu == MARGIN_MU (the checked instantiation
-    from M-001 / proofs/lh-bundle).  For other mu values the formula applies but the
-    Proven basis is the raw theorem (not the checked M-001 instantiation).
+    Guarantee: `Proven` for single-hop bundle decode when the returned value >= `items`
+    AND `mu == MARGIN_MU` (the checked instantiation from M-001 / proofs/lh-bundle;
+    Clarkson-Ubaru-Yang 2023 Thm 6).  For other mu values, `Proven` follows the raw
+    theorem (not the concrete M-001 checked instantiation).  When called from multi-hop
+    callers (candidate_bound.py) with an effective_m argument, the result is `Declared`
+    (heuristic m_eff model) + `Empirical` (validated by sweep) — NOT inherited `Proven`.
     """
-    import sys  # noqa: PLC0415 — lazy, avoids a module-level import for a sentinel
-
     if items <= 0 or not math.isfinite(delta) or delta <= 0.0 or delta > 1.0:
         return sys.maxsize
     if not math.isfinite(mu) or mu <= 0.0:
