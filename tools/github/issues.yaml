@@ -3812,7 +3812,7 @@ issues:
   - id: E12-1
     title: "E12-1 (epic) — Runtime & concurrency execution maturity (RFC-0008)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:epic, area:execution, priority:P1, status:in-progress]
+    labels: [phase:7, type:epic, area:execution, priority:P1, status:done]
     depends_on: [E7-2]
     epic: E12
     doc_refs: [corpus:RFC-0008, corpus:RFC-0027, corpus:ADR-020, corpus:DN-25]
@@ -7007,7 +7007,7 @@ issues:
   - id: E24-1
     title: "E24-1 (epic) -- DN-57 enactment: mandatory ; terminator + human<->stream tooling"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:epic, area:language, priority:P2, status:done]
     epic: E24
     depends_on: []
     doc_refs:
