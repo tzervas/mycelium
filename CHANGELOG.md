@@ -8,6 +8,23 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-29: RFC-0038 §8.8 — colony trust topology + #772 review fixes, M-849)
+
+- **RFC-0038 colony trust topology (`Proposed`; maintainer direction).** Adds §8.8: a mesh
+  distributes trust in one of two **configurable topologies** — **controller mode** (one or more
+  controller colonies / a redundant, regionally-partitioned **controller stack** distributing the
+  `TrustRoot`, for enterprise-scale central management of tens of thousands of colonies) vs
+  **masterless mode** (each colony self-manages trust against its own internal store, §7.2), plus
+  **node invalidation/blacklist** (permanent or temporary, config-driven, node-level trust
+  revocation — never-silent). Framed by the **no-black-box-by-construction** inspectability thesis
+  (`reveal`/`EXPLAIN`/provenance) that makes self-developing AI meshes auditable. Controller
+  protocol / blacklist semantics / topology transition are open infrastructure R&D (extend RFC-0008
+  mesh). Folds in the **#772 review fixes**: §13 Design+Implementation DoD now enumerate §8.4–§8.8 +
+  `BadSignature`/granularity/deviation/blacklist conformance; §M hierarchy notation reconciled to the
+  normative §8.5; §5.1 `BadSignature` dual-path clarified; `(configurable)` dropped from the library
+  default row; §8.4 two-knobs wording. All `Declared`; enacts nothing. RFC-0038 now carries the full
+  enforcement + trust model and is ready for maintainer approval.
+
 ### Added (2026-06-29: DN-65 — scoped-PR decomposition & per-PR toolchain scoping workflow policy, M-848)
 
 - **DN-65 — scoped-PR decomposition & workspace prep (`Accepted` workflow policy; maintainer-directed).**

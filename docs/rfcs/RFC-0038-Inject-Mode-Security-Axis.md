@@ -152,7 +152,9 @@ signature from the project's preparation-phase key, even if the attacker can wri
 Image node. Two distinct never-silent refusals carry the rejection: **`InjectError::UnsignedCode(
 ContentHash)`** (no cert at all) and **`InjectError::BadSignature(ContentHash, SignerId)`** (a cert
 whose signature does not verify against a trusted public key in the `TrustRoot` — wrong/untrusted
-signer). Both carry the exact hash that was rejected (§8.7). (`Declared` — mechanism unbuilt;
+signer). Both refusals carry the exact rejected `ContentHash` and apply on **both** the compiled
+and interpreted paths (`BadSignature` defined in §8.7; the `loose`/`inoculated` context governs
+each). (`Declared` — mechanism unbuilt;
 threat model `Exact`-cited from DN-64 §4.1/§4.5.)
 
 ### §5.2 What the gate does not close (G2 / DN-44 §1.1)
@@ -330,8 +332,8 @@ These are the design space; the selection among them is open R&D (§K.2).
 ### §8.4 Enforcement granularity — the grain of checking (`Declared`, maintainer direction 2026-06-29)
 
 The mode axis (`loose`/`inoculated`) says **whether** a signed artifact is required. A second,
-**orthogonal granularity axis** says **at what grain** the requirement is checked. The two are
-independent knobs: a developer sets a *mode* and, within it, a *granularity*. **`inoculated` does
+**orthogonal granularity axis** says **at what grain** the requirement is checked. These two knobs
+are independent: a developer sets an inject *mode* and, separately, a *granularity*. **`inoculated` does
 not mean "verify every call" by default** — that is the costly extreme, opt-in, not the baseline.
 
 | Granularity | What is checked | When | Typical fit |
@@ -382,7 +384,7 @@ away.
 | Project kind / maturity | Default mode | Default granularity | Rationale |
 |---|---|---|---|
 | script · rapid-dev · early project · interpreted | `loose` | n/a (unsigned permitted, G2-tagged) | do not slam early work with certification; iterate fast |
-| library (phylum) | `inoculated` (configurable) | `module` | a published API is signed at its phylum boundary |
+| library (phylum) | `inoculated` | `module` | a published API is signed at its phylum boundary |
 | application | `inoculated` | `whole` (compile/load-time application signature) | verify the full app is signed once; trust its calls |
 | trusted-computing / high-assurance | `inoculated` | `call` (opt-in) | maximum provenance/trust; performance cost accepted by choice |
 
@@ -404,6 +406,51 @@ that are not overbearing, with an ergonomic path both up (full per-call) and dow
   own-`TrustRoot` verification of §7.2 (a colony never inherits a peer's trust). The decentralized
   model means each node chooses its own trust/provenance/performance trade; the ergonomic controls
   (§8.5) make that a knob, not a rewrite.
+
+### §8.8 Colony trust topology — controller, masterless, and node invalidation (`Declared`, maintainer direction 2026-06-29)
+
+A mesh of colonies distributes trust in one of two **configurable topologies** — this generalizes
+the own-`TrustRoot` verification of §7.2 from a pairwise rule into a mesh-level trust-distribution
+model. (This reaches into infrastructure/architecture beyond a typical language's surface; it is in
+scope because Mycelium's purpose is **safe, inspectable AI mesh auto-development** — see the framing
+note below.)
+
+- **Controller mode (centralized trust distribution).** One or more **controller colonies** form a
+  trusted head that distributes trust across the mesh. A **controller stack** (more than one
+  controller, themselves distributed) provides **redundancy and scaling** — e.g. an enterprise with
+  tens of thousands of colonies partitions **by region**, with one controller per region (or two/
+  three per region for redundancy). The controller set is **configurable in the mesh**. In
+  controller mode a colony resolves trust decisions (which `SignerId`s/certs it trusts, what may be
+  injected/run) **by consulting its controller(s)**, which propagate the `TrustRoot`.
+- **Masterless mode (fully-distributed, self-managed trust).** No controller: each colony
+  **determines its own trust** from whoever deployed/configured it, resolving every decision against
+  its **own internal trust store** (its own `TrustRoot`, §7.2) — it verifies a signature internally
+  and **allows or denies** the inject/run/change **on its own authority**, never deferring to a head.
+  This is the decentralized default for a self-managed mesh.
+- **Node invalidation / blacklist (node-level trust revocation).** When trust is broken — a peer
+  sends untrusted or `BadSignature` content — a colony may **flag and blacklist** the offending node,
+  **permanently or temporarily** per configuration. The blacklist entry is itself an inspectable,
+  provenance-tagged, **never-silent** decision (G2): it records which node, which artifact/hash, and
+  why. This complements content-addressed revocation (§11, the hash *is* the revocation) with a
+  **node-level** revocation.
+
+These are `Declared` directions; the controller protocol, the trust-propagation mechanism, the
+blacklist scope/TTL semantics, and the masterless↔controller transition are **open infrastructure
+R&D** extending RFC-0008's mesh model (and §R8-Q4 adversarial mesh). The topology is, like §8.5, a
+**configurable, never-silent posture** — a colony's mode and its controller set (or masterless
+declaration) are EXPLAIN-able.
+
+**Framing — why a language carries this (`Declared`).** Mycelium's goal is **mesh networks of AI that
+auto-manage and auto-develop *safely***; the trust topology is what keeps a self-developing mesh
+auditable. Because the language is **no-black-box by construction** (ADR-006; the `reveal` / `EXPLAIN`
+/ provenance surfaces), you do **not** have to read and comprehend every line of generated code to
+know what it does and why — you can **inspect** it: the provenance DAG (RFC-0001 §4.3/§4.8) shows what
+produced a value under which policy; `EXPLAIN` answers "why this, at what cost"; `reveal` renders the
+elaborated code; and the language can `explain` code natively into something close to plain English
+(what / why / when / how). The trust topology decides **whose** auto-generated changes a colony
+admits; the inspectability surfaces let a human or a peer colony **see what was admitted and what it
+does** — provenance and auditability by construction, not bolted on. (Grounding: ADR-006; RFC-0001
+§4.3/§4.8; DN-44 inspectable-security thesis; RFC-0008 mesh/colony model.)
 
 ---
 
@@ -470,9 +517,11 @@ The interaction with RFC-0034 §6 mode resolution must be carefully specified to
 (I5 — the two axes are independent; their scoping mechanisms must not entangle them).
 
 **Direction now given (maintainer 2026-06-29, §8.5).** The *shape* of inject-mode scoping is
-resolved: a single containment hierarchy (`global ⊃ project ⊃ colony ⊃ module ⊃ nodule ⊃ function ⊃
-line`) with **inward resolution**, **auto-decoration** (set-once-applies-beneath), **granular
-override**, and a never-silent **default-plus-deviations manifest** (§8.5), plus the orthogonal
+resolved: a single containment hierarchy (abbreviated here as `global ⊃ project ⊃ colony ⊃ module ⊃
+nodule ⊃ function ⊃ line`; **§8.5 carries the full slot names — `phylum/module` and
+`nodule/file/script` — and is normative**) with **inward resolution**, **auto-decoration**
+(set-once-applies-beneath), **granular override**, and a never-silent **default-plus-deviations
+manifest** (§8.5), plus the orthogonal
 **enforcement-granularity** knob (§8.4). What remains R&D under §M is narrowed to the *config
 surface and resolution algorithm* — a manifest table vs. an `@inject` annotation vs. a germination
 parameter (and whether to reuse `@certification` scoping, still subject to I5) — not whether scoping
@@ -543,15 +592,21 @@ This RFC advances or references the following requirements from
 **Design DoD (this RFC at Accepted):** the maintainer ratifies this document; the knob matrix
 extension (§4.1), the two first-class inject modes (§4.2), the `InjectCert` structure (§6.2),
 `TrustRoot` semantics (§7.1), cross-colony trust (§7.2), `inject_mode` on `Resolution` (§7.3),
-and the three named open R&D items (§K.2/§L/§M) are stated normatively and grounded; the
-invariants I1-I7 are stated as design targets.
+the **enforcement-granularity axis (§8.4)**, the **scope-resolution hierarchy + auto-decoration +
+deviation manifest (§8.5)**, the **defaults by project kind (§8.6)**, the **interpreted/colony
+posture + `BadSignature` (§8.7)**, the **colony trust topology — controller/masterless/node-
+invalidation (§8.8)**, and the three named open R&D items (§K.2/§L/§M) are stated normatively and
+grounded; the invariants I1-I7 are stated as design targets.
 
 **Implementation DoD (Enacted — with code):** the inject-mode mechanism lands Rust-first:
 
 - `InjectCert` struct in `crates/mycelium-mlir/src/inject.rs` (or a new `inject_cert.rs`)
   with the fields in §6.2.
-- `InjectError::UnsignedCode(ContentHash)` variant added.
+- `InjectError::UnsignedCode(ContentHash)` and `InjectError::BadSignature(ContentHash, SignerId)`
+  variants added (missing-cert vs wrong/untrusted-signer; §5.1/§8.7).
 - `inject_mode: InjectMode` dimension added to `Resolution`.
+- **Enforcement granularity** (`whole`/`module`/`call`, §8.4) + **scope-resolution** with
+  auto-decoration, granular override, and the never-silent **deviation manifest** (§8.5).
 - `TrustRoot` on `Image`, set at germination, immutable thereafter.
 - `myc-prepare` emits a signed spore (key management: tracked per §K.2).
 - Conformance suite parameterized over `InjectMode` (`loose`/`inoculated`), verifying:
@@ -560,7 +615,12 @@ invariants I1-I7 are stated as design targets.
   (c) `inoculated` rejects unsigned interpreted definitions (I6);
   (d) `TrustRoot` immutability — runtime change yields explicit error;
   (e) `inject_mode` appears on every `Resolution` and is EXPLAIN-able;
-  (f) cert axis and inject axis compose correctly in all four combinations.
+  (f) cert axis and inject axis compose correctly in all four combinations;
+  (g) granularity (`whole`/`module`/`call`) is honored per scope, a coarser grain is mode-tagged
+      and EXPLAIN-able (never a silent weakening), and the **deviation manifest** renders the
+      declared default plus the enumerated departures (§8.4/§8.5);
+  (h) `BadSignature` rejects a wrong/untrusted signer on both compiled and interpreted paths, and a
+      blacklisted node's content is refused (never-silent), per the colony topology (§8.7/§8.8).
 
 Until Implementation DoD is met, all mechanism claims stay `Declared` (VR-5/G2).
 
@@ -585,3 +645,4 @@ Until Implementation DoD is met, all mechanism claims stay `Declared` (VR-5/G2).
 |---|---|---|
 | 2026-06-29 | **Proposed** | Initial draft — ratifies the hot-inject security axis from DN-64 §7 OQ-K…OQ-Q (2026-06-29 maintainer dispositions). Introduces the `loose`/`inoculated` inject modes as an axis orthogonal to RFC-0034's cert axis; defines `InjectCert` as the spore's signature component (ADR-013 §2 comp. 4); specifies `TrustRoot` semantics and cross-colony trust (OQ-Q); extends `Resolution` with `inject_mode`; names three open R&D items (§K.2 key-management detail, §L replay/expiry, §M scoping hierarchy) explicitly — none silently closed (G2/VR-5). Feeds ADR-013, ADR-017, RFC-0008 R8-Q4 (out of scope), RFC-0034 §4/§8 (independent). Commissioned under M-836…M-842. |
 | 2026-06-29 | **Proposed** | §8.4–§8.7 added (maintainer direction) — the **enforcement-granularity** axis (`whole`/`module`/`call`; `inoculated` is NOT per-call by default — `whole`-app compile/load-time signature is the application default), the **scope-resolution hierarchy** (global ⊃ … ⊃ line) with **auto-decoration**, **granular override**, and a never-silent **default-plus-deviations manifest** (gives §M/OQ-M its shape — residual R&D narrowed to the config surface), **defaults by project kind/maturity** (scripts/interpreted → `loose`; app → `inoculated`/`whole`; trusted-computing → `inoculated`/`call` opt-in), and **interpreted/colony posture** (interpreted defaults `loose` with opt-in per-inject signing; `InjectError::BadSignature` added for wrong/untrusted signer alongside `UnsignedCode`). Advances M-836/M-838/M-840. All `Declared`; enacts nothing. |
+| 2026-06-29 | **Proposed** | §8.8 added (maintainer direction, M-849) — **colony trust topology**: **controller mode** (one or more controller colonies / a redundant, regionally-partitioned controller stack distributing the `TrustRoot` — enterprise-scale central management) vs **masterless mode** (each colony self-manages trust against its own internal store, §7.2) vs **node invalidation/blacklist** (permanent/temporary node-level trust revocation, never-silent). Framed by the no-black-box inspectability thesis (`reveal`/`EXPLAIN`/provenance) for safe AI mesh auto-development. Folds in the #772 review fixes: §13 Design+Implementation DoD now enumerate §8.4–§8.8 + `BadSignature`/granularity/deviation/blacklist conformance (g)/(h); §M hierarchy notation reconciled to §8.5 (normative); §5.1 `BadSignature` dual-path clarified; `(configurable)` dropped from the library default row; §8.4 two-knobs wording. All `Declared`; enacts nothing. |

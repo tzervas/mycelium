@@ -7515,3 +7515,28 @@ issues:
       Pairs with the sync-off-tip step (already a standing rule). Never-silent: prints what it installed/
       skipped + why.
       DoD: the recipe lands; DN-65 §2.3 references it; a scoped PR's agent can prep its env in one step.
+  - id: M-849
+    title: "M-849 -- Colony trust topology: controller / masterless / node invalidation (RFC-0038 §8.8)"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:design, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-842, M-847]
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:RFC-0008
+      - corpus:DN-44
+    body: |
+      RFC-0038 §8.8 (maintainer direction 2026-06-29): a configurable mesh trust topology generalizing
+      cross-colony own-TrustRoot verification (§7.2) into mesh-level trust distribution.
+      As an operator of a colony mesh, I want to choose how trust is distributed — a central controller
+      (or redundant controller stack, regionally partitioned, for enterprise-scale central management) or
+      a fully masterless self-managed mode where each colony trusts against its own store — and to flag/
+      blacklist nodes that break trust, so that safe AI-mesh auto-development stays auditable.
+      Direction (Declared): (1) CONTROLLER mode — one+ controller colonies distribute the TrustRoot; a
+      controller stack gives redundancy + scaling; configurable in the mesh; (2) MASTERLESS mode — each
+      colony resolves trust against its own internal store on its own authority; (3) NODE INVALIDATION —
+      flag + blacklist a node permanently/temporarily (config), as an inspectable never-silent decision.
+      Framed by the no-black-box inspectability thesis (reveal/EXPLAIN/provenance). Open infrastructure
+      R&D: controller protocol, trust-propagation, blacklist scope/TTL, masterless<->controller transition;
+      extends RFC-0008 mesh + R8-Q4 adversarial mesh.
+      DoD: RFC-0038 §8.8 ratified; controller protocol + blacklist semantics specified; realized atop the
+      RFC-0008 mesh model; every trust decision EXPLAIN-able + provenance-tagged (never-silent).
