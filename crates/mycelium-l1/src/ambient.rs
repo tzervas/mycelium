@@ -219,35 +219,55 @@ pub fn expand_to_source(nodule: &Nodule) -> String {
     // Re-emit the `@std-sys` FFI-floor marker (M-661) when present: dropping it would silently
     // relocate audited `wild` code into a non-`@std-sys` context (changing program meaning — G2),
     // so the longhand twin must round-trip the header attribute.
+    //
+    // DN-57 §3 (M-818): the nodule header is a component — it ends with a mandatory `;`. The
+    // header/body boundary is the `;` token, so the canonical form is whitespace-independent and
+    // re-parses under the mandatory-terminator grammar.
     out.push_str(&format!(
-        "nodule {}{}\n",
+        "nodule {}{};\n",
         path_str(&nodule.path),
         if nodule.std_sys { " @std-sys" } else { "" }
     ));
     for item in &nodule.items {
         out.push('\n');
-        match item {
-            Item::Use(u) => out.push_str(&print_use(u)),
-            Item::Default(p) => out.push_str(&format!("default paradigm {p}\n")),
-            Item::Type(td) => out.push_str(&print_type_decl(td)),
-            Item::Trait(td) => out.push_str(&print_trait_decl(td)),
-            Item::Impl(id) => out.push_str(&print_impl_decl(id)),
-            Item::Fn(fd) => out.push_str(&print_fn_decl(fd)),
+        // Each `print_*` emits the item text ending in `\n`; DN-57 §3 (M-818) appends the mandatory
+        // `;` component terminator via `terminate_item`, *uniformly* — a `}`-closed block (`trait`,
+        // `impl`, `object`) still gets the trailing `;`.
+        let item_text = match item {
+            Item::Use(u) => print_use(u),
+            Item::Default(p) => format!("default paradigm {p}\n"),
+            Item::Type(td) => print_type_decl(td),
+            Item::Trait(td) => print_trait_decl(td),
+            Item::Impl(id) => print_impl_decl(id),
+            Item::Fn(fd) => print_fn_decl(fd),
             // `object` declarations are rendered in surface form (not desugared) — the LSP
             // "expand ambient" shows the source as-written with paradigms filled in. After
             // Phase 0 expansion in the checker the desugared items (type + impls + fns) are in
             // scope; here we emit the pre-desugar surface so the round-trip is stable.
-            Item::Object(od) => out.push_str(&print_object_decl(od)),
+            Item::Object(od) => print_object_decl(od),
             // DN-54 / M-812: `lower`/`derive` declarations round-trip verbatim through the
             // ambient expansion pass (no ambient state to fill; rule RHS has no bare reprs).
-            Item::Lower(ld) => out.push_str(&print_lower_decl(ld)),
-            Item::Derive(dd) => out.push_str(&print_derive_decl(dd)),
+            Item::Lower(ld) => print_lower_decl(ld),
+            Item::Derive(dd) => print_derive_decl(dd),
             // M-664: an inherent method block round-trips in surface form (pre-desugar), like
             // `object` — the Phase 0 desugar to `Item::Fn`s happens later in the checker.
-            Item::InherentImpl(id) => out.push_str(&print_inherent_impl_decl(id)),
-        }
+            Item::InherentImpl(id) => print_inherent_impl_decl(id),
+        };
+        out.push_str(&terminate_item(&item_text));
     }
     out
+}
+
+/// Append the mandatory `;` component terminator (DN-57 §3, M-818) to a rendered item. Each
+/// `print_*` produces text ending in a single trailing `\n`; this replaces that `\n` with `;\n` so
+/// the item ends in exactly one `;` (uniform across expression items and `}`-closed blocks). The
+/// terminator goes *after* the closing `}` of a block item (`trait`/`impl`/`object`), matching the
+/// parser's `expect_terminator` after `}` consumption.
+fn terminate_item(item_text: &str) -> String {
+    match item_text.strip_suffix('\n') {
+        Some(body) => format!("{body};\n"),
+        None => format!("{item_text};"),
+    }
 }
 
 /// Render a whole [`Phylum`] back to canonical surface text (M-662): the optional `phylum <path>`
@@ -766,13 +786,15 @@ fn print_object_decl(od: &ObjectDecl) -> String {
         ));
     }
     for id in &od.impls {
-        // Re-use print_impl_decl but indent each line by 2 spaces.
-        for line in print_impl_decl(id).lines() {
+        // Re-use print_impl_decl but indent each line by 2 spaces; DN-57 §3 (M-818): the object
+        // `impl` member is a component — terminated by `;` after its closing `}`.
+        for line in terminate_item(&print_impl_decl(id)).lines() {
             s.push_str(&format!("  {line}\n"));
         }
     }
     for fd in &od.fns {
-        for line in print_fn_decl(fd).lines() {
+        // DN-57 §3 (M-818): each object `fn` member is a component — terminated by `;`.
+        for line in terminate_item(&print_fn_decl(fd)).lines() {
             s.push_str(&format!("  {line}\n"));
         }
     }
@@ -827,7 +849,8 @@ fn print_trait_decl(td: &TraitDecl) -> String {
     };
     let mut s = format!("{}trait {}{} {{\n", pub_str(td.vis), td.name, params);
     for sig in &td.sigs {
-        s.push_str(&format!("  fn {}\n", print_sig_tail(sig)));
+        // DN-57 §3 (M-818): each trait signature is a component — terminated by `;`.
+        s.push_str(&format!("  fn {};\n", print_sig_tail(sig)));
     }
     s.push_str("}\n");
     s
@@ -928,7 +951,8 @@ fn print_impl_decl(id: &ImplDecl) -> String {
         print_type_ref(&id.for_ty)
     );
     for m in &id.methods {
-        s.push_str(&format!("  {}", print_fn_decl(m)));
+        // DN-57 §3 (M-818): each impl method is a component — terminated by `;`.
+        s.push_str(&format!("  {}", terminate_item(&print_fn_decl(m))));
     }
     s.push_str("}\n");
     s
@@ -938,7 +962,8 @@ fn print_impl_decl(id: &ImplDecl) -> String {
 fn print_inherent_impl_decl(id: &InherentImplDecl) -> String {
     let mut s = format!("impl {} {{\n", print_type_ref(&id.for_ty));
     for m in &id.methods {
-        s.push_str(&format!("  {}", print_fn_decl(m)));
+        // DN-57 §3 (M-818): each inherent method is a component — terminated by `;`.
+        s.push_str(&format!("  {}", terminate_item(&print_fn_decl(m))));
     }
     s.push_str("}\n");
     s

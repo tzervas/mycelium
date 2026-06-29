@@ -623,6 +623,9 @@ fn item_first_lines(nodule: &Nodule, tokens: &[Spanned]) -> Vec<u32> {
                 Item::Type(_) => matches!(s.tok, Tok::Type | Tok::Pub),
                 Item::Trait(_) => matches!(s.tok, Tok::Trait | Tok::Pub),
                 Item::Impl(_) => s.tok == Tok::Impl,
+                // M-664: an inherent method block also opens on `impl` (no `for`); the opener
+                // keyword is identical to a trait-instance `impl`.
+                Item::InherentImpl(_) => s.tok == Tok::Impl,
                 Item::Fn(_) => matches!(s.tok, Tok::Fn | Tok::Pub | Tok::Thaw),
                 // DN-53 / M-811: `object` opens at item position (optionally `pub object`).
                 Item::Object(_) => matches!(s.tok, Tok::Object | Tok::Pub),
@@ -839,6 +842,18 @@ fn collect_match_arm_comments(
                 depth,
             )?;
         }
+        // `consume(e)` (DN-… surface keyword) wraps a single sub-expression — recurse through it
+        // transparently to catch any nested match-arm comments.
+        Expr::Consume(inner) => {
+            collect_match_arm_comments(
+                item_idx,
+                inner,
+                remaining,
+                arm_trailing,
+                fat_arrow_lines,
+                depth,
+            )?;
+        }
         Expr::Swap { value, .. } => {
             collect_match_arm_comments(
                 item_idx,
@@ -939,9 +954,12 @@ fn render_body_with_comments(
     let mut out = String::new();
     let mut notes = Vec::new();
 
-    // Render the nodule header line (e.g. `nodule signals.demo`).
+    // Render the nodule header line (e.g. `nodule signals.demo;`). DN-57 §3 (M-818): the nodule
+    // header is a component — it ends with the mandatory `;` terminator (so the canonical output
+    // re-parses under the mandatory-terminator grammar; the round-trip self-check at the call site
+    // would otherwise reject it).
     let nodule_line = format!(
-        "nodule {}{}\n",
+        "nodule {}{};\n",
         nodule.path.0.join("."),
         if nodule.std_sys { " @std-sys" } else { "" }
     );
@@ -1098,12 +1116,15 @@ fn render_fn_decl_with_comments(
         format!("  {body_text}")
     };
 
-    let mut s = format!("{pub_prefix}{thaw_prefix}fn {sig_text} =\n{indented_body}\n");
+    // DN-57 §3 (M-818): the fn body ends with the mandatory `;` component terminator. It lands
+    // directly after the body expression (and *before* any trailing comment), so the canonical form
+    // re-parses under the mandatory-terminator grammar.
+    let mut s = format!("{pub_prefix}{thaw_prefix}fn {sig_text} =\n{indented_body};\n");
 
     // Append fn-body trailing comment if any.
     // A trailing comment on the fn body means the whole fn was on one source line
     // (the body is a simple expression, not a multiline construct) so we append
-    // to the (single) body line — between the body expression and the final `\n`.
+    // to the (single) body line — between the body expression and the final `\n` (after the `;`).
     if let Some(cmt) = fn_trailing {
         if s.ends_with('\n') {
             s.pop(); // remove the trailing newline
@@ -1140,6 +1161,8 @@ fn render_impl_with_comments(
     );
     let arm_map = plan.arm_trailing.get(&item_idx);
     for method in &id.methods {
+        // Each method is itself a component; `render_fn_decl_with_comments` already appends the
+        // method's mandatory `;` (DN-57 §3, M-818).
         let method_text = render_fn_decl_with_comments(method, None, arm_map, notes)?;
         for line in method_text.lines() {
             s.push_str("  ");
@@ -1147,7 +1170,10 @@ fn render_impl_with_comments(
             s.push('\n');
         }
     }
-    s.push_str("}\n");
+    // DN-57 §3 (M-818): the `impl` block is itself a component — its closing `}` carries the
+    // mandatory `;` terminator, *uniformly* with the expression items (a `}`-closed block still
+    // ends with `;`).
+    s.push_str("};\n");
     Ok(s)
 }
 
@@ -1268,6 +1294,8 @@ fn render_expr_canonical(e: &Expr) -> String {
             render_expr_canonical(policy),
             render_expr_canonical(body)
         ),
+        // `consume e` — affine move of a substrate (mirrors `print_expr` in ambient.rs).
+        Expr::Consume(b) => format!("consume {}", render_expr_canonical(b)),
     }
 }
 

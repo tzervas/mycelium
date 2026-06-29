@@ -72,5 +72,5 @@ pub use mono::{
     MonoSelections,
 };
 pub use nodule::{parse_nodule_header, NoduleHeader, NoduleHeaderError};
-pub use parse::{parse, parse_phylum};
+pub use parse::{parse, parse_lenient, parse_phylum, parse_phylum_lenient};
 pub use totality::Totality;

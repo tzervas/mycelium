@@ -30,10 +30,50 @@ pub fn parse(src: &str) -> Result<Nodule, ParseError> {
         toks,
         i: 0,
         depth: 0,
+        lenient_terminator: false,
     };
     let nodule = p.parse_nodule()?;
     p.expect(&Tok::Eof, "end of input")?;
     Ok(nodule)
+}
+
+/// **Migration-only** lenient parse (M-818): identical to [`parse`] except the mandatory `;`
+/// component terminator (DN-57 §3) is treated as *optional* — a tolerant reader for the corpus
+/// migration that ingests pre-`;` source and re-emits it terminated via
+/// [`crate::expand_to_source`]. **Not** part of the surface contract: the canonical grammar requires
+/// `;` (use [`parse`]); this entry exists solely so the one-shot migration can read the old corpus.
+///
+/// # Errors
+/// As [`parse`], minus the missing-terminator refusal.
+pub fn parse_lenient(src: &str) -> Result<Nodule, ParseError> {
+    let toks = lex(src)?;
+    let mut p = Parser {
+        toks,
+        i: 0,
+        depth: 0,
+        lenient_terminator: true,
+    };
+    let nodule = p.parse_nodule()?;
+    p.expect(&Tok::Eof, "end of input")?;
+    Ok(nodule)
+}
+
+/// **Migration-only** lenient phylum parse (M-818) — see [`parse_lenient`]. Optional-`;` twin of
+/// [`parse_phylum`], used by the one-shot corpus migration only.
+///
+/// # Errors
+/// As [`parse_phylum`], minus the missing-terminator refusal.
+pub fn parse_phylum_lenient(src: &str) -> Result<Phylum, ParseError> {
+    let toks = lex(src)?;
+    let mut p = Parser {
+        toks,
+        i: 0,
+        depth: 0,
+        lenient_terminator: true,
+    };
+    let phylum = p.parse_phylum()?;
+    p.expect(&Tok::Eof, "end of input")?;
+    Ok(phylum)
 }
 
 /// Parse a complete **phylum** program (M-662; RFC-0006 §4.3): an optional `phylum <path>` header
@@ -52,6 +92,7 @@ pub fn parse_phylum(src: &str) -> Result<Phylum, ParseError> {
         toks,
         i: 0,
         depth: 0,
+        lenient_terminator: false,
     };
     let phylum = p.parse_phylum()?;
     p.expect(&Tok::Eof, "end of input")?;
@@ -63,6 +104,11 @@ struct Parser {
     i: usize,
     /// Current expression-nesting depth, bounded by [`MAX_EXPR_DEPTH`] (A4-02).
     depth: u32,
+    /// **Migration-only** (M-818): when set, [`expect_terminator`](Self::expect_terminator) treats
+    /// the mandatory `;` as optional. The default-grammar path always leaves this `false` — the
+    /// surface contract is mandatory `;` (DN-57 §3). Set only by [`parse_lenient`] /
+    /// [`parse_phylum_lenient`] for the one-shot corpus migration.
+    lenient_terminator: bool,
 }
 
 /// Walk a [`TypeRef`] collecting which param names appear in width-slot positions
@@ -209,6 +255,38 @@ impl Parser {
         }
     }
 
+    /// Consume the **mandatory** `;` component terminator (DN-57 §3, enacted M-818). Every
+    /// component — a top-level item, a trait signature, an `impl`/object method, an object `via`
+    /// clause, **and the nodule header itself** — ends with exactly one `;`, *uniformly and
+    /// regardless of how its body ends*: a `}`-terminated component (`trait { … }`, `impl { … }`,
+    /// `object { … }`) still requires the trailing `;`. This makes the end-of-component a single
+    /// terminal *token* (never the *absence* of more tokens / a newline), so whitespace-free source
+    /// (`nodule d; fn a() => … = …;`) is legal and a streaming parser can emit a completed
+    /// component the instant it sees `;` — the full streaming guarantee.
+    ///
+    /// Never-silent (G2): a missing terminator is an explicit [`ParseError`] naming the component
+    /// and where the `;` belongs — never a silently-accepted run-on. `what` is the component name
+    /// (e.g. `"function definition"`).
+    fn expect_terminator(&mut self, what: &str) -> Result<(), ParseError> {
+        if self.eat(&Tok::Semi) {
+            Ok(())
+        } else if self.lenient_terminator {
+            // Migration-only tolerance (M-818): accept a missing `;` so the one-shot corpus
+            // migration can read pre-`;` source. The default grammar path never sets this flag.
+            Ok(())
+        } else {
+            Err(ParseError::new(
+                self.pos(),
+                format!(
+                    "expected `;` to terminate this {what} (DN-57: `;` is the mandatory \
+                     component terminator — every component ends with `;`, including a \
+                     `}}`-closed block), found {:?}",
+                    self.cur()
+                ),
+            ))
+        }
+    }
+
     // ---- recursion budget (A4-02 / DN-40 A1·A2) ----
     //
     // Every recursive-descent entry point that can nest on the *host* stack — the expression
@@ -272,8 +350,6 @@ impl Parser {
                 }
             }
             items.push(parse_one(self)?);
-            // DN-57: an optional `;` terminates a component (whitespace-independent / streamable).
-            self.eat(&Tok::Semi);
         }
         Ok(items)
     }
@@ -400,11 +476,15 @@ impl Parser {
         // Optional `@std-sys` FFI-floor header marker (M-661). It is the audited-FFI *context* gate;
         // it carries no further syntax (no `: true`/`: false` — its mere presence is the attribute).
         let std_sys = self.eat(&Tok::AtStdSys);
+        // DN-57 §3 (M-818): the nodule header is itself a component — it ends with a mandatory `;`.
+        // This is what makes fully whitespace-free source (`nodule d; fn a() => … = …;`) legal: the
+        // header/body boundary is the `;` token, not a newline.
+        self.expect_terminator("nodule header")?;
         let mut items = Vec::new();
         // Stop at the next `nodule` (the start of a sibling nodule in a phylum) or EOF.
         while !self.at(&Tok::Eof) && !self.at(&Tok::Nodule) {
             items.push(self.parse_item()?);
-            self.eat(&Tok::Semi); // DN-57: optional component terminator
+            self.expect_terminator("item")?; // DN-57 §3 (M-818): mandatory component terminator
         }
         Ok(Nodule {
             path,
@@ -679,7 +759,7 @@ impl Parser {
         let mut sigs = Vec::new();
         while !self.at(&Tok::RBrace) {
             sigs.push(self.parse_fn_sig()?);
-            self.eat(&Tok::Semi); // DN-57: optional component terminator
+            self.expect_terminator("trait signature")?; // DN-57 §3 (M-818)
         }
         self.expect(&Tok::RBrace, "`}` to close the trait body")?;
         Ok(TraitDecl {
@@ -1114,7 +1194,7 @@ impl Parser {
                 ));
             }
             methods.push(self.parse_fn_decl(Vis::Private)?);
-            self.eat(&Tok::Semi); // DN-57: optional component terminator
+            self.expect_terminator("impl method")?; // DN-57 §3 (M-818)
         }
         self.expect(&Tok::RBrace, "`}` to close the `impl` body")?;
         Ok(methods)
@@ -1205,7 +1285,7 @@ impl Parser {
                     )?;
                     let trait_name = self.ident()?;
                     let trait_args = self.parse_type_args_opt()?;
-                    self.eat(&Tok::Semi); // DN-57: optional component terminator
+                    self.expect_terminator("`via` delegation clause")?; // DN-57 §3 (M-818)
                     via_decls.push(ViaDecl {
                         field_idx,
                         trait_name,
@@ -1215,12 +1295,12 @@ impl Parser {
                 // `impl Trait for …` — explicit trait instance inside the object body.
                 Tok::Impl => {
                     impls.push(self.parse_impl_decl()?);
-                    self.eat(&Tok::Semi); // DN-57: optional component terminator
+                    self.expect_terminator("object `impl` member")?; // DN-57 §3 (M-818)
                 }
                 // `fn …` / `thaw fn …` — inherent function.
                 Tok::Fn | Tok::Thaw => {
                     fns.push(self.parse_fn_decl(Vis::Private)?);
-                    self.eat(&Tok::Semi); // DN-57: optional component terminator
+                    self.expect_terminator("object `fn` member")?; // DN-57 §3 (M-818)
                 }
                 // `pub` inside an object body is not supported — methods/impl items are not
                 // re-exported independently; the object itself carries its `pub` vis (G2).
