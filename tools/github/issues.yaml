@@ -4781,6 +4781,36 @@ issues:
       - corpus:DN-25
       - src:crates/mycelium-l1/tests/std_generic_conformance.rs
     body: |
+      PARTIAL (2026-06-30, lib10 Session): per-op conformance gap-closure landed (branch
+      claude/lib10-m719-conformance). Audited every exported op of all 8 self-hosted nodules
+      (result/option/cmp/iter/collections/text/fmt/math) against its differential harness for the
+      RFC-0031 §5 D5 bar (>=1 three-way differential per EXPORTED op). result/option/cmp/iter/fmt were
+      already 100% covered. Closed the remaining gaps:
+      - std.collections: the 6 constructor/builder ops (empty/push_front/map_empty/map_insert/
+        set_empty/set_add) are NOT runnable through a three-way differential under the current surface
+        (RFC-0007 §11.3: a nullary generic constructor/fn cannot have its type argument determined from
+        an enclosing return-type ascription, and a bare base constructor in builder-arg position fails
+        re-inference at monomorphization). Rather than fake a Declared "pass" (VR-5), pinned the
+        never-silent REFUSAL for all 6 as the honest asserted fact (std_collections.rs +2 tests:
+        nullary_constructors_refuse_undetermined_type_never_silent,
+        builders_over_bare_base_constructor_refuse_never_silent). FLAG: runnable per-op coverage for
+        these 6 lands when RFC-0007 §11.3 ascription syntax / nullary-call type-arg inference is
+        available -- a never-silent open item, not a silent omission.
+      - std.text: added isolated three-way per-op tests for is_cont_byte (4 region cases) and the
+        .myc-SURFACE wrappers concat + slice (3 cases; previously only the kernel bytes_concat/
+        bytes_slice prims were tested, not the wrappers). std_text.rs +7.
+      - std.math: the consolidated gate's "every width-generic op at >=2 widths" claim was an
+        overclaim -- bor/bxor (binary) and tsub/tmul (ternary) had only ONE width. Added the second
+        width for each: std_math.rs +4 (bor16/bxor16/tsub6/tmul6) and EXPANDED MATH_CASES in
+        std_generic_conformance.rs to cover the full badd/bsub/band/bor/bxor/bnot + tadd/tsub/tmul/tneg
+        surface at >=2 widths each, so the gate's header is now honest.
+      - API surface: lib/std/mycelium-proj.toml [surface].exports OMITTED std.iter (a self-hosted,
+        differential-tested nodule); added it so the frozen export surface is complete.
+      All change-scoped gates green: cargo fmt --check, cargo clippy -p mycelium-l1 --tests (no findings
+      in changed files; the 8 mycelium-mlir warnings pre-exist, outside scope), and the std_* /
+      std_generic_conformance targets (collections 26, text 42, math 23, generic_conformance 4, iter 16,
+      cmp 38, bytes_slice 14 -- all pass).
+
       PARTIAL (2026-06-27, rsm Session-2): the "conformance over the new generic surface" clause is
       DONE -- std_generic_conformance.rs is the named gate: the width-generic stdlib surface (std.cmp
       cmp/le/max, std.math badd/tadd, std.collections map_get/set_contains) is checked three-way
@@ -4788,7 +4818,8 @@ issues:
       refusal table. Per-module three-way coverage also lives in std_cmp/std_math/std_collections/
       std_text/width_generic. STILL OPEN (not claimed -- VR-5): the BROADER M-719 closure -- retire or
       deprecate the reference mycelium-std-* Rust crates, and freeze a documented stable public API per
-      RFC-0031 §5 D5 (the API-freeze + crate-retirement decision). Status stays in-progress.
+      RFC-0031 §5 D5 (the API-freeze + crate-retirement decision; this is a maintainer/orchestrator
+      decision, not closed by this leaf). Status stays in-progress.
 
       Integration and conformance gate for E13-1: verify that every ported .myc stdlib module
       (M-715...M-718) meets the RFC-0031 stability bar, retire or deprecate the corresponding
