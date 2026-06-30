@@ -45,16 +45,21 @@ case "$mode" in
     [ "$quiet" -eq 1 ] || echo "worktree-guard: ok — isolated (linked) worktree at $top."
     ;;
   orchestrator)
+    # Resolve the MAIN worktree (the first one git lists) so the check is correct even when invoked
+    # from a linked worktree — not just the CWD's tree.
+    main_tree="$(git worktree list --porcelain | awk '/^worktree /{print $2; exit}')"
+    [ -n "$main_tree" ] || main_tree="$top"
     if [ "$is_linked" -eq 1 ]; then
-      echo "worktree-guard: note — CWD is a linked worktree, not the main one (orchestrator mode expects the main tree)." >&2
+      echo "worktree-guard: note — CWD is a linked worktree; checking the MAIN worktree at $main_tree." >&2
     fi
-    if [ -n "$(git status --porcelain)" ]; then
-      echo "worktree-guard: BLOCKED — the main worktree ($top) has uncommitted changes; it must stay a clean pointer." >&2
+    if [ -n "$(git -C "$main_tree" status --porcelain)" ]; then
+      echo "worktree-guard: BLOCKED — the main worktree ($main_tree) has uncommitted changes; it must stay a clean pointer." >&2
       echo "  A stray agent likely edited the shared tree. Preserve its work to ITS OWN branch (commit + push)" >&2
       echo "  before switching the tree off it; spawn concurrent agents isolated (CLAUDE.md mitigation #11)." >&2
       exit 1
     fi
     n="$(git worktree list | wc -l | tr -d ' ')"
-    [ "$quiet" -eq 1 ] || echo "worktree-guard: ok — main worktree clean on '$(git rev-parse --abbrev-ref HEAD)' (${n} worktree(s) total)."
+    br="$(git -C "$main_tree" rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
+    [ "$quiet" -eq 1 ] || echo "worktree-guard: ok — main worktree ($main_tree) clean on '${br}' (${n} worktree(s) total)."
     ;;
 esac

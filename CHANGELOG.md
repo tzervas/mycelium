@@ -21,10 +21,12 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
     `/pr-review` agent posts findings as PR comments → patches → replies → updates the description
     → merges the PR **up the tree** (onto the working or staging tier; stops before `main` — that
     is `/land`). Parameterized by `PR`/`BASE`/`MODEL`.
-  - **`/worktree-guard`** and **`scripts/checks/worktree-guard.sh`** — the isolated-worktree
-    safeguard (CLAUDE.md mitigation #11), idempotent and parameterized: `--leaf` asserts a concurrent
-    agent is in an isolated worktree; `--orchestrator` (default) asserts the main tree is a clean
-    pointer. Shellcheck-clean; `--quiet` mode for hook/CI use; never-silent (G2).
+  - **`/worktree-guard`** and **`scripts/checks/worktree-guard.sh`** + the **`just worktree-guard`**
+    recipe (alias `just wg`) — the isolated-worktree safeguard (CLAUDE.md mitigation #11), idempotent
+    and parameterized: `--leaf` asserts a concurrent agent is in an isolated worktree; `--orchestrator`
+    (default) resolves and checks the **main** worktree (the first `git worktree list` entry), so it is
+    correct even when invoked from a linked worktree. Shellcheck-clean; `--quiet` mode for hook/CI use;
+    never-silent (G2). Wired into the justfile mirroring `just branch-guard`.
   - **CLAUDE.md**: skills list, mitigation #11 enforcement note, and §Concurrent-PR development
     "operationalized as skills" pointer updated. **CONTRIBUTING.md**: concurrent-PR bullet updated
     to name the three skills.

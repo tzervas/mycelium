@@ -26,10 +26,13 @@ worktree stays a clean pointer**. It is **idempotent** (a pure read of git state
 ## Use it
 
 ```sh
-scripts/checks/worktree-guard.sh --leaf          # a concurrent agent: assert I'm in an ISOLATED worktree
-scripts/checks/worktree-guard.sh                 # orchestrator (default): assert the main tree is clean
-scripts/checks/worktree-guard.sh --quiet         # suppress the ok line (for hook/CI use)
+just worktree-guard --leaf       # (alias: just wg) — a concurrent agent: assert I'm in an ISOLATED worktree
+just worktree-guard              # orchestrator (default): assert the main tree is a clean pointer
+scripts/checks/worktree-guard.sh --quiet   # the script directly; --quiet suppresses the ok line (hook/CI use)
 ```
+
+The default (`--orchestrator`) resolves the **main** worktree (the first `git worktree list` entry) and
+checks *its* status, so it is correct even when invoked from a linked worktree.
 
 - **`--leaf`** — blocks (non-zero) if the CWD is the shared main worktree rather than a linked one.
   Detection: a linked worktree's per-worktree git dir differs from the shared common dir
