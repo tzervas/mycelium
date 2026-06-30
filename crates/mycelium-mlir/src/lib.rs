@@ -73,6 +73,10 @@ pub mod specialize;
 pub mod swap_codegen;
 pub mod trampoline;
 pub mod vr4;
+// M-854 (RFC-0039 §5.2): native direct-LLVM codegen of `Repr::Vsa` hypervector ops (real-Vec<f64>
+// MAP-I/BSC/HRR/FHRR fragment) — differential-checked against `mycelium-vsa`, mutant-witnessed, honest
+// per-op tags (SBC/MAP-B refused never-silently).
+pub mod vsa_codegen;
 
 pub use accel::{
     accelerated_ternary_dot, AccelOutcome, BitnetCapability, DegradeReason, Path as AccelPath,
@@ -128,6 +132,13 @@ pub use dense_codegen::{
     DenseCgOp, DenseExplain, DenseProgram, DenseResult, DENSE_CODEGEN_GUARANTEE,
 };
 pub use vr4::{cross_backend_gate, Backend, BackendStage, CrossBackendGate, StageStatus};
+// M-854 (RFC-0039 §5.2): native VSA hypervector codegen (real-Vec<f64> MAP-I/BSC/HRR/FHRR) + its
+// inspectable EXPLAIN record. `similarity` is a bare-`f64` measurement; SBC/MAP-B and the ADR-031
+// element-space/complex carriers stay explicit never-silent refusals (OQ-3 / E20-1 gate).
+pub use vsa_codegen::{
+    emit_vsa_llvm_ir, vsa_compile, vsa_compile_and_run, VsaAotError, VsaArtifact, VsaCgOp,
+    VsaExplain, VsaModelId, VsaProgram, VsaResult, VSA_CODEGEN_GUARANTEE,
+};
 
 #[cfg(test)]
 mod tests;

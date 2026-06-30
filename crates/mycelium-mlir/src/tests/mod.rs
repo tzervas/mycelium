@@ -16,3 +16,4 @@ mod native;
 mod passes;
 mod rc_plan_tests;
 mod swap_codegen;
+mod vsa_codegen;

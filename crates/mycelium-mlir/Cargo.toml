@@ -45,6 +45,13 @@ mycelium-core = { path = "../mycelium-core" }
 # the *same* value, never a divergent literal (DRY/VR-5). No cycle: `mycelium-dense` does not depend on
 # `mycelium-mlir`.
 mycelium-dense = { path = "../mycelium-dense" }
+# M-854 (RFC-0039 §5.2): the native VSA codegen (`vsa_codegen.rs`) is differential-checked against
+# `mycelium-vsa` (the trusted-base reference) for the 1.0.0-mandatory MAP-I/BSC/HRR/FHRR models; it
+# imports the reference's `capacity::proven_capacity_bound` so the single-op MAP-I bundle Proven bound
+# is the *same* checked side-condition (never a divergent literal — DRY/VR-5), and refuses SBC/MAP-B
+# never-silently. No cycle: `mycelium-vsa` depends only on `mycelium-core`/`mycelium-select`, never on
+# `mycelium-mlir`.
+mycelium-vsa = { path = "../mycelium-vsa" }
 mycelium-interp = { path = "../mycelium-interp" }
 # MEM-4 wiring (DN-33 / RFC-0027 §9): the RC-annotated IR + static analysis, and the runtime
 # reclamation-record contract the AOT tier emits the §9 audit trail into. Both are upstream of
