@@ -7762,7 +7762,7 @@ issues:
       - corpus:RFC-0008
       - corpus:DN-64
     body: |
-      DN-64 OQ-Q disposition: "verify inject cert is valid, trusted, and not expired or superceded by the
+      DN-64 OQ-Q disposition: "verify inject cert is valid, trusted, and not expired or superseded by the
       trusted signer."
       As a colony receiving a hot-inject from a peer in a mesh, I want to verify the InjectCert is valid,
       trusted, and not expired/superseded against MY OWN TrustRoot (never inherit the sender's), so that
