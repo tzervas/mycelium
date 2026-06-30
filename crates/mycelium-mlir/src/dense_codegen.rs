@@ -151,10 +151,13 @@ pub struct DenseProgram {
 
 /// What a Dense native op produces: a Dense `Value` (for `add`/`sub`/`neg`/`scale`) or a bare-`f64`
 /// measurement (for `dot`/`similarity`). Never-silent: the variant is the op's honest output shape.
+/// The `Value` is **boxed** — a `Value` is ~240 bytes while a measurement is 8, so an unboxed enum
+/// would bloat every `Measurement` to the `Value` size (clippy `large_enum_variant`); boxing keeps the
+/// common-case measurement small without changing the never-silent shape.
 #[derive(Debug, Clone, PartialEq)]
 pub enum DenseResult {
-    /// A Dense `Value` carrying the reference's per-op guarantee tag.
-    Value(Value),
+    /// A Dense `Value` (boxed) carrying the reference's per-op guarantee tag.
+    Value(Box<Value>),
     /// A bare-`f64` measurement (no `Meta` — mirrors `DenseSpace::dot`/`similarity`).
     Measurement(f64),
 }
@@ -223,7 +226,10 @@ impl fmt::Display for DenseAotError {
                 write!(f, "dimension mismatch: expected {expected}, got {got}")
             }
             DenseAotError::NonFinite(i) => {
-                write!(f, "input element {i} is NaN/Inf — no defined rounding bound")
+                write!(
+                    f,
+                    "input element {i} is NaN/Inf — no defined rounding bound"
+                )
             }
             DenseAotError::OffGrid(s) => write!(f, "off the declared dtype grid: {s}"),
             DenseAotError::Malformed(s) => write!(f, "malformed Dense program: {s}"),
@@ -278,10 +284,10 @@ pub struct DenseExplain {
     pub quant: &'static str,
 }
 
-/// The codegen-correctness guarantee for the native Dense path: **`Empirical`** (the M-210 differential
-/// + the `cargo-mutants` witness are the basis; no proof object is linked into this codegen — VR-5).
-/// Exposed so callers / EXPLAIN consumers read the honest codegen-confidence tag, distinct from the
-/// reference *value* tag the read-back carries.
+/// The codegen-correctness guarantee for the native Dense path: **`Empirical`** (the basis is the
+/// M-210 differential together with the `cargo-mutants` witness; no proof object is linked into this
+/// codegen — VR-5). Exposed so callers / EXPLAIN consumers read the honest codegen-confidence tag,
+/// distinct from the reference *value* tag the read-back carries.
 pub const DENSE_CODEGEN_GUARANTEE: GuaranteeStrength = GuaranteeStrength::Empirical;
 
 const F32_OP_CITATION: &str = "round-to-nearest relative error ≤ u = β^(1−p)/2 = 2^−24 for IEEE \
@@ -504,10 +510,10 @@ fn emit_elementwise(
         .b
         .as_ref()
         .ok_or_else(|| DenseAotError::Malformed("binary op needs operand b".to_owned()))?;
-    for i in 0..prog.dim as usize {
+    for (&ai, &bi) in prog.a.iter().zip(b.iter()) {
         // Operands are exact, on-grid (validated), so the f32 constants are exact.
-        let x = f32_const(prog.a[i]);
-        let y = f32_const(b[i]);
+        let x = f32_const(ai);
+        let y = f32_const(bi);
         let r = ssa.fresh();
         let _ = writeln!(body, "  {r} = {fop} float {x}, {y}");
         let rounded = emit_round_to_grid(prog.dtype, &r, ssa, body);
@@ -520,8 +526,8 @@ fn emit_elementwise(
 /// Emit elementwise negation: `fneg`, exact (no rounding — symmetric grids), then print. Mirrors
 /// `DenseSpace::neg_value`.
 fn emit_neg(prog: &DenseProgram, ssa: &mut Ssa, body: &mut String) {
-    for i in 0..prog.dim as usize {
-        let x = f32_const(prog.a[i]);
+    for &ai in &prog.a {
+        let x = f32_const(ai);
         let r = ssa.fresh();
         let _ = writeln!(body, "  {r} = fneg float {x}");
         // neg is exact on a symmetric grid: a negated on-grid value is on-grid and finite. Extend
@@ -540,8 +546,8 @@ fn emit_scale(prog: &DenseProgram, ssa: &mut Ssa, body: &mut String) -> Result<(
         .scale
         .ok_or_else(|| DenseAotError::Malformed("scale needs a factor".to_owned()))?;
     let cc = f32_const(c);
-    for i in 0..prog.dim as usize {
-        let x = f32_const(prog.a[i]);
+    for &ai in &prog.a {
+        let x = f32_const(ai);
         let r = ssa.fresh();
         let _ = writeln!(body, "  {r} = fmul float {cc}, {x}");
         let rounded = emit_round_to_grid(prog.dtype, &r, ssa, body);
@@ -843,7 +849,7 @@ impl DenseArtifact {
         };
         let meta = self.result_meta()?;
         Value::new(repr, Payload::Scalars(xs), meta)
-            .map(DenseResult::Value)
+            .map(|v| DenseResult::Value(Box::new(v)))
             .map_err(|e| DenseAotError::Wf(e.to_string()))
     }
 

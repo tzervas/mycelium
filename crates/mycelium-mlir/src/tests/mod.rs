@@ -3,6 +3,7 @@
 
 mod accel;
 mod bitnet;
+mod dense_codegen;
 mod dialect;
 mod inject_tests;
 mod jit;

@@ -35,11 +35,16 @@
 //! G2). Guarantee tag: **Declared** (hand-written textual-IR lowering; the differential against the
 //! interpreter is empirical evidence, not a proof — VR-5).
 //!
-//! **Deliberately out of subset (explicit refusals, never silent — G2):** `App`, `Lam`, `Fix`,
+//! **Deliberately out of *this* subset (explicit refusals, never silent — G2):** `App`, `Lam`, `Fix`,
 //! `FixGroup` (closures + recursion need closure-conversion + heap, deferred to Increment-2/3),
-//! `Swap` (swap to non-binary/ternary repr), Dense/VSA representations. Each is an explicit
-//! [`AotError`]. The MLIR dialect path stays the eventual home (`dialect::emit` is its dumpable
-//! skeleton), deferred until libMLIR exists.
+//! `Swap` to a non-binary/ternary repr, and the `Dense`/`Vsa` representations *in the generic bit/trit
+//! `Node` lowering* (the lane model here is i32 bit/trit elements). Each is an explicit [`AotError`].
+//! **`Repr::Dense` now has a dedicated native home** — the [`crate::dense_codegen`] direct-LLVM path
+//! (M-853; RFC-0039 §5.1) lowers the un-quantized F32/BF16 element-wise surface against the
+//! `mycelium-dense` reference; a Dense `Const` reaching [`const_lane`] is routed there (the refusal
+//! here names where Dense *is* lowered — ADR-006/G2). VSA + quantized Dense stay refused (RFC-0039
+//! §5.1/§5.2; M-854 / E20-1). The MLIR dialect path stays the eventual home for the bit/trit fragment
+//! (`dialect::emit` is its dumpable skeleton), deferred until libMLIR exists.
 //!
 //! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
 //! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
@@ -2304,6 +2309,17 @@ fn const_lane(v: &Value) -> Result<Lane, AotError> {
                 })
                 .collect(),
         }),
+        // M-853 (RFC-0039 §5.1): `Repr::Dense` now has a **native home** — the dedicated
+        // `dense_codegen` direct-LLVM path (`dense_compile_and_run`/`emit_dense_llvm_ir`), which lowers
+        // the un-quantized F32/BF16 element-wise surface against the `mycelium-dense` reference. Dense
+        // is **not** lowered through this generic bit/trit `Node` const-lane (the lane model is i32
+        // bit/trit elements; Dense is `f64`), so a Dense `Const` reaching here is routed to that native
+        // path, never silently mis-lowered as a bit/trit lane. The refusal is informative (ADR-006/G2):
+        // it names where Dense *is* lowered. (Quantized Dense + VSA stay refused per RFC-0039 §5.1/§5.2.)
+        (repr @ Repr::Dense { .. }, _) => Err(AotError::UnsupportedRepr(format!(
+            "{repr:?}: Dense is lowered by the dedicated dense_codegen direct-LLVM path \
+             (dense_compile_and_run; M-853/RFC-0039 §5.1), not this generic bit/trit Node lowering"
+        ))),
         (repr, _) => Err(AotError::UnsupportedRepr(format!("{repr:?}"))),
     }
 }
