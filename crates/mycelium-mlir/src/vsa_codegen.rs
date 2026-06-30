@@ -1199,6 +1199,24 @@ impl VsaArtifact {
         }
     }
 
+    /// White-box constructor pointing `bin` at an **arbitrary executable** (a universal POSIX utility
+    /// like `/bin/true` / `/bin/false`, **never** `llc`/`clang`), so [`Self::run`]'s process-level
+    /// exit-status guard can be witnessed toolchain-independently (no AOT toolchain — the vacuity-prone
+    /// leg is the `llc`/`clang` differential, not coreutils). The read-back-shape fields are
+    /// placeholders (the status guard fires before they matter).
+    #[cfg(test)]
+    pub(crate) fn for_exec_test(bin: std::path::PathBuf, op: VsaCgOp) -> Self {
+        VsaArtifact {
+            _dir: TmpDir(std::path::PathBuf::new()),
+            bin,
+            op,
+            model: VsaModelId::Hrr,
+            dim: 1,
+            bundle_delta: None,
+            item_count: 1,
+        }
+    }
+
     /// Run the artifact and read its result back. A value op reconstructs a VSA [`Value`] carrying the
     /// reference's per-op guarantee tag; a measurement op returns a bare `f64`. A sentinel line
     /// (degenerate phasor) is surfaced as an explicit [`VsaAotError`] — never a silent value (G2).
@@ -1381,10 +1399,13 @@ pub(crate) fn intrinsic_decls(model: VsaModelId, op: VsaCgOp) -> String {
     decls
 }
 
-/// Compile a VSA program to a native executable (emit IR → `llc` → `clang`) without running it.
-/// Returns [`VsaAotError::ToolchainMissing`] when `llc`/`clang` are absent (callers skip); any
-/// out-of-fragment construct is the same explicit refusal as [`emit_vsa_llvm_ir`].
-pub fn vsa_compile(prog: &VsaProgram) -> Result<VsaArtifact, VsaAotError> {
+/// Assemble the **complete** module IR `vsa_compile` feeds to `llc`: the per-element body from
+/// [`emit_vsa_llvm_ir`] with the op's [`intrinsic_decls`] block prepended ahead of `@main` (only when
+/// the op pulls any intrinsic in — `if !decls.is_empty()`, so a no-intrinsic op's IR is untouched).
+/// Pure (no toolchain), split out of [`vsa_compile`] so the decl-prepend guard is **witnessable
+/// without `llc`/`clang`** (the env-independent mutant-witness; VR-5). Returns the same explicit
+/// refusal as [`emit_vsa_llvm_ir`] for an out-of-fragment program.
+pub(crate) fn assemble_compile_ir(prog: &VsaProgram) -> Result<String, VsaAotError> {
     let (mut ir, _explain) = emit_vsa_llvm_ir(prog)?;
     let decls = intrinsic_decls(prog.model, prog.op);
     if !decls.is_empty() {
@@ -1394,6 +1415,14 @@ pub fn vsa_compile(prog: &VsaProgram) -> Result<VsaArtifact, VsaAotError> {
             1,
         );
     }
+    Ok(ir)
+}
+
+/// Compile a VSA program to a native executable (emit IR → `llc` → `clang`) without running it.
+/// Returns [`VsaAotError::ToolchainMissing`] when `llc`/`clang` are absent (callers skip); any
+/// out-of-fragment construct is the same explicit refusal as [`emit_vsa_llvm_ir`].
+pub fn vsa_compile(prog: &VsaProgram) -> Result<VsaArtifact, VsaAotError> {
+    let ir = assemble_compile_ir(prog)?;
     ensure_toolchain()?;
     let dir = unique_tmp_dir().map_err(aot_to_vsa)?;
     let ll = dir.join("vsa.ll");
