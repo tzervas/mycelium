@@ -201,7 +201,10 @@ pub(crate) fn lower_recursion_group(
     let cur = ssa.fresh(); // alloca i64 — current member id
     let acc = ssa.fresh(); // alloca i64 — current accumulator (packed Binary{8})
     let res = ssa.fresh(); // alloca i64 — the value being returned up the stack
-    let _ = writeln!(body, "  ; ── M-850 heap-trampoline (non-tail Fix / FixGroup) ──");
+    let _ = writeln!(
+        body,
+        "  ; ── M-850 heap-trampoline (non-tail Fix / FixGroup) ──"
+    );
     let _ = writeln!(body, "  {sp} = alloca i64, align 8");
     let _ = writeln!(body, "  store i64 0, i64* {sp}");
     let _ = writeln!(body, "  {cur} = alloca i64, align 8");
@@ -311,7 +314,10 @@ pub(crate) fn lower_recursion_group(
     let tag_reg = ssa.fresh();
     let _ = writeln!(body, "  {tag_reg} = load i64, i64* {fi64}");
     let saved_gep = ssa.fresh();
-    let _ = writeln!(body, "  {saved_gep} = getelementptr i64, i64* {fi64}, i64 1");
+    let _ = writeln!(
+        body,
+        "  {saved_gep} = getelementptr i64, i64* {fi64}, i64 1"
+    );
     let saved_reg = ssa.fresh();
     let _ = writeln!(body, "  {saved_reg} = load i64, i64* {saved_gep}");
     let r_in = ssa.fresh();
@@ -457,7 +463,8 @@ fn emit_arm_inner(
     match plan {
         ArmPlan::Base => {
             // Lower the full arm body as a straight-line Binary{8} block; store its result into `res`.
-            let result_lane = crate::llvm::lower_anf_block_pub(anf, &mut arm_env, ssa, bbc, body, funcs, flags)?;
+            let result_lane =
+                crate::llvm::lower_anf_block_pub(anf, &mut arm_env, ssa, bbc, body, funcs, flags)?;
             require_binary8(&result_lane, "trampoline base-arm result")?;
             let packed = pack_binary8_pub(&result_lane, ssa, body);
             let _ = writeln!(body, "  store i64 {packed}, i64* {res}");
@@ -527,7 +534,14 @@ fn emit_bump_depth(sp: &str, ssa: &mut Ssa, body: &mut String) {
 /// (the depth counter). The depth-limit guard in the CALL state catches an over-deep stack *before*
 /// the next dispatch, so a push past the ceiling is never reached as a real store (the guard runs
 /// first), and the frame array is sized `ceiling × 16` so this store is always in-bounds.
-fn emit_push_frame(tag: u64, saved_reg: &str, sp: &str, stk: &str, ssa: &mut Ssa, body: &mut String) {
+fn emit_push_frame(
+    tag: u64,
+    saved_reg: &str,
+    sp: &str,
+    stk: &str,
+    ssa: &mut Ssa,
+    body: &mut String,
+) {
     let d = ssa.fresh();
     let _ = writeln!(body, "  {d} = load i64, i64* {sp}");
     let fbyte = ssa.fresh();
@@ -538,7 +552,10 @@ fn emit_push_frame(tag: u64, saved_reg: &str, sp: &str, stk: &str, ssa: &mut Ssa
     let _ = writeln!(body, "  {fi64} = bitcast i8* {fptr} to i64*");
     let _ = writeln!(body, "  store i64 {tag}, i64* {fi64}");
     let saved_gep = ssa.fresh();
-    let _ = writeln!(body, "  {saved_gep} = getelementptr i64, i64* {fi64}, i64 1");
+    let _ = writeln!(
+        body,
+        "  {saved_gep} = getelementptr i64, i64* {fi64}, i64 1"
+    );
     let _ = writeln!(body, "  store i64 {saved_reg}, i64* {saved_gep}");
     let d1 = ssa.fresh();
     let _ = writeln!(body, "  {d1} = add i64 {d}, 1");
@@ -853,9 +870,7 @@ pub(crate) fn destructure_fix(self_name: &str, fix_body: &Anf) -> Result<Vec<Mem
 /// Destructure a `FixGroup`'s member definitions into [`Member`]s. Each member must be the canonical
 /// `λparam. Match param { Lit-arms / default }` shape (Binary{8} branch). The `defs` are the lowered
 /// `(name, body)` pairs carried by every `Rhs::FixGroup` binding.
-pub(crate) fn destructure_fixgroup(
-    defs: &[(String, Anf)],
-) -> Result<Vec<Member>, AotError> {
+pub(crate) fn destructure_fixgroup(defs: &[(String, Anf)]) -> Result<Vec<Member>, AotError> {
     let mut members = Vec::with_capacity(defs.len());
     for (name, def) in defs {
         let (param, arms, default) = destructure_lam_match(name, def)?;
@@ -956,11 +971,7 @@ pub(crate) fn is_pure_tail_single_fix(members: &[Member]) -> Result<bool, AotErr
     let m = &members[0];
     let names = [m.name.as_str()];
     let mut all_tail_or_base = true;
-    let arms_iter = m
-        .arms
-        .iter()
-        .map(|(_, a)| a)
-        .chain(m.default.iter());
+    let arms_iter = m.arms.iter().map(|(_, a)| a).chain(m.default.iter());
     for arm in arms_iter {
         // A `Match` in the arm's pre-call bindings forces the trampoline (the tail loop refuses it,
         // DN-15 §8.5). Detect a nested Match anywhere in the arm body's binding RHSs.

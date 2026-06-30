@@ -612,10 +612,7 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
             // (no IR yet), exactly as a `Fix` is suspended — consumed by a downstream
             // `App(member, init)` that routes to the heap-trampoline (RFC-0004 §11.6; DN-15 §10).
             Rhs::FixGroup { defs, which } => EnvValue::FixGroup(FixGroupVal {
-                defs: defs
-                    .iter()
-                    .map(|(n, d)| (n.clone(), d.clone()))
-                    .collect(),
+                defs: defs.iter().map(|(n, d)| (n.clone(), d.clone())).collect(),
                 which: which.clone(),
             }),
         };
@@ -825,10 +822,7 @@ fn lower_anf_block(
             }
             // M-850: suspend the FixGroup member (consumed by a downstream App → heap-trampoline).
             Rhs::FixGroup { defs, which } => EnvValue::FixGroup(FixGroupVal {
-                defs: defs
-                    .iter()
-                    .map(|(n, d)| (n.clone(), d.clone()))
-                    .collect(),
+                defs: defs.iter().map(|(n, d)| (n.clone(), d.clone())).collect(),
                 which: which.clone(),
             }),
         };
@@ -2734,4 +2728,3 @@ impl Drop for TmpDir {
         let _ = std::fs::remove_dir_all(&self.0);
     }
 }
-

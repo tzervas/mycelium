@@ -35,7 +35,7 @@ fn byte_n(n: u8) -> Value {
     let bits: Vec<bool> = (0..8).map(|i| (n >> i) & 1 == 1).collect();
     Value::new(
         Repr::Binary { width: 8 },
-        Payload::Bits(bits.try_into().expect("8 bits")),
+        Payload::Bits(bits),
         mycelium_core::Meta::exact(mycelium_core::Provenance::Root),
     )
     .expect("8-bit binary value")
@@ -59,7 +59,8 @@ fn assert_interp_eq_native(label: &str, prog: &Node, expected: &[bool]) {
         Err(AotError::ToolchainMissing(_)) => return, // env skip — house idiom
         Err(e) => panic!("{label}: direct-LLVM path errored: {e}"),
     };
-    let interp = interp_bounded(prog, 100_000).unwrap_or_else(|e| panic!("{label}: interp errored: {e:?}"));
+    let interp =
+        interp_bounded(prog, 100_000).unwrap_or_else(|e| panic!("{label}: interp errored: {e:?}"));
 
     assert_eq!(
         observable(&interp),
@@ -225,7 +226,11 @@ fn two_frame_program() -> Node {
 #[test]
 fn two_stacked_frames_interp_eq_native() {
     // not(not(0xAA)) = 0xAA — the double-complement round-trips iff both frames unwind correctly.
-    assert_interp_eq_native("two stacked non-tail frames", &two_frame_program(), &bits(0xAA));
+    assert_interp_eq_native(
+        "two stacked non-tail frames",
+        &two_frame_program(),
+        &bits(0xAA),
+    );
 }
 
 // ─── Mutual recursion via `FixGroup` ────────────────────────────────────────────────────────────
@@ -290,7 +295,11 @@ fn fixgroup_program() -> Node {
 fn fixgroup_mutual_interp_eq_native() {
     // f(1) → g(0) → not(f(0)) = not(0xAA) = 0x55. Mutual recursion now LOWERS (was UnsupportedNode
     // before M-850); the trampoline's shared member dispatch resolves the sibling call.
-    assert_interp_eq_native("FixGroup mutual recursion", &fixgroup_program(), &bits(!0xAA));
+    assert_interp_eq_native(
+        "FixGroup mutual recursion",
+        &fixgroup_program(),
+        &bits(!0xAA),
+    );
 }
 
 /// A `FixGroup` entered at the **second** member — `App(g, 1)` — so the trampoline's `entry` index is
