@@ -1,8 +1,9 @@
-//! M-602 / M-725 — the **three-way** native differential (NFR-7; VR-4; RR-12; RFC-0029 §7; phase-6).
+//! M-602 / M-725 / M-857 — the **three-way** native differential (NFR-7; VR-4; RR-12; RFC-0029 §7;
+//! phase-6).
 //!
 //! Extends the M-302 interp↔native differential (`native_differential.rs`) to a **third** compiled
 //! path: the **real MLIR-dialect** lowering (`dialect::native`, feature `mlir-dialect`; M-601, widened
-//! by M-725). For the in-fragment calculus corpus the programs run under
+//! by M-725 then M-857). For the in-fragment calculus corpus the programs run under
 //!
 //! 1. the M-110 **reference interpreter** (the trusted base),
 //! 2. the **direct-LLVM** backend (`mycelium_mlir::compile_and_run`; `llvm.rs`), and
@@ -15,13 +16,14 @@
 //! not vacuous.
 //!
 //! **Honest fragment boundary (VR-5/G2).** The MLIR-dialect path covers the element-wise fragment
-//! (`core.id`, `bit.not/and/or/xor`, `trit.neg`) **plus** (M-725) the balanced-ternary additive carry
-//! chain `trit.add`/`trit.sub` — including its never-silent overflow read-back. The **new boundary**
-//! is `trit.mul` (the shifted-accumulate fragment), the data fragment, closures and recursion: each an
+//! (`core.id`, `bit.not/and/or/xor`, `trit.neg`) **plus** the balanced-ternary fixed-width arithmetic
+//! — the additive carry chain `trit.add`/`trit.sub` (M-725) and the shifted-accumulate multiply
+//! `trit.mul` (M-857) — including their never-silent overflow read-back. The **new boundary** is
+//! everything richer: the data fragment, closures and recursion, `Swap`, Dense/VSA — each an
 //! **explicit refusal** there (`DialectError::Unsupported`) that routes to the direct-LLVM/interp path.
-//! This test asserts BOTH: the in-fragment corpus (element-wise + trit add/sub, in-range *and*
+//! This test asserts BOTH: the in-fragment corpus (element-wise + trit add/sub/mul, in-range *and*
 //! overflowing) is three-way equivalent — on the result *and* the overflow refusal — AND the
-//! out-of-fragment corpus (`trit.mul`, …) is explicitly refused by the MLIR path while still
+//! out-of-fragment corpus (closures, …) is explicitly refused by the MLIR path while still
 //! interp ≡ direct-LLVM (so coverage is honest, never silently claimed).
 //!
 //! **Toolchain skip.** Both compiled paths need their tools (`llc`/`clang` for direct-LLVM;
@@ -208,6 +210,47 @@ fn element_wise_corpus() -> Vec<Node> {
                 args: vec![Node::Var("s".into())],
             }),
         },
+        // ── M-857: the shifted-accumulate multiply, all in-range (no overflow) ──
+        // trit.mul: 2 · 3 = 6 (= [+,-,0]) in 3 trits (max magnitude 13). 2 = [0,+,-], 3 = [0,+,0].
+        Node::Op {
+            prim: "trit.mul".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Neg])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Zero])),
+            ],
+        },
+        // trit.mul with a negative factor + a wider ripple: (−4) · 2 = −8 (= [0,-,0,+]) in 4 trits
+        // (max magnitude 40). −4 = [0,0,-,-], 2 = [0,0,+,-]; −8 = 0·27 + (−1)·9 + 0·3 + 1·1.
+        Node::Op {
+            prim: "trit.mul".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Neg, Trit::Neg])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos, Trit::Neg])),
+            ],
+        },
+        // trit.mul by zero: 5 · 0 = 0 — every partial vanishes (the `arith.muli {aj}, 0` path).
+        Node::Op {
+            prim: "trit.mul".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Pos, Trit::Neg, Trit::Neg])),
+                Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Zero])),
+            ],
+        },
+        // nested: (a · b) through a let, then negate — a Ternary multiply lane end-to-end.
+        Node::Let {
+            id: "p".into(),
+            bound: Box::new(Node::Op {
+                prim: "trit.mul".into(),
+                args: vec![
+                    Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Neg])),
+                    Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
+                ],
+            }),
+            body: Box::new(Node::Op {
+                prim: "trit.neg".into(),
+                args: vec![Node::Var("p".into())],
+            }),
+        },
     ]
 }
 
@@ -338,49 +381,57 @@ fn mlir_dialect_distinguishes_different_programs() {
 /// the direct-LLVM/interp path), while interp ≡ direct-LLVM still holds. This proves coverage is
 /// honest — the dialect path never silently mis-lowers a node it doesn't support (G2/VR-5).
 ///
-/// **M-725 moved the boundary:** `trit.add`/`trit.sub` are now IN-fragment (they appear in
-/// [`element_wise_corpus`] / [`overflow_corpus`]); the new boundary is `trit.mul`, the
-/// shifted-accumulate fragment. So these cases exercise the *new* refusal, not the old one.
+/// **M-857 moved the boundary again:** `trit.mul` is now IN-fragment (it appears in
+/// [`element_wise_corpus`] / [`overflow_corpus`]); the new boundary is everything *richer* than the
+/// fixed-width bit/trit arithmetic — closures (`Lam`/`App`), recursion (`Fix`), the data fragment, and
+/// `Swap`. These cases use **closures** (which the interpreter evaluates and direct-LLVM lowers to a
+/// `Binary` lane, while the MLIR path refuses) so the interp ≡ direct-LLVM parity leg stays
+/// non-vacuous; `Swap`/data nodes are exercised by the in-crate emission refusal tests instead (their
+/// results don't read back as a simple lane through this harness's `IdentitySwapEngine`).
 fn out_of_fragment_corpus() -> Vec<Node> {
+    // `(λx. not x) A` — a closure applied to an argument. Result is a `Binary{8}` lane, so both the
+    // interpreter and the direct-LLVM read-back produce a value; the MLIR-dialect path refuses it.
+    let not_closure_applied = || Node::App {
+        func: Box::new(Node::Lam {
+            param: "x".into(),
+            body: Box::new(Node::Op {
+                prim: "bit.not".into(),
+                args: vec![Node::Var("x".into())],
+            }),
+        }),
+        arg: Box::new(Node::Const(byte(A))),
+    };
     vec![
-        // trit *multiply* — the new boundary: refused by the dialect path, lowered by direct-LLVM.
-        Node::Op {
-            prim: "trit.mul".into(),
-            args: vec![
-                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Neg])),
-                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Zero])),
-            ],
+        // A bare closure application — the new boundary: refused by the dialect path (closures are not
+        // in the MLIR-dialect fragment), lowered by direct-LLVM (M-378) and interpreted.
+        not_closure_applied(),
+        // The identity closure `(λy. y) B` — a different closure, still refused by the MLIR path.
+        Node::App {
+            func: Box::new(Node::Lam {
+                param: "y".into(),
+                body: Box::new(Node::Var("y".into())),
+            }),
+            arg: Box::new(Node::Const(byte(B))),
         },
-        Node::Op {
-            prim: "trit.mul".into(),
-            args: vec![
-                Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
-                Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
-            ],
-        },
-        // trit.mul nested behind an in-fragment trit.add — the whole program is refused (the MLIR
-        // path refuses the *program*, not just the op) and routed to direct-LLVM/interp.
-        Node::Op {
-            prim: "trit.add".into(),
-            args: vec![
-                Node::Op {
-                    prim: "trit.mul".into(),
-                    args: vec![
-                        Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
-                        Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Zero])),
-                    ],
-                },
-                Node::Const(tern(vec![Trit::Zero, Trit::Zero, Trit::Pos])),
-            ],
+        // A closure application nested behind an in-fragment bit.not (so the *program* mixes an
+        // in-fragment op with an out-of-fragment node) — the whole program is refused by the MLIR
+        // path and routed to direct-LLVM/interp.
+        Node::Let {
+            id: "c".into(),
+            bound: Box::new(not_closure_applied()),
+            body: Box::new(Node::Op {
+                prim: "bit.not".into(),
+                args: vec![Node::Var("c".into())],
+            }),
         },
     ]
 }
 
-/// The **overflow** corpus (M-725): in-fragment `trit.add`/`trit.sub` programs whose fixed-width
-/// result leaves the `m`-trit range. All three paths must **refuse** non-silently — the interpreter
-/// errors (`EvalError::Overflow`), the direct-LLVM path returns `AotError::Overflow`, and the
-/// MLIR-dialect path returns `DialectError::Overflow` (the shared sentinel read-back). This is the
-/// overflow half of the honest carry boundary — a value is never silently wrapped (SC-3/G2).
+/// The **overflow** corpus (M-725; M-857): in-fragment `trit.add`/`trit.sub`/`trit.mul` programs whose
+/// fixed-width result leaves the `m`-trit range. All three paths must **refuse** non-silently — the
+/// interpreter errors (`EvalError::Overflow`), the direct-LLVM path returns `AotError::Overflow`, and
+/// the MLIR-dialect path returns `DialectError::Overflow` (the shared sentinel read-back). This is the
+/// overflow half of the honest arithmetic boundary — a value is never silently wrapped (SC-3/G2).
 fn overflow_corpus() -> Vec<Node> {
     vec![
         // max(2 trits) + max(2 trits) = 4 + 4 = 8, out of the 2-trit range [−4, 4]. ([+,+] = 4.)
@@ -397,6 +448,23 @@ fn overflow_corpus() -> Vec<Node> {
             args: vec![
                 Node::Const(tern(vec![Trit::Pos, Trit::Pos])),
                 Node::Const(tern(vec![Trit::Neg, Trit::Neg])),
+            ],
+        },
+        // M-857: max(2 trits) · max(2 trits) = 4 · 4 = 16, out of the 2-trit range [−4, 4] — a high
+        // trit is non-zero. Exercises the multiply overflow read-back (the 2m-buffer high half).
+        Node::Op {
+            prim: "trit.mul".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Pos, Trit::Pos])),
+                Node::Const(tern(vec![Trit::Pos, Trit::Pos])),
+            ],
+        },
+        // 3 · 3 = 9, out of the 2-trit range (9 > 4). ([+,0] = 3.)
+        Node::Op {
+            prim: "trit.mul".into(),
+            args: vec![
+                Node::Const(tern(vec![Trit::Pos, Trit::Zero])),
+                Node::Const(tern(vec![Trit::Pos, Trit::Zero])),
             ],
         },
     ]
@@ -429,10 +497,11 @@ fn out_of_fragment_nodes_are_refused_by_mlir_but_run_on_direct_llvm() {
     }
 }
 
-/// M-725: the **overflow** three-way refusal parity. An in-fragment `trit.add`/`trit.sub` whose
-/// result leaves the `m`-trit range must be refused **non-silently by all three paths** — the
-/// interpreter errors, and both compiled paths return an explicit `Overflow`. Never a silent wrap on
-/// any path (SC-3/G2), so the carry boundary is honest on overflow as well as on value.
+/// M-725 / M-857: the **overflow** three-way refusal parity. An in-fragment
+/// `trit.add`/`trit.sub`/`trit.mul` whose result leaves the `m`-trit range must be refused
+/// **non-silently by all three paths** — the interpreter errors, and both compiled paths return an
+/// explicit `Overflow`. Never a silent wrap on any path (SC-3/G2), so the fixed-width arithmetic
+/// boundary is honest on overflow as well as on value.
 #[test]
 fn overflowing_trit_arithmetic_is_refused_non_silently_three_ways() {
     for (i, node) in overflow_corpus().iter().enumerate() {
