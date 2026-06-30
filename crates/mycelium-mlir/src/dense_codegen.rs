@@ -808,20 +808,27 @@ impl DenseArtifact {
         let stdout = String::from_utf8(output.stdout)
             .map_err(|e| DenseAotError::Parse(format!("non-utf8 output: {e}")))?;
         let line = stdout.lines().next().unwrap_or("").trim();
-        // Never-silent sentinels (matches DenseError::Overflow / SubnormalUnsupported).
-        if line.starts_with(DENSE_OVERFLOW_SENTINEL) {
-            return Err(DenseAotError::Overflow);
-        }
-        if line.starts_with(DENSE_SUBNORMAL_SENTINEL) {
-            return Err(DenseAotError::Subnormal);
-        }
-        let bits: Vec<u64> = line
-            .split_whitespace()
-            .map(|tok| {
+        // Never-silent sentinels (matches DenseError::Overflow / SubnormalUnsupported). A sentinel
+        // can appear **anywhere** on the line, not only at its start: a result element that overflows
+        // / goes subnormal at index `i > 0` is printed *after* the earlier in-range elements (the
+        // artifact emits each element space-separated, then the sentinel for the first failing one),
+        // so the line reads e.g. `"<bits0> OVERFLOW"`. Scan every whitespace-split token for a
+        // sentinel and surface the matching `DenseAotError` — never misclassify an overflow/subnormal
+        // as a `Parse` failure of the sentinel token (G2: the refusal stays the right variant).
+        let mut tokens = line.split_whitespace();
+        let mut bits: Vec<u64> = Vec::new();
+        for tok in tokens.by_ref() {
+            if tok == DENSE_OVERFLOW_SENTINEL {
+                return Err(DenseAotError::Overflow);
+            }
+            if tok == DENSE_SUBNORMAL_SENTINEL {
+                return Err(DenseAotError::Subnormal);
+            }
+            bits.push(
                 tok.parse::<u64>()
-                    .map_err(|e| DenseAotError::Parse(format!("non-u64 token {tok:?}: {e}")))
-            })
-            .collect::<Result<_, _>>()?;
+                    .map_err(|e| DenseAotError::Parse(format!("non-u64 token {tok:?}: {e}")))?,
+            );
+        }
         if self.op.is_value_op() {
             self.reconstruct_value(&bits)
         } else {

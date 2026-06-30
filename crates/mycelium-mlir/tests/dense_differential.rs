@@ -395,6 +395,63 @@ fn refusals_match_the_reference() {
     );
 }
 
+/// A result element that overflows/goes-subnormal at index **> 0** of a dim > 1 vector must surface
+/// the correct `DenseAotError::Overflow`/`Subnormal` — **not** a misclassified `Parse` failure. The
+/// artifact prints the earlier in-range elements (space-separated) before the sentinel, so the
+/// read-back must scan for the sentinel **anywhere** on the line, not only at its start. Earlier the
+/// `refusals_match_the_reference` corpus only exercised dim = 1 (overflow at index 0), which the
+/// start-only check happened to handle; this pins the dim > 1, index > 0 boundary (G2 — the refusal
+/// stays the right variant). The reference refuses identically (`DenseError::Overflow { index: 1 }`).
+#[test]
+fn overflow_subnormal_at_nonzero_index_is_the_right_variant_not_parse() {
+    use mycelium_dense::{DenseError, DENSE_MIN_NORMAL};
+    let space = DenseSpace::new(2, ScalarKind::F32).unwrap();
+
+    // Overflow at index 1: a = [1.0, f32::MAX], b = [1.0, f32::MAX]. Element 0 is in-range (2.0),
+    // element 1 overflows (f32::MAX + f32::MAX = +Inf). Reference: Overflow { index: 1 }.
+    let a = space.value(vec![1.0, f64::from(f32::MAX)]).unwrap();
+    assert_eq!(
+        space.add_values(&a, &a),
+        Err(DenseError::Overflow { index: 1 })
+    );
+    let p = prog(
+        DenseCgOp::Add,
+        ScalarKind::F32,
+        vec![1.0, f64::from(f32::MAX)],
+        Some(vec![1.0, f64::from(f32::MAX)]),
+        None,
+    );
+    match dense_compile_and_run(&p) {
+        Err(DenseAotError::Overflow) => {}
+        Err(DenseAotError::ToolchainMissing(_)) => return,
+        other => panic!("overflow at index 1 must surface DenseAotError::Overflow, got {other:?}"),
+    }
+
+    // Subnormal at index 1: a = [1.0, 1.5·2⁻¹²⁶], b = [0.0, 1.25·2⁻¹²⁶]. Element 0 in-range (1.0),
+    // element 1 subnormal (0.25·2⁻¹²⁶). Reference: SubnormalUnsupported { index: 1 }.
+    let a = space.value(vec![1.0, 1.5 * DENSE_MIN_NORMAL]).unwrap();
+    let b = space.value(vec![0.0, 1.25 * DENSE_MIN_NORMAL]).unwrap();
+    assert_eq!(
+        space.sub_values(&a, &b),
+        Err(DenseError::SubnormalUnsupported { index: 1 })
+    );
+    let p = prog(
+        DenseCgOp::Sub,
+        ScalarKind::F32,
+        vec![1.0, 1.5 * DENSE_MIN_NORMAL],
+        Some(vec![0.0, 1.25 * DENSE_MIN_NORMAL]),
+        None,
+    );
+    match dense_compile_and_run(&p) {
+        // env skip — the toolchain is absent (this is the last assertion, so a unit value, not a
+        // `return`, to satisfy clippy::needless_return).
+        Err(DenseAotError::Subnormal) | Err(DenseAotError::ToolchainMissing(_)) => {}
+        other => {
+            panic!("subnormal at index 1 must surface DenseAotError::Subnormal, got {other:?}")
+        }
+    }
+}
+
 // ─── the dialect leg honestly refuses Dense (the third edge is a never-faked refusal) ────────────
 
 /// The **MLIR-dialect** path honestly **refuses** a Dense `Const` (`DialectError::Unsupported`) — so
