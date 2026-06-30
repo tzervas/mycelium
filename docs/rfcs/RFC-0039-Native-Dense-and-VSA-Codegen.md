@@ -8,7 +8,7 @@
 | **Date** | 2026-06-30 |
 | **Feeds** | E25-1 (native AOT full-language coverage) — issues **M-853** (Dense), **M-854** (VSA), **M-855** (dynamic-VSA JIT + ADR-009 lift) |
 | **Decides** | How `Repr::Dense` element-wise ops + the ADR-030 quant descriptor lower natively (with the quant-granularity / accumulator-width / packing-schedule recorded as inspectable `Meta.physical`, DN-01); how `Repr::Vsa` bind/bundle/permute lower over the BSC/HRR/FHRR/MAP(-I/-B)/SBC models (honoring ADR-031's element space / sparsity / complex carrier); how the dynamic-VSA JIT runs (data-dependent dimension, runtime model selection, cleanup/resonator loops) as an explicit never-silently-selected `ExecMode`; and the honesty/verification contract (every native Dense/VSA op differential-checked through the M-210 checker against the `mycelium-dense`/`mycelium-vsa` reference, mutant-witnessed, honest per-op tags). |
-| **Grounds** | RFC-0029 §3 (which **excludes** native Dense/VSA codegen — this RFC fills that gap, it does not contradict it); RFC-0001 §4.1/§4.3 (the `Repr` = Binary/Ternary/Dense/Vsa value model + `Meta.physical`/`Meta.bound`); RFC-0003 §4.1/§5/§6 (the VSA per-op guarantee matrix erratum + the cited-theorem-plus-checked-instantiation capacity strategy + the resonator manifest); RFC-0004 §5 (schedule-staged packing as `Meta.physical`), §6 (no-opaque-lowering — every stage dumpable), §11 (the additive direct-LLVM increment pattern); RFC-0002 (the swap/cert discipline — honest `{ε, δ, strength}`); RFC-0009 (resonator factorization — Empirical-only, never-silent `NoConverge`); ADR-030 (Dense quant granularity descriptor in `Repr`, scales in `Payload`); ADR-031 (VSA element space / block-sparsity / complex carrier in `Repr`); ADR-009 (hybrid execution — the dynamic-VSA JIT deferral this RFC's §6 lifts, append-only); ADR-034 §6 (re-gating that names this RFC the vehicle); ADR-006 (EXPLAIN obligation); G2/VR-5 (never-silent, honest tags); KC-3 (small auditable kernel — the native path stays outside the trusted base). |
+| **Grounds** | RFC-0029 §3/§5 Q6 (the out-of-scope boundary and the "Explicitly refused" honest codegen map — Dense/VSA exclusion recorded in §5 Q6/§7.1; this RFC fills that gap, it does not contradict it); RFC-0001 §4.1/§4.3 (the `Repr` = Binary/Ternary/Dense/Vsa value model + `Meta.physical`/`Meta.bound`); RFC-0003 §4.1/§5/§6 (the VSA per-op guarantee matrix erratum + the cited-theorem-plus-checked-instantiation capacity strategy + the resonator manifest); RFC-0004 §5 (schedule-staged packing as `Meta.physical`), §6 (no-opaque-lowering — every stage dumpable), §11 (the additive direct-LLVM increment pattern); RFC-0002 (the swap/cert discipline — honest `{ε, δ, strength}`); RFC-0009 (resonator factorization — Empirical-only, never-silent `NoConverge`); ADR-030 (Dense quant granularity descriptor in `Repr`, scales in `Payload`); ADR-031 (VSA element space / block-sparsity / complex carrier in `Repr`); ADR-009 (hybrid execution — the dynamic-VSA JIT deferral this RFC's §6 lifts, append-only); ADR-034 §6 (re-gating that names this RFC the vehicle); ADR-006 (EXPLAIN obligation); G2/VR-5 (never-silent, honest tags); KC-3 (small auditable kernel — the native path stays outside the trusted base). |
 | **Coupled with** | `crates/mycelium-mlir/` (the AOT/JIT backend where `Repr::Dense`/`Repr::Vsa` are currently REFUSED — `src/llvm.rs:2170`, `src/dialect/native.rs:349-350`; the `ExecMode` enum at `src/mode.rs:55-72`); `crates/mycelium-dense/` + `crates/mycelium-vsa/` (the trusted-base reference semantics this native path is differential-checked against); `crates/mycelium-cert/` (the M-210 observational-equivalence checker — `src/check.rs`) |
 | **Task** | E25-1 (epic) / M-853 (first child) |
 
@@ -260,6 +260,12 @@ first; dialect later**) **removes the VSA refusal** for the covered fragment and
     `BoundBasis::ProvenThm` *iff* `dim ≥ requiredDim(items, δ)`, else `None` (honest downgrade). Native
     `bundle` **must run the same side-condition check** and stamp Proven only when it passes — never on
     a different (e.g. SIMD-reordered) accumulation that the checked instantiation did not cover.
+  - BSC `bundle` carries a **lattice-level `Proven`** (the "on-expectation" qualifier per RFC-0003 §4.1
+    / `matrix.rs` A3-06/C1-04 — a weaker guarantee than MAP-I's tail-bound `Proven`), but the
+    **value-level output is correctly `Empirical`** (a δ from `BSC_BUNDLE_PROFILE`; the lattice cannot
+    carry the "on expectation" qualifier — see `matrix.rs` comment). Native BSC `bundle` must therefore
+    issue an **`Empirical`** `SwapCertificate` matching the reference's value-level behavior — never
+    upgrading to the lattice `Proven` entry (VR-5; M-I2).
   - HRR/FHRR `unbind` and `bundle` stay **Empirical**, bounded by the reference's trial-validated
     `EmpiricalProfile`s (the documented coverage windows — odd `m ≤ 5`, `d ≥ 1024`, single-factor,
     codebook ≤ 16, etc.). A native lowering whose floating-point reduction order differs from the
@@ -356,7 +362,7 @@ dynamic path exactly as for the static one.
 ADR-009 (Hybrid execution; Accepted) established: *one Core IR, multiple backends — interpreter (the
 reference semantics), JIT, AOT; AOT preferred for stable components; interpretation/JIT for
 development, exploration, and **dynamic VSA**.* ADR-009 thus already names dynamic VSA as a JIT use
-case, and RFC-0029 §5.3 records that "ADR-009 already sanctions JIT, so **no superseding ADR is
+case, and RFC-0029 §5 item 3/§7.3 records that "ADR-009 already sanctions JIT, so **no superseding ADR is
 required**" for the JIT *mechanism*. ADR-034 §6, however, frames the dynamic-VSA JIT specifically as
 "**lifting ADR-009's deferral** for that path," and names this RFC (or a focused ADR-009 amendment, the
 maintainer's call) as the place to record it.
@@ -367,7 +373,7 @@ runtime-model-selection / cleanup-resonator workloads — moving it from sanctio
 designed (now Accepted). This is a **cross-reference, not a rewrite**: ADR-009's text is unchanged; the
 append-only pointer recorded against it (to be applied by the integrating parent — see the flagged
 edits accompanying this RFC) is *"the dynamic-VSA JIT deferral is lifted by RFC-0039 §6 (Accepted
-2026-06-30); the JIT mechanism itself was already sanctioned (RFC-0029 §5.3)."*
+2026-06-30); the JIT mechanism itself was already sanctioned (RFC-0029 §5/§7.3)."*
 
 **OQ-1 resolved (maintainer 2026-06-30): this §6 cross-reference IS the vehicle — there is NO separate
 ADR-009 amendment.** The §6 record here, plus the Foundation ADR-009 cross-reference note, are the full
