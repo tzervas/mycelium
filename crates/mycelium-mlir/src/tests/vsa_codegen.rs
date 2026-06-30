@@ -692,6 +692,14 @@ fn hrr_fhrr_bundle_outside_profile_is_refused() {
             emit_vsa_llvm_ir(&prog(VsaCgOp::Bundle, model, 256, ok, None, None)).is_ok(),
             "{model:?} bundle of 5 items at dim 256 must lower (in-envelope)"
         );
+        // An EVEN in-envelope count (m = 4) ALSO lowers — HRR/FHRR sum/phasor bundles have no
+        // majority-tie asymmetry, so `odd_items_only` is `false` (unlike BSC). This pins that field:
+        // a mutation flipping it to `odd_items_only = true` would refuse m = 4 here.
+        let even_ok: Vec<Vec<f64>> = (0..4).map(|_| mk(256)).collect();
+        assert!(
+            emit_vsa_llvm_ir(&prog(VsaCgOp::Bundle, model, 256, even_ok, None, None)).is_ok(),
+            "{model:?} bundle of an EVEN 4 items at dim 256 must lower (odd_items_only = false)"
+        );
     }
 }
 
