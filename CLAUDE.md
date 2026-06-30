@@ -451,7 +451,10 @@ checkout it made in the shared tree.
 and GitHub-API work, not leaf edits. One agent per worktree, one worktree per branch. If a stray agent
 *did* land in the shared tree, **preserve its work first** — commit its in-progress changes to **its
 own** branch and push (durability, #9) — **before** switching the tree off it; never `git checkout`
-away from a dirty shared tree (it aborts, or cross-contaminates the destination branch).
+away from a dirty shared tree (it aborts, or cross-contaminates the destination branch). **Enforced by
+`/worktree-guard`** (`scripts/checks/worktree-guard.sh`): a leaf runs `--leaf` before its first git
+write (asserts it is in an isolated worktree); the orchestrator runs the default mode (asserts the main
+tree is a clean pointer) — the worktree analogue of `/branch-guard`.
 
 ### 12. Branch-guard string-match false-positive — split commit+push; keep protected names out of messages (lesson, 2026-06-30)
 **Pattern:** the `PreToolUse` branch-guard scans the **Bash command text**, so a compound
@@ -577,6 +580,12 @@ pull-down rule of mitigation #6); the integrating parent reconciles `CHANGELOG` 
 
 This is what keeps a large, parallel wave collision-free, honest, and fast.
 
+**Operationalized as parameterized skills** (so the pattern holds by construction, not by memory):
+**`/wave`** drives the whole loop above (partition → isolate → change-scoped leaf → per-PR review →
+integration close-out); **`/pr-land`** is the per-PR review-and-merge-up step (Parts 3–4);
+**`/worktree-guard`** enforces Part 2 (mitigation #11) the way `/branch-guard` enforces the protected
+tiers. Point new agents at these skills rather than re-explaining the pattern.
+
 ## Wave-N multi-session workflow — protected bases, free children, squash-only `main`
 
 When a wave is too big for one session, split it into **independent parent sessions** by **disjoint
@@ -609,9 +618,22 @@ Invoke with `/<name>`; they auto-engage when relevant.
 - **`/doc-index`** — regenerate and query the agent code index (`docs/api-index/`), check
   `doc_refs` grammar validity.
 - **`/land`** — land a reviewed PR on main: self-review + handle CI/bot comments → green `just check` → curated squash-merge (squash-only) → branch/worktree cleanup.
+- **`/wave`** — run a concurrent wave of tightly-scoped work the safe, fast way (the umbrella for
+  §Concurrent-PR development): partition by file ownership → one **isolated worktree** per agent →
+  change-scoped leaf checks + own-issue updates → per-PR review+merge via `/pr-land` → integration-tier
+  close-out; `main` stays the terminal maintainer checkpoint.
+- **`/pr-land`** — the agent-driven per-PR review loop: an isolated Sonnet `/pr-review` agent posts
+  findings as PR comments → patches → replies → updates the description → merges the PR **up the tree**
+  (leaf→`dev`, `dev`→`integration`). Parameterized by PR # + base tier. (Not the `main` squash — that's
+  `/land`.)
+- **`/worktree-guard`** — the isolated-worktree safeguard (mitigation #11), parameterized + idempotent
+  like `/branch-guard`: `--leaf` asserts a concurrent agent is isolated; default asserts the
+  orchestrator's main tree is a clean pointer. Backs `scripts/checks/worktree-guard.sh`.
 
 The review skills share one rubric: `.claude/skills/_shared/review-rubric.md` (tiers, severity,
-report format). Posture is **advisory** — they recommend, they don't gate.
+report format). Posture is **advisory** — they recommend, they don't gate. The
+**concurrent-development skills** (`/wave` · `/pr-land` · `/worktree-guard`) operationalize
+§Concurrent-PR development + mitigations #11/#12 so the pattern holds by construction, not by memory.
 
 ## Map
 - `docs/Mycelium_Project_Foundation.md` — charter (FR/NFR/VR, SC-*/KC-*, ADR-001…009, roadmap).

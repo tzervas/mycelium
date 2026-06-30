@@ -120,8 +120,9 @@ GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo t
   rather than editing `CHANGELOG`/indices themselves). Each concurrent agent works in its **own isolated
   `git worktree`**; each PR gets a dedicated **`/pr-review` agent** that posts findings as PR comments,
   patches them, replies with the resolution, updates the PR description, and merges up the tree — with
-  the **merge to `main` the terminal (maintainer) checkpoint**. Full agent-facing form: `CLAUDE.md`
-  §Concurrent-PR development and §Autonomous PR workflow.
+  the **merge to `main` the terminal (maintainer) checkpoint**. Operationalized as the **`/wave`**,
+  **`/pr-land`**, and **`/worktree-guard`** skills (`.claude/skills/`). Full agent-facing form:
+  `CLAUDE.md` §Concurrent-PR development and §Autonomous PR workflow.
 
 ---
 

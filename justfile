@@ -120,6 +120,12 @@ alias safety := safety-check
 branch-guard:
     @bash scripts/checks/branch-guard.sh
 alias bg := branch-guard
+# worktree-guard: assert the worktree-isolation discipline — one isolated worktree per concurrent
+# agent; the orchestrator's main tree a clean pointer. Idempotent + parameterized (--leaf /
+# --orchestrator / --quiet); the worktree analogue of branch-guard (CLAUDE.md mitigation #11).
+worktree-guard *ARGS:
+    @bash scripts/checks/worktree-guard.sh {{ARGS}}
+alias wg := worktree-guard
 # Per-use unsafe escape gate (M-793; RFC-0034 §9; sharpens ADR-014): (A) trusted-kernel crates
 # (`mycelium-core`, `-cert`, `-numerics`, `-vsa`) must retain `#![forbid(unsafe_code)]`; (B) every
 # non-kernel `unsafe` site must carry a per-use `#[allow(unsafe_code)]` (or `cfg_attr` form) within
