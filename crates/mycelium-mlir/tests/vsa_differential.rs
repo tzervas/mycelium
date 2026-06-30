@@ -539,6 +539,42 @@ fn fhrr_negative_zero_phase_wraps_bit_exact() {
     }
 }
 
+/// FHRR degenerate bundle component: when a component's phasor sum vanishes, its phase is undefined —
+/// the **executed native artifact** must print the `DEGENERATE` sentinel and the read-back surfaces an
+/// explicit [`VsaAotError::DegenerateBundleComponent`], **exactly where the reference refuses**
+/// (`VsaError::DegenerateBundleComponent`) — never an arbitrary phase (G2/SC-3). Opposite phasors
+/// (`θ` and `θ+π`) cancel at every component. This exercises the never-silent trap through a real
+/// `llc`/`clang` artifact, not just IR inspection.
+#[test]
+fn fhrr_degenerate_bundle_is_refused_by_the_executed_artifact() {
+    use std::f64::consts::{PI, TAU};
+    // The opposite phasor of θ is wrap(θ + π) in (−π, π] — `rem_euclid` then shift, matching the
+    // reference's `wrap_phase`. Both components cancel against `a`'s, so the phasor sum vanishes.
+    let opp = |t: f64| {
+        let u = (t + PI).rem_euclid(TAU);
+        if u > PI {
+            u - TAU
+        } else {
+            u
+        }
+    };
+    let a = vec![0.5, -1.0];
+    let b = vec![opp(0.5), opp(-1.0)];
+    // Reference: the bundle of opposite phasors is a degenerate-component refusal.
+    assert_eq!(
+        Fhrr::new(2).bundle(&[&a, &b]),
+        Err(mycelium_vsa::VsaError::DegenerateBundleComponent { index: 0 })
+    );
+    let p = prog(VsaCgOp::Bundle, VsaModelId::Fhrr, vec![a, b], None, None);
+    match vsa_compile_and_run(&p) {
+        Err(VsaAotError::DegenerateBundleComponent) => {}
+        Err(VsaAotError::ToolchainMissing(_)) => {}
+        other => {
+            panic!("FHRR degenerate bundle must surface DegenerateBundleComponent, got {other:?}")
+        }
+    }
+}
+
 // ─── non-vacuity: the native path actually discriminates ─────────────────────────────────────────
 
 /// Sanity: the native VSA path **discriminates** — binding the same operand against `+1` (the
