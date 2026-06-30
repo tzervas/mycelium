@@ -43,10 +43,18 @@
 //! the interpreter.
 //!
 //! ## Honesty (VR-5)
-//! Guarantee tag **Declared** — hand-written textual LLVM IR; the three-way differential
-//! (interp ≡ direct-LLVM ≡ MLIR-dialect) is *empirical* evidence, not a proof. Only with that
-//! differential checked **and** a `cargo-mutants` witness of the frame/trampoline logic does the tag
-//! rise to **Empirical**; it is never upgraded without that checked basis.
+//! Guarantee tag **Empirical** — hand-written textual LLVM IR with a *checked* empirical basis, not a
+//! proof. The basis (M-850): the **interp ≡ direct-LLVM** differential over the recursion corpus
+//! (`tests/recursion_trampoline_differential.rs` — non-tail `Cont::{Not,And,Or,Xor}`, two stacked
+//! frames, `FixGroup` mutual recursion, deep-recursion `DepthLimit`) is green, **and** a
+//! `cargo-mutants` witness of the frame/continuation logic is caught by it (`emit_apply_cont` and
+//! `materialize_saved` mutants caught by value-divergence; `emit_push_frame`/`emit_bump_depth → ()`
+//! caught by the deep-recursion test no longer terminating — 0 missed on that core). It is **not**
+//! `Proven`: there is no machine-checked refinement theorem for the emitted IR, so the tag is never
+//! upgraded past `Empirical` (VR-5). The MLIR-dialect leg does **not** run for this corpus —
+//! `dialect::native` honestly refuses recursion (`Fix`/`FixGroup` → `UnsupportedNode`), so the
+//! differential is two-way (interp ≡ direct-LLVM) with the dialect edge an explicit refusal, not a
+//! skipped/vacuous pass.
 //!
 //! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced (the frame stack is a
 //! safe `@malloc`/`@free` heap structure in emitted IR, like the Increment-2 arena).
