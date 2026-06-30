@@ -229,8 +229,21 @@ pub(crate) struct FixVal {
     pub(crate) body: mycelium_core::lower::Anf,
 }
 
+/// A suspended `FixGroup` member (M-850 / Wave-B; RFC-0004 §11.6; DN-15 §10): the group's lowered
+/// member definitions plus which member this binding resolves to. Stored without emitting IR;
+/// consumed by a downstream `App(member, init)` that routes to [`crate::trampoline`]. The
+/// env-machine analogue is `aot.rs`'s `AotVal::FixGroup` (the focus-suspension unfold).
+#[derive(Debug, Clone)]
+pub(crate) struct FixGroupVal {
+    /// All members of the group, in declaration order: `(member-name, lowered λ.Match body)`.
+    pub(crate) defs: Vec<(String, mycelium_core::lower::Anf)>,
+    /// Which member name this binding resolves to (the entry when this binding is the `App` func).
+    pub(crate) which: String,
+}
+
 /// An environment value — a repr-lane (bit/trit), a constructed data value (tagged struct), a
-/// native closure (Increment-2), or a suspended Fix value (Increment-3).
+/// native closure (Increment-2), a suspended Fix value (Increment-3), or a suspended FixGroup
+/// member (M-850).
 ///
 /// The `lower_program` env maps [`Atom`] → `EnvValue`. Repr-lane values flow into `emit_op`; datum
 /// values are produced by `Construct` and consumed by `Match` arm bodies; closure values are
@@ -246,6 +259,11 @@ pub(crate) enum EnvValue {
     /// A suspended `Fix` — produced by `Rhs::Fix`, consumed by the special `App(Fix, init)`
     /// dispatch. Never a printable result value (G2).
     Fix(FixVal),
+    /// A suspended `FixGroup` member (M-850 / Wave-B) — produced by `Rhs::FixGroup`, consumed by the
+    /// special `App(FixGroup-member, init)` dispatch which routes to the heap-trampoline
+    /// ([`crate::trampoline`]). Carries the whole group's lowered defs plus which member this is
+    /// (so a sibling call resolves the group). Never a printable result value (G2).
+    FixGroup(FixGroupVal),
 }
 
 impl EnvValue {
@@ -265,6 +283,10 @@ impl EnvValue {
                 "{ctx}: expected a repr lane but found a Fix value — a bare Fix is not a \
                  printable/repr value; it must be applied to an argument (Increment-3; DN-15 §8; G2)"
             ))),
+            EnvValue::FixGroup(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a FixGroup member — a bare FixGroup is not a \
+                 printable/repr value; it must be applied to an argument (M-850; DN-15 §10; G2)"
+            ))),
         }
     }
     fn as_lane(&self, ctx: &str) -> Result<&Lane, AotError> {
@@ -279,6 +301,10 @@ impl EnvValue {
             EnvValue::Fix(_) => Err(AotError::UnsupportedNode(format!(
                 "{ctx}: expected a repr lane but found a Fix value — only usable as an App func \
                  (Increment-3; G2)"
+            ))),
+            EnvValue::FixGroup(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a FixGroup member — only usable as an App \
+                 func (M-850; G2)"
             ))),
         }
     }
@@ -582,13 +608,16 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                     body: fix_body.clone(),
                 })
             }
-            Rhs::FixGroup { .. } => {
-                return Err(AotError::UnsupportedNode(
-                    "FixGroup: mutual recursion is not supported in Increment-3 (only single Fix \
-                     with a λparam.Match body is supported; RFC-0004 §11.6; G2)"
-                        .to_owned(),
-                ));
-            }
+            // M-850 (Wave-B): a `FixGroup` binding is now **suspended** as an `EnvValue::FixGroup`
+            // (no IR yet), exactly as a `Fix` is suspended — consumed by a downstream
+            // `App(member, init)` that routes to the heap-trampoline (RFC-0004 §11.6; DN-15 §10).
+            Rhs::FixGroup { defs, which } => EnvValue::FixGroup(FixGroupVal {
+                defs: defs
+                    .iter()
+                    .map(|(n, d)| (n.clone(), d.clone()))
+                    .collect(),
+                which: which.clone(),
+            }),
         };
         env.insert(b.name.clone(), ev);
     }
@@ -604,6 +633,100 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
         overflow,
         funcs,
     })
+}
+
+/// `pub(crate)` shim so the M-850 heap-trampoline ([`crate::trampoline`]) can reuse the exact
+/// straight-line block lowering (DRY/KC-3 — one lowering, never a divergent copy). Same contract as
+/// [`lower_anf_block`].
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn lower_anf_block_pub(
+    anf: &lower::Anf,
+    env: &mut HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+) -> Result<Lane, AotError> {
+    lower_anf_block(anf, env, ssa, bbc, body, funcs, flags)
+}
+
+/// `pub(crate)` shim: lower every binding of `anf` whose name is **not** `call_name` (the recursive
+/// call binding the trampoline handles itself), extending `env`. Reuses
+/// [`lower_arm_bindings_before_tail`]'s contract generalized to "stop at the named call binding"
+/// regardless of whether it is literally the tail. Returns once the named binding (or end) is hit.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn lower_bindings_before_call_pub(
+    anf: &lower::Anf,
+    call_name: &Atom,
+    env: &mut HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    // The pre-call sequence is straight-line `Binary{8}` (const/alias/op only), so block-label and
+    // closure-function sinks are unused here — kept in the signature for a uniform lowering surface.
+    _bbc: &mut Bbc,
+    body: &mut String,
+    _funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+) -> Result<(), AotError> {
+    for b in anf.bindings() {
+        if &b.name == call_name {
+            // The recursive-call binding — the trampoline emits the call/step/cont itself; stop.
+            break;
+        }
+        let ev = match &b.rhs {
+            Rhs::Const(v) => EnvValue::Repr(const_lane(v)?),
+            Rhs::Alias(a) => lookup_ev(env, a)?.clone(),
+            Rhs::Op { prim, args } => {
+                let operands: Vec<&Lane> = args
+                    .iter()
+                    .map(|a| lookup_ev(env, a)?.as_lane("trampoline pre-call op operand"))
+                    .collect::<Result<_, _>>()?;
+                EnvValue::Repr(emit_op(prim, &operands, ssa, body, flags)?)
+            }
+            // A non-canonical pre-call construct (Swap/Construct/Match/Lam/Fix/App-to-non-member/
+            // FixGroup) is refused — the trampoline pre-call sequence is straight-line Binary{8}
+            // only; anything else is routed to the interpreter (never fragile IR — G2/VR-5).
+            other => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "trampoline: a non-straight-line pre-call binding ({}) is not supported in a \
+                     recursive arm — only Binary{{8}} const/alias/op before the call (G2)",
+                    rhs_kind(other)
+                )));
+            }
+        };
+        env.insert(b.name.clone(), ev);
+    }
+    Ok(())
+}
+
+/// A short human label for an `Rhs` variant (diagnostics only).
+fn rhs_kind(rhs: &Rhs) -> &'static str {
+    match rhs {
+        Rhs::Const(_) => "Const",
+        Rhs::Alias(_) => "Alias",
+        Rhs::Op { .. } => "Op",
+        Rhs::Swap { .. } => "Swap",
+        Rhs::Construct { .. } => "Construct",
+        Rhs::App { .. } => "App",
+        Rhs::Lam { .. } => "Lam",
+        Rhs::Fix { .. } => "Fix",
+        Rhs::FixGroup { .. } => "FixGroup",
+        Rhs::Match { .. } => "Match",
+    }
+}
+
+/// `pub(crate)` shims for the narrow-ABI pack/unpack/typecheck helpers the trampoline shares.
+pub(crate) fn pack_binary8_pub(lane: &Lane, ssa: &mut Ssa, body: &mut String) -> String {
+    pack_binary8(lane, ssa, body)
+}
+pub(crate) fn unpack_binary8_pub(src: &str, ssa: &mut Ssa, body: &mut String) -> Lane {
+    unpack_binary8(src, ssa, body)
+}
+pub(crate) fn as_binary8_pub<'a>(ev: &'a EnvValue, ctx: &str) -> Result<&'a Lane, AotError> {
+    as_binary8(ev, ctx)
+}
+pub(crate) fn lit_binary8_packed_pub(value: &Value) -> Result<u64, AotError> {
+    lit_binary8_packed(value)
 }
 
 /// Lower a nested ANF block (a `Match` arm or similar nested scope) into the ongoing IR stream,
@@ -687,13 +810,14 @@ fn lower_anf_block(
                     body: fix_body.clone(),
                 })
             }
-            Rhs::FixGroup { .. } => {
-                return Err(AotError::UnsupportedNode(
-                    "FixGroup in a nested block: mutual recursion is not supported in Increment-3 \
-                     (only single Fix with λparam.Match body; RFC-0004 §11.6; G2)"
-                        .to_owned(),
-                ));
-            }
+            // M-850: suspend the FixGroup member (consumed by a downstream App → heap-trampoline).
+            Rhs::FixGroup { defs, which } => EnvValue::FixGroup(FixGroupVal {
+                defs: defs
+                    .iter()
+                    .map(|(n, d)| (n.clone(), d.clone()))
+                    .collect(),
+                which: which.clone(),
+            }),
         };
         env.insert(b.name.clone(), ev);
     }
@@ -1003,8 +1127,33 @@ fn lower_app(
 ) -> Result<EnvValue, AotError> {
     let func_ev = lookup_ev(env, func)?;
     // Increment-3: App(Fix, init) → iterative tail-recursion loop (never stack recursion; DN-05 #1).
+    // M-850 (Wave-B): a non-tail single `Fix` (or a `Match` in a pre-call binding — DN-15 §8.5) no
+    // longer refuses; it routes to the **heap-trampoline** ([`crate::trampoline`]) — the full
+    // defunctionalized control-stack lowering DN-15 §4.3 anticipated. The fast iterative tail loop is
+    // kept (byte-identical IR) for the pure-tail/base fragment it already handled; anything heavier
+    // takes the trampoline. Both are bounded by the SAME `AutoDepthBudget` (DRY/KC-3).
     if let EnvValue::Fix(fixval) = func_ev {
-        return lower_tail_fix(fixval, arg, env, ssa, bbc, body, funcs, flags);
+        let members = crate::trampoline::destructure_fix(&fixval.name, &fixval.body)?;
+        if crate::trampoline::is_pure_tail_single_fix(&members)? {
+            return lower_tail_fix(fixval, arg, env, ssa, bbc, body, funcs, flags);
+        }
+        return crate::trampoline::lower_recursion_group(
+            &members, 0, arg, env, ssa, bbc, body, funcs, flags,
+        );
+    }
+    // M-850: App(FixGroup-member, init) → heap-trampoline over all members; `which` selects the
+    // entry. Mutual recursion is resolved by the trampoline's shared member dispatch (RFC-0004
+    // §11.6; DN-15 §10). Never the C stack — bounded by the same AutoDepthBudget (DN-05 #1).
+    if let EnvValue::FixGroup(fg) = func_ev {
+        let members = crate::trampoline::destructure_fixgroup(&fg.defs)?;
+        let entry = fg
+            .defs
+            .iter()
+            .position(|(n, _)| n == &fg.which)
+            .ok_or_else(|| AotError::FreeVariable(fg.which.clone()))?;
+        return crate::trampoline::lower_recursion_group(
+            &members, entry, arg, env, ssa, bbc, body, funcs, flags,
+        );
     }
     let base = func_ev.as_closure("App function")?.base.clone();
     // fn_ptr ← record slot 0.
@@ -1097,6 +1246,13 @@ fn lower_match(
             return Err(AotError::UnsupportedNode(
                 "Match on a Fix value is not supported — a Fix must be applied (App) before it \
                  can be matched (Increment-3; G2)"
+                    .to_owned(),
+            ));
+        }
+        EnvValue::FixGroup(_) => {
+            return Err(AotError::UnsupportedNode(
+                "Match on a FixGroup member is not supported — it must be applied (App) before it \
+                 can be matched (M-850; G2)"
                     .to_owned(),
             ));
         }
@@ -1932,10 +2088,21 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
     // Closures (Increment-2) bring in the bump arena + `@malloc`/`@free`; a closure-free program
     // emits byte-for-byte the same module as before (no arena, no extra declares).
     let uses_closures = !funcs.is_empty();
+    // M-850 (Wave-B): the heap-trampoline lowering emits `@myc_tramp_alloc` calls into `body`; a
+    // program with no non-tail-Fix/FixGroup recursion never does, so it emits the same module as
+    // before (no trampoline runtime, no extra declares). Detecting via the emitted body keeps the
+    // runtime opt-in without threading another flag through every lowering signature (DRY).
+    let uses_trampoline = body.contains("@myc_tramp_alloc");
+    // `@malloc`/`@free` are shared by the closure arena and the trampoline frame stack — declare
+    // them once if either is present.
+    let uses_heap = uses_closures || uses_trampoline;
     let mut out =
         String::from("; mycelium direct-LLVM AOT (bit/trit + non-recursive data; M-301; M-373)\n");
     if uses_closures {
         out.push_str("; closures: heap closure records on a bump arena (M-378; DN-15 §7)\n");
+    }
+    if uses_trampoline {
+        out.push_str("; recursion: heap-trampoline control stack (M-850; DN-15 §10)\n");
     }
     // `@putchar` for the read-back protocol; `@abort` for the defined-traps (the match no-default
     // trap and the bump-arena OOM). `@abort` is declared `noreturn` so LLVM treats every
@@ -1943,9 +2110,16 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
     // (G2), and no post-trap path — e.g. the OOM block returning a null pointer — is ever reachable.
     out.push_str("declare i32 @putchar(i32)\n");
     out.push_str("declare void @abort() noreturn\n");
-    if uses_closures {
+    if uses_heap {
         out.push_str("declare i8* @malloc(i64)\n");
         out.push_str("declare void @free(i8*)\n");
+    }
+    if uses_trampoline {
+        // The trampoline frame-stack alloc/free seams (emitted before the closure arena so the
+        // closure functions, which may also be present, follow). Never silent OOM (defined-trap).
+        out.push_str(&crate::trampoline::trampoline_runtime());
+    }
+    if uses_closures {
         out.push_str(&arena_runtime());
         // The closure functions (one `define` per `Rhs::Lam`), emitted before `@main`.
         for f in &funcs {
