@@ -8,6 +8,12 @@ construction (CLAUDE.md §Swarm).
 > **The top-level of this directory holds only *current* kickoffs.** Completed kickoffs are moved to
 > [`archive/`](archive/) once their tranche has landed on `main` and been validated against the
 > codebase (the audit that produced this list, 2026-06-28). See **§Completed (archived)** below.
+>
+> **Workspace prep + scoped PRs (DN-65).** At kickoff, every agent **syncs off the latest tip**
+> (same head, tips match) and **pre-installs the toolchain its work-package needs** (Rust →
+> `just setup`; Python → `uv sync`; docs → markdown/`doc_refs`; proofs → `z3`/LH/Lean) before
+> working. Land each work-package as **logical, closely-scoped PRs** (~1–2k-LOC soft target,
+> individually `/pr-review`'d), not one monolith — see `docs/notes/DN-65-…md`.
 
 ## The tiers (each PR-gated; stringency rises with the tier)
 

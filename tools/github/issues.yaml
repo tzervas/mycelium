@@ -7128,3 +7128,415 @@ issues:
     landed_basis: "status:done (serial-lane closeout, 2026-06-29). First-class tuple type: literals (a,b), types (T,U), patterns + let/match destructuring, nested tuples, multi-value return — desugars to a synthetic single-ctor Tuple-N Construct (KC-3, mycelium-core untouched). The first-order application restriction lifted so inline f(x)(y) routes through the 4A.5 apply dispatcher. Verified three-way (L1-eval == L0-interp == AOT) — the differential caught + forced fix of a desugar-completeness bug. Flagged (non-blocking, maintainer): positional projection (.0) destructure-only; unit () arity>=2 only."
     body: |
       Add a first-class tuple/product type + lift f(x)(y), per the maintainer decision after M-822.
+  - id: M-827
+    title: "M-827 -- Graded type soundness: machine-checked noninterference proof for Gamma |- e : tau @ g"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:research, area:language, priority:P3, status:needs-design]
+    depends_on: [M-663]
+    doc_refs:
+      - corpus:RFC-0018
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-A disposition (maintainer 2026-06-29): "yes, must be R&D'd and enacted."
+      As a maintainer, I want the RFC-0018 stage-1a graded judgment's noninterference proof
+      mechanically checked, so that the graded type system can carry `Proven` rather than `Declared`.
+      R&D the near-term mechanization path (Lean 4 vs Liquid Haskell vs Agda/Rocq) per
+      research/26-dn64-typesystem-rnd-RECORD.md; until mechanized it stays `Declared` (VR-5).
+      DoD: a chosen proof path with a staged plan; an executable proof skeleton; RFC-0018 §11 updated
+      append-only when the proof lands (only then may the tag upgrade).
+  - id: M-828
+    title: "M-828 -- Activate forage/backbone + mechanized SelectionPolicy capture & setting"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:design, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-825, M-668]
+    doc_refs:
+      - corpus:RFC-0005
+      - corpus:RFC-0008
+      - corpus:DN-63
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-B disposition: forage and backbone "must be made active"; selection-policy + swap
+      machinery "should support mechanized capture & setting to improve ergonomics while retaining
+      transparency, provenance and explainability."
+      As a Mycelium developer, I want to capture-and-set a selection policy mechanically (record/replay,
+      a setter surface), so that policy ergonomics improve without losing EXPLAIN/provenance (ADR-006/G2).
+      DoD: forage/backbone promoted from reserved-not-active to active per a future R2 RFC; the
+      capture/set surface specified as EXPLAIN-able + provenance-tagged (no black box). See
+      research/27-dn64-ergonomics-rnd-RECORD.md.
+  - id: M-829
+    title: "M-829 -- Tractable composition rule for approximation bounds (E2-1)"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:research, area:swap, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0002
+      - corpus:ADR-011
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-C disposition: "should have a tractable comp rule for bounds to be definable."
+      As a numerics author, I want chained approximations (non-Exact source into a swap) to compose
+      with a defined bound, so that pipelines aren't limited to exact-source-only.
+      R&D the E2-1 input-bound (plus) swap-epsilon rule (interval/affine arithmetic; relative-vs-absolute
+      epsilon; ADR-011 universal BoundBasis) and where it stays `Proven` vs drops to `Empirical`.
+      DoD: a candidate composition rule with its strength boundary; the `SwapError::ApproximateSource`
+      path updated append-only if/when the rule is adopted. See research/26-dn64-typesystem-rnd-RECORD.md.
+  - id: M-830
+    title: "M-830 -- Three-layer memory model: guarantee the stupid-easy ergonomics"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0027
+      - corpus:DN-32
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-D disposition: "must be built to ensure & guarantee the stupid easy ergonomics."
+      As a Mycelium developer, I want affine(L1)/RC(L2)/region(L3) memory to require near-zero ceremony
+      in the common case, so that safety + throughput come without annotation burden.
+      R&D the defaults/inference making Layer-1 affine the zero-ceremony default (RFC-0027 OQ-1/OQ-4).
+      DoD: an ergonomics spec + measured annotation-burden target; feeds E12 memory-model build plan.
+      See research/26-dn64-typesystem-rnd-RECORD.md.
+  - id: M-831
+    title: "M-831 -- Substrate/hypha reclamation interaction (LR-8 x RT7 x RFC-0014 recovery)"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:research, area:execution, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0008
+      - corpus:RFC-0014
+      - corpus:DN-59
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-E disposition: "investigate, r&d and plan."
+      As a runtime author, I want defined behavior when a hypha holding an affine `substrate` (LR-8) is
+      reclaimed (RT7) — consumed / dormanted / escalated — so that resource lifetimes are never silent.
+      R&D the interaction with RFC-0014 bounded-effects recovery; route to DN-59 + a future `graft` R2 RFC.
+      DoD: the reclaim-policy questions enumerated + a chosen direction. See research/26-...-RECORD.md.
+  - id: M-832
+    title: "M-832 -- VSA multi-hop compositional Proven-bounds GPU experiment"
+    milestone: "Phase 2 — Full Unification & Verified Swaps"
+    labels: [phase:2, type:research, area:vsa, priority:P3, status:in-progress]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0003
+      - corpus:RFC-0009
+      - corpus:DN-64
+      - src:experiments/mycelium_experiments/vsa_bounds
+      - src:proofs/vsa-multihop-bound
+    body: |
+      DN-64 OQ-F disposition: "must be r&d'd on gpu" (maintainer desktop). Build runnable experiments
+      mapping the tractable subset of multi-hop VSA programs admitting `Proven` capacity bounds.
+      As a maintainer, I want a GPU sweep over {model, F, k, d, h, delta}, so that I can see where a
+      closed-form bound still upper-bounds the measured failure rate (candidate `Proven` subset).
+      Harness: experiments/mycelium_experiments/vsa_bounds/ (numpy reference + optional torch/CUDA;
+      never-silent backend; VR-5 — measures rates, never asserts `Proven`; verdict is maintainer analysis).
+      Extended (maintainer follow-up) toward the MECHANICAL PROOF (the OQ-A/M-827 bridge): the harness
+      now DISCOVERS candidate closed-form multi-hop bounds (candidate_bound.py — effective-m models
+      A_exponential/B_linear/C_sqrt, fit + never-silent regime validation) and EMITS checkable proof
+      obligations (proof_obligation.py — SMT-LIB + Liquid-Haskell skeletons mirroring proofs/lh-bundle +
+      capacity.rs's checked-instantiation), scaffolded under proofs/vsa-multihop-bound/. VR-5 absolute:
+      it proposes a theorem + emits the obligation a prover must discharge; it NEVER stamps `Proven`.
+      DoD: maintainer runs the sweep locally; SUMMARY.md + PROOF-SUMMARY.md present data, candidate
+      regimes, and the emitted obligations for ratification; the `Proven` upgrade requires a proof
+      assistant to discharge the obligation AND the underlying multi-hop theorem to be established (M-827).
+      FLAGs resolved (maintainer "all and both", 2026-06-29): the harness now tests ALL THREE
+      effective-m models (A_exponential/B_linear/C_sqrt) comparatively per composition AND emits
+      obligations for BOTH proof assistants (Lean 4 via native_decide + Liquid Haskell via Z3),
+      alongside SMT-LIB. proofs/vsa-multihop-bound/lean/ scaffold added; committed EXAMPLE-* artifacts
+      from a CPU --demo run. Both assistants axiomatize the candidate theorem (the open OQ-A/M-827
+      question); neither stamps `Proven`.
+  - id: M-833
+    title: "M-833 -- Ratify guard clauses (when <cond>) + guarantee propagation to the arm"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P3, status:todo]
+    depends_on: [M-823]
+    doc_refs:
+      - corpus:RFC-0020
+      - corpus:RFC-0018
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-G disposition: "yes [ratify]; unless it can be mechanically proven, it must drop to declared."
+      As a Mycelium author, I want `when <cond>` pattern guards, so that refinement is expressible — with
+      the guard's tag meeting into the arm: the arm is `Declared` unless the guard is mechanically proven (VR-5).
+      DoD: RFC-0020 §4.1 S2 amended (append-only) to specify guards + the tag-meet rule; Maranget
+      usefulness preserved. See research/27-dn64-ergonomics-rnd-RECORD.md.
+  - id: M-834
+    title: "M-834 -- Short-keyword scope: type-literal-only; split trait methods vs associated types"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0037
+      - corpus:DN-31
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-I disposition: "likely should split trait methods and associated types for clarity and
+      ensuring one canonical form discipline. ergonomics is key."
+      As a Mycelium author, I want short paradigm keywords (bin{N}/tern{N}/emb{D,S}/hvec{E,D,Sp}) to bind
+      to type literals ONLY (not methods/associated types), so that the one-canonical-form discipline
+      (DN-03 §3) is preserved; and trait methods vs associated types split for clarity.
+      DoD: RFC-0037 D2-b / DN-31 amended (append-only) with the type-literal-only scope + the split.
+      See research/27-dn64-ergonomics-rnd-RECORD.md.
+  - id: M-835
+    title: "M-835 -- Ergonomic wrappers/decorators/tooling for the stringent doctrine (no degradation)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P3, status:needs-design]
+    depends_on: [M-663]
+    doc_refs:
+      - corpus:RFC-0018
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-J disposition: "for much of the stringent required doctrine/etc. it should have
+      accompanying wrappers/decorators and/or tooling/ergonomic implementations to facilitate ease of use
+      while not degrading."
+      As a Mycelium developer, I want derive/decorator/tooling affordances that reduce the graded-type
+      annotation burden, so that the stringent doctrine stays usable WITHOUT silently strengthening tags (S2).
+      DoD: an ergonomics affordance set specified (RFC-0018 §5) that preserves honesty (no silent upgrade).
+      See research/27-dn64-ergonomics-rnd-RECORD.md.
+  - id: M-836
+    title: "M-836 -- Inject signing authority: project-scoped, graded, dev-configurable by scope-of-work"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:execution, priority:P2, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:RFC-0008
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-K disposition: signing scope "depends on what is actually being written... scoped to their
+      project specifically be it a script, module, library, full application or other form and scope of
+      project. graded and dev configurable based on scope of work."
+      As a Mycelium developer, I want inject signing requirements that scale to my project's scope, so that
+      a quick script isn't over-gated while a production application is fully gated.
+      DoD: RFC-0038 §K specifies the project-scoped graded signing model; key-management detail = open R&D.
+  - id: M-837
+    title: "M-837 -- InjectCert replay/expiry mechanism"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:research, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-836]
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-L disposition: "r&d."
+      As a colony operator, I want protection against replaying an old InjectCert for a later-superseded
+      (known-vulnerable) definition, so that content-addressing's identity guarantee is complemented by
+      freshness. R&D monotonic-counter vs expiry; the corpus has no revocation/expiry machinery yet.
+      DoD: a chosen freshness mechanism specified in RFC-0038 §L.
+  - id: M-838
+    title: "M-838 -- Inject-mode scoping hierarchy (reuse @certification vs image/colony/runtime)"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:research, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-836]
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:RFC-0034
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-M disposition: "r&d."
+      As a colony operator, I want the inject-mode (loose/inoculated) knob scoped correctly — a runtime
+      security policy, not a per-nodule authoring choice — so that the gate cannot be locally weakened.
+      R&D whether to reuse RFC-0034 §6 @certification scoping or live at image/colony/runtime level.
+      Direction given (maintainer 2026-06-29, RFC-0038 §8.5; tracked as M-847): the scoping SHAPE is
+      resolved — a containment hierarchy (global > project > colony > module > nodule > function > line)
+      with inward resolution, auto-decoration, granular override, and a never-silent default-plus-deviations
+      manifest. The residual R&D here narrows to the config surface + resolution algorithm.
+      DoD: a chosen scope specified in RFC-0038 §M.
+  - id: M-839
+    title: "M-839 -- InjectCert = the spore's signature component (myc-prepare signs a spore)"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:execution, priority:P2, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:ADR-013
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-N disposition: "the same" — the InjectCert IS the spore's signature component (ADR-013 §2
+      comp. 4). `myc-prepare` produces a signed spore that is both the deployable unit and the inject gate.
+      As a Mycelium developer, I want one signed artifact (the spore) to serve as deploy unit and inject
+      gate, so that there is no second identity to drift from the dispatch key.
+      DoD: RFC-0038 §N + a future ADR-013 amendment (append-only) realize the unified signed-spore design.
+  - id: M-840
+    title: "M-840 -- Inoculated mode gates the interpreter-fallback path too"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:execution, priority:P2, status:needs-design]
+    depends_on: [M-841]
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:ADR-017
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-O disposition: "in sealed [inoculated], yes. sealed is secured and strictly enforced
+      production tier mode." Interpreted definitions also require a cert in inoculated mode.
+      As a colony operator, I want inoculated mode to gate the interpreter-fallback path uniformly, so that
+      the production tier is strictly enforced (no unsigned execution path).
+      DoD: RFC-0038 §O specifies cert-required for the interpreted path in inoculated; threat-model rationale
+      stated honestly (G2).
+  - id: M-841
+    title: "M-841 -- Inject mode names: inoculated (production) replaces sealed; loose (local-dev) retained"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:execution, priority:P2, status:todo]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:DN-02
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-P disposition: "inoculated to replace sealed."
+      As a reader, I want the production inject mode named on-brand with the fungal lexicon, so that the
+      name teaches its meaning (a verified organism admitted to a substrate) and earns the three-test gate.
+      `loose` (local-dev, unsigned permitted, G2-tagged) retained; `inoculated` = secured production tier.
+      DoD: RFC-0038 carries the ratified naming; DN-02 three-test gate recorded.
+  - id: M-842
+    title: "M-842 -- Cross-colony inject verification against the receiver's own TrustRoot"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-839]
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:RFC-0008
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-Q disposition: "verify inject cert is valid, trusted, and not expired or superceded by the
+      trusted signer."
+      As a colony receiving a hot-inject from a peer in a mesh, I want to verify the InjectCert is valid,
+      trusted, and not expired/superseded against MY OWN TrustRoot (never inherit the sender's), so that
+      trust is never transitively assumed (RFC-0008 §R8-Q4).
+      DoD: RFC-0038 §Q specifies own-TrustRoot verification + the valid/trusted/unexpired/unsuperseded checks.
+  - id: M-843
+    title: "M-843 -- Composite-operation guarantee aggregation scope"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:research, area:core, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0001
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-R disposition: "r&d."
+      As a reviewer, I want the exact scope of the per-operation guarantee tag in composite operations
+      defined — whether a function-level summary beyond the meet of its operations is well-defined/useful —
+      so that aggregation is never ambiguous. Ground in RFC-0001 §4.7 (meet) + RFC-0013 §4.6.
+      DoD: the composite-op tag scope specified; meet-only vs function-summary decided.
+      See research/27-dn64-ergonomics-rnd-RECORD.md.
+  - id: M-844
+    title: "M-844 -- Per-instantiation guarantee-tag context through monomorphization"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P3, status:todo]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0019
+      - corpus:RFC-0018
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-S disposition: "yes" — each monomorphized instantiation carries its own guarantee-tag context.
+      As a Mycelium author, I want a generic function monomorphized at two different guarantee levels to keep
+      distinct tag contexts per instantiation, so that grades don't bleed across instantiations.
+      DoD: RFC-0019 §4.4 + RFC-0018 §4 reconciled (append-only) to confirm per-instantiation tag context +
+      the content-addressed-identity implication. See research/26-dn64-typesystem-rnd-RECORD.md.
+  - id: M-845
+    title: "M-845 -- Apply the three-test naming gate at proposal time"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P3, status:todo]
+    depends_on: []
+    doc_refs:
+      - corpus:DN-02
+      - corpus:DN-03
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-T disposition: "the same 3 test gate" — apply T-map/T-illuminate/T-learn at proposal time,
+      not only at ratification.
+      As a contributor proposing a term, I want the three-test gate applied at proposal time, so that
+      candidate names are vetted early. Also resolve the DN-03 §3 sub-question (does one-name-per-term bind
+      library names — may a phylum export both `add` and `plus`?).
+      DoD: the proposal-time gate process recorded in DN-02 §7; the library-alias rule decided in DN-03.
+      See research/27-dn64-ergonomics-rnd-RECORD.md.
+  - id: M-846
+    title: "M-846 -- Record-literal shorthand {x,y} deterministic shadowing rules"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:research, area:language, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0006
+      - corpus:RFC-0020
+      - corpus:DN-64
+    body: |
+      DN-64 OQ-H disposition (maintainer 2026-06-29, supplied after the initial 19): "R&D."
+      As a Mycelium author, I want record-literal shorthand `{x, y}` elaborating to `{x: x, y: y}`, so that
+      record construction is concise — but only if the local-binding-vs-field disambiguation is explicit and
+      never-silent (G2) and the readability win justifies the shadowing discipline.
+      R&D the deterministic shadowing rule (which `x`/`y` is in scope when a local binding and a field share
+      a name) and whether the convenience is worth it.
+      DoD: a specified, never-silent shadowing rule (or a decision not to adopt the shorthand), recorded in
+      RFC-0006/RFC-0020 append-only. See research/27-dn64-ergonomics-rnd-RECORD.md.
+  - id: M-847
+    title: "M-847 -- Inject enforcement granularity + scope resolution + deviation manifest (RFC-0038 §8.4-§8.7)"
+    milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
+    labels: [phase:4, type:design, area:execution, priority:P2, status:needs-design]
+    depends_on: [M-836, M-838, M-840]
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:RFC-0034
+      - corpus:DN-64
+    body: |
+      DN-64 §7 OQ-K/M/O refinement (maintainer direction 2026-06-29, RFC-0038 §8.4-§8.7): make the
+      inject/signing security posture an ergonomic, developer-adjustable spectrum — not per-call by default.
+      As a Mycelium developer, I want to set the signing/verification posture (mode x enforcement
+      granularity) once at a scope and have it auto-apply, with easy granular override, so that security/
+      provenance/performance is tunable without being overbearing.
+      Direction (Declared): (1) an ENFORCEMENT-GRANULARITY axis orthogonal to loose/inoculated —
+      `whole` (application/spore signature, checked once at compile/load; the application DEFAULT, not
+      per-call), `module` (per-phylum/nodule), `call` (per-dispatch; opt-in trusted-computing extreme);
+      (2) a SCOPE-RESOLUTION hierarchy (global > project > colony > module > nodule > function > line) with
+      inward resolution + AUTO-DECORATION (set-once-applies-beneath) + granular OVERRIDE; (3) a never-silent
+      DEVIATION MANIFEST (G2) — the declared default plus an enumerated list of sites that differ, EXPLAIN-able;
+      (4) DEFAULTS by project kind/maturity (scripts/interpreted/early -> loose; library -> inoculated/module;
+      application -> inoculated/whole; trusted-computing -> inoculated/call opt-in); (5) interpreted defaults
+      loose with opt-in per-inject signing (private key signs, TrustRoot public key verifies; BadSignature
+      on mismatch); (6) per-colony posture in a mesh (own TrustRoot). Gives M-838 (OQ-M scoping) its shape.
+      DoD: RFC-0038 §8.4-§8.7 ratified; the config surface + resolution algorithm chosen (the residual R&D
+      under §K.2/§M); the granularity/scope/override + deviation-manifest realized Rust-first; never-silent.
+  - id: M-848
+    title: "M-848 -- Scoped-toolchain setup automation (just setup-scoped) per DN-65"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:infra, area:toolchain, priority:P3, status:needs-design]
+    depends_on: []
+    doc_refs:
+      - corpus:DN-65
+      - src:justfile
+    body: |
+      DN-65 §2.3 automation: turn the change-kind -> toolchain map into a runnable workspace-prep step.
+      As an agent (or contributor) about to work a scoped PR, I want one command that determines which
+      toolchain components my change-kind needs beyond the default and installs exactly those, so that I
+      have the right tools for the work with no mid-flight surprises.
+      Direction: a `just setup-scoped <profile>` recipe (or a per-kind probe) that, given the change scope
+      (rust / python / docs / proofs / mixed), emits + runs the precise setup commands (cargo-nextest/
+      cargo-public-api; uv sync --group <g>; markdownlint + doc_refs; z3/LH/Lean), layered on `just setup`.
+      Pairs with the sync-off-tip step (already a standing rule). Never-silent: prints what it installed/
+      skipped + why.
+      DoD: the recipe lands; DN-65 §2.3 references it; a scoped PR's agent can prep its env in one step.
+  - id: M-849
+    title: "M-849 -- Colony trust topology: controller / masterless / node invalidation (RFC-0038 §8.8)"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:design, area:execution, priority:P3, status:needs-design]
+    depends_on: [M-842, M-847]
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:RFC-0008
+      - corpus:DN-44
+    body: |
+      RFC-0038 §8.8 (maintainer direction 2026-06-29): a configurable mesh trust topology generalizing
+      cross-colony own-TrustRoot verification (§7.2) into mesh-level trust distribution.
+      As an operator of a colony mesh, I want to choose how trust is distributed — a central controller
+      (or redundant controller stack, regionally partitioned, for enterprise-scale central management) or
+      a fully masterless self-managed mode where each colony trusts against its own store — and to flag/
+      blacklist nodes that break trust, so that safe AI-mesh auto-development stays auditable.
+      Direction (Declared): (1) CONTROLLER mode — one+ controller colonies distribute the TrustRoot; a
+      controller stack gives redundancy + scaling; configurable in the mesh; (2) MASTERLESS mode — each
+      colony resolves trust against its own internal store on its own authority; (3) NODE INVALIDATION —
+      flag + blacklist a node permanently/temporarily (config), as an inspectable never-silent decision.
+      Framed by the no-black-box inspectability thesis (reveal/EXPLAIN/provenance). Open infrastructure
+      R&D: controller protocol, trust-propagation, blacklist scope/TTL, masterless<->controller transition;
+      extends RFC-0008 mesh + R8-Q4 adversarial mesh.
+      DoD: RFC-0038 §8.8 ratified; controller protocol + blacklist semantics specified; realized atop the
+      RFC-0008 mesh model; every trust decision EXPLAIN-able + provenance-tagged (never-silent).
