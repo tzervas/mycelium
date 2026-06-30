@@ -710,10 +710,10 @@ fn fold_or(flags: &[String], ssa: &mut Ssa, body: &mut String) -> Option<String>
 }
 
 /// Walk the lowered ANF, emitting one `arith` op per binding into `@main`'s body, and return the
-/// result lane **plus** the program-level overflow flag (`Some(i1)` iff any `trit.add`/`trit.sub`
-/// binding can overflow at runtime, else `None`). Returns an explicit [`DialectError::Unsupported`]
-/// for any node outside the fragment — routing the program to the direct-LLVM backend / interpreter
-/// (G2).
+/// result lane **plus** the program-level overflow flag (`Some(i1)` iff any fixed-width arithmetic
+/// binding — `trit.add`/`trit.sub` (M-725) or `trit.mul` (M-857) — can overflow at runtime, else
+/// `None`). Returns an explicit [`DialectError::Unsupported`] for any node outside the fragment —
+/// routing the program to the direct-LLVM backend / interpreter (G2).
 fn lower_program(
     node: &Node,
     ssa: &mut Ssa,
@@ -724,9 +724,10 @@ fn lower_program(
 }
 
 /// Lower one ANF block (its bindings + result) into MLIR ops, returning the result lane and the
-/// folded program-level overflow flag (`None` when no trit additive op is present, so an
-/// overflow-free program emits exactly the M-601 module). The data / closure / recursion / swap
-/// nodes are explicit refusals here (they live on the richer paths).
+/// folded program-level overflow flag (`None` when no fixed-width arithmetic op is present — i.e.
+/// no `trit.add`/`trit.sub`/`trit.mul` — so an overflow-free program emits exactly the M-601
+/// module). The data / closure / recursion / swap nodes are explicit refusals here (they live on
+/// the richer paths).
 fn lower_block(
     anf: &Anf,
     ssa: &mut Ssa,
@@ -734,10 +735,11 @@ fn lower_block(
 ) -> Result<(Lane, Option<String>), DialectError> {
     use std::collections::HashMap;
     let mut env: HashMap<Atom, Lane> = HashMap::new();
-    // The per-op overflow `i1` registers, accumulated across the program. Any trit additive op
-    // pushes its overflow condition here; the interpreter errors on the *first* overflow, so the
-    // native path being conservative (OR of all of them ⇒ one explicit overflow) gives the same
-    // verdict — the meaningless result is never read either way. Mirrors `crate::llvm`'s flags.
+    // The per-op overflow `i1` registers, accumulated across the program. Any fixed-width
+    // arithmetic op (`trit.add`/`trit.sub`; M-725, or `trit.mul`; M-857) pushes its overflow
+    // condition here; the interpreter errors on the *first* overflow, so the native path being
+    // conservative (OR of all of them ⇒ one explicit overflow) gives the same verdict — the
+    // meaningless result is never read either way. Mirrors `crate::llvm`'s flags.
     let mut flags: Vec<String> = Vec::new();
     let lookup = |env: &HashMap<Atom, Lane>, a: &Atom| -> Result<Lane, DialectError> {
         env.get(a)
@@ -848,13 +850,13 @@ fn emit_char_code(kind: LaneKind, v: &str, ssa: &mut Ssa, body: &mut String) -> 
 /// Returns an explicit [`DialectError::Unsupported`] for an out-of-fragment node (the program then
 /// runs on the direct-LLVM backend / interpreter).
 ///
-/// **Overflow read-back (M-725).** When the program contains a `trit.add`/`trit.sub` that can
-/// overflow at runtime, `@main` branches (`cf.cond_br`) on the folded overflow `i1`: on overflow it
-/// prints the shared [`OVERFLOW_SENTINEL`] line and returns 0; otherwise it prints the result line —
-/// exactly mirroring [`crate::llvm`]'s read-back, so the artifact's stdout means the same on both
-/// compiled paths. An **overflow-free** program (no trit additive op) emits the single-block,
-/// straight-line module unchanged (byte-for-byte the M-601 shape) — the branch is added only when it
-/// is needed.
+/// **Overflow read-back (M-725/M-857).** When the program contains a `trit.add`/`trit.sub`
+/// (M-725) or `trit.mul` (M-857) that can overflow at runtime, `@main` branches (`cf.cond_br`) on
+/// the folded overflow `i1`: on overflow it prints the shared [`OVERFLOW_SENTINEL`] line and
+/// returns 0; otherwise it prints the result line — exactly mirroring [`crate::llvm`]'s read-back,
+/// so the artifact's stdout means the same on both compiled paths. An **overflow-free** program (no
+/// fixed-width arithmetic op) emits the single-block, straight-line module unchanged (byte-for-byte
+/// the M-601 shape) — the branch is added only when it is needed.
 ///
 /// The returned `(module, kind, width)` triple carries the lane shape so the read-back
 /// ([`crate::llvm::decode_result`]) can parse `@main`'s stdout. Every op is explicit, dumpable MLIR
@@ -873,8 +875,9 @@ pub fn emit_mlir(node: &Node) -> Result<(String, ResultKind, usize), DialectErro
     module.push_str("  func.func @main() -> i32 {\n");
 
     match overflow {
-        // No trit additive op ⇒ no overflow path; straight-line print + return (the M-601 module
-        // unchanged, so element-wise programs emit byte-for-byte as before).
+        // No fixed-width arithmetic op (trit.add/sub/mul) ⇒ no overflow path; straight-line
+        // print + return (the M-601 module unchanged, so element-wise programs emit byte-for-byte
+        // as before).
         None => {
             emit_print(&result, &mut ssa, &mut body);
             module.push_str(&body);
@@ -927,8 +930,8 @@ pub fn emit_mlir(node: &Node) -> Result<(String, ResultKind, usize), DialectErro
 /// Emits the `arith`/`func`/`cf` MLIR module ([`emit_mlir`]), then runs
 /// `mlir-opt --convert-cf-to-llvm --convert-func-to-llvm --convert-arith-to-llvm
 /// --reconcile-unrealized-casts | mlir-translate --mlir-to-llvmir`. The `--convert-cf-to-llvm` pass
-/// lowers the M-725 overflow-read-back `cf.cond_br` (a no-op for an overflow-free element-wise
-/// program, which contains no `cf` ops). Each stage is a real libMLIR pass; the intermediate MLIR and
+/// lowers the M-725/M-857 overflow-read-back `cf.cond_br` (a no-op for an overflow-free
+/// element-wise program, which contains no `cf` ops). Each stage is a real libMLIR pass; the intermediate MLIR and
 /// the resulting IR are both dumpable (no opaque pass — VR-4). Returns the LLVM IR text + lane shape,
 /// or an explicit [`DialectError`] (skip on `ToolchainMissing`).
 pub fn lower_to_llvm_ir(node: &Node) -> Result<(String, ResultKind, usize), DialectError> {
@@ -941,8 +944,9 @@ pub fn lower_to_llvm_ir(node: &Node) -> Result<(String, ResultKind, usize), Dial
     std::fs::write(&mlir_path, mlir.as_bytes())
         .map_err(|e| DialectError::Run(format!("write MLIR: {e}")))?;
 
-    // Stage 1: mlir-opt lowers cf+func+arith → the LLVM dialect. `--convert-cf-to-llvm` handles the
-    // M-725 overflow-read-back branch; it is a no-op for an overflow-free element-wise module.
+    // Stage 1: mlir-opt lowers cf+func+arith → the LLVM dialect. `--convert-cf-to-llvm` handles
+    // the M-725/M-857 overflow-read-back branch; it is a no-op for an overflow-free element-wise
+    // module.
     let lowered_mlir = run_capture(
         &tools.mlir_opt,
         &[
@@ -988,9 +992,10 @@ impl Compiled {
     }
     /// Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}`
     /// [`Value`] via the **shared** [`crate::llvm::decode_result`] (same read-back as the
-    /// direct-LLVM path). A `trit.add`/`trit.sub` that overflowed prints the shared
-    /// [`OVERFLOW_SENTINEL`] line ⇒ an explicit [`DialectError::Overflow`], never a silent wrap
-    /// (M-725; mirrors [`crate::llvm::AotError::Overflow`] and the interpreter's `EvalError::Overflow`).
+    /// direct-LLVM path). A `trit.add`/`trit.sub` (M-725) or `trit.mul` (M-857) that overflowed
+    /// prints the shared [`OVERFLOW_SENTINEL`] line ⇒ an explicit [`DialectError::Overflow`], never
+    /// a silent wrap (M-725/M-857; mirrors [`crate::llvm::AotError::Overflow`] and the
+    /// interpreter's `EvalError::Overflow`).
     pub fn run(&self) -> Result<Value, DialectError> {
         let output = Command::new(&self.bin)
             .output()
