@@ -56,6 +56,9 @@ pub mod bitnet;
 pub mod budget;
 pub mod channel;
 pub mod deploy;
+// M-853 (RFC-0039 §5.1): native direct-LLVM codegen of `Repr::Dense` element-wise ops (un-quantized
+// F32/BF16 fragment) — differential-checked against `mycelium-dense`, mutant-witnessed, honest tags.
+pub mod dense_codegen;
 pub mod dialect;
 pub mod inject;
 pub mod jit;
@@ -117,6 +120,13 @@ pub use llvm::{
     compile_and_run_with_swap_mode, compile_with_swap_mode, emit_llvm_ir_with_swap_mode,
 };
 pub use swap_codegen::{legal_pair as swap_legal_pair, SwapCertMode, SwapExplain};
+// M-853 (RFC-0039 §5.1): native Dense element-wise codegen (un-quantized F32/BF16) + its inspectable
+// EXPLAIN record. `dot`/`similarity` are bare-`f64` measurements; the quantized variants stay an
+// explicit never-silent refusal (E20-1 gate).
+pub use dense_codegen::{
+    dense_compile, dense_compile_and_run, emit_dense_llvm_ir, DenseAotError, DenseArtifact,
+    DenseCgOp, DenseExplain, DenseProgram, DenseResult, DENSE_CODEGEN_GUARANTEE,
+};
 pub use vr4::{cross_backend_gate, Backend, BackendStage, CrossBackendGate, StageStatus};
 
 #[cfg(test)]

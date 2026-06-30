@@ -812,11 +812,9 @@ fn datum_capture_by_closure_is_explicitly_refused() {
                 "datum-capture refusal message must name the issue; got: {msg}"
             );
         }
-        Err(AotError::ToolchainMissing(_)) => { /* env skip — the refusal is at lower_lam, before llc */ }
-        Ok(v) => panic!(
-            "datum capture must be refused; got value {:?}",
-            v.payload()
-        ),
+        Err(AotError::ToolchainMissing(_)) => { /* env skip — the refusal is at lower_lam, before llc */
+        }
+        Ok(v) => panic!("datum capture must be refused; got value {:?}", v.payload()),
         Err(e) => panic!("datum capture refused with unexpected variant: {e}"),
     }
 }
