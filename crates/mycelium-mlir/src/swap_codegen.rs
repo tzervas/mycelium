@@ -418,12 +418,7 @@ fn emit_trits_to_int(trits: &[String], ssa: &mut Ssa, body: &mut String) -> Stri
 /// on an **illegal pair in `ReuseInterp` mode** (whose legality was not re-checked at compile time)
 /// a non-zero final quotient signals that the value did not fit in `m` trits — the caller **must**
 /// emit `icmp ne i64 {final_q}, 0` and push it as an overflow flag (G2/SC-3).
-fn emit_int_to_trits(
-    int_reg: &str,
-    m: usize,
-    ssa: &mut Ssa,
-    body: &mut String,
-) -> (Lane, String) {
+fn emit_int_to_trits(int_reg: &str, m: usize, ssa: &mut Ssa, body: &mut String) -> (Lane, String) {
     let mut v = int_reg.to_owned();
     let mut lsb_first: Vec<String> = Vec::with_capacity(m);
     for _ in 0..m {
@@ -452,7 +447,13 @@ fn emit_int_to_trits(
         v = v_next;
     }
     let vals: Vec<String> = lsb_first.into_iter().rev().collect(); // → MSB-first
-    (Lane { kind: LaneKind::Ternary, vals }, v)
+    (
+        Lane {
+            kind: LaneKind::Ternary,
+            vals,
+        },
+        v,
+    )
 }
 
 /// Emit IR encoding an `i64` integer (`int_reg`) into an MSB-first `Binary` lane of `n` two's-
