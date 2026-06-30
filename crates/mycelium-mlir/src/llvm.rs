@@ -984,8 +984,11 @@ fn free_vars_into(
     note_free_atom(anf.result(), bound, free, seen);
 }
 
-/// Require an [`EnvValue`] to be a `Binary{8}` lane — the only value type that crosses a closure
-/// boundary in the narrow Increment-2 ABI (DN-15 §7.1). Explicit refusal otherwise (G2).
+/// Require an [`EnvValue`] to be a `Binary{8}` lane — the only repr that the trampoline
+/// recursion-accumulator ABI (DN-15 §7.1/§10) and the `Match` branch-primitive (`Lit`-arm switch;
+/// DN-15 §8.3) accept. Explicit refusal otherwise (G2). *(Before M-851 this was also the closure
+/// boundary check; the widened closure ABI now carries any repr/width via inlining, so this
+/// function's scope is the trampoline + branch-primitive subset only.)*
 fn as_binary8<'a>(ev: &'a EnvValue, ctx: &str) -> Result<&'a Lane, AotError> {
     let lane = ev.as_lane(ctx)?;
     if lane.kind != LaneKind::Binary || lane.vals.len() != CLOSURE_ABI_WIDTH {

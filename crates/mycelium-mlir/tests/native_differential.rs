@@ -535,9 +535,12 @@ fn closure_corpus() -> Vec<Node> {
         //    captures `p`, is allocated + called within the outer body, and returns `Binary{8}`.
         //    Exercises recursion of the closure-conversion machinery (free-var analysis descending into
         //    a nested lambda; a record built inside a closure function) — the boundary case the widened
-        //    ABI resolves end-to-end. (The *fully* polymorphic nested-capture `(λx. (λw. w⊕x) x)`,
-        //    anchored only at the call site, is an honest refusal — see
-        //    `polymorphic_nested_capture_is_explicitly_refused` — never a guessed width; G2/VR-5.)
+        //    ABI resolves end-to-end. (The *fully* polymorphic nested-capture `(λx. (λw. w⊕x) x)` —
+        //    with no body-local const to pin the param shape — also lowers under M-851, because the
+        //    call-site argument pins `x`'s shape at inlining time; see `nested_capture_of_outer_param_lowers`
+        //    and `closure_widening_differential::nested_capture_of_outer_param`. The corpus case here uses
+        //    the let-`p` form only to cross-cover the in-body-binding path — not because the polymorphic
+        //    form is refused; G2/VR-5: no guessed width in either form.)
         app(
             lam(
                 "x",
@@ -762,6 +765,60 @@ fn nested_capture_of_outer_param_lowers() {
         &Payload::Bits(vec![false; 8]),
         "A ⊕ A must be 0"
     );
+}
+
+/// M-851 capture boundary (DN-15 §7.4; G2): a **`Datum`** (constructed data value) may *not* be
+/// captured by a closure in the widened ABI — capturing it would require runtime closure dispatch
+/// (a vtable / tagged-union wire type) that is a separate future increment. The refusal is
+/// **explicit** (`UnsupportedNode`) and **test-pinned** here so the boundary never silently shifts.
+///
+/// Pattern: `λx. (λy. <expr using constructed datum d>) v` where the inner closure captures `d`.
+/// The outer closure body constructs a `Box(A)`; the inner `λy.` tries to capture it. `lower_lam`
+/// refuses that at capture time — never at App time (G2: the refusal is at the well-defined boundary,
+/// not silently deferred until a mis-encode would produce wrong output).
+#[test]
+fn datum_capture_by_closure_is_explicitly_refused() {
+    // Construct a Box(A) datum, then try to capture it in a closure. The closure never applies it,
+    // so the refusal is purely at capture time — not because of what the body does with it.
+    let reg = box_registry();
+    let box_ctor = reg.ctor_ref("Box", 0).unwrap();
+    // Program: (λouter. let d = Box(outer) in (λinner. outer) A) A
+    // Here the inner closure captures `d` (a Datum) — must refuse at lower_lam time.
+    let prog = Node::App {
+        func: Box::new(Node::Lam {
+            param: "outer".to_owned(),
+            body: Box::new(Node::Let {
+                id: "d".to_owned(),
+                bound: Box::new(Node::Construct {
+                    ctor: box_ctor,
+                    args: vec![Node::Var("outer".to_owned())],
+                }),
+                body: Box::new(Node::App {
+                    func: Box::new(Node::Lam {
+                        param: "inner".to_owned(),
+                        body: Box::new(Node::Var("d".to_owned())), // captures datum `d`
+                    }),
+                    arg: Box::new(Node::Const(byte(A))),
+                }),
+            }),
+        }),
+        arg: Box::new(Node::Const(byte(A))),
+    };
+    match mycelium_mlir::compile_and_run(&prog) {
+        Err(AotError::UnsupportedNode(msg)) => {
+            // The error must name the offending capture — never a silent mis-encode.
+            assert!(
+                msg.contains("datum") || msg.contains("data value"),
+                "datum-capture refusal message must name the issue; got: {msg}"
+            );
+        }
+        Err(AotError::ToolchainMissing(_)) => { /* env skip — the refusal is at lower_lam, before llc */ }
+        Ok(v) => panic!(
+            "datum capture must be refused; got value {:?}",
+            v.payload()
+        ),
+        Err(e) => panic!("datum capture refused with unexpected variant: {e}"),
+    }
 }
 
 // ─── M-379: Binary branch primitive (Match Lit-arms on a Binary lane) ─────────────────────────
