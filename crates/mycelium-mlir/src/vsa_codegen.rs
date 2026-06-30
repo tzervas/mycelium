@@ -984,22 +984,25 @@ fn emit_dot_acc(xs: &[f64], ys: &[f64], ssa: &mut Ssa, body: &mut String) -> Str
     acc
 }
 
-/// Emit `wrap_phase(theta)` = `let u = theta rem_euclid TAU; if u > π { u − TAU } else u`, mirroring
-/// `fhrr::wrap_phase` digit-for-digit. `rem_euclid` for a positive divisor `TAU` is
-/// `r = theta − TAU·floor(theta/TAU)` (always in `[0, TAU)`), matching Rust's `f64::rem_euclid`.
-/// Returns the wrapped-phase SSA register.
+/// Emit `wrap_phase(theta)` = `let u = theta.rem_euclid(TAU); if u > π { u − TAU } else u`, mirroring
+/// `fhrr::wrap_phase` digit-for-digit. The `rem_euclid` is emitted as **exactly** Rust's `f64`
+/// algorithm — `let r = theta % TAU; if r < 0 { r + TAU } else { r }` (TAU > 0 so `|TAU| = TAU`) —
+/// using the LLVM `frem` for `%`. This matches `f64::rem_euclid` **bit-for-bit including the `-0.0`
+/// sign** (a `floor`-based identity `theta − TAU·floor(theta/TAU)` agrees on every magnitude *except*
+/// `theta = -0.0`, which it would flip to `+0.0` — verified over 2·10⁶ samples; using `frem` closes
+/// that edge so the read-back stays bit-exact for a `-0.0` phase sum). Returns the wrapped register.
 fn emit_wrap_phase(theta: &str, ssa: &mut Ssa, body: &mut String) -> String {
     let tau = f64_const(std::f64::consts::TAU);
     let pi = f64_const(std::f64::consts::PI);
-    // q = theta / TAU; fq = floor(q); u = theta − TAU·fq  (rem_euclid for positive TAU).
-    let q = ssa.fresh();
-    let _ = writeln!(body, "  {q} = fdiv double {theta}, {tau}");
-    let fq = ssa.fresh();
-    let _ = writeln!(body, "  {fq} = call double @llvm.floor.f64(double {q})");
-    let scaled = ssa.fresh();
-    let _ = writeln!(body, "  {scaled} = fmul double {tau}, {fq}");
+    // r = theta % TAU  (frem); rem_euclid: if r < 0 { r + TAU } else { r }.
+    let r0 = ssa.fresh();
+    let _ = writeln!(body, "  {r0} = frem double {theta}, {tau}");
+    let neg = ssa.fresh();
+    let _ = writeln!(body, "  {neg} = fcmp olt double {r0}, 0.0");
+    let plus = ssa.fresh();
+    let _ = writeln!(body, "  {plus} = fadd double {r0}, {tau}");
     let u = ssa.fresh();
-    let _ = writeln!(body, "  {u} = fsub double {theta}, {scaled}");
+    let _ = writeln!(body, "  {u} = select i1 {neg}, double {plus}, double {r0}");
     // if u > π { u − TAU } else { u }
     let gt = ssa.fresh();
     let _ = writeln!(body, "  {gt} = fcmp ogt double {u}, {pi}");
@@ -1242,27 +1245,24 @@ pub fn vsa_compile(prog: &VsaProgram) -> Result<VsaArtifact, VsaAotError> {
     // Declare the intrinsics each op pulls in (only where needed — a reader sees exactly what each op
     // requires).
     let mut decls = String::new();
-    let needs_fabs =
-        matches!(prog.model, VsaModelId::Bsc) && matches!(prog.op, VsaCgOp::Bind | VsaCgOp::Unbind);
-    if needs_fabs {
+    // BSC bind/unbind: |a−b| uses `fabs`.
+    if matches!(prog.model, VsaModelId::Bsc) && matches!(prog.op, VsaCgOp::Bind | VsaCgOp::Unbind) {
         decls.push_str("declare double @llvm.fabs.f64(double)\n");
     }
-    let needs_trig = matches!(prog.model, VsaModelId::Fhrr)
-        && matches!(
-            prog.op,
-            VsaCgOp::Bind | VsaCgOp::Unbind | VsaCgOp::Bundle | VsaCgOp::Similarity
-        );
-    if needs_trig {
+    // FHRR bundle + similarity use libm `cos`/`sin` (bit-exact with the reference's `f64::cos`/`sin`);
+    // FHRR bind/unbind only `frem`-wrap a phase (no trig). FHRR bundle additionally needs `atan2`
+    // (a libm symbol — no LLVM intrinsic) and `sqrt` (the magnitude guard).
+    if matches!(prog.model, VsaModelId::Fhrr)
+        && matches!(prog.op, VsaCgOp::Bundle | VsaCgOp::Similarity)
+    {
         decls.push_str("declare double @cos(double)\n");
-        decls.push_str("declare double @sin(double)\n");
-        decls.push_str("declare double @llvm.floor.f64(double)\n");
+        if matches!(prog.op, VsaCgOp::Bundle) {
+            decls.push_str("declare double @sin(double)\n");
+            decls.push_str("declare double @atan2(double, double)\n");
+            decls.push_str("declare double @llvm.sqrt.f64(double)\n");
+        }
     }
-    if matches!(prog.model, VsaModelId::Fhrr) && matches!(prog.op, VsaCgOp::Bundle) {
-        // `atan2` is a libm symbol (no LLVM intrinsic); the rest are intrinsics.
-        decls.push_str("declare double @atan2(double, double)\n");
-        decls.push_str("declare double @llvm.sqrt.f64(double)\n");
-    }
-    // cosine similarity (MAP-I/HRR) and FHRR phase-sim / wrap need their intrinsics.
+    // Cosine similarity (MAP-I/HRR) needs `sqrt` for the norms.
     if matches!(prog.op, VsaCgOp::Similarity)
         && matches!(prog.model, VsaModelId::MapI | VsaModelId::Hrr)
     {

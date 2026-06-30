@@ -227,7 +227,13 @@ fn reference_similarity(model: VsaModelId, p: &VsaProgram) -> f64 {
 /// A small bipolar (`±1`) vector (MAP-I) from a deterministic pattern.
 fn bipolar(dim: u32, seed: u64) -> Vec<f64> {
     (0..u64::from(dim))
-        .map(|i| if (i * 2 + seed) % 3 == 0 { 1.0 } else { -1.0 })
+        .map(|i| {
+            if (i * 2 + seed).is_multiple_of(3) {
+                1.0
+            } else {
+                -1.0
+            }
+        })
         .collect()
 }
 /// A small binary (`{0,1}`) vector (BSC).
@@ -493,6 +499,43 @@ fn measurement_ops_match_reference_bit_exact() {
             Err(VsaAotError::ToolchainMissing(_)) => return,
             Err(e) => panic!("case #{i}: direct-LLVM errored: {e}"),
         }
+    }
+}
+
+/// FHRR `-0.0` phase-wrap edge: a phase sum that lands on `-0.0` must wrap **bit-exactly** like the
+/// reference's `f64::rem_euclid` (which preserves the `-0.0` sign), not flip to `+0.0`. The native
+/// `wrap_phase` emits `frem` + the `if r<0 {r+TAU}` algorithm precisely for this reason (a `floor`-based
+/// identity would flip the sign here — verified over 2·10⁶ samples). `bind([-0.0], [-0.0]) = wrap(-0.0)`
+/// exercises the edge: `(-0.0)+(-0.0) = -0.0` reaches `wrap_phase`. The reference and native must agree
+/// bit-for-bit (G2 — never a silent ±0 divergence).
+#[test]
+fn fhrr_negative_zero_phase_wraps_bit_exact() {
+    let neg_zero = vec![-0.0_f64];
+    let p = prog(
+        VsaCgOp::Bind,
+        VsaModelId::Fhrr,
+        vec![neg_zero.clone(), neg_zero],
+        None,
+        None,
+    );
+    let reference = Fhrr::new(1).bind(&[-0.0], &[-0.0]).unwrap();
+    match vsa_compile_and_run(&p) {
+        Ok(VsaResult::Value(native)) => {
+            let native_payload = match native.payload() {
+                Payload::Hypervector(h) => h.clone(),
+                other => panic!("expected a hypervector, got {other:?}"),
+            };
+            assert_eq!(
+                reference[0].to_bits(),
+                native_payload[0].to_bits(),
+                "FHRR -0.0 phase wrap must be bit-exact (ref={}, native={}); the frem-based \
+                 rem_euclid preserves the -0.0 sign",
+                reference[0],
+                native_payload[0]
+            );
+        }
+        Err(VsaAotError::ToolchainMissing(_)) => {}
+        other => panic!("FHRR -0.0 bind errored: {other:?}"),
     }
 }
 

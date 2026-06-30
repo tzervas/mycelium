@@ -36,7 +36,7 @@ fn prog(
 /// A small bipolar (`±1`) vector for MAP-I.
 fn bipolar(dim: u32) -> Vec<f64> {
     (0..dim)
-        .map(|i| if i % 2 == 0 { 1.0 } else { -1.0 })
+        .map(|i| if i.is_multiple_of(2) { 1.0 } else { -1.0 })
         .collect()
 }
 
@@ -338,13 +338,14 @@ fn bind_unbind_emit_explicit_per_element_ir() {
         ir.contains("fsub double") && ir.contains("@llvm.fabs.f64"),
         "BSC bind must emit the |a−b| XOR lowering:\n{ir}"
     );
-    // FHRR bind: phase add + wrap (fadd + floor-based wrap_phase). Unbind: fsub.
+    // FHRR bind: phase add + the `frem`-based rem_euclid wrap (bit-exact with `f64::rem_euclid`,
+    // including the −0.0 sign). Unbind: fsub.
     let fadd = emit_vsa_llvm_ir(&canonical(VsaModelId::Fhrr, VsaCgOp::Bind))
         .unwrap()
         .0;
     assert!(
-        fadd.contains("fadd double") && fadd.contains("@llvm.floor.f64"),
-        "FHRR bind must emit phase-add + wrap:\n{fadd}"
+        fadd.contains("fadd double") && fadd.contains("frem double"),
+        "FHRR bind must emit phase-add + the frem-based wrap (rem_euclid):\n{fadd}"
     );
     let fsub = emit_vsa_llvm_ir(&canonical(VsaModelId::Fhrr, VsaCgOp::Unbind))
         .unwrap()
