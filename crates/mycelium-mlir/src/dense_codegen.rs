@@ -335,7 +335,10 @@ fn op_rel_eps(dtype: ScalarKind) -> f64 {
     }
 }
 
-fn op_citation(dtype: ScalarKind) -> &'static str {
+/// The cited theorem behind the `Proven` rounding bound, per dtype — F32 single-rounding vs BF16
+/// two-rounding (the citation IS the transparency record the `ProvenThm` basis carries; a wrong/blank
+/// citation would mis-attribute the bound, so it is mutant-witnessed). `pub(crate)` for white-box test.
+pub(crate) fn op_citation(dtype: ScalarKind) -> &'static str {
     match dtype {
         ScalarKind::Bf16 => BF16_OP_CITATION,
         _ => F32_OP_CITATION,

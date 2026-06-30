@@ -7,8 +7,8 @@
 //! `tests/dense_differential.rs`.
 
 use crate::dense_codegen::{
-    emit_dense_llvm_ir, on_grid, round_f32_to_bf16, DenseAotError, DenseCgOp, DenseExplain,
-    DenseProgram, DENSE_CODEGEN_GUARANTEE,
+    emit_dense_llvm_ir, on_grid, op_citation, round_f32_to_bf16, DenseAotError, DenseCgOp,
+    DenseExplain, DenseProgram, DENSE_CODEGEN_GUARANTEE,
 };
 use mycelium_core::{GuaranteeStrength, PhysicalLayout, ScalarKind};
 
@@ -597,6 +597,33 @@ fn on_grid_accepts_and_rejects_exactly() {
     // F16/F64 are never on-grid (refused dtypes).
     assert!(!on_grid(ScalarKind::F16, 1.5));
     assert!(!on_grid(ScalarKind::F64, 1.5));
+}
+
+/// The `Proven` rounding-bound citation is dtype-specific and non-blank — F32 cites single-rounding,
+/// BF16 cites the two-rounding composition. The citation IS the transparency record the `ProvenThm`
+/// basis carries (a wrong/blank/dtype-confused citation mis-attributes the bound — VR-5/ADR-006), so
+/// it is pinned. Kills the `op_citation -> "xyzzy"` and `delete ScalarKind::Bf16 arm` mutants.
+#[test]
+fn op_citation_is_dtype_specific_and_nonblank() {
+    let f32 = op_citation(ScalarKind::F32);
+    let bf16 = op_citation(ScalarKind::Bf16);
+    assert!(
+        !f32.is_empty() && !bf16.is_empty(),
+        "citations must be non-blank"
+    );
+    assert_ne!(
+        f32, bf16,
+        "F32 and BF16 citations must differ (distinct bounds)"
+    );
+    // F32 cites the single-rounding 2⁻²⁴ bound; BF16 cites the two-rounding 2⁻⁸ + 2⁻²³ composition.
+    assert!(
+        f32.contains("2^−24") && f32.contains("binary32"),
+        "F32 citation must name the single-rounding binary32 bound; got: {f32}"
+    );
+    assert!(
+        bf16.contains("two-rounding") && bf16.contains("bfloat16"),
+        "BF16 citation must name the two-rounding bfloat16 composition; got: {bf16}"
+    );
 }
 
 /// The `DenseAotError` `Display` strings discriminate the variants (kills the
