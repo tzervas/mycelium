@@ -8,6 +8,25 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-30: RFC-0039 — Native Dense & VSA Codegen, Accepted)
+
+- **RFC-0039 (Accepted, maintainer-ratified 2026-06-30)** is the design vehicle (ADR-034 §6) for
+  native codegen of `Repr::Dense` and `Repr::Vsa` plus the dynamic-VSA JIT — the gap RFC-0029 §3
+  explicitly excludes. It decides design only (ratifies the design; asserts no implementation;
+  M-853/M-854/M-855 stay design-gated on it; → Enacted only when the path is complete + stable). The
+  four open questions were resolved at ratification: **OQ-1** — the §6 cross-reference IS the vehicle
+  for the ADR-009 dynamic-VSA JIT deferral lift, no separate ADR-009 amendment; **OQ-2** — native Dense
+  scopes to the F32/BF16 un-quantized fragment first, the full ADR-030 int/fp8/TF32 quant/accumulator/
+  packing set widens as E20-1 lands `QuantDesc`; **OQ-3** — the standard models MAP-I/BSC/HRR/FHRR are
+  1.0.0-native-mandatory, the niche SBC/MAP-B extend post-mandate; **OQ-4 (both)** — native codegen
+  covers the un-quantized/real fragment now AND commits to widening to quantized-Dense (ADR-030) plus
+  element-space/block-sparse/complex VSA (ADR-031), gated only on **E20-1** landing those `Repr` fields
+  (the enabling dependency for the full-coverage half), refusing the unbuilt variants never-silently in
+  the interim. The native path preserves the RFC-0003 §4.1 per-op tags only where the checked basis
+  holds (VR-5 — single-op MAP-I bundle Proven via `proofs/lh-bundle`/`capacity.rs`; the multi-hop M-832
+  work stays in-progress research, never Proven). Carried by a M-210-checked, mutant-witnessed,
+  interpreter-referenced honesty contract. Advances E25-1 / ADR-034 track T6.
+
 ### Fixed (2026-06-30: branch-guard PreToolUse hook — worktree resolution)
 
 - **The branch-guard PreToolUse hook now resolves the branch from the command's worktree, not the main
