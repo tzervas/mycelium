@@ -469,12 +469,23 @@ fn emit_arm_inner(
             call_name,
             cont,
         } => {
-            // Lower the pre-call straight-line bindings (everything up to the call binding) so the
-            // `step` atom and the continuation operands are available. The call binding (and anything
-            // after it — e.g. the wrapping op for a non-tail call) is NOT lowered normally; the
-            // trampoline emits the call + continuation itself.
+            // Lower the straight-line *support* bindings so the `step` atom and the continuation's
+            // saved operand are available. Every binding except the recursive-call binding
+            // (`call_name`) and the wrapping-op result binding (`anf.result()`) is lowered — the
+            // trampoline emits those two itself (the call + the defunctionalized continuation). This
+            // must lower the saved operand even when it is bound *after* the call in ANF order (e.g.
+            // `%c=App(self,%s); %k=Const(mask); %r=and(%c,%k)`), so we skip the two and lower the rest
+            // rather than stopping at the call.
             crate::llvm::lower_bindings_before_call_pub(
-                anf, call_name, &mut arm_env, ssa, bbc, body, funcs, flags,
+                anf,
+                call_name,
+                anf.result(),
+                &mut arm_env,
+                ssa,
+                bbc,
+                body,
+                funcs,
+                flags,
             )?;
             // Materialize the saved continuation operand (binary op) NOW (it depends on pre-call
             // bindings); pack to i64. Identity/unary have no saved operand ⇒ "0".

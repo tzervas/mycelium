@@ -651,17 +651,28 @@ pub(crate) fn lower_anf_block_pub(
     lower_anf_block(anf, env, ssa, bbc, body, funcs, flags)
 }
 
-/// `pub(crate)` shim: lower every binding of `anf` whose name is **not** `call_name` (the recursive
-/// call binding the trampoline handles itself), extending `env`. Reuses
-/// [`lower_arm_bindings_before_tail`]'s contract generalized to "stop at the named call binding"
-/// regardless of whether it is literally the tail. Returns once the named binding (or end) is hit.
+/// `pub(crate)` shim: lower every **support** binding of `anf` — every binding whose name is neither
+/// `call_name` (the recursive `App(member, step)`, which the trampoline emits itself) nor
+/// `result_name` (the wrapping `Binary{8}` op the trampoline applies as the defunctionalized
+/// continuation) — extending `env`. The support set is the straight-line `Binary{8}` const/alias/op
+/// bindings the `step` atom and the continuation's saved operand depend on.
+///
+/// **Why every binding, not "those before the call":** after ANF flattening the saved continuation
+/// operand can be bound *after* the call binding (e.g. `%c=App(self,%s); %k=Const(mask);
+/// %r=and(%c,%k)` — the mask `%k` follows the call), so a "stop at the call" walk would miss it and
+/// the operand would be a free variable. Skipping exactly the call and result bindings (and lowering
+/// everything else regardless of position) lowers each support binding exactly once. Any binding the
+/// saved operand transitively needs precedes it in ANF order, so a single forward pass binds them all
+/// before the continuation materializes the operand (G2: a still-missing operand is a free-variable
+/// error, never silently mis-encoded).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn lower_bindings_before_call_pub(
     anf: &lower::Anf,
     call_name: &Atom,
+    result_name: &Atom,
     env: &mut HashMap<Atom, EnvValue>,
     ssa: &mut Ssa,
-    // The pre-call sequence is straight-line `Binary{8}` (const/alias/op only), so block-label and
+    // The support sequence is straight-line `Binary{8}` (const/alias/op only), so block-label and
     // closure-function sinks are unused here — kept in the signature for a uniform lowering surface.
     _bbc: &mut Bbc,
     body: &mut String,
@@ -669,9 +680,11 @@ pub(crate) fn lower_bindings_before_call_pub(
     flags: &mut Vec<String>,
 ) -> Result<(), AotError> {
     for b in anf.bindings() {
-        if &b.name == call_name {
-            // The recursive-call binding — the trampoline emits the call/step/cont itself; stop.
-            break;
+        if &b.name == call_name || &b.name == result_name {
+            // The recursive-call binding and the wrapping-op result binding are emitted by the
+            // trampoline itself (the call + the defunctionalized continuation); skip both, lower the
+            // rest (which includes any saved-operand binding that follows the call in ANF order).
+            continue;
         }
         let ev = match &b.rhs {
             Rhs::Const(v) => EnvValue::Repr(const_lane(v)?),
