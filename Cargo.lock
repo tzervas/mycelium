@@ -332,6 +332,7 @@ dependencies = [
  "mycelium-numerics",
  "mycelium-select",
  "mycelium-std-runtime",
+ "mycelium-vsa",
 ]
 
 [[package]]
