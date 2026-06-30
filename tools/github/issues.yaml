@@ -5788,9 +5788,10 @@ issues:
     title: "M-738 — chore(release): full-language 1.0.0 release act"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:release, priority:P1, status:blocked]
-    landed_basis: "status:blocked (2026-06-23) — the release act is NOT performed: its external gate deps are unmet. E13-1 (self-hosting stdlib) is needs-design (only lib/std/result.myc self-hosts — 1 of 25 modules); E18-1 (full-language readiness) is needs-design; ADR-022 is Accepted (NOT Enacted) with sub-gate rows A2/A3/A4 still open. Per the rel10 kickoff + house rule #3 / G2, the tag is NOT cut and ADR-021/ADR-022 stay Accepted (no Enacted). M-737 (ADR-023 Accepted) IS done; this task unblocks only when E13-1 + E18-1 + every ADR-022 gate row are confirmed closed."
+    landed_basis: "status:blocked (2026-06-23) — the release act is NOT performed: its external gate deps are unmet. E13-1 (self-hosting stdlib) is needs-design (only lib/std/result.myc self-hosts — 1 of 25 modules); E18-1 (full-language readiness) is needs-design; ADR-022 is Accepted (NOT Enacted) with sub-gate rows A2/A3/A4 still open. Per the rel10 kickoff + house rule #3 / G2, the tag is NOT cut and ADR-021/ADR-022 stay Accepted (no Enacted). M-737 (ADR-023 Accepted) IS done; this task unblocks only when E13-1 + E18-1 + E15-1 (AOT — re-gated by ADR-034, 2026-06-30) + every ADR-022 gate row are confirmed closed."
+    depends_on: [E15-1]
     epic: E17-1
-    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:DN-25]
+    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:ADR-034, corpus:DN-25]
     body: |
       The terminal step: verify that every ADR-022 (full-language 1.0.0 release-readiness
       gate) row is closed, then record the conscientious release decision by moving
