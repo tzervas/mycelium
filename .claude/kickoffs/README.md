@@ -9,6 +9,15 @@ construction (CLAUDE.md §Swarm).
 > [`archive/`](archive/) once their tranche has landed on `main` and been validated against the
 > codebase (the audit that produced this list, 2026-06-28). See **§Completed (archived)** below.
 >
+> **Recent landings (2026-06-29 → 06-30, on `main`).** The serial-language closeout — tuple type +
+> `f(x)(y)` (M-826), or-patterns (M-823), partial application (M-822), DN-54 §10 (M-824), backbone
+> (M-825) — **resolved the `s10`/`hof` flagged residuals** (or-patterns, tuple-gated partial app).
+> The **DN-64 §7** design wave also landed: **RFC-0038 Inject-Mode Security Axis → `Accepted`**
+> (design ratified, mechanism unbuilt → claims stay `Declared` until Enacted), **DN-65** scoped-PR /
+> toolchain-scoping workflow policy, `research/26`+`27`, and the VSA proof-discovery experiment
+> (M-827…M-849). These are design-phase landings, **not** 1.0.0-track kickoffs — the track table
+> below is unchanged by them (only the `s10`/`hof` residual notes are refreshed).
+>
 > **Workspace prep + scoped PRs (DN-65).** At kickoff, every agent **syncs off the latest tip**
 > (same head, tips match) and **pre-installs the toolchain its work-package needs** (Rust →
 > `just setup`; Python → `uv sync`; docs → markdown/`doc_refs`; proofs → `z3`/LH/Lean) before
@@ -50,7 +59,7 @@ tree**, branches **off `dev`**, merges into `dev`, then promotes `dev → integr
 | UID | Track | Owns | Status / remaining |
 |---|---|---|---|
 | **`c10`** | T1 — core/kernel 1.0.0 sub-gate (E10-1) | `crates/mycelium-core/**` · kernel T1 scope | **gate-met / tag-ready**; only **M-703** (cut the tag) remains — **maintainer-reserved** |
-| **`s10`** | T2 — surface-language completeness & grammar (E11-1) | `crates/mycelium-l1/**` · `docs/spec/grammar/**` | ✅ **DONE → archived** (2026-06-29): M-704 (dynamic HOF) · M-705/M-708 (ops/stabilization, prior) · **M-706** (RFC-0030 grammar gaps) · **M-707** (RFC-0020 §10 carve-out enactment) all landed. **E11-1 surface-language complete.** Flagged residuals (RFC-0020 §9 / RFC-0024 §4A.8): or-patterns (R20-Q3), list/`for` bidirectional inference (R20-Q5), and partial application (tuple-gated) — all never-silent, forward-tracked |
+| **`s10`** | T2 — surface-language completeness & grammar (E11-1) | `crates/mycelium-l1/**` · `docs/spec/grammar/**` | ✅ **DONE → archived** (2026-06-29): M-704 (dynamic HOF) · M-705/M-708 (ops/stabilization, prior) · **M-706** (RFC-0030 grammar gaps) · **M-707** (RFC-0020 §10 carve-out enactment) all landed. **E11-1 surface-language complete.** Residuals **RESOLVED in the serial closeout** (2026-06-29, #767): or-patterns (R20-Q3 → **M-823**), partial application + first-class tuple type incl. `f(x)(y)` (**M-822**/**M-826**), list bidirectional inference (R20-Q5 → **M-823**); the `for`-body→spine two-pass feedback remains a flagged open item (never-silent) |
 | **`r10`** | T3 — runtime & concurrency execution maturity (E12-1) | `crates/mycelium-std-runtime/**` · `crates/mycelium-mlir/src/runtime.rs` | ✅ **DONE → archived** (2026-06-29): M-709/710/711/712/713 + **M-677** (declared-effect → interp budget ledger + per-effect `retry(<=3)` surface syntax wired; overrun → explicit `EffectBudgetExhausted`; KC-3, no new L0 node) all landed. **E12-1 runtime maturity complete.** |
 | **`lib10`** | T4 — standard library in Mycelium (E13-1) | `lib/std/**` · `crates/mycelium-std-*/**` | **in progress (long pole)**; M-715/716/717/718 landed; remaining **M-719** (API-freeze + Rust-crate retirement; post-1.0 acceptable per RFC-0031) |
 | **`rel10`** | T8 — documentation, stability & 1.0.0 release (E17-1) | `docs/**` · `CHANGELOG.md` · stability/release scope | **in progress**; M-735/736/737 landed; remaining **M-738** (release act — gated on the other tracks; cuts the tag) |
@@ -72,11 +81,12 @@ All surface follow-on kickoffs have landed and are **archived** (2026-06-29): **
 **`lwd`** (DN-54 `derive`→L0 elaboration + sound KC-3 guard, M-812-cont), and **`strm`** (E24-1 —
 M-818/M-821 mandatory `;`, M-819 `mycfmt --flatten`, M-820 `myc --stream`; **DN-57 → Enacted**). See
 **§Completed (archived)** for each. **The `crates/mycelium-l1` frontend serial lane is now clear** —
-the next serial-on-L1 work (`boot10` self-hosting) is gated on `lib10`. Flagged residuals carried
-forward (all never-silent, none blocking): `hof` partial-application tuple-gated (RFC-0024 §4A.8);
-`lwd` `derive`-site consumption model underdetermined (DN-54 stays Accepted); `s10` or-patterns
-(R20-Q3) + R20-Q5 deferred (RFC-0020 §9); `srf`/E7-2 **R2 construct activation** (the per-construct
-RFCs DN-63 decomposed) is the future track (`needs-design`).
+the next serial-on-L1 work (`boot10` self-hosting) is gated on `lib10`. Residual status (updated
+2026-06-29/30): `hof` partial-application + first-class tuple type incl. `f(x)(y)` — **RESOLVED**
+(M-822/M-826); `s10` or-patterns (R20-Q3) + list inference (R20-Q5) — **RESOLVED** (M-823), only the
+`for`-body→spine two-pass remains a flagged open item; `lwd` `derive`-site consumption model —
+DN-54 §10 design-pass landed (M-824; DN-54 stays Accepted); `srf`/E7-2 **R2 construct activation**
+(`forage`/`backbone` et al.) — now **directed** by DN-64 §7 OQ-B (M-828), future `needs-design`.
 
 ### PM tooling & post-1.0
 
@@ -109,7 +119,7 @@ any) are owned by the still-current kickoff noted.
 | **`dfr`** | RP-10/RP-9 web/ADK research gate discharged; RFC-0022/0023 → Accepted (#344) | `dfb` (builds, shelved) |
 | **`rsm`** | cross-cutting Session-2 — W1 (M-753/718/717) + W2 docs-currency + W3 capture (DN-45–50, M-800–807 stubs) all landed | M-719 close → `lib10` |
 | **`s10`** | E11-1 surface-language completeness — M-704 (HOF) · M-706 (RFC-0030 grammar gaps) · M-707 (RFC-0020 §10 carve-out enactment) landed (joins prior M-705/M-708). Residuals flagged: or-patterns (R20-Q3), R20-Q5, partial-app (tuple-gated) | — (residuals in RFC-0020 §9 / RFC-0024 §4A.8) |
-| **`hof`** | M-704 dynamic HOF — closures/capture/dynamic-fn-flow + capturing `map` run three-way; KC-3 (no new L0 node) | partial-app tuple-gated residual → maintainer tuple-type decision |
+| **`hof`** | M-704 dynamic HOF — closures/capture/dynamic-fn-flow + capturing `map` run three-way; KC-3 (no new L0 node) | ✅ residual RESOLVED — tuple type + `f(x)(y)` (M-826) + partial application (M-822) landed (serial closeout #767) |
 | **`lwd`** | M-812-cont DN-54 `derive`→L0 elaboration + §4.1/§4.2 checks + sound §6 KC-3 guard + §7 harness | `derive`-site consumption model → maintainer ratification (DN-54 stays Accepted) |
 | **`srf`** | E7-2 lexicon tail — M-664 (`consume` + inherent `impl`) + M-668 (R2 planning DN-63) landed 2026-06-29 | E7-2 **R2 construct activation** (per-construct xloc/mesh/cyst/graft/forage/backbone impl RFCs, DN-63) — future, `needs-design` |
 | **`strm`** | E24-1 DN-57 enactment — M-818/M-821 (mandatory `;` + corpus migration), M-819 (`mycfmt --flatten`), M-820 (`myc --stream`) landed; **DN-57 → Enacted** (#762) | — |
@@ -130,9 +140,10 @@ green before the next — "do L1 surgery inline, never delegate to parallel leav
 > PR #750):** `srf(M-664) → s10(M-707 → M-706) → hof(M-704) → lwd(M-812-cont) → strm(M-818) → r10(M-712)`
 > all landed (run by a serial Opus swarm: one isolated-worktree leaf per task, sync-first off the
 > pushed tip, octopus-merged + orchestrator-reconciled). **Flagged residuals carried forward** (all
-> never-silent, none blocking): `hof` partial-application is tuple-gated (RFC-0024 §4A.8); `lwd`
-> `derive`-site consumption model is underdetermined by DN-54; `s10` or-patterns (R20-Q3) + R20-Q5
-> stay deferred (RFC-0020 §9).
+> never-silent, none blocking): these residuals have since **landed** (serial closeout 2026-06-29,
+> #767) — `hof` partial application + tuple type incl. `f(x)(y)` (M-822/M-826), `s10` or-patterns
+> (R20-Q3) + list inference (R20-Q5) (M-823); `lwd` `derive`-site got the DN-54 §10 design-pass
+> (M-824). Only the `for`-body→spine two-pass feedback remains a flagged open item.
 >
 > ✅ **The follow-on serial L1 wave is also COMPLETE (landed 2026-06-29, PRs #755→#757 squash +
 > #758/#759 backprop):** `r10`'s **M-677** (effect→budget ledger + `retry(<=3)` surface syntax — the
