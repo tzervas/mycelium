@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0039 |
-| **Status** | **Proposed** (2026-06-30) |
+| **Status** | **Accepted** (2026-06-30 — maintainer-ratified; the four §8 open questions resolved 2026-06-30) · Proposed (2026-06-30) |
 | **Type** | Foundational / normative — the native-codegen design for `Repr::Dense` and `Repr::Vsa`, and the dynamic-VSA JIT |
 | **Date** | 2026-06-30 |
 | **Feeds** | E25-1 (native AOT full-language coverage) — issues **M-853** (Dense), **M-854** (VSA), **M-855** (dynamic-VSA JIT + ADR-009 lift) |
@@ -12,9 +12,11 @@
 | **Coupled with** | `crates/mycelium-mlir/` (the AOT/JIT backend where `Repr::Dense`/`Repr::Vsa` are currently REFUSED — `src/llvm.rs:2170`, `src/dialect/native.rs:349-350`; the `ExecMode` enum at `src/mode.rs:55-72`); `crates/mycelium-dense/` + `crates/mycelium-vsa/` (the trusted-base reference semantics this native path is differential-checked against); `crates/mycelium-cert/` (the M-210 observational-equivalence checker — `src/check.rs`) |
 | **Task** | E25-1 (epic) / M-853 (first child) |
 
-> **Posture (transparency rule / VR-5).** This RFC **decides design only**. Proposing it asserts **no
-> implementation** and moves **nothing** to Accepted/Enacted — neither this RFC, nor RFC-0029, nor
-> ADR-009. The native Dense/VSA path is **not built**: `Repr::Dense` and `Repr::Vsa` are *today* an
+> **Posture (transparency rule / VR-5).** This RFC **decides design only**. Acceptance ratifies the
+> *design* — it asserts **no implementation** and moves **nothing else** to Accepted/Enacted: not RFC-0029,
+> not ADR-009, and not this RFC itself past Accepted (RFC-0039 → Enacted only when the path is complete +
+> stable, house rule #3). M-853/M-854/M-855 stay design-gated on this RFC (now Accepted) **before** they
+> implement (§7). The native Dense/VSA path is **not built**: `Repr::Dense` and `Repr::Vsa` are *today* an
 > explicit, never-silent refusal in every native backend (`AotError::UnsupportedRepr` in `llvm.rs`;
 > `DialectError::Unsupported("…Dense/VSA stay on the interpreter / direct-LLVM path")` in
 > `dialect/native.rs`), routed to the interpreter — which **remains the trusted base and the
@@ -53,8 +55,8 @@ scope expanded to **full-language native-codegen coverage** — which includes D
 dynamic VSA/HDC. ADR-034 §6 names two scope pieces that "need their **own normative design before
 implementation**": native Dense + VSA codegen (out of RFC-0029's scope), and the ADR-009 JIT-deferral
 lift for dynamic VSA. **This RFC is that design vehicle** (the maintainer's choice, 2026-06-30:
-RFC-0039 rather than an RFC-0029 amendment, with the ADR-009 lift recorded here rather than in a
-separate ADR — see the FLAG in §8).
+RFC-0039 rather than an RFC-0029 amendment, with the ADR-009 lift recorded **here** in §6 — and, per
+the OQ-1 resolution, the §6 cross-reference **is** the full record: **no separate ADR-009 amendment**).
 
 The goal: lift the Dense/VSA refusal into native lowering whose output is **observably equivalent**
 to the `mycelium-dense`/`mycelium-vsa` reference, never-silent at every residual boundary, EXPLAIN-able
@@ -89,9 +91,18 @@ always measured against the interpreter + the reference crates (NFR-7).**
 - **Native Dense lowering** of the `mycelium-dense` element-wise surface (`add`/`sub`/`neg`/`scale`;
   `dot`/`similarity` as bare measurements) plus the ADR-030 quant model, with the granularity
   descriptor / accumulator width / packing schedule recorded as `Meta.physical` (§5.1).
-- **Native VSA lowering** of `bind`/`unbind`/`bundle`/`permute` over the implemented models (MAP-I,
-  MAP-B, BSC, HRR, FHRR, SBC), honoring ADR-031's element space / sparsity / complex carrier, and
-  **preserving the RFC-0003 §4.1 per-op guarantee matrix** (§5.2).
+- **Native VSA lowering** of `bind`/`unbind`/`bundle`/`permute` over the **1.0.0-mandatory standard
+  models** — **MAP-I, BSC, HRR, FHRR** (the literature/`torchhd` standards; OQ-3 resolved) — honoring
+  ADR-031's element space / sparsity / complex carrier, and **preserving the RFC-0003 §4.1 per-op
+  guarantee matrix** (§5.2). The niche models (**SBC, MAP-B**) extend post-mandate, each still
+  differential-checked + honest-tagged when added.
+- **The committed widening to the full quantized-Dense + element-space-VSA coverage** (§5.1/§5.2,
+  OQ-4 resolved — "both"): native codegen covers the **un-quantized F32/BF16 Dense + real-`Vec<f64>`
+  VSA fragment now** (M-853/M-854), **and** this RFC **commits** to widening to the quantized Dense
+  (ADR-030) and element-space/block-sparse/complex VSA (ADR-031) variants — **gated only on E20-1
+  landing those `Repr` fields** (native codegen cannot precede the repr existing). The unbuilt variants
+  stay an explicit never-silent refusal until E20-1 lands them; **E20-1 is the enabling dependency for
+  the full-coverage half** (§7).
 - **The dynamic-VSA JIT** (§5.3): data-dependent dimension, runtime model selection, cleanup/resonator
   loops, as an explicit `ExecMode` (no silent/`Auto` selection), and the **ADR-009 deferral lift** for
   this path recorded here (append-only cross-reference, §6).
@@ -109,10 +120,13 @@ always measured against the interpreter + the reference crates (NFR-7).**
   E25-1 increments with their own design grounding (RFC-0004 §11, RFC-0002); this RFC's only contact
   with `Swap` is that a Dense↔VSA or Dense-dtype native swap reuses the **same** M-210 cert discipline
   (§5.4), it does not re-specify the swap node.
-- Implementing ADR-030's `QuantDesc` / ADR-031's `VsaElem`/`VsaSparsity`/`HypervectorC` in the value
-  model — those are the E20-1 content-address rehash's work (the reprs do not yet carry these fields;
-  see the honesty note in §5.1/§5.2). This RFC specifies how native codegen **will honor** them once
-  present, and refuses (never-silent) any quant/element-space mode the reference cannot yet represent.
+- *Implementing* ADR-030's `QuantDesc` / ADR-031's `VsaElem`/`VsaSparsity`/`HypervectorC` in the value
+  model — those `Repr` fields are the **E20-1 content-address rehash's** work (the reprs do not yet
+  carry them; see the honesty note in §5.1/§5.2). This RFC **commits native codegen to widen to** the
+  quantized/element-space coverage **as E20-1 lands those fields** (the in-scope OQ-4 commitment above —
+  it is *sequenced behind E20-1*, not deferred indefinitely), and until then refuses (never-silent) any
+  quant/element-space mode the reference cannot yet represent. *Building the reprs themselves* stays
+  E20-1's job, not this RFC's.
 - Hardware-specific Dense intrinsics beyond the schedule-staged packing set (general GPU/tile/MMA) —
   deferred beyond 1.0.0 (YAGNI), consistent with RFC-0029's BitNet boundary.
 
@@ -132,11 +146,12 @@ always measured against the interpreter + the reference crates (NFR-7).**
 - [ ] §5.4 (honesty/verification contract) specifies: the three-way (and interp≡JIT) differential
   through the M-210 checker; the mutant-witness; and that every uncovered fragment stays an explicit
   refusal routed to the interpreter (G2).
-- [ ] §6 records the ADR-009 dynamic-VSA JIT deferral lift (append-only cross-reference), with the
-  FLAG (§8) on whether a focused ADR-009 amendment is also wanted — the maintainer's call.
-- [ ] All open questions in §8 are resolved or explicitly deferred with direction.
-- [ ] This RFC reaches **Accepted** (maintainer ratification) **before** any M-853/M-854/M-855
-  implementation work begins (each task is design-gated on it — §7).
+- [x] §6 records the ADR-009 dynamic-VSA JIT deferral lift (append-only cross-reference); OQ-1 is
+  resolved — the §6 record **is** the vehicle, **no** separate ADR-009 amendment (maintainer 2026-06-30).
+- [x] All §8 open questions are **resolved** (maintainer 2026-06-30 — OQ-1…OQ-4; see §8).
+- [x] This RFC reaches **Accepted** (maintainer ratification, 2026-06-30) — the gate every
+  M-853/M-854/M-855 implementation task waits on; each stays design-gated on it (§7) **before** it
+  implements.
 
 ## 5. Normative decisions
 
@@ -179,13 +194,20 @@ dumpable, no opaque pass; RFC-0004 §6). The lowering is **never-silent**:
   wrong-precision lowering. The native path **does not** ship a second, divergent Dense semantics
   (DRY; the interpreter + `mycelium-dense` are the single meaning).
 
+**Coverage sequencing (OQ-2 + OQ-4, resolved 2026-06-30 — "both").** Native Dense codegen ships the
+**un-quantized F32/BF16 element-wise fragment first** (M-853), **and** this RFC **commits to widening**
+to the full ADR-030 quant/accumulator/packing set (the int/fp8/TF32 dtypes; `PerTensor` + `PerBlock`
+schemes first per ADR-030's own staging) **as E20-1 lands the `QuantDesc` descriptor** — the widening
+is *sequenced behind E20-1*, not deferred indefinitely. Until each quantized dtype/scheme is present
+and differential-checked, it is an explicit never-silent refusal.
+
 > **Honesty note (VR-5).** ADR-030's `QuantDesc` is **Accepted but not yet implemented** in the value
 > model (it lands in the E20-1 content-address rehash, pre-persistence). `mycelium-dense` today stores
 > `Payload::Scalars` with no `quant` field. So the §5.1 quant-as-`Meta.physical` decision is the
-> **design contract native codegen honors once the descriptor exists**; until then native Dense covers
-> only the un-quantized F32/BF16 element-wise fragment, and **explicitly refuses** any quantized Dense
-> value (never silently treating it as un-quantized). Guarantee: `Empirical` per increment once the
-> differential is checked; `Declared` until then.
+> **design contract native codegen honors once the descriptor exists** (the committed widening above);
+> until then native Dense covers only the un-quantized F32/BF16 element-wise fragment, and **explicitly
+> refuses** any quantized Dense value (never silently treating it as un-quantized). Guarantee:
+> `Empirical` per increment once the differential is checked; `Declared` until then.
 
 ### 5.2 Native VSA lowering (M-854)
 
@@ -204,9 +226,24 @@ authoritatively:
   expectation** for BSC, **Empirical** for MAP-B (depth-1 only — RR-13 forbids deep nesting under
   Proven) and HRR/FHRR.
 
+**Mandatory model set (OQ-3, resolved 2026-06-30).** The **commonly-used standard models are
+1.0.0-native-mandatory — MAP-I, BSC, HRR, FHRR** (the standards in the VSA/HDC literature and in
+`torchhd` use). The **niche/less-common models extend post-mandate — SBC, MAP-B** (and any others):
+they are interpreter-served (never-silent refusal in the native path) until each is native-lowered,
+and each still lands with a checked differential + honest tag when added. This RFC therefore scopes
+native VSA 1.0.0 to {MAP-I, BSC, HRR, FHRR} and treats {SBC, MAP-B} as a committed later extension.
+
+**Coverage sequencing (OQ-4, resolved 2026-06-30 — "both").** The mandatory models' **real-`Vec<f64>`
+fragment ships now** (M-854), **and** this RFC **commits to widening** to the ADR-031 element-space /
+block-sparse / complex-carrier variants **as E20-1 lands the `VsaElem`/`VsaSparsity`/`HypervectorC`
+`Repr` fields** — sequenced behind E20-1, not deferred indefinitely. Until each carrier is present and
+differential-checked, the block-sparse/complex variant is an explicit never-silent refusal. (FHRR's
+*complex* carrier in particular widens with E20-1; its real-phase encoding is covered in the interim,
+see the honesty note.)
+
 **Decision.** Native VSA lowering (a new `crates/mycelium-mlir/src/vsa_codegen.rs`, **direct-LLVM
 first; dialect later**) **removes the VSA refusal** for the covered fragment and lowers `bind`/`bundle`/
-`permute` over each model's carrier as explicit, dumpable IR. The binding rules:
+`permute` over each mandatory model's carrier as explicit, dumpable IR. The binding rules:
 
 - **Honor ADR-031's element space + sparsity + complex carrier.** The `model` selects the algebra over
   a carrier that can honestly store it (`VsaElem{Binary,Bipolar,Integer,Real,Complex}`,
@@ -327,55 +364,62 @@ maintainer's call) as the place to record it.
 **This RFC records the lift here, append-only:** the dynamic-VSA JIT execution mode (§5.3) is the
 realization of ADR-009's "interpreter/JIT for dynamic VSA" clause for the data-dependent-dimension /
 runtime-model-selection / cleanup-resonator workloads — moving it from sanctioned-but-deferred to
-designed (Proposed). This is a **cross-reference, not a rewrite**: ADR-009's text is unchanged; the
+designed (now Accepted). This is a **cross-reference, not a rewrite**: ADR-009's text is unchanged; the
 append-only pointer recorded against it (to be applied by the integrating parent — see the flagged
-edits accompanying this RFC) is *"the dynamic-VSA JIT deferral is lifted by RFC-0039 §6 (Proposed
-2026-06-30 → Accepted on ratification); the JIT mechanism itself was already sanctioned (RFC-0029
-§5.3)."* Whether a *focused ADR-009 amendment* (mirroring how ADR-024 amended a single gate row) is
-**also** wanted, in addition to this RFC's record, is the maintainer's call — see the FLAG in §8.
+edits accompanying this RFC) is *"the dynamic-VSA JIT deferral is lifted by RFC-0039 §6 (Accepted
+2026-06-30); the JIT mechanism itself was already sanctioned (RFC-0029 §5.3)."*
+
+**OQ-1 resolved (maintainer 2026-06-30): this §6 cross-reference IS the vehicle — there is NO separate
+ADR-009 amendment.** The §6 record here, plus the Foundation ADR-009 cross-reference note, are the full
+capture of the dynamic-VSA JIT deferral lift; a focused ADR-009 amendment (the ADR-024 single-gate-row
+pattern) was considered and is **not** taken (the JIT *mechanism* needed no superseding ADR — RFC-0029
+§5.3 — and the *deferral lift* is fully recorded by this RFC, append-only against ADR-009).
 
 ## 7. Increment map (design-gated on this RFC)
 
-Each increment is **design-gated on RFC-0039 reaching Accepted** before implementation (per its DoD and
-ADR-034 §6); each lands with a checked three-way differential and honest tags, never-silent at every
-residual boundary.
+**RFC-0039 is now Accepted (2026-06-30)**, so the design gate each increment waits on is **met** —
+each remains **design-gated on this RFC** in the sense that it implements *to* RFC-0039's normative
+decisions, with a checked three-way differential and honest tags, never-silent at every residual
+boundary (per its DoD and ADR-034 §6). **The full-coverage half — quantized Dense (ADR-030) and
+element-space/block-sparse/complex VSA (ADR-031) — has a second enabling dependency: E20-1** (which
+lands the `QuantDesc` / `VsaElem` / `VsaSparsity` / `HypervectorC` `Repr` fields). The un-quantized /
+real fragment proceeds now; the quantized / element-space fragment widens **as E20-1 lands those
+reprs** (OQ-4 "both"), refusing the unbuilt variants never-silently in the interim.
 
 | Task | Scope | Reference | Gate |
 |---|---|---|---|
-| **M-853** | Native Dense lowering (`dense_codegen.rs`, direct-LLVM first; dialect later) — removes the Dense refusal (`llvm.rs:2170`, `native.rs:349-350`); ADR-030 quant / accumulator width / packing schedule as inspectable `Meta.physical`; never-silent on unsupported quant modes. | `mycelium-dense` (+ `mycelium-cert::dense`) | RFC-0039 Accepted; three-way differential green; `cargo-mutants` catches a quant-granularity mutation → Empirical. |
-| **M-854** | Native VSA lowering (`vsa_codegen.rs`, direct-LLVM first; dialect later) — `bind`/`bundle`/`permute` over MAP/BSC/HRR/FHRR(/SBC); preserves the RFC-0003 §4.1 Proven/Exact/Empirical tags only where the checked basis holds. | `mycelium-vsa` (+ `mycelium-cert::dense_vsa`) | RFC-0039 Accepted; three-way differential green incl. a capacity-bound parity case; `cargo-mutants` catches a bind/bundle mutation. |
-| **M-855** | Dynamic-VSA JIT (`jit.rs`) — data-dependent dim, runtime model selection, cleanup/resonator loops, as an explicit never-silently-selected `ExecMode` (no `Auto` arm); records the ADR-009 lift (§6). | interpreter (interp ≡ JIT) | RFC-0039 Accepted (§6 lift recorded); `JIT ≡ interpreter` over the dynamic subset (Empirical) + explicit refusal outside it; `cargo-mutants` catches a JIT-codegen mutation. |
+| **M-853** | Native Dense lowering (`dense_codegen.rs`, direct-LLVM first; dialect later) — removes the Dense refusal (`llvm.rs:2170`, `native.rs:349-350`); un-quantized F32/BF16 first, widening to ADR-030 quant / accumulator width / packing schedule as inspectable `Meta.physical` **as E20-1 lands `QuantDesc`**; never-silent on unsupported quant modes. | `mycelium-dense` (+ `mycelium-cert::dense`) | RFC-0039 Accepted (met); three-way differential green; `cargo-mutants` catches a quant-granularity mutation → Empirical. Quant half also gated on **E20-1**. |
+| **M-854** | Native VSA lowering (`vsa_codegen.rs`, direct-LLVM first; dialect later) — `bind`/`bundle`/`permute` over the 1.0.0-mandatory **MAP-I/BSC/HRR/FHRR** (SBC/MAP-B extend post-mandate); real-`Vec<f64>` fragment first, widening to ADR-031 element-space/block-sparse/complex **as E20-1 lands those carriers**; preserves the RFC-0003 §4.1 Proven/Exact/Empirical tags only where the checked basis holds. | `mycelium-vsa` (+ `mycelium-cert::dense_vsa`) | RFC-0039 Accepted (met); three-way differential green incl. a capacity-bound parity case; `cargo-mutants` catches a bind/bundle mutation. Element-space half also gated on **E20-1**. |
+| **M-855** | Dynamic-VSA JIT (`jit.rs`) — data-dependent dim, runtime model selection, cleanup/resonator loops, as an explicit never-silently-selected `ExecMode` (no `Auto` arm); records the ADR-009 lift (§6, no separate amendment — OQ-1). | interpreter (interp ≡ JIT) | RFC-0039 Accepted (met; §6 lift recorded); `JIT ≡ interpreter` over the dynamic subset (Empirical) + explicit refusal outside it; `cargo-mutants` catches a JIT-codegen mutation. |
 
-## 8. Open questions
+## 8. Resolved decisions (was: open questions)
 
-These need the maintainer (or a sibling decision) before they can be marked resolved; none is decided
-by authoring this RFC.
+The four Proposed open questions, **resolved by the maintainer 2026-06-30** (the ratification that
+moved this RFC to Accepted). Recorded append-only with their resolutions; the body sections above
+(§3/§5/§6/§7) are updated to match.
 
-- **OQ-1 (FLAG — RFC vs. ADR-009 amendment).** ADR-034 §6 and the M-855 task both flag this: the
-  dynamic-VSA JIT deferral lift is recorded in §6 of *this* RFC. Does the maintainer **also** want a
-  *focused ADR-009 amendment* (the ADR-024 pattern — an append-only "T-row" amendment recorded in the
-  ADR index), or is the §6 cross-reference sufficient? RFC-0029 §5.3 holds that the JIT *mechanism*
-  needs no superseding ADR; this question is only about where the *dynamic-VSA deferral lift* is
-  recorded. **Not guessed — maintainer's call (raise at the M-855 PR).**
-- **OQ-2 (Dense packing schedule — exact set).** RFC-0004 §5 fixes the *ternary* packing set
-  (I2_S/TL1/TL2, ≈5 schemes). The Dense quant path (ADR-030 dtypes: I8/U8/I16/U16/I4/U4/F8E4M3/F8E5M2/
-  TF32, MX FP6/FP4 later) needs its own enumerable packing/accumulator-width schedule set recorded as
-  `Meta.physical`. **What is the exact set for 1.0.0?** Lean: stage `PerTensor` + `PerBlock` first
-  (ADR-030's own staging), F32/BF16 un-quantized first, the int/fp8 quantized packings behind explicit
-  refusals until each is differential-checked. **Maintainer confirms the 1.0.0 Dense packing set.**
-- **OQ-3 (which VSA models are 1.0.0-mandatory vs deferred).** All six models exist in `mycelium-vsa`.
-  Native codegen for **all** of them by 1.0.0, or a mandatory core (MAP-I/BSC — the Exact/Proven
-  models, the compositional workhorses per RR-13) with HRR/FHRR/MAP-B/SBC native lowering deferred
-  (interpreter-served, never-silent) past 1.0.0? Lean: MAP-I + BSC native mandatory; the
-  Empirical-`unbind` models (HRR/FHRR) and SBC's block-sparse carrier native-lower once ADR-031's
-  carrier is implemented, else explicit refusal. **Maintainer sets the 1.0.0 VSA-native mandatory set.**
-- **OQ-4 (quant/element-space sequencing vs. E20-1).** ADR-030's `QuantDesc` and ADR-031's
-  `VsaElem`/`VsaSparsity`/`HypervectorC` are Accepted but **unimplemented** (they land in the E20-1
-  content-address rehash, pre-persistence). Native Dense/VSA codegen of the *quantized*/*block-sparse*/
-  *complex* fragment is therefore **blocked on E20-1**, while the un-quantized F32/BF16 Dense and the
-  real-`Vec<f64>` VSA fragment can proceed now. **Confirm the sequencing:** native codegen ships the
-  un-quantized/real fragment first (refusing the rest), and widens to quant/element-space as E20-1
-  lands them. (Stated as the lean; maintainer confirms it is not gated *the other way*.)
+- **OQ-1 (RFC vs. ADR-009 amendment) — RESOLVED.** The **§6 cross-reference IS the vehicle**; there is
+  **no separate ADR-009 amendment**. The §6 append-only record, plus the Foundation ADR-009
+  cross-reference note, are the full capture of the dynamic-VSA JIT deferral lift. (The JIT *mechanism*
+  needed no superseding ADR — RFC-0029 §5.3 — and the *deferral lift* is fully recorded here against
+  ADR-009, append-only. The ADR-024 single-gate-row amendment pattern was considered and not taken.)
+- **OQ-2 (Dense coverage sequencing) — RESOLVED.** **Yes** — native Dense codegen scopes to the
+  **F32/BF16 (un-quantized, real) fragment first**, and the **full ADR-030 int/fp8/TF32
+  quant/accumulator/packing set widens as E20-1 lands the `QuantDesc` descriptor** (`PerTensor` +
+  `PerBlock` first, per ADR-030's own staging). The unbuilt quantized dtypes/schemes stay an explicit
+  never-silent refusal until each is present + differential-checked (§5.1).
+- **OQ-3 (1.0.0-mandatory VSA models) — RESOLVED.** The **commonly-used standard models are
+  1.0.0-native-mandatory — MAP-I, BSC, HRR, FHRR** (the standards in the literature / `torchhd` use).
+  The **niche/less-common models — SBC, MAP-B** (and any others) — **extend post-mandate** (each still
+  differential-checked + honest-tagged when added; interpreter-served + never-silent refusal in the
+  native path until then). §5.2 marks the set accordingly.
+- **OQ-4 (quant/element-space sequencing vs. E20-1) — RESOLVED: BOTH.** Native codegen covers the
+  **un-quantized/real fragment NOW** (M-853/M-854), **AND** this RFC **commits** to widening to the
+  quantized Dense (ADR-030) and element-space/block-sparse/complex VSA (ADR-031) variants — **gated
+  only on E20-1 landing those `Repr` fields** (native codegen cannot precede the repr existing). So
+  "both" is **sequenced by the E20-1 dependency, not deferred indefinitely**: **E20-1 is the enabling
+  dependency for the full-coverage half** (§7), and the unbuilt variants stay a never-silent refusal in
+  the interim (§3 in-scope commitment; §5.1/§5.2).
 
 ## 9. Grounding / honesty
 
@@ -392,12 +436,16 @@ by authoring this RFC.
 - **RFC-0009** — resonator factorization: Empirical-only, never-silent `NoConverge` — the contract the
   dynamic-VSA JIT cleanup/resonator loops preserve.
 - **ADR-030 / ADR-031** — the Dense quant descriptor and the VSA element-space/sparsity/complex-carrier
-  designs the codegen must honor (Accepted; **implementation deferred to E20-1** — the honesty notes in
-  §5.1/§5.2 record that the descriptors are not yet in the value model).
+  designs the codegen must honor (Accepted; the `Repr` fields are **landed by E20-1** — native codegen
+  **commits to widen** to them as E20-1 lands them, OQ-4 "both"; the honesty notes in §5.1/§5.2 record
+  that the descriptors are not yet in the value model).
+- **E20-1** — the content-address rehash that lands the ADR-030 `QuantDesc` / ADR-031
+  `VsaElem`/`VsaSparsity`/`HypervectorC` `Repr` fields; the **enabling dependency for the full-coverage
+  (quantized-Dense + element-space-VSA) half** of M-853/M-854 (§7; OQ-4).
 - **ADR-009** — the hybrid-execution decision; §6 records the dynamic-VSA JIT deferral lift
-  append-only.
+  append-only (OQ-1 resolved: §6 is the vehicle, no separate ADR-009 amendment).
 - **ADR-034 §6** — the re-gating that names this RFC the vehicle for native Dense+VSA codegen and the
-  ADR-009 lift, with the RFC-vs-amendment question flagged (OQ-1).
+  ADR-009 lift; the RFC-vs-amendment question it flagged is resolved here (OQ-1, §6/§8).
 - **ADR-006 / G2 / VR-5 / KC-3** — EXPLAIN obligation, never-silent, honest tags never upgraded past
   basis, small auditable kernel (the native path stays outside the trusted base).
 - **Code, checked 2026-06-30:** `crates/mycelium-mlir/src/{llvm.rs:2170, dialect/native.rs:349-350,
@@ -415,4 +463,5 @@ by authoring this RFC.
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-30 | **Accepted** | Maintainer-ratified; the four §8 open questions resolved. **OQ-1:** the §6 cross-reference IS the vehicle for the ADR-009 dynamic-VSA JIT deferral lift — NO separate ADR-009 amendment (§6 record + the Foundation ADR-009 cross-ref note are the full capture). **OQ-2:** native Dense scopes to the F32/BF16 un-quantized fragment first; the full ADR-030 int/fp8/TF32 quant/accumulator/packing set widens as E20-1 lands `QuantDesc`. **OQ-3:** the standard models MAP-I/BSC/HRR/FHRR are 1.0.0-native-mandatory; the niche SBC/MAP-B extend post-mandate (each differential-checked + honest-tagged when added). **OQ-4 (BOTH):** native codegen covers the un-quantized/real fragment now AND commits to widening to quantized-Dense (ADR-030) + element-space/block-sparse/complex VSA (ADR-031) — gated only on **E20-1** landing those `Repr` fields (the enabling dependency for the full-coverage half), refusing the unbuilt variants never-silently in the interim. The Proven-scope correction is unchanged (single-op MAP-I bundle Proven only; the multi-hop M-832 work stays in-progress research, never Proven — VR-5). Acceptance ratifies the **design** only — asserts no implementation; M-853/M-854/M-855 stay design-gated on this RFC (now Accepted) before they implement; RFC-0039 → Enacted only when the path is complete + stable (house rule #3). Task: E25-1 / M-853. |
 | 2026-06-30 | **Proposed** | Created. Native-codegen design for `Repr::Dense` (M-853 — element-wise ops + ADR-030 quant as inspectable `Meta.physical`/DN-01) and `Repr::Vsa` (M-854 — bind/bundle/permute over MAP/BSC/HRR/FHRR/SBC, honoring ADR-031, preserving the RFC-0003 §4.1 per-op tags only where the checked basis holds — VR-5), plus the dynamic-VSA JIT (M-855 — data-dependent dim / runtime model selection / cleanup-resonator loops as an explicit never-silently-selected `ExecMode`), and the M-210-checked, mutant-witnessed, interpreter-referenced honesty contract. Fills the Dense/VSA gap RFC-0029 §3 excludes (does not contradict it). Records the ADR-009 dynamic-VSA JIT deferral lift append-only (§6), with OQ-1 flagging whether a focused ADR-009 amendment is also wanted. Asserts **no** implementation; nothing moves to Accepted/Enacted by authoring. Task: E25-1 / M-853. |
