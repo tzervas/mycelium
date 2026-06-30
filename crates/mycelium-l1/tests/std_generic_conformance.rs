@@ -146,8 +146,12 @@ const CMP_CASES: &[Case] = &[
     },
 ];
 
-/// std.math: binary at Binary{8}/Binary{16}, ternary at Ternary{3}.
+/// std.math: every width-generic op at ≥ 2 distinct widths — binary at Binary{8}/Binary{16}, ternary at
+/// Ternary{3}/Ternary{6}. (M-719 gap-closure: the gate's header claims "≥ 2 distinct widths each" for the
+/// whole `badd/bsub/band/bor/bxor/bnot` + `tadd/tsub/tmul/tneg` surface; this table now delivers it, so the
+/// consolidated gate is honest, not just the per-module `std_math.rs`.)
 const MATH_CASES: &[Case] = &[
+    // ── binary arithmetic: badd / bsub at Binary{8} and Binary{16} ──
     Case {
         label: "badd@8: badd(3,5)=8",
         nodule: MATH_SRC,
@@ -163,10 +167,119 @@ const MATH_CASES: &[Case] = &[
             "nodule ref;\nfn main() => Binary{16} = add_bin(0b0000_0001_0000_0000, 0b0000_0000_0000_0001);",
     },
     Case {
+        label: "bsub@8: bsub(5,3)=2",
+        nodule: MATH_SRC,
+        driver: "fn main() => Binary{8} = bsub(0b0000_0101, 0b0000_0011);",
+        reference: "nodule ref;\nfn main() => Binary{8} = sub_bin(0b0000_0101, 0b0000_0011);",
+    },
+    Case {
+        label: "bsub@16: bsub(256,1)=255",
+        nodule: MATH_SRC,
+        driver:
+            "fn main() => Binary{16} = bsub(0b0000_0001_0000_0000, 0b0000_0000_0000_0001);",
+        reference:
+            "nodule ref;\nfn main() => Binary{16} = sub_bin(0b0000_0001_0000_0000, 0b0000_0000_0000_0001);",
+    },
+    // ── binary bitwise: band / bor / bxor / bnot at Binary{8} and Binary{16} ──
+    Case {
+        label: "band@8",
+        nodule: MATH_SRC,
+        driver: "fn main() => Binary{8} = band(0b0000_1100, 0b0000_1010);",
+        reference: "nodule ref;\nfn main() => Binary{8} = and(0b0000_1100, 0b0000_1010);",
+    },
+    Case {
+        label: "band@16",
+        nodule: MATH_SRC,
+        driver: "fn main() => Binary{16} = band(0b1111_1111_0000_0000, 0b0000_1111_1111_0000);",
+        reference:
+            "nodule ref;\nfn main() => Binary{16} = and(0b1111_1111_0000_0000, 0b0000_1111_1111_0000);",
+    },
+    Case {
+        label: "bor@8",
+        nodule: MATH_SRC,
+        driver: "fn main() => Binary{8} = bor(0b0000_1100, 0b0000_1010);",
+        reference: "nodule ref;\nfn main() => Binary{8} = or(0b0000_1100, 0b0000_1010);",
+    },
+    Case {
+        label: "bor@16",
+        nodule: MATH_SRC,
+        driver: "fn main() => Binary{16} = bor(0b1111_1111_0000_0000, 0b0000_1111_1111_0000);",
+        reference:
+            "nodule ref;\nfn main() => Binary{16} = or(0b1111_1111_0000_0000, 0b0000_1111_1111_0000);",
+    },
+    Case {
+        label: "bxor@8",
+        nodule: MATH_SRC,
+        driver: "fn main() => Binary{8} = bxor(0b0000_1100, 0b0000_1010);",
+        reference: "nodule ref;\nfn main() => Binary{8} = xor(0b0000_1100, 0b0000_1010);",
+    },
+    Case {
+        label: "bxor@16",
+        nodule: MATH_SRC,
+        driver: "fn main() => Binary{16} = bxor(0b1111_1111_0000_0000, 0b0000_1111_1111_0000);",
+        reference:
+            "nodule ref;\nfn main() => Binary{16} = xor(0b1111_1111_0000_0000, 0b0000_1111_1111_0000);",
+    },
+    Case {
+        label: "bnot@8",
+        nodule: MATH_SRC,
+        driver: "fn main() => Binary{8} = bnot(0b0000_1111);",
+        reference: "nodule ref;\nfn main() => Binary{8} = not(0b0000_1111);",
+    },
+    Case {
+        label: "bnot@16",
+        nodule: MATH_SRC,
+        driver: "fn main() => Binary{16} = bnot(0b0000_0000_1111_1111);",
+        reference: "nodule ref;\nfn main() => Binary{16} = not(0b0000_0000_1111_1111);",
+    },
+    // ── balanced-ternary: tadd / tsub / tmul / tneg at Ternary{3} and Ternary{6} ──
+    Case {
         label: "tadd@3: tadd(+1,-1)=0",
         nodule: MATH_SRC,
         driver: "fn main() => Ternary{3} = tadd(0t00+, 0t00-);",
         reference: "nodule ref;\nfn main() => Ternary{3} = add(0t00+, 0t00-);",
+    },
+    Case {
+        label: "tadd@6",
+        nodule: MATH_SRC,
+        driver: "fn main() => Ternary{6} = tadd(0t00+0+-, 0t00000+);",
+        reference: "nodule ref;\nfn main() => Ternary{6} = add(0t00+0+-, 0t00000+);",
+    },
+    Case {
+        label: "tsub@3",
+        nodule: MATH_SRC,
+        driver: "fn main() => Ternary{3} = tsub(0t00+, 0t00-);",
+        reference: "nodule ref;\nfn main() => Ternary{3} = sub(0t00+, 0t00-);",
+    },
+    Case {
+        label: "tsub@6",
+        nodule: MATH_SRC,
+        driver: "fn main() => Ternary{6} = tsub(0t00+0+-, 0t00000+);",
+        reference: "nodule ref;\nfn main() => Ternary{6} = sub(0t00+0+-, 0t00000+);",
+    },
+    Case {
+        label: "tmul@3",
+        nodule: MATH_SRC,
+        driver: "fn main() => Ternary{3} = tmul(0t00+, 0t0+-);",
+        reference: "nodule ref;\nfn main() => Ternary{3} = mul(0t00+, 0t0+-);",
+    },
+    Case {
+        label: "tmul@6",
+        nodule: MATH_SRC,
+        driver: "fn main() => Ternary{6} = tmul(0t00000+, 0t0000+-);",
+        reference: "nodule ref;\nfn main() => Ternary{6} = mul(0t00000+, 0t0000+-);",
+    },
+    Case {
+        label: "tneg@3",
+        nodule: MATH_SRC,
+        driver: "fn main() => Ternary{3} = tneg(0t0+-);",
+        reference: "nodule ref;\nfn main() => Ternary{3} = neg(0t0+-);",
+    },
+    Case {
+        label: "tneg@6",
+        nodule: MATH_SRC,
+        driver: "fn main() => Ternary{6} = tneg(0t00+0+-);",
+        reference: "nodule ref;\nfn main() => Ternary{6} = neg(0t00+0+-);",
     },
 ];
 

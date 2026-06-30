@@ -295,6 +295,59 @@ fn tneg_ternary6() {
     assert_op("tneg6", "Ternary{6}", "tneg(0t00+0+-)", "neg(0t00+0+-)");
 }
 
+// ── Second-width coverage for bor / bxor / tsub / tmul (M-719 gap-closure) ───────────────────────────
+//
+// The consolidated conformance gate (std_generic_conformance.rs) states every width-generic math op is
+// checked at ≥ 2 distinct widths. `badd`/`bsub`/`band`/`bnot` and `tadd`/`tneg` already had two widths
+// above; these add the SECOND width for `bor`/`bxor` (Binary{16}) and `tsub`/`tmul` (Ternary{6}) so the
+// "≥ 2 widths each" claim holds for the whole binary-bitwise and ternary-arithmetic surface — proving each
+// is genuinely width-generic (the same definition specialised at a second width), not a Binary{8}/Ternary{3}
+// monomorph. All Exact; three-way agreement Empirical. Reference reuses the kernel prim (Derived provenance).
+
+/// `bor` at Binary{16} — the same definition at a second width. Exact.
+#[test]
+fn bor_binary16() {
+    assert_op(
+        "bor16",
+        "Binary{16}",
+        "bor(0b1111_1111_0000_0000, 0b0000_1111_1111_0000)",
+        "or(0b1111_1111_0000_0000, 0b0000_1111_1111_0000)",
+    );
+}
+
+/// `bxor` at Binary{16} — the same definition at a second width. Exact.
+#[test]
+fn bxor_binary16() {
+    assert_op(
+        "bxor16",
+        "Binary{16}",
+        "bxor(0b1111_1111_0000_0000, 0b0000_1111_1111_0000)",
+        "xor(0b1111_1111_0000_0000, 0b0000_1111_1111_0000)",
+    );
+}
+
+/// `tsub` at Ternary{6} — the same definition at a second width. Exact.
+#[test]
+fn tsub_ternary6() {
+    assert_op(
+        "tsub6",
+        "Ternary{6}",
+        "tsub(0t00+0+-, 0t00000+)",
+        "sub(0t00+0+-, 0t00000+)",
+    );
+}
+
+/// `tmul` at Ternary{6} — the same definition at a second width. Exact (in-range result).
+#[test]
+fn tmul_ternary6() {
+    assert_op(
+        "tmul6",
+        "Ternary{6}",
+        "tmul(0t00000+, 0t0000+-)",
+        "mul(0t00000+, 0t0000+-)",
+    );
+}
+
 // ── Never-silent overflow/underflow refusals (G2) on every path ─────────────────────────────────────
 
 /// Run the generic surface program and assert all three paths REFUSE (never-silent overflow / G2).
