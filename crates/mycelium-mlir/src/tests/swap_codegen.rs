@@ -238,3 +238,34 @@ fn identity_swap_passes_through_with_an_explain_comment() {
         "an identity swap must not emit a transcode:\n{ir}"
     );
 }
+
+/// A binary width too wide for the i64 transcode is refused **never-silently** (G2/VR-5) rather than
+/// emit a silently-wrong transcode — the native-path width bound (`check_i64_width`), which guards the
+/// i64 path in **both** cert modes. This matters most in `ReuseInterp` mode: there `check_legal` does
+/// **not** refuse an illegal pair, so an over-wide `(64, 2)` would otherwise reach the i64 decode and
+/// overflow `1i64 << 64`. The width bound catches it explicitly. (A *legal* pair always has `n ≤ 61`
+/// and `m ≤ 39` with the i64 `max_magnitude`, so this bound only ever fires on an illegal/over-wide
+/// pair — but firing it is what keeps the i64 path sound, never a silent overflow.)
+#[test]
+fn over_wide_pair_is_refused_not_silently_transcoded() {
+    use crate::llvm::emit_llvm_ir_with_swap_mode;
+    // 64 bits → 2 trits: an illegal, over-wide pair. In ReuseInterp the legal-pair re-check does not
+    // refuse, so the i64 width bound must catch n=64 > 62 — never a silent `1i64 << 64` overflow.
+    let prog = swap_b_to_t(vec![false; 64], 2);
+    assert!(!mycelium_cert::legal_pair(64, 2), "(64,2) is illegal");
+    match emit_llvm_ir_with_swap_mode(&prog, SwapCertMode::ReuseInterp) {
+        Err(crate::llvm::AotError::UnsupportedNode(msg)) => {
+            assert!(
+                msg.contains("i64") && (msg.contains("62") || msg.contains("width")),
+                "the refusal must name the i64 transcode width bound; got: {msg}"
+            );
+        }
+        other => panic!("an over-wide (64,2) swap must be refused in ReuseInterp, got {other:?}"),
+    }
+    // In the default Recheck mode the illegal pair is refused even earlier (the legal-pair re-check),
+    // so it is still never silently transcoded.
+    assert!(matches!(
+        emit_llvm_ir(&prog),
+        Err(crate::llvm::AotError::UnsupportedNode(_))
+    ));
+}

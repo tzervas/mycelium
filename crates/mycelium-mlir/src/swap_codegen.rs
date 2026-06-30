@@ -140,6 +140,40 @@ pub fn legal_pair(width: u32, trits: u32) -> bool {
     bin_max_neg_mag <= i128::from(tern_max)
 }
 
+/// The widest binary `n` the **i64** transcode arithmetic is sound for. The decode accumulates the
+/// unsigned magnitude (up to `2^n − 1`) and the sign correction subtracts `2^n`, both of which must
+/// stay representable: `2^n ≤ i64::MAX` requires `n ≤ 62`. A *legal* pair can in principle reach
+/// `n = 63` (e.g. `(63, 40)`: `2^62 ≤ (3^40−1)/2`), which would overflow the i64 path — so codegen
+/// **refuses** `n > 62` explicitly rather than emit a silently-wrong transcode (G2/VR-5). The trusted
+/// interpreter (which uses `i128`) still handles such a pair; this is a native-path width bound, not a
+/// language limit.
+pub(crate) const MAX_BINARY_WIDTH_I64: u32 = 62;
+
+/// The widest ternary `m` the **i64** transcode is sound for: `trits_to_int` Horner-accumulates
+/// `acc·3 + digit`, whose magnitude is bounded by `(3^m − 1)/2`; `m ≤ 39` keeps `3^m` within i64
+/// (`3^40 ≈ 1.2e19 > i64::MAX ≈ 9.2e18`). A wider `m` is refused (never a silent overflow; G2).
+pub(crate) const MAX_TERNARY_WIDTH_I64: u32 = 39;
+
+/// Refuse a bit/trit width the i64 transcode cannot represent soundly — an explicit, never-silent
+/// width bound (G2/VR-5). Returns `Ok(())` when both widths are in range.
+fn check_i64_width(width: u32, trits: u32) -> Result<(), AotError> {
+    if width > MAX_BINARY_WIDTH_I64 {
+        return Err(AotError::UnsupportedNode(format!(
+            "swap binary width {width} exceeds the native i64 transcode bound \
+             ({MAX_BINARY_WIDTH_I64}); refused rather than emit a silently-wrong transcode — the \
+             interpreter (i128) still handles it (M-852; G2/VR-5)"
+        )));
+    }
+    if trits > MAX_TERNARY_WIDTH_I64 {
+        return Err(AotError::UnsupportedNode(format!(
+            "swap ternary width {trits} exceeds the native i64 transcode bound \
+             ({MAX_TERNARY_WIDTH_I64}); refused rather than emit a silently-wrong transcode \
+             (M-852; G2/VR-5)"
+        )));
+    }
+    Ok(())
+}
+
 /// Lower a `Rhs::Swap` node natively (M-852). Given the already-lowered source [`Lane`] and the
 /// source/target [`Repr`], emit the transcode IR into `body` and return the result lane plus its
 /// [`SwapExplain`]. Range failures on the partial `dec` direction (`Ternary → Binary`) push an `i1`
@@ -195,6 +229,7 @@ pub(crate) fn lower_swap(
         (Repr::Binary { width }, Repr::Ternary { trits }) => {
             let (width, trits) = (*width, *trits);
             let legal = check_legal(width, trits, mode)?;
+            check_i64_width(width, trits)?;
             let explain = mk_explain(src_repr, target, width, trits, legal, mode);
             emit_explain_comment(&explain, body);
             if src_lane.kind != LaneKind::Binary {
@@ -212,6 +247,7 @@ pub(crate) fn lower_swap(
         (Repr::Ternary { trits }, Repr::Binary { width }) => {
             let (width, trits) = (*width, *trits);
             let legal = check_legal(width, trits, mode)?;
+            check_i64_width(width, trits)?;
             let explain = mk_explain(src_repr, target, width, trits, legal, mode);
             emit_explain_comment(&explain, body);
             if src_lane.kind != LaneKind::Ternary {
@@ -323,9 +359,14 @@ fn emit_bits_to_int(bits: &[String], ssa: &mut Ssa, body: &mut String) -> String
     let sign = &bits[0];
     let is_neg = ssa.fresh();
     let _ = writeln!(body, "  {is_neg} = icmp eq i32 {sign}, 1");
-    // 2^n as an i64 constant (n ≤ 62 for the subset; a wider n would overflow i64 and is out of the
-    // bijective small-pair regime anyway — a legal pair caps n well under 64).
-    let two_pow_n: i64 = if n < 62 { 1i64 << n } else { i64::MAX };
+    // 2^n as an i64 constant. `n ≤ MAX_BINARY_WIDTH_I64 = 62` is guaranteed by `check_i64_width`
+    // (a wider pair is refused upstream — never a silent overflow, G2), so `1i64 << n` is always in
+    // range here (no dead saturation branch).
+    debug_assert!(
+        n <= MAX_BINARY_WIDTH_I64 as usize,
+        "check_i64_width guarantees n ≤ 62"
+    );
+    let two_pow_n: i64 = 1i64 << n;
     let corrected = ssa.fresh();
     let _ = writeln!(body, "  {corrected} = sub i64 {acc}, {two_pow_n}");
     let out = ssa.fresh();
@@ -414,12 +455,14 @@ fn emit_int_to_bits(int_reg: &str, n: usize, ssa: &mut Ssa, body: &mut String) -
             oor,
         );
     }
-    // Range bounds: lo = −2^(n-1), hi = 2^(n-1) − 1. For the bijective small-pair regime n ≤ 62.
-    let half: i64 = if n - 1 < 62 {
-        1i64 << (n - 1)
-    } else {
-        i64::MAX
-    };
+    // Range bounds: lo = −2^(n-1), hi = 2^(n-1) − 1. `n ≤ MAX_BINARY_WIDTH_I64 = 62` is guaranteed by
+    // `check_i64_width` (a wider pair is refused upstream — G2), so `1i64 << (n−1)` is always in range
+    // here (no dead saturation branch).
+    debug_assert!(
+        n <= MAX_BINARY_WIDTH_I64 as usize,
+        "check_i64_width guarantees n ≤ 62"
+    );
+    let half: i64 = 1i64 << (n - 1);
     let lo = -half;
     let hi = half - 1;
     let lt_lo = ssa.fresh();
