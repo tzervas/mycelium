@@ -2637,7 +2637,22 @@ pub fn compile(node: &Node) -> Result<CompiledArtifact, AotError> {
     let guard = TmpDir(dir);
 
     std::fs::write(&ll, ir.as_bytes()).map_err(|e| AotError::Run(format!("write IR: {e}")))?;
-    run_tool("llc", &["-filetype=obj", path(&ll)?, "-o", path(&obj)?])?;
+    // `-relocation-model=pic`: the trampoline (M-850) and closure-arena modules carry global/`.rodata`
+    // references whose default (static) relocations are `R_X86_64_32S`, which a PIE link rejects
+    // (`can not be used when making a PIE object`). Modern clang links PIE by default, so we emit a
+    // PIC object that is link-compatible with PIE. The byte-for-byte element-wise modules are
+    // unaffected by the relocation model (no global refs), so this is a strict superset — never a
+    // silent behavioural change (G2); it only lets the heavier recursion/closure modules link.
+    run_tool(
+        "llc",
+        &[
+            "-relocation-model=pic",
+            "-filetype=obj",
+            path(&ll)?,
+            "-o",
+            path(&obj)?,
+        ],
+    )?;
     run_tool("clang", &[path(&obj)?, "-o", path(&bin)?])?;
 
     Ok(CompiledArtifact {
