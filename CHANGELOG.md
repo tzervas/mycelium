@@ -8,6 +8,17 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-29: RFC-0038 ratified — `Proposed → Accepted`)
+
+- **RFC-0038 — Inject-Mode Security Axis: `Proposed → Accepted`** (maintainer approved, append-only).
+  The full inject-mode security + trust model is ratified — `loose`/`inoculated` modes, `InjectCert` =
+  spore signature, enforcement granularity (§8.4), scope resolution + deviation manifest (§8.5),
+  defaults by project kind (§8.6), interpreted opt-in signing + `BadSignature` (§8.7), and the colony
+  trust topology (§8.8). **Acceptance ratifies the *design*, not an implementation:** the mechanism is
+  unbuilt, so every mechanism claim stays `Declared` (VR-5) until **Enacted** Rust-first (§13
+  Implementation DoD). Open R&D (§K.2/§L/§M; §8.8 controller protocol/blacklist — M-849) carries
+  forward, not closed by acceptance.
+
 ### Changed (2026-06-29: RFC-0038 §8.8 — colony trust topology + #772 review fixes, M-849)
 
 - **RFC-0038 colony trust topology (`Proposed`; maintainer direction).** Adds §8.8: a mesh
