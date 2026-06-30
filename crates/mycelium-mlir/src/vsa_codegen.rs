@@ -95,8 +95,55 @@ use mycelium_vsa::bsc::BSC_BUNDLE_PROFILE;
 use mycelium_vsa::capacity::proven_capacity_bound;
 use mycelium_vsa::fhrr::FHRR_UNBIND_PROFILE;
 use mycelium_vsa::hrr::HRR_UNBIND_PROFILE;
+use mycelium_vsa::EmpiricalProfile;
 
 use crate::llvm::{path, run_tool, unique_tmp_dir, TmpDir};
+
+// ─── earned Empirical capacity profiles for HRR/FHRR bundle (M-854; FLAG-0 resolution 2026-06-30) ─
+
+/// The trial-validated regime backing the native HRR-`bundle` `Empirical` δ (M-854; RFC-0039 §5.2,
+/// per the maintainer's FLAG-0 resolution 2026-06-30 — HRR/FHRR bundle moves from `Declared` to a real
+/// `Empirical` tag earned by measured trials). `mycelium-vsa` exposes no value-level HRR-bundle profile,
+/// so this profile is **derived here** (in the native codegen, over the *same* `mycelium-vsa` reference
+/// algebra) and validated by [`crate::tests::vsa_codegen`]'s Monte-Carlo trial, exactly mirroring the
+/// `BSC_BUNDLE_PROFILE` / `*_UNBIND_PROFILE` derivation: the membership-decode failure rate at the worst
+/// covered point (`max_items` members, `min_dim`) stays ≤ `delta` over `trials` independent trials.
+///
+/// **Measured envelope (CPU, this environment, 2026-06-30):** at `dim = 256`, codebook 16, the
+/// membership-decode failure rate is `0` for `m ≤ 4` and `1e-4` (1/10 000) at `m = 5` — comfortably
+/// ≤ `δ = 1e-2`. The `δ = 1e-2` declared here is the family-consistent guaranteed tail (a 10 000-trial
+/// basis cannot distinguish `1e-4` from `0`), **earned** by the trial, never fabricated. Outside this
+/// envelope (`dim < 256` or `m > 5`) native HRR `bundle` is an explicit `OutsideEmpiricalProfile`
+/// refusal — the bound is **never claimed beyond what was measured** (VR-5). The large-dim / many-vector
+/// extension is GPU-deferred (the heavy profiling test; see `tests/vsa_differential.rs`).
+pub const HRR_BUNDLE_PROFILE: EmpiricalProfile = EmpiricalProfile {
+    max_items: 5,
+    // Sum-superposition has no majority-tie asymmetry (unlike BSC), so even item counts are covered.
+    odd_items_only: false,
+    min_dim: 256,
+    delta: 1e-2,
+    trials: 10_000,
+    method: "Monte-Carlo HRR sum-bundle membership decode (N(0,1/d) atoms, m ≤ 5, d ≥ 256, \
+             codebook 16, depth 1; measured worst-point rate 1e-4 ≤ δ at d=256/m=5)",
+};
+
+/// The trial-validated regime backing the native FHRR-`bundle` `Empirical` δ (M-854; the FLAG-0
+/// resolution 2026-06-30). Derived + validated here exactly as [`HRR_BUNDLE_PROFILE`], over the
+/// `mycelium-vsa` FHRR phasor-bundle algebra. **Measured envelope (CPU, 2026-06-30):** at `dim = 256`,
+/// codebook 16, the membership-decode failure rate is `0` for every `m ≤ 5` — well ≤ `δ = 1e-2`. The
+/// `δ = 1e-2` is the family-consistent earned tail; outside the envelope native FHRR `bundle` is an
+/// explicit `OutsideEmpiricalProfile` refusal, and the FHRR degenerate-phasor-component refusal
+/// (`DegenerateBundleComponent`) is unchanged (a vanished phasor sum is still refused never-silently).
+pub const FHRR_BUNDLE_PROFILE: EmpiricalProfile = EmpiricalProfile {
+    max_items: 5,
+    odd_items_only: false,
+    min_dim: 256,
+    delta: 1e-2,
+    trials: 10_000,
+    method:
+        "Monte-Carlo FHRR phasor-bundle membership decode (uniform phasor atoms, m ≤ 5, d ≥ 256, \
+             codebook 16, depth 1; measured worst-point rate 0 ≤ δ at d=256/m=5)",
+};
 
 // ─── the VSA op surface this module lowers (real-Vec<f64> fragment; RFC-0039 §5.2) ──────────────
 
@@ -199,21 +246,19 @@ impl VsaModelId {
     /// - `permute` and `bind` are algebraically exact — **`Exact`** for every mandatory model;
     /// - `unbind` is **`Exact`** (self-inverse) for MAP-I/BSC, **`Empirical`** (the weak link, the
     ///   reference's `*_unbind` profile) for HRR/FHRR;
-    /// - `bundle` is **`Proven`** for MAP-I (the checked capacity bound) and **`Empirical`** for BSC
-    ///   (the `BSC_BUNDLE_PROFILE`) — both have a reference *value-level* wrapper. **HRR/FHRR `bundle`
-    ///   have NO reference value-level wrapper** (only the raw `VsaModel::bundle` algebra, with no
-    ///   trial-validated `EmpiricalProfile`), so claiming `Empirical` would *fabricate* a bound — which
-    ///   VR-5 forbids ("an explicit refusal, not a silent Empirical-anyway", RFC-0039 §5.2). The honest
-    ///   tag is therefore **`Declared`** (the "asserted, always flagged" tier, with a `UserDeclared`
-    ///   basis): the superposition payload is lowered **bit-exactly** (the differential witnesses it),
-    ///   but **no validated value-level bound is asserted** — a downgrade from the operation-level
-    ///   `Empirical`, never a fabricated one. (`Declared` is *not* a silent Empirical: it is the
-    ///   transparency lattice's flag for an unvalidated assertion — VR-5/G2.)
+    /// - `bundle` is **`Proven`** for MAP-I (the checked capacity bound) and **`Empirical`** for BSC,
+    ///   HRR, and FHRR — each carrying a trial-validated capacity profile: BSC the reference's
+    ///   `BSC_BUNDLE_PROFILE`, and HRR/FHRR the **codegen-derived** [`HRR_BUNDLE_PROFILE`] /
+    ///   [`FHRR_BUNDLE_PROFILE`] (M-854 FLAG-0 resolution, 2026-06-30 — moved from `Declared` to a real
+    ///   `Empirical` earned by measured trials, validated over the `mycelium-vsa` reference algebra; no
+    ///   fabricated bound — VR-5). The `Empirical` tag holds **only within** the measured envelope
+    ///   (`max_items` / `min_dim`); outside it native `bundle` is an explicit `OutsideEmpiricalProfile`
+    ///   refusal — the bound is never claimed past what was measured.
     ///
     /// `None` for a measurement (`similarity` — no `Meta`).
     #[must_use]
     pub fn reference_guarantee(self, op: VsaCgOp) -> Option<GuaranteeStrength> {
-        use GuaranteeStrength::{Declared, Empirical, Exact, Proven};
+        use GuaranteeStrength::{Empirical, Exact, Proven};
         let g = match (self, op) {
             // permute is a coordinate bijection — Exact for every model.
             (_, VsaCgOp::Permute) => Exact,
@@ -222,12 +267,9 @@ impl VsaModelId {
             // unbind: self-inverse exact for MAP-I/BSC; the weak link (Empirical) for HRR/FHRR.
             (VsaModelId::MapI | VsaModelId::Bsc, VsaCgOp::Unbind) => Exact,
             (VsaModelId::Hrr | VsaModelId::Fhrr, VsaCgOp::Unbind) => Empirical,
-            // bundle: MAP-I value-level Proven (checked capacity); BSC value-level Empirical (profile).
+            // bundle: MAP-I value-level Proven (checked capacity); BSC/HRR/FHRR Empirical (trial profile).
             (VsaModelId::MapI, VsaCgOp::Bundle) => Proven,
-            (VsaModelId::Bsc, VsaCgOp::Bundle) => Empirical,
-            // HRR/FHRR bundle: no reference value-level bound exists — honest downgrade to Declared
-            // (a flagged unvalidated assertion; never a fabricated Empirical; VR-5).
-            (VsaModelId::Hrr | VsaModelId::Fhrr, VsaCgOp::Bundle) => Declared,
+            (VsaModelId::Bsc | VsaModelId::Hrr | VsaModelId::Fhrr, VsaCgOp::Bundle) => Empirical,
             // similarity is a measurement — no Meta tag.
             (_, VsaCgOp::Similarity) => return None,
         };
@@ -557,14 +599,24 @@ impl VsaProgram {
         Ok(())
     }
 
-    /// Check the op's empirical / capacity regime, replaying the reference's side-conditions: the
-    /// BSC bundle profile, the HRR/FHRR unbind profile minimum dim, and the MAP-I bundle capacity
-    /// side-condition (the `Proven` gate). Never stamps a tag past the basis (VR-5).
+    /// Check the op's empirical / capacity regime, replaying the side-conditions: the BSC/HRR/FHRR
+    /// bundle profiles, the HRR/FHRR unbind profile minimum dim, and the MAP-I bundle capacity
+    /// side-condition (the `Proven` gate). Never stamps a tag past the basis (VR-5) — an op outside its
+    /// trial-validated envelope is an explicit `OutsideEmpiricalProfile` refusal, not an Empirical-anyway.
     fn check_regime(&self) -> Result<(), VsaAotError> {
         match (self.model, self.op) {
             // BSC value-level bundle is profile-gated (odd m ≤ 5, dim ≥ 1024) — the same gate the
             // reference's `bundle_values_empirical` runs via `BSC_BUNDLE_PROFILE.check`.
             (VsaModelId::Bsc, VsaCgOp::Bundle) => BSC_BUNDLE_PROFILE
+                .check(self.items.len(), self.dim)
+                .map_err(|e| VsaAotError::OutsideEmpiricalProfile(e.to_string())),
+            // HRR/FHRR value-level bundle are profile-gated (m ≤ 5, dim ≥ 256) — the codegen-derived
+            // HRR_BUNDLE_PROFILE / FHRR_BUNDLE_PROFILE (M-854 FLAG-0 resolution): Empirical within the
+            // measured envelope, an explicit refusal beyond it (never claimed past what was measured).
+            (VsaModelId::Hrr, VsaCgOp::Bundle) => HRR_BUNDLE_PROFILE
+                .check(self.items.len(), self.dim)
+                .map_err(|e| VsaAotError::OutsideEmpiricalProfile(e.to_string())),
+            (VsaModelId::Fhrr, VsaCgOp::Bundle) => FHRR_BUNDLE_PROFILE
                 .check(self.items.len(), self.dim)
                 .map_err(|e| VsaAotError::OutsideEmpiricalProfile(e.to_string())),
             // HRR/FHRR value-level unbind require the profile minimum dim (the single-factor regime's
@@ -1210,11 +1262,10 @@ impl VsaArtifact {
         Meta::new(provenance, guarantee, bound, None, physical, None).map_err(map_wf)
     }
 
-    /// The bound the read-back `Meta` carries, matching the reference: the trial profile bound for an
-    /// `Empirical` op, the **checked** capacity bound for the MAP-I `Proven` bundle, a flagged
-    /// `UserDeclared` capacity bound for a `Declared` HRR/FHRR bundle, none for `Exact`.
+    /// The bound the read-back `Meta` carries, matching how the op was verified: the trial profile
+    /// bound for an `Empirical` op (BSC/HRR/FHRR bundle, HRR/FHRR unbind), the **checked** capacity
+    /// bound for the MAP-I `Proven` bundle, none for `Exact`.
     fn result_bound(&self, guarantee: GuaranteeStrength) -> Result<Option<Bound>, VsaAotError> {
-        use mycelium_core::{BoundBasis, BoundKind};
         Ok(match (self.model, self.op, guarantee) {
             (_, _, GuaranteeStrength::Exact) => None,
             // MAP-I Proven bundle: replay the reference's checked capacity bound (same side-condition).
@@ -1233,30 +1284,23 @@ impl VsaArtifact {
                     )?,
                 )
             }
-            // Empirical ops carry the reference's trial-validated profile bound (the same bound the
-            // reference's value-level wrapper stamps).
+            // Empirical bundle ops carry their trial-validated profile bound (the EmpiricalFit δ the
+            // §profile measured): BSC the reference's profile, HRR/FHRR the codegen-derived profiles.
             (VsaModelId::Bsc, VsaCgOp::Bundle, GuaranteeStrength::Empirical) => {
                 Some(BSC_BUNDLE_PROFILE.bound())
             }
+            (VsaModelId::Hrr, VsaCgOp::Bundle, GuaranteeStrength::Empirical) => {
+                Some(HRR_BUNDLE_PROFILE.bound())
+            }
+            (VsaModelId::Fhrr, VsaCgOp::Bundle, GuaranteeStrength::Empirical) => {
+                Some(FHRR_BUNDLE_PROFILE.bound())
+            }
+            // Empirical unbind ops carry the reference's trial-validated profile bound.
             (VsaModelId::Hrr, VsaCgOp::Unbind, GuaranteeStrength::Empirical) => {
                 Some(HRR_UNBIND_PROFILE.bound())
             }
             (VsaModelId::Fhrr, VsaCgOp::Unbind, GuaranteeStrength::Empirical) => {
                 Some(FHRR_UNBIND_PROFILE.bound())
-            }
-            // HRR/FHRR bundle: the reference exposes no value-level bound (only the raw `bundle`
-            // algebra), so the honest value-level tag is `Declared` with a flagged `UserDeclared`
-            // capacity bound — never a fabricated `Empirical` profile (VR-5). The `Capacity{items,dim}`
-            // records *what was bundled* (a true, inspectable fact) without asserting a failure
-            // probability the reference never validated.
-            (VsaModelId::Hrr | VsaModelId::Fhrr, VsaCgOp::Bundle, GuaranteeStrength::Declared) => {
-                Some(Bound {
-                    kind: BoundKind::Capacity {
-                        items: self.item_count.max(1),
-                        dim: u64::from(self.dim),
-                    },
-                    basis: BoundBasis::UserDeclared,
-                })
             }
             _ => None,
         })

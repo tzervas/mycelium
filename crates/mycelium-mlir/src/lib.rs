@@ -138,7 +138,7 @@ pub use vr4::{cross_backend_gate, Backend, BackendStage, CrossBackendGate, Stage
 pub use vsa_codegen::{
     emit_vsa_llvm_ir, resolve_model as resolve_vsa_model, vsa_compile, vsa_compile_and_run,
     VsaAotError, VsaArtifact, VsaCgOp, VsaExplain, VsaModelId, VsaProgram, VsaResult,
-    VSA_CODEGEN_GUARANTEE,
+    FHRR_BUNDLE_PROFILE, HRR_BUNDLE_PROFILE, VSA_CODEGEN_GUARANTEE,
 };
 
 #[cfg(test)]

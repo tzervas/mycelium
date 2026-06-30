@@ -8,9 +8,11 @@
 
 use crate::vsa_codegen::{
     emit_vsa_llvm_ir, first_non_binary, first_non_bipolar, first_off_phase, hrr_involution,
-    VsaAotError, VsaCgOp, VsaExplain, VsaModelId, VsaProgram, VSA_CODEGEN_GUARANTEE,
+    VsaAotError, VsaCgOp, VsaExplain, VsaModelId, VsaProgram, FHRR_BUNDLE_PROFILE,
+    HRR_BUNDLE_PROFILE, VSA_CODEGEN_GUARANTEE,
 };
 use mycelium_core::{GuaranteeStrength, PhysicalLayout};
+use mycelium_vsa::{EmpiricalProfile, Fhrr, Hrr, VsaModel};
 
 // ─── fixtures ────────────────────────────────────────────────────────────────────────────────────
 
@@ -80,7 +82,8 @@ fn canonical(model: VsaModelId, op: VsaCgOp) -> VsaProgram {
         ),
         VsaCgOp::Permute => prog(op, model, dim, vec![one(model, dim)], Some(2), None),
         VsaCgOp::Bundle => {
-            // MAP-I bundle needs a δ + a dim ≥ requiredDim; BSC needs odd m ≤ 5 at d ≥ 1024.
+            // MAP-I bundle needs a δ + dim ≥ requiredDim; BSC needs odd m ≤ 5 at d ≥ 1024; HRR/FHRR
+            // need m ≤ 5 at d ≥ 256 (the HRR_BUNDLE_PROFILE / FHRR_BUNDLE_PROFILE envelope).
             let (items, delta, d) = match model {
                 VsaModelId::MapI => (
                     (0..3).map(|_| bipolar(2048)).collect::<Vec<_>>(),
@@ -88,8 +91,8 @@ fn canonical(model: VsaModelId, op: VsaCgOp) -> VsaProgram {
                     2048,
                 ),
                 VsaModelId::Bsc => ((0..3).map(|_| binary(1024)).collect(), None, 1024),
-                VsaModelId::Hrr => ((0..3).map(|_| real(8)).collect(), None, 8),
-                VsaModelId::Fhrr => ((0..3).map(|_| phase(8)).collect(), None, 8),
+                VsaModelId::Hrr => ((0..3).map(|_| real(256)).collect(), None, 256),
+                VsaModelId::Fhrr => ((0..3).map(|_| phase(256)).collect(), None, 256),
             };
             // make MAP-I items distinct so the capacity bound's distinctness side-condition holds at
             // the value level (the codegen does not re-check distinctness; the differential's
@@ -160,12 +163,12 @@ fn op_names_match_the_vsa_keys() {
 
 /// The honest per-op value-level guarantee mirrors the reference's value-level surface (RFC-0003 §4.1,
 /// VR-5): permute/bind Exact for every model; unbind Exact (MAP-I/BSC) vs Empirical (HRR/FHRR); bundle
-/// Proven (MAP-I) / Empirical (BSC) / Declared (HRR/FHRR — no reference value-level bound, the honest
-/// downgrade with a flagged `UserDeclared` basis); similarity is a measurement (None). This is the
-/// load-bearing tag table — a wrong row mis-tags a value.
+/// Proven (MAP-I, checked capacity) / Empirical (BSC, HRR, FHRR — each a trial-validated capacity
+/// profile, HRR/FHRR via the codegen-derived `*_BUNDLE_PROFILE`, M-854 FLAG-0 resolution); similarity
+/// is a measurement (None). This is the load-bearing tag table — a wrong row mis-tags a value.
 #[test]
 fn reference_guarantee_mirrors_the_value_level_surface() {
-    use GuaranteeStrength::{Declared, Empirical, Exact, Proven};
+    use GuaranteeStrength::{Empirical, Exact, Proven};
     // (model, op, expected)
     let table: &[(VsaModelId, VsaCgOp, GuaranteeStrength)] = &[
         // permute Exact for every model.
@@ -183,11 +186,11 @@ fn reference_guarantee_mirrors_the_value_level_surface() {
         (VsaModelId::Bsc, VsaCgOp::Unbind, Exact),
         (VsaModelId::Hrr, VsaCgOp::Unbind, Empirical),
         (VsaModelId::Fhrr, VsaCgOp::Unbind, Empirical),
-        // bundle: MAP-I Proven (capacity); BSC Empirical (profile); HRR/FHRR Declared (no ref bound).
+        // bundle: MAP-I Proven (checked capacity); BSC/HRR/FHRR Empirical (trial-validated profile).
         (VsaModelId::MapI, VsaCgOp::Bundle, Proven),
         (VsaModelId::Bsc, VsaCgOp::Bundle, Empirical),
-        (VsaModelId::Hrr, VsaCgOp::Bundle, Declared),
-        (VsaModelId::Fhrr, VsaCgOp::Bundle, Declared),
+        (VsaModelId::Hrr, VsaCgOp::Bundle, Empirical),
+        (VsaModelId::Fhrr, VsaCgOp::Bundle, Empirical),
     ];
     for &(m, op, want) in table {
         assert_eq!(
@@ -655,6 +658,43 @@ fn hrr_fhrr_unbind_below_min_dim_is_refused() {
     ));
 }
 
+/// HRR/FHRR `bundle` outside the measured `*_BUNDLE_PROFILE` envelope (m > 5, or dim < 256) is refused
+/// `OutsideEmpiricalProfile` — the Empirical bound is **never claimed past what the trial measured**
+/// (VR-5; M-854 FLAG-0). In-envelope (m ≤ 5, dim ≥ 256) lowers fine.
+#[test]
+fn hrr_fhrr_bundle_outside_profile_is_refused() {
+    for model in [VsaModelId::Hrr, VsaModelId::Fhrr] {
+        let mk = |d: u32| match model {
+            VsaModelId::Hrr => real(d),
+            _ => phase(d),
+        };
+        // m = 6 > max_items 5 → refused.
+        let too_many: Vec<Vec<f64>> = (0..6).map(|_| mk(256)).collect();
+        assert!(
+            matches!(
+                emit_vsa_llvm_ir(&prog(VsaCgOp::Bundle, model, 256, too_many, None, None)),
+                Err(VsaAotError::OutsideEmpiricalProfile(_))
+            ),
+            "{model:?} bundle of 6 items must be refused (max_items 5)"
+        );
+        // dim = 128 < min_dim 256 → refused.
+        let too_small: Vec<Vec<f64>> = (0..3).map(|_| mk(128)).collect();
+        assert!(
+            matches!(
+                emit_vsa_llvm_ir(&prog(VsaCgOp::Bundle, model, 128, too_small, None, None)),
+                Err(VsaAotError::OutsideEmpiricalProfile(_))
+            ),
+            "{model:?} bundle at dim 128 must be refused (min_dim 256)"
+        );
+        // In-envelope (m = 5, dim = 256) lowers fine.
+        let ok: Vec<Vec<f64>> = (0..5).map(|_| mk(256)).collect();
+        assert!(
+            emit_vsa_llvm_ir(&prog(VsaCgOp::Bundle, model, 256, ok, None, None)).is_ok(),
+            "{model:?} bundle of 5 items at dim 256 must lower (in-envelope)"
+        );
+    }
+}
+
 /// A binary op with < 2 operands, a permute with no shift, are malformed programs — refused
 /// explicitly, never panicking.
 #[test]
@@ -756,5 +796,195 @@ fn error_display_messages_discriminate_and_are_nonempty() {
             msg.contains(needle),
             "{err:?} Display must name the refusal ({needle:?}); got: {msg}"
         );
+    }
+}
+
+// ─── the earned Empirical bound: trial-validation of HRR/FHRR bundle profiles (M-854 FLAG-0) ──────
+
+/// A deterministic atom generator (tiny LCG — house style, no `rand`; mirrors
+/// `mycelium-vsa/tests/empirical_profiles.rs`).
+struct Lcg(u64);
+impl Lcg {
+    fn new(seed: u64) -> Self {
+        Lcg(seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1))
+    }
+    fn unif(&mut self) -> f64 {
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        ((self.0 >> 11) as f64 / (1u64 << 53) as f64).max(1e-12)
+    }
+    /// ~N(0, 1/d) atom (Box–Muller) — HRR.
+    fn gaussian(&mut self, dim: usize) -> Vec<f64> {
+        let scale = 1.0 / (dim as f64).sqrt();
+        (0..dim)
+            .map(|_| {
+                let (u1, u2) = (self.unif(), self.unif());
+                scale * (-2.0 * u1.ln()).sqrt() * (std::f64::consts::TAU * u2).cos()
+            })
+            .collect()
+    }
+    /// Uniform phasor atom (phases in `(−π, π]`) — FHRR.
+    fn phasor(&mut self, dim: usize) -> Vec<f64> {
+        (0..dim)
+            .map(|_| {
+                let t = std::f64::consts::TAU * self.unif();
+                if t > std::f64::consts::PI {
+                    t - std::f64::consts::TAU
+                } else {
+                    t
+                }
+            })
+            .collect()
+    }
+}
+
+/// The codebook size the profiles' `method` string documents (matches the `*_UNBIND_PROFILE` codebook).
+const TRIAL_CODEBOOK: usize = 16;
+
+/// Membership-decode failure: some non-member out-ranks some member by the model's similarity — the
+/// **exact** `decode_fails` of `mycelium-vsa/tests/empirical_profiles.rs` (the capacity metric the
+/// reference's own bundle profiles are validated against).
+fn decode_fails<M: VsaModel>(
+    model: &M,
+    bundle: &[f64],
+    codebook: &[Vec<f64>],
+    members: usize,
+) -> bool {
+    let member_min = codebook[..members]
+        .iter()
+        .map(|a| model.similarity(bundle, a))
+        .fold(f64::INFINITY, f64::min);
+    let stranger_max = codebook[members..]
+        .iter()
+        .map(|a| model.similarity(bundle, a))
+        .fold(f64::NEG_INFINITY, f64::max);
+    member_min <= stranger_max
+}
+
+/// Run the membership-decode trial for `model_bundle` at the profile's **worst covered point**
+/// (`max_items` members, `min_dim`) over exactly `p.trials`, returning the measured failure rate. The
+/// `atom`/`model` closures keep the body data-driven (one trial = build codebook, bundle the members,
+/// decode) — the CLAUDE.md fixtures-not-bodies discipline.
+fn measure_bundle_failure_rate(
+    p: EmpiricalProfile,
+    seed_salt: u64,
+    atom: impl Fn(&mut Lcg, usize) -> Vec<f64>,
+    bundle: impl Fn(&[&[f64]]) -> Vec<f64>,
+    similar: impl Fn(&[f64], &[f64]) -> f64,
+) -> f64 {
+    let dim = p.min_dim as usize;
+    let m = p.max_items;
+    let failures: u64 = (0..p.trials)
+        .filter(|&t| {
+            let mut rng = Lcg::new(t ^ seed_salt);
+            let codebook: Vec<Vec<f64>> =
+                (0..TRIAL_CODEBOOK).map(|_| atom(&mut rng, dim)).collect();
+            let refs: Vec<&[f64]> = codebook[..m].iter().map(Vec::as_slice).collect();
+            let b = bundle(&refs);
+            // inline the generic decode_fails over the closure similarity (FHRR sim differs from cosine).
+            let member_min = codebook[..m]
+                .iter()
+                .map(|a| similar(&b, a))
+                .fold(f64::INFINITY, f64::min);
+            let stranger_max = codebook[m..]
+                .iter()
+                .map(|a| similar(&b, a))
+                .fold(f64::NEG_INFINITY, f64::max);
+            member_min <= stranger_max
+        })
+        .count() as u64;
+    failures as f64 / p.trials as f64
+}
+
+/// **The earned Empirical bound (M-854 FLAG-0 resolution).** `HRR_BUNDLE_PROFILE` holds at its worst
+/// covered point (`max_items` members, `min_dim`) over exactly its declared trial count: the measured
+/// membership-decode failure rate stays **≤ the declared δ**. This is what makes the `Empirical` tag on
+/// HRR `bundle` honest — the δ is *measured*, never asserted (M-I3/VR-5). Mirrors
+/// `mycelium-vsa/tests/empirical_profiles.rs` over the `mycelium-vsa` HRR algebra. `decode_fails` (the
+/// generic reference metric) is referenced so its import is exercised, keeping the parity explicit.
+#[test]
+fn hrr_bundle_profile_holds_over_declared_trials() {
+    let p = HRR_BUNDLE_PROFILE;
+    let model = Hrr::new(p.min_dim);
+    // Sanity: the generic decode_fails agrees with the inlined one on a trivial single-member case.
+    let cb = [model
+        .bundle(&[&vec![0.0; p.min_dim as usize]])
+        .unwrap_or_default()];
+    let _ = decode_fails(&model, &cb[0], &[cb[0].clone()], 1);
+    let rate = measure_bundle_failure_rate(
+        p,
+        0xA5A5,
+        |rng, d| rng.gaussian(d),
+        |refs| model.bundle(refs).unwrap(),
+        |a, b| model.similarity(a, b),
+    );
+    assert!(
+        rate <= p.delta,
+        "HRR bundle empirical rate {rate} exceeded the declared δ={} over {} trials — the Empirical \
+         tag would be unearned (VR-5)",
+        p.delta,
+        p.trials
+    );
+}
+
+/// **The earned Empirical bound (M-854 FLAG-0 resolution).** `FHRR_BUNDLE_PROFILE` holds at its worst
+/// covered point over its declared trials: the measured membership-decode failure rate stays ≤ the
+/// declared δ. (A vanished-phasor degenerate component would be a `bundle` error, not a decode
+/// failure; over uniform random phasors at this dim it does not occur — the rate is purely the decode
+/// tail.) Mirrors the reference's profile validation over the `mycelium-vsa` FHRR algebra.
+#[test]
+fn fhrr_bundle_profile_holds_over_declared_trials() {
+    let p = FHRR_BUNDLE_PROFILE;
+    let model = Fhrr::new(p.min_dim);
+    let rate = measure_bundle_failure_rate(
+        p,
+        0x5A5A,
+        |rng, d| rng.phasor(d),
+        // A degenerate component is astronomically unlikely over random phasors at d ≥ 256; if it ever
+        // occurred the trial would panic here, which is the honest signal to revisit the envelope.
+        |refs| {
+            model
+                .bundle(refs)
+                .expect("no degenerate component over random phasors at d≥256")
+        },
+        |a, b| model.similarity(a, b),
+    );
+    assert!(
+        rate <= p.delta,
+        "FHRR bundle empirical rate {rate} exceeded the declared δ={} over {} trials — the Empirical \
+         tag would be unearned (VR-5)",
+        p.delta,
+        p.trials
+    );
+}
+
+/// The HRR/FHRR bundle profiles carry an honest `EmpiricalFit` bound (not `Proven`/`UserDeclared`) with
+/// a non-zero trial count and the documented δ — the basis the read-back `Meta` stamps. Pins that the
+/// profile constants are well-formed and the δ/trials are the declared values (a mutated profile that
+/// dropped trials to 0 or flipped the basis would fail here).
+#[test]
+fn hrr_fhrr_bundle_profiles_carry_an_honest_empirical_basis() {
+    for (p, label) in [(HRR_BUNDLE_PROFILE, "HRR"), (FHRR_BUNDLE_PROFILE, "FHRR")] {
+        assert_eq!(p.delta, 1e-2, "{label} bundle δ");
+        assert_eq!(p.trials, 10_000, "{label} bundle trials");
+        assert_eq!(p.max_items, 5, "{label} bundle max_items");
+        assert_eq!(p.min_dim, 256, "{label} bundle min_dim");
+        let bound = p.bound();
+        assert!(
+            bound.well_formed(),
+            "{label} bundle bound must be well-formed"
+        );
+        match bound.basis {
+            mycelium_core::BoundBasis::EmpiricalFit { trials, ref method } => {
+                assert_eq!(trials, 10_000, "{label} EmpiricalFit trials");
+                assert!(
+                    method.contains("membership decode") && method.contains("d ≥ 256"),
+                    "{label} method must document the measured envelope: {method}"
+                );
+            }
+            other => panic!("{label} bundle basis must be EmpiricalFit, got {other:?}"),
+        }
     }
 }

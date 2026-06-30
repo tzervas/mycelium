@@ -26,9 +26,11 @@
 //! (`InsufficientCapacity`) otherwise — never an unbacked `Proven` (VR-5).
 //!
 //! **Honest tags carried** (RFC-0003 §4.1, VR-5): `Exact` (bind/permute, MAP-I/BSC unbind), `Empirical`
-//! (HRR/FHRR unbind via the reference's profile, BSC bundle via `BSC_BUNDLE_PROFILE`), `Proven` (MAP-I
-//! bundle via the checked capacity bound), `Declared` (HRR/FHRR bundle — no reference value-level
-//! bound; the honest downgrade, never a fabricated Empirical).
+//! (HRR/FHRR unbind via the reference's profile; BSC bundle via `BSC_BUNDLE_PROFILE`; HRR/FHRR bundle
+//! via the codegen-derived `HRR_BUNDLE_PROFILE`/`FHRR_BUNDLE_PROFILE`, earned by measured trials — the
+//! M-854 FLAG-0 resolution, moved from `Declared` to `Empirical`-within-envelope), `Proven` (MAP-I
+//! bundle via the checked capacity bound). Outside an op's measured envelope it is refused
+//! `OutsideEmpiricalProfile`, never claimed past what was measured.
 //!
 //! **Toolchain skip.** The direct-LLVM path needs `llc`/`clang`; where absent it returns
 //! `ToolchainMissing` and the path **skips** (the house idiom) — never a false failure.
@@ -47,10 +49,13 @@
 
 use mycelium_cert::{check, CheckVerdict, Evidence, RefinementRelation};
 use mycelium_core::{
-    operation_hash, Bound, BoundBasis, BoundKind, GuaranteeStrength, Meta, Payload, PhysicalLayout,
-    Provenance, Repr, SparsityClass, Value,
+    operation_hash, Bound, GuaranteeStrength, Meta, Payload, PhysicalLayout, Provenance, Repr,
+    SparsityClass, Value,
 };
-use mycelium_mlir::{vsa_compile_and_run, VsaAotError, VsaCgOp, VsaModelId, VsaProgram, VsaResult};
+use mycelium_mlir::{
+    vsa_compile_and_run, VsaAotError, VsaCgOp, VsaModelId, VsaProgram, VsaResult,
+    FHRR_BUNDLE_PROFILE, HRR_BUNDLE_PROFILE,
+};
 use mycelium_numerics::Certificate;
 use mycelium_vsa::bsc::BSC_BUNDLE_PROFILE;
 use mycelium_vsa::capacity::proven_capacity_bound;
@@ -121,20 +126,17 @@ fn reference_value(
         (VsaModelId::Bsc, VsaCgOp::Bundle, GuaranteeStrength::Empirical) => {
             Some(BSC_BUNDLE_PROFILE.bound())
         }
+        (VsaModelId::Hrr, VsaCgOp::Bundle, GuaranteeStrength::Empirical) => {
+            Some(HRR_BUNDLE_PROFILE.bound())
+        }
+        (VsaModelId::Fhrr, VsaCgOp::Bundle, GuaranteeStrength::Empirical) => {
+            Some(FHRR_BUNDLE_PROFILE.bound())
+        }
         (VsaModelId::Hrr, VsaCgOp::Unbind, GuaranteeStrength::Empirical) => {
             Some(HRR_UNBIND_PROFILE.bound())
         }
         (VsaModelId::Fhrr, VsaCgOp::Unbind, GuaranteeStrength::Empirical) => {
             Some(FHRR_UNBIND_PROFILE.bound())
-        }
-        (VsaModelId::Hrr | VsaModelId::Fhrr, VsaCgOp::Bundle, GuaranteeStrength::Declared) => {
-            Some(Bound {
-                kind: BoundKind::Capacity {
-                    items: item_count.max(1),
-                    dim: u64::from(dim),
-                },
-                basis: BoundBasis::UserDeclared,
-            })
         }
         _ => None,
     };
@@ -330,7 +332,8 @@ fn value_corpus() -> Vec<(VsaModelId, VsaCgOp, VsaProgram)> {
         ),
     ));
     // bundle: MAP-I Proven (dim 2048, δ 1e-2 — distinct items so the value-level distinctness holds);
-    // BSC Empirical (dim 1024, 3 items); HRR/FHRR Declared (small dim).
+    // BSC Empirical (dim 1024, 3 items); HRR/FHRR Empirical (dim 256, 3 items — in the measured
+    // *_BUNDLE_PROFILE envelope: m ≤ 5, d ≥ 256).
     v.push((
         VsaModelId::MapI,
         VsaCgOp::Bundle,
@@ -359,7 +362,7 @@ fn value_corpus() -> Vec<(VsaModelId, VsaCgOp, VsaProgram)> {
         prog(
             VsaCgOp::Bundle,
             VsaModelId::Hrr,
-            (1..=3).map(|s| real(8, s)).collect(),
+            (1..=3).map(|s| real(256, s)).collect(),
             None,
             None,
         ),
@@ -370,7 +373,7 @@ fn value_corpus() -> Vec<(VsaModelId, VsaCgOp, VsaProgram)> {
         prog(
             VsaCgOp::Bundle,
             VsaModelId::Fhrr,
-            (1..=3).map(|s| phase(8, s)).collect(),
+            (1..=3).map(|s| phase(256, s)).collect(),
             None,
             None,
         ),
@@ -542,14 +545,16 @@ fn fhrr_negative_zero_phase_wraps_bit_exact() {
 /// FHRR degenerate bundle component: when a component's phasor sum vanishes, its phase is undefined —
 /// the **executed native artifact** must print the `DEGENERATE` sentinel and the read-back surfaces an
 /// explicit [`VsaAotError::DegenerateBundleComponent`], **exactly where the reference refuses**
-/// (`VsaError::DegenerateBundleComponent`) — never an arbitrary phase (G2/SC-3). Opposite phasors
-/// (`θ` and `θ+π`) cancel at every component. This exercises the never-silent trap through a real
+/// (`VsaError::DegenerateBundleComponent`) — never an arbitrary phase (G2/SC-3). Built at dim 256 (the
+/// `FHRR_BUNDLE_PROFILE` envelope, so the profile gate passes and the runtime degenerate-trap is the
+/// surfaced failure) with two pairwise-opposite phasor items (`θ` and `wrap(θ + π)`) — every component
+/// cancels, so component 0 is degenerate. This exercises the never-silent trap through a real
 /// `llc`/`clang` artifact, not just IR inspection.
 #[test]
 fn fhrr_degenerate_bundle_is_refused_by_the_executed_artifact() {
     use std::f64::consts::{PI, TAU};
     // The opposite phasor of θ is wrap(θ + π) in (−π, π] — `rem_euclid` then shift, matching the
-    // reference's `wrap_phase`. Both components cancel against `a`'s, so the phasor sum vanishes.
+    // reference's `wrap_phase`.
     let opp = |t: f64| {
         let u = (t + PI).rem_euclid(TAU);
         if u > PI {
@@ -558,11 +563,11 @@ fn fhrr_degenerate_bundle_is_refused_by_the_executed_artifact() {
             u
         }
     };
-    let a = vec![0.5, -1.0];
-    let b = vec![opp(0.5), opp(-1.0)];
-    // Reference: the bundle of opposite phasors is a degenerate-component refusal.
+    let a = phase(256, 7); // in-range phasor vector (alphabet-valid)
+    let b: Vec<f64> = a.iter().map(|&t| opp(t)).collect(); // pairwise opposite — every component cancels
+                                                           // Reference: the bundle of opposite phasors is a degenerate-component refusal at index 0.
     assert_eq!(
-        Fhrr::new(2).bundle(&[&a, &b]),
+        Fhrr::new(256).bundle(&[&a, &b]),
         Err(mycelium_vsa::VsaError::DegenerateBundleComponent { index: 0 })
     );
     let p = prog(VsaCgOp::Bundle, VsaModelId::Fhrr, vec![a, b], None, None);
@@ -877,5 +882,47 @@ fn heavy_large_dim_differential_gpu_deferred() {
         }
         Err(VsaAotError::ToolchainMissing(_)) => {}
         other => panic!("heavy MAP-I bind errored: {other:?}"),
+    }
+}
+
+/// **GPU-deferred (siderail, 2026-06-30) — the HRR/FHRR bundle *profile-extension* trial.** The CPU
+/// `HRR_BUNDLE_PROFILE`/`FHRR_BUNDLE_PROFILE` envelope (m ≤ 5, d ≥ 256, codebook 16) is the **earned**
+/// Empirical basis here; **widening** it (larger dim, more components / larger codebook — the heavy
+/// HDC-realistic regime) requires the many-trial Monte-Carlo at scale that needs a GPU this environment
+/// lacks. This test sketches that heavy profiling (a large-dim, many-component bundle decode) and is
+/// `#[ignore]` — NOT run here, NOT claimed passed. Until the maintainer's GPU pass widens the profile,
+/// **native HRR/FHRR bundle beyond the CPU-measured envelope honestly refuses `OutsideEmpiricalProfile`**
+/// (asserted CPU-side in `hrr_fhrr_bundle_outside_profile_is_refused`) — the bound is never claimed past
+/// what was measured (VR-5). Run locally with `cargo test -p mycelium-mlir -- --ignored`.
+#[test]
+#[ignore = "heavy VSA — requires GPU; maintainer local follow-up (2026-06-30 PM)"]
+fn heavy_hrr_fhrr_bundle_profile_extension_gpu_deferred() {
+    // A large-dim bundle decode at m = 11, dim = 4096 — outside the CPU envelope (m > 5). On a GPU the
+    // many-trial validation would widen HRR_BUNDLE_PROFILE/FHRR_BUNDLE_PROFILE to cover it; here we only
+    // (a) confirm the lowering still compiles+runs bit-exactly at scale (dim-independence), and
+    // (b) document that the *tag* for this regime stays refused until the GPU profile widens.
+    let items: Vec<Vec<f64>> = (1..=11u64).map(|s| real(4096, s)).collect();
+    // CPU truth #1: beyond the measured envelope, the native path refuses (never an unearned Empirical).
+    let cpu = prog(VsaCgOp::Bundle, VsaModelId::Hrr, items.clone(), None, None);
+    assert!(
+        matches!(
+            mycelium_mlir::emit_vsa_llvm_ir(&cpu),
+            Err(VsaAotError::OutsideEmpiricalProfile(_))
+        ),
+        "m=11 is outside the CPU-measured HRR bundle envelope — must refuse until a GPU pass widens it"
+    );
+    // CPU truth #2 (the bit-exact lowering is dim-independent): the *payload* of an in-envelope large
+    // bundle still matches the reference. A GPU pass would run this decode-trial at scale; here we just
+    // exercise the compiled artifact at a larger-but-in-envelope point (m = 5, dim = 4096).
+    let big: Vec<Vec<f64>> = (1..=5u64).map(|s| real(4096, s)).collect();
+    let p = prog(VsaCgOp::Bundle, VsaModelId::Hrr, big, None, None);
+    let payload = reference_payload(VsaModelId::Hrr, VsaCgOp::Bundle, &p);
+    let reference = reference_value(VsaModelId::Hrr, VsaCgOp::Bundle, 4096, payload, 5, None);
+    match vsa_compile_and_run(&p) {
+        Ok(VsaResult::Value(native)) => {
+            assert_eq!(observable(&reference), observable(&native));
+        }
+        Err(VsaAotError::ToolchainMissing(_)) => {}
+        other => panic!("heavy in-envelope HRR bundle errored: {other:?}"),
     }
 }
