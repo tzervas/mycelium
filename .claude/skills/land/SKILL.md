@@ -20,6 +20,11 @@ The working loop for safely landing work on `main`. This operationalises
 on any conflict. This skill is **advisory discipline, not a gate-bypass** —
 a maintainer override still wins; if asked to wait, wait.
 
+**Scoped PRs (DN-65).** Work lands as **logical, closely-scoped PRs** (~1–2k-LOC soft target),
+each `/pr-review`'d on its own. When PRs share files, land them **sequentially** and **pull the
+freshly-merged base down before the next** so each diff is against current head and shared-file
+edits append cleanly.
+
 ## When to use
 
 - Landing a single PR → `main`.

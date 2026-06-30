@@ -8,6 +8,118 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-29: RFC-0038 ratified — `Proposed → Accepted`)
+
+- **RFC-0038 — Inject-Mode Security Axis: `Proposed → Accepted`** (maintainer approved, append-only).
+  The full inject-mode security + trust model is ratified — `loose`/`inoculated` modes, `InjectCert` =
+  spore signature, enforcement granularity (§8.4), scope resolution + deviation manifest (§8.5),
+  defaults by project kind (§8.6), interpreted opt-in signing + `BadSignature` (§8.7), and the colony
+  trust topology (§8.8). **Acceptance ratifies the *design*, not an implementation:** the mechanism is
+  unbuilt, so every mechanism claim stays `Declared` (VR-5) until **Enacted** Rust-first (§13
+  Implementation DoD). Open R&D (§K.2/§L/§M; §8.8 controller protocol/blacklist — M-849) carries
+  forward, not closed by acceptance.
+
+### Changed (2026-06-29: RFC-0038 §8.8 — colony trust topology + #772 review fixes, M-849)
+
+- **RFC-0038 colony trust topology (`Proposed`; maintainer direction).** Adds §8.8: a mesh
+  distributes trust in one of two **configurable topologies** — **controller mode** (one or more
+  controller colonies / a redundant, regionally-partitioned **controller stack** distributing the
+  `TrustRoot`, for enterprise-scale central management of tens of thousands of colonies) vs
+  **masterless mode** (each colony self-manages trust against its own internal store, §7.2), plus
+  **node invalidation/blacklist** (permanent or temporary, config-driven, node-level trust
+  revocation — never-silent). Framed by the **no-black-box-by-construction** inspectability thesis
+  (`reveal`/`EXPLAIN`/provenance) that makes self-developing AI meshes auditable. Controller
+  protocol / blacklist semantics / topology transition are open infrastructure R&D (extend RFC-0008
+  mesh). Folds in the **#772 review fixes**: §13 Design+Implementation DoD now enumerate §8.4–§8.8 +
+  `BadSignature`/granularity/deviation/blacklist conformance; §M hierarchy notation reconciled to the
+  normative §8.5; §5.1 `BadSignature` dual-path clarified; `(configurable)` dropped from the library
+  default row; §8.4 two-knobs wording. All `Declared`; enacts nothing. RFC-0038 now carries the full
+  enforcement + trust model and is ready for maintainer approval.
+
+### Added (2026-06-29: DN-65 — scoped-PR decomposition & per-PR toolchain scoping workflow policy, M-848)
+
+- **DN-65 — scoped-PR decomposition & workspace prep (`Accepted` workflow policy; maintainer-directed).**
+  Large work is **done at any scale but lands as logical, closely-scoped PRs** (soft ~1–2k-LOC-delta
+  rule of thumb — cohesion over a line count; a 50k-line wave lands as a fan/sequence of small,
+  individually `/pr-review`'d PRs). Before working a unit: **sync off the latest tip** and
+  **pre-install the toolchain the change-kind needs** (the DN-65 §2.3 change-kind→tool map: Rust →
+  `just setup`; Python → `uv sync`; docs → markdownlint/`doc_refs`; proofs → `z3`/LH/Lean) — workspace
+  prep, so nothing surprises mid-flight. The PR-landing twin of DN-20 (change-scoping) and the swarm
+  file-ownership partition. Distilled into CLAUDE.md (Commits & PRs), CONTRIBUTING.md, and the skills
+  `/dev-workflow`/`/land`/`/kickoff`; the scoped-setup automation (`just setup-scoped`) is tracked as
+  **M-848**.
+
+### Changed (2026-06-29: RFC-0038 §8.4–§8.7 — enforcement granularity, scope resolution, and the deviation manifest, M-847)
+
+- **RFC-0038 enforcement-granularity model (`Proposed`; maintainer direction).** Adds an
+  **enforcement-granularity** axis orthogonal to the `loose`/`inoculated` mode: `whole`
+  (application/spore signature checked once at compile/load — the **application default**, NOT
+  per-call), `module` (per-phylum/nodule), and `call` (per-dispatch — the opt-in trusted-computing
+  extreme). A **scope-resolution hierarchy** (`global ⊃ project ⊃ colony ⊃ module ⊃ nodule ⊃
+  function ⊃ line`) sets the posture once and **auto-decorates everything beneath**, with **granular
+  override** (open up or lock down a specific site) and a never-silent **default-plus-deviations
+  manifest** (G2 — the declared default plus an enumerated list of the sites that differ). **Defaults
+  scale to project kind/maturity** (scripts/interpreted/early → `loose`; library → `inoculated`/
+  `module`; application → `inoculated`/`whole`; trusted-computing → `inoculated`/`call` opt-in). The
+  interpreted path defaults `loose` but supports **opt-in per-inject signing** (dev private key signs,
+  `TrustRoot` public key verifies; `InjectError::BadSignature` added for a wrong/untrusted signer
+  alongside `UnsignedCode`). Gives §M/OQ-M its shape (residual R&D narrowed to the config surface);
+  advances M-836/M-838/M-840. All `Declared`; enacts nothing.
+
+### Added (2026-06-29: VSA proof-discovery — all three effective-`m` models + both Lean 4 and Liquid Haskell, M-832)
+
+- **All three effective-`m` models, comparatively (M-832 / OQ-F).** The `--proof` mode now discovers
+  and emits obligations for **all three** candidate models (`A_exponential` / `B_linear` / `C_sqrt`)
+  across all three compositions in one run, with a **comparative ranking per composition** in
+  `PROOF-SUMMARY.md` (tightest valid upper bound; refuted models listed explicitly, never silently
+  dropped — G2). The maintainer reads the comparison rather than pre-choosing a model.
+- **Both proof assistants — Lean 4 and Liquid Haskell.** Alongside the SMT-LIB (refutation pattern) and
+  Liquid-Haskell skeletons, a new **`emit_lean()`** emits Lean 4 probes (`axiom candidateCapacityThm` +
+  per-point `native_decide` arithmetic instantiation), with a `proofs/vsa-multihop-bound/lean/` scaffold
+  (`lean-toolchain` pinned to `leanprover/lean4:v4.15.0`, `lakefile.toml`, a representative module). The
+  Lean path also feeds the OQ-A/M-827 mechanization (research/26 recommends Lean 4). VR-5: both
+  assistants **axiomatize** the candidate theorem and discharge only the arithmetic — neither stamps
+  `Proven`. A committed **`EXAMPLE-*`** obligation set (from a real CPU `--demo` run; 6 in-regime probes,
+  3 refuted cases honestly reported) makes the output concrete without running anything.
+
+### Added (2026-06-29: DN-64 §7 maintainer dispositions — RFC-0038 inject-mode security axis, research/26+27 R&D records, VSA-bounds GPU experiment, M-827…M-846)
+
+- **DN-64 §7 — maintainer dispositions on all 20 open questions (OQ-A…OQ-T).** Each OQ recorded at
+  the strength the maintainer set it to, none upgraded past its basis (VR-5); OQ-H's R&D disposition
+  was supplied after the initial 19. Ratifies the production hot-inject mode rename `sealed` to
+  **`inoculated`** (`loose` retained for local-dev); routes the hot-inject cluster (OQ-K…OQ-Q) to
+  RFC-0038; mints tracking issues M-827…M-846. Append-only; DN-64 stays `Draft`.
+- **RFC-0038 — Inject-Mode Security Axis (`Proposed`; enacts no code).** A hot-inject security axis
+  **orthogonal** to the fast/certified cert axis (RFC-0034 §8): `loose` (unsigned injection permitted,
+  every injected call G2-tagged) vs `inoculated` (a valid `InjectCert` required, never-silent
+  `InjectError::UnsignedCode` refusal, gating the interpreter-fallback path too). The `InjectCert`
+  **is** the spore's signature component (ADR-013 §2 comp. 4) — `myc-prepare` signs a spore that is
+  both deployable unit and inject gate, fusing the gate with the VR-4 no-opaque-lowering attestation
+  (DN-18/M-630; ADR-006 for EXPLAIN-ability). A colony verifies the cert valid/trusted/unexpired/unsuperseded against its **own**
+  `TrustRoot`; signing authority is project-scoped and graded by scope-of-work. Key-management detail,
+  replay/expiry, and inject-mode scoping (§K.2/§L/§M) are named open R&D. References RFC-0034/ADR-013/
+  ADR-017 without changing them (append-only).
+- **Research Records 26 + 27 — DN-64 R&D planning.** `research/26` (type system — graded-soundness
+  proof path, E2-1 bound composition, three-layer memory ergonomics, substrate/hypha reclamation,
+  per-instantiation grades) and `research/27` (ergonomics — `forage`/`backbone` activation plus
+  mechanized EXPLAIN-able policy capture, guard clauses, short-keyword scope, annotation-burden
+  wrappers, composite aggregation, proposal-time naming gate, record-literal shadowing). All proposals
+  `Declared`; external mechanisms `Empirical` at source.
+- **VSA compositional-`Proven`-bounds GPU experiment (M-832, OQ-F).** A runnable harness at
+  `experiments/mycelium_experiments/vsa_bounds/` — numpy reference path (always runs) plus an optional
+  torch/CUDA accelerator, never-silent backend selection — that reimplements `capacity.rs::required_dim`
+  at exact parity and sweeps `single` (bundle-capacity, the `Proven` anchor) and `multihop`
+  (bind-chain / bundle-of-binds / nested-unbind) failure rates across `{model, F, k, d, h, δ}` to map
+  where a closed-form bound still tracks the measured rate. VR-5: it measures rates only — the
+  "this subset admits `Proven` bounds" verdict stays the maintainer's, from `SUMMARY.md` plus plots.
+  **Extended toward the mechanical proof (the OQ-A bridge):** a `--proof` mode discovers candidate
+  closed-form multi-hop bounds (`candidate_bound.py` — effective-`m` models, fit plus never-silent
+  regime validation) and emits checkable proof obligations (`proof_obligation.py` — SMT-LIB and
+  Liquid-Haskell skeletons mirroring `proofs/lh-bundle/` and `capacity.rs`'s checked-instantiation),
+  scaffolded under `proofs/vsa-multihop-bound/`. It proposes a theorem and emits the obligation a
+  prover must discharge — it never stamps `Proven`. 29 CI tests green (no torch required); `uv sync
+  --group gpu` enables the GPU path.
+
 ### Added (2026-06-29: serial-lane closeout — M-822 partial application, M-826 tuple type, M-823 or-patterns + R20-Q5, M-824 DN-54 design-pass, M-825 backbone)
 
 - **Multi-argument partial application via currying (M-822; RFC-0024 §4A.8).** A multi-param `lambda`
