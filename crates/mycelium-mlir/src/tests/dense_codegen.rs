@@ -7,8 +7,8 @@
 //! `tests/dense_differential.rs`.
 
 use crate::dense_codegen::{
-    emit_dense_llvm_ir, DenseAotError, DenseCgOp, DenseExplain, DenseProgram,
-    DENSE_CODEGEN_GUARANTEE,
+    emit_dense_llvm_ir, on_grid, round_f32_to_bf16, DenseAotError, DenseCgOp, DenseExplain,
+    DenseProgram, DENSE_CODEGEN_GUARANTEE,
 };
 use mycelium_core::{GuaranteeStrength, PhysicalLayout, ScalarKind};
 
@@ -512,4 +512,111 @@ fn dense_explain_carries_the_honest_guarantee_split() {
         e.codegen_guarantee,
         "the reference value tag and the codegen-correctness tag must stay distinct (VR-5)"
     );
+}
+
+// ─── mutant-witness for the host-side grid helpers (kill the round_f32_to_bf16 / on_grid mutants) ─
+
+/// Direct witness for `round_f32_to_bf16` (the host-side bf16 grid-rounding helper). Pins the exact
+/// round of a value that is **f32-exact but bf16-off** to its correct nearest-even bf16 — this is the
+/// case where the `>> ↔ <<` and `+ ↔ -`/`+ ↔ *` bit-twiddle mutations diverge (they survive a corpus
+/// of only on-grid values, which round to themselves under several mutations). Mirrors
+/// `mycelium_dense`'s rounding bit-for-bit (the differential's BF16 leg checks the *emitted* IR; this
+/// pins the host helper the grid check relies on).
+#[test]
+fn round_f32_to_bf16_is_bit_exact() {
+    // The bf16-off values are built by *arithmetic* (1.5 ± a sub-bf16-ULP fraction) rather than a
+    // decimal literal — a literal like 1.501953125 trips clippy::excessive_precision, and the bit
+    // intent is clearer this way. `2⁻⁹` and `2⁻⁷` are both exact f32, so these sums are exact f32.
+    let half_ulp_down = 1.5_f32 + 2.0_f32.powi(-9); // 1.5 + 2⁻⁹ = exactly half a bf16 ULP above 1.5
+    let above_half = 1.5_f32 + 2.0_f32.powi(-7); // 1.5 + 2⁻⁷ = above the half-ULP (rounds up)
+
+    // 1.5 is on the bf16 grid → rounds to itself.
+    assert_eq!(round_f32_to_bf16(1.5), 1.5);
+    // 1.5 + 2⁻⁹ is f32-exact but bf16-off. The dropped low bits are exactly half an ULP, so
+    // ties-to-even rounds DOWN to 1.5 (1.5's last kept bit is even). A wrong shift / rounding-bias
+    // mutation lands elsewhere.
+    assert_eq!(
+        round_f32_to_bf16(half_ulp_down),
+        1.5,
+        "ties-to-even must round 1.5+2⁻⁹ down to 1.5 (the correct bf16 round)"
+    );
+    // Above the half-ULP: rounds UP to the next bf16. Pin that it is strictly above 1.5 and a valid
+    // bf16 (low 16 bits zero) — a sign/shift mutation lands on a different grid point.
+    let up = round_f32_to_bf16(above_half);
+    assert!(
+        up > 1.5 && up.to_bits() & 0x0000_FFFF == 0,
+        "a >half-ULP value must round UP to a valid bf16 (low 16 bits zero), got {up}"
+    );
+    // ── The ties-to-even *odd-kept-bit* case — kills the `(bits >> 16) ↔ (bits << 16)` lsb-extraction
+    // mutation. That mutation forces the rounding lsb to 0 (round-half-DOWN instead of
+    // round-half-to-EVEN), which only differs at an exact half-ULP tie whose kept bit is ODD: there
+    // the correct round goes UP (to the even neighbour) but the mutant goes DOWN. The even-kept-bit
+    // tie above does NOT distinguish them (both round down). ──
+    // bf16 grid in [1,2) has ULP 2⁻⁷, half-ULP 2⁻⁸. Start at the ODD grid point 1 + 2⁻⁷ (mantissa LSB
+    // set) and add exactly half a ULP: 1 + 2⁻⁷ + 2⁻⁸. Ties-to-even rounds UP to the EVEN neighbour
+    // 1 + 2⁻⁶; the lsb-forced-0 mutant rounds DOWN to 1 + 2⁻⁷.
+    let odd_tie = 1.0_f32 + 2.0_f32.powi(-7) + 2.0_f32.powi(-8);
+    let even_neighbour = 1.0_f32 + 2.0_f32.powi(-6);
+    assert_eq!(
+        round_f32_to_bf16(odd_tie),
+        even_neighbour,
+        "ties-to-even must round an odd-kept-bit tie UP to the even neighbour (kills the lsb >>/<< \
+         mutation that would round half-down instead)"
+    );
+
+    // The rounded value is always on the bf16 grid (low 16 bits zero) — a `<<`/`>>` swap would leave
+    // non-zero low bits.
+    for v in [0.5_f32, 2.0, -3.0, half_ulp_down, above_half, odd_tie] {
+        let r = round_f32_to_bf16(v);
+        assert_eq!(
+            r.to_bits() & 0x0000_FFFF,
+            0,
+            "round_f32_to_bf16({v}) = {r} must be on the bf16 grid (low 16 bits zero)"
+        );
+    }
+}
+
+/// `on_grid` accepts exactly the values on each dtype's grid and rejects off-grid ones — the host
+/// check the lowering's input validation relies on. Kills the `on_grid` `== ↔ !=` / branch mutants
+/// and (transitively) the `round_f32_to_bf16` mutants via the bf16-off case.
+#[test]
+fn on_grid_accepts_and_rejects_exactly() {
+    // 1.5 + 2⁻⁹ is f32-exact but bf16-OFF (the discriminating case) — built by arithmetic to keep the
+    // bit intent clear (and dodge clippy::excessive_precision on the decimal form).
+    let bf16_off = 1.5_f32 + 2.0_f32.powi(-9);
+    // F32: any exact f32 is on-grid; 0.1 is not exactly an f32.
+    assert!(on_grid(ScalarKind::F32, 1.5));
+    assert!(on_grid(ScalarKind::F32, f64::from(bf16_off))); // f32-exact
+    assert!(!on_grid(ScalarKind::F32, 0.1));
+    // BF16: 1.5 is on-grid; the bf16-off value is f32-exact but off the bf16 grid.
+    assert!(on_grid(ScalarKind::Bf16, 1.5));
+    assert!(
+        !on_grid(ScalarKind::Bf16, f64::from(bf16_off)),
+        "1.5+2⁻⁹ is f32-exact but off the bf16 grid — must be rejected"
+    );
+    // F16/F64 are never on-grid (refused dtypes).
+    assert!(!on_grid(ScalarKind::F16, 1.5));
+    assert!(!on_grid(ScalarKind::F64, 1.5));
+}
+
+/// The `DenseAotError` `Display` strings discriminate the variants (kills the
+/// `fmt -> Ok(Default::default())` mutant, which would blank every message — a never-silent refusal
+/// must say *what* was refused, G2/ADR-006).
+#[test]
+fn error_display_messages_discriminate_and_are_nonempty() {
+    let cases: [(DenseAotError, &str); 5] = [
+        (DenseAotError::UnsupportedDtype(ScalarKind::F64), "F32/BF16"),
+        (DenseAotError::Subnormal, "subnormal"),
+        (DenseAotError::Overflow, "overflow"),
+        (DenseAotError::QuantRefused("q".to_owned()), "quantized"),
+        (DenseAotError::NonFinite(3), "NaN/Inf"),
+    ];
+    for (err, needle) in cases {
+        let msg = err.to_string();
+        assert!(!msg.is_empty(), "{err:?} Display must be non-empty (G2)");
+        assert!(
+            msg.contains(needle),
+            "{err:?} Display must name the refusal ({needle:?}); got: {msg}"
+        );
+    }
 }

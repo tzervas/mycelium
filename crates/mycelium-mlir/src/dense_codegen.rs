@@ -305,15 +305,16 @@ const BF16_OP_CITATION: &str = "two-rounding composition (1+δ₁)(1+δ₂)−1 
 /// Round an `f32` to the nearest bfloat16 (ties to even), widened back to `f32` bit-exactly — the
 /// same grid the reference targets (`mycelium_dense`'s private `round_f32_to_bf16`, re-implemented so
 /// the native path has its own host-side basis for grid checks). Caller has excluded NaN/Inf.
-fn round_f32_to_bf16(x: f32) -> f32 {
+/// `pub(crate)` for white-box mutant-witness testing (the bit-twiddle is a correctness helper).
+pub(crate) fn round_f32_to_bf16(x: f32) -> f32 {
     let bits = x.to_bits();
     let lsb = (bits >> 16) & 1;
     f32::from_bits(((bits + 0x7FFF + lsb) >> 16) << 16)
 }
 
 /// Whether `x` is exactly representable on the `dtype` grid (finite values only) — mirrors
-/// `mycelium_dense`'s private `on_grid`.
-fn on_grid(dtype: ScalarKind, x: f64) -> bool {
+/// `mycelium_dense`'s private `on_grid`. `pub(crate)` for white-box mutant-witness testing.
+pub(crate) fn on_grid(dtype: ScalarKind, x: f64) -> bool {
     #[allow(clippy::cast_possible_truncation)] // representability is exactly what we check
     let xf = x as f32;
     if f64::from(xf) != x {
