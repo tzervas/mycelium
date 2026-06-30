@@ -4712,6 +4712,7 @@ issues:
       - src:lib/std/cmp.myc
       - src:lib/std/collections.myc
       - src:crates/mycelium-l1/tests/std_math.rs
+      - src:crates/mycelium-l1/tests/enablement.rs
     body: |
       DONE (2026-06-27, rsm Session-2; M-753 width-generics now landed). The WIDTH-GENERIC math/cmp
       surface ships against the SURFACED prims only (VR-5/G2 -- nothing claimed ahead of a prim):
@@ -4781,6 +4782,36 @@ issues:
       - corpus:DN-25
       - src:crates/mycelium-l1/tests/std_generic_conformance.rs
     body: |
+      PARTIAL (2026-06-30, lib10 Session): per-op conformance gap-closure landed (branch
+      claude/lib10-m719-conformance). Audited every exported op of all 8 self-hosted nodules
+      (result/option/cmp/iter/collections/text/fmt/math) against its differential harness for the
+      RFC-0031 §5 D5 bar (>=1 three-way differential per EXPORTED op). result/option/cmp/iter/fmt were
+      already 100% covered. Closed the remaining gaps:
+      - std.collections: the 6 constructor/builder ops (empty/push_front/map_empty/map_insert/
+        set_empty/set_add) are NOT runnable through a three-way differential under the current surface
+        (RFC-0007 §11.3: a nullary generic constructor/fn cannot have its type argument determined from
+        an enclosing return-type ascription, and a bare base constructor in builder-arg position fails
+        re-inference at monomorphization). Rather than fake a Declared "pass" (VR-5), pinned the
+        never-silent REFUSAL for all 6 as the honest asserted fact (std_collections.rs +2 tests:
+        nullary_constructors_refuse_undetermined_type_never_silent,
+        builders_over_bare_base_constructor_refuse_never_silent). FLAG: runnable per-op coverage for
+        these 6 lands when RFC-0007 §11.3 ascription syntax / nullary-call type-arg inference is
+        available -- a never-silent open item, not a silent omission.
+      - std.text: added isolated three-way per-op tests for is_cont_byte (4 region cases) and the
+        .myc-SURFACE wrappers concat + slice (3 cases; previously only the kernel bytes_concat/
+        bytes_slice prims were tested, not the wrappers). std_text.rs +7.
+      - std.math: the consolidated gate's "every width-generic op at >=2 widths" claim was an
+        overclaim -- bor/bxor (binary) and tsub/tmul (ternary) had only ONE width. Added the second
+        width for each: std_math.rs +4 (bor16/bxor16/tsub6/tmul6) and EXPANDED MATH_CASES in
+        std_generic_conformance.rs to cover the full badd/bsub/band/bor/bxor/bnot + tadd/tsub/tmul/tneg
+        surface at >=2 widths each, so the gate's header is now honest.
+      - API surface: lib/std/mycelium-proj.toml [surface].exports OMITTED std.iter (a self-hosted,
+        differential-tested nodule); added it so the frozen export surface is complete.
+      All change-scoped gates green: cargo fmt --check, cargo clippy -p mycelium-l1 --tests (no findings
+      in changed files; the 8 mycelium-mlir warnings pre-exist, outside scope), and the std_* /
+      std_generic_conformance targets (collections 26, text 42, math 23, generic_conformance 4, iter 16,
+      cmp 38, bytes_slice 14 -- all pass).
+
       PARTIAL (2026-06-27, rsm Session-2): the "conformance over the new generic surface" clause is
       DONE -- std_generic_conformance.rs is the named gate: the width-generic stdlib surface (std.cmp
       cmp/le/max, std.math badd/tadd, std.collections map_get/set_contains) is checked three-way
@@ -4788,7 +4819,8 @@ issues:
       refusal table. Per-module three-way coverage also lives in std_cmp/std_math/std_collections/
       std_text/width_generic. STILL OPEN (not claimed -- VR-5): the BROADER M-719 closure -- retire or
       deprecate the reference mycelium-std-* Rust crates, and freeze a documented stable public API per
-      RFC-0031 §5 D5 (the API-freeze + crate-retirement decision). Status stays in-progress.
+      RFC-0031 §5 D5 (the API-freeze + crate-retirement decision; this is a maintainer/orchestrator
+      decision, not closed by this leaf). Status stays in-progress.
 
       Integration and conformance gate for E13-1: verify that every ported .myc stdlib module
       (M-715...M-718) meets the RFC-0031 stability bar, retire or deprecate the corresponding
@@ -5788,9 +5820,10 @@ issues:
     title: "M-738 — chore(release): full-language 1.0.0 release act"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:release, priority:P1, status:blocked]
-    landed_basis: "status:blocked (2026-06-23) — the release act is NOT performed: its external gate deps are unmet. E13-1 (self-hosting stdlib) is needs-design (only lib/std/result.myc self-hosts — 1 of 25 modules); E18-1 (full-language readiness) is needs-design; ADR-022 is Accepted (NOT Enacted) with sub-gate rows A2/A3/A4 still open. Per the rel10 kickoff + house rule #3 / G2, the tag is NOT cut and ADR-021/ADR-022 stay Accepted (no Enacted). M-737 (ADR-023 Accepted) IS done; this task unblocks only when E13-1 + E18-1 + every ADR-022 gate row are confirmed closed."
+    landed_basis: "status:blocked (2026-06-23) — the release act is NOT performed: its external gate deps are unmet. E13-1 (self-hosting stdlib) is needs-design (only lib/std/result.myc self-hosts — 1 of 25 modules); E18-1 (full-language readiness) is needs-design; ADR-022 is Accepted (NOT Enacted) with sub-gate rows A2/A3/A4 still open. Per the rel10 kickoff + house rule #3 / G2, the tag is NOT cut and ADR-021/ADR-022 stay Accepted (no Enacted). M-737 (ADR-023 Accepted) IS done; this task unblocks only when E13-1 + E18-1 + E15-1 (AOT — re-gated by ADR-034, 2026-06-30) + every ADR-022 gate row are confirmed closed."
+    depends_on: [E15-1]
     epic: E17-1
-    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:DN-25]
+    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:ADR-034, corpus:DN-25]
     body: |
       The terminal step: verify that every ADR-022 (full-language 1.0.0 release-readiness
       gate) row is closed, then record the conscientious release decision by moving
@@ -6105,29 +6138,55 @@ issues:
       - corpus:RFC-0032
       - corpus:RFC-0031
       - src:lib/std/result.myc
+      - src:crates/mycelium-l1/tests/enablement.rs
+      - src:crates/mycelium-l1/tests/std_cmp.rs
+      - src:crates/mycelium-l1/tests/std_math.rs
+      - src:crates/mycelium-l1/tests/std_collections.rs
+      - src:crates/mycelium-l1/tests/std_bytes_slice.rs
+      - src:crates/mycelium-l1/tests/std_text.rs
     body: |
-      TIER-2 SMOKE PORTS LANDED (2026-06-26, wave-n1): the indexed Vec op and the byte index/decode
-      smoke ports now exist — crates/mycelium-l1/tests/std_collections.rs (Vec get/len three-way) and
-      std_text.rs (byte_len/decode_ascii over a Bytes literal, three-way) + std_fmt.rs. The E13-1
-      preconditions are demonstrated, not asserted: M-716 (#461) ⟸ std_collections.rs; M-717 (#462) ⟸
-      std_text.rs / std_fmt.rs — both flipped ready → in-progress with the pointer (M-717 is PARTIAL:
-      multi-byte decode + Bytes-native slice deferred on the width-cast prim gap). REMAINING: a full
-      Bytes-native string-slice smoke port awaits the width-cast/slice prim surface (flagged on M-717).
+      DoD MET — VERIFIED COMPLETE (2026-06-30, kickoff kpr): every M-752 DoD clause is satisfied by
+      landed work; the only remaining step is the tracking flip (status in-progress → done), which the
+      INTEGRATION TIER owns (flagged below, not self-flipped). This entry records the verification, not
+      new test authoring — the conformance ports were landed across waves n1/n2/Session-2 (M-799/DN-43
+      surfaced the byte slice/concat prims that this body previously listed as REMAINING). All
+      change-scoped tests re-run green on origin/dev: enablement.rs (32) + std_cmp.rs (14) +
+      std_math.rs (38) + std_collections.rs (24) + std_bytes_slice.rs (14) + std_text.rs (19) +
+      std_generic_conformance.rs (35). The four kickoff-named smoke ports — a width-typed eq, a binary
+      add, an indexed Seq/Vec op, a Bytes slice — each have a passing three-way differential (L1-eval ≡
+      L0-interp ≡ AOT) demonstrating the unblock, never asserting it (VR-5/G2):
+      - width-typed eq  → enablement.rs::eq_binary_width_typed / eq_ternary_width_typed; std_cmp.rs.
+      - binary add      → enablement.rs::add_bin_in_range (+ overflow-refusal on every path); std_math.rs.
+      - indexed Seq/Vec → enablement.rs::seq_get_surface_three_way (+ OOB refusal); std_collections.rs.
+      - Bytes slice     → std_bytes_slice.rs::slice_in_range_preserves_value (+ OOB/inverted refusal).
+      Never-silent (G2) is pinned on every path: add_bin/sub_bin overflow, seq.get OOB, and bytes.slice
+      out-of-range/inverted-range each refuse on L1-eval, L0-interp, AND AOT (no silent wrap/clamp).
 
-      IN PROGRESS (Tier-1 landed in #518; Tier-2 pending M-749/M-750). Integration gate for E19-1:
-      confirm every new prim/representation is differential-tested (three-way where it runs to closed L0)
-      and honestly tagged, and demonstrate each unblock with a small .myc smoke port following the
-      std_result/std_option/std_cmp harness pattern. DONE for Tier-1: crates/mycelium-l1/tests/
-      enablement.rs covers the width-typed eq/lt + binary add/sub three-way + never-silent refusals + a
-      Bool-bridge port. REMAINING (Tier-2): the indexed Vec op + string slice smoke ports land with
-      M-749 (Repr::Seq) / M-750 (Repr::Bytes). The smoke ports prove the E13-1 preconditions are
-      genuinely satisfied -- never asserted (VR-5/G2).
+      E13-1 PRECONDITION FLIPS (all in place, demonstrated not asserted): M-716 (⟸ M-749 Repr::Seq) is
+      status done, citing enablement.rs + std_collections.rs; M-717 (⟸ M-750 Repr::Bytes) is status
+      done, citing enablement.rs + std_text.rs/std_fmt.rs; M-718 (⟸ M-747/M-748 cmp/binary-math) is
+      status done, citing std_math.rs/std_cmp.rs (the .myc ports) + enablement.rs (the Tier-1 prim
+      three-way). The width-cast/slice gap this body previously flagged on M-717 was CLOSED by
+      M-799/DN-43 (bytes_slice/bytes_concat surfaced, never-silent on every path).
+
+      HISTORY (superseded by the verification above, retained for audit): TIER-2 SMOKE PORTS LANDED
+      (2026-06-26, wave-n1) — the indexed Vec op + byte index/decode ports landed (std_collections.rs,
+      std_text.rs, std_fmt.rs); at that point a full Bytes-native string-slice port was still REMAINING
+      (awaiting the width-cast/slice prim surface, since landed via M-799/DN-43). Tier-1 (#518): the
+      width-typed eq/lt + binary add/sub three-way + never-silent refusals + a Bool-bridge port in
+      enablement.rs.
 
       Definition of Done:
       - Every enabler has a passing three-way differential test; no enabler is undifferentiated.
       - A .myc smoke port per unblocked E13-1 tier; each E13-1 issue's precondition flipped with a pointer
         to the demonstrating test.
       - just check green; CHANGELOG append-only.
+
+      DoD status (2026-06-30, kickoff kpr): clause 1 MET (every enabler has a passing three-way test —
+      enablement.rs + the std_* ports, all green); clause 2 MET (a .myc smoke port per unblocked tier,
+      and M-716/M-717/M-718 each flipped to done with a demonstrating-test pointer); clause 3 — change-
+      scoped tests green (full `just check` + CHANGELOG append-only is the integration tier's close-out,
+      flagged). REMAINING: only the tracking flip status in-progress → done, which integration owns.
 
   - id: M-753
     title: "M-753 -- width-generic functions (const-generic over representation width) [E11-1/s10]"

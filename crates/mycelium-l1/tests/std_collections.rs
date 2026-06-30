@@ -460,3 +460,105 @@ fn map_get_mixed_key_widths_refuses() {
         "refusal must name the key-width mismatch (never-silent), got: {err}"
     );
 }
+
+// ── Constructors / builders: empty / push_front / map_empty / map_insert / set_empty / set_add ───────
+//
+// M-719 honesty boundary (VR-5/G2) — NOT a fabricated pass. The six constructor/builder ops
+// (`empty`/`push_front`/`map_empty`/`map_insert`/`set_empty`/`set_add`) are EXPORTED but cannot yet be
+// exercised through a runnable three-way differential under the current language surface, because of the
+// RFC-0007 §11.3 nullary-generic-constructor / type-argument-inference limitation:
+//
+//   - `empty()` / `map_empty()` / `set_empty()` are generic NULLARY functions. A call determines neither
+//     `A`/`K`/`V` from its (absent) arguments, and the checker does NOT propagate the *enclosing
+//     function's* return-type ascription into the call (a return-type ascription is not a call-result
+//     ascription, and there is no surface syntax to ascribe a nullary call's result). So `is_empty(empty())`,
+//     `let e: Vec[Binary{8}] = empty() in …`, and a typed wrapper `fn e8() => Vec[Binary{8}] = empty()`
+//     all REFUSE at check time with a never-silent message: "`empty` is generic over `A`, but this call
+//     does not determine it — ascribe an argument or the result (RFC-0007 §11.3, never a guessed default)".
+//   - `push_front(x, Nil)` / `map_insert(k, v, MNil)` / `set_add(x, SNil)` reach the checker but FAIL at
+//     monomorphization: a bare nullary constructor (`Nil`/`MNil`/`SNil`) in argument position cannot have
+//     its type argument re-inferred ("constructor `Nil` of generic `Vec<…>` needs its type argument(s)
+//     from context — ascribe the value (RFC-0007 §11.3, never a guess)").
+//
+// This is the SAME limitation the nodule itself documents for `snoc` (why it writes `push_front(x, xs)`
+// rather than `Cons(x, Nil)`) and for the O(n) `reverse` form. Rather than fake a `Declared` "pass" for an
+// op that does not execute (which would violate VR-5), the never-silent refusal is PINNED below as the
+// honest, asserted conformance fact for these ops, and the runnable-differential gap is FLAGGED for M-719
+// close-out (the runnable coverage lands when RFC-0007 §11.3 ascription syntax / nullary-call type-argument
+// inference is available — tracked as a never-silent open item, not a silent omission).
+
+/// The exported generic constructors `empty`/`map_empty`/`set_empty` are NOT silently defaulted — a call
+/// that fails to determine the element/key/value type is a never-silent check refusal (G2 / RFC-0007 §11.3),
+/// never a guessed `A`. This pins that behaviour for all three so the "no silent default" contract is a
+/// trial-checked fact, not just prose. (Data-driven over the three constructor calls — a body that asserts
+/// over a case table, per the test-layout rule.)
+#[test]
+fn nullary_constructors_refuse_undetermined_type_never_silent() {
+    // (label, driver) — each calls a nullary generic constructor whose type parameter is undetermined.
+    const CASES: &[(&str, &str)] = &[
+        ("empty", "fn main() => Bool = is_empty(empty());"),
+        (
+            "map_empty",
+            "fn main() => Option[Binary{8}] = map_get(map_empty(), 0b0000_0001);",
+        ),
+        (
+            "set_empty",
+            "fn main() => Bool = set_contains(set_empty(), 0b0000_0001);",
+        ),
+    ];
+    for (label, driver) in CASES {
+        let src = program(driver);
+        let parsed = parse(&src).unwrap_or_else(|e| panic!("{label}: parse should succeed: {e}"));
+        let err = check_nodule(&parsed)
+            .err()
+            .unwrap_or_else(|| {
+                panic!("{label}: expected a never-silent undetermined-type refusal, but check succeeded")
+            })
+            .to_string();
+        // The refusal must name the never-silent rule (RFC-0007 §11.3) — not a guessed default.
+        assert!(
+            err.contains("does not determine it") || err.contains("§11.3"),
+            "{label}: refusal must be the never-silent undetermined-type message, got: {err}"
+        );
+    }
+}
+
+/// The builder ops `push_front`/`map_insert`/`set_add` over a bare nullary base constructor are NOT
+/// silently defaulted either: the type argument of `Nil`/`MNil`/`SNil` in argument position cannot be
+/// re-inferred at monomorphization, and that is a never-silent refusal (G2 / RFC-0007 §11.3), never a
+/// guessed structure. Pinned here so the builders' "no silent default base" contract is trial-checked.
+#[test]
+fn builders_over_bare_base_constructor_refuse_never_silent() {
+    // (label, driver) — each builder wraps a bare nullary base constructor whose type argument is
+    // undetermined in argument position; check passes but monomorphize refuses (never-silent).
+    const CASES: &[(&str, &str)] = &[
+        (
+            "push_front",
+            "fn mk() => Vec[Binary{8}] = push_front(0b0000_0111, Nil);\nfn main() => Option[Binary{8}] = head(mk());",
+        ),
+        (
+            "map_insert",
+            "fn mk() => Map[Binary{8},Binary{8}] = map_insert(0b0000_0011, 0b0010_0000, MNil);\nfn main() => Option[Binary{8}] = map_get(mk(), 0b0000_0011);",
+        ),
+        (
+            "set_add",
+            "fn mk() => Set[Binary{8}] = set_add(0b0000_0101, SNil);\nfn main() => Bool = set_contains(mk(), 0b0000_0101);",
+        ),
+    ];
+    for (label, driver) in CASES {
+        let src = program(driver);
+        let parsed = parse(&src).unwrap_or_else(|e| panic!("{label}: parse should succeed: {e}"));
+        let env = check_nodule(&parsed)
+            .unwrap_or_else(|e| panic!("{label}: check should succeed (refusal is at mono): {e}"));
+        let err = monomorphize(&env, "main")
+            .err()
+            .unwrap_or_else(|| {
+                panic!("{label}: expected a never-silent mono refusal, but monomorphize succeeded")
+            })
+            .to_string();
+        assert!(
+            err.contains("type argument") || err.contains("§11.3") || err.contains("from context"),
+            "{label}: refusal must be the never-silent type-argument message, got: {err}"
+        );
+    }
+}

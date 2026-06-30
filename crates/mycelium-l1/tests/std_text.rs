@@ -669,3 +669,87 @@ fn decode_one_accepts_min_four_byte_boundary() {
     );
     assert_three_way("decode_one(U+10000 min 4-byte)=Ok", &src, &expected);
 }
+
+// ── is_cont_byte (M-719 gap-closure: isolated per-op differential) ──────────────────────────────────
+//
+// `is_cont_byte` is exercised internally by `decode_two/three/four`, but the RFC-0031 §5 D5 bar is
+// per-EXPORTED-op, so it gets its own isolated three-way tests over its three regions: below 0x80
+// (not a continuation), 0x80..=0xBF (continuation), and 0xC0.. (not a continuation). Total over
+// Binary{8} (Exact); three-way agreement Empirical.
+
+/// `is_cont_byte(0x41)` → `False` — an ASCII byte (< 0x80) is not a continuation byte. Exact.
+#[test]
+fn is_cont_byte_false_below_0x80() {
+    let driver = "fn main() => Bool = is_cont_byte(0b0100_0001);";
+    let src = program(driver);
+    let expected = "nodule ref;\nfn main() => Bool = False;";
+    assert_three_way("is_cont_byte(0x41 → False)", &src, expected);
+}
+
+/// `is_cont_byte(0x80)` → `True` — the first continuation byte (0x80 = 0b1000_0000). Exact.
+#[test]
+fn is_cont_byte_true_at_0x80() {
+    let driver = "fn main() => Bool = is_cont_byte(0b1000_0000);";
+    let src = program(driver);
+    let expected = "nodule ref;\nfn main() => Bool = True;";
+    assert_three_way("is_cont_byte(0x80 → True)", &src, expected);
+}
+
+/// `is_cont_byte(0xBF)` → `True` — the last continuation byte (0xBF = 0b1011_1111). Exact.
+#[test]
+fn is_cont_byte_true_at_0xbf() {
+    let driver = "fn main() => Bool = is_cont_byte(0b1011_1111);";
+    let src = program(driver);
+    let expected = "nodule ref;\nfn main() => Bool = True;";
+    assert_three_way("is_cont_byte(0xBF → True)", &src, expected);
+}
+
+/// `is_cont_byte(0xC0)` → `False` — 0xC0 = 0b1100_0000 is a lead byte, not a continuation (the high
+/// two bits are 0b11, not 0b10). The upper boundary of the continuation region. Exact.
+#[test]
+fn is_cont_byte_false_at_0xc0() {
+    let driver = "fn main() => Bool = is_cont_byte(0b1100_0000);";
+    let src = program(driver);
+    let expected = "nodule ref;\nfn main() => Bool = False;";
+    assert_three_way("is_cont_byte(0xC0 → False)", &src, expected);
+}
+
+// ── concat / slice — the `.myc`-SURFACE wrappers over the kernel Bytes prims (M-719 gap-closure) ──────
+//
+// `std_bytes_slice.rs` covers the kernel `bytes_concat`/`bytes_slice` prims directly and the `.myc`
+// `slice_opt` wrapper, but NOT the thin `.myc`-surface `concat`/`slice` wrappers themselves. The
+// RFC-0031 §5 D5 bar is per-EXPORTED-op, so these wrappers get their own three-way differential here.
+// The reference reuses the SAME kernel prim (`bytes_concat`/`bytes_slice`) so the result shares the
+// `Derived` provenance the computed value carries (a `0x…` literal would be `Root` and not compare equal —
+// Meta carries provenance). Both wrappers are `Exact` on their domain; three-way agreement Empirical.
+
+/// `concat(0xDEAD, 0xBEEF)` → `0xDEADBEEF` — the `.myc` `concat` wrapper delegates to the Exact
+/// `bytes_concat` kernel prim. Reference reuses `bytes_concat` (Derived provenance). Exact.
+#[test]
+fn concat_surface_wrapper_joins_bytes() {
+    let driver = "fn main() => Bytes = concat(0xDEAD, 0xBEEF);";
+    let src = program(driver);
+    let expected = "nodule ref;\nfn main() => Bytes = bytes_concat(0xDEAD, 0xBEEF);";
+    assert_three_way("concat(0xDEAD,0xBEEF)=0xDEADBEEF", &src, expected);
+}
+
+/// `slice(0xDEADBEEF, 1, 3)` → `0xADBE` — the `.myc` `slice` wrapper delegates to the never-silent
+/// `bytes_slice` kernel prim on the in-range half-open `[1, 3)`. Reference reuses `bytes_slice`
+/// (Derived provenance). Exact on the in-range domain (start <= end <= len). Bounds are Binary{32}.
+#[test]
+fn slice_surface_wrapper_in_range() {
+    let driver = "fn main() => Bytes = slice(0xDEADBEEF, 0b0000_0000_0000_0000_0000_0000_0000_0001, 0b0000_0000_0000_0000_0000_0000_0000_0011);";
+    let src = program(driver);
+    let expected = "nodule ref;\nfn main() => Bytes = bytes_slice(0xDEADBEEF, 0b0000_0000_0000_0000_0000_0000_0000_0001, 0b0000_0000_0000_0000_0000_0000_0000_0011);";
+    assert_three_way("slice(0xDEADBEEF,[1,3))=0xADBE", &src, expected);
+}
+
+/// `slice(0xDEADBEEF, 0, 4)` → the whole `Bytes` (the full half-open `[0, len)`) — an identity slice.
+/// Exact; reference reuses `bytes_slice` (Derived provenance).
+#[test]
+fn slice_surface_wrapper_full_range_is_identity() {
+    let driver = "fn main() => Bytes = slice(0xDEADBEEF, 0b0000_0000_0000_0000_0000_0000_0000_0000, 0b0000_0000_0000_0000_0000_0000_0000_0100);";
+    let src = program(driver);
+    let expected = "nodule ref;\nfn main() => Bytes = bytes_slice(0xDEADBEEF, 0b0000_0000_0000_0000_0000_0000_0000_0000, 0b0000_0000_0000_0000_0000_0000_0000_0100);";
+    assert_three_way("slice(0xDEADBEEF,[0,4))=identity", &src, expected);
+}
