@@ -269,3 +269,28 @@ fn over_wide_pair_is_refused_not_silently_transcoded() {
         Err(crate::llvm::AotError::UnsupportedNode(_))
     ));
 }
+
+/// The width bound is `>` not `>=`: a binary width of **exactly** `MAX_BINARY_WIDTH_I64 = 62` is
+/// **accepted** (it is the widest the i64 transcode handles soundly — `1i64 << 62` fits i64), not
+/// refused. Exercised via `ReuseInterp` (an illegal but in-i64-bound pair `(62, 2)` reaches the
+/// transcode). Pins the off-by-one: a `> → >=` mutation would wrongly refuse width 62.
+#[test]
+fn width_at_the_i64_bound_is_accepted_not_refused() {
+    use crate::llvm::emit_llvm_ir_with_swap_mode;
+    // Binary side: width 62 == MAX_BINARY_WIDTH_I64 must be accepted (pins `>` not `>=`).
+    let bw = swap_b_to_t(vec![false; 62], 2); // (62,2) illegal but in-i64-bound
+    let ir = emit_llvm_ir_with_swap_mode(&bw, SwapCertMode::ReuseInterp)
+        .expect("binary width == 62 is exactly at the i64 bound and must lower (not refused)");
+    assert!(
+        ir.contains("; swap") && ir.contains("srem i64"),
+        "the width-62 swap must emit the transcode (accepted at the boundary):\n{ir}"
+    );
+    // Ternary side: trits 39 == MAX_TERNARY_WIDTH_I64 must be accepted (pins the ternary `>` bound).
+    let tw = swap_b_to_t(vec![false; 2], 39); // (2,39) in-i64-bound; enc to 39 trits
+    let ir_t = emit_llvm_ir_with_swap_mode(&tw, SwapCertMode::ReuseInterp)
+        .expect("ternary width == 39 is exactly at the i64 bound and must lower (not refused)");
+    assert!(
+        ir_t.contains("; swap"),
+        "the trits-39 swap must emit the transcode (accepted at the boundary):\n{ir_t}"
+    );
+}
