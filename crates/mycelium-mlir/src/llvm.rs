@@ -229,8 +229,21 @@ pub(crate) struct FixVal {
     pub(crate) body: mycelium_core::lower::Anf,
 }
 
+/// A suspended `FixGroup` member (M-850 / Wave-B; RFC-0004 §11.6; DN-15 §10): the group's lowered
+/// member definitions plus which member this binding resolves to. Stored without emitting IR;
+/// consumed by a downstream `App(member, init)` that routes to [`crate::trampoline`]. The
+/// env-machine analogue is `aot.rs`'s `AotVal::FixGroup` (the focus-suspension unfold).
+#[derive(Debug, Clone)]
+pub(crate) struct FixGroupVal {
+    /// All members of the group, in declaration order: `(member-name, lowered λ.Match body)`.
+    pub(crate) defs: Vec<(String, mycelium_core::lower::Anf)>,
+    /// Which member name this binding resolves to (the entry when this binding is the `App` func).
+    pub(crate) which: String,
+}
+
 /// An environment value — a repr-lane (bit/trit), a constructed data value (tagged struct), a
-/// native closure (Increment-2), or a suspended Fix value (Increment-3).
+/// native closure (Increment-2), a suspended Fix value (Increment-3), or a suspended FixGroup
+/// member (M-850).
 ///
 /// The `lower_program` env maps [`Atom`] → `EnvValue`. Repr-lane values flow into `emit_op`; datum
 /// values are produced by `Construct` and consumed by `Match` arm bodies; closure values are
@@ -246,6 +259,11 @@ pub(crate) enum EnvValue {
     /// A suspended `Fix` — produced by `Rhs::Fix`, consumed by the special `App(Fix, init)`
     /// dispatch. Never a printable result value (G2).
     Fix(FixVal),
+    /// A suspended `FixGroup` member (M-850 / Wave-B) — produced by `Rhs::FixGroup`, consumed by the
+    /// special `App(FixGroup-member, init)` dispatch which routes to the heap-trampoline
+    /// ([`crate::trampoline`]). Carries the whole group's lowered defs plus which member this is
+    /// (so a sibling call resolves the group). Never a printable result value (G2).
+    FixGroup(FixGroupVal),
 }
 
 impl EnvValue {
@@ -265,6 +283,10 @@ impl EnvValue {
                 "{ctx}: expected a repr lane but found a Fix value — a bare Fix is not a \
                  printable/repr value; it must be applied to an argument (Increment-3; DN-15 §8; G2)"
             ))),
+            EnvValue::FixGroup(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a FixGroup member — a bare FixGroup is not a \
+                 printable/repr value; it must be applied to an argument (M-850; DN-15 §10; G2)"
+            ))),
         }
     }
     fn as_lane(&self, ctx: &str) -> Result<&Lane, AotError> {
@@ -279,6 +301,10 @@ impl EnvValue {
             EnvValue::Fix(_) => Err(AotError::UnsupportedNode(format!(
                 "{ctx}: expected a repr lane but found a Fix value — only usable as an App func \
                  (Increment-3; G2)"
+            ))),
+            EnvValue::FixGroup(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a FixGroup member — only usable as an App \
+                 func (M-850; G2)"
             ))),
         }
     }
@@ -582,13 +608,13 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                     body: fix_body.clone(),
                 })
             }
-            Rhs::FixGroup { .. } => {
-                return Err(AotError::UnsupportedNode(
-                    "FixGroup: mutual recursion is not supported in Increment-3 (only single Fix \
-                     with a λparam.Match body is supported; RFC-0004 §11.6; G2)"
-                        .to_owned(),
-                ));
-            }
+            // M-850 (Wave-B): a `FixGroup` binding is now **suspended** as an `EnvValue::FixGroup`
+            // (no IR yet), exactly as a `Fix` is suspended — consumed by a downstream
+            // `App(member, init)` that routes to the heap-trampoline (RFC-0004 §11.6; DN-15 §10).
+            Rhs::FixGroup { defs, which } => EnvValue::FixGroup(FixGroupVal {
+                defs: defs.iter().map(|(n, d)| (n.clone(), d.clone())).collect(),
+                which: which.clone(),
+            }),
         };
         env.insert(b.name.clone(), ev);
     }
@@ -604,6 +630,113 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
         overflow,
         funcs,
     })
+}
+
+/// `pub(crate)` shim so the M-850 heap-trampoline ([`crate::trampoline`]) can reuse the exact
+/// straight-line block lowering (DRY/KC-3 — one lowering, never a divergent copy). Same contract as
+/// [`lower_anf_block`].
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn lower_anf_block_pub(
+    anf: &lower::Anf,
+    env: &mut HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+) -> Result<Lane, AotError> {
+    lower_anf_block(anf, env, ssa, bbc, body, funcs, flags)
+}
+
+/// `pub(crate)` shim: lower every **support** binding of `anf` — every binding whose name is neither
+/// `call_name` (the recursive `App(member, step)`, which the trampoline emits itself) nor
+/// `result_name` (the wrapping `Binary{8}` op the trampoline applies as the defunctionalized
+/// continuation) — extending `env`. The support set is the straight-line `Binary{8}` const/alias/op
+/// bindings the `step` atom and the continuation's saved operand depend on.
+///
+/// **Why every binding, not "those before the call":** after ANF flattening the saved continuation
+/// operand can be bound *after* the call binding (e.g. `%c=App(self,%s); %k=Const(mask);
+/// %r=and(%c,%k)` — the mask `%k` follows the call), so a "stop at the call" walk would miss it and
+/// the operand would be a free variable. Skipping exactly the call and result bindings (and lowering
+/// everything else regardless of position) lowers each support binding exactly once. Any binding the
+/// saved operand transitively needs precedes it in ANF order, so a single forward pass binds them all
+/// before the continuation materializes the operand (G2: a still-missing operand is a free-variable
+/// error, never silently mis-encoded).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn lower_bindings_before_call_pub(
+    anf: &lower::Anf,
+    call_name: &Atom,
+    result_name: &Atom,
+    env: &mut HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    // The support sequence is straight-line `Binary{8}` (const/alias/op only), so block-label and
+    // closure-function sinks are unused here — kept in the signature for a uniform lowering surface.
+    _bbc: &mut Bbc,
+    body: &mut String,
+    _funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+) -> Result<(), AotError> {
+    for b in anf.bindings() {
+        if &b.name == call_name || &b.name == result_name {
+            // The recursive-call binding and the wrapping-op result binding are emitted by the
+            // trampoline itself (the call + the defunctionalized continuation); skip both, lower the
+            // rest (which includes any saved-operand binding that follows the call in ANF order).
+            continue;
+        }
+        let ev = match &b.rhs {
+            Rhs::Const(v) => EnvValue::Repr(const_lane(v)?),
+            Rhs::Alias(a) => lookup_ev(env, a)?.clone(),
+            Rhs::Op { prim, args } => {
+                let operands: Vec<&Lane> = args
+                    .iter()
+                    .map(|a| lookup_ev(env, a)?.as_lane("trampoline pre-call op operand"))
+                    .collect::<Result<_, _>>()?;
+                EnvValue::Repr(emit_op(prim, &operands, ssa, body, flags)?)
+            }
+            // A non-canonical pre-call construct (Swap/Construct/Match/Lam/Fix/App-to-non-member/
+            // FixGroup) is refused — the trampoline pre-call sequence is straight-line Binary{8}
+            // only; anything else is routed to the interpreter (never fragile IR — G2/VR-5).
+            other => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "trampoline: a non-straight-line pre-call binding ({}) is not supported in a \
+                     recursive arm — only Binary{{8}} const/alias/op before the call (G2)",
+                    rhs_kind(other)
+                )));
+            }
+        };
+        env.insert(b.name.clone(), ev);
+    }
+    Ok(())
+}
+
+/// A short human label for an `Rhs` variant (diagnostics only).
+fn rhs_kind(rhs: &Rhs) -> &'static str {
+    match rhs {
+        Rhs::Const(_) => "Const",
+        Rhs::Alias(_) => "Alias",
+        Rhs::Op { .. } => "Op",
+        Rhs::Swap { .. } => "Swap",
+        Rhs::Construct { .. } => "Construct",
+        Rhs::App { .. } => "App",
+        Rhs::Lam { .. } => "Lam",
+        Rhs::Fix { .. } => "Fix",
+        Rhs::FixGroup { .. } => "FixGroup",
+        Rhs::Match { .. } => "Match",
+    }
+}
+
+/// `pub(crate)` shims for the narrow-ABI pack/unpack/typecheck helpers the trampoline shares.
+pub(crate) fn pack_binary8_pub(lane: &Lane, ssa: &mut Ssa, body: &mut String) -> String {
+    pack_binary8(lane, ssa, body)
+}
+pub(crate) fn unpack_binary8_pub(src: &str, ssa: &mut Ssa, body: &mut String) -> Lane {
+    unpack_binary8(src, ssa, body)
+}
+pub(crate) fn as_binary8_pub<'a>(ev: &'a EnvValue, ctx: &str) -> Result<&'a Lane, AotError> {
+    as_binary8(ev, ctx)
+}
+pub(crate) fn lit_binary8_packed_pub(value: &Value) -> Result<u64, AotError> {
+    lit_binary8_packed(value)
 }
 
 /// Lower a nested ANF block (a `Match` arm or similar nested scope) into the ongoing IR stream,
@@ -687,13 +820,11 @@ fn lower_anf_block(
                     body: fix_body.clone(),
                 })
             }
-            Rhs::FixGroup { .. } => {
-                return Err(AotError::UnsupportedNode(
-                    "FixGroup in a nested block: mutual recursion is not supported in Increment-3 \
-                     (only single Fix with λparam.Match body; RFC-0004 §11.6; G2)"
-                        .to_owned(),
-                ));
-            }
+            // M-850: suspend the FixGroup member (consumed by a downstream App → heap-trampoline).
+            Rhs::FixGroup { defs, which } => EnvValue::FixGroup(FixGroupVal {
+                defs: defs.iter().map(|(n, d)| (n.clone(), d.clone())).collect(),
+                which: which.clone(),
+            }),
         };
         env.insert(b.name.clone(), ev);
     }
@@ -1003,8 +1134,33 @@ fn lower_app(
 ) -> Result<EnvValue, AotError> {
     let func_ev = lookup_ev(env, func)?;
     // Increment-3: App(Fix, init) → iterative tail-recursion loop (never stack recursion; DN-05 #1).
+    // M-850 (Wave-B): a non-tail single `Fix` (or a `Match` in a pre-call binding — DN-15 §8.5) no
+    // longer refuses; it routes to the **heap-trampoline** ([`crate::trampoline`]) — the full
+    // defunctionalized control-stack lowering DN-15 §4.3 anticipated. The fast iterative tail loop is
+    // kept (byte-identical IR) for the pure-tail/base fragment it already handled; anything heavier
+    // takes the trampoline. Both are bounded by the SAME `AutoDepthBudget` (DRY/KC-3).
     if let EnvValue::Fix(fixval) = func_ev {
-        return lower_tail_fix(fixval, arg, env, ssa, bbc, body, funcs, flags);
+        let members = crate::trampoline::destructure_fix(&fixval.name, &fixval.body)?;
+        if crate::trampoline::is_pure_tail_single_fix(&members)? {
+            return lower_tail_fix(fixval, arg, env, ssa, bbc, body, funcs, flags);
+        }
+        return crate::trampoline::lower_recursion_group(
+            &members, 0, arg, env, ssa, bbc, body, funcs, flags,
+        );
+    }
+    // M-850: App(FixGroup-member, init) → heap-trampoline over all members; `which` selects the
+    // entry. Mutual recursion is resolved by the trampoline's shared member dispatch (RFC-0004
+    // §11.6; DN-15 §10). Never the C stack — bounded by the same AutoDepthBudget (DN-05 #1).
+    if let EnvValue::FixGroup(fg) = func_ev {
+        let members = crate::trampoline::destructure_fixgroup(&fg.defs)?;
+        let entry = fg
+            .defs
+            .iter()
+            .position(|(n, _)| n == &fg.which)
+            .ok_or_else(|| AotError::FreeVariable(fg.which.clone()))?;
+        return crate::trampoline::lower_recursion_group(
+            &members, entry, arg, env, ssa, bbc, body, funcs, flags,
+        );
     }
     let base = func_ev.as_closure("App function")?.base.clone();
     // fn_ptr ← record slot 0.
@@ -1097,6 +1253,13 @@ fn lower_match(
             return Err(AotError::UnsupportedNode(
                 "Match on a Fix value is not supported — a Fix must be applied (App) before it \
                  can be matched (Increment-3; G2)"
+                    .to_owned(),
+            ));
+        }
+        EnvValue::FixGroup(_) => {
+            return Err(AotError::UnsupportedNode(
+                "Match on a FixGroup member is not supported — it must be applied (App) before it \
+                 can be matched (M-850; G2)"
                     .to_owned(),
             ));
         }
@@ -1932,10 +2095,21 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
     // Closures (Increment-2) bring in the bump arena + `@malloc`/`@free`; a closure-free program
     // emits byte-for-byte the same module as before (no arena, no extra declares).
     let uses_closures = !funcs.is_empty();
+    // M-850 (Wave-B): the heap-trampoline lowering emits `@myc_tramp_alloc` calls into `body`; a
+    // program with no non-tail-Fix/FixGroup recursion never does, so it emits the same module as
+    // before (no trampoline runtime, no extra declares). Detecting via the emitted body keeps the
+    // runtime opt-in without threading another flag through every lowering signature (DRY).
+    let uses_trampoline = body.contains("@myc_tramp_alloc");
+    // `@malloc`/`@free` are shared by the closure arena and the trampoline frame stack — declare
+    // them once if either is present.
+    let uses_heap = uses_closures || uses_trampoline;
     let mut out =
         String::from("; mycelium direct-LLVM AOT (bit/trit + non-recursive data; M-301; M-373)\n");
     if uses_closures {
         out.push_str("; closures: heap closure records on a bump arena (M-378; DN-15 §7)\n");
+    }
+    if uses_trampoline {
+        out.push_str("; recursion: heap-trampoline control stack (M-850; DN-15 §10)\n");
     }
     // `@putchar` for the read-back protocol; `@abort` for the defined-traps (the match no-default
     // trap and the bump-arena OOM). `@abort` is declared `noreturn` so LLVM treats every
@@ -1943,9 +2117,16 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
     // (G2), and no post-trap path — e.g. the OOM block returning a null pointer — is ever reachable.
     out.push_str("declare i32 @putchar(i32)\n");
     out.push_str("declare void @abort() noreturn\n");
-    if uses_closures {
+    if uses_heap {
         out.push_str("declare i8* @malloc(i64)\n");
         out.push_str("declare void @free(i8*)\n");
+    }
+    if uses_trampoline {
+        // The trampoline frame-stack alloc/free seams (emitted before the closure arena so the
+        // closure functions, which may also be present, follow). Never silent OOM (defined-trap).
+        out.push_str(&crate::trampoline::trampoline_runtime());
+    }
+    if uses_closures {
         out.push_str(&arena_runtime());
         // The closure functions (one `define` per `Rhs::Lam`), emitted before `@main`.
         for f in &funcs {
@@ -2463,7 +2644,22 @@ pub fn compile(node: &Node) -> Result<CompiledArtifact, AotError> {
     let guard = TmpDir(dir);
 
     std::fs::write(&ll, ir.as_bytes()).map_err(|e| AotError::Run(format!("write IR: {e}")))?;
-    run_tool("llc", &["-filetype=obj", path(&ll)?, "-o", path(&obj)?])?;
+    // `-relocation-model=pic`: the trampoline (M-850) and closure-arena modules carry global/`.rodata`
+    // references whose default (static) relocations are `R_X86_64_32S`, which a PIE link rejects
+    // (`can not be used when making a PIE object`). Modern clang links PIE by default, so we emit a
+    // PIC object that is link-compatible with PIE. The byte-for-byte element-wise modules are
+    // unaffected by the relocation model (no global refs), so this is a strict superset — never a
+    // silent behavioural change (G2); it only lets the heavier recursion/closure modules link.
+    run_tool(
+        "llc",
+        &[
+            "-relocation-model=pic",
+            "-filetype=obj",
+            path(&ll)?,
+            "-o",
+            path(&obj)?,
+        ],
+    )?;
     run_tool("clang", &[path(&obj)?, "-o", path(&bin)?])?;
 
     Ok(CompiledArtifact {
@@ -2530,303 +2726,5 @@ pub(crate) struct TmpDir(pub(crate) std::path::PathBuf);
 impl Drop for TmpDir {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mycelium_core::Repr;
-
-    fn binary(bits: Vec<bool>) -> Value {
-        let width = bits.len() as u32;
-        Value::new(
-            Repr::Binary { width },
-            Payload::Bits(bits),
-            Meta::exact(Provenance::Root),
-        )
-        .unwrap()
-    }
-
-    fn ternary(trits: Vec<Trit>) -> Value {
-        let m = trits.len() as u32;
-        Value::new(
-            Repr::Ternary { trits: m },
-            Payload::Trits(trits),
-            Meta::exact(Provenance::Root),
-        )
-        .unwrap()
-    }
-
-    fn not_program() -> Node {
-        Node::Op {
-            prim: "bit.not".into(),
-            args: vec![Node::Const(binary(vec![true, false, true, true]))],
-        }
-    }
-
-    fn neg_program() -> Node {
-        Node::Op {
-            prim: "trit.neg".into(),
-            args: vec![Node::Const(ternary(vec![Trit::Pos, Trit::Zero, Trit::Neg]))],
-        }
-    }
-
-    #[test]
-    fn emits_module_for_bit_not() {
-        let ir = emit_llvm_ir(&not_program()).unwrap();
-        assert!(ir.contains("declare i32 @putchar(i32)"));
-        assert!(ir.contains("define i32 @main()"));
-        assert!(ir.contains("xor i32")); // bit.not lowers to xor with 1
-        assert!(ir.contains("call i32 @putchar"));
-        assert!(ir.contains("ret i32 0"));
-    }
-
-    #[test]
-    fn emission_is_deterministic() {
-        assert_eq!(emit_llvm_ir(&not_program()), emit_llvm_ir(&not_program()));
-    }
-
-    #[test]
-    fn emits_module_for_trit_neg() {
-        let ir = emit_llvm_ir(&neg_program()).unwrap();
-        assert!(ir.contains("sub i32 0,")); // trit.neg lowers to 0 - x per trit
-                                            // Ternary output uses the '-'(45)/'0'(48)/'+'(43) select chain.
-        assert!(ir.contains("select i1") && ir.contains("i32 45") && ir.contains("i32 43"));
-        assert!(ir.contains("ret i32 0"));
-    }
-
-    #[test]
-    fn ternary_const_is_supported() {
-        // M-301 trit slice: a Ternary const is now lowered (was UnsupportedRepr in the bit-only
-        // slice). Mutant-witness: reverting const_lane to Binary-only would refuse this.
-        let v = ternary(vec![Trit::Pos, Trit::Zero, Trit::Neg]);
-        assert!(emit_llvm_ir(&Node::Const(v)).is_ok());
-    }
-
-    fn binop(prim: &str, a: Vec<Trit>, b: Vec<Trit>) -> Node {
-        Node::Op {
-            prim: prim.into(),
-            args: vec![Node::Const(ternary(a)), Node::Const(ternary(b))],
-        }
-    }
-
-    #[test]
-    fn trit_add_emits_ripple_carry_ir() {
-        // Mutant-witness: a non-carry (elementwise) add would not emit the srem/sdiv-by-3 balancing
-        // or the icmp overflow flag the read-back protocol branches on.
-        let ir = emit_llvm_ir(&binop(
-            "trit.add",
-            vec![Trit::Pos, Trit::Neg, Trit::Neg],
-            vec![Trit::Zero, Trit::Pos, Trit::Pos],
-        ))
-        .unwrap();
-        assert!(ir.contains("srem i32") && ir.contains("sdiv i32")); // balanced-digit normalisation
-        assert!(ir.contains("icmp ne i32")); // overflow flag
-        assert!(ir.contains("br i1")); // read-back branch
-        assert!(ir.contains("putchar(i32 33)")); // overflow sentinel '!'
-    }
-
-    #[test]
-    fn arithmetic_emission_is_deterministic() {
-        let p = binop(
-            "trit.mul",
-            vec![Trit::Zero, Trit::Pos, Trit::Neg],
-            vec![Trit::Zero, Trit::Pos, Trit::Zero],
-        );
-        assert_eq!(emit_llvm_ir(&p), emit_llvm_ir(&p));
-    }
-
-    #[test]
-    fn refuses_arithmetic_width_mismatch() {
-        // Mutant-witness: dropping the width check would emit a ragged ripple-carry.
-        let prog = binop("trit.add", vec![Trit::Pos, Trit::Zero], vec![Trit::Pos]);
-        assert!(matches!(
-            emit_llvm_ir(&prog),
-            Err(AotError::WidthMismatch { .. })
-        ));
-    }
-
-    #[test]
-    fn refuses_bit_arithmetic_on_binary_lane() {
-        // Mutant-witness: dropping require_kind would let trit.add ripple over a binary lane.
-        let prog = Node::Op {
-            prim: "trit.add".into(),
-            args: vec![
-                Node::Const(binary(vec![true, false])),
-                Node::Const(binary(vec![false, true])),
-            ],
-        };
-        assert!(matches!(
-            emit_llvm_ir(&prog),
-            Err(AotError::UnsupportedPrim(_))
-        ));
-    }
-
-    #[test]
-    fn refuses_bit_op_on_ternary_lane() {
-        // Mutant-witness: dropping require_kind would let bit.not mis-lower a ternary lane.
-        let prog = Node::Op {
-            prim: "bit.not".into(),
-            args: vec![Node::Const(ternary(vec![Trit::Pos, Trit::Neg]))],
-        };
-        assert!(matches!(
-            emit_llvm_ir(&prog),
-            Err(AotError::UnsupportedPrim(_))
-        ));
-    }
-
-    #[test]
-    fn refuses_swap() {
-        // Mutant-witness: a swap is not straight-line bit logic; it must be refused, not ignored.
-        let prog = Node::Swap {
-            src: Box::new(Node::Const(binary(vec![true, false]))),
-            target: Repr::Ternary { trits: 2 },
-            policy: mycelium_core::ContentHash::parse("blake3:x").unwrap(),
-        };
-        assert!(matches!(
-            emit_llvm_ir(&prog),
-            Err(AotError::UnsupportedNode(_))
-        ));
-    }
-
-    #[test]
-    fn refuses_width_mismatch() {
-        // Mutant-witness: dropping the width check would emit a ragged elementwise op.
-        let prog = Node::Op {
-            prim: "bit.and".into(),
-            args: vec![
-                Node::Const(binary(vec![true, false, true])),
-                Node::Const(binary(vec![true, false])),
-            ],
-        };
-        assert!(matches!(
-            emit_llvm_ir(&prog),
-            Err(AotError::WidthMismatch { .. })
-        ));
-    }
-
-    // --- compiled-path smoke test (skips when llc/clang are absent) ---------------------------
-
-    #[test]
-    fn native_bit_not_matches_interpreter() {
-        let prog = not_program();
-        match compile_and_run(&prog) {
-            Ok(v) => {
-                // Mutant-witness: if bit.not lowered to `or`/`and` instead of `xor _, 1`, the
-                // payload would differ from the complemented input.
-                assert_eq!(v.payload(), &Payload::Bits(vec![false, true, false, false]));
-                assert_eq!(v.repr(), &Repr::Binary { width: 4 });
-            }
-            Err(AotError::ToolchainMissing(_)) => { /* environment skip — house idiom */ }
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_neg_matches_interpreter() {
-        // Mutant-witness: if trit.neg lowered to anything but `0 - x` (or the output select chain
-        // mapped the wrong char), the negated payload `[-,0,+]` would differ.
-        match compile_and_run(&neg_program()) {
-            Ok(v) => {
-                assert_eq!(
-                    v.payload(),
-                    &Payload::Trits(vec![Trit::Neg, Trit::Zero, Trit::Pos])
-                );
-                assert_eq!(v.repr(), &Repr::Ternary { trits: 3 });
-            }
-            Err(AotError::ToolchainMissing(_)) => { /* environment skip */ }
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_add_matches_oracle() {
-        // 5 + 4 = 9 in 3 trits: [+,-,-] + [0,+,+] = [+,0,0]. Mutant-witness: a missing carry would
-        // yield the elementwise (wrong) sum, and a wrong balancing constant would mis-encode.
-        let prog = binop(
-            "trit.add",
-            vec![Trit::Pos, Trit::Neg, Trit::Neg],
-            vec![Trit::Zero, Trit::Pos, Trit::Pos],
-        );
-        match compile_and_run(&prog) {
-            Ok(v) => assert_eq!(
-                v.payload(),
-                &Payload::Trits(vec![Trit::Pos, Trit::Zero, Trit::Zero])
-            ),
-            Err(AotError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_sub_matches_oracle() {
-        // 9 - 4 = 5 in 3 trits: [+,0,0] - [0,+,+] = [+,-,-].
-        let prog = binop(
-            "trit.sub",
-            vec![Trit::Pos, Trit::Zero, Trit::Zero],
-            vec![Trit::Zero, Trit::Pos, Trit::Pos],
-        );
-        match compile_and_run(&prog) {
-            Ok(v) => assert_eq!(
-                v.payload(),
-                &Payload::Trits(vec![Trit::Pos, Trit::Neg, Trit::Neg])
-            ),
-            Err(AotError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_mul_matches_oracle() {
-        // 2 * 3 = 6 in 3 trits: [0,+,-] * [0,+,0] = [+,-,0]. Mutant-witness: a wrong shift in the
-        // shifted-accumulate, or reading the high (overflow) half, would diverge.
-        let prog = binop(
-            "trit.mul",
-            vec![Trit::Zero, Trit::Pos, Trit::Neg],
-            vec![Trit::Zero, Trit::Pos, Trit::Zero],
-        );
-        match compile_and_run(&prog) {
-            Ok(v) => assert_eq!(
-                v.payload(),
-                &Payload::Trits(vec![Trit::Pos, Trit::Neg, Trit::Zero])
-            ),
-            Err(AotError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_add_overflow_is_explicit() {
-        // 4 + 4 = 8 in 2 trits (max magnitude 4) overflows. The native path must report it through
-        // the read-back protocol — an explicit Overflow, never a silent wrap. Mutant-witness:
-        // dropping the final-carry flag would print a wrapped result instead.
-        let prog = binop(
-            "trit.add",
-            vec![Trit::Pos, Trit::Pos],
-            vec![Trit::Pos, Trit::Pos],
-        );
-        match compile_and_run(&prog) {
-            Ok(v) => panic!("overflow must not produce a value, got {:?}", v.payload()),
-            Err(AotError::Overflow(_)) => { /* expected */ }
-            Err(AotError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_mul_overflow_is_explicit() {
-        // 4 * 4 = 16 in 2 trits overflows (high trits non-zero).
-        let prog = binop(
-            "trit.mul",
-            vec![Trit::Pos, Trit::Pos],
-            vec![Trit::Pos, Trit::Pos],
-        );
-        match compile_and_run(&prog) {
-            Ok(v) => panic!("overflow must not produce a value, got {:?}", v.payload()),
-            Err(AotError::Overflow(_)) => {}
-            Err(AotError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
     }
 }

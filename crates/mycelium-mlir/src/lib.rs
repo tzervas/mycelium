@@ -67,6 +67,7 @@ pub mod rc_plan;
 pub mod runtime;
 pub mod simd;
 pub mod specialize;
+pub mod trampoline;
 pub mod vr4;
 
 pub use accel::{
