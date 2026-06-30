@@ -697,23 +697,38 @@ fn map_i_bundle_capacity_parity_proven_iff_reference() {
 
 // ─── never-silent refusals: SBC/MAP-B + the carrier gate (G2) ────────────────────────────────────
 
-/// SBC / MAP-B (and any non-mandatory model) are refused never-silently at the model gate — they are
-/// not in the 1.0.0-native-mandatory set {MAP-I, BSC, HRR, FHRR} (OQ-3). The reference *does* implement
-/// them (so they are interpreter/reference-served), but the native path refuses, never silently serving
-/// a different model. We assert the gate via `from_registry_id` returning `None` for them (the native
-/// `VsaModelId` simply cannot name them — they have no native lowering surface).
+/// SBC / MAP-B (and any non-mandatory model) are refused **never-silently** at the model-resolution
+/// boundary (`resolve_vsa_model`) — they are not in the 1.0.0-native-mandatory set {MAP-I, BSC, HRR,
+/// FHRR} (OQ-3). The reference *does* implement them (so they stay interpreter/reference-served), but
+/// the native path refuses with an explicit `UnsupportedModel`, never silently serving a different
+/// model (G2). A **sparse carrier** is likewise an explicit `UnsupportedCarrier` (the ADR-031 carrier
+/// is not yet in the value model — E20-1 gate), never silently flattened to dense.
 #[test]
-fn sbc_mapb_are_refused_by_the_native_model_gate() {
-    for id in ["SBC", "MAP-B", "MAP-C", "VTB"] {
-        assert_eq!(
-            VsaModelId::from_registry_id(id),
-            None,
-            "{id} is not 1.0.0-native-mandatory — refused (no native lowering), never silently served"
-        );
+fn sbc_mapb_and_sparse_carrier_are_refused_never_silently() {
+    use mycelium_core::SparsityClass;
+    use mycelium_mlir::resolve_vsa_model;
+    // SBC / MAP-B / unknown → explicit UnsupportedModel (the reference serves them; the native path
+    // refuses and routes there — NFR-7).
+    for id in ["SBC", "MAP-B", "MAP-C", "VTB", "nonsense"] {
+        match resolve_vsa_model(id, SparsityClass::Dense) {
+            Err(VsaAotError::UnsupportedModel(got)) => assert_eq!(got, id),
+            other => panic!("{id} must be refused with UnsupportedModel, got {other:?}"),
+        }
     }
-    // The reference DOES serve them (the trusted base): SBC/MAP-B exist in mycelium-vsa, so a program
-    // naming them runs on the reference/interpreter — the native path's refusal routes there (NFR-7).
-    // (We only assert the native gate here; the reference's own coverage is mycelium-vsa's tests.)
+    // The four mandatory models resolve (dense).
+    for (id, want) in [
+        ("MAP-I", VsaModelId::MapI),
+        ("BSC", VsaModelId::Bsc),
+        ("HRR", VsaModelId::Hrr),
+        ("FHRR", VsaModelId::Fhrr),
+    ] {
+        assert_eq!(resolve_vsa_model(id, SparsityClass::Dense), Ok(want));
+    }
+    // A sparse carrier on a mandatory model is still refused (ADR-031/E20-1 gate) — never flattened.
+    assert!(matches!(
+        resolve_vsa_model("MAP-I", SparsityClass::Sparse { max_active: 8 }),
+        Err(VsaAotError::UnsupportedCarrier(_))
+    ));
 }
 
 // ─── the dialect leg honestly refuses VSA (the third edge is a never-faked refusal) ──────────────

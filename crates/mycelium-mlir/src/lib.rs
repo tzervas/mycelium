@@ -136,8 +136,9 @@ pub use vr4::{cross_backend_gate, Backend, BackendStage, CrossBackendGate, Stage
 // inspectable EXPLAIN record. `similarity` is a bare-`f64` measurement; SBC/MAP-B and the ADR-031
 // element-space/complex carriers stay explicit never-silent refusals (OQ-3 / E20-1 gate).
 pub use vsa_codegen::{
-    emit_vsa_llvm_ir, vsa_compile, vsa_compile_and_run, VsaAotError, VsaArtifact, VsaCgOp,
-    VsaExplain, VsaModelId, VsaProgram, VsaResult, VSA_CODEGEN_GUARANTEE,
+    emit_vsa_llvm_ir, resolve_model as resolve_vsa_model, vsa_compile, vsa_compile_and_run,
+    VsaAotError, VsaArtifact, VsaCgOp, VsaExplain, VsaModelId, VsaProgram, VsaResult,
+    VSA_CODEGEN_GUARANTEE,
 };
 
 #[cfg(test)]

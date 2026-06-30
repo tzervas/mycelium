@@ -235,6 +235,30 @@ impl VsaModelId {
     }
 }
 
+/// Resolve a `Repr::Vsa { model, sparsity }` to the native [`VsaModelId`] for lowering, or an
+/// **explicit, never-silent** refusal — the boundary entry point that turns a registry id + sparsity
+/// class into a lowerable model (G2). Refuses:
+/// - a **non-mandatory model** (SBC / MAP-B / unknown) → [`VsaAotError::UnsupportedModel`] (OQ-3;
+///   extend post-mandate), never silently served by a different model;
+/// - a **sparse carrier** (ADR-031 block-sparse, not yet in the value model) →
+///   [`VsaAotError::UnsupportedCarrier`] (E20-1 gate), never silently flattened to dense.
+///
+/// This is how a caller (e.g. an AOT lowering pass dispatching a `Repr::Vsa` const) reaches native VSA
+/// codegen: it resolves the model here and gets a typed refusal for anything out of the real-`Vec<f64>`
+/// MAP-I/BSC/HRR/FHRR fragment, routing those to the interpreter/reference (NFR-7).
+pub fn resolve_model(model: &str, sparsity: SparsityClass) -> Result<VsaModelId, VsaAotError> {
+    match sparsity {
+        SparsityClass::Dense => {}
+        SparsityClass::Sparse { max_active } => {
+            return Err(VsaAotError::UnsupportedCarrier(format!(
+                "sparse≤{max_active} (ADR-031 block-sparse carrier, E20-1)"
+            )));
+        }
+    }
+    VsaModelId::from_registry_id(model)
+        .ok_or_else(|| VsaAotError::UnsupportedModel(model.to_owned()))
+}
+
 /// A native-VSA lowering program: one op over a model's hypervector carrier, plus its operand(s).
 /// The operands are the reference hypervector payloads the caller has built through `mycelium-vsa`
 /// (so they are alphabet-valid + dim-consistent). Single-source-of-truth for [`emit_vsa_llvm_ir`],
