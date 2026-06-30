@@ -155,7 +155,8 @@ not add `on: push` / `on: pull_request` auto-triggers without an explicit decisi
   agent-driven review-with-another-agent pass is the gate — third-party review bots (Copilot,
   Sourcery) are **disabled** in this repo). Each tier is PR-gated and **more stringent than the last**; `main`/`integration`/
   `dev` are persistent + protected (no direct push), everything below `dev` is ephemeral and merges
-  freely. `main` advances **only** through the `integration → main` squash-PR — never a direct
+  freely (the concurrent-pattern §below adds a per-PR review loop even for leaf→`dev` hops as an
+  opt-in tightening). `main` advances **only** through the `integration → main` squash-PR — never a direct
   `git push`/merge/commit, even for a one-file fix. Full workflow + the per-isolated-tree kickoff
   index (parallel Sonnet swarms): **`.claude/kickoffs/README.md`**.
 - **Squash-only into `main`.** Every PR lands on `main` as a **single squash commit** — a linear,
@@ -561,8 +562,10 @@ dedicated **Sonnet `/pr-review` agent** that audits it against the house rules a
 as PR comments** (and subscribes to the PR). A **patcher** — the same Sonnet if it still has context,
 else a fresh one — **fixes** what's found, **replies to each comment with the resolution applied**, and
 **updates the PR description** to match the net change. When the review is resolved and the PR is green,
-the agent **merges it up the tree** (leaf → `dev` → `integration`) itself — the merge gate is the
-agent's. **The terminal checkpoint is the merge to `main`:** that one is held for maintainer review (or
+the agent **merges it up the tree** (leaf → `dev` → the staging tier) itself — the merge gate is the
+agent's. *(This tightens the default: in this pattern, leaf→`dev` hops are also PR-gated for the
+review loop, superseding the "leaves merge freely below `dev`" default for concurrent waves.)*
+**The terminal checkpoint is the merge to `main`:** that one is held for maintainer review (or
 merged only when explicitly ready). Keep the review conversation in PR **comment threads** — frugal,
 severity-ranked, honest and non-sycophantic (house rule #4); the diff plus the resolved threads are the
 record.

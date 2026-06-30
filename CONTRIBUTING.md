@@ -112,8 +112,8 @@ GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo t
   you are not surprised mid-flight. When PRs share files, land them in order and pull the merged base
   down before the next. Full policy plus the change-kind→toolchain map: `docs/notes/DN-65-…md`.
 - **Concurrent, tier-scoped, agent-reviewed development (the optimal pattern).** Work flows
-  `feature/leaf → dev → integration → main` — each tier PR-gated (merges into `dev`/`integration`/`main`
-  are via PR; working branches below `dev` merge freely). **Testing tightens up the tiers:** a **leaf
+  `feature/leaf → dev → integration → main` — in this pattern each hop is PR-reviewed (tightening
+  the default where branches below `dev` merge freely; see `CLAUDE.md` §Commits & PRs). **Testing tightens up the tiers:** a **leaf
   runs only the change-scoped checks for what it touches** (deep on those components, not the whole
   workspace), `dev` is the working tier, and **`integration` is where the gates tighten and the polish
   concentrates** — APIs regenerated, docs finalized, issues/epics closed out (so leaves FLAG those up
