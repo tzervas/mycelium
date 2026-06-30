@@ -719,13 +719,12 @@ fn closures_over_ternary_values_now_lower() {
     assert_eq!(native.repr(), t.repr());
 }
 
-/// M-851 honest boundary (G2/VR-5): a **fully shape-polymorphic nested capture** — `(λx. (λw. w ⊕ x)
-/// x) A` — has no statically-resolvable param width (the only anchor is the call-site argument, which
-/// the per-closure type-directed pass does not propagate). It is an explicit `UnsupportedNode`, never
-/// a guessed unbox width; the interpreter still evaluates it (the boundary is a native-codegen
-/// limitation, honestly surfaced, not a semantic restriction).
+/// M-851 specialize-at-application: a **nested capture of the outer param** — `(λx. (λw. w ⊕ x) x) A
+/// → A ⊕ A = 0` — lowers natively. The inner closure captures the outer parameter `x` and is applied
+/// to it; the inlining resolves it fully (the call-site argument `A` pins `x`, the inner closure
+/// inlines with `w ← x`), so the shape flows in directly with no guessed width. interp ≡ native.
 #[test]
-fn polymorphic_nested_capture_is_explicitly_refused() {
+fn nested_capture_of_outer_param_lowers() {
     let prog = Node::App {
         func: Box::new(Node::Lam {
             param: "x".to_owned(),
@@ -742,21 +741,26 @@ fn polymorphic_nested_capture_is_explicitly_refused() {
         }),
         arg: Box::new(Node::Const(byte(A))),
     };
-    match mycelium_mlir::compile_and_run(&prog) {
-        Err(AotError::UnsupportedNode(_)) => { /* expected explicit refusal */ }
-        Err(AotError::ToolchainMissing(_)) => { /* env skip */ }
-        Ok(v) => panic!(
-            "a fully-polymorphic nested capture must be refused; native returned {:?}",
-            v.payload()
-        ),
-        Err(e) => panic!("polymorphic nested capture errored unexpectedly: {e}"),
-    }
-    // The interpreter still evaluates it (the program is well-formed; the boundary is codegen-only).
-    let interp =
-        Interpreter::new(PrimRegistry::with_builtins(), Box::new(IdentitySwapEngine)).eval(&prog);
-    assert!(
-        interp.is_ok(),
-        "the interpreter should evaluate the (valid) polymorphic program"
+    let native = match mycelium_mlir::compile_and_run(&prog) {
+        Ok(v) => v,
+        Err(AotError::ToolchainMissing(_)) => return, // env skip
+        Err(e) => panic!("nested capture of outer param must lower; errored: {e}"),
+    };
+    let interp = Interpreter::new(PrimRegistry::with_builtins(), Box::new(IdentitySwapEngine))
+        .eval(&prog)
+        .expect("interp must evaluate the nested-capture program");
+    assert_eq!(
+        observable(&interp),
+        observable(&native),
+        "nested capture: interp {:?} vs native {:?}",
+        interp.payload(),
+        native.payload()
+    );
+    // A ⊕ A == 0.
+    assert_eq!(
+        native.payload(),
+        &Payload::Bits(vec![false; 8]),
+        "A ⊕ A must be 0"
     );
 }
 

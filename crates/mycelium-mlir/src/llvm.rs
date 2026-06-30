@@ -192,50 +192,37 @@ pub(crate) struct Datum {
     pub(crate) slots: usize,
 }
 
-/// The element width of the **narrow Increment-2 closure ABI**: closures carry/return `Binary{8}`
-/// values packed into a single `i64` (DN-15 §7.1; RFC-0004 §11.5). Anything wider/other-repr is an
-/// explicit `UnsupportedNode` (never a silent mis-encode — G2).
+/// The element width of the **narrow `Binary{8}` recursion-accumulator ABI** used by the heap
+/// trampoline ([`crate::trampoline`]): a recursion accumulator is a `Binary{8}` value packed into a
+/// single `i64` (DN-15 §7.1/§10). Anything wider/other-repr is an explicit `UnsupportedNode` (never a
+/// silent mis-encode — G2). *(M-378 also used this for the narrow closure ABI; M-851 widened closures
+/// to inlined any-repr/width values, so this constant now scopes the trampoline accumulator only.)*
 pub(crate) const CLOSURE_ABI_WIDTH: usize = 8;
 
-/// The arena capacity (bytes) for the bump-allocated closure heap (DN-15 §7.2). A **`Declared`**
-/// compile-time over-estimate. Increment-2 excludes `Fix`/`FixGroup`, so the number of closure
-/// records is statically bounded by program structure (not a runaway) — but that bound is *not
-/// computed here*, so a sufficiently large finite program could still exceed this capacity. If it
-/// does, the over-capacity check in `@myc_arena_alloc` takes an explicit `@abort` (a never-silent
-/// defined-trap — G2), exactly the seam where **Increment-3** substitutes a `DepthBudget`-resolved
-/// ceiling + a graceful limit (DN-05 #1; `budget.rs`, M-349).
-pub(crate) const ARENA_CAPACITY_BYTES: usize = 1 << 20;
-
-/// A native closure value: a pointer to a heap (arena) closure record laid out as
-/// `[ fn_ptr:i64 | boxed_capture_0:i64 | … | boxed_capture_k:i64 ]` (slot 0 = `@myc_closureN` address
-/// as i64; slots 1.. = **boxed** captured values — each an `i8*` box pointer stored as `i64`).
-/// Produced by `Rhs::Lam`, consumed by `Rhs::App` as an indirect call through the **widened
-/// pointer-boxed ABI** (`i8* @myc_closureN(i8* %env, i8* %arg)` — M-851; DN-15 §7.1 widening): a
-/// closure now crosses the boundary over any repr/width and may **return a closure** (currying).
+/// A native closure value — **widened, specialize-at-application** representation (M-851; DN-15 §7.1
+/// — the "uniform … any repr/width" widening of the M-378 narrow `Binary{8}` ABI). The narrow ABI
+/// eagerly emitted a top-level `i64 (i8*,i64)` function + heap record carrying a single packed
+/// `Binary{8}`; this widened path instead **suspends** the closure as its un-lowered lambda (`param` +
+/// `body` ANF) plus a snapshot of the **captured environment** (each free var's already-lowered
+/// [`EnvValue`]), and **specializes (inlines) it at the application site** ([`lower_app`]): the
+/// argument pins the param's concrete shape, the body is lowered inline, and the result flows back as
+/// an [`EnvValue`] of whatever shape the body computed. This lets closures over **any repr/width**,
+/// **curried application** (a body whose result is itself a `ClosureVal`), and **returned closures**
+/// (a closure flowing through a `let`/binding, applied later) all lower natively — with no fixed wire
+/// ABI, no indirect call, and **no guessed param width** (each shape is statically resolved at the App
+/// site; G2/VR-5). A closure that is never applied (left on the printable program result, or
+/// `Match`-scrutinized) stays an explicit refusal (a closure is not printable/branchable — DN-15 §7.4).
 #[derive(Debug, Clone)]
 pub(crate) struct ClosureVal {
-    /// The SSA register holding the record's `i64*` base pointer.
-    pub(crate) base: String,
-    /// How this closure's **return** shape is resolved — see [`ClosureRet`]. Lets `Rhs::App` unbox the
-    /// `i8*` call result into the right [`EnvValue`] (and a curried `App(App(f,a),b)` know the inner
-    /// result is itself a callable closure) without any runtime shape switch.
-    pub(crate) ret_shape: ClosureRet,
-}
-
-/// How a closure's return shape is statically resolved at an `Rhs::App` site (M-851):
-/// - `Known(shape)` — a concrete lane/closure shape (the common, fully-typed case);
-/// - `EchoesParam` — the closure returns its **parameter unchanged** (the polymorphic identity / a
-///   pass-through), so the result shape **equals the argument's** at the call site — resolved there;
-/// - `Unknown` — the return shape is not statically resolvable (a closure recovered from a runtime
-///   box without its descriptor); applying it is an explicit refusal (never a guessed unbox — G2).
-#[derive(Debug, Clone)]
-pub(crate) enum ClosureRet {
-    /// A concrete, statically-known return shape.
-    Known(BoxShape),
-    /// The closure returns its parameter unchanged; the result shape is the call-site argument's.
-    EchoesParam,
-    /// Not statically resolvable — applying the closure is refused (G2).
-    Unknown,
+    /// The closure parameter name (bound to the application argument when specialized).
+    pub(crate) param: String,
+    /// The closure body as an un-lowered ANF block, lowered inline at the application site.
+    pub(crate) body: mycelium_core::lower::Anf,
+    /// The captured environment — each free variable of the body mapped to its already-lowered
+    /// [`EnvValue`] from the *defining* scope (a lane of any repr/width, or a nested `ClosureVal`).
+    /// Snapshotting the values (not re-looking-them-up at the App site) keeps lexical capture correct
+    /// when the closure is applied outside its defining scope (a returned/curried closure).
+    pub(crate) captured: Vec<(String, EnvValue)>,
 }
 
 /// A suspended `Fix` value (Increment-3 / RFC-0004 §11.6): the Fix body (a `λparam. Match ...`)
@@ -285,15 +272,6 @@ pub(crate) enum EnvValue {
     /// ([`crate::trampoline`]). Carries the whole group's lowered defs plus which member this is
     /// (so a sibling call resolves the group). Never a printable result value (G2).
     FixGroup(FixGroupVal),
-    /// An **opaque boxed value** (M-851): the SSA register holding a boxed value (`i8*`) whose static
-    /// shape is *not* constrained by its uses — a closure parameter used only as a **pass-through**
-    /// (`(λx. x) v` — the polymorphic identity), or aliased / re-applied / re-returned unchanged. It is
-    /// carried as the raw box and re-boxed by-identity ([`box_env_value`]) at the next boundary, so a
-    /// shape-polymorphic value flows through without being mis-typed (the identity closure works over
-    /// **any** repr/width). The moment it is consumed by a lane op / `Match` (which needs a concrete
-    /// shape) it is an explicit refusal — that consumption is exactly what would have constrained the
-    /// param, so an *opaque* value reaching an op means the inference genuinely could not pin it (G2).
-    BoxedOpaque(String),
 }
 
 impl EnvValue {
@@ -317,11 +295,6 @@ impl EnvValue {
                 "{ctx}: expected a repr lane but found a FixGroup member — a bare FixGroup is not a \
                  printable/repr value; it must be applied to an argument (M-850; DN-15 §10; G2)"
             ))),
-            EnvValue::BoxedOpaque(_) => Err(AotError::UnsupportedNode(format!(
-                "{ctx}: expected a repr lane but found a shape-opaque boxed value (an unconstrained \
-                 pass-through closure param) — its concrete width is unknown, so it cannot be \
-                 forced to a lane here; refused, never guessed (M-851; G2/VR-5)"
-            ))),
         }
     }
     fn as_lane(&self, ctx: &str) -> Result<&Lane, AotError> {
@@ -340,10 +313,6 @@ impl EnvValue {
             EnvValue::FixGroup(_) => Err(AotError::UnsupportedNode(format!(
                 "{ctx}: expected a repr lane but found a FixGroup member — only usable as an App \
                  func (M-850; G2)"
-            ))),
-            EnvValue::BoxedOpaque(_) => Err(AotError::UnsupportedNode(format!(
-                "{ctx}: expected a repr lane but found a shape-opaque boxed value (an unconstrained \
-                 pass-through closure param) — its concrete width is unknown; refused (M-851; G2)"
             ))),
         }
     }
@@ -396,9 +365,11 @@ pub(crate) struct Lowered {
     /// trit-arithmetic op's overflow condition, or `None` for a program that cannot overflow (no
     /// `trit.add/sub/mul`). The AOT/JIT emitters branch on it to drive the read-back protocol.
     pub(crate) overflow: Option<String>,
-    /// The emitted closure functions (`define i64 @myc_closureN(i8* %env, i64 %arg) { … }`), one per
-    /// `Rhs::Lam` lowered (Increment-2). Empty for a closure-free program — in which case
-    /// [`emit_llvm_ir`] emits byte-for-byte the same module as before (no arena, no closures).
+    /// **Vestigial since M-851 — always empty.** The narrow ABI (M-378) emitted one top-level
+    /// `@myc_closureN` function per `Rhs::Lam` here; the widened ABI **inlines** closures at their
+    /// application site ([`lower_app`]), so no top-level closure functions are produced. Retained only
+    /// because the trampoline-shared lowering signatures thread a `funcs` sink (M-850); nothing writes
+    /// to it now. Kept (not removed) to avoid churning the `crate::trampoline` interface.
     pub(crate) funcs: Vec<String>,
 }
 
@@ -621,37 +592,19 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                 alts,
                 default,
             } => lower_match(
-                scrutinee,
-                alts,
-                default,
-                &env,
-                &mut ssa,
-                &mut bbc,
-                &mut body,
-                &mut funcs,
+                scrutinee, alts, default, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
                 &mut flags,
-                TrapRet::MainI32,
             )?,
-            // Increment-2 (M-378; DN-15 §7; RFC-0004 §11.5), widened to the uniform pointer-boxed ABI
-            // (M-851): App/Lam are natively lowered via closure-conversion (free-var analysis → heap
-            // closure record → indirect call) over **any repr/width** and with currying / returned
-            // closures. Fix/FixGroup route to the heap-trampoline (M-850; narrow ABI; G2/VR-5).
+            // M-378 + M-851 (DN-15 §7; RFC-0004 §11.5/§11.7): `Lam` builds a suspended closure value
+            // (free-var snapshot) and `App` **specializes (inlines)** it at the call site over the
+            // widened any-repr/width boxed-value model — currying + returned closures lower natively.
+            // Fix/FixGroup route to the heap trampoline (M-850; DN-05 #1 stack-robustness; G2/VR-5).
             Rhs::Lam {
                 param,
                 body: lam_body,
-            } => lower_lam(
-                param, lam_body, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
-            )?,
+            } => lower_lam(param, lam_body, &env)?,
             Rhs::App { func, arg } => lower_app(
-                func,
-                arg,
-                &env,
-                &mut ssa,
-                &mut bbc,
-                &mut body,
-                &mut funcs,
-                &mut flags,
-                TrapRet::MainI32,
+                func, arg, &env, &mut ssa, &mut bbc, &mut body, &mut funcs, &mut flags,
             )?,
             Rhs::Fix {
                 name,
@@ -700,9 +653,7 @@ pub(crate) fn lower_anf_block_pub(
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
 ) -> Result<Lane, AotError> {
-    // The trampoline emits its block IR into `@main`'s body (the recursion loop lives in main), so a
-    // box header-check mismatch traps with `ret i32 0` (`TrapRet::MainI32`).
-    lower_anf_block(anf, env, ssa, bbc, body, funcs, flags, TrapRet::MainI32)
+    lower_anf_block(anf, env, ssa, bbc, body, funcs, flags)
 }
 
 /// `pub(crate)` shim: lower every **support** binding of `anf` — every binding whose name is neither
@@ -797,9 +748,8 @@ pub(crate) fn lit_binary8_packed_pub(value: &Value) -> Result<u64, AotError> {
 }
 
 /// Lower a nested ANF block (a `Match` arm or similar nested scope) into the ongoing IR stream,
-/// extending `env` with any new bindings. Returns the result `Lane` of the nested block.
-/// This is the recursive workhorse for `Rhs::Match` arm bodies in [`lower_program`].
-#[allow(clippy::too_many_arguments)]
+/// extending `env` with any new bindings. Returns the result `Lane` of the nested block (forcing the
+/// result to a repr lane). This is the recursive workhorse for `Rhs::Match` arm bodies.
 fn lower_anf_block(
     anf: &lower::Anf,
     env: &mut HashMap<Atom, EnvValue>,
@@ -808,17 +758,15 @@ fn lower_anf_block(
     body: &mut String,
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
-    trap: TrapRet,
 ) -> Result<Lane, AotError> {
-    lower_anf_block_ev(anf, env, ssa, bbc, body, funcs, flags, trap)?.into_lane("match arm result")
+    lower_anf_block_ev(anf, env, ssa, bbc, body, funcs, flags)?.into_lane("match arm result")
 }
 
-/// Lower a nested ANF block returning its raw [`EnvValue`] result (a lane **or** a closure). The
+/// Lower a nested ANF block returning its raw [`EnvValue`] result — a lane **or** a closure. The
 /// closure-result case is what makes **currying / returned closures** lowerable (M-851): a closure
-/// body whose result is itself a `Lam`/`App`-of-closure yields an `EnvValue::Closure`, which the
-/// caller boxes (tag `BOX_TAG_CLOSURE`) instead of forcing it to a printable lane. [`lower_anf_block`]
-/// is the lane-forcing wrapper for the (common) repr-result case. `trap` types any box header-check
-/// mismatch terminator to the enclosing function's return.
+/// body whose result is itself a `Lam` / an `App`-returning-a-closure yields an `EnvValue::Closure`,
+/// which the caller (an enclosing `App`, or a `let` binding) consumes directly rather than forcing it
+/// to a printable lane. [`lower_anf_block`] is the lane-forcing wrapper for the (common) repr-result.
 #[allow(clippy::too_many_arguments)]
 fn lower_anf_block_ev(
     anf: &lower::Anf,
@@ -828,7 +776,6 @@ fn lower_anf_block_ev(
     body: &mut String,
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
-    trap: TrapRet,
 ) -> Result<EnvValue, AotError> {
     for b in anf.bindings() {
         let ev = match &b.rhs {
@@ -880,18 +827,14 @@ fn lower_anf_block_ev(
                 scrutinee,
                 alts,
                 default,
-            } => lower_match(
-                scrutinee, alts, default, env, ssa, bbc, body, funcs, flags, trap,
-            )?,
+            } => lower_match(scrutinee, alts, default, env, ssa, bbc, body, funcs, flags)?,
             // Increment-2: closures are lowered inside match arms too (a `Lam`/`App` may appear in an
             // arm body). Fix/FixGroup stay explicit UnsupportedNode (Increment-3; G2/VR-5).
             Rhs::Lam {
                 param,
                 body: lam_body,
-            } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
-            Rhs::App { func, arg } => {
-                lower_app(func, arg, env, ssa, bbc, body, funcs, flags, trap)?
-            }
+            } => lower_lam(param, lam_body, env)?,
+            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
             Rhs::Fix {
                 name,
                 body: fix_body,
@@ -1092,674 +1035,57 @@ fn unpack_binary8(src: &str, ssa: &mut Ssa, body: &mut String) -> Lane {
     }
 }
 
-/// The LLVM type of a closure function pointer in the **widened, uniform pointer-boxed ABI**
-/// (M-851; DN-15 §7.1 *"uniform pointer-boxed lanes of any repr/width"* — the separable widening of
-/// the §7.1 narrow ABI): `i8* (i8*, i8*)*` — a closure takes a **boxed value** (`i8* %arg`) and
-/// returns a **boxed value** (`i8*`). The boxed value can carry a lane of *any* repr/width *or*
-/// another closure, so closures over any width, currying, and closure-valued results all lower
-/// natively (the refusals M-378 listed are removed). The earlier narrow `i64 (i8*, i64)*` (only
-/// `Binary{8}` packed into one `i64`) is retained **inside the trampoline** ([`crate::trampoline`])
-/// for the recursion accumulator — that ABI is untouched (M-850 kept byte-identical).
-const CLOSURE_FN_TY: &str = "i8* (i8*, i8*)*";
-
-// ─── Uniform pointer-boxed value ABI (M-851; DN-15 §7.1 widening) ──────────────────────────────
-//
-// A **boxed value** is an `i8*` to an arena box laid out in `i64` slots:
-//
-//   [ tag:i64 | width:i64 | payload_0:i64 | … | payload_{width-1}:i64 ]
-//
-// where `tag` distinguishes the box's kind and `width` is its element count:
-//   - `BOX_TAG_BINARY`  — a `Binary{width}` lane; each payload slot holds one bit element (`sext`ed).
-//   - `BOX_TAG_TERNARY` — a `Ternary{width}` lane; each payload slot holds one trit (`-1/0/1`,`sext`).
-//   - `BOX_TAG_CLOSURE` — a closure; `width = 0`; payload slot 0 holds the closure-record `i8*` as i64.
-//
-// The header (`tag`,`width`) makes a box **self-describing** at runtime (never a silent mis-decode —
-// G2): the unbox helpers emit a runtime `tag`/`width` check against the *statically expected* shape
-// and `@abort` on mismatch (a defined-trap, like the match no-default trap). The static shape is
-// always known at each box/unbox site (a capture from the enclosing env, an `App` argument's lane, a
-// closure body's result, or the inferred param shape — [`infer_param_shape`]), so the dynamic check
-// is a belt-and-braces guard, not the source of truth. Fully textual / dumpable (RFC-0004 §6).
-
-/// Box tag for a `Binary{width}` lane.
-const BOX_TAG_BINARY: u64 = 0;
-/// Box tag for a `Ternary{width}` lane.
-const BOX_TAG_TERNARY: u64 = 1;
-/// Box tag for a closure (payload slot 0 = closure-record `i8*` as `i64`; `width = 0`).
-const BOX_TAG_CLOSURE: u64 = 2;
-
-/// The box tag for a lane kind (`Binary`/`Ternary`).
-fn box_tag_for(kind: LaneKind) -> u64 {
-    match kind {
-        LaneKind::Binary => BOX_TAG_BINARY,
-        LaneKind::Ternary => BOX_TAG_TERNARY,
-    }
-}
-
-/// The static shape of a boxed value: a lane (kind + element count) or a closure. Used to drive the
-/// type-directed `box`/`unbox` at each closure boundary site and the dynamic header check.
-///
-/// `Closure(ret)` carries the closure's **own return shape** (`ret`) so a curried application
-/// `App(App(f, a), b)` is fully statically typed: applying `f` yields a `Closure(ret)`, and `ret`
-/// is the shape the *next* application produces — recovered without any runtime width-probe (the
-/// boxed-value ABI stays type-directed end-to-end; an unconstrained nested return is `None` and is
-/// refused at the unbox site rather than guessed — G2/VR-5).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum BoxShape {
-    /// A repr lane of this kind and element count.
-    Lane(LaneKind, usize),
-    /// A closure value (a boxed function) returning a value of the boxed inner shape (`None` when that
-    /// nested return shape is not statically resolvable — e.g. a closure recovered from a runtime box
-    /// without its descriptor; applying it then needs an explicit shape, refused if absent — G2).
-    Closure(Option<Box<BoxShape>>),
-    /// A **shape-opaque** boxed value — a value whose concrete repr/width is not statically known (a
-    /// pass-through closure param, or a capture of one). It flows through boundaries *by identity* (no
-    /// unbox/rebox), so a polymorphic value (the identity, a pass-through capture) is never mis-typed;
-    /// the moment it is consumed by a lane op / `Match` (which needs a concrete width) it is an
-    /// explicit refusal — never a guessed width (M-851; G2/VR-5).
-    Opaque,
-}
-
-impl BoxShape {
-    /// The shape of a concrete [`Lane`].
-    fn of_lane(lane: &Lane) -> Self {
-        BoxShape::Lane(lane.kind, lane.vals.len())
-    }
-    /// The shape of an [`EnvValue`] that may cross a closure boundary — a repr lane or a closure
-    /// (carrying the closure's resolved return shape when `Known`). A datum / Fix / FixGroup may
-    /// **not** cross the boundary (explicit refusal — G2; DN-15 §7.4). An opaque boxed value is
-    /// shape-unknown (`Closure(None)` is *not* it — `BoxedOpaque` is handled at the box site directly).
-    fn of_env(ev: &EnvValue, ctx: &str) -> Result<Self, AotError> {
-        match ev {
-            EnvValue::Repr(l) => Ok(BoxShape::of_lane(l)),
-            EnvValue::Closure(c) => Ok(BoxShape::Closure(match &c.ret_shape {
-                ClosureRet::Known(s) => Some(Box::new(s.clone())),
-                ClosureRet::EchoesParam | ClosureRet::Unknown => None,
-            })),
-            EnvValue::Datum(_) => Err(AotError::UnsupportedNode(format!(
-                "{ctx}: a constructed data value cannot cross the closure boundary (the boxed-value \
-                 ABI carries repr lanes and closures only; DN-15 §7.4; G2)"
-            ))),
-            EnvValue::Fix(_) | EnvValue::FixGroup(_) => Err(AotError::UnsupportedNode(format!(
-                "{ctx}: a Fix/FixGroup value cannot cross the closure boundary — it must be applied \
-                 (App) to run via the trampoline, not boxed (M-850; G2)"
-            ))),
-            // A shape-opaque value crosses the boundary by-identity (it is already a box); its shape
-            // descriptor is `Opaque` — boxed/unboxed without an unbox/rebox (the polymorphic case).
-            EnvValue::BoxedOpaque(_) => Ok(BoxShape::Opaque),
-        }
-    }
-}
-
-/// Allocate a box of `width` payload slots on the arena and store its `tag`/`width` header, returning
-/// the box `i8*`. The caller fills the payload slots (via [`box_payload_gep`]).
-fn box_alloc(tag: u64, width: usize, ssa: &mut Ssa, body: &mut String) -> String {
-    let nbytes = (2 + width) * 8; // header (tag,width) + one i64 per payload element
-    let raw = ssa.fresh();
-    let _ = writeln!(body, "  {raw} = call i8* @myc_arena_alloc(i64 {nbytes})");
-    let hp = ssa.fresh();
-    let _ = writeln!(body, "  {hp} = bitcast i8* {raw} to i64*");
-    let _ = writeln!(body, "  store i64 {tag}, i64* {hp}"); // slot 0 = tag
-    let wgep = ssa.fresh();
-    let _ = writeln!(body, "  {wgep} = getelementptr i64, i64* {hp}, i64 1");
-    let _ = writeln!(body, "  store i64 {width}, i64* {wgep}"); // slot 1 = width
-    raw
-}
-
-/// A GEP to payload slot `i` of a box (`i8*`), as an `i64*`. Payload begins at i64-index `2 + i`
-/// (after the `tag`/`width` header).
-fn box_payload_gep(box_ptr: &str, i: usize, ssa: &mut Ssa, body: &mut String) -> String {
-    let hp = ssa.fresh();
-    let _ = writeln!(body, "  {hp} = bitcast i8* {box_ptr} to i64*");
-    let gep = ssa.fresh();
-    let _ = writeln!(
-        body,
-        "  {gep} = getelementptr i64, i64* {hp}, i64 {}",
-        2 + i
-    );
-    gep
-}
-
-/// Box a repr [`Lane`] into a fresh arena box (`i8*`), `sext`ing each `i32` element to its `i64`
-/// payload slot. The inverse of [`unbox_lane`]. Any-kind / any-width (the widening core).
-fn box_lane(lane: &Lane, ssa: &mut Ssa, body: &mut String) -> String {
-    let tag = box_tag_for(lane.kind);
-    let bx = box_alloc(tag, lane.vals.len(), ssa, body);
-    for (i, v) in lane.vals.iter().enumerate() {
-        let ext = ssa.fresh();
-        let _ = writeln!(body, "  {ext} = sext i32 {v} to i64");
-        let gep = box_payload_gep(&bx, i, ssa, body);
-        let _ = writeln!(body, "  store i64 {ext}, i64* {gep}");
-    }
-    bx
-}
-
-/// The defined-trap terminator for a box header-check mismatch, **typed to the enclosing function's
-/// return** so the (provably-dead, post-`noreturn`-`@abort`) block has a valid terminator without a
-/// raw `unreachable` (G2; consistent with the match no-default trap). A closure function returns
-/// `i8*` (so `ret i8* null`); `@main` returns `i32` (so `ret i32 0`). Threaded through every unbox so
-/// the same check works in both contexts.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum TrapRet {
-    /// `ret i8* null` — inside a closure function (return type `i8*`).
-    BoxPtr,
-    /// `ret i32 0` — inside `@main` (return type `i32`).
-    MainI32,
-}
-
-impl TrapRet {
-    fn terminator(self) -> &'static str {
-        match self {
-            TrapRet::BoxPtr => "  ret i8* null",
-            TrapRet::MainI32 => "  ret i32 0",
-        }
-    }
-}
-
-/// Unbox a boxed value (`i8*`) into a repr [`Lane`] of the statically-expected `kind`/`width`,
-/// truncating each `i64` payload slot back to an `i32` element. A runtime header check guards the
-/// expected shape and `@abort`s on mismatch (defined-trap, never a silent mis-decode — G2). The
-/// inverse of [`box_lane`].
-fn unbox_lane(
-    box_ptr: &str,
-    kind: LaneKind,
-    width: usize,
-    trap: TrapRet,
-    ssa: &mut Ssa,
-    bbc: &mut Bbc,
-    body: &mut String,
-) {
-    emit_box_header_check(
-        box_ptr,
-        box_tag_for(kind),
-        Some(width),
-        trap,
-        ssa,
-        bbc,
-        body,
-    );
-}
-
-/// Load the `width` payload elements of a box (`i8*`) as a [`Lane`] of `i32` registers (each `trunc`ed
-/// from its `i64` slot). Assumes the header has been checked ([`emit_box_header_check`]).
-fn load_box_lane(
-    box_ptr: &str,
-    kind: LaneKind,
-    width: usize,
-    ssa: &mut Ssa,
-    body: &mut String,
-) -> Lane {
-    let vals = (0..width)
-        .map(|i| {
-            let gep = box_payload_gep(box_ptr, i, ssa, body);
-            let loaded = ssa.fresh();
-            let _ = writeln!(body, "  {loaded} = load i64, i64* {gep}");
-            let t = ssa.fresh();
-            let _ = writeln!(body, "  {t} = trunc i64 {loaded} to i32");
-            t
-        })
-        .collect();
-    Lane { kind, vals }
-}
-
-/// Box a closure value into a fresh `BOX_TAG_CLOSURE` box: `width = 0`, payload slot 0 = the record
-/// pointer as `i64`. The closure's return shape is **threaded statically** through the [`BoxShape`]
-/// (`Closure(ret)`) — it does not need to live in the box, because every box/unbox site is
-/// type-directed (the producing [`box_env_value`] and the consuming [`unbox_boxed_arg`] both know the
-/// shape from the same static context). Lets a closure be a capture, an `App` argument, or a returned
-/// value (currying / returned closures); the record already lives on the arena, the box wraps its
-/// pointer so the uniform `i8*` ABI is uniform everywhere.
-fn box_closure(c: &ClosureVal, ssa: &mut Ssa, body: &mut String) -> String {
-    let bx = box_alloc(BOX_TAG_CLOSURE, 0, ssa, body);
-    let as_int = ssa.fresh();
-    let _ = writeln!(body, "  {as_int} = ptrtoint i64* {} to i64", c.base);
-    let gep = box_payload_gep(&bx, 0, ssa, body);
-    let _ = writeln!(body, "  store i64 {as_int}, i64* {gep}");
-    bx
-}
-
-/// Unbox a `BOX_TAG_CLOSURE` box back to a [`ClosureVal`] (its record `i64*` base), with a runtime
-/// header check (`@abort` on a non-closure box — G2). The inverse of [`box_closure`]. The recovered
-/// closure's return shape (`ret`) is supplied by the caller from the static `BoxShape::Closure(ret)`
-/// it is unboxing against (type-directed; never re-parsed from IR): `Some(s)` ⇒ `Known(s)`, `None` ⇒
-/// `Unknown` (a closure recovered without a static descriptor — applying it is then refused, G2).
-fn unbox_closure(
-    box_ptr: &str,
-    ret: Option<BoxShape>,
-    trap: TrapRet,
-    ssa: &mut Ssa,
-    bbc: &mut Bbc,
-    body: &mut String,
-) -> ClosureVal {
-    emit_box_header_check(box_ptr, BOX_TAG_CLOSURE, None, trap, ssa, bbc, body);
-    let gep = box_payload_gep(box_ptr, 0, ssa, body);
-    let as_int = ssa.fresh();
-    let _ = writeln!(body, "  {as_int} = load i64, i64* {gep}");
-    let base = ssa.fresh();
-    let _ = writeln!(body, "  {base} = inttoptr i64 {as_int} to i64*");
-    let ret_shape = match ret {
-        Some(s) => ClosureRet::Known(s),
-        None => ClosureRet::Unknown,
-    };
-    ClosureVal { base, ret_shape }
-}
-
-/// Box an [`EnvValue`] crossing a closure boundary — a lane via [`box_lane`], a closure via
-/// [`box_closure`], and a **shape-opaque** value ([`EnvValue::BoxedOpaque`]) **by identity** (it is
-/// already a box pointer — a polymorphic pass-through value flows through unchanged, no re-encode).
-/// The single entry every boundary site (capture, argument, result) routes through, so the encoding
-/// can never disagree with the decoder.
-fn box_env_value(
-    ev: &EnvValue,
-    ctx: &str,
-    ssa: &mut Ssa,
-    body: &mut String,
-) -> Result<String, AotError> {
-    match ev {
-        EnvValue::Repr(l) => Ok(box_lane(l, ssa, body)),
-        EnvValue::Closure(c) => Ok(box_closure(c, ssa, body)),
-        EnvValue::BoxedOpaque(ptr) => Ok(ptr.clone()),
-        _ => {
-            // Reuse `BoxShape::of_env`'s honest refusal for datum/Fix/FixGroup.
-            BoxShape::of_env(ev, ctx)?;
-            unreachable!("of_env returns Err for the non-boxable cases handled above")
-        }
-    }
-}
-
-/// Emit a runtime header check on a box (`i8*`): assert `tag` equals `expect_tag` and (when
-/// `expect_width` is `Some`) `width` equals it, taking a defined-trap `@abort` on mismatch (never raw
-/// `unreachable` UB — G2/SC-3; consistent with the match no-default trap). This makes the boxed-value
-/// ABI **never-silent**: a mis-shaped box is an explicit abort at the unbox site, not a silent
-/// mis-decode. Branches to a fresh `ok` block that the caller's subsequent loads fall into.
-fn emit_box_header_check(
-    box_ptr: &str,
-    expect_tag: u64,
-    expect_width: Option<usize>,
-    trap: TrapRet,
-    ssa: &mut Ssa,
-    bbc: &mut Bbc,
-    body: &mut String,
-) {
-    let hp = ssa.fresh();
-    let _ = writeln!(body, "  {hp} = bitcast i8* {box_ptr} to i64*");
-    let tag_reg = ssa.fresh();
-    let _ = writeln!(body, "  {tag_reg} = load i64, i64* {hp}");
-    let tag_ok = ssa.fresh();
-    let _ = writeln!(body, "  {tag_ok} = icmp eq i64 {tag_reg}, {expect_tag}");
-    let mut cond = tag_ok;
-    if let Some(w) = expect_width {
-        let wgep = ssa.fresh();
-        let _ = writeln!(body, "  {wgep} = getelementptr i64, i64* {hp}, i64 1");
-        let w_reg = ssa.fresh();
-        let _ = writeln!(body, "  {w_reg} = load i64, i64* {wgep}");
-        let w_ok = ssa.fresh();
-        let _ = writeln!(body, "  {w_ok} = icmp eq i64 {w_reg}, {w}");
-        let both = ssa.fresh();
-        let _ = writeln!(body, "  {both} = and i1 {cond}, {w_ok}");
-        cond = both;
-    }
-    let ok_label = bbc.fresh();
-    let bad_label = bbc.fresh();
-    let _ = writeln!(
-        body,
-        "  br i1 {cond}, label %{ok_label}, label %{bad_label}"
-    );
-    // Mismatch: a defined-trap (`@abort` is `noreturn`; the trailing ret is provably dead — G2). The
-    // terminator is typed to the enclosing function's return (`TrapRet`) so it is valid IR in both
-    // a closure function (`ret i8* null`) and `@main` (`ret i32 0`).
-    let _ = writeln!(body, "{bad_label}:");
-    let _ = writeln!(body, "  call void @abort()");
-    let _ = writeln!(body, "{}", trap.terminator());
-    let _ = writeln!(body, "{ok_label}:");
-}
-
-/// Infer the static [`BoxShape`] of a closure parameter `param` from how `body` uses it, so the
-/// closure-function prologue can unbox `%arg` to the right lane shape (or treat it as a closure). The
-/// uniform boxed ABI is self-describing at runtime, but each *static* unbox needs an element count, so
-/// we resolve the param's shape from a constraint walk over the body (the same type-directed style the
-/// rest of the lowering uses — every other value's shape comes from its producer):
-///
-/// - the param used as an `App` **func** ⇒ a closure (`BoxShape::Closure`);
-/// - the param used in an `Op` alongside an operand of known shape (a const, a capture, or another
-///   shaped binding) ⇒ that operand's `Lane` shape (`bit.*`/`trit.*`/`core.id` are shape-preserving);
-/// - the param `Match`-scrutinized over `Lit` patterns ⇒ the pattern's `Binary{width}` shape;
-/// - the param used **only** as a pass-through (aliased / re-applied / re-returned unchanged) ⇒
-///   **`Ok(None)`**: the param is shape-**polymorphic** (the identity), carried as a [`EnvValue::
-///   BoxedOpaque`] box that flows through without a concrete shape (a guessed width would be a lie — so
-///   it is *not* guessed; the value passes through opaque and the call site resolves the result).
-///
-/// Returns `Ok(Some(shape))` when a single concrete shape is forced, `Ok(None)` when unconstrained
-/// (pass-through ⇒ opaque), and an explicit [`AotError::UnsupportedNode`] only on a **conflicting**
-/// shape (never a guess — G2/VR-5). `known` seeds the shapes visible in the body (the captures).
-fn infer_param_shape(
-    param: &str,
-    body: &lower::Anf,
-    known: &HashMap<String, BoxShape>,
-) -> Result<Option<BoxShape>, AotError> {
-    let mut found: Option<BoxShape> = None;
-    let mut local: HashMap<String, BoxShape> = known.clone();
-    infer_param_shape_walk(param, body, &mut local, &mut found)?;
-    Ok(found)
-}
-
-/// Record a shape constraint on an atom: if it is `param`, pin `found` (a *conflicting* later
-/// constraint is a hard error — the program is ill-shaped for the single-param-shape native ABI).
-fn note_param_shape(
-    param: &str,
-    a: &Atom,
-    shape: &BoxShape,
-    found: &mut Option<BoxShape>,
-) -> Result<(), AotError> {
-    if let Atom::Named(n) = a {
-        if n == param {
-            match found {
-                None => *found = Some(shape.clone()),
-                Some(prev) if prev == shape => {}
-                Some(prev) => {
-                    return Err(AotError::UnsupportedNode(format!(
-                        "closure param `{param}` is used at conflicting shapes ({prev:?} vs \
-                         {shape:?}) — the native boxed-value ABI needs a single param shape; \
-                         refused (M-851; G2)"
-                    )));
-                }
-            }
-        }
-    }
-    Ok(())
-}
-
-/// One constraint-propagation pass for [`infer_param_shape`]: track each binding's resolved
-/// [`BoxShape`] in `local`, and the first concrete shape forced on `param` in `found`.
-fn infer_param_shape_walk(
-    param: &str,
-    anf: &lower::Anf,
-    local: &mut HashMap<String, BoxShape>,
-    found: &mut Option<BoxShape>,
-) -> Result<(), AotError> {
-    use mycelium_core::lower::AnfAlt;
-    for b in anf.bindings() {
-        let shape: Option<BoxShape> = match &b.rhs {
-            Rhs::Const(v) => Some(BoxShape::of_lane(&const_lane(v)?)),
-            Rhs::Alias(a) => atom_shape(a, local),
-            Rhs::Op { prim, args } => {
-                // Shape-preserving ops: every operand and the result share one lane shape. If any
-                // operand's shape is known, constrain the param-operands (and the result) to it.
-                let known_shape = args.iter().find_map(|a| atom_shape(a, local));
-                if let Some(sh) = &known_shape {
-                    for a in args {
-                        note_param_shape(param, a, sh, found)?;
-                    }
-                }
-                let _ = prim; // `core.id`/`bit.*`/`trit.*` are all shape-preserving.
-                known_shape
-            }
-            Rhs::App { func, .. } => {
-                // The func operand must be a closure; the App result shape is the callee's return
-                // shape (when statically known), so a downstream op/result can resolve through it.
-                let func_shape = atom_shape(func, local);
-                let ret = match &func_shape {
-                    Some(BoxShape::Closure(Some(r))) => Some((**r).clone()),
-                    _ => None,
-                };
-                note_param_shape(param, func, &BoxShape::Closure(None), found)?;
-                ret
-            }
-            Rhs::Lam {
-                param: lp,
-                body: lb,
-            } => {
-                // A nested lambda is a closure returning its own (recursively inferred) result shape.
-                // Best-effort: if the nested body's result shape is statically resolvable from the
-                // surrounding `local`, thread it; else `Closure(None)` (resolved at its own lowering).
-                Some(BoxShape::Closure(
-                    infer_lam_result_shape(lp, lb, local).map(Box::new),
-                ))
-            }
-            Rhs::Match {
-                scrutinee, alts, ..
-            } => {
-                // A `Lit`-arm Match constrains the scrutinee to the pattern's Binary{width} shape.
-                if let Some(AnfAlt::Lit { value, .. }) =
-                    alts.iter().find(|a| matches!(a, AnfAlt::Lit { .. }))
-                {
-                    if let Repr::Binary { width } = value.repr() {
-                        note_param_shape(
-                            param,
-                            scrutinee,
-                            &BoxShape::Lane(LaneKind::Binary, *width as usize),
-                            found,
-                        )?;
-                    }
-                }
-                None
-            }
-            _ => None,
-        };
-        // Track each binding's resolved shape keyed by its rendered atom (so both `Named` *and* `Temp`
-        // bindings are tracked — a const/op bound to a `Temp` is the common ANF case, and the param's
-        // shape often propagates through a `Temp` operand). The capture seed uses the same key space
-        // (a capture's `Named` name renders to its bare name).
-        if let Some(sh) = shape {
-            local.insert(b.name.render(), sh);
-        }
-    }
-    Ok(())
-}
-
-/// Best-effort static result shape of a nested `λlp. lb`, used only to thread a nested closure's
-/// return shape during param inference (currying). Returns `None` when not statically resolvable from
-/// the surrounding scope (then the nested closure's own lowering pins it). Never errors here — a
-/// genuine ambiguity surfaces at the nested closure's own `infer_param_shape`/result-box site (G2).
-fn infer_lam_result_shape(
-    lp: &str,
-    lb: &lower::Anf,
-    outer: &HashMap<String, BoxShape>,
-) -> Option<BoxShape> {
-    let mut local = outer.clone();
-    // Try to resolve the nested param's shape too (so a body returning the param resolves); ignore an
-    // inference error / an unconstrained param here (the nested lowering will surface it honestly).
-    if let Ok(Some(ps)) = infer_param_shape(lp, lb, outer) {
-        local.insert(lp.to_owned(), ps);
-    }
-    let mut found: Option<BoxShape> = None;
-    let _ = infer_param_shape_walk(lp, lb, &mut local, &mut found);
-    atom_shape(lb.result(), &local)
-}
-
-/// The known [`BoxShape`] of an atom from the `local` shape map (keyed by rendered atom — `Named` *or*
-/// `Temp`), or `None`.
-fn atom_shape(a: &Atom, local: &HashMap<String, BoxShape>) -> Option<BoxShape> {
-    local.get(&a.render()).cloned()
-}
-
-/// Lower `Rhs::Lam` (Increment-2 closure-conversion; DN-15 §7.3, widened by M-851 to the uniform
-/// pointer-boxed ABI). Emits — into the *current* function `out_body` — the arena allocation of a
-/// closure record `[fn_ptr | boxed_capture_0 | … | boxed_capture_k]` (each capture boxed via
-/// [`box_env_value`], so a capture may itself be any-width lane or a closure), and registers a
-/// top-level `@myc_closureN(i8* %env, i8* %arg)` whose body is `body` lowered with `param`←(unboxed
-/// `%arg`) and each capture←(unboxed `%env` slot). Returns the [`EnvValue::Closure`]. A closure may
-/// now return another closure (currying / returned closures) — the body result is boxed by
-/// [`BoxShape`], lane or closure.
-#[allow(clippy::too_many_arguments)]
+/// Lower `Rhs::Lam` (M-851 widened closure ABI; DN-15 §7.1 widening). Emits **no IR** — it builds a
+/// **suspended** [`ClosureVal`] (the `param`, the un-lowered `body`, and a snapshot of each captured
+/// free var's already-lowered [`EnvValue`]). The body is lowered later, **inlined at the application
+/// site** ([`lower_app`]), where the argument pins the param's concrete shape — so closures over any
+/// repr/width, currying, and returned closures lower without a fixed wire ABI or a guessed width.
+/// Capturing the values *now* (snapshot) keeps lexical scope correct when the closure is applied
+/// outside its defining scope (a returned/curried closure). A free var that is not in the defining
+/// env is an explicit [`AotError::FreeVariable`] (never a silent miscapture — G2).
 fn lower_lam(
     param: &str,
     body: &lower::Anf,
     env: &HashMap<Atom, EnvValue>,
-    ssa: &mut Ssa,
-    bbc: &mut Bbc,
-    out_body: &mut String,
-    funcs: &mut Vec<String>,
 ) -> Result<EnvValue, AotError> {
-    let captures = closure_free_vars(body, param);
-
-    // Reserve this closure's function slot/name up-front (deterministic id = structural order). The
-    // placeholder is overwritten once the body — which may itself register nested closures — lowers.
-    let id = funcs.len();
-    funcs.push(String::new());
-    let fname = format!("@myc_closure{id}");
-
-    // Resolve each capture's static shape from the enclosing env (a lane of any width, or a closure —
-    // a closure capture is what lets a nested lambda close over an outer *function*, e.g. currying).
-    let cap_shapes: Vec<(String, BoxShape)> = captures
-        .iter()
-        .map(|capname| {
-            let cev = lookup_ev(env, &Atom::Named(capname.clone()))?;
-            let sh = BoxShape::of_env(cev, &format!("closure capture `{capname}`"))?;
-            Ok((capname.clone(), sh))
-        })
-        .collect::<Result<_, AotError>>()?;
-
-    // ── Allocate the record on the arena: slot 0 = fn_ptr (as i64), slots 1..=k = BOXED captures
-    //    (each an `i8*` box pointer, stored as i64). Boxing a capture lets it be any-width / a closure.
-    let k = captures.len();
-    let nbytes = (1 + k) * 8;
-    let raw = ssa.fresh();
-    let _ = writeln!(
-        out_body,
-        "  {raw} = call i8* @myc_arena_alloc(i64 {nbytes})"
-    );
-    let base = ssa.fresh();
-    let _ = writeln!(out_body, "  {base} = bitcast i8* {raw} to i64*");
-    // Slot 0 ← the closure function pointer, as i64.
-    let fpint = ssa.fresh();
-    let _ = writeln!(
-        out_body,
-        "  {fpint} = ptrtoint {CLOSURE_FN_TY} {fname} to i64"
-    );
-    let _ = writeln!(out_body, "  store i64 {fpint}, i64* {base}");
-    // Slots 1..=k ← each captured value, BOXED (the box `i8*` stored as i64).
-    for (j, capname) in captures.iter().enumerate() {
-        let cev = lookup_ev(env, &Atom::Named(capname.clone()))?;
-        let cbox = box_env_value(cev, &format!("closure capture `{capname}`"), ssa, out_body)?;
-        let cbox_int = ssa.fresh();
-        let _ = writeln!(out_body, "  {cbox_int} = ptrtoint i8* {cbox} to i64");
-        let cgep = ssa.fresh();
-        let _ = writeln!(
-            out_body,
-            "  {cgep} = getelementptr i64, i64* {base}, i64 {}",
-            j + 1
-        );
-        let _ = writeln!(out_body, "  store i64 {cbox_int}, i64* {cgep}");
-    }
-
-    // ── Infer the param's static lane/closure shape from its body uses (the boxed-value unbox needs an
-    //    element count; the param is the only value with no producer). The captures' shapes seed the
-    //    inference. When the param is **unconstrained** (used only as a pass-through — the polymorphic
-    //    identity), it stays a shape-**opaque** boxed value: it flows through (alias / re-apply /
-    //    re-return) by identity, no unbox/rebox, so the identity closure works over *any* repr/width.
-    //    A *conflicting* shape is still a hard refusal (G2/VR-5; `infer_param_shape` errors on that).
-    let known: HashMap<String, BoxShape> = cap_shapes.iter().cloned().collect();
-    let param_shape = infer_param_shape(param, body, &known)?;
-
-    // ── Emit the closure function body in a *fresh* env (param + captures only — a closure cannot see
-    //    the enclosing function's SSA registers; any other reference surfaces as an explicit
-    //    FreeVariable error, never invalid IR — G2). `%arg`/`%env` are boxed (`i8*`).
-    let mut cbody = String::new();
-    let mut cenv: HashMap<Atom, EnvValue> = HashMap::new();
-    // Unbox `%arg` to the inferred param shape (lane of any width, or a closure for a higher-order
-    // param), OR keep it shape-opaque (a pass-through param). The header check `@abort`s on a mis-shaped
-    // box (never silent — G2). Runs in the closure function (return type `i8*`) so the trap is `BoxPtr`.
-    let param_ev = match &param_shape {
-        Some(shape) => unbox_boxed_arg("%arg", shape, TrapRet::BoxPtr, ssa, bbc, &mut cbody),
-        None => EnvValue::BoxedOpaque("%arg".to_owned()),
-    };
-    cenv.insert(Atom::Named(param.to_owned()), param_ev);
-    // `%env` points at the captures region (record slots 1..); each slot is a box pointer (as i64).
-    let envp = ssa.fresh();
-    let _ = writeln!(cbody, "  {envp} = bitcast i8* %env to i64*");
-    for (j, (capname, cap_shape)) in cap_shapes.iter().enumerate() {
-        let cgep = ssa.fresh();
-        let _ = writeln!(cbody, "  {cgep} = getelementptr i64, i64* {envp}, i64 {j}");
-        let cval = ssa.fresh();
-        let _ = writeln!(cbody, "  {cval} = load i64, i64* {cgep}");
-        let cbox = ssa.fresh();
-        let _ = writeln!(cbody, "  {cbox} = inttoptr i64 {cval} to i8*");
-        let cap_ev = unbox_boxed_arg(&cbox, cap_shape, TrapRet::BoxPtr, ssa, bbc, &mut cbody);
-        cenv.insert(Atom::Named(capname.clone()), cap_ev);
-    }
-    // Lower the body to its raw EnvValue (a lane OR a closure — closure ⇒ currying / returned closure).
-    // The closure function returns `i8*`, so a box header-check mismatch in the body traps with
-    // `ret i8* null` (`TrapRet::BoxPtr`).
-    let mut cflags: Vec<String> = Vec::new();
-    let result_ev = lower_anf_block_ev(
-        body,
-        &mut cenv,
-        ssa,
-        bbc,
-        &mut cbody,
-        funcs,
-        &mut cflags,
-        TrapRet::BoxPtr,
-    )?;
-    if !cflags.is_empty() {
-        return Err(AotError::UnsupportedNode(
-            "trit arithmetic with a runtime overflow check inside a closure body is not supported — \
-             the boxed-value ABI carries the *value*, not the read-back overflow protocol; refused \
-             (M-851; DN-15 §7.1; G2)"
-                .to_owned(),
-        ));
-    }
-    // The closure's own return shape (for `ClosureVal.ret_shape`), so a *caller's* `App` types the
-    // result (and a curried `App(App(f,a),b)` knows the inner result is callable). A lane/closure body
-    // result is `Known`; a shape-**opaque** result (the body returns its param unchanged — the
-    // identity) is `EchoesParam` (the App resolves the result shape from the call-site argument).
-    // Datum/Fix/FixGroup results across the boundary are refused (G2) — same as `box_env_value` below.
-    let ret_shape = match &result_ev {
-        EnvValue::BoxedOpaque(_) => ClosureRet::EchoesParam,
-        other => ClosureRet::Known(BoxShape::of_env(other, "closure body result")?),
-    };
-    // Box the result (lane of any width, a closure, or a pass-through opaque box) → `ret i8*`.
-    let result_box = box_env_value(&result_ev, "closure body result", ssa, &mut cbody)?;
-
-    let mut def = String::new();
-    let _ = writeln!(def, "define i8* {fname}(i8* %env, i8* %arg) {{");
-    def.push_str("entry:\n");
-    def.push_str(&cbody);
-    let _ = writeln!(def, "  ret i8* {result_box}");
-    def.push_str("}\n");
-    funcs[id] = def;
-
-    Ok(EnvValue::Closure(ClosureVal { base, ret_shape }))
-}
-
-/// Unbox a boxed argument/capture (`i8*`) into its [`EnvValue`] per the static [`BoxShape`]: a lane is
-/// header-checked then loaded ([`unbox_lane`]+[`load_box_lane`]); a closure is header-checked then its
-/// record pointer recovered ([`unbox_closure`]); a shape-**opaque** value is kept as the raw box
-/// ([`EnvValue::BoxedOpaque`], no header check — its shape is genuinely unknown, so it flows through
-/// by identity). The single entry the closure prologue uses for both `%arg` and each capture, so the
-/// decode never disagrees with [`box_env_value`]'s encode.
-fn unbox_boxed_arg(
-    box_ptr: &str,
-    shape: &BoxShape,
-    trap: TrapRet,
-    ssa: &mut Ssa,
-    bbc: &mut Bbc,
-    body: &mut String,
-) -> EnvValue {
-    match shape {
-        BoxShape::Lane(kind, width) => {
-            unbox_lane(box_ptr, *kind, *width, trap, ssa, bbc, body);
-            EnvValue::Repr(load_box_lane(box_ptr, *kind, *width, ssa, body))
+    let capture_names = closure_free_vars(body, param);
+    let mut captured: Vec<(String, EnvValue)> = Vec::with_capacity(capture_names.len());
+    for capname in &capture_names {
+        // Snapshot the captured value from the *defining* scope. Only repr lanes and (nested) closures
+        // may be captured; a datum/Fix/FixGroup capture is an explicit refusal (DN-15 §7.4; G2).
+        let cev = lookup_ev(env, &Atom::Named(capname.clone()))?.clone();
+        match &cev {
+            EnvValue::Repr(_) | EnvValue::Closure(_) => {}
+            EnvValue::Datum(_) => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "closure capture `{capname}`: a constructed data value cannot be captured by a \
+                     closure (the widened closure ABI carries repr lanes and closures; DN-15 §7.4; G2)"
+                )));
+            }
+            EnvValue::Fix(_) | EnvValue::FixGroup(_) => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "closure capture `{capname}`: a Fix/FixGroup value cannot be captured — it must \
+                     be applied (App) to run via the trampoline, not captured (M-850; G2)"
+                )));
+            }
         }
-        BoxShape::Closure(ret) => EnvValue::Closure(unbox_closure(
-            box_ptr,
-            ret.as_deref().cloned(),
-            trap,
-            ssa,
-            bbc,
-            body,
-        )),
-        BoxShape::Opaque => EnvValue::BoxedOpaque(box_ptr.to_owned()),
+        captured.push((capname.clone(), cev));
     }
+    Ok(EnvValue::Closure(ClosureVal {
+        param: param.to_owned(),
+        body: body.clone(),
+        captured,
+    }))
 }
 
-/// Lower `Rhs::App` (Increment-2/3; DN-15 §7.3/§8, widened by M-851): paths dispatched on `func`'s
+/// Lower `Rhs::App` (DN-15 §7.3/§8, closure path widened by M-851): paths dispatched on `func`'s
 /// `EnvValue`:
 /// - **`EnvValue::Fix`/`FixGroup`**: recursion → trampoline / iterative loop (M-850; narrow ABI).
-/// - **`EnvValue::Closure`**: indirect call through the closure record over the **widened
-///   pointer-boxed ABI** (`i8* @myc_closureN(i8* %env, i8* %arg)`): the argument is boxed (any
-///   repr/width, or a closure), the result is unboxed per the callee's static return [`BoxShape`] —
-///   so the result may itself be a closure (currying / returned closures).
+/// - **`EnvValue::Closure`**: the closure is **specialized (inlined) at this site** — the body is
+///   lowered into the current block with the param bound to the (concrete-shape) argument and each
+///   captured free var restored, returning the body's [`EnvValue`] (a lane of any repr/width, or a
+///   nested closure for currying / a returned closure). No fixed wire ABI, no indirect call, no
+///   guessed param width — every shape is statically resolved here (G2/VR-5; DN-15 §7.1 widening).
 ///
 /// Anything else is an explicit refusal (G2 — never silent).
 #[allow(clippy::too_many_arguments)]
@@ -1772,7 +1098,6 @@ fn lower_app(
     body: &mut String,
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
-    trap: TrapRet,
 ) -> Result<EnvValue, AotError> {
     let func_ev = lookup_ev(env, func)?;
     // Increment-3: App(Fix, init) → iterative tail-recursion loop (never stack recursion; DN-05 #1).
@@ -1804,46 +1129,19 @@ fn lower_app(
             &members, entry, arg, env, ssa, bbc, body, funcs, flags,
         );
     }
+    // M-851: specialize (inline) the closure at this application. Build a fresh env from the closure's
+    // captured snapshot + the param bound to the argument's already-lowered value (any repr/width, or a
+    // nested closure), then lower the closure body into the current block. The argument's concrete
+    // shape flows in directly, so no width is ever guessed (G2). A closure cannot see the enclosing
+    // function's bindings — only its captures + param (the snapshot is the lexical environment).
     let closure = func_ev.as_closure("App function")?.clone();
-    let base = closure.base.clone();
-    // fn_ptr ← record slot 0.
-    let fpint = ssa.fresh();
-    let _ = writeln!(body, "  {fpint} = load i64, i64* {base}");
-    let fp = ssa.fresh();
-    let _ = writeln!(body, "  {fp} = inttoptr i64 {fpint} to {CLOSURE_FN_TY}");
-    // %env ← &record[1] (the captures region), as i8*.
-    let egep = ssa.fresh();
-    let _ = writeln!(body, "  {egep} = getelementptr i64, i64* {base}, i64 1");
-    let eptr = ssa.fresh();
-    let _ = writeln!(body, "  {eptr} = bitcast i64* {egep} to i8*");
-    // arg → BOXED value (`i8*`) over the widened ABI — any repr/width, or a closure (currying).
-    let arg_ev = lookup_ev(env, arg)?;
-    let arg_box = box_env_value(arg_ev, "App argument", ssa, body)?;
-    let res = ssa.fresh();
-    let _ = writeln!(body, "  {res} = call i8* {fp}(i8* {eptr}, i8* {arg_box})");
-    // Resolve the `i8*` result shape from the callee's statically-resolved return:
-    // - `Known(s)`        → unbox the result box at `s` (lane of any width, or a nested closure);
-    // - `EchoesParam`     → the closure returns its param unchanged (the identity), so the result is
-    //                       the **argument's** value — recovered from the result box at the *arg's*
-    //                       shape (`(λx.x) A` over *any* repr/width; for an opaque/closure arg the
-    //                       result flows through opaque);
-    // - `Unknown`         → not statically resolvable → explicit refusal (never a guessed unbox — G2).
-    match closure.ret_shape {
-        ClosureRet::Known(shape) => Ok(unbox_boxed_arg(&res, &shape, trap, ssa, bbc, body)),
-        ClosureRet::EchoesParam => match BoxShape::of_env(arg_ev, "App argument (identity result)") {
-            // A lane/closure argument: the result is that same shape.
-            Ok(shape) => Ok(unbox_boxed_arg(&res, &shape, trap, ssa, bbc, body)),
-            // A shape-opaque argument echoed through an identity stays opaque (no concrete shape to
-            // unbox at) — carry the result box as opaque; consuming it as a lane is refused later (G2).
-            Err(_) => Ok(EnvValue::BoxedOpaque(res)),
-        },
-        ClosureRet::Unknown => Err(AotError::UnsupportedNode(
-            "App on a closure whose return shape is not statically known (recovered from a runtime \
-             box without its descriptor) — the boxed-value result cannot be unboxed at a known \
-             width; refused (M-851; DN-15 §7.1; G2/VR-5)"
-                .to_owned(),
-        )),
+    let arg_ev = lookup_ev(env, arg)?.clone();
+    let mut cenv: HashMap<Atom, EnvValue> = HashMap::with_capacity(closure.captured.len() + 1);
+    for (capname, cev) in &closure.captured {
+        cenv.insert(Atom::Named(capname.clone()), cev.clone());
     }
+    cenv.insert(Atom::Named(closure.param.clone()), arg_ev);
+    lower_anf_block_ev(&closure.body, &mut cenv, ssa, bbc, body, funcs, flags)
 }
 
 /// Pack a `Binary{8}` literal `Value` (a Match `Lit`-arm pattern) into the `u64` the native branch
@@ -1880,7 +1178,6 @@ fn lit_binary8_packed(value: &Value) -> Result<u64, AotError> {
 /// A no-match with no ANF `default` traps with `@abort` (a defined trap, never raw `unreachable`; G2).
 /// Mixing forms (a `Lit` arm on a datum, or a `Ctor` arm on a lane) is an explicit refusal.
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::too_many_arguments)]
 fn lower_match(
     scrutinee: &Atom,
     alts: &[lower::AnfAlt],
@@ -1891,7 +1188,6 @@ fn lower_match(
     body: &mut String,
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
-    trap: TrapRet,
 ) -> Result<EnvValue, AotError> {
     use mycelium_core::lower::AnfAlt;
     let scrut = lookup_ev(env, scrutinee)?.clone();
@@ -1924,14 +1220,6 @@ fn lower_match(
             return Err(AotError::UnsupportedNode(
                 "Match on a FixGroup member is not supported — it must be applied (App) before it \
                  can be matched (M-850; G2)"
-                    .to_owned(),
-            ));
-        }
-        EnvValue::BoxedOpaque(_) => {
-            return Err(AotError::UnsupportedNode(
-                "Match on a shape-opaque boxed value (an unconstrained pass-through closure param) \
-                 is not supported — the branch primitive needs a concrete Binary width; refused, \
-                 never a guessed scrutinee width (M-851; G2/VR-5)"
                     .to_owned(),
             ));
         }
@@ -2020,8 +1308,7 @@ fn lower_match(
             // A `Lit` arm binds nothing — the literal is matched by the switch value.
             AnfAlt::Lit { body: arm_body, .. } => arm_body,
         };
-        let arm_result =
-            lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags, trap)?;
+        let arm_result = lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags)?;
         phi_entries.push((label.clone(), arm_result));
         let _ = writeln!(body, "  br label %{merge_label}");
     }
@@ -2037,7 +1324,6 @@ fn lower_match(
             body,
             funcs,
             flags,
-            trap,
         )?;
         phi_entries.push((default_label.clone(), default_result));
         let _ = writeln!(body, "  br label %{merge_label}");
@@ -2304,20 +1590,8 @@ fn lower_arm_bindings_before_tail(
             Rhs::Lam {
                 param,
                 body: lam_body,
-            } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
-            // The tail-loop pre-call sequence lives in `@main`, so a closure-call result unbox here
-            // traps with `ret i32 0` (`TrapRet::MainI32`).
-            Rhs::App { func, arg } => lower_app(
-                func,
-                arg,
-                env,
-                ssa,
-                bbc,
-                body,
-                funcs,
-                flags,
-                TrapRet::MainI32,
-            )?,
+            } => lower_lam(param, lam_body, env)?,
+            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
             Rhs::Fix {
                 name,
                 body: fix_body,
@@ -2629,18 +1903,9 @@ fn lower_tail_fix(
 
         match arm_kind {
             ArmKind::Base => {
-                // Lower the full arm body and collect its result for the exit phi. The tail loop is in
-                // `@main`, so a closure-call result unbox here traps with `ret i32 0`.
-                let result_lane = lower_anf_block(
-                    arm_anf,
-                    &mut arm_env,
-                    ssa,
-                    bbc,
-                    body,
-                    funcs,
-                    flags,
-                    TrapRet::MainI32,
-                )?;
+                // Lower the full arm body and collect its result for the exit phi.
+                let result_lane =
+                    lower_anf_block(arm_anf, &mut arm_env, ssa, bbc, body, funcs, flags)?;
                 exit_phi_entries.push((lbl.clone(), result_lane));
                 let _ = writeln!(body, "  br label %{exit_label}");
             }
@@ -2686,16 +1951,8 @@ fn lower_tail_fix(
         def_env.insert(Atom::Named(param.clone()), EnvValue::Repr(n_lane.clone()));
         match &default_kind {
             Some((def_anf, ArmKind::Base)) => {
-                let result_lane = lower_anf_block(
-                    def_anf,
-                    &mut def_env,
-                    ssa,
-                    bbc,
-                    body,
-                    funcs,
-                    flags,
-                    TrapRet::MainI32,
-                )?;
+                let result_lane =
+                    lower_anf_block(def_anf, &mut def_env, ssa, bbc, body, funcs, flags)?;
                 exit_phi_entries.push((default_label.clone(), result_lane));
                 let _ = writeln!(body, "  br label %{exit_label}");
             }
@@ -2793,76 +2050,51 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
         result,
         mut ssa,
         overflow,
-        funcs,
+        // Vestigial since M-851: the narrow ABI emitted one top-level `@myc_closureN` function per
+        // `Rhs::Lam` here; the widened ABI **inlines** closures at their application site
+        // ([`lower_app`]), so no top-level closure functions (and no bump arena) are produced. The
+        // field is retained (always empty) only because the trampoline-shared lowering signatures
+        // thread it (M-850); it carries no closure functions now.
+        funcs: _funcs,
     } = lower_program(node)?;
-    // Closures (Increment-2) bring in the bump arena + `@malloc`/`@free`; a closure-free program
-    // emits byte-for-byte the same module as before (no arena, no extra declares).
-    let uses_closures = !funcs.is_empty();
     // M-850 (Wave-B): the heap-trampoline lowering emits `@myc_tramp_alloc` calls into `body`; a
     // program with no non-tail-Fix/FixGroup recursion never does, so it emits the same module as
     // before (no trampoline runtime, no extra declares). Detecting via the emitted body keeps the
     // runtime opt-in without threading another flag through every lowering signature (DRY).
     let uses_trampoline = body.contains("@myc_tramp_alloc");
-    // `@malloc`/`@free` are shared by the closure arena and the trampoline frame stack — declare
-    // them once if either is present.
-    let uses_heap = uses_closures || uses_trampoline;
     let mut out =
         String::from("; mycelium direct-LLVM AOT (bit/trit + non-recursive data; M-301; M-373)\n");
-    if uses_closures {
-        out.push_str("; closures: heap closure records on a bump arena (M-378; DN-15 §7)\n");
-    }
     if uses_trampoline {
         out.push_str("; recursion: heap-trampoline control stack (M-850; DN-15 §10)\n");
     }
+    // M-851: closures lower by **inlining** at the application site — no top-level closure functions,
+    // no bump arena, no closure heap. A closure-only program now emits the same straight-line module
+    // as the bit/trit subset (its closures are inlined into `@main`'s body). The only heap is the
+    // trampoline frame stack (recursion).
+    //
     // `@putchar` for the read-back protocol; `@abort` for the defined-traps (the match no-default
-    // trap and the bump-arena OOM). `@abort` is declared `noreturn` so LLVM treats every
+    // trap and the trampoline OOM). `@abort` is declared `noreturn` so LLVM treats every
     // `call @abort` as non-returning: the dead `ret` that follows each trap is provably never taken
-    // (G2), and no post-trap path — e.g. the OOM block returning a null pointer — is ever reachable.
+    // (G2), and no post-trap path is ever reachable.
     out.push_str("declare i32 @putchar(i32)\n");
     out.push_str("declare void @abort() noreturn\n");
-    if uses_heap {
+    if uses_trampoline {
+        // The trampoline frame stack needs `@malloc`/`@free` + the alloc/free seams. Never silent OOM
+        // (defined-trap).
         out.push_str("declare i8* @malloc(i64)\n");
         out.push_str("declare void @free(i8*)\n");
-    }
-    if uses_trampoline {
-        // The trampoline frame-stack alloc/free seams (emitted before the closure arena so the
-        // closure functions, which may also be present, follow). Never silent OOM (defined-trap).
         out.push_str(&crate::trampoline::trampoline_runtime());
-    }
-    if uses_closures {
-        out.push_str(&arena_runtime());
-        // The closure functions (one `define` per `Rhs::Lam`), emitted before `@main`.
-        for f in &funcs {
-            out.push('\n');
-            out.push_str(f);
-        }
     }
     out.push('\n');
     out.push_str("define i32 @main() {\nentry:\n");
-    if uses_closures {
-        // Bump-arena init: one `@malloc` block + a zeroed cursor (DN-15 §7.2). Freed before the
-        // normal-completion `ret` below.
-        let _ = writeln!(
-            out,
-            "  %arena_raw = call i8* @malloc(i64 {ARENA_CAPACITY_BYTES})"
-        );
-        out.push_str("  store i8* %arena_raw, i8** @myc_arena_base\n");
-        out.push_str("  store i64 0, i64* @myc_arena_off\n");
-    }
     out.push_str(&body);
     match overflow {
         // No trit arithmetic ⇒ no overflow path; emit the result line straight-line (unchanged IR).
         None => {
-            if uses_closures {
-                emit_arena_free(&mut out);
-            }
             emit_result_line(result.kind, &result.vals, &mut ssa, &mut out);
         }
         // Overflow possible ⇒ branch on the runtime flag: print the sentinel line on overflow, the
-        // result line otherwise (the read-back protocol — never a silent wrap, G2). A program can
-        // both use closures and contain trit arithmetic in non-closure bindings, so this branch may
-        // co-occur with a live arena: the `@free` stays on the normal `ok` path; the `ovf` early-exit
-        // skips it and lets the OS reclaim the arena at process exit.
+        // result line otherwise (the read-back protocol — never a silent wrap, G2).
         Some(ovf) => {
             let _ = writeln!(&mut out, "  br i1 {ovf}, label %ovf, label %ok");
             out.push_str("ovf:\n");
@@ -2875,47 +2107,11 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
             let snl = ssa.fresh();
             let _ = writeln!(&mut out, "  {snl} = call i32 @putchar(i32 10)");
             out.push_str("  ret i32 0\nok:\n");
-            if uses_closures {
-                emit_arena_free(&mut out);
-            }
             emit_result_line(result.kind, &result.vals, &mut ssa, &mut out);
         }
     }
     out.push_str("}\n");
     Ok(out)
-}
-
-/// The bump-arena runtime (DN-15 §7.2): two module globals (base pointer + cursor) and the single
-/// allocation seam `@myc_arena_alloc`. The over-capacity check takes an explicit defined-trap
-/// (`@abort`, never raw `unreachable` UB; G2) — the exact point where **Increment-3** substitutes a
-/// `DepthBudget`-resolved ceiling + a graceful limit (DN-05 #1; `budget.rs`, M-349). All textual,
-/// fully dumpable (no opaque pass — RFC-0004 §6 / VR-4).
-fn arena_runtime() -> String {
-    let mut s = String::new();
-    s.push_str("@myc_arena_base = internal global i8* null\n");
-    s.push_str("@myc_arena_off = internal global i64 0\n\n");
-    s.push_str("define i8* @myc_arena_alloc(i64 %n) {\nentry:\n");
-    s.push_str("  %base = load i8*, i8** @myc_arena_base\n");
-    s.push_str("  %off = load i64, i64* @myc_arena_off\n");
-    s.push_str("  %newoff = add i64 %off, %n\n");
-    let _ = writeln!(s, "  %over = icmp ugt i64 %newoff, {ARENA_CAPACITY_BYTES}");
-    s.push_str("  br i1 %over, label %oom, label %ok\n");
-    // OOM: an explicit defined-trap. `@abort` is declared `noreturn` (see `emit_llvm_ir`), so this
-    // block is non-returning in IR — the trailing `ret i8* null` is a provably-dead terminator
-    // (LLVM never lets the null reach the caller's bitcast/store), kept only so the block has a
-    // valid terminator without a raw `unreachable` (consistent with the match no-default trap; G2).
-    s.push_str("oom:\n  call void @abort()\n  ret i8* null\n");
-    s.push_str("ok:\n");
-    s.push_str("  store i64 %newoff, i64* @myc_arena_off\n");
-    s.push_str("  %p = getelementptr i8, i8* %base, i64 %off\n");
-    s.push_str("  ret i8* %p\n}\n");
-    s
-}
-
-/// Emit the arena teardown — `@free` the single block before normal completion (DN-15 §7.2).
-fn emit_arena_free(out: &mut String) {
-    out.push_str("  %arena_fb = load i8*, i8** @myc_arena_base\n");
-    out.push_str("  call void @free(i8* %arena_fb)\n");
 }
 
 /// Emit each result element as its ASCII char via `@putchar` (one op per element — a transparent
