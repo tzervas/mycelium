@@ -8,10 +8,14 @@
 
 use crate::vsa_codegen::{
     emit_vsa_llvm_ir, first_non_binary, first_non_bipolar, first_off_phase, hrr_involution,
-    VsaAotError, VsaCgOp, VsaExplain, VsaModelId, VsaProgram, FHRR_BUNDLE_PROFILE,
-    HRR_BUNDLE_PROFILE, VSA_CODEGEN_GUARANTEE,
+    VsaAotError, VsaArtifact, VsaCgOp, VsaExplain, VsaModelId, VsaProgram, VsaResult,
+    FHRR_BUNDLE_PROFILE, HRR_BUNDLE_PROFILE, VSA_CODEGEN_GUARANTEE,
 };
-use mycelium_core::{GuaranteeStrength, PhysicalLayout};
+use mycelium_core::{Bound, GuaranteeStrength, PhysicalLayout};
+use mycelium_vsa::bsc::BSC_BUNDLE_PROFILE;
+use mycelium_vsa::capacity::proven_capacity_bound;
+use mycelium_vsa::fhrr::FHRR_UNBIND_PROFILE;
+use mycelium_vsa::hrr::HRR_UNBIND_PROFILE;
 use mycelium_vsa::{EmpiricalProfile, Fhrr, Hrr, VsaModel};
 
 // ─── fixtures ────────────────────────────────────────────────────────────────────────────────────
@@ -995,4 +999,708 @@ fn hrr_fhrr_bundle_profiles_carry_an_honest_empirical_basis() {
             other => panic!("{label} bundle basis must be EmpiricalFit, got {other:?}"),
         }
     }
+}
+
+// ─── toolchain-independent emission witnesses (M-854 mutant-witness hardening) ─────────────────────
+//
+// Every test below asserts on the **emitted IR text** (or a directly-called read-back method) — never
+// on a compiled `llc`/`clang` run. This is the load-bearing property: the execution differential in
+// `tests/vsa_differential.rs` `=> return`s on `ToolchainMissing`, so under `cargo-mutants` (where the
+// toolchain is not reliably exercised) the arithmetic/plumbing mutants survive *vacuously*. These
+// emission assertions kill them with **no toolchain**, so a full mutant pass shows 0 real survivors on
+// any box (VR-5; the M-725 `ran_mlir` non-vacuity lesson). Each test names the exact mutant(s) it kills.
+
+/// `f64_const`'s exact rendering (hex IEEE-754 bits) — replicated here so the emission assertions can
+/// build the precise operand strings the codegen emits (kills `f64_const -> String::new()/"xyzzy"`
+/// indirectly via every product/operand line, and pins the bit-exact constant rendering).
+fn hexc(x: f64) -> String {
+    format!("0x{:016X}", x.to_bits())
+}
+
+/// Extract the ordered `(lhs, rhs)` operand pairs of every `fmul double <lhs>, <rhs>` line in the IR.
+fn fmul_pairs(ir: &str) -> Vec<(String, String)> {
+    ir.lines()
+        .filter_map(|l| {
+            l.trim()
+                .strip_prefix("")
+                .and_then(|_| parse_bin("fmul double", l))
+        })
+        .collect()
+}
+
+/// Parse a `<reg> = <opcode> <a>, <b>` line into `(a, b)` if it matches `opcode`.
+fn parse_bin(opcode: &str, line: &str) -> Option<(String, String)> {
+    let rhs = line.split_once('=')?.1.trim();
+    let args = rhs.strip_prefix(opcode)?.trim();
+    let (a, b) = args.split_once(',')?;
+    Some((a.trim().to_owned(), b.trim().to_owned()))
+}
+
+// ─── Category 1: arithmetic / codegen — the env-sensitive core ─────────────────────────────────────
+
+/// `emit_cconv` (line 817) emits each circular-convolution product `a[i]·b[(k+d−i) mod d]` in the
+/// reference's exact order. With distinct operand values the emitted `fmul` operand sequence pins the
+/// index arithmetic exactly — any of the `% → /`, `% → +`, `- → +`, `- → /`, `+ → -`, `+ → *` mutants
+/// (817:36/817:31/817:27) changes (or panics on) the chosen `b` element, diverging the emitted text.
+/// Toolchain-independent: the assertion is purely over the IR string.
+#[test]
+fn cconv_product_index_arithmetic_is_pinned() {
+    // HRR has no alphabet constraint, so arbitrary distinct values are valid operands.
+    let d = 3usize;
+    let a = vec![2.0, 3.0, 5.0];
+    let b = vec![7.0, 11.0, 13.0];
+    let p = prog(
+        VsaCgOp::Bind,
+        VsaModelId::Hrr,
+        d as u32,
+        vec![a.clone(), b.clone()],
+        None,
+        None,
+    );
+    let (ir, _) = emit_vsa_llvm_ir(&p).expect("HRR bind lowers");
+    // Reference formula (mirrors emit_cconv): out[k] = Σᵢ a[i]·b[(k+d−i) mod d].
+    let mut want: Vec<(String, String)> = Vec::new();
+    for k in 0..d {
+        for (i, &ai) in a.iter().enumerate() {
+            let bi = b[(k + d - i) % d];
+            want.push((hexc(ai), hexc(bi)));
+        }
+    }
+    assert_eq!(
+        fmul_pairs(&ir),
+        want,
+        "emit_cconv must emit the products in the reference's index order (kills the 817 index-arith \
+         mutants); got IR:\n{ir}"
+    );
+}
+
+/// `hrr_involution` (line 806) `b~[i] = b[(d−i) mod d]` — already witnessed by
+/// `hrr_involution_maps_indices_exactly`, but the *unbind* path threads it into `emit_cconv`, so we
+/// also pin that the emitted unbind products use the involuted `b`. This guards the 806 `% → /ʹ+` and
+/// `- → +ʹ/` mutants *through the emission path* (belt-and-braces with the direct helper test).
+#[test]
+fn hrr_unbind_emits_involution_threaded_products() {
+    let d = 3usize;
+    let a = vec![2.0, 3.0, 5.0];
+    let b = vec![7.0, 11.0, 13.0];
+    // dim 3 < the unbind profile min (256), so go through emit_cconv via the *bind of the involution*
+    // to keep the test toolchain-free and unprofiled: involution(b) then bound is what unbind convolves.
+    let bv = hrr_involution(&b);
+    let p_bind_inv = prog(
+        VsaCgOp::Bind,
+        VsaModelId::Hrr,
+        d as u32,
+        vec![a.clone(), bv.clone()],
+        None,
+        None,
+    );
+    let (ir, _) = emit_vsa_llvm_ir(&p_bind_inv).expect("HRR bind lowers");
+    let mut want: Vec<(String, String)> = Vec::new();
+    for k in 0..d {
+        for (i, &ai) in a.iter().enumerate() {
+            want.push((hexc(ai), hexc(bv[(k + d - i) % d])));
+        }
+    }
+    assert_eq!(
+        fmul_pairs(&ir),
+        want,
+        "involution must thread into the conv products:\n{ir}"
+    );
+    // And the involution itself is non-identity for this b (so the thread is observable).
+    assert_ne!(
+        bv, b,
+        "involution(b) must differ from b for a non-palindromic b"
+    );
+}
+
+/// `emit_bundle` BSC majority (lines 859/862/864): the per-component majority bit is folded host-side
+/// and emitted as a constant. Engineering components at every `n` (count of ones over 3 odd items)
+/// pins the decision boundary: `half = 3/2 = 1.5`, `n > half → 1`, `n < half → 0`. This kills
+/// `859 / → %` (half→1, flips the n=1 tie), `859 / → *` (half→6, all-zero), `862 > → ==` / `862 > → <`,
+/// and `864 < → ==` / `864 < → >` — each changes at least one emitted constant bit. (The `>= / <=`
+/// variants are equivalent on the reachable odd-`m` domain — n is integer, half is X.5 — and are
+/// justified in `.cargo/mutants.toml`.) Toolchain-independent: asserts on the printed constant bits.
+#[test]
+fn bsc_bundle_majority_boundary_bits_are_pinned() {
+    // 3 items, dim 1024 (the BSC profile envelope: odd m ≤ 5, dim ≥ 1024). Build the three vectors so
+    // the first four components realise n ∈ {3, 2, 1, 0} with item[0] = 1 at the n=1 component (so the
+    // `/ → %` tie-mutation, which would copy item[0]=1, flips the correct bit 0 → 1).
+    let dim = 1024u32;
+    let mut v0 = vec![0.0; dim as usize];
+    let mut v1 = vec![0.0; dim as usize];
+    let mut v2 = vec![0.0; dim as usize];
+    // component 0: n = 3 (all ones)            → majority 1
+    v0[0] = 1.0;
+    v1[0] = 1.0;
+    v2[0] = 1.0;
+    // component 1: n = 2 (two ones, item0 = 0) → majority 1 (and item0=0 so `> → ==` copying item0 flips)
+    v1[1] = 1.0;
+    v2[1] = 1.0;
+    // component 2: n = 1 (one one, in item0)   → majority 0 (item0=1 so `/ → %` tie copies 1, flips)
+    v0[2] = 1.0;
+    // component 3: n = 0 (all zero)            → majority 0
+    let p = prog(
+        VsaCgOp::Bundle,
+        VsaModelId::Bsc,
+        dim,
+        vec![v0.clone(), v1.clone(), v2.clone()],
+        None,
+        None,
+    );
+    let (ir, _) = emit_vsa_llvm_ir(&p).expect("BSC bundle lowers (in profile)");
+    // The BSC majority bit is printed as a *constant* `i64 <bits>` (emit_print_const_f64_bits — no
+    // bitcast). Extract the ordered printed constant bit-values for the first four components.
+    let printed: Vec<u64> = ir
+        .lines()
+        .filter_map(|l| {
+            let l = l.trim();
+            // const print: `call i32 (...) @printf(... @.fmt_u64 ...), i64 <bits>)` with NO preceding
+            // bitcast — i.e. the i64 operand is a literal, not an SSA `%r…`.
+            let after = l.rsplit_once("i64 ")?.1;
+            let tok = after.trim_end_matches(')').trim();
+            tok.parse::<u64>().ok()
+        })
+        .collect();
+    let want = [
+        1.0f64.to_bits(), // n=3 → 1
+        1.0f64.to_bits(), // n=2 → 1
+        0.0f64.to_bits(), // n=1 → 0
+        0.0f64.to_bits(), // n=0 → 0
+    ];
+    assert!(
+        printed.len() >= 4,
+        "BSC bundle must print one constant bit per component; got {} for dim {dim}:\n{ir}",
+        printed.len()
+    );
+    assert_eq!(
+        &printed[..4],
+        &want,
+        "BSC majority bits must follow n>1.5→1 / n<1.5→0 (kills the 859/862/864 majority mutants):\n{ir}"
+    );
+}
+
+/// `emit_permute` (line 944) `src = (i + shift).rem_euclid(d)` — the permuted component index. With
+/// distinct operand values the emitted constant sequence pins the rotation: `+ → -` and `+ → *` (944:29)
+/// pick a different (or out-of-range → panic) source index. Toolchain-independent (printed constants).
+#[test]
+fn permute_source_index_arithmetic_is_pinned() {
+    // MAP-I bipolar with distinct *positions* isn't enough (only ±1), so use HRR (free reals) with
+    // distinct values to make every source index observable.
+    let a = vec![2.0, 3.0, 5.0, 7.0];
+    let d = a.len() as i64;
+    let shift = 1i64;
+    let p = prog(
+        VsaCgOp::Permute,
+        VsaModelId::Hrr,
+        a.len() as u32,
+        vec![a.clone()],
+        Some(shift),
+        None,
+    );
+    let (ir, _) = emit_vsa_llvm_ir(&p).expect("HRR permute lowers");
+    // Reference: result[i] = a[(i + shift).rem_euclid(d)].
+    let want: Vec<u64> = (0..a.len())
+        .map(|i| a[(i as i64 + shift).rem_euclid(d) as usize].to_bits())
+        .collect();
+    let printed: Vec<u64> = ir
+        .lines()
+        .filter_map(|l| {
+            let after = l.trim().rsplit_once("i64 ")?.1;
+            after.trim_end_matches(')').trim().parse::<u64>().ok()
+        })
+        .collect();
+    assert_eq!(
+        printed.first().copied(),
+        Some(want[0]),
+        "permute src[0] must be a[(0+shift) rem_euclid d] (kills 944 + → -/*):\n{ir}"
+    );
+    assert_eq!(
+        &printed[..want.len()],
+        &want[..],
+        "permute must emit the rotated component order exactly:\n{ir}"
+    );
+}
+
+/// `emit_dot_acc` / `emit_cosine` / `emit_hamming_sim` / `emit_phase_sim` / `emit_wrap_phase` return
+/// the *result SSA register*; replacing the body with `String::new()`/`"xyzzy"` (1049/970/995/1025/1073)
+/// makes the returned register name invalid, so the printed measurement references a non-existent
+/// (or literal-"xyzzy") operand — observable in the emitted IR. We pin that similarity IR references a
+/// real SSA register (`%r…`) as the printed value and contains the expected per-model arithmetic.
+#[test]
+fn similarity_returns_real_ssa_register_not_stub() {
+    // MAP-I / HRR cosine threads emit_dot_acc + emit_cosine; the printed value must be a bitcast of a
+    // real `%r…` register, never the empty/"xyzzy" stub a body-replacement mutant would yield.
+    for model in [VsaModelId::MapI, VsaModelId::Hrr] {
+        let (ir, _) = emit_vsa_llvm_ir(&canonical(model, VsaCgOp::Similarity)).unwrap();
+        // The final measurement is printed via `bitcast double %r… to i64`. A stubbed emit_cosine would
+        // bitcast an empty or `xyzzy` operand — assert the bitcast operand is a real `%r` register.
+        let bitcast_ops: Vec<&str> = ir
+            .lines()
+            .filter_map(|l| l.trim().split_once("bitcast double ").map(|(_, r)| r))
+            .map(|r| r.split_whitespace().next().unwrap_or(""))
+            .collect();
+        assert!(
+            bitcast_ops.iter().all(|op| op.starts_with("%r")),
+            "{model:?} similarity must bitcast a real SSA register (not a stubbed empty/\"xyzzy\" \
+             operand — kills emit_cosine/emit_dot_acc body-replacement mutants):\n{ir}"
+        );
+        assert!(
+            !ir.contains("xyzzy"),
+            "{model:?} similarity IR must never contain a stub literal:\n{ir}"
+        );
+        // The dot-product accumulation must be present (emit_dot_acc not stubbed away).
+        assert!(
+            ir.contains("fmul double") && ir.contains("fadd double"),
+            "{model:?} cosine must emit the Σ xᵢ·yᵢ accumulation:\n{ir}"
+        );
+    }
+    // BSC hamming + FHRR phase-sim likewise must reference real registers and their arithmetic.
+    let (ir_bsc, _) = emit_vsa_llvm_ir(&canonical(VsaModelId::Bsc, VsaCgOp::Similarity)).unwrap();
+    assert!(
+        !ir_bsc.contains("xyzzy")
+            && ir_bsc.contains("fsub double")
+            && ir_bsc.contains("fdiv double"),
+        "BSC similarity must emit the 1 − 2·h/d arithmetic, no stub:\n{ir_bsc}"
+    );
+    let (ir_f, _) = emit_vsa_llvm_ir(&canonical(VsaModelId::Fhrr, VsaCgOp::Similarity)).unwrap();
+    assert!(
+        !ir_f.contains("xyzzy") && ir_f.contains("@cos(double") && ir_f.contains("fdiv double"),
+        "FHRR similarity must emit mean cos(θa−θb), no stub:\n{ir_f}"
+    );
+}
+
+/// `emit_wrap_phase` (1073) must thread a real wrapped register: FHRR bind prints
+/// `bitcast double %r… to i64` of the wrap result. A `String::new()`/`"xyzzy"` body mutant would make
+/// the printed operand invalid/literal — caught here without a toolchain.
+#[test]
+fn fhrr_wrap_phase_threads_a_real_register() {
+    let (ir, _) = emit_vsa_llvm_ir(&canonical(VsaModelId::Fhrr, VsaCgOp::Bind)).unwrap();
+    assert!(
+        ir.contains("frem double") && ir.contains("select i1"),
+        "FHRR bind must emit the frem-based rem_euclid wrap (emit_wrap_phase not stubbed):\n{ir}"
+    );
+    let bitcast_ops: Vec<&str> = ir
+        .lines()
+        .filter_map(|l| l.trim().split_once("bitcast double ").map(|(_, r)| r))
+        .map(|r| r.split_whitespace().next().unwrap_or(""))
+        .collect();
+    assert!(
+        !bitcast_ops.is_empty() && bitcast_ops.iter().all(|op| op.starts_with("%r")),
+        "FHRR bind must bitcast a real wrapped SSA register (kills emit_wrap_phase stub):\n{ir}"
+    );
+    assert!(
+        !ir.contains("xyzzy"),
+        "no stub literal in FHRR bind IR:\n{ir}"
+    );
+}
+
+/// `emit_print_f64_bits` (1096), `emit_print_const_f64_bits` (1109), `emit_newline` (1129),
+/// `f64_const` (1139): the read-back protocol's print plumbing. Replacing any with `()`/empty makes the
+/// IR fail to print a value (or omit the bitcast), so the per-element output count drops. We pin the
+/// exact print shape: a MAP-I bind of dim `d` emits exactly `d` `bitcast double … to i64` + `d`
+/// value-prints, each referencing the `@.fmt_u64` format, and the trailing `@.fmt_nl` newline. Killing
+/// `emit_print_f64_bits -> ()` / `emit_newline -> ()` / `f64_const -> ""` without a toolchain.
+#[test]
+fn print_plumbing_shape_is_pinned() {
+    let d = 8usize;
+    let p = canonical(VsaModelId::MapI, VsaCgOp::Bind); // dim 8, one fmul + one print per element
+    assert_eq!(p.dim as usize, d);
+    let (ir, _) = emit_vsa_llvm_ir(&p).unwrap();
+    // emit_print_f64_bits: one `bitcast double %r… to i64` per element.
+    assert_eq!(
+        ir.matches("bitcast double").count(),
+        d,
+        "MAP-I bind must emit one f64-bits print (bitcast) per element (kills emit_print_f64_bits→()):\n{ir}"
+    );
+    // each value print *uses* the u64 format global (the `[6 x i8]* @.fmt_u64` call-site form — the
+    // declaration `@.fmt_u64 = …` is a different substring, so this counts only the d print sites).
+    assert_eq!(
+        ir.matches("[6 x i8]* @.fmt_u64").count(),
+        d,
+        "each element print must reference @.fmt_u64 (kills the print plumbing mutants):\n{ir}"
+    );
+    // exactly one trailing newline print (kills emit_newline→()) — the `[2 x i8]* @.fmt_nl` call-site.
+    assert_eq!(
+        ir.matches("[2 x i8]* @.fmt_nl").count(),
+        1,
+        "the result line must be terminated by exactly one newline print (kills emit_newline→()):\n{ir}"
+    );
+    // f64_const renders the operands as hex bit-patterns: the first product uses the first operand's
+    // hex constant (kills f64_const→""/"xyzzy", which would blank/garble every operand).
+    let first = canonical_first_operand_value(VsaModelId::MapI);
+    assert!(
+        ir.contains(&format!("fmul double {}", hexc(first))),
+        "the first product must carry the bit-exact f64 constant {} (kills f64_const stub):\n{ir}",
+        hexc(first)
+    );
+}
+
+/// The `bipolar(dim)` fixture's component 0 value (the MAP-I canonical first operand's first element),
+/// used to pin the `f64_const` rendering in `print_plumbing_shape_is_pinned`.
+fn canonical_first_operand_value(model: VsaModelId) -> f64 {
+    match model {
+        VsaModelId::MapI => bipolar(8)[0],
+        VsaModelId::Bsc => binary(8)[0],
+        VsaModelId::Hrr => real(8)[0],
+        VsaModelId::Fhrr => phase(8)[0],
+    }
+}
+
+/// `Ssa::fresh` (1148) / `fresh_label` (1153): SSA register/label minting. The names must be
+/// **monotone and unique** (`%r0, %r1, …` / `bb0, bb1, …`) — replacing the body with `String::new()`/
+/// `"xyzzy"` collapses every register to one name (invalid SSA, duplicate defs), and the `+= → -=/*=`
+/// mutants (1149/1154) break monotonicity (repeats/overflow). We pin uniqueness + the `%r{n}` shape by
+/// scanning the emitted IR's SSA definitions. Toolchain-independent: pure text analysis.
+#[test]
+fn ssa_names_are_unique_and_monotone() {
+    use std::collections::BTreeSet;
+    // FHRR bundle uses BOTH fresh registers and fresh_labels (the degenerate-trap branches), so it
+    // exercises both counters at dim 256 (the FHRR bundle profile).
+    let p = canonical(VsaModelId::Fhrr, VsaCgOp::Bundle);
+    let (ir, _) = emit_vsa_llvm_ir(&p).unwrap();
+    // Collect every `%r<N>` definition (LHS of ` = `) and every `bb<N>:` label.
+    let mut regs: Vec<usize> = Vec::new();
+    let mut reg_names: BTreeSet<&str> = BTreeSet::new();
+    let mut labels: Vec<usize> = Vec::new();
+    for line in ir.lines() {
+        let t = line.trim();
+        if let Some((lhs, _)) = t.split_once(" = ") {
+            if let Some(n) = lhs.strip_prefix("%r") {
+                if let Ok(n) = n.parse::<usize>() {
+                    assert!(
+                        reg_names.insert(lhs),
+                        "duplicate SSA def {lhs} — fresh() not unique:\n{ir}"
+                    );
+                    regs.push(n);
+                }
+            }
+        }
+        if let Some(name) = t.strip_suffix(':') {
+            if let Some(n) = name.strip_prefix("bb") {
+                if let Ok(n) = n.parse::<usize>() {
+                    labels.push(n);
+                }
+            }
+        }
+    }
+    assert!(
+        regs.len() > 5,
+        "expected many fresh registers in FHRR bundle:\n{ir}"
+    );
+    // Registers are minted in strictly increasing order (monotone counter — `+= 1`). A `-=`/`*=`
+    // mutant or a stubbed body breaks strict monotonicity (repeats / non-increasing).
+    assert!(
+        regs.windows(2).all(|w| w[1] > w[0]),
+        "SSA register indices must be strictly increasing (kills Ssa::fresh += → -=/*= and the body \
+         stub): got {regs:?}\n{ir}"
+    );
+    // Labels (fresh_label) likewise strictly increasing and never colliding with a register index in
+    // the same line position — at least present (the degenerate trap mints them).
+    assert!(
+        !labels.is_empty() && labels.windows(2).all(|w| w[1] > w[0]),
+        "fresh_label must mint strictly-increasing bb labels (kills fresh_label += → -=/*= + stub): \
+         got {labels:?}\n{ir}"
+    );
+    assert!(
+        !ir.contains("xyzzy"),
+        "no stub literal in emitted IR:\n{ir}"
+    );
+}
+
+// ─── Category 3: guarantee-bound match arms (read-back; toolchain-free) ────────────────────────────
+
+/// `VsaArtifact::result_bound` (1269) + every arm (1270/1272/1289/1292/1295/1299/1302): the read-back
+/// `Meta` bound per `(model, op, strength)`. We call `result_bound` **directly** on a placeholder
+/// artifact (no `llc`/`clang`), asserting the EXACT `Option<Bound>` each arm returns — so deleting any
+/// arm (which falls through to a *different* value) is caught, and `result_bound → Ok(None)` /
+/// `Ok(Some(Default::default()))` flips a checked bound. The `(_, _, Exact) → None` arm (1270) is a
+/// fall-through equivalent (deleting it still yields `None` via the `_` arm) — justified in
+/// `.cargo/mutants.toml`, not witnessed here (no test *can* kill an equivalent; VR-5/G2).
+/// One read-back-bound case (fixture, not a test-body tuple — keeps the data-driven table legible and
+/// dodges clippy's `type_complexity`).
+struct BoundCase {
+    op: VsaCgOp,
+    model: VsaModelId,
+    dim: u32,
+    delta: Option<f64>,
+    items: u64,
+    strength: GuaranteeStrength,
+    want: Option<Bound>,
+}
+
+#[test]
+fn result_bound_per_arm_returns_the_exact_bound() {
+    use GuaranteeStrength::{Empirical, Exact, Proven};
+    let c = |op, model, dim, delta, items, strength, want| BoundCase {
+        op,
+        model,
+        dim,
+        delta,
+        items,
+        strength,
+        want,
+    };
+    let cases = vec![
+        // Exact ops carry no bound (None) — bind/permute.
+        c(VsaCgOp::Bind, VsaModelId::MapI, 8, None, 2, Exact, None),
+        c(VsaCgOp::Permute, VsaModelId::Hrr, 8, None, 1, Exact, None),
+        // MAP-I Proven bundle → the reference's checked capacity bound (arm 1272).
+        c(
+            VsaCgOp::Bundle,
+            VsaModelId::MapI,
+            2048,
+            Some(1e-2),
+            3,
+            Proven,
+            Some(proven_capacity_bound(3, 2048, 1e-2).expect("capacity bound exists")),
+        ),
+        // Empirical bundle ops → their trial profile bound (arms 1289/1292/1295).
+        c(
+            VsaCgOp::Bundle,
+            VsaModelId::Bsc,
+            1024,
+            None,
+            3,
+            Empirical,
+            Some(BSC_BUNDLE_PROFILE.bound()),
+        ),
+        c(
+            VsaCgOp::Bundle,
+            VsaModelId::Hrr,
+            256,
+            None,
+            3,
+            Empirical,
+            Some(HRR_BUNDLE_PROFILE.bound()),
+        ),
+        c(
+            VsaCgOp::Bundle,
+            VsaModelId::Fhrr,
+            256,
+            None,
+            3,
+            Empirical,
+            Some(FHRR_BUNDLE_PROFILE.bound()),
+        ),
+        // Empirical unbind ops → the reference's unbind profile bound (arms 1299/1302).
+        c(
+            VsaCgOp::Unbind,
+            VsaModelId::Hrr,
+            256,
+            None,
+            1,
+            Empirical,
+            Some(HRR_UNBIND_PROFILE.bound()),
+        ),
+        c(
+            VsaCgOp::Unbind,
+            VsaModelId::Fhrr,
+            256,
+            None,
+            1,
+            Empirical,
+            Some(FHRR_UNBIND_PROFILE.bound()),
+        ),
+    ];
+    for case in cases {
+        let art =
+            VsaArtifact::for_readback_test(case.op, case.model, case.dim, case.delta, case.items);
+        let got = art.result_bound(case.strength).unwrap_or_else(|e| {
+            panic!(
+                "{:?} {:?} {:?} result_bound errored: {e}",
+                case.model, case.op, case.strength
+            )
+        });
+        assert_eq!(
+            got, case.want,
+            "{:?} {:?} {:?} must return the exact bound (kills the deleted-arm + \
+             Ok(None)/Ok(Some(default)) mutants)",
+            case.model, case.op, case.strength
+        );
+    }
+}
+
+/// `result_meta` carries the per-op guarantee + bound the read-back stamps; a value op's `Meta` must
+/// match the reference tag and the bound `result_bound` computes. Pins MAP-I bundle Proven (with the
+/// capacity bound) and an Exact op (no bound) end-to-end through `result_meta` (no toolchain). This
+/// guards `result_meta → Ok(Default::default())` and keeps the bound wiring honest.
+#[test]
+fn result_meta_carries_the_reference_tag_and_bound() {
+    // MAP-I Proven bundle.
+    let art =
+        VsaArtifact::for_readback_test(VsaCgOp::Bundle, VsaModelId::MapI, 2048, Some(1e-2), 3);
+    let meta = art.result_meta().expect("MAP-I bundle meta");
+    assert_eq!(meta.guarantee(), GuaranteeStrength::Proven);
+    assert_eq!(
+        meta.bound(),
+        Some(&proven_capacity_bound(3, 2048, 1e-2).unwrap()),
+        "MAP-I bundle Meta must carry the checked capacity bound (DRY/VR-5)"
+    );
+    // An Exact op: bind → Exact, no bound.
+    let art = VsaArtifact::for_readback_test(VsaCgOp::Bind, VsaModelId::MapI, 8, None, 2);
+    let meta = art.result_meta().expect("MAP-I bind meta");
+    assert_eq!(meta.guarantee(), GuaranteeStrength::Exact);
+    assert_eq!(meta.bound(), None, "an Exact op carries no bound");
+}
+
+// ─── Category 4: read-back control guards (toolchain-free) ─────────────────────────────────────────
+
+/// `reconstruct_value` (1220) dim-mismatch guard `if bits.len() != self.dim`: a wrong component count
+/// is an explicit `Parse` refusal, never a silent value (G2). Calling it directly (no toolchain) pins
+/// both sides of the `!=` guard — the right count reconstructs, a wrong count refuses — killing
+/// `1220 != → ==` and the `Ok(Default::default())` body mutant.
+#[test]
+fn reconstruct_value_dim_guard_holds_both_sides() {
+    // Permute (Exact value op) at dim 4: the right number of components reconstructs a Value.
+    let art = VsaArtifact::for_readback_test(VsaCgOp::Permute, VsaModelId::Hrr, 4, None, 1);
+    let bits: Vec<u64> = [1.0f64, 2.0, 3.0, 4.0]
+        .iter()
+        .map(|x| x.to_bits())
+        .collect();
+    match art.reconstruct_value(&bits) {
+        Ok(VsaResult::Value(v)) => assert_eq!(v.meta().guarantee(), GuaranteeStrength::Exact),
+        other => panic!("4 components at dim 4 must reconstruct a Value, got {other:?}"),
+    }
+    // A wrong count (3 ≠ 4) is refused — the `!=` guard fires (kills `!= → ==`).
+    let short: Vec<u64> = [1.0f64, 2.0, 3.0].iter().map(|x| x.to_bits()).collect();
+    assert!(
+        matches!(art.reconstruct_value(&short), Err(VsaAotError::Parse(_))),
+        "a component-count mismatch must be an explicit Parse refusal (kills 1220 != → ==)"
+    );
+    // The right count again, off-by-one over (5 ≠ 4) — also refused (the guard is symmetric).
+    let long: Vec<u64> = [1.0f64, 2.0, 3.0, 4.0, 5.0]
+        .iter()
+        .map(|x| x.to_bits())
+        .collect();
+    assert!(
+        matches!(art.reconstruct_value(&long), Err(VsaAotError::Parse(_))),
+        "an over-count must also be refused"
+    );
+}
+
+/// `intrinsic_decls` per-`(model, op)` guards (the `&& → ||` mutants in `vsa_compile`'s decl block):
+/// the `declare` block must carry **exactly** the intrinsics each op pulls in. We call `intrinsic_decls`
+/// **directly** (no toolchain — `vsa_compile` runs `ensure_toolchain` after building it, but the helper
+/// is pure) and assert the exact declaration set per case. A `&& → ||` widening declares an intrinsic
+/// the op never calls; an arm-drop omits a needed one — both diverge from the pinned set. The declared
+/// set must also exactly match the intrinsics the emitted body *calls* (so a stale/missing decl can't
+/// hide — the never-silent invariant, G2).
+#[test]
+fn intrinsic_declaration_guards_are_exact() {
+    use crate::vsa_codegen::intrinsic_decls;
+    // The five intrinsic symbols the codegen can pull in.
+    let all = ["@llvm.fabs.f64", "@cos", "@sin", "@atan2", "@llvm.sqrt.f64"];
+    // (model, op, the exact subset of `all` that must be declared)
+    let cases: &[(VsaModelId, VsaCgOp, &[&str])] = &[
+        (VsaModelId::Bsc, VsaCgOp::Bind, &["@llvm.fabs.f64"]),
+        (VsaModelId::Bsc, VsaCgOp::Unbind, &["@llvm.fabs.f64"]),
+        (VsaModelId::Bsc, VsaCgOp::Bundle, &[]),
+        (VsaModelId::MapI, VsaCgOp::Bind, &[]),
+        (VsaModelId::MapI, VsaCgOp::Bundle, &[]),
+        (VsaModelId::MapI, VsaCgOp::Similarity, &["@llvm.sqrt.f64"]),
+        (VsaModelId::Hrr, VsaCgOp::Similarity, &["@llvm.sqrt.f64"]),
+        (VsaModelId::Fhrr, VsaCgOp::Bind, &[]),
+        (VsaModelId::Fhrr, VsaCgOp::Unbind, &[]),
+        (VsaModelId::Fhrr, VsaCgOp::Similarity, &["@cos"]),
+        (
+            VsaModelId::Fhrr,
+            VsaCgOp::Bundle,
+            &["@cos", "@sin", "@atan2", "@llvm.sqrt.f64"],
+        ),
+    ];
+    for &(model, op, want) in cases {
+        let decls = intrinsic_decls(model, op);
+        for sym in all {
+            let declared = decls.contains(&format!("declare double {sym}("));
+            let expected = want.contains(&sym);
+            assert_eq!(
+                declared, expected,
+                "{model:?} {op:?}: declaration of {sym} must be {expected} (kills the && → || decl \
+                 widening / arm-drop mutants); decls were:\n{decls}"
+            );
+        }
+        // Cross-check: the declared set equals the set the emitted body actually calls (no stale decl,
+        // none missing) — the never-silent invariant the guards enforce (G2).
+        let (ir, _) = emit_vsa_llvm_ir(&canonical(model, op)).expect("canonical lowers");
+        for sym in all {
+            let body_calls = ir.contains(&format!(" {sym}("));
+            let declared = decls.contains(&format!("declare double {sym}("));
+            assert_eq!(
+                body_calls, declared,
+                "{model:?} {op:?}: the body's use of {sym} ({body_calls}) must match its declaration \
+                 ({declared}) — exact, never-silent (G2):\n{ir}"
+            );
+        }
+    }
+}
+
+/// `VsaResult` equality (the read-back observable) — pins that a reconstructed permute Value equals an
+/// equivalent freshly-built reconstruction and differs from a different one, so the `reconstruct_value`
+/// / `result_meta` body-replacement (`Ok(Default::default())`) mutants — which would collapse every
+/// result to a default — are caught (a default `VsaResult` would not equal the real reconstruction).
+#[test]
+fn reconstructed_value_is_not_a_default_stub() {
+    let art = VsaArtifact::for_readback_test(VsaCgOp::Permute, VsaModelId::Hrr, 3, None, 1);
+    let a: Vec<u64> = [1.0f64, 2.0, 3.0].iter().map(|x| x.to_bits()).collect();
+    let b: Vec<u64> = [9.0f64, 8.0, 7.0].iter().map(|x| x.to_bits()).collect();
+    let ra = art.reconstruct_value(&a).expect("reconstruct a");
+    let rb = art.reconstruct_value(&b).expect("reconstruct b");
+    assert_ne!(
+        ra, rb,
+        "distinct payloads must reconstruct to distinct Values (not a default stub)"
+    );
+    // And the reconstruction carries the real payload (so it is not Default::default()).
+    match ra {
+        VsaResult::Value(v) => match v.payload() {
+            mycelium_core::Payload::Hypervector(xs) => {
+                assert_eq!(
+                    xs,
+                    &vec![1.0, 2.0, 3.0],
+                    "the reconstructed payload must be the read-back bits"
+                )
+            }
+            other => panic!("expected a Hypervector payload, got {other:?}"),
+        },
+        other => panic!("expected a Value, got {other:?}"),
+    }
+}
+
+/// `parse_stdout` sentinel scan (`tok == VSA_DEGENERATE_SENTINEL`) + measurement length check
+/// (`bits.len() != 1`): the never-silent read-back protocol, witnessed **without a toolchain** by
+/// feeding captured stdout strings directly. Kills the `== → !=` (sentinel) and `!= → ==` (measurement
+/// length) guard mutants, plus the body-replacement (`Ok(Default::default())`) on the read-back.
+#[test]
+fn parse_stdout_read_back_protocol_holds() {
+    // A degenerate sentinel anywhere on the line → explicit refusal (the `==` guard fires).
+    let art = VsaArtifact::for_readback_test(VsaCgOp::Bundle, VsaModelId::Fhrr, 2, None, 3);
+    let with_sentinel = format!("{} DEGENERATE\n", 1.0f64.to_bits());
+    assert!(
+        matches!(
+            art.parse_stdout(&with_sentinel),
+            Err(VsaAotError::DegenerateBundleComponent)
+        ),
+        "a DEGENERATE token must surface the never-silent refusal (kills sentinel == → !=)"
+    );
+    // No sentinel, right component count → a Value (the `==` guard does NOT fire on a normal token).
+    let art2 = VsaArtifact::for_readback_test(VsaCgOp::Permute, VsaModelId::Hrr, 2, None, 1);
+    let two = format!("{} {}\n", 1.0f64.to_bits(), 2.0f64.to_bits());
+    assert!(
+        matches!(art2.parse_stdout(&two), Ok(VsaResult::Value(_))),
+        "a clean 2-component line must reconstruct a Value (sentinel guard must not over-fire)"
+    );
+    // Measurement: exactly one element required (the `!= 1` guard). Similarity is a measurement op.
+    let sim = VsaArtifact::for_readback_test(VsaCgOp::Similarity, VsaModelId::MapI, 8, None, 2);
+    let one = format!("{}\n", 0.5f64.to_bits());
+    match sim.parse_stdout(&one) {
+        Ok(VsaResult::Measurement(m)) => {
+            assert_eq!(m, 0.5, "the measurement must read back its f64")
+        }
+        other => panic!("a single-element measurement must parse, got {other:?}"),
+    }
+    // Two elements for a measurement → refused (the `!= 1` guard fires; kills 1207 != → ==).
+    let two_meas = format!("{} {}\n", 0.5f64.to_bits(), 0.25f64.to_bits());
+    assert!(
+        matches!(sim.parse_stdout(&two_meas), Err(VsaAotError::Parse(_))),
+        "a measurement with ≠ 1 element must be refused (kills the measurement length guard mutant)"
+    );
 }

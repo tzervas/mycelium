@@ -1173,6 +1173,32 @@ pub struct VsaArtifact {
 }
 
 impl VsaArtifact {
+    /// White-box constructor for the **toolchain-independent read-back tests** (M-854 mutant-witness).
+    /// The read-back metadata methods (`result_bound` / `result_meta` / `reconstruct_value`) read only
+    /// the *shape* fields (`op`, `model`, `dim`, `bundle_delta`, `item_count`) — never `bin`/`_dir` —
+    /// so a test can witness those code paths with a placeholder binary, no `llc`/`clang` required (the
+    /// emission-assertion discipline that keeps the mutant catch-rate environment-independent; VR-5,
+    /// the M-725 `ran_mlir` non-vacuity lesson). The `bin` it carries is never executed by those
+    /// methods, so it points nowhere; the empty `TmpDir` drop is a no-op.
+    #[cfg(test)]
+    pub(crate) fn for_readback_test(
+        op: VsaCgOp,
+        model: VsaModelId,
+        dim: u32,
+        bundle_delta: Option<f64>,
+        item_count: u64,
+    ) -> Self {
+        VsaArtifact {
+            _dir: TmpDir(std::path::PathBuf::new()),
+            bin: std::path::PathBuf::new(),
+            op,
+            model,
+            dim,
+            bundle_delta,
+            item_count,
+        }
+    }
+
     /// Run the artifact and read its result back. A value op reconstructs a VSA [`Value`] carrying the
     /// reference's per-op guarantee tag; a measurement op returns a bare `f64`. A sentinel line
     /// (degenerate phasor) is surfaced as an explicit [`VsaAotError`] — never a silent value (G2).
@@ -1188,6 +1214,16 @@ impl VsaArtifact {
         }
         let stdout = String::from_utf8(output.stdout)
             .map_err(|e| VsaAotError::Parse(format!("non-utf8 output: {e}")))?;
+        self.parse_stdout(&stdout)
+    }
+
+    /// Parse a captured artifact stdout into the result `VsaResult`, applying the never-silent
+    /// read-back protocol: scan every token of the first line, surface the `DEGENERATE` sentinel as an
+    /// explicit refusal (G2), reconstruct a `Value` for a value op, and require exactly one element for
+    /// a measurement. Split out of [`Self::run`] so the read-back logic is **witnessable without the
+    /// `llc`/`clang` toolchain** (the env-independent mutant-witness; VR-5) — `run` only adds the
+    /// process exec + exit-status check around it.
+    pub(crate) fn parse_stdout(&self, stdout: &str) -> Result<VsaResult, VsaAotError> {
         let line = stdout.lines().next().unwrap_or("").trim();
         // Never-silent sentinel (matches VsaError::DegenerateBundleComponent). A sentinel can appear
         // anywhere on the line (after the earlier in-range components), so scan every token.
@@ -1215,8 +1251,10 @@ impl VsaArtifact {
     }
 
     /// Reconstruct the VSA `Value` from the printed f64 bit patterns, carrying the reference's per-op
-    /// guarantee tag (so the observable matches the reference).
-    fn reconstruct_value(&self, bits: &[u64]) -> Result<VsaResult, VsaAotError> {
+    /// guarantee tag (so the observable matches the reference). `pub(crate)` for the toolchain-free
+    /// white-box read-back mutant-witness (the `dim`-mismatch guard + the per-op `Meta` are pinned
+    /// directly, not only behind a compiled run).
+    pub(crate) fn reconstruct_value(&self, bits: &[u64]) -> Result<VsaResult, VsaAotError> {
         if bits.len() != self.dim as usize {
             return Err(VsaAotError::Parse(format!(
                 "expected {} components, got {}",
@@ -1243,8 +1281,8 @@ impl VsaArtifact {
     /// side-condition the reference checks — VR-5/M-I2), and `Declared` (with a flagged `UserDeclared`
     /// bound) for HRR/FHRR bundle, which the reference exposes no value-level bound for — the honest
     /// downgrade (never a fabricated `Empirical`; VR-5). `Meta.physical = VsaStore` records the
-    /// inspectable schedule.
-    fn result_meta(&self) -> Result<Meta, VsaAotError> {
+    /// inspectable schedule. `pub(crate)` for the toolchain-free read-back mutant-witness.
+    pub(crate) fn result_meta(&self) -> Result<Meta, VsaAotError> {
         let map_wf = |e: WfError| VsaAotError::Wf(e.to_string());
         let physical = Some(PhysicalLayout::VsaStore { sparse: false });
         let op_name = self.model.op_name(self.op).ok_or_else(|| {
@@ -1264,8 +1302,13 @@ impl VsaArtifact {
 
     /// The bound the read-back `Meta` carries, matching how the op was verified: the trial profile
     /// bound for an `Empirical` op (BSC/HRR/FHRR bundle, HRR/FHRR unbind), the **checked** capacity
-    /// bound for the MAP-I `Proven` bundle, none for `Exact`.
-    fn result_bound(&self, guarantee: GuaranteeStrength) -> Result<Option<Bound>, VsaAotError> {
+    /// bound for the MAP-I `Proven` bundle, none for `Exact`. `pub(crate)` so the toolchain-free
+    /// read-back mutant-witness can pin the exact `Option<Bound>` each `(model, op, strength)` arm
+    /// returns (deleting any arm flips a checked value; VR-5).
+    pub(crate) fn result_bound(
+        &self,
+        guarantee: GuaranteeStrength,
+    ) -> Result<Option<Bound>, VsaAotError> {
         Ok(match (self.model, self.op, guarantee) {
             (_, _, GuaranteeStrength::Exact) => None,
             // MAP-I Proven bundle: replay the reference's checked capacity bound (same side-condition).
@@ -1307,37 +1350,43 @@ impl VsaArtifact {
     }
 }
 
-/// Compile a VSA program to a native executable (emit IR → `llc` → `clang`) without running it.
-/// Returns [`VsaAotError::ToolchainMissing`] when `llc`/`clang` are absent (callers skip); any
-/// out-of-fragment construct is the same explicit refusal as [`emit_vsa_llvm_ir`].
-pub fn vsa_compile(prog: &VsaProgram) -> Result<VsaArtifact, VsaAotError> {
-    let (mut ir, _explain) = emit_vsa_llvm_ir(prog)?;
-    // Declare the intrinsics each op pulls in (only where needed — a reader sees exactly what each op
-    // requires).
+/// The `declare` block of intrinsics a `(model, op)` pulls in — only what each op actually emits, so a
+/// reader sees exactly its dependencies (no over-declaration). Pure (no toolchain), so the
+/// per-`(model, op)` declaration guards are **witnessable without `llc`/`clang`** (the env-independent
+/// mutant-witness; VR-5). Each `&&` here is load-bearing — a `&& → ||` widening would declare an
+/// intrinsic the op never calls (an unjustified, never-silent-violating decl); the `if !decls`
+/// idempotence and the nested `Bundle`-only block keep `cos` (bundle+similarity) separate from
+/// `sin`/`atan2`/`sqrt` (bundle-only).
+pub(crate) fn intrinsic_decls(model: VsaModelId, op: VsaCgOp) -> String {
     let mut decls = String::new();
     // BSC bind/unbind: |a−b| uses `fabs`.
-    if matches!(prog.model, VsaModelId::Bsc) && matches!(prog.op, VsaCgOp::Bind | VsaCgOp::Unbind) {
+    if matches!(model, VsaModelId::Bsc) && matches!(op, VsaCgOp::Bind | VsaCgOp::Unbind) {
         decls.push_str("declare double @llvm.fabs.f64(double)\n");
     }
     // FHRR bundle + similarity use libm `cos`/`sin` (bit-exact with the reference's `f64::cos`/`sin`);
     // FHRR bind/unbind only `frem`-wrap a phase (no trig). FHRR bundle additionally needs `atan2`
     // (a libm symbol — no LLVM intrinsic) and `sqrt` (the magnitude guard).
-    if matches!(prog.model, VsaModelId::Fhrr)
-        && matches!(prog.op, VsaCgOp::Bundle | VsaCgOp::Similarity)
-    {
+    if matches!(model, VsaModelId::Fhrr) && matches!(op, VsaCgOp::Bundle | VsaCgOp::Similarity) {
         decls.push_str("declare double @cos(double)\n");
-        if matches!(prog.op, VsaCgOp::Bundle) {
+        if matches!(op, VsaCgOp::Bundle) {
             decls.push_str("declare double @sin(double)\n");
             decls.push_str("declare double @atan2(double, double)\n");
             decls.push_str("declare double @llvm.sqrt.f64(double)\n");
         }
     }
     // Cosine similarity (MAP-I/HRR) needs `sqrt` for the norms.
-    if matches!(prog.op, VsaCgOp::Similarity)
-        && matches!(prog.model, VsaModelId::MapI | VsaModelId::Hrr)
-    {
+    if matches!(op, VsaCgOp::Similarity) && matches!(model, VsaModelId::MapI | VsaModelId::Hrr) {
         decls.push_str("declare double @llvm.sqrt.f64(double)\n");
     }
+    decls
+}
+
+/// Compile a VSA program to a native executable (emit IR → `llc` → `clang`) without running it.
+/// Returns [`VsaAotError::ToolchainMissing`] when `llc`/`clang` are absent (callers skip); any
+/// out-of-fragment construct is the same explicit refusal as [`emit_vsa_llvm_ir`].
+pub fn vsa_compile(prog: &VsaProgram) -> Result<VsaArtifact, VsaAotError> {
+    let (mut ir, _explain) = emit_vsa_llvm_ir(prog)?;
+    let decls = intrinsic_decls(prog.model, prog.op);
     if !decls.is_empty() {
         ir = ir.replacen(
             "define i32 @main()",
