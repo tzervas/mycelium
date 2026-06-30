@@ -58,7 +58,7 @@ toolchain/IDE/distribution (T7), documentation & stability guarantees (T8), and
 **self-hosting of everything beyond the bare core (T9)**. T4 + T9 are the defining criteria of the
 maintainer's clarification.
 
-Out of scope for `1.0.0` (tracked, but `1.x`/`2.0`): **native AOT maturity / optimization / JIT (T6 — rolled to `1.1` as a QoL/perf enhancement; 1.0.0 ships on the interpreter trusted base + the existing direct-LLVM kernel subset; see §8 Q4)**, semantic-level projections to other languages
+Out of scope for `1.0.0` (tracked, but `1.x`/`2.0`): **native AOT maturity / optimization / JIT (T6 — rolled to `1.1` as a QoL/perf enhancement; 1.0.0 ships on the interpreter trusted base + the existing direct-LLVM kernel subset; see §8 Q4)** *(re-gated INTO `lang 1.0.0` by ADR-034, 2026-06-30 — see the §8 Q4 note + ADR-034)*, semantic-level projections to other languages
 (RFC-0021 exploratory), resonator-only probabilistic pipelines beyond the VSA submodule, and any
 "nice to have" not required for *full usability*. Deferrals stay named, never silent.
 
@@ -108,7 +108,7 @@ its own per-issue DoDs (DN-25 is the map; the epics carry the detail). Summary c
 | **T3 Runtime & concurrency** | E12-1 (+E7-2) | real scheduler; full RFC-0008 vocabulary executes; deadlock-freedom checked; memory reclamation (RFC-0027); supervision/cancellation | 🔨 in progress — scheduler/deadlock/supervision landed (M-709/711/713); M-710/M-712 open |
 | **T4 Stdlib in Mycelium** | E13-1 | the stdlib + core libs **written in `.myc`** (RFC-0031), differential-tested, stable APIs; Rust std-`*` beyond the bare core superseded by `.myc` | ⏳ open |
 | **T5 FFI & system** | E14-1 | capability-based FFI (RFC-0028); `wild` executes; real io/fs/sys bindings; ADR-014 unsafe floor confined + audited | 🔨 in progress (on dev) — wild/@std-sys executes (#499); not yet on main |
-| **T6 Native AOT maturity** | E15-1 (+E6-1) | full libMLIR lowering; EXPLAIN-able optimization passes (RFC-0029); JIT; interp ≡ AOT ≡ JIT differential durable | **→ `1.1` (un-gated 2026-06-23; QoL/perf, not a 1.0.0 blocker — §8 Q4)** |
+| **T6 Native AOT maturity** | E15-1 (+E6-1, +E25-1) | full libMLIR lowering; EXPLAIN-able optimization passes (RFC-0029); JIT; full-language native-codegen coverage (closures/recursion/`trit.mul`/`Swap`/Dense/VSA + dynamic-VSA JIT); interp ≡ AOT ≡ JIT differential durable | **→ `1.1` (un-gated 2026-06-23; QoL/perf — §8 Q4)** · **RE-GATED into `lang 1.0.0` by ADR-034 (2026-06-30): hard gate row, full native coverage; M-738 `depends_on` E15-1 — see ADR-034** |
 | **T7 Toolchain/IDE/dist** | E16-1 (+E9-1) | full LSP (completions/hover/semantic tokens); highlighting shipped (RFC-0026); package publish/resolve; reproducible install | ⏳ open |
 | **T8 Docs & stability** | E17-1 | language reference + tutorial; per-module stdlib docs; stability/API-compat guarantees (ADR-023); `lang` SemVer enacted; **MIT-only licensing audited** (§7) | 🔨 in progress — language ref + stdlib API docs + ADR-023 done (M-735/736/737); M-738 release act blocked |
 | **T9 Self-hosting** | E18-1 | **1.0.0 bar (Q1):** the core stdlib/corelib is self-hosted in Mycelium so no dev must hand-write L0/L1 (with T4); self-hosting CI gate green for that slice (DN-14, DN-26). The full toolchain/compiler self-host (zero-Rust) **trails to the long-term arc (§10)** — not a 1.0.0 blocker | ⏳ open |
@@ -122,7 +122,7 @@ usable, not yet zero-Rust.
 ## 6. Sequencing (high level; DN-25 has the dependency graph)
 
 T1 (core gate) and T2 (surface) run first and in parallel; T4 (stdlib in Mycelium) depends on T2;
-T3/T5 (runtime/FFI) enable T4's system-touching modules; **T6 (AOT) is deferred to `1.1`** (perf/QoL, §8 Q4); T7/T8 are
+T3/T5 (runtime/FFI) enable T4's system-touching modules; **T6 (AOT) is deferred to `1.1`** (perf/QoL, §8 Q4) *(re-gated into `lang 1.0.0` by ADR-034, 2026-06-30 — now a hard gate row delivered "through the lowers"; see §8 Q4 note)*; T7/T8 are
 continuous; T9 (self-hosting) is the capstone, depending on T2 + T4. The `core 1.0.0` tag (T1) can
 land long before `lang 1.0.0`.
 
@@ -163,6 +163,13 @@ land long before `lang 1.0.0`.
   the existing direct-LLVM kernel-subset path; optimized native codegen is *performance, not
   correctness*, so it does not gate the release. T6 is removed from the §5 gate (→ `1.1`) and `aot10`
   leaves the 1.0.0 waves (it runs post-1.0.0, alongside the T9 self-host capstone).
+  > **SUPERSEDED by ADR-034 (2026-06-30 — maintainer-ratified).** Q4 is **reversed**: T6 (E15-1
+  > native AOT) is **re-gated INTO `lang 1.0.0`** as a **hard gate row**, scope expanded to
+  > **full-language native-codegen coverage** (closures · non-tail/mutual recursion · `trit.mul` ·
+  > `Swap` · Dense · VSA · JIT for dynamic VSA/HDC). The interpreter stays the trusted-base reference;
+  > the native path stays outside the kernel (KC-3). `M-738` now `depends_on E15-1`. This Q4 resolution
+  > text is preserved (append-only, house rule #3); the change lives in **ADR-034** (umbrella epic
+  > E25-1, issues M-850…M-863). See ADR-034.
 
 ## 9. Grounding & honesty
 
@@ -233,3 +240,13 @@ Recorded so the program stays honest about where it ends — these are **vision,
   §5 T1 row references ADR-024). The ADR-021 Gate A/B rows stay met + unchanged; `M-703` `depends_on`
   E19-1. This is the house-rule-correct (supersede-to-change-criteria) capture of the RFC-0032 §5 D6
   decision. (ADR-024; Copilot #514.)
+- 2026-06-30 — **Q4 REVERSED — T6-re-gating ENACTED by ADR-034** (maintainer-ratified). The §8 Q4
+  resolution (T6 native AOT → `1.1`) is **superseded**: T6 (epic **E15-1**) is **re-gated into
+  `lang 1.0.0`** as a **hard gate row**, scope expanded to **full-language native-codegen coverage**
+  (closures · non-tail/mutual recursion · `trit.mul` · `Swap` · Dense · VSA · JIT for dynamic VSA/HDC),
+  delivered "through the lowers." Recorded in the focused amending **ADR-034**, not by rewriting §3/§5/§8
+  Q4 in place (each carries an append-only "re-gated by ADR-034" pointer; the Q4 resolution text is
+  preserved). Umbrella epic **E25-1** (M-850…M-863); `M-738` now `depends_on E15-1`. The interpreter
+  stays the trusted-base reference; the AOT path stays outside the kernel (KC-3); honest tags +
+  never-silent throughout (G2/VR-5). House-rule-correct (supersede-to-change-criteria) capture of the
+  maintainer's 2026-06-30 decision. (ADR-034.)
