@@ -270,6 +270,48 @@ fn over_wide_pair_is_refused_not_silently_transcoded() {
     ));
 }
 
+/// An **in-i64-bound illegal pair** in `ReuseInterp` mode emits the `enc` transcode IR **plus** a
+/// never-silent final-quotient overflow flag — so a value outside the ternary range produces an
+/// explicit `AotError::Overflow` rather than silently wrong trits (G2/SC-3; M-852). The IR contains
+/// the `icmp ne` final-quotient check (the never-silent guard). Pair `(8, 4)` is illegal:
+/// `2^7 = 128 > (3^4−1)/2 = 40`. The width guard (`check_i64_width`) does **not** block it (8 ≤ 62,
+/// 4 ≤ 39), so this test exercises the final-quotient path (not `check_i64_width`).
+#[test]
+fn in_i64_bound_illegal_pair_enc_emits_final_quotient_overflow_flag() {
+    use crate::llvm::emit_llvm_ir_with_swap_mode;
+    // (8,4): 8 ≤ 62 and 4 ≤ 39 — passes check_i64_width. Illegal (128 > 40) but in-i64-bound.
+    let prog = swap_b_to_t(vec![true, false, true, true, false, false, true, false], 4); // bit pattern = −78
+    assert!(!mycelium_cert::legal_pair(8, 4), "(8,4) is illegal");
+    // In Recheck mode the illegal pair is refused at compile time (before any IR is emitted).
+    match emit_llvm_ir(&prog) {
+        Err(crate::llvm::AotError::UnsupportedNode(_)) => { /* expected */ }
+        other => panic!("Recheck must refuse (8,4) before any IR, got {other:?}"),
+    }
+    // In ReuseInterp mode the IR is emitted (the pair's legality is not re-checked at compile time),
+    // and the emitted IR carries the never-silent final-quotient check (`icmp ne i64 …, 0`) that
+    // catches an out-of-range value at runtime. For the in-range value −78 (which fits in T_4:
+    // |−78| = 78 > 40 — actually also out of range for T_4; max_magnitude(4)=40), the runtime
+    // would produce AotError::Overflow (the read-back sentinel). The key assertion here is that
+    // the IR is emitted (no UnsupportedNode) and contains the overflow guard.
+    match emit_llvm_ir_with_swap_mode(&prog, SwapCertMode::ReuseInterp) {
+        Ok(ir) => {
+            assert!(
+                ir.contains("; swap") && ir.contains("srem i64"),
+                "ReuseInterp must emit the transcode IR (not refuse at compile time):\n{ir}"
+            );
+            assert!(
+                ir.contains("icmp ne i64"),
+                "the enc direction must emit the never-silent final-quotient overflow guard \
+                 (G2/SC-3; M-852):\n{ir}"
+            );
+        }
+        Err(crate::llvm::AotError::UnsupportedNode(msg)) => {
+            panic!("ReuseInterp must not refuse an in-i64-bound pair at compile time; got: {msg}")
+        }
+        Err(other) => panic!("unexpected error for (8,4) in ReuseInterp: {other}"),
+    }
+}
+
 /// The width bound is `>` not `>=`: a binary width of **exactly** `MAX_BINARY_WIDTH_I64 = 62` is
 /// **accepted** (it is the widest the i64 transcode handles soundly — `1i64 << 62` fits i64), not
 /// refused. Exercised via `ReuseInterp` (an illegal but in-i64-bound pair `(62, 2)` reaches the

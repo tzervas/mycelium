@@ -239,8 +239,18 @@ pub(crate) fn lower_swap(
                 )));
             }
             let int_reg = emit_bits_to_int(&src_lane.vals, ssa, body);
-            // enc is total on a legal pair (no range failure), so no overflow flag is pushed.
-            let lane = emit_int_to_trits(&int_reg, trits as usize, ssa, body);
+            let (lane, final_q) = emit_int_to_trits(&int_reg, trits as usize, ssa, body);
+            // On a legal pair the final quotient is provably 0, so enc is total and no overflow flag
+            // is pushed. In `ReuseInterp` mode the pair's legality was NOT independently re-checked
+            // at compile time — the caller is trusted to have validated it through the interpreter.
+            // To uphold G2 (never silent) even when that precondition is violated, we emit a
+            // never-silent final-quotient check: if `final_q != 0` the value did not fit in `m`
+            // trits, so we push an overflow flag exactly as the `dec` direction does. On a legal pair
+            // this flag is always 0 (dead code), so it does not change the semantics for the normal
+            // path — the cost is one extra `icmp` instruction (G2/SC-3; M-852).
+            let oor = ssa.fresh();
+            let _ = writeln!(body, "  {oor} = icmp ne i64 {final_q}, 0");
+            flags.push(oor);
             Ok((lane, explain))
         }
         // ── Ternary{m} → Binary{n}: dec, PARTIAL — range failure is never-silent (out of range). ──
@@ -394,14 +404,26 @@ fn emit_trits_to_int(trits: &[String], ssa: &mut Ssa, body: &mut String) -> Stri
     acc
 }
 
-/// Emit IR encoding an `i64` integer (`int_reg`) into an MSB-first `Ternary` lane of `m` trits.
+/// Emit IR encoding an `i64` integer (`int_reg`) into an MSB-first `Ternary` lane of `m` trits,
+/// returning the lane **and** the final-quotient SSA register.
+///
 /// Mirrors `mycelium_core::ternary::int_to_trits` digit-for-digit: per LSB digit, `r = v rem 3`
 /// folded to balanced `{−1,0,1}` (`2 ≡ −1`, with a borrow `v += 1`), then `v = (v − digit)/3`.
 /// Computed branch-free with `srem`/`sdiv` and a `select` for the `2 → −1` fold. The result lane is
 /// MSB-first (we compute LSB-first then reverse). `m` is the codegen-fixed target width, so the loop
-/// is unrolled — every digit is explicit IR (§6). A legal pair guarantees the value fits, so the
-/// final quotient is provably 0 (no range flag needed on the `enc` direction).
-fn emit_int_to_trits(int_reg: &str, m: usize, ssa: &mut Ssa, body: &mut String) -> Lane {
+/// is unrolled — every digit is explicit IR (§6).
+///
+/// The **final quotient** (the `i64` left in `v` after all `m` digits are consumed) is returned so
+/// the caller can emit a never-silent out-of-range check: on a legal pair the quotient is provably 0;
+/// on an **illegal pair in `ReuseInterp` mode** (whose legality was not re-checked at compile time)
+/// a non-zero final quotient signals that the value did not fit in `m` trits — the caller **must**
+/// emit `icmp ne i64 {final_q}, 0` and push it as an overflow flag (G2/SC-3).
+fn emit_int_to_trits(
+    int_reg: &str,
+    m: usize,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> (Lane, String) {
     let mut v = int_reg.to_owned();
     let mut lsb_first: Vec<String> = Vec::with_capacity(m);
     for _ in 0..m {
@@ -430,10 +452,7 @@ fn emit_int_to_trits(int_reg: &str, m: usize, ssa: &mut Ssa, body: &mut String) 
         v = v_next;
     }
     let vals: Vec<String> = lsb_first.into_iter().rev().collect(); // → MSB-first
-    Lane {
-        kind: LaneKind::Ternary,
-        vals,
-    }
+    (Lane { kind: LaneKind::Ternary, vals }, v)
 }
 
 /// Emit IR encoding an `i64` integer (`int_reg`) into an MSB-first `Binary` lane of `n` two's-
