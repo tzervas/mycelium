@@ -6,7 +6,9 @@ mod bitnet;
 mod dialect;
 mod inject_tests;
 mod jit;
+mod llvm;
 mod mode;
+mod trampoline;
 // `dialect::native` only compiles under `mlir-dialect`, so its white-box tests are gated to match.
 #[cfg(feature = "mlir-dialect")]
 mod native;
