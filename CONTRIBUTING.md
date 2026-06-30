@@ -111,6 +111,17 @@ GitHub Actions running `cargo fmt --check`, `cargo clippy -D warnings`, `cargo t
   `just setup`; Python → `uv sync`; docs → the markdown/`doc_refs` checks; proofs → `z3`/LH/Lean) so
   you are not surprised mid-flight. When PRs share files, land them in order and pull the merged base
   down before the next. Full policy plus the change-kind→toolchain map: `docs/notes/DN-65-…md`.
+- **Concurrent, tier-scoped, agent-reviewed development (the optimal pattern).** Work flows
+  `feature/leaf → dev → integration → main` — each tier PR-gated (merges into `dev`/`integration`/`main`
+  are via PR; working branches below `dev` merge freely). **Testing tightens up the tiers:** a **leaf
+  runs only the change-scoped checks for what it touches** (deep on those components, not the whole
+  workspace), `dev` is the working tier, and **`integration` is where the gates tighten and the polish
+  concentrates** — APIs regenerated, docs finalized, issues/epics closed out (so leaves FLAG those up
+  rather than editing `CHANGELOG`/indices themselves). Each concurrent agent works in its **own isolated
+  `git worktree`**; each PR gets a dedicated **`/pr-review` agent** that posts findings as PR comments,
+  patches them, replies with the resolution, updates the PR description, and merges up the tree — with
+  the **merge to `main` the terminal (maintainer) checkpoint**. Full agent-facing form: `CLAUDE.md`
+  §Concurrent-PR development and §Autonomous PR workflow.
 
 ---
 
