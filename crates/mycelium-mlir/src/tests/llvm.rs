@@ -151,17 +151,36 @@ fn refuses_bit_op_on_ternary_lane() {
 }
 
 #[test]
-fn refuses_swap() {
-    // Mutant-witness: a swap is not straight-line bit logic; it must be refused, not ignored.
-    let prog = Node::Swap {
+fn lowers_legal_swap_and_refuses_unsupported_swap_kinds() {
+    // M-852 (E25-1): a `Swap` over the certified binary↔ternary class is now **lowered** natively
+    // (was refused before M-852). `(2,2)` is a legal pair (2^1=2 ≤ (3^2−1)/2=4), so it emits a
+    // transcode module — no longer an UnsupportedNode. (The cert basis is recorded in a dumpable IR
+    // comment; the interp↔native equivalence is the `tests/swap_differential.rs` gate.)
+    let legal = Node::Swap {
         src: Box::new(Node::Const(binary(vec![true, false]))),
         target: Repr::Ternary { trits: 2 },
         policy: mycelium_core::ContentHash::parse("blake3:x").unwrap(),
     };
-    assert!(matches!(
-        emit_llvm_ir(&prog),
-        Err(AotError::UnsupportedNode(_))
-    ));
+    let ir = emit_llvm_ir(&legal).expect("a legal binary↔ternary swap now lowers (M-852)");
+    assert!(
+        ir.contains("; swap"),
+        "the dumpable swap comment must be emitted:\n{ir}"
+    );
+
+    // Mutant-witness / never-silent (G2): an **illegal** pair `(2,4)`… is legal, so pick a clearly
+    // illegal one: `(8,2)` — 2^7=128 > (3^2−1)/2=4 — must still be an explicit refusal in the default
+    // (Recheck) mode. A swap kind outside bit↔ternary is never silently lowered.
+    let illegal = Node::Swap {
+        src: Box::new(Node::Const(binary(vec![
+            true, false, true, true, false, false, true, false,
+        ]))),
+        target: Repr::Ternary { trits: 2 },
+        policy: mycelium_core::ContentHash::parse("blake3:x").unwrap(),
+    };
+    assert!(
+        matches!(emit_llvm_ir(&illegal), Err(AotError::UnsupportedNode(_))),
+        "an illegal-pair swap must be refused in the default Recheck mode (never silent; G2)"
+    );
 }
 
 #[test]
