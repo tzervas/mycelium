@@ -8,6 +8,29 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-06-30: ADR-034 — native AOT re-gated INTO `lang 1.0.0`)
+
+- **ADR-034 — Full-Language 1.0.0 Gate (Track T6) Re-Gating: `Accepted`** (maintainer-ratified,
+  append-only). **Reverses ADR-022 §8 Q4** (which un-gated native AOT to `1.1`): epic **E15-1** (native
+  AOT) is **re-gated INTO `lang 1.0.0` as a hard gate row**, scope expanded to **full-language
+  native-codegen coverage** — closures, non-tail and mutual recursion, `trit.mul`, `Swap`, Dense, VSA,
+  and JIT for dynamic VSA/HDC — delivered "through the lowers" over scoped PRs. ADR-022 §3/§5 T6/§8 Q4
+  carry append-only "re-gated by ADR-034" pointers (the Q4 resolution text is preserved, not rewritten —
+  house rule #3). `M-738` (the `lang 1.0.0` release act) now `depends_on E15-1`.
+- **Program registered (umbrella epic `E25-1`, issues `M-850`…`M-863`).** The native-AOT
+  full-coverage increments (recursion trampoline, closure-ABI widening, `Swap`/Dense/VSA codegen,
+  dynamic-VSA JIT, dialect catch-up, unified mutant-witnessed three-way differential), the perf +
+  parallelism extension (bench single+multicore scaling + regression gates, parallel per-function
+  codegen, scheduler work-stealing, parallel pure-fragment eval), and the ratification act are
+  registered in `tools/github/issues.yaml` with user stories + Definition of Done. **RFC-0039** (Native
+  Dense & VSA Codegen) is the proposed design vehicle for the Dense/VSA increments.
+- **Honest posture (VR-5/G2).** The native AOT is implemented and landed on `main` (waveN2) and **builds and tests
+  pass** at the bit/trit and bounded-data subset (verified 2026-06-30; the `mlir-dialect` leg
+  skips gracefully where libMLIR is absent, ADR-019). Full coverage is **not yet met** and is **not**
+  claimed — each E25-1/E15-1 leaf stays `Declared` until it lands with a checked three-way differential
+  (interp ≡ AOT ≡ JIT), mutant-witnessed. The interpreter remains the trusted-base reference; the AOT
+  path stays outside the kernel (KC-3). RFC-0029 moves `Accepted → Enacted` only at completion (M-863).
+
 ### Changed (2026-06-29: RFC-0038 ratified — `Proposed → Accepted`)
 
 - **RFC-0038 — Inject-Mode Security Axis: `Proposed → Accepted`** (maintainer approved, append-only).
