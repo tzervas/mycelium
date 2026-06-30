@@ -201,12 +201,14 @@ impl VsaModelId {
     ///   reference's `*_unbind` profile) for HRR/FHRR;
     /// - `bundle` is **`Proven`** for MAP-I (the checked capacity bound) and **`Empirical`** for BSC
     ///   (the `BSC_BUNDLE_PROFILE`) — both have a reference *value-level* wrapper. **HRR/FHRR `bundle`
-    ///   have NO reference value-level wrapper** (only the raw `VsaModel::bundle` algebra, which
-    ///   returns a bare `Vec<f64>` with no `Meta`), so issuing an `Empirical` value would require a
-    ///   *fabricated* bound — which VR-5 forbids. The honest tag is therefore **`Declared`** (a
-    ///   downgrade from the operation-level `Empirical`, flagged with a `UserDeclared` basis): the raw
-    ///   superposition is computed bit-exactly (the differential witnesses the payload), but no
-    ///   validated value-level bound is asserted.
+    ///   have NO reference value-level wrapper** (only the raw `VsaModel::bundle` algebra, with no
+    ///   trial-validated `EmpiricalProfile`), so claiming `Empirical` would *fabricate* a bound — which
+    ///   VR-5 forbids ("an explicit refusal, not a silent Empirical-anyway", RFC-0039 §5.2). The honest
+    ///   tag is therefore **`Declared`** (the "asserted, always flagged" tier, with a `UserDeclared`
+    ///   basis): the superposition payload is lowered **bit-exactly** (the differential witnesses it),
+    ///   but **no validated value-level bound is asserted** — a downgrade from the operation-level
+    ///   `Empirical`, never a fabricated one. (`Declared` is *not* a silent Empirical: it is the
+    ///   transparency lattice's flag for an unvalidated assertion — VR-5/G2.)
     ///
     /// `None` for a measurement (`similarity` — no `Meta`).
     #[must_use]
@@ -224,7 +226,7 @@ impl VsaModelId {
             (VsaModelId::MapI, VsaCgOp::Bundle) => Proven,
             (VsaModelId::Bsc, VsaCgOp::Bundle) => Empirical,
             // HRR/FHRR bundle: no reference value-level bound exists — honest downgrade to Declared
-            // (never a fabricated Empirical bound; VR-5).
+            // (a flagged unvalidated assertion; never a fabricated Empirical; VR-5).
             (VsaModelId::Hrr | VsaModelId::Fhrr, VsaCgOp::Bundle) => Declared,
             // similarity is a measurement — no Meta tag.
             (_, VsaCgOp::Similarity) => return None,
@@ -1218,10 +1220,10 @@ impl VsaArtifact {
             (VsaModelId::Fhrr, VsaCgOp::Unbind, GuaranteeStrength::Empirical) => {
                 Some(FHRR_UNBIND_PROFILE.bound())
             }
-            // HRR/FHRR bundle: the reference exposes NO value-level bound (only the raw `bundle`
-            // algebra). The honest value-level tag is `Declared` with a flagged `UserDeclared`
+            // HRR/FHRR bundle: the reference exposes no value-level bound (only the raw `bundle`
+            // algebra), so the honest value-level tag is `Declared` with a flagged `UserDeclared`
             // capacity bound — never a fabricated `Empirical` profile (VR-5). The `Capacity{items,dim}`
-            // records *what was bundled* (an inspectable, true fact) without asserting a failure
+            // records *what was bundled* (a true, inspectable fact) without asserting a failure
             // probability the reference never validated.
             (VsaModelId::Hrr | VsaModelId::Fhrr, VsaCgOp::Bundle, GuaranteeStrength::Declared) => {
                 Some(Bound {

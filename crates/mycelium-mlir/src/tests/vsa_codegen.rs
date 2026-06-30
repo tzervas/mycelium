@@ -160,8 +160,9 @@ fn op_names_match_the_vsa_keys() {
 
 /// The honest per-op value-level guarantee mirrors the reference's value-level surface (RFC-0003 §4.1,
 /// VR-5): permute/bind Exact for every model; unbind Exact (MAP-I/BSC) vs Empirical (HRR/FHRR); bundle
-/// Proven (MAP-I) / Empirical (BSC) / Declared (HRR/FHRR — no reference value-level bound); similarity
-/// is a measurement (None). This is the load-bearing tag table — a wrong row mis-tags a value.
+/// Proven (MAP-I) / Empirical (BSC) / Declared (HRR/FHRR — no reference value-level bound, the honest
+/// downgrade with a flagged `UserDeclared` basis); similarity is a measurement (None). This is the
+/// load-bearing tag table — a wrong row mis-tags a value.
 #[test]
 fn reference_guarantee_mirrors_the_value_level_surface() {
     use GuaranteeStrength::{Declared, Empirical, Exact, Proven};
