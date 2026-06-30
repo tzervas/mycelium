@@ -65,9 +65,19 @@ section "apt/nala fast-path (snapshot-persisted prebuilt check tools)"
 # nala itself is NOT listed here: it is bootstrapped in Step 1 below (the driver install), so adding it
 # to the batch set would make it re-appear in `apt_missing` and be reinstalled in Step 3 (harmless but
 # redundant — DRY).
+#
+# `llvm`/`clang` (unversioned meta-packages — M-848/E25): the native AOT backend
+# (crates/mycelium-mlir/src/llvm.rs — `compile_and_run` drives `llc` + `clang`, RFC-0004 §2 /
+# ADR-034) is NOT feature-gated like `mlir-dialect` — it is the default, always-on direct-LLVM path,
+# so it belongs in this default sweep, not the opt-in `setup-mlir.sh`. The unversioned packages
+# track whatever LLVM major the distro ships (no committed version pin to bump — CLAUDE.md);
+# `setup-mlir.sh` separately derives the matching libMLIR major from whichever `llc`/`clang` land
+# here. `z3`: the SMT obligation `proofs.sh` runs (binary-ternary-roundtrip) probes for it directly;
+# cheap, apt-available, part of the `just check` proofs gate.
 declare -A APT_BIN=(
   [shellcheck]=shellcheck [codespell]=codespell [yamllint]=yamllint [graphviz]=dot
   [gitleaks]=gitleaks [just]=just [pre-commit]=pre-commit [python3-pip]=pip3
+  [llvm]=llc [clang]=clang [z3]=z3
 )
 if have apt-get; then
   apt_missing=()
@@ -232,6 +242,18 @@ if have cargo; then
   if cargo nextest --version >/dev/null 2>&1; then ok "cargo: cargo-nextest present"
   elif cargo install --locked --quiet cargo-nextest 2>/dev/null; then ok "cargo install: cargo-nextest"
   else skip "cargo: cargo-nextest (install failed or offline; tests fall back to \`cargo test\`)"; fi
+fi
+
+# cargo-mutants (M-654 WS8 / M-848-E25): the `just mutants` / `just check-full` durability gate
+# over the trusted-base crates. No apt package — cargo-only, so the fallback chain here is just
+# `cargo install --locked` (deterministic; matches the cargo-deny/nextest pattern above). Best-effort,
+# idempotent (`cargo mutants --version` short-circuits when present). Skip-graceful: `check-full`
+# is a deliberate release/nightly gate, not part of the everyday `just check`, so a missing
+# cargo-mutants here only narrows `check-full`, never blocks day-to-day `just check`.
+if have cargo; then
+  if cargo mutants --version >/dev/null 2>&1; then ok "cargo: cargo-mutants present"
+  elif cargo install --locked --quiet cargo-mutants 2>/dev/null; then ok "cargo install: cargo-mutants"
+  else skip "cargo: cargo-mutants (install failed or offline; \`just check-full\`/\`just mutants\` will need it manually — cargo install --locked cargo-mutants)"; fi
 fi
 
 # Code-map / API-surface tools (optional). `cargo public-api` (the `just api` gate) drives a

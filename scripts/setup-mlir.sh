@@ -2,7 +2,9 @@
 # Provision libMLIR (the `mlir-opt`/`mlir-translate` toolchain) version-matched to the installed
 # LLVM, so the OPTIONAL `mlir-dialect` Cargo feature of `mycelium-mlir` (the real ternary →
 # arith/vector → LLVM dialect lowering, M-601) can build and be tested. ADR-019 records this as a
-# decision; this script makes it durable + idempotent. Wire it into `just setup`.
+# decision; this script makes it durable + idempotent. Wired into `just setup-mlir` — deliberately
+# OPT-IN, kept OUT of the default `just setup` (an off-by-default feature must not apt-install/
+# sudo-prompt by default; see the justfile's `setup-mlir` recipe comment).
 #
 # Honesty / house rules (CLAUDE.md):
 #  - The LLVM major is DERIVED from the installed `llc` (then `clang`), never hard-coded — so the
@@ -13,8 +15,9 @@
 #    (advisory, never blocks) — mirroring scripts/install-tools.sh and the `llc`/`clang`
 #    ToolchainMissing idiom in crates/mycelium-mlir/src/llvm.rs.
 #  - SECURITY: NO `curl | bash`, no piping a download to a shell, no unpinned remote fetch. Only the
-#    distro package manager (apt-get) with explicit, version-matched package names. All variable
-#    expansions are quoted. (Read by /security-review.)
+#    distro package manager — nala when present and functional, else apt-get (its universal
+#    bootstrap/fallback) — with explicit, version-matched package names. All variable expansions
+#    are quoted. (Read by /security-review.)
 #
 # The default Mycelium build and `cargo test` stay green WITHOUT libMLIR — the `mlir-dialect`
 # feature is OFF by default and probes for the tools, skipping when absent (ADR-019). This script
@@ -72,7 +75,7 @@ if have "mlir-opt-$MAJOR" && have "mlir-translate-$MAJOR"; then
   exit 0
 fi
 
-# ── Step 3: install the version-matched packages via the distro package manager only.
+# ── Step 3: install the version-matched packages via the distro package manager.
 # On Debian/Ubuntu the packages are `libmlir-$MAJOR-dev` (provides libMLIR.so.$MAJOR) and
 # `mlir-$MAJOR-tools` (provides mlir-opt-$MAJOR / mlir-translate-$MAJOR).
 PKG_DEV="libmlir-$MAJOR-dev"
@@ -97,13 +100,26 @@ if [ "$(id -u)" -ne 0 ]; then
   fi
 fi
 
-echo "  installing version-matched MLIR toolchain: $PKG_DEV $PKG_TOOLS"
-echo "  + ${SUDO:+$SUDO }apt-get install -y --no-install-recommends \"$PKG_DEV\" \"$PKG_TOOLS\""
-if ${SUDO:+$SUDO} apt-get install -y --no-install-recommends "$PKG_DEV" "$PKG_TOOLS"; then
-  ok "apt-get install succeeded"
+# Prefer nala when it is present AND functional (some containers ship a nala whose apt_pkg/
+# python3-apt binding is broken — ABI/path mismatch — so probe `nala --version`, not mere
+# presence; mirrors install-tools.sh's nala_ok probe). apt-get is the universal fallback driver,
+# both as the bootstrap for nala and when nala can't run.
+PM="apt-get"
+if have nala && nala --version >/dev/null 2>&1; then
+  PM="nala"
+fi
+
+echo "  installing version-matched MLIR toolchain via $PM: $PKG_DEV $PKG_TOOLS"
+echo "  + ${SUDO:+$SUDO }$PM install -y --no-install-recommends \"$PKG_DEV\" \"$PKG_TOOLS\""
+if ${SUDO:+$SUDO} "$PM" install -y --no-install-recommends "$PKG_DEV" "$PKG_TOOLS"; then
+  ok "$PM install succeeded"
+elif [ "$PM" != "apt-get" ] \
+     && ${SUDO:+$SUDO} apt-get install -y --no-install-recommends "$PKG_DEV" "$PKG_TOOLS"; then
+  ok "apt-get install succeeded (fallback — the $PM driver failed)"
 else
-  skip "apt-get could not install $PKG_DEV / $PKG_TOOLS (unavailable for LLVM major $MAJOR on this distro, or apt index stale)"
+  skip "$PM could not install $PKG_DEV / $PKG_TOOLS (unavailable for LLVM major $MAJOR on this distro, or apt index stale)"
   echo "  ensure your apt sources provide LLVM $MAJOR (e.g. apt.llvm.org), then re-run; advisory, not blocking."
+  echo "  manual fallback: ${SUDO:+$SUDO }apt-get install -y --no-install-recommends $PKG_DEV $PKG_TOOLS"
   exit 0
 fi
 

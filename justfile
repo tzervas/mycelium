@@ -13,9 +13,10 @@ default:
 setup:
     @bash scripts/install.sh
 
-# Provision the OFF-by-default `mlir-dialect` feature's libMLIR toolchain (apt; may use sudo).
+# Provision the OFF-by-default `mlir-dialect` feature's libMLIR toolchain (nala/apt; may use sudo).
 # Deliberately kept OUT of `just setup` so the default never apt-installs or sudo-prompts for an
 # optional feature most contributors don't build (ADR-019); run this only if you want that feature.
+# Idempotent — safe to re-run; a second run on a provisioned box is an all-present no-op.
 setup-mlir:
     @bash scripts/setup-mlir.sh
 
