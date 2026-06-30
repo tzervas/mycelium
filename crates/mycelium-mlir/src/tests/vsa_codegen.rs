@@ -1704,3 +1704,76 @@ fn parse_stdout_read_back_protocol_holds() {
         "a measurement with ≠ 1 element must be refused (kills the measurement length guard mutant)"
     );
 }
+
+/// `VsaArtifact::run` exit-status guard `if !output.status.success()` (`delete !`): a non-zero artifact
+/// exit is an explicit `Run` refusal, never a silent value (G2). Witnessed with the **universal POSIX
+/// utilities** `/bin/false` (exit 1) and `/bin/true` (exit 0) — **never `llc`/`clang`**, so it does not
+/// depend on the vacuity-prone AOT toolchain leg. `delete !` inverts the guard (accepting failures,
+/// rejecting successes); both sides are pinned. Skipped only if coreutils are somehow absent.
+#[test]
+fn run_rejects_a_failed_artifact_exit() {
+    use std::path::PathBuf;
+    let (false_bin, true_bin) = (PathBuf::from("/bin/false"), PathBuf::from("/bin/true"));
+    if !false_bin.exists() || !true_bin.exists() {
+        return; // not a POSIX environment — never the case on Linux/WSL (the maintainer's box).
+    }
+    // Non-zero exit (/bin/false) → explicit Run refusal (the `if !success` guard fires).
+    let failing = VsaArtifact::for_exec_test(false_bin, VsaCgOp::Similarity);
+    assert!(
+        matches!(failing.run(), Err(VsaAotError::Run(_))),
+        "a non-zero artifact exit must be an explicit Run refusal (kills run's exit-status `delete !`)"
+    );
+    // Zero exit (/bin/true, empty stdout) → passes the status guard, then refuses the empty
+    // measurement at parse (a Parse error, NOT a Run error). The `delete !` mutant would instead turn
+    // this success into a Run error — so distinguishing Parse-vs-Run pins the guard's polarity.
+    let ok_exit = VsaArtifact::for_exec_test(true_bin, VsaCgOp::Similarity);
+    assert!(
+        matches!(ok_exit.run(), Err(VsaAotError::Parse(_))),
+        "a zero-exit artifact must pass the status guard and reach parse (kills the inverted guard)"
+    );
+}
+
+/// `assemble_compile_ir` decl-prepend guard `if !decls.is_empty()` (`delete !` in `vsa_compile`'s
+/// extracted assembler): the complete module IR must carry the op's intrinsic `declare` block ahead of
+/// `@main` — exactly when the op needs intrinsics, and never otherwise. `delete !` inverts the guard
+/// (prepending only for *no-intrinsic* ops, dropping the declares for ops that need them → an
+/// undeclared-symbol `.ll`). Witnessed **without `llc`/`clang`** by inspecting the assembled IR string.
+#[test]
+fn assemble_compile_ir_prepends_decls_exactly_when_needed() {
+    use crate::vsa_codegen::assemble_compile_ir;
+    // BSC bind NEEDS @llvm.fabs.f64 → the declare must appear, ahead of @main.
+    let bsc = assemble_compile_ir(&canonical(VsaModelId::Bsc, VsaCgOp::Bind)).expect("assembles");
+    assert!(
+        bsc.contains("declare double @llvm.fabs.f64(double)"),
+        "BSC bind IR must prepend the fabs declare (kills the decl-prepend `delete !`):\n{bsc}"
+    );
+    let decl_pos = bsc.find("declare double @llvm.fabs.f64").unwrap();
+    let main_pos = bsc.find("define i32 @main()").unwrap();
+    assert!(
+        decl_pos < main_pos,
+        "the declare must precede @main:\n{bsc}"
+    );
+    // MAP-I bind needs NO intrinsics → no declare is prepended (the guard must not fire). A `delete !`
+    // mutant would (wrongly) try to prepend here — but with empty decls the replacen is a no-op, so the
+    // observable difference is the BSC case above (declare PRESENT vs DROPPED). We still pin the
+    // no-intrinsic shape: MAP-I bind carries no `declare double @llvm`/`@cos`/`@sin`/`@atan2`.
+    let mapi = assemble_compile_ir(&canonical(VsaModelId::MapI, VsaCgOp::Bind)).expect("assembles");
+    assert!(
+        !mapi.contains("declare double @llvm.fabs.f64")
+            && !mapi.contains("declare double @cos")
+            && !mapi.contains("declare double @llvm.sqrt.f64"),
+        "MAP-I bind needs no intrinsic declares:\n{mapi}"
+    );
+    // FHRR bundle needs the full set — each declare present and ahead of @main.
+    let fhrr =
+        assemble_compile_ir(&canonical(VsaModelId::Fhrr, VsaCgOp::Bundle)).expect("assembles");
+    for sym in ["@cos", "@sin", "@atan2", "@llvm.sqrt.f64"] {
+        let d = fhrr
+            .find(&format!("declare double {sym}"))
+            .unwrap_or_else(|| panic!("FHRR bundle IR must declare {sym}:\n{fhrr}"));
+        assert!(
+            d < fhrr.find("define i32 @main()").unwrap(),
+            "{sym} declare must precede @main"
+        );
+    }
+}
