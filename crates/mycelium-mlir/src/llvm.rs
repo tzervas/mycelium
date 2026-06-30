@@ -697,7 +697,16 @@ pub(crate) fn lower_anf_block_pub(
 ) -> Result<Lane, AotError> {
     // The trampoline (recursion) path lowers `Binary{8}` straight-line + Match only — a `Swap`
     // there is already refused — so the swap cert mode is the `Recheck` default (M-852).
-    lower_anf_block(anf, env, ssa, bbc, body, funcs, flags, SwapCertMode::Recheck)
+    lower_anf_block(
+        anf,
+        env,
+        ssa,
+        bbc,
+        body,
+        funcs,
+        flags,
+        SwapCertMode::Recheck,
+    )
 }
 
 /// `pub(crate)` shim: lower every **support** binding of `anf` — every binding whose name is neither
@@ -840,8 +849,9 @@ fn lower_anf_block_ev(
             Rhs::Swap { src, target, .. } => {
                 let src_lane = lookup_ev(env, src)?.as_lane("swap source")?;
                 let src_repr = lane_repr(src_lane);
-                let (lane, _explain) =
-                    swap_codegen::lower_swap(src_lane, &src_repr, target, swap_mode, ssa, body, flags)?;
+                let (lane, _explain) = swap_codegen::lower_swap(
+                    src_lane, &src_repr, target, swap_mode, ssa, body, flags,
+                )?;
                 EnvValue::Repr(lane)
             }
             Rhs::Construct { ctor, args } => {
@@ -1200,7 +1210,16 @@ fn lower_app(
         cenv.insert(Atom::Named(capname.clone()), cev.clone());
     }
     cenv.insert(Atom::Named(closure.param.clone()), arg_ev);
-    lower_anf_block_ev(&closure.body, &mut cenv, ssa, bbc, body, funcs, flags, swap_mode)
+    lower_anf_block_ev(
+        &closure.body,
+        &mut cenv,
+        ssa,
+        bbc,
+        body,
+        funcs,
+        flags,
+        swap_mode,
+    )
 }
 
 /// Pack a `Binary{8}` literal `Value` (a Match `Lit`-arm pattern) into the `u64` the native branch
@@ -1368,8 +1387,16 @@ fn lower_match(
             // A `Lit` arm binds nothing — the literal is matched by the switch value.
             AnfAlt::Lit { body: arm_body, .. } => arm_body,
         };
-        let arm_result =
-            lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags, swap_mode)?;
+        let arm_result = lower_anf_block(
+            arm_body,
+            &mut arm_env,
+            ssa,
+            bbc,
+            body,
+            funcs,
+            flags,
+            swap_mode,
+        )?;
         phi_entries.push((label.clone(), arm_result));
         let _ = writeln!(body, "  br label %{merge_label}");
     }
@@ -1660,7 +1687,17 @@ fn lower_arm_bindings_before_tail(
             Rhs::App { func, arg } => {
                 // Recursion-arm App: the trampoline/tail-loop path; a swap here is refused (the
                 // `Rhs::Swap` arm above), so the swap cert mode is the `Recheck` default (M-852).
-                lower_app(func, arg, env, ssa, bbc, body, funcs, flags, SwapCertMode::Recheck)?
+                lower_app(
+                    func,
+                    arg,
+                    env,
+                    ssa,
+                    bbc,
+                    body,
+                    funcs,
+                    flags,
+                    SwapCertMode::Recheck,
+                )?
             }
             Rhs::Fix {
                 name,
@@ -1976,7 +2013,14 @@ fn lower_tail_fix(
                 // Lower the full arm body and collect its result for the exit phi. A base-arm swap
                 // uses the `Recheck` default (the recursion path is not mode-threaded; M-852).
                 let result_lane = lower_anf_block(
-                    arm_anf, &mut arm_env, ssa, bbc, body, funcs, flags, SwapCertMode::Recheck,
+                    arm_anf,
+                    &mut arm_env,
+                    ssa,
+                    bbc,
+                    body,
+                    funcs,
+                    flags,
+                    SwapCertMode::Recheck,
                 )?;
                 exit_phi_entries.push((lbl.clone(), result_lane));
                 let _ = writeln!(body, "  br label %{exit_label}");
@@ -2024,7 +2068,14 @@ fn lower_tail_fix(
         match &default_kind {
             Some((def_anf, ArmKind::Base)) => {
                 let result_lane = lower_anf_block(
-                    def_anf, &mut def_env, ssa, bbc, body, funcs, flags, SwapCertMode::Recheck,
+                    def_anf,
+                    &mut def_env,
+                    ssa,
+                    bbc,
+                    body,
+                    funcs,
+                    flags,
+                    SwapCertMode::Recheck,
                 )?;
                 exit_phi_entries.push((default_label.clone(), result_lane));
                 let _ = writeln!(body, "  br label %{exit_label}");

@@ -329,7 +329,10 @@ fn emit_bits_to_int(bits: &[String], ssa: &mut Ssa, body: &mut String) -> String
     let corrected = ssa.fresh();
     let _ = writeln!(body, "  {corrected} = sub i64 {acc}, {two_pow_n}");
     let out = ssa.fresh();
-    let _ = writeln!(body, "  {out} = select i1 {is_neg}, i64 {corrected}, i64 {acc}");
+    let _ = writeln!(
+        body,
+        "  {out} = select i1 {is_neg}, i64 {corrected}, i64 {acc}"
+    );
     out
 }
 
@@ -412,7 +415,11 @@ fn emit_int_to_bits(int_reg: &str, n: usize, ssa: &mut Ssa, body: &mut String) -
         );
     }
     // Range bounds: lo = −2^(n-1), hi = 2^(n-1) − 1. For the bijective small-pair regime n ≤ 62.
-    let half: i64 = if n - 1 < 62 { 1i64 << (n - 1) } else { i64::MAX };
+    let half: i64 = if n - 1 < 62 {
+        1i64 << (n - 1)
+    } else {
+        i64::MAX
+    };
     let lo = -half;
     let hi = half - 1;
     let lt_lo = ssa.fresh();
