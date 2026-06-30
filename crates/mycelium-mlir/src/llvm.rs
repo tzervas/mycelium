@@ -192,29 +192,37 @@ pub(crate) struct Datum {
     pub(crate) slots: usize,
 }
 
-/// The element width of the **narrow Increment-2 closure ABI**: closures carry/return `Binary{8}`
-/// values packed into a single `i64` (DN-15 §7.1; RFC-0004 §11.5). Anything wider/other-repr is an
-/// explicit `UnsupportedNode` (never a silent mis-encode — G2).
+/// The element width of the **narrow `Binary{8}` recursion-accumulator ABI** used by the heap
+/// trampoline ([`crate::trampoline`]): a recursion accumulator is a `Binary{8}` value packed into a
+/// single `i64` (DN-15 §7.1/§10). Anything wider/other-repr is an explicit `UnsupportedNode` (never a
+/// silent mis-encode — G2). *(M-378 also used this for the narrow closure ABI; M-851 widened closures
+/// to inlined any-repr/width values, so this constant now scopes the trampoline accumulator only.)*
 pub(crate) const CLOSURE_ABI_WIDTH: usize = 8;
 
-/// The arena capacity (bytes) for the bump-allocated closure heap (DN-15 §7.2). A **`Declared`**
-/// compile-time over-estimate. Increment-2 excludes `Fix`/`FixGroup`, so the number of closure
-/// records is statically bounded by program structure (not a runaway) — but that bound is *not
-/// computed here*, so a sufficiently large finite program could still exceed this capacity. If it
-/// does, the over-capacity check in `@myc_arena_alloc` takes an explicit `@abort` (a never-silent
-/// defined-trap — G2), exactly the seam where **Increment-3** substitutes a `DepthBudget`-resolved
-/// ceiling + a graceful limit (DN-05 #1; `budget.rs`, M-349).
-pub(crate) const ARENA_CAPACITY_BYTES: usize = 1 << 20;
-
-/// A native closure value (Increment-2): a pointer to a heap (arena) closure record laid out as
-/// `[ fn_ptr:i64 | capture_0:i64 | … | capture_k:i64 ]` (slot 0 = `@myc_closureN` address as i64,
-/// slots 1.. = captured `Binary{8}` values packed to `i64`). Produced by `Rhs::Lam`, consumed by
-/// `Rhs::App` as an indirect call. A closure is never a printable result and never crosses the
-/// narrow ABI as an argument/result — those are explicit refusals (DN-15 §7.4; G2).
+/// A native closure value — **widened, specialize-at-application** representation (M-851; DN-15 §7.1
+/// — the "uniform … any repr/width" widening of the M-378 narrow `Binary{8}` ABI). The narrow ABI
+/// eagerly emitted a top-level `i64 (i8*,i64)` function + heap record carrying a single packed
+/// `Binary{8}`; this widened path instead **suspends** the closure as its un-lowered lambda (`param` +
+/// `body` ANF) plus a snapshot of the **captured environment** (each free var's already-lowered
+/// [`EnvValue`]), and **specializes (inlines) it at the application site** ([`lower_app`]): the
+/// argument pins the param's concrete shape, the body is lowered inline, and the result flows back as
+/// an [`EnvValue`] of whatever shape the body computed. This lets closures over **any repr/width**,
+/// **curried application** (a body whose result is itself a `ClosureVal`), and **returned closures**
+/// (a closure flowing through a `let`/binding, applied later) all lower natively — with no fixed wire
+/// ABI, no indirect call, and **no guessed param width** (each shape is statically resolved at the App
+/// site; G2/VR-5). A closure that is never applied (left on the printable program result, or
+/// `Match`-scrutinized) stays an explicit refusal (a closure is not printable/branchable — DN-15 §7.4).
 #[derive(Debug, Clone)]
 pub(crate) struct ClosureVal {
-    /// The SSA register holding the record's `i64*` base pointer.
-    pub(crate) base: String,
+    /// The closure parameter name (bound to the application argument when specialized).
+    pub(crate) param: String,
+    /// The closure body as an un-lowered ANF block, lowered inline at the application site.
+    pub(crate) body: mycelium_core::lower::Anf,
+    /// The captured environment — each free variable of the body mapped to its already-lowered
+    /// [`EnvValue`] from the *defining* scope (a lane of any repr/width, or a nested `ClosureVal`).
+    /// Snapshotting the values (not re-looking-them-up at the App site) keeps lexical capture correct
+    /// when the closure is applied outside its defining scope (a returned/curried closure).
+    pub(crate) captured: Vec<(String, EnvValue)>,
 }
 
 /// A suspended `Fix` value (Increment-3 / RFC-0004 §11.6): the Fix body (a `λparam. Match ...`)
@@ -357,9 +365,11 @@ pub(crate) struct Lowered {
     /// trit-arithmetic op's overflow condition, or `None` for a program that cannot overflow (no
     /// `trit.add/sub/mul`). The AOT/JIT emitters branch on it to drive the read-back protocol.
     pub(crate) overflow: Option<String>,
-    /// The emitted closure functions (`define i64 @myc_closureN(i8* %env, i64 %arg) { … }`), one per
-    /// `Rhs::Lam` lowered (Increment-2). Empty for a closure-free program — in which case
-    /// [`emit_llvm_ir`] emits byte-for-byte the same module as before (no arena, no closures).
+    /// **Vestigial since M-851 — always empty.** The narrow ABI (M-378) emitted one top-level
+    /// `@myc_closureN` function per `Rhs::Lam` here; the widened ABI **inlines** closures at their
+    /// application site ([`lower_app`]), so no top-level closure functions are produced. Retained only
+    /// because the trampoline-shared lowering signatures thread a `funcs` sink (M-850); nothing writes
+    /// to it now. Kept (not removed) to avoid churning the `crate::trampoline` interface.
     pub(crate) funcs: Vec<String>,
 }
 
@@ -585,16 +595,14 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                 scrutinee, alts, default, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
                 &mut flags,
             )?,
-            // Increment-2 (M-378; DN-15 §7; RFC-0004 §11.5): App/Lam are now natively lowered via
-            // closure-conversion (free-var analysis → heap closure record → indirect call), over the
-            // narrow `Binary{8}`-packed-`i64` ABI and the bump arena. Fix/FixGroup stay explicit
-            // UnsupportedNode (Increment-3 — heap trampoline + DN-05 #1 stack-robustness; G2/VR-5).
+            // M-378 + M-851 (DN-15 §7; RFC-0004 §11.5/§11.7): `Lam` builds a suspended closure value
+            // (free-var snapshot) and `App` **specializes (inlines)** it at the call site over the
+            // widened any-repr/width boxed-value model — currying + returned closures lower natively.
+            // Fix/FixGroup route to the heap trampoline (M-850; DN-05 #1 stack-robustness; G2/VR-5).
             Rhs::Lam {
                 param,
                 body: lam_body,
-            } => lower_lam(
-                param, lam_body, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
-            )?,
+            } => lower_lam(param, lam_body, &env)?,
             Rhs::App { func, arg } => lower_app(
                 func, arg, &env, &mut ssa, &mut bbc, &mut body, &mut funcs, &mut flags,
             )?,
@@ -740,8 +748,8 @@ pub(crate) fn lit_binary8_packed_pub(value: &Value) -> Result<u64, AotError> {
 }
 
 /// Lower a nested ANF block (a `Match` arm or similar nested scope) into the ongoing IR stream,
-/// extending `env` with any new bindings. Returns the result `Lane` of the nested block.
-/// This is the recursive workhorse for `Rhs::Match` arm bodies in [`lower_program`].
+/// extending `env` with any new bindings. Returns the result `Lane` of the nested block (forcing the
+/// result to a repr lane). This is the recursive workhorse for `Rhs::Match` arm bodies.
 fn lower_anf_block(
     anf: &lower::Anf,
     env: &mut HashMap<Atom, EnvValue>,
@@ -751,6 +759,24 @@ fn lower_anf_block(
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
 ) -> Result<Lane, AotError> {
+    lower_anf_block_ev(anf, env, ssa, bbc, body, funcs, flags)?.into_lane("match arm result")
+}
+
+/// Lower a nested ANF block returning its raw [`EnvValue`] result — a lane **or** a closure. The
+/// closure-result case is what makes **currying / returned closures** lowerable (M-851): a closure
+/// body whose result is itself a `Lam` / an `App`-returning-a-closure yields an `EnvValue::Closure`,
+/// which the caller (an enclosing `App`, or a `let` binding) consumes directly rather than forcing it
+/// to a printable lane. [`lower_anf_block`] is the lane-forcing wrapper for the (common) repr-result.
+#[allow(clippy::too_many_arguments)]
+fn lower_anf_block_ev(
+    anf: &lower::Anf,
+    env: &mut HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+) -> Result<EnvValue, AotError> {
     for b in anf.bindings() {
         let ev = match &b.rhs {
             Rhs::Const(v) => EnvValue::Repr(const_lane(v)?),
@@ -807,7 +833,7 @@ fn lower_anf_block(
             Rhs::Lam {
                 param,
                 body: lam_body,
-            } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
+            } => lower_lam(param, lam_body, env)?,
             Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
             Rhs::Fix {
                 name,
@@ -828,8 +854,7 @@ fn lower_anf_block(
         };
         env.insert(b.name.clone(), ev);
     }
-    let result_ev = lookup_ev(env, anf.result())?.clone();
-    result_ev.into_lane("match arm result")
+    Ok(lookup_ev(env, anf.result())?.clone())
 }
 
 /// Compute the **free `Named` variables** of a closure body `body` whose parameter is `param`, in
@@ -959,8 +984,11 @@ fn free_vars_into(
     note_free_atom(anf.result(), bound, free, seen);
 }
 
-/// Require an [`EnvValue`] to be a `Binary{8}` lane — the only value type that crosses a closure
-/// boundary in the narrow Increment-2 ABI (DN-15 §7.1). Explicit refusal otherwise (G2).
+/// Require an [`EnvValue`] to be a `Binary{8}` lane — the only repr that the trampoline
+/// recursion-accumulator ABI (DN-15 §7.1/§10) and the `Match` branch-primitive (`Lit`-arm switch;
+/// DN-15 §8.3) accept. Explicit refusal otherwise (G2). *(Before M-851 this was also the closure
+/// boundary check; the widened closure ABI now carries any repr/width via inlining, so this
+/// function's scope is the trampoline + branch-primitive subset only.)*
 fn as_binary8<'a>(ev: &'a EnvValue, ctx: &str) -> Result<&'a Lane, AotError> {
     let lane = ev.as_lane(ctx)?;
     if lane.kind != LaneKind::Binary || lane.vals.len() != CLOSURE_ABI_WIDTH {
@@ -1010,115 +1038,57 @@ fn unpack_binary8(src: &str, ssa: &mut Ssa, body: &mut String) -> Lane {
     }
 }
 
-/// The fixed LLVM type of a closure function pointer in the narrow ABI: `i64 (i8*, i64)*`.
-const CLOSURE_FN_TY: &str = "i64 (i8*, i64)*";
-
-/// Lower `Rhs::Lam` (Increment-2 closure-conversion; DN-15 §7.3). Emits — into the *current* function
-/// `out_body` — the arena allocation of a closure record `[fn_ptr | captures]` (capturing each free
-/// var, packed), and registers a top-level `@myc_closureN(i8* %env, i64 %arg)` function whose body is
-/// `body` lowered with `param`←`%arg` and each capture←`%env`. Returns the [`EnvValue::Closure`].
-#[allow(clippy::too_many_arguments)]
+/// Lower `Rhs::Lam` (M-851 widened closure ABI; DN-15 §7.1 widening). Emits **no IR** — it builds a
+/// **suspended** [`ClosureVal`] (the `param`, the un-lowered `body`, and a snapshot of each captured
+/// free var's already-lowered [`EnvValue`]). The body is lowered later, **inlined at the application
+/// site** ([`lower_app`]), where the argument pins the param's concrete shape — so closures over any
+/// repr/width, currying, and returned closures lower without a fixed wire ABI or a guessed width.
+/// Capturing the values *now* (snapshot) keeps lexical scope correct when the closure is applied
+/// outside its defining scope (a returned/curried closure). A free var that is not in the defining
+/// env is an explicit [`AotError::FreeVariable`] (never a silent miscapture — G2).
 fn lower_lam(
     param: &str,
     body: &lower::Anf,
     env: &HashMap<Atom, EnvValue>,
-    ssa: &mut Ssa,
-    bbc: &mut Bbc,
-    out_body: &mut String,
-    funcs: &mut Vec<String>,
 ) -> Result<EnvValue, AotError> {
-    let captures = closure_free_vars(body, param);
-
-    // Reserve this closure's function slot/name up-front (deterministic id = structural order). The
-    // placeholder is overwritten once the body — which may itself register nested closures — lowers.
-    let id = funcs.len();
-    funcs.push(String::new());
-    let fname = format!("@myc_closure{id}");
-
-    // Allocate the record on the bump arena: 1 (fn_ptr) + k (captures) i64 slots.
-    let k = captures.len();
-    let nbytes = (1 + k) * 8;
-    let raw = ssa.fresh();
-    let _ = writeln!(
-        out_body,
-        "  {raw} = call i8* @myc_arena_alloc(i64 {nbytes})"
-    );
-    let base = ssa.fresh();
-    let _ = writeln!(out_body, "  {base} = bitcast i8* {raw} to i64*");
-    // Slot 0 ← the closure function pointer, as i64.
-    let fpint = ssa.fresh();
-    let _ = writeln!(
-        out_body,
-        "  {fpint} = ptrtoint {CLOSURE_FN_TY} {fname} to i64"
-    );
-    let _ = writeln!(out_body, "  store i64 {fpint}, i64* {base}");
-    // Slots 1..=k ← each captured Binary{8} value, packed.
-    for (j, capname) in captures.iter().enumerate() {
-        let cev = lookup_ev(env, &Atom::Named(capname.clone()))?;
-        let clane = as_binary8(cev, &format!("closure capture `{capname}`"))?.clone();
-        let packed = pack_binary8(&clane, ssa, out_body);
-        let cgep = ssa.fresh();
-        let _ = writeln!(
-            out_body,
-            "  {cgep} = getelementptr i64, i64* {base}, i64 {}",
-            j + 1
-        );
-        let _ = writeln!(out_body, "  store i64 {packed}, i64* {cgep}");
+    let capture_names = closure_free_vars(body, param);
+    let mut captured: Vec<(String, EnvValue)> = Vec::with_capacity(capture_names.len());
+    for capname in &capture_names {
+        // Snapshot the captured value from the *defining* scope. Only repr lanes and (nested) closures
+        // may be captured; a datum/Fix/FixGroup capture is an explicit refusal (DN-15 §7.4; G2).
+        let cev = lookup_ev(env, &Atom::Named(capname.clone()))?.clone();
+        match &cev {
+            EnvValue::Repr(_) | EnvValue::Closure(_) => {}
+            EnvValue::Datum(_) => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "closure capture `{capname}`: a constructed data value cannot be captured by a \
+                     closure (the widened closure ABI carries repr lanes and closures; DN-15 §7.4; G2)"
+                )));
+            }
+            EnvValue::Fix(_) | EnvValue::FixGroup(_) => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "closure capture `{capname}`: a Fix/FixGroup value cannot be captured — it must \
+                     be applied (App) to run via the trampoline, not captured (M-850; G2)"
+                )));
+            }
+        }
+        captured.push((capname.clone(), cev));
     }
-
-    // Emit the closure function body in a *fresh* env (param + captures only — a closure cannot see
-    // the enclosing function's SSA registers; any other reference surfaces as an explicit
-    // FreeVariable error, never invalid IR — G2).
-    let mut cbody = String::new();
-    let mut cenv: HashMap<Atom, EnvValue> = HashMap::new();
-    let arg_lane = unpack_binary8("%arg", ssa, &mut cbody);
-    cenv.insert(Atom::Named(param.to_owned()), EnvValue::Repr(arg_lane));
-    let envp = ssa.fresh();
-    let _ = writeln!(cbody, "  {envp} = bitcast i8* %env to i64*");
-    for (j, capname) in captures.iter().enumerate() {
-        let cgep = ssa.fresh();
-        let _ = writeln!(cbody, "  {cgep} = getelementptr i64, i64* {envp}, i64 {j}");
-        let cval = ssa.fresh();
-        let _ = writeln!(cbody, "  {cval} = load i64, i64* {cgep}");
-        let clane = unpack_binary8(&cval, ssa, &mut cbody);
-        cenv.insert(Atom::Named(capname.clone()), EnvValue::Repr(clane));
-    }
-    // The closure body is a straight-line Binary block; give it its own flag sink and refuse any
-    // trit-arithmetic overflow inside it (the narrow ABI is Binary-only; G2).
-    let mut cflags: Vec<String> = Vec::new();
-    let result_lane = lower_anf_block(body, &mut cenv, ssa, bbc, &mut cbody, funcs, &mut cflags)?;
-    if !cflags.is_empty() {
-        return Err(AotError::UnsupportedNode(
-            "trit arithmetic inside a closure body is not supported in the native closure ABI \
-             (Increment-2; closures carry Binary{8} only — DN-15 §7.1)"
-                .to_owned(),
-        ));
-    }
-    if result_lane.kind != LaneKind::Binary || result_lane.vals.len() != CLOSURE_ABI_WIDTH {
-        return Err(AotError::UnsupportedNode(format!(
-            "closure body result must be a Binary{{{CLOSURE_ABI_WIDTH}}} value in the native \
-             closure ABI (Increment-2); got {:?} width {}",
-            result_lane.kind,
-            result_lane.vals.len()
-        )));
-    }
-    let packed_ret = pack_binary8(&result_lane, ssa, &mut cbody);
-
-    let mut def = String::new();
-    let _ = writeln!(def, "define i64 {fname}(i8* %env, i64 %arg) {{");
-    def.push_str("entry:\n");
-    def.push_str(&cbody);
-    let _ = writeln!(def, "  ret i64 {packed_ret}");
-    def.push_str("}\n");
-    funcs[id] = def;
-
-    Ok(EnvValue::Closure(ClosureVal { base }))
+    Ok(EnvValue::Closure(ClosureVal {
+        param: param.to_owned(),
+        body: body.clone(),
+        captured,
+    }))
 }
 
-/// Lower `Rhs::App` (Increment-2/3; DN-15 §7.3/§8): two paths dispatched on `func`'s `EnvValue`:
-/// - **`EnvValue::Fix`** (Increment-3): `App(Fix{…}, init)` — tail-recursive loop; delegates to
-///   [`lower_tail_fix`] which emits the iterative LLVM loop (RFC-0004 §11.6; DN-05 #1).
-/// - **`EnvValue::Closure`** (Increment-2): indirect call through the closure record (DN-15 §7.3).
+/// Lower `Rhs::App` (DN-15 §7.3/§8, closure path widened by M-851): paths dispatched on `func`'s
+/// `EnvValue`:
+/// - **`EnvValue::Fix`/`FixGroup`**: recursion → trampoline / iterative loop (M-850; narrow ABI).
+/// - **`EnvValue::Closure`**: the closure is **specialized (inlined) at this site** — the body is
+///   lowered into the current block with the param bound to the (concrete-shape) argument and each
+///   captured free var restored, returning the body's [`EnvValue`] (a lane of any repr/width, or a
+///   nested closure for currying / a returned closure). No fixed wire ABI, no indirect call, no
+///   guessed param width — every shape is statically resolved here (G2/VR-5; DN-15 §7.1 widening).
 ///
 /// Anything else is an explicit refusal (G2 — never silent).
 #[allow(clippy::too_many_arguments)]
@@ -1162,26 +1132,19 @@ fn lower_app(
             &members, entry, arg, env, ssa, bbc, body, funcs, flags,
         );
     }
-    let base = func_ev.as_closure("App function")?.base.clone();
-    // fn_ptr ← record slot 0.
-    let fpint = ssa.fresh();
-    let _ = writeln!(body, "  {fpint} = load i64, i64* {base}");
-    let fp = ssa.fresh();
-    let _ = writeln!(body, "  {fp} = inttoptr i64 {fpint} to {CLOSURE_FN_TY}");
-    // %env ← &record[1] (the captures region), as i8*.
-    let egep = ssa.fresh();
-    let _ = writeln!(body, "  {egep} = getelementptr i64, i64* {base}, i64 1");
-    let eptr = ssa.fresh();
-    let _ = writeln!(body, "  {eptr} = bitcast i64* {egep} to i8*");
-    // arg (must be Binary{8}) → packed i64.
-    let arg_lane = as_binary8(lookup_ev(env, arg)?, "App argument")?.clone();
-    let packed_arg = pack_binary8(&arg_lane, ssa, body);
-    let res = ssa.fresh();
-    let _ = writeln!(
-        body,
-        "  {res} = call i64 {fp}(i8* {eptr}, i64 {packed_arg})"
-    );
-    Ok(EnvValue::Repr(unpack_binary8(&res, ssa, body)))
+    // M-851: specialize (inline) the closure at this application. Build a fresh env from the closure's
+    // captured snapshot + the param bound to the argument's already-lowered value (any repr/width, or a
+    // nested closure), then lower the closure body into the current block. The argument's concrete
+    // shape flows in directly, so no width is ever guessed (G2). A closure cannot see the enclosing
+    // function's bindings — only its captures + param (the snapshot is the lexical environment).
+    let closure = func_ev.as_closure("App function")?.clone();
+    let arg_ev = lookup_ev(env, arg)?.clone();
+    let mut cenv: HashMap<Atom, EnvValue> = HashMap::with_capacity(closure.captured.len() + 1);
+    for (capname, cev) in &closure.captured {
+        cenv.insert(Atom::Named(capname.clone()), cev.clone());
+    }
+    cenv.insert(Atom::Named(closure.param.clone()), arg_ev);
+    lower_anf_block_ev(&closure.body, &mut cenv, ssa, bbc, body, funcs, flags)
 }
 
 /// Pack a `Binary{8}` literal `Value` (a Match `Lit`-arm pattern) into the `u64` the native branch
@@ -1630,7 +1593,7 @@ fn lower_arm_bindings_before_tail(
             Rhs::Lam {
                 param,
                 body: lam_body,
-            } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
+            } => lower_lam(param, lam_body, env)?,
             Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
             Rhs::Fix {
                 name,
@@ -2090,76 +2053,51 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
         result,
         mut ssa,
         overflow,
-        funcs,
+        // Vestigial since M-851: the narrow ABI emitted one top-level `@myc_closureN` function per
+        // `Rhs::Lam` here; the widened ABI **inlines** closures at their application site
+        // ([`lower_app`]), so no top-level closure functions (and no bump arena) are produced. The
+        // field is retained (always empty) only because the trampoline-shared lowering signatures
+        // thread it (M-850); it carries no closure functions now.
+        funcs: _funcs,
     } = lower_program(node)?;
-    // Closures (Increment-2) bring in the bump arena + `@malloc`/`@free`; a closure-free program
-    // emits byte-for-byte the same module as before (no arena, no extra declares).
-    let uses_closures = !funcs.is_empty();
     // M-850 (Wave-B): the heap-trampoline lowering emits `@myc_tramp_alloc` calls into `body`; a
     // program with no non-tail-Fix/FixGroup recursion never does, so it emits the same module as
     // before (no trampoline runtime, no extra declares). Detecting via the emitted body keeps the
     // runtime opt-in without threading another flag through every lowering signature (DRY).
     let uses_trampoline = body.contains("@myc_tramp_alloc");
-    // `@malloc`/`@free` are shared by the closure arena and the trampoline frame stack — declare
-    // them once if either is present.
-    let uses_heap = uses_closures || uses_trampoline;
     let mut out =
         String::from("; mycelium direct-LLVM AOT (bit/trit + non-recursive data; M-301; M-373)\n");
-    if uses_closures {
-        out.push_str("; closures: heap closure records on a bump arena (M-378; DN-15 §7)\n");
-    }
     if uses_trampoline {
         out.push_str("; recursion: heap-trampoline control stack (M-850; DN-15 §10)\n");
     }
+    // M-851: closures lower by **inlining** at the application site — no top-level closure functions,
+    // no bump arena, no closure heap. A closure-only program now emits the same straight-line module
+    // as the bit/trit subset (its closures are inlined into `@main`'s body). The only heap is the
+    // trampoline frame stack (recursion).
+    //
     // `@putchar` for the read-back protocol; `@abort` for the defined-traps (the match no-default
-    // trap and the bump-arena OOM). `@abort` is declared `noreturn` so LLVM treats every
+    // trap and the trampoline OOM). `@abort` is declared `noreturn` so LLVM treats every
     // `call @abort` as non-returning: the dead `ret` that follows each trap is provably never taken
-    // (G2), and no post-trap path — e.g. the OOM block returning a null pointer — is ever reachable.
+    // (G2), and no post-trap path is ever reachable.
     out.push_str("declare i32 @putchar(i32)\n");
     out.push_str("declare void @abort() noreturn\n");
-    if uses_heap {
+    if uses_trampoline {
+        // The trampoline frame stack needs `@malloc`/`@free` + the alloc/free seams. Never silent OOM
+        // (defined-trap).
         out.push_str("declare i8* @malloc(i64)\n");
         out.push_str("declare void @free(i8*)\n");
-    }
-    if uses_trampoline {
-        // The trampoline frame-stack alloc/free seams (emitted before the closure arena so the
-        // closure functions, which may also be present, follow). Never silent OOM (defined-trap).
         out.push_str(&crate::trampoline::trampoline_runtime());
-    }
-    if uses_closures {
-        out.push_str(&arena_runtime());
-        // The closure functions (one `define` per `Rhs::Lam`), emitted before `@main`.
-        for f in &funcs {
-            out.push('\n');
-            out.push_str(f);
-        }
     }
     out.push('\n');
     out.push_str("define i32 @main() {\nentry:\n");
-    if uses_closures {
-        // Bump-arena init: one `@malloc` block + a zeroed cursor (DN-15 §7.2). Freed before the
-        // normal-completion `ret` below.
-        let _ = writeln!(
-            out,
-            "  %arena_raw = call i8* @malloc(i64 {ARENA_CAPACITY_BYTES})"
-        );
-        out.push_str("  store i8* %arena_raw, i8** @myc_arena_base\n");
-        out.push_str("  store i64 0, i64* @myc_arena_off\n");
-    }
     out.push_str(&body);
     match overflow {
         // No trit arithmetic ⇒ no overflow path; emit the result line straight-line (unchanged IR).
         None => {
-            if uses_closures {
-                emit_arena_free(&mut out);
-            }
             emit_result_line(result.kind, &result.vals, &mut ssa, &mut out);
         }
         // Overflow possible ⇒ branch on the runtime flag: print the sentinel line on overflow, the
-        // result line otherwise (the read-back protocol — never a silent wrap, G2). A program can
-        // both use closures and contain trit arithmetic in non-closure bindings, so this branch may
-        // co-occur with a live arena: the `@free` stays on the normal `ok` path; the `ovf` early-exit
-        // skips it and lets the OS reclaim the arena at process exit.
+        // result line otherwise (the read-back protocol — never a silent wrap, G2).
         Some(ovf) => {
             let _ = writeln!(&mut out, "  br i1 {ovf}, label %ovf, label %ok");
             out.push_str("ovf:\n");
@@ -2172,47 +2110,11 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
             let snl = ssa.fresh();
             let _ = writeln!(&mut out, "  {snl} = call i32 @putchar(i32 10)");
             out.push_str("  ret i32 0\nok:\n");
-            if uses_closures {
-                emit_arena_free(&mut out);
-            }
             emit_result_line(result.kind, &result.vals, &mut ssa, &mut out);
         }
     }
     out.push_str("}\n");
     Ok(out)
-}
-
-/// The bump-arena runtime (DN-15 §7.2): two module globals (base pointer + cursor) and the single
-/// allocation seam `@myc_arena_alloc`. The over-capacity check takes an explicit defined-trap
-/// (`@abort`, never raw `unreachable` UB; G2) — the exact point where **Increment-3** substitutes a
-/// `DepthBudget`-resolved ceiling + a graceful limit (DN-05 #1; `budget.rs`, M-349). All textual,
-/// fully dumpable (no opaque pass — RFC-0004 §6 / VR-4).
-fn arena_runtime() -> String {
-    let mut s = String::new();
-    s.push_str("@myc_arena_base = internal global i8* null\n");
-    s.push_str("@myc_arena_off = internal global i64 0\n\n");
-    s.push_str("define i8* @myc_arena_alloc(i64 %n) {\nentry:\n");
-    s.push_str("  %base = load i8*, i8** @myc_arena_base\n");
-    s.push_str("  %off = load i64, i64* @myc_arena_off\n");
-    s.push_str("  %newoff = add i64 %off, %n\n");
-    let _ = writeln!(s, "  %over = icmp ugt i64 %newoff, {ARENA_CAPACITY_BYTES}");
-    s.push_str("  br i1 %over, label %oom, label %ok\n");
-    // OOM: an explicit defined-trap. `@abort` is declared `noreturn` (see `emit_llvm_ir`), so this
-    // block is non-returning in IR — the trailing `ret i8* null` is a provably-dead terminator
-    // (LLVM never lets the null reach the caller's bitcast/store), kept only so the block has a
-    // valid terminator without a raw `unreachable` (consistent with the match no-default trap; G2).
-    s.push_str("oom:\n  call void @abort()\n  ret i8* null\n");
-    s.push_str("ok:\n");
-    s.push_str("  store i64 %newoff, i64* @myc_arena_off\n");
-    s.push_str("  %p = getelementptr i8, i8* %base, i64 %off\n");
-    s.push_str("  ret i8* %p\n}\n");
-    s
-}
-
-/// Emit the arena teardown — `@free` the single block before normal completion (DN-15 §7.2).
-fn emit_arena_free(out: &mut String) {
-    out.push_str("  %arena_fb = load i8*, i8** @myc_arena_base\n");
-    out.push_str("  call void @free(i8* %arena_fb)\n");
 }
 
 /// Emit each result element as its ASCII char via `@putchar` (one op per element — a transparent
