@@ -367,14 +367,17 @@ fn deep_non_tail_recursion_is_graceful_depth_limit_never_overflow() {
 
     // Interpreter parity: it also refuses (FuelExhausted) — the parity DN-15 §8.4 asserts. The
     // reference interpreter is O(1) in *Mycelium* stack but a tree-walking eval of a deeply-nested
-    // **non-tail** body grows the *host Rust* call stack 1:1 with depth before fuel runs out — a
-    // property of the interpreter's recursion descent, orthogonal to the M-850 native guarantee. So
-    // we run this leg on a thread with a roomy stack (the native leg above is the C-stack-safety
-    // guarantee under test; this only confirms the interpreter's refusal *variant* matches).
+    // **non-tail** body grows the *host Rust* call stack with depth before fuel runs out (and the
+    // substitution cost is super-linear in fuel) — a property of the interpreter's recursion descent,
+    // orthogonal to the M-850 native guarantee. So we run this leg on a thread with a roomy stack and
+    // a small fuel budget (enough to exhaust, cheap to run): the native leg above is the
+    // C-stack-safety guarantee under test; this only confirms the interpreter's refusal *variant*
+    // matches (both refuse, never silent — the tail-cycle parity at full depth lives in
+    // `tail_fixgroup_divergence_is_graceful_depth_limit`, where the interpreter is O(1)-stack).
     let prog_for_interp = prog.clone();
     let handle = std::thread::Builder::new()
-        .stack_size(64 * 1024 * 1024)
-        .spawn(move || interp_bounded(&prog_for_interp, 5_000))
+        .stack_size(32 * 1024 * 1024)
+        .spawn(move || interp_bounded(&prog_for_interp, 200))
         .expect("spawn interp thread");
     let interp = handle.join().expect("interp thread panicked");
     assert!(
