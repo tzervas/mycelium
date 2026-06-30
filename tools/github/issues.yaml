@@ -5273,56 +5273,62 @@ issues:
   - id: M-853
     title: "Native Dense lowering (Repr::Dense element-wise + quant descriptor)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
     epic: E25-1
     depends_on: [M-852]
-    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
+    doc_refs: [corpus:ADR-034, corpus:RFC-0039, corpus:RFC-0029, corpus:DN-25]
     body: |
       Native Dense lowering (new src/dense_codegen.rs, direct-LLVM first; dialect later) -- removes the
-      Dense-repr refusal (native.rs:342 + the llvm.rs Dense refusal). Dense native codegen is OUT of
-      RFC-0029's current scope (§3), so it is DESIGN-GATED on a new RFC (RFC-0039 proposed -- Native
-      Dense & VSA Codegen): quant granularity, accumulator width, packing schedule as inspectable
-      meta.physical (DN-01). FLAG: RFC-vs-RFC-0029-amendment is the maintainer's call (PR-6).
+      Dense-repr refusals (llvm.rs:2170 + dialect/native.rs:349-350). DESIGN-GATED on RFC-0039 (Native
+      Dense & VSA Codegen, Accepted 2026-06-30) -- implement to its §5.1 decisions: quant granularity,
+      accumulator width, packing schedule as inspectable meta.physical (DN-01). Scope: un-quantized
+      F32/BF16 first (OQ-2); the full ADR-030 int/fp8/TF32 quant/accumulator/packing widening is
+      additionally gated on E20-1 landing QuantDesc (OQ-4 "both" -- RFC-0039 §7), refused never-silently
+      until then.
 
       Definition of Done:
-      - RFC-0039 (or the chosen vehicle) reaches Accepted before implementation.
       - Three-way differential vs mycelium-cert::dense reference green; cargo-mutants catches a
         quant-granularity mutation -> Empirical; never-silent on unsupported quant modes.
       - just check green; CHANGELOG append-only; honest tag (Declared until the differential is checked).
   - id: M-854
     title: "Native VSA lowering (bind/bundle/permute over the mycelium-vsa models)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
     epic: E25-1
     depends_on: [M-853]
-    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
+    doc_refs: [corpus:ADR-034, corpus:RFC-0039, corpus:RFC-0029, corpus:DN-25]
     body: |
       Native VSA lowering (new src/vsa_codegen.rs, direct-LLVM first; dialect later) -- bind/bundle/
-      permute over the BSC/HRR/FHRR/MAP models (mycelium-vsa). DESIGN-GATED on the same new RFC as
-      M-853 (RFC-0039). Capacity bounds already have Lean 4 + Liquid Haskell proofs (M-832) -- the
-      codegen must PRESERVE those Proven tags where they hold and drop to Empirical/Declared where
-      codegen introduces new approximation (VR-5, never upgrade without a checked basis).
+      permute over the mycelium-vsa models. DESIGN-GATED on RFC-0039 (Accepted 2026-06-30). Mandatory
+      1.0.0-native models = MAP-I/BSC/HRR/FHRR; niche SBC/MAP-B extend post-mandate (OQ-3). Element-space
+      / block-sparse / complex VSA widening additionally gated on E20-1 (OQ-4).
+
+      HONEST CORRECTION (VR-5 -- supersedes the prior "capacity bounds already have Lean 4 + LH proofs"
+      claim): only the SINGLE-OP MAP-I bundle capacity bound is Proven (M-001/proofs/lh-bundle, replayed
+      in capacity.rs). The multi-hop M-832 work is IN-PROGRESS research emitting undischarged obligations
+      and NEVER stamps Proven. Codegen preserves Proven ONLY for that checked single-op side-condition
+      (RFC-0039 §5.2); everything else is Empirical/Declared.
 
       Definition of Done:
-      - RFC-0039 Accepted; three-way differential vs mycelium-cert::dense_vsa + mycelium-vsa reference
-        green, incl. a capacity-bound parity case; cargo-mutants catches a bind/bundle mutation.
-      - just check green; CHANGELOG append-only; honest tags (Proven preserved only where the proof holds).
+      - Three-way differential vs mycelium-cert::dense_vsa + mycelium-vsa reference green, incl. a
+        capacity-bound parity case (single-op MAP-I); cargo-mutants catches a bind/bundle mutation.
+      - just check green; CHANGELOG append-only; honest tags (Proven preserved only for the checked
+        single-op bound).
   - id: M-855
     title: "JIT for dynamic VSA/HDC workloads + ADR-009 deferral-lift record"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
     epic: E25-1
     depends_on: [M-854]
-    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
+    doc_refs: [corpus:ADR-034, corpus:RFC-0039, corpus:RFC-0029, corpus:DN-25]
     body: |
       JIT path for dynamic VSA/HDC workloads (data-dependent hypervector dim, runtime model selection,
       cleanup/resonator loops) in jit.rs, as an explicit never-silently-selected ExecMode (no Auto arm,
-      G2). FLAG (maintainer): RFC-0029 §5.3 claims ADR-009 already sanctions JIT, but the maintainer
-      named "lifting ADR-009's deferral" -- confirm whether dynamic-VSA JIT needs a focused ADR-009
-      amendment (mirroring ADR-024) or is covered by RFC-0039's execution section. Do not guess.
+      G2). The ADR-009 dynamic-VSA JIT deferral lift is recorded in RFC-0039 §6 (Accepted 2026-06-30);
+      OQ-1 RESOLVED: the §6 record IS the vehicle -- NO separate ADR-009 amendment. Design-gated on
+      RFC-0039 Accepted (now met).
 
       Definition of Done:
-      - The ADR-009 deferral-lift is recorded in the chosen vehicle (Accepted) before implementation.
       - JIT == interpreter over a dynamic-VSA subset (Empirical) + explicit refusal outside it;
         cargo-mutants catches a JIT-codegen mutation.
       - just check green; CHANGELOG append-only; honest tag.
