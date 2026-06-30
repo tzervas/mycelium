@@ -67,6 +67,7 @@ pub mod rc_plan;
 pub mod runtime;
 pub mod simd;
 pub mod specialize;
+pub mod swap_codegen;
 pub mod trampoline;
 pub mod vr4;
 
@@ -110,6 +111,12 @@ pub use simd::{
 pub use specialize::{
     compile_specialized_dot, emit_specialized_dot_ir, jit_specialized_dot, SpecializedDotKernel,
 };
+// M-852: native `Swap`-node codegen for the certified binary↔ternary class + the reified,
+// EXPLAIN-able cert mode (DEFAULT compile-time re-check · OPT-IN reuse-interp).
+pub use llvm::{
+    compile_and_run_with_swap_mode, compile_with_swap_mode, emit_llvm_ir_with_swap_mode,
+};
+pub use swap_codegen::{legal_pair as swap_legal_pair, SwapCertMode, SwapExplain};
 pub use vr4::{cross_backend_gate, Backend, BackendStage, CrossBackendGate, StageStatus};
 
 #[cfg(test)]

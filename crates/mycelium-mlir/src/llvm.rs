@@ -54,6 +54,8 @@ use std::process::Command;
 use mycelium_core::lower::{self, Atom, Rhs};
 use mycelium_core::{Meta, Node, Payload, Provenance, Repr, Trit, Value};
 
+use crate::swap_codegen::{self, SwapCertMode};
+
 /// An explicit failure of the direct-LLVM AOT path. Every non-supported construct, missing tool, or
 /// subprocess failure is one of these — the path is **never silent** (G2).
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -516,6 +518,36 @@ pub(crate) fn decode_result(
 /// explicit [`AotError`] for anything outside the bit/trit + non-recursive-data subset (M-301;
 /// M-373). The env maps each bound atom to an [`EnvValue`] (either a repr lane or a datum struct).
 pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
+    // The default native swap cert mode is `Recheck` (compile-time independent re-check; M-852).
+    lower_program_with_swap_mode(node, SwapCertMode::Recheck)
+}
+
+/// The source [`Repr`] a lowered [`Lane`] denotes — a `Binary` lane of `N` elements is
+/// `Repr::Binary{ width: N }`, a `Ternary` lane of `M` elements is `Repr::Ternary{ trits: M }`. Used
+/// to reconstruct the swap's *source* repr (the `Swap` node carries only the target). The element
+/// count is exactly the repr width by construction of [`const_lane`]/`emit_op` (each lane element is
+/// one bit/trit), so this reconstruction is exact — never a guess (G2).
+fn lane_repr(lane: &Lane) -> Repr {
+    match lane.kind {
+        LaneKind::Binary => Repr::Binary {
+            width: lane.vals.len() as u32,
+        },
+        LaneKind::Ternary => Repr::Ternary {
+            trits: lane.vals.len() as u32,
+        },
+    }
+}
+
+/// Lower a program under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT —
+/// compile-time independent re-check of the bijection certificate) or `ReuseInterp` (OPT-IN — carry
+/// the interpreter's certificate forward). The mode reaches the straight-line / let / non-recursive
+/// match-arm `Swap` lowering sites; swaps inside a recursion *base arm* use the `Recheck` default
+/// (the trampoline path is not threaded — still correct, never silent). [`lower_program`] delegates
+/// here with `Recheck`.
+pub(crate) fn lower_program_with_swap_mode(
+    node: &Node,
+    swap_mode: SwapCertMode,
+) -> Result<Lowered, AotError> {
     let anf = lower::lower_to_anf(node);
     let mut env: HashMap<Atom, EnvValue> = HashMap::new();
     let mut ssa = Ssa(0);
@@ -541,10 +573,20 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                     .collect::<Result<_, _>>()?;
                 EnvValue::Repr(emit_op(prim, &operands, &mut ssa, &mut body, &mut flags)?)
             }
-            Rhs::Swap { target, .. } => {
-                return Err(AotError::UnsupportedNode(format!(
-                    "swap to {target:?} (the subset is straight-line bit/trit ops; M-301)"
-                )));
+            // M-852 (E25-1; RFC-0002 §3/§4; RFC-0004 §6/§11): the **`Swap` node** — the one
+            // Repr-changing node (WF1) — lowers natively for the certified binary↔ternary class
+            // (+ same-Repr identity). The cert handling is the reified `swap_mode`: DEFAULT
+            // `Recheck` re-runs the bijection cert check at compile time; OPT-IN `ReuseInterp`
+            // carries the interpreter's cert forward. Range failures on the partial `dec` direction
+            // push a never-silent overflow flag (matches `SwapError::OutOfRange`). Dense/VSA and
+            // other swap kinds stay explicit `UnsupportedNode` (G2).
+            Rhs::Swap { src, target, .. } => {
+                let src_lane = lookup_ev(&env, src)?.as_lane("swap source")?;
+                let src_repr = lane_repr(src_lane);
+                let (lane, _explain) = swap_codegen::lower_swap(
+                    src_lane, &src_repr, target, swap_mode, &mut ssa, &mut body, &mut flags,
+                )?;
+                EnvValue::Repr(lane)
             }
             // Increment-1 (M-373; DN-15 §4.1; RFC-0004 §11.2): Construct and Match are lowered for
             // the NON-RECURSIVE, BOUNDED case. Stack alloca is used (not malloc) because the
@@ -593,7 +635,7 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                 default,
             } => lower_match(
                 scrutinee, alts, default, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
-                &mut flags,
+                &mut flags, swap_mode,
             )?,
             // M-378 + M-851 (DN-15 §7; RFC-0004 §11.5/§11.7): `Lam` builds a suspended closure value
             // (free-var snapshot) and `App` **specializes (inlines)** it at the call site over the
@@ -604,7 +646,7 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                 body: lam_body,
             } => lower_lam(param, lam_body, &env)?,
             Rhs::App { func, arg } => lower_app(
-                func, arg, &env, &mut ssa, &mut bbc, &mut body, &mut funcs, &mut flags,
+                func, arg, &env, &mut ssa, &mut bbc, &mut body, &mut funcs, &mut flags, swap_mode,
             )?,
             Rhs::Fix {
                 name,
@@ -653,7 +695,9 @@ pub(crate) fn lower_anf_block_pub(
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
 ) -> Result<Lane, AotError> {
-    lower_anf_block(anf, env, ssa, bbc, body, funcs, flags)
+    // The trampoline (recursion) path lowers `Binary{8}` straight-line + Match only — a `Swap`
+    // there is already refused — so the swap cert mode is the `Recheck` default (M-852).
+    lower_anf_block(anf, env, ssa, bbc, body, funcs, flags, SwapCertMode::Recheck)
 }
 
 /// `pub(crate)` shim: lower every **support** binding of `anf` — every binding whose name is neither
@@ -750,6 +794,7 @@ pub(crate) fn lit_binary8_packed_pub(value: &Value) -> Result<u64, AotError> {
 /// Lower a nested ANF block (a `Match` arm or similar nested scope) into the ongoing IR stream,
 /// extending `env` with any new bindings. Returns the result `Lane` of the nested block (forcing the
 /// result to a repr lane). This is the recursive workhorse for `Rhs::Match` arm bodies.
+#[allow(clippy::too_many_arguments)]
 fn lower_anf_block(
     anf: &lower::Anf,
     env: &mut HashMap<Atom, EnvValue>,
@@ -758,8 +803,10 @@ fn lower_anf_block(
     body: &mut String,
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
+    swap_mode: SwapCertMode,
 ) -> Result<Lane, AotError> {
-    lower_anf_block_ev(anf, env, ssa, bbc, body, funcs, flags)?.into_lane("match arm result")
+    lower_anf_block_ev(anf, env, ssa, bbc, body, funcs, flags, swap_mode)?
+        .into_lane("match arm result")
 }
 
 /// Lower a nested ANF block returning its raw [`EnvValue`] result — a lane **or** a closure. The
@@ -776,6 +823,7 @@ fn lower_anf_block_ev(
     body: &mut String,
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
+    swap_mode: SwapCertMode,
 ) -> Result<EnvValue, AotError> {
     for b in anf.bindings() {
         let ev = match &b.rhs {
@@ -788,10 +836,13 @@ fn lower_anf_block_ev(
                     .collect::<Result<_, _>>()?;
                 EnvValue::Repr(emit_op(prim, &operands, ssa, body, flags)?)
             }
-            Rhs::Swap { target, .. } => {
-                return Err(AotError::UnsupportedNode(format!(
-                    "swap to {target:?} in a match arm (M-301)"
-                )));
+            // M-852: native `Swap` lowering inside a nested block (a `let`-bound or match-arm swap).
+            Rhs::Swap { src, target, .. } => {
+                let src_lane = lookup_ev(env, src)?.as_lane("swap source")?;
+                let src_repr = lane_repr(src_lane);
+                let (lane, _explain) =
+                    swap_codegen::lower_swap(src_lane, &src_repr, target, swap_mode, ssa, body, flags)?;
+                EnvValue::Repr(lane)
             }
             Rhs::Construct { ctor, args } => {
                 let field_lanes: Vec<Lane> = args
@@ -827,14 +878,18 @@ fn lower_anf_block_ev(
                 scrutinee,
                 alts,
                 default,
-            } => lower_match(scrutinee, alts, default, env, ssa, bbc, body, funcs, flags)?,
+            } => lower_match(
+                scrutinee, alts, default, env, ssa, bbc, body, funcs, flags, swap_mode,
+            )?,
             // Increment-2: closures are lowered inside match arms too (a `Lam`/`App` may appear in an
             // arm body). Fix/FixGroup stay explicit UnsupportedNode (Increment-3; G2/VR-5).
             Rhs::Lam {
                 param,
                 body: lam_body,
             } => lower_lam(param, lam_body, env)?,
-            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
+            Rhs::App { func, arg } => {
+                lower_app(func, arg, env, ssa, bbc, body, funcs, flags, swap_mode)?
+            }
             Rhs::Fix {
                 name,
                 body: fix_body,
@@ -1101,6 +1156,7 @@ fn lower_app(
     body: &mut String,
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
+    swap_mode: SwapCertMode,
 ) -> Result<EnvValue, AotError> {
     let func_ev = lookup_ev(env, func)?;
     // Increment-3: App(Fix, init) → iterative tail-recursion loop (never stack recursion; DN-05 #1).
@@ -1144,7 +1200,7 @@ fn lower_app(
         cenv.insert(Atom::Named(capname.clone()), cev.clone());
     }
     cenv.insert(Atom::Named(closure.param.clone()), arg_ev);
-    lower_anf_block_ev(&closure.body, &mut cenv, ssa, bbc, body, funcs, flags)
+    lower_anf_block_ev(&closure.body, &mut cenv, ssa, bbc, body, funcs, flags, swap_mode)
 }
 
 /// Pack a `Binary{8}` literal `Value` (a Match `Lit`-arm pattern) into the `u64` the native branch
@@ -1191,6 +1247,7 @@ fn lower_match(
     body: &mut String,
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
+    swap_mode: SwapCertMode,
 ) -> Result<EnvValue, AotError> {
     use mycelium_core::lower::AnfAlt;
     let scrut = lookup_ev(env, scrutinee)?.clone();
@@ -1311,7 +1368,8 @@ fn lower_match(
             // A `Lit` arm binds nothing — the literal is matched by the switch value.
             AnfAlt::Lit { body: arm_body, .. } => arm_body,
         };
-        let arm_result = lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags)?;
+        let arm_result =
+            lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags, swap_mode)?;
         phi_entries.push((label.clone(), arm_result));
         let _ = writeln!(body, "  br label %{merge_label}");
     }
@@ -1327,6 +1385,7 @@ fn lower_match(
             body,
             funcs,
             flags,
+            swap_mode,
         )?;
         phi_entries.push((default_label.clone(), default_result));
         let _ = writeln!(body, "  br label %{merge_label}");
@@ -1555,9 +1614,13 @@ fn lower_arm_bindings_before_tail(
                     .collect::<Result<_, _>>()?;
                 EnvValue::Repr(emit_op(prim, &operands, ssa, body, flags)?)
             }
+            // M-852 lowers `Swap` for straight-line / let / non-recursive match-arm positions; a
+            // swap inside a tail-Fix *recursion step* stays an explicit refusal (out of scope — the
+            // recursion path is not swap-aware). Never a silent mis-lowering (G2).
             Rhs::Swap { target, .. } => {
                 return Err(AotError::UnsupportedNode(format!(
-                    "swap to {target:?} in a tail-Fix arm body (M-301)"
+                    "swap to {target:?} in a tail-Fix arm body — native swap is lowered outside \
+                     recursion steps only (M-852); refused here, never silent (G2)"
                 )));
             }
             Rhs::Construct { ctor, args } => {
@@ -1594,7 +1657,11 @@ fn lower_arm_bindings_before_tail(
                 param,
                 body: lam_body,
             } => lower_lam(param, lam_body, env)?,
-            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
+            Rhs::App { func, arg } => {
+                // Recursion-arm App: the trampoline/tail-loop path; a swap here is refused (the
+                // `Rhs::Swap` arm above), so the swap cert mode is the `Recheck` default (M-852).
+                lower_app(func, arg, env, ssa, bbc, body, funcs, flags, SwapCertMode::Recheck)?
+            }
             Rhs::Fix {
                 name,
                 body: fix_body,
@@ -1906,9 +1973,11 @@ fn lower_tail_fix(
 
         match arm_kind {
             ArmKind::Base => {
-                // Lower the full arm body and collect its result for the exit phi.
-                let result_lane =
-                    lower_anf_block(arm_anf, &mut arm_env, ssa, bbc, body, funcs, flags)?;
+                // Lower the full arm body and collect its result for the exit phi. A base-arm swap
+                // uses the `Recheck` default (the recursion path is not mode-threaded; M-852).
+                let result_lane = lower_anf_block(
+                    arm_anf, &mut arm_env, ssa, bbc, body, funcs, flags, SwapCertMode::Recheck,
+                )?;
                 exit_phi_entries.push((lbl.clone(), result_lane));
                 let _ = writeln!(body, "  br label %{exit_label}");
             }
@@ -1954,8 +2023,9 @@ fn lower_tail_fix(
         def_env.insert(Atom::Named(param.clone()), EnvValue::Repr(n_lane.clone()));
         match &default_kind {
             Some((def_anf, ArmKind::Base)) => {
-                let result_lane =
-                    lower_anf_block(def_anf, &mut def_env, ssa, bbc, body, funcs, flags)?;
+                let result_lane = lower_anf_block(
+                    def_anf, &mut def_env, ssa, bbc, body, funcs, flags, SwapCertMode::Recheck,
+                )?;
                 exit_phi_entries.push((default_label.clone(), result_lane));
                 let _ = writeln!(body, "  br label %{exit_label}");
             }
@@ -2048,6 +2118,20 @@ fn lower_tail_fix(
 /// Ternary: `'-'`/`'0'`/`'+'`). Deterministic. One op per output element (no opaque pass —
 /// RFC-0004 §6). Returns an explicit [`AotError`] for anything outside the subset.
 pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
+    // Default native swap cert mode: `Recheck` (compile-time independent re-check; M-852).
+    emit_llvm_ir_with_swap_mode(node, SwapCertMode::Recheck)
+}
+
+/// Emit textual LLVM IR under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT —
+/// compile-time independent re-check of the bijection certificate) or `ReuseInterp` (OPT-IN — carry
+/// the interpreter's certificate forward). The mode is recorded in the emitted IR (a dumpable swap
+/// comment) and selects whether the bijection side-condition is independently re-checked at compile
+/// time. For a swap-free program the two modes emit byte-identical IR. [`emit_llvm_ir`] delegates
+/// here with `Recheck`.
+pub fn emit_llvm_ir_with_swap_mode(
+    node: &Node,
+    swap_mode: SwapCertMode,
+) -> Result<String, AotError> {
     let Lowered {
         body,
         result,
@@ -2059,7 +2143,7 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
         // field is retained (always empty) only because the trampoline-shared lowering signatures
         // thread it (M-850); it carries no closure functions now.
         funcs: _funcs,
-    } = lower_program(node)?;
+    } = lower_program_with_swap_mode(node, swap_mode)?;
     // M-850 (Wave-B): the heap-trampoline lowering emits `@myc_tramp_alloc` calls into `body`; a
     // program with no non-tail-Fix/FixGroup recursion never does, so it emits the same module as
     // before (no trampoline runtime, no extra declares). Detecting via the emitted body keeps the
@@ -2131,10 +2215,12 @@ fn emit_result_line(kind: LaneKind, vals: &[Operand], ssa: &mut Ssa, out: &mut S
 }
 
 /// The result shape (lane kind + element count) of the program — **derived from the actual
-/// lowering** ([`lower_program`]) so it can never disagree with what [`emit_llvm_ir`] emits. Used by
-/// [`compile`] to know how to parse the native output.
-fn result_shape(node: &Node) -> Result<(LaneKind, usize), AotError> {
-    let l = lower_program(node)?;
+/// lowering** ([`lower_program_with_swap_mode`]) so it can never disagree with what
+/// [`emit_llvm_ir_with_swap_mode`] emits. Used by [`compile`] to know how to parse the native
+/// output. Threaded with the swap mode so a `Recheck`-refused illegal-pair swap is surfaced
+/// identically here and in the emitter (no shape/emit disagreement; M-852).
+fn result_shape(node: &Node, swap_mode: SwapCertMode) -> Result<(LaneKind, usize), AotError> {
+    let l = lower_program_with_swap_mode(node, swap_mode)?;
     Ok((l.result.kind, l.result.vals.len()))
 }
 
@@ -2535,8 +2621,20 @@ impl CompiledArtifact {
 /// without running it. Returns [`AotError::ToolchainMissing`] when `llc`/`clang` are absent so
 /// callers can skip; any out-of-subset construct is the same explicit refusal as [`emit_llvm_ir`].
 pub fn compile(node: &Node) -> Result<CompiledArtifact, AotError> {
-    let ir = emit_llvm_ir(node)?;
-    let (kind, width) = result_shape(node)?;
+    // Default native swap cert mode: `Recheck` (compile-time independent re-check; M-852).
+    compile_with_swap_mode(node, SwapCertMode::Recheck)
+}
+
+/// Compile under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT — compile-time
+/// independent re-check of the bijection certificate) or `ReuseInterp` (OPT-IN — carry the
+/// interpreter's certificate forward). The IR and the read-back shape are both threaded with the
+/// mode so they never disagree. [`compile`] delegates here with `Recheck`.
+pub fn compile_with_swap_mode(
+    node: &Node,
+    swap_mode: SwapCertMode,
+) -> Result<CompiledArtifact, AotError> {
+    let ir = emit_llvm_ir_with_swap_mode(node, swap_mode)?;
+    let (kind, width) = result_shape(node, swap_mode)?;
     ensure_toolchain()?;
 
     let dir = unique_tmp_dir()?;
@@ -2577,6 +2675,16 @@ pub fn compile(node: &Node) -> Result<CompiledArtifact, AotError> {
 /// **compiled** execution path the M-302 differential checks against the interpreter.
 pub fn compile_and_run(node: &Node) -> Result<Value, AotError> {
     compile(node)?.run()
+}
+
+/// Compile + run under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT) or
+/// `ReuseInterp` (OPT-IN). The compiled-path entry the swap differential exercises in **both** cert
+/// modes. [`compile_and_run`] delegates here with `Recheck`.
+pub fn compile_and_run_with_swap_mode(
+    node: &Node,
+    swap_mode: SwapCertMode,
+) -> Result<Value, AotError> {
+    compile_with_swap_mode(node, swap_mode)?.run()
 }
 
 fn ensure_toolchain() -> Result<(), AotError> {
