@@ -1,7 +1,9 @@
-//! The **real** ternary-dialect lowering (M-601; M-725; RFC-0004 §2; RFC-0029 §7; ADR-009/ADR-019).
+//! The **real** ternary-dialect lowering (M-601; M-725; M-857; RFC-0004 §2; RFC-0029 §7;
+//! ADR-009/ADR-019).
 //!
 //! Feature-gated (`mlir-dialect`, OFF by default). For the **bit/trit element-wise straight-line
-//! fragment plus the balanced-ternary additive carry chain** (`trit.add`/`trit.sub`, M-725) this
+//! fragment plus the balanced-ternary fixed-width arithmetic** — the additive carry chain
+//! `trit.add`/`trit.sub` (M-725) and the shifted-accumulate multiply `trit.mul` (M-857) — this
 //! emits a genuine MLIR module in the `func` + `arith` + `cf` dialects and drives it through the
 //! verified libMLIR pipeline
 //!
@@ -15,34 +17,37 @@
 //! genuinely MLIR-compiled execution path (not the textual [`super::emit`] skeleton, not the
 //! [`crate::llvm`] direct-LLVM emitter, not the [`crate::aot`] env-machine).
 //!
-//! **The fragment, and the moving honest boundary (RFC-0004 §2; M-725; VR-5/G2).** RFC-0004 §2
+//! **The fragment, and the moving honest boundary (RFC-0004 §2; M-725; M-857; VR-5/G2).** RFC-0004 §2
 //! sequences the AOT path as "`ternary` first … lowering progressively to `linalg`/`vector`/`arith`".
 //! The element-wise bit/trit ops (`core.id`, `bit.not/and/or/xor`, `trit.neg`) are the sub-fragment
 //! the **standard** `arith` dialect carries faithfully — one `arith` op per element, every op
-//! dumpable. **M-725 widens this one increment beyond element-wise**: the balanced-ternary *additive*
-//! carry chain `trit.add`/`trit.sub` now lowers through the real dialect path as a fixed-width
-//! ripple-carry over `arith` ops (`arith.addi`/`arith.remsi`/`arith.divsi`/`arith.subi`,
-//! digit-for-digit the same `s + 4 → srem/sdiv 3 − 1` step the direct-LLVM path uses), with the
-//! out-of-range result reported through the **shared** [`crate::llvm::OVERFLOW_SENTINEL`] read-back
-//! (a `cf.cond_br` on the runtime overflow flag) — never a silent wrap. The new honest boundary is
-//! `trit.mul` (the shifted-accumulate / 2m-trit-buffer fragment) and everything richer (the
-//! `Construct`/`Match` data fragment, closures, recursion, `Swap`, Dense/VSA): each is an
-//! **explicit, never-silent** [`DialectError::Unsupported`] routing the program to the direct-LLVM
-//! backend ([`crate::llvm`]) or the interpreter — which already cover the full v0 calculus. The
-//! carry *step* mirrors `mycelium_core::ternary::add_with_carry` digit-for-digit (one source of
-//! truth for the carry semantics, re-emitted in `arith`, never a *divergent* second algorithm — DRY);
-//! we still ship **no** divergent codegen for `trit.mul`/closures here just to widen further. The
-//! honest boundary is an explicit refusal, not silent or fragile output.
+//! dumpable. **M-725 widened this beyond element-wise** to the balanced-ternary *additive* carry chain
+//! `trit.add`/`trit.sub`, and **M-857 widens it again to balanced-ternary *multiply* `trit.mul`** — the
+//! shifted-accumulate / 2m-trit-buffer fragment. Both lower through the real dialect path over `arith`
+//! ops: additive as a fixed-width ripple-carry (`arith.addi`/`arith.remsi`/`arith.divsi`/`arith.subi`,
+//! digit-for-digit the same `s + 4 → srem/sdiv 3 − 1` step the direct-LLVM path uses), and multiply as
+//! shifted accumulation of `±a` (`arith.muli` per digit) into a 2m-trit buffer with the same shared
+//! ripple adder — overflow iff any high trit is non-zero. Out-of-range results are reported through the
+//! **shared** [`crate::llvm::OVERFLOW_SENTINEL`] read-back (a `cf.cond_br` on the runtime overflow flag)
+//! — never a silent wrap. The new honest boundary is everything **richer** than the fixed-width
+//! bit/trit arithmetic: the `Construct`/`Match` data fragment, closures, recursion, `Swap`, Dense/VSA —
+//! each an **explicit, never-silent** [`DialectError::Unsupported`] routing the program to the
+//! direct-LLVM backend ([`crate::llvm`]) or the interpreter, which already cover the full v0 calculus.
+//! The carry *step* mirrors `mycelium_core::ternary::add_with_carry` digit-for-digit, and the multiply
+//! mirrors `mycelium_core::ternary::mul` (one source of truth per algorithm, re-emitted in `arith`,
+//! never a *divergent* second algorithm — DRY); we still ship **no** divergent codegen for the
+//! data/closure/recursion fragments here just to widen further. The honest boundary is an explicit
+//! refusal, not silent or fragile output.
 //!
 //! **Read-back protocol — shared with [`crate::llvm`] (single contract).** The emitted `@main`
 //! `putchar`s each result element's ASCII char (`'0'`/`'1'` for bits; `'-'`/`'0'`/`'+'` for trits)
 //! then a newline, and the result is decoded by the **same** [`crate::llvm::decode_result`] the
-//! direct-LLVM path uses. On an additive overflow (`trit.add`/`trit.sub` leaving the `m`-trit range)
-//! the artifact prints the **shared** [`crate::llvm::OVERFLOW_SENTINEL`] line instead, decoded to an
-//! explicit [`DialectError::Overflow`] — byte-for-byte the same sentinel and meaning as the
-//! direct-LLVM path's [`crate::llvm::AotError::Overflow`]. So the MLIR-dialect output and the
-//! direct-LLVM output are read back identically — the three-way differential (M-602/M-725) compares
-//! like with like, on the result *and* the overflow refusal.
+//! direct-LLVM path uses. On an arithmetic overflow (`trit.add`/`trit.sub`/`trit.mul` leaving the
+//! `m`-trit range) the artifact prints the **shared** [`crate::llvm::OVERFLOW_SENTINEL`] line instead,
+//! decoded to an explicit [`DialectError::Overflow`] — byte-for-byte the same sentinel and meaning as
+//! the direct-LLVM path's [`crate::llvm::AotError::Overflow`]. So the MLIR-dialect output and the
+//! direct-LLVM output are read back identically — the three-way differential (M-602/M-725/M-857)
+//! compares like with like, on the result *and* the overflow refusal.
 //!
 //! **Toolchain probing (skip-gracefully).** `mlir-opt`/`mlir-translate`/`clang` are probed at
 //! runtime; absence is a graceful [`DialectError::ToolchainMissing`] (the caller skips, never
@@ -69,16 +74,17 @@ use crate::llvm::{decode_result, LaneKind, OVERFLOW_SENTINEL};
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DialectError {
     /// A node/prim/repr outside the fragment the standard `arith`/`func`/`cf` dialects lower here
-    /// (the bit/trit element-wise ops **plus** the balanced-ternary additive carry chain
-    /// `trit.add`/`trit.sub`; M-725). The message names what was refused and where it should run
-    /// instead (the direct-LLVM backend [`crate::llvm`] or the interpreter) — an `EXPLAIN`-able
-    /// routing, never a silent drop (G2/VR-5).
+    /// (the bit/trit element-wise ops **plus** the balanced-ternary fixed-width arithmetic
+    /// `trit.add`/`trit.sub`; M-725, and `trit.mul`; M-857). The message names what was refused and
+    /// where it should run instead (the direct-LLVM backend [`crate::llvm`] or the interpreter) — an
+    /// `EXPLAIN`-able routing, never a silent drop (G2/VR-5).
     Unsupported(String),
-    /// A balanced-ternary additive result left the fixed `m`-trit range — the MLIR-compiled artifact
-    /// computed the overflow at runtime and signalled it through the shared read-back protocol (the
+    /// A balanced-ternary arithmetic result (additive `trit.add`/`trit.sub`; M-725, or multiplicative
+    /// `trit.mul`; M-857) left the fixed `m`-trit range — the MLIR-compiled artifact computed the
+    /// overflow at runtime and signalled it through the shared read-back protocol (the
     /// [`crate::llvm::OVERFLOW_SENTINEL`] line). Surfaced as an explicit error mirroring
     /// [`crate::llvm::AotError::Overflow`] and the interpreter's `EvalError::Overflow` — never a
-    /// silent wrap (SC-3/G2). So the three-way differential stays honest on overflow too (M-725).
+    /// silent wrap (SC-3/G2). So the three-way differential stays honest on overflow too.
     Overflow(String),
     /// An operand atom with no prior binding (an ill-formed lowering — should not occur for a
     /// well-formed ANF program; surfaced explicitly rather than panicking).
@@ -404,12 +410,14 @@ fn map2(
 }
 
 /// Lower one primitive over its operand lanes to `arith` ops, returning the result lane. Covers the
-/// element-wise fragment **and** the balanced-ternary additive carry chain `trit.add`/`trit.sub`
-/// (M-725) — the latter push their runtime overflow `i1` SSA name onto `flags` (the caller folds
-/// them into the program-level overflow flag that drives the read-back). The new honest boundary is
-/// `trit.mul` (and everything richer): an explicit [`DialectError::Unsupported`] routing to
-/// [`crate::llvm`] / the interpreter (G2). The carry *step* re-emits
-/// `mycelium_core::ternary::add_with_carry` digit-for-digit (one source of truth, never a divergent
+/// element-wise fragment **and** the balanced-ternary fixed-width arithmetic — the additive carry
+/// chain `trit.add`/`trit.sub` (M-725) and the shifted-accumulate multiply `trit.mul` (M-857) — all of
+/// which push their runtime overflow `i1` SSA name(s) onto `flags` (the caller folds them into the
+/// program-level overflow flag that drives the read-back). The new honest boundary is everything
+/// **richer** (the data fragment, closures, recursion, `Swap`, Dense/VSA): an explicit
+/// [`DialectError::Unsupported`] routing to [`crate::llvm`] / the interpreter (G2). The carry *step*
+/// re-emits `mycelium_core::ternary::add_with_carry` and the multiply re-emits
+/// `mycelium_core::ternary::mul` digit-for-digit (one source of truth per algorithm, never a divergent
 /// second algorithm — DRY).
 fn emit_op(
     prim: &str,
@@ -498,19 +506,25 @@ fn emit_op(
             flags.push(ovf);
             Ok(lane)
         }
-        // The NEW honest boundary (M-725): `trit.mul` is the shifted-accumulate / 2m-trit-buffer
-        // fragment — materially richer than the additive ripple, and already implemented and
-        // differential-proven on the direct-LLVM path (`crate::llvm::emit_trit_mul`). We do NOT ship
-        // a second, divergent multiply codegen here just to widen further: that would be two sources
-        // of truth for the same semantics (DRY) and a fragility risk (G2). Explicit refusal.
-        "trit.mul" => Err(DialectError::Unsupported(format!(
-            "{prim}: balanced-ternary multiply (shifted-accumulate) is the MLIR-dialect fragment's \
-             new boundary — it runs on the direct-LLVM backend (crate::llvm::emit_trit_mul), which \
-             carries the 2m-trit accumulation + overflow read-back"
-        ))),
+        // Balanced-ternary multiplication (M-857): shifted accumulation of `±a` into a 2m-trit
+        // buffer (mirrors `mycelium_core::ternary::mul` and the direct-LLVM `crate::llvm::emit_trit_mul`
+        // digit-for-digit), then overflow iff any high trit is non-zero. Each `b` digit scales `a` by
+        // an `arith.muli` (the digit is ±1/0, so this is exactly ±a / 0 per position). Re-expresses the
+        // *same* algorithm in `arith` ops — not a divergent second codegen (DRY: the carry step is the
+        // shared `emit_trit_add_step`). The per-accumulation carries plus the high trits become runtime
+        // overflow `i1` flags folded into the program-level read-back (never a silent wrap — G2).
+        "trit.mul" => {
+            let (a, b) = arity2(prim)?;
+            require_kind(prim, a.kind, LaneKind::Ternary)?;
+            require_kind(prim, b.kind, LaneKind::Ternary)?;
+            require_width(prim, a, b)?;
+            let (lane, ovfs) = emit_trit_mul(&a.vals, &b.vals, ssa, body);
+            flags.extend(ovfs);
+            Ok(lane)
+        }
         other => Err(DialectError::Unsupported(format!(
             "primitive {other:?} is not in the MLIR-dialect fragment (bit.not/and/or/xor, trit.neg, \
-             trit.add, trit.sub, core.id) — it runs on the direct-LLVM backend / interpreter"
+             trit.add, trit.sub, trit.mul, core.id) — it runs on the direct-LLVM backend / interpreter"
         ))),
     }
 }
@@ -590,6 +604,96 @@ fn emit_trit_add_step(
     let next_carry = ssa.fresh();
     let _ = writeln!(body, "    {next_carry} = arith.subi {q}, {one} : i32");
     (digit, next_carry)
+}
+
+/// Emit fixed-width balanced-ternary multiplication over MSB-first trit operands `a`/`b` (equal
+/// length, caller-checked) in `arith` ops. Mirrors `mycelium_core::ternary::mul` and the direct-LLVM
+/// [`crate::llvm`]'s `emit_trit_mul` digit-for-digit: shifted accumulation of `±a` into a 2m-trit
+/// buffer, returning the low `m` trits (MSB-first) and the overflow `i1` flags — one per non-zero high
+/// trit, plus each accumulation's carry (provably zero, OR-ed in as an honest net so a codegen slip can
+/// never pass silently — G2). Each `b` digit (∈ `{−1,0,1}`) scales `a` by an `arith.muli`, so
+/// `aⱼ · bₖ` is exactly `±aⱼ / 0` per position — the per-digit factor, no carry yet; the carries are
+/// resolved by the shared ripple adder ([`emit_ripple_add_lsb`], built on the shared
+/// `emit_trit_add_step` — DRY, never a divergent second algorithm).
+fn emit_trit_mul(
+    a: &[String],
+    b: &[String],
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> (Lane, Vec<String>) {
+    let m = a.len();
+    if m == 0 {
+        return (
+            Lane {
+                kind: LaneKind::Ternary,
+                vals: Vec::new(),
+            },
+            Vec::new(),
+        );
+    }
+    let wide = 2 * m;
+    // LSB-first views of the operands and a 2m-wide accumulator initialised to the zero-trit SSA.
+    // (MLIR operands must be SSA values — unlike LLVM IR text, a literal `0` is not a valid operand,
+    // so every buffer slot is a materialised `arith.constant 0`.)
+    let a_lsb: Vec<&String> = a.iter().rev().collect();
+    let b_lsb: Vec<&String> = b.iter().rev().collect();
+    let zero = emit_const_i32(0, ssa, body);
+    let mut acc: Vec<String> = vec![zero.clone(); wide];
+    let mut flags: Vec<String> = Vec::new();
+
+    for (k, &bk) in b_lsb.iter().enumerate() {
+        // Partial = (a scaled by digit bk) shifted left by k, in a 2m-wide LSB-first buffer. The
+        // digit is ±1/0, so `aⱼ * bk` is exactly ±aⱼ / 0 — the per-digit factor, no carry yet.
+        let mut partial: Vec<String> = vec![zero.clone(); wide];
+        for (j, &aj) in a_lsb.iter().enumerate() {
+            let p = ssa.fresh();
+            let _ = writeln!(body, "    {p} = arith.muli {aj}, {bk} : i32");
+            partial[k + j] = p;
+        }
+        let (next_acc, carry) = emit_ripple_add_lsb(&acc, &partial, ssa, body);
+        acc = next_acc;
+        // The 2m-wide sum cannot truly overflow for m-trit operands; OR the carry in anyway so a
+        // codegen slip can never pass silently (honest net, never a fabricated guarantee — G2).
+        let zc = emit_const_i32(0, ssa, body);
+        let c = ssa.fresh();
+        let _ = writeln!(body, "    {c} = arith.cmpi ne, {carry}, {zc} : i32");
+        flags.push(c);
+    }
+    // The product fits in m trits iff the high half (positions [m, 2m)) is all zero.
+    for hi in &acc[m..] {
+        let zh = emit_const_i32(0, ssa, body);
+        let f = ssa.fresh();
+        let _ = writeln!(body, "    {f} = arith.cmpi ne, {hi}, {zh} : i32");
+        flags.push(f);
+    }
+    let vals: Vec<String> = acc[..m].iter().rev().cloned().collect(); // low m trits, MSB-first
+    (
+        Lane {
+            kind: LaneKind::Ternary,
+            vals,
+        },
+        flags,
+    )
+}
+
+/// Ripple-carry add over two equal-length **LSB-first** trit-operand vectors in `arith` ops. Returns
+/// the sum (LSB-first) and the final carry SSA register. The shared inner adder for [`emit_trit_mul`],
+/// built on the shared [`emit_trit_add_step`] (the single carry primitive — DRY). The incoming carry of
+/// the LSB step is the constant 0 trit.
+fn emit_ripple_add_lsb(
+    a: &[String],
+    b: &[String],
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> (Vec<String>, String) {
+    let mut carry = emit_const_i32(0, ssa, body);
+    let mut sum: Vec<String> = Vec::with_capacity(a.len());
+    for (ai, bi) in a.iter().zip(b) {
+        let (digit, next_carry) = emit_trit_add_step(ai, bi, &carry, ssa, body);
+        sum.push(digit);
+        carry = next_carry;
+    }
+    (sum, carry)
 }
 
 /// Fold a list of `i1` overflow flags into one (`arith.ori` chain), or `None` if empty.
