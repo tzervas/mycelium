@@ -8,6 +8,18 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Fixed (2026-06-30: branch-guard PreToolUse hook — worktree resolution)
+
+- **The branch-guard PreToolUse hook now resolves the branch from the command's worktree, not the main
+  checkout.** `scripts/hooks/claude-git-branch-guard.sh` keyed the protected-branch decision off
+  `CLAUDE_PROJECT_DIR` (the main checkout), so it false-positived an **isolated worktree agent**
+  committing to its own leaf branch whenever the main checkout sat on a protected branch (`dev`) — the
+  worktree variant of mitigation #12. It now reads the payload's `cwd` (the directory the git command
+  runs in) and judges THAT worktree's `HEAD`, with `CLAUDE_PROJECT_DIR` only a fail-safe. The guard
+  stays fully armed: a real commit/merge/push on a protected branch — in any worktree — and any
+  force-push still block. Verified with five cases (leaf-commit ALLOW · dev-commit BLOCK · force-push
+  BLOCK · push-to-dev BLOCK · non-git ALLOW).
+
 ### Added (2026-06-30: concurrent-PR pattern operationalized as parameterized skills — `/wave`, `/pr-land`, `/worktree-guard`)
 
 - **Three new parameterized skills** capture the concurrent-PR development pattern as enforceable,

@@ -10,11 +10,19 @@
 # parse/IO problem so a malformed payload never wedges the session — the git-level hook is the backstop.
 set -uo pipefail
 
-cd "${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}" 2>/dev/null || exit 0
-
 payload="$(cat || true)"
 cmd="$(printf '%s' "$payload" | jq -r '.tool_input.command // empty' 2>/dev/null || true)"
 [[ -z "$cmd" ]] && exit 0  # not a readable Bash command — allow; other guards still apply
+
+# Resolve the branch from the directory the command actually RUNS in (the payload's `cwd`), NOT the
+# main checkout. An isolated worktree agent on its own leaf branch must be judged by THAT worktree's
+# HEAD — using CLAUDE_PROJECT_DIR (which points at the main checkout) false-positived worktree agents
+# whenever the main checkout sat on a protected branch (CLAUDE.md mitigation #11; the worktree variant
+# of #12). Fail-safe to CLAUDE_PROJECT_DIR / the repo top when the cwd is absent. The guard stays fully
+# armed: a real commit/merge/push on a protected branch (in any worktree) still blocks.
+run_dir="$(printf '%s' "$payload" | jq -r '.cwd // empty' 2>/dev/null || true)"
+[[ -z "$run_dir" || ! -d "$run_dir" ]] && run_dir="${CLAUDE_PROJECT_DIR:-$(git rev-parse --show-toplevel 2>/dev/null || echo .)}"
+cd "$run_dir" 2>/dev/null || exit 0
 
 # Inspect the command STRUCTURE, not text inside quotes: strip single/double-quoted argument content
 # (commit messages, echo strings, here-strings) BEFORE scanning, so a commit message that mentions
