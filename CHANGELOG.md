@@ -8,6 +8,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-30: concurrent-PR pattern operationalized as parameterized skills — `/wave`, `/pr-land`, `/worktree-guard`)
+
+- **Three new parameterized skills** capture the concurrent-PR development pattern as enforceable,
+  reusable agent tooling (the `/branch-guard` shape) so the discipline holds by construction and
+  need not be re-explained per wave.
+  - **`/wave`** (`skills/wave/SKILL.md`) — umbrella for §Concurrent-PR development: partition by
+    file ownership → one isolated `git worktree` per agent → change-scoped leaf checks and own-issue
+    updates → per-PR review and merge via `/pr-land` → integration-tier close-out; `main` stays the
+    terminal maintainer checkpoint. Parameterized by `ITEMS`/`MODE`/`BASE`.
+  - **`/pr-land`** (`skills/pr-land/SKILL.md`) — per-PR agent-review loop: an isolated Sonnet
+    `/pr-review` agent posts findings as PR comments → patches → replies → updates the description
+    → merges the PR **up the tree** (onto the working or staging tier; stops before `main` — that
+    is `/land`). Parameterized by `PR`/`BASE`/`MODEL`.
+  - **`/worktree-guard`** and **`scripts/checks/worktree-guard.sh`** — the isolated-worktree
+    safeguard (CLAUDE.md mitigation #11), idempotent and parameterized: `--leaf` asserts a concurrent
+    agent is in an isolated worktree; `--orchestrator` (default) asserts the main tree is a clean
+    pointer. Shellcheck-clean; `--quiet` mode for hook/CI use; never-silent (G2).
+  - **CLAUDE.md**: skills list, mitigation #11 enforcement note, and §Concurrent-PR development
+    "operationalized as skills" pointer updated. **CONTRIBUTING.md**: concurrent-PR bullet updated
+    to name the three skills.
+
 ### Changed (2026-06-30: ADR-034 — native AOT re-gated INTO `lang 1.0.0`)
 
 - **ADR-034 — Full-Language 1.0.0 Gate (Track T6) Re-Gating: `Accepted`** (maintainer-ratified,

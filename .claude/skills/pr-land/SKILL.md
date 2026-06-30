@@ -10,7 +10,7 @@ when_to_use: >-
   Use to land a working/leaf or kickoff PR onto `dev` (or `dev` onto `integration`) the reviewed,
   collision-safe way — for each PR you bring up in a concurrent wave. NOT for the final squash onto
   `main` (that terminal, maintainer-gated step is /land or /wave-land).
-allowed-tools: Bash(git fetch:*), Bash(git diff:*), Bash(scripts/checks/branch-guard.sh:*), Bash(scripts/checks/worktree-guard.sh:*)
+allowed-tools: Bash(git fetch:*), Bash(git diff:*), Bash(git merge:*), Bash(gh pr:*), Bash(scripts/checks/branch-guard.sh:*), Bash(scripts/checks/worktree-guard.sh:*)
 ---
 
 # pr-land
