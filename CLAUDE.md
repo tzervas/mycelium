@@ -465,6 +465,13 @@ heredoc) — even though the target branch is a fine working branch.
 `commit && push`), and avoid the bare protected-branch names in commit-message bodies where a reword
 works (e.g. "the staging tier" instead of "integration"). The guard stays armed and exactly correct
 for real violations; this only sidesteps the string-match false-positive. (Brief every agent on it.)
+**A second variant — now FIXED in the hook (2026-06-30):** the guard keyed the protected-branch
+decision off `CLAUDE_PROJECT_DIR` (the **main checkout**), so an isolated worktree agent on its own
+leaf branch was false-blocked whenever the main checkout sat on a protected branch. The hook now
+resolves the branch from the command's **worktree `cwd`** (the payload's `cwd`), judging that
+worktree's `HEAD` — so worktree agents commit freely while real protected-branch ops still block
+(verified: leaf-commit ALLOW · dev-commit BLOCK · force-push BLOCK). Keep the per-agent commit/push
+split (the string-match variant above is unchanged).
 
 ## Autonomous PR workflow — review-before-merge, no human gate
 

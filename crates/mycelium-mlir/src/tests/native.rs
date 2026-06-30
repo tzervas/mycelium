@@ -139,6 +139,41 @@ fn element_wise_program_has_no_overflow_branch() {
     );
 }
 
+/// A `trit.mul` over two 3-trit constants with a named numeric oracle: `2 · 3 = 6`, in range (no
+/// overflow). Balanced-ternary MSB-first: `2 = [0,+,-]` (1·3 + (−1)·1), `3 = [0,+,0]` (1·3), and the
+/// product `6 = [+,-,0]` (1·9 + (−1)·3 + 0·1) all fit 3 trits. Mirrors the `trit_add_in_range` /
+/// `trit_sub_in_range` named-helper style so the emission test exercises a known in-range pair.
+fn trit_mul_in_range() -> Node {
+    Node::Op {
+        prim: "trit.mul".into(),
+        args: vec![
+            Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Neg])),
+            Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Zero])),
+        ],
+    }
+}
+
+/// M-857: `trit.mul` now lowers through the real dialect path — shifted accumulation of `±a` into a
+/// 2m-trit buffer (`arith.muli` per digit) plus the shared ripple adder, with the never-silent
+/// overflow read-back branch (`cf.cond_br`). Asserts the genuine multiply + carry arithmetic and the
+/// overflow branch are emitted (mirrors `trit_add_emits_real_ripple_carry_with_overflow_branch`).
+#[test]
+fn trit_mul_emits_real_shifted_accumulate_with_overflow_branch() {
+    let (m, kind, width) = emit_mlir(&trit_mul_in_range()).expect("emit trit.mul");
+    assert_eq!(kind, ResultKind::Ternary);
+    assert_eq!(width, 3);
+    // The per-digit scaling factor (`±a / 0`) is an integer multiply:
+    assert!(m.contains("arith.muli"), "expected arith.muli in:\n{m}");
+    // The shared balanced-ternary carry step resolves the accumulation (`x = s + 4`, `remsi`/`divsi`):
+    assert!(m.contains("arith.remsi"), "expected arith.remsi in:\n{m}");
+    assert!(m.contains("arith.divsi"), "expected arith.divsi in:\n{m}");
+    // The never-silent overflow read-back: a conditional branch on the folded overflow flag.
+    assert!(m.contains("cf.cond_br"), "expected cf.cond_br in:\n{m}");
+    assert!(m.contains("^ovf:"), "expected ^ovf block in:\n{m}");
+    assert!(m.contains("^ok:"), "expected ^ok block in:\n{m}");
+    assert!(m.contains("func.return"));
+}
+
 #[test]
 fn out_of_fragment_nodes_are_explicitly_refused() {
     // A Swap is refused (routed to interp / direct-LLVM), never silently lowered.
@@ -151,18 +186,16 @@ fn out_of_fragment_nodes_are_explicitly_refused() {
         Err(DialectError::Unsupported(_)) => {}
         other => panic!("Swap must be Unsupported, got {other:?}"),
     }
-    // The NEW boundary (M-725): trit *multiply* is refused (stays on the direct-LLVM path), while
-    // trit.add/sub now lower. The message routes it explicitly (never a silent drop).
-    let mul = Node::Op {
-        prim: "trit.mul".into(),
-        args: vec![
-            Node::Const(tern(vec![Trit::Pos, Trit::Neg, Trit::Neg])),
-            Node::Const(tern(vec![Trit::Zero, Trit::Pos, Trit::Pos])),
-        ],
+    // The NEW boundary (M-857 moved it past `trit.mul`, which now lowers): everything richer than the
+    // fixed-width bit/trit arithmetic is still refused — here a closure (`Lam`) stays on the
+    // direct-LLVM / interp path. The message routes it explicitly (never a silent drop).
+    let lam = Node::Lam {
+        param: "x".into(),
+        body: Box::new(Node::Var("x".into())),
     };
-    match emit_mlir(&mul) {
+    match emit_mlir(&lam) {
         Err(DialectError::Unsupported(_)) => {}
-        other => panic!("trit.mul must be Unsupported (the new boundary), got {other:?}"),
+        other => panic!("a closure (Lam) must be Unsupported (the new boundary), got {other:?}"),
     }
 }
 
