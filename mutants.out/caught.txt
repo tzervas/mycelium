@@ -1,0 +1,129 @@
+crates/mycelium-mlir/src/vsa_codegen.rs:171:9: replace VsaCgOp::is_value_op -> bool with true
+crates/mycelium-mlir/src/vsa_codegen.rs:171:9: replace VsaCgOp::is_value_op -> bool with false
+crates/mycelium-mlir/src/vsa_codegen.rs:171:9: delete ! in VsaCgOp::is_value_op
+crates/mycelium-mlir/src/vsa_codegen.rs:196:9: replace VsaModelId::registry_id -> &'static str with ""
+crates/mycelium-mlir/src/vsa_codegen.rs:196:9: replace VsaModelId::registry_id -> &'static str with "xyzzy"
+crates/mycelium-mlir/src/vsa_codegen.rs:209:9: replace VsaModelId::from_registry_id -> Option<Self> with None
+crates/mycelium-mlir/src/vsa_codegen.rs:210:13: delete match arm "MAP-I" in VsaModelId::from_registry_id
+crates/mycelium-mlir/src/vsa_codegen.rs:211:13: delete match arm "BSC" in VsaModelId::from_registry_id
+crates/mycelium-mlir/src/vsa_codegen.rs:212:13: delete match arm "HRR" in VsaModelId::from_registry_id
+crates/mycelium-mlir/src/vsa_codegen.rs:213:13: delete match arm "FHRR" in VsaModelId::from_registry_id
+crates/mycelium-mlir/src/vsa_codegen.rs:222:9: replace VsaModelId::op_prefix -> &'static str with ""
+crates/mycelium-mlir/src/vsa_codegen.rs:222:9: replace VsaModelId::op_prefix -> &'static str with "xyzzy"
+crates/mycelium-mlir/src/vsa_codegen.rs:234:9: replace VsaModelId::op_name -> Option<String> with None
+crates/mycelium-mlir/src/vsa_codegen.rs:234:9: replace VsaModelId::op_name -> Option<String> with Some(String::new())
+crates/mycelium-mlir/src/vsa_codegen.rs:234:9: replace VsaModelId::op_name -> Option<String> with Some("xyzzy".into())
+crates/mycelium-mlir/src/vsa_codegen.rs:261:9: replace VsaModelId::reference_guarantee -> Option<GuaranteeStrength> with None
+crates/mycelium-mlir/src/vsa_codegen.rs:409:9: replace <impl fmt::Display for VsaAotError>::fmt -> fmt::Result with Ok(Default::default())
+crates/mycelium-mlir/src/vsa_codegen.rs:504:5: replace first_non_bipolar -> Option<usize> with None
+crates/mycelium-mlir/src/vsa_codegen.rs:504:5: replace first_non_bipolar -> Option<usize> with Some(0)
+crates/mycelium-mlir/src/vsa_codegen.rs:504:5: replace first_non_bipolar -> Option<usize> with Some(1)
+crates/mycelium-mlir/src/vsa_codegen.rs:504:37: replace && with || in first_non_bipolar
+crates/mycelium-mlir/src/vsa_codegen.rs:504:30: replace != with == in first_non_bipolar
+crates/mycelium-mlir/src/vsa_codegen.rs:504:42: replace != with == in first_non_bipolar
+crates/mycelium-mlir/src/vsa_codegen.rs:504:45: delete - in first_non_bipolar
+crates/mycelium-mlir/src/vsa_codegen.rs:510:5: replace first_non_binary -> Option<usize> with None
+crates/mycelium-mlir/src/vsa_codegen.rs:510:5: replace first_non_binary -> Option<usize> with Some(0)
+crates/mycelium-mlir/src/vsa_codegen.rs:510:5: replace first_non_binary -> Option<usize> with Some(1)
+crates/mycelium-mlir/src/vsa_codegen.rs:510:37: replace && with || in first_non_binary
+crates/mycelium-mlir/src/vsa_codegen.rs:510:30: replace != with == in first_non_binary
+crates/mycelium-mlir/src/vsa_codegen.rs:510:42: replace != with == in first_non_binary
+crates/mycelium-mlir/src/vsa_codegen.rs:516:5: replace first_off_phase -> Option<usize> with None
+crates/mycelium-mlir/src/vsa_codegen.rs:516:5: replace first_off_phase -> Option<usize> with Some(0)
+crates/mycelium-mlir/src/vsa_codegen.rs:516:5: replace first_off_phase -> Option<usize> with Some(1)
+crates/mycelium-mlir/src/vsa_codegen.rs:517:69: replace || with && in first_off_phase
+crates/mycelium-mlir/src/vsa_codegen.rs:517:39: replace || with && in first_off_phase
+crates/mycelium-mlir/src/vsa_codegen.rs:517:24: delete ! in first_off_phase
+crates/mycelium-mlir/src/vsa_codegen.rs:517:44: replace <= with > in first_off_phase
+crates/mycelium-mlir/src/vsa_codegen.rs:517:47: delete - in first_off_phase
+crates/mycelium-mlir/src/vsa_codegen.rs:517:74: replace > with == in first_off_phase
+crates/mycelium-mlir/src/vsa_codegen.rs:517:74: replace > with < in first_off_phase
+crates/mycelium-mlir/src/vsa_codegen.rs:517:74: replace > with >= in first_off_phase
+crates/mycelium-mlir/src/vsa_codegen.rs:525:9: replace VsaProgram::required_operands -> usize with 0
+crates/mycelium-mlir/src/vsa_codegen.rs:525:9: replace VsaProgram::required_operands -> usize with 1
+crates/mycelium-mlir/src/vsa_codegen.rs:534:9: replace VsaProgram::operands -> &[Vec<f64>] with Vec::leak(Vec::new())
+crates/mycelium-mlir/src/vsa_codegen.rs:534:9: replace VsaProgram::operands -> &[Vec<f64>] with Vec::leak(vec![vec![]])
+crates/mycelium-mlir/src/vsa_codegen.rs:534:9: replace VsaProgram::operands -> &[Vec<f64>] with Vec::leak(vec![vec![0.0]])
+crates/mycelium-mlir/src/vsa_codegen.rs:534:9: replace VsaProgram::operands -> &[Vec<f64>] with Vec::leak(vec![vec![1.0]])
+crates/mycelium-mlir/src/vsa_codegen.rs:534:9: replace VsaProgram::operands -> &[Vec<f64>] with Vec::leak(vec![vec![-1.0]])
+crates/mycelium-mlir/src/vsa_codegen.rs:543:9: replace VsaProgram::validate -> Result<(), VsaAotError> with Ok(())
+crates/mycelium-mlir/src/vsa_codegen.rs:545:37: replace < with == in VsaProgram::validate
+crates/mycelium-mlir/src/vsa_codegen.rs:545:37: replace < with > in VsaProgram::validate
+crates/mycelium-mlir/src/vsa_codegen.rs:545:37: replace < with <= in VsaProgram::validate
+crates/mycelium-mlir/src/vsa_codegen.rs:571:24: replace != with == in VsaProgram::validate
+crates/mycelium-mlir/src/vsa_codegen.rs:587:9: replace VsaProgram::check_alphabet -> Result<(), VsaAotError> with Ok(())
+crates/mycelium-mlir/src/vsa_codegen.rs:607:9: replace VsaProgram::check_regime -> Result<(), VsaAotError> with Ok(())
+crates/mycelium-mlir/src/vsa_codegen.rs:610:13: delete match arm (VsaModelId::Bsc, VsaCgOp::Bundle) in VsaProgram::check_regime
+crates/mycelium-mlir/src/vsa_codegen.rs:616:13: delete match arm (VsaModelId::Hrr, VsaCgOp::Bundle) in VsaProgram::check_regime
+crates/mycelium-mlir/src/vsa_codegen.rs:619:13: delete match arm (VsaModelId::Fhrr, VsaCgOp::Bundle) in VsaProgram::check_regime
+crates/mycelium-mlir/src/vsa_codegen.rs:626:13: delete match arm (VsaModelId::Hrr, VsaCgOp::Unbind) in VsaProgram::check_regime
+crates/mycelium-mlir/src/vsa_codegen.rs:629:13: delete match arm (VsaModelId::Fhrr, VsaCgOp::Unbind) in VsaProgram::check_regime
+crates/mycelium-mlir/src/vsa_codegen.rs:633:13: delete match arm (VsaModelId::MapI, VsaCgOp::Bundle) in VsaProgram::check_regime
+crates/mycelium-mlir/src/vsa_codegen.rs:725:5: replace emit_explain_comment with ()
+crates/mycelium-mlir/src/vsa_codegen.rs:741:5: replace emit_bind -> Result<(), VsaAotError> with Ok(())
+crates/mycelium-mlir/src/vsa_codegen.rs:805:5: replace hrr_involution -> Vec<f64> with vec![]
+crates/mycelium-mlir/src/vsa_codegen.rs:805:5: replace hrr_involution -> Vec<f64> with vec![0.0]
+crates/mycelium-mlir/src/vsa_codegen.rs:805:5: replace hrr_involution -> Vec<f64> with vec![1.0]
+crates/mycelium-mlir/src/vsa_codegen.rs:805:5: replace hrr_involution -> Vec<f64> with vec![-1.0]
+crates/mycelium-mlir/src/vsa_codegen.rs:806:30: replace % with / in hrr_involution
+crates/mycelium-mlir/src/vsa_codegen.rs:806:30: replace % with + in hrr_involution
+crates/mycelium-mlir/src/vsa_codegen.rs:806:25: replace - with + in hrr_involution
+crates/mycelium-mlir/src/vsa_codegen.rs:806:25: replace - with / in hrr_involution
+crates/mycelium-mlir/src/vsa_codegen.rs:813:5: replace emit_cconv with ()
+crates/mycelium-mlir/src/vsa_codegen.rs:817:36: replace % with / in emit_cconv
+crates/mycelium-mlir/src/vsa_codegen.rs:817:36: replace % with + in emit_cconv
+crates/mycelium-mlir/src/vsa_codegen.rs:817:31: replace - with + in emit_cconv
+crates/mycelium-mlir/src/vsa_codegen.rs:817:31: replace - with / in emit_cconv
+crates/mycelium-mlir/src/vsa_codegen.rs:817:27: replace + with - in emit_cconv
+crates/mycelium-mlir/src/vsa_codegen.rs:817:27: replace + with * in emit_cconv
+crates/mycelium-mlir/src/vsa_codegen.rs:835:5: replace emit_bundle -> Result<(), VsaAotError> with Ok(())
+crates/mycelium-mlir/src/vsa_codegen.rs:859:43: replace / with % in emit_bundle
+crates/mycelium-mlir/src/vsa_codegen.rs:859:43: replace / with * in emit_bundle
+crates/mycelium-mlir/src/vsa_codegen.rs:862:32: replace > with == in emit_bundle
+crates/mycelium-mlir/src/vsa_codegen.rs:862:32: replace > with < in emit_bundle
+crates/mycelium-mlir/src/vsa_codegen.rs:864:29: replace < with == in emit_bundle
+crates/mycelium-mlir/src/vsa_codegen.rs:864:29: replace < with > in emit_bundle
+crates/mycelium-mlir/src/vsa_codegen.rs:887:5: replace emit_fhrr_bundle with ()
+crates/mycelium-mlir/src/vsa_codegen.rs:938:5: replace emit_permute -> Result<(), VsaAotError> with Ok(())
+crates/mycelium-mlir/src/vsa_codegen.rs:944:29: replace + with - in emit_permute
+crates/mycelium-mlir/src/vsa_codegen.rs:944:29: replace + with * in emit_permute
+crates/mycelium-mlir/src/vsa_codegen.rs:955:5: replace emit_similarity -> Result<(), VsaAotError> with Ok(())
+crates/mycelium-mlir/src/vsa_codegen.rs:970:5: replace emit_cosine -> String with String::new()
+crates/mycelium-mlir/src/vsa_codegen.rs:970:5: replace emit_cosine -> String with "xyzzy".into()
+crates/mycelium-mlir/src/vsa_codegen.rs:995:5: replace emit_hamming_sim -> String with String::new()
+crates/mycelium-mlir/src/vsa_codegen.rs:995:5: replace emit_hamming_sim -> String with "xyzzy".into()
+crates/mycelium-mlir/src/vsa_codegen.rs:1025:5: replace emit_phase_sim -> String with String::new()
+crates/mycelium-mlir/src/vsa_codegen.rs:1025:5: replace emit_phase_sim -> String with "xyzzy".into()
+crates/mycelium-mlir/src/vsa_codegen.rs:1049:5: replace emit_dot_acc -> String with String::new()
+crates/mycelium-mlir/src/vsa_codegen.rs:1049:5: replace emit_dot_acc -> String with "xyzzy".into()
+crates/mycelium-mlir/src/vsa_codegen.rs:1073:5: replace emit_wrap_phase -> String with String::new()
+crates/mycelium-mlir/src/vsa_codegen.rs:1073:5: replace emit_wrap_phase -> String with "xyzzy".into()
+crates/mycelium-mlir/src/vsa_codegen.rs:1096:5: replace emit_print_f64_bits with ()
+crates/mycelium-mlir/src/vsa_codegen.rs:1109:5: replace emit_print_const_f64_bits with ()
+crates/mycelium-mlir/src/vsa_codegen.rs:1119:5: replace emit_print_sentinel with ()
+crates/mycelium-mlir/src/vsa_codegen.rs:1129:5: replace emit_newline with ()
+crates/mycelium-mlir/src/vsa_codegen.rs:1139:5: replace f64_const -> String with String::new()
+crates/mycelium-mlir/src/vsa_codegen.rs:1139:5: replace f64_const -> String with "xyzzy".into()
+crates/mycelium-mlir/src/vsa_codegen.rs:1148:9: replace Ssa::fresh -> String with String::new()
+crates/mycelium-mlir/src/vsa_codegen.rs:1148:9: replace Ssa::fresh -> String with "xyzzy".into()
+crates/mycelium-mlir/src/vsa_codegen.rs:1149:16: replace += with -= in Ssa::fresh
+crates/mycelium-mlir/src/vsa_codegen.rs:1149:16: replace += with *= in Ssa::fresh
+crates/mycelium-mlir/src/vsa_codegen.rs:1153:9: replace Ssa::fresh_label -> String with String::new()
+crates/mycelium-mlir/src/vsa_codegen.rs:1153:9: replace Ssa::fresh_label -> String with "xyzzy".into()
+crates/mycelium-mlir/src/vsa_codegen.rs:1154:16: replace += with -= in Ssa::fresh_label
+crates/mycelium-mlir/src/vsa_codegen.rs:1154:16: replace += with *= in Ssa::fresh_label
+crates/mycelium-mlir/src/vsa_codegen.rs:1232:20: replace == with != in VsaArtifact::parse_stdout
+crates/mycelium-mlir/src/vsa_codegen.rs:1243:27: replace != with == in VsaArtifact::parse_stdout
+crates/mycelium-mlir/src/vsa_codegen.rs:1258:23: replace != with == in VsaArtifact::reconstruct_value
+crates/mycelium-mlir/src/vsa_codegen.rs:1312:9: replace VsaArtifact::result_bound -> Result<Option<Bound>, VsaAotError> with Ok(None)
+crates/mycelium-mlir/src/vsa_codegen.rs:1315:13: delete match arm (VsaModelId::MapI, VsaCgOp::Bundle, GuaranteeStrength::Proven) in VsaArtifact::result_bound
+crates/mycelium-mlir/src/vsa_codegen.rs:1332:13: delete match arm (VsaModelId::Bsc, VsaCgOp::Bundle, GuaranteeStrength::Empirical) in VsaArtifact::result_bound
+crates/mycelium-mlir/src/vsa_codegen.rs:1335:13: delete match arm (VsaModelId::Hrr, VsaCgOp::Bundle, GuaranteeStrength::Empirical) in VsaArtifact::result_bound
+crates/mycelium-mlir/src/vsa_codegen.rs:1338:13: delete match arm (VsaModelId::Fhrr, VsaCgOp::Bundle, GuaranteeStrength::Empirical) in VsaArtifact::result_bound
+crates/mycelium-mlir/src/vsa_codegen.rs:1342:13: delete match arm (VsaModelId::Hrr, VsaCgOp::Unbind, GuaranteeStrength::Empirical) in VsaArtifact::result_bound
+crates/mycelium-mlir/src/vsa_codegen.rs:1345:13: delete match arm (VsaModelId::Fhrr, VsaCgOp::Unbind, GuaranteeStrength::Empirical) in VsaArtifact::result_bound
+crates/mycelium-mlir/src/vsa_codegen.rs:1361:5: replace intrinsic_decls -> String with String::new()
+crates/mycelium-mlir/src/vsa_codegen.rs:1361:5: replace intrinsic_decls -> String with "xyzzy".into()
+crates/mycelium-mlir/src/vsa_codegen.rs:1363:41: replace && with || in intrinsic_decls
+crates/mycelium-mlir/src/vsa_codegen.rs:1369:42: replace && with || in intrinsic_decls
+crates/mycelium-mlir/src/vsa_codegen.rs:1378:42: replace && with || in intrinsic_decls

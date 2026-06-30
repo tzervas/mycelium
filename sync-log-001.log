@@ -1,0 +1,226 @@
+  note: label 'good-first-issue' is defined but unused by any issue
+  note: label 'status:blocked' is defined but unused by any issue
+  note: label 'type:bug' is defined but unused by any issue
+>> manifest check OK: 166 issue(s); 35 label(s) + 9 milestone(s) all defined.
+>> doc_refs check OK: all doc_refs entries resolve.
+   → gh auth status
+   → gh repo view tzervas/mycelium --json visibility -q .visibility
+   → gh label create phase:0 --repo tzervas/mycelium --color 0E8A16 --description Phase 0 — Confirm & Specify --force
+   → gh label create phase:1 --repo tzervas/mycelium --color 1D76DB --description Phase 1 — Minimal Viable Core --force
+   → gh label create phase:2 --repo tzervas/mycelium --color 5319E7 --description Phase 2 — Full Unification & Verified Swaps --force
+   → gh label create phase:3 --repo tzervas/mycelium --color B60205 --description Phase 3 — Tooling, Projections & Acceleration --force
+   → gh label create phase:4 --repo tzervas/mycelium --color D93F0B --description Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion --force
+   → gh label create phase:5 --repo tzervas/mycelium --color C2E0C6 --description Phase 5 — Self-Hosting & Core Library (anticipated) --force
+   → gh label create phase:6 --repo tzervas/mycelium --color BFDADC --description Phase 6 — Native Acceleration & Deployment (anticipated) --force
+   → gh label create phase:7 --repo tzervas/mycelium --color FEF2C0 --description Phase 7 — Runtime & Concurrency Execution Model / RFC-0008 (anticipated) --force
+   → gh label create phase:8 --repo tzervas/mycelium --color D4C5F9 --description Phase 8 — Toolchain & Release Engineering (anticipated) --force
+   → gh label create type:feature --repo tzervas/mycelium --color A2EEEF --description New capability --force
+   → gh label create type:spec --repo tzervas/mycelium --color C5DEF5 --description Specification / schema --force
+   → gh label create type:research --repo tzervas/mycelium --color D4C5F9 --description Experiment / investigation --force
+   → gh label create type:verification --repo tzervas/mycelium --color BFD4F2 --description Proof / bound / equivalence checking --force
+   → gh label create type:infra --repo tzervas/mycelium --color FEF2C0 --description Repo / CI / tooling scaffolding --force
+   → gh label create type:docs --repo tzervas/mycelium --color 0075CA --description Documentation --force
+   → gh label create type:chore --repo tzervas/mycelium --color EDEDED --description Maintenance --force
+   → gh label create type:bug --repo tzervas/mycelium --color D73A4A --description Defect --force
+   → gh label create type:design --repo tzervas/mycelium --color C0B6F2 --description Design / decision work (RFC/ADR/DN) before implementation --force
+   → gh label create type:epic --repo tzervas/mycelium --color 5319E7 --description Epic — decomposes into child leaf issues (one wave) --force
+   → gh label create area:core-ir --repo tzervas/mycelium --color 0366D6 --description WS-B Core IR & reference interpreter --force
+   → gh label create area:swap --repo tzervas/mycelium --color 0366D6 --description WS-C Swaps & certificates --force
+   → gh label create area:vsa --repo tzervas/mycelium --color 0366D6 --description WS-D VSA submodule --force
+   → gh label create area:execution --repo tzervas/mycelium --color 0366D6 --description WS-E Execution & backends --force
+   → gh label create area:numerics --repo tzervas/mycelium --color 0366D6 --description WS-F Verified numerics & checker --force
+   → gh label create area:selection --repo tzervas/mycelium --color 0366D6 --description WS-G Selection & EXPLAIN --force
+   → gh label create area:toolchain --repo tzervas/mycelium --color 0366D6 --description WS-H Toolchain (LSP/linter/formatter/build) --force
+   → gh label create area:project --repo tzervas/mycelium --color 0366D6 --description WS-I Project infrastructure --force
+   → gh label create area:language --repo tzervas/mycelium --color 0366D6 --description Surface language (L1) — lexer/parser/AST/grammar --force
+   → gh label create area:stdlib --repo tzervas/mycelium --color 0366D6 --description Standard / core library (the mycelium-std-* crates, RFC-0016) --force
+   → gh label create area:release --repo tzervas/mycelium --color 0366D6 --description Release engineering — versioning, release-plz, packaging/publishing --force
+   → gh label create priority:P0 --repo tzervas/mycelium --color B60205 --description Critical-path / existential --force
+   → gh label create priority:P1 --repo tzervas/mycelium --color FBCA04 --description Important --force
+   → gh label create priority:P2 --repo tzervas/mycelium --color C2E0C6 --description Nice-to-have / later --force
+   → gh label create priority:P3 --repo tzervas/mycelium --color BFDADC --description Low priority / anticipated / out-of-gate --force
+   → gh label create status:blocked --repo tzervas/mycelium --color E99695 --description Blocked by a dependency --force
+   → gh label create status:needs-design --repo tzervas/mycelium --color F9D0C4 --description Needs design before implementation --force
+   → gh label create status:done --repo tzervas/mycelium --color 0E8A16 --description Completed and verified --force
+   → gh label create good-first-issue --repo tzervas/mycelium --color 7057FF --description Good entry point --force
+   → gh api --paginate repos/tzervas/mycelium/labels
+   ! noncompliant label 'area:spec' has no declared alias in label-aliases.json — left untouched; add an alias or delete it manually
+   ! noncompliant label 'duplicate' has no declared alias in label-aliases.json — left untouched; add an alias or delete it manually
+   ! noncompliant label 'help wanted' has no declared alias in label-aliases.json — left untouched; add an alias or delete it manually
+   ! noncompliant label 'invalid' has no declared alias in label-aliases.json — left untouched; add an alias or delete it manually
+   ! noncompliant label 'question' has no declared alias in label-aliases.json — left untouched; add an alias or delete it manually
+   ! noncompliant label 'wontfix' has no declared alias in label-aliases.json — left untouched; add an alias or delete it manually
+   → gh api repos/tzervas/mycelium/milestones?state=all --paginate
+   → gh api --paginate repos/tzervas/mycelium/issues?state=all&per_page=100
+   → gh api --paginate repos/tzervas/mycelium/pulls?state=all&per_page=100
+   ! #255: scope 'gh-sync' is not an area:* label (no area inferred)
+   ! #238: scope 'gh-sync' is not an area:* label (no area inferred)
+   ! #237: note: spanned ['Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   ! #236: scope 'process' is not an area:* label (no area inferred)
+   ! #235: scope 'readme' is not an area:* label (no area inferred)
+   ! #235: note: spanned ['Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion', 'Phase 6 — Native Acceleration & Deployment'] -> chose highest-phase 'Phase 6 — Native Acceleration & Deployment'
+   ! #234: scope 'gh-sync' is not an area:* label (no area inferred)
+   ! #232: scope 'gh' is not an area:* label (no area inferred)
+   ! #231: scope 'process' is not an area:* label (no area inferred)
+   ! #230: scope 'issues' is not an area:* label (no area inferred)
+   ! #230: note: spanned ['Phase 5 — Self-Hosting & Core Library', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   ! #229: scope 'gh' is not an area:* label (no area inferred)
+   ! #229: note: spanned ['Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion', 'Phase 5 — Self-Hosting & Core Library', 'Phase 6 — Native Acceleration & Deployment', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   ! #228: scope 'ratify' is not an area:* label (no area inferred)
+   ! #227: scope 'process' is not an area:* label (no area inferred)
+   ! #224: scope 'llvm' is not an area:* label (no area inferred)
+   ! #224: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 3 — Tooling, Projections & Acceleration', 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   ! #222: scope 'llvm' is not an area:* label (no area inferred)
+   ! #222: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 3 — Tooling, Projections & Acceleration', 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion'] -> chose highest-phase 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion'
+   → gh api --paginate repos/tzervas/mycelium/pulls/220/commits?per_page=100
+   ! #220: scope 'dn-16' is not an area:* label (no area inferred)
+   ! #220: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 5 — Self-Hosting & Core Library'] -> chose highest-phase 'Phase 5 — Self-Hosting & Core Library'
+   → gh api --paginate repos/tzervas/mycelium/pulls/219/commits?per_page=100
+   ! #219: scope 'm376-p1' is not an area:* label (no area inferred)
+   ! #219: note: spanned ['Phase 3 — Tooling, Projections & Acceleration', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   → gh api --paginate repos/tzervas/mycelium/pulls/217/commits?per_page=100
+   ! #217: scope 'dn-17' is not an area:* label (no area inferred)
+   ! #217: note: spanned ['Phase 3 — Tooling, Projections & Acceleration', 'Phase 5 — Self-Hosting & Core Library', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   → gh api --paginate repos/tzervas/mycelium/pulls/213/commits?per_page=100
+   ! #213: scope 'wave5' is not an area:* label (no area inferred)
+   ! #213: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 3 — Tooling, Projections & Acceleration', 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion', 'Phase 5 — Self-Hosting & Core Library'] -> chose highest-phase 'Phase 5 — Self-Hosting & Core Library'
+   ! #207: scope 'wave4' is not an area:* label (no area inferred)
+   ! #207: note: spanned ['Phase 3 — Tooling, Projections & Acceleration', 'Phase 5 — Self-Hosting & Core Library'] -> chose highest-phase 'Phase 5 — Self-Hosting & Core Library'
+   → gh api --paginate repos/tzervas/mycelium/pulls/205/commits?per_page=100
+   ! #205: scope 'currency' is not an area:* label (no area inferred)
+   ! #205: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   → gh api --paginate repos/tzervas/mycelium/pulls/204/commits?per_page=100
+   ! #204: scope 'currency' is not an area:* label (no area inferred)
+   ! #204: note: spanned ['Phase 5 — Self-Hosting & Core Library', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   ! #201: scope 'std' is not an area:* label (no area inferred)
+   ! #200: unknown commit type 'scaffold' (no type:* mapping)
+   ! #200: scope 'std' is not an area:* label (no area inferred)
+   ! #196: unknown commit type 'scaffold' (no type:* mapping)
+   ! #196: scope 'std' is not an area:* label (no area inferred)
+   ! #195: note: spanned ['Phase 3 — Tooling, Projections & Acceleration', 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion'] -> chose highest-phase 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion'
+   ! #194: scope 'lang' is not an area:* label (no area inferred)
+   ! #194: note: spanned ['Phase 0 — Confirm & Specify', 'Phase 3 — Tooling, Projections & Acceleration'] -> chose highest-phase 'Phase 3 — Tooling, Projections & Acceleration'
+   ! #192: scope 'llm-harness' is not an area:* label (no area inferred)
+   ! #191: scope 'llm-harness' is not an area:* label (no area inferred)
+   ! #190: scope 'llm-harness' is not an area:* label (no area inferred)
+   ! #189: scope 'llm-harness' is not an area:* label (no area inferred)
+   ! #188: scope 'llm-harness' is not an area:* label (no area inferred)
+   ! #187: note: spanned ['Phase 0 — Confirm & Specify', 'Phase 2 — Full Unification & Verified Swaps', 'Phase 3 — Tooling, Projections & Acceleration', 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion'] -> chose highest-phase 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion'
+   ! #183: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 3 — Tooling, Projections & Acceleration', 'Phase 5 — Self-Hosting & Core Library'] -> chose highest-phase 'Phase 5 — Self-Hosting & Core Library'
+   ! #148: note: spanned ['Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   ! #147: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion', 'Phase 5 — Self-Hosting & Core Library', 'Phase 6 — Native Acceleration & Deployment'] -> chose highest-phase 'Phase 6 — Native Acceleration & Deployment'
+   ! #145: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   ! #142: note: spanned ['Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion', 'Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   ! #141: note: spanned ['Phase 1 — Minimal Viable Core', 'Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)', 'Phase 8 — Toolchain & Release Engineering'] -> chose highest-phase 'Phase 8 — Toolchain & Release Engineering'
+   ! #123: note: spanned ['Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion', 'Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)'] -> chose highest-phase 'Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)'
+   → gh api --paginate repos/tzervas/mycelium/pulls/117/commits?per_page=100
+   ! #117: note: spanned ['Phase 3 — Tooling, Projections & Acceleration', 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion', 'Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)'] -> chose highest-phase 'Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)'
+   ! #115: note: spanned ['Phase 1 — Minimal Viable Core', 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion'] -> chose highest-phase 'Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion'
+   ! #111: scope 'adr-016' is not an area:* label (no area inferred)
+   ! #111: scope 'adr-017' is not an area:* label (no area inferred)
+   ! #102: scope 'adr' is not an area:* label (no area inferred)
+   ! #101: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 3 — Tooling, Projections & Acceleration'] -> chose highest-phase 'Phase 3 — Tooling, Projections & Acceleration'
+   ! #100: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 3 — Tooling, Projections & Acceleration'] -> chose highest-phase 'Phase 3 — Tooling, Projections & Acceleration'
+   ! #99: note: spanned ['Phase 2 — Full Unification & Verified Swaps', 'Phase 3 — Tooling, Projections & Acceleration'] -> chose highest-phase 'Phase 3 — Tooling, Projections & Acceleration'
+   ! #84: scope 'adr-015' is not an area:* label (no area inferred)
+   ! #82: scope 'rfc-0009' is not an area:* label (no area inferred)
+   → gh api --paginate repos/tzervas/mycelium/pulls/81/commits?per_page=100
+   ! #78: note: spanned ['Phase 1 — Minimal Viable Core', 'Phase 2 — Full Unification & Verified Swaps'] -> chose highest-phase 'Phase 2 — Full Unification & Verified Swaps'
+   ! #77: note: spanned ['Phase 0 — Confirm & Specify', 'Phase 2 — Full Unification & Verified Swaps'] -> chose highest-phase 'Phase 2 — Full Unification & Verified Swaps'
+   ! #71: note: spanned ['Phase 1 — Minimal Viable Core', 'Phase 2 — Full Unification & Verified Swaps'] -> chose highest-phase 'Phase 2 — Full Unification & Verified Swaps'
+   ! #68: note: spanned ['Phase 1 — Minimal Viable Core', 'Phase 2 — Full Unification & Verified Swaps'] -> chose highest-phase 'Phase 2 — Full Unification & Verified Swaps'
+   ! #46: scope 'adr-011' is not an area:* label (no area inferred)
+   → gh api --paginate repos/tzervas/mycelium/issues?state=all&per_page=100
+   → gh api --paginate repos/tzervas/mycelium/pulls?state=all&per_page=100
+   → gh api graphql -f query=query{ user(login:"tzervas"){ projectsV2(first:100){ nodes{ id number title } } } }
+   → gh api graphql -f query=query{ node(id:"PVT_kwHOBqSX9M4Ba6MG"){ ... on ProjectV2{ fields(first:50){ nodes{ __typename ... on ProjectV2FieldCommon{ id name } ... on ProjectV2SingleSelectField{ id name options{ id name color description } } } } } } }
+   → gh api graphql -f query=query{ node(id:"PVT_kwHOBqSX9M4Ba6MG"){ ... on ProjectV2{ items(first:100){ pageInfo{ hasNextPage endCursor } nodes{ id content{ __typename ... on Issue{ number } ... on PullRequest{ number } } fieldValues(first:20){ nodes{ __typename ... on ProjectV2ItemFieldSingleSelectValue{ name field{ ... on ProjectV2SingleSelectField{ name } } } } } } } } } }
+   → gh api graphql -f query=query{ node(id:"PVT_kwHOBqSX9M4Ba6MG"){ ... on ProjectV2{ items(first:100, after:"Y3Vyc29yOnYyOpKrMDAwMDAwMDAuMDHODAEhrw=="){ pageInfo{ hasNextPage endCursor } nodes{ id content{ __typename ... on Issue{ number } ... on PullRequest{ number } } fieldValues(first:20){ nodes{ __typename ... on ProjectV2ItemFieldSingleSelectValue{ name field{ ... on ProjectV2SingleSelectField{ name } } } } } } } } } }
+   → gh api graphql -f query=query{ node(id:"PVT_kwHOBqSX9M4Ba6MG"){ ... on ProjectV2{ items(first:100, after:"Y3Vyc29yOnYyOpKsMDAwMDAwMDAuMDA1zgwNCKI="){ pageInfo{ hasNextPage endCursor } nodes{ id content{ __typename ... on Issue{ number } ... on PullRequest{ number } } fieldValues(first:20){ nodes{ __typename ... on ProjectV2ItemFieldSingleSelectValue{ name field{ ... on ProjectV2SingleSelectField{ name } } } } } } } } } }
+   ! #182: Area: multiple area:* labels ['project', 'stdlib', 'toolchain'] — not set
+   ! #180: Area: multiple area:* labels ['stdlib', 'toolchain'] — not set
+   ! #115: Area: multiple area:* labels ['language', 'toolchain'] — not set
+   ! #101: Area: multiple area:* labels ['core-ir', 'language'] — not set
+   ! #78: Area: multiple area:* labels ['execution', 'selection'] — not set
+============================================================
+>> Mycelium PM reconcile — repo: tzervas/mycelium  (live)
+============================================================
+>> validate: manifests vs codebase
+   = cross-manifest checks pass (conventions/project/labels in parity)
+
+>> preflight: gh auth + least-privilege scope check
+   = gh: authenticated
+   ~ least-privilege advisory: `gist` is not used by this run
+   ~ least-privilege advisory: `read:org` is not used by this run
+   ~ least-privilege advisory: `workflow` is not used by this run
+   = gh: token scopes satisfy the computed minimum ['project', 'repo']
+
+>> labels: 38 declared in labels.json
+   • phase:0
+   • phase:1
+   • phase:2
+   • phase:3
+   • phase:4
+   • phase:5
+   • phase:6
+   • phase:7
+   • phase:8
+   • type:feature
+   • type:spec
+   • type:research
+   • type:verification
+   • type:infra
+   • type:docs
+   • type:chore
+   • type:bug
+   • type:design
+   • type:epic
+   • area:core-ir
+   • area:swap
+   • area:vsa
+   • area:execution
+   • area:numerics
+   • area:selection
+   • area:toolchain
+   • area:project
+   • area:language
+   • area:stdlib
+   • area:release
+   • priority:P0
+   • priority:P1
+   • priority:P2
+   • priority:P3
+   • status:blocked
+   • status:needs-design
+   • status:done
+   • good-first-issue
+
+>> milestones: 9 declared in milestones.json
+   = exists #1: Phase 0 — Confirm & Specify
+   = exists #2: Phase 1 — Minimal Viable Core
+   = exists #3: Phase 2 — Full Unification & Verified Swaps
+   = exists #4: Phase 3 — Tooling, Projections & Acceleration
+   = exists #5: Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion
+   = exists #6: Phase 5 — Self-Hosting & Core Library
+   = exists #7: Phase 6 — Native Acceleration & Deployment
+   = exists #8: Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)
+   = exists #9: Phase 8 — Toolchain & Release Engineering
+
+>> issues: 166 task(s) in issues.yaml; 171 issue(s) on tzervas/mycelium (update=on, bodies=off)
+>> issues done — 0 created, 0 updated, 166 already in sync
+
+>> PRs: 84 on tzervas/mycelium — add-only label/milestone backfill
+>> PRs done — 0 updated, 84 already in sync
+
+>> project: 'Mycelium' (owner user tzervas)
+   = exists: project #16
+   ! manual view: 'Board' — {"layout": "BOARD", "group_by": "Status"}
+   ! manual view: 'By Phase' — {"layout": "TABLE", "group_by": "Phase", "sort_by": ["Priority", "Estimate"]}
+   ! manual view: 'Roadmap' — {"layout": "ROADMAP", "group_by": "Iteration (or Phase until iterations start)"}
+   ! manual workflow: auto-add — Auto-add items from tzervas/mycelium that carry any phase:* label.
+   ! manual workflow: item-added-todo — When an item is added → set Status = Todo.
+   ! manual workflow: closed-merged-done — When an issue is closed / a PR is merged → set Status = Done.
+   ! manual workflow: blocked — When the status:blocked label is added → set Status = Blocked.
+>> project done — 0 item(s) added, 0 field value(s) set, 656 already in sync
+
+>> reconcile complete (live).

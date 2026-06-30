@@ -1,0 +1,6 @@
+crates/mycelium-mlir/src/vsa_codegen.rs:862:32: replace > with >= in emit_bundle
+crates/mycelium-mlir/src/vsa_codegen.rs:864:29: replace < with <= in emit_bundle
+crates/mycelium-mlir/src/vsa_codegen.rs:1209:12: delete ! in VsaArtifact::run
+crates/mycelium-mlir/src/vsa_codegen.rs:1313:13: delete match arm (_, _, GuaranteeStrength::Exact) in VsaArtifact::result_bound
+crates/mycelium-mlir/src/vsa_codegen.rs:1390:8: delete ! in vsa_compile
+crates/mycelium-mlir/src/vsa_codegen.rs:1457:5: replace ensure_toolchain -> Result<(), VsaAotError> with Ok(())
