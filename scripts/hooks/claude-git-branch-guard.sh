@@ -49,8 +49,16 @@
 # --- Fail-safe boundary (non-negotiable: zero false-negatives) ------------------------------------
 # Reducing false-positives must never allow a real violation through. The guard BLOCKS (closed, exit
 # 2) — never allows — whenever a git-touching command's structure cannot be confidently resolved:
-#   - The raw command contains a dynamic-content marker ($( , a backtick, <( , >( ) — command/process
-#     substitution means the actual destination/flags are not statically knowable.
+#   - A command/process substitution ($( , a backtick, <( , >( ) appears where it can obscure a
+#     git-MUTATING operation's target or force flags — SCOPED to: (a) a `git push`'s own argument
+#     tokens (e.g. `git push origin $(echo dev)` — the destination is unresolvable), or (b) the git
+#     SUBCOMMAND position itself (e.g. `git $(echo push) …` — we cannot tell if it is a push). A
+#     substitution ANYWHERE ELSE — a read-only `git diff`/`git log`, an `echo "$(…)"`, a `VAR=$(…)`
+#     assignment, a non-git command, or a mutating subcommand's *args* (commit/merge/cherry-pick/
+#     rebase/revert are judged by the cwd HEAD, not by their args, so a substitution there cannot
+#     flip the verdict) — CANNOT change a protected-branch/force verdict and is ALLOWED. (A prior
+#     revision rejected substitution at the whole-command level; that over-blocked ubiquitous
+#     read-only command-substitution and was a regression — this scoping is the fix.)
 #   - The tokenizer reports an unterminated quote or escape (malformed/obfuscated quoting).
 #   - A `git push` carries a flag that takes a separate value we do not special-case (-o / --repo /
 #     --receive-pack / --push-option) — we cannot safely tell whether the NEXT token is that flag's

@@ -155,6 +155,40 @@ check ALLOW claude/leaf/x "git -C <dir> push explicit refspec, not bare (no cwd 
   'git -C /some/dir push origin claude/leaf/x'
 
 echo ""
+echo "=== must ALLOW: command-substitution OUTSIDE a push's target (regression fix) ==="
+# The substitution fail-safe must be scoped to a git push's own args (or the git subcommand
+# position); a substitution in a read-only git, an echo, or an assignment can never change a
+# protected/force verdict, so it must be allowed rather than blocked (the prior whole-command
+# reject was a regression that blocked ubiquitous command-substitution everywhere).
+# shellcheck disable=SC2016  # single-quoted on purpose: literal argv test data, not for local expansion.
+check ALLOW claude/leaf/x "read-only git diff piped to wc, inside an echo substitution" \
+  'echo "count: $(git diff --name-only origin/dev...origin/claude/leaf/x | wc -l)"'
+# shellcheck disable=SC2016
+check ALLOW claude/leaf/x "VAR=\$(git rev-parse HEAD) assignment then commit on a leaf branch" \
+  'VAR=$(git rev-parse HEAD) && git commit -m x'
+# shellcheck disable=SC2016
+check ALLOW claude/leaf/x "git status; echo with a date substitution" \
+  'git status; echo "$(date)"'
+# shellcheck disable=SC2016
+check ALLOW claude/leaf/x "for-loop over a git worktree list substitution, no mutating op" \
+  'for wt in $(git worktree list); do echo $wt; done'
+# shellcheck disable=SC2016
+check ALLOW claude/leaf/x "substitution in an echo, then a push to a STATIC leaf dest" \
+  'echo "$(git log -1)" && git push origin claude/leaf/x'
+
+echo ""
+echo "=== must BLOCK (UNSAFE): substitution that DETERMINES a push's destination ==="
+# shellcheck disable=SC2016  # literal argv test data: the substitution is the fail-safe trigger.
+check UNSAFE claude/leaf/x "push dest produced by \$(echo dev) substitution" \
+  'git push origin $(echo dev)'
+# shellcheck disable=SC2016
+check UNSAFE claude/leaf/x "push dest produced by \$(cat target.txt) substitution" \
+  'git push origin $(cat target.txt)'
+# shellcheck disable=SC2016
+check UNSAFE claude/leaf/x "git subcommand itself produced by a substitution" \
+  'git $(echo push) origin main'
+
+echo ""
 echo "----------------------------------------------------------------------"
 echo "TOTAL: pass=$pass fail=$fail"
 if [[ $fail -ne 0 ]]; then
