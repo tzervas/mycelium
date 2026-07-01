@@ -574,8 +574,8 @@ pub fn build_dense_map(
         let full = project_dir.join(&src.path);
         let bytes = std::fs::read(&full).map_err(|e| io(&full.display().to_string(), e))?;
         let hex = blake3::hash(&bytes).to_hex();
-        let actual = ContentHash::from_parts("blake3", hex.as_str())
-            .expect("blake3 hex is a valid digest");
+        let actual =
+            ContentHash::from_parts("blake3", hex.as_str()).expect("blake3 hex is a valid digest");
         if actual != src.hash {
             return Err(RemoteError::Integrity(format!(
                 "source {} now hashes to {} but the spore records {} — the project directory has \
@@ -671,8 +671,8 @@ pub fn verify_and_reconstruct(
             ))
         })?;
         let hex = blake3::hash(bytes).to_hex();
-        let actual = ContentHash::from_parts("blake3", hex.as_str())
-            .expect("blake3 hex is a valid digest");
+        let actual =
+            ContentHash::from_parts("blake3", hex.as_str()).expect("blake3 hex is a valid digest");
         if actual != obj.content_hash {
             return Err(RemoteError::Integrity(format!(
                 "fetched object {} does not hash to its declared content address {} (got {}) — \
@@ -697,7 +697,12 @@ pub fn verify_and_reconstruct(
     }
 
     rebuilt.sort_by(|a, b| a.path.cmp(&b.path));
-    let recomputed = content_address(dense_map.kind, &dense_map.surface, &rebuilt, &dense_map.deps);
+    let recomputed = content_address(
+        dense_map.kind,
+        &dense_map.surface,
+        &rebuilt,
+        &dense_map.deps,
+    );
     if recomputed != dense_map.spore_id {
         return Err(RemoteError::Integrity(format!(
             "reconstructed spore recomputes to spore_id {} but the dense-map declares {} — an \
@@ -794,12 +799,12 @@ fn tail_lines(s: &str, n: usize) -> String {
 ///
 /// # Errors
 /// [`RemoteError::ToolMissing`] if `oras` is absent; [`RemoteError::Transport`] if it is present but
-/// `oras --version` fails.
+/// `oras version` fails.
 pub fn oras_preflight() -> Result<(), RemoteError> {
     let mut cmd = Command::new("oras");
-    cmd.arg("--version");
+    cmd.arg("version");
     let out = spawn_oras(cmd)?;
-    require_success(&out, "oras --version")
+    require_success(&out, "oras version")
 }
 
 fn unique_temp_dir(tag: &str) -> Result<PathBuf, RemoteError> {
@@ -874,7 +879,8 @@ impl OciTransport for OrasTransport {
         cmd.arg("push");
         self.maybe_plain_http(&mut cmd);
         cmd.arg(reference);
-        cmd.arg("--artifact-type").arg("application/vnd.mycelium.spore.v1");
+        cmd.arg("--artifact-type")
+            .arg("application/vnd.mycelium.spore.v1");
         cmd.arg("--config")
             .arg(format!("{cfg_name}:application/vnd.mycelium.densemap.v1"));
         for blob in layers {
@@ -1055,7 +1061,8 @@ pub fn parse_registry(s: &str) -> Result<RegistryTarget, RemoteError> {
             ));
         }
         let host = rest.split('/').next().unwrap_or("");
-        let plain_http = host == "localhost" || host.starts_with("localhost:") || host.starts_with("127.");
+        let plain_http =
+            host == "localhost" || host.starts_with("localhost:") || host.starts_with("127.");
         return Ok(RegistryTarget::Oci {
             base: rest.to_owned(),
             plain_http,

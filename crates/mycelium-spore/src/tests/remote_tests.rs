@@ -224,7 +224,10 @@ fn decode_rejects_truncated_length_prefix() {
     let dm = sample_dense_map();
     let bytes = encode_dense_map(&dm);
     let text = String::from_utf8(bytes).unwrap();
-    assert!(text.contains("name:3:geo\n"), "fixture must contain the expected name field");
+    assert!(
+        text.contains("name:3:geo\n"),
+        "fixture must contain the expected name field"
+    );
     let idx = text.find("name:3:geo\n").unwrap();
     let cut_at = idx + "name:3:g".len();
     let truncated = &text.as_bytes()[..cut_at];
@@ -275,9 +278,10 @@ fn decode_rejects_duplicate_object() {
 fn build_dense_map_produces_matching_objects_and_dense_map() {
     let (spore, dir) = demo_spore(
         "build-ok",
-        &[
-            ("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n"),
-        ],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     let (dm, blobs) = build_dense_map(&spore, &dir).unwrap();
     assert_eq!(dm.spore_id, spore.id);
@@ -297,7 +301,10 @@ fn build_dense_map_produces_matching_objects_and_dense_map() {
 fn build_dense_map_rejects_a_tampered_source_file() {
     let (spore, dir) = demo_spore(
         "build-tamper",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     // Mutate the file on disk after the spore was built — build_dense_map must catch the drift.
     std::fs::write(dir.join("shapes.myc"), "// tampered\n").unwrap();
@@ -311,11 +318,16 @@ fn build_dense_map_rejects_a_tampered_source_file() {
 fn verify_and_reconstruct_happy_path() {
     let (spore, dir) = demo_spore(
         "vr-ok",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     let (dm, blobs) = build_dense_map(&spore, &dir).unwrap();
-    let fetched: Vec<(String, Vec<u8>)> =
-        blobs.iter().map(|b| (b.oci_title(), b.bytes.clone())).collect();
+    let fetched: Vec<(String, Vec<u8>)> = blobs
+        .iter()
+        .map(|b| (b.oci_title(), b.bytes.clone()))
+        .collect();
     let reconstructed = verify_and_reconstruct(dm, &fetched).unwrap();
     assert_eq!(reconstructed.spore_id, spore.id);
     assert_eq!(reconstructed.sources.len(), 1);
@@ -326,11 +338,16 @@ fn verify_and_reconstruct_happy_path() {
 fn verify_and_reconstruct_rejects_a_tampered_blob() {
     let (spore, dir) = demo_spore(
         "vr-tamper",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     let (dm, blobs) = build_dense_map(&spore, &dir).unwrap();
-    let mut fetched: Vec<(String, Vec<u8>)> =
-        blobs.iter().map(|b| (b.oci_title(), b.bytes.clone())).collect();
+    let mut fetched: Vec<(String, Vec<u8>)> = blobs
+        .iter()
+        .map(|b| (b.oci_title(), b.bytes.clone()))
+        .collect();
     fetched[0].1.push(b'!');
     let err = verify_and_reconstruct(dm, &fetched).unwrap_err();
     assert!(matches!(err, RemoteError::Integrity(_)), "got {err:?}");
@@ -340,7 +357,10 @@ fn verify_and_reconstruct_rejects_a_tampered_blob() {
 fn verify_and_reconstruct_rejects_a_missing_object() {
     let (spore, dir) = demo_spore(
         "vr-missing",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     let (dm, _blobs) = build_dense_map(&spore, &dir).unwrap();
     let err = verify_and_reconstruct(dm, &[]).unwrap_err();
@@ -351,11 +371,16 @@ fn verify_and_reconstruct_rejects_a_missing_object() {
 fn verify_and_reconstruct_rejects_an_extra_undescribed_blob() {
     let (spore, dir) = demo_spore(
         "vr-extra",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     let (dm, blobs) = build_dense_map(&spore, &dir).unwrap();
-    let mut fetched: Vec<(String, Vec<u8>)> =
-        blobs.iter().map(|b| (b.oci_title(), b.bytes.clone())).collect();
+    let mut fetched: Vec<(String, Vec<u8>)> = blobs
+        .iter()
+        .map(|b| (b.oci_title(), b.bytes.clone()))
+        .collect();
     fetched.push(("extra.myco".to_owned(), b"not described".to_vec()));
     let err = verify_and_reconstruct(dm, &fetched).unwrap_err();
     assert!(matches!(err, RemoteError::Integrity(_)), "got {err:?}");
@@ -365,13 +390,18 @@ fn verify_and_reconstruct_rejects_an_extra_undescribed_blob() {
 fn verify_and_reconstruct_rejects_a_spore_id_mismatch() {
     let (spore, dir) = demo_spore(
         "vr-idmismatch",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     let (mut dm, blobs) = build_dense_map(&spore, &dir).unwrap();
     // A dense-map that claims a spore_id inconsistent with its own objects/deps/surface.
     dm.spore_id = hash_of(b"a completely different DAG");
-    let fetched: Vec<(String, Vec<u8>)> =
-        blobs.iter().map(|b| (b.oci_title(), b.bytes.clone())).collect();
+    let fetched: Vec<(String, Vec<u8>)> = blobs
+        .iter()
+        .map(|b| (b.oci_title(), b.bytes.clone()))
+        .collect();
     let err = verify_and_reconstruct(dm, &fetched).unwrap_err();
     assert!(matches!(err, RemoteError::Integrity(_)), "got {err:?}");
 }
@@ -382,7 +412,10 @@ fn verify_and_reconstruct_rejects_a_spore_id_mismatch() {
 fn publish_then_resolve_exact_version_round_trips_via_mem_transport() {
     let (spore, dir) = demo_spore(
         "pubres-exact",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     let target = RegistryTarget::Oci {
         base: "example.test/owner".to_owned(),
@@ -403,11 +436,17 @@ fn publish_then_resolve_exact_version_round_trips_via_mem_transport() {
 fn resolve_latest_picks_the_highest_published_version() {
     let (spore1, dir1) = demo_spore(
         "pubres-latest-1",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     let (spore2, dir2) = demo_spore(
         "pubres-latest-2",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn b() -> Binary{8} = 0b1\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn b() -> Binary{8} = 0b1\n",
+        )],
     );
     let target = RegistryTarget::Oci {
         base: "example.test/owner".to_owned(),
@@ -430,7 +469,10 @@ fn resolve_latest_picks_the_highest_published_version() {
 fn resolve_range_constraint_is_unsupported() {
     let (spore, dir) = demo_spore(
         "pubres-range",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     let target = RegistryTarget::Oci {
         base: "example.test/owner".to_owned(),
@@ -439,7 +481,14 @@ fn resolve_range_constraint_is_unsupported() {
     let transport = MemTransport::new();
     publish_remote(&target, &spore, &dir, "geo", "1.0.0", &transport).unwrap();
 
-    for constraint in ["^1.0.0", "~1.0", ">=1.0.0", "<2.0.0", "=1.0.0", "1.0.0,2.0.0"] {
+    for constraint in [
+        "^1.0.0",
+        "~1.0",
+        ">=1.0.0",
+        "<2.0.0",
+        "=1.0.0",
+        "1.0.0,2.0.0",
+    ] {
         let err = resolve_remote(&target, "geo", constraint, &transport).unwrap_err();
         assert!(
             matches!(err, RemoteError::Unsupported(_)),
@@ -463,7 +512,10 @@ fn resolve_unpublished_name_is_not_found() {
 fn publish_remote_rejects_a_local_target() {
     let (spore, dir) = demo_spore(
         "pubres-localtarget",
-        &[("shapes.myc", "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n")],
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
     );
     let target = RegistryTarget::Local(PathBuf::from("/tmp/whatever"));
     let transport = MemTransport::new();
@@ -499,9 +551,16 @@ fn parse_registry_table() {
         ),
         (
             "/var/lib/mycelium/registry",
-            Ok(RegistryTarget::Local(PathBuf::from("/var/lib/mycelium/registry"))),
+            Ok(RegistryTarget::Local(PathBuf::from(
+                "/var/lib/mycelium/registry",
+            ))),
         ),
-        ("relative/registry/dir", Ok(RegistryTarget::Local(PathBuf::from("relative/registry/dir")))),
+        (
+            "relative/registry/dir",
+            Ok(RegistryTarget::Local(PathBuf::from(
+                "relative/registry/dir",
+            ))),
+        ),
         ("s3://bad-scheme/bucket", Err(())),
         ("ghcr://", Err(())),
         ("oci://", Err(())),
@@ -510,7 +569,10 @@ fn parse_registry_table() {
         let got = parse_registry(input);
         match expected {
             Ok(want) => assert_eq!(&got.unwrap(), want, "input {input:?}"),
-            Err(()) => assert!(got.is_err(), "input {input:?} should be rejected, got {got:?}"),
+            Err(()) => assert!(
+                got.is_err(),
+                "input {input:?} should be rejected, got {got:?}"
+            ),
         }
     }
 }
