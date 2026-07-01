@@ -2,6 +2,7 @@
 //! lives in this dedicated in-crate module, per CLAUDE.md "Test layout").
 
 mod batch;
+mod corpus;
 mod diff;
 mod emit;
 mod invariant;
