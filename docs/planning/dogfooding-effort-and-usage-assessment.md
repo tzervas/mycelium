@@ -30,9 +30,14 @@ Measured on the workspace at `dev` (2026-07-01), Rust reference implementation:
 | Mycelium (`.myc`) written so far | **968 LOC** (≈ 0.5% — the dogfood has effectively not started) |
 | Repo lifespan to reach this | **~23 days**, **1,274 commits** (2026-06-08 → 07-01), largely agent-driven |
 
-The 968 `.myc` lines vs 126,539 Rust lines is the headline: **the reference is ~99.5% Rust**; DN-66's
-per-crate survey independently found **zero of 26 `mycelium-std-*` crates** clear even the narrower
-RFC-0031 self-host bar today. The dogfood is a near-greenfield reimplementation effort, not a finishing pass.
+The 968 `.myc` lines vs 126,539 Rust lines is the headline: **the reference is ~99.5% Rust**. But the
+0.5% is not noise — **~877 of those `.myc` lines are the core-lib self-host slice** (`lib/std/`:
+`option`/`result`/`cmp`/`iter`/`collections`/`text`/`fmt`/`math`), and **M-714–M-719 are all `done`**:
+that slice **passes differential conformance** against its Rust twin, and **M-502 (surface-sufficiency
+gate) is `done`** — i.e. the language is *proven* able to express core stdlib. What DN-66 found is the
+next, stricter bar: **zero of 26 crates clear the RFC-0031 §5 D6 trigger to *retire* the Rust crate** —
+the `.myc` core modules are conformance-passing **prototypes that coexist with** (do not yet replace) the
+load-bearing Rust. So the dogfood is **seeded and de-risked at the core, not begun at the leaves.**
 
 ## 2. Productivity baseline (grounded, single sample)
 
@@ -147,6 +152,37 @@ not a single budget window. But I **cannot read the weekly meter** from a sessio
 the **PoC spike is the right-sized, highest-value move** (it also converts these estimates from
 `Declared` to `Empirical`); the full sweep should be planned across many windows and is explicitly a
 non-tag-gating, within-1.0.0 track (ADR-036), so it need never be rushed into one budget period.
+
+## 5b. The 26 stdlib crates + the full path (crates → transpiler → self-hosted)
+
+**Are the 26 `mycelium-std-*` crates the Rust implementation?** Yes — all 26 (**41,123 non-test LOC**,
+Tier A) are the load-bearing Rust. **~8 have partial `.myc` prototypes** (the M-714–M-719 core slice,
+~877 lines) that pass differential conformance but do **not** yet retire their Rust twin (DN-66 / D6).
+
+**Cost to fully self-host the stdlib (all 26 crates clear D6, Rust retired):**
+
+| Model | Stdlib cost | Notes |
+|---|---|---|
+| **Agent port** | **~7.4M tokens** (range ~4.5–12M) | §4 Tier-A figure; the ~877 done lines barely dent it. |
+| **Transpiler-accelerated** | **~3–5M tokens** for the stdlib portion | + the shared transpiler build (~2–5M, §5a). The core slice is the hand-written **seed**. |
+
+**The full path — and the good news: its hardest gate is already partly cleared.** DN-34 gates the
+transpiler on the surface being a viable *target*; **M-502 + the M-714–719 core slice prove the surface
+can already express + differentially-validate core stdlib.** So for stdlib the path is unusually clear:
+
+1. **Core-lib slice** (`option`/`result`/`cmp`/`iter`/`collections`/`text`/`fmt`/`math` in `.myc`,
+   conformance-passing) — **DONE** (M-714–719). This is the transpiler's seed *and* its proof-of-target.
+2. **Build the transpiler** (~2–5M, §5a), targeting the now-proven surface, seeded from `py2rust`.
+3. **Transpile + refine the remaining ~18 stdlib crates + bring the 8 prototypes to D6-clearing parity**
+   (~3–5M) — retiring the Rust stdlib crate-by-crate under Rust≡Mycelium differential validation.
+4. **Surface features the leaf crates still need** (`fs`/`io`/`sys`/`time`/`rand` want runtime/effect
+   capabilities the pure-value core slice didn't exercise) — incremental, some `needs-design` (part of §6).
+
+The **stdlib is the cheapest, most de-risked tier to finish** (~3–8M tokens all-in depending on
+mechanism, atop the transpiler build) and is the natural **first full-self-host milestone** after the
+core slice. The **toolchain → kernel → AOT** tiers follow and carry the heavier §6 capability gate
+(E18-1 is `needs-design`). *(All figures `Declared`; the first transpiled-and-retired stdlib crate
+converts them to `Empirical`.)*
 
 ## 6. The dominant uncertainty (read this before the numbers)
 
