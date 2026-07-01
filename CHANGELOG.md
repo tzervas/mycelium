@@ -8,6 +8,44 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-07-01: M-864 — persistent bounded work-stealing pool for the Scheduler, nested-safe submission)
+
+- **`Scheduler::run_indexed` dispatches onto a persistent, process-wide pool (`mycelium_sched::pool`),
+  not fresh OS threads per call.** The pool is created once, lazily, sized to
+  `available_parallelism()`, and reused for the life of the process — including across **nested**
+  `run_indexed` calls (a job that itself calls `run_indexed` again). A caller blocked on its own
+  batch's completion **helps** drain the shared queue (`Pool::help_while`, the Cilk/TBB/Rayon
+  work-helping pattern) rather than parking, which is the structural argument for why a **fixed**-size
+  pool never deadlocks under arbitrarily deep nesting (module docs; checked by deep-chain/wide-fan-out/
+  mixed-shape stress tests under a wall-clock timeout, plus a Linux thread-count-bounded regression
+  witness). Tag: **Empirical** (structural argument + stress tests, not a mechanized proof — VR-5).
+  This removes the resource concern M-860/M-862 both had to work around by capping their own
+  parallelism to a single, non-nested, top-level batch.
+- **Breaking API change, ratified: `run_indexed` now requires `F: Send + 'static` / `T: Send +
+  'static`** (previously just `Send`, borrowing freely via the old `std::thread::scope`). A persistent
+  pool's worker threads outlive any single call, so a job can no longer safely borrow from the
+  caller's stack frame. Ratified in new **`docs/notes/DN-67-Persistent-Work-Stealing-Pool.md`**
+  (`Draft`), which also carries the full caller-by-caller audit and the deadlock-freedom argument.
+- **Every current caller adjusted** (none needed `unsafe`; the crate stays
+  `#![forbid(unsafe_code)]`): `mycelium-mlir`'s M-860 `emit_llvm_ir_many_with_swap_mode` now clones
+  each `Node` per job instead of borrowing it (determinism unaffected — the content-hash sort still
+  runs over the original nodes first); `mycelium-interp`'s M-862 `eval_top_batch` now clones the
+  `Interpreter` once per batch behind an `Arc` and shares an `Arc<AtomicU64>` fuel counter — made cheap
+  by giving `Interpreter` `#[derive(Clone)]` (its `swap` field moves from `Box<dyn SwapEngine>` to
+  `Arc<dyn SwapEngine>`, and `SwapEngine`'s bound widens from `Sync` to `Send + Sync`). Two callers not
+  named in the M-864 issue's own body — found only by building the whole workspace, since
+  `mycelium-mlir` transitively depends on `mycelium-std-runtime` — needed the same treatment:
+  `dataflow::run_dataflow_scheduled` (M-711) now takes ownership of each still-pending task via
+  `mem::replace` with a transient placeholder for the duration of a sweep's parallel poll, restoring it
+  afterward; `supervision::run_supervised` (M-713) now clones its `CancelToken` per job (an
+  `Arc<AtomicBool>`-backed handle, so every clone still shares the same cancellation flag).
+- **`mycelium-std-runtime`'s inline tests extracted (M-797, as-touched):** `dataflow.rs` and
+  `supervision.rs`'s former inline `#[cfg(test)] mod tests` blocks move to `src/tests/dataflow.rs` /
+  `src/tests/supervision.rs`, plus one new regression test each for the M-864 adjustment.
+- M-860's byte-identical parallel-emit test and M-862's parallel-eval differential/determinism suites
+  are unmodified and re-verified green; `mycelium-sched` gains 6 new nested-recursion stress tests
+  (24/24 total, 18 pre-existing); `mycelium-std-runtime` stays 98/98 green.
+
 ### Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)
 
 - **ADR-035 — Full-Language 1.0.0 Gate (Track T4) Scope Amendment (`Accepted`, maintainer-ratified).**
