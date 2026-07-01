@@ -3196,6 +3196,14 @@ issues:
       amendment is enacted append-only by the focused amending ADR-024 (Accepted 2026-06-23) -- NOT by
       rewriting ADR-022 §4/§5 (which carry an "amended by ADR-024" pointer). See ADR-024 + RFC-0032 D6.
 
+      PRECONDITION CONFIRMED (2026-07-01, tag-readiness resync): E19-1 is now `status:done`
+      (landed_date 2026-07-01 — M-746/747/748/749/750/751/752/798 all done, each differential-tested;
+      see E19-1's own landed_basis). So every M-703 `depends_on` entry (M-700, M-701, M-702, E19-1) is
+      now closed; the sole remaining item is the maintainer's own tag-cut + ADR-022-T1-Enacted act
+      this issue names — no open engineering precondition remains (VR-5: a status report on the E19-1
+      epic's own checked closure, not a fresh gate run). Status stays `todo` (maintainer-reserved act,
+      not performed by this note).
+
       maintainer-reserved (like M-655 — no agent cuts the tag or enacts the status). The A/B engineering
       rows are met (2026-06-23, kickoff c10): M-700/M-701/M-702 are satisfied and ADR-022 §4/§5 records
       track T1's A1–A5/B1–B2 all met; the gate SCOPE now additionally requires E19-1 (above). The
@@ -6524,7 +6532,7 @@ issues:
     title: "E17-1 (epic) — Documentation, stability guarantees & 1.0.0 release"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:epic, area:release, priority:P1, status:in-progress]
-    landed_basis: "status:in-progress (2026-06-23) — 3 of 4 children done: M-735 (language reference + tutorial, docs/reference/, with a parser-verified conformance fixture), M-736 (generated stdlib API docs — lib/std wired into mycelium-doc + per-fn source-comment extraction, std.result covered, gaps flagged), M-737 (ADR-023 Draft->Proposed->Accepted). M-738 (the release act) is BLOCKED on the external deps E13-1 + E18-1 (both needs-design) and ADR-022 enactment — the 1.0.0 tag is NOT cut (G2 / house rule #3). Epic completes when E13-1 + E18-1 close and M-738 fires."
+    landed_basis: "status:in-progress (2026-07-01, tag-readiness resync — corrects the 2026-06-23 text below) — 3 of 4 children done: M-735 (language reference + tutorial, docs/reference/, with a parser-verified conformance fixture), M-736 (generated stdlib API docs — lib/std wired into mycelium-doc + per-fn source-comment extraction, std.result covered, gaps flagged), M-737 (ADR-023 Draft->Proposed->Accepted). M-738 (the release act) is BLOCKED ONLY on the maintainer's own tag-cut act — its engineering deps are now closed: E13-1 is `status:done` (ADR-035-narrowed T4 bar — DN-66 stable-API freeze + M-714...M-718); E18-1's shared core-lib self-host slice (T9, ADR-022 §8 Q1) is met via that same E13-1 closure, and ADR-036 (2026-07-01) names E18-1's own remaining children (M-739...M-742) the non-tag-gating, within-1.0.0 comprehensive-dogfooding track (it gates the separate public-release milestone, not this tag) — so E18-1 staying `status:needs-design` on those children does NOT block M-738. ADR-022 enactment happens AT the M-738 act, not before — the 1.0.0 tag is still NOT cut (G2 / house rule #3), but only because the maintainer act has not run. Epic completes when M-738 fires."
     depends_on: [E13-1, E18-1]
     epic: E17
     doc_refs: [corpus:ADR-023, corpus:ADR-022, corpus:DN-25]
@@ -6667,10 +6675,10 @@ issues:
     title: "M-738 — chore(release): full-language 1.0.0 release act"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:release, priority:P1, status:blocked]
-    landed_basis: "status:blocked (2026-06-23) — the release act is NOT performed: its external gate deps are unmet. E13-1 (self-hosting stdlib) is needs-design (only lib/std/result.myc self-hosts — 1 of 25 modules); E18-1 (full-language readiness) is needs-design; ADR-022 is Accepted (NOT Enacted) with sub-gate rows A2/A3/A4 still open. Per the rel10 kickoff + house rule #3 / G2, the tag is NOT cut and ADR-021/ADR-022 stay Accepted (no Enacted). M-737 (ADR-023 Accepted) IS done; this task unblocks only when E13-1 + E18-1 + E15-1 (AOT — re-gated by ADR-034, 2026-06-30) + every ADR-022 gate row are confirmed closed."
+    landed_basis: "status:blocked (2026-07-01, tag-readiness resync — corrects the 2026-06-23 text below, which had gone stale) — the release act is correctly NOT yet performed, but every ENGINEERING gate row it waited on is now closed; the sole remaining precondition is the maintainer's own tag-cut act (this issue). Corrections to the prior text: E13-1 (T4 stdlib-in-Mycelium) is `status:done` — ADR-035 (2026-07-01, maintainer-ratified) narrows T4's Definition of Done to the DN-66 stable-API freeze + the core-lib self-host slice (M-714...M-718), NOT full RFC-0031 §5 D6 Rust-crate retirement of all 26 mycelium-std-* crates (that continues post-1.0, off the critical path, as M-867); E18-1 stays `status:needs-design` but is NOT a blocker in full — its shared core-lib self-host slice (T9, ADR-022 §8 Q1) is met via the same E13-1 closure, and ADR-036 (2026-07-01, maintainer-ratified) names E18-1's own remaining children (M-739...M-742, the full toolchain/compiler self-host) the project's comprehensive-dogfooding track: real, within-1.0.0, tracked work that gates the project's separate PUBLIC-RELEASE milestone, not this tag; E15-1 (T6 native AOT, re-gated as a hard row by ADR-034) is `status:done` via the E25-1 umbrella epic's M-863 ratification act (2026-07-01) — RFC-0029 -> Enacted, DN-15 -> Resolved. M-737 (ADR-023 Accepted) was already done. ADR-022 stays Accepted (NOT Enacted) — Enactment happens AT this act, not before. This task now unblocks purely on the maintainer performing the tag-cut + ADR-022 Accepted -> Enacted record; no open engineering gate remains (VR-5: a status report on checked, cited closures — DN-66, ADR-034/035/036, the E13-1/E15-1/E25-1 `done` entries — not a fresh gate run)."
     depends_on: [E15-1]
     epic: E17-1
-    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:ADR-034, corpus:DN-25]
+    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:ADR-034, corpus:ADR-035, corpus:ADR-036, corpus:DN-25]
     body: |
       The terminal step: verify that every ADR-022 (full-language 1.0.0 release-readiness
       gate) row is closed, then record the conscientious release decision by moving
@@ -6681,6 +6689,17 @@ issues:
       step. It must not run until E13-1 (stdlib gate), E18-1 (full-language readiness
       gate), and M-737 (ADR-023 Accepted) are all confirmed done (G2 — never-silent).
 
+      STATUS UPDATE (2026-07-01, tag-readiness resync; append-only — the paragraph above is
+      preserved as the original framing): E13-1 is now `status:done` on the ADR-035-narrowed T4
+      bar; E18-1's core-lib self-host slice (shared with T4/T9, ADR-022 §8 Q1) is likewise met,
+      and ADR-036 clarifies that E18-1's OWN remaining children (M-739...M-742) are the
+      non-tag-gating, within-1.0.0 comprehensive-dogfooding track — they gate the project's
+      separate public-release milestone, not this tag act. E15-1 is `status:done` (E25-1/M-863).
+      So the "must not run until E13-1 + E18-1 ... confirmed done" line above is read as: E13-1
+      done (narrowed bar); E18-1's tag-relevant slice done (its full scope is intentionally
+      non-gating per ADR-036, not an open blocker). No engineering gate is open; the remaining
+      precondition is the maintainer's own tag-cut act.
+
       User stories:
       - As a maintainer, I want the 1.0.0 tag to be cut only when every gate row is
         confirmed closed, so that a premature release is impossible by construction.
@@ -6688,7 +6707,9 @@ issues:
         accurately record what changed at 1.0.0, so that I know what I am adopting.
 
       Issues to resolve:
-      - Confirm E13-1 and E18-1 are done before starting this task.
+      - Confirm E13-1 and E18-1 are done before starting this task. RESOLVED (2026-07-01):
+        E13-1 done (ADR-035-narrowed bar); E18-1's tag-gating core-lib slice done (shared with
+        T4) — E18-1's remaining children are the ADR-036 dogfooding track, non-tag-gating.
       - Confirm ADR-022 criteria (forthcoming) are all met row-by-row.
       - Confirm cargo deny check licenses is green (MIT-only; non-skip-graceful).
 
