@@ -8902,3 +8902,82 @@ issues:
       extends RFC-0008 mesh + R8-Q4 adversarial mesh.
       DoD: RFC-0038 §8.8 ratified; controller protocol + blacklist semantics specified; realized atop the
       RFC-0008 mesh model; every trust decision EXPLAIN-able + provenance-tagged (never-silent).
+  - id: E26-1
+    title: "E26-1 (epic) — Networked spore registry: GHCR/OCI dense-map distribution + registry dogfood"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:toolchain, priority:P1, status:in-progress]
+    depends_on: [M-732]
+    epic: E26
+    doc_refs: [corpus:ADR-037, corpus:DN-28, corpus:ADR-013]
+    body: |
+      Give the spore registry a networked home so Mycelium's packaging units (phylum / nodule /
+      spore) are installable without crates.io, hosted in the GitHub Packages container registry
+      (GHCR) — and use that publish path as a live dogfood of the registry design (DN-28) and
+      implementation (mycelium-spore), per the maintainer release strategy (ADR-036). The remote
+      backend distributes the DN-28 dense-map over OCI (each content-object -> one deduped OCI blob;
+      the dense-map DAG -> the OCI config; name@version -> the OCI tag), fixed by ADR-037.
+
+      User stories:
+      - As a phylum author, I want `spore publish --registry ghcr://<owner>` to host my phylum in
+        the GitHub Packages registry, so that users install it by name+version without crates.io.
+      - As a downstream developer, I want `spore resolve <name> <version> --registry ghcr://<owner>`
+        to fetch a hash-verified spore, so that what I install is exactly what was published (G2).
+      - As the maintainer, I want the real example phyla published to GHCR before the repo flips
+        public, so that the registry design + implementation are proven operational on a production
+        registry (the dogfood), not just asserted.
+
+      Issues to resolve:
+      - Whole-spore artifact vs per-object dense-map? RESOLVED (ADR-037): DN-28 dense-map (per-object
+        OCI blobs, deduped) — the point of the dogfood is to exercise the dense-map design.
+      - Wire transport: pure-Rust OCI client vs a driver? RESOLVED (ADR-037): `oras` is the v0 driver
+        behind an `OciTransport` trait; a pure-Rust client is append-only future work.
+
+      Definition of Done:
+      - M-871 done: remote backend (dense-map encode/decode, build/verify/reconstruct, OciTransport +
+        oras driver + in-memory double, publish_remote/resolve_remote) lands never-silent (G2), tags
+        Empirical/Declared; `spore publish/resolve --registry oci://|ghcr://` route by scheme.
+      - Round-trip verified against a local OCI registry AND a live GHCR publish->resolve of the
+        example phyla (the dogfood); ADR-037 -> Enacted on that basis.
+      - just check green; guarantee tags honest (VR-5); property test per bound.
+
+      Children: M-871 (remote spore registry backend — DN-28 dense-map over GHCR/OCI).
+  - id: M-871
+    title: "M-871 -- feat(spore): remote registry backend — DN-28 dense-map over GHCR/OCI (ADR-037)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:in-progress]
+    depends_on: [M-732]
+    epic: E26-1
+    doc_refs:
+      - corpus:ADR-037
+      - corpus:DN-28
+      - corpus:ADR-013
+      - src:crates/mycelium-spore/src/remote.rs
+    body: |
+      Implement the ADR-037 remote/networked backend for the spore registry: a published spore is an
+      OCI 1.1 artifact in GHCR (ghcr.io/<owner>/<phylum>:<version>), decomposed into the DN-28
+      dense-map — each source object is its own BLAKE3-addressed OCI blob (deduped by digest across
+      versions), the dense-map DAG is the OCI config blob, name@version is the OCI tag. `oras` is the
+      v0 wire-transport driver behind an `OciTransport` trait (pure-Rust client is future work).
+
+      As a phylum author, I want to publish/resolve spores against GHCR by name+version, so that
+      distribution needs no crates.io and every fetch is hash-verified end-to-end.
+
+      Fetch-and-verify is mandatory + never-silent (G2): on resolve every object's bytes must BLAKE3
+      to its declared content address AND the reconstructed DAG must recompute (via the single
+      canonical `mycelium_spore::content_address`) to the recorded spore_id; a missing object, a
+      byte-mismatch, an extra layer, or a spore_id mismatch is an explicit error. A SemVer range stays
+      Unsupported (ADR-018 deferred), never mis-resolved. No new runtime dependency (KC-3): the
+      dense-map is a hand-rolled injective length-prefixed encoding with a strict parser; the
+      transport shells to `oras` (absent -> explicit ToolMissing error, never a silent skip).
+
+      Definition of Done:
+      - `crates/mycelium-spore/src/remote.rs`: DenseMap encode/decode (injective, strict, property-
+        tested + adversarial), build_dense_map, verify_and_reconstruct, OciTransport trait + oras
+        driver + in-memory test double, parse_registry (scheme routing), publish_remote/resolve_remote,
+        RemoteError (exit-coded, never-silent).
+      - `spore publish/resolve --registry oci://|ghcr://` route to the remote backend by explicit
+        scheme; a bare path keeps the M-732 local store. resolve -o <dir> materializes the verified tree.
+      - Tests green: encode/decode round-trip + adversarial proptest; verify/tamper/missing cases;
+        publish->resolve via the in-memory double (exact + latest); range -> Unsupported. A live-oras
+        integration test is #[ignore]d (orchestrator runs the local + GHCR round-trip).
+      - cargo fmt / clippy -D warnings / test -p mycelium-spore green; tags Empirical/Declared (VR-5).
