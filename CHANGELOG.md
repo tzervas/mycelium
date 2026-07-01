@@ -8,6 +8,24 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: M-872 — remote registry name@version immutability + dogfooding effort/usage assessment)
+
+- **Remote spore publish now enforces `name@version` immutability (M-872).** `publish_remote` gained a
+  best-effort pre-check (list-tags → pull → compare `spore_id`): republishing a **different** spore under
+  an existing `name@version` is refused as `RemoteError::Conflict` (exit 6), an identical re-publish is
+  idempotent, and a first publish proceeds. Parity with the local store's `Conflict` semantics
+  (ADR-003/M-732). Grounded, never-silent `oras` error classification (verified against `registry:2`
+  **and** GHCR): a missing repo/tag (`name unknown`/`not found`) maps to `NotFound` so a first publish
+  proceeds, while an auth failure stays `Transport` — a missing credential is never read as "nothing
+  published" (G2). **Honest ceiling (Declared, VR-5):** OCI tags are server-side mutable, so this is a
+  *client-side* guard, not a proven server invariant. 59 spore tests (2 new) + live-verified.
+- **`docs/planning/dogfooding-effort-and-usage-assessment.md`** — a `Declared` forecast sizing the
+  comprehensive-dogfooding track (replace all Rust with Mycelium): footprint (51 crates, 126.5k non-test
+  LOC, 287 modules), a productivity baseline from a measured agent sample, a tiered per-crate token model
+  (~45M-token floor for the LOC port; realistic all-in ~70–120M once the language-capability build +
+  differential validation are included), and cheapest-capability-first sequencing. States plainly what it
+  cannot measure (the weekly usage meter). Linked from the self-hosting port ledger.
+
 ### Added (2026-07-01: ADR-037 / M-871 — remote spore registry: GHCR/OCI dense-map distribution + live dogfood)
 
 - **`crates/mycelium-spore` gains a remote/networked backend** (`mycelium_spore::remote`) siblings the

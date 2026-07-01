@@ -432,6 +432,73 @@ fn publish_then_resolve_exact_version_round_trips_via_mem_transport() {
     assert_eq!(resolved.reconstructed.sources.len(), 1);
 }
 
+// ─── immutability (M-872): a name@version is immutable; idempotent re-publish is fine ────────────
+
+#[test]
+fn publish_remote_refuses_a_conflicting_republish_under_an_existing_version() {
+    // Two DIFFERENT spores (different source bytes → different spore_id), same name@version.
+    let (spore1, dir1) = demo_spore(
+        "immut-conflict-1",
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
+    );
+    let (spore2, dir2) = demo_spore(
+        "immut-conflict-2",
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn b() -> Binary{8} = 0b1\n",
+        )],
+    );
+    assert_ne!(
+        spore1.id, spore2.id,
+        "the two demo spores must differ in identity"
+    );
+    let target = RegistryTarget::Oci {
+        base: "example.test/owner".to_owned(),
+        plain_http: true,
+    };
+    let transport = MemTransport::new();
+    publish_remote(&target, &spore1, &dir1, "geo", "1.0.0", &transport).unwrap();
+
+    // A DIFFERENT spore under the SAME name@version is refused as a Conflict (immutability, G2) —
+    // never a silent overwrite.
+    let err = publish_remote(&target, &spore2, &dir2, "geo", "1.0.0", &transport).unwrap_err();
+    assert!(
+        matches!(err, RemoteError::Conflict(_)),
+        "expected Conflict, got {err:?}"
+    );
+    assert_eq!(err.exit_code(), 6);
+
+    // The immutability refusal must not have overwritten the first publish (it still resolves to
+    // spore1, unchanged).
+    let resolved = resolve_remote(&target, "geo", "1.0.0", &transport).unwrap();
+    assert_eq!(resolved.reconstructed.spore_id, spore1.id);
+}
+
+#[test]
+fn publish_remote_allows_an_idempotent_republish_of_the_same_spore() {
+    let (spore, dir) = demo_spore(
+        "immut-idempotent",
+        &[(
+            "shapes.myc",
+            "// nodule: geo.shapes\nnodule geo.shapes\nfn a() -> Binary{8} = 0b0\n",
+        )],
+    );
+    let target = RegistryTarget::Oci {
+        base: "example.test/owner".to_owned(),
+        plain_http: true,
+    };
+    let transport = MemTransport::new();
+    let first = publish_remote(&target, &spore, &dir, "geo", "1.0.0", &transport).unwrap();
+    // Re-publishing the IDENTICAL spore under the same name@version is idempotent (same spore_id →
+    // not a conflict); the receipt is stable.
+    let second = publish_remote(&target, &spore, &dir, "geo", "1.0.0", &transport).unwrap();
+    assert_eq!(first.spore_id, second.spore_id);
+    assert_eq!(first.reference, second.reference);
+}
+
 #[test]
 fn resolve_latest_picks_the_highest_published_version() {
     let (spore1, dir1) = demo_spore(
