@@ -2315,9 +2315,17 @@ pub fn emit_llvm_ir_many_with_swap_mode(
     // the scatter below can restore `nodes`' own order. `Scheduler::run_indexed` returns outputs in
     // spawn order (RT2), so `computed` is in content-key order — the scatter, not the return order,
     // is what pins the output to the original index.
+    //
+    // M-864: `run_indexed` now requires `'static` job closures (the persistent pool's worker threads
+    // outlive this call), so each job clones its own `Node` up front rather than borrowing
+    // `&nodes[i]` — the content-key sort above already ran over the ORIGINAL `nodes`, so cloning
+    // afterward changes nothing about which node ends up in which slot, only how it's captured.
     let jobs: Vec<_> = order
         .iter()
-        .map(|&i| move || (i, emit_llvm_ir_with_swap_mode(&nodes[i], swap_mode)))
+        .map(|&i| {
+            let node = nodes[i].clone();
+            move || (i, emit_llvm_ir_with_swap_mode(&node, swap_mode))
+        })
         .collect();
     let computed: Vec<(usize, Result<String, AotError>)> =
         Scheduler::new().run_indexed(jobs, None, None);
