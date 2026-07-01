@@ -4,7 +4,7 @@
 |---|---|
 | **Status** | **Declared** planning estimate (2026-07-01). A model built from **one** measured productivity sample + LOC heuristics — **not** `Empirical` (it is not a measured distribution) and **not** `Proven`. Wide error bars; assumptions are stated so they can be adjusted. |
 | **Purpose** | Size the comprehensive-dogfooding track (ADR-036): reimplementing **all** of Mycelium *in* Mycelium, beside the Rust reference, until the Rust artifacts are superseded. Answers "how much usage (tokens) is likely required?" and "how much per nodule/module?" |
-| **Feeds** | ADR-036 (dogfooding/public-release strategy), `docs/planning/self-hosting-port-ledger.md`, DN-66 (stdlib self-host readiness), E18-1 (self-hosting capstone) |
+| **Feeds** | ADR-036 (dogfooding/public-release strategy), `docs/planning/self-hosting-port-ledger.md`, DN-66 (stdlib self-host readiness), E18-1 (self-hosting capstone), **DN-34 (Rust→Mycelium transpiler strategy — the intended bulk mechanism, §5a; Draft, not implemented)**, DN-26 (self-hosting bootstrap plan) |
 
 > **Transparency (VR-5).** This is a *forecast*, tagged `Declared`. Its central figure rests on a
 > **single** measured code-production sample (this session's M-871 remote-registry agent) extrapolated
@@ -105,6 +105,49 @@ there are **287**.
 The full 51-crate table is reproducible from `just`/the workspace (`find crates -name '*.rs'`); the tail
 is dominated by the 26 stdlib crates at 0.03M–0.6M each.
 
+## 5a. Two rewrite mechanisms — this estimate is the *agent-port* (upper-bound) model
+
+**The §4 figure prices per-module *agent* porting. That is the pessimistic mechanism.** The project's
+intended bulk-rewrite mechanism is a **Rust→Mycelium transpiler** (**DN-34**, Draft/advisory — *not
+implemented*, no code; seeded from the maintainer's `py2rust` + `py-rust-bridge` projects: AST-walk
+transpilation + a never-silent "flag, don't guess" compatibility analyzer). It reshapes the cost curve:
+
+| Mechanism | Cost shape | Where it applies |
+|---|---|---|
+| **Agent port (this doc's §4)** | ~LOC × rate, paid **per module, every time** | the fallback / refinement mechanism; the only option where no transpiler exists |
+| **Transpiler (DN-34)** | a **bounded one-time build** of the transpiler, then **cheap deterministic transpile** + a smaller agent **refinement** pass per crate | the intended bulk mechanism once the Mycelium surface is a viable *target* |
+
+Under the transpiler path the marginal cost of the mechanical bulk collapses (transpilation is a
+compiler run, not an agent run); what remains is (a) the one-time transpiler build (itself an agent
+effort, but sized like *one* toolchain crate — order ~1–5M tokens, `Declared`), (b) a **refinement +
+differential-validation** pass per crate (a fraction of the §4 per-crate figure — call it 0.2–0.5×), and
+(c) the same **language-capability gate** (§6), which the transpiler does **not** remove. So a
+transpiler-accelerated all-in is plausibly **~0.3–0.5× the §4 LOC-port line** for the mechanical portion
+(≈ **15–25M** instead of ~45M), **plus** the unchanged capability build. **Caveats (VR-5):** DN-34 is
+Draft and gated on surface maturity; a transpiler's output still needs human/agent refinement to be
+idiomatic + to clear the never-silent/guarantee-tag bar; and the transpiler cannot emit constructs the
+language can't yet express — so it *accelerates* the port, it does not *bypass* §6. This row is
+`Declared` and coarser than §4 (no measured transpiler sample exists).
+
+**Cost to stand up + run the transpiler (Declared, order-of-magnitude):**
+
+| Step | Estimate | Notes |
+|---|---|---|
+| **Build the transpiler** | **~2–5M tokens** | Sized as *one large toolchain crate* (~5–15k LOC: a Rust-AST→Mycelium construct mapper + never-silent "flag, don't guess" analyzer + FFI-bridge glue), **seeded** from the maintainer's `py2rust`/`py-rust-bridge` (not greenfield). Bounded, self-contained. |
+| **Execute (transpile) the codebase** | **~0 agent tokens** | A deterministic compiler run per crate — near-zero *agent* cost once built. |
+| **Refine + differential-validate output** | **~15–25M tokens** | 0.2–0.5× the §4 per-crate figure across the workspace — the real remaining work after transpilation. |
+| **Language-capability gate (§6)** | **un-estimable (design-bound)** | Unchanged; the transpiler cannot emit what the surface can't express. |
+| **Recommended first spike (PoC)** | **~1–3M tokens** | Map a handful of Rust constructs → Mycelium, transpile **one** small Tier-A stdlib crate, refine + differential-validate it end-to-end. De-risks DN-34 and yields the **first `Empirical` rate** to replace every `Declared` figure here. |
+
+**"Do we have enough usage to build + execute it?"** — the honest split: the **build** (~2–5M) and a
+**PoC spike** (~1–3M) are small, bounded increments that very likely fit a normal usage window; the
+**full execute + refine** (~15–25M, atop the capability gate) is a **multi-session, multi-week** effort,
+not a single budget window. But I **cannot read the weekly meter** from a session (Posture note) — check
+`/usage` or the Console for tokens remaining and divide: if you have low-single-digit millions this week,
+the **PoC spike is the right-sized, highest-value move** (it also converts these estimates from
+`Declared` to `Empirical`); the full sweep should be planned across many windows and is explicitly a
+non-tag-gating, within-1.0.0 track (ADR-036), so it need never be rushed into one budget period.
+
 ## 6. The dominant uncertainty (read this before the numbers)
 
 **§4's estimate assumes the language can already express each crate. It largely cannot yet** — and that
@@ -132,10 +175,12 @@ I cannot read the weekly meter from here (see the Posture note). To convert:
 
 - Read **tokens remaining this week** from `/usage` (or the Anthropic Console).
 - This session produced **one** ~2,500-net-line feature (the registry + M-872) at a plausible ~1M+
-  tokens all-in. At that throughput, the **~45M-token floor** is on the order of **dozens of
-  feature-sized sessions**; the realistic all-in (~70–120M) is **many months** of sustained
-  agent-driven work — consistent with the ~23-day, 1,274-commit velocity that produced the Rust
-  reference in the first place, i.e. **dogfooding is comparable in size to building the reference again.**
+  tokens all-in. At that throughput, the **agent-port ~45M-token floor** is on the order of **dozens of
+  feature-sized sessions**; the realistic agent-port all-in (~70–120M) is **many months** of sustained
+  agent-driven work — comparable in size to building the Rust reference again (the ~23-day, 1,274-commit
+  velocity). **The transpiler path (§5a) is the lever that shrinks this** — plausibly to a ~15–25M
+  mechanical portion + the capability build — which is why DN-34 names it the intended bulk mechanism.
+  Neither path removes the language-capability gate (§6).
 - Because dogfooding is a **within-1.0.0, non-tag-gating** track (ADR-036), this cost does **not** block
   the v1.0.0 tag or the artifact publish — it paces the road to the *public* release.
 
