@@ -134,8 +134,47 @@ for the R2 schema/signing/germination obligations).
    lists; richer selectors (globs, exclusions) are deferred.
 3. **Signing** — out of v0 (an artifact-metadata component (4) obligation, deferred with the R2 schema).
 
+## 10. Remote backend — GHCR/OCI dense-map (ADR-037, M-871)
+
+The M-732 local file store gains a **networked sibling** so spores are installable without crates.io,
+hosted in the **GitHub Packages container registry (GHCR)**. Fixed by **ADR-037** (Enacted) and
+implemented in `mycelium-spore::remote`.
+
+- **Route by explicit scheme (never guessed, G2).** `spore publish`/`resolve --registry <R>`: a bare
+  path `<R>` keeps the local store; `oci://<host>[/path]` or `ghcr://<owner>` selects the remote OCI
+  backend. `ghcr://X` → `ghcr.io/X`; `oci://localhost…`/`127.*` auto-selects plain-HTTP; any other
+  `<scheme>://` is an explicit `InvalidInput`.
+- **Mapping (ADR-037 §2).** A spore is one OCI 1.1 artifact (`artifactType
+  application/vnd.mycelium.spore.v1`) at `<base>/<name>:<version>`: each **source object** → one OCI blob
+  (`application/vnd.mycelium.spore.object.v1`, title `<blake3-hex>.myco`), **deduped by digest** across
+  versions; the **dense-map** (`{spore_id, kind, surface, objects[{rel_path, content_hash}], deps}`) → the
+  OCI **config** blob (`application/vnd.mycelium.densemap.v1`, a hand-rolled injective length-prefixed
+  encoding with a strict never-silent parser — no new dependency, KC-3); `name@version` → the OCI **tag**.
+- **Fetch-and-verify on resolve (DN-28 §3; G2).** Every fetched object's bytes must BLAKE3 to its declared
+  `content_hash`, and the reconstructed source set must recompute — via the single canonical
+  `content_address` (never re-implemented) — to the recorded `spore_id`. A missing object, an
+  extra/undescribed blob, a byte mismatch, or a `spore_id` mismatch is an explicit `Integrity` error.
+  `resolve -o <dir>` materializes the verified tree + the `mycelium-densemap`.
+- **Transport.** `oras` is the v0 wire driver behind the `OciTransport` trait (a pure-Rust OCI client is
+  append-only future work); `oras` absent is an explicit `ToolMissing` error, never a silent skip.
+- **Version selection.** Exact version or `latest`/`*` (highest tag by the shared version-sort key); a
+  SemVer range stays `Unsupported` (ADR-018 deferred), never mis-resolved.
+- **Verified end-to-end (Empirical).** Round-trips green against a local `registry:2` (`just
+  spore-oci-selftest`) and the **live GitHub Packages registry** — the example phyla `hello` + `std`
+  published to `ghcr.io/tzervas/{hello,std}` and resolved back with byte-identical, hash-verified
+  `spore_id`s (`just spore-ghcr-dogfood <owner>`; the release-strategy dogfood, ADR-036).
+- **Disclosed v0 gap (never-silent).** Remote publish does **not** yet enforce `name@version`
+  immutability the way the local store does (OCI tags are mutable; a best-effort client-side pre-check is
+  tracked as **M-872**). Stated here + in ADR-037, not silently dropped.
+
 ## Meta — changelog
 
+- **2026-07-01 — Remote backend added (§10; ADR-037 Enacted, M-871).** A GHCR/OCI dense-map remote
+  backend (`mycelium-spore::remote`) sibling to the M-732 local store: publish/resolve route by
+  `--registry` scheme, spores distribute as OCI artifacts (per-object deduped blobs + dense-map config +
+  `name@version` tag), resolve is fetch-and-verify (BLAKE3 per object + `spore_id` recompute). Verified
+  against a local `registry:2` and the live GitHub Packages registry (the ADR-036 dogfood). Disclosed v0
+  gap: remote immutability not yet enforced (M-872). No new dependency (KC-3). Append-only.
 - **2026-06-16 — Proposed (M-368 design).** The spore build & publish contract, design-first. Specifies
   building the ADR-013 content-addressed deployable unit from a `mycelium-proj.toml` (the first consumer of
   M-359's accepted-but-uninterpreted `[surface]`/`[dependencies]`/`[spore]` tables): the build pipeline,

@@ -248,6 +248,18 @@ docs-container-build:
 docs-container-run:
     @bash scripts/docs-container.sh run
 
+# --- spore registry: GHCR/OCI dense-map dogfood (ADR-037 / M-871) ---
+# Local OCI round-trip self-test: stand up a throwaway registry:2 (podman), publish+resolve the
+# example phyla against oci://localhost:5000, verify the hashes, tear down. Needs oras + podman.
+# Dependency-free of any live account — the CI-shaped proof of the remote backend.
+spore-oci-selftest:
+    @bash scripts/dist/spore-oci-selftest.sh
+# Live dogfood: publish the example phyla to the GitHub Packages registry (GHCR) and resolve them
+# back, verifying end-to-end. Needs oras + a token with write:packages,read:packages in GH_TOKEN or
+# CR_PAT. Usage: `GH_TOKEN=… just spore-ghcr-dogfood <owner>` (owner defaults to the repo owner).
+spore-ghcr-dogfood owner="tzervas":
+    @bash scripts/dist/spore-ghcr-dogfood.sh {{owner}}
+
 # --- pre-commit (optional, easy DX) ---
 # Install the git hooks so `just check`-equivalent runs on every commit.
 hooks:

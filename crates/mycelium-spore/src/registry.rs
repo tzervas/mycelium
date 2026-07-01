@@ -355,7 +355,10 @@ fn published_versions(root: &Path, name: &str) -> Result<Vec<String>, RegistryEr
 /// fallback for non-numeric parts. Honest scope (`Declared`): this orders simple `MAJOR.MINOR.PATCH`
 /// labels for `latest`; it is **not** a full SemVer precedence implementation (pre-release/build
 /// metadata are not interpreted) — that is the deferred ADR-018 work.
-fn version_key(v: &str) -> Vec<(u64, String)> {
+///
+/// `pub(crate)` so [`crate::remote::resolve_remote`] reuses the same `latest`-selection ordering
+/// instead of re-deriving it (DRY; ADR-037 §2 explicitly asks for reuse here).
+pub(crate) fn version_key(v: &str) -> Vec<(u64, String)> {
     v.split('.')
         .map(|part| {
             let num = part
