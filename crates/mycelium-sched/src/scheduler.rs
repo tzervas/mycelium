@@ -1,18 +1,23 @@
-//! `Scheduler` — a real **OS-thread** work-stealing scheduler (M-709 / M-861 / RFC-0008 RT1·RT2·RT3
-//! / E12-1 / E25-1).
+//! `Scheduler` — a real **OS-thread** work-stealing scheduler (M-709 / M-861 / M-864 / RFC-0008
+//! RT1·RT2·RT3 / E12-1 / E25-1).
 //!
 //! The v0 R1 surface ([`crate::colony`]) ran tasks cooperatively on the calling thread. M-709 grew
-//! that into a fixed pool of OS worker threads over a single shared FIFO queue. M-861 grows it
+//! that into a fixed pool of OS worker threads over a single shared FIFO queue. M-861 grew it
 //! again: **per-worker deques with steal-on-empty** (LIFO-own / FIFO-steal), which cuts contention
-//! on the single shared queue while preserving every guarantee M-709 established.
+//! on the single shared queue while preserving every guarantee M-709 established. **M-864** replaces
+//! the per-call `std::thread::scope` (fresh OS threads every call) with dispatch onto the
+//! process-wide **persistent** [`crate::pool`] — see that module's docs for the help-stealing design
+//! that makes *nested* `run_indexed` submission safe on a **fixed**-size pool.
 //!
 //! # Honesty (VR-5)
 //!
-//! - **RT2 sequentialization differential — `Empirical`, unchanged by stealing.** RT1 (tasks share
-//!   no mutable state) makes the observable result order-independent — the differential
-//!   ("parallel run ≡ spawn-order sequential reference") asserts *result*-equality, never
-//!   *scheduling*-equality, so work-stealing (which only reorders *execution*, never the RT1/RT2
-//!   observable) leaves the differential's claim unchanged. It is *checked* by a property test
+//! - **RT2 sequentialization differential — `Empirical`, unchanged by stealing or by M-864's pool
+//!   redesign.** RT1 (tasks share no mutable state) makes the observable result order-independent —
+//!   the differential ("parallel run ≡ spawn-order sequential reference") asserts *result*-equality,
+//!   never *scheduling*-equality, so work-stealing (which only reorders *execution*, never the
+//!   RT1/RT2 observable) leaves the differential's claim unchanged, and neither does *how many OS
+//!   threads* execute that reordered work (M-864: persistent pool vs. per-call fresh threads is an
+//!   execution-substrate change, not an observable one). It is *checked* by a property test
 //!   ([`tests`]) run under many randomized worker/steal configurations, not assumed — but it is not
 //!   `Proven` (no mechanized theorem), so it stays `Empirical`.
 //! - **RT3 — stealing is kept semantics-free.** The victim-selection policy
@@ -25,24 +30,40 @@
 //!   default is preserved regardless of which worker executed which job or in what order steals
 //!   occurred.
 //! - **Backpressure bound — `Exact`.** The **total** pending-job count across every per-worker
-//!   deque holds **at most** `capacity` pending jobs *by construction*: a job is enqueued only
+//!   deque (this batch's own lanes — M-864 keeps this bound per-call, unaffected by the pool being
+//!   shared) holds **at most** `capacity` pending jobs *by construction*: a job is enqueued only
 //!   while `total < capacity`, under one shared lock guarding all deques together (so "total ≤
 //!   capacity" is a single structural invariant, not a race between N independently-locked
 //!   counters). The bound is asserted by a mutant-witness test.
 //! - **Liveness (every submitted job runs exactly once) — `Empirical`.** Property-tested over
 //!   random job sets and random worker/steal configurations; not `Proven`.
+//! - **Nested-submission deadlock-freedom (M-864) — `Empirical`.** [`crate::pool::Pool::help_while`]
+//!   carries a structural argument (module docs) that a **fixed**-size pool never deadlocks under
+//!   arbitrarily deep nested `run_indexed` submission; checked by deep-chain and wide-fan-out stress
+//!   tests under a wall-clock timeout ([`tests`]), not mechanically proven — `Empirical`, not
+//!   `Proven` (VR-5).
 //!
-//! The crate stays `#![forbid(unsafe_code)]`: the pool uses [`std::thread::scope`] (so worker
-//! threads may borrow the jobs without a `'static` bound) and one `Mutex`/`Condvar` guarding all
-//! per-worker `VecDeque`s together — no `unsafe`, no `rayon`/`crossbeam` (a Chase-Lev lock-free
-//! deque needs `unsafe` or an external crate; both are out of scope here, ADR/DN ratified: zero new
+//! # The `'static` contract (M-864 — ratified: `docs/notes/DN-67-Persistent-Work-Stealing-Pool.md`)
+//!
+//! [`Scheduler::run_indexed`] now requires `F: 'static` and `T: 'static` (previously only `F: Send`
+//! and `T: Send`, borrowing freely within the `std::thread::scope` call). A **persistent** pool's
+//! worker threads outlive any single `run_indexed` call, so a job closure can no longer safely
+//! borrow data from the calling stack frame the way `thread::scope`'s scoped threads could — it must
+//! own (or `Arc`-share) everything it touches. Every current caller already passes owned data or was
+//! adjusted to (M-860's per-node `Node::clone`, M-862's `Arc`-shared fuel counter and cloned
+//! `Interpreter`); see DN-67 for the full rationale and the caller-by-caller audit.
+//!
+//! The crate stays `#![forbid(unsafe_code)]`: [`crate::pool`] is built from `Arc`/`Mutex`/`Condvar`/
+//! `VecDeque`/`thread::spawn` — no `unsafe`, no `rayon`/`crossbeam` (a Chase-Lev lock-free deque
+//! needs `unsafe` or an external crate; both are out of scope here, ADR/DN ratified: zero new
 //! dependencies).
 
 use std::collections::VecDeque;
-use std::sync::{Condvar, Mutex};
-use std::thread;
+use std::sync::{Arc, Condvar, Mutex};
 
 use mycelium_core::GuaranteeStrength;
+
+use crate::pool;
 
 /// Guarantee strength for the scheduler's RT2 sequentialization differential.
 ///
@@ -206,7 +227,7 @@ impl Scheduler {
     /// Guarantee: **Exact** (construction is deterministic given the probed parallelism).
     #[must_use]
     pub fn new() -> Self {
-        let workers = thread::available_parallelism().map_or(1, std::num::NonZeroUsize::get);
+        let workers = std::thread::available_parallelism().map_or(1, std::num::NonZeroUsize::get);
         Scheduler {
             workers,
             capacity: workers.saturating_mul(2),
@@ -268,34 +289,51 @@ impl Scheduler {
         self.steal_policy
     }
 
-    /// Run `jobs` across the OS-thread pool and return their outputs **in spawn order** (so the
-    /// result vector is directly comparable to the sequential reference — the RT2 differential).
+    /// Run `jobs` across the persistent, process-wide work-stealing pool ([`crate::pool`], M-864)
+    /// and return their outputs **in spawn order** (so the result vector is directly comparable to
+    /// the sequential reference — the RT2 differential).
     ///
-    /// Dispatch: the feeder distributes jobs round-robin across `workers` per-worker deques. Each
-    /// worker pops its **own** deque LIFO (`pop_back` — recency locality) and, once empty, consults
-    /// [`StealPolicy::select_victim`] to steal FIFO (`pop_front`) from another worker's deque.
-    /// Completion order and which worker ran which job are **never observable** through this API
-    /// (RT3-neutral: only the returned, spawn-order-indexed result vector is visible) — so RT2's
-    /// deterministic-result default holds regardless of the steal schedule. Liveness (every job
-    /// runs exactly once) is `Empirical`.
+    /// Dispatch: this batch's own feeder distributes jobs round-robin across `workers` **lanes**
+    /// (per-batch deques — unchanged from M-861). Each lane's loop pops its **own** deque LIFO
+    /// (`pop_back` — recency locality) and, once empty, consults [`StealPolicy::select_victim`] to
+    /// steal FIFO (`pop_front`) from another lane's deque. Completion order and which physical thread
+    /// ran which job are **never observable** through this API (RT3-neutral: only the returned,
+    /// spawn-order-indexed result vector is visible) — so RT2's deterministic-result default holds
+    /// regardless of the steal schedule, and regardless of M-864's dispatch substrate. Liveness
+    /// (every job runs exactly once) is `Empirical`.
     ///
-    /// The **total** pending-job count across every per-worker deque is bounded at
-    /// [`capacity`](Scheduler::capacity): the feeder enqueues a job only while the total has room,
-    /// blocking otherwise — demand-signalled backpressure, never an unbounded silent buffer (G2 /
-    /// RFC-0008 §4.3).
+    /// **M-864 — persistent pool, help-stealing join.** Each of the `workers` lane-loops is
+    /// submitted as one task to the shared [`crate::pool`] rather than spawned as a fresh OS thread;
+    /// the calling thread runs the feeder loop below and then **helps** the pool drain (any pending
+    /// task, from this batch or — under nested submission — any other) until every lane of this
+    /// batch has finished ([`crate::pool::Pool::help_while`]) — never a bare block. This is what
+    /// makes a **nested** `run_indexed` call (one submitted from inside a job running on a pool
+    /// worker) safe on a **fixed**-size pool: see `pool`'s module docs for the deadlock-freedom
+    /// argument.
+    ///
+    /// The **total** pending-job count across every lane's deque (this call's own, independent of
+    /// any other concurrently in-flight batch) is bounded at [`capacity`](Scheduler::capacity): the
+    /// feeder enqueues a job only while the total has room, blocking (while still available to be
+    /// helped by other threads) otherwise — demand-signalled backpressure, never an unbounded silent
+    /// buffer (G2 / RFC-0008 §4.3).
     ///
     /// `peak_depth` (when `Some`) records the **maximum** observed *total* pending depth (summed
-    /// across every deque), so a test can confirm the bound is real (it must be `≤ capacity`).
+    /// across every lane), so a test can confirm the bound is real (it must be `≤ capacity`).
     ///
     /// `steal_count` (when `Some`) records how many jobs were actually completed via a steal
-    /// (`pop_front` from another worker's deque) rather than from the popping worker's own deque —
-    /// a mutant-witness: a scheduler that silently regressed to single-queue dispatch (never
+    /// (`pop_front` from another lane's deque) rather than from the popping lane's own deque — a
+    /// mutant-witness: a scheduler that silently regressed to single-queue dispatch (never
     /// stealing) would report `0` here under a steal-forcing job shape, and a test asserts it is
     /// nonzero (see `tests::scheduler`).
     ///
+    /// # The `'static` contract (M-864)
+    /// `F`/`T` must be `'static`: the shared pool's worker threads outlive this call, so a job can no
+    /// longer borrow from the caller's stack frame the way the pre-M-864 `std::thread::scope`
+    /// allowed. See the module docs and `docs/notes/DN-67-Persistent-Work-Stealing-Pool.md`.
+    ///
     /// Guarantee: outputs equal the sequential reference — **`Empirical`** (RT2; RT1 ⇒
-    /// schedule-independence, unaffected by stealing). Pure tasks only (the [`crate::task`] purity
-    /// contract is `Declared`).
+    /// schedule-independence, unaffected by stealing or by the M-864 pool redesign). Pure tasks only
+    /// (the [`crate::task`] purity contract is `Declared`).
     #[must_use]
     pub fn run_indexed<T, F>(
         &self,
@@ -304,21 +342,22 @@ impl Scheduler {
         steal_count: Option<&mut usize>,
     ) -> Vec<T>
     where
-        F: FnOnce() -> T + Send,
-        T: Send,
+        F: FnOnce() -> T + Send + 'static,
+        T: Send + 'static,
     {
         let n = jobs.len();
         if n == 0 {
             return Vec::new();
         }
 
-        let workers = self.workers.min(n); // no point spawning more workers than jobs
+        let workers = self.workers.min(n); // no point creating more lanes than jobs
+        let pool = pool::get();
 
-        // One lock guards every per-worker deque together, so "total pending ≤ capacity" is a
-        // single structural invariant (never a race between N independently-locked counters).
-        // `deques[i]` is worker `i`'s own ready deque: LIFO pop from the back (own work), FIFO pop
-        // from the front when another worker steals from it. `closed` signals the feeder is done
-        // so an idle, empty worker can exit instead of waiting forever (never a silent hang).
+        // One lock guards every lane's deque together, so "total pending ≤ capacity" is a single
+        // structural invariant (never a race between N independently-locked counters). `deques[i]`
+        // is lane `i`'s own ready deque: LIFO pop from the back (own work), FIFO pop from the front
+        // when another lane steals from it. `closed` signals the feeder is done so an idle, empty
+        // lane can exit instead of waiting forever (never a silent hang).
         struct Deques<F> {
             deques: Vec<VecDeque<(usize, F)>>,
             total: usize,
@@ -326,37 +365,40 @@ impl Scheduler {
             peak: usize,
             steals: usize,
         }
-        let state = Mutex::new(Deques::<F> {
+        let state = Arc::new(Mutex::new(Deques::<F> {
             deques: (0..workers).map(|_| VecDeque::new()).collect(),
             total: 0,
             closed: false,
             peak: 0,
             steals: 0,
-        });
-        let not_empty = Condvar::new(); // a worker waits here for work anywhere (or close)
-        let not_full = Condvar::new(); // the feeder waits here for total room (backpressure)
+        }));
+        let not_empty = Arc::new(Condvar::new()); // a lane waits here for work anywhere (or close)
+        let not_full = Arc::new(Condvar::new()); // the feeder waits here for total room (backpressure)
 
         // Results, pre-sized and written by spawn index → the output stays in spawn order (RT2).
-        let results = Mutex::new(Vec::<Option<T>>::with_capacity(n));
-        {
-            let mut r = results.lock().expect("results mutex poisoned");
-            r.resize_with(n, || None);
-        }
+        let results = Arc::new(Mutex::new((0..n).map(|_| None::<T>).collect::<Vec<_>>()));
+
+        // The per-batch "how many lanes are still running" countdown — the nested-join wait
+        // condition `help_while` polls. Reaching 0 means every lane has drained its own deque, found
+        // nothing left to steal, and observed `closed` — i.e. this whole batch is done.
+        let remaining = Arc::new((Mutex::new(workers), Condvar::new()));
 
         let capacity = self.capacity;
         let policy = self.steal_policy;
 
-        thread::scope(|scope| {
-            for me in 0..workers {
-                let state = &state;
-                let results = &results;
-                let not_full = &not_full;
-                let not_empty = &not_empty;
-                scope.spawn(move || loop {
+        for me in 0..workers {
+            let state = Arc::clone(&state);
+            let results = Arc::clone(&results);
+            let not_full = Arc::clone(&not_full);
+            let not_empty = Arc::clone(&not_empty);
+            let remaining = Arc::clone(&remaining);
+            let pool_for_signal = Arc::clone(&pool);
+            pool.submit(Box::new(move || {
+                loop {
                     // Pull the next job — own deque first (LIFO), then steal (FIFO) — or exit once
                     // the queue is closed + every deque is drained.
                     let item = {
-                        let mut s = state.lock().expect("scheduler mutex poisoned");
+                        let mut s = state.lock().expect("mycelium-sched: scheduler mutex poisoned");
                         loop {
                             if let Some(item) = s.deques[me].pop_back() {
                                 s.total -= 1;
@@ -381,46 +423,82 @@ impl Scheduler {
                             if s.closed {
                                 break None;
                             }
-                            s = not_empty.wait(s).expect("scheduler mutex poisoned");
+                            s = not_empty.wait(s).expect("mycelium-sched: scheduler mutex poisoned");
                         }
                     };
                     match item {
                         Some((idx, job)) => {
                             let out = job();
-                            let mut r = results.lock().expect("results mutex poisoned");
+                            let mut r = results.lock().expect("mycelium-sched: results mutex poisoned");
                             r[idx] = Some(out);
                         }
                         None => break,
                     }
-                });
-            }
+                }
+                // This lane is done. Decrement the batch's countdown; the last lane out wakes
+                // anyone waiting on `remaining`'s own condvar, and (via `notify_all`) any helper
+                // parked in `Pool::help_while` with nothing to steal right now.
+                let (lock, cv) = &*remaining;
+                let mut r = lock.lock().expect("mycelium-sched: remaining-lanes mutex poisoned");
+                *r -= 1;
+                if *r == 0 {
+                    cv.notify_all();
+                }
+                drop(r);
+                pool_for_signal.notify_all();
+            }));
+        }
 
-            // Feeder (this thread): enqueue every job in order, round-robin across the per-worker
-            // deques, blocking while the *total* is at capacity — demand-signalled backpressure
-            // (the bound is enforced under the lock; G2).
-            for (idx, job) in jobs.into_iter().enumerate() {
-                let mut s = state.lock().expect("scheduler mutex poisoned");
-                while s.total >= capacity {
-                    s = not_full.wait(s).expect("scheduler mutex poisoned");
-                }
-                let target = idx % workers;
-                s.deques[target].push_back((idx, job));
-                s.total += 1;
-                if s.total > s.peak {
-                    s.peak = s.total;
-                }
-                not_empty.notify_all(); // any idle worker may steal this new item — wake all
+        // Feeder (this thread — may be an external caller, or a pool worker running a job that
+        // called `run_indexed` again, i.e. a nested submission): enqueue every job in order,
+        // round-robin across the lanes, blocking while the *total* is at capacity —
+        // demand-signalled backpressure (the bound is enforced under the lock; G2). This thread is
+        // never "just" blocked: `not_full.wait` only parks while genuinely no room exists, and every
+        // lane consuming this batch's own work is itself a pool task, reachable via `help_while`
+        // below once feeding is done.
+        for (idx, job) in jobs.into_iter().enumerate() {
+            let mut s = state
+                .lock()
+                .expect("mycelium-sched: scheduler mutex poisoned");
+            while s.total >= capacity {
+                s = not_full
+                    .wait(s)
+                    .expect("mycelium-sched: scheduler mutex poisoned");
             }
-            // Close: no more jobs. Wake every idle worker so it can drain + exit (never a hang).
-            {
-                let mut s = state.lock().expect("scheduler mutex poisoned");
-                s.closed = true;
-                not_empty.notify_all();
+            let target = idx % workers;
+            s.deques[target].push_back((idx, job));
+            s.total += 1;
+            if s.total > s.peak {
+                s.peak = s.total;
             }
-        });
+            not_empty.notify_all(); // any idle lane may steal this new item — wake all
+        }
+        // Close: no more jobs. Wake every idle lane so it can drain + exit (never a hang).
+        {
+            let mut s = state
+                .lock()
+                .expect("mycelium-sched: scheduler mutex poisoned");
+            s.closed = true;
+            not_empty.notify_all();
+        }
+
+        // The nested-join wait: help the shared pool drain — this batch's own lanes, or (under
+        // nested submission) anyone else's — until every lane of THIS batch has exited. Never a bare
+        // block (M-864's help-steal deadlock-freedom argument; see `pool` module docs).
+        {
+            let (lock, _cv) = &*remaining;
+            pool.help_while(|| {
+                *lock
+                    .lock()
+                    .expect("mycelium-sched: remaining-lanes mutex poisoned")
+                    == 0
+            });
+        }
 
         if peak_depth.is_some() || steal_count.is_some() {
-            let s = state.lock().expect("scheduler mutex poisoned");
+            let s = state
+                .lock()
+                .expect("mycelium-sched: scheduler mutex poisoned");
             if let Some(slot) = peak_depth {
                 *slot = s.peak;
             }
@@ -429,10 +507,20 @@ impl Scheduler {
             }
         }
 
+        // Every lane has exited (`remaining == 0`), and each lane's own writes into `results`
+        // happen-before its own countdown decrement (program order on that lane's thread), which
+        // happens-before this thread observing `remaining == 0` (via `remaining`'s mutex) — so every
+        // write is visible here. Take the contents out from under the lock (never `Arc::try_unwrap`:
+        // other lane closures' `Arc<Mutex<..>>` clones are dropped on their own threads shortly
+        // after their final decrement, on a schedule this thread does not control — racing that
+        // drop would be a spurious, non-deterministic failure mode, not a real one).
+        let contents = std::mem::take(
+            &mut *results
+                .lock()
+                .expect("mycelium-sched: results mutex poisoned"),
+        );
         // Every slot is `Some` (liveness: each job ran exactly once); unwrap in spawn order.
-        results
-            .into_inner()
-            .expect("results mutex poisoned")
+        contents
             .into_iter()
             .map(|o| o.expect("liveness: every submitted job ran exactly once (RT2 join)"))
             .collect()

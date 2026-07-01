@@ -30,8 +30,18 @@
 //! parallel-evaluation work (M-862) can use the Scheduler without reintroducing the cycle.
 //!
 //! **Trusted-base discipline (ADR-014):** zero `unsafe` — compiler-enforced.
+//!
+//! # M-864 — the persistent work-stealing pool
+//!
+//! [`scheduler::Scheduler::run_indexed`] no longer spawns fresh OS threads per call — it dispatches
+//! onto a process-wide, persistent, bounded [`pool`], sized once to `available_parallelism()` and
+//! reused for the life of the process, including across **nested** `run_indexed` calls (a worker
+//! calling `run_indexed` again from inside a job). See `pool`'s module docs for the help-stealing
+//! design and its deadlock-freedom argument, and `docs/notes/DN-67-Persistent-Work-Stealing-Pool.md`
+//! for the ratified `'static` job-closure contract change this requires.
 #![forbid(unsafe_code)]
 
+mod pool;
 pub mod scheduler;
 
 #[cfg(test)]

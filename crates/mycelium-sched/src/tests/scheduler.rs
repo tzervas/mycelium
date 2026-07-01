@@ -25,6 +25,11 @@
 //!    that silently regressed to single-queue/no-steal dispatch would still pass checks 1–5 (the
 //!    *outputs* would still be correct) but this test would catch the regression directly.
 
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{mpsc, Arc};
+use std::thread;
+use std::time::Duration;
+
 use proptest::prelude::*;
 
 use crate::scheduler::{Scheduler, SchedulerError, StealPolicy};
@@ -322,4 +327,232 @@ proptest! {
             prop_assert!(!any_other_nonempty, "select_victim returned None despite a nonempty candidate existing");
         }
     }
+}
+
+// ── M-864: nested `run_indexed` submission on the persistent pool ─────────────────────────────
+//
+// These stress the property `run_indexed`'s doc/`crate::pool` module docs claim but the tests above
+// never exercise: a job that itself calls `Scheduler::run_indexed` (nested submission), at various
+// depths/widths/shapes, must (1) never deadlock (checked here via a wall-clock timeout, not just an
+// unbounded `cargo test` hang), (2) produce results identical to a plain sequential reference, stably
+// across many repeated runs, and (3) never grow the OS thread count with nesting depth (the whole
+// point of replacing per-call `thread::scope` with the persistent pool).
+
+/// Run `f` on a fresh thread and wait up to `timeout` for it to finish, panicking with a clear
+/// "suspected deadlock" message instead of hanging forever if it does not. `f`'s spawned thread is
+/// never joined on timeout (a genuine deadlock would leak it) — acceptable for a test: the process
+/// still exits normally, since only `main`/the test-harness thread returning matters for exit, and a
+/// clear, fast test failure is far more useful here than an unbounded hang.
+fn run_with_timeout<T: Send + 'static>(
+    timeout: Duration,
+    f: impl FnOnce() -> T + Send + 'static,
+) -> T {
+    let (tx, rx) = mpsc::channel();
+    thread::spawn(move || {
+        let _ = tx.send(f());
+    });
+    rx.recv_timeout(timeout).unwrap_or_else(|_| {
+        panic!(
+            "nested run_indexed did not complete within {timeout:?} — suspected deadlock (M-864 \
+             help-steal invariant violated)"
+        )
+    })
+}
+
+/// The pure, unscheduled sequential reference for the nested shapes below: `widths[0]` is the
+/// root's fan-out, `widths[1..]` the fan-out at every deeper level (uniform per level, but the
+/// shape as a whole can still mix zero/one/many — see the mixed-shape test). A leaf (`widths` empty)
+/// contributes exactly `1`.
+fn nested_reference_shape(widths: &[usize]) -> u64 {
+    match widths.split_first() {
+        None => 1,
+        Some((&w, rest)) => (0..w).map(|_| nested_reference_shape(rest)).sum(),
+    }
+}
+
+/// The nested-`run_indexed` counterpart of [`nested_reference_shape`]: every non-leaf level fans out
+/// across a **fresh** `Scheduler::new()` batch, each of whose jobs recurses into the next level —
+/// i.e. every non-leaf `run_indexed` call here is itself invoked from *inside* a job of its parent's
+/// `run_indexed` call (nested submission, arbitrarily deep). Must equal
+/// [`nested_reference_shape`] exactly, regardless of shape or repeated runs (M-864 DoD).
+fn nested_parallel_shape(widths: &[usize]) -> u64 {
+    match widths.split_first() {
+        None => 1,
+        Some((&w, rest)) => {
+            let rest = rest.to_vec(); // owned so each job closure can be `'static` (M-864 contract)
+            let jobs: Vec<_> = (0..w)
+                .map(|_| {
+                    let rest = rest.clone();
+                    move || nested_parallel_shape(&rest)
+                })
+                .collect();
+            Scheduler::new()
+                .run_indexed(jobs, None, None)
+                .into_iter()
+                .sum()
+        }
+    }
+}
+
+#[test]
+fn nested_deep_chain_matches_sequential_reference_no_deadlock() {
+    // A single, deep (40-level) chain — width 1 at every level, so exactly one nested `run_indexed`
+    // call is ever in flight at a time, but 40 of them are simultaneously on the call stack at the
+    // deepest point (each still waiting — via help-steal, never a bare block — on its own child).
+    let shape = vec![1usize; 40];
+    let expected = nested_reference_shape(&shape);
+    let actual = run_with_timeout(Duration::from_secs(30), move || {
+        nested_parallel_shape(&shape)
+    });
+    assert_eq!(
+        actual, expected,
+        "a 40-deep nested chain of run_indexed calls must match the sequential reference"
+    );
+}
+
+#[test]
+fn nested_wide_fanout_matches_sequential_reference_no_deadlock() {
+    // 3 levels deep, wide fan-out at each level, and — unlike the deep-chain test — EVERY sibling at
+    // every level also recurses, so many nested `run_indexed` batches are concurrently in flight,
+    // all funnelled through the one shared, bounded, persistent pool (M-864's target scenario).
+    let shape = vec![15usize, 15, 6];
+    let expected = nested_reference_shape(&shape);
+    let actual = run_with_timeout(Duration::from_secs(60), move || {
+        nested_parallel_shape(&shape)
+    });
+    assert_eq!(
+        actual, expected,
+        "wide nested fan-out (concurrent nested batches) must match the sequential reference"
+    );
+}
+
+#[test]
+fn nested_mixed_batch_sizes_including_empty_and_single_item_match_reference() {
+    // A deliberately irregular shape: a zero-width level (a branch that fans out to NOTHING — the
+    // `n == 0` fast path, reached from *inside* a nested call), a width-1 level (no real parallelism,
+    // `workers.min(n) == 1`), and ordinary wider levels, all nested inside one another.
+    let shape = vec![6usize, 0, 4, 1, 5, 2];
+    let expected = nested_reference_shape(&shape);
+    let actual = run_with_timeout(Duration::from_secs(60), move || {
+        nested_parallel_shape(&shape)
+    });
+    assert_eq!(
+        actual, expected,
+        "mixed batch-size nesting (including empty/single-item batches) must match the sequential \
+         reference"
+    );
+}
+
+#[test]
+fn nested_recursion_is_deterministic_across_many_repeated_runs() {
+    // The M-864 DoD explicitly asks for determinism "stable across many repeated runs", not a
+    // one-off pass — covers a deep chain, a wide fan-out, and a mixed shape, 50 runs each.
+    let shapes: [Vec<usize>; 3] = [
+        vec![1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        vec![12, 8],
+        vec![5, 0, 3, 1, 4],
+    ];
+    for shape in &shapes {
+        let expected = nested_reference_shape(shape);
+        for run in 0..50 {
+            let owned_shape = shape.clone();
+            let actual = run_with_timeout(Duration::from_secs(30), move || {
+                nested_parallel_shape(&owned_shape)
+            });
+            assert_eq!(
+                actual, expected,
+                "nested run_indexed must be exactly reproducible run-to-run (run {run}, shape \
+                 {shape:?})"
+            );
+        }
+    }
+}
+
+#[test]
+fn nested_empty_and_single_item_batches_never_hang() {
+    // A nested call whose OWN batch is empty (n == 0) short-circuits before touching the pool at all
+    // (the `if n == 0` fast path in `run_indexed`) — and a nested call with exactly one job must not
+    // deadlock either (`workers.min(1) == 1` lane, no steal candidates ever consulted).
+    let outer_jobs: Vec<Box<dyn FnOnce() -> usize + Send>> = vec![
+        Box::new(|| {
+            let inner: Vec<u64> =
+                Scheduler::new().run_indexed(Vec::<fn() -> u64>::new(), None, None);
+            inner.len()
+        }),
+        Box::new(|| {
+            let inner: Vec<u64> = Scheduler::new().run_indexed(vec![|| 7u64], None, None);
+            inner.len()
+        }),
+    ];
+    let result = run_with_timeout(Duration::from_secs(10), move || {
+        Scheduler::new().run_indexed(outer_jobs, None, None)
+    });
+    assert_eq!(
+        result,
+        vec![0, 1],
+        "nested empty/single-item batches must resolve without hanging"
+    );
+}
+
+/// Best-effort OS thread count for THIS process (Linux only — `/proc/self/status`). Used only by
+/// [`nested_recursion_thread_count_is_bounded_not_growing_with_depth`] as a regression witness for
+/// "the persistent pool never grows with nesting depth" (M-864 DoD). Every other nested-recursion
+/// property above (determinism, no-deadlock, liveness) is checked platform-independently.
+#[cfg(target_os = "linux")]
+fn os_thread_count() -> usize {
+    let status = std::fs::read_to_string("/proc/self/status")
+        .expect("mycelium-sched test: /proc/self/status must be readable on Linux");
+    status
+        .lines()
+        .find_map(|l| l.strip_prefix("Threads:"))
+        .and_then(|s| s.trim().parse::<usize>().ok())
+        .expect("mycelium-sched test: /proc/self/status must have a `Threads:` line")
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn nested_recursion_thread_count_is_bounded_not_growing_with_depth() {
+    fn deep_chain(depth: usize, peak: &Arc<AtomicUsize>) -> u64 {
+        peak.fetch_max(os_thread_count(), Ordering::Relaxed);
+        if depth == 0 {
+            return 1;
+        }
+        let peak = Arc::clone(peak);
+        let jobs: Vec<Box<dyn FnOnce() -> u64 + Send>> =
+            vec![Box::new(move || deep_chain(depth - 1, &peak))];
+        Scheduler::new()
+            .run_indexed(jobs, None, None)
+            .into_iter()
+            .sum()
+    }
+
+    // Warm the persistent pool first (the first-ever `run_indexed` call anywhere lazily spawns its
+    // `available_parallelism()` OS threads — see `crate::pool::get`) so the baseline below reflects
+    // its steady state, not a cold start.
+    let _: Vec<i32> = Scheduler::new().run_indexed(vec![|| 1], None, None);
+    thread::sleep(Duration::from_millis(20));
+    let baseline = os_thread_count();
+
+    let peak = Arc::new(AtomicUsize::new(baseline));
+    let peak_for_run = Arc::clone(&peak);
+    let depth = 40usize;
+    let result = run_with_timeout(Duration::from_secs(30), move || {
+        deep_chain(depth, &peak_for_run)
+    });
+    assert_eq!(
+        result, 1,
+        "a width-1 chain always sums to 1 regardless of depth"
+    );
+
+    let observed_peak = peak.load(Ordering::Relaxed);
+    let available = thread::available_parallelism().map_or(1, std::num::NonZeroUsize::get);
+    // Generous, depth-INDEPENDENT slack (test-harness/runtime threads). The point: peak stays a
+    // small constant, never `O(depth)` — a regression to per-call `thread::scope` would blow this at
+    // depth 40 (dozens of threads, growing linearly with depth); the persistent pool stays flat.
+    assert!(
+        observed_peak <= available + baseline + 16,
+        "OS thread count grew with nesting depth (observed peak {observed_peak}, baseline \
+         {baseline}, available_parallelism {available}) — the pool must stay bounded regardless of \
+         how deep run_indexed nests (M-864)"
+    );
 }
