@@ -428,12 +428,36 @@ pub fn emit_expr(expr: &Expr, self_ty: Option<&str>) -> Result<String, GapReason
         Expr::Call(c) => {
             let func =
                 match &*c.func {
-                    Expr::Path(p) if p.qself.is_none() => p
+                    Expr::Path(p) if p.qself.is_none() && p.path.segments.len() == 1 => p
                         .path
                         .segments
                         .last()
                         .map(|s| s.ident.to_string())
                         .ok_or_else(|| GapReason::new(Category::Other, "empty call-target path"))?,
+                    Expr::Path(p) if p.qself.is_none() => {
+                        // A qualified/associated-function call (`Type::method(...)`, e.g. Rust's
+                        // widening bodies `i16::from(self)`). Mycelium calls are bare identifiers
+                        // (`app_expr ::= primary ('(' args? ')')*`, `primary ::= ... | path`,
+                        // `path ::= Ident ('.' Ident)*` — no `::`/qualifier form). An earlier
+                        // iteration of this arm collapsed any path to its last segment, which for a
+                        // *call target* fabricates a call to whatever that segment's name happens to
+                        // be — e.g. `i16::from(self)` -> `from(self)`, and `from` is NOT a confirmed
+                        // Mycelium builtin (grep of `docs/spec/grammar/mycelium.ebnf` finds it only in
+                        // prose, never in a grammar production). There is no established Mycelium
+                        // surface form for a Rust conversion-op/associated-fn call, so — mirroring
+                        // `map::map_type`'s identical qualified-path decision — this is left an
+                        // explicit gap rather than a fabricated call (G2/DN-34 §4).
+                        return Err(GapReason::new(
+                            Category::Other,
+                            format!(
+                            "qualified/associated-function call `{}` — no established Mycelium \
+                             surface form for a Rust conversion-op body; emitting the bare \
+                             last-segment name would fabricate a call (e.g. `from(...)` is not a \
+                             Mycelium builtin)",
+                            tokens_to_string(&*c.func)
+                        ),
+                        ));
+                    }
                     _ => return Err(GapReason::new(
                         Category::Other,
                         "call target is not a simple path (e.g. a closure call) — no confirmed \
@@ -971,8 +995,19 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
         let reason = if sub_gaps.is_empty() {
             "impl block has no items".to_string()
         } else {
+            // Fold every sub-issue's own reason into the top-level gap's reason text. When an
+            // impl fails wholesale (this arm), its `sub_gaps` are otherwise discarded — they are
+            // only surfaced as separate `Gap` records via `emit::Emitted::sub_gaps` on the
+            // *success* path (see `Outcome::Emitted` in `transpile.rs`). Folding them here keeps
+            // this failure path never-silent too (G2): the specific reason (e.g. "no established
+            // Mycelium surface form for `from(...)`") is never lost behind a generic count.
+            let details = sub_gaps
+                .iter()
+                .map(|g| g.reason.as_str())
+                .collect::<Vec<_>>()
+                .join("; ");
             format!(
-                "no member of this impl block could be transpiled ({} sub-issue(s) below)",
+                "no member of this impl block could be transpiled ({} sub-issue(s)): {details}",
                 sub_gaps.len()
             )
         };

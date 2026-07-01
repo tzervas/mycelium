@@ -81,54 +81,6 @@ impl Ordering {
   fn reverse(self: Ordering) => Ordering = match self { Less => Greater, Equal => Equal, Greater => Less };
 };
 
-impl Widen[Binary{16}] for Binary{8} {
-  fn widen(self: Binary{8}) => Binary{16} = from(self);
-};
-
-impl Widen[Binary{32}] for Binary{8} {
-  fn widen(self: Binary{8}) => Binary{32} = from(self);
-};
-
-impl Widen[Binary{64}] for Binary{8} {
-  fn widen(self: Binary{8}) => Binary{64} = from(self);
-};
-
-impl Widen[Binary{128}] for Binary{8} {
-  fn widen(self: Binary{8}) => Binary{128} = from(self);
-};
-
-impl Widen[Binary{32}] for Binary{16} {
-  fn widen(self: Binary{16}) => Binary{32} = from(self);
-};
-
-impl Widen[Binary{64}] for Binary{16} {
-  fn widen(self: Binary{16}) => Binary{64} = from(self);
-};
-
-impl Widen[Binary{128}] for Binary{16} {
-  fn widen(self: Binary{16}) => Binary{128} = from(self);
-};
-
-impl Widen[Binary{64}] for Binary{32} {
-  fn widen(self: Binary{32}) => Binary{64} = from(self);
-};
-
-impl Widen[Binary{128}] for Binary{32} {
-  fn widen(self: Binary{32}) => Binary{128} = from(self);
-};
-
-impl Widen[Binary{128}] for Binary{64} {
-  fn widen(self: Binary{64}) => Binary{128} = from(self);
-};
-
-impl Widen[Binary{32}] for Bool {
-  fn widen(self: Bool) => Binary{32} = from(self);
-};
-
-impl Widen[Binary{64}] for Bool {
-  fn widen(self: Bool) => Binary{64} = from(self);
-};
-
 // A BF16 value stored as its bit pattern in a `u16`.
 //
 // BF16 = 1-bit sign + 8-bit exponent + 7-bit mantissa (the upper 16 bits of an f32 bit pattern).

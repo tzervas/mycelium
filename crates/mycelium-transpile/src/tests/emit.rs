@@ -120,6 +120,20 @@ fn cases() -> Vec<Case> {
                 category: Category::Struct,
             },
         },
+        // Regression guard (High finding, G2/DN-34 §4): a numeric-widening `impl Widen<..>
+        // for ..` whose body is a qualified associated-function call (`u16::from(self)`, the
+        // real shape of Rust's widening bodies in `mycelium-std-cmp`) must be GAPPED, never
+        // emitted with a fabricated `from(self)` body — `from` is not a Mycelium builtin (no
+        // grammar production; only prose mentions in `docs/spec/grammar/mycelium.ebnf`). An
+        // earlier iteration collapsed the qualified call to its last segment and emitted exactly
+        // this fabricated text; this case pins the fix.
+        Case {
+            name: "widen_from_call_gapped_not_fabricated",
+            rust: "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }",
+            expect: Expect::Gapped {
+                category: Category::Impl,
+            },
+        },
         // KNOWN HARD GAP: multi-statement fn body (an interior statement that is neither a
         // simple `let` nor the trailing expression).
         Case {
@@ -248,4 +262,26 @@ fn emit_fixture_corpus() {
     for case in cases() {
         run(&case);
     }
+}
+
+/// Regression guard (High finding, G2/DN-34 §4): the never-silent gap mechanism means a gapped
+/// item's `.myc` text is never emitted at all — but pin that down directly (rather than only via
+/// `emit_fixture_corpus`'s `Expect::Gapped` check) so a future change that started emitting a
+/// partial/fallback body for this case would fail loudly here, not just leave `emitted_items`
+/// empty while still leaking fabricated text into the `.myc` output.
+#[test]
+fn widen_from_call_produces_no_fabricated_myc_text() {
+    let rust = "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        report.emitted_items.is_empty(),
+        "expected the Widen impl to be fully gapped, got emitted_items={:?}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("from("),
+        "emitted .myc text must never contain a fabricated `from(...)` call (from is not a \
+         Mycelium builtin — G2/DN-34 §4), got:\n{myc}"
+    );
 }

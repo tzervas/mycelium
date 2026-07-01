@@ -55,10 +55,10 @@ pub fn transpile_source(
                 line: 1,
                 col: 1,
                 category: Category::Other,
-                rust_construct: "inner attribute (#![...])".to_string(),
+                rust_construct: Category::Other.as_str().to_string(),
                 snippet: non_doc.join(" "),
-                reason: "crate/file-level inner attributes are not transpiled (no nodule-header \
-                          equivalent for these Rust-specific directives)"
+                reason: "crate/file-level inner attributes (#![...]) are not transpiled (no \
+                          nodule-header equivalent for these Rust-specific directives)"
                     .to_string(),
                 item_name: None,
             });
@@ -70,7 +70,6 @@ pub fn transpile_source(
 
     for item in &parsed.items {
         let (line, col) = span_line_col(item);
-        let kind = item_kind_str(item);
         let name_hint = item_display_name(item);
         let snippet = tokens_to_string(item);
 
@@ -88,7 +87,15 @@ pub fn transpile_source(
                         line,
                         col,
                         category: sg.category,
-                        rust_construct: kind.to_string(),
+                        // `rust_construct` mirrors `category` (the finer, per-failure-reason
+                        // taxonomy from `gap.rs`), not the coarse `syn::Item` kind an earlier
+                        // iteration used (`Impl`/`Fn`/`Struct`/...) — that coarser string
+                        // collapsed e.g. every failing `impl` method to the same "Impl" label
+                        // regardless of *why* it failed, hiding exactly the distinction the gap
+                        // report exists to surface (G2: the report is the ground truth the
+                        // surface-feature backlog is synthesized from, so its categories must be
+                        // the real ones, not a re-derived approximation of them).
+                        rust_construct: sg.category.as_str().to_string(),
                         snippet: snippet.clone(),
                         reason: sg.reason,
                         item_name: Some(name.clone()),
@@ -101,7 +108,7 @@ pub fn transpile_source(
                     line,
                     col,
                     category: reason.category,
-                    rust_construct: kind.to_string(),
+                    rust_construct: reason.category.as_str().to_string(),
                     snippet,
                     reason: reason.reason,
                     item_name: name_hint,
@@ -113,7 +120,7 @@ pub fn transpile_source(
                     line,
                     col,
                     category: Category::TestItem,
-                    rust_construct: kind.to_string(),
+                    rust_construct: Category::TestItem.as_str().to_string(),
                     snippet,
                     reason: "#[cfg(test)] item — out of scope for this PoC's transpilation \
                               surface (excluded from the expressible-fraction denominator, \
@@ -265,28 +272,6 @@ fn dispatch_use(u: &syn::ItemUse) -> Outcome {
             sub_gaps: Vec::new(),
         }),
         Err(e) => Outcome::Gap(e),
-    }
-}
-
-fn item_kind_str(item: &Item) -> &'static str {
-    match item {
-        Item::Const(_) => "Const",
-        Item::Enum(_) => "Enum",
-        Item::ExternCrate(_) => "ExternCrate",
-        Item::Fn(_) => "Fn",
-        Item::ForeignMod(_) => "ForeignMod",
-        Item::Impl(_) => "Impl",
-        Item::Macro(_) => "Macro",
-        Item::Mod(_) => "Mod",
-        Item::Static(_) => "Static",
-        Item::Struct(_) => "Struct",
-        Item::Trait(_) => "Trait",
-        Item::TraitAlias(_) => "TraitAlias",
-        Item::Type(_) => "Type",
-        Item::Union(_) => "Union",
-        Item::Use(_) => "Use",
-        Item::Verbatim(_) => "Verbatim",
-        _ => "Unknown",
     }
 }
 

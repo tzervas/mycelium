@@ -60,6 +60,12 @@ pub struct Gap {
     pub line: usize,
     pub col: usize,
     pub category: Category,
+    /// `Category::as_str()` for [`Gap::category`] — kept as its own (string-typed) field for
+    /// serialization stability, but **always derived from `category`**, never a separately
+    /// re-derived coarse `syn::Item`-kind label (an earlier iteration used e.g. `"Impl"`/`"Fn"`
+    /// regardless of *why* an item failed; the finer per-reason `Category` taxonomy is the ground
+    /// truth the committed `.gap.json` is synthesized from — G2, no divergence between the
+    /// category actually assigned and the string reported for it).
     pub rust_construct: String,
     pub snippet: String,
     pub reason: String,

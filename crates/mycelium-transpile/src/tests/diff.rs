@@ -87,6 +87,46 @@ fn std_cmp_twin_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../lib/std/cmp.myc")
 }
 
+/// Regression guard (High finding, G2/DN-34 §4) over the *real* target crate: transpiling
+/// `mycelium-std-cmp/src/lib.rs` must never emit a fabricated `from(...)` call for the 12
+/// numeric-widening `impl Widen<..> for ..` blocks (Rust body `<T>::from(self)`) — each must be
+/// gapped instead, since `from` is not a confirmed Mycelium builtin (no grammar production for it
+/// in `docs/spec/grammar/mycelium.ebnf`, only prose mentions). An earlier iteration collapsed the
+/// qualified `<T>::from` call to its last segment and checked in exactly this fabricated text;
+/// this test pins the fix against a regression.
+#[test]
+fn widen_impls_are_gapped_not_fabricated_in_real_crate() {
+    let rust_path = std_cmp_rust_path();
+    assert!(rust_path.is_file(), "missing {}", rust_path.display());
+    let (emitted_myc, report) =
+        transpile_file(&rust_path).unwrap_or_else(|e| panic!("transpile failed: {e}"));
+
+    assert!(
+        !emitted_myc.contains("from("),
+        "emitted .myc text must never contain a fabricated `from(...)` call (from is not a \
+         Mycelium builtin — G2/DN-34 §4), got:\n{emitted_myc}"
+    );
+    assert!(
+        !report
+            .emitted_items
+            .iter()
+            .any(|n| n.starts_with("impl Widen")),
+        "no `impl Widen[...]` block should be in emitted_items — its conversion-op body has no \
+         established Mycelium surface form and must be gapped, not emitted; got {:?}",
+        report.emitted_items
+    );
+    let widen_gap_count = report
+        .gaps
+        .iter()
+        .filter(|g| g.snippet.contains("Widen") && g.reason.contains("from"))
+        .count();
+    assert!(
+        widen_gap_count >= 12,
+        "expected at least the 12 numeric-widening Widen impls (u8/u16/u32/u64 chain + bool) to \
+         be gapped for their unmappable `from(...)`-call body, got {widen_gap_count}"
+    );
+}
+
 #[test]
 fn diff_against_std_cmp_twin() {
     let rust_path = std_cmp_rust_path();
