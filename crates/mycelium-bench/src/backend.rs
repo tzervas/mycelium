@@ -534,21 +534,41 @@ mod tests {
         // a flat "compiled paths can't do data": both compiled backends can lower a **flat
         // non-recursive match/construct to a repr** (e.g. `Sign -> Ternary{1}`), so a `Data` case may
         // legitimately produce a VALUE. What is *always* a capability loss is **recursion**
-        // (`Fix`/`FixGroup`) and **swap** (`Swap`) — neither compiled backend lowers those.
+        // (`Fix`/`FixGroup`) — neither compiled backend lowers that (no native call-frame/stack
+        // machinery in the emitted IR).
+        //
+        // `Swap` is **no longer** in that always-a-loss bucket: M-852 (PR #823) landed native `Swap`
+        // codegen for the certified binary<->ternary LEGAL-pair class in the shared `lower_program`
+        // path both JIT (`jit.rs::emit_kernel_fn`) and direct-LLVM (`llvm.rs::compile_and_run`) route
+        // through (`swap_codegen::lower_swap`) — so a swap case can now legitimately produce a VALUE
+        // on both compiled backends, exactly like a flat data case. Verified directly: on this
+        // corpus's `swap-roundtrip` case (a legal `(8,6)` binary<->ternary<->binary round trip), both
+        // JIT and direct-LLVM now return `Outcome::Value` whose `repr`/`payload`/`guarantee` match the
+        // trusted interpreter's (`0b0010_1010` round-trips losslessly; only `Meta::provenance` differs
+        // — `Root` vs `Derived`, the documented dynamic-metadata exclusion, RFC-0001 §4.6). An
+        // *illegal*-pair or otherwise-unsupported swap is still refused explicitly
+        // (`AotError::UnsupportedNode`/`UnsupportedScheme`, never a silently-wrong transcode — G2/
+        // VR-5), so `Swap` now shares `Data`'s never-silent obligation rather than recursion's
+        // always-a-loss one. This is the prior test's stale assumption corrected, not weakened: it
+        // used to hard-code "swap is always a capability loss" as a pre-asserted fact, which is
+        // exactly the VR-5 anti-pattern the `Data` arm already avoided — folding `Swap` into that arm
+        // fixes the staleness while keeping the real obligation (never a wrong answer slipped through)
+        // fully enforced.
         //
         // So we assert two things, both honest:
-        //  1. recursion + swap ⇒ a capability loss / skip on BOTH compiled backends, and
-        //  2. on data, BOTH compiled backends are **never-silent**: a value, a capability loss, or a
-        //     skip — never a wrong answer slipped through (the harness's whole purpose).
-        // (Which data cases each backend actually lowers is a *measured* output of the harness, not a
-        // pre-asserted fact — VR-5: we don't hard-code a capability claim we'd have to keep in sync.)
+        //  1. recursion ⇒ a capability loss / skip on BOTH compiled backends, and
+        //  2. on data + swap, BOTH compiled backends are **never-silent**: a value, a capability loss,
+        //     or a skip — never a wrong answer slipped through (the harness's whole purpose).
+        // (Which data/swap cases each backend actually lowers is a *measured* output of the harness,
+        // not a pre-asserted fact — VR-5: we don't hard-code a capability claim we'd have to keep in
+        // sync.)
         use crate::corpus::Fragment;
         for case in corpus() {
             let node = case.elaborate().expect("elaborates");
 
             match case.fragment {
-                // (1) recursion + swap: always out of the compiled subset.
-                Fragment::Recursion | Fragment::Swap => {
+                // (1) recursion: always out of the compiled subset.
+                Fragment::Recursion => {
                     for (label, outcome) in [
                         ("jit", run_jit(&node)),
                         ("direct-llvm", run_direct_llvm(&node)),
@@ -562,8 +582,8 @@ mod tests {
                         );
                     }
                 }
-                // (2) data: never-silent on both (value OR explicit capability loss / skip).
-                Fragment::Data => {
+                // (2) data + swap: never-silent on both (value OR explicit capability loss / skip).
+                Fragment::Data | Fragment::Swap => {
                     for (label, outcome) in [
                         ("jit", run_jit(&node)),
                         ("direct-llvm", run_direct_llvm(&node)),
@@ -573,8 +593,9 @@ mod tests {
                                 outcome,
                                 Outcome::Value(_) | Outcome::Unlowerable(_) | Outcome::Skipped(_)
                             ),
-                            "{label} on data `{}` must be never-silent (value / capability loss / \
+                            "{label} on {} `{}` must be never-silent (value / capability loss / \
                              skip), got {:?}",
+                            case.fragment.label(),
                             case.id,
                             outcome.status()
                         );
