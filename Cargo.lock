@@ -332,6 +332,7 @@ dependencies = [
  "mycelium-interp",
  "mycelium-mir-passes",
  "mycelium-numerics",
+ "mycelium-sched",
  "mycelium-select",
  "mycelium-std-runtime",
  "mycelium-vsa",

@@ -55,6 +55,10 @@ pub mod aot;
 pub mod bitnet;
 pub mod budget;
 pub mod channel;
+// M-865: harness-level parallel dispatch (Scheduler::run_indexed) for the direct-LLVM AOT + JIT
+// paths, extending M-862's top-level pure-argument batch to the two compiled execution paths this
+// crate owns (`Op`-headed batches only — see the module docs for the honest `Construct` scope carve-out).
+pub mod concurrent;
 pub mod deploy;
 // M-853 (RFC-0039 §5.1): native direct-LLVM codegen of `Repr::Dense` element-wise ops (un-quantized
 // F32/BF16 fragment) — differential-checked against `mycelium-dense`, mutant-witnessed, honest tags.
@@ -100,6 +104,11 @@ pub use budget::{
     StaticReason, STATIC_FALLBACK_DEPTH,
 };
 pub use channel::{Network, Receiver, Sender, TryRecv, TrySend};
+// M-865: the harness-level AOT/JIT concurrent-batch dispatch + its EXPLAIN-able plan type.
+pub use concurrent::{
+    compile_and_run_concurrent, compile_and_run_concurrent_with_swap_mode, jit_run_concurrent,
+    plan_concurrent, ConcurrentPlan,
+};
 pub use deploy::{DeployError, NativeArtifact};
 pub use dialect::emit;
 #[cfg(feature = "mlir-dialect")]

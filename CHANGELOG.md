@@ -8,6 +8,41 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)
+
+- **`mycelium-mlir::concurrent`** (`compile_and_run_concurrent`, `jit_run_concurrent`,
+  `plan_concurrent`/`ConcurrentPlan`) extends M-862's interpreter-side top-level pure-argument batch
+  (a pure, ≥2-argument top-level `Op` — narrowed from `Op`/`Construct` to `Op`-only, see below) to the
+  **direct-LLVM AOT** and **in-process JIT** execution paths, dispatched at the **Rust harness level**
+  through the *same* `mycelium_sched::scheduler::Scheduler::run_indexed` entry point M-860's
+  `emit_llvm_ir_many` already uses — no new scheduler surface, no LLVM-IR-level concurrency
+  primitive. Each batch argument is submitted as its own job and evaluated by the exact trusted
+  sequential runner for that path (`compile_and_run_with_swap_mode` / `jit_run`); results are
+  recomposed by invoking that **same** runner once more on a tiny reconstructed `prim(consts…)` node
+  — so prim-application semantics is never hand-reimplemented, only *scheduled* differently.
+- **Honest scope narrowing (never-silent, G2):** a `Construct`-headed batch is explicitly *out* of
+  this dispatcher's scope — the direct-LLVM whole-program contract requires a top-level result to
+  reduce to a representation `Lane` (`lower_program_with_swap_mode`'s `into_lane` check), which a bare
+  `Construct` cannot produce standalone, so there is no per-argument compile entry point to recompose
+  through for that head. Documented in the module's own docs, not silently dropped.
+- **New differential (`tests/concurrent_threeway_differential.rs`, M-858-style):**
+  interp-sequential ≡ interp-parallel (M-862) ≡ AOT-parallel ≡ JIT-parallel over the `Op`-headed
+  batch corpus, each pair validated through the shared M-210 `ObservationalEquiv` checker, with a
+  `ran_aot`/`ran_jit` toolchain non-vacuity guard **and** a plan-level non-vacuity guard
+  (`ConcurrentPlan::OpBatch` genuinely selected — never a silent fall-through to sequential). A
+  **mutant witness** (`mutant_witness_catches_a_wrong_index_compose_aot`/`_jit`) demonstrates the
+  differential actually *catches* a deliberately-broken concurrent dispatch (a wrong-index recompose
+  over a non-commutative `trit.sub`), not merely asserts agreement. Verified non-vacuously on this
+  box (libMLIR-18 + `llc`/`clang` present) with and without `--features mlir-dialect`.
+- **M-865's original title over-claimed "AOT-runtime concurrency + async execution parity with the
+  interpreter" — rescoped honestly, same day.** The language has **no executable concurrency
+  surface** today (`hypha` ratified-not-lexed, `async` unimplemented, every execution path still runs
+  sequentially), so that framing was vacuous. M-865's *actual*, landed scope is the harness-level
+  extension above; real hypha/colony/async parity is carved out to a new post-1.0.0-tag issue,
+  **M-869**, gated on the language growing a spawn/hypha surface. RFC-0008 §Meta and DN-61 §Meta
+  carry matching append-only notes (RFC-0008 status unchanged: Accepted; DN-61 status unchanged).
+  Guarantee tag: **Empirical** (differential-checked), never `Proven` (VR-5).
+
 ### Changed (2026-07-01: M-864 — persistent bounded work-stealing pool for the Scheduler, nested-safe submission)
 
 - **`Scheduler::run_indexed` dispatches onto a persistent, process-wide pool (`mycelium_sched::pool`),
