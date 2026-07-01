@@ -134,7 +134,7 @@ where
             }
         })
         .collect();
-    scheduler.run_indexed(jobs, None)
+    scheduler.run_indexed(jobs, None, None)
 }
 
 /// What a supervisor did about one child failure — a reified, inspectable action (EXPLAIN; no black

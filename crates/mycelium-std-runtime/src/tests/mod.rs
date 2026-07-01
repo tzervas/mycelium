@@ -8,4 +8,5 @@ pub mod network;
 pub mod rc;
 pub mod reclamation;
 pub mod region;
+pub mod scheduler;
 pub mod scope_region;
