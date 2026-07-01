@@ -80,7 +80,12 @@ Not a gap category above (it's a positive result folded into `emitted`): the 10
 unsigned-integer-chain `Widen<..>` impls in `mycelium-std-cmp` (`u8`->`u16`/`u32`/`u64`/
 `u128`, `u16`->`u32`/`u64`/`u128`, `u32`->`u64`/`u128`, `u64`->`u128`) are now emitted
 faithfully via the real DN-41 `width_cast` prim instead of gapping — see
-`src/emit.rs::try_width_cast_widen_body`. `Narrow::narrow` bodies (fallible,
-`Result<To, NarrowError>`) still gap, now citing DN-41 explicitly
-(`Category::Conversion`) instead of the incidental `Result<..>`-type-mapping gap they
-fell into before.
+`src/emit.rs::try_width_cast_widen_body`. A dedicated `Category::Conversion` gap path
+exists for fallible `Narrow::narrow` bodies (`Result<To, NarrowError>`) and is covered by
+synthetic unit tests. **Honest note (Empirical, VR-5):** across this 6-crate corpus
+`Category::Conversion` has **zero** hits — the only concrete narrow, `impl Narrow<f32> for
+f64` (`mycelium-std-cmp/src/lib.rs:675`), gaps *earlier* via the type-mapping path (`f32`/
+`f64` have no confirmed `Binary{N}` mapping, so `self_ty_text` fails before the conversion
+intercept is reached). So the conversion intercept is real code, not yet exercised by any
+real crate here — it would fire once a concrete narrow between mappable `Binary` widths
+appears. Reported, not overstated.

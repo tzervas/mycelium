@@ -128,7 +128,7 @@ fn cases() -> Vec<Case> {
         // `Binary{N}`/`Binary{M}` (unsigned widening), it is now instead emitted **faithfully**
         // via the real DN-41 `width_cast` prim — a strict improvement over the earlier "gap the
         // whole impl" behavior this case originally pinned (see
-        // `widen_binary_emits_width_cast_not_fabricated_from` in `src/tests/diff.rs` for the
+        // `widen_impls_never_fabricate_from_in_real_crate` in `src/tests/diff.rs` for the
         // real-crate-scale version of this guard).
         Case {
             name: "widen_binary_emits_width_cast",
