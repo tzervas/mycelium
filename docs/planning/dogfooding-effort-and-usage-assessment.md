@@ -144,6 +144,18 @@ language can't yet express — so it *accelerates* the port, it does not *bypass
 | **Language-capability gate (§6)** | **un-estimable (design-bound)** | Unchanged; the transpiler cannot emit what the surface can't express. |
 | **Recommended first spike (PoC)** | **~1–3M tokens** | Map a handful of Rust constructs → Mycelium, transpile **one** small Tier-A stdlib crate, refine + differential-validate it end-to-end. De-risks DN-34 and yields the **first `Empirical` rate** to replace every `Declared` figure here. |
 
+> **`Empirical` UPDATE (2026-07-01 — M-873 / kickoff `trx`, the PoC spike landed).** The spike ran:
+> `crates/mycelium-transpile` (syn-based, never-silent gap report) transpiled `mycelium-std-cmp` and
+> diffed against `lib/std/cmp.myc`. **Measured fully-loaded cost ≈ 0.85–0.95M tokens** (545k measured
+> subagent + est. ~0.3–0.4M orchestrator) for ~2.5k Rust LOC + fixtures — **at/below the low end** of
+> the `~1–3M` first-spike row above (and below the `~2–5M` build row), so those `Declared` estimates
+> were, if anything, conservative. **Expressibility measured at 3.6%** of the crate against the
+> *current* surface *without* macro expansion (a lower bound — DN-34 §8.2). The load-bearing finding
+> for this cost model: **~55% of a real crate is macro-generated**, so the biggest lever is
+> transpiler-side **macro expansion** (expand-first), which converts that bulk cheaply and leaves the
+> genuine language-surface gaps as the remaining design work (DN-34 §8.3 backlog). The `~15–25M`
+> execute+refine row stays `Declared` (unmeasured); this spike converts only the build/PoC rows.
+
 **"Do we have enough usage to build + execute it?"** — the honest split: the **build** (~2–5M) and a
 **PoC spike** (~1–3M) are small, bounded increments that very likely fit a normal usage window; the
 **full execute + refine** (~15–25M, atop the capability gate) is a **multi-session, multi-week** effort,

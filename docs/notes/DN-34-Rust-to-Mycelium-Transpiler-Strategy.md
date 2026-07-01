@@ -148,6 +148,75 @@ plausible-but-wrong Mycelium.** This is `analyze` as a first-class output, not a
   cbindgen binding generation + Rust interop analysis). Architecture `Empirical` (the projects
   exist); transfer to Rust→Mycelium is `Declared`.
 
+## §8 PoC results — the first code spike (M-873, kickoff `trx`, 2026-07-01) — `Empirical`
+
+The **first code** against this strategy landed as `crates/mycelium-transpile` (a spike, not the
+gated full phase of §5 — DN-34 stays **Draft**; nothing here is Enacted). It reads one Rust crate's
+`syn` AST and emits (a) a best-effort `.myc` for expressible constructs and (b) a never-silent,
+structured **gap report** (`{file, line, rust_construct, reason, category}` JSON). PoC target:
+`crates/mycelium-std-cmp`, diffed against its hand-written twin `lib/std/cmp.myc` (M-714/DN-66).
+
+### §8.1 Seed correction (`Empirical`, from reading the repos)
+DN-34 §2 posted the `py2rust`/`py-rust-bridge` seed as "architecture transfers, completeness does
+not." A direct read (2026-07-01) confirms and **sharpens** that: both are ~150-line early scaffolds;
+`py2rust`'s `CompatibilityAnalyzer` is an **allowlist of four known-bad constructs with a silent
+pass-through default** — i.e. the *opposite* of never-silent. There is no reusable visitor, mapping
+registry, structured gap record, or `syn` usage to lift. **Correction carried into the PoC:** the
+transpiler is built on `syn` with an **exhaustive dispatch** whose fallback arm *always records a
+gap* (never an allowlist). So the seed transferred a *naming/CLI shape* and a cautionary
+anti-pattern, not an implementation — the §4 flag-don't-guess principle had to be *built*, not
+inherited. (This does not change §2's posture; it grounds it with measured specifics.)
+
+### §8.2 Measured expressibility on `std-cmp` (`Empirical` — the DN-34 §6-Q6 "auto-conversion fraction")
+Against the **current** surface, **without macro expansion**: **4 of 111 non-test top-level items
+emitted ≈ 3.6% expressible**; 112 gap records (incl. sub-item gaps). This is the pilot-crate
+measurement §6-Q6 asked for — but it is a **lower bound**, because the dominant blocker is
+un-expanded macros (see the backlog). Emitted (all grammar-checked against
+`docs/spec/grammar/mycelium.ebnf`, but **unvalidated** — no Mycelium parser/checker confirms the
+output, tagged `Declared`): `type Ordering`, inherent `impl Ordering { reverse }`, tuple-payload
+`type Bf16Bits`, one `use` import. **Diff vs the twin:** `Ordering` and `reverse` are genuine
+matches; the twin's other helpers (`is_lt`, `cmp{N}`, …) are its own hand-refinements absent from the
+Rust source; `Bf16Bits` is emitted-with-no-twin-counterpart. Never a silent mismatch — every
+non-emitted top-level item is in the gap report (property-tested).
+
+**Honesty note (G2/VR-5, resolved during review):** an initial pass emitted 12 numeric-widening
+`impl Widen[…] for …` blocks with a fabricated `from(self)` body (the `as`-conversion has no
+established Mycelium surface form, and `from` is not a builtin). That is exactly the
+plausible-but-wrong emission §4 forbids; it was **reclassified to gaps** (dropping 16→4 emitted).
+The emitter now gaps *any* fn/impl body it cannot faithfully lower rather than inventing one.
+
+### §8.3 Prioritized surface-feature backlog (the demand data for E18-1 `needs-design`) — `Empirical` counts / `Declared` rankings
+Ranked by measured frequency times blocking value on `std-cmp`. This is the first-class output the
+kickoff asked for — real demand data, not a guessed roadmap:
+
+| # | Missing capability | Gap count (std-cmp) | Note |
+|---|---|---|---|
+| 1 | **Macro handling** (`macro_rules!` and invocations) | 62 (~55%) | The dominant blocker. Best addressed transpiler-side by **expand-first** (`cargo expand`/rustc) — turns these into ordinary impls — more than by a Mycelium macro surface. An *architecture* decision (§6-Q1 addendum), not only a language gap. |
+| 2 | **Trait `impl`s and conversion/`as`-cast op bodies** | 27 | Numeric widening/narrowing (`self as T`) has no expressible body; reconcile with **DN-41 width-cast** — a genuine surface gap. |
+| 3 | **Trait definitions** (default-method bodies, `Self`, supertrait bounds) | 5 | `trait_item` exists; `Self`-referent default bodies are the gap. |
+| 4 | **Trait-bounded generics** (`<T: Bound>`) | 4 | `[T]` type-params landed (M-656/7); the *bound* surface is the gap. |
+| 5 | **Struct-like / generic-payload enum variants** (error enums) | 2 | `ClampError<T>` / `NarrowError` multi-field, generic-payload constructors. |
+| 6 | **Derive attributes** (`#[derive(...)]`) | 3 | reconcile with DN-54 `derive` elaboration. |
+| 7 | **Named-field structs** (beyond single-positional tuple) | 1 | `MatrixRow`. |
+
+Tail gaps: associated consts, inner attributes (`#![…]`), and multi-statement fn bodies (the last
+did not dominate on this declarative crate but will elsewhere — a Mycelium fn body is one `= expr`).
+
+**Load-bearing conclusion:** on a real crate the current surface expresses ~4% *directly*, but
+**~55% of the residue is macro-generated** — so the highest-leverage next step is **transpiler-side
+macro expansion**, after which the language-surface gaps (rows 2–7) become the true `needs-design`
+worklist. This re-weights the §5 "bulk mechanism" cost model: expansion converts a large mechanical
+fraction cheaply; the irreducible human/design work is the surface gaps, not the boilerplate.
+
+### §8.4 Token cost (`Empirical` subagents · `Declared` orchestrator overhead)
+The build-the-transpiler and PoC spike (§5a rows) cost, **measured**: scoping 83k, emitter build
+254k, one review-correction round 207k = **545k subagent tokens**, plus orchestrator overhead (not
+self-measurable, est. ~0.3–0.4M) so **fully-loaded ≈ 0.85–0.95M tokens** for ~2.5k Rust LOC plus
+fixtures. This sits **at/below the low end of §5a's `Declared` "first spike ~1–3M"** estimate — the
+first real data point, suggesting the §5a build/spike figures were, if anything, conservative. The
+§5a rows are annotated with this measurement; the full execute-plus-refine figure remains `Declared`
+(unmeasured).
+
 ---
 
 ## Meta — changelog
@@ -173,3 +242,15 @@ plausible-but-wrong Mycelium.** This is `analyze` as a first-class output, not a
   flagged) and the `?` operator is **absent from the v0 grammar** (lower to explicit `match`). §6 Q1
   and §7 corpus echoes corrected in lockstep. Status unchanged (**Draft**); enacts nothing. (Append-only;
   VR-5; G2.)
+- **2026-07-01 — §8 added: PoC results (M-873, kickoff `trx`).** Records the first **code** spike —
+  `crates/mycelium-transpile` (syn-based, exhaustive-dispatch, never-silent gap report) run on
+  `mycelium-std-cmp` and diffed against `lib/std/cmp.myc`. Measured (`Empirical`): **3.6%** of the
+  crate expressible against the current surface *without* macro expansion (the §6-Q6 auto-conversion
+  fraction, a lower bound); the **prioritized surface-feature backlog** (§8.3 — macros ~55%, then
+  conversion-op bodies / traits / bounded-generics / payload-variants / structs) as the E18-1
+  `needs-design` demand data; and a **~0.85–0.95M-token** fully-loaded cost, at/below §5a's `Declared`
+  "first spike" estimate. §8.1 sharpens the §2 seed posture with the measured specifics (the seed's
+  analyzer is a silent-pass allowlist — the anti-pattern; the PoC built the flag-don't-guess layer on
+  `syn` instead). §8.2 logs a review fix where 12 fabricated `from(self)` bodies were reclassified to
+  gaps (G2/VR-5 — never emit plausible-but-wrong). **Status unchanged (Draft, advisory)** — a spike,
+  not the gated full phase (§5); enacts nothing further. (Append-only; VR-5; G2.)
