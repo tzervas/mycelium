@@ -31,4 +31,4 @@ APIs directly — no fragile subprocess plumbing.
 
 ## Role in the workspace
 
-Depends on `mycelium-proj`, `mycelium-spore`, `mycelium-l1`, and `mycelium-cli-common`; provides the unified toolchain CLI above the kernel (KC-3). See the [workspace overview](../../README.md).
+Depends on `mycelium-proj`, `mycelium-spore`, `mycelium-l1`, and `mycelium-cli-common`; provides the unified toolchain CLI above the kernel (KC-3). See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-cli).

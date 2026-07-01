@@ -1,0 +1,87 @@
+# Self-Hosting Port Ledger — requisite components & logic for the Mycelium-native reimplementation
+
+> **Status:** living planning ledger (append-only; extended as components land). **Advisory** — it
+> records intent for the future self-hosting effort; it decides nothing normatively.
+>
+> **Owners / related:** epic **E18-1** (self-hosting capstone), **DN-26** (self-hosting bootstrap
+> plan), **DN-14** (self-hosting gate), the **`boot10`** kickoff. See also `docs/notes/DN-25`
+> (road to full-language 1.0.0).
+>
+> **Roadmap for ADR-036 (2026-07-01 — maintainer-ratified).** This ledger is the roadmap for the
+> project's **comprehensive-dogfooding track**: build each Mycelium-native component **beside** its
+> Rust reference → **Rust≡Mycelium differential validation** (extending the interp≡AOT≡JIT
+> discipline, RFC-0029 §7.5/M-210) → **replace** the Rust original once tested/benched/validated and
+> maintainer-satisfied → the project's **public release** (gated on this track's completion; the
+> `lang 1.0.0` tag itself is cut on the Rust reference and is not gated by this ledger's completion
+> beyond the existing core-lib self-host slice, ADR-022 §8 Q1). See ADR-036.
+
+## Purpose
+
+The Rust kernel + reference interpreter is **scaffolding**: the 1.0.0 arc lands components Rust-first
+because that is the fastest way to get them *correct*, but the long-term goal (E18-1, ADR-022 §10) is
+a **self-hosted implementation in Mycelium-lang itself**. Every Rust-reference component is therefore
+a *future Mycelium port*.
+
+This ledger captures — **as each component lands** — the logic + interfaces the self-hosting effort
+must reproduce, and flags any **external Rust dependencies** whose semantics must be reimplemented
+natively (they are not directly portable to a Mycelium that does not depend on Rust crates). The
+point is that the port works from a **spec**, not from archaeology of the Rust encoding.
+
+**Discipline:** at every wave integration, add/refresh the component's row. Keep it honest — a logic
+summary is `Empirical/Declared` unless it points at a checked spec; never claim a port is trivial
+that isn't.
+
+## External-dependency port considerations
+
+External Rust crates used in the reference are **not** part of the self-hosting surface. Where the
+reference leans on one, the self-hosted version must reproduce its *semantics* on Mycelium's own
+runtime/stdlib.
+
+| Rust dep | Used by (Rust ref) | Semantics to reproduce | Native Mycelium target |
+|---|---|---|---|
+| ~~**rayon**~~ **— DISSOLVED (2026-07-01)** | *(historical only — see note below; no current user)* | *(no longer applicable)* | *(no longer applicable)* |
+
+**On the rayon choice — SUPERSEDED, the port item is dissolved (2026-07-01, Wave-1 reconciliation).**
+The entry above originally recorded `rayon` (M-860's first pass, commit `a8e608e`) as a deliberate,
+correct-for-the-Rust-reference choice that would nonetheless need a self-hosting port later. That
+premise no longer holds: the SAME DAY, once the M-861 work-stealing Scheduler was **relocated to a
+new foundational crate, `mycelium-sched`** (PR #864, below `mycelium-interp`, breaking the
+`interp`↔`std-runtime` dependency cycle), both M-860 (commit `b6107b8`) and M-862 (commit `ed2ac9c`)
+were reworked to dispatch through `mycelium_sched::scheduler::Scheduler::run_indexed` directly, and
+`rayon` was **removed entirely** (confirmed: zero `rayon` references in `Cargo.lock` or any workspace
+`Cargo.toml`, 2026-07-01). **There is nothing left to reproduce for self-hosting on this axis** — the
+Rust reference itself no longer depends on an external crate here; it depends on `mycelium-sched`, a
+**first-party** crate that is itself squarely inside the self-hosting effort's own future-port surface
+(the runtime/scheduler, not a third-party semantics-reproduction exercise). This is a genuine
+reduction in self-hosting scope, not just a rename: porting `mycelium-sched`'s `Scheduler` follows the
+project's own conventions and is tracked under the ordinary runtime-component port path below, rather
+than as a bespoke "reimplement rayon" exercise.
+
+## Component ledger
+
+Per landed component: its logic, the Rust module that hosts it, external deps, and the native-port
+consideration. Extended per wave.
+
+| Component | Rust crate/module | Logic summary | External deps | Native-port consideration | Tracking |
+|---|---|---|---|---|---|
+| Parallel AOT codegen | `crates/mycelium-mlir` (per-function lowering) | independent functions lowered concurrently; stable content-key sort → byte-identical output vs sequential | **none** (was rayon; dissolved 2026-07-01 — see note above) | **Already native** as of 2026-07-01: dispatches via `mycelium_sched::scheduler::Scheduler::run_indexed`, a first-party crate. Nothing rayon-shaped to reproduce; the remaining port item is the ordinary one of porting `mycelium-sched`'s `Scheduler` itself to Mycelium-lang (tracked with the rest of the runtime, not as a bespoke exercise) | M-860 |
+| Parallel pure-fragment eval | `crates/mycelium-interp` (env-machine) | effect-free fragments evaluated concurrently over the outermost independent argument batch (no nesting — the current interim cap), RT2-preserving; differential vs sequential = identical values; choice reified in an EXPLAIN-able `ParallelPlan` | **none** (was rayon; dissolved 2026-07-01 — see note above) | **Already native**, same substrate as M-860 above (`Scheduler::run_indexed`). The purity/effect analysis that gates parallelism (`is_pure`) is itself a component to port; the bounded-to-top-level-batch limitation (no nested submission) carries forward to the self-hosted version until M-864 lands | M-862 |
+| MLIR-dialect Dense/VSA codegen | `crates/mycelium-mlir/src/dialect/native/{dense,vsa}.rs` | lowers Dense/VSA ops through the real `arith`/`func`/`math` MLIR dialect, mirroring `dense_codegen.rs`/`vsa_codegen.rs` | libMLIR (`mlir-opt`/`mlir-translate`, external toolchain, not a Rust crate) | **No self-hosting port item** — this is AOT-backend codegen that drives the real LLVM/MLIR C++ toolchain; it stays Rust/FFI-hosted regardless of whether the frontend/checker/stdlib self-host (analogous to how a self-hosted compiler still typically keeps its LLVM integration in a host language). Noted here so the omission is explicit, not silently skipped | M-856b |
+| Stdlib stable-API freeze | `crates/mycelium-std-*` (all 26 crates) | dated, grounded snapshot of the current public-API + guarantee-matrix baseline for every `mycelium-std-*` crate — **this snapshot is exactly the spec the self-hosting `.myc` ports must match**, per crate | n/a (documentation/audit, not code) | **Direct input to the self-hosting effort**: DN-66's per-crate table (spec status, `GUARANTEE_MATRIX` location, public-surface size) is the reference each `.myc` port's D5/D6 conformance bar is checked against; DN-66 §3 also grounds why the 5 existing same-named `.myc` prototypes don't yet qualify as full ports | M-719 (DN-66) |
+| Recursion-depth budgets (totality + ambient passes) | `crates/mycelium-l1/src/{totality,ambient}.rs` | explicit `MAX_WALK_DEPTH`/`MAX_AMBIENT_DEPTH` (4096) budgets on the passes' own AST-descent, refusing cleanly past them rather than relying on a host-stack limit | none | **Self-hosting-portable by the issue's own design intent**: the explicit-budget discipline (vs. relying on the host call stack) is exactly the pattern a Mycelium-native frontend needs, since a self-hosted checker/elaborator has no Rust host stack to fall back on. The `mycelium-stack` deep-worker-stack adapter is explicitly transitional (Rust-hosted only); the budget itself is the portable primitive. **Known gap, not yet closed:** the sibling `mono.rs` `free_vars`/`pattern_binders` recursion remains unbounded — a follow-up, out of this item's own scope | M-674 |
+| *(license audit gate, M-743)* | `scripts/checks/license-first-party.sh` | MIT-only first-party license enforcement | n/a | **Not applicable** — a project-tooling/CI gate script, not Mycelium-language-implementation logic; outside this ledger's scope (nothing here for the self-hosting effort to reproduce) | M-743 |
+
+### Forward items (not yet landed — tracked for when they do)
+
+| Component | Status | What it will add to this ledger when it lands |
+|---|---|---|
+| Persistent bounded work-stealing pool | `needs-design`, M-864 | Replaces `mycelium-sched`'s current per-call-spawn `Scheduler::run_indexed` with a persistent, nested-submission-safe pool. When landed, update the M-860/M-862 rows above (or add a new `mycelium-sched` row) with the pool's own logic + the ratified `run_indexed` contract change, since the self-hosted port target changes shape (pool lifecycle + nested-join wait-loop, not just per-call spawn) |
+| AOT-runtime concurrency + async parity with the interpreter | `needs-design`, M-865 | Extends the AOT-compiled path to run Colony/hypha/async programs on the same `mycelium-sched` substrate as the interpreter. When landed, add a row for the AOT-side concurrency surface + note whether it introduces any AOT-only runtime logic that itself becomes a distinct self-hosting port item (vs. reusing the interpreter's already-tracked one) |
+
+<!-- Append new rows below as components land. Keep the External-dependency table in sync. -->
+
+## How this feeds the self-hosting effort
+
+When E18-1 / `boot10` begins porting a subsystem, its first input is this ledger's row(s): the logic
+to reproduce and the native substitutes for any Rust dep. A row that is thin is a signal to write the
+component's spec *before* porting (a DN or a `docs/spec/` entry), not to reverse-engineer the Rust.

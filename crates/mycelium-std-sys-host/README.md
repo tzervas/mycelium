@@ -31,4 +31,13 @@ are explicit `Err` (no silent zero-fill, no clock wrap/clamp). Source is ground 
 
 ## Role in the workspace
 
-The sole crate that depends on both the audited OS floor and the pure std crates; wires the production entropy and clock sources without touching `unsafe`. See the [workspace overview](../../README.md).
+The sole crate that depends on both the audited OS floor and the pure std crates; wires the production entropy and clock sources without touching `unsafe`. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-sys-host).
+
+## Stability (DN-66 freeze, 2026-07-01)
+
+This crate's public API (`OsEntropy`, `OsClock`) is the **frozen baseline** per
+[DN-66](../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md). Unlike
+its 25 siblings, `mycelium-std-sys-host` has **no `docs/spec/stdlib/sys-host.md`** yet (DN-66 §4.a
+FLAGs this as a follow-up); the "Overview"/"Key items"/"Guarantee posture" sections above are the
+current documented contract until a formal spec lands. No `.myc` port exists, so the RFC-0031 D6
+retirement trigger has not fired and no item here is `#[deprecated]`.

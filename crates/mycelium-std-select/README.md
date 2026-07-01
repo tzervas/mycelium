@@ -33,4 +33,4 @@ policy is a total predicate over exact metadata — nothing probabilistic or lea
 
 ## Role in the workspace
 
-Ring 1 / Tier A EXPLAIN capability surface; wraps `mycelium-select` (M-221) without adding trusted code. See the [workspace overview](../../README.md).
+Ring 1 / Tier A EXPLAIN capability surface; wraps `mycelium-select` (M-221) without adding trusted code. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-select).

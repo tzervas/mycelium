@@ -35,6 +35,14 @@
 //! available to the whole library; no ambient choice is imposed here — callers select
 //! the representation explicitly. `repr_of`, `meta_of`, and `guarantee_of` expose the
 //! reified representation of any value as a pure, total query (never an inferred default).
+//!
+//! # Stability (DN-66 freeze, 2026-07-01)
+//!
+//! This crate's public API, as documented in `docs/spec/stdlib/core.md` (spec status:
+//! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+//! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//! It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
 #![forbid(unsafe_code)]
 
 // ---- shared stdlib error scaffold (M-535, E5-1; DN-17 §2.4/§4 P3) ----------------

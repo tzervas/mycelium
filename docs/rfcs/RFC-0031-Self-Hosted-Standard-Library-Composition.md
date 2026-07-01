@@ -203,6 +203,18 @@ through the migration. Once a `.myc` port clears D5, the Rust crate's public API
 **Final removal is a separate post-Enactment decision** — a module's Rust reference is the cheapest
 honest oracle, so it survives until RFC-0031 is Enacted and the maintainer retires it explicitly.
 
+> **Scope note (added 2026-07-01, ADR-035 — append-only; D6 mechanism itself unchanged).** DN-66's
+> grounded per-crate survey found that, as of 2026-07-01, **none** of the 26 `mycelium-std-*` crates
+> clears the D6 trigger — the six same-named `.myc` nodules (`cmp`/`math`/`collections`/`text`/`iter`/
+> `fmt`) are structurally disjoint prototypes, not D5-clearing ports, and `mycelium-std-runtime` is
+> load-bearing (depended on directly by `crates/mycelium-mlir`). **ADR-035** narrows ADR-022 track T4's
+> `lang 1.0.0` bar to the documented stable-API freeze (DN-66) + the core-lib self-host slice
+> (M-714…M-718); the full per-op D5 audit + D6 retirement work above is **deferred to the post-1.0
+> long-term arc** (ADR-022 §10) and is no longer on the `lang 1.0.0` critical path. This does not change
+> D5/D6 as *mechanism* — a `.myc` port still self-hosts only when it clears D5, and D6 still marks
+> `#[deprecated]` only once it does; it changes *when* that full-corpus retirement must land relative to
+> the `lang 1.0.0` tag. See ADR-035.
+
 ### D7 — `spore` packaging
 
 **One `spore` per phylum** (`std`), versioned as a unit (ADR-013 deployable artifact; ADR-003
@@ -230,6 +242,7 @@ consumer needs the smaller surface.)
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-07-01 | **Accepted** (unchanged — scope note added) | **D6 retirement scoped post-1.0 by ADR-035** (append-only; D5/D6 mechanism itself unchanged). DN-66's grounded per-crate survey found zero of 26 `mycelium-std-*` crates clear the D6 trigger today (the six same-named `.myc` nodules are structurally disjoint prototypes; `mycelium-std-runtime` is load-bearing). ADR-035 narrows ADR-022 track T4's `lang 1.0.0` bar to the stable-API freeze (DN-66) + the core-lib self-host slice (M-714…M-718); full per-op D5 audits + D6 retirement for the remaining crates continue as post-1.0 long-term-arc work (ADR-022 §10), off the `lang 1.0.0` critical path. See ADR-035. |
 | 2026-06-27 | **Accepted** | **Tier-0/Tier-1 self-hosted surface implemented (Rust-first), pending ratification** (status unchanged — an implementation note, not a transition). The §5 D4-sequenced prototypes now **execute three-way** (L1-eval ≡ L0-interp ≡ AOT): `lib/std/iter.myc` first-order combinators (`map`/`filter`/`foldl`/`any`/`all`/`find`) once the recursive-HOF defunctionalization re-pass closed (**M-715**, RFC-0024 §7); and the **width-generic** Tier-1 surface unblocked by the D2 prims (RFC-0032) — `lib/std/cmp.myc` (`cmp`/`le`/`ge`/`max`/`min`), `lib/std/math.myc` (`badd`/`bsub`/`band`/`bor`/`bxor`/`bnot` over `Binary{N}`, `tadd`/`tsub`/`tmul`/`tneg` over `Ternary{M}`), `lib/std/collections.myc` (`map_get<N,V>`/`set_contains<N>`, unblocking M-716), and `lib/std/text.myc` (UTF-8 validity, M-717) — each monomorphized per call-site width (**M-718** consuming **M-753**/DN-42). Conformance gated in `crates/mycelium-l1/tests/std_generic_conformance.rs` (M-719) at ≥ 2 widths each, with never-silent width-mismatch refusals (G2). Agreement `Empirical`; nothing upgraded to `Proven` (VR-5). These remain **prototypes** under the D5 stability bar; the Rust `mycelium-std-*` crates stay the D6 differential oracle, and the full migration (D6 retirement / frozen stable API) remains open. RFC stays **Accepted** (not Enacted). |
 | 2026-06-23 | **Accepted** | M-714: composition model ratified — §5 D1 (irreducible-Rust boundary + criterion), D2 (phylum layout), D3 (no bootstrap circularity), D4 (surface-readiness-tiered migration order; the executable core is Tier-0, `collections`/`text`/`math` blocked on prims — VR-5), D5 (per-op stability bar + the `std_result`/`std_option`/`std_cmp` prototype pattern), D6 (Rust crate kept as differential oracle), D7 (one spore per phylum). M-715 Tier-0 (`option.myc`/`cmp.myc`) lands alongside. |
 | 2026-06-23 | **Draft** | Initial stub — open questions enumerated; no normative decisions. Task: E13-1/M-714. |

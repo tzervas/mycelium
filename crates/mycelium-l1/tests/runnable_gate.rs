@@ -227,6 +227,15 @@ fn every_accepted_construct_elaborates_to_ok_or_explicit_residual() {
                     cat = row.category
                 );
             }
+            (Err(ElabError::DepthExceeded { site, limit }), _) => {
+                panic!(
+                    "DN-50 gate INCONSISTENCY [{cat}]: elaborate hit its own call-graph-analysis \
+                     recursion-depth budget ({limit}) at `{site}` (M-674) for a DN-50 corpus \
+                     program — none of these fixtures should approach that budget; this indicates a \
+                     corpus regression, not a staging refusal.",
+                    cat = row.category
+                );
+            }
         }
     }
 }

@@ -30,4 +30,4 @@ Metadata is threaded honestly: an `Op`/`Swap` result's guarantee is the `meet` o
 
 ## Role in the workspace
 
-Depends on `mycelium-core` and `mycelium-numerics`. Used by `mycelium-l1`, `mycelium-mlir`, `mycelium-cert`, and the differential test harness. See the [workspace overview](../../README.md).
+Depends on `mycelium-core` and `mycelium-numerics`. Used by `mycelium-l1`, `mycelium-mlir`, `mycelium-cert`, and the differential test harness. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-interp).

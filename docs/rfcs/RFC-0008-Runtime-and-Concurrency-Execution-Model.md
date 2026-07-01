@@ -409,6 +409,30 @@ substrate (the RFC-0004 backend story, distributed).
 
 ## Meta — changelog
 
+- **2026-07-01 — §8 scope ratified: harness-level M-862 batch extension to AOT/JIT, NOT hypha/colony/
+  async parity (M-865, append-only).** M-865 was minted naming "AOT-runtime concurrency + async
+  execution parity with the interpreter"; on inspection that framing over-claimed against present-day
+  reality (a scoping pass this same day established: the language has **no executable concurrency
+  surface** — `hypha` is ratified-not-lexed (§4.5), `async` is unimplemented, and every execution path
+  (interpreter, AOT, JIT) still runs one sequential program). What *is* real and closeable today is
+  narrower: M-862 gave the reference interpreter a bounded, top-level-only parallel-eval path (a pure,
+  ≥2-argument top-level `Op`/`Construct` fanned across `mycelium_sched::Scheduler::run_indexed`), and
+  the AOT/JIT compiled paths had no analogous harness-level dispatch of their own to validate against
+  it. **Ratified scope:** extend M-862's exact fragment gate to the direct-LLVM AOT and in-process JIT
+  paths, dispatched at the **Rust harness level** (reusing M-860's precedent —
+  `Scheduler::run_indexed` — never a new LLVM-IR-level concurrency primitive, never a second
+  scheduler), narrowed further to **`Op`-headed** batches only (a `Construct`-headed batch is out of
+  this harness's scope: the direct-LLVM whole-program contract requires a top-level `Lane` result,
+  which a bare `Construct` cannot produce standalone — `mycelium-mlir::concurrent` module docs).
+  Landed as `mycelium-mlir::concurrent` (`compile_and_run_concurrent`/`jit_run_concurrent`) plus
+  `tests/concurrent_threeway_differential.rs` (interp-sequential ≡ interp-parallel ≡ AOT-parallel ≡
+  JIT-parallel, M-210-checked, mutant-witnessed). **Real hypha/colony/async concurrency parity is
+  explicitly NOT this — it is carved out to a new post-1.0.0-tag issue, M-869**, gated on the language
+  actually growing a spawn/hypha surface to drive it (§4.5's activation path). RFC-0008 status
+  **unchanged** (Accepted) — this is a scope clarification + a landed harness extension, not a runtime-
+  model change. Guarantee: `Empirical` (differential-checked, non-vacuous on this box — libMLIR-18 +
+  clang present), never `Proven` (VR-5).
+
 - **2026-06-29 — `backbone` declared-vs-promoted resolved (M-825, append-only):** Maintainer decision:
   `backbone` is runtime-dynamic **promoted** (not manifest-level declared). Append-only note added in
   §4.5 resolving DN-63 FLAG-15; the `backbone` implementation RFC proceeds on the promoted-dynamic model.

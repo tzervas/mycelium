@@ -79,6 +79,17 @@ pub enum AmbientError {
         /// The ambient paradigm in force.
         paradigm: Paradigm,
     },
+    /// The resolution pass's OWN recursive descent over `expr`/`type_ref`/`pattern` exceeded its
+    /// explicit [`MAX_AMBIENT_DEPTH`] budget (M-674 remaining TODO item 2) — the compiler pass's
+    /// analysis recursion over the AST, not a claim about the checked program's semantics. Refused
+    /// cleanly here rather than overflowing the host stack (banked guard 4; A4-02), mirroring the
+    /// checker's `MAX_CHECK_DEPTH` discipline.
+    DepthExceeded {
+        /// The item/definition being resolved when the budget was exceeded.
+        site: String,
+        /// The exceeded budget.
+        limit: u32,
+    },
 }
 
 impl core::fmt::Display for AmbientError {
@@ -108,6 +119,12 @@ impl core::fmt::Display for AmbientError {
                 f,
                 "`{site}`: a bare decimal has no `{paradigm}` encoding — only `Binary`/`Ternary` \
                  ambients give a bare decimal a meaning (RFC-0012 §4.3); write the value explicitly"
+            ),
+            AmbientError::DepthExceeded { site, limit } => write!(
+                f,
+                "`{site}`: AST nesting exceeds the ambient resolution pass's own recursion-depth \
+                 budget ({limit}) — an explicit budget (banked guard 4; M-674), refused cleanly \
+                 rather than overflowing the host stack"
             ),
         }
     }
@@ -148,9 +165,19 @@ pub fn resolve(nodule: &Nodule) -> Result<Nodule, AmbientError> {
 
 /// Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3).
 ///
+/// Runs on [`mycelium_stack`]'s deep worker stack (M-674), mirroring the checker's/evaluator's
+/// discipline: [`MAX_AMBIENT_DEPTH`] — not a host-stack overflow — is always what bounds a
+/// pathologically-nested `nodule`, regardless of the caller's own thread-stack size. Resolution runs
+/// *before* `checkty`'s own deep-stack wrapping (`check_phylum_matured`), so it needs its own —
+/// nesting worker threads is cheap (tens of microseconds) and harmless.
+///
 /// # Errors
 /// See [`resolve`].
 pub fn resolve_report(nodule: &Nodule) -> Result<Resolved, AmbientError> {
+    mycelium_stack::with_deep_stack(|| resolve_report_inner(nodule))
+}
+
+fn resolve_report_inner(nodule: &Nodule) -> Result<Resolved, AmbientError> {
     // The nodule-scope ambient: at most one `default paradigm`, the outermost frame. It governs all
     // signature types and is the base expression ambient.
     let mut default: Option<Paradigm> = None;
@@ -289,13 +316,44 @@ pub fn expand_phylum_to_source(phylum: &Phylum) -> String {
     out
 }
 
+/// Explicit depth budget for the ambient resolution pass's OWN recursive descent over
+/// `Resolver::expr`/`type_ref`/`pattern` (M-674 remaining TODO item 2) — the compiler pass's
+/// analysis recursion, distinct from any RFC-0012 semantic concept (resolution has no notion of
+/// non-termination). Mirrors the checker's `MAX_CHECK_DEPTH` discipline (banked guard 4; A4-02):
+/// rather than rely on the host call stack (a resource that is not a semantic limit), the pass
+/// carries this reified budget and refuses past it with a clean [`AmbientError::DepthExceeded`],
+/// never a host-stack overflow. Set comfortably above the parser's `MAX_EXPR_DEPTH` (256)
+/// surface-nesting cap, so no parser-produced AST ever approaches it — the ceiling exists as
+/// defense-in-depth for a synthetic/API-built tree handed directly to [`resolve`]/[`resolve_report`].
+///
+/// **Grounding (measured, not guessed).** `resolve_report` runs on [`mycelium_stack`]'s 256 MiB deep
+/// worker stack (below); measured empirically, `Resolver::expr`'s own recursion survives at least
+/// 1,000,000 levels on that stack without overflowing. This budget (`4096`) is therefore comfortably
+/// (>200×) below the measured physical floor, and **16×** above the parser's 256-deep surface cap.
+pub(crate) const MAX_AMBIENT_DEPTH: u32 = 4096;
+
 /// The resolution worker: holds the provenance trace; the ambient paradigm is threaded as an
-/// argument (innermost-enclosing-wins, a binder-like stack), never as mutable state.
+/// argument (innermost-enclosing-wins, a binder-like stack), never as mutable state. The recursion
+/// depth (M-674) is threaded the same way — an explicit argument to `expr`/`type_ref`/`pattern`,
+/// reset to `0` at the top of each declaration's resolution (mirroring the checker's per-body reset).
 struct Resolver {
     notes: Vec<ResolutionNote>,
 }
 
 impl Resolver {
+    /// Charge one level of nesting against the explicit [`MAX_AMBIENT_DEPTH`] budget (banked guard
+    /// 4): returns the incremented depth, or a clean [`AmbientError::DepthExceeded`] past the
+    /// budget — never a host-stack overflow.
+    fn enter_depth(site: &str, depth: u32) -> Result<u32, AmbientError> {
+        let depth = depth + 1;
+        if depth > MAX_AMBIENT_DEPTH {
+            return Err(AmbientError::DepthExceeded {
+                site: site.to_owned(),
+                limit: MAX_AMBIENT_DEPTH,
+            });
+        }
+        Ok(depth)
+    }
     fn note(&mut self, site: &str, paradigm: Paradigm, detail: impl Into<String>) {
         self.notes.push(ResolutionNote {
             site: site.to_owned(),
@@ -313,7 +371,7 @@ impl Resolver {
         for c in &td.ctors {
             let mut fields = Vec::with_capacity(c.fields.len());
             for f in &c.fields {
-                fields.push(self.type_ref(amb, &td.name, f)?);
+                fields.push(self.type_ref(amb, &td.name, f, 0)?);
             }
             ctors.push(Ctor {
                 name: c.name.clone(),
@@ -359,9 +417,9 @@ impl Resolver {
         let site = &id.trait_name;
         let mut trait_args = Vec::with_capacity(id.trait_args.len());
         for a in &id.trait_args {
-            trait_args.push(self.type_ref(amb, site, a)?);
+            trait_args.push(self.type_ref(amb, site, a, 0)?);
         }
-        let for_ty = self.type_ref(amb, site, &id.for_ty)?;
+        let for_ty = self.type_ref(amb, site, &id.for_ty, 0)?;
         let mut methods = Vec::with_capacity(id.methods.len());
         for m in &id.methods {
             methods.push(self.fn_decl(amb, m)?);
@@ -383,7 +441,7 @@ impl Resolver {
         id: &InherentImplDecl,
     ) -> Result<InherentImplDecl, AmbientError> {
         let site = "impl";
-        let for_ty = self.type_ref(amb, site, &id.for_ty)?;
+        let for_ty = self.type_ref(amb, site, &id.for_ty, 0)?;
         let mut methods = Vec::with_capacity(id.methods.len());
         for m in &id.methods {
             methods.push(self.fn_decl(amb, m)?);
@@ -394,8 +452,10 @@ impl Resolver {
     fn fn_decl(&mut self, amb: Option<Paradigm>, fd: &FnDecl) -> Result<FnDecl, AmbientError> {
         let sig = self.fn_sig(amb, &fd.sig)?;
         // The function body resolves under the nodule ambient as its base frame; `with paradigm`
-        // blocks nest *inside* it. Signatures (above) never see a block-scope override.
-        let body = self.expr(amb, &fd.sig.name, &fd.body)?;
+        // blocks nest *inside* it. Signatures (above) never see a block-scope override. The
+        // recursion-depth budget (M-674) resets to `0` per body, mirroring the checker's per-body
+        // reset — each declaration's traversal is independently bounded.
+        let body = self.expr(amb, &fd.sig.name, &fd.body, 0)?;
         Ok(FnDecl {
             // Visibility is surface metadata, untouched by ambient resolution (M-662).
             vis: fd.vis,
@@ -421,7 +481,7 @@ impl Resolver {
         let ctor = {
             let mut fields = Vec::with_capacity(od.ctor.fields.len());
             for f in &od.ctor.fields {
-                fields.push(self.type_ref(amb, site, f)?);
+                fields.push(self.type_ref(amb, site, f, 0)?);
             }
             Ctor {
                 name: od.ctor.name.clone(),
@@ -433,7 +493,7 @@ impl Resolver {
         for via in &od.via_decls {
             let mut trait_args = Vec::with_capacity(via.trait_args.len());
             for a in &via.trait_args {
-                trait_args.push(self.type_ref(amb, site, a)?);
+                trait_args.push(self.type_ref(amb, site, a, 0)?);
             }
             via_decls.push(crate::ast::ViaDecl {
                 field_idx: via.field_idx,
@@ -467,10 +527,10 @@ impl Resolver {
         for p in &s.value_params {
             value_params.push(Param {
                 name: p.name.clone(),
-                ty: self.type_ref(amb, &s.name, &p.ty)?,
+                ty: self.type_ref(amb, &s.name, &p.ty, 0)?,
             });
         }
-        let ret = self.type_ref(amb, &s.name, &s.ret)?;
+        let ret = self.type_ref(amb, &s.name, &s.ret, 0)?;
         Ok(FnSig {
             name: s.name.clone(),
             params: s.params.clone(),
@@ -485,12 +545,19 @@ impl Resolver {
 
     /// Resolve a [`TypeRef`]: a paradigm-less base is filled from `amb`; everything else passes
     /// through (the guarantee index is unaffected — VR-5).
+    ///
+    /// # Errors
+    /// [`AmbientError::DepthExceeded`] once this traversal's own recursion exceeds
+    /// [`MAX_AMBIENT_DEPTH`] (M-674) — a clean, explicit refusal rather than a host-stack overflow
+    /// on a pathologically-nested `t`.
     fn type_ref(
         &mut self,
         amb: Option<Paradigm>,
         site: &str,
         t: &TypeRef,
+        depth: u32,
     ) -> Result<TypeRef, AmbientError> {
+        let depth = Self::enter_depth(site, depth)?;
         let base = match &t.base {
             BaseType::Ambient(params) => {
                 let p = amb.ok_or_else(|| AmbientError::UnresolvedAmbient {
@@ -504,15 +571,15 @@ impl Resolver {
             BaseType::Named(name, args) => {
                 let mut out = Vec::with_capacity(args.len());
                 for a in args {
-                    out.push(self.type_ref(amb, site, a)?);
+                    out.push(self.type_ref(amb, site, a, depth)?);
                 }
                 BaseType::Named(name.clone(), out)
             }
             // Function types carry two inner TypeRefs; resolve each so that a paradigm-less
             // repr nested inside `A -> B` is filled in context (RFC-0024 §3, M-685).
             BaseType::Fn(arg, ret) => BaseType::Fn(
-                Box::new(self.type_ref(amb, site, arg)?),
-                Box::new(self.type_ref(amb, site, ret)?),
+                Box::new(self.type_ref(amb, site, arg, depth)?),
+                Box::new(self.type_ref(amb, site, ret, depth)?),
             ),
             other => other.clone(),
         };
@@ -524,10 +591,24 @@ impl Resolver {
 
     /// Resolve an expression under the current ambient `amb`. `with paradigm P { e }` recurses with
     /// `amb = Some(P)` and returns the resolved body (the block is stripped — I1: no node inserted).
-    fn expr(&mut self, amb: Option<Paradigm>, site: &str, e: &Expr) -> Result<Expr, AmbientError> {
+    ///
+    /// # Errors
+    /// [`AmbientError::DepthExceeded`] once this traversal's own recursion exceeds
+    /// [`MAX_AMBIENT_DEPTH`] (M-674) — a clean, explicit refusal rather than a host-stack overflow
+    /// on a pathologically-nested `e`.
+    fn expr(
+        &mut self,
+        amb: Option<Paradigm>,
+        site: &str,
+        e: &Expr,
+        depth: u32,
+    ) -> Result<Expr, AmbientError> {
+        let depth = Self::enter_depth(site, depth)?;
         Ok(match e {
-            Expr::WithParadigm { paradigm, body } => self.expr(Some(*paradigm), site, body)?,
-            Expr::Lit(l) => Expr::Lit(self.literal(amb, site, l)?),
+            Expr::WithParadigm { paradigm, body } => {
+                self.expr(Some(*paradigm), site, body, depth)?
+            }
+            Expr::Lit(l) => Expr::Lit(self.literal(amb, site, l, depth)?),
             Expr::Path(p) => Expr::Path(p.clone()),
             Expr::Let {
                 name,
@@ -537,27 +618,27 @@ impl Resolver {
             } => Expr::Let {
                 name: name.clone(),
                 ty: match ty {
-                    Some(t) => Some(self.type_ref(amb, site, t)?),
+                    Some(t) => Some(self.type_ref(amb, site, t, depth)?),
                     None => None,
                 },
-                bound: Box::new(self.expr(amb, site, bound)?),
-                body: Box::new(self.expr(amb, site, body)?),
+                bound: Box::new(self.expr(amb, site, bound, depth)?),
+                body: Box::new(self.expr(amb, site, body, depth)?),
             },
             Expr::If { cond, conseq, alt } => Expr::If {
-                cond: Box::new(self.expr(amb, site, cond)?),
-                conseq: Box::new(self.expr(amb, site, conseq)?),
-                alt: Box::new(self.expr(amb, site, alt)?),
+                cond: Box::new(self.expr(amb, site, cond, depth)?),
+                conseq: Box::new(self.expr(amb, site, conseq, depth)?),
+                alt: Box::new(self.expr(amb, site, alt, depth)?),
             },
             Expr::Match { scrutinee, arms } => {
                 let mut out = Vec::with_capacity(arms.len());
                 for arm in arms {
                     out.push(Arm {
-                        pattern: self.pattern(amb, site, &arm.pattern)?,
-                        body: self.expr(amb, site, &arm.body)?,
+                        pattern: self.pattern(amb, site, &arm.pattern, depth)?,
+                        body: self.expr(amb, site, &arm.body, depth)?,
                     });
                 }
                 Expr::Match {
-                    scrutinee: Box::new(self.expr(amb, site, scrutinee)?),
+                    scrutinee: Box::new(self.expr(amb, site, scrutinee, depth)?),
                     arms: out,
                 }
             }
@@ -569,18 +650,18 @@ impl Resolver {
                 body,
             } => Expr::For {
                 x: x.clone(),
-                xs: Box::new(self.expr(amb, site, xs)?),
+                xs: Box::new(self.expr(amb, site, xs, depth)?),
                 acc: acc.clone(),
-                init: Box::new(self.expr(amb, site, init)?),
-                body: Box::new(self.expr(amb, site, body)?),
+                init: Box::new(self.expr(amb, site, init, depth)?),
+                body: Box::new(self.expr(amb, site, body, depth)?),
             },
             Expr::Swap {
                 value,
                 target,
                 policy,
             } => Expr::Swap {
-                value: Box::new(self.expr(amb, site, value)?),
-                target: self.type_ref(amb, site, target)?,
+                value: Box::new(self.expr(amb, site, value, depth)?),
+                target: self.type_ref(amb, site, target, depth)?,
                 policy: policy.clone(),
             },
             // `wild` is the audited/opaque FFI escape (M-661): its body is trusted foreign code,
@@ -592,15 +673,15 @@ impl Resolver {
             // (audited, not verified — VR-5/ADR-014; RFC-0016 §8-Q6). `spore(value)` wraps a *real*
             // value expression (deferred — E2-5/M-260), so it still resolves transparently.
             Expr::Wild(b) => Expr::Wild(b.clone()),
-            Expr::Spore(b) => Expr::Spore(Box::new(self.expr(amb, site, b)?)),
+            Expr::Spore(b) => Expr::Spore(Box::new(self.expr(amb, site, b, depth)?)),
             // M-664: `consume <expr>` — resolve the operand's ambient (the operand is an ordinary
             // value expression; the `Substrate`-type check is the checker's job).
-            Expr::Consume(b) => Expr::Consume(Box::new(self.expr(amb, site, b)?)),
+            Expr::Consume(b) => Expr::Consume(Box::new(self.expr(amb, site, b, depth)?)),
             // A `lambda` body flows transparently under the same ambient (no new ambient frame); the
             // params carry their own explicit types. (Deferred form — M-704 — but resolved like any expr.)
             Expr::Lambda { params, body } => Expr::Lambda {
                 params: params.clone(),
-                body: Box::new(self.expr(amb, site, body)?),
+                body: Box::new(self.expr(amb, site, body, depth)?),
             },
             // A `colony`'s ambient flows transparently into each `hypha` body (no new ambient frame;
             // RFC-0008 §4.7). Resolve every hypha body under the same `amb`.
@@ -608,7 +689,7 @@ impl Resolver {
                 let mut out = Vec::with_capacity(hyphae.len());
                 for h in hyphae {
                     out.push(crate::ast::Hypha {
-                        body: self.expr(amb, site, &h.body)?,
+                        body: self.expr(amb, site, &h.body, depth)?,
                     });
                 }
                 Expr::Colony(out)
@@ -616,26 +697,26 @@ impl Resolver {
             Expr::App { head, args } => {
                 let mut out = Vec::with_capacity(args.len());
                 for a in args {
-                    out.push(self.expr(amb, site, a)?);
+                    out.push(self.expr(amb, site, a, depth)?);
                 }
                 Expr::App {
-                    head: Box::new(self.expr(amb, site, head)?),
+                    head: Box::new(self.expr(amb, site, head, depth)?),
                     args: out,
                 }
             }
             Expr::Ascribe(inner, t) => Expr::Ascribe(
-                Box::new(self.expr(amb, site, inner)?),
-                self.type_ref(amb, site, t)?,
+                Box::new(self.expr(amb, site, inner, depth)?),
+                self.type_ref(amb, site, t, depth)?,
             ),
             // DN-58 §A/§B (M-667): `fuse(a, b)` and `reclaim(policy) { body }` — both operands
             // flow under the same ambient frame (no new paradigm context). Resolve transparently.
             Expr::Fuse { left, right } => Expr::Fuse {
-                left: Box::new(self.expr(amb, site, left)?),
-                right: Box::new(self.expr(amb, site, right)?),
+                left: Box::new(self.expr(amb, site, left, depth)?),
+                right: Box::new(self.expr(amb, site, right, depth)?),
             },
             Expr::Reclaim { policy, body } => Expr::Reclaim {
-                policy: Box::new(self.expr(amb, site, policy)?),
-                body: Box::new(self.expr(amb, site, body)?),
+                policy: Box::new(self.expr(amb, site, policy, depth)?),
+                body: Box::new(self.expr(amb, site, body, depth)?),
             },
             // M-826: propagate the ambient paradigm into each element of a tuple literal.
             // A tuple literal `(a, b, …)` may contain repr literals (e.g. bare decimals); each
@@ -643,7 +724,7 @@ impl Resolver {
             Expr::TupleLit(elems) => {
                 let mut out = Vec::with_capacity(elems.len());
                 for el in elems {
-                    out.push(self.expr(amb, site, el)?);
+                    out.push(self.expr(amb, site, el, depth)?);
                 }
                 Expr::TupleLit(out)
             }
@@ -659,6 +740,7 @@ impl Resolver {
         amb: Option<Paradigm>,
         site: &str,
         l: &Literal,
+        depth: u32,
     ) -> Result<Literal, AmbientError> {
         Ok(match l {
             Literal::Int(v) => match amb {
@@ -677,7 +759,7 @@ impl Resolver {
             Literal::List(elems) => {
                 let mut out = Vec::with_capacity(elems.len());
                 for e in elems {
-                    out.push(self.expr(amb, site, e)?);
+                    out.push(self.expr(amb, site, e, depth)?);
                 }
                 Literal::List(out)
             }
@@ -692,18 +774,25 @@ impl Resolver {
     /// Resolve a pattern: a bare-decimal literal pattern adopts the ambient paradigm (its width is
     /// the scrutinee's, checked by `normalize_pattern`). Constructor/binder/wildcard patterns and
     /// tagged-literal patterns are unaffected.
+    ///
+    /// # Errors
+    /// [`AmbientError::DepthExceeded`] once this traversal's own recursion exceeds
+    /// [`MAX_AMBIENT_DEPTH`] (M-674) — a clean, explicit refusal rather than a host-stack overflow
+    /// on a pathologically-nested `p`.
     fn pattern(
         &mut self,
         amb: Option<Paradigm>,
         site: &str,
         p: &Pattern,
+        depth: u32,
     ) -> Result<Pattern, AmbientError> {
+        let depth = Self::enter_depth(site, depth)?;
         Ok(match p {
-            Pattern::Lit(l) => Pattern::Lit(self.literal(amb, site, l)?),
+            Pattern::Lit(l) => Pattern::Lit(self.literal(amb, site, l, depth)?),
             Pattern::Ctor(name, subs) => {
                 let mut out = Vec::with_capacity(subs.len());
                 for s in subs {
-                    out.push(self.pattern(amb, site, s)?);
+                    out.push(self.pattern(amb, site, s, depth)?);
                 }
                 Pattern::Ctor(name.clone(), out)
             }
@@ -711,7 +800,7 @@ impl Resolver {
             Pattern::Tuple(subs) => {
                 let mut out = Vec::with_capacity(subs.len());
                 for s in subs {
-                    out.push(self.pattern(amb, site, s)?);
+                    out.push(self.pattern(amb, site, s, depth)?);
                 }
                 Pattern::Tuple(out)
             }
@@ -723,7 +812,7 @@ impl Resolver {
             Pattern::Or(alts) => {
                 let mut resolved = Vec::with_capacity(alts.len());
                 for alt in alts {
-                    resolved.push(self.pattern(amb, site, alt)?);
+                    resolved.push(self.pattern(amb, site, alt, depth)?);
                 }
                 Pattern::Or(resolved)
             }

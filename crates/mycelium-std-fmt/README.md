@@ -34,4 +34,4 @@ fallible (`Err(FromJsonError)`) — never silent on malformed input (C1/G2).
 
 ## Role in the workspace
 
-Human-readable and machine-readable output for all `std` crates and user-facing tooling. See the [workspace overview](../../README.md).
+Human-readable and machine-readable output for all `std` crates and user-facing tooling. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-fmt).

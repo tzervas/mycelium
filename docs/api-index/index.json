@@ -5859,7 +5859,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 138,
+      "line": 142,
       "summary": "Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5870,7 +5870,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/swap.rs",
-      "line": 27,
+      "line": 39,
       "summary": "The trivial swap engine: a swap whose `target` equals the source `Repr` is the identity — exactly",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5881,7 +5881,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 317,
+      "line": 332,
       "summary": "The reference interpreter: a primitive registry + a swap engine.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5892,7 +5892,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 525,
+      "line": 542,
       "summary": "Evaluate `node` to a **representation** value by iterating step to a normal",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5903,7 +5903,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 537,
+      "line": 554,
       "summary": "Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5914,7 +5914,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 337,
+      "line": 354,
       "summary": "Build an interpreter with a custom prim registry and swap engine (e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5925,7 +5925,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 354,
+      "line": 371,
       "summary": "The registered primitive names (for tooling/EXPLAIN).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5936,7 +5936,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 362,
+      "line": 379,
       "summary": "Perform exactly one small-step reduction on `node` (the `⟶` relation above).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5947,7 +5947,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 347,
+      "line": 364,
       "summary": "Override the step budget.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5980,7 +5980,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 128,
+      "line": 132,
       "summary": "The result of one small-step attempt on a node.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6002,7 +6002,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/swap.rs",
-      "line": 16,
+      "line": 28,
       "summary": "Evaluates a `Swap` node.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6112,7 +6112,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 110,
+      "line": 111,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6189,7 +6189,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 111,
+      "line": 112,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6288,7 +6288,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 112,
+      "line": 113,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6343,7 +6343,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 470,
+      "line": 471,
       "summary": "The checked program environment: registry + function table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6464,7 +6464,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 920,
+      "line": 921,
       "summary": "The checked environments of a whole **phylum** (M-662): one [`Env`] per nodule, paired with the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6475,7 +6475,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/ambient.rs",
-      "line": 131,
+      "line": 148,
       "summary": "The resolved twin plus its provenance trace.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6541,7 +6541,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::ambient",
       "file": "crates/mycelium-l1/src/ambient.rs",
-      "line": 120,
+      "line": 137,
       "summary": "A record of one ambient fill, for EXPLAIN / \"where did this paradigm come from?\" (§4.3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7014,7 +7014,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1502,
+      "line": 1503,
       "summary": "Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7025,7 +7025,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1012,
+      "line": 1013,
       "summary": "Check a whole nodule: build the registry (prelude + declarations), then type every function",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7036,7 +7036,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1443,
+      "line": 1444,
       "summary": "Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7047,7 +7047,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1030,
+      "line": 1031,
       "summary": "Check a whole **phylum** (M-662; RFC-0006 §4.3): build the phylum-wide `pub` **export table** and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7058,7 +7058,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1040,
+      "line": 1041,
       "summary": "Like [`check_phylum`] but with the explicit `matured_scope` gate applied to **every** nodule",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7091,7 +7091,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 201,
+      "line": 202,
       "summary": "One constructor of a registered data type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7102,7 +7102,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 213,
+      "line": 214,
       "summary": "A registered data type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7113,7 +7113,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 508,
+      "line": 509,
       "summary": "Find the data type owning constructor `ctor`, with its index — `None` if no type has it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7124,7 +7124,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 524,
+      "line": 525,
       "summary": "The function declaration named `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7135,7 +7135,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 532,
+      "line": 533,
       "summary": "The totality verdict for function `name`, if it has been classified.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7146,7 +7146,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 546,
+      "line": 547,
       "summary": "The registered instance for `(trait_name, head)`, if any (RFC-0019 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7157,7 +7157,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 539,
+      "line": 540,
       "summary": "The registered trait named `name`, if any (RFC-0019 §4.2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7168,7 +7168,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::Env",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 517,
+      "line": 518,
       "summary": "The registered data type named `name`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7179,7 +7179,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 241,
+      "line": 242,
       "summary": "A registered **instance** `impl Trait<args> for T` (RFC-0019 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7201,7 +7201,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::PhylumEnv",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 938,
+      "line": 939,
       "summary": "The checked [`Env`] of the nodule whose path equals `path`, if present.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7212,7 +7212,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::PhylumEnv",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 929,
+      "line": 930,
       "summary": "The single nodule's [`Env`] when this is a phylum-of-one, else `None`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7223,7 +7223,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 228,
+      "line": 229,
       "summary": "A registered **trait** (RFC-0019 §4.2; LR-2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7245,7 +7245,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 5395,
+      "line": 5403,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7256,7 +7256,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 5376,
+      "line": 5384,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7267,7 +7267,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 260,
+      "line": 261,
       "summary": "The **coherence key** of a type (RFC-0019 §4.5): the head a `(trait, type-head)` instance key is",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7289,7 +7289,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 694,
+      "line": 732,
       "summary": "Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7300,7 +7300,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 84,
+      "line": 101,
       "summary": "Build the L0 [`Value`] of a representation literal (Q6: a literal *is* its representation —",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7311,7 +7311,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 257,
+      "line": 274,
       "summary": "The v0 **policy-name reference**: a deterministic, domain-separated content address derived",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7322,7 +7322,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::elab",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 179,
+      "line": 196,
       "summary": "Resolve a surface [`TypeRef`] to a kernel [`Repr`] (swap targets).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7333,7 +7333,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 278,
+      "line": 295,
       "summary": "Elaborate the nullary function `entry` of a checked nodule to a closed L0 [`Node`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7344,7 +7344,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 315,
+      "line": 332,
       "summary": "**Per-hypha elaboration of a `colony` entry** for the *real-concurrency* execution path",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7355,7 +7355,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 431,
+      "line": 448,
       "summary": "**Elaborate a user-defined generative-lowering rule's RHS to a closed L0 [`Node`]** (DN-54",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7366,7 +7366,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/elab.rs",
-      "line": 366,
+      "line": 383,
       "summary": "**Policy + body elaboration of a `reclaim` entry** for the *real-supervision* execution path",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7487,7 +7487,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/ambient.rs",
-      "line": 278,
+      "line": 305,
       "summary": "Render a whole [`Phylum`] back to canonical surface text (M-662): the optional `phylum <path>`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7498,7 +7498,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/ambient.rs",
-      "line": 217,
+      "line": 244,
       "summary": "Render a (resolved or partly-resolved) [`Nodule`] back to canonical surface text — the M-142/LSP",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7762,7 +7762,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/ambient.rs",
-      "line": 145,
+      "line": 162,
       "summary": "Resolve a parsed [`Nodule`] to its longhand twin (RFC-0012 §4.3/§4.4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7773,7 +7773,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/ambient.rs",
-      "line": 153,
+      "line": 176,
       "summary": "Like [`resolve`], but also returns the provenance trace ([`ResolutionNote`]s) for EXPLAIN (§4.3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7872,7 +7872,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::totality",
       "file": "crates/mycelium-l1/src/totality.rs",
-      "line": 45,
+      "line": 100,
       "summary": "Classify every function in the table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10358,7 +10358,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2646,
+      "line": 2731,
       "summary": "A compiled native artifact for a bit/trit-subset program: the executable on disk (in a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11029,7 +11029,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/dialect/native.rs",
-      "line": 1691,
+      "line": 1698,
       "summary": "Compile `node` through the MLIR pipeline to a native executable (MLIR → LLVM IR → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11040,7 +11040,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/dialect/native.rs",
-      "line": 1721,
+      "line": 1728,
       "summary": "Compile + run `node` through the MLIR pipeline and read the result back.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11150,7 +11150,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 58,
+      "line": 62,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11238,7 +11238,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 62,
+      "line": 66,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11348,7 +11348,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 63,
+      "line": 67,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11447,7 +11447,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 64,
+      "line": 68,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11513,7 +11513,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 65,
+      "line": 69,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11524,7 +11524,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm::CompiledArtifact",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2656,
+      "line": 2741,
       "summary": "Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11535,7 +11535,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2690,
+      "line": 2775,
       "summary": "Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11546,7 +11546,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2743,
+      "line": 2828,
       "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11557,7 +11557,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 66,
+      "line": 70,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11612,7 +11612,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 67,
+      "line": 71,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11656,7 +11656,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 68,
+      "line": 72,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11986,7 +11986,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 69,
+      "line": 73,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12107,7 +12107,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 70,
+      "line": 74,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12118,7 +12118,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 71,
+      "line": 75,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12129,7 +12129,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 72,
+      "line": 76,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12217,7 +12217,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 75,
+      "line": 79,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14098,7 +14098,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 538,
+      "line": 546,
       "summary": "A BF16 value stored as its bit pattern in a `u16`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14109,7 +14109,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp::Bf16Bits",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 550,
+      "line": 558,
       "summary": "The BF16 bit-pattern for positive infinity.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14120,7 +14120,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp::Bf16Bits",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 548,
+      "line": 556,
       "summary": "The BF16 bit-pattern for NaN (a quiet NaN in f32 bit layout).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14131,7 +14131,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp::Bf16Bits",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 552,
+      "line": 560,
       "summary": "The BF16 bit-pattern for negative infinity.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14142,7 +14142,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp::Bf16Bits",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 546,
+      "line": 554,
       "summary": "The BF16 bit-pattern for negative one.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14153,7 +14153,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp::Bf16Bits",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 544,
+      "line": 552,
       "summary": "The BF16 bit-pattern for positive one.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14164,7 +14164,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp::Bf16Bits",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 542,
+      "line": 550,
       "summary": "The BF16 bit-pattern for positive zero.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14175,7 +14175,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp::Bf16Bits",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 560,
+      "line": 568,
       "summary": "Widen this BF16 value to an f32 by zero-filling the lower 16 mantissa bits.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14186,7 +14186,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 251,
+      "line": 259,
       "summary": "The explicit error set for `clamp` (spec §3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14197,7 +14197,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 845,
+      "line": 853,
       "summary": "The `std.cmp`/`convert` guarantee matrix (spec §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14208,7 +14208,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 823,
+      "line": 831,
       "summary": "One row of the `std.cmp`/`convert` guarantee matrix (RFC-0016 §4.5; spec §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14219,7 +14219,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 119,
+      "line": 127,
       "summary": "Total equality — respects content-addressed identity where it applies (ADR-003).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14230,7 +14230,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 133,
+      "line": 141,
       "summary": "Total ordering — for types with a well-defined total order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14241,7 +14241,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 168,
+      "line": 176,
       "summary": "Partial ordering — for types where some pairs may be incomparable (e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14252,7 +14252,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 363,
+      "line": 371,
       "summary": "Explicitly-fallible narrowing conversion — the value may not fit in the target type.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14263,7 +14263,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 318,
+      "line": 326,
       "summary": "The explicit error set for a narrowing conversion (spec §3 / §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14274,7 +14274,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 70,
+      "line": 78,
       "summary": "The result of a comparison — Less, Equal, or Greater.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14285,7 +14285,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp::Ordering",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 82,
+      "line": 90,
       "summary": "Reverse the ordering: `Less ↔ Greater`, `Equal ↔ Equal`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14296,7 +14296,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 307,
+      "line": 315,
       "summary": "Lossless widening conversion — the domain is a subset of the codomain by construction.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14307,7 +14307,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 924,
+      "line": 932,
       "summary": "Assert the structural invariants of the guarantee matrix — called from tests.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14318,7 +14318,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 285,
+      "line": 293,
       "summary": "Clamp `x` to `[lo, hi]` under total order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14329,7 +14329,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 238,
+      "line": 246,
       "summary": "Return the maximum of two values under total order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14340,7 +14340,7 @@
       "crate": "mycelium-std-cmp",
       "module": "mycelium_std_cmp",
       "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 226,
+      "line": 234,
       "summary": "Return the minimum of two values under total order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14395,7 +14395,7 @@
       "crate": "mycelium-std-collections",
       "module": "mycelium_std_collections",
       "file": "crates/mycelium-std-collections/src/lib.rs",
-      "line": 109,
+      "line": 117,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14406,7 +14406,7 @@
       "crate": "mycelium-std-collections",
       "module": "mycelium_std_collections",
       "file": "crates/mycelium-std-collections/src/lib.rs",
-      "line": 110,
+      "line": 118,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14461,7 +14461,7 @@
       "crate": "mycelium-std-collections",
       "module": "mycelium_std_collections",
       "file": "crates/mycelium-std-collections/src/lib.rs",
-      "line": 111,
+      "line": 119,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14472,7 +14472,7 @@
       "crate": "mycelium-std-collections",
       "module": "mycelium_std_collections",
       "file": "crates/mycelium-std-collections/src/lib.rs",
-      "line": 112,
+      "line": 120,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14483,7 +14483,7 @@
       "crate": "mycelium-std-collections",
       "module": "mycelium_std_collections",
       "file": "crates/mycelium-std-collections/src/lib.rs",
-      "line": 113,
+      "line": 121,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14538,7 +14538,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 172,
+      "line": 180,
       "summary": "Build a typed [`ContentRef`] that cert / policy / provenance / `spore` artifacts embed to",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14549,7 +14549,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 77,
+      "line": 85,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14615,7 +14615,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 154,
+      "line": 162,
       "summary": "Identity equality by digest: two content hashes are **the same identity** iff their digests",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14626,7 +14626,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 78,
+      "line": 86,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14637,7 +14637,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 79,
+      "line": 87,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14692,7 +14692,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 134,
+      "line": 142,
       "summary": "The content hash of a definition (hash-of-AST; RFC-0001 §4.6 `hash(def)`):",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14703,7 +14703,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 112,
+      "line": 120,
       "summary": "The content hash of a runtime *value*: its identity-bearing `Repr` + payload, with all dynamic",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14714,7 +14714,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 80,
+      "line": 88,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14791,7 +14791,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 250,
+      "line": 258,
       "summary": "All names bound to `hash` in `registry`, as a list (0 or 1 entries with the current kernel;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14802,7 +14802,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 190,
+      "line": 198,
       "summary": "Parse a content-address string (`<algo>:<digest>`) into a [`ContentHash`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14813,7 +14813,7 @@
       "crate": "mycelium-std-content",
       "module": "mycelium_std_content",
       "file": "crates/mycelium-std-content/src/lib.rs",
-      "line": 230,
+      "line": 238,
       "summary": "Look up the name bound to a content hash in `registry`, returning `None` when the name is",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14824,7 +14824,7 @@
       "crate": "mycelium-std-core",
       "module": "mycelium_std_core",
       "file": "crates/mycelium-std-core/src/lib.rs",
-      "line": 139,
+      "line": 147,
       "summary": "The `std.core` guarantee matrix (spec §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14835,7 +14835,7 @@
       "crate": "mycelium-std-core",
       "module": "mycelium_std_core",
       "file": "crates/mycelium-std-core/src/lib.rs",
-      "line": 121,
+      "line": 129,
       "summary": "One row of the module guarantee matrix (RFC-0016 §4.5): an exported item, its",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14846,7 +14846,7 @@
       "crate": "mycelium-std-core",
       "module": "mycelium_std_core",
       "file": "crates/mycelium-std-core/src/lib.rs",
-      "line": 105,
+      "line": 113,
       "summary": "The bound attached to `v`, or `None` when there is no metadata or no bound.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14857,7 +14857,7 @@
       "crate": "mycelium-std-core",
       "module": "mycelium_std_core",
       "file": "crates/mycelium-std-core/src/lib.rs",
-      "line": 47,
+      "line": 55,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14879,7 +14879,7 @@
       "crate": "mycelium-std-core",
       "module": "mycelium_std_core",
       "file": "crates/mycelium-std-core/src/lib.rs",
-      "line": 99,
+      "line": 107,
       "summary": "The guarantee tag of `v` (total — every value carries one).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14890,7 +14890,7 @@
       "crate": "mycelium-std-core",
       "module": "mycelium_std_core",
       "file": "crates/mycelium-std-core/src/lib.rs",
-      "line": 93,
+      "line": 101,
       "summary": "The metadata of `v`, or `None` if `v` is algebraic data (no `Meta`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14901,7 +14901,7 @@
       "crate": "mycelium-std-core",
       "module": "mycelium_std_core",
       "file": "crates/mycelium-std-core/src/lib.rs",
-      "line": 62,
+      "line": 70,
       "summary": "The curated default prelude (spec §3 / FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14912,7 +14912,7 @@
       "crate": "mycelium-std-core",
       "module": "mycelium_std_core",
       "file": "crates/mycelium-std-core/src/lib.rs",
-      "line": 111,
+      "line": 119,
       "summary": "The provenance of `v`, or `None` if `v` is algebraic data (no `Meta`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14923,7 +14923,7 @@
       "crate": "mycelium-std-core",
       "module": "mycelium_std_core",
       "file": "crates/mycelium-std-core/src/lib.rs",
-      "line": 87,
+      "line": 95,
       "summary": "The representation of `v`, or `None` if `v` is algebraic data (no `Repr`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14934,7 +14934,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 454,
+      "line": 462,
       "summary": "Empirical basis string for BF16 accumulation ops (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14945,7 +14945,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 448,
+      "line": 456,
       "summary": "Empirical basis string for accumulation ops (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14956,7 +14956,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 239,
+      "line": 247,
       "summary": "The guarantee matrix for `std.dense` (RFC-0016 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14967,7 +14967,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 217,
+      "line": 225,
       "summary": "One row of the guarantee matrix (§4 of `docs/spec/stdlib/dense.md`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14978,7 +14978,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 166,
+      "line": 174,
       "summary": "A reified ε-bound artifact: the inspectable record of a float op's accuracy claim (C3/EXPLAIN;",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14989,7 +14989,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::OpBound",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 185,
+      "line": 193,
       "summary": "Convert to a [`Bound`] suitable for attaching to a [`mycelium_core::Meta`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15000,7 +15000,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 459,
+      "line": 467,
       "summary": "Empirical basis string for L2-norm / cosine ops (FLAG Q2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15011,7 +15011,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 492,
+      "line": 500,
       "summary": "The ergonomic Ring-1 capability surface over a typed `Dense{dim, dtype}` space (M-518).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15022,7 +15022,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 589,
+      "line": 597,
       "summary": "Elementwise `a + b` — float DT: `Proven` (FLAG Q1 — uses kernel bound).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15033,7 +15033,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 873,
+      "line": 881,
       "summary": "Cosine similarity — float DT: `Empirical` (FLAG Q2: sqrt + division composition).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15044,7 +15044,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 515,
+      "line": 523,
       "summary": "The dimensionality.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15055,7 +15055,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 845,
+      "line": 853,
       "summary": "Dot product `⟨a, b⟩` — float DT: `Empirical` (FLAG Q1: accumulation bound).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15066,7 +15066,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 521,
+      "line": 529,
       "summary": "The element dtype.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15077,7 +15077,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 560,
+      "line": 568,
       "summary": "Construct a value from a slice, checking length and grid alignment.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15088,7 +15088,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 544,
+      "line": 552,
       "summary": "Construct an **Exact** constant vector with every element equal to `x`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15099,7 +15099,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 630,
+      "line": 638,
       "summary": "Elementwise (Hadamard) product `a ⊙ b` — float DT: `Proven` (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15110,7 +15110,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 798,
+      "line": 806,
       "summary": "L1 norm (sum of |xᵢ|) — float DT: `Empirical` (same accumulation argument as `sum`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15121,7 +15121,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 818,
+      "line": 826,
       "summary": "L2 (Euclidean) norm — float DT: `Empirical` (FLAG Q2: sqrt composition not fully checked).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15132,7 +15132,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 710,
+      "line": 718,
       "summary": "Map a function `f` over every element (tag = meet of input tag and `f_tag` — VR-5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15143,7 +15143,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 615,
+      "line": 623,
       "summary": "Elementwise negation — **Exact** (the dtype grid is symmetric; no rounding).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15154,7 +15154,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 501,
+      "line": 509,
       "summary": "Construct a `StdDense` surface for a `dim`-dimensional space over `dtype`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15165,7 +15165,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 678,
+      "line": 686,
       "summary": "Scalar multiplication `s · a` — float DT: `Proven` (FLAG Q1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15176,7 +15176,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 509,
+      "line": 517,
       "summary": "The underlying [`DenseSpace`] descriptor.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15187,7 +15187,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 599,
+      "line": 607,
       "summary": "Elementwise `a − b` — same contract as add.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15198,7 +15198,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 777,
+      "line": 785,
       "summary": "Sum all elements — float DT: `Empirical` (FLAG Q1: accumulation bound, conservative",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15209,7 +15209,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense::StdDense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 529,
+      "line": 537,
       "summary": "Construct an **Exact** zero vector (guarantee matrix: `zeros` — `Exact`, total).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15220,7 +15220,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 92,
+      "line": 100,
       "summary": "Errors from the `std.dense` capability surface (C1/G2: explicit typed errors, never sentinels).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15231,7 +15231,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 443,
+      "line": 451,
       "summary": "BF16 analogue of [`accumulation_eps_f32`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15242,7 +15242,7 @@
       "crate": "mycelium-std-dense",
       "module": "mycelium_std_dense",
       "file": "crates/mycelium-std-dense/src/lib.rs",
-      "line": 436,
+      "line": 444,
       "summary": "Conservative empirical ε for floating-point accumulation ops (`sum`, `l1_norm`, `dot`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15253,7 +15253,7 @@
       "crate": "mycelium-std-diag",
       "module": "mycelium_std_diag",
       "file": "crates/mycelium-std-diag/src/lib.rs",
-      "line": 42,
+      "line": 50,
       "summary": "The §4.5 guarantee matrix — encoded as data, asserted in tests (RFC-0016 §4.5; spec §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15341,7 +15341,7 @@
       "crate": "mycelium-std-error",
       "module": "mycelium_std_error",
       "file": "crates/mycelium-std-error/src/lib.rs",
-      "line": 64,
+      "line": 72,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15385,7 +15385,7 @@
       "crate": "mycelium-std-error",
       "module": "mycelium_std_error",
       "file": "crates/mycelium-std-error/src/lib.rs",
-      "line": 65,
+      "line": 73,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15616,7 +15616,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 122,
+      "line": 130,
       "summary": "A budget for `display_bounded`: the maximum number of *elements* (bits, trits, scalars,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15627,7 +15627,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 187,
+      "line": 195,
       "summary": "Errors the `from_json` machine projection can raise.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15638,7 +15638,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 369,
+      "line": 377,
       "summary": "The `std.fmt` guarantee matrix (spec §4 / RFC-0016 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15649,7 +15649,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 172,
+      "line": 180,
       "summary": "The machine-projection JSON view of a [`Value`] (spec §3 / G11).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15660,7 +15660,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt::Json",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 177,
+      "line": 185,
       "summary": "Borrow the inner `serde_json::Value` for inspection.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15671,7 +15671,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 351,
+      "line": 359,
       "summary": "One row of the `std.fmt` guarantee matrix (RFC-0016 §4.5; spec §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15682,7 +15682,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 152,
+      "line": 160,
       "summary": "The result of `display_bounded`: a rendered text paired with its truncation record.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15693,7 +15693,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 96,
+      "line": 104,
       "summary": "A rendered text string (the output of a human projection).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15704,7 +15704,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt::Text",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 101,
+      "line": 109,
       "summary": "Borrow the inner string.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15715,7 +15715,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 214,
+      "line": 222,
       "summary": "Error the `to_json` machine projection can raise.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15726,7 +15726,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 131,
+      "line": 139,
       "summary": "Whether a [`Rendering`] is complete or whether some content was elided.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15737,7 +15737,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 417,
+      "line": 425,
       "summary": "Assert the structural invariants of the guarantee matrix — called from tests.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15748,7 +15748,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 279,
+      "line": 287,
       "summary": "Render `v` as a structural debug string (more detailed than `display`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15759,7 +15759,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 265,
+      "line": 273,
       "summary": "Render `v` as a human-readable string.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15770,7 +15770,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 295,
+      "line": 303,
       "summary": "Render `v` within `limit` elements, emitting a typed `Truncation` record when content is",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15781,7 +15781,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 341,
+      "line": 349,
       "summary": "Reconstruct a [`Value`] from its machine JSON view (the `from_json` half).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15792,7 +15792,7 @@
       "crate": "mycelium-std-fmt",
       "module": "mycelium_std_fmt",
       "file": "crates/mycelium-std-fmt/src/lib.rs",
-      "line": 318,
+      "line": 326,
       "summary": "Project `v` to a machine-faithful JSON view (the `to_json` half of the dual projection, G11).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15803,7 +15803,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 110,
+      "line": 118,
       "summary": "An open directory iterator handle.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15858,7 +15858,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 87,
+      "line": 95,
       "summary": "An affine open-file handle (LR-8: consumed exactly once).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15869,7 +15869,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::File",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 100,
+      "line": 108,
       "summary": "Whether this handle has been consumed.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15891,7 +15891,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 131,
+      "line": 139,
       "summary": "The filesystem context: holds the substrate and exposes all effectful fs ops.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15902,7 +15902,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 255,
+      "line": 263,
       "summary": "Close (consume) a `File` handle.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15913,7 +15913,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 327,
+      "line": 335,
       "summary": "Copy `from` to `to`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15924,7 +15924,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 282,
+      "line": 290,
       "summary": "Create a directory at `path`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15935,7 +15935,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 178,
+      "line": 186,
       "summary": "Check whether a path exists.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15946,7 +15946,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 242,
+      "line": 250,
       "summary": "Flush deferred write state for a `File` handle.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15957,7 +15957,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 141,
+      "line": 149,
       "summary": "Create a new `Fs` over a fresh in-memory substrate.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15968,7 +15968,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 149,
+      "line": 157,
       "summary": "Create a new `Fs` with a simulated disk limit (for testing `DiskFull` paths).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15979,7 +15979,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 203,
+      "line": 211,
       "summary": "Open a path to an affine `File` handle under an explicit `OpenOptions`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -15990,7 +15990,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 94,
+      "line": 102,
       "summary": "The original path this handle was opened for (for diagnostics).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16001,7 +16001,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 217,
+      "line": 225,
       "summary": "Read bytes from an open `File` handle into `buf`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16012,7 +16012,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 269,
+      "line": 277,
       "summary": "List the entries in a directory.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16023,7 +16023,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 302,
+      "line": 310,
       "summary": "Remove an **empty** directory at `path`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16034,7 +16034,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 292,
+      "line": 300,
       "summary": "Remove a regular file at `path`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16045,7 +16045,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 315,
+      "line": 323,
       "summary": "Rename / move `from` to `to`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16056,7 +16056,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 188,
+      "line": 196,
       "summary": "Get filesystem metadata for a path.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16067,7 +16067,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs::Fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 229,
+      "line": 237,
       "summary": "Write bytes to an open `File` handle.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16166,7 +16166,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 57,
+      "line": 65,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16210,7 +16210,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 58,
+      "line": 66,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16221,7 +16221,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 59,
+      "line": 67,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16364,7 +16364,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 60,
+      "line": 68,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16485,7 +16485,7 @@
       "crate": "mycelium-std-fs",
       "module": "mycelium_std_fs",
       "file": "crates/mycelium-std-fs/src/lib.rs",
-      "line": 61,
+      "line": 69,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16694,7 +16694,7 @@
       "crate": "mycelium-std-io",
       "module": "mycelium_std_io",
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 101,
+      "line": 109,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16727,7 +16727,7 @@
       "crate": "mycelium-std-io",
       "module": "mycelium_std_io",
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 102,
+      "line": 110,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16804,7 +16804,7 @@
       "crate": "mycelium-std-io",
       "module": "mycelium_std_io",
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 103,
+      "line": 111,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16892,7 +16892,7 @@
       "crate": "mycelium-std-io",
       "module": "mycelium_std_io",
       "file": "crates/mycelium-std-io/src/lib.rs",
-      "line": 104,
+      "line": 112,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -16936,7 +16936,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 471,
+      "line": 479,
       "summary": "The reified done-flag witness for [`any_with_witness`] and [`all_with_witness`] (C3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17002,7 +17002,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 262,
+      "line": 270,
       "summary": "Return `true` if all elements satisfy `pred`, together with an [`AnyAllWitness`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17013,7 +17013,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 231,
+      "line": 239,
       "summary": "Return `true` if any element satisfies `pred`, together with an [`AnyAllWitness`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17024,7 +17024,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 375,
+      "line": 383,
       "summary": "Append all elements of `right` after `left` — two finite spines remain finite.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17035,7 +17035,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 210,
+      "line": 218,
       "summary": "Count the number of elements in `source`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17046,7 +17046,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 157,
+      "line": 165,
       "summary": "Pair each element with its zero-based index.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17057,7 +17057,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 86,
+      "line": 94,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17079,7 +17079,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 121,
+      "line": 129,
       "summary": "Keep only elements for which `pred` returns `true`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17090,7 +17090,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 295,
+      "line": 303,
       "summary": "Return the first element satisfying `pred`, or `None` if no element matches.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17101,7 +17101,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 167,
+      "line": 175,
       "summary": "Map each element to a `Foldable<F>` and flatten — finite-of-finite is finite (§4.7).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17112,7 +17112,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 188,
+      "line": 196,
       "summary": "The §4.8 `for` fold, surfaced directly.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17123,7 +17123,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 87,
+      "line": 95,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17134,7 +17134,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 88,
+      "line": 96,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17167,7 +17167,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 89,
+      "line": 97,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17178,7 +17178,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 456,
+      "line": 464,
       "summary": "Convert a [`Lazy<E>`] back into a bounded, total [`Foldable<E>`] by applying a `Nat` bound.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17189,7 +17189,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 111,
+      "line": 119,
       "summary": "Apply `f` to every element, producing a new `Foldable<F>`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17200,7 +17200,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 311,
+      "line": 319,
       "summary": "Return the zero-based index of the first element satisfying `pred`, or `None` if none.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17211,7 +17211,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 198,
+      "line": 206,
       "summary": "Reduce a non-empty `Foldable` with a combining function, returning `None` on empty input.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17222,7 +17222,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 133,
+      "line": 141,
       "summary": "Running accumulator fold — length-preserving (one output element per input element).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17233,7 +17233,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 399,
+      "line": 407,
       "summary": "Drop the first `n` elements, returning the remainder.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17244,7 +17244,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 410,
+      "line": 418,
       "summary": "Keep every `k`-th element (0-indexed).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17255,7 +17255,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 389,
+      "line": 397,
       "summary": "Keep at most the first `n` elements.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17266,7 +17266,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 434,
+      "line": 442,
       "summary": "Apply a [`Transducer<E, F>`] to `source`, reducing into `init` with `f`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17277,7 +17277,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 90,
+      "line": 98,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17288,7 +17288,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 336,
+      "line": 344,
       "summary": "Pair elements from two `Foldable`s, truncating to the shorter spine.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17299,7 +17299,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 353,
+      "line": 361,
       "summary": "Pair elements from two `Foldable`s; return `Err(ZipLengthMismatch)` if lengths differ.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17310,7 +17310,7 @@
       "crate": "mycelium-std-iter",
       "module": "mycelium_std_iter",
       "file": "crates/mycelium-std-iter/src/lib.rs",
-      "line": 91,
+      "line": 99,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17431,7 +17431,7 @@
       "crate": "mycelium-std-math",
       "module": "mycelium_std_math",
       "file": "crates/mycelium-std-math/src/lib.rs",
-      "line": 92,
+      "line": 100,
       "summary": "The explicit error set for fallible `std.math` ops (spec §3; C1 / G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17453,7 +17453,7 @@
       "crate": "mycelium-std-math",
       "module": "mycelium_std_math",
       "file": "crates/mycelium-std-math/src/lib.rs",
-      "line": 77,
+      "line": 85,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17640,7 +17640,7 @@
       "crate": "mycelium-std-math",
       "module": "mycelium_std_math",
       "file": "crates/mycelium-std-math/src/lib.rs",
-      "line": 78,
+      "line": 86,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17805,7 +17805,7 @@
       "crate": "mycelium-std-math",
       "module": "mycelium_std_math",
       "file": "crates/mycelium-std-math/src/lib.rs",
-      "line": 79,
+      "line": 87,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17816,7 +17816,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 246,
+      "line": 254,
       "summary": "A thin view pairing a value with its `{Bound, strength}` (RFC-0001 §4.3 `Meta`) — **not** a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17827,7 +17827,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 196,
+      "line": 204,
       "summary": "Structured verdict for the tier-i re-validation checker (spec §3 `CheckErr`; RFC-0013).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17838,7 +17838,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 73,
+      "line": 81,
       "summary": "The `Declared`-strength ε upper bound for `f64` operations whose compute floor is the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17849,7 +17849,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 414,
+      "line": 422,
       "summary": "The `explain` artifact for an [`Approx<T>`] (C3; G11 dual human/machine projection).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17860,7 +17860,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 154,
+      "line": 162,
       "summary": "Structured refusal record for `std.numerics` helpers (C1; RFC-0013; spec §3 `NumErr`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17871,7 +17871,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 117,
+      "line": 125,
       "summary": "A checked-theorem witness required to construct an [`Approx`] with `Proven` strength (FR-N3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17882,7 +17882,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics::ProvenThm",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 134,
+      "line": 142,
       "summary": "Construct a [`ProvenThm`] witness with the given `citation`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17893,7 +17893,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 585,
+      "line": 593,
       "summary": "The single sanctioned cross-kernel inference (spec §3 `accuracy_to_probability`; ADR-010 §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17904,7 +17904,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 643,
+      "line": 651,
       "summary": "Re-validate a claimed ε bound for `op` over `input_bounds` via the M-203 tier-i checker.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17915,7 +17915,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 670,
+      "line": 678,
       "summary": "Re-validate a claimed δ union bound over `input_bounds` via the M-203 tier-i checker.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17926,7 +17926,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 493,
+      "line": 501,
       "summary": "Construct an `ErrorBound{eps, norm, basis}` (spec §3 `error_bound`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17937,7 +17937,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 50,
+      "line": 58,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17981,7 +17981,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 510,
+      "line": 518,
       "summary": "Construct a `ProbabilityBound{delta, basis}` (spec §3 `prob_bound`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -17992,7 +17992,7 @@
       "crate": "mycelium-std-numerics",
       "module": "mycelium_std_numerics",
       "file": "crates/mycelium-std-numerics/src/lib.rs",
-      "line": 537,
+      "line": 545,
       "summary": "Compose the **δ union bound** of a slice of `Probability`-kind bounds, taking the **meet** of",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18003,7 +18003,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 142,
+      "line": 150,
       "summary": "The reified `entropy` declared effect (C6 / RT3 / RFC-0014).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18014,7 +18014,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 569,
+      "line": 577,
       "summary": "An entropy-backed generator.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18025,7 +18025,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 152,
+      "line": 160,
       "summary": "Injectable entropy source — the seam between pure `std.rand` and the `std-sys` phylum.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18036,7 +18036,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 740,
+      "line": 748,
       "summary": "The `std.rand` guarantee matrix (spec §4 / RFC-0016 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18047,7 +18047,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 705,
+      "line": 713,
       "summary": "One row of the `std.rand` guarantee matrix (RFC-0016 §4.5; rand.md §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18058,7 +18058,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 85,
+      "line": 93,
       "summary": "Errors returned by `std.rand` operations (C1 — every fallible op returns this",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18069,7 +18069,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 195,
+      "line": 203,
       "summary": "A seeded, deterministic generator **value** (spec §3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18080,7 +18080,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand::Rng",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 227,
+      "line": 235,
       "summary": "The algorithm this generator uses (inspectable; C3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18091,7 +18091,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand::Rng",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 221,
+      "line": 229,
       "summary": "The current raw state (inspectable; C3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18102,7 +18102,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 171,
+      "line": 179,
       "summary": "The PRNG algorithm used by a [`Rng`] — the inspectable algorithm tag (C3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18113,7 +18113,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 670,
+      "line": 678,
       "summary": "A deterministic, injectable [`EntropySource`] for tests.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18124,7 +18124,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand::StubEntropy",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 591,
+      "line": 599,
       "summary": "Construct an `EntropyRng` by seeding from the given entropy source.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18135,7 +18135,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 843,
+      "line": 851,
       "summary": "Assert the structural invariants of the guarantee matrix — called from tests.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18146,7 +18146,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 439,
+      "line": 447,
       "summary": "Draw a `bool` from a Bernoulli distribution with success probability `p`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18157,7 +18157,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 463,
+      "line": 471,
       "summary": "Choose one element uniformly at random from a non-empty slice.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18168,7 +18168,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 529,
+      "line": 537,
       "summary": "Draw from an Exponential(λ) distribution using the inverse-CDF method.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18179,7 +18179,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 317,
+      "line": 325,
       "summary": "Draw the next raw `u64` from a seeded generator.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18190,7 +18190,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 508,
+      "line": 516,
       "summary": "Draw from a Normal(μ, σ) distribution using the Box–Muller transform.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18201,7 +18201,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 300,
+      "line": 308,
       "summary": "Build an [`Rng`] from a `u64` seed.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18212,7 +18212,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 634,
+      "line": 642,
       "summary": "Mint a single reproducible seed from entropy, then return a pure [`Rng`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18223,7 +18223,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 482,
+      "line": 490,
       "summary": "Produce a uniformly-random permutation of the input slice (Fisher–Yates shuffle).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18234,7 +18234,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 338,
+      "line": 346,
       "summary": "Derive two independent sub-stream generators from one (the \"split\" operation).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18245,7 +18245,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 374,
+      "line": 382,
       "summary": "Draw a uniformly-distributed `i64` in the half-open range `[lo, hi)`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18256,7 +18256,7 @@
       "crate": "mycelium-std-rand",
       "module": "mycelium_std_rand",
       "file": "crates/mycelium-std-rand/src/lib.rs",
-      "line": 394,
+      "line": 402,
       "summary": "Draw a uniformly-distributed `u64` in the half-open range `[lo, hi)`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18344,7 +18344,7 @@
       "crate": "mycelium-std-recover",
       "module": "mycelium_std_recover",
       "file": "crates/mycelium-std-recover/src/lib.rs",
-      "line": 89,
+      "line": 97,
       "summary": "`RecoverOutcome<T, E>` is `Resolution<T, E>` — the concrete shape that resolves",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18410,7 +18410,7 @@
       "crate": "mycelium-std-recover",
       "module": "mycelium_std_recover",
       "file": "crates/mycelium-std-recover/src/lib.rs",
-      "line": 61,
+      "line": 69,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18432,7 +18432,7 @@
       "crate": "mycelium-std-recover",
       "module": "mycelium_std_recover",
       "file": "crates/mycelium-std-recover/src/lib.rs",
-      "line": 62,
+      "line": 70,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18443,7 +18443,7 @@
       "crate": "mycelium-std-recover",
       "module": "mycelium_std_recover",
       "file": "crates/mycelium-std-recover/src/lib.rs",
-      "line": 63,
+      "line": 71,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18487,7 +18487,7 @@
       "crate": "mycelium-std-recover",
       "module": "mycelium_std_recover",
       "file": "crates/mycelium-std-recover/src/lib.rs",
-      "line": 64,
+      "line": 72,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18509,7 +18509,7 @@
       "crate": "mycelium-std-recover",
       "module": "mycelium_std_recover",
       "file": "crates/mycelium-std-recover/src/lib.rs",
-      "line": 65,
+      "line": 73,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18520,7 +18520,7 @@
       "crate": "mycelium-std-recover",
       "module": "mycelium_std_recover",
       "file": "crates/mycelium-std-recover/src/lib.rs",
-      "line": 66,
+      "line": 74,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18553,7 +18553,7 @@
       "crate": "mycelium-std-recover",
       "module": "mycelium_std_recover",
       "file": "crates/mycelium-std-recover/src/lib.rs",
-      "line": 67,
+      "line": 75,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18630,7 +18630,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 64,
+      "line": 76,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18696,7 +18696,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 65,
+      "line": 77,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18817,8 +18817,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::dataflow",
       "file": "crates/mycelium-std-runtime/src/dataflow.rs",
-      "line": 167,
-      "summary": "As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool** (M-709)",
+      "line": 186,
+      "summary": "As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool**",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -18828,7 +18828,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 66,
+      "line": 78,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18850,7 +18850,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 67,
+      "line": 79,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19004,7 +19004,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 68,
+      "line": 80,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19037,7 +19037,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 69,
+      "line": 81,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19224,7 +19224,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 70,
+      "line": 82,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19411,63 +19411,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 71,
+      "line": 83,
       "summary": null,
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_BACKPRESSURE_STRENGTH:",
-      "kind": "const",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::scheduler",
-      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 59,
-      "summary": "Guarantee strength for the demand-signalled backpressure bound.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH:",
-      "kind": "const",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::scheduler",
-      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 65,
-      "summary": "Guarantee strength for liveness (every submitted job runs exactly once).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH:",
-      "kind": "const",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::scheduler",
-      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 52,
-      "summary": "Guarantee strength for the scheduler's RT2 sequentialization differential.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler",
-      "kind": "struct",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::scheduler",
-      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 195,
-      "summary": "A real OS-thread scheduler: a fixed worker pool, **per-worker deques with steal-on-empty**",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::capacity",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::scheduler::Scheduler",
-      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 261,
-      "summary": "The bounded ready-queue depth — the backpressure ceiling (never exceeded across the *sum*",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19476,53 +19421,9 @@
       "kind": "fn",
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler::Scheduler",
-      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 208,
-      "summary": "A scheduler sized to the host's available parallelism (fallback: 1 worker), with a ready",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::run_indexed",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::scheduler::Scheduler",
-      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 300,
-      "summary": "Run `jobs` across the OS-thread pool and return their outputs **in spawn order** (so the",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::with_workers",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::scheduler::Scheduler",
-      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 223,
-      "summary": "A scheduler with exactly `workers` OS threads and a ready-queue `capacity`, using the",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::Scheduler::workers",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::scheduler::Scheduler",
-      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 254,
-      "summary": "The number of OS worker threads this scheduler runs.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::SchedulerError",
-      "kind": "enum",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::scheduler",
-      "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 78,
-      "summary": "Why constructing a [`Scheduler`] refused — always explicit, never a silent fallback (G2).",
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
+      "line": 63,
+      "summary": "Create a new empty scope.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19532,7 +19433,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 72,
+      "line": 84,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19620,7 +19521,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 73,
+      "line": 85,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19730,7 +19631,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 180,
+      "line": 190,
       "summary": "Why a supervised child run ended in failure — always explicit (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19741,7 +19642,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 164,
+      "line": 174,
       "summary": "The result of supervising a restartable child to resolution or escalation.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19752,7 +19653,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 143,
+      "line": 153,
       "summary": "What a supervisor did about one child failure — a reified, inspectable action (EXPLAIN; no black",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19763,7 +19664,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 153,
+      "line": 163,
       "summary": "One reified supervision decision — the EXPLAIN record (RFC-0008 §4.7; ADR-006: selections are",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19774,7 +19675,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 113,
+      "line": 120,
       "summary": "Run `tasks` on the OS-thread pool under a shared [`CancelToken`], collecting **every** child's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19785,7 +19686,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 198,
+      "line": 208,
       "summary": "Run a restartable child under a live [`Supervisor`] (M-356) until it succeeds or the supervisor",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19796,7 +19697,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 74,
+      "line": 86,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19917,7 +19818,7 @@
       "crate": "mycelium-std-select",
       "module": "mycelium_std_select",
       "file": "crates/mycelium-std-select/src/lib.rs",
-      "line": 350,
+      "line": 358,
       "summary": "Whether an op emits a valid, inspectable `Explanation` (the C3 / SC-3 crux).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19928,7 +19829,7 @@
       "crate": "mycelium-std-select",
       "module": "mycelium_std_select",
       "file": "crates/mycelium-std-select/src/lib.rs",
-      "line": 309,
+      "line": 317,
       "summary": "One row of the guarantee matrix (RFC-0016 §4.5; spec §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19939,7 +19840,7 @@
       "crate": "mycelium-std-select",
       "module": "mycelium_std_select",
       "file": "crates/mycelium-std-select/src/lib.rs",
-      "line": 331,
+      "line": 339,
       "summary": "The honest guarantee tag — C2 / VR-5.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19950,7 +19851,7 @@
       "crate": "mycelium-std-select",
       "module": "mycelium_std_select",
       "file": "crates/mycelium-std-select/src/lib.rs",
-      "line": 91,
+      "line": 99,
       "summary": "A **content hash** that identifies a [`SelectionPolicy`] — recorded in `Meta.policy_used` so",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19961,7 +19862,7 @@
       "crate": "mycelium-std-select",
       "module": "mycelium_std_select",
       "file": "crates/mycelium-std-select/src/lib.rs",
-      "line": 130,
+      "line": 138,
       "summary": "Build and validate a [`SelectionPolicy`] from a name, candidates, rules, a default arm, and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19972,7 +19873,7 @@
       "crate": "mycelium-std-select",
       "module": "mycelium_std_select",
       "file": "crates/mycelium-std-select/src/lib.rs",
-      "line": 239,
+      "line": 247,
       "summary": "The **explain capability** (RFC-0005 §4): derive the mandatory [`Explanation`] for a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19983,7 +19884,7 @@
       "crate": "mycelium-std-select",
       "module": "mycelium_std_select",
       "file": "crates/mycelium-std-select/src/lib.rs",
-      "line": 145,
+      "line": 153,
       "summary": "Return the content address of a [`SelectionPolicy`] — its [`PolicyRef`] (RFC-0005 §3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19994,7 +19895,7 @@
       "crate": "mycelium-std-select",
       "module": "mycelium_std_select",
       "file": "crates/mycelium-std-select/src/lib.rs",
-      "line": 195,
+      "line": 203,
       "summary": "The **one selection mechanism** (RFC-0005 §4; C3): evaluate the decision table and return",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20005,7 +19906,7 @@
       "crate": "mycelium-std-select",
       "module": "mycelium_std_select",
       "file": "crates/mycelium-std-select/src/lib.rs",
-      "line": 291,
+      "line": 299,
       "summary": "A **first-class deterministic override**: force a specific candidate by index and record",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20126,7 +20027,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore",
       "file": "crates/mycelium-std-spore/src/lib.rs",
-      "line": 60,
+      "line": 68,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20170,7 +20071,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore",
       "file": "crates/mycelium-std-spore/src/lib.rs",
-      "line": 61,
+      "line": 69,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20225,7 +20126,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore",
       "file": "crates/mycelium-std-spore/src/lib.rs",
-      "line": 62,
+      "line": 70,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20368,7 +20269,7 @@
       "crate": "mycelium-std-spore",
       "module": "mycelium_std_spore",
       "file": "crates/mycelium-std-spore/src/lib.rs",
-      "line": 63,
+      "line": 71,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20434,7 +20335,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 103,
+      "line": 111,
       "summary": "Why a certificate check did not produce a `Validated` verdict (RFC-0002 §2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20445,7 +20346,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 143,
+      "line": 151,
       "summary": "A dual human/machine projection of a [`SwapCertificate`] (G11; C3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20456,7 +20357,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 468,
+      "line": 476,
       "summary": "The guarantee matrix for `std.swap` (RFC-0016 §4.5; swap.md §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20467,7 +20368,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 448,
+      "line": 456,
       "summary": "One row of the guarantee matrix (RFC-0016 §4.5; swap.md §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20478,7 +20379,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 59,
+      "line": 67,
       "summary": "A PolicyRef is a [`ContentHash`] that records which swap policy was applied (RFC-0005; ADR-006).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20489,7 +20390,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 71,
+      "line": 79,
       "summary": "The result of a successful swap: the target **value** together with its inspectable",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20500,7 +20401,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 537,
+      "line": 545,
       "summary": "Assert the structural invariants of the guarantee matrix — called from tests.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20511,7 +20412,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 245,
+      "line": 253,
       "summary": "`bin_to_tern` — encode an `n`-bit two's-complement [`Value`] into `m` balanced trits.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20522,7 +20423,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 378,
+      "line": 386,
       "summary": "Validate that value `b` refines value `a` under the swap described by `cert` (M-210).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20533,7 +20434,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 320,
+      "line": 328,
       "summary": "`dense_to_vsa` — encode a bipolar `Dense{n, F32}` value into a `Vsa{MAP-I, vsa_dim}`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20544,7 +20445,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 88,
+      "line": 96,
       "summary": "Project the certificate to a human/machine dual EXPLAIN record (G11; C3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20555,7 +20456,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 295,
+      "line": 303,
       "summary": "`f32_to_bf16` — round a `Dense{F32}` value to `Dense{BF16}` under round-to-nearest (M-211).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20566,7 +20467,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 267,
+      "line": 275,
       "summary": "`tern_to_bin` — decode `m` balanced trits back into an `n`-bit two's-complement [`Value`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20577,7 +20478,7 @@
       "crate": "mycelium-std-swap",
       "module": "mycelium_std_swap",
       "file": "crates/mycelium-std-swap/src/lib.rs",
-      "line": 348,
+      "line": 356,
       "summary": "`vsa_to_dense` — decode a `swap.dense_vsa.enc.v1` product back to a bipolar `Dense{F32}` value",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20588,7 +20489,7 @@
       "crate": "mycelium-std-sys",
       "module": "mycelium_std_sys",
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 48,
+      "line": 56,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20654,7 +20555,7 @@
       "crate": "mycelium-std-sys",
       "module": "mycelium_std_sys",
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 49,
+      "line": 57,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20720,7 +20621,7 @@
       "crate": "mycelium-std-sys",
       "module": "mycelium_std_sys",
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 50,
+      "line": 58,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20808,7 +20709,7 @@
       "crate": "mycelium-std-sys",
       "module": "mycelium_std_sys",
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 51,
+      "line": 59,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -20973,7 +20874,7 @@
       "crate": "mycelium-std-sys",
       "module": "mycelium_std_sys",
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 52,
+      "line": 60,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21006,7 +20907,7 @@
       "crate": "mycelium-std-sys",
       "module": "mycelium_std_sys",
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 53,
+      "line": 61,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21061,7 +20962,7 @@
       "crate": "mycelium-std-sys",
       "module": "mycelium_std_sys",
       "file": "crates/mycelium-std-sys/src/lib.rs",
-      "line": 54,
+      "line": 62,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21204,7 +21105,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/lib.rs",
-      "line": 51,
+      "line": 59,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21226,7 +21127,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/lib.rs",
-      "line": 52,
+      "line": 60,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21358,7 +21259,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/lib.rs",
-      "line": 53,
+      "line": 61,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21435,7 +21336,7 @@
       "crate": "mycelium-std-ternary",
       "module": "mycelium_std_ternary",
       "file": "crates/mycelium-std-ternary/src/lib.rs",
-      "line": 54,
+      "line": 62,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21567,7 +21468,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 173,
+      "line": 181,
       "summary": "A declared, bounded trial budget for a property run (C6 — effects are bounded).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21578,7 +21479,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Budget",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 177,
+      "line": 185,
       "summary": "The default budget when no specific value is required (100 trials).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21589,7 +21490,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Budget",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 180,
+      "line": 188,
       "summary": "The minimum budget (1 trial).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21600,7 +21501,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Budget",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 194,
+      "line": 202,
       "summary": "The number of trials this budget permits.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21622,7 +21523,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 155,
+      "line": 163,
       "summary": "A type that can produce values of type `T` given an `Rng`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21633,7 +21534,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 312,
+      "line": 320,
       "summary": "A golden baseline: an identifier (the \"name\") and its expected serialized form.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21677,7 +21578,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 92,
+      "line": 100,
       "summary": "A deterministic, seeded pseudo-random generator for property-test inputs (RT3 / C6).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21688,7 +21589,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Rng",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 101,
+      "line": 109,
       "summary": "Construct a generator from a fixed seed (RT3: no undeclared entropy).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21699,7 +21600,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Rng",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 124,
+      "line": 132,
       "summary": "Advance and return a `u32`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21710,7 +21611,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Rng",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 114,
+      "line": 122,
       "summary": "Advance the state and return the next `u64` (Xorshift64).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21721,7 +21622,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing::Rng",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 131,
+      "line": 139,
       "summary": "Advance and return a value in `[0, n)`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -21798,7 +21699,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 67,
+      "line": 75,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22029,7 +21930,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 434,
+      "line": 442,
       "summary": "Run a differential (oracle) test: require `lhs(input) == rhs(input)`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22040,7 +21941,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 221,
+      "line": 229,
       "summary": "Run a property test: generate `budget` inputs from `gen` and check `prop` for each.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22073,7 +21974,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 346,
+      "line": 354,
       "summary": "Run a golden / snapshot test: compare `produced` against the stored baseline.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22084,7 +21985,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 68,
+      "line": 76,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22117,7 +22018,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 519,
+      "line": 527,
       "summary": "True only if there are no failures **and** skipped/undetermined counts are surfaced (i.e.,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22128,7 +22029,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 481,
+      "line": 489,
       "summary": "Aggregate a slice of verdicts into a [`Summary`].",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22139,7 +22040,7 @@
       "crate": "mycelium-std-testing",
       "module": "mycelium_std_testing",
       "file": "crates/mycelium-std-testing/src/lib.rs",
-      "line": 69,
+      "line": 77,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22293,7 +22194,7 @@
       "crate": "mycelium-std-text",
       "module": "mycelium_std_text",
       "file": "crates/mycelium-std-text/src/lib.rs",
-      "line": 80,
+      "line": 88,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22337,7 +22238,7 @@
       "crate": "mycelium-std-text",
       "module": "mycelium_std_text",
       "file": "crates/mycelium-std-text/src/lib.rs",
-      "line": 81,
+      "line": 89,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22414,7 +22315,7 @@
       "crate": "mycelium-std-text",
       "module": "mycelium_std_text",
       "file": "crates/mycelium-std-text/src/lib.rs",
-      "line": 82,
+      "line": 90,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22535,7 +22436,7 @@
       "crate": "mycelium-std-text",
       "module": "mycelium_std_text",
       "file": "crates/mycelium-std-text/src/lib.rs",
-      "line": 83,
+      "line": 91,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22612,7 +22513,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 547,
+      "line": 555,
       "summary": "The injectable clock-source surface (C6 / RFC-0014 declared effects).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22623,7 +22524,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 139,
+      "line": 147,
       "summary": "Declared-effect wrapper for a MONOTONIC or LOGICAL clock read (effect: `time`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22634,7 +22535,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 166,
+      "line": 174,
       "summary": "Declared-effect wrapper for a WALL-CLOCK read (effect: `{ time, entropy }`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22645,7 +22546,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 205,
+      "line": 213,
       "summary": "A signed nanosecond span (C4 / RFC-0001 value-semantic).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22656,7 +22557,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::Duration",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 218,
+      "line": 226,
       "summary": "The largest representable (most-positive) span.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22667,7 +22568,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::Duration",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 215,
+      "line": 223,
       "summary": "The smallest representable (most-negative) span.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22678,7 +22579,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::Duration",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 212,
+      "line": 220,
       "summary": "The zero span.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22689,7 +22590,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::Duration",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 297,
+      "line": 305,
       "summary": "Absolute value of the span.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22700,7 +22601,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::Duration",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 287,
+      "line": 295,
       "summary": "Negate the span.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22711,7 +22612,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::Duration",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 243,
+      "line": 251,
       "summary": "Construct from microseconds.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22722,7 +22623,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::Duration",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 235,
+      "line": 243,
       "summary": "Construct from milliseconds.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22733,7 +22634,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::Duration",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 227,
+      "line": 235,
       "summary": "Construct from whole seconds.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22744,7 +22645,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 788,
+      "line": 796,
       "summary": "The `std.time` guarantee matrix (spec §4 / RFC-0016 §4.5).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22755,7 +22656,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 763,
+      "line": 771,
       "summary": "One row of the `std.time` guarantee matrix (RFC-0016 §4.5 / spec §4).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22766,7 +22667,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 386,
+      "line": 394,
       "summary": "A point on the RFC-0008 LOGICAL clock (a deterministic monotonic tick the runtime advances).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22777,7 +22678,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 668,
+      "line": 676,
       "summary": "A [`ClockSource`] with manually-settable time values — for deterministic tests.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22788,7 +22689,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::ManualClock",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 702,
+      "line": 710,
       "summary": "Advance the MONOTONIC clock by `delta_ns` nanoseconds (for tests that simulate time",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22799,7 +22700,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::ManualClock",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 696,
+      "line": 704,
       "summary": "Set the LOGICAL tick returned by `logical_now`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22810,7 +22711,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::ManualClock",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 686,
+      "line": 694,
       "summary": "Set the MONOTONIC clock value returned by `mono_now`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22821,7 +22722,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::ManualClock",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 691,
+      "line": 699,
       "summary": "Set the WALL-CLOCK value returned by `wall_now`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22832,7 +22733,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time::ManualClock",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 707,
+      "line": 715,
       "summary": "Advance the LOGICAL clock by one tick (for tests that simulate a runtime step).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22843,7 +22744,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 318,
+      "line": 326,
       "summary": "A point on the MONOTONIC clock (never-backward, no civil meaning).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22854,7 +22755,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 582,
+      "line": 590,
       "summary": "A [`ClockSource`] backed by Rust's `std::time` — the **std-sys placeholder** (FLAG §7-Q3).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22865,7 +22766,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 93,
+      "line": 101,
       "summary": "Every explicit failure from a `std.time` operation (C1 / G2 / RFC-0013 diagnostic shape).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22876,7 +22777,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 348,
+      "line": 356,
       "summary": "A point on the WALL-CLOCK (civil/UTC time, an entropy source).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22887,7 +22788,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 883,
+      "line": 891,
       "summary": "Assert the structural invariants of the guarantee matrix — called from tests.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22898,7 +22799,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 414,
+      "line": 422,
       "summary": "Add two durations.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22909,7 +22810,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 467,
+      "line": 475,
       "summary": "Convert a duration to a coarser unit (truncating), or return `Err(Overflow)` if the truncated",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22920,7 +22821,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 451,
+      "line": 459,
       "summary": "Compare two durations.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22931,7 +22832,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 442,
+      "line": 450,
       "summary": "Scale a duration by a signed integer factor.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22942,7 +22843,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 428,
+      "line": 436,
       "summary": "Subtract two durations (`a - b`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22953,7 +22854,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 525,
+      "line": 533,
       "summary": "Compute the duration between two LOGICAL instants (`later − earlier`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22964,7 +22865,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 755,
+      "line": 763,
       "summary": "Read the LOGICAL clock from `source`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22975,7 +22876,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 488,
+      "line": 496,
       "summary": "Compute the signed duration between two MONOTONIC instants (`later − earlier`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22986,7 +22887,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 735,
+      "line": 743,
       "summary": "Read the MONOTONIC clock from `source`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -22997,7 +22898,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 505,
+      "line": 513,
       "summary": "Compute the signed duration between two WALL-CLOCK instants (`later − earlier`).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23008,7 +22909,7 @@
       "crate": "mycelium-std-time",
       "module": "mycelium_std_time",
       "file": "crates/mycelium-std-time/src/lib.rs",
-      "line": 747,
+      "line": 755,
       "summary": "Read the WALL-CLOCK from `source`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23107,7 +23008,7 @@
       "crate": "mycelium-std-vsa",
       "module": "mycelium_std_vsa",
       "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 46,
+      "line": 54,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23118,7 +23019,7 @@
       "crate": "mycelium-std-vsa",
       "module": "mycelium_std_vsa",
       "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 47,
+      "line": 55,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23140,7 +23041,7 @@
       "crate": "mycelium-std-vsa",
       "module": "mycelium_std_vsa",
       "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 48,
+      "line": 56,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -23162,7 +23063,7 @@
       "crate": "mycelium-std-vsa",
       "module": "mycelium_std_vsa",
       "file": "crates/mycelium-std-vsa/src/lib.rs",
-      "line": 49,
+      "line": 57,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -29679,7 +29580,7 @@
     },
     {
       "symbol": "mycelium_interp::swap::IdentitySwapEngine",
-      "reason": "dedup-alias: same definition as `mycelium_interp::IdentitySwapEngine` at crates/mycelium-interp/src/swap.rs:27 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_interp::IdentitySwapEngine` at crates/mycelium-interp/src/swap.rs:39 — one canonical row kept"
     },
     {
       "symbol": "mycelium_interp::swap::IdentitySwapEngine::clone",
@@ -29723,7 +29624,7 @@
     },
     {
       "symbol": "mycelium_interp::swap::SwapEngine",
-      "reason": "dedup-alias: same definition as `mycelium_interp::SwapEngine` at crates/mycelium-interp/src/swap.rs:16 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_interp::SwapEngine` at crates/mycelium-interp/src/swap.rs:28 — one canonical row kept"
     },
     {
       "symbol": "mycelium_interp::swap::SwapEngine::swap",
@@ -29779,7 +29680,7 @@
     },
     {
       "symbol": "mycelium_l1::ambient::Resolved",
-      "reason": "dedup-alias: same definition as `mycelium_l1::Resolved` at crates/mycelium-l1/src/ambient.rs:131 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::Resolved` at crates/mycelium-l1/src/ambient.rs:148 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::ambient::Resolved::clone",
@@ -29807,19 +29708,19 @@
     },
     {
       "symbol": "mycelium_l1::ambient::expand_phylum_to_source",
-      "reason": "dedup-alias: same definition as `mycelium_l1::expand_phylum_to_source` at crates/mycelium-l1/src/ambient.rs:278 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::expand_phylum_to_source` at crates/mycelium-l1/src/ambient.rs:305 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::ambient::expand_to_source",
-      "reason": "dedup-alias: same definition as `mycelium_l1::expand_to_source` at crates/mycelium-l1/src/ambient.rs:217 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::expand_to_source` at crates/mycelium-l1/src/ambient.rs:244 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::ambient::resolve",
-      "reason": "dedup-alias: same definition as `mycelium_l1::resolve` at crates/mycelium-l1/src/ambient.rs:145 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::resolve` at crates/mycelium-l1/src/ambient.rs:162 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::ambient::resolve_report",
-      "reason": "dedup-alias: same definition as `mycelium_l1::resolve_report` at crates/mycelium-l1/src/ambient.rs:153 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::resolve_report` at crates/mycelium-l1/src/ambient.rs:176 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::ast::AmbientParams::clone",
@@ -30399,7 +30300,7 @@
     },
     {
       "symbol": "mycelium_l1::checkty::Env",
-      "reason": "dedup-alias: same definition as `mycelium_l1::Env` at crates/mycelium-l1/src/checkty.rs:470 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::Env` at crates/mycelium-l1/src/checkty.rs:471 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::Env::clone",
@@ -30431,7 +30332,7 @@
     },
     {
       "symbol": "mycelium_l1::checkty::PhylumEnv",
-      "reason": "dedup-alias: same definition as `mycelium_l1::PhylumEnv` at crates/mycelium-l1/src/checkty.rs:920 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::PhylumEnv` at crates/mycelium-l1/src/checkty.rs:921 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::PhylumEnv::clone",
@@ -30519,23 +30420,23 @@
     },
     {
       "symbol": "mycelium_l1::checkty::check_and_resolve",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:1502 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:1503 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:1012 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:1013 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:1443 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:1444 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:1030 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:1031 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:1040 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:1041 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::ElabError",
@@ -30575,19 +30476,19 @@
     },
     {
       "symbol": "mycelium_l1::elab::elaborate",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate` at crates/mycelium-l1/src/elab.rs:278 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate` at crates/mycelium-l1/src/elab.rs:295 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_colony",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:315 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_colony` at crates/mycelium-l1/src/elab.rs:332 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_lower_rule",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:431 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_lower_rule` at crates/mycelium-l1/src/elab.rs:448 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::elaborate_reclaim",
-      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:366 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::elaborate_reclaim` at crates/mycelium-l1/src/elab.rs:383 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::error::ParseError",
@@ -33755,7 +33656,7 @@
     },
     {
       "symbol": "mycelium_mlir::llvm::CompiledArtifact",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::CompiledArtifact` at crates/mycelium-mlir/src/llvm.rs:2646 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::CompiledArtifact` at crates/mycelium-mlir/src/llvm.rs:2731 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::llvm::emit_llvm_ir",
@@ -37003,23 +36904,23 @@
     },
     {
       "symbol": "mycelium_std_core::prelude::bound_of",
-      "reason": "dedup-alias: same definition as `mycelium_std_core::bound_of` at crates/mycelium-std-core/src/lib.rs:105 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_core::bound_of` at crates/mycelium-std-core/src/lib.rs:113 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_core::prelude::guarantee_of",
-      "reason": "dedup-alias: same definition as `mycelium_std_core::guarantee_of` at crates/mycelium-std-core/src/lib.rs:99 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_core::guarantee_of` at crates/mycelium-std-core/src/lib.rs:107 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_core::prelude::meta_of",
-      "reason": "dedup-alias: same definition as `mycelium_std_core::meta_of` at crates/mycelium-std-core/src/lib.rs:93 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_core::meta_of` at crates/mycelium-std-core/src/lib.rs:101 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_core::prelude::provenance_of",
-      "reason": "dedup-alias: same definition as `mycelium_std_core::provenance_of` at crates/mycelium-std-core/src/lib.rs:111 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_core::provenance_of` at crates/mycelium-std-core/src/lib.rs:119 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_core::prelude::repr_of",
-      "reason": "dedup-alias: same definition as `mycelium_std_core::repr_of` at crates/mycelium-std-core/src/lib.rs:87 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_core::repr_of` at crates/mycelium-std-core/src/lib.rs:95 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_dense::BF16_OP_REL_EPS",
@@ -37531,7 +37432,7 @@
     },
     {
       "symbol": "mycelium_std_fs::File::path",
-      "reason": "dedup-alias: same definition as `mycelium_std_fs::Fs::path` at crates/mycelium-std-fs/src/lib.rs:94 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_fs::Fs::path` at crates/mycelium-std-fs/src/lib.rs:102 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_fs::error::ErrnoClass",
@@ -40006,6 +39907,22 @@
       "reason": "dedup-alias: same definition as `mycelium_std_runtime::region::Region::new` at crates/mycelium-std-runtime/src/region.rs:190 — one canonical row kept"
     },
     {
+      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH:",
+      "reason": "definition not found via regex heuristic (kind='const', name='SCHEDULER_LIVENESS_STRENGTH:') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH:",
+      "reason": "definition not found via regex heuristic (kind='const', name='SCHEDULER_RT2_STRENGTH:') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::scheduler::Scheduler",
+      "reason": "definition not found via regex heuristic (kind='struct', name='Scheduler') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::scheduler::Scheduler::capacity",
+      "reason": "definition not found via regex heuristic (kind='fn', name='capacity') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_runtime::scheduler::Scheduler::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -40016,6 +39933,26 @@
     {
       "symbol": "mycelium_std_runtime::scheduler::Scheduler::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::scheduler::Scheduler::new",
+      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_std_runtime::scheduler::Scheduler::run_indexed",
+      "reason": "definition not found via regex heuristic (kind='fn', name='run_indexed') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::scheduler::Scheduler::with_workers",
+      "reason": "definition not found via regex heuristic (kind='fn', name='with_workers') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::scheduler::Scheduler::workers",
+      "reason": "definition not found via regex heuristic (kind='fn', name='workers') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::scheduler::SchedulerError",
+      "reason": "definition not found via regex heuristic (kind='enum', name='SchedulerError') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::scheduler::SchedulerError::clone",
@@ -40819,7 +40756,7 @@
     },
     {
       "symbol": "mycelium_std_swap::Swapped::explain",
-      "reason": "dedup-alias: same definition as `mycelium_std_swap::explain` at crates/mycelium-std-swap/src/lib.rs:88 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_swap::explain` at crates/mycelium-std-swap/src/lib.rs:96 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_swap::Swapped::fmt",
@@ -41363,7 +41300,7 @@
     },
     {
       "symbol": "mycelium_std_testing::Budget::new",
-      "reason": "dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:101 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:109 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_testing::Budget::partial_cmp",
@@ -41391,7 +41328,7 @@
     },
     {
       "symbol": "mycelium_std_testing::GoldenBaseline::new",
-      "reason": "dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:101 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_testing::Rng::new` at crates/mycelium-std-testing/src/lib.rs:109 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_testing::Rng::clone",
@@ -42103,15 +42040,15 @@
     },
     {
       "symbol": "mycelium_std_time::ClockSource::logical_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::logical_now` at crates/mycelium-std-time/src/lib.rs:755 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::logical_now` at crates/mycelium-std-time/src/lib.rs:763 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::ClockSource::mono_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::mono_now` at crates/mycelium-std-time/src/lib.rs:735 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::mono_now` at crates/mycelium-std-time/src/lib.rs:743 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::ClockSource::wall_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::wall_now` at crates/mycelium-std-time/src/lib.rs:747 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::wall_now` at crates/mycelium-std-time/src/lib.rs:755 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::DeclaredTime",
@@ -42263,27 +42200,27 @@
     },
     {
       "symbol": "mycelium_std_time::ManualClock::logical_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::logical_now` at crates/mycelium-std-time/src/lib.rs:755 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::logical_now` at crates/mycelium-std-time/src/lib.rs:763 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::ManualClock::logical_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::logical_now` at crates/mycelium-std-time/src/lib.rs:755 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::logical_now` at crates/mycelium-std-time/src/lib.rs:763 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::ManualClock::mono_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::mono_now` at crates/mycelium-std-time/src/lib.rs:735 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::mono_now` at crates/mycelium-std-time/src/lib.rs:743 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::ManualClock::mono_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::mono_now` at crates/mycelium-std-time/src/lib.rs:735 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::mono_now` at crates/mycelium-std-time/src/lib.rs:743 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::ManualClock::wall_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::wall_now` at crates/mycelium-std-time/src/lib.rs:747 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::wall_now` at crates/mycelium-std-time/src/lib.rs:755 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::ManualClock::wall_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::wall_now` at crates/mycelium-std-time/src/lib.rs:747 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::wall_now` at crates/mycelium-std-time/src/lib.rs:755 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::MonoInstant::as_nanos",
@@ -42331,27 +42268,27 @@
     },
     {
       "symbol": "mycelium_std_time::SystemClock::logical_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::logical_now` at crates/mycelium-std-time/src/lib.rs:755 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::logical_now` at crates/mycelium-std-time/src/lib.rs:763 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::SystemClock::logical_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::logical_now` at crates/mycelium-std-time/src/lib.rs:755 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::logical_now` at crates/mycelium-std-time/src/lib.rs:763 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::SystemClock::mono_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::mono_now` at crates/mycelium-std-time/src/lib.rs:735 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::mono_now` at crates/mycelium-std-time/src/lib.rs:743 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::SystemClock::mono_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::mono_now` at crates/mycelium-std-time/src/lib.rs:735 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::mono_now` at crates/mycelium-std-time/src/lib.rs:743 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::SystemClock::wall_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::wall_now` at crates/mycelium-std-time/src/lib.rs:747 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::wall_now` at crates/mycelium-std-time/src/lib.rs:755 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::SystemClock::wall_now",
-      "reason": "dedup-alias: same definition as `mycelium_std_time::wall_now` at crates/mycelium-std-time/src/lib.rs:747 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_std_time::wall_now` at crates/mycelium-std-time/src/lib.rs:755 — one canonical row kept"
     },
     {
       "symbol": "mycelium_std_time::TimeErr::clone",

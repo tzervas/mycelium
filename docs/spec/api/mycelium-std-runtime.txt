@@ -611,7 +611,6 @@ impl core::marker::Unpin for mycelium_std_runtime::scheduler::Scheduler
 impl core::marker::UnsafeUnpin for mycelium_std_runtime::scheduler::Scheduler
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::scheduler::Scheduler
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::scheduler::Scheduler
-pub const mycelium_std_runtime::scheduler::SCHEDULER_BACKPRESSURE_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
 pub const mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
 pub const mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
 pub mod mycelium_std_runtime::scope_region

@@ -53,4 +53,4 @@ ground truth.
 ## Role in the workspace
 
 The fungal concurrency and memory-model runtime; depends on `mycelium-interp` for the M-356
-supervision/cancellation kernel. See the [workspace overview](../../README.md).
+supervision/cancellation kernel. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-runtime).

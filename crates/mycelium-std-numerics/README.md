@@ -36,4 +36,4 @@ meets a threshold, returning an explicit `Err(CheckErr)` rather than silently pa
 
 ## Role in the workspace
 
-Error-bound primitives consumed by `std.math`, `std.dense`, and any crate that carries `Approx` results. See the [workspace overview](../../README.md).
+Error-bound primitives consumed by `std.math`, `std.dense`, and any crate that carries `Approx` results. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-numerics).

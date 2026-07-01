@@ -47,7 +47,11 @@ snapshot rebuilds only when the setup script or network allowlist changes, or af
 Docs: [code.claude.com/docs/en/claude-code-on-the-web](https://code.claude.com/docs/en/claude-code-on-the-web)
 § *Setup scripts* / *Environment caching*.
 
-## What runs
+## What runs (`just check` / `scripts/checks/all.sh`)
+
+The 26 gates below run, in this order, for every `just check` / `just ci` / CI invocation
+(`scripts/checks/all.sh`'s `checks=(...)` array is the ground truth — this table mirrors it).
+
 | Check | Tool | Notes |
 |---|---|---|
 | `structured` | python | every tracked `.json/.yaml/.toml` parses |
@@ -57,10 +61,41 @@ Docs: [code.claude.com/docs/en/claude-code-on-the-web](https://code.claude.com/d
 | `doc-currency` | `doc_currency.py` | README structure tree · Doc-Index coverage · cited counts |
 | `doc-status` | `doc_status_check.py` | decision-status **lattice** · nav-README↔header cross-check · Declared stale-phrase invariants |
 | `schema` | check-jsonschema | draft 2020-12 metaschema + example instances (per M-010) |
+| `grammar` | python | structural validation of the surface-grammar artifacts + conformance corpus (RFC-0006 §4.3; DN-02); the parser gate itself is `cargo test` in `mycelium-l1` |
 | `spell` | codespell | config `.codespellrc` |
 | `secrets` | gitleaks | respects `.gitleaks.toml`; narrow fallback if gitleaks absent |
 | `format` | cargo fmt / ruff | check-only; `--fix` to write |
 | `lint` | clippy / ruff | `clippy -D warnings` per CONTRIBUTING |
+| `safety` | python | Rust `// SAFETY:` adjacency for every `unsafe` (M-681) + the FFI unsafe-floor audit (RFC-0028 §4.7; ADR-014 §8.1; DN-21 §5 F-3) |
+| `unsafe-per-use` | python | per-use `unsafe` escape gate (M-793; RFC-0034 §9) — every `unsafe` block is a conscious, source-visible opt-in |
+| `test` | cargo test / nextest | the tiered unit/regression/proptest suite (DN-20) |
+| `myc-fmt` | `mycfmt --check` | canonical `.myc` formatting gate (M-364) over every real project root |
+| `myc-check` | `myc-check --project` | `.myc` parse + L1 type-check gate (M-365) |
+| `myc-sec` | `myc-sec` | `wild`-block audit — every escape hatch must be justified (M-367) |
+| `myc-lint` | `myc-lint --project` | M-141 invariant lints + M-358/M-359 header lints (M-366) |
+| `myc-doc` | `myc-doc lint` | doc-build / §4.1 quality-bar gate over the corpus + example `.myc` nodules (M-363) |
+| `myc-spore` | `spore build` | packaging smoke — non-gating (packaging is a build artifact, not a correctness property) (M-368) |
+| `proofs` | z3 / LiquidHaskell / Lean | machine-checkable proofs under `proofs/`; skips when a prover toolchain is absent |
+| `api` | cargo-public-api | public-API surface diff vs the committed `docs/spec/api/<crate>.txt` baseline (KC-3) |
+| `doc-index` | python | drift gate — committed `docs/api-index/` must match a fresh regeneration |
+| `deny` | cargo-deny / cargo-audit | supply-chain gate (advisories, licenses, sources; C1-09) |
+| `drift` | python | editor-grammar drift gate — committed `tools/grammar/` artifacts must match a fresh regeneration from the lexer (M-731; RFC-0026) |
+
+**Skip-graceful vs strict:** every gate above skips (never fails) when its tool/toolchain isn't
+present yet in **local** dev — except `dist-verify`-style integrity gates and, in the **CI gate
+environment** (`CI=true` or `MYCELIUM_REQUIRE_SUPPLY_CHAIN=1`), `deny`, where a *missing* tool
+becomes a failure rather than a skip (a stricter gate can't be quietly bypassed by uninstalling
+its tool).
+
+**Other scripts (not part of `just check`):**
+
+| Script | Recipe | Notes |
+|---|---|---|
+| `scan.sh` | `just scan` | supplementary, **advisory** local scanners — opt-in, not gating |
+| `branch-guard.sh` | `just branch-guard` (`bg`) | protected-branch guard (`/branch-guard`) |
+| `worktree-guard.sh` | `just worktree-guard` (`wg`) | isolated-worktree guard (`/worktree-guard`) |
+| `changed-crates.sh` | (sourced by `test-fast`/`check`) | change-scoping for the tiered test recipes (DN-20) |
+| `fuzz-smoke.sh` | `just check-full` only | one bounded cargo-fuzz target — the Tier-2 durability gate |
 
 ## Design rules
 - **Graceful skip:** a check whose tool or language isn't present prints `skip` and exits 0 —

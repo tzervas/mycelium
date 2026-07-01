@@ -13,7 +13,19 @@ use crate::EvalError;
 
 /// Evaluates a `Swap` node. Implementations must be *never silent*: an out-of-domain or unsupported
 /// conversion returns an [`EvalError`] (the interpreter surfaces it), it does not coerce.
-pub trait SwapEngine {
+///
+/// **`Sync` (M-862) + `Send` (M-864):** the parallel-pure-fragment evaluator (`crate::parallel`)
+/// shares the engine across the M-861 scheduler's worker threads (`mycelium_sched`) via `&Interpreter`
+/// — every engine must be safely readable from multiple threads at once (`Sync`). M-864's persistent
+/// pool tightened `run_indexed` to `'static` job closures, which can no longer *borrow*
+/// `&Interpreter` from the caller's stack frame (the pool's worker threads outlive any single call);
+/// `Interpreter` is now `Clone` and stores its engine as `Arc<dyn SwapEngine>` so a job can own a
+/// cheap handle to it, which additionally requires `Send` (an `Arc<T>` is `Send` only if `T: Send +
+/// Sync`). Every shipped/known implementation (the identity engine here, the M-120 certified engines
+/// in `mycelium-cert`) is a plain, interior-mutability-free struct and satisfies both automatically;
+/// a future engine that needs interior mutability would need its own synchronization (e.g. a
+/// `Mutex`), same as any other `Send + Sync` type.
+pub trait SwapEngine: Send + Sync {
     /// Convert `src` to `target` under `policy`, returning the converted [`Value`] or an error. The
     /// result's [`Meta`] must record `policy_used` (ADR-006) and an honest guarantee/bound.
     fn swap(&self, src: &Value, target: &Repr, policy: &ContentHash) -> Result<Value, EvalError>;

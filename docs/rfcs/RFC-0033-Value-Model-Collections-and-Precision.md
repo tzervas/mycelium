@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **RFC** | 0033 |
-| **Status** | **Proposed** (2026-06-24) — the value-model collections (`Seq`/`Bytes`) and the four paradigms' precision/width semantics (Binary sign-free; Ternary arbitrary-width; Dense granularity-descriptor quant; VSA explicit element-space + block-sparsity + complex carrier), the never-silent boundaries between them, and the content-address identity set are stated normatively **as proposed**. The maintainer ratifies → **Accepted** (house rule #3 — never skipping steps). Per the swarm-integration rule, kernel pieces move to *"implemented (Rust-first), pending ratification"* as they land — **never silently to `Accepted`** (VR-5). |
+| **Status** | **Accepted** (2026-07-01 — maintainer-ratified). The value-model collections (`Seq`/`Bytes`) and the four paradigms' precision/width semantics (Binary sign-free; Ternary arbitrary-width; Dense granularity-descriptor quant; VSA explicit element-space + block-sparsity + complex carrier), the never-silent boundaries between them, and the content-address identity set (§1–§8) are ratified. Was **Proposed** (2026-06-24). **The V1–V5 kernel implementation (the content-address one-way doors + swap/guarantee reconciliation, M-760…M-784) is deferred to post-1.0** — the value-model growth beyond the already-landed V0 `BigTernary` (M-754…M-757) is a post-1.0 wave; only the *design* is ratified here. Per the swarm-integration rule, kernel pieces still move to *"implemented (Rust-first), pending ratification"* as they land, never silently upgraded past a checked basis (VR-5). |
 | **Type** | Foundational / normative (once Accepted) — extends RFC-0001's value model with collections and honest precision/width semantics so the ABI need not break to introduce growable/quantized/complex/large-width values later |
 | **Date** | 2026-06-24 |
 | **Feeds** | E20-1 (Value-Model Collections & Precision) — M-754…M-784; the dogfooding gate (values may be persisted only once the content-address one-way doors land — §7) |
@@ -13,13 +13,15 @@
 | **Task** | E20-1 (epic) / M-785 (this RFC + ADR-025…031 — the E20-1 design gate; the V0 ternary impl is M-754…M-759) |
 
 > **Posture (honesty rule / VR-5).** This RFC **decides** the value-model collections + precision
-> surface **as proposed** (§3–§7): the `Repr`/`Payload` shapes, the never-silent boundaries, and the
+> surface, now **ratified** (§3–§7): the `Repr`/`Payload` shapes, the never-silent boundaries, and the
 > content-address identity set. It **decides the surface, it does not implement it** — the only kernel
-> piece landing alongside this RFC is the arbitrary-width `BigTernary` (E20-1 V0, off the
+> piece landed alongside this RFC's authoring is the arbitrary-width `BigTernary` (E20-1 V0, off the
 > content-address critical path), reconciled into `core::ternary`. The two **content-address one-way
 > doors** (Dense quant descriptor §4.3; VSA element-space §4.4) and the swap/guarantee reconciliation
-> (§6) are **Proposed and unimplemented**; they land together in a single rehash (M-780) only after
-> ratification, **before any value is persisted for dogfooding** (§7). Every `Repr`/`Payload` addition
+> (§6) are **ratified but unimplemented**; the V1–V5 implementation work (M-760…M-784) is **deferred to
+> post-1.0** (a post-1.0 wave, per the maintainer's 2026-07-01 ratification) and, whenever it proceeds,
+> lands together in a single rehash (M-780), **before any value is persisted for dogfooding** (§7). Every
+> `Repr`/`Payload` addition
 > **enlarges the trusted base** (KC-3) and is justified per §2.3 (admissible only when the alternative
 > would make the value model *unable to honestly represent* a standard datum — a correctness condition).
 > Until each piece is implemented + differential-tested, claims about its behaviour are `Declared`
@@ -208,4 +210,5 @@ cannot be constructed over a real payload. The conformance test matrix is in
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-07-01 | **Accepted** | Maintainer-ratified: §1–§8 (the value-model collections + precision surface, the never-silent boundaries, and the content-address identity set) are ratified as normative. Companion decision records **ADR-025, ADR-026, ADR-027, ADR-028** flip `Proposed → Accepted` in the same act (ADR-029/030/031 were already Accepted, 2026-06-24). **The V1–V5 kernel implementation (M-760…M-784 — the content-address one-way doors + swap/guarantee reconciliation) is deferred to post-1.0**: the design is ratified now, the value-model growth beyond the already-landed V0 `BigTernary` (M-754…M-757) proceeds as a post-1.0 wave. No V-numbered implementation task (M-758…M-784) is flipped by this act. `M-785`'s own Definition of Done ("RFC-0033 + ADR-025…031 reach Accepted") is now met; M-785 flips to `done`. |
 | 2026-06-24 | **Proposed** | Initial proposal. Value-model collections (`Seq`/`Bytes`, aligned with RFC-0032 D3/D4) + the four paradigms' precision/width: Binary sign-free (§4.1, one-way door on `signed`-in-`Repr`); Ternary arbitrary-width with never-silent fixed-width boundary (§4.2 — removes the cap, core is already cap-honest); Dense granularity-descriptor quant in `Repr` + scale arrays in `Payload` (§4.3, content-address one-way door, **disagrees with the input draft's scalar quant**); VSA explicit element-space + block-sparsity + complex carrier (§4.4, content-address one-way door, **disagrees with the input draft's model-strings-suffice**). §6 reconciliation **extends** ADR-011's universal `bound.basis` (OQ-3 already closed — not reopened). §7 content-address identity set + dogfood gate (single rehash M-780). OQ-4/OQ-5 declared-open. Companion records: `research/14`, `research/15`; decision records `ADR-025…031`; plan `docs/planning/value-model-implementation-plan.md`. Task E20-1/M-785. |

@@ -54,6 +54,17 @@ pub enum ElabError {
     },
     /// The requested entry definition does not exist in the checked environment.
     UnknownFn(String),
+    /// A pass-internal AST traversal ([`crate::totality::walk_expr`], reused here for call-set
+    /// collection over the call graph — M-641/DRY) exceeded its own explicit recursion-depth budget
+    /// (M-674) on a pathologically-nested body. An operational resource refusal, distinct from
+    /// [`ElabError::Residual`] (a semantic "outside the fragment" verdict) — refused cleanly rather
+    /// than overflowing the host stack (banked guard 4).
+    DepthExceeded {
+        /// The definition being analyzed when the budget was exceeded.
+        site: String,
+        /// The exceeded budget.
+        limit: u32,
+    },
 }
 
 impl core::fmt::Display for ElabError {
@@ -65,6 +76,12 @@ impl core::fmt::Display for ElabError {
                  run it on the L1 evaluator"
             ),
             ElabError::UnknownFn(name) => write!(f, "no function `{name}` in the checked nodule"),
+            ElabError::DepthExceeded { site, limit } => write!(
+                f,
+                "`{site}`: AST nesting exceeds the call-graph analysis's own recursion-depth budget \
+                 ({limit}) — an explicit budget (banked guard 4; M-674), refused cleanly rather than \
+                 overflowing the host stack"
+            ),
         }
     }
 }
@@ -577,7 +594,7 @@ fn recursive_sccs(env: &Env, entry: &str) -> Result<Vec<Vec<String>>, ElabError>
             continue;
         }
         if let Some(fd) = env.fns.get(&f) {
-            for callee in calls_in_fn(&fd.body) {
+            for callee in calls_in_fn(&f, &fd.body)? {
                 if env.fns.contains_key(&callee) {
                     frontier.push(callee);
                 }
@@ -597,21 +614,27 @@ fn recursive_sccs(env: &Env, entry: &str) -> Result<Vec<Vec<String>>, ElabError>
         out: Vec<Vec<String>>,
     }
     // The reachable function callees of `f`, sorted and unique (BTreeSet) for a deterministic walk.
-    fn successors(env: &Env, reachable: &BTreeSet<String>, f: &str) -> BTreeSet<String> {
-        calls_in_fn(&env.fns[f].body)
+    fn successors(
+        env: &Env,
+        reachable: &BTreeSet<String>,
+        f: &str,
+    ) -> Result<BTreeSet<String>, ElabError> {
+        Ok(calls_in_fn(f, &env.fns[f].body)?
             .into_iter()
             .filter(|c| reachable.contains(c) && env.fns.contains_key(c))
-            .collect()
+            .collect())
     }
-    fn strongconnect(t: &mut Tarjan, v: &str) {
+    // Call-graph recursion (bounded by the reachable function count, not AST nesting — a separate
+    // resource from the [`ElabError::DepthExceeded`] AST-traversal budget `successors` may surface).
+    fn strongconnect(t: &mut Tarjan, v: &str) -> Result<(), ElabError> {
         t.idx.insert(v.to_owned(), t.index);
         t.low.insert(v.to_owned(), t.index);
         t.index += 1;
         t.stack.push(v.to_owned());
         t.on_stack.insert(v.to_owned());
-        for w in successors(t.env, t.reachable, v) {
+        for w in successors(t.env, t.reachable, v)? {
             if !t.idx.contains_key(&w) {
-                strongconnect(t, &w);
+                strongconnect(t, &w)?;
                 let lw = t.low[&w];
                 let lv = t.low.get_mut(v).expect("v indexed");
                 *lv = (*lv).min(lw);
@@ -635,6 +658,7 @@ fn recursive_sccs(env: &Env, entry: &str) -> Result<Vec<Vec<String>>, ElabError>
             scc.sort(); // deterministic member order (group binding order is observable in the hash)
             t.out.push(scc);
         }
+        Ok(())
     }
     let mut t = Tarjan {
         env,
@@ -648,39 +672,53 @@ fn recursive_sccs(env: &Env, entry: &str) -> Result<Vec<Vec<String>>, ElabError>
     };
     for f in &reachable {
         if !t.idx.contains_key(f) {
-            strongconnect(&mut t, f);
+            strongconnect(&mut t, f)?;
         }
     }
 
     // Keep only the *recursive* SCCs (a multi-member group, or a self-looping singleton), preserving
     // Tarjan's callee-first order.
-    let sccs = t
-        .out
-        .into_iter()
-        .filter(|scc| scc.len() > 1 || calls_in_fn(&env.fns[&scc[0]].body).contains(&scc[0]))
-        .collect();
+    let mut sccs = Vec::with_capacity(t.out.len());
+    for scc in t.out {
+        let recursive =
+            scc.len() > 1 || calls_in_fn(&scc[0], &env.fns[&scc[0]].body)?.contains(&scc[0]);
+        if recursive {
+            sccs.push(scc);
+        }
+    }
     Ok(sccs)
 }
 
 /// The set of function/constructor/prim names a body calls (single-segment heads + bare paths). A
 /// superset filter — the caller intersects with `env.fns` to get function calls.
-fn calls_in_fn(body: &Expr) -> BTreeSet<String> {
+///
+/// # Errors
+/// [`ElabError::DepthExceeded`] once the shared [`crate::totality::walk_expr`] traversal's own
+/// recursion exceeds its explicit budget (M-674) on a pathologically-nested `body` — a clean,
+/// explicit refusal rather than a host-stack overflow.
+fn calls_in_fn(site: &str, body: &Expr) -> Result<BTreeSet<String>, ElabError> {
     let mut out = BTreeSet::new();
-    collect_calls(body, &mut out);
-    out
+    collect_calls(site, body, &mut out)?;
+    Ok(out)
 }
 
-fn collect_calls(e: &Expr, out: &mut BTreeSet<String>) {
+fn collect_calls(site: &str, e: &Expr, out: &mut BTreeSet<String>) -> Result<(), ElabError> {
     // Same pre-order traversal totality uses (M-641) — factored into the one shared `walk_expr`;
     // this collector's *action* differs (it gathers **every** single-segment path, the superset
     // filter `calls_in_fn` documents, not just `App` heads), so the visitor closure carries that.
+    // `walk_expr` carries its own explicit recursion-depth budget (M-674) — mapped here to the
+    // never-silent `ElabError::DepthExceeded`, never a host-stack overflow.
     crate::totality::walk_expr(e, &mut |x| {
         if let Expr::Path(p) = x {
             if p.0.len() == 1 {
                 out.insert(p.0[0].clone());
             }
         }
-    });
+    })
+    .map_err(|e| ElabError::DepthExceeded {
+        site: site.to_owned(),
+        limit: e.limit,
+    })
 }
 
 /// Build the content-addressed data registry `Σ` (RFC-0001 §4.3 r3) from the checked environment's

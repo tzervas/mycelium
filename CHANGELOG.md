@@ -8,6 +8,279 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)
+
+- **`mycelium-mlir::concurrent`** (`compile_and_run_concurrent`, `jit_run_concurrent`,
+  `plan_concurrent`/`ConcurrentPlan`) extends M-862's interpreter-side top-level pure-argument batch
+  (a pure, ≥2-argument top-level `Op` — narrowed from `Op`/`Construct` to `Op`-only, see below) to the
+  **direct-LLVM AOT** and **in-process JIT** execution paths, dispatched at the **Rust harness level**
+  through the *same* `mycelium_sched::scheduler::Scheduler::run_indexed` entry point M-860's
+  `emit_llvm_ir_many` already uses — no new scheduler surface, no LLVM-IR-level concurrency
+  primitive. Each batch argument is submitted as its own job and evaluated by the exact trusted
+  sequential runner for that path (`compile_and_run_with_swap_mode` / `jit_run`); results are
+  recomposed by invoking that **same** runner once more on a tiny reconstructed `prim(consts…)` node
+  — so prim-application semantics is never hand-reimplemented, only *scheduled* differently.
+- **Honest scope narrowing (never-silent, G2):** a `Construct`-headed batch is explicitly *out* of
+  this dispatcher's scope — the direct-LLVM whole-program contract requires a top-level result to
+  reduce to a representation `Lane` (`lower_program_with_swap_mode`'s `into_lane` check), which a bare
+  `Construct` cannot produce standalone, so there is no per-argument compile entry point to recompose
+  through for that head. Documented in the module's own docs, not silently dropped.
+- **New differential (`tests/concurrent_threeway_differential.rs`, M-858-style):**
+  interp-sequential ≡ interp-parallel (M-862) ≡ AOT-parallel ≡ JIT-parallel over the `Op`-headed
+  batch corpus, each pair validated through the shared M-210 `ObservationalEquiv` checker, with a
+  `ran_aot`/`ran_jit` toolchain non-vacuity guard **and** a plan-level non-vacuity guard
+  (`ConcurrentPlan::OpBatch` genuinely selected — never a silent fall-through to sequential). A
+  **mutant witness** (`mutant_witness_catches_a_wrong_index_compose_aot`/`_jit`) demonstrates the
+  differential actually *catches* a deliberately-broken concurrent dispatch (a wrong-index recompose
+  over a non-commutative `trit.sub`), not merely asserts agreement. Verified non-vacuously on this
+  box (libMLIR-18 + `llc`/`clang` present) with and without `--features mlir-dialect`.
+- **M-865's original title over-claimed "AOT-runtime concurrency + async execution parity with the
+  interpreter" — rescoped honestly, same day.** The language has **no executable concurrency
+  surface** today (`hypha` ratified-not-lexed, `async` unimplemented, every execution path still runs
+  sequentially), so that framing was vacuous. M-865's *actual*, landed scope is the harness-level
+  extension above; real hypha/colony/async parity is carved out to a new post-1.0.0-tag issue,
+  **M-869**, gated on the language growing a spawn/hypha surface. RFC-0008 §Meta and DN-61 §Meta
+  carry matching append-only notes (RFC-0008 status unchanged: Accepted; DN-61 status unchanged).
+  Guarantee tag: **Empirical** (differential-checked), never `Proven` (VR-5).
+
+### Changed (2026-07-01: M-864 — persistent bounded work-stealing pool for the Scheduler, nested-safe submission)
+
+- **`Scheduler::run_indexed` dispatches onto a persistent, process-wide pool (`mycelium_sched::pool`),
+  not fresh OS threads per call.** The pool is created once, lazily, sized to
+  `available_parallelism()`, and reused for the life of the process — including across **nested**
+  `run_indexed` calls (a job that itself calls `run_indexed` again). A caller blocked on its own
+  batch's completion **helps** drain the shared queue (`Pool::help_while`, the Cilk/TBB/Rayon
+  work-helping pattern) rather than parking. The batch's lanes are **populated up front and never
+  bare-block** (the queue is unbounded — no backpressure), so `help_while` is the *only* wait on any
+  batch's critical path: the structural reason a **fixed**-size pool never deadlocks under arbitrarily
+  deep nesting. Tag: **Empirical** — validated by **forced-low-worker-count** nested stress tests
+  (`P ∈ {1,2,3,4}`, incl. the `[15,15,6]` shape) that *hang on the pre-fix code and pass on this one*,
+  under a wall-clock timeout, plus global-pool stress + a Linux thread-count regression witness; not a
+  mechanized proof (VR-5). This removes the resource concern M-860/M-862 both had to work around by
+  capping their own parallelism to a single, non-nested, top-level batch.
+- **Sound-on-arrival via an adversarial deadlock review (same day):** the *first* cut of this pool
+  kept M-861's `capacity` backpressure, whose feeder bare-blocked *before* help-stealing — a real
+  nested-submission deadlock at `width > capacity + P` (reproduced), plus a panicking job that hung
+  the join and killed a pool worker. Both fixed at the root before landing: the **backpressure/
+  `capacity` bound is removed** (it was the deadlock cause and a non-normative impl detail per DN-61
+  §A.2 — the pool queue is now unbounded, memory bounded by the batch's job count), and the join is
+  **panic-safe** (`std::panic::catch_unwind` per job keeps the persistent worker alive; the first job
+  panic re-raises at the join, `thread::scope`-style; an RAII drop-guard decrements the batch
+  countdown on every unwind path). The now-false `SCHEDULER_BACKPRESSURE_STRENGTH` (`Exact`) constant
+  and its `mycelium-std-runtime` re-export are **removed** rather than left as a stale claim (VR-5);
+  `Scheduler::capacity` / `with_workers(_, capacity)` remain for source compatibility but no longer
+  bound anything (documented, never-silent).
+- **Honest limit (never-silent, VR-5): bounded *progress*, not bounded *stack*.** `help_while` pops
+  the shared queue indiscriminately, so under **deep-AND-wide** low-`P` nesting a single OS thread can
+  stack help-steal frames from many sibling batches (~`O(w^(d-1))`) → a **stack overflow, not a
+  hang**. So nested `run_indexed` is deadlock-free / panic-safe / deterministic at any depth but only
+  **stack-safe for moderate depth×width**. The boundary was *measured* (DN-67 §3.4 table: e.g. at
+  forced `P=1`, depth 5 completes at every tested width but depth 6 overflows at width 4), and a
+  characterizing test (`[4,4,4,4]`, well inside the safe region) documents it. Current consumers
+  (M-860/M-862) submit a single non-nested batch, so they are trivially safe. The `O(depth)`-stack
+  leapfrogging fix is the tracked follow-up **M-868**.
+- **Breaking API change, ratified: `run_indexed` now requires `F: Send + 'static` / `T: Send +
+  'static`** (previously just `Send`, borrowing freely via the old `std::thread::scope`). A persistent
+  pool's worker threads outlive any single call, so a job can no longer safely borrow from the
+  caller's stack frame. Ratified in new **`docs/notes/DN-67-Persistent-Work-Stealing-Pool.md`**
+  (`Draft`), which also carries the full caller-by-caller audit and the deadlock-freedom argument.
+- **Every current caller adjusted** (none needed `unsafe`; the crate stays
+  `#![forbid(unsafe_code)]`): `mycelium-mlir`'s M-860 `emit_llvm_ir_many_with_swap_mode` now clones
+  each `Node` per job instead of borrowing it (determinism unaffected — the content-hash sort still
+  runs over the original nodes first); `mycelium-interp`'s M-862 `eval_top_batch` now clones the
+  `Interpreter` once per batch behind an `Arc` and shares an `Arc<AtomicU64>` fuel counter — made cheap
+  by giving `Interpreter` `#[derive(Clone)]` (its `swap` field moves from `Box<dyn SwapEngine>` to
+  `Arc<dyn SwapEngine>`, and `SwapEngine`'s bound widens from `Sync` to `Send + Sync`). Two callers not
+  named in the M-864 issue's own body — found only by building the whole workspace, since
+  `mycelium-mlir` transitively depends on `mycelium-std-runtime` — needed the same treatment:
+  `dataflow::run_dataflow_scheduled` (M-711) now takes ownership of each still-pending task via
+  `mem::replace` with a transient placeholder for the duration of a sweep's parallel poll, restoring it
+  afterward; `supervision::run_supervised` (M-713) now clones its `CancelToken` per job (an
+  `Arc<AtomicBool>`-backed handle, so every clone still shares the same cancellation flag).
+- **`mycelium-std-runtime`'s inline tests extracted (M-797, as-touched):** `dataflow.rs` and
+  `supervision.rs`'s former inline `#[cfg(test)] mod tests` blocks move to `src/tests/dataflow.rs` /
+  `src/tests/supervision.rs`. The dataflow ownership-restore test is **strengthened** to assert the
+  exact total step count (so a wrong-slot restore that strands a task is caught even when it doesn't
+  deadlock), and the supervision cancel-token test is **honestly downgraded** to assert only the
+  deterministic shared-flag propagation (the cross-sibling-observation claim was scheduling-dependent;
+  `external_cancel_propagates_to_all_tasks` already covers per-job-clone flag-sharing deterministically).
+- M-860's byte-identical parallel-emit test and M-862's parallel-eval differential/determinism suites
+  are unmodified and re-verified green; `mycelium-sched` gains nested-recursion + **forced-low-`P`
+  deadlock** + **panic-safety** stress tests (30/30 total); `mycelium-std-runtime` stays 98/98 green.
+
+### Added (2026-07-01: ADR-036 — dogfooding and public-release strategy ratified)
+
+- **ADR-036 — Dogfooding and Public-Release Strategy (`Accepted`, maintainer-ratified).** Fixes the
+  `lang 1.0.0` **tag** and the project's **public release** as two distinct milestones. The tag is cut
+  on the **Rust reference implementation**; self-hosting gates it only at the existing **core-lib
+  self-host slice** (ADR-022 §8 Q1 — unchanged, explicitly preserved). **Comprehensive dogfooding**
+  (progressively rewriting the whole toolchain/stdlib/kernel *in* Mycelium, beside the Rust originals —
+  E18-1's full scope beyond the core-lib slice) is a first-class **within-1.0.0**, non-tag-gating,
+  **parallel** track. Each Mycelium reimplementation is **Rust≡Mycelium differential-validated**
+  (extending the interp≡AOT≡JIT discipline, RFC-0029 §7.5/M-210) and **replaces** its Rust counterpart
+  only once tested, benched, validated, and it satisfies the maintainer. The repository **stays
+  private** until dogfooding is complete and validated — the **public release** happens only then,
+  refining the trigger condition **DN-27** (Draft, untouched) deferred to "a future ADR." This is an
+  **additive** decision, not a §5/§8 Q1 criteria amendment (contrast ADR-024/034/035): ADR-022 §8 Q1
+  and §10 each carry an append-only "see ADR-036" pointer, their own resolution/vision text unchanged.
+- **Cross-reference application (ADR-036):** E18-1's issue body (`tools/github/issues.yaml`) carries an
+  append-only, non-status-changing note framing it as the dogfooding-capstone track, roadmapped by
+  `docs/planning/self-hosting-port-ledger.md` (which itself gets a header note to the same effect). No
+  epic/issue status is flipped by this act.
+
+### Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)
+
+- **ADR-035 — Full-Language 1.0.0 Gate (Track T4) Scope Amendment (`Accepted`, maintainer-ratified).**
+  Narrows ADR-022 track T4's `lang 1.0.0` Definition of Done to the documented **stable-API freeze**
+  (**DN-66**) + the **core-lib self-host slice** (M-714…M-718) — full RFC-0031 §5 D6 Rust-crate
+  retirement for all 26 `mycelium-std-*` crates is **deferred to the post-1.0 long-term arc** (ADR-022
+  §10), mirroring how §8 Q1 already narrowed T9 and how **ADR-024** narrowed T1. Grounded in DN-66's
+  per-crate finding that zero crates clear the D6 trigger today (six same-named `.myc` nodules are
+  structurally disjoint prototypes, not ports; `mycelium-std-runtime` is load-bearing —
+  `crates/mycelium-mlir` depends on it directly). ADR-022 §5 T4 row + §8 Q1 carry append-only "narrowed
+  by ADR-035" pointers (their normative text is not rewritten); RFC-0031 §5 D6 carries an append-only
+  scope note (the D5/D6 mechanism itself is unchanged). **DN-66** itself moves `Draft → Accepted` by
+  this ratifying act.
+- **Issue status flips (ADR-035):** `M-719` (`in-progress` → `done` — its stable-API-freeze half now
+  closes T4's narrowed 1.0.0 bar; the D6-retirement half is spun out to a new post-1.0 backlog item);
+  `E13-1` epic (`in-progress` → `done` — all named children done under the narrowed scope). `E18-1`'s
+  body carries a clarifying, non-status-changing note (its own remaining children, M-739…M-742, are
+  unaffected and stay open). A new post-1.0 backlog issue, **`M-867`**, is minted (`status:todo`) to
+  carry the full per-op D5/D6 retirement work forward.
+- **RFC-0033 (Value-Model Collections & Precision): `Proposed` → `Accepted`** (maintainer-ratified).
+  The value-model collections (`Seq`/`Bytes`) + the four paradigms' precision/width semantics
+  (§1–§8) are ratified. **ADR-025, ADR-026, ADR-027, ADR-028 flip `Proposed` → `Accepted`** in the same
+  act (ADR-029/030/031 were already Accepted, 2026-06-24, PR #536). **The V1–V5 kernel implementation
+  (M-760…M-784 — the content-address one-way doors + swap/guarantee reconciliation) is deferred to
+  post-1.0** — the design is ratified now; the value-model growth beyond the already-landed V0
+  `BigTernary` (M-754…M-757, `done`) proceeds as a post-1.0 wave. No V-numbered implementation task
+  (M-758…M-784) is flipped by this act.
+- **Issue status flip (RFC-0033):** `M-785` (`in-progress` → `done` — its own Definition of Done,
+  "RFC-0033 + ADR-025…031 reach Accepted," is now met). `E20-1` epic label moves `proposed` →
+  `in-progress` (the design half is done; the epic itself stays open pending the deferred post-1.0
+  implementation, not flipped to `done`).
+- Stale cross-references to ADR-028's prior `Proposed` status updated append-only where they were
+  cited as grounding (`docs/Doc-Index.md`, `docs/notes/DN-41-Width-Cast-Prim.md`,
+  `docs/notes/DN-51-Binary-Width-Arithmetic-Promotion-and-Narrowing.md`) — each records the status at
+  authoring time and notes the later transition; no finding or decision in those notes is revised.
+
+### Changed (2026-07-01: M-863 — AOT ratification act: RFC-0029 → Enacted, DN-15 → Resolved, E15-1/E25-1/E19-1 status flips)
+
+- **RFC-0029 (AOT Optimization, Codegen Maturity, and JIT): `Accepted` → `Enacted`.** With E25-1's
+  remaining children — M-856b (Dense/VSA through the MLIR-dialect path), M-860 (parallel per-function
+  AOT codegen), and M-862 (parallel pure-fragment interpreter eval) — landed this wave, every E15-1
+  (M-725…M-729) and E25-1 (M-850…M-862) child is `done` with a checked three-way differential
+  (M-858's unified mutant-witnessed harness, PR #851, 0-missed). The path this RFC sanctions is
+  complete and stable — the condition its own Posture note reserved for `Enacted` (house rule #3:
+  stepped through `Accepted` first). The interpreter stays the trusted-base reference throughout
+  (ADR-007/NFR-7); this RFC governs only the native performance layer.
+- **DN-15 (Native-Path Direct-LLVM Decomposition): `Draft` → `Resolved`.** The §10 status question
+  this note's own prior resync flagged for the maintainer is now settled: M-856/M-856b/M-857/M-858
+  closed the last open Increment-4 (MLIR-dialect) catch-up, so both halves the note decomposed —
+  the direct-LLVM-advanceable half (§3) and the libMLIR-gated half (§2/§4.4) — are landed for the
+  full ADR-034 coverage scope, each checked-differential. A §10 resolution paragraph is appended
+  (append-only; no prior section rewritten).
+- **DN-25 (Road to Full-Language 1.0.0): T6 row refreshed (advisory map, no status move).** All 15
+  E25-1 + all 5 E15-1 children now show `done` in the §2 T6 row and §3 inventory.
+- **ADR-034: DoD checkboxes updated, Status deliberately left `Accepted` (FLAG).** Every §5
+  Definition-of-Done item except the terminal one is now met (E15-1/E25-1 coverage, RFC-0029
+  Enacted, DN-15 Resolved, the ADR-022 pointers, `M-738 depends_on E15-1`). ADR-034's own Status
+  field and its final DoD bullet both couple `Accepted → Enacted` to the `lang 1.0.0` tag act
+  (M-738), which has not run (M-738 stays `status:blocked` on E13-1/E18-1). Per house rule #3/VR-5
+  this is **not** flipped to Enacted here — flagged for the maintainer, not guessed past the
+  checked tag-coupling basis.
+- **Issue status flips:** `M-729` (`ready` → `done` — M-858's unified harness is the closing
+  extension of its own differential-durability DoD, resolving a body/label inconsistency the prior
+  close-out had only flagged); `E15-1`, `E25-1` epics (`in-progress` → `done` — all children
+  verified done); `E19-1` epic (`in-progress` → `done` — a stale-label resync; M-746…M-752/M-798
+  were already all `done`). `M-863` (this act) itself flips `ready` → `done`.
+- Not flipped: **ADR-034's Status** (stays `Accepted`, tag-coupled to M-738 — see above).
+- **Nav-index reconcile (dev→integration gate).** The M-863 header flip left one stale nav row —
+  `docs/rfcs/README.md` still showed RFC-0029 as `Accepted`; synced it to `Enacted` (matching the
+  authoritative header, forward-only). `docs/api-index/` regenerated for line-number drift. Both
+  were caught by the full `just check` (`doc-status`/`doc-index` gates) at the integration promotion,
+  not by the change-scoped leaf checks — the integration tier doing exactly its reconciliation job.
+
+### Added (2026-07-01: Wave-1 — native-scheduler parallelism, dialect Dense/VSA, stdlib freeze, governance gates)
+
+- **`mycelium-sched` foundational crate + Scheduler relocation (PR #864, previously untracked).**
+  The M-861 work-stealing OS-thread `Scheduler` moved out of `mycelium-std-runtime` into a new
+  crate, `crates/mycelium-sched` (deps: `mycelium-core` only, for `GuaranteeStrength`), landing it
+  **below** `mycelium-interp` and breaking the `interp`↔`std-runtime` dependency cycle that blocked
+  M-862's native-scheduler rewire. `mycelium-std-runtime` re-exports the same path, so downstream
+  call sites (bench included) are unaffected. Pure structural refactor, no behavior change (DN-61
+  §A.2: scheduler internal strategy is non-normative — only RT2 determinism is). This landed with
+  no changelog entry at the time; recorded here.
+- **M-856b — MLIR-dialect coverage for Dense/VSA (libMLIR-gated).** The dialect leg
+  (`crates/mycelium-mlir/src/dialect/native.rs`) now lowers Dense/VSA element-wise ops, extending
+  the three-way differential (interp == direct-LLVM == dialect) over Dense and all four
+  1.0.0-mandatory VSA models (MAP-I/BSC/HRR/FHRR), matching direct-LLVM's existing
+  `dense_codegen.rs`/`vsa_codegen.rs` fragment. Skip-graceful (`DialectError::ToolchainMissing`)
+  where `mlir-opt`/`mlir-translate` are absent — never a faked pass. Tag: **Empirical** where
+  libMLIR is provisioned.
+- **M-860 — parallel per-function AOT codegen via the native scheduler.** Per-function/per-nodule
+  lowering now dispatches through `mycelium_sched::scheduler::Scheduler::run_indexed`, joined by a
+  stable content-hash sort so the parallel emission is byte-identical to the sequential emit (no
+  new nondeterminism, emission order pinned). Reworked from an initial rayon-based prototype onto
+  the native scheduler before landing — **no rayon** dependency added. Tag: **Exact** (byte-equal
+  by construction, checked via the join-order differential).
+- **M-862 — parallel pure-fragment interpreter evaluation via the native scheduler.** Independent,
+  provably-pure Core IR fragments (a top-level `Op`/`Construct`'s direct argument batch) now
+  evaluate in parallel through the same `Scheduler::run_indexed`, gated by the existing purity
+  check and bounded to the outermost independent batch (no nested `run_indexed`); the choice is
+  reified in an EXPLAIN-able `ParallelPlan` (`SequentialImpure` / `SequentialNoBatch` /
+  `TopLevelBatch`, never a silent fallback). Differential-verified against the trusted sequential
+  interpreter (25x determinism, purity-gate, fuel-parity, impure-fallback tests). Enabled by the
+  Scheduler relocation above (PR #864) — **no rayon**. Tag: **Empirical**.
+- **M-743 — MIT-only first-party license audit gate.** `scripts/checks/license-first-party.sh`
+  added and wired into `scripts/checks/all.sh`, enforcing ADR-022 §7's MIT-only first-party policy
+  as a standing green check rather than a one-time sweep.
+- **M-674 — explicit recursion budgets on the totality and ambient passes.** Both passes now carry
+  an explicit, reified depth budget (mirroring the checker/elaborator/parser/evaluator discipline
+  M-674 already established) and refuse cleanly with a never-silent `*DepthExceeded` on
+  exhaustion, rather than relying transitively on the parser's bound. The sibling `mono.rs`
+  `free_vars`/pattern-binders recursion remains unbounded — an explicitly open follow-up, out of
+  this issue's totality/ambient scope (flagged, not silently dropped — G2).
+- **M-719 — stdlib stable-API freeze (DN-66).**
+  `docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md` freezes the
+  current public-API baseline for all 26 `mycelium-std-*` crates as a dated, grounded snapshot and
+  assesses the RFC-0031 §5 D6 retirement trigger — finding no crate yet clears it (the 5
+  same-named `.myc` prototypes are disjoint subsets, not full ports). Additive stability
+  doc-comments added to all 26 crates; no crate retired, no `#[deprecated]` applied — retirement
+  remains a separate, unmet precondition (DN-66 §4). Partial closure of M-719 (not fully done —
+  the per-op audit precondition for retirement is still open).
+  - Adversarial-review fixes on the above: `eval_core_parallel`'s top-level batch now defers to the
+    trusted sequential `eval_core` on any argument error, closing a fuel-starvation divergence
+    under concurrent scheduling; the four dialect-differential `assert!(ran, …)` sites
+    (`dense_differential.rs`/`vsa_differential.rs`, value and measurement ops) are gated on
+    `MlirTools::is_available()`, restoring the documented skip-graceful contract on a box without
+    libMLIR; `license-first-party.sh`'s three license-line lookups get a trailing `|| true` so a
+    missing license prints its finding instead of aborting silently under `set -e` (G2); and
+    `mono.rs::finish` now maps a totality depth-budget trip to `ElabError::DepthExceeded` (not
+    `::Residual`), so the M-674 refusal is reported honestly rather than mistaken for a semantic
+    verdict.
+
+### Documentation (2026-07-01: README/docs decomposition — leaner landing pages, topic-split guides, accuracy pass)
+
+- **Root README decomposed (551 → 107 lines)** into a lean, navigable landing page plus nine linked
+  topic docs under `docs/guide/` (why-and-design, guarantees-and-verification, workspace-map,
+  comparisons, repository-structure, status-and-roadmap, decisions-and-reading-order, glossary,
+  contributing-and-provenance), each with a ToC and back-nav. No content lost — relocated and cross-linked.
+- **Tooling/experiment READMEs decomposed:** `tools/llm-harness/README.md` (570 → 167) split into
+  MODEL-ACQUISITION / TERMUX-SETUP / GROK-HARNESS; `experiments/README.md` (263 → 84) with a new
+  KC2-RUNBOOK; accuracy fixes (harness module map, KC-2 satisfied-kill-criterion status, and the
+  `scripts/README.md` gate table corrected from 11 to the real 26 rows).
+- **50 crate READMEs** given a uniform shape and `docs/api-index/INDEX.md#<crate>` nav, with grounded
+  accuracy fixes (mycelium-mlir E25 surface, mir-passes fn names, bench module paths, std-collections `foldable()`).
+- **docs/ reference + spec + wiki** nav footers, ToCs, and AOT-status accuracy; synced two stale
+  decision-status references to the authoritative RFC bodies (RFC-0025 and RFC-0030 are **Enacted**,
+  matched to their Status fields — no upgrade past basis).
+- **Tooling:** `scripts/doc_currency.py` now reads the repository-structure tree from its new home
+  `docs/guide/repository-structure.md` (README fallback retained); Node upgraded 18 to 22 so the
+  `markdownlint-cli2` gate runs (was graceful-skip) — all 432 docs lint clean.
+
+Verified: `markdown.sh` (432 docs, 0 errors), `links.sh`, `doc_refs_check.py`, and `doc_currency.py` all green.
+
 ### Added (2026-06-30: E25-1 staging-tier close-out — dynamic-VSA JIT, dialect Construct/Match/Swap, unified mutant-witnessed differential)
 
 - **M-855 — JIT for dynamic VSA/HDC workloads (PR #848, RFC-0039 §6).** Runtime-specialized JIT

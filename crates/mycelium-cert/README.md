@@ -30,4 +30,4 @@ Bijective swaps produce `Exact` values (the round-trip lemma's side-conditions a
 
 ## Role in the workspace
 
-Depends on `mycelium-core`, `mycelium-interp`, `mycelium-numerics`, and `mycelium-vsa`. Used by `mycelium-l1` and `mycelium-mlir`. Dev-dependencies include `mycelium-proj` and `mycelium-spore` for the RFC-0034 conformance suite. See the [workspace overview](../../README.md).
+Depends on `mycelium-core`, `mycelium-interp`, `mycelium-numerics`, and `mycelium-vsa`. Used by `mycelium-l1` and `mycelium-mlir`. Dev-dependencies include `mycelium-proj` and `mycelium-spore` for the RFC-0034 conformance suite. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-cert).

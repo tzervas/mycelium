@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-15 |
-| **Status** | **Draft** (2026-06-19; M-373) |
+| **Status** | **Resolved** (2026-07-01 — M-863 ratification act: §10's own flagged status question is now settled — see the §10 append below and the changelog) **Draft** (2026-06-19; M-373) |
 | **Feeds** | RFC-0004 (execution model — §2 revisit clause, §6 inspectability); ADR-009 (no-opaque-lowering, all backends); DN-05 #1 (stack-robustness design requirement; DepthBudget trait); M-348 (libMLIR provisioning — the remaining block); M-373 (this task) |
 | **Date** | June 19, 2026 |
 | **Decides** | *Design note, not a ratified decision.* Records the honest decomposition of M-348 into a libMLIR-gated half (real ternary dialect lowering; stays blocked) and a direct-LLVM-advanceable half (llvm.rs data-fragment extension; sanctioned by RFC-0004 §2 revisit clause). Presents the strategy and per-increment risk table. No spec is promoted to Accepted here. |
@@ -494,6 +494,27 @@ Resolved is much stronger (Increments 0–3 are now ALL landed; only Increment 4
 a *different* tracking vehicle since §9, remains). **This resync leaves Status at Draft** and flags
 the narrow-vs-broad reading for the maintainer to decide (G2/VR-5 — do not guess a status transition).
 
+**Resolution (2026-07-01, M-863 ratification act) — Status: Draft → Resolved.** The gap this section
+flagged is now closed on a checked basis, under the **broad** reading (every increment this note
+scoped is closed), not only the narrow one already argued above. Since this resync, the previously
+"still in-progress" Increment-4 catch-up landed in full: **M-856** (PR #850) brought `Construct`/
+`Match` + `Swap` through the MLIR-dialect path; **M-856b** (the honest split this resync's own
+paragraph named as still open) brought **Dense/VSA** through the same dialect path; **M-857**
+(PR #820) closed `trit.mul`; and **M-858** (PR #851) unified the mutant-witnessed three-way
+differential (interp ≡ direct-LLVM ≡ MLIR-dialect, plus JIT for the in-subset fragment) over all of
+it, closing the 5 dialect mutant survivors M-856 introduced with real witnesses (0-missed). So both
+halves this note decomposed — the direct-LLVM-advanceable half (§3, Increments 0–3, closed at M-850/
+M-851 per the entry above) and the libMLIR-gated half (§2/§4.4, Increment 4) — are now landed for the
+full Core IR fragment ADR-034 scopes (bit/trit, data, recursion, `Swap`, Dense, VSA), each carried by
+a checked differential. What stays an honest, never-silent boundary (not a gap this note tracked):
+the `mlir-dialect` feature is still **off by default** and skips gracefully
+(`DialectError::ToolchainMissing`) where libMLIR is not provisioned (§9/ADR-019 — a portability
+property, not an incompleteness of the design); JIT cleanup/resonator loops (M-855) are explicitly
+deferred beyond this note's scope. No prior section is rewritten — §1–§9 and the §10 paragraph above
+stand as written (append-only); this paragraph is the resolution record. Grounds: M-856/M-856b/M-857/
+M-858 `landed_basis` entries in `tools/github/issues.yaml`; RFC-0029 (Enacted, same act); ADR-034 §5
+(the DoD bullet this closes). Task: E25-1/M-863.
+
 ---
 
 ## Meta — changelog
@@ -504,3 +525,4 @@ the narrow-vs-broad reading for the maintainer to decide (G2/VR-5 — do not gue
 <!-- changelog: 2026-06-19 §8.5 refined (M-379; PR #224 review) — recorded a further deferred native-codegen-shape limitation: a Match in a tail arm's pre-tail binding sequence (step computed via Match) would invalidate the loop back-edge phi, so it is an explicit UnsupportedNode (needs current-block tracking through the back-edge; deferred). The program stays semantically valid (interpreter evaluates it); honest boundary, never fragile IR (G2). Append-only. -->
 <!-- changelog: 2026-06-20 §9 added (M-603) — recorded the libMLIR unblock: the M-348 "libMLIR absent" premise is checked-false on Linux (apt `libmlir-18-dev` + `mlir-18-tools`, candidate 1:18.1.3-1ubuntu1, version-matched to LLVM 18.1.3; the --convert-*-to-llvm | mlir-translate --mlir-to-llvmir pipeline emits valid LLVM IR). Made durable via scripts/setup-mlir.sh + ADR-019 (Accepted): libMLIR is the optional, version-matched build dep of the OFF-by-default mlir-dialect feature, so the default build/test stay green without it (G2/VR-5). Real dialect lowering is M-601; the three-way differential is M-602. §5 table Increment-4 status moves (in prose) from blocked-on-M-348 toward provisionable + in-progress under M-601; the table text is unchanged. Append-only. -->
 <!-- changelog: 2026-06-30 §10 added (M-850/M-851, manifests resync) — recorded the §5 table's Increment-3 full trampoline (M-850, PR #818: non-tail Fix + FixGroup via a heap control-stack trampoline, AutoDepthBudget-bounded, tag Declared→Empirical on a checked cargo-mutants basis) and Increment-2 closure-ABI widening (M-851, PR #821: specialize-at-application inlining, an honest mechanism correction to the §7.1 "uniform pointer-boxed lane" sketch, tag Empirical) both landing. §5/§7/§8 text unchanged (append-only); §8.5's Match-in-pre-tail limitation is now also removed (subsumed by the trampoline's block tracking) — recursive heap data, closure-valued program results, and cross-boundary datum/Fix captures remain the honest refusal boundary. Status judgment (Draft→Resolved) left to the maintainer — FLAGGED, not unilaterally decided (no explicit DoD stated in this note; Increment 4 / M-856 dialect catch-up still in-progress). Append-only. -->
+<!-- changelog: 2026-07-01 Status Draft -> Resolved (M-863 ratification act) — a §10 resolution paragraph appended (not a rewrite): M-856 (PR #850, Construct/Match+Swap dialect), M-856b (Dense/VSA dialect), M-857 (PR #820, trit.mul dialect), and M-858 (PR #851, unified mutant-witnessed three-way) closed the Increment-4 catch-up this note's prior resync left open, so both the libMLIR-gated half (§2/§4.4) and the direct-LLVM-advanceable half (§3) are now landed for the full ADR-034 coverage scope, each checked-differential. The mlir-dialect feature staying off-by-default + graceful-skip (§9) is a portability property, not a tracked gap; JIT cleanup/resonator loops (M-855) stay an explicit out-of-scope deferral. Append-only. -->

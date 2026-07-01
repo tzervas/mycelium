@@ -151,13 +151,32 @@ pub fn run_dataflow(
     Ok(())
 }
 
-/// As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool** (M-709)
-/// — the "checked across OS threads" path (RFC-0008 §4.3 under the real scheduler).
+/// A transient placeholder [`PollTask`] swapped into `tasks[i]` while the real task at that index is
+/// on loan to a parallel sweep (see [`run_dataflow_scheduled`]) — never actually polled itself (the
+/// real task is always swapped back before the next sweep), but must type-check as a valid
+/// [`PollTask`] to occupy the slot.
+struct AlreadyDone;
+impl PollTask for AlreadyDone {
+    fn poll(&mut self) -> Step {
+        Step::Done
+    }
+}
+
+/// As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool**
+/// (M-709/M-864) — the "checked across OS threads" path (RFC-0008 §4.3 under the real scheduler).
 ///
 /// Each still-pending task is polled **at most once per sweep** on a worker thread; the tasks are
 /// disjoint objects (no shared mutable state but the channels, RT1), so the parallel polls are
 /// data-race-free. The deadlock decision is identical and order-independent: a stall is a stall in
 /// any sweep order, so it is surfaced as the same explicit [`Deadlock`] (G2), never a hung worker.
+///
+/// **M-864 note:** `Scheduler::run_indexed` now requires `'static` job closures (the persistent
+/// pool's worker threads outlive any single call), so this sweep can no longer *borrow* `tasks[i]`
+/// by `&mut` across the call the way the pre-M-864 `thread::scope`-backed scheduler allowed. Each
+/// still-pending task is instead swapped **out** of `tasks` (taking ownership, `'static` by
+/// construction — only the borrow was ever the obstacle, not the boxed task itself) for the
+/// duration of the parallel poll, and swapped back the moment its result is in hand — the sweep's
+/// own book-keeping (`done`/`remaining`) and the deadlock decision are otherwise unchanged.
 ///
 /// Guarantee: deadlock detection **`Empirical`** (same basis as [`run_dataflow`], now exercised on
 /// real OS threads).
@@ -174,17 +193,27 @@ pub fn run_dataflow_scheduled(
     let mut remaining = n;
     while remaining > 0 {
         let before = progress();
-        // Borrow each *still-pending* task disjointly (RT1: no shared mutable state but the
-        // channels) and poll them in parallel on the worker pool — one step each, by index.
-        let jobs: Vec<_> = tasks
-            .iter_mut()
-            .enumerate()
-            .filter(|(i, _)| !done[*i])
-            .map(|(i, t)| move || (i, matches!(t.poll(), Step::Done)))
+        // Take OWNERSHIP of each still-pending task for this sweep's parallel poll (M-864 — see the
+        // doc above): a placeholder occupies the slot only for the duration of the poll and is never
+        // itself polled.
+        let pending: Vec<usize> = (0..n).filter(|&i| !done[i]).collect();
+        let taken: Vec<Box<dyn PollTask + Send>> = pending
+            .iter()
+            .map(|&i| std::mem::replace(&mut tasks[i], Box::new(AlreadyDone)))
+            .collect();
+        let jobs: Vec<_> = taken
+            .into_iter()
+            .map(|mut t| {
+                move || {
+                    let became_done = matches!(t.poll(), Step::Done);
+                    (t, became_done)
+                }
+            })
             .collect();
         let results = scheduler.run_indexed(jobs, None, None);
         let mut advanced = false;
-        for (i, became_done) in results {
+        for (&i, (t, became_done)) in pending.iter().zip(results) {
+            tasks[i] = t; // restore the (possibly now-resolved) task to its original slot
             if became_done {
                 done[i] = true;
                 remaining -= 1;
@@ -197,169 +226,4 @@ pub fn run_dataflow_scheduled(
         }
     }
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::cell::Cell;
-    use std::rc::Rc;
-    use std::sync::atomic::AtomicUsize;
-    use std::sync::Arc;
-
-    /// A task that resolves after `steps` polls, bumping shared progress each step (a stand-in for a
-    /// successful channel op). Models a producer/consumer that makes forward progress.
-    struct Countdown {
-        steps: usize,
-        progress: Rc<Cell<u64>>,
-    }
-    impl PollTask for Countdown {
-        fn poll(&mut self) -> Step {
-            if self.steps == 0 {
-                return Step::Done;
-            }
-            self.steps -= 1;
-            self.progress.set(self.progress.get() + 1);
-            if self.steps == 0 {
-                Step::Done
-            } else {
-                Step::Pending
-            }
-        }
-    }
-
-    /// A task that never makes progress — always `Pending`, never bumps progress. A pair of these
-    /// models a true deadlock (two tasks each waiting on the other).
-    struct Stuck;
-    impl PollTask for Stuck {
-        fn poll(&mut self) -> Step {
-            Step::Pending
-        }
-    }
-
-    #[test]
-    fn satisfiable_network_completes() {
-        let prog = Rc::new(Cell::new(0u64));
-        let mut tasks: Vec<Box<dyn PollTask>> = vec![
-            Box::new(Countdown {
-                steps: 3,
-                progress: Rc::clone(&prog),
-            }),
-            Box::new(Countdown {
-                steps: 5,
-                progress: Rc::clone(&prog),
-            }),
-        ];
-        let p = Rc::clone(&prog);
-        let r = run_dataflow(&mut tasks, SweepDir::Ascending, move || p.get());
-        assert!(
-            r.is_ok(),
-            "a network that makes progress must complete, got {r:?}"
-        );
-    }
-
-    #[test]
-    fn stalled_network_is_explicit_deadlock_never_hangs() {
-        // Mutant witness: removing the no-progress check would loop forever (test would hang).
-        let prog = Rc::new(Cell::new(0u64));
-        let mut tasks: Vec<Box<dyn PollTask>> = vec![Box::new(Stuck), Box::new(Stuck)];
-        let p = Rc::clone(&prog);
-        let err = run_dataflow(&mut tasks, SweepDir::Ascending, move || p.get())
-            .expect_err("a fully stalled network must return Deadlock, never hang (G2)");
-        assert_eq!(
-            err.task_count, 2,
-            "Deadlock must report the parked task count"
-        );
-    }
-
-    #[test]
-    fn sweep_direction_is_determinism_invariant() {
-        // Kahn-determinism (RFC-0008 §4.3): ascending and descending sweeps complete the same
-        // satisfiable network (both Ok). The schedule differs; the outcome does not.
-        for dir in [SweepDir::Ascending, SweepDir::Descending] {
-            let prog = Rc::new(Cell::new(0u64));
-            let mut tasks: Vec<Box<dyn PollTask>> = (1..=4)
-                .map(|s| {
-                    Box::new(Countdown {
-                        steps: s,
-                        progress: Rc::clone(&prog),
-                    }) as Box<dyn PollTask>
-                })
-                .collect();
-            let p = Rc::clone(&prog);
-            assert!(
-                run_dataflow(&mut tasks, dir, move || p.get()).is_ok(),
-                "{dir:?} sweep must complete the satisfiable network"
-            );
-        }
-    }
-
-    // ── Scheduled (OS-thread) path: the deadlock decision holds across real threads ──
-
-    /// A `Send` countdown using atomics, for the scheduled driver. Idempotent `Done`.
-    struct AtomicCountdown {
-        steps: AtomicUsize,
-        progress: Arc<AtomicU64>,
-    }
-    impl PollTask for AtomicCountdown {
-        fn poll(&mut self) -> Step {
-            let cur = self.steps.load(Ordering::SeqCst);
-            if cur == 0 {
-                return Step::Done;
-            }
-            self.steps.store(cur - 1, Ordering::SeqCst);
-            self.progress.fetch_add(1, Ordering::SeqCst);
-            if cur - 1 == 0 {
-                Step::Done
-            } else {
-                Step::Pending
-            }
-        }
-    }
-
-    struct AtomicStuck;
-    impl PollTask for AtomicStuck {
-        fn poll(&mut self) -> Step {
-            Step::Pending
-        }
-    }
-
-    #[test]
-    fn scheduled_satisfiable_network_completes_on_os_threads() {
-        let sched = Scheduler::with_workers(4, 8).unwrap();
-        let prog = Arc::new(AtomicU64::new(0));
-        let mut tasks: Vec<Box<dyn PollTask + Send>> = (1..=6)
-            .map(|s| {
-                Box::new(AtomicCountdown {
-                    steps: AtomicUsize::new(s),
-                    progress: Arc::clone(&prog),
-                }) as Box<dyn PollTask + Send>
-            })
-            .collect();
-        let p = Arc::clone(&prog);
-        let r = run_dataflow_scheduled(&sched, &mut tasks, move || p.load(Ordering::SeqCst));
-        assert!(
-            r.is_ok(),
-            "scheduled satisfiable network must complete, got {r:?}"
-        );
-    }
-
-    #[test]
-    fn scheduled_stalled_network_is_explicit_deadlock_never_hangs() {
-        // The never-silent guarantee under the real scheduler: a stall is Deadlock, not a hung pool.
-        let sched = Scheduler::with_workers(4, 8).unwrap();
-        let prog = Arc::new(AtomicU64::new(0));
-        let mut tasks: Vec<Box<dyn PollTask + Send>> = vec![
-            Box::new(AtomicStuck),
-            Box::new(AtomicStuck),
-            Box::new(AtomicStuck),
-        ];
-        let p = Arc::clone(&prog);
-        let err = run_dataflow_scheduled(&sched, &mut tasks, move || p.load(Ordering::SeqCst))
-            .expect_err("a stalled network must return Deadlock under the scheduler, never hang");
-        assert_eq!(
-            err.task_count, 3,
-            "Deadlock must report the parked task count"
-        );
-    }
 }

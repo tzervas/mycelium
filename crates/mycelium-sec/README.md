@@ -35,4 +35,4 @@ coverage, reported as such, never folded into a clean bill.
 
 ## Role in the workspace
 
-Depends on `mycelium-cli-common` only at the library level (a text-scan recogniser, `std`-only, no new dep); the binary orchestrates `scripts/checks/` via `std::process`. See the [workspace overview](../../README.md).
+Depends on `mycelium-cli-common` only at the library level (a text-scan recogniser, `std`-only, no new dep); the binary orchestrates `scripts/checks/` via `std::process`. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-sec).

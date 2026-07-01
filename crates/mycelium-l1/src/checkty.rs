@@ -186,7 +186,8 @@ impl From<AmbientError> for CheckError {
         let site = match &e {
             AmbientError::UnresolvedAmbient { site }
             | AmbientError::ParadigmShapeMismatch { site, .. }
-            | AmbientError::BareDecimalNoEncoding { site, .. } => site.clone(),
+            | AmbientError::BareDecimalNoEncoding { site, .. }
+            | AmbientError::DepthExceeded { site, .. } => site.clone(),
             AmbientError::MultipleDefaults { .. } => "<nodule>".to_owned(),
         };
         CheckError {
@@ -1925,7 +1926,8 @@ fn check_nodule_with(
     // When `matured_scope` is true, every **own** fn with `thaw == false` must be `Total`; a non-total
     // non-thaw fn is an explicit error (RFC-0007 §4.5 / RFC-0017 §4.2). A `thaw` fn is exempt.
     // (Imported fns are gated by their *own* nodule's scope, not this one — M-662.)
-    let totality = crate::totality::classify_all(&fns);
+    let totality = crate::totality::classify_all(&fns)
+        .map_err(|e| CheckError::new(&qualify(&nodule.path, "<totality>"), e.to_string()))?;
     if matured_scope {
         for fd in regs.fns.values() {
             if !fd.thaw && totality[&fd.sig.name] != crate::totality::Totality::Total {
@@ -1993,7 +1995,7 @@ fn check_lower_decl_structural(
     // (3) §4.6 purity — a `lower` rule's RHS must be a pure compile-time term; a `wild { … }` block
     // (the audited FFI floor — LR-9/S6) is refused **structurally** here so the diagnostic names
     // DN-54 §4.6 precisely (and so the refusal holds even in an `@std-sys` nodule). Never-silent (G2).
-    if rhs_contains_wild(&ld.rhs).is_some() {
+    if rhs_contains_wild(&ld.rhs).map_err(|e| CheckError::new(&ld.name, e.to_string()))? {
         return Err(CheckError::new(
             &ld.name,
             format!(
@@ -2053,16 +2055,18 @@ fn check_lower_rule_rhs_type(
 }
 
 /// Does the expression tree contain a `wild { … }` block anywhere? (DN-54 §4.6 — a `lower` rule's
-/// RHS must be pure.) Returns `Some(())` at the first `wild` found, else `None`. Uses the shared
-/// stateless [`crate::totality::walk_expr`] traversal (DRY — same tree walk every pass uses).
-fn rhs_contains_wild(rhs: &Expr) -> Option<()> {
+/// RHS must be pure.) Returns `true` at the first `wild` found. Uses the shared stateless
+/// [`crate::totality::walk_expr`] traversal (DRY — same tree walk every pass uses), which carries
+/// its own explicit recursion-depth budget (M-674) — a pathologically-nested RHS refuses cleanly
+/// (propagated to the caller) rather than overflowing the host stack.
+fn rhs_contains_wild(rhs: &Expr) -> Result<bool, crate::totality::WalkDepthExceeded> {
     let mut found = false;
     crate::totality::walk_expr(rhs, &mut |x| {
         if matches!(x, Expr::Wild(_)) {
             found = true;
         }
-    });
-    found.then_some(())
+    })?;
+    Ok(found)
 }
 
 /// Validate a `derive Name for T` use-site application (DN-54 §4 / M-812 / DN-38 §8.1).
@@ -2126,7 +2130,9 @@ fn check_lower_rule_acyclicity(
         lower_rules.contains_key(name) && !fns.contains_key(name) && !is_ctor(name)
     };
     // Edges: rule → the set of *other rule names* its RHS references (single-segment paths). Sorted
-    // (BTreeSet) for a deterministic cycle report.
+    // (BTreeSet) for a deterministic cycle report. `walk_expr` carries its own explicit
+    // recursion-depth budget (M-674); a pathologically-nested RHS refuses cleanly here rather than
+    // overflowing the host stack.
     let edges: BTreeMap<&str, BTreeSet<String>> = lower_rules
         .iter()
         .map(|(name, ld)| {
@@ -2137,10 +2143,11 @@ fn check_lower_rule_acyclicity(
                         refs.insert(p.0[0].clone());
                     }
                 }
-            });
-            (name.as_str(), refs)
+            })
+            .map_err(|e| CheckError::new(name, e.to_string()))?;
+            Ok::<_, CheckError>((name.as_str(), refs))
         })
-        .collect();
+        .collect::<Result<_, _>>()?;
 
     // A direct self-reference is the trivial cycle.
     for (name, refs) in &edges {
@@ -2321,7 +2328,8 @@ fn check_body_effect_coverage(
             }
             _ => {}
         }
-    });
+    })
+    .map_err(|e| CheckError::new(name, e.to_string()))?;
     for (eff, source) in &performed {
         if !declared.contains(eff) {
             let via = match source {

@@ -73,6 +73,14 @@
 //! in the [`DenseSpace`] descriptor (never inferred), and a shape or dtype mismatch is an explicit
 //! `Err`, never a silent broadcast or re-round (C1). Representation changes (`Dense{F32}→Dense{BF16}`,
 //! `Dense↔VSA`) are explicit swaps in `std.swap` — never automatic.
+//!
+//! # Stability (DN-66 freeze, 2026-07-01)
+//!
+//! This crate's public API, as documented in `docs/spec/stdlib/dense.md` (spec status:
+//! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+//! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//! It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
 #![forbid(unsafe_code)]
 
 pub use mycelium_core::{Bound, BoundBasis, BoundKind, GuaranteeStrength, NormKind, ScalarKind};

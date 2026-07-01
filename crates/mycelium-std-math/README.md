@@ -35,4 +35,4 @@ Exact integer/rational ops: `Exact`. All approximate ops (transcendentals, round
 
 ## Role in the workspace
 
-Numeric function layer for all Ring-2 stdlib consumers and user-facing math operations. See the [workspace overview](../../README.md).
+Numeric function layer for all Ring-2 stdlib consumers and user-facing math operations. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-math).

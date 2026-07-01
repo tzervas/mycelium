@@ -10,10 +10,16 @@
 //! deliberately divergent lowering is caught (a mutation of the lowering diverges here), so a passing
 //! differential is meaningful, not vacuous.
 //!
-//! **The third (MLIR-dialect) leg honestly refuses Dense** (`DialectError::Unsupported`,
-//! `dialect/native.rs`) — so the three-way reduces to a *two-way* (reference ≡ direct-LLVM) for Dense,
-//! never a faked third pass (VR-5/G2). [`dense_const_is_refused_by_the_mlir_dialect_path`] asserts the
-//! refusal, keeping the coverage honest: the dialect path never silently mis-lowers a Dense value.
+//! **The MLIR-dialect leg (M-856b).** The **generic bit/trit `Node` path** still honestly refuses a
+//! Dense `Const` (`DialectError::Unsupported`, `dialect/native.rs::const_lane`) — that boundary is
+//! permanent on both backends (Dense is lowered through the dedicated `DenseProgram` entry points,
+//! never the generic `Node` path); [`dense_const_is_refused_by_the_mlir_dialect_path`] still asserts
+//! it. But `dialect::native::dense` (M-856b) now provides a **dialect-native sibling** of
+//! `dense_compile_and_run` over the *same* `DenseProgram`, so the differential is a genuine **three-way**
+//! (reference ≡ direct-LLVM ≡ dialect) where libMLIR is provisioned — skip-graceful
+//! (`DenseAotError::ToolchainMissing`) where it is not, never a faked pass (VR-5/G2). See
+//! [`value_ops_dialect_matches_reference_and_direct_llvm`] /
+//! [`measurement_ops_dialect_matches_reference_bit_exact`].
 //!
 //! **Never-silent boundaries (G2/SC-3).** A subnormal/overflow result, an off-grid/non-finite input, a
 //! quantized value, and an F16/F64 dtype are each refused **non-silently** by the native path exactly
@@ -315,6 +321,105 @@ fn native_dense_distinguishes_different_programs() {
         ),
         "the checker must reject the divergent dense pair"
     );
+}
+
+// ─── the MLIR-dialect leg (M-856b): reference ≡ direct-LLVM ≡ dialect ────────────────────────────
+
+/// Value ops: `DenseSpace` (reference) ≡ direct-LLVM ≡ **dialect** — a genuine three-way, libMLIR-
+/// gated (skip-graceful on `ToolchainMissing`, never a faked pass). `ran` tracks non-vacuity: at
+/// least one corpus case must actually run through the dialect pipeline for the assertion to mean
+/// anything (the M-725 `ran_mlir` discipline).
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn value_ops_dialect_matches_reference_and_direct_llvm() {
+    use mycelium_mlir::dialect::native::dense::dialect_compile_and_run;
+    use mycelium_mlir::MlirTools;
+    let mut ran = false;
+    for (i, p) in value_corpus().iter().enumerate() {
+        let reference = reference_value(p);
+        let direct = match dense_compile_and_run(p) {
+            Ok(DenseResult::Value(v)) => *v,
+            Err(DenseAotError::ToolchainMissing(_)) => continue, // direct-LLVM env skip
+            other => panic!("program #{i}: direct-LLVM unexpected: {other:?}"),
+        };
+        match dialect_compile_and_run(p) {
+            Ok(DenseResult::Value(dialect)) => {
+                ran = true;
+                assert_eq!(
+                    observable(&reference),
+                    observable(&dialect),
+                    "program #{i} ({:?} {:?}): reference vs dialect diverged",
+                    p.op,
+                    p.dtype
+                );
+                assert_eq!(
+                    observable(&direct),
+                    observable(&dialect),
+                    "program #{i} ({:?} {:?}): direct-LLVM vs dialect diverged",
+                    p.op,
+                    p.dtype
+                );
+            }
+            Ok(other) => panic!("program #{i}: expected a Value, got {other:?}"),
+            Err(DenseAotError::ToolchainMissing(_)) => continue, // dialect env skip
+            Err(e) => panic!("program #{i}: dialect errored: {e}"),
+        }
+    }
+    // A missing toolchain means every case skip-graceful'd (`ToolchainMissing`) — that is the
+    // documented "green on a box without the tools" contract (Cargo.toml), never a false failure.
+    // Only when the toolchain actually resolves does a still-vacuous corpus indicate a real bug.
+    if MlirTools::is_available() {
+        assert!(
+            ran,
+            "non-vacuity: at least one corpus case must actually run through the dialect pipeline \
+             (libMLIR is provisioned in this environment, so the assertion above must mean something)"
+        );
+    }
+}
+
+/// Measurement ops (`dot`/`similarity`): reference ≡ direct-LLVM ≡ dialect, bit-exact.
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn measurement_ops_dialect_matches_reference_bit_exact() {
+    use mycelium_mlir::dialect::native::dense::dialect_compile_and_run;
+    use mycelium_mlir::MlirTools;
+    let mut ran = false;
+    for (i, p) in measurement_corpus().iter().enumerate() {
+        let reference = reference_measurement(p);
+        let direct = match dense_compile_and_run(p) {
+            Ok(DenseResult::Measurement(m)) => m,
+            Err(DenseAotError::ToolchainMissing(_)) => continue,
+            other => panic!("program #{i}: direct-LLVM unexpected: {other:?}"),
+        };
+        match dialect_compile_and_run(p) {
+            Ok(DenseResult::Measurement(dialect)) => {
+                ran = true;
+                assert_eq!(
+                    reference.to_bits(),
+                    dialect.to_bits(),
+                    "program #{i} ({:?}): reference vs dialect diverged",
+                    p.op
+                );
+                assert_eq!(
+                    direct.to_bits(),
+                    dialect.to_bits(),
+                    "program #{i} ({:?}): direct-LLVM vs dialect diverged",
+                    p.op
+                );
+            }
+            Ok(other) => panic!("program #{i}: expected a Measurement, got {other:?}"),
+            Err(DenseAotError::ToolchainMissing(_)) => continue,
+            Err(e) => panic!("program #{i}: dialect errored: {e}"),
+        }
+    }
+    // Skip-graceful on a missing toolchain (the documented no-libMLIR-box contract); only a
+    // still-vacuous corpus with the toolchain actually resolved is a real failure.
+    if MlirTools::is_available() {
+        assert!(
+            ran,
+            "non-vacuity: at least one corpus case must run through the dialect pipeline"
+        );
+    }
 }
 
 // ─── never-silent refusals match the reference (G2/SC-3) ─────────────────────────────────────────

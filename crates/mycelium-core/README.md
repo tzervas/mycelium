@@ -31,4 +31,4 @@ Per-op guarantee tags are carried by `Meta` and composed by `GuaranteeStrength::
 
 ## Role in the workspace
 
-The foundational crate depended on by every other crate. No upstream Mycelium dependencies. See the [workspace overview](../../README.md).
+The foundational crate depended on by every other crate. No upstream Mycelium dependencies. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-core).
