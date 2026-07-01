@@ -56,6 +56,16 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   doc-comments added to all 26 crates; no crate retired, no `#[deprecated]` applied — retirement
   remains a separate, unmet precondition (DN-66 §4). Partial closure of M-719 (not fully done —
   the per-op audit precondition for retirement is still open).
+  - Adversarial-review fixes on the above: `eval_core_parallel`'s top-level batch now defers to the
+    trusted sequential `eval_core` on any argument error, closing a fuel-starvation divergence
+    under concurrent scheduling; the four dialect-differential `assert!(ran, …)` sites
+    (`dense_differential.rs`/`vsa_differential.rs`, value and measurement ops) are gated on
+    `MlirTools::is_available()`, restoring the documented skip-graceful contract on a box without
+    libMLIR; `license-first-party.sh`'s three license-line lookups get a trailing `|| true` so a
+    missing license prints its finding instead of aborting silently under `set -e` (G2); and
+    `mono.rs::finish` now maps a totality depth-budget trip to `ElabError::DepthExceeded` (not
+    `::Residual`), so the M-674 refusal is reported honestly rather than mistaken for a semantic
+    verdict.
 
 ### Documentation (2026-07-01: README/docs decomposition — leaner landing pages, topic-split guides, accuracy pass)
 
