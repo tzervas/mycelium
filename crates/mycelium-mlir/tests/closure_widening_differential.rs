@@ -17,7 +17,10 @@
 //! `DialectError::Unsupported`), so for this corpus the third differential edge is an **honest
 //! refusal**, not a vacuous skip — exactly as the recursion trampoline differential is two-way
 //! (interp ≡ direct-LLVM). The element-wise three-way leg with its `ran_mlir` non-vacuity guard lives
-//! in `tests/threeway_differential.rs`.
+//! in `tests/threeway_differential.rs`. **M-858:** this paragraph used to be an unchecked doc-comment
+//! claim; `tests/unified_threeway_differential.rs::dialect_honestly_refuses_closures_and_recursion`
+//! now actually calls `mlir_compile_and_run` on an `App`/`Lam` program and asserts the
+//! `DialectError::Unsupported` refusal, turning the claim into a checked fact.
 //!
 //! Guarantee tag: **Empirical** — hand-written textual LLVM IR with a *checked* empirical basis (this
 //! differential + the `cargo-mutants` witness of the closure inlining fns), never `Proven` (VR-5: no

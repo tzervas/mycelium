@@ -16,7 +16,11 @@
 //! The MLIR-dialect leg is **not** exercised here: `dialect::native` explicitly refuses recursion
 //! (`Fix`/`FixGroup` → `UnsupportedNode`; `src/dialect/native.rs`), so for this corpus the third
 //! differential edge is an honest refusal, not a vacuous skip. The element-wise three-way leg lives
-//! in `tests/threeway_differential.rs` (with its `ran_mlir` non-vacuity guard).
+//! in `tests/threeway_differential.rs` (with its `ran_mlir` non-vacuity guard). **M-858:** this
+//! paragraph used to be an unchecked doc-comment claim; it is now a checked fact — see
+//! `tests/unified_threeway_differential.rs::dialect_honestly_refuses_closures_and_recursion`, which
+//! actually calls `mlir_compile_and_run` on a `Fix`-based program and asserts the
+//! `DialectError::Unsupported` refusal, never just asserting it in prose.
 
 mod common;
 use common::observable;
