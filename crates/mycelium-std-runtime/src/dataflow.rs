@@ -182,7 +182,7 @@ pub fn run_dataflow_scheduled(
             .filter(|(i, _)| !done[*i])
             .map(|(i, t)| move || (i, matches!(t.poll(), Step::Done)))
             .collect();
-        let results = scheduler.run_indexed(jobs, None);
+        let results = scheduler.run_indexed(jobs, None, None);
         let mut advanced = false;
         for (i, became_done) in results {
             if became_done {
