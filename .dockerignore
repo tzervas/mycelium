@@ -1,0 +1,8 @@
+# Keep the docs container build context (docs/Containerfile) lean — none of this is needed inside
+# the image; myc-doc/cargo doc/rustdoc regenerate everything they need from source.
+.git/
+target/
+fuzz/target/
+**/target/
+.claude/worktrees/
+node_modules/

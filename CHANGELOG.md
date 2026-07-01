@@ -8,6 +8,53 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: M-363 follow-up — myc-doc BOOK output + a Podman/Docker docs container)
+
+- **`crates/mycelium-doc` gains a BOOK renderer** (`mycelium_doc::book`) — the M-363 spec's output
+  (b), "the full language book", closing the one named output that wasn't yet built (HTML/Typst/JSON
+  landed 2026-06-17; book did not). A curated, linear, chaptered reading order over the *same*
+  content-addressed doc-IR (Getting Started → Language Guide → Language Reference → Standard Library
+  → Concepts → Toolchain → Contributing → Appendices), driven by a small committed manifest
+  (`docs/book-manifest.json`): explicit `sources` for hand-curated order, drift-proof `globs` for the
+  Standard Library/RFC/ADR/DN appendix chapters (a new file under a globbed directory appears in the
+  next build, no manifest edit needed — the same discipline as `tools/docgen/code_index.py`). Each
+  page carries prev/next navigation + a chapter breadcrumb; a hand-rolled `book/search-index.json` +
+  vanilla-JS `search.js` gives client-side search with **no new dependency** (reuses `serde`/
+  `serde_json`, already vetted — KC-3).
+- **Composition, not re-authorship:** the book renders a *scoped* `DocModel` through the existing
+  `emit::html::render` and re-wraps the extracted `<article>` (byte-identical `data-cid`s) in a
+  book-specific shell — it does not re-derive page content. The one non-`.md` source
+  (`docs/spec/grammar/mycelium.ebnf`) is synthesized as a single verbatim, unchecked `Example` node
+  (the exact file bytes, never invented prose); `CONTRIBUTING.md` (outside `docs/`) rides through the
+  normal ingest+resolve pipeline via a new `BuildInput::extra_md_files` field, so its cross-references
+  resolve like any other corpus doc. `BuildInput::conventional`'s default is unchanged — the existing
+  `myc-doc build`/`lint` commands and their output are untouched by this addition (verified: `myc-doc
+  lint` still reports the same 8/8 green checks over the unchanged 289-document corpus).
+- **Never-silent by construction:** a manifest chapter that resolves to zero pages, a source path
+  that matches no ingested document, or a page double-booked into two chapters is a build error
+  (`BookError`), never a silently-dropped chapter or a dead ToC link (G2). Verified against the real
+  corpus: `myc-doc book` produces 185 pages across 11 chapters with **zero** dead ToC/prev-next links
+  and zero unresolved cross-references in the rendered book pages.
+- **New CLI + justfile:** `myc-doc book [--repo-root .] [--out target/doc]`; `just docs-book`
+  (advisory, not part of `just check`, same posture as `docs-site`).
+- **`docs/Containerfile`** (Podman-first, docker-fallback): a two-stage build — a pinned Rust 1.92
+  builder (matching `rust-toolchain.toml`/ADR-007) runs `myc-doc build` + `myc-doc book` +
+  `cargo doc --workspace --no-deps`, then a minimal `python:3.13-slim` stage serves the assembled
+  static site via `python3 -m http.server` (Python is first-class here). A small landing page links
+  Book / Corpus / Rustdoc / **Agent code index** (`docs/api-index/`) — the container serves AI agents
+  and the maintainer alike. `docs/gen-rustdoc-index.py` fills the one real gap found while verifying
+  this live: `cargo doc --workspace` emits no top-level index, so a small script lists exactly the
+  crate directories that were actually generated (never a hardcoded, driftable list). New
+  `scripts/docs-container.sh` (+ `just docs-container-build` / `docs-container-run`): prefers
+  `podman`, falls back to `docker`, errors clearly if neither is installed. Verified non-vacuously on
+  this box: built with `podman build`, ran with `podman run -p 8080:8000`, and `curl`-checked every
+  section (`/`, `/book/index.html`, `/book/search-index.json`, `/corpus/index.html`,
+  `/rustdoc/index.html`, `/api-index/INDEX.md`) returns 200 with the expected content.
+- **Test layout, as-touched (CLAUDE.md M-797 discipline):** `build.rs` (extended for
+  `extra_md_files`) had its inline tests extracted to `src/tests/build.rs`; the new `book.rs` starts
+  clean in `src/tests/book.rs` from day one — this crate's other pre-existing inline-test modules are
+  untouched (the accepted lazy-retrofit posture; not this change's scope).
+
 ### Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)
 
 - **`mycelium-mlir::concurrent`** (`compile_and_run_concurrent`, `jit_run_concurrent`,
