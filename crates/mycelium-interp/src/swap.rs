@@ -15,11 +15,12 @@ use crate::EvalError;
 /// conversion returns an [`EvalError`] (the interpreter surfaces it), it does not coerce.
 ///
 /// **`Sync` (M-862):** the parallel-pure-fragment evaluator (`crate::parallel`) shares `&Interpreter`
-/// — which owns a `Box<dyn SwapEngine>` — across rayon's worker threads, so every engine must be
-/// safely readable from multiple threads at once. Every shipped/known implementation (the identity
-/// engine here, the M-120 certified engines in `mycelium-cert`) is a plain, interior-mutability-free
-/// struct and satisfies this automatically; a future engine that needs interior mutability would need
-/// its own synchronization (e.g. a `Mutex`), same as any other `Sync` type.
+/// — which owns a `Box<dyn SwapEngine>` — across the M-861 scheduler's worker threads
+/// (`mycelium_sched`), so every engine must be safely readable from multiple threads at once. Every
+/// shipped/known implementation (the identity engine here, the M-120 certified engines in
+/// `mycelium-cert`) is a plain, interior-mutability-free struct and satisfies this automatically; a
+/// future engine that needs interior mutability would need its own synchronization (e.g. a `Mutex`),
+/// same as any other `Sync` type.
 pub trait SwapEngine: Sync {
     /// Convert `src` to `target` under `policy`, returning the converted [`Value`] or an error. The
     /// result's [`Meta`] must record `policy_used` (ADR-006) and an honest guarantee/bound.

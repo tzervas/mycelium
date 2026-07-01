@@ -15,8 +15,8 @@ workspace = true
 mycelium-core = { path = "../mycelium-core" }
 # The verified-numerics kernels: composing an approximate input's bound honestly (M-204; ADR-010).
 mycelium-numerics = { path = "../mycelium-numerics" }
-# M-862: bounded, work-stealing thread pool for the parallel-pure-fragment evaluator (`parallel.rs`).
-# Crate-local (not hoisted to `[workspace.dependencies]`, DN-17 §2.1) — FLAG: worth hoisting once a
-# second crate (e.g. the AOT env-machine) also depends on rayon; that's the orchestrator's call since
-# the workspace manifest is shared-file territory.
-rayon = "1"
+# The work-stealing OS-thread Scheduler (M-709/M-861), relocated below mycelium-interp (E25) so
+# the interpreter's own parallel evaluation (M-862) can use it without a
+# mycelium-interp <-> mycelium-std-runtime cycle. Wired into `src/parallel.rs` (M-862): the
+# top-level pure-argument batch is dispatched through `Scheduler::run_indexed`.
+mycelium-sched = { path = "../mycelium-sched" }

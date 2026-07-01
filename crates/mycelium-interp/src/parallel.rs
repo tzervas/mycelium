@@ -1,57 +1,59 @@
-//! Parallel evaluation of **provably-pure** Core IR fragments (M-862; RFC-0008 §4.2; ADR-034;
-//! DN-25). This is a **perf path**, validated against the sequential reference by a differential —
-//! never a second semantics: [`Interpreter::eval_core`]/[`Interpreter::step`] stay the trusted,
-//! small-step meaning of a program (RFC-0008 §4.2, mirroring the AOT path's relationship to the
-//! interpreter, KC-3 — concurrency adds *scheduling*, never new *meaning*).
+//! Parallel evaluation of **provably-pure** (effect-free) Core IR fragments (M-862; RFC-0008 §4.2;
+//! ADR-034; DN-25). This is a **perf path**, validated against the sequential reference by a
+//! differential — never a second semantics: [`Interpreter::eval_core`]/[`Interpreter::step`] stay
+//! the trusted, small-step meaning of a program (RFC-0008 §4.2, mirroring the AOT path's
+//! relationship to the interpreter, KC-3 — concurrency adds *scheduling*, never new *meaning*).
 //!
-//! # What gets parallelized (EXPLAIN-able, never silent — G2)
-//! Only the **independent field lists** of [`Node::Construct`]/[`Node::Op`] — each field/argument is
-//! a closed subterm with no data dependency on its siblings (substitution has already closed every
-//! `Var` before evaluation reaches here; RFC-0001 §4.5) — are fanned out onto rayon's bounded global
-//! thread pool. Everything else ([`Node::Let`], [`Node::Match`] arm *selection*, [`Node::App`]
-//! β-reduction, [`Node::Fix`]/[`Node::FixGroup`] unfolding) stays exactly the sequential reduction
-//! order, because those steps are either inherently ordered (a `Let`'s body needs the bound value) or
-//! would otherwise force *speculative* execution of a branch that may never be taken (a `Match` arm) —
-//! and a not-taken arm can still be *ill-formed* (e.g. `NonExhaustiveMatch` deeper inside), so running
-//! it "for free" in parallel could surface an error that a sequential run never would. `Node::App`'s
-//! function/argument positions ARE evaluated concurrently (`rayon::join`) since both are already
-//! independent, closed subterms under call-by-value — mirroring `Construct`/`Op`.
+//! # What gets parallelized — the **bounded, top-level-only** plan ([`plan_parallel`])
+//! Only the **outermost independent-argument batch** of a pure fragment is fanned out: the direct
+//! argument list of a top-level [`Node::Op`] or [`Node::Construct`] (the "independent pure Construct
+//! elements" the M-862 issue names). Each of those arguments is then evaluated **sequentially,
+//! wholly inside its own worker**, by the trusted small-step interpreter ([`Interpreter::step`]) —
+//! with **no nested** [`Scheduler::run_indexed`]. Everything else (a `Let`/`Match`/`App`/`Fix` head,
+//! or an `Op`/`Construct` with fewer than two arguments) is evaluated **wholly sequentially** through
+//! the trusted [`Interpreter::eval_core`]. The selection is reified in [`ParallelPlan`] — explicit
+//! and EXPLAIN-able, never a silent reorder (house rule #2 / G2).
+//!
+//! **Why top-level only (interim bound, VR-5/G2).** The relocated M-709/M-861 [`Scheduler`]
+//! ([`mycelium_sched`]) spawns **fresh OS threads per [`Scheduler::run_indexed`] call** (the
+//! persistent, bounded work-stealing pool is a deferred follow-up). Fanning parallelism *recursively*
+//! at every `Op`/`Construct`/`App` node would therefore spawn `O(depth × fan-out)` OS threads — a
+//! resource-exhaustion hazard, not a correctness one, but real. Bounding the fan-out to the single
+//! outermost batch caps total spawned threads at that batch's width, which is safe and predictable.
+//! **This is an explicit interim measure**; once the pooled scheduler lands, the bound can widen
+//! (the differential/EXPLAIN contract here is unaffected by *how much* is parallelized).
 //!
 //! # The purity gate ([`is_pure`])
 //! [`is_pure`] is a **whole-fragment, structural** (syntactic) predicate, deliberately conservative
-//! and all-or-nothing: if *any* subterm is not provably effect-free, the *whole* fragment falls back
-//! to the ordinary sequential [`Interpreter::eval_core`] — never a partial/mixed evaluation order.
-//! Grounding for what counts as "provably pure":
-//! - Every built-in [`crate::prims::PrimFn`] is documented as "a pure function from argument values
-//!   to a result value" ([`crate::prims`] module docs) — **except** the reserved `wild:`-namespaced
-//!   host-capability escape hatch (RFC-0028 §4.3), the *only* place a `Node::Op` can reach an
-//!   arbitrary, potentially-effectful host operation. `is_pure` therefore excludes any `Op` whose
-//!   `prim` starts with `"wild:"`.
+//! and all-or-nothing: if *any* subterm is not provably effect-free, the *whole* fragment is
+//! evaluated by the ordinary sequential [`Interpreter::eval_core`] — never a partial/mixed order.
+//! Grounding for "provably pure":
+//! - Every built-in [`crate::prims::PrimFn`] is documented pure ([`crate::prims`] module docs) —
+//!   **except** the reserved `wild:`-namespaced host-capability escape hatch (RFC-0028 §4.3), the
+//!   *only* place a `Node::Op` reaches an arbitrary, potentially-effectful host operation. `is_pure`
+//!   therefore excludes any `Op` whose `prim` starts with `"wild:"`.
 //! - [`Node::Swap`] delegates to a runtime-supplied `Box<dyn SwapEngine>` (crate::swap) whose
-//!   concrete behaviour cannot be statically inspected from a `Node` alone (a custom engine could do
-//!   anything). `is_pure` conservatively treats **every** `Swap` node as an opacity/parallelism
-//!   boundary — never assumed pure, even though the shipped [`crate::swap::IdentitySwapEngine`]
-//!   happens to be.
+//!   concrete behaviour cannot be statically inspected from a `Node` alone. `is_pure` conservatively
+//!   treats **every** `Swap` node as an opacity boundary — never assumed pure, even though the
+//!   shipped [`crate::swap::IdentitySwapEngine`] happens to be.
 //! - `Const`/`Var`/`Lam` are trivially pure (no reduction).
 //!
 //! # Tag: Empirical (differential-checked)
 //! The equivalence `eval_core_parallel(e) == eval_core(e)` for `e` in the pure fragment is checked by
-//! a corpus differential (`src/tests/parallel.rs`), not proven — tagged **Empirical** per the
+//! a corpus differential (`src/tests/parallel.rs`), not proven — tagged **Empirical** on the
 //! transparency lattice (never upgraded to `Proven` without a checked side-condition, VR-5).
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use mycelium_core::{CoreValue, GuaranteeStrength, Node};
-use rayon::prelude::*;
+use mycelium_core::{CoreValue, Node};
+use mycelium_sched::scheduler::Scheduler;
 
-use crate::{as_const, collect_values, guarantee_of_value, node_to_core_value, select_arm, subst};
-use crate::{EvalError, Interpreter};
+use crate::{collect_values, node_to_core_value, EvalError, Interpreter, Step};
 
 /// Whether `node` is a **provably pure** (effect-free) Core IR fragment — the structural,
-/// conservative, EXPLAIN-able gate that governs whether [`Interpreter::eval_parallel`]/
-/// [`Interpreter::eval_core_parallel`] may reorder/parallelize its evaluation. See the module docs
-/// for the grounding of each case. All-or-nothing over the whole subtree: a single impure/opaque leaf
-/// (a `wild:` op, or any `Swap`) makes the **entire** fragment ineligible, never just the leaf.
+/// conservative, EXPLAIN-able gate. See the module docs for the grounding of each case.
+/// All-or-nothing over the whole subtree: a single impure/opaque leaf (a `wild:` op, or any `Swap`)
+/// makes the **entire** fragment ineligible, never just the leaf.
 #[must_use]
 pub fn is_pure(node: &Node) -> bool {
     match node {
@@ -83,8 +85,69 @@ pub fn is_pure(node: &Node) -> bool {
     }
 }
 
-/// Tick the shared fuel counter (an [`AtomicU64`] so concurrent branches can share one budget),
-/// returning [`EvalError::FuelExhausted`] on underflow — never silent, and never a per-branch budget
+/// The head node of a parallelized top-level batch — the "independent pure elements" M-862 fans out.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BatchHead {
+    /// A top-level [`Node::Op`]: its argument list is the batch; the batch results are the prim's
+    /// operands.
+    Op,
+    /// A top-level [`Node::Construct`]: its argument list is the batch; the batch results are the
+    /// datum's fields.
+    Construct,
+}
+
+/// The **reified, EXPLAIN-able** decision of what (if anything) [`Interpreter::eval_core_parallel`]
+/// will parallelize for a given fragment — never a silent/opaque choice (house rule #2 / G2). A
+/// caller/tool can ask *exactly* what the parallel evaluator intends to do before it runs.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ParallelPlan {
+    /// The fragment is **impure** (a `wild:` op or a `Swap` appears somewhere) — evaluated wholly
+    /// sequentially by [`Interpreter::eval_core`], never reordered.
+    SequentialImpure,
+    /// The fragment is pure but its **outermost node is not an independent-argument batch worth
+    /// parallelizing** (fewer than two top-level arguments, or a `Let`/`Match`/`App`/`Fix`/… head) —
+    /// evaluated wholly sequentially by [`Interpreter::eval_core`].
+    SequentialNoBatch,
+    /// The outermost node is a pure `Op`/`Construct` with **≥2 independent arguments**; those
+    /// arguments are the batch dispatched across [`Scheduler::run_indexed`] (a single, non-nested
+    /// fan-out), each evaluated sequentially within its worker.
+    TopLevelBatch {
+        /// Which node family heads the batch.
+        head: BatchHead,
+        /// The batch width (number of independent arguments fanned out).
+        width: usize,
+    },
+}
+
+/// The number of independent top-level arguments a fragment must have before the batch is fanned out
+/// rather than run sequentially. Below this, the scheduling overhead is not worth a thread.
+const MIN_BATCH_WIDTH: usize = 2;
+
+/// Compute the [`ParallelPlan`] for `node` — the explicit, side-effect-free decision procedure
+/// [`Interpreter::eval_core_parallel`] follows (and that a caller can inspect up front). Looks at the
+/// **outermost node only** (the interim top-level bound; see module docs).
+#[must_use]
+pub fn plan_parallel(node: &Node) -> ParallelPlan {
+    if !is_pure(node) {
+        return ParallelPlan::SequentialImpure;
+    }
+    match node {
+        Node::Op { args, .. } if args.len() >= MIN_BATCH_WIDTH => ParallelPlan::TopLevelBatch {
+            head: BatchHead::Op,
+            width: args.len(),
+        },
+        Node::Construct { args, .. } if args.len() >= MIN_BATCH_WIDTH => {
+            ParallelPlan::TopLevelBatch {
+                head: BatchHead::Construct,
+                width: args.len(),
+            }
+        }
+        _ => ParallelPlan::SequentialNoBatch,
+    }
+}
+
+/// Tick the shared fuel counter (an [`AtomicU64`] so concurrent batch workers share one budget),
+/// returning [`EvalError::FuelExhausted`] on underflow — never silent, and never a per-worker budget
 /// that could let two threads jointly overrun the declared total (RFC-0007 §4.5 CakeML clock).
 fn tick(fuel: &AtomicU64) -> Result<(), EvalError> {
     fuel.fetch_update(Ordering::Relaxed, Ordering::Relaxed, |f| f.checked_sub(1))
@@ -93,24 +156,27 @@ fn tick(fuel: &AtomicU64) -> Result<(), EvalError> {
 }
 
 impl Interpreter {
-    /// Evaluate `node` to a [`CoreValue`] exactly like [`Interpreter::eval_core`], except that when
-    /// the **whole** fragment is [`is_pure`], independent `Construct`/`Op` argument lists (and an
-    /// `App`'s function/argument positions) are evaluated **in parallel** on rayon's bounded global
-    /// thread pool instead of the strictly left-to-right small-step order. Observable behaviour is
-    /// identical to the sequential reference (RT2-preserving) — the *only* difference is which CPU
-    /// evaluates which independent subterm, never a difference in the result. An impure fragment
-    /// (reaches a `wild:` op or any `Swap`) falls back to plain [`Interpreter::eval_core`] in full —
-    /// never a partial/mixed order (never-silent selection, G2).
+    /// Evaluate `node` to a [`CoreValue`] with the **same result** as [`Interpreter::eval_core`],
+    /// except that when the fragment's [`plan_parallel`] is a [`ParallelPlan::TopLevelBatch`] the
+    /// outermost independent argument batch is evaluated **in parallel** on the M-861
+    /// [`Scheduler`] — a single, non-nested [`Scheduler::run_indexed`] fan-out (the interim
+    /// top-level bound; see module docs). Observable behaviour is identical to the sequential
+    /// reference (RT2-preserving): [`Scheduler::run_indexed`] returns outputs in **spawn order**, so
+    /// the result is deterministic regardless of the steal schedule, and each argument is reduced by
+    /// the trusted sequential [`Interpreter::step`]. Any fragment that is impure, or whose outermost
+    /// node is not a ≥2-argument `Op`/`Construct`, falls back **wholesale** to
+    /// [`Interpreter::eval_core`] (never a partial/mixed order — G2).
     ///
     /// **Empirical, differential-checked** (M-862): `eval_core_parallel(e) == eval_core(e)` for `e`
     /// in the pure fragment is checked over a corpus in `src/tests/parallel.rs`, not proven.
     pub fn eval_core_parallel(&self, node: &Node) -> Result<CoreValue, EvalError> {
-        if !is_pure(node) {
-            return self.eval_core(node);
+        match plan_parallel(node) {
+            // Wholesale sequential — the trusted reference, never reordered.
+            ParallelPlan::SequentialImpure | ParallelPlan::SequentialNoBatch => {
+                self.eval_core(node)
+            }
+            ParallelPlan::TopLevelBatch { head, .. } => self.eval_top_batch(node, head),
         }
-        let fuel = AtomicU64::new(self.fuel);
-        let normal = self.eval_value_parallel(node, &fuel)?;
-        node_to_core_value(&normal)
     }
 
     /// Evaluate `node` to a representation [`crate::Value`], mirroring [`Interpreter::eval`] — see
@@ -122,123 +188,84 @@ impl Interpreter {
         }
     }
 
-    /// The big-step, purity-gated evaluator: reduces `node` fully to a normal-form [`Node`] (a
-    /// `Const` or a saturated `Construct` of values). Only ever called on a subtree that is already
-    /// known [`is_pure`] (checked once at the [`Interpreter::eval_core_parallel`] entry point, and
-    /// preserved by construction since every `is_pure` case requires all its children to be pure
-    /// too) — so no case here re-checks purity, and the `Swap` arm below (unreachable from a pure
-    /// caller) is still implemented faithfully rather than `unreachable!()`, matching the crate's
-    /// no-panics discipline (G2).
-    fn eval_value_parallel(&self, node: &Node, fuel: &AtomicU64) -> Result<Node, EvalError> {
-        match node {
-            Node::Const(_) | Node::Lam { .. } => Ok(node.clone()),
-            Node::Var(x) => Err(EvalError::FreeVariable(x.clone())),
-
-            Node::Let { id, bound, body } => {
-                let b = self.eval_value_parallel(bound, fuel)?;
-                tick(fuel)?;
-                let next = subst(body, id, &b);
-                self.eval_value_parallel(&next, fuel)
+    /// Fan the outermost `Op`/`Construct` argument batch across the scheduler (a single, non-nested
+    /// `run_indexed`), then recombine. Each argument is reduced to a normal-form [`Node`] by the
+    /// trusted sequential small-step interpreter ([`Interpreter::eval_to_normal_node`]) inside its
+    /// worker — so this introduces **no** second semantics, only scheduling. Only ever called for a
+    /// [`ParallelPlan::TopLevelBatch`] node (a pure `Op`/`Construct` with ≥2 args).
+    fn eval_top_batch(&self, node: &Node, head: BatchHead) -> Result<CoreValue, EvalError> {
+        let args: &[Node] = match node {
+            Node::Op { args, .. } | Node::Construct { args, .. } => args,
+            // Unreachable: `eval_top_batch` is only reached via a `TopLevelBatch` plan, which is only
+            // produced for `Op`/`Construct`. Refuse explicitly rather than panic (never-silent, G2).
+            _ => {
+                return Err(EvalError::DataMalformed {
+                    why: "eval_top_batch reached a non-Op/Construct head".to_owned(),
+                })
             }
+        };
 
-            Node::Op { prim, args } => {
-                let evaluated: Vec<Node> = args
-                    .par_iter()
-                    .map(|a| self.eval_value_parallel(a, fuel))
-                    .collect::<Result<_, _>>()?;
-                let values = collect_values(&evaluated)?;
+        // One shared fuel budget across the concurrently-evaluated arguments (never a per-worker
+        // budget that could jointly overrun the declared total).
+        let fuel = AtomicU64::new(self.fuel);
+        let fuel_ref = &fuel;
+
+        // One `run_indexed` fan-out; each job runs the SEQUENTIAL interpreter on its argument (no
+        // nested `run_indexed` — the interim thread bound). Outputs come back in spawn order, so the
+        // recombination below is deterministic and matches the sequential left-to-right reduction.
+        let jobs: Vec<_> = args
+            .iter()
+            .map(|arg| move || self.eval_to_normal_node(arg, fuel_ref))
+            .collect();
+        let results: Vec<Result<Node, EvalError>> = Scheduler::new().run_indexed(jobs, None, None);
+        let normals: Vec<Node> = results.into_iter().collect::<Result<_, _>>()?;
+
+        match head {
+            BatchHead::Op => {
+                let prim = match node {
+                    Node::Op { prim, .. } => prim,
+                    _ => unreachable!("head == Op ⇒ node is Op"),
+                };
+                // Apply δ exactly as the sequential `step` (E-Op-Apply) does: all args are now values.
+                let values = collect_values(&normals)?;
                 let f = self
                     .prims
                     .get(prim)
                     .ok_or_else(|| EvalError::UnknownPrim(prim.clone()))?;
                 let result = f(prim, &values)?;
-                tick(fuel)?;
-                Ok(Node::Const(result))
+                tick(fuel_ref)?;
+                Ok(CoreValue::Repr(result))
             }
-
-            // Unreachable from a pure caller (`is_pure` excludes every `Swap`); implemented
-            // faithfully anyway rather than panicking, per the crate's never-silent discipline.
-            Node::Swap {
-                src,
-                target,
-                policy,
-            } => {
-                let s = self.eval_value_parallel(src, fuel)?;
-                let v = as_const(&s)?;
-                let result = self.swap.swap(v, target, policy)?;
-                tick(fuel)?;
-                Ok(Node::Const(result))
-            }
-
-            Node::Construct { ctor, args } => {
-                let evaluated: Vec<Node> = args
-                    .par_iter()
-                    .map(|a| self.eval_value_parallel(a, fuel))
-                    .collect::<Result<_, _>>()?;
-                Ok(Node::Construct {
-                    ctor: ctor.clone(),
-                    args: evaluated,
-                })
-            }
-
-            Node::Match {
-                scrutinee,
-                alts,
-                default,
-            } => {
-                // The scrutinee determines which single arm runs — arms are never spec­ulatively
-                // evaluated in parallel (a not-taken arm may be ill-formed/erroring; see module docs).
-                let s = self.eval_value_parallel(scrutinee, fuel)?;
-                let g = guarantee_of_value(&s)?;
-                if g != GuaranteeStrength::Exact {
-                    return Err(EvalError::GuaranteeMeetUnsupported { scrutinee: g });
-                }
-                let body = select_arm(&s, alts, default.as_deref())?;
-                tick(fuel)?;
-                self.eval_value_parallel(&body, fuel)
-            }
-
-            Node::App { func, arg } => {
-                // Both positions are independent, already-closed subterms under call-by-value.
-                let (f, a) = rayon::join(
-                    || self.eval_value_parallel(func, fuel),
-                    || self.eval_value_parallel(arg, fuel),
-                );
-                let (f, a) = (f?, a?);
-                match f {
-                    Node::Lam { param, body } => {
-                        tick(fuel)?;
-                        let next = subst(&body, &param, &a);
-                        self.eval_value_parallel(&next, fuel)
-                    }
-                    _ => Err(EvalError::ApplyNonFunction),
-                }
-            }
-
-            Node::Fix { name, body } => {
-                tick(fuel)?;
-                let unfolded = subst(body, name, node);
-                self.eval_value_parallel(&unfolded, fuel)
-            }
-
-            Node::FixGroup { defs, body } => {
-                // Mirrors `Interpreter::step`'s `FixGroup` unfold exactly (focus vs continuation).
-                let target: Node = match body.as_ref() {
-                    Node::Var(v) => defs
-                        .iter()
-                        .find(|(name, _)| name == v)
-                        .map_or_else(|| (**body).clone(), |(_, d)| (**d).clone()),
-                    _ => (**body).clone(),
+            BatchHead::Construct => {
+                let ctor = match node {
+                    Node::Construct { ctor, .. } => ctor,
+                    _ => unreachable!("head == Construct ⇒ node is Construct"),
                 };
-                let unfolded = defs.iter().fold(target, |acc, (name, _)| {
-                    let focus = Node::FixGroup {
-                        defs: defs.clone(),
-                        body: Box::new(Node::Var(name.clone())),
-                    };
-                    subst(&acc, name, &focus)
-                });
-                tick(fuel)?;
-                self.eval_value_parallel(&unfolded, fuel)
+                // A saturated Construct of values is itself a normal form (a data value); read it off
+                // exactly as `node_to_core_value` does for the sequential path.
+                let rebuilt = Node::Construct {
+                    ctor: ctor.clone(),
+                    args: normals,
+                };
+                node_to_core_value(&rebuilt)
+            }
+        }
+    }
+
+    /// Reduce `node` to a **normal-form [`Node`]** (a `Const`, or a saturated `Construct` of values)
+    /// by iterating the trusted sequential small-step [`Interpreter::step`] under the shared `fuel`
+    /// clock. This is the exact [`Interpreter::eval_core`] loop, returning the normal-form node
+    /// instead of reading it off — so a batch worker uses the trusted semantics verbatim, never a
+    /// reimplementation. Runs entirely on one thread (no nested parallelism).
+    fn eval_to_normal_node(&self, node: &Node, fuel: &AtomicU64) -> Result<Node, EvalError> {
+        let mut current = node.clone();
+        loop {
+            match self.step(&current)? {
+                Step::Value => return Ok(current),
+                Step::Next(next) => {
+                    tick(fuel)?;
+                    current = *next;
+                }
             }
         }
     }

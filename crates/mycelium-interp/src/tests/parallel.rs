@@ -1,7 +1,7 @@
 //! M-862: the `parallel_eval == sequential_eval` differential over a corpus of pure fragments, plus
-//! `is_pure` gate tests (the EXPLAIN-able selection). White-box access via `use crate::…::*`
-//! (CLAUDE.md test-layout rule).
-use crate::parallel::is_pure;
+//! `is_pure`/`plan_parallel` gate tests (the EXPLAIN-able, top-level-bounded selection). White-box
+//! access via `use crate::…::*` (CLAUDE.md test-layout rule).
+use crate::parallel::{is_pure, plan_parallel, BatchHead, ParallelPlan};
 use crate::{EvalError, Interpreter};
 use mycelium_core::{
     Alt, CtorSpec, DataRegistry, DeclSpec, FieldSpec, Meta, Node, Payload, Provenance, Repr, Value,
@@ -210,7 +210,8 @@ fn parallel_eval_matches_sequential_eval_over_the_pure_corpus() {
 }
 
 /// Repeating the differential many times catches any nondeterminism a data race would introduce
-/// (rayon's scheduling order varies run to run; the *result* must not).
+/// (the scheduler's steal/execution order varies run to run; the spawn-order-indexed *result* must
+/// not — RT2).
 #[test]
 fn parallel_eval_is_deterministic_across_repeated_runs() {
     let interp = Interpreter::default();
@@ -304,5 +305,130 @@ fn eval_parallel_on_a_data_result_is_an_explicit_refusal_like_eval() {
     assert_eq!(
         interp.eval_parallel(&z(&r)).unwrap_err(),
         EvalError::DataResult
+    );
+}
+
+// ---- plan_parallel: the reified, EXPLAIN-able, top-level-BOUNDED selection (never silent, G2) ----
+
+#[test]
+fn plan_parallelizes_only_a_top_level_multi_arg_op_or_construct() {
+    let r = registry();
+    // A top-level ≥2-arg Op → a top-level Op batch of that width.
+    assert_eq!(
+        plan_parallel(&op("bit.and", vec![byte([true; 8]), byte([false; 8])])),
+        ParallelPlan::TopLevelBatch {
+            head: BatchHead::Op,
+            width: 2
+        }
+    );
+    // A top-level ≥2-arg Construct (Pair) → a top-level Construct batch.
+    let pair = Node::Construct {
+        ctor: r.ctor_ref("Pair", 0).unwrap(),
+        args: vec![byte([true; 8]), byte([false; 8])],
+    };
+    assert_eq!(
+        plan_parallel(&pair),
+        ParallelPlan::TopLevelBatch {
+            head: BatchHead::Construct,
+            width: 2
+        }
+    );
+}
+
+#[test]
+fn plan_does_not_parallelize_below_the_top_level_or_below_two_args() {
+    let r = registry();
+    // A single-arg Op is not worth a thread → sequential (no batch).
+    assert_eq!(
+        plan_parallel(&op("bit.not", vec![byte([true; 8])])),
+        ParallelPlan::SequentialNoBatch
+    );
+    // A zero-arg Construct (Z) → sequential.
+    assert_eq!(plan_parallel(&z(&r)), ParallelPlan::SequentialNoBatch);
+    // A Let/App/Match/Fix HEAD is never a top-level batch (the parallelism is bounded to the
+    // outermost node — nested Op/Construct arg lists are evaluated sequentially within a worker).
+    let let_node = Node::Let {
+        id: "x".into(),
+        bound: Box::new(op("bit.not", vec![byte([false; 8])])),
+        body: Box::new(op("bit.and", vec![Node::Var("x".into()), byte([true; 8])])),
+    };
+    assert_eq!(plan_parallel(&let_node), ParallelPlan::SequentialNoBatch);
+    let app = Node::App {
+        func: Box::new(Node::Lam {
+            param: "x".into(),
+            body: Box::new(op("bit.not", vec![Node::Var("x".into())])),
+        }),
+        arg: Box::new(byte([false; 8])),
+    };
+    assert_eq!(plan_parallel(&app), ParallelPlan::SequentialNoBatch);
+}
+
+#[test]
+fn plan_marks_impure_fragments_sequential_impure() {
+    // A `wild:` op or a `Swap` (even at the top) is never parallelized — the wholesale-sequential,
+    // never-reordered path (G2).
+    assert_eq!(
+        plan_parallel(&op("wild:foreign", vec![byte([true; 8]), byte([false; 8])])),
+        ParallelPlan::SequentialImpure
+    );
+    let swap = Node::Swap {
+        src: Box::new(byte([true; 8])),
+        target: Repr::Binary { width: 8 },
+        policy: mycelium_core::operation_hash("policy"),
+    };
+    assert_eq!(plan_parallel(&swap), ParallelPlan::SequentialImpure);
+}
+
+#[test]
+fn a_deeply_nested_pure_fragment_parallelizes_only_the_top_batch_and_still_matches() {
+    // The bound: even though every level here is a pure multi-arg Op, only the OUTERMOST batch is
+    // fanned out — the nested Op arg lists are reduced sequentially inside each worker (so total
+    // spawned threads are capped at the top width, never O(depth * fan-out)). Correctness is
+    // unaffected: the result still equals the sequential reference.
+    let deep = op(
+        "bit.and",
+        vec![
+            op(
+                "bit.or",
+                vec![
+                    op("bit.xor", vec![byte([true; 8]), byte([false; 8])]),
+                    op("bit.not", vec![byte([false; 8])]),
+                ],
+            ),
+            op(
+                "bit.xor",
+                vec![
+                    op("bit.and", vec![byte([true; 8]), byte([true; 8])]),
+                    byte([false, true, false, true, false, true, false, true]),
+                ],
+            ),
+        ],
+    );
+    assert!(is_pure(&deep));
+    // Only the outermost `bit.and`'s two args form the batch — width 2, regardless of depth.
+    assert_eq!(
+        plan_parallel(&deep),
+        ParallelPlan::TopLevelBatch {
+            head: BatchHead::Op,
+            width: 2
+        }
+    );
+    let interp = Interpreter::default();
+    assert_eq!(interp.eval_core(&deep), interp.eval_core_parallel(&deep));
+}
+
+#[test]
+fn eval_parallel_exercises_the_batch_path_through_the_repr_entry_point() {
+    // A ≥2-arg top-level Op reaches the parallel batch path via `eval_parallel` (the repr entry
+    // point) and still equals the sequential `eval`.
+    let interp = Interpreter::default();
+    let node = op("bit.xor", vec![byte([true; 8]), byte([false; 8])]);
+    assert!(matches!(
+        plan_parallel(&node),
+        ParallelPlan::TopLevelBatch { .. }
+    ));
+    assert_eq!(
+        interp.eval(&node).unwrap(),
+        interp.eval_parallel(&node).unwrap()
     );
 }
