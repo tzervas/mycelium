@@ -72,8 +72,8 @@ force it). Nothing here upgrades any guarantee tag; the freeze is of *shape*, no
 | `mycelium-std-time` | Accepted (2026-06-20) | `src/lib.rs:GUARANTEE_MATRIX` | 39 | none |
 | `mycelium-std-vsa` | Accepted (2026-06-20) | `src/lib.rs:GUARANTEE_MATRIX` | 14 | none |
 
-24/26 specs Accepted; `recover`/`spore` Accepted for their landed (Rust-first/library) half only;
-`sys-host` has no spec at all (§4.a). This table **supersedes DN-16's stale "25 specs" scope note**
+25/26 specs Accepted; `recover`/`spore` Accepted for their landed (Rust-first/library) half only;
+`sys-host` is the sole exception — no spec file at all (§4.a). This table **supersedes DN-16's stale "25 specs" scope note**
 (DN-16 §Changelog 2026-06-25 already widened it to 26; this note reproduces the current count with
 fresh per-crate evidence rather than re-asserting DN-16's now-dated per-spec verdicts).
 
@@ -87,8 +87,8 @@ partial-credit one.
 
 ### 3.1 Finding: no crate's `.myc` port covers its own exported surface — the ports are disjoint prototypes, not replacements
 
-Five crates have *some* `.myc` nodule bearing the same module name (`cmp`, `math`, `collections`,
-`text`, `iter` — the RFC-0031 2026-06-27 changelog's "Tier-0/Tier-1 self-hosted surface" entry).
+Six crates have *some* `.myc` nodule bearing the same module name (`cmp`, `math`, `collections`,
+`text`, `iter`, `fmt` — the RFC-0031 2026-06-27 changelog's "Tier-0/Tier-1 self-hosted surface" entry).
 Checked directly against each Rust crate's actual exported items, **none is a superset or
 equivalent of the Rust crate's surface** — each `.myc` nodule implements a narrower, structurally
 different prototype:
@@ -126,7 +126,7 @@ different prototype:
   `mycelium-std-text`'s 38-item `Bytes`/`Lossy<T>` surface.
 
 **Conclusion (grounded, not asserted):** the D6 trigger — *"a `.myc` port clears D5"* — has **not
-fired for any of the 26 crates**. The 5 crates with a same-named `.myc` nodule have narrower,
+fired for any of the 26 crates**. The 6 crates with a same-named `.myc` nodule have narrower,
 structurally distinct prototype surfaces (RFC-0031's own D4 table calls these "Tier 0/1
 prototypes"; its 2026-06-27 changelog entry says outright: *"these remain **prototypes** under
 the D5 stability bar... the full migration (D6 retirement / frozen stable API) remains open"*).
@@ -212,7 +212,7 @@ declines to introduce. **No crate is marked `#[deprecated]` by this note.**
 
 - **2026-07-01 — Draft (M-719 leaf, W1-719 session).** Initial freeze + D6 assessment. Tabulates
   all 26 `mycelium-std-*` crates' spec status, guarantee-matrix location, and public-surface size;
-  grounds the finding that no crate's `.myc` port clears the D5/D6 whole-module bar (five crates
+  grounds the finding that no crate's `.myc` port clears the D5/D6 whole-module bar (six crates
   have same-named but structurally disjoint `.myc` prototypes — `math` most starkly, `fmt`
   explicitly self-disclaimed in its own source comment); declines to apply `#[deprecated]` on that
   evidence; adds non-breaking stability doc-comments across all 26 crates; FLAGs the five items

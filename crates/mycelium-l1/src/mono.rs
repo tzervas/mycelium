@@ -528,17 +528,20 @@ impl<'e> Mono<'e> {
     /// registries (no generics/traits remain).
     ///
     /// # Errors
-    /// [`ElabError::Residual`] if the totality pass's own AST-traversal recursion exceeds its
+    /// [`ElabError::DepthExceeded`] if the totality pass's own AST-traversal recursion exceeds its
     /// explicit depth budget ([`crate::totality::MAX_WALK_DEPTH`]; M-674) on a pathologically-nested
-    /// specialized body — a clean, explicit refusal rather than a host-stack overflow.
+    /// specialized body — a clean, explicit *budget* refusal (never a host-stack overflow, and never
+    /// mis-reported as a semantic `Residual`; consistent with `elab::collect_calls`).
     fn finish(self) -> Result<(Env, MonoSelections), ElabError> {
         // Recompute totality over the specialized fn set (a specialization's verdict equals its
         // source's; the SCC/descent machinery is structural — totality.rs). The matured gate and the
         // elaborator's SCC pass then read verdicts by the *mangled* names. Never fabricated (VR-5).
+        // A depth-budget trip here is the never-silent `DepthExceeded` (M-674), NOT a `Residual`
+        // (which would conflate a resource limit with an "outside-the-fragment" semantic verdict).
         let totality =
-            crate::totality::classify_all(&self.out_fns).map_err(|e| ElabError::Residual {
+            crate::totality::classify_all(&self.out_fns).map_err(|e| ElabError::DepthExceeded {
                 site: "<monomorphization>".to_owned(),
-                what: format!("totality re-classification over the specialized fn set: {e}"),
+                limit: e.limit,
             })?;
         let env = Env {
             types: self.out_types,
