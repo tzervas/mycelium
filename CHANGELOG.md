@@ -8,6 +8,29 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: M-873 follow-on — transpiler hardening: width_cast emission, batch mode, 8-twin union backlog)
+
+- **Faithful `width_cast` conversion emission (DN-41).** `mycelium-transpile` now emits unsigned
+  `Binary` widening `impl` bodies as the **real** `width_cast(self, <Binary{M} witness>)` prim (witness
+  = a synthesized all-zero `BinLit` of `M` bits; grammar/RFC-0020-confirmed width-from-content; DN-41 §3
+  makes the witness bits unused). Raised **std-cmp 3.6%→12.6%** (10 conversion `impl`s became genuine
+  emissions). Honestly still gapped: **signed** widening (ADR-028 sign-free `Binary` — a real semantic
+  gap), `bool`-`Self` widening (no witness), and all **narrowing** (DN-41 fallible/`Result`, no single-
+  `= expr` form). The principle: emit a body **iff** it maps to a *confirmed real* surface, else gap it.
+- **Directory/batch CLI mode** — `mycelium-transpile <crate-src-dir> <out>` transpiles a whole crate's
+  `src/` (skips tests), emitting per-file `.myc`/`.gap.json` + combined `summary.json`/`union.gap.json`.
+- **Union surface-feature backlog across 6 core-lib crates** (`fixtures/UNION-BACKLOG.md`,
+  `union-backlog.json`): grand union **43/346 ≈ 12.4%** expressible (`Empirical`). Re-ranked demand data
+  — **unsupported *types* #1 (36%: `String`/`text`, `usize`/`isize`, `char`, closures, and signed ints —
+  an ADR-028 sign-free consequence)**, macros #2 (22%), trait-bounded generics #3 (12%). Recorded in
+  DN-34 §8.5.
+- **Grounded self-hosting finding (DN-34 §8.6):** `std.option`/`std.result` have **no Rust source**
+  (authored directly in Mycelium — M-715/M-649); excluded from the corpus, never substituted (VR-5/G2).
+- **Honest artifact parity fix:** regenerated the single-file `std-cmp` fixtures (they were stale after
+  `width_cast` landed — now 14 emitted / 20 `width_cast` lines, matching the batch output + the code).
+- 16/16 tests green (fmt/clippy clean). **Flagged for integration:** the `cargo-public-api` baseline
+  still can't be generated in-env (tool absent) — deferred, not fabricated.
+
 ### Added (2026-07-01: M-873 — Rust→Mycelium transpiler PoC + prioritized surface-feature backlog)
 
 - **`crates/mycelium-transpile` (new, PoC — kickoff `trx`, DN-34 §8).** A `syn`-based Rust→Mycelium
