@@ -8,6 +8,38 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-07-01: M-863 — AOT ratification act: RFC-0029 → Enacted, DN-15 → Resolved, E15-1/E25-1/E19-1 status flips)
+
+- **RFC-0029 (AOT Optimization, Codegen Maturity, and JIT): `Accepted` → `Enacted`.** With E25-1's
+  remaining children — M-856b (Dense/VSA through the MLIR-dialect path), M-860 (parallel per-function
+  AOT codegen), and M-862 (parallel pure-fragment interpreter eval) — landed this wave, every E15-1
+  (M-725…M-729) and E25-1 (M-850…M-862) child is `done` with a checked three-way differential
+  (M-858's unified mutant-witnessed harness, PR #851, 0-missed). The path this RFC sanctions is
+  complete and stable — the condition its own Posture note reserved for `Enacted` (house rule #3:
+  stepped through `Accepted` first). The interpreter stays the trusted-base reference throughout
+  (ADR-007/NFR-7); this RFC governs only the native performance layer.
+- **DN-15 (Native-Path Direct-LLVM Decomposition): `Draft` → `Resolved`.** The §10 status question
+  this note's own prior resync flagged for the maintainer is now settled: M-856/M-856b/M-857/M-858
+  closed the last open Increment-4 (MLIR-dialect) catch-up, so both halves the note decomposed —
+  the direct-LLVM-advanceable half (§3) and the libMLIR-gated half (§2/§4.4) — are landed for the
+  full ADR-034 coverage scope, each checked-differential. A §10 resolution paragraph is appended
+  (append-only; no prior section rewritten).
+- **DN-25 (Road to Full-Language 1.0.0): T6 row refreshed (advisory map, no status move).** All 15
+  E25-1 + all 5 E15-1 children now show `done` in the §2 T6 row and §3 inventory.
+- **ADR-034: DoD checkboxes updated, Status deliberately left `Accepted` (FLAG).** Every §5
+  Definition-of-Done item except the terminal one is now met (E15-1/E25-1 coverage, RFC-0029
+  Enacted, DN-15 Resolved, the ADR-022 pointers, `M-738 depends_on E15-1`). ADR-034's own Status
+  field and its final DoD bullet both couple `Accepted → Enacted` to the `lang 1.0.0` tag act
+  (M-738), which has not run (M-738 stays `status:blocked` on E13-1/E18-1). Per house rule #3/VR-5
+  this is **not** flipped to Enacted here — flagged for the maintainer, not guessed past the
+  checked tag-coupling basis.
+- **Issue status flips:** `M-729` (`ready` → `done` — M-858's unified harness is the closing
+  extension of its own differential-durability DoD, resolving a body/label inconsistency the prior
+  close-out had only flagged); `E15-1`, `E25-1` epics (`in-progress` → `done` — all children
+  verified done); `E19-1` epic (`in-progress` → `done` — a stale-label resync; M-746…M-752/M-798
+  were already all `done`). `M-863` (this act) itself flips `ready` → `done`.
+- Not flipped: **ADR-034's Status** (stays `Accepted`, tag-coupled to M-738 — see above).
+
 ### Added (2026-07-01: Wave-1 — native-scheduler parallelism, dialect Dense/VSA, stdlib freeze, governance gates)
 
 - **`mycelium-sched` foundational crate + Scheduler relocation (PR #864, previously untracked).**

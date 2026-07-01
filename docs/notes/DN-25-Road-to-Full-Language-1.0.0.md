@@ -34,7 +34,7 @@ Mycelium (`.myc`), stable, and fully usable**.
 | **T3** Runtime & concurrency execution maturity | **E12-1** | RFC-0027 (memory mgmt & reclamation) | `r10` | 7 |
 | **T4** Standard library **in Mycelium** | **E13-1** | RFC-0031 (self-hosted stdlib composition) | `lib10` | 5 |
 | **T5** FFI & system interface | **E14-1** | RFC-0028 (FFI & system interface) | `ffi10` | 7 |
-| **T6** Native AOT maturity, optimization & accel — **HARD `lang 1.0.0` GATE (ADR-034, 2026-06-30): full native-codegen coverage required** (was → `1.1`, ADR-022 §8 Q4; re-gated INTO `lang 1.0.0`). **In-progress (2026-06-30, staging-tier close-out): 9/15 E25-1 children landed** — M-850/851/852/853/854/855/856/857/858 `done`; M-856b (new)/859/860/861/862/863 open. | **E15-1** (+E25-1) | RFC-0029 (AOT opt, codegen maturity & JIT, Accepted); ADR-034 (re-gating); RFC-0039 (Dense/VSA codegen, Accepted) | `aot10` | 6 |
+| **T6** Native AOT maturity, optimization & accel — **HARD `lang 1.0.0` GATE (ADR-034, 2026-06-30): full native-codegen coverage required** (was → `1.1`, ADR-022 §8 Q4; re-gated INTO `lang 1.0.0`). **DONE (2026-07-01, M-863 ratification act): all 15 E25-1 children + all 5 E15-1 children landed** `done`; RFC-0029 → **Enacted**; DN-15 → **Resolved**. ADR-034 itself stays Accepted (its own Enactment rides the `lang 1.0.0` tag, M-738 — not this row). | **E15-1** (+E25-1) | RFC-0029 (AOT opt, codegen maturity & JIT, **Enacted**); ADR-034 (re-gating, Accepted); RFC-0039 (Dense/VSA codegen, Accepted) | `aot10` | 6 |
 | **T7** Toolchain, IDE & package distribution | **E16-1** | RFC-0026 (editor highlighting grammar) | `tool10` | 8 |
 | **T8** Documentation, stability & release | **E17-1** | ADR-023 (stability & API-compat guarantees) | `rel10` | 8 |
 | **T9** Self-hosting capstone | **E18-1** | DN-26 (self-hosting bootstrap plan) | `boot10` | 5 |
@@ -50,7 +50,11 @@ not duplicated.
 - **E12-1 (T3):** M-709 real scheduler · M-710 runtime vocabulary execution · M-711 deadlock-freedom · M-712 memory reclamation · M-713 supervision/cancellation.
 - **E13-1 (T4):** M-714 stdlib composition/layout · M-715 core/prelude in `.myc` · M-716 collections in `.myc` · M-717 text/fmt in `.myc` · M-718 math/numerics in `.myc` · M-719 stdlib conformance + stability.
 - **E14-1 (T5):** M-720 FFI surface · M-721 `wild` execution · M-722 syscall binding · M-723 time/rand bindings · M-724 FFI safety audit.
-- **E15-1 (T6):** M-725 libMLIR integration · M-726 optimization passes · M-727 JIT · M-728 BitNet accel · M-729 codegen differential durability. **(Re-gated INTO `lang 1.0.0` by ADR-034.)**
+- **E15-1 (T6):** M-725 libMLIR integration **(done)** · M-726 optimization passes **(done)** ·
+  M-727 JIT **(done)** · M-728 BitNet accel **(done)** · M-729 codegen differential durability
+  **(done — M-863 resync: M-858's unified mutant-witnessed harness closes M-729's own durability
+  DoD)**. **All 5 children done (Re-gated INTO `lang 1.0.0` by ADR-034; subsumed under E25-1's
+  expanded DoD).**
 - **E25-1 (T6 full coverage — ADR-034):** M-850 full recursion trampoline **(done, PR #818)** ·
   M-851 closure-ABI widening **(done, PR #821)** · M-852 `Swap` codegen **(done, PR #823)** ·
   M-853 Dense lowering **(done, PR #824)** · M-854 VSA lowering **(done, PR #825)** · M-855
@@ -58,10 +62,12 @@ not duplicated.
   dialect catch-up for Construct/Match + Swap **(done, PR #850** — Dense/VSA-dialect split out
   honestly as new **M-856b**, not silently dropped**)** · M-857 `trit.mul` dialect **(done,
   PR #820)** · M-858 unified mutant-witnessed three-way **(done, PR #851** — closes 5 dialect
-  mutant survivors, earns the codegen Empirical basis**)** · **M-856b** (new) Dense/VSA through the
-  dialect path · M-859 bench scaling + regression gates · M-860 parallel codegen · M-861 scheduler
-  work-stealing · M-862 parallel pure-eval (post-tag-cautious) · M-863 ratification act. RFC-0039
-  (Dense/VSA codegen) **Accepted** (2026-06-30, maintainer-ratified).
+  mutant survivors, earns the codegen Empirical basis**)** · **M-856b** Dense/VSA through the
+  dialect path **(done)** · M-859 bench scaling + regression gates **(done, PR #845)** · M-860
+  parallel codegen **(done)** · M-861 scheduler work-stealing **(done)** · M-862 parallel pure-eval
+  (post-tag-cautious) **(done, landed pre-tag)** · M-863 ratification act **(this act)**. **All 14
+  children done (2026-07-01, M-863 ratification act).** RFC-0039 (Dense/VSA codegen) **Accepted**
+  (2026-06-30, maintainer-ratified).
 - **E16-1 (T7):** M-730 full LSP · M-731 highlighting delivery · M-732 package manager · M-733 toolchain UX · M-734 reproducible distribution.
 - **E17-1 (T8):** M-735 language reference + tutorial · M-736 stdlib API docs · M-737 stability/API-compat guarantees · M-738 full-language 1.0.0 release act · **M-743 MIT-only licensing audit + enforcement**.
 - **E18-1 (T9):** M-739 self-hosting bootstrap plan · M-740 port L1 frontend to `.myc` · M-741 self-hosted toolchain ratification · M-742 self-hosting CI gate.
@@ -84,7 +90,7 @@ lang axis:   T2 (E11-1) ─┬─► T4 (E13-1) ─┬─► T9 (E18-1) ─► l
 - **Wave B:** T3 (runtime) ∥ T5 (FFI) — unblock the system-touching stdlib modules.
 - **Wave C:** T4 (stdlib in Mycelium) — the heart; depends on T2 (+ T3/T5 for system modules).
 - **Wave D:** T9 (self-hosting capstone) — depends on T2 + T4; then T8/M-738 cuts `lang 1.0.0`.
-- **T6 (native AOT — `aot10`) — RE-GATED INTO `lang 1.0.0` by ADR-034 (2026-06-30):** was rolled to `1.1` (ADR-022 §8 Q4), now a **hard gate row** with **full-language native-codegen coverage** (E15-1 + E25-1), delivered "through the lowers" (closures · recursion · `trit.mul` · `Swap` · Dense · VSA · dynamic-VSA JIT) plus the perf/parallelism extension. The interpreter (the trusted base) stays the reference; the native path is the performance layer, differential-checked against it. `M-738` waits on E15-1.
+- **T6 (native AOT — `aot10`) — RE-GATED INTO `lang 1.0.0` by ADR-034 (2026-06-30):** was rolled to `1.1` (ADR-022 §8 Q4), now a **hard gate row** with **full-language native-codegen coverage** (E15-1 + E25-1), delivered "through the lowers" (closures · recursion · `trit.mul` · `Swap` · Dense · VSA · dynamic-VSA JIT) plus the perf/parallelism extension. The interpreter (the trusted base) stays the reference; the native path is the performance layer, differential-checked against it. **T6 itself is now met (2026-07-01, M-863 ratification act) — all E15-1/E25-1 children `done`, RFC-0029 Enacted, DN-15 Resolved.** `M-738` still waits on E15-1 structurally (the depends_on edge is unchanged) but that precondition is now satisfied; `M-738` remains blocked on the other §5 tracks (T4/E13-1, T9/E18-1) it also depends on.
 
 ## 5. Kickoffs (the parallelizable heads)
 
@@ -110,6 +116,19 @@ this note maps it without overclaiming any of it as done (VR-5/G2).
 
 ## 8. Changelog
 
+- **2026-07-01 — T6 status refresh: ALL 15 E25-1 + all 5 E15-1 children landed `done` (M-863
+  ratification act; advisory map refresh, no ADR-022/DN-25 status move — DN-25 itself stays
+  Draft/advisory throughout, per its own Posture).** The three children still open at the prior
+  resync — **M-856b** (Dense/VSA through the MLIR-dialect path), **M-860** (parallel per-function
+  AOT codegen via `mycelium-sched`), and **M-862** (parallel pure-fragment interpreter eval,
+  landed pre-tag) — landed this wave, alongside the previously-flagged M-859/M-861 `landed_pr`-vs-
+  label gap now resolved (both confirmed `status:done`). This closes T6's own gate criteria: the
+  §2 T6 row and §3 inventory are refreshed inline (append-only) to **DONE**; RFC-0029 → **Enacted**;
+  DN-15 → **Resolved**. **ADR-034 itself is unaffected by this refresh** — its own Status stays
+  Accepted; its Enactment is coupled to the `lang 1.0.0` tag act (M-738), not to T6/E15-1/E25-1
+  landing (see ADR-034 §5's final DoD bullet). `M-738` still waits on the other §5 tracks (T4/E13-1,
+  T9/E18-1). This is an advisory map refresh only — it does not move ADR-022 or claim `lang 1.0.0`
+  complete (VR-5).
 - **2026-06-30 — T6 status refresh: 9/15 E25-1 children landed (staging-tier close-out resync;
   advisory, no status move).** Three more children landed `done` since the prior resync:
   **M-855 (dynamic-VSA JIT, PR #848 — cleanup/resonator loops explicitly deferred), M-856 (dialect

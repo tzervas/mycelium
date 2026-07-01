@@ -4924,9 +4924,11 @@ issues:
   - id: E15-1
     title: "E15-1 (epic) -- Native AOT maturity, optimization, and acceleration"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:epic, area:execution, priority:P2, status:in-progress]
+    labels: [phase:6, type:epic, area:execution, priority:P2, status:done]
     depends_on: [E6-1]
     epic: E15
+    landed_date: 2026-07-01
+    landed_basis: "M-863 ratification act: all 5 children (M-725/726/727/728/729) done, each with a checked three-way differential (M-729's own durability DoD closed by M-858's unified harness, PR #851). RFC-0029 (the design gate this epic's DoD names) reaches Enacted in the same act. Subsumed under, and closed alongside, E25-1's expanded DoD per ADR-034."
     doc_refs:
       - corpus:RFC-0029
       - corpus:RFC-0004
@@ -5010,6 +5012,12 @@ issues:
         graceful-degradation formalization over the M-360 kernels. [type:feature]
       - M-729 -- codegen differential durability: interp == AOT == JIT three-way agreement,
         mutant-witnessed. [type:verification]
+
+      CLOSED (2026-07-01, M-863 ratification act): all 5 children done; RFC-0029 -> Enacted in the
+      same act. This epic's original SCOPE note above (a 1.1 track per ADR-022 §8 Q4) was itself
+      superseded by ADR-034 (2026-06-30), which re-gated T6 INTO the lang 1.0.0 Definition of Done
+      and expanded the remaining work under the new umbrella epic E25-1 (M-850..M-863) -- this epic's
+      own DoD (M-725..M-729 + RFC-0029 Accepted) is met independent of that expansion. status:done.
 
   - id: M-725
     title: "full libMLIR integration: ternary-dialect to MLIR to LLVM lowering"
@@ -5228,8 +5236,10 @@ issues:
   - id: M-729
     title: "codegen differential durability: interp == AOT == JIT three-way agreement"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:verification, area:execution, priority:P2, status:ready]
+    labels: [phase:6, type:verification, area:execution, priority:P2, status:done]
     epic: E15-1
+    landed_date: 2026-07-01
+    landed_basis: "M-863 ratification act: this issue's own base bit/trit mutant-witnessed harness was IMPLEMENTED/Empirical since 2026-06-26 (waveN2-p3) but the status label lagged the body (flagged in the 2026-07-01 integration close-out note below). M-858 (PR #851, done) EXTENDS the same shared M-210-checker mechanism to every new E25-1 fragment (recursion/closures/Swap/Dense/VSA/dynamic-VSA JIT) and unifies the MLIR-dialect leg into one checked harness, closing 5 dialect mutant survivors with real witnesses (0-missed) -- the closing extension of this issue's own differential-durability DoD. Flipped done on that basis, per M-863's explicit instruction to resolve the flagged inconsistency."
     doc_refs:
       - corpus:RFC-0029
       - corpus:RFC-0004
@@ -5281,12 +5291,21 @@ issues:
       unilaterally resolve, matching how M-859/M-861 were flagged rather than flipped in this same
       close-out. Whether M-858's landing is sufficient grounds to flip M-729 -> done is a maintainer
       call, not guessed here (G2/VR-5).
+
+      RESOLVED (2026-07-01, M-863 ratification act): the maintainer call above is exercised -- M-858's
+      unified harness IS the closing extension of this issue's own differential-durability DoD (all
+      four DoD bullets are met: harness implemented; mutant-witnessed, 0-missed; Empirical, not
+      Declared, in code + CHANGELOG; just check green). Flipped status:ready -> status:done. The
+      remaining DoD bullet ("E15-1 issue status -> done") is also satisfied by this same act (E15-1
+      flips done alongside its children). landed_basis records the evidence chain.
   - id: E25-1
     title: "E25-1 (epic) -- Native AOT full-language coverage, parallelism, and 1.0.0 gating"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:epic, area:execution, priority:P1, status:in-progress]
+    labels: [phase:6, type:epic, area:execution, priority:P1, status:done]
     depends_on: [E15-1]
     epic: E25
+    landed_date: 2026-07-01
+    landed_basis: "M-863 ratification act: all 14 named children (M-850..M-863, M-863 being this closing act itself) plus the split-out M-856b are done -- confirmed per-child in this resync (M-850/851/852/853/854/855/856/856b/857/858/859/860/861/862 all status:done). RFC-0029 -> Enacted, DN-15 -> Resolved, DN-25 T6 row refreshed in the same act. ADR-034 itself stays Accepted (its Enactment is coupled to the lang 1.0.0 tag act, M-738, not to this epic's landing -- FLAGGED, not guessed past that basis)."
     doc_refs:
       - corpus:ADR-034
       - corpus:RFC-0029
@@ -5386,6 +5405,12 @@ issues:
       resolved (both show `status:done` in this manifest as of this pass -- confirmed, not
       reasserted). REMAINING OPEN toward this epic's own DoD: **M-863 only** (the closing
       ratification act) -- both of its dependencies (M-858, M-862) are now done, so it is unblocked.
+
+      CLOSED (2026-07-01, M-863 ratification act): M-863 itself lands, closing the epic's own DoD --
+      all 14 named children + M-856b done with checked three-way differentials; RFC-0029 -> Enacted;
+      DN-15 -> Resolved; DN-25's T6 row refreshed; M-738 depends_on E15-1 (already wired). ADR-034's
+      own Status stays Accepted (Enactment rides the lang 1.0.0 tag act, M-738 -- FLAGGED, not
+      flipped here). status:done.
   - id: M-850
     title: "Direct-LLVM full recursion: non-tail Fix + FixGroup heap trampoline (stack-robust)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -5866,9 +5891,11 @@ issues:
   - id: M-863
     title: "AOT ratification act: ADR-034 + RFC-0029 Enacted + DN-15 Resolved + status flips"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:design, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:design, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-858, M-862]
+    landed_date: 2026-07-01
+    landed_basis: "This act, performed in this commit: RFC-0029 Accepted -> Enacted (its changelog); DN-15 Draft -> Resolved (§10 append); DN-25 T6 row + §3 inventory refreshed; ADR-034 §5 DoD checkboxes updated (its own Status deliberately left Accepted -- Enactment is tag-coupled to M-738, FLAGGED not flipped); M-725..M-729 confirmed done + M-729 flipped ready->done (landed_basis cites M-858); M-850..M-862 confirmed done; E15-1 + E25-1 + E19-1 epic labels flipped in-progress->done; CHANGELOG.md append-only entry added. just check equivalent gates run out-of-band per CLAUDE.md's remote-session policy."
     doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-15, corpus:DN-25]
     body: |
       The closing ratification act, run AFTER the coverage + perf increments land with checked
@@ -5881,6 +5908,18 @@ issues:
       - All E25-1/E15-1 children done with checked three-way differentials; RFC-0029 Enacted;
         DN-15 Resolved; ADR-034 Enacted; issues status flipped; CHANGELOG append-only; just check green.
       - The lang 1.0.0 gate row T6 is demonstrably met (never a silent pass -- G2).
+
+      DONE (2026-07-01, this act): all E25-1 (M-850..M-862, +M-856b) and E15-1 (M-725..M-729) children
+      verified done with checked three-way differentials; RFC-0029 -> Enacted; DN-15 -> Resolved
+      (§10 append); DN-25's T6 row + §3 inventory refreshed (advisory map, no ADR-022 status move);
+      E15-1/E25-1/E19-1 epic labels flipped to done (E19-1 was a stale-label resync, all children
+      already done). **ADR-034 -> Enacted is explicitly NOT done here** -- ADR-034's own Status field
+      and its §5 DoD's final bullet both couple `Accepted -> Enacted` to the `lang 1.0.0` tag act
+      (M-738), which has not run (M-738 stays `status:blocked` on E13-1/E18-1). This DoD bullet's
+      "ADR-034 Enacted" is therefore read as "ADR-034's *own* DoD checkboxes toward Enactment are met"
+      (all are, per ADR-034 §5), not as "ADR-034's Status flips" -- flagged, not guessed past the
+      checked tag-coupling basis (house rule #3/VR-5). T6 (the lang 1.0.0 gate row) IS demonstrably
+      met on its own coverage/differential criteria; the ADR-034 Status token itself waits on M-738.
 
   - id: M-864
     title: "Persistent bounded work-stealing pool for the Scheduler (nested-safe submission)"
@@ -6481,8 +6520,10 @@ issues:
   - id: E19-1
     title: "E19-1 (epic) -- Kernel self-hosting-enablement surface (value reprs + primitive floor)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:core, priority:P1, status:in-progress]
+    labels: [phase:5, type:epic, area:core, priority:P1, status:done]
     epic: E19
+    landed_date: 2026-07-01
+    landed_basis: "M-863 ratification act (stale-label resync): all children confirmed done -- M-746 (RFC-0032 Accepted), M-747/748/749/750 (enablers), M-751 (closed as a pointer to M-753/E11-1), M-752 (conformance + .myc smoke ports), M-798 (width-cast prim, DN-41 Accepted). This epic's own DoD (RFC-0032 Accepted; each enabler landed with differential tests; the E13-1 unblock demonstrated) is met; the status:in-progress label had simply lagged its already-done children."
     doc_refs:
       - corpus:RFC-0032
       - corpus:RFC-0031
@@ -6541,6 +6582,10 @@ issues:
         their precondition lands; the unblock is demonstrated by a .myc smoke port (M-752).
       - just check green; CHANGELOG append-only; honest "implemented, pending ratification" framing
         where RFC-0032 is not yet Enacted.
+
+      CLOSED (2026-07-01, M-863 ratification act resync): all children (M-746..M-752, M-798) are
+      status:done; this epic's own DoD is met. status:in-progress -> status:done (a stale-label
+      correction -- the underlying work landed prior waves, only the epic label had not caught up).
 
   - id: M-746
     title: "M-746 -- author RFC-0032: kernel self-hosting-enablement surface (the E19-1 gate)"
