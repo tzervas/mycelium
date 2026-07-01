@@ -5887,7 +5887,7 @@ issues:
   - id: M-861
     title: "Scheduler multicore work-stealing (RT2-preserving, RT3-reified steal policy)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:runtime, priority:P1, status:done]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-859]
     landed_pr: 843
@@ -5992,7 +5992,7 @@ issues:
   - id: M-864
     title: "Persistent bounded work-stealing pool for the Scheduler (nested-safe submission)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:runtime, priority:P2, status:done]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-862]
     landed_date: 2026-07-01
     landed_basis: "branch claude/dev-m864-workstealing-pool. Scheduler::run_indexed's per-call std::thread::scope replaced by one process-wide persistent pool (mycelium_sched::pool, sized to available_parallelism(), never resized/recreated); nested submission is help-stealing (Pool::help_while). run_indexed's bound tightened to F: Send + 'static / T: Send + 'static (DN-67 §2 ratifies; every caller audited/adjusted -- Node/Interpreter/CancelToken/task ownership, none needed unsafe). Initial commits c4eef4e/84458d2/178e502/9a495c2. IMPORTANT -- CORRECTNESS REWRITE (same day, after an adversarial deadlock review REPRODUCED a real hang; DN-67 §3.0): the first cut kept M-861's capacity backpressure, whose feeder bare-blocked BEFORE help-stealing -> a nested-submission deadlock at width > capacity + P (the committed [15,15,6] test would have hung on any <=4-core box; it only passed on the 28-core dev box). Second defect: a panicking job hung the join and killed the pool worker. BOTH FIXED AT ROOT: (1) backpressure/capacity REMOVED (non-normative per DN-61 A.2, and the deadlock cause) -- the pool queue is unbounded, each batch populates its lanes up front then runs, so no lane or feeder ever bare-blocks; help_while is the only wait on a batch's critical path. (2) panic-safe join -- catch_unwind per job keeps the persistent worker alive, first job panic re-raised at join (thread::scope-like), RAII drop-guard decrements the countdown on every unwind path. SCHEDULER_BACKPRESSURE_STRENGTH (Exact) const + its std-runtime re-export REMOVED (would be a false claim, VR-5); capacity/with_workers(_,capacity) retained for source-compat but bound nothing (documented). VALIDATION (hardware-independent, the coordinator's guardrail): a pub(crate) Pool::with_workers_for_test(P) + Scheduler::run_indexed_on(pool,..) hook forces a small P through every nesting level; forced_low_p_wide_fanout_does_not_deadlock_p1_through_p4 runs [15,15,6] at P in {1,2,3,4} under a 60s timeout. REPRODUCTION CONFIRMED: with the pre-fix feeder-block reverted in a scratch worktree (+ the same hook), that test HANGS at every P (timeout fires ~15s); on the fixed code it PASSES. Plus forced-P deep/mixed shapes, forced P=1, two panic-safety tests, global-pool nested stress, and a Linux thread-count regression witness. Tests: 29/29 mycelium-sched; M-860 parallel_emit_matches_sequential_emit_byte_identical + M-862 parallel differential/determinism re-verified green unmodified; mycelium-std-runtime 98/98 (dataflow restore test strengthened to assert exact step total; supervision cancel-token test honestly downgraded). 15+ consecutive full-suite runs, zero flakes. cargo fmt --check, clippy -p mycelium-sched -p mycelium-mlir -p mycelium-interp -p mycelium-std-runtime --all-targets -D warnings -A unsafe_code, cargo build --workspace all green. Tag: Empirical (deadlock-freedom + determinism), never Proven absent a mechanized proof (VR-5)."
@@ -6144,7 +6144,7 @@ issues:
   - id: M-866
     title: "Bound mono.rs free_vars/pattern_binders recursion (M-674 follow-up)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:fix, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:bug, area:language, priority:P2, status:todo]
     depends_on: [M-674]
     doc_refs: [corpus:ADR-032, src:crates/mycelium-l1/src/mono.rs, src:crates/mycelium-l1/src/totality.rs]
     body: |
@@ -6173,7 +6173,7 @@ issues:
   - id: M-868
     title: "Leapfrogging (own-subtree help-steal) to bound the scheduler pool's help-frame stack to O(depth)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:perf, area:runtime, priority:P2, status:needs-design]
+    labels: [phase:6, type:chore, area:execution, priority:P2, status:needs-design]
     depends_on: [M-864]
     epic: E25-1
     doc_refs:
@@ -6256,7 +6256,7 @@ issues:
   - id: M-869
     title: "AOT/interp hypha/colony/async concurrency parity (requires the language concurrency surface)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:runtime, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
     depends_on: [M-865]
     epic: E25-1
     doc_refs:
@@ -6853,7 +6853,7 @@ issues:
   - id: E19-1
     title: "E19-1 (epic) -- Kernel self-hosting-enablement surface (value reprs + primitive floor)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:core, priority:P1, status:done]
+    labels: [phase:5, type:epic, area:core-ir, priority:P1, status:done]
     epic: E19
     landed_date: 2026-07-01
     landed_basis: "M-863 ratification act (stale-label resync): all children confirmed done -- M-746 (RFC-0032 Accepted), M-747/748/749/750 (enablers), M-751 (closed as a pointer to M-753/E11-1), M-752 (conformance + .myc smoke ports), M-798 (width-cast prim, DN-41 Accepted). This epic's own DoD (RFC-0032 Accepted; each enabler landed with differential tests; the E13-1 unblock demonstrated) is met; the status:in-progress label had simply lagged its already-done children."
@@ -6923,7 +6923,7 @@ issues:
   - id: M-746
     title: "M-746 -- author RFC-0032: kernel self-hosting-enablement surface (the E19-1 gate)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:core, priority:P1, status:done]
+    labels: [phase:5, type:design, area:core-ir, priority:P1, status:done]
     epic: E19-1
     doc_refs:
       - corpus:RFC-0032
@@ -6959,7 +6959,7 @@ issues:
   - id: M-747
     title: "M-747 -- reduce-to-Bool comparison/equality prim over Binary{N}/Ternary{N}"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746]
     doc_refs:
@@ -6983,7 +6983,7 @@ issues:
   - id: M-748
     title: "M-748 -- binary arithmetic prim surface (bit.and/bit.or + never-silent add/sub)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746]
     doc_refs:
@@ -7007,7 +7007,7 @@ issues:
   - id: M-749
     title: "M-749 -- sequence/array value representation + never-silent indexing"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746]
     doc_refs:
@@ -7031,7 +7031,7 @@ issues:
   - id: M-750
     title: "M-750 -- byte/string value representation + codepoint ops"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746, M-749]
     doc_refs:
@@ -7073,7 +7073,7 @@ issues:
   - id: M-752
     title: "M-752 -- enablement conformance: each prim/repr differential-tested + .myc smoke ports"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core, priority:P1, status:done]
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-747, M-748, M-749, M-750]
     landed_date: 2026-07-01
@@ -7183,7 +7183,7 @@ issues:
   - id: E20-1
     title: "E20-1 (epic) -- Value-Model Collections & Precision (RFC-0033)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:core, priority:P1, status:in-progress]
+    labels: [phase:5, type:epic, area:core-ir, priority:P1, status:in-progress]
     epic: E20
     doc_refs:
       - corpus:RFC-0033
@@ -7254,7 +7254,7 @@ issues:
   - id: M-785
     title: "M-785 -- author RFC-0033 + ADR-025..031: value-model collections & precision (the E20-1 design gate)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:core, priority:P1, status:done]
+    labels: [phase:5, type:design, area:core-ir, priority:P1, status:done]
     epic: E20-1
     landed_date: 2026-07-01
     landed_basis: "Maintainer ratification act (2026-07-01): RFC-0033 flips Proposed -> Accepted; ADR-025/026/027/028 flip Proposed -> Accepted in the same act (ADR-029/030/031 were already Accepted 2026-06-24). This issue's own DoD (docs committed Proposed, maintainer review of the two disagreements before any -> Accepted) is fully met -- the maintainer review + ratification has now happened for all seven decision records. V1-V6 implementation (M-760..M-784) is a separate, deferred (post-1.0) act, not part of this design-gate issue's scope."
@@ -7298,7 +7298,7 @@ issues:
   - id: M-754
     title: "M-754 -- reconcile balanced-trit primitives into core::ternary (DRY add_with_carry)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P0, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P0, status:done]
     epic: E20-1
     depends_on: [M-785]
     doc_refs:
@@ -7318,7 +7318,7 @@ issues:
   - id: M-755
     title: "M-755 -- port exhaustive Trit truth-table tests (add_with_carry 27-row)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:test, area:core, priority:P1, status:done]
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:done]
     epic: E20-1
     depends_on: [M-754]
     doc_refs:
@@ -7333,7 +7333,7 @@ issues:
   - id: M-756
     title: "M-756 -- arbitrary-width balanced-ternary integer arithmetic (BigTernary)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P0, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P0, status:done]
     epic: E20-1
     depends_on: [M-754]
     doc_refs:
@@ -7354,7 +7354,7 @@ issues:
   - id: M-757
     title: "M-757 -- never-silent fixed-width ternary boundary (FixedWidthTrits, checked_add_fixed)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P0, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P0, status:done]
     epic: E20-1
     depends_on: [M-756]
     doc_refs:
@@ -7370,7 +7370,7 @@ issues:
   - id: M-758
     title: "M-758 -- (P2) limbed PackedTernary (40 trits/u64), differential vs BigTernary"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:perf, area:core, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:core-ir, priority:P2, status:todo]
     epic: E20-1
     depends_on: [M-756]
     doc_refs:
@@ -7386,7 +7386,7 @@ issues:
   - id: M-759
     title: "M-759 -- (P2) ternary multiplication fast path (Karatsuba/Toom) proven vs schoolbook"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:perf, area:core, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:core-ir, priority:P2, status:todo]
     epic: E20-1
     depends_on: [M-756]
     doc_refs:
@@ -7402,7 +7402,7 @@ issues:
   - id: E21-1
     title: "E21-1 (epic) -- Tunable Certification & Transparency Modes (RFC-0034 / ADR-032 implementation)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:core, priority:P1, status:done]
+    labels: [phase:5, type:epic, area:core-ir, priority:P1, status:done]
     epic: E21
     landed_date: 2026-07-01
     landed_basis: "All 11 children done: M-786, M-787, M-788, M-789, M-790, M-791, M-792, M-793, M-794, M-795, M-796 (each carries its own landed_pr/landed_basis in this manifest). RFC-0034 -> 'Enacted -- with code (Rust-first)' (docs/rfcs/RFC-0034-Tunable-Certification-and-Transparency-Modes.md, 2026-06-24, maintainer-ratified) once the §13 conformance suite (M-794) landed green -- the epic's own acceptance criterion."
@@ -7485,7 +7485,7 @@ issues:
   - id: M-786
     title: "M-786 -- CertMode + never-silent mode tag in Meta (RFC-0034 §3.1)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E21-1
     depends_on: []
     doc_refs:
@@ -7505,7 +7505,7 @@ issues:
   - id: M-787
     title: "M-787 -- mode-gated provenance tagging: `fast` omits Empirical/Proven (RFC-0034 §7, §3.2)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -7526,7 +7526,7 @@ issues:
   - id: M-788
     title: "M-788 -- mode-gated swap-cert emission + checking (RFC-0034 §4)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:cert, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786, M-787]
     doc_refs:
@@ -7547,7 +7547,7 @@ issues:
   - id: M-789
     title: "M-789 -- compile/runtime phase split: spores mintable with runtime cert OFF (RFC-0034 §8)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -7568,7 +7568,7 @@ issues:
   - id: M-790
     title: "M-790 -- mode resolution + scoping (@certification; global/phylum/nodule) via RFC-0012 (RFC-0034 §6)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:project, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:project, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -7590,7 +7590,7 @@ issues:
   - id: M-791
     title: "M-791 -- named `wrapping` Axis-B opt-out (RFC-0034 §10)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P2, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P2, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -7609,7 +7609,7 @@ issues:
   - id: M-792
     title: "M-792 -- EXPLAIN-of-mode + generation != consumption (RFC-0034 §7, §3.1, conformance d)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:tooling, priority:P2, status:done]
+    labels: [phase:5, type:feature, area:toolchain, priority:P2, status:done]
     epic: E21-1
     depends_on: [M-786, M-790]
     doc_refs:
@@ -7630,7 +7630,7 @@ issues:
   - id: M-793
     title: "M-793 -- memory-safe by default + explicit per-use unsafe escape (RFC-0034 §9, sharpens ADR-014)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:tooling, priority:P2, status:done]
+    labels: [phase:5, type:feature, area:toolchain, priority:P2, status:done]
     epic: E21-1
     depends_on: []
     doc_refs:
@@ -7650,7 +7650,7 @@ issues:
   - id: M-794
     title: "M-794 -- RFC-0034 §13 conformance suite + advance to Enacted-with-code (the E21-1 gate)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core, priority:P1, status:done]
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786, M-787, M-788, M-789, M-790, M-791, M-792, M-793, M-795]
     doc_refs:
@@ -7675,7 +7675,7 @@ issues:
   - id: M-795
     title: "M-795 -- adapt + parameterize the test suite across CertMode tiers (cross-cutting)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core, priority:P1, status:done]
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -7708,7 +7708,7 @@ issues:
   - id: M-796
     title: "M-796 -- native scoped mode-parametric testing in the Mycelium testing toolkit (downstream)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:tooling, priority:P2, status:done]
+    labels: [phase:5, type:feature, area:toolchain, priority:P2, status:done]
     epic: E21-1
     depends_on: [M-790, M-795]
     doc_refs:
@@ -7741,7 +7741,7 @@ issues:
   - id: M-816
     title: "M-816 -- prune 84 deprecated stale branches to the three protected tiers (external action)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:tooling, priority:P2, status:blocked]
+    labels: [phase:5, type:chore, area:toolchain, priority:P2, status:blocked]
     epic: E21-1
     depends_on: []
     doc_refs:
@@ -7819,7 +7819,7 @@ issues:
   - id: M-797
     title: "M-797 -- extract inline #[cfg(test)] tests to in-crate src/tests/ (no tests in logic files)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:refactor, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:toolchain, priority:P2, status:todo]
     epic: E21-1
     depends_on: []
     doc_refs:
@@ -7848,7 +7848,7 @@ issues:
   - id: E22-1
     title: "E22-1 (epic) -- Security Scanning Toolkit (automated detection, standard reporting, honest safe auto-fix)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:epic, area:tooling, priority:P2, status:proposed]
+    labels: [phase:8, type:epic, area:toolchain, priority:P2, status:todo]
     epic: E22
     doc_refs:
       - corpus:DN-30
@@ -7914,7 +7914,7 @@ issues:
   - id: M-798
     title: "M-798 -- width-cast/zero-extension kernel prim (bit.width_cast) [DN-41]"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-750]
     landed_date: 2026-07-01
@@ -7972,7 +7972,7 @@ issues:
   - id: E23-1
     title: "E23-1 (epic) -- Post-1.0 future-workstream capture (rsm F1-F6; design/decide later)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:epic, area:planning, priority:P3, status:todo]
+    labels: [phase:6, type:epic, area:project, priority:P3, status:todo]
     epic: E23
     doc_refs:
       - corpus:DN-45
@@ -8045,7 +8045,7 @@ issues:
   - id: M-806
     title: "M-806 -- gate: assert every wild/FFI/intentional-escape surface carries a disclosure block (DN-46 / rsm F2)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:tooling, area:toolchain, priority:P3, status:todo]
+    labels: [phase:6, type:infra, area:toolchain, priority:P3, status:todo]
     epic: E23-1
     depends_on: [M-801]
     doc_refs:
@@ -8105,7 +8105,7 @@ issues:
   - id: M-804
     title: "M-804 -- post-critical quality passes: capture (DN-49 / rsm F6)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:spec, area:planning, priority:P3, status:todo]
+    labels: [phase:6, type:spec, area:project, priority:P3, status:todo]
     epic: E23-1
     depends_on: []
     doc_refs:
@@ -8128,7 +8128,7 @@ issues:
   - id: M-805
     title: "M-805 -- kernel & primitives consolidation; multi-kernel question (capture; RFC-0036 / rsm F5)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:spec, area:core, priority:P3, status:todo]
+    labels: [phase:6, type:spec, area:core-ir, priority:P3, status:todo]
     epic: E23-1
     depends_on: []
     doc_refs:
@@ -8248,7 +8248,7 @@ issues:
   - id: M-812-cont
     title: "M-812-cont -- DN-54 derive elaboration + KC-3 kernel-growth guard + IL-grammar RHS check (the load-bearing safety)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:impl, area:language, priority:P2, status:done]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E7-1
     depends_on: [M-812]
     landed_basis: "status:done (core; consumption-model residual flagged) — DN-54 §4.1/§4.2/§4.6/§6/§7 landed (lwd kickoff, 2026-06-29): (1) RHS elaboration to L0 — `elab::elaborate_lower_rule` reads Env::lower_rules and lowers a rule RHS through the SAME path a hand-written nullary fn body takes (Empirical, via the §7 differential + M-210 check_core); (2) §4.1 IL-grammar RHS type-check (`check_lower_rule_rhs_type`, Declared); (3) §4.6 purity — `wild` refused in a rule RHS even in @std-sys (Declared); (4) §4.2 cross-rule acyclicity (`check_lower_rule_acyclicity`, iterative DFS; self+mutual cycles refused, Declared); (5) §6 KC-3 kernel-growth guard — GENUINELY SOUND (Proven-by-construction, narrow checked sense: the elaborator returns the closed `mycelium_core::Node` enum, so a rule cannot construct a variant outside the frozen L0 grammar; host-op growth closed by §4.6; non-vacuously confirmed by Node::is_aot_lowerable over the frozen node set). §7 harness `tests/lower_derive.rs` (5 tests: structural identity, run-value differential, KC-3-in-fragment, hygiene, round-trip) REPLACES the two no-L0 residual guard tests. Also fixed a latent bug: lowercase true/false are NOT L1 names (prelude is True/False) — the new §4.1 check correctly rejects them; fixtures corrected. Verified: cargo test -p mycelium-l1 671 passed/0 failed; fmt+clippy clean. FLAGGED RESIDUAL (architecturally significant, never-silent): DN-54 underdetermines the `derive`-SITE consumption/attachment model + parametric instantiation — landed the nullary/monomorphic elaboration, left the consumption model for maintainer ratification. DN-54 stays Accepted + append-only impl note (NOT Enacted — the consumption model is outstanding; house rule #3)."
@@ -8320,7 +8320,7 @@ issues:
   - id: M-808
     title: "M-808 -- branch-protection guard: enforce no-commit/push-to-protected-branch (rsm)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:tooling, area:tooling, priority:P1, status:done]
+    labels: [phase:5, type:infra, area:toolchain, priority:P1, status:done]
     depends_on: []
     doc_refs:
       - src:scripts/checks/branch-guard.sh
@@ -8383,7 +8383,7 @@ issues:
   - id: M-819
     title: "M-819 -- mycfmt --flatten: canonical ;-emission + single-line stream form (DN-57)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P3, status:done]
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:done]
     epic: E24-1
     depends_on: [M-818]
     doc_refs:
@@ -8396,7 +8396,7 @@ issues:
   - id: M-820
     title: "M-820 -- myc --stream: streaming-parse CLI entry over ;-delimited input (DN-57)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P3, status:done]
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:done]
     epic: E24-1
     depends_on: [M-818]
     doc_refs:
@@ -8759,7 +8759,7 @@ issues:
   - id: M-843
     title: "M-843 -- Composite-operation guarantee aggregation scope"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:research, area:core, priority:P3, status:needs-design]
+    labels: [phase:5, type:research, area:core-ir, priority:P3, status:needs-design]
     depends_on: []
     doc_refs:
       - corpus:RFC-0001
