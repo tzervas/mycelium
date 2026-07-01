@@ -2,7 +2,8 @@
 # Run machine-checkable proofs under proofs/. Skips when a prover toolchain is absent.
 # (Heavy on a cold build — compiling LiquidHaskell from scratch is slow; incremental rebuilds
 # are near-instant. The whole CI suite is manual-dispatch only, so this is acceptable there.)
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "proofs"
 rc=0

@@ -13,6 +13,19 @@
 //!   a process-spawn-bound compiled path (M-602/E1) — surfaced with that reason, not buried.
 //! - A backend that was only **skipped** (toolchain absent) yields no verdict — the harness could not
 //!   measure it here; that is neither a win nor a loss.
+//!
+//! ## Regression gates (M-859) — this-run-vs-committed-baseline
+//! The classifier above compares a backend **against the interpreter, same run**. The
+//! [`RegressionGate`]/[`regression_classify`] pair below is a *second*, orthogonal comparison: this
+//! run's `ns_per_call` for a (case, backend) **against a committed baseline JSON** captured on a
+//! specific host — the day-to-day "did we get faster or slower since the baseline was taken"
+//! question. Both comparisons coexist; neither replaces the other (the interpreter differential is
+//! still how a divergence/capability loss is caught; the regression gate is purely a speed trend).
+//!
+//! **Honesty:** a regression verdict is `Empirical`, exactly like a speed verdict — measured, with
+//! the [`RegressionGate::REGRESSION_BAND`] threshold reified (no black box), and it is **only ever
+//! compared against a baseline captured on the *same host tag*** — cross-host comparison is refused
+//! (a different host's numbers are not portable; see [`RegressionOutcome::HostMismatch`]).
 
 use crate::backend::{observable_eq, Backend, Outcome};
 use crate::timing::Timing;
@@ -243,214 +256,170 @@ pub fn classify(
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mycelium_core::{CoreValue, Meta, Payload, Provenance, Repr, Value};
+// ─────────────────────────────── Regression gates (M-859) ────────────────────────────────────────
 
-    fn byte(b: u8) -> CoreValue {
-        let bits: Vec<bool> = (0..8).map(|i| (b >> i) & 1 == 1).collect();
-        CoreValue::Repr(
-            Value::new(
-                Repr::Binary { width: 8 },
-                Payload::Bits(bits),
-                Meta::exact(Provenance::Root),
-            )
-            .expect("valid byte"),
-        )
+/// One committed baseline timing: a (case, backend) `ns_per_call` snapshot from a prior run, plus the
+/// host tag it was captured on (regression gates never compare across hosts — see
+/// [`RegressionOutcome::HostMismatch`]).
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct BaselineEntry {
+    /// The case id (matches [`crate::corpus::Case::id`]).
+    pub case_id: String,
+    /// The backend, by its stable label (matches [`Backend::label`] — kept as a string so the
+    /// baseline JSON is self-describing without re-deriving the `Backend` serde mapping).
+    pub backend: String,
+    /// The committed `ns_per_call` this entry was captured at.
+    pub ns_per_call: f64,
+}
+
+/// A committed regression baseline: a host tag (provenance — see [`crate::host_note_for_scaling`]'s
+/// sibling convention) plus every `(case, backend)` timing captured on that host at commit time.
+/// This is the artifact `regression_classify` compares a fresh run against — **not** a target to hit
+/// (VR-5): a REGRESSION row means "slower than this baseline was, on this host", nothing more.
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct RegressionBaseline {
+    /// The host tag this baseline was captured on (e.g. `"x86_64-linux, 4 hw threads"`) — the
+    /// portability guard: a baseline is only ever compared against a run tagged with the same host.
+    pub host_tag: String,
+    /// When the baseline was captured (a free-form provenance note — a date/commit, not parsed).
+    pub captured: String,
+    /// The trial count each entry's `ns_per_call` represents (documents the baseline's own honesty —
+    /// it was itself an `Empirical` measurement with this many iterations, matching
+    /// [`crate::timing::Timing::iters`]'s convention).
+    pub trial_iters: u32,
+    /// Every captured `(case, backend)` timing.
+    pub entries: Vec<BaselineEntry>,
+}
+
+impl RegressionBaseline {
+    /// Look up this baseline's `ns_per_call` for `(case_id, backend)`, if captured.
+    #[must_use]
+    pub fn lookup(&self, case_id: &str, backend: Backend) -> Option<f64> {
+        self.entries
+            .iter()
+            .find(|e| e.case_id == case_id && e.backend == backend.label())
+            .map(|e| e.ns_per_call)
     }
 
-    fn timing(ns: f64) -> Timing {
-        Timing {
-            ns_per_call: ns,
-            iters: 1000,
-            batches: 5,
-            ns_per_call_worst: ns,
+    /// Parse a baseline from its committed JSON text. Never-silent: a malformed baseline is an
+    /// explicit `Err`, never treated as "no baseline" (which would silently disable regression
+    /// gating).
+    ///
+    /// # Errors
+    /// The `serde_json` parse error, verbatim.
+    pub fn from_json(text: &str) -> Result<Self, serde_json::Error> {
+        serde_json::from_str(text)
+    }
+
+    /// Serialize this baseline to pretty JSON (the committed-artifact format).
+    ///
+    /// # Errors
+    /// A `serde_json` serialization error (only possible on an unrepresentable float, e.g. NaN/∞ —
+    /// never expected from a real measurement, but never silently substituted either).
+    pub fn to_json(&self) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(self)
+    }
+}
+
+/// The regression-gate half-width: a fresh `ns_per_call` within `[1/(1+REGRESSION_BAND),
+/// 1+REGRESSION_BAND]` of the baseline is a `Hold`; slower beyond that is a `Regression`, faster
+/// beyond that is an `Improvement`. Reified (no black box) — a wider/narrower band is a different,
+/// nameable study. Set wider than [`NEUTRAL_BAND`] (±10%) because host-to-host-run noise on a shared
+/// CI-like box compounds two `Empirical` measurements (the baseline capture and this run), not one.
+pub const REGRESSION_BAND: f64 = 0.20;
+
+/// The regression-gate verdict for one `(case, backend)` pair — this run vs the committed baseline.
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum RegressionOutcome {
+    /// Faster than the baseline beyond [`REGRESSION_BAND`] — a measured improvement.
+    Improvement {
+        /// `baseline_ns / this_run_ns` (`> 1`).
+        ratio_x1000: u64,
+    },
+    /// Within [`REGRESSION_BAND`] of the baseline — holding steady.
+    Hold {
+        /// `baseline_ns / this_run_ns`.
+        ratio_x1000: u64,
+    },
+    /// Slower than the baseline beyond [`REGRESSION_BAND`] — a measured regression, flagged.
+    Regression {
+        /// `baseline_ns / this_run_ns` (`< 1`).
+        ratio_x1000: u64,
+    },
+    /// This run has no timing to compare (skip / capability loss / error / untimed) — not gated.
+    NotTimed,
+    /// The baseline has no entry for this `(case, backend)` — nothing to compare against yet (e.g. a
+    /// newly added corpus case); never fabricated as a `Hold`.
+    NoBaseline,
+    /// The baseline's host tag does not match this run's host tag — refused rather than silently
+    /// compared (a different host's numbers are not portable, VR-5).
+    HostMismatch {
+        /// The baseline's recorded host tag.
+        baseline_host: String,
+        /// This run's host tag.
+        this_host: String,
+    },
+}
+
+impl RegressionOutcome {
+    /// A short status word for the report table.
+    #[must_use]
+    pub fn status(&self) -> &'static str {
+        match self {
+            RegressionOutcome::Improvement { .. } => "WIN (vs baseline)",
+            RegressionOutcome::Hold { .. } => "hold",
+            RegressionOutcome::Regression { .. } => "REGRESSION",
+            RegressionOutcome::NotTimed => "not-timed",
+            RegressionOutcome::NoBaseline => "no-baseline",
+            RegressionOutcome::HostMismatch { .. } => "host-mismatch",
         }
     }
 
-    #[test]
-    fn equal_values_and_faster_backend_is_a_speed_win() {
-        let interp = Outcome::value_outcome(byte(0xAB));
-        let other = Outcome::value_outcome(byte(0xAB));
-        // interp 100ns, backend 25ns => 4x faster => WIN.
-        let v = classify(
-            Backend::Jit,
-            (&interp, Some(timing(100.0))),
-            (&other, Some(timing(25.0))),
-        );
-        assert!(v.is_win(), "expected a speed win, got {v:?}");
-        assert_eq!(v.status(), "WIN");
-        assert_eq!(v.guarantee_tag(), "Empirical");
-        if let Verdict::SpeedWin { ratio_x1000 } = v {
-            assert_eq!(ratio_x1000, 4000, "4.0x => 4000 per-mille");
-        } else {
-            panic!("not a SpeedWin");
-        }
+    /// Whether this is a flagged regression (the row the "regression gate" name refers to).
+    #[must_use]
+    pub fn is_regression(&self) -> bool {
+        matches!(self, RegressionOutcome::Regression { .. })
     }
+}
 
-    #[test]
-    fn equal_values_and_slower_spawn_bound_backend_is_a_speed_loss_with_reason() {
-        let interp = Outcome::value_outcome(byte(0xAB));
-        let other = Outcome::value_outcome(byte(0xAB));
-        // interp 100ns, direct-llvm 100000ns => far slower => LOSS, with the spawn-bound reason.
-        let v = classify(
-            Backend::DirectLlvm,
-            (&interp, Some(timing(100.0))),
-            (&other, Some(timing(100_000.0))),
-        );
-        assert!(v.is_loss(), "expected a loss, got {v:?}");
-        match v {
-            Verdict::SpeedLoss { reason, .. } => {
-                assert!(
-                    reason.contains("process-spawn-bound"),
-                    "the spawn-bound reason must be surfaced honestly: {reason}"
-                );
-            }
-            _ => panic!("expected SpeedLoss"),
-        }
+/// Classify one `(case, backend)` pair's fresh timing against the committed `baseline`, gated on the
+/// host tag matching. `this_host` is the running host's tag (the caller's provenance note, e.g.
+/// [`crate::host_note_for_scaling`]); `this_ns` is `None` when this run did not time the pair (a
+/// skip / capability loss / error) — recorded as [`RegressionOutcome::NotTimed`], never compared as
+/// if it were zero.
+#[must_use]
+pub fn regression_classify(
+    baseline: &RegressionBaseline,
+    this_host: &str,
+    case_id: &str,
+    backend: Backend,
+    this_ns: Option<f64>,
+) -> RegressionOutcome {
+    if baseline.host_tag != this_host {
+        return RegressionOutcome::HostMismatch {
+            baseline_host: baseline.host_tag.clone(),
+            this_host: this_host.to_string(),
+        };
     }
-
-    #[test]
-    fn provenance_differences_are_not_correctness_losses() {
-        use crate::backend::observable_eq;
-        use mycelium_core::{ContentHash, Provenance};
-        // The compiled backends read a value back and stamp `Provenance::Root`; the interpreter
-        // records a `Derived` chain. Same repr+payload+guarantee ⇒ observationally equal ⇒ NOT a
-        // correctness loss (the false positive this guards against).
-        let payload = Payload::Bits((0..8).map(|i| (0xAB_u8 >> i) & 1 == 1).collect());
-        let root = CoreValue::Repr(
-            Value::new(
-                Repr::Binary { width: 8 },
-                payload.clone(),
-                Meta::exact(Provenance::Root),
-            )
-            .unwrap(),
-        );
-        let derived = CoreValue::Repr(
-            Value::new(
-                Repr::Binary { width: 8 },
-                payload,
-                Meta::exact(Provenance::Derived {
-                    op: ContentHash::parse("blake3:abc123").unwrap(),
-                    inputs: vec![ContentHash::parse("blake3:def456").unwrap()],
-                }),
-            )
-            .unwrap(),
-        );
-        assert!(
-            observable_eq(&root, &derived),
-            "values differing only in provenance must be observationally equal (not a loss)"
-        );
-        // And the classifier must treat them as equal — a speed verdict, never a correctness loss.
-        let v = classify(
-            Backend::DirectLlvm,
-            (&Outcome::value_outcome(derived), Some(timing(100.0))),
-            (&Outcome::value_outcome(root), Some(timing(100.0))),
-        );
-        assert!(
-            !matches!(v, Verdict::CorrectnessLoss { .. }),
-            "a provenance-only difference must NOT be a correctness loss, got {v:?}"
-        );
+    let Some(this_ns) = this_ns else {
+        return RegressionOutcome::NotTimed;
+    };
+    let Some(baseline_ns) = baseline.lookup(case_id, backend) else {
+        return RegressionOutcome::NoBaseline;
+    };
+    if this_ns <= 0.0 || baseline_ns <= 0.0 {
+        // A non-positive timing is a measurement anomaly, never divided against — treated as
+        // not-timed rather than fabricating an infinite/NaN ratio (G2).
+        return RegressionOutcome::NotTimed;
     }
-
-    #[test]
-    fn diverging_values_is_a_correctness_loss_even_if_faster() {
-        let interp = Outcome::value_outcome(byte(0xAB));
-        let other = Outcome::value_outcome(byte(0xFF)); // wrong answer
-                                                        // Backend is 10x faster, but the answer diverges — still a LOSS (correctness).
-        let v = classify(
-            Backend::Jit,
-            (&interp, Some(timing(100.0))),
-            (&other, Some(timing(10.0))),
-        );
-        assert!(v.is_loss());
-        assert!(!v.is_win(), "a wrong-but-fast answer is never a win");
-        assert!(matches!(v, Verdict::CorrectnessLoss { .. }));
-        assert_eq!(v.status(), "LOSS (correctness)");
-    }
-
-    #[test]
-    fn unlowerable_node_is_a_capability_loss() {
-        let interp = Outcome::value_outcome(byte(0xAB));
-        let other = Outcome::Unlowerable("unsupported node for the AOT subset: Fix".into());
-        let v = classify(
-            Backend::DirectLlvm,
-            (&interp, Some(timing(100.0))),
-            (&other, None),
-        );
-        assert!(v.is_loss());
-        assert!(matches!(v, Verdict::CapabilityLoss { .. }));
-        assert_eq!(v.guarantee_tag(), "Declared");
-        if let Verdict::CapabilityLoss { reason } = v {
-            assert!(
-                reason.contains("Fix"),
-                "the unlowerable reason must be kept: {reason}"
-            );
-        }
-    }
-
-    #[test]
-    fn toolchain_absent_is_a_skip_not_a_loss() {
-        let interp = Outcome::value_outcome(byte(0xAB));
-        let other = Outcome::Skipped("native toolchain absent (clang)".into());
-        let v = classify(
-            Backend::DirectLlvm,
-            (&interp, Some(timing(100.0))),
-            (&other, None),
-        );
-        assert!(!v.is_loss(), "a skip is NOT a loss");
-        assert!(!v.is_win());
-        assert!(matches!(v, Verdict::Skipped { .. }));
-        assert_eq!(v.status(), "skipped");
-    }
-
-    #[test]
-    fn runtime_error_is_recorded_not_a_loss_category() {
-        let interp = Outcome::value_outcome(byte(0xAB));
-        let other = Outcome::Error("trit arithmetic overflowed fixed width".into());
-        let v = classify(
-            Backend::DirectLlvm,
-            (&interp, Some(timing(100.0))),
-            (&other, None),
-        );
-        assert!(matches!(v, Verdict::RuntimeError { .. }));
-        assert!(!v.is_loss());
-    }
-
-    #[test]
-    fn neutral_band_classifies_near_parity_as_neutral() {
-        let interp = Outcome::value_outcome(byte(0xAB));
-        let other = Outcome::value_outcome(byte(0xAB));
-        // 100ns vs 105ns => within +-10% => Neutral.
-        let v = classify(
-            Backend::AotEnv,
-            (&interp, Some(timing(100.0))),
-            (&other, Some(timing(105.0))),
-        );
-        assert!(matches!(v, Verdict::SpeedNeutral { .. }), "got {v:?}");
-        assert!(!v.is_loss() && !v.is_win());
-    }
-
-    #[test]
-    fn baseline_failure_is_flagged_loudly() {
-        let interp = Outcome::Error("interpreter blew up".into());
-        let other = Outcome::value_outcome(byte(0xAB));
-        let v = classify(
-            Backend::AotEnv,
-            (&interp, None),
-            (&other, Some(timing(10.0))),
-        );
-        assert!(matches!(v, Verdict::BaselineFailed { .. }));
-    }
-
-    #[test]
-    fn missing_timings_with_equal_values_is_neutral_not_a_false_win() {
-        // If we couldn't time one side (e.g. a one-shot run), equal values => Neutral, never a
-        // fabricated speed verdict.
-        let interp = Outcome::value_outcome(byte(0xAB));
-        let other = Outcome::value_outcome(byte(0xAB));
-        let v = classify(Backend::AotEnv, (&interp, None), (&other, None));
-        assert!(matches!(v, Verdict::SpeedNeutral { ratio_x1000: 1000 }));
+    let r = baseline_ns / this_ns; // > 1 means this run is FASTER than the baseline.
+    let x1000 = ratio_x1000(baseline_ns, this_ns);
+    if r > 1.0 + REGRESSION_BAND {
+        RegressionOutcome::Improvement { ratio_x1000: x1000 }
+    } else if r < 1.0 / (1.0 + REGRESSION_BAND) {
+        RegressionOutcome::Regression { ratio_x1000: x1000 }
+    } else {
+        RegressionOutcome::Hold { ratio_x1000: x1000 }
     }
 }

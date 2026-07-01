@@ -3,12 +3,18 @@
 
 mod accel;
 mod bitnet;
+mod dense_codegen;
 mod dialect;
 mod inject_tests;
 mod jit;
+mod llvm;
 mod mode;
+mod trampoline;
 // `dialect::native` only compiles under `mlir-dialect`, so its white-box tests are gated to match.
 #[cfg(feature = "mlir-dialect")]
 mod native;
 mod passes;
 mod rc_plan_tests;
+mod swap_codegen;
+mod vsa_codegen;
+mod vsa_jit;

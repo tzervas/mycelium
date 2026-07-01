@@ -13,7 +13,11 @@ use std::fmt::Write as _;
 use crate::backend::Backend;
 use crate::llm::LlmReport;
 use crate::measure::RunRecord;
-use crate::verdict::{Verdict, NEUTRAL_BAND};
+use crate::scaling::{ScalingOutcome, ScalingRun};
+use crate::verdict::{
+    regression_classify, RegressionBaseline, RegressionOutcome, Verdict, NEUTRAL_BAND,
+    REGRESSION_BAND,
+};
 
 /// Everything the report needs: the run record, optional ingested LLM-harness report, and run
 /// metadata. Serializable verbatim to the JSON projection.
@@ -35,6 +39,44 @@ pub struct Report {
     pub run: RunRecord,
     /// The ingested LLM-harness section (provenance + per-validation rows), if a report was found.
     pub llm: Option<LlmSection>,
+    /// The multicore scaling run (M-859), if one was taken alongside the single-core measurements.
+    /// `None` for a single-core-only report (e.g. the fast pre-commit / test-only reports) — the
+    /// scaling section is additive, never required for the single-core WIN/LOSS table to be valid.
+    pub scaling: Option<ScalingRun>,
+    /// The regression-gate section (M-859): this run's `ns_per_call` vs the committed baseline,
+    /// `None` when no baseline was supplied (regression gating is opt-in per invocation).
+    pub regression: Option<RegressionSection>,
+}
+
+/// The regression-gate section: the committed baseline this run was compared against, plus every
+/// `(case, backend)` outcome. Built by [`Report::with_regression_gate`] — never fabricated when no
+/// baseline is on hand (the `regression` field on [`Report`] just stays `None`, G2).
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct RegressionSection {
+    /// The baseline's own host tag + capture provenance (carried through so the report is
+    /// self-contained — a reader does not need the baseline file to see what was compared).
+    pub baseline_host_tag: String,
+    /// The baseline's capture provenance note.
+    pub baseline_captured: String,
+    /// The regression-gate band half-width used (reified — no black box).
+    pub regression_band: f64,
+    /// Every `(case, backend)` regression-gate row.
+    pub rows: Vec<RegressionRow>,
+}
+
+/// One `(case, backend)` regression-gate row.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct RegressionRow {
+    /// The case id.
+    pub case_id: String,
+    /// The backend's stable label.
+    pub backend: &'static str,
+    /// This run's `ns_per_call`, if timed.
+    pub this_ns: Option<f64>,
+    /// The baseline's `ns_per_call`, if this pair was in the baseline.
+    pub baseline_ns: Option<f64>,
+    /// The classified outcome.
+    pub outcome: RegressionOutcome,
 }
 
 /// The honesty posture block stamped into the report.
@@ -148,6 +190,48 @@ pub struct LossRollup {
 }
 
 impl Report {
+    /// Build the [`RegressionSection`] for this run against `baseline`, and attach it (`self.regression
+    /// = Some(...)`). Every `(case, backend)` pair in `self.run` gets a row — including pairs the
+    /// baseline has no entry for ([`RegressionOutcome::NoBaseline`]) and pairs this run did not time
+    /// ([`RegressionOutcome::NotTimed`]) — never a silently-dropped row (G2). Consumes and returns
+    /// `self` for convenient chaining at the call site (`bin/bench.rs`).
+    /// **Host tag note:** the comparison uses the caller-supplied `this_host_tag` — the *canonical,
+    /// bare* host tag ([`crate::host_tag`], e.g. `"x86_64-linux, 4 hw threads"`), **not**
+    /// [`Report::host_note`] (which wraps the same information in report-header prose, `"host: ...
+    /// (provenance only)"`). Passing the prose form here would make every gate row a spurious
+    /// [`RegressionOutcome::HostMismatch`] even on the exact host the baseline was captured on — a
+    /// real bug caught while dogfooding this module (M-859) before this doc note existed.
+    #[must_use]
+    pub fn with_regression_gate(
+        mut self,
+        this_host_tag: &str,
+        baseline: &RegressionBaseline,
+    ) -> Self {
+        let mut rows = Vec::new();
+        for case in &self.run.cases {
+            for b in &case.backends {
+                let this_ns = b.timing.map(|t| t.ns_per_call);
+                let baseline_ns = baseline.lookup(&case.id, b.backend);
+                let outcome =
+                    regression_classify(baseline, this_host_tag, &case.id, b.backend, this_ns);
+                rows.push(RegressionRow {
+                    case_id: case.id.clone(),
+                    backend: b.backend.label(),
+                    this_ns,
+                    baseline_ns,
+                    outcome,
+                });
+            }
+        }
+        self.regression = Some(RegressionSection {
+            baseline_host_tag: baseline.host_tag.clone(),
+            baseline_captured: baseline.captured.clone(),
+            regression_band: REGRESSION_BAND,
+            rows,
+        });
+        self
+    }
+
     /// Roll up every loss across the run for the "where we're losing" section.
     #[must_use]
     pub fn loss_rollup(&self) -> LossRollup {
@@ -216,6 +300,8 @@ impl Report {
         self.write_winloss_table(&mut s);
         self.write_per_backend_numbers(&mut s);
         self.write_losses(&mut s);
+        self.write_scaling(&mut s);
+        self.write_regression(&mut s);
         self.write_llm(&mut s);
         // Normalize the trailer to exactly one newline so the emitted markdown is lint-clean
         // (markdownlint MD012 — no multiple consecutive blank lines at EOF) regardless of which
@@ -439,6 +525,145 @@ impl Report {
         }
     }
 
+    fn write_scaling(&self, s: &mut String) {
+        let _ = writeln!(s, "## Multicore scaling (M-859)\n");
+        let Some(run) = &self.scaling else {
+            let _ = writeln!(
+                s,
+                "No scaling run attached to this report (scaling is opt-in per invocation — the \
+                 single-core WIN/LOSS numbers above stand on their own). This section is empty, not \
+                 synthesized.\n"
+            );
+            return;
+        };
+        let _ = writeln!(
+            s,
+            "> {} — worker counts exercised: {:?}. Speedup is `t(1 worker) / t(N workers)` per job \
+             (min-of-batches); *ideal* is linear (`speedup == N`). Every figure is **Empirical** \
+             (measured, trial-counted — VR-5); no scaling target is pre-written. The **Amdahl serial \
+             fraction** column is a coarse two-point fit (1-worker and max-worker samples only), also \
+             **Empirical** — a derived statistic, not a proof.\n",
+            run.host_note, run.worker_counts,
+        );
+        let _ = writeln!(
+            s,
+            "| case | backend | spawn-bound | speedup @ max workers | ideal (linear) | Amdahl serial \
+             fraction | note |"
+        );
+        let _ = writeln!(s, "|---|---|---|---|---|---|---|");
+        for point in &run.points {
+            let spawn_bound = if point.backend.is_process_spawn_bound() {
+                "yes"
+            } else {
+                "no"
+            };
+            let (speedup_cell, ideal_cell, amdahl_cell, note) = match &point.outcome {
+                ScalingOutcome::Measured(_) => {
+                    let sp = point.speedups();
+                    let max = sp
+                        .as_ref()
+                        .and_then(|v| v.iter().max_by_key(|(w, _, _)| *w));
+                    let (speedup, ideal) = max
+                        .map_or(("—".to_string(), "—".to_string()), |(_, s, i)| {
+                            (format!("{s:.2}x"), format!("{i:.2}x"))
+                        });
+                    let amdahl = point
+                        .amdahl_serial_fraction()
+                        .map_or_else(|| "—".to_string(), |f| format!("{f:.3}"));
+                    (
+                        speedup,
+                        ideal,
+                        amdahl,
+                        if point.backend.is_process_spawn_bound() {
+                            "spawn-dominated: contention here is mostly OS process creation, not \
+                             kernel compute (M-602/E1 carried into the scaling curve)"
+                                .to_string()
+                        } else {
+                            String::new()
+                        },
+                    )
+                }
+                ScalingOutcome::Skipped(reason) => (
+                    "—".to_string(),
+                    "—".to_string(),
+                    "—".to_string(),
+                    reason.clone(),
+                ),
+                ScalingOutcome::Unmeasurable(reason) => (
+                    "—".to_string(),
+                    "—".to_string(),
+                    "—".to_string(),
+                    reason.clone(),
+                ),
+            };
+            let _ = writeln!(
+                s,
+                "| `{}` | `{}` | {} | {} | {} | {} | {} |",
+                point.case_id,
+                point.backend.label(),
+                spawn_bound,
+                speedup_cell,
+                ideal_cell,
+                amdahl_cell,
+                md_escape(&note),
+            );
+        }
+        let _ = writeln!(s);
+    }
+
+    fn write_regression(&self, s: &mut String) {
+        let _ = writeln!(s, "## Regression gate vs committed baseline (M-859)\n");
+        let Some(sec) = &self.regression else {
+            let _ = writeln!(
+                s,
+                "No baseline supplied for this report — the regression gate is opt-in \
+                 (`Report::with_regression_gate`). This section is empty, not synthesized.\n"
+            );
+            return;
+        };
+        let _ = writeln!(
+            s,
+            "> Baseline captured on `{}` ({}). Band: ±{:.0}% (wider than the single-run neutral band \
+             — two independent Empirical measurements compound noise). `REGRESSION` rows are the \
+             ones to look at; `host-mismatch` means this run's host does not match the baseline's, so \
+             the comparison was refused rather than silently taken (VR-5: a different host's numbers \
+             are not portable).\n",
+            sec.baseline_host_tag,
+            sec.baseline_captured,
+            sec.regression_band * 100.0,
+        );
+        let regressions: Vec<_> = sec
+            .rows
+            .iter()
+            .filter(|r| r.outcome.is_regression())
+            .collect();
+        let _ = writeln!(
+            s,
+            "**{} regression(s)** flagged out of {} gated row(s).\n",
+            regressions.len(),
+            sec.rows.len()
+        );
+        let _ = writeln!(
+            s,
+            "| case | backend | baseline ns | this run ns | verdict |"
+        );
+        let _ = writeln!(s, "|---|---|---|---|---|");
+        for row in &sec.rows {
+            let baseline_cell = row.baseline_ns.map_or_else(|| "—".to_string(), fmt_ns);
+            let this_cell = row.this_ns.map_or_else(|| "—".to_string(), fmt_ns);
+            let _ = writeln!(
+                s,
+                "| `{}` | `{}` | {} | {} | {} |",
+                row.case_id,
+                row.backend,
+                baseline_cell,
+                this_cell,
+                row.outcome.status(),
+            );
+        }
+        let _ = writeln!(s);
+    }
+
     fn write_llm(&self, s: &mut String) {
         let _ = writeln!(s, "## LLM-harness leverage (KC-2 / SC-5b)\n");
         match &self.llm {
@@ -543,8 +768,11 @@ fn fmt_ratio(x1000: u64) -> String {
     format!("{r:.2}x")
 }
 
-/// Escape `|` and newlines so a reason cannot break a markdown table row.
-fn md_escape(s: &str) -> String {
+/// Escape `|` and newlines so a reason cannot break a markdown table row. `pub(crate)` (not
+/// private) so the in-crate `src/tests/report.rs` white-box test module can exercise it directly
+/// (the CLAUDE.md test-layout convention: tests live in a sibling module, not `mod tests` nested
+/// inside this file, so plain private visibility would not reach them).
+pub(crate) fn md_escape(s: &str) -> String {
     s.replace('|', "\\|").replace(['\n', '\r'], " ")
 }
 
@@ -552,115 +780,4 @@ fn md_escape(s: &str) -> String {
 #[must_use]
 pub fn neutral_band() -> f64 {
     NEUTRAL_BAND
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::backend::Engines;
-    use crate::corpus::corpus;
-    use crate::measure::run_corpus;
-
-    /// Build a small real report by measuring two bit cases (offline, deterministic enough for the
-    /// emission tests — we assert structure, never specific timings).
-    fn small_report() -> Report {
-        let eng = Engines::default();
-        let cases: Vec<_> = corpus()
-            .into_iter()
-            .filter(|c| matches!(c.id, "bit-xor-not" | "rec-self"))
-            .collect();
-        let run = run_corpus(&cases, &eng);
-        Report {
-            tool: "mycelium-bench-test",
-            profile: "test",
-            mlir_dialect_feature: cfg!(feature = "mlir-dialect"),
-            host_note: "unit-test".into(),
-            honesty: Honesty::default(),
-            neutral_band: NEUTRAL_BAND,
-            run,
-            llm: None,
-        }
-    }
-
-    #[test]
-    fn json_projection_is_valid_and_roundtrips_as_value() {
-        let r = small_report();
-        let json = r.to_json().expect("serializes");
-        // It must be valid JSON.
-        let v: serde_json::Value = serde_json::from_str(&json).expect("valid json");
-        assert_eq!(v["tool"], "mycelium-bench-test");
-        assert!(v["run"]["cases"].is_array());
-        // Deterministic: serializing twice gives identical bytes.
-        assert_eq!(json, r.to_json().unwrap());
-    }
-
-    #[test]
-    fn markdown_has_all_required_sections() {
-        let r = small_report();
-        let md = r.to_markdown();
-        assert!(md.contains("# Mycelium honest benchmark report"));
-        assert!(md.contains("## WIN / LOSS / regression table"));
-        assert!(md.contains("## Per-case timings"));
-        assert!(md.contains("## Where we're losing"));
-        assert!(md.contains("## LLM-harness leverage"));
-        // The honesty posture + VR-5 must be stated.
-        assert!(md.contains("VR-5"));
-        assert!(md.contains("Empirical"));
-        // The process-spawn caveat must be present (it is the headline honest finding).
-        assert!(md.contains("process-spawn-bound"));
-    }
-
-    #[test]
-    fn the_recursion_case_surfaces_a_capability_loss_in_the_losses_section() {
-        // rec-self cannot be lowered by jit/direct-llvm — the "where we're losing" section MUST name
-        // it as a capability loss (unless the run skipped for toolchain absence, also acceptable).
-        let r = small_report();
-        let roll = r.loss_rollup();
-        let md = r.to_markdown();
-        // Either a capability loss is recorded, or the compiled paths were skipped (no toolchain).
-        let tallies = r.tallies();
-        let compiled_accounted = !roll.capability.is_empty() || tallies.skips > 0;
-        assert!(
-            compiled_accounted,
-            "the recursion case must produce a capability loss OR a skip for the compiled paths"
-        );
-        if !roll.capability.is_empty() {
-            assert!(
-                md.contains("Capability losses"),
-                "a recorded capability loss must appear in the losses section"
-            );
-        }
-    }
-
-    #[test]
-    fn md_escape_protects_table_rows() {
-        assert_eq!(md_escape("a | b\nc"), "a \\| b c");
-    }
-
-    #[test]
-    fn llm_section_labels_synthetic_when_present() {
-        use crate::llm::LlmReport;
-        let sample = r#"{
-          "harness":"mycelium-llm-validation","version":"0.1.0","run_id":"X","mode":"mock",
-          "honesty_posture":{"never_silent":true,"guarantee_lattice":["Exact"],
-            "model_allowed_tags":["Declared"],"vr5_rule":"r"},
-          "summary":{"overall":"MOCK","total":1,"pass":0,"mock_pass":1,"skip":0,"fail":0,
-            "exit_code":0,"mode":"mock","model":null},
-          "results":[{"id":"V-01","status":"mock-PASS","guarantee_tag":"Declared",
-            "message":"m","detail":{"mode":"mock"}}]
-        }"#;
-        let rep = LlmReport::from_json(sample).unwrap();
-        let mut r = small_report();
-        r.llm = Some(LlmSection::from_report(
-            &rep,
-            "sample.json".into(),
-            rep.is_synthetic(),
-        ));
-        let md = r.to_markdown();
-        assert!(
-            md.contains("SYNTHETIC sample"),
-            "synthetic must be labeled in the LLM section"
-        );
-        assert!(md.contains("V-01"));
-    }
 }

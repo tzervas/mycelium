@@ -3,7 +3,8 @@
 # Convention (per M-010): docs/spec/schemas/<name>.schema.json with examples under
 #   docs/spec/schemas/examples/<name>/valid/*.json   (must validate)
 #   docs/spec/schemas/examples/<name>/invalid/*.json (must NOT validate)
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "json-schema"
 

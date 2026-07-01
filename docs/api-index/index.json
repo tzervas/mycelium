@@ -18,7 +18,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/corpus.rs",
-      "line": 55,
+      "line": 58,
       "summary": "One corpus entry: a stable id, the v0-calculus source, its fragment, and a one-line note on what",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -51,7 +51,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/corpus.rs",
-      "line": 28,
+      "line": 30,
       "summary": "Which evaluation-complete fragment a case lives in — the basis for whether a compiled backend can",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -73,7 +73,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 42,
+      "line": 84,
       "summary": "The honesty posture block stamped into the report.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -95,7 +95,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 64,
+      "line": 106,
       "summary": "The LLM-harness section of the unified report.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -128,7 +128,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 21,
+      "line": 25,
       "summary": "Everything the report needs: the run record, optional ingested LLM-harness report, and run",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -150,7 +150,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/verdict.rs",
-      "line": 25,
+      "line": 38,
       "summary": "The speed comparison band of a backend vs the interpreter, once both produced an *equal* value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -161,7 +161,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/verdict.rs",
-      "line": 37,
+      "line": 50,
       "summary": "The full classification of one (backend, case) pair vs the trusted interpreter baseline.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -370,7 +370,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/verdict.rs",
-      "line": 160,
+      "line": 173,
       "summary": "Classify one (backend, case) pair.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -392,7 +392,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/corpus.rs",
-      "line": 104,
+      "line": 107,
       "summary": "The full corpus, in a stable order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -403,7 +403,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::corpus::Case",
       "file": "crates/mycelium-bench/src/corpus.rs",
-      "line": 94,
+      "line": 97,
       "summary": "Parse, type-check and elaborate this case's source to a closed Core IR [`Node`] (the input",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -414,7 +414,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::corpus",
       "file": "crates/mycelium-bench/src/corpus.rs",
-      "line": 69,
+      "line": 72,
       "summary": "An error from turning a corpus source into a Core IR term — kept explicit (never a silent skip)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -425,7 +425,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::corpus::Fragment",
       "file": "crates/mycelium-bench/src/corpus.rs",
-      "line": 42,
+      "line": 45,
       "summary": "A short human label for the report.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -700,7 +700,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::report::LlmSection",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 129,
+      "line": 171,
       "summary": "Build the section from the schema-agnostic [`crate::llm::ParsedLlmSection`] produced by",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -711,7 +711,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::report::LlmSection",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 97,
+      "line": 139,
       "summary": "Build the section from a parsed report + its source path / synthetic flag.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -722,7 +722,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::report",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 77,
+      "line": 119,
       "summary": "One per-validation row in the LLM section.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -733,7 +733,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::report",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 141,
+      "line": 183,
       "summary": "A roll-up of losses for the \"where we're losing\" section.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -744,7 +744,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::report::Report",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 153,
+      "line": 237,
       "summary": "Roll up every loss across the run for the \"where we're losing\" section.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -755,7 +755,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::report::Report",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 186,
+      "line": 270,
       "summary": "Count (wins, speed-losses, correctness-losses, capability-losses, skips) across the run.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -766,7 +766,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::report::Report",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 206,
+      "line": 290,
       "summary": "The machine-readable JSON projection (pretty-printed, deterministic).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -777,7 +777,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::report::Report",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 213,
+      "line": 297,
       "summary": "The human-readable markdown projection (deterministic — same run ⇒ same bytes, modulo the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -788,7 +788,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::report",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 491,
+      "line": 716,
       "summary": "Loss/win tallies across a run.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -799,7 +799,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::report",
       "file": "crates/mycelium-bench/src/report.rs",
-      "line": 553,
+      "line": 781,
       "summary": "The neutral-band constant, re-exported for the binary to stamp into the report metadata.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -821,7 +821,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/lib.rs",
-      "line": 49,
+      "line": 50,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -898,7 +898,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench",
       "file": "crates/mycelium-bench/src/lib.rs",
-      "line": 50,
+      "line": 51,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -909,7 +909,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::verdict",
       "file": "crates/mycelium-bench/src/verdict.rs",
-      "line": 138,
+      "line": 151,
       "summary": "The neutral band half-width: a backend within `[1/(1+NEUTRAL), 1+NEUTRAL]` of the interpreter's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -920,7 +920,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::verdict::Verdict",
       "file": "crates/mycelium-bench/src/verdict.rs",
-      "line": 121,
+      "line": 134,
       "summary": "The honest guarantee tag for this verdict.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -931,7 +931,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::verdict::Verdict",
       "file": "crates/mycelium-bench/src/verdict.rs",
-      "line": 103,
+      "line": 116,
       "summary": "Whether this verdict counts as a LOSS (any of the three loss kinds) — for the \"where we're",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -942,7 +942,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::verdict::Verdict",
       "file": "crates/mycelium-bench/src/verdict.rs",
-      "line": 114,
+      "line": 127,
       "summary": "Whether this verdict counts as a WIN (a measured speed win).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -953,7 +953,7 @@
       "crate": "mycelium-bench",
       "module": "mycelium_bench::verdict::Verdict",
       "file": "crates/mycelium-bench/src/verdict.rs",
-      "line": 86,
+      "line": 99,
       "summary": "A short status word for the report table.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6464,7 +6464,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 889,
+      "line": 920,
       "summary": "The checked environments of a whole **phylum** (M-662): one [`Env`] per nodule, paired with the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7014,7 +7014,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1471,
+      "line": 1502,
       "summary": "Like [`check_nodule`], but also returns the **fully-resolved longhand twin** of the program",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7025,7 +7025,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 981,
+      "line": 1012,
       "summary": "Check a whole nodule: build the registry (prelude + declarations), then type every function",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7036,7 +7036,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1412,
+      "line": 1443,
       "summary": "Like [`check_nodule`] but with an explicit `matured_scope` flag (RFC-0017 §4.2): when `true`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7047,7 +7047,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 999,
+      "line": 1030,
       "summary": "Check a whole **phylum** (M-662; RFC-0006 §4.3): build the phylum-wide `pub` **export table** and",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7058,7 +7058,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 1009,
+      "line": 1040,
       "summary": "Like [`check_phylum`] but with the explicit `matured_scope` gate applied to **every** nodule",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7201,7 +7201,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::PhylumEnv",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 907,
+      "line": 938,
       "summary": "The checked [`Env`] of the nodule whose path equals `path`, if present.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7212,7 +7212,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty::PhylumEnv",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 898,
+      "line": 929,
       "summary": "The single nodule's [`Env`] when this is a phylum-of-one, else `None`.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7245,7 +7245,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 5364,
+      "line": 5395,
       "summary": "The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7256,7 +7256,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::checkty",
       "file": "crates/mycelium-l1/src/checkty.rs",
-      "line": 5345,
+      "line": 5376,
       "summary": "The builtin prim signature table `Π` (RFC-0007 §4.4 T-Op), width-polymorphic.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10270,7 +10270,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 60,
+      "line": 67,
       "summary": "An explicit failure of the direct-LLVM AOT path.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10358,7 +10358,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2410,
+      "line": 2646,
       "summary": "A compiled native artifact for a bit/trit-subset program: the executable on disk (in a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11029,7 +11029,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/dialect/native.rs",
-      "line": 920,
+      "line": 1691,
       "summary": "Compile `node` through the MLIR pipeline to a native executable (MLIR → LLVM IR → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11040,7 +11040,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/dialect/native.rs",
-      "line": 950,
+      "line": 1721,
       "summary": "Compile + run `node` through the MLIR pipeline and read the result back.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11106,7 +11106,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 326,
+      "line": 343,
       "summary": "Compile the bit/trit-subset program to a shared object without calling it.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11238,7 +11238,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 59,
+      "line": 62,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11315,7 +11315,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 1924,
+      "line": 2176,
       "summary": "Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11348,7 +11348,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 60,
+      "line": 63,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11447,7 +11447,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 61,
+      "line": 64,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11469,7 +11469,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/jit.rs",
-      "line": 350,
+      "line": 367,
       "summary": "Compile the program to a shared object and call it once, in-process.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11513,7 +11513,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 62,
+      "line": 65,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11524,7 +11524,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm::CompiledArtifact",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2420,
+      "line": 2656,
       "summary": "Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11535,7 +11535,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2454,
+      "line": 2690,
       "summary": "Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11546,7 +11546,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2480,
+      "line": 2743,
       "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11557,7 +11557,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 63,
+      "line": 66,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11612,7 +11612,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 64,
+      "line": 67,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11656,7 +11656,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 65,
+      "line": 68,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11986,7 +11986,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 66,
+      "line": 69,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12107,7 +12107,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 67,
+      "line": 70,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12118,7 +12118,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 68,
+      "line": 71,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12129,7 +12129,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 69,
+      "line": 72,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12217,7 +12217,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/lib.rs",
-      "line": 70,
+      "line": 75,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19422,7 +19422,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler",
       "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 40,
+      "line": 59,
       "summary": "Guarantee strength for the demand-signalled backpressure bound.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19433,7 +19433,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler",
       "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 45,
+      "line": 65,
       "summary": "Guarantee strength for liveness (every submitted job runs exactly once).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19444,7 +19444,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler",
       "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 34,
+      "line": 52,
       "summary": "Guarantee strength for the scheduler's RT2 sequentialization differential.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19455,8 +19455,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler",
       "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 82,
-      "summary": "A real OS-thread scheduler: a fixed worker pool with fair FIFO dispatch and a **bounded**,",
+      "line": 195,
+      "summary": "A real OS-thread scheduler: a fixed worker pool, **per-worker deques with steal-on-empty**",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19466,8 +19466,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler::Scheduler",
       "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 124,
-      "summary": "The bounded ready-queue depth — the backpressure ceiling (never exceeded; G2).",
+      "line": 261,
+      "summary": "The bounded ready-queue depth — the backpressure ceiling (never exceeded across the *sum*",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19477,7 +19477,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler::Scheduler",
       "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 93,
+      "line": 208,
       "summary": "A scheduler sized to the host's available parallelism (fallback: 1 worker), with a ready",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19488,7 +19488,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler::Scheduler",
       "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 142,
+      "line": 300,
       "summary": "Run `jobs` across the OS-thread pool and return their outputs **in spawn order** (so the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19499,8 +19499,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler::Scheduler",
       "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 106,
-      "summary": "A scheduler with exactly `workers` OS threads and a ready-queue `capacity`.",
+      "line": 223,
+      "summary": "A scheduler with exactly `workers` OS threads and a ready-queue `capacity`, using the",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19510,7 +19510,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler::Scheduler",
       "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 118,
+      "line": 254,
       "summary": "The number of OS worker threads this scheduler runs.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19521,7 +19521,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::scheduler",
       "file": "crates/mycelium-std-runtime/src/scheduler.rs",
-      "line": 49,
+      "line": 78,
       "summary": "Why constructing a [`Scheduler`] refused — always explicit, never a silent fallback (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -24819,7 +24819,7 @@
     },
     {
       "symbol": "mycelium_bench::corpus::Case",
-      "reason": "dedup-alias: same definition as `mycelium_bench::Case` at crates/mycelium-bench/src/corpus.rs:55 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_bench::Case` at crates/mycelium-bench/src/corpus.rs:58 — one canonical row kept"
     },
     {
       "symbol": "mycelium_bench::corpus::Case::clone",
@@ -24847,7 +24847,7 @@
     },
     {
       "symbol": "mycelium_bench::corpus::Fragment",
-      "reason": "dedup-alias: same definition as `mycelium_bench::Fragment` at crates/mycelium-bench/src/corpus.rs:28 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_bench::Fragment` at crates/mycelium-bench/src/corpus.rs:30 — one canonical row kept"
     },
     {
       "symbol": "mycelium_bench::corpus::Fragment::clone",
@@ -24899,7 +24899,7 @@
     },
     {
       "symbol": "mycelium_bench::corpus::corpus",
-      "reason": "dedup-alias: same definition as `mycelium_bench::corpus` at crates/mycelium-bench/src/corpus.rs:104 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_bench::corpus` at crates/mycelium-bench/src/corpus.rs:107 — one canonical row kept"
     },
     {
       "symbol": "mycelium_bench::llm::GrokAblation::clone",
@@ -25187,7 +25187,7 @@
     },
     {
       "symbol": "mycelium_bench::report::Honesty",
-      "reason": "dedup-alias: same definition as `mycelium_bench::Honesty` at crates/mycelium-bench/src/report.rs:42 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_bench::Honesty` at crates/mycelium-bench/src/report.rs:84 — one canonical row kept"
     },
     {
       "symbol": "mycelium_bench::report::Honesty::clone",
@@ -25223,7 +25223,7 @@
     },
     {
       "symbol": "mycelium_bench::report::LlmSection",
-      "reason": "dedup-alias: same definition as `mycelium_bench::LlmSection` at crates/mycelium-bench/src/report.rs:64 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_bench::LlmSection` at crates/mycelium-bench/src/report.rs:106 — one canonical row kept"
     },
     {
       "symbol": "mycelium_bench::report::LlmSection::clone",
@@ -25279,7 +25279,7 @@
     },
     {
       "symbol": "mycelium_bench::report::Report",
-      "reason": "dedup-alias: same definition as `mycelium_bench::Report` at crates/mycelium-bench/src/report.rs:21 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_bench::Report` at crates/mycelium-bench/src/report.rs:25 — one canonical row kept"
     },
     {
       "symbol": "mycelium_bench::report::Report::clone",
@@ -25339,7 +25339,7 @@
     },
     {
       "symbol": "mycelium_bench::verdict::Speed",
-      "reason": "dedup-alias: same definition as `mycelium_bench::Speed` at crates/mycelium-bench/src/verdict.rs:25 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_bench::Speed` at crates/mycelium-bench/src/verdict.rs:38 — one canonical row kept"
     },
     {
       "symbol": "mycelium_bench::verdict::Speed::clone",
@@ -25375,7 +25375,7 @@
     },
     {
       "symbol": "mycelium_bench::verdict::Verdict",
-      "reason": "dedup-alias: same definition as `mycelium_bench::Verdict` at crates/mycelium-bench/src/verdict.rs:37 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_bench::Verdict` at crates/mycelium-bench/src/verdict.rs:50 — one canonical row kept"
     },
     {
       "symbol": "mycelium_bench::verdict::Verdict::clone",
@@ -25411,7 +25411,7 @@
     },
     {
       "symbol": "mycelium_bench::verdict::classify",
-      "reason": "dedup-alias: same definition as `mycelium_bench::classify` at crates/mycelium-bench/src/verdict.rs:160 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_bench::classify` at crates/mycelium-bench/src/verdict.rs:173 — one canonical row kept"
     },
     {
       "symbol": "mycelium_build::BuildCertificate::clone",
@@ -30431,7 +30431,7 @@
     },
     {
       "symbol": "mycelium_l1::checkty::PhylumEnv",
-      "reason": "dedup-alias: same definition as `mycelium_l1::PhylumEnv` at crates/mycelium-l1/src/checkty.rs:889 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::PhylumEnv` at crates/mycelium-l1/src/checkty.rs:920 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::PhylumEnv::clone",
@@ -30519,23 +30519,23 @@
     },
     {
       "symbol": "mycelium_l1::checkty::check_and_resolve",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:1471 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_and_resolve` at crates/mycelium-l1/src/checkty.rs:1502 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:981 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule` at crates/mycelium-l1/src/checkty.rs:1012 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_nodule_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:1412 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_nodule_matured` at crates/mycelium-l1/src/checkty.rs:1443 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:999 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum` at crates/mycelium-l1/src/checkty.rs:1030 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::checkty::check_phylum_matured",
-      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:1009 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::check_phylum_matured` at crates/mycelium-l1/src/checkty.rs:1040 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::elab::ElabError",
@@ -33711,15 +33711,15 @@
     },
     {
       "symbol": "mycelium_mlir::jit::compile_so",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::compile_so` at crates/mycelium-mlir/src/jit.rs:326 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::compile_so` at crates/mycelium-mlir/src/jit.rs:343 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::jit::jit_run",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::jit_run` at crates/mycelium-mlir/src/jit.rs:350 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::jit_run` at crates/mycelium-mlir/src/jit.rs:367 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::llvm::AotError",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::AotError` at crates/mycelium-mlir/src/llvm.rs:60 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::AotError` at crates/mycelium-mlir/src/llvm.rs:67 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::llvm::AotError::clone",
@@ -33755,11 +33755,11 @@
     },
     {
       "symbol": "mycelium_mlir::llvm::CompiledArtifact",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::CompiledArtifact` at crates/mycelium-mlir/src/llvm.rs:2410 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::CompiledArtifact` at crates/mycelium-mlir/src/llvm.rs:2646 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::llvm::emit_llvm_ir",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::emit_llvm_ir` at crates/mycelium-mlir/src/llvm.rs:1924 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::emit_llvm_ir` at crates/mycelium-mlir/src/llvm.rs:2176 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::mode::ExecMode::clone",

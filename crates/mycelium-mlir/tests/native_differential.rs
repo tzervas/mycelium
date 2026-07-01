@@ -529,15 +529,26 @@ fn closure_corpus() -> Vec<Node> {
                 Node::Const(byte(B)),
             )),
         ),
-        // 7. Nested capturing lambda, applied inside the body: (λx. (λw. w ⊕ x) x) A → A ⊕ A.
-        //    The inner closure captures the *outer* parameter x (a capture that resolves to another
-        //    closure's argument lane), is allocated + called within the outer body, and returns
-        //    Binary{8}. Exercises recursion of the closure-conversion machinery (free-var analysis
-        //    descending into a nested lambda; a record built inside a closure function).
+        // 7. Nested capturing lambda, applied inside the body: (λx. let p = x ⊕ B in
+        //    (λw. w ⊕ p) p) A → (A⊕B) ⊕ (A⊕B) = 0. The body-local const `B` pins the (M-851 boxed-ABI)
+        //    param shape via `x ⊕ B`, so `p` is a concretely-typed `Binary{8}` lane; the inner closure
+        //    captures `p`, is allocated + called within the outer body, and returns `Binary{8}`.
+        //    Exercises recursion of the closure-conversion machinery (free-var analysis descending into
+        //    a nested lambda; a record built inside a closure function) — the boundary case the widened
+        //    ABI resolves end-to-end. (The *fully* polymorphic nested-capture `(λx. (λw. w⊕x) x)` —
+        //    with no body-local const to pin the param shape — also lowers under M-851, because the
+        //    call-site argument pins `x`'s shape at inlining time; see `nested_capture_of_outer_param_lowers`
+        //    and `closure_widening_differential::nested_capture_of_outer_param`. The corpus case here uses
+        //    the let-`p` form only to cross-cover the in-body-binding path — not because the polymorphic
+        //    form is refused; G2/VR-5: no guessed width in either form.)
         app(
             lam(
                 "x",
-                app(lam("w", op2("bit.xor", var("w"), var("x"))), var("x")),
+                let_(
+                    "p",
+                    op2("bit.xor", var("x"), Node::Const(byte(B))),
+                    app(lam("w", op2("bit.xor", var("w"), var("p"))), var("p")),
+                ),
             ),
             Node::Const(byte(A)),
         ),
@@ -638,18 +649,21 @@ fn native_closure_differential_distinguishes_different_bodies() {
     );
 }
 
-/// Refusal parity (M-378 updates M-373): with closures now lowered, the native path must still
-/// refuse — explicitly, never silently (G2) — the constructs outside the Increment-2 subset:
-/// `Fix`/`FixGroup` recursion (Increment-3) and a **closure-valued program result** (a bare `Lam`,
-/// or currying — a closure is not a printable value in the narrow ABI; DN-15 §7.4).
+/// Refusal parity after the **M-851 widening**: even with closures over any repr/width, currying, and
+/// returned closures now lowering, the native path must still refuse — explicitly, never silently
+/// (G2) — a **closure-valued program result** (a closure is not printable by the read-back protocol)
+/// and a degenerate `Fix`. A bare `Lam`, and a curried `(λx.λy.x) A` (whose result is the inner
+/// closure `λy.x`), both reduce to a closure value at the program result and so are refused **at the
+/// result** (DN-15 §7.4) — note the boundary moved: currying itself now lowers; only a closure left
+/// on the *printable program result* is refused.
 #[test]
-fn recursion_and_closure_valued_results_are_still_explicitly_refused() {
+fn closure_valued_program_result_and_degenerate_fix_are_refused() {
     // A bare Lam: lowers to a closure value, which cannot be the printable program result.
     let bare_lam = Node::Lam {
         param: "x".to_owned(),
         body: Box::new(Node::Var("x".to_owned())),
     };
-    // Currying — the inner application would need a closure as a value across the ABI: (λx. λy. x) A.
+    // Currying *now lowers*, but its result here IS a closure (`λy. x`), refused as the program result.
     let curry = Node::App {
         func: Box::new(Node::Lam {
             param: "x".to_owned(),
@@ -660,7 +674,7 @@ fn recursion_and_closure_valued_results_are_still_explicitly_refused() {
         }),
         arg: Box::new(Node::Const(byte(A))),
     };
-    // Self-referential recursion — Increment-3, not this subset.
+    // Self-referential degenerate Fix — not a `λparam.Match` recursion shape.
     let fix = Node::Fix {
         name: "f".to_owned(),
         body: Box::new(Node::Var("f".to_owned())),
@@ -678,27 +692,130 @@ fn recursion_and_closure_valued_results_are_still_explicitly_refused() {
     }
 }
 
-/// M-378 narrow-ABI parity: a value crossing the closure boundary that is not `Binary{8}` must be an
-/// explicit `UnsupportedNode` — never a silent mis-encode (G2; DN-15 §7.1). Here the closure is
-/// applied to a `Ternary` argument, which `as_binary8` refuses at the `App` site.
+/// M-851: a value crossing the closure boundary that is **not** `Binary{8}` now **lowers** — the
+/// widened uniform pointer-boxed ABI carries any repr/width. Here the identity closure applied to a
+/// `Ternary` argument returns that ternary value, value-equal to the interpreter (the refusal this
+/// replaced — `closures_over_non_binary8_values_are_explicitly_refused` — is removed by the widening).
 #[test]
-fn closures_over_non_binary8_values_are_explicitly_refused() {
-    // (λx. x) applied to a balanced-ternary value — outside the Binary{8}-packed-i64 closure ABI.
+fn closures_over_ternary_values_now_lower() {
+    // (λx. x) applied to a balanced-ternary value — inside the widened boxed-value closure ABI.
+    let t = tern(vec![Trit::Pos, Trit::Zero, Trit::Neg]);
     let prog = Node::App {
         func: Box::new(Node::Lam {
             param: "x".to_owned(),
             body: Box::new(Node::Var("x".to_owned())),
         }),
-        arg: Box::new(Node::Const(tern(vec![Trit::Pos, Trit::Zero, Trit::Neg]))),
+        arg: Box::new(Node::Const(t.clone())),
+    };
+    let native = match mycelium_mlir::compile_and_run(&prog) {
+        Ok(v) => v,
+        Err(AotError::ToolchainMissing(_)) => return, // env skip
+        Err(e) => panic!("ternary-argument identity closure must lower now; errored: {e}"),
+    };
+    // The identity over a ternary value returns the same ternary value (Mutant-witness: a mis-encoded
+    // box header or a wrong sext/trunc would diverge from the interpreter's oracle).
+    assert_eq!(
+        native.payload(),
+        t.payload(),
+        "identity over ternary must echo the input"
+    );
+    assert_eq!(native.repr(), t.repr());
+}
+
+/// M-851 specialize-at-application: a **nested capture of the outer param** — `(λx. (λw. w ⊕ x) x) A
+/// → A ⊕ A = 0` — lowers natively. The inner closure captures the outer parameter `x` and is applied
+/// to it; the inlining resolves it fully (the call-site argument `A` pins `x`, the inner closure
+/// inlines with `w ← x`), so the shape flows in directly with no guessed width. interp ≡ native.
+#[test]
+fn nested_capture_of_outer_param_lowers() {
+    let prog = Node::App {
+        func: Box::new(Node::Lam {
+            param: "x".to_owned(),
+            body: Box::new(Node::App {
+                func: Box::new(Node::Lam {
+                    param: "w".to_owned(),
+                    body: Box::new(Node::Op {
+                        prim: "bit.xor".into(),
+                        args: vec![Node::Var("w".to_owned()), Node::Var("x".to_owned())],
+                    }),
+                }),
+                arg: Box::new(Node::Var("x".to_owned())),
+            }),
+        }),
+        arg: Box::new(Node::Const(byte(A))),
+    };
+    let native = match mycelium_mlir::compile_and_run(&prog) {
+        Ok(v) => v,
+        Err(AotError::ToolchainMissing(_)) => return, // env skip
+        Err(e) => panic!("nested capture of outer param must lower; errored: {e}"),
+    };
+    let interp = Interpreter::new(PrimRegistry::with_builtins(), Box::new(IdentitySwapEngine))
+        .eval(&prog)
+        .expect("interp must evaluate the nested-capture program");
+    assert_eq!(
+        observable(&interp),
+        observable(&native),
+        "nested capture: interp {:?} vs native {:?}",
+        interp.payload(),
+        native.payload()
+    );
+    // A ⊕ A == 0.
+    assert_eq!(
+        native.payload(),
+        &Payload::Bits(vec![false; 8]),
+        "A ⊕ A must be 0"
+    );
+}
+
+/// M-851 capture boundary (DN-15 §7.4; G2): a **`Datum`** (constructed data value) may *not* be
+/// captured by a closure in the widened ABI — capturing it would require runtime closure dispatch
+/// (a vtable / tagged-union wire type) that is a separate future increment. The refusal is
+/// **explicit** (`UnsupportedNode`) and **test-pinned** here so the boundary never silently shifts.
+///
+/// Pattern: `λx. (λy. <expr using constructed datum d>) v` where the inner closure captures `d`.
+/// The outer closure body constructs a `Box(A)`; the inner `λy.` tries to capture it. `lower_lam`
+/// refuses that at capture time — never at App time (G2: the refusal is at the well-defined boundary,
+/// not silently deferred until a mis-encode would produce wrong output).
+#[test]
+fn datum_capture_by_closure_is_explicitly_refused() {
+    // Construct a Box(A) datum, then try to capture it in a closure. The closure never applies it,
+    // so the refusal is purely at capture time — not because of what the body does with it.
+    let reg = box_registry();
+    let box_ctor = reg.ctor_ref("Box", 0).unwrap();
+    // Program: (λouter. let d = Box(outer) in (λinner. outer) A) A
+    // Here the inner closure captures `d` (a Datum) — must refuse at lower_lam time.
+    let prog = Node::App {
+        func: Box::new(Node::Lam {
+            param: "outer".to_owned(),
+            body: Box::new(Node::Let {
+                id: "d".to_owned(),
+                bound: Box::new(Node::Construct {
+                    ctor: box_ctor,
+                    args: vec![Node::Var("outer".to_owned())],
+                }),
+                body: Box::new(Node::App {
+                    func: Box::new(Node::Lam {
+                        param: "inner".to_owned(),
+                        body: Box::new(Node::Var("d".to_owned())), // captures datum `d`
+                    }),
+                    arg: Box::new(Node::Const(byte(A))),
+                }),
+            }),
+        }),
+        arg: Box::new(Node::Const(byte(A))),
     };
     match mycelium_mlir::compile_and_run(&prog) {
-        Err(AotError::UnsupportedNode(_)) => { /* expected explicit refusal */ }
-        Err(AotError::ToolchainMissing(_)) => { /* environment skip */ }
-        Ok(v) => panic!(
-            "a ternary-argument closure must be refused; native path returned {:?}",
-            v.payload()
-        ),
-        Err(e) => panic!("ternary-argument closure errored with an unexpected variant: {e}"),
+        Err(AotError::UnsupportedNode(msg)) => {
+            // The error must name the offending capture — never a silent mis-encode.
+            assert!(
+                msg.contains("datum") || msg.contains("data value"),
+                "datum-capture refusal message must name the issue; got: {msg}"
+            );
+        }
+        Err(AotError::ToolchainMissing(_)) => { /* env skip — the refusal is at lower_lam, before llc */
+        }
+        Ok(v) => panic!("datum capture must be refused; got value {:?}", v.payload()),
+        Err(e) => panic!("datum capture refused with unexpected variant: {e}"),
     }
 }
 

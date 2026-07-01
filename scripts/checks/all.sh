@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Run the full local suite. This is the single entrypoint shared by `just check`,
 # `just ci`, and the GitHub Actions workflow — guaranteeing local↔CI parity.
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 
 # Force color into the per-check subprocesses when we're on a real terminal: their stdout is

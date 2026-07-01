@@ -31,7 +31,8 @@
 #    that public repo bypasses the git proxy and uses the allowed HTTPS path. (Inline equivalent for
 #    one run: `MYC_DENY_ALLOW_HTTPS_FETCH=1 just deny`.) Never a blanket github.com un-rewrite; TLS +
 #    HTTPS_PROXY untouched. Full write-up: .claude/memory/toolchain.md §"Supply-chain gate".
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "supply-chain (cargo-deny / cargo-audit)"
 

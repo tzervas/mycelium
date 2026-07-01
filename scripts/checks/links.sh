@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Offline cross-reference / relative-link checker (no network). Catches broken
 # intra-repo links and @imports — e.g. a moved file that left a dangling reference.
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "links & cross-references (offline)"
 

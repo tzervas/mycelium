@@ -321,21 +321,37 @@ mod tests {
                 "id() is the program hash, not a forgeable input"
             );
         }
-        // The remaining never-silent path: a Swap is outside the direct-LLVM bit subset ⇒ an explicit,
-        // *structured* refusal (routed to the proven path), never fragile codegen (G2/VR-5).
-        let swap = Node::Swap {
+        // M-852 (E25-1): a `Swap` over the certified binary↔ternary class is now natively deployable
+        // (the direct-LLVM backend lowers it). `(8,6)` is a legal pair, so it builds (or skips on a
+        // box without the toolchain) — no longer an out-of-fragment refusal.
+        let legal_swap = Node::Swap {
             src: Box::new(Node::Const(byte([true; 8]))),
             target: Repr::Ternary { trits: 6 },
             policy: ContentHash::parse("blake3:round_trip_safe").unwrap(),
         };
-        match NativeArtifact::build(&swap) {
+        match NativeArtifact::build(&legal_swap) {
+            Ok(_) | Err(DeployError::ToolchainMissing(_)) => { /* deployable, or honest env skip */
+            }
+            Err(e) => panic!("a legal binary↔ternary swap must be deployable now (M-852), got {e}"),
+        }
+
+        // The remaining never-silent path: a swap we do **not** lower — an **illegal** pair `(8,2)`
+        // (2^7=128 > (3^2−1)/2=4) — is refused at compile time (the Recheck mode's side-condition
+        // re-check) ⇒ an explicit *structured* refusal, never fragile codegen (G2/VR-5). This refusal
+        // is returned during lowering, before the toolchain, so it holds even on a box without llc.
+        let illegal_swap = Node::Swap {
+            src: Box::new(Node::Const(byte([true; 8]))),
+            target: Repr::Ternary { trits: 2 },
+            policy: ContentHash::parse("blake3:round_trip_safe").unwrap(),
+        };
+        match NativeArtifact::build(&illegal_swap) {
             Err(DeployError::NotDeployable(m)) => {
                 assert!(!m.is_empty(), "the refusal carries an EXPLAIN-able reason");
             }
-            // Honest: if the toolchain is absent the out-of-fragment refusal may surface as the skip
-            // signal instead — still never a fabricated Ok.
             Err(DeployError::ToolchainMissing(_)) => {}
-            Ok(_) => panic!("a Swap must not be natively deployable (out of fragment)"),
+            Ok(_) => {
+                panic!("an illegal-pair swap must not be natively deployable (out of fragment)")
+            }
         }
     }
 

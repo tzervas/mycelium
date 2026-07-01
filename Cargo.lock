@@ -170,6 +170,7 @@ dependencies = [
  "mycelium-interp",
  "mycelium-l1",
  "mycelium-mlir",
+ "mycelium-std-runtime",
  "serde",
  "serde_json",
 ]
@@ -326,11 +327,13 @@ version = "0.0.0"
 dependencies = [
  "mycelium-cert",
  "mycelium-core",
+ "mycelium-dense",
  "mycelium-interp",
  "mycelium-mir-passes",
  "mycelium-numerics",
  "mycelium-select",
  "mycelium-std-runtime",
+ "mycelium-vsa",
 ]
 
 [[package]]

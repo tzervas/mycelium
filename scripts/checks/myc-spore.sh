@@ -7,7 +7,8 @@
 # it prints the deterministic digest as an honest receipt; if the builder cannot complete it `skip`s
 # with the reason (never a silent pass; G2/VR-5) rather than turning `just check` red. The four
 # pass/fail gates (myc-fmt/myc-check/myc-sec/myc-lint) own correctness; this only proves M-368 runs.
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "myc-spore (packaging smoke — spore build; non-gating)"
 

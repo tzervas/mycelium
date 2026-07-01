@@ -12,7 +12,8 @@
 #   - cargo-machete: unused-dependency surface (supply-chain-surface reduction; advisory — DN-44 §6.2).
 #   - kernel-harden: clippy panic-path visibility over the trusted base (advisory — DN-44 §4.2/§6.1).
 # Full posture map: docs/notes/DN-44-Codebase-Security-Posture.md.
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "advisory scanners (osv / geiger / hack / machete / kernel-harden) — opt-in, not in \`just check\`"
 

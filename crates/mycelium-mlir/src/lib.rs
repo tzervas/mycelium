@@ -56,6 +56,9 @@ pub mod bitnet;
 pub mod budget;
 pub mod channel;
 pub mod deploy;
+// M-853 (RFC-0039 §5.1): native direct-LLVM codegen of `Repr::Dense` element-wise ops (un-quantized
+// F32/BF16 fragment) — differential-checked against `mycelium-dense`, mutant-witnessed, honest tags.
+pub mod dense_codegen;
 pub mod dialect;
 pub mod inject;
 pub mod jit;
@@ -67,7 +70,19 @@ pub mod rc_plan;
 pub mod runtime;
 pub mod simd;
 pub mod specialize;
+pub mod swap_codegen;
+pub mod trampoline;
 pub mod vr4;
+// M-854 (RFC-0039 §5.2): native direct-LLVM codegen of `Repr::Vsa` hypervector ops (real-Vec<f64>
+// MAP-I/BSC/HRR/FHRR fragment) — differential-checked against `mycelium-vsa`, mutant-witnessed, honest
+// per-op tags (SBC/MAP-B refused never-silently).
+pub mod vsa_codegen;
+// M-855 (RFC-0039 §5.3): the dynamic-VSA JIT — the M-340 in-process `dlopen` JIT extended to the
+// M-854 real-Vec<f64> MAP-I/BSC/HRR/FHRR fragment, for data-dependent-dimension / runtime-model-
+// selection workloads. Reuses vsa_codegen's program/error/EXPLAIN/read-back shapes verbatim; the ADR-
+// 009 dynamic-VSA JIT deferral lift is recorded append-only at RFC-0039 §6 (OQ-1, no separate ADR-009
+// amendment).
+pub mod vsa_jit;
 
 pub use accel::{
     accelerated_ternary_dot, AccelOutcome, BitnetCapability, DegradeReason, Path as AccelPath,
@@ -109,7 +124,32 @@ pub use simd::{
 pub use specialize::{
     compile_specialized_dot, emit_specialized_dot_ir, jit_specialized_dot, SpecializedDotKernel,
 };
+// M-852: native `Swap`-node codegen for the certified binary↔ternary class + the reified,
+// EXPLAIN-able cert mode (DEFAULT compile-time re-check · OPT-IN reuse-interp).
+pub use llvm::{
+    compile_and_run_with_swap_mode, compile_with_swap_mode, emit_llvm_ir_with_swap_mode,
+};
+pub use swap_codegen::{legal_pair as swap_legal_pair, SwapCertMode, SwapExplain};
+// M-853 (RFC-0039 §5.1): native Dense element-wise codegen (un-quantized F32/BF16) + its inspectable
+// EXPLAIN record. `dot`/`similarity` are bare-`f64` measurements; the quantized variants stay an
+// explicit never-silent refusal (E20-1 gate).
+pub use dense_codegen::{
+    dense_compile, dense_compile_and_run, emit_dense_llvm_ir, DenseAotError, DenseArtifact,
+    DenseCgOp, DenseExplain, DenseProgram, DenseResult, DENSE_CODEGEN_GUARANTEE,
+};
 pub use vr4::{cross_backend_gate, Backend, BackendStage, CrossBackendGate, StageStatus};
+// M-854 (RFC-0039 §5.2): native VSA hypervector codegen (real-Vec<f64> MAP-I/BSC/HRR/FHRR) + its
+// inspectable EXPLAIN record. `similarity` is a bare-`f64` measurement; SBC/MAP-B and the ADR-031
+// element-space/complex carriers stay explicit never-silent refusals (OQ-3 / E20-1 gate).
+pub use vsa_codegen::{
+    emit_vsa_llvm_ir, resolve_model as resolve_vsa_model, vsa_compile, vsa_compile_and_run,
+    VsaAotError, VsaArtifact, VsaCgOp, VsaExplain, VsaModelId, VsaProgram, VsaResult,
+    FHRR_BUNDLE_PROFILE, HRR_BUNDLE_PROFILE, VSA_CODEGEN_GUARANTEE,
+};
+// M-855 (RFC-0039 §5.3): the dynamic-VSA JIT — in-process `dlopen` execution over the same real-
+// Vec<f64> MAP-I/BSC/HRR/FHRR fragment as `vsa_codegen`, for data-dependent-dimension / runtime-model-
+// selection workloads. `VsaJitArtifact`/errors/results are shared with the AOT path (`vsa_codegen`).
+pub use vsa_jit::{vsa_jit_compile, vsa_jit_compile_and_run, VsaJitArtifact, VSA_JIT_GUARANTEE};
 
 #[cfg(test)]
 mod tests;

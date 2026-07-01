@@ -4,7 +4,8 @@
 # would reformat (contract §5: 0 ok · 1 would-reformat · 2 parse · 3 header · 4 out-of-scope/pin ·
 # 64 usage · 66 io). Skips gracefully when cargo is absent or there is no project to format.
 # Scope excludes tests/fixtures/ (intentionally-bad must-fail inputs; locked decision #3).
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "myc-fmt (canonical formatting — mycfmt)"
 
