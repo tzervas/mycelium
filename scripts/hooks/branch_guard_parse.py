@@ -33,8 +33,17 @@ MUTATING_SUBCMDS = {"commit", "merge", "cherry-pick", "rebase", "revert"}
 GIT_DIR_REDIRECT_FLAGS = {"-C", "--git-dir", "--work-tree", "--namespace"}
 WRAPPER_TOKENS = {"sudo", "command", "time", "env"}
 # Command/process substitution: the actual text git would see is produced at runtime and is not
-# statically knowable from the command string alone.
+# statically knowable from the command string alone. This is fail-safe-relevant ONLY when the
+# substitution can obscure a git-MUTATING operation's target or force flags — i.e. only inside a
+# `git push`'s own argument tokens (which determine the destination branch and force flags). A
+# substitution anywhere else (a read-only `git diff`/`git log`, an `echo`, a `VAR=$(…)` assignment,
+# a non-git command) cannot change a protected-branch/force verdict and MUST be allowed — scoping
+# it to push args is what keeps ubiquitous command-substitution from being blocked everywhere.
 DYNAMIC_MARKERS = ["$(", "`", "<(", ">("]
+
+
+def has_dynamic_marker(token: str) -> bool:
+    return any(marker in token for marker in DYNAMIC_MARKERS)
 
 
 class Unsafe(Exception):
@@ -93,6 +102,15 @@ def analyze_push(push_args, current_branch, protected_patterns, dir_redirected):
     i = 0
     while i < len(push_args):
         tok = push_args[i]
+        # A command/process substitution INSIDE a push's own args can obscure the destination
+        # branch or a force flag (e.g. `git push origin $(echo dev)` or `git push $(cat what.txt)`),
+        # so it is unresolvable HERE and must fail safe. (Substitution outside a push segment is
+        # handled by simply not reaching this function — see analyze()/analyze_segment.)
+        if has_dynamic_marker(tok):
+            raise Unsafe(
+                "'git push' argument contains a command/process substitution "
+                f"({tok!r}); the destination/force cannot be statically resolved"
+            )
         if tok in FORCE_FLAGS:
             force = True
             i += 1
@@ -167,6 +185,16 @@ def analyze_segment(seg, current_branch, protected_patterns):
     subcmd = seg[idx]
     rest = seg[idx + 1 :]
 
+    # If the subcommand token ITSELF is produced by a substitution (e.g. `git $(echo push) …`), we
+    # cannot tell whether this is a push/mutating op or an inert one — fail safe. (Narrow: this only
+    # fires when the substitution is in the git subcommand position, never for read-only segments,
+    # echo, or assignments, so it does not re-introduce the over-block this rewrite removes.)
+    if has_dynamic_marker(subcmd):
+        raise Unsafe(
+            "git subcommand is produced by a command/process substitution "
+            f"({subcmd!r}); cannot tell whether it is a push/mutating operation"
+        )
+
     if subcmd == "push":
         return analyze_push(rest, current_branch, protected_patterns, dir_redirected)
 
@@ -185,14 +213,16 @@ def analyze_segment(seg, current_branch, protected_patterns):
 
 def analyze(cmd: str, current_branch: str, protected_patterns):
     """Top-level entry: returns None if allowed, else a block-reason string. Raises Unsafe for
-    the fail-safe (default-deny) path."""
-    for marker in DYNAMIC_MARKERS:
-        if marker in cmd:
-            raise Unsafe(
-                f"command contains '{marker}' (command/process substitution); the actual "
-                "arguments cannot be statically resolved"
-            )
+    the fail-safe (default-deny) path.
 
+    Note: command/process substitution ($(…)/`…`/<(…)/>(…)) is NOT rejected at the whole-command
+    level — that over-blocked ubiquitous read-only substitution (e.g. `echo "$(git diff … | wc -l)"`,
+    a `VAR=$(git rev-parse HEAD)` assignment) that can never change a protected-branch/force verdict.
+    The substitution fail-safe is applied narrowly, inside analyze_push, only to a `git push`'s own
+    argument tokens where it can actually obscure the destination or force flags. Mutating
+    subcommands (commit/merge/cherry-pick/rebase/revert) are judged by the cwd HEAD independently of
+    their args, so a substitution in their args cannot flip the verdict and is intentionally ignored.
+    """
     for seg in split_top_level(cmd):
         reason = analyze_segment(seg, current_branch, protected_patterns)
         if reason is not None:
