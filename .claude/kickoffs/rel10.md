@@ -16,7 +16,7 @@ is PR-only; the head → `main` PR is the final squash step.
 | **Head branch** | `claude/head/rel10` |
 | **Status** | ready |
 | **Swarm mode** | Sonnet |
-| **Depends on** | E13-1 (self-hosting stdlib gate — stdlib written in `.myc`, stable, usable); E18-1 (full-language readiness gate — per the roadmap; the full gate definition is in ADR-022, Accepted) |
+| **Depends on** | E13-1 (self-hosting stdlib gate — stdlib written in `.myc`, stable, usable); E18-1 (full-language readiness gate — per the roadmap; the full gate definition is in ADR-022, Accepted); **E15-1 / E25-1 (native AOT — re-gated into the `lang 1.0.0` Definition of Done by ADR-034, 2026-06-30; the AOT ripple onto M-738 — see `aot10`)** |
 
 ## Scope
 
@@ -88,11 +88,17 @@ Full table: kickoffs README §Cross-track deconfliction.
 ```
 (external) E13-1 — stdlib in .myc, stable
 (external) E18-1 — full-language readiness gate (ADR-022)
+(external) E15-1 / E25-1 — native AOT full-language coverage (ADR-034 re-gate; see aot10)
   +-  M-735 — language reference + tutorial  \
   +-  M-736 — stdlib API docs                 > parallel
   +-  M-737 — ADR-023 authored + Accepted    /
        +-- M-738 — release act (ADR-022 Accepted -> Enacted; 1.0.0 tag cut)
 ```
+
+**2026-07-01 resync note:** ADR-034 (Accepted 2026-06-30) re-gated E15-1/E25-1 (native AOT) into
+the `lang 1.0.0` Definition of Done as a hard row (track T6), so M-738 now additionally waits on
+`aot10`'s remainder (M-856b/M-860/M-862/M-863) — see `issues.yaml`'s M-738 `depends_on: [E15-1]`
+and the `aot10` kickoff for current status.
 
 **M-738 is a gate-check step, not a build step.** Its task is to verify the ADR-022
 Definition of Done is met (every row closed), then record the conscientious release
