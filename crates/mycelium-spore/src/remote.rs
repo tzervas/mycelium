@@ -56,7 +56,12 @@ pub enum RemoteError {
     /// A content-integrity failure: a bad `ContentHash`, a hash mismatch, a missing/extra object, a
     /// malformed dense-map encoding, or a recomputed-`spore_id` mismatch (exit 5).
     Integrity(String),
-    /// An immutability/consistency conflict (reserved for a future remote conflict check; exit 6).
+    /// An immutability/consistency conflict (exit 6). **Disclosed v0 gap (ADR-037 §Status; M-872):**
+    /// unlike the local store ([`crate::registry::RegistryError::Conflict`]), remote publish does not
+    /// yet refuse a differing re-publish under an existing `name@version` — OCI tags are mutable and
+    /// [`publish_remote`] pushes unconditionally. This variant is defined for the M-872 best-effort
+    /// pre-check (list-tags → compare `spore_id`); it is intentionally unconstructed in v0, not a
+    /// silently-dropped guarantee (the gap is stated in the ADR + `EXPLAIN`, never hidden — G2).
     Conflict(String),
     /// A request this v0 backend honestly cannot satisfy — a SemVer range constraint (exit 64).
     Unsupported(String),

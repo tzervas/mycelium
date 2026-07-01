@@ -5166,7 +5166,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 20,
+      "line": 21,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5177,7 +5177,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/build.rs",
-      "line": 59,
+      "line": 68,
       "summary": "Build the resolved doc model from the input.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5188,7 +5188,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc::build::BuildInput",
       "file": "crates/mycelium-doc/src/build.rs",
-      "line": 44,
+      "line": 52,
       "summary": "The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5210,7 +5210,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 21,
+      "line": 22,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5287,7 +5287,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 22,
+      "line": 23,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5331,7 +5331,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 23,
+      "line": 24,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5507,7 +5507,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/build.rs",
-      "line": 141,
+      "line": 165,
       "summary": "Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5518,7 +5518,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 24,
+      "line": 25,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5617,7 +5617,7 @@
       "crate": "mycelium-doc",
       "module": "mycelium_doc",
       "file": "crates/mycelium-doc/src/lib.rs",
-      "line": 25,
+      "line": 26,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13933,7 +13933,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 37,
+      "line": 45,
       "summary": "A resolved dependency edge — pinned by content hash (authoritative, ADR-003).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13944,7 +13944,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 28,
+      "line": 36,
       "summary": "A project source file, content-addressed (raw-byte BLAKE3; ADR-003).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13955,7 +13955,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 51,
+      "line": 59,
       "summary": "A built spore: its content-addressed identity plus the components that define it and the metadata that",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13966,7 +13966,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 71,
+      "line": 79,
       "summary": "A spore-build refusal — never a partial artifact (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13977,7 +13977,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore::SporeError",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 81,
+      "line": 89,
       "summary": "The CLI exit code for this refusal.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -13999,7 +13999,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 106,
+      "line": 114,
       "summary": "Build a [`Spore`] from a parsed manifest and the project root directory.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14010,7 +14010,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 200,
+      "line": 208,
       "summary": "The canonical, deterministic identity encoding (ADR-003) — **the single source of truth for spore",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14021,7 +14021,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 350,
+      "line": 358,
       "summary": "The `EXPLAIN` of a built spore (no black box): the identity receipt, the surface, the code by hash, the",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -14032,7 +14032,7 @@
       "crate": "mycelium-spore",
       "module": "mycelium_spore",
       "file": "crates/mycelium-spore/src/lib.rs",
-      "line": 253,
+      "line": 261,
       "summary": "The canonical `[project].kind` spelling.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -28684,11 +28684,11 @@
     },
     {
       "symbol": "mycelium_doc::build::build",
-      "reason": "dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:59 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:68 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::build::emit_all",
-      "reason": "dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:141 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:165 — one canonical row kept"
     },
     {
       "symbol": "mycelium_doc::corpus::AnchorAlloc::default",

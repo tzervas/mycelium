@@ -8905,7 +8905,8 @@ issues:
   - id: E26-1
     title: "E26-1 (epic) — Networked spore registry: GHCR/OCI dense-map distribution + registry dogfood"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:epic, area:toolchain, priority:P1, status:in-progress]
+    labels: [phase:8, type:epic, area:toolchain, priority:P1, status:done]
+    landed_basis: "status:done (2026-07-01) — M-871 done: the remote backend landed (mycelium-spore::remote) and the DOGFOOD is live: example phyla hello + std published to ghcr.io/tzervas/{hello,std}:0.0.0-dogfood and resolved back with hash-verified, byte-identical spore_ids (local registry:2 AND live GitHub Packages). ADR-037 Enacted. One disclosed v0 gap: remote name@version immutability not yet enforced (M-872). just check green; tags Empirical/Declared (VR-5)."
     depends_on: [M-732]
     epic: E26
     doc_refs: [corpus:ADR-037, corpus:DN-28, corpus:ADR-013]
@@ -8944,7 +8945,8 @@ issues:
   - id: M-871
     title: "M-871 -- feat(spore): remote registry backend — DN-28 dense-map over GHCR/OCI (ADR-037)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:in-progress]
+    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:done]
+    landed_basis: "status:done (2026-07-01) — crates/mycelium-spore/src/remote.rs: DenseMap encode/decode (injective, byte-cursor strict parser, proptest round-trip + injectivity + adversarial), build_dense_map, verify_and_reconstruct (every object BLAKE3-checked, spore_id recomputed via canonical content_address; missing/extra/duplicate/tamper/id-mismatch all explicit Integrity errors, G2), OciTransport trait + OrasTransport (subprocess; oras-absent -> ToolMissing, never silent) + MemTransport double, parse_registry (scheme routing), publish_remote/resolve_remote (exact + latest; range -> Unsupported), RemoteError (exit-coded). CLI routes publish/resolve by --registry scheme; remote resolve -o materializes the verified tree. 57 unit tests + 1 ignored (live-oras); fmt/clippy -D warnings clean. VERIFIED: local registry:2 AND live GHCR round-trip (ghcr.io/tzervas/{hello,std}). No new runtime dep (KC-3). Disclosed v0 gap: remote immutability check deferred to M-872."
     depends_on: [M-732]
     epic: E26-1
     doc_refs:
@@ -8981,3 +8983,32 @@ issues:
         publish->resolve via the in-memory double (exact + latest); range -> Unsupported. A live-oras
         integration test is #[ignore]d (orchestrator runs the local + GHCR round-trip).
       - cargo fmt / clippy -D warnings / test -p mycelium-spore green; tags Empirical/Declared (VR-5).
+  - id: M-872
+    title: "M-872 -- feat(spore): enforce name@version immutability on remote (OCI) publish"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:todo]
+    depends_on: [M-871]
+    epic: E26-1
+    doc_refs:
+      - corpus:ADR-037
+      - src:crates/mycelium-spore/src/remote.rs
+    body: |
+      Disclosed v0 gap from M-871 (ADR-037 §Status / §5): the LOCAL spore registry (M-732) refuses to
+      republish a DIFFERENT artifact under an existing name@version (immutability, RegistryError::Conflict),
+      but the REMOTE (OCI/GHCR) backend does not yet — OCI tags are mutable by default and publish_remote
+      pushes unconditionally. RemoteError::Conflict is defined but currently unconstructed.
+
+      As a phylum consumer, I want a published name@version to be immutable on the remote too, so that a
+      resolve returns the same bytes tomorrow as today (supply-chain integrity, ADR-003).
+
+      Approach (best-effort, never-silent): before pushing, check whether the tag already exists (via
+      OciTransport::list_tags on the repo); if it does, pull + decode its dense-map and compare spore_id —
+      identical => idempotent (skip/allow), different => RemoteError::Conflict (refuse, G2). Honest caveat:
+      OCI tags are server-side mutable, so a client-side check is best-effort (a racing client could still
+      overwrite) — document that ceiling (Declared), never overclaim it as Proven immutability. Distinguish
+      "repo/tag absent -> proceed" from a real transport error -> propagate (no silent swallow).
+
+      Definition of Done:
+      - publish_remote refuses a conflicting re-publish with RemoteError::Conflict; an identical re-publish
+        is idempotent; a first publish is unaffected. Tests via MemTransport (+ an #[ignore]d live case).
+      - The best-effort ceiling is documented (Declared, not Proven). cargo fmt/clippy/test green.

@@ -8,6 +8,40 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: ADR-037 / M-871 — remote spore registry: GHCR/OCI dense-map distribution + live dogfood)
+
+- **`crates/mycelium-spore` gains a remote/networked backend** (`mycelium_spore::remote`) siblings the
+  M-732 local file store, so spores are installable without crates.io, hosted in the **GitHub Packages
+  container registry (GHCR)**. Fixed by **ADR-037** (Accepted then Enacted, same day) and grounded in the
+  release strategy (ADR-036): host phylum/nodule/spore in the GitHub Packages registry to prove out the
+  registry design (DN-28) and implementation, no crates.io, repo private until dogfooded.
+- **DN-28 dense-map over OCI (ADR-037 §2).** A published spore is one OCI 1.1 artifact
+  (`artifactType application/vnd.mycelium.spore.v1`) at `ghcr.io/<owner>/<phylum>:<version>`: each source
+  object becomes one OCI blob (title `<blake3-hex>.myco`), **deduped by digest** across versions; the
+  dense-map DAG (`spore_id`, kind, surface, object references, dependency edges) becomes the OCI config
+  blob; `name@version` becomes the OCI tag. The dense-map codec is a hand-rolled, injective,
+  length-prefixed encoding with a strict never-silent parser (mirroring `content_address`) — **no new
+  runtime dependency** (KC-3).
+- **Fetch-and-verify on resolve (DN-28 §3; G2).** Every fetched object's bytes must BLAKE3 to its declared
+  content address, and the reconstructed source set must recompute — via the single canonical
+  `content_address` (never re-implemented) — to the recorded `spore_id`. A missing object, an
+  extra/undescribed blob, a byte mismatch, or a `spore_id` mismatch is an explicit `Integrity` refusal;
+  `resolve -o <dir>` materializes the verified tree plus the `mycelium-densemap`.
+- **CLI routes by explicit `--registry` scheme (never guessed):** a bare path keeps the local store;
+  `oci://<host>[/path]` or `ghcr://<owner>` selects the remote backend. `oras` is the v0 wire-transport
+  driver behind the `OciTransport` trait (a pure-Rust client is append-only future work); `oras` absent is
+  an explicit `ToolMissing` error, never a silent skip. Exact-version or `latest` selection; a SemVer
+  range stays `Unsupported` (ADR-018 deferred), never mis-resolved.
+- **Live dogfood verified (Empirical).** Round-trips green against a local `registry:2`
+  (`just spore-oci-selftest`, 57 unit tests incl. proptest round-trip/injectivity/adversarial) **and the
+  live GitHub Packages registry** — the example phyla `hello` and `std` published to
+  `ghcr.io/tzervas/{hello,std}` and resolved back with byte-identical, hash-verified `spore_id`s
+  (`just spore-ghcr-dogfood <owner>` + `scripts/dist/`). DN-28 gains an append-only forward pointer to
+  ADR-037 (its status unchanged).
+- **Disclosed v0 gap (never-silent, G2):** remote publish does not yet enforce `name@version` immutability
+  the way the local store does (OCI tags are mutable; a best-effort client-side pre-check is tracked as
+  **M-872**). Stated in ADR-037, the contract spec §10, and the `RemoteError::Conflict` doc-comment.
+
 ### Added (2026-07-01: M-870 — third-party attributions + NOTICE generation)
 
 - **`THIRD-PARTY-LICENSES.md`** added at the repo root: every third-party Rust crate in the
