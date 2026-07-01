@@ -4712,6 +4712,7 @@ issues:
       - src:lib/std/cmp.myc
       - src:lib/std/collections.myc
       - src:crates/mycelium-l1/tests/std_math.rs
+      - src:crates/mycelium-l1/tests/enablement.rs
     body: |
       DONE (2026-06-27, rsm Session-2; M-753 width-generics now landed). The WIDTH-GENERIC math/cmp
       surface ships against the SURFACED prims only (VR-5/G2 -- nothing claimed ahead of a prim):
@@ -4781,6 +4782,36 @@ issues:
       - corpus:DN-25
       - src:crates/mycelium-l1/tests/std_generic_conformance.rs
     body: |
+      PARTIAL (2026-06-30, lib10 Session): per-op conformance gap-closure landed (branch
+      claude/lib10-m719-conformance). Audited every exported op of all 8 self-hosted nodules
+      (result/option/cmp/iter/collections/text/fmt/math) against its differential harness for the
+      RFC-0031 §5 D5 bar (>=1 three-way differential per EXPORTED op). result/option/cmp/iter/fmt were
+      already 100% covered. Closed the remaining gaps:
+      - std.collections: the 6 constructor/builder ops (empty/push_front/map_empty/map_insert/
+        set_empty/set_add) are NOT runnable through a three-way differential under the current surface
+        (RFC-0007 §11.3: a nullary generic constructor/fn cannot have its type argument determined from
+        an enclosing return-type ascription, and a bare base constructor in builder-arg position fails
+        re-inference at monomorphization). Rather than fake a Declared "pass" (VR-5), pinned the
+        never-silent REFUSAL for all 6 as the honest asserted fact (std_collections.rs +2 tests:
+        nullary_constructors_refuse_undetermined_type_never_silent,
+        builders_over_bare_base_constructor_refuse_never_silent). FLAG: runnable per-op coverage for
+        these 6 lands when RFC-0007 §11.3 ascription syntax / nullary-call type-arg inference is
+        available -- a never-silent open item, not a silent omission.
+      - std.text: added isolated three-way per-op tests for is_cont_byte (4 region cases) and the
+        .myc-SURFACE wrappers concat + slice (3 cases; previously only the kernel bytes_concat/
+        bytes_slice prims were tested, not the wrappers). std_text.rs +7.
+      - std.math: the consolidated gate's "every width-generic op at >=2 widths" claim was an
+        overclaim -- bor/bxor (binary) and tsub/tmul (ternary) had only ONE width. Added the second
+        width for each: std_math.rs +4 (bor16/bxor16/tsub6/tmul6) and EXPANDED MATH_CASES in
+        std_generic_conformance.rs to cover the full badd/bsub/band/bor/bxor/bnot + tadd/tsub/tmul/tneg
+        surface at >=2 widths each, so the gate's header is now honest.
+      - API surface: lib/std/mycelium-proj.toml [surface].exports OMITTED std.iter (a self-hosted,
+        differential-tested nodule); added it so the frozen export surface is complete.
+      All change-scoped gates green: cargo fmt --check, cargo clippy -p mycelium-l1 --tests (no findings
+      in changed files; the 8 mycelium-mlir warnings pre-exist, outside scope), and the std_* /
+      std_generic_conformance targets (collections 26, text 42, math 23, generic_conformance 4, iter 16,
+      cmp 38, bytes_slice 14 -- all pass).
+
       PARTIAL (2026-06-27, rsm Session-2): the "conformance over the new generic surface" clause is
       DONE -- std_generic_conformance.rs is the named gate: the width-generic stdlib surface (std.cmp
       cmp/le/max, std.math badd/tadd, std.collections map_get/set_contains) is checked three-way
@@ -4788,7 +4819,8 @@ issues:
       refusal table. Per-module three-way coverage also lives in std_cmp/std_math/std_collections/
       std_text/width_generic. STILL OPEN (not claimed -- VR-5): the BROADER M-719 closure -- retire or
       deprecate the reference mycelium-std-* Rust crates, and freeze a documented stable public API per
-      RFC-0031 §5 D5 (the API-freeze + crate-retirement decision). Status stays in-progress.
+      RFC-0031 §5 D5 (the API-freeze + crate-retirement decision; this is a maintainer/orchestrator
+      decision, not closed by this leaf). Status stays in-progress.
 
       Integration and conformance gate for E13-1: verify that every ported .myc stdlib module
       (M-715...M-718) meets the RFC-0031 stability bar, retire or deprecate the corresponding
@@ -5139,6 +5171,527 @@ issues:
         codebase and CHANGELOG.
       - just check green including the differential durability tests.
       - E15-1 issue status -> done; CHANGELOG entry append-only with honest guarantee framing.
+
+      FLAG (2026-07-01, integration close-out -- relationship to M-858, not a status change): E25-1's
+      M-858 (done, PR #851) EXTENDS this issue's own mutant-witnessed interp==AOT==JIT mechanism to
+      the new E25-1 fragments (recursion/closures/Swap/Dense/VSA/dynamic-VSA JIT) and additionally
+      brings the MLIR-dialect leg into the same checked harness. M-858 does NOT, by itself, retroactively
+      close THIS issue's own DoD (the base bit/trit-fragment mutant-witness this body already claimed
+      "IMPLEMENTED... Empirical" back on 2026-06-26) -- that is a pre-existing status/body inconsistency
+      (body says implemented, `labels:` still says `status:ready`) this resync surfaces but does not
+      unilaterally resolve, matching how M-859/M-861 were flagged rather than flipped in this same
+      close-out. Whether M-858's landing is sufficient grounds to flip M-729 -> done is a maintainer
+      call, not guessed here (G2/VR-5).
+  - id: E25-1
+    title: "E25-1 (epic) -- Native AOT full-language coverage, parallelism, and 1.0.0 gating"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:epic, area:execution, priority:P1, status:in-progress]
+    depends_on: [E15-1]
+    epic: E25
+    doc_refs:
+      - corpus:ADR-034
+      - corpus:RFC-0029
+      - corpus:RFC-0004
+      - corpus:DN-25
+    body: |
+      RE-GATED INTO lang 1.0.0 by ADR-034 (2026-06-30, maintainer-ratified): native AOT (E15-1) is a
+      HARD lang-1.0.0 gate row, scope expanded to FULL-LANGUAGE native-codegen coverage. This epic is
+      the umbrella for the coverage-widening increments, the perf/parallelism extension, and the
+      ratification act. It does NOT replace E15-1 (waveN2 M-725..M-729 stay; they are subsumed under
+      ADR-034's expanded DoD); it carries the new work.
+
+      Honest base state (verified 2026-06-30, PRE-WAVE -- the state this epic was scoped against;
+      superseded by the refresh below, kept for the historical record): crates/mycelium-mlir is
+      landed on main and BUILDS clean; direct-LLVM (llvm.rs) covers bit/trit + non-recursive
+      Construct/Match + Binary{8} closures + tail-only Fix, and REFUSES (never-silent) Swap /
+      FixGroup / non-tail Fix / wide-curried closures / Dense / VSA. MLIR-dialect (native.rs,
+      feature mlir-dialect, libMLIR-gated per ADR-019) covers bit/trit + trit.add/sub, refuses
+      trit.mul + data + recursion + Swap + Dense/VSA. The interpreter is the trusted-base reference
+      throughout (ADR-007/NFR-7); the native path is the perf layer.
+
+      Base-state REFRESH (2026-07-01, integration close-out -- honest supersession of the pre-wave
+      paragraph above, VR-5): after M-850..M-858, direct-LLVM now additionally covers non-tail
+      Fix + FixGroup (heap trampoline, M-850), closures over any repr/width + currying (M-851),
+      certified binary<->ternary Swap (M-852), un-quantized Dense element-wise (M-853), and
+      MAP-I/BSC/HRR/FHRR VSA bind/unbind/bundle/permute/similarity (M-854) -- each Empirical via a
+      checked three-way differential, never Proven beyond the one checked single-op MAP-I capacity
+      bound (M-854). MLIR-dialect additionally covers trit.mul (M-857) and Construct/Match + Swap
+      (M-856); it STILL REFUSES Dense/VSA (tracked as the new **M-856b**). A JIT path for dynamic
+      VSA/HDC now exists (M-855, cleanup/resonator loops deferred). The remaining never-silent
+      refusal surface is materially smaller than the pre-wave paragraph describes, but is NOT
+      empty: M-856b's dialect Dense/VSA gap, JIT cleanup/resonator loops, and whatever M-860's
+      parallel-codegen and M-862's parallel-eval increments still gate on. Read the pre-wave
+      paragraph as "why this epic exists", not "current state" -- this paragraph is current as of
+      2026-07-01.
+
+      User stories:
+      - As a language user, I want the native AOT to compile the WHOLE language (closures, recursion,
+        Swap, Dense, VSA), so that 1.0.0 is fully featured natively, not only on the interpreter.
+      - As a maintainer, I want every coverage increment carried by a checked three-way differential
+        (interp == AOT == JIT), so that native correctness is by construction, never by assertion.
+      - As a performance-sensitive user, I want demonstrated single- and multi-core scaling with
+        honest Empirical numbers, so that "performant" is measured, not claimed.
+
+      Definition of Done:
+      - All E25-1 children (M-850..M-863) done with checked three-way differentials + honest tags.
+      - Every remaining unsupported fragment (if any) is an explicit never-silent refusal routed to
+        the interpreter (G2) -- no silent miscompile.
+      - RFC-0029 -> Enacted; DN-15 -> Resolved; ADR-034 -> Enacted with ADR-022 at the lang 1.0.0 tag.
+      - M-738 (lang 1.0.0 release act) depends_on E15-1; the tag waits on full native coverage.
+
+      PROGRESS (2026-06-30, manifests resync): 6 of 14 children landed `done` with checked
+      three-way differentials -- M-850 (recursion trampoline, PR #818), M-851 (closure-ABI widening,
+      PR #821), M-852 (Swap codegen, PR #823), M-853 (Dense codegen, PR #824), M-854 (VSA codegen,
+      PR #825), M-857 (trit.mul dialect, PR #820). REMAINING (still `ready`/`needs-design`, none
+      started this wave): M-855 (dynamic-VSA JIT), M-856 (dialect catch-up for Construct/Match/Swap/
+      Dense/VSA), M-858 (unified mutant-witnessed three-way differential across all new fragments),
+      M-859 (bench scaling + regression gates), M-860 (parallel codegen), M-861 (scheduler
+      work-stealing), M-862/M-863 (post-tag-cautious perf eval + ratification act). The DoD's
+      "RFC-0029 -> Enacted / DN-15 -> Resolved / ADR-034 -> Enacted" bullet stays unmet -- RFC-0029
+      and RFC-0039 both stay Accepted (not Enacted) per house rule #3 (Enacted requires the full path
+      complete + stable, not a partial landing); DN-15's Draft->Resolved judgment is FLAGGED in this
+      resync's report, not unilaterally decided. status:in-progress (was todo) reflects the partial
+      landing honestly -- not done, not unstarted.
+
+      PROGRESS (2026-06-30, integration close-out resync): 3 more children landed `done` since the
+      prior resync -- M-855 (dynamic-VSA JIT, PR #848; cleanup/resonator loops explicitly deferred),
+      M-856 (dialect catch-up for Construct/Match + Swap, PR #850; Dense/VSA-dialect split out as
+      the new **M-856b**, not silently dropped -- G2), M-858 (unified mutant-witnessed three-way
+      differential, PR #851; closed the 5 dialect mutant survivors M-856 introduced, earning the
+      codegen Empirical basis). Also landed this wave: a stale bench capability-loss assertion fix
+      (PR #849, noted under M-859) correcting Swap's classification post-M-852. REMAINING OPEN:
+      M-856b (Dense/VSA through the dialect, new), M-860 (parallel codegen), M-862/M-863
+      (post-tag-cautious perf eval + ratification act). FLAG: M-859 and M-861 carry `landed_pr`
+      merges (PR #845, #843) per git history but this manifest still shows their pre-existing
+      `status:ready` -- a gap from the prior resync this agent did not unilaterally resolve (out of
+      this close-out's explicit scope; flagged for the next resync/maintainer, not silently carried
+      forward as fact). DoD's Enacted/Resolved bullet stays unmet for the same house-rule-#3 reason
+      as above.
+  - id: M-850
+    title: "Direct-LLVM full recursion: non-tail Fix + FixGroup heap trampoline (stack-robust)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
+    epic: E25-1
+    depends_on: [E15-1]
+    landed_pr: 818
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #818 (a1e0517) — non-tail Fix + FixGroup heap trampoline in crates/mycelium-mlir/src/trampoline.rs: object-level recursion on an explicit malloc'd control stack, graceful DepthLimit (no C-stack overflow), reusing AutoDepthBudget (M-349). Independently reviewed (isolated worktree, rebuilt+retested): cargo test green incl. --features mlir-dialect, interp==direct-LLVM differential + cargo-mutants witness (0 missed -> Empirical), never-silent refusals test-pinned, no unsafe."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0004, corpus:DN-25]
+    body: |
+      Extend direct-LLVM (llvm.rs) from tail-only Fix to non-tail Fix + mutual recursion (FixGroup)
+      via a heap-allocated control-stack trampoline (NOT the C stack), bounded by the SAME
+      AutoDepthBudget the env-machine uses (budget.rs, M-349 -- reuse, do not reinvent; KC-3/DRY).
+      New module src/trampoline.rs (file-disjoint from the existing tail-loop code). Removes the
+      never-silent FixGroup refusal (llvm.rs:585) + the DN-15 §8.5 Match-in-pre-tail limitation;
+      deep recursion that today refuses now runs to a graceful DepthLimit (never-silent, G2).
+
+      Definition of Done:
+      - Three-way differential (interp == direct-LLVM == MLIR-dialect where it runs) green over a
+        recursion-heavy corpus, incl. a deep-recursion case reaching graceful DepthLimit parity with
+        the interpreter's FuelExhausted (DN-15 §8.4).
+      - cargo-mutants catches a mutation of the trampoline frame logic -> Empirical (else Declared).
+      - DN-15 §10 append records the Inc-3 (full trampoline) resolution; §5 text unchanged.
+      - just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #818): landed in crates/mycelium-mlir/src/trampoline.rs (1029 LOC) +
+      src/tests/trampoline.rs + tests/recursion_trampoline_differential.rs. Non-tail Fix + FixGroup
+      run via a heap control-stack trampoline bounded by the shared AutoDepthBudget; the FixGroup
+      refusal (llvm.rs:585) and the DN-15 §8.5 Match-in-pre-tail limitation are removed. cargo-mutants
+      catches a trampoline-frame mutation (0 missed) -> tag upgraded Declared to Empirical on that
+      checked basis (VR-5). DN-15 §10 append still owed (this resync's task 3). Honest tag: Empirical.
+  - id: M-851
+    title: "Direct-LLVM closure-ABI widening: any repr/width + currying + closure results"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
+    epic: E25-1
+    depends_on: [E15-1]
+    landed_pr: 821
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #821 (5a94ae7) — closures over any repr/width + currying + returned closures lower via specialize-at-application inlining (a Lam builds a suspended closure value; an App inlines its body with the param bound to the concrete-shape arg), an architectural choice (vs. a wire-level boxed-lane ABI) surfaced to and accepted by the maintainer. Removes the narrow Binary{8} ABI + the heap arena. 37 tests green (13 closure differential non-vacuous, 12 recursion), cargo-mutants 8/0 -> Empirical; 3 MEDIUMs patched on-branch."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0004, corpus:DN-25]
+    body: |
+      Replace the narrow packed-i64 Binary{8} closure ABI (M-378) with a uniform pointer-boxed lane
+      representation so closures over any repr/width, curried application, and closure-valued results
+      lower natively (llvm.rs closure section). Removes the M-378 narrow-Binary{8} refusals (DN-15 §7.4).
+
+      Definition of Done:
+      - Three-way differential green over a closure-heavy corpus (wide captures, currying, returned
+        closures); cargo-mutants catches a box/unbox mutation -> Empirical.
+      - RFC-0004 §11.7 append records the closure-ABI widening (additive under the §2 revisit clause).
+      - just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #821): landed in crates/mycelium-mlir/src/llvm.rs (closure section
+      rewritten, 374 lines net) + tests/closure_widening_differential.rs. HONEST CORRECTION (VR-5):
+      the realized mechanism is specialize-at-application inlining, not the uniform pointer-boxed
+      lane ABI the issue body sketched — a `Lam` builds a suspended closure value and an `App`
+      inlines its body at the concrete argument shape, removing the M-378 narrow-Binary{8} refusals
+      (DN-15 §7.4) without a runtime box/unbox pair. Closure-valued program results and cross-boundary
+      datum/Fix captures stay explicit never-silent UnsupportedNode (runtime dispatch deferred).
+      cargo-mutants 8/0 missed -> Empirical. RFC-0004 §11.7 append still owed (FLAG: not yet done in
+      this resync — see report). Honest tag: Empirical.
+  - id: M-852
+    title: "Direct-LLVM Swap native codegen (certificate-preserving, M-210-checked)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
+    epic: E25-1
+    depends_on: [M-851]
+    landed_pr: 823
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #823 (8392131) — native direct-LLVM codegen of Swap for the certified binary<->ternary class (swap_codegen.rs): value-preserving enc/dec transcode in dumpable IR, maintainer-ratified SwapCertMode (DEFAULT Recheck = independent compile-time re-check over mycelium-core; OPT-IN ReuseInterp), mode+source EXPLAIN-recorded. Two real silent-miscompile bugs caught + fixed before landing (cargo-mutants over-width overflow; review in-bound illegal-pair quotient discard). 145/152 tests green, cert-equivalence via M-210 both modes."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0004, corpus:RFC-0029, corpus:DN-25]
+    body: |
+      Lower the Swap node natively (llvm.rs:508 refusal + new src/swap_codegen.rs). Swap is the ONLY
+      Repr-changing node (WF1) and carries a swap certificate (Bijective / Bounded-eps) -- the emitted
+      code must be observationally equivalent to the mycelium-cert BinaryTernarySwapEngine result, and
+      the certificate must be preserved in Meta (no-opaque-lowering, ADR-009/VR-4).
+
+      FLAG (maintainer ratification, raise at this PR via AskUserQuestion): does the native swap re-run
+      the certificate check at compile time, or carry the interpreter-computed certificate forward?
+      This is a design decision affecting the Proven/Empirical tag -- do not guess (G2/VR-5).
+
+      Definition of Done:
+      - Certificate-equivalence (emitted swap == engine result via the M-210 checker) + three-way
+        differential green; cargo-mutants catches a swap-lowering mutation -> Empirical.
+      - RFC-0004 §11.8 append + RFC-0002 cross-ref; just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #823): landed in crates/mycelium-mlir/src/swap_codegen.rs (515 LOC) +
+      tests/swap_differential.rs. FLAG RESOLVED (maintainer-ratified): a two-mode SwapCertMode —
+      DEFAULT `Recheck` (an independent compile-time re-check of the certificate over mycelium-core)
+      and an opt-in `ReuseInterp` (carries the interpreter-computed certificate forward) — both modes
+      EXPLAIN-recorded (mode + source). Never-silent refusals: Dense/VSA, illegal pair, over-i64-width
+      (both modes), swap-in-recursion. cargo-mutants caught a real over-width 1<<64 overflow bug and
+      review caught a real in-bound illegal-pair quotient-discard bug, both fixed before landing.
+      RFC-0004 §11.7 append (not §11.8 per the merge note) + RFC-0002 cross-ref still owed (FLAG: not
+      yet done in this resync — out of this agent's doc-ownership scope, see report). Honest tag:
+      Empirical (Proven correctly not claimed — VR-5).
+  - id: M-853
+    title: "Native Dense lowering (Repr::Dense element-wise + quant descriptor)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
+    epic: E25-1
+    depends_on: [M-852]
+    landed_pr: 824
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #824 (ce450b7) — native direct-LLVM Dense element-wise lowering (add/sub/neg/scale/dot/similarity) over the un-quantized F32/BF16 fragment (RFC-0039 §5.1). Three-way differential through the M-210 checker (bit-exact; dialect leg honestly refuses), cargo-mutants-witnessed (67/70 viable caught). Honest tags: codegen claim Empirical, read-back carries the reference per-op tag (Proven add/sub/scale, Exact neg). Quantized Dense stays an explicit never-silent refusal gated on E20-1."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0039, corpus:RFC-0029, corpus:DN-25]
+    body: |
+      Native Dense lowering (new src/dense_codegen.rs, direct-LLVM first; dialect later) -- removes the
+      Dense-repr refusals (llvm.rs:2170 + dialect/native.rs:349-350). DESIGN-GATED on RFC-0039 (Native
+      Dense & VSA Codegen, Accepted 2026-06-30) -- implement to its §5.1 decisions: quant granularity,
+      accumulator width, packing schedule as inspectable meta.physical (DN-01). Scope: un-quantized
+      F32/BF16 first (OQ-2); the full ADR-030 int/fp8/TF32 quant/accumulator/packing widening is
+      additionally gated on E20-1 landing QuantDesc (OQ-4 "both" -- RFC-0039 §7), refused never-silently
+      until then.
+
+      Definition of Done:
+      - Three-way differential vs mycelium-cert::dense reference green; cargo-mutants catches a
+        quant-granularity mutation -> Empirical; never-silent on unsupported quant modes.
+      - just check green; CHANGELOG append-only; honest tag (Declared until the differential is checked).
+
+      DONE (2026-06-30, PR #824): landed in crates/mycelium-mlir/src/dense_codegen.rs (1001 LOC) +
+      tests/dense_differential.rs. Element-wise add/sub/neg/scale/dot/similarity over un-quantized
+      F32/BF16 (RFC-0039 §5.1/OQ-2); three-way differential through the M-210 checker is bit-exact
+      (dialect leg honestly refuses Dense). cargo-mutants 67/70 viable caught. Overflow/subnormal
+      classified by sentinel-token scan at the correct (non-zero) index, a real bug caught + fixed.
+      Quantized Dense (ADR-030 int/fp8/TF32) stays an explicit never-silent refusal, gated on E20-1
+      landing QuantDesc per OQ-4. Honest tag: codegen claim Empirical; read-back carries the reference
+      per-op tag (Proven add/sub/scale, Exact neg) -- upgraded from the prior Declared placeholder on
+      this checked basis (VR-5).
+  - id: M-854
+    title: "Native VSA lowering (bind/bundle/permute over the mycelium-vsa models)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
+    epic: E25-1
+    depends_on: [M-853]
+    landed_pr: 825
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #825 (fda7b9f) — native direct-LLVM VSA lowering (bind/unbind/bundle/permute/similarity) for the four 1.0.0-mandatory models, mirroring mycelium-vsa digit-for-digit (RFC-0039 §5.2). Three-way differential through the M-210 checker (bit-exact; dialect honestly refuses VSA); cargo-mutants 0-missed cross-environment via toolchain-independent witnesses + 4 justified equivalents. Honest tags: Empirical codegen; Proven only the single-op MAP-I bundle bound; HRR/FHRR bundle Empirical-within-a-measured-profile, refuse outside; SBC/MAP-B + quantized stay never-silent refusals (E20-1-gated)."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0039, corpus:RFC-0029, corpus:DN-25]
+    body: |
+      Native VSA lowering (new src/vsa_codegen.rs, direct-LLVM first; dialect later) -- bind/bundle/
+      permute over the mycelium-vsa models. DESIGN-GATED on RFC-0039 (Accepted 2026-06-30). Mandatory
+      1.0.0-native models = MAP-I/BSC/HRR/FHRR; niche SBC/MAP-B extend post-mandate (OQ-3). Element-space
+      / block-sparse / complex VSA widening additionally gated on E20-1 (OQ-4).
+
+      HONEST CORRECTION (VR-5 -- supersedes the prior "capacity bounds already have Lean 4 + LH proofs"
+      claim): only the SINGLE-OP MAP-I bundle capacity bound is Proven (M-001/proofs/lh-bundle, replayed
+      in capacity.rs). The multi-hop M-832 work is IN-PROGRESS research emitting undischarged obligations
+      and NEVER stamps Proven. Codegen preserves Proven ONLY for that checked single-op side-condition
+      (RFC-0039 §5.2); everything else is Empirical/Declared.
+
+      Definition of Done:
+      - Three-way differential vs mycelium-cert::dense_vsa + mycelium-vsa reference green, incl. a
+        capacity-bound parity case (single-op MAP-I); cargo-mutants catches a bind/bundle mutation.
+      - just check green; CHANGELOG append-only; honest tags (Proven preserved only for the checked
+        single-op bound).
+
+      DONE (2026-06-30, PR #825): landed in crates/mycelium-mlir/src/vsa_codegen.rs (1493 LOC) +
+      tests/vsa_differential.rs (928 LOC). bind/unbind/bundle/permute/similarity for the four
+      1.0.0-mandatory models (MAP-I/BSC/HRR/FHRR), mirroring mycelium-vsa digit-for-digit; dialect leg
+      honestly refuses VSA. cargo-mutants 0-missed via TOOLCHAIN-INDEPENDENT emission/read-back
+      witnesses + 4 inline-justified equivalents -- this property is CROSS-ENVIRONMENT (does not depend
+      on the local mlir-18-tools/libMLIR install), distinct from M-857's libMLIR-gated witnesses.
+      Honest tags carried exactly per RFC-0039 §5.2: Proven preserved ONLY for the single-op MAP-I
+      bundle side-condition (capacity::proven_capacity_bound replay); HRR/FHRR bundle is Empirical
+      WITHIN the reference's measured EmpiricalProfile coverage window (odd m<=5, d>=1024,
+      single-factor, codebook<=16) and refuses OutsideEmpiricalProfile beyond it -- never a silent
+      Empirical-anyway. SBC/MAP-B (niche, OQ-3) and quantized/block-sparse/complex-carrier VSA
+      (ADR-031, OQ-4) stay explicit never-silent refusals, E20-1-gated. HEAVY/large-hypervector-dim
+      VSA workloads and the full cargo-mutants durability pass beyond the toolchain-independent witness
+      set are GPU-DEFERRED (maintainer-run; not executed in this CPU-bound agent environment) -- the
+      landed claim covers the CPU small-dim envelope only. RFC-0039 remains Accepted (implemented
+      Rust-first, pending ratification -- NOT moved to Enacted by this landing). Honest tag: Empirical.
+  - id: M-855
+    title: "JIT for dynamic VSA/HDC workloads + ADR-009 deferral-lift record"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
+    epic: E25-1
+    depends_on: [M-854]
+    landed_pr: 848
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #848 (51fe194) — dynamic-VSA JIT runtime-specialization for the four mandatory models (bind/unbind/bundle/permute/similarity) in crates/mycelium-mlir/src/vsa_jit.rs, reusing the M-854 refusal surface + read-back verbatim. Differential 9/9 non-vacuous + cargo-mutants 0-missed on local hardware (a BSC-majority boundary gap closed, 2 equivalents justified). Cleanup/resonator loops explicitly deferred (not in this landing). Honest tag: Empirical."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0039, corpus:RFC-0029, corpus:DN-25]
+    body: |
+      JIT path for dynamic VSA/HDC workloads (data-dependent hypervector dim, runtime model selection,
+      cleanup/resonator loops) in jit.rs, as an explicit never-silently-selected ExecMode (no Auto arm,
+      G2). The ADR-009 dynamic-VSA JIT deferral lift is recorded in RFC-0039 §6 (Accepted 2026-06-30);
+      OQ-1 RESOLVED: the §6 record IS the vehicle -- NO separate ADR-009 amendment. Design-gated on
+      RFC-0039 Accepted (now met).
+
+      Definition of Done:
+      - JIT == interpreter over a dynamic-VSA subset (Empirical) + explicit refusal outside it;
+        cargo-mutants catches a JIT-codegen mutation.
+      - just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #848): landed in crates/mycelium-mlir/src/vsa_jit.rs (551 LOC) +
+      tests/vsa_jit_differential.rs (689 LOC) + src/tests/vsa_jit.rs (618 LOC). bind/unbind/bundle/
+      permute/similarity JIT-specialized at runtime for MAP-I/BSC/HRR/FHRR, mirroring M-854's
+      refusal surface. cargo-mutants 0-missed (a BSC-majority boundary gap closed, 2 equivalents
+      justified inline). PARTIAL LANDING (honest, per this issue's scope): cleanup/resonator loops
+      are explicitly DEFERRED, not covered by this JIT path or its differential. Honest tag:
+      Empirical.
+  - id: M-856
+    title: "MLIR-dialect coverage catch-up: Construct/Match + Swap + Dense/VSA (libMLIR-gated)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
+    epic: E25-1
+    depends_on: [M-850, M-853, M-854]
+    landed_pr: 850
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #850 (d1e27d9) — MLIR-dialect leg (native.rs) now lowers Construct/Match (data) and Swap (binary<->ternary transcode) through real libMLIR; three-way differential interp == direct-LLVM == dialect verified. Dense/VSA-dialect coverage SCOPED OUT of this landing and split to M-856b (honest partial landing, not silently dropped -- G2). Mutant-witness for the new dialect surface subsumed by M-858's unified differential."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
+    body: |
+      Bring the MLIR-dialect path (native.rs, feature mlir-dialect) up to direct-LLVM's fragment:
+      Construct/Match (native.rs:666), Swap (native.rs:659), Dense/VSA (native.rs:342). libMLIR-GATED
+      (ADR-019) -- where mlir-opt/mlir-translate are absent the dialect leg skips gracefully
+      (DialectError::ToolchainMissing; never a red gate, never a faked pass -- reuse M-725's ran_mlir
+      non-vacuity guard). FLAG in the PR: the dialect leg is verified only where libMLIR is provisioned;
+      the direct-LLVM leg is the always-on guarantee.
+
+      Definition of Done:
+      - Three-way differential green where libMLIR is provisioned (skip-graceful + recorded where not);
+        cargo-mutants catches a dialect-lowering mutation.
+      - just check green (no skips silently masked); CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #850, partial landing -- honest per-title split): Construct/Match + Swap
+      now lower through the real arith/func/cf dialect path (crates/mycelium-mlir/src/dialect/
+      native.rs); three-way differential interp == direct-LLVM == dialect verified non-vacuous
+      against a provisioned libMLIR. Dense/VSA through the dialect is EXPLICITLY DEFERRED and split
+      out as **M-856b** (new issue below) -- this issue's title scope (Construct/Match + Swap) is
+      done; the Dense/VSA half of the original title is not. The dialect-lowering mutant witness
+      for this new surface is carried by M-858's unified differential (5 dialect mutant survivors
+      closed there), not duplicated here. Honest tag: Empirical where libMLIR is provisioned;
+      skip-graceful (DialectError::ToolchainMissing) where absent.
+  - id: M-856b
+    title: "MLIR-dialect coverage: Dense/VSA through the dialect path (libMLIR-gated)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
+    epic: E25-1
+    depends_on: [M-853, M-854, M-856]
+    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
+    body: |
+      Split out of M-856 (2026-06-30 resync, honest partial-landing division): bring Dense and VSA
+      lowering (native.rs:342) through the MLIR-dialect path (feature mlir-dialect), matching
+      direct-LLVM's dense_codegen.rs/vsa_codegen.rs fragment. libMLIR-GATED (ADR-019) -- skip
+      gracefully (DialectError::ToolchainMissing) where mlir-opt/mlir-translate are absent; never a
+      red gate, never a faked pass (reuse M-725's ran_mlir non-vacuity guard, same discipline M-856
+      established for Construct/Match/Swap).
+
+      Definition of Done:
+      - Three-way differential (interp == direct-LLVM == dialect) green over Dense + VSA where
+        libMLIR is provisioned (skip-graceful + recorded where not); cargo-mutants catches a
+        dialect-lowering mutation on the Dense/VSA path specifically.
+      - just check green (no skips silently masked); CHANGELOG append-only; honest tag.
+  - id: M-857
+    title: "trit.mul through the real MLIR-dialect path (libMLIR-gated)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
+    epic: E25-1
+    depends_on: [M-725]
+    landed_pr: 820
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #820 (9082e2f) — balanced-ternary trit.mul lowered through the real arith/func/cf dialect path (shifted-accumulate, 2m-trit buffer, shared emit_trit_add_step carry; DRY with direct-LLVM emit_trit_mul + mycelium_core::ternary::mul). DialectError::Unsupported(\"trit.mul\") refusal removed. Three-way differential non-vacuous (libMLIR 18.1.3 provisioned), cargo-mutants 9-caught/0-missed -> Empirical; 1 Medium patched on-branch."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
+    body: |
+      Lower trit.mul (shifted-accumulate / 2m-trit buffer) through arith/func dialect ops in
+      native.rs, removing the DialectError::Unsupported("trit.mul") refusal (native.rs:506). The
+      direct-LLVM emit_trit_mul already exists; this reproduces it through the dialect and checks
+      three-way. libMLIR-GATED (skip-graceful where absent; bench records Skipped with reason).
+
+      Definition of Done:
+      - Three-way differential over a trit-mul corpus green where libMLIR is provisioned; mutant on
+        the shift/accumulate caught -> Empirical. just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #820): landed in crates/mycelium-mlir/src/dialect/native.rs (257 lines
+      net). trit.mul now lowers through arith/func/cf dialect ops (shifted-accumulate, 2m-trit
+      buffer), sharing emit_trit_add_step with direct-LLVM emit_trit_mul (DRY). The
+      DialectError::Unsupported("trit.mul") refusal is removed; the dialect boundary moves to
+      closures/recursion/data/Swap/Dense/VSA (each an explicit test-pinned refusal -- M-856 is the
+      tracked dialect catch-up for those). THIS WITNESS IS LIBMLIR-GATED (unlike M-854's
+      toolchain-independent witnesses): the three-way differential ran non-vacuous against a
+      provisioned libMLIR 18.1.3; cargo-mutants 9-caught/0-missed in that environment. Honest tag:
+      Empirical where libMLIR is provisioned; skip-graceful (DialectError::ToolchainMissing) where
+      absent, never a faked pass.
+  - id: M-858
+    title: "Unified mutant-witnessed three-way differential over all new fragments"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:verification, area:execution, priority:P1, status:done]
+    epic: E25-1
+    depends_on: [M-850, M-852, M-854, M-855]
+    landed_pr: 851
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #851 (184ec13) — unified interp == direct-LLVM == dialect (== JIT for the in-subset fragment) differential through the shared M-210 checker with ran_mlir non-vacuity, over element-wise/arithmetic, data (Construct/Match), and certified-swap corpora. 5 dialect mutant survivors (M-856's new Construct/Match/Swap dialect surface) closed with real witnesses -- 0-missed. Earns the codegen Empirical basis and subsumes M-856's dialect witness obligation."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
+    body: |
+      Extend the unified interp == AOT == JIT three-way differential (M-729's shared M-210 checker)
+      to cover every new fragment (recursion, closures, Swap, Dense, VSA, dynamic-VSA JIT), mutant-
+      witnessed (a codegen divergence on any new fragment is caught -- a witness test, not a
+      mutants.toml edit; RFC-0029 §7.5). This is the durability gate that keeps the coverage claims
+      Empirical, not Declared.
+
+      Definition of Done:
+      - The extended harness catches an injected codegen divergence for each new fragment family.
+      - The native coverage claims are labelled Empirical in code + CHANGELOG. just check green.
+
+      DONE (2026-06-30, PR #851): landed in tests/unified_threeway_differential.rs (951 LOC, plus
+      small parity fixes to closure_widening_differential.rs and
+      recursion_trampoline_differential.rs). Single differential entrypoint covering interp/
+      direct-LLVM/MLIR-dialect (+ JIT for the in-subset fragment) over element-wise+arithmetic,
+      data (Construct/Match), and certified-swap corpora, plus overflow parity and an honest
+      boundary check (closures/recursion actually verified refused by the dialect leg, not just
+      claimed). Two coverage gaps found + closed with real witnesses (not mutants.toml edits):
+      emit_swap_int_to_bits range-bound arithmetic (a swap(8 -> binary4) boundary case) and
+      lower_match_dialect's arm-shape || guard (a same-kind different-width Match case) -- 5
+      dialect mutant survivors total closed, 0-missed. Note: Dense/VSA are NOT yet part of the
+      dialect leg of this differential (M-856b, deferred) -- the unified harness covers what M-856
+      landed (Construct/Match/Swap) plus the pre-existing direct-LLVM/JIT fragments; it does not
+      retroactively cover the M-856b scope. Honest tag: Empirical.
+  - id: M-859
+    title: "mycelium-bench: single + multicore scaling curves + regression gates"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:verification, area:execution, priority:P1, status:ready]
+    epic: E25-1
+    depends_on: [E15-1]
+    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
+    body: |
+      Extend mycelium-bench (new scaling.rs + verdict.rs/report.rs): per-backend single-core baselines
+      (reuse is_process_spawn_bound to separate spawn from compute), multicore scaling curves (a batch
+      of independent programs across 1..N workers via the Scheduler -- measurement only, no semantic
+      change), regression gates vs a committed baseline JSON, and a scaling-efficiency column in the
+      "where we're losing" report (Amdahl serial fraction / contention / spawn cost). All numbers
+      Empirical + host-tagged; thresholds Declared.
+
+      Definition of Done:
+      - Scaling curves + regression gates produced for interp/AOT/JIT; baseline JSON committed;
+        bench self-tests green. just check green; CHANGELOG append-only; honest tags.
+
+      FOLLOW-UP (2026-06-30, PR #849): a stale bench test assertion in
+      crates/mycelium-bench/src/backend.rs (recursion_and_swap_are_capability_losses_and_data_is_
+      never_silent) hard-coded Swap as an always-a-capability-loss fragment, predating M-852's
+      native Swap codegen. Corrected: legal-pair Swap now folds into the same never-silent
+      (value/capability-loss/skip, measured not pre-asserted) obligation Fragment::Data already
+      uses, since M-852's shared lower_program path lowers a legal binary<->ternary round trip to a
+      Value on both compiled backends (repr/payload/guarantee match the interpreter's; only the
+      dynamic Meta::provenance differs, Root vs Derived, RFC-0001 §4.6). Illegal-pair/unsupported
+      swaps remain explicit capability losses. Recursion (Fix/FixGroup) is unaffected -- still
+      always a capability loss on both compiled backends (no native call-frame machinery emitted).
+      This is a stale-expectation fix, not a scaling/regression-gate change; M-859's own status is
+      unchanged by this note (see this resync's report for a separate FLAG on M-859/M-861 status
+      currency).
+  - id: M-860
+    title: "Parallel AOT codegen: per-function independent lowering, byte-identical emit"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
+    epic: E25-1
+    depends_on: [M-859]
+    doc_refs: [corpus:ADR-034, corpus:RFC-0004, corpus:RFC-0008, corpus:DN-25]
+    body: |
+      Parallelize the pure, independent per-function/per-nodule lowering (llvm.rs/native.rs), joined by
+      a stable content-key sort so the emitted IR is BYTE-IDENTICAL to the sequential emit -- Exact by
+      construction, no new nondeterminism (emission order pinned). FLAG (PR-isolated): if a parallelism
+      primitive is added (rayon/crossbeam) it is a supply-chain/deny.toml decision -- prefer the
+      zero-dep std::thread::scope parallel-map first (keeps forbid(unsafe_code)); raise the dep choice
+      via AskUserQuestion.
+
+      Definition of Done:
+      - parallel_emit == sequential_emit (byte-equal, Exact) + the existing three-way unchanged;
+        cargo-mutants catches a join-order mutation. just check green; CHANGELOG append-only; honest tag.
+  - id: M-861
+    title: "Scheduler multicore work-stealing (RT2-preserving, RT3-reified steal policy)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:runtime, priority:P1, status:ready]
+    epic: E25-1
+    depends_on: [M-859]
+    doc_refs: [corpus:ADR-034, corpus:RFC-0008, corpus:DN-25]
+    body: |
+      Replace the single shared FIFO VecDeque (scheduler.rs) with per-worker deques + steal-on-empty.
+      RFC-0008 RT1/RT2: tasks share no mutable state, so the observable result is order-independent --
+      the existing SCHEDULER_RT2_STRENGTH=Empirical differential ("parallel run == spawn-order
+      sequential reference") carries over (it asserts result-equality, not scheduling-equality). The
+      steal policy (LIFO-own/FIFO-steal, victim selection) is a placement-style decision -> an RT3
+      reified, EXPLAIN-able policy (mirroring forage), never silent. Keep stealing SEMANTICS-FREE:
+      completion-order + worker-identity stay unobservable, so RT2's deterministic default holds.
+
+      Definition of Done:
+      - The RT2 differential is extended to assert result-equality UNDER stealing (property-tested);
+        the total backpressure bound (sum of deque lengths <= capacity) stays Exact or is honestly
+        downgraded with the reason; the steal policy is EXPLAIN-able (RT3). just check green; honest tag.
+  - id: M-862
+    title: "Parallel pure-fragment interpreter/env-machine eval + differential (post-tag-cautious)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    epic: E25-1
+    depends_on: [M-860, M-861]
+    doc_refs: [corpus:ADR-034, corpus:RFC-0008, corpus:DN-25]
+    body: |
+      Parallelize evaluation ONLY for the provably pure, independent RT2 fragment (independent pure
+      Match arms / Construct elements), each carrying a differential parallel == sequential == interp
+      (M-210). FLAG (significant): the SEQUENTIAL interpreter STAYS the reference (RFC-0008 §4.2/KC-3 --
+      concurrency adds scheduling outside the kernel, never new meaning inside it); the parallel
+      evaluator is a perf path validated against it, exactly like AOT. Recommend landing LAST /
+      cautiously, possibly AFTER the lang 1.0.0 tag -- maintainer decides pre/post-tag at this PR.
+
+      Definition of Done:
+      - parallel_eval == sequential_eval == interp green over the pure fragment; cargo-mutants catches
+        a divergence; the trusted base stays sequential as the reference. just check green; honest tag.
+  - id: M-863
+    title: "AOT ratification act: ADR-034 + RFC-0029 Enacted + DN-15 Resolved + status flips"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:design, area:execution, priority:P1, status:ready]
+    epic: E25-1
+    depends_on: [M-858, M-862]
+    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-15, corpus:DN-25]
+    body: |
+      The closing ratification act, run AFTER the coverage + perf increments land with checked
+      differentials and the M-858 mutant-witness fires (claim Empirical, not Declared). Append-only:
+      RFC-0029 Accepted -> Enacted; DN-15 Draft -> Resolved (§10 append); DN-25 T6 row refreshed;
+      ADR-034 -> Enacted with ADR-022 at the lang 1.0.0 tag. Status flips: M-725..M-729 + M-850..M-862
+      + E15-1 + E25-1 -> done.
+
+      Definition of Done:
+      - All E25-1/E15-1 children done with checked three-way differentials; RFC-0029 Enacted;
+        DN-15 Resolved; ADR-034 Enacted; issues status flipped; CHANGELOG append-only; just check green.
+      - The lang 1.0.0 gate row T6 is demonstrably met (never a silent pass -- G2).
   - id: E16-1
     title: "E16-1 (epic) — Toolchain, IDE & package distribution"
     milestone: "Phase 8 — Toolchain & Release Engineering"
@@ -5489,9 +6042,10 @@ issues:
     title: "M-738 — chore(release): full-language 1.0.0 release act"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:release, priority:P1, status:blocked]
-    landed_basis: "status:blocked (2026-06-23) — the release act is NOT performed: its external gate deps are unmet. E13-1 (self-hosting stdlib) is needs-design (only lib/std/result.myc self-hosts — 1 of 25 modules); E18-1 (full-language readiness) is needs-design; ADR-022 is Accepted (NOT Enacted) with sub-gate rows A2/A3/A4 still open. Per the rel10 kickoff + house rule #3 / G2, the tag is NOT cut and ADR-021/ADR-022 stay Accepted (no Enacted). M-737 (ADR-023 Accepted) IS done; this task unblocks only when E13-1 + E18-1 + every ADR-022 gate row are confirmed closed."
+    landed_basis: "status:blocked (2026-06-23) — the release act is NOT performed: its external gate deps are unmet. E13-1 (self-hosting stdlib) is needs-design (only lib/std/result.myc self-hosts — 1 of 25 modules); E18-1 (full-language readiness) is needs-design; ADR-022 is Accepted (NOT Enacted) with sub-gate rows A2/A3/A4 still open. Per the rel10 kickoff + house rule #3 / G2, the tag is NOT cut and ADR-021/ADR-022 stay Accepted (no Enacted). M-737 (ADR-023 Accepted) IS done; this task unblocks only when E13-1 + E18-1 + E15-1 (AOT — re-gated by ADR-034, 2026-06-30) + every ADR-022 gate row are confirmed closed."
+    depends_on: [E15-1]
     epic: E17-1
-    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:DN-25]
+    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:ADR-021, corpus:ADR-034, corpus:DN-25]
     body: |
       The terminal step: verify that every ADR-022 (full-language 1.0.0 release-readiness
       gate) row is closed, then record the conscientious release decision by moving
@@ -5806,29 +6360,55 @@ issues:
       - corpus:RFC-0032
       - corpus:RFC-0031
       - src:lib/std/result.myc
+      - src:crates/mycelium-l1/tests/enablement.rs
+      - src:crates/mycelium-l1/tests/std_cmp.rs
+      - src:crates/mycelium-l1/tests/std_math.rs
+      - src:crates/mycelium-l1/tests/std_collections.rs
+      - src:crates/mycelium-l1/tests/std_bytes_slice.rs
+      - src:crates/mycelium-l1/tests/std_text.rs
     body: |
-      TIER-2 SMOKE PORTS LANDED (2026-06-26, wave-n1): the indexed Vec op and the byte index/decode
-      smoke ports now exist — crates/mycelium-l1/tests/std_collections.rs (Vec get/len three-way) and
-      std_text.rs (byte_len/decode_ascii over a Bytes literal, three-way) + std_fmt.rs. The E13-1
-      preconditions are demonstrated, not asserted: M-716 (#461) ⟸ std_collections.rs; M-717 (#462) ⟸
-      std_text.rs / std_fmt.rs — both flipped ready → in-progress with the pointer (M-717 is PARTIAL:
-      multi-byte decode + Bytes-native slice deferred on the width-cast prim gap). REMAINING: a full
-      Bytes-native string-slice smoke port awaits the width-cast/slice prim surface (flagged on M-717).
+      DoD MET — VERIFIED COMPLETE (2026-06-30, kickoff kpr): every M-752 DoD clause is satisfied by
+      landed work; the only remaining step is the tracking flip (status in-progress → done), which the
+      INTEGRATION TIER owns (flagged below, not self-flipped). This entry records the verification, not
+      new test authoring — the conformance ports were landed across waves n1/n2/Session-2 (M-799/DN-43
+      surfaced the byte slice/concat prims that this body previously listed as REMAINING). All
+      change-scoped tests re-run green on origin/dev: enablement.rs (32) + std_cmp.rs (14) +
+      std_math.rs (38) + std_collections.rs (24) + std_bytes_slice.rs (14) + std_text.rs (19) +
+      std_generic_conformance.rs (35). The four kickoff-named smoke ports — a width-typed eq, a binary
+      add, an indexed Seq/Vec op, a Bytes slice — each have a passing three-way differential (L1-eval ≡
+      L0-interp ≡ AOT) demonstrating the unblock, never asserting it (VR-5/G2):
+      - width-typed eq  → enablement.rs::eq_binary_width_typed / eq_ternary_width_typed; std_cmp.rs.
+      - binary add      → enablement.rs::add_bin_in_range (+ overflow-refusal on every path); std_math.rs.
+      - indexed Seq/Vec → enablement.rs::seq_get_surface_three_way (+ OOB refusal); std_collections.rs.
+      - Bytes slice     → std_bytes_slice.rs::slice_in_range_preserves_value (+ OOB/inverted refusal).
+      Never-silent (G2) is pinned on every path: add_bin/sub_bin overflow, seq.get OOB, and bytes.slice
+      out-of-range/inverted-range each refuse on L1-eval, L0-interp, AND AOT (no silent wrap/clamp).
 
-      IN PROGRESS (Tier-1 landed in #518; Tier-2 pending M-749/M-750). Integration gate for E19-1:
-      confirm every new prim/representation is differential-tested (three-way where it runs to closed L0)
-      and honestly tagged, and demonstrate each unblock with a small .myc smoke port following the
-      std_result/std_option/std_cmp harness pattern. DONE for Tier-1: crates/mycelium-l1/tests/
-      enablement.rs covers the width-typed eq/lt + binary add/sub three-way + never-silent refusals + a
-      Bool-bridge port. REMAINING (Tier-2): the indexed Vec op + string slice smoke ports land with
-      M-749 (Repr::Seq) / M-750 (Repr::Bytes). The smoke ports prove the E13-1 preconditions are
-      genuinely satisfied -- never asserted (VR-5/G2).
+      E13-1 PRECONDITION FLIPS (all in place, demonstrated not asserted): M-716 (⟸ M-749 Repr::Seq) is
+      status done, citing enablement.rs + std_collections.rs; M-717 (⟸ M-750 Repr::Bytes) is status
+      done, citing enablement.rs + std_text.rs/std_fmt.rs; M-718 (⟸ M-747/M-748 cmp/binary-math) is
+      status done, citing std_math.rs/std_cmp.rs (the .myc ports) + enablement.rs (the Tier-1 prim
+      three-way). The width-cast/slice gap this body previously flagged on M-717 was CLOSED by
+      M-799/DN-43 (bytes_slice/bytes_concat surfaced, never-silent on every path).
+
+      HISTORY (superseded by the verification above, retained for audit): TIER-2 SMOKE PORTS LANDED
+      (2026-06-26, wave-n1) — the indexed Vec op + byte index/decode ports landed (std_collections.rs,
+      std_text.rs, std_fmt.rs); at that point a full Bytes-native string-slice port was still REMAINING
+      (awaiting the width-cast/slice prim surface, since landed via M-799/DN-43). Tier-1 (#518): the
+      width-typed eq/lt + binary add/sub three-way + never-silent refusals + a Bool-bridge port in
+      enablement.rs.
 
       Definition of Done:
       - Every enabler has a passing three-way differential test; no enabler is undifferentiated.
       - A .myc smoke port per unblocked E13-1 tier; each E13-1 issue's precondition flipped with a pointer
         to the demonstrating test.
       - just check green; CHANGELOG append-only.
+
+      DoD status (2026-06-30, kickoff kpr): clause 1 MET (every enabler has a passing three-way test —
+      enablement.rs + the std_* ports, all green); clause 2 MET (a .myc smoke port per unblocked tier,
+      and M-716/M-717/M-718 each flipped to done with a demonstrating-test pointer); clause 3 — change-
+      scoped tests green (full `just check` + CHANGELOG append-only is the integration tier's close-out,
+      flagged). REMAINING: only the tracking flip status in-progress → done, which integration owns.
 
   - id: M-753
     title: "M-753 -- width-generic functions (const-generic over representation width) [E11-1/s10]"
@@ -7398,7 +7978,7 @@ issues:
       - corpus:RFC-0008
       - corpus:DN-64
     body: |
-      DN-64 OQ-Q disposition: "verify inject cert is valid, trusted, and not expired or superceded by the
+      DN-64 OQ-Q disposition: "verify inject cert is valid, trusted, and not expired or superseded by the
       trusted signer."
       As a colony receiving a hot-inject from a peer in a mesh, I want to verify the InjectCert is valid,
       trusted, and not expired/superseded against MY OWN TrustRoot (never inherit the sender's), so that
@@ -7499,7 +8079,7 @@ issues:
   - id: M-848
     title: "M-848 -- Scoped-toolchain setup automation (just setup-scoped) per DN-65"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:infra, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:8, type:infra, area:toolchain, priority:P3, status:in-progress]
     depends_on: []
     doc_refs:
       - corpus:DN-65
@@ -7515,6 +8095,16 @@ issues:
       Pairs with the sync-off-tip step (already a standing rule). Never-silent: prints what it installed/
       skipped + why.
       DoD: the recipe lands; DN-65 §2.3 references it; a scoped PR's agent can prep its env in one step.
+
+      MARKER (2026-06-30, manifests resync, status todo/needs-design -> in-progress): a sibling
+      toolchain agent was reported (this wave) to be making the setup tooling idempotent/auto-installing
+      so differentials are non-vacuous without changing test semantics (see CHANGELOG.md "toolchain
+      made idempotent/auto-installing (M-848)" methodology-resolution note). NO `claude/leaf/E25-toolchain`
+      (or equivalent) branch, commit, or `just setup-scoped` recipe was found in `origin` at the time of
+      this resync (`git ls-remote origin` checked 2026-06-30; `justfile` has no `setup-scoped` target
+      yet) -- so this status move records that the work is reported in-flight, NOT that it has landed.
+      FLAGGED for the maintainer: confirm whether the sibling toolchain agent's branch was pushed
+      elsewhere / under a different name, or is still local-only / not yet started.
   - id: M-849
     title: "M-849 -- Colony trust topology: controller / masterless / node invalidation (RFC-0038 §8.8)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"

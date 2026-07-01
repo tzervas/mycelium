@@ -11,11 +11,15 @@
 # What it provisions (each component probes first and no-ops when already present):
 #   rust    — the Rust toolchain pinned to the repo MSRV (rustup, if present). NEVER bumps the pin.
 #   python  — `uv` + a CPython for the project (3.13/3.14 target; skip-gracefully on older).
-#   checks  — `just`, the lint/check tools, gitleaks, supply-chain gates (reuses install-tools.sh).
+#   checks  — `just`, the lint/check tools, gitleaks, supply-chain gates, the native AOT toolchain
+#             (`llc`/`clang` — NOT feature-gated, the default direct-LLVM backend, RFC-0004 §2 /
+#             ADR-034), `cargo-mutants`/`cargo-nextest`, `z3` (reuses install-tools.sh).
 #   hooks   — the pre-commit git hooks (so `just check`-equivalent runs on commit).
-#   mlir    — OPT-IN ONLY (libMLIR for the off-by-default `mlir-dialect` feature; ADR-019). Never
-#             part of `--all` or the defaults, because an off-by-default feature must not
-#             apt-install/sudo-prompt by default.
+#   mlir    — OPT-IN ONLY (libMLIR `mlir-opt`/`mlir-translate` for the off-by-default `mlir-dialect`
+#             Cargo feature; ADR-019). Never part of `--all` or the defaults, because an
+#             off-by-default feature must not apt-install/sudo-prompt by default. (`llc`/`clang`
+#             themselves are NOT part of this opt-in set — they're in `checks` above, since the
+#             direct-LLVM AOT path that needs them is always on.)
 #
 # Honesty / house rules (CLAUDE.md):
 #   - never-silent (G2): a failed REQUIRED step is reported and aborts with a clear message; an
@@ -31,8 +35,11 @@
 # clean skip; non-zero only when a REQUIRED, requested component genuinely fails.
 set -euo pipefail
 
-# ── House shell helpers (have/section/ok/skip/fail). lib.sh lives beside this script. ─────────────
-LIB="${BASH_SOURCE%/*}/lib.sh"
+# ── House shell helpers (have/section/ok/skip/fail). lib.sh lives beside this script. CWD-independent
+# resolution: `dirname` of a bare filename (e.g. when run as `bash install.sh` from inside scripts/)
+# yields `.`, and `cd ... && pwd` makes it absolute — works regardless of the invoking CWD. ──────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="$SCRIPT_DIR/lib.sh"
 if [[ -f "$LIB" ]]; then
   # shellcheck source=scripts/lib.sh
   source "$LIB"

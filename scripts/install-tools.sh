@@ -30,7 +30,8 @@
 # of `just check`; set MYCELIUM_SKIP_OPTIONAL_CARGO=1 to skip them and stay well under budget. The
 # security gates (cargo-deny/cargo-audit, used by `just deny`) and everything else still install.
 # ─────────────────────────────────────────────────────────────────────────────────────────────
-source "${BASH_SOURCE%/*}/lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib.sh"
 cd "$REPO_ROOT" || exit 1
 
 # Ensure uv's tool-bin and cargo's bin are on PATH for this run (a fresh container may not have
@@ -65,9 +66,19 @@ section "apt/nala fast-path (snapshot-persisted prebuilt check tools)"
 # nala itself is NOT listed here: it is bootstrapped in Step 1 below (the driver install), so adding it
 # to the batch set would make it re-appear in `apt_missing` and be reinstalled in Step 3 (harmless but
 # redundant — DRY).
+#
+# `llvm`/`clang` (unversioned meta-packages — M-848/E25): the native AOT backend
+# (crates/mycelium-mlir/src/llvm.rs — `compile_and_run` drives `llc` + `clang`, RFC-0004 §2 /
+# ADR-034) is NOT feature-gated like `mlir-dialect` — it is the default, always-on direct-LLVM path,
+# so it belongs in this default sweep, not the opt-in `setup-mlir.sh`. The unversioned packages
+# track whatever LLVM major the distro ships (no committed version pin to bump — CLAUDE.md);
+# `setup-mlir.sh` separately derives the matching libMLIR major from whichever `llc`/`clang` land
+# here. `z3`: the SMT obligation `proofs.sh` runs (binary-ternary-roundtrip) probes for it directly;
+# cheap, apt-available, part of the `just check` proofs gate.
 declare -A APT_BIN=(
   [shellcheck]=shellcheck [codespell]=codespell [yamllint]=yamllint [graphviz]=dot
   [gitleaks]=gitleaks [just]=just [pre-commit]=pre-commit [python3-pip]=pip3
+  [llvm]=llc [clang]=clang [z3]=z3
 )
 if have apt-get; then
   apt_missing=()
@@ -117,6 +128,33 @@ if have apt-get; then
 else
   skip "no apt-get — the uv/cargo/npx installers below handle every tool"
 fi
+
+# ── LLVM unversioned-binary floor (defense in depth — M-848/E25) ──────────────────────────────────
+# `crates/mycelium-mlir/src/llvm.rs::ensure_toolchain()` invokes the LITERAL names `llc`/`clang` (no
+# version probing in the Rust kernel — by design, see ADR-034), so the always-on direct-LLVM AOT path
+# needs an UNVERSIONED `llc`/`clang` on PATH. On the Debian/Ubuntu `llvm`/`clang` meta-packages this is
+# automatic (verified: `llvm-defaults` depends on `llvm-<N>` and itself provides the unversioned
+# `/usr/bin/llc`). This step is a never-silent SAFETY NET for the rarer case — a distro/container where
+# only version-suffixed binaries (`llc-NN`/`clang-NN`, e.g. from apt.llvm.org) are present without the
+# unversioned meta-package — so the AOT path still resolves rather than failing at compile-time with
+# ToolchainMissing. Idempotent: a no-op when an unversioned `llc`/`clang` already resolves.
+section "LLVM unversioned-binary floor (llc/clang)"
+for tool in llc clang; do
+  if have "$tool"; then
+    ok "$tool present (unversioned): $(command -v "$tool")"
+    continue
+  fi
+  # Probe version-suffixed siblings (highest major first) and symlink the newest into a PATH dir.
+  versioned="$(compgen -c "${tool}-" 2>/dev/null | grep -E "^${tool}-[0-9]+$" | sort -t- -k2 -n -r | head -n1 || true)"
+  if [[ -n "$versioned" ]]; then
+    target="$HOME/.local/bin/$tool"
+    mkdir -p "$HOME/.local/bin"
+    ln -sf "$(command -v "$versioned")" "$target"
+    ok "$tool: no unversioned binary, found $versioned — symlinked $target -> $(command -v "$versioned")"
+  else
+    skip "$tool: no unversioned or version-suffixed binary found — the AOT path (crates/mycelium-mlir) will report ToolchainMissing until llc/clang are installed"
+  fi
+done
 
 section "bootstrap gating tools (just / pre-commit / yamllint)"
 # These are the tools the local↔CI check spine assumes exist (`just check` routes through them).
@@ -232,6 +270,18 @@ if have cargo; then
   if cargo nextest --version >/dev/null 2>&1; then ok "cargo: cargo-nextest present"
   elif cargo install --locked --quiet cargo-nextest 2>/dev/null; then ok "cargo install: cargo-nextest"
   else skip "cargo: cargo-nextest (install failed or offline; tests fall back to \`cargo test\`)"; fi
+fi
+
+# cargo-mutants (M-654 WS8 / M-848-E25): the `just mutants` / `just check-full` durability gate
+# over the trusted-base crates. No apt package — cargo-only, so the fallback chain here is just
+# `cargo install --locked` (deterministic; matches the cargo-deny/nextest pattern above). Best-effort,
+# idempotent (`cargo mutants --version` short-circuits when present). Skip-graceful: `check-full`
+# is a deliberate release/nightly gate, not part of the everyday `just check`, so a missing
+# cargo-mutants here only narrows `check-full`, never blocks day-to-day `just check`.
+if have cargo; then
+  if cargo mutants --version >/dev/null 2>&1; then ok "cargo: cargo-mutants present"
+  elif cargo install --locked --quiet cargo-mutants 2>/dev/null; then ok "cargo install: cargo-mutants"
+  else skip "cargo: cargo-mutants (install failed or offline; \`just check-full\`/\`just mutants\` will need it manually — cargo install --locked cargo-mutants)"; fi
 fi
 
 # Code-map / API-surface tools (optional). `cargo public-api` (the `just api` gate) drives a

@@ -3,7 +3,9 @@
 # lowercase). Keep this list small and justified.
 # fuzz/corpus/* is fuzzer input/output data (committed seeds + libFuzzer-generated mutations) —
 # raw bytes, never prose, so it is skipped like target/ and the harness reports (M-654).
-skip = .git,*.lock,node_modules,target,dist-newstyle,.venv,.tools-venv,*.svg,idmap.tsv,./tools/llm-harness/reports/*,tools/llm-harness/reports/*,./fuzz/corpus/*,fuzz/corpus/*
+# mutants.out / mutants.out.old is a local `cargo-mutants` run's output dir (gitignored, but codespell
+# walks the filesystem and does not honour .gitignore — it is generated logs/diffs, never prose).
+skip = .git,*.lock,node_modules,target,dist-newstyle,.venv,.tools-venv,*.svg,idmap.tsv,./tools/llm-harness/reports/*,tools/llm-harness/reports/*,./fuzz/corpus/*,fuzz/corpus/*,mutants.out,mutants.out.old,./mutants.out/*,mutants.out/*
 # Domain terms / abbreviations codespell otherwise flags:
 # ser (Serialize abbrev), clen (Content-Length var), publisherr (PublishErr type), raison (raison
 # d'être), copyed/copys (Dockerfile COPY directive), re-used (valid hyphenation).
@@ -12,6 +14,7 @@ skip = .git,*.lock,node_modules,target,dist-newstyle,.venv,.tools-venv,*.svg,idm
 # (the tagless-final "Symantics" typeclass, a deliberate Syntax/semantics pun — Carette/Kiselyov/
 # Shan), generat (bracketed quote insertion "generat[es]"), disjointness (valid set-theory term;
 # codespell mis-suggests "disjointedness"), toom (Toom-Cook multiplication algorithm), pre-emptive
-# and re-declare (valid hyphenations).
-ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,implementors,referenced,effekt,inout,ser,clen,publisherr,raison,copyed,copys,re-use,re-used,re-uses,ot,theses,forin,symantics,generat,disjointness,toom,pre-emptive,re-declare
+# and re-declare (valid hyphenations). unparseable (valid English variant of "unparsable",
+# used in scripts/hooks/test-branch-guard-parse.sh).
+ignore-words-list = crate,crates,iff,ist,nin,ba,te,fo,mor,ans,od,implementor,implementors,referenced,effekt,inout,ser,clen,publisherr,raison,copyed,copys,re-use,re-used,re-uses,ot,theses,forin,symantics,generat,disjointness,toom,pre-emptive,re-declare,olt,unparseable
 quiet-level = 3

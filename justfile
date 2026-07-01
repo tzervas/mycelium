@@ -13,9 +13,10 @@ default:
 setup:
     @bash scripts/install.sh
 
-# Provision the OFF-by-default `mlir-dialect` feature's libMLIR toolchain (apt; may use sudo).
+# Provision the OFF-by-default `mlir-dialect` feature's libMLIR toolchain (nala/apt; may use sudo).
 # Deliberately kept OUT of `just setup` so the default never apt-installs or sudo-prompts for an
 # optional feature most contributors don't build (ADR-019); run this only if you want that feature.
+# Idempotent — safe to re-run; a second run on a provisioned box is an all-present no-op.
 setup-mlir:
     @bash scripts/setup-mlir.sh
 
@@ -120,6 +121,12 @@ alias safety := safety-check
 branch-guard:
     @bash scripts/checks/branch-guard.sh
 alias bg := branch-guard
+# worktree-guard: assert the worktree-isolation discipline — one isolated worktree per concurrent
+# agent; the orchestrator's main tree a clean pointer. Idempotent + parameterized (--leaf /
+# --orchestrator / --quiet); the worktree analogue of branch-guard (CLAUDE.md mitigation #11).
+worktree-guard *ARGS:
+    @bash scripts/checks/worktree-guard.sh {{ARGS}}
+alias wg := worktree-guard
 # Per-use unsafe escape gate (M-793; RFC-0034 §9; sharpens ADR-014): (A) trusted-kernel crates
 # (`mycelium-core`, `-cert`, `-numerics`, `-vsa`) must retain `#![forbid(unsafe_code)]`; (B) every
 # non-kernel `unsafe` site must carry a per-use `#[allow(unsafe_code)]` (or `cfg_attr` form) within

@@ -67,4 +67,42 @@ exclude_re = [
     # dense_vsa::vsa_to_dense sign decision `if dot > 0.0` with `> -> >=`: the `dot == 0.0` case is
     # already caught one line above (-> AmbiguousDecode), so dot != 0.0 here and > is equivalent to >=.
     "dense_vsa\\.rs:[0-9]+:[0-9]+: replace > with >= in vsa_to_dense",
+
+    # ──────────────────── mycelium-mlir / vsa_codegen (M-854) ────────────────────
+    # The toolchain-independent mutant-witness (src/tests/vsa_codegen.rs) kills every real survivor in
+    # vsa_codegen.rs via emission/read-back assertions (no llc/clang). The four below are GENUINE
+    # equivalents — confirmed missed by `cargo mutants --re …` AND proven indistinguishable on the
+    # reachable domain — so they are honestly excluded (VR-5/G2), never silently skipped.
+    #
+    # ensure_toolchain() -> Ok(()): a redundant *early* ToolchainMissing. With llc/clang present it
+    # already returns Ok(()); when absent, vsa_compile proceeds to run_tool("llc", …) which itself
+    # returns ToolchainMissing("llc") (llvm.rs run_tool maps the spawn error identically), so the
+    # observable Result is the SAME ToolchainMissing variant + tool name either way. EQUIVALENT.
+    "vsa_codegen\\.rs:[0-9]+:[0-9]+: replace ensure_toolchain -> Result<\\(\\), VsaAotError> with Ok\\(\\(\\)\\)",
+    # emit_bundle BSC majority `n > half` with `> -> >=` (and `n < half` with `< -> <=`): BSC `bundle`
+    # is profile-gated to ODD item counts (BSC_BUNDLE_PROFILE.odd_items_only — validate() refuses even
+    # m before emit_bundle runs), so half = m/2 is always X.5 and n (a sum of {0,1}) is an integer that
+    # can NEVER equal half. Thus n>half ⟺ n>=half and n<half ⟺ n<=half on the reachable domain.
+    # EQUIVALENT. (The `> -> ==`, `> -> <`, `< -> ==`, `< -> >` variants ARE caught — boundary witness.)
+    "vsa_codegen\\.rs:[0-9]+:[0-9]+: replace > with >= in emit_bundle",
+    "vsa_codegen\\.rs:[0-9]+:[0-9]+: replace < with <= in emit_bundle",
+    # VsaArtifact::result_bound delete arm `(_, _, GuaranteeStrength::Exact) => None`: deleting it lets
+    # an Exact guarantee fall through every specific (Proven/Empirical) arm — none of which match Exact —
+    # to the final `_ => None`, yielding the SAME None. EQUIVALENT (a fall-through that returns the same
+    # value). The other six arm-deletes (Proven/Empirical bounds) flip a checked bound and ARE caught.
+    "vsa_codegen\\.rs:[0-9]+:[0-9]+: delete match arm \\(_, _, GuaranteeStrength::Exact\\) in VsaArtifact::result_bound",
+
+    # ────────────────────── mycelium-mlir / vsa_jit (M-855) ───────────────────────
+    # compute_bundle_non_fhrr's BSC majority `n > half` / `n < half` — the exact same folded-constant
+    # majority arithmetic vsa_codegen::emit_bundle's BSC arm uses (vsa_jit.rs computes it independently
+    # for the JIT store-sink, per the module's own doc comment on why it doesn't share emit_bundle's
+    # print-coupled control flow). Same justification as the vsa_codegen entries above: BSC `bundle` is
+    # profile-gated to ODD item counts (`BSC_BUNDLE_PROFILE.odd_items_only`, enforced by
+    # `VsaProgram::validate` before `emit_vsa_jit_ir` ever calls this function), so `half = m/2` is
+    # always X.5 and the integer `n` can never equal it — `n>half ⟺ n>=half` and `n<half ⟺ n<=half` on
+    # the reachable domain. EQUIVALENT. (The `>`->`==` and `<`->`==` variants are caught —
+    # `bsc_bundle_majority_boundary_bits_are_pinned` deliberately puts the *minority* bit at `items[0]`
+    # so a tie-fallback masquerading as the real branch surfaces the wrong bit.)
+    "vsa_jit\\.rs:[0-9]+:[0-9]+: replace > with >= in compute_bundle_non_fhrr",
+    "vsa_jit\\.rs:[0-9]+:[0-9]+: replace < with <= in compute_bundle_non_fhrr",
 ]

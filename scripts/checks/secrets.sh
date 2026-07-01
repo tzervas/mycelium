@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Secret scan. Prefer gitleaks (respects .gitleaks.toml); else a narrow high-confidence fallback.
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "secret scan"
 

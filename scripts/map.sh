@@ -3,7 +3,8 @@
 # Enumerates/traces the Rust workspace: crate-to-crate dependency graph (routing), per-crate
 # module/item structure with internal `use` edges, and rustdoc including private items.
 # Every tool is optional — missing ones skip gracefully. Artifacts land under target/map/.
-source "${BASH_SOURCE%/*}/lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "code map"
 

@@ -9,7 +9,8 @@
 # missing fuzz smoke is reduced durability coverage on this run, surfaced honestly, not a silent
 # pass and not a hard build failure (the full mutants gate + the proptest suites still ran). On a
 # release machine with the toolchain present, the smoke runs and a crash fails the run.
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "cargo-fuzz smoke (durability; Tier-2)"
 

@@ -6,7 +6,8 @@
 # enforces the maintainer-DECLARED stale-phrase invariants in
 # tools/doc-status-invariants.yaml. Complements doc-currency (structure/index/counts)
 # and links (cross-refs); this one owns *status* currency. Source is ground truth.
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "doc status (lattice · nav cross-check · declared stale-phrase invariants)"
 

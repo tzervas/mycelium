@@ -433,6 +433,69 @@ of *provisioning*, not of the *verdict* (VR-5).
 
 ---
 
+## 10. Full recursion + closure-ABI widening land (M-850/M-851; 2026-06-30) — §5 table Inc-2/3 rows close
+
+This section records, append-only, that the **§5 table's Increment-2 and Increment-3 rows are now
+fully landed**, closing the deferred items those rows and §7/§8 called out. Nothing above is
+rewritten — the §5 table text and §7/§8 prose are unchanged (append-only is honoured); this section
+is the prose record of the closure.
+
+**Increment 3 (§4.3/§8) — the deferred full trampoline lands as M-850.** §8.1 named the open gap
+explicitly: "the **full defunctionalized heap trampoline** (general non-tail recursion, mirroring
+`aot.rs`'s `Frame` stack) is deferred to a later increment." That increment is **M-850** (PR #818,
+landed 2026-06-30): non-tail `Fix` + mutual recursion (`FixGroup`) now lower via a heap-allocated
+control-stack trampoline (`crates/mycelium-mlir/src/trampoline.rs`, 1029 lines), bounded by the
+same `AutoDepthBudget` ceiling §8.2 already designed in (M-349, reused not reinvented — DRY/KC-3).
+The §8.5 refusals for non-tail recursion and `FixGroup` are **removed**; the §8.5 *Match-in-pre-tail*
+codegen-shape limitation is **also removed** (the trampoline's block-tracking subsumes the tail-loop
+back-edge `phi` issue that caused it). What remains refused per §8.5 is now narrower: **recursive
+heap data** (self-referential constructors) stays an explicit `UnsupportedNode` (G2) — the
+trampoline closes the *control-flow* half of Increment 3, not the data-representation half, which
+was never part of its scope. `cargo-mutants` catches a trampoline-frame mutation (0 missed) on a
+checked basis: the guarantee tag for the trampoline mechanism upgrades **Declared → Empirical**
+(VR-5 — a checked, not assumed, basis). The §5 table's Increment-3 row text ("Partial — tail landed;
+full trampoline deferred") is left as written; this paragraph is the status-movement record, exactly
+the pattern §9 already established for Increment 4.
+
+**Increment 2 (§4.2/§7) — the narrow closure ABI widens as M-851.** §7.1 named the narrow
+packed-`i64` `Binary{8}` closure ABI a deliberate first step, with "widening it (uniform
+pointer-boxed lanes of any repr/width) is a later, separable step." That widening is **M-851**
+(PR #821, landed 2026-06-30) — with an honest correction to the *mechanism*, not the *outcome*:
+rather than a uniform pointer-boxed lane ABI, the realized design is **specialize-at-application
+inlining** (a `Lam` builds a suspended closure value; an `App` inlines its body at the concrete
+argument shape), an architectural choice surfaced to and accepted by the maintainer. This removes
+the §7.1 narrow-ABI refusals for other widths, `Ternary`, datums across the boundary, and currying.
+The §7.2 bump-arena no-GC strategy is **superseded** by this change (inlining needs no heap closure
+record for the covered fragment) — recorded here, not rewritten there (append-only). What stays
+refused per the widened §7.4 boundary: closure-valued **program results** (not printable by the
+read-back protocol) and cross-boundary **datum**/`Fix` captures (runtime dispatch deferred) — both
+explicit, never-silent `UnsupportedNode` (G2/VR-5). `cargo-mutants` 8/0 missed → **Empirical**.
+
+**Net effect on the §5 table's "what stays refused" surface.** Combined, M-850 + M-851 remove every
+Increment-2/3 refusal that was a *deferred-scope* gap (full trampoline, ABI width, currying,
+closure-valued intermediate results) and leave only refusals that are *honest boundaries* of the
+direct-LLVM fragment as currently scoped: closure-valued program results, cross-boundary datum/`Fix`
+captures, and recursive heap data. Increment 4 (the real ternary MLIR dialect) is **unaffected** by
+this section — its status is §9's, not this one's; M-857 (landed this wave) closes `trit.mul`
+specifically but the broader Increment-4 catch-up (`Construct`/`Match`/`Swap`/Dense/VSA through the
+dialect) is **M-856**, not yet landed.
+
+**Status judgment (Draft vs. Resolved) — left Draft, FLAGGED for the maintainer.** This note carries
+no explicit "Definition of Done" section to check against (none is stated above), so this resync
+does **not** unilaterally infer one and flip the Status field. The reasoning, for the maintainer's
+call: DN-15's own framing (line 9) is "the strategy and per-increment risk table" for **all** of
+M-348's increments (0–4); Increment 4 (libMLIR dialect) is still **in-progress** (M-601/M-602 landed
+element-wise + trit.add/sub per §9; M-857 lands `trit.mul`; the broader M-856 catch-up — `Construct`/
+`Match`/`Swap`/Dense/VSA through the dialect — has not started this wave). If "Resolved" is read as
+"every increment this note scoped is closed," DN-15 is **not yet** there. If "Resolved" is read more
+narrowly as "the direct-LLVM-advanceable half (§3) — the note's own stated focus, as opposed to the
+libMLIR-gated half explicitly carved out as out-of-scope in §2 — is now fully landed," the case for
+Resolved is much stronger (Increments 0–3 are now ALL landed; only Increment 4, explicitly scoped to
+a *different* tracking vehicle since §9, remains). **This resync leaves Status at Draft** and flags
+the narrow-vs-broad reading for the maintainer to decide (G2/VR-5 — do not guess a status transition).
+
+---
+
 ## Meta — changelog
 
 <!-- changelog: 2026-06-19 Draft created (M-373) — records the libMLIR-gated vs direct-LLVM-advanceable decomposition, the Increment-1 (Construct/Match) design strategy, the DN-05 #1 DepthBudget reuse plan for Increment 3, and the per-increment risk table. Append-only. -->
@@ -440,3 +503,4 @@ of *provisioning*, not of the *verdict* (VR-5).
 <!-- changelog: 2026-06-19 §8 added (M-379) — realized Increment-3 design: tail-position Fix → iterative LLVM loop (host C stack O(1) by construction, DN-05 #1 compliant), bounded by an AutoDepthBudget ceiling (M-349) → graceful DepthLimit (the Inc-2 arena seam generalized to a depth counter); a Binary branch primitive (Match repr-lane scrutinee + Lit arms) for the base case. Non-tail recursion, FixGroup, and recursive heap data stay UnsupportedNode (G2). §5 table Increment-3 row marked partially landed (tail only). Guarantee stays Declared (VR-5). Append-only. -->
 <!-- changelog: 2026-06-19 §8.5 refined (M-379; PR #224 review) — recorded a further deferred native-codegen-shape limitation: a Match in a tail arm's pre-tail binding sequence (step computed via Match) would invalidate the loop back-edge phi, so it is an explicit UnsupportedNode (needs current-block tracking through the back-edge; deferred). The program stays semantically valid (interpreter evaluates it); honest boundary, never fragile IR (G2). Append-only. -->
 <!-- changelog: 2026-06-20 §9 added (M-603) — recorded the libMLIR unblock: the M-348 "libMLIR absent" premise is checked-false on Linux (apt `libmlir-18-dev` + `mlir-18-tools`, candidate 1:18.1.3-1ubuntu1, version-matched to LLVM 18.1.3; the --convert-*-to-llvm | mlir-translate --mlir-to-llvmir pipeline emits valid LLVM IR). Made durable via scripts/setup-mlir.sh + ADR-019 (Accepted): libMLIR is the optional, version-matched build dep of the OFF-by-default mlir-dialect feature, so the default build/test stay green without it (G2/VR-5). Real dialect lowering is M-601; the three-way differential is M-602. §5 table Increment-4 status moves (in prose) from blocked-on-M-348 toward provisionable + in-progress under M-601; the table text is unchanged. Append-only. -->
+<!-- changelog: 2026-06-30 §10 added (M-850/M-851, manifests resync) — recorded the §5 table's Increment-3 full trampoline (M-850, PR #818: non-tail Fix + FixGroup via a heap control-stack trampoline, AutoDepthBudget-bounded, tag Declared→Empirical on a checked cargo-mutants basis) and Increment-2 closure-ABI widening (M-851, PR #821: specialize-at-application inlining, an honest mechanism correction to the §7.1 "uniform pointer-boxed lane" sketch, tag Empirical) both landing. §5/§7/§8 text unchanged (append-only); §8.5's Match-in-pre-tail limitation is now also removed (subsumed by the trampoline's block tracking) — recursive heap data, closure-valued program results, and cross-boundary datum/Fix captures remain the honest refusal boundary. Status judgment (Draft→Resolved) left to the maintainer — FLAGGED, not unilaterally decided (no explicit DoD stated in this note; Increment 4 / M-856 dialect catch-up still in-progress). Append-only. -->

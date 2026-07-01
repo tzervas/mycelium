@@ -20,7 +20,7 @@
 mod common;
 use common::{byte, tern, A, B};
 
-use mycelium_core::{Node, Trit, Value};
+use mycelium_core::{Meta, Node, Payload, Provenance, Trit, Value};
 use mycelium_interp::{IdentitySwapEngine, PrimRegistry, SwapEngine};
 use mycelium_mlir::{ExecMode, ModeError};
 
@@ -152,13 +152,23 @@ fn aot_mode_equals_interpreter_mode_over_the_subset() {
 /// quietly run a different path.
 #[test]
 fn jit_mode_refuses_out_of_subset_explicitly_never_falls_back() {
-    // A closure/lambda application — outside the JIT's bit/trit subset, but runnable by interp/AOT.
-    let out_of_subset = Node::App {
-        func: Box::new(Node::Lam {
-            param: "x".into(),
-            body: Box::new(Node::Var("x".into())),
-        }),
-        arg: Box::new(Node::Const(byte(A))),
+    // A `Dense` (embedding) value passed through `core.id` — outside the compiled bit/trit + data +
+    // closure/recursion subset (`const_lane` lowers only `Binary`/`Ternary`), but a valid value the
+    // interpreter evaluates. (The prior identity-*closure* example is no longer out-of-subset: the JIT
+    // shares `llvm.rs`'s lowering, which since M-851 lowers closures by inlining — so a still-refused
+    // *representation* is the faithful "out-of-subset" probe now.)
+    let dense = Value::new(
+        mycelium_core::Repr::Dense {
+            dim: 3,
+            dtype: mycelium_core::ScalarKind::F64,
+        },
+        Payload::Scalars(vec![1.0, -2.0, 0.5]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("a well-formed dense value");
+    let out_of_subset = Node::Op {
+        prim: "core.id".into(),
+        args: vec![Node::Const(dense)],
     };
 
     // The interpreter mode runs it fine (proving the node is valid, just not JIT-able).
@@ -169,18 +179,23 @@ fn jit_mode_refuses_out_of_subset_explicitly_never_falls_back() {
         "the out-of-subset node must be valid under the interpreter, got {interp:?}"
     );
 
-    // The JIT mode must REFUSE explicitly — never silently run the interpreter's answer.
+    // The JIT mode must REFUSE explicitly — never silently run the interpreter's answer. The refusal
+    // is an explicit `Err` (a `Dense` const maps through `AotError::UnsupportedRepr` →
+    // `ModeError::Jit`; a structural out-of-subset node would map through `UnsupportedNode` →
+    // `ModeError::Unsupported`). The G2 invariant under test is precisely *no silent `Ok` fallback* —
+    // any explicit refusal `Err` satisfies it; only an `Ok` (a silently-run interpreter answer) fails.
     let (p, s) = config();
     match mycelium_mlir::run_mode(ExecMode::Jit, &out_of_subset, p, s) {
-        Err(ModeError::Unsupported(_)) => { /* expected explicit refusal */ }
         Err(ModeError::ToolchainMissing(_)) => { /* env skip — clang absent, still no silent run */
+        }
+        Err(ModeError::Unsupported(_)) | Err(ModeError::Jit(_)) => { /* explicit refusal — expected */
         }
         Ok(v) => panic!(
             "JIT mode must refuse the out-of-subset node explicitly, got a value {:?} \
              (silent fallback would be the G2 violation)",
             v.payload()
         ),
-        Err(e) => panic!("unexpected JIT-mode error (expected Unsupported): {e}"),
+        Err(e) => panic!("unexpected JIT-mode error variant (expected an explicit refusal): {e}"),
     }
 }
 

@@ -39,6 +39,19 @@ bitnet-accel = []
 
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
+# M-853 (RFC-0039 §5.1): the native Dense codegen (`dense_codegen.rs`) is differential-checked against
+# `mycelium-dense` (the trusted-base reference); it imports the reference's per-op relative-ε
+# constants (`F32_OP_REL_EPS`/`BF16_OP_REL_EPS`/`DENSE_MIN_NORMAL`) so the native bound it stamps is
+# the *same* value, never a divergent literal (DRY/VR-5). No cycle: `mycelium-dense` does not depend on
+# `mycelium-mlir`.
+mycelium-dense = { path = "../mycelium-dense" }
+# M-854 (RFC-0039 §5.2): the native VSA codegen (`vsa_codegen.rs`) is differential-checked against
+# `mycelium-vsa` (the trusted-base reference) for the 1.0.0-mandatory MAP-I/BSC/HRR/FHRR models; it
+# imports the reference's `capacity::proven_capacity_bound` so the single-op MAP-I bundle Proven bound
+# is the *same* checked side-condition (never a divergent literal — DRY/VR-5), and refuses SBC/MAP-B
+# never-silently. No cycle: `mycelium-vsa` depends only on `mycelium-core`/`mycelium-select`, never on
+# `mycelium-mlir`.
+mycelium-vsa = { path = "../mycelium-vsa" }
 mycelium-interp = { path = "../mycelium-interp" }
 # MEM-4 wiring (DN-33 / RFC-0027 §9): the RC-annotated IR + static analysis, and the runtime
 # reclamation-record contract the AOT tier emits the §9 audit trail into. Both are upstream of
@@ -53,3 +66,7 @@ mycelium-cert = { path = "../mycelium-cert" }
 mycelium-numerics = { path = "../mycelium-numerics" }
 # The E3 wrong-layout differential (M-251) drives the layout chosen by the M-250 packing selector.
 mycelium-select = { path = "../mycelium-select" }
+# M-853 (RFC-0039 §5.1): the Dense three-way differential (`tests/dense_differential.rs`) uses
+# `DenseSpace` directly as the reference the native Dense codegen is checked against (the interpreter
+# has no `dense.*` prims — Dense is a standalone operational surface, like the cert swap). Already a
+# regular dependency above; listed in dev-deps is unnecessary (it is in scope for tests transitively).

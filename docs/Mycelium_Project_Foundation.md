@@ -410,6 +410,12 @@ Designing the LSP protocol surface early is high-leverage: it is the channel thr
 *Decision:* One Core IR, multiple backends — interpreter/VM (the **reference semantics**), JIT, and AOT native codegen. AOT is preferred for *stable components* (content-addressed + spec-ratified + verification-passed); interpretation/JIT serves development, exploration, and dynamic VSA. AOT/JIT output is validated against the interpreter via the swap-grade translation-validation machinery (NFR-7, **VR-4**). No-opaque-lowering applies to all backends.
 *Consequences:* Multi-backend lowering effort; a precise "stable component" definition is required (delivered in RFC-0004); the interpreter↔AOT equivalence obligation (RR-12) must be discharged; the AOT path is **MLIR→LLVM** (committed via ADR-007 / RFC-0004; **T1.5**).
 *Grounding:* Area 1 (MLIR multi-backend, MetaOCaml staging, CompCert/translation validation); **R3**; cross-cutting **A.1**.
+> Cross-reference (2026-06-30, append-only — not a rewrite): the dynamic-VSA JIT deferral named in
+> this ADR ("interpreter/JIT for dynamic VSA") is **lifted** for the data-dependent-dimension /
+> runtime-model-selection / cleanup-resonator workloads by **RFC-0039 §6 (Accepted 2026-06-30)**. The
+> JIT *mechanism* itself was already sanctioned (RFC-0029 §5.3); RFC-0039 records the dynamic-VSA
+> *deferral lift*. OQ-1 resolved (maintainer 2026-06-30): the RFC-0039 §6 record plus this note are the
+> full capture — there is **no separate ADR-009 amendment**.
 
 **ADR-010 · Verified-numerics foundation: two bound kernels + shared certificate** *(full record: standalone ADR-010 file)*
 *Status:* **Accepted** (ratified by **T0.1**).

@@ -31,6 +31,9 @@ mycelium-mlir = { path = "../mycelium-mlir", version = "0.0.0" }
 mycelium-l1 = { path = "../mycelium-l1", version = "0.0.0" }
 # The certified binary<->ternary swap engine the differential corpus exercises (same engine all paths use).
 mycelium-cert = { path = "../mycelium-cert", version = "0.0.0" }
+# The OS-thread Scheduler (M-709) driving the multicore scaling curves (measurement only — the
+# scheduler itself is unmodified, read-only from this crate's perspective).
+mycelium-std-runtime = { path = "../mycelium-std-runtime", version = "0.0.0" }
 # Deterministic JSON for the machine-readable report + the LLM-harness report ingestion.
 serde = { workspace = true }
 serde_json = { workspace = true }

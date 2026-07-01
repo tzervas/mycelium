@@ -45,12 +45,20 @@ dist-newstyle/
 /.tmp/
 
 # ---- WS8 durability outputs (M-654): cargo-mutants + cargo-fuzz runtime artifacts ----
-# The `just mutants`/`just fuzz` recipes, fuzz targets, and configs ARE committed; the generated
-# run output (mutants reports, fuzz build dir + crash artifacts) is not. The hand-written seed
-# corpus (`fuzz/corpus/**/seed_*`) IS committed; only the libFuzzer-discovered hex-named corpus
-# entries are ignored — that granularity is delegated to `fuzz/.gitignore` (so we do NOT blanket
-# `/fuzz/corpus/` here, which would shadow the committed seeds).
-mutants.out/
+# The `just mutants`/`just fuzz` recipes, fuzz targets, and configs ARE committed; we now ALSO track
+# the COMPACT per-run cargo-mutants result record (the caught/missed/unviable/timeout lists +
+# outcomes.json) so a run's verdict is reviewable in-repo, ignoring only the bulk (debug.log, the
+# diff/ tree, and the mutated-source copies). The fuzz build dir + crash artifacts stay ignored. The
+# hand-written seed corpus (`fuzz/corpus/**/seed_*`) IS committed; only the libFuzzer-discovered
+# hex-named corpus entries are ignored — that granularity is delegated to `fuzz/.gitignore` (so we do
+# NOT blanket `/fuzz/corpus/` here, which would shadow the committed seeds).
+# cargo-mutants: track the compact result record, ignore the bulk (debug.log, diff/, copies)
+mutants.out/*
+!mutants.out/caught.txt
+!mutants.out/missed.txt
+!mutants.out/unviable.txt
+!mutants.out/timeout.txt
+!mutants.out/outcomes.json
 mutants.out.old/
 /fuzz/artifacts/
 /fuzz/target/

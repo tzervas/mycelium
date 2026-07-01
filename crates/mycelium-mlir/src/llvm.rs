@@ -35,11 +35,16 @@
 //! G2). Guarantee tag: **Declared** (hand-written textual-IR lowering; the differential against the
 //! interpreter is empirical evidence, not a proof — VR-5).
 //!
-//! **Deliberately out of subset (explicit refusals, never silent — G2):** `App`, `Lam`, `Fix`,
+//! **Deliberately out of *this* subset (explicit refusals, never silent — G2):** `App`, `Lam`, `Fix`,
 //! `FixGroup` (closures + recursion need closure-conversion + heap, deferred to Increment-2/3),
-//! `Swap` (swap to non-binary/ternary repr), Dense/VSA representations. Each is an explicit
-//! [`AotError`]. The MLIR dialect path stays the eventual home (`dialect::emit` is its dumpable
-//! skeleton), deferred until libMLIR exists.
+//! `Swap` to a non-binary/ternary repr, and the `Dense`/`Vsa` representations *in the generic bit/trit
+//! `Node` lowering* (the lane model here is i32 bit/trit elements). Each is an explicit [`AotError`].
+//! **`Repr::Dense` now has a dedicated native home** — the [`crate::dense_codegen`] direct-LLVM path
+//! (M-853; RFC-0039 §5.1) lowers the un-quantized F32/BF16 element-wise surface against the
+//! `mycelium-dense` reference; a Dense `Const` reaching [`const_lane`] is routed there (the refusal
+//! here names where Dense *is* lowered — ADR-006/G2). VSA + quantized Dense stay refused (RFC-0039
+//! §5.1/§5.2; M-854 / E20-1). The MLIR dialect path stays the eventual home for the bit/trit fragment
+//! (`dialect::emit` is its dumpable skeleton), deferred until libMLIR exists.
 //!
 //! **Submodule confinement (DN-21 §5 F-2):** zero `unsafe` — compiler-enforced; the crate's
 //! only `unsafe` is the dynamic-linking FFI in `jit`/`bitnet`/`specialize`.
@@ -53,6 +58,8 @@ use std::process::Command;
 
 use mycelium_core::lower::{self, Atom, Rhs};
 use mycelium_core::{Meta, Node, Payload, Provenance, Repr, Trit, Value};
+
+use crate::swap_codegen::{self, SwapCertMode};
 
 /// An explicit failure of the direct-LLVM AOT path. Every non-supported construct, missing tool, or
 /// subprocess failure is one of these — the path is **never silent** (G2).
@@ -192,29 +199,37 @@ pub(crate) struct Datum {
     pub(crate) slots: usize,
 }
 
-/// The element width of the **narrow Increment-2 closure ABI**: closures carry/return `Binary{8}`
-/// values packed into a single `i64` (DN-15 §7.1; RFC-0004 §11.5). Anything wider/other-repr is an
-/// explicit `UnsupportedNode` (never a silent mis-encode — G2).
+/// The element width of the **narrow `Binary{8}` recursion-accumulator ABI** used by the heap
+/// trampoline ([`crate::trampoline`]): a recursion accumulator is a `Binary{8}` value packed into a
+/// single `i64` (DN-15 §7.1/§10). Anything wider/other-repr is an explicit `UnsupportedNode` (never a
+/// silent mis-encode — G2). *(M-378 also used this for the narrow closure ABI; M-851 widened closures
+/// to inlined any-repr/width values, so this constant now scopes the trampoline accumulator only.)*
 pub(crate) const CLOSURE_ABI_WIDTH: usize = 8;
 
-/// The arena capacity (bytes) for the bump-allocated closure heap (DN-15 §7.2). A **`Declared`**
-/// compile-time over-estimate. Increment-2 excludes `Fix`/`FixGroup`, so the number of closure
-/// records is statically bounded by program structure (not a runaway) — but that bound is *not
-/// computed here*, so a sufficiently large finite program could still exceed this capacity. If it
-/// does, the over-capacity check in `@myc_arena_alloc` takes an explicit `@abort` (a never-silent
-/// defined-trap — G2), exactly the seam where **Increment-3** substitutes a `DepthBudget`-resolved
-/// ceiling + a graceful limit (DN-05 #1; `budget.rs`, M-349).
-pub(crate) const ARENA_CAPACITY_BYTES: usize = 1 << 20;
-
-/// A native closure value (Increment-2): a pointer to a heap (arena) closure record laid out as
-/// `[ fn_ptr:i64 | capture_0:i64 | … | capture_k:i64 ]` (slot 0 = `@myc_closureN` address as i64,
-/// slots 1.. = captured `Binary{8}` values packed to `i64`). Produced by `Rhs::Lam`, consumed by
-/// `Rhs::App` as an indirect call. A closure is never a printable result and never crosses the
-/// narrow ABI as an argument/result — those are explicit refusals (DN-15 §7.4; G2).
+/// A native closure value — **widened, specialize-at-application** representation (M-851; DN-15 §7.1
+/// — the "uniform … any repr/width" widening of the M-378 narrow `Binary{8}` ABI). The narrow ABI
+/// eagerly emitted a top-level `i64 (i8*,i64)` function + heap record carrying a single packed
+/// `Binary{8}`; this widened path instead **suspends** the closure as its un-lowered lambda (`param` +
+/// `body` ANF) plus a snapshot of the **captured environment** (each free var's already-lowered
+/// [`EnvValue`]), and **specializes (inlines) it at the application site** ([`lower_app`]): the
+/// argument pins the param's concrete shape, the body is lowered inline, and the result flows back as
+/// an [`EnvValue`] of whatever shape the body computed. This lets closures over **any repr/width**,
+/// **curried application** (a body whose result is itself a `ClosureVal`), and **returned closures**
+/// (a closure flowing through a `let`/binding, applied later) all lower natively — with no fixed wire
+/// ABI, no indirect call, and **no guessed param width** (each shape is statically resolved at the App
+/// site; G2/VR-5). A closure that is never applied (left on the printable program result, or
+/// `Match`-scrutinized) stays an explicit refusal (a closure is not printable/branchable — DN-15 §7.4).
 #[derive(Debug, Clone)]
 pub(crate) struct ClosureVal {
-    /// The SSA register holding the record's `i64*` base pointer.
-    pub(crate) base: String,
+    /// The closure parameter name (bound to the application argument when specialized).
+    pub(crate) param: String,
+    /// The closure body as an un-lowered ANF block, lowered inline at the application site.
+    pub(crate) body: mycelium_core::lower::Anf,
+    /// The captured environment — each free variable of the body mapped to its already-lowered
+    /// [`EnvValue`] from the *defining* scope (a lane of any repr/width, or a nested `ClosureVal`).
+    /// Snapshotting the values (not re-looking-them-up at the App site) keeps lexical capture correct
+    /// when the closure is applied outside its defining scope (a returned/curried closure).
+    pub(crate) captured: Vec<(String, EnvValue)>,
 }
 
 /// A suspended `Fix` value (Increment-3 / RFC-0004 §11.6): the Fix body (a `λparam. Match ...`)
@@ -229,8 +244,21 @@ pub(crate) struct FixVal {
     pub(crate) body: mycelium_core::lower::Anf,
 }
 
+/// A suspended `FixGroup` member (M-850 / Wave-B; RFC-0004 §11.6; DN-15 §10): the group's lowered
+/// member definitions plus which member this binding resolves to. Stored without emitting IR;
+/// consumed by a downstream `App(member, init)` that routes to [`crate::trampoline`]. The
+/// env-machine analogue is `aot.rs`'s `AotVal::FixGroup` (the focus-suspension unfold).
+#[derive(Debug, Clone)]
+pub(crate) struct FixGroupVal {
+    /// All members of the group, in declaration order: `(member-name, lowered λ.Match body)`.
+    pub(crate) defs: Vec<(String, mycelium_core::lower::Anf)>,
+    /// Which member name this binding resolves to (the entry when this binding is the `App` func).
+    pub(crate) which: String,
+}
+
 /// An environment value — a repr-lane (bit/trit), a constructed data value (tagged struct), a
-/// native closure (Increment-2), or a suspended Fix value (Increment-3).
+/// native closure (Increment-2), a suspended Fix value (Increment-3), or a suspended FixGroup
+/// member (M-850).
 ///
 /// The `lower_program` env maps [`Atom`] → `EnvValue`. Repr-lane values flow into `emit_op`; datum
 /// values are produced by `Construct` and consumed by `Match` arm bodies; closure values are
@@ -246,6 +274,11 @@ pub(crate) enum EnvValue {
     /// A suspended `Fix` — produced by `Rhs::Fix`, consumed by the special `App(Fix, init)`
     /// dispatch. Never a printable result value (G2).
     Fix(FixVal),
+    /// A suspended `FixGroup` member (M-850 / Wave-B) — produced by `Rhs::FixGroup`, consumed by the
+    /// special `App(FixGroup-member, init)` dispatch which routes to the heap-trampoline
+    /// ([`crate::trampoline`]). Carries the whole group's lowered defs plus which member this is
+    /// (so a sibling call resolves the group). Never a printable result value (G2).
+    FixGroup(FixGroupVal),
 }
 
 impl EnvValue {
@@ -265,6 +298,10 @@ impl EnvValue {
                 "{ctx}: expected a repr lane but found a Fix value — a bare Fix is not a \
                  printable/repr value; it must be applied to an argument (Increment-3; DN-15 §8; G2)"
             ))),
+            EnvValue::FixGroup(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a FixGroup member — a bare FixGroup is not a \
+                 printable/repr value; it must be applied to an argument (M-850; DN-15 §10; G2)"
+            ))),
         }
     }
     fn as_lane(&self, ctx: &str) -> Result<&Lane, AotError> {
@@ -279,6 +316,10 @@ impl EnvValue {
             EnvValue::Fix(_) => Err(AotError::UnsupportedNode(format!(
                 "{ctx}: expected a repr lane but found a Fix value — only usable as an App func \
                  (Increment-3; G2)"
+            ))),
+            EnvValue::FixGroup(_) => Err(AotError::UnsupportedNode(format!(
+                "{ctx}: expected a repr lane but found a FixGroup member — only usable as an App \
+                 func (M-850; G2)"
             ))),
         }
     }
@@ -331,9 +372,11 @@ pub(crate) struct Lowered {
     /// trit-arithmetic op's overflow condition, or `None` for a program that cannot overflow (no
     /// `trit.add/sub/mul`). The AOT/JIT emitters branch on it to drive the read-back protocol.
     pub(crate) overflow: Option<String>,
-    /// The emitted closure functions (`define i64 @myc_closureN(i8* %env, i64 %arg) { … }`), one per
-    /// `Rhs::Lam` lowered (Increment-2). Empty for a closure-free program — in which case
-    /// [`emit_llvm_ir`] emits byte-for-byte the same module as before (no arena, no closures).
+    /// **Vestigial since M-851 — always empty.** The narrow ABI (M-378) emitted one top-level
+    /// `@myc_closureN` function per `Rhs::Lam` here; the widened ABI **inlines** closures at their
+    /// application site ([`lower_app`]), so no top-level closure functions are produced. Retained only
+    /// because the trampoline-shared lowering signatures thread a `funcs` sink (M-850); nothing writes
+    /// to it now. Kept (not removed) to avoid churning the `crate::trampoline` interface.
     pub(crate) funcs: Vec<String>,
 }
 
@@ -480,6 +523,36 @@ pub(crate) fn decode_result(
 /// explicit [`AotError`] for anything outside the bit/trit + non-recursive-data subset (M-301;
 /// M-373). The env maps each bound atom to an [`EnvValue`] (either a repr lane or a datum struct).
 pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
+    // The default native swap cert mode is `Recheck` (compile-time independent re-check; M-852).
+    lower_program_with_swap_mode(node, SwapCertMode::Recheck)
+}
+
+/// The source [`Repr`] a lowered [`Lane`] denotes — a `Binary` lane of `N` elements is
+/// `Repr::Binary{ width: N }`, a `Ternary` lane of `M` elements is `Repr::Ternary{ trits: M }`. Used
+/// to reconstruct the swap's *source* repr (the `Swap` node carries only the target). The element
+/// count is exactly the repr width by construction of [`const_lane`]/`emit_op` (each lane element is
+/// one bit/trit), so this reconstruction is exact — never a guess (G2).
+fn lane_repr(lane: &Lane) -> Repr {
+    match lane.kind {
+        LaneKind::Binary => Repr::Binary {
+            width: lane.vals.len() as u32,
+        },
+        LaneKind::Ternary => Repr::Ternary {
+            trits: lane.vals.len() as u32,
+        },
+    }
+}
+
+/// Lower a program under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT —
+/// compile-time independent re-check of the bijection certificate) or `ReuseInterp` (OPT-IN — carry
+/// the interpreter's certificate forward). The mode reaches the straight-line / let / non-recursive
+/// match-arm `Swap` lowering sites; swaps inside a recursion *base arm* use the `Recheck` default
+/// (the trampoline path is not threaded — still correct, never silent). [`lower_program`] delegates
+/// here with `Recheck`.
+pub(crate) fn lower_program_with_swap_mode(
+    node: &Node,
+    swap_mode: SwapCertMode,
+) -> Result<Lowered, AotError> {
     let anf = lower::lower_to_anf(node);
     let mut env: HashMap<Atom, EnvValue> = HashMap::new();
     let mut ssa = Ssa(0);
@@ -505,10 +578,20 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                     .collect::<Result<_, _>>()?;
                 EnvValue::Repr(emit_op(prim, &operands, &mut ssa, &mut body, &mut flags)?)
             }
-            Rhs::Swap { target, .. } => {
-                return Err(AotError::UnsupportedNode(format!(
-                    "swap to {target:?} (the subset is straight-line bit/trit ops; M-301)"
-                )));
+            // M-852 (E25-1; RFC-0002 §3/§4; RFC-0004 §6/§11): the **`Swap` node** — the one
+            // Repr-changing node (WF1) — lowers natively for the certified binary↔ternary class
+            // (+ same-Repr identity). The cert handling is the reified `swap_mode`: DEFAULT
+            // `Recheck` re-runs the bijection cert check at compile time; OPT-IN `ReuseInterp`
+            // carries the interpreter's cert forward. Range failures on the partial `dec` direction
+            // push a never-silent overflow flag (matches `SwapError::OutOfRange`). Dense/VSA and
+            // other swap kinds stay explicit `UnsupportedNode` (G2).
+            Rhs::Swap { src, target, .. } => {
+                let src_lane = lookup_ev(&env, src)?.as_lane("swap source")?;
+                let src_repr = lane_repr(src_lane);
+                let (lane, _explain) = swap_codegen::lower_swap(
+                    src_lane, &src_repr, target, swap_mode, &mut ssa, &mut body, &mut flags,
+                )?;
+                EnvValue::Repr(lane)
             }
             // Increment-1 (M-373; DN-15 §4.1; RFC-0004 §11.2): Construct and Match are lowered for
             // the NON-RECURSIVE, BOUNDED case. Stack alloca is used (not malloc) because the
@@ -557,20 +640,18 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                 default,
             } => lower_match(
                 scrutinee, alts, default, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
-                &mut flags,
+                &mut flags, swap_mode,
             )?,
-            // Increment-2 (M-378; DN-15 §7; RFC-0004 §11.5): App/Lam are now natively lowered via
-            // closure-conversion (free-var analysis → heap closure record → indirect call), over the
-            // narrow `Binary{8}`-packed-`i64` ABI and the bump arena. Fix/FixGroup stay explicit
-            // UnsupportedNode (Increment-3 — heap trampoline + DN-05 #1 stack-robustness; G2/VR-5).
+            // M-378 + M-851 (DN-15 §7; RFC-0004 §11.5/§11.7): `Lam` builds a suspended closure value
+            // (free-var snapshot) and `App` **specializes (inlines)** it at the call site over the
+            // widened any-repr/width boxed-value model — currying + returned closures lower natively.
+            // Fix/FixGroup route to the heap trampoline (M-850; DN-05 #1 stack-robustness; G2/VR-5).
             Rhs::Lam {
                 param,
                 body: lam_body,
-            } => lower_lam(
-                param, lam_body, &env, &mut ssa, &mut bbc, &mut body, &mut funcs,
-            )?,
+            } => lower_lam(param, lam_body, &env)?,
             Rhs::App { func, arg } => lower_app(
-                func, arg, &env, &mut ssa, &mut bbc, &mut body, &mut funcs, &mut flags,
+                func, arg, &env, &mut ssa, &mut bbc, &mut body, &mut funcs, &mut flags, swap_mode,
             )?,
             Rhs::Fix {
                 name,
@@ -582,13 +663,13 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
                     body: fix_body.clone(),
                 })
             }
-            Rhs::FixGroup { .. } => {
-                return Err(AotError::UnsupportedNode(
-                    "FixGroup: mutual recursion is not supported in Increment-3 (only single Fix \
-                     with a λparam.Match body is supported; RFC-0004 §11.6; G2)"
-                        .to_owned(),
-                ));
-            }
+            // M-850 (Wave-B): a `FixGroup` binding is now **suspended** as an `EnvValue::FixGroup`
+            // (no IR yet), exactly as a `Fix` is suspended — consumed by a downstream
+            // `App(member, init)` that routes to the heap-trampoline (RFC-0004 §11.6; DN-15 §10).
+            Rhs::FixGroup { defs, which } => EnvValue::FixGroup(FixGroupVal {
+                defs: defs.iter().map(|(n, d)| (n.clone(), d.clone())).collect(),
+                which: which.clone(),
+            }),
         };
         env.insert(b.name.clone(), ev);
     }
@@ -606,10 +687,11 @@ pub(crate) fn lower_program(node: &Node) -> Result<Lowered, AotError> {
     })
 }
 
-/// Lower a nested ANF block (a `Match` arm or similar nested scope) into the ongoing IR stream,
-/// extending `env` with any new bindings. Returns the result `Lane` of the nested block.
-/// This is the recursive workhorse for `Rhs::Match` arm bodies in [`lower_program`].
-fn lower_anf_block(
+/// `pub(crate)` shim so the M-850 heap-trampoline ([`crate::trampoline`]) can reuse the exact
+/// straight-line block lowering (DRY/KC-3 — one lowering, never a divergent copy). Same contract as
+/// [`lower_anf_block`].
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn lower_anf_block_pub(
     anf: &lower::Anf,
     env: &mut HashMap<Atom, EnvValue>,
     ssa: &mut Ssa,
@@ -618,6 +700,145 @@ fn lower_anf_block(
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
 ) -> Result<Lane, AotError> {
+    // The trampoline (recursion) path lowers `Binary{8}` straight-line + Match only — a `Swap`
+    // there is already refused — so the swap cert mode is the `Recheck` default (M-852).
+    lower_anf_block(
+        anf,
+        env,
+        ssa,
+        bbc,
+        body,
+        funcs,
+        flags,
+        SwapCertMode::Recheck,
+    )
+}
+
+/// `pub(crate)` shim: lower every **support** binding of `anf` — every binding whose name is neither
+/// `call_name` (the recursive `App(member, step)`, which the trampoline emits itself) nor
+/// `result_name` (the wrapping `Binary{8}` op the trampoline applies as the defunctionalized
+/// continuation) — extending `env`. The support set is the straight-line `Binary{8}` const/alias/op
+/// bindings the `step` atom and the continuation's saved operand depend on.
+///
+/// **Why every binding, not "those before the call":** after ANF flattening the saved continuation
+/// operand can be bound *after* the call binding (e.g. `%c=App(self,%s); %k=Const(mask);
+/// %r=and(%c,%k)` — the mask `%k` follows the call), so a "stop at the call" walk would miss it and
+/// the operand would be a free variable. Skipping exactly the call and result bindings (and lowering
+/// everything else regardless of position) lowers each support binding exactly once. Any binding the
+/// saved operand transitively needs precedes it in ANF order, so a single forward pass binds them all
+/// before the continuation materializes the operand (G2: a still-missing operand is a free-variable
+/// error, never silently mis-encoded).
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn lower_bindings_before_call_pub(
+    anf: &lower::Anf,
+    call_name: &Atom,
+    result_name: &Atom,
+    env: &mut HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    // The support sequence is straight-line `Binary{8}` (const/alias/op only), so block-label and
+    // closure-function sinks are unused here — kept in the signature for a uniform lowering surface.
+    _bbc: &mut Bbc,
+    body: &mut String,
+    _funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+) -> Result<(), AotError> {
+    for b in anf.bindings() {
+        if &b.name == call_name || &b.name == result_name {
+            // The recursive-call binding and the wrapping-op result binding are emitted by the
+            // trampoline itself (the call + the defunctionalized continuation); skip both, lower the
+            // rest (which includes any saved-operand binding that follows the call in ANF order).
+            continue;
+        }
+        let ev = match &b.rhs {
+            Rhs::Const(v) => EnvValue::Repr(const_lane(v)?),
+            Rhs::Alias(a) => lookup_ev(env, a)?.clone(),
+            Rhs::Op { prim, args } => {
+                let operands: Vec<&Lane> = args
+                    .iter()
+                    .map(|a| lookup_ev(env, a)?.as_lane("trampoline pre-call op operand"))
+                    .collect::<Result<_, _>>()?;
+                EnvValue::Repr(emit_op(prim, &operands, ssa, body, flags)?)
+            }
+            // A non-canonical pre-call construct (Swap/Construct/Match/Lam/Fix/App-to-non-member/
+            // FixGroup) is refused — the trampoline pre-call sequence is straight-line Binary{8}
+            // only; anything else is routed to the interpreter (never fragile IR — G2/VR-5).
+            other => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "trampoline: a non-straight-line pre-call binding ({}) is not supported in a \
+                     recursive arm — only Binary{{8}} const/alias/op before the call (G2)",
+                    rhs_kind(other)
+                )));
+            }
+        };
+        env.insert(b.name.clone(), ev);
+    }
+    Ok(())
+}
+
+/// A short human label for an `Rhs` variant (diagnostics only).
+fn rhs_kind(rhs: &Rhs) -> &'static str {
+    match rhs {
+        Rhs::Const(_) => "Const",
+        Rhs::Alias(_) => "Alias",
+        Rhs::Op { .. } => "Op",
+        Rhs::Swap { .. } => "Swap",
+        Rhs::Construct { .. } => "Construct",
+        Rhs::App { .. } => "App",
+        Rhs::Lam { .. } => "Lam",
+        Rhs::Fix { .. } => "Fix",
+        Rhs::FixGroup { .. } => "FixGroup",
+        Rhs::Match { .. } => "Match",
+    }
+}
+
+/// `pub(crate)` shims for the narrow-ABI pack/unpack/typecheck helpers the trampoline shares.
+pub(crate) fn pack_binary8_pub(lane: &Lane, ssa: &mut Ssa, body: &mut String) -> String {
+    pack_binary8(lane, ssa, body)
+}
+pub(crate) fn unpack_binary8_pub(src: &str, ssa: &mut Ssa, body: &mut String) -> Lane {
+    unpack_binary8(src, ssa, body)
+}
+pub(crate) fn as_binary8_pub<'a>(ev: &'a EnvValue, ctx: &str) -> Result<&'a Lane, AotError> {
+    as_binary8(ev, ctx)
+}
+pub(crate) fn lit_binary8_packed_pub(value: &Value) -> Result<u64, AotError> {
+    lit_binary8_packed(value)
+}
+
+/// Lower a nested ANF block (a `Match` arm or similar nested scope) into the ongoing IR stream,
+/// extending `env` with any new bindings. Returns the result `Lane` of the nested block (forcing the
+/// result to a repr lane). This is the recursive workhorse for `Rhs::Match` arm bodies.
+#[allow(clippy::too_many_arguments)]
+fn lower_anf_block(
+    anf: &lower::Anf,
+    env: &mut HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+    swap_mode: SwapCertMode,
+) -> Result<Lane, AotError> {
+    lower_anf_block_ev(anf, env, ssa, bbc, body, funcs, flags, swap_mode)?
+        .into_lane("match arm result")
+}
+
+/// Lower a nested ANF block returning its raw [`EnvValue`] result — a lane **or** a closure. The
+/// closure-result case is what makes **currying / returned closures** lowerable (M-851): a closure
+/// body whose result is itself a `Lam` / an `App`-returning-a-closure yields an `EnvValue::Closure`,
+/// which the caller (an enclosing `App`, or a `let` binding) consumes directly rather than forcing it
+/// to a printable lane. [`lower_anf_block`] is the lane-forcing wrapper for the (common) repr-result.
+#[allow(clippy::too_many_arguments)]
+fn lower_anf_block_ev(
+    anf: &lower::Anf,
+    env: &mut HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    funcs: &mut Vec<String>,
+    flags: &mut Vec<String>,
+    swap_mode: SwapCertMode,
+) -> Result<EnvValue, AotError> {
     for b in anf.bindings() {
         let ev = match &b.rhs {
             Rhs::Const(v) => EnvValue::Repr(const_lane(v)?),
@@ -629,10 +850,14 @@ fn lower_anf_block(
                     .collect::<Result<_, _>>()?;
                 EnvValue::Repr(emit_op(prim, &operands, ssa, body, flags)?)
             }
-            Rhs::Swap { target, .. } => {
-                return Err(AotError::UnsupportedNode(format!(
-                    "swap to {target:?} in a match arm (M-301)"
-                )));
+            // M-852: native `Swap` lowering inside a nested block (a `let`-bound or match-arm swap).
+            Rhs::Swap { src, target, .. } => {
+                let src_lane = lookup_ev(env, src)?.as_lane("swap source")?;
+                let src_repr = lane_repr(src_lane);
+                let (lane, _explain) = swap_codegen::lower_swap(
+                    src_lane, &src_repr, target, swap_mode, ssa, body, flags,
+                )?;
+                EnvValue::Repr(lane)
             }
             Rhs::Construct { ctor, args } => {
                 let field_lanes: Vec<Lane> = args
@@ -668,14 +893,18 @@ fn lower_anf_block(
                 scrutinee,
                 alts,
                 default,
-            } => lower_match(scrutinee, alts, default, env, ssa, bbc, body, funcs, flags)?,
+            } => lower_match(
+                scrutinee, alts, default, env, ssa, bbc, body, funcs, flags, swap_mode,
+            )?,
             // Increment-2: closures are lowered inside match arms too (a `Lam`/`App` may appear in an
             // arm body). Fix/FixGroup stay explicit UnsupportedNode (Increment-3; G2/VR-5).
             Rhs::Lam {
                 param,
                 body: lam_body,
-            } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
-            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
+            } => lower_lam(param, lam_body, env)?,
+            Rhs::App { func, arg } => {
+                lower_app(func, arg, env, ssa, bbc, body, funcs, flags, swap_mode)?
+            }
             Rhs::Fix {
                 name,
                 body: fix_body,
@@ -687,18 +916,15 @@ fn lower_anf_block(
                     body: fix_body.clone(),
                 })
             }
-            Rhs::FixGroup { .. } => {
-                return Err(AotError::UnsupportedNode(
-                    "FixGroup in a nested block: mutual recursion is not supported in Increment-3 \
-                     (only single Fix with λparam.Match body; RFC-0004 §11.6; G2)"
-                        .to_owned(),
-                ));
-            }
+            // M-850: suspend the FixGroup member (consumed by a downstream App → heap-trampoline).
+            Rhs::FixGroup { defs, which } => EnvValue::FixGroup(FixGroupVal {
+                defs: defs.iter().map(|(n, d)| (n.clone(), d.clone())).collect(),
+                which: which.clone(),
+            }),
         };
         env.insert(b.name.clone(), ev);
     }
-    let result_ev = lookup_ev(env, anf.result())?.clone();
-    result_ev.into_lane("match arm result")
+    Ok(lookup_ev(env, anf.result())?.clone())
 }
 
 /// Compute the **free `Named` variables** of a closure body `body` whose parameter is `param`, in
@@ -828,8 +1054,11 @@ fn free_vars_into(
     note_free_atom(anf.result(), bound, free, seen);
 }
 
-/// Require an [`EnvValue`] to be a `Binary{8}` lane — the only value type that crosses a closure
-/// boundary in the narrow Increment-2 ABI (DN-15 §7.1). Explicit refusal otherwise (G2).
+/// Require an [`EnvValue`] to be a `Binary{8}` lane — the only repr that the trampoline
+/// recursion-accumulator ABI (DN-15 §7.1/§10) and the `Match` branch-primitive (`Lit`-arm switch;
+/// DN-15 §8.3) accept. Explicit refusal otherwise (G2). *(Before M-851 this was also the closure
+/// boundary check; the widened closure ABI now carries any repr/width via inlining, so this
+/// function's scope is the trampoline + branch-primitive subset only.)*
 fn as_binary8<'a>(ev: &'a EnvValue, ctx: &str) -> Result<&'a Lane, AotError> {
     let lane = ev.as_lane(ctx)?;
     if lane.kind != LaneKind::Binary || lane.vals.len() != CLOSURE_ABI_WIDTH {
@@ -879,115 +1108,57 @@ fn unpack_binary8(src: &str, ssa: &mut Ssa, body: &mut String) -> Lane {
     }
 }
 
-/// The fixed LLVM type of a closure function pointer in the narrow ABI: `i64 (i8*, i64)*`.
-const CLOSURE_FN_TY: &str = "i64 (i8*, i64)*";
-
-/// Lower `Rhs::Lam` (Increment-2 closure-conversion; DN-15 §7.3). Emits — into the *current* function
-/// `out_body` — the arena allocation of a closure record `[fn_ptr | captures]` (capturing each free
-/// var, packed), and registers a top-level `@myc_closureN(i8* %env, i64 %arg)` function whose body is
-/// `body` lowered with `param`←`%arg` and each capture←`%env`. Returns the [`EnvValue::Closure`].
-#[allow(clippy::too_many_arguments)]
+/// Lower `Rhs::Lam` (M-851 widened closure ABI; DN-15 §7.1 widening). Emits **no IR** — it builds a
+/// **suspended** [`ClosureVal`] (the `param`, the un-lowered `body`, and a snapshot of each captured
+/// free var's already-lowered [`EnvValue`]). The body is lowered later, **inlined at the application
+/// site** ([`lower_app`]), where the argument pins the param's concrete shape — so closures over any
+/// repr/width, currying, and returned closures lower without a fixed wire ABI or a guessed width.
+/// Capturing the values *now* (snapshot) keeps lexical scope correct when the closure is applied
+/// outside its defining scope (a returned/curried closure). A free var that is not in the defining
+/// env is an explicit [`AotError::FreeVariable`] (never a silent miscapture — G2).
 fn lower_lam(
     param: &str,
     body: &lower::Anf,
     env: &HashMap<Atom, EnvValue>,
-    ssa: &mut Ssa,
-    bbc: &mut Bbc,
-    out_body: &mut String,
-    funcs: &mut Vec<String>,
 ) -> Result<EnvValue, AotError> {
-    let captures = closure_free_vars(body, param);
-
-    // Reserve this closure's function slot/name up-front (deterministic id = structural order). The
-    // placeholder is overwritten once the body — which may itself register nested closures — lowers.
-    let id = funcs.len();
-    funcs.push(String::new());
-    let fname = format!("@myc_closure{id}");
-
-    // Allocate the record on the bump arena: 1 (fn_ptr) + k (captures) i64 slots.
-    let k = captures.len();
-    let nbytes = (1 + k) * 8;
-    let raw = ssa.fresh();
-    let _ = writeln!(
-        out_body,
-        "  {raw} = call i8* @myc_arena_alloc(i64 {nbytes})"
-    );
-    let base = ssa.fresh();
-    let _ = writeln!(out_body, "  {base} = bitcast i8* {raw} to i64*");
-    // Slot 0 ← the closure function pointer, as i64.
-    let fpint = ssa.fresh();
-    let _ = writeln!(
-        out_body,
-        "  {fpint} = ptrtoint {CLOSURE_FN_TY} {fname} to i64"
-    );
-    let _ = writeln!(out_body, "  store i64 {fpint}, i64* {base}");
-    // Slots 1..=k ← each captured Binary{8} value, packed.
-    for (j, capname) in captures.iter().enumerate() {
-        let cev = lookup_ev(env, &Atom::Named(capname.clone()))?;
-        let clane = as_binary8(cev, &format!("closure capture `{capname}`"))?.clone();
-        let packed = pack_binary8(&clane, ssa, out_body);
-        let cgep = ssa.fresh();
-        let _ = writeln!(
-            out_body,
-            "  {cgep} = getelementptr i64, i64* {base}, i64 {}",
-            j + 1
-        );
-        let _ = writeln!(out_body, "  store i64 {packed}, i64* {cgep}");
+    let capture_names = closure_free_vars(body, param);
+    let mut captured: Vec<(String, EnvValue)> = Vec::with_capacity(capture_names.len());
+    for capname in &capture_names {
+        // Snapshot the captured value from the *defining* scope. Only repr lanes and (nested) closures
+        // may be captured; a datum/Fix/FixGroup capture is an explicit refusal (DN-15 §7.4; G2).
+        let cev = lookup_ev(env, &Atom::Named(capname.clone()))?.clone();
+        match &cev {
+            EnvValue::Repr(_) | EnvValue::Closure(_) => {}
+            EnvValue::Datum(_) => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "closure capture `{capname}`: a constructed data value cannot be captured by a \
+                     closure (the widened closure ABI carries repr lanes and closures; DN-15 §7.4; G2)"
+                )));
+            }
+            EnvValue::Fix(_) | EnvValue::FixGroup(_) => {
+                return Err(AotError::UnsupportedNode(format!(
+                    "closure capture `{capname}`: a Fix/FixGroup value cannot be captured — it must \
+                     be applied (App) to run via the trampoline, not captured (M-850; G2)"
+                )));
+            }
+        }
+        captured.push((capname.clone(), cev));
     }
-
-    // Emit the closure function body in a *fresh* env (param + captures only — a closure cannot see
-    // the enclosing function's SSA registers; any other reference surfaces as an explicit
-    // FreeVariable error, never invalid IR — G2).
-    let mut cbody = String::new();
-    let mut cenv: HashMap<Atom, EnvValue> = HashMap::new();
-    let arg_lane = unpack_binary8("%arg", ssa, &mut cbody);
-    cenv.insert(Atom::Named(param.to_owned()), EnvValue::Repr(arg_lane));
-    let envp = ssa.fresh();
-    let _ = writeln!(cbody, "  {envp} = bitcast i8* %env to i64*");
-    for (j, capname) in captures.iter().enumerate() {
-        let cgep = ssa.fresh();
-        let _ = writeln!(cbody, "  {cgep} = getelementptr i64, i64* {envp}, i64 {j}");
-        let cval = ssa.fresh();
-        let _ = writeln!(cbody, "  {cval} = load i64, i64* {cgep}");
-        let clane = unpack_binary8(&cval, ssa, &mut cbody);
-        cenv.insert(Atom::Named(capname.clone()), EnvValue::Repr(clane));
-    }
-    // The closure body is a straight-line Binary block; give it its own flag sink and refuse any
-    // trit-arithmetic overflow inside it (the narrow ABI is Binary-only; G2).
-    let mut cflags: Vec<String> = Vec::new();
-    let result_lane = lower_anf_block(body, &mut cenv, ssa, bbc, &mut cbody, funcs, &mut cflags)?;
-    if !cflags.is_empty() {
-        return Err(AotError::UnsupportedNode(
-            "trit arithmetic inside a closure body is not supported in the native closure ABI \
-             (Increment-2; closures carry Binary{8} only — DN-15 §7.1)"
-                .to_owned(),
-        ));
-    }
-    if result_lane.kind != LaneKind::Binary || result_lane.vals.len() != CLOSURE_ABI_WIDTH {
-        return Err(AotError::UnsupportedNode(format!(
-            "closure body result must be a Binary{{{CLOSURE_ABI_WIDTH}}} value in the native \
-             closure ABI (Increment-2); got {:?} width {}",
-            result_lane.kind,
-            result_lane.vals.len()
-        )));
-    }
-    let packed_ret = pack_binary8(&result_lane, ssa, &mut cbody);
-
-    let mut def = String::new();
-    let _ = writeln!(def, "define i64 {fname}(i8* %env, i64 %arg) {{");
-    def.push_str("entry:\n");
-    def.push_str(&cbody);
-    let _ = writeln!(def, "  ret i64 {packed_ret}");
-    def.push_str("}\n");
-    funcs[id] = def;
-
-    Ok(EnvValue::Closure(ClosureVal { base }))
+    Ok(EnvValue::Closure(ClosureVal {
+        param: param.to_owned(),
+        body: body.clone(),
+        captured,
+    }))
 }
 
-/// Lower `Rhs::App` (Increment-2/3; DN-15 §7.3/§8): two paths dispatched on `func`'s `EnvValue`:
-/// - **`EnvValue::Fix`** (Increment-3): `App(Fix{…}, init)` — tail-recursive loop; delegates to
-///   [`lower_tail_fix`] which emits the iterative LLVM loop (RFC-0004 §11.6; DN-05 #1).
-/// - **`EnvValue::Closure`** (Increment-2): indirect call through the closure record (DN-15 §7.3).
+/// Lower `Rhs::App` (DN-15 §7.3/§8, closure path widened by M-851): paths dispatched on `func`'s
+/// `EnvValue`:
+/// - **`EnvValue::Fix`/`FixGroup`**: recursion → trampoline / iterative loop (M-850; narrow ABI).
+/// - **`EnvValue::Closure`**: the closure is **specialized (inlined) at this site** — the body is
+///   lowered into the current block with the param bound to the (concrete-shape) argument and each
+///   captured free var restored, returning the body's [`EnvValue`] (a lane of any repr/width, or a
+///   nested closure for currying / a returned closure). No fixed wire ABI, no indirect call, no
+///   guessed param width — every shape is statically resolved here (G2/VR-5; DN-15 §7.1 widening).
 ///
 /// Anything else is an explicit refusal (G2 — never silent).
 #[allow(clippy::too_many_arguments)]
@@ -1000,32 +1171,60 @@ fn lower_app(
     body: &mut String,
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
+    swap_mode: SwapCertMode,
 ) -> Result<EnvValue, AotError> {
     let func_ev = lookup_ev(env, func)?;
     // Increment-3: App(Fix, init) → iterative tail-recursion loop (never stack recursion; DN-05 #1).
+    // M-850 (Wave-B): a non-tail single `Fix` (or a `Match` in a pre-call binding — DN-15 §8.5) no
+    // longer refuses; it routes to the **heap-trampoline** ([`crate::trampoline`]) — the full
+    // defunctionalized control-stack lowering DN-15 §4.3 anticipated. The fast iterative tail loop is
+    // kept (byte-identical IR) for the pure-tail/base fragment it already handled; anything heavier
+    // takes the trampoline. Both are bounded by the SAME `AutoDepthBudget` (DRY/KC-3).
     if let EnvValue::Fix(fixval) = func_ev {
-        return lower_tail_fix(fixval, arg, env, ssa, bbc, body, funcs, flags);
+        let members = crate::trampoline::destructure_fix(&fixval.name, &fixval.body)?;
+        if crate::trampoline::is_pure_tail_single_fix(&members)? {
+            return lower_tail_fix(fixval, arg, env, ssa, bbc, body, funcs, flags);
+        }
+        return crate::trampoline::lower_recursion_group(
+            &members, 0, arg, env, ssa, bbc, body, funcs, flags,
+        );
     }
-    let base = func_ev.as_closure("App function")?.base.clone();
-    // fn_ptr ← record slot 0.
-    let fpint = ssa.fresh();
-    let _ = writeln!(body, "  {fpint} = load i64, i64* {base}");
-    let fp = ssa.fresh();
-    let _ = writeln!(body, "  {fp} = inttoptr i64 {fpint} to {CLOSURE_FN_TY}");
-    // %env ← &record[1] (the captures region), as i8*.
-    let egep = ssa.fresh();
-    let _ = writeln!(body, "  {egep} = getelementptr i64, i64* {base}, i64 1");
-    let eptr = ssa.fresh();
-    let _ = writeln!(body, "  {eptr} = bitcast i64* {egep} to i8*");
-    // arg (must be Binary{8}) → packed i64.
-    let arg_lane = as_binary8(lookup_ev(env, arg)?, "App argument")?.clone();
-    let packed_arg = pack_binary8(&arg_lane, ssa, body);
-    let res = ssa.fresh();
-    let _ = writeln!(
+    // M-850: App(FixGroup-member, init) → heap-trampoline over all members; `which` selects the
+    // entry. Mutual recursion is resolved by the trampoline's shared member dispatch (RFC-0004
+    // §11.6; DN-15 §10). Never the C stack — bounded by the same AutoDepthBudget (DN-05 #1).
+    if let EnvValue::FixGroup(fg) = func_ev {
+        let members = crate::trampoline::destructure_fixgroup(&fg.defs)?;
+        let entry = fg
+            .defs
+            .iter()
+            .position(|(n, _)| n == &fg.which)
+            .ok_or_else(|| AotError::FreeVariable(fg.which.clone()))?;
+        return crate::trampoline::lower_recursion_group(
+            &members, entry, arg, env, ssa, bbc, body, funcs, flags,
+        );
+    }
+    // M-851: specialize (inline) the closure at this application. Build a fresh env from the closure's
+    // captured snapshot + the param bound to the argument's already-lowered value (any repr/width, or a
+    // nested closure), then lower the closure body into the current block. The argument's concrete
+    // shape flows in directly, so no width is ever guessed (G2). A closure cannot see the enclosing
+    // function's bindings — only its captures + param (the snapshot is the lexical environment).
+    let closure = func_ev.as_closure("App function")?.clone();
+    let arg_ev = lookup_ev(env, arg)?.clone();
+    let mut cenv: HashMap<Atom, EnvValue> = HashMap::with_capacity(closure.captured.len() + 1);
+    for (capname, cev) in &closure.captured {
+        cenv.insert(Atom::Named(capname.clone()), cev.clone());
+    }
+    cenv.insert(Atom::Named(closure.param.clone()), arg_ev);
+    lower_anf_block_ev(
+        &closure.body,
+        &mut cenv,
+        ssa,
+        bbc,
         body,
-        "  {res} = call i64 {fp}(i8* {eptr}, i64 {packed_arg})"
-    );
-    Ok(EnvValue::Repr(unpack_binary8(&res, ssa, body)))
+        funcs,
+        flags,
+        swap_mode,
+    )
 }
 
 /// Pack a `Binary{8}` literal `Value` (a Match `Lit`-arm pattern) into the `u64` the native branch
@@ -1072,6 +1271,7 @@ fn lower_match(
     body: &mut String,
     funcs: &mut Vec<String>,
     flags: &mut Vec<String>,
+    swap_mode: SwapCertMode,
 ) -> Result<EnvValue, AotError> {
     use mycelium_core::lower::AnfAlt;
     let scrut = lookup_ev(env, scrutinee)?.clone();
@@ -1097,6 +1297,13 @@ fn lower_match(
             return Err(AotError::UnsupportedNode(
                 "Match on a Fix value is not supported — a Fix must be applied (App) before it \
                  can be matched (Increment-3; G2)"
+                    .to_owned(),
+            ));
+        }
+        EnvValue::FixGroup(_) => {
+            return Err(AotError::UnsupportedNode(
+                "Match on a FixGroup member is not supported — it must be applied (App) before it \
+                 can be matched (M-850; G2)"
                     .to_owned(),
             ));
         }
@@ -1185,7 +1392,16 @@ fn lower_match(
             // A `Lit` arm binds nothing — the literal is matched by the switch value.
             AnfAlt::Lit { body: arm_body, .. } => arm_body,
         };
-        let arm_result = lower_anf_block(arm_body, &mut arm_env, ssa, bbc, body, funcs, flags)?;
+        let arm_result = lower_anf_block(
+            arm_body,
+            &mut arm_env,
+            ssa,
+            bbc,
+            body,
+            funcs,
+            flags,
+            swap_mode,
+        )?;
         phi_entries.push((label.clone(), arm_result));
         let _ = writeln!(body, "  br label %{merge_label}");
     }
@@ -1201,6 +1417,7 @@ fn lower_match(
             body,
             funcs,
             flags,
+            swap_mode,
         )?;
         phi_entries.push((default_label.clone(), default_result));
         let _ = writeln!(body, "  br label %{merge_label}");
@@ -1429,9 +1646,13 @@ fn lower_arm_bindings_before_tail(
                     .collect::<Result<_, _>>()?;
                 EnvValue::Repr(emit_op(prim, &operands, ssa, body, flags)?)
             }
+            // M-852 lowers `Swap` for straight-line / let / non-recursive match-arm positions; a
+            // swap inside a tail-Fix *recursion step* stays an explicit refusal (out of scope — the
+            // recursion path is not swap-aware). Never a silent mis-lowering (G2).
             Rhs::Swap { target, .. } => {
                 return Err(AotError::UnsupportedNode(format!(
-                    "swap to {target:?} in a tail-Fix arm body (M-301)"
+                    "swap to {target:?} in a tail-Fix arm body — native swap is lowered outside \
+                     recursion steps only (M-852); refused here, never silent (G2)"
                 )));
             }
             Rhs::Construct { ctor, args } => {
@@ -1467,8 +1688,22 @@ fn lower_arm_bindings_before_tail(
             Rhs::Lam {
                 param,
                 body: lam_body,
-            } => lower_lam(param, lam_body, env, ssa, bbc, body, funcs)?,
-            Rhs::App { func, arg } => lower_app(func, arg, env, ssa, bbc, body, funcs, flags)?,
+            } => lower_lam(param, lam_body, env)?,
+            Rhs::App { func, arg } => {
+                // Recursion-arm App: the trampoline/tail-loop path; a swap here is refused (the
+                // `Rhs::Swap` arm above), so the swap cert mode is the `Recheck` default (M-852).
+                lower_app(
+                    func,
+                    arg,
+                    env,
+                    ssa,
+                    bbc,
+                    body,
+                    funcs,
+                    flags,
+                    SwapCertMode::Recheck,
+                )?
+            }
             Rhs::Fix {
                 name,
                 body: fix_body,
@@ -1780,9 +2015,18 @@ fn lower_tail_fix(
 
         match arm_kind {
             ArmKind::Base => {
-                // Lower the full arm body and collect its result for the exit phi.
-                let result_lane =
-                    lower_anf_block(arm_anf, &mut arm_env, ssa, bbc, body, funcs, flags)?;
+                // Lower the full arm body and collect its result for the exit phi. A base-arm swap
+                // uses the `Recheck` default (the recursion path is not mode-threaded; M-852).
+                let result_lane = lower_anf_block(
+                    arm_anf,
+                    &mut arm_env,
+                    ssa,
+                    bbc,
+                    body,
+                    funcs,
+                    flags,
+                    SwapCertMode::Recheck,
+                )?;
                 exit_phi_entries.push((lbl.clone(), result_lane));
                 let _ = writeln!(body, "  br label %{exit_label}");
             }
@@ -1828,8 +2072,16 @@ fn lower_tail_fix(
         def_env.insert(Atom::Named(param.clone()), EnvValue::Repr(n_lane.clone()));
         match &default_kind {
             Some((def_anf, ArmKind::Base)) => {
-                let result_lane =
-                    lower_anf_block(def_anf, &mut def_env, ssa, bbc, body, funcs, flags)?;
+                let result_lane = lower_anf_block(
+                    def_anf,
+                    &mut def_env,
+                    ssa,
+                    bbc,
+                    body,
+                    funcs,
+                    flags,
+                    SwapCertMode::Recheck,
+                )?;
                 exit_phi_entries.push((default_label.clone(), result_lane));
                 let _ = writeln!(body, "  br label %{exit_label}");
             }
@@ -1922,63 +2174,70 @@ fn lower_tail_fix(
 /// Ternary: `'-'`/`'0'`/`'+'`). Deterministic. One op per output element (no opaque pass —
 /// RFC-0004 §6). Returns an explicit [`AotError`] for anything outside the subset.
 pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
+    // Default native swap cert mode: `Recheck` (compile-time independent re-check; M-852).
+    emit_llvm_ir_with_swap_mode(node, SwapCertMode::Recheck)
+}
+
+/// Emit textual LLVM IR under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT —
+/// compile-time independent re-check of the bijection certificate) or `ReuseInterp` (OPT-IN — carry
+/// the interpreter's certificate forward). The mode is recorded in the emitted IR (a dumpable swap
+/// comment) and selects whether the bijection side-condition is independently re-checked at compile
+/// time. For a swap-free program the two modes emit byte-identical IR. [`emit_llvm_ir`] delegates
+/// here with `Recheck`.
+pub fn emit_llvm_ir_with_swap_mode(
+    node: &Node,
+    swap_mode: SwapCertMode,
+) -> Result<String, AotError> {
     let Lowered {
         body,
         result,
         mut ssa,
         overflow,
-        funcs,
-    } = lower_program(node)?;
-    // Closures (Increment-2) bring in the bump arena + `@malloc`/`@free`; a closure-free program
-    // emits byte-for-byte the same module as before (no arena, no extra declares).
-    let uses_closures = !funcs.is_empty();
+        // Vestigial since M-851: the narrow ABI emitted one top-level `@myc_closureN` function per
+        // `Rhs::Lam` here; the widened ABI **inlines** closures at their application site
+        // ([`lower_app`]), so no top-level closure functions (and no bump arena) are produced. The
+        // field is retained (always empty) only because the trampoline-shared lowering signatures
+        // thread it (M-850); it carries no closure functions now.
+        funcs: _funcs,
+    } = lower_program_with_swap_mode(node, swap_mode)?;
+    // M-850 (Wave-B): the heap-trampoline lowering emits `@myc_tramp_alloc` calls into `body`; a
+    // program with no non-tail-Fix/FixGroup recursion never does, so it emits the same module as
+    // before (no trampoline runtime, no extra declares). Detecting via the emitted body keeps the
+    // runtime opt-in without threading another flag through every lowering signature (DRY).
+    let uses_trampoline = body.contains("@myc_tramp_alloc");
     let mut out =
         String::from("; mycelium direct-LLVM AOT (bit/trit + non-recursive data; M-301; M-373)\n");
-    if uses_closures {
-        out.push_str("; closures: heap closure records on a bump arena (M-378; DN-15 §7)\n");
+    if uses_trampoline {
+        out.push_str("; recursion: heap-trampoline control stack (M-850; DN-15 §10)\n");
     }
+    // M-851: closures lower by **inlining** at the application site — no top-level closure functions,
+    // no bump arena, no closure heap. A closure-only program now emits the same straight-line module
+    // as the bit/trit subset (its closures are inlined into `@main`'s body). The only heap is the
+    // trampoline frame stack (recursion).
+    //
     // `@putchar` for the read-back protocol; `@abort` for the defined-traps (the match no-default
-    // trap and the bump-arena OOM). `@abort` is declared `noreturn` so LLVM treats every
+    // trap and the trampoline OOM). `@abort` is declared `noreturn` so LLVM treats every
     // `call @abort` as non-returning: the dead `ret` that follows each trap is provably never taken
-    // (G2), and no post-trap path — e.g. the OOM block returning a null pointer — is ever reachable.
+    // (G2), and no post-trap path is ever reachable.
     out.push_str("declare i32 @putchar(i32)\n");
     out.push_str("declare void @abort() noreturn\n");
-    if uses_closures {
+    if uses_trampoline {
+        // The trampoline frame stack needs `@malloc`/`@free` + the alloc/free seams. Never silent OOM
+        // (defined-trap).
         out.push_str("declare i8* @malloc(i64)\n");
         out.push_str("declare void @free(i8*)\n");
-        out.push_str(&arena_runtime());
-        // The closure functions (one `define` per `Rhs::Lam`), emitted before `@main`.
-        for f in &funcs {
-            out.push('\n');
-            out.push_str(f);
-        }
+        out.push_str(&crate::trampoline::trampoline_runtime());
     }
     out.push('\n');
     out.push_str("define i32 @main() {\nentry:\n");
-    if uses_closures {
-        // Bump-arena init: one `@malloc` block + a zeroed cursor (DN-15 §7.2). Freed before the
-        // normal-completion `ret` below.
-        let _ = writeln!(
-            out,
-            "  %arena_raw = call i8* @malloc(i64 {ARENA_CAPACITY_BYTES})"
-        );
-        out.push_str("  store i8* %arena_raw, i8** @myc_arena_base\n");
-        out.push_str("  store i64 0, i64* @myc_arena_off\n");
-    }
     out.push_str(&body);
     match overflow {
         // No trit arithmetic ⇒ no overflow path; emit the result line straight-line (unchanged IR).
         None => {
-            if uses_closures {
-                emit_arena_free(&mut out);
-            }
             emit_result_line(result.kind, &result.vals, &mut ssa, &mut out);
         }
         // Overflow possible ⇒ branch on the runtime flag: print the sentinel line on overflow, the
-        // result line otherwise (the read-back protocol — never a silent wrap, G2). A program can
-        // both use closures and contain trit arithmetic in non-closure bindings, so this branch may
-        // co-occur with a live arena: the `@free` stays on the normal `ok` path; the `ovf` early-exit
-        // skips it and lets the OS reclaim the arena at process exit.
+        // result line otherwise (the read-back protocol — never a silent wrap, G2).
         Some(ovf) => {
             let _ = writeln!(&mut out, "  br i1 {ovf}, label %ovf, label %ok");
             out.push_str("ovf:\n");
@@ -1991,47 +2250,11 @@ pub fn emit_llvm_ir(node: &Node) -> Result<String, AotError> {
             let snl = ssa.fresh();
             let _ = writeln!(&mut out, "  {snl} = call i32 @putchar(i32 10)");
             out.push_str("  ret i32 0\nok:\n");
-            if uses_closures {
-                emit_arena_free(&mut out);
-            }
             emit_result_line(result.kind, &result.vals, &mut ssa, &mut out);
         }
     }
     out.push_str("}\n");
     Ok(out)
-}
-
-/// The bump-arena runtime (DN-15 §7.2): two module globals (base pointer + cursor) and the single
-/// allocation seam `@myc_arena_alloc`. The over-capacity check takes an explicit defined-trap
-/// (`@abort`, never raw `unreachable` UB; G2) — the exact point where **Increment-3** substitutes a
-/// `DepthBudget`-resolved ceiling + a graceful limit (DN-05 #1; `budget.rs`, M-349). All textual,
-/// fully dumpable (no opaque pass — RFC-0004 §6 / VR-4).
-fn arena_runtime() -> String {
-    let mut s = String::new();
-    s.push_str("@myc_arena_base = internal global i8* null\n");
-    s.push_str("@myc_arena_off = internal global i64 0\n\n");
-    s.push_str("define i8* @myc_arena_alloc(i64 %n) {\nentry:\n");
-    s.push_str("  %base = load i8*, i8** @myc_arena_base\n");
-    s.push_str("  %off = load i64, i64* @myc_arena_off\n");
-    s.push_str("  %newoff = add i64 %off, %n\n");
-    let _ = writeln!(s, "  %over = icmp ugt i64 %newoff, {ARENA_CAPACITY_BYTES}");
-    s.push_str("  br i1 %over, label %oom, label %ok\n");
-    // OOM: an explicit defined-trap. `@abort` is declared `noreturn` (see `emit_llvm_ir`), so this
-    // block is non-returning in IR — the trailing `ret i8* null` is a provably-dead terminator
-    // (LLVM never lets the null reach the caller's bitcast/store), kept only so the block has a
-    // valid terminator without a raw `unreachable` (consistent with the match no-default trap; G2).
-    s.push_str("oom:\n  call void @abort()\n  ret i8* null\n");
-    s.push_str("ok:\n");
-    s.push_str("  store i64 %newoff, i64* @myc_arena_off\n");
-    s.push_str("  %p = getelementptr i8, i8* %base, i64 %off\n");
-    s.push_str("  ret i8* %p\n}\n");
-    s
-}
-
-/// Emit the arena teardown — `@free` the single block before normal completion (DN-15 §7.2).
-fn emit_arena_free(out: &mut String) {
-    out.push_str("  %arena_fb = load i8*, i8** @myc_arena_base\n");
-    out.push_str("  call void @free(i8* %arena_fb)\n");
 }
 
 /// Emit each result element as its ASCII char via `@putchar` (one op per element — a transparent
@@ -2048,10 +2271,12 @@ fn emit_result_line(kind: LaneKind, vals: &[Operand], ssa: &mut Ssa, out: &mut S
 }
 
 /// The result shape (lane kind + element count) of the program — **derived from the actual
-/// lowering** ([`lower_program`]) so it can never disagree with what [`emit_llvm_ir`] emits. Used by
-/// [`compile`] to know how to parse the native output.
-fn result_shape(node: &Node) -> Result<(LaneKind, usize), AotError> {
-    let l = lower_program(node)?;
+/// lowering** ([`lower_program_with_swap_mode`]) so it can never disagree with what
+/// [`emit_llvm_ir_with_swap_mode`] emits. Used by [`compile`] to know how to parse the native
+/// output. Threaded with the swap mode so a `Recheck`-refused illegal-pair swap is surfaced
+/// identically here and in the emitter (no shape/emit disagreement; M-852).
+fn result_shape(node: &Node, swap_mode: SwapCertMode) -> Result<(LaneKind, usize), AotError> {
+    let l = lower_program_with_swap_mode(node, swap_mode)?;
     Ok((l.result.kind, l.result.vals.len()))
 }
 
@@ -2084,6 +2309,17 @@ fn const_lane(v: &Value) -> Result<Lane, AotError> {
                 })
                 .collect(),
         }),
+        // M-853 (RFC-0039 §5.1): `Repr::Dense` now has a **native home** — the dedicated
+        // `dense_codegen` direct-LLVM path (`dense_compile_and_run`/`emit_dense_llvm_ir`), which lowers
+        // the un-quantized F32/BF16 element-wise surface against the `mycelium-dense` reference. Dense
+        // is **not** lowered through this generic bit/trit `Node` const-lane (the lane model is i32
+        // bit/trit elements; Dense is `f64`), so a Dense `Const` reaching here is routed to that native
+        // path, never silently mis-lowered as a bit/trit lane. The refusal is informative (ADR-006/G2):
+        // it names where Dense *is* lowered. (Quantized Dense + VSA stay refused per RFC-0039 §5.1/§5.2.)
+        (repr @ Repr::Dense { .. }, _) => Err(AotError::UnsupportedRepr(format!(
+            "{repr:?}: Dense is lowered by the dedicated dense_codegen direct-LLVM path \
+             (dense_compile_and_run; M-853/RFC-0039 §5.1), not this generic bit/trit Node lowering"
+        ))),
         (repr, _) => Err(AotError::UnsupportedRepr(format!("{repr:?}"))),
     }
 }
@@ -2452,8 +2688,20 @@ impl CompiledArtifact {
 /// without running it. Returns [`AotError::ToolchainMissing`] when `llc`/`clang` are absent so
 /// callers can skip; any out-of-subset construct is the same explicit refusal as [`emit_llvm_ir`].
 pub fn compile(node: &Node) -> Result<CompiledArtifact, AotError> {
-    let ir = emit_llvm_ir(node)?;
-    let (kind, width) = result_shape(node)?;
+    // Default native swap cert mode: `Recheck` (compile-time independent re-check; M-852).
+    compile_with_swap_mode(node, SwapCertMode::Recheck)
+}
+
+/// Compile under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT — compile-time
+/// independent re-check of the bijection certificate) or `ReuseInterp` (OPT-IN — carry the
+/// interpreter's certificate forward). The IR and the read-back shape are both threaded with the
+/// mode so they never disagree. [`compile`] delegates here with `Recheck`.
+pub fn compile_with_swap_mode(
+    node: &Node,
+    swap_mode: SwapCertMode,
+) -> Result<CompiledArtifact, AotError> {
+    let ir = emit_llvm_ir_with_swap_mode(node, swap_mode)?;
+    let (kind, width) = result_shape(node, swap_mode)?;
     ensure_toolchain()?;
 
     let dir = unique_tmp_dir()?;
@@ -2463,7 +2711,22 @@ pub fn compile(node: &Node) -> Result<CompiledArtifact, AotError> {
     let guard = TmpDir(dir);
 
     std::fs::write(&ll, ir.as_bytes()).map_err(|e| AotError::Run(format!("write IR: {e}")))?;
-    run_tool("llc", &["-filetype=obj", path(&ll)?, "-o", path(&obj)?])?;
+    // `-relocation-model=pic`: the trampoline (M-850) and closure-arena modules carry global/`.rodata`
+    // references whose default (static) relocations are `R_X86_64_32S`, which a PIE link rejects
+    // (`can not be used when making a PIE object`). Modern clang links PIE by default, so we emit a
+    // PIC object that is link-compatible with PIE. The byte-for-byte element-wise modules are
+    // unaffected by the relocation model (no global refs), so this is a strict superset — never a
+    // silent behavioural change (G2); it only lets the heavier recursion/closure modules link.
+    run_tool(
+        "llc",
+        &[
+            "-relocation-model=pic",
+            "-filetype=obj",
+            path(&ll)?,
+            "-o",
+            path(&obj)?,
+        ],
+    )?;
     run_tool("clang", &[path(&obj)?, "-o", path(&bin)?])?;
 
     Ok(CompiledArtifact {
@@ -2479,6 +2742,16 @@ pub fn compile(node: &Node) -> Result<CompiledArtifact, AotError> {
 /// **compiled** execution path the M-302 differential checks against the interpreter.
 pub fn compile_and_run(node: &Node) -> Result<Value, AotError> {
     compile(node)?.run()
+}
+
+/// Compile + run under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT) or
+/// `ReuseInterp` (OPT-IN). The compiled-path entry the swap differential exercises in **both** cert
+/// modes. [`compile_and_run`] delegates here with `Recheck`.
+pub fn compile_and_run_with_swap_mode(
+    node: &Node,
+    swap_mode: SwapCertMode,
+) -> Result<Value, AotError> {
+    compile_with_swap_mode(node, swap_mode)?.run()
 }
 
 fn ensure_toolchain() -> Result<(), AotError> {
@@ -2530,303 +2803,5 @@ pub(crate) struct TmpDir(pub(crate) std::path::PathBuf);
 impl Drop for TmpDir {
     fn drop(&mut self) {
         let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use mycelium_core::Repr;
-
-    fn binary(bits: Vec<bool>) -> Value {
-        let width = bits.len() as u32;
-        Value::new(
-            Repr::Binary { width },
-            Payload::Bits(bits),
-            Meta::exact(Provenance::Root),
-        )
-        .unwrap()
-    }
-
-    fn ternary(trits: Vec<Trit>) -> Value {
-        let m = trits.len() as u32;
-        Value::new(
-            Repr::Ternary { trits: m },
-            Payload::Trits(trits),
-            Meta::exact(Provenance::Root),
-        )
-        .unwrap()
-    }
-
-    fn not_program() -> Node {
-        Node::Op {
-            prim: "bit.not".into(),
-            args: vec![Node::Const(binary(vec![true, false, true, true]))],
-        }
-    }
-
-    fn neg_program() -> Node {
-        Node::Op {
-            prim: "trit.neg".into(),
-            args: vec![Node::Const(ternary(vec![Trit::Pos, Trit::Zero, Trit::Neg]))],
-        }
-    }
-
-    #[test]
-    fn emits_module_for_bit_not() {
-        let ir = emit_llvm_ir(&not_program()).unwrap();
-        assert!(ir.contains("declare i32 @putchar(i32)"));
-        assert!(ir.contains("define i32 @main()"));
-        assert!(ir.contains("xor i32")); // bit.not lowers to xor with 1
-        assert!(ir.contains("call i32 @putchar"));
-        assert!(ir.contains("ret i32 0"));
-    }
-
-    #[test]
-    fn emission_is_deterministic() {
-        assert_eq!(emit_llvm_ir(&not_program()), emit_llvm_ir(&not_program()));
-    }
-
-    #[test]
-    fn emits_module_for_trit_neg() {
-        let ir = emit_llvm_ir(&neg_program()).unwrap();
-        assert!(ir.contains("sub i32 0,")); // trit.neg lowers to 0 - x per trit
-                                            // Ternary output uses the '-'(45)/'0'(48)/'+'(43) select chain.
-        assert!(ir.contains("select i1") && ir.contains("i32 45") && ir.contains("i32 43"));
-        assert!(ir.contains("ret i32 0"));
-    }
-
-    #[test]
-    fn ternary_const_is_supported() {
-        // M-301 trit slice: a Ternary const is now lowered (was UnsupportedRepr in the bit-only
-        // slice). Mutant-witness: reverting const_lane to Binary-only would refuse this.
-        let v = ternary(vec![Trit::Pos, Trit::Zero, Trit::Neg]);
-        assert!(emit_llvm_ir(&Node::Const(v)).is_ok());
-    }
-
-    fn binop(prim: &str, a: Vec<Trit>, b: Vec<Trit>) -> Node {
-        Node::Op {
-            prim: prim.into(),
-            args: vec![Node::Const(ternary(a)), Node::Const(ternary(b))],
-        }
-    }
-
-    #[test]
-    fn trit_add_emits_ripple_carry_ir() {
-        // Mutant-witness: a non-carry (elementwise) add would not emit the srem/sdiv-by-3 balancing
-        // or the icmp overflow flag the read-back protocol branches on.
-        let ir = emit_llvm_ir(&binop(
-            "trit.add",
-            vec![Trit::Pos, Trit::Neg, Trit::Neg],
-            vec![Trit::Zero, Trit::Pos, Trit::Pos],
-        ))
-        .unwrap();
-        assert!(ir.contains("srem i32") && ir.contains("sdiv i32")); // balanced-digit normalisation
-        assert!(ir.contains("icmp ne i32")); // overflow flag
-        assert!(ir.contains("br i1")); // read-back branch
-        assert!(ir.contains("putchar(i32 33)")); // overflow sentinel '!'
-    }
-
-    #[test]
-    fn arithmetic_emission_is_deterministic() {
-        let p = binop(
-            "trit.mul",
-            vec![Trit::Zero, Trit::Pos, Trit::Neg],
-            vec![Trit::Zero, Trit::Pos, Trit::Zero],
-        );
-        assert_eq!(emit_llvm_ir(&p), emit_llvm_ir(&p));
-    }
-
-    #[test]
-    fn refuses_arithmetic_width_mismatch() {
-        // Mutant-witness: dropping the width check would emit a ragged ripple-carry.
-        let prog = binop("trit.add", vec![Trit::Pos, Trit::Zero], vec![Trit::Pos]);
-        assert!(matches!(
-            emit_llvm_ir(&prog),
-            Err(AotError::WidthMismatch { .. })
-        ));
-    }
-
-    #[test]
-    fn refuses_bit_arithmetic_on_binary_lane() {
-        // Mutant-witness: dropping require_kind would let trit.add ripple over a binary lane.
-        let prog = Node::Op {
-            prim: "trit.add".into(),
-            args: vec![
-                Node::Const(binary(vec![true, false])),
-                Node::Const(binary(vec![false, true])),
-            ],
-        };
-        assert!(matches!(
-            emit_llvm_ir(&prog),
-            Err(AotError::UnsupportedPrim(_))
-        ));
-    }
-
-    #[test]
-    fn refuses_bit_op_on_ternary_lane() {
-        // Mutant-witness: dropping require_kind would let bit.not mis-lower a ternary lane.
-        let prog = Node::Op {
-            prim: "bit.not".into(),
-            args: vec![Node::Const(ternary(vec![Trit::Pos, Trit::Neg]))],
-        };
-        assert!(matches!(
-            emit_llvm_ir(&prog),
-            Err(AotError::UnsupportedPrim(_))
-        ));
-    }
-
-    #[test]
-    fn refuses_swap() {
-        // Mutant-witness: a swap is not straight-line bit logic; it must be refused, not ignored.
-        let prog = Node::Swap {
-            src: Box::new(Node::Const(binary(vec![true, false]))),
-            target: Repr::Ternary { trits: 2 },
-            policy: mycelium_core::ContentHash::parse("blake3:x").unwrap(),
-        };
-        assert!(matches!(
-            emit_llvm_ir(&prog),
-            Err(AotError::UnsupportedNode(_))
-        ));
-    }
-
-    #[test]
-    fn refuses_width_mismatch() {
-        // Mutant-witness: dropping the width check would emit a ragged elementwise op.
-        let prog = Node::Op {
-            prim: "bit.and".into(),
-            args: vec![
-                Node::Const(binary(vec![true, false, true])),
-                Node::Const(binary(vec![true, false])),
-            ],
-        };
-        assert!(matches!(
-            emit_llvm_ir(&prog),
-            Err(AotError::WidthMismatch { .. })
-        ));
-    }
-
-    // --- compiled-path smoke test (skips when llc/clang are absent) ---------------------------
-
-    #[test]
-    fn native_bit_not_matches_interpreter() {
-        let prog = not_program();
-        match compile_and_run(&prog) {
-            Ok(v) => {
-                // Mutant-witness: if bit.not lowered to `or`/`and` instead of `xor _, 1`, the
-                // payload would differ from the complemented input.
-                assert_eq!(v.payload(), &Payload::Bits(vec![false, true, false, false]));
-                assert_eq!(v.repr(), &Repr::Binary { width: 4 });
-            }
-            Err(AotError::ToolchainMissing(_)) => { /* environment skip — house idiom */ }
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_neg_matches_interpreter() {
-        // Mutant-witness: if trit.neg lowered to anything but `0 - x` (or the output select chain
-        // mapped the wrong char), the negated payload `[-,0,+]` would differ.
-        match compile_and_run(&neg_program()) {
-            Ok(v) => {
-                assert_eq!(
-                    v.payload(),
-                    &Payload::Trits(vec![Trit::Neg, Trit::Zero, Trit::Pos])
-                );
-                assert_eq!(v.repr(), &Repr::Ternary { trits: 3 });
-            }
-            Err(AotError::ToolchainMissing(_)) => { /* environment skip */ }
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_add_matches_oracle() {
-        // 5 + 4 = 9 in 3 trits: [+,-,-] + [0,+,+] = [+,0,0]. Mutant-witness: a missing carry would
-        // yield the elementwise (wrong) sum, and a wrong balancing constant would mis-encode.
-        let prog = binop(
-            "trit.add",
-            vec![Trit::Pos, Trit::Neg, Trit::Neg],
-            vec![Trit::Zero, Trit::Pos, Trit::Pos],
-        );
-        match compile_and_run(&prog) {
-            Ok(v) => assert_eq!(
-                v.payload(),
-                &Payload::Trits(vec![Trit::Pos, Trit::Zero, Trit::Zero])
-            ),
-            Err(AotError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_sub_matches_oracle() {
-        // 9 - 4 = 5 in 3 trits: [+,0,0] - [0,+,+] = [+,-,-].
-        let prog = binop(
-            "trit.sub",
-            vec![Trit::Pos, Trit::Zero, Trit::Zero],
-            vec![Trit::Zero, Trit::Pos, Trit::Pos],
-        );
-        match compile_and_run(&prog) {
-            Ok(v) => assert_eq!(
-                v.payload(),
-                &Payload::Trits(vec![Trit::Pos, Trit::Neg, Trit::Neg])
-            ),
-            Err(AotError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_mul_matches_oracle() {
-        // 2 * 3 = 6 in 3 trits: [0,+,-] * [0,+,0] = [+,-,0]. Mutant-witness: a wrong shift in the
-        // shifted-accumulate, or reading the high (overflow) half, would diverge.
-        let prog = binop(
-            "trit.mul",
-            vec![Trit::Zero, Trit::Pos, Trit::Neg],
-            vec![Trit::Zero, Trit::Pos, Trit::Zero],
-        );
-        match compile_and_run(&prog) {
-            Ok(v) => assert_eq!(
-                v.payload(),
-                &Payload::Trits(vec![Trit::Pos, Trit::Neg, Trit::Zero])
-            ),
-            Err(AotError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_add_overflow_is_explicit() {
-        // 4 + 4 = 8 in 2 trits (max magnitude 4) overflows. The native path must report it through
-        // the read-back protocol — an explicit Overflow, never a silent wrap. Mutant-witness:
-        // dropping the final-carry flag would print a wrapped result instead.
-        let prog = binop(
-            "trit.add",
-            vec![Trit::Pos, Trit::Pos],
-            vec![Trit::Pos, Trit::Pos],
-        );
-        match compile_and_run(&prog) {
-            Ok(v) => panic!("overflow must not produce a value, got {:?}", v.payload()),
-            Err(AotError::Overflow(_)) => { /* expected */ }
-            Err(AotError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
-    }
-
-    #[test]
-    fn native_trit_mul_overflow_is_explicit() {
-        // 4 * 4 = 16 in 2 trits overflows (high trits non-zero).
-        let prog = binop(
-            "trit.mul",
-            vec![Trit::Pos, Trit::Pos],
-            vec![Trit::Pos, Trit::Pos],
-        );
-        match compile_and_run(&prog) {
-            Ok(v) => panic!("overflow must not produce a value, got {:?}", v.payload()),
-            Err(AotError::Overflow(_)) => {}
-            Err(AotError::ToolchainMissing(_)) => {}
-            Err(e) => panic!("unexpected AOT error: {e}"),
-        }
     }
 }
