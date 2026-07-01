@@ -32,4 +32,4 @@ perturbs a definition's content hash.
 
 ## Role in the workspace
 
-Depends on `mycelium-l1` and `mycelium-core`; consumed by `mycelium-fmt`, `mycelium-check`, `mycelium-lint`, `mycelium-doc`, `mycelium-lsp`, and `mycelium-cli`. See the [workspace overview](../../README.md).
+Depends on `mycelium-l1` and `mycelium-core`; consumed by `mycelium-fmt`, `mycelium-check`, `mycelium-lint`, `mycelium-doc`, `mycelium-lsp`, and `mycelium-cli`. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-proj).

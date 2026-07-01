@@ -57,7 +57,18 @@ mycelium-interp = { path = "../mycelium-interp" }
 # reclamation-record contract the AOT tier emits the §9 audit trail into. Both are upstream of
 # `mlir` (they depend only on core / std-core / interp) — the dependency graph stays a DAG.
 mycelium-mir-passes = { path = "../mycelium-mir-passes" }
+# M-860: the parallel per-function/per-nodule AOT codegen (`emit_llvm_ir_many`) dispatches across
+# `mycelium_std_runtime::scheduler::Scheduler` — the M-861 work-stealing OS-thread pool — so it
+# reuses this existing dependency and adds no new one (maintainer decision 2026-07-01, grounded in
+# the flag against pulling in `rayon`).
 mycelium-std-runtime = { path = "../mycelium-std-runtime" }
+# M-865: the harness-level AOT/JIT concurrent-batch dispatch (`concurrent.rs`) submits its argument
+# jobs directly through `mycelium_sched::scheduler::Scheduler` — the same relocated M-861/M-864
+# work-stealing pool `mycelium-interp`'s own M-862 parallel-eval path and this crate's M-860
+# `emit_llvm_ir_many` (via the `mycelium-std-runtime` re-export above) both already dispatch through.
+# Depending on it directly adds no new scheduler surface and no cycle (`mycelium-sched` sits below
+# `mycelium-interp`, which this crate already depends on).
+mycelium-sched = { path = "../mycelium-sched" }
 
 [dev-dependencies]
 # The interp↔AOT differential (M-151) drives both paths with the certified binary↔ternary swap,

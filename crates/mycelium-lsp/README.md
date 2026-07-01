@@ -33,4 +33,4 @@ elaborate), completions, hover, go-to-definition, semantic tokens, and an RFC-00
 
 ## Role in the workspace
 
-Depends on `mycelium-core`, `mycelium-interp`, `mycelium-cert`, `mycelium-select`, `mycelium-l1`, and `mycelium-proj`; provides the toolchain surface consumed by `mycelium-check`, `mycelium-lint`, and the LSP server. See the [workspace overview](../../README.md).
+Depends on `mycelium-core`, `mycelium-interp`, `mycelium-cert`, `mycelium-select`, `mycelium-l1`, and `mycelium-proj`; provides the toolchain surface consumed by `mycelium-check`, `mycelium-lint`, and the LSP server. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-lsp).

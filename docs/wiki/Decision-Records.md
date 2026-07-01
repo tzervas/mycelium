@@ -42,3 +42,9 @@ charter (FR/NFR/VR, SC-*/KC-*, the roadmap).
   table. ·
   [`docs/Doc-Index.md`](https://github.com/tzervas/mycelium/blob/main/docs/Doc-Index.md) — everything,
   with status.
+
+---
+
+**Up:** [Home](Home.md) · [Tunable Certification](Tunable-Certification.md) ·
+[Doc Index](https://github.com/tzervas/mycelium/blob/main/docs/Doc-Index.md) ·
+[repo root README](https://github.com/tzervas/mycelium/blob/main/README.md)

@@ -23,6 +23,12 @@ construction (CLAUDE.md §Swarm).
 > `just setup`; Python → `uv sync`; docs → markdown/`doc_refs`; proofs → `z3`/LH/Lean) before
 > working. Land each work-package as **logical, closely-scoped PRs** (~1–2k-LOC soft target,
 > individually `/pr-review`'d), not one monolith — see `docs/notes/DN-65-…md`.
+>
+> **Post-AOT PM resync (2026-07-01).** `aot10` (T6, native AOT) is **NO LONGER post-1.0/1.1** — ADR-034
+> (Accepted 2026-06-30, maintainer-ratified) re-gates it as a **hard `lang 1.0.0` gate row**, reversing
+> ADR-022 §8 Q4. It is moved into the 1.0.0-track table below. Epics **E7-1**, **E7-2**, and **E21-1**
+> are also confirmed **closed** (`status:done`) in this resync — all of their children landed with
+> checked evidence; see `tools/github/issues.yaml`.
 
 ## The tiers (each PR-gated; stringency rises with the tier)
 
@@ -64,9 +70,9 @@ tree**, branches **off `dev`**, merges into `dev`, then promotes `dev → integr
 | **`lib10`** | T4 — standard library in Mycelium (E13-1) | `lib/std/**` · `crates/mycelium-std-*/**` | **in progress (long pole)**; M-715/716/717/718 landed; remaining **M-719** (API-freeze + Rust-crate retirement; post-1.0 acceptable per RFC-0031) |
 | **`rel10`** | T8 — documentation, stability & 1.0.0 release (E17-1) | `docs/**` · `CHANGELOG.md` · stability/release scope | **in progress**; M-735/736/737 landed; remaining **M-738** (release act — gated on the other tracks; cuts the tag) |
 | **`boot10`** | T9 — self-hosting capstone (E18-1) | `lib/std/**` · `crates/mycelium-l1/**` · self-hosting | **blocked** on E11-1 (`s10`) + E13-1 (`lib10`); M-739…M-742 `needs-design` |
+| **`aot10`** | T6 — native AOT full-language coverage, parallelism & 1.0.0 gating (E15-1/E25-1) | `crates/mycelium-mlir/**` | **HARD `lang 1.0.0` GATE (re-gated by ADR-034, 2026-06-30)** — reverses ADR-022 §8 Q4's `1.1` un-gating. E15-1's original children M-725/726/727/728 landed `done` this resync (M-729 flagged, not flipped — maintainer call on whether M-858 retroactively satisfies its DoD); E25-1 (the umbrella epic carrying the ADR-034-expanded scope) has M-850…861 `done`; remaining: **M-856b** (dialect Dense/VSA), **M-860** (parallel codegen), **M-862** (parallel pure-fragment eval — pre/post-tag FLAGged), **M-863** (ratification act: RFC-0029 → Enacted, DN-15 → Resolved) |
 
-*(T5 FFI = `ffi10` and T7 toolchain = `tool10` are **complete → archived**. T6 native AOT = `aot10` is
-**post-1.0 / 1.1**, below.)*
+*(T5 FFI = `ffi10` and T7 toolchain = `tool10` are **complete → archived**.)*
 
 ### Kernel-enablement
 
@@ -93,8 +99,7 @@ DN-54 §10 design-pass landed (M-824; DN-54 stays Accepted); `srf`/E7-2 **R2 con
 | UID | Scope | Status / remaining |
 |---|---|---|
 | **`tul`** | GitHub PM tooling | M-675 (`idmap.tsv` reconcile) **done**; only **M-676** (Projects-v2 Area field) remains — deferrable/secondary (P3) |
-| **`aot10`** | T6 — native AOT maturity (E15-1) | **POST-1.0 / 1.1** — ADR-022 §8 Q4 un-gated it as QoL/perf, *not* a 1.0.0 blocker; RFC-0029 Accepted, M-725…729 `ready` |
-| **`dfb`** | **the dogfooding boundary** — `crates/mycelium-web` + `crates/mycelium-adk` (NEW) | ⏸ **SHELVED** behind the L1-surface-completeness wave (HOF/`hof` · comment-preserving `mycfmt` · operators). Research gate (`dfr`) discharged; resume once the surface is complete + ergonomic |
+| **`dfb`** | **the dogfooding boundary** — `crates/mycelium-web` + `crates/mycelium-adk` (NEW) | ⏸ **UNSHELVABLE — awaiting maintainer decision to resume or re-shelve** (2026-07-01): the shelving condition (L1-surface-completeness wave — `s10`/`hof`/`lwd`/`strm`) is now **SATISFIED/archived**; the technical blocker is gone but M-670/M-671 stay `status:blocked` pending an explicit maintainer call. Research gate (`dfr`) discharged |
 
 ## Completed (archived → [`archive/`](archive/))
 
@@ -167,16 +172,18 @@ as it's serial). The completed lane above is kept for the method/record.
 | **`lib10`** | `lib/std/**` (`.myc`) | Mycelium-source, not Rust; consumes the L1 surface read-only |
 | **`kpr`** (M-752) | `crates/mycelium-interp/src/prims.rs` + `crates/mycelium-l1/tests/**` (smoke ports) | prims + test files; coordinates with `c10` on `crates/mycelium-core/**` (flag-don't-guess) |
 | **`rel10`** | `docs/**`, `crates/mycelium-doc/**`, the release notes | docs/release; cites code read-only |
-| **`aot10`** | `crates/mycelium-mlir/**` | native-codegen; **POST-1.0/1.1**, run after the release |
+| **`aot10`** | `crates/mycelium-mlir/**` | native-codegen; **hard `lang 1.0.0` gate (ADR-034)** — a `rel10` M-738 dependency, not a post-release item; disjoint tree runs in parallel with the others |
 | **`tul`** (M-676) | `tools/github/**` | PM tooling only |
 
 ### Sequenced by dependency (cannot start until a gate clears) — *not* parallelizable yet
 
 - **`boot10`** (E18-1 self-hosting) — blocked on **E11-1 (`s10`)** + **E13-1 (`lib10`)** landing.
 - **`c10` M-703** (cut core tag) — gated on **E19-1 (`kpr` M-752)** + maintainer (reserved).
-- **`rel10` M-738** (release act) — gated on every 1.0.0 track green; runs **last**.
-- **`dfb`** (dogfooding) — **shelved** behind L1-surface completeness (`srf`/`s10`/`hof` + ergonomic
-  `mycfmt`); the dogfood boundary, not pre-dogfood work.
+- **`rel10` M-738** (release act) — gated on every 1.0.0 track green, **now including `aot10`/E25-1**
+  (ADR-034 re-gate, 2026-07-01); runs **last**.
+- **`dfb`** (dogfooding) — its shelving condition (L1-surface completeness) is now satisfied
+  (2026-07-01); **unshelvable — awaiting maintainer decision to resume or re-shelve**, not
+  pre-dogfood work either way.
 
 ### The integrator's shared-file rule
 
@@ -189,8 +196,9 @@ continuity rides `issues.yaml` `depends_on` + body notes — never by touching a
 
 ✅ **The L1 serial lane (`srf`→`s10`→`hof`→`lwd`→`strm`→`r10`) is COMPLETE** — no L1-lane kickoff
 remains; the next serial-on-L1 work (`boot10`) is gated on `lib10`. **Now run the parallel phase:
-`lib10` + `rel10` + `kpr` + `tul`** fully in parallel (disjoint trees); hold
-**`boot10`/`c10`-tag/`rel10`-M738/`dfb`** until their gates clear; `aot10` is post-1.0.
+`lib10` + `rel10` + `kpr` + `tul` + `aot10`** fully in parallel (disjoint trees; `aot10` is now a hard
+`rel10`-M738 dependency, not a post-1.0 item — ADR-034); hold **`boot10`/`c10`-tag/`rel10`-M738**
+until their gates clear; `dfb` awaits a maintainer resume/re-shelve call.
 
 ## Coverage — the current set IS comprehensive for pre-dogfooding
 
@@ -199,12 +207,16 @@ kickoff above. The following open items are **deliberately *not* kickoffs** (exc
 pre-dogfood set), so the next session doesn't chase them:
 
 - **Done, just status-lag:** **E7-5 / M-692** (operator syntax) — satisfied by the landed M-745 (`ops`,
-  RFC-0025 Enacted); flipped to `done`. **M-724** (FFI safety verify) — E14-1 is `done`; label-lag only.
+  RFC-0025 Enacted); flipped to `done`. **M-724** (FFI safety verify) — E14-1 is `done`; label-lag
+  flipped 2026-07-01 (PR #499). **E7-1** and **E7-2** (L1 stage-1 completeness / RFC-0008 runtime
+  vocabulary) — all children done; both epics flipped `done` 2026-07-01.
 - **Routed into an existing kickoff:** **M-677** (declared-effects → interp budget) → `r10`.
 - **Design-pending (kickoff only *after* the RFC is ratified):** **E20-1** (collections / RFC-0033,
-  `proposed`), **E21-1** (tunable-cert / RFC-0034, `proposed`), **E22-1** (security-scan / RFC-0035).
+  `proposed`), **E22-1** (security-scan / RFC-0035). **E21-1** (tunable-cert / RFC-0034) is **no
+  longer design-pending** — RFC-0034 → "Enacted — with code" (2026-06-24) and all 11 children landed;
+  E21-1 flipped `done` 2026-07-01.
 - **Post-1.0 / release-engineering (Phase 8):** **E9-1** editor highlighting + **M-697** · **M-743**
-  MIT-licensing audit · **M-744** issue-dedup. Plus `aot10` (T6 native AOT).
+  MIT-licensing audit · **M-744** issue-dedup.
 - **Housekeeping / ongoing hardening (not feature kickoffs):** **M-674** (explicit-budget robustness) ·
   **M-797** (inline-test retrofit) · **M-816** (stale-branch pruning).
 

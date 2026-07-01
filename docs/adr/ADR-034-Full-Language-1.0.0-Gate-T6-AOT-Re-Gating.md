@@ -91,18 +91,29 @@ maintainer weighed the coupling cost against that goal and chose full native cov
 
 ## 5. Definition of Done
 
-- [ ] E15-1 reaches full-language native coverage: the increments (E25-1 / M-850 recursion · M-851
+- [x] E15-1 reaches full-language native coverage: the increments (E25-1 / M-850 recursion · M-851
   closures · M-852 `Swap` · M-853 Dense · M-854 VSA · M-855 dynamic-VSA JIT · M-856 dialect catch-up ·
   M-857 `trit.mul` dialect · M-858 unified mutant-witnessed three-way) each land with a checked
-  three-way differential and honest tags; never-silent (G2) at every remaining boundary.
-- [ ] RFC-0029 reaches **Enacted** (the path complete + stable; the M-729 mutant-witness fires —
-  `Empirical`, §7.5); DN-15 → **Resolved**; DN-25's T6 row reflects the re-gating.
-- [ ] ADR-022 carries the append-only "T6 re-gated by ADR-034" pointers (§3 + §5 T6 + §8 Q4 + changelog);
-  its §8 Q4 resolution text is otherwise unchanged.
-- [ ] `M-738` `depends_on E15-1` (tracker); the `lang 1.0.0` tag is cut only once E15-1 is met (with the
-  other §5 tracks).
+  three-way differential and honest tags; never-silent (G2) at every remaining boundary. **Met
+  2026-07-01 (M-863 ratification act):** every E15-1 (M-725…M-729) and E25-1 (M-850…M-862) child is
+  `done`, including the M-856b Dense/VSA-dialect split-out and M-860/M-862 parallelism increments
+  that were still open at this ADR's own ratification date.
+- [x] RFC-0029 reaches **Enacted** (the path complete + stable; the M-729 mutant-witness fires —
+  `Empirical`, §7.5); DN-15 → **Resolved**; DN-25's T6 row reflects the re-gating. **Met 2026-07-01
+  (M-863):** RFC-0029 → Enacted, DN-15 → Resolved, DN-25 §2/§3 refreshed — all same act.
+- [x] ADR-022 carries the append-only "T6 re-gated by ADR-034" pointers (§3 + §5 T6 + §8 Q4 + changelog);
+  its §8 Q4 resolution text is otherwise unchanged. Already landed (2026-06-30, same wave as this
+  ADR's own Accepted) — confirmed present, not re-added.
+- [x] `M-738` `depends_on E15-1` (tracker); the `lang 1.0.0` tag is cut only once E15-1 is met (with the
+  other §5 tracks). Already wired (`tools/github/issues.yaml`); confirmed present.
 - [x] This ADR reaches **Accepted** (maintainer-ratified) and is indexed (`docs/adr/README.md`).
-- **Enacted** with ADR-022 at the `lang 1.0.0` tag (append-only; M-738).
+- **Enacted** with ADR-022 at the `lang 1.0.0` tag (append-only; M-738). **NOT flipped by the M-863
+  ratification act (2026-07-01) — FLAG.** This ADR's own Status field and this final DoD bullet both
+  couple Enactment to the `lang 1.0.0` tag act (M-738), not to E15-1/E25-1 coverage landing alone;
+  every checkbox above is now met, but the tag itself has not been cut (M-738 is still
+  `status:blocked` — stdlib-in-Mycelium/E13-1 and self-hosting/E18-1 remain open per M-738's own
+  `landed_basis`). Per VR-5, this stays **Accepted** until M-738 actually cuts the tag; do not guess
+  the transition ahead of that checked basis.
 
 ## 6. Grounding / honesty
 
@@ -124,4 +135,5 @@ maintainer weighed the coupling cost against that goal and chose full native cov
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-07-01 | **Accepted** (unchanged — §5 DoD progress note) | **M-863 ratification act.** Every §5 DoD checkbox but the terminal one is now met: E15-1 + E25-1 close with all children `done` (M-856b, M-860, M-862 — the last three open at this ADR's Accepted date — land this wave); RFC-0029 → **Enacted**; DN-15 → **Resolved**; DN-25's T6 row refreshed. **Status stays Accepted, NOT Enacted** — this ADR's own Status field and §5's final bullet both couple `Accepted → Enacted` to the `lang 1.0.0` tag act (M-738), which has not run (M-738 remains `status:blocked` on E13-1/E18-1, per its own `landed_basis`). FLAGGED, not guessed past this checked basis (house rule #3/VR-5). Task: E25-1/M-863. |
 | 2026-06-30 | **Accepted** | Maintainer-ratified scoped amendment of ADR-022 track T6: **reverses §8 Q4** (which un-gated native AOT to `1.1`) and re-adds epic **E15-1** to the `lang 1.0.0` Definition of Done as a **hard gate row**, with scope expanded to **full-language native-codegen coverage** (closures · non-tail/mutual recursion · `trit.mul` · `Swap` · Dense · VSA · JIT for dynamic VSA/HDC). Umbrella epic **E25-1** (issues M-850…M-863). `M-738` now `depends_on E15-1`. ADR-022 §3/§5 T6/§8 Q4 carry append-only "re-gated by ADR-034" pointers (their resolution text is not rewritten). The interpreter stays the trusted-base reference; the AOT path stays outside the kernel (KC-3); honest tags + never-silent throughout (G2/VR-5). Enacts the maintainer's 2026-06-30 decision append-only (mirrors ADR-024). |

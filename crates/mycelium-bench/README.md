@@ -36,9 +36,9 @@ target.
 - `classify` / `Verdict` / `Speed` — classify a measured outcome against the interpreter baseline.
 - `run_scaling` / `ScalingRun` / `ScalingPoint` / `ScalingOutcome` — multicore scaling curves over
   the OS-thread `Scheduler` (M-859).
-- `regression_classify` / `RegressionBaseline` / `RegressionOutcome` — this-run-vs-committed-baseline
-  regression gating, host-tag-scoped (M-859).
-- `Report` / `Honesty` / `LlmSection` / `RegressionSection` — the deterministic markdown + JSON
+- `verdict::regression_classify` / `verdict::RegressionBaseline` / `verdict::RegressionOutcome` —
+  this-run-vs-committed-baseline regression gating, host-tag-scoped (M-859).
+- `Report` / `Honesty` / `LlmSection` / `report::RegressionSection` — the deterministic markdown + JSON
   report with the WIN/LOSS table, the scaling section, and the regression-gate section.
 - `parse_any_llm_json` / `LlmReport` — LLM-harness report ingestion.
 - `bench` binary — the harness entry point (`--out <DIR>`, `--stdout`, `--scaling [N]`,
@@ -59,4 +59,4 @@ target.
 
 Depends on `mycelium-core`, `mycelium-interp`, `mycelium-mlir`, `mycelium-l1`, `mycelium-cert`, and
 `mycelium-std-runtime` (the OS-thread `Scheduler` the scaling suite drives); measures the backends
-without modifying them. See the [workspace overview](../../README.md).
+without modifying them. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-bench).

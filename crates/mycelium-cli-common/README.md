@@ -27,4 +27,4 @@ unreadable input is always a reported, structured outcome, never a hidden empty 
 
 ## Role in the workspace
 
-Provides the shared CLI substrate (no external deps, `std`-only) consumed by `mycelium-fmt`, `mycelium-check`, `mycelium-lint`, and `mycelium-sec`. See the [workspace overview](../../README.md).
+Provides the shared CLI substrate (no external deps, `std`-only) consumed by `mycelium-fmt`, `mycelium-check`, `mycelium-lint`, and `mycelium-sec`. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-cli-common).

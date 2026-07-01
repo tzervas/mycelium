@@ -31,4 +31,4 @@ conformance, no-dead-xref, dual-projection parity, no-hallucinated-prose, and ch
 
 ## Role in the workspace
 
-Depends on `mycelium-core`, `mycelium-proj`, and `mycelium-l1`; provides the doc-IR and quality lint consumed by `mycelium-lint` (`DOC_QUALITY_CHECKS`) and the `myc-doc` binary. See the [workspace overview](../../README.md).
+Depends on `mycelium-core`, `mycelium-proj`, and `mycelium-l1`; provides the doc-IR and quality lint consumed by `mycelium-lint` (`DOC_QUALITY_CHECKS`) and the `myc-doc` binary. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-doc).

@@ -35,4 +35,4 @@ error — never a silent clamp, sentinel, or truncation (C1/G2).
 
 ## Role in the workspace
 
-Ordering/conversion primitives depended on by Ring-1/Ring-2 crates. See the [workspace overview](../../README.md).
+Ordering/conversion primitives depended on by Ring-1/Ring-2 crates. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-cmp).

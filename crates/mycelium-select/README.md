@@ -26,4 +26,4 @@ Policies are content-addressed via `SelectionPolicy::policy_ref` (BLAKE3 over th
 
 ## Role in the workspace
 
-Depends on `mycelium-core` only (KC-3). Used by `mycelium-vsa` (decode-method site) and the swap/packing selection sites. Dev-dependencies include `mycelium-cert` and `mycelium-interp` for the M-222 swap-site wiring test. See the [workspace overview](../../README.md).
+Depends on `mycelium-core` only (KC-3). Used by `mycelium-vsa` (decode-method site) and the swap/packing selection sites. Dev-dependencies include `mycelium-cert` and `mycelium-interp` for the M-222 swap-site wiring test. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-select).

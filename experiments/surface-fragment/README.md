@@ -7,11 +7,17 @@
 | **Purpose** | a tiny concrete syntax sufficient to run the **KC-2** LLM-leverage experiment (M-002, #3) |
 | **Maps to** | `SPECIFICATION.md` §10.1 |
 
-> ⚠️ **Throwaway, not a committed surface.** This grammar exists **only** to give the KC-2
-> experiment something to generate and measure. It is **gated on KC-2** (Foundation §2.2, §2.4): if
-> the experiment says novel syntax hurts LLM leverage, this is discarded in favour of projections or
-> an embedded DSL (RR-3). It is deliberately *not* under `docs/spec/` and carries **no** normative
-> weight. The committed surface — if any — is a later decision.
+> ⚠️ **Throwaway, not a committed surface — and KC-2 has since returned its verdict.** This
+> grammar was written **only** to give the KC-2 experiment something to generate and measure,
+> gated on KC-2 (Foundation §2.2, §2.4): if the experiment showed novel syntax hurts LLM leverage,
+> it would be discarded in favour of projections or an embedded DSL (RR-3). **That gate is now
+> resolved** — KC-2 returned **proceed**
+> ([`DN-09-KC-2-Verdict.md`](../../docs/notes/DN-09-KC-2-Verdict.md), 2026-06-18), selecting the L3
+> strategy (committed text syntax + a co-equal structured-projection layer). This document is
+> preserved as the historical record of the throwaway fragment KC-2 actually ran against; it is
+> still deliberately *not* under `docs/spec/` and carries **no** normative weight — the committed
+> surface's authoritative definition, if it has since diverged from this fragment, lives under
+> `docs/spec/grammar/` (RFC-0006/RFC-0007), not here.
 
 It covers exactly the three things M-002 needs to exercise: **declare-value**, **swap** (the
 never-silent representation change), and **one VSA op** (`bundle`). Everything desugars to the
@@ -71,18 +77,21 @@ See `examples/`. Each is a tiny task with a known-correct form:
 - [`examples/type-error.myc`](examples/type-error.myc) — a **negative** example: adding a `Binary`
   to a `Ternary` with no `swap` → the type checker must reject it (the no-implicit-conversion rule).
 
-## How M-002 (#3) will use this
+## How M-002 (#3) used this
 
-The KC-2 experiment asks an LLM to produce programs in **this** fragment vs. a Python-embedded-DSL
-baseline, and measures syntactic validity + type-check pass rate + edit-to-fix iterations
-(Foundation §6 P0.2; SC-5b; G10). Two dependencies are still open and tracked there:
-
-1. a **parser + type-checker** for this fragment to score "type-checks" (needs the Core IR /
-   interpreter, M-101 #11 / M-110 #15); a syntactic-validity-only pass is possible from the grammar
-   alone meanwhile;
-2. **LLM API access** to run the generation arm.
+The KC-2 experiment (`experiments/mycelium_experiments/kc2/`) asked an LLM to produce programs in
+**this** fragment vs. a Python-embedded-DSL baseline, and measured syntactic validity + type-check
+pass rate + edit-to-fix iterations (Foundation §6 P0.2; SC-5b; G10). The two dependencies this
+originally listed as open are both resolved: the fragment is scored by the real `myc-check`
+(parse + typecheck + signature), and the local llama.cpp harness (`tools/llm-harness/`) supplied
+the generation arm — see [`../README.md`](../README.md) and
+[`../KC2-RUNBOOK.md`](../KC2-RUNBOOK.md) for the runnable end-to-end procedure, and
+[`DN-09-KC-2-Verdict.md`](../../docs/notes/DN-09-KC-2-Verdict.md) for the measured run + verdict.
 
 ## Changelog
 
+- **2026-06-30:** updated the framing to reflect the KC-2 verdict (DN-09, 2026-06-18, proceed) —
+  the "gated on KC-2" language and the "still open" dependencies were stale; both are resolved.
+  No grammar/desugaring changes.
 - **2026-06-09:** initial throwaway fragment (grammar + desugaring + 3 reference programs) to unblock
   M-002. Not a committed surface; gated on KC-2.

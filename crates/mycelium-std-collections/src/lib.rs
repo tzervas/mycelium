@@ -103,6 +103,14 @@
 //! is coerced by the container. The bucketing hash used by `Map`/`Set` internally is not a
 //! representation operation (ADR-003 — it is not `ContentHash`); no `Repr` is changed or inferred
 //! by collection operations. Representation change of elements requires an explicit `std.swap`.
+//!
+//! # Stability (DN-66 freeze, 2026-07-01)
+//!
+//! This crate's public API, as documented in `docs/spec/stdlib/collections.md` (spec status:
+//! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+//! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//! It remains the RFC-0031 D6 differential-oracle reference; the same-named `lib/std/collections.myc` prototype is a narrower, structurally distinct surface (DN-66 S3.1) — the D6 retirement trigger has not fired, so no item here is `#[deprecated]`.
 
 #![forbid(unsafe_code)]
 

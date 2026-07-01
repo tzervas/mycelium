@@ -30,4 +30,4 @@ recovery trace (RFC-0014).
 
 ## Role in the workspace
 
-Ergonomic Option/Result handling layer for all Ring-2 std crates and user code. See the [workspace overview](../../README.md).
+Ergonomic Option/Result handling layer for all Ring-2 std crates and user code. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-error).

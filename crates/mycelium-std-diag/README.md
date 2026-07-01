@@ -28,4 +28,4 @@ every reported issue is located and classifiable (RFC-0013 I1/never-silent).
 
 ## Role in the workspace
 
-Shared diagnostic vocabulary for compiler, interpreter, and stdlib error reporting. See the [workspace overview](../../README.md).
+Shared diagnostic vocabulary for compiler, interpreter, and stdlib error reporting. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-diag).

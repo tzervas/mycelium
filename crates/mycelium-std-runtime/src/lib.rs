@@ -14,9 +14,13 @@
 //! # Execution maturity (E12-1: M-709 / M-711 / M-713)
 //!
 //! Beyond the cooperative v0 surface, the crate now executes on real OS threads:
-//! - [`scheduler::Scheduler`] (M-709) — a fixed OS-thread pool with fair FIFO dispatch and
-//!   demand-signalled, bounded backpressure (RFC-0008 RT1·RT2·§4.3); the RT2 sequentialization
-//!   differential is property-tested (`Empirical`).
+//! - [`scheduler::Scheduler`] (M-709 / M-861) — a per-worker-deque work-stealing OS-thread pool
+//!   with demand-signalled, bounded backpressure (RFC-0008 RT1·RT2·RT3·§4.3); the RT2
+//!   sequentialization differential is property-tested (`Empirical`). **Relocated to
+//!   `mycelium-sched`** (E25/M-862): this crate also depends on `mycelium-interp` (below), so the
+//!   Scheduler moved to a foundational crate below `mycelium-interp` to let the interpreter use it
+//!   too, without an `interp <-> std-runtime` cycle. [`scheduler`] here is a thin re-export —
+//!   see its module docs and `mycelium-sched`'s crate docs for the dependency-graph rationale.
 //! - [`dataflow::run_dataflow`] / [`dataflow::run_dataflow_scheduled`] (M-711) — deadlock-freedom
 //!   for communicating tasks: a no-progress sweep is an explicit [`task::Deadlock`], never a silent
 //!   hang (G2 / RFC-0008 §4.3), checked on both the cooperative path and the OS-thread pool.
@@ -59,6 +63,14 @@
 //!   still holds buffered values in transit reclaims them, emitting one
 //!   `ReclamationRecord(ChannelClose)` per value (RFC-0027 §9 / §7.3), with a canonical
 //!   [`network::ChannelNodeId`] resolving the MEM-1 `ChannelId` placeholder.
+//!
+//! # Stability (DN-66 freeze, 2026-07-01)
+//!
+//! This crate's public API, as documented in `docs/spec/stdlib/runtime.md` (spec status:
+//! Accepted, v0 R1 surface (2026-06-21)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+//! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//! Unlike the other 25 `mycelium-std-*` crates, this one is **load-bearing** (consumed directly by `mycelium-mlir`), not reference-only — it is never a retirement candidate under RFC-0031 D6 while that dependency exists (DN-66 S4.c).
 #![forbid(unsafe_code)]
 
 pub mod colony;

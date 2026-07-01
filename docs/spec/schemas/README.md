@@ -9,6 +9,11 @@ enforces it — never a silent gap (the honesty rule applied to the contracts th
 Ratified per **M-010** ([#5](https://github.com/tzervas/mycelium/issues/5)); see
 `docs/planning/phase-0.md` §3/§6.1 for the plan and the canonical-set derivation.
 
+**Contents:** [The set (10)](#the-set-10) · [Toolchain metadata schemas](#toolchain-metadata-schemas-m-359) ·
+[Convention](#convention-enforced-by-scriptschecksschemash) ·
+[What CI checks vs. what code checks](#what-ci-checks-vs-what-code-checks) ·
+[Open questions — resolved](#open-questions--resolved)
+
 ## The set (10)
 
 | `<name>.schema.json` | Models | Source |
@@ -82,3 +87,8 @@ Three corpus clarifications were surfaced while projecting the RFCs and have sin
 - **OQ-5** (`policy`) — **Deferred (by design), tracked.** RFC-0005 intentionally defers the
   concrete predicate grammar to a later RFC; `rules[].when` stays a declared object. Tracked by the
   Phase-2 epic **E2-6 "Selection policy + EXPLAIN"** (#33).
+
+---
+
+**Up:** [repo root README](../../../README.md) · [Doc Index](../../Doc-Index.md) ·
+[Reference docs](../../reference/README.md)

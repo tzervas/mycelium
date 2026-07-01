@@ -36,4 +36,4 @@ regrowth is `Empirical` at most — never `Proven` (VR-5/FR-C2). Source is groun
 
 ## Role in the workspace
 
-Ring 1 / Tier A deployable-unit library; composes `mycelium-spore`, `mycelium-std-vsa`, and `mycelium-std-numerics`. See the [workspace overview](../../README.md).
+Ring 1 / Tier A deployable-unit library; composes `mycelium-spore`, `mycelium-std-vsa`, and `mycelium-std-numerics`. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-spore).

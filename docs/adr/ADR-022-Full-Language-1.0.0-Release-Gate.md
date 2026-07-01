@@ -106,7 +106,7 @@ its own per-issue DoDs (DN-25 is the map; the epics carry the detail). Summary c
 | **T1 Core sub-gate** | E10-1 (T1 scope amended by **ADR-024**) | ADR-021 Gate A/B all ✅; `core 1.0.0` tagged; ADR-022 T1 → Enacted at the tag | ✅ gate-met / tag-ready on these criteria; **T1 scope amended by ADR-024 (adds E19-1) — see ADR-024**; `core 1.0.0` tag pending (M-703, maintainer-reserved) |
 | **T2 Surface completeness** | E11-1 (+E7-1/E7-3/E7-5) | full HOF/closures; operator syntax (RFC-0025); committed L3 EBNF grammar (RFC-0030, RFC-0006 Q3/Q8 resolved); generics/traits/effects stable | 🔨 in progress — operator syntax + surface stabilization landed (M-705/706/708); M-704/M-707 open |
 | **T3 Runtime & concurrency** | E12-1 (+E7-2) | real scheduler; full RFC-0008 vocabulary executes; deadlock-freedom checked; memory reclamation (RFC-0027); supervision/cancellation | 🔨 in progress — scheduler/deadlock/supervision landed (M-709/711/713); M-710/M-712 open |
-| **T4 Stdlib in Mycelium** | E13-1 | the stdlib + core libs **written in `.myc`** (RFC-0031), differential-tested, stable APIs; Rust std-`*` beyond the bare core superseded by `.myc` | ⏳ open |
+| **T4 Stdlib in Mycelium** | E13-1 (T4 scope amended by **ADR-035**) | the stdlib + core libs **written in `.myc`** (RFC-0031), differential-tested, stable APIs; Rust std-`*` beyond the bare core superseded by `.myc` | ✅ met on the **ADR-035-narrowed** bar (documented stable-API freeze — DN-66 — + the core-lib self-host slice, M-714…M-719); full Rust-crate D6 retirement (RFC-0031 §5) **deferred post-1.0** — see ADR-035 |
 | **T5 FFI & system** | E14-1 | capability-based FFI (RFC-0028); `wild` executes; real io/fs/sys bindings; ADR-014 unsafe floor confined + audited | 🔨 in progress (on dev) — wild/@std-sys executes (#499); not yet on main |
 | **T6 Native AOT maturity** | E15-1 (+E6-1, +E25-1) | full libMLIR lowering; EXPLAIN-able optimization passes (RFC-0029); JIT; full-language native-codegen coverage (closures/recursion/`trit.mul`/`Swap`/Dense/VSA + dynamic-VSA JIT); interp ≡ AOT ≡ JIT differential durable | **→ `1.1` (un-gated 2026-06-23; QoL/perf — §8 Q4)** · **RE-GATED into `lang 1.0.0` by ADR-034 (2026-06-30): hard gate row, full native coverage; M-738 `depends_on` E15-1 — see ADR-034** |
 | **T7 Toolchain/IDE/dist** | E16-1 (+E9-1) | full LSP (completions/hover/semantic tokens); highlighting shipped (RFC-0026); package publish/resolve; reproducible install | ⏳ open |
@@ -148,6 +148,19 @@ land long before `lang 1.0.0`.
   *entire* toolchain/compiler is **not** a hard 1.0.0 blocker — it is the long-term arc (§10). So T4
   (stdlib + core libs in Mycelium) and the core-lib slice of T9 hard-block 1.0.0; the compiler-self-host
   remainder may trail past 1.0.0. (Reasonable, not maximal.)
+  > **Narrowed by ADR-035 (2026-07-01 — maintainer-ratified).** ADR-035 narrows T4's Definition of Done
+  > (§5) to the documented stable-API freeze (**DN-66**) + the core-lib self-host slice (**M-714…M-719**)
+  > — full RFC-0031 §5 D6 Rust-crate retirement (all 26 `mycelium-std-*` crates individually cleared and
+  > `#[deprecated]`-marked) is **deferred to the post-1.0 long-term arc (§10)**, the same reasonable-not-
+  > maximal logic this Q1 resolution already applied to T9's full-toolchain self-host. This Q1 resolution
+  > text is preserved (append-only, house rule #3); the change lives in **ADR-035**. See ADR-035.
+  > **See also ADR-036 (2026-07-01 — maintainer-ratified project strategy, not a Q1 amendment).** ADR-036
+  > confirms this Q1 resolution **unchanged**: the `lang 1.0.0` tag's only self-hosting bar stays the
+  > core-lib slice above. ADR-036 additionally names T9's *remaining* full-toolchain/stdlib self-host
+  > (E18-1, beyond this slice) the project's **comprehensive-dogfooding track** — first-class,
+  > within-1.0.0, run beside the Rust reference and Rust≡Mycelium differential-validated, but gating
+  > **nothing** beyond this same slice — and ties the project's **public release** (distinct from the
+  > tag) to that track's completion. See ADR-036.
 - **Q2 (dependency license policy) — RESOLVED.** **MIT governs first-party only** — libs, modules,
   crates, nodules, phyla. Third-party Rust (and other) **dependencies keep their own licenses**
   (`deny.toml`'s Apache/BSD/ISC/Unicode allow-list stays). *Long-term (§10):* all Rust is rewritten in
@@ -192,6 +205,14 @@ Recorded so the program stays honest about where it ends — these are **vision,
   re-export repo groups its component repos and presents a user-friendly interface over its phyla and
   nodules), and the project **flips to a full set of public, MIT-licensed repos** — a useful corpus for
   developers, users, and models to leverage. Captured in **DN-27**.
+  > **Trigger condition set by ADR-036 (2026-07-01 — maintainer-ratified).** DN-27 left this flip's
+  > binding trigger to "a future ADR ... when `lang 1.0.0` nears" (DN-27 *Decides*). **ADR-036 is that
+  > ADR**: the public release does **not** follow merely from the `lang 1.0.0` tag landing — it follows
+  > only once the comprehensive-dogfooding track above is **complete, differentially validated
+  > (Rust≡Mycelium), and the targeted Rust components are replaced** by their validated Mycelium
+  > counterparts. Until then the repository **stays private**, even after the tag. This text (the
+  > zero-Rust vision + DN-27 pointer) is preserved unchanged; the binding condition lives in **ADR-036**.
+  > See ADR-036.
 
 ---
 
@@ -250,3 +271,22 @@ Recorded so the program stays honest about where it ends — these are **vision,
   stays the trusted-base reference; the AOT path stays outside the kernel (KC-3); honest tags +
   never-silent throughout (G2/VR-5). House-rule-correct (supersede-to-change-criteria) capture of the
   maintainer's 2026-06-30 decision. (ADR-034.)
+- 2026-07-01 — **T4 NARROWED — scope amendment ENACTED by ADR-035** (maintainer-ratified). Track T4's
+  Definition of Done is **narrowed**: the `lang 1.0.0` bar is the documented stable-API freeze
+  (**DN-66**) plus the core-lib self-host slice (**M-714…M-719**), **not** full RFC-0031 §5 D6
+  Rust-crate retirement for all 26 `mycelium-std-*` crates — that work is **deferred to the post-1.0
+  long-term arc (§10)**, mirroring Q1's existing T9 narrowing and the ADR-024/ADR-034 amending
+  precedent. Recorded in the focused amending **ADR-035**, not by rewriting §5 T4/§8 Q1 in place (each
+  carries an append-only "narrowed by ADR-035" pointer; their resolution text is preserved). Grounded
+  in DN-66's per-crate finding that zero crates clear the D6 trigger today. `M-719` re-scoped (freeze
+  half closes for 1.0.0; retirement half spun out to a post-1.0 backlog issue). House-rule-correct
+  (supersede-to-change-criteria) capture of the maintainer's 2026-07-01 decision. (ADR-035.)
+- 2026-07-01 — **Dogfooding + public-release strategy recorded — ADR-036** (maintainer-ratified;
+  additive, not a §5/§8 Q1 criteria amendment). §8 Q1 and §10 each carry an append-only "see ADR-036"
+  pointer, text otherwise unchanged: the `lang 1.0.0` **tag** stays gated only by the existing core-lib
+  self-host slice (Q1, unchanged); the **comprehensive-dogfooding track** (E18-1's full scope beyond
+  that slice — the whole toolchain/stdlib rewritten in Mycelium, beside the Rust originals,
+  Rust≡Mycelium differential-validated) is now named a first-class **within-1.0.0**, non-tag-gating,
+  parallel track; and the project's **public release** is fixed as a distinct, later milestone from the
+  tag — gated on that track's completion, per the trigger condition **DN-27** deferred to "a future ADR."
+  The repository stays private until then. (ADR-036.)

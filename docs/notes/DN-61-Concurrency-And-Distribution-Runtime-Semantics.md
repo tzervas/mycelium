@@ -407,6 +407,20 @@ This DN is **Enacted** when:
 
 ## Meta — changelog
 
+- **2026-07-01 — A.5 instantiated for the AOT/JIT compiled paths (M-865, append-only).** A.5 already
+  ratified "parallel execution of the deterministic fragment... under the same conformance gate" for
+  the interpreter (realized as M-862's top-level pure-argument batch). M-865 extends the *same*
+  fragment gate + conformance obligation (item 2: "the RT2 differential test extended to parallel
+  schedules") to the direct-LLVM AOT and in-process JIT execution paths, at the harness level
+  (`mycelium-mlir::concurrent`, dispatched through the same `mycelium_sched::Scheduler::run_indexed`
+  A.5/M-862 already uses — item 1's `Send + Sync`/no-shared-mutable-state basis carries over
+  unchanged). Tagged `Empirical` per item 3 (differential-checked: interp-sequential ≡
+  interp-parallel ≡ AOT-parallel ≡ JIT-parallel, `tests/concurrent_threeway_differential.rs`), never
+  `Proven`. Scope note: narrowed to `Op`-headed batches (not `Construct`-headed — a direct-LLVM
+  whole-program constraint, not a DN-61 concern); real hypha/colony/async parity (a distinct, larger
+  claim than "a parallel performance path exists") stays out of scope, tracked at M-869 pending the
+  language's own concurrency surface. This does not change DN-61's Status or either Part's
+  ratification. (Append-only; VR-5; G2.)
 - **2026-06-28 — Part A: Accepted (ratified by maintainer, in-session); Part B: stays Draft (open research agenda).** Part A (R1 scheduler normativity — RT2 + fuel-compatible cooperative stepping + RT7) ratified. Part B (R2 distributed: clocks R8-Q3, Byzantine R8-Q4, distributed reclamation RFC-0027 OQ-2, network-xloc, concurrent fuse-merge) explicitly recorded as open research agenda — not ratifiable until dedicated research passes. Status split made explicit in the Status field. (Append-only; VR-5; G2.)
 - **2026-06-28 — Draft created.** Part A: scheduler-normativity proposal (R8-Q1), tagged
   `Declared`-with-argument, grounded in RFC-0008 RT2/RT7 and M-357 differential baseline.
