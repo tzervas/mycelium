@@ -4,18 +4,9 @@
 |---|---|
 | **Note** | DN-67 |
 | **Status** | **Draft** (2026-07-01, authored by the M-864 leaf) |
-| **Decides** | Ratifies the `Scheduler::run_indexed` closure/return-type contract change M-864
-requires — `F: FnOnce() -> T + Send + 'static` and `T: Send + 'static` (previously `F: Send`,
-`T: Send`, with borrowing freely permitted via `std::thread::scope`) — and records the
-help-stealing design that makes nested `run_indexed` submission safe and cheap on a **persistent,
-bounded** pool. |
-| **Feeds** | `mycelium-sched::scheduler::Scheduler::run_indexed`; its consumers
-`mycelium-mlir::llvm::emit_llvm_ir_many_with_swap_mode` (M-860), `mycelium-interp::parallel::eval_top_batch`
-(M-862), `mycelium-std-runtime::dataflow::run_dataflow_scheduled` (M-711), `mycelium-std-runtime::supervision::run_supervised` (M-713). |
-| **Depends on** | DN-61 §A.2 (R1 scheduler normativity — internal scheduling strategy is
-explicitly **not** normative; only RT2 determinism + fuel-compatible cooperative stepping + RT7
-scope discipline are); RFC-0008 §4.1 RT1–RT3, §4.7; M-861 (per-worker deques + steal-on-empty, the
-dispatch/steal logic this note's pool reuses verbatim). |
+| **Decides** | Ratifies the `Scheduler::run_indexed` closure/return-type contract change M-864 requires — `F: FnOnce() -> T + Send + 'static` and `T: Send + 'static` (previously `F: Send`, `T: Send`, with borrowing freely permitted via `std::thread::scope`) — and records the help-stealing design that makes nested `run_indexed` submission safe and cheap on a **persistent, bounded** pool. |
+| **Feeds** | `mycelium-sched::scheduler::Scheduler::run_indexed`; its consumers `mycelium-mlir::llvm::emit_llvm_ir_many_with_swap_mode` (M-860), `mycelium-interp::parallel::eval_top_batch` (M-862), `mycelium-std-runtime::dataflow::run_dataflow_scheduled` (M-711), `mycelium-std-runtime::supervision::run_supervised` (M-713). |
+| **Depends on** | DN-61 §A.2 (R1 scheduler normativity — internal scheduling strategy is explicitly **not** normative; only RT2 determinism + fuel-compatible cooperative stepping + RT7 scope discipline are); RFC-0008 §4.1 RT1–RT3, §4.7; M-861 (per-worker deques + steal-on-empty, the dispatch/steal logic this note's pool reuses verbatim). |
 | **Date** | 2026-07-01 |
 | **Task** | M-864, branch `claude/dev-m864-workstealing-pool` |
 
