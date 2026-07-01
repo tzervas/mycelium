@@ -3644,6 +3644,7 @@ issues:
       - corpus:DN-14
       - corpus:DN-25
       - corpus:ADR-035
+      - corpus:ADR-036
     body: |
       The capstone criterion of full-language 1.0.0 (ADR-022, forthcoming; DN-25): everything
       beyond the bare Rust mycelium-core kernel is written in Mycelium (.myc files) and the
@@ -3701,6 +3702,17 @@ issues:
       long-term-arc capstone work ADR-022 §8 Q1 already scopes past 1.0.0, not a 1.0.0 blocker.
       No status flip here; this is a clarifying cross-reference only (VR-5: not claiming this
       epic done when its own children are not).
+
+      NOTE (2026-07-01, ADR-036): this epic is the project's dogfooding-capstone track --
+      comprehensive self-hosting of the whole toolchain/stdlib/kernel in Mycelium, built beside
+      the Rust reference and Rust-vs-Mycelium differential-validated (extending the
+      interp==AOT==JIT discipline, RFC-0029 §7.5/M-210). Per ADR-036, this track is non-tag-gating
+      except its core-lib slice (T9, ADR-022 §8 Q1, unchanged) -- the remainder (M-739...M-742 and
+      whatever further comprehensive-rewrite work follows) runs within-1.0.0 and in parallel with
+      the tag-gating tracks, and instead gates the project's separate PUBLIC-RELEASE milestone
+      (repo stays private until this track is complete + validated and the targeted Rust
+      components are replaced). Roadmapped by docs/planning/self-hosting-port-ledger.md. No status
+      flip here; clarifying cross-reference only (VR-5).
 
   - id: M-739
     title: "M-739 — Self-hosting bootstrap plan (DN-26) + staged port order"
