@@ -193,6 +193,29 @@ impl Interpreter {
     /// trusted sequential small-step interpreter ([`Interpreter::eval_to_normal_node`]) inside its
     /// worker — so this introduces **no** second semantics, only scheduling. Only ever called for a
     /// [`ParallelPlan::TopLevelBatch`] node (a pure `Op`/`Construct` with ≥2 args).
+    ///
+    /// # Exact-equivalence discipline (fixes a fuel-starvation divergence, M-862 follow-up)
+    /// The trusted sequential `eval_core`/`step` is strict left-to-right and **short-circuits**: it
+    /// stops at the first erroring argument and never spends fuel on the ones after it. Dispatching
+    /// every argument as a concurrent job against one shared fuel counter breaks that: a
+    /// fuel-hungry/non-terminating sibling can drain the shared budget and starve an *earlier* arg
+    /// into `FuelExhausted` where the sequential reference would have reached a deterministic
+    /// non-fuel error first (or vice versa) — schedule-dependent, so it can even disagree with
+    /// itself run to run.
+    ///
+    /// The fix keeps the parallel speedup exactly where it is safe and defers to the reference
+    /// everywhere it might not be:
+    /// - Snapshot `F0 = self.fuel` and run the batch on a **separate** clone of it (never the real
+    ///   counter — there is nothing to corrupt if the attempt is discarded).
+    /// - If **every** argument job returns `Ok` (the clone was never exhausted and no argument
+    ///   errored), the parallel run cannot have diverged: sequential would have run the same
+    ///   arguments to the same values, spending the same total fuel (order-independent for a simple
+    ///   decrement-by-1 pool once every request succeeds). Commit that result.
+    /// - If **any** argument job returns `Err` (including `FuelExhausted`) the parallel attempt may
+    ///   have evaluated (or starved) siblings the sequential reference would never have reached —
+    ///   **discard it entirely** (never commit its partially-consumed fuel) and re-evaluate the whole
+    ///   node via the trusted sequential [`Interpreter::eval_core`] on a fresh `F0`. That is the
+    ///   authoritative, deterministic answer.
     fn eval_top_batch(&self, node: &Node, head: BatchHead) -> Result<CoreValue, EvalError> {
         let args: &[Node] = match node {
             Node::Op { args, .. } | Node::Construct { args, .. } => args,
@@ -205,20 +228,29 @@ impl Interpreter {
             }
         };
 
-        // One shared fuel budget across the concurrently-evaluated arguments (never a per-worker
-        // budget that could jointly overrun the declared total).
+        // A fuel clone seeded at F0 = self.fuel — never the real/authoritative counter. If any job
+        // errors we throw this attempt (and whatever it consumed) away entirely.
         let fuel = AtomicU64::new(self.fuel);
         let fuel_ref = &fuel;
 
         // One `run_indexed` fan-out; each job runs the SEQUENTIAL interpreter on its argument (no
-        // nested `run_indexed` — the interim thread bound). Outputs come back in spawn order, so the
-        // recombination below is deterministic and matches the sequential left-to-right reduction.
+        // nested `run_indexed` — the interim thread bound). Outputs come back in spawn order.
         let jobs: Vec<_> = args
             .iter()
             .map(|arg| move || self.eval_to_normal_node(arg, fuel_ref))
             .collect();
         let results: Vec<Result<Node, EvalError>> = Scheduler::new().run_indexed(jobs, None, None);
-        let normals: Vec<Node> = results.into_iter().collect::<Result<_, _>>()?;
+
+        // Any error anywhere in the batch (a genuine semantic error, or fuel starved by a sibling) —
+        // discard this parallel attempt wholesale and defer to the trusted sequential reference,
+        // which alone has the correct short-circuiting order. Never partially trust the clone.
+        if results.iter().any(Result::is_err) {
+            return self.eval_core(node);
+        }
+        let normals: Vec<Node> = results
+            .into_iter()
+            .map(|r| r.expect("checked all Ok above"))
+            .collect();
 
         match head {
             BatchHead::Op => {

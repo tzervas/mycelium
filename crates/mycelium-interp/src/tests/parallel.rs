@@ -26,6 +26,28 @@ fn op(prim: &str, args: Vec<Node>) -> Node {
     }
 }
 
+/// A `Binary{width: 4}` constant — deliberately a different width than [`byte`] so a `bit.and`/
+/// `bit.or`/`bit.xor` of the two is a deterministic width-mismatch [`EvalError::PrimType`].
+fn nibble(bits: [bool; 4]) -> Node {
+    Node::Const(
+        Value::new(
+            Repr::Binary { width: 4 },
+            Payload::Bits(bits.to_vec()),
+            Meta::exact(Provenance::Root),
+        )
+        .unwrap(),
+    )
+}
+
+/// `Fix(f, Var f)` — pure (per [`is_pure`]) and **non-terminating**: every reduction step is a fresh
+/// redex, so it consumes fuel forever and never reaches a value. Used to starve a shared fuel pool.
+fn spin() -> Node {
+    Node::Fix {
+        name: "f".into(),
+        body: Box::new(Node::Var("f".into())),
+    }
+}
+
 /// `Pair(Binary{8}, Binary{8})` and `type Nat = Z | S(Nat)` — enough data shape for
 /// `Construct`/`Match` fixtures.
 fn registry() -> DataRegistry {
@@ -431,4 +453,90 @@ fn eval_parallel_exercises_the_batch_path_through_the_repr_entry_point() {
         interp.eval(&node).unwrap(),
         interp.eval_parallel(&node).unwrap()
     );
+}
+
+// ---- fuel-starvation divergence fix: a non-terminating sibling must never starve an earlier
+// ---- arg's fuel into a different (wrong) error than the sequential reference (VR-5/G2) ----
+
+/// The headline regression case. `A = bit.and(bit.not(byte8), nibble4)` is a top-level-*nested*
+/// width mismatch: sequentially, reducing the leftmost argument `A` needs only ~1-2 ticks before it
+/// deterministically errors `PrimType` (E-Op-Arg finds the innermost `bit.not` redex, then E-Op-Apply
+/// on `A` itself hits the width mismatch) — the sequential reference's strict left-to-right
+/// short-circuit means the second top-level argument `spin` (pure, non-terminating) is **never**
+/// touched. Dispatching both as concurrent jobs against one shared fuel pool (the pre-fix behaviour)
+/// lets `spin` race ahead and drain the pool, starving `A`'s job into `FuelExhausted` instead —
+/// schedule-dependent and wrong. The fix (discard any batch with an `Err` and defer wholesale to
+/// `eval_core`) must make `eval_core_parallel` agree with `eval_core` exactly, every time.
+#[test]
+fn fuel_starved_sibling_never_diverges_from_the_sequential_reference() {
+    let a = op(
+        "bit.and",
+        vec![
+            op("bit.not", vec![byte([true; 8])]),
+            nibble([true, false, true, false]),
+        ],
+    );
+    let node = op("bit.and", vec![a, spin()]);
+    assert!(is_pure(&node));
+    assert_eq!(
+        plan_parallel(&node),
+        ParallelPlan::TopLevelBatch {
+            head: BatchHead::Op,
+            width: 2
+        }
+    );
+
+    // Tight fuel: comfortably enough for the sequential reference's couple of ticks, nowhere near
+    // enough for `spin` to ever terminate — it always errors, so every parallel attempt must be
+    // discarded and re-run through the sequential reference (never a partially-trusted result).
+    let interp = Interpreter::default().with_fuel(5);
+    let expected = interp.eval_core(&node);
+    assert_eq!(
+        expected,
+        Err(EvalError::PrimType {
+            prim: "bit.and".to_owned(),
+            why: "width mismatch: 8 vs 4".to_owned(),
+        }),
+        "sequential reference must deterministically hit the width-mismatch PrimType error on `A` \
+         without ever reaching `spin`"
+    );
+
+    // Repeated runs exercise whatever interleaving the scheduler actually produces; the parallel
+    // result must equal `expected` — never `FuelExhausted` — every single time (schedule-independent).
+    for _ in 0..50 {
+        assert_eq!(
+            interp.eval_core_parallel(&node),
+            expected,
+            "eval_core_parallel diverged from eval_core under a fuel-starving sibling"
+        );
+    }
+}
+
+/// The all-success fast path (both batch jobs return `Ok`) must still parallelize and still match
+/// the sequential reference exactly — the fix only changes behaviour on the any-error path.
+#[test]
+fn all_success_batch_still_parallelizes_and_matches_sequential() {
+    let node = op(
+        "bit.and",
+        vec![
+            op("bit.not", vec![byte([true; 8])]),
+            op(
+                "bit.or",
+                vec![
+                    byte([false; 8]),
+                    byte([true, false, true, false, true, false, true, false]),
+                ],
+            ),
+        ],
+    );
+    assert!(is_pure(&node));
+    assert_eq!(
+        plan_parallel(&node),
+        ParallelPlan::TopLevelBatch {
+            head: BatchHead::Op,
+            width: 2
+        }
+    );
+    let interp = Interpreter::default();
+    assert_eq!(interp.eval_core(&node), interp.eval_core_parallel(&node));
 }
