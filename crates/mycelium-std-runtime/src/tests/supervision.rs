@@ -93,6 +93,12 @@ fn run_supervised_collects_every_outcome_no_silent_drop() {
 #[test]
 fn external_cancel_propagates_to_all_tasks() {
     // An externally-cancelled scope: every cooperative task observes it (none silently runs on).
+    //
+    // This also deterministically covers the M-864 change to `run_supervised` (each job now receives
+    // its OWN `CancelToken::clone` rather than a shared `&CancelToken` borrow — the persistent pool's
+    // `'static` jobs can't borrow): the token is cancelled BEFORE the run, and every one of the five
+    // jobs observes the cancellation through its own independent clone. That is a deterministic proof
+    // that clones share the underlying `Arc<AtomicBool>` flag — no scheduling-order dependence.
     let sched = Scheduler::with_workers(2, 4).unwrap();
     let token = CancelToken::new();
     token.cancel(); // cancel before running
@@ -174,25 +180,19 @@ fn supervise_escalates_when_cascade_bound_hit_never_unbounded() {
 }
 
 #[test]
-fn run_supervised_each_job_gets_an_independent_cancel_token_clone_but_shares_the_flag() {
-    // M-864 regression witness: `run_supervised` now clones `token` once per job (since the shared
-    // pool's `'static` jobs can no longer borrow it) instead of sharing one `&CancelToken` borrow.
-    // `CancelToken::clone` is documented to share the same underlying flag — confirm a failure in
-    // ONE job's clone is still observed by a SIBLING job's own, distinct clone (not just by the
-    // caller's original `token`, which the earlier tests already check).
+fn run_supervised_failure_propagates_cancellation_to_the_shared_flag() {
+    // A failing job cancels the shared token (never-silent propagation, G2/RT7). Deterministic
+    // portion only: after `run_supervised` returns, the caller's token MUST read cancelled (the
+    // failure flipped the one shared `Arc<AtomicBool>` flag that every per-job clone also reads —
+    // M-864's per-job-clone change preserves this). Whether a *sibling* observes it mid-run is
+    // scheduling-dependent and deliberately NOT asserted here (that would be an order-race);
+    // `external_cancel_propagates_to_all_tasks` above covers cross-job clone observation
+    // deterministically via a pre-run cancel.
     let sched = Scheduler::with_workers(3, 8).unwrap();
     let token = CancelToken::new();
     let tasks: Vec<BoxTask<usize, &'static str>> = vec![
         Box::new(|_t: &CancelToken| TaskOutcome::Failed("fails immediately")),
-        Box::new(|t: &CancelToken| {
-            // This job's OWN clone must see the sibling's cancellation, proving the flag — not
-            // just the reference — is shared across independently-cloned tokens.
-            if t.is_cancelled() {
-                TaskOutcome::Cancelled
-            } else {
-                TaskOutcome::Done(1)
-            }
-        }),
+        Box::new(|_t: &CancelToken| TaskOutcome::Done(1)),
     ];
     let outcomes = run_supervised(&sched, &token, tasks);
     assert_eq!(outcomes.len(), 2, "no outcome silently dropped");
@@ -200,11 +200,9 @@ fn run_supervised_each_job_gets_an_independent_cancel_token_clone_but_shares_the
         outcomes[0].is_failure(),
         "the first job's failure must be reported"
     );
-    // Whether outcome[1] observes the cancellation depends on scheduling order relative to the
-    // failure, so assert on the CALLER's own token instead (deterministic once `run_supervised`
-    // returns): the shared flag must be cancelled either way.
     assert!(
         token.is_cancelled(),
-        "the caller's token clone must observe the propagated cancellation (shared flag, M-864)"
+        "a failure must flip the shared cancellation flag (observed via the caller's own clone; \
+         M-864 per-job-clone preserves the shared-flag semantics)"
     );
 }

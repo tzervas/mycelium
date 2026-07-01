@@ -170,16 +170,27 @@ fn scheduled_stalled_network_is_explicit_deadlock_never_hangs() {
 
 #[test]
 fn scheduled_sweep_restores_tasks_to_their_original_slots_across_multiple_sweeps() {
-    // M-864 regression witness: `run_dataflow_scheduled` now takes ownership of each still-pending
-    // task for a sweep (swapping a transient `AlreadyDone` placeholder into its slot) and must
-    // restore the REAL task to the SAME index afterward — a shuffle bug here would still often
-    // "complete" (index-independent countdown) but could silently swap two tasks' identities. Use
-    // distinguishable per-task step counts and confirm the deadlock-free multi-sweep run still
-    // reports the exact original task count with none unresolved.
+    // M-864 regression witness (strengthened per the semantic review): `run_dataflow_scheduled` now
+    // takes OWNERSHIP of each still-pending task for a sweep (swapping a transient `AlreadyDone`
+    // placeholder into its slot) and must restore the REAL task to the SAME index afterward.
+    //
+    // Why the old "only assert Ok()" was too weak: `done[]` is tracked by INDEX. If a sweep restored
+    // a task to the wrong slot, a still-pending task could land at an index already marked done and
+    // be skipped forever — which *usually* deadlocks, but can instead spuriously "complete" if a
+    // finished task double-counts at another slot (remaining hits 0 while a real task was stranded).
+    // So `Ok()` alone does NOT catch a mis-restore.
+    //
+    // The robust check: each task bumps a SHARED `progress` counter once per real step. The total
+    // number of real steps is fixed (sum of the per-task step counts). A correct run performs EXACTLY
+    // that many steps; a mis-restore that strands any task performs FEWER. Assert the exact total —
+    // slot-sensitive, so a shuffle bug is caught whether it deadlocks or "completes early".
     let sched = Scheduler::with_workers(3, 8).unwrap();
+    let step_counts: Vec<usize> = (1..=9).collect();
+    let expected_total_steps: u64 = step_counts.iter().map(|&s| s as u64).sum(); // 45
     let prog = Arc::new(AtomicU64::new(0));
-    let mut tasks: Vec<Box<dyn PollTask + Send>> = (1..=9)
-        .map(|s| {
+    let mut tasks: Vec<Box<dyn PollTask + Send>> = step_counts
+        .iter()
+        .map(|&s| {
             Box::new(AtomicCountdown {
                 steps: AtomicUsize::new(s),
                 progress: Arc::clone(&prog),
@@ -192,5 +203,11 @@ fn scheduled_sweep_restores_tasks_to_their_original_slots_across_multiple_sweeps
         r.is_ok(),
         "a satisfiable network with varied per-task step counts must complete across many sweeps, \
          got {r:?}"
+    );
+    assert_eq!(
+        prog.load(Ordering::SeqCst),
+        expected_total_steps,
+        "every task must run its full step count exactly once — a mis-restore (wrong slot) would \
+         strand a task and leave the total short (M-864 ownership-swap correctness)"
     );
 }
