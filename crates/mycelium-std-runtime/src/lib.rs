@@ -59,6 +59,14 @@
 //!   still holds buffered values in transit reclaims them, emitting one
 //!   `ReclamationRecord(ChannelClose)` per value (RFC-0027 §9 / §7.3), with a canonical
 //!   [`network::ChannelNodeId`] resolving the MEM-1 `ChannelId` placeholder.
+//!
+//! # Stability (DN-66 freeze, 2026-07-01)
+//!
+//! This crate's public API, as documented in `docs/spec/stdlib/runtime.md` (spec status:
+//! Accepted, v0 R1 surface (2026-06-21)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+//! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//! Unlike the other 25 `mycelium-std-*` crates, this one is **load-bearing** (consumed directly by `mycelium-mlir`), not reference-only — it is never a retirement candidate under RFC-0031 D6 while that dependency exists (DN-66 S4.c).
 #![forbid(unsafe_code)]
 
 pub mod colony;

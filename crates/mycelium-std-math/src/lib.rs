@@ -72,6 +72,14 @@
 //! [`Approx::explain`]); the precision bound is an explicit declaration, not an implicit
 //! guarantee. See §FLAG for the M-541 disposition. [§FLAG: transcendental compute floor pending
 //! M-541 `std-sys` audit; strength is `Declared` until the audited theorem is delivered.]
+//!
+//! # Stability (DN-66 freeze, 2026-07-01)
+//!
+//! This crate's public API, as documented in `docs/spec/stdlib/math.md` (spec status:
+//! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+//! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//! It remains the RFC-0031 D6 differential-oracle reference; the same-named `lib/std/math.myc` prototype is a narrower, structurally distinct surface (DN-66 S3.1) — the D6 retirement trigger has not fired, so no item here is `#[deprecated]`.
 #![forbid(unsafe_code)]
 
 pub mod approx;

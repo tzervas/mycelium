@@ -75,6 +75,14 @@
 //! `Text` is a UTF-8 byte sequence; callers are responsible for any encoding decision (e.g.,
 //! which `Repr` their parsed numeric values use). No ambient encoding is inferred; lossy
 //! transcoding is an explicit named op (`to_latin1_lossy`), never a silent substitution.
+//!
+//! # Stability (DN-66 freeze, 2026-07-01)
+//!
+//! This crate's public API, as documented in `docs/spec/stdlib/text.md` (spec status:
+//! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+//! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//! It remains the RFC-0031 D6 differential-oracle reference; the same-named `lib/std/text.myc` prototype is a narrower, structurally distinct surface (DN-66 S3.1) — the D6 retirement trigger has not fired, so no item here is `#[deprecated]`.
 #![forbid(unsafe_code)]
 
 pub mod error;
