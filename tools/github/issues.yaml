@@ -9013,3 +9013,44 @@ issues:
       - publish_remote refuses a conflicting re-publish with RemoteError::Conflict; an identical re-publish
         is idempotent; a first publish is unaffected. Tests via MemTransport (+ an #[ignore]d live case).
       - The best-effort ceiling is documented (Declared, not Proven). cargo fmt/clippy/test green.
+  - id: M-873
+    title: "M-873 -- feat(transpile): Rust→Mycelium transpiler PoC (existing surface + gap-report)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:todo]
+    depends_on: [M-719]
+    epic: E18-1
+    doc_refs:
+      - corpus:DN-34
+      - corpus:DN-26
+      - src:docs/planning/dogfooding-effort-and-usage-assessment.md
+    body: |
+      Kickoff `trx` (.claude/kickoffs/trx.md). Get a Rust→Mycelium transpiler working against the
+      LANGUAGE SURFACE THAT ALREADY EXISTS (do not wait for full maturity): emit what the current
+      surface expresses, FLAG what it cannot (never guess, G2). Use it to partially implement the 26
+      Rust mycelium-std-* crates, and produce the prioritized surface-feature backlog (the union of
+      gap-reports) as a first-class output — grounding E18-1's needs-design work with real demand data.
+
+      As a maintainer accelerating self-hosting, I want a transpiler that turns each Rust stdlib crate
+      into a best-effort Mycelium port + an exact inventory of the language features still missing, so
+      that the dogfooding rewrite is both accelerated and demand-prioritized.
+
+      The cheap design (diff against known-good): the core-lib slice already has hand-written .myc twins
+      (M-714-719: lib/std/{cmp,option,result,iter,collections,text,fmt,math}.myc). Point the transpiler
+      at those crates' Rust source and DIFF its output against the existing .myc — correctness is a cheap
+      diff, not an execution/differential run. PoC target: mycelium-std-cmp (623 LOC, has a .myc twin).
+      Seed from the maintainer's py2rust + py-rust-bridge (DN-34); do not build the Rust parser greenfield.
+      New dep (syn/quote) is scoped to the transpiler crate only (KC-3, not the kernel).
+
+      Efficiency (maintainer is usage-constrained): Hybrid model tiering (Opus design/gap-judgment, Sonnet
+      emitter, Haiku mechanical rows); ~1-2 agents NOT a Workflow fan-out; Explore agents for read-heavy
+      scoping; change-scoped checks during iteration; structured (schema) gap-report; one warm session.
+
+      Definition of Done:
+      - crates/mycelium-transpile transpiles std-cmp's Rust -> .myc emitting the expressible fraction +
+        a never-silent structured gap report ({file,line,rust_construct,reason}); fmt/clippy -D warnings/
+        test -p green.
+      - Diff vs lib/std/cmp.myc characterized (matched/refined/flagged), never a silent mismatch.
+      - Gap report captured as the seed of the surface-feature backlog (a DN entry / E18-1 issues).
+      - The MEASURED token cost recorded -> converts the assessment doc's Declared rates to Empirical
+        (update docs/planning/dogfooding-effort-and-usage-assessment.md + the self-hosting port ledger).
+      - Landed as a scoped PR to dev via /pr-land. Non-tag-gating (ADR-036).
