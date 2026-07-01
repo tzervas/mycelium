@@ -1,8 +1,9 @@
-# Kickoff `aot10` -- Native AOT maturity, optimization, and acceleration (E15-1)
+# Kickoff `aot10` -- Native AOT maturity, optimization, and acceleration (E15-1 / E25-1)
 
 > Read `CLAUDE.md` (house rules win) + `.claude/kickoffs/README.md` + `RFC-0029` + `DN-15` +
-> `ADR-019` first. The interpreter stays the trusted base throughout; the native path is the
-> performance path. Every optimization pass must be EXPLAIN-able and never-silent (ADR-006/G2).
+> `ADR-019` + `ADR-034` first. The interpreter stays the trusted base throughout; the native path
+> is the performance path. Every optimization pass must be EXPLAIN-able and never-silent
+> (ADR-006/G2).
 
 ## Metadata
 
@@ -10,103 +11,92 @@
 |---|---|
 | **UID** | `aot10` |
 | **Head branch** | `claude/head/aot10` |
-| **Status** | ready |
+| **Status** | LIVE/PARTIAL -- E15-1 (waveN2 M-725..729) landed done; owns the E25-1 remainder now |
 | **Swarm mode** | Sonnet |
-| **Depends on** | E6-1 (native-path wave -- M-725 subsumes its remaining tasks); RFC-0029 reaching Accepted before M-726...M-729 implementation begins |
+| **Depends on** | E15-1 (done); RFC-0029 (Accepted); ADR-034 (Accepted, 2026-06-30) |
 
-## Scope
+## RESCOPE (2026-07-01, post-AOT audit)
 
-Mature the native AOT path from the current state (direct-LLVM kernel subset + `mlir-dialect`
-feature skeleton, per `crates/mycelium-mlir/src/lib.rs`) into a real optimizing backend:
-full libMLIR lowering, EXPLAIN-able optimization passes (inlining/CSE/DCE), JIT for dynamic
-VSA/HDC workloads (ADR-009 deferred to enacted), BitNet packed-ternary acceleration (FR-C3),
-and a mutant-witnessed three-way differential (interp vs AOT vs JIT).
+This kickoff was originally written against the old E15-1/M-725..729 frame. **That frame is now
+CLOSED**: M-725, M-726, M-727, M-728 flipped to `status:done` in this resync (stale labels against
+already-landed, CHANGELOG-confirmed work); M-729 stays `status:ready` pending a maintainer call on
+whether M-858's broader unified differential retroactively satisfies its narrower DoD (see this
+resync's PR for the FLAG -- not decided here).
 
-**Owned directory:** `crates/mycelium-mlir/` (the AOT/JIT backend crate).
+**ADR-034 (Accepted, 2026-06-30, maintainer-ratified) re-gated native AOT as a HARD `lang 1.0.0`
+gate row (track T6)** -- it reverses ADR-022 §8 Q4 (which had un-gated T6 to `1.1`) and expands
+E15-1's scope to full-language native-codegen coverage, carried forward by the umbrella epic
+**E25-1**. `aot10` now owns the **E25-1 remainder** -- the still-open children after the
+`M-850..M-861` coverage/perf wave landed:
+
+- **M-856b** -- MLIR-dialect coverage: Dense/VSA through the dialect path (libMLIR-gated). Split
+  out of M-856 (done) as an honest partial-landing division -- Construct/Match/Swap landed through
+  the dialect leg, Dense/VSA did not. `status:ready`.
+- **M-860** -- Parallel AOT codegen: per-function independent lowering, byte-identical emit.
+  `status:ready`; depends_on M-859 (done, PR #845).
+- **M-862** -- Parallel pure-fragment interpreter/env-machine eval + differential
+  (post-tag-cautious). `status:needs-design`; depends_on M-860, M-861 (done, PR #843). **FLAG**:
+  this issue's own body recommends landing LAST/cautiously, possibly AFTER the lang 1.0.0 tag --
+  pre/post-1.0 timing is a maintainer call, not decided here or in the PM resync.
+- **M-863** -- AOT ratification act: ADR-034 + RFC-0029 -> Enacted, DN-15 -> Resolved, status
+  flips. `status:ready`; depends_on M-858 (done), M-862 (open). This is the CLOSING act -- run it
+  last, after M-856b/M-860/M-862 land.
+
+**Owned directory:** `crates/mycelium-mlir/` (the AOT/JIT backend crate) -- unchanged.
 **Read-only for leaves:** `tools/github/issues.yaml`, `CHANGELOG.md`, `docs/Doc-Index.md`,
 `docs/api-index/`, workspace `Cargo.toml`, `mycelium-core`/`mycelium-l0`/`mycelium-l1`
 (the trusted base; no kernel changes).
 
-## Epic and issue IDs
+## Epic and issue IDs (current)
 
-- **E15-1** -- Native AOT maturity, optimization, and acceleration
-  - **M-725** -- full libMLIR integration: ternary-dialect to MLIR to LLVM lowering, subsuming E6-1 remaining `[type:feature]`
-  - **M-726** -- optimization passes (RFC-0029): inlining/CSE/DCE as EXPLAIN-able, never-silent, differential-checked transforms `[type:feature]`
-  - **M-727** -- JIT for dynamic / VSA workloads (ADR-009 deferred to enacted) `[type:feature]`
-  - **M-728** -- BitNet-class packed-ternary acceleration (FR-C3) `[type:feature]`
-  - **M-729** -- codegen differential durability: interp == AOT == JIT three-way agreement, mutant-witnessed `[type:verification]`
+- **E25-1** (epic, `status:in-progress`) -- Native AOT full-language coverage, parallelism, and
+  1.0.0 gating (ADR-034). Children `M-850..M-861` done; remainder below.
+  - **M-856b** -- Dense/VSA through the MLIR-dialect path (libMLIR-gated) `[type:feature]`
+  - **M-860** -- Parallel AOT codegen, byte-identical emit `[type:feature]`
+  - **M-862** -- Parallel pure-fragment eval + differential (post-tag-cautious; pre/post-1.0
+    FLAGged) `[type:feature]`
+  - **M-863** -- AOT ratification act (ADR-034/RFC-0029/DN-15 closing record) `[type:design]`
+
+(Historical, closed: E15-1's original children M-725/726/727/728/729 -- four done this resync,
+M-729 flagged not flipped; E25-1's M-850..M-861 -- all done, landed on `dev` across PRs #815-#851.)
 
 ## Grounding
 
-- RFC-0029 (`docs/rfcs/RFC-0029-AOT-Optimization-Codegen-Maturity-and-JIT.md`) -- must reach
-  **Accepted** before M-726...M-729 implementation begins.
-- RFC-0004 (Execution Model -- ss2 revisit clause sanctions advancing the native path; ss6
-  inspectability applies to every optimization pass).
-- DN-15 (Draft, 2026-06-19) -- honest decomposition of M-348; ground truth for which native-path
-  work is libMLIR-gated vs direct-LLVM-advanceable.
-- ADR-019 (libMLIR toolchain) -- provisioning decision; **check current binding status before
-  starting M-725** (DN-15 ss1 records it was blocked at M-373's time).
-- ADR-009 (JIT deferred) -- the source of the deferral M-727 is designed to lift.
-- ADR-006 (no black boxes) + G2/VR-5 -- every optimization pass is EXPLAIN-able and never-silent.
-- `crates/mycelium-mlir/src/lib.rs` -- current backend state (checked 2026-06-23).
+- **ADR-034** (`docs/adr/ADR-034-Full-Language-1.0.0-Gate-T6-AOT-Re-Gating.md`, Accepted
+  2026-06-30) -- the re-gating decision that makes this kickoff a hard `lang 1.0.0` gate, not a
+  `1.1` QoL item. `Accepted -> Enacted` happens with ADR-022 at the `lang 1.0.0` tag (M-863's job).
+- RFC-0029 (Accepted) -- AOT optimization/codegen-maturity/JIT design; advances to Enacted once
+  M-863 runs (post-M-862).
+- DN-15 -- honest decomposition of the native-path work; `Draft -> Resolved` is M-863's job, not
+  pre-judged here.
+- ADR-019 (libMLIR toolchain, Enacted) -- provisioning; M-856b is libMLIR-gated (skip-graceful
+  where the toolchain is absent, per the M-856/M-857 precedent -- never a faked pass).
+- `crates/mycelium-mlir/` -- current backend state (refreshed 2026-07-01 in E25-1's body: direct-LLVM
+  covers non-tail Fix/FixGroup, closures, certified Swap, Dense, VSA; MLIR-dialect covers trit.mul +
+  Construct/Match/Swap but still refuses Dense/VSA -- M-856b's scope).
 
 ## Swarm / parallelization pattern
 
-**Serial gate then staged parallel.** RFC-0029 must reach Accepted before implementation.
-Then:
+- **M-856b** and **M-860** are independent (different files: `dialect/native.rs` vs the codegen
+  emit path) and may run as parallel Sonnet leaves.
+- **M-862** depends on M-860 (parallel codegen) and M-861 (done) -- start after M-860 lands.
+- **M-863** is the closing, single-owner ratification act -- runs last, after M-856b/M-860/M-862.
 
-- **M-725 (full libMLIR integration)** -- must land first; it provides the complete lowering
-  infrastructure all other leaves depend on.
-- **M-726 (optimization passes)** and **M-727 (JIT)** are independent once M-725 lands; may
-  run as parallel Sonnet leaves (M-726 adds pass pipeline; M-727 adds JIT execution mode;
-  both stay within `crates/mycelium-mlir/`).
-- **M-728 (BitNet acceleration)** -- depends on M-725 (needs the lowering path to hook into).
-  May run in parallel with M-727 if M-725 has landed.
-- **M-729 (differential durability)** -- integration gate; runs after M-725...M-728 are done.
-
-Collision surface: `crates/mycelium-mlir/` only. Leaves must partition by module/file within
-that crate (e.g. M-726 owns `crates/mycelium-mlir/src/passes/`, M-727 owns
-`crates/mycelium-mlir/src/jit.rs`, M-728 owns `crates/mycelium-mlir/src/accel/`).
-
-## Sequencing and dependencies
-
-```
-RFC-0029 Accepted -- GATE
-  |
-M-725 (full libMLIR integration -- subsumes E6-1 remaining)
-  |           |
-M-726       M-727   (parallel: optimization passes / JIT)
-  |
-M-728 (BitNet packed-ternary acceleration)
-  |
-M-729 (three-way differential durability: interp == AOT == JIT)
-```
-
-**Pre-flight check for M-725 (mandatory before branching):** Confirm ADR-019 / libMLIR
-binding status in the current environment. DN-15 ss1 records that real ternary-dialect lowering
-was libMLIR-gated at M-373. If still gated, M-725 must either stage a direct-LLVM-advanceable
-increment first (per DN-15 ss2) or FLAG the block before spawning leaves.
+Collision surface stays `crates/mycelium-mlir/` only.
 
 ## Definition of Done
 
-- [ ] RFC-0029 reaches **Accepted** (design gate cleared).
-- [ ] M-725: `crates/mycelium-mlir/` provides complete ternary-dialect to `arith`/`func` to
-  LLVM dialect lowering; the `mlir-dialect` skeleton is replaced by a real binding; E6-1
-  remaining tasks are subsumed and their issues closed.
-- [ ] M-726: at minimum inlining, CSE, and DCE passes are implemented; each pass is reified as
-  an EXPLAIN-able transform (no black-box heuristics); differential tests confirm the optimized
-  output is semantically equivalent to unoptimized (interp == AOT with/without passes, `Empirical`).
-- [ ] M-727: JIT is available for dynamic / VSA workloads; it is never silently selected (must
-  be an explicit mode -- consistent with the never-silent G2 rule); correctness obligation:
-  JIT result == interpreter result (`Empirical`).
-- [ ] M-728: BitNet packed-ternary acceleration is behind an explicit capability flag; the
-  reference ternary path always produces the same result (`Empirical` differential); graceful
-  degradation on hardware without the acceleration is never-silent.
-- [ ] M-729: the three-way differential (interp == AOT == JIT) is mutant-witnessed
-  (`cargo-mutants` / `cargo-fuzz` smoke confirms the test suite catches codegen divergence).
+- [ ] M-856b: Dense/VSA lower through the MLIR-dialect path; three-way differential green where
+  libMLIR is provisioned (skip-graceful + recorded where not); cargo-mutants catches a
+  dialect-lowering mutation on Dense/VSA specifically.
+- [ ] M-860: `parallel_emit == sequential_emit` byte-equal (`Exact`); cargo-mutants catches a
+  join-order mutation.
+- [ ] M-862: `parallel_eval == sequential_eval == interp` over the pure fragment; the sequential
+  interpreter stays the reference; **maintainer decides pre/post-1.0-tag timing at that PR**.
+- [ ] M-863: RFC-0029 -> Enacted; DN-15 -> Resolved; ADR-034 -> Enacted with ADR-022 at the tag;
+  status flips recorded append-only.
 - [ ] `just check` green on `crates/mycelium-mlir/` with all new features enabled.
-- [ ] E15-1 issue status -> `done`; CHANGELOG entry (append-only; honest guarantee tags;
-  "implemented (native-path), pending ratification" framing where RFC-0029 is not yet Enacted).
+- [ ] E25-1 issue status -> `done`; CHANGELOG entry (append-only; honest guarantee tags).
 
 ## Landing
 

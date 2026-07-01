@@ -41,3 +41,14 @@ Per-op guarantee matrices: HTTP **Exact**-when-Ok, JSON **Empirical**, server de
 **Empirical-via-RT2**, handler/tool purity **Declared** — **never `Proven`** without a checked basis.
 Never-silent G2 throughout; "implemented Rust-first, pending ratification." **Done** = both phyla green
 on the head, matrices asserted, M-670/M-671 bodies + status updated, ready for final integration to `main`.
+
+## Shelving condition update (2026-07-01, post-AOT audit)
+M-670/M-671 were **SHELVED** (2026-06-23, maintainer re-sequencing) behind the L1
+surface-completeness wave — E7-3 (HOF, kickoff `hof`), E7-4 (comment-preserving `mycfmt`, kickoff
+`lwd`), E7-5 (operator syntax, kickoff `ops`/`s10`/`strm` per the wave's actual task split). That
+condition is now **SATISFIED**: E7-3, E7-4, and E7-5 are all `status:done` in `issues.yaml`, and
+their kickoffs (`s10`, `hof`, `lwd`, `strm`) are archived (`.claude/kickoffs/archive/`). Status is
+**"unshelvable — awaiting maintainer decision to resume or re-shelve"**: the technical blocker is
+gone, but M-670/M-671 remain `status:blocked` in `issues.yaml` pending an explicit maintainer call
+on resuming this dogfooding build now vs. keeping it shelved for other reasons — not decided here
+(G2 — don't guess a resume that wasn't asked for).

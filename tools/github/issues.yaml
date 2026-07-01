@@ -2219,10 +2219,18 @@ issues:
   - id: M-655
     title: "M-655 — Cut 1.0.0 (kernel/core): ADR-021 Accepted → Enacted at the tagged release"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:task, area:project, priority:P1, status:todo]
+    labels: [phase:8, type:task, area:project, priority:P1, status:done]
     depends_on: [M-652, M-653, M-654]
+    landed_date: 2026-07-01
+    landed_basis: "SUPERSEDED BY M-703 (not a landing) -- both are the kernel-tag act; ADR-021 is Superseded by ADR-022 (docs/adr/ADR-021-1.0.0-Release-Readiness-Gate.md, 2026-06-23), so ADR-021 can no longer move Accepted -> Enacted directly (the inherited kernel-gate enactment attaches to ADR-022 track T1 instead). M-703's own body explicitly says: 'This issue overlaps the pre-existing maintainer-reserved M-655 (cut 1.0.0 tag); resolve them together.' M-703 carries the ADR-024/E19-1 scope extension and stays the canonical, OPEN, maintainer-reserved issue -- it is NOT touched by this resync. M-655 is marked done-as-superseded (duplicate), not deleted (G2 -- no history erased)."
     doc_refs: [corpus:ADR-021, corpus:DN-19, corpus:ADR-018]
     body: |
+      DUPLICATE (2026-07-01 resync): superseded by M-703, which explicitly names this issue as the
+      overlap to resolve together. ADR-021 (this issue's Accepted->Enacted target) is itself
+      Superseded by ADR-022, so this issue's literal acceptance criterion can no longer be met as
+      written -- the equivalent act now runs through M-703 / ADR-022 track T1. This entry is closed
+      as a duplicate, not deleted, per G2.
+
       The terminal 1.0.0 step. Once Gate A2/A3/A4 (M-653/M-654/M-652) close — A1/A5/B1/B2 already met — cut **1.0.0 of the kernel/core**: record the conscientious release decision by moving ADR-021 `Accepted → Enacted` (it must step through Accepted first — house rule #3), and tag the release. Per ADR-018 each crate advancing to 1.0.0 is its own explicit decision; this gate governs the kernel/core release as a set. The surface language stays scoped to `1.x` (ADR-021 §2/§5).
       Acceptance: all ADR-021 gate rows met; the release decision recorded (ADR-021 → Enacted, append-only); the 1.0.0 tag cut; CHANGELOG `[Unreleased]` → `[1.0.0]` section.
       READY (2026-06-21): A2/A3/A4 closed (M-653/M-654/M-652) and A1/A5/B1/B2 already met — every ADR-021 gate row is green. Unblocked; the maintainer cuts the 1.0.0 tag and moves ADR-021 `Accepted → Enacted` at that step.
@@ -2239,10 +2247,10 @@ issues:
   - id: E7-1
     title: "E7-1 (epic) — L1 Stage-1 Language Completeness: Generics, Traits, Effects, FFI, Phylum, Surface Terms"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:language, priority:P1, status:needs-design]
+    labels: [phase:5, type:epic, area:language, priority:P1, status:done]
     depends_on: []
-    evidence_date: 2026-06-21
-    landed_basis: "status:needs-design (NOT done) — evidence is a REFERENCE/partial, not a completed landing; git log 4a30dba (2026-06-21) 'docs(planning): Phase-6 gap-closure epics E7-1/E7-2 + 13 tracking issues'"
+    landed_date: 2026-07-01
+    landed_basis: "All 10 children done: M-656, M-657, M-658, M-659, M-660, M-661, M-662, M-663, M-664, M-673 (each carries its own landed_pr/landed_basis in this manifest). DN-14 (Self-Hosting Gate) is Resolved (docs/notes/DN-14-Self-Hosting-Gate.md, 2026-06-23) -- the epic's own acceptance criterion (all DN-14 §3 gate-fail rows flipped to present, DN-14 -> Resolved). Supersedes the prior evidence-only note below (retained for audit)."
     epic: E7
     doc_refs: [corpus:DN-14, corpus:RFC-0007, corpus:RFC-0018, corpus:RFC-0019]
     body: |
@@ -2252,6 +2260,11 @@ issues:
 
       Honesty floor: no gate-fail row in DN-14 §3 may be flipped to `present` before the implementing issue (M-657/M-659/M-660/M-661/M-662/M-663) is landed and confirmed by `just check` green. Tags stay at the honestly-supportable strength; VR-5 applies to every implementing child.
       Acceptance: all five gate-fail rows (6–9, 11) plus the missing-partial row (10) in DN-14 §3 flipped to `present`; DN-14 Status → Resolved (append-only); `just check` green; CHANGELOG entry.
+
+      DONE (2026-07-01 resync): all 10 children landed done; DN-14 -> Resolved. Prior evidence-only
+      note (superseded, retained for audit): "status:needs-design (NOT done) — evidence is a
+      REFERENCE/partial, not a completed landing; git log 4a30dba (2026-06-21) 'docs(planning):
+      Phase-6 gap-closure epics E7-1/E7-2 + 13 tracking issues'" (evidence_date 2026-06-21).
 
   - id: M-656
     title: "M-656 — spec(rfc-0007): Amend RFC-0007 to ratify stage-1 generic type parameters"
@@ -2485,10 +2498,10 @@ issues:
   - id: E7-2
     title: "E7-2 (epic) — RFC-0008 Runtime Vocabulary: Lexer Reservation → L1 Construct Activation (R1 then R2)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:epic, area:execution, priority:P2, status:needs-design]
+    labels: [phase:7, type:epic, area:execution, priority:P2, status:done]
     depends_on: []
-    evidence_date: 2026-06-21
-    landed_basis: "status:needs-design (NOT done) — evidence is a REFERENCE/partial, not a completed landing; git log 1d67da8 (2026-06-21) 'feat(l1+mlir): hypha/colony real-concurrency lowering, RT2-validated (M-666, E7-2 R1)'"
+    landed_date: 2026-07-01
+    landed_basis: "All 4 children done: M-665, M-666, M-667, M-668 (each carries its own landed_pr/landed_basis in this manifest) -- the epic's acceptance criteria (all 10 DN-03 §4 runtime terms reserved; hypha/colony active; fuse/reclaim/tier active; R2 planning note produced). Supersedes the prior evidence-only note below (retained for audit)."
     epic: E7
     doc_refs: [corpus:RFC-0008, corpus:DN-03, corpus:DN-06]
     body: |
@@ -2498,6 +2511,11 @@ issues:
 
       E7-2 is independent of E7-1 — the runtime lexer reservation (M-665) can start immediately; the L1 constructs (M-666/M-667) depend on M-357 (done) but not on the E7-1 language features. Only M-668 (R2 planning) optionally benefits from E7-1 being further along.
       Acceptance: all 10 DN-03 §4 runtime terms in `keyword()`; `hypha`/`colony` active L1 constructs; `fuse`/`reclaim`/`tier` active; R2 planning note produced; RFC-0008 §4.6 R1 enactment note updated; `just check` green.
+
+      DONE (2026-07-01 resync): all 4 children landed done. Prior evidence-only note (superseded,
+      retained for audit): "status:needs-design (NOT done) — evidence is a REFERENCE/partial, not a
+      completed landing; git log 1d67da8 (2026-06-21) 'feat(l1+mlir): hypha/colony real-concurrency
+      lowering, RT2-validated (M-666, E7-2 R1)'" (evidence_date 2026-06-21).
 
   - id: M-665
     title: "M-665 — feat(l1-lexer): Reserve all 10 DN-03 runtime terms in keyword() — never-silent reservation (G2)"
@@ -4296,11 +4314,18 @@ issues:
   - id: M-724
     title: "M-724 — verify(ffi): FFI safety — ADR-014 unsafe-floor confinement for FFI surface, audited + just safety-check green"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:verification, area:execution, priority:P1, status:in-progress]
+    labels: [phase:7, type:verification, area:execution, priority:P1, status:done]
     depends_on: [M-720, M-721, M-722, M-723]
     epic: E14-1
+    landed_pr: 499
+    landed_date: 2026-07-01
+    landed_basis: "Merge PR #499 (df20d98); CHANGELOG.md '### Added (2026-06-23: E14-1 — the wild/FFI execution floor executes; RFC-0028 Accepted; M-720/M-721/M-722/M-724)' — just safety-check (scripts/checks/safety.sh) extended to a Mycelium-level wild-site audit: every wild block in a shippable .myc nodule must be in a @std-sys nodule, inside a fn declaring !{ffi}, and carry a // SAFETY: comment (a gate, not a lint, G2). safety is wired into just check via scripts/checks/all.sh's checks= array (confirmed still wired 2026-07-01)."
     doc_refs: [corpus:RFC-0028, corpus:ADR-014, corpus:DN-25, src:crates/mycelium-std-sys/src/lib.rs, src:crates/mycelium-mlir/src/jit.rs]
     body: |
+      DONE (2026-07-01 resync): status label was stale (`in-progress`); PR #499 landed the
+      wild-site audit gate (scripts/checks/safety.sh) and it remains wired into `just check`
+      (scripts/checks/all.sh). Flipped on that evidence.
+
       After M-720 through M-723 land, audit the full FFI surface against ADR-014 confinement
       requirements and add a just safety-check gate that verifies the audit mechanically in CI.
       Every wild site in an @std-sys nodule must carry a SAFETY comment specifying the ABI
@@ -4946,14 +4971,23 @@ issues:
   - id: M-725
     title: "full libMLIR integration: ternary-dialect to MLIR to LLVM lowering"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:done]
     epic: E15-1
+    landed_date: 2026-07-01
+    landed_basis: "Commit f9f6c5b (waveN2, 2026-06-26); CHANGELOG.md '### Added (2026-06-26: waveN2 Phase-1 — stdlib enablers, width-cast prim, MLIR carry-chain, design notes (E13-1/E19-1/E15-1))' — the trit.add/trit.sub balanced-ternary carry chain lowers through the real MLIR-dialect path (arith/func -> mlir-opt -> mlir-translate -> clang); three-way differential (interp == direct-LLVM == MLIR-dialect) ran end-to-end (mlir-18-tools provisioned; skip-graceful where absent). NOTE (2026-07-01 resync): the base bit/trit + trit.add/sub fragment landed here; the remaining Dense/VSA-dialect coverage is tracked separately as M-856b (not silently folded into this issue's DoD — G2)."
     doc_refs:
       - corpus:RFC-0029
       - corpus:RFC-0004
       - src:crates/mycelium-mlir/src/lib.rs
       - corpus:DN-25
     body: |
+      DONE (2026-07-01 resync): status label was stale (`ready`) against the body's own
+      "IMPLEMENTED (2026-06-26, waveN2-p1)" record below and CHANGELOG confirmation; flipped to
+      `done` on that evidence. The trit.mul + data/closure/recursion/Swap/Dense/VSA fragments
+      remain explicit never-silent refusals at the MLIR-dialect boundary; trit.mul lands under
+      M-857 (done), Construct/Match+Swap under M-856 (done), and the Dense/VSA dialect remainder
+      is split out to **M-856b** (still open) — an honest partial closure, not silently dropped.
+
       IMPLEMENTED (2026-06-26, waveN2-p1): the trit.add/trit.sub balanced-ternary carry chain is lowered
       through the REAL MLIR-dialect path (arith/func -> mlir-opt -> mlir-translate -> clang); the never-silent
       DialectError::Unsupported refusal moved to trit.mul (+ richer fragments); overflow via the shared
@@ -4995,14 +5029,22 @@ issues:
   - id: M-726
     title: "optimization passes: inlining/CSE/DCE as EXPLAIN-able never-silent transforms"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:done]
     epic: E15-1
+    landed_date: 2026-07-01
+    landed_basis: "Commit f9f6c5b (waveN2, 2026-06-26); CHANGELOG.md '### Added (2026-06-26: waveN2 Phase-2 — M-717 multi-byte UTF-8 complete, M-726 EXPLAIN-able opt passes)' — inline/cse/dce passes landed in crates/mycelium-mlir/src/passes/, each a pure Program -> (Program, TransformLog), every transform reified as a queryable TransformRecord (RFC-0029 §7.2, G2). Differential eval(optimized) == eval(unoptimized) == interp(source) across a corpus with a sabotage sentinel for non-vacuity. 102->115 mlir tests."
     doc_refs:
       - corpus:RFC-0029
       - corpus:RFC-0004
       - src:crates/mycelium-mlir/src/lib.rs
       - corpus:DN-25
     body: |
+      DONE (2026-07-01 resync): status label was stale (`ready`) against the body's own
+      "IMPLEMENTED (2026-06-26, waveN2-p2)" record below and CHANGELOG confirmation; flipped to
+      `done` on that evidence. Inline/CSE/DCE passes are in crates/mycelium-mlir/src/passes/,
+      each EXPLAIN-able (reified TransformRecord log) and differential-tested; no further work
+      pending on this issue's own DoD.
+
       IMPLEMENTED (2026-06-26, waveN2-p2): inline/cse/dce passes in crates/mycelium-mlir/src/passes/,
       each a pure Program -> (Program, TransformLog). EXPLAIN-able: every transform reifies a
       TransformRecord {pass, rule, site, before, after, reason} into an append-only queryable log
@@ -5041,14 +5083,21 @@ issues:
   - id: M-727
     title: "JIT formalized as an explicit never-silently-selected mode (VSA/HDC dynamic)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:done]
     epic: E15-1
+    landed_date: 2026-07-01
+    landed_basis: "Commit f9f6c5b (waveN2, 2026-06-26); CHANGELOG.md '### Added (2026-06-26: waveN2 Phase-3 — M-717 slicing closed, E15-1 tail, DN-41/42 ratified)' — JIT exposed as a named ExecMode (Interpreter/Aot/Jit) reachable only by explicitly naming ExecMode::Jit, no Default/Auto/fallback arm (never-silently-selected, G2); differential JIT == interp ran over the subset with explicit-refusal-no-fallback outside it. src/mode.rs."
     doc_refs:
       - corpus:RFC-0029
       - corpus:RFC-0004
       - src:crates/mycelium-mlir/src/jit.rs
       - corpus:DN-25
     body: |
+      DONE (2026-07-01 resync): status label was stale (`ready`) against the body's own
+      "IMPLEMENTED (2026-06-26, waveN2-p3)" record below and CHANGELOG confirmation; flipped to
+      `done` on that evidence. No superseding ADR was required (ADR-009 already sanctioned
+      interpreter/JIT); src/mode.rs carries the explicit, named ExecMode.
+
       IMPLEMENTED (2026-06-26, waveN2-p3): JIT exposed as a named ExecMode (Interpreter/Aot/Jit) with NO
       Default/Auto/fallback arm -- reachable only by naming ExecMode::Jit (never-silently-selected, G2;
       out-of-subset/toolchain-absent are explicit ModeError). Differential RAN: JIT==interp over the subset
@@ -5087,14 +5136,21 @@ issues:
   - id: M-728
     title: "BitNet-class packed-ternary acceleration (FR-C3)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:done]
     epic: E15-1
+    landed_date: 2026-07-01
+    landed_basis: "Commit f9f6c5b (waveN2, 2026-06-26); CHANGELOG.md '### Added (2026-06-26: waveN2 Phase-3 — M-717 slicing closed, E15-1 tail, DN-41/42 ratified)' — BitNet accel landed behind the bitnet-accel feature + runtime BitnetCapability::detect(); absent hardware degrades via an EXPLICIT recorded AccelOutcome/DegradeReason (EXPLAIN-able, never a silent slow path, G2). Differential ran both branches (accel == reference). crates/mycelium-mlir/src/accel/."
     doc_refs:
       - corpus:RFC-0029
       - corpus:RFC-0004
       - src:crates/mycelium-mlir/src/lib.rs
       - corpus:DN-25
     body: |
+      DONE (2026-07-01 resync): status label was stale (`ready`) against the body's own
+      "IMPLEMENTED (2026-06-26, waveN2-p3)" record below and CHANGELOG confirmation; flipped to
+      `done` on that evidence. crates/mycelium-mlir/src/accel/ carries the capability-gated
+      acceleration + graceful degradation; no further work pending on this issue's own DoD.
+
       IMPLEMENTED (2026-06-26, waveN2-p3): BitNet accel behind the bitnet-accel feature + runtime
       BitnetCapability::detect(); absent => EXPLICIT recorded graceful degradation (AccelOutcome/DegradeReason,
       EXPLAIN-able, never a silent slow path, G2). Differential RAN both branches: accel == reference.
@@ -5589,11 +5645,19 @@ issues:
   - id: M-859
     title: "mycelium-bench: single + multicore scaling curves + regression gates"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:verification, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:verification, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [E15-1]
+    landed_pr: 845
+    landed_date: 2026-07-01
+    landed_basis: "Merge PR #845 (da8b27d) — mycelium-bench extended with scaling.rs: per-backend single-core baselines (spawn/compute separated via is_process_spawn_bound), multicore scaling curves over 1..N workers via the Scheduler, regression gates vs a committed baseline JSON, and a scaling-efficiency column in the report. commit 31b4ef2 reconciled the scaling call site with M-861's Scheduler::run_indexed. Supersedes the FOLLOW-UP note below, which recorded a stale-assertion fix (PR #849) and explicitly deferred M-859's own status currency to this resync."
     doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
     body: |
+      DONE (2026-07-01 resync): PR #845 landed the scaling curves, regression-gate machinery, and
+      baseline JSON this issue's DoD requires. The prior FOLLOW-UP note (PR #849) below was a
+      correctness fix to an unrelated stale bench assertion, not this issue's own scaling work;
+      that note's "M-859's own status is unchanged" caveat is now superseded by the PR #845 landing.
+
       Extend mycelium-bench (new scaling.rs + verdict.rs/report.rs): per-backend single-core baselines
       (reuse is_process_spawn_bound to separate spawn from compute), multicore scaling curves (a batch
       of independent programs across 1..N workers via the Scheduler -- measurement only, no semantic
@@ -5639,11 +5703,18 @@ issues:
   - id: M-861
     title: "Scheduler multicore work-stealing (RT2-preserving, RT3-reified steal policy)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:runtime, priority:P1, status:ready]
+    labels: [phase:6, type:feature, area:runtime, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-859]
+    landed_pr: 843
+    landed_date: 2026-07-01
+    landed_basis: "Merge PR #843 (a236f25) — scheduler.rs replaced the single shared FIFO VecDeque with per-worker deques + steal-on-empty (crates/mycelium-std-runtime/src/scheduler.rs); the RT2 differential (parallel run == spawn-order sequential reference) extended under stealing; the steal policy (LIFO-own/FIFO-steal) is EXPLAIN-able (RT3), completion-order/worker-identity stay unobservable."
     doc_refs: [corpus:ADR-034, corpus:RFC-0008, corpus:DN-25]
     body: |
+      DONE (2026-07-01 resync): PR #843 landed the per-worker-deque work-stealing scheduler this
+      issue's DoD requires, with the RT2 differential extended under stealing and the steal policy
+      reified per RT3.
+
       Replace the single shared FIFO VecDeque (scheduler.rs) with per-worker deques + steal-on-empty.
       RFC-0008 RT1/RT2: tasks share no mutable state, so the observable result is order-independent --
       the existing SCHEDULER_RT2_STRENGTH=Empirical differential ("parallel run == spawn-order
@@ -6353,9 +6424,11 @@ issues:
   - id: M-752
     title: "M-752 -- enablement conformance: each prim/repr differential-tested + .myc smoke ports"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core, priority:P1, status:in-progress]
+    labels: [phase:5, type:verification, area:core, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-747, M-748, M-749, M-750]
+    landed_date: 2026-07-01
+    landed_basis: "Body's own 2026-06-30 kickoff-kpr verification record (below): every DoD clause is satisfied by landed work (enablement.rs/std_cmp.rs/std_math.rs/std_collections.rs/std_bytes_slice.rs/std_text.rs/std_generic_conformance.rs re-run green on origin/dev), with the tracking flip explicitly deferred to the integration tier -- this resync performs that deferred flip on the evidence already recorded in the issue."
     doc_refs:
       - corpus:RFC-0032
       - corpus:RFC-0031
@@ -6367,6 +6440,10 @@ issues:
       - src:crates/mycelium-l1/tests/std_bytes_slice.rs
       - src:crates/mycelium-l1/tests/std_text.rs
     body: |
+      DONE (2026-07-01, integration close-out): the tracking flip this body's kickoff-kpr entry
+      deferred to the integration tier is applied here, on the verification evidence already
+      recorded below (no new work performed).
+
       DoD MET — VERIFIED COMPLETE (2026-06-30, kickoff kpr): every M-752 DoD clause is satisfied by
       landed work; the only remaining step is the tracking flip (status in-progress → done), which the
       INTEGRATION TIER owns (flagged below, not self-flipped). This entry records the verification, not
@@ -6634,6 +6711,8 @@ issues:
       PackedTernary (>=40 trits/u64) as the perf path, differentially proven bit-exact against BigTernary
       over a fuzz corpus. Do not build until a profile justifies it (NFR / YAGNI).
 
+      POST-1.0 (not an ADR-022 T1–T9 gate row; parked) (2026-07-01 resync).
+
   - id: M-759
     title: "M-759 -- (P2) ternary multiplication fast path (Karatsuba/Toom) proven vs schoolbook"
     milestone: "Phase 5 — Self-Hosting & Core Library"
@@ -6647,12 +6726,16 @@ issues:
       (was VM-015) YAGNI follow-on, GATE ON A BENCH. Karatsuba/Toom multiplication proven equivalent to
       the schoolbook BigTernary::mul over a fuzz corpus. Do not build until a profile justifies it.
 
+      POST-1.0 (not an ADR-022 T1–T9 gate row; parked) (2026-07-01 resync).
+
   # ---------------- E21-1: Tunable Certification & Transparency Modes (RFC-0034 / ADR-032) ----------------
   - id: E21-1
     title: "E21-1 (epic) -- Tunable Certification & Transparency Modes (RFC-0034 / ADR-032 implementation)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:core, priority:P1, status:proposed]
+    labels: [phase:5, type:epic, area:core, priority:P1, status:done]
     epic: E21
+    landed_date: 2026-07-01
+    landed_basis: "All 11 children done: M-786, M-787, M-788, M-789, M-790, M-791, M-792, M-793, M-794, M-795, M-796 (each carries its own landed_pr/landed_basis in this manifest). RFC-0034 -> 'Enacted -- with code (Rust-first)' (docs/rfcs/RFC-0034-Tunable-Certification-and-Transparency-Modes.md, 2026-06-24, maintainer-ratified) once the §13 conformance suite (M-794) landed green -- the epic's own acceptance criterion."
     doc_refs:
       - corpus:RFC-0034
       - corpus:ADR-032
@@ -6724,6 +6807,10 @@ issues:
       - just check green; CHANGELOG append-only; docs/api-index regenerated for the new public surface.
       - No content-hash perturbation by the mode (ADR-003 property test); `fast` never carries
         Empirical/Proven (VR-5 property test).
+
+      DONE (2026-07-01 resync): all 11 children (M-786..796) landed done; RFC-0034 advanced to
+      "Enacted -- with code (Rust-first)" (2026-06-24) once M-794's §13 conformance suite landed
+      green, meeting this epic's own Definition of Done.
 
   - id: M-786
     title: "M-786 -- CertMode + never-silent mode tag in Meta (RFC-0034 §3.1)"
@@ -7157,14 +7244,21 @@ issues:
   - id: M-798
     title: "M-798 -- width-cast/zero-extension kernel prim (bit.width_cast) [DN-41]"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:in-progress]
+    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-750]
+    landed_date: 2026-07-01
+    landed_basis: "Commit f9f6c5b (waveN2, 2026-06-26); CHANGELOG.md '### Added (2026-06-26: waveN2 Phase-1 — stdlib enablers, width-cast prim, MLIR carry-chain, design notes (E13-1/E19-1/E15-1))' — bit.width_cast landed in crates/mycelium-interp/src/prims.rs, surfaced + width-checked in mycelium-l1; 12 three-way differential tests incl. narrow-overflow refusal on all three paths. DN-41 is Accepted (docs/notes/DN-41-Width-Cast-Prim.md, ratified by the maintainer 2026-06-26) -- the body's own '(DN-41 Proposed -- maintainer ratifies -> Accepted)' framing predates the ratification; label was stale."
     doc_refs:
       - corpus:RFC-0032
       - src:crates/mycelium-interp/src/prims.rs
       - src:crates/mycelium-l1/tests/std_widthcast.rs
     body: |
+      DONE (2026-07-01 resync): status label was stale (`in-progress`); DN-41 has since been
+      ratified Accepted (2026-06-26) and the implementation below satisfies this issue's DoD
+      (widen Exact, narrow never-silent Overflow, three-way differential green). Flipped on that
+      evidence.
+
       IMPLEMENTED Rust-first (2026-06-26, waveN2-p1; DN-41 Proposed -- maintainer ratifies -> Accepted).
       The never-silent Binary width-cast prim wave-n1 flagged as missing: re-width an unsigned Binary{N} ->
       Binary{M}. Widen (M>N) = zero-extension, Exact (ADR-028 sign-free); identity Exact; narrow (M<N) = keep
@@ -7940,13 +8034,21 @@ issues:
   - id: M-840
     title: "M-840 -- Inoculated mode gates the interpreter-fallback path too"
     milestone: "Phase 4 — Interpreted↔Compiled ABI, Hot-Inject & AOT-Fragment Completion"
-    labels: [phase:4, type:design, area:execution, priority:P2, status:needs-design]
+    labels: [phase:4, type:design, area:execution, priority:P2, status:done]
     depends_on: [M-841]
+    landed_date: 2026-07-01
+    landed_basis: "RFC-0038-Inject-Mode-Security-Axis.md §5.3 'Interpreter fallback rationale (OQ-O)' + §8.7 'Interpreted path and colony posture' -- RFC-0038 is Accepted (2026-06-29, maintainer-approved). This issue's DoD is design-only (RFC specifies cert-required for the interpreted path in inoculated + threat-model rationale, G2) and is met verbatim by §5.3/§8.7: 'inoculated enforces uniformly -- the gate is about who authorized this code, not about which execution path it takes'. Tags stay Declared per RFC-0038's own strength (the runtime mechanism is unenacted; this issue's DoD was never a code-landing DoD)."
     doc_refs:
       - corpus:RFC-0038
       - corpus:ADR-017
       - corpus:DN-64
     body: |
+      DONE (2026-07-01 resync): this issue's DoD ("RFC-0038 §O specifies cert-required for the
+      interpreted path in inoculated; threat-model rationale stated honestly") is a design-only DoD,
+      and RFC-0038 §5.3 + §8.7 (both Accepted, 2026-06-29) satisfy it verbatim -- see landed_basis.
+      Flipped on that evidence; no code-landing claim is made here (RFC-0038's runtime mechanism
+      stays unenacted/Declared per the RFC's own honest status).
+
       DN-64 OQ-O disposition: "in sealed [inoculated], yes. sealed is secured and strictly enforced
       production tier mode." Interpreted definitions also require a cert in inoculated mode.
       As a colony operator, I want inoculated mode to gate the interpreter-fallback path uniformly, so that
