@@ -28,7 +28,7 @@ mycelium/
 │   ├── api-index/   ← the committed, generated agent code index (INDEX.md / index.json)
 │   ├── wiki/        ← source for the published GitHub wiki
 │   └── devlog/      ← append-only development log
-├── research/                 ← the evidence base (records 01 … 13)
+├── research/                 ← the evidence base (records 01 … 27)
 ├── examples/                 ← worked `.myc` programs (hello-phylum, repr-tour)
 ├── lib/                      ← self-hosted Mycelium-lang stdlib (`.myc`; std.result — M-649/RFC-0024)
 ├── experiments/               ← uv-managed Python experiments (the KC-2 LLM-leverage harness)

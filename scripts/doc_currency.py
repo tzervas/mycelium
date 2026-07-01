@@ -5,8 +5,9 @@ Catches *staleness* the link/quality-bar checks do not: the navigational docs
 drifting out of agreement with the repository they describe. Three assertions,
 each cheap, deterministic, and skip-free:
 
-1. **Structure currency** — the README "Repository structure" tree lists every
-   significant top-level entry, and names nothing that does not exist on disk.
+1. **Structure currency** — the "Repository structure" tree (in
+   docs/guide/repository-structure.md, or the root README as a fallback) lists
+   every significant top-level entry, and names nothing that does not exist on disk.
 2. **Index coverage** — every RFC / ADR / DN decision doc is referenced by id in
    `docs/Doc-Index.md` (a new RFC that never got indexed is the failure mode).
 3. **Cited-count currency** — an opt-in `<!-- doc-currency:crate-count -->` marker
@@ -47,6 +48,10 @@ KEY_FILES = {
 
 README = REPO_ROOT / "README.md"
 DOC_INDEX = REPO_ROOT / "docs" / "Doc-Index.md"
+# The repository-structure tree was decomposed out of the root README into a
+# dedicated guide doc; the currency check follows it there (falls back to README
+# if the guide is absent). The crate-count marker still lives in the README.
+STRUCTURE_DOC = REPO_ROOT / "docs" / "guide" / "repository-structure.md"
 
 
 def fail(msg: str) -> None:
@@ -67,7 +72,7 @@ def required_toplevel() -> set[str]:
 def readme_structure_block(text: str) -> str | None:
     """Extract the fenced code block that follows the 'Repository structure'
     heading — the tree the structure check parses."""
-    m = re.search(r"##+\s*Repository structure", text)
+    m = re.search(r"#+\s*Repository structure", text)
     if not m:
         return None
     rest = text[m.end() :]
@@ -87,14 +92,16 @@ def first_level_entries(block: str) -> set[str]:
 
 
 def check_structure(errors: list[str]) -> None:
-    if not README.exists():
-        errors.append("README.md not found")
+    doc = STRUCTURE_DOC if STRUCTURE_DOC.exists() else README
+    if not doc.exists():
+        errors.append("no repository-structure doc found (guide or README.md)")
         return
-    text = README.read_text(encoding="utf-8")
+    rel = doc.relative_to(REPO_ROOT)
+    text = doc.read_text(encoding="utf-8")
     block = readme_structure_block(text)
     if block is None:
         errors.append(
-            "README.md has no fenced tree under a 'Repository structure' heading"
+            f"{rel} has no fenced tree under a 'Repository structure' heading"
         )
         return
     listed = first_level_entries(block)
@@ -103,14 +110,14 @@ def check_structure(errors: list[str]) -> None:
     missing = sorted(r for r in required if r.rstrip("/") not in listed)
     for name in missing:
         errors.append(
-            f"README 'Repository structure' omits top-level entry: {name!r} "
+            f"{rel} 'Repository structure' omits top-level entry: {name!r} "
             "(present on disk — add it to the tree)"
         )
 
     for name in sorted(listed):
         if not (REPO_ROOT / name).exists():
             errors.append(
-                f"README 'Repository structure' lists {name!r}, which does not "
+                f"{rel} 'Repository structure' lists {name!r}, which does not "
                 "exist at the repo root (phantom entry — remove or fix it)"
             )
 
