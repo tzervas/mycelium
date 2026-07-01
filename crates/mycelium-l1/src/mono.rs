@@ -176,7 +176,7 @@ pub fn monomorphize_with_selections(
     }
     let mut m = Mono::new(env);
     m.run(entry)?;
-    Ok(m.finish())
+    m.finish()
 }
 
 /// Is `env` already fully monomorphic, trait-free, **and** HOF-free? Then mono is the identity
@@ -526,11 +526,20 @@ impl<'e> Mono<'e> {
     /// Consume the driver into the closed monomorphic [`Env`] plus its [`MonoSelections`] EXPLAIN
     /// record: the emitted fns/types, recomputed totality, and **empty** trait/instance/impl
     /// registries (no generics/traits remain).
-    fn finish(self) -> (Env, MonoSelections) {
+    ///
+    /// # Errors
+    /// [`ElabError::Residual`] if the totality pass's own AST-traversal recursion exceeds its
+    /// explicit depth budget ([`crate::totality::MAX_WALK_DEPTH`]; M-674) on a pathologically-nested
+    /// specialized body — a clean, explicit refusal rather than a host-stack overflow.
+    fn finish(self) -> Result<(Env, MonoSelections), ElabError> {
         // Recompute totality over the specialized fn set (a specialization's verdict equals its
         // source's; the SCC/descent machinery is structural — totality.rs). The matured gate and the
         // elaborator's SCC pass then read verdicts by the *mangled* names. Never fabricated (VR-5).
-        let totality = crate::totality::classify_all(&self.out_fns);
+        let totality =
+            crate::totality::classify_all(&self.out_fns).map_err(|e| ElabError::Residual {
+                site: "<monomorphization>".to_owned(),
+                what: format!("totality re-classification over the specialized fn set: {e}"),
+            })?;
         let env = Env {
             types: self.out_types,
             fns: self.out_fns,
@@ -542,14 +551,14 @@ impl<'e> Mono<'e> {
             // registry is a pre-mono artefact — rules are expanded before/at elaborate time).
             lower_rules: BTreeMap::new(),
         };
-        (
+        Ok((
             env,
             MonoSelections {
                 by_mangled: self.selections,
                 hof_specs: self.hof_specs,
                 closure_specs: self.closure_specs,
             },
-        )
+        ))
     }
 
     /// Specialize source function `name` at concrete `targs` (and optionally with baked-in
