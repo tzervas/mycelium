@@ -54,6 +54,14 @@
 //! (via `std.swap`) before comparison — this module does not cross `Repr` paradigms. The lossless
 //! `BF16 → F32` widening here emits no certificate because it is not a paradigm crossing; all
 //! other narrowing conversions are explicit fallible ops.
+//!
+//! # Stability (DN-66 freeze, 2026-07-01)
+//!
+//! This crate's public API, as documented in `docs/spec/stdlib/cmp.md` (spec status:
+//! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+//! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//! It remains the RFC-0031 D6 differential-oracle reference; the same-named `lib/std/cmp.myc` prototype is a narrower, structurally distinct surface (DN-66 S3.1) — the D6 retirement trigger has not fired, so no item here is `#[deprecated]`.
 #![forbid(unsafe_code)]
 
 use mycelium_core::GuaranteeStrength;

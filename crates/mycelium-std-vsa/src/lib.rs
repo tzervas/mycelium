@@ -40,6 +40,14 @@
 //! never inferred. There is no implicit fallback to dense storage — a model/dim mismatch is an
 //! explicit `Err`, never a silent coercion. The `ResonatorTrace` makes the approximation path
 //! inspectable (C3/G11).
+//!
+//! # Stability (DN-66 freeze, 2026-07-01)
+//!
+//! This crate's public API, as documented in `docs/spec/stdlib/vsa.md` (spec status:
+//! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+//! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//! It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
 
 #![forbid(unsafe_code)]
 

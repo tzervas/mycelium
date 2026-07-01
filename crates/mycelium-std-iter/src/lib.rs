@@ -81,6 +81,14 @@
 //! produces `Binary{32}` values (or whatever the mapping function returns); no representation
 //! is coerced by the combinator itself. Cross-representation element transformation requires an
 //! explicit swap in the mapping function.
+//!
+//! # Stability (DN-66 freeze, 2026-07-01)
+//!
+//! This crate's public API, as documented in `docs/spec/stdlib/iter.md` (spec status:
+//! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
+//! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
+//! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
+//! It remains the RFC-0031 D6 differential-oracle reference; the same-named `lib/std/iter.myc` prototype is a narrower, structurally distinct surface (DN-66 S3.1) — the D6 retirement trigger has not fired, so no item here is `#[deprecated]`.
 #![forbid(unsafe_code)]
 
 pub mod error;
