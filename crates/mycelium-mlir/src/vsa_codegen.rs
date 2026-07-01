@@ -1205,6 +1205,35 @@ impl VsaArtifact {
         }
     }
 
+    /// Build an artifact around an **already-compiled** executable — the MLIR-dialect sibling emitter
+    /// (`dialect::native::vsa`, M-856b) compiles through its own pipeline (`mlir-opt` / `mlir-translate`
+    /// / `clang`, not `llc`/`clang`), then reuses this constructor so [`Self::run`]'s read-back/
+    /// reconstruct logic runs **verbatim** for both compiled paths — the two can never silently diverge
+    /// on how a result `Value` is stamped (DRY; VR-5). `pub(crate)`, and gated to the `mlir-dialect`
+    /// feature — its only caller — so a default (feature-off) build carries no dead-code warning for
+    /// a constructor that exists solely for that path.
+    #[cfg(feature = "mlir-dialect")]
+    #[allow(clippy::too_many_arguments)] // mirrors the read-back shape exactly; no natural grouping
+    pub(crate) fn from_binary(
+        dir: TmpDir,
+        bin: std::path::PathBuf,
+        op: VsaCgOp,
+        model: VsaModelId,
+        dim: u32,
+        bundle_delta: Option<f64>,
+        item_count: u64,
+    ) -> Self {
+        VsaArtifact {
+            _dir: dir,
+            bin,
+            op,
+            model,
+            dim,
+            bundle_delta,
+            item_count,
+        }
+    }
+
     /// White-box constructor for the **toolchain-independent read-back tests** (M-854 mutant-witness).
     /// The read-back metadata methods (`result_bound` / `result_meta` / `reconstruct_value`) read only
     /// the *shape* fields (`op`, `model`, `dim`, `bundle_delta`, `item_count`) — never `bin`/`_dir` —

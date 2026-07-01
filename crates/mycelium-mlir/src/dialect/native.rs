@@ -107,6 +107,13 @@ use mycelium_core::{Node, Payload, Repr, Trit, Value};
 
 use crate::llvm::{decode_result, LaneKind, OVERFLOW_SENTINEL};
 
+/// The dialect-native sibling of [`crate::dense_codegen`] (M-856b) — lowers `DenseProgram` (the
+/// element-wise Dense fragment) to `arith`/`func`/`math`/`llvm` MLIR instead of direct LLVM IR text.
+pub mod dense;
+/// The dialect-native sibling of [`crate::vsa_codegen`] (M-856b) — lowers `VsaProgram` (the
+/// MAP-I/BSC/HRR/FHRR real-`Vec<f64>` fragment) to `arith`/`func`/`math`/`llvm` MLIR.
+pub mod vsa;
+
 /// An explicit failure of the real MLIR-dialect path. Every unsupported construct, missing tool, or
 /// subprocess failure is one of these — the path is **never silent** (G2). Mirrors the contract of
 /// [`crate::llvm::AotError`], specialized to the MLIR pipeline.

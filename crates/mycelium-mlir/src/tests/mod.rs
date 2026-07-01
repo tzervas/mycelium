@@ -13,6 +13,11 @@ mod trampoline;
 // `dialect::native` only compiles under `mlir-dialect`, so its white-box tests are gated to match.
 #[cfg(feature = "mlir-dialect")]
 mod native;
+// `dialect::native::{dense,vsa}` (M-856b) — same feature gate as `native` above.
+#[cfg(feature = "mlir-dialect")]
+mod native_dense;
+#[cfg(feature = "mlir-dialect")]
+mod native_vsa;
 mod passes;
 mod rc_plan_tests;
 mod swap_codegen;
