@@ -2,7 +2,8 @@
 # doc-index — drift gate: committed docs/api-index/ must match a fresh regeneration.
 # Skip-graceful if python3 absent (same pattern as other tool-gated checks).
 set -euo pipefail
-. "$(dirname "$0")/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 
 section "doc-index"

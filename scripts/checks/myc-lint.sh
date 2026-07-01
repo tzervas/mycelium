@@ -6,7 +6,8 @@
 # doc-quality lint stays dormant until the M-363 doc build (Wave B) — so this gate is purely a
 # read-only check here. Skips gracefully when cargo is absent or there is no project. Scope
 # excludes tests/fixtures/ (intentionally-bad must-fail inputs; locked decision #3).
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "myc-lint (invariant + header lints — myc-lint)"
 

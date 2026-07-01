@@ -20,7 +20,8 @@
 # drop in narrative `@io` context to TEACH the FFI boundary, and are never compiled/published. Neither
 # tree is shippable FFI-floor code, so neither is in scope for the spore-level §4.7 floor. The entire
 # workspace `unsafe` surface is confined to `crates/mycelium-mlir/src/jit.rs` (DN-21 §6).
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 
 status=0

@@ -7,7 +7,8 @@
 # dropped — while myc-sec reports FULL coverage of the family it owns (skip != pass; G2/VR-5).
 # Skips gracefully when cargo is absent or there is no project. Scope excludes tests/fixtures/
 # (intentionally-bad must-fail inputs; locked decision #3).
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "myc-sec (wild-block audit — myc-sec)"
 

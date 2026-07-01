@@ -23,7 +23,8 @@
 # Honesty (house rule 1 / VR-5): no property/bound test is ever dropped — only its CASE COUNT is
 # tiered (low every commit via PROPTEST_CASES, full on release). Every bound is exercised on every
 # commit at low cases; the full statistical power runs in the `full` tier. (DN-20 honesty guardrail.)
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 
 TIER="${MYC_TEST_TIER:-check}"

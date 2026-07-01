@@ -30,7 +30,8 @@
 # of `just check`; set MYCELIUM_SKIP_OPTIONAL_CARGO=1 to skip them and stay well under budget. The
 # security gates (cargo-deny/cargo-audit, used by `just deny`) and everything else still install.
 # ─────────────────────────────────────────────────────────────────────────────────────────────
-source "${BASH_SOURCE%/*}/lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib.sh"
 cd "$REPO_ROOT" || exit 1
 
 # Ensure uv's tool-bin and cargo's bin are on PATH for this run (a fresh container may not have
@@ -127,6 +128,33 @@ if have apt-get; then
 else
   skip "no apt-get — the uv/cargo/npx installers below handle every tool"
 fi
+
+# ── LLVM unversioned-binary floor (defense in depth — M-848/E25) ──────────────────────────────────
+# `crates/mycelium-mlir/src/llvm.rs::ensure_toolchain()` invokes the LITERAL names `llc`/`clang` (no
+# version probing in the Rust kernel — by design, see ADR-034), so the always-on direct-LLVM AOT path
+# needs an UNVERSIONED `llc`/`clang` on PATH. On the Debian/Ubuntu `llvm`/`clang` meta-packages this is
+# automatic (verified: `llvm-defaults` depends on `llvm-<N>` and itself provides the unversioned
+# `/usr/bin/llc`). This step is a never-silent SAFETY NET for the rarer case — a distro/container where
+# only version-suffixed binaries (`llc-NN`/`clang-NN`, e.g. from apt.llvm.org) are present without the
+# unversioned meta-package — so the AOT path still resolves rather than failing at compile-time with
+# ToolchainMissing. Idempotent: a no-op when an unversioned `llc`/`clang` already resolves.
+section "LLVM unversioned-binary floor (llc/clang)"
+for tool in llc clang; do
+  if have "$tool"; then
+    ok "$tool present (unversioned): $(command -v "$tool")"
+    continue
+  fi
+  # Probe version-suffixed siblings (highest major first) and symlink the newest into a PATH dir.
+  versioned="$(compgen -c "${tool}-" 2>/dev/null | grep -E "^${tool}-[0-9]+$" | sort -t- -k2 -n -r | head -n1 || true)"
+  if [[ -n "$versioned" ]]; then
+    target="$HOME/.local/bin/$tool"
+    mkdir -p "$HOME/.local/bin"
+    ln -sf "$(command -v "$versioned")" "$target"
+    ok "$tool: no unversioned binary, found $versioned — symlinked $target -> $(command -v "$versioned")"
+  else
+    skip "$tool: no unversioned or version-suffixed binary found — the AOT path (crates/mycelium-mlir) will report ToolchainMissing until llc/clang are installed"
+  fi
+done
 
 section "bootstrap gating tools (just / pre-commit / yamllint)"
 # These are the tools the local↔CI check spine assumes exist (`just check` routes through them).

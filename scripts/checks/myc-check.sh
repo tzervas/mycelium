@@ -5,7 +5,8 @@
 # name-visibility — cross-phylum depth is the M-365 deferral, not yet exercised here.
 # Skips gracefully when cargo is absent or there is no project. Scope excludes tests/fixtures/
 # (intentionally-bad must-fail inputs; locked decision #3).
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "myc-check (parse + L1 type-check — myc-check)"
 
