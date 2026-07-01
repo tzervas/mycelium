@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-66 |
-| **Status** | **Draft** (2026-07-01 — authored by the M-719 leaf, W1-719 session; advisory input to the maintainer's append-only ratification/retirement call, DN-07 posture. Not self-ratified to Accepted by this note.) |
+| **Status** | **Accepted** (2026-07-01 — maintainer-ratified via **ADR-035**, which cites this note's §2 freeze + §3 D6 assessment as its grounding evidence and narrows ADR-022 track T4's `lang 1.0.0` Definition of Done accordingly. Was **Draft** (2026-07-01, authored by the M-719 leaf, W1-719 session).) |
 | **Decides** | *Nothing normatively.* Freezes the **current** stable public-API baseline for all 26 `mycelium-std-*` crates as a dated snapshot, and assesses — with grounded evidence — whether any crate has cleared the RFC-0031 §5 **D6** Rust-crate-retirement trigger. It does **not** rename, remove, or move any spec's status (append-only, house rule #3); it does not apply any `#[deprecated]` attribute (see §3 for why). |
 | **Feeds** | M-719 (the issue this closes the "broader closure" clause of, in part); RFC-0031 §5 D5/D6; ADR-023 (stability/deprecation mechanism); DN-16 (the prior per-spec ratification-readiness survey, which this note updates the crate-inventory count for); DN-07 (ratification posture). |
 | **Depends on** | RFC-0031 (Accepted, 2026-06-23) — D5 stability bar, D6 retirement mechanism; ADR-023 (Accepted, 2026-06-23) — the `#[deprecated(note = "…")]` mechanism and release-based removal policy; RFC-0016 (Enacted) — the per-crate spec corpus. |
@@ -189,9 +189,10 @@ declines to introduce. **No crate is marked `#[deprecated]` by this note.**
       in-tree; see the leaf's report for the exact diff).
 - [x] No `#[deprecated]` is applied where the evidence does not support it (VR-5) — the FLAG list
       (§4.a–e) states precisely what remains and why it is out of this leaf's safe scope.
-- [ ] Maintainer ratification of this note's status (`Draft` → `Accepted`) — not this leaf's call.
-- [ ] `docs/Doc-Index.md` / `issues.yaml` / `CHANGELOG.md` registration — orchestrator-owned,
-      deferred (§4.e).
+- [x] Maintainer ratification of this note's status (`Draft` → `Accepted`) — **met 2026-07-01** via
+      **ADR-035**, which cites this note's §2/§3 as its grounding evidence.
+- [x] `docs/Doc-Index.md` / `issues.yaml` / `CHANGELOG.md` registration — **met 2026-07-01**, applied
+      alongside ADR-035's ratification (this note's own §4.e deferral is closed by that act).
 
 ## 6. Grounding / honesty
 
@@ -210,6 +211,14 @@ declines to introduce. **No crate is marked `#[deprecated]` by this note.**
 
 ## Changelog
 
+- **2026-07-01 — Accepted (maintainer ratification via ADR-035).** This note's §2 freeze +
+  §3 D6 assessment is adopted as the grounding evidence for **ADR-035**, which narrows ADR-022
+  track T4's `lang 1.0.0` Definition of Done to the stable-API freeze + the core-lib self-host
+  slice (M-714…M-718), deferring full D6 Rust-crate retirement to the post-1.0 long-term arc
+  (ADR-022 §10). Status moves forward `Draft → Accepted` (house rule #3); the §2/§3 findings and
+  the §4 FLAG list are **unchanged** by this transition — the ratification adopts them, it does
+  not revise them. `docs/Doc-Index.md`/`issues.yaml`/`CHANGELOG.md` registration (§4.e) is closed
+  by the same act. See ADR-035.
 - **2026-07-01 — Draft (M-719 leaf, W1-719 session).** Initial freeze + D6 assessment. Tabulates
   all 26 `mycelium-std-*` crates' spec status, guarantee-matrix location, and public-surface size;
   grounds the finding that no crate's `.myc` port clears the D5/D6 whole-module bar (six crates
