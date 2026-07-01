@@ -3643,6 +3643,7 @@ issues:
       - corpus:DN-26
       - corpus:DN-14
       - corpus:DN-25
+      - corpus:ADR-035
     body: |
       The capstone criterion of full-language 1.0.0 (ADR-022, forthcoming; DN-25): everything
       beyond the bare Rust mycelium-core kernel is written in Mycelium (.myc files) and the
@@ -3691,6 +3692,15 @@ issues:
       Children: M-739 (self-hosting bootstrap plan + staged port order), M-740 (port L1
       frontend to .myc with differential), M-741 (ratify self-hosted toolchain as canonical),
       M-742 (self-hosting CI gate: bootstrap + three-way differential + mutant-witnessed).
+
+      NOTE (2026-07-01, ADR-035): the "core stdlib/corelib self-host slice" this epic's DoD shares
+      with E13-1/T4 (ADR-022 §8 Q1) is now clarified + satisfied on the ADR-035-narrowed T4 bar
+      (DN-66 stable-API freeze + M-714...M-718, all done) -- E13-1 itself closes for 1.0.0 purposes
+      under that narrowing. This epic's OWN remaining children (M-739...M-742, the compiler/
+      toolchain self-host) are UNAFFECTED and stay open (status:needs-design) -- they are the
+      long-term-arc capstone work ADR-022 §8 Q1 already scopes past 1.0.0, not a 1.0.0 blocker.
+      No status flip here; this is a clarifying cross-reference only (VR-5: not claiming this
+      epic done when its own children are not).
 
   - id: M-739
     title: "M-739 — Self-hosting bootstrap plan (DN-26) + staged port order"
@@ -4369,13 +4379,17 @@ issues:
   - id: E13-1
     title: "E13-1 (epic) -- Standard library in Mycelium (self-hosted stdlib + core libs)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:stdlib, priority:P1, status:in-progress]
+    labels: [phase:5, type:epic, area:stdlib, priority:P1, status:done]
     depends_on: [E11-1]
     epic: E13
+    landed_date: 2026-07-01
+    landed_basis: "ADR-035 (maintainer-ratified) narrows this epic's lang 1.0.0 Definition of Done to the stable-API freeze (DN-66) + the core-lib self-host slice -- all named children (M-714/M-715/M-716/M-717/M-718/M-719) are now done under that narrowed scope. Full RFC-0031 D6 Rust-crate retirement (all 26 mycelium-std-* crates) continues post-1.0 as M-867, off the lang 1.0.0 critical path."
     doc_refs:
       - corpus:RFC-0031
       - corpus:RFC-0016
       - corpus:DN-25
+      - corpus:DN-66
+      - corpus:ADR-035
     body: |
       THE defining full-language-1.0.0 criterion: the stdlib and libraries beyond the bare Rust
       core are written fully in Mycelium (.myc), stable, and fully usable. Today only
@@ -4439,6 +4453,14 @@ issues:
       - M-719 -- stdlib conformance + stability: every std module has differential tests + a
         stable documented API; the Rust std-* crates beyond the bare core are superseded by
         .myc. [type:verification]
+
+      DONE (2026-07-01, ADR-035 ratification act): the maintainer narrowed this epic's lang 1.0.0
+      Definition of Done (ADR-022 T4) to the documented stable-API freeze (DN-66) + the core-lib
+      self-host slice (M-714...M-718) -- NOT full RFC-0031 D6 retirement of every mycelium-std-*
+      Rust crate, which is real, tracked work but is deferred to the post-1.0 long-term arc
+      (ADR-022 §10; see ADR-035). All named children are done under the narrowed bar, so this epic
+      closes for its 1.0.0 scope. The full-retirement ambition continues as **M-867** (post-1.0
+      backlog, status:todo), not as an open item of this epic.
 
   - id: M-714
     title: "stdlib composition + phylum layout (RFC-0031)"
@@ -4819,13 +4841,16 @@ issues:
   - id: M-719
     title: "stdlib conformance + stability: differential tests + stable documented API"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:stdlib, priority:P1, status:in-progress]
+    labels: [phase:5, type:verification, area:stdlib, priority:P1, status:done]
     epic: E13-1
+    landed_date: 2026-07-01
+    landed_basis: "ADR-035 (maintainer-ratified, 2026-07-01) narrows ADR-022 track T4's lang 1.0.0 bar to the stable-API freeze (DN-66) + the core-lib self-host slice (M-714...M-718) -- NOT full RFC-0031 D6 Rust-crate retirement. M-719's stable-API-freeze half (DN-66, landed 2026-07-01 W1-719 leaf) now closes this issue's 1.0.0 scope. The D6-retirement half (deprecate/retire all 26 mycelium-std-* crates) is re-scoped post-1.0 per ADR-035 and spun out to M-867 (status:todo)."
     doc_refs:
       - corpus:RFC-0031
       - corpus:RFC-0016
       - corpus:DN-25
       - corpus:DN-66
+      - corpus:ADR-035
       - src:crates/mycelium-l1/tests/std_generic_conformance.rs
     body: |
       PARTIAL (2026-06-30, lib10 Session): per-op conformance gap-closure landed (branch
@@ -4917,9 +4942,20 @@ issues:
       `mycelium-std-runtime` is load-bearing (depended on directly by `crates/mycelium-mlir`), not
       reference-only, and needs cross-crate coordination before any retirement conversation; (d)
       final crate removal waits for RFC-0031 to reach Enacted plus an explicit maintainer act, even
-      once D5/D6 are cleared. **Status stays in-progress** — the freeze half is closed, the
-      retirement half is not; this is a partial closure of the "broader closure" clause, not a full
-      M-719 close-out.
+      once D5/D6 are cleared.
+
+      DONE (2026-07-01, ADR-035 ratification act): the maintainer narrowed ADR-022 track T4's
+      lang 1.0.0 Definition of Done to the stable-API freeze (DN-66) + the core-lib self-host slice
+      (M-714...M-718) -- full RFC-0031 D6 Rust-crate retirement is deferred to the post-1.0
+      long-term arc (ADR-022 §10; see ADR-035). Under this narrowed scope, M-719's stable-API-freeze
+      half (already landed, above) IS the whole of M-719's 1.0.0 requirement, so this issue is CLOSED
+      (status -> done) for 1.0.0 purposes. The D6-retirement half (per-op D5 audits + `#[deprecated]`
+      marking for the 21 crates with no `.myc` prototype, plus completing the 5 disjoint prototypes
+      into true supersets, plus the `mycelium-std-runtime` cross-crate-coordination retirement) is
+      real, tracked work that continues -- it is spun out to **M-867** (new issue, `status:todo`,
+      explicitly post-1.0, off the `lang 1.0.0` critical path). Nothing about the DN-66 findings
+      changes; only the 1.0.0-gating scope narrows (VR-5: this is a status report on a checked basis,
+      not an upgrade of any prior claim).
 
   - id: E15-1
     title: "E15-1 (epic) -- Native AOT maturity, optimization, and acceleration"
@@ -6060,6 +6096,59 @@ issues:
         the just-under/past-budget pattern `totality.rs`/`ambient.rs` already use).
       - just check green; honest tag (Empirical — measured headroom, not merely asserted, per VR-5).
 
+  - id: M-867
+    title: "(post-1.0) Full RFC-0031 D6 stdlib self-hosting: per-op .myc ports + Rust-crate retirement for all mycelium-std-* crates"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P3, status:todo]
+    depends_on: [M-719]
+    epic: E13-1
+    doc_refs:
+      - corpus:RFC-0031
+      - corpus:DN-66
+      - corpus:ADR-035
+      - src:crates/mycelium-std-runtime/src/lib.rs
+    body: |
+      Minted 2026-07-01 (ADR-035 ratification act), spun out of M-719's "broader closure" clause.
+      ADR-035 narrows ADR-022 track T4's lang 1.0.0 Definition of Done to the stable-API freeze
+      (DN-66) + the core-lib self-host slice (M-714...M-718) -- M-719 closes for 1.0.0 on that
+      narrowed bar. This issue carries the DEFERRED remainder: DN-66 §3 grounds that zero of the 26
+      `mycelium-std-*` crates yet clear the RFC-0031 §5 D5/D6 whole-module bar -- the six same-named
+      `.myc` nodules (`cmp`/`math`/`collections`/`text`/`iter`/`fmt`) are structurally disjoint
+      prototypes (e.g. `math.myc`'s width-indexed bitwise ops share zero op-name or domain overlap
+      with `mycelium-std-math`'s `f64`/`i64` surface), not D5-clearing ports, and the other 20 crates
+      have no `.myc` nodule at all. This is real, tracked, POST-1.0 work (ADR-022 §10 long-term
+      zero-Rust arc) -- explicitly OFF the `lang 1.0.0` critical path per ADR-035.
+
+      User stories:
+      - As a maintainer pursuing the zero-Rust long-term vision, I want a tracked issue for the full
+        stdlib self-hosting effort, so that narrowing the 1.0.0 bar (ADR-035) does not silently drop
+        the ambition -- it is deferred, not abandoned.
+      - As a language user, I want every `mycelium-std-*` crate eventually superseded by a real
+        `.myc` port (not a same-named prototype), so that the stdlib is genuinely self-hosted, not
+        merely frozen-API.
+
+      Issues to resolve:
+      - Per-op D5 audit + a genuine `.myc` port for each of the 20 crates with no existing
+        prototype, and completion of the 6 disjoint prototypes (`cmp`/`math`/`collections`/`text`/
+        `iter`/`fmt`) into true supersets of their Rust crate's exported surface.
+      - `mycelium-std-sys-host` needs a `docs/spec/stdlib/sys-host.md` before any D5 audit (DN-66 §4.a).
+      - `mycelium-std-runtime` is load-bearing (`crates/mycelium-mlir` depends on it directly for
+        RC-plan/refcounting behavior, per its `Cargo.toml`) -- its retirement, if ever, needs
+        cross-crate coordination with `mycelium-mlir`, not a unilateral stdlib-side change.
+      - Final crate removal (vs `#[deprecated]` marking) waits for RFC-0031 to reach Enacted plus an
+        explicit maintainer act (RFC-0031 §5 D6), even once D5 is cleared per crate.
+
+      Definition of Done:
+      - Every one of the 26 `mycelium-std-*` crates has a `.myc` port whose exported-op surface is a
+        true superset of (or equivalent to) the Rust crate's, each op differential-tested three-way
+        (L1-eval == L0-interp == AOT where applicable), honestly tagged, and never-silent (G2) --
+        the RFC-0031 §5 D5 bar cleared per-op, per-module, not asserted.
+      - Each cleared crate's Rust public API is marked `#[deprecated(note = "...")]` per RFC-0031 §5
+        D6, citing the differential-tested `.myc` replacement.
+      - `mycelium-std-runtime`'s retirement path (if any) is coordinated with `mycelium-mlir` and
+        recorded at the ADR/DN level before any change to its status.
+      - just check green; CHANGELOG append-only; RFC-0031 -> Enacted considered once this + D7 close.
+
   - id: E16-1
     title: "E16-1 (epic) — Toolchain, IDE & package distribution"
     milestone: "Phase 8 — Toolchain & Release Engineering"
@@ -6850,7 +6939,7 @@ issues:
   - id: E20-1
     title: "E20-1 (epic) -- Value-Model Collections & Precision (RFC-0033)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:core, priority:P1, status:proposed]
+    labels: [phase:5, type:epic, area:core, priority:P1, status:in-progress]
     epic: E20
     doc_refs:
       - corpus:RFC-0033
@@ -6907,14 +6996,30 @@ issues:
       - just check green; CHANGELOG append-only; honest "implemented (Rust-first), pending ratification"
         framing; OQ-4/OQ-5 stay declared-open.
 
+      DESIGN-HALF DONE (2026-07-01, maintainer ratification act): RFC-0033 flips Proposed -> Accepted;
+      ADR-025/026/027/028 flip Proposed -> Accepted in the same act (ADR-029/030/031 were already
+      Accepted 2026-06-24). This epic's first DoD bullet ("RFC-0033 + ADR-025..031 reach Accepted") is
+      MET; M-785 (the design-gate task) flips to done. **The epic itself stays status:in-progress, NOT
+      done** -- the remaining DoD bullets (V1-V6 content-address rehash M-780, the swap/guarantee
+      reconciliation M-781) are UNMET and are explicitly DEFERRED to a post-1.0 wave (per the
+      maintainer's 2026-07-01 ratification, recorded in RFC-0033's own changelog) -- V0 (M-754..M-757,
+      already done) is the only V-numbered work landing before 1.0.0. No V-task (M-758..M-784) is
+      flipped by this act; this is a status report on the design half only (VR-5: not claiming the
+      impl half done when it is not).
+
   - id: M-785
     title: "M-785 -- author RFC-0033 + ADR-025..031: value-model collections & precision (the E20-1 design gate)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:core, priority:P1, status:in-progress]
+    labels: [phase:5, type:design, area:core, priority:P1, status:done]
     epic: E20-1
+    landed_date: 2026-07-01
+    landed_basis: "Maintainer ratification act (2026-07-01): RFC-0033 flips Proposed -> Accepted; ADR-025/026/027/028 flip Proposed -> Accepted in the same act (ADR-029/030/031 were already Accepted 2026-06-24). This issue's own DoD (docs committed Proposed, maintainer review of the two disagreements before any -> Accepted) is fully met -- the maintainer review + ratification has now happened for all seven decision records. V1-V6 implementation (M-760..M-784) is a separate, deferred (post-1.0) act, not part of this design-gate issue's scope."
     doc_refs:
       - corpus:RFC-0033
       - corpus:ADR-025
+      - corpus:ADR-026
+      - corpus:ADR-027
+      - corpus:ADR-028
       - corpus:ADR-029
       - corpus:ADR-030
       - corpus:ADR-031
@@ -6940,6 +7045,11 @@ issues:
         validate (python3 tools/github/doc_refs_check.py).
       - Maintainer review of the two Grok-disagreements (ADR-030 Dense, ADR-031 VSA) before any -> Accepted.
       - DOCS-ONLY change: no Rust, no docs/api-index regen.
+
+      DONE (2026-07-01, maintainer ratification act): RFC-0033 + ADR-025/026/027/028 flip
+      Proposed -> Accepted (ADR-029/030/031 already Accepted 2026-06-24). Doc-Index/README indices
+      + CHANGELOG updated append-only; doc_refs validated. Docs-only -- no Rust touched, no
+      docs/api-index regen (unaffected by a docs-only status change).
 
   - id: M-754
     title: "M-754 -- reconcile balanced-trit primitives into core::ternary (DRY add_with_carry)"

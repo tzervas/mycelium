@@ -12,8 +12,9 @@
 > **Posture (transparency rule / VR-5 / G2).** This note records a **design decision the maintainer
 > ratified in conversation**; it **enacts no code**. Every guarantee claim below is tagged at its
 > *established* strength: the widen/growth/in-range cases are `Exact` (a total, lossless map on the
-> unsigned magnitude — `Binary` is sign-free, **ADR-028**, currently *Proposed* but already adopted in
-> practice by DN-41); `truncate` is honestly **lossy** (its own tag, never `Exact`); the never-silent
+> unsigned magnitude — `Binary` is sign-free, **ADR-028** (*Proposed* at this note's authoring, later
+> **Accepted** 2026-07-01 via RFC-0033's ratification act — already adopted in practice by DN-41
+> either way); `truncate` is honestly **lossy** (its own tag, never `Exact`); the never-silent
 > refusals are `Declared`/never-silent. Nothing is upgraded to `Proven`. The policy **softens** two
 > prior positions (see §3) — this is recorded explicitly, not silently.
 
@@ -100,10 +101,12 @@ is opt-in.
   semantics (zero-extension) and the checked-narrow are reused verbatim.
 - **DN-42** (Accepted) — width-generics (M-753); §4's mixed-width *refusal* is the conservative
   placeholder this note replaces (for arithmetic) with operand promotion.
-- **ADR-028** (*Proposed*) — `Binary` is sign-free, which is what makes widening a pure zero-extension
-  (lossless, `Exact`). Honest caveat: ADR-028 is in the RFC-0033/ADR-025…031 value-model cluster and is
-  *Proposed*, not yet Accepted — but DN-41 (Accepted) already commits the zero-extension widen, so the
-  lossless-widen basis is effectively settled via DN-41 even ahead of ADR-028's ratification.
+- **ADR-028** (*Proposed at this note's authoring, later **Accepted** 2026-07-01 via RFC-0033's
+  ratification act*) — `Binary` is sign-free, which is what makes widening a pure zero-extension
+  (lossless, `Exact`). Honest caveat, as recorded at authoring time: ADR-028 was then in the
+  RFC-0033/ADR-025…031 value-model cluster and Proposed, not yet Accepted — but DN-41 (Accepted)
+  already committed the zero-extension widen, so the lossless-widen basis was effectively settled via
+  DN-41 even ahead of ADR-028's ratification (which has since landed).
 - **`std.cmp`/`convert` spec** — lossless widening total, lossy narrowing explicit/fallible: this note
   is consistent with that doctrine (and extends it with the explicit `truncate`).
 - **RFC-0032 §5 D2** — the binary-arithmetic kernel enablers (`bit.add`/`bit.sub`) the `widening_*`

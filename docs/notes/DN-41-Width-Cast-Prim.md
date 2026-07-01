@@ -155,8 +155,10 @@ gap. (No AOT limitation to flag.)
 
 > **Append-only (house rule #3).** This note **supersedes nothing** and moves no decision status from
 > itself. It extends RFC-0032's enabler set with a Proposed follow-on prim; RFC-0032 stays Accepted,
-> ADR-028 stays Proposed (this note *depends on* ADR-028's direction, it does not advance it). CHANGELOG
-> / Doc-Index / issues.yaml / docs/api-index are owned by the integrating parent.
+> ADR-028 stayed Proposed as of this note's authoring (this note *depends on* ADR-028's direction, it
+> does not advance it) — **ADR-028 later reached Accepted (2026-07-01, RFC-0033's ratification act)**,
+> a status move made elsewhere, not by this note. CHANGELOG / Doc-Index / issues.yaml / docs/api-index
+> are owned by the integrating parent.
 
 ---
 
