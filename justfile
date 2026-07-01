@@ -156,6 +156,20 @@ api:
 # Drift gate: committed docs/api-index/ must match a fresh regeneration. Skip if python3 absent.
 doc-index:
     @bash scripts/checks/doc-index.sh
+
+# (Re)generate THIRD-PARTY-LICENSES.md from Cargo.lock via cargo-about (about.toml + about.hbs).
+# Run after any dependency bump/add/remove; commit the result. Needs cargo-about:
+# `cargo install cargo-about --locked --features cli` (or `just setup`).
+licenses:
+    @cargo about generate --workspace --fail about.hbs -o THIRD-PARTY-LICENSES.md \
+      && printf '%s\n' "$(cat THIRD-PARTY-LICENSES.md)" > THIRD-PARTY-LICENSES.md \
+      && echo "  ok    THIRD-PARTY-LICENSES.md regenerated — review the diff and commit" \
+      || echo "  FAIL  cargo-about not installed or generation failed — cargo install cargo-about --locked --features cli"
+alias third-party-licenses := licenses
+# Drift gate: committed THIRD-PARTY-LICENSES.md must match a fresh `just licenses` regeneration.
+# Skip-graceful if cargo-about is absent (same pattern as `deny`/`doc-index`).
+licenses-check:
+    @bash scripts/checks/licenses.sh
 # Supply-chain gate: cargo-deny (deny.toml) + cargo-audit. Skips if the tools are absent.
 deny:
     @bash scripts/checks/deny.sh
@@ -221,6 +235,30 @@ docs-index:
 # WSL: cd target/docsite && python3 -m http.server 8080, then open http://localhost:8080.
 docs-site:
     @bash scripts/docsite.sh
+# Build the curated, chaptered myc-doc BOOK (M-363 output (b)) — one linear reading order over the
+# corpus with prev/next nav + a client-side search index, driven by docs/book-manifest.json.
+# Advisory, NOT part of `just check`. Output under target/doc-book/book/ (gitignored).
+docs-book:
+    cargo run -q -p mycelium-doc --bin myc-doc -- book --repo-root . --out target/doc-book
+# Build the local docs Podman/Docker container (corpus + book + rustdoc + agent index, served via
+# python3 -m http.server). Advisory. Prefers podman, falls back to docker, errors clearly if neither.
+docs-container-build:
+    @bash scripts/docs-container.sh build
+# Run the built docs container, serving on http://localhost:8080.
+docs-container-run:
+    @bash scripts/docs-container.sh run
+
+# --- spore registry: GHCR/OCI dense-map dogfood (ADR-037 / M-871) ---
+# Local OCI round-trip self-test: stand up a throwaway registry:2 (podman), publish+resolve the
+# example phyla against oci://localhost:5000, verify the hashes, tear down. Needs oras + podman.
+# Dependency-free of any live account — the CI-shaped proof of the remote backend.
+spore-oci-selftest:
+    @bash scripts/dist/spore-oci-selftest.sh
+# Live dogfood: publish the example phyla to the GitHub Packages registry (GHCR) and resolve them
+# back, verifying end-to-end. Needs oras + a token with write:packages,read:packages in GH_TOKEN or
+# CR_PAT. Usage: `GH_TOKEN=… just spore-ghcr-dogfood <owner>` (owner defaults to the repo owner).
+spore-ghcr-dogfood owner="tzervas":
+    @bash scripts/dist/spore-ghcr-dogfood.sh {{owner}}
 
 # --- pre-commit (optional, easy DX) ---
 # Install the git hooks so `just check`-equivalent runs on every commit.

@@ -8,6 +8,125 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: M-872 — remote registry name@version immutability + dogfooding effort/usage assessment)
+
+- **Remote spore publish now enforces `name@version` immutability (M-872).** `publish_remote` gained a
+  best-effort pre-check (list-tags → pull → compare `spore_id`): republishing a **different** spore under
+  an existing `name@version` is refused as `RemoteError::Conflict` (exit 6), an identical re-publish is
+  idempotent, and a first publish proceeds. Parity with the local store's `Conflict` semantics
+  (ADR-003/M-732). Grounded, never-silent `oras` error classification (verified against `registry:2`
+  **and** GHCR): a missing repo/tag (`name unknown`/`not found`) maps to `NotFound` so a first publish
+  proceeds, while an auth failure stays `Transport` — a missing credential is never read as "nothing
+  published" (G2). **Honest ceiling (Declared, VR-5):** OCI tags are server-side mutable, so this is a
+  *client-side* guard, not a proven server invariant. 59 spore tests (2 new) + live-verified.
+- **`docs/planning/dogfooding-effort-and-usage-assessment.md`** — a `Declared` forecast sizing the
+  comprehensive-dogfooding track (replace all Rust with Mycelium): footprint (51 crates, 126.5k non-test
+  LOC, 287 modules), a productivity baseline from a measured agent sample, a tiered per-crate token model
+  (~45M-token floor for the LOC port; realistic all-in ~70–120M once the language-capability build +
+  differential validation are included), and cheapest-capability-first sequencing. States plainly what it
+  cannot measure (the weekly usage meter). Linked from the self-hosting port ledger.
+
+### Added (2026-07-01: ADR-037 / M-871 — remote spore registry: GHCR/OCI dense-map distribution + live dogfood)
+
+- **`crates/mycelium-spore` gains a remote/networked backend** (`mycelium_spore::remote`) siblings the
+  M-732 local file store, so spores are installable without crates.io, hosted in the **GitHub Packages
+  container registry (GHCR)**. Fixed by **ADR-037** (Accepted then Enacted, same day) and grounded in the
+  release strategy (ADR-036): host phylum/nodule/spore in the GitHub Packages registry to prove out the
+  registry design (DN-28) and implementation, no crates.io, repo private until dogfooded.
+- **DN-28 dense-map over OCI (ADR-037 §2).** A published spore is one OCI 1.1 artifact
+  (`artifactType application/vnd.mycelium.spore.v1`) at `ghcr.io/<owner>/<phylum>:<version>`: each source
+  object becomes one OCI blob (title `<blake3-hex>.myco`), **deduped by digest** across versions; the
+  dense-map DAG (`spore_id`, kind, surface, object references, dependency edges) becomes the OCI config
+  blob; `name@version` becomes the OCI tag. The dense-map codec is a hand-rolled, injective,
+  length-prefixed encoding with a strict never-silent parser (mirroring `content_address`) — **no new
+  runtime dependency** (KC-3).
+- **Fetch-and-verify on resolve (DN-28 §3; G2).** Every fetched object's bytes must BLAKE3 to its declared
+  content address, and the reconstructed source set must recompute — via the single canonical
+  `content_address` (never re-implemented) — to the recorded `spore_id`. A missing object, an
+  extra/undescribed blob, a byte mismatch, or a `spore_id` mismatch is an explicit `Integrity` refusal;
+  `resolve -o <dir>` materializes the verified tree plus the `mycelium-densemap`.
+- **CLI routes by explicit `--registry` scheme (never guessed):** a bare path keeps the local store;
+  `oci://<host>[/path]` or `ghcr://<owner>` selects the remote backend. `oras` is the v0 wire-transport
+  driver behind the `OciTransport` trait (a pure-Rust client is append-only future work); `oras` absent is
+  an explicit `ToolMissing` error, never a silent skip. Exact-version or `latest` selection; a SemVer
+  range stays `Unsupported` (ADR-018 deferred), never mis-resolved.
+- **Live dogfood verified (Empirical).** Round-trips green against a local `registry:2`
+  (`just spore-oci-selftest`, 57 unit tests incl. proptest round-trip/injectivity/adversarial) **and the
+  live GitHub Packages registry** — the example phyla `hello` and `std` published to
+  `ghcr.io/tzervas/{hello,std}` and resolved back with byte-identical, hash-verified `spore_id`s
+  (`just spore-ghcr-dogfood <owner>` + `scripts/dist/`). DN-28 gains an append-only forward pointer to
+  ADR-037 (its status unchanged).
+- **Disclosed v0 gap (never-silent, G2):** remote publish does not yet enforce `name@version` immutability
+  the way the local store does (OCI tags are mutable; a best-effort client-side pre-check is tracked as
+  **M-872**). Stated in ADR-037, the contract spec §10, and the `RemoteError::Conflict` doc-comment.
+
+### Added (2026-07-01: M-870 — third-party attributions + NOTICE generation)
+
+- **`THIRD-PARTY-LICENSES.md`** added at the repo root: every third-party Rust crate in the
+  workspace dependency graph (53 `(crate, version)` entries across 51 unique crate names),
+  generated via [`cargo-about`](https://github.com/EmbarkStudios/cargo-about) from `Cargo.lock`,
+  with the actual license text for each of the 25 unique license-text groups (deduped by identical
+  text, referenced by SPDX id — MIT ×22, Apache-2.0, BSD-2-Clause, Unicode-3.0). Config committed
+  for reproducible regeneration: `about.toml` (accepted-license allow-list mirroring `deny.toml`)
+  and a custom Markdown `about.hbs` template (the stock template emits HTML). Closes the
+  notice-preservation gap `M-743`'s first-party MIT audit didn't cover — MIT/BSD/Apache-2.0 all
+  require the license text to travel with a shipped artifact.
+- **`just licenses`** (alias `just third-party-licenses`) regenerates the file;
+  **`scripts/checks/licenses.sh`** is a drift gate (`scripts/checks/all.sh` component 28, part of
+  `just check`/`just check-full`) that skip-gracefully passes when `cargo-about` isn't installed
+  and otherwise fails on staleness or an unresolved license (never a silent gap — G2).
+- **NVIDIA disclosure (`experiments/README.md`):** the optional Python `gpu` dependency-group
+  (`uv sync --group gpu`, used by the M-832 `vsa_bounds` sweep) pulls NVIDIA-proprietary CUDA
+  runtime packages transitively through `torch`, under NVIDIA's own EULA — not OSI-approved.
+  Documented as opt-in only, experiments-only, and never part of a distributed Mycelium artifact —
+  out of `THIRD-PARTY-LICENSES.md`'s Rust-only scope but disclosed all the same (never-silent, G2).
+
+### Added (2026-07-01: M-363 follow-up — myc-doc BOOK output + a Podman/Docker docs container)
+
+- **`crates/mycelium-doc` gains a BOOK renderer** (`mycelium_doc::book`) — the M-363 spec's output
+  (b), "the full language book", closing the one named output that wasn't yet built (HTML/Typst/JSON
+  landed 2026-06-17; book did not). A curated, linear, chaptered reading order over the *same*
+  content-addressed doc-IR (Getting Started → Language Guide → Language Reference → Standard Library
+  → Concepts → Toolchain → Contributing → Appendices), driven by a small committed manifest
+  (`docs/book-manifest.json`): explicit `sources` for hand-curated order, drift-proof `globs` for the
+  Standard Library/RFC/ADR/DN appendix chapters (a new file under a globbed directory appears in the
+  next build, no manifest edit needed — the same discipline as `tools/docgen/code_index.py`). Each
+  page carries prev/next navigation + a chapter breadcrumb; a hand-rolled `book/search-index.json` +
+  vanilla-JS `search.js` gives client-side search with **no new dependency** (reuses `serde`/
+  `serde_json`, already vetted — KC-3).
+- **Composition, not re-authorship:** the book renders a *scoped* `DocModel` through the existing
+  `emit::html::render` and re-wraps the extracted `<article>` (byte-identical `data-cid`s) in a
+  book-specific shell — it does not re-derive page content. The one non-`.md` source
+  (`docs/spec/grammar/mycelium.ebnf`) is synthesized as a single verbatim, unchecked `Example` node
+  (the exact file bytes, never invented prose); `CONTRIBUTING.md` (outside `docs/`) rides through the
+  normal ingest+resolve pipeline via a new `BuildInput::extra_md_files` field, so its cross-references
+  resolve like any other corpus doc. `BuildInput::conventional`'s default is unchanged — the existing
+  `myc-doc build`/`lint` commands and their output are untouched by this addition (verified: `myc-doc
+  lint` still reports the same 8/8 green checks over the unchanged 289-document corpus).
+- **Never-silent by construction:** a manifest chapter that resolves to zero pages, a source path
+  that matches no ingested document, or a page double-booked into two chapters is a build error
+  (`BookError`), never a silently-dropped chapter or a dead ToC link (G2). Verified against the real
+  corpus: `myc-doc book` produces 185 pages across 11 chapters with **zero** dead ToC/prev-next links
+  and zero unresolved cross-references in the rendered book pages.
+- **New CLI + justfile:** `myc-doc book [--repo-root .] [--out target/doc]`; `just docs-book`
+  (advisory, not part of `just check`, same posture as `docs-site`).
+- **`docs/Containerfile`** (Podman-first, docker-fallback): a two-stage build — a pinned Rust 1.92
+  builder (matching `rust-toolchain.toml`/ADR-007) runs `myc-doc build` + `myc-doc book` +
+  `cargo doc --workspace --no-deps`, then a minimal `python:3.13-slim` stage serves the assembled
+  static site via `python3 -m http.server` (Python is first-class here). A small landing page links
+  Book / Corpus / Rustdoc / **Agent code index** (`docs/api-index/`) — the container serves AI agents
+  and the maintainer alike. `docs/gen-rustdoc-index.py` fills the one real gap found while verifying
+  this live: `cargo doc --workspace` emits no top-level index, so a small script lists exactly the
+  crate directories that were actually generated (never a hardcoded, driftable list). New
+  `scripts/docs-container.sh` (+ `just docs-container-build` / `docs-container-run`): prefers
+  `podman`, falls back to `docker`, errors clearly if neither is installed. Verified non-vacuously on
+  this box: built with `podman build`, ran with `podman run -p 8080:8000`, and `curl`-checked every
+  section (`/`, `/book/index.html`, `/book/search-index.json`, `/corpus/index.html`,
+  `/rustdoc/index.html`, `/api-index/INDEX.md`) returns 200 with the expected content.
+- **Test layout, as-touched (CLAUDE.md M-797 discipline):** `build.rs` (extended for
+  `extra_md_files`) had its inline tests extracted to `src/tests/build.rs`; the new `book.rs` starts
+  clean in `src/tests/book.rs` from day one — this crate's other pre-existing inline-test modules are
+  untouched (the accepted lazy-retrofit posture; not this change's scope).
 ### Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)
 
 - **`mycelium-mlir::concurrent`** (`compile_and_run_concurrent`, `jit_run_concurrent`,

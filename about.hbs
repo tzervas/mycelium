@@ -1,0 +1,50 @@
+{{! Handlebars template for cargo-about -> THIRD-PARTY-LICENSES.md. Emits Markdown, not HTML - so
+    every field that can contain license-text punctuation is rendered via triple-stash to skip
+    Handlebars' default HTML-escaping, keeping license texts byte-faithful. Regenerate with
+    just licenses; never hand-edit the output. }}
+# Third-Party Licenses
+
+<!-- markdownlint-disable -->
+
+This file is **auto-generated** by [`cargo-about`](https://github.com/EmbarkStudios/cargo-about)
+from `Cargo.lock` + `about.toml`, covering every third-party Rust crate in the `mycelium` workspace
+dependency graph (first-party `mycelium-*` crates and the private `xtask` tool are excluded — they
+are covered by the repo-root `LICENSE`, MIT, per ADR-022 §7). It exists to preserve the
+attribution/notice terms (MIT/BSD/ISC "include this copyright notice", Apache-2.0 §4(d) NOTICE,
+etc.) that third-party permissive licenses require when the workspace's binaries/artifacts ship.
+
+**Regenerate:** `just licenses` (wraps `cargo about generate about.hbs -o THIRD-PARTY-LICENSES.md`).
+**Do not hand-edit** — update `about.toml` (accepted-license set) or `about.hbs` (this template)
+instead, then regenerate. `cargo-deny` (`deny.toml`) is the enforcement gate for which licenses are
+*allowed* in the tree; this file is the notice-preservation record for what's actually in it — the
+two should stay in lockstep (a license accepted here but not in `deny.toml`'s `allow` list, or vice
+versa, is a drift signal, not expected steady state).
+
+**Scope note (never-silent, G2):** this file covers the **Rust** dependency graph only. The
+optional Python `gpu` dependency-group under `experiments/` (`uv sync --group gpu`) pulls
+NVIDIA-proprietary CUDA runtime packages under NVIDIA's own EULA — not OSI-approved, not covered by
+this file, opt-in only, and never part of a distributed Mycelium artifact. See
+`experiments/README.md` for the full disclosure.
+
+## License overview
+
+{{#each overview}}
+- {{{name}}} (`{{{id}}}`) — {{count}} crate(s)
+{{/each}}
+
+## Full license texts
+
+{{#each licenses}}
+### {{{name}}} (`{{{id}}}`)
+
+Used by:
+
+{{#each used_by}}
+- `{{{crate.name}}}` {{{crate.version}}}{{#if crate.repository}} — <{{{crate.repository}}}>{{/if}}
+{{/each}}
+
+```text
+{{{text}}}
+```
+
+{{/each}}

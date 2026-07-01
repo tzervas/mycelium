@@ -3,3 +3,4 @@
 
 mod lib_tests;
 mod registry_tests;
+mod remote_tests;

@@ -5887,7 +5887,7 @@ issues:
   - id: M-861
     title: "Scheduler multicore work-stealing (RT2-preserving, RT3-reified steal policy)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:runtime, priority:P1, status:done]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-859]
     landed_pr: 843
@@ -5992,7 +5992,7 @@ issues:
   - id: M-864
     title: "Persistent bounded work-stealing pool for the Scheduler (nested-safe submission)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:runtime, priority:P2, status:done]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:done]
     depends_on: [M-862]
     landed_date: 2026-07-01
     landed_basis: "branch claude/dev-m864-workstealing-pool. Scheduler::run_indexed's per-call std::thread::scope replaced by one process-wide persistent pool (mycelium_sched::pool, sized to available_parallelism(), never resized/recreated); nested submission is help-stealing (Pool::help_while). run_indexed's bound tightened to F: Send + 'static / T: Send + 'static (DN-67 §2 ratifies; every caller audited/adjusted -- Node/Interpreter/CancelToken/task ownership, none needed unsafe). Initial commits c4eef4e/84458d2/178e502/9a495c2. IMPORTANT -- CORRECTNESS REWRITE (same day, after an adversarial deadlock review REPRODUCED a real hang; DN-67 §3.0): the first cut kept M-861's capacity backpressure, whose feeder bare-blocked BEFORE help-stealing -> a nested-submission deadlock at width > capacity + P (the committed [15,15,6] test would have hung on any <=4-core box; it only passed on the 28-core dev box). Second defect: a panicking job hung the join and killed the pool worker. BOTH FIXED AT ROOT: (1) backpressure/capacity REMOVED (non-normative per DN-61 A.2, and the deadlock cause) -- the pool queue is unbounded, each batch populates its lanes up front then runs, so no lane or feeder ever bare-blocks; help_while is the only wait on a batch's critical path. (2) panic-safe join -- catch_unwind per job keeps the persistent worker alive, first job panic re-raised at join (thread::scope-like), RAII drop-guard decrements the countdown on every unwind path. SCHEDULER_BACKPRESSURE_STRENGTH (Exact) const + its std-runtime re-export REMOVED (would be a false claim, VR-5); capacity/with_workers(_,capacity) retained for source-compat but bound nothing (documented). VALIDATION (hardware-independent, the coordinator's guardrail): a pub(crate) Pool::with_workers_for_test(P) + Scheduler::run_indexed_on(pool,..) hook forces a small P through every nesting level; forced_low_p_wide_fanout_does_not_deadlock_p1_through_p4 runs [15,15,6] at P in {1,2,3,4} under a 60s timeout. REPRODUCTION CONFIRMED: with the pre-fix feeder-block reverted in a scratch worktree (+ the same hook), that test HANGS at every P (timeout fires ~15s); on the fixed code it PASSES. Plus forced-P deep/mixed shapes, forced P=1, two panic-safety tests, global-pool nested stress, and a Linux thread-count regression witness. Tests: 29/29 mycelium-sched; M-860 parallel_emit_matches_sequential_emit_byte_identical + M-862 parallel differential/determinism re-verified green unmodified; mycelium-std-runtime 98/98 (dataflow restore test strengthened to assert exact step total; supervision cancel-token test honestly downgraded). 15+ consecutive full-suite runs, zero flakes. cargo fmt --check, clippy -p mycelium-sched -p mycelium-mlir -p mycelium-interp -p mycelium-std-runtime --all-targets -D warnings -A unsafe_code, cargo build --workspace all green. Tag: Empirical (deadlock-freedom + determinism), never Proven absent a mechanized proof (VR-5)."
@@ -6144,7 +6144,7 @@ issues:
   - id: M-866
     title: "Bound mono.rs free_vars/pattern_binders recursion (M-674 follow-up)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:fix, area:language, priority:P2, status:todo]
+    labels: [phase:5, type:bug, area:language, priority:P2, status:todo]
     depends_on: [M-674]
     doc_refs: [corpus:ADR-032, src:crates/mycelium-l1/src/mono.rs, src:crates/mycelium-l1/src/totality.rs]
     body: |
@@ -6173,7 +6173,7 @@ issues:
   - id: M-868
     title: "Leapfrogging (own-subtree help-steal) to bound the scheduler pool's help-frame stack to O(depth)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:perf, area:runtime, priority:P2, status:needs-design]
+    labels: [phase:6, type:chore, area:execution, priority:P2, status:needs-design]
     depends_on: [M-864]
     epic: E25-1
     doc_refs:
@@ -6256,7 +6256,7 @@ issues:
   - id: M-869
     title: "AOT/interp hypha/colony/async concurrency parity (requires the language concurrency surface)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:runtime, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
     depends_on: [M-865]
     epic: E25-1
     doc_refs:
@@ -6762,6 +6762,61 @@ issues:
       first-party only, third-party deps keep Apache/BSD; ADR-023 §3.4 already records the MIT-only
       gate criterion — this issue's own DoD line item was thus already satisfied by prior ADR work,
       confirmed rather than re-decided here. Gate verified green.
+  - id: M-870
+    title: "M-870 — chore(licenses): third-party attributions + NOTICE generation wired for release"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:release, priority:P2, status:done]
+    depends_on: [M-743]
+    epic: E17-1
+    landed_date: 2026-07-01
+    landed_basis: "status:done — THIRD-PARTY-LICENSES.md generated at the repo root via cargo-about (about.toml + about.hbs, both committed for reproducible regeneration): 53 third-party (crate, version) entries across 51 unique crate names in the Rust dependency graph, grouped into 25 unique license-text blocks (MIT x22, Apache-2.0, BSD-2-Clause, Unicode-3.0), each with the crate's actual license text (spot-checked: arrayref/BSD-2-Clause and unicode-ident/Unicode-3.0 texts verified byte-faithful against source). `cargo about generate --workspace --fail` exits 0 (no unresolved license). Companion to M-743 (first-party MIT axis) and deny.toml (which-licenses-allowed axis) — this is the notice-preservation axis those two don't cover. Wired into the toolchain: `just licenses` regenerates (skip-graceful message if cargo-about absent); `scripts/checks/licenses.sh` is a drift gate (component 28 in scripts/checks/all.sh, part of `just check`/`just check-full`) that skip-gracefully passes when cargo-about isn't installed and otherwise fails on staleness or an unresolved license — never a silent gap (G2). FLAG resolved during the work: `command -v cargo-about` does not find the tool here because `cargo install` places it in $CARGO_HOME/bin, which is not on $PATH in this environment (mitigation #3) — the gate probes via `cargo about --version` (cargo's own subcommand dispatch, which does search $CARGO_HOME/bin) instead of a raw PATH lookup. Separately disclosed (not this issue's Rust scope, but the same never-silent principle): experiments/README.md now documents that the optional Python `gpu` dependency-group pulls NVIDIA-proprietary CUDA runtime packages under NVIDIA's own EULA (opt-in only, experiments-only, never redistributed)."
+    doc_refs:
+      - corpus:ADR-022
+      - corpus:ADR-023
+      - src:THIRD-PARTY-LICENSES.md
+      - src:about.toml
+      - src:about.hbs
+      - src:scripts/checks/licenses.sh
+      - src:experiments/README.md
+    body: |
+      The audit behind M-743 (first-party MIT-only) also established that the Rust dependency tree
+      is 52-ish third-party crates, all permissive (MIT/Apache-2.0/BSD/ISC/Unicode/Unlicense/CC0/
+      MPL-file-level) — `cargo deny check licenses` (deny.toml) is green with zero copyleft
+      conflicts. The gap that audit surfaced: no `THIRD-PARTY-LICENSES.md`/`NOTICE` file existed,
+      even though MIT/BSD/Apache-2.0 all require the license text to travel with a shipped
+      artifact. This issue closes that attribution gap ahead of the public 1.0.0 release.
+
+      User stories:
+      - As a downstream consumer of a Mycelium release artifact, I want the third-party license
+        notices bundled and readable in one file, so that I can confirm my own compliance
+        obligations without re-deriving the dependency tree myself.
+      - As a maintainer, I want the attribution file to regenerate deterministically from
+        `Cargo.lock`, so that a dependency bump never silently drifts the notice file out of date.
+      - As a contributor evaluating the optional GPU experiment path, I want an explicit,
+        honest disclosure that it pulls NVIDIA-proprietary (non-OSI) binaries, so that opting in
+        is informed, not accidental (G2).
+
+      Issues to resolve:
+      - Which tool generates the attribution file reproducibly? RESOLVED: `cargo-about` (the
+        standard tool for this), configured via `about.toml` (accepted-license allow-list mirroring
+        `deny.toml`) + a custom Markdown `about.hbs` template (the stock template emits HTML).
+      - Should the drift check gate `just check` or only `just check-full`? RESOLVED: it gates
+        `just check` too (component 28) — generation is sub-second and the check is
+        skip-graceful when cargo-about is absent, so it never blocks an environment without the
+        tool installed, matching the `deny`/`doc-index` precedent.
+
+      Definition of Done:
+      - `THIRD-PARTY-LICENSES.md` exists at the repo root, enumerates every third-party Rust crate
+        with its license identifier and the actual license text (deduped by identical text,
+        referenced by SPDX id), and is regenerable from committed config (`about.toml`/`about.hbs`).
+      - A `just` recipe regenerates the file (`just licenses`, aliased `just third-party-licenses`).
+      - A drift-check script exists (`scripts/checks/licenses.sh`) and is skip-graceful when the
+        generator tool is absent.
+      - `experiments/README.md` discloses the NVIDIA-proprietary CUDA runtime packages pulled by
+        the optional `gpu` dependency-group (opt-in only, experiments-only, never redistributed).
+      - `deny.toml` and all first-party licensing are left untouched (this issue is additive).
+      - `just` licenses generation verified end-to-end; `markdown.sh`/`links.sh`/`manifest-check.py`
+        clean on the touched files.
   - id: M-744
     title: "M-744 — infra: gh-issues-dedup.py — reliable duplicate-issue reconcile (safety net)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
@@ -6798,7 +6853,7 @@ issues:
   - id: E19-1
     title: "E19-1 (epic) -- Kernel self-hosting-enablement surface (value reprs + primitive floor)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:core, priority:P1, status:done]
+    labels: [phase:5, type:epic, area:core-ir, priority:P1, status:done]
     epic: E19
     landed_date: 2026-07-01
     landed_basis: "M-863 ratification act (stale-label resync): all children confirmed done -- M-746 (RFC-0032 Accepted), M-747/748/749/750 (enablers), M-751 (closed as a pointer to M-753/E11-1), M-752 (conformance + .myc smoke ports), M-798 (width-cast prim, DN-41 Accepted). This epic's own DoD (RFC-0032 Accepted; each enabler landed with differential tests; the E13-1 unblock demonstrated) is met; the status:in-progress label had simply lagged its already-done children."
@@ -6868,7 +6923,7 @@ issues:
   - id: M-746
     title: "M-746 -- author RFC-0032: kernel self-hosting-enablement surface (the E19-1 gate)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:core, priority:P1, status:done]
+    labels: [phase:5, type:design, area:core-ir, priority:P1, status:done]
     epic: E19-1
     doc_refs:
       - corpus:RFC-0032
@@ -6904,7 +6959,7 @@ issues:
   - id: M-747
     title: "M-747 -- reduce-to-Bool comparison/equality prim over Binary{N}/Ternary{N}"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746]
     doc_refs:
@@ -6928,7 +6983,7 @@ issues:
   - id: M-748
     title: "M-748 -- binary arithmetic prim surface (bit.and/bit.or + never-silent add/sub)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746]
     doc_refs:
@@ -6952,7 +7007,7 @@ issues:
   - id: M-749
     title: "M-749 -- sequence/array value representation + never-silent indexing"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746]
     doc_refs:
@@ -6976,7 +7031,7 @@ issues:
   - id: M-750
     title: "M-750 -- byte/string value representation + codepoint ops"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-746, M-749]
     doc_refs:
@@ -7018,7 +7073,7 @@ issues:
   - id: M-752
     title: "M-752 -- enablement conformance: each prim/repr differential-tested + .myc smoke ports"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core, priority:P1, status:done]
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-747, M-748, M-749, M-750]
     landed_date: 2026-07-01
@@ -7128,7 +7183,7 @@ issues:
   - id: E20-1
     title: "E20-1 (epic) -- Value-Model Collections & Precision (RFC-0033)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:core, priority:P1, status:in-progress]
+    labels: [phase:5, type:epic, area:core-ir, priority:P1, status:in-progress]
     epic: E20
     doc_refs:
       - corpus:RFC-0033
@@ -7199,7 +7254,7 @@ issues:
   - id: M-785
     title: "M-785 -- author RFC-0033 + ADR-025..031: value-model collections & precision (the E20-1 design gate)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:core, priority:P1, status:done]
+    labels: [phase:5, type:design, area:core-ir, priority:P1, status:done]
     epic: E20-1
     landed_date: 2026-07-01
     landed_basis: "Maintainer ratification act (2026-07-01): RFC-0033 flips Proposed -> Accepted; ADR-025/026/027/028 flip Proposed -> Accepted in the same act (ADR-029/030/031 were already Accepted 2026-06-24). This issue's own DoD (docs committed Proposed, maintainer review of the two disagreements before any -> Accepted) is fully met -- the maintainer review + ratification has now happened for all seven decision records. V1-V6 implementation (M-760..M-784) is a separate, deferred (post-1.0) act, not part of this design-gate issue's scope."
@@ -7243,7 +7298,7 @@ issues:
   - id: M-754
     title: "M-754 -- reconcile balanced-trit primitives into core::ternary (DRY add_with_carry)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P0, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P0, status:done]
     epic: E20-1
     depends_on: [M-785]
     doc_refs:
@@ -7263,7 +7318,7 @@ issues:
   - id: M-755
     title: "M-755 -- port exhaustive Trit truth-table tests (add_with_carry 27-row)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:test, area:core, priority:P1, status:done]
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:done]
     epic: E20-1
     depends_on: [M-754]
     doc_refs:
@@ -7278,7 +7333,7 @@ issues:
   - id: M-756
     title: "M-756 -- arbitrary-width balanced-ternary integer arithmetic (BigTernary)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P0, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P0, status:done]
     epic: E20-1
     depends_on: [M-754]
     doc_refs:
@@ -7299,7 +7354,7 @@ issues:
   - id: M-757
     title: "M-757 -- never-silent fixed-width ternary boundary (FixedWidthTrits, checked_add_fixed)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P0, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P0, status:done]
     epic: E20-1
     depends_on: [M-756]
     doc_refs:
@@ -7315,7 +7370,7 @@ issues:
   - id: M-758
     title: "M-758 -- (P2) limbed PackedTernary (40 trits/u64), differential vs BigTernary"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:perf, area:core, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:core-ir, priority:P2, status:todo]
     epic: E20-1
     depends_on: [M-756]
     doc_refs:
@@ -7331,7 +7386,7 @@ issues:
   - id: M-759
     title: "M-759 -- (P2) ternary multiplication fast path (Karatsuba/Toom) proven vs schoolbook"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:perf, area:core, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:core-ir, priority:P2, status:todo]
     epic: E20-1
     depends_on: [M-756]
     doc_refs:
@@ -7347,7 +7402,7 @@ issues:
   - id: E21-1
     title: "E21-1 (epic) -- Tunable Certification & Transparency Modes (RFC-0034 / ADR-032 implementation)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:epic, area:core, priority:P1, status:done]
+    labels: [phase:5, type:epic, area:core-ir, priority:P1, status:done]
     epic: E21
     landed_date: 2026-07-01
     landed_basis: "All 11 children done: M-786, M-787, M-788, M-789, M-790, M-791, M-792, M-793, M-794, M-795, M-796 (each carries its own landed_pr/landed_basis in this manifest). RFC-0034 -> 'Enacted -- with code (Rust-first)' (docs/rfcs/RFC-0034-Tunable-Certification-and-Transparency-Modes.md, 2026-06-24, maintainer-ratified) once the §13 conformance suite (M-794) landed green -- the epic's own acceptance criterion."
@@ -7430,7 +7485,7 @@ issues:
   - id: M-786
     title: "M-786 -- CertMode + never-silent mode tag in Meta (RFC-0034 §3.1)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E21-1
     depends_on: []
     doc_refs:
@@ -7450,7 +7505,7 @@ issues:
   - id: M-787
     title: "M-787 -- mode-gated provenance tagging: `fast` omits Empirical/Proven (RFC-0034 §7, §3.2)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -7471,7 +7526,7 @@ issues:
   - id: M-788
     title: "M-788 -- mode-gated swap-cert emission + checking (RFC-0034 §4)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:cert, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786, M-787]
     doc_refs:
@@ -7492,7 +7547,7 @@ issues:
   - id: M-789
     title: "M-789 -- compile/runtime phase split: spores mintable with runtime cert OFF (RFC-0034 §8)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -7513,7 +7568,7 @@ issues:
   - id: M-790
     title: "M-790 -- mode resolution + scoping (@certification; global/phylum/nodule) via RFC-0012 (RFC-0034 §6)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:project, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:project, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -7535,7 +7590,7 @@ issues:
   - id: M-791
     title: "M-791 -- named `wrapping` Axis-B opt-out (RFC-0034 §10)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:core, priority:P2, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P2, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -7554,7 +7609,7 @@ issues:
   - id: M-792
     title: "M-792 -- EXPLAIN-of-mode + generation != consumption (RFC-0034 §7, §3.1, conformance d)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:tooling, priority:P2, status:done]
+    labels: [phase:5, type:feature, area:toolchain, priority:P2, status:done]
     epic: E21-1
     depends_on: [M-786, M-790]
     doc_refs:
@@ -7575,7 +7630,7 @@ issues:
   - id: M-793
     title: "M-793 -- memory-safe by default + explicit per-use unsafe escape (RFC-0034 §9, sharpens ADR-014)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:tooling, priority:P2, status:done]
+    labels: [phase:5, type:feature, area:toolchain, priority:P2, status:done]
     epic: E21-1
     depends_on: []
     doc_refs:
@@ -7595,7 +7650,7 @@ issues:
   - id: M-794
     title: "M-794 -- RFC-0034 §13 conformance suite + advance to Enacted-with-code (the E21-1 gate)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core, priority:P1, status:done]
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786, M-787, M-788, M-789, M-790, M-791, M-792, M-793, M-795]
     doc_refs:
@@ -7620,7 +7675,7 @@ issues:
   - id: M-795
     title: "M-795 -- adapt + parameterize the test suite across CertMode tiers (cross-cutting)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:core, priority:P1, status:done]
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:done]
     epic: E21-1
     depends_on: [M-786]
     doc_refs:
@@ -7653,7 +7708,7 @@ issues:
   - id: M-796
     title: "M-796 -- native scoped mode-parametric testing in the Mycelium testing toolkit (downstream)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feat, area:tooling, priority:P2, status:done]
+    labels: [phase:5, type:feature, area:toolchain, priority:P2, status:done]
     epic: E21-1
     depends_on: [M-790, M-795]
     doc_refs:
@@ -7686,7 +7741,7 @@ issues:
   - id: M-816
     title: "M-816 -- prune 84 deprecated stale branches to the three protected tiers (external action)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:chore, area:tooling, priority:P2, status:blocked]
+    labels: [phase:5, type:chore, area:toolchain, priority:P2, status:blocked]
     epic: E21-1
     depends_on: []
     doc_refs:
@@ -7764,7 +7819,7 @@ issues:
   - id: M-797
     title: "M-797 -- extract inline #[cfg(test)] tests to in-crate src/tests/ (no tests in logic files)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:refactor, area:tooling, priority:P2, status:todo]
+    labels: [phase:5, type:chore, area:toolchain, priority:P2, status:todo]
     epic: E21-1
     depends_on: []
     doc_refs:
@@ -7793,7 +7848,7 @@ issues:
   - id: E22-1
     title: "E22-1 (epic) -- Security Scanning Toolkit (automated detection, standard reporting, honest safe auto-fix)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:epic, area:tooling, priority:P2, status:proposed]
+    labels: [phase:8, type:epic, area:toolchain, priority:P2, status:todo]
     epic: E22
     doc_refs:
       - corpus:DN-30
@@ -7859,7 +7914,7 @@ issues:
   - id: M-798
     title: "M-798 -- width-cast/zero-extension kernel prim (bit.width_cast) [DN-41]"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core, priority:P1, status:done]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
     epic: E19-1
     depends_on: [M-750]
     landed_date: 2026-07-01
@@ -7917,7 +7972,7 @@ issues:
   - id: E23-1
     title: "E23-1 (epic) -- Post-1.0 future-workstream capture (rsm F1-F6; design/decide later)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:epic, area:planning, priority:P3, status:todo]
+    labels: [phase:6, type:epic, area:project, priority:P3, status:todo]
     epic: E23
     doc_refs:
       - corpus:DN-45
@@ -7990,7 +8045,7 @@ issues:
   - id: M-806
     title: "M-806 -- gate: assert every wild/FFI/intentional-escape surface carries a disclosure block (DN-46 / rsm F2)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:tooling, area:toolchain, priority:P3, status:todo]
+    labels: [phase:6, type:infra, area:toolchain, priority:P3, status:todo]
     epic: E23-1
     depends_on: [M-801]
     doc_refs:
@@ -8050,7 +8105,7 @@ issues:
   - id: M-804
     title: "M-804 -- post-critical quality passes: capture (DN-49 / rsm F6)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:spec, area:planning, priority:P3, status:todo]
+    labels: [phase:6, type:spec, area:project, priority:P3, status:todo]
     epic: E23-1
     depends_on: []
     doc_refs:
@@ -8073,7 +8128,7 @@ issues:
   - id: M-805
     title: "M-805 -- kernel & primitives consolidation; multi-kernel question (capture; RFC-0036 / rsm F5)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:spec, area:core, priority:P3, status:todo]
+    labels: [phase:6, type:spec, area:core-ir, priority:P3, status:todo]
     epic: E23-1
     depends_on: []
     doc_refs:
@@ -8193,7 +8248,7 @@ issues:
   - id: M-812-cont
     title: "M-812-cont -- DN-54 derive elaboration + KC-3 kernel-growth guard + IL-grammar RHS check (the load-bearing safety)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:impl, area:language, priority:P2, status:done]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     epic: E7-1
     depends_on: [M-812]
     landed_basis: "status:done (core; consumption-model residual flagged) — DN-54 §4.1/§4.2/§4.6/§6/§7 landed (lwd kickoff, 2026-06-29): (1) RHS elaboration to L0 — `elab::elaborate_lower_rule` reads Env::lower_rules and lowers a rule RHS through the SAME path a hand-written nullary fn body takes (Empirical, via the §7 differential + M-210 check_core); (2) §4.1 IL-grammar RHS type-check (`check_lower_rule_rhs_type`, Declared); (3) §4.6 purity — `wild` refused in a rule RHS even in @std-sys (Declared); (4) §4.2 cross-rule acyclicity (`check_lower_rule_acyclicity`, iterative DFS; self+mutual cycles refused, Declared); (5) §6 KC-3 kernel-growth guard — GENUINELY SOUND (Proven-by-construction, narrow checked sense: the elaborator returns the closed `mycelium_core::Node` enum, so a rule cannot construct a variant outside the frozen L0 grammar; host-op growth closed by §4.6; non-vacuously confirmed by Node::is_aot_lowerable over the frozen node set). §7 harness `tests/lower_derive.rs` (5 tests: structural identity, run-value differential, KC-3-in-fragment, hygiene, round-trip) REPLACES the two no-L0 residual guard tests. Also fixed a latent bug: lowercase true/false are NOT L1 names (prelude is True/False) — the new §4.1 check correctly rejects them; fixtures corrected. Verified: cargo test -p mycelium-l1 671 passed/0 failed; fmt+clippy clean. FLAGGED RESIDUAL (architecturally significant, never-silent): DN-54 underdetermines the `derive`-SITE consumption/attachment model + parametric instantiation — landed the nullary/monomorphic elaboration, left the consumption model for maintainer ratification. DN-54 stays Accepted + append-only impl note (NOT Enacted — the consumption model is outstanding; house rule #3)."
@@ -8265,7 +8320,7 @@ issues:
   - id: M-808
     title: "M-808 -- branch-protection guard: enforce no-commit/push-to-protected-branch (rsm)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:tooling, area:tooling, priority:P1, status:done]
+    labels: [phase:5, type:infra, area:toolchain, priority:P1, status:done]
     depends_on: []
     doc_refs:
       - src:scripts/checks/branch-guard.sh
@@ -8328,7 +8383,7 @@ issues:
   - id: M-819
     title: "M-819 -- mycfmt --flatten: canonical ;-emission + single-line stream form (DN-57)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P3, status:done]
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:done]
     epic: E24-1
     depends_on: [M-818]
     doc_refs:
@@ -8341,7 +8396,7 @@ issues:
   - id: M-820
     title: "M-820 -- myc --stream: streaming-parse CLI entry over ;-delimited input (DN-57)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:tooling, priority:P3, status:done]
+    labels: [phase:5, type:feature, area:toolchain, priority:P3, status:done]
     epic: E24-1
     depends_on: [M-818]
     doc_refs:
@@ -8704,7 +8759,7 @@ issues:
   - id: M-843
     title: "M-843 -- Composite-operation guarantee aggregation scope"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:research, area:core, priority:P3, status:needs-design]
+    labels: [phase:5, type:research, area:core-ir, priority:P3, status:needs-design]
     depends_on: []
     doc_refs:
       - corpus:RFC-0001
@@ -8847,3 +8902,114 @@ issues:
       extends RFC-0008 mesh + R8-Q4 adversarial mesh.
       DoD: RFC-0038 §8.8 ratified; controller protocol + blacklist semantics specified; realized atop the
       RFC-0008 mesh model; every trust decision EXPLAIN-able + provenance-tagged (never-silent).
+  - id: E26-1
+    title: "E26-1 (epic) — Networked spore registry: GHCR/OCI dense-map distribution + registry dogfood"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:epic, area:toolchain, priority:P1, status:done]
+    landed_basis: "status:done (2026-07-01) — M-871 done: the remote backend landed (mycelium-spore::remote) and the DOGFOOD is live: example phyla hello + std published to ghcr.io/tzervas/{hello,std}:0.0.0-dogfood and resolved back with hash-verified, byte-identical spore_ids (local registry:2 AND live GitHub Packages). ADR-037 Enacted. One disclosed v0 gap: remote name@version immutability not yet enforced (M-872). just check green; tags Empirical/Declared (VR-5)."
+    depends_on: [M-732]
+    epic: E26
+    doc_refs: [corpus:ADR-037, corpus:DN-28, corpus:ADR-013]
+    body: |
+      Give the spore registry a networked home so Mycelium's packaging units (phylum / nodule /
+      spore) are installable without crates.io, hosted in the GitHub Packages container registry
+      (GHCR) — and use that publish path as a live dogfood of the registry design (DN-28) and
+      implementation (mycelium-spore), per the maintainer release strategy (ADR-036). The remote
+      backend distributes the DN-28 dense-map over OCI (each content-object -> one deduped OCI blob;
+      the dense-map DAG -> the OCI config; name@version -> the OCI tag), fixed by ADR-037.
+
+      User stories:
+      - As a phylum author, I want `spore publish --registry ghcr://<owner>` to host my phylum in
+        the GitHub Packages registry, so that users install it by name+version without crates.io.
+      - As a downstream developer, I want `spore resolve <name> <version> --registry ghcr://<owner>`
+        to fetch a hash-verified spore, so that what I install is exactly what was published (G2).
+      - As the maintainer, I want the real example phyla published to GHCR before the repo flips
+        public, so that the registry design + implementation are proven operational on a production
+        registry (the dogfood), not just asserted.
+
+      Issues to resolve:
+      - Whole-spore artifact vs per-object dense-map? RESOLVED (ADR-037): DN-28 dense-map (per-object
+        OCI blobs, deduped) — the point of the dogfood is to exercise the dense-map design.
+      - Wire transport: pure-Rust OCI client vs a driver? RESOLVED (ADR-037): `oras` is the v0 driver
+        behind an `OciTransport` trait; a pure-Rust client is append-only future work.
+
+      Definition of Done:
+      - M-871 done: remote backend (dense-map encode/decode, build/verify/reconstruct, OciTransport +
+        oras driver + in-memory double, publish_remote/resolve_remote) lands never-silent (G2), tags
+        Empirical/Declared; `spore publish/resolve --registry oci://|ghcr://` route by scheme.
+      - Round-trip verified against a local OCI registry AND a live GHCR publish->resolve of the
+        example phyla (the dogfood); ADR-037 -> Enacted on that basis.
+      - just check green; guarantee tags honest (VR-5); property test per bound.
+
+      Children: M-871 (remote spore registry backend — DN-28 dense-map over GHCR/OCI).
+  - id: M-871
+    title: "M-871 -- feat(spore): remote registry backend — DN-28 dense-map over GHCR/OCI (ADR-037)"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P1, status:done]
+    landed_basis: "status:done (2026-07-01) — crates/mycelium-spore/src/remote.rs: DenseMap encode/decode (injective, byte-cursor strict parser, proptest round-trip + injectivity + adversarial), build_dense_map, verify_and_reconstruct (every object BLAKE3-checked, spore_id recomputed via canonical content_address; missing/extra/duplicate/tamper/id-mismatch all explicit Integrity errors, G2), OciTransport trait + OrasTransport (subprocess; oras-absent -> ToolMissing, never silent) + MemTransport double, parse_registry (scheme routing), publish_remote/resolve_remote (exact + latest; range -> Unsupported), RemoteError (exit-coded). CLI routes publish/resolve by --registry scheme; remote resolve -o materializes the verified tree. 57 unit tests + 1 ignored (live-oras); fmt/clippy -D warnings clean. VERIFIED: local registry:2 AND live GHCR round-trip (ghcr.io/tzervas/{hello,std}). No new runtime dep (KC-3). Disclosed v0 gap: remote immutability check deferred to M-872."
+    depends_on: [M-732]
+    epic: E26-1
+    doc_refs:
+      - corpus:ADR-037
+      - corpus:DN-28
+      - corpus:ADR-013
+      - src:crates/mycelium-spore/src/remote.rs
+    body: |
+      Implement the ADR-037 remote/networked backend for the spore registry: a published spore is an
+      OCI 1.1 artifact in GHCR (ghcr.io/<owner>/<phylum>:<version>), decomposed into the DN-28
+      dense-map — each source object is its own BLAKE3-addressed OCI blob (deduped by digest across
+      versions), the dense-map DAG is the OCI config blob, name@version is the OCI tag. `oras` is the
+      v0 wire-transport driver behind an `OciTransport` trait (pure-Rust client is future work).
+
+      As a phylum author, I want to publish/resolve spores against GHCR by name+version, so that
+      distribution needs no crates.io and every fetch is hash-verified end-to-end.
+
+      Fetch-and-verify is mandatory + never-silent (G2): on resolve every object's bytes must BLAKE3
+      to its declared content address AND the reconstructed DAG must recompute (via the single
+      canonical `mycelium_spore::content_address`) to the recorded spore_id; a missing object, a
+      byte-mismatch, an extra layer, or a spore_id mismatch is an explicit error. A SemVer range stays
+      Unsupported (ADR-018 deferred), never mis-resolved. No new runtime dependency (KC-3): the
+      dense-map is a hand-rolled injective length-prefixed encoding with a strict parser; the
+      transport shells to `oras` (absent -> explicit ToolMissing error, never a silent skip).
+
+      Definition of Done:
+      - `crates/mycelium-spore/src/remote.rs`: DenseMap encode/decode (injective, strict, property-
+        tested + adversarial), build_dense_map, verify_and_reconstruct, OciTransport trait + oras
+        driver + in-memory test double, parse_registry (scheme routing), publish_remote/resolve_remote,
+        RemoteError (exit-coded, never-silent).
+      - `spore publish/resolve --registry oci://|ghcr://` route to the remote backend by explicit
+        scheme; a bare path keeps the M-732 local store. resolve -o <dir> materializes the verified tree.
+      - Tests green: encode/decode round-trip + adversarial proptest; verify/tamper/missing cases;
+        publish->resolve via the in-memory double (exact + latest); range -> Unsupported. A live-oras
+        integration test is #[ignore]d (orchestrator runs the local + GHCR round-trip).
+      - cargo fmt / clippy -D warnings / test -p mycelium-spore green; tags Empirical/Declared (VR-5).
+  - id: M-872
+    title: "M-872 -- feat(spore): enforce name@version immutability on remote (OCI) publish"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
+    landed_basis: "status:done (2026-07-01) — publish_remote gained a best-effort immutability pre-check: list_tags -> pull -> compare spore_id; a DIFFERING re-publish under an existing name@version is refused as RemoteError::Conflict (exit 6), an identical re-publish is idempotent, a first publish proceeds. Grounded oras error classification (registry:2 AND GHCR verified 2026-07-01: 'name unknown'/'not found' -> NotFound; auth errors stay Transport, never read as 'nothing published' — G2). Honest ceiling (Declared, VR-5): OCI tags are server-side mutable, so this is a client-side guard, not a proven server invariant. 59 unit tests (2 new immutability cases) + live-verified against a local registry:2. cargo fmt/clippy -D warnings/test green."
+    depends_on: [M-871]
+    epic: E26-1
+    doc_refs:
+      - corpus:ADR-037
+      - src:crates/mycelium-spore/src/remote.rs
+    body: |
+      Disclosed v0 gap from M-871 (ADR-037 §Status / §5): the LOCAL spore registry (M-732) refuses to
+      republish a DIFFERENT artifact under an existing name@version (immutability, RegistryError::Conflict),
+      but the REMOTE (OCI/GHCR) backend does not yet — OCI tags are mutable by default and publish_remote
+      pushes unconditionally. RemoteError::Conflict is defined but currently unconstructed.
+
+      As a phylum consumer, I want a published name@version to be immutable on the remote too, so that a
+      resolve returns the same bytes tomorrow as today (supply-chain integrity, ADR-003).
+
+      Approach (best-effort, never-silent): before pushing, check whether the tag already exists (via
+      OciTransport::list_tags on the repo); if it does, pull + decode its dense-map and compare spore_id —
+      identical => idempotent (skip/allow), different => RemoteError::Conflict (refuse, G2). Honest caveat:
+      OCI tags are server-side mutable, so a client-side check is best-effort (a racing client could still
+      overwrite) — document that ceiling (Declared), never overclaim it as Proven immutability. Distinguish
+      "repo/tag absent -> proceed" from a real transport error -> propagate (no silent swallow).
+
+      Definition of Done:
+      - publish_remote refuses a conflicting re-publish with RemoteError::Conflict; an identical re-publish
+        is idempotent; a first publish is unaffected. Tests via MemTransport (+ an #[ignore]d live case).
+      - The best-effort ceiling is documented (Declared, not Proven). cargo fmt/clippy/test green.

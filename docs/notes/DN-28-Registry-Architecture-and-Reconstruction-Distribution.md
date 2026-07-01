@@ -4,7 +4,7 @@
 |---|---|
 | **Note** | DN-28 |
 | **Status** | **Draft** (2026-06-23; planning capture, DN-17 posture) |
-| **Feeds** | ADR-003 (content-addressed identity — the load-bearing rule); ADR-013 (`spore` is the deployable unit); ADR-018 (versioning policy); M-732 (the registry publish/resolve landed in E16-1); DN-06 (phylum/nodule/spore model); DN-27 (post-1.0.0 public decomposition) |
+| **Feeds** | ADR-003 (content-addressed identity — the load-bearing rule); ADR-013 (`spore` is the deployable unit); ADR-018 (versioning policy); M-732 (the registry publish/resolve landed in E16-1); DN-06 (phylum/nodule/spore model); DN-27 (post-1.0.0 public decomposition); **ADR-037 (the binding v0 remote-backend decision this note anticipated — GHCR/OCI distributing this note's dense-map)** |
 | **Date** | June 23, 2026 |
 | **Decides** | *Nothing normatively* — advisory. Records the maintainer's intended **registry architecture** (2026-06-23): a cheap, lightweight, content-addressed distribution model where the registry stores a phylum's **content-hash DAG** (the dense, verifiable map), and the **actual source bytes live in a git forge / object store** that the consumer fetches and verifies. Captured now so the M-732 v0 and its successors are shaped toward this end-state, not painted into a corner. The binding decision is a future RFC. |
 | **Task** | E16-1 follow-up (registry evolution); gated research before the security features |
@@ -15,6 +15,16 @@
 > optimized host — so present decisions don't foreclose it. Where this note describes security /
 > secrecy / obfuscation features, those are **future research**, explicitly **not** in any MVP and
 > **not** implemented; nothing here may be cited as a shipped guarantee (G2).
+>
+> **Update (2026-07-01) — the binding v0 backend decision landed as ADR-037 (append-only, this note is
+> unchanged below).** ADR-037 selects **GHCR (the GitHub Packages container registry) / OCI 1.1 artifacts**
+> as the spore registry's v0 remote backend, distributing **this note's dense-map** directly: each
+> content-object → one OCI blob (deduped by digest, exactly §3's "store each object once"), the dense-map
+> DAG → the OCI config blob, `name@version` → the OCI tag; resolve is the §3 fetch-and-verify. It **refines
+> one detail** of this note's sketch: where §5 floated GitHub *Releases* as the v0 object store, ADR-037
+> uses the GitHub Packages *container* registry instead — still GitHub-artifacts-backed, but the Packages
+> registry the maintainer's release strategy (ADR-036) names, and a cleaner fit for content-addressed blob
+> dedup. This note stays **Draft/advisory**; ADR-037 is the binding decision it said "is a future RFC."
 
 ---
 
