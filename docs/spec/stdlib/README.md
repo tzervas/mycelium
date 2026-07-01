@@ -10,6 +10,13 @@
 
 ---
 
+**Contents:** [1. What a module spec is](#1-what-a-module-spec-is-and-is-not) ·
+[2. The guarantee matrix](#2-the-guarantee-matrix-every-module-ships-one) ·
+[3. Ring layering](#3-ring-layering-rfc-0016-42) ·
+[4. Module spec index](#4-module-spec-index) ·
+[5. Cross-module reconciliation](#5-cross-module-reconciliation-first-design-wave) ·
+[6. How this index stays honest](#6-how-this-index-stays-honest) · [Changelog](#meta--changelog)
+
 ## 1. What a module spec is (and is not)
 
 A module spec is **design-first**: it fixes *what the module is, what every exported op promises, and how
@@ -195,6 +202,10 @@ implementations proceed against RFC-0016 now.
 
 ## Meta — changelog
 
+- **2026-07-01 — Contents list + nav footer added (docs-quality pass, DOCS-D3).** No module-spec
+  status, ratification, or table content changed; added a top-of-doc section jump list and a
+  footer link back to the reference index / Doc Index for easier navigation of this long index.
+  Append-only.
 - **2026-06-23 — Status narrative + `runtime` row corrected; E13-1 self-hosting note added.** The
   wave-status paragraph now reflects the 2026-06-21 ratification of `runtime` (v0 R1 surface;
   DN-16 re-audit; 25/25 crate specs `Accepted`); the `runtime` Tier-A index row updated from
@@ -248,3 +259,8 @@ implementations proceed against RFC-0016 now.
   tasks (M-510…M-534). Marks the first orchestration wave's `design landing` set (Tier-A differentiators
   `core`/`swap`/`ternary`/`dense`/`select`/`content` + Tier-B pure commons `iter`/`math`/`error`/`cmp`/
   `fmt`); the remainder are `anticipated` for later waves. No code; no kernel change (KC-3). Append-only.
+
+---
+
+**Up:** [repo root README](../../../README.md) · [Doc Index](../../Doc-Index.md) ·
+[Reference docs](../../reference/README.md)
