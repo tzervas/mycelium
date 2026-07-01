@@ -56,12 +56,11 @@ pub enum RemoteError {
     /// A content-integrity failure: a bad `ContentHash`, a hash mismatch, a missing/extra object, a
     /// malformed dense-map encoding, or a recomputed-`spore_id` mismatch (exit 5).
     Integrity(String),
-    /// An immutability/consistency conflict (exit 6). **Disclosed v0 gap (ADR-037 §Status; M-872):**
-    /// unlike the local store ([`crate::registry::RegistryError::Conflict`]), remote publish does not
-    /// yet refuse a differing re-publish under an existing `name@version` — OCI tags are mutable and
-    /// [`publish_remote`] pushes unconditionally. This variant is defined for the M-872 best-effort
-    /// pre-check (list-tags → compare `spore_id`); it is intentionally unconstructed in v0, not a
-    /// silently-dropped guarantee (the gap is stated in the ADR + `EXPLAIN`, never hidden — G2).
+    /// An immutability conflict (exit 6): [`publish_remote`] refuses to republish a **different**
+    /// spore under an existing `name@version` (M-872) — parity with the local store's
+    /// [`crate::registry::RegistryError::Conflict`] (ADR-003 / M-732). **Best-effort ceiling
+    /// (Declared, VR-5):** it is a *client-side* pre-check (list-tags → compare `spore_id`); OCI tags
+    /// are server-side mutable, so it is not a proven server invariant — never claimed `Proven`.
     Conflict(String),
     /// A request this v0 backend honestly cannot satisfy — a SemVer range constraint (exit 64).
     Unsupported(String),
@@ -799,6 +798,39 @@ fn tail_lines(s: &str, n: usize) -> String {
     lines[start..].join("\n")
 }
 
+/// Map a **failed** `oras` [`std::process::Output`] to a [`RemoteError`], distinguishing an OCI
+/// "not found" (a missing repository or tag — a *normal, expected* condition when checking whether
+/// something is already published) from a genuine transport/auth failure. Used where "absent" is a
+/// legitimate answer (the immutability pre-check, resolve of a missing tag), so a first publish
+/// isn't mistaken for an error.
+///
+/// The distinction is **grounded** in the OCI distribution spec's `NAME_UNKNOWN`/`MANIFEST_UNKNOWN`
+/// errors, which both `registry:2` and GHCR surface with the substrings matched below (verified
+/// 2026-07-01 against each). An auth/permission failure (`unauthorized`/`denied`/`401`/`403`)
+/// deliberately does **not** match, so it stays a propagated [`RemoteError::Transport`] — a missing
+/// credential is **never silently read as "nothing is published"** (G2/VR-5), which would otherwise
+/// let the immutability check be bypassed by an auth error.
+fn classify_oras_failure(output: &std::process::Output, what: &str) -> RemoteError {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let low = stderr.to_ascii_lowercase();
+    let not_found = low.contains("not found")
+        || low.contains("name unknown")
+        || low.contains("not known to registry")
+        || low.contains("name_unknown")
+        || low.contains("manifest unknown")
+        || low.contains("manifest_unknown");
+    let msg = format!(
+        "`{what}` exited with {:?}: {}",
+        output.status.code(),
+        tail_lines(&stderr, 20)
+    );
+    if not_found {
+        RemoteError::NotFound(msg)
+    } else {
+        RemoteError::Transport(msg)
+    }
+}
+
 /// Preflight-check that `oras` is on `PATH` and runnable — a small, explicit "is the v0 transport
 /// prerequisite present" probe (ADR-037 §5), usable ahead of a push/pull for a friendlier failure.
 ///
@@ -919,7 +951,14 @@ impl OciTransport for OrasTransport {
         self.maybe_plain_http(&mut cfg_cmd);
         cfg_cmd.arg(reference);
         let cfg_out = spawn_oras(cfg_cmd)?;
-        require_success(&cfg_out, "oras manifest fetch-config")?;
+        // A missing manifest/tag is classified NotFound (an expected "not published" answer) vs a
+        // real transport/auth failure — so resolve and the immutability pre-check distinguish them.
+        if !cfg_out.status.success() {
+            return Err(classify_oras_failure(
+                &cfg_out,
+                "oras manifest fetch-config",
+            ));
+        }
         let config = cfg_out.stdout;
 
         let tmp = unique_temp_dir("oras-pull")?;
@@ -957,7 +996,12 @@ impl OciTransport for OrasTransport {
         self.maybe_plain_http(&mut cmd);
         cmd.arg(repo);
         let out = spawn_oras(cmd)?;
-        require_success(&out, "oras repo tags")?;
+        // A missing repository is a NORMAL answer here ("no tags yet") — classify it as NotFound so
+        // the immutability pre-check can proceed with a first publish; a real transport/auth failure
+        // still propagates as Transport (never silently read as "no tags", G2).
+        if !out.status.success() {
+            return Err(classify_oras_failure(&out, "oras repo tags"));
+        }
         let text = String::from_utf8_lossy(&out.stdout);
         Ok(text
             .lines()
@@ -1144,7 +1188,41 @@ pub fn publish_remote(
 
     let (dense_map, blobs) = build_dense_map(spore, project_dir)?;
     let config = encode_dense_map(&dense_map);
-    let reference = format!("{base}/{name}:{version}");
+    let repo = format!("{base}/{name}");
+    let reference = format!("{repo}:{version}");
+
+    // Immutability pre-check (M-872) — best-effort parity with the local store's `Conflict` semantics
+    // (M-732). A registry `name@version` is immutable: republishing a DIFFERENT spore under an
+    // existing tag is refused; an identical re-publish is idempotent; a first publish proceeds.
+    //
+    // **Honest ceiling (Declared, VR-5):** OCI tags are server-side MUTABLE — this is a *client-side*
+    // guard (a racing or hostile client could still overwrite the tag out from under us), so it is a
+    // best-effort consistency check, **not** a proven server invariant. It is never claimed `Proven`.
+    // Never-silent (G2): a real transport/auth error is propagated, never swallowed into "proceed".
+    match transport.list_tags(&repo) {
+        Ok(tags) if tags.iter().any(|t| t == version) => {
+            // The tag already exists — compare identity by reading its recorded `spore_id`.
+            let (existing_config, _existing_layers) = transport.pull(&reference)?;
+            let existing = decode_dense_map(&existing_config)?;
+            if existing.spore_id != spore.id {
+                return Err(RemoteError::Conflict(format!(
+                    "{name}@{version} is already published at {reference} with a DIFFERENT spore \
+                     (existing spore_id={}, publishing {}) — a registry name@version is immutable; \
+                     publish under a new version (ADR-003 / M-732 parity, G2). Note: OCI tags are \
+                     server-side mutable, so this is a best-effort client-side guard (Declared), not \
+                     a proven server invariant.",
+                    existing.spore_id.as_str(),
+                    spore.id.as_str(),
+                )));
+            }
+            // Same `spore_id` → an identical re-publish is idempotent; fall through to a harmless
+            // re-push (content-addressed, so the manifest digest is unchanged).
+        }
+        Ok(_) => {} // repo exists but this tag is absent → proceed
+        Err(RemoteError::NotFound(_)) => {} // repo/tags don't exist yet (first publish) → proceed
+        Err(e) => return Err(e), // a real transport/auth failure → never swallowed (G2)
+    }
+
     let manifest_digest = transport.push(&reference, &config, &blobs)?;
 
     Ok(RemotePublishReceipt {
