@@ -156,3 +156,24 @@ append-only provenance (every artifact records what it was generated *from* — 
   deferred. The §8 gate is lifted and the pipeline *design* moves **Proposed → Accepted**; this unblocks
   **M-366's §4.1 doc quality-bar lint** (now specifiable against the chosen stack). **Building M-363
   remains a separate, not-yet-scheduled task** (don't start unless asked). Append-only.
+- **2026-07-01 — Enacted addendum: BOOK output (M-363 output (b)) + a local Podman/Docker docs
+  container.** `crates/mycelium-doc` gained a fifth renderer, `book` (§`mycelium_doc::book`),
+  alongside HTML/Typst/JSON (§3): a curated, linear, chaptered reading order over the *same*
+  content-addressed doc-IR, driven by a small committed manifest (`docs/book-manifest.json` — explicit
+  `sources` for curated order, drift-proof `globs` for the Standard Library/RFC/ADR/DN appendix
+  chapters so a new file is picked up automatically), with per-page prev/next navigation, a
+  chapter breadcrumb, and a client-side search index (`book/search-index.json` + a hand-rolled
+  `search.js` — no new dependency, KC-3). It **composes** the existing per-page HTML projection
+  (byte-identical `data-cid`s) rather than re-rendering; the one non-`.md` source
+  (`docs/spec/grammar/mycelium.ebnf`) is synthesized as a single verbatim, unchecked `Example` node
+  (grounded — the exact file bytes — never invented), and `CONTRIBUTING.md` (outside `docs/`) rides
+  in via a new `BuildInput::extra_md_files` field so its cross-references resolve through the same
+  pipeline as the rest of the corpus; `BuildInput::conventional`'s default (and so the existing
+  `build`/`lint` commands) is unchanged. A manifest entry that resolves to no ingested document is a
+  build error, never a silently-dropped chapter (G2). New CLI: `myc-doc book`; new `just docs-book`.
+  Also added: `docs/Containerfile` (a two-stage Podman/Docker build — a pinned Rust builder runs
+  `myc-doc build` + `myc-doc book` + `cargo doc`, then a minimal Python image serves the assembled
+  static site) + `scripts/docs-container.sh` (`just docs-container-build`/`docs-container-run`,
+  podman-preferred, docker-fallback) — the agent code index (`docs/api-index/`) is served alongside
+  the human-facing book/corpus/rustdoc views, so the container serves agents and the maintainer alike.
+  Both advisory (not part of `just check`), the same posture as `scripts/docsite.sh`. Append-only.

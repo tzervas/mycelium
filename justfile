@@ -235,6 +235,18 @@ docs-index:
 # WSL: cd target/docsite && python3 -m http.server 8080, then open http://localhost:8080.
 docs-site:
     @bash scripts/docsite.sh
+# Build the curated, chaptered myc-doc BOOK (M-363 output (b)) — one linear reading order over the
+# corpus with prev/next nav + a client-side search index, driven by docs/book-manifest.json.
+# Advisory, NOT part of `just check`. Output under target/doc-book/book/ (gitignored).
+docs-book:
+    cargo run -q -p mycelium-doc --bin myc-doc -- book --repo-root . --out target/doc-book
+# Build the local docs Podman/Docker container (corpus + book + rustdoc + agent index, served via
+# python3 -m http.server). Advisory. Prefers podman, falls back to docker, errors clearly if neither.
+docs-container-build:
+    @bash scripts/docs-container.sh build
+# Run the built docs container, serving on http://localhost:8080.
+docs-container-run:
+    @bash scripts/docs-container.sh run
 
 # --- pre-commit (optional, easy DX) ---
 # Install the git hooks so `just check`-equivalent runs on every commit.
