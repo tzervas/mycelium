@@ -3,6 +3,8 @@ defined, the edit-to-fix loop feeds diagnostics back, and no verdict is pre-writ
 
 from __future__ import annotations
 
+import os
+
 import pytest
 
 from mycelium_experiments.kc2 import (
@@ -14,6 +16,18 @@ from mycelium_experiments.kc2 import (
     baseline,
     run_arm,
     run_experiment,
+)
+
+# KC-<n> are project KILL CRITERIA — early go/no-go decision probes, not ongoing quality gates.
+# KC-2 (M-002) was the LLM-leverage probe: does the language's lexicon/syntax/grammar + its
+# teaching error messages let an LLM improve? It answered decisively YES (DN-09) and the project
+# has far exceeded every kill point, so KC-2 has served its purpose. It also needs an LLM backend
+# (llama.cpp) that is not a 1.0.0 build dependency. Skip by default (never-silent — pytest reports
+# "skipped", never a false pass) until explicitly opted in with MYC_RUN_KC2=1. (Maintainer directive.)
+pytestmark = pytest.mark.skipif(
+    os.environ.get("MYC_RUN_KC2") != "1",
+    reason="KC-2 (M-002) is a satisfied kill-criterion experiment (needs an llama.cpp LLM backend; "
+    "not a 1.0.0 gate) — set MYC_RUN_KC2=1 to run it explicitly",
 )
 
 
