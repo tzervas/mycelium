@@ -35,6 +35,10 @@ if ! cargo about generate --workspace --fail about.hbs -o "$tmpfile" >/tmp/myc-l
   tail -30 /tmp/myc-licenses.out | sed 's/^/    /'
   exit 3
 fi
+# cargo-about's template always trails the last license block with a blank line before EOF;
+# normalize to exactly one trailing newline (matching `just licenses` + the pre-commit
+# end-of-file-fixer convention) so this diff never flags that as spurious drift.
+printf '%s\n' "$(cat "$tmpfile")" > "$tmpfile"
 
 if diff -q "$tmpfile" THIRD-PARTY-LICENSES.md >/dev/null 2>&1; then
   ok "THIRD-PARTY-LICENSES.md is current"

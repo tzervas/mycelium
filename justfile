@@ -162,6 +162,7 @@ doc-index:
 # `cargo install cargo-about --locked --features cli` (or `just setup`).
 licenses:
     @cargo about generate --workspace --fail about.hbs -o THIRD-PARTY-LICENSES.md \
+      && printf '%s\n' "$(cat THIRD-PARTY-LICENSES.md)" > THIRD-PARTY-LICENSES.md \
       && echo "  ok    THIRD-PARTY-LICENSES.md regenerated — review the diff and commit" \
       || echo "  FAIL  cargo-about not installed or generation failed — cargo install cargo-about --locked --features cli"
 alias third-party-licenses := licenses
