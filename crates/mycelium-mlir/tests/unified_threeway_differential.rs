@@ -159,10 +159,16 @@ fn assert_checker_rejects(a: &Value, b: &Value, label: &str) {
 /// Run one corpus through interp ≡ direct-LLVM ≡ MLIR-dialect (≡ JIT iff `allow_jit`), each pair
 /// M-210-checked. Accumulates into the caller's `ran_mlir`/`ran_jit` non-vacuity flags — a skipped
 /// leg never masquerades as agreement (G2).
-fn assert_in_fragment_agreement(cases: &[Case], allow_jit: bool, ran_mlir: &mut bool, ran_jit: &mut bool) {
+fn assert_in_fragment_agreement(
+    cases: &[Case],
+    allow_jit: bool,
+    ran_mlir: &mut bool,
+    ran_jit: &mut bool,
+) {
     for c in cases {
-        let interp = interp_of(c)
-            .unwrap_or_else(|e| panic!("{}: interpreter must evaluate the case, got {e:?}", c.label));
+        let interp = interp_of(c).unwrap_or_else(|e| {
+            panic!("{}: interpreter must evaluate the case, got {e:?}", c.label)
+        });
 
         let direct = match mycelium_mlir::compile_and_run(&c.node) {
             Ok(v) => Some(v),
@@ -548,7 +554,10 @@ fn certified_swap_corpus() -> Vec<Case> {
         ),
         Case::certified(
             "swap(2:ternary3 -> binary4)",
-            swap_node(tern(vec![Trit::Zero, Trit::Pos, Trit::Neg]), Repr::Binary { width: 4 }),
+            swap_node(
+                tern(vec![Trit::Zero, Trit::Pos, Trit::Neg]),
+                Repr::Binary { width: 4 },
+            ),
         ),
     ]
 }
@@ -635,9 +644,13 @@ fn overflow_refusal_is_three_way_honest() {
         },
     );
     // Swap dec: a large ternary value swapped down into too-narrow a binary width.
-    let big_ternary = binary_to_ternary(&binary(vec![false, true, true, false, false, true, false, false]), 6, &swap_policy())
-        .unwrap()
-        .0;
+    let big_ternary = binary_to_ternary(
+        &binary(vec![false, true, true, false, false, true, false, false]),
+        6,
+        &swap_policy(),
+    )
+    .unwrap()
+    .0;
     let Payload::Trits(ts) = big_ternary.payload() else {
         unreachable!()
     };
@@ -756,7 +769,8 @@ fn dialect_honestly_refuses_closures_and_recursion() {
         // silently succeed with a possibly-wrong value, and never silently skip as though it agreed.
         match mycelium_mlir::mlir_compile_and_run(&node) {
             Err(DialectError::Unsupported(_)) => { /* expected — the checked honest boundary */ }
-            Err(DialectError::ToolchainMissing(_)) => { /* env skip — still not a silent success */ }
+            Err(DialectError::ToolchainMissing(_)) => { /* env skip — still not a silent success */
+            }
             Ok(v) => panic!(
                 "{label}: the MLIR-dialect leg must refuse (out of the M-856 fragment), got {:?}",
                 v.payload()
@@ -841,7 +855,8 @@ fn witness_one_leg(leg: &str, p: &Node, q: &Node) {
         mycelium_mlir::mlir_compile_and_run(q),
     ) {
         (Ok(vp), Ok(vq)) => (vp, vq),
-        (Err(DialectError::ToolchainMissing(_)), _) | (_, Err(DialectError::ToolchainMissing(_))) => {
+        (Err(DialectError::ToolchainMissing(_)), _)
+        | (_, Err(DialectError::ToolchainMissing(_))) => {
             return; // env skip
         }
         (rp, rq) => panic!("{leg}: MLIR-dialect errored: {rp:?} / {rq:?}"),
