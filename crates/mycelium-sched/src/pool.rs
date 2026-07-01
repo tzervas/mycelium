@@ -79,6 +79,7 @@
 //! lock-free Chase-Lev deque would need `unsafe` or an external crate; both stay out of scope).
 
 use std::collections::VecDeque;
+use std::panic::AssertUnwindSafe;
 use std::sync::{Arc, Condvar, Mutex, OnceLock};
 use std::thread;
 use std::time::Duration;
@@ -126,12 +127,29 @@ impl Pool {
         pool
     }
 
+    /// A **fresh, non-global** pool with exactly `workers` OS threads — **test-only**. The forced,
+    /// small worker count is the only way to reproduce the nested-submission deadlock the M-864
+    /// rewrite fixes on a machine with many cores (the global [`get`] pool is sized to
+    /// `available_parallelism()`, so a wide-fan-out shape that hangs at `P = 4` completes fine at
+    /// `P = 28`). Paired with [`crate::scheduler::Scheduler::run_indexed_on`], which lets a batch and
+    /// its nested sub-batches all run on this same forced-count pool.
+    #[cfg(test)]
+    pub(crate) fn with_workers_for_test(workers: usize) -> Arc<Self> {
+        Pool::new(workers)
+    }
+
     /// A persistent worker thread's body: forever pop-and-run, parking on `cv` when the queue is
     /// empty. Never returns (the pool's threads live for the process's duration).
+    ///
+    /// Each task runs under [`std::panic::catch_unwind`] so a panicking task can **never** kill this
+    /// persistent worker (M-864 Defect-2 safety: a dead worker would shrink the fixed pool toward
+    /// zero with no replenishment). Job-panic *propagation* to the batch caller is handled one level
+    /// up, in the lane-loop ([`crate::scheduler::Scheduler::run_indexed_on`]); this is the last-line
+    /// guard against any *other* unwind (e.g. a poisoned lock) reaching the worker's stack.
     fn worker_loop(self: Arc<Self>) {
         loop {
             let task = self.blocking_pop();
-            task();
+            run_caught(task);
         }
     }
 
@@ -203,7 +221,10 @@ impl Pool {
             match q.pop_front() {
                 Some(task) => {
                     drop(q);
-                    task();
+                    // Catch, same as `worker_loop`: a helping caller must not unwind out of
+                    // `help_while` because some *other* batch's task panicked. Job-panic propagation
+                    // to the OWNING batch's caller is handled in that batch's own lane-loop, not here.
+                    run_caught(task);
                 }
                 None => {
                     // Nothing to help with right now. Park briefly — woken promptly by a fresh
@@ -218,6 +239,17 @@ impl Pool {
             }
         }
     }
+}
+
+/// Run one pool task, swallowing any panic so it cannot unwind out of a persistent worker thread or
+/// a helping caller (M-864 Defect-2 last-line safety — see [`Pool::worker_loop`]). Job-panic
+/// *propagation* to the owning batch's caller is done deliberately in the lane-loop (which captures
+/// the payload and re-raises it at the join); this function only prevents an unwind from *escaping*
+/// into the pool's own control loops. Any payload reaching here is therefore a non-job unwind (e.g. a
+/// poisoned lock); it is dropped, and the affected batch's result slot stays `None` → surfaced at the
+/// caller's own liveness unwrap rather than by killing the worker.
+fn run_caught(task: PoolTask) {
+    let _ = std::panic::catch_unwind(AssertUnwindSafe(task));
 }
 
 /// The process-wide persistent pool, sized once (lazily, on first use) to

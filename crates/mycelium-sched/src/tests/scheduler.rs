@@ -32,6 +32,7 @@ use std::time::Duration;
 
 use proptest::prelude::*;
 
+use crate::pool::Pool;
 use crate::scheduler::{Scheduler, SchedulerError, StealPolicy};
 
 #[test]
@@ -283,10 +284,13 @@ proptest! {
         prop_assert_eq!(out, expected, "each job runs exactly once (liveness), regardless of steal activity");
     }
 
-    // Backpressure bound (Exact, by construction): the TOTAL pending depth across every
-    // per-worker deque never exceeds `capacity`.
+    // Peak pending depth is exactly `n` (M-864: the whole batch is materialized across its lanes
+    // before any lane drains — the queue is unbounded, `capacity` no longer bounds it). This
+    // replaces M-861's `ready_queue_never_exceeds_capacity`: that backpressure bound was the
+    // feeder's bare-block point and the reproduced-deadlock cause, so it was removed (module docs /
+    // DN-67). `cap` is passed only to confirm it is genuinely ignored — peak is `n`, not `≤ cap`.
     #[test]
-    fn ready_queue_never_exceeds_capacity(
+    fn peak_pending_depth_is_the_job_count_capacity_no_longer_bounds(
         n in 1usize..200,
         workers in 1usize..6,
         cap in 1usize..8,
@@ -295,11 +299,10 @@ proptest! {
         let jobs: Vec<_> = (0..n).map(|i| move || i).collect();
         let mut peak = 0usize;
         let _ = s.run_indexed(jobs, Some(&mut peak), None);
-        prop_assert!(
-            peak <= cap,
-            "total ready-queue peak {} (summed across every per-worker deque) must not exceed \
-             capacity {} (G2: bounded, never unbounded)",
-            peak, cap
+        prop_assert_eq!(
+            peak, n,
+            "M-864: all n jobs are enqueued before any lane drains, so peak == n (capacity no \
+             longer bounds the queue)"
         );
     }
 
@@ -554,5 +557,200 @@ fn nested_recursion_thread_count_is_bounded_not_growing_with_depth() {
         "OS thread count grew with nesting depth (observed peak {observed_peak}, baseline \
          {baseline}, available_parallelism {available}) — the pool must stay bounded regardless of \
          how deep run_indexed nests (M-864)"
+    );
+}
+
+// ── M-864 correctness rewrite: FORCED-LOW-WORKER-COUNT nested tests ───────────────────────────
+//
+// The tests above run on the GLOBAL pool (sized to `available_parallelism()`), so on a many-core
+// box they cannot reproduce the nested-submission deadlock the original M-864 implementation had:
+// its feeder bare-blocked on backpressure (`total >= capacity`) BEFORE help-stealing, so with
+// enough nesting every pool thread bare-blocked and nothing drained the queue. That hang manifests
+// only when the pool worker count `P` is SMALL relative to the fan-out width (width > cap + P).
+//
+// These tests force an explicit small `P` via `Pool::with_workers_for_test` + `Scheduler::run_
+// indexed_on`, so the whole nested tree (every level) runs on the forced-count pool. They are the
+// hardware-independent validation the coordinator required: on the PRE-FIX code they DEADLOCK (the
+// `run_with_timeout` wrapper turns the hang into a fast, explicit test failure); on the fixed code
+// (unbounded queue, feed-then-run, no feeder/lane bare-block) they PASS. Verified by hand against a
+// scratch revert of the feeder-block (see DN-67 §3 / the PR report).
+
+/// Nested `run_indexed`, threading an EXPLICIT `pool` through every level (so a forced-small worker
+/// count holds for the whole tree, not just the top batch). `sched` fixes the per-batch lane count.
+fn nested_parallel_shape_on(pool: &Arc<Pool>, sched: Scheduler, widths: &[usize]) -> u64 {
+    match widths.split_first() {
+        None => 1,
+        Some((&w, rest)) => {
+            let rest = rest.to_vec();
+            let jobs: Vec<_> = (0..w)
+                .map(|_| {
+                    let rest = rest.clone();
+                    let pool = Arc::clone(pool);
+                    move || nested_parallel_shape_on(&pool, sched, &rest)
+                })
+                .collect();
+            sched
+                .run_indexed_on(pool, jobs, None, None)
+                .into_iter()
+                .sum()
+        }
+    }
+}
+
+#[test]
+fn forced_low_p_wide_fanout_does_not_deadlock_p1_through_p4() {
+    // THE regression test for the reproduced hang. The `[15,15,6]` shape (width 15 ≫ any of the
+    // small forced worker counts + the old `capacity`) is exactly what deadlocked the pre-fix
+    // feeder on a ≤4-core machine. Run it at forced P ∈ {1,2,3,4}; each must complete and match the
+    // sequential reference under a wall-clock timeout. A single hang at ANY P fails the test.
+    let shape = vec![15usize, 15, 6];
+    let expected = nested_reference_shape(&shape);
+    for p in 1usize..=4 {
+        let shape = shape.clone();
+        let actual = run_with_timeout(Duration::from_secs(60), move || {
+            let pool = Pool::with_workers_for_test(p);
+            // Lane count per batch: use a modest fixed count so batches genuinely fan out across
+            // lanes even when P is tiny (the lanes are pool TASKS, run by P workers + the helping
+            // caller — the point is that nested feeders never bare-block regardless of P vs width).
+            let sched = Scheduler::with_workers(4, 8).unwrap();
+            nested_parallel_shape_on(&pool, sched, &shape)
+        });
+        assert_eq!(
+            actual, expected,
+            "forced P={p}: wide nested fan-out [15,15,6] must complete without deadlock and match \
+             the sequential reference (this shape hangs on the pre-fix feeder-block code)"
+        );
+    }
+}
+
+#[test]
+fn forced_low_p_deep_chain_and_mixed_shapes_do_not_deadlock() {
+    // A deep chain and irregular mixed shapes (incl. empty/single-item sub-batches), all at forced
+    // low P — the nested-submission stress the global-pool tests can't force on a many-core box.
+    let shapes: [Vec<usize>; 4] = [
+        vec![1usize; 30],    // deep chain
+        vec![8, 0, 5, 1, 4], // mixed incl. empty + single-item
+        vec![10, 10],        // two wide levels
+        vec![3, 3, 3, 3, 3], // moderate fan-out, moderately deep
+    ];
+    for p in 1usize..=4 {
+        for shape in &shapes {
+            let expected = nested_reference_shape(shape);
+            let shape = shape.clone();
+            let actual = run_with_timeout(Duration::from_secs(60), move || {
+                let pool = Pool::with_workers_for_test(p);
+                let sched = Scheduler::with_workers(4, 8).unwrap();
+                nested_parallel_shape_on(&pool, sched, &shape)
+            });
+            assert_eq!(
+                actual, expected,
+                "forced P={p}: nested shape must complete without deadlock and match the reference"
+            );
+        }
+    }
+}
+
+#[test]
+fn forced_p1_single_worker_nested_is_the_hardest_case_and_still_completes() {
+    // P=1 is the tightest: a single pool worker, so ALL concurrency comes from the caller's own
+    // `help_while` recruiting itself as an extra helper. If any lane or feeder bare-blocked, P=1
+    // would wedge immediately. A width-6, depth-3 tree (216 leaves) must still complete.
+    let shape = vec![6usize, 6, 6];
+    let expected = nested_reference_shape(&shape);
+    let actual = run_with_timeout(Duration::from_secs(60), move || {
+        let pool = Pool::with_workers_for_test(1);
+        let sched = Scheduler::with_workers(4, 8).unwrap();
+        nested_parallel_shape_on(&pool, sched, &shape)
+    });
+    assert_eq!(
+        actual, expected,
+        "forced P=1 (all concurrency via the caller's help_while) must still complete a nested tree"
+    );
+}
+
+// ── M-864 Defect 2: a panicking job must not hang the join or kill the pool ───────────────────
+
+#[test]
+fn a_panicking_job_propagates_at_join_without_hanging_and_pool_survives() {
+    // A job that panics must (1) NOT hang the batch (the RAII drop-guard decrements `remaining` on
+    // unwind), (2) NOT kill the persistent pool worker (each job runs under catch_unwind), and
+    // (3) re-raise the panic in the calling thread at the join (thread::scope-like propagation).
+    // Use a forced pool so a killed worker (regression) would be observable as a subsequent hang.
+    let pool = Pool::with_workers_for_test(2);
+    let sched = Scheduler::with_workers(4, 8).unwrap();
+
+    // (3) the panic is surfaced to the caller (not swallowed).
+    let pool_a = Arc::clone(&pool);
+    let panicked = run_with_timeout(Duration::from_secs(30), move || {
+        let jobs: Vec<Box<dyn FnOnce() -> u64 + Send>> = vec![
+            Box::new(|| 1u64),
+            Box::new(|| panic!("job boom (expected by the test)")),
+            Box::new(|| 3u64),
+        ];
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            sched.run_indexed_on(&pool_a, jobs, None, None)
+        }))
+        .is_err()
+    });
+    assert!(
+        panicked,
+        "a panicking job must re-raise at the join (thread::scope-like), not be swallowed"
+    );
+
+    // (1)+(2): the SAME pool must still work after a panicking batch — a subsequent batch completes
+    // (the worker did not die; the join did not hang). If either regressed, this would time out.
+    let pool_b = Arc::clone(&pool);
+    let sum = run_with_timeout(Duration::from_secs(30), move || {
+        let sched = Scheduler::with_workers(4, 8).unwrap();
+        let jobs: Vec<_> = (0..50usize).map(|i| move || i as u64).collect();
+        sched
+            .run_indexed_on(&pool_b, jobs, None, None)
+            .into_iter()
+            .sum::<u64>()
+    });
+    assert_eq!(
+        sum,
+        (0..50u64).sum::<u64>(),
+        "the pool must survive a panicking job — a later batch on the same pool must complete"
+    );
+}
+
+#[test]
+fn a_nested_panic_propagates_up_through_the_nesting_without_hanging() {
+    // A panic in a DEEPLY nested job must propagate all the way up (each level's help_while returns,
+    // each level re-raises), never hang a mid-level join. Forced P=2 so a hang would be immediate.
+    let pool = Pool::with_workers_for_test(2);
+    let raised = run_with_timeout(Duration::from_secs(30), move || {
+        let sched = Scheduler::with_workers(4, 8).unwrap();
+        let pool_inner = Arc::clone(&pool);
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || {
+            // outer batch → each job runs an inner batch → one inner job panics.
+            let outer: Vec<Box<dyn FnOnce() -> u64 + Send>> = (0..3usize)
+                .map(|k| -> Box<dyn FnOnce() -> u64 + Send> {
+                    let pool_k = Arc::clone(&pool_inner);
+                    Box::new(move || {
+                        let inner: Vec<Box<dyn FnOnce() -> u64 + Send>> = (0..3usize)
+                            .map(|j| -> Box<dyn FnOnce() -> u64 + Send> {
+                                if k == 1 && j == 2 {
+                                    Box::new(|| panic!("deep boom (expected)"))
+                                } else {
+                                    Box::new(move || (j as u64) + 1)
+                                }
+                            })
+                            .collect();
+                        sched
+                            .run_indexed_on(&pool_k, inner, None, None)
+                            .into_iter()
+                            .sum()
+                    })
+                })
+                .collect();
+            sched.run_indexed_on(&pool_inner, outer, None, None)
+        }))
+        .is_err()
+    });
+    assert!(
+        raised,
+        "a deeply-nested job panic must propagate up through every join, never hang a mid-level one"
     );
 }
