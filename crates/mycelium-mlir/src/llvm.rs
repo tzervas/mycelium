@@ -2257,6 +2257,64 @@ pub fn emit_llvm_ir_with_swap_mode(
     Ok(out)
 }
 
+// ─── parallel per-function/per-nodule codegen (M-860) ─────────────────────────────────────────
+
+/// Lower `nodes` — a batch of **independent** functions/nodules — in parallel via `rayon`,
+/// returning one [`AotError`]-or-IR result per input, in the **same order as `nodes`**.
+///
+/// **Determinism (Exact by construction).** Each call to [`emit_llvm_ir_with_swap_mode`] is a pure
+/// function of its own `Node` — a fresh [`Ssa`]/[`Bbc`] counter pair starts at zero every time, and
+/// no lowering shares mutable state across nodes — so parallelizing the *computation* cannot change
+/// any individual node's emitted text. The remaining risk is **work-distribution order**: to keep
+/// that reproducible too (not just "happens to work"), the batch is sorted by each node's
+/// [`mycelium_core::Node::content_hash`] (RFC-0001 §4.6 — a stable, α-normalized structural key,
+/// paired with the original index as a tie-break for two structurally-identical nodes) *before* the
+/// `rayon` parallel map, and every result is scattered back to its **original** index (never
+/// completion order) on the way out. So `emit_llvm_ir_many(nodes) == nodes.iter().map(emit_llvm_ir)`
+/// element-wise, byte-for-byte, regardless of thread count or scheduling — asserted by
+/// [`tests::llvm::parallel_emit_matches_sequential_emit_byte_identical`].
+///
+/// Uses the default swap-cert mode ([`SwapCertMode::Recheck`]); see
+/// [`emit_llvm_ir_many_with_swap_mode`] to select [`SwapCertMode::ReuseInterp`] for the whole batch.
+#[must_use]
+pub fn emit_llvm_ir_many(nodes: &[Node]) -> Vec<Result<String, AotError>> {
+    emit_llvm_ir_many_with_swap_mode(nodes, SwapCertMode::Recheck)
+}
+
+/// [`emit_llvm_ir_many`] under an explicit, whole-batch [`SwapCertMode`] (M-852). See
+/// [`emit_llvm_ir_many`]'s doc for the determinism contract (content-key-sorted work distribution,
+/// original-index reassembly).
+#[must_use]
+pub fn emit_llvm_ir_many_with_swap_mode(
+    nodes: &[Node],
+    swap_mode: SwapCertMode,
+) -> Vec<Result<String, AotError>> {
+    use rayon::prelude::*;
+
+    // Stable work order: sort indices by (content_hash, original_index) — never a `HashMap`/set
+    // iteration order, never wall-clock/thread-arrival order (G2 — no incidental nondeterminism).
+    let mut order: Vec<usize> = (0..nodes.len()).collect();
+    let keys: Vec<mycelium_core::ContentHash> = nodes.iter().map(Node::content_hash).collect();
+    order.sort_by(|&a, &b| keys[a].cmp(&keys[b]).then(a.cmp(&b)));
+
+    // Parallel map over the sorted order; each result carries its ORIGINAL index home.
+    let computed: Vec<(usize, Result<String, AotError>)> = order
+        .par_iter()
+        .map(|&i| (i, emit_llvm_ir_with_swap_mode(&nodes[i], swap_mode)))
+        .collect();
+
+    // Scatter back to original position — the output vector's order never depends on completion
+    // order or the content-key sort, only on `nodes`' own index (Exact; never-silent: every slot is
+    // populated exactly once, or this would panic rather than silently return a short/reordered Vec).
+    let mut out: Vec<Option<Result<String, AotError>>> = (0..nodes.len()).map(|_| None).collect();
+    for (i, r) in computed {
+        out[i] = Some(r);
+    }
+    out.into_iter()
+        .map(|slot| slot.expect("every index populated exactly once by the scatter above"))
+        .collect()
+}
+
 /// Emit each result element as its ASCII char via `@putchar` (one op per element — a transparent
 /// rendering of the computed lane, no opaque pass, RFC-0004 §6), then a trailing newline and `ret`.
 fn emit_result_line(kind: LaneKind, vals: &[Operand], ssa: &mut Ssa, out: &mut String) {
