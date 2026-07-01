@@ -46,6 +46,7 @@ pub mod corpus;
 pub mod llm;
 pub mod measure;
 pub mod report;
+pub mod scaling;
 pub mod timing;
 pub mod verdict;
 
@@ -54,7 +55,35 @@ pub use corpus::{corpus, Case, Fragment};
 pub use llm::{parse_any_llm_json, GrokLlmReport, LlmReport, ParsedLlmSection};
 pub use measure::{run_corpus, CaseRecord, RunRecord};
 pub use report::{Honesty, LlmSection, Report};
+pub use scaling::{run_scaling, ScalingOutcome, ScalingPoint, ScalingRun, ScalingSample};
 pub use verdict::{classify, Speed, Verdict};
+
+/// The **canonical, bare** host tag (`"<arch>-<os>, <N> hw threads"`, no prose wrapper) — the form
+/// used for exact-match comparisons: [`verdict::RegressionBaseline::host_tag`] and the regression
+/// gate's host check. Kept separate from [`host_note_for_scaling`] (which wraps this same
+/// information in prose for human-readable report headers) so a regression gate never has to
+/// string-strip prose to recover the comparable tag — that mismatch (`"host: ... (provenance
+/// only)"` vs the bare tag) was a real bug caught while dogfooding this module (M-859), fixed by
+/// giving the exact-match comparison its own canonical, un-prosed form.
+#[must_use]
+pub fn host_tag() -> String {
+    let arch = std::env::consts::ARCH;
+    let os = std::env::consts::OS;
+    let threads = std::thread::available_parallelism()
+        .map(std::num::NonZeroUsize::get)
+        .unwrap_or(0);
+    format!("{arch}-{os}, {threads} hw threads")
+}
+
+/// Best-effort one-line host note for report provenance (target triple + hw thread count). No PII.
+/// Shared by the single-core report (`bin/bench.rs::host_note`, unchanged) and the scaling module —
+/// factored here so both projections stamp an identical host string for one run. Wraps
+/// [`host_tag`] in prose; NOT the form used for the regression gate's exact-match comparison (see
+/// [`host_tag`]'s doc for why the two are kept distinct).
+#[must_use]
+pub fn host_note_for_scaling() -> String {
+    format!("host: {} (provenance only)", host_tag())
+}
 
 #[cfg(test)]
 mod tests;

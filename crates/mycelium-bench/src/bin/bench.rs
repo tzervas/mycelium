@@ -6,8 +6,12 @@
 //! refused — its timings are not representative (no optimisation, overflow checks on), so any WIN/LOSS
 //! verdict from it would be dishonest (VR-5/G2).
 //!
-//! It prints a short human summary to stdout and writes the full report to `reports/`. Optional flag:
-//! `--out <DIR>` to redirect the report directory; `--stdout` to also print the markdown.
+//! It prints a short human summary to stdout and writes the full report to `reports/`. Optional flags:
+//! `--out <DIR>` to redirect the report directory; `--stdout` to also print the markdown;
+//! `--scaling [N]` to also run the multicore scaling suite (M-859; `N` caps worker count, default
+//! host parallelism — this is *slow*, opt-in, off by default); `--baseline <FILE>` to gate this run's
+//! single-core timings against a committed [`RegressionBaseline`] JSON (M-859; opt-in, off by
+//! default — no baseline is fabricated when the flag is absent).
 
 use std::path::{Path, PathBuf};
 
@@ -16,7 +20,9 @@ use mycelium_bench::corpus::corpus;
 use mycelium_bench::llm::{LlmIngestError, LlmReport};
 use mycelium_bench::measure::run_corpus;
 use mycelium_bench::report::{neutral_band, Honesty, LlmSection, Report};
+use mycelium_bench::scaling::run_scaling;
 use mycelium_bench::timing::refuse_debug_build;
+use mycelium_bench::verdict::RegressionBaseline;
 
 fn main() {
     // 1. Honest profile gate: never measure a debug build.
@@ -25,6 +31,8 @@ fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let out_dir = parse_out_dir(&args).unwrap_or_else(default_reports_dir);
     let also_stdout = args.iter().any(|a| a == "--stdout");
+    let scaling_max_workers = parse_scaling_flag(&args);
+    let baseline_path = parse_baseline_flag(&args);
 
     eprintln!("mycelium-bench: running the execution-backend corpus (release build)...");
     let eng = Engines::default();
@@ -35,7 +43,17 @@ fn main() {
     //    SYNTHETIC sample (labeled synthetic). Absence is recorded, never synthesized.
     let llm = ingest_llm_section();
 
-    let report = Report {
+    // 3. Multicore scaling (M-859) — opt-in via `--scaling [N]`, off by default (it is
+    //    substantially slower: every case x backend is timed across every worker count 1..=N).
+    let scaling = scaling_max_workers.map(|max_workers| {
+        eprintln!(
+            "mycelium-bench: running the multicore scaling suite (1..={max_workers} workers, this \
+             is the slow opt-in path)..."
+        );
+        run_scaling(&cases, max_workers, 8, 3)
+    });
+
+    let mut report = Report {
         tool: "mycelium-bench",
         profile: "release",
         mlir_dialect_feature: cfg!(feature = "mlir-dialect"),
@@ -44,7 +62,29 @@ fn main() {
         neutral_band: neutral_band(),
         run,
         llm,
+        scaling,
+        regression: None,
     };
+
+    // 4. Regression gate (M-859) — opt-in via `--baseline <FILE>`. A malformed/unreadable baseline
+    //    is a loud failure (exit 1), never a silent skip of the gate the caller explicitly asked for.
+    if let Some(path) = baseline_path {
+        let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
+            eprintln!(
+                "mycelium-bench: cannot read baseline {}: {e}",
+                path.display()
+            );
+            std::process::exit(1);
+        });
+        let baseline = RegressionBaseline::from_json(&text).unwrap_or_else(|e| {
+            eprintln!(
+                "mycelium-bench: baseline {} is not valid JSON: {e}",
+                path.display()
+            );
+            std::process::exit(1);
+        });
+        report = report.with_regression_gate(&mycelium_bench::host_tag(), &baseline);
+    }
 
     // 3. Emit both projections (G11 dual projection), deterministically.
     if let Err(e) = std::fs::create_dir_all(&out_dir) {
@@ -104,6 +144,31 @@ fn main() {
     } else {
         println!("  llm-harness      : none found (section recorded empty, not synthesized)");
     }
+    if let Some(run) = &report.scaling {
+        println!(
+            "  scaling (M-859)  : {} points across worker counts {:?} (host: {})",
+            run.points.len(),
+            run.worker_counts,
+            run.host_note,
+        );
+    } else {
+        println!("  scaling (M-859)  : not run (pass --scaling [N] to opt in)");
+    }
+    if let Some(sec) = &report.regression {
+        let regressions = sec
+            .rows
+            .iter()
+            .filter(|r| r.outcome.is_regression())
+            .count();
+        println!(
+            "  regression gate  : {} row(s) vs baseline (captured {}); {} REGRESSION(S)",
+            sec.rows.len(),
+            sec.baseline_captured,
+            regressions,
+        );
+    } else {
+        println!("  regression gate  : not run (pass --baseline <FILE> to opt in)");
+    }
 
     if also_stdout {
         println!("\n{md}");
@@ -121,6 +186,32 @@ fn parse_out_dir(args: &[String]) -> Option<PathBuf> {
     None
 }
 
+/// `--scaling [N]` — opt into the multicore scaling suite. `N` (optional) caps the worker count;
+/// absent or unparsable, it defaults to the host's available parallelism
+/// (`mycelium_std_runtime::scheduler::Scheduler::new().workers()`, floor 1). Returns `None` when the
+/// flag was not passed at all (the suite is off by default — it is materially slower).
+fn parse_scaling_flag(args: &[String]) -> Option<usize> {
+    let idx = args.iter().position(|a| a == "--scaling")?;
+    let default_workers = mycelium_std_runtime::scheduler::Scheduler::new().workers();
+    let n = args
+        .get(idx + 1)
+        .and_then(|s| s.parse::<usize>().ok())
+        .filter(|n| *n > 0)
+        .unwrap_or(default_workers);
+    Some(n)
+}
+
+/// `--baseline <FILE>` — opt into the regression gate against a committed baseline JSON.
+fn parse_baseline_flag(args: &[String]) -> Option<PathBuf> {
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        if a == "--baseline" {
+            return it.next().map(PathBuf::from);
+        }
+    }
+    None
+}
+
 /// The default report dir: `<crate>/reports/`, resolved relative to this source file so it works from
 /// any CWD (`CARGO_MANIFEST_DIR` is the crate root at build time).
 fn default_reports_dir() -> PathBuf {
@@ -128,13 +219,11 @@ fn default_reports_dir() -> PathBuf {
 }
 
 /// Best-effort one-line host note for report provenance (target triple + thread count). No PII.
+/// Delegates to [`mycelium_bench::host_note_for_scaling`] — a single canonical implementation (the
+/// prior copy here duplicated it exactly, which is exactly the kind of drift that produced the
+/// `host_tag()`-vs-`host_note()` format mismatch this module's regression gate had to fix, M-859).
 fn host_note() -> String {
-    let arch = std::env::consts::ARCH;
-    let os = std::env::consts::OS;
-    let threads = std::thread::available_parallelism()
-        .map(std::num::NonZeroUsize::get)
-        .unwrap_or(0);
-    format!("host: {arch}-{os}, {threads} hw threads (provenance only)")
+    mycelium_bench::host_note_for_scaling()
 }
 
 /// Find the LLM-harness report to ingest. Order:

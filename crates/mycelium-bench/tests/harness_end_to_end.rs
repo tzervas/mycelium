@@ -72,6 +72,8 @@ fn build_report() -> Report {
         neutral_band: neutral_band(),
         run,
         llm,
+        scaling: None,
+        regression: None,
     }
 }
 
@@ -265,6 +267,8 @@ fn the_harness_ingests_grok_report_and_labels_synthetic_correctly() {
         neutral_band: neutral_band(),
         run,
         llm: Some(llm_section),
+        scaling: None,
+        regression: None,
     };
 
     let md = report.to_markdown();

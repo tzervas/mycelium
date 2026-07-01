@@ -18,24 +18,45 @@ error, or environmental skip. It also ingests the LLM-harness report so language
 `Empirical`; a debug build is refused for performance numbers; a differential divergence is always
 recorded as a correctness LOSS (VR-5 — no pre-written performance target).
 
+**Multicore scaling + regression gates (M-859).** Beyond the single-core WIN/LOSS table, the harness
+can also measure how a *batch of independent programs* scales across `1..=N` OS worker threads (via
+the real `mycelium-std-runtime` `Scheduler`, M-709), and gate a fresh run's timings against a
+committed baseline JSON captured on a specific host. Both are opt-in (`--scaling [N]` /
+`--baseline <FILE>` on the `bench` binary) and purely measurement — neither changes any backend's
+semantics or execution path. Every scaling/regression figure is `Empirical` with an explicit trial
+count; the Amdahl serial-fraction estimate is an explicitly-labeled coarse two-point fit, never a
+target.
+
 ## Key items
 
 - `run_corpus` / `RunRecord` / `CaseRecord` — measure all corpus cases across all backends.
-- `Backend` / `Engines` / `Outcome` — the execution backend abstraction.
+- `Backend` / `Engines` / `Outcome` — the execution backend abstraction (`is_process_spawn_bound`
+  flags the compiled paths that exec a fresh native process per call).
 - `corpus` / `Case` / `Fragment` — the shared v0-calculus program corpus.
 - `classify` / `Verdict` / `Speed` — classify a measured outcome against the interpreter baseline.
-- `Report` / `Honesty` / `LlmSection` — the deterministic markdown + JSON report with WIN/LOSS table.
+- `run_scaling` / `ScalingRun` / `ScalingPoint` / `ScalingOutcome` — multicore scaling curves over
+  the OS-thread `Scheduler` (M-859).
+- `regression_classify` / `RegressionBaseline` / `RegressionOutcome` — this-run-vs-committed-baseline
+  regression gating, host-tag-scoped (M-859).
+- `Report` / `Honesty` / `LlmSection` / `RegressionSection` — the deterministic markdown + JSON
+  report with the WIN/LOSS table, the scaling section, and the regression-gate section.
 - `parse_any_llm_json` / `LlmReport` — LLM-harness report ingestion.
-- `bench` binary — the harness entry point.
+- `bench` binary — the harness entry point (`--out <DIR>`, `--stdout`, `--scaling [N]`,
+  `--baseline <FILE>`).
+- `baselines/BASELINE-<host-tag>.json` — committed regression baselines (see
+  [`baselines/`](baselines/)), one per host tag they were captured on.
 
 ## Design references
 
-- E-BENCH
+- E-BENCH, M-859
 - NFR-7, ADR-007
 - M-212, M-250, M-303, M-340, M-360
+- RFC-0008 RT1·RT2 (the `Scheduler` the scaling suite drives)
 - KC-2, SC-5b
 - VR-5, G2
 
 ## Role in the workspace
 
-Depends on `mycelium-core`, `mycelium-interp`, `mycelium-mlir`, `mycelium-l1`, and `mycelium-cert`; measures the backends without modifying them. See the [workspace overview](../../README.md).
+Depends on `mycelium-core`, `mycelium-interp`, `mycelium-mlir`, `mycelium-l1`, `mycelium-cert`, and
+`mycelium-std-runtime` (the OS-thread `Scheduler` the scaling suite drives); measures the backends
+without modifying them. See the [workspace overview](../../README.md).

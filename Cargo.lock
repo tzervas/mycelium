@@ -170,6 +170,7 @@ dependencies = [
  "mycelium-interp",
  "mycelium-l1",
  "mycelium-mlir",
+ "mycelium-std-runtime",
  "serde",
  "serde_json",
 ]
