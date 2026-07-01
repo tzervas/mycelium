@@ -9016,13 +9016,15 @@ issues:
   - id: M-873
     title: "M-873 -- feat(transpile): Rust→Mycelium transpiler PoC (existing surface + gap-report)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:todo]
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
     depends_on: [M-719]
     epic: E18-1
     doc_refs:
       - corpus:DN-34
       - corpus:DN-26
       - src:docs/planning/dogfooding-effort-and-usage-assessment.md
+      - src:crates/mycelium-transpile/src/transpile.rs
+      - src:crates/mycelium-transpile/src/gap.rs
     body: |
       Kickoff `trx` (.claude/kickoffs/trx.md). Get a Rust→Mycelium transpiler working against the
       LANGUAGE SURFACE THAT ALREADY EXISTS (do not wait for full maturity): emit what the current
@@ -9054,3 +9056,16 @@ issues:
       - The MEASURED token cost recorded -> converts the assessment doc's Declared rates to Empirical
         (update docs/planning/dogfooding-effort-and-usage-assessment.md + the self-hosting port ledger).
       - Landed as a scoped PR to dev via /pr-land. Non-tag-gating (ADR-036).
+
+      LANDED (2026-07-01, kickoff trx, Hybrid swarm). crates/mycelium-transpile: syn-based AST-walk
+      -> best-effort .myc + never-silent structured gap report (exhaustive dispatch, fallback always
+      records a gap -- NOT the seed's allowlist anti-pattern). Run on mycelium-std-cmp, diffed vs
+      lib/std/cmp.myc. Measured (Empirical): 4/111 non-test top-level items expressible = 3.6% against
+      the current surface WITHOUT macro expansion (lower bound); 112 gap records. Dominant blocker:
+      macros ~55% -> top lever is transpiler-side macro expansion. Prioritized surface-feature backlog
+      (the E18-1 needs-design demand data) recorded in DN-34 section 8.3. Measured PoC cost
+      ~0.85-0.95M tokens -> converts the assessment doc's Declared build/PoC rows to Empirical (5a).
+      Review fix (G2/VR-5): 12 numeric-widening impls with a fabricated from(self) body reclassified
+      emitted->gapped (never emit plausible-but-wrong). fmt/clippy -D warnings/test -p green (7/7).
+      DN-34 stays Draft (a spike, not the gated full transpiler phase). The macro-expansion lever and
+      the surface gaps (rows 2-7 of the backlog) are the follow-on needs-design items under E18-1.
