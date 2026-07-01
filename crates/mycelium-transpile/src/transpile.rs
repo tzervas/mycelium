@@ -1,0 +1,357 @@
+//! The driver (M-873): parse one Rust file with `syn`, walk every top-level item exhaustively,
+//! and either emit `.myc` text or record a [`Gap`] — **never both-absent** (G2).
+//!
+//! **Invariant** (checked by `src/tests/invariant.rs`): for every top-level item in
+//! `syn::File::items`, its name/index appears in `GapReport::emitted_items` OR at least one
+//! [`Gap`] in `GapReport::gaps` — never neither.
+
+use crate::emit::{self, Emitted};
+use crate::gap::{Category, Gap, GapReason, GapReport};
+use crate::map::tokens_to_string;
+use std::fs;
+use std::path::Path;
+use syn::spanned::Spanned;
+use syn::Item;
+
+/// Parse `path` and transpile every top-level item. Returns the best-effort `.myc` text plus the
+/// structured gap report. I/O and parse failures are returned as `Err` (this is a hard failure
+/// distinct from a per-item gap — the file could not be read/parsed at all).
+pub fn transpile_file(path: &Path) -> Result<(String, GapReport), String> {
+    let source_text =
+        fs::read_to_string(path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
+    transpile_source(
+        &source_text,
+        &path.display().to_string(),
+        &derive_nodule_path(path),
+    )
+}
+
+/// Transpile already-read source text. Split out from [`transpile_file`] so tests can exercise
+/// the driver on small inline fixtures without touching the filesystem.
+pub fn transpile_source(
+    source_text: &str,
+    file_label: &str,
+    nodule_path: &str,
+) -> Result<(String, GapReport), String> {
+    let parsed =
+        syn::parse_file(source_text).map_err(|e| format!("failed to parse {file_label}: {e}"))?;
+
+    let mut emitted_items = Vec::new();
+    let mut gaps = Vec::new();
+
+    if !parsed.attrs.is_empty() {
+        // Inner (`#![...]`) attributes live outside `syn::File::items`, so they are outside the
+        // per-item invariant's scope by construction — but still recorded, never silently
+        // dropped. Doc attrs (`//!`) are folded into the nodule header instead of gapped.
+        let non_doc: Vec<String> = parsed
+            .attrs
+            .iter()
+            .filter(|a| !a.path().is_ident("doc"))
+            .map(tokens_to_string)
+            .collect();
+        if !non_doc.is_empty() {
+            gaps.push(Gap {
+                file: file_label.to_string(),
+                line: 1,
+                col: 1,
+                category: Category::Other,
+                rust_construct: "inner attribute (#![...])".to_string(),
+                snippet: non_doc.join(" "),
+                reason: "crate/file-level inner attributes are not transpiled (no nodule-header \
+                          equivalent for these Rust-specific directives)"
+                    .to_string(),
+                item_name: None,
+            });
+        }
+    }
+
+    let total = parsed.items.len();
+    let mut body_chunks = Vec::new();
+
+    for item in &parsed.items {
+        let (line, col) = span_line_col(item);
+        let kind = item_kind_str(item);
+        let name_hint = item_display_name(item);
+        let snippet = tokens_to_string(item);
+
+        match dispatch_item(item) {
+            Outcome::Emitted(Emitted {
+                name,
+                myc,
+                sub_gaps,
+            }) => {
+                body_chunks.push(myc);
+                emitted_items.push(name.clone());
+                for sg in sub_gaps {
+                    gaps.push(Gap {
+                        file: file_label.to_string(),
+                        line,
+                        col,
+                        category: sg.category,
+                        rust_construct: kind.to_string(),
+                        snippet: snippet.clone(),
+                        reason: sg.reason,
+                        item_name: Some(name.clone()),
+                    });
+                }
+            }
+            Outcome::Gap(reason) => {
+                gaps.push(Gap {
+                    file: file_label.to_string(),
+                    line,
+                    col,
+                    category: reason.category,
+                    rust_construct: kind.to_string(),
+                    snippet,
+                    reason: reason.reason,
+                    item_name: name_hint,
+                });
+            }
+            Outcome::TestExcluded => {
+                gaps.push(Gap {
+                    file: file_label.to_string(),
+                    line,
+                    col,
+                    category: Category::TestItem,
+                    rust_construct: kind.to_string(),
+                    snippet,
+                    reason: "#[cfg(test)] item — out of scope for this PoC's transpilation \
+                              surface (excluded from the expressible-fraction denominator, \
+                              but recorded, never silently skipped)"
+                        .to_string(),
+                    item_name: name_hint,
+                });
+            }
+        }
+    }
+
+    let myc_text = render_nodule(nodule_path, &body_chunks, &parsed.attrs);
+    let report = GapReport {
+        source: file_label.to_string(),
+        emitted_items,
+        gaps,
+        total_top_level_items: total,
+    };
+    Ok((myc_text, report))
+}
+
+enum Outcome {
+    Emitted(Emitted),
+    Gap(GapReason),
+    TestExcluded,
+}
+
+/// Exhaustive dispatch over `syn::Item` (itself `#[non_exhaustive]`). Every arm either calls into
+/// `emit.rs` or produces an explicit [`GapReason`] — the trailing `_` arm is the
+/// forward-compatibility catch-all, itself a gap, never a silent no-op.
+fn dispatch_item(item: &Item) -> Outcome {
+    match item {
+        Item::Enum(e) => emit::emit_enum(e).map_or_else(Outcome::Gap, Outcome::Emitted),
+        Item::Struct(s) => emit::emit_struct(s).map_or_else(Outcome::Gap, Outcome::Emitted),
+        Item::Fn(f) => emit::emit_fn(f).map_or_else(Outcome::Gap, Outcome::Emitted),
+        Item::Trait(t) => emit::emit_trait(t).map_or_else(Outcome::Gap, Outcome::Emitted),
+        Item::Impl(i) => emit::emit_impl(i).map_or_else(Outcome::Gap, Outcome::Emitted),
+        Item::Use(u) => dispatch_use(u),
+        Item::Mod(m) => {
+            if emit::is_cfg_test(&m.attrs) {
+                Outcome::TestExcluded
+            } else {
+                Outcome::Gap(GapReason::new(
+                    Category::Other,
+                    "`mod` declaration — Mycelium's nodule-per-file model has no nested-module \
+                     construct in this grammar fragment",
+                ))
+            }
+        }
+        Item::Macro(m) => {
+            if m.mac.path.is_ident("macro_rules") {
+                Outcome::Gap(GapReason::new(
+                    Category::MacroDef,
+                    "`macro_rules!` definition — no macro system in this grammar",
+                ))
+            } else {
+                Outcome::Gap(GapReason::new(
+                    Category::MacroInvocation,
+                    "item-position macro invocation — no macro system in this grammar",
+                ))
+            }
+        }
+        Item::Const(c) => Outcome::Gap(GapReason::new(
+            Category::Other,
+            format!(
+                "top-level `const {}` — no const item production in the grammar (`item` covers \
+                 use/default/type/trait/impl/fn/object/lower/derive only)",
+                c.ident
+            ),
+        )),
+        Item::Static(s) => Outcome::Gap(GapReason::new(
+            Category::Other,
+            format!(
+                "top-level `static {}` — no static item production in the grammar",
+                s.ident
+            ),
+        )),
+        Item::Type(t) => Outcome::Gap(GapReason::new(
+            Category::Other,
+            format!(
+                "`type {} = ...` alias — Mycelium's `type_item` always introduces a new nominal \
+                 sum type via `'=' constructor ('|' constructor)*`; a bare alias to an existing \
+                 type would fabricate a sum type where none exists semantically",
+                t.ident
+            ),
+        )),
+        Item::Union(u) => Outcome::Gap(GapReason::new(
+            Category::Struct,
+            format!("`union {}` — no union construct in the grammar", u.ident),
+        )),
+        Item::ExternCrate(e) => Outcome::Gap(GapReason::new(
+            Category::Other,
+            format!(
+                "`extern crate {}` — no equivalent (phylum/nodule import model differs)",
+                e.ident
+            ),
+        )),
+        Item::ForeignMod(_) => Outcome::Gap(GapReason::new(
+            Category::Other,
+            "foreign/FFI block — Mycelium's FFI escape is `wild`, legal only inside an \
+             `@std-sys` nodule with a declared `!{ffi}` effect; not auto-mapped",
+        )),
+        Item::TraitAlias(t) => Outcome::Gap(GapReason::new(
+            Category::Trait,
+            format!("`trait {} = ...` alias — no trait-alias construct", t.ident),
+        )),
+        Item::Verbatim(_) => Outcome::Gap(GapReason::new(
+            Category::Other,
+            "unparsed/verbatim item (syn could not fully parse this construct)",
+        )),
+        _ => Outcome::Gap(GapReason::new(
+            Category::Other,
+            "unrecognized syn::Item variant (Item is #[non_exhaustive] — forward-compatibility \
+             catch-all)",
+        )),
+    }
+}
+
+fn dispatch_use(u: &syn::ItemUse) -> Outcome {
+    // Grammar: `use_item ::= 'use' path ( '.' '*' )?` — a single dotted path, optionally globbed.
+    // Aliased (`as`) and grouped (`{a, b}`) imports have no confirmed equivalent.
+    fn render(tree: &syn::UseTree, prefix: &mut Vec<String>) -> Result<String, GapReason> {
+        match tree {
+            syn::UseTree::Path(p) => {
+                prefix.push(p.ident.to_string());
+                render(&p.tree, prefix)
+            }
+            syn::UseTree::Name(n) => {
+                prefix.push(n.ident.to_string());
+                Ok(format!("use {};", prefix.join(".")))
+            }
+            syn::UseTree::Glob(_) => Ok(format!("use {}.*;", prefix.join("."))),
+            syn::UseTree::Rename(_) => Err(GapReason::new(
+                Category::Other,
+                "`use ... as ...` rename has no confirmed equivalent",
+            )),
+            syn::UseTree::Group(_) => Err(GapReason::new(
+                Category::Other,
+                "grouped `use a::{b, c}` has no confirmed equivalent (only a single path or \
+                 glob import is supported)",
+            )),
+        }
+    }
+    let mut prefix = Vec::new();
+    match render(&u.tree, &mut prefix) {
+        Ok(myc) => Outcome::Emitted(Emitted {
+            name: format!("use {}", prefix.join(".")),
+            myc,
+            sub_gaps: Vec::new(),
+        }),
+        Err(e) => Outcome::Gap(e),
+    }
+}
+
+fn item_kind_str(item: &Item) -> &'static str {
+    match item {
+        Item::Const(_) => "Const",
+        Item::Enum(_) => "Enum",
+        Item::ExternCrate(_) => "ExternCrate",
+        Item::Fn(_) => "Fn",
+        Item::ForeignMod(_) => "ForeignMod",
+        Item::Impl(_) => "Impl",
+        Item::Macro(_) => "Macro",
+        Item::Mod(_) => "Mod",
+        Item::Static(_) => "Static",
+        Item::Struct(_) => "Struct",
+        Item::Trait(_) => "Trait",
+        Item::TraitAlias(_) => "TraitAlias",
+        Item::Type(_) => "Type",
+        Item::Union(_) => "Union",
+        Item::Use(_) => "Use",
+        Item::Verbatim(_) => "Verbatim",
+        _ => "Unknown",
+    }
+}
+
+fn item_display_name(item: &Item) -> Option<String> {
+    match item {
+        Item::Const(i) => Some(i.ident.to_string()),
+        Item::Enum(i) => Some(i.ident.to_string()),
+        Item::ExternCrate(i) => Some(i.ident.to_string()),
+        Item::Fn(i) => Some(i.sig.ident.to_string()),
+        Item::ForeignMod(_) => None,
+        Item::Impl(i) => Some(tokens_to_string(&*i.self_ty)),
+        Item::Macro(i) => i.ident.as_ref().map(|id| id.to_string()),
+        Item::Mod(i) => Some(i.ident.to_string()),
+        Item::Static(i) => Some(i.ident.to_string()),
+        Item::Struct(i) => Some(i.ident.to_string()),
+        Item::Trait(i) => Some(i.ident.to_string()),
+        Item::TraitAlias(i) => Some(i.ident.to_string()),
+        Item::Type(i) => Some(i.ident.to_string()),
+        Item::Union(i) => Some(i.ident.to_string()),
+        Item::Use(_) => None,
+        _ => None,
+    }
+}
+
+fn span_line_col(item: &Item) -> (usize, usize) {
+    let start = item.span().start();
+    (start.line, start.column + 1)
+}
+
+/// Best-effort nodule-path derivation (Declared heuristic): `crates/mycelium-std-cmp/src/lib.rs`
+/// -> `std.cmp`, matching `lib/std/cmp.myc`'s actual header for the crate this PoC targets. Not
+/// guaranteed to be meaningful for an arbitrary input path — the CLI documents this.
+fn derive_nodule_path(path: &Path) -> String {
+    let crate_dir = path
+        .parent() // .../src
+        .and_then(Path::parent) // .../mycelium-std-cmp
+        .and_then(|p| p.file_name())
+        .and_then(|n| n.to_str());
+    match crate_dir {
+        Some(dir) => {
+            let stripped = dir.strip_prefix("mycelium-").unwrap_or(dir);
+            stripped.replace('-', ".")
+        }
+        None => path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown")
+            .to_string(),
+    }
+}
+
+fn render_nodule(nodule_path: &str, chunks: &[String], file_attrs: &[syn::Attribute]) -> String {
+    let mut out = String::new();
+    out.push_str(&format!("// nodule: {nodule_path}\n"));
+    for d in emit::doc_lines(file_attrs) {
+        out.push_str(&d);
+        out.push('\n');
+    }
+    out.push_str(
+        "// @summary: best-effort transpilation via mycelium-transpile (M-873). Declared,\n\
+         // unvalidated — no Mycelium parser/typechecker confirms this output; see the\n\
+         // accompanying .gap.json for every construct this pass could not express.\n",
+    );
+    out.push_str(&format!("nodule {nodule_path};\n\n"));
+    out.push_str(&chunks.join("\n\n"));
+    out.push('\n');
+    out
+}
