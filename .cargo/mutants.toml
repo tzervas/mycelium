@@ -91,4 +91,18 @@ exclude_re = [
     # to the final `_ => None`, yielding the SAME None. EQUIVALENT (a fall-through that returns the same
     # value). The other six arm-deletes (Proven/Empirical bounds) flip a checked bound and ARE caught.
     "vsa_codegen\\.rs:[0-9]+:[0-9]+: delete match arm \\(_, _, GuaranteeStrength::Exact\\) in VsaArtifact::result_bound",
+
+    # ────────────────────── mycelium-mlir / vsa_jit (M-855) ───────────────────────
+    # compute_bundle_non_fhrr's BSC majority `n > half` / `n < half` — the exact same folded-constant
+    # majority arithmetic vsa_codegen::emit_bundle's BSC arm uses (vsa_jit.rs computes it independently
+    # for the JIT store-sink, per the module's own doc comment on why it doesn't share emit_bundle's
+    # print-coupled control flow). Same justification as the vsa_codegen entries above: BSC `bundle` is
+    # profile-gated to ODD item counts (`BSC_BUNDLE_PROFILE.odd_items_only`, enforced by
+    # `VsaProgram::validate` before `emit_vsa_jit_ir` ever calls this function), so `half = m/2` is
+    # always X.5 and the integer `n` can never equal it — `n>half ⟺ n>=half` and `n<half ⟺ n<=half` on
+    # the reachable domain. EQUIVALENT. (The `>`->`==` and `<`->`==` variants are caught —
+    # `bsc_bundle_majority_boundary_bits_are_pinned` deliberately puts the *minority* bit at `items[0]`
+    # so a tie-fallback masquerading as the real branch surfaces the wrong bit.)
+    "vsa_jit\\.rs:[0-9]+:[0-9]+: replace > with >= in compute_bundle_non_fhrr",
+    "vsa_jit\\.rs:[0-9]+:[0-9]+: replace < with <= in compute_bundle_non_fhrr",
 ]

@@ -143,6 +143,12 @@ pub(crate) type BitnetDotFn = extern "C" fn(*const u8, *const i32, i64) -> i64;
 pub(crate) type SpecDotFn = extern "C" fn(*const i32) -> i64;
 /// The `extern "C"` signature of the JIT element-wise kernel: `i32 f(ptr %out)` (the overflow status).
 pub(crate) type JitKernelFn = extern "C" fn(*mut u8) -> i32;
+/// The `extern "C"` signature of the **dynamic-VSA** JIT kernel (M-855; `vsa_jit.rs`): `i32
+/// f(ptr %out)` writing `width` `i64` IEEE-754 bit patterns (one per hypervector component, or one for
+/// a bare-`f64` measurement) and returning a status (`0` = ok, `1` = refused — mirrors the AOT
+/// `DEGENERATE` sentinel/`DegenerateBundleComponent`, never a silently-wrapped value). Distinct from
+/// [`JitKernelFn`] because the element width differs (`u64` bit patterns vs `u8` char codes).
+pub(crate) type VsaJitKernelFn = extern "C" fn(*mut u64) -> i32;
 
 /// A loaded shared library that `dlclose`s itself on drop. `pub(crate)` so other in-crate JIT kernels
 /// (e.g. the M-360 BitNet dot kernel) reuse the same dynamic-loader rather than re-rolling the FFI.
@@ -232,6 +238,17 @@ impl Lib {
         #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
         unsafe {
             self.get::<SpecDotFn>("myc_bitnet_dot_spec")
+        }
+    }
+
+    /// Resolve the dynamic-VSA JIT kernel `myc_vsa_kernel` to a lifetime-bound, safe-to-call [`Sym`]
+    /// (M-855; RFC-0039 §5.3).
+    pub(crate) fn vsa_kernel(&self) -> Result<Sym<'_, VsaJitKernelFn>, AotError> {
+        // SAFETY: `vsa_jit::emit_vsa_jit_ir` emits exactly `define i32 @myc_vsa_kernel(ptr %out)`
+        // writing `i64` bit-pattern elements, so `VsaJitKernelFn` is this symbol's ABI.
+        #[cfg_attr(not(debug_assertions), allow(unsafe_code))]
+        unsafe {
+            self.get::<VsaJitKernelFn>("myc_vsa_kernel")
         }
     }
 }
