@@ -115,6 +115,8 @@ pub mod swap;
 #[cfg(test)]
 mod tests;
 
+use std::sync::Arc;
+
 use mycelium_core::{Alt, CoreValue, Datum, GuaranteeStrength, Node, Repr, Value, WfError};
 
 pub use budget::{Budgets, EffectBudget, EffectBudgetExhausted, EffectKind};
@@ -316,9 +318,20 @@ const DEFAULT_FUEL: u64 = 1_000_000;
 
 /// The reference interpreter: a primitive registry + a swap engine. [`Interpreter::default`] wires
 /// the exact built-in prims and the identity swap engine.
+///
+/// **`Clone` (M-864):** the parallel-pure-fragment evaluator (`crate::parallel`) needs an *owned*
+/// handle to the interpreter's config it can move into a `'static` job closure submitted to the
+/// M-861/M-864 persistent [`Scheduler`](mycelium_sched::scheduler::Scheduler) pool — a borrow no
+/// longer suffices once the pool's worker threads outlive any single `run_indexed` call (see
+/// `crate::parallel::eval_top_batch`). Cloning is cheap: `swap` is stored as `Arc<dyn SwapEngine>`
+/// (an `Arc::clone` bump, not a deep copy — `SwapEngine` itself has no `Clone` bound, since a boxed
+/// trait object can't derive one; `Arc` sidesteps that without changing the trait), `prims` is a
+/// small `BTreeMap` clone (bounded by the built-in prim count, not by program size), and `fuel` is
+/// `Copy`.
+#[derive(Clone)]
 pub struct Interpreter {
     prims: PrimRegistry,
-    swap: Box<dyn SwapEngine>,
+    swap: Arc<dyn SwapEngine>,
     fuel: u64,
 }
 
@@ -326,7 +339,7 @@ impl Default for Interpreter {
     fn default() -> Self {
         Interpreter {
             prims: PrimRegistry::with_builtins(),
-            swap: Box::new(IdentitySwapEngine),
+            swap: Arc::new(IdentitySwapEngine),
             fuel: DEFAULT_FUEL,
         }
     }
@@ -334,12 +347,14 @@ impl Default for Interpreter {
 
 impl Interpreter {
     /// Build an interpreter with a custom prim registry and swap engine (e.g. M-120's certified
-    /// swap, or M-111's arithmetic prims).
+    /// swap, or M-111's arithmetic prims). Takes an owned `Box` (the existing, stable public
+    /// signature); internally stored as `Arc<dyn SwapEngine>` (M-864 — see the struct docs), an
+    /// unconditional, allocation-free `Box` → `Arc` conversion (`Arc::from`).
     #[must_use]
     pub fn new(prims: PrimRegistry, swap: Box<dyn SwapEngine>) -> Self {
         Interpreter {
             prims,
-            swap,
+            swap: Arc::from(swap),
             fuel: DEFAULT_FUEL,
         }
     }

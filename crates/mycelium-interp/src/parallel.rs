@@ -44,6 +44,7 @@
 //! transparency lattice (never upgraded to `Proven` without a checked side-condition, VR-5).
 
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
 
 use mycelium_core::{CoreValue, Node};
 use mycelium_sched::scheduler::Scheduler;
@@ -229,15 +230,31 @@ impl Interpreter {
         };
 
         // A fuel clone seeded at F0 = self.fuel — never the real/authoritative counter. If any job
-        // errors we throw this attempt (and whatever it consumed) away entirely.
-        let fuel = AtomicU64::new(self.fuel);
-        let fuel_ref = &fuel;
+        // errors we throw this attempt (and whatever it consumed) away entirely. `Arc`-shared (M-864:
+        // `run_indexed` now requires `'static` jobs, so the shared counter can no longer be a plain
+        // `&AtomicU64` borrow of a stack local — every job owns an `Arc::clone` of it instead, same
+        // shared-counter semantics, just `'static`-owned).
+        let fuel = Arc::new(AtomicU64::new(self.fuel));
 
-        // One `run_indexed` fan-out; each job runs the SEQUENTIAL interpreter on its argument (no
-        // nested `run_indexed` — the interim thread bound). Outputs come back in spawn order.
+        // M-864: a job can no longer borrow `&Interpreter` from this stack frame either (the shared
+        // pool's worker threads outlive this call) — clone the interpreter once (`Interpreter` is
+        // `Clone`: an `Arc`-bumped swap engine + a small `prims` map clone, see its struct docs) and
+        // give each job its own cheap `Arc::clone` handle to that one clone, so `prims` is deep-cloned
+        // once per batch, not once per job.
+        let interp = Arc::new(self.clone());
+
+        // One `run_indexed` fan-out; each job runs the SEQUENTIAL interpreter on its (now owned)
+        // argument (no nested `run_indexed` — the interim top-level-only bound; M-864 made nested
+        // submission cheap at the scheduler level, but this evaluator does not yet exploit it — see
+        // module docs). Outputs come back in spawn order.
         let jobs: Vec<_> = args
             .iter()
-            .map(|arg| move || self.eval_to_normal_node(arg, fuel_ref))
+            .map(|arg| {
+                let interp = Arc::clone(&interp);
+                let fuel = Arc::clone(&fuel);
+                let arg = arg.clone();
+                move || interp.eval_to_normal_node(&arg, &fuel)
+            })
             .collect();
         let results: Vec<Result<Node, EvalError>> = Scheduler::new().run_indexed(jobs, None, None);
 
@@ -265,7 +282,7 @@ impl Interpreter {
                     .get(prim)
                     .ok_or_else(|| EvalError::UnknownPrim(prim.clone()))?;
                 let result = f(prim, &values)?;
-                tick(fuel_ref)?;
+                tick(&fuel)?;
                 Ok(CoreValue::Repr(result))
             }
             BatchHead::Construct => {
