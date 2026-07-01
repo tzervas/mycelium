@@ -185,11 +185,16 @@ fn compute_bundle_mapi_emits_left_to_right_sum() {
 fn bsc_bundle_majority_boundary_bits_are_pinned() {
     // 3 items (odd), single component: n in {0,1,2,3}. half = 1.5.
     // n=3 -> 1 (>half); n=2 -> 1 (>half); n=1 -> 0 (<half); n=0 -> 0 (<half). No tie possible for odd m.
+    // The n=2/n=1 cases deliberately put the *minority* bit at items[0] (x) — if the majority arm
+    // ever fell through to the tie fallback `items[0][idx]` (e.g. a `>`->`==` or `<`->`==` mutation,
+    // which makes `n > half`/`n < half` never true for an integer n against a non-integer half), the
+    // wrong (minority) bit would surface instead of the correct majority bit, so these two cases are
+    // load-bearing for catching that mutant class — not just a majority-vs-minority label pun.
     let cases: [(u8, u8, u8, f64); 4] = [
-        (1, 1, 1, 1.0), // n=3 -> 1
-        (1, 1, 0, 1.0), // n=2 -> 1
-        (1, 0, 0, 0.0), // n=1 -> 0
-        (0, 0, 0, 0.0), // n=0 -> 0
+        (1, 1, 1, 1.0), // n=3 -> 1 (unanimous; items[0]=1 coincides, but distinctness carried by below)
+        (0, 1, 1, 1.0), // n=2 -> 1; items[0]=0 is the MINORITY bit — catches `>` -> `==`
+        (1, 0, 0, 0.0), // n=1 -> 0; items[0]=1 is the MINORITY bit — catches `<` -> `==`
+        (0, 0, 0, 0.0), // n=0 -> 0 (unanimous)
     ];
     for (x, y, z, want) in cases {
         let items = vec![vec![f64::from(x)], vec![f64::from(y)], vec![f64::from(z)]];
