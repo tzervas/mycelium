@@ -4,6 +4,16 @@
     "use mycelium_core.GuaranteeStrength",
     "Ordering",
     "impl Ordering",
+    "impl Widen[Binary{16}] for Binary{8}",
+    "impl Widen[Binary{32}] for Binary{8}",
+    "impl Widen[Binary{64}] for Binary{8}",
+    "impl Widen[Binary{128}] for Binary{8}",
+    "impl Widen[Binary{32}] for Binary{16}",
+    "impl Widen[Binary{64}] for Binary{16}",
+    "impl Widen[Binary{128}] for Binary{16}",
+    "impl Widen[Binary{64}] for Binary{32}",
+    "impl Widen[Binary{128}] for Binary{32}",
+    "impl Widen[Binary{128}] for Binary{64}",
     "Bf16Bits"
   ],
   "gaps": [
@@ -336,106 +346,6 @@
       "snippet": "impl Widen < i128 > for i64 { fn widen (self) -> i128 { i128 :: from (self) } }",
       "reason": "impl target type `i64` has no confirmed mapping (signed integer `i64` — Binary{N} is documented unsigned-magnitude (lib/std/cmp.myc); mapping a signed type onto it would misrepresent twos-complement semantics, so this is left an explicit gap rather than guessed (VR-5))",
       "item_name": "i64"
-    },
-    {
-      "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 442,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Widen < u16 > for u8 { fn widen (self) -> u16 { u16 :: from (self) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `widen` body: qualified/associated-function call `u16 :: from` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
-      "item_name": "u8"
-    },
-    {
-      "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 447,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Widen < u32 > for u8 { fn widen (self) -> u32 { u32 :: from (self) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `widen` body: qualified/associated-function call `u32 :: from` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
-      "item_name": "u8"
-    },
-    {
-      "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 452,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Widen < u64 > for u8 { fn widen (self) -> u64 { u64 :: from (self) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `widen` body: qualified/associated-function call `u64 :: from` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
-      "item_name": "u8"
-    },
-    {
-      "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 457,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Widen < u128 > for u8 { fn widen (self) -> u128 { u128 :: from (self) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `widen` body: qualified/associated-function call `u128 :: from` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
-      "item_name": "u8"
-    },
-    {
-      "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 462,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Widen < u32 > for u16 { fn widen (self) -> u32 { u32 :: from (self) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `widen` body: qualified/associated-function call `u32 :: from` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
-      "item_name": "u16"
-    },
-    {
-      "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 467,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Widen < u64 > for u16 { fn widen (self) -> u64 { u64 :: from (self) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `widen` body: qualified/associated-function call `u64 :: from` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
-      "item_name": "u16"
-    },
-    {
-      "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 472,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Widen < u128 > for u16 { fn widen (self) -> u128 { u128 :: from (self) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `widen` body: qualified/associated-function call `u128 :: from` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
-      "item_name": "u16"
-    },
-    {
-      "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 477,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Widen < u64 > for u32 { fn widen (self) -> u64 { u64 :: from (self) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `widen` body: qualified/associated-function call `u64 :: from` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
-      "item_name": "u32"
-    },
-    {
-      "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 482,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Widen < u128 > for u32 { fn widen (self) -> u128 { u128 :: from (self) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `widen` body: qualified/associated-function call `u128 :: from` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
-      "item_name": "u32"
-    },
-    {
-      "file": "crates/mycelium-std-cmp/src/lib.rs",
-      "line": 487,
-      "col": 1,
-      "category": "Impl",
-      "rust_construct": "Impl",
-      "snippet": "impl Widen < u128 > for u64 { fn widen (self) -> u128 { u128 :: from (self) } }",
-      "reason": "no member of this impl block could be transpiled (1 sub-issue(s)): impl method `widen` body: qualified/associated-function call `u128 :: from` — no established Mycelium surface form for a Rust conversion-op body; emitting the bare last-segment name would fabricate a call (e.g. `from(...)` is not a Mycelium builtin)",
-      "item_name": "u64"
     },
     {
       "file": "crates/mycelium-std-cmp/src/lib.rs",

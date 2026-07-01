@@ -81,6 +81,56 @@ impl Ordering {
   fn reverse(self: Ordering) => Ordering = match self { Less => Greater, Equal => Equal, Greater => Less };
 };
 
+impl Widen[Binary{16}] for Binary{8} {
+  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+  fn widen(self: Binary{8}) => Binary{16} = width_cast(self, 0b0000_0000_0000_0000);
+};
+
+impl Widen[Binary{32}] for Binary{8} {
+  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+  fn widen(self: Binary{8}) => Binary{32} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000);
+};
+
+impl Widen[Binary{64}] for Binary{8} {
+  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+  fn widen(self: Binary{8}) => Binary{64} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+};
+
+impl Widen[Binary{128}] for Binary{8} {
+  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+  fn widen(self: Binary{8}) => Binary{128} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+};
+
+impl Widen[Binary{32}] for Binary{16} {
+  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+  fn widen(self: Binary{16}) => Binary{32} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000);
+};
+
+impl Widen[Binary{64}] for Binary{16} {
+  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+  fn widen(self: Binary{16}) => Binary{64} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+};
+
+impl Widen[Binary{128}] for Binary{16} {
+  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+  fn widen(self: Binary{16}) => Binary{128} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+};
+
+impl Widen[Binary{64}] for Binary{32} {
+  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+  fn widen(self: Binary{32}) => Binary{64} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+};
+
+impl Widen[Binary{128}] for Binary{32} {
+  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+  fn widen(self: Binary{32}) => Binary{128} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+};
+
+impl Widen[Binary{128}] for Binary{64} {
+  // Declared: body emitted via width_cast (DN-41 real prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the Binary{M} width witness is a synthesized all-zero BinLit (RFC-0020 §Representation-tagged literals); unvalidated by a Mycelium checker (crate-level Declared guarantee, see src/lib.rs).
+  fn widen(self: Binary{64}) => Binary{128} = width_cast(self, 0b0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000_0000);
+};
+
 // A BF16 value stored as its bit pattern in a `u16`.
 //
 // BF16 = 1-bit sign + 8-bit exponent + 7-bit mantissa (the upper 16 bits of an f32 bit pattern).
