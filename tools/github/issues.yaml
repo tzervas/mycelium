@@ -5459,6 +5459,18 @@ issues:
       DN-15 -> Resolved; DN-25's T6 row refreshed; M-738 depends_on E15-1 (already wired). ADR-034's
       own Status stays Accepted (Enactment rides the lang 1.0.0 tag act, M-738 -- FLAGGED, not
       flipped here). status:done.
+
+      PROGRESS (2026-07-01, post-closure): **M-865** landed (branch
+      claude/dev-m865-aot-parallel-differential, not yet merged -- pending wave integration) --
+      rescoped same-day from its original "AOT-runtime concurrency + async parity" framing (vacuous:
+      the language has no executable concurrency surface) to what was actually real and closeable:
+      a harness-level parallel-eval dispatch extending M-862's pure-arg batch to the direct-LLVM AOT
+      and JIT paths via `mycelium-mlir::concurrent`, mutant-witnessed, M-210-checked. This does NOT
+      reopen the epic's own DoD (closed above, unaffected) -- M-864/M-865, like M-868, are post-closure
+      epic-tagged extensions (perf-path hardening / a distinct concurrency-parity workstream), not
+      1.0.0-gating children. The real hypha/colony/async parity claim M-865's original title made is
+      spun out honestly to a new post-1.0.0-tag issue, **M-869**, depends_on M-865, gated on the
+      language's own concurrency surface (tracked via M-710).
   - id: M-850
     title: "Direct-LLVM full recursion: non-tail Fix + FixGroup heap trampoline (stack-robust)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -6024,62 +6036,102 @@ issues:
         explicitly extended to use the new nesting where it helps; just check green; honest tag.
 
   - id: M-865
-    title: "AOT-runtime concurrency + async execution parity with the interpreter"
+    title: "Harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch (NOT hypha/colony/async parity)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:done]
+    epic: E25-1
     depends_on: [M-861, M-862]
-    doc_refs: [corpus:RFC-0008, corpus:DN-61, src:crates/mycelium-sched/src/scheduler.rs]
+    doc_refs:
+      - corpus:RFC-0008
+      - corpus:DN-61
+      - src:crates/mycelium-sched/src/scheduler.rs
+      - src:crates/mycelium-mlir/src/concurrent.rs
+      - src:crates/mycelium-mlir/tests/concurrent_threeway_differential.rs
     body: |
-      Minted 2026-07-01 (Wave-1 reconciliation close-out). The delivered AOT native-runtime path
-      (epic E25-1: direct-LLVM + MLIR-dialect codegen, now covering recursion/closures/Swap/Dense/
-      VSA per M-850..M-858/M-856b) and the interpreter's own new parallel-eval path (M-862) both
-      exist TODAY, but they do not yet share a validated concurrency/async story: M-861's
-      work-stealing Scheduler backs the interpreter's Colony/hypha runtime and M-862's parallel
-      pure-fragment eval, while the AOT-compiled path has no analogous parallel/async execution of
-      its own compiled output validated against either. This issue closes that gap: the AOT runtime
-      must run parallel/async programs on the SAME native scheduler substrate
-      (`mycelium-sched::scheduler::Scheduler`) the interpreter uses, and the existing interp == AOT
-      == JIT differential (M-151/NFR-7, extended per M-858) must itself extend to cover concurrent/
-      async execution, not just sequential value computation.
+      Minted 2026-07-01 (Wave-1 reconciliation close-out). RESCOPED same-day (maintainer decision,
+      2026-07-01) after a scoping pass established the original title over-claimed: the language has
+      NO executable concurrency surface today -- `hypha` is ratified-not-lexed (RFC-0008 §4.5),
+      `async` is unimplemented, and AOT/JIT/the interpreter all run compiled/interpreted programs
+      SEQUENTIALLY. "AOT-runtime concurrency + async execution parity with the interpreter" was
+      therefore vacuous as originally framed -- there is no hypha/colony/async surface on EITHER side
+      to compare. What is real and closeable today: M-862 gave the interpreter a bounded,
+      top-level-only PARALLEL-EVAL path (a pure, >=2-argument top-level `Op`/`Construct` fanned across
+      `mycelium_sched::scheduler::Scheduler::run_indexed`), and M-860 already proved the pattern of
+      dispatching AOT work through that same `Scheduler` for a sibling case (parallel per-function
+      codegen). The AOT-compiled and JIT execution paths had no analogous HARNESS-LEVEL parallel
+      dispatch of their own validated against M-862's -- that narrower, real gap is this issue's scope.
 
-      This is a PRESENT-TENSE gap (the runtime this issue targets is already delivered, not a
-      future placeholder) -- distinguish from M-864, which hardens the scheduler's own internal
-      pooling and is deferrable regardless of whether AOT ever runs concurrent programs. RT2
-      (deterministic-fragment equivalence) is the governing obligation throughout, per DN-61 §A.2
-      and RFC-0008 §8 (R1 scheduler normativity; R2 distributed constructs are explicitly
-      out-of-scope agenda items, not this issue's concern).
+      Real hypha/colony/async concurrency parity -- the ORIGINAL title's claim -- is carved out
+      honestly to a new post-1.0.0-tag issue, **M-869**, gated on the language actually growing a
+      spawn/hypha surface to drive it. This issue does not claim that; see the DoD below.
 
       User stories:
-      - As a language user, I want a program using Colony/hypha concurrency to behave identically
-        whether it runs on the interpreter or the AOT-compiled path, so that native compilation is
-        never an escape hatch from RT2's deterministic-fragment guarantee.
-      - As a compiler engineer, I want the AOT runtime to reuse `mycelium-sched` rather than grow a
-        second scheduler, so the two execution paths can't silently diverge on scheduling semantics
-        (DRY; KC-3 -- no duplicate kernel-adjacent primitive).
-      - As a maintainer, I want the interp == AOT == JIT differential extended to concurrent/async
-        programs (not just sequential ones), so "parity" is a checked claim, not an assumption.
+      - As a compiler engineer, I want the AOT/JIT paths' harness-level dispatch to reuse
+        `mycelium-sched::Scheduler::run_indexed` directly (no FFI/ABI shim, no second scheduler), so
+        the three execution paths (interp/AOT/JIT) can't silently diverge on scheduling semantics
+        (DRY; KC-3).
+      - As a maintainer, I want the interp == AOT == JIT differential extended to the SAME batch
+        fragment M-862 already validates for the interpreter, so "the compiled paths parallelize the
+        same fragment, the same way" is a checked claim, not an assumption.
+      - As a future concurrency-surface implementer, I want the honest boundary between "a parallel
+        performance path exists" (this issue) and "the language has spawn/hypha/async" (M-869) drawn
+        explicitly, so neither claim is read as covering the other (VR-5).
 
-      Issues to resolve:
-      - What AOT-compiled surface exercises Colony/hypha/async today (if any), and what is missing
-        to drive `Scheduler::run_indexed`/multi-task submission from AOT-compiled code?
-      - Does the AOT runtime call into `mycelium-sched` directly, or through a thin FFI/ABI shim --
-        and does that shim risk becoming its own untested second scheduler surface (KC-3 concern)?
-      - How does the RT2 differential extend to concurrent/async execution specifically -- same
-        sequentialization-equivalence property M-357/M-861 already established, or a new one?
-      - Relationship to M-864 (pool hardening): does this issue need M-864's nested-safety, or can
-        it land against today's single-level `run_indexed`?
+      Issues to resolve -- answered:
+      - What AOT-compiled surface exercises Colony/hypha/async today? NONE. The only real
+        parallel-execution surface anywhere in the stack is M-862's interpreter-side top-level
+        pure-argument batch. This issue extends that SAME fragment's harness-level dispatch to
+        AOT/JIT; it does not add a new Colony/hypha surface to either compiled path.
+      - Does the AOT runtime call into `mycelium-sched` directly, or through a shim? DIRECTLY --
+        `mycelium-mlir::concurrent` depends on `mycelium-sched` and calls
+        `Scheduler::new().run_indexed(..)` at the Rust harness level, submitting one job per batch
+        argument and recomposing through the SAME trusted sequential runner
+        (`compile_and_run_with_swap_mode` / `jit_run`) the sequential reference already uses -- no
+        FFI/ABI bridge, no second scheduler, no re-implemented prim-application semantics.
+      - How does the RT2 differential extend? The SAME sequentialization-equivalence property
+        M-357/M-861/M-862 already established, over the SAME fragment M-862 defines (narrowed further
+        here to `Op`-headed batches only -- see the DoD's honest scope note) --
+        `tests/concurrent_threeway_differential.rs` checks interp-sequential == interp-parallel (M-862)
+        == AOT-parallel == JIT-parallel, each pair through the M-210 `ObservationalEquiv` checker.
+      - Relationship to M-864 (pool hardening)? Inherited for free, not separately needed: this
+        issue's batch is a single, non-nested, depth-1 fan-out (mirroring M-862's own top-level-only
+        bound) dispatched through `Scheduler::run_indexed`, which as of M-864 already routes onto the
+        persistent bounded pool. No nested submission occurs here, so M-864's nested-safety guarantee
+        is inherited but not exercised, and M-868 (leapfrogging / help-frame depth bound) is not
+        needed for this issue's single-level batch.
 
-      Definition of Done:
-      - AOT-compiled Colony/hypha/async programs execute on `mycelium-sched::scheduler::Scheduler`,
-        the same substrate the interpreter uses -- no second scheduler implementation.
-      - The interp == AOT == JIT differential (M-151/NFR-7 lineage) is extended to a concurrent/
-        async corpus and passes non-vacuous; a divergence is caught by a property test or
-        cargo-mutants witness, not merely asserted.
-      - RT2's deterministic-fragment equivalence holds across all three execution paths under
-        concurrency; any narrowing vs. the interpreter's own concurrency surface is an explicit,
-        never-silent refusal (G2), not a silent gap.
-      - just check green; honest tag (Empirical, not Proven, absent a checked argument); CHANGELOG
-        append-only.
+      Definition of Done (rewritten honestly, 2026-07-01 -- supersedes the original DoD, which
+      claimed Colony/hypha/async parity this issue does not deliver):
+      - `mycelium-mlir::concurrent` extends M-862's exact `Op`-headed pure-argument-batch fragment to
+        the direct-LLVM AOT path (`compile_and_run_concurrent`) and the in-process JIT
+        (`jit_run_concurrent`), dispatched at the Rust harness level through
+        `mycelium_sched::scheduler::Scheduler::run_indexed` -- no second scheduler, no new
+        LLVM-IR-level concurrency primitive.
+      - `Construct`-headed batches are explicitly OUT of this dispatcher's scope (a checked reason,
+        not a hand-wave: the direct-LLVM whole-program contract requires a top-level `Lane` result,
+        which a bare `Construct` cannot produce standalone -- `mycelium-mlir::concurrent` module
+        docs) -- a never-silent, documented narrowing (G2), not a silent gap.
+      - The interp-sequential == interp-parallel (M-862) == AOT-parallel == JIT-parallel differential
+        (`tests/concurrent_threeway_differential.rs`) passes non-vacuously (verified on this box:
+        libMLIR-18 + `llc`/`clang` present, `ran_aot`/`ran_jit` asserted true) plus a plan-level
+        non-vacuity guard (`ConcurrentPlan::OpBatch` genuinely selected, never a silent fall-through).
+      - A mutant witness (`mutant_witness_catches_a_wrong_index_compose_aot`/`_jit`) demonstrates the
+        differential actually CATCHES a deliberately-broken concurrent dispatch (a wrong-index
+        recompose over a non-commutative op), not merely asserts agreement.
+      - Real hypha/colony/async concurrency parity is explicitly NOT claimed here -- carved out to
+        **M-869**, which depends_on this issue and is gated on the language's own concurrency surface.
+      - `cargo fmt`/`clippy -D warnings`/`cargo test -p mycelium-mlir` green with AND without
+        `--features mlir-dialect`; honest tag (`Empirical`, differential-checked, never `Proven`
+        absent a checked argument -- VR-5); CHANGELOG append-only.
+
+      Landed 2026-07-01: branch `claude/dev-m865-aot-parallel-differential` (isolated worktree off
+      `origin/dev`, per the maintainer-narrowed M-865 tag) -- `cargo build --workspace`,
+      `cargo clippy -p mycelium-mlir -p mycelium-cert --all-targets -- -D warnings -A unsafe_code`,
+      and `cargo test -p mycelium-mlir` (with and without `--features mlir-dialect`) all green on
+      this box. NOT YET MERGED to `dev`/`main` -- pending PR review + integration by the orchestrating
+      wave (this agent was explicitly instructed not to open a PR); reported branch + SHA + this FLAG
+      up rather than landing directly (never-silent — the "done" status here reflects the WORK being
+      complete and independently verified, not a merged-to-dev claim).
 
   - id: M-866
     title: "Bound mono.rs free_vars/pattern_binders recursion (M-674 follow-up)"
@@ -6192,6 +6244,78 @@ issues:
       - `mycelium-std-runtime`'s retirement path (if any) is coordinated with `mycelium-mlir` and
         recorded at the ADR/DN level before any change to its status.
       - just check green; CHANGELOG append-only; RFC-0031 -> Enacted considered once this + D7 close.
+
+  - id: M-869
+    title: "AOT/interp hypha/colony/async concurrency parity (requires the language concurrency surface)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:runtime, priority:P2, status:needs-design]
+    depends_on: [M-865]
+    epic: E25-1
+    doc_refs:
+      - corpus:RFC-0008
+      - corpus:DN-61
+      - src:crates/mycelium-mlir/src/concurrent.rs
+      - src:crates/mycelium-std-runtime/src/lib.rs
+    body: |
+      Minted 2026-07-01, spun out of M-865's rescoping (maintainer decision, same day): M-865's
+      original title claimed "AOT-runtime concurrency + async execution parity with the interpreter",
+      but a scoping pass established that claim was vacuous today -- the language has NO executable
+      concurrency surface: `hypha` is ratified-not-lexed (RFC-0008 §4.5), `async` is unimplemented,
+      and every execution path (interpreter, AOT env-machine, direct-LLVM AOT, JIT) still runs a
+      SEQUENTIAL program end-to-end. M-865 landed the real, narrower thing that was actually
+      closeable -- a harness-level parallel-eval dispatch (reusing `mycelium-sched::Scheduler` for
+      AOT/JIT, mirroring the interpreter's M-862 batch) -- and explicitly carved OUT this issue's
+      claim as not delivered. This is POST-1.0.0-TAG, explicitly out of the E25-1 epic's own 1.0.0
+      gating DoD (like its sibling M-864/M-868): it cannot be designed, let alone landed, before the
+      language itself grows a spawn/hypha/async surface to drive it.
+
+      This is where "real" concurrency parity -- a program that actually SPAWNS concurrent
+      hyphae/tasks and observes them scheduled, on both the interpreter and the AOT-compiled path,
+      with a checked equivalence between the two -- lives once that surface exists. It is NOT
+      satisfied by M-862 (a parallel-eval PERFORMANCE optimization over a pure fragment, invisible to
+      the program) or M-865 (the same performance optimization's harness-level extension to AOT/JIT)
+      -- neither of those involves a `hypha`/`colony`/`spawn` construct the *program* itself writes;
+      this issue is precisely the gap between "the runtime can execute things in parallel" and "the
+      language lets a program EXPRESS concurrency and observe its effects."
+
+      User stories:
+      - As a language user, I want a program that spawns concurrent hyphae to behave identically
+        (up to RT2's deterministic-fragment equivalence) whether it runs on the interpreter or the
+        AOT-compiled path, so native compilation is never an escape hatch from that guarantee.
+      - As a compiler engineer, I want the AOT-compiled path to reuse `mycelium-sched` for any real
+        `hypha`/`colony` execution (not grow a second scheduler), continuing the precedent M-860/
+        M-862/M-865 already established for the performance-path batches.
+      - As a maintainer, I want this claim to stay `needs-design` (not `todo`) until the language's
+        own `hypha`/`spawn` surface is lexed and elaborated (M-710 is the tracked gate for that),
+        so the issue cannot be picked up prematurely against a surface that does not exist yet.
+
+      Issues to resolve:
+      - What is the minimal `hypha`/`spawn` surface (L1 syntax + elaboration) this issue needs before
+        design can start -- is M-710 (the reserved-vocabulary activation track) the correct
+        prerequisite, or does a narrower slice suffice?
+      - Once a program can express concurrency, does the AOT-compiled path drive
+        `mycelium-sched::scheduler::Scheduler` directly (as M-865's harness-level dispatch already
+        does for its performance-path batch), or does a genuinely spawning/observing construct need
+        different plumbing (e.g. a runtime callback surface, not a pure batch-and-recompose harness)?
+      - How does RT2 (deterministic-fragment equivalence) extend to a program-visible spawn/join,
+        rather than an invisible performance optimization -- the same sequentialization-equivalence
+        property (M-357/M-861/M-862/M-865), or a new one specific to observable concurrency?
+
+      Definition of Done:
+      - Blocked on the language concurrency surface existing (spawn/hypha syntax + elaboration,
+        tracked via M-710) -- this issue cannot leave `needs-design` before that lands.
+      - AOT-compiled programs that spawn hyphae/tasks execute on
+        `mycelium-sched::scheduler::Scheduler`, the same substrate the interpreter uses -- no second
+        scheduler implementation (continuing M-860/M-862/M-865's precedent).
+      - The interp == AOT == JIT differential (M-151/NFR-7 lineage, extended per M-858/M-865) is
+        further extended to a genuinely concurrent (program-spawns-hyphae) corpus and passes
+        non-vacuous; a divergence is caught by a property test or cargo-mutants witness, not merely
+        asserted.
+      - RT2's deterministic-fragment equivalence holds across all execution paths for this corpus;
+        any narrowing vs. the interpreter's own concurrency surface is an explicit, never-silent
+        refusal (G2), not a silent gap.
+      - just check green; honest tag (Empirical, not Proven, absent a checked argument); CHANGELOG
+        append-only.
 
   - id: E16-1
     title: "E16-1 (epic) — Toolchain, IDE & package distribution"
