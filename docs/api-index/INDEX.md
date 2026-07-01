@@ -6397,7 +6397,6 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_runtime::region::ScopeNodeId::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::region::ScopeNodeId::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::region::ScopeTree::new` | dedup-alias: same definition as `mycelium_std_runtime::region::Region::new` at crates/mycelium-std-runtime/src/region.rs:190 — one canonical row kept |
-| `mycelium_std_runtime::scheduler::SCHEDULER_BACKPRESSURE_STRENGTH:` | definition not found via regex heuristic (kind='const', name='SCHEDULER_BACKPRESSURE_STRENGTH:') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH:` | definition not found via regex heuristic (kind='const', name='SCHEDULER_LIVENESS_STRENGTH:') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH:` | definition not found via regex heuristic (kind='const', name='SCHEDULER_RT2_STRENGTH:') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::scheduler::Scheduler` | definition not found via regex heuristic (kind='struct', name='Scheduler') — possibly macro-generated or cfg-gated |

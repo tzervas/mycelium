@@ -15,12 +15,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `available_parallelism()`, and reused for the life of the process — including across **nested**
   `run_indexed` calls (a job that itself calls `run_indexed` again). A caller blocked on its own
   batch's completion **helps** drain the shared queue (`Pool::help_while`, the Cilk/TBB/Rayon
-  work-helping pattern) rather than parking, which is the structural argument for why a **fixed**-size
-  pool never deadlocks under arbitrarily deep nesting (module docs; checked by deep-chain/wide-fan-out/
-  mixed-shape stress tests under a wall-clock timeout, plus a Linux thread-count-bounded regression
-  witness). Tag: **Empirical** (structural argument + stress tests, not a mechanized proof — VR-5).
-  This removes the resource concern M-860/M-862 both had to work around by capping their own
-  parallelism to a single, non-nested, top-level batch.
+  work-helping pattern) rather than parking. The batch's lanes are **populated up front and never
+  bare-block** (the queue is unbounded — no backpressure), so `help_while` is the *only* wait on any
+  batch's critical path: the structural reason a **fixed**-size pool never deadlocks under arbitrarily
+  deep nesting. Tag: **Empirical** — validated by **forced-low-worker-count** nested stress tests
+  (`P ∈ {1,2,3,4}`, incl. the `[15,15,6]` shape) that *hang on the pre-fix code and pass on this one*,
+  under a wall-clock timeout, plus global-pool stress + a Linux thread-count regression witness; not a
+  mechanized proof (VR-5). This removes the resource concern M-860/M-862 both had to work around by
+  capping their own parallelism to a single, non-nested, top-level batch.
+- **Sound-on-arrival via an adversarial deadlock review (same day):** the *first* cut of this pool
+  kept M-861's `capacity` backpressure, whose feeder bare-blocked *before* help-stealing — a real
+  nested-submission deadlock at `width > capacity + P` (reproduced), plus a panicking job that hung
+  the join and killed a pool worker. Both fixed at the root before landing: the **backpressure/
+  `capacity` bound is removed** (it was the deadlock cause and a non-normative impl detail per DN-61
+  §A.2 — the pool queue is now unbounded, memory bounded by the batch's job count), and the join is
+  **panic-safe** (`std::panic::catch_unwind` per job keeps the persistent worker alive; the first job
+  panic re-raises at the join, `thread::scope`-style; an RAII drop-guard decrements the batch
+  countdown on every unwind path). The now-false `SCHEDULER_BACKPRESSURE_STRENGTH` (`Exact`) constant
+  and its `mycelium-std-runtime` re-export are **removed** rather than left as a stale claim (VR-5);
+  `Scheduler::capacity` / `with_workers(_, capacity)` remain for source compatibility but no longer
+  bound anything (documented, never-silent).
 - **Breaking API change, ratified: `run_indexed` now requires `F: Send + 'static` / `T: Send +
   'static`** (previously just `Send`, borrowing freely via the old `std::thread::scope`). A persistent
   pool's worker threads outlive any single call, so a job can no longer safely borrow from the
@@ -41,10 +55,14 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   `Arc<AtomicBool>`-backed handle, so every clone still shares the same cancellation flag).
 - **`mycelium-std-runtime`'s inline tests extracted (M-797, as-touched):** `dataflow.rs` and
   `supervision.rs`'s former inline `#[cfg(test)] mod tests` blocks move to `src/tests/dataflow.rs` /
-  `src/tests/supervision.rs`, plus one new regression test each for the M-864 adjustment.
+  `src/tests/supervision.rs`. The dataflow ownership-restore test is **strengthened** to assert the
+  exact total step count (so a wrong-slot restore that strands a task is caught even when it doesn't
+  deadlock), and the supervision cancel-token test is **honestly downgraded** to assert only the
+  deterministic shared-flag propagation (the cross-sibling-observation claim was scheduling-dependent;
+  `external_cancel_propagates_to_all_tasks` already covers per-job-clone flag-sharing deterministically).
 - M-860's byte-identical parallel-emit test and M-862's parallel-eval differential/determinism suites
-  are unmodified and re-verified green; `mycelium-sched` gains 6 new nested-recursion stress tests
-  (24/24 total, 18 pre-existing); `mycelium-std-runtime` stays 98/98 green.
+  are unmodified and re-verified green; `mycelium-sched` gains nested-recursion + **forced-low-`P`
+  deadlock** + **panic-safety** stress tests (29/29 total); `mycelium-std-runtime` stays 98/98 green.
 
 ### Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)
 

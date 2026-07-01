@@ -98,91 +98,149 @@ to `thread::available_parallelism()` (fallback 1 — never 0). Its threads are n
 live for the process's duration, the same pattern as a typical global thread-pool singleton (e.g.
 Rayon's default pool).
 
-`Scheduler::run_indexed` keeps its existing per-call dispatch shape from M-861 **completely
-unchanged**: `workers` lanes (per-batch deques), round-robin feed, LIFO-own/FIFO-steal via
-`StealPolicy::select_victim`, a `capacity`-bounded backpressure counter. The only thing that
-changed is *how the lane-loop bodies get executed*: instead of `thread::scope` spawning `workers`
-fresh OS threads to run them, each lane-loop is submitted as one `'static`, boxed task
-(`Box<dyn FnOnce() + Send + 'static>`) to the shared pool's queue, and the calling thread — after
-finishing its feeder duty — **helps** drain the shared queue (any pending task, from this batch or
-any other, at any nesting depth) until every one of its own batch's lanes has finished.
+### 3.0 The correctness rewrite (2026-07-01 — an adversarial review reproduced a real hang)
+
+**The first implementation of this design was unsound and is superseded by the account below.** It
+kept M-861's demand-signalled backpressure: a **feeder** loop that `Condvar::wait`s while the
+per-lane deques already hold `capacity` items, and it reached that wait **before** entering the
+help-steal loop. Two defects followed:
+
+- **Defect 1 (deadlock — reproduced).** A nested `run_indexed` call is a pool worker running a job
+  that submits its own batch and then becomes that batch's feeder. If that feeder bare-blocks on the
+  `capacity` gate (because its lanes haven't drained yet), it drains **nothing** while it waits.
+  With a wide enough fan-out relative to the worker count (`width > capacity + P`), enough nested
+  feeders bare-block simultaneously that **every** pool thread is parked and no thread is left to
+  run the lane-tasks that would let any feeder proceed — a permanent hang. Reproduced
+  deterministically at forced `P ∈ {1,2,3,4}` with the `[15,15,6]` shape (see §3.3). This shape
+  would hang the original committed `nested_wide_fanout` test on any ≤ 4-core machine (e.g. a default
+  4-vCPU CI runner); it only "passed" on the 28-core development box, where `capacity = 2·P = 56 >
+  15` so the feeder never blocked.
+- **Defect 2 (panic hangs the join + kills the pool).** A panicking job unwound past the batch's
+  completion decrement, so the join's countdown never reached zero (`help_while` hangs forever) and
+  the panic propagated out of the pool worker's stack, **permanently killing that worker** — the
+  fixed pool shrinks toward zero with no replenishment. A regression from `std::thread::scope`,
+  which propagates a panic cleanly at join.
+
+Both are fixed at the root:
+
+**Fix 1 — no bare-block on the batch's own progress; unbounded queue.** The demand-signalled
+`capacity` backpressure is **removed entirely** (it was a non-normative implementation detail per
+DN-61 §A.2, and it was the deadlock's cause). `Scheduler::run_indexed` now:
+
+1. **populates every lane's deque up front**, round-robin by spawn index, with *no* capacity gate —
+   the whole batch is materialized before any lane runs (memory bounded by the batch's job count,
+   which the caller already holds in `jobs: Vec<F>` — no new blowup);
+2. **then** submits the `min(workers, n)` lane-loop tasks to the pool.
+
+Because every deque is full before any lane starts and **no work is ever added later**, a lane never
+has to *wait* for more work: it pops its own deque (LIFO), steals when empty (FIFO), and **exits the
+instant nothing remains anywhere**. There is no feeder `Condvar` and no lane `Condvar` — the
+lane-loop is **totally non-blocking**. The only "wait" left on any batch's critical path is
+`Pool::help_while`, which *runs* pending tasks rather than parking. This is what restores the
+deadlock-freedom induction (§3.2): every thread that would otherwise wait is instead actively
+draining the shared queue.
+
+**Fix 2 — panic-safe join (thread::scope-like).** Each job runs under `std::panic::catch_unwind`
+inside its lane-loop, so a panicking job (a) never kills the persistent pool worker, and (b) has its
+payload captured. The **first** captured job panic is re-raised in the calling thread *after* the
+join, via `std::panic::resume_unwind` — matching `std::thread::scope`'s panic-propagates-at-join
+semantics. An RAII **drop-guard** decrements the batch's outstanding-lane counter on **every** exit
+path (normal return or unwind) and wakes the join, so no panic can leave `help_while` hanging.
+`Pool::worker_loop` and `Pool::help_while` additionally run every task under `catch_unwind` as a
+last-line guard, so no stray unwind (e.g. a poisoned lock) can ever escape into the pool's control
+loops and kill a worker.
+
+Because backpressure is gone, the former `Exact` `SCHEDULER_BACKPRESSURE_STRENGTH` guarantee and its
+re-export are **removed** (they tagged a bound that no longer exists — leaving them would be a false
+`Exact` claim, VR-5). `Scheduler::capacity` / `with_workers(_, capacity)` are retained for source
+compatibility but **no longer bound anything**, documented as such (never-silent).
 
 ### 3.1 The help-stealing pattern
 
-A bounded, persistent pool creates an obvious hazard: if a pool thread submits a nested batch and
-then just *blocks* waiting for it, and every other pool thread is doing the same for its own nested
-batch, the pool can wedge with no thread actually running anything.
-
-`Pool::help_while(done: impl FnMut() -> bool)` is the fix — the Cilk/TBB/Rayon "work-helping"
-pattern: a thread that would otherwise block instead executes any pending task from the shared
-queue until its own `done` condition holds. A thread waiting on its own batch's completion is
-therefore never idle-and-unproductive; it is an *additional* worker for as long as it waits. This
-is what makes a **fixed**-size pool safe under **unbounded** nesting depth: the resource that grows
-with nesting is *helpers-currently-waiting*, never OS threads.
+`Pool::help_while(done: impl FnMut() -> bool)` is the Cilk/TBB/Rayon "work-helping" pattern: a
+thread that would otherwise block on its own batch's completion instead executes any pending task
+from the shared queue — its own batch's, or anyone else's, at any nesting depth — until its `done`
+condition holds. A thread waiting on its own batch is therefore never idle-and-unproductive; it is
+an *additional* worker for as long as it waits. Combined with Fix 1 (no other bare-block anywhere on
+a batch's critical path), this is what makes a **fixed**-size pool safe under **unbounded** nesting
+depth: the resource that grows with nesting is *helpers-currently-waiting*, never OS threads.
 
 ### 3.2 Deadlock-freedom argument — `Empirical`
 
 Model the live system as a forest of "batches" (one per in-flight `run_indexed` call), each with a
 finite, positive count of outstanding lane-loop tasks. A *helper* is any thread not currently
 running a task — the `P ≥ 1` persistent workers, or any caller (at any nesting depth) currently
-inside `help_while`. Every helper is, by construction, actively trying to pop a task from the
-shared queue, never merely parked. So as long as the queue is non-empty, some helper dequeues and
-runs a task in bounded time (the queue is a `Mutex`-guarded FIFO; nothing is skipped or starved by
-construction). Running a task either (a) completes a lane-loop permanently, or (b) runs a user job,
-which — by the pre-existing "pure task" contract `run_indexed` has always carried — terminates in
-finite time, possibly after submitting and waiting (recursively, via the same `help_while`) on a
-strictly nested, strictly smaller sub-batch. Because the nesting is a finite call tree (finite
-program, finite fuel per RFC-0007 §4.5's cooperative-stepping budget bounding every task's own
-runtime), induction on tree depth gives: every leaf batch completes outright (its lane-loops are
-plain jobs with no further waiting); given every leaf batch completes, every batch one level up
-completes (its own lane-loops' jobs each wait only on leaf batches); and so on to the root. No step
-assumes `P` is large enough for any particular *concurrency width* — only that `P ≥ 1`, so the
-queue is never permanently unattended. **Conclusion: no deadlock, for any fixed `P ≥ 1`, at any
-nesting depth.**
+inside `help_while`. **The load-bearing invariant, now actually true (Fix 1): nothing on a batch's
+critical path ever bare-blocks** — a lane-loop only pops/steals/exits (never waits), and the sole
+wait is `help_while`, which runs tasks. So every helper is, by construction, actively trying to pop
+a task from the shared queue, never merely parked. As long as the queue is non-empty, some helper
+dequeues and runs a task in bounded time (the queue is a `Mutex`-guarded FIFO; nothing is skipped or
+starved). Running a task either (a) completes a lane-loop permanently, or (b) runs a user job, which
+— by the pre-existing "pure task" contract `run_indexed` has always carried — terminates in finite
+time, possibly after submitting and waiting (recursively, via the same `help_while`) on a strictly
+nested, strictly smaller sub-batch. Because the nesting is a finite call tree (finite program,
+finite fuel per RFC-0007 §4.5's cooperative-stepping budget bounding every task's own runtime),
+induction on tree depth gives: every leaf batch completes outright (its lane-loops are plain jobs
+with no further waiting); given every leaf batch completes, every batch one level up completes; and
+so on to the root. No step assumes `P` is large enough for any particular *concurrency width* — only
+that `P ≥ 1`, so the queue is never permanently unattended. **Conclusion: no deadlock, for any fixed
+`P ≥ 1`, at any nesting depth.**
+
+### 3.3 Validation — the tests that hang on the pre-fix code and pass on this one
 
 This is the informal, structural argument, not a mechanized proof — tagged **`Empirical`**, checked
-by (`mycelium-sched::tests::scheduler`):
+by `mycelium-sched::tests::scheduler`. The **decisive** additions are the **forced-low-worker-count**
+tests (a `pub(crate)` `Pool::with_workers_for_test(P)` + `Scheduler::run_indexed_on(pool, …)` hook
+threads a small, explicit `P` through every nesting level — the only way to exercise the deadlock on
+a many-core box, since the global pool is sized to `available_parallelism()`):
 
-- `nested_deep_chain_matches_sequential_reference_no_deadlock` — a 40-level chain (width 1 at every
-  level), under a 30s wall-clock timeout.
-- `nested_wide_fanout_matches_sequential_reference_no_deadlock` — 3 levels deep, wide fan-out
-  (15×15×6), every sibling recursing, so many nested batches are concurrently in flight.
-- `nested_mixed_batch_sizes_including_empty_and_single_item_match_reference` — an irregular shape
-  mixing a zero-width level, a single-item level, and ordinary wider levels.
-- `nested_empty_and_single_item_batches_never_hang` — the `n == 0` fast path (never touches the
-  pool at all) and a single-job nested call.
-- `nested_recursion_is_deterministic_across_many_repeated_runs` — 50 repeated runs each over a deep
-  chain, a wide fan-out, and a mixed shape, asserting exact equality with a pure sequential
-  reference every time (not a one-off pass).
-- `nested_recursion_thread_count_is_bounded_not_growing_with_depth` (Linux-only, via
-  `/proc/self/status`'s `Threads:` line) — a 40-deep chain's peak observed OS thread count stays
-  within a small, depth-independent constant of `available_parallelism()`, the direct regression
-  witness for "the persistent pool never grows with nesting depth".
+- `forced_low_p_wide_fanout_does_not_deadlock_p1_through_p4` — the `[15,15,6]` shape at forced
+  `P ∈ {1,2,3,4}` under a 60s wall-clock timeout. **This is the direct regression test for the
+  reproduced hang.** Verified honestly: with the pre-fix feeder-block reintroduced (a scratch revert
+  of just Fix 1, with the same test hook added), this test **hangs at every `P`** (the timeout fires
+  at ~15s with "suspected deadlock"); on the fixed code it passes.
+- `forced_low_p_deep_chain_and_mixed_shapes_do_not_deadlock` — deep chain + irregular shapes (incl.
+  empty/single-item sub-batches) at forced `P ∈ {1,2,3,4}`.
+- `forced_p1_single_worker_nested_is_the_hardest_case_and_still_completes` — `P = 1` (all
+  concurrency from the caller's own `help_while`), a width-6 depth-3 tree.
+- `a_panicking_job_propagates_at_join_without_hanging_and_pool_survives` — Defect 2: a panicking job
+  re-raises at the join, and a **subsequent** batch on the same forced pool still completes (proving
+  the worker did not die and the join did not hang).
+- `a_nested_panic_propagates_up_through_the_nesting_without_hanging` — a deeply-nested panic
+  propagates up through every join level.
 
-All of the above ran green across repeated full-suite invocations (10+ consecutive runs with zero
-flakes observed) during this change's own verification, in addition to being part of the committed
-suite.
+Plus the global-pool nested tests carried over from the first implementation (deep chain, wide
+fan-out, mixed shapes, 50×-repeat determinism, and the Linux `/proc/self/status` thread-count
+regression witness that the pool never grows with nesting depth). All ran green across 15+
+consecutive full-suite invocations with zero flakes during this change's verification.
 
 ## 4. Determinism is untouched
 
 `run_indexed`'s RT2 contract — spawn-order-indexed results, regardless of steal schedule — is
-**unchanged**: results are still written into a pre-sized `Vec<Option<T>>` by job index, read off
-after every lane has finished. The pool module knows nothing about job *order*; it is a bag of
-`'static` closures. M-860's byte-identical parallel-vs-sequential emit test
+**unchanged** by both the original design and the §3.0 correctness rewrite: results are still
+written into a pre-sized `Vec<Option<T>>` by job index, read off after every lane has finished (and,
+post-rewrite, only after any captured job panic has been re-raised, so a panic surfaces before any
+`None` slot is read). The pool module knows nothing about job *order*; it is a bag of `'static`
+closures. M-860's byte-identical parallel-vs-sequential emit test
 (`tests::llvm::parallel_emit_matches_sequential_emit_byte_identical`) and M-862's parallel-eval
 differential (`tests::parallel::parallel_eval_matches_sequential_eval_over_the_pure_corpus`, plus
 its own repeated-run determinism test) both stayed green, unmodified in their assertions, through
-this change.
+both the original change and the rewrite.
 
 ## 5. Definition of Done
 
 - [x] The `'static` contract change is ratified here (this note), not silently shipped as an
       implementation detail.
 - [x] A nested-join wait-loop (`Pool::help_while`) is documented with a structural deadlock-freedom
-      argument and checked by nested-submission property/stress tests (§3.2) — `Empirical`, not
+      argument (§3.2, updated for the §3.0 rewrite so the "no bare-block" invariant it relies on is
+      actually true) and checked by **forced-low-worker-count** nested stress tests that *reproduce
+      the original hang on the pre-fix code and pass on the fixed code* (§3.3) — `Empirical`, not
       `Proven` (no mechanized proof is in-repo; VR-5).
-- [x] Nested stress tests (multiple levels of nested `run_indexed`, wide fan-out, mixed shapes)
-      pass without deadlock or starvation, under a wall-clock timeout.
+- [x] Panic-safety (§3.0 Fix 2): a panicking job does not hang the join or kill the pool, and the
+      first panic re-raises at the join (thread::scope-like) — checked by two panic tests.
+- [x] Nested stress tests (multiple levels of nested `run_indexed`, wide fan-out, mixed shapes) pass
+      without deadlock or starvation, under a wall-clock timeout, at forced `P ∈ {1,2,3,4}` and on
+      the global pool.
 - [x] M-860 and M-862 are re-validated unaffected: their existing differentials
       (`parallel_emit_matches_sequential_emit_byte_identical`,
       `parallel_eval_matches_sequential_eval_over_the_pure_corpus`, and the rest of each crate's
@@ -190,15 +248,26 @@ this change.
       issue — M-862's module docs still note the top-level-only bound is a *choice*, not a
       limitation, now that nesting is cheap at the scheduler level).
 - [x] `just check`-equivalent gates green for the touched crates: `cargo fmt --check`; `cargo
-      clippy -p mycelium-sched -p mycelium-mlir -p mycelium-interp --all-targets -- -D warnings -A
-      unsafe_code`; `cargo test` for `mycelium-sched`, `mycelium-mlir`, `mycelium-interp`, and
-      `mycelium-std-runtime` (the two additional callers found during the audit); `cargo build
-      --workspace` succeeds.
+      clippy -p mycelium-sched -p mycelium-mlir -p mycelium-interp -p mycelium-std-runtime
+      --all-targets -- -D warnings -A unsafe_code`; `cargo test` for `mycelium-sched`,
+      `mycelium-mlir`, `mycelium-interp`, and `mycelium-std-runtime`; `cargo build --workspace`
+      succeeds.
 - [x] Honest tags throughout: `Empirical` where a property/stress test is the checked basis, never
-      upgraded to `Proven` without a mechanized argument (VR-5).
+      upgraded to `Proven` without a mechanized argument (VR-5). The obsolete `Exact`
+      `SCHEDULER_BACKPRESSURE_STRENGTH` guarantee is **removed**, not left as a false claim.
 
 ## Meta — changelog
 
 - 2026-07-01 — Drafted (M-864 leaf). Records the `'static` contract change, the help-steal
   persistent-pool design, its deadlock-freedom argument, and the caller-by-caller audit (including
   the two `mycelium-std-runtime` callers not named in the original issue body).
+- 2026-07-01 — **Correctness rewrite (§3.0), same day, after an adversarial deadlock review
+  reproduced a real hang.** The first implementation kept M-861's `capacity` backpressure, whose
+  feeder bare-blocked *before* help-stealing → a nested-submission deadlock at `width > capacity + P`
+  (reproduced at forced `P ∈ {1,2,3,4}` with `[15,15,6]`), plus a panic that hung the join and killed
+  a pool worker. Fixed at the root: unbounded queue (populate-all-then-run, so no lane or feeder
+  ever bare-blocks) + a panic-safe join (`catch_unwind` per job, first panic re-raised at join, RAII
+  drop-guard on the countdown). Backpressure (`SCHEDULER_BACKPRESSURE_STRENGTH`, `Exact`) is dropped
+  as a non-normative impl detail (DN-61 §A.2); `capacity` is retained but no longer bounds anything.
+  Added forced-low-`P` deadlock tests + panic tests; the reproduction on pre-fix code was verified in
+  a scratch revert.

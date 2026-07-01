@@ -39907,10 +39907,6 @@
       "reason": "dedup-alias: same definition as `mycelium_std_runtime::region::Region::new` at crates/mycelium-std-runtime/src/region.rs:190 — one canonical row kept"
     },
     {
-      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_BACKPRESSURE_STRENGTH:",
-      "reason": "definition not found via regex heuristic (kind='const', name='SCHEDULER_BACKPRESSURE_STRENGTH:') — possibly macro-generated or cfg-gated"
-    },
-    {
       "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH:",
       "reason": "definition not found via regex heuristic (kind='const', name='SCHEDULER_LIVENESS_STRENGTH:') — possibly macro-generated or cfg-gated"
     },
