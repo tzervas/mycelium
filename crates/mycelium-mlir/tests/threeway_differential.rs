@@ -37,10 +37,14 @@
 #![cfg(feature = "mlir-dialect")]
 
 use mycelium_cert::{check, CheckVerdict, Evidence, RefinementRelation};
-use mycelium_core::{GuaranteeStrength, Meta, Node, Payload, Provenance, Repr, Trit, Value};
+use mycelium_core::{
+    Alt, CtorSpec, DataRegistry, DeclSpec, FieldSpec, GuaranteeStrength, Meta, Node, Payload,
+    Provenance, Repr, Trit, Value,
+};
 use mycelium_interp::{IdentitySwapEngine, Interpreter, PrimRegistry};
 use mycelium_mlir::{AotError, DialectError};
 use mycelium_numerics::Certificate;
+use std::collections::BTreeMap;
 
 // ─── shared helpers (local; the `common` module's helpers are a superset we don't fully need) ──
 
@@ -377,6 +381,260 @@ fn mlir_dialect_distinguishes_different_programs() {
     );
 }
 
+// ─── M-856: the `Construct`/`Match` non-recursive data fragment ──────────────────────────────
+
+/// A single-constructor, single-field type: `type Box = Box(Binary{8})`. Non-recursive (no
+/// `FieldSpec::Data` back-reference) — firmly within the Increment-1 subset.
+fn box_registry() -> DataRegistry {
+    let mut specs = BTreeMap::new();
+    specs.insert(
+        "Box".to_owned(),
+        DeclSpec {
+            ctors: vec![CtorSpec {
+                fields: vec![FieldSpec::Repr(Repr::Binary { width: 8 })],
+            }],
+        },
+    );
+    DataRegistry::build(&specs).expect("Box registry must build")
+}
+
+/// A two-constructor, no-field type: `type Color = Red | Blue`.
+fn color_registry() -> DataRegistry {
+    let mut specs = BTreeMap::new();
+    specs.insert(
+        "Color".to_owned(),
+        DeclSpec {
+            ctors: vec![CtorSpec { fields: vec![] }, CtorSpec { fields: vec![] }],
+        },
+    );
+    DataRegistry::build(&specs).expect("Color registry must build")
+}
+
+/// The M-856 data-fragment corpus (mirrors `native_differential.rs::data_corpus`, the direct-LLVM
+/// Increment-1 corpus, so the same shapes are proven three-way, not just two-way). Every program's
+/// final result is a repr lane (bit vector); each is valid under the interpreter, the direct-LLVM
+/// backend, and now the MLIR-dialect path.
+fn data_corpus() -> Vec<Node> {
+    let reg = box_registry();
+    let col = color_registry();
+    let mk_box = |bits: [bool; 8]| Node::Construct {
+        ctor: reg.ctor_ref("Box", 0).unwrap(),
+        args: vec![Node::Const(byte(bits))],
+    };
+    let red = || Node::Construct {
+        ctor: col.ctor_ref("Color", 0).unwrap(),
+        args: vec![],
+    };
+    let blue = || Node::Construct {
+        ctor: col.ctor_ref("Color", 1).unwrap(),
+        args: vec![],
+    };
+
+    vec![
+        // 1. Construct Box(A), match to extract the inner field b -> return b unchanged (the
+        //    tag-materialize + `cf.switch` + direct-SSA field bind + block-arg merge shape).
+        Node::Match {
+            scrutinee: Box::new(mk_box(A)),
+            alts: vec![Alt::Ctor {
+                ctor: reg.ctor_ref("Box", 0).unwrap(),
+                binders: vec!["b".to_owned()],
+                body: Node::Var("b".to_owned()),
+            }],
+            default: None,
+        },
+        // 2. Construct Box(A), match and apply bit.not to the extracted field — an op inside an arm
+        //    body, using a binder (not just a constant).
+        Node::Match {
+            scrutinee: Box::new(mk_box(A)),
+            alts: vec![Alt::Ctor {
+                ctor: reg.ctor_ref("Box", 0).unwrap(),
+                binders: vec!["b".to_owned()],
+                body: Node::Op {
+                    prim: "bit.not".into(),
+                    args: vec![Node::Var("b".to_owned())],
+                },
+            }],
+            default: None,
+        },
+        // 3. Let-bound Construct, then match — a Construct result in the env (Datum) looked up as
+        //    the scrutinee of a later Match.
+        Node::Let {
+            id: "box_a".into(),
+            bound: Box::new(mk_box(A)),
+            body: Box::new(Node::Match {
+                scrutinee: Box::new(Node::Var("box_a".into())),
+                alts: vec![Alt::Ctor {
+                    ctor: reg.ctor_ref("Box", 0).unwrap(),
+                    binders: vec!["b".to_owned()],
+                    body: Node::Op {
+                        prim: "bit.and".into(),
+                        args: vec![Node::Var("b".to_owned()), Node::Const(byte(B))],
+                    },
+                }],
+                default: None,
+            }),
+        },
+        // 4. Two-constructor Color type: match Red -> return A; match Blue -> return B. Exercises
+        //    the switch with two real arms (the merge collects two (label, Lane) pairs).
+        Node::Match {
+            scrutinee: Box::new(red()),
+            alts: vec![
+                Alt::Ctor {
+                    ctor: col.ctor_ref("Color", 0).unwrap(),
+                    binders: vec![],
+                    body: Node::Const(byte(A)),
+                },
+                Alt::Ctor {
+                    ctor: col.ctor_ref("Color", 1).unwrap(),
+                    binders: vec![],
+                    body: Node::Const(byte(B)),
+                },
+            ],
+            default: None,
+        },
+        // 5. Same two-constructor Color type but select Blue -> return B (mutant-witness that the
+        //    switch dispatches on the correct tag, not always on arm 0).
+        Node::Match {
+            scrutinee: Box::new(blue()),
+            alts: vec![
+                Alt::Ctor {
+                    ctor: col.ctor_ref("Color", 0).unwrap(),
+                    binders: vec![],
+                    body: Node::Const(byte(A)),
+                },
+                Alt::Ctor {
+                    ctor: col.ctor_ref("Color", 1).unwrap(),
+                    binders: vec![],
+                    body: Node::Const(byte(B)),
+                },
+            ],
+            default: None,
+        },
+        // NOTE (M-856b candidate, FLAGged, not included here): a `Match` `default` arm containing a
+        // `trit.add` is deliberately NOT added to this *three-way* corpus. The direct-LLVM backend
+        // (`crate::llvm`, read-only for this task) fails `llc`'s IR verifier on that shape
+        // ("Instruction does not dominate all uses!") — it folds a Match arm's overflow flags into
+        // the *same shared list* as the enclosing scope, so a flag computed only inside the
+        // non-taken arm is referenced at a point that arm does not dominate. The MLIR-dialect path
+        // (this crate) does not share the hazard (per-arm local folding + block-argument
+        // re-export — see the module doc comment) and is covered on this exact shape by the
+        // dedicated `crate::dialect::native::tests::match_default_arm_with_trit_add_…` in-crate
+        // test (interp <-> MLIR-dialect only, since the direct-LLVM leg cannot compile it).
+    ]
+}
+
+/// M-856: interp = direct-LLVM = MLIR-dialect on the `data_corpus` (`Construct`/`Match`), each pair
+/// validated through the shared M-210 checker. Skips a path whose toolchain is absent; asserts the
+/// MLIR path was non-vacuously exercised when its toolchain is present.
+#[test]
+fn interp_directllvm_mlirdialect_are_three_way_equivalent_on_the_data_corpus() {
+    let mut ran_mlir = false;
+    for (i, node) in data_corpus().iter().enumerate() {
+        let interp = interp_eval(node);
+
+        let direct = match mycelium_mlir::compile_and_run(node) {
+            Ok(v) => Some(v),
+            Err(AotError::ToolchainMissing(_)) => None,
+            Err(e) => panic!("data program #{i}: direct-LLVM path errored: {e}"),
+        };
+        let mlir = match mycelium_mlir::mlir_compile_and_run(node) {
+            Ok(v) => Some(v),
+            Err(DialectError::ToolchainMissing(_)) => None,
+            Err(e) => panic!("data program #{i}: MLIR-dialect path errored: {e}"),
+        };
+
+        if let Some(d) = &direct {
+            assert_eq!(
+                observable(&interp),
+                observable(d),
+                "data program #{i}: interp vs direct-LLVM diverged"
+            );
+        }
+        if let Some(m) = &mlir {
+            ran_mlir = true;
+            // Mutant-witness: a wrong tag, a mis-bound field, or a switch on the wrong discriminant
+            // would diverge here.
+            assert_eq!(
+                observable(&interp),
+                observable(m),
+                "data program #{i}: interp vs MLIR-dialect diverged ({:?} vs {:?})",
+                interp.payload(),
+                m.payload()
+            );
+            assert_eq!(
+                check(
+                    &interp,
+                    m,
+                    RefinementRelation::ObservationalEquiv,
+                    Certificate::exact(),
+                    &Evidence::Observational,
+                ),
+                CheckVerdict::Validated {
+                    strength: GuaranteeStrength::Exact
+                },
+                "data program #{i}: the shared checker must validate the interp<->MLIR pair"
+            );
+        }
+        if let (Some(d), Some(m)) = (&direct, &mlir) {
+            assert_eq!(
+                observable(d),
+                observable(m),
+                "data program #{i}: direct-LLVM vs MLIR-dialect diverged"
+            );
+        }
+    }
+    if mycelium_mlir::MlirTools::is_available() {
+        assert!(
+            ran_mlir,
+            "MLIR toolchain is available but no data program exercised the dialect path — vacuous"
+        );
+    }
+}
+
+/// M-856: a `Match` with **no default arm and no matching case** traps via the shared `@abort`
+/// defined-trap convention — exercised only on the direct-LLVM/interp legs here (the MLIR-dialect
+/// artifact aborts the *process*, which this differential harness's simple stdout read-back does
+/// not attempt to observe as a `Value`; the emission-level trap shape is asserted in the in-crate
+/// `construct_and_match_emit_a_switch_and_no_memory_ops` test instead). This test only pins that
+/// the **direct-LLVM** and **interpreter** legs agree the case is a hard refusal (never a silent
+/// wrong-arm fallthrough), so the abort path itself is not a divergence the MLIR leg introduces.
+#[test]
+fn match_default_arm_is_taken_not_the_no_default_trap() {
+    // Sanity companion: program #6 in `data_corpus` (Blue with only a Red arm + a `trit.add`
+    // default) exercises the *taken* default, not the trap — covered by the three-way test above.
+    // This test just pins that omitting the default on an exhaustive two-arm match never traps.
+    let col = color_registry();
+    let node = Node::Match {
+        scrutinee: Box::new(Node::Construct {
+            ctor: col.ctor_ref("Color", 1).unwrap(),
+            args: vec![],
+        }),
+        alts: vec![
+            Alt::Ctor {
+                ctor: col.ctor_ref("Color", 0).unwrap(),
+                binders: vec![],
+                body: Node::Const(byte(A)),
+            },
+            Alt::Ctor {
+                ctor: col.ctor_ref("Color", 1).unwrap(),
+                binders: vec![],
+                body: Node::Const(byte(B)),
+            },
+        ],
+        default: None,
+    };
+    let interp = interp_eval(&node);
+    match mycelium_mlir::mlir_compile_and_run(&node) {
+        Ok(v) => assert_eq!(
+            observable(&interp),
+            observable(&v),
+            "exhaustive match diverged"
+        ),
+        Err(DialectError::ToolchainMissing(_)) => {}
+        Err(e) => panic!("unexpected MLIR-dialect error: {e}"),
+    }
+}
+
 /// The out-of-fragment corpus: nodes the MLIR-dialect path must **explicitly refuse** (routing to
 /// the direct-LLVM/interp path), while interp ≡ direct-LLVM still holds. This proves coverage is
 /// honest — the dialect path never silently mis-lowers a node it doesn't support (G2/VR-5).
@@ -424,6 +682,25 @@ fn out_of_fragment_corpus() -> Vec<Node> {
                 args: vec![Node::Var("c".into())],
             }),
         },
+        // M-856: a `Match` with a **literal** arm on a `Binary{8}` scrutinee (the Increment-3
+        // recursion branch primitive `crate::llvm` also lowers outside a `Fix` loop) — still
+        // refused by the MLIR-dialect path (only `Ctor`-arm matching on a `Construct`-built datum
+        // is covered; the `Lit`-arm form is tied to the Fix/FixGroup fragment, deferred). Direct-LLVM
+        // and the interpreter both handle it.
+        Node::Match {
+            scrutinee: Box::new(Node::Const(byte(A))),
+            alts: vec![Alt::Lit {
+                value: byte(A),
+                body: Node::Const(byte(B)),
+            }],
+            default: Some(Box::new(Node::Const(byte(A)))),
+        },
+        // M-856: an **illegal** binary<->ternary Swap pair — `Binary{8} -> Ternary{2}` (2^7=128 >
+        // (3^2-1)/2=4) — still an explicit MLIR refusal (the `Recheck` compile-time re-check rejects
+        // it), while the interpreter's certified engine also raises `IllegalPair` and direct-LLVM
+        // refuses at compile time too, so all three legs agree the program never silently produces a
+        // value — checked directly in `swap_differential.rs`, not read back here (a `Swap`'s result
+        // does not round-trip through this harness's plain `IdentitySwapEngine` interp path).
     ]
 }
 
