@@ -154,6 +154,13 @@ land long before `lang 1.0.0`.
   > `#[deprecated]`-marked) is **deferred to the post-1.0 long-term arc (§10)**, the same reasonable-not-
   > maximal logic this Q1 resolution already applied to T9's full-toolchain self-host. This Q1 resolution
   > text is preserved (append-only, house rule #3); the change lives in **ADR-035**. See ADR-035.
+  > **See also ADR-036 (2026-07-01 — maintainer-ratified project strategy, not a Q1 amendment).** ADR-036
+  > confirms this Q1 resolution **unchanged**: the `lang 1.0.0` tag's only self-hosting bar stays the
+  > core-lib slice above. ADR-036 additionally names T9's *remaining* full-toolchain/stdlib self-host
+  > (E18-1, beyond this slice) the project's **comprehensive-dogfooding track** — first-class,
+  > within-1.0.0, run beside the Rust reference and Rust≡Mycelium differential-validated, but gating
+  > **nothing** beyond this same slice — and ties the project's **public release** (distinct from the
+  > tag) to that track's completion. See ADR-036.
 - **Q2 (dependency license policy) — RESOLVED.** **MIT governs first-party only** — libs, modules,
   crates, nodules, phyla. Third-party Rust (and other) **dependencies keep their own licenses**
   (`deny.toml`'s Apache/BSD/ISC/Unicode allow-list stays). *Long-term (§10):* all Rust is rewritten in
@@ -198,6 +205,14 @@ Recorded so the program stays honest about where it ends — these are **vision,
   re-export repo groups its component repos and presents a user-friendly interface over its phyla and
   nodules), and the project **flips to a full set of public, MIT-licensed repos** — a useful corpus for
   developers, users, and models to leverage. Captured in **DN-27**.
+  > **Trigger condition set by ADR-036 (2026-07-01 — maintainer-ratified).** DN-27 left this flip's
+  > binding trigger to "a future ADR ... when `lang 1.0.0` nears" (DN-27 *Decides*). **ADR-036 is that
+  > ADR**: the public release does **not** follow merely from the `lang 1.0.0` tag landing — it follows
+  > only once the comprehensive-dogfooding track above is **complete, differentially validated
+  > (Rust≡Mycelium), and the targeted Rust components are replaced** by their validated Mycelium
+  > counterparts. Until then the repository **stays private**, even after the tag. This text (the
+  > zero-Rust vision + DN-27 pointer) is preserved unchanged; the binding condition lives in **ADR-036**.
+  > See ADR-036.
 
 ---
 
@@ -266,3 +281,12 @@ Recorded so the program stays honest about where it ends — these are **vision,
   in DN-66's per-crate finding that zero crates clear the D6 trigger today. `M-719` re-scoped (freeze
   half closes for 1.0.0; retirement half spun out to a post-1.0 backlog issue). House-rule-correct
   (supersede-to-change-criteria) capture of the maintainer's 2026-07-01 decision. (ADR-035.)
+- 2026-07-01 — **Dogfooding + public-release strategy recorded — ADR-036** (maintainer-ratified;
+  additive, not a §5/§8 Q1 criteria amendment). §8 Q1 and §10 each carry an append-only "see ADR-036"
+  pointer, text otherwise unchanged: the `lang 1.0.0` **tag** stays gated only by the existing core-lib
+  self-host slice (Q1, unchanged); the **comprehensive-dogfooding track** (E18-1's full scope beyond
+  that slice — the whole toolchain/stdlib rewritten in Mycelium, beside the Rust originals,
+  Rust≡Mycelium differential-validated) is now named a first-class **within-1.0.0**, non-tag-gating,
+  parallel track; and the project's **public release** is fixed as a distinct, later milestone from the
+  tag — gated on that track's completion, per the trigger condition **DN-27** deferred to "a future ADR."
+  The repository stays private until then. (ADR-036.)

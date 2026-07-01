@@ -8,6 +8,26 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: ADR-036 — dogfooding and public-release strategy ratified)
+
+- **ADR-036 — Dogfooding and Public-Release Strategy (`Accepted`, maintainer-ratified).** Fixes the
+  `lang 1.0.0` **tag** and the project's **public release** as two distinct milestones. The tag is cut
+  on the **Rust reference implementation**; self-hosting gates it only at the existing **core-lib
+  self-host slice** (ADR-022 §8 Q1 — unchanged, explicitly preserved). **Comprehensive dogfooding**
+  (progressively rewriting the whole toolchain/stdlib/kernel *in* Mycelium, beside the Rust originals —
+  E18-1's full scope beyond the core-lib slice) is a first-class **within-1.0.0**, non-tag-gating,
+  **parallel** track. Each Mycelium reimplementation is **Rust≡Mycelium differential-validated**
+  (extending the interp≡AOT≡JIT discipline, RFC-0029 §7.5/M-210) and **replaces** its Rust counterpart
+  only once tested, benched, validated, and it satisfies the maintainer. The repository **stays
+  private** until dogfooding is complete and validated — the **public release** happens only then,
+  refining the trigger condition **DN-27** (Draft, untouched) deferred to "a future ADR." This is an
+  **additive** decision, not a §5/§8 Q1 criteria amendment (contrast ADR-024/034/035): ADR-022 §8 Q1
+  and §10 each carry an append-only "see ADR-036" pointer, their own resolution/vision text unchanged.
+- **Cross-reference application (ADR-036):** E18-1's issue body (`tools/github/issues.yaml`) carries an
+  append-only, non-status-changing note framing it as the dogfooding-capstone track, roadmapped by
+  `docs/planning/self-hosting-port-ledger.md` (which itself gets a header note to the same effect). No
+  epic/issue status is flipped by this act.
+
 ### Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)
 
 - **ADR-035 — Full-Language 1.0.0 Gate (Track T4) Scope Amendment (`Accepted`, maintainer-ratified).**
