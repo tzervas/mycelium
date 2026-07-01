@@ -129,6 +129,27 @@ pub static MATRIX: &[GaugeRow] = &[
         strength: GuaranteeStrength::Exact,
         basis: "rate + total restart bounds enforced structurally; inherited from M-356 Supervisor (M-713)",
     },
+    // ── M-861: per-worker-deque work-stealing scheduler ──
+    GaugeRow {
+        operation: "Scheduler RT2 sequentialization differential (work-stealing)",
+        strength: GuaranteeStrength::Empirical,
+        basis: "parallel run equals sequential reference under stealing; result-order-only claim, unaffected by execution reordering; property-tested over randomized worker/steal configurations, not Proven (M-861)",
+    },
+    GaugeRow {
+        operation: "Scheduler backpressure bound (total pending across per-worker deques)",
+        strength: GuaranteeStrength::Exact,
+        basis: "total pending ≤ capacity by construction under one lock guarding every deque together; G2 (M-861)",
+    },
+    GaugeRow {
+        operation: "Scheduler liveness under stealing (each job runs exactly once)",
+        strength: GuaranteeStrength::Empirical,
+        basis: "property-tested over random job sets and random worker/steal configurations; not Proven (M-861)",
+    },
+    GaugeRow {
+        operation: "Steal-victim-selection policy determinism (RT3 EXPLAIN)",
+        strength: GuaranteeStrength::Exact,
+        basis: "StealPolicy::select_victim is a total, deterministic function of its inputs; every decision is an inspectable StealDecision record (M-861 / RFC-0008 RT3)",
+    },
 ];
 
 #[cfg(test)]
