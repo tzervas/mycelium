@@ -32,11 +32,13 @@
 //!   catch-all arm, not on an exhaustiveness check the compiler enforces. Tagged **Empirical/
 //!   Declared** accordingly, per VR-5 (never upgraded past its checked basis).
 
+pub mod batch;
 pub mod emit;
 pub mod gap;
 pub mod map;
 pub mod transpile;
 
+pub use batch::{discover_rs_files, summarize, transpile_batch, BatchSummary, UnionGapReport};
 pub use gap::{Category, Gap, GapReport};
 pub use transpile::{transpile_file, transpile_source};
 
