@@ -31,4 +31,4 @@ are explicit `Err` (no silent zero-fill, no clock wrap/clamp). Source is ground 
 
 ## Role in the workspace
 
-The sole crate that depends on both the audited OS floor and the pure std crates; wires the production entropy and clock sources without touching `unsafe`. See the [workspace overview](../../README.md).
+The sole crate that depends on both the audited OS floor and the pure std crates; wires the production entropy and clock sources without touching `unsafe`. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-sys-host).

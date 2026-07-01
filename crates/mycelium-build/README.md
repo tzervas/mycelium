@@ -32,4 +32,4 @@ input (G2).
 
 ## Role in the workspace
 
-Provides the AOT-eligibility gate and content-addressed build certificates; depends on `mycelium-core` only (outside the trusted kernel per KC-3). See the [workspace overview](../../README.md).
+Provides the AOT-eligibility gate and content-addressed build certificates; depends on `mycelium-core` only (outside the trusted kernel per KC-3). See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-build).

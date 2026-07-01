@@ -29,4 +29,4 @@ The balance invariant is `Exact` (by construction, independently checked). No pe
 
 ## Role in the workspace
 
-Depends on `mycelium-core` only (read-only consumer). The MEM-4 follow-ons (Increment 2/3, recursion, interprocedural) are tracked as M-797. See the [workspace overview](../../README.md).
+Depends on `mycelium-core` only (read-only consumer). The MEM-4 follow-ons (Increment 2/3, recursion, interprocedural) are tracked as M-797. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-mir-passes).

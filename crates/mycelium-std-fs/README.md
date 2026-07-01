@@ -32,4 +32,4 @@ testable without OS facilities; `RealFs` is deferred to `std-sys` (M-541).
 
 ## Role in the workspace
 
-Filesystem I/O layer for the stdlib; builds on `std.io` `Source`/`Sink` abstractions. See the [workspace overview](../../README.md).
+Filesystem I/O layer for the stdlib; builds on `std.io` `Source`/`Sink` abstractions. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-fs).

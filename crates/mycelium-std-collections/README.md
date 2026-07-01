@@ -25,4 +25,4 @@ returns an explicit `Err(CollErr::IndexOOB)` — never a panic or silent default
 
 ## Role in the workspace
 
-General-purpose immutable collections used across Ring-1/Ring-2 stdlib crates. See the [workspace overview](../../README.md).
+General-purpose immutable collections used across Ring-1/Ring-2 stdlib crates. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-collections).

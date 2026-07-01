@@ -26,4 +26,4 @@ Additional modules: `inject::Image` (in-process hot-inject prototype, M-341), `b
 
 ## Role in the workspace
 
-Depends on `mycelium-core` and `mycelium-interp`. Dev-dependencies include `mycelium-cert`, `mycelium-numerics`, and `mycelium-select` for the differential and layout tests. The trusted base remains the interpreter (NFR-7); this crate is the perf/inspectability path above it. See the [workspace overview](../../README.md).
+Depends on `mycelium-core` and `mycelium-interp`. Dev-dependencies include `mycelium-cert`, `mycelium-numerics`, and `mycelium-select` for the differential and layout tests. The trusted base remains the interpreter (NFR-7); this crate is the perf/inspectability path above it. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-mlir).

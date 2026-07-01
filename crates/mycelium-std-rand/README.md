@@ -40,4 +40,4 @@ reaches `Proven` without a checked theorem (VR-5). Source is ground truth.
 
 ## Role in the workspace
 
-Ring 2 / Tier B pure RNG surface; platform entropy is injected from `mycelium-std-sys`. See the [workspace overview](../../README.md).
+Ring 2 / Tier B pure RNG surface; platform entropy is injected from `mycelium-std-sys`. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-rand).

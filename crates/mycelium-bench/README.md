@@ -59,4 +59,4 @@ target.
 
 Depends on `mycelium-core`, `mycelium-interp`, `mycelium-mlir`, `mycelium-l1`, `mycelium-cert`, and
 `mycelium-std-runtime` (the OS-thread `Scheduler` the scaling suite drives); measures the backends
-without modifying them. See the [workspace overview](../../README.md).
+without modifying them. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-bench).

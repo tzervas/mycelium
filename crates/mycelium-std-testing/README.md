@@ -37,4 +37,4 @@ harness never inflates the subject crate's tag — a passing `for_all` backs `Em
 
 ## Role in the workspace
 
-Ring 2 / Tier B verification harness; adds no trusted code and checks the trusted base. See the [workspace overview](../../README.md).
+Ring 2 / Tier B verification harness; adds no trusted code and checks the trusted base. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-testing).

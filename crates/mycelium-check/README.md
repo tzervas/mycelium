@@ -30,4 +30,4 @@ provides (VR-5).
 
 ## Role in the workspace
 
-Depends on `mycelium-l1`, `mycelium-lsp`, `mycelium-proj`, and `mycelium-cli-common`; provides the project-scoped check driver for the toolchain. See the [workspace overview](../../README.md).
+Depends on `mycelium-l1`, `mycelium-lsp`, `mycelium-proj`, and `mycelium-cli-common`; provides the project-scoped check driver for the toolchain. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-check).
