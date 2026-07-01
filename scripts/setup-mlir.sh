@@ -26,8 +26,10 @@ set -euo pipefail
 
 # ── Reuse the house shell helpers when available (have/section/ok/skip), else define minimal
 # fallbacks so the script is self-contained and runnable from anywhere. lib.sh lives beside this
-# script under scripts/.
-LIB="${BASH_SOURCE%/*}/lib.sh"
+# script under scripts/. CWD-independent resolution: `dirname` of a bare filename (e.g. when run as
+# `bash setup-mlir.sh` from inside scripts/) yields `.`, and `cd ... && pwd` makes it absolute.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="$SCRIPT_DIR/lib.sh"
 if [ -f "$LIB" ]; then
   # shellcheck source=scripts/lib.sh
   source "$LIB"
@@ -61,9 +63,25 @@ if [ -z "$MAJOR" ] && have clang; then
   [ -n "$MAJOR" ] && ok "detected LLVM major $MAJOR from \`clang --version\`"
 fi
 
+# Fallback: no UNVERSIONED llc/clang on PATH (e.g. only version-suffixed `llc-NN`/`clang-NN` are
+# installed — a distro/container without the Debian `llvm`/`clang` meta-packages, such as a bare
+# apt.llvm.org install). Probe the highest version-suffixed binary directly so detection still
+# succeeds; this only determines MAJOR for the libMLIR package match below — it does NOT make
+# `llc`/`clang` resolve unversioned (that floor is `install-tools.sh`'s LLVM unversioned-binary step).
 if [ -z "$MAJOR" ]; then
-  skip "no LLVM toolchain detected (neither \`llc\` nor \`clang\` present, or version unparsable)"
-  echo "  no LLVM toolchain detected; install LLVM first, then re-run \`bash scripts/setup-mlir.sh\`."
+  for t in llc clang; do
+    versioned="$(compgen -c "${t}-" 2>/dev/null | grep -E "^${t}-[0-9]+$" | sort -t- -k2 -n -r | head -n1 || true)"
+    if [ -n "$versioned" ]; then
+      MAJOR="${versioned##*-}"
+      ok "detected LLVM major $MAJOR from version-suffixed \`$versioned\` (no unversioned $t on PATH)"
+      break
+    fi
+  done
+fi
+
+if [ -z "$MAJOR" ]; then
+  skip "no LLVM toolchain detected (neither \`llc\`/\`clang\` nor a version-suffixed \`llc-NN\`/\`clang-NN\` present, or version unparsable)"
+  echo "  no LLVM toolchain detected; install LLVM first (e.g. \`bash scripts/install-tools.sh\`), then re-run \`bash scripts/setup-mlir.sh\`."
   exit 0
 fi
 

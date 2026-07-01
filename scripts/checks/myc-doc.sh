@@ -8,7 +8,8 @@
 # the legibility check is honestly PARTIALLY-DORMANT (structure checked; colour-contrast/typography
 # need a rendering engine). Skips gracefully when cargo is absent. `typst` PDF compile is a separate,
 # optional downstream step that also skips when typst is missing — never a half-build.
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "myc-doc (M-363 doc-IR build + §4.1 quality-bar lint — myc-doc)"
 

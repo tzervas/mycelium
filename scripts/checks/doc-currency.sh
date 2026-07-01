@@ -4,7 +4,8 @@
 # real top-level layout, every RFC/ADR/DN is indexed in docs/Doc-Index.md, and any
 # `<!-- doc-currency:crate-count -->` marker cites the real crate count. Complements (does NOT
 # duplicate) the `links` cross-reference check and the `myc-doc` doc-IR quality bar.
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "doc currency (structure tree · index coverage · cited counts)"
 

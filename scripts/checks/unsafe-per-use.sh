@@ -22,7 +22,8 @@
 #
 # This script is COMPLEMENTARY to `safety.sh` (which audits `// SAFETY:` adjacency); together
 # they enforce the full ADR-014 + RFC-0034 §9 per-use policy.
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 
 status=0

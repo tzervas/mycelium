@@ -7,7 +7,8 @@
 #   - both corpus categories exist and are non-empty,
 #   - every .myc carries a leading `//` explanatory header (accept: what it exercises;
 #     reject: why it is rejected — the never-silent expectation, surfaced in the corpus itself).
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "grammar"
 

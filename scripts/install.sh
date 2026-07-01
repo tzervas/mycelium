@@ -35,8 +35,11 @@
 # clean skip; non-zero only when a REQUIRED, requested component genuinely fails.
 set -euo pipefail
 
-# ── House shell helpers (have/section/ok/skip/fail). lib.sh lives beside this script. ─────────────
-LIB="${BASH_SOURCE%/*}/lib.sh"
+# ── House shell helpers (have/section/ok/skip/fail). lib.sh lives beside this script. CWD-independent
+# resolution: `dirname` of a bare filename (e.g. when run as `bash install.sh` from inside scripts/)
+# yields `.`, and `cd ... && pwd` makes it absolute — works regardless of the invoking CWD. ──────────
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB="$SCRIPT_DIR/lib.sh"
 if [[ -f "$LIB" ]]; then
   # shellcheck source=scripts/lib.sh
   source "$LIB"

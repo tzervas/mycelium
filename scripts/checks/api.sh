@@ -5,7 +5,8 @@
 # Skips gracefully when cargo-public-api is absent or a crate has no baseline yet; bootstrap or
 # update the snapshots with `just api-baseline`. (cargo-public-api drives a nightly rustdoc; that
 # nightly is used only to introspect the surface, it does not change the MSRV-pinned build.)
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "public-api surface"
 rc=0

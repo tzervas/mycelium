@@ -2,7 +2,8 @@
 # (Re)generate the committed public-API snapshots that scripts/checks/api.sh gates against.
 # Writes docs/spec/api/<crate>.txt for every workspace crate. Run after an *intended* API change
 # (the diff is then a reviewed part of the commit). Requires cargo-public-api (+ a nightly rustdoc).
-source "${BASH_SOURCE%/*}/lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "regenerate public-api baselines"
 

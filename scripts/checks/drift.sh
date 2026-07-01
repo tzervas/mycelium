@@ -3,7 +3,8 @@
 # must match a fresh regeneration from the canonical lexer keyword() table (G2: the lexer can never
 # silently diverge from the grammars that colour editors). Skip-graceful if python3 absent.
 set -euo pipefail
-. "$(dirname "$0")/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+. "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 
 section "drift"

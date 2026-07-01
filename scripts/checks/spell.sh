@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Spell-check prose with codespell (config: .codespellrc).
-source "${BASH_SOURCE%/*}/../lib.sh"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/../lib.sh"
 cd "$REPO_ROOT" || exit 1
 section "codespell"
 
