@@ -8,6 +8,55 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: Wave-1 — native-scheduler parallelism, dialect Dense/VSA, stdlib freeze, governance gates)
+
+- **`mycelium-sched` foundational crate + Scheduler relocation (PR #864, previously untracked).**
+  The M-861 work-stealing OS-thread `Scheduler` moved out of `mycelium-std-runtime` into a new
+  crate, `crates/mycelium-sched` (deps: `mycelium-core` only, for `GuaranteeStrength`), landing it
+  **below** `mycelium-interp` and breaking the `interp`↔`std-runtime` dependency cycle that blocked
+  M-862's native-scheduler rewire. `mycelium-std-runtime` re-exports the same path, so downstream
+  call sites (bench included) are unaffected. Pure structural refactor, no behavior change (DN-61
+  §A.2: scheduler internal strategy is non-normative — only RT2 determinism is). This landed with
+  no changelog entry at the time; recorded here.
+- **M-856b — MLIR-dialect coverage for Dense/VSA (libMLIR-gated).** The dialect leg
+  (`crates/mycelium-mlir/src/dialect/native.rs`) now lowers Dense/VSA element-wise ops, extending
+  the three-way differential (interp == direct-LLVM == dialect) over Dense and all four
+  1.0.0-mandatory VSA models (MAP-I/BSC/HRR/FHRR), matching direct-LLVM's existing
+  `dense_codegen.rs`/`vsa_codegen.rs` fragment. Skip-graceful (`DialectError::ToolchainMissing`)
+  where `mlir-opt`/`mlir-translate` are absent — never a faked pass. Tag: **Empirical** where
+  libMLIR is provisioned.
+- **M-860 — parallel per-function AOT codegen via the native scheduler.** Per-function/per-nodule
+  lowering now dispatches through `mycelium_sched::scheduler::Scheduler::run_indexed`, joined by a
+  stable content-hash sort so the parallel emission is byte-identical to the sequential emit (no
+  new nondeterminism, emission order pinned). Reworked from an initial rayon-based prototype onto
+  the native scheduler before landing — **no rayon** dependency added. Tag: **Exact** (byte-equal
+  by construction, checked via the join-order differential).
+- **M-862 — parallel pure-fragment interpreter evaluation via the native scheduler.** Independent,
+  provably-pure Core IR fragments (a top-level `Op`/`Construct`'s direct argument batch) now
+  evaluate in parallel through the same `Scheduler::run_indexed`, gated by the existing purity
+  check and bounded to the outermost independent batch (no nested `run_indexed`); the choice is
+  reified in an EXPLAIN-able `ParallelPlan` (`SequentialImpure` / `SequentialNoBatch` /
+  `TopLevelBatch`, never a silent fallback). Differential-verified against the trusted sequential
+  interpreter (25x determinism, purity-gate, fuel-parity, impure-fallback tests). Enabled by the
+  Scheduler relocation above (PR #864) — **no rayon**. Tag: **Empirical**.
+- **M-743 — MIT-only first-party license audit gate.** `scripts/checks/license-first-party.sh`
+  added and wired into `scripts/checks/all.sh`, enforcing ADR-022 §7's MIT-only first-party policy
+  as a standing green check rather than a one-time sweep.
+- **M-674 — explicit recursion budgets on the totality and ambient passes.** Both passes now carry
+  an explicit, reified depth budget (mirroring the checker/elaborator/parser/evaluator discipline
+  M-674 already established) and refuse cleanly with a never-silent `*DepthExceeded` on
+  exhaustion, rather than relying transitively on the parser's bound. The sibling `mono.rs`
+  `free_vars`/pattern-binders recursion remains unbounded — an explicitly open follow-up, out of
+  this issue's totality/ambient scope (flagged, not silently dropped — G2).
+- **M-719 — stdlib stable-API freeze (DN-66).**
+  `docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md` freezes the
+  current public-API baseline for all 26 `mycelium-std-*` crates as a dated, grounded snapshot and
+  assesses the RFC-0031 §5 D6 retirement trigger — finding no crate yet clears it (the 5
+  same-named `.myc` prototypes are disjoint subsets, not full ports). Additive stability
+  doc-comments added to all 26 crates; no crate retired, no `#[deprecated]` applied — retirement
+  remains a separate, unmet precondition (DN-66 §4). Partial closure of M-719 (not fully done —
+  the per-op audit precondition for retirement is still open).
+
 ### Documentation (2026-07-01: README/docs decomposition — leaner landing pages, topic-split guides, accuracy pass)
 
 - **Root README decomposed (551 → 107 lines)** into a lean, navigable landing page plus nine linked
