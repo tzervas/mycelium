@@ -17,6 +17,6 @@ mycelium-core = { path = "../mycelium-core" }
 mycelium-numerics = { path = "../mycelium-numerics" }
 # The work-stealing OS-thread Scheduler (M-709/M-861), relocated below mycelium-interp (E25) so
 # the interpreter's own parallel evaluation (M-862) can use it without a
-# mycelium-interp <-> mycelium-std-runtime cycle. Not yet wired into src/ here — that rewire is
-# M-862's own scoped change; this dependency only makes the Scheduler available.
+# mycelium-interp <-> mycelium-std-runtime cycle. Wired into `src/parallel.rs` (M-862): the
+# top-level pure-argument batch is dispatched through `Scheduler::run_indexed`.
 mycelium-sched = { path = "../mycelium-sched" }

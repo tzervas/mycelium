@@ -2312,16 +2312,36 @@ issues:
   - id: M-674
     title: "M-674 — robustness: uniform explicit-budget + deep-stack discipline across all recursion limit points"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P2, status:in-progress]
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
     depends_on: [M-657]
     evidence_pr: 349
     evidence_date: 2026-06-22
-    landed_basis: "status:in-progress (NOT done) — evidence is a REFERENCE/partial, not a completed landing; CHANGELOG.md '### Changed (2026-06-22: M-674 — evaluator runs on the deep worker stack; depth budget is the ceiling)'; merged-PR-list #349 (cross-checked; no (#NNN) in the curated subject)"
-    doc_refs: [src:crates/mycelium-stack/src/lib.rs, src:crates/mycelium-l1/src/checkty.rs, src:crates/mycelium-l1/src/elab.rs]
+    landed_date: 2026-07-01
+    landed_basis: "commit e26f08a (W1-674 leaf, merged via 702e910) — the totality checker's own call-graph/mutual-descent traversal (walk_expr/descend_walk/pattern_binders) and the ambient resolution pass's own expr/type_ref/pattern recursion now each carry an explicit MAX_WALK_DEPTH/MAX_AMBIENT_DEPTH budget (4096), refusing cleanly with a never-silent WalkDepthExceeded/AmbientError::DepthExceeded past it, running on mycelium-stack's deep worker stack; empirically measured headroom >=1,000,000 levels (>200x the budget). CHANGELOG.md '### Added (2026-07-01: Wave-1 ...)' M-674 entry."
+    doc_refs: [src:crates/mycelium-stack/src/lib.rs, src:crates/mycelium-l1/src/checkty.rs, src:crates/mycelium-l1/src/elab.rs, src:crates/mycelium-l1/src/totality.rs, src:crates/mycelium-l1/src/ambient.rs]
     body: |
       Generalize the "explicit reified depth budget (banked guard 4) + deep worker stack (`mycelium-stack`, isolated outside the `#![forbid(unsafe_code)]` kernel) + measured-safe ceiling" discipline to EVERY recursion/resource limit point, so they all refuse cleanly and never crash, and the pattern is uniform + self-hosting-portable (the explicit budgets carry to the Mycelium-native frontend; the host-stack adapter is transitional). The explicit budget is the load-bearing primitive; the deep stack is only needed where frames are large enough that the budget would otherwise outrun a normal host stack.
       Status (2026-06-22): DONE — checker (`MAX_CHECK_DEPTH`, deep stack), elaborator (`MAX_ELAB_DEPTH`, deep stack), parser (`MAX_EXPR_DEPTH`, explicit budget; small frames fit the normal stack), **evaluator** (`Evaluator::call` runs on the deep worker stack; `DEFAULT_DEPTH=64` stays the explicit ceiling but `with_depth(N)` is now host-stack-safe — est. physical ceiling ~65k–130k levels in debug; `SwapEngine: +Send+Sync`; clean-refusal test). Isolation crate `mycelium-stack` + kernel `forbid(unsafe_code)` landed.
       TODO (the remaining limit points): (2) **totality** + **ambient** passes — give each an explicit budget (today bounded only transitively by the parser's 256); (3) audit cross-crate recursion limit points (MLIR lowering in `mycelium-mlir`, the runtime task/supervision depth, reconstruction recursion in `mycelium-core::recon`, dense/VSA recursive ops) and apply the same discipline (budget where it recurses; the isolated deep-stack adapter where frames warrant it). (4) Optional: wire the documented `grow-on-demand` (stacker) feature in `mycelium-stack` (unsafe contained in the leaf dep) if unbounded-growth is ever wanted. Each gets a clean-refusal regression test. Honesty: a budget is an honest ceiling (never silent), not a guess; never raise one without measuring the physical headroom (as `MAX_CHECK_DEPTH` records).
+
+      DONE (2026-07-01, W1-674 leaf): closes TODO item (2) — the totality checker's `walk_expr`/
+      `descend_walk`/`pattern_binders` traversal and the ambient resolution pass's `expr`/`type_ref`/
+      `pattern` recursion now each carry their own explicit budget (`MAX_WALK_DEPTH`/
+      `MAX_AMBIENT_DEPTH`, 4096), refusing cleanly (`WalkDepthExceeded`/`AmbientError::DepthExceeded`)
+      past it and running on `mycelium-stack`'s deep worker stack, so the budget — not a host-stack
+      overflow — is what bounds a pathologically-nested input. Empirically measured: `walk_expr`
+      survives >=2,000,000 levels, the ambient resolver >=1,000,000, both >200x the 4096 budget.
+      `checkty`/`elab`'s own call-graph/effect-coverage collectors share `walk_expr` (M-641) and were
+      updated to propagate the budget, closing the same gap there too. Regression tests added for both
+      passes (just-under-budget succeeds, past-budget refuses cleanly), including the self-recursive
+      `descend_walk` path.
+      FLAG (honest, not silently dropped — G2): the sibling `mono.rs` `free_vars`/`pattern_binders`
+      recursion (monomorphization's own AST descent, distinct from `totality.rs`'s traversal) remains
+      UNBOUNDED — item (3)'s cross-crate audit did not reach it. This is a follow-up, explicitly out
+      of this issue's totality/ambient scope (item (2)), not a silent gap. Items (3) (the broader
+      cross-crate audit: MLIR lowering, runtime task/supervision depth, `mycelium-core::recon`,
+      dense/VSA recursive ops) and (4) (optional `grow-on-demand` stacker feature) remain open.
+      This mono.rs remainder is now tracked as M-866.
 
   - id: M-675
     title: "M-675 — tooling: reconcile idmap.tsv against live GitHub for all Phase-5/6/7/8 issues"
@@ -4805,6 +4825,7 @@ issues:
       - corpus:RFC-0031
       - corpus:RFC-0016
       - corpus:DN-25
+      - corpus:DN-66
       - src:crates/mycelium-l1/tests/std_generic_conformance.rs
     body: |
       PARTIAL (2026-06-30, lib10 Session): per-op conformance gap-closure landed (branch
@@ -4877,6 +4898,28 @@ issues:
         stability bar; no Rust crate is left as an undeclared dependency of .myc code.
       - just check green on the full lib/std/ tree.
       - E13-1 issue status -> done; CHANGELOG entry append-only with honest framing.
+
+      PARTIAL (2026-07-01, W1-719 leaf): the "broader closure" clause's FIRST half — the
+      stable-API-freeze — is now DONE. **DN-66** (`docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md`)
+      freezes the current public-API baseline for all 26 `mycelium-std-*` crates as a single dated,
+      grounded snapshot (spec status + `GUARANTEE_MATRIX` location + public-surface size per crate,
+      cross-checked against the 5 same-named `.myc` prototypes) and adds additive, non-breaking
+      stability doc-comments to all 26 crates' `src/lib.rs` (or README where the crate doc is
+      `include_str!`-sourced). This satisfies the DoD's "stable documented public API" bullet.
+      **The SECOND half — crate retirement/deprecation — is STILL OPEN, honestly, not claimed
+      done (VR-5):** DN-66 §3 grounds (not asserts) that no crate yet clears the RFC-0031 §5 D6
+      retirement trigger — the 5 same-named `.myc` prototypes (`math`/`fmt`/`cmp`/`collections`/
+      `iter`) are structurally disjoint subsets of their Rust crates' full surface, not full ports,
+      so none is retirement-eligible. No `#[deprecated]` attribute is applied; no crate is removed.
+      DN-66 §4 additionally flags: (a) `mycelium-std-sys-host` has no `docs/spec/stdlib/*.md` yet;
+      (b) the real precondition for any future `#[deprecated]` call is a per-op audit as each
+      module's D4-sequenced `.myc` port lands its *full* surface, not a one-time note; (c)
+      `mycelium-std-runtime` is load-bearing (depended on directly by `crates/mycelium-mlir`), not
+      reference-only, and needs cross-crate coordination before any retirement conversation; (d)
+      final crate removal waits for RFC-0031 to reach Enacted plus an explicit maintainer act, even
+      once D5/D6 are cleared. **Status stays in-progress** — the freeze half is closed, the
+      retirement half is not; this is a partial closure of the "broader closure" clause, not a full
+      M-719 close-out.
 
   - id: E15-1
     title: "E15-1 (epic) -- Native AOT maturity, optimization, and acceleration"
@@ -5323,6 +5366,26 @@ issues:
       this close-out's explicit scope; flagged for the next resync/maintainer, not silently carried
       forward as fact). DoD's Enacted/Resolved bullet stays unmet for the same house-rule-#3 reason
       as above.
+
+      PROGRESS (2026-07-01, Wave-1 reconciliation close-out): 3 more children landed `done` --
+      **M-856b** (Dense/VSA through the dialect path, W1-AOT-856b-860 leaf), **M-860** (parallel
+      per-function AOT codegen, same leaf, reworked onto the native scheduler -- see below), and
+      **M-862** (parallel pure-fragment interpreter eval, W1-862 leaf, landed PRE-tag -- the
+      maintainer decided pre/post-tag at this PR, per the issue's own flagged open question). A
+      previously-UNTRACKED landing enabled two of these: the M-861 work-stealing Scheduler was
+      RELOCATED to a new foundational crate, `mycelium-sched`, below `mycelium-interp` (PR #864),
+      breaking the `interp`<->`std-runtime` dependency cycle -- M-860 and M-862 both dispatch
+      through `mycelium_sched::scheduler::Scheduler::run_indexed` in their landed state, and NEITHER
+      carries a rayon dependency (M-860's first pass used rayon, flagged and superseded same-day;
+      M-862 was native-scheduler from this rewire onward). **Two new children minted, both
+      explicitly OUT of this epic's own 1.0.0-gating DoD** (perf-path hardening / a distinct
+      concurrency-parity workstream, not full-language coverage): **M-864** (persistent bounded
+      work-stealing pool -- the pooled-scheduler follow-up M-862's body already named as deferred)
+      and **M-865** (AOT-runtime concurrency + async parity with the interpreter, RFC-0008 §8
+      R8-Q1-adjacent). The prior resync's M-859/M-861 `landed_pr`-vs-`status:ready` FLAG is now
+      resolved (both show `status:done` in this manifest as of this pass -- confirmed, not
+      reasserted). REMAINING OPEN toward this epic's own DoD: **M-863 only** (the closing
+      ratification act) -- both of its dependencies (M-858, M-862) are now done, so it is unblocked.
   - id: M-850
     title: "Direct-LLVM full recursion: non-tail Fix + FixGroup heap trampoline (stack-robust)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -5561,10 +5624,12 @@ issues:
   - id: M-856b
     title: "MLIR-dialect coverage: Dense/VSA through the dialect path (libMLIR-gated)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:done]
     epic: E25-1
     depends_on: [M-853, M-854, M-856]
-    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
+    landed_date: 2026-07-01
+    landed_basis: "commit e7fb725 (W1-AOT-856b-860 leaf, merged via f781e3e) — dialect::native::{dense,vsa} (crates/mycelium-mlir/src/dialect/native/{dense,vsa}.rs, new) lower DenseProgram (add/sub/neg/scale/dot/similarity) and VsaProgram (bind/unbind/bundle/permute/similarity over MAP-I/BSC/HRR/FHRR) through arith/func/math MLIR ops, reusing DenseArtifact/VsaArtifact read-back verbatim. Two real toolchain pitfalls caught + fixed before landing: arith.remf is IEEE remainder not fmod (FHRR phase wrap uses llvm.frem instead); math.atan2 needs --convert-math-to-libm. Reconfirmed by this reconciliation pass: `cargo test -p mycelium-mlir --features mlir-dialect --test dense_differential --test vsa_differential` passes non-vacuous in this environment (libMLIR 18 provisioned at /usr/lib/llvm-18/bin) — 9/9 dense + 15/17 vsa (2 GPU-deferred, pre-existing) all ok, none skipped. cargo-mutants was not independently re-run by this reconciliation pass (not re-verified beyond the differential); the leaf's own dialect-lowering mutant-witness claim is carried as-authored, not re-checked here. Tag: Empirical where libMLIR is provisioned; skip-graceful (DialectError::ToolchainMissing) elsewhere."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25, src:crates/mycelium-mlir/src/dialect/native/dense.rs, src:crates/mycelium-mlir/src/dialect/native/vsa.rs]
     body: |
       Split out of M-856 (2026-06-30 resync, honest partial-landing division): bring Dense and VSA
       lowering (native.rs:342) through the MLIR-dialect path (feature mlir-dialect), matching
@@ -5578,6 +5643,18 @@ issues:
         libMLIR is provisioned (skip-graceful + recorded where not); cargo-mutants catches a
         dialect-lowering mutation on the Dense/VSA path specifically.
       - just check green (no skips silently masked); CHANGELOG append-only; honest tag.
+
+      DONE (2026-07-01, W1-AOT-856b-860 leaf): dialect::native::dense + dialect::native::vsa land
+      the Dense/VSA dialect lowering, mirroring direct-LLVM's dense_codegen.rs/vsa_codegen.rs
+      algorithms verbatim (never re-derived) and reusing DenseArtifact/VsaArtifact's read-back
+      logic so the two compiled paths cannot silently diverge on result-stamping. The three-way
+      differential (interp == direct-LLVM == dialect) is extended over both Dense and VSA
+      (MAP-I/BSC/HRR/FHRR), including the FHRR -0.0 phase-wrap edge, the FHRR degenerate-bundle
+      sentinel, and the MAP-I capacity-bound parity case. Two silent-divergence pitfalls were
+      caught empirically against the real libMLIR-18 toolchain and fixed pre-landing (arith.remf
+      vs llvm.frem for FHRR phase wrap; math.atan2 needing --convert-math-to-libm). Skip-graceful
+      (DialectError::ToolchainMissing) where the toolchain is absent, never a faked pass.
+      Reconfirmed non-vacuous by this reconciliation pass (see landed_basis).
   - id: M-857
     title: "trit.mul through the real MLIR-dialect path (libMLIR-gated)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -5685,10 +5762,12 @@ issues:
   - id: M-860
     title: "Parallel AOT codegen: per-function independent lowering, byte-identical emit"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-859]
-    doc_refs: [corpus:ADR-034, corpus:RFC-0004, corpus:RFC-0008, corpus:DN-25]
+    landed_date: 2026-07-01
+    landed_basis: "commits a8e608e + b6107b8 (W1-AOT-856b-860 leaf, merged via f781e3e) — emit_llvm_ir_many/emit_llvm_ir_many_with_swap_mode (crates/mycelium-mlir/src/llvm.rs) lower a batch of independent Nodes in parallel, content-hash-sorted before dispatch and scattered back to original index on the way out (Exact by construction: each per-node lowering is a pure function, fresh SSA/label counters, no shared mutable state). Initial prototype (a8e608e) used a crate-local rayon dependency (flagged by the leaf as a deviation from the issue's own zero-dep default); superseded before landing (b6107b8, maintainer-directed 2026-07-01) by mycelium_std_runtime::scheduler::Scheduler::run_indexed (the M-861 work-stealing pool), removing rayon + its crossbeam/either transitive tree entirely -- confirmed zero rayon references anywhere in Cargo.lock by this reconciliation pass. Reconfirmed by this pass: `cargo test -p mycelium-mlir --lib tests::llvm::` -- 5/5 green (parallel_emit_matches_sequential_emit_byte_identical, output-order-is-input-order, stability, empty-batch, refusal-isolation). Tag: Exact (byte-identical by construction)."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0004, corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-mlir/src/llvm.rs]
     body: |
       Parallelize the pure, independent per-function/per-nodule lowering (llvm.rs/native.rs), joined by
       a stable content-key sort so the emitted IR is BYTE-IDENTICAL to the sequential emit -- Exact by
@@ -5700,6 +5779,18 @@ issues:
       Definition of Done:
       - parallel_emit == sequential_emit (byte-equal, Exact) + the existing three-way unchanged;
         cargo-mutants catches a join-order mutation. just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-07-01, W1-AOT-856b-860 leaf + same-day maintainer-directed rework): landed as
+      emit_llvm_ir_many/emit_llvm_ir_many_with_swap_mode. The leaf's first pass used a crate-local
+      rayon dependency and explicitly flagged the deviation from this issue's own stated zero-dep
+      preference; the maintainer resolved the flag the same day by dispatching through the newly
+      relocated mycelium_std_runtime::scheduler::Scheduler::run_indexed instead (see the
+      mycelium-sched relocation, PR #864) -- rayon was removed entirely, not merely avoided going
+      forward. Content-hash sort before dispatch + index-scatter after keeps the emission
+      byte-identical to sequential; five tests confirm byte-identity, index preservation under
+      reordering, run-to-run stability, empty-batch handling, and refusal isolation. Reconfirmed
+      green by this reconciliation pass (see landed_basis). cargo-mutants join-order witness not
+      independently re-run here.
   - id: M-861
     title: "Scheduler multicore work-stealing (RT2-preserving, RT3-reified steal policy)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -5727,13 +5818,26 @@ issues:
       - The RT2 differential is extended to assert result-equality UNDER stealing (property-tested);
         the total backpressure bound (sum of deque lengths <= capacity) stays Exact or is honestly
         downgraded with the reason; the steal policy is EXPLAIN-able (RT3). just check green; honest tag.
+
+      Append-only follow-up note (2026-07-01, Wave-1 integration close-out, previously UNTRACKED --
+      recorded here rather than silently left out): AFTER this issue landed, the Scheduler this body
+      describes was RELOCATED from `crates/mycelium-std-runtime/src/scheduler.rs` to a new
+      foundational crate, `crates/mycelium-sched` (PR #864), below `mycelium-interp`, so the
+      interpreter could depend on it directly without an `interp`<->`std-runtime` cycle (needed by
+      M-862's native-scheduler rewire). `mycelium-std-runtime` re-exports the same path, so this is
+      a pure structural move -- no behavior change to the work-stealing/RT2/RT3 properties this
+      issue's landed_basis already certifies; the file path cited above is now historical (as-landed
+      at the time), not current. This had no CHANGELOG entry at the time; one is added retroactively
+      (`CHANGELOG.md` 2026-07-01 Wave-1 entry).
   - id: M-862
     title: "Parallel pure-fragment interpreter/env-machine eval + differential (post-tag-cautious)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:done]
     epic: E25-1
     depends_on: [M-860, M-861]
-    doc_refs: [corpus:ADR-034, corpus:RFC-0008, corpus:DN-25]
+    landed_date: 2026-07-01
+    landed_basis: "commits e9662b9 (W1-862 leaf, initial rayon-based prototype) + ed2ac9c (rewire onto mycelium-sched, merged via 62cefea) -- enabled by the mycelium-sched foundational-crate relocation (PR #864), which broke the interp<->std-runtime dependency cycle that blocked a native-scheduler rewire and let mycelium-interp depend on mycelium_sched::scheduler::Scheduler::run_indexed directly (rayon dependency removed from mycelium-interp entirely, confirmed zero rayon references in Cargo.lock by this reconciliation pass). Parallelism is bounded to the outermost independent-argument batch (a top-level Op/Construct's direct argument list; each argument reduced sequentially inside its worker by the trusted small-step interpreter, no nested run_indexed) -- an explicit interim cap on spawned OS threads, reified in an EXPLAIN-able ParallelPlan (SequentialImpure/SequentialNoBatch/TopLevelBatch), never silent. Reconfirmed by this reconciliation pass: `cargo test -p mycelium-interp parallel::` -- 14/14 green (differential vs sequential, 25x determinism, purity-gate, fuel-parity, impure-fallback, plan_parallel EXPLAIN, deep-nesting-bounded). The sequential interpreter stays the trusted reference (RFC-0008 §4.2/KC-3) -- the parallel evaluator is a validated perf path, not a new meaning. cargo-mutants divergence witness not independently re-run here. Tag: Empirical."
+    doc_refs: [corpus:ADR-034, corpus:RFC-0008, corpus:DN-25, src:crates/mycelium-interp/src/parallel.rs, src:crates/mycelium-sched/src/scheduler.rs]
     body: |
       Parallelize evaluation ONLY for the provably pure, independent RT2 fragment (independent pure
       Match arms / Construct elements), each carrying a differential parallel == sequential == interp
@@ -5745,6 +5849,20 @@ issues:
       Definition of Done:
       - parallel_eval == sequential_eval == interp green over the pure fragment; cargo-mutants catches
         a divergence; the trusted base stays sequential as the reference. just check green; honest tag.
+
+      DONE (2026-07-01, W1-862 leaf, landed PRE-tag): the maintainer decided pre-tag at this PR
+      (superseding the issue's own "recommend post-tag" caution). Initial landing (e9662b9) used
+      rayon for the top-level batch dispatch; the SAME DAY, once the mycelium-sched foundational
+      crate relocated the M-861 Scheduler below mycelium-interp (PR #864, breaking the
+      interp<->std-runtime cycle), the evaluator was rewired (ed2ac9c) onto
+      mycelium_sched::scheduler::Scheduler::run_indexed and the rayon dependency was removed
+      entirely -- so the landed state carries NO rayon. Parallelism stays bounded to the outermost
+      independent-argument batch (no nested run_indexed; each argument reduces sequentially inside
+      its own worker via the trusted small-step interpreter) -- an explicit, documented interim cap
+      on spawned OS threads (the pooled/nested-safe scheduler is the forward item, tracked as
+      M-864). The choice is reified in an EXPLAIN-able ParallelPlan, never a silent fallback.
+      Everything else preserved: the purity gate + sequential fallback, the shared AtomicU64 fuel,
+      the SwapEngine: Sync bound. Reconfirmed green by this reconciliation pass (see landed_basis).
   - id: M-863
     title: "AOT ratification act: ADR-034 + RFC-0029 Enacted + DN-15 Resolved + status flips"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -5763,6 +5881,146 @@ issues:
       - All E25-1/E15-1 children done with checked three-way differentials; RFC-0029 Enacted;
         DN-15 Resolved; ADR-034 Enacted; issues status flipped; CHANGELOG append-only; just check green.
       - The lang 1.0.0 gate row T6 is demonstrably met (never a silent pass -- G2).
+
+  - id: M-864
+    title: "Persistent bounded work-stealing pool for the Scheduler (nested-safe submission)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:runtime, priority:P2, status:needs-design]
+    depends_on: [M-862]
+    doc_refs: [corpus:DN-61, corpus:RFC-0008, src:crates/mycelium-sched/src/scheduler.rs]
+    body: |
+      Minted 2026-07-01 (Wave-1 reconciliation close-out) from the interim measure M-862's landed
+      body explicitly named as deferred: `Scheduler::run_indexed` currently spawns fresh OS threads
+      per call, so M-860's parallel codegen and M-862's parallel-eval both cap their parallelism at
+      a single, non-nested, top-level batch to bound spawned-thread count. This issue is the
+      follow-up that replaces the per-call-spawn scheduler with a PERSISTENT, bounded thread pool
+      that is safe to submit to from WITHIN an already-running worker (a nested/recursive
+      `run_indexed` call) without deadlocking the pool -- the precondition for either M-860 or
+      M-862 to parallelize below their current single top-level batch.
+
+      DEFER past the 1.0.0 tag: this is a perf path, not a correctness gate (DN-61 §A.2 -- the R1
+      scheduler's only normative commitment is the RT2 determinism obligation + fuel-compatible
+      cooperative stepping; internal strategy, including whether the pool is persistent or
+      per-call-spawn, is an implementation artifact). YAGNI until a nested consumer actually exists
+      (neither M-860 nor M-862 needs nesting to meet their own landed DoD); pursue this once a
+      concrete caller wants parallelism below the top-level batch.
+
+      User stories:
+      - As a compiler/runtime engineer, I want to submit work to the Scheduler from inside an
+        already-running worker, so that nested parallel structures (e.g. a parallel AOT codegen
+        batch that itself wants to parallelize a sub-batch) don't have to flatten to sequential.
+      - As a maintainer, I want the pool's nested-safety proven by a stress test, not asserted, so
+        that "deadlock-free" is Empirical/Proven per VR-5, never Declared-and-hoped.
+      - As a downstream consumer of `run_indexed`, I want the closure-bound contract change (if any)
+        ratified at the ADR/DN level before I depend on it, so the API is stable when I build on it.
+
+      Issues to resolve:
+      - Ratify the `run_indexed` closure-bound contract change this pool requires (today `F:
+        'static` per the current signature) at the ADR/DN level -- ratification, not a leaf's own
+        unilateral API change.
+      - Design a provably-deadlock-free help-steal nested-join wait-loop (a nested submitter parks
+        or helps steal while waiting, never blocks the pool's only worker holding its own answer).
+      - Size the pool (bounded, not unbounded -- explicit capacity, never-silent backpressure/
+        refusal on exhaustion, mirroring the existing deque backpressure bound).
+
+      Definition of Done:
+      - The `run_indexed` contract change (if any) is ratified at the ADR/DN level, not silently
+        shipped as an implementation detail.
+      - A nested-join wait-loop is proven deadlock-free (property test over nested submission
+        depths, not just the single-level case) -- Empirical at minimum, Proven if a checked
+        argument is available.
+      - Nested stress tests (multiple levels of nested `run_indexed`, saturating the bounded pool)
+        pass without deadlock or starvation.
+      - M-860/M-862 are re-validated unaffected (their existing differentials stay green) or
+        explicitly extended to use the new nesting where it helps; just check green; honest tag.
+
+  - id: M-865
+    title: "AOT-runtime concurrency + async execution parity with the interpreter"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:needs-design]
+    depends_on: [M-861, M-862]
+    doc_refs: [corpus:RFC-0008, corpus:DN-61, src:crates/mycelium-sched/src/scheduler.rs]
+    body: |
+      Minted 2026-07-01 (Wave-1 reconciliation close-out). The delivered AOT native-runtime path
+      (epic E25-1: direct-LLVM + MLIR-dialect codegen, now covering recursion/closures/Swap/Dense/
+      VSA per M-850..M-858/M-856b) and the interpreter's own new parallel-eval path (M-862) both
+      exist TODAY, but they do not yet share a validated concurrency/async story: M-861's
+      work-stealing Scheduler backs the interpreter's Colony/hypha runtime and M-862's parallel
+      pure-fragment eval, while the AOT-compiled path has no analogous parallel/async execution of
+      its own compiled output validated against either. This issue closes that gap: the AOT runtime
+      must run parallel/async programs on the SAME native scheduler substrate
+      (`mycelium-sched::scheduler::Scheduler`) the interpreter uses, and the existing interp == AOT
+      == JIT differential (M-151/NFR-7, extended per M-858) must itself extend to cover concurrent/
+      async execution, not just sequential value computation.
+
+      This is a PRESENT-TENSE gap (the runtime this issue targets is already delivered, not a
+      future placeholder) -- distinguish from M-864, which hardens the scheduler's own internal
+      pooling and is deferrable regardless of whether AOT ever runs concurrent programs. RT2
+      (deterministic-fragment equivalence) is the governing obligation throughout, per DN-61 §A.2
+      and RFC-0008 §8 (R1 scheduler normativity; R2 distributed constructs are explicitly
+      out-of-scope agenda items, not this issue's concern).
+
+      User stories:
+      - As a language user, I want a program using Colony/hypha concurrency to behave identically
+        whether it runs on the interpreter or the AOT-compiled path, so that native compilation is
+        never an escape hatch from RT2's deterministic-fragment guarantee.
+      - As a compiler engineer, I want the AOT runtime to reuse `mycelium-sched` rather than grow a
+        second scheduler, so the two execution paths can't silently diverge on scheduling semantics
+        (DRY; KC-3 -- no duplicate kernel-adjacent primitive).
+      - As a maintainer, I want the interp == AOT == JIT differential extended to concurrent/async
+        programs (not just sequential ones), so "parity" is a checked claim, not an assumption.
+
+      Issues to resolve:
+      - What AOT-compiled surface exercises Colony/hypha/async today (if any), and what is missing
+        to drive `Scheduler::run_indexed`/multi-task submission from AOT-compiled code?
+      - Does the AOT runtime call into `mycelium-sched` directly, or through a thin FFI/ABI shim --
+        and does that shim risk becoming its own untested second scheduler surface (KC-3 concern)?
+      - How does the RT2 differential extend to concurrent/async execution specifically -- same
+        sequentialization-equivalence property M-357/M-861 already established, or a new one?
+      - Relationship to M-864 (pool hardening): does this issue need M-864's nested-safety, or can
+        it land against today's single-level `run_indexed`?
+
+      Definition of Done:
+      - AOT-compiled Colony/hypha/async programs execute on `mycelium-sched::scheduler::Scheduler`,
+        the same substrate the interpreter uses -- no second scheduler implementation.
+      - The interp == AOT == JIT differential (M-151/NFR-7 lineage) is extended to a concurrent/
+        async corpus and passes non-vacuous; a divergence is caught by a property test or
+        cargo-mutants witness, not merely asserted.
+      - RT2's deterministic-fragment equivalence holds across all three execution paths under
+        concurrency; any narrowing vs. the interpreter's own concurrency surface is an explicit,
+        never-silent refusal (G2), not a silent gap.
+      - just check green; honest tag (Empirical, not Proven, absent a checked argument); CHANGELOG
+        append-only.
+
+  - id: M-866
+    title: "Bound mono.rs free_vars/pattern_binders recursion (M-674 follow-up)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:fix, area:language, priority:P2, status:todo]
+    depends_on: [M-674]
+    doc_refs: [corpus:ADR-032, src:crates/mycelium-l1/src/mono.rs, src:crates/mycelium-l1/src/totality.rs]
+    body: |
+      Minted 2026-07-01 (Wave-1 reconciliation close-out), closing the FLAG M-674 left open: `mono.rs`'s
+      own `free_vars`/`pattern_binders` recursion (monomorphization's AST descent over a specialized
+      body, walking `Expr`/`Pattern` directly) carries NO explicit depth budget of its own. This is
+      distinct from both the totality/ambient budgets M-674 landed (`MAX_WALK_DEPTH`/`MAX_AMBIENT_DEPTH`
+      on `totality.rs`'s `walk_expr`/`descend_walk`/`pattern_binders` and `ambient.rs`'s traversal) and
+      from the `classify_all` -> `ElabError::DepthExceeded` mapping `mono.rs::finish` already has (that
+      mapping only covers the totality re-check `finish` invokes, not `free_vars`/`pattern_binders`'
+      own recursion during specialization). A pathologically-nested specialized body can today overflow
+      the host stack (process abort) instead of a clean never-silent refusal (G2).
+
+      User stories:
+      - As a compiler maintainer, I want the monomorphizer's own AST recursion bounded, so that a
+        pathologically-nested input refuses cleanly instead of aborting.
+
+      Definition of Done:
+      - `free_vars` and `pattern_binders` in `mono.rs` each carry an explicit `MAX_WALK_DEPTH`-style
+        budget matching `totality.rs`'s discipline, returning an explicit error (never a silent abort
+        or a host-stack overflow — G2) once exceeded.
+      - A nesting regression test asserts the explicit error is returned just past the budget (mirroring
+        the just-under/past-budget pattern `totality.rs`/`ambient.rs` already use).
+      - just check green; honest tag (Empirical — measured headroom, not merely asserted, per VR-5).
+
   - id: E16-1
     title: "E16-1 (epic) — Toolchain, IDE & package distribution"
     milestone: "Phase 8 — Toolchain & Release Engineering"
@@ -6149,10 +6407,12 @@ issues:
   - id: M-743
     title: "M-743 — chore: MIT-only licensing audit + enforcement (first-party artifacts)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:chore, area:release, priority:P2, status:needs-design]
+    labels: [phase:8, type:chore, area:release, priority:P2, status:done]
     depends_on: []
     epic: E17-1
-    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:DN-25]
+    landed_date: 2026-07-01
+    landed_basis: "commit 79b46f3 (W1-743 leaf, merged via 006d641) — scripts/checks/license-first-party.sh added and wired into scripts/checks/all.sh (gate 27/license-first-party); checks root LICENSE (MIT text), all 53 in-scope Cargo.toml manifests, shipped mycelium-proj.toml phylum manifests, and shipped .myc @license headers, all MIT, with explicit ADR-023 §3.4-governed exceptions for test fixtures. ADR-022 §8 Q2 (dependency-license policy) was already RESOLVED 2026-06-23 (MIT first-party only; third-party deps keep Apache/BSD); ADR-023 §3.4 already records the MIT-only 1.0.0 gate criterion. Verified green: scripts/checks/license-first-party.sh exits 0."
+    doc_refs: [corpus:ADR-022, corpus:ADR-023, corpus:DN-25, src:scripts/checks/license-first-party.sh]
     body: |
       The project is MIT-licensed only (ADR-022 §7; CONTRIBUTING §Licensing) — no Apache-2.0 / dual-license
       on any first-party artifact. Root LICENSE + workspace Cargo.toml are already MIT and the example
@@ -6174,6 +6434,17 @@ issues:
       - A CI gate (in just check) fails on any first-party artifact whose license is not MIT.
       - ADR-023 records the MIT-only policy + resolves the dependency-license question (Q2).
       - No first-party Apache/dual-license remains; the audit is green.
+
+      DONE (2026-07-01, W1-743 leaf): `scripts/checks/license-first-party.sh` added, wired into
+      `scripts/checks/all.sh` as a standing gate (index 27, `license-first-party`) rather than a
+      one-time sweep. Checks: root `LICENSE` is the MIT text; all 53 in-scope workspace `Cargo.toml`
+      manifests declare `license = "MIT"`; shipped `mycelium-proj.toml` phylum manifests are MIT;
+      shipped `.myc` `@license` headers declare MIT — with explicit, ADR-023 §3.4-precedented
+      exceptions for non-shipped test fixtures/teaching walkthroughs (never a silent skip). The Q2
+      dependency-license question was already RESOLVED by ADR-022 §8 (2026-06-23): MIT governs
+      first-party only, third-party deps keep Apache/BSD; ADR-023 §3.4 already records the MIT-only
+      gate criterion — this issue's own DoD line item was thus already satisfied by prior ADR work,
+      confirmed rather than re-decided here. Gate verified green.
   - id: M-744
     title: "M-744 — infra: gh-issues-dedup.py — reliable duplicate-issue reconcile (safety net)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
