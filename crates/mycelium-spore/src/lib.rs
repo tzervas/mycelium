@@ -23,6 +23,14 @@ use mycelium_proj::{Manifest, ProjectKind};
 pub mod registry;
 pub use registry::{artifact_hash, publish, resolve, PublishReceipt, RegistryError, Resolved};
 
+/// The remote OCI/GHCR registry backend (M-871/E26-1; ADR-037): `publish_remote` / `resolve_remote`
+/// distributing the DN-28 dense-map over OCI, behind an [`remote::OciTransport`] (`oras` v0).
+pub mod remote;
+pub use remote::{
+    publish_remote, resolve_remote, DenseMap, ObjectBlob, ObjectRef, OciTransport, OrasTransport,
+    Reconstructed, RegistryTarget, RemoteError, RemotePublishReceipt, RemoteResolved,
+};
+
 /// A project source file, content-addressed (raw-byte BLAKE3; ADR-003).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SourceFile {
