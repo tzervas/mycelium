@@ -120,16 +120,40 @@ fn cases() -> Vec<Case> {
                 category: Category::Struct,
             },
         },
-        // Regression guard (High finding, G2/DN-34 §4): a numeric-widening `impl Widen<..>
-        // for ..` whose body is a qualified associated-function call (`u16::from(self)`, the
-        // real shape of Rust's widening bodies in `mycelium-std-cmp`) must be GAPPED, never
-        // emitted with a fabricated `from(self)` body — `from` is not a Mycelium builtin (no
-        // grammar production; only prose mentions in `docs/spec/grammar/mycelium.ebnf`). An
-        // earlier iteration collapsed the qualified call to its last segment and emitted exactly
-        // this fabricated text; this case pins the fix.
+        // M-873 follow-on (DN-41): a numeric-widening `impl Widen<..> for ..` whose body is a
+        // qualified associated-function call (`u16::from(self)`, the real shape of Rust's
+        // widening bodies in `mycelium-std-cmp`) must never be emitted with the *fabricated*
+        // `from(self)` text (`from` is not a Mycelium builtin — no grammar production; only prose
+        // mentions in `docs/spec/grammar/mycelium.ebnf`). Once both `Self`/target map to
+        // `Binary{N}`/`Binary{M}` (unsigned widening), it is now instead emitted **faithfully**
+        // via the real DN-41 `width_cast` prim — a strict improvement over the earlier "gap the
+        // whole impl" behavior this case originally pinned (see
+        // `widen_impls_never_fabricate_from_in_real_crate` in `src/tests/diff.rs` for the
+        // real-crate-scale version of this guard).
         Case {
-            name: "widen_from_call_gapped_not_fabricated",
+            name: "widen_binary_emits_width_cast",
             rust: "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }",
+            expect: Expect::Emitted {
+                item: "impl Widen[Binary{16}] for Binary{8}",
+                contains: "width_cast(self, 0b0000_0000_0000_0000)",
+            },
+        },
+        // Widen over a non-`Binary` `Self` (e.g. `bool`) has no `width_cast` witness path (`Self`
+        // doesn't map to `Binary{N}` at all) — the qualified `u32::from(self)` call stays an
+        // honest gap, unchanged from the pre-DN-41 behavior.
+        Case {
+            name: "widen_bool_from_call_still_gapped_not_fabricated",
+            rust: "impl Widen<u32> for bool { fn widen(self) -> u32 { u32::from(self) } }",
+            expect: Expect::Gapped {
+                category: Category::Impl,
+            },
+        },
+        // DN-41 §2: `Narrow::narrow` is fallible (`Result<To, NarrowError>`) — no `= expr
+        // fn_item` body can express a Result-returning refuse, so it stays an explicit,
+        // DN-41-cited gap rather than a forced/fabricated emission.
+        Case {
+            name: "narrow_gapped_cites_dn41",
+            rust: "impl Narrow<u8> for u16 { fn narrow(self) -> Result<u8, NarrowError> { u8::try_from(self) } }",
             expect: Expect::Gapped {
                 category: Category::Impl,
             },
@@ -264,24 +288,76 @@ fn emit_fixture_corpus() {
     }
 }
 
-/// Regression guard (High finding, G2/DN-34 §4): the never-silent gap mechanism means a gapped
-/// item's `.myc` text is never emitted at all — but pin that down directly (rather than only via
-/// `emit_fixture_corpus`'s `Expect::Gapped` check) so a future change that started emitting a
+/// Regression guard (High finding, G2/DN-34 §4, extended by DN-41/M-873 follow-on): the
+/// never-silent gap mechanism means a *gapped* item's `.myc` text is never emitted at all — pin
+/// that down directly for the bool-`Self` widen shape (which still has no `width_cast` witness
+/// path — `Self` doesn't map to `Binary{N}`) so a future change that started emitting a
 /// partial/fallback body for this case would fail loudly here, not just leave `emitted_items`
 /// empty while still leaking fabricated text into the `.myc` output.
 #[test]
-fn widen_from_call_produces_no_fabricated_myc_text() {
-    let rust = "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }";
+fn widen_bool_from_call_produces_no_fabricated_myc_text() {
+    let rust = "impl Widen<u32> for bool { fn widen(self) -> u32 { u32::from(self) } }";
     let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
         .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
     assert!(
         report.emitted_items.is_empty(),
-        "expected the Widen impl to be fully gapped, got emitted_items={:?}",
+        "expected the bool Widen impl to be fully gapped, got emitted_items={:?}",
         report.emitted_items
     );
     assert!(
         !myc.contains("from("),
         "emitted .myc text must never contain a fabricated `from(...)` call (from is not a \
          Mycelium builtin — G2/DN-34 §4), got:\n{myc}"
+    );
+}
+
+/// The DN-41 companion of the guard above: a `Binary{N}`->`Binary{M}` widen must emit a **real**
+/// `width_cast(self, ..)` call — never a fabricated `from(...)` call, and never left gapped now
+/// that the faithful mapping exists.
+#[test]
+fn widen_binary_emits_width_cast_not_fabricated_from() {
+    let rust = "impl Widen<u16> for u8 { fn widen(self) -> u16 { u16::from(self) } }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        report
+            .emitted_items
+            .iter()
+            .any(|n| n == "impl Widen[Binary{16}] for Binary{8}"),
+        "expected the Binary widen impl to be emitted via width_cast, got emitted_items={:?}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("from("),
+        "emitted .myc text must never contain a fabricated `from(...)` call (from is not a \
+         Mycelium builtin — G2/DN-34 §4), got:\n{myc}"
+    );
+    assert!(
+        myc.contains("width_cast(self, 0b0000_0000_0000_0000)"),
+        "expected a real `width_cast(self, ..)` call with a 16-bit zero witness, got:\n{myc}"
+    );
+}
+
+/// DN-41 companion: `Narrow::narrow` is fallible and has no `= expr` surface, so it must stay an
+/// honest gap whose reason cites DN-41 — never a fabricated `try_from`/`?`-shaped emission.
+#[test]
+fn narrow_gap_cites_dn41_and_produces_no_fabricated_myc_text() {
+    let rust = "impl Narrow<u8> for u16 { fn narrow(self) -> Result<u8, NarrowError> { u8::try_from(self) } }";
+    let (myc, report) = transpile_source(rust, "fixture.rs", "fixture")
+        .unwrap_or_else(|e| panic!("failed to parse/transpile: {e}"));
+    assert!(
+        report.emitted_items.is_empty(),
+        "expected the Narrow impl to be fully gapped, got emitted_items={:?}",
+        report.emitted_items
+    );
+    assert!(
+        !myc.contains("try_from") && !myc.contains("width_cast"),
+        "narrow bodies must never be fabricated (no try_from-shaped or width_cast emission), \
+         got:\n{myc}"
+    );
+    assert!(
+        report.gaps.iter().any(|g| g.reason.contains("DN-41")),
+        "expected the narrow gap's reason to cite DN-41, got {:?}",
+        report.gaps.iter().map(|g| &g.reason).collect::<Vec<_>>()
     );
 }
