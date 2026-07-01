@@ -52,3 +52,9 @@ are first-class goals alongside the transparent-swap thesis.
   (the mechanism) ·
   [Foundation §1](https://github.com/tzervas/mycelium/blob/main/docs/Mycelium_Project_Foundation.md)
   (the charter update).
+
+---
+
+**Up:** [Home](Home.md) · [Decision Records](Decision-Records.md) ·
+[Doc Index](https://github.com/tzervas/mycelium/blob/main/docs/Doc-Index.md) ·
+[repo root README](https://github.com/tzervas/mycelium/blob/main/README.md)

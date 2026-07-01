@@ -61,3 +61,9 @@ tagged **`Empirical`**; the `Dup`-count reduction is **`Exact`** (read off the I
   [RFC-0027](https://github.com/tzervas/mycelium/blob/main/docs/rfcs/RFC-0027-Memory-Management-and-Reclamation.md) ·
   [DN-33](https://github.com/tzervas/mycelium/blob/main/docs/notes/DN-33-Layer1-Static-Uniqueness-Analysis.md) ·
   [build plan](https://github.com/tzervas/mycelium/blob/main/docs/planning/E12-Memory-Model-Build-Plan.md).
+
+---
+
+**Up:** [Home](Home.md) · [Architecture](Architecture.md) ·
+[Doc Index](https://github.com/tzervas/mycelium/blob/main/docs/Doc-Index.md) ·
+[repo root README](https://github.com/tzervas/mycelium/blob/main/README.md)
