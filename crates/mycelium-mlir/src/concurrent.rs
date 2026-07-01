@@ -192,9 +192,9 @@ pub fn compile_and_run_concurrent_with_swap_mode(
 ) -> Result<mycelium_core::Value, AotError> {
     match plan_concurrent(node) {
         ConcurrentPlan::Sequential => llvm::compile_and_run_with_swap_mode(node, swap_mode),
-        ConcurrentPlan::OpBatch { .. } => {
-            concurrent_op_batch(node, move |n| llvm::compile_and_run_with_swap_mode(n, swap_mode))
-        }
+        ConcurrentPlan::OpBatch { .. } => concurrent_op_batch(node, move |n| {
+            llvm::compile_and_run_with_swap_mode(n, swap_mode)
+        }),
     }
 }
 
