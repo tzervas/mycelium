@@ -36,9 +36,9 @@ target.
 - `classify` / `Verdict` / `Speed` — classify a measured outcome against the interpreter baseline.
 - `run_scaling` / `ScalingRun` / `ScalingPoint` / `ScalingOutcome` — multicore scaling curves over
   the OS-thread `Scheduler` (M-859).
-- `regression_classify` / `RegressionBaseline` / `RegressionOutcome` — this-run-vs-committed-baseline
-  regression gating, host-tag-scoped (M-859).
-- `Report` / `Honesty` / `LlmSection` / `RegressionSection` — the deterministic markdown + JSON
+- `verdict::regression_classify` / `verdict::RegressionBaseline` / `verdict::RegressionOutcome` —
+  this-run-vs-committed-baseline regression gating, host-tag-scoped (M-859).
+- `Report` / `Honesty` / `LlmSection` / `report::RegressionSection` — the deterministic markdown + JSON
   report with the WIN/LOSS table, the scaling section, and the regression-gate section.
 - `parse_any_llm_json` / `LlmReport` — LLM-harness report ingestion.
 - `bench` binary — the harness entry point (`--out <DIR>`, `--stdout`, `--scaling [N]`,

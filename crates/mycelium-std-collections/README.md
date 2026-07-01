@@ -13,7 +13,7 @@ returns an explicit `Err(CollErr::IndexOOB)` — never a panic or silent default
 
 ## Key items
 
-- `Seq<E>` — immutable ordered sequence with `get`, `push`, `pop`, `len`, `iter`.
+- `Seq<E>` — immutable ordered sequence with `get`, `push`, `pop`, `len`, `foldable`.
 - `Map<K,V>` — insertion-ordered key-value map with `get`, `insert`, `remove`, `contains_key`.
 - `Set<E>` — insertion-ordered element set with `contains`, `insert`, `remove`.
 - `CollErr::IndexOOB` — explicit out-of-bounds error returned by indexed access.
