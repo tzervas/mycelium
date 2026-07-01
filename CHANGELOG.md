@@ -195,6 +195,11 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   verified done); `E19-1` epic (`in-progress` → `done` — a stale-label resync; M-746…M-752/M-798
   were already all `done`). `M-863` (this act) itself flips `ready` → `done`.
 - Not flipped: **ADR-034's Status** (stays `Accepted`, tag-coupled to M-738 — see above).
+- **Nav-index reconcile (dev→integration gate).** The M-863 header flip left one stale nav row —
+  `docs/rfcs/README.md` still showed RFC-0029 as `Accepted`; synced it to `Enacted` (matching the
+  authoritative header, forward-only). `docs/api-index/` regenerated for line-number drift. Both
+  were caught by the full `just check` (`doc-status`/`doc-index` gates) at the integration promotion,
+  not by the change-scoped leaf checks — the integration tier doing exactly its reconciliation job.
 
 ### Added (2026-07-01: Wave-1 — native-scheduler parallelism, dialect Dense/VSA, stdlib freeze, governance gates)
 
