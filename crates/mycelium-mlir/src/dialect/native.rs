@@ -17,27 +17,66 @@
 //! genuinely MLIR-compiled execution path (not the textual [`super::emit`] skeleton, not the
 //! [`crate::llvm`] direct-LLVM emitter, not the [`crate::aot`] env-machine).
 //!
-//! **The fragment, and the moving honest boundary (RFC-0004 §2; M-725; M-857; VR-5/G2).** RFC-0004 §2
-//! sequences the AOT path as "`ternary` first … lowering progressively to `linalg`/`vector`/`arith`".
-//! The element-wise bit/trit ops (`core.id`, `bit.not/and/or/xor`, `trit.neg`) are the sub-fragment
-//! the **standard** `arith` dialect carries faithfully — one `arith` op per element, every op
-//! dumpable. **M-725 widened this beyond element-wise** to the balanced-ternary *additive* carry chain
-//! `trit.add`/`trit.sub`, and **M-857 widens it again to balanced-ternary *multiply* `trit.mul`** — the
-//! shifted-accumulate / 2m-trit-buffer fragment. Both lower through the real dialect path over `arith`
-//! ops: additive as a fixed-width ripple-carry (`arith.addi`/`arith.remsi`/`arith.divsi`/`arith.subi`,
-//! digit-for-digit the same `s + 4 → srem/sdiv 3 − 1` step the direct-LLVM path uses), and multiply as
-//! shifted accumulation of `±a` (`arith.muli` per digit) into a 2m-trit buffer with the same shared
-//! ripple adder — overflow iff any high trit is non-zero. Out-of-range results are reported through the
-//! **shared** [`crate::llvm::OVERFLOW_SENTINEL`] read-back (a `cf.cond_br` on the runtime overflow flag)
-//! — never a silent wrap. The new honest boundary is everything **richer** than the fixed-width
-//! bit/trit arithmetic: the `Construct`/`Match` data fragment, closures, recursion, `Swap`, Dense/VSA —
-//! each an **explicit, never-silent** [`DialectError::Unsupported`] routing the program to the
-//! direct-LLVM backend ([`crate::llvm`]) or the interpreter, which already cover the full v0 calculus.
-//! The carry *step* mirrors `mycelium_core::ternary::add_with_carry` digit-for-digit, and the multiply
-//! mirrors `mycelium_core::ternary::mul` (one source of truth per algorithm, re-emitted in `arith`,
-//! never a *divergent* second algorithm — DRY); we still ship **no** divergent codegen for the
-//! data/closure/recursion fragments here just to widen further. The honest boundary is an explicit
-//! refusal, not silent or fragile output.
+//! **The fragment, and the moving honest boundary (RFC-0004 §2; M-725; M-857; M-856; VR-5/G2).**
+//! RFC-0004 §2 sequences the AOT path as "`ternary` first … lowering progressively to
+//! `linalg`/`vector`/`arith`". The element-wise bit/trit ops (`core.id`, `bit.not/and/or/xor`,
+//! `trit.neg`) are the sub-fragment the **standard** `arith` dialect carries faithfully — one `arith`
+//! op per element, every op dumpable. **M-725 widened this beyond element-wise** to the
+//! balanced-ternary *additive* carry chain `trit.add`/`trit.sub`, and **M-857 widens it again to
+//! balanced-ternary *multiply* `trit.mul`** — the shifted-accumulate / 2m-trit-buffer fragment. Both
+//! lower through the real dialect path over `arith` ops: additive as a fixed-width ripple-carry
+//! (`arith.addi`/`arith.remsi`/`arith.divsi`/`arith.subi`, digit-for-digit the same `s + 4 →
+//! srem/sdiv 3 − 1` step the direct-LLVM path uses), and multiply as shifted accumulation of `±a`
+//! (`arith.muli` per digit) into a 2m-trit buffer with the same shared ripple adder — overflow iff any
+//! high trit is non-zero.
+//!
+//! **M-856 widens the fragment a third time, to the `Construct`/`Match` non-recursive data fragment
+//! and the certified binary↔ternary `Swap`.** `Construct`/`Match` mirror the direct-LLVM
+//! [`crate::llvm`] Increment-1 fragment (M-373; non-recursive, bounded — no `Fix`/`FixGroup` in
+//! scope), but **without** the `alloca`/`getelementptr`/`load`/`store` indirection: because MLIR's
+//! structured control flow needs no memory to thread a dominating value into a successor block (block
+//! *arguments*, not `phi` nodes, and a value defined in a dominating predecessor is directly
+//! referenceable in every block it dominates — verified empirically against `mlir-opt-18` for this
+//! module), a constructed value's tag and fields stay plain SSA registers end to end: `Construct`
+//! materializes the tag as an `arith.constant … : i64` and carries each field's already-lowered
+//! [`Lane`] forward unchanged (no store), and `Match` dispatches on the tag with `cf.switch`,
+//! binding each `Ctor` arm's fields by direct SSA reference (no load) and merging the arms' results
+//! through a block-argument "phi" at the join point. Only the **`Ctor`-arm** form is covered (data
+//! constructed by `Construct`); the narrow `Binary{8}`-packed **`Lit`-arm** form (the Increment-3
+//! recursion *branch primitive* the direct-LLVM heap trampoline uses for its base case) stays an
+//! explicit refusal here — it is tied to the `Fix`/`FixGroup` recursion fragment, which is out of
+//! scope for this increment (flagged for a follow-up alongside Dense/VSA, M-856b). A fixed-width
+//! arithmetic op *inside* a `Match` arm has its overflow flag folded **locally** to that arm and
+//! re-exported through the merge block's own block argument (never a flag referencing a
+//! non-dominating block — a real SSA-dominance hazard the direct-LLVM alloca/phi shape does not
+//! share, so this module's design deliberately does not mirror it byte-for-byte; the *value*-level
+//! contract — the same read-back protocol, the same overflow semantics — still matches
+//! [`crate::llvm`] exactly).
+//!
+//! `Swap` covers the **certified binary↔ternary class** (RFC-0002 §4) plus same-`Repr` identity,
+//! mirroring `crate::swap_codegen`'s algorithm — decode/encode via `arith.extui`/`arith.extsi`/
+//! `arith.muli`/`arith.addi`/`arith.subi`/`arith.divsi`/`arith.remsi`/`arith.select`/`arith.trunci`/
+//! `arith.shrui`/`arith.andi`/`arith.cmpi`, digit-for-digit the same accumulate/balanced-division
+//! transcode `mycelium_core::binary`/`ternary` define (DRY at the *algorithm* level — the
+//! direct-LLVM and MLIR-arith emitters are independent textual renderings of the *same* algorithm,
+//! never a divergent second one) — always under the **`Recheck`** cert mode (the compile-time
+//! independent bijection re-check; `crate::swap_codegen::legal_pair`/`MAX_BINARY_WIDTH_I64`/
+//! `MAX_TERNARY_WIDTH_I64` are reused directly, single source of truth). The `ReuseInterp` opt-in mode
+//! is not wired here (a small, explicitly deferred gap — the default/safer mode is what
+//! [`compile_and_run`] uses). An out-of-range `dec` (`Ternary → Binary`) result and an illegal `(n,m)`
+//! pair are refused exactly as `crate::swap_codegen` refuses them (an [`DialectError::Overflow`] read
+//! back through the shared sentinel, and a compile-time [`DialectError::Unsupported`], respectively —
+//! never silent).
+//!
+//! Out-of-range results (trit arithmetic *or* the `Swap` `dec` direction) are reported through the
+//! **shared** [`crate::llvm::OVERFLOW_SENTINEL`] read-back (a `cf.cond_br` on the runtime overflow
+//! flag) — never a silent wrap. The new honest boundary is everything **richer**: closures, recursion
+//! (`App`/`Lam`/`Fix`/`FixGroup`), the `Lit`-arm branch primitive, and Dense/VSA (both as `Swap`
+//! targets and as a `Repr` in the generic lowering) — each an **explicit, never-silent**
+//! [`DialectError::Unsupported`] routing the program to the direct-LLVM backend ([`crate::llvm`]) or
+//! the interpreter, which already cover the full v0 calculus. We still ship **no** divergent codegen
+//! for the closure/recursion/Dense/VSA fragments here just to widen further. The honest boundary is an
+//! explicit refusal, not silent or fragile output.
 //!
 //! **Read-back protocol — shared with [`crate::llvm`] (single contract).** The emitted `@main`
 //! `putchar`s each result element's ASCII char (`'0'`/`'1'` for bits; `'-'`/`'0'`/`'+'` for trits)
@@ -63,7 +102,7 @@ use std::fmt::Write as _;
 use std::path::Path;
 use std::process::Command;
 
-use mycelium_core::lower::{self, Anf, Atom, Rhs};
+use mycelium_core::lower::{self, Anf, AnfAlt, Atom, Rhs};
 use mycelium_core::{Node, Payload, Repr, Trit, Value};
 
 use crate::llvm::{decode_result, LaneKind, OVERFLOW_SENTINEL};
@@ -307,10 +346,74 @@ struct Lane {
     vals: Vec<String>,
 }
 
+/// A monotone counter minting fresh MLIR block labels (`bb0`, `bb1`, …; written `^bb0` at use sites).
+/// A separate namespace from [`Ssa`] (labels start `^`, values `%`), kept as its own counter for
+/// readability — mirrors [`crate::llvm`]'s `Bbc`. M-856 (`Match` dispatch).
+#[derive(Default)]
+struct Bbc(usize);
+impl Bbc {
+    fn fresh(&mut self) -> String {
+        let n = self.0;
+        self.0 += 1;
+        format!("bb{n}")
+    }
+}
+
+/// A constructed data value in the lowered env (M-856; mirrors the *value*-level contract of
+/// [`crate::llvm::Datum`], not its physical layout). Produced by `Rhs::Construct`, consumed by a
+/// `Rhs::Match` `Ctor` arm.
+///
+/// **No memory.** Unlike the direct-LLVM `Datum` (a stack `alloca`'d `[N+1 x i64]` struct read back
+/// with `getelementptr`/`load`), this carries the tag and every field as **plain SSA values**: MLIR's
+/// structured control flow needs no memory to thread a dominating value into a successor block (a
+/// value defined in a dominating predecessor block is directly referenceable in every block it
+/// dominates — verified against `mlir-opt-18` for this module's shape), so `Construct` never stores
+/// and `Match` never loads. The tag is additionally materialized as an `i64` SSA constant (the
+/// `cf.switch` discriminant); `_tag` is kept for auditability, mirroring `crate::llvm::Datum::_tag`.
+#[derive(Debug, Clone)]
+struct Datum {
+    /// The constructor tag (`ctor.index()`), retained for auditability.
+    _tag: u64,
+    /// The tag materialized as an `arith.constant … : i64` SSA name — the `cf.switch` discriminant.
+    tag_ssa: String,
+    /// Each field's already-lowered lane, in declaration order.
+    fields: Vec<Lane>,
+}
+
+/// An environment value for the M-856 lowering: either a repr lane (bit/trit) or a constructed
+/// [`Datum`]. Mirrors [`crate::llvm::EnvValue`]'s `Repr`/`Datum` variants (closures/Fix/FixGroup are
+/// not represented here — `App`/`Lam`/`Fix`/`FixGroup` stay explicit refusals in this fragment).
+#[derive(Debug, Clone)]
+enum EnvValue {
+    Repr(Lane),
+    Datum(Datum),
+}
+
+impl EnvValue {
+    /// Extract the repr lane (cloned), or an explicit refusal if this is a datum (G2 — never a
+    /// silent type confusion).
+    fn as_lane(&self, ctx: &str) -> Result<Lane, DialectError> {
+        match self {
+            EnvValue::Repr(l) => Ok(l.clone()),
+            EnvValue::Datum(_) => Err(DialectError::Unsupported(format!(
+                "{ctx}: expected a repr lane but found a constructed datum (M-856)"
+            ))),
+        }
+    }
+}
+
 /// Emit an `arith.constant` for one `i32` element value, returning its SSA name.
 fn emit_const_i32(v: i32, ssa: &mut Ssa, body: &mut String) -> String {
     let r = ssa.fresh();
     let _ = writeln!(body, "    {r} = arith.constant {v} : i32");
+    r
+}
+
+/// Emit an `arith.constant` for one `i64` value, returning its SSA name. M-856 (`Construct` tags,
+/// `Swap` transcode arithmetic).
+fn emit_const_i64(v: i64, ssa: &mut Ssa, body: &mut String) -> String {
+    let r = ssa.fresh();
+    let _ = writeln!(body, "    {r} = arith.constant {v} : i64");
     r
 }
 
@@ -709,72 +812,124 @@ fn fold_or(flags: &[String], ssa: &mut Ssa, body: &mut String) -> Option<String>
     Some(acc)
 }
 
+/// The source [`Repr`] a lowered [`Lane`] denotes (mirrors `crate::llvm::lane_repr`). Used to
+/// reconstruct a `Swap`'s *source* repr from its already-lowered operand (M-856).
+fn lane_repr(lane: &Lane) -> Repr {
+    match lane.kind {
+        LaneKind::Binary => Repr::Binary {
+            width: lane.vals.len() as u32,
+        },
+        LaneKind::Ternary => Repr::Ternary {
+            trits: lane.vals.len() as u32,
+        },
+    }
+}
+
 /// Walk the lowered ANF, emitting one `arith` op per binding into `@main`'s body, and return the
 /// result lane **plus** the program-level overflow flag (`Some(i1)` iff any fixed-width arithmetic
-/// binding — `trit.add`/`trit.sub` (M-725) or `trit.mul` (M-857) — can overflow at runtime, else
+/// binding — `trit.add`/`trit.sub` (M-725), `trit.mul` (M-857), a `Swap` `dec`/illegal-final-quotient
+/// check, or a `Match` whose arms carry one (M-856) — can overflow/be-out-of-range at runtime, else
 /// `None`). Returns an explicit [`DialectError::Unsupported`] for any node outside the fragment —
-/// routing the program to the direct-LLVM backend / interpreter (G2).
+/// routing the program to the direct-LLVM backend / interpreter (G2). `uses_abort` is set when a
+/// `Match` with no default arm lowers a defined trap (so [`emit_mlir`] declares `@abort` only when
+/// it is actually called).
 fn lower_program(
     node: &Node,
     ssa: &mut Ssa,
+    bbc: &mut Bbc,
     body: &mut String,
+    uses_abort: &mut bool,
 ) -> Result<(Lane, Option<String>), DialectError> {
     let anf = lower::lower_to_anf(node);
-    lower_block(&anf, ssa, body)
+    let mut env: std::collections::HashMap<Atom, EnvValue> = std::collections::HashMap::new();
+    lower_block(&anf, &mut env, ssa, bbc, body, uses_abort)
 }
 
 /// Lower one ANF block (its bindings + result) into MLIR ops, returning the result lane and the
-/// folded program-level overflow flag (`None` when no fixed-width arithmetic op is present — i.e.
-/// no `trit.add`/`trit.sub`/`trit.mul` — so an overflow-free program emits exactly the M-601
-/// module). The data / closure / recursion / swap nodes are explicit refusals here (they live on
-/// the richer paths).
+/// folded **local-to-this-block** overflow flag (`None` when no op in *this* block can
+/// overflow/be-out-of-range — so an overflow-free, data-free program emits exactly the M-601
+/// module). Recursively callable for `Match` arm/default bodies (M-856): each call gets its own
+/// local `flags` list, folded at its end — a nested block's flag is exported to its caller only
+/// through a dominating SSA value (a `Match`'s merge-block argument), never left dangling across a
+/// non-dominating branch (a real SSA-dominance hazard; see the module doc comment).
 fn lower_block(
     anf: &Anf,
+    env: &mut std::collections::HashMap<Atom, EnvValue>,
     ssa: &mut Ssa,
+    bbc: &mut Bbc,
     body: &mut String,
+    uses_abort: &mut bool,
 ) -> Result<(Lane, Option<String>), DialectError> {
-    use std::collections::HashMap;
-    let mut env: HashMap<Atom, Lane> = HashMap::new();
-    // The per-op overflow `i1` registers, accumulated across the program. Any fixed-width
-    // arithmetic op (`trit.add`/`trit.sub`; M-725, or `trit.mul`; M-857) pushes its overflow
-    // condition here; the interpreter errors on the *first* overflow, so the native path being
-    // conservative (OR of all of them ⇒ one explicit overflow) gives the same verdict — the
-    // meaningless result is never read either way. Mirrors `crate::llvm`'s flags.
+    // The per-op overflow `i1` registers accumulated across *this* block only (M-856: a `Match`'s
+    // arm/default bodies each fold their own list independently — see the function doc comment).
+    // Any fixed-width arithmetic op (`trit.add`/`trit.sub`; M-725, `trit.mul`; M-857) or `Swap`
+    // range check (M-856) pushes its overflow condition here; the interpreter errors on the *first*
+    // overflow, so the native path being conservative (OR of all of them ⇒ one explicit overflow)
+    // gives the same verdict — the meaningless result is never read either way. Mirrors
+    // `crate::llvm`'s flags.
     let mut flags: Vec<String> = Vec::new();
-    let lookup = |env: &HashMap<Atom, Lane>, a: &Atom| -> Result<Lane, DialectError> {
+    let lookup_ev = |env: &std::collections::HashMap<Atom, EnvValue>,
+                     a: &Atom|
+     -> Result<EnvValue, DialectError> {
         env.get(a)
             .cloned()
             .ok_or_else(|| DialectError::FreeVariable(a.render()))
     };
 
     for b in anf.bindings() {
-        let lane = match &b.rhs {
-            Rhs::Const(v) => const_lane(v, ssa, body)?,
-            Rhs::Alias(a) => lookup(&env, a)?,
+        let ev = match &b.rhs {
+            Rhs::Const(v) => EnvValue::Repr(const_lane(v, ssa, body)?),
+            Rhs::Alias(a) => lookup_ev(env, a)?,
             Rhs::Op { prim, args } => {
                 let operands: Vec<Lane> = args
                     .iter()
-                    .map(|a| lookup(&env, a))
+                    .map(|a| lookup_ev(env, a)?.as_lane("op operand"))
                     .collect::<Result<_, _>>()?;
                 let refs: Vec<&Lane> = operands.iter().collect();
-                emit_op(prim, &refs, ssa, body, &mut flags)?
+                EnvValue::Repr(emit_op(prim, &refs, ssa, body, &mut flags)?)
+            }
+            // M-856: the certified binary↔ternary `Swap` (RFC-0002 §4) + same-Repr identity, always
+            // under the `Recheck` cert mode (the compile-time independent bijection re-check).
+            // Dense/VSA and other swap kinds stay an explicit refusal (below).
+            Rhs::Swap { src, target, .. } => {
+                let src_lane = lookup_ev(env, src)?.as_lane("swap source")?;
+                let src_repr = lane_repr(&src_lane);
+                let (lane, ovf) = lower_swap_dialect(&src_lane, &src_repr, target, ssa, body)?;
+                if let Some(f) = ovf {
+                    flags.push(f);
+                }
+                EnvValue::Repr(lane)
+            }
+            // M-856: the non-recursive `Construct`/`Match` data fragment (mirrors the direct-LLVM
+            // Increment-1 fragment; M-373). `Construct` never emits IR beyond the tag constant — the
+            // field lanes are already-lowered SSA values, carried forward unchanged (no memory).
+            Rhs::Construct { ctor, args } => {
+                let fields: Vec<Lane> = args
+                    .iter()
+                    .map(|a| lookup_ev(env, a)?.as_lane("Construct field"))
+                    .collect::<Result<_, _>>()?;
+                let tag_ssa = emit_const_i64(i64::from(ctor.index()), ssa, body);
+                EnvValue::Datum(Datum {
+                    _tag: u64::from(ctor.index()),
+                    tag_ssa,
+                    fields,
+                })
+            }
+            Rhs::Match {
+                scrutinee,
+                alts,
+                default,
+            } => {
+                let (lane, ovf) =
+                    lower_match_dialect(scrutinee, alts, default, env, ssa, bbc, body, uses_abort)?;
+                if let Some(f) = ovf {
+                    flags.push(f);
+                }
+                EnvValue::Repr(lane)
             }
             // Everything below is an explicit, never-silent refusal — it runs on the direct-LLVM
             // backend (`crate::llvm`, which covers the full v0 calculus) or the interpreter. The
             // message routes it there (EXPLAIN-able; G2/VR-5).
-            Rhs::Swap { target, .. } => {
-                return Err(DialectError::Unsupported(format!(
-                    "Swap to {target:?}: representation swaps are not in the MLIR-dialect fragment \
-                     (they run on the interpreter / direct-LLVM path)"
-                )));
-            }
-            Rhs::Construct { .. } | Rhs::Match { .. } => {
-                return Err(DialectError::Unsupported(
-                    "the data fragment (Construct/Match) is not in the MLIR-dialect fragment — it is \
-                     lowered by the direct-LLVM backend (crate::llvm; M-373) or interpreted"
-                        .to_owned(),
-                ));
-            }
             Rhs::App { .. } | Rhs::Lam { .. } => {
                 return Err(DialectError::Unsupported(
                     "closures (App/Lam) are not in the MLIR-dialect fragment — they are lowered by \
@@ -791,12 +946,512 @@ fn lower_block(
                 ));
             }
         };
-        env.insert(b.name.clone(), lane);
+        env.insert(b.name.clone(), ev);
     }
-    let result = lookup(&env, anf.result())?;
-    // Fold every per-op overflow `i1` into one program-level flag (or `None` — no trit additive op).
+    let result = lookup_ev(env, anf.result())?.as_lane("block result")?;
+    // Fold every per-op overflow `i1` *in this block* into one local flag (or `None`).
     let overflow = fold_or(&flags, ssa, body);
     Ok((result, overflow))
+}
+
+// ─── M-856: `Match` (Ctor-arm, non-recursive data fragment) ───────────────────────────────────
+
+/// Lower `Rhs::Match` for a **`Datum` scrutinee + `Ctor` arms** — the M-856 dialect counterpart of
+/// [`crate::llvm`]'s `lower_match` Increment-1 (Ctor) form. A `Match` on a bare repr lane (the
+/// `Lit`-arm branch primitive `crate::llvm` uses for the Increment-3 recursion base case) is an
+/// explicit refusal: it is tied to `Fix`/`FixGroup`, which stays out of the MLIR-dialect fragment.
+///
+/// Dispatches on the tag with `cf.switch`; each arm's fields are bound by **direct SSA reference**
+/// (the `Datum`'s field lanes, computed before the switch, dominate every arm block — no load).
+/// Each arm is lowered into its **own local text buffer** first (via a recursive [`lower_block`]
+/// call, so nested `Match`/arithmetic inside an arm folds its own overflow flag locally), and only
+/// once every arm's shape is known is the merge block's header decided — so the overflow `i1` is
+/// threaded through the merge only when at least one arm actually needs it (an overflow-free,
+/// arithmetic-free `Match` costs nothing beyond the switch/merge it already needed).
+///
+/// A no-match with no ANF `default` traps with `@abort` (a defined trap, never raw UB; G2) —
+/// `uses_abort` is set so [`emit_mlir`] declares the extern only when it is actually called.
+#[allow(clippy::too_many_arguments)]
+fn lower_match_dialect(
+    scrutinee: &Atom,
+    alts: &[AnfAlt],
+    default_arm: &Option<Anf>,
+    env: &std::collections::HashMap<Atom, EnvValue>,
+    ssa: &mut Ssa,
+    bbc: &mut Bbc,
+    body: &mut String,
+    uses_abort: &mut bool,
+) -> Result<(Lane, Option<String>), DialectError> {
+    let scrut = env
+        .get(scrutinee)
+        .cloned()
+        .ok_or_else(|| DialectError::FreeVariable(scrutinee.render()))?;
+    let datum = match scrut {
+        EnvValue::Datum(d) => d,
+        EnvValue::Repr(_) => {
+            return Err(DialectError::Unsupported(
+                "Match on a repr-lane scrutinee is not in the MLIR-dialect fragment — only \
+                 constructor-arm Match on a Construct-built datum is lowered here; literal-arm \
+                 matching on a Binary{8} lane is the Increment-3 recursion branch primitive, tied to \
+                 Fix/FixGroup and deferred alongside Dense/VSA (M-856; the direct-LLVM backend still \
+                 covers it)"
+                    .to_owned(),
+            ));
+        }
+    };
+    if alts.is_empty() && default_arm.is_none() {
+        return Err(DialectError::Unsupported(
+            "Match with zero arms and no default (exhaustive coverage requires at least one arm or \
+             a default)"
+                .to_owned(),
+        ));
+    }
+    for alt in alts {
+        if matches!(alt, AnfAlt::Lit { .. }) {
+            return Err(DialectError::Unsupported(
+                "a literal arm on a constructed-data Match scrutinee is not valid — constructor \
+                 arms only for data values (G2)"
+                    .to_owned(),
+            ));
+        }
+    }
+
+    let arm_labels: Vec<String> = (0..alts.len()).map(|_| bbc.fresh()).collect();
+    let default_label = bbc.fresh();
+    let merge_label = bbc.fresh();
+
+    let _ = write!(
+        body,
+        "    cf.switch {} : i64, [\n      default: ^{default_label}",
+        datum.tag_ssa
+    );
+    for (alt, label) in alts.iter().zip(&arm_labels) {
+        let AnfAlt::Ctor { ctor, .. } = alt else {
+            unreachable!("Lit arms rejected above")
+        };
+        let _ = write!(body, ",\n      {}: ^{label}", ctor.index());
+    }
+    let _ = writeln!(body, "\n    ]");
+
+    struct ArmOut {
+        label: String,
+        text: String,
+        lane: Lane,
+        ovf: Option<String>,
+    }
+    let mut arms: Vec<ArmOut> = Vec::with_capacity(alts.len() + 1);
+    for (alt, label) in alts.iter().zip(&arm_labels) {
+        let AnfAlt::Ctor {
+            binders,
+            body: arm_body,
+            ..
+        } = alt
+        else {
+            unreachable!("Lit arms rejected above")
+        };
+        // Never-silent (G2): the interpreter rejects arity mismatch with DataMalformed.
+        if binders.len() != datum.fields.len() {
+            return Err(DialectError::Unsupported(format!(
+                "Match arm binder arity ({}) != constructor field count ({}) — malformed Match \
+                 (interpreter rejects with DataMalformed; G2/WF7)",
+                binders.len(),
+                datum.fields.len()
+            )));
+        }
+        let mut arm_env = env.clone();
+        for (binder, field_lane) in binders.iter().zip(&datum.fields) {
+            arm_env.insert(
+                Atom::Named(binder.clone()),
+                EnvValue::Repr(field_lane.clone()),
+            );
+        }
+        let mut text = String::new();
+        let (lane, ovf) = lower_block(arm_body, &mut arm_env, ssa, bbc, &mut text, uses_abort)?;
+        arms.push(ArmOut {
+            label: label.clone(),
+            text,
+            lane,
+            ovf,
+        });
+    }
+    match default_arm {
+        Some(default_block) => {
+            let mut def_env = env.clone();
+            let mut text = String::new();
+            let (lane, ovf) =
+                lower_block(default_block, &mut def_env, ssa, bbc, &mut text, uses_abort)?;
+            arms.push(ArmOut {
+                label: default_label.clone(),
+                text,
+                lane,
+                ovf,
+            });
+        }
+        None => {
+            *uses_abort = true;
+            let _ = writeln!(body, "  ^{default_label}:");
+            let _ = writeln!(body, "    func.call @abort() : () -> ()");
+            let z = emit_const_i32(0, ssa, body);
+            let _ = writeln!(body, "    func.return {z} : i32");
+        }
+    }
+
+    debug_assert!(
+        !arms.is_empty(),
+        "at least one Ctor arm or a Some(default) reaches here — checked above"
+    );
+    let kind = arms[0].lane.kind;
+    let width = arms[0].lane.vals.len();
+    for a in &arms[1..] {
+        if a.lane.kind != kind || a.lane.vals.len() != width {
+            return Err(DialectError::Unsupported(
+                "Match arms produce lanes of different kind or width — all arms must return the \
+                 same repr shape"
+                    .to_owned(),
+            ));
+        }
+    }
+    let any_ovf = arms.iter().any(|a| a.ovf.is_some());
+
+    let merge_result_names: Vec<String> = (0..width).map(|_| ssa.fresh()).collect();
+    let merge_ovf_name = if any_ovf { Some(ssa.fresh()) } else { None };
+    for a in &arms {
+        let _ = writeln!(body, "  ^{}:", a.label);
+        body.push_str(&a.text);
+        let mut names = a.lane.vals.clone();
+        let mut types: Vec<&str> = vec!["i32"; a.lane.vals.len()];
+        if merge_ovf_name.is_some() {
+            // Normalize a missing local overflow to a materialized `false` — only when a *sibling*
+            // arm needs the i1 slot (never-silent: an arm that cannot overflow contributes `false`,
+            // not an omitted operand).
+            let ovf_ssa = match &a.ovf {
+                Some(s) => s.clone(),
+                None => {
+                    let r = ssa.fresh();
+                    let _ = writeln!(body, "    {r} = arith.constant false");
+                    r
+                }
+            };
+            names.push(ovf_ssa);
+            types.push("i1");
+        }
+        let _ = writeln!(
+            body,
+            "    cf.br ^{merge_label}({} : {})",
+            names.join(", "),
+            types.join(", ")
+        );
+    }
+    let mut header_parts: Vec<String> = merge_result_names
+        .iter()
+        .map(|n| format!("{n}: i32"))
+        .collect();
+    if let Some(ovf_name) = &merge_ovf_name {
+        header_parts.push(format!("{ovf_name}: i1"));
+    }
+    if header_parts.is_empty() {
+        let _ = writeln!(body, "  ^{merge_label}:");
+    } else {
+        let _ = writeln!(body, "  ^{merge_label}({}):", header_parts.join(", "));
+    }
+
+    Ok((
+        Lane {
+            kind,
+            vals: merge_result_names,
+        },
+        merge_ovf_name,
+    ))
+}
+
+// ─── M-856: `Swap` (certified binary↔ternary + identity) ──────────────────────────────────────
+
+/// Lower `Rhs::Swap` for the **certified binary↔ternary class** (RFC-0002 §4) plus same-`Repr`
+/// identity — the MLIR-arith counterpart of `crate::swap_codegen::lower_swap`, always under the
+/// `Recheck` cert mode (the compile-time independent bijection re-check; `ReuseInterp` is not wired
+/// here, a small explicitly-deferred gap). Reuses `crate::swap_codegen::legal_pair` and the
+/// `MAX_BINARY_WIDTH_I64`/`MAX_TERNARY_WIDTH_I64` i64-soundness bounds directly (single source of
+/// truth for the side-condition; DRY) but re-derives the transcode **arithmetic** in `arith` ops
+/// (the direct-LLVM emitter's textual LLVM instructions cannot be reused — different IR surface —
+/// so this is an independent rendering of the *same* `mycelium_core::binary`/`ternary` algorithm,
+/// digit-for-digit, never a divergent second algorithm).
+///
+/// Returns the transcoded lane plus an optional out-of-range `i1` (`Some` for the partial `dec`
+/// direction and the `enc` final-quotient honest-net check, mirroring `crate::swap_codegen`;
+/// `None` for `enc` on a re-checked-legal pair and for identity). Dense/VSA, a non-bit/trit pair, or
+/// an **illegal** `(n,m)` pair are explicit [`DialectError::Unsupported`] refusals — never silently
+/// lowered (G2).
+fn lower_swap_dialect(
+    src_lane: &Lane,
+    src_repr: &Repr,
+    target: &Repr,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> Result<(Lane, Option<String>), DialectError> {
+    match (src_repr, target) {
+        // ── Identity (same Repr): the trivial swap, no transcode. ──
+        (a, b) if a == b => Ok((src_lane.clone(), None)),
+        // ── Binary{n} → Ternary{m}: enc, total on a legal pair. ──
+        (Repr::Binary { width }, Repr::Ternary { trits }) => {
+            let (width, trits) = (*width, *trits);
+            check_legal_dialect(width, trits)?;
+            check_i64_width_dialect(width, trits)?;
+            if src_lane.kind != LaneKind::Binary {
+                return Err(DialectError::Unsupported(format!(
+                    "swap Binary→Ternary: source lane is {:?}, expected Binary (G2)",
+                    src_lane.kind
+                )));
+            }
+            let int_reg = emit_swap_bits_to_int(&src_lane.vals, ssa, body);
+            let (lane, final_q) = emit_swap_int_to_trits(&int_reg, trits as usize, ssa, body);
+            // On a legal (re-checked) pair the final quotient is provably 0; the never-silent
+            // final-quotient check is emitted anyway (dead code on the normal path) so a codegen
+            // slip can never pass silently — mirrors `crate::swap_codegen`'s honest-net (G2/SC-3).
+            let zero = emit_const_i64(0, ssa, body);
+            let oor = ssa.fresh();
+            let _ = writeln!(body, "    {oor} = arith.cmpi ne, {final_q}, {zero} : i64");
+            Ok((lane, Some(oor)))
+        }
+        // ── Ternary{m} → Binary{n}: dec, PARTIAL — range failure is never-silent. ──
+        (Repr::Ternary { trits }, Repr::Binary { width }) => {
+            let (width, trits) = (*width, *trits);
+            check_legal_dialect(width, trits)?;
+            check_i64_width_dialect(width, trits)?;
+            if src_lane.kind != LaneKind::Ternary {
+                return Err(DialectError::Unsupported(format!(
+                    "swap Ternary→Binary: source lane is {:?}, expected Ternary (G2)",
+                    src_lane.kind
+                )));
+            }
+            let int_reg = emit_swap_trits_to_int(&src_lane.vals, ssa, body);
+            let (lane, oor) = emit_swap_int_to_bits(&int_reg, width as usize, ssa, body);
+            Ok((lane, Some(oor)))
+        }
+        // ── Everything else: an explicit refusal — never a silent mis-lowering (G2). ──
+        (a, b) => Err(DialectError::Unsupported(format!(
+            "swap {a:?} → {b:?}: only the certified binary↔ternary class (and same-Repr identity) \
+             is lowered in the MLIR-dialect fragment (M-856); Dense/VSA and other swap kinds stay \
+             explicit refusals — they run on the interpreter / direct-LLVM path"
+        ))),
+    }
+}
+
+/// Re-check the bijection side-condition at compile time (the `Recheck` cert mode — the only mode
+/// this module wires). An illegal pair is refused here, never emitted (VR-5/G2). Reuses
+/// `crate::swap_codegen::legal_pair` directly (single source of truth for the side-condition).
+fn check_legal_dialect(width: u32, trits: u32) -> Result<(), DialectError> {
+    if crate::swap_codegen::legal_pair(width, trits) {
+        Ok(())
+    } else {
+        Err(DialectError::Unsupported(format!(
+            "swap Binary{{{width}}}↔Ternary{{{trits}}}: the compile-time re-check rejects the \
+             bijection side-condition — (n,m) is NOT a legal pair (B_n ⊄ T_m, RFC-0002 §5); the \
+             swap is refused, never emitted (M-856; VR-5/G2)"
+        )))
+    }
+}
+
+/// Refuse a bit/trit width the `i64` transcode cannot represent soundly (never a silently-wrong
+/// transcode; G2/VR-5). Reuses `crate::swap_codegen`'s bounds directly (single source of truth).
+fn check_i64_width_dialect(width: u32, trits: u32) -> Result<(), DialectError> {
+    use crate::swap_codegen::{MAX_BINARY_WIDTH_I64, MAX_TERNARY_WIDTH_I64};
+    if width > MAX_BINARY_WIDTH_I64 {
+        return Err(DialectError::Unsupported(format!(
+            "swap binary width {width} exceeds the native i64 transcode bound \
+             ({MAX_BINARY_WIDTH_I64}); refused rather than emit a silently-wrong transcode (M-856; \
+             G2/VR-5)"
+        )));
+    }
+    if trits > MAX_TERNARY_WIDTH_I64 {
+        return Err(DialectError::Unsupported(format!(
+            "swap ternary width {trits} exceeds the native i64 transcode bound \
+             ({MAX_TERNARY_WIDTH_I64}); refused rather than emit a silently-wrong transcode (M-856; \
+             G2/VR-5)"
+        )));
+    }
+    Ok(())
+}
+
+/// Decode an MSB-first `Binary` lane (`i32` elements in `{0,1}`) into a two's-complement integer in
+/// an `i64` SSA register. Mirrors `mycelium_core::binary::bits_to_int` / `crate::swap_codegen`'s
+/// `emit_bits_to_int` digit-for-digit, re-expressed in `arith` ops (M-856; DRY at the *algorithm*
+/// level).
+fn emit_swap_bits_to_int(bits: &[String], ssa: &mut Ssa, body: &mut String) -> String {
+    let n = bits.len();
+    let mut acc = emit_const_i64(0, ssa, body);
+    for v in bits {
+        let z = ssa.fresh();
+        let _ = writeln!(body, "    {z} = arith.extui {v} : i32 to i64");
+        let two = emit_const_i64(2, ssa, body);
+        let sh = ssa.fresh();
+        let _ = writeln!(body, "    {sh} = arith.muli {acc}, {two} : i64");
+        let next = ssa.fresh();
+        let _ = writeln!(body, "    {next} = arith.addi {sh}, {z} : i64");
+        acc = next;
+    }
+    if n == 0 {
+        return acc; // empty string denotes 0 (binary::bits_to_int contract)
+    }
+    let sign = &bits[0];
+    let one32 = emit_const_i32(1, ssa, body);
+    let is_neg = ssa.fresh();
+    let _ = writeln!(body, "    {is_neg} = arith.cmpi eq, {sign}, {one32} : i32");
+    debug_assert!(
+        n <= crate::swap_codegen::MAX_BINARY_WIDTH_I64 as usize,
+        "check_i64_width_dialect guarantees n <= MAX_BINARY_WIDTH_I64"
+    );
+    let two_pow_n: i64 = 1i64 << n;
+    let two_pow_n_ssa = emit_const_i64(two_pow_n, ssa, body);
+    let corrected = ssa.fresh();
+    let _ = writeln!(
+        body,
+        "    {corrected} = arith.subi {acc}, {two_pow_n_ssa} : i64"
+    );
+    let out = ssa.fresh();
+    let _ = writeln!(
+        body,
+        "    {out} = arith.select {is_neg}, {corrected}, {acc} : i64"
+    );
+    out
+}
+
+/// Decode an MSB-first `Ternary` lane (`i32` elements in `{−1,0,1}`) into an integer in an `i64`
+/// SSA register. Mirrors `mycelium_core::ternary::trits_to_int` / `crate::swap_codegen`'s
+/// `emit_trits_to_int` digit-for-digit (Horner from the MSB), re-expressed in `arith` ops (M-856).
+fn emit_swap_trits_to_int(trits: &[String], ssa: &mut Ssa, body: &mut String) -> String {
+    let mut acc = emit_const_i64(0, ssa, body);
+    for v in trits {
+        let ext = ssa.fresh();
+        let _ = writeln!(body, "    {ext} = arith.extsi {v} : i32 to i64");
+        let three = emit_const_i64(3, ssa, body);
+        let mul = ssa.fresh();
+        let _ = writeln!(body, "    {mul} = arith.muli {acc}, {three} : i64");
+        let next = ssa.fresh();
+        let _ = writeln!(body, "    {next} = arith.addi {mul}, {ext} : i64");
+        acc = next;
+    }
+    acc
+}
+
+/// Encode an `i64` integer (`int_reg`) into an MSB-first `Ternary` lane of `m` trits, returning the
+/// lane and the final-quotient SSA register. Mirrors `mycelium_core::ternary::int_to_trits` /
+/// `crate::swap_codegen`'s `emit_int_to_trits` digit-for-digit (balanced remainder + borrow),
+/// re-expressed in `arith` ops (M-856). The caller emits the never-silent final-quotient check.
+fn emit_swap_int_to_trits(
+    int_reg: &str,
+    m: usize,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> (Lane, String) {
+    let mut v = int_reg.to_owned();
+    let mut lsb_first: Vec<String> = Vec::with_capacity(m);
+    for _ in 0..m {
+        let three_a = emit_const_i64(3, ssa, body);
+        let sr = ssa.fresh();
+        let _ = writeln!(body, "    {sr} = arith.remsi {v}, {three_a} : i64");
+        let three_b = emit_const_i64(3, ssa, body);
+        let plus3 = ssa.fresh();
+        let _ = writeln!(body, "    {plus3} = arith.addi {sr}, {three_b} : i64");
+        let three_c = emit_const_i64(3, ssa, body);
+        let r0 = ssa.fresh();
+        let _ = writeln!(body, "    {r0} = arith.remsi {plus3}, {three_c} : i64");
+        let two_c = emit_const_i64(2, ssa, body);
+        let is_two = ssa.fresh();
+        let _ = writeln!(body, "    {is_two} = arith.cmpi eq, {r0}, {two_c} : i64");
+        let neg1_c = emit_const_i64(-1, ssa, body);
+        let digit64 = ssa.fresh();
+        let _ = writeln!(
+            body,
+            "    {digit64} = arith.select {is_two}, {neg1_c}, {r0} : i64"
+        );
+        let v_minus = ssa.fresh();
+        let _ = writeln!(body, "    {v_minus} = arith.subi {v}, {digit64} : i64");
+        let three_d = emit_const_i64(3, ssa, body);
+        let v_next = ssa.fresh();
+        let _ = writeln!(
+            body,
+            "    {v_next} = arith.divsi {v_minus}, {three_d} : i64"
+        );
+        let digit32 = ssa.fresh();
+        let _ = writeln!(body, "    {digit32} = arith.trunci {digit64} : i64 to i32");
+        lsb_first.push(digit32);
+        v = v_next;
+    }
+    let vals: Vec<String> = lsb_first.into_iter().rev().collect(); // → MSB-first
+    (
+        Lane {
+            kind: LaneKind::Ternary,
+            vals,
+        },
+        v,
+    )
+}
+
+/// Encode an `i64` integer (`int_reg`) into an MSB-first `Binary` lane of `n` two's-complement
+/// bits, plus an `i1` out-of-range register (set iff the value does not fit `B_n`). Mirrors
+/// `mycelium_core::binary::int_to_bits` / `crate::swap_codegen`'s `emit_int_to_bits` digit-for-digit,
+/// re-expressed in `arith` ops (M-856). The range bit is the never-silent `dec`-partiality signal.
+fn emit_swap_int_to_bits(
+    int_reg: &str,
+    n: usize,
+    ssa: &mut Ssa,
+    body: &mut String,
+) -> (Lane, String) {
+    if n == 0 {
+        // Zero-width: representable iff v == 0 (binary::int_to_bits n==0 contract).
+        let zero = emit_const_i64(0, ssa, body);
+        let oor = ssa.fresh();
+        let _ = writeln!(body, "    {oor} = arith.cmpi ne, {int_reg}, {zero} : i64");
+        return (
+            Lane {
+                kind: LaneKind::Binary,
+                vals: Vec::new(),
+            },
+            oor,
+        );
+    }
+    debug_assert!(
+        n <= crate::swap_codegen::MAX_BINARY_WIDTH_I64 as usize,
+        "check_i64_width_dialect guarantees n <= MAX_BINARY_WIDTH_I64"
+    );
+    let half: i64 = 1i64 << (n - 1);
+    let lo = -half;
+    let hi = half - 1;
+    let lo_c = emit_const_i64(lo, ssa, body);
+    let lt_lo = ssa.fresh();
+    let _ = writeln!(
+        body,
+        "    {lt_lo} = arith.cmpi slt, {int_reg}, {lo_c} : i64"
+    );
+    let hi_c = emit_const_i64(hi, ssa, body);
+    let gt_hi = ssa.fresh();
+    let _ = writeln!(
+        body,
+        "    {gt_hi} = arith.cmpi sgt, {int_reg}, {hi_c} : i64"
+    );
+    let oor = ssa.fresh();
+    let _ = writeln!(body, "    {oor} = arith.ori {lt_lo}, {gt_hi} : i1");
+    let vals: Vec<String> = (0..n)
+        .map(|i| {
+            let shift = n - 1 - i;
+            let shift_c = emit_const_i64(shift as i64, ssa, body);
+            let sh = ssa.fresh();
+            let _ = writeln!(body, "    {sh} = arith.shrui {int_reg}, {shift_c} : i64");
+            let one_c = emit_const_i64(1, ssa, body);
+            let m = ssa.fresh();
+            let _ = writeln!(body, "    {m} = arith.andi {sh}, {one_c} : i64");
+            let t = ssa.fresh();
+            let _ = writeln!(body, "    {t} = arith.trunci {m} : i64 to i32");
+            t
+        })
+        .collect();
+    (
+        Lane {
+            kind: LaneKind::Binary,
+            vals,
+        },
+        oor,
+    )
 }
 
 /// Emit the print sequence: one `func.call @putchar` per result element (its ASCII char), then a
@@ -863,8 +1518,10 @@ fn emit_char_code(kind: LaneKind, v: &str, ssa: &mut Ssa, body: &mut String) -> 
 /// text — no opaque pass (RFC-0004 §6 / VR-4).
 pub fn emit_mlir(node: &Node) -> Result<(String, ResultKind, usize), DialectError> {
     let mut ssa = Ssa::default();
+    let mut bbc = Bbc::default();
     let mut body = String::new();
-    let (result, overflow) = lower_program(node, &mut ssa, &mut body)?;
+    let mut uses_abort = false;
+    let (result, overflow) = lower_program(node, &mut ssa, &mut bbc, &mut body, &mut uses_abort)?;
 
     let kind = ResultKind::from_lane(result.kind);
     let width = result.vals.len();
@@ -872,6 +1529,11 @@ pub fn emit_mlir(node: &Node) -> Result<(String, ResultKind, usize), DialectErro
     let mut module = String::new();
     module.push_str("module {\n");
     module.push_str("  func.func private @putchar(i32) -> i32\n");
+    // M-856: `@abort` is declared only when a Match with no default arm actually traps to it — a
+    // data-free / total-Match program's module is unaffected (still byte-for-byte the M-601 shape).
+    if uses_abort {
+        module.push_str("  func.func private @abort() -> ()\n");
+    }
     module.push_str("  func.func @main() -> i32 {\n");
 
     match overflow {

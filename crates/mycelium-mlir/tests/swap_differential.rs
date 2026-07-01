@@ -11,9 +11,17 @@
 //!
 //! and each pair is **validated through the single shared M-210 checker**
 //! ([`RefinementRelation::ObservationalEquiv`]) — a deliberately divergent lowering is caught, so a
-//! passing differential is meaningful, not vacuous. The **third** (MLIR-dialect) path honestly
-//! **refuses** `Swap` (`DialectError::Unsupported`), so the dialect leg of the three-way is a
-//! never-faked refusal (covered by [`swap_is_refused_by_the_mlir_dialect_path`]).
+//! passing differential is meaningful, not vacuous.
+//!
+//! **M-856 widens the third (MLIR-dialect) leg to a real lowering** of the certified
+//! binary↔ternary class (+ same-`Repr` identity), always under the `Recheck` cert mode (the
+//! `ReuseInterp` opt-in mode is not wired in the dialect path). So `b_to_t_three_way_including_mlir_dialect`
+//! / `t_to_b_three_way_including_mlir_dialect` are a genuine three-way for this class, each pair
+//! M-210-checked. Dense/VSA targets and an **illegal** `(n,m)` pair stay explicit dialect
+//! refusals ([`swap_to_dense_is_refused_by_the_mlir_dialect_path`] /
+//! [`swap_illegal_pair_is_refused_by_the_mlir_dialect_path`]) — never silently lowered — and the
+//! out-of-range `dec` direction is refused the same way as direct-LLVM
+//! ([`swap_out_of_range_dec_is_refused_by_the_mlir_dialect_path`]).
 //!
 //! **Out-of-range (`dec` partiality, RFC-0002 §4 P4).** A `Ternary → Binary` swap whose value leaves
 //! `B_n` is refused **never-silently** by both paths: the interpreter errors (`SwapError::OutOfRange`
@@ -352,26 +360,169 @@ fn illegal_pair_is_refused_at_compile_time_in_recheck_mode() {
     }
 }
 
-/// The third leg of the three-way differential: the **MLIR-dialect** path honestly **refuses**
-/// `Swap` (`DialectError::Unsupported`) — so the three-way reduces to a *two-way* (interp ≡
-/// direct-LLVM), never a faked third pass (VR-5/G2). Asserting the refusal keeps the coverage honest:
-/// the dialect path never silently mis-lowers a `Swap` it does not support.
+// ─── M-856: the third leg — the MLIR-dialect path now LOWERS the certified swap class ─────────
+//
+// M-856 widens the MLIR-dialect fragment to the certified binary↔ternary `Swap` class (always
+// under the `Recheck` cert mode — `ReuseInterp` is not wired in the dialect path, a small
+// explicitly-deferred gap). So the three-way differential is now a REAL three-way for this class:
+// interp(certified) ≡ direct-LLVM ≡ MLIR-dialect, each pair M-210-checked. Dense/VSA targets, a
+// non-bit/trit pair, and an **illegal** `(n,m)` pair stay explicit dialect refusals (covered by
+// [`swap_illegal_pair_is_refused_by_the_mlir_dialect_path`] and
+// [`swap_to_dense_is_refused_by_the_mlir_dialect_path`]) — never silently lowered.
+
 #[cfg(feature = "mlir-dialect")]
 #[test]
-fn swap_is_refused_by_the_mlir_dialect_path() {
+fn b_to_t_three_way_including_mlir_dialect() {
+    for (i, (node, cert_val)) in b_to_t_corpus().iter().enumerate() {
+        let interp = interp_swap(node).expect("certified interp must evaluate the in-range swap");
+        assert_eq!(
+            observable(&interp),
+            observable(cert_val),
+            "program #{i}: interp swap != mycelium-cert binary_to_ternary"
+        );
+        match mycelium_mlir::mlir_compile_and_run(node) {
+            Ok(native) => {
+                assert_eq!(
+                    observable(&interp),
+                    observable(&native),
+                    "program #{i}: interp vs MLIR-dialect swap diverged"
+                );
+                assert_eq!(
+                    check(
+                        &interp,
+                        &native,
+                        RefinementRelation::ObservationalEquiv,
+                        Certificate::exact(),
+                        &Evidence::Observational,
+                    ),
+                    CheckVerdict::Validated {
+                        strength: GuaranteeStrength::Exact
+                    },
+                    "program #{i}: shared checker must validate interp↔MLIR-dialect"
+                );
+            }
+            Err(mycelium_mlir::DialectError::ToolchainMissing(_)) => { /* env skip */ }
+            Err(e) => panic!("program #{i}: MLIR-dialect swap errored: {e}"),
+        }
+    }
+}
+
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn t_to_b_three_way_including_mlir_dialect() {
+    for (i, (node, cert_val)) in t_to_b_corpus().iter().enumerate() {
+        let interp = interp_swap(node).expect("certified interp must evaluate the in-range dec");
+        assert_eq!(
+            observable(&interp),
+            observable(cert_val),
+            "program #{i}: interp swap != mycelium-cert ternary_to_binary"
+        );
+        match mycelium_mlir::mlir_compile_and_run(node) {
+            Ok(native) => {
+                assert_eq!(
+                    observable(&interp),
+                    observable(&native),
+                    "program #{i}: interp vs MLIR-dialect dec diverged"
+                );
+                assert_eq!(
+                    check(
+                        &interp,
+                        &native,
+                        RefinementRelation::ObservationalEquiv,
+                        Certificate::exact(),
+                        &Evidence::Observational,
+                    ),
+                    CheckVerdict::Validated {
+                        strength: GuaranteeStrength::Exact
+                    },
+                    "program #{i}: shared checker must validate interp↔MLIR-dialect"
+                );
+            }
+            Err(mycelium_mlir::DialectError::ToolchainMissing(_)) => { /* env skip */ }
+            Err(e) => panic!("program #{i}: MLIR-dialect dec errored: {e}"),
+        }
+    }
+}
+
+/// Out-of-range `dec` on the MLIR-dialect path: `DialectError::Overflow` (the shared sentinel
+/// read-back), mirroring `out_of_range_dec_is_refused_non_silently`'s direct-LLVM assertion —
+/// never a silent wrap (SC-3/G2).
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn swap_out_of_range_dec_is_refused_by_the_mlir_dialect_path() {
+    use mycelium_mlir::DialectError;
+    let big = binary_to_ternary(
+        &binary(vec![false, true, true, false, false, true, false, false]), // 100
+        6,
+        &policy(),
+    )
+    .unwrap()
+    .0;
+    let Payload::Trits(ts) = big.payload() else {
+        unreachable!()
+    };
+    let prog = swap_node(ternary(ts.clone()), Repr::Binary { width: 4 });
+    match mycelium_mlir::mlir_compile_and_run(&prog) {
+        Err(DialectError::Overflow(_)) => { /* expected explicit refusal */ }
+        Err(DialectError::ToolchainMissing(_)) => { /* env skip */ }
+        Ok(v) => panic!(
+            "the MLIR-dialect path must refuse the out-of-range dec, got {:?}",
+            v.payload()
+        ),
+        Err(e) => panic!("unexpected MLIR-dialect error on out-of-range dec: {e}"),
+    }
+}
+
+/// An **illegal** `(n, m)` pair — `(8, 4)`: `2^7 = 128 > (3^4−1)/2 = 40` — is refused by the
+/// MLIR-dialect path's `Recheck`-mode compile-time re-check (`DialectError::Unsupported`), the
+/// dialect analogue of `illegal_pair_is_refused_at_compile_time_in_recheck_mode`. Never emitted —
+/// the illegal pair fails before the toolchain is even invoked (so this refusal is returned even
+/// on a box without libMLIR — checked without a `ToolchainMissing` escape hatch).
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn swap_illegal_pair_is_refused_by_the_mlir_dialect_path() {
     use mycelium_mlir::DialectError;
     let prog = swap_node(
         binary(vec![true, false, true, true, false, false, true, false]),
-        Repr::Ternary { trits: 6 },
+        Repr::Ternary { trits: 4 },
     );
+    match mycelium_mlir::mlir_compile_and_run(&prog) {
+        Err(DialectError::Unsupported(msg)) => {
+            assert!(
+                msg.contains("legal pair") || msg.contains("recheck"),
+                "the refusal must name the legal-pair re-check; got: {msg}"
+            );
+        }
+        other => panic!("the illegal pair must be Unsupported at compile time, got {other:?}"),
+    }
+}
+
+/// A `Swap` to `Dense` stays an explicit MLIR-dialect refusal — only the certified binary↔ternary
+/// class (+ same-Repr identity) is lowered here (M-856); Dense/VSA are out of scope (deferred
+/// alongside the dialect legs of `dense_differential.rs`/`vsa_differential.rs`, unaffected by this
+/// change).
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn swap_to_dense_is_refused_by_the_mlir_dialect_path() {
+    use mycelium_mlir::DialectError;
+    let prog = Node::Swap {
+        src: Box::new(Node::Const(binary(vec![
+            true, false, true, true, false, false, true, false,
+        ]))),
+        target: Repr::Dense {
+            dim: 8,
+            dtype: mycelium_core::ScalarKind::F32,
+        },
+        policy: policy(),
+    };
     match mycelium_mlir::mlir_compile_and_run(&prog) {
         Err(DialectError::Unsupported(_)) => { /* expected explicit refusal */ }
         Err(DialectError::ToolchainMissing(_)) => { /* env skip — still no silent success */ }
         Ok(v) => panic!(
-            "the MLIR-dialect path must refuse Swap, got {:?}",
+            "a Swap to Dense must be refused by the MLIR-dialect path, got {:?}",
             v.payload()
         ),
-        Err(e) => panic!("unexpected MLIR-dialect error on Swap: {e}"),
+        Err(e) => panic!("unexpected MLIR-dialect error on Swap-to-Dense: {e}"),
     }
 }
 
