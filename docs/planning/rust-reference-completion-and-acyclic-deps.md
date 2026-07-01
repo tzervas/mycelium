@@ -267,6 +267,37 @@ own promotion case.
 
 ---
 
+## 8a. Stdlib surface-sufficiency (verified 2026-07-01) — which self-host blockers are Rust work in this plan
+
+A dedicated verification (Fable-5, 2026-07-01) answered "is the Mycelium *surface* sufficient to write
+all 26 stdlib crates in pure `.myc`?" **Answer: PARTIALLY-TRUE, mostly stale.** The grammar/checker
+surface IS sufficient for ~19/26 crates (8 already run as `.myc`; the classic suspected gaps —
+generics, traits, effects, HOF **including capturing closures** (M-704), FFI, sequences — have all
+landed). The ~5–7 blocked crates are blocked by **below-grammar** items, and those items are
+**Rust-reference work already inside this plan's workstreams** — this section maps them so the plan
+is complete on the self-host-enabler axis. *(The `trx` transpiler gap-backlog OVER-states surface
+gaps — it measures a mechanical mapper, not the surface; use this verification, not that backlog, for
+surface-sufficiency. The stale `docs/spec/stdlib/self-hosting-readiness.md` §0 update, 2026-07-01,
+records the same finding.)*
+
+| Verified surface-enabler gap | Blocks | Home in this plan | Tracking |
+|---|---|---|---|
+| Float value form + ops (no float literal/type/prims) | `math`(f64), `numerics` | **Workstream C** (value-model; the AOT-refusal tail rides the same crates) | E20-1 / RFC-0033 (post-1.0 per ADR-035) |
+| Binary `mul`/`div`/`shl`/`shr` prims + signed-op set | `math`/`numerics` integer half | **Workstream C** (value-ops) / **B** (surfacing to L1) | M-718 FLAG · ADR-028 · E20-1 |
+| Surface `dense.*`/`vsa.*` op-prims to L1 | `dense`, `vsa` | **Workstream C** | **Untracked — MINT an issue** |
+| RFC-0008 R2 runtime vocabulary activation | `runtime` full surface | **Workstream D** (M-828) | E12-1 / DN-63 |
+| `Substrate`/`consume` execution (staged `Residual`) | `fs`, `io` | **Workstream B** (extends the `consume`-semantics row) | **Untracked as execution — MINT an issue** |
+| Textual string literal (ergonomics, not expressiveness) | authoring `text`/`fmt`/`diag`/`error` | **Workstream B** (grammar/lexer) or a small standalone | **Untracked — MINT (ergonomic, low priority)** |
+| `hash.*` prim surfacing for `content` (blake3 in core, unsurfaced) | `content` | **Workstream C** (prim surfacing) | **Untracked — MINT** |
+
+**Actions folded into this plan:** (1) the tracked gaps are already covered by C/D/B — no new
+workstream; (2) **four issues should be minted** (Dense/VSA-to-L1 prims, Substrate execution, string
+literal, `hash.*` prim) so the tracker is complete — do this at kickoff, verifying free `M-xxx` slots
+(mitigation #1); (3) the surface-sufficiency verdict is `PARTIALLY-TRUE`, and full self-hosting stays
+post-1.0 (ADR-035) — so these enablers are **in scope for Rust-complete** (they're prim/value work),
+while the actual `.myc` porting that consumes them is E18-1 (out of scope, §11). Distinguishing the
+two is the point: this plan lands the *enablers* in Rust; E18-1 writes the `.myc` against them.
+
 ## 9. Guarantee-tag / proof debt (continuous, cross-cutting)
 
 Runs alongside all workstreams, not as a phase: **M-512** (dense accumulation Higham bound),
@@ -337,7 +368,10 @@ handoff is explicit; this plan's own scope ends at M-final either way.
 - **E18-1 self-hosting** — the *subsequent* milestone. It is `needs-design`, **not tag-gating**
   for 1.0.0 (ADR-022), and gates the public release (ADR-036). This plan produces its
   precondition (a complete, stratified, cycle-free Rust reference) and hands off; it does not plan
-  E18-1's execution. Its demand data already exists (the `trx` transpiler gap-backlog, DN-34 §8).
+  E18-1's execution. Its demand data exists in two forms: the `trx` transpiler gap-backlog (DN-34 §8
+  — but that *over-states* surface gaps, being a mechanical-mapper measure), and the **authoritative**
+  surface-sufficiency verification (§8a, 2026-07-01) which shows the surface is sufficient for ~19/26
+  crates and names the real below-grammar enablers (which §8a lands *in Rust* as part of this plan).
 - **Maintainer-reserved acts** — M-703 (kernel tag), M-655, M-381/M-646 (LLM runs), M-816, and
   the M-738 release act. Noted as exit-adjacent; not planned, not performed by agents.
 - **Big-bang M-797 extraction** — stays the lazy as-touched sweep (§6), by standing maintainer
@@ -376,3 +410,8 @@ handoff is explicit; this plan's own scope ends at M-final either way.
   "everything in Rust, no circular deps, before self-hosting" directive). Grounded in the three
   Fable-5 research digs of the same date; forecasts are `Declared`, survey facts `Empirical`.
   Companion kickoff: `.claude/kickoffs/rcp.md`. Append-only.
+- **2026-07-01 — §8a added** (stdlib surface-sufficiency verification): maps the ~5 below-grammar
+  self-host-enabler gaps to Workstreams B/C/D, lists 4 issues to mint, and corrects the §11 E18-1
+  demand-data note (the `trx` transpiler backlog over-states surface gaps; §8a is authoritative).
+  Companion: the append-only §0 currency update to `docs/spec/stdlib/self-hosting-readiness.md`
+  (whose 2026-06-17 "not-yet" verdict was stale). Append-only.
