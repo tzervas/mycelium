@@ -57,14 +57,11 @@ mycelium-interp = { path = "../mycelium-interp" }
 # reclamation-record contract the AOT tier emits the §9 audit trail into. Both are upstream of
 # `mlir` (they depend only on core / std-core / interp) — the dependency graph stays a DAG.
 mycelium-mir-passes = { path = "../mycelium-mir-passes" }
+# M-860: the parallel per-function/per-nodule AOT codegen (`emit_llvm_ir_many`) dispatches across
+# `mycelium_std_runtime::scheduler::Scheduler` — the M-861 work-stealing OS-thread pool — so it
+# reuses this existing dependency and adds no new one (maintainer decision 2026-07-01, grounded in
+# the flag against pulling in `rayon`).
 mycelium-std-runtime = { path = "../mycelium-std-runtime" }
-# M-860: parallel per-function/per-nodule AOT codegen. Crate-local (not `[workspace.dependencies]`
-# — maintainer's explicit choice for this task, FLAGged against the issue body's own default
-# preference for a zero-dep `std::thread::scope` parallel-map; see the M-860 commit/PR notes).
-# MIT/Apache-2.0 (deny.toml already allows both); rayon's work-stealing pool is well-audited and
-# widely used, and the per-function lowering here is embarrassingly parallel (each call gets its
-# own fresh SSA/label counters — no shared mutable state to race).
-rayon = "1"
 
 [dev-dependencies]
 # The interp↔AOT differential (M-151) drives both paths with the certified binary↔ternary swap,
