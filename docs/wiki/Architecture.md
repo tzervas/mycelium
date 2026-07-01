@@ -43,12 +43,29 @@ committed API baseline (`docs/spec/api/`, KC-3). This page is the conceptual map
 
 ## Execution paths
 
-- **Reference interpreter** (`mycelium-interp`) — the trusted base and the reference semantics.
-- **AOT** (`mycelium-mlir`) — MLIR → LLVM, confined to the performance path; validated against the
-  interpreter by the shared certificate checker (`mycelium-cert`).
+- **Reference interpreter** (`mycelium-interp`) — the trusted base and the reference semantics;
+  every other path is validated against it, never the other way around.
+- **AOT** (`mycelium-mlir`) — MLIR → LLVM, confined to the performance path. The native-codegen
+  wave (epic **E25-1**, ADR-034) has landed direct-LLVM coverage for non-tail/mutual recursion
+  (heap trampoline, M-850), closures via specialize-at-application inlining (M-851), the
+  certified binary↔ternary `Swap` (M-852), `Dense` (M-853), and `VSA` (M-854) — plus a **JIT**
+  path for dynamic-VSA/HDC workloads (M-855) and **MLIR-dialect** catch-up for `Construct`/`Match`/
+  `Swap` (M-856; Dense/VSA through the dialect leg is tracked separately as M-856b). A **unified
+  three-way differential** (interp / direct-LLVM / MLIR-dialect, plus JIT for its in-subset
+  fragment, M-858) is the checked basis for these claims. **Status: implemented (Rust-first),
+  tagged `Empirical`** — mutant-witnessed on a checked basis, not `Proven`; the epic itself is
+  still **in-progress** (parallel codegen and the post-landing performance-evaluation/ratification
+  steps remain open). Every compiled path is validated against the interpreter by the shared
+  certificate checker (`mycelium-cert`); an unsupported fragment is an explicit, never-silent
+  refusal rather than a silent fallback (G2).
 - **Memory** — values are immutable (LR-8) + acyclic (LR-9) + content-addressed; the runtime memory
   model reclaims them through the three-layer hybrid, with the static RC-elision passes
   (`mycelium-mir-passes`) removing provably-redundant reference-counting work.
+
+> **Grounding note (VR-5).** RFC-0029 (AOT optimization/codegen maturity/JIT) and RFC-0039 (native
+> Dense/VSA codegen) plus ADR-034 (the T6 re-gating that brought E25-1 into the `lang 1.0.0` gate)
+> are **Accepted** — ratified as design, not yet **Enacted** (Enacted requires the full E25-1 path
+> complete + stable, per house rule #3). Don't read "implemented" above as "ratified-complete."
 
 ## House rules (enforced)
 
@@ -56,3 +73,9 @@ Small auditable kernel (KC-3); the transparency & auditability rule (per-op tags
 without a checked basis); never-silent operations (G2); append-only decisions (RFC/ADR/DN advance,
 never rewrite); grounded claims. See [Decision Records](Decision-Records.md) and the repository
 `CONTRIBUTING.md` / `CLAUDE.md`.
+
+---
+
+**Up:** [Home](Home.md) · [Crate Index](Crate-Index.md) ·
+[Doc Index](https://github.com/tzervas/mycelium/blob/main/docs/Doc-Index.md) ·
+[repo root README](https://github.com/tzervas/mycelium/blob/main/README.md)

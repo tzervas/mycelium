@@ -53,3 +53,9 @@ reviewed part of a change.
 
 Every crate also has a short `README.md` (see the [Crate Index](Crate-Index.md)) for a 30-second
 orientation before diving into rustdoc.
+
+---
+
+**Up:** [Home](Home.md) · [Crate Index](Crate-Index.md) ·
+[Doc Index](https://github.com/tzervas/mycelium/blob/main/docs/Doc-Index.md) ·
+[repo root README](https://github.com/tzervas/mycelium/blob/main/README.md)

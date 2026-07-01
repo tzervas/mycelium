@@ -25,4 +25,4 @@ A missing or ambiguous publish input is an explicit `SporeError`, never a guess 
 
 ## Role in the workspace
 
-Depends on `mycelium-core` (content-address type) and `mycelium-proj` (manifest). Provides the `spore` CLI binary. Dev-dependencies include `proptest` for the registry hash-verification bound (M-732 DoD). See the [workspace overview](../../README.md).
+Depends on `mycelium-core` (content-address type) and `mycelium-proj` (manifest). Provides the `spore` CLI binary. Dev-dependencies include `proptest` for the registry hash-verification bound (M-732 DoD). See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-spore).

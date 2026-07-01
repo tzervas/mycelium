@@ -38,4 +38,4 @@ never upgraded to a pure value (VR-5). Source is ground truth.
 
 ## Role in the workspace
 
-Ring 2 / Tier B clock and duration surface; injectable `ClockSource` enables deterministic testing without touching OS state. See the [workspace overview](../../README.md).
+Ring 2 / Tier B clock and duration surface; injectable `ClockSource` enables deterministic testing without touching OS state. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-time).

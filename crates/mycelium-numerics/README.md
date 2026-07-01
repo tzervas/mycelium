@@ -29,4 +29,4 @@ The tier-i Rust checker (`check_error_claim`/`check_union_claim`) re-derives a c
 
 ## Role in the workspace
 
-Depends on `mycelium-core` (guarantee lattice, `Bound`/`BoundBasis` vocabulary). Used by `mycelium-interp`, `mycelium-cert`, and the differential test harness. See the [workspace overview](../../README.md).
+Depends on `mycelium-core` (guarantee lattice, `Bound`/`BoundBasis` vocabulary). Used by `mycelium-interp`, `mycelium-cert`, and the differential test harness. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-numerics).

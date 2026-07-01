@@ -26,6 +26,19 @@ dictionary-free static resolution, three-way), as do width-generics (M-753) and 
 args (M-687/M-715); what still *checks-but-does-not-run* is closures / multi-arg arrows / partial
 application (M-704), multi-parameter traits / associated types, and effect annotations (checker-only → M-677).
 
+## Execution paths (grounding for the "runs" claims above)
+
+The tutorial and language-reference "runs three-way" language refers to the interpreter (the
+trusted base) agreeing with the AOT paths. As of the native-codegen wave (epic **E25-1**, ADR-034)
+the AOT side covers non-tail/mutual recursion, closures, certified `Swap`, `Dense`, `VSA`, a
+dynamic-VSA JIT, and MLIR-dialect lowering for `Construct`/`Match`/`Swap` — checked by a unified
+three-way differential (interp / direct-LLVM / MLIR-dialect). **Status: implemented (Rust-first),
+tagged `Empirical`** (mutant-witnessed, not `Proven`); the epic is still **in-progress** (parallel
+codegen and the post-landing performance-evaluation/ratification steps are open), and RFC-0029 /
+RFC-0039 / ADR-034 remain **Accepted**, not **Enacted** (VR-5 — Enacted needs the full path
+complete + stable). See `docs/wiki/Architecture.md#execution-paths` for the fuller picture and
+`CHANGELOG.md` for the per-task landing record.
+
 ## Related documentation
 
 - **Stability promise:** `docs/adr/ADR-023-Stability-and-API-Compatibility-Guarantees.md` — what is
@@ -33,11 +46,24 @@ application (M-704), multi-parameter traits / associated types, and effect annot
 - **Stdlib specs:** `docs/spec/stdlib/` — per-module standard-library specifications.
 - **Glossary:** `docs/Glossary.md` — per-term definitions with normative citations.
 - **Grammar:** `docs/spec/grammar/mycelium.ebnf` + `docs/spec/grammar/README.md`.
+- **AOT / execution architecture:** `docs/wiki/Architecture.md` — the compiler/runtime tiers and
+  execution-path status.
 
 ## Changelog
 
+- **2026-07-01 — AOT E25-1 grounding + nav footer added (docs-quality pass, DOCS-D3).** Added an
+  "Execution paths" section citing the landed native-codegen coverage (recursion, closures, Swap,
+  Dense, VSA, dynamic-VSA JIT, MLIR-dialect catch-up) at its checked `Empirical` tag, noted the
+  epic is still in-progress, and that RFC-0029/RFC-0039/ADR-034 stay Accepted (not Enacted, VR-5).
+  Added a nav footer back to the root README/Doc-Index/Glossary. No normative content changed.
+  Append-only.
 - **2026-06-23 — stdlib API docs added (M-736).** `stdlib-api.md` added to the index: generated
   per-module stdlib API reference projected from `lib/std/` by `mycelium-doc`. Today covers
   `std.result` (the only self-hosted module; E13-1 ports the rest). Append-only.
 - **2026-06-23 — Created (M-735).** Reference section index for the full-language 1.0.0 docs gate
   (E17-1): the language reference + tutorial. Append-only.
+
+---
+
+**Up:** [repo root README](../../README.md) · [Doc Index](../Doc-Index.md) ·
+[Glossary](../Glossary.md)

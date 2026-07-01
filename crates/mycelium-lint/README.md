@@ -32,4 +32,4 @@ documentation quality-bar lint (M-363 §6, 8 checks) is active: the check-name s
 
 ## Role in the workspace
 
-Depends on `mycelium-l1`, `mycelium-lsp`, `mycelium-doc`, and `mycelium-cli-common`; provides the lint-and-fix tooling above the kernel. See the [workspace overview](../../README.md).
+Depends on `mycelium-l1`, `mycelium-lsp`, `mycelium-doc`, and `mycelium-cli-common`; provides the lint-and-fix tooling above the kernel. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-lint).

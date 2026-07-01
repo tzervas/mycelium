@@ -8,6 +8,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Documentation (2026-07-01: README/docs decomposition — leaner landing pages, topic-split guides, accuracy pass)
+
+- **Root README decomposed (551 → 107 lines)** into a lean, navigable landing page plus nine linked
+  topic docs under `docs/guide/` (why-and-design, guarantees-and-verification, workspace-map,
+  comparisons, repository-structure, status-and-roadmap, decisions-and-reading-order, glossary,
+  contributing-and-provenance), each with a ToC and back-nav. No content lost — relocated and cross-linked.
+- **Tooling/experiment READMEs decomposed:** `tools/llm-harness/README.md` (570 → 167) split into
+  MODEL-ACQUISITION / TERMUX-SETUP / GROK-HARNESS; `experiments/README.md` (263 → 84) with a new
+  KC2-RUNBOOK; accuracy fixes (harness module map, KC-2 satisfied-kill-criterion status, and the
+  `scripts/README.md` gate table corrected from 11 to the real 26 rows).
+- **50 crate READMEs** given a uniform shape and `docs/api-index/INDEX.md#<crate>` nav, with grounded
+  accuracy fixes (mycelium-mlir E25 surface, mir-passes fn names, bench module paths, std-collections `foldable()`).
+- **docs/ reference + spec + wiki** nav footers, ToCs, and AOT-status accuracy; synced two stale
+  decision-status references to the authoritative RFC bodies (RFC-0025 and RFC-0030 are **Enacted**,
+  matched to their Status fields — no upgrade past basis).
+- **Tooling:** `scripts/doc_currency.py` now reads the repository-structure tree from its new home
+  `docs/guide/repository-structure.md` (README fallback retained); Node upgraded 18 to 22 so the
+  `markdownlint-cli2` gate runs (was graceful-skip) — all 432 docs lint clean.
+
+Verified: `markdown.sh` (432 docs, 0 errors), `links.sh`, `doc_refs_check.py`, and `doc_currency.py` all green.
+
 ### Added (2026-06-30: E25-1 staging-tier close-out — dynamic-VSA JIT, dialect Construct/Match/Swap, unified mutant-witnessed differential)
 
 - **M-855 — JIT for dynamic VSA/HDC workloads (PR #848, RFC-0039 §6).** Runtime-specialized JIT
