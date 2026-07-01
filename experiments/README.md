@@ -80,5 +80,35 @@ See [`KC2-RUNBOOK.md`](KC2-RUNBOOK.md) for the full commands:
    edit-to-fix iterations, plus the primer/model matrix and the desktop-GPU containerised path.
 4. **Capture results** — commit the JSON report + summary + harness reports to your branch.
 
+## Third-party license note: the optional `gpu` dependency-group
+
+**Disclosure (never-silent, G2) — not part of the Rust `THIRD-PARTY-LICENSES.md` scope.** The
+Rust kernel's dependency tree is 100% permissive (MIT/Apache-2.0/BSD/ISC/Unicode/Unlicense/CC0/
+MPL-file-level — `cargo deny check licenses` is green, see `THIRD-PARTY-LICENSES.md` at the repo
+root). This directory's optional Python `gpu` dependency-group (`[dependency-groups].gpu` in
+`experiments/pyproject.toml` — `torch` and `matplotlib`, opted into via `uv sync --group gpu`) is a
+different case: on Linux/Windows, `torch`'s CUDA build transitively pulls a set of
+**NVIDIA-proprietary** CUDA runtime packages (`nvidia-cublas`, `nvidia-cuda-runtime`,
+`nvidia-cuda-cupti`, `nvidia-cuda-nvrtc`, `nvidia-cufft`, `nvidia-cusolver`, `nvidia-cusparse`,
+`nvidia-nvjitlink`, and related `nvidia-*` wheels — see the pinned versions in
+`experiments/uv.lock`), distributed under **NVIDIA's own EULA** — **not** an OSI-approved
+open-source license.
+
+Scope of the exposure, stated plainly:
+
+- **Opt-in only.** The base `experiments` install (`uv sync`, `uv sync --group dev`) never touches
+  these packages — they land only if you explicitly run `uv sync --group gpu`.
+- **Experiments-only.** This dependency-group exists solely for the `vsa_bounds` GPU-accelerated
+  sweep (M-832) and similar local measurement harnesses under `experiments/`. It is not imported
+  by, linked against, or shipped with any Mycelium kernel/spore artifact — the `mycelium-*` Rust
+  crates and the `.myc` stdlib have no dependency on it.
+- **Not redistributed.** Nothing under this dependency-group is bundled into a Mycelium release
+  artifact; a contributor who opts in is installing NVIDIA's own binaries locally, under NVIDIA's
+  own terms, for their own experiment run.
+
+If you opt into `--group gpu`, you accept NVIDIA's EULA for those packages directly (`uv`/`pip`
+print the package source at install time; NVIDIA publishes its CUDA EULA alongside each package).
+This note exists so that opt-in is an *informed* one, not a silent one.
+
 ---
 [Back to `tools/llm-harness/README.md`](../tools/llm-harness/README.md)
