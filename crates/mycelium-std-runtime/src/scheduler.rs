@@ -15,7 +15,12 @@
 //! `SchedulerError`, and the `*_STRENGTH` guarantee constants) so the M-859 bench and any other
 //! consumer compile unchanged. See `mycelium-sched`'s crate docs for the full relocation
 //! rationale and the resulting dependency graph.
+//!
+//! **M-864:** the former `SCHEDULER_BACKPRESSURE_STRENGTH` re-export is dropped — the demand-signalled
+//! backpressure bound it tagged was removed (it was the cause of a reproduced nested-submission
+//! deadlock; the pool queue is now unbounded, memory bounded by batch size). See `mycelium-sched`'s
+//! scheduler docs and DN-67.
 pub use mycelium_sched::scheduler::{
-    Scheduler, SchedulerError, StealDecision, StealPolicy, SCHEDULER_BACKPRESSURE_STRENGTH,
-    SCHEDULER_LIVENESS_STRENGTH, SCHEDULER_RT2_STRENGTH, STEAL_POLICY_STRENGTH,
+    Scheduler, SchedulerError, StealDecision, StealPolicy, SCHEDULER_LIVENESS_STRENGTH,
+    SCHEDULER_RT2_STRENGTH, STEAL_POLICY_STRENGTH,
 };

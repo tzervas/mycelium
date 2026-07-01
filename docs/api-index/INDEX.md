@@ -594,20 +594,20 @@
 | `mycelium_interp::EffectBudgetExhausted` | struct | `crates/mycelium-interp/src/budget.rs:114` | Exceeding a budget — an **explicit, graceful** structured error (RFC-0014 §4.5 I4), never a hang / |
 | `mycelium_interp::EffectKind` | enum | `crates/mycelium-interp/src/budget.rs:27` | A closed kernel of effect **kinds** (RFC-0014 §4.5 I3) plus user-declared names. |
 | `mycelium_interp::Escalation` | enum | `crates/mycelium-interp/src/supervise.rs:135` | A supervisor escalated: a restart cascade hit a bound and the supervisor itself fails (its own |
-| `mycelium_interp::EvalError` | enum | `crates/mycelium-interp/src/lib.rs:140` | Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2). |
-| `mycelium_interp::IdentitySwapEngine` | struct | `crates/mycelium-interp/src/swap.rs:35` | The trivial swap engine: a swap whose `target` equals the source `Repr` is the identity — exactly |
-| `mycelium_interp::Interpreter` | struct | `crates/mycelium-interp/src/lib.rs:319` | The reference interpreter: a primitive registry + a swap engine. |
-| `mycelium_interp::Interpreter::eval` | fn | `crates/mycelium-interp/src/lib.rs:527` | Evaluate `node` to a **representation** value by iterating step to a normal |
-| `mycelium_interp::Interpreter::eval_core` | fn | `crates/mycelium-interp/src/lib.rs:539` | Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data |
-| `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:339` | Build an interpreter with a custom prim registry and swap engine (e.g. |
-| `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:356` | The registered primitive names (for tooling/EXPLAIN). |
-| `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:364` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
-| `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:349` | Override the step budget. |
+| `mycelium_interp::EvalError` | enum | `crates/mycelium-interp/src/lib.rs:142` | Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2). |
+| `mycelium_interp::IdentitySwapEngine` | struct | `crates/mycelium-interp/src/swap.rs:39` | The trivial swap engine: a swap whose `target` equals the source `Repr` is the identity — exactly |
+| `mycelium_interp::Interpreter` | struct | `crates/mycelium-interp/src/lib.rs:332` | The reference interpreter: a primitive registry + a swap engine. |
+| `mycelium_interp::Interpreter::eval` | fn | `crates/mycelium-interp/src/lib.rs:542` | Evaluate `node` to a **representation** value by iterating step to a normal |
+| `mycelium_interp::Interpreter::eval_core` | fn | `crates/mycelium-interp/src/lib.rs:554` | Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data |
+| `mycelium_interp::Interpreter::new` | fn | `crates/mycelium-interp/src/lib.rs:354` | Build an interpreter with a custom prim registry and swap engine (e.g. |
+| `mycelium_interp::Interpreter::prim_names` | fn | `crates/mycelium-interp/src/lib.rs:371` | The registered primitive names (for tooling/EXPLAIN). |
+| `mycelium_interp::Interpreter::step` | fn | `crates/mycelium-interp/src/lib.rs:379` | Perform exactly one small-step reduction on `node` (the `⟶` relation above). |
+| `mycelium_interp::Interpreter::with_fuel` | fn | `crates/mycelium-interp/src/lib.rs:364` | Override the step budget. |
 | `mycelium_interp::PrimRegistry` | struct | `crates/mycelium-interp/src/prims.rs:54` | The name→implementation table the interpreter dispatches `Op` nodes through. |
 | `mycelium_interp::RestartIntensity` | struct | `crates/mycelium-interp/src/supervise.rs:125` | **Max-restart-intensity** for `reclaim` supervision (RFC-0008 §4.7; Erlang/OTP, Research Record 05 |
-| `mycelium_interp::Step` | enum | `crates/mycelium-interp/src/lib.rs:130` | The result of one small-step attempt on a node. |
+| `mycelium_interp::Step` | enum | `crates/mycelium-interp/src/lib.rs:132` | The result of one small-step attempt on a node. |
 | `mycelium_interp::Supervisor` | struct | `crates/mycelium-interp/src/supervise.rs:179` | A `reclaim` **supervisor** (RFC-0008 §4.7; RT4/RT7): it restarts a failed child under a *bounded* |
-| `mycelium_interp::SwapEngine` | trait | `crates/mycelium-interp/src/swap.rs:24` | Evaluates a `Swap` node. |
+| `mycelium_interp::SwapEngine` | trait | `crates/mycelium-interp/src/swap.rs:28` | Evaluates a `Swap` node. |
 | `mycelium_interp::TaskOutcome` | enum | `crates/mycelium-interp/src/supervise.rs:94` | The **explicit, additive result of running a task** (RFC-0014 I1 lifted across the task boundary, |
 | `mycelium_interp::budget` | mod | `crates/mycelium-interp/src/lib.rs:109` | — |
 | `mycelium_interp::budget::Budgets::consume` | fn | `crates/mycelium-interp/src/budget.rs:183` | Consume `amount` of `kind`'s budget. |
@@ -1028,7 +1028,7 @@
 | `mycelium_mlir::BitnetDotKernel` | struct | `crates/mycelium-mlir/src/bitnet.rs:281` | A compiled, in-process BitNet dot kernel: the `.so` (in a per-artifact temp dir, cleaned on drop), |
 | `mycelium_mlir::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:123` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
 | `mycelium_mlir::ColonyError` | enum | `crates/mycelium-mlir/src/runtime.rs:347` | Why running a `colony` through the concurrent executor refused — **always explicit, never a silent |
-| `mycelium_mlir::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:2723` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
+| `mycelium_mlir::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:2731` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
 | `mycelium_mlir::CrossBackendGate` | struct | `crates/mycelium-mlir/src/vr4.rs:146` | The full VR-4 cross-backend gate result for one program: a [`BackendStage`] for **every** backend. |
 | `mycelium_mlir::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:113` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
 | `mycelium_mlir::DegradeReason` | enum | `crates/mycelium-mlir/src/accel.rs:127` | Why the reference path was chosen instead of the accelerator — the recorded, inspectable basis for |
@@ -1134,9 +1134,9 @@
 | `mycelium_mlir::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:445` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
 | `mycelium_mlir::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:451` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
 | `mycelium_mlir::llvm` | mod | `crates/mycelium-mlir/src/lib.rs:65` | — |
-| `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/llvm.rs:2733` | Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}` |
-| `mycelium_mlir::llvm::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:2767` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
-| `mycelium_mlir::llvm::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:2820` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
+| `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/llvm.rs:2741` | Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}` |
+| `mycelium_mlir::llvm::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:2775` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
+| `mycelium_mlir::llvm::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:2828` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
 | `mycelium_mlir::mode` | mod | `crates/mycelium-mlir/src/lib.rs:66` | — |
 | `mycelium_mlir::mode::ExecMode::ALL:` | const | `crates/mycelium-mlir/src/mode.rs:77` | Every named mode, in a stable order — for tooling, differential parameterization, and an |
 | `mycelium_mlir::mode::ExecMode::is_always_available` | fn | `crates/mycelium-mlir/src/mode.rs:95` | Whether this mode can run **without an external toolchain**. |
@@ -1907,7 +1907,7 @@
 | `mycelium_std_runtime::dataflow::Step` | enum | `crates/mycelium-std-runtime/src/dataflow.rs:44` | One non-blocking step of a communicating task. |
 | `mycelium_std_runtime::dataflow::SweepDir` | enum | `crates/mycelium-std-runtime/src/dataflow.rs:64` | The order a sweep visits still-pending tasks. |
 | `mycelium_std_runtime::dataflow::run_dataflow` | fn | `crates/mycelium-std-runtime/src/dataflow.rs:121` | Sweep `tasks` cooperatively until all resolve, or return [`Deadlock`] on a no-progress sweep. |
-| `mycelium_std_runtime::dataflow::run_dataflow_scheduled` | fn | `crates/mycelium-std-runtime/src/dataflow.rs:167` | As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool** (M-709) |
+| `mycelium_std_runtime::dataflow::run_dataflow_scheduled` | fn | `crates/mycelium-std-runtime/src/dataflow.rs:186` | As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool** |
 | `mycelium_std_runtime::guarantee_matrix` | mod | `crates/mycelium-std-runtime/src/lib.rs:78` | — |
 | `mycelium_std_runtime::guarantee_matrix::GaugeRow` | struct | `crates/mycelium-std-runtime/src/guarantee_matrix.rs:10` | One row in the guarantee matrix. |
 | `mycelium_std_runtime::network` | mod | `crates/mycelium-std-runtime/src/lib.rs:79` | — |
@@ -1981,12 +1981,12 @@
 | `mycelium_std_runtime::supervision::CancelTree::token` | fn | `crates/mycelium-std-runtime/src/supervision.rs:65` | This node's cooperative cancel token (clones share the same flag). |
 | `mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH:` | const | `crates/mycelium-std-runtime/src/supervision.rs:32` | Guarantee strength for cancellation propagation + explicit outcome collection. |
 | `mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH:` | const | `crates/mycelium-std-runtime/src/supervision.rs:35` | Guarantee strength for the restart bound (inherited from the M-356 [`Supervisor`]). |
-| `mycelium_std_runtime::supervision::SupervisedFailure` | enum | `crates/mycelium-std-runtime/src/supervision.rs:180` | Why a supervised child run ended in failure — always explicit (G2). |
-| `mycelium_std_runtime::supervision::SupervisedRun` | struct | `crates/mycelium-std-runtime/src/supervision.rs:164` | The result of supervising a restartable child to resolution or escalation. |
-| `mycelium_std_runtime::supervision::SupervisionAction` | enum | `crates/mycelium-std-runtime/src/supervision.rs:143` | What a supervisor did about one child failure — a reified, inspectable action (EXPLAIN; no black |
-| `mycelium_std_runtime::supervision::SupervisionRecord` | struct | `crates/mycelium-std-runtime/src/supervision.rs:153` | One reified supervision decision — the EXPLAIN record (RFC-0008 §4.7; ADR-006: selections are |
-| `mycelium_std_runtime::supervision::run_supervised` | fn | `crates/mycelium-std-runtime/src/supervision.rs:113` | Run `tasks` on the OS-thread pool under a shared [`CancelToken`], collecting **every** child's |
-| `mycelium_std_runtime::supervision::supervise_with_restart` | fn | `crates/mycelium-std-runtime/src/supervision.rs:198` | Run a restartable child under a live [`Supervisor`] (M-356) until it succeeds or the supervisor |
+| `mycelium_std_runtime::supervision::SupervisedFailure` | enum | `crates/mycelium-std-runtime/src/supervision.rs:190` | Why a supervised child run ended in failure — always explicit (G2). |
+| `mycelium_std_runtime::supervision::SupervisedRun` | struct | `crates/mycelium-std-runtime/src/supervision.rs:174` | The result of supervising a restartable child to resolution or escalation. |
+| `mycelium_std_runtime::supervision::SupervisionAction` | enum | `crates/mycelium-std-runtime/src/supervision.rs:153` | What a supervisor did about one child failure — a reified, inspectable action (EXPLAIN; no black |
+| `mycelium_std_runtime::supervision::SupervisionRecord` | struct | `crates/mycelium-std-runtime/src/supervision.rs:163` | One reified supervision decision — the EXPLAIN record (RFC-0008 §4.7; ADR-006: selections are |
+| `mycelium_std_runtime::supervision::run_supervised` | fn | `crates/mycelium-std-runtime/src/supervision.rs:120` | Run `tasks` on the OS-thread pool under a shared [`CancelToken`], collecting **every** child's |
+| `mycelium_std_runtime::supervision::supervise_with_restart` | fn | `crates/mycelium-std-runtime/src/supervision.rs:208` | Run a restartable child under a live [`Supervisor`] (M-356) until it succeeds or the supervisor |
 | `mycelium_std_runtime::task` | mod | `crates/mycelium-std-runtime/src/lib.rs:86` | — |
 | `mycelium_std_runtime::task::Deadlock` | struct | `crates/mycelium-std-runtime/src/task.rs:97` | Deadlock descriptor: returned when a scope cannot make progress. |
 | `mycelium_std_runtime::task::Poll` | enum | `crates/mycelium-std-runtime/src/task.rs:75` | Poll result for an async task step. |
@@ -3815,7 +3815,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_interp::supervise::TaskOutcome` | definition not found via regex heuristic (kind='fn', name='TaskOutcome') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::supervise::TaskOutcome` | definition not found via regex heuristic (kind='fn', name='TaskOutcome') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::supervise::TaskOutcome` | dedup-alias: same definition as `mycelium_interp::TaskOutcome` at crates/mycelium-interp/src/supervise.rs:94 — one canonical row kept |
-| `mycelium_interp::swap::IdentitySwapEngine` | dedup-alias: same definition as `mycelium_interp::IdentitySwapEngine` at crates/mycelium-interp/src/swap.rs:35 — one canonical row kept |
+| `mycelium_interp::swap::IdentitySwapEngine` | dedup-alias: same definition as `mycelium_interp::IdentitySwapEngine` at crates/mycelium-interp/src/swap.rs:39 — one canonical row kept |
 | `mycelium_interp::swap::IdentitySwapEngine::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::swap::IdentitySwapEngine::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::swap::IdentitySwapEngine::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
@@ -3826,7 +3826,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_interp::swap::IdentitySwapEngine::swap` | definition not found via regex heuristic (kind='fn', name='swap') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::swap::IdentitySwapEngine::swap` | definition not found via regex heuristic (kind='fn', name='swap') — possibly macro-generated or cfg-gated |
 | `mycelium_interp::swap::IdentitySwapEngine::swap` | definition not found via regex heuristic (kind='fn', name='swap') — possibly macro-generated or cfg-gated |
-| `mycelium_interp::swap::SwapEngine` | dedup-alias: same definition as `mycelium_interp::SwapEngine` at crates/mycelium-interp/src/swap.rs:24 — one canonical row kept |
+| `mycelium_interp::swap::SwapEngine` | dedup-alias: same definition as `mycelium_interp::SwapEngine` at crates/mycelium-interp/src/swap.rs:28 — one canonical row kept |
 | `mycelium_interp::swap::SwapEngine::swap` | definition not found via regex heuristic (kind='fn', name='swap') — possibly macro-generated or cfg-gated |
 | `mycelium_l1::ambient::AmbientError` | dedup-alias: same definition as `mycelium_l1::AmbientError` at crates/mycelium-l1/src/ambient.rs:51 — one canonical row kept |
 | `mycelium_l1::ambient::AmbientError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4834,7 +4834,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::llvm::AotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::llvm::AotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::llvm::AotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_mlir::llvm::CompiledArtifact` | dedup-alias: same definition as `mycelium_mlir::CompiledArtifact` at crates/mycelium-mlir/src/llvm.rs:2723 — one canonical row kept |
+| `mycelium_mlir::llvm::CompiledArtifact` | dedup-alias: same definition as `mycelium_mlir::CompiledArtifact` at crates/mycelium-mlir/src/llvm.rs:2731 — one canonical row kept |
 | `mycelium_mlir::llvm::emit_llvm_ir` | dedup-alias: same definition as `mycelium_mlir::emit_llvm_ir` at crates/mycelium-mlir/src/llvm.rs:2176 — one canonical row kept |
 | `mycelium_mlir::mode::ExecMode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::mode::ExecMode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -6397,7 +6397,6 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_runtime::region::ScopeNodeId::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::region::ScopeNodeId::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::region::ScopeTree::new` | dedup-alias: same definition as `mycelium_std_runtime::region::Region::new` at crates/mycelium-std-runtime/src/region.rs:190 — one canonical row kept |
-| `mycelium_std_runtime::scheduler::SCHEDULER_BACKPRESSURE_STRENGTH:` | definition not found via regex heuristic (kind='const', name='SCHEDULER_BACKPRESSURE_STRENGTH:') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH:` | definition not found via regex heuristic (kind='const', name='SCHEDULER_LIVENESS_STRENGTH:') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH:` | definition not found via regex heuristic (kind='const', name='SCHEDULER_RT2_STRENGTH:') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::scheduler::Scheduler` | definition not found via regex heuristic (kind='struct', name='Scheduler') — possibly macro-generated or cfg-gated |

@@ -5859,7 +5859,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 140,
+      "line": 142,
       "summary": "Why evaluation could not proceed (always explicit — the interpreter is never silent; SC-3/G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5870,7 +5870,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/swap.rs",
-      "line": 35,
+      "line": 39,
       "summary": "The trivial swap engine: a swap whose `target` equals the source `Repr` is the identity — exactly",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5881,7 +5881,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 319,
+      "line": 332,
       "summary": "The reference interpreter: a primitive registry + a swap engine.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5892,7 +5892,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 527,
+      "line": 542,
       "summary": "Evaluate `node` to a **representation** value by iterating step to a normal",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5903,7 +5903,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 539,
+      "line": 554,
       "summary": "Evaluate `node` to a [`CoreValue`] — a representation value **or** a data value (the r3 data",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5914,7 +5914,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 339,
+      "line": 354,
       "summary": "Build an interpreter with a custom prim registry and swap engine (e.g.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5925,7 +5925,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 356,
+      "line": 371,
       "summary": "The registered primitive names (for tooling/EXPLAIN).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5936,7 +5936,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 364,
+      "line": 379,
       "summary": "Perform exactly one small-step reduction on `node` (the `⟶` relation above).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5947,7 +5947,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp::Interpreter",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 349,
+      "line": 364,
       "summary": "Override the step budget.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -5980,7 +5980,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/lib.rs",
-      "line": 130,
+      "line": 132,
       "summary": "The result of one small-step attempt on a node.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6002,7 +6002,7 @@
       "crate": "mycelium-interp",
       "module": "mycelium_interp",
       "file": "crates/mycelium-interp/src/swap.rs",
-      "line": 24,
+      "line": 28,
       "summary": "Evaluates a `Swap` node.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10358,7 +10358,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2723,
+      "line": 2731,
       "summary": "A compiled native artifact for a bit/trit-subset program: the executable on disk (in a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11524,7 +11524,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm::CompiledArtifact",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2733,
+      "line": 2741,
       "summary": "Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}`",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11535,7 +11535,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2767,
+      "line": 2775,
       "summary": "Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`)",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -11546,7 +11546,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir::llvm",
       "file": "crates/mycelium-mlir/src/llvm.rs",
-      "line": 2820,
+      "line": 2828,
       "summary": "Compile the bit/trit-subset program to a native executable, run it once, and read the result",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18817,8 +18817,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::dataflow",
       "file": "crates/mycelium-std-runtime/src/dataflow.rs",
-      "line": 167,
-      "summary": "As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool** (M-709)",
+      "line": 186,
+      "summary": "As [`run_dataflow`], but each sweep's independent polls run **across the OS-thread pool**",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19631,7 +19631,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 180,
+      "line": 190,
       "summary": "Why a supervised child run ended in failure — always explicit (G2).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19642,7 +19642,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 164,
+      "line": 174,
       "summary": "The result of supervising a restartable child to resolution or escalation.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19653,7 +19653,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 143,
+      "line": 153,
       "summary": "What a supervisor did about one child failure — a reified, inspectable action (EXPLAIN; no black",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19664,7 +19664,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 153,
+      "line": 163,
       "summary": "One reified supervision decision — the EXPLAIN record (RFC-0008 §4.7; ADR-006: selections are",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19675,7 +19675,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 113,
+      "line": 120,
       "summary": "Run `tasks` on the OS-thread pool under a shared [`CancelToken`], collecting **every** child's",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19686,7 +19686,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision",
       "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 198,
+      "line": 208,
       "summary": "Run a restartable child under a live [`Supervisor`] (M-356) until it succeeds or the supervisor",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -29580,7 +29580,7 @@
     },
     {
       "symbol": "mycelium_interp::swap::IdentitySwapEngine",
-      "reason": "dedup-alias: same definition as `mycelium_interp::IdentitySwapEngine` at crates/mycelium-interp/src/swap.rs:35 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_interp::IdentitySwapEngine` at crates/mycelium-interp/src/swap.rs:39 — one canonical row kept"
     },
     {
       "symbol": "mycelium_interp::swap::IdentitySwapEngine::clone",
@@ -29624,7 +29624,7 @@
     },
     {
       "symbol": "mycelium_interp::swap::SwapEngine",
-      "reason": "dedup-alias: same definition as `mycelium_interp::SwapEngine` at crates/mycelium-interp/src/swap.rs:24 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_interp::SwapEngine` at crates/mycelium-interp/src/swap.rs:28 — one canonical row kept"
     },
     {
       "symbol": "mycelium_interp::swap::SwapEngine::swap",
@@ -33656,7 +33656,7 @@
     },
     {
       "symbol": "mycelium_mlir::llvm::CompiledArtifact",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::CompiledArtifact` at crates/mycelium-mlir/src/llvm.rs:2723 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::CompiledArtifact` at crates/mycelium-mlir/src/llvm.rs:2731 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::llvm::emit_llvm_ir",
@@ -39905,10 +39905,6 @@
     {
       "symbol": "mycelium_std_runtime::region::ScopeTree::new",
       "reason": "dedup-alias: same definition as `mycelium_std_runtime::region::Region::new` at crates/mycelium-std-runtime/src/region.rs:190 — one canonical row kept"
-    },
-    {
-      "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_BACKPRESSURE_STRENGTH:",
-      "reason": "definition not found via regex heuristic (kind='const', name='SCHEDULER_BACKPRESSURE_STRENGTH:') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH:",

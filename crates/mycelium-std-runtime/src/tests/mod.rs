@@ -8,8 +8,10 @@
 //! (see `src/scheduler.rs`), so its behavior is exercised by `mycelium-sched`'s own test suite.
 
 pub mod composition;
+pub mod dataflow;
 pub mod network;
 pub mod rc;
 pub mod reclamation;
 pub mod region;
 pub mod scope_region;
+pub mod supervision;

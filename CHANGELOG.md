@@ -8,6 +8,71 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-07-01: M-864 — persistent bounded work-stealing pool for the Scheduler, nested-safe submission)
+
+- **`Scheduler::run_indexed` dispatches onto a persistent, process-wide pool (`mycelium_sched::pool`),
+  not fresh OS threads per call.** The pool is created once, lazily, sized to
+  `available_parallelism()`, and reused for the life of the process — including across **nested**
+  `run_indexed` calls (a job that itself calls `run_indexed` again). A caller blocked on its own
+  batch's completion **helps** drain the shared queue (`Pool::help_while`, the Cilk/TBB/Rayon
+  work-helping pattern) rather than parking. The batch's lanes are **populated up front and never
+  bare-block** (the queue is unbounded — no backpressure), so `help_while` is the *only* wait on any
+  batch's critical path: the structural reason a **fixed**-size pool never deadlocks under arbitrarily
+  deep nesting. Tag: **Empirical** — validated by **forced-low-worker-count** nested stress tests
+  (`P ∈ {1,2,3,4}`, incl. the `[15,15,6]` shape) that *hang on the pre-fix code and pass on this one*,
+  under a wall-clock timeout, plus global-pool stress + a Linux thread-count regression witness; not a
+  mechanized proof (VR-5). This removes the resource concern M-860/M-862 both had to work around by
+  capping their own parallelism to a single, non-nested, top-level batch.
+- **Sound-on-arrival via an adversarial deadlock review (same day):** the *first* cut of this pool
+  kept M-861's `capacity` backpressure, whose feeder bare-blocked *before* help-stealing — a real
+  nested-submission deadlock at `width > capacity + P` (reproduced), plus a panicking job that hung
+  the join and killed a pool worker. Both fixed at the root before landing: the **backpressure/
+  `capacity` bound is removed** (it was the deadlock cause and a non-normative impl detail per DN-61
+  §A.2 — the pool queue is now unbounded, memory bounded by the batch's job count), and the join is
+  **panic-safe** (`std::panic::catch_unwind` per job keeps the persistent worker alive; the first job
+  panic re-raises at the join, `thread::scope`-style; an RAII drop-guard decrements the batch
+  countdown on every unwind path). The now-false `SCHEDULER_BACKPRESSURE_STRENGTH` (`Exact`) constant
+  and its `mycelium-std-runtime` re-export are **removed** rather than left as a stale claim (VR-5);
+  `Scheduler::capacity` / `with_workers(_, capacity)` remain for source compatibility but no longer
+  bound anything (documented, never-silent).
+- **Honest limit (never-silent, VR-5): bounded *progress*, not bounded *stack*.** `help_while` pops
+  the shared queue indiscriminately, so under **deep-AND-wide** low-`P` nesting a single OS thread can
+  stack help-steal frames from many sibling batches (~`O(w^(d-1))`) → a **stack overflow, not a
+  hang**. So nested `run_indexed` is deadlock-free / panic-safe / deterministic at any depth but only
+  **stack-safe for moderate depth×width**. The boundary was *measured* (DN-67 §3.4 table: e.g. at
+  forced `P=1`, depth 5 completes at every tested width but depth 6 overflows at width 4), and a
+  characterizing test (`[4,4,4,4]`, well inside the safe region) documents it. Current consumers
+  (M-860/M-862) submit a single non-nested batch, so they are trivially safe. The `O(depth)`-stack
+  leapfrogging fix is the tracked follow-up **M-868**.
+- **Breaking API change, ratified: `run_indexed` now requires `F: Send + 'static` / `T: Send +
+  'static`** (previously just `Send`, borrowing freely via the old `std::thread::scope`). A persistent
+  pool's worker threads outlive any single call, so a job can no longer safely borrow from the
+  caller's stack frame. Ratified in new **`docs/notes/DN-67-Persistent-Work-Stealing-Pool.md`**
+  (`Draft`), which also carries the full caller-by-caller audit and the deadlock-freedom argument.
+- **Every current caller adjusted** (none needed `unsafe`; the crate stays
+  `#![forbid(unsafe_code)]`): `mycelium-mlir`'s M-860 `emit_llvm_ir_many_with_swap_mode` now clones
+  each `Node` per job instead of borrowing it (determinism unaffected — the content-hash sort still
+  runs over the original nodes first); `mycelium-interp`'s M-862 `eval_top_batch` now clones the
+  `Interpreter` once per batch behind an `Arc` and shares an `Arc<AtomicU64>` fuel counter — made cheap
+  by giving `Interpreter` `#[derive(Clone)]` (its `swap` field moves from `Box<dyn SwapEngine>` to
+  `Arc<dyn SwapEngine>`, and `SwapEngine`'s bound widens from `Sync` to `Send + Sync`). Two callers not
+  named in the M-864 issue's own body — found only by building the whole workspace, since
+  `mycelium-mlir` transitively depends on `mycelium-std-runtime` — needed the same treatment:
+  `dataflow::run_dataflow_scheduled` (M-711) now takes ownership of each still-pending task via
+  `mem::replace` with a transient placeholder for the duration of a sweep's parallel poll, restoring it
+  afterward; `supervision::run_supervised` (M-713) now clones its `CancelToken` per job (an
+  `Arc<AtomicBool>`-backed handle, so every clone still shares the same cancellation flag).
+- **`mycelium-std-runtime`'s inline tests extracted (M-797, as-touched):** `dataflow.rs` and
+  `supervision.rs`'s former inline `#[cfg(test)] mod tests` blocks move to `src/tests/dataflow.rs` /
+  `src/tests/supervision.rs`. The dataflow ownership-restore test is **strengthened** to assert the
+  exact total step count (so a wrong-slot restore that strands a task is caught even when it doesn't
+  deadlock), and the supervision cancel-token test is **honestly downgraded** to assert only the
+  deterministic shared-flag propagation (the cross-sibling-observation claim was scheduling-dependent;
+  `external_cancel_propagates_to_all_tasks` already covers per-job-clone flag-sharing deterministically).
+- M-860's byte-identical parallel-emit test and M-862's parallel-eval differential/determinism suites
+  are unmodified and re-verified green; `mycelium-sched` gains nested-recursion + **forced-low-`P`
+  deadlock** + **panic-safety** stress tests (30/30 total); `mycelium-std-runtime` stays 98/98 green.
+
 ### Added (2026-07-01: ADR-036 — dogfooding and public-release strategy ratified)
 
 - **ADR-036 — Dogfooding and Public-Release Strategy (`Accepted`, maintainer-ratified).** Fixes the
