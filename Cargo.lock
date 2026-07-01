@@ -275,6 +275,7 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-numerics",
+ "mycelium-sched",
 ]
 
 [[package]]
@@ -352,6 +353,14 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-l1",
+ "proptest",
+]
+
+[[package]]
+name = "mycelium-sched"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
  "proptest",
 ]
 
@@ -526,6 +535,7 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-interp",
+ "mycelium-sched",
  "mycelium-std-core",
  "proptest",
 ]
