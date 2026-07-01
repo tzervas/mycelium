@@ -658,8 +658,28 @@ fn overflow_refusal_is_three_way_honest() {
         "swap(100:ternary6 -> binary4) (out-of-range dec)",
         swap_node(tern(ts.clone()), Repr::Binary { width: 4 }),
     );
+    // **M-858 mutant witness (the swap-`dec` range boundary).** The `dec` range check in
+    // `emit_swap_int_to_bits` computes `hi = (1 << (n-1)) - 1` — for `binary4`, `B_4 = [-8, 7]`, so
+    // `hi = 7`. The value **8** is the *first* value past the boundary: the correct code refuses it
+    // (`8 > 7`), while every mutation that widens or shifts that bound (`n-1 → n+1`/`n/1`,
+    // `half-1 → half+1`/`half/1`) makes `8` wrongly *in-range* — so the MLIR-dialect artifact would
+    // return `Ok` instead of `Overflow`, and this case catches it (the far-out `100` case above does
+    // not, since it overflows every widened bound too). `8 = +1·9 + 0·3 − 1·1` over 3 trits (MSB-first),
+    // and `(4,3)` is a legal pair (`2^3 = 8 ≤ (3^3−1)/2 = 13`).
+    let swap_boundary_overflow = Case::certified(
+        "swap(8:ternary3 -> binary4) (boundary: first value past B_4 max 7)",
+        swap_node(
+            tern(vec![Trit::Pos, Trit::Zero, Trit::Neg]),
+            Repr::Binary { width: 4 },
+        ),
+    );
 
-    for case in [arith_overflow, mul_overflow, swap_overflow] {
+    for case in [
+        arith_overflow,
+        mul_overflow,
+        swap_overflow,
+        swap_boundary_overflow,
+    ] {
         let interp = interp_of(&case);
         assert!(
             interp.is_err(),
@@ -777,6 +797,66 @@ fn dialect_honestly_refuses_closures_and_recursion() {
             ),
             Err(e) => panic!("{label}: unexpected MLIR-dialect error: {e}"),
         }
+    }
+}
+
+/// **M-858 mutant witness (the Match arm-shape-consistency guard).** `lower_match_dialect` refuses a
+/// `Match` whose arms produce lanes of **different kind or width** (`a.lane.kind != kind ||
+/// a.lane.vals.len() != width`) — the block-argument "phi" that merges the arms needs a uniform
+/// shape, so a heterogeneous merge is an explicit, never-silent [`DialectError::Unsupported`] (G2).
+/// For a **well-typed** `Match` both operands are always false, so the equivalence corpus can't
+/// exercise this guard; this test builds a deliberately **same-kind, different-width** `Match`
+/// (`Binary{8}` arm vs `Binary{4}` arm) — exactly one operand true — so the guard's `||` is the load
+/// bearing operator: with `||` the dialect refuses (correct); a mutation to `&&` would let it fall
+/// through and emit a malformed phi (a silent mis-lowering), which this assertion catches. The
+/// interpreter runs such a `Match` fine (it returns only the taken arm), so the honest three-way
+/// reduces to "direct paths cover it, the dialect refuses the ill-shaped merge" — never a silent pass.
+#[test]
+fn dialect_refuses_a_match_with_inconsistent_arm_shapes() {
+    // A two-constructor tag-only type `Color = Red | Blue`, matched on `Red`. The two arms return
+    // lanes of the **same kind** (Binary) but **different width** (8 vs 4) — so `kind != kind` is
+    // false while `width_8 != width_4` is true: the `||`/`&&` distinction is observable here.
+    let col = color_registry();
+    let bin4 = Value::new(
+        Repr::Binary { width: 4 },
+        Payload::Bits(vec![true, false, true, false]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("4-bit binary value");
+    let node = Node::Match {
+        scrutinee: Box::new(Node::Construct {
+            ctor: col.ctor_ref("Color", 0).unwrap(), // Red
+            args: vec![],
+        }),
+        alts: vec![
+            Alt::Ctor {
+                ctor: col.ctor_ref("Color", 0).unwrap(), // Red -> Binary{8}
+                binders: vec![],
+                body: Node::Const(byte(A)),
+            },
+            Alt::Ctor {
+                ctor: col.ctor_ref("Color", 1).unwrap(), // Blue -> Binary{4}
+                binders: vec![],
+                body: Node::Const(bin4),
+            },
+        ],
+        default: None,
+    };
+
+    match mycelium_mlir::mlir_compile_and_run(&node) {
+        Err(DialectError::Unsupported(msg)) => {
+            assert!(
+                msg.contains("different kind or width") || msg.contains("same repr shape"),
+                "the refusal must name the arm-shape-consistency guard; got: {msg}"
+            );
+        }
+        // Compile-time refusal — reached before any toolchain is invoked, so there is NO
+        // `ToolchainMissing` escape here: the guard must fire even on a box without libMLIR.
+        Ok(v) => panic!(
+            "an inconsistent-arm-shape Match must be refused by the dialect (arm-shape guard), got {:?}",
+            v.payload()
+        ),
+        Err(e) => panic!("the arm-shape guard must refuse with Unsupported, got a different error: {e}"),
     }
 }
 
