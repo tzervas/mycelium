@@ -2257,6 +2257,83 @@ pub fn emit_llvm_ir_with_swap_mode(
     Ok(out)
 }
 
+// ─── parallel per-function/per-nodule codegen (M-860) ─────────────────────────────────────────
+
+/// Lower `nodes` — a batch of **independent** functions/nodules — in parallel across the native
+/// work-stealing [`Scheduler`](mycelium_std_runtime::scheduler::Scheduler) (M-861), returning one
+/// [`AotError`]-or-IR result per input, in the **same order as `nodes`**.
+///
+/// **Determinism (Exact by construction).** Each call to [`emit_llvm_ir_with_swap_mode`] is a pure
+/// function of its own `Node` — a fresh [`Ssa`]/[`Bbc`] counter pair starts at zero every time, and
+/// no lowering shares mutable state across nodes — so parallelizing the *computation* cannot change
+/// any individual node's emitted text. Two further guards make the *batch* result reproducible, not
+/// just "happens to work":
+/// - the batch is sorted by each node's [`mycelium_core::Node::content_hash`] (RFC-0001 §4.6 — a
+///   stable, α-normalized structural key, paired with the original index as a tie-break for two
+///   structurally-identical nodes) *before* being submitted, so **which job the scheduler dispatches
+///   in which slot** is a pure function of the batch's content, never of wall-clock/thread-arrival
+///   order;
+/// - [`Scheduler::run_indexed`](mycelium_std_runtime::scheduler::Scheduler::run_indexed) returns its
+///   outputs in **spawn order** (its RT2 differential contract — completion order and worker identity
+///   are unobservable through that API), and every result is then scattered back to its **original**
+///   `nodes` index.
+///
+/// So `emit_llvm_ir_many(nodes) == nodes.iter().map(emit_llvm_ir)` element-wise, byte-for-byte,
+/// regardless of worker count, steal schedule, or scheduling — asserted by
+/// [`tests::llvm::parallel_emit_matches_sequential_emit_byte_identical`]. The work-stealing pool is
+/// the same one M-861 landed for the runtime scheduler (zero new dependency — `mycelium-mlir`
+/// already depends on `mycelium-std-runtime`).
+///
+/// Uses the default swap-cert mode ([`SwapCertMode::Recheck`]); see
+/// [`emit_llvm_ir_many_with_swap_mode`] to select [`SwapCertMode::ReuseInterp`] for the whole batch.
+#[must_use]
+pub fn emit_llvm_ir_many(nodes: &[Node]) -> Vec<Result<String, AotError>> {
+    emit_llvm_ir_many_with_swap_mode(nodes, SwapCertMode::Recheck)
+}
+
+/// [`emit_llvm_ir_many`] under an explicit, whole-batch [`SwapCertMode`] (M-852). See
+/// [`emit_llvm_ir_many`]'s doc for the determinism contract (content-key-sorted work distribution,
+/// spawn-order scheduler results, original-index reassembly).
+#[must_use]
+pub fn emit_llvm_ir_many_with_swap_mode(
+    nodes: &[Node],
+    swap_mode: SwapCertMode,
+) -> Vec<Result<String, AotError>> {
+    use mycelium_std_runtime::scheduler::Scheduler;
+
+    if nodes.is_empty() {
+        return Vec::new();
+    }
+
+    // Stable work order: sort indices by (content_hash, original_index) — never a `HashMap`/set
+    // iteration order, never wall-clock/thread-arrival order (G2 — no incidental nondeterminism).
+    let mut order: Vec<usize> = (0..nodes.len()).collect();
+    let keys: Vec<mycelium_core::ContentHash> = nodes.iter().map(Node::content_hash).collect();
+    order.sort_by(|&a, &b| keys[a].cmp(&keys[b]).then(a.cmp(&b)));
+
+    // One pure job per node, submitted in content-key order; each job carries its ORIGINAL index so
+    // the scatter below can restore `nodes`' own order. `Scheduler::run_indexed` returns outputs in
+    // spawn order (RT2), so `computed` is in content-key order — the scatter, not the return order,
+    // is what pins the output to the original index.
+    let jobs: Vec<_> = order
+        .iter()
+        .map(|&i| move || (i, emit_llvm_ir_with_swap_mode(&nodes[i], swap_mode)))
+        .collect();
+    let computed: Vec<(usize, Result<String, AotError>)> =
+        Scheduler::new().run_indexed(jobs, None, None);
+
+    // Scatter back to original position — the output vector's order never depends on completion
+    // order or the content-key sort, only on `nodes`' own index (Exact; never-silent: every slot is
+    // populated exactly once, or this would panic rather than silently return a short/reordered Vec).
+    let mut out: Vec<Option<Result<String, AotError>>> = (0..nodes.len()).map(|_| None).collect();
+    for (i, r) in computed {
+        out[i] = Some(r);
+    }
+    out.into_iter()
+        .map(|slot| slot.expect("every index populated exactly once by the scatter above"))
+        .collect()
+}
+
 /// Emit each result element as its ASCII char via `@putchar` (one op per element — a transparent
 /// rendering of the computed lane, no opaque pass, RFC-0004 §6), then a trailing newline and `ret`.
 fn emit_result_line(kind: LaneKind, vals: &[Operand], ssa: &mut Ssa, out: &mut String) {

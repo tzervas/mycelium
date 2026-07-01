@@ -322,3 +322,104 @@ fn native_trit_mul_overflow_is_explicit() {
         Err(e) => panic!("unexpected AOT error: {e}"),
     }
 }
+
+// ─── M-860: parallel per-function codegen — byte-identical vs sequential ──────────────────────
+
+/// A multi-function batch: several distinct, independent programs (different prims/operands, so
+/// distinct content hashes → the content-key sort actually reorders the parallel work relative to
+/// input order, exercising the scatter-back-to-original-index path, not a no-op sort).
+fn multi_function_batch() -> Vec<Node> {
+    vec![
+        not_program(),
+        neg_program(),
+        binop(
+            "trit.add",
+            vec![Trit::Pos, Trit::Zero],
+            vec![Trit::Neg, Trit::Pos],
+        ),
+        binop(
+            "trit.sub",
+            vec![Trit::Zero, Trit::Pos],
+            vec![Trit::Pos, Trit::Neg],
+        ),
+        binop(
+            "trit.mul",
+            vec![Trit::Pos, Trit::Zero],
+            vec![Trit::Neg, Trit::Zero],
+        ),
+        Node::Const(binary(vec![true, false, false, true])),
+    ]
+}
+
+#[test]
+fn parallel_emit_matches_sequential_emit_byte_identical() {
+    let nodes = multi_function_batch();
+    let sequential: Vec<Result<String, AotError>> = nodes.iter().map(emit_llvm_ir).collect();
+    let parallel = emit_llvm_ir_many(&nodes);
+    assert_eq!(
+        parallel.len(),
+        sequential.len(),
+        "parallel batch must return exactly one result per input"
+    );
+    for (i, (p, s)) in parallel.iter().zip(sequential.iter()).enumerate() {
+        assert_eq!(
+            p, s,
+            "program #{i}: parallel emit diverged from sequential emit"
+        );
+    }
+}
+
+#[test]
+fn parallel_emit_output_order_is_input_order_not_content_hash_order() {
+    // A stronger check than the byte-equality above: the OUTPUT VEC's i-th element must be the i-th
+    // INPUT's result, not merely "the same multiset of results" (a scatter-by-completion-order bug
+    // would still pass a naive set-equality check but fail this).
+    let nodes = multi_function_batch();
+    let parallel = emit_llvm_ir_many(&nodes);
+    for (i, node) in nodes.iter().enumerate() {
+        assert_eq!(
+            parallel[i],
+            emit_llvm_ir(node),
+            "program #{i}: output position must match its own input's emission, not another \
+             program's (a scatter/reorder bug)"
+        );
+    }
+}
+
+#[test]
+fn parallel_emit_is_stable_under_repeated_runs() {
+    // Rerunning the parallel batch (fresh thread-pool scheduling each time) must not perturb the
+    // output — Exact by construction (M-860 DoD), not "usually agrees".
+    let nodes = multi_function_batch();
+    let first = emit_llvm_ir_many(&nodes);
+    for _ in 0..5 {
+        assert_eq!(emit_llvm_ir_many(&nodes), first);
+    }
+}
+
+#[test]
+fn parallel_emit_handles_an_empty_batch() {
+    let empty: Vec<Node> = Vec::new();
+    assert_eq!(
+        emit_llvm_ir_many(&empty),
+        Vec::<Result<String, AotError>>::new()
+    );
+}
+
+#[test]
+fn parallel_emit_preserves_a_refusal_at_its_original_index() {
+    // Mix a well-formed program with one that `emit_llvm_ir` refuses (a width mismatch); the
+    // refusal must land at its own index, not swallow or misplace the others.
+    let bad = Node::Op {
+        prim: "trit.add".into(),
+        args: vec![
+            Node::Const(ternary(vec![Trit::Pos, Trit::Zero])),
+            Node::Const(ternary(vec![Trit::Neg])),
+        ],
+    };
+    let nodes = vec![not_program(), bad, neg_program()];
+    let parallel = emit_llvm_ir_many(&nodes);
+    assert!(parallel[0].is_ok());
+    assert!(matches!(parallel[1], Err(AotError::WidthMismatch { .. })));
+    assert!(parallel[2].is_ok());
+}

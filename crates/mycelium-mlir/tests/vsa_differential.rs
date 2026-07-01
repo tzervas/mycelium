@@ -16,10 +16,20 @@
 //! `Payload::Hypervector` bit-exactly). A deliberately divergent lowering is caught (a mutation of the
 //! lowering diverges here), so a passing differential is meaningful, not vacuous.
 //!
-//! **The third (MLIR-dialect) leg honestly refuses VSA** (`DialectError::Unsupported` naming
-//! "Dense/VSA stay on the interpreter / direct-LLVM path", `dialect/native.rs`) — so the three-way
-//! reduces to a *two-way* (reference ≡ direct-LLVM) for VSA, never a faked third pass (VR-5/G2).
-//! [`vsa_const_is_refused_by_the_mlir_dialect_path`] asserts the refusal.
+//! **The MLIR-dialect leg (M-856b).** The **generic bit/trit `Node` path** still honestly refuses a
+//! VSA `Const` (`DialectError::Unsupported` naming "Dense/VSA stay on the interpreter / direct-LLVM
+//! path", `dialect/native.rs::const_lane`) — that boundary is permanent on both backends (VSA is
+//! lowered through the dedicated `VsaProgram` entry points, never the generic `Node` path);
+//! [`vsa_const_is_refused_by_the_mlir_dialect_path`] still asserts it. But `dialect::native::vsa`
+//! (M-856b) now provides a **dialect-native sibling** of `vsa_compile_and_run` over the *same*
+//! `VsaProgram` — covering `bind`/`unbind`/`bundle`/`permute`/`similarity` over all four
+//! 1.0.0-mandatory models — so the differential is a genuine **three-way** (reference ≡ direct-LLVM ≡
+//! dialect) over the existing small-dim corpus where libMLIR is provisioned — skip-graceful
+//! (`VsaAotError::ToolchainMissing`) where it is not, never a faked pass (VR-5/G2). See
+//! [`value_ops_dialect_matches_reference_and_direct_llvm`] /
+//! [`measurement_ops_dialect_matches_reference_bit_exact`]. Kept deliberately to the **existing**
+//! light small-dim corpus (no new heavy/large-dim VSA test infrastructure — the heavy GPU-scale
+//! mutant-durability pass stays the maintainer's follow-up, per the module doc above).
 //!
 //! **The capacity-bound parity case** (RFC-0039 §5.4): the native MAP-I `bundle` issues `Proven` **iff**
 //! the reference does (the checked `dim ≥ requiredDim` side-condition), and refuses
@@ -734,6 +744,206 @@ fn map_i_bundle_capacity_parity_proven_iff_reference() {
         None,
         "the reference also refuses a Proven bound at dim 64 (parity)"
     );
+}
+
+// ─── the MLIR-dialect leg (M-856b): reference ≡ direct-LLVM ≡ dialect ────────────────────────────
+
+/// Value ops: `mycelium-vsa` (reference) ≡ direct-LLVM ≡ **dialect**, over the existing small-dim
+/// corpus (every model × op) — a genuine three-way, libMLIR-gated (skip-graceful, never a faked
+/// pass). `ran` tracks non-vacuity (the M-725 `ran_mlir` discipline): kept **light** per the module
+/// doc — no new heavy corpus, just the existing light corpus run through one more (real) backend.
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn value_ops_dialect_matches_reference_and_direct_llvm() {
+    use mycelium_mlir::dialect::native::vsa::dialect_compile_and_run;
+    let mut ran = false;
+    for (i, (model, op, p)) in value_corpus().iter().enumerate() {
+        let payload = reference_payload(*model, *op, p);
+        let reference = reference_value(
+            *model,
+            *op,
+            p.dim,
+            payload,
+            p.items.len() as u64,
+            p.bundle_delta,
+        );
+        let direct = match vsa_compile_and_run(p) {
+            Ok(VsaResult::Value(v)) => *v,
+            Err(VsaAotError::ToolchainMissing(_)) => continue, // direct-LLVM env skip
+            other => panic!("case #{i} ({model:?} {op:?}): direct-LLVM unexpected: {other:?}"),
+        };
+        match dialect_compile_and_run(p) {
+            Ok(VsaResult::Value(dialect)) => {
+                ran = true;
+                assert_eq!(
+                    observable(&reference),
+                    observable(&dialect),
+                    "case #{i} ({model:?} {op:?}): reference vs dialect diverged"
+                );
+                assert_eq!(
+                    observable(&direct),
+                    observable(&dialect),
+                    "case #{i} ({model:?} {op:?}): direct-LLVM vs dialect diverged"
+                );
+            }
+            Ok(other) => panic!("case #{i}: expected a Value, got {other:?}"),
+            Err(VsaAotError::ToolchainMissing(_)) => continue, // dialect env skip
+            Err(e) => panic!("case #{i} ({model:?} {op:?}): dialect errored: {e}"),
+        }
+    }
+    assert!(
+        ran,
+        "non-vacuity: at least one corpus case must actually run through the dialect pipeline \
+         (libMLIR must be provisioned in this environment for the assertion above to mean anything)"
+    );
+}
+
+/// Measurement ops (`similarity`): reference ≡ direct-LLVM ≡ dialect, bit-exact, over every model.
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn measurement_ops_dialect_matches_reference_bit_exact() {
+    use mycelium_mlir::dialect::native::vsa::dialect_compile_and_run;
+    let mut ran = false;
+    for (i, (model, p)) in measurement_corpus().iter().enumerate() {
+        let reference = reference_similarity(*model, p);
+        let direct = match vsa_compile_and_run(p) {
+            Ok(VsaResult::Measurement(m)) => m,
+            Err(VsaAotError::ToolchainMissing(_)) => continue,
+            other => panic!("case #{i}: direct-LLVM unexpected: {other:?}"),
+        };
+        match dialect_compile_and_run(p) {
+            Ok(VsaResult::Measurement(dialect)) => {
+                ran = true;
+                assert_eq!(
+                    reference.to_bits(),
+                    dialect.to_bits(),
+                    "case #{i} ({model:?} similarity): reference vs dialect diverged"
+                );
+                assert_eq!(
+                    direct.to_bits(),
+                    dialect.to_bits(),
+                    "case #{i} ({model:?} similarity): direct-LLVM vs dialect diverged"
+                );
+            }
+            Ok(other) => panic!("case #{i}: expected a Measurement, got {other:?}"),
+            Err(VsaAotError::ToolchainMissing(_)) => continue,
+            Err(e) => panic!("case #{i}: dialect errored: {e}"),
+        }
+    }
+    assert!(
+        ran,
+        "non-vacuity: at least one corpus case must run through the dialect pipeline"
+    );
+}
+
+/// The dialect leg's FHRR `-0.0` phase-wrap edge, mirroring
+/// [`fhrr_negative_zero_phase_wraps_bit_exact`]: the dialect emitter uses `llvm.frem` (not
+/// `arith.remf`, which is MLIR's *IEEE remainder* — verified empirically to disagree with `fmod`;
+/// see `dialect::native::vsa`'s module doc), so it must preserve the `-0.0` sign exactly like the
+/// reference and the direct-LLVM path.
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn fhrr_negative_zero_phase_wraps_bit_exact_through_the_dialect() {
+    use mycelium_mlir::dialect::native::vsa::dialect_compile_and_run;
+    let neg_zero = vec![-0.0_f64];
+    let p = prog(
+        VsaCgOp::Bind,
+        VsaModelId::Fhrr,
+        vec![neg_zero.clone(), neg_zero],
+        None,
+        None,
+    );
+    let reference = Fhrr::new(1).bind(&[-0.0], &[-0.0]).unwrap();
+    match dialect_compile_and_run(&p) {
+        Ok(VsaResult::Value(dialect)) => {
+            let dialect_payload = match dialect.payload() {
+                Payload::Hypervector(h) => h.clone(),
+                other => panic!("expected a hypervector, got {other:?}"),
+            };
+            assert_eq!(
+                reference[0].to_bits(),
+                dialect_payload[0].to_bits(),
+                "FHRR -0.0 phase wrap must be bit-exact through the dialect too (ref={}, \
+                 dialect={})",
+                reference[0],
+                dialect_payload[0]
+            );
+        }
+        Err(VsaAotError::ToolchainMissing(_)) => {}
+        other => panic!("FHRR -0.0 bind (dialect) errored: {other:?}"),
+    }
+}
+
+/// The dialect leg's FHRR degenerate-bundle refusal, mirroring
+/// [`fhrr_degenerate_bundle_is_refused_by_the_executed_artifact`]: the `cf.cond_br` branch to the
+/// `DEGENERATE` sentinel must fire through the real compiled dialect artifact too, never an
+/// arbitrary phase (G2/SC-3).
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn fhrr_degenerate_bundle_is_refused_by_the_dialect_artifact() {
+    use mycelium_mlir::dialect::native::vsa::dialect_compile_and_run;
+    use std::f64::consts::{PI, TAU};
+    let opp = |t: f64| {
+        let u = (t + PI).rem_euclid(TAU);
+        if u > PI {
+            u - TAU
+        } else {
+            u
+        }
+    };
+    let a = phase(256, 7);
+    let b: Vec<f64> = a.iter().map(|&t| opp(t)).collect();
+    let p = prog(VsaCgOp::Bundle, VsaModelId::Fhrr, vec![a, b], None, None);
+    match dialect_compile_and_run(&p) {
+        Err(VsaAotError::DegenerateBundleComponent) => {}
+        Err(VsaAotError::ToolchainMissing(_)) => {}
+        other => panic!(
+            "FHRR degenerate bundle (dialect) must surface DegenerateBundleComponent, got {other:?}"
+        ),
+    }
+}
+
+/// The dialect leg carries the **same** MAP-I bundle capacity-parity discipline as direct-LLVM
+/// (RFC-0039 §5.4's capacity-bound parity case) — inherited for free from the shared
+/// `VsaProgram::validate` (DRY), asserted directly here so the parity is pinned on this leg too.
+#[cfg(feature = "mlir-dialect")]
+#[test]
+fn map_i_bundle_capacity_parity_proven_iff_reference_through_the_dialect() {
+    use mycelium_mlir::dialect::native::vsa::{dialect_compile_and_run, emit_vsa_mlir};
+    let items: Vec<Vec<f64>> = (1..=3).map(|s| bipolar(2048, s)).collect();
+    let p = prog(VsaCgOp::Bundle, VsaModelId::MapI, items, None, Some(1e-2));
+    match dialect_compile_and_run(&p) {
+        Ok(VsaResult::Value(dialect)) => {
+            assert_eq!(
+                dialect.meta().guarantee(),
+                GuaranteeStrength::Proven,
+                "sufficient dim must yield a Proven bundle through the dialect too"
+            );
+            let want = proven_capacity_bound(3, 2048, 1e-2).unwrap();
+            assert_eq!(
+                dialect.meta().bound(),
+                Some(&want),
+                "the dialect Proven bound must be the reference's checked capacity bound (DRY/VR-5)"
+            );
+        }
+        Err(VsaAotError::ToolchainMissing(_)) => return,
+        other => panic!("sufficient-dim MAP-I bundle (dialect) errored: {other:?}"),
+    }
+
+    let small_items: Vec<Vec<f64>> = (1..=3).map(|s| bipolar(64, s)).collect();
+    let small = prog(
+        VsaCgOp::Bundle,
+        VsaModelId::MapI,
+        small_items,
+        None,
+        Some(1e-2),
+    );
+    match emit_vsa_mlir(&small) {
+        Err(VsaAotError::InsufficientCapacity { items, dim, .. }) => {
+            assert_eq!((items, dim), (3, 64));
+        }
+        other => panic!("insufficient-dim MAP-I bundle (dialect) must be refused, got {other:?}"),
+    }
 }
 
 // ─── never-silent refusals: SBC/MAP-B + the carrier gate (G2) ────────────────────────────────────

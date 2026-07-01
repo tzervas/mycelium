@@ -351,8 +351,10 @@ impl DenseProgram {
     /// Validate the program against the same contract the reference enforces: a supported dtype, the
     /// un-quantized fragment, dim-consistent operands, and finite, exactly-on-grid input elements (and
     /// scale factor). Returns an explicit [`DenseAotError`] for any violation — never a silent coercion
-    /// (G2), exactly as `DenseSpace` refuses.
-    fn validate(&self) -> Result<(), DenseAotError> {
+    /// (G2), exactly as `DenseSpace` refuses. `pub(crate)` so the MLIR-dialect sibling emitter
+    /// (`dialect::native::dense`, M-856b) reuses the *same* validation — never a second, divergent copy
+    /// (DRY).
+    pub(crate) fn validate(&self) -> Result<(), DenseAotError> {
         // dtype gate — F16/F64 refused (matches DenseSpace::new).
         match self.dtype {
             ScalarKind::F32 | ScalarKind::Bf16 => {}
@@ -792,6 +794,30 @@ pub struct DenseArtifact {
 }
 
 impl DenseArtifact {
+    /// Build an artifact around an **already-compiled** executable — the MLIR-dialect sibling emitter
+    /// (`dialect::native::dense`, M-856b) compiles through its own pipeline (`mlir-opt` /
+    /// `mlir-translate` / `clang`, not `llc`/`clang`), then reuses this constructor so [`Self::run`]'s
+    /// read-back/reconstruct logic runs **verbatim** for both compiled paths — the two can never
+    /// silently diverge on how a result `Value` is stamped (DRY; VR-5). `pub(crate)`, and gated to
+    /// the `mlir-dialect` feature — its only caller — so a default (feature-off) build carries no
+    /// dead-code warning for a constructor that exists solely for that path.
+    #[cfg(feature = "mlir-dialect")]
+    pub(crate) fn from_binary(
+        dir: TmpDir,
+        bin: std::path::PathBuf,
+        op: DenseCgOp,
+        dim: u32,
+        dtype: ScalarKind,
+    ) -> Self {
+        DenseArtifact {
+            _dir: dir,
+            bin,
+            op,
+            dim,
+            dtype,
+        }
+    }
+
     /// Run the artifact and read its result back. A value op reconstructs a Dense [`Value`] carrying
     /// the reference's per-op guarantee tag; a measurement op returns a bare `f64`. A sentinel line
     /// (subnormal/overflow) is surfaced as an explicit [`DenseAotError`] — never a silent value (G2).

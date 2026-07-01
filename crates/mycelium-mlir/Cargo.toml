@@ -57,6 +57,10 @@ mycelium-interp = { path = "../mycelium-interp" }
 # reclamation-record contract the AOT tier emits the §9 audit trail into. Both are upstream of
 # `mlir` (they depend only on core / std-core / interp) — the dependency graph stays a DAG.
 mycelium-mir-passes = { path = "../mycelium-mir-passes" }
+# M-860: the parallel per-function/per-nodule AOT codegen (`emit_llvm_ir_many`) dispatches across
+# `mycelium_std_runtime::scheduler::Scheduler` — the M-861 work-stealing OS-thread pool — so it
+# reuses this existing dependency and adds no new one (maintainer decision 2026-07-01, grounded in
+# the flag against pulling in `rayon`).
 mycelium-std-runtime = { path = "../mycelium-std-runtime" }
 
 [dev-dependencies]
