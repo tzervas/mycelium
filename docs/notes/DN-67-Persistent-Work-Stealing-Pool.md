@@ -214,6 +214,57 @@ fan-out, mixed shapes, 50×-repeat determinism, and the Linux `/proc/self/status
 regression witness that the pool never grows with nesting depth). All ran green across 15+
 consecutive full-suite invocations with zero flakes during this change's verification.
 
+### 3.4 The limit: bounded *progress*, not bounded *stack* (never-silent, VR-5) — follow-up M-868
+
+The §3.2 induction proves logical **progress** (no deadlock) but says **nothing about the call
+stack**. `help_while` pops the shared queue **indiscriminately** — any batch's lane-loop, not only
+tasks descending from the waiter's own subtree — so a nested pop → nested `help_while` stacks a call
+frame on one OS thread, and under a **deep-AND-wide** fully-fanned tree at low `P` a single thread
+can accumulate help-steal frames from many sibling/cousin batches. The worst-case frame count is
+~`O(w^(d-1))` for width `w`, depth `d`. That failure mode is a **stack overflow (a crash), not a
+hang** — so the honest contract is: nested `run_indexed` is **deadlock-free / panic-safe /
+deterministic at any depth, but only *stack*-safe for MODERATE depth×width**, not literally
+unbounded nesting.
+
+**Measured boundary** (debug build, ~2 MiB default thread stack, forced `P = 1`, this repo's
+`Scheduler::with_workers(4, 8)` lane count):
+
+| Shape | Depth × width | Leaves | Result |
+|---|---|---|---|
+| `[4,4,4,4]` | 4 × 4 | 256 | completes |
+| `[3,3,3,3,3]` | 5 × 3 | 243 | completes |
+| `[5,5,5,5]` | 4 × 5 | 625 | completes |
+| `[4,4,4,4,4]` | 5 × 4 | 1024 | completes |
+| `[3,3,3,3,3,3]` | 6 × 3 | 729 | completes |
+| `[5,5,5,5,5]` | 5 × 5 | 3125 | completes |
+| `[8,8,8,8]` | 4 × 8 | 4096 | completes |
+| `[4,4,4,4,4,4]` | 6 × 4 | 4096 | **stack overflow** |
+| `[3,3,3,3,3,3,3,3]` | 8 × 3 | 6561 | **stack overflow** |
+| `[2]×16` | 16 × 2 | 65536 | **stack overflow** |
+
+So depth is the primary driver and **width amplifies it** (depth 6 completes at width 3 but
+overflows at width 4) — exactly what the `O(w^(d-1))` worst case predicts, and the reason this is
+*not* a pure `O(depth)` bound. Release builds (smaller frames) push the boundary out somewhat, but
+the shape of the limit is unchanged.
+
+The committed characterizing test
+(`deep_and_wide_low_p_completes_within_a_normal_stack_moderate_region`, `[4,4,4,4]` at `P ∈ {1,2}`)
+sits with ample margin **inside** the safe region and asserts completion — it documents the moderate
+safe region rather than asserting "any depth" (it deliberately does not probe to overflow, which
+would crash the test process rather than fail an assertion; the boundary above was measured with
+throwaway probes, not committed).
+
+**Current consumers are trivially safe:** M-860 (`emit_llvm_ir_many`) and M-862 (`eval_top_batch`)
+each submit a **single, non-nested** batch (depth 1), so they never enter the help-steal recursion
+at all.
+
+**Follow-up — M-868 (tracked).** The `O(depth)`-stack fix is **Cilk-style leapfrogging**:
+`help_while` runs *only* tasks that descend from its own batch (rather than any queued task), so a
+waiter's stack can deepen by at most one frame per *ancestor* batch — `O(depth)`, independent of
+width. That is a design change (it needs per-task subtree provenance / a per-batch work-view), so it
+is deliberately **not** done here (the M-864 brief asked for a correct primitive, not leapfrogging);
+it is minted as **M-868** and referenced from the `pool.rs`/`scheduler.rs` docs and this note.
+
 ## 4. Determinism is untouched
 
 `run_indexed`'s RT2 contract — spawn-order-indexed results, regardless of steal schedule — is
@@ -271,3 +322,11 @@ both the original change and the rewrite.
   as a non-normative impl detail (DN-61 §A.2); `capacity` is retained but no longer bounds anything.
   Added forced-low-`P` deadlock tests + panic tests; the reproduction on pre-fix code was verified in
   a scratch revert.
+- 2026-07-01 — **Honesty pass (§3.4), after the re-review confirmed soundness.** Added the
+  bounded-*progress*-not-bounded-*stack* caveat: `help_while`'s indiscriminate popping stacks
+  help-steal frames under deep+wide low-`P` nesting (~`O(w^(d-1))`), a stack overflow rather than a
+  hang, so the contract is downgraded from "safe at unbounded nesting" to "stack-safe for moderate
+  depth×width" across `scheduler.rs` / `pool.rs` / this note (never-silent, VR-5). Measured the actual
+  boundary (§3.4 table); added a characterizing test inside the safe region. The `O(depth)`-stack
+  leapfrogging fix is minted as the follow-up **M-868**. Also fixed a stale `tests/scheduler.rs` DoD
+  header still claiming the removed `Exact` backpressure bound.

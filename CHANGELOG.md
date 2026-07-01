@@ -35,6 +35,15 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
   and its `mycelium-std-runtime` re-export are **removed** rather than left as a stale claim (VR-5);
   `Scheduler::capacity` / `with_workers(_, capacity)` remain for source compatibility but no longer
   bound anything (documented, never-silent).
+- **Honest limit (never-silent, VR-5): bounded *progress*, not bounded *stack*.** `help_while` pops
+  the shared queue indiscriminately, so under **deep-AND-wide** low-`P` nesting a single OS thread can
+  stack help-steal frames from many sibling batches (~`O(w^(d-1))`) → a **stack overflow, not a
+  hang**. So nested `run_indexed` is deadlock-free / panic-safe / deterministic at any depth but only
+  **stack-safe for moderate depth×width**. The boundary was *measured* (DN-67 §3.4 table: e.g. at
+  forced `P=1`, depth 5 completes at every tested width but depth 6 overflows at width 4), and a
+  characterizing test (`[4,4,4,4]`, well inside the safe region) documents it. Current consumers
+  (M-860/M-862) submit a single non-nested batch, so they are trivially safe. The `O(depth)`-stack
+  leapfrogging fix is the tracked follow-up **M-868**.
 - **Breaking API change, ratified: `run_indexed` now requires `F: Send + 'static` / `T: Send +
   'static`** (previously just `Send`, borrowing freely via the old `std::thread::scope`). A persistent
   pool's worker threads outlive any single call, so a job can no longer safely borrow from the

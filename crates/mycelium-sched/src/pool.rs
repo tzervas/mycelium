@@ -26,8 +26,21 @@
 //! otherwise block instead **executes any pending task from the shared queue** — its own batch's, or
 //! anyone else's, at any nesting depth — until its own wait condition is satisfied. A "blocked"
 //! thread is therefore never idle-and-unproductive; it is an *additional* worker for as long as it
-//! waits. This is what makes a **fixed**-size pool safe under **unbounded** nesting depth: the
+//! waits. This is what keeps a **fixed**-size pool **deadlock-free** at any nesting depth: the
 //! resource that scales with nesting is *helpers-that-happen-to-be-waiting*, not OS threads.
+//!
+//! **Bounded-progress, NOT bounded-stack (M-864 — never-silent, VR-5).** The induction below proves
+//! logical *progress* (no deadlock), but **not** a bounded call *stack*. Because `help_while` pops
+//! the shared queue **indiscriminately** (any batch's lane-loop, not only tasks descending from the
+//! waiter's own subtree), a nested pop → nested `help_while` stacks a call frame, and under a
+//! **deep-AND-wide** fully-fanned tree at low `P` a single OS thread can accumulate help-steal frames
+//! from many sibling/cousin batches — worst case ~`O(w^(d-1))` frames for width `w`, depth `d`. That
+//! is a **stack overflow (a crash), not a hang**. So this pool is deadlock-free / panic-safe /
+//! deterministic at *any* depth, but only *stack*-safe for **moderate** depth×width (measured region:
+//! see `deep_and_wide_low_p_completes_within_a_normal_stack_moderate_region` in [`crate::tests`] and
+//! DN-67 §3.4). Current consumers (M-860/M-862) submit a **single, non-nested** batch, so they are
+//! trivially inside the safe region. The `O(depth)`-stack fix — Cilk-style **leapfrogging**, where
+//! `help_while` runs only tasks descending from its own batch — is the tracked follow-up **M-868**.
 //!
 //! ## Deadlock-freedom argument (`Empirical` — checked by [`crate::tests`]'s nested-recursion
 //! stress tests, not mechanically proven)
@@ -58,12 +71,14 @@
 //! completes (its lane-loops' jobs each wait on leaf batches, which complete), and so on to the
 //! root. No step in this induction assumes `P` is large enough for any particular *concurrency*
 //! width — only that `P ≥ 1` so the queue is never permanently unattended. Hence: **no deadlock,
-//! for any fixed `P ≥ 1`, at any nesting depth.**
+//! for any fixed `P ≥ 1`, at any nesting depth.** (This is a *progress* result only — it says
+//! nothing about the call-stack depth, which is the separate bounded-stack caveat above.)
 //!
 //! This is the informal (but load-bearing) argument; [`crate::tests`] checks it empirically with
-//! deep-chain and wide-fan-out nested stress tests under a wall-clock timeout (a real hang would
-//! time the test out rather than the assertion merely failing) — `Empirical`, not `Proven` (no
-//! mechanized model-checked proof is in-repo), per VR-5.
+//! deep-chain and wide-fan-out nested stress tests, incl. **forced-low-worker-count** ones
+//! (`P ∈ {1,2,3,4}`) that hang on the pre-fix code and pass here, under a wall-clock timeout (a real
+//! hang would time the test out rather than the assertion merely failing) — `Empirical`, not
+//! `Proven` (no mechanized model-checked proof is in-repo), per VR-5.
 //!
 //! # Determinism is untouched
 //!

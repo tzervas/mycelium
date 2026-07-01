@@ -77,6 +77,15 @@
 //!   (`P ∈ {1,2,3,4}`, wide fan-out incl. the `[15,15,6]` shape that reproduced the original hang)
 //!   under a wall-clock timeout ([`tests`]) — the tests that hang on the pre-fix code and pass on
 //!   this one. Not mechanically proven, so `Empirical`, not `Proven` (VR-5).
+//! - **Bounded *progress*, not bounded *stack* (M-864 — never-silent, VR-5).** Deadlock-freedom is a
+//!   progress result; it does **not** bound the call stack. `help_while` pops the shared queue
+//!   indiscriminately, so under **deep-AND-wide** low-`P` nesting a single OS thread can stack
+//!   help-steal frames from many sibling batches (~`O(w^(d-1))`) → a **stack overflow**, not a hang.
+//!   So nested `run_indexed` is deadlock-free / panic-safe / deterministic at any depth, but only
+//!   *stack*-safe for **moderate** depth×width (measured region + boundary: `crate::pool` module
+//!   docs, the `deep_and_wide_low_p_*` test, DN-67 §3.4). Current consumers submit a single,
+//!   non-nested batch, so they are trivially safe. The `O(depth)`-stack (leapfrogging) fix is the
+//!   tracked follow-up **M-868**.
 //!
 //! # The `'static` contract (M-864 — ratified: `docs/notes/DN-67-Persistent-Work-Stealing-Pool.md`)
 //!
@@ -247,7 +256,9 @@ pub struct StealDecision {
 /// - RT2 sequentialization: **`Empirical`** ([`SCHEDULER_RT2_STRENGTH`]), unchanged by stealing.
 /// - RT3 steal-policy determinism/inspectability: **`Exact`** ([`STEAL_POLICY_STRENGTH`]).
 /// - Nested-submission deadlock-freedom (M-864): **`Empirical`** (forced-low-worker-count nested
-///   stress tests; see module docs).
+///   stress tests; see module docs). *Progress only* — the help-steal frame stack grows with the
+///   live-internal-batch count, so nesting is stack-safe for **moderate** depth×width, not literally
+///   unbounded (deep+wide low-`P` can overflow; leapfrogging fix tracked as M-868 — module docs).
 /// - Liveness (each job runs once): **`Empirical`** ([`SCHEDULER_LIVENESS_STRENGTH`]).
 /// - Backpressure: **removed at M-864** (was the deadlock cause; `capacity` no longer bounds the
 ///   queue — see module docs and [`Scheduler::capacity`]).

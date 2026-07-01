@@ -3,7 +3,7 @@
 //!
 //! M-797 in-crate test layout: all tests live here, not in `scheduler.rs`.
 //!
-//! # DoD coverage (M-861)
+//! # DoD coverage (M-861, amended by M-864)
 //!
 //! 1. **Construction refusals** stay fail-closed (`ZeroWorkers`/`ZeroCapacity`), unchanged by the
 //!    deque redesign.
@@ -14,8 +14,12 @@
 //! 4. **Liveness** (every job runs exactly once) holds under random worker/job-count
 //!    configurations, including single-worker (no stealing possible) and many-worker (steal-heavy)
 //!    extremes.
-//! 5. **Backpressure bound stays `Exact`:** the peak *total* pending depth (summed across every
-//!    per-worker deque) never exceeds `capacity`, across random `(n, workers, cap)` configurations.
+//! 5. **Peak pending depth == job count (M-864 — backpressure REMOVED).** M-861's demand-signalled
+//!    `capacity` backpressure was the feeder's bare-block point and the cause of a reproduced
+//!    nested-submission deadlock, so it is gone (module docs / DN-67): the pool queue is unbounded
+//!    and a batch materializes all `n` jobs across its lanes up front, so the peak *total* pending
+//!    depth is exactly `n` and `capacity` no longer bounds anything. (Was: "backpressure stays
+//!    `Exact`, peak ≤ capacity".)
 //! 6. **`StealPolicy::select_victim` (RT3 EXPLAIN) is total, deterministic, and inspectable:**
 //!    same inputs → same `StealDecision`; returns `None` iff every other deque is empty; the
 //!    returned `victim` is never the thief itself and always has nonzero occupancy in the snapshot.
@@ -24,6 +28,10 @@
 //!    steal; under a steal-forcing shape (few workers, many jobs) it must be `> 0`. A scheduler
 //!    that silently regressed to single-queue/no-steal dispatch would still pass checks 1–5 (the
 //!    *outputs* would still be correct) but this test would catch the regression directly.
+//! 8. **M-864 nested submission:** deadlock-free at any depth (forced-low-`P` tests), panic-safe,
+//!    deterministic — AND a *characterizing* test for the help-steal frame-stack growth under
+//!    deep+wide low-`P` nesting (the moderate safe region; the `O(depth)`-stack leapfrogging fix is
+//!    the tracked follow-up M-868). See DN-67 §3.4.
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{mpsc, Arc};
@@ -753,4 +761,46 @@ fn a_nested_panic_propagates_up_through_the_nesting_without_hanging() {
         raised,
         "a deeply-nested job panic must propagate up through every join, never hang a mid-level one"
     );
+}
+
+// ── M-864: help-steal frame-stack growth under deep+wide low-P nesting (CHARACTERIZING) ────────
+//
+// `Pool::help_while` pops from the shared queue INDISCRIMINATELY — any batch's lane-loop, not just
+// tasks descending from the waiter's own subtree — so a nested pop → nested `help_while` stacks a
+// call frame on ONE OS thread. Under DEEP+WIDE nesting at low P, a single thread can accumulate
+// help-steal frames from many sibling/cousin batches (worst case ~O(w^(d-1))), so the frame STACK
+// grows with the live-internal-batch count. The deadlock-freedom induction (module docs) proves
+// logical PROGRESS but NOT bounded stack — so `run_indexed` is deadlock-free / panic-safe /
+// deterministic at any depth, but only stack-SAFE for MODERATE depth×width (never-silent, VR-5).
+//
+// This test CHARACTERIZES the safe region rather than asserting "any depth". Measured boundary
+// (debug build, ~2 MiB default thread stack, forced P=1): shapes up to depth 5 at every tested
+// width (incl. [8,8,8,8] = 4096 leaves) and depth 6 at width 3 COMPLETE; depth 6 width 4, depth 8
+// width 3, and depth 16 width 2 STACK-OVERFLOW (a crash, not a hang). Width amplifies depth, as the
+// O(w^(d-1)) worst case predicts. The O(depth)-stack fix — Cilk-style leapfrogging, where
+// `help_while` runs ONLY tasks descending from its own batch — is the tracked follow-up M-868;
+// see DN-67 §3.4. Current consumers (M-860/M-862) do not nest at all, so they are trivially inside
+// the safe region.
+#[test]
+fn deep_and_wide_low_p_completes_within_a_normal_stack_moderate_region() {
+    // [4,4,4,4]: depth 4, width 4 — 256 leaves, 85 internal batches, all funnelled through 1–2 pool
+    // workers plus the caller's own help_while. Genuinely deep AND wide, with ample margin below the
+    // measured overflow boundary (≈ depth 6), so it completes within a normal stack and is not
+    // scheduling-flaky. This documents the moderate safe region; it deliberately does NOT probe to
+    // overflow (that would crash the test process, not fail an assertion).
+    let shape = vec![4usize, 4, 4, 4];
+    let expected = nested_reference_shape(&shape);
+    for p in 1usize..=2 {
+        let shape = shape.clone();
+        let actual = run_with_timeout(Duration::from_secs(60), move || {
+            let pool = Pool::with_workers_for_test(p);
+            let sched = Scheduler::with_workers(4, 8).unwrap();
+            nested_parallel_shape_on(&pool, sched, &shape)
+        });
+        assert_eq!(
+            actual, expected,
+            "forced P={p}: a moderate deep+wide nested tree [4,4,4,4] must complete within a normal \
+             stack (characterizes the safe region; deeper+wider overflows — tracked as M-868)"
+        );
+    }
 }
