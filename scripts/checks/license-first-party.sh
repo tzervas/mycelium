@@ -79,9 +79,14 @@ if [[ ! -f Cargo.toml ]]; then
   fail "no root Cargo.toml — cannot audit workspace license"
   status=1
 else
+  # `|| true` on the trailing pipeline: under `set -o pipefail` a table with no license line makes
+  # `grep` exit 1, which — unmasked — would abort the whole script via `set -e` right here, BEFORE
+  # the `[[ -z ]]`/mismatch check below ever gets to print the "license is missing" finding (a
+  # never-silent violation, G2). Masking lets `ws_license` come back empty and fall through to that
+  # check instead of vanishing as a bare, unexplained non-zero exit.
   ws_license=$(toml_table Cargo.toml "workspace.package" \
     | grep -E '^[[:space:]]*license[[:space:]]*=' | head -1 \
-    | sed -E 's/^[^=]*=[[:space:]]*"([^"]*)".*/\1/')
+    | sed -E 's/^[^=]*=[[:space:]]*"([^"]*)".*/\1/' || true)
   if [[ "$ws_license" != "$REQUIRED" ]]; then
     fail "root Cargo.toml [workspace.package].license is '${ws_license:-<missing>}', expected MIT"
     status=1
@@ -123,7 +128,9 @@ else
       bad+=("$rel: listed as a workspace member but file is missing")
       continue
     fi
-    line=$(toml_table "$rel" "package" | grep -E '^[[:space:]]*license(\.workspace)?[[:space:]]*=' | head -1)
+    # `|| true`: see the workspace.package fix above — a missing [package].license would otherwise
+    # make `grep` exit 1 and abort the script under `set -e` before the `-z` finding below can fire.
+    line=$(toml_table "$rel" "package" | grep -E '^[[:space:]]*license(\.workspace)?[[:space:]]*=' | head -1 || true)
     if [[ -z "$line" ]]; then
       bad+=("$rel: [package].license is missing")
     elif printf '%s' "$line" | grep -qE '^[[:space:]]*license\.workspace[[:space:]]*=[[:space:]]*true'; then
@@ -160,7 +167,9 @@ for f in "${proj_manifests[@]}"; do
       continue
       ;;
   esac
-  line=$(toml_table "$f" "project" | grep -E '^[[:space:]]*license[[:space:]]*=' | head -1)
+  # `|| true`: same fail-safe as the two Cargo.toml sites above — a missing [project].license would
+  # otherwise make `grep` exit 1 and abort the script under `set -e` before the finding below fires.
+  line=$(toml_table "$f" "project" | grep -E '^[[:space:]]*license[[:space:]]*=' | head -1 || true)
   if [[ -z "$line" ]]; then
     bad+=("$f: [project].license is missing")
     continue
