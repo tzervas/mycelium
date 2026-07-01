@@ -3644,6 +3644,7 @@ issues:
       - corpus:DN-14
       - corpus:DN-25
       - corpus:ADR-035
+      - corpus:ADR-036
     body: |
       The capstone criterion of full-language 1.0.0 (ADR-022, forthcoming; DN-25): everything
       beyond the bare Rust mycelium-core kernel is written in Mycelium (.myc files) and the
@@ -3701,6 +3702,17 @@ issues:
       long-term-arc capstone work ADR-022 §8 Q1 already scopes past 1.0.0, not a 1.0.0 blocker.
       No status flip here; this is a clarifying cross-reference only (VR-5: not claiming this
       epic done when its own children are not).
+
+      NOTE (2026-07-01, ADR-036): this epic is the project's dogfooding-capstone track --
+      comprehensive self-hosting of the whole toolchain/stdlib/kernel in Mycelium, built beside
+      the Rust reference and Rust-vs-Mycelium differential-validated (extending the
+      interp==AOT==JIT discipline, RFC-0029 §7.5/M-210). Per ADR-036, this track is non-tag-gating
+      except its core-lib slice (T9, ADR-022 §8 Q1, unchanged) -- the remainder (M-739...M-742 and
+      whatever further comprehensive-rewrite work follows) runs within-1.0.0 and in parallel with
+      the tag-gating tracks, and instead gates the project's separate PUBLIC-RELEASE milestone
+      (repo stays private until this track is complete + validated and the targeted Rust
+      components are replaced). Roadmapped by docs/planning/self-hosting-port-ledger.md. No status
+      flip here; clarifying cross-reference only (VR-5).
 
   - id: M-739
     title: "M-739 — Self-hosting bootstrap plan (DN-26) + staged port order"
@@ -6097,6 +6109,36 @@ issues:
       - A nesting regression test asserts the explicit error is returned just past the budget (mirroring
         the just-under/past-budget pattern `totality.rs`/`ambient.rs` already use).
       - just check green; honest tag (Empirical — measured headroom, not merely asserted, per VR-5).
+
+  - id: M-868
+    title: "Leapfrogging (own-subtree help-steal) to bound the scheduler pool's help-frame stack to O(depth)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:perf, area:runtime, priority:P2, status:needs-design]
+    depends_on: [M-864]
+    epic: E25-1
+    doc_refs:
+      - corpus:DN-67
+      - corpus:DN-61
+      - src:crates/mycelium-sched/src/pool.rs
+    body: |
+      Minted 2026-07-01 (M-864 re-review follow-up). M-864's persistent work-stealing pool is
+      deadlock-free / panic-safe / deterministic at any nesting depth, but its help_while steals
+      cross-batch indiscriminately, so a deep-AND-wide low-P nested submission stacks ~O(w^(d-1))
+      help-steal frames on one OS thread -> stack overflow (a crash, not a hang) beyond a measured
+      moderate depth x width region (DN-67 3.4). Current consumers (M-860 codegen, M-862 eval) submit
+      a single non-nested batch, so they are trivially safe -- NOT a 1.0.0-tag blocker (post-tag).
+
+      Implement Cilk/TBB/ForkJoinPool-style leapfrogging: a thread joining on its own batch executes
+      only tasks descending from that batch's subtree (not arbitrary sibling batches), bounding the
+      help-frame stack to O(depth) and making arbitrarily deep+wide nesting stack-safe -- without
+      re-introducing the backpressure deadlock M-864 removed.
+
+      User story: As a runtime author, I want the work-stealing pool stack-safe under arbitrary
+      nested parallelism, so a deeply+widely concurrent Mycelium program cannot crash the process.
+      Definition of Done: help_while confined to own-subtree descendants (leapfrogging); the DN-67
+      3.4 deep+wide overflow shapes complete at forced low P within a normal stack; the
+      "moderate depth x width" caveat in the Scheduler/pool/DN-67 docs upgraded to "any depth";
+      deadlock-freedom + determinism + panic-safety re-validated; post-1.0.0-tag.
 
   - id: M-867
     title: "(post-1.0) Full RFC-0031 D6 stdlib self-hosting: per-op .myc ports + Rust-crate retirement for all mycelium-std-* crates"

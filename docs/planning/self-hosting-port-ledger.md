@@ -6,6 +6,14 @@
 > **Owners / related:** epic **E18-1** (self-hosting capstone), **DN-26** (self-hosting bootstrap
 > plan), **DN-14** (self-hosting gate), the **`boot10`** kickoff. See also `docs/notes/DN-25`
 > (road to full-language 1.0.0).
+>
+> **Roadmap for ADR-036 (2026-07-01 — maintainer-ratified).** This ledger is the roadmap for the
+> project's **comprehensive-dogfooding track**: build each Mycelium-native component **beside** its
+> Rust reference → **Rust≡Mycelium differential validation** (extending the interp≡AOT≡JIT
+> discipline, RFC-0029 §7.5/M-210) → **replace** the Rust original once tested/benched/validated and
+> maintainer-satisfied → the project's **public release** (gated on this track's completion; the
+> `lang 1.0.0` tag itself is cut on the Rust reference and is not gated by this ledger's completion
+> beyond the existing core-lib self-host slice, ADR-022 §8 Q1). See ADR-036.
 
 ## Purpose
 
