@@ -8986,7 +8986,8 @@ issues:
   - id: M-872
     title: "M-872 -- feat(spore): enforce name@version immutability on remote (OCI) publish"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:todo]
+    labels: [phase:8, type:feature, area:toolchain, priority:P2, status:done]
+    landed_basis: "status:done (2026-07-01) — publish_remote gained a best-effort immutability pre-check: list_tags -> pull -> compare spore_id; a DIFFERING re-publish under an existing name@version is refused as RemoteError::Conflict (exit 6), an identical re-publish is idempotent, a first publish proceeds. Grounded oras error classification (registry:2 AND GHCR verified 2026-07-01: 'name unknown'/'not found' -> NotFound; auth errors stay Transport, never read as 'nothing published' — G2). Honest ceiling (Declared, VR-5): OCI tags are server-side mutable, so this is a client-side guard, not a proven server invariant. 59 unit tests (2 new immutability cases) + live-verified against a local registry:2. cargo fmt/clippy -D warnings/test green."
     depends_on: [M-871]
     epic: E26-1
     doc_refs:

@@ -7,6 +7,10 @@
 > plan), **DN-14** (self-hosting gate), the **`boot10`** kickoff. See also `docs/notes/DN-25`
 > (road to full-language 1.0.0).
 >
+> **Effort/usage forecast:** `docs/planning/dogfooding-effort-and-usage-assessment.md` sizes this track
+> (~45M-token floor for the LOC port; realistic all-in ~70–120M once capability-build + differential
+> validation are included) — a `Declared` model, refine it to `Empirical` as the first Tier-A ports land.
+>
 > **Roadmap for ADR-036 (2026-07-01 — maintainer-ratified).** This ledger is the roadmap for the
 > project's **comprehensive-dogfooding track**: build each Mycelium-native component **beside** its
 > Rust reference → **Rust≡Mycelium differential validation** (extending the interp≡AOT≡JIT
