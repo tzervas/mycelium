@@ -8,6 +8,100 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-30: E25-1 native-AOT full-coverage increments land — recursion, closures, Swap, Dense, VSA, trit.mul dialect)
+
+- **M-850 — direct-LLVM full recursion (heap trampoline, PR #818).** Non-tail `Fix` + mutual
+  recursion (`FixGroup`) now lower via a heap-allocated control-stack trampoline
+  (`crates/mycelium-mlir/src/trampoline.rs`), bounded by the same `AutoDepthBudget` the env-machine
+  uses (M-349, reused not reinvented) — deep recursion that previously refused now runs to a
+  graceful `DepthLimit`, never a C-stack overflow (DN-05 #1, G2). Removes the `FixGroup` refusal
+  (`llvm.rs:585`) and the DN-15 §8.5 Match-in-pre-tail limitation. `cargo-mutants` catches a
+  trampoline-frame mutation (0 missed) on a checked basis, so the tag upgrades **Declared to
+  Empirical** (VR-5) — not Proven; the differential is interp == direct-LLVM, not a formal proof.
+- **M-851 — direct-LLVM closure-ABI widening (PR #821).** Closures over any repr/width, curried
+  application, and closure-valued intermediate results now lower natively via
+  **specialize-at-application inlining** — a `Lam` builds a suspended closure value and an `App`
+  inlines its body at the concrete argument shape — removing the narrow packed-`i64` `Binary{8}`
+  ABI (M-378) and its heap arena. This is an honest correction to the issue's original "uniform
+  pointer-boxed lane" sketch: the realized mechanism is inlining, an architectural choice surfaced
+  to and accepted by the maintainer, not a runtime box/unbox pair. Closure-valued *program results*
+  and cross-boundary datum/`Fix` captures stay explicit never-silent `UnsupportedNode` (runtime
+  dispatch deferred). `cargo-mutants` 8/0 missed → **Empirical**.
+- **M-852 — direct-LLVM Swap native codegen (PR #823).** The `Swap` node — the only `Repr`-changing
+  node (WF1) — now lowers natively for the certified binary↔ternary class
+  (`crates/mycelium-mlir/src/swap_codegen.rs`): value-preserving enc/dec transcode in dumpable IR.
+  The maintainer-ratified design resolves the issue's open FLAG with a **two-mode `SwapCertMode`**:
+  **`Recheck`** (default) independently re-checks the certificate at compile time over
+  `mycelium-core`; **`ReuseInterp`** (opt-in) carries the interpreter-computed certificate forward —
+  both modes EXPLAIN-recorded (mode + source, no opaque choice). Never-silent refusals: Dense/VSA,
+  illegal pair, over-`i64`-width (both modes), swap-in-recursion. Two real silent-miscompile bugs
+  were caught and fixed *before* landing: an over-width `1<<64` overflow (`cargo-mutants`-caught)
+  and an in-bound illegal-pair encode-quotient discard (review-caught). Tag: **Empirical**
+  (Proven correctly not claimed — VR-5; cert-equivalence checked via the M-210 checker, not a
+  formal proof of the lowering itself).
+- **M-853 — native Dense lowering (PR #824, RFC-0039 §5.1).** Element-wise Dense ops
+  (add/sub/neg/scale/dot/similarity) over the **un-quantized F32/BF16** fragment now lower natively
+  (`crates/mycelium-mlir/src/dense_codegen.rs`), per RFC-0039's OQ-2 scoping. Three-way differential
+  through the M-210 checker is bit-exact (the dialect leg honestly refuses Dense); `cargo-mutants`
+  catches 67/70 viable mutants. Tag: codegen claim **Empirical**; the read-back carries the
+  reference's own per-op tag (**Proven** for add/sub/scale, **Exact** for neg) — the native path
+  preserves these only because it introduces no new approximation (VR-5). Quantized Dense
+  (ADR-030 int/fp8/TF32) stays an explicit never-silent refusal, gated on **E20-1** landing
+  `QuantDesc`.
+- **M-854 — native VSA lowering (PR #825, RFC-0039 §5.2).** `bind`/`unbind`/`bundle`/`permute`/
+  `similarity` over the four 1.0.0-mandatory models — **MAP-I, BSC, HRR, FHRR** — now lower
+  natively (`crates/mycelium-mlir/src/vsa_codegen.rs`), mirroring `mycelium-vsa` digit-for-digit.
+  Three-way differential through the M-210 checker is bit-exact (dialect leg honestly refuses VSA).
+  **Honest per-op tags carried exactly per RFC-0039 §5.2 — no upgrade past the checked basis
+  (VR-5):**
+  - **Proven is preserved ONLY for the single-op MAP-I `bundle` capacity bound** (the checked
+    instantiation `capacity::proven_capacity_bound`, replayed in `capacity.rs`, basis
+    `proofs/lh-bundle`/M-001). The multi-hop compositional work (M-832) is in-progress research
+    emitting undischarged proof obligations and **never** stamps Proven — codegen does not borrow
+    from it.
+  - **HRR/FHRR `bundle` is Empirical within a measured capacity profile** — the reference's
+    documented `EmpiricalProfile` coverage window (odd `m ≤ 5`, `d ≥ 1024`, single-factor,
+    codebook ≤ 16) — and **refuses `OutsideEmpiricalProfile`** beyond it; never a silent
+    Empirical-anyway.
+  - **SBC/MAP-B (niche models, OQ-3) and quantized/block-sparse/complex-carrier VSA (ADR-031,
+    OQ-4) stay explicit never-silent refusals**, gated on E20-1 landing the carrier `Repr` fields.
+  - `cargo-mutants` is **0-missed via toolchain-independent emission/read-back witnesses + 4
+    inline-justified equivalents** — this property is **cross-environment** (does not depend on a
+    local `mlir-18-tools`/libMLIR install present in the witnessing environment), distinct from
+    M-857's libMLIR-gated witnesses below.
+  - **Heavy / large-hypervector-dimension VSA workloads and the full mutant-durability pass beyond
+    the toolchain-independent witness set are GPU-deferred (maintainer-run)** — the landed claim
+    covers the CPU small-dimension envelope only; large-dim profile extension is a follow-up.
+  - RFC-0039 stays **Accepted** (implemented Rust-first, pending ratification) — this landing does
+    **not** move it to Enacted (house rule #3: Enacted requires the full E25-1 path complete +
+    stable, not one increment).
+- **M-857 — `trit.mul` through the real MLIR-dialect path (PR #820, libMLIR-gated).**
+  Balanced-ternary `trit.mul` (shifted-accumulate, 2m-trit buffer) now lowers through the real
+  `arith`/`func`/`cf` dialect path (`crates/mycelium-mlir/src/dialect/native.rs`), sharing
+  `emit_trit_add_step` with the direct-LLVM `emit_trit_mul` (DRY). The
+  `DialectError::Unsupported("trit.mul")` refusal is removed; the dialect boundary moves to
+  closures/recursion/data/`Swap`/Dense/VSA (each an explicit, test-pinned refusal — **M-856**
+  is the tracked dialect catch-up for those fragments). **This witness is libMLIR-gated** (unlike
+  M-854's toolchain-independent witnesses): the three-way differential ran non-vacuous against a
+  provisioned libMLIR 18.1.3, `cargo-mutants` 9-caught/0-missed in that environment. Tag:
+  **Empirical** where libMLIR is provisioned; skip-graceful (`DialectError::ToolchainMissing`)
+  where absent — never a faked pass (G2/VR-5).
+- **E25-1 (epic) status moves `todo` → `in-progress`.** 6 of 14 children landed `done` this wave
+  (M-850/851/852/853/854/857); the remaining 8 (M-855 dynamic-VSA JIT, M-856 dialect catch-up,
+  M-858 unified mutant-witnessed three-way differential, M-859 bench scaling, M-860 parallel
+  codegen, M-861 scheduler work-stealing, M-862/863 perf-eval + ratification) are unstarted this
+  wave. `issues.yaml` records each landed child's `landed_pr`/`landed_date`/`landed_basis` plus an
+  honest "DONE" append to its body (append-only — house rule #3); none of RFC-0029 → Enacted,
+  DN-15 → Resolved, or ADR-034 → Enacted are claimed by this partial landing.
+- **Methodology resolution — scoped-toolchain setup (M-848).** A sibling toolchain effort is
+  reported (this wave) to be making `just setup`/the scoped-toolchain tooling idempotent and
+  auto-installing, so that differential tests run non-vacuous (genuinely exercising the toolchain
+  path, not silently skipping it) without changing test semantics — superseding the previously
+  proposed separate non-vacuity guard with the simpler fix at the toolchain layer. `M-848` is
+  recorded `in-progress` in `issues.yaml` with a marker noting no corresponding branch/commit was
+  found in `origin` as of this resync (flagged for maintainer confirmation), pending its own
+  landing report.
+
 ### Added (2026-06-30: RFC-0039 — Native Dense & VSA Codegen, Accepted)
 
 - **RFC-0039 (Accepted, maintainer-ratified 2026-06-30)** is the design vehicle (ADR-034 §6) for

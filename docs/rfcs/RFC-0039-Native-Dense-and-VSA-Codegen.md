@@ -294,6 +294,21 @@ first; dialect later**) **removes the VSA refusal** for the covered fragment and
 > Proven** (VR-5). Native VSA codegen therefore **preserves Proven only for the single-op bundle
 > side-condition that is actually checked**, and treats any composed/multi-hop bound as Empirical at
 > most — never upgrading on the strength of unfinished research.
+>
+> **§5.2 clarification note (append-only — M-854 landed 2026-06-30, PR #825; maintainer FLAG-0
+> resolution).** Now that M-854 has landed and checked the HRR/FHRR `bundle` Empirical claim above
+> against a real implementation, the maintainer's resolution sharpens *where* that Empirical claim
+> currently holds, without changing the §5.2 decision text itself (which stays normative and
+> unchanged): the **HRR/FHRR bundle is Empirical within a measured capacity profile — specifically
+> the CPU small-dimension envelope this landing's witnesses cover** (the reference's documented
+> `EmpiricalProfile` coverage window: odd `m ≤ 5`, `d ≥ 1024`, single-factor, codebook ≤ 16, run on
+> CPU) — and **refuses `OutsideEmpiricalProfile`** for anything beyond that measured window, never a
+> silent Empirical-anyway (G2/VR-5 unchanged from the decision text above). **Large-hypervector-dimension
+> profile extension is an explicit GPU follow-up** (maintainer-run; not executed in the CPU-bound
+> agent environment that landed M-854) — it is *not* claimed Empirical today, and widening the
+> profile is future work, not a retroactive upgrade of this landing's tag. This note records what is
+> actually checked as of the landing; it does not loosen or tighten the §5.2 decision's guarantee
+> rules, which already required exactly this profile-bounded honesty.
 
 ### 5.3 Dynamic-VSA JIT execution (M-855)
 
@@ -469,5 +484,6 @@ moved this RFC to Accepted). Recorded append-only with their resolutions; the bo
 
 | Date | Status | Note |
 |---|---|---|
+| 2026-06-30 | **Accepted** (implemented, pending ratification) | **M-853 (Dense, PR #824) and M-854 (VSA, PR #825) landed** — both design-gated on this RFC, both implementing it (Rust-first). §5.1 Dense: un-quantized F32/BF16 element-wise lowering, three-way differential bit-exact, `cargo-mutants` 67/70 caught (Empirical codegen; reference per-op tags Proven add/sub/scale, Exact neg). §5.2 VSA: MAP-I/BSC/HRR/FHRR bind/bundle/permute, three-way differential bit-exact, `cargo-mutants` 0-missed via toolchain-independent cross-environment witnesses; honest tags exactly as §5.2 requires (Proven only the single-op MAP-I bundle bound; HRR/FHRR bundle Empirical within a measured profile, refuses outside it — see the new §5.2 clarification note: the measured profile is the CPU small-dimension envelope, large-dim extension is a GPU follow-up). SBC/MAP-B + quantized/element-space/complex-carrier VSA stay never-silent refusals, E20-1-gated, unchanged from the design. **This landing does not move the RFC's Status** — it stays **Accepted, implemented Rust-first, pending ratification** (house rule #3: Enacted requires the full E25-1 path — including M-855/856/858 — complete and stable, not two of its children). Task: E25-1 / M-853/M-854. |
 | 2026-06-30 | **Accepted** | Maintainer-ratified; the four §8 open questions resolved. **OQ-1:** the §6 cross-reference IS the vehicle for the ADR-009 dynamic-VSA JIT deferral lift — NO separate ADR-009 amendment (§6 record + the Foundation ADR-009 cross-ref note are the full capture). **OQ-2:** native Dense scopes to the F32/BF16 un-quantized fragment first; the full ADR-030 int/fp8/TF32 quant/accumulator/packing set widens as E20-1 lands `QuantDesc`. **OQ-3:** the standard models MAP-I/BSC/HRR/FHRR are 1.0.0-native-mandatory; the niche SBC/MAP-B extend post-mandate (each differential-checked + honest-tagged when added). **OQ-4 (BOTH):** native codegen covers the un-quantized/real fragment now AND commits to widening to quantized-Dense (ADR-030) + element-space/block-sparse/complex VSA (ADR-031) — gated only on **E20-1** landing those `Repr` fields (the enabling dependency for the full-coverage half), refusing the unbuilt variants never-silently in the interim. The Proven-scope correction is unchanged (single-op MAP-I bundle Proven only; the multi-hop M-832 work stays in-progress research, never Proven — VR-5). Acceptance ratifies the **design** only — asserts no implementation; M-853/M-854/M-855 stay design-gated on this RFC (now Accepted) before they implement; RFC-0039 → Enacted only when the path is complete + stable (house rule #3). Task: E25-1 / M-853. |
 | 2026-06-30 | **Proposed** | Created. Native-codegen design for `Repr::Dense` (M-853 — element-wise ops + ADR-030 quant as inspectable `Meta.physical`/DN-01) and `Repr::Vsa` (M-854 — bind/bundle/permute over MAP/BSC/HRR/FHRR/SBC, honoring ADR-031, preserving the RFC-0003 §4.1 per-op tags only where the checked basis holds — VR-5), plus the dynamic-VSA JIT (M-855 — data-dependent dim / runtime model selection / cleanup-resonator loops as an explicit never-silently-selected `ExecMode`), and the M-210-checked, mutant-witnessed, interpreter-referenced honesty contract. Fills the Dense/VSA gap RFC-0029 §3 excludes (does not contradict it). Records the ADR-009 dynamic-VSA JIT deferral lift append-only (§6), with OQ-1 flagging whether a focused ADR-009 amendment is also wanted. Asserts **no** implementation; nothing moves to Accepted/Enacted by authoring. Task: E25-1 / M-853. |

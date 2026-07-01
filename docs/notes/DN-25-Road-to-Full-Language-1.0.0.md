@@ -34,7 +34,7 @@ Mycelium (`.myc`), stable, and fully usable**.
 | **T3** Runtime & concurrency execution maturity | **E12-1** | RFC-0027 (memory mgmt & reclamation) | `r10` | 7 |
 | **T4** Standard library **in Mycelium** | **E13-1** | RFC-0031 (self-hosted stdlib composition) | `lib10` | 5 |
 | **T5** FFI & system interface | **E14-1** | RFC-0028 (FFI & system interface) | `ffi10` | 7 |
-| **T6** Native AOT maturity, optimization & accel — **RE-GATED INTO `lang 1.0.0` by ADR-034 (2026-06-30): hard gate row, full native coverage** (was → `1.1`, ADR-022 §8 Q4) | **E15-1** (+E25-1) | RFC-0029 (AOT opt, codegen maturity & JIT); ADR-034 (re-gating); RFC-0039 (Dense/VSA codegen, proposed) | `aot10` | 6 |
+| **T6** Native AOT maturity, optimization & accel — **HARD `lang 1.0.0` GATE (ADR-034, 2026-06-30): full native-codegen coverage required** (was → `1.1`, ADR-022 §8 Q4; re-gated INTO `lang 1.0.0`). **In-progress (2026-06-30): 6/14 E25-1 children landed** — M-850/851/852/853/854/857 `done`; M-855/856/858/859/860/861/862/863 open. | **E15-1** (+E25-1) | RFC-0029 (AOT opt, codegen maturity & JIT, Accepted); ADR-034 (re-gating); RFC-0039 (Dense/VSA codegen, Accepted) | `aot10` | 6 |
 | **T7** Toolchain, IDE & package distribution | **E16-1** | RFC-0026 (editor highlighting grammar) | `tool10` | 8 |
 | **T8** Documentation, stability & release | **E17-1** | ADR-023 (stability & API-compat guarantees) | `rel10` | 8 |
 | **T9** Self-hosting capstone | **E18-1** | DN-26 (self-hosting bootstrap plan) | `boot10` | 5 |
@@ -51,7 +51,14 @@ not duplicated.
 - **E13-1 (T4):** M-714 stdlib composition/layout · M-715 core/prelude in `.myc` · M-716 collections in `.myc` · M-717 text/fmt in `.myc` · M-718 math/numerics in `.myc` · M-719 stdlib conformance + stability.
 - **E14-1 (T5):** M-720 FFI surface · M-721 `wild` execution · M-722 syscall binding · M-723 time/rand bindings · M-724 FFI safety audit.
 - **E15-1 (T6):** M-725 libMLIR integration · M-726 optimization passes · M-727 JIT · M-728 BitNet accel · M-729 codegen differential durability. **(Re-gated INTO `lang 1.0.0` by ADR-034.)**
-- **E25-1 (T6 full coverage — ADR-034):** M-850 full recursion trampoline · M-851 closure-ABI widening · M-852 `Swap` codegen · M-853 Dense lowering · M-854 VSA lowering · M-855 dynamic-VSA JIT (ADR-009 lift) · M-856 dialect catch-up · M-857 `trit.mul` dialect · M-858 unified mutant-witnessed three-way · M-859 bench scaling + regression gates · M-860 parallel codegen · M-861 scheduler work-stealing · M-862 parallel pure-eval (post-tag-cautious) · M-863 ratification act. RFC-0039 (Dense/VSA codegen) proposed.
+- **E25-1 (T6 full coverage — ADR-034):** M-850 full recursion trampoline **(done, PR #818)** ·
+  M-851 closure-ABI widening **(done, PR #821)** · M-852 `Swap` codegen **(done, PR #823)** ·
+  M-853 Dense lowering **(done, PR #824)** · M-854 VSA lowering **(done, PR #825)** · M-855
+  dynamic-VSA JIT (ADR-009 lift) · M-856 dialect catch-up · M-857 `trit.mul` dialect **(done,
+  PR #820)** · M-858 unified mutant-witnessed three-way · M-859 bench scaling + regression gates ·
+  M-860 parallel codegen · M-861 scheduler work-stealing · M-862 parallel pure-eval
+  (post-tag-cautious) · M-863 ratification act. RFC-0039 (Dense/VSA codegen) **Accepted**
+  (2026-06-30, maintainer-ratified).
 - **E16-1 (T7):** M-730 full LSP · M-731 highlighting delivery · M-732 package manager · M-733 toolchain UX · M-734 reproducible distribution.
 - **E17-1 (T8):** M-735 language reference + tutorial · M-736 stdlib API docs · M-737 stability/API-compat guarantees · M-738 full-language 1.0.0 release act · **M-743 MIT-only licensing audit + enforcement**.
 - **E18-1 (T9):** M-739 self-hosting bootstrap plan · M-740 port L1 frontend to `.myc` · M-741 self-hosted toolchain ratification · M-742 self-hosting CI gate.
@@ -100,6 +107,18 @@ this note maps it without overclaiming any of it as done (VR-5/G2).
 
 ## 8. Changelog
 
+- **2026-06-30 — T6 status refresh: 6/14 E25-1 children landed (manifests resync; advisory, no
+  status move).** The §2 T6 row label is refreshed from "RE-GATED INTO lang 1.0.0" to the settled
+  **"HARD `lang 1.0.0` GATE (ADR-034)"** framing, with an in-progress count appended:
+  **M-850 (recursion trampoline), M-851 (closure-ABI widening), M-852 (`Swap` codegen), M-853
+  (Dense lowering), M-854 (VSA lowering), and M-857 (`trit.mul` dialect) landed `done`** this wave
+  (PRs #818/#821/#823/#824/#825/#820); **M-855, M-856, M-858, M-859, M-860, M-861, M-862, M-863
+  remain open.** RFC-0029 stays Accepted (was already so); RFC-0039 moved Proposed → **Accepted**
+  (maintainer-ratified, recorded separately 2026-06-30). The §3 inventory line annotates each landed
+  ID inline (append-only — the original list is preserved, not rewritten). This is an advisory map
+  refresh — it does not move ADR-034, RFC-0029, or RFC-0039 past their own recorded status, and does
+  not claim T6 (or `lang 1.0.0`) complete: 8 of 14 E25-1 children remain open, including the
+  durability gate (M-858) and the ratification act (M-863) (VR-5).
 - **2026-06-30 — T6 RE-GATED into `lang 1.0.0` (ADR-034; advisory map refresh).** The maintainer
   re-gated native AOT (T6/E15-1) **into** the `lang 1.0.0` hard gate (reversing ADR-022 §8 Q4) with
   scope expanded to **full-language native-codegen coverage** + a perf/parallelism extension. The §2

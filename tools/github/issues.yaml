@@ -5174,7 +5174,7 @@ issues:
   - id: E25-1
     title: "E25-1 (epic) -- Native AOT full-language coverage, parallelism, and 1.0.0 gating"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:epic, area:execution, priority:P1, status:todo]
+    labels: [phase:6, type:epic, area:execution, priority:P1, status:in-progress]
     depends_on: [E15-1]
     epic: E25
     doc_refs:
@@ -5210,12 +5210,29 @@ issues:
         the interpreter (G2) -- no silent miscompile.
       - RFC-0029 -> Enacted; DN-15 -> Resolved; ADR-034 -> Enacted with ADR-022 at the lang 1.0.0 tag.
       - M-738 (lang 1.0.0 release act) depends_on E15-1; the tag waits on full native coverage.
+
+      PROGRESS (2026-06-30, manifests resync): 6 of 14 children landed `done` with checked
+      three-way differentials -- M-850 (recursion trampoline, PR #818), M-851 (closure-ABI widening,
+      PR #821), M-852 (Swap codegen, PR #823), M-853 (Dense codegen, PR #824), M-854 (VSA codegen,
+      PR #825), M-857 (trit.mul dialect, PR #820). REMAINING (still `ready`/`needs-design`, none
+      started this wave): M-855 (dynamic-VSA JIT), M-856 (dialect catch-up for Construct/Match/Swap/
+      Dense/VSA), M-858 (unified mutant-witnessed three-way differential across all new fragments),
+      M-859 (bench scaling + regression gates), M-860 (parallel codegen), M-861 (scheduler
+      work-stealing), M-862/M-863 (post-tag-cautious perf eval + ratification act). The DoD's
+      "RFC-0029 -> Enacted / DN-15 -> Resolved / ADR-034 -> Enacted" bullet stays unmet -- RFC-0029
+      and RFC-0039 both stay Accepted (not Enacted) per house rule #3 (Enacted requires the full path
+      complete + stable, not a partial landing); DN-15's Draft->Resolved judgment is FLAGGED in this
+      resync's report, not unilaterally decided. status:in-progress (was todo) reflects the partial
+      landing honestly -- not done, not unstarted.
   - id: M-850
     title: "Direct-LLVM full recursion: non-tail Fix + FixGroup heap trampoline (stack-robust)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [E15-1]
+    landed_pr: 818
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #818 (a1e0517) — non-tail Fix + FixGroup heap trampoline in crates/mycelium-mlir/src/trampoline.rs: object-level recursion on an explicit malloc'd control stack, graceful DepthLimit (no C-stack overflow), reusing AutoDepthBudget (M-349). Independently reviewed (isolated worktree, rebuilt+retested): cargo test green incl. --features mlir-dialect, interp==direct-LLVM differential + cargo-mutants witness (0 missed -> Empirical), never-silent refusals test-pinned, no unsafe."
     doc_refs: [corpus:ADR-034, corpus:RFC-0004, corpus:DN-25]
     body: |
       Extend direct-LLVM (llvm.rs) from tail-only Fix to non-tail Fix + mutual recursion (FixGroup)
@@ -5232,12 +5249,22 @@ issues:
       - cargo-mutants catches a mutation of the trampoline frame logic -> Empirical (else Declared).
       - DN-15 §10 append records the Inc-3 (full trampoline) resolution; §5 text unchanged.
       - just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #818): landed in crates/mycelium-mlir/src/trampoline.rs (1029 LOC) +
+      src/tests/trampoline.rs + tests/recursion_trampoline_differential.rs. Non-tail Fix + FixGroup
+      run via a heap control-stack trampoline bounded by the shared AutoDepthBudget; the FixGroup
+      refusal (llvm.rs:585) and the DN-15 §8.5 Match-in-pre-tail limitation are removed. cargo-mutants
+      catches a trampoline-frame mutation (0 missed) -> tag upgraded Declared to Empirical on that
+      checked basis (VR-5). DN-15 §10 append still owed (this resync's task 3). Honest tag: Empirical.
   - id: M-851
     title: "Direct-LLVM closure-ABI widening: any repr/width + currying + closure results"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [E15-1]
+    landed_pr: 821
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #821 (5a94ae7) — closures over any repr/width + currying + returned closures lower via specialize-at-application inlining (a Lam builds a suspended closure value; an App inlines its body with the param bound to the concrete-shape arg), an architectural choice (vs. a wire-level boxed-lane ABI) surfaced to and accepted by the maintainer. Removes the narrow Binary{8} ABI + the heap arena. 37 tests green (13 closure differential non-vacuous, 12 recursion), cargo-mutants 8/0 -> Empirical; 3 MEDIUMs patched on-branch."
     doc_refs: [corpus:ADR-034, corpus:RFC-0004, corpus:DN-25]
     body: |
       Replace the narrow packed-i64 Binary{8} closure ABI (M-378) with a uniform pointer-boxed lane
@@ -5249,12 +5276,25 @@ issues:
         closures); cargo-mutants catches a box/unbox mutation -> Empirical.
       - RFC-0004 §11.7 append records the closure-ABI widening (additive under the §2 revisit clause).
       - just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #821): landed in crates/mycelium-mlir/src/llvm.rs (closure section
+      rewritten, 374 lines net) + tests/closure_widening_differential.rs. HONEST CORRECTION (VR-5):
+      the realized mechanism is specialize-at-application inlining, not the uniform pointer-boxed
+      lane ABI the issue body sketched — a `Lam` builds a suspended closure value and an `App`
+      inlines its body at the concrete argument shape, removing the M-378 narrow-Binary{8} refusals
+      (DN-15 §7.4) without a runtime box/unbox pair. Closure-valued program results and cross-boundary
+      datum/Fix captures stay explicit never-silent UnsupportedNode (runtime dispatch deferred).
+      cargo-mutants 8/0 missed -> Empirical. RFC-0004 §11.7 append still owed (FLAG: not yet done in
+      this resync — see report). Honest tag: Empirical.
   - id: M-852
     title: "Direct-LLVM Swap native codegen (certificate-preserving, M-210-checked)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-851]
+    landed_pr: 823
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #823 (8392131) — native direct-LLVM codegen of Swap for the certified binary<->ternary class (swap_codegen.rs): value-preserving enc/dec transcode in dumpable IR, maintainer-ratified SwapCertMode (DEFAULT Recheck = independent compile-time re-check over mycelium-core; OPT-IN ReuseInterp), mode+source EXPLAIN-recorded. Two real silent-miscompile bugs caught + fixed before landing (cargo-mutants over-width overflow; review in-bound illegal-pair quotient discard). 145/152 tests green, cert-equivalence via M-210 both modes."
     doc_refs: [corpus:ADR-034, corpus:RFC-0004, corpus:RFC-0029, corpus:DN-25]
     body: |
       Lower the Swap node natively (llvm.rs:508 refusal + new src/swap_codegen.rs). Swap is the ONLY
@@ -5270,12 +5310,26 @@ issues:
       - Certificate-equivalence (emitted swap == engine result via the M-210 checker) + three-way
         differential green; cargo-mutants catches a swap-lowering mutation -> Empirical.
       - RFC-0004 §11.8 append + RFC-0002 cross-ref; just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #823): landed in crates/mycelium-mlir/src/swap_codegen.rs (515 LOC) +
+      tests/swap_differential.rs. FLAG RESOLVED (maintainer-ratified): a two-mode SwapCertMode —
+      DEFAULT `Recheck` (an independent compile-time re-check of the certificate over mycelium-core)
+      and an opt-in `ReuseInterp` (carries the interpreter-computed certificate forward) — both modes
+      EXPLAIN-recorded (mode + source). Never-silent refusals: Dense/VSA, illegal pair, over-i64-width
+      (both modes), swap-in-recursion. cargo-mutants caught a real over-width 1<<64 overflow bug and
+      review caught a real in-bound illegal-pair quotient-discard bug, both fixed before landing.
+      RFC-0004 §11.7 append (not §11.8 per the merge note) + RFC-0002 cross-ref still owed (FLAG: not
+      yet done in this resync — out of this agent's doc-ownership scope, see report). Honest tag:
+      Empirical (Proven correctly not claimed — VR-5).
   - id: M-853
     title: "Native Dense lowering (Repr::Dense element-wise + quant descriptor)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-852]
+    landed_pr: 824
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #824 (ce450b7) — native direct-LLVM Dense element-wise lowering (add/sub/neg/scale/dot/similarity) over the un-quantized F32/BF16 fragment (RFC-0039 §5.1). Three-way differential through the M-210 checker (bit-exact; dialect leg honestly refuses), cargo-mutants-witnessed (67/70 viable caught). Honest tags: codegen claim Empirical, read-back carries the reference per-op tag (Proven add/sub/scale, Exact neg). Quantized Dense stays an explicit never-silent refusal gated on E20-1."
     doc_refs: [corpus:ADR-034, corpus:RFC-0039, corpus:RFC-0029, corpus:DN-25]
     body: |
       Native Dense lowering (new src/dense_codegen.rs, direct-LLVM first; dialect later) -- removes the
@@ -5290,12 +5344,25 @@ issues:
       - Three-way differential vs mycelium-cert::dense reference green; cargo-mutants catches a
         quant-granularity mutation -> Empirical; never-silent on unsupported quant modes.
       - just check green; CHANGELOG append-only; honest tag (Declared until the differential is checked).
+
+      DONE (2026-06-30, PR #824): landed in crates/mycelium-mlir/src/dense_codegen.rs (1001 LOC) +
+      tests/dense_differential.rs. Element-wise add/sub/neg/scale/dot/similarity over un-quantized
+      F32/BF16 (RFC-0039 §5.1/OQ-2); three-way differential through the M-210 checker is bit-exact
+      (dialect leg honestly refuses Dense). cargo-mutants 67/70 viable caught. Overflow/subnormal
+      classified by sentinel-token scan at the correct (non-zero) index, a real bug caught + fixed.
+      Quantized Dense (ADR-030 int/fp8/TF32) stays an explicit never-silent refusal, gated on E20-1
+      landing QuantDesc per OQ-4. Honest tag: codegen claim Empirical; read-back carries the reference
+      per-op tag (Proven add/sub/scale, Exact neg) -- upgraded from the prior Declared placeholder on
+      this checked basis (VR-5).
   - id: M-854
     title: "Native VSA lowering (bind/bundle/permute over the mycelium-vsa models)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-853]
+    landed_pr: 825
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #825 (fda7b9f) — native direct-LLVM VSA lowering (bind/unbind/bundle/permute/similarity) for the four 1.0.0-mandatory models, mirroring mycelium-vsa digit-for-digit (RFC-0039 §5.2). Three-way differential through the M-210 checker (bit-exact; dialect honestly refuses VSA); cargo-mutants 0-missed cross-environment via toolchain-independent witnesses + 4 justified equivalents. Honest tags: Empirical codegen; Proven only the single-op MAP-I bundle bound; HRR/FHRR bundle Empirical-within-a-measured-profile, refuse outside; SBC/MAP-B + quantized stay never-silent refusals (E20-1-gated)."
     doc_refs: [corpus:ADR-034, corpus:RFC-0039, corpus:RFC-0029, corpus:DN-25]
     body: |
       Native VSA lowering (new src/vsa_codegen.rs, direct-LLVM first; dialect later) -- bind/bundle/
@@ -5314,6 +5381,23 @@ issues:
         capacity-bound parity case (single-op MAP-I); cargo-mutants catches a bind/bundle mutation.
       - just check green; CHANGELOG append-only; honest tags (Proven preserved only for the checked
         single-op bound).
+
+      DONE (2026-06-30, PR #825): landed in crates/mycelium-mlir/src/vsa_codegen.rs (1493 LOC) +
+      tests/vsa_differential.rs (928 LOC). bind/unbind/bundle/permute/similarity for the four
+      1.0.0-mandatory models (MAP-I/BSC/HRR/FHRR), mirroring mycelium-vsa digit-for-digit; dialect leg
+      honestly refuses VSA. cargo-mutants 0-missed via TOOLCHAIN-INDEPENDENT emission/read-back
+      witnesses + 4 inline-justified equivalents -- this property is CROSS-ENVIRONMENT (does not depend
+      on the local mlir-18-tools/libMLIR install), distinct from M-857's libMLIR-gated witnesses.
+      Honest tags carried exactly per RFC-0039 §5.2: Proven preserved ONLY for the single-op MAP-I
+      bundle side-condition (capacity::proven_capacity_bound replay); HRR/FHRR bundle is Empirical
+      WITHIN the reference's measured EmpiricalProfile coverage window (odd m<=5, d>=1024,
+      single-factor, codebook<=16) and refuses OutsideEmpiricalProfile beyond it -- never a silent
+      Empirical-anyway. SBC/MAP-B (niche, OQ-3) and quantized/block-sparse/complex-carrier VSA
+      (ADR-031, OQ-4) stay explicit never-silent refusals, E20-1-gated. HEAVY/large-hypervector-dim
+      VSA workloads and the full cargo-mutants durability pass beyond the toolchain-independent witness
+      set are GPU-DEFERRED (maintainer-run; not executed in this CPU-bound agent environment) -- the
+      landed claim covers the CPU small-dim envelope only. RFC-0039 remains Accepted (implemented
+      Rust-first, pending ratification -- NOT moved to Enacted by this landing). Honest tag: Empirical.
   - id: M-855
     title: "JIT for dynamic VSA/HDC workloads + ADR-009 deferral-lift record"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -5354,9 +5438,12 @@ issues:
   - id: M-857
     title: "trit.mul through the real MLIR-dialect path (libMLIR-gated)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-725]
+    landed_pr: 820
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #820 (9082e2f) — balanced-ternary trit.mul lowered through the real arith/func/cf dialect path (shifted-accumulate, 2m-trit buffer, shared emit_trit_add_step carry; DRY with direct-LLVM emit_trit_mul + mycelium_core::ternary::mul). DialectError::Unsupported(\"trit.mul\") refusal removed. Three-way differential non-vacuous (libMLIR 18.1.3 provisioned), cargo-mutants 9-caught/0-missed -> Empirical; 1 Medium patched on-branch."
     doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
     body: |
       Lower trit.mul (shifted-accumulate / 2m-trit buffer) through arith/func dialect ops in
@@ -5367,6 +5454,17 @@ issues:
       Definition of Done:
       - Three-way differential over a trit-mul corpus green where libMLIR is provisioned; mutant on
         the shift/accumulate caught -> Empirical. just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #820): landed in crates/mycelium-mlir/src/dialect/native.rs (257 lines
+      net). trit.mul now lowers through arith/func/cf dialect ops (shifted-accumulate, 2m-trit
+      buffer), sharing emit_trit_add_step with direct-LLVM emit_trit_mul (DRY). The
+      DialectError::Unsupported("trit.mul") refusal is removed; the dialect boundary moves to
+      closures/recursion/data/Swap/Dense/VSA (each an explicit test-pinned refusal -- M-856 is the
+      tracked dialect catch-up for those). THIS WITNESS IS LIBMLIR-GATED (unlike M-854's
+      toolchain-independent witnesses): the three-way differential ran non-vacuous against a
+      provisioned libMLIR 18.1.3; cargo-mutants 9-caught/0-missed in that environment. Honest tag:
+      Empirical where libMLIR is provisioned; skip-graceful (DialectError::ToolchainMissing) where
+      absent, never a faked pass.
   - id: M-858
     title: "Unified mutant-witnessed three-way differential over all new fragments"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -7863,7 +7961,7 @@ issues:
   - id: M-848
     title: "M-848 -- Scoped-toolchain setup automation (just setup-scoped) per DN-65"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:infra, area:toolchain, priority:P3, status:needs-design]
+    labels: [phase:8, type:infra, area:toolchain, priority:P3, status:in-progress]
     depends_on: []
     doc_refs:
       - corpus:DN-65
@@ -7879,6 +7977,16 @@ issues:
       Pairs with the sync-off-tip step (already a standing rule). Never-silent: prints what it installed/
       skipped + why.
       DoD: the recipe lands; DN-65 §2.3 references it; a scoped PR's agent can prep its env in one step.
+
+      MARKER (2026-06-30, manifests resync, status todo/needs-design -> in-progress): a sibling
+      toolchain agent was reported (this wave) to be making the setup tooling idempotent/auto-installing
+      so differentials are non-vacuous without changing test semantics (see CHANGELOG.md "toolchain
+      made idempotent/auto-installing (M-848)" methodology-resolution note). NO `claude/leaf/E25-toolchain`
+      (or equivalent) branch, commit, or `just setup-scoped` recipe was found in `origin` at the time of
+      this resync (`git ls-remote origin` checked 2026-06-30; `justfile` has no `setup-scoped` target
+      yet) -- so this status move records that the work is reported in-flight, NOT that it has landed.
+      FLAGGED for the maintainer: confirm whether the sibling toolchain agent's branch was pushed
+      elsewhere / under a different name, or is still local-only / not yet started.
   - id: M-849
     title: "M-849 -- Colony trust topology: controller / masterless / node invalidation (RFC-0038 §8.8)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
