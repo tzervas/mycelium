@@ -77,6 +77,12 @@ pub mod vr4;
 // MAP-I/BSC/HRR/FHRR fragment) — differential-checked against `mycelium-vsa`, mutant-witnessed, honest
 // per-op tags (SBC/MAP-B refused never-silently).
 pub mod vsa_codegen;
+// M-855 (RFC-0039 §5.3): the dynamic-VSA JIT — the M-340 in-process `dlopen` JIT extended to the
+// M-854 real-Vec<f64> MAP-I/BSC/HRR/FHRR fragment, for data-dependent-dimension / runtime-model-
+// selection workloads. Reuses vsa_codegen's program/error/EXPLAIN/read-back shapes verbatim; the ADR-
+// 009 dynamic-VSA JIT deferral lift is recorded append-only at RFC-0039 §6 (OQ-1, no separate ADR-009
+// amendment).
+pub mod vsa_jit;
 
 pub use accel::{
     accelerated_ternary_dot, AccelOutcome, BitnetCapability, DegradeReason, Path as AccelPath,
@@ -140,6 +146,10 @@ pub use vsa_codegen::{
     VsaAotError, VsaArtifact, VsaCgOp, VsaExplain, VsaModelId, VsaProgram, VsaResult,
     FHRR_BUNDLE_PROFILE, HRR_BUNDLE_PROFILE, VSA_CODEGEN_GUARANTEE,
 };
+// M-855 (RFC-0039 §5.3): the dynamic-VSA JIT — in-process `dlopen` execution over the same real-
+// Vec<f64> MAP-I/BSC/HRR/FHRR fragment as `vsa_codegen`, for data-dependent-dimension / runtime-model-
+// selection workloads. `VsaJitArtifact`/errors/results are shared with the AOT path (`vsa_codegen`).
+pub use vsa_jit::{vsa_jit_compile, vsa_jit_compile_and_run, VsaJitArtifact, VSA_JIT_GUARANTEE};
 
 #[cfg(test)]
 mod tests;

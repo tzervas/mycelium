@@ -538,7 +538,7 @@ impl VsaProgram {
     /// the model's alphabet, and the op's empirical/capacity regime. Returns an explicit
     /// [`VsaAotError`] for any violation — never a silent coercion (G2), exactly as `mycelium-vsa`
     /// refuses.
-    fn validate(&self) -> Result<(), VsaAotError> {
+    pub(crate) fn validate(&self) -> Result<(), VsaAotError> {
         // Operand-count / malformed-shape gate.
         match self.op {
             VsaCgOp::Bind | VsaCgOp::Unbind | VsaCgOp::Similarity => {
@@ -699,7 +699,7 @@ pub fn emit_vsa_llvm_ir(prog: &VsaProgram) -> Result<(String, VsaExplain), VsaAo
     Ok((out, explain))
 }
 
-fn mk_explain(prog: &VsaProgram) -> VsaExplain {
+pub(crate) fn mk_explain(prog: &VsaProgram) -> VsaExplain {
     VsaExplain {
         op: prog
             .model
@@ -721,7 +721,7 @@ fn mk_explain(prog: &VsaProgram) -> VsaExplain {
 
 /// Emit the dumpable EXPLAIN comment into the IR (RFC-0004 §6 — the op's basis is visible in the
 /// `.ll`; never a black box, G2).
-fn emit_explain_comment(e: &VsaExplain, out: &mut String) {
+pub(crate) fn emit_explain_comment(e: &VsaExplain, out: &mut String) {
     let _ = writeln!(
         out,
         "; vsa {} | model={} dim={} | physical={:?} | ref-guarantee={:?} | codegen-guarantee={:?} \
@@ -966,7 +966,7 @@ fn emit_similarity(prog: &VsaProgram, ssa: &mut Ssa, body: &mut String) -> Resul
 
 /// Emit cosine `dot / (‖a‖·‖b‖)`, `0` on a zero-norm operand (mirrors `wrap::cosine` / `MapI::similarity`
 /// — all in `f64`, summed left-to-right). Returns the result SSA register.
-fn emit_cosine(a: &[f64], b: &[f64], ssa: &mut Ssa, body: &mut String) -> String {
+pub(crate) fn emit_cosine(a: &[f64], b: &[f64], ssa: &mut Ssa, body: &mut String) -> String {
     let dot = emit_dot_acc(a, b, ssa, body);
     let na2 = emit_dot_acc(a, a, ssa, body);
     let nb2 = emit_dot_acc(b, b, ssa, body);
@@ -991,7 +991,7 @@ fn emit_cosine(a: &[f64], b: &[f64], ssa: &mut Ssa, body: &mut String) -> String
 
 /// Emit the BSC centered-Hamming similarity `1 − 2·d_H/d` (mirrors `Bsc::similarity`). `d_H` counts
 /// positions where `a ≠ b`; the count + the `1 − 2·h/d` are in `f64`, matching the reference exactly.
-fn emit_hamming_sim(a: &[f64], b: &[f64], ssa: &mut Ssa, body: &mut String) -> String {
+pub(crate) fn emit_hamming_sim(a: &[f64], b: &[f64], ssa: &mut Ssa, body: &mut String) -> String {
     let mut hamm = "0.0".to_owned();
     for (&ai, &bi) in a.iter().zip(b.iter()) {
         // h += (a == b) ? 0.0 : 1.0
@@ -1021,7 +1021,7 @@ fn emit_hamming_sim(a: &[f64], b: &[f64], ssa: &mut Ssa, body: &mut String) -> S
 
 /// Emit the FHRR phase similarity `mean cos(θa − θb)` (mirrors `Fhrr::similarity`) — summed
 /// left-to-right then divided by `len`, all in `f64`.
-fn emit_phase_sim(a: &[f64], b: &[f64], ssa: &mut Ssa, body: &mut String) -> String {
+pub(crate) fn emit_phase_sim(a: &[f64], b: &[f64], ssa: &mut Ssa, body: &mut String) -> String {
     let mut acc = "0.0".to_owned();
     for (&ai, &bi) in a.iter().zip(b.iter()) {
         let diff = ssa.fresh();
@@ -1069,7 +1069,7 @@ fn emit_dot_acc(xs: &[f64], ys: &[f64], ssa: &mut Ssa, body: &mut String) -> Str
 /// sign** (a `floor`-based identity `theta − TAU·floor(theta/TAU)` agrees on every magnitude *except*
 /// `theta = -0.0`, which it would flip to `+0.0` — verified over 2·10⁶ samples; using `frem` closes
 /// that edge so the read-back stays bit-exact for a `-0.0` phase sum). Returns the wrapped register.
-fn emit_wrap_phase(theta: &str, ssa: &mut Ssa, body: &mut String) -> String {
+pub(crate) fn emit_wrap_phase(theta: &str, ssa: &mut Ssa, body: &mut String) -> String {
     let tau = f64_const(std::f64::consts::TAU);
     let pi = f64_const(std::f64::consts::PI);
     // r = theta % TAU  (frem); rem_euclid: if r < 0 { r + TAU } else { r }.
@@ -1135,21 +1135,27 @@ fn emit_newline(ssa: &mut Ssa, body: &mut String) {
 }
 
 /// Render an `f64` as an exact LLVM `double` constant (hex form — bit-exact, no decimal round-trip).
-fn f64_const(x: f64) -> String {
+pub(crate) fn f64_const(x: f64) -> String {
     format!("0x{:016X}", x.to_bits())
 }
 
 // ─── SSA / label counters (local; the llvm.rs ones are pub(crate) but coupled to that module) ───
 
 /// SSA register counter for the VSA module (separate from `llvm::Ssa` so the two never collide).
-struct Ssa(usize);
+/// `pub(crate)` so the JIT store-sink emitter (`vsa_jit.rs`, M-855) shares the exact same counter
+/// discipline as this module's print-sink emitter — one SSA-naming scheme, never two that could drift.
+pub(crate) struct Ssa(usize);
 impl Ssa {
-    fn fresh(&mut self) -> String {
+    /// A fresh SSA counter starting at register `%r0` (mirrors this module's own `Ssa(0)` construction).
+    pub(crate) fn new() -> Self {
+        Ssa(0)
+    }
+    pub(crate) fn fresh(&mut self) -> String {
         let n = self.0;
         self.0 += 1;
         format!("%r{n}")
     }
-    fn fresh_label(&mut self) -> String {
+    pub(crate) fn fresh_label(&mut self) -> String {
         let n = self.0;
         self.0 += 1;
         format!("bb{n}")
@@ -1173,6 +1179,32 @@ pub struct VsaArtifact {
 }
 
 impl VsaArtifact {
+    /// Build a read-back-**shape-only** artifact — carries the `(op, model, dim, bundle_delta,
+    /// item_count)` shape but no executable (`bin`/`_dir` are empty placeholders, matching
+    /// [`Self::for_readback_test`]'s no-execution contract). `pub(crate)`, always available (not
+    /// `#[cfg(test)]`) so the **dynamic-VSA JIT** (`vsa_jit.rs`, M-855) can reuse this module's
+    /// read-back methods (`reconstruct_value` / `result_meta` / `result_bound`) verbatim over its own
+    /// `dlopen`-sourced `u64` buffer — the JIT read-back Meta/guarantee construction is then *provably*
+    /// identical to the AOT path's (DRY; the two execution modes can never silently diverge on how a
+    /// result `Value` is stamped).
+    pub(crate) fn for_shape(
+        op: VsaCgOp,
+        model: VsaModelId,
+        dim: u32,
+        bundle_delta: Option<f64>,
+        item_count: u64,
+    ) -> Self {
+        VsaArtifact {
+            _dir: TmpDir(std::path::PathBuf::new()),
+            bin: std::path::PathBuf::new(),
+            op,
+            model,
+            dim,
+            bundle_delta,
+            item_count,
+        }
+    }
+
     /// White-box constructor for the **toolchain-independent read-back tests** (M-854 mutant-witness).
     /// The read-back metadata methods (`result_bound` / `result_meta` / `reconstruct_value`) read only
     /// the *shape* fields (`op`, `model`, `dim`, `bundle_delta`, `item_count`) — never `bin`/`_dir` —
@@ -1471,7 +1503,7 @@ pub fn vsa_compile_and_run(prog: &VsaProgram) -> Result<VsaResult, VsaAotError> 
 /// Map a `llvm::AotError` (from the reused toolchain helpers) into a `VsaAotError`, preserving the
 /// never-silent classification (toolchain-missing stays a skip; a real compile/run failure stays an
 /// error).
-fn aot_to_vsa(e: crate::llvm::AotError) -> VsaAotError {
+pub(crate) fn aot_to_vsa(e: crate::llvm::AotError) -> VsaAotError {
     use crate::llvm::AotError;
     match e {
         AotError::ToolchainMissing(t) => VsaAotError::ToolchainMissing(t),
