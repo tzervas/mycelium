@@ -1,5 +1,10 @@
+use std::collections::BTreeMap;
+
 use crate::ambient::*;
-use crate::ast::{Expr, Item, Literal, Nodule, Paradigm};
+use crate::ast::{
+    BaseType, Expr, FnDecl, FnSig, Item, Literal, Nodule, Paradigm, Param, Path, TypeRef, Vis,
+    WidthRef,
+};
 use crate::parse;
 
 fn nodule(src: &str) -> Nodule {
@@ -120,5 +125,74 @@ fn the_std_sys_marker_round_trips_through_expand_to_source() {
     assert!(
         !expand_to_source(&resolve(&plain).unwrap()).contains("@std-sys"),
         "an unmarked nodule must not gain `@std-sys`"
+    );
+}
+
+/// A `consume(consume(… consume(x) …))` nest `depth` deep — `Expr::Consume` is a bare `Box<Expr>`
+/// wrapper that the resolver walks transparently (no ambient-sensitive fields), so it is the
+/// simplest way to build a pathologically-nested `Expr` directly, bypassing the parser's
+/// `MAX_EXPR_DEPTH` surface cap (mirroring `checkty`'s `deep_not` / `totality`'s `deep_consume`
+/// fixtures — a direct AST is the way to exercise *this pass's own* M-674 budget).
+fn deep_consume(depth: usize) -> Expr {
+    let mut e = Expr::Path(Path(vec!["x".to_string()]));
+    for _ in 0..depth {
+        e = Expr::Consume(Box::new(e));
+    }
+    e
+}
+
+fn nodule_with_body(body: Expr) -> Nodule {
+    Nodule {
+        path: Path(vec!["d".to_string()]),
+        std_sys: false,
+        items: vec![Item::Fn(FnDecl {
+            vis: Vis::Private,
+            thaw: false,
+            tier: None,
+            sig: FnSig {
+                name: "main".to_string(),
+                params: vec![],
+                value_params: vec![Param {
+                    name: "x".to_string(),
+                    ty: TypeRef {
+                        base: BaseType::Binary(WidthRef::Lit(1)),
+                        guarantee: None,
+                    },
+                }],
+                ret: TypeRef {
+                    base: BaseType::Binary(WidthRef::Lit(1)),
+                    guarantee: None,
+                },
+                effects: vec![],
+                effect_budgets: BTreeMap::new(),
+            },
+            body,
+        })],
+    }
+}
+
+#[test]
+fn the_depth_budget_trips_cleanly_and_just_under_it_succeeds() {
+    // Just under the budget: resolution completes (identity on this ambient-free body — Consume
+    // carries no paradigm-sensitive fields).
+    let ok = resolve(&nodule_with_body(deep_consume(
+        (MAX_AMBIENT_DEPTH - 5) as usize,
+    )));
+    assert!(
+        ok.is_ok(),
+        "just under the budget should resolve ok: {ok:?}"
+    );
+    // Past the budget: a clean, explicit refusal — never a host-stack overflow (banked guard 4).
+    let err = resolve(&nodule_with_body(deep_consume(
+        (MAX_AMBIENT_DEPTH + 50) as usize,
+    )))
+    .expect_err("past the budget must refuse");
+    assert!(
+        matches!(err, AmbientError::DepthExceeded { limit, .. } if limit == MAX_AMBIENT_DEPTH),
+        "expected the explicit depth-budget refusal, got: {err:?}"
+    );
+    assert!(
+        err.to_string().contains("recursion-depth budget"),
+        "expected the explicit depth-budget refusal message, got: {err}"
     );
 }
