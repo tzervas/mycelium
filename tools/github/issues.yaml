@@ -2341,6 +2341,7 @@ issues:
       of this issue's totality/ambient scope (item (2)), not a silent gap. Items (3) (the broader
       cross-crate audit: MLIR lowering, runtime task/supervision depth, `mycelium-core::recon`,
       dense/VSA recursive ops) and (4) (optional `grow-on-demand` stacker feature) remain open.
+      This mono.rs remainder is now tracked as M-866.
 
   - id: M-675
     title: "M-675 — tooling: reconcile idmap.tsv against live GitHub for all Phase-5/6/7/8 issues"
@@ -5990,6 +5991,35 @@ issues:
         never-silent refusal (G2), not a silent gap.
       - just check green; honest tag (Empirical, not Proven, absent a checked argument); CHANGELOG
         append-only.
+
+  - id: M-866
+    title: "Bound mono.rs free_vars/pattern_binders recursion (M-674 follow-up)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:fix, area:language, priority:P2, status:todo]
+    depends_on: [M-674]
+    doc_refs: [corpus:ADR-032, src:crates/mycelium-l1/src/mono.rs, src:crates/mycelium-l1/src/totality.rs]
+    body: |
+      Minted 2026-07-01 (Wave-1 reconciliation close-out), closing the FLAG M-674 left open: `mono.rs`'s
+      own `free_vars`/`pattern_binders` recursion (monomorphization's AST descent over a specialized
+      body, walking `Expr`/`Pattern` directly) carries NO explicit depth budget of its own. This is
+      distinct from both the totality/ambient budgets M-674 landed (`MAX_WALK_DEPTH`/`MAX_AMBIENT_DEPTH`
+      on `totality.rs`'s `walk_expr`/`descend_walk`/`pattern_binders` and `ambient.rs`'s traversal) and
+      from the `classify_all` -> `ElabError::DepthExceeded` mapping `mono.rs::finish` already has (that
+      mapping only covers the totality re-check `finish` invokes, not `free_vars`/`pattern_binders`'
+      own recursion during specialization). A pathologically-nested specialized body can today overflow
+      the host stack (process abort) instead of a clean never-silent refusal (G2).
+
+      User stories:
+      - As a compiler maintainer, I want the monomorphizer's own AST recursion bounded, so that a
+        pathologically-nested input refuses cleanly instead of aborting.
+
+      Definition of Done:
+      - `free_vars` and `pattern_binders` in `mono.rs` each carry an explicit `MAX_WALK_DEPTH`-style
+        budget matching `totality.rs`'s discipline, returning an explicit error (never a silent abort
+        or a host-stack overflow — G2) once exceeded.
+      - A nesting regression test asserts the explicit error is returned just past the budget (mirroring
+        the just-under/past-budget pattern `totality.rs`/`ambient.rs` already use).
+      - just check green; honest tag (Empirical — measured headroom, not merely asserted, per VR-5).
 
   - id: E16-1
     title: "E16-1 (epic) — Toolchain, IDE & package distribution"
