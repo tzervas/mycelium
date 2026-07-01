@@ -183,7 +183,10 @@ fn time_batch(
             .map(|_| independent_job(case_src, backend))
             .collect();
         let t = Instant::now();
-        let outcomes = scheduler.run_indexed(jobs, None);
+        // `run_indexed(jobs, peak_depth, steal_count)` — scaling measurement needs neither the
+        // queue-depth nor the work-steal instrumentation (M-861 added `steal_count`), so both are
+        // `None`; we only want the wall time of the whole batch across `workers` threads.
+        let outcomes = scheduler.run_indexed(jobs, None, None);
         let elapsed = t.elapsed();
         if outcomes.iter().any(|o| matches!(o, Outcome::Value(_))) {
             any_value = true;
