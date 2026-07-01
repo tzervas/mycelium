@@ -156,6 +156,20 @@ api:
 # Drift gate: committed docs/api-index/ must match a fresh regeneration. Skip if python3 absent.
 doc-index:
     @bash scripts/checks/doc-index.sh
+
+# (Re)generate THIRD-PARTY-LICENSES.md from Cargo.lock via cargo-about (about.toml + about.hbs).
+# Run after any dependency bump/add/remove; commit the result. Needs cargo-about:
+# `cargo install cargo-about --locked --features cli` (or `just setup`).
+licenses:
+    @cargo about generate --workspace --fail about.hbs -o THIRD-PARTY-LICENSES.md \
+      && printf '%s\n' "$(cat THIRD-PARTY-LICENSES.md)" > THIRD-PARTY-LICENSES.md \
+      && echo "  ok    THIRD-PARTY-LICENSES.md regenerated — review the diff and commit" \
+      || echo "  FAIL  cargo-about not installed or generation failed — cargo install cargo-about --locked --features cli"
+alias third-party-licenses := licenses
+# Drift gate: committed THIRD-PARTY-LICENSES.md must match a fresh `just licenses` regeneration.
+# Skip-graceful if cargo-about is absent (same pattern as `deny`/`doc-index`).
+licenses-check:
+    @bash scripts/checks/licenses.sh
 # Supply-chain gate: cargo-deny (deny.toml) + cargo-audit. Skips if the tools are absent.
 deny:
     @bash scripts/checks/deny.sh

@@ -8,6 +8,27 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: M-870 — third-party attributions + NOTICE generation)
+
+- **`THIRD-PARTY-LICENSES.md`** added at the repo root: every third-party Rust crate in the
+  workspace dependency graph (53 `(crate, version)` entries across 51 unique crate names),
+  generated via [`cargo-about`](https://github.com/EmbarkStudios/cargo-about) from `Cargo.lock`,
+  with the actual license text for each of the 25 unique license-text groups (deduped by identical
+  text, referenced by SPDX id — MIT ×22, Apache-2.0, BSD-2-Clause, Unicode-3.0). Config committed
+  for reproducible regeneration: `about.toml` (accepted-license allow-list mirroring `deny.toml`)
+  and a custom Markdown `about.hbs` template (the stock template emits HTML). Closes the
+  notice-preservation gap `M-743`'s first-party MIT audit didn't cover — MIT/BSD/Apache-2.0 all
+  require the license text to travel with a shipped artifact.
+- **`just licenses`** (alias `just third-party-licenses`) regenerates the file;
+  **`scripts/checks/licenses.sh`** is a drift gate (`scripts/checks/all.sh` component 28, part of
+  `just check`/`just check-full`) that skip-gracefully passes when `cargo-about` isn't installed
+  and otherwise fails on staleness or an unresolved license (never a silent gap — G2).
+- **NVIDIA disclosure (`experiments/README.md`):** the optional Python `gpu` dependency-group
+  (`uv sync --group gpu`, used by the M-832 `vsa_bounds` sweep) pulls NVIDIA-proprietary CUDA
+  runtime packages transitively through `torch`, under NVIDIA's own EULA — not OSI-approved.
+  Documented as opt-in only, experiments-only, and never part of a distributed Mycelium artifact —
+  out of `THIRD-PARTY-LICENSES.md`'s Rust-only scope but disclosed all the same (never-silent, G2).
+
 ### Added (2026-07-01: M-865 — harness-level parallel AOT/JIT dispatch extending M-862's pure-arg batch)
 
 - **`mycelium-mlir::concurrent`** (`compile_and_run_concurrent`, `jit_run_concurrent`,
