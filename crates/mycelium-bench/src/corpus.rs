@@ -13,8 +13,10 @@
 //! - [`Fragment::Data`] — `Construct`/`Match` programs. A *flat non-recursive* match/construct to a
 //!   repr the compiled backends MAY still lower; a recursive-data result they cannot. Which is which
 //!   is a *measured* harness output (VR-5), not a pre-asserted capability claim.
-//! - [`Fragment::Swap`] — uses the certified binary<->ternary swap, which the compiled paths route to
-//!   the interpreter (also a recorded capability loss for them).
+//! - [`Fragment::Swap`] — uses the certified binary<->ternary swap. Since M-852 (PR #823) the compiled
+//!   paths natively lower a **legal-pair** swap to a repr value; an illegal pair or unsupported repr
+//!   is still an explicit capability loss. Which is which is a *measured* harness output (VR-5), like
+//!   [`Fragment::Data`] — not a pre-asserted "always a loss" fact.
 //!
 //! Every case carries its source so the report is reproducible and the verdict is auditable.
 
@@ -32,7 +34,8 @@ pub enum Fragment {
     Data,
     /// Recursion (`Fix`/`FixGroup`) — interp + AOT env-machine only.
     Recursion,
-    /// Uses the certified binary<->ternary `Swap` — interp + AOT env-machine only.
+    /// Uses the certified binary<->ternary `Swap` — a legal pair now natively lowers on the compiled
+    /// backends too (M-852); an illegal pair/unsupported repr is still a capability loss.
     Swap,
 }
 
@@ -140,12 +143,14 @@ pub fn corpus() -> Vec<Case> {
             fragment: Fragment::BitSubset,
             note: "balanced-ternary ripple-carry add (direct-LLVM lowers it; MLIR-dialect does NOT — a capability split)",
         },
-        // ── Swap: certified binary<->ternary — interp + AOT only ─────────────────────────────────
+        // ── Swap: certified binary<->ternary — a legal pair, natively lowered since M-852 ──────────
         Case {
             id: "swap-roundtrip",
             src: "nodule d;\nfn main() => Binary{8} =\n  let b = 0b0010_1010 in swap(swap(b, to: Ternary{6}, policy: rt), to: Binary{8}, policy: rt);",
             fragment: Fragment::Swap,
-            note: "a binary->ternary->binary certified round-trip (compiled paths route Swap to the interpreter — capability loss)",
+            note: "a binary->ternary->binary certified round-trip over a LEGAL (8,6) pair — since \
+                   M-852 the compiled backends natively lower this to a value (measured, not \
+                   assumed); an illegal pair remains a capability loss",
         },
         // ── Data: Construct/Match — interp + AOT env-machine only ─────────────────────────────────
         Case {
