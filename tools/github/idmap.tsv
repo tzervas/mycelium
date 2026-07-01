@@ -349,3 +349,14 @@ M-797	584	4739622983
 #   originals from the FLAG batch; an ADDITIONAL ~30 newer authored-ahead ids (M-745–M-751, M-753–
 #   M-759, M-785–M-796, E19-1–E22-1) are ALSO unmapped (not in the original FLAG) — a full
 #   reconcile-all is a follow-on. The total unmapped count is 38, not 8.
+# RECONCILE (2026-07-01, integration close-out): `python3 tools/github/manifest-check.py` now
+#   reports 275/384 issues.yaml ids covered (109 unmapped, all WARNING-level — non-fatal per the
+#   tool's own split of ERROR=corruption vs WARNING=normal authoring drift). The growth from 38 to
+#   109 unmapped is the E19-1..E25-1 authoring wave landing entirely issues.yaml-first, incl. the
+#   full E25-1 M-850..M-863 set (+ the new split M-856b) added/flipped `done` this close-out — NONE
+#   of them have a live GitHub issue yet, so NONE get an idmap row here (G2: a number/db_id cannot
+#   be invented for a non-existent issue — that would be a guess, not a mapping). This is the same
+#   authored-ahead pattern as the original FLAG, now at wave scale; unblocking it is a
+#   `gh-issues-sync.py --issues` create-if-absent run (a live-GitHub-write operation, out of scope
+#   for a docs/manifest-only close-out session). Exact current gap: run manifest-check.py for the
+#   live count rather than trusting this comment (it drifts; the tool doesn't).

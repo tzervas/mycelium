@@ -8,6 +8,55 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-06-30: E25-1 staging-tier close-out — dynamic-VSA JIT, dialect Construct/Match/Swap, unified mutant-witnessed differential)
+
+- **M-855 — JIT for dynamic VSA/HDC workloads (PR #848, RFC-0039 §6).** Runtime-specialized JIT
+  execution for the four 1.0.0-mandatory VSA models (MAP-I, BSC, HRR, FHRR) covering
+  `bind`/`unbind`/`bundle`/`permute`/`similarity` (`crates/mycelium-mlir/src/vsa_jit.rs`), reusing
+  M-854's refusal surface and read-back verbatim (DRY). Differential against the interpreter is
+  9/9 non-vacuous; `cargo-mutants` is 0-missed on local hardware (one BSC-majority boundary gap
+  closed, two equivalent mutants justified inline). This is a partial landing, stated honestly:
+  cleanup/resonator loops are explicitly **deferred**, not covered by this JIT path or its
+  differential. Tag: **Empirical**.
+- **M-856 — MLIR-dialect catch-up for Construct/Match and Swap (PR #850, libMLIR-gated).** The
+  dialect leg (`crates/mycelium-mlir/src/dialect/native.rs`) now lowers `Construct`/`Match` (data)
+  and `Swap` (binary↔ternary transcode) through the real `arith`/`func`/`cf` dialect path; the
+  three-way differential interp == direct-LLVM == dialect is verified non-vacuous against a
+  provisioned libMLIR. **Honest partial-landing split (G2 — not silently dropped):** Dense/VSA
+  through the dialect is out of scope for this landing and is carried forward as a new issue,
+  **M-856b**. Tag: Empirical where libMLIR is provisioned; skip-graceful
+  (`DialectError::ToolchainMissing`) where absent.
+- **M-858 — unified mutant-witnessed three-way differential (PR #851).** A single differential
+  entrypoint (`tests/unified_threeway_differential.rs`) now covers interp / direct-LLVM /
+  MLIR-dialect (plus JIT for the in-subset fragment) over element-wise/arithmetic, data
+  (Construct/Match), and certified-swap corpora, including overflow parity and an honest boundary
+  check that closures/recursion are actually verified refused by the dialect leg (not just
+  claimed). Two coverage gaps in M-856's new dialect surface were found and closed with real
+  witnesses — a swap-boundary case (`swap(8 → binary4)`, the first value past the target width)
+  and a same-kind different-width `Match` case exercising the arm-shape `||` guard — closing **5
+  dialect mutant survivors, 0-missed**. This is the checked basis that earns the native codegen
+  claim its **Empirical** tag, not Declared (VR-5); it subsumes M-856's own dialect-witness
+  obligation. Dense/VSA are not yet part of the dialect leg of this differential (deferred to
+  M-856b).
+- **Fixed — bench Swap capability-loss classification was stale (PR #849, M-852 follow-up).** A
+  `mycelium-bench` test (`recursion_and_swap_are_capability_losses_and_data_is_never_silent`) hard-
+  coded `Swap` as an always-a-capability-loss fragment on both compiled backends, a fact that
+  predated M-852's native Swap codegen. Corrected: legal-pair `Swap` now folds into the same
+  never-silent (value / capability-loss / skip, measured not pre-asserted — VR-5) obligation
+  `Fragment::Data` already carries, since M-852's shared `lower_program` path lowers a legal
+  binary↔ternary round trip to a `Value` on both compiled backends whose repr/payload/guarantee
+  match the interpreter's (only the dynamic `Meta::provenance` differs, `Root` vs `Derived`, per
+  RFC-0001 §4.6). Illegal-pair/unsupported swaps remain explicit capability losses; recursion
+  (`Fix`/`FixGroup`) is unaffected and stays always-a-loss on both compiled backends.
+- **E25-1 (epic) progress refresh.** 3 more children landed `done` this wave (M-855/856/858,
+  bringing the total to 9 of the now-15 tracked children, after M-856's honest split adds
+  M-856b); still open: M-856b (new), M-860 (parallel codegen), M-862/863 (post-tag-cautious
+  perf-eval + ratification). `issues.yaml` records each landed child's `landed_pr`/`landed_date`/
+  `landed_basis` plus an append-only "DONE" note to its body. Flagged, not silently corrected: the
+  manifest shows M-859/M-861 still `status:ready` despite carrying `landed_pr` merges (PR #845,
+  #843) from before this close-out — left for the next resync/maintainer rather than unilaterally
+  flipped by this agent.
+
 ### Added (2026-06-30: E25-1 native-AOT full-coverage increments land — recursion, closures, Swap, Dense, VSA, trit.mul dialect)
 
 - **M-850 — direct-LLVM full recursion (heap trampoline, PR #818).** Non-tail `Fix` + mutual

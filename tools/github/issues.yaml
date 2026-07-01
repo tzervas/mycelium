@@ -5171,6 +5171,17 @@ issues:
         codebase and CHANGELOG.
       - just check green including the differential durability tests.
       - E15-1 issue status -> done; CHANGELOG entry append-only with honest guarantee framing.
+
+      FLAG (2026-07-01, integration close-out -- relationship to M-858, not a status change): E25-1's
+      M-858 (done, PR #851) EXTENDS this issue's own mutant-witnessed interp==AOT==JIT mechanism to
+      the new E25-1 fragments (recursion/closures/Swap/Dense/VSA/dynamic-VSA JIT) and additionally
+      brings the MLIR-dialect leg into the same checked harness. M-858 does NOT, by itself, retroactively
+      close THIS issue's own DoD (the base bit/trit-fragment mutant-witness this body already claimed
+      "IMPLEMENTED... Empirical" back on 2026-06-26) -- that is a pre-existing status/body inconsistency
+      (body says implemented, `labels:` still says `status:ready`) this resync surfaces but does not
+      unilaterally resolve, matching how M-859/M-861 were flagged rather than flipped in this same
+      close-out. Whether M-858's landing is sufficient grounds to flip M-729 -> done is a maintainer
+      call, not guessed here (G2/VR-5).
   - id: E25-1
     title: "E25-1 (epic) -- Native AOT full-language coverage, parallelism, and 1.0.0 gating"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -5189,12 +5200,29 @@ issues:
       ratification act. It does NOT replace E15-1 (waveN2 M-725..M-729 stay; they are subsumed under
       ADR-034's expanded DoD); it carries the new work.
 
-      Honest base state (verified 2026-06-30): crates/mycelium-mlir is landed on main and BUILDS clean;
-      direct-LLVM (llvm.rs) covers bit/trit + non-recursive Construct/Match + Binary{8} closures +
-      tail-only Fix, and REFUSES (never-silent) Swap / FixGroup / non-tail Fix / wide-curried closures /
-      Dense / VSA. MLIR-dialect (native.rs, feature mlir-dialect, libMLIR-gated per ADR-019) covers
-      bit/trit + trit.add/sub, refuses trit.mul + data + recursion + Swap + Dense/VSA. The interpreter
-      is the trusted-base reference throughout (ADR-007/NFR-7); the native path is the perf layer.
+      Honest base state (verified 2026-06-30, PRE-WAVE -- the state this epic was scoped against;
+      superseded by the refresh below, kept for the historical record): crates/mycelium-mlir is
+      landed on main and BUILDS clean; direct-LLVM (llvm.rs) covers bit/trit + non-recursive
+      Construct/Match + Binary{8} closures + tail-only Fix, and REFUSES (never-silent) Swap /
+      FixGroup / non-tail Fix / wide-curried closures / Dense / VSA. MLIR-dialect (native.rs,
+      feature mlir-dialect, libMLIR-gated per ADR-019) covers bit/trit + trit.add/sub, refuses
+      trit.mul + data + recursion + Swap + Dense/VSA. The interpreter is the trusted-base reference
+      throughout (ADR-007/NFR-7); the native path is the perf layer.
+
+      Base-state REFRESH (2026-07-01, integration close-out -- honest supersession of the pre-wave
+      paragraph above, VR-5): after M-850..M-858, direct-LLVM now additionally covers non-tail
+      Fix + FixGroup (heap trampoline, M-850), closures over any repr/width + currying (M-851),
+      certified binary<->ternary Swap (M-852), un-quantized Dense element-wise (M-853), and
+      MAP-I/BSC/HRR/FHRR VSA bind/unbind/bundle/permute/similarity (M-854) -- each Empirical via a
+      checked three-way differential, never Proven beyond the one checked single-op MAP-I capacity
+      bound (M-854). MLIR-dialect additionally covers trit.mul (M-857) and Construct/Match + Swap
+      (M-856); it STILL REFUSES Dense/VSA (tracked as the new **M-856b**). A JIT path for dynamic
+      VSA/HDC now exists (M-855, cleanup/resonator loops deferred). The remaining never-silent
+      refusal surface is materially smaller than the pre-wave paragraph describes, but is NOT
+      empty: M-856b's dialect Dense/VSA gap, JIT cleanup/resonator loops, and whatever M-860's
+      parallel-codegen and M-862's parallel-eval increments still gate on. Read the pre-wave
+      paragraph as "why this epic exists", not "current state" -- this paragraph is current as of
+      2026-07-01.
 
       User stories:
       - As a language user, I want the native AOT to compile the WHOLE language (closures, recursion,
@@ -5224,6 +5252,21 @@ issues:
       complete + stable, not a partial landing); DN-15's Draft->Resolved judgment is FLAGGED in this
       resync's report, not unilaterally decided. status:in-progress (was todo) reflects the partial
       landing honestly -- not done, not unstarted.
+
+      PROGRESS (2026-06-30, integration close-out resync): 3 more children landed `done` since the
+      prior resync -- M-855 (dynamic-VSA JIT, PR #848; cleanup/resonator loops explicitly deferred),
+      M-856 (dialect catch-up for Construct/Match + Swap, PR #850; Dense/VSA-dialect split out as
+      the new **M-856b**, not silently dropped -- G2), M-858 (unified mutant-witnessed three-way
+      differential, PR #851; closed the 5 dialect mutant survivors M-856 introduced, earning the
+      codegen Empirical basis). Also landed this wave: a stale bench capability-loss assertion fix
+      (PR #849, noted under M-859) correcting Swap's classification post-M-852. REMAINING OPEN:
+      M-856b (Dense/VSA through the dialect, new), M-860 (parallel codegen), M-862/M-863
+      (post-tag-cautious perf eval + ratification act). FLAG: M-859 and M-861 carry `landed_pr`
+      merges (PR #845, #843) per git history but this manifest still shows their pre-existing
+      `status:ready` -- a gap from the prior resync this agent did not unilaterally resolve (out of
+      this close-out's explicit scope; flagged for the next resync/maintainer, not silently carried
+      forward as fact). DoD's Enacted/Resolved bullet stays unmet for the same house-rule-#3 reason
+      as above.
   - id: M-850
     title: "Direct-LLVM full recursion: non-tail Fix + FixGroup heap trampoline (stack-robust)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -5401,9 +5444,12 @@ issues:
   - id: M-855
     title: "JIT for dynamic VSA/HDC workloads + ADR-009 deferral-lift record"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-854]
+    landed_pr: 848
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #848 (51fe194) — dynamic-VSA JIT runtime-specialization for the four mandatory models (bind/unbind/bundle/permute/similarity) in crates/mycelium-mlir/src/vsa_jit.rs, reusing the M-854 refusal surface + read-back verbatim. Differential 9/9 non-vacuous + cargo-mutants 0-missed on local hardware (a BSC-majority boundary gap closed, 2 equivalents justified). Cleanup/resonator loops explicitly deferred (not in this landing). Honest tag: Empirical."
     doc_refs: [corpus:ADR-034, corpus:RFC-0039, corpus:RFC-0029, corpus:DN-25]
     body: |
       JIT path for dynamic VSA/HDC workloads (data-dependent hypervector dim, runtime model selection,
@@ -5416,12 +5462,23 @@ issues:
       - JIT == interpreter over a dynamic-VSA subset (Empirical) + explicit refusal outside it;
         cargo-mutants catches a JIT-codegen mutation.
       - just check green; CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #848): landed in crates/mycelium-mlir/src/vsa_jit.rs (551 LOC) +
+      tests/vsa_jit_differential.rs (689 LOC) + src/tests/vsa_jit.rs (618 LOC). bind/unbind/bundle/
+      permute/similarity JIT-specialized at runtime for MAP-I/BSC/HRR/FHRR, mirroring M-854's
+      refusal surface. cargo-mutants 0-missed (a BSC-majority boundary gap closed, 2 equivalents
+      justified inline). PARTIAL LANDING (honest, per this issue's scope): cleanup/resonator loops
+      are explicitly DEFERRED, not covered by this JIT path or its differential. Honest tag:
+      Empirical.
   - id: M-856
     title: "MLIR-dialect coverage catch-up: Construct/Match + Swap + Dense/VSA (libMLIR-gated)"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:feature, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:feature, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-850, M-853, M-854]
+    landed_pr: 850
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #850 (d1e27d9) — MLIR-dialect leg (native.rs) now lowers Construct/Match (data) and Swap (binary<->ternary transcode) through real libMLIR; three-way differential interp == direct-LLVM == dialect verified. Dense/VSA-dialect coverage SCOPED OUT of this landing and split to M-856b (honest partial landing, not silently dropped -- G2). Mutant-witness for the new dialect surface subsumed by M-858's unified differential."
     doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
     body: |
       Bring the MLIR-dialect path (native.rs, feature mlir-dialect) up to direct-LLVM's fragment:
@@ -5434,6 +5491,36 @@ issues:
       Definition of Done:
       - Three-way differential green where libMLIR is provisioned (skip-graceful + recorded where not);
         cargo-mutants catches a dialect-lowering mutation.
+      - just check green (no skips silently masked); CHANGELOG append-only; honest tag.
+
+      DONE (2026-06-30, PR #850, partial landing -- honest per-title split): Construct/Match + Swap
+      now lower through the real arith/func/cf dialect path (crates/mycelium-mlir/src/dialect/
+      native.rs); three-way differential interp == direct-LLVM == dialect verified non-vacuous
+      against a provisioned libMLIR. Dense/VSA through the dialect is EXPLICITLY DEFERRED and split
+      out as **M-856b** (new issue below) -- this issue's title scope (Construct/Match + Swap) is
+      done; the Dense/VSA half of the original title is not. The dialect-lowering mutant witness
+      for this new surface is carried by M-858's unified differential (5 dialect mutant survivors
+      closed there), not duplicated here. Honest tag: Empirical where libMLIR is provisioned;
+      skip-graceful (DialectError::ToolchainMissing) where absent.
+  - id: M-856b
+    title: "MLIR-dialect coverage: Dense/VSA through the dialect path (libMLIR-gated)"
+    milestone: "Phase 6 — Native Acceleration & Deployment"
+    labels: [phase:6, type:feature, area:execution, priority:P2, status:ready]
+    epic: E25-1
+    depends_on: [M-853, M-854, M-856]
+    doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
+    body: |
+      Split out of M-856 (2026-06-30 resync, honest partial-landing division): bring Dense and VSA
+      lowering (native.rs:342) through the MLIR-dialect path (feature mlir-dialect), matching
+      direct-LLVM's dense_codegen.rs/vsa_codegen.rs fragment. libMLIR-GATED (ADR-019) -- skip
+      gracefully (DialectError::ToolchainMissing) where mlir-opt/mlir-translate are absent; never a
+      red gate, never a faked pass (reuse M-725's ran_mlir non-vacuity guard, same discipline M-856
+      established for Construct/Match/Swap).
+
+      Definition of Done:
+      - Three-way differential (interp == direct-LLVM == dialect) green over Dense + VSA where
+        libMLIR is provisioned (skip-graceful + recorded where not); cargo-mutants catches a
+        dialect-lowering mutation on the Dense/VSA path specifically.
       - just check green (no skips silently masked); CHANGELOG append-only; honest tag.
   - id: M-857
     title: "trit.mul through the real MLIR-dialect path (libMLIR-gated)"
@@ -5468,9 +5555,12 @@ issues:
   - id: M-858
     title: "Unified mutant-witnessed three-way differential over all new fragments"
     milestone: "Phase 6 — Native Acceleration & Deployment"
-    labels: [phase:6, type:verification, area:execution, priority:P1, status:ready]
+    labels: [phase:6, type:verification, area:execution, priority:P1, status:done]
     epic: E25-1
     depends_on: [M-850, M-852, M-854, M-855]
+    landed_pr: 851
+    landed_date: 2026-06-30
+    landed_basis: "Merge PR #851 (184ec13) — unified interp == direct-LLVM == dialect (== JIT for the in-subset fragment) differential through the shared M-210 checker with ran_mlir non-vacuity, over element-wise/arithmetic, data (Construct/Match), and certified-swap corpora. 5 dialect mutant survivors (M-856's new Construct/Match/Swap dialect surface) closed with real witnesses -- 0-missed. Earns the codegen Empirical basis and subsumes M-856's dialect witness obligation."
     doc_refs: [corpus:ADR-034, corpus:RFC-0029, corpus:DN-25]
     body: |
       Extend the unified interp == AOT == JIT three-way differential (M-729's shared M-210 checker)
@@ -5482,6 +5572,20 @@ issues:
       Definition of Done:
       - The extended harness catches an injected codegen divergence for each new fragment family.
       - The native coverage claims are labelled Empirical in code + CHANGELOG. just check green.
+
+      DONE (2026-06-30, PR #851): landed in tests/unified_threeway_differential.rs (951 LOC, plus
+      small parity fixes to closure_widening_differential.rs and
+      recursion_trampoline_differential.rs). Single differential entrypoint covering interp/
+      direct-LLVM/MLIR-dialect (+ JIT for the in-subset fragment) over element-wise+arithmetic,
+      data (Construct/Match), and certified-swap corpora, plus overflow parity and an honest
+      boundary check (closures/recursion actually verified refused by the dialect leg, not just
+      claimed). Two coverage gaps found + closed with real witnesses (not mutants.toml edits):
+      emit_swap_int_to_bits range-bound arithmetic (a swap(8 -> binary4) boundary case) and
+      lower_match_dialect's arm-shape || guard (a same-kind different-width Match case) -- 5
+      dialect mutant survivors total closed, 0-missed. Note: Dense/VSA are NOT yet part of the
+      dialect leg of this differential (M-856b, deferred) -- the unified harness covers what M-856
+      landed (Construct/Match/Swap) plus the pre-existing direct-LLVM/JIT fragments; it does not
+      retroactively cover the M-856b scope. Honest tag: Empirical.
   - id: M-859
     title: "mycelium-bench: single + multicore scaling curves + regression gates"
     milestone: "Phase 6 — Native Acceleration & Deployment"
@@ -5500,6 +5604,20 @@ issues:
       Definition of Done:
       - Scaling curves + regression gates produced for interp/AOT/JIT; baseline JSON committed;
         bench self-tests green. just check green; CHANGELOG append-only; honest tags.
+
+      FOLLOW-UP (2026-06-30, PR #849): a stale bench test assertion in
+      crates/mycelium-bench/src/backend.rs (recursion_and_swap_are_capability_losses_and_data_is_
+      never_silent) hard-coded Swap as an always-a-capability-loss fragment, predating M-852's
+      native Swap codegen. Corrected: legal-pair Swap now folds into the same never-silent
+      (value/capability-loss/skip, measured not pre-asserted) obligation Fragment::Data already
+      uses, since M-852's shared lower_program path lowers a legal binary<->ternary round trip to a
+      Value on both compiled backends (repr/payload/guarantee match the interpreter's; only the
+      dynamic Meta::provenance differs, Root vs Derived, RFC-0001 §4.6). Illegal-pair/unsupported
+      swaps remain explicit capability losses. Recursion (Fix/FixGroup) is unaffected -- still
+      always a capability loss on both compiled backends (no native call-frame machinery emitted).
+      This is a stale-expectation fix, not a scaling/regression-gate change; M-859's own status is
+      unchanged by this note (see this resync's report for a separate FLAG on M-859/M-861 status
+      currency).
   - id: M-860
     title: "Parallel AOT codegen: per-function independent lowering, byte-identical emit"
     milestone: "Phase 6 — Native Acceleration & Deployment"
