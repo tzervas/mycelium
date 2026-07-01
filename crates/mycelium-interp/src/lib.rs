@@ -107,6 +107,7 @@
 #![forbid(unsafe_code)]
 
 pub mod budget;
+pub mod parallel;
 pub mod prims;
 pub mod supervise;
 pub mod swap;
@@ -117,6 +118,7 @@ mod tests;
 use mycelium_core::{Alt, CoreValue, Datum, GuaranteeStrength, Node, Repr, Value, WfError};
 
 pub use budget::{Budgets, EffectBudget, EffectBudgetExhausted, EffectKind};
+pub use parallel::{is_pure, plan_parallel, BatchHead, ParallelPlan};
 pub use prims::PrimRegistry;
 pub use supervise::{
     CancelToken, Cancelled, Escalation, RestartIntensity, Supervisor, TaskOutcome,
