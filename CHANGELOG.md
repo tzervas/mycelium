@@ -8,6 +8,42 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: Phase-2 ratification — ADR-035 T4 scope amendment + RFC-0033/ADR-025..028 ratification)
+
+- **ADR-035 — Full-Language 1.0.0 Gate (Track T4) Scope Amendment (`Accepted`, maintainer-ratified).**
+  Narrows ADR-022 track T4's `lang 1.0.0` Definition of Done to the documented **stable-API freeze**
+  (**DN-66**) + the **core-lib self-host slice** (M-714…M-718) — full RFC-0031 §5 D6 Rust-crate
+  retirement for all 26 `mycelium-std-*` crates is **deferred to the post-1.0 long-term arc** (ADR-022
+  §10), mirroring how §8 Q1 already narrowed T9 and how **ADR-024** narrowed T1. Grounded in DN-66's
+  per-crate finding that zero crates clear the D6 trigger today (six same-named `.myc` nodules are
+  structurally disjoint prototypes, not ports; `mycelium-std-runtime` is load-bearing —
+  `crates/mycelium-mlir` depends on it directly). ADR-022 §5 T4 row + §8 Q1 carry append-only "narrowed
+  by ADR-035" pointers (their normative text is not rewritten); RFC-0031 §5 D6 carries an append-only
+  scope note (the D5/D6 mechanism itself is unchanged). **DN-66** itself moves `Draft → Accepted` by
+  this ratifying act.
+- **Issue status flips (ADR-035):** `M-719` (`in-progress` → `done` — its stable-API-freeze half now
+  closes T4's narrowed 1.0.0 bar; the D6-retirement half is spun out to a new post-1.0 backlog item);
+  `E13-1` epic (`in-progress` → `done` — all named children done under the narrowed scope). `E18-1`'s
+  body carries a clarifying, non-status-changing note (its own remaining children, M-739…M-742, are
+  unaffected and stay open). A new post-1.0 backlog issue, **`M-867`**, is minted (`status:todo`) to
+  carry the full per-op D5/D6 retirement work forward.
+- **RFC-0033 (Value-Model Collections & Precision): `Proposed` → `Accepted`** (maintainer-ratified).
+  The value-model collections (`Seq`/`Bytes`) + the four paradigms' precision/width semantics
+  (§1–§8) are ratified. **ADR-025, ADR-026, ADR-027, ADR-028 flip `Proposed` → `Accepted`** in the same
+  act (ADR-029/030/031 were already Accepted, 2026-06-24, PR #536). **The V1–V5 kernel implementation
+  (M-760…M-784 — the content-address one-way doors + swap/guarantee reconciliation) is deferred to
+  post-1.0** — the design is ratified now; the value-model growth beyond the already-landed V0
+  `BigTernary` (M-754…M-757, `done`) proceeds as a post-1.0 wave. No V-numbered implementation task
+  (M-758…M-784) is flipped by this act.
+- **Issue status flip (RFC-0033):** `M-785` (`in-progress` → `done` — its own Definition of Done,
+  "RFC-0033 + ADR-025…031 reach Accepted," is now met). `E20-1` epic label moves `proposed` →
+  `in-progress` (the design half is done; the epic itself stays open pending the deferred post-1.0
+  implementation, not flipped to `done`).
+- Stale cross-references to ADR-028's prior `Proposed` status updated append-only where they were
+  cited as grounding (`docs/Doc-Index.md`, `docs/notes/DN-41-Width-Cast-Prim.md`,
+  `docs/notes/DN-51-Binary-Width-Arithmetic-Promotion-and-Narrowing.md`) — each records the status at
+  authoring time and notes the later transition; no finding or decision in those notes is revised.
+
 ### Changed (2026-07-01: M-863 — AOT ratification act: RFC-0029 → Enacted, DN-15 → Resolved, E15-1/E25-1/E19-1 status flips)
 
 - **RFC-0029 (AOT Optimization, Codegen Maturity, and JIT): `Accepted` → `Enacted`.** With E25-1's
