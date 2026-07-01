@@ -50,3 +50,9 @@ The house rules (small auditable kernel; the transparency & auditability rule; n
 append-only decisions; grounded claims) and the tiered branch workflow are in the repository
 `CONTRIBUTING.md` and `CLAUDE.md`. Every PR states which `FR/NFR/VR/SC` it advances (or which
 ADR/RFC it implements) and **how it was verified**. The project is **MIT-licensed only**.
+
+---
+
+**Up:** [Home](Home.md) · [Architecture](Architecture.md) ·
+[Doc Index](https://github.com/tzervas/mycelium/blob/main/docs/Doc-Index.md) ·
+[repo root README](https://github.com/tzervas/mycelium/blob/main/README.md)

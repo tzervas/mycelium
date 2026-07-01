@@ -30,4 +30,4 @@ ergonomically wraps these types; it does not redefine them.
 
 ## Role in the workspace
 
-Provides the canonical diagnostic record below the stdlib layer; depends on `mycelium-core`; consumed by `std.diag`, `std.recover`, and `std.testing`. See the [workspace overview](../../README.md).
+Provides the canonical diagnostic record below the stdlib layer; depends on `mycelium-core`; consumed by `std.diag`, `std.recover`, and `std.testing`. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-diag).

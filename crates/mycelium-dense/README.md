@@ -28,4 +28,4 @@
 
 ## Role in the workspace
 
-Depends on `mycelium-core` only. Used by `mycelium-cert` (Dense↔VSA swap). See the [workspace overview](../../README.md).
+Depends on `mycelium-core` only. Used by `mycelium-cert` (Dense↔VSA swap). See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-dense).

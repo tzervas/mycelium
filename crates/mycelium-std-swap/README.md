@@ -39,4 +39,4 @@ truth.
 
 ## Role in the workspace
 
-Ring 1 / Tier A certified representation-change surface; wraps `mycelium-cert` without enlarging the trusted base. See the [workspace overview](../../README.md).
+Ring 1 / Tier A certified representation-change surface; wraps `mycelium-cert` without enlarging the trusted base. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-swap).

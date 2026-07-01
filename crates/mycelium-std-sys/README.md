@@ -32,4 +32,4 @@ backs libm precision, OS entropy quality, FS semantics, or clock resolution in v
 
 ## Role in the workspace
 
-The only crate in the std tree that may touch OS/FFI; sits below the std layer with no mycelium workspace dependencies. See the [workspace overview](../../README.md).
+The only crate in the std tree that may touch OS/FFI; sits below the std layer with no mycelium workspace dependencies. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-sys).

@@ -21,4 +21,4 @@ The design is intentionally transitional: the kernel's explicit depth budgets (`
 
 ## Role in the workspace
 
-No upstream Mycelium dependencies. Used by `mycelium-l1` (checker and elaborator). The grow-on-demand hybrid (optional `stacker` feature) is documented in `Cargo.toml` but off by default; it would contain any upstream `unsafe` in a single audited leaf, never in Mycelium-authored source. See the [workspace overview](../../README.md).
+No upstream Mycelium dependencies. Used by `mycelium-l1` (checker and elaborator). The grow-on-demand hybrid (optional `stacker` feature) is documented in `Cargo.toml` but off by default; it would contain any upstream `unsafe` in a single audited leaf, never in Mycelium-authored source. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-stack).

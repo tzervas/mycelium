@@ -36,4 +36,4 @@ one per exported op, asserted in tests (RFC-0016 §4.5).
 
 ## Role in the workspace
 
-Canonical serialization and byte-I/O layer; `std.fs` builds on `Source`/`Sink`; `std.fmt` delegates JSON to this crate. See the [workspace overview](../../README.md).
+Canonical serialization and byte-I/O layer; `std.fs` builds on `Source`/`Sink`; `std.fmt` delegates JSON to this crate. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-io).

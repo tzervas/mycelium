@@ -32,4 +32,4 @@ identity: every hash is derived from content, never assigned (ADR-003).
 
 ## Role in the workspace
 
-Identity and name-resolution primitives for Ring-1/Ring-2 crates and the content-addressed value store. See the [workspace overview](../../README.md).
+Identity and name-resolution primitives for Ring-1/Ring-2 crates and the content-addressed value store. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-content).

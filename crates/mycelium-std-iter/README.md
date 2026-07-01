@@ -36,4 +36,4 @@ under RFC-0007 (kernel `for`/fold totality-by-construction).
 
 ## Role in the workspace
 
-Iteration and pipeline combinators for Ring-2 std crates and user code. See the [workspace overview](../../README.md).
+Iteration and pipeline combinators for Ring-2 std crates and user code. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-iter).

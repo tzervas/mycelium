@@ -29,4 +29,4 @@ the shared `StdError` marker trait and `impl_std_error!` macro used by every oth
 
 ## Role in the workspace
 
-Foundation prelude for all `mycelium-std-*` crates; no user code should need to import `mycelium-core` directly. See the [workspace overview](../../README.md).
+Foundation prelude for all `mycelium-std-*` crates; no user code should need to import `mycelium-core` directly. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-core).

@@ -33,4 +33,4 @@ non-unit vectors, etc.) return `Err(StdDenseError)`.
 
 ## Role in the workspace
 
-Dense numeric substrate for embedding, ML, and VSA workloads. See the [workspace overview](../../README.md).
+Dense numeric substrate for embedding, ML, and VSA workloads. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-dense).

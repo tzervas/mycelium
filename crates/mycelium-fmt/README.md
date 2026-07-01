@@ -34,4 +34,4 @@ comment is an explicit error; `mycfmt` never writes a partial or garbled rewrite
 
 ## Role in the workspace
 
-Depends on `mycelium-l1`, `mycelium-proj`, and `mycelium-cli-common`; provides the canonical formatter above the kernel. See the [workspace overview](../../README.md).
+Depends on `mycelium-l1`, `mycelium-proj`, and `mycelium-cli-common`; provides the canonical formatter above the kernel. See the [workspace overview](../../README.md). Further reading: the [doc index](../../docs/Doc-Index.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-fmt).

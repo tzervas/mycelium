@@ -37,4 +37,4 @@ substitution. Tags are never upgraded past their basis (VR-5). Source is ground 
 
 ## Role in the workspace
 
-Ring 1 / Tier A declarative error-recovery bridge over the `mycelium-diag` record. See the [workspace overview](../../README.md).
+Ring 1 / Tier A declarative error-recovery bridge over the `mycelium-diag` record. See the [workspace overview](../../README.md). Further reading: the [stdlib spec index](../../docs/spec/stdlib/README.md) and this crate's entry in the [agent code index](../../docs/api-index/INDEX.md#mycelium-std-recover).
