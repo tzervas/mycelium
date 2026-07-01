@@ -30,6 +30,14 @@ pub enum Category {
     /// still recorded (never silently skipped). Excluded from the "expressible fraction"
     /// denominator (see [`GapReport::non_test_item_count`]).
     TestItem,
+    /// A `Widen`/`Narrow` conversion-op body this pass deliberately left a gap even though a real
+    /// DN-41 `width_cast` prim exists — specifically the `Narrow::narrow` case (DN-41's narrowing
+    /// is fallible, `Result<To, NarrowError>`, and this grammar fragment's `fn_item` body has no
+    /// `= expr`-shaped Result surface to express a refuse), and the defensive fallback for a
+    /// `Widen::widen` body over `Binary{N}`/`Binary{M}` whose target width could not be resolved
+    /// from the impl's trait-generic argument (never guessed — VR-5). Distinct from the general
+    /// `Impl`/`Other` buckets so the union-backlog can rank "conversion-op gaps" on their own.
+    Conversion,
     Other,
 }
 
@@ -48,6 +56,7 @@ impl Category {
             Category::WhereClause => "WhereClause",
             Category::PayloadVariant => "PayloadVariant",
             Category::TestItem => "TestItem",
+            Category::Conversion => "Conversion",
             Category::Other => "Other",
         }
     }

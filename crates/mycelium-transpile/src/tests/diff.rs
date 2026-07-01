@@ -87,15 +87,24 @@ fn std_cmp_twin_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../lib/std/cmp.myc")
 }
 
-/// Regression guard (High finding, G2/DN-34 §4) over the *real* target crate: transpiling
-/// `mycelium-std-cmp/src/lib.rs` must never emit a fabricated `from(...)` call for the 12
-/// numeric-widening `impl Widen<..> for ..` blocks (Rust body `<T>::from(self)`) — each must be
-/// gapped instead, since `from` is not a confirmed Mycelium builtin (no grammar production for it
-/// in `docs/spec/grammar/mycelium.ebnf`, only prose mentions). An earlier iteration collapsed the
-/// qualified `<T>::from` call to its last segment and checked in exactly this fabricated text;
-/// this test pins the fix against a regression.
+/// Regression guard (High finding, G2/DN-34 §4; extended by DN-41/M-873 follow-on) over the
+/// *real* target crate: transpiling `mycelium-std-cmp/src/lib.rs` must never emit a **fabricated**
+/// `from(...)` call for any `impl Widen<..> for ..` block (Rust body `<T>::from(self)`) — `from`
+/// is not a confirmed Mycelium builtin (no grammar production for it in
+/// `docs/spec/grammar/mycelium.ebnf`, only prose mentions). An earlier iteration collapsed the
+/// qualified `<T>::from` call to its last segment and checked in exactly this fabricated text.
+///
+/// Since DN-41 landed a real `width_cast` prim, the *unsigned integer chain* widen impls
+/// (`u8`->`u16`/`u32`/`u64`/`u128`, `u16`->`u32`/`u64`/`u128`, `u32`->`u64`/`u128`, `u64`->`u128`
+/// — 10 impls, both `Self`/target mapping to `Binary{N}`/`Binary{M}`) are now **faithfully
+/// emitted** via `width_cast(self, ..)` instead of gapped — a strict improvement this test now
+/// asserts positively. The `bool`->`{u32,u64}` widen impls (`Self` = `bool` maps to `Bool`, not
+/// `Binary{N}` — no `width_cast` witness path) and the signed-integer chain (signed ints have no
+/// confirmed `Binary{N}` mapping at all — see `map::map_type`) still have no faithful mapping and
+/// stay gapped, citing the qualified-call fabrication risk. Either way, `from(` must never appear
+/// in the emitted `.myc` text.
 #[test]
-fn widen_impls_are_gapped_not_fabricated_in_real_crate() {
+fn widen_impls_never_fabricate_from_in_real_crate() {
     let rust_path = std_cmp_rust_path();
     assert!(rust_path.is_file(), "missing {}", rust_path.display());
     let (emitted_myc, report) =
@@ -106,13 +115,36 @@ fn widen_impls_are_gapped_not_fabricated_in_real_crate() {
         "emitted .myc text must never contain a fabricated `from(...)` call (from is not a \
          Mycelium builtin — G2/DN-34 §4), got:\n{emitted_myc}"
     );
+
+    // The 10 unsigned Binary-to-Binary widen impls now emit faithfully via width_cast.
+    let width_cast_widen_count = report
+        .emitted_items
+        .iter()
+        .filter(|n| n.starts_with("impl Widen[Binary{") && n.contains("for Binary{"))
+        .count();
+    assert!(
+        width_cast_widen_count >= 10,
+        "expected at least the 10 unsigned-integer-chain Widen impls to be emitted via \
+         width_cast, got {width_cast_widen_count} in emitted_items={:?}",
+        report.emitted_items
+    );
+    let width_cast_call_count = emitted_myc.matches("width_cast(self,").count();
+    assert!(
+        width_cast_call_count >= 10,
+        "expected at least 10 real `width_cast(self, ..)` calls in the emitted .myc text, got \
+         {width_cast_call_count}"
+    );
+
+    // The bool->{u32,u64} widen impls (no Binary Self) still have no faithful mapping and stay
+    // gapped, citing the fabrication-risk reason.
     assert!(
         !report
             .emitted_items
             .iter()
-            .any(|n| n.starts_with("impl Widen")),
-        "no `impl Widen[...]` block should be in emitted_items — its conversion-op body has no \
-         established Mycelium surface form and must be gapped, not emitted; got {:?}",
+            .any(|n| n.starts_with("impl Widen") && n.contains("for Bool")),
+        "no `impl Widen[...] for Bool` block should be in emitted_items — bool's Widen body has \
+         no width_cast witness path (Self doesn't map to Binary{{N}}) and must stay gapped; got \
+         {:?}",
         report.emitted_items
     );
     let widen_gap_count = report
@@ -121,9 +153,35 @@ fn widen_impls_are_gapped_not_fabricated_in_real_crate() {
         .filter(|g| g.snippet.contains("Widen") && g.reason.contains("from"))
         .count();
     assert!(
-        widen_gap_count >= 12,
-        "expected at least the 12 numeric-widening Widen impls (u8/u16/u32/u64 chain + bool) to \
-         be gapped for their unmappable `from(...)`-call body, got {widen_gap_count}"
+        widen_gap_count >= 2,
+        "expected at least the 2 bool-Self numeric-widening Widen impls (bool->u32, bool->u64) \
+         to be gapped for their unmappable `from(...)`-call body, got {widen_gap_count}"
+    );
+}
+
+/// DN-41 companion regression guard over the real crate: `Narrow::narrow` bodies must never be
+/// fabricated (no `try_from`/`?`-shaped emission or spurious `width_cast`), and every recorded
+/// narrow-related gap must cite DN-41 (the honest reason: fallible Result-returning bodies have
+/// no `= expr` surface).
+#[test]
+fn narrow_impls_never_fabricated_in_real_crate() {
+    let rust_path = std_cmp_rust_path();
+    assert!(rust_path.is_file(), "missing {}", rust_path.display());
+    let (emitted_myc, report) =
+        transpile_file(&rust_path).unwrap_or_else(|e| panic!("transpile failed: {e}"));
+
+    assert!(
+        !report
+            .emitted_items
+            .iter()
+            .any(|n| n.starts_with("impl Narrow")),
+        "no `impl Narrow[...]` block should be in emitted_items — narrow bodies are fallible \
+         (DN-41 §2) and must stay gapped; got {:?}",
+        report.emitted_items
+    );
+    assert!(
+        !emitted_myc.contains("try_from"),
+        "emitted .myc text must never contain a fabricated `try_from(...)` call, got:\n{emitted_myc}"
     );
 }
 

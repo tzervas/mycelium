@@ -127,6 +127,89 @@ fn plain_type_params(generics: &Generics) -> Result<Vec<String>, GapReason> {
     Ok(names)
 }
 
+// ---------------------------------------------------------------------------------------------
+// DN-41 `width_cast` conversion-body emission (M-873 follow-on).
+//
+// `docs/notes/DN-41-Width-Cast-Prim.md` §2 ratifies a real surface prim
+// `width_cast(value: Binary{N}, into: Binary{M}) -> Binary{M}`: widen (M>N) zero-extends
+// (`Exact`); same-width is identity; narrow (M<N) is a checked, never-silent refuse
+// (`EvalError::Overflow`) — §3 fixes the **width-witness ABI**: `M` is carried by the *second
+// operand's* `Binary{M}` width alone (its bits are unused), exactly as `lib/std/text.myc`'s own
+// `width_cast(i, bytes_len(b))` call threads a width through an in-scope `Binary{32}` value.
+//
+// A Rust `impl Widen<To> for From { fn widen(self) -> To { To::from(self) } }` body — the actual
+// shape in `mycelium-std-cmp` — has no confirmed mapping for the qualified `To::from(self)` call
+// (see `emit_expr`'s `Expr::Call` qualified-path arm); previously that always gapped the whole
+// impl. When `From`/`To` both map to `Binary{N}`/`Binary{M}` (unsigned widening), this is now a
+// **real, faithful** emission instead: `width_cast(self, <Binary{M} witness>)`. The witness is a
+// synthesized all-zero `BinLit` of exactly `M` bits — confirmed as a legitimate `Binary{M}`-typed
+// value by the grammar (`literal ::= BinLit | ...`, `BinLit ::= '0b' ('0'|'1'|'_')+`) and
+// RFC-0020 §"Representation-tagged literals" ("[a BinLit's] width/dimension is determined by the
+// literal's content (bit-count for BinLit)") — and DN-41 §3 explicitly says the witness's *bits*
+// are ignored, so an all-zero witness is exactly as valid as any other same-width value already
+// in scope. This is a synthesized witness, not one reused from the call site (the widen body has
+// no other `Binary{M}` value in scope to reuse) — `Declared`, not `Exact`, because no Mycelium
+// checker in this crate confirms the emitted text type-checks (see module docs).
+//
+// `Narrow::narrow` bodies are the DN-41 §2 fallible case (`Result<To, NarrowError>`, refusing on
+// an out-of-range/non-representable value) — a single `= expr` `fn_item` body has no
+// Result-returning surface in this grammar fragment, so those stay an honest, explicitly-cited
+// gap rather than a forced/fabricated emission.
+
+/// Parse a `map_type`-produced `Binary{N}` type-ref string back to its width `N`. Only matches
+/// the exact `Binary{<digits>}` shape `map_type` emits for unsigned integers — never a guess for
+/// any other text (e.g. `Bool`, a bare ident) that happens to not match.
+fn binary_width(ty_text: &str) -> Option<u32> {
+    ty_text
+        .strip_prefix("Binary{")
+        .and_then(|rest| rest.strip_suffix('}'))
+        .and_then(|digits| digits.parse::<u32>().ok())
+}
+
+/// Synthesize an all-zero `BinLit` witness of exactly `width` bits, grouped in nibbles
+/// (`0b0000_0000_0000_0000` for width 16) matching the corpus's own `BinLit` style (e.g.
+/// `lib/std/text.myc`'s `0b0000_0000_0000_0000_0000_0000_1000_0000`). The witness's bits are
+/// ignored by `width_cast` (DN-41 §3) — only its bit-count (= its `Binary{width}` type, per
+/// RFC-0020) is observed, so an all-zero pattern is a faithful, unconditionally-valid witness for
+/// any target width.
+fn zero_bin_literal(width: u32) -> String {
+    let mut s = String::with_capacity(2 + width as usize + width as usize / 4);
+    s.push_str("0b");
+    for i in 0..width {
+        if i > 0 && i % 4 == 0 {
+            s.push('_');
+        }
+        s.push('0');
+    }
+    s
+}
+
+/// If `trait_name`/`method` identify a `Widen::widen` method whose `Self`/target both map to
+/// `Binary{N}`/`Binary{M}` (unsigned widening) with `M > N`, return the faithful `width_cast`
+/// body. `None` for every other shape (bool/float/signed self types, non-`Widen` impls, or a
+/// `Widen` impl whose recorded target arg isn't a plain `Binary{M}` text) — the caller falls back
+/// to the general per-expression emitter, which gaps `To::from(self)` honestly (no fabrication,
+/// VR-5).
+fn try_width_cast_widen_body(
+    trait_name: Option<&str>,
+    method: &str,
+    self_ty_text: &str,
+    trait_targs: &[String],
+) -> Option<String> {
+    if trait_name != Some("Widen") || method != "widen" {
+        return None;
+    }
+    let n = binary_width(self_ty_text)?;
+    let m = binary_width(trait_targs.first()?)?;
+    if m <= n {
+        // Not an actual widen (or an unresolvable width relationship) — leave it to the general
+        // path rather than emit a `width_cast` that DN-41 would treat as identity/narrow for a
+        // trait that promises "Total — never fails" widening. Never guessed (VR-5).
+        return None;
+    }
+    Some(format!("width_cast(self, {})", zero_bin_literal(m)))
+}
+
 /// Reject `async`/`unsafe`/`extern "ABI"` fn modifiers — `fn_item`/`fn_sig` in the grammar carry
 /// no such modifier slot.
 fn check_fn_modifiers(sig: &Signature) -> Result<(), GapReason> {
@@ -928,6 +1011,24 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
     for ii in &item.items {
         match ii {
             ImplItem::Fn(f) => {
+                // DN-41 §2: `Narrow::narrow` is fallible (`Result<To, NarrowError>`) — no
+                // `= expr fn_item` body can express a Result-returning refuse in this grammar
+                // fragment, regardless of whether `Self`/the target type otherwise map. Intercept
+                // before signature mapping so the recorded reason cites the real cause (DN-41)
+                // rather than the incidental `Result<..>` generic-type-path gap that would
+                // otherwise fire first and obscure it.
+                if trait_name.as_deref() == Some("Narrow") && f.sig.ident == "narrow" {
+                    sub_gaps.push(GapReason::new(
+                        Category::Conversion,
+                        "impl method `narrow`: DN-41 (docs/notes/DN-41-Width-Cast-Prim.md §2) \
+                         specifies narrowing as fallible — `Result<To, NarrowError>`, refusing \
+                         on an out-of-range/non-representable value — but this grammar \
+                         fragment's `fn_item` body is a single `= expr` with no \
+                         Result-returning surface to express that refuse; left an explicit gap \
+                         rather than forced (VR-5)",
+                    ));
+                    continue;
+                }
                 if let Err(e) = check_fn_modifiers(&f.sig) {
                     sub_gaps.push(GapReason::new(
                         e.category,
@@ -935,37 +1036,61 @@ pub fn emit_impl(item: &ItemImpl) -> Result<Emitted, GapReason> {
                     ));
                     continue;
                 }
+                let width_cast_body = try_width_cast_widen_body(
+                    trait_name.as_deref(),
+                    &f.sig.ident.to_string(),
+                    &self_ty_text,
+                    &trait_targs,
+                );
                 match map_signature(
                     &f.sig.generics,
                     &f.sig.inputs,
                     &f.sig.output,
                     Some(&self_ty_text),
                 ) {
-                    Ok(sig) => match emit_block_as_expr(&f.block, Some(&self_ty_text)) {
-                        Ok(body) => {
-                            let non_doc = non_doc_attrs(&f.attrs);
-                            if !non_doc.is_empty() {
-                                sub_gaps.push(GapReason::new(
-                                    Category::DeriveAttr,
-                                    format!(
-                                        "dropped non-doc attribute(s) on method `{}`: {}",
-                                        f.sig.ident,
-                                        non_doc.join(" ")
-                                    ),
+                    Ok(sig) => {
+                        let body_result = match &width_cast_body {
+                            Some(body) => Ok(body.clone()),
+                            None => emit_block_as_expr(&f.block, Some(&self_ty_text)),
+                        };
+                        match body_result {
+                            Ok(body) => {
+                                let non_doc = non_doc_attrs(&f.attrs);
+                                if !non_doc.is_empty() {
+                                    sub_gaps.push(GapReason::new(
+                                        Category::DeriveAttr,
+                                        format!(
+                                            "dropped non-doc attribute(s) on method `{}`: {}",
+                                            f.sig.ident,
+                                            non_doc.join(" ")
+                                        ),
+                                    ));
+                                }
+                                let mut doc = doc_lines(&f.attrs);
+                                if width_cast_body.is_some() {
+                                    doc.push(
+                                        "// Declared: body emitted via width_cast (DN-41 real \
+                                         prim, docs/notes/DN-41-Width-Cast-Prim.md §2) — the \
+                                         Binary{M} width witness is a synthesized all-zero BinLit \
+                                         (RFC-0020 §Representation-tagged literals); unvalidated \
+                                         by a Mycelium checker (crate-level Declared guarantee, \
+                                         see src/lib.rs)."
+                                            .to_string(),
+                                    );
+                                }
+                                method_bodies.push(render_fn(
+                                    &f.sig.ident.to_string(),
+                                    &sig,
+                                    &body,
+                                    &doc,
                                 ));
                             }
-                            method_bodies.push(render_fn(
-                                &f.sig.ident.to_string(),
-                                &sig,
-                                &body,
-                                &doc_lines(&f.attrs),
-                            ));
+                            Err(e) => sub_gaps.push(GapReason::new(
+                                e.category,
+                                format!("impl method `{}` body: {}", f.sig.ident, e.reason),
+                            )),
                         }
-                        Err(e) => sub_gaps.push(GapReason::new(
-                            e.category,
-                            format!("impl method `{}` body: {}", f.sig.ident, e.reason),
-                        )),
-                    },
+                    }
                     Err(e) => sub_gaps.push(GapReason::new(
                         e.category,
                         format!("impl method `{}` signature: {}", f.sig.ident, e.reason),
