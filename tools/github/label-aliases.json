@@ -1,16 +1,30 @@
 {
   "_about": "Declared migrations + retirements for NONCOMPLIANT repo labels (live on GitHub but absent from labels.json). gh-issues-sync.py --labels, for each repo label not in labels.json: (1) if it appears in `aliases` it MIGRATES (relabel every issue/PR carrying it to the target, then delete the stale label); (2) else if it appears in `retire` it is RETIRED (deleted ONLY when it carries no issues/PRs — a retired-but-still-used label is FLAGGED, never silently dropped, G2); (3) otherwise it is FLAGGED, never silently deleted. An alias WINS over retire (migrating preserves the label↔issue link). Each entry is a ratified decision, not a guess.",
   "aliases": {
+    "area:cert": "area:numerics",
+    "area:core": "area:core-ir",
+    "area:planning": "area:project",
+    "area:runtime": "area:execution",
+    "area:tooling": "area:toolchain",
     "bug": "type:bug",
     "documentation": "type:docs",
     "enhancement": "type:feature",
-    "good first issue": "good-first-issue"
+    "good first issue": "good-first-issue",
+    "status:proposed": "status:todo",
+    "type:feat": "type:feature",
+    "type:fix": "type:bug",
+    "type:impl": "type:feature",
+    "type:perf": "type:chore",
+    "type:refactor": "type:chore",
+    "type:test": "type:verification",
+    "type:tooling": "type:infra"
   },
   "retire": [
     "duplicate",
     "help wanted",
     "invalid",
     "question",
+    "status:ready",
     "wontfix"
   ]
 }

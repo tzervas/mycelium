@@ -29,6 +29,21 @@ construction (CLAUDE.md §Swarm).
 > ADR-022 §8 Q4. It is moved into the 1.0.0-track table below. Epics **E7-1**, **E7-2**, and **E21-1**
 > are also confirmed **closed** (`status:done`) in this resync — all of their children landed with
 > checked evidence; see `tools/github/issues.yaml`.
+>
+> **Kickoff prose-sync + three closures (2026-07-01, same day).** `aot10` (E15-1/E25-1 — the M-863
+> ratification act lands M-856b/M-860/M-862/M-863, all `done`), `kpr` (E19-1 — M-752 lands `done`), and
+> `lib10` (E13-1 — M-714…M-719 all `done`) are now **✅ DONE → archived** (moved to `archive/` unchanged,
+> per the archival convention above; their table rows below stay, marked done, mirroring `s10`/`r10`).
+> **ADR-035** (Accepted, maintainer-ratified) narrows T4's Definition of Done to the DN-66 stable-API
+> freeze + core-lib self-host slice (M-714…M-718 + M-719's freeze half); the full RFC-0031 §5 D6
+> Rust-crate-retirement half is re-scoped **post-1.0** as new issue **M-867** (`status:todo`, P3), not a
+> 1.0.0 blocker. **ADR-036** (Accepted, maintainer-ratified) makes the `lang 1.0.0` **tag** and the
+> project's **public release** two distinct milestones: the tag needs only the already-met core-lib
+> self-host slice; E18-1's remaining children (M-739…M-742, `boot10`) become the **comprehensive
+> dogfooding** track — real, within-1.0.0, tracked work, but it gates the *public release* (and keeps
+> the repo private until validated), not the tag, and runs in parallel rather than serially blocking.
+> Net effect per `issues.yaml`'s own M-738 `landed_basis`: **every engineering gate row for the tag is
+> now closed** — M-738 (`rel10`) stays `status:blocked`, but purely on the maintainer's own tag-cut act.
 
 ## The tiers (each PR-gated; stringency rises with the tier)
 
@@ -67,18 +82,19 @@ tree**, branches **off `dev`**, merges into `dev`, then promotes `dev → integr
 | **`c10`** | T1 — core/kernel 1.0.0 sub-gate (E10-1) | `crates/mycelium-core/**` · kernel T1 scope | **gate-met / tag-ready**; only **M-703** (cut the tag) remains — **maintainer-reserved** |
 | **`s10`** | T2 — surface-language completeness & grammar (E11-1) | `crates/mycelium-l1/**` · `docs/spec/grammar/**` | ✅ **DONE → archived** (2026-06-29): M-704 (dynamic HOF) · M-705/M-708 (ops/stabilization, prior) · **M-706** (RFC-0030 grammar gaps) · **M-707** (RFC-0020 §10 carve-out enactment) all landed. **E11-1 surface-language complete.** Residuals **RESOLVED in the serial closeout** (2026-06-29, #767): or-patterns (R20-Q3 → **M-823**), partial application + first-class tuple type incl. `f(x)(y)` (**M-822**/**M-826**), list bidirectional inference (R20-Q5 → **M-823**); the `for`-body→spine two-pass feedback remains a flagged open item (never-silent) |
 | **`r10`** | T3 — runtime & concurrency execution maturity (E12-1) | `crates/mycelium-std-runtime/**` · `crates/mycelium-mlir/src/runtime.rs` | ✅ **DONE → archived** (2026-06-29): M-709/710/711/712/713 + **M-677** (declared-effect → interp budget ledger + per-effect `retry(<=3)` surface syntax wired; overrun → explicit `EffectBudgetExhausted`; KC-3, no new L0 node) all landed. **E12-1 runtime maturity complete.** |
-| **`lib10`** | T4 — standard library in Mycelium (E13-1) | `lib/std/**` · `crates/mycelium-std-*/**` | **in progress (long pole)**; M-715/716/717/718 landed; remaining **M-719** (API-freeze + Rust-crate retirement; post-1.0 acceptable per RFC-0031) |
-| **`rel10`** | T8 — documentation, stability & 1.0.0 release (E17-1) | `docs/**` · `CHANGELOG.md` · stability/release scope | **in progress**; M-735/736/737 landed; remaining **M-738** (release act — gated on the other tracks; cuts the tag) |
-| **`boot10`** | T9 — self-hosting capstone (E18-1) | `lib/std/**` · `crates/mycelium-l1/**` · self-hosting | **blocked** on E11-1 (`s10`) + E13-1 (`lib10`); M-739…M-742 `needs-design` |
-| **`aot10`** | T6 — native AOT full-language coverage, parallelism & 1.0.0 gating (E15-1/E25-1) | `crates/mycelium-mlir/**` | **HARD `lang 1.0.0` GATE (re-gated by ADR-034, 2026-06-30)** — reverses ADR-022 §8 Q4's `1.1` un-gating. E15-1's original children M-725/726/727/728 landed `done` this resync (M-729 flagged, not flipped — maintainer call on whether M-858 retroactively satisfies its DoD); E25-1 (the umbrella epic carrying the ADR-034-expanded scope) has M-850…861 `done`; remaining: **M-856b** (dialect Dense/VSA), **M-860** (parallel codegen), **M-862** (parallel pure-fragment eval — pre/post-tag FLAGged), **M-863** (ratification act: RFC-0029 → Enacted, DN-15 → Resolved) |
+| **`lib10`** | T4 — standard library in Mycelium (E13-1) | `lib/std/**` · `crates/mycelium-std-*/**` | ✅ **DONE → archived** (2026-07-01): M-714…M-719 all landed. **ADR-035** (Accepted) narrows T4's bar to the DN-66 stable-API freeze + core-lib self-host slice (M-714…M-718 + M-719's freeze half) — met; the full D6 Rust-crate-retirement half is re-scoped **post-1.0** as new issue **M-867** (`status:todo`, P3). **E13-1 complete.** |
+| **`rel10`** | T8 — documentation, stability & 1.0.0 release (E17-1) | `docs/**` · `CHANGELOG.md` · stability/release scope | **in progress**; M-735/736/737 landed; remaining **M-738** (release act) is `status:blocked` **purely on the maintainer's tag-cut act** (2026-07-01) — every engineering gate row it waited on (E13-1, E15-1/E25-1, ADR-023) is now closed, and E18-1 is no longer a blocker at all (ADR-036, below) |
+| **`boot10`** | T9 — self-hosting capstone (E18-1) | `lib/std/**` · `crates/mycelium-l1/**` · self-hosting | **unblocked** (2026-07-01) — E11-1 (`s10`) and E13-1 (`lib10`) have both landed; M-739…M-742 stay `needs-design`. **ADR-036** (Accepted, maintainer-ratified) reframes this remaining scope as the **comprehensive-dogfooding** track: real, within-1.0.0, tracked work, but it gates the project's separate *public-release* milestone, not the `lang 1.0.0` tag (the tag's only self-hosting bar — the core-lib slice — is already met via E13-1) |
+| **`aot10`** | T6 — native AOT full-language coverage, parallelism & 1.0.0 gating (E15-1/E25-1) | `crates/mycelium-mlir/**` | ✅ **DONE → archived** (2026-07-01): the **M-863 ratification act** lands the remainder — **M-856b** (dialect Dense/VSA), **M-860** (parallel codegen), **M-862** (parallel pure-fragment eval), **M-863** itself — all `done`; E15-1 + E25-1 both close. RFC-0029 → **Enacted**; DN-15 → **Resolved**; **ADR-034 stays Accepted** (its own `Accepted → Enacted` step is coupled to the `lang 1.0.0` tag act, M-738 — not yet run, per house rule #3) |
 
-*(T5 FFI = `ffi10` and T7 toolchain = `tool10` are **complete → archived**.)*
+*(T2 = `s10`, T3 = `r10`, T4 = `lib10`, T5 = `ffi10`, T6 = `aot10`, T7 = `tool10` are all **complete →
+archived**.)*
 
 ### Kernel-enablement
 
 | UID | Scope | Owns | Status / remaining |
 |---|---|---|---|
-| **`kpr`** | E19-1 — value reprs + prims that unblock E13-1 (RFC-0032) | `crates/mycelium-interp/src/prims.rs` · `crates/mycelium-core/**` (coord `c10`) | **in progress**; M-746/747/748/749/750/751 landed; remaining **M-752** (Tier-2 enablement smoke ports — now unblocked) |
+| **`kpr`** | E19-1 — value reprs + prims that unblock E13-1 (RFC-0032) | `crates/mycelium-interp/src/prims.rs` · `crates/mycelium-core/**` (coord `c10`) | ✅ **DONE → archived** (2026-07-01): M-746…M-752 all landed (RFC-0032 Accepted; every enabler + the M-752 Tier-2 enablement smoke ports). **E19-1 complete** — unblocks `c10`'s M-703 dependency. |
 
 ### Surface follow-ons (`crates/mycelium-l1/src/{parse,checkty,elab,mono}.rs`) — ✅ ALL COMPLETE
 
@@ -87,7 +103,8 @@ All surface follow-on kickoffs have landed and are **archived** (2026-06-29): **
 **`lwd`** (DN-54 `derive`→L0 elaboration + sound KC-3 guard, M-812-cont), and **`strm`** (E24-1 —
 M-818/M-821 mandatory `;`, M-819 `mycfmt --flatten`, M-820 `myc --stream`; **DN-57 → Enacted**). See
 **§Completed (archived)** for each. **The `crates/mycelium-l1` frontend serial lane is now clear** —
-the next serial-on-L1 work (`boot10` self-hosting) is gated on `lib10`. Residual status (updated
+the next serial-on-L1 work (`boot10` self-hosting) is **unblocked** (2026-07-01): `lib10`/E13-1 has
+landed (see the resync note above). Residual status (updated
 2026-06-29/30): `hof` partial-application + first-class tuple type incl. `f(x)(y)` — **RESOLVED**
 (M-822/M-826); `s10` or-patterns (R20-Q3) + list inference (R20-Q5) — **RESOLVED** (M-823), only the
 `for`-body→spine two-pass remains a flagged open item; `lwd` `derive`-site consumption model —
@@ -129,6 +146,9 @@ any) are owned by the still-current kickoff noted.
 | **`srf`** | E7-2 lexicon tail — M-664 (`consume` + inherent `impl`) + M-668 (R2 planning DN-63) landed 2026-06-29 | E7-2 **R2 construct activation** (per-construct xloc/mesh/cyst/graft/forage/backbone impl RFCs, DN-63) — future, `needs-design` |
 | **`strm`** | E24-1 DN-57 enactment — M-818/M-821 (mandatory `;` + corpus migration), M-819 (`mycfmt --flatten`), M-820 (`myc --stream`) landed; **DN-57 → Enacted** (#762) | — |
 | **`r10`** | E12-1 runtime maturity — M-709/710/711/712/713 + M-677 (effect→budget ledger + `retry(<=3)` surface syntax, KC-3) landed 2026-06-29 | — |
+| **`aot10`** | E15-1/E25-1 native AOT — M-863 ratification act closes the remainder (M-856b dialect Dense/VSA, M-860 parallel codegen, M-862 parallel pure-fragment eval, M-863 itself); RFC-0029 → Enacted, DN-15 → Resolved (ADR-034 stays Accepted pending the `lang 1.0.0` tag, M-738) landed 2026-07-01 | `rel10` (M-738 gate now closed on this front) |
+| **`kpr`** | E19-1 kernel self-hosting-enablement surface — RFC-0032 Accepted + M-746…M-752 (comparison/binary-arith prims, `Repr::Seq`/`Repr::Bytes`, width-generics reassigned to `s10` as M-753, Tier-2 enablement smoke ports) landed 2026-07-01 | `c10` (M-703's E19-1 dependency now met) |
+| **`lib10`** | E13-1 stdlib in Mycelium — M-714…M-719 landed; ADR-035 narrows T4's bar to the DN-66 stable-API freeze + core-lib self-host slice (met); full D6 Rust-crate retirement re-scoped post-1.0 as M-867 landed 2026-07-01 | `rel10` (M-738 gate now closed on this front); `boot10` (E13-1 precondition met) |
 
 ## Parallelization & sequencing guide
 
@@ -156,11 +176,14 @@ green before the next — "do L1 surgery inline, never delegate to parallel leav
 > **M-819** (`mycfmt --flatten`) and **M-820** (`myc --stream`) plus `srf`'s **M-668** (R2 planning
 > DN-63) landed alongside. **DN-57 → Enacted** (#762). **The `parse`/`checkty`/`elab`/`mono` serial
 > lane now has NO queued tasks** — every ticketed task touching the L1 frontend is done. The next
-> serial-on-L1 work is **`boot10`** (self-hosting; owns `mycelium-l1/**`), **blocked on `lib10`**
-> (E13-1, the long pole) — **so the path forward is the parallel phase** (`lib10` + `rel10` + `kpr` +
-> `tul`), not another serial L1 kickoff. Still-open L1-adjacent items are **non-lane**: `M-674`
-> (ongoing explicit-budget hardening) and `kpr`/`M-752` (smoke ports touch `mycelium-l1/tests/**`,
-> not the frontend `src`).
+> serial-on-L1 work is **`boot10`** (self-hosting; owns `mycelium-l1/**`) — **now unblocked**
+> (2026-07-01): `lib10`/E13-1 (the long pole) has landed and archived, alongside `kpr`/E19-1 and
+> `aot10`/E15-1+E25-1. Per **ADR-036**, `boot10`'s remaining scope (M-739…M-742) is the
+> **comprehensive-dogfooding** track — real work, but it gates the project's separate public-release
+> milestone, not the `lang 1.0.0` tag. **The path forward is `rel10` + `tul` (+ `boot10` if desired)**,
+> not another serial L1 kickoff. Still-open L1-adjacent items are **non-lane**: `M-674`
+> (ongoing explicit-budget hardening). (`kpr`/M-752's smoke ports, which touched
+> `mycelium-l1/tests/**` not the frontend `src`, are done and archived.)
 
 Recommended order for a *fresh* serial lane (cheapest-unblocks-most first; any order is valid as long
 as it's serial). The completed lane above is kept for the method/record.
@@ -169,21 +192,26 @@ as it's serial). The completed lane above is kept for the method/record.
 
 | Kickoff | Disjoint tree it owns | Why no collision |
 |---|---|---|
-| **`lib10`** | `lib/std/**` (`.myc`) | Mycelium-source, not Rust; consumes the L1 surface read-only |
-| **`kpr`** (M-752) | `crates/mycelium-interp/src/prims.rs` + `crates/mycelium-l1/tests/**` (smoke ports) | prims + test files; coordinates with `c10` on `crates/mycelium-core/**` (flag-don't-guess) |
 | **`rel10`** | `docs/**`, `crates/mycelium-doc/**`, the release notes | docs/release; cites code read-only |
-| **`aot10`** | `crates/mycelium-mlir/**` | native-codegen; **hard `lang 1.0.0` gate (ADR-034)** — a `rel10` M-738 dependency, not a post-release item; disjoint tree runs in parallel with the others |
 | **`tul`** (M-676) | `tools/github/**` | PM tooling only |
+| **`boot10`** (M-739…M-742) | `lib/compiler/**` (new) + `mycelium-l1/**` (read/differential only) | now unblocked (E11-1/E13-1 both landed); ADR-036's comprehensive-dogfooding track — real work, non-gating on the tag |
+
+*(`lib10`, `kpr`, and `aot10` — formerly listed here — landed 2026-07-01 and are now archived; see
+§Completed above.)*
 
 ### Sequenced by dependency (cannot start until a gate clears) — *not* parallelizable yet
 
-- **`boot10`** (E18-1 self-hosting) — blocked on **E11-1 (`s10`)** + **E13-1 (`lib10`)** landing.
-- **`c10` M-703** (cut core tag) — gated on **E19-1 (`kpr` M-752)** + maintainer (reserved).
-- **`rel10` M-738** (release act) — gated on every 1.0.0 track green, **now including `aot10`/E25-1**
-  (ADR-034 re-gate, 2026-07-01); runs **last**.
+- **`c10` M-703** (cut core tag) — its engineering deps (M-700/701/702, E19-1) are all `done`; gated on
+  **maintainer** only (reserved).
+- **`rel10` M-738** (release act) — every engineering gate row is now closed (E13-1 done via `lib10`;
+  E15-1/E25-1 done via `aot10`; E18-1 non-gating per ADR-036; ADR-023/M-737 done); `status:blocked`
+  **purely on the maintainer's tag-cut act** (2026-07-01); runs **last**.
 - **`dfb`** (dogfooding) — its shelving condition (L1-surface completeness) is now satisfied
   (2026-07-01); **unshelvable — awaiting maintainer decision to resume or re-shelve**, not
   pre-dogfood work either way.
+
+(`boot10` is no longer listed as gated — see the Parallel table above; it is unblocked but its scope is
+the comprehensive-dogfooding track, not a `lang 1.0.0` tag blocker.)
 
 ### The integrator's shared-file rule
 
@@ -195,10 +223,12 @@ continuity rides `issues.yaml` `depends_on` + body notes — never by touching a
 ### One-line scheduler
 
 ✅ **The L1 serial lane (`srf`→`s10`→`hof`→`lwd`→`strm`→`r10`) is COMPLETE** — no L1-lane kickoff
-remains; the next serial-on-L1 work (`boot10`) is gated on `lib10`. **Now run the parallel phase:
-`lib10` + `rel10` + `kpr` + `tul` + `aot10`** fully in parallel (disjoint trees; `aot10` is now a hard
-`rel10`-M738 dependency, not a post-1.0 item — ADR-034); hold **`boot10`/`c10`-tag/`rel10`-M738**
-until their gates clear; `dfb` awaits a maintainer resume/re-shelve call.
+remains. ✅ **`lib10`, `kpr`, and `aot10` are also COMPLETE (2026-07-01, archived)** — every 1.0.0
+engineering track is now green. **What's left:** `rel10`'s M-738 (the release act) is `status:blocked`
+purely on the **maintainer's tag-cut act**; `c10`'s M-703 is likewise maintainer-reserved only; `tul`
+has one deferrable secondary item (M-676); `boot10` is unblocked and may run (ADR-036's
+comprehensive-dogfooding track, non-gating on the tag); `dfb` awaits a maintainer resume/re-shelve
+call.
 
 ## Coverage — the current set IS comprehensive for pre-dogfooding
 

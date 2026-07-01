@@ -17,6 +17,7 @@
 //! `ContentHash` shape and the trusted L1 checker, and adds **no new workspace dependency**.
 
 pub mod apiref;
+pub mod book;
 pub mod build;
 pub mod corpus;
 pub mod doc_lint;
@@ -24,6 +25,10 @@ pub mod emit;
 pub mod hash;
 pub mod ir;
 
+#[cfg(test)]
+mod tests;
+
+pub use book::{build_book, load_manifest, BookError, BookManifest, ChapterSpec};
 pub use build::{build, emit_all, BuildInput};
 pub use doc_lint::{
     lint, CheckOutcome, CheckStatus, DocLintReport, Finding, Severity, CHECK_NAMES,

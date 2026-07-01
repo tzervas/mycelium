@@ -1,9 +1,11 @@
 //! `myc-doc` — the M-363 documentation BUILD CLI: project the corpus into the doc-IR, **emit** the
-//! HTML/Typst/JSON views, and run the **§4.1 quality-bar lint** over the model.
+//! HTML/Typst/JSON views, run the **§4.1 quality-bar lint** over the model, and build the curated
+//! **BOOK** view (§`mycelium_doc::book`).
 //!
 //! Usage:
 //! ```text
 //!   myc-doc build  [--repo-root .] [--out target/doc]   # project + emit every view
+//!   myc-doc book   [--repo-root .] [--out target/doc]   # + the curated chaptered book (book/)
 //!   myc-doc lint   [--repo-root .]                       # run the 8 §4.1 checks (gate)
 //!   myc-doc status                                       # print the lint's active status
 //! ```
@@ -84,6 +86,28 @@ fn run(args: &[String]) -> Result<u8, (u8, String)> {
             println!("   {EPUB_DEFERRAL}");
             Ok(EX_OK)
         }
+        "book" => {
+            let mut input = BuildInput::conventional(&repo_root);
+            // Ride CONTRIBUTING.md through the same ingest+resolve pipeline as the corpus walk (the
+            // Contributing chapter's source) — see BuildInput::extra_md_files.
+            input.extra_md_files = vec![repo_root.join("CONTRIBUTING.md")];
+            let model = build(&input).map_err(|e| (EX_IO, format!("build: {e}")))?;
+            let manifest = mycelium_doc::load_manifest(&repo_root)
+                .map_err(|e| (EX_FINDING, format!("book manifest: {e}")))?;
+            let arts = mycelium_doc::build_book(&model, &manifest, &repo_root)
+                .map_err(|e| (EX_FINDING, format!("book: {e}")))?;
+            let n = arts
+                .write_to(&out)
+                .map_err(|e| (EX_IO, format!("emit: {e}")))?;
+            println!(
+                ">> myc-doc book: '{}' — {} chapters → {} artifacts under {}/book",
+                manifest.title,
+                manifest.chapters.len(),
+                n,
+                out.display()
+            );
+            Ok(EX_OK)
+        }
         "lint" => {
             let input = BuildInput::conventional(&repo_root);
             let model = build(&input).map_err(|e| (EX_IO, format!("build: {e}")))?;
@@ -136,5 +160,5 @@ fn print_report(model: &mycelium_doc::DocModel, report: &doc_lint::DocLintReport
 }
 
 fn usage() -> String {
-    "usage: myc-doc <build|lint|status> [--repo-root <dir>] [--out <dir>]".to_owned()
+    "usage: myc-doc <build|book|lint|status> [--repo-root <dir>] [--out <dir>]".to_owned()
 }

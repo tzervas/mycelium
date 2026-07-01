@@ -521,22 +521,22 @@
 | `mycelium_doc::apiref` | mod | `crates/mycelium-doc/src/lib.rs:19` | — |
 | `mycelium_doc::apiref::project_nodule` | fn | `crates/mycelium-doc/src/apiref.rs:21` | Project a `.myc` source into a [`Payload::Document`] (`source_kind: api`) of api-item nodes. |
 | `mycelium_doc::apiref::project_schema` | fn | `crates/mycelium-doc/src/apiref.rs:107` | Project a JSON-schema file into a [`Payload::Document`] of api-item nodes (one per top-level |
-| `mycelium_doc::build` | mod | `crates/mycelium-doc/src/lib.rs:20` | — |
-| `mycelium_doc::build` | fn | `crates/mycelium-doc/src/build.rs:59` | Build the resolved doc model from the input. |
-| `mycelium_doc::build::BuildInput::conventional` | fn | `crates/mycelium-doc/src/build.rs:44` | The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`, |
+| `mycelium_doc::build` | mod | `crates/mycelium-doc/src/lib.rs:21` | — |
+| `mycelium_doc::build` | fn | `crates/mycelium-doc/src/build.rs:68` | Build the resolved doc model from the input. |
+| `mycelium_doc::build::BuildInput::conventional` | fn | `crates/mycelium-doc/src/build.rs:52` | The conventional layout rooted at `repo_root`: `docs/`, `docs/spec/schemas/`, `examples/`, |
 | `mycelium_doc::build::EPUB_DEFERRAL:` | const | `crates/mycelium-doc/src/build.rs:19` | EPUB is an honest deferral (spec §8 / §4.1 "never a half-build"). |
-| `mycelium_doc::corpus` | mod | `crates/mycelium-doc/src/lib.rs:21` | — |
+| `mycelium_doc::corpus` | mod | `crates/mycelium-doc/src/lib.rs:22` | — |
 | `mycelium_doc::corpus::AnchorAlloc` | struct | `crates/mycelium-doc/src/corpus.rs:14` | Allocates globally-unique, stable anchor slugs (so deep links never collide — §4.1 navigability). |
 | `mycelium_doc::corpus::AnchorAlloc::alloc` | fn | `crates/mycelium-doc/src/corpus.rs:26` | Slugify `base` (optionally namespaced under `ns`) and make it unique by `-N` suffixing. |
 | `mycelium_doc::corpus::AnchorAlloc::new` | fn | `crates/mycelium-doc/src/corpus.rs:21` | A fresh allocator. |
 | `mycelium_doc::corpus::extract_links` | fn | `crates/mycelium-doc/src/corpus.rs:170` | Extract inline `text` link targets from a paragraph (the cross-reference seed). |
 | `mycelium_doc::corpus::ingest` | fn | `crates/mycelium-doc/src/corpus.rs:232` | Project a markdown source into a [`Payload::Document`] node. |
 | `mycelium_doc::corpus::slugify` | fn | `crates/mycelium-doc/src/corpus.rs:52` | A GitHub-style anchor slug: lowercase, non-alphanumerics → `-`, collapsed, trimmed. |
-| `mycelium_doc::doc_lint` | mod | `crates/mycelium-doc/src/lib.rs:22` | — |
+| `mycelium_doc::doc_lint` | mod | `crates/mycelium-doc/src/lib.rs:23` | — |
 | `mycelium_doc::doc_lint::DocLintReport::errors` | fn | `crates/mycelium-doc/src/doc_lint.rs:105` | Every error-severity finding, flattened. |
 | `mycelium_doc::doc_lint::DocLintReport::has_errors` | fn | `crates/mycelium-doc/src/doc_lint.rs:97` | Whether any finding is error-severity (the gate condition). |
 | `mycelium_doc::doc_lint::Severity::as_str` | fn | `crates/mycelium-doc/src/doc_lint.rs:41` | The canonical label. |
-| `mycelium_doc::emit` | mod | `crates/mycelium-doc/src/lib.rs:23` | — |
+| `mycelium_doc::emit` | mod | `crates/mycelium-doc/src/lib.rs:24` | — |
 | `mycelium_doc::emit::Artifacts` | struct | `crates/mycelium-doc/src/emit/mod.rs:15` | A set of generated artifacts: repo/out-relative path → file contents. |
 | `mycelium_doc::emit::Artifacts::new` | fn | `crates/mycelium-doc/src/emit/mod.rs:23` | A fresh, empty artifact set. |
 | `mycelium_doc::emit::Artifacts::put` | fn | `crates/mycelium-doc/src/emit/mod.rs:28` | Add (or overwrite) one artifact. |
@@ -552,8 +552,8 @@
 | `mycelium_doc::emit::json::render_search_index` | fn | `crates/mycelium-doc/src/emit/json.rs:42` | One JSON record per node, newline-delimited (a streamable search/tooling index). |
 | `mycelium_doc::emit::typst` | mod | `crates/mycelium-doc/src/emit/mod.rs:9` | — |
 | `mycelium_doc::emit::typst::render` | fn | `crates/mycelium-doc/src/emit/typst.rs:11` | Render the whole model to one Typst document source. |
-| `mycelium_doc::emit_all` | fn | `crates/mycelium-doc/src/build.rs:141` | Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note). |
-| `mycelium_doc::hash` | mod | `crates/mycelium-doc/src/lib.rs:24` | — |
+| `mycelium_doc::emit_all` | fn | `crates/mycelium-doc/src/build.rs:165` | Emit every artifact (HTML site · Typst source · machine JSON · the EPUB deferral note). |
+| `mycelium_doc::hash` | mod | `crates/mycelium-doc/src/lib.rs:25` | — |
 | `mycelium_doc::hash::DocHasher` | struct | `crates/mycelium-doc/src/hash.rs:14` | A canonical, injective content hasher: tagged, length-prefixed writes feed a single BLAKE3 state. |
 | `mycelium_doc::hash::DocHasher::child` | fn | `crates/mycelium-doc/src/hash.rs:64` | Absorb an already-computed child address (a content hash), length-prefixed. |
 | `mycelium_doc::hash::DocHasher::finish` | fn | `crates/mycelium-doc/src/hash.rs:70` | Finalize into the kernel's `blake3:<hex>` content-address shape. |
@@ -562,7 +562,7 @@
 | `mycelium_doc::hash::DocHasher::str` | fn | `crates/mycelium-doc/src/hash.rs:46` | Absorb a length-prefixed string (the prefix makes the framing injective). |
 | `mycelium_doc::hash::DocHasher::tag` | fn | `crates/mycelium-doc/src/hash.rs:34` | Absorb a one-byte domain/kind tag. |
 | `mycelium_doc::hash::DocHasher::u64` | fn | `crates/mycelium-doc/src/hash.rs:40` | Absorb a `u64` (little-endian, fixed width — framing is injective). |
-| `mycelium_doc::ir` | mod | `crates/mycelium-doc/src/lib.rs:25` | — |
+| `mycelium_doc::ir` | mod | `crates/mycelium-doc/src/lib.rs:26` | — |
 | `mycelium_doc::ir::DocModel::all_nodes` | fn | `crates/mycelium-doc/src/ir.rs:345` | Every node across every document, depth-first (the order a reader meets them). |
 | `mycelium_doc::ir::DocModel::id_set` | fn | `crates/mycelium-doc/src/ir.rs:355` | The set of content addresses present in the model (used by the dual-projection-parity lint). |
 | `mycelium_doc::ir::Level::as_str` | fn | `crates/mycelium-doc/src/ir.rs:34` | The canonical label. |
@@ -1378,16 +1378,16 @@
 | `mycelium_spore::PublishReceipt` | struct | `crates/mycelium-spore/src/registry.rs:40` | The outcome of a successful [`publish`]: the receipt a CLI prints (no black box). |
 | `mycelium_spore::RegistryError` | enum | `crates/mycelium-spore/src/registry.rs:72` | A registry operation refusal — always explicit, never a partial/silent result (G2). |
 | `mycelium_spore::Resolved` | struct | `crates/mycelium-spore/src/registry.rs:57` | The outcome of a successful [`resolve`]: the fetched, hash-verified artifact and its identity. |
-| `mycelium_spore::ResolvedDep` | struct | `crates/mycelium-spore/src/lib.rs:37` | A resolved dependency edge — pinned by content hash (authoritative, ADR-003). |
-| `mycelium_spore::SourceFile` | struct | `crates/mycelium-spore/src/lib.rs:28` | A project source file, content-addressed (raw-byte BLAKE3; ADR-003). |
-| `mycelium_spore::Spore` | struct | `crates/mycelium-spore/src/lib.rs:51` | A built spore: its content-addressed identity plus the components that define it and the metadata that |
-| `mycelium_spore::SporeError` | enum | `crates/mycelium-spore/src/lib.rs:71` | A spore-build refusal — never a partial artifact (G2). |
-| `mycelium_spore::SporeError::exit_code` | fn | `crates/mycelium-spore/src/lib.rs:81` | The CLI exit code for this refusal. |
+| `mycelium_spore::ResolvedDep` | struct | `crates/mycelium-spore/src/lib.rs:45` | A resolved dependency edge — pinned by content hash (authoritative, ADR-003). |
+| `mycelium_spore::SourceFile` | struct | `crates/mycelium-spore/src/lib.rs:36` | A project source file, content-addressed (raw-byte BLAKE3; ADR-003). |
+| `mycelium_spore::Spore` | struct | `crates/mycelium-spore/src/lib.rs:59` | A built spore: its content-addressed identity plus the components that define it and the metadata that |
+| `mycelium_spore::SporeError` | enum | `crates/mycelium-spore/src/lib.rs:79` | A spore-build refusal — never a partial artifact (G2). |
+| `mycelium_spore::SporeError::exit_code` | fn | `crates/mycelium-spore/src/lib.rs:89` | The CLI exit code for this refusal. |
 | `mycelium_spore::artifact_hash` | fn | `crates/mycelium-spore/src/registry.rs:121` | BLAKE3 the bytes into a `blake3:<hex>` [`ContentHash`] — the integrity address of an artifact. |
-| `mycelium_spore::build_spore` | fn | `crates/mycelium-spore/src/lib.rs:106` | Build a [`Spore`] from a parsed manifest and the project root directory. |
-| `mycelium_spore::content_address` | fn | `crates/mycelium-spore/src/lib.rs:200` | The canonical, deterministic identity encoding (ADR-003) — **the single source of truth for spore |
-| `mycelium_spore::explain` | fn | `crates/mycelium-spore/src/lib.rs:350` | The `EXPLAIN` of a built spore (no black box): the identity receipt, the surface, the code by hash, the |
-| `mycelium_spore::kind_str` | fn | `crates/mycelium-spore/src/lib.rs:253` | The canonical `[project].kind` spelling. |
+| `mycelium_spore::build_spore` | fn | `crates/mycelium-spore/src/lib.rs:114` | Build a [`Spore`] from a parsed manifest and the project root directory. |
+| `mycelium_spore::content_address` | fn | `crates/mycelium-spore/src/lib.rs:208` | The canonical, deterministic identity encoding (ADR-003) — **the single source of truth for spore |
+| `mycelium_spore::explain` | fn | `crates/mycelium-spore/src/lib.rs:358` | The `EXPLAIN` of a built spore (no black box): the identity receipt, the surface, the code by hash, the |
+| `mycelium_spore::kind_str` | fn | `crates/mycelium-spore/src/lib.rs:261` | The canonical `[project].kind` spelling. |
 | `mycelium_spore::publish` | fn | `crates/mycelium-spore/src/registry.rs:176` | **Publish** `spore`'s `descriptor` bytes under `name@version` into the registry at `root`. |
 | `mycelium_spore::registry` | mod | `crates/mycelium-spore/src/lib.rs:23` | The content-addressed registry (M-732): `publish` / `resolve` over a local store (ADR-003). |
 | `mycelium_spore::registry::RegistryError::exit_code` | fn | `crates/mycelium-spore/src/registry.rs:92` | The CLI exit code for this refusal. |
@@ -3591,8 +3591,8 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_doc::build::BuildInput::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::build::BuildInput::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::build::BuildInput::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_doc::build::build` | dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:59 — one canonical row kept |
-| `mycelium_doc::build::emit_all` | dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:141 — one canonical row kept |
+| `mycelium_doc::build::build` | dedup-alias: same definition as `mycelium_doc::build` at crates/mycelium-doc/src/build.rs:68 — one canonical row kept |
+| `mycelium_doc::build::emit_all` | dedup-alias: same definition as `mycelium_doc::emit_all` at crates/mycelium-doc/src/build.rs:165 — one canonical row kept |
 | `mycelium_doc::corpus::AnchorAlloc::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::corpus::AnchorAlloc::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_doc::doc_lint::CHECK_NAMES:` | dedup-alias: same definition as `mycelium_doc::CHECK_NAMES:` at crates/mycelium-doc/src/doc_lint.rs:16 — one canonical row kept |

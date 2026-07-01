@@ -1,0 +1,51 @@
+# docs/Containerfile — local docs site (corpus + BOOK + rustdoc + agent index), Podman-first.
+#
+# Two stages: (1) a pinned Rust builder projects the doc-IR (myc-doc build + book) and builds
+# rustdoc; (2) a minimal Python image serves the assembled static site with `python3 -m
+# http.server` (Python is first-class here — CLAUDE.md). Advisory tooling: NOT part of `just
+# check`, mirrors experiments/docker/Dockerfile's conventions (pinned ARG versions, fully-qualified
+# base images, no unpinned curl|sh).
+#
+# Build + run (from the repo root):
+#   podman build -t mycelium-docs -f docs/Containerfile .
+#   podman run --rm -p 8080:8000 mycelium-docs
+#   open http://localhost:8080
+# (docker works identically if podman is unavailable — see scripts/docs-container.sh.)
+
+# syntax=docker/dockerfile:1
+
+# Pin to the repo MSRV (rust-toolchain.toml / ADR-007) and a Python feature line the project
+# already treats as first-class (CLAUDE.md). Both overridable via --build-arg.
+ARG RUST_VERSION=1.92
+ARG PYTHON_VERSION=3.13
+ARG RUST_IMAGE=docker.io/library/rust:${RUST_VERSION}-bookworm
+ARG PYTHON_IMAGE=docker.io/library/python:${PYTHON_VERSION}-slim
+
+# ── Stage 1: build the doc-IR outputs (corpus HTML + BOOK) + rustdoc ────────────────────────────
+FROM ${RUST_IMAGE} AS builder
+WORKDIR /repo
+
+# The repo is COPYed (not bind-mounted) — this stage produces a self-contained image, unlike the
+# KC-2 experiment runner which bind-mounts for host-visible logs (experiments/docker/Dockerfile).
+COPY . .
+
+# myc-doc build → the corpus HTML/Typst/JSON site; myc-doc book → the curated chaptered book;
+# cargo doc → rustdoc. All three are pure-projection builds (no network access needed at build
+# time beyond the already-vendored/lockfile-resolved crates.io deps).
+RUN mkdir -p /site \
+    && cargo run --locked -q -p mycelium-doc --bin myc-doc -- build --repo-root . --out /site/corpus \
+    && cargo run --locked -q -p mycelium-doc --bin myc-doc -- book  --repo-root . --out /site \
+    && cargo doc --locked --workspace --no-deps --quiet \
+    && mkdir -p /site/rustdoc && cp -r target/doc/. /site/rustdoc/ \
+    && python3 docs/gen-rustdoc-index.py /site/rustdoc \
+    && mkdir -p /site/api-index && cp -r docs/api-index/. /site/api-index/ \
+    && cp docs/docs-container-landing.html /site/index.html
+
+# ── Stage 2: serve the static site ──────────────────────────────────────────────────────────────
+FROM ${PYTHON_IMAGE} AS runtime
+WORKDIR /site
+COPY --from=builder /site /site
+EXPOSE 8000
+# CMD (not ENTRYPOINT): a bare `run IMAGE` serves; `run IMAGE <cmd>` execs <cmd> directly instead
+# (the same reasoning as experiments/docker/Dockerfile).
+CMD ["python3", "-m", "http.server", "8000"]

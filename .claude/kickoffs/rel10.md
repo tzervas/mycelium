@@ -16,7 +16,7 @@ is PR-only; the head → `main` PR is the final squash step.
 | **Head branch** | `claude/head/rel10` |
 | **Status** | ready |
 | **Swarm mode** | Sonnet |
-| **Depends on** | E13-1 (self-hosting stdlib gate — stdlib written in `.myc`, stable, usable); E18-1 (full-language readiness gate — per the roadmap; the full gate definition is in ADR-022, Accepted); **E15-1 / E25-1 (native AOT — re-gated into the `lang 1.0.0` Definition of Done by ADR-034, 2026-06-30; the AOT ripple onto M-738 — see `aot10`)** |
+| **Depends on** | E13-1 — **done** (2026-07-01, `lib10` archived; ADR-035 narrows the T4 bar to the DN-66 stable-API freeze + core-lib self-host slice, met); E18-1 — **no longer a release-tag blocker** (ADR-036, 2026-07-01, maintainer-ratified: E18-1's remaining scope, M-739…M-742/`boot10`, is the comprehensive-dogfooding track, gating the project's separate *public-release* milestone, not the `lang 1.0.0` tag; the tag's only self-hosting bar, the core-lib slice, is already met via E13-1); **E15-1 / E25-1 — done** (2026-07-01, `aot10` archived via the M-863 ratification act; RFC-0029 → Enacted, DN-15 → Resolved, ADR-034 stays Accepted pending this very tag act) |
 
 ## Scope
 
@@ -61,9 +61,11 @@ E17-1 (epic), M-735, M-736, M-737, M-738.
   act) — serialize.
 - M-735 and M-736 are **disjoint** (`docs/reference/` vs `crates/mycelium-doc/`) — fan
   out in parallel with each other and with M-737 (they do not depend on ADR-023).
-- M-738 depends on M-737 (ADR-023 Accepted) **and** on E13-1 + E18-1 being done
-  (external deps, not this wave's to satisfy). If those deps are not yet met, M-738
-  is a `BLOCKED` stub — do not attempt the release act prematurely (G2 / never-silent).
+- M-738 depends on M-737 (ADR-023 Accepted — done) and on E13-1 + E15-1/E25-1 being done (external
+  deps; both landed 2026-07-01 — see the resync note below). E18-1 is **not** a dependency of the tag
+  itself (ADR-036 reclassifies its remaining scope as the non-gating comprehensive-dogfooding track).
+  With every engineering gate closed, M-738 unblocks purely on the maintainer's tag-cut act — do not
+  attempt the release act without that explicit maintainer go-ahead (G2 / never-silent).
 
 **Collision surface owned by this kickoff head (never agent-edited by leaves):**
 
@@ -86,19 +88,23 @@ Full table: kickoffs README §Cross-track deconfliction.
 ## Sequencing & dependencies
 
 ```
-(external) E13-1 — stdlib in .myc, stable
-(external) E18-1 — full-language readiness gate (ADR-022)
-(external) E15-1 / E25-1 — native AOT full-language coverage (ADR-034 re-gate; see aot10)
+(external) E13-1 — stdlib in .myc, stable — DONE (2026-07-01)
+(external) E18-1 — non-gating for the tag (ADR-036); comprehensive-dogfooding track, runs parallel
+(external) E15-1 / E25-1 — native AOT full-language coverage — DONE (2026-07-01, M-863 ratification)
   +-  M-735 — language reference + tutorial  \
   +-  M-736 — stdlib API docs                 > parallel
-  +-  M-737 — ADR-023 authored + Accepted    /
-       +-- M-738 — release act (ADR-022 Accepted -> Enacted; 1.0.0 tag cut)
+  +-  M-737 — ADR-023 authored + Accepted    /   (done)
+       +-- M-738 — release act (ADR-022 Accepted -> Enacted; 1.0.0 tag cut) — status:blocked,
+           purely on the maintainer's tag-cut act; no engineering gate remains
 ```
 
-**2026-07-01 resync note:** ADR-034 (Accepted 2026-06-30) re-gated E15-1/E25-1 (native AOT) into
-the `lang 1.0.0` Definition of Done as a hard row (track T6), so M-738 now additionally waits on
-`aot10`'s remainder (M-856b/M-860/M-862/M-863) — see `issues.yaml`'s M-738 `depends_on: [E15-1]`
-and the `aot10` kickoff for current status.
+**2026-07-01 resync note (supersedes the prior note below it — append-only history).** The prior note
+(same day, earlier) recorded ADR-034 re-gating E15-1/E25-1 as a hard row and M-738 waiting on `aot10`'s
+remainder. That remainder has since landed: the **M-863 ratification act** closed **M-856b/M-860/M-862/
+M-863**, so E15-1 + E25-1 are `status:done` and `aot10` is archived. Separately, **ADR-035** narrowed
+E13-1/T4's bar (met, `lib10` archived) and **ADR-036** reclassified E18-1's remaining scope as
+non-gating for the tag. Per `issues.yaml`'s own M-738 `landed_basis`: **no open engineering gate
+remains** — this task now unblocks purely on the maintainer performing the tag-cut act.
 
 **M-738 is a gate-check step, not a build step.** Its task is to verify the ADR-022
 Definition of Done is met (every row closed), then record the conscientious release
@@ -116,7 +122,8 @@ until every gate row is confirmed — never-silent (G2).
 - [ ] M-737: ADR-023 is authored (all §5 open questions answered), moves
   `Draft -> Proposed -> Accepted`; the stability scope, dual-version model, deprecation
   policy, and MIT-only license gate are all decided (never silently deferred — G2).
-- [ ] M-738 (the release act — only when E13-1 + E18-1 + M-737 are all done):
+- [ ] M-738 (the release act — E13-1, E15-1/E25-1, and M-737 are all done; E18-1 is non-gating for
+  the tag per ADR-036 — the only remaining precondition is the maintainer's own tag-cut act):
   - Every ADR-022 gate row confirmed closed (never a silent pass — G2).
   - ADR-021 `Accepted -> Enacted` confirmed (kernel gate, should already be done).
   - ADR-022 `Accepted -> Enacted` (the full-language gate — append-only, must step

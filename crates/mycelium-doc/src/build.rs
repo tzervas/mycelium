@@ -31,6 +31,14 @@ pub struct BuildInput {
     pub schemas_root: Option<PathBuf>,
     /// Example/project roots to project `.myc` nodules from (e.g. `examples`).
     pub example_roots: Vec<PathBuf>,
+    /// Individual markdown files **outside** `corpus_root` to ingest through the same pipeline (so
+    /// their cross-references resolve against the full anchor universe, same as everything under
+    /// `docs/`). v0 use: the book output (§`crate::book`) pulls in repo-root docs like
+    /// `CONTRIBUTING.md` for its Contributing chapter — `BuildInput::conventional` leaves this empty
+    /// (default `build`/`lint` behaviour is unchanged), the book CLI path opts in explicitly. A
+    /// listed path that does not exist is skipped, not an error (the same skip-graceful posture as
+    /// `example_roots`).
+    pub extra_md_files: Vec<PathBuf>,
 }
 
 impl BuildInput {
@@ -47,6 +55,7 @@ impl BuildInput {
             corpus_root: Some(repo_root.join("docs")),
             schemas_root: Some(repo_root.join("docs/spec/schemas")),
             example_roots: vec![repo_root.join("examples"), repo_root.join("lib/std")],
+            extra_md_files: Vec::new(),
             repo_root,
         }
     }
@@ -77,6 +86,21 @@ pub fn build(input: &BuildInput) -> std::io::Result<DocModel> {
             file_index.insert(rel.clone(), node.anchor.clone());
             docs.push(node);
         }
+    }
+
+    // 1.5) Extra individual markdown files outside corpus_root (e.g. `CONTRIBUTING.md`) — same
+    // ingest pipeline, so their xrefs resolve against the full anchor universe (skip-graceful:
+    // a listed path that doesn't exist is not an error).
+    for path in &input.extra_md_files {
+        if !path.exists() {
+            continue;
+        }
+        let rel = repo_rel(&input.repo_root, path);
+        let src = std::fs::read_to_string(path)?;
+        let kind = classify(&rel);
+        let node = ingest(&rel, &src, kind, &mut alloc);
+        file_index.insert(rel.clone(), node.anchor.clone());
+        docs.push(node);
     }
 
     // 2) JSON schemas (api reference).
@@ -153,11 +177,11 @@ pub fn emit_all(model: &DocModel) -> emit::Artifacts {
 
 // ── xref resolution ─────────────────────────────────────────────────────────────────────────────
 
-struct ResolveCtx {
-    anchors: std::collections::BTreeSet<String>,
-    file_index: BTreeMap<String, String>,
+pub(crate) struct ResolveCtx {
+    pub(crate) anchors: std::collections::BTreeSet<String>,
+    pub(crate) file_index: BTreeMap<String, String>,
     /// The corpus root, repo-relative (e.g. `docs`) — internal links under it must resolve.
-    corpus_rel: Option<String>,
+    pub(crate) corpus_rel: Option<String>,
 }
 
 /// Rebuild a node with its cross-references resolved (hashes repropagate from the leaves up).
@@ -192,7 +216,12 @@ fn resolve_target(raw: &str, here_anchor: &str, source: &str, ctx: &ResolveCtx) 
     }
 }
 
-fn classify_target(raw: &str, here_anchor: &str, source: &str, ctx: &ResolveCtx) -> XrefResolution {
+pub(crate) fn classify_target(
+    raw: &str,
+    here_anchor: &str,
+    source: &str,
+    ctx: &ResolveCtx,
+) -> XrefResolution {
     if raw.starts_with("http://") || raw.starts_with("https://") {
         return XrefResolution::ExternalUrl;
     }
@@ -254,7 +283,7 @@ fn resolve_fragment(doc_anchor: &str, frag: Option<&str>, ctx: &ResolveCtx) -> X
 
 // ── filesystem helpers ──────────────────────────────────────────────────────────────────────────
 
-fn classify(rel: &str) -> SourceKind {
+pub(crate) fn classify(rel: &str) -> SourceKind {
     if rel.contains("/rfcs/") {
         SourceKind::Rfc
     } else if rel.contains("/adr/") {
@@ -322,7 +351,7 @@ fn parent_dir(rel: &str) -> &str {
 }
 
 /// Join `base` (a dir) and a relative `link`, resolving `.`/`..`, returning a clean repo-relative path.
-fn normalize_join(base: &str, link: &str) -> String {
+pub(crate) fn normalize_join(base: &str, link: &str) -> String {
     let mut parts: Vec<&str> = if base.is_empty() {
         Vec::new()
     } else {
@@ -338,116 +367,4 @@ fn normalize_join(base: &str, link: &str) -> String {
         }
     }
     parts.join("/")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn normalize_join_resolves_dot_dot() {
-        assert_eq!(
-            normalize_join("docs/rfcs", "../adr/ADR-003.md"),
-            "docs/adr/ADR-003.md"
-        );
-        assert_eq!(normalize_join("docs", "./Glossary.md"), "docs/Glossary.md");
-        assert_eq!(normalize_join("docs/spec", "x.md"), "docs/spec/x.md");
-    }
-
-    #[test]
-    fn classify_maps_paths_to_families() {
-        assert_eq!(classify("docs/rfcs/RFC-0001.md"), SourceKind::Rfc);
-        assert_eq!(classify("docs/adr/ADR-010.md"), SourceKind::Adr);
-        assert_eq!(classify("docs/notes/DN-06.md"), SourceKind::Note);
-        assert_eq!(classify("docs/devlog/x.md"), SourceKind::Devlog);
-        assert_eq!(classify("docs/spec/SPEC.md"), SourceKind::Spec);
-        assert_eq!(classify("docs/Glossary.md"), SourceKind::Other);
-    }
-
-    fn ctx_with(files: &[(&str, &str)], anchors: &[&str], corpus: &str) -> ResolveCtx {
-        ResolveCtx {
-            anchors: anchors.iter().map(|s| (*s).to_owned()).collect(),
-            file_index: files
-                .iter()
-                .map(|(p, a)| ((*p).to_owned(), (*a).to_owned()))
-                .collect(),
-            corpus_rel: Some(corpus.to_owned()),
-        }
-    }
-
-    #[test]
-    fn an_external_url_is_out_of_scope_not_dead() {
-        let ctx = ctx_with(&[], &[], "docs");
-        assert_eq!(
-            classify_target("https://example.com", "d--x", "docs/a.md", &ctx),
-            XrefResolution::ExternalUrl
-        );
-    }
-
-    #[test]
-    fn a_resolving_internal_md_link_is_internal() {
-        let ctx = ctx_with(
-            &[("docs/rfcs/RFC-0013.md", "rfc-0013")],
-            &["rfc-0013", "rfc-0013--levels"],
-            "docs",
-        );
-        // file-level
-        assert_eq!(
-            classify_target("../rfcs/RFC-0013.md", "spec--x", "docs/spec/a.md", &ctx),
-            XrefResolution::Internal {
-                anchor: "rfc-0013".to_owned()
-            }
-        );
-        // fragment-level
-        assert_eq!(
-            classify_target(
-                "../rfcs/RFC-0013.md#levels",
-                "spec--x",
-                "docs/spec/a.md",
-                &ctx
-            ),
-            XrefResolution::Internal {
-                anchor: "rfc-0013--levels".to_owned()
-            }
-        );
-    }
-
-    #[test]
-    fn a_broken_internal_corpus_link_is_dead() {
-        let ctx = ctx_with(&[], &[], "docs");
-        match classify_target("../rfcs/RFC-9999.md", "spec--x", "docs/spec/a.md", &ctx) {
-            XrefResolution::Dead { .. } => {}
-            other => panic!("expected Dead, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn a_link_outside_the_corpus_is_out_of_scope() {
-        let ctx = ctx_with(&[], &[], "docs");
-        // README at repo root — links.sh owns it, not the doc-IR.
-        assert_eq!(
-            classify_target("../../README.md", "spec--x", "docs/spec/a.md", &ctx),
-            XrefResolution::OutOfScope
-        );
-        // a non-markdown target
-        assert_eq!(
-            classify_target("../../scripts/lib.sh", "spec--x", "docs/spec/a.md", &ctx),
-            XrefResolution::OutOfScope
-        );
-    }
-
-    #[test]
-    fn a_missing_fragment_falls_back_to_the_document_top() {
-        let ctx = ctx_with(
-            &[("docs/x.md", "x")],
-            &["x"], // no x--nope anchor
-            "docs",
-        );
-        assert_eq!(
-            classify_target("x.md#nope", "y--a", "docs/y.md", &ctx),
-            XrefResolution::Internal {
-                anchor: "x".to_owned()
-            }
-        );
-    }
 }

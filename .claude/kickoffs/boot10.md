@@ -8,7 +8,22 @@
 | **Head branch** | `claude/head/boot10` |
 | **Status** | ready |
 | **Swarm mode** | Sonnet |
-| **Depends on** | E11-1 (surface-language completeness, kickoff `s10`); E13-1 (the self-hosting stdlib epic — must precede the port); DN-14 (self-hosting gate — Resolved); DN-26 (bootstrap plan — Draft, this kickoff drives M-739 to fill it out) |
+| **Depends on** | E11-1 — **done** (`s10` archived, 2026-06-29); E13-1 — **done** (`lib10` archived, 2026-07-01) — **both preconditions are now met, so this kickoff is unblocked**; DN-14 (self-hosting gate — Resolved); DN-26 (bootstrap plan — Draft, this kickoff drives M-739 to fill it out) |
+
+---
+
+## RESCOPE (2026-07-01, ADR-036)
+
+This kickoff is now **unblocked** — both preconditions (E11-1/`s10`, E13-1/`lib10`) have landed and
+archived. But **ADR-036** (Accepted, maintainer-ratified) reclassifies what its remaining scope
+*gates*: the `lang 1.0.0` **tag** needs only the core-lib self-host slice already fixed by
+ADR-022 §8 Q1 (satisfied via E13-1) — **not** the full toolchain/compiler self-host this kickoff
+builds. M-739…M-742 (this kickoff's whole task list) become the **comprehensive-dogfooding** track:
+real, tracked, **within-1.0.0** work, but it gates the project's separate *public-release* milestone
+(the repo stays private until dogfooding is complete and validated per ADR-036), not the `lang 1.0.0`
+tag act (M-738, `rel10`). M-739…M-742 stay `status:needs-design` in `tools/github/issues.yaml` — no
+design work has actually started; this note only corrects the *blocking relationship*, not the task
+status.
 
 ---
 
@@ -90,10 +105,13 @@ M-742 (CI gate: bootstrap + three-way differential + mutant witness)
 
 - M-739 (plan) must complete before M-740 begins — the plan determines which stages run in
   what order and where the new `.myc` files live.
-- E11-1 (kickoff `s10`) must complete before M-740 Wave B+ — the parser port requires a
-  stable, ratified surface grammar (RFC-0030) and the full HOF/closure surface (M-704).
-- E13-1 (stdlib completeness) must complete before M-741 — the ratification criterion is
-  "everything beyond the bare Rust core is in `.myc`", which includes the stdlib.
+- E11-1 (kickoff `s10`) — **done** (2026-06-29) — the parser port requires the stable, ratified
+  surface grammar (RFC-0030) and full HOF/closure surface (M-704) it delivered; M-740 Wave B+ is
+  clear to proceed on this front.
+- E13-1 (stdlib completeness) — **done** (2026-07-01, `lib10` archived) — the ratification
+  criterion "everything beyond the bare Rust core is in `.myc`" now has its stdlib half satisfied;
+  M-741 is clear to proceed on this front (note: per the RESCOPE above, M-741's *own* result no
+  longer gates the `lang 1.0.0` tag — it gates the comprehensive-dogfooding/public-release track).
 - M-742 (CI gate) depends on M-741 (ratification) to know what is canonical.
 
 ---
@@ -130,9 +148,10 @@ You are running kickoff `boot10` — the self-hosting capstone of Mycelium's ful
 The repo is `/home/user/mycelium`. Your working branch is `claude/head/boot10`; branch off
 `dev` (or `main` if `dev` is current) and push before spawning leaf agents.
 
-**Prerequisite check (do this first):** Confirm E11-1 (kickoff `s10`) and E13-1 (stdlib
-completeness) are landed on `main` before proceeding past M-739. If they are not, flag this and
-do not begin M-740 (the port will be blocked by surface gaps and missing stdlib modules).
+**Prerequisite check — CONFIRMED (2026-07-01):** E11-1 (kickoff `s10`) and E13-1 (stdlib
+completeness) are both landed on `main` (archived kickoffs `s10`/`lib10`). The prior gate is clear;
+M-740 may proceed. Per ADR-036 (2026-07-01), remember this whole task set is the
+comprehensive-dogfooding track — real work, but it does not gate the `lang 1.0.0` tag.
 
 **Context:** DN-14 (Resolved, 2026-06-23) confirms the surface is self-hosting capable for
 pure, polymorphic, generic, trait-bearing modules. `lib/std/result.myc` is the first self-hosted
