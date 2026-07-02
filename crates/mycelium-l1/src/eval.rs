@@ -669,17 +669,20 @@ impl<'e> Evaluator<'e> {
                 what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
                     .to_owned(),
             }),
-            // M-902: the `Substrate` v0 value form now exists ([`L1Value::Substrate`]), but the
-            // affine use-once **move** it needs is not built: the static affine enforcement is M-903
-            // (DN-71 §4.2) and the `consume` lowering is M-904 (DN-71 §4.3). Never-silent (G2/VR-5):
-            // an explicit `Unsupported` naming the staging owners, never a silent/fabricated move.
-            // (This is the surface twin of `SubstrateHandle::try_consume`'s refusing seam.)
+            // M-902 landed the `Substrate` v0 value form ([`L1Value::Substrate`]); M-903 landed the
+            // affine use-once **check** (the static pass in `crate::affine`, run at check time, plus
+            // `SubstrateHandle::try_consume`'s runtime backstop — DN-71 §4.2). What is still missing
+            // is the **lowering**: this evaluator has no execution path that performs the actual move
+            // through existing nodes — that wiring is M-904 (DN-71 §4.3). So a program that reaches
+            // here has *already* been statically checked to be affine-clean; this refusal is honestly
+            // about execution, not about the affine discipline being unchecked. Never-silent (G2/VR-5):
+            // an explicit `Unsupported` naming the staging owner, never a silent/fabricated move.
             Expr::Consume(_) => Err(L1Error::Unsupported {
                 site: site.to_owned(),
-                what: "`consume` of an affine `Substrate` is staged: the M-902 value form exists, \
-                       but the affine use-once move (static enforcement M-903; `consume` lowering \
-                       M-904) is not built — an explicit refusal, never a silent move (DN-71 Model \
-                       S §4.2/§4.3; LR-8; DN-03 §1)"
+                what: "`consume` of an affine `Substrate` type-checks and its use-once discipline is \
+                       statically checked (M-903; DN-71 §4.2), but the interpreter has no execution \
+                       path for the move yet — the `consume` lowering through existing nodes is M-904 \
+                       (DN-71 §4.3). An explicit refusal, never a silent move (LR-8; DN-03 §1)"
                     .to_owned(),
             }),
             // RFC-0024 §4A (M-704): the L1 evaluator runs on the **monomorphized** env, where every

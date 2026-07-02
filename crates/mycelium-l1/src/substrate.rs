@@ -22,15 +22,27 @@
 //! **inspected**. The invalid states are unrepresentable or explicit errors — never a silent default
 //! or a panic (G2/VR-5).
 //!
-//! # What is deliberately *not* here — the M-903 / M-904 seams
-//! The **affine use-once enforcement** (the consumed-state transition + its never-silent runtime
-//! backstop, DN-71 §4.2) is **M-903**; the **`consume` lowering** (DN-71 §4.3) is **M-904**. Neither
-//! is built here. The consume/move seam — [`SubstrateHandle::try_consume`] — is left as an
-//! **explicit, refusing** stub that names those staging owners; it never silently moves, no-ops, or
-//! fabricates a transition (G2/VR-5). The surface `consume <expr>` correspondingly stays an explicit
-//! refusal in the evaluator (see `crate::eval`), now naming the M-903/M-904 seam.
+//! # The M-903 use-once transition (this module's runtime half)
+//! **M-903** (DN-71 §4.2) lands the affine use-once transition: [`SubstrateHandle::try_consume`] is
+//! now the real checked move (Live → Consumed), backed by a `consumed` flag **shared across every
+//! clone of the same identity** (`Clone` is passage, not re-acquisition — see the type doc below).
+//! The **primary** enforcement is the *static* pass (`crate::affine`, run by
+//! [`crate::checkty::check_nodule`]): a well-typed, checker-accepted program never calls
+//! `try_consume` twice on the same identity. `try_consume`'s runtime check is the **backstop** DN-71
+//! §4.2 asks for — under a correct static pass it is unreachable from checked code, so a tripped
+//! backstop is an internal invariant surfaced loudly (G2), never silent corruption. It is also the
+//! net that catches what the *lexically single-use* static pass cannot see: a `Substrate` captured
+//! by a closure or a `for`-loop body that runs more than once at runtime (`crate::affine`'s module
+//! docs name this limitation explicitly).
+//!
+//! # What is still *not* here — the M-904 seam
+//! The **`consume` lowering** (real L0/evaluator execution through existing paths, DN-71 §4.3) is
+//! **M-904**. The surface `consume <expr>` therefore still refuses at evaluation time (see
+//! `crate::eval`) — but it is now, honestly, only the *lowering* that is missing: the affine
+//! discipline itself (this module + `crate::affine`) is checked, not merely asserted.
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
 
 /// Process-unique source of opaque handle identities. A handle's identity is the *external resource*
 /// it names, **not** its content (ADR-003 does not apply), so every [`SubstrateHandle::acquire`]
@@ -71,16 +83,35 @@ impl SubstrateProvenance {
 /// value-passing machinery (binding a `let`, passing an argument, a whole-value pattern binder all
 /// clone the bound `L1Value`). Cloning preserves the **same identity** (`id`) — a clone is the *same*
 /// resource, i.e. surface *passage*, not a second resource. Affinity (use-once) is **not** enforced
-/// by making this Rust type non-`Clone`; it is a **checker** property — the static affine pass
-/// (M-903) ensures no surface program moves a `Substrate` binding more than once along any path. The
-/// Rust-level `Clone` is the passage mechanism; the affine discipline lives one layer up (DN-71 §4.2;
-/// DN-33 §8.1 Q4 — the known-affine binding is owned-unique in the checker, not in the value type).
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// by making this Rust type non-`Clone`; the **primary** enforcement is a **checker** property — the
+/// static affine pass (`crate::affine`, M-903) ensures no surface program moves a `Substrate`
+/// binding more than once along any path (DN-71 §4.2; DN-33 §8.1 Q4 — the known-affine binding is
+/// owned-unique in the checker, not in the value type). The Rust-level `Clone` is the passage
+/// mechanism; [`Self::try_consume`]'s shared `consumed` flag (M-903) is the **runtime backstop** for
+/// what the static pass cannot see (a closure/`for`-body capture that runs more than once).
+#[derive(Debug, Clone)]
 pub struct SubstrateHandle {
     tag: String,
     id: u64,
     provenance: SubstrateProvenance,
+    /// The use-once **runtime backstop** (M-903; DN-71 §4.2) — `false` (live) until
+    /// [`Self::try_consume`] transitions it. Shared (`Arc`) across every `Clone` of this identity:
+    /// cloning is passage, not re-acquisition, so consuming *any* clone must be visible through
+    /// *every* clone (never a backstop a naive re-clone could dodge).
+    consumed: Arc<AtomicBool>,
 }
+
+impl PartialEq for SubstrateHandle {
+    /// Identity equality, matching [`Self::id`]'s documented contract ("two handles are the same
+    /// resource iff their ids are equal") — `provenance` is invariant per id (set once at
+    /// [`Self::acquire`]) and `consumed` is shared *state* over one identity, not part of it, so
+    /// neither needs comparing once `id` matches.
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for SubstrateHandle {}
 
 impl SubstrateHandle {
     /// **Acquire** a fresh `Substrate` handle for `tag`, recording how it was acquired. This is the
@@ -93,6 +124,7 @@ impl SubstrateHandle {
             tag: tag.into(),
             id: NEXT_HANDLE_ID.fetch_add(1, Ordering::Relaxed),
             provenance,
+            consumed: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -127,43 +159,79 @@ impl SubstrateHandle {
         )
     }
 
-    /// The **consume/move seam** for the affine construct (DN-71 §4.2 enforcement / §4.3 lowering).
+    /// Whether this handle has already been consumed (the [`Self::try_consume`] runtime backstop's
+    /// current state) — inspectable, never a black box (house rule 2). `true` reflects a move made
+    /// through *any* clone of this identity (the flag is shared, not per-clone).
+    #[must_use]
+    pub fn is_consumed(&self) -> bool {
+        self.consumed.load(Ordering::Acquire)
+    }
+
+    /// The **consume/move transition** for the affine construct (DN-71 Model S §4.2; M-903): the
+    /// checked Live → Consumed move, backed by the shared `consumed` flag.
     ///
-    /// M-902 makes the handle *exist*, *pass*, and be *inspected*; the use-once **transition**
-    /// (Live → Consumed) with its static affine check is **M-903**, and the `consume` **lowering** is
-    /// **M-904**. Neither is built here, so this is an **explicit, never-silent refusal** naming the
-    /// staging owners — never a silent no-op, a fabricated move, or a panic (G2/VR-5). M-903 replaces
-    /// this stub with the checked affine transition.
+    /// This is the **runtime backstop**, not the primary enforcement — the *static* affine pass
+    /// (`crate::affine`, run during [`crate::checkty::check_nodule`]) is what a well-typed program is
+    /// checked against, so a checker-accepted program never reaches a second `try_consume` on the
+    /// same identity. This method exists so a double-consume that somehow slips past the static pass
+    /// (the closure/loop-body multiplicity gap `crate::affine`'s docs name) still **traps explicitly**
+    /// — never a silent second move, never corrupted state (G2/VR-5).
+    ///
+    /// `Ok` on the first call for this identity (across all its clones): the flag flips to consumed
+    /// and the moved handle (same identity, now-consumed) is returned. `Err(SubstrateError::
+    /// AlreadyConsumed)` on any subsequent call, naming the `tag` and `id` of the violated handle —
+    /// never a silent no-op or a fabricated second move.
+    ///
+    /// M-904 still owns the surface `consume <expr>` **lowering** (wiring this into real L0/evaluator
+    /// execution); this method is the checked primitive that lowering will call.
     pub fn try_consume(&self) -> Result<Self, SubstrateError> {
-        Err(SubstrateError::AffineTrackingUnstaged {
-            tag: self.tag.clone(),
-        })
+        // The only legal transition is `false -> true`; a `false` result (the AtomicBool's own
+        // *prior* value) means WE won the race and made the move — `Ordering::AcqRel` on success
+        // (visible to any later `Acquire` load/exchange on this same Arc, e.g. `is_consumed`) and
+        // `Ordering::Acquire` on failure (nothing published, just observing that it's already gone).
+        match self
+            .consumed
+            .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        {
+            Ok(_was_live) => Ok(self.clone()),
+            Err(_already_consumed) => Err(SubstrateError::AlreadyConsumed {
+                tag: self.tag.clone(),
+                id: self.id,
+            }),
+        }
     }
 }
 
 /// Why a `Substrate` operation was refused — always explicit (never-silent; G2/VR-5). The variant
-/// set is closed: v0 supports only the create/pass/inspect surface, so the sole refusal is the
-/// staged affine-move seam.
+/// set is closed: v0 supports only the create/pass/inspect/consume surface, so the sole refusal is
+/// the runtime use-once backstop (`crate::affine`'s static pass is the primary enforcement, and
+/// refuses at check time — never reaching this Rust-level `Result` at all for a checked program).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SubstrateError {
-    /// The affine use-once **move** (Live → Consumed) is not yet built — its static enforcement is
-    /// **M-903** and the `consume` lowering is **M-904** (DN-71 Model S §4.2/§4.3). A v0 handle
-    /// exists, is passed, and is inspected, but it cannot yet be *consumed*: this is an explicit
-    /// refusal, never a silent move (G2). Names the tag of the handle whose consume was refused.
-    AffineTrackingUnstaged {
+    /// The affine use-once **move** (Live → Consumed) was attempted on an identity that was already
+    /// consumed — the [`SubstrateHandle::try_consume`] runtime backstop (M-903; DN-71 Model S §4.2)
+    /// tripped. Under a correct static pass this is unreachable from a checked program; a real
+    /// occurrence is an internal invariant break, surfaced loudly (G2) rather than as silent
+    /// corruption. Names the `tag` and `id` of the violated handle.
+    AlreadyConsumed {
         /// The `tag` of the handle whose consume/move was refused.
         tag: String,
+        /// The opaque identity ([`SubstrateHandle::id`]) of the already-consumed handle.
+        id: u64,
     },
 }
 
 impl core::fmt::Display for SubstrateError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            SubstrateError::AffineTrackingUnstaged { tag } => write!(
+            SubstrateError::AlreadyConsumed { tag, id } => write!(
                 f,
-                "consume of `Substrate{{{tag}}}` is staged: the M-902 value form exists, but the \
-                 affine use-once move (static enforcement M-903; `consume` lowering M-904) is not \
-                 built — an explicit refusal, never a silent move (DN-71 Model S §4.2/§4.3; VR-5)"
+                "double-consume: `Substrate{{{tag}}}` #{id} was already consumed — this is the \
+                 M-903 runtime use-once backstop (DN-71 Model S §4.2) tripping on a move that the \
+                 static affine pass should have refused at check time; a checked program never \
+                 reaches this at runtime, so seeing it means either an unchecked call path or a \
+                 closure/loop-body capture the static pass cannot see (`crate::affine` docs) — \
+                 never silent corruption (G2/VR-5)"
             ),
         }
     }

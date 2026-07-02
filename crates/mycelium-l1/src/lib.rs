@@ -34,6 +34,10 @@
 //! primitive that carries to the self-hosted frontend.
 #![forbid(unsafe_code)]
 
+/// The static affine **use-once** tracker for `Substrate` bindings (M-903; DN-71 Model S §4.2) —
+/// piggybacked on [`checkty::Cx`]'s own scope, not a parallel analysis (KC-3/DRY). Internal to the
+/// frontend; not part of the public surface.
+mod affine;
 pub mod ambient;
 pub mod ast;
 pub mod checkty;
@@ -51,7 +55,9 @@ pub mod nodule;
 pub mod parse;
 /// The `Substrate` v0 value form (M-902; DN-71 Model S §4.1) — an interpreter-level opaque affine
 /// handle at the L1 evaluator level. No new L0 node / no `Repr` growth (KC-3). The affine use-once
-/// enforcement (M-903) and `consume` lowering (M-904) are left as explicit, refusing seams here.
+/// **runtime backstop** now lives here too (M-903 — [`substrate::SubstrateHandle::try_consume`]);
+/// the primary enforcement is the static pass ([`affine`]) run by [`checkty::check_nodule`]. The
+/// `consume` **lowering** (real execution through existing paths) is still M-904.
 pub mod substrate;
 pub mod token;
 pub mod totality;
