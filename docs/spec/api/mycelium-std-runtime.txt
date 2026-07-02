@@ -114,7 +114,7 @@ pub const mycelium_std_runtime::dataflow::SWEEP_DETERMINISM_STRENGTH: mycelium_c
 pub trait mycelium_std_runtime::dataflow::PollTask
 pub fn mycelium_std_runtime::dataflow::PollTask::poll(&mut self) -> mycelium_std_runtime::dataflow::Step
 pub fn mycelium_std_runtime::dataflow::run_dataflow(&mut [alloc::boxed::Box<dyn mycelium_std_runtime::dataflow::PollTask>], mycelium_std_runtime::dataflow::SweepDir, impl core::ops::function::Fn() -> u64) -> core::result::Result<(), mycelium_std_runtime::task::Deadlock>
-pub fn mycelium_std_runtime::dataflow::run_dataflow_scheduled(&mycelium_std_runtime::scheduler::Scheduler, &mut [alloc::boxed::Box<(dyn mycelium_std_runtime::dataflow::PollTask + core::marker::Send)>], impl core::ops::function::Fn() -> u64) -> core::result::Result<(), mycelium_std_runtime::task::Deadlock>
+pub fn mycelium_std_runtime::dataflow::run_dataflow_scheduled(&mycelium_sched::scheduler::Scheduler, &mut [alloc::boxed::Box<(dyn mycelium_std_runtime::dataflow::PollTask + core::marker::Send)>], impl core::ops::function::Fn() -> u64) -> core::result::Result<(), mycelium_std_runtime::task::Deadlock>
 pub mod mycelium_std_runtime::guarantee_matrix
 pub struct mycelium_std_runtime::guarantee_matrix::GaugeRow
 pub mycelium_std_runtime::guarantee_matrix::GaugeRow::basis: &'static str
@@ -188,7 +188,7 @@ impl<V> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::networ
 impl<V> core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::network::TrySend<V> where V: core::panic::unwind_safe::UnwindSafe
 pub struct mycelium_std_runtime::network::ChannelNodeId(_)
 impl mycelium_std_runtime::network::ChannelNodeId
-pub fn mycelium_std_runtime::network::ChannelNodeId::as_channel_id(self) -> mycelium_std_runtime::reclamation::ChannelId
+pub fn mycelium_std_runtime::network::ChannelNodeId::as_channel_id(self) -> mycelium_rt_abi::reclamation::ChannelId
 pub fn mycelium_std_runtime::network::ChannelNodeId::as_u64(self) -> u64
 impl core::clone::Clone for mycelium_std_runtime::network::ChannelNodeId
 pub fn mycelium_std_runtime::network::ChannelNodeId::clone(&self) -> mycelium_std_runtime::network::ChannelNodeId
@@ -230,7 +230,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::network::Net
 pub struct mycelium_std_runtime::network::Receiver<V>
 impl<V> mycelium_std_runtime::network::Receiver<V>
 pub fn mycelium_std_runtime::network::Receiver<V>::channel_id(&self) -> mycelium_std_runtime::network::ChannelNodeId
-pub fn mycelium_std_runtime::network::Receiver<V>::close_with_reclaim(self, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink, mycelium_std_runtime::reclamation::ScopeId, mycelium_std_runtime::reclamation::SweepEpoch, impl core::ops::function::Fn(&V) -> mycelium_core::id::ContentHash) -> usize
+pub fn mycelium_std_runtime::network::Receiver<V>::close_with_reclaim(self, &mut dyn mycelium_rt_abi::reclamation::ReclamationSink, mycelium_rt_abi::reclamation::ScopeId, mycelium_rt_abi::reclamation::SweepEpoch, impl core::ops::function::Fn(&V) -> mycelium_core::id::ContentHash) -> usize
 pub fn mycelium_std_runtime::network::Receiver<V>::try_recv(&self) -> mycelium_std_runtime::network::TryRecv<V>
 impl<V> core::fmt::Debug for mycelium_std_runtime::network::Receiver<V>
 pub fn mycelium_std_runtime::network::Receiver<V>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
@@ -273,7 +273,7 @@ impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::rc::RcPro
 pub struct mycelium_std_runtime::rc::RcCell<T>
 impl<T> mycelium_std_runtime::rc::RcCell<T>
 pub fn mycelium_std_runtime::rc::RcCell<T>::clone_ref(&self) -> mycelium_std_runtime::rc::RcCell<T>
-pub fn mycelium_std_runtime::rc::RcCell<T>::drop_ref(self, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink, mycelium_std_runtime::reclamation::ScopeId, mycelium_std_runtime::reclamation::SweepEpoch, mycelium_core::id::ContentHash) -> mycelium_std_runtime::rc::RcProbe<T>
+pub fn mycelium_std_runtime::rc::RcCell<T>::drop_ref(self, &mut dyn mycelium_rt_abi::reclamation::ReclamationSink, mycelium_rt_abi::reclamation::ScopeId, mycelium_rt_abi::reclamation::SweepEpoch, mycelium_core::id::ContentHash) -> mycelium_std_runtime::rc::RcProbe<T>
 pub fn mycelium_std_runtime::rc::RcCell<T>::new(T) -> Self
 pub fn mycelium_std_runtime::rc::RcCell<T>::refcount(&self) -> usize
 pub fn mycelium_std_runtime::rc::RcCell<T>::value(&self) -> &T
@@ -287,160 +287,14 @@ impl<T> core::marker::UnsafeUnpin for mycelium_std_runtime::rc::RcCell<T>
 impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::rc::RcCell<T> where T: core::panic::unwind_safe::RefUnwindSafe
 impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::rc::RcCell<T> where T: core::panic::unwind_safe::RefUnwindSafe
 pub mod mycelium_std_runtime::reclamation
-pub enum mycelium_std_runtime::reclamation::ReclamationTrigger
-pub mycelium_std_runtime::reclamation::ReclamationTrigger::ChannelClose
-pub mycelium_std_runtime::reclamation::ReclamationTrigger::RcZero
-pub mycelium_std_runtime::reclamation::ReclamationTrigger::ScopeExit
-impl core::clone::Clone for mycelium_std_runtime::reclamation::ReclamationTrigger
-pub fn mycelium_std_runtime::reclamation::ReclamationTrigger::clone(&self) -> mycelium_std_runtime::reclamation::ReclamationTrigger
-impl core::cmp::Eq for mycelium_std_runtime::reclamation::ReclamationTrigger
-impl core::cmp::PartialEq for mycelium_std_runtime::reclamation::ReclamationTrigger
-pub fn mycelium_std_runtime::reclamation::ReclamationTrigger::eq(&self, &mycelium_std_runtime::reclamation::ReclamationTrigger) -> bool
-impl core::fmt::Debug for mycelium_std_runtime::reclamation::ReclamationTrigger
-pub fn mycelium_std_runtime::reclamation::ReclamationTrigger::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_std_runtime::reclamation::ReclamationTrigger
-impl core::marker::Freeze for mycelium_std_runtime::reclamation::ReclamationTrigger
-impl core::marker::Send for mycelium_std_runtime::reclamation::ReclamationTrigger
-impl core::marker::Sync for mycelium_std_runtime::reclamation::ReclamationTrigger
-impl core::marker::Unpin for mycelium_std_runtime::reclamation::ReclamationTrigger
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::reclamation::ReclamationTrigger
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::reclamation::ReclamationTrigger
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::reclamation::ReclamationTrigger
-pub struct mycelium_std_runtime::reclamation::ChannelId(pub u64)
-impl core::clone::Clone for mycelium_std_runtime::reclamation::ChannelId
-pub fn mycelium_std_runtime::reclamation::ChannelId::clone(&self) -> mycelium_std_runtime::reclamation::ChannelId
-impl core::cmp::Eq for mycelium_std_runtime::reclamation::ChannelId
-impl core::cmp::PartialEq for mycelium_std_runtime::reclamation::ChannelId
-pub fn mycelium_std_runtime::reclamation::ChannelId::eq(&self, &mycelium_std_runtime::reclamation::ChannelId) -> bool
-impl core::fmt::Debug for mycelium_std_runtime::reclamation::ChannelId
-pub fn mycelium_std_runtime::reclamation::ChannelId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::hash::Hash for mycelium_std_runtime::reclamation::ChannelId
-pub fn mycelium_std_runtime::reclamation::ChannelId::hash<__H: core::hash::Hasher>(&self, &mut __H)
-impl core::marker::Copy for mycelium_std_runtime::reclamation::ChannelId
-impl core::marker::StructuralPartialEq for mycelium_std_runtime::reclamation::ChannelId
-impl core::marker::Freeze for mycelium_std_runtime::reclamation::ChannelId
-impl core::marker::Send for mycelium_std_runtime::reclamation::ChannelId
-impl core::marker::Sync for mycelium_std_runtime::reclamation::ChannelId
-impl core::marker::Unpin for mycelium_std_runtime::reclamation::ChannelId
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::reclamation::ChannelId
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::reclamation::ChannelId
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::reclamation::ChannelId
-pub struct mycelium_std_runtime::reclamation::CollectingSink
-pub mycelium_std_runtime::reclamation::CollectingSink::records: alloc::vec::Vec<mycelium_std_runtime::reclamation::ReclamationRecord>
-impl mycelium_std_runtime::reclamation::CollectingSink
-pub fn mycelium_std_runtime::reclamation::CollectingSink::drain(&mut self) -> alloc::vec::Vec<mycelium_std_runtime::reclamation::ReclamationRecord>
-pub fn mycelium_std_runtime::reclamation::CollectingSink::is_empty(&self) -> bool
-pub fn mycelium_std_runtime::reclamation::CollectingSink::len(&self) -> usize
-pub fn mycelium_std_runtime::reclamation::CollectingSink::new() -> Self
-impl core::default::Default for mycelium_std_runtime::reclamation::CollectingSink
-pub fn mycelium_std_runtime::reclamation::CollectingSink::default() -> mycelium_std_runtime::reclamation::CollectingSink
-impl core::fmt::Debug for mycelium_std_runtime::reclamation::CollectingSink
-pub fn mycelium_std_runtime::reclamation::CollectingSink::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl mycelium_std_runtime::reclamation::ReclamationSink for mycelium_std_runtime::reclamation::CollectingSink
-pub fn mycelium_std_runtime::reclamation::CollectingSink::emit(&mut self, mycelium_std_runtime::reclamation::ReclamationRecord)
-impl core::marker::Freeze for mycelium_std_runtime::reclamation::CollectingSink
-impl core::marker::Send for mycelium_std_runtime::reclamation::CollectingSink
-impl core::marker::Sync for mycelium_std_runtime::reclamation::CollectingSink
-impl core::marker::Unpin for mycelium_std_runtime::reclamation::CollectingSink
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::reclamation::CollectingSink
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::reclamation::CollectingSink
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::reclamation::CollectingSink
-pub struct mycelium_std_runtime::reclamation::ExplainRecord
-pub mycelium_std_runtime::reclamation::ExplainRecord::channel_id: core::option::Option<mycelium_std_runtime::reclamation::ChannelId>
-pub mycelium_std_runtime::reclamation::ExplainRecord::scope_id: mycelium_std_runtime::reclamation::ScopeId
-pub mycelium_std_runtime::reclamation::ExplainRecord::sweep_epoch: mycelium_std_runtime::reclamation::SweepEpoch
-pub mycelium_std_runtime::reclamation::ExplainRecord::trigger: mycelium_std_runtime::reclamation::ReclamationTrigger
-pub mycelium_std_runtime::reclamation::ExplainRecord::value_meta_hash: mycelium_core::id::ContentHash
-impl core::clone::Clone for mycelium_std_runtime::reclamation::ExplainRecord
-pub fn mycelium_std_runtime::reclamation::ExplainRecord::clone(&self) -> mycelium_std_runtime::reclamation::ExplainRecord
-impl core::cmp::Eq for mycelium_std_runtime::reclamation::ExplainRecord
-impl core::cmp::PartialEq for mycelium_std_runtime::reclamation::ExplainRecord
-pub fn mycelium_std_runtime::reclamation::ExplainRecord::eq(&self, &mycelium_std_runtime::reclamation::ExplainRecord) -> bool
-impl core::fmt::Debug for mycelium_std_runtime::reclamation::ExplainRecord
-pub fn mycelium_std_runtime::reclamation::ExplainRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::fmt::Display for mycelium_std_runtime::reclamation::ExplainRecord
-pub fn mycelium_std_runtime::reclamation::ExplainRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_std_runtime::reclamation::ExplainRecord
-impl core::marker::Freeze for mycelium_std_runtime::reclamation::ExplainRecord
-impl core::marker::Send for mycelium_std_runtime::reclamation::ExplainRecord
-impl core::marker::Sync for mycelium_std_runtime::reclamation::ExplainRecord
-impl core::marker::Unpin for mycelium_std_runtime::reclamation::ExplainRecord
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::reclamation::ExplainRecord
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::reclamation::ExplainRecord
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::reclamation::ExplainRecord
-pub struct mycelium_std_runtime::reclamation::ReclamationRecord
-pub mycelium_std_runtime::reclamation::ReclamationRecord::channel_id: core::option::Option<mycelium_std_runtime::reclamation::ChannelId>
-pub mycelium_std_runtime::reclamation::ReclamationRecord::scope_id: mycelium_std_runtime::reclamation::ScopeId
-pub mycelium_std_runtime::reclamation::ReclamationRecord::sweep_epoch: mycelium_std_runtime::reclamation::SweepEpoch
-pub mycelium_std_runtime::reclamation::ReclamationRecord::trigger: mycelium_std_runtime::reclamation::ReclamationTrigger
-pub mycelium_std_runtime::reclamation::ReclamationRecord::value_meta_hash: mycelium_core::id::ContentHash
-impl mycelium_std_runtime::reclamation::ReclamationRecord
-pub fn mycelium_std_runtime::reclamation::ReclamationRecord::explain(&self) -> mycelium_std_runtime::reclamation::ExplainRecord
-pub fn mycelium_std_runtime::reclamation::ReclamationRecord::for_channel_close(mycelium_std_runtime::reclamation::ScopeId, mycelium_std_runtime::reclamation::SweepEpoch, mycelium_core::id::ContentHash, mycelium_std_runtime::reclamation::ChannelId) -> Self
-pub fn mycelium_std_runtime::reclamation::ReclamationRecord::new(mycelium_std_runtime::reclamation::ScopeId, mycelium_std_runtime::reclamation::SweepEpoch, mycelium_std_runtime::reclamation::ReclamationTrigger, mycelium_core::id::ContentHash) -> Self
-pub fn mycelium_std_runtime::reclamation::ReclamationRecord::trigger(&self) -> &mycelium_std_runtime::reclamation::ReclamationTrigger
-pub fn mycelium_std_runtime::reclamation::ReclamationRecord::value_meta_hash(&self) -> &mycelium_core::id::ContentHash
-impl core::clone::Clone for mycelium_std_runtime::reclamation::ReclamationRecord
-pub fn mycelium_std_runtime::reclamation::ReclamationRecord::clone(&self) -> mycelium_std_runtime::reclamation::ReclamationRecord
-impl core::cmp::Eq for mycelium_std_runtime::reclamation::ReclamationRecord
-impl core::cmp::PartialEq for mycelium_std_runtime::reclamation::ReclamationRecord
-pub fn mycelium_std_runtime::reclamation::ReclamationRecord::eq(&self, &mycelium_std_runtime::reclamation::ReclamationRecord) -> bool
-impl core::fmt::Debug for mycelium_std_runtime::reclamation::ReclamationRecord
-pub fn mycelium_std_runtime::reclamation::ReclamationRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_std_runtime::reclamation::ReclamationRecord
-impl core::marker::Freeze for mycelium_std_runtime::reclamation::ReclamationRecord
-impl core::marker::Send for mycelium_std_runtime::reclamation::ReclamationRecord
-impl core::marker::Sync for mycelium_std_runtime::reclamation::ReclamationRecord
-impl core::marker::Unpin for mycelium_std_runtime::reclamation::ReclamationRecord
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::reclamation::ReclamationRecord
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::reclamation::ReclamationRecord
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::reclamation::ReclamationRecord
-pub struct mycelium_std_runtime::reclamation::ScopeId(pub u64)
-impl core::clone::Clone for mycelium_std_runtime::reclamation::ScopeId
-pub fn mycelium_std_runtime::reclamation::ScopeId::clone(&self) -> mycelium_std_runtime::reclamation::ScopeId
-impl core::cmp::Eq for mycelium_std_runtime::reclamation::ScopeId
-impl core::cmp::PartialEq for mycelium_std_runtime::reclamation::ScopeId
-pub fn mycelium_std_runtime::reclamation::ScopeId::eq(&self, &mycelium_std_runtime::reclamation::ScopeId) -> bool
-impl core::fmt::Debug for mycelium_std_runtime::reclamation::ScopeId
-pub fn mycelium_std_runtime::reclamation::ScopeId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::hash::Hash for mycelium_std_runtime::reclamation::ScopeId
-pub fn mycelium_std_runtime::reclamation::ScopeId::hash<__H: core::hash::Hasher>(&self, &mut __H)
-impl core::marker::Copy for mycelium_std_runtime::reclamation::ScopeId
-impl core::marker::StructuralPartialEq for mycelium_std_runtime::reclamation::ScopeId
-impl core::marker::Freeze for mycelium_std_runtime::reclamation::ScopeId
-impl core::marker::Send for mycelium_std_runtime::reclamation::ScopeId
-impl core::marker::Sync for mycelium_std_runtime::reclamation::ScopeId
-impl core::marker::Unpin for mycelium_std_runtime::reclamation::ScopeId
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::reclamation::ScopeId
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::reclamation::ScopeId
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::reclamation::ScopeId
-pub struct mycelium_std_runtime::reclamation::SweepEpoch(pub u64)
-impl core::clone::Clone for mycelium_std_runtime::reclamation::SweepEpoch
-pub fn mycelium_std_runtime::reclamation::SweepEpoch::clone(&self) -> mycelium_std_runtime::reclamation::SweepEpoch
-impl core::cmp::Eq for mycelium_std_runtime::reclamation::SweepEpoch
-impl core::cmp::Ord for mycelium_std_runtime::reclamation::SweepEpoch
-pub fn mycelium_std_runtime::reclamation::SweepEpoch::cmp(&self, &mycelium_std_runtime::reclamation::SweepEpoch) -> core::cmp::Ordering
-impl core::cmp::PartialEq for mycelium_std_runtime::reclamation::SweepEpoch
-pub fn mycelium_std_runtime::reclamation::SweepEpoch::eq(&self, &mycelium_std_runtime::reclamation::SweepEpoch) -> bool
-impl core::cmp::PartialOrd for mycelium_std_runtime::reclamation::SweepEpoch
-pub fn mycelium_std_runtime::reclamation::SweepEpoch::partial_cmp(&self, &mycelium_std_runtime::reclamation::SweepEpoch) -> core::option::Option<core::cmp::Ordering>
-impl core::fmt::Debug for mycelium_std_runtime::reclamation::SweepEpoch
-pub fn mycelium_std_runtime::reclamation::SweepEpoch::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::hash::Hash for mycelium_std_runtime::reclamation::SweepEpoch
-pub fn mycelium_std_runtime::reclamation::SweepEpoch::hash<__H: core::hash::Hasher>(&self, &mut __H)
-impl core::marker::Copy for mycelium_std_runtime::reclamation::SweepEpoch
-impl core::marker::StructuralPartialEq for mycelium_std_runtime::reclamation::SweepEpoch
-impl core::marker::Freeze for mycelium_std_runtime::reclamation::SweepEpoch
-impl core::marker::Send for mycelium_std_runtime::reclamation::SweepEpoch
-impl core::marker::Sync for mycelium_std_runtime::reclamation::SweepEpoch
-impl core::marker::Unpin for mycelium_std_runtime::reclamation::SweepEpoch
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::reclamation::SweepEpoch
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::reclamation::SweepEpoch
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::reclamation::SweepEpoch
-pub trait mycelium_std_runtime::reclamation::ReclamationSink
-pub fn mycelium_std_runtime::reclamation::ReclamationSink::emit(&mut self, mycelium_std_runtime::reclamation::ReclamationRecord)
-impl mycelium_std_runtime::reclamation::ReclamationSink for mycelium_std_runtime::reclamation::CollectingSink
-pub fn mycelium_std_runtime::reclamation::CollectingSink::emit(&mut self, mycelium_std_runtime::reclamation::ReclamationRecord)
+pub use mycelium_std_runtime::reclamation::ChannelId
+pub use mycelium_std_runtime::reclamation::CollectingSink
+pub use mycelium_std_runtime::reclamation::ExplainRecord
+pub use mycelium_std_runtime::reclamation::ReclamationRecord
+pub use mycelium_std_runtime::reclamation::ReclamationSink
+pub use mycelium_std_runtime::reclamation::ReclamationTrigger
+pub use mycelium_std_runtime::reclamation::ScopeId
+pub use mycelium_std_runtime::reclamation::SweepEpoch
 pub mod mycelium_std_runtime::region
 pub struct mycelium_std_runtime::region::ClosedRegion
 pub mycelium_std_runtime::region::ClosedRegion::epoch: mycelium_std_runtime::region::RegionEpoch
@@ -483,7 +337,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::region::Defe
 pub struct mycelium_std_runtime::region::Region
 pub mycelium_std_runtime::region::Region::id: mycelium_std_runtime::region::ScopeNodeId
 impl mycelium_std_runtime::region::Region
-pub fn mycelium_std_runtime::region::Region::close(&mut self, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink) -> mycelium_std_runtime::region::ClosedRegion
+pub fn mycelium_std_runtime::region::Region::close(&mut self, &mut dyn mycelium_rt_abi::reclamation::ReclamationSink) -> mycelium_std_runtime::region::ClosedRegion
 pub fn mycelium_std_runtime::region::Region::closed_epoch(&self) -> core::option::Option<mycelium_std_runtime::region::RegionEpoch>
 pub fn mycelium_std_runtime::region::Region::defer(&mut self, mycelium_core::id::ContentHash)
 pub fn mycelium_std_runtime::region::Region::deferred_count(&self) -> usize
@@ -504,7 +358,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::region::R
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::region::Region
 pub struct mycelium_std_runtime::region::RegionEpoch(_)
 impl mycelium_std_runtime::region::RegionEpoch
-pub fn mycelium_std_runtime::region::RegionEpoch::as_sweep_epoch(self) -> mycelium_std_runtime::reclamation::SweepEpoch
+pub fn mycelium_std_runtime::region::RegionEpoch::as_sweep_epoch(self) -> mycelium_rt_abi::reclamation::SweepEpoch
 pub fn mycelium_std_runtime::region::RegionEpoch::as_u64(self) -> u64
 impl core::clone::Clone for mycelium_std_runtime::region::RegionEpoch
 pub fn mycelium_std_runtime::region::RegionEpoch::clone(&self) -> mycelium_std_runtime::region::RegionEpoch
@@ -530,7 +384,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::region::R
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::region::RegionEpoch
 pub struct mycelium_std_runtime::region::ScopeNodeId(_)
 impl mycelium_std_runtime::region::ScopeNodeId
-pub fn mycelium_std_runtime::region::ScopeNodeId::as_scope_id(self) -> mycelium_std_runtime::reclamation::ScopeId
+pub fn mycelium_std_runtime::region::ScopeNodeId::as_scope_id(self) -> mycelium_rt_abi::reclamation::ScopeId
 pub fn mycelium_std_runtime::region::ScopeNodeId::as_u64(self) -> u64
 impl core::clone::Clone for mycelium_std_runtime::region::ScopeNodeId
 pub fn mycelium_std_runtime::region::ScopeNodeId::clone(&self) -> mycelium_std_runtime::region::ScopeNodeId
@@ -558,7 +412,7 @@ pub struct mycelium_std_runtime::region::ScopeTree
 pub mycelium_std_runtime::region::ScopeTree::children: alloc::vec::Vec<mycelium_std_runtime::region::Region>
 pub mycelium_std_runtime::region::ScopeTree::parent: mycelium_std_runtime::region::Region
 impl mycelium_std_runtime::region::ScopeTree
-pub fn mycelium_std_runtime::region::ScopeTree::close_ordered(&mut self, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink) -> alloc::vec::Vec<mycelium_std_runtime::region::ClosedRegion>
+pub fn mycelium_std_runtime::region::ScopeTree::close_ordered(&mut self, &mut dyn mycelium_rt_abi::reclamation::ReclamationSink) -> alloc::vec::Vec<mycelium_std_runtime::region::ClosedRegion>
 pub fn mycelium_std_runtime::region::ScopeTree::new(usize) -> Self
 impl core::marker::Freeze for mycelium_std_runtime::region::ScopeTree
 impl core::marker::Send for mycelium_std_runtime::region::ScopeTree
@@ -568,55 +422,17 @@ impl core::marker::UnsafeUnpin for mycelium_std_runtime::region::ScopeTree
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::region::ScopeTree
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::region::ScopeTree
 pub mod mycelium_std_runtime::scheduler
-pub enum mycelium_std_runtime::scheduler::SchedulerError
-pub mycelium_std_runtime::scheduler::SchedulerError::ZeroCapacity
-pub mycelium_std_runtime::scheduler::SchedulerError::ZeroWorkers
-impl core::clone::Clone for mycelium_std_runtime::scheduler::SchedulerError
-pub fn mycelium_std_runtime::scheduler::SchedulerError::clone(&self) -> mycelium_std_runtime::scheduler::SchedulerError
-impl core::cmp::Eq for mycelium_std_runtime::scheduler::SchedulerError
-impl core::cmp::PartialEq for mycelium_std_runtime::scheduler::SchedulerError
-pub fn mycelium_std_runtime::scheduler::SchedulerError::eq(&self, &mycelium_std_runtime::scheduler::SchedulerError) -> bool
-impl core::error::Error for mycelium_std_runtime::scheduler::SchedulerError
-impl core::fmt::Debug for mycelium_std_runtime::scheduler::SchedulerError
-pub fn mycelium_std_runtime::scheduler::SchedulerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::fmt::Display for mycelium_std_runtime::scheduler::SchedulerError
-pub fn mycelium_std_runtime::scheduler::SchedulerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::Copy for mycelium_std_runtime::scheduler::SchedulerError
-impl core::marker::StructuralPartialEq for mycelium_std_runtime::scheduler::SchedulerError
-impl core::marker::Freeze for mycelium_std_runtime::scheduler::SchedulerError
-impl core::marker::Send for mycelium_std_runtime::scheduler::SchedulerError
-impl core::marker::Sync for mycelium_std_runtime::scheduler::SchedulerError
-impl core::marker::Unpin for mycelium_std_runtime::scheduler::SchedulerError
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::scheduler::SchedulerError
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::scheduler::SchedulerError
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::scheduler::SchedulerError
-pub struct mycelium_std_runtime::scheduler::Scheduler
-impl mycelium_std_runtime::scheduler::Scheduler
-pub fn mycelium_std_runtime::scheduler::Scheduler::capacity(&self) -> usize
-pub fn mycelium_std_runtime::scheduler::Scheduler::new() -> Self
-pub fn mycelium_std_runtime::scheduler::Scheduler::run_indexed<T, F>(&self, alloc::vec::Vec<F>, core::option::Option<&mut usize>) -> alloc::vec::Vec<T> where F: core::ops::function::FnOnce() -> T + core::marker::Send, T: core::marker::Send
-pub fn mycelium_std_runtime::scheduler::Scheduler::with_workers(usize, usize) -> core::result::Result<Self, mycelium_std_runtime::scheduler::SchedulerError>
-pub fn mycelium_std_runtime::scheduler::Scheduler::workers(&self) -> usize
-impl core::clone::Clone for mycelium_std_runtime::scheduler::Scheduler
-pub fn mycelium_std_runtime::scheduler::Scheduler::clone(&self) -> mycelium_std_runtime::scheduler::Scheduler
-impl core::default::Default for mycelium_std_runtime::scheduler::Scheduler
-pub fn mycelium_std_runtime::scheduler::Scheduler::default() -> Self
-impl core::fmt::Debug for mycelium_std_runtime::scheduler::Scheduler
-pub fn mycelium_std_runtime::scheduler::Scheduler::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::Copy for mycelium_std_runtime::scheduler::Scheduler
-impl core::marker::Freeze for mycelium_std_runtime::scheduler::Scheduler
-impl core::marker::Send for mycelium_std_runtime::scheduler::Scheduler
-impl core::marker::Sync for mycelium_std_runtime::scheduler::Scheduler
-impl core::marker::Unpin for mycelium_std_runtime::scheduler::Scheduler
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::scheduler::Scheduler
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::scheduler::Scheduler
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::scheduler::Scheduler
-pub const mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
-pub const mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub use mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH
+pub use mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH
+pub use mycelium_std_runtime::scheduler::STEAL_POLICY_STRENGTH
+pub use mycelium_std_runtime::scheduler::Scheduler
+pub use mycelium_std_runtime::scheduler::SchedulerError
+pub use mycelium_std_runtime::scheduler::StealDecision
+pub use mycelium_std_runtime::scheduler::StealPolicy
 pub mod mycelium_std_runtime::scope_region
 pub struct mycelium_std_runtime::scope_region::RegionScope
 impl mycelium_std_runtime::scope_region::RegionScope
-pub fn mycelium_std_runtime::scope_region::RegionScope::close(self, &mut dyn mycelium_std_runtime::reclamation::ReclamationSink) -> mycelium_std_runtime::region::ClosedRegion
+pub fn mycelium_std_runtime::scope_region::RegionScope::close(self, &mut dyn mycelium_rt_abi::reclamation::ReclamationSink) -> mycelium_std_runtime::region::ClosedRegion
 pub fn mycelium_std_runtime::scope_region::RegionScope::defer(&mut self, mycelium_core::id::ContentHash)
 pub fn mycelium_std_runtime::scope_region::RegionScope::deferred_count(&self) -> usize
 pub fn mycelium_std_runtime::scope_region::RegionScope::enter() -> Self
@@ -630,110 +446,23 @@ impl core::marker::Unpin for mycelium_std_runtime::scope_region::RegionScope
 impl core::marker::UnsafeUnpin for mycelium_std_runtime::scope_region::RegionScope
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::scope_region::RegionScope
 impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::scope_region::RegionScope
-pub fn mycelium_std_runtime::scope_region::with_region<R>(&mut dyn mycelium_std_runtime::reclamation::ReclamationSink, impl core::ops::function::FnOnce(&mut mycelium_std_runtime::region::Region) -> R) -> (R, mycelium_std_runtime::region::ClosedRegion)
+pub fn mycelium_std_runtime::scope_region::with_region<R>(&mut dyn mycelium_rt_abi::reclamation::ReclamationSink, impl core::ops::function::FnOnce(&mut mycelium_std_runtime::region::Region) -> R) -> (R, mycelium_std_runtime::region::ClosedRegion)
 pub mod mycelium_std_runtime::supervision
 pub use mycelium_std_runtime::supervision::CancelToken
+pub use mycelium_std_runtime::supervision::CancelTree
 pub use mycelium_std_runtime::supervision::Cancelled
 pub use mycelium_std_runtime::supervision::Escalation
 pub use mycelium_std_runtime::supervision::RestartIntensity
+pub use mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH
+pub use mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH
+pub use mycelium_std_runtime::supervision::SupervisedFailure
+pub use mycelium_std_runtime::supervision::SupervisedRun
+pub use mycelium_std_runtime::supervision::SupervisionAction
+pub use mycelium_std_runtime::supervision::SupervisionRecord
 pub use mycelium_std_runtime::supervision::Supervisor
 pub use mycelium_std_runtime::supervision::TaskOutcome
-pub enum mycelium_std_runtime::supervision::SupervisedFailure
-pub mycelium_std_runtime::supervision::SupervisedFailure::Cancelled
-pub mycelium_std_runtime::supervision::SupervisedFailure::Escalated(mycelium_interp::supervise::Escalation)
-impl core::clone::Clone for mycelium_std_runtime::supervision::SupervisedFailure
-pub fn mycelium_std_runtime::supervision::SupervisedFailure::clone(&self) -> mycelium_std_runtime::supervision::SupervisedFailure
-impl core::cmp::Eq for mycelium_std_runtime::supervision::SupervisedFailure
-impl core::cmp::PartialEq for mycelium_std_runtime::supervision::SupervisedFailure
-pub fn mycelium_std_runtime::supervision::SupervisedFailure::eq(&self, &mycelium_std_runtime::supervision::SupervisedFailure) -> bool
-impl core::fmt::Debug for mycelium_std_runtime::supervision::SupervisedFailure
-pub fn mycelium_std_runtime::supervision::SupervisedFailure::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_std_runtime::supervision::SupervisedFailure
-impl core::marker::Freeze for mycelium_std_runtime::supervision::SupervisedFailure
-impl core::marker::Send for mycelium_std_runtime::supervision::SupervisedFailure
-impl core::marker::Sync for mycelium_std_runtime::supervision::SupervisedFailure
-impl core::marker::Unpin for mycelium_std_runtime::supervision::SupervisedFailure
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::supervision::SupervisedFailure
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::supervision::SupervisedFailure
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::supervision::SupervisedFailure
-pub enum mycelium_std_runtime::supervision::SupervisionAction
-pub mycelium_std_runtime::supervision::SupervisionAction::Escalated(mycelium_interp::supervise::Escalation)
-pub mycelium_std_runtime::supervision::SupervisionAction::Restarted
-impl core::clone::Clone for mycelium_std_runtime::supervision::SupervisionAction
-pub fn mycelium_std_runtime::supervision::SupervisionAction::clone(&self) -> mycelium_std_runtime::supervision::SupervisionAction
-impl core::cmp::Eq for mycelium_std_runtime::supervision::SupervisionAction
-impl core::cmp::PartialEq for mycelium_std_runtime::supervision::SupervisionAction
-pub fn mycelium_std_runtime::supervision::SupervisionAction::eq(&self, &mycelium_std_runtime::supervision::SupervisionAction) -> bool
-impl core::fmt::Debug for mycelium_std_runtime::supervision::SupervisionAction
-pub fn mycelium_std_runtime::supervision::SupervisionAction::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_std_runtime::supervision::SupervisionAction
-impl core::marker::Freeze for mycelium_std_runtime::supervision::SupervisionAction
-impl core::marker::Send for mycelium_std_runtime::supervision::SupervisionAction
-impl core::marker::Sync for mycelium_std_runtime::supervision::SupervisionAction
-impl core::marker::Unpin for mycelium_std_runtime::supervision::SupervisionAction
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::supervision::SupervisionAction
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::supervision::SupervisionAction
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::supervision::SupervisionAction
-pub struct mycelium_std_runtime::supervision::CancelTree
-impl mycelium_std_runtime::supervision::CancelTree
-pub fn mycelium_std_runtime::supervision::CancelTree::cancel(&self)
-pub fn mycelium_std_runtime::supervision::CancelTree::child(&mut self) -> &mut mycelium_std_runtime::supervision::CancelTree
-pub fn mycelium_std_runtime::supervision::CancelTree::child_count(&self) -> usize
-pub fn mycelium_std_runtime::supervision::CancelTree::is_cancelled(&self) -> bool
-pub fn mycelium_std_runtime::supervision::CancelTree::new() -> Self
-pub fn mycelium_std_runtime::supervision::CancelTree::token(&self) -> mycelium_interp::supervise::CancelToken
-impl core::default::Default for mycelium_std_runtime::supervision::CancelTree
-pub fn mycelium_std_runtime::supervision::CancelTree::default() -> mycelium_std_runtime::supervision::CancelTree
-impl core::fmt::Debug for mycelium_std_runtime::supervision::CancelTree
-pub fn mycelium_std_runtime::supervision::CancelTree::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::Freeze for mycelium_std_runtime::supervision::CancelTree
-impl core::marker::Send for mycelium_std_runtime::supervision::CancelTree
-impl core::marker::Sync for mycelium_std_runtime::supervision::CancelTree
-impl core::marker::Unpin for mycelium_std_runtime::supervision::CancelTree
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::supervision::CancelTree
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::supervision::CancelTree
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::supervision::CancelTree
-pub struct mycelium_std_runtime::supervision::SupervisedRun<T>
-pub mycelium_std_runtime::supervision::SupervisedRun::result: core::result::Result<T, mycelium_std_runtime::supervision::SupervisedFailure>
-pub mycelium_std_runtime::supervision::SupervisedRun::trace: alloc::vec::Vec<mycelium_std_runtime::supervision::SupervisionRecord>
-impl<T: core::clone::Clone> core::clone::Clone for mycelium_std_runtime::supervision::SupervisedRun<T>
-pub fn mycelium_std_runtime::supervision::SupervisedRun<T>::clone(&self) -> mycelium_std_runtime::supervision::SupervisedRun<T>
-impl<T: core::cmp::Eq> core::cmp::Eq for mycelium_std_runtime::supervision::SupervisedRun<T>
-impl<T: core::cmp::PartialEq> core::cmp::PartialEq for mycelium_std_runtime::supervision::SupervisedRun<T>
-pub fn mycelium_std_runtime::supervision::SupervisedRun<T>::eq(&self, &mycelium_std_runtime::supervision::SupervisedRun<T>) -> bool
-impl<T: core::cmp::PartialEq> core::marker::StructuralPartialEq for mycelium_std_runtime::supervision::SupervisedRun<T>
-impl<T: core::fmt::Debug> core::fmt::Debug for mycelium_std_runtime::supervision::SupervisedRun<T>
-pub fn mycelium_std_runtime::supervision::SupervisedRun<T>::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl<T> core::marker::Freeze for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::marker::Freeze
-impl<T> core::marker::Send for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::marker::Send
-impl<T> core::marker::Sync for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::marker::Sync
-impl<T> core::marker::Unpin for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::marker::Unpin
-impl<T> core::marker::UnsafeUnpin for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::marker::UnsafeUnpin
-impl<T> core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::panic::unwind_safe::RefUnwindSafe
-impl<T> core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::supervision::SupervisedRun<T> where T: core::panic::unwind_safe::UnwindSafe
-pub struct mycelium_std_runtime::supervision::SupervisionRecord
-pub mycelium_std_runtime::supervision::SupervisionRecord::action: mycelium_std_runtime::supervision::SupervisionAction
-pub mycelium_std_runtime::supervision::SupervisionRecord::logical_tick: u64
-pub mycelium_std_runtime::supervision::SupervisionRecord::restarts_before: u64
-impl core::clone::Clone for mycelium_std_runtime::supervision::SupervisionRecord
-pub fn mycelium_std_runtime::supervision::SupervisionRecord::clone(&self) -> mycelium_std_runtime::supervision::SupervisionRecord
-impl core::cmp::Eq for mycelium_std_runtime::supervision::SupervisionRecord
-impl core::cmp::PartialEq for mycelium_std_runtime::supervision::SupervisionRecord
-pub fn mycelium_std_runtime::supervision::SupervisionRecord::eq(&self, &mycelium_std_runtime::supervision::SupervisionRecord) -> bool
-impl core::fmt::Debug for mycelium_std_runtime::supervision::SupervisionRecord
-pub fn mycelium_std_runtime::supervision::SupervisionRecord::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_std_runtime::supervision::SupervisionRecord
-impl core::marker::Freeze for mycelium_std_runtime::supervision::SupervisionRecord
-impl core::marker::Send for mycelium_std_runtime::supervision::SupervisionRecord
-impl core::marker::Sync for mycelium_std_runtime::supervision::SupervisionRecord
-impl core::marker::Unpin for mycelium_std_runtime::supervision::SupervisionRecord
-impl core::marker::UnsafeUnpin for mycelium_std_runtime::supervision::SupervisionRecord
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_std_runtime::supervision::SupervisionRecord
-impl core::panic::unwind_safe::UnwindSafe for mycelium_std_runtime::supervision::SupervisionRecord
-pub const mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
-pub const mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
-pub fn mycelium_std_runtime::supervision::run_supervised<T, E, F>(&mycelium_std_runtime::scheduler::Scheduler, &mycelium_interp::supervise::CancelToken, alloc::vec::Vec<F>) -> alloc::vec::Vec<mycelium_interp::supervise::TaskOutcome<T, E>> where F: core::ops::function::FnOnce(&mycelium_interp::supervise::CancelToken) -> mycelium_interp::supervise::TaskOutcome<T, E> + core::marker::Send, T: core::marker::Send, E: core::marker::Send
-pub fn mycelium_std_runtime::supervision::supervise_with_restart<T, E>(&mut mycelium_interp::supervise::Supervisor, impl core::ops::function::FnMut() -> mycelium_interp::supervise::TaskOutcome<T, E>) -> mycelium_std_runtime::supervision::SupervisedRun<T>
+pub use mycelium_std_runtime::supervision::run_supervised
+pub use mycelium_std_runtime::supervision::supervise_with_restart
 pub mod mycelium_std_runtime::task
 pub enum mycelium_std_runtime::task::Poll<T>
 pub mycelium_std_runtime::task::Poll::Pending

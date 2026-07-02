@@ -1029,14 +1029,24 @@
 | `mycelium_mlir::Colony` | type | `crates/mycelium-mlir/src/runtime.rs:126` | A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of |
 | `mycelium_mlir::ColonyError` | enum | `crates/mycelium-mlir/src/runtime.rs:350` | Why running a `colony` through the concurrent executor refused — **always explicit, never a silent |
 | `mycelium_mlir::CompiledArtifact` | struct | `crates/mycelium-mlir/src/llvm.rs:2731` | A compiled native artifact for a bit/trit-subset program: the executable on disk (in a |
+| `mycelium_mlir::ConcurrentPlan` | enum | `crates/mycelium-mlir/src/concurrent.rs:94` | The **reified, EXPLAIN-able** decision this module's dispatchers make for a given fragment — never |
 | `mycelium_mlir::CrossBackendGate` | struct | `crates/mycelium-mlir/src/vr4.rs:146` | The full VR-4 cross-backend gate result for one program: a [`BackendStage`] for **every** backend. |
+| `mycelium_mlir::DENSE_CODEGEN_GUARANTEE:` | const | `crates/mycelium-mlir/src/dense_codegen.rs:291` | The codegen-correctness guarantee for the native Dense path: **`Empirical`** (the basis is the |
 | `mycelium_mlir::Deadlock` | struct | `crates/mycelium-mlir/src/runtime.rs:116` | A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a |
 | `mycelium_mlir::DegradeReason` | enum | `crates/mycelium-mlir/src/accel.rs:127` | Why the reference path was chosen instead of the accelerator — the recorded, inspectable basis for |
+| `mycelium_mlir::DenseAotError` | enum | `crates/mycelium-mlir/src/dense_codegen.rs:171` | Why the native Dense path could not lower/run a program — **always explicit, never silent** (G2). |
+| `mycelium_mlir::DenseArtifact` | struct | `crates/mycelium-mlir/src/dense_codegen.rs:788` | A compiled native Dense artifact: the executable on disk (cleaned on drop) plus the read-back |
+| `mycelium_mlir::DenseCgOp` | enum | `crates/mycelium-mlir/src/dense_codegen.rs:82` | The Dense element-wise ops native codegen lowers — the `mycelium-dense::DenseSpace` surface |
+| `mycelium_mlir::DenseExplain` | struct | `crates/mycelium-mlir/src/dense_codegen.rs:265` | The inspectable record of how a Dense op was lowered — the EXPLAIN payload (RFC-0004 §6; no black |
+| `mycelium_mlir::DenseProgram` | struct | `crates/mycelium-mlir/src/dense_codegen.rs:136` | A native-Dense lowering program: one element-wise op over a Dense space, plus its operand(s). |
+| `mycelium_mlir::DenseResult` | enum | `crates/mycelium-mlir/src/dense_codegen.rs:158` | What a Dense native op produces: a Dense `Value` (for `add`/`sub`/`neg`/`scale`) or a bare-`f64` |
 | `mycelium_mlir::DeployError` | enum | `crates/mycelium-mlir/src/deploy.rs:60` | Why producing a deployable native artifact failed — always explicit (G2), never a guessed default, |
 | `mycelium_mlir::DepthBasis` | enum | `crates/mycelium-mlir/src/budget.rs:106` | The inspectable derivation of a [`DepthResolution`] — the no-black-box record (G2). |
 | `mycelium_mlir::DepthBudget` | trait | `crates/mycelium-mlir/src/budget.rs:67` | Resolves a control-stack **depth ceiling** for the AOT env-machine, with an inspectable basis. |
 | `mycelium_mlir::DepthBudget::resolve` | fn | `crates/mycelium-mlir/src/inject.rs:172` | How `hash` resolves — the `EXPLAIN`-able dispatch decision (ADR-017 decision 5). |
 | `mycelium_mlir::DepthResolution` | struct | `crates/mycelium-mlir/src/budget.rs:75` | A resolved depth ceiling plus the [`DepthBasis`] explaining how it was chosen. |
+| `mycelium_mlir::FHRR_BUNDLE_PROFILE:` | const | `crates/mycelium-mlir/src/vsa_codegen.rs:137` | The trial-validated regime backing the native FHRR-`bundle` `Empirical` δ (M-854; the FLAG-0 |
+| `mycelium_mlir::HRR_BUNDLE_PROFILE:` | const | `crates/mycelium-mlir/src/vsa_codegen.rs:119` | The trial-validated regime backing the native HRR-`bundle` `Empirical` δ (M-854; RFC-0039 §5.2, |
 | `mycelium_mlir::Image` | struct | `crates/mycelium-mlir/src/inject.rs:103` | The running **image**: a hash-keyed dispatch table over a compiled overlay + an interpretable |
 | `mycelium_mlir::InjectError` | enum | `crates/mycelium-mlir/src/inject.rs:69` | A failure at the dispatch/injection boundary — every variant is explicit (never a silent pass or |
 | `mycelium_mlir::JitArtifact` | struct | `crates/mycelium-mlir/src/jit.rs:106` | A JIT-compiled kernel: the `.so` on disk (in a per-artifact temp dir, cleaned on drop) + the |
@@ -1058,11 +1068,23 @@
 | `mycelium_mlir::StageStatus` | enum | `crates/mycelium-mlir/src/vr4.rs:94` | Whether a backend's stage was dumped, or skipped (with a reason) — never a fabricated dump (G2). |
 | `mycelium_mlir::StaticDepthBudget` | struct | `crates/mycelium-mlir/src/budget.rs:239` | An explicit, fixed depth ceiling — for tests and callers that want a deterministic budget. |
 | `mycelium_mlir::StaticReason` | enum | `crates/mycelium-mlir/src/budget.rs:86` | Why a [`DepthBasis::Static`] budget was used (detection not attempted, failed, or explicit). |
+| `mycelium_mlir::SwapCertMode` | enum | `crates/mycelium-mlir/src/swap_codegen.rs:72` | How the swap's **certificate** is handled by native codegen — a reified, EXPLAIN-able, |
+| `mycelium_mlir::SwapExplain` | struct | `crates/mycelium-mlir/src/swap_codegen.rs:109` | The inspectable record of how a `Swap` node was lowered — the EXPLAIN payload (RFC-0004 §6; |
 | `mycelium_mlir::SweepOrder` | enum | `crates/mycelium-mlir/src/runtime.rs:104` | The order a **dataflow** sweep visits still-pending children. |
 | `mycelium_mlir::Task` | trait | `crates/mycelium-mlir/src/runtime.rs:70` | A cooperative task: `poll` advances it by one step. |
 | `mycelium_mlir::TaskCtx` | struct | `crates/mycelium-mlir/src/runtime.rs:57` | The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token |
 | `mycelium_mlir::TryRecv` | enum | `crates/mycelium-mlir/src/channel.rs:138` | Why a [`Receiver::try_recv`] yielded no value. |
 | `mycelium_mlir::TrySend` | enum | `crates/mycelium-mlir/src/channel.rs:128` | Why a [`Sender::try_send`] could not complete *right now*. |
+| `mycelium_mlir::VSA_CODEGEN_GUARANTEE:` | const | `crates/mycelium-mlir/src/vsa_codegen.rs:492` | The codegen-correctness guarantee for the native VSA path: **`Empirical`** (the basis is the M-210 |
+| `mycelium_mlir::VSA_JIT_GUARANTEE:` | const | `crates/mycelium-mlir/src/vsa_jit.rs:88` | The codegen-correctness guarantee for the dynamic-VSA JIT path (M-855; RFC-0039 §5.3) — |
+| `mycelium_mlir::VsaAotError` | enum | `crates/mycelium-mlir/src/vsa_codegen.rs:345` | Why the native VSA path could not lower/run a program — **always explicit, never silent** (G2). |
+| `mycelium_mlir::VsaArtifact` | struct | `crates/mycelium-mlir/src/vsa_codegen.rs:1169` | A compiled native VSA artifact: the executable on disk (cleaned on drop) plus the read-back shape |
+| `mycelium_mlir::VsaCgOp` | enum | `crates/mycelium-mlir/src/vsa_codegen.rs:153` | The VSA ops native codegen lowers — the `mycelium-vsa::VsaModel` surface (RFC-0039 §5.2). |
+| `mycelium_mlir::VsaExplain` | struct | `crates/mycelium-mlir/src/vsa_codegen.rs:467` | The inspectable record of how a VSA op was lowered — the EXPLAIN payload (RFC-0004 §6; no black |
+| `mycelium_mlir::VsaJitArtifact` | struct | `crates/mycelium-mlir/src/vsa_jit.rs:448` | A JIT-compiled dynamic-VSA kernel: the `.so` on disk (per-artifact temp dir, cleaned on drop) plus |
+| `mycelium_mlir::VsaModelId` | enum | `crates/mycelium-mlir/src/vsa_codegen.rs:178` | The 1.0.0-native-mandatory VSA models (OQ-3 resolved 2026-06-30). |
+| `mycelium_mlir::VsaProgram` | struct | `crates/mycelium-mlir/src/vsa_codegen.rs:309` | A native-VSA lowering program: one op over a model's hypervector carrier, plus its operand(s). |
+| `mycelium_mlir::VsaResult` | enum | `crates/mycelium-mlir/src/vsa_codegen.rs:332` | What a VSA native op produces: a VSA `Value` (`bind`/`unbind`/`bundle`/`permute`) or a bare-`f64` |
 | `mycelium_mlir::accel` | mod | `crates/mycelium-mlir/src/lib.rs:53` | — |
 | `mycelium_mlir::accel::AccelOutcome::explain` | fn | `crates/mycelium-mlir/src/accel.rs:77` | An `EXPLAIN` of the capability state — *why* the accelerated path will or won't run, so the |
 | `mycelium_mlir::accel::AccelOutcome::was_accelerated` | fn | `crates/mycelium-mlir/src/accel.rs:163` | Whether the accelerated kernel produced this value (vs. |
@@ -1091,6 +1113,9 @@
 | `mycelium_mlir::channel::Network::new` | fn | `crates/mycelium-mlir/src/channel.rs:82` | A fresh network with its progress clock at zero. |
 | `mycelium_mlir::compile` | fn | `crates/mycelium-mlir/src/dialect/native.rs:1698` | Compile `node` through the MLIR pipeline to a native executable (MLIR → LLVM IR → `clang`) |
 | `mycelium_mlir::compile_and_run` | fn | `crates/mycelium-mlir/src/dialect/native.rs:1728` | Compile + run `node` through the MLIR pipeline and read the result back. |
+| `mycelium_mlir::compile_and_run_concurrent` | fn | `crates/mycelium-mlir/src/concurrent.rs:183` | The harness-level parallel entry point for the **direct-LLVM AOT** path (default |
+| `mycelium_mlir::compile_and_run_concurrent_with_swap_mode` | fn | `crates/mycelium-mlir/src/concurrent.rs:189` | [`compile_and_run_concurrent`] under an **explicit** native swap cert mode (M-852 parameterization |
+| `mycelium_mlir::compile_and_run_with_swap_mode` | fn | `crates/mycelium-mlir/src/llvm.rs:2835` | Compile + run under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT) or |
 | `mycelium_mlir::compile_bitnet_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:408` | Compile the **I2_S** BitNet dot kernel to a shared object and load it in-process. |
 | `mycelium_mlir::compile_bitnet_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:415` | Compile the BitNet dot kernel for `scheme` to a shared object and load it in-process. |
 | `mycelium_mlir::compile_bitnet_dot_simd` | fn | `crates/mycelium-mlir/src/simd.rs:131` | Compile the hand-vectorized I2_S BitNet dot kernel to a shared object and load it in-process, |
@@ -1098,8 +1123,17 @@
 | `mycelium_mlir::compile_bitnet_dot_simd_tl2` | fn | `crates/mycelium-mlir/src/simd.rs:595` | Compile the hand-vectorized TL2 BitNet dot kernel to a shared object and load it in-process, |
 | `mycelium_mlir::compile_so` | fn | `crates/mycelium-mlir/src/jit.rs:343` | Compile the bit/trit-subset program to a shared object without calling it. |
 | `mycelium_mlir::compile_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:168` | Compile a kernel **specialized on `weights`** (baked in as constants) to a shared object and load |
+| `mycelium_mlir::compile_with_swap_mode` | fn | `crates/mycelium-mlir/src/llvm.rs:2784` | Compile under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT — compile-time |
+| `mycelium_mlir::concurrent` | mod | `crates/mycelium-mlir/src/lib.rs:61` | — |
 | `mycelium_mlir::cross_backend_gate` | fn | `crates/mycelium-mlir/src/vr4.rs:195` | Run the **VR-4 cross-backend gate** over `node`: for every backend, produce its dumpable lowering |
 | `mycelium_mlir::default_depth_budget` | fn | `crates/mycelium-mlir/src/aot.rs:64` | The default depth-budget resolution — the resolved ceiling **and** its `EXPLAIN`-able basis (no |
+| `mycelium_mlir::dense_codegen` | mod | `crates/mycelium-mlir/src/lib.rs:65` | — |
+| `mycelium_mlir::dense_codegen::DenseArtifact::run` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:824` | Run the artifact and read its result back. |
+| `mycelium_mlir::dense_codegen::DenseCgOp::is_value_op` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:115` | Whether the op produces a Dense `Value` (vs a bare-`f64` measurement). |
+| `mycelium_mlir::dense_codegen::DenseCgOp::name` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:101` | The `mycelium-dense` operation name (matches the reference's `operation_hash` keys), recorded in |
+| `mycelium_mlir::dense_codegen::DenseCgOp::reference_guarantee` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:122` | The honest reference guarantee for a value op (mirrors `DenseSpace::op_guarantee`). |
+| `mycelium_mlir::dense_compile` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:944` | Compile a Dense program to a native executable (emit IR → `llc` → `clang`) without running it. |
+| `mycelium_mlir::dense_compile_and_run` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:1001` | Compile + run a Dense program: the compiled execution path the M-853 differential checks against |
 | `mycelium_mlir::deploy` | mod | `crates/mycelium-mlir/src/lib.rs:62` | — |
 | `mycelium_mlir::deploy::NativeArtifact::build` | fn | `crates/mycelium-mlir/src/deploy.rs:128` | Build the native-artifact descriptor for `node`. |
 | `mycelium_mlir::deploy::NativeArtifact::explain` | fn | `crates/mycelium-mlir/src/deploy.rs:192` | A human-readable `EXPLAIN` of the deployable artifact: its content identity, the carried-IR |
@@ -1115,9 +1149,12 @@
 | `mycelium_mlir::emit_bitnet_dot_simd_ir` | fn | `crates/mycelium-mlir/src/simd.rs:59` | Emit the textual LLVM IR for the **hand-vectorized I2_S** packed-ternary dot kernel |
 | `mycelium_mlir::emit_bitnet_dot_simd_tl1_ir` | fn | `crates/mycelium-mlir/src/simd.rs:167` | Emit the textual LLVM IR for the **hand-vectorized TL1** packed-ternary dot kernel |
 | `mycelium_mlir::emit_bitnet_dot_simd_tl2_ir` | fn | `crates/mycelium-mlir/src/simd.rs:300` | Emit the textual LLVM IR for the **hand-vectorized TL2** packed-ternary dot kernel |
+| `mycelium_mlir::emit_dense_llvm_ir` | fn | `crates/mycelium-mlir/src/dense_codegen.rs:435` | Emit textual LLVM IR for a Dense element-wise program — a `main` that computes each result element |
 | `mycelium_mlir::emit_llvm_ir` | fn | `crates/mycelium-mlir/src/llvm.rs:2176` | Emit textual LLVM IR for the bit/trit + non-recursive-data program `node` — a `main` that |
+| `mycelium_mlir::emit_llvm_ir_with_swap_mode` | fn | `crates/mycelium-mlir/src/llvm.rs:2187` | Emit textual LLVM IR under an **explicit** native swap cert mode (M-852): `Recheck` (DEFAULT — |
 | `mycelium_mlir::emit_reclamation_plan` | fn | `crates/mycelium-mlir/src/rc_plan.rs:120` | Build and emit the MEM-4 reclamation plan for `node`, returning the number of records emitted. |
 | `mycelium_mlir::emit_specialized_dot_ir` | fn | `crates/mycelium-mlir/src/specialize.rs:57` | Emit the textual LLVM IR for a **weight-specialized** ternary dot kernel |
+| `mycelium_mlir::emit_vsa_llvm_ir` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:672` | Emit textual LLVM IR for a VSA program — a `main` that computes each result component (or the |
 | `mycelium_mlir::inject` | mod | `crates/mycelium-mlir/src/lib.rs:67` | — |
 | `mycelium_mlir::inject::Image::call` | fn | `crates/mycelium-mlir/src/inject.rs:185` | Dispatch a call by content hash (ADR-016's call ABI, nullary-unit restriction). |
 | `mycelium_mlir::inject::Image::define` | fn | `crates/mycelium-mlir/src/inject.rs:135` | Register a definition **interpret-only** under its content hash (RFC-0001 §4.6), returning the |
@@ -1130,6 +1167,7 @@
 | `mycelium_mlir::jit` | mod | `crates/mycelium-mlir/src/lib.rs:68` | — |
 | `mycelium_mlir::jit::JitArtifact::call` | fn | `crates/mycelium-mlir/src/jit.rs:116` | Call the kernel in-process (`dlopen` → `dlsym` → call) and read the result back as an `Exact` |
 | `mycelium_mlir::jit_run` | fn | `crates/mycelium-mlir/src/jit.rs:367` | Compile the program to a shared object and call it once, in-process. |
+| `mycelium_mlir::jit_run_concurrent` | fn | `crates/mycelium-mlir/src/concurrent.rs:206` | The harness-level parallel entry point for the **in-process JIT** path — see the module docs for |
 | `mycelium_mlir::jit_specialized_dot` | fn | `crates/mycelium-mlir/src/specialize.rs:205` | Convenience: specialize on `weights`, compile, and run the dot product against `activations` once. |
 | `mycelium_mlir::jit_ternary_dot` | fn | `crates/mycelium-mlir/src/bitnet.rs:445` | Convenience: pack `weights` under [`KERNEL_SCHEME`] (I2_S), compile the kernel, and run the dot |
 | `mycelium_mlir::jit_ternary_dot_for` | fn | `crates/mycelium-mlir/src/bitnet.rs:451` | As [`jit_ternary_dot`], but for an explicit `scheme` — packs `weights` under `scheme` and runs |
@@ -1137,6 +1175,8 @@
 | `mycelium_mlir::llvm::CompiledArtifact::run` | fn | `crates/mycelium-mlir/src/llvm.rs:2741` | Execute the compiled artifact and read its result back as an `Exact` `Binary{w}`/`Ternary{m}` |
 | `mycelium_mlir::llvm::compile` | fn | `crates/mycelium-mlir/src/llvm.rs:2775` | Compile the bit/trit-subset program to a native executable (emit LLVM IR → `llc` → `clang`) |
 | `mycelium_mlir::llvm::compile_and_run` | fn | `crates/mycelium-mlir/src/llvm.rs:2828` | Compile the bit/trit-subset program to a native executable, run it once, and read the result |
+| `mycelium_mlir::llvm::emit_llvm_ir_many` | fn | `crates/mycelium-mlir/src/llvm.rs:2290` | Lower `nodes` — a batch of **independent** functions/nodules — in parallel across the native |
+| `mycelium_mlir::llvm::emit_llvm_ir_many_with_swap_mode` | fn | `crates/mycelium-mlir/src/llvm.rs:2298` | [`emit_llvm_ir_many`] under an explicit, whole-batch [`SwapCertMode`] (M-852). |
 | `mycelium_mlir::mode` | mod | `crates/mycelium-mlir/src/lib.rs:70` | — |
 | `mycelium_mlir::mode::ExecMode::ALL:` | const | `crates/mycelium-mlir/src/mode.rs:77` | Every named mode, in a stable order — for tooling, differential parameterization, and an |
 | `mycelium_mlir::mode::ExecMode::is_always_available` | fn | `crates/mycelium-mlir/src/mode.rs:95` | Whether this mode can run **without an external toolchain**. |
@@ -1176,6 +1216,7 @@
 | `mycelium_mlir::passes::inline` | fn | `crates/mycelium-mlir/src/passes/inline.rs:40` | Run the inlining pass: a pure `Program -> (Program, TransformLog)`. |
 | `mycelium_mlir::passes::optimize` | fn | `crates/mycelium-mlir/src/passes/mod.rs:549` | Lower a [`Node`], run the full pipeline, and return the optimized pass IR + the merged log. |
 | `mycelium_mlir::passes::run_pipeline` | fn | `crates/mycelium-mlir/src/passes/mod.rs:535` | Run the full sanctioned pipeline — **inline → CSE → DCE** — over a pass-IR program, accumulating |
+| `mycelium_mlir::plan_concurrent` | fn | `crates/mycelium-mlir/src/concurrent.rs:114` | Compute the [`ConcurrentPlan`] for `node` — reuses |
 | `mycelium_mlir::rc_plan` | mod | `crates/mycelium-mlir/src/lib.rs:73` | — |
 | `mycelium_mlir::recompile_closure` | fn | `crates/mycelium-mlir/src/inject.rs:226` | The **recompile set** of a change, by hash reachability (ADR-017 decision 3 — no AST/file diff). |
 | `mycelium_mlir::relayout_trits` | fn | `crates/mycelium-mlir/src/pack.rs:291` | Re-materialize trits through a pack-then-read round-trip where the buffer is **packed as** |
@@ -1195,7 +1236,12 @@
 | `mycelium_mlir::specialize::SpecializedDotKernel::call` | fn | `crates/mycelium-mlir/src/specialize.rs:130` | Run the specialized kernel over `activations`, returning `Σ digit(wᵢ)·activations[i]` for the |
 | `mycelium_mlir::specialize::SpecializedDotKernel::n` | fn | `crates/mycelium-mlir/src/specialize.rs:104` | The logical number of lanes (weight length) compiled into this kernel. |
 | `mycelium_mlir::specialize::SpecializedDotKernel::nonzero` | fn | `crates/mycelium-mlir/src/specialize.rs:111` | The number of nonzero (surviving) lanes — the straight-line `add`/`sub` count, exposed for |
+| `mycelium_mlir::swap_codegen` | mod | `crates/mycelium-mlir/src/lib.rs:77` | — |
+| `mycelium_mlir::swap_codegen::SwapCertMode::cert_source` | fn | `crates/mycelium-mlir/src/swap_codegen.rs:96` | The cert **source** this mode records — independently re-checked vs carried-from-interp. |
+| `mycelium_mlir::swap_codegen::SwapCertMode::label` | fn | `crates/mycelium-mlir/src/swap_codegen.rs:86` | A short, stable label for the EXPLAIN record / IR comment (never a hidden mode — G2). |
+| `mycelium_mlir::swap_codegen::legal_pair` | fn | `crates/mycelium-mlir/src/swap_codegen.rs:134` | Whether `(n, m)` admits a lossless binary↔ternary swap: `B_n ⊆ T_m ⇔ 2^(n-1) ≤ (3^m − 1)/2` |
 | `mycelium_mlir::ternary_dot_ref` | fn | `crates/mycelium-mlir/src/bitnet.rs:135` | The reference (oracle) ternary dot product `Σ digit(wᵢ)·xᵢ` over `i64`, the exact semantics the |
+| `mycelium_mlir::trampoline` | mod | `crates/mycelium-mlir/src/lib.rs:78` | — |
 | `mycelium_mlir::unpack_trits` | fn | `crates/mycelium-mlir/src/pack.rs:243` | Decode `count` trits from `bytes` under `scheme`. |
 | `mycelium_mlir::vr4` | mod | `crates/mycelium-mlir/src/lib.rs:79` | — |
 | `mycelium_mlir::vr4::Backend::all` | fn | `crates/mycelium-mlir/src/vr4.rs:67` | All backends, in lowering order — the exhaustive set the VR-4 gate must cover. |
@@ -1204,6 +1250,21 @@
 | `mycelium_mlir::vr4::CrossBackendGate::covered` | fn | `crates/mycelium-mlir/src/vr4.rs:164` | How many backends produced an actual dump (vs. |
 | `mycelium_mlir::vr4::CrossBackendGate::fully_covered` | fn | `crates/mycelium-mlir/src/vr4.rs:156` | Whether **every** backend produced a dumpable stage (no skips) — the strongest gate verdict. |
 | `mycelium_mlir::vr4::StageStatus::is_dumped` | fn | `crates/mycelium-mlir/src/vr4.rs:105` | Whether this stage was actually dumped (covered), vs. |
+| `mycelium_mlir::vsa_codegen` | mod | `crates/mycelium-mlir/src/lib.rs:83` | — |
+| `mycelium_mlir::vsa_codegen::VsaArtifact::run` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:1284` | Run the artifact and read its result back. |
+| `mycelium_mlir::vsa_codegen::VsaCgOp::is_value_op` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:170` | Whether the op produces a VSA `Value` (vs a bare-`f64` measurement). |
+| `mycelium_mlir::vsa_codegen::VsaModelId::from_registry_id` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:208` | Parse a registry model id into a native-mandatory model, or `None` for a non-mandatory model |
+| `mycelium_mlir::vsa_codegen::VsaModelId::op_name` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:233` | The full op name for `(model, op)` matching the reference's keys, e.g. |
+| `mycelium_mlir::vsa_codegen::VsaModelId::op_prefix` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:221` | The `mycelium-vsa` operation-name prefix for this model (e.g. |
+| `mycelium_mlir::vsa_codegen::VsaModelId::reference_guarantee` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:260` | The honest **value-level** guarantee the native read-back carries for `(model, op)` — derived |
+| `mycelium_mlir::vsa_codegen::VsaModelId::registry_id` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:195` | The `mycelium-vsa` registry model id (matches `Repr::Vsa { model }` + the reference's |
+| `mycelium_mlir::vsa_codegen::resolve_model` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:291` | Resolve a `Repr::Vsa { model, sparsity }` to the native [`VsaModelId`] for lowering, or an |
+| `mycelium_mlir::vsa_compile` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:1485` | Compile a VSA program to a native executable (emit IR → `llc` → `clang`) without running it. |
+| `mycelium_mlir::vsa_compile_and_run` | fn | `crates/mycelium-mlir/src/vsa_codegen.rs:1528` | Compile + run a VSA program: the compiled execution path the M-854 differential checks against the |
+| `mycelium_mlir::vsa_jit` | mod | `crates/mycelium-mlir/src/lib.rs:89` | — |
+| `mycelium_mlir::vsa_jit::VsaJitArtifact::call` | fn | `crates/mycelium-mlir/src/vsa_jit.rs:465` | Call the kernel in-process (`dlopen` -> `dlsym` -> call) and read the result back, applying the |
+| `mycelium_mlir::vsa_jit_compile` | fn | `crates/mycelium-mlir/src/vsa_jit.rs:512` | Compile a dynamic-VSA program to an in-process JIT kernel (emit IR -> `clang -shared` -> ready to |
+| `mycelium_mlir::vsa_jit_compile_and_run` | fn | `crates/mycelium-mlir/src/vsa_jit.rs:549` | Compile + call a dynamic-VSA program in-process: the JIT execution path the M-855 differential |
 
 ## mycelium-numerics
 
@@ -1308,6 +1369,44 @@
 | `mycelium_proj::resolve` | mod | `crates/mycelium-proj/src/lib.rs:28` | — |
 | `mycelium_proj::resolve` | fn | `crates/mycelium-proj/src/resolve.rs:83` | Resolve a parsed header against an optional project manifest. |
 | `mycelium_proj::resolve_mode` | fn | `crates/mycelium-proj/src/cert_scope.rs:170` | **Resolve the active certification mode most-specific-wins** over a set of `@certification` |
+
+## mycelium-rt-abi
+
+| Symbol | Kind | File:Line | Summary |
+|---|---|---|---|
+| `mycelium_rt_abi::reclamation` | mod | `crates/mycelium-rt-abi/src/lib.rs:29` | — |
+| `mycelium_rt_abi::reclamation::ChannelId` | struct | `crates/mycelium-rt-abi/src/reclamation.rs:61` | A stable, opaque identifier for a channel (RFC-0027 §9, `channel_id`). |
+| `mycelium_rt_abi::reclamation::CollectingSink` | struct | `crates/mycelium-rt-abi/src/reclamation.rs:343` | A `ReclamationSink` implementation that collects all emitted records into a `Vec`. |
+| `mycelium_rt_abi::reclamation::CollectingSink::drain` | fn | `crates/mycelium-rt-abi/src/reclamation.rs:370` | Drain all collected records, leaving the sink empty. |
+| `mycelium_rt_abi::reclamation::CollectingSink::is_empty` | fn | `crates/mycelium-rt-abi/src/reclamation.rs:365` | Whether no records have been collected. |
+| `mycelium_rt_abi::reclamation::CollectingSink::len` | fn | `crates/mycelium-rt-abi/src/reclamation.rs:359` | Number of records collected so far. |
+| `mycelium_rt_abi::reclamation::CollectingSink::new` | fn | `crates/mycelium-rt-abi/src/reclamation.rs:182` | Construct a `ReclamationRecord` for a `RcZero` or `ScopeExit` event (no channel). |
+| `mycelium_rt_abi::reclamation::ExplainRecord` | struct | `crates/mycelium-rt-abi/src/reclamation.rs:270` | The EXPLAIN output for a `ReclamationRecord` — the RFC-0005 EXPLAIN contract applied |
+| `mycelium_rt_abi::reclamation::ReclamationRecord` | struct | `crates/mycelium-rt-abi/src/reclamation.rs:148` | The EXPLAIN/audit record for a single reclamation event (RFC-0027 §9). |
+| `mycelium_rt_abi::reclamation::ReclamationRecord::explain` | fn | `crates/mycelium-rt-abi/src/reclamation.rs:234` | EXPLAIN-ability (RFC-0005): return a human-readable summary of all five fields. |
+| `mycelium_rt_abi::reclamation::ReclamationRecord::for_channel_close` | fn | `crates/mycelium-rt-abi/src/reclamation.rs:207` | Construct a `ReclamationRecord` for a `ChannelClose` event. |
+| `mycelium_rt_abi::reclamation::ReclamationRecord::trigger` | fn | `crates/mycelium-rt-abi/src/reclamation.rs:246` | Return a reference to the trigger — the G2 "why" of this reclamation event. |
+| `mycelium_rt_abi::reclamation::ReclamationRecord::value_meta_hash` | fn | `crates/mycelium-rt-abi/src/reclamation.rs:252` | Return the content-identity hash of the reclaimed value (RFC-0027 §9 / RFC-0001 §4.6). |
+| `mycelium_rt_abi::reclamation::ReclamationSink` | trait | `crates/mycelium-rt-abi/src/reclamation.rs:330` | The never-silent emit contract (G2 / RFC-0027 §9). |
+| `mycelium_rt_abi::reclamation::ReclamationTrigger` | enum | `crates/mycelium-rt-abi/src/reclamation.rs:93` | The reason a reclamation event fired — exhaustive over the three structural triggers |
+| `mycelium_rt_abi::reclamation::ScopeId` | struct | `crates/mycelium-rt-abi/src/reclamation.rs:52` | A stable, opaque identifier for a runtime scope (RT7 scope tree node). |
+| `mycelium_rt_abi::reclamation::SweepEpoch` | struct | `crates/mycelium-rt-abi/src/reclamation.rs:76` | A monotonic epoch counter from the `SweepOrder` model (RFC-0008 §4.3). |
+| `mycelium_rt_abi::supervision` | mod | `crates/mycelium-rt-abi/src/lib.rs:30` | — |
+| `mycelium_rt_abi::supervision::CancelTree` | struct | `crates/mycelium-rt-abi/src/supervision.rs:48` | A cancellation **tree** (RFC-0008 RT7): a node with its own [`CancelToken`] and child tokens. |
+| `mycelium_rt_abi::supervision::CancelTree::cancel` | fn | `crates/mycelium-rt-abi/src/supervision.rs:88` | Cancel this node **and every descendant** — the never-silent cascade (G2/RT7). |
+| `mycelium_rt_abi::supervision::CancelTree::child` | fn | `crates/mycelium-rt-abi/src/supervision.rs:74` | Attach a fresh child scope and return a mutable handle to it, so callers can build a genuine |
+| `mycelium_rt_abi::supervision::CancelTree::child_count` | fn | `crates/mycelium-rt-abi/src/supervision.rs:97` | The number of direct child scopes (for inspection/tests). |
+| `mycelium_rt_abi::supervision::CancelTree::is_cancelled` | fn | `crates/mycelium-rt-abi/src/supervision.rs:83` | Whether this node has been cancelled. |
+| `mycelium_rt_abi::supervision::CancelTree::new` | fn | `crates/mycelium-rt-abi/src/supervision.rs:56` | A fresh, un-cancelled root. |
+| `mycelium_rt_abi::supervision::CancelTree::token` | fn | `crates/mycelium-rt-abi/src/supervision.rs:65` | This node's cooperative cancel token (clones share the same flag). |
+| `mycelium_rt_abi::supervision::SUPERVISION_PROPAGATION_STRENGTH:` | const | `crates/mycelium-rt-abi/src/supervision.rs:32` | Guarantee strength for cancellation propagation + explicit outcome collection. |
+| `mycelium_rt_abi::supervision::SUPERVISION_RESTART_BOUND_STRENGTH:` | const | `crates/mycelium-rt-abi/src/supervision.rs:35` | Guarantee strength for the restart bound (inherited from the M-356 [`Supervisor`]). |
+| `mycelium_rt_abi::supervision::SupervisedFailure` | enum | `crates/mycelium-rt-abi/src/supervision.rs:190` | Why a supervised child run ended in failure — always explicit (G2). |
+| `mycelium_rt_abi::supervision::SupervisedRun` | struct | `crates/mycelium-rt-abi/src/supervision.rs:174` | The result of supervising a restartable child to resolution or escalation. |
+| `mycelium_rt_abi::supervision::SupervisionAction` | enum | `crates/mycelium-rt-abi/src/supervision.rs:153` | What a supervisor did about one child failure — a reified, inspectable action (EXPLAIN; no black |
+| `mycelium_rt_abi::supervision::SupervisionRecord` | struct | `crates/mycelium-rt-abi/src/supervision.rs:163` | One reified supervision decision — the EXPLAIN record (RFC-0008 §4.7; ADR-006: selections are |
+| `mycelium_rt_abi::supervision::run_supervised` | fn | `crates/mycelium-rt-abi/src/supervision.rs:120` | Run `tasks` on the OS-thread pool under a shared [`CancelToken`], collecting **every** child's |
+| `mycelium_rt_abi::supervision::supervise_with_restart` | fn | `crates/mycelium-rt-abi/src/supervision.rs:208` | Run a restartable child under a live [`Supervisor`] (M-356) until it succeeds or the supervisor |
 
 ## mycelium-sec
 
@@ -1946,7 +2045,6 @@
 | `mycelium_std_runtime::region::ScopeTree` | struct | `crates/mycelium-std-runtime/src/region.rs:415` | A minimal parent–child scope-tree for encoding and testing the sweep-order model |
 | `mycelium_std_runtime::region::ScopeTree::close_ordered` | fn | `crates/mycelium-std-runtime/src/region.rs:444` | Close all children first (in any order — siblings are concurrent), then close the parent. |
 | `mycelium_std_runtime::scheduler` | mod | `crates/mycelium-std-runtime/src/lib.rs:98` | — |
-| `mycelium_std_runtime::scheduler::Scheduler::new` | fn | `crates/mycelium-std-runtime/src/colony.rs:63` | Create a new empty scope. |
 | `mycelium_std_runtime::scope_region` | mod | `crates/mycelium-std-runtime/src/lib.rs:99` | — |
 | `mycelium_std_runtime::scope_region::RegionScope` | struct | `crates/mycelium-std-runtime/src/scope_region.rs:183` | An explicit-close scope guard wrapping a [`Region`]. |
 | `mycelium_std_runtime::scope_region::RegionScope::close` | fn | `crates/mycelium-std-runtime/src/scope_region.rs:236` | Close this scope guard, emitting all deferred reclamation records and returning the |
@@ -1956,7 +2054,6 @@
 | `mycelium_std_runtime::scope_region::RegionScope::id` | fn | `crates/mycelium-std-runtime/src/scope_region.rs:223` | The unique identity of this scope's underlying [`Region`]. |
 | `mycelium_std_runtime::scope_region::with_region` | fn | `crates/mycelium-std-runtime/src/scope_region.rs:128` | Run `body` within a freshly-opened scope region and close the region after the body returns. |
 | `mycelium_std_runtime::supervision` | mod | `crates/mycelium-std-runtime/src/lib.rs:100` | — |
-| `mycelium_std_runtime::supervision::CancelTree::cancel` | fn | `crates/mycelium-std-runtime/src/colony.rs:88` | Cancel this scope. |
 | `mycelium_std_runtime::task` | mod | `crates/mycelium-std-runtime/src/lib.rs:101` | — |
 | `mycelium_std_runtime::task::Deadlock` | struct | `crates/mycelium-std-runtime/src/task.rs:97` | Deadlock descriptor: returned when a scope cannot make progress. |
 | `mycelium_std_runtime::task::Poll` | enum | `crates/mycelium-std-runtime/src/task.rs:75` | Poll result for an async task step. |
@@ -4753,6 +4850,57 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::channel::TrySend` | dedup-alias: same definition as `mycelium_mlir::TrySend` at crates/mycelium-mlir/src/channel.rs:128 — one canonical row kept |
 | `mycelium_mlir::compile` | ambiguous: short name 'compile' is defined in multiple modules; attributed to crates/mycelium-mlir/src/dialect/native.rs by heuristic — verify against source (ground truth) |
 | `mycelium_mlir::compile_and_run` | ambiguous: short name 'compile_and_run' is defined in multiple modules; attributed to crates/mycelium-mlir/src/dialect/native.rs by heuristic — verify against source (ground truth) |
+| `mycelium_mlir::concurrent::ConcurrentPlan` | dedup-alias: same definition as `mycelium_mlir::ConcurrentPlan` at crates/mycelium-mlir/src/concurrent.rs:94 — one canonical row kept |
+| `mycelium_mlir::concurrent::ConcurrentPlan::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::concurrent::ConcurrentPlan::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::concurrent::ConcurrentPlan::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::concurrent::ConcurrentPlan::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::concurrent::ConcurrentPlan::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::concurrent::ConcurrentPlan::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::concurrent::compile_and_run_concurrent` | dedup-alias: same definition as `mycelium_mlir::compile_and_run_concurrent` at crates/mycelium-mlir/src/concurrent.rs:183 — one canonical row kept |
+| `mycelium_mlir::concurrent::compile_and_run_concurrent_with_swap_mode` | dedup-alias: same definition as `mycelium_mlir::compile_and_run_concurrent_with_swap_mode` at crates/mycelium-mlir/src/concurrent.rs:189 — one canonical row kept |
+| `mycelium_mlir::concurrent::jit_run_concurrent` | dedup-alias: same definition as `mycelium_mlir::jit_run_concurrent` at crates/mycelium-mlir/src/concurrent.rs:206 — one canonical row kept |
+| `mycelium_mlir::concurrent::plan_concurrent` | dedup-alias: same definition as `mycelium_mlir::plan_concurrent` at crates/mycelium-mlir/src/concurrent.rs:114 — one canonical row kept |
+| `mycelium_mlir::dense_codegen::DENSE_CODEGEN_GUARANTEE:` | dedup-alias: same definition as `mycelium_mlir::DENSE_CODEGEN_GUARANTEE:` at crates/mycelium-mlir/src/dense_codegen.rs:291 — one canonical row kept |
+| `mycelium_mlir::dense_codegen::DenseAotError` | dedup-alias: same definition as `mycelium_mlir::DenseAotError` at crates/mycelium-mlir/src/dense_codegen.rs:171 — one canonical row kept |
+| `mycelium_mlir::dense_codegen::DenseAotError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseAotError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseAotError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseAotError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseAotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseAotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseAotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseAotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseArtifact` | dedup-alias: same definition as `mycelium_mlir::DenseArtifact` at crates/mycelium-mlir/src/dense_codegen.rs:788 — one canonical row kept |
+| `mycelium_mlir::dense_codegen::DenseCgOp` | dedup-alias: same definition as `mycelium_mlir::DenseCgOp` at crates/mycelium-mlir/src/dense_codegen.rs:82 — one canonical row kept |
+| `mycelium_mlir::dense_codegen::DenseCgOp::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseCgOp::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseCgOp::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseCgOp::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseCgOp::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseCgOp::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseExplain` | dedup-alias: same definition as `mycelium_mlir::DenseExplain` at crates/mycelium-mlir/src/dense_codegen.rs:265 — one canonical row kept |
+| `mycelium_mlir::dense_codegen::DenseExplain::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseExplain::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseExplain::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseExplain::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseExplain::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseExplain::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseProgram` | dedup-alias: same definition as `mycelium_mlir::DenseProgram` at crates/mycelium-mlir/src/dense_codegen.rs:136 — one canonical row kept |
+| `mycelium_mlir::dense_codegen::DenseProgram::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseProgram::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseProgram::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseProgram::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseResult` | dedup-alias: same definition as `mycelium_mlir::DenseResult` at crates/mycelium-mlir/src/dense_codegen.rs:158 — one canonical row kept |
+| `mycelium_mlir::dense_codegen::DenseResult::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseResult::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseResult::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseResult::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseResult::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::DenseResult::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::dense_codegen::dense_compile` | dedup-alias: same definition as `mycelium_mlir::dense_compile` at crates/mycelium-mlir/src/dense_codegen.rs:944 — one canonical row kept |
+| `mycelium_mlir::dense_codegen::dense_compile_and_run` | dedup-alias: same definition as `mycelium_mlir::dense_compile_and_run` at crates/mycelium-mlir/src/dense_codegen.rs:1001 — one canonical row kept |
+| `mycelium_mlir::dense_codegen::emit_dense_llvm_ir` | dedup-alias: same definition as `mycelium_mlir::emit_dense_llvm_ir` at crates/mycelium-mlir/src/dense_codegen.rs:435 — one canonical row kept |
 | `mycelium_mlir::deploy::DeployError` | dedup-alias: same definition as `mycelium_mlir::DeployError` at crates/mycelium-mlir/src/deploy.rs:60 — one canonical row kept |
 | `mycelium_mlir::deploy::DeployError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::deploy::DeployError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4805,7 +4953,10 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::llvm::AotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::llvm::AotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::llvm::CompiledArtifact` | dedup-alias: same definition as `mycelium_mlir::CompiledArtifact` at crates/mycelium-mlir/src/llvm.rs:2731 — one canonical row kept |
+| `mycelium_mlir::llvm::compile_and_run_with_swap_mode` | dedup-alias: same definition as `mycelium_mlir::compile_and_run_with_swap_mode` at crates/mycelium-mlir/src/llvm.rs:2835 — one canonical row kept |
+| `mycelium_mlir::llvm::compile_with_swap_mode` | dedup-alias: same definition as `mycelium_mlir::compile_with_swap_mode` at crates/mycelium-mlir/src/llvm.rs:2784 — one canonical row kept |
 | `mycelium_mlir::llvm::emit_llvm_ir` | dedup-alias: same definition as `mycelium_mlir::emit_llvm_ir` at crates/mycelium-mlir/src/llvm.rs:2176 — one canonical row kept |
+| `mycelium_mlir::llvm::emit_llvm_ir_with_swap_mode` | dedup-alias: same definition as `mycelium_mlir::emit_llvm_ir_with_swap_mode` at crates/mycelium-mlir/src/llvm.rs:2187 — one canonical row kept |
 | `mycelium_mlir::mode::ExecMode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::mode::ExecMode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::mode::ExecMode::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
@@ -4878,6 +5029,7 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::rc_plan::RcRun::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::rc_plan::emit_reclamation_plan` | dedup-alias: same definition as `mycelium_mlir::emit_reclamation_plan` at crates/mycelium-mlir/src/rc_plan.rs:120 — one canonical row kept |
 | `mycelium_mlir::rc_plan::run_with_reclamation` | dedup-alias: same definition as `mycelium_mlir::run_with_reclamation` at crates/mycelium-mlir/src/rc_plan.rs:163 — one canonical row kept |
+| `mycelium_mlir::resolve_vsa_model` | definition not found via regex heuristic (kind='fn', name='resolve_vsa_model') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::run` | ambiguous: short name 'run' is defined in multiple modules; attributed to crates/mycelium-mlir/src/aot.rs by heuristic — verify against source (ground truth) |
 | `mycelium_mlir::run_mode` | definition not found via regex heuristic (kind='fn', name='run_mode') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::runtime::Colony` | dedup-alias: same definition as `mycelium_mlir::Colony` at crates/mycelium-mlir/src/runtime.rs:126 — one canonical row kept |
@@ -4950,6 +5102,23 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::specialize::compile_specialized_dot` | dedup-alias: same definition as `mycelium_mlir::compile_specialized_dot` at crates/mycelium-mlir/src/specialize.rs:168 — one canonical row kept |
 | `mycelium_mlir::specialize::emit_specialized_dot_ir` | dedup-alias: same definition as `mycelium_mlir::emit_specialized_dot_ir` at crates/mycelium-mlir/src/specialize.rs:57 — one canonical row kept |
 | `mycelium_mlir::specialize::jit_specialized_dot` | dedup-alias: same definition as `mycelium_mlir::jit_specialized_dot` at crates/mycelium-mlir/src/specialize.rs:205 — one canonical row kept |
+| `mycelium_mlir::swap_codegen::SwapCertMode` | dedup-alias: same definition as `mycelium_mlir::SwapCertMode` at crates/mycelium-mlir/src/swap_codegen.rs:72 — one canonical row kept |
+| `mycelium_mlir::swap_codegen::SwapCertMode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapCertMode::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapCertMode::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapCertMode::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapCertMode::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapCertMode::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapCertMode::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapCertMode::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapExplain` | dedup-alias: same definition as `mycelium_mlir::SwapExplain` at crates/mycelium-mlir/src/swap_codegen.rs:109 — one canonical row kept |
+| `mycelium_mlir::swap_codegen::SwapExplain::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapExplain::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapExplain::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapExplain::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapExplain::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_codegen::SwapExplain::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::swap_legal_pair` | definition not found via regex heuristic (kind='fn', name='swap_legal_pair') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::vr4::Backend` | dedup-alias: same definition as `mycelium_mlir::Backend` at crates/mycelium-mlir/src/vr4.rs:49 — one canonical row kept |
 | `mycelium_mlir::vr4::Backend::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::vr4::Backend::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -4983,6 +5152,59 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_mlir::vr4::StageStatus::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::vr4::StageStatus::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_mlir::vr4::cross_backend_gate` | dedup-alias: same definition as `mycelium_mlir::cross_backend_gate` at crates/mycelium-mlir/src/vr4.rs:195 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::FHRR_BUNDLE_PROFILE:` | dedup-alias: same definition as `mycelium_mlir::FHRR_BUNDLE_PROFILE:` at crates/mycelium-mlir/src/vsa_codegen.rs:137 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::HRR_BUNDLE_PROFILE:` | dedup-alias: same definition as `mycelium_mlir::HRR_BUNDLE_PROFILE:` at crates/mycelium-mlir/src/vsa_codegen.rs:119 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::VSA_CODEGEN_GUARANTEE:` | dedup-alias: same definition as `mycelium_mlir::VSA_CODEGEN_GUARANTEE:` at crates/mycelium-mlir/src/vsa_codegen.rs:492 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::VsaAotError` | dedup-alias: same definition as `mycelium_mlir::VsaAotError` at crates/mycelium-mlir/src/vsa_codegen.rs:345 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::VsaAotError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaAotError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaAotError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaAotError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaAotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaAotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaAotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaAotError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaArtifact` | dedup-alias: same definition as `mycelium_mlir::VsaArtifact` at crates/mycelium-mlir/src/vsa_codegen.rs:1169 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::VsaCgOp` | dedup-alias: same definition as `mycelium_mlir::VsaCgOp` at crates/mycelium-mlir/src/vsa_codegen.rs:153 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::VsaCgOp::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaCgOp::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaCgOp::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaCgOp::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaCgOp::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaCgOp::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaExplain` | dedup-alias: same definition as `mycelium_mlir::VsaExplain` at crates/mycelium-mlir/src/vsa_codegen.rs:467 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::VsaExplain::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaExplain::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaExplain::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaExplain::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaExplain::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaExplain::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaModelId` | dedup-alias: same definition as `mycelium_mlir::VsaModelId` at crates/mycelium-mlir/src/vsa_codegen.rs:178 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::VsaModelId::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaModelId::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaModelId::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaModelId::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaModelId::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaModelId::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaProgram` | dedup-alias: same definition as `mycelium_mlir::VsaProgram` at crates/mycelium-mlir/src/vsa_codegen.rs:309 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::VsaProgram::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaProgram::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaProgram::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaProgram::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaResult` | dedup-alias: same definition as `mycelium_mlir::VsaResult` at crates/mycelium-mlir/src/vsa_codegen.rs:332 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::VsaResult::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaResult::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaResult::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaResult::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaResult::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::VsaResult::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_mlir::vsa_codegen::emit_vsa_llvm_ir` | dedup-alias: same definition as `mycelium_mlir::emit_vsa_llvm_ir` at crates/mycelium-mlir/src/vsa_codegen.rs:672 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::vsa_compile` | dedup-alias: same definition as `mycelium_mlir::vsa_compile` at crates/mycelium-mlir/src/vsa_codegen.rs:1485 — one canonical row kept |
+| `mycelium_mlir::vsa_codegen::vsa_compile_and_run` | dedup-alias: same definition as `mycelium_mlir::vsa_compile_and_run` at crates/mycelium-mlir/src/vsa_codegen.rs:1528 — one canonical row kept |
+| `mycelium_mlir::vsa_jit::VSA_JIT_GUARANTEE:` | dedup-alias: same definition as `mycelium_mlir::VSA_JIT_GUARANTEE:` at crates/mycelium-mlir/src/vsa_jit.rs:88 — one canonical row kept |
+| `mycelium_mlir::vsa_jit::VsaJitArtifact` | dedup-alias: same definition as `mycelium_mlir::VsaJitArtifact` at crates/mycelium-mlir/src/vsa_jit.rs:448 — one canonical row kept |
+| `mycelium_mlir::vsa_jit::vsa_jit_compile` | dedup-alias: same definition as `mycelium_mlir::vsa_jit_compile` at crates/mycelium-mlir/src/vsa_jit.rs:512 — one canonical row kept |
+| `mycelium_mlir::vsa_jit::vsa_jit_compile_and_run` | dedup-alias: same definition as `mycelium_mlir::vsa_jit_compile_and_run` at crates/mycelium-mlir/src/vsa_jit.rs:549 — one canonical row kept |
 | `mycelium_numerics::cert::Certificate` | dedup-alias: same definition as `mycelium_numerics::Certificate` at crates/mycelium-numerics/src/cert.rs:159 — one canonical row kept |
 | `mycelium_numerics::cert::Certificate::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_numerics::cert::Certificate::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
@@ -5258,6 +5480,56 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_proj::resolve::ResolvedHeader::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_proj::resolve::explain` | dedup-alias: same definition as `mycelium_proj::explain` at crates/mycelium-proj/src/resolve.rs:181 — one canonical row kept |
 | `mycelium_proj::resolve::resolve` | dedup-alias: same definition as `mycelium_proj::resolve` at crates/mycelium-proj/src/resolve.rs:83 — one canonical row kept |
+| `mycelium_rt_abi::reclamation::ChannelId::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ChannelId::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ChannelId::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ChannelId::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::CollectingSink::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::CollectingSink::emit` | definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::CollectingSink::emit` | definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::CollectingSink::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ExplainRecord::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ExplainRecord::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ExplainRecord::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ExplainRecord::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ReclamationRecord::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ReclamationRecord::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ReclamationRecord::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ReclamationRecord::new` | dedup-alias: same definition as `mycelium_rt_abi::reclamation::CollectingSink::new` at crates/mycelium-rt-abi/src/reclamation.rs:182 — one canonical row kept |
+| `mycelium_rt_abi::reclamation::ReclamationSink::emit` | definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ReclamationTrigger::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ReclamationTrigger::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ReclamationTrigger::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ScopeId::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ScopeId::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ScopeId::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::ScopeId::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::SweepEpoch::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::SweepEpoch::cmp` | definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::SweepEpoch::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::SweepEpoch::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::SweepEpoch::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::reclamation::SweepEpoch::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::CancelToken` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_rt_abi::supervision::CancelTree::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::CancelTree::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::Cancelled` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_rt_abi::supervision::Escalation` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_rt_abi::supervision::RestartIntensity` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_rt_abi::supervision::SupervisedFailure::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisedFailure::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisedFailure::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisedRun` | definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisedRun` | definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisedRun` | definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisionAction::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisionAction::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisionAction::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisionRecord::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisionRecord::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::SupervisionRecord::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_rt_abi::supervision::Supervisor` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_rt_abi::supervision::TaskOutcome` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_sec::Finding::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_sec::Finding::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_sec::Finding::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -6313,54 +6585,14 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_runtime::rc::RcCell` | definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::rc::RcCell` | definition not found via regex heuristic (kind='fn', name='RcCell') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::rc::RcProbe` | definition not found via regex heuristic (kind='fn', name='RcProbe') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ChannelId` | definition not found via regex heuristic (kind='struct', name='ChannelId') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ChannelId::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ChannelId::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ChannelId::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ChannelId::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::CollectingSink` | definition not found via regex heuristic (kind='struct', name='CollectingSink') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::CollectingSink::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::CollectingSink::drain` | definition not found via regex heuristic (kind='fn', name='drain') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::CollectingSink::emit` | definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::CollectingSink::emit` | definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::CollectingSink::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::CollectingSink::is_empty` | definition not found via regex heuristic (kind='fn', name='is_empty') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::CollectingSink::len` | definition not found via regex heuristic (kind='fn', name='len') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::CollectingSink::new` | ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth) |
-| `mycelium_std_runtime::reclamation::CollectingSink::new` | dedup-alias: same definition as `mycelium_std_runtime::scheduler::Scheduler::new` at crates/mycelium-std-runtime/src/colony.rs:63 — one canonical row kept |
-| `mycelium_std_runtime::reclamation::ExplainRecord` | definition not found via regex heuristic (kind='struct', name='ExplainRecord') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ExplainRecord::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ExplainRecord::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ExplainRecord::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ExplainRecord::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationRecord` | definition not found via regex heuristic (kind='struct', name='ReclamationRecord') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationRecord::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationRecord::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationRecord::explain` | definition not found via regex heuristic (kind='fn', name='explain') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationRecord::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationRecord::for_channel_close` | definition not found via regex heuristic (kind='fn', name='for_channel_close') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationRecord::new` | ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth) |
-| `mycelium_std_runtime::reclamation::ReclamationRecord::new` | dedup-alias: same definition as `mycelium_std_runtime::scheduler::Scheduler::new` at crates/mycelium-std-runtime/src/colony.rs:63 — one canonical row kept |
-| `mycelium_std_runtime::reclamation::ReclamationRecord::trigger` | definition not found via regex heuristic (kind='fn', name='trigger') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationRecord::value_meta_hash` | definition not found via regex heuristic (kind='fn', name='value_meta_hash') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationSink` | definition not found via regex heuristic (kind='trait', name='ReclamationSink') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationSink::emit` | definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationTrigger` | definition not found via regex heuristic (kind='enum', name='ReclamationTrigger') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationTrigger::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationTrigger::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ReclamationTrigger::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ScopeId` | definition not found via regex heuristic (kind='struct', name='ScopeId') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ScopeId::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ScopeId::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ScopeId::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::ScopeId::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::SweepEpoch` | definition not found via regex heuristic (kind='struct', name='SweepEpoch') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::SweepEpoch::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::SweepEpoch::cmp` | definition not found via regex heuristic (kind='fn', name='cmp') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::SweepEpoch::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::SweepEpoch::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::SweepEpoch::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::reclamation::SweepEpoch::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::reclamation::ChannelId` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::reclamation::CollectingSink` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::reclamation::ExplainRecord` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::reclamation::ReclamationRecord` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::reclamation::ReclamationSink` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::reclamation::ReclamationTrigger` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::reclamation::ScopeId` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::reclamation::SweepEpoch` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_runtime::region::ClosedRegion::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::region::ClosedRegion::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::region::ClosedRegion::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
@@ -6385,59 +6617,29 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_std_runtime::region::ScopeNodeId::hash` | definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::region::ScopeNodeId::partial_cmp` | definition not found via regex heuristic (kind='fn', name='partial_cmp') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::region::ScopeTree::new` | dedup-alias: same definition as `mycelium_std_runtime::region::Region::new` at crates/mycelium-std-runtime/src/region.rs:190 — one canonical row kept |
-| `mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH:` | definition not found via regex heuristic (kind='const', name='SCHEDULER_LIVENESS_STRENGTH:') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH:` | definition not found via regex heuristic (kind='const', name='SCHEDULER_RT2_STRENGTH:') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::Scheduler` | definition not found via regex heuristic (kind='struct', name='Scheduler') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::Scheduler::capacity` | definition not found via regex heuristic (kind='fn', name='capacity') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::Scheduler::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::Scheduler::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::Scheduler::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::Scheduler::new` | ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth) |
-| `mycelium_std_runtime::scheduler::Scheduler::run_indexed` | definition not found via regex heuristic (kind='fn', name='run_indexed') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::Scheduler::with_workers` | definition not found via regex heuristic (kind='fn', name='with_workers') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::Scheduler::workers` | definition not found via regex heuristic (kind='fn', name='workers') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::SchedulerError` | definition not found via regex heuristic (kind='enum', name='SchedulerError') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::SchedulerError::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::SchedulerError::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::SchedulerError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::scheduler::SchedulerError::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::scheduler::SCHEDULER_LIVENESS_STRENGTH` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::scheduler::SCHEDULER_RT2_STRENGTH` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::scheduler::STEAL_POLICY_STRENGTH` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::scheduler::Scheduler` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::scheduler::SchedulerError` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::scheduler::StealDecision` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::scheduler::StealPolicy` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_runtime::scope_region::RegionScope::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::supervision::CancelToken` | re-export (pub use) — cannot locate definition without type resolution |
-| `mycelium_std_runtime::supervision::CancelTree` | definition not found via regex heuristic (kind='struct', name='CancelTree') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::CancelTree::cancel` | ambiguous: short name 'cancel' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth) |
-| `mycelium_std_runtime::supervision::CancelTree::child` | definition not found via regex heuristic (kind='fn', name='child') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::CancelTree::child_count` | definition not found via regex heuristic (kind='fn', name='child_count') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::CancelTree::default` | definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::CancelTree::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::CancelTree::is_cancelled` | dedup-alias: same definition as `mycelium_std_runtime::task::TaskCtx::is_cancelled` at crates/mycelium-std-runtime/src/task.rs:57 — one canonical row kept |
-| `mycelium_std_runtime::supervision::CancelTree::new` | ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth) |
-| `mycelium_std_runtime::supervision::CancelTree::new` | dedup-alias: same definition as `mycelium_std_runtime::scheduler::Scheduler::new` at crates/mycelium-std-runtime/src/colony.rs:63 — one canonical row kept |
-| `mycelium_std_runtime::supervision::CancelTree::token` | definition not found via regex heuristic (kind='fn', name='token') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::CancelTree` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_runtime::supervision::Cancelled` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_runtime::supervision::Escalation` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_runtime::supervision::RestartIntensity` | re-export (pub use) — cannot locate definition without type resolution |
-| `mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH:` | definition not found via regex heuristic (kind='const', name='SUPERVISION_PROPAGATION_STRENGTH:') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH:` | definition not found via regex heuristic (kind='const', name='SUPERVISION_RESTART_BOUND_STRENGTH:') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisedFailure` | definition not found via regex heuristic (kind='enum', name='SupervisedFailure') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisedFailure::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisedFailure::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisedFailure::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisedRun` | definition not found via regex heuristic (kind='struct', name='SupervisedRun') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisedRun` | definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisedRun` | definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisedRun` | definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisionAction` | definition not found via regex heuristic (kind='enum', name='SupervisionAction') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisionAction::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisionAction::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisionAction::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisionRecord` | definition not found via regex heuristic (kind='struct', name='SupervisionRecord') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisionRecord::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisionRecord::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::SupervisionRecord::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::SupervisedFailure` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::SupervisedRun` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::SupervisionAction` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::SupervisionRecord` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_runtime::supervision::Supervisor` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_runtime::supervision::TaskOutcome` | re-export (pub use) — cannot locate definition without type resolution |
-| `mycelium_std_runtime::supervision::run_supervised` | definition not found via regex heuristic (kind='fn', name='run_supervised') — possibly macro-generated or cfg-gated |
-| `mycelium_std_runtime::supervision::supervise_with_restart` | definition not found via regex heuristic (kind='fn', name='supervise_with_restart') — possibly macro-generated or cfg-gated |
+| `mycelium_std_runtime::supervision::run_supervised` | re-export (pub use) — cannot locate definition without type resolution |
+| `mycelium_std_runtime::supervision::supervise_with_restart` | re-export (pub use) — cannot locate definition without type resolution |
 | `mycelium_std_runtime::task::Deadlock::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::task::Deadlock::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_std_runtime::task::Deadlock::new` | dedup-alias: same definition as `mycelium_std_runtime::task::Task::new` at crates/mycelium-std-runtime/src/task.rs:27 — one canonical row kept |
