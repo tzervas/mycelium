@@ -205,13 +205,20 @@ impl PrimTable {
     /// VSA superposition** (`vsa.bundle`, RFC-0003 §4/§5/ADR-008, M-893 — `enb` Gap C; the
     /// certified path via MAP-I's `bundle_values_certified`, dispatch set the certified singleton
     /// {MAP-I}; the runtime value carries the kernel-checked `Proven` `CapacityBound` — see the
-    /// entry comment).
+    /// entry comment), and the **VSA cleanup/reconstruction pair + capacity query**
+    /// (`vsa.cleanup`/`vsa.reconstruct`/`vsa.required_dim`, RFC-0003 §3/§5/§6/ADR-008, M-894 —
+    /// `enb` Gap C; the FR-S4 cleanup-memory retrieval returning the `[index, confidence,
+    /// margin]` decision triple, the §6 compositional role-reconstruction with an explicit
+    /// threshold, and the M-131 `requiredDim`/`proven_capacity_bound` query — see the entry
+    /// comment).
     /// Every entry is `intrinsic = Exact` **except** `dense.add`/`dense.sub`/`dense.scale`/
     /// `dense.dot`/`dense.similarity` (`Proven`, carried from the kernel's per-op tag), the
     /// `flt.*` group (`Empirical` — the ratified ADR-040 §2.6 host-conformance posture; see the
     /// entry comment), `vsa.unbind` (`Empirical` — the meet over the model set: FHRR's
-    /// normative weak-link unbind; see the entry comment), and `vsa.bundle` (`Proven` — the meet
-    /// over its certified singleton dispatch set {MAP-I}; see the entry comment); all are
+    /// normative weak-link unbind; see the entry comment), `vsa.bundle` (`Proven` — the meet
+    /// over its certified singleton dispatch set {MAP-I}; see the entry comment), and
+    /// `vsa.required_dim` (`Proven` — the M-131 checked instantiation of the cited capacity
+    /// theorem; see the entry comment); all are
     /// width-`Uniform` **except**
     /// `cmp.eq`/`cmp.lt`/`cmp.lt_s`,
     /// `dense.dot`/`dense.similarity`, and the `flt.*` comparison group, which are
@@ -583,6 +590,67 @@ impl PrimTable {
         // carries the kernel-checked `CapacityBound` itself (kernel↔table consistency is guarded
         // by a `mycelium-interp` test — this crate cannot see `mycelium-vsa`).
         t.insert("vsa.bundle", vsa(vec![Any, Any], GuaranteeStrength::Proven));
+        // RFC-0003 §3/§6 / ADR-008 (M-894, `enb` Gap C): **`vsa.cleanup`** + **`vsa.reconstruct`**
+        // — the cleanup-memory retrieval and the compositional role-reconstruction decode (FR-S4),
+        // plus **`vsa.required_dim`**, the capacity-bound query (RFC-0003 §5; M-131).
+        //
+        // `vsa.cleanup(query, codebook)` snaps a (possibly noisy) hypervector to the nearest
+        // codebook atom by the dispatched model's similarity and returns the **decision triple**
+        // `[index, confidence, margin]` (a `Seq{Float, 3}`) — the retrieval is never a silent
+        // nearest-neighbour pick (FR-S4/G2: confidence + margin are reported in-band, the caller
+        // decides). The decision procedure is an exhaustive arg-max over the codebook guarded by
+        // the RFC-0010 §4.4 identifiability refusal (a tie is an explicit error, never a
+        // coin-flip), so the intrinsic is **`Exact`** — the same claim shape as the RFC-0010
+        // brute-force decode arm — uniformly across the MAP-I/FHRR/BSC dispatch set (the model
+        // only supplies `similarity`; the procedure is model-generic, so the meet is `Exact`).
+        // A non-`Exact` **query** does not refuse: its (strength, bound) pair passes through to
+        // the result via the RFC-0001 §4.7 meet (the M-204 `Passthrough` posture — cleanup exists
+        // precisely to make a noisy unbind usable), while codebook atoms must be `Exact`.
+        //
+        // `vsa.reconstruct(record, role, codebook, threshold)` is the RFC-0003 §6 compositional
+        // reconstruction (`reconstruct_role` semantics): unbind the record by the role atom, clean
+        // the noisy result up against the codebook, and **refuse explicitly below the caller's
+        // `Float` threshold** (the manifest's `cleanup_threshold` made an explicit operand —
+        // never a silent low-quality answer, G2). Result: the same `Seq{Float, 3}` decision
+        // triple; the record's own (strength, bound) pair passes through (a certified bundle's
+        // `Proven` `CapacityBound` is re-disclosed on the decode — the disclosed bound is the
+        // value's own). **The dispatch set for reconstruct is {MAP-I, BSC}** — the models whose
+        // unbind is `Exact` self-inverse algebra; FHRR's unbind tag is `Empirical` and
+        // trial-validated only for a single `vsa.fhrr.bind` product (the kernel's regime gate),
+        // which a reconstruction record is not, so an FHRR reconstruct is an explicit refusal
+        // (never a stretched profile — VR-5); surfacing it is an append-only extension under a
+        // reconstruction-regime profile of its own. The intrinsic is the meet over {MAP-I, BSC}
+        // of unbind∘arg-max = **`Exact`**. The factor-decode sibling (`reconstruct_factors`,
+        // RFC-0009/RFC-0010) is deliberately NOT surfaced here: it routes through the RFC-0005
+        // selector whose mandatory EXPLAIN has no prim-surface carrier yet, and its manifest/
+        // multi-codebook forms need value shapes this surface lacks — a distinct, append-only
+        // surfacing under its own name (`vsa.reconstruct_factors`), never a silent conflation.
+        //
+        // `vsa.required_dim(items, δ)` surfaces the M-131 capacity-bound query: the sufficient
+        // dimension `requiredDim(m, δ) = ⌈(2/μ²)·ln(m/δ)⌉` (μ = 0.1, the cited Clarkson/Thomas
+        // instantiation — `mycelium-vsa::capacity`). The result is a `Binary{64}` dimension
+        // carrying the kernel's **`Proven`** `CapacityBound` for exactly that (items, dim, δ)
+        // instantiation (`proven_capacity_bound` — the side-condition `dim ≥ requiredDim` holds
+        // by construction), so the query is inspectable/EXPLAIN-able: the `ProvenThm` basis
+        // records the citation, μ, and the checked condition. Intrinsic **`Proven`** — the same
+        // checked-instantiation stance as `vsa.bundle`. Degenerate inputs (zero items, δ outside
+        // `(0, 1]`) are explicit wrapper refusals, never the kernel's `u64::MAX` sentinel.
+        //
+        // All three ride the same `Any`/`Uniform` paradigm-model escape hatch as the bind group
+        // (the real typing — `Vsa{m, d}` × `Seq{Vsa{m, d}, N≥1}` → `Seq{Float, 3}`,
+        // `Vsa{m, d}` × `Vsa{m, d}` × `Seq{Vsa{m, d}, N≥1}` × `Float` → `Seq{Float, 3}`,
+        // `Binary{W}` × `Float` → `Binary{64}` — is enforced by the interpreter prim + the L1
+        // checker branch `try_check_vsa_prim`; table↔kernel consistency is guarded by a
+        // `mycelium-interp` test, ADR-008 keeping the dependency one-way).
+        t.insert("vsa.cleanup", vsa(vec![Any, Any], GuaranteeStrength::Exact));
+        t.insert(
+            "vsa.reconstruct",
+            vsa(vec![Any, Any, Any, Any], GuaranteeStrength::Exact),
+        );
+        t.insert(
+            "vsa.required_dim",
+            vsa(vec![Any, Any], GuaranteeStrength::Proven),
+        );
         t
     }
 
