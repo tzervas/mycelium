@@ -5,11 +5,11 @@
 // @since: 2026-07-02
 // @updated: 2026-07-02
 // @summary: Self-hosted RFC-0016 §4.5 `std.diag` guarantee matrix — the 14-row honest-tag/
+nodule std.diag;
+
 //   fallibility/effects/EXPLAIN/never-silent table, ported to `.myc` as CHECKED DATA (M-926,
 //   kickoff `opp`, RFC-0031 D5). The kernel record half (`Diag`/`Locus`/`Trace`/`Code`/`Severity`,
 //   `mycelium-diag`) is NOT ported here — see the FLAG below (RFC-0031 D1 kernel boundary).
-nodule std.diag;
-
 // M-926 (E29-1, kickoff `opp`). RFC-0031 D5 port of `crates/mycelium-std-diag/src/guarantee_matrix.rs`
 // — the "load-bearing deliverable" the crate's own module doc names (RFC-0016 §4.5). Unblocked by
 // M-910/M-911 (textual string literals `"…"` land as `Bytes`, so the matrix's prose fields — `op`,
@@ -46,7 +46,6 @@ nodule std.diag;
 // The prose fields themselves ARE fully ported (byte-faithful transcriptions) — only the substring
 // ASSERTIONS over them are out of scope pending a `bytes_eq`/`bytes_contains` prim (route to `enb` if
 // wave demand justifies it — not requested by this port alone).
-
 // ── Guarantee ────────────────────────────────────────────────────────────────────────────────────
 // The lattice tag Exact ⊐ Proven ⊐ Empirical ⊐ Declared (VR-5). Typed — never stringly (mirrors the
 // kernel `Severity` precedent, mycelium-diag). All 14 matrix rows use `GExact` (RFC-0016 C2); the
@@ -126,7 +125,6 @@ fn nonempty(b: Bytes) => Bool =
 // ── The 14 rows (hand-transcribed verbatim from guarantee_matrix.rs::MATRIX, RFC-0016 §4.5) ───────
 // Each Rust multi-line `\`-continued literal is flattened to the single logical string it denotes
 // (Rust's `\` + newline strips the newline and leading whitespace — no content change, VR-5).
-
 // ── presentation / identity ─────────────────────────────────────────────────────────────────────
 fn row_present() => MatrixRow =
   Row("present", GExact, Total, "total — returns the error UNCHANGED alongside the diagnostic (I1); cannot fail in a way that drops it", "none (pure)", IsExplainRecord, "the error is returned unchanged in Presentation.error — the structural proof that the renderer cannot suppress it (I1)");
@@ -184,7 +182,6 @@ fn matrix() => Vec[MatrixRow] =
 
 // ── Structural checks over the matrix (the .myc analogs of guarantee_matrix.rs::tests) ───────────
 // Every check below is Empirical (trials, std_diag.rs three-way differential) over Declared data.
-
 // matrix_len: the row count, as Binary{8} (14 rows fits trivially). O(n) spine-walk (Declared,
 // mirrors std.collections::len).
 fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =

@@ -346,6 +346,7 @@ dependencies = [
  "mycelium-std-diag",
  "mycelium-std-error",
  "mycelium-std-recover",
+ "mycelium-std-ternary",
 ]
 
 [[package]]
