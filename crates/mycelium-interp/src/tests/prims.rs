@@ -516,3 +516,165 @@ fn bin_div_rem_satisfy_euclidean_identity_at_width6() {
         }
     }
 }
+
+// ---- RFC-0033 §4.1.2/§4.1.3 (M-889, `enb` Gap B): never-silent logical shift ----
+
+#[test]
+fn bin_shl_and_shr_worked_examples() {
+    let reg = PrimRegistry::with_builtins();
+    let shl = reg.get("bin.shl").expect("bin.shl registered");
+    let shr = reg.get("bin.shr").expect("bin.shr registered");
+    // 1 << 3 = 8, 8 >> 3 = 1.
+    let one = u_bin(1, 8);
+    let three = u_bin(3, 8);
+    let r = shl("bin.shl", &[&one, &three]).expect("1 << 3");
+    assert_eq!(
+        r.payload(),
+        &Payload::Bits(mycelium_core::binary::uint_to_bits(8, 8).unwrap())
+    );
+    let eight = u_bin(8, 8);
+    let r = shr("bin.shr", &[&eight, &three]).expect("8 >> 3");
+    assert_eq!(
+        r.payload(),
+        &Payload::Bits(mycelium_core::binary::uint_to_bits(1, 8).unwrap())
+    );
+    // Logical (zero-filling) right shift: 0x80 >> 4 = 0x08, never sign-extended.
+    let hi_bit = u_bin(0b1000_0000, 8);
+    let four = u_bin(4, 8);
+    let r = shr("bin.shr", &[&hi_bit, &four]).expect("0x80 >> 4");
+    assert_eq!(
+        r.payload(),
+        &Payload::Bits(mycelium_core::binary::uint_to_bits(0b0000_1000, 8).unwrap())
+    );
+}
+
+#[test]
+fn bin_shift_by_zero_is_identity() {
+    let reg = PrimRegistry::with_builtins();
+    let shl = reg.get("bin.shl").expect("bin.shl registered");
+    let shr = reg.get("bin.shr").expect("bin.shr registered");
+    let a = u_bin(0b1010_1010, 8);
+    let zero = u_bin(0, 8);
+    let r = shl("bin.shl", &[&a, &zero]).expect("shl by 0");
+    assert_eq!(r.payload(), a.payload());
+    let r = shr("bin.shr", &[&a, &zero]).expect("shr by 0");
+    assert_eq!(r.payload(), a.payload());
+}
+
+/// A shift amount `>= width` is an explicit `PrimType` refusal — never UB, a silently wrapped
+/// shift amount, or a silently-zeroed result.
+#[test]
+fn bin_shift_amount_at_or_above_width_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let shl = reg.get("bin.shl").expect("bin.shl registered");
+    let shr = reg.get("bin.shr").expect("bin.shr registered");
+    let a = u_bin(1, 8);
+    let width = u_bin(8, 8);
+    assert!(
+        matches!(
+            shl("bin.shl", &[&a, &width]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "shift-amount == width must be an explicit PrimType refusal, never UB/wrap"
+    );
+    assert!(
+        matches!(
+            shr("bin.shr", &[&a, &width]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "shift-amount == width must be an explicit PrimType refusal, never UB/wrap"
+    );
+    let above = u_bin(255, 8);
+    assert!(matches!(
+        shl("bin.shl", &[&a, &above]),
+        Err(EvalError::PrimType { .. })
+    ));
+    assert!(matches!(
+        shr("bin.shr", &[&a, &above]),
+        Err(EvalError::PrimType { .. })
+    ));
+}
+
+#[test]
+fn bin_shift_width_mismatch_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let shl = reg.get("bin.shl").expect("bin.shl registered");
+    let wide = u_bin(1, 8);
+    let narrow = u_bin(1, 1);
+    assert!(
+        matches!(
+            shl("bin.shl", &[&wide, &narrow]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "mismatched-width shift must be PrimType, never a silent coercion"
+    );
+}
+
+/// A width beyond the current `bin.shl`/`bin.shr` cap (`mycelium_core::binary::SHIFT_MAX_WIDTH`)
+/// is an explicit `PrimType` refusal — never a silently-truncated native-int computation (M-889
+/// scope boundary, mirroring `bin.mul`/`bin.div`'s width-cap refusals).
+#[test]
+fn bin_shift_over_cap_width_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let shl = reg.get("bin.shl").expect("bin.shl registered");
+    let width = mycelium_core::binary::SHIFT_MAX_WIDTH + 1;
+    let a = wide_binary(width, &[]);
+    let b = wide_binary(width, &[]);
+    assert!(
+        matches!(shl("bin.shl", &[&a, &b]), Err(EvalError::PrimType { .. })),
+        "an over-cap width must be an explicit PrimType refusal, never a silent truncation"
+    );
+}
+
+/// **Property test (the shift-amount bound):** for every value/shift-amount pair at a small width,
+/// `bin.shl`/`bin.shr` agree with a native `u64` shift for in-range amounts and refuse explicitly
+/// for `k >= n`. Mirrors `mycelium_core::binary`'s own `shift_matches_native_oracle` at the codec
+/// layer, one level up through the prim's dispatch + never-silent-error mapping.
+#[test]
+fn bin_shift_matches_native_oracle_at_width6() {
+    let reg = PrimRegistry::with_builtins();
+    let shl = reg.get("bin.shl").expect("bin.shl registered");
+    let shr = reg.get("bin.shr").expect("bin.shr registered");
+    let n: u32 = 6;
+    let hi: u64 = (1u64 << n) - 1;
+    for v in 0..=hi {
+        for k in 0..=hi {
+            let a = u_bin(v, n);
+            let kb = u_bin(k, n);
+            let got_shl = shl("bin.shl", &[&a, &kb]);
+            let got_shr = shr("bin.shr", &[&a, &kb]);
+            if k >= u64::from(n) {
+                assert!(
+                    matches!(got_shl, Err(EvalError::PrimType { .. })),
+                    "shl {v}<<{k} at n={n} should refuse, got {got_shl:?}"
+                );
+                assert!(
+                    matches!(got_shr, Err(EvalError::PrimType { .. })),
+                    "shr {v}>>{k} at n={n} should refuse, got {got_shr:?}"
+                );
+            } else {
+                let mask = (1u64 << n) - 1;
+                let expected_shl = (v << k) & mask;
+                let expected_shr = v >> k;
+                let shl_val = got_shl.expect("in-range shl must succeed");
+                let shr_val = got_shr.expect("in-range shr must succeed");
+                let Payload::Bits(shl_bits) = shl_val.payload() else {
+                    panic!("bin.shl must return Payload::Bits")
+                };
+                let Payload::Bits(shr_bits) = shr_val.payload() else {
+                    panic!("bin.shr must return Payload::Bits")
+                };
+                assert_eq!(
+                    mycelium_core::binary::bits_to_uint(shl_bits),
+                    expected_shl,
+                    "shl {v}<<{k} at n={n}"
+                );
+                assert_eq!(
+                    mycelium_core::binary::bits_to_uint(shr_bits),
+                    expected_shr,
+                    "shr {v}>>{k} at n={n}"
+                );
+            }
+        }
+    }
+}

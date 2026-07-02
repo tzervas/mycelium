@@ -165,9 +165,10 @@ impl PrimTable {
     /// (`bit.*`), the fixed-width balanced-ternary arithmetic (`trit.*`, M-111), the reduce-to-`Bool`
     /// comparison prims (`cmp.eq`/`cmp.lt`, RFC-0032 D1), the never-silent binary arithmetic
     /// (`bit.add`/`bit.sub`, RFC-0032 D2), the never-silent two's-complement multiply
-    /// (`bin.mul`, RFC-0033 §4.1.2/§4.1.3, M-887 — the first Gap-B `enb` prim), and the never-silent
-    /// **unsigned** division/remainder (`bin.div`/`bin.rem`, RFC-0033 §4.1.2/§4.1.3, M-888 — the
-    /// signed variant rides M-767 under a distinct name). Every entry is
+    /// (`bin.mul`, RFC-0033 §4.1.2/§4.1.3, M-887 — the first Gap-B `enb` prim), the never-silent
+    /// **unsigned** division/remainder (`bin.div`/`bin.rem`, RFC-0033 §4.1.2/§4.1.3, M-888), and the
+    /// never-silent **logical** left/right shift (`bin.shl`/`bin.shr`, RFC-0033 §4.1.2/§4.1.3,
+    /// M-889 — the signed/arithmetic variants ride M-767 under distinct names). Every entry is
     /// `intrinsic = Exact`; all are width-`Uniform`
     /// **except** `cmp.eq`/`cmp.lt`, which are width-`Collapse` (operand width → `Binary{1}`). This is
     /// the single source of truth the `mycelium-interp` intrinsic and the `mycelium-l1` surface table
@@ -228,6 +229,14 @@ impl PrimTable {
         // nonzero-divisor domain; div-by-zero is a runtime, not intrinsic, refusal).
         t.insert("bin.div", exact(vec![Binary, Binary], Binary));
         t.insert("bin.rem", exact(vec![Binary, Binary], Binary));
+        // RFC-0033 §4.1.2/§4.1.3 (M-889, `enb` Gap B): never-silent **logical** (unsigned) `Binary`
+        // left/right shift — the third Gap-B prim of the signedness-split `shift` op set (§4.1.2).
+        // Both operands are `Binary{N}` (the shift amount is itself read as an unsigned `N`-bit
+        // bitvector); a shift amount `>= N` is a runtime, not intrinsic, refusal (never UB/wrap), so
+        // `intrinsic = Exact` — same posture as `bin.div`/`bin.rem`'s div-by-zero. The **arithmetic**
+        // (sign-extending) right shift is the distinct signed op M-767 lands under its own name.
+        t.insert("bin.shl", exact(vec![Binary, Binary], Binary));
+        t.insert("bin.shr", exact(vec![Binary, Binary], Binary));
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         // `intrinsic = Exact` (the widen/identity/in-range-narrow result equals the unsigned value
         // exactly; a lossy narrow is a never-silent *runtime* refusal, not a non-Exact intrinsic).

@@ -1,6 +1,7 @@
 //! White-box tests for [`crate::binary`]. Extracted from the logic file as-touched by M-887 (test
 //! layout rule, M-797) — the pre-existing codec tests plus the new [`crate::binary::mul`] coverage.
-//! M-888 adds the unsigned [`crate::binary::div_rem`] coverage.
+//! M-888 adds the unsigned [`crate::binary::div_rem`] coverage. M-889 adds the logical
+//! [`crate::binary::shl`]/[`crate::binary::shr`] coverage.
 
 use crate::binary::*;
 
@@ -271,6 +272,138 @@ fn div_rem_matches_euclidean_identity_oracle() {
                         "Euclidean identity {x} == ({x}/{y})*{y} + {x}%{y}"
                     );
                     assert!(rv < y, "remainder must be < divisor");
+                }
+            }
+        }
+    }
+}
+
+// ---- M-889: `shl`/`shr` — never-silent logical fixed-width shifts ------------------------------
+
+#[test]
+fn shl_worked_examples() {
+    // 1 << 3 = 8 at Binary{8}.
+    let a = uint_to_bits(1, 8).unwrap();
+    let k = uint_to_bits(3, 8).unwrap();
+    let got = shl(&a, &k).expect("1 << 3");
+    assert_eq!(bits_to_uint(&got), 8);
+
+    // Bits shifted past the MSB are dropped (never wrapped): 0b1111_1111 << 1 = 0b1111_1110.
+    let a = uint_to_bits(255, 8).unwrap();
+    let k = uint_to_bits(1, 8).unwrap();
+    let got = shl(&a, &k).expect("255 << 1");
+    assert_eq!(bits_to_uint(&got), 254);
+}
+
+#[test]
+fn shr_worked_examples() {
+    // 8 >> 3 = 1 at Binary{8}.
+    let a = uint_to_bits(8, 8).unwrap();
+    let k = uint_to_bits(3, 8).unwrap();
+    let got = shr(&a, &k).expect("8 >> 3");
+    assert_eq!(bits_to_uint(&got), 1);
+
+    // Bits shifted past the LSB are dropped, zero-filled at the MSB (logical, not arithmetic):
+    // 0b1000_0000 >> 4 = 0b0000_1000, not sign-extended.
+    let a = uint_to_bits(0b1000_0000, 8).unwrap();
+    let k = uint_to_bits(4, 8).unwrap();
+    let got = shr(&a, &k).expect("0x80 >> 4");
+    assert_eq!(bits_to_uint(&got), 0b0000_1000);
+}
+
+/// Shifting by `0` is the identity, for both directions.
+#[test]
+fn shift_by_zero_is_identity() {
+    for n in 1u32..=8 {
+        let hi: u64 = (1u64 << n) - 1;
+        for v in 0..=hi {
+            let a = uint_to_bits(v, n).unwrap();
+            let zero = uint_to_bits(0, n).unwrap();
+            assert_eq!(shl(&a, &zero), Some(a.clone()), "shl by 0 at v={v}, n={n}");
+            assert_eq!(shr(&a, &zero), Some(a.clone()), "shr by 0 at v={v}, n={n}");
+        }
+    }
+}
+
+/// A shift amount `>= width` is an explicit `None` — never-silent (never UB, a modulo-wrapped
+/// shift amount, or a silently-zeroed result).
+#[test]
+fn shift_amount_at_or_above_width_refuses() {
+    let a = uint_to_bits(0b0000_0001, 8).unwrap();
+    // Exactly at the width boundary.
+    let k8 = uint_to_bits(8, 8).unwrap();
+    assert_eq!(shl(&a, &k8), None, "shift by exactly the width must refuse");
+    assert_eq!(shr(&a, &k8), None, "shift by exactly the width must refuse");
+    // Above the width.
+    let k255 = uint_to_bits(255, 8).unwrap();
+    assert_eq!(shl(&a, &k255), None, "shift above the width must refuse");
+    assert_eq!(shr(&a, &k255), None, "shift above the width must refuse");
+    // One below the width boundary is in range (n=8, k=7 is the max valid shift).
+    let k7 = uint_to_bits(7, 8).unwrap();
+    assert!(shl(&a, &k7).is_some(), "shift by width-1 must succeed");
+    assert!(shr(&a, &k7).is_some(), "shift by width-1 must succeed");
+}
+
+#[test]
+fn shift_rejects_unequal_widths() {
+    let a = uint_to_bits(1, 4).unwrap();
+    let k = uint_to_bits(1, 8).unwrap();
+    assert_eq!(shl(&a, &k), None);
+    assert_eq!(shr(&a, &k), None);
+}
+
+#[test]
+fn shift_rejects_over_cap_width() {
+    let a = vec![false; SHIFT_MAX_WIDTH + 1];
+    let k = vec![false; SHIFT_MAX_WIDTH + 1];
+    assert_eq!(shl(&a, &k), None);
+    assert_eq!(shr(&a, &k), None);
+    // At the cap itself the boundary is accepted.
+    let a64 = uint_to_bits(1, 64).unwrap();
+    let k64 = uint_to_bits(63, 64).unwrap();
+    assert_eq!(shl(&a64, &k64).map(|b| bits_to_uint(&b)), Some(1u64 << 63));
+    let a64b = uint_to_bits(u64::MAX, 64).unwrap();
+    assert_eq!(shr(&a64b, &k64).map(|b| bits_to_uint(&b)), Some(1u64));
+}
+
+/// The zero-width bitvector's only representable shift amount is `0`, and `0 >= width(0)`, so
+/// `n == 0` always refuses — it is not special-cased to a trivial identity.
+#[test]
+fn shift_n0_always_refuses() {
+    assert_eq!(shl(&[], &[]), None);
+    assert_eq!(shr(&[], &[]), None);
+}
+
+/// **Oracle property test (the shift-amount bound):** for every value/shift-amount pair at a small
+/// width, `shl`/`shr` agree with a native `u64` shift for in-range amounts and refuse explicitly
+/// for `k >= n`. Mirrors `div_rem_matches_euclidean_identity_oracle`.
+#[test]
+fn shift_matches_native_oracle() {
+    for n in 1u32..=8 {
+        let hi: u64 = (1u64 << n) - 1;
+        for v in 0..=hi {
+            for k in 0..=hi {
+                let a = uint_to_bits(v, n).unwrap();
+                let kb = uint_to_bits(k, n).unwrap();
+                let got_shl = shl(&a, &kb);
+                let got_shr = shr(&a, &kb);
+                if k >= u64::from(n) {
+                    assert_eq!(got_shl, None, "shl {v}<<{k} at n={n} should refuse");
+                    assert_eq!(got_shr, None, "shr {v}>>{k} at n={n} should refuse");
+                } else {
+                    let mask = if n == 64 { u64::MAX } else { (1u64 << n) - 1 };
+                    let expected_shl = (v << k) & mask;
+                    let expected_shr = v >> k;
+                    assert_eq!(
+                        got_shl.map(|b| bits_to_uint(&b)),
+                        Some(expected_shl),
+                        "shl {v}<<{k} at n={n}"
+                    );
+                    assert_eq!(
+                        got_shr.map(|b| bits_to_uint(&b)),
+                        Some(expected_shr),
+                        "shr {v}>>{k} at n={n}"
+                    );
                 }
             }
         }

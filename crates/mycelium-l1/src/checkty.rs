@@ -5309,9 +5309,10 @@ fn prim_family(name: &str) -> Option<PrimFam> {
         // multiply (distinct surface name from the trit-backed `mul` below, which stays balanced-
         // ternary). M-888 adds `div_bin`/`rem_bin` — never-silent **unsigned** division/remainder
         // (the signed variant rides M-767 under its own distinct name, per RFC-0033 §4.1.2's
-        // signedness-split requirement for division).
+        // signedness-split requirement for division). M-889 adds `shl_bin`/`shr_bin` — never-silent
+        // **logical** left/right shift (the arithmetic/signed right shift rides M-767 likewise).
         "not" | "xor" | "and" | "or" | "add_bin" | "sub_bin" | "mul_bin" | "div_bin"
-        | "rem_bin" => PrimFam::Binary,
+        | "rem_bin" | "shl_bin" | "shr_bin" => PrimFam::Binary,
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -5404,8 +5405,12 @@ pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
         // two's-complement overflow bound is likewise a runtime contract (`bin.mul`'s `Overflow`).
         // M-888: `div_bin`/`rem_bin` — same width-preserving shape; div-by-zero is likewise a
         // runtime contract (`bin.div`/`bin.rem`'s `PrimType` refusal), not a static type error.
+        // M-889: `shl_bin`/`shr_bin` — same width-preserving shape (both operands, including the
+        // shift amount, are `Binary{N}`); an out-of-range shift amount is likewise a runtime
+        // contract (`bin.shl`/`bin.shr`'s `PrimType` refusal), not a static type error.
         (
-            "and" | "or" | "add_bin" | "sub_bin" | "mul_bin" | "div_bin" | "rem_bin",
+            "and" | "or" | "add_bin" | "sub_bin" | "mul_bin" | "div_bin" | "rem_bin" | "shl_bin"
+            | "shr_bin",
             [Ty::Binary(a), Ty::Binary(b)],
         ) if a == b => Some(Ty::Binary(a.clone())),
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
@@ -5436,6 +5441,10 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // reading rides M-767 under its own surface name.
         "div_bin" => "bin.div",
         "rem_bin" => "bin.rem",
+        // RFC-0033 §4.1.2/§4.1.3 (M-889, `enb` Gap B): never-silent **logical** left/right shift —
+        // the arithmetic/signed right shift rides M-767 under its own surface name.
+        "shl_bin" => "bin.shl",
+        "shr_bin" => "bin.shr",
         // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (returns `Binary{1}`).
         "eq" => "cmp.eq",
         "lt" => "cmp.lt",

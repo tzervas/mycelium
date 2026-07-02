@@ -1,5 +1,6 @@
 //! Two's-complement binary integer semantics (M-120 support; extended by M-887 with fixed-width
-//! multiply, M-888 with fixed-width unsigned division/remainder).
+//! multiply, M-888 with fixed-width unsigned division/remainder, M-889 with fixed-width logical
+//! shifts).
 //!
 //! An `n`-bit value is read **most-significant-first** as a two's-complement integer with range
 //! `B_n = [−2^(n-1), 2^(n-1) − 1]` (`docs/spec/swaps/binary-ternary.md` §2). This is the binary-side
@@ -18,6 +19,11 @@
 //! own distinct name (FLAGged in the `mycelium-interp` prim doc comment — `bin.*` was M-887's
 //! namespace for the *signed* two's-complement multiply, so an *unsigned* op sharing it is a naming
 //! tension worth a maintainer look, even though it is what the M-888 task text names).
+//!
+//! [`shl`]/[`shr`] (M-889) round out the signedness-split `shift` op set (RFC-0033 §4.1.2) with the
+//! **logical** (unsigned) reading — same unsigned bitvector codec as [`div_rem`]. Shift-amount `>=`
+//! width is an explicit never-silent refusal (never UB, wrap, or a silently-zeroed result); the
+//! **arithmetic** (sign-extending) right shift is the distinct signed op M-767 lands later.
 
 /// The signed two's-complement value of an MSB-first bit string. The empty string is `0`.
 #[must_use]
@@ -173,4 +179,69 @@ pub fn div_rem(a: &[bool], b: &[bool]) -> Option<(Vec<bool>, Vec<bool>)> {
     let r = av % bv;
     // Safe narrow: q <= av < 2^n and r < bv <= av < 2^n, so both fit n bits.
     Some((uint_to_bits(q, n)?, uint_to_bits(r, n)?))
+}
+
+/// The current [`shl`]/[`shr`] operand-width cap (`n ≤ 64`) — exact via a `u64`/`u128` unsigned
+/// intermediate, the same cap [`bits_to_uint`]/[`uint_to_bits`] already declare. Public so callers
+/// (the `bin.shl`/`bin.shr` prims) can distinguish an over-cap *width* refusal from an
+/// out-of-range *shift-amount* refusal without duplicating the constant (G2 — the two refusal
+/// reasons stay honestly distinct at the caller's `EvalError` layer, mirroring [`MUL_MAX_WIDTH`]/
+/// [`DIV_MAX_WIDTH`]).
+pub const SHIFT_MAX_WIDTH: usize = 64;
+
+/// **Logical** (unsigned) fixed-width left shift of an `n`-bit bitvector (MSB-first) by a
+/// **shift-amount operand of the same width and shape** — `shift` is itself read as an unsigned
+/// `n`-bit bitvector (via [`bits_to_uint`]), for `n ≤ `[`SHIFT_MAX_WIDTH`]. Bits shifted past the
+/// MSB are dropped (never wrapped/rotated) and zero bits are shifted in at the LSB — the unsigned/
+/// shared reading (RFC-0033 §4.1.2's `shift` op set; the **arithmetic** (sign-extending) right
+/// shift is a *distinct* signed op deferred to M-767, per §4.1.2's signedness-split requirement).
+///
+/// `None` when `a.len() != shift.len()`, `a.len() > SHIFT_MAX_WIDTH`, or the shift amount is `>=`
+/// the width `n` — an explicit, never-silent out-of-range-shift-amount refusal (G2), never UB, a
+/// silent wrap-around/modulo of the shift amount, or a silently-zeroed result. (At `n == 0` the
+/// only representable shift amount is `0`, and `0 >= 0`, so `n == 0` always refuses — mirroring
+/// [`div_rem`]'s `n == 0` div-by-zero refusal.)
+#[must_use]
+pub fn shl(a: &[bool], shift: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != shift.len() || a.len() > SHIFT_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    if n == 0 {
+        return None;
+    }
+    let k = bits_to_uint(shift);
+    if k >= u64::from(n) {
+        return None; // shift-amount >= width — explicit, never-silent refusal (G2).
+    }
+    // Widen to u128 before shifting so bits shifted past bit 63 (at n == 64) don't overflow/panic;
+    // `av < 2^n` and `k < n <= 64`, so `av << k < 2^(2n) <= 2^128`, always fits u128.
+    let av = u128::from(bits_to_uint(a));
+    let modulus = 1u128 << n; // n <= 64, so this is exact in u128.
+    let result = ((av << k) % modulus) as u64; // < modulus <= 2^64, exact narrow.
+    uint_to_bits(result, n)
+}
+
+/// **Logical** (unsigned, zero-filling) fixed-width right shift — the counterpart to [`shl`], same
+/// operand shape (`shift` is an unsigned `n`-bit bitvector) and the same cap/refusal contract:
+/// `None` on a width mismatch, an over-cap width, or a shift amount `>= n` (never UB/wrap/silent,
+/// including at `n == 0`). Bits shifted past the LSB are dropped; zero bits are shifted in at the
+/// MSB. (The **arithmetic**/sign-extending right shift is the distinct signed op deferred to
+/// M-767.)
+#[must_use]
+pub fn shr(a: &[bool], shift: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != shift.len() || a.len() > SHIFT_MAX_WIDTH {
+        return None;
+    }
+    let n = a.len() as u32;
+    if n == 0 {
+        return None;
+    }
+    let k = bits_to_uint(shift);
+    if k >= u64::from(n) {
+        return None; // shift-amount >= width — explicit, never-silent refusal (G2).
+    }
+    let av = bits_to_uint(a);
+    let result = av >> k; // k < n <= 64, safe unsigned/logical right shift.
+    uint_to_bits(result, n)
 }
