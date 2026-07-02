@@ -824,6 +824,268 @@ fn add_s_and_sub_s_width_mismatch_refuse_statically() {
     }
 }
 
+// ── M-767 (`enb` Gap B): the signedness-split signed op set — div_s/rem_s/shr_s/lt_s ────────────
+//
+// `div_s`/`rem_s`/`shr_s`/`lt_s` (kernel `bin.div_s`/`bin.rem_s`/`bin.shr_s`/`cmp.lt_s`) complete
+// the RFC-0033 §4.1.2 **signedness split**: division, ordering, right shift, and overflow
+// *detection* differ by signedness, so each signed reading is a **distinct named op** from its
+// landed `_u` counterpart (ADR-028; DN-72 `_s` suffixes — the names this task's slot pre-assigned).
+//
+// **Rounding convention (grounding, VR-5):** signed division is **truncated toward zero**, the
+// remainder's sign following the dividend — the ADR-028-cited SMT-LIB `bvsdiv`/`bvsrem` semantics
+// (RFC-0033's text does not literally pin the rounding; the choice is grounded on that citation
+// and FLAGged in the M-767 report, never silently made). The signed-division overflow-detect case
+// (`min ÷ −1`, quotient `+2^(N-1)` out of `B_N`) refuses explicitly on every path — §4.1.3's
+// never-silent overflow outranks SMT-LIB's defined wrap. `shr_s` is the **arithmetic**
+// (sign-extending) right shift; `lt_s` the two's-complement order (`Binary`-only: balanced
+// ternary's `lt` is already the signed order).
+
+#[test]
+fn div_s_and_rem_s_worked_examples_pin_truncation() {
+    // 7 / 2 = 3 r 1.
+    assert_three_way(
+        "div_s 7/2",
+        "nodule d;\nfn main() => Binary{8} = div_s(0b0000_0111, 0b0000_0010);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
+    );
+    // -7 / 2 = -3 (truncated toward zero — a floored convention would answer -4 = 0b1111_1100).
+    assert_three_way(
+        "div_s -7/2 truncates toward zero",
+        "nodule d;\nfn main() => Binary{8} = div_s(0b1111_1001, 0b0000_0010);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111101".chars().map(|c| c == '1').collect()),
+    );
+    // -7 % 2 = -1 (sign follows the dividend — floored would answer +1).
+    assert_three_way(
+        "rem_s -7%2 sign follows the dividend",
+        "nodule d;\nfn main() => Binary{8} = rem_s(0b1111_1001, 0b0000_0010);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111111".chars().map(|c| c == '1').collect()),
+    );
+    // 7 / -2 = -3 r 1.
+    assert_three_way(
+        "div_s 7/-2",
+        "nodule d;\nfn main() => Binary{8} = div_s(0b0000_0111, 0b1111_1110);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111101".chars().map(|c| c == '1').collect()),
+    );
+    assert_three_way(
+        "rem_s 7%-2",
+        "nodule d;\nfn main() => Binary{8} = rem_s(0b0000_0111, 0b1111_1110);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// The §4.1.3 signed **overflow-detect** case: `-128 ÷ -1` (true quotient `+128`, out of `B_8`)
+/// refuses on **all three** paths — never a silent wrap back to `-128`. `rem_s(-128, -1) = 0`
+/// fits `B_8` exactly and succeeds three-way (deliberately not Rust `checked_rem`'s
+/// hardware-motivated over-refusal — see `mycelium_core::binary::rem_signed`).
+#[test]
+fn div_s_min_by_neg_one_refuses_on_every_path_rem_s_succeeds() {
+    let src = "nodule d;\nfn main() => Binary{8} = div_s(0b1000_0000, 0b1111_1111);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+    assert!(
+        Evaluator::new(&env).call("main", vec![]).is_err(),
+        "-128 / -1 must refuse on L1-eval (never a silent wrap to -128)"
+    );
+    let node = elaborate(&env, "main").expect("in fragment");
+    assert!(
+        interp.eval(&node).is_err(),
+        "-128 / -1 must refuse on L0-interp"
+    );
+    assert!(
+        mycelium_mlir::run(&node, &prims, &engine).is_err(),
+        "-128 / -1 must refuse on AOT"
+    );
+
+    // The remainder's exact result 0 fits B_8 — it succeeds on the same operands, three-way.
+    assert_three_way(
+        "rem_s -128%-1 = 0",
+        "nodule d;\nfn main() => Binary{8} = rem_s(0b1000_0000, 0b1111_1111);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00000000".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// Signed division/remainder by zero refuses on **all three** paths, exactly as the unsigned pair
+/// does — an explicit runtime refusal, never a panic or a silently-defined value.
+#[test]
+fn div_s_and_rem_s_by_zero_refuse_on_every_path() {
+    for src in [
+        "nodule d;\nfn main() => Binary{8} = div_s(0b1111_1001, 0b0000_0000);",
+        "nodule d;\nfn main() => Binary{8} = rem_s(0b1111_1001, 0b0000_0000);",
+    ] {
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+        let interp = Interpreter::new(
+            PrimRegistry::with_builtins(),
+            Box::new(mycelium_cert::BinaryTernarySwapEngine),
+        );
+        let prims = PrimRegistry::with_builtins();
+        let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+        assert!(
+            Evaluator::new(&env).call("main", vec![]).is_err(),
+            "L1-eval must refuse signed division by zero: {src}"
+        );
+        let node = elaborate(&env, "main").expect("in fragment");
+        assert!(
+            interp.eval(&node).is_err(),
+            "L0-interp must refuse signed division by zero: {src}"
+        );
+        assert!(
+            mycelium_mlir::run(&node, &prims, &engine).is_err(),
+            "AOT must refuse signed division by zero: {src}"
+        );
+    }
+}
+
+/// `shr_s` **sign-extends**: `-128 >> 4 = -8` (`0b1000_0000` → `0b1111_1000`), where the logical
+/// `shr_u` answers `+8` (`0b0000_1000`) — both pinned three-way so the signedness split is
+/// visible in the differential itself.
+#[test]
+fn shr_s_sign_extends_three_way_where_shr_u_zero_fills() {
+    assert_three_way(
+        "shr_s -128>>4 sign-extends",
+        "nodule d;\nfn main() => Binary{8} = shr_s(0b1000_0000, 0b0000_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111000".chars().map(|c| c == '1').collect()),
+    );
+    assert_three_way(
+        "shr_u -128>>4 zero-fills (the unsigned twin, for contrast)",
+        "nodule d;\nfn main() => Binary{8} = shr_u(0b1000_0000, 0b0000_0100);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00001000".chars().map(|c| c == '1').collect()),
+    );
+    // -1 >> 3 = -1 (all-ones is a fixed point of sign extension).
+    assert_three_way(
+        "shr_s -1>>3 = -1",
+        "nodule d;\nfn main() => Binary{8} = shr_s(0b1111_1111, 0b0000_0011);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("11111111".chars().map(|c| c == '1').collect()),
+    );
+    // A non-negative value agrees with the logical shift: 64 >> 3 = 8.
+    assert_three_way(
+        "shr_s 64>>3 = 8",
+        "nodule d;\nfn main() => Binary{8} = shr_s(0b0100_0000, 0b0000_0011);",
+        &Repr::Binary { width: 8 },
+        &Payload::Bits("00001000".chars().map(|c| c == '1').collect()),
+    );
+}
+
+/// An out-of-range shift amount (`k >= N`) refuses on **all three** paths for the arithmetic
+/// shift, exactly as for the logical one — never an implicit "all sign bits" result.
+#[test]
+fn shr_s_out_of_range_shift_refuses_on_every_path() {
+    for src in [
+        "nodule d;\nfn main() => Binary{8} = shr_s(0b1111_1111, 0b0000_1000);",
+        "nodule d;\nfn main() => Binary{8} = shr_s(0b1111_1111, 0b1111_1111);",
+    ] {
+        let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+        let interp = Interpreter::new(
+            PrimRegistry::with_builtins(),
+            Box::new(mycelium_cert::BinaryTernarySwapEngine),
+        );
+        let prims = PrimRegistry::with_builtins();
+        let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+        assert!(
+            Evaluator::new(&env).call("main", vec![]).is_err(),
+            "L1-eval must refuse an out-of-range arithmetic shift amount: {src}"
+        );
+        let node = elaborate(&env, "main").expect("in fragment");
+        assert!(
+            interp.eval(&node).is_err(),
+            "L0-interp must refuse an out-of-range arithmetic shift amount: {src}"
+        );
+        assert!(
+            mycelium_mlir::run(&node, &prims, &engine).is_err(),
+            "AOT must refuse an out-of-range arithmetic shift amount: {src}"
+        );
+    }
+}
+
+/// `lt_s` is the two's-complement order: `0b1111_1111` is `-1 < 0` under `lt_s` but `255 > 0`
+/// under the unsigned `lt` — the distinguishing pair pinned three-way against both prims.
+#[test]
+fn lt_s_orders_two_complement_where_lt_orders_magnitude() {
+    let (r, p) = b1(true);
+    assert_three_way(
+        "lt_s -1 < 0",
+        "nodule d;\nfn main() => Binary{1} = lt_s(0b1111_1111, 0b0000_0000);",
+        &r,
+        &p,
+    );
+    let (r, p) = b1(false);
+    assert_three_way(
+        "lt 255 !< 0 (the unsigned twin, for contrast)",
+        "nodule d;\nfn main() => Binary{1} = lt(0b1111_1111, 0b0000_0000);",
+        &r,
+        &p,
+    );
+    // min < max; equal is not strictly less.
+    let (r, p) = b1(true);
+    assert_three_way(
+        "lt_s -128 < 127",
+        "nodule d;\nfn main() => Binary{1} = lt_s(0b1000_0000, 0b0111_1111);",
+        &r,
+        &p,
+    );
+    let (r, p) = b1(false);
+    assert_three_way(
+        "lt_s equal-is-false",
+        "nodule d;\nfn main() => Binary{1} = lt_s(0b0000_0101, 0b0000_0101);",
+        &r,
+        &p,
+    );
+}
+
+/// `lt_s` static refusal surface (conformance rejects, G2): a width mismatch and a cross-paradigm
+/// pair are static type errors; a **ternary** pair refuses with the real routing (balanced
+/// ternary's `lt` order is already the signed order — a distinct ternary `lt_s` would silently
+/// duplicate it); a width-mismatched `div_s` likewise refuses statically.
+#[test]
+fn signed_op_static_rejects() {
+    for (src, why) in [
+        (
+            "nodule d;\nfn main() => Binary{1} = lt_s(0b0000_0001, 0b0);",
+            "width-mismatched lt_s",
+        ),
+        (
+            "nodule d;\nfn main() => Binary{1} = lt_s(0b0000_0001, 0t00+-);",
+            "cross-paradigm lt_s",
+        ),
+        (
+            "nodule d;\nfn main() => Binary{1} = lt_s(0t00+-, 0t00+-);",
+            "ternary lt_s (use lt — already the signed order)",
+        ),
+        (
+            "nodule d;\nfn main() => Binary{8} = div_s(0b0000_0001, 0b0);",
+            "width-mismatched div_s",
+        ),
+        (
+            "nodule d;\nfn main() => Binary{8} = shr_s(0b0000_0001, 0b0);",
+            "width-mismatched shr_s",
+        ),
+    ] {
+        assert!(
+            check_nodule(&parse(src).expect("parses")).is_err(),
+            "{why} must be a static type error, never a silent coercion/order: {src}"
+        );
+    }
+}
+
 // ── M-749: indexed-sequence prims — prim-level differential (L0-interp ≡ AOT) ────────────────────
 //
 // `Repr::Seq` has no `.myc` surface literal yet (lexer/parser wiring deferred — FLAGGED in the

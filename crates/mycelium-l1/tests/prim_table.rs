@@ -121,6 +121,25 @@ fn surface_cases() -> Vec<(&'static str, Vec<Ty>, Ty)> {
             vec![Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
+        // RFC-0033 §4.1.2/§4.1.3 (M-767, `enb` Gap B): the signedness-split signed op set —
+        // signed truncated division/remainder + the arithmetic right shift, distinct-named from
+        // their `_u` counterparts (ADR-028; DN-72). (`lt_s` is width-collapsing and rides the
+        // comparison guard below, not this width-uniform table.)
+        (
+            "div_s",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
+        (
+            "rem_s",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
+        (
+            "shr_s",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
     ]
 }
 
@@ -279,7 +298,9 @@ fn float_cmp_prims_resolve_to_declared_collapsing_empirical_kernel_prims() {
 fn comparison_prims_resolve_to_declared_collapsing_kernel_prims() {
     use mycelium_core::WidthRel;
     let table = PrimTable::builtins();
-    for surface in ["eq", "lt"] {
+    // `lt_s` (M-767) is the signed order — same collapsing shape as the D1 pair (its Π operands
+    // are pinned `Binary` rather than the D1 `Any`, checked by `mycelium-core`'s own Π test).
+    for surface in ["eq", "lt", "lt_s"] {
         let kernel = prim_kernel_name(surface)
             .unwrap_or_else(|| panic!("comparison prim `{surface}` must map to a kernel name"));
         assert!(
