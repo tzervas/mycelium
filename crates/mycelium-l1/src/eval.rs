@@ -33,8 +33,13 @@ use mycelium_interp::{
     Budgets, EffectBudget, EffectBudgetExhausted, EvalError as KernelError, PrimRegistry,
     SwapEngine,
 };
+// M-906 (DN-70 D1; RFC-0008 RT3): `@forage`'s D-lite placement decision reuses the existing
+// RFC-0005 `SelectionPolicy` machinery verbatim — no new mechanism (DN-70).
+use mycelium_select::{
+    select_placement, Candidate, CostModel, NodeRef, SelectionInputs, SelectionPolicy,
+};
 
-use crate::ast::{Expr, Literal, Pattern, Strength};
+use crate::ast::{Expr, Hypha, Literal, Pattern, Strength};
 use crate::checkty::{prim_kernel_name, Env};
 use crate::elab::{lit_value, policy_name_ref, type_repr, ElabError};
 
@@ -137,6 +142,47 @@ fn value_contains_substrate_id(v: &L1Value, id: u64) -> bool {
     }
 }
 
+/// One recorded `@forage(policy)` placement decision (M-906; DN-70 D1; RFC-0008 RT3) — the
+/// mandatory RFC-0005 §2.2 EXPLAIN record, `site`-tagged (mirrors
+/// [`crate::substrate::ReleaseEvent`]'s `site` field — no fabricated line/column; this evaluator
+/// has no source spans, VR-5) so a caller can attribute each decision to the function it occurred
+/// in. `explanation` is [`mycelium_select::Explanation`] **verbatim** — the real RFC-0005
+/// mechanism's own record, not a reimplementation (DN-70 D1: "no new mechanism").
+#[derive(Debug, Clone, PartialEq)]
+pub struct ForageDecision {
+    /// The function in which the `@forage`-annotated hypha spawned.
+    pub site: String,
+    /// The `mycelium-select` EXPLAIN record for this decision.
+    pub explanation: mycelium_select::Explanation,
+}
+
+/// Why a `@forage(policy)` placement failed — always explicit, never a silent hang or a fabricated
+/// placement (RT4/G2; DN-63 §3.5 FLAG-14; M-906/DN-70 D1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ForageError {
+    /// The D-lite worker-availability bitmask has no set bits — the (degenerate, single-node)
+    /// candidate set is empty. DN-63 §3.5 FLAG-14's required shape, implemented exactly: a typed,
+    /// explicit error, never a silent hang. `elaborate`/`elaborate_colony` refuse the identical
+    /// source with an explicit [`ElabError::Residual`] (see `crate::elab::forage_reject_if_empty`)
+    /// — never-silent on every path (L1-eval and elaborate→{L0-interp, AOT} agree: none of them
+    /// silently accepts a no-candidate forage).
+    NoCandidates,
+}
+
+impl core::fmt::Display for ForageError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ForageError::NoCandidates => write!(
+                f,
+                "`@forage` has no placement candidates (DN-63 §3.5 FLAG-14): the worker- \
+                 availability bitmask is all-zero — an explicit refusal, never a silent placement"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ForageError {}
+
 /// Why L1 evaluation could not produce a value — always explicit (S5/G2).
 #[derive(Debug, Clone, PartialEq)]
 pub enum L1Error {
@@ -186,6 +232,9 @@ pub enum L1Error {
     /// primed from `FnSig::effect_budgets` at the call site and consumed once per declared effect
     /// per invocation.
     EffectBudget(EffectBudgetExhausted),
+    /// A `@forage(policy)` placement decision refused (M-906; DN-70 D1; RFC-0008 RT3) — see
+    /// [`ForageError`].
+    Forage(ForageError),
 }
 
 impl core::fmt::Display for L1Error {
@@ -213,6 +262,7 @@ impl core::fmt::Display for L1Error {
                 "in `{site}`: stuck — {why} (the typechecker should have refused this program)"
             ),
             L1Error::EffectBudget(e) => write!(f, "{e}"),
+            L1Error::Forage(e) => write!(f, "{e}"),
         }
     }
 }
@@ -228,6 +278,12 @@ impl From<KernelError> for L1Error {
 impl From<EffectBudgetExhausted> for L1Error {
     fn from(e: EffectBudgetExhausted) -> Self {
         L1Error::EffectBudget(e)
+    }
+}
+
+impl From<ForageError> for L1Error {
+    fn from(e: ForageError) -> Self {
+        L1Error::Forage(e)
     }
 }
 
@@ -331,6 +387,11 @@ pub struct Evaluator<'e> {
     /// `&self` (see that method's doc for the full `Sync` argument); the lock is only ever held for
     /// the length of a single `Vec::push`/clone, so it never contends across the recursive walk.
     releases: std::sync::Mutex<Vec<crate::substrate::ReleaseEvent>>,
+    /// The M-906 (DN-70 D1; RFC-0008 RT3) **mandatory-EXPLAIN placement trail** — every `@forage`
+    /// decision made during evaluation, inspectable via [`Self::forage_decisions`] (never a black
+    /// box — house rule 2). Same [`std::sync::Mutex`]-not-`RefCell` pattern as [`Self::releases`]
+    /// (`Evaluator` stays `Sync`; the lock is only ever held for a single `Vec::push`/clone).
+    forage_trail: std::sync::Mutex<Vec<ForageDecision>>,
 }
 
 impl<'e> Evaluator<'e> {
@@ -344,7 +405,22 @@ impl<'e> Evaluator<'e> {
             fuel: DEFAULT_FUEL,
             depth: DEFAULT_DEPTH,
             releases: std::sync::Mutex::new(Vec::new()),
+            forage_trail: std::sync::Mutex::new(Vec::new()),
         }
+    }
+
+    /// The [`ForageDecision`] EXPLAIN trail accumulated by every `@forage(policy)` placement
+    /// decision (M-906; DN-70 D1; RFC-0008 RT3) across every [`Self::call`] made on this
+    /// `Evaluator` so far — mandatory EXPLAIN, never a black box (house rule 2; RFC-0005 §2.2).
+    /// Empty iff no `@forage`-annotated hypha ever ran. A poisoned lock (only reachable after an
+    /// unrelated panic while holding it, which this evaluator never does by design) is recovered
+    /// rather than propagated (mirrors [`Self::release_events`]).
+    #[must_use]
+    pub fn forage_decisions(&self) -> Vec<ForageDecision> {
+        self.forage_trail
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
     }
 
     /// The [`ReleaseEvent`](crate::substrate::ReleaseEvent) log accumulated by scope-exit releases
@@ -545,6 +621,111 @@ impl<'e> Evaluator<'e> {
             self.assert_guarantee(name, &result, g)?;
         }
         Ok(result)
+    }
+
+    /// Evaluate one hypha's `@forage(policy)` placement decision, if present (M-906; DN-70 D1;
+    /// RFC-0008 RT3; DN-63 §3.5), **before** its body runs. Mirrors `reclaim`'s "evaluate the
+    /// policy for its effect" sequential reference (DN-58 §B) with one real addition: the D-lite
+    /// mechanism genuinely consults `mycelium-select`'s `SelectionPolicy`/[`select_placement`]
+    /// (RFC-0005 §2 — total, deterministic, mandatory-EXPLAIN) over the **single-node** candidate
+    /// set the policy's bitmask names (DN-70 D1: "degenerate but real" — one local worker per set
+    /// bit). Placement is semantics-free (RT3: it changes performance, never `body`'s value), so
+    /// this returns `()`, not a value — the caller runs `body` unchanged afterward.
+    ///
+    /// Never-silent (DN-63 §3.5 FLAG-14 / G2): an all-zero bitmask is an explicit
+    /// [`L1Error::Forage`]`(`[`ForageError::NoCandidates`]`)`, never a fabricated placement or a
+    /// hang. `elaborate`/`elaborate_colony` refuse the *identical* source statically (see
+    /// `crate::elab::forage_reject_if_empty`), so every execution path agrees.
+    ///
+    /// Guarantee: `Declared` — the D-lite candidate set (one worker per bitmask bit,
+    /// `default_choice: 0`, no cost-differentiating rules) is a placeholder policy shape; the full
+    /// adaptive/cost-based policy surface is DN-63 FLAG-13, narrowed here, not resolved.
+    fn eval_hypha_forage(
+        &self,
+        fuel: &mut u64,
+        depth: u32,
+        ledger: &mut Budgets,
+        site: &str,
+        scope: &mut Vec<(String, L1Value)>,
+        h: &Hypha,
+    ) -> Result<(), L1Error> {
+        let Some(policy) = &h.forage else {
+            return Ok(());
+        };
+        let pv = self.eval(fuel, depth, ledger, site, scope, policy)?;
+        let L1Value::Repr(v) = &pv else {
+            return Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: "internal: `@forage(policy)` evaluated to a non-repr value — the checker \
+                      requires a literal binary bitmask (M-906/DN-70 D1)"
+                    .to_owned(),
+            });
+        };
+        let mycelium_core::Payload::Bits(bits) = v.payload() else {
+            return Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: "internal: `@forage(policy)` evaluated to a non-`Binary` repr — the checker \
+                      requires a literal binary bitmask (M-906/DN-70 D1)"
+                    .to_owned(),
+            });
+        };
+        let candidates: Vec<Candidate> = bits
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| **b)
+            .map(|(i, _)| Candidate::Node(NodeRef(format!("worker-{i}"))))
+            .collect();
+        if candidates.is_empty() {
+            return Err(ForageError::NoCandidates.into());
+        }
+        // A trivial, deterministic single-arm policy: no cost-differentiating rules yet (DN-63
+        // FLAG-13 stays open), so the default arm always picks the lowest-index available worker
+        // (`Action`-free — `rules: []`) — matching `StealPolicy::RoundRobin`'s "lowest index wins
+        // a tie" convention (`mycelium-sched`).
+        let policy = SelectionPolicy::new(
+            "forage.dlite.v0",
+            candidates,
+            Vec::new(),
+            0,
+            CostModel {
+                storage_weight: 1.0,
+            },
+        )
+        .map_err(|e| L1Error::Stuck {
+            site: site.to_owned(),
+            why: format!(
+                "internal: `@forage` D-lite policy construction failed unexpectedly: {e} \
+                 (the caller always supplies ≥ 1 candidate and a valid cost weight)"
+            ),
+        })?;
+        // `src: Bytes` is the crate's own documented "no static representation applies here"
+        // sentinel (see `mycelium_select::repr_storage_bits`'s `Repr::Bytes => 0.0` precedent) —
+        // `forage` places a *hypha* (a computation), not a value with a `Repr`, and the D-lite
+        // policy's `rules: []` never inspects `inputs` anyway (only the mandatory default arm
+        // fires), so no predicate ever reads this sentinel (honesty note, not a fabricated value).
+        let inputs = SelectionInputs {
+            src: mycelium_core::Repr::Bytes,
+            guarantee: GuaranteeStrength::Declared,
+            bound: None,
+            sparsity: None,
+            decode: None,
+        };
+        let (_chosen, explanation) =
+            select_placement(&policy, &inputs, None).map_err(|e| L1Error::Stuck {
+                site: site.to_owned(),
+                why: format!(
+                    "internal: `@forage` D-lite `select_placement` failed unexpectedly: {e} (the \
+                     caller always supplies a `Node` candidate set)"
+                ),
+            })?;
+        self.forage_trail
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(ForageDecision {
+                site: site.to_owned(),
+                explanation,
+            });
+        Ok(())
     }
 
     /// Big-step evaluation of `e` under `scope`. Every node costs one unit of fuel, so an
@@ -819,10 +1000,15 @@ impl<'e> Evaluator<'e> {
                 };
                 // Evaluate each leading hypha for its (sequentialized) effect, in order; a refusal in
                 // any one propagates (never silently dropped — RT4/I1). Their values are not the
-                // colony's observable in this no-product v0 (only the last hypha's is).
+                // colony's observable in this no-product v0 (only the last hypha's is). Each
+                // hypha's `@forage(policy)` (M-906/DN-70 D1), if present, is consulted immediately
+                // before its body runs (RT3 semantics-free placement — the decision never changes
+                // the body's value, only its EXPLAIN trail).
                 for h in leading {
+                    self.eval_hypha_forage(fuel, depth, ledger, site, scope, h)?;
                     self.eval(fuel, depth, ledger, site, scope, &h.body)?;
                 }
+                self.eval_hypha_forage(fuel, depth, ledger, site, scope, last)?;
                 self.eval(fuel, depth, ledger, site, scope, &last.body)
             }
 

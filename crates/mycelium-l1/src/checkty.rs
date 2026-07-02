@@ -3650,14 +3650,72 @@ impl Cx<'_> {
         // Leading hyphae: each is its own computation with no expected type. RT1 — each is checked
         // under the same lexical scope (closed over by value), never mutating it.
         for h in leading {
+            let forage = match &h.forage {
+                Some(p) => Some(Box::new(self.check_forage_policy(scope, p)?)),
+                None => None,
+            };
             let (_ty, body2) = self.check(scope, &h.body, None)?;
-            checked.push(Hypha { body: body2 });
+            checked.push(Hypha {
+                forage,
+                body: body2,
+            });
         }
         // The final hypha carries the colony's observable (the RT2 sequentialization's last step), so
         // the `expected` type applies to it.
+        let forage = match &last.forage {
+            Some(p) => Some(Box::new(self.check_forage_policy(scope, p)?)),
+            None => None,
+        };
         let (rty, last_body2) = self.check(scope, &last.body, expected)?;
-        checked.push(Hypha { body: last_body2 });
+        checked.push(Hypha {
+            forage,
+            body: last_body2,
+        });
         Ok((rty, Expr::Colony(checked)))
+    }
+
+    /// D-lite `@forage(policy)` policy check (RFC-0008 RT3; DN-63 §3.5; M-906/DN-70 D1). The
+    /// D-lite subset narrows DN-63's open `policy: PlacementPolicy` expression sketch (§3.5) to a
+    /// **literal binary bitmask**: each set bit `i` names one local worker candidate `worker-i`
+    /// (DN-63 FLAG-13, narrowed for the subset, not resolved — the full node-level `Meta` signal
+    /// set stays open, owned by the H2 `forage` maturity work, DN-70 §5 R-6). This is a
+    /// *checker*-level narrowing, not a grammar one (`parse_hypha` accepts any expression),
+    /// because the D-lite mechanism builds a `mycelium_select::SelectionPolicy` **statically**, at
+    /// elaboration time, straight from the literal's bits (so `elaborate`/`elaborate_colony` and
+    /// the L1 evaluator can agree identically on the DN-63 FLAG-14 empty-candidate refusal — see
+    /// [`crate::elab`]'s `elab_colony` and [`crate::eval::ForageError`]). Reusing `mycelium-select`
+    /// for an *arbitrary evaluated* Mycelium policy value is exactly the DN-70 §5 R-5 mechanized
+    /// capture-and-set surface, explicitly deferred to H2. A non-literal or non-`Binary` policy is
+    /// refused here, explicitly (never silently coerced or ignored — G2).
+    ///
+    /// Guarantee: `Declared` — the literal-bitmask convention is this D-lite subset's own,
+    /// narrower-than-DN-63 choice (FLAG, per the M-906 task brief: "uses the existing
+    /// SelectionPolicy — no new mechanism"; the mechanism itself is unchanged, only its D-lite
+    /// input surface is narrowed).
+    fn check_forage_policy(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        policy: &Expr,
+    ) -> Result<Expr, CheckError> {
+        let (ty, policy2) = self.check(scope, policy, None)?;
+        if !matches!(ty, Ty::Binary(_)) {
+            return self.err(format!(
+                "`@forage(policy)` requires a binary-bitmask policy in the D-lite subset (got \
+                 `{ty}`) — each set bit names one local worker candidate (DN-63 §3.5 FLAG-13, \
+                 narrowed; RFC-0008 RT3); the general `PlacementPolicy` expression surface is the \
+                 DN-70 §5 R-5 H2 mechanized-capture work (never-silent — G2)"
+            ));
+        }
+        if !matches!(policy2, Expr::Lit(Literal::Bin(_))) {
+            return self.err(
+                "`@forage(policy)` requires a *literal* binary-bitmask policy in the D-lite \
+                 subset (e.g. `@forage(0b101) hypha …`) — a computed `Binary` expression is not \
+                 yet supported; the general dynamic-policy surface is the DN-70 §5 R-5 H2 \
+                 mechanized `SelectionPolicy` capture-and-set work (never-silent — G2)"
+                    .to_owned(),
+            );
+        }
+        Ok(policy2)
     }
 
     /// DN-58 §A (M-667): `fuse(a, b)` — lawful binary merge over the `Fuse` semilattice instance

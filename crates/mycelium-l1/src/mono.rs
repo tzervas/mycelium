@@ -1187,7 +1187,15 @@ impl<'e> Mono<'e> {
             Expr::Colony(hyphae) => {
                 let mut out = Vec::with_capacity(hyphae.len());
                 for h in hyphae {
+                    // M-906 (DN-70 D1): rewrite the optional `@forage(policy)` literal through
+                    // monomorphization too (mirrors `body`; a literal bitmask carries no type
+                    // variables, but the rewrite keeps the pass total over every hypha field).
+                    let forage = match &h.forage {
+                        Some(p) => Some(Box::new(self.rewrite(site, scope, p, None)?)),
+                        None => None,
+                    };
                     out.push(Hypha {
+                        forage,
                         body: self.rewrite(site, scope, &h.body, None)?,
                     });
                 }

@@ -688,7 +688,15 @@ impl Resolver {
             Expr::Colony(hyphae) => {
                 let mut out = Vec::with_capacity(hyphae.len());
                 for h in hyphae {
+                    // M-906 (DN-70 D1): a hypha's optional `@forage(policy)` annotation resolves
+                    // under the same ambient as its body (no new ambient frame — it is a plain
+                    // value expression, like `reclaim`'s policy).
+                    let forage = match &h.forage {
+                        Some(p) => Some(Box::new(self.expr(amb, site, p, depth)?)),
+                        None => None,
+                    };
                     out.push(crate::ast::Hypha {
+                        forage,
                         body: self.expr(amb, site, &h.body, depth)?,
                     });
                 }

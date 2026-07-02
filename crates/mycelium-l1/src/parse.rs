@@ -2157,17 +2157,36 @@ impl Parser {
         Ok(Expr::Colony(hyphae))
     }
 
-    /// One `hypha <expr>` spawn inside a [`parse_colony`] body. The `hypha` keyword is mandatory
-    /// (RT7: every concurrent unit is named — a bare body would be ambiguous with a value), and its
-    /// computation is parsed as an `app_expr` (a call like `compute(x)` — the issue's canonical form),
-    /// matching `for`'s use of `app_expr` for its bounded sub-expressions.
+    /// One `hypha <expr>` spawn inside a [`parse_colony`] body, with an optional leading
+    /// `@forage(policy) ` placement-policy annotation (RFC-0008 RT3; DN-63 §3.5; D-lite, M-906/
+    /// DN-70 D1) — the same `@` **attribute-before-construct** shape as `@tier(mode) fn …`
+    /// (DN-58 §C), applied to `hypha`. The `hypha` keyword is mandatory (RT7: every concurrent
+    /// unit is named — a bare body would be ambiguous with a value), and its computation is parsed
+    /// as an `app_expr` (a call like `compute(x)` — the issue's canonical form), matching `for`'s
+    /// use of `app_expr` for its bounded sub-expressions.
+    ///
+    /// `policy` is parsed as a general expression (mirroring `reclaim(policy) { body }`'s open
+    /// policy — DN-58 §B); the D-lite **narrowing** to a literal binary bitmask is a *checker*
+    /// rule ([`crate::checkty::Cx::check_forage_policy`]), not a grammar restriction, so a
+    /// non-literal policy still parses and gets a precise, checker-level teaching diagnostic
+    /// rather than an opaque parse error.
     fn parse_hypha(&mut self) -> Result<Hypha, ParseError> {
+        let forage = if self.at(&Tok::At) {
+            self.bump(); // `@`
+            self.expect_keyword(&Tok::Forage)?;
+            self.expect(&Tok::LParen, "`(` to open the `@forage` policy argument")?;
+            let policy = self.parse_expr()?;
+            self.expect(&Tok::RParen, "`)` to close the `@forage` policy argument")?;
+            Some(Box::new(policy))
+        } else {
+            None
+        };
         self.expect(
             &Tok::Hypha,
             "`hypha` to open a concurrent task in the `colony` block (RFC-0008 §4.7)",
         )?;
         let body = self.parse_app()?;
-        Ok(Hypha { body })
+        Ok(Hypha { forage, body })
     }
 
     fn parse_app(&mut self) -> Result<Expr, ParseError> {

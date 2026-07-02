@@ -81,6 +81,15 @@ fn corpus() -> Vec<&'static str> {
         // is the last hypha's value (no v0 product type). Determinism: the value is independent of
         // any scheduling — the sequentialization is the meaning.
         "nodule d;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\nfn main() => Binary{8} =\n  colony { hypha compute(0b0000_1111), hypha compute(0b1010_1010), hypha xor(0b1111_0000, 0b0000_1111) };",
+        // --- M-906 (DN-70 D1): `@forage(policy) hypha …` — the D-lite placement-policy surface ---
+        // Semantics-free (RT3): a well-formed (non-empty-candidate) `@forage` annotation must not
+        // change the observable on any of the three execution paths — placement is a performance
+        // concern layered over the unchanged body, exactly like `reclaim`'s policy (DN-58 §B).
+        "nodule d;\nfn main() => Binary{8} = colony { @forage(0b1) hypha not(0b1011_0010) };",
+        // A multi-bit mask (3 candidate workers) and a multi-hypha colony where only the LAST hypha
+        // carries the annotation — pins that the annotation is per-hypha, and that a leading
+        // un-annotated hypha is unaffected.
+        "nodule d;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\nfn main() => Binary{8} =\n  colony { hypha compute(0b0000_1111), @forage(0b101) hypha compute(0b1010_1010) };",
         // --- RFC-0020 §9 / R20-Q5: list-literal element-type inference from return-type context ---
         // The return type `Seq{Binary{8}, 3}` flows into the list literal `[…]` bidirectionally as
         // the `expected` type in `check_list` — the element type `Binary{8}` is NOT determined
@@ -771,6 +780,181 @@ fn a_failing_hypha_is_an_explicit_colony_error_not_a_silent_drop() {
         }
         other => panic!("expected an explicit HyphaFailed, got: {other}"),
     }
+}
+
+// --- M-906 (DN-70 D1; RFC-0008 RT3; DN-63 §3.5): `@forage(policy)` D-lite conformance ------------
+//
+// Three obligations from the D-lite scope split (DN-70 D1's row-by-row DoD): (1) the DN-63 §3.5
+// FLAG-14 empty-candidate-set case is an explicit `ForageError::NoCandidates`, agreeing across
+// every execution path (never a silent divergence — mirrors `dense_swap_is_an_explicit_residual_
+// on_all_paths` above); (2) the RT2 placement differential — two DIFFERENT placements of the same
+// deterministic computation must produce the same observable (DN-70 D1 "Conformance obligation");
+// (3) the mandatory RFC-0005 §2.2 EXPLAIN trail is genuinely populated, not just documented.
+
+/// **DN-63 §3.5 FLAG-14 — an all-zero `@forage` bitmask is an explicit refusal on every path.**
+/// `elaborate` (the sequential-reference path feeding both L0-interp and AOT) refuses with an
+/// explicit [`ElabError::Residual`] (`crate::elab::forage_reject_if_empty`); L1-eval refuses with
+/// the typed `L1Error::Forage(ForageError::NoCandidates)`. Neither path silently accepts a
+/// no-candidate placement (G2/RT4) — classification: Explicit-Residual + Explicit-Kernel-style
+/// refusal (`Empirical` — this test), the same shape `dense_swap_is_an_explicit_residual_on_all_
+/// paths` pins for the Dense-swap residual.
+#[test]
+fn forage_no_candidates_is_an_explicit_refusal_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = colony { @forage(0b0) hypha not(0b1011_0010) };";
+    let env = check_nodule(&parse(src).expect(
+        "an all-zero `@forage` bitmask still checks \
+        (the D-lite checker only validates shape: literal + Binary type — the empty-candidate \
+        refusal is an elaboration/runtime obligation, DN-63 §3.5 FLAG-14)",
+    ))
+    .expect("checks");
+
+    // Path A: `elaborate` refuses with an explicit Residual — never a fabricated L0 program.
+    let elab_err = elaborate(&env, "main")
+        .expect_err("elaborate must refuse an all-zero `@forage` bitmask (DN-63 §3.5 FLAG-14)");
+    assert!(
+        matches!(elab_err, ElabError::Residual { .. }),
+        "the all-zero-bitmask elaborate error must be an explicit Residual; got: {elab_err}"
+    );
+    assert!(
+        elab_err.to_string().contains("FLAG-14") || elab_err.to_string().contains("NoCandidates"),
+        "the Residual message must name the DN-63 FLAG-14 empty-candidate-set case; got: {elab_err}"
+    );
+
+    // Path B: L1-eval refuses explicitly with the typed `ForageError::NoCandidates`.
+    let l1_err = Evaluator::new(&env)
+        .call("main", vec![])
+        .expect_err("L1-eval must refuse an all-zero `@forage` bitmask explicitly");
+    assert!(
+        matches!(l1_err, L1Error::Forage(mycelium_l1::ForageError::NoCandidates)),
+        "L1-eval's all-zero-bitmask error must be the typed ForageError::NoCandidates; got: {l1_err}"
+    );
+
+    // Both paths refuse explicitly and consistently: neither elaborate→{L0-interp, AOT} nor
+    // L1-eval ever silently accepts a no-candidate `@forage` (DN-63 §3.5 FLAG-14 → satisfied).
+}
+
+/// **The RT2 placement differential (DN-70 D1's explicit conformance obligation).** Two DIFFERENT
+/// `@forage` bitmasks — naming disjoint, differently-sized candidate sets, so `mycelium-select`
+/// genuinely picks a *different* `NodeRef` for each — must still produce the SAME observable
+/// (`repr + payload + guarantee`) for the same deterministic body, on every execution path
+/// (L1-eval ≡ elaborate→L0-interp ≡ AOT). This is RT3's "the running node changes performance,
+/// never the observable" made executable: placement genuinely varies (asserted below via
+/// `forage_decisions()`), the value does not.
+#[test]
+fn forage_placement_choice_does_not_change_the_observable_rt2() {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = BinaryTernarySwapEngine;
+
+    // Two same-width masks with the set bit at DIFFERENT string positions (`@forage` candidates
+    // are indexed by bitmask digit position — see `eval_hypha_forage`'s doc comment) — `0b10`
+    // names only `worker-0`, `0b01` names only `worker-1`; `SelectionPolicy`'s `default_choice: 0`
+    // therefore picks a genuinely different `NodeRef` for each, over disjoint candidate sets.
+    let masks = ["0b10", "0b01"];
+    let mut chosen_nodes = Vec::new();
+    let mut repr_observables = Vec::new();
+
+    for mask in masks {
+        let src = format!(
+            "nodule d;\nfn main() => Binary{{8}} = colony {{ @forage({mask}) hypha not(0b1011_0010) }};"
+        );
+        let env = check_nodule(&parse(&src).expect("parses")).expect("checks");
+
+        let evaluator = Evaluator::new(&env);
+        let l1 = evaluator
+            .call("main", vec![])
+            .unwrap_or_else(|e| panic!("mask {mask}: L1-eval failed: {e}"));
+        let l1 = l1
+            .as_repr()
+            .unwrap_or_else(|| panic!("mask {mask}: fragment result must be a repr value"))
+            .clone();
+        let decisions = evaluator.forage_decisions();
+        assert_eq!(
+            decisions.len(),
+            1,
+            "mask {mask}: exactly one `@forage` decision must be recorded"
+        );
+        chosen_nodes.push(decisions[0].explanation.chosen.clone());
+
+        let node = elaborate(&env, "main")
+            .unwrap_or_else(|e| panic!("mask {mask}: must be in the fragment: {e}"));
+        let l0 = interp
+            .eval(&node)
+            .unwrap_or_else(|e| panic!("mask {mask}: L0-interp failed: {e}"));
+        let aot = mycelium_mlir::run(&node, &prims, &engine)
+            .unwrap_or_else(|e| panic!("mask {mask}: AOT failed: {e}"));
+
+        assert_eq!(
+            observable(&l1),
+            observable(&l0),
+            "mask {mask}: L1-eval vs L0-interp diverged"
+        );
+        assert_eq!(
+            observable(&l0),
+            observable(&aot),
+            "mask {mask}: L0-interp vs AOT diverged"
+        );
+        repr_observables.push(l1);
+    }
+
+    // The two masks genuinely chose DIFFERENT placement candidates…
+    assert_ne!(
+        chosen_nodes[0], chosen_nodes[1],
+        "the two disjoint bitmasks must choose different `NodeRef` candidates \
+         (otherwise this is not exercising RT2 at all)"
+    );
+    // …yet the two runs' observables are identical — placement is genuinely semantics-free (RT3):
+    // the RT2 placement differential DN-70 D1 requires.
+    assert_eq!(
+        observable(&repr_observables[0]),
+        observable(&repr_observables[1]),
+        "different `@forage` placements of the SAME deterministic body must agree on the \
+         observable (RT2/RT3 — placement is semantics-free)"
+    );
+}
+
+/// **Mandatory EXPLAIN is genuinely wired (RFC-0005 §2.2; M-906).** A well-formed `@forage`
+/// decision is recorded in [`Evaluator::forage_decisions`] with the site, the policy's own
+/// content address (`policy_ref`), the full per-candidate cost ranking, and the chosen `NodeRef` —
+/// inspectable, never a black box (house rule 2).
+#[test]
+fn forage_decision_is_recorded_in_the_explain_trail() {
+    let src =
+        "nodule d;\nfn main() => Binary{8} = colony { @forage(0b101) hypha not(0b1011_0010) };";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+    let evaluator = Evaluator::new(&env);
+    evaluator.call("main", vec![]).expect("runs");
+
+    let decisions = evaluator.forage_decisions();
+    assert_eq!(
+        decisions.len(),
+        1,
+        "exactly one `@forage` decision recorded"
+    );
+    let d = &decisions[0];
+    assert_eq!(
+        d.site, "main",
+        "the decision is attributed to its enclosing fn"
+    );
+    // `0b101` names candidates `worker-0` and `worker-2` (bits 0 and 2 set); `default_choice: 0`
+    // deterministically picks the lowest-index candidate — `worker-0`.
+    assert_eq!(
+        d.explanation.costs.len(),
+        2,
+        "the EXPLAIN's cost ranking must list every candidate the bitmask named (2 set bits)"
+    );
+    assert_eq!(
+        d.explanation.chosen,
+        mycelium_select::Candidate::Node(mycelium_select::NodeRef("worker-0".to_owned())),
+        "the deterministic default arm must choose the lowest-index candidate"
+    );
+    assert!(
+        !d.explanation.overridden,
+        "a D-lite decision is never a forced override"
+    );
 }
 
 // --- M-673: monomorphization — generics + traits to closed L0, three-way differential ----------

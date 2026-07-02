@@ -832,6 +832,16 @@ pub struct Arm {
 /// the computation produces (RT1: values move, state is never shared).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Hypha {
+    /// An optional `@forage(policy)` placement-policy annotation (RFC-0008 RT3; DN-63 §3.5;
+    /// D-lite, M-906/DN-70 D1). `None` = no explicit policy — the hypha places on the trivial
+    /// implicit single-candidate set (the current node). `Some` names a **literal binary bitmask**
+    /// expression (D-lite narrows DN-63's open `policy: PlacementPolicy` expression surface to a
+    /// checkable literal — see [`crate::checkty::Cx::check_forage_policy`] doc comment; the
+    /// general dynamic-expression policy surface is the DN-70 §5 R-5 H2 mechanized
+    /// `SelectionPolicy` capture-and-set work). Each set bit `i` names one local worker candidate
+    /// `worker-i`; an all-zero mask is the DN-63 FLAG-14 empty-candidate-set case
+    /// (`ForageError::NoCandidates`, refused never-silently — see [`crate::eval::ForageError`]).
+    pub forage: Option<Box<Expr>>,
     /// The spawned computation (an application/expression over immutable values).
     pub body: Expr,
 }
