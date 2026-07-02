@@ -5307,8 +5307,11 @@ fn prim_family(name: &str) -> Option<PrimFam> {
         // RFC-0032 D2 (M-748): width-preserving binary logical + arithmetic prims.
         // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): `mul_bin` — never-silent two's-complement
         // multiply (distinct surface name from the trit-backed `mul` below, which stays balanced-
-        // ternary).
-        "not" | "xor" | "and" | "or" | "add_bin" | "sub_bin" | "mul_bin" => PrimFam::Binary,
+        // ternary). M-888 adds `div_bin`/`rem_bin` — never-silent **unsigned** division/remainder
+        // (the signed variant rides M-767 under its own distinct name, per RFC-0033 §4.1.2's
+        // signedness-split requirement for division).
+        "not" | "xor" | "and" | "or" | "add_bin" | "sub_bin" | "mul_bin" | "div_bin"
+        | "rem_bin" => PrimFam::Binary,
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -5399,11 +5402,12 @@ pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
         // a runtime contract; the static signature is width-preserving like the trit arithmetic).
         // RFC-0033 §4.1.2/§4.1.3 (M-887): `mul_bin` — same width-preserving shape; the never-silent
         // two's-complement overflow bound is likewise a runtime contract (`bin.mul`'s `Overflow`).
-        ("and" | "or" | "add_bin" | "sub_bin" | "mul_bin", [Ty::Binary(a), Ty::Binary(b)])
-            if a == b =>
-        {
-            Some(Ty::Binary(a.clone()))
-        }
+        // M-888: `div_bin`/`rem_bin` — same width-preserving shape; div-by-zero is likewise a
+        // runtime contract (`bin.div`/`bin.rem`'s `PrimType` refusal), not a static type error.
+        (
+            "and" | "or" | "add_bin" | "sub_bin" | "mul_bin" | "div_bin" | "rem_bin",
+            [Ty::Binary(a), Ty::Binary(b)],
+        ) if a == b => Some(Ty::Binary(a.clone())),
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
             Some(Ty::Ternary(a.clone()))
         }
@@ -5427,6 +5431,11 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply —
         // the first shared (signedness-agnostic bit-pattern) two's-complement op ADR-028 names.
         "mul_bin" => "bin.mul",
+        // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent **unsigned** division/
+        // remainder — division must be a distinct-named op per signedness (§4.1.2); the signed
+        // reading rides M-767 under its own surface name.
+        "div_bin" => "bin.div",
+        "rem_bin" => "bin.rem",
         // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (returns `Binary{1}`).
         "eq" => "cmp.eq",
         "lt" => "cmp.lt",
