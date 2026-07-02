@@ -58,7 +58,7 @@ fn every_interp_builtin_intrinsic_matches_its_composition_path() {
         };
         Some(DenseSpace::op_guarantee(op))
     };
-    // M-892: the VSA bind group's kernel ops (cleanup/reconstruct ride M-894).
+    // M-892: the VSA bind group's kernel ops.
     let vsa_op = |name: &str| -> Option<VsaOp> {
         match name {
             "vsa.bind" => Some(VsaOp::Bind),
@@ -68,7 +68,54 @@ fn every_interp_builtin_intrinsic_matches_its_composition_path() {
         }
     };
     for name in PrimRegistry::with_builtins().names() {
-        if name == "vsa.bundle" {
+        if name == "vsa.cleanup" || name == "vsa.reconstruct" {
+            // M-894: the retrieval decodes — exhaustive arg-max over the codebook guarded by the
+            // RFC-0010 §4.4 identifiability refusal, so the op's own contribution is `Exact`.
+            // For `vsa.cleanup` the procedure is model-generic (the model only supplies
+            // `similarity`), so the meet over MAP-I/FHRR/BSC is `Exact` outright; for
+            // `vsa.reconstruct` the unbind step folds in, so the intrinsic is the meet over its
+            // {MAP-I, BSC} dispatch set of the kernel's per-model Unbind tags — recomputed from
+            // the kernel here so widening the set must keep the meet honest (VR-5; FHRR — whose
+            // Empirical unbind profile covers only single bind products — is an explicit wrapper
+            // refusal, not a dispatch member). The *runtime* triple carries the query/record's
+            // own (strength, bound) pair through the §4.7 meet — the value-side twin is guarded
+            // in `src/tests/prims.rs`.
+            let expected = if name == "vsa.reconstruct" {
+                let models: [&dyn VsaModel; 2] = [&MapI::new(4), &Bsc::new(4)];
+                GuaranteeStrength::meet_all(
+                    models.iter().map(|m| m.intrinsic_guarantee(VsaOp::Unbind)),
+                )
+            } else {
+                GuaranteeStrength::Exact
+            };
+            assert_eq!(
+                table.intrinsic(name),
+                Some(expected),
+                "prim `{name}`: the table's intrinsic must be the Exact arg-max decode claim \
+                 met over its dispatch set (VR-5)",
+            );
+        } else if name == "vsa.required_dim" {
+            // M-894: the capacity-bound query — the M-131 checked instantiation of the cited
+            // theorem (`mycelium-vsa::capacity::proven_capacity_bound` issues the `ProvenThm`
+            // `CapacityBound`; the side-condition holds by construction at the returned dim), so
+            // the Π intrinsic is `Proven` — the same stance as `vsa.bundle`, pinned against the
+            // kernel's own basis (the bound the runtime value carries is `ProvenThm`).
+            assert!(
+                matches!(
+                    mycelium_vsa::capacity::proven_capacity_bound(3, 10_000, 1e-2)
+                        .expect("the probe instantiation certifies")
+                        .basis,
+                    mycelium_core::BoundBasis::ProvenThm { .. }
+                ),
+                "the kernel's capacity bound basis must stay ProvenThm (M-131)",
+            );
+            assert_eq!(
+                table.intrinsic(name),
+                Some(GuaranteeStrength::Proven),
+                "prim `{name}`: the table's intrinsic must match the kernel's checked \
+                 ProvenThm instantiation stance (VR-5)",
+            );
+        } else if name == "vsa.bundle" {
             // M-893: `vsa.bundle` is the **certified path** — its dispatch set is the certified
             // singleton {MAP-I} (the only model whose Value-level bundle carries a *checked*
             // capacity bound, `bundle_values_certified`; the wrapper refuses FHRR/BSC, whose

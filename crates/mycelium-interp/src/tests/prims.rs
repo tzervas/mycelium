@@ -3298,3 +3298,611 @@ fn vsa_bundle_members_recoverable_below_the_proven_capacity_bound() {
         }
     }
 }
+
+// ── M-894 (`enb` Gap C): `vsa.cleanup` + `vsa.reconstruct` + `vsa.required_dim` ─────────────────
+//
+// The cleanup-memory retrieval, the RFC-0003 §6 compositional role-reconstruction, and the M-131
+// capacity-bound query (FR-S4). These tests pin: (1) the accept paths — the `[index, confidence,
+// margin]` decision triple with the query/record's own (strength, bound) pair carried through
+// (the disclosed bound is the value's own — VR-5), composed `Derived{op: hash(prim)}` provenance;
+// (2) the dispatch sets (cleanup: MAP-I/FHRR/BSC; reconstruct: {MAP-I, BSC}, an FHRR record an
+// explicit refusal naming its unbind profile's regime); (3) the never-silent reject surface
+// (empty codebook, model/dim mismatches, the RFC-0010 §4.4 identifiability tie, the below-
+// threshold refusal naming confidence vs threshold, non-Exact non-carry operands, degenerate
+// items/δ, arity); and (4) the **below-capacity property** (the M-894 DoD row): over a
+// deterministic (m × seed) corpus at a dim certified by `vsa.required_dim`'s own answer,
+// role-reconstruction from a certified bundle recovers every bundled filler, and the triple
+// re-discloses the record's own `Proven` `CapacityBound`.
+
+/// Unpack the `Seq{Float, 3}` decision triple.
+fn triple_of(v: &Value) -> [f64; 3] {
+    match v.payload() {
+        Payload::Seq(elems) => {
+            let xs: Vec<f64> = elems
+                .iter()
+                .map(|e| match e.payload() {
+                    Payload::Float(x) => *x,
+                    other => panic!("triple element must be a Float, got {other:?}"),
+                })
+                .collect();
+            [xs[0], xs[1], xs[2]]
+        }
+        other => panic!("expected the Seq{{Float, 3}} decision triple, got {other:?}"),
+    }
+}
+
+/// Decode a `Binary{64}` result (MSB-first) to a u64.
+fn u64_of_bits(v: &Value) -> u64 {
+    match (v.repr(), v.payload()) {
+        (Repr::Binary { width: 64 }, Payload::Bits(bits)) => {
+            bits.iter().fold(0u64, |acc, &b| (acc << 1) | u64::from(b))
+        }
+        other => panic!("expected a Binary{{64}} dimension, got {other:?}"),
+    }
+}
+
+/// Accept path per model (MAP-I/FHRR/BSC — the procedure is model-generic): cleaning an exact
+/// codebook atom recovers its own index with confidence ≈ 1 and a positive margin; the triple is
+/// `Seq{Float, 3}`, `Exact`/no bound (every operand was `Exact`), with composed
+/// `Derived{op: hash("vsa.cleanup"), inputs: the operands}` provenance (G2: inspectable).
+#[test]
+fn vsa_cleanup_returns_the_decision_triple_per_model() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.cleanup").expect("vsa.cleanup registered");
+    for (model, dim, atom, _) in vsa_corpus() {
+        let atoms: Vec<Value> = (0..4)
+            .map(|i| vsa_hv(model, dim, atom(dim, 400 + i)))
+            .collect();
+        let codebook = vsa_seq_of(&atoms[0], &atoms);
+        let query = atoms[2].clone();
+        let y = f("vsa.cleanup", &[&query, &codebook])
+            .unwrap_or_else(|e| panic!("{model}: cleanup failed: {e}"));
+        assert_eq!(
+            y.repr(),
+            &Repr::Seq {
+                elem: Box::new(Repr::Float {
+                    width: FloatWidth::F64
+                }),
+                len: 3,
+            },
+            "{model}: the result is the Seq{{Float, 3}} decision triple"
+        );
+        let [index, confidence, margin] = triple_of(&y);
+        assert_eq!(
+            index, 2.0,
+            "{model}: the exact atom cleans to its own index"
+        );
+        assert!(
+            (confidence - 1.0).abs() < 1e-9,
+            "{model}: an exact-atom query matches with full confidence, got {confidence}"
+        );
+        assert!(margin > 0.0, "{model}: unique arg-max, got margin {margin}");
+        assert_eq!(
+            y.meta().guarantee(),
+            GuaranteeStrength::Exact,
+            "{model}: all-Exact operands ⇒ an Exact decode triple (RFC-0010 §4.4)"
+        );
+        assert!(
+            y.meta().bound().is_none(),
+            "{model}: Exact carries no bound"
+        );
+        match y.meta().provenance() {
+            Provenance::Derived { op, inputs } => {
+                assert_eq!(op, &mycelium_core::operation_hash("vsa.cleanup"));
+                assert_eq!(inputs, &vec![query.content_hash(), codebook.content_hash()]);
+            }
+            other => panic!("{model}: expected Derived provenance, got {other:?}"),
+        }
+    }
+}
+
+/// The FR-S4 headline path + the carry rule: an **FHRR unbind result** (`Empirical`, carrying its
+/// trial-validated probability bound) used as the cleanup query yields the right atom, and the
+/// triple carries the query's **own** (strength, bound) pair through the §4.7 meet — `Empirical`
+/// with the same `Probability`/`EmpiricalFit` bound, never re-derived, never upgraded (VR-5).
+#[test]
+fn vsa_cleanup_carries_the_noisy_query_pair_through() {
+    let reg = PrimRegistry::with_builtins();
+    let bind = reg.get("vsa.bind").expect("registered");
+    let unbind = reg.get("vsa.unbind").expect("registered");
+    let cleanup = reg.get("vsa.cleanup").expect("registered");
+    let dim = 256u32;
+    let a = vsa_hv("FHRR", dim, fhrr_atom(dim, 21));
+    let b = vsa_hv("FHRR", dim, fhrr_atom(dim, 22));
+    let product = bind("vsa.bind", &[&a, &b]).expect("bind accepts");
+    // A single vsa.fhrr.bind product is inside the validated unbind regime.
+    let noisy = unbind("vsa.unbind", &[&product, &b]).expect("in-regime unbind accepts");
+    assert_eq!(noisy.meta().guarantee(), GuaranteeStrength::Empirical);
+    let query_bound = noisy
+        .meta()
+        .bound()
+        .cloned()
+        .expect("Empirical has a bound");
+
+    let atoms: Vec<Value> = [21u64, 31, 41, 51]
+        .into_iter()
+        .map(|s| vsa_hv("FHRR", dim, fhrr_atom(dim, s)))
+        .collect();
+    let codebook = vsa_seq_of(&atoms[0], &atoms);
+    let y = cleanup("vsa.cleanup", &[&noisy, &codebook]).expect("cleanup accepts");
+    let [index, confidence, margin] = triple_of(&y);
+    assert_eq!(index, 0.0, "the noisy unbind cleans up to the true atom");
+    assert!(
+        confidence > 0.9,
+        "FHRR exact-inverse recovery, got {confidence}"
+    );
+    assert!(margin > 0.0);
+    // The carried pair is the query's own (the M-204 Passthrough posture).
+    assert_eq!(
+        y.meta().guarantee(),
+        GuaranteeStrength::Empirical,
+        "the triple's strength is the meet — the noisy query's own Empirical"
+    );
+    assert_eq!(
+        y.meta().bound(),
+        Some(&query_bound),
+        "the disclosed bound is the query's own, carried unchanged (VR-5)"
+    );
+}
+
+/// Exact round trip per self-inverse model ({MAP-I, BSC} — the reconstruct dispatch set): with a
+/// plain `Exact` bind product as the record, `vsa.reconstruct(record, role, fillers, thr)`
+/// recovers the filler's index at confidence ≈ 1 with an `Exact`/no-bound triple.
+#[test]
+fn vsa_reconstruct_exact_roundtrip_per_self_inverse_model() {
+    let reg = PrimRegistry::with_builtins();
+    let bind = reg.get("vsa.bind").expect("registered");
+    let f = reg
+        .get("vsa.reconstruct")
+        .expect("vsa.reconstruct registered");
+    for (model, dim, atom) in [
+        ("MAP-I", 64u32, mapi_atom as AtomFn),
+        ("BSC", 64, bsc_atom as AtomFn),
+    ] {
+        let role = vsa_hv(model, dim, atom(dim, 500));
+        let fillers: Vec<Value> = (0..3)
+            .map(|i| vsa_hv(model, dim, atom(dim, 600 + i)))
+            .collect();
+        let codebook = vsa_seq_of(&fillers[0], &fillers);
+        let record = bind("vsa.bind", &[&role, &fillers[1]]).expect("bind accepts");
+        let y = f("vsa.reconstruct", &[&record, &role, &codebook, &fv(0.5)])
+            .unwrap_or_else(|e| panic!("{model}: reconstruct failed: {e}"));
+        let [index, confidence, margin] = triple_of(&y);
+        assert_eq!(index, 1.0, "{model}: the bound filler is recovered");
+        assert!(
+            (confidence - 1.0).abs() < 1e-9,
+            "{model}: self-inverse unbind recovers exactly, got {confidence}"
+        );
+        assert!(margin > 0.0, "{model}: unique arg-max");
+        assert_eq!(y.meta().guarantee(), GuaranteeStrength::Exact);
+        assert!(y.meta().bound().is_none());
+    }
+}
+
+/// **The below-capacity property (the M-894 DoD row).** Data-driven corpus over m ∈ {2, 3, 5} ×
+/// three seeds: bundle m role⊗filler pairs through the certified path at a dimension that
+/// `vsa.required_dim`'s **own answer** certifies (dim ≥ requiredDim(m, δ) — the query and the
+/// property exercise the same checked instantiation), then reconstruct **every** role — each
+/// recovers its own filler index, clearing the threshold with a positive margin, and the triple
+/// re-discloses the record's **own** `Proven` `CapacityBound` (`Capacity{m, dim}`, `ProvenThm`)
+/// carried unchanged (VR-5: the disclosed bound is the value's own; the δ-tail itself is the
+/// cited theorem's claim — this corpus is Empirical evidence *for* the Proven instantiation,
+/// the M-131 posture).
+#[test]
+fn vsa_reconstruct_recovers_below_the_proven_capacity_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let bind = reg.get("vsa.bind").expect("registered");
+    let bundle = reg.get("vsa.bundle").expect("registered");
+    let required_dim = reg.get("vsa.required_dim").expect("registered");
+    let f = reg.get("vsa.reconstruct").expect("registered");
+    let dim = 2048u32;
+    let delta = 1e-2;
+    for m in [2u64, 3, 5] {
+        // The property's precondition through the surfaced query itself: dim ≥ requiredDim(m, δ).
+        let items_v = shift_bin(m, 8);
+        let req = required_dim("vsa.required_dim", &[&items_v, &fv(delta)])
+            .expect("the capacity query accepts");
+        assert!(
+            u64::from(dim) >= u64_of_bits(&req),
+            "corpus precondition: dim {dim} certifies m={m} (required {})",
+            u64_of_bits(&req)
+        );
+        for base_seed in [0u64, 1, 2] {
+            let s0 = 10_000 * (base_seed + 1);
+            let roles: Vec<Value> = (0..m)
+                .map(|i| vsa_hv("MAP-I", dim, mapi_atom(dim, s0 + i)))
+                .collect();
+            let fillers: Vec<Value> = (0..m)
+                .map(|i| vsa_hv("MAP-I", dim, mapi_atom(dim, s0 + 100 + i)))
+                .collect();
+            let pairs: Vec<Value> = roles
+                .iter()
+                .zip(&fillers)
+                .map(|(r, x)| bind("vsa.bind", &[r, x]).expect("bind accepts"))
+                .collect();
+            let seq = vsa_seq_of(&pairs[0], &pairs);
+            let record = bundle("vsa.bundle", &[&seq, &fv(delta)]).expect("certified bundle");
+            let record_bound = record.meta().bound().cloned().expect("Proven has a bound");
+            let codebook = vsa_seq_of(&fillers[0], &fillers);
+            for (k, role) in roles.iter().enumerate() {
+                let y = f("vsa.reconstruct", &[&record, role, &codebook, &fv(0.2)]).unwrap_or_else(
+                    |e| panic!("m={m} seed={base_seed} role {k}: reconstruct failed: {e}"),
+                );
+                let [index, confidence, margin] = triple_of(&y);
+                assert_eq!(
+                    index, k as f64,
+                    "m={m} seed={base_seed}: role {k} recovers its own filler below capacity"
+                );
+                assert!(confidence >= 0.2 && margin > 0.0);
+                // The carried pair is the record's own: Proven + its OWN CapacityBound.
+                assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
+                assert_eq!(
+                    y.meta().bound(),
+                    Some(&record_bound),
+                    "the disclosed bound is the record's own Capacity bound (VR-5)"
+                );
+                match y.meta().bound() {
+                    Some(Bound {
+                        kind: BoundKind::Capacity { items, dim: d },
+                        basis: BoundBasis::ProvenThm { .. },
+                    }) => {
+                        assert_eq!(*items, m);
+                        assert_eq!(*d, u64::from(dim));
+                    }
+                    other => {
+                        panic!("expected the record's Capacity/ProvenThm bound, got {other:?}")
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Below-threshold retrieval refuses **explicitly, naming confidence vs threshold** — never a
+/// silent low-quality answer (RFC-0003 §6; G2): the m = 3 crosstalk confidence (≈ 1/√3) cannot
+/// clear a 0.9 threshold.
+#[test]
+fn vsa_reconstruct_below_threshold_refuses_explicitly() {
+    let reg = PrimRegistry::with_builtins();
+    let bind = reg.get("vsa.bind").expect("registered");
+    let bundle = reg.get("vsa.bundle").expect("registered");
+    let f = reg.get("vsa.reconstruct").expect("registered");
+    let dim = 2048u32;
+    let roles: Vec<Value> = (0..3)
+        .map(|i| vsa_hv("MAP-I", dim, mapi_atom(dim, 700 + i)))
+        .collect();
+    let fillers: Vec<Value> = (0..3)
+        .map(|i| vsa_hv("MAP-I", dim, mapi_atom(dim, 800 + i)))
+        .collect();
+    let pairs: Vec<Value> = roles
+        .iter()
+        .zip(&fillers)
+        .map(|(r, x)| bind("vsa.bind", &[r, x]).expect("bind accepts"))
+        .collect();
+    let seq = vsa_seq_of(&pairs[0], &pairs);
+    let record = bundle("vsa.bundle", &[&seq, &fv(1e-2)]).expect("certified bundle");
+    let codebook = vsa_seq_of(&fillers[0], &fillers);
+    match f(
+        "vsa.reconstruct",
+        &[&record, &roles[0], &codebook, &fv(0.9)],
+    ) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("below the threshold 0.9"),
+            "the refusal names confidence vs threshold, got: {why}"
+        ),
+        other => panic!("a below-threshold retrieval must refuse, got {other:?}"),
+    }
+}
+
+/// The reconstruct dispatch set is {MAP-I, BSC}: an FHRR record refuses **naming the ground** —
+/// FHRR's `Empirical` unbind profile covers only a single `vsa.fhrr.bind` product, not a
+/// reconstruction record (VR-5: never a stretched profile; surfacing it is append-only).
+#[test]
+fn vsa_reconstruct_dispatch_excludes_fhrr_explicitly() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.reconstruct").expect("registered");
+    let dim = 256u32;
+    let record = vsa_hv("FHRR", dim, fhrr_atom(dim, 1));
+    let role = vsa_hv("FHRR", dim, fhrr_atom(dim, 2));
+    let atoms: Vec<Value> = (0..2)
+        .map(|i| vsa_hv("FHRR", dim, fhrr_atom(dim, 10 + i)))
+        .collect();
+    let codebook = vsa_seq_of(&atoms[0], &atoms);
+    match f("vsa.reconstruct", &[&record, &role, &codebook, &fv(0.3)]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("FHRR") && why.contains("MAP-I, BSC"),
+            "the refusal names FHRR and the dispatch set, got: {why}"
+        ),
+        other => panic!("an FHRR reconstruct must refuse, got {other:?}"),
+    }
+}
+
+/// The cleanup never-silent reject surface: an out-of-set model (naming the M-892 set), an empty
+/// codebook, a query↔codebook model/dim mismatch (naming both reprs), the RFC-0010 §4.4
+/// identifiability tie, a non-`Exact` codebook atom (only the query slot carries a pair through),
+/// a non-Seq codebook, and arity — every one explicit, never a coercion or a coin-flip (G2).
+#[test]
+fn vsa_cleanup_reject_surface_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.cleanup").expect("registered");
+    let dim = 64u32;
+    let a = vsa_hv("MAP-I", dim, mapi_atom(dim, 1));
+    let b = vsa_hv("MAP-I", dim, mapi_atom(dim, 2));
+    let codebook = vsa_seq_of(&a, &[a.clone(), b.clone()]);
+
+    // Out-of-set model: the shared vsa_model_of refusal names the dispatch set.
+    let hrr = vsa_hv("HRR", dim, mapi_atom(dim, 3));
+    match f("vsa.cleanup", &[&hrr, &codebook]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("MAP-I, FHRR, BSC"),
+            "the out-of-set refusal names the dispatch set, got: {why}"
+        ),
+        other => panic!("an out-of-set model must refuse, got {other:?}"),
+    }
+
+    // Empty codebook: nothing to clean up against.
+    let empty = vsa_seq_of(&a, &[]);
+    match f("vsa.cleanup", &[&a, &empty]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("at least one atom"),
+            "the empty-codebook refusal is named, got: {why}"
+        ),
+        other => panic!("an empty codebook must refuse, got {other:?}"),
+    }
+
+    // Query↔codebook model/dim mismatch: named, never coerced (the codebook itself is
+    // homogeneous — core Seq well-formedness — but may disagree with the query).
+    let small = vsa_hv("MAP-I", 16, mapi_atom(16, 4));
+    match f("vsa.cleanup", &[&small, &codebook]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("share the query's model and dim"),
+            "the mismatch refusal is named, got: {why}"
+        ),
+        other => panic!("a query/codebook dim mismatch must refuse, got {other:?}"),
+    }
+
+    // Identifiability tie: two identical atoms — the query matches both, margin 0 — is an
+    // explicit refusal, never a coin-flip between tied atoms (RFC-0010 §4.4).
+    let dup = vsa_seq_of(&a, &[a.clone(), a.clone()]);
+    match f("vsa.cleanup", &[&a, &dup]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("non-identifiable"),
+            "the tie refusal is named, got: {why}"
+        ),
+        other => panic!("a tied retrieval must refuse, got {other:?}"),
+    }
+
+    // A non-Exact codebook atom: only the query slot carries a pair through.
+    let bundle = reg.get("vsa.bundle").expect("registered");
+    let big_dim = 2048u32;
+    let items: Vec<Value> = (0..2)
+        .map(|i| vsa_hv("MAP-I", big_dim, mapi_atom(big_dim, 20 + i)))
+        .collect();
+    let proven =
+        bundle("vsa.bundle", &[&vsa_seq_of(&items[0], &items), &fv(1e-2)]).expect("accepts");
+    let fresh = vsa_hv("MAP-I", big_dim, mapi_atom(big_dim, 30));
+    let tainted = vsa_seq_of(&fresh, &[fresh.clone(), proven]);
+    assert!(
+        matches!(
+            f("vsa.cleanup", &[&fresh, &tainted]),
+            Err(EvalError::ApproxCompositionUnsupported { .. })
+        ),
+        "a non-Exact codebook atom must refuse composition"
+    );
+
+    // Non-Seq codebook / arity: explicit.
+    assert!(
+        matches!(f("vsa.cleanup", &[&a, &b]), Err(EvalError::PrimType { .. })),
+        "a non-Seq codebook must refuse"
+    );
+    assert!(
+        matches!(f("vsa.cleanup", &[&a]), Err(EvalError::PrimType { .. })),
+        "arity 1 must refuse"
+    );
+}
+
+/// The reconstruct-specific reject surface: a role↔record model/dim mismatch (naming both), a
+/// non-`Exact` role (only the record slot carries a pair through), a non-Float / out-of-domain
+/// threshold (naming the RFC-0003 §6 `[0, 1]` manifest domain), and arity.
+#[test]
+fn vsa_reconstruct_reject_surface_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let bind = reg.get("vsa.bind").expect("registered");
+    let f = reg.get("vsa.reconstruct").expect("registered");
+    let dim = 64u32;
+    let role = vsa_hv("MAP-I", dim, mapi_atom(dim, 1));
+    let filler = vsa_hv("MAP-I", dim, mapi_atom(dim, 2));
+    let record = bind("vsa.bind", &[&role, &filler]).expect("accepts");
+    let codebook = vsa_seq_of(&filler, std::slice::from_ref(&filler));
+
+    // Role model/dim mismatch: named.
+    let foreign_role = vsa_hv("BSC", dim, bsc_atom(dim, 1));
+    match f(
+        "vsa.reconstruct",
+        &[&record, &foreign_role, &codebook, &fv(0.3)],
+    ) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("share one model and"),
+            "the role-mismatch refusal is named, got: {why}"
+        ),
+        other => panic!("a role model mismatch must refuse, got {other:?}"),
+    }
+
+    // A non-Exact role: no carry rule outside the record slot.
+    let bundle = reg.get("vsa.bundle").expect("registered");
+    let big_dim = 2048u32;
+    let items: Vec<Value> = (0..2)
+        .map(|i| vsa_hv("MAP-I", big_dim, mapi_atom(big_dim, 40 + i)))
+        .collect();
+    let proven =
+        bundle("vsa.bundle", &[&vsa_seq_of(&items[0], &items), &fv(1e-2)]).expect("accepts");
+    let big_record = bind("vsa.bind", &[&items[0], &items[1]]).expect("accepts");
+    let big_codebook = vsa_seq_of(&items[1], std::slice::from_ref(&items[1]));
+    assert!(
+        matches!(
+            f(
+                "vsa.reconstruct",
+                &[&big_record, &proven, &big_codebook, &fv(0.3)]
+            ),
+            Err(EvalError::ApproxCompositionUnsupported { .. })
+        ),
+        "a non-Exact role must refuse composition (only the record carries a pair through)"
+    );
+
+    // Threshold domain: finite ∈ [0, 1], named (the ReconInfo manifest domain).
+    for bad in [-0.1, 1.5, f64::NAN, f64::INFINITY] {
+        match f("vsa.reconstruct", &[&record, &role, &codebook, &fv(bad)]) {
+            Err(EvalError::PrimType { why, .. }) => assert!(
+                why.contains("[0, 1]"),
+                "threshold={bad}: the domain refusal is named, got: {why}"
+            ),
+            other => panic!("threshold={bad} must refuse, got {other:?}"),
+        }
+    }
+    // A non-Float threshold: explicit.
+    assert!(
+        matches!(
+            f(
+                "vsa.reconstruct",
+                &[&record, &role, &codebook, &byte([false; 8])]
+            ),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Float threshold must refuse"
+    );
+    // Arity.
+    assert!(
+        matches!(
+            f("vsa.reconstruct", &[&record, &role, &codebook]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "arity 3 must refuse"
+    );
+}
+
+/// `vsa.required_dim` matches the kernel's M-001 probe table and carries the kernel's **`Proven`**
+/// `CapacityBound` for exactly the returned (items, dim, δ) instantiation — the query is
+/// inspectable: `ProvenThm` basis with the citation + μ + the checked side-condition, composed
+/// provenance over both operands. Minimality is pinned too: one dimension below the answer, the
+/// kernel issues **no** Proven bound (the side-condition genuinely bites).
+#[test]
+fn vsa_required_dim_matches_the_kernel_probe_table_and_carries_the_proven_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg
+        .get("vsa.required_dim")
+        .expect("vsa.required_dim registered");
+    for (items, delta, expected) in [
+        (3u64, 1e-2, 1141u64),
+        (10, 1e-3, 1843),
+        (50, 1e-3, 2164),
+        (100, 1e-4, 2764),
+    ] {
+        let items_v = shift_bin(items, 8);
+        let delta_v = fv(delta);
+        let y = f("vsa.required_dim", &[&items_v, &delta_v]).expect("the probe row accepts");
+        assert_eq!(
+            u64_of_bits(&y),
+            expected,
+            "items={items} δ={delta}: requiredDim must match the M-001 probe table"
+        );
+        assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
+        match y.meta().bound() {
+            Some(Bound {
+                kind: BoundKind::Capacity { items: m, dim: d },
+                basis: BoundBasis::ProvenThm { citation },
+            }) => {
+                assert_eq!(*m, items, "the bound discloses the queried item count");
+                assert_eq!(*d, expected, "the bound discloses the returned dim");
+                assert!(
+                    citation.contains("Clarkson")
+                        && citation.contains("requiredDim")
+                        && citation.contains("0.1"),
+                    "the ProvenThm basis records the citation, μ, and the checked \
+                     side-condition: {citation}"
+                );
+            }
+            other => panic!("expected the kernel's Capacity/ProvenThm bound, got {other:?}"),
+        }
+        match y.meta().provenance() {
+            Provenance::Derived { op, inputs } => {
+                assert_eq!(op, &mycelium_core::operation_hash("vsa.required_dim"));
+                assert_eq!(
+                    inputs,
+                    &vec![items_v.content_hash(), delta_v.content_hash()]
+                );
+            }
+            other => panic!("expected Derived provenance, got {other:?}"),
+        }
+        // Minimality: one below the answer, the kernel's checked side-condition fails — no
+        // Proven bound exists (the returned dim is the smallest certifiable one).
+        assert!(
+            capacity::proven_capacity_bound(items, expected - 1, delta).is_none(),
+            "items={items} δ={delta}: dim {} must NOT certify",
+            expected - 1
+        );
+        assert!(
+            capacity::proven_capacity_bound(items, expected, delta).is_some(),
+            "items={items} δ={delta}: the returned dim must certify"
+        );
+    }
+    // The degenerate-but-legal corner (items = 1, δ = 1): requiredDim is 0, disclosed as the
+    // smallest well-formed dimension 1 — still sufficient (monotone), documented, never a
+    // malformed zero-dim bound.
+    let y = f("vsa.required_dim", &[&shift_bin(1, 8), &fv(1.0)]).expect("accepts");
+    assert_eq!(u64_of_bits(&y), 1);
+    assert!(matches!(
+        y.meta().bound(),
+        Some(Bound {
+            kind: BoundKind::Capacity { items: 1, dim: 1 },
+            ..
+        })
+    ));
+}
+
+/// The capacity-query reject surface: zero items (never the kernel's `u64::MAX` sentinel), δ
+/// outside `(0, 1]` / non-finite (named), a non-Binary items operand, a non-Float δ, arity, and
+/// the Exact-input guard (a non-Exact operand refuses — the query composes no bounds).
+#[test]
+fn vsa_required_dim_reject_surface_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.required_dim").expect("registered");
+    let delta = fv(1e-2);
+
+    match f("vsa.required_dim", &[&shift_bin(0, 8), &delta]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("zero items"),
+            "the zero-items refusal is named, got: {why}"
+        ),
+        other => panic!("zero items must refuse, got {other:?}"),
+    }
+    for bad_delta in [0.0, -1e-3, 1.5, f64::NAN, f64::INFINITY] {
+        match f("vsa.required_dim", &[&shift_bin(3, 8), &fv(bad_delta)]) {
+            Err(EvalError::PrimType { why, .. }) => assert!(
+                why.contains("(0, 1]"),
+                "δ={bad_delta}: the δ-domain refusal is named, got: {why}"
+            ),
+            other => panic!("δ={bad_delta} must refuse, got {other:?}"),
+        }
+    }
+    assert!(
+        matches!(
+            f("vsa.required_dim", &[&fv(3.0), &delta]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Binary items operand must refuse"
+    );
+    assert!(
+        matches!(
+            f("vsa.required_dim", &[&shift_bin(3, 8), &byte([false; 8])]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Float δ must refuse"
+    );
+    assert!(
+        matches!(
+            f("vsa.required_dim", &[&shift_bin(3, 8)]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "arity 1 must refuse"
+    );
+}
