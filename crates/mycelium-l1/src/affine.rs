@@ -15,15 +15,20 @@
 //! `truncate` call site in `checkty.rs` pairs a matching [`Tracker`] call, so the two stacks always
 //! have equal length and the same index always names the same binding in both.
 //!
-//! A [`Tracker`] is constructed **inert** ([`Tracker::inert`]) for the two `Cx` contexts that are
-//! not a whole-function-body check — `check_lower_rule_rhs_type` (a `lower` rule's RHS has no value
-//! parameters, so no `Substrate` binding is ever in scope there) and `infer_type` (the elaborator's
-//! **post-check** re-inference over an already-validated term, RFC-0011, invoked repeatedly over
-//! partial/overlapping fragments with a scope the elaborator threads itself — running the affine
-//! pass again there could false-positive on a fragment that is not the whole original walk). Only
-//! `check_fn_body`'s `Cx` — the one full walk of one function body from its parameter scope — gets
-//! an **active** tracker ([`Tracker::seeded`]). Every push/pop/truncate/use hook on an inert tracker
-//! is a guaranteed no-op (never a silent behavior change to the two non-affine contexts — G2).
+//! A [`Tracker`] is constructed **inert** ([`Tracker::inert`]) for exactly one `Cx` context that is
+//! not a whole-function-body check — `infer_type` (the elaborator's **post-check** re-inference over
+//! an already-validated term, RFC-0011, invoked repeatedly over partial/overlapping fragments with a
+//! scope the elaborator threads itself — running the affine pass again there could false-positive on
+//! a fragment that is not the whole original walk). `check_fn_body`'s `Cx` — the one full walk of one
+//! function body from its parameter scope — gets an **active** tracker ([`Tracker::seeded`]) seeded
+//! from the function's parameters. `check_lower_rule_rhs_type` (a `lower` rule's RHS check, DN-54
+//! §4.1) **also** gets an active tracker (M-919; DN-71 Model S), seeded from an *empty* initial scope
+//! — a `lower` rule has no value *parameters*, but its RHS can still legally introduce a
+//! `Substrate`-typed local via a call to an already-checked helper `fn` (DN-54 §3.3 permits ordinary
+//! fn calls in a rule's RHS), so an inert tracker there would have silently exempted every such
+//! binding from the same double-consume check an ordinary function body gets — a real coverage gap
+//! closed by M-919. Every push/pop/truncate/use hook on an inert tracker is a guaranteed no-op
+//! (never a silent behavior change to the one remaining non-affine context — G2).
 //!
 //! # Branch merging — conservative union, sound over precise (`Empirical`, not `Proven`)
 //! `if`/`match` alternatives are mutually exclusive at runtime, so each is checked from the **same**

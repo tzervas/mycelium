@@ -374,6 +374,55 @@ fn lower_rule_with_wild_rhs_is_refused() {
     );
 }
 
+// ---- M-919 / DN-71 Model S: affine `Substrate` use-once checking is ACTIVE in a `lower` rule's
+// RHS, not silently exempted (the extension-checker enactment of the ratified consume model) -----
+//
+// A `lower` rule has no value *parameters* (DN-54 §3.2), but its RHS can still legally introduce a
+// `Substrate`-typed local by calling an already-checked helper `fn` (DN-54 §3.3 permits calls to
+// other top-level fns). Before M-919 the RHS type-check ran with an **inert** affine tracker
+// (reasoned only from "no value parameters ⇒ no Substrate in scope", which ignored this helper-fn
+// path), so a double-consume of a derive-site-acquired `Substrate` type-checked silently. These
+// tests pin the fix: the same double-consume diagnostic `check_fn_body` gives now fires inside a
+// `lower` rule's RHS too (reject), and a single, correctly-affine use still checks (accept — no
+// over-rejection regression).
+
+/// A helper `fn` in an `@std-sys` nodule acquires a `Substrate` via `wild`; a `lower` rule's RHS
+/// `let`-binds the result and uses it **twice** — this must be refused exactly as it would be
+/// inside an ordinary function body (DN-71 Model S §4.2), not silently accepted because the RHS
+/// check's tracker used to be permanently inert.
+#[test]
+fn lower_rule_rhs_double_consume_of_a_helper_acquired_substrate_is_refused() {
+    let err = check_err(
+        "nodule d @std-sys;\n\
+         fn make() => Substrate{Sock} !{ffi} = wild { host_call() };\n\
+         fn take(s: Substrate{Sock}) => Bool = True;\n\
+         lower Bad = let s = make() in let _ = take(s) in take(s);",
+    );
+    assert!(
+        err.message.contains("double-consume"),
+        "expected the DN-71 Model S double-consume diagnostic to fire inside a `lower` rule's RHS, \
+         got: {}",
+        err.message
+    );
+    assert!(
+        err.message.contains("DN-71"),
+        "expected the diagnostic to cite DN-71 Model S, got: {}",
+        err.message
+    );
+}
+
+/// The single-use counterpart: the same helper-acquired `Substrate`, used exactly **once** in a
+/// `lower` rule's RHS, checks cleanly — the M-919 fix must not over-reject legitimate single-use
+/// derive-site code (no regression on the accept side).
+#[test]
+fn lower_rule_rhs_single_consume_of_a_helper_acquired_substrate_checks() {
+    let e = env("nodule d @std-sys;\n\
+         fn make() => Substrate{Sock} !{ffi} = wild { host_call() };\n\
+         fn take(s: Substrate{Sock}) => Bool = True;\n\
+         lower Good = let s = make() in take(s);");
+    assert!(e.lower_rules.contains_key("Good"));
+}
+
 // ---- DN-54 §4.2 cross-rule acyclicity (M-812-cont) ------------------------------------------
 
 /// §4.2: a `lower` rule whose RHS references **itself** is refused (the trivial cycle) — the
