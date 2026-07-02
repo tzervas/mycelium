@@ -15,6 +15,7 @@ below) and the pointer-stubs needed to keep inbound references resolving.
 | `docs/reviews/2026-06-14-deep-review/` (7 files) | `docs/archive/reviews/2026-06-14-deep-review/` | 2026-07 | historical-iterative — a point-in-time four-stage deep-review snapshot (correctness/security/quality/roadmap + the M-653 Medium-findings ledger), closed out and referenced by citation only |
 | `docs/verification/` (5 `M-xxx-verified.md` files) | `docs/archive/verification/` | 2026-07 | historical-iterative — per-milestone verification write-ups for landed work, cited by ID from spec/guide docs rather than browsed directly |
 | `docs/adr/ADR-021-1.0.0-Release-Readiness-Gate.md` | `docs/archive/adr/ADR-021-1.0.0-Release-Readiness-Gate.md` | 2026-07 | superseded — ADR-021 is Superseded by ADR-022 (2026-06-23); its kernel Gate A/B criteria live on as ADR-022 track T1, so ADR-021 itself is historical record, not a live decision doc |
+| `.claude/agent-context.md` §"Current state" (the dated `## Current state (2026-06-29)` section + "Recently landed" log, excised in place — not a whole-file move) | `docs/archive/agent-context/log-2026-06.md` | 2026-07 | historical-iterative — a multi-week dated session log that had accreted in the agent orientation file; superseded as the current-state pointer by `docs/CURRENT-STATE.md`. Moved byte-for-byte; `agent-context.md` keeps a 2–3 line pointer in its place |
 
 ## Pointer-stubs
 

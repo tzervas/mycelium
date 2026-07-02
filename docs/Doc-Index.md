@@ -1,5 +1,9 @@
 # Mycelium — Document Index & Status
 
+**Start here for current state:** `docs/CURRENT-STATE.md` — the dense "what's true now" pointer
+index (gate state, corpus digest, implementation state, open maintainer decisions). This document
+remains the authoritative status resolver for every individual RFC/ADR/DN.
+
 **Date:** June 08, 2026 *(table living — last refreshed 2026-06-23)*
 **Purpose:** the authoritative map of the document corpus — every RFC/ADR/DN with its status and the dependency DAG. The design corpus is Accepted/Resolved and **Rust-first implementation is underway** (Phases 0–3, 5, 7 complete; 4, 6, 8 in progress — see `docs/planning/phase-*.md`). Per the honesty rule the per-module stdlib specs were held at *"implemented (Rust-first), pending ratification"* — **not** silently `Accepted` — until the maintainer ratification passes (2026-06-20 DN-07 moved 23 specs to `Accepted`; **2026-06-21** additionally ratified `runtime` (v0 R1 surface) and the newly-written `sys` spec → **25/25** crate specs `Accepted`). Only `self-hosting-readiness` (the M-502 gate doc, not a crate) stays `Draft`. **2026-06-23:** RFC-0009/RFC-0010/RFC-0019/ADR-015/ADR-018/ADR-019 moved Accepted → **Enacted** (maintainer-approved; see §1 rows and individual doc changelogs). This index is append-only (§6).
 
