@@ -1,0 +1,20 @@
+// SYNTAX TEST "source.mycelium" "numeric literals and string escapes"
+
+  0b1010_0101
+//^^^^^^^^^^^ constant.numeric.binary.mycelium
+
+  0t+0-
+//^^^^^ constant.numeric.ternary.mycelium
+
+  0x00ff
+//^^^^^^ constant.numeric.bytes.mycelium
+
+  1.5e-3
+//^^^^^^ constant.numeric.float.mycelium
+
+  let s = "a\nb\qc"
+//        ^ string.quoted.double.mycelium
+//          ^^ constant.character.escape.mycelium
+//             ^^ invalid.illegal.escape.mycelium
+//                ^ string.quoted.double.mycelium
+
