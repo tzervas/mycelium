@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-69 |
-| **Status** | **Draft** (2026-07-02 — advisory; **maintainer ratifies**). A **review instance of the DN-39 four-clause default-DENY kernel-promotion bar**, applied to the scalar-float value-form kernel entry that ADR-040 (Proposed, same date) designs. **Recommendation: PROMOTE** — the candidate clears all four conjunctive clauses, the first candidate to do so (DN-39's sole prior candidate was a decisive KEEP-OUT). Default-DENY is overcome **on merit, argued clause-by-clause with per-clause tags** — not waved through because ADR-038 wants the feature. This note enacts nothing and moves no status: kernel entry happens only when the maintainer ratifies **both** this dossier's verdict **and** ADR-040 (the ADR-038 §2.6 double gate), and even then only via M-896…M-900. |
+| **Status** | **Accepted** (2026-07-02 — maintainer-ratified: the **PROMOTE** recommendation below is confirmed, alongside ADR-040's acceptance the same date. Drafted 2026-07-02 as **Draft/advisory**; that history stands unchanged — this line records the forward transition, append-only, house rule #3). A **review instance of the DN-39 four-clause default-DENY kernel-promotion bar**, applied to the scalar-float value-form kernel entry that ADR-040 (now **Accepted**, same date) designs. **Recommendation: PROMOTE** — the candidate clears all four conjunctive clauses, the first candidate to do so (DN-39's sole prior candidate was a decisive KEEP-OUT). Default-DENY is overcome **on merit, argued clause-by-clause with per-clause tags** — not waved through because ADR-038 wants the feature. This note enacts no code by itself: kernel entry happens via **both** this dossier's ratified verdict **and** ADR-040's acceptance (the ADR-038 §2.6 double gate — now satisfied), and even then only via M-896…M-900. |
 | **Feeds** | The **KC-3 small-auditable-kernel** invariant (house rule #5) and the trusted-core boundary **DN-39 §7** records; **ADR-040** (the design under review); **ADR-038 §2.6** (the double gate this dossier is half of); M-896…M-900 (gated implementation). |
 | **Date** | July 2, 2026 |
 | **Decides** | *Nothing normatively.* Records (1) the recording-format choice for DN-39 review instances (a new dated note — FLAGged, §1); (2) the precise candidate surface (§2); (3) the clause-by-clause adjudication under the DN-39 §2 bar with honest tags and evidence pointers (§3); (4) the **PROMOTE** recommendation (§4); (5) why this verdict is consistent with DN-39's "encodings are the last thing to axiomatize" principle (§5); (6) the open-question ledger (§6) and the guarantee posture + DoD (§7). |
@@ -217,6 +217,14 @@ growth posture); (c) ratifies ADR-040 separately — this dossier passing does *
 ADR, and vice versa (the §2.6 gate is a conjunction). CHANGELOG / Doc-Index / issues.yaml /
 docs/api-index are owned by the integrating parent, per the concurrent-PR pattern.
 
+**Ratification note (append-only, 2026-07-02).** The maintainer ratified the **PROMOTE**
+recommendation (a) alongside ADR-040's acceptance (c) the same date — the ADR-038 §2.6 double gate
+is satisfied and M-896…M-900 unblock (status:blocked → status:todo, tools/github/issues.yaml).
+DoD item (b) — an explicit maintainer ruling on OQ-1 (instance venue) and OQ-3 (width growth
+posture) — is **not separately recorded** in this ratification; both OQs stay open per §6 until a
+ruling is recorded (not guessed — G2). This DN is now **Accepted** on the strength of (a)+(c); it
+moves to **Resolved** per its own DoD once M-896…M-900 land.
+
 ---
 
 ## Meta — changelog
@@ -232,3 +240,7 @@ docs/api-index are owned by the integrating parent, per the concurrent-PR patter
   (§6: instance venue FLAG; libm not covered; width-growth posture; the FLAG-5 uniform-NaN E20-1
   settlement; the self-review limitation). Enacts nothing; moves no status. Shared indices owned by
   the integrating parent. (Append-only; VR-5; G2.)
+- **2026-07-02 — Accepted (maintainer-ratified).** The PROMOTE recommendation (§4) is ratified,
+  alongside ADR-040's acceptance the same date — the ADR-038 §2.6 double gate is satisfied.
+  DoD item (b) (OQ-1/OQ-3 dispositions) not separately recorded — both stay open. Unblocks
+  M-896…M-900 (tools/github/issues.yaml status:blocked → status:todo). Append-only; VR-5; G2.

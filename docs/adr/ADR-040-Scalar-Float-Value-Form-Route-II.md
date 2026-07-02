@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **ADR** | 040 |
-| **Status** | **Proposed** (2026-07-02 — drafted per ADR-038 §2.6 / task M-895; **maintainer ratifies** — this ADR is not self-ratified). The *route* is already decided: ADR-038 §2.6 (Accepted 2026-07-01) fixed **route (ii) — a first-class scalar-float `Repr`** — and this ADR does **not** re-open it; it fixes the float *design* inside that route (width set, NaN/rounding semantics, never-silent boundaries, content-address coordination). Kernel entry is separately gated by the DN-39 default-DENY promotion bar; the four-clause dossier is **DN-69** (companion note, same date). |
+| **Status** | **Accepted** (2026-07-02 — maintainer-ratified; route-ii + F64-only + in-band IEEE overflow (FLAG-2) + the §7 FLAG recommendations approved. Drafted 2026-07-02 per ADR-038 §2.6 / task M-895 as **Proposed**; that history stands unchanged below — this line records the forward transition, append-only, house rule #3). The *route* is already decided: ADR-038 §2.6 (Accepted 2026-07-01) fixed **route (ii) — a first-class scalar-float `Repr`** — and this ADR does **not** re-open it; it fixes the float *design* inside that route (width set, NaN/rounding semantics, never-silent boundaries, content-address coordination). Kernel entry is separately gated by the DN-39 default-DENY promotion bar; the four-clause dossier is **DN-69** (companion note, same date; PROMOTE ratified alongside this ADR). |
 | **Decides** | *(proposed)* A first-class scalar-float value form: `Repr::Float { width }` with the width set **binary64 (F64) only at introduction**, carried by an append-only, frozen-tag width registry (the `ScalarKind::tag()` discipline) so later widths extend without shifting any existing address. Arithmetic is IEEE-754 binary64, **round-to-nearest-even only**; rounding mode is a property of **operations**, never hidden state (the ADR-028 signedness-as-operations parallel). **NaN is canonicalized to the single positive quiet-NaN bit pattern at value construction** (NaN payload bits are not identity-bearing and not observable); `+0.0`/`-0.0` stay bit-distinct. Arithmetic specials (±inf, NaN) are **in-band, inspectable, propagating values** — the recommended overflow policy (§2.4, FLAG-2) — while every **conversion boundary** (float↔integer, parsing, any future width change) is never-silent: out-of-range/NaN → explicit `Option`/error. The content-address impact is **documented, not spent** (§3): identity commitments are settled here, and the identity-set change rides the **single E20-1 rehash**, coordinated with the deferred ADR-030/031 one-way doors and **deferred to the first value-persistence feature** (RFC-0033 §7 / ADR-038 §2.6). |
 | **Grounds** | **ADR-038 §2.6** (route (ii) decided; the double gate — float ADR + DN-39 review); **RFC-0033 §7** (single-rehash dogfood gate), **§4.1.4** (the one-way-door pattern this ADR mirrors), **§4.3.2** (floats-as-Dense-dtypes = route (i), rejected by ADR-038), and its 2026-07-01 changelog pull-forward note; **ADR-028** (semantics carried by operations, not the `Repr` — the rounding-mode parallel); **ADR-030/ADR-031** (the deferred content-address one-way doors this ADR coordinates with; note ADR-031's M-775…M-780 → **E20-1** milestone erratum); **DN-39** (the default-DENY promotion bar) + **DN-69** (this candidate's four-clause dossier); `docs/spec/stdlib/self-hosting-readiness.md` §0 blocker-1 (the motivating gap, `Exact`); `docs/spec/stdlib/cmp.md` Q1 (float partial order / named total order); IEEE 754-2019 (binary64, RNE, totalOrder); `crates/mycelium-core/src/repr.rs` + `src/content.rs` (the current `Repr`/`Canon` facts, source-read). |
 | **Date** | 2026-07-02 |
@@ -15,6 +15,14 @@
 > design document, so the strongest tags in play are `Exact` for gap statements verified against
 > source/grammar, `Empirical` for source-read facts, and `Declared` for asserted platform properties).
 > Open decision points are FLAGged in §7, not silently resolved.
+>
+> **Ratification note (append-only, 2026-07-02).** The maintainer has reviewed and **accepted**
+> this ADR: route-ii, the F64-only width set (FLAG-1), the NaN/zero identity rules (§2.3,
+> FLAG-4/FLAG-5), the in-band IEEE overflow policy (§2.4, FLAG-2), the never-silent conversion
+> boundaries (§2.4), the minimal kernel op surface (§2.5), and the §3 rehash-coordination posture
+> are all approved as drafted, together with the §7 FLAG recommendations. DN-69's companion PROMOTE
+> verdict is ratified alongside this ADR (the ADR-038 §2.6 double gate is satisfied). This note
+> records the transition forward (Proposed → Accepted); the drafting history above is unchanged.
 
 ## 1. Context — the gap, and the decided route
 
@@ -253,6 +261,10 @@ the M-896…M-900 DoDs (including the no-rehash regression evidence) — steppin
 never skipping (house rule #3). MIT-licensed like every first-party artifact (house rule #6); the
 IEEE-754 citations are references, not incorporated text.
 
+**Gate cleared (2026-07-02).** The maintainer ratified (a)–(f) above and DN-69's PROMOTE verdict.
+This ADR is now **Accepted**; the M-896…M-900 gate is open. It remains **Enacted** only once
+M-896…M-900 land per their DoDs (unchanged — this note does not advance the ADR past Accepted).
+
 ---
 
 ### Changelog
@@ -260,3 +272,4 @@ IEEE-754 citations are references, not incorporated text.
 | Date | Status | Note |
 |---|---|---|
 | 2026-07-02 | **Proposed** | Initial draft (task M-895, kickoff `enb` Gap A). Route (ii) per ADR-038 §2.6 (not re-opened). Proposes: `Repr::Float{width}`, F64-only frozen-tag width registry; RNE-only, rounding-as-operations (ADR-028 parallel); canonical-NaN identity, bit-distinct signed zeros; in-band IEEE specials + never-silent conversion boundaries; minimal kernel op surface (no libm); content-address impact documented-not-spent, coordinated with ADR-030/031 in the single E20-1 rehash deferred to first value-persistence (RFC-0033 §7). Seven maintainer FLAGs (§7). Companion DN-39 dossier: DN-69. Maintainer ratifies; not self-ratified. |
+| 2026-07-02 | **Accepted** | Maintainer-ratified. Route-ii + F64-only width set (FLAG-1) + the NaN/zero identity rules (FLAG-4/5) + in-band IEEE overflow policy (FLAG-2) + the never-silent conversion boundaries + the minimal kernel op surface + the §3 rehash-coordination posture, together with all §7 FLAG recommendations, approved as drafted. DN-69's companion PROMOTE verdict ratified alongside (ADR-038 §2.6 double gate satisfied). Opens the M-896…M-900 gate (status:blocked → status:todo, tools/github/issues.yaml). Enacted only once M-896…M-900 land per their DoDs. |

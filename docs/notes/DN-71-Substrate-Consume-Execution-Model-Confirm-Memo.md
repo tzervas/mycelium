@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-71 |
-| **Status** | **Draft** (2026-07-02, authored by the M-901 leaf — a **confirm-memo for maintainer sign-off**; nothing here is self-ratified, and the Gap-E implementation lane M-902…M-904 stays `status:blocked` until the sign-off is recorded) |
+| **Status** | **Accepted** (2026-07-02 — **maintainer sign-off recorded**: Model S (§4/§6) is approved. Authored 2026-07-02 by the M-901 leaf as **Draft**, a confirm-memo pending sign-off; that history stands unchanged — this line records the forward transition, append-only, house rule #3. The Gap-E implementation lane M-902…M-904 unblocks) |
 | **Decides** | Nothing normatively — it **proposes** the confirmed execution model for the affine `Substrate`/`consume` construct (value form, use-once enforcement, lowering, drop protocol), enumerates alternatives with an honest tradeoff table, records a recommendation, and lists every open decision as a FLAG for the maintainer. The maintainer's sign-off (accept / revise / flag-blocking, §9) is what confirms it. |
 | **Feeds** | M-902 (`Substrate` v0 value form) · M-903 (affine tracker) · M-904 (lift the staged `Residual`) — the `enb` Gap-E lane; the future `grm` M-918 DN-54 dossier (§7 cross-check); RFC-0027 OQ-5 (drop-without-consume protocol, FLAG-4) |
 | **Depends on** | DN-54 §10 (M-824 derive-site design-pass — the pattern + its Model-A commitments, §3); DN-03 §1 + DN-02 §2 (the `consume`/`substrate` lexicon rulings); RFC-0006 LR-8/LR-9 (affine external-resource kind; leaks structurally excluded); DN-33 §8.1 Q4 (maintainer-ratified: `substrate`/`consume` uniqueness subsumes into the MEM-4 static-uniqueness mechanism); DN-59 + RFC-0027 OQ-5 (reclamation; drop-without-consume deferred); `docs/spec/stdlib/io.md` + `fs.md` (the consuming specs); `docs/spec/stdlib/self-hosting-readiness.md` §0 item 5 (the blocker this lane closes); M-664 (the landed `consume` surface) |
@@ -16,6 +16,15 @@
 > ratification). Nothing is tagged `Proven` — no side-condition-checked theorem exists for any claim
 > here. Where the corpus is ambiguous or two documents pull in different directions, the ambiguity is
 > FLAGged (§8), never resolved by silent choice (G2 — flag, don't guess).
+>
+> **Maintainer sign-off (append-only, 2026-07-02).** The maintainer **accepts** Model S (§4,
+> recommended §6): the interpreter-level opaque affine `Substrate` handle (no new L0 node, no
+> `Repr` growth), static use-once enforcement in the L1 checker with a never-silent runtime
+> consumed-flag backstop, and `consume` lowering as the observational-identity move through
+> existing paths. The gate that held M-902…M-904 at `status:blocked` (§1) is now cleared; all
+> three move to `status:todo` (tools/github/issues.yaml). The individual FLAG-1…FLAG-9
+> dispositions (§8) are **not itemized** in this sign-off and remain for the integrator/maintainer
+> to record explicitly before any FLAG-dependent implementation choice is made (G2 — not guessed).
 
 ---
 
@@ -293,6 +302,10 @@ close-out (integrator-owned). Nothing in this memo advances any ADR/RFC/DN statu
 `Accepted`, RFC-0027 OQ-5 remains open, and this note itself stays `Draft` until the maintainer's
 signal (house rule #3).
 
+**Sign-off recorded (2026-07-02): Accept.** The maintainer accepts Model S per the note above.
+This note moves `Draft` → `Accepted` (house rule #3, stepping forward, not skipped); it moves to
+`Resolved` once M-902…M-904 land per their DoDs and the M-901 issue closes out.
+
 ---
 
 ## Meta — changelog
@@ -306,3 +319,7 @@ signal (house rule #3).
   commitments and the reconciliation FLAG; nine FLAGs for maintainer sign-off. Confirms nothing —
   maintainer sign-off pending; M-902…M-904 stay blocked. CHANGELOG / Doc-Index / issues.yaml /
   api-index untouched — FLAGged to the integrating parent. (Append-only; VR-5; G2.)
+- **2026-07-02 — Accepted (maintainer sign-off recorded: Accept).** Model S (§4/§6) approved as
+  drafted. Unblocks M-902…M-904 (tools/github/issues.yaml status:blocked → status:todo).
+  FLAG-1…FLAG-9 dispositions not itemized in this sign-off — remain open, not guessed (G2).
+  Append-only; VR-5; G2.
