@@ -187,13 +187,17 @@ impl PrimTable {
     /// `enb` Gap C; the first *tensor-valued* prims, and the first non-`Exact` intrinsics — see
     /// the crate-level Scope note), plus the **dense measurement pair**
     /// (`dense.dot`/`dense.similarity`, M-891 — two `Dense{d, s}` operands reduce to a
-    /// `Dense{1, F64}` measurement carrying the kernel's proven binary64 accumulation bound).
+    /// `Dense{1, F64}` measurement carrying the kernel's proven binary64 accumulation bound),
+    /// and the **scalar-float arithmetic group**
+    /// (`flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg`, ADR-040 §2.5, M-898 — `enb` Gap A;
+    /// IEEE-754 binary64 under RNE over `Repr::Float`, in-band specials per the ratified FLAG-2).
     /// Every entry is `intrinsic = Exact` **except** `dense.add`/`dense.sub`/`dense.scale`/
-    /// `dense.dot`/`dense.similarity` (`Proven`, carried from the kernel's per-op tag);
-    /// all are width-`Uniform` **except** `cmp.eq`/`cmp.lt` and `dense.dot`/`dense.similarity`,
-    /// which are width-`Collapse` (operand width → `Binary{1}` / operand dim → a dim-1
-    /// measurement). This is the single source of truth the `mycelium-interp` intrinsic
-    /// and the `mycelium-l1` surface table are checked against.
+    /// `dense.dot`/`dense.similarity` (`Proven`, carried from the kernel's per-op tag) and the
+    /// `flt.*` group (`Empirical` — the ratified ADR-040 §2.6 host-conformance posture; see the
+    /// entry comment); all are width-`Uniform` **except** `cmp.eq`/`cmp.lt` and
+    /// `dense.dot`/`dense.similarity`, which are width-`Collapse` (operand width → `Binary{1}` /
+    /// operand dim → a dim-1 measurement). This is the single source of truth the
+    /// `mycelium-interp` intrinsic and the `mycelium-l1` surface table are checked against.
     #[must_use]
     pub fn builtins() -> Self {
         use PrimParadigm::{Any, Binary, Ternary};
@@ -369,6 +373,51 @@ impl PrimTable {
         };
         t.insert("dense.dot", dense_measure());
         t.insert("dense.similarity", dense_measure());
+        // ADR-040 §2.5 (M-898, `enb` Gap A): the **scalar-float arithmetic group** —
+        // `flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg` over `Repr::Float{F64}` (IEEE-754
+        // binary64, round-to-nearest-even only; rounding is a property of the *operation*, never
+        // hidden state — ADR-040 §2.2, the ADR-028 parallel). Arithmetic specials (±inf, NaN) are
+        // **in-band, inspectable, propagating values** (ADR-040 §2.4, ratified FLAG-2): overflow
+        // → ±inf, div-by-zero → ±inf, 0/0 → NaN — never a trap and never a silent wrap onto an
+        // ordinary in-range value; the distinguished in-band sentinel IS the never-silent signal
+        // (classification rides `is_nan`/`is_finite`, M-899's op set). Every NaN result carries
+        // the canonical bits (`Value::new` construction invariant, ADR-040 §2.3).
+        //
+        // **Intrinsic — `Empirical`, per the ratified ADR-040 §2.6 (VR-5, never upgraded).** The
+        // op's *definition* is "the correctly-rounded IEEE-754 binary64 result under RNE" (`Exact`
+        // as a definition — it is the spec); the *implementation claim* that the host's f64
+        // arithmetic delivers exactly that bit pattern is **`Empirical`** at introduction (pinned
+        // by the hand-derived IEEE reference-case corpus in `mycelium-interp`), with the
+        // underlying "Rust f64 is IEEE-754 binary64" platform statement held at `Declared` (the
+        // Rust reference; not independently verified). No `Proven` is claimed anywhere: a Proven
+        // accuracy-vs-real-arithmetic claim would need a theorem with *checked* side-conditions
+        // (none is checked here), and — unlike `bin.*`, whose two's-complement kernel is
+        // in-project, decidable software — these ops delegate to host float hardware, so `Exact`
+        // would overstate the conformance evidence (the ADR's own tag table). libm is NOT
+        // involved (ADR-040 §2.5 keeps transcendentals out of the kernel), so this is not the
+        // Empirical-libm case — the Empirical here is the host-conformance claim, disclosed as a
+        // zero-deviation-vs-spec bound on the runtime result (see `mycelium-interp`'s wrappers).
+        //
+        // **Paradigm/width-model note (FLAG — the same escape hatch as the seq/bytes/dense prims
+        // above):** `PrimParadigm` has no first-class `Float` paradigm, so operands/result are
+        // typed `Any`/`Uniform` here as the nearest tags. The real never-silent typing — every
+        // operand a `Float` (binary64) scalar — is enforced by the interpreter prims
+        // (`prims.rs::as_float`) and the L1 checker (`checkty.rs::try_check_float_prim`). A
+        // first-class `Float` paradigm is a deliberate, append-only extension left for the
+        // surface-typing work (it ripples into content-addressing), exactly as for `Dense`.
+        let flt = |operands: Vec<PrimParadigm>| PrimDecl {
+            sig: PrimSig {
+                operands,
+                result: Any,
+                width: WidthRel::Uniform,
+            },
+            intrinsic: GuaranteeStrength::Empirical,
+        };
+        t.insert("flt.add", flt(vec![Any, Any]));
+        t.insert("flt.sub", flt(vec![Any, Any]));
+        t.insert("flt.mul", flt(vec![Any, Any]));
+        t.insert("flt.div", flt(vec![Any, Any]));
+        t.insert("flt.neg", flt(vec![Any]));
         t
     }
 
