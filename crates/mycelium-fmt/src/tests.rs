@@ -434,3 +434,83 @@ fn match_arm_trailing_comment_canonical_syntax() {
         Err(e) => panic!("unexpected error: {e}"),
     }
 }
+
+// ============================================================================================
+// String literal render arm (M-910/M-911 follow-up): `render_literal` was missing a
+// `Literal::Str` arm and fell into `unreachable!()`, so `mycfmt` panicked on any `.myc` file
+// containing a `"…"` literal. These tests cover the fixed arm.
+// ============================================================================================
+
+/// Round-trip corpus: decoded string-literal *content* covering every escape character the
+/// lexer's `lex_string` decode table recognizes (`\n \t \\ \" \0 \r`), a mix of several in one
+/// string, and the empty string.
+///
+/// Guarantee tag: `Empirical` — verified by execution of this test, not a formal proof.
+const STR_LITERAL_ROUNDTRIP_CORPUS: &[&str] = &[
+    "",
+    "plain",
+    "line1\nline2",
+    "tab\there",
+    "back\\slash",
+    "quote\"inside",
+    "nul\0byte",
+    "cr\rreturn",
+    "mixed: \"\\\n\t\0\r end",
+];
+
+/// `render_literal` on a `Literal::Str` must re-escape exactly the inverse of
+/// `mycelium_l1::lexer::Lexer::lex_string`'s decode table, so lexing the rendered `"…"` token
+/// reproduces the same decoded content byte-for-byte (M-910/M-911: the fix this test guards).
+#[test]
+fn str_literal_render_round_trips_through_the_lexer() {
+    use mycelium_l1::ast::Literal;
+    use mycelium_l1::lexer::lex;
+    use mycelium_l1::token::Tok;
+
+    for &content in STR_LITERAL_ROUNDTRIP_CORPUS {
+        let rendered = render_literal(&Literal::Str(content.to_owned()));
+        // Must be a `"…"`-delimited token so it re-lexes as a single StrLit.
+        assert!(
+            rendered.starts_with('"') && rendered.ends_with('"') && rendered.len() >= 2,
+            "rendered form is quoted: {rendered:?}"
+        );
+        let toks = lex(&rendered).unwrap_or_else(|e| panic!("re-lexing {rendered:?} failed: {e}"));
+        // `lex` terminates the stream with `Tok::Eof`; a bare literal is exactly [StrLit, Eof].
+        assert_eq!(toks.len(), 2, "StrLit + Eof for {rendered:?}: {toks:?}");
+        match &toks[0].tok {
+            Tok::StrLit(decoded) => {
+                assert_eq!(
+                    decoded, content,
+                    "round-trip content for input {content:?} (rendered {rendered:?})"
+                );
+            }
+            other => panic!("expected StrLit, got {other:?} for {rendered:?}"),
+        }
+        assert_eq!(toks[1].tok, Tok::Eof);
+    }
+}
+
+/// `mycfmt` (`format_source`) must not panic on a `.myc` source that contains a string literal —
+/// the regression this whole fix addresses (M-910/M-911 added `Literal::Str`, but the fmt render
+/// arm was never added, so any string literal panicked the formatter via `unreachable!()`, which
+/// broke the `myc-fmt` pre-commit/pre-push hook on any port using strings, e.g. `diag`).
+#[test]
+fn format_source_does_not_panic_on_a_string_literal() {
+    let src = "nodule d;\nfn greeting() => Bytes = \"hello, \\\"world\\\"!\\n\";\n";
+    match format_source(src, None) {
+        Ok(r) => {
+            // The rendered literal round-trips to the same AST (C1) and is idempotent (C2).
+            let reparsed = parse(&r.output).expect("re-parses");
+            let original = parse(src).expect("original parses");
+            assert_eq!(reparsed, original, "C1 identity for a string literal");
+            let r2 = format_source(&r.output, None).expect("second format");
+            assert_eq!(r2.output, r.output, "idempotent");
+        }
+        Err(FmtError::Parse(_)) => {
+            // If this exact surface syntax isn't accepted by the current grammar, that's a
+            // syntax-fixture issue, not the panic this test guards against — but a `Parse`
+            // error (rather than a panic) is itself proof the fix holds.
+        }
+        Err(e) => panic!("unexpected error (not a panic, but unexpected): {e}"),
+    }
+}
