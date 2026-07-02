@@ -171,7 +171,10 @@ fn bool_not(a: Bool) => Bool =
 // nonempty: True iff `b` has at least one byte. Delegates to the Exact `bytes_len` prim; the
 // zero-comparison is the Exact `eq` prim at Binary{32} (the width `bytes_len` returns). Total (Exact).
 fn nonempty(b: Bytes) => Bool =
-  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True };
+  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0000) {
+    0b1 => False,
+    _ => True
+  };
 
 // ── The 7 rows (hand-transcribed verbatim from lib.rs::GUARANTEE_MATRIX, RFC-0016 §4.5) ──────────
 // Tags at the SAME strength as the Rust rows (VR-5): the bounded ops' tag is the DEFAULT strength;
@@ -203,7 +206,19 @@ type Vec[A] = Nil | Cons(A, Vec[A]);
 
 // matrix: the full 7-row table, in the same order as lib.rs::GUARANTEE_MATRIX.
 fn matrix() => Vec[MatrixRow] =
-  Cons(row_bin_to_tern(), Cons(row_tern_to_bin(), Cons(row_f32_to_bf16(), Cons(row_dense_to_vsa(), Cons(row_vsa_to_dense(), Cons(row_check_swap(), Cons(row_explain(), Nil)))))));
+  Cons(
+    row_bin_to_tern(),
+    Cons(
+      row_tern_to_bin(),
+      Cons(
+        row_f32_to_bf16(),
+        Cons(
+          row_dense_to_vsa(),
+          Cons(row_vsa_to_dense(), Cons(row_check_swap(), Cons(row_explain(), Nil)))
+        )
+      )
+    )
+  );
 
 // ── Structural checks over the matrix (the .myc port of lib.rs::assert_matrix_invariants) ────────
 // The Rust source PANICS on violation (a test-time assert); this port returns an explicit Bool —
@@ -216,29 +231,65 @@ fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
 
 // all_ops_nonempty: no matrix row has an empty op name (lib.rs: "matrix row has empty op name").
 fn all_ops_nonempty(xs: Vec[MatrixRow]) => Bool =
-  match xs { Nil => True, Cons(r, rest) => bool_and(nonempty(row_op(r)), all_ops_nonempty(rest)) };
+  match xs {
+    Nil => True,
+    Cons(r, rest) => bool_and(nonempty(row_op(r)), all_ops_nonempty(rest))
+  };
 
 // bijective_implies_exact: a Bijective cert implies an Exact guarantee — the only genuinely
 // bijective/exact swap class (RFC-0002 §4; lib.rs: "Bijective cert implies Exact guarantee").
 fn bijective_implies_exact(xs: Vec[MatrixRow]) => Bool =
-  match xs { Nil => True, Cons(r, rest) => bool_and(match is_bijective(row_cert_kind(r)) { True => is_exact(row_guarantee(r)), False => True }, bijective_implies_exact(rest)) };
+  match xs {
+    Nil => True,
+    Cons(r, rest) =>
+      bool_and(
+        match is_bijective(row_cert_kind(r)) {
+          True => is_exact(row_guarantee(r)),
+          False => True
+        },
+        bijective_implies_exact(rest)
+      )
+  };
 
 // bounded_never_exact: a Bounded cert is never Exact — Exact means no bound (M-I1; RFC-0001 §4.3;
 // lib.rs: "Bounded cert cannot be Exact").
 fn bounded_never_exact(xs: Vec[MatrixRow]) => Bool =
-  match xs { Nil => True, Cons(r, rest) => bool_and(match is_bounded(row_cert_kind(r)) { True => bool_not(is_exact(row_guarantee(r))), False => True }, bounded_never_exact(rest)) };
+  match xs {
+    Nil => True,
+    Cons(r, rest) =>
+      bool_and(
+        match is_bounded(row_cert_kind(r)) {
+          True => bool_not(is_exact(row_guarantee(r))),
+          False => True
+        },
+        bounded_never_exact(rest)
+      )
+  };
 
 // nonfallible_no_cert_kind: a non-fallible op emits no swap cert kind (lib.rs: "non-fallible op
 // should not emit a swap cert_kind" — `explain` is cert_carrying but PROJECTS rather than emits,
 // so its kind is KNone).
 fn nonfallible_no_cert_kind(xs: Vec[MatrixRow]) => Bool =
-  match xs { Nil => True, Cons(r, rest) => bool_and(match row_fallible(r) { True => True, False => is_kind_none(row_cert_kind(r)) }, nonfallible_no_cert_kind(rest)) };
+  match xs {
+    Nil => True,
+    Cons(r, rest) =>
+      bool_and(
+        match row_fallible(r) { True => True, False => is_kind_none(row_cert_kind(r)) },
+        nonfallible_no_cert_kind(rest)
+      )
+  };
 
 // matrix_invariants_hold: the conjunction — the whole assert_matrix_invariants contract as one
 // checkable value. (The Rust "cert_kind must be 'Bijective' or 'Bounded'" arm is discharged by the
 // CertKind type — unrepresentable, see the CertKind doc.)
 fn matrix_invariants_hold() => Bool =
-  bool_and(all_ops_nonempty(matrix()), bool_and(bijective_implies_exact(matrix()), bool_and(bounded_never_exact(matrix()), nonfallible_no_cert_kind(matrix()))));
+  bool_and(
+    all_ops_nonempty(matrix()),
+    bool_and(
+      bijective_implies_exact(matrix()),
+      bool_and(bounded_never_exact(matrix()), nonfallible_no_cert_kind(matrix()))
+    )
+  );
 
 // ── The bijective swap class, through the language's own construct (S1/WF2) ──────────────────────
 // The `.myc` form of lib.rs::bin_to_tern/tern_to_bin at the RFC-0002 §5 legal pairs (8,6) and
