@@ -53,8 +53,8 @@ One isolated worktree per leaf (mitigation #11); commit/push split (#12); scoped
 
 ## PM decomposition — bite-sized tasks
 
-Proposed M-ids **M-915…M-924** (next-free after `enb`'s block; re-verify at minting — mitigation
-#1). None minted by this doc. Verification-first discipline throughout: the 2026-06-29 serial
+Proposed M-ids **M-915…M-924** (next-free after `enb`'s block; re-verify at minting —
+mitigation #1). None minted by this doc. Verification-first discipline throughout: the 2026-06-29 serial
 closeout landed adjacent work (M-822/M-826 tuple + partial application; M-824 DN-54 §10
 design-pass; `lwd`'s M-812-cont checks) — every task below **verifies the landed state before
 building**, so nothing is re-landed and no gap is assumed closed.

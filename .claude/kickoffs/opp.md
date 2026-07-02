@@ -60,8 +60,8 @@ they share `issues.yaml` rows (mitigation #6).
 
 ## PM decomposition — bite-sized tasks
 
-Proposed M-ids **M-925…M-935** (next-free after `grm`'s block; re-verify at minting — mitigation
-#1). None minted by this doc. Every port task's DoD includes the same five rows (stated once here,
+Proposed M-ids **M-925…M-935** (next-free after `grm`'s block; re-verify at minting —
+mitigation #1). None minted by this doc. Every port task's DoD includes the same five rows (stated once here,
 cited as "**D5 rows**" below): (1) surface-check recorded before porting (`Empirical` — or the task
 STOPS and FLAGs); (2) pre-port polish committed separately Rust-side, behavior-neutral (tests
 prove it); (3) `.myc` nodule + `include_str!` harness, three-way where forms close; (4)
