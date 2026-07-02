@@ -41,6 +41,20 @@ multiple-versions = "warn"
 wildcards = "warn"
 allow-wildcard-paths = true
 
+# Structural belt-and-suspenders for the acyclic-deps invariant (DN-68; kickoff `acy`, M-880). The
+# AUTHORITATIVE structural gate is `cargo xtask deps` (scripts/checks/deps-acyclic.sh): it enforces
+# acyclicity (normal AND dev edges), the `core < std < tools` tier rule, and `interp` never depending
+# on any `std-*`, with per-edge diagnostics. cargo-deny CANNOT express dependency cycles or a
+# tier-scoped edge rule, so this list only adds a narrow, explicit tripwire for the one upward anomaly
+# `acy` removed (`mycelium-mlir -> mycelium-std-runtime`, M-883/M-884): `mycelium-std-runtime` may be a
+# DIRECT dependency ONLY of its current legitimate consumer(s). Re-introducing the mlir edge — or any
+# new upward reach into std-runtime — fails `just deny` / `just check` loudly (G2). A genuinely new
+# std-runtime consumer is added here in a review PR, deliberately, per DN-68's change-by-review
+# procedure. Never-silent: this is a SUBSET of the invariant; `xtask deps` is the complete check.
+deny = [
+    { name = "mycelium-std-runtime", wrappers = ["mycelium-bench"] },
+]
+
 [sources]
 # Only crates.io. Reject unknown registries/git sources unless explicitly allowed later.
 unknown-registry = "deny"

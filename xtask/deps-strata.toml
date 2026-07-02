@@ -52,7 +52,7 @@ tier_order = ["core", "std", "tools"]
 derived_from = "cargo metadata --format-version 1, workspace at dev@388a865, 2026-07-02; mycelium-rt-abi added + mycelium-std-runtime/mycelium-mlir re-derived by hand (same formula) for the M-883/M-884 runtime-ABI seam extraction, 2026-07-02"
 strata_guarantee = "Empirical (point-in-time topological derivation over the NORMAL-dep graph; not re-derived live — see file header)"
 tiers_guarantee = "Declared (manually-asserted architectural intent; flagged per VR-5, not derived from the graph)"
-basis_ref = "DN: acyclic-deps invariant (M-885, pending authorship — orchestrator wires the final doc path)"
+basis_ref = "DN-68 (docs/notes/DN-68-Acyclic-Deps-Invariant.md) — the acyclic-deps invariant + change-procedure"
 
 # ---------------------------------------------------------------------------------------------
 # M-877: fine per-crate layer (longest normal-dependency chain from a sink; 0 = no in-workspace
@@ -180,7 +180,7 @@ xtask = "tools"
 [[named_rules]]
 id = "no-interp-std-dep"
 description = "mycelium-interp must never depend (normal OR dev) on any mycelium-std-* crate — the KC-3 trusted-base boundary (also covers a latent interp<->cert risk via the std layer)."
-basis_ref = "DN: acyclic-deps invariant (M-885, pending)"
+basis_ref = "DN-68 (docs/notes/DN-68-Acyclic-Deps-Invariant.md)"
 kind = "forbidden-target-prefix"
 source = "mycelium-interp"
 forbidden_target_prefix = "mycelium-std-"
@@ -188,5 +188,5 @@ forbidden_target_prefix = "mycelium-std-"
 [[named_rules]]
 id = "no-upward-tier-edges"
 description = "No crate may have a normal or dev dependency on a crate in a strictly higher architectural tier per `tier_order` (core < std < tools). Formerly violated by mycelium-mlir (core) -> mycelium-std-runtime (std); fixed by M-883/M-884 (the mycelium-rt-abi runtime-ABI seam extraction) — this rule now guards against regressing that edge."
-basis_ref = "DN: acyclic-deps invariant (M-885, pending)"
+basis_ref = "DN-68 (docs/notes/DN-68-Acyclic-Deps-Invariant.md)"
 kind = "tier-order"
