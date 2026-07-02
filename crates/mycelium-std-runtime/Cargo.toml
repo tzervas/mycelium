@@ -24,6 +24,10 @@ mycelium-sched = { path = "../mycelium-sched" }
 # src/reclamation.rs / src/supervision.rs). The M-356 composition kernel this crate used to reuse
 # via a direct `mycelium-interp` dependency is now consumed transitively through this crate.
 mycelium-rt-abi = { path = "../mycelium-rt-abi" }
+# M-963 (DN-78 §3 B-1/B-2): the mechanized SelectionPolicy capture/replay + reified setter
+# surface rides the existing RFC-0005 machinery — mycelium-select is a foundational crate
+# (depends only on mycelium-core), so this edge stays acyclic (DN-68 / H0 gate).
+mycelium-select = { path = "../mycelium-select" }
 
 [dev-dependencies]
 # Property-based testing for the RT2 sequentialization + liveness + backpressure differentials.

@@ -86,12 +86,32 @@
 //! load-bearing (e.g. via `mycelium-bench`, or other v0 R1 surface usage) or reverts to an ordinary
 //! retirement candidate under RFC-0031 D6 is an **orchestrator/maintainer-level re-review of
 //! DN-66 §4.c**, not decided here — this note only records that its stated factual basis changed.
+//!
+//! # R2 tail — mechanized policy capture/set + the residual ledger (M-963 / DN-78)
+//!
+//! The M-828 capture-and-set tail, decided buildable by DN-78 §3 under the 2026-07-02
+//! delegation (frz Lane C, epic E31-1):
+//!
+//! - [`policy_mech`] — mechanized `SelectionPolicy` **capture** ([`policy_mech::capture`] /
+//!   [`policy_mech::replay`] — record-vs-replay, never a silent pass) and **setting**
+//!   ([`policy_mech::PolicySlot`] — a reified setter whose every transition is recorded),
+//!   riding the existing RFC-0005 machinery in `mycelium-select` (no new mechanism, KC-3).
+//! - [`r2_residual`] — the never-silent ledger + refusal surface for everything the DN-78 §4
+//!   split defers (the four remaining §4.5 construct activations, the capture/set L1 surface,
+//!   multi-node placement maturity): one tested row per deferral, an explicit typed refusal
+//!   per item (G2).
+//!
+//! These modules are **additive** to the DN-66 frozen v0 R1 baseline (a spec amendment for
+//! `docs/spec/stdlib/runtime.md` is FLAGged to the integrator — DN-78 FLAG-F2, not a silent
+//! extension).
 #![forbid(unsafe_code)]
 
 pub mod colony;
 pub mod dataflow;
 pub mod guarantee_matrix;
 pub mod network;
+pub mod policy_mech;
+pub mod r2_residual;
 pub mod rc;
 pub mod reclamation;
 pub mod region;
