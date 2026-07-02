@@ -1,6 +1,6 @@
 # Kickoff `rwr` — Phase II: the progressive Mycelium rewrite (post-public; `0.x → 1.0.0`)
 
-> **UID:** `rwr` · **Basis:** **ADR-038** (Proposed) §2.3/§2.5/§2.8 + the umbrella roadmap
+> **UID:** `rwr` · **Basis:** **ADR-038** (Accepted, 2026-07-01) §2.3/§2.5/§2.8 + the umbrella roadmap
 > `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` **§7** · RFC-0031 §5 **D4–D7** (order ·
 > stability bar · oracle retention · one spore per phylum) · **RFC-0033 §7** + its V-wave
 > (**M-760…M-784** — RFC-0033-named slots, unminted today) · ADR-030/031 (the deferred one-way
@@ -20,7 +20,7 @@ Progressively rewrite the remaining corpus in Mycelium, **in the open**: each mo
 its Rust reference, **Rust≡Mycelium differential-validated**, replacing its original **only on the
 maintainer's satisfaction** (ADR-036 §2.3) — while the **public semver climbs `0.x → 1.0.0`**
 (ADR-038 §2.8), where **`1.0.0` = fully rewritten into Mycelium where appropriate + 100%
-operational** (subject to FLAG-V2). The version *is* the honest progress measure; nothing here has
+operational** (FLAG-V2, resolved 2026-07-01). The version *is* the honest progress measure; nothing here has
 a calendar deadline.
 
 ## Scope
@@ -48,7 +48,7 @@ kickoff + bootstrap-protocol ratification (RFC-0031 D3's no-circularity staging 
 | Per-module **replace-on-satisfaction** act (every port; never self-declared) | M-949/M-952 rows, each wave | ADR-036 §2.3 |
 | Toolchain-port module sign-offs (which components port, in what order) | M-951 → M-952 | ADR-036 §2.2/§2.3 |
 | The **value-persistence tripwire** — the single M-780 rehash fires immediately BEFORE the first value-persistence feature, never speculatively | M-954 | RFC-0033 §7 · ADR-030/031 |
-| **FLAG-V2** — whether `1.0.0` requires compiler self-hosting (proposed reading: no — compiler counts as appropriate-Rust unless §2.3's condition triggers) | M-957 | ADR-038 §2.8 |
+| **FLAG-V2** — whether `1.0.0` requires compiler self-hosting — **RESOLVED 2026-07-01** (matches this kickoff's proposed reading: `1.0.0` = fully dogfooded/self-hosted/rewritten-where-appropriate; compiler self-hosting rides §2.3's condition, not a hard gate) | M-957 | ADR-038 §2.8 |
 | The semver scheme (set at the flip) + **every version bump and the `1.0.0` cut are maintainer release acts** | M-956/M-957 | ADR-038 §2.8 |
 
 ## Swarm method + model tiering (ADR-038 §2.7)

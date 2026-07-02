@@ -11,6 +11,29 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-07-01: ADR-038 ratified — Accepted; FLAG-V1/V2 resolved)
+
+- **ADR-038 ratified by the maintainer ("ratify 38") — status `Proposed → Accepted`.** The
+  function-first release strategy now **binds**: the public release is gated on **functional
+  usability** and is **version-independent** — it happens at a sub-`1.0.0` (**`0.x`**) semver on
+  reaching functional usability, well before `1.0.0`; **`1.0.0` = fully dogfooded / self-hosted /
+  rewritten into Mycelium *where appropriate* + 100% operational**.
+  - **FLAG-V1 resolved** — the `lang 1.0.0` label collision with ADR-022's functional-completeness
+    milestone dissolves: since the public release is a sub-`1.0.0` (`0.x`) semver, it is never
+    labeled `1.0.0`, so no ADR-022 relabel is needed.
+  - **FLAG-V2 resolved** — `1.0.0` requires the project to be fully dogfooded/self-hosted/rewritten
+    into Mycelium *where appropriate*; compiler self-hosting rides §2.3's demonstrably-better
+    stability/performance condition (part of "where appropriate," not a hard gate).
+  - The **ADR-036 §2.4 refinement** (release gate: functional usability, version-independent, not
+    Rust-replacement) and the **RFC-0031 §5 D1 supersession** (compiler-forever-Rust permanence
+    lifted; D1's boundary itself remains operative through Phase I) are now **in force**.
+  - Cross-references synced corpus-wide: `docs/adr/ADR-036-Dogfooding-and-Public-Release-Strategy.md`
+    §2.4 + changelog row, `docs/rfcs/RFC-0031-Self-Hosted-Standard-Library-Composition.md` §5 D1 scope
+    note + changelog row, `docs/adr/README.md` (status paragraph + ADR-036/ADR-038 table rows),
+    `docs/Doc-Index.md` (ADR-038 row), and the Phase-I/II kickoffs (`.claude/kickoffs/{flp,rwr,enb,
+    grm,opp,acy,rcp,README}.md`) + `docs/CURRENT-STATE.md` — every "Proposed / binds-on-ratification /
+    FLAG open" reference updated to Accepted / in-force / resolved.
+
 ### Changed (2026-07-01: ADR-038 refinement — versioning axis + execution doctrine, still Proposed)
 
 - **ADR-038 refined (same session, pre-ratification; held `Proposed`).** Two maintainer-directed

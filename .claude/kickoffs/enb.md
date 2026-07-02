@@ -1,6 +1,6 @@
 # Kickoff `enb` — Phase-I H1: enabler-gap closure (the critical path to usability)
 
-> **UID:** `enb` · **Basis:** **ADR-038** (Proposed) §2.2/§2.6 + the umbrella roadmap
+> **UID:** `enb` · **Basis:** **ADR-038** (Accepted, 2026-07-01) §2.2/§2.6 + the umbrella roadmap
 > `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` **§3 (H1)** ·
 > `docs/spec/stdlib/self-hosting-readiness.md` **§0** (the 2026-07-01 below-grammar gap list,
 > `Exact`/`Empirical` per item) · RFC-0033 §4.1.2–§4.1.3 + its 2026-07-01 pull-forward note
@@ -147,8 +147,8 @@ overlaps the B/C lane.
 ## Prerequisites
 
 1. **`acy` (H0) landed** — the enforcement gate this wave lands under.
-2. **ADR-038 ratification** (Proposed → Accepted) — the strategy this wave executes; H1 work that
-   is also justified under prior ratified decisions (e.g. the RFC-0033 pull-forward note) may start,
-   but the *wave as a whole* is ADR-038's Phase-I critical path — confirm with the maintainer.
+2. **ADR-038 ratification** (Accepted, 2026-07-01) — the strategy this wave executes; satisfied. H1
+   work that is also justified under prior ratified decisions (e.g. the RFC-0033 pull-forward note)
+   may start, but the *wave as a whole* is ADR-038's Phase-I critical path.
 3. **Maintainer gates inside the wave** (FLAG, never guess): float ADR + DN-39 outcome (M-895 →
    M-896); the consume-model confirmation (M-901); the M-828 D-lite split sign-off (M-905).

@@ -1,6 +1,6 @@
 # Kickoff `acy` — Phase-I H0: foundation + acyclic-deps hardening (LANDS FIRST)
 
-> **UID:** `acy` · **Basis:** **ADR-038** (Proposed — function-first strategy) + the umbrella roadmap
+> **UID:** `acy` · **Basis:** **ADR-038** (Accepted, 2026-07-01 — function-first strategy) + the umbrella roadmap
 > `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` **§2 (H0)** · dep-graph survey (`Empirical`,
 > 2026-07-01, spot-verified at HEAD) · PR #864 (the `mycelium-sched` extraction precedent).
 > **Planned by:** Fable (ADR-038 §2.7 — planning tier); **implemented by:** Sonnet/Haiku leaves per the

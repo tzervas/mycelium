@@ -1,6 +1,6 @@
 # Kickoff `grm` — Phase-I H2a: the grammar-stability gate (ratification-gated; before mass porting)
 
-> **UID:** `grm` · **Basis:** **ADR-038** (Proposed) + the umbrella roadmap
+> **UID:** `grm` · **Basis:** **ADR-038** (Accepted, 2026-07-01) + the umbrella roadmap
 > `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` **§5 (H2a)** · RFC-0037 (Enacted — its named
 > follow-ons: D2-b short repr keywords, RFC-0025 operator wiring) · DN-54 (Accepted — extension
 > checker; §10 derive-site consume design-pass M-824) · RFC-0024 §4A.8 (tuple-type decision) ·
