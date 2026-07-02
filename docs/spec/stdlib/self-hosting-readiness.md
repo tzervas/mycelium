@@ -2,13 +2,61 @@
 
 | Field | Value |
 |---|---|
-| **Status** | **Draft (needs-design)** (2026-06-17) — the *checkable verdict*, not a pre-declaration. The verdict below is **"not yet established"** and stays so until the surface actually supports authoring a stdlib module in Mycelium-lang (VR-5; never pre-declared). |
+| **Status** | **Draft** — the original (2026-06-17) verdict below was **"not yet established."** **⚠ SUPERSEDED by the §0 currency update (2026-07-01):** that verdict's own flip-trigger (§5) has FIRED — the surface now authors stdlib modules in Mycelium-lang, so the general "not-yet" claim is stale. See §0 for the current, grounded verdict. (Append-only: the original §1–§5 assessment is preserved as the 2026-06-17 snapshot; §0 records what changed. VR-5/G2.) |
 | **Tracks** | **M-502** (#150) — the M-346 precondition made checkable. Gates the Mycelium-lang *migration half* of M-510…M-520 (RFC-0016 §4.6 Phase 5b). |
 | **Scope** | Enumerate the surface-language capabilities a stdlib module needs in order to be **authored in Mycelium-lang itself** (dogfooding, "free of other languages"), assess each against the landed corpus, and emit an honest **ready / not-yet** verdict. Does **not** gate the Rust-first modules (Batches P5-A/P5-B proceed against RFC-0016 now). |
 | **Depends on** | RFC-0016 §4.6 (the Rust-first → Mycelium-lang migration the gate sits inside); RFC-0006/0007 (the surface + L1 calculus a module is written in); RFC-0011 (L0 `Match` + data-in-core); RFC-0012 (ambient representation); DN-06 (`phylum`/`nodule`); M-359 (the manifest); M-320 (the L1 term-language extension) |
 | **Grounds on** | the Doc-Index status of each cited doc; `tools/github/issues.yaml` (M-320 #92, the surface track); the RFC-0016 §4.6 migration discipline |
 
 ---
+
+## 0. Currency update (2026-07-01) — the verdict has flipped for the SURFACE; remaining blockers are below-grammar
+
+> **Grounded re-verification (2026-07-01, `Empirical`/`Exact` as tagged).** The original §1–§5 "not
+> yet established" verdict (2026-06-17) is **superseded**. Its §5 flip-trigger — "a real module is
+> authored in Mycelium-lang and passes the differential" — **has fired**: `lib/std/result.myc`
+> (M-649) and `lib/std/option.myc` (M-715) were authored **directly in Mycelium** with no Rust source,
+> and 8 `lib/std/*.myc` nodules execute three-way (L1-eval ≡ L0-interp ≡ AOT;
+> `crates/mycelium-l1/tests/std_*.rs`). DN-14 (self-hosting gate) is **Resolved** with all capability
+> rows `present`. RFC-0031 records Tier-0/Tier-1 nodules executing.
+>
+> **Current verdict: the language SURFACE (grammar + checker) is SUFFICIENT to author the structural
+> majority of stdlib modules in pure Mycelium.** The classic suspected gaps have all landed —
+> generics `[T]`, width-generics `{N}` (DN-42), traits (M-673 elaboration RUNs), effects `!{…}`
+> (M-660), HOF **including capturing closures** (M-704 — the "closures are Impossible" line elsewhere
+> is stale; capture is implemented in `mono.rs`), FFI via `wild`/`@std-sys` executing three-way
+> (M-720/721), sequences/`Bytes` (RFC-0032). ~19 of 26 crates are expressible or already-demonstrated;
+> ~5–7 are blocked.
+>
+> **The remaining blockers are NOT grammar/surface gaps — they are below-grammar (kernel-prim
+> surfacing, value-model implementation, or staged execution):**
+> 1. **No float value form/ops** (no float literal/type/prims; F16–F64 exist only as Dense dtypes) →
+>    blocks `math`(f64 half), `numerics`. `Exact` (grammar + `interp/src/prims.rs`). Tracked: E20-1 /
+>    RFC-0033 (full self-hosting deferred post-1.0 by ADR-035).
+> 2. **No binary `mul`/`div`/`shl`/`shr` prims + no signed-op set** → blocks the integer numeric half.
+>    `Exact`. Tracked: M-718 FLAG · ADR-028 (signedness-as-operations) · E20-1.
+> 3. **Dense/VSA op-prims not surfaced to L1** (types/literals exist; no `dense.*`/`vsa.*` ops in the
+>    prim registry) → blocks `dense`, `vsa`. `Exact`. **Tracking unclear — recommend minting an issue.**
+> 4. **RFC-0008 R2 runtime vocabulary inactive** (`mesh`/`graft`/`cyst`/`xloc`/`forage`/`backbone`
+>    reserved-not-active) → blocks `runtime`'s full surface. Tracked: E12-1 / DN-63 / M-828.
+> 5. **`Substrate`/`consume` execution staged** (elaborates to a never-silent `Residual`; no v0 value
+>    form) → blocks `fs`/`io`'s affine-handle model. `Exact` (grammar comment). **No dedicated
+>    execution issue found — recommend minting.**
+> Plus two small **untracked** items: **no textual string literal** (only `0x…` `BytesLit` — an
+> *ergonomic* gap, not an expressive one) and a **`hash.*` prim** for `content` (blake3 lives in
+> `mycelium-core` but isn't surfaced). `Empirical`.
+>
+> **By-design non-gaps (RFC-0031 D1):** `mycelium-std-sys`/`sys-host` and the `io`/`fs`/`time`/`rand`
+> FFI floor are *irreducibly Rust* behind the quarantined `@std-sys` `wild` boundary — "pure Mycelium"
+> there legitimately means "`.myc` + the audited `wild` FFI edge," which works today. `core`/`l0`/`l1`/
+> `cert`/`interp::prims`/`mlir` stay Rust forever.
+>
+> **Bottom line:** "not enough surface to self-host the stdlib" is **PARTIALLY-TRUE and mostly stale** —
+> true only for the small below-grammar set above (all value-model/prim/execution items already
+> deferred post-1.0 by ADR-035), false as a claim about the grammar/surface. The full port bar (D5/D6,
+> Rust-crate retirement) remains post-1.0 per DN-66/ADR-035 — this update corrects the *surface-
+> sufficiency* claim only, not the port-completion status. (Append-only; supersedes the 2026-06-17
+> snapshot below; does not delete it. VR-5/G2.)
 
 ## 1. What this gate decides
 
