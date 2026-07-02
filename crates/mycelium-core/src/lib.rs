@@ -47,8 +47,8 @@ pub use prim::{PrimDecl, PrimParadigm, PrimRef, PrimSig, PrimTable, WidthRel};
 pub use recon::{
     CleanupShape, DecodeProcedure, DecodeSpec, InitStrategy, Recipe, ReconInfo, ReconMode,
 };
-pub use repr::{Repr, ScalarKind, SparsityClass};
-pub use value::{Payload, Trit, Value};
+pub use repr::{FloatWidth, Repr, ScalarKind, SparsityClass};
+pub use value::{Payload, Trit, Value, CANONICAL_NAN_BITS};
 pub use wrapping::WrappingOpt;
 
 /// Well-formedness errors for Core IR construction (RFC-0001 §4.3/§4.5 invariants).

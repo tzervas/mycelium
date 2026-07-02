@@ -48,6 +48,10 @@ pub(crate) mod tag {
     /// registry grows).
     pub const REPR_SEQ: u8 = 0x14;
     pub const REPR_BYTES: u8 = 0x15;
+    /// ADR-040 §3 (M-896): the scalar-float repr. Appended (append-only: existing codes are
+    /// frozen, so adding this arm changes **no** existing value's address — no rehash is spent;
+    /// pinned by the address-stability regression test).
+    pub const REPR_FLOAT: u8 = 0x16;
 
     pub const PAYLOAD_BITS: u8 = 0x20;
     pub const PAYLOAD_TRITS: u8 = 0x21;
@@ -56,6 +60,8 @@ pub(crate) mod tag {
     /// RFC-0032 D3/D4 (M-749/M-750): the sequence + byte-string payloads. Appended (append-only).
     pub const PAYLOAD_SEQ: u8 = 0x24;
     pub const PAYLOAD_BYTES: u8 = 0x25;
+    /// ADR-040 §3 (M-896): the scalar-float payload. Appended (append-only).
+    pub const PAYLOAD_FLOAT: u8 = 0x26;
 
     pub const SPARSITY_DENSE: u8 = 0x30;
     pub const SPARSITY_SPARSE: u8 = 0x31;
@@ -153,6 +159,13 @@ impl Canon {
 
     /// A finite-precision scalar by its exact bit pattern — deterministic and bit-faithful (so e.g.
     /// `+0.0` and `-0.0` are distinct identities, as they are distinct literals).
+    ///
+    /// **Known seam, deliberately unchanged here (ADR-040 §2.3 / FLAG-5, `Empirical`):** the
+    /// existing `Dense`/`Hypervector` payload paths feed **raw** bits through this encoder with no
+    /// NaN canonicalization, so NaN-bearing tensors already have platform-bit-dependent identities.
+    /// Settling one uniform NaN rule for those paths is identity-affecting and rides the single
+    /// E20-1 rehash (RFC-0033 §7) — NOT this change (M-896), which canonicalizes only the new
+    /// scalar [`Payload::Float`] arm and leaves every existing address byte-identical.
     fn f64(&mut self, x: f64) {
         self.h.update(&x.to_bits().to_le_bytes());
     }
@@ -264,6 +277,12 @@ impl Canon {
                 self.u32(*len);
                 self.repr(elem);
             }
+            Repr::Float { width } => {
+                // ADR-040 §3: identity-bearing = the Float variant tag + the frozen width tag
+                // (the `FloatWidth::tag()` registry — append-only, address-stable).
+                self.tag(tag::REPR_FLOAT);
+                self.h.update(&[width.tag()]);
+            }
             Repr::Bytes => {
                 // A byte string carries no type parameter (any byte content) — the tag alone fixes
                 // the type identity (RFC-0032 D4).
@@ -306,6 +325,15 @@ impl Canon {
                 for &x in xs {
                     self.f64(x);
                 }
+            }
+            Payload::Float(x) => {
+                // ADR-040 §2.3/§3: identity is the exact bit pattern with NaN canonicalized —
+                // `+0.0`/`-0.0` stay distinct addresses; every NaN is ONE address. `Value::new`
+                // already canonicalizes on construction, so this re-canonicalization is idempotent
+                // there — it makes the one-NaN-address rule hold *by construction* on every hash
+                // path, not by trusting the caller.
+                self.tag(tag::PAYLOAD_FLOAT);
+                self.f64(crate::value::canonical_float(*x));
             }
             Payload::Seq(elems) => {
                 // Length-prefixed, then each element's identity-bearing content (repr + payload) via

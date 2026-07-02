@@ -61,6 +61,8 @@ pub enum ParadigmKind {
     Seq,
     /// `Repr::Bytes` — the byte string (RFC-0032 D4; M-750).
     Bytes,
+    /// `Repr::Float` — the scalar IEEE-754 float (ADR-040; M-896).
+    Float,
 }
 
 fn kind_of(repr: &Repr) -> ParadigmKind {
@@ -71,6 +73,7 @@ fn kind_of(repr: &Repr) -> ParadigmKind {
         Repr::Vsa { .. } => ParadigmKind::Vsa,
         Repr::Seq { .. } => ParadigmKind::Seq,
         Repr::Bytes => ParadigmKind::Bytes,
+        Repr::Float { .. } => ParadigmKind::Float,
     }
 }
 
@@ -320,6 +323,12 @@ fn repr_storage_bits(repr: &Repr) -> f64 {
         // selection table does not currently produce `Bytes` candidates, so this only fills an
         // EXPLAIN cost line if ever queried.
         Repr::Bytes => 0.0,
+        // ADR-040 §2.1 (M-896): a scalar float's static footprint is exactly its frozen width —
+        // binary64 = 64 bits (the only registered width; a future width adds its own arm here by
+        // construction, never a silent default).
+        Repr::Float { width } => match width {
+            mycelium_core::FloatWidth::F64 => 64.0,
+        },
     }
 }
 
@@ -347,6 +356,8 @@ fn src_elements(repr: &Repr) -> f64 {
         // RFC-0032 D4 (M-750): a byte string's element count is not in its `Repr` (it rides the
         // payload) — `0.0` is the honest static lower bound, like its storage footprint above.
         Repr::Bytes => 0.0,
+        // ADR-040 (M-896): a scalar float is exactly one element.
+        Repr::Float { .. } => 1.0,
     }
 }
 

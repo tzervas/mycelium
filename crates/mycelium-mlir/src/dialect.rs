@@ -54,6 +54,10 @@ fn repr_attr(repr: &Repr) -> String {
         Repr::Seq { elem, len } => format!("seq<{},{len}>", repr_attr(elem)),
         // RFC-0032 D4 (M-750): the byte string carries no static type parameter.
         Repr::Bytes => "bytes".to_owned(),
+        // ADR-040 (M-896): the scalar float renders its frozen width by name (F64-only today).
+        // This is the *textual dump* only — float ops/codegen are M-898+; the native path keeps
+        // refusing unsupported fragments explicitly (never a silent flatten).
+        Repr::Float { .. } => "float<f64>".to_owned(),
     }
 }
 
@@ -77,6 +81,9 @@ fn payload_attr(p: &Payload) -> String {
         }
         // RFC-0032 D4 (M-750): a byte payload renders as a lowercase-hex string.
         Payload::Bytes(bytes) => bytes.iter().map(|b| format!("{b:02x}")).collect(),
+        // ADR-040 (M-896): shortest round-trip decimal (`{:?}`) — deterministic; the in-band
+        // specials render as `inf`/`-inf`/`NaN` and `-0.0` keeps its sign (a faithful dump).
+        Payload::Float(x) => format!("{x:?}"),
     }
 }
 
