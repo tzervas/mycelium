@@ -5298,7 +5298,10 @@ impl PrimFam {
 fn prim_family(name: &str) -> Option<PrimFam> {
     Some(match name {
         // RFC-0032 D2 (M-748): width-preserving binary logical + arithmetic prims.
-        "not" | "xor" | "and" | "or" | "add_bin" | "sub_bin" => PrimFam::Binary,
+        // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): `mul_bin` — never-silent two's-complement
+        // multiply (distinct surface name from the trit-backed `mul` below, which stays balanced-
+        // ternary).
+        "not" | "xor" | "and" | "or" | "add_bin" | "sub_bin" | "mul_bin" => PrimFam::Binary,
         "add" | "sub" | "mul" | "neg" => PrimFam::Ternary,
         _ => return None,
     })
@@ -5387,7 +5390,11 @@ pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
         ("xor", [Ty::Binary(a), Ty::Binary(b)]) if a == b => Some(Ty::Binary(a.clone())),
         // RFC-0032 D2 (M-748): width-preserving binary arithmetic/logical (never-silent overflow is
         // a runtime contract; the static signature is width-preserving like the trit arithmetic).
-        ("and" | "or" | "add_bin" | "sub_bin", [Ty::Binary(a), Ty::Binary(b)]) if a == b => {
+        // RFC-0033 §4.1.2/§4.1.3 (M-887): `mul_bin` — same width-preserving shape; the never-silent
+        // two's-complement overflow bound is likewise a runtime contract (`bin.mul`'s `Overflow`).
+        ("and" | "or" | "add_bin" | "sub_bin" | "mul_bin", [Ty::Binary(a), Ty::Binary(b)])
+            if a == b =>
+        {
             Some(Ty::Binary(a.clone()))
         }
         ("add" | "sub" | "mul", [Ty::Ternary(a), Ty::Ternary(b)]) if a == b => {
@@ -5410,6 +5417,9 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "or" => "bit.or",
         "add_bin" => "bit.add",
         "sub_bin" => "bit.sub",
+        // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply —
+        // the first shared (signedness-agnostic bit-pattern) two's-complement op ADR-028 names.
+        "mul_bin" => "bin.mul",
         // RFC-0032 D1 (M-747): reduce-to-`Bool` comparison/equality (returns `Binary{1}`).
         "eq" => "cmp.eq",
         "lt" => "cmp.lt",

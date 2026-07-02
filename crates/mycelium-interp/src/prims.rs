@@ -26,7 +26,8 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 use mycelium_core::{
-    operation_hash, ternary, Bound, GuaranteeStrength, Meta, Payload, Provenance, Repr, Trit, Value,
+    binary, operation_hash, ternary, Bound, GuaranteeStrength, Meta, Payload, Provenance, Repr,
+    Trit, Value,
 };
 use mycelium_numerics::{compose_error_bound, ErrorOp};
 
@@ -70,8 +71,10 @@ impl PrimRegistry {
     /// M-747), never-silent fixed-width binary arithmetic (`bit.add`/`bit.sub`, RFC-0032 D2,
     /// M-748), the never-silent `Binary` width-cast (`bit.width_cast` — zero-extend widen / checked
     /// narrow, DN-41, M-798), never-silent indexed-sequence access (`seq.len`/`seq.get`, RFC-0032 D3,
-    /// M-749), and never-silent byte-string access
-    /// (`bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat`, RFC-0032 D4, M-750).
+    /// M-749), never-silent byte-string access
+    /// (`bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat`, RFC-0032 D4, M-750), and the
+    /// never-silent two's-complement `Binary` multiply (`bin.mul`, RFC-0033 §4.1.2/§4.1.3, M-887 —
+    /// the first `enb` Gap-B prim; sets the registry pattern the sibling Gap-B/C prims mirror).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -90,6 +93,8 @@ impl PrimRegistry {
         // RFC-0032 D2 (M-748): never-silent fixed-width binary arithmetic over `Binary{N}`.
         r.register("bit.add", prim_bit_add);
         r.register("bit.sub", prim_bit_sub);
+        // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply.
+        r.register("bin.mul", prim_bin_mul);
         // DN-41 (M-798): never-silent width-cast (zero-extend widen / checked narrow) over `Binary`.
         r.register("bit.width_cast", prim_width_cast);
         // RFC-0032 D3 (M-749): never-silent indexed-sequence access over `Repr::Seq`.
@@ -496,6 +501,71 @@ fn prim_bit_add(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
 /// `bit.sub : (Binary{N}, Binary{N}) → Binary{N}` — never-silent unsigned subtraction (RFC-0032 D2).
 fn prim_bit_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     bin_arith(prim, args, true)
+}
+
+// --- RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply --------
+//
+// `bin.mul` is the first Gap-B prim of the RFC-0033 shared two's-complement arithmetic set
+// (ADR-028: signedness lives in the *op*, not the `Repr` — `add`/`sub`/`mul`/`neg` are bit-identical
+// across the signed/unsigned reading of the operands; only division, comparison, shift, and
+// overflow *detection* are signedness-split). This prim reads its equal-width `Binary{N}` operands
+// under the two's-complement (**signed**) interpretation — "two's-complement multiply" per the
+// M-887 task naming — distinct from `bit.add`/`bit.sub`'s existing **unsigned** overflow contract
+// (RFC-0032 D2). The kernel codec lives in [`mycelium_core::binary`] (the M-120 two's-complement
+// home, shared with the binary↔ternary swap), mirroring how `trit_binop` delegates to
+// [`mycelium_core::ternary`]. Never-silent: an out-of-range product is an explicit
+// [`EvalError::Overflow`], never a wrap (RFC-0033 §4.1.3; G2).
+//
+// **Registry pattern for the rest of Gap B/C (M-766/M-767/M-888/M-889/…):** kernel codec in
+// `mycelium-core` (arithmetic + the never-silent bound, `Option<Vec<bool>>`) → a thin prim wrapper
+// here that checks arity/width, calls the codec, and maps `None` to `EvalError::Overflow` →
+// registered under a `bin.*`/`bit.*`/`trit.*`-namespaced kernel name → surfaced in
+// `mycelium-l1/src/checkty.rs` (`prim_family`/`prim_sig`/`prim_kernel_name`) under a distinct
+// surface name → pinned in `mycelium-core::PrimTable::builtins()` (the content-addressed `Π`,
+// DN-10 §3.4 equivalence) and `mycelium-l1/tests/prim_table.rs`'s `surface_cases()`.
+//
+// **Width cap (current scope).** [`mycelium_core::binary::mul`] is exact for `n ≤
+// `[`mycelium_core::binary::MUL_MAX_WIDTH`]` (an `i128` intermediate product — the same cap
+// `bits_to_int`/`int_to_bits` already declare); a wider operand refuses with an explicit
+// [`EvalError::PrimType`] naming the cap, never a silent truncation. Arbitrary-width `Binary`
+// multiply (matching `bit.add`/`bit.sub`'s width-unbounded ripple-carry) is out of scope for
+// M-887 — FLAGged for the Gap-B follow-ons that reconcile the full shared op set (M-766/M-767).
+
+/// `bin.mul : (Binary{N}, Binary{N}) → Binary{N}` — never-silent two's-complement multiply
+/// (RFC-0033 §4.1.2/§4.1.3, M-887). Equal-width operands, `N ≤
+/// `[`mycelium_core::binary::MUL_MAX_WIDTH`]` (see the module note above); a width mismatch or an
+/// over-cap width is an explicit [`EvalError::PrimType`], and an out-of-range product is an
+/// explicit [`EvalError::Overflow`] — never a silent wrap (G2).
+fn prim_bin_mul(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let b = as_bits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), b.len()),
+        });
+    }
+    if a.len() > binary::MUL_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit two's-complement multiply cap (M-887 scope)",
+                a.len(),
+                binary::MUL_MAX_WIDTH
+            ),
+        });
+    }
+    let out = binary::mul(a, b).ok_or_else(|| EvalError::Overflow {
+        prim: prim.to_owned(),
+    })?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
 }
 
 // --- DN-41 (M-798): never-silent `Binary` width-cast -------------------------------------------

@@ -75,6 +75,12 @@ fn surface_cases() -> Vec<(&'static str, Vec<Ty>, Ty)> {
             vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
             Ty::Binary(Width::Lit(8)),
         ),
+        // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply.
+        (
+            "mul_bin",
+            vec![Ty::Binary(Width::Lit(8)), Ty::Binary(Width::Lit(8))],
+            Ty::Binary(Width::Lit(8)),
+        ),
     ]
 }
 

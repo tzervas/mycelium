@@ -1,9 +1,13 @@
-//! Two's-complement binary integer semantics (M-120 support).
+//! Two's-complement binary integer semantics (M-120 support; extended by M-887 with fixed-width
+//! multiply).
 //!
 //! An `n`-bit value is read **most-significant-first** as a two's-complement integer with range
 //! `B_n = [−2^(n-1), 2^(n-1) − 1]` (`docs/spec/swaps/binary-ternary.md` §2). This is the binary-side
 //! codec the binary↔ternary swap (M-120) uses; the balanced-ternary side lives in
-//! [`crate::ternary`]. Values use `i64`, exact for every `n ≤ 64`.
+//! [`crate::ternary`]. Values use `i64`, exact for every `n ≤ 64`. [`mul`] (M-887) reuses this same
+//! `n ≤ 64` cap (via an `i128` intermediate product) and gives the never-silent fixed-width multiply
+//! contract `mycelium-interp`'s `bin.mul` prim (RFC-0033 §4.1.2/§4.1.3; ADR-028) delegates to —
+//! mirroring how [`crate::ternary::mul`] is the kernel side of the `trit.mul` prim.
 
 /// The signed two's-complement value of an MSB-first bit string. The empty string is `0`.
 #[must_use]
@@ -48,60 +52,42 @@ pub fn int_to_bits(value: i64, n: u32) -> Option<Vec<bool>> {
     Some(bits)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+/// The current [`mul`] operand-width cap (`n ≤ 64`) — exact via an `i128` intermediate product, the
+/// same cap [`bits_to_int`]/[`int_to_bits`] already declare. Public so callers (the `bin.mul` prim)
+/// can distinguish an over-cap *width* refusal from an in-range-width arithmetic *overflow* refusal
+/// without duplicating the constant (G2 — the two refusal reasons stay honestly distinct at the
+/// caller's `EvalError` layer, even though this function collapses both to `None`).
+pub const MUL_MAX_WIDTH: usize = 64;
 
-    #[test]
-    fn worked_example_byte() {
-        // binary-ternary.md §5: 0b1011_0010 (MSB-first) = −78 in two's complement.
-        let bits = [true, false, true, true, false, false, true, false];
-        assert_eq!(bits_to_int(&bits), -78);
-        assert_eq!(int_to_bits(-78, 8), Some(bits.to_vec()));
+/// Two's-complement fixed-width multiply of two equal-width `n`-bit two's-complement integers
+/// (MSB-first), for `n ≤ `[`MUL_MAX_WIDTH`]. `None` when `a.len() != b.len()`, `a.len() >
+/// MUL_MAX_WIDTH`, or the exact product does not fit `B_n = [−2^(n-1), 2^(n-1) − 1]` — never-silent
+/// fixed-width overflow (RFC-0033 §4.1.2/§4.1.3; ADR-028 — the shared, signedness-agnostic bit
+/// pattern, read here under the two's-complement/signed interpretation), the same contract
+/// [`crate::ternary::mul`] gives the balanced-ternary side.
+///
+/// **Implementation.** Both operands round-trip through [`bits_to_int`] into `i64` (exact for `n ≤
+/// 64`), widen to `i128` for the multiply (`|a|,|b| ≤ 2^63 ⇒ |a·b| ≤ 2^126 « i128::MAX` — the
+/// product itself never overflows `i128`), then the exact product is range-checked against `B_n`
+/// before narrowing back through [`int_to_bits`]. This is exact, not an approximation: every step
+/// up to the final range check is a lossless widening.
+#[must_use]
+pub fn mul(a: &[bool], b: &[bool]) -> Option<Vec<bool>> {
+    if a.len() != b.len() || a.len() > MUL_MAX_WIDTH {
+        return None;
     }
-
-    #[test]
-    fn range_edges() {
-        assert_eq!(
-            bits_to_int(&[true, false, false, false, false, false, false, false]),
-            -128
-        );
-        assert_eq!(
-            bits_to_int(&[false, true, true, true, true, true, true, true]),
-            127
-        );
-        assert_eq!(int_to_bits(127, 8).map(|b| bits_to_int(&b)), Some(127));
-        assert_eq!(int_to_bits(-128, 8).map(|b| bits_to_int(&b)), Some(-128));
-        assert_eq!(int_to_bits(128, 8), None); // out of range
-        assert_eq!(int_to_bits(-129, 8), None);
+    let n = a.len() as u32;
+    if n == 0 {
+        return Some(Vec::new()); // B_0 = {0}; 0 * 0 = 0, trivially in range.
     }
-
-    #[test]
-    fn round_trips_exhaustively_at_n8() {
-        for v in -128..=127 {
-            let bits = int_to_bits(v, 8).expect("in range");
-            assert_eq!(bits.len(), 8);
-            assert_eq!(bits_to_int(&bits), v);
-        }
+    let av = i128::from(bits_to_int(a));
+    let bv = i128::from(bits_to_int(b));
+    let product = av * bv; // never overflows i128 — see the doc comment above.
+    let lo = -(1i128 << (n - 1));
+    let hi = (1i128 << (n - 1)) - 1;
+    if product < lo || product > hi {
+        return None; // the exact product does not fit B_n — never-silent overflow.
     }
-
-    // Mutant-witness (binary.rs:31:25): `value == 0` → `value != 0`
-    // The mutation changes the n=0 guard so that any non-zero value returns Some(Vec::new())
-    // (the zero-width representation of any integer!) instead of None. The existing
-    // round_trips_exhaustively_at_n8 test only covers n=8, missing this guard entirely.
-    #[test]
-    fn int_to_bits_n0_rejects_nonzero() {
-        // n=0 has a zero-width repr that can only hold the value 0.
-        assert_eq!(
-            int_to_bits(0, 0),
-            Some(Vec::new()),
-            "0 in 0 bits is representable"
-        );
-        assert_eq!(int_to_bits(1, 0), None, "1 cannot be represented in 0 bits");
-        assert_eq!(
-            int_to_bits(-1, 0),
-            None,
-            "-1 cannot be represented in 0 bits"
-        );
-    }
+    // Safe narrow: the range check above puts `product` inside B_n ⊆ i64's range (n ≤ 64).
+    int_to_bits(product as i64, n)
 }

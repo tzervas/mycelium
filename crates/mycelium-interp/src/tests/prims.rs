@@ -230,3 +230,151 @@ fn bit_sub_in_range_and_underflow_never_silent() {
         "sub underflow must be explicit, never a silent wrap"
     );
 }
+
+// ---- RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply ----
+
+/// A `Binary{width}` value of all-`false` bits, then patched via `set` — used to build wide
+/// (> 8-bit) operands the `b8` helper can't express.
+fn wide_binary(width: usize, ones_at_msb_first: &[usize]) -> Value {
+    let mut bits = vec![false; width];
+    for &i in ones_at_msb_first {
+        bits[i] = true;
+    }
+    Value::new(
+        Repr::Binary {
+            width: width as u32,
+        },
+        Payload::Bits(bits),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+#[test]
+fn bin_mul_in_range_positive_and_negative() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bin.mul").expect("bin.mul registered");
+    // 3 * 4 = 12 (0b0000_0011 * 0b0000_0100 = 0b0000_1100).
+    let r = f("bin.mul", &[&b8("0000_0011"), &b8("0000_0100")]).expect("mul");
+    assert_eq!(r.payload(), &Payload::Bits(bits("0000_1100")));
+    assert_eq!(r.repr(), &Repr::Binary { width: 8 });
+    // -3 * 4 = -12: -3 is 0b1111_1101, -12 is 0b1111_0100.
+    let r = f("bin.mul", &[&b8("1111_1101"), &b8("0000_0100")]).expect("mul");
+    assert_eq!(r.payload(), &Payload::Bits(bits("1111_0100")));
+    // -3 * -4 = 12.
+    let r = f("bin.mul", &[&b8("1111_1101"), &b8("1111_1100")]).expect("mul");
+    assert_eq!(r.payload(), &Payload::Bits(bits("0000_1100")));
+}
+
+/// The classic two's-complement overflow edge: `i8::MIN * -1 = 128`, out of `B_8 = [-128, 127]` —
+/// an explicit `Overflow`, never a silent wrap back to `-128`.
+#[test]
+fn bin_mul_min_times_neg_one_overflows() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bin.mul").expect("bin.mul registered");
+    let min = b8("1000_0000"); // -128
+    let neg_one = b8("1111_1111"); // -1
+    assert!(
+        matches!(
+            f("bin.mul", &[&min, &neg_one]),
+            Err(EvalError::Overflow { .. })
+        ),
+        "i8::MIN * -1 must be an explicit overflow, never a silent wrap"
+    );
+}
+
+#[test]
+fn bin_mul_overflow_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bin.mul").expect("bin.mul registered");
+    // 127 * 2 = 254, out of B_8 ([-128, 127]).
+    assert!(
+        matches!(
+            f("bin.mul", &[&b8("0111_1111"), &b8("0000_0010")]),
+            Err(EvalError::Overflow { .. })
+        ),
+        "mul overflow must be explicit, never a silent wrap"
+    );
+}
+
+#[test]
+fn bin_mul_width_mismatch_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bin.mul").expect("bin.mul registered");
+    let wide = b8("0000_0001");
+    let narrow = Value::new(
+        Repr::Binary { width: 1 },
+        Payload::Bits(vec![false]),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap();
+    assert!(
+        matches!(
+            f("bin.mul", &[&wide, &narrow]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "mismatched-width mul must be PrimType, never a silent coercion"
+    );
+}
+
+/// A width beyond the current `bin.mul` cap (`mycelium_core::binary::MUL_MAX_WIDTH`) is an explicit
+/// `PrimType` refusal — distinct from an in-range-width `Overflow` — never a silently-truncated
+/// native-int computation (M-887 scope boundary; FLAGged for the Gap-B follow-ons).
+#[test]
+fn bin_mul_over_cap_width_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bin.mul").expect("bin.mul registered");
+    let width = mycelium_core::binary::MUL_MAX_WIDTH + 1;
+    let a = wide_binary(width, &[]);
+    let b = wide_binary(width, &[]);
+    assert!(
+        matches!(f("bin.mul", &[&a, &b]), Err(EvalError::PrimType { .. })),
+        "an over-cap width must be an explicit PrimType refusal, never a silent truncation"
+    );
+}
+
+/// **Property test (the overflow bound):** for every in-range pair at a small width, `bin.mul`'s
+/// result agrees with an `i64` oracle; every out-of-range pair is an explicit `Overflow`. Mirrors
+/// `mycelium_core::binary`'s own `mul_matches_integer_oracle` at the codec layer, one level up
+/// through the prim's dispatch + never-silent-error mapping.
+#[test]
+fn bin_mul_matches_integer_oracle_at_width6() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bin.mul").expect("bin.mul registered");
+    let n: u32 = 6;
+    let lo = -(1i64 << (n - 1));
+    let hi = (1i64 << (n - 1)) - 1;
+    for x in lo..=hi {
+        for y in lo..=hi {
+            let av = mycelium_core::binary::int_to_bits(x, n).unwrap();
+            let bv = mycelium_core::binary::int_to_bits(y, n).unwrap();
+            let a = Value::new(
+                Repr::Binary { width: n },
+                Payload::Bits(av),
+                Meta::exact(Provenance::Root),
+            )
+            .unwrap();
+            let b = Value::new(
+                Repr::Binary { width: n },
+                Payload::Bits(bv),
+                Meta::exact(Provenance::Root),
+            )
+            .unwrap();
+            let expected = i128::from(x) * i128::from(y);
+            let got = f("bin.mul", &[&a, &b]);
+            if expected >= i128::from(lo) && expected <= i128::from(hi) {
+                let want_bits = mycelium_core::binary::int_to_bits(expected as i64, n).unwrap();
+                assert_eq!(
+                    got.expect("in-range mul must succeed").payload(),
+                    &Payload::Bits(want_bits),
+                    "mul {x}*{y} at n={n}"
+                );
+            } else {
+                assert!(
+                    matches!(got, Err(EvalError::Overflow { .. })),
+                    "mul {x}*{y} at n={n} should overflow, got {got:?}"
+                );
+            }
+        }
+    }
+}
