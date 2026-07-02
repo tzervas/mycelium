@@ -67,18 +67,21 @@ digest is a snapshot, that table is live.
 
 ## Active / next work
 
-- **The Rust-reference-completion + acyclic-deps plan** — `docs/planning/rust-reference-completion-and-acyclic-deps.md`
-  (kickoff UID `rcp`) is **PROPOSED**, under maintainer review in **open PR #913** (branch
-  `worktree-agent-a89ab8d467a2b2b46`) — **not yet merged to `dev`**, so the plan doc and the `rcp.md`
-  kickoff do not exist on this branch yet. It reframes the remaining work as a bounded closeout
-  (Workstream A: make the acyclic-deps invariant structural; B–G: language/value-model/runtime/
-  toolchain/security/kernel-freeze closeout) that gates **E18-1 self-hosting**.
-- **Stdlib surface-sufficiency finding** (carried in the same open PR #913, destined for
-  `docs/spec/stdlib/self-hosting-readiness.md` §0): the current surface is verified sufficient for
-  **~19/26** stdlib crates; the **~5 real blockers are below-grammar** (float ops, binary mul/div +
-  signed, Dense/VSA-to-L1 prims, R2 vocab, `Substrate` execution) — **not yet reflected** in the
-  ratified spec on `dev` as of this writing (FLAG: verify PR #913's merge state before citing its
-  file paths as live).
+- **The function-first umbrella roadmap** — `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md`
+  (**revised 2026-07-01** from the Rust-reference-completion + acyclic-deps plan, kickoff UID `rcp`;
+  a pointer stub remains at the old path, which open **PR #913** carried in its prior form) is
+  **Advisory/Proposed**, governed by **ADR-038** (*Pragmatic Dogfooding: the Function-First Release
+  Strategy* — **Proposed**, awaiting maintainer ratification): Phase I → `lang 1.0.0` + public
+  release gated on **functional usability** (H0 acyclic-deps enforcement → H1 below-grammar
+  enablers → H2 closeout lanes, H2a grammar-stability gate before mass porting); Phase II →
+  post-public **progressive** Mycelium rewrite (compiler self-hosting deferred/conditional).
+  ADR-038 refines ADR-036 §2.4 (release gate: usability, not Rust-replacement) and records that
+  ADR-036 superseded RFC-0031 §5 D1's compiler-forever-Rust permanence (append-only notes on both).
+- **Stdlib surface-sufficiency finding** — `docs/spec/stdlib/self-hosting-readiness.md` **§0 is
+  live on this branch** (the 2026-07-01 currency update): the current surface is verified
+  sufficient for **~19/26** stdlib crates; the **~5 real blockers are below-grammar** (float ops,
+  binary mul/div + signed, Dense/VSA-to-L1 prims, R2 vocab, `Substrate` execution) — these are
+  exactly the roadmap's **H1** enabler set.
 
 ## Open maintainer decisions
 

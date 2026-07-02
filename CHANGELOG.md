@@ -11,6 +11,40 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-01: ADR-038 Proposed — function-first release strategy + the road-to-1.0.0 umbrella roadmap)
+
+- **ADR-038 — Pragmatic Dogfooding: the Function-First Release Strategy** (**Proposed**, awaiting
+  maintainer ratification — authored from the maintainer's 2026-07-01 session directives, not
+  self-ratified). Records the North Star **"Rust where appropriate, Mycelium everywhere else"**
+  (pragmatic dogfooding, not zero-Rust dogmatism); **Phase I → `lang 1.0.0` and the public release
+  gated on functional usability** (repo private, crates `0.0.0`, `publish = false` until the flip);
+  **Phase II → post-public progressive Mycelium rewrite** with compiler self-hosting a deferred,
+  doubly-conditional aspiration (only if stability/perf-proven; only after transpiler polish); the
+  transpiler doctrine (progressive hardening, pre-port polish, manifest transcoding only where
+  ROI-positive — accelerant, never gate); float route (ii) (scalar-float `Repr` via a future float
+  ADR and a DN-39 promotion review; single rehash coordinated with the deferred ADR-030/031 doors,
+  deferred to first value-persistence); and the planning-tier/implementation-tier execution doctrine
+  with mandatory PM prep (user stories and DoD before any implementation agent).
+- **Umbrella roadmap revised:** `docs/planning/rust-reference-completion-and-acyclic-deps.md` →
+  **`docs/planning/road-to-1.0.0-and-mycelium-rewrite.md`** (git mv; pointer stub left at the old
+  path; `.claude/kickoffs/rcp.md` and `docs/CURRENT-STATE.md` references updated). Re-sequenced
+  function-first per ADR-038: **H0** acyclic-deps enforcement plus workspace publish-hygiene and
+  M-866; **H1** the below-grammar usability enablers (order B→C→A(route-ii)→E→D-lite, plus
+  `myc run`/string-literal/`hash.*` — from the readiness-§0 verification); **H2** the Rust-reference
+  closeout lanes (l1 semantics, value/AOT tail, runtime maturity, toolchain/UX, inject-mode, kernel
+  freeze); **H2a** the grammar-stability gate before mass porting (RFC-0037 follow-ons, DN-54
+  completion, tuple decision, ADR-033 FLAG-1); opportunistic `.myc` ports non-gating; **Phase II**
+  cleanly separated. Nothing from the prior plan dropped (mapping in its meta-changelog).
+- **Append-only notes (bodies preserved, changelog rows added):** **ADR-036** — §2.4's release gate
+  refined by ADR-038 to functional usability (binding upon ratification; §2.1–§2.3 unchanged);
+  **RFC-0031** — §5 D1's "compiler stays Rust forever" permanence superseded (ADR-036 §2.2's
+  toolchain-wide dogfooding scope, made explicit by ADR-038; D1 boundary stays operative through
+  Phase I); **RFC-0033** — M-766/M-767 plus the float-`Repr` work pulled forward from the deferred
+  V-wave into Phase I, §7 single-rehash dogfood-gate discipline honored unchanged.
+- Indexed in `docs/adr/README.md` (also adding the previously-missing **ADR-037** index row —
+  index-coverage gap closed) and `docs/Doc-Index.md`. No `issues.yaml` entries minted (task minting
+  happens at execution kickoff per the roadmap).
+
 ### Added (2026-07-01: M-873 follow-on — transpiler hardening: width_cast emission, batch mode, 8-twin union backlog)
 
 - **Faithful `width_cast` conversion emission (DN-41).** `mycelium-transpile` now emits unsigned
