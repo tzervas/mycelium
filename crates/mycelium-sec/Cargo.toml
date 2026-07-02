@@ -18,10 +18,6 @@ workspace = true
 # crate's own `collect_myc` (lib-public, untouched). In-workspace path dep, std-only (KC-3).
 mycelium-cli-common = { path = "../mycelium-cli-common" }
 
-[dev-dependencies]
-# M-961: property tests for the inject-gate verify bounds (house rule: a property test per bound).
-proptest = "1"
-
 [[bin]]
 name = "myc-sec"
 path = "src/bin/myc-sec.rs"

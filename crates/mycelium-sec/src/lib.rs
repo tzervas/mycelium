@@ -12,12 +12,12 @@
 //! (the bin); the load-bearing honesty rule is **skip ≠ pass** — a missing scanner is *reduced coverage*,
 //! reported as such, never folded into a clean bill. KC-3: above the kernel; no new dependency.
 //!
-//! **M-961 (RFC-0038 / DN-77):** the [`inject_gate`] module carries the inject-mode security-axis
-//! core — `loose`/`inoculated` policy, `TrustRoot`, the `SignatureScheme` verify seam, the
-//! never-silent policy refusals, and the default-plus-deviations manifest. The gate's insertion
-//! point (the `Image` dispatch boundary) consumes it from `mycelium-mlir`.
-
-pub mod inject_gate;
+//! **M-961 (RFC-0038 / DN-77) placement note:** the inject-mode gate core (`loose`/`inoculated`
+//! policy, `TrustRoot`, the `SignatureScheme` verify seam, refusals, manifest) lives at the
+//! gate's insertion point — `mycelium-mlir::inject_gate` (core tier) — NOT here: this crate is
+//! tools-tier, and a `core → tools` dependency would violate DN-68's `no-upward-tier-edges`
+//! rule (`xtask/deps-strata.toml`; the M-883/M-884 seam precedent). Security *tooling* built in
+//! this crate can depend downward on that module.
 
 use std::path::{Path, PathBuf};
 

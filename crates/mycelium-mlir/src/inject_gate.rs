@@ -4,9 +4,16 @@
 //! `loose`/`inoculated` modes (RFC-0038 §4.2), the [`TrustRoot`] (§7.1), the [`SignatureScheme`]
 //! verify seam (DN-77 §3.3 B-1), the enforcement-grain knob (§8.4), the never-silent policy
 //! refusals, and the default-plus-deviations [`PolicyManifest`] (§8.5, Phase-I slice per DN-77
-//! §4 item 7). The *gate itself* — where a program is loaded/verified — lives at the dispatch
-//! boundary (`mycelium-mlir::inject::Image`, the DN-77 §2 insertion point); this crate carries
-//! the mechanism the gate calls so the policy surface is auditable in one small place (KC-3).
+//! §4 item 7). The *gate itself* — where a program is loaded/verified — is the dispatch
+//! boundary ([`Image`](crate::inject::Image), the DN-77 §2 insertion point); the policy core
+//! lives beside it in this crate so the security surface is auditable in one small place (KC-3).
+//!
+//! **Placement (DN-68).** DN-77 §2 named `mycelium-sec` "a plausible home for verify helpers,
+//! not a prebuilt one" — but `mycelium-sec` is a **tools-tier** crate (`xtask/deps-strata.toml`)
+//! and the gate's consumer is this **core-tier** crate, so housing the mechanism there would
+//! create a `core → tools` edge the DN-68 `no-upward-tier-edges` named rule forbids (checked:
+//! `cargo run -p xtask -- deps`). Per that rule's own precedent (M-883/M-884 — the seam moves to
+//! the lower tier), the policy core lands here, importable downward by the security tooling.
 //!
 //! **Honesty / scope (VR-5, G2).** What is built here is exactly the DN-77 §4 subset:
 //!
@@ -23,6 +30,7 @@
 //! * Replay/expiry (RFC-0038 §L, M-837), the scoping-hierarchy config surface (§M, M-838),
 //!   `myc-prepare` signed-spore emission (M-839), the cross-colony mesh flow (M-842), and the
 //!   colony trust topology (§8.8, M-849) all stay `Declared` — none is closed here (G2).
+#![forbid(unsafe_code)]
 
 use std::collections::BTreeSet;
 use std::fmt;
