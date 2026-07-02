@@ -326,6 +326,7 @@ dependencies = [
 name = "mycelium-interp"
 version = "0.0.0"
 dependencies = [
+ "blake3",
  "mycelium-core",
  "mycelium-dense",
  "mycelium-numerics",

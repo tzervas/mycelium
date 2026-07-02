@@ -439,3 +439,61 @@ fn vsa_prims_resolve_to_declared_model_dispatched_kernel_prims() {
         );
     }
 }
+
+/// The M-912 (`enb`) additions — `bytes_eq` (the folded-in equality gap the diag/error/recover
+/// ports flagged: `bytes.*` had len/get/slice/concat but no equality) and `hash_blake3` (the
+/// kernel's own BLAKE3 content-addressing hash, M-103, surfaced as a prim). Both are typed by the
+/// dedicated `try_check_seq_bytes_prim` branch (like the rest of the `bytes.*` group) and their Π
+/// entries use the documented `Any` paradigm-model escape hatch (no first-class `Bytes` paradigm
+/// yet). `bytes_eq` genuinely reduces to a `Binary` truth value (not a hatch); `hash_blake3`'s
+/// result is `Any` like `bytes_slice`/`bytes_concat`. Both `Exact` — `bytes_eq` is a total `[u8]`
+/// comparison, and `hash_blake3` is `Exact` on the strength of the kernel's own deterministic
+/// BLAKE3 use (M-103), pinned by the known-digest conformance vectors in `mycelium-interp`.
+#[test]
+fn bytes_eq_and_hash_blake3_resolve_to_declared_kernel_prims() {
+    use mycelium_core::GuaranteeStrength;
+    let table = PrimTable::builtins();
+
+    let bytes_eq_kernel = prim_kernel_name("bytes_eq").expect("bytes_eq must map to a kernel name");
+    assert_eq!(
+        bytes_eq_kernel, "bytes.eq",
+        "surface→kernel mapping drifted"
+    );
+    assert!(
+        table.contains(bytes_eq_kernel),
+        "surface `bytes_eq` → kernel `{bytes_eq_kernel}`, but it is not declared in Π",
+    );
+    let decl = table.get(bytes_eq_kernel).expect("declared prim");
+    assert_eq!(decl.sig.arity(), 2, "`bytes.eq` is binary (two operands)");
+    assert!(
+        decl.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+        "`bytes.eq` operands use the documented `Any` escape hatch (no Bytes paradigm yet)",
+    );
+    assert_eq!(
+        decl.sig.result,
+        PrimParadigm::Binary,
+        "`bytes.eq` reduces to a Binary{{1}} truth value",
+    );
+    assert_eq!(decl.intrinsic, GuaranteeStrength::Exact);
+
+    let hash_kernel =
+        prim_kernel_name("hash_blake3").expect("hash_blake3 must map to a kernel name");
+    assert_eq!(hash_kernel, "hash.blake3", "surface→kernel mapping drifted");
+    assert!(
+        table.contains(hash_kernel),
+        "surface `hash_blake3` → kernel `{hash_kernel}`, but it is not declared in Π",
+    );
+    let decl = table.get(hash_kernel).expect("declared prim");
+    assert_eq!(decl.sig.arity(), 1, "`hash.blake3` is unary");
+    assert!(
+        decl.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+        "`hash.blake3` operand uses the documented `Any` escape hatch (no Bytes paradigm yet)",
+    );
+    assert_eq!(decl.sig.result, PrimParadigm::Any);
+    assert_eq!(
+        decl.intrinsic,
+        GuaranteeStrength::Exact,
+        "`hash.blake3` intrinsic must stay Exact — justified by the kernel's own deterministic \
+         BLAKE3 use (VR-5)",
+    );
+}

@@ -210,7 +210,10 @@ impl PrimTable {
     /// `enb` Gap C; the FR-S4 cleanup-memory retrieval returning the `[index, confidence,
     /// margin]` decision triple, the §6 compositional role-reconstruction with an explicit
     /// threshold, and the M-131 `requiredDim`/`proven_capacity_bound` query — see the entry
-    /// comment).
+    /// comment), plus **`bytes.eq`** (M-912, `enb` — the folded-in equality gap the diag/error/
+    /// recover ports flagged: byte-wise equality over two `Bytes` operands) and **`hash.blake3`**
+    /// (M-912, `enb` — the kernel's own BLAKE3 content-addressing hash, M-103, surfaced as a
+    /// `Bytes -> Bytes` prim; `Exact`, justified by the kernel's own deterministic use).
     /// Every entry is `intrinsic = Exact` **except** `dense.add`/`dense.sub`/`dense.scale`/
     /// `dense.dot`/`dense.similarity` (`Proven`, carried from the kernel's per-op tag), the
     /// `flt.*` group (`Empirical` — the ratified ADR-040 §2.6 host-conformance posture; see the
@@ -362,6 +365,21 @@ impl PrimTable {
         t.insert("bytes.get", exact(vec![Any, Binary], Binary));
         t.insert("bytes.slice", exact(vec![Any, Binary, Binary], Any));
         t.insert("bytes.concat", exact(vec![Any, Any], Any));
+        // M-912 (`enb`, folded-in gap): `bytes.eq` — byte-wise equality over two `Bytes` operands,
+        // flagged missing by the diag/error/recover ports (`bytes.*` had len/get/slice/concat but no
+        // equality). Same `Any`/`Binary` escape hatch as the rest of the group (no first-class
+        // `Bytes` paradigm); the real "both operands `Bytes`" typing is the interpreter prim
+        // (`prims.rs::prim_bytes_eq`) and the L1 checker branch. `intrinsic = Exact` — a total,
+        // decidable `[u8]` comparison, no approximation involved.
+        t.insert("bytes.eq", exact(vec![Any, Any], Binary));
+        // M-912 (`enb`): `hash.blake3` — the kernel's own content-addressing hash (BLAKE3, M-103;
+        // `mycelium-core::content::Canon`/`id::ContentHash` already use it) surfaced as a prim:
+        // `Bytes -> Bytes`, the 32-byte digest of the input byte string. Same `Any` escape hatch (no
+        // first-class `Bytes` paradigm); the real "operand must be `Bytes`" typing is the interpreter
+        // prim (`prims.rs::prim_hash_blake3`) and the L1 checker branch. `intrinsic = Exact` —
+        // justified by the kernel's own use of BLAKE3 for content addressing (deterministic; the
+        // wrapper calls the same algorithm the same way, adding no additional uncertainty).
+        t.insert("hash.blake3", exact(vec![Any], Any));
         // DN-58 §A (M-817): the `Binary` `Fuse` semilattice meet (bitwise-AND). `intrinsic = Exact`
         // (a total greatest-lower-bound). The user-`Data` fuse registers no prim — it elaborates to the
         // resolved `Fuse::join` call (DN-58 §A.5) — and the non-`Binary` reprs have no committed meet

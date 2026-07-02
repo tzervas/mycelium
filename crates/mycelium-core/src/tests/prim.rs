@@ -88,6 +88,8 @@ fn builtins_are_present_and_resolvable() {
         "bytes.get",
         "bytes.slice",
         "bytes.concat",
+        "bytes.eq",
+        "hash.blake3",
         "fuse_join:binary",
     ] {
         let r = t.prim_ref(name).expect("builtin registered");
@@ -121,8 +123,10 @@ fn builtins_are_present_and_resolvable() {
     // dispatch set {MAP-I}); RFC-0003 §3/§5/§6/M-894 added the cleanup/reconstruction pair
     // `vsa.cleanup`/`vsa.reconstruct` and the capacity query `vsa.required_dim` — pinned
     // separately below, `vsa.required_dim`'s intrinsic is `Proven` (the M-131 checked
-    // instantiation)).
-    assert_eq!(t.entries().len(), 57);
+    // instantiation); M-912 (`enb`) added `bytes.eq` (the folded-in equality gap) and
+    // `hash.blake3` (the kernel's own BLAKE3 content-addressing hash surfaced as a prim) — both
+    // `Exact`, listed above with the rest of the `Exact` group).
+    assert_eq!(t.entries().len(), 59);
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -510,10 +514,11 @@ fn names_returns_registered_sorted_names() {
     // §3/§4/M-892 vsa.bind/vsa.unbind/vsa.permute, the model-dispatched VSA bind group +
     // RFC-0003 §4/§5/M-893 vsa.bundle, the certified superposition path + RFC-0003
     // §3/§5/§6/M-894 vsa.cleanup/vsa.reconstruct/vsa.required_dim, the cleanup/reconstruction
-    // pair and the capacity-bound query).
+    // pair and the capacity-bound query + M-912 bytes.eq/hash.blake3, the folded-in byte
+    // equality gap and the kernel's BLAKE3 content-addressing hash surfaced as a prim).
     assert_eq!(
         ns.len(),
-        57,
+        59,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

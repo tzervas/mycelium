@@ -29,3 +29,8 @@ mycelium-sched = { path = "../mycelium-sched" }
 # honest per-model tag/bound and the prim wrapper carries it through unchanged (VR-5).
 # Downward-only dep (ADR-008: vsa sits on core — the M-890 `mycelium-dense` precedent).
 mycelium-vsa = { path = "../mycelium-vsa" }
+# M-912 (`enb`): surfaces the kernel's own content-addressing hash (BLAKE3, M-103 —
+# `mycelium-core::content::Canon`/`id::ContentHash` already use it) as the `hash.blake3` prim. Same
+# crate + version the kernel content-addresses with (workspace-pinned), so the wrapper adds no
+# additional algorithmic uncertainty beyond the kernel's own use — the basis for the `Exact` tag.
+blake3.workspace = true

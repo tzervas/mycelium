@@ -3906,3 +3906,180 @@ fn vsa_required_dim_reject_surface_is_never_silent() {
         "arity 1 must refuse"
     );
 }
+
+// ---- M-912: `bytes.eq` / `hash.blake3` ----
+
+/// A `Repr::Bytes` const value over `bytes`.
+fn bytes_val(bytes: Vec<u8>) -> Value {
+    Value::new(
+        Repr::Bytes,
+        Payload::Bytes(bytes),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// The deterministic official BLAKE3 test-vector input: a repeating sequence of 251 bytes
+/// (`0, 1, 2, …, 250, 0, 1, …`) — exactly the generation rule documented by
+/// `BLAKE3-team/BLAKE3`'s `test_vectors/test_vectors.json`.
+fn blake3_test_vector_input(len: usize) -> Vec<u8> {
+    (0..len).map(|i| (i % 251) as u8).collect()
+}
+
+/// `hash.blake3` reproduces the **official BLAKE3 test vectors** (known digests, not merely
+/// self-consistency against the same crate) at several input lengths, including a
+/// chunk-boundary crossing (BLAKE3's chunk size is 1024 bytes) — pins the wrapper's
+/// byte-for-byte correctness (right bytes, right order, right length), not just "it calls
+/// some hash function". Guarantee `Exact` (M-912; justified by the kernel's own
+/// deterministic BLAKE3 use for content addressing, M-103).
+#[test]
+fn hash_blake3_matches_official_test_vectors() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("hash.blake3").expect("hash.blake3 registered");
+    // (input length, expected 32-byte digest as lowercase hex) — the official BLAKE3
+    // test vectors (github.com/BLAKE3-team/BLAKE3, test_vectors/test_vectors.json),
+    // truncated to the default 32-byte output (the vectors are extended-output; the
+    // spec documents that the first 32 bytes must match the default-length output).
+    for (len, expected_hex) in [
+        (
+            0,
+            "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262",
+        ),
+        (
+            1,
+            "2d3adedff11b61f14c886e35afa036736dcd87a74d27b5c1510225d0f592e213",
+        ),
+        (
+            3,
+            "e1be4d7a8ab5560aa4199eea339849ba8e293d55ca0a81006726d184519e647f",
+        ),
+        (
+            64,
+            "4eed7141ea4a5cd4b788606bd23f46e212af9cacebacdc7d1f4c6dc7f2511b98",
+        ),
+        (
+            1024,
+            "42214739f095a406f3fc83deb889744ac00df831c10daa55189b5d121c855af7",
+        ),
+    ] {
+        let input = bytes_val(blake3_test_vector_input(len));
+        let out = f("hash.blake3", &[&input]).unwrap_or_else(|e| panic!("len={len}: {e:?}"));
+        assert_eq!(out.repr(), &Repr::Bytes, "len={len}: result must be Bytes");
+        let Payload::Bytes(digest) = out.payload() else {
+            panic!("len={len}: payload must be Bytes")
+        };
+        assert_eq!(digest.len(), 32, "len={len}: BLAKE3 digest is 32 bytes");
+        let hex: String = digest.iter().map(|b| format!("{b:02x}")).collect();
+        assert_eq!(
+            hex, expected_hex,
+            "len={len}: digest must match the official BLAKE3 test vector"
+        );
+        assert_eq!(
+            out.meta().guarantee(),
+            GuaranteeStrength::Exact,
+            "len={len}: hash.blake3 is Exact"
+        );
+    }
+}
+
+/// `hash.blake3` refuses a non-`Bytes` operand and the wrong arity — never-silent (G2).
+#[test]
+fn hash_blake3_reject_surface_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("hash.blake3").expect("hash.blake3 registered");
+    let non_bytes = byte([true; 8]);
+    assert!(
+        matches!(
+            f("hash.blake3", &[&non_bytes]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Bytes operand must refuse"
+    );
+    let b = bytes_val(vec![0x01]);
+    assert!(
+        matches!(f("hash.blake3", &[]), Err(EvalError::PrimType { .. })),
+        "arity 0 must refuse"
+    );
+    assert!(
+        matches!(f("hash.blake3", &[&b, &b]), Err(EvalError::PrimType { .. })),
+        "arity 2 must refuse"
+    );
+}
+
+/// `bytes.eq` accepts equal/unequal `Bytes` pairs (including the empty string, and pairs
+/// differing only in length) with the `Exact` tag — the M-912 folded-in equality gap.
+#[test]
+fn bytes_eq_accepts_equal_and_unequal_pairs() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bytes.eq").expect("bytes.eq registered");
+
+    let a = bytes_val(vec![0x01, 0x02, 0x03]);
+    let a2 = bytes_val(vec![0x01, 0x02, 0x03]);
+    let out = f("bytes.eq", &[&a, &a2]).expect("bytes.eq evaluates");
+    assert_eq!(out.repr(), &Repr::Binary { width: 1 });
+    assert_eq!(
+        out.payload(),
+        &Payload::Bits(vec![true]),
+        "equal byte strings -> true"
+    );
+    assert_eq!(out.meta().guarantee(), GuaranteeStrength::Exact);
+
+    let b = bytes_val(vec![0x01, 0x02, 0x04]);
+    let out = f("bytes.eq", &[&a, &b]).expect("bytes.eq evaluates");
+    assert_eq!(
+        out.payload(),
+        &Payload::Bits(vec![false]),
+        "differing byte -> false"
+    );
+
+    // Different lengths (a length-sensitive comparison, not a prefix match).
+    let c = bytes_val(vec![0x01, 0x02]);
+    let out = f("bytes.eq", &[&a, &c]).expect("bytes.eq evaluates");
+    assert_eq!(
+        out.payload(),
+        &Payload::Bits(vec![false]),
+        "different-length byte strings -> false, never a prefix match"
+    );
+
+    // The empty string equals itself.
+    let empty = bytes_val(vec![]);
+    let empty2 = bytes_val(vec![]);
+    let out = f("bytes.eq", &[&empty, &empty2]).expect("bytes.eq evaluates");
+    assert_eq!(out.payload(), &Payload::Bits(vec![true]), "empty == empty");
+}
+
+/// `bytes.eq` refuses a non-`Bytes` operand (either position) and the wrong arity —
+/// never-silent (G2).
+#[test]
+fn bytes_eq_reject_surface_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bytes.eq").expect("bytes.eq registered");
+    let b = bytes_val(vec![0x01]);
+    let non_bytes = byte([true; 8]);
+
+    assert!(
+        matches!(
+            f("bytes.eq", &[&non_bytes, &b]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Bytes first operand must refuse"
+    );
+    assert!(
+        matches!(
+            f("bytes.eq", &[&b, &non_bytes]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Bytes second operand must refuse"
+    );
+    assert!(
+        matches!(f("bytes.eq", &[&b]), Err(EvalError::PrimType { .. })),
+        "arity 1 must refuse"
+    );
+    assert!(
+        matches!(
+            f("bytes.eq", &[&b, &b, &b]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "arity 3 must refuse"
+    );
+}
