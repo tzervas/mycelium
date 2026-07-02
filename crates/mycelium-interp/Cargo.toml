@@ -24,3 +24,8 @@ mycelium-numerics = { path = "../mycelium-numerics" }
 # mycelium-interp <-> mycelium-std-runtime cycle. Wired into `src/parallel.rs` (M-862): the
 # top-level pure-argument batch is dispatched through `Scheduler::run_indexed`.
 mycelium-sched = { path = "../mycelium-sched" }
+# The VSA algebra kernel: the model-dispatched VSA bind group (`vsa.*`, M-892) delegates to the
+# Value-level model ops (`MapI`/`Fhrr`/`Bsc`) — the kernel constructs the result `Value` with its
+# honest per-model tag/bound and the prim wrapper carries it through unchanged (VR-5).
+# Downward-only dep (ADR-008: vsa sits on core — the M-890 `mycelium-dense` precedent).
+mycelium-vsa = { path = "../mycelium-vsa" }

@@ -31,6 +31,8 @@ pub mod matrix;
 pub mod recon;
 pub mod resonator;
 pub mod sbc;
+#[cfg(test)]
+mod tests;
 pub(crate) mod wrap;
 
 pub use bsc::Bsc;

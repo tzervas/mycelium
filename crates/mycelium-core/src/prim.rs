@@ -198,11 +198,16 @@ impl PrimTable {
     /// (`flt.lt`/`flt.le`/`flt.gt`/`flt.ge`/`flt.eq` — the IEEE-754 §5.11 partial-order
     /// predicates, NaN explicitly unordered — plus the named opt-in total order `flt.total_le`
     /// (IEEE-754 §5.10 `totalOrder`), ADR-040 §2.4, M-899 — `enb` Gap A; the total-order
-    /// *property* stays `Empirical` until the M-511 proof debt is discharged).
+    /// *property* stays `Empirical` until the M-511 proof debt is discharged),
+    /// and the **VSA bind group** (`vsa.bind`/`vsa.unbind`/`vsa.permute`, RFC-0003 §3/§4/ADR-008,
+    /// M-892 — `enb` Gap C; model-dispatched MAP-I/FHRR/BSC, tags per model carried from the
+    /// `mycelium-vsa` kernel — see the entry comment for the meet-tag rule).
     /// Every entry is `intrinsic = Exact` **except** `dense.add`/`dense.sub`/`dense.scale`/
-    /// `dense.dot`/`dense.similarity` (`Proven`, carried from the kernel's per-op tag) and the
+    /// `dense.dot`/`dense.similarity` (`Proven`, carried from the kernel's per-op tag), the
     /// `flt.*` group (`Empirical` — the ratified ADR-040 §2.6 host-conformance posture; see the
-    /// entry comment); all are width-`Uniform` **except** `cmp.eq`/`cmp.lt`/`cmp.lt_s`,
+    /// entry comment), and `vsa.unbind` (`Empirical` — the meet over the model set: FHRR's
+    /// normative weak-link unbind; see the entry comment); all are width-`Uniform` **except**
+    /// `cmp.eq`/`cmp.lt`/`cmp.lt_s`,
     /// `dense.dot`/`dense.similarity`, and the `flt.*` comparison group, which are
     /// width-`Collapse` (operand width → `Binary{1}` / operand dim → a dim-1 measurement /
     /// two `Float` scalars → a `Binary{1}` truth value). This is the single source of truth the
@@ -505,6 +510,53 @@ impl PrimTable {
         t.insert("flt.ge", flt_cmp());
         t.insert("flt.eq", flt_cmp());
         t.insert("flt.total_le", flt_cmp());
+        // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the **VSA bind group** —
+        // `vsa.bind`/`vsa.unbind`/`vsa.permute` over `Repr::Vsa{model, dim, sparsity}` values,
+        // **model-dispatched** at runtime on the operand's model id across the introduction set
+        // **MAP-I / FHRR / BSC** (an operand outside that set is an explicit refusal in the
+        // interpreter wrapper, never a guessed algebra — G2; widening the set is an append-only
+        // extension that must recompute the meets below). The kernel (`mycelium-vsa`'s Value-level
+        // ops, e.g. `MapI::bind_values`) constructs the full result `Value` — payload and `Meta`
+        // (model-namespaced `Derived` provenance such as `vsa.map_i.bind`, and the per-model
+        // honest tag) — and the wrapper carries it through unchanged (VR-5), exactly the M-890/
+        // M-891 tensor-valued pattern.
+        //
+        // **Intrinsic tags — the MEET over the dispatch set, never the strongest member (VR-5).**
+        // A Π declaration stores ONE strength, but the per-op tag is *per-model* (RFC-0003 §4:
+        // MAP-I bind/unbind/permute `Exact`; FHRR bind/permute `Exact` but unbind **`Empirical`**
+        // — the normative weak-link assignment; BSC bind/unbind/permute `Exact`). Recording the
+        // strongest would over-claim for FHRR, so the table records the meet: `vsa.bind`/
+        // `vsa.permute` = `Exact` (all three agree), `vsa.unbind` = **`Empirical`** (downgraded to
+        // stay accurate — house rule 1). The *runtime* result still carries the dispatched model's
+        // own (possibly stronger) kernel tag — e.g. a MAP-I unbind result is `Exact` — because the
+        // kernel constructs the `Meta`, not this table. Table↔kernel meet-consistency is guarded
+        // by a `mycelium-interp` test (this crate cannot see `mycelium-vsa` — ADR-008 keeps the
+        // dependency one-way).
+        //
+        // **Paradigm/width-model note (FLAG — the same escape hatch as the seq/bytes/dense/flt
+        // prims above):** `PrimParadigm` has no first-class `Vsa` paradigm and `WidthRel` no
+        // model/dim relation, so operands/results are typed `Any`/`Uniform` here as the nearest
+        // tags (`vsa.permute`'s second operand is really a `Binary{W}` shift amount — enforced by
+        // the interpreter wrapper and the L1 checker, like `bit.width_cast`'s witness operand).
+        // The real never-silent typing — equal model + dim on every hypervector operand, model
+        // mismatch an explicit refusal, never a coercion — is enforced by the kernel + interpreter
+        // prim and the L1 checker branch (`checkty.rs::try_check_vsa_prim`). A first-class `Vsa`
+        // paradigm is a deliberate, RFC-unpinned extension left for the surface-typing work
+        // (it ripples into content-addressing), exactly as for `Seq`/`Bytes`/`Dense`/`Float`.
+        let vsa = |operands: Vec<PrimParadigm>, intrinsic: GuaranteeStrength| PrimDecl {
+            sig: PrimSig {
+                operands,
+                result: Any,
+                width: WidthRel::Uniform,
+            },
+            intrinsic,
+        };
+        t.insert("vsa.bind", vsa(vec![Any, Any], GuaranteeStrength::Exact));
+        t.insert(
+            "vsa.unbind",
+            vsa(vec![Any, Any], GuaranteeStrength::Empirical),
+        );
+        t.insert("vsa.permute", vsa(vec![Any, Any], GuaranteeStrength::Exact));
         t
     }
 
