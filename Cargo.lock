@@ -610,6 +610,7 @@ dependencies = [
  "mycelium-core",
  "mycelium-rt-abi",
  "mycelium-sched",
+ "mycelium-select",
  "mycelium-std-core",
  "proptest",
 ]
