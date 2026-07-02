@@ -1,5 +1,6 @@
 //! White-box tests for [`crate::binary`]. Extracted from the logic file as-touched by M-887 (test
 //! layout rule, M-797) — the pre-existing codec tests plus the new [`crate::binary::mul`] coverage.
+//! M-888 adds the unsigned [`crate::binary::div_rem`] coverage.
 
 use crate::binary::*;
 
@@ -154,6 +155,122 @@ fn mul_matches_integer_oracle() {
                     assert_eq!(got, int_to_bits(expected_i64, n), "mul {x}*{y} at n={n}");
                 } else {
                     assert_eq!(got, None, "mul {x}*{y} should overflow at n={n}");
+                }
+            }
+        }
+    }
+}
+
+// ---- M-888: `div_rem` — never-silent unsigned fixed-width division/remainder -------------------
+
+#[test]
+fn uint_round_trips_exhaustively_at_n8() {
+    for v in 0u64..=255 {
+        let bits = uint_to_bits(v, 8).expect("in range");
+        assert_eq!(bits.len(), 8);
+        assert_eq!(bits_to_uint(&bits), v);
+    }
+}
+
+#[test]
+fn uint_to_bits_rejects_out_of_range() {
+    assert_eq!(uint_to_bits(255, 8), Some(vec![true; 8]));
+    assert_eq!(uint_to_bits(256, 8), None); // out of range for 8 bits
+    assert_eq!(uint_to_bits(0, 0), Some(Vec::new()));
+    assert_eq!(uint_to_bits(1, 0), None);
+}
+
+#[test]
+fn div_rem_worked_examples() {
+    // 7 / 2 = 3 remainder 1.
+    let a = uint_to_bits(7, 8).unwrap();
+    let b = uint_to_bits(2, 8).unwrap();
+    let (q, r) = div_rem(&a, &b).expect("7 / 2");
+    assert_eq!(bits_to_uint(&q), 3);
+    assert_eq!(bits_to_uint(&r), 1);
+
+    // 255 / 1 = 255 remainder 0 (upper boundary at n=8).
+    let a = uint_to_bits(255, 8).unwrap();
+    let b = uint_to_bits(1, 8).unwrap();
+    let (q, r) = div_rem(&a, &b).expect("255 / 1");
+    assert_eq!(bits_to_uint(&q), 255);
+    assert_eq!(bits_to_uint(&r), 0);
+
+    // 0 / anything nonzero = 0 remainder 0.
+    let zero = uint_to_bits(0, 8).unwrap();
+    let x = uint_to_bits(17, 8).unwrap();
+    let (q, r) = div_rem(&zero, &x).expect("0 / 17");
+    assert_eq!(bits_to_uint(&q), 0);
+    assert_eq!(bits_to_uint(&r), 0);
+}
+
+/// Division by zero is an explicit `None` — never a panic, never a silently-defined value.
+#[test]
+fn div_rem_by_zero_refuses() {
+    let a = uint_to_bits(7, 8).unwrap();
+    let zero = uint_to_bits(0, 8).unwrap();
+    assert_eq!(div_rem(&a, &zero), None);
+    // Even 0 / 0 refuses — it is not special-cased to (0, 0).
+    assert_eq!(div_rem(&zero, &zero), None);
+}
+
+#[test]
+fn div_rem_rejects_unequal_widths() {
+    let a = uint_to_bits(1, 4).unwrap();
+    let b = uint_to_bits(1, 8).unwrap();
+    assert_eq!(div_rem(&a, &b), None);
+}
+
+#[test]
+fn div_rem_rejects_over_cap_width() {
+    let a = vec![false; DIV_MAX_WIDTH + 1];
+    let b = vec![false; DIV_MAX_WIDTH + 1];
+    assert_eq!(div_rem(&a, &b), None);
+    // At the cap itself the boundary is accepted (subject to the operands, not the width).
+    let a64 = uint_to_bits(10, 64).unwrap();
+    let b64 = uint_to_bits(3, 64).unwrap();
+    let (q, r) = div_rem(&a64, &b64).expect("10 / 3 at n=64");
+    assert_eq!(bits_to_uint(&q), 3);
+    assert_eq!(bits_to_uint(&r), 1);
+}
+
+#[test]
+fn div_rem_n0_is_div_by_zero() {
+    // The zero-width bitvector's only value is 0; 0 / 0 refuses, it is not silently `(0, 0)`.
+    assert_eq!(div_rem(&[], &[]), None);
+}
+
+/// **Oracle property test (the Euclidean identity):** for every pair at small widths with a
+/// nonzero divisor, `a == quotient * b + remainder` holds bit-exactly and `remainder < b`; every
+/// zero-divisor pair is an explicit `None`. Mirrors `mul_matches_integer_oracle`.
+#[test]
+fn div_rem_matches_euclidean_identity_oracle() {
+    for n in 1u32..=8 {
+        let hi: u64 = (1u64 << n) - 1;
+        for x in 0..=hi {
+            for y in 0..=hi {
+                let a = uint_to_bits(x, n).unwrap();
+                let b = uint_to_bits(y, n).unwrap();
+                let got = div_rem(&a, &b);
+                if y == 0 {
+                    assert_eq!(
+                        got, None,
+                        "div_rem {x}/{y} should refuse (div-by-zero) at n={n}"
+                    );
+                } else {
+                    let (q, r) =
+                        got.unwrap_or_else(|| panic!("div_rem {x}/{y} at n={n} must succeed"));
+                    let qv = bits_to_uint(&q);
+                    let rv = bits_to_uint(&r);
+                    assert_eq!(qv, x / y, "quotient {x}/{y} at n={n}");
+                    assert_eq!(rv, x % y, "remainder {x}/{y} at n={n}");
+                    // Euclidean identity, bit-exact.
+                    assert_eq!(
+                        qv * y + rv,
+                        x,
+                        "Euclidean identity {x} == ({x}/{y})*{y} + {x}%{y}"
+                    );
+                    assert!(rv < y, "remainder must be < divisor");
                 }
             }
         }

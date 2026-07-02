@@ -72,9 +72,11 @@ impl PrimRegistry {
     /// M-748), the never-silent `Binary` width-cast (`bit.width_cast` — zero-extend widen / checked
     /// narrow, DN-41, M-798), never-silent indexed-sequence access (`seq.len`/`seq.get`, RFC-0032 D3,
     /// M-749), never-silent byte-string access
-    /// (`bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat`, RFC-0032 D4, M-750), and the
-    /// never-silent two's-complement `Binary` multiply (`bin.mul`, RFC-0033 §4.1.2/§4.1.3, M-887 —
-    /// the first `enb` Gap-B prim; sets the registry pattern the sibling Gap-B/C prims mirror).
+    /// (`bytes.len`/`bytes.get`/`bytes.slice`/`bytes.concat`, RFC-0032 D4, M-750), the never-silent
+    /// two's-complement `Binary` multiply (`bin.mul`, RFC-0033 §4.1.2/§4.1.3, M-887 — the first
+    /// `enb` Gap-B prim; sets the registry pattern the sibling Gap-B/C prims mirror), and the
+    /// never-silent **unsigned** `Binary` division/remainder (`bin.div`/`bin.rem`, RFC-0033
+    /// §4.1.2/§4.1.3, M-888 — div-by-zero is an explicit refusal; the signed variant rides M-767).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -95,6 +97,9 @@ impl PrimRegistry {
         r.register("bit.sub", prim_bit_sub);
         // RFC-0033 §4.1.2/§4.1.3 (M-887, `enb` Gap B): never-silent two's-complement multiply.
         r.register("bin.mul", prim_bin_mul);
+        // RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent unsigned division/remainder.
+        r.register("bin.div", prim_bin_div);
+        r.register("bin.rem", prim_bin_rem);
         // DN-41 (M-798): never-silent width-cast (zero-extend widen / checked narrow) over `Binary`.
         r.register("bit.width_cast", prim_width_cast);
         // RFC-0032 D3 (M-749): never-silent indexed-sequence access over `Repr::Seq`.
@@ -564,6 +569,95 @@ fn prim_bin_mul(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
         args,
         args[0].repr().clone(),
         Payload::Bits(out),
+        ApproxRule::Refuse,
+    )
+}
+
+// --- RFC-0033 §4.1.2/§4.1.3 (M-888, `enb` Gap B): never-silent unsigned division/remainder -------
+//
+// `bin.div`/`bin.rem` are the second Gap-B prims of the RFC-0033 arithmetic set. Division *differs*
+// by signedness (§4.1.2: "operations whose result differs by signedness … MUST be distinct named
+// ops"), unlike `bin.mul` (shared/signedness-agnostic bits). This lands the **unsigned** reading
+// first — the signed/two's-complement reading rides M-767 under its own distinct name. The kernel
+// codec ([`binary::div_rem`]) reads operands as **unsigned** bitvectors ([`binary::bits_to_uint`]),
+// never through the two's-complement [`binary::bits_to_int`] `bin.mul` uses.
+//
+// **Naming FLAG (maintainer call).** The M-888 task text names these prims `bin.div`/`bin.rem`,
+// mirroring `bin.mul`'s `bin.*` kernel namespace — but M-887 established `bin.*` for the *signed*
+// two's-complement reading (`bin.mul`), while `bit.*` is the existing *unsigned* arithmetic
+// namespace (`bit.add`/`bit.sub`, RFC-0032 D2). Naming an **unsigned** division `bin.div` sits
+// somewhat against that emerging convention (`bit.div` would read more consistently with
+// `bit.add`/`bit.sub`). Landed as `bin.div`/`bin.rem` per the literal task/issue naming; flagged
+// here — and in the leaf report — for a maintainer decision on whether M-767's future *signed*
+// `div`/`rem` should instead claim `bin.div`/`bin.rem` and this unsigned pair be renamed
+// `bit.div`/`bit.rem` for consistency (a rename is cheap now, before any downstream `.myc` surface
+// depends on the name; RFC-0033 §4.1.2 requires the distinct-naming property, not a specific
+// spelling).
+//
+// Never-silent: division by zero is an explicit [`EvalError::PrimType`] (there is no "overflow"
+// case for unsigned fixed-width division — see [`binary::div_rem`]'s doc comment), never a panic or
+// a silently-defined value (RFC-0033 §4.1.3; G2).
+//
+// **Width cap (current scope).** Mirrors `bin.mul`: [`binary::div_rem`] is exact for `n ≤
+// `[`binary::DIV_MAX_WIDTH`]`; a wider operand refuses with an explicit [`EvalError::PrimType`]
+// naming the cap.
+
+/// Shared arity/width validation + kernel dispatch for `bin.div`/`bin.rem`: checks arity 2,
+/// extracts equal-width `Binary` operand bits (width mismatch/over-cap → [`EvalError::PrimType`]),
+/// and calls [`binary::div_rem`] (div-by-zero → an explicit [`EvalError::PrimType`], never a
+/// panic). Returns `(quotient_bits, remainder_bits)` so `bin.div`/`bin.rem` share exactly one
+/// division per call rather than each recomputing it.
+fn bin_div_rem(prim: &str, args: &[&Value]) -> Result<(Vec<bool>, Vec<bool>), EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bits(prim, args[0])?;
+    let b = as_bits(prim, args[1])?;
+    if a.len() != b.len() {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("width mismatch: {} vs {} bits", a.len(), b.len()),
+        });
+    }
+    if a.len() > binary::DIV_MAX_WIDTH {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "width {} exceeds the {}-bit unsigned division cap (M-888 scope)",
+                a.len(),
+                binary::DIV_MAX_WIDTH
+            ),
+        });
+    }
+    binary::div_rem(a, b).ok_or_else(|| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: "division by zero".to_owned(),
+    })
+}
+
+/// `bin.div : (Binary{N}, Binary{N}) → Binary{N}` — never-silent **unsigned** division
+/// (RFC-0033 §4.1.2/§4.1.3, M-888). Equal-width operands, `N ≤ `[`binary::DIV_MAX_WIDTH`]`; a width
+/// mismatch, an over-cap width, or division by zero is an explicit [`EvalError::PrimType`] — never
+/// a panic or a silently-defined value (G2).
+fn prim_bin_div(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (q, _r) = bin_div_rem(prim, args)?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(q),
+        ApproxRule::Refuse,
+    )
+}
+
+/// `bin.rem : (Binary{N}, Binary{N}) → Binary{N}` — never-silent **unsigned** remainder
+/// (RFC-0033 §4.1.2/§4.1.3, M-888). Same never-silent contract as [`prim_bin_div`]; together they
+/// satisfy the Euclidean identity `a == (a/b)*b + (a%b)` for `b ≠ 0` (property-tested).
+fn prim_bin_rem(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (_q, r) = bin_div_rem(prim, args)?;
+    compose_result(
+        prim,
+        args,
+        args[0].repr().clone(),
+        Payload::Bits(r),
         ApproxRule::Refuse,
     )
 }
