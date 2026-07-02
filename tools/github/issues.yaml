@@ -9735,7 +9735,7 @@ issues:
   - id: M-895
     title: "Float ADR draft + DN-39 promotion dossier (scalar-float route ii; maintainer ratifies)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:numerics, priority:P1, status:in-progress]
+    labels: [phase:5, type:design, area:numerics, priority:P1, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
@@ -9744,6 +9744,11 @@ issues:
       - corpus:RFC-0033
       - corpus:ADR-030
       - corpus:ADR-031
+    landed_basis: "status:done (2026-07-02, maintainer-ratified). ADR-040 (Scalar-Float Value Form,
+      Route II) transitioned Proposed -> Accepted 2026-07-02: route-ii + F64-only width set +
+      in-band IEEE overflow (FLAG-2) + the §7 FLAG recommendations approved. DN-69's PROMOTE
+      verdict (DN-39 promotion dossier) ratified alongside it -- the ADR-038 §2.6 double gate is
+      now satisfied. Unblocks M-896...M-900 (this same ratification, status:blocked -> status:todo)."
     body: |
       Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap A — the design gate). Float ADR draft +
       DN-39 promotion dossier: width set, NaN/rounding semantics, never-silent boundaries;
@@ -9754,6 +9759,10 @@ issues:
       MAINTAINER GATE: the ADR is drafted Proposed — the maintainer ratifies; it is NOT
       self-ratified. M-896…M-900 are status:blocked on this ADR reaching Accepted + the DN-39
       (kernel-promotion bar) review passing — kernel entry is earned, default-DENY.
+
+      MAINTAINER GATE CLEARED 2026-07-02: ADR-040 Accepted (route-ii + F64-only + in-band IEEE
+      overflow + §7 FLAG recommendations approved) and DN-69's PROMOTE verdict ratified. The
+      double gate (ADR-038 §2.6) is satisfied; M-896…M-900 unblocked.
 
       User stories:
       - As the maintainer, I want the float design + kernel-entry case laid out for ratification,
@@ -9766,7 +9775,7 @@ issues:
   - id: M-896
     title: "Scalar-float Repr variant + value form in mycelium-core (per the Accepted ADR)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:todo]
     epic: E28-1
     depends_on: [M-895]
     doc_refs:
@@ -9778,8 +9787,8 @@ issues:
       form in `mycelium-core`, per the Accepted ADR; identity impact *documented, not spent* — no
       content-address rehash (RFC-0033 §7 / M-780 discipline). Model: Sonnet.
 
-      BLOCKED — maintainer gate: M-895's ADR must be Accepted AND the DN-39 review passed before
-      this lands (kernel entry is earned, default-DENY).
+      maintainer gate cleared 2026-07-02 — M-895's ADR-040 reached Accepted and DN-69's DN-39
+      review passed (PROMOTE ratified); this task is unblocked.
 
       User stories:
       - As a language user, I want floats to be first-class values, so that `math`'s f64 half stops
@@ -9792,7 +9801,7 @@ issues:
   - id: M-897
     title: "Float literal — lex + parse + typecheck in the L1 surface"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
     epic: E28-1
     depends_on: [M-896]
     doc_refs:
@@ -9801,8 +9810,8 @@ issues:
       Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap A). Float literal: lex + parse + typecheck
       in the L1 surface. Serial-lane slot (L1 frontend). Model: Sonnet.
 
-      BLOCKED — maintainer gate (transitively): the Gap-A lane opens only after M-895's ADR is
-      Accepted + DN-39 passed (M-896 lands first).
+      maintainer gate cleared 2026-07-02 — M-895's ADR-040 reached Accepted and DN-39 passed
+      (transitively, via M-896); this task is unblocked.
 
       User stories:
       - As a stdlib author, I want to write `1.5` in `.myc`, so that float code is authorable, not
@@ -9815,7 +9824,7 @@ issues:
   - id: M-898
     title: "Float arithmetic prims — flt.add/sub/mul/div/neg with honest accuracy tags"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:todo]
     epic: E28-1
     depends_on: [M-897]
     doc_refs:
@@ -9825,8 +9834,8 @@ issues:
       `flt.add`/`sub`/`mul`/`div`/`neg` — rounding per the ADR; tags honest (Empirical where
       libm-dependent — the M-541 audit is pending). Model: Sonnet.
 
-      BLOCKED — maintainer gate (transitively): the Gap-A lane opens only after M-895's ADR is
-      Accepted + DN-39 passed.
+      maintainer gate cleared 2026-07-02 — M-895's ADR-040 reached Accepted and DN-39 passed
+      (transitively); this task is unblocked.
 
       User stories:
       - As a stdlib author, I want float arithmetic with honest accuracy tags, so that `numerics`
@@ -9839,7 +9848,7 @@ issues:
   - id: M-899
     title: "Float comparison/total-order prims — explicit NaN semantics (ties to M-511 proof debt)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:numerics, priority:P2, status:blocked]
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:todo]
     epic: E28-1
     depends_on: [M-898]
     doc_refs:
@@ -9849,8 +9858,8 @@ issues:
       NaN handling per the ADR; ties to M-511 — the total-order proof debt becomes load-bearing,
       the tag stays Empirical until proven. Model: Haiku.
 
-      BLOCKED — maintainer gate (transitively): the Gap-A lane opens only after M-895's ADR is
-      Accepted + DN-39 passed.
+      maintainer gate cleared 2026-07-02 — M-895's ADR-040 reached Accepted and DN-39 passed
+      (transitively); this task is unblocked.
 
       User stories:
       - As a stdlib author, I want float ordering with explicit NaN semantics, so that sorting
@@ -9863,7 +9872,7 @@ issues:
   - id: M-900
     title: "Float three-way conformance closure + readiness §0 blocker-1 re-verified"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:verification, area:numerics, priority:P2, status:blocked]
+    labels: [phase:5, type:verification, area:numerics, priority:P2, status:todo]
     epic: E28-1
     depends_on: [M-898, M-899]
     doc_refs:
@@ -9873,8 +9882,8 @@ issues:
       (L1-eval ≡ L0-interp ≡ AOT where forms close) + readiness §0 blocker-1 re-verified.
       Model: Haiku.
 
-      BLOCKED — maintainer gate (transitively): the Gap-A lane opens only after M-895's ADR is
-      Accepted + DN-39 passed.
+      maintainer gate cleared 2026-07-02 — M-895's ADR-040 reached Accepted and DN-39 passed
+      (transitively); this task is unblocked.
 
       User stories:
       - As the Phase-I gate, I want the float gap checked off with evidence, so that the usability
@@ -9887,11 +9896,16 @@ issues:
   - id: M-901
     title: "Confirm the Substrate/consume execution model — DN-54 §10 design-pass confirm-memo"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:design, area:language, priority:P1, status:todo]
+    labels: [phase:5, type:design, area:language, priority:P1, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
       - corpus:DN-54
+    landed_basis: "status:done (2026-07-02, maintainer-ratified). DN-71 (Substrate/consume
+      Execution Model Confirm-Memo) transitioned Draft -> Accepted 2026-07-02: Model S
+      (interpreter-level opaque affine handle; static use-once enforcement with a never-silent
+      runtime backstop; identity-move consume lowering) approved as recommended. Unblocks
+      M-902...M-904 (status:blocked -> status:todo, this same ratification)."
     body: |
       Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap E — the design gate). Confirm the execution
       model: the DN-54 §10 derive-site `consume` design-pass (M-824) as the target — a short
@@ -9902,6 +9916,8 @@ issues:
       Cross-check: this memo MUST be checked against `grm` M-918's DN-54 dossier (M-918 is a
       reserved `grm`-kickoff slot, not yet minted) — the two kickoffs share the same consume model
       and must not fork it; FLAG if they diverge.
+
+      MAINTAINER GATE CLEARED 2026-07-02: DN-71 Accepted — Model S approved. M-902…M-904 unblocked.
 
       User stories:
       - As the maintainer, I want the consume-execution model confirmed before code, so that the
@@ -9914,7 +9930,7 @@ issues:
   - id: M-902
     title: "Substrate v0 value form — creation, passage, inspection (never-silent errors)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:todo]
     epic: E28-1
     depends_on: [M-901]
     doc_refs:
@@ -9923,7 +9939,8 @@ issues:
       Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap E). `Substrate` v0 value form — the
       value-model plumbing (creation, passage, inspection; never-silent errors). Model: Sonnet.
 
-      BLOCKED — maintainer gate: M-901's consume-model confirm-memo must be signed off first.
+      maintainer gate cleared 2026-07-02 — M-901's DN-71 consume-model confirm-memo was signed off
+      (Model S accepted); this task is unblocked.
 
       User stories:
       - As a stdlib author, I want `Substrate` values to exist at runtime, so that `fs`/`io`'s
@@ -9936,7 +9953,7 @@ issues:
   - id: M-903
     title: "Affine tracker — consume checked semantics (use-once; double-consume/leak explicit)"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
     epic: E28-1
     depends_on: [M-902]
     doc_refs:
@@ -9945,8 +9962,8 @@ issues:
       Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap E). Affine tracker — `consume` checked
       semantics: use-once enforcement; double-consume/leak → explicit diagnostics. Model: Sonnet.
 
-      BLOCKED — maintainer gate (transitively): the Gap-E lane opens only after M-901's sign-off
-      (M-902 lands first).
+      maintainer gate cleared 2026-07-02 — M-901's DN-71 sign-off (Model S accepted); this task is
+      unblocked (transitively, via M-902).
 
       User stories:
       - As a language user, I want double-use of a consumed handle to be a compile/runtime error
@@ -9959,7 +9976,7 @@ issues:
   - id: M-904
     title: "Lift the staged Residual — Substrate/consume elaborate to executing forms"
     milestone: "Phase 5 — Self-Hosting & Core Library"
-    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    labels: [phase:5, type:feature, area:language, priority:P1, status:todo]
     epic: E28-1
     depends_on: [M-903]
     doc_refs:
@@ -9969,7 +9986,8 @@ issues:
       `Substrate`/`consume` elaborate to *executing* forms in the interpreter; conformance accept
       + reject. Model: Sonnet.
 
-      BLOCKED — maintainer gate (transitively): the Gap-E lane opens only after M-901's sign-off.
+      maintainer gate cleared 2026-07-02 — M-901's DN-71 sign-off (Model S accepted); this task is
+      unblocked (transitively).
 
       User stories:
       - As a stdlib author, I want `fs`/`io`'s affine-handle model to actually run, so that those
@@ -9982,17 +10000,24 @@ issues:
   - id: M-905
     title: "Scope-split M-828 — define the D-lite subset (forage/backbone) vs the H2 remainder"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:design, area:execution, priority:P2, status:todo]
+    labels: [phase:7, type:design, area:execution, priority:P2, status:done]
     epic: E28-1
     depends_on: []
     doc_refs:
       - corpus:DN-63
       - corpus:ADR-038
+    landed_basis: "status:done (2026-07-02, maintainer-ratified). DN-70 (M-828 D-lite Scope Split)
+      transitioned Draft -> Accepted 2026-07-02: the D-lite split (§3 in-scope rows D1 forage /
+      D2 backbone vs §5 deferred R-1...R-6) is approved as drafted (FLAG-D1 cleared). Unblocks
+      M-906/M-907 (status:blocked -> status:todo, this same ratification)."
     body: |
       Minted 2026-07-02 (kickoff `enb`, Phase-I H1, D-lite). Scope-split M-828: define the D-lite
       subset (`forage`/`backbone` per roadmap §3; what exactly `std.runtime`'s *usable surface*
       needs per DN-63) vs the H2 remainder. MAINTAINER GATE (FLAG): the maintainer signs the split
       — M-906/M-907 are status:blocked on that sign-off. Model: Sonnet.
+
+      MAINTAINER GATE CLEARED 2026-07-02: DN-70 Accepted — the D-lite split signed off
+      (FLAG-D1 cleared). M-906/M-907 unblocked.
 
       User stories:
       - As the maintainer, I want the usability subset explicitly split from the full R2 wave, so
@@ -10005,7 +10030,7 @@ issues:
   - id: M-906
     title: "Activate forage per the D-lite subset (lex → parse → elab → interp; DN-63 semantics)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:feature, area:execution, priority:P2, status:blocked]
+    labels: [phase:7, type:feature, area:execution, priority:P2, status:todo]
     epic: E28-1
     depends_on: [M-905]
     doc_refs:
@@ -10015,7 +10040,8 @@ issues:
       subset: lex → parse → elab → interp, DN-63 semantics. Serial-lane slot (L1 frontend) — joins
       the one-L1-surgery-at-a-time lane. Model: Sonnet.
 
-      BLOCKED — maintainer gate: M-905's D-lite split must be signed off first.
+      maintainer gate cleared 2026-07-02 — M-905's DN-70 D-lite split was signed off
+      (FLAG-D1 cleared); this task is unblocked.
 
       User stories:
       - As a language user, I want `forage` working end-to-end, so that runtime-vocabulary programs
@@ -10028,7 +10054,7 @@ issues:
   - id: M-907
     title: "Verify backbone's landed state vs the D-lite subset (M-825 landed; verify, don't re-land)"
     milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
-    labels: [phase:7, type:verification, area:execution, priority:P2, status:blocked]
+    labels: [phase:7, type:verification, area:execution, priority:P2, status:todo]
     epic: E28-1
     depends_on: [M-905]
     doc_refs:
@@ -10038,7 +10064,10 @@ issues:
       the D-lite subset — M-825 landed a backbone construct 2026-06-29; verify against DN-63/the
       split, close residual gaps ONLY, don't re-land. Model: Haiku.
 
-      BLOCKED — maintainer gate: M-905's D-lite split must be signed off first.
+      maintainer gate cleared 2026-07-02 — M-905's DN-70 D-lite split was signed off
+      (FLAG-D1 cleared); this task is unblocked. Note (DN-70 §4/FLAG-D3): the phrase "M-825 landed
+      a backbone construct" is corrected by DN-70 to "M-825 landed the backbone decision" —
+      carried here for the assignee's awareness pending the integrator's formal wording fix.
 
       User stories:
       - As the Phase-I gate, I want backbone's D-lite row checked with evidence, so that landed

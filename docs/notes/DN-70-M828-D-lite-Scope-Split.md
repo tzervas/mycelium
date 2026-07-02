@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-70 |
-| **Status** | **Draft** (2026-07-02 — split proposed; **maintainer sign-off pending** — see FLAG-D1. Nothing here is self-ratified; M-906/M-907 stay `status:blocked` until the maintainer signs) |
+| **Status** | **Accepted** (2026-07-02 — **maintainer sign-off recorded**: the D-lite split is approved. Drafted 2026-07-02 as **Draft**, split proposed pending sign-off; that history stands unchanged — this line records the forward transition, append-only, house rule #3. FLAG-D1 is cleared — see the dated sign-off note below and §Definition of Done. M-906/M-907 unblock) |
 | **Decides** | *Proposes, does not ratify:* the scope split of **M-828** into the **D-lite usability subset** (H1 — `forage` activation + `backbone` verification) and the **H2-deferred remainder** (the other four R2 constructs + the mechanized `SelectionPolicy` capture-&-set surface). Each row is grounded in DN-63; the maintainer's signature is the decision (kickoff `enb`, M-905 gate) |
 | **Feeds** | M-828 (its body carries the split once the integrator applies FLAG-D5's text); M-906 (`forage` activation — scope fixed here); M-907 (`backbone` verification — scope fixed here); DN-63 (per-construct decomposition — unchanged, cited row-by-row); RFC-0008 §4.5 (the activation status rule — see FLAG-D2); ADR-038 Phase I / roadmap §3 (the H1 D-lite row) |
 | **Task** | M-905 (epic E28-1, kickoff `enb`) |
@@ -18,6 +18,14 @@
 > *narrows* a FLAG, that narrowing is stated explicitly and the full FLAG stays open for the
 > H2 vehicle. **Append-only:** the sign-off (or its refusal/amendment) lands as a dated
 > section below, not as a rewrite.
+>
+> **Maintainer sign-off (append-only, 2026-07-02).** FLAG-D1 is cleared: the maintainer signs the
+> D-lite split — §3's in-scope rows (D1 `forage` single-node activation, D2 `backbone`
+> verification) as M-906/M-907's scope, and §5's deferred rows R-1…R-6 as the M-828 H2 remainder.
+> The gate that held M-906/M-907 at `status:blocked` (§1 "The gate") is now cleared; both move to
+> `status:todo` (tools/github/issues.yaml). FLAG-D2 (the RFC vehicle question), FLAG-D3 (wording
+> correction), FLAG-D4 (DN-slot verification), and FLAG-D5 (M-828 body text) are unaffected by this
+> sign-off and remain for the integrator per their original disposition.
 
 ---
 
@@ -180,7 +188,7 @@ append-only body text recording this on M-828.
 
 | FLAG | What it is | Who decides / applies |
 |---|---|---|
-| **FLAG-D1** | **Maintainer sign-off on the split** (§3 in-scope vs §5 deferred) — the M-905 gate. M-906/M-907 stay `status:blocked` until signed. Sign-off (or amendment) is recorded as a dated append-only section here | **Maintainer** |
+| **FLAG-D1** | **Maintainer sign-off on the split** (§3 in-scope vs §5 deferred) — the M-905 gate. M-906/M-907 stay `status:blocked` until signed. Sign-off (or amendment) is recorded as a dated append-only section here | **Maintainer** — **CLEARED 2026-07-02**, see the sign-off note above. |
 | **FLAG-D2** | **RFC vehicle for the D-lite `forage` activation.** RFC-0008 §4.5's status rule is *normative*: activation "requires an implementation RFC committing each construct's typing and elaboration per RFC-0006 §4.3"; DN-63 §6 recommends a per-construct `RFC-00XX-forage`. Options: (a) M-906 ships a scoped `forage` implementation RFC (subset-sized — the D-lite scope in §3 D1 is most of its content) alongside the code — **recommended**, keeps §4.5 intact; (b) the maintainer explicitly decides the subset activation may land with the RFC following. Not guessed here (G2) | **Maintainer** (with FLAG-D1) |
 | **FLAG-D3** | Kickoff/M-907 wording: "M-825 landed a backbone construct" → should read "M-825 landed the backbone **decision** (runtime-dynamic promoted)". §4 above carries the verified basis. Integrator corrects the M-907 body wording at integration tier (issues.yaml is orchestrator-owned) | Integrator |
 | **FLAG-D4** | DN number: **DN-70** minted here (DN-69 was taken by the scalar-float dossier landed 2026-07-02; verified free at `de11922`). Integrator re-verifies the slot at merge (mitigation #1 analogue) and registers the Doc-Index row | Integrator |
@@ -218,6 +226,11 @@ This DN is **Accepted** when:
    as the M-828 remainder — and disposes FLAG-D2 (the RFC vehicle question).
 2. The integrator applies FLAG-D3/D4/D5 (wording fix, index registration, M-828 body).
 
+**Item 1 is satisfied 2026-07-02** (the maintainer sign-off note above) for the split
+confirmation; **FLAG-D2 is not separately disposed** in this sign-off and stays open for the
+integrator/maintainer to resolve before M-906 ships its `forage` implementation RFC. Item 2
+remains the integrator's, per ownership (append-only — not applied from this branch).
+
 This DN is **Resolved** when:
 
 - M-906 and M-907 are done per their DoDs, and the M-828 body carries the split (so the H2
@@ -234,3 +247,7 @@ This DN is **Resolved** when:
   `Empirical` (verified at `de11922`); split `Declared`, gated on maintainer sign-off
   (FLAG-D1). FLAGs D1–D5 raised (sign-off; RFC vehicle; M-825 wording correction; DN-slot
   verification; M-828 body text). Advisory; append-only. No shared file touched.
+- **2026-07-02 — Accepted (maintainer sign-off recorded).** FLAG-D1 cleared: the D-lite split
+  (§3 in-scope vs §5 deferred) is approved as drafted. Unblocks M-906/M-907
+  (tools/github/issues.yaml status:blocked → status:todo). FLAG-D2 (RFC vehicle) not separately
+  disposed — stays open; FLAG-D3/D4/D5 unaffected, remain integrator-owned. Append-only; VR-5; G2.
