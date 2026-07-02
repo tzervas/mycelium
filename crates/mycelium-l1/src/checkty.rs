@@ -10,6 +10,7 @@
 use std::cell::Cell;
 use std::collections::{BTreeMap, BTreeSet};
 
+use crate::affine::{Tracker, UseOutcome};
 use crate::ambient::AmbientError;
 use crate::ast::{
     Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
@@ -2098,6 +2099,9 @@ fn check_lower_rule_rhs_type(
         bounds: &[],
         std_sys: false,
         depth: Cell::new(0),
+        // Not a whole-function-body walk (a `lower` rule has no value parameters — no `Substrate`
+        // binding is ever in scope here); the affine pass never needs to run (`crate::affine` docs).
+        affine: Tracker::inert(),
     };
     let mut scope: Vec<(String, Ty)> = Vec::new();
     cx.infer(&mut scope, &ld.rhs).map_err(|e| {
@@ -2881,6 +2885,10 @@ fn check_fn_body(
         bounds: &bounds,
         std_sys,
         depth: Cell::new(0),
+        // The one whole-function-body walk — seed the active affine tracker from the parameter
+        // scope so a `Substrate`-typed parameter is already tracked as the body starts (M-903;
+        // DN-71 §4.2: a parameter pass counts as the caller's move-in).
+        affine: Tracker::seeded(&scope),
     };
     let (got, body) = cx.check(&mut scope, &fd.body, Some(&ret))?;
     if got != ret {
@@ -2979,6 +2987,12 @@ struct Cx<'a> {
     /// Live expression-nesting depth for the explicit [`MAX_CHECK_DEPTH`] budget (interior
     /// mutability so [`Self::check`] stays `&self`). Reset per body; accounted by [`DepthGuard`].
     depth: Cell<u32>,
+    /// The **affine `Substrate` use-once tracker** (M-903; DN-71 §4.2) — mirrors `scope` by index
+    /// (interior mutability, matching `depth`'s pattern, so [`Self::check`] stays `&self`). Active
+    /// (seeded from the parameter scope) only in [`check_fn_body`]; **inert** (a guaranteed no-op)
+    /// in the other two `Cx` contexts (`check_lower_rule_rhs_type`, `infer_type`) — see
+    /// `crate::affine`'s module docs for why.
+    affine: Tracker,
 }
 
 impl Cx<'_> {
@@ -3155,7 +3169,35 @@ impl Cx<'_> {
             ));
         }
         let name = &p.0[0];
-        if let Some((_, ty)) = scope.iter().rev().find(|(n, _)| n == name) {
+        // `rposition` (not `.rev().find()`) so `idx` is the scope's own index — the affine tracker
+        // mirrors `scope` index-for-index (shadowing = later wins = the last/rightmost match).
+        if let Some(idx) = scope.iter().rposition(|(n, _)| n == name) {
+            let ty = &scope[idx].1;
+            // M-903 / DN-71 §4.2: a reference to a `Substrate`-typed binding is a **move** — record
+            // it in the affine tracker (a no-op for any non-`Substrate` binding, or when this `Cx`
+            // is not running the affine pass — `crate::affine` docs). A second move of the same
+            // binding on a reachable path is a never-silent double-consume refusal naming **both**
+            // sites (RFC-0013 diagnostic style: this checker has no source spans, so "site" is the
+            // binding's name plus a stable per-body use ordinal — honest, not a fabricated line/col).
+            match self.affine.use_at(idx) {
+                UseOutcome::NotAffine | UseOutcome::FirstUse => {}
+                UseOutcome::DoubleUse {
+                    tag,
+                    first_ordinal,
+                    this_ordinal,
+                } => {
+                    return self.err(format!(
+                        "double-consume: `{name}` (`Substrate{{{tag}}}`) is used again here \
+                         (reference #{this_ordinal} to `{name}` in `{site}`), but it was already \
+                         moved earlier (reference #{first_ordinal} to `{name}`) — an affine \
+                         `Substrate` value may be consumed, passed, returned, or captured **at \
+                         most once** along any execution path (DN-71 Model S §4.2; RFC-0006 LR-8). \
+                         This is a static checker refusal naming both the first move and this \
+                         violating use — never silent (G2/VR-5).",
+                        site = self.site
+                    ));
+                }
+            }
             return Ok((ty.clone(), e.clone()));
         }
         // A reference to a name brought in by ≥2 globs (and not shadowed by a local/own/explicit
@@ -3329,9 +3371,11 @@ impl Cx<'_> {
                 return self.err(format!("let `{name}`: {}", edge_mismatch("bound", w, &bty)));
             }
         }
-        scope.push((name.to_owned(), bty));
+        scope.push((name.to_owned(), bty.clone()));
+        self.affine.push(&bty);
         let r = self.check(scope, body, expected);
         scope.pop();
+        self.affine.pop();
         let (rty, body2) = r?;
         Ok((
             rty,
@@ -3428,9 +3472,14 @@ impl Cx<'_> {
             None => None,
         };
         // Check the body under the extended scope; the param shadows any same-named outer binder.
+        // (A `Substrate`-typed capture inside this body is tracked as one lexical use — sound only
+        // when the closure runs at most once; the runtime backstop covers a closure called more
+        // than once — `crate::affine` module docs, the known loop/closure limitation.)
         scope.push((param.name.clone(), param_ty.clone()));
+        self.affine.push(&param_ty);
         let r = self.check(scope, body, expected_ret.as_ref());
         scope.pop();
+        self.affine.pop();
         let (body_ty, body2) = r?;
         if let Some(er) = &expected_ret {
             if er != &body_ty {
@@ -3462,10 +3511,18 @@ impl Cx<'_> {
         if c != bool_ty {
             return self.err(format!("if-condition must be Bool, got {c}"));
         }
+        // M-903 / DN-71 §4.2: `conseq`/`alt` are mutually exclusive at runtime, so each is checked
+        // from the *same* pre-branch affine snapshot; the post-branch states are then union-merged
+        // (a slot moved in *either* branch counts as moved afterward — conservative, `crate::affine`
+        // module docs on why this is sound-over-precise for v0).
+        let pre_branch = self.affine.snapshot();
         let (t, conseq2) = self.check(scope, conseq, expected)?;
+        let post_conseq = self.affine.snapshot();
+        self.affine.restore(&pre_branch);
         // The else-branch may borrow the then-branch's type as its expected (so a bare decimal in
         // one branch can take the other's width).
         let (f, alt2) = self.check(scope, alt, expected.or(Some(&t)))?;
+        self.affine.merge_alt(post_conseq);
         if t != f {
             return self.err(format!(
                 "if-branches disagree: {}",
@@ -4441,11 +4498,18 @@ impl Cx<'_> {
         let elem = linear_elem_ty(self.site, self.types, tname, targs)?;
         // The accumulator type is the whole expression's type, so the `for`'s expected anchors `init`.
         let (aty, init2) = self.check(scope, init, expected)?;
-        scope.push((x.to_owned(), elem));
+        // (A `Substrate`-typed `x`/`acc` capture inside `body` is tracked as one lexical use —
+        // sound only when `body` runs at most once, which a `for` generally does not guarantee;
+        // the runtime backstop covers a repeated iteration — `crate::affine` module docs.)
+        scope.push((x.to_owned(), elem.clone()));
+        self.affine.push(&elem);
         scope.push((acc.to_owned(), aty.clone()));
+        self.affine.push(&aty);
         let r = self.check(scope, body, Some(&aty));
         scope.pop();
+        self.affine.pop();
         scope.pop();
+        self.affine.pop();
         let (bty, body2) = r?;
         if bty != aty {
             return self.err(format!(
@@ -4558,6 +4622,13 @@ impl Cx<'_> {
         let mut rows: Vec<Vec<crate::usefulness::Pat>> = Vec::new();
         let mut result: Option<Ty> = None;
         let mut arms2: Vec<crate::ast::Arm> = Vec::with_capacity(flat_arms.len());
+        // M-903 / DN-71 §4.2: every arm is a mutually exclusive alternative at runtime, so each is
+        // checked from the *same* pre-match affine snapshot; `merged` accumulates the union of every
+        // arm's post-body outcome (a slot moved in *any* arm counts as moved afterward —
+        // conservative, `crate::affine` module docs). Restored as the tracker's live state once the
+        // whole match has been checked.
+        let pre_match = self.affine.snapshot();
+        let mut merged = pre_match.clone();
         for arm in &flat_arms {
             // Normalize the pattern against the scrutinee/field types first — resolve ambient
             // bare-decimal literals to concrete ones, and rewrite nullary-ctor idents to explicit
@@ -4577,15 +4648,25 @@ impl Cx<'_> {
                      be reachable)",
                 );
             }
-            // Type the body with the pattern's binders in scope.
+            // Type the body with the pattern's binders in scope. Restore the shared pre-match affine
+            // baseline first (undoes any Moved marks a *previous* arm left on an outer binding — arms
+            // are alternatives, not a sequence), then push this arm's own binder slots (a
+            // `Substrate`-typed field capture is tracked exactly like a `let` binder — DN-71 §4.2).
             let depth = scope.len();
+            self.affine.restore(&pre_match);
             for (name, ty, _occ) in &binds {
                 scope.push((name.clone(), ty.clone()));
+                self.affine.push(ty);
             }
             let body_expected = expected.or(result.as_ref());
             let r = self.check(scope, &arm.body, body_expected);
             scope.truncate(depth);
+            self.affine.truncate(depth);
             let (bty, body2) = r?;
+            // Union-merge this arm's (now-truncated, pre-match-depth) outcome into `merged`.
+            if let (Some(m), Some(cur)) = (merged.as_mut(), self.affine.snapshot()) {
+                crate::affine::union_merge_into(m, &cur);
+            }
             match &result {
                 None => result = Some(bty),
                 Some(r) if *r != bty => {
@@ -4602,6 +4683,10 @@ impl Cx<'_> {
                 body: body2,
             });
         }
+        // Install the union-merged post-match affine state as the tracker's live state, so any
+        // `Substrate` binding moved in at least one arm is treated as moved by whatever follows this
+        // `match` (M-903 / DN-71 §4.2).
+        self.affine.restore(&merged);
         // Exhaustiveness (W7): a wildcard must not be useful — else its witness is a missing case.
         if let Some(witness) =
             crate::usefulness::useful(self.types, &rows, &[crate::usefulness::Pat::Wild], &col)
@@ -5900,6 +5985,12 @@ pub(crate) fn infer_type(
         // re-litigating the gate — the gate is the checker's job, done once.
         std_sys: true,
         depth: Cell::new(0),
+        // Post-check re-inference over an already-validated term, invoked repeatedly over
+        // partial/overlapping fragments with a scope the elaborator threads itself — not the one
+        // whole-function-body walk, so the affine pass stays inert here (`crate::affine` docs: it
+        // would risk a false positive on a fragment that isn't the original walk, and the term
+        // already passed the real check).
+        affine: Tracker::inert(),
     };
     cx.infer(scope, e)
 }
