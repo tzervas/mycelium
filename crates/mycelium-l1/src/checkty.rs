@@ -13,8 +13,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use crate::ambient::AmbientError;
 use crate::ast::{
     Arm, BaseType, DeriveDecl, Expr, FnDecl, FnSig, Hypha, ImplDecl, Item, Literal, LowerDecl,
-    Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Phylum, Scalar, Strength, TraitRef,
-    TypeDecl, TypeRef, UsePath, WidthRef,
+    Nodule, ObjectDecl, Paradigm, Param, Path, Pattern, Phylum, Scalar, Sparsity, Strength,
+    TraitRef, TypeDecl, TypeRef, UsePath, WidthRef,
 };
 
 /// The checker's **explicit expression-nesting budget** (the "banked guard 4" discipline; A4-02).
@@ -81,6 +81,24 @@ pub enum Ty {
     Ternary(Width),
     /// `Dense{d, s}`.
     Dense(u32, Scalar),
+    /// `VSA{model, dim, sparsity}` (RFC-0003 §3; M-892 — the type-level lift of the former
+    /// blanket "VSA types are deferred" refusal). The `model` is the **kernel model id**
+    /// (`"MAP-I"`, `"FHRR"`, `"BSC"`, …) — the surface ident is canonicalized by
+    /// [`vsa_kernel_model_id`] at resolution (an ident cannot carry the kernel ids' `-`).
+    /// Any model id is admissible as a type *mention* (exactly as `mycelium-core` type-checks
+    /// hypervector mentions without the algebra — ADR-008); the `vsa_*` prims are additionally
+    /// gated to their dispatch set by [`Checker::try_check_vsa_prim`]. Value construction is
+    /// injection-only until a surface hypervector form lands (the M-890 Dense posture).
+    Vsa {
+        /// The kernel model id (canonicalized — ADR-003: the name here is metadata, matching
+        /// `Repr::Vsa { model }`).
+        model: String,
+        /// Hypervector dimensionality.
+        dim: u32,
+        /// Declared sparsity (the `vsa_*` prims require `Dense` at introduction — the kernel's
+        /// Value-level ops construct dense-class results).
+        sparsity: Sparsity,
+    },
     /// A registered data type applied to type arguments — `Data("List", [Binary(8)])` is
     /// `List<Binary{8}>`; an empty argument vector is a monomorphic/nullary type (`Data("Bool", [])`).
     /// Content addressing of declarations: RFC-0007 §4.2 (parameterized declarations are one registry
@@ -137,6 +155,14 @@ impl core::fmt::Display for Ty {
                 write!(f, ">")
             }
             Ty::Substrate(t) => write!(f, "Substrate{{{t}}}"),
+            Ty::Vsa {
+                model,
+                dim,
+                sparsity,
+            } => match sparsity {
+                Sparsity::Dense => write!(f, "VSA{{{model}, {dim}, Dense}}"),
+                Sparsity::Sparse(k) => write!(f, "VSA{{{model}, {dim}, Sparse{{{k}}}}}"),
+            },
             Ty::Seq(elem, n) => write!(f, "Seq{{{elem}, {n}}}"),
             Ty::Bytes => write!(f, "Bytes"),
             Ty::Float => write!(f, "Float"),
@@ -271,6 +297,9 @@ pub fn type_head(ty: &Ty) -> Option<String> {
         Ty::Binary(_) => "Binary".to_owned(),
         Ty::Ternary(_) => "Ternary".to_owned(),
         Ty::Dense(_, _) => "Dense".to_owned(),
+        // RFC-0003 §3 (M-892): VSA keys per head like Dense (model/dim/sparsity erased — the same
+        // documented stage-1 coherence simplification as the width-erased scalar paradigms).
+        Ty::Vsa { .. } => "Vsa".to_owned(),
         Ty::Substrate(t) => format!("Substrate:{t}"),
         // RFC-0032 D3/D4: the sequence/byte-string reprs key per head (width/elem erased like the
         // scalar paradigms — a documented stage-1 coherence simplification).
@@ -319,9 +348,12 @@ pub(crate) fn subst_ty(ty: &Ty, s: &BTreeMap<String, Ty>) -> Ty {
                 _ => ty.clone(),
             })
             .unwrap_or_else(|| ty.clone()),
+        // RFC-0003 §3 (M-892): VSA is fully concrete (model/dim/sparsity are structural
+        // constants — no abstract slot to substitute into), like Dense.
         Ty::Binary(Width::Lit(_))
         | Ty::Ternary(Width::Lit(_))
         | Ty::Dense(_, _)
+        | Ty::Vsa { .. }
         | Ty::Substrate(_)
         | Ty::Bytes
         | Ty::Float => ty.clone(),
@@ -353,6 +385,8 @@ pub(crate) fn has_var(ty: &Ty) -> bool {
         Ty::Binary(Width::Lit(_))
         | Ty::Ternary(Width::Lit(_))
         | Ty::Dense(_, _)
+        // M-892: VSA is fully concrete (no abstract slot), like Dense.
+        | Ty::Vsa { .. }
         | Ty::Substrate(_)
         | Ty::Bytes
         | Ty::Float => false,
@@ -585,8 +619,9 @@ pub(crate) fn prelude() -> DataInfo {
 /// Resolve a surface [`TypeRef`] to a checked [`Ty`], with the type parameters `tyvars` in scope
 /// (RFC-0007 §11.2): a `Named(name, [])` whose `name` is a type parameter resolves to [`Ty::Var`];
 /// any other `Named` is a data type whose **arity is checked** against its declaration (`List<A>`
-/// applied to the wrong number of arguments is an explicit error, never a guess). VSA types stay a
-/// deferred refusal. The guarantee index is *allowed* and returned alongside (checked dynamically at
+/// applied to the wrong number of arguments is an explicit error, never a guess). VSA types resolve
+/// concretely as of M-892 (their surface model ident canonicalized to the kernel model id). The
+/// guarantee index is *allowed* and returned alongside (checked dynamically at
 /// stage 0 — RFC-0007 §4.3). `tyvars` is `&[]` in a monomorphic context.
 pub(crate) fn resolve_ty(
     site: &str,
@@ -610,12 +645,20 @@ pub(crate) fn resolve_ty(
         BaseType::Bytes => Ty::Bytes,
         // ADR-040 (M-897): the nullary scalar-float repr type (binary64 only — FLAG-1).
         BaseType::Float => Ty::Float,
-        BaseType::Vsa { .. } => {
-            return Err(CheckError::new(
-                site,
-                "VSA types are deferred in the L1 v0 prototype (no value forms yet)",
-            ))
-        }
+        // RFC-0003 §3 / ADR-008 (M-892): the VSA type resolves concretely — the type-level lift
+        // of the former blanket deferral, needed so the `vsa_*` prims are typable. Any model id
+        // is admissible as a *mention* (core already type-checks hypervector mentions without
+        // the algebra); the prims gate their dispatch set separately (`try_check_vsa_prim`).
+        // The surface ident is canonicalized to the kernel model id (`MAP_I` → `MAP-I`, …).
+        BaseType::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => Ty::Vsa {
+            model: vsa_kernel_model_id(model),
+            dim: *dim,
+            sparsity: sparsity.clone(),
+        },
         BaseType::Named(name, args) => {
             // A bare name that is a type parameter in scope is an abstract type variable (§11.2).
             if args.is_empty() && tyvars.iter().any(|v| v == name) {
@@ -2579,10 +2622,11 @@ pub(crate) fn register_instances(
         let type_local = match &for_ty {
             Ty::Data(n, _) => phylum_types.contains(n.as_str()),
             // Primitive repr types are "owned by the phylum" for stage-1 (RFC-0019 §4.5) — the
-            // RFC-0032 sequence/byte-string reprs included.
+            // RFC-0032 sequence/byte-string reprs and the M-892 VSA repr included.
             Ty::Binary(_)
             | Ty::Ternary(_)
             | Ty::Dense(_, _)
+            | Ty::Vsa { .. }
             | Ty::Substrate(_)
             | Ty::Seq(_, _)
             | Ty::Bytes
@@ -3994,6 +4038,13 @@ impl Cx<'_> {
         if let Some(ret) = self.try_check_dense_prim(scope, head, name, args)? {
             return Ok(ret);
         }
+        // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the model-dispatched VSA bind group.
+        // Model + dim live in the type (`VSA{model, dim, sparsity}`), so a model/dim mismatch is
+        // a *static* explicit refusal here — never a coercion (G2) — and an out-of-set model is
+        // a static refusal naming the dispatch set. A dedicated branch like dense/seq/bytes.
+        if let Some(ret) = self.try_check_vsa_prim(scope, head, name, args)? {
+            return Ok(ret);
+        }
         // ADR-040 §2.5 (M-898, `enb` Gap A): the scalar-float arithmetic prims. `Float` is a
         // nullary type (no width to anchor — every operand and the result are exactly `Float`),
         // so a dedicated branch like dense/seq/bytes, not the width-polymorphic `prim_family`.
@@ -5105,6 +5156,145 @@ impl Cx<'_> {
         }
     }
 
+    /// Try to check a call to a **VSA bind-group prim** (RFC-0003 §3/§4; ADR-008; M-892, `enb`
+    /// Gap C) — `vsa_bind`/`vsa_unbind` (binary, hypervector × hypervector) and `vsa_permute`
+    /// (hypervector × `Binary{W}` shift), kernel `vsa.bind`/`vsa.unbind`/`vsa.permute` (surface
+    /// names `_`-joined like `dense_add`). Returns `Ok(None)` if `name` is not one of them.
+    ///
+    /// Model + dim + sparsity live in the type (`VSA{model, dim, sparsity}`), so the static rules
+    /// are: every hypervector operand must be a `VSA` type with **one shared model + dim +
+    /// sparsity** (a mismatch is an explicit refusal, never a coercion — G2); the model must be
+    /// in the **introduction dispatch set MAP-I / FHRR / BSC** (an out-of-set model — HRR/MAP-B/
+    /// SBC mentions included — is a static refusal naming the set; widening is append-only and
+    /// mirrors the interpreter's dispatch); and the sparsity must be `Dense` at introduction
+    /// (the kernel's Value-level ops construct dense-class results — a `Sparse` claim would
+    /// diverge from the runtime value, so it is refused, not silently re-classed). `vsa_permute`'s
+    /// shift is any unsigned `Binary{W}` magnitude (rotation is cyclic — the inverse permute is
+    /// the complementary shift `dim − s`); a bare-decimal shift has no width anchor here and must
+    /// be written/ascribed explicitly (RFC-0012 §4.3 — never a default width).
+    ///
+    /// The numeric-domain contracts stay **runtime**, owned by the kernel and carried through the
+    /// interpreter wrapper: alphabet violations, the FHRR unbind regime gate, and non-`Exact`
+    /// operand composition are explicit runtime refusals; per-op tags ride the runtime value
+    /// **per model** (MAP-I/BSC ops `Exact`; FHRR `unbind` `Empirical` with its trial-validated
+    /// δ bound — VR-5, carried, never re-stamped; `mycelium-interp/src/prims.rs`).
+    fn try_check_vsa_prim(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        name: &str,
+        args: &[Expr],
+    ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        if !matches!(name, "vsa_bind" | "vsa_unbind" | "vsa_permute") {
+            return Ok(None);
+        }
+        // The M-892 introduction dispatch set (must mirror `vsa_model_of` in
+        // `mycelium-interp/src/prims.rs`; widening one without the other is caught by the
+        // three-way conformance tests).
+        const VSA_PRIM_MODELS: [&str; 3] = ["MAP-I", "FHRR", "BSC"];
+        let arity_err = |want: usize| -> Result<Option<(Ty, Expr)>, CheckError> {
+            self.err(format!(
+                "`{name}` takes {want} operand(s), got {} (RFC-0003 §3; M-892)",
+                args.len()
+            ))
+        };
+        // Every hypervector operand must be a concrete `VSA{model, dim, sparsity}` whose model is
+        // in the dispatch set and whose sparsity is `Dense` (introduction scope).
+        let check_hv = |scope: &mut Vec<(String, Ty)>,
+                        a: &Expr,
+                        which: &str|
+         -> Result<(String, u32, Sparsity, Expr), CheckError> {
+            let (ty, a2) = self.check(scope, a, None)?;
+            let Ty::Vsa {
+                model,
+                dim,
+                sparsity,
+            } = ty
+            else {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` {which} operand must be a `VSA{{model, dim, sparsity}}` \
+                         hypervector, got {ty} (RFC-0003 §3; M-892 — never a silent conversion; \
+                         a cross-paradigm edge needs an explicit `swap`)"
+                    ),
+                ));
+            };
+            if !VSA_PRIM_MODELS.contains(&model.as_str()) {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` model {model:?} is outside the vsa prim dispatch set at \
+                         introduction (MAP-I, FHRR, BSC — M-892); the type is a legal mention, \
+                         but its algebra is not surfaced — widening the set is an append-only \
+                         extension, never a guessed algebra (G2)"
+                    ),
+                ));
+            }
+            if sparsity != Sparsity::Dense {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` requires a `Dense`-sparsity hypervector at introduction — the \
+                         kernel's Value-level ops construct dense-class results, so a Sparse \
+                         operand type would diverge from the runtime value (M-892; refused, \
+                         never silently re-classed — G2)"
+                    ),
+                ));
+            }
+            Ok((model, dim, sparsity, a2))
+        };
+        match name {
+            "vsa_bind" | "vsa_unbind" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (ma, da, spa, a2) = check_hv(scope, &args[0], "first")?;
+                let (mb, db, _spb, b2) = check_hv(scope, &args[1], "second")?;
+                if ma != mb || da != db {
+                    // The never-silent model/shape contract, statically: name both full types.
+                    return self.err(format!(
+                        "`{name}` operands must share one model and dim, got VSA{{{ma}, {da}}} \
+                         and VSA{{{mb}, {db}}} (M-892 — a model or dim mismatch is an explicit \
+                         refusal, never a cross-model coercion; G2)"
+                    ));
+                }
+                Ok(Some((
+                    Ty::Vsa {
+                        model: ma,
+                        dim: da,
+                        sparsity: spa,
+                    },
+                    app_node(head, vec![a2, b2]),
+                )))
+            }
+            "vsa_permute" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (m, d, sp, a2) = check_hv(scope, &args[0], "hypervector")?;
+                let (sty, s2) = self.check(scope, &args[1], None)?;
+                let Ty::Binary(_) = sty else {
+                    return self.err(format!(
+                        "`vsa_permute` shift must be an unsigned `Binary{{W}}` magnitude, got \
+                         {sty} (M-892 — rotation is cyclic, so the inverse permute is the \
+                         complementary shift `dim − s`; a bare decimal has no width anchor here \
+                         and must be written/ascribed explicitly, RFC-0012 §4.3)"
+                    ));
+                };
+                Ok(Some((
+                    Ty::Vsa {
+                        model: m,
+                        dim: d,
+                        sparsity: sp,
+                    },
+                    app_node(head, vec![a2, s2]),
+                )))
+            }
+            _ => unreachable!("gated by the matches! above"),
+        }
+    }
+
     /// Try to check a call to a **scalar-float prim** (ADR-040 §2.4/§2.5; M-898/M-899, `enb`
     /// Gap A) — the arithmetic group `flt_add`/`flt_sub`/`flt_mul`/`flt_div` (binary) and
     /// `flt_neg` (unary), kernel `flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg`, plus the
@@ -5544,6 +5734,10 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         Ty::Binary(_) => Some("Binary"),
         Ty::Ternary(_) => Some("Ternary"),
         Ty::Dense(_, _) => Some("Dense"),
+        // RFC-0001 §4.1's fourth paradigm (M-892): a cross-paradigm edge involving a hypervector
+        // gets the same explicit-`swap` framing (no v0 swap engine reaches it — the refusal is
+        // the honest message, never a silent conversion).
+        Ty::Vsa { .. } => Some("VSA"),
         // `Ty::Fn` is not a representation type — it has no paradigm (RFC-0024 §3). `Seq`/`Bytes`
         // are first-class reprs but not *swap*-paradigms (no cross-paradigm swap edge), so they have
         // no paradigm name here (RFC-0032 D3/D4).
@@ -5742,6 +5936,21 @@ pub fn prim_sig(name: &str, args: &[Ty]) -> Option<Ty> {
     }
 }
 
+/// Canonicalize a surface VSA model ident to the **kernel model id** (`Repr::Vsa { model }` —
+/// M-892). A surface ident cannot carry the `-` some kernel ids use (`MAP-I`, `MAP-B`), so the
+/// underscore spelling maps onto it; every other ident passes through **verbatim** (an unknown
+/// model is a legal type *mention* — core type-checks hypervector mentions without the algebra,
+/// ADR-008 — and the `vsa_*` prims gate their own dispatch set with an explicit refusal, so
+/// nothing here guesses). The mapping is total and append-only.
+#[must_use]
+pub fn vsa_kernel_model_id(surface: &str) -> String {
+    match surface {
+        "MAP_I" => "MAP-I".to_owned(),
+        "MAP_B" => "MAP-B".to_owned(),
+        other => other.to_owned(),
+    }
+}
+
 /// The surface→kernel prim-name mapping (the `Op` node's `prim` — RFC-0007 §4.1).
 #[must_use]
 pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
@@ -5843,6 +6052,16 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "flt_ge" => "flt.ge",
         "flt_eq" => "flt.eq",
         "flt_total_le" => "flt.total_le",
+        // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the model-dispatched VSA bind group —
+        // kernel `mycelium-vsa`, per-model tags carried from the model's Value-level op (MAP-I/
+        // BSC ops `Exact`; FHRR `unbind` `Empirical` with its trial-validated δ — VR-5, never
+        // re-stamped; the Π-table intrinsic is the meet over the MAP-I/FHRR/BSC dispatch set).
+        // Surface names are `_`-joined like `dense_add`; typed by the dedicated
+        // `try_check_vsa_prim` branch (model + dim in the type ⇒ static never-silent mismatch;
+        // an out-of-set model is a static refusal naming the set).
+        "vsa_bind" => "vsa.bind",
+        "vsa_unbind" => "vsa.unbind",
+        "vsa_permute" => "vsa.permute",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",

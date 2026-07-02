@@ -49,8 +49,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use crate::ast::{
-    Arm, BaseType, Expr, FnDecl, FnSig, Hypha, Literal, Param, Path, Pattern, Scalar, TypeRef,
-    WidthRef,
+    Arm, BaseType, Expr, FnDecl, FnSig, Hypha, Literal, Param, Path, Pattern, Scalar, Sparsity,
+    TypeRef, WidthRef,
 };
 use crate::checkty::{
     has_var, infer_type, param_subst, resolve_ty, subst_ty, type_head, unify, CtorInfo, DataInfo,
@@ -2904,6 +2904,20 @@ pub(crate) fn mangle_ty(t: &Ty) -> String {
         Ty::Ternary(Width::Lit(m)) => format!("Ternary{m}"),
         Ty::Ternary(Width::Var(v)) => format!("TernaryVAR_{v}"),
         Ty::Dense(d, s) => format!("Dense{d}{}", scalar_tag(*s)),
+        // RFC-0003 §3 (M-892): `VSA{model, dim, sparsity}` mangles like `Seq` (the `$` separates
+        // the shape fragment from the model id, whose `-` — not an identifier char — maps to `_`;
+        // injective over the kernel model-id alphabet). `VSA{MAP-I, 256, Dense}` → `Vsa256Dn$MAP_I`.
+        Ty::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => {
+            let sp = match sparsity {
+                Sparsity::Dense => "Dn".to_owned(),
+                Sparsity::Sparse(k) => format!("Sp{k}"),
+            };
+            format!("Vsa{dim}{sp}${}", model.replace('-', "_"))
+        }
         Ty::Substrate(tag) => format!("Substrate{tag}"),
         // RFC-0032 D3/D4: `Seq{T, N}` mangles to `SeqN$<elem>` (injective — the `$` separates the
         // length from the recursively-mangled element); `Bytes` is nullary.
@@ -3012,6 +3026,8 @@ fn mangle_ty_in_ty(t: &Ty) -> Ty {
         Ty::Binary(_)
         | Ty::Ternary(_)
         | Ty::Dense(_, _)
+        // M-892: the VSA repr is a primitive — passes through unchanged.
+        | Ty::Vsa { .. }
         | Ty::Substrate(_)
         | Ty::Bytes
         | Ty::Float => t.clone(),
@@ -3039,6 +3055,19 @@ fn ty_to_source_ref(t: &Ty) -> TypeRef {
         Ty::Ternary(Width::Lit(m)) => BaseType::Ternary(WidthRef::Lit(*m)),
         Ty::Ternary(Width::Var(v)) => BaseType::Ternary(WidthRef::Name(v.clone())),
         Ty::Dense(d, s) => BaseType::Dense(*d, *s),
+        // M-892: round-trip the VSA repr. The checked model is the canonical kernel id
+        // (`MAP-I`); `resolve_ty`'s canonicalization is idempotent on kernel ids, so threading
+        // it back through re-inference is stable (the parser itself can only produce the
+        // underscore surface spelling — this ref is checker-internal).
+        Ty::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => BaseType::Vsa {
+            model: model.clone(),
+            dim: *dim,
+            sparsity: sparsity.clone(),
+        },
         Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
         // RFC-0032 D3/D4: round-trip the sequence/byte-string reprs to their surface forms.
         Ty::Seq(elem, n) => BaseType::Seq {
@@ -3071,6 +3100,17 @@ fn ty_to_ref(t: &Ty) -> TypeRef {
         Ty::Ternary(Width::Lit(m)) => BaseType::Ternary(WidthRef::Lit(*m)),
         Ty::Ternary(Width::Var(v)) => BaseType::Ternary(WidthRef::Name(v.clone())),
         Ty::Dense(d, s) => BaseType::Dense(*d, *s),
+        // M-892: round-trip the VSA repr (kernel model id — idempotent under re-resolution;
+        // see `ty_to_source_ref`).
+        Ty::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => BaseType::Vsa {
+            model: model.clone(),
+            dim: *dim,
+            sparsity: sparsity.clone(),
+        },
         Ty::Substrate(tag) => BaseType::Substrate(tag.clone()),
         // RFC-0032 D3/D4: round-trip the sequence/byte-string reprs (the element type is mono'd to a
         // concrete surface form via the same `ty_to_ref`).
