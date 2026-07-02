@@ -90,13 +90,14 @@ tree**, branches **off `dev`**, merges into `dev`, then promotes `dev → integr
 *(T2 = `s10`, T3 = `r10`, T4 = `lib10`, T5 = `ffi10`, T6 = `aot10`, T7 = `tool10` are all **complete →
 archived**.)*
 
-### Phase-I function-first kickoffs (ADR-038 Proposed · umbrella roadmap)
+### Phase-I function-first kickoffs (ADR-038 Accepted, 2026-07-01 · umbrella roadmap)
 
 Authored 2026-07-01 by the planning tier (ADR-038 §2.7 — Fable plans, Sonnet/Haiku implement; every
 task PM-prepped with user stories + DoD **before** any implementation agent). Decomposition source:
 `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md`. All M-ids in these kickoffs are **proposed,
 not minted** — verify free slots at each kickoff (mitigation #1). `acy` **lands first**; `enb` is
-the usability critical path; `grm` is decision-gated; `opp` is non-gating and parallel.
+the usability critical path; `grm` is decision-gated; `opp` is non-gating and parallel; `frz` is the
+H2 closeout (its kernel-freeze declaration the **last Phase-I act**, gated on `enb`+`grm`).
 
 | UID | Scope | Owns | Status / remaining |
 |---|---|---|---|
@@ -104,6 +105,21 @@ the usability critical path; `grm` is decision-gated; `opp` is non-gating and pa
 | **`enb`** | **H1** — below-grammar enabler closure: B→C→A(float route-ii)→E prim lane + D-lite/`myc run`/strings/`hash.*` (roadmap §3; the Phase-I critical path) | `mycelium-interp/src/prims.rs` + `mycelium-l1` frontend (**the serial lane**) · `mycelium-cli` (`myc run`) · float ADR + DN-39 dossier | 📋 planned — 30 tasks (M-887…M-914 proposed + RFC-0033-named M-766/M-767); after `acy`; maintainer gates inside (float ADR · consume model · M-828 D-lite split) |
 | **`grm`** | **H2a** — grammar-stability gate before mass porting (roadmap §5): RFC-0037 follow-ons · DN-54 completion · tuple decision · ADR-033 FLAG-1 | `mycelium-l1` frontend (serial) · extension-checker · `mycelium.ebnf`/editor grammars/api-index regeneration | 📋 planned — 10 tasks (M-915…M-924 proposed); **ratification-gated** (three maintainer decisions; dossiers first) |
 | **`opp`** | Opportunistic `.myc` ports — 9 ready-now pure/structural crates, smallest-first (roadmap §6; **non-gating**) | `lib/std/{diag,core,select,swap,recover,error,testing,ternary,spore}.myc` (new) · `mycelium-l1/tests/std_*.rs` · per-crate pre-port Rust polish | 📋 planned — 11 tasks (M-925…M-935 proposed); needs only `acy`; runs parallel with `enb` |
+| **`frz`** | **H2** — Rust-reference closeout remainder (roadmap §4): kernel freeze (DN-56) · inject-mode enactment (RFC-0038) · R2 vocabulary remainder (M-828) · l1-semantics tail (M-833/M-844/`Fuse`/`via`) | `mycelium-interp`/`mycelium-sec` (inject-mode) · `mycelium-std-runtime` (R2) · `mycelium-l1` frontend (serial l1 tail) · DN-56 (the freeze act) | 📋 planned — 12 tasks (M-958…M-969 proposed); after `enb`, alongside `grm`; **kernel-freeze declaration is the last Phase-I act** (maintainer-gated); heavy runtime items (M-869/M-868/M-831) are Phase-II/non-gating |
+
+### Phase-II kickoffs (post-public — ADR-038 §2.3/§2.8 · roadmap §7)
+
+Authored 2026-07-01 by the planning tier (same discipline). `flp` is the **Phase-I→II boundary
+event** — its prep may start once the Phase-I DoD is in sight, but **the flip act itself is
+strictly last** and waits on the maintainer's usability ratification (ADR-036 §2.4 as refined by
+ADR-038). `rwr` is deliberately **higher-altitude** (progressive, per-wave minting, decision-gated
+— ADR-038 §2.3); its per-crate issues are minted per wave, not by the kickoff. All M-ids proposed,
+not minted (mitigation #1).
+
+| UID | Scope | Owns | Status / remaining |
+|---|---|---|---|
+| **`flp`** | **The PUBLIC FLIP (monorepo, first) + later decomposition** — **Stage 1:** flip the **monorepo** public at a `0.x` in one gated act (M-938, strictly last in Phase I). **Stage 2 (later, post-public):** author the owed decomposition ADR (ADR-039; DN-27 §4) — **pushed to the remote as the maintainer's decision point** — then per-phylum-group repos (~8–12, maintainer ⟐), per-repo CI+GHCR, issue/docs porting, spore-first re-exports, lock-then-archive the monorepo last | the monorepo flip act · the decomposition ADR · repo scaffolds + history carry · reusable CI workflows · `repo:` issue axis | 📋 planned — 11 tasks (M-936…M-946 proposed); private until the flip; **flip + ADR-039 both maintainer-gated** (usability ratification · `0.x` · FLAG-V1 · the decomposition decision on the pushed ADR) |
+| **`rwr`** | **Phase-II progressive Mycelium rewrite** (post-public; the public semver climbs `0.x → 1.0.0`; `1.0.0` = fully rewritten where appropriate + 100% operational) | port-wave manifests + waves (D5/differential/D6) · transpiler hardening ladder · toolchain-port scoping · V-wave remainder (RFC-0033 M-760…M-784 incl. the single M-780 rehash at its tripwire) · the `1.0.0` terminal dossier | 📋 planned — 11 wave-level tasks (M-947…M-957 proposed); **gated on `flp` + `grm`** (mass porting) and `enb` (V-wave audit); compiler self-hosting stays an **aspiration**, not a lane (FLAG-V2) |
 
 ### Kernel-enablement
 

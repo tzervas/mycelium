@@ -95,16 +95,16 @@ to land) well before the public release, since the tag does not require comprehe
 while the public release explicitly does (§2.4).
 
 > **Gate refined by ADR-038 (2026-07-01 — append-only pointer; this §2.4 text preserved unrewritten).**
-> The maintainer's 2026-07-01 function-first direction, recorded in **ADR-038** (Proposed, pending
-> ratification), **refines this section's release trigger**: the public flip is gated on **functional
+> The maintainer's 2026-07-01 function-first direction, recorded in **ADR-038** (Accepted, 2026-07-01),
+> **refines this section's release trigger**: the public flip is gated on **functional
 > usability** (the language fully functional + usable per ADR-038's Phase-I Definition of Done), **not**
 > on dogfooding-complete/Rust-replaced as written above, and it is **version-independent** — it happens
 > at **whatever semantic version fits the work completed (a `0.x`), well before `1.0.0`** (ADR-038 §2.8:
 > the public semver *tracks the Mycelium rewrite*, `1.0.0` ≡ "fully rewritten and 100% operational").
 > The Mycelium replacement continues **progressively post-public** (ADR-038 Phase II). §2.1–§2.3 of this
 > ADR (tag on the Rust reference; parallel non-tag-gating dogfooding; Rust≡Mycelium differential +
-> replace-on-satisfaction) are **unchanged and remain in force**. The refinement **binds when ADR-038
-> reaches Accepted**; until then this §2.4 stands as written. See ADR-038 (esp. §2.8 + FLAG-V1/V2).
+> replace-on-satisfaction) are **unchanged and remain in force**. The refinement is **in force —
+> ADR-038 ratified Accepted 2026-07-01**. See ADR-038 (esp. §2.8 + FLAG-V1/V2, both resolved).
 
 ## 3. Consequences
 
@@ -218,5 +218,5 @@ comprehensive-rewrite effort until the tag lands.
 
 | Date | Status | Note |
 |---|---|---|
-| 2026-07-01 | **Accepted** (unchanged — §2.4 refinement pointer added) | **§2.4's release gate refined by ADR-038** (Proposed, same day — append-only pointer at §2.4; body preserved): the public-release trigger becomes **functional usability** (ADR-038 Phase I) and is **version-independent** — the flip happens at whatever semver fits (a `0.x`, well before `1.0.0`); the public semver tracks the Mycelium rewrite (`1.0.0` ≡ fully-rewritten + 100% operational, ADR-038 §2.8), and the replacement continues progressively **post-public** (ADR-038 Phase II). §2.1–§2.3 unchanged and in force. Binding upon ADR-038's ratification; until then §2.4 stands as written. See ADR-038. |
+| 2026-07-01 | **Accepted** (unchanged — §2.4 refinement pointer added) | **§2.4's release gate refined by ADR-038** (Accepted, 2026-07-01 — append-only pointer at §2.4; body preserved): the public-release trigger becomes **functional usability** (ADR-038 Phase I) and is **version-independent** — the flip happens at whatever semver fits (a `0.x`, well before `1.0.0`); the public semver tracks the Mycelium rewrite (`1.0.0` ≡ fully-rewritten + 100% operational, ADR-038 §2.8), and the replacement continues progressively **post-public** (ADR-038 Phase II). §2.1–§2.3 unchanged and in force. **In force — ADR-038 ratified Accepted 2026-07-01** (FLAG-V1/V2 resolved). See ADR-038. |
 | 2026-07-01 | **Accepted** | Maintainer-ratified project-strategy decision: the `lang 1.0.0` **tag** is cut on the Rust reference implementation (self-hosting gates it only at the existing core-lib slice, **ADR-022 §8 Q1, unchanged**); **comprehensive dogfooding** (rewriting all of Mycelium in Mycelium, beside the Rust originals) is a first-class **within-1.0.0**, non-tag-gating, parallel track (E18-1's full scope); each reimplementation is **differential-validated** against its Rust reference (extending the interp≡AOT≡JIT discipline, RFC-0029 §7.5/M-210, to a Rust≡Mycelium axis) and **replaces** the Rust original only once tested/benched/validated and maintainer-satisfied; the repository **stays private** until dogfooding is complete and validated, with the **public release** a distinct, later milestone from the tag. Does **not** amend ADR-022 §5's Definition of Done or §8 Q1's resolution (both preserved verbatim, append-only pointers only) — contrast ADR-024/034/035, which did amend track criteria. Refines DN-27's anticipated public-release trigger (DN-27 stays Draft, untouched). E18-1 and the self-hosting port ledger carry append-only, non-status-changing framing notes. |

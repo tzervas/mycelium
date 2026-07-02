@@ -71,7 +71,8 @@ digest is a snapshot, that table is live.
   (**revised 2026-07-01** from the Rust-reference-completion + acyclic-deps plan, kickoff UID `rcp`;
   a pointer stub remains at the old path, which open **PR #913** carried in its prior form) is
   **Advisory/Proposed**, governed by **ADR-038** (*Pragmatic Dogfooding: the Function-First Release
-  Strategy* — **Proposed**, awaiting maintainer ratification): Phase I → `lang 1.0.0` + public
+  Strategy* — **Accepted**, 2026-07-01, maintainer-ratified; **FLAG-V1/V2 resolved** — public release
+  sub-`1.0.0`/`0.x` at usability, `1.0.0` = fully-rewritten-where-appropriate): Phase I → `lang 1.0.0` + public
   release gated on **functional usability** (H0 acyclic-deps enforcement → H1 below-grammar
   enablers → H2 closeout lanes, H2a grammar-stability gate before mass porting); Phase II →
   post-public **progressive** Mycelium rewrite (compiler self-hosting deferred/conditional).
@@ -83,12 +84,27 @@ digest is a snapshot, that table is live.
   binary mul/div + signed, Dense/VSA-to-L1 prims, R2 vocab, `Substrate` execution) — these are
   exactly the roadmap's **H1** enabler set.
 - **Phase-I kickoffs authored (2026-07-01, planning tier per ADR-038 §2.7)** —
-  `.claude/kickoffs/{acy,enb,grm,opp}.md`: `acy` (H0 acyclic-deps + hygiene, **lands first**) →
+  `.claude/kickoffs/{acy,enb,grm,opp,frz}.md`: `acy` (H0 acyclic-deps + hygiene, **lands first**) →
   `enb` (H1 enabler closure, the usability critical path) · `grm` (H2a grammar-stability gate,
-  ratification-gated) · `opp` (opportunistic `.myc` ports, non-gating, parallel). Every task
-  carries a user story + DoD; M-ids **M-877…M-935** (plus the RFC-0033-named M-766/M-767) are
-  **proposed only** — minted at each kickoff after slot re-verification (mitigation #1). Phase-II
-  kickoffs are deliberately **not** authored (post-public — roadmap §7).
+  ratification-gated) · `opp` (opportunistic `.myc` ports, non-gating, parallel) · `frz` (H2
+  Rust-reference closeout — kernel freeze (DN-56) + inject-mode (RFC-0038) + R2 remainder (M-828) +
+  l1-semantics tail; its **kernel-freeze declaration is the last Phase-I act**, gated on `enb`+`grm`,
+  with the heavy runtime items M-869/M-868/M-831 marked Phase-II/non-gating). Every task
+  carries a user story + DoD; M-ids **M-877…M-935 + `frz`'s M-958…M-969** (plus the RFC-0033-named
+  M-766/M-767) are **proposed only** — minted at each kickoff after slot re-verification (mitigation #1).
+- **Phase-II kickoffs authored (2026-07-01, same planning tier)** — `.claude/kickoffs/{flp,rwr}.md`:
+  `flp` (**the public flip, two staged** — **Stage 1:** flip the **monorepo** public at a `0.x` in
+  one gated act, strictly last in Phase I; **Stage 2 (later, post-public):** author the owed DN-27 §4
+  binding decomposition ADR (ADR-039 proposed) and **push it to the remote as the maintainer's
+  decomposition decision point**, then decompose into per-phylum-group repos, lock-then-archive the
+  monorepo last — all maintainer-gated on the usability ratification + the `0.x` + FLAG-V1, resolved
+  2026-07-01: public release is sub-`1.0.0`, no label collision) and
+  `rwr` (**the post-public progressive rewrite** — mass porting gated on `grm`, transpiler ladder,
+  toolchain ports, the V-wave remainder with the single M-780 rehash at its value-persistence
+  tripwire, `1.0.0` terminal dossier with FLAG-V2, resolved 2026-07-01: `1.0.0` = fully dogfooded/
+  self-hosted/rewritten-where-appropriate; compiler self-hosting stays an aspiration, not
+  a lane). M-ids **M-936…M-957 proposed only**; `rwr` is deliberately higher-altitude (per-wave
+  minting — ADR-038 §2.3).
 
 ## Open maintainer decisions
 
