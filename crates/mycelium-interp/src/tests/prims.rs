@@ -1155,3 +1155,514 @@ fn dense_dot_respects_its_own_disclosed_bound() {
         );
     }
 }
+
+// ---- ADR-040 §2.5 (M-898, `enb` Gap A): the scalar-float arithmetic group ----------------------
+//
+// The reference-case corpus below is the **evidence** behind the `EmpiricalFit` basis every
+// `flt.*` result carries (ADR-040 §2.6): every expected value is **hand-derived from IEEE-754
+// binary64 RNE semantics** (exact-arithmetic rows, ties-to-even at the 2^53 boundary,
+// overflow/underflow edges, signed zeros, the specials algebra, canonical-NaN identity) and
+// written as an independent literal/constant — never recomputed with the op under test. The
+// corpus row count is pinned to `FLT_CONFORMANCE_TRIALS`, so the trials the basis *records*
+// equal the trials actually *run* (VR-5 — evidence never drifts from the claim).
+
+use mycelium_core::{FloatWidth, GuaranteeStrength, CANONICAL_NAN_BITS};
+
+/// An `Exact` `Float{F64}` value (the M-897 float-literal form — the ops' normal input).
+fn fv(x: f64) -> Value {
+    Value::new(
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(x),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("a Float payload matches a Float repr")
+}
+
+/// The canonical quiet NaN (the single NaN identity — ADR-040 §2.3).
+fn cnan() -> f64 {
+    f64::from_bits(CANONICAL_NAN_BITS)
+}
+
+/// One reference row: op, operands, and the hand-derived expected bit pattern.
+struct FltCase {
+    op: &'static str,
+    args: Vec<f64>,
+    expected: f64,
+    why: &'static str,
+}
+
+/// The M-898 IEEE-754 binary64 RNE reference corpus (see the section note). Exactly
+/// [`FLT_CONFORMANCE_TRIALS`] rows — asserted by `flt_reference_case_corpus`.
+fn flt_reference_cases() -> Vec<FltCase> {
+    let c = |op, args: &[f64], expected, why| FltCase {
+        op,
+        args: args.to_vec(),
+        expected,
+        why,
+    };
+    vec![
+        // flt.add — exact-arithmetic rows (all operands and results on the dyadic grid).
+        c("flt.add", &[1.5, 2.25], 3.75, "exact dyadic sum"),
+        c("flt.add", &[0.5, 0.25], 0.75, "exact dyadic sum"),
+        c(
+            "flt.add",
+            &[-1.5, 1.5],
+            0.0,
+            "IEEE 6.3: x + (−x) is +0 under RNE",
+        ),
+        c(
+            "flt.add",
+            &[-0.0, -0.0],
+            -0.0,
+            "IEEE 6.3: (−0) + (−0) is −0",
+        ),
+        c(
+            "flt.add",
+            &[-0.0, 0.0],
+            0.0,
+            "IEEE 6.3: opposite-signed zeros sum to +0 under RNE",
+        ),
+        // Ties-to-even at the 2^53 representability edge (spacing 2): 2^53 + 1 is the midpoint
+        // of {2^53, 2^53 + 2} → the even mantissa (2^53) wins; (2^53 + 2) + 1 is the midpoint of
+        // {2^53 + 2, 2^53 + 4} → the even mantissa (2^53 + 4) wins.
+        c(
+            "flt.add",
+            &[9_007_199_254_740_992.0, 1.0],
+            9_007_199_254_740_992.0,
+            "RNE tie at 2^53: midpoint rounds to the even mantissa (down)",
+        ),
+        c(
+            "flt.add",
+            &[9_007_199_254_740_994.0, 1.0],
+            9_007_199_254_740_996.0,
+            "RNE tie at 2^53 + 3: midpoint rounds to the even mantissa (up)",
+        ),
+        c(
+            "flt.add",
+            &[f64::MAX, f64::MAX],
+            f64::INFINITY,
+            "overflow → +inf, in-band (ratified FLAG-2)",
+        ),
+        c(
+            "flt.add",
+            &[-f64::MAX, -f64::MAX],
+            f64::NEG_INFINITY,
+            "overflow → −inf, in-band",
+        ),
+        c("flt.add", &[f64::INFINITY, 1.0], f64::INFINITY, "inf + finite = inf"),
+        c(
+            "flt.add",
+            &[f64::INFINITY, f64::NEG_INFINITY],
+            f64::from_bits(CANONICAL_NAN_BITS),
+            "inf + (−inf) is invalid → NaN (canonical)",
+        ),
+        c(
+            "flt.add",
+            &[f64::from_bits(CANONICAL_NAN_BITS), 1.0],
+            f64::from_bits(CANONICAL_NAN_BITS),
+            "NaN propagates (canonical)",
+        ),
+        // flt.sub.
+        c("flt.sub", &[3.75, 1.5], 2.25, "exact dyadic difference"),
+        c("flt.sub", &[1.0, 1.0], 0.0, "x − x is +0 under RNE"),
+        c("flt.sub", &[0.0, 0.0], 0.0, "(+0) − (+0) is +0 under RNE"),
+        c(
+            "flt.sub",
+            &[-0.0, 0.0],
+            -0.0,
+            "(−0) − (+0) is (−0) + (−0) = −0",
+        ),
+        c(
+            "flt.sub",
+            &[f64::INFINITY, f64::INFINITY],
+            f64::from_bits(CANONICAL_NAN_BITS),
+            "inf − inf is invalid → NaN (canonical)",
+        ),
+        c(
+            "flt.sub",
+            &[1.0, f64::INFINITY],
+            f64::NEG_INFINITY,
+            "finite − inf = −inf",
+        ),
+        c(
+            "flt.sub",
+            &[f64::MAX, -f64::MAX],
+            f64::INFINITY,
+            "overflow → +inf, in-band",
+        ),
+        // flt.mul.
+        c("flt.mul", &[1.5, 2.0], 3.0, "exact dyadic product"),
+        c("flt.mul", &[-1.5, 2.0], -3.0, "exact dyadic product, sign rule"),
+        c("flt.mul", &[0.5, 0.5], 0.25, "exact dyadic product"),
+        c(
+            "flt.mul",
+            &[f64::MAX, 2.0],
+            f64::INFINITY,
+            "overflow → +inf, in-band",
+        ),
+        c(
+            "flt.mul",
+            &[0.0, f64::INFINITY],
+            f64::from_bits(CANONICAL_NAN_BITS),
+            "0 × inf is invalid → NaN (canonical)",
+        ),
+        c("flt.mul", &[-1.0, 0.0], -0.0, "IEEE sign rule: (−1) × (+0) = −0"),
+        c(
+            "flt.mul",
+            &[f64::INFINITY, -2.0],
+            f64::NEG_INFINITY,
+            "inf × negative = −inf",
+        ),
+        // Underflow at the subnormal floor (spacing 2^-1074): (2^-1074) × 0.5 = 2^-1075 is the
+        // midpoint of {0, 2^-1074} → the even candidate (0) wins under RNE.
+        c(
+            "flt.mul",
+            &[5e-324, 0.5],
+            0.0,
+            "RNE tie at the subnormal floor: midpoint rounds to the even candidate 0",
+        ),
+        // flt.div.
+        c("flt.div", &[3.0, 2.0], 1.5, "exact dyadic quotient"),
+        c(
+            "flt.div",
+            &[1.0, 0.0],
+            f64::INFINITY,
+            "div-by-zero → +inf, in-band (never a trap — ratified FLAG-2)",
+        ),
+        c(
+            "flt.div",
+            &[-1.0, 0.0],
+            f64::NEG_INFINITY,
+            "div-by-zero, sign rule → −inf",
+        ),
+        c(
+            "flt.div",
+            &[1.0, -0.0],
+            f64::NEG_INFINITY,
+            "div by −0, sign rule → −inf (−0 is observably distinct — ADR-040 §2.3)",
+        ),
+        c(
+            "flt.div",
+            &[0.0, 0.0],
+            f64::from_bits(CANONICAL_NAN_BITS),
+            "0/0 is invalid → NaN (canonical)",
+        ),
+        c(
+            "flt.div",
+            &[f64::INFINITY, f64::INFINITY],
+            f64::from_bits(CANONICAL_NAN_BITS),
+            "inf/inf is invalid → NaN (canonical)",
+        ),
+        c("flt.div", &[1.0, f64::INFINITY], 0.0, "finite/inf = +0"),
+        c("flt.div", &[-1.0, f64::INFINITY], -0.0, "finite/inf, sign rule = −0"),
+        // flt.neg — sign-bit flip (exact; never rounds).
+        c("flt.neg", &[1.5], -1.5, "sign flip"),
+        c("flt.neg", &[0.0], -0.0, "neg(+0) = −0 (bit-distinct — ADR-040 §2.3)"),
+        c("flt.neg", &[-0.0], 0.0, "neg(−0) = +0"),
+        c("flt.neg", &[f64::INFINITY], f64::NEG_INFINITY, "neg(inf) = −inf"),
+        c(
+            "flt.neg",
+            &[f64::from_bits(CANONICAL_NAN_BITS)],
+            f64::from_bits(CANONICAL_NAN_BITS),
+            "neg(NaN) re-canonicalizes: NaN sign/payload bits are not observable (§2.3)",
+        ),
+    ]
+}
+
+/// **The conformance corpus (the `EmpiricalFit` evidence):** every row's delivered bit pattern
+/// equals its hand-derived IEEE-754 RNE reference **bit-for-bit** (a payload `==` would pass
+/// `-0.0 == 0.0` and fail NaN — bits do neither), and the row count equals the
+/// `FLT_CONFORMANCE_TRIALS` the basis records.
+#[test]
+fn flt_reference_case_corpus() {
+    let reg = PrimRegistry::with_builtins();
+    let cases = flt_reference_cases();
+    assert_eq!(
+        cases.len() as u64,
+        FLT_CONFORMANCE_TRIALS,
+        "the recorded trials must equal the trials actually run (VR-5)"
+    );
+    for case in &cases {
+        let f = reg.get(case.op).expect("flt prim registered");
+        let args: Vec<Value> = case.args.iter().copied().map(fv).collect();
+        let argrefs: Vec<&Value> = args.iter().collect();
+        let y = f(case.op, &argrefs).unwrap_or_else(|e| {
+            panic!("{}({:?}) must be total, got {e:?}", case.op, case.args)
+        });
+        let Payload::Float(x) = y.payload() else {
+            panic!("{}: result payload must be Float", case.op)
+        };
+        assert_eq!(
+            x.to_bits(),
+            case.expected.to_bits(),
+            "{}({:?}): got {x:?}, want {:?} — {}",
+            case.op,
+            case.args,
+            case.expected,
+            case.why
+        );
+        assert_eq!(
+            y.repr(),
+            &Repr::Float {
+                width: FloatWidth::F64
+            },
+            "{}: result repr must be Float{{F64}}",
+            case.op
+        );
+    }
+}
+
+/// A value corpus for the property sweeps: finite grid points (exact + inexact decimals),
+/// signed zeros, subnormals, the finite extremes, both infinities, and the canonical NaN.
+fn flt_value_corpus() -> Vec<f64> {
+    vec![
+        0.0,
+        -0.0,
+        1.0,
+        -1.0,
+        1.5,
+        -2.5,
+        0.1,
+        0.2,
+        1.0 / 3.0,
+        1e10,
+        -1e-300,
+        5e-324,
+        f64::MAX,
+        -f64::MAX,
+        f64::MIN_POSITIVE,
+        9_007_199_254_740_992.0,
+        f64::INFINITY,
+        f64::NEG_INFINITY,
+        f64::from_bits(CANONICAL_NAN_BITS),
+    ]
+}
+
+/// **Property (commutativity, bit-exact):** `flt.add`/`flt.mul` are commutative bit-for-bit over
+/// the whole corpus — including specials and NaN, because every NaN result is canonical (one NaN,
+/// one bit pattern; ADR-040 §2.3 is what makes float commutativity *bit*-exact, not just IEEE-==).
+#[test]
+fn flt_add_mul_commute_bitwise_on_the_corpus() {
+    let reg = PrimRegistry::with_builtins();
+    for op in ["flt.add", "flt.mul"] {
+        let f = reg.get(op).expect("registered");
+        for &a in &flt_value_corpus() {
+            for &b in &flt_value_corpus() {
+                let (va, vb) = (fv(a), fv(b));
+                let xy = f(op, &[&va, &vb]).expect("total");
+                let yx = f(op, &[&vb, &va]).expect("total");
+                let (Payload::Float(p), Payload::Float(q)) = (xy.payload(), yx.payload()) else {
+                    panic!("{op}: float results expected")
+                };
+                assert_eq!(
+                    p.to_bits(),
+                    q.to_bits(),
+                    "{op}({a:?}, {b:?}) must commute bit-exactly"
+                );
+            }
+        }
+    }
+}
+
+/// **Property (additive identity):** `x + 0.0` is IEEE-equal to `x` for every non-NaN `x`, and
+/// bit-identical for every `x` except `−0.0` (where IEEE itself defines `−0 + (+0) = +0` under
+/// RNE — the documented identity-vs-equality seam, ADR-040 FLAG-4).
+#[test]
+fn flt_add_zero_is_the_identity_modulo_ieee() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("flt.add").expect("registered");
+    let zero = fv(0.0);
+    for &x in &flt_value_corpus() {
+        let vx = fv(x);
+        let y = f("flt.add", &[&vx, &zero]).expect("total");
+        let Payload::Float(out) = y.payload() else {
+            panic!("float result expected")
+        };
+        if x.is_nan() {
+            assert_eq!(out.to_bits(), CANONICAL_NAN_BITS, "NaN + 0 is canonical NaN");
+        } else {
+            assert_eq!(*out, x, "x + 0.0 must be IEEE-equal to x (x = {x:?})");
+            if x.to_bits() != (-0.0f64).to_bits() {
+                assert_eq!(out.to_bits(), x.to_bits(), "bit-identity for x ≠ −0.0");
+            }
+        }
+    }
+}
+
+/// **Property (involution):** `flt.neg ∘ flt.neg` is a bit-identity over the whole corpus — the
+/// signed zeros round-trip (`+0 → −0 → +0`), the infinities round-trip, and NaN re-canonicalizes
+/// to itself.
+#[test]
+fn flt_neg_neg_is_a_bit_identity() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("flt.neg").expect("registered");
+    for &x in &flt_value_corpus() {
+        let vx = fv(x);
+        let once = f("flt.neg", &[&vx]).expect("total");
+        let twice = f("flt.neg", &[&once]).expect("total");
+        let Payload::Float(out) = twice.payload() else {
+            panic!("float result expected")
+        };
+        assert_eq!(
+            out.to_bits(),
+            x.to_bits(),
+            "neg(neg({x:?})) must be a bit-identity"
+        );
+    }
+}
+
+/// **Property (one NaN, one address — ADR-040 §2.3):** every NaN any `flt.*` op produces over the
+/// corpus carries exactly the canonical bits — no constructor path yields a non-canonical NaN.
+#[test]
+fn flt_nan_results_are_always_canonical() {
+    let reg = PrimRegistry::with_builtins();
+    for op in ["flt.add", "flt.sub", "flt.mul", "flt.div"] {
+        let f = reg.get(op).expect("registered");
+        for &a in &flt_value_corpus() {
+            for &b in &flt_value_corpus() {
+                let (va, vb) = (fv(a), fv(b));
+                let y = f(op, &[&va, &vb]).expect("total");
+                let Payload::Float(out) = y.payload() else {
+                    panic!("float result expected")
+                };
+                if out.is_nan() {
+                    assert_eq!(
+                        out.to_bits(),
+                        CANONICAL_NAN_BITS,
+                        "{op}({a:?}, {b:?}): NaN must be canonical"
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// **The ADR-040 §2.6 tag contract, inspectable off the value (EXPLAIN — G2/SC-3):** every
+/// `flt.*` result over `Exact` inputs is `Empirical` with the zero-deviation-vs-spec bound
+/// (`eps = 0`, `Linf`) on the `EmpiricalFit{FLT_CONFORMANCE_TRIALS, …}` basis, with `Derived`
+/// provenance — and the Π table's intrinsic agrees with what the wrapper delivers (the DN-10
+/// §3.4 table↔kernel consistency, float form).
+#[test]
+fn flt_results_carry_the_adr040_empirical_tag_and_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let table = PrimTable::builtins();
+    let one = fv(1.0);
+    let half = fv(0.5);
+    for op in ["flt.add", "flt.sub", "flt.mul", "flt.div", "flt.neg"] {
+        let f = reg.get(op).expect("registered");
+        let args: Vec<&Value> = if op == "flt.neg" {
+            vec![&half]
+        } else {
+            vec![&one, &half]
+        };
+        let y = f(op, &args).expect("total");
+        assert_eq!(
+            y.meta().guarantee(),
+            GuaranteeStrength::Empirical,
+            "{op}: the per-op tag is the ratified ADR-040 §2.6 Empirical (VR-5)"
+        );
+        assert_eq!(
+            table.intrinsic(op),
+            Some(GuaranteeStrength::Empirical),
+            "{op}: Π intrinsic must agree with the delivered tag (DN-10 §3.4)"
+        );
+        match y.meta().bound() {
+            Some(Bound {
+                kind: BoundKind::Error { eps, norm },
+                basis: BoundBasis::EmpiricalFit { trials, method },
+            }) => {
+                assert_eq!(*eps, 0.0, "{op}: zero deviation vs the RNE spec");
+                assert_eq!(*norm, NormKind::Linf);
+                assert_eq!(
+                    *trials, FLT_CONFORMANCE_TRIALS,
+                    "{op}: the basis records the corpus actually run"
+                );
+                assert!(!method.trim().is_empty());
+            }
+            other => panic!("{op}: expected the EmpiricalFit zero-deviation bound, got {other:?}"),
+        }
+        assert!(
+            matches!(y.meta().provenance(), Provenance::Derived { .. }),
+            "{op}: provenance must be Derived"
+        );
+    }
+}
+
+/// **Composition:** a `flt.*` result (Empirical, zero-deviation) is a legal input to the next
+/// `flt.*` op — chained float arithmetic composes, and the chained result keeps the same honest
+/// tag/bound form. An input carrying a *genuine* approximation bound (`eps > 0`) is an explicit
+/// [`EvalError::ApproxCompositionUnsupported`] — no defined float ε-rule yet, refused, never
+/// fabricated (G2/VR-5).
+#[test]
+fn flt_chaining_composes_and_true_approximations_refuse() {
+    let reg = PrimRegistry::with_builtins();
+    let add = reg.get("flt.add").expect("registered");
+    let mul = reg.get("flt.mul").expect("registered");
+    // Chain: (1.5 × 2.0) + 0.25 = 3.25 — the intermediate is Empirical and composes.
+    let prod = mul("flt.mul", &[&fv(1.5), &fv(2.0)]).expect("total");
+    assert_eq!(prod.meta().guarantee(), GuaranteeStrength::Empirical);
+    let sum = add("flt.add", &[&prod, &fv(0.25)]).expect("chained flt ops must compose");
+    let Payload::Float(out) = sum.payload() else {
+        panic!("float result expected")
+    };
+    assert_eq!(out.to_bits(), 3.25f64.to_bits());
+    assert_eq!(sum.meta().guarantee(), GuaranteeStrength::Empirical);
+    // A genuinely-approximate Float input (eps > 0) has no defined propagation rule — refuse.
+    let approx = Value::new(
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(1.0),
+        Meta::new(
+            Provenance::Root,
+            GuaranteeStrength::Empirical,
+            Some(Bound {
+                kind: BoundKind::Error {
+                    eps: 1e-3,
+                    norm: NormKind::Rel,
+                },
+                basis: BoundBasis::EmpiricalFit {
+                    trials: 10,
+                    method: "a synthetic approximate source".to_owned(),
+                },
+            }),
+            None,
+            None,
+            None,
+        )
+        .expect("well-formed meta"),
+    )
+    .expect("well-formed value");
+    assert!(
+        matches!(
+            add("flt.add", &[&approx, &fv(1.0)]),
+            Err(EvalError::ApproxCompositionUnsupported { .. })
+        ),
+        "a true approximation must refuse explicitly, never a fabricated bound"
+    );
+}
+
+/// **Never-silent type/arity discipline:** a non-`Float` operand and a wrong arity are explicit
+/// [`EvalError::PrimType`] refusals — never a coercion (G2).
+#[test]
+fn flt_type_and_arity_refusals_are_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let add = reg.get("flt.add").expect("registered");
+    let neg = reg.get("flt.neg").expect("registered");
+    let b = byte([false; 8]);
+    let x = fv(1.0);
+    assert!(
+        matches!(add("flt.add", &[&b, &x]), Err(EvalError::PrimType { .. })),
+        "a Binary operand must refuse"
+    );
+    assert!(
+        matches!(add("flt.add", &[&x]), Err(EvalError::PrimType { .. })),
+        "arity 1 for flt.add must refuse"
+    );
+    assert!(
+        matches!(neg("flt.neg", &[&x, &x]), Err(EvalError::PrimType { .. })),
+        "arity 2 for flt.neg must refuse"
+    );
+}
