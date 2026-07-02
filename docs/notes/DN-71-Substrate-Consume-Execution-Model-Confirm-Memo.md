@@ -1,8 +1,8 @@
-# Design Note DN-70 — `Substrate`/`consume` Execution Model: Confirm-Memo (M-901)
+# Design Note DN-71 — `Substrate`/`consume` Execution Model: Confirm-Memo (M-901)
 
 | Field | Value |
 |---|---|
-| **Note** | DN-70 |
+| **Note** | DN-71 |
 | **Status** | **Draft** (2026-07-02, authored by the M-901 leaf — a **confirm-memo for maintainer sign-off**; nothing here is self-ratified, and the Gap-E implementation lane M-902…M-904 stays `status:blocked` until the sign-off is recorded) |
 | **Decides** | Nothing normatively — it **proposes** the confirmed execution model for the affine `Substrate`/`consume` construct (value form, use-once enforcement, lowering, drop protocol), enumerates alternatives with an honest tradeoff table, records a recommendation, and lists every open decision as a FLAG for the maintainer. The maintainer's sign-off (accept / revise / flag-blocking, §9) is what confirms it. |
 | **Feeds** | M-902 (`Substrate` v0 value form) · M-903 (affine tracker) · M-904 (lift the staged `Residual`) — the `enb` Gap-E lane; the future `grm` M-918 DN-54 dossier (§7 cross-check); RFC-0027 OQ-5 (drop-without-consume protocol, FLAG-4) |
@@ -93,7 +93,7 @@ and 5); and a maintainer-ratified design pass before enactment (§10.7). That in
 maintainer's confirmed intent (`Declared`; G2 — surfaced, not assumed).
 
 **Memo location (FLAG-2).** The task allowed either a new DN or a DN-54 addendum. A **new note
-(DN-70)** was minted, following the established convention for design dossiers/memos (DN-65 memo,
+(DN-71)** was minted, following the established convention for design dossiers/memos (DN-65 memo,
 DN-68 invariant note, DN-69 promotion dossier — all new dated notes; DN-54's own §10.7 routes its
 follow-up work to a separate implementing RFC, not to further DN-54 growth). Appending an
 affine-`Substrate` section to DN-54 would also have hard-coded the FLAG-1 conflation into the
@@ -258,7 +258,7 @@ so this memo pins the **shared commitments** any coherent reading requires both 
 `tools/github/issues.yaml`; the slot appears only as a proposed row in `.claude/kickoffs/grm.md`
 (which itself demands the reciprocal cross-check: *"the `enb` M-901 cross-check (same model — the
 two kickoffs must not fork it: FLAG if they diverge)"*). **FLAG-5:** when `grm` mints M-918, its
-dossier and this memo MUST be reconciled explicitly — M-918 cites DN-70 §7, and any divergence from
+dossier and this memo MUST be reconciled explicitly — M-918 cites DN-71 §7, and any divergence from
 commitments 1–5 (or a ratified attachment model that invalidates an assumption used here) re-opens
 this memo append-only. No divergence exists today, trivially, because M-918's dossier does not yet
 exist — that is an `Exact` vacuous truth, recorded as such, not evidence of agreement (VR-5).
@@ -270,7 +270,7 @@ Every FLAG is `Declared` (a question with a recommended answer, not a decision).
 | FLAG | Question | Recommendation |
 |---|---|---|
 | FLAG-1 | **Interpretation of "DN-54 §10 as the target."** DN-54 §10 contains no affine-`Substrate` content (§3); this memo reads the directive as "build Gap E to the §10 design-pass pattern + Model-A commitments." Is that the intended reading? | Confirm the §3 reading; if the maintainer instead intended a substantive dependency on the (unratified) §10 attachment model, say which parts bind Gap E. |
-| FLAG-2 | **Memo location.** New note DN-70 vs a DN-54 §11 addendum. | Keep DN-70 (convention: DN-65/68/69 precedents; avoids entrenching the FLAG-1 conflation). |
+| FLAG-2 | **Memo location.** New note DN-71 vs a DN-54 §11 addendum. | Keep DN-71 (convention: DN-65/68/69 precedents; avoids entrenching the FLAG-1 conflation). (Note: this memo was renumbered DN-70 → DN-71 pre-integration — DN-70 is the M-905 D-lite scope-split memo that landed concurrently; no self-cite ambiguity remains.) |
 | FLAG-3 | **Enforcement locus + staging.** Is static enforcement (Model S) confirmed as the target? May M-903 land the runtime backstop first as an explicitly-recorded staging step (Model D as a step, never the target)? | Confirm Model S as target; permit backstop-first staging only with the static pass in the same milestone and the interim recorded (G2). |
 | FLAG-4 | **Drop-without-consume (RFC-0027 OQ-5).** Runtime error, or deterministic scope-exit release + recorded reclamation/EXPLAIN event? (Silent no-op is G2-excluded regardless.) OQ-5 was deferred pending the `graft` RFC — ratify a v0 posture now, or hold? | v0: deterministic scope-exit release with a recorded event (aligns LR-9's "leaks structurally excluded" with the *affine* reading); keep OQ-5's full protocol open for the `graft` RFC. |
 | FLAG-5 | **M-918 reconciliation.** M-918 is reserved/unminted; when `grm` mints it, the two artifacts must cross-cite and hold §7's commitments 1–5; divergence re-opens this memo (append-only). Also: should M-918 adopt "attachment model" naming (§7 item 5)? | Adopt both: the reconciliation obligation and the naming recommendation. |
