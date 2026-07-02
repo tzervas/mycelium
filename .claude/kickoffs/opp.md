@@ -1,6 +1,6 @@
 # Kickoff `opp` — Phase-I opportunistic Mycelium ports (ready-now; non-gating)
 
-> **UID:** `opp` · **Basis:** **ADR-038** (Proposed) §2.2/§2.5 + the umbrella roadmap
+> **UID:** `opp` · **Basis:** **ADR-038** (Accepted, 2026-07-01) §2.2/§2.5 + the umbrella roadmap
 > `docs/planning/road-to-1.0.0-and-mycelium-rewrite.md` **§6** · RFC-0031 §5 **D5/D6** (the per-op
 > stability bar + oracle retention) · `docs/spec/stdlib/self-hosting-readiness.md` §0 (~19/26
 > expressible, `Empirical`) · DN-34 §8 (transpiler ≈12.4% union coverage, `Empirical` — accelerant,
