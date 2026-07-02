@@ -386,7 +386,10 @@ impl PrimTable {
         // **in-band, inspectable, propagating values** (ADR-040 §2.4, ratified FLAG-2): overflow
         // → ±inf, div-by-zero → ±inf, 0/0 → NaN — never a trap and never a silent wrap onto an
         // ordinary in-range value; the distinguished in-band sentinel IS the never-silent signal
-        // (classification rides `is_nan`/`is_finite`, M-899's op set). Every NaN result carries
+        // (dedicated classification prims `is_nan`/`is_finite` are still OPEN — M-899 shipped
+        // comparison/total-order only; until they land, NaN is detectable as `¬flt.eq(x, x)` and
+        // finiteness as `flt.lt(-inf, x) ∧ flt.lt(x, +inf)` — FLAGged, never silently dropped).
+        // Every NaN result carries
         // the canonical bits (`Value::new` construction invariant, ADR-040 §2.3).
         //
         // **Intrinsic — `Empirical`, per the ratified ADR-040 §2.6 (VR-5, never upgraded).** The

@@ -1699,3 +1699,639 @@ fn flt_type_and_arity_refusals_are_never_silent() {
         "arity 2 for flt.neg must refuse"
     );
 }
+
+// ---- ADR-040 §2.4 (M-899, `enb` Gap A): scalar-float comparison + the named total order -------
+//
+// Two kinds of evidence, matching the section note in `prims.rs`:
+//   - the **reference corpus** (`flt_cmp_reference_cases`) — hand-derived IEEE-754 §5.11
+//     predicate rows and §5.10 totalOrder rows, the `EmpiricalFit` basis every comparison result
+//     records (row count pinned to `FLT_CMP_CONFORMANCE_TRIALS`, VR-5);
+//   - the **property sweeps** over `flt_value_corpus()` — trichotomy on non-NaN, NaN-unordered
+//     on every predicate, lt/gt + le/ge duality, and the total-order laws (totality,
+//     antisymmetry, transitivity, reflexivity, the −0/+0/NaN placement). The total-order laws
+//     are exactly the **M-511 proof debt**: this corpus evidence is what keeps the tag honest at
+//     `Empirical` — it is NOT a proof, and the tag must not move to `Proven` until M-511 lands.
+
+/// The five IEEE-754 §5.11 partial-order predicates (NaN unordered → false on every one).
+const FLT_CMP_PREDICATES: [&str; 5] = ["flt.lt", "flt.le", "flt.gt", "flt.ge", "flt.eq"];
+
+/// Extract the `Binary{1}` truth bit of a comparison result (never a silent shape pass).
+#[track_caller]
+fn flt_cmp_truth(label: &str, v: &Value) -> bool {
+    assert_eq!(
+        v.repr(),
+        &Repr::Binary { width: 1 },
+        "{label}: result repr must be Binary{{1}}"
+    );
+    let Payload::Bits(bits) = v.payload() else {
+        panic!(
+            "{label}: result payload must be Bits, got {:?}",
+            v.payload()
+        )
+    };
+    assert_eq!(bits.len(), 1, "{label}: exactly one truth bit");
+    bits[0]
+}
+
+/// Invoke a float-comparison prim over two `Exact` float operands and return its truth bit.
+#[track_caller]
+fn flt_cmp(reg: &PrimRegistry, op: &str, a: f64, b: f64) -> bool {
+    let f = reg.get(op).expect("flt comparison prim registered");
+    let (va, vb) = (fv(a), fv(b));
+    let y = f(op, &[&va, &vb])
+        .unwrap_or_else(|e| panic!("{op}({a:?}, {b:?}) must be total over Float operands: {e:?}"));
+    flt_cmp_truth(op, &y)
+}
+
+/// One comparison reference row: op, operands, and the hand-derived expected truth value.
+struct FltCmpCase {
+    op: &'static str,
+    a: f64,
+    b: f64,
+    expected: bool,
+    why: &'static str,
+}
+
+/// The M-899 comparison reference corpus (see the section note). Every expected truth value is
+/// hand-derived from IEEE-754 §5.11 (the five predicates) / §5.10 (`totalOrder`) — never
+/// recomputed with the op under test. Exactly [`FLT_CMP_CONFORMANCE_TRIALS`] rows — asserted by
+/// `flt_cmp_reference_case_corpus`.
+fn flt_cmp_reference_cases() -> Vec<FltCmpCase> {
+    let c = |op, a, b, expected, why| FltCmpCase {
+        op,
+        a,
+        b,
+        expected,
+        why,
+    };
+    vec![
+        // flt.lt — §5.11 compareQuietLess.
+        c("flt.lt", 1.0, 2.0, true, "finite ordered pair"),
+        c("flt.lt", 2.0, 1.0, false, "reversed pair"),
+        c("flt.lt", 1.0, 1.0, false, "irreflexive"),
+        c("flt.lt", -0.0, 0.0, false, "−0 == +0 under §5.11: not less"),
+        c("flt.lt", cnan(), 1.0, false, "NaN unordered → false"),
+        c(
+            "flt.lt",
+            1.0,
+            cnan(),
+            false,
+            "NaN unordered (either side) → false",
+        ),
+        c(
+            "flt.lt",
+            cnan(),
+            cnan(),
+            false,
+            "NaN vs NaN unordered → false",
+        ),
+        c(
+            "flt.lt",
+            f64::NEG_INFINITY,
+            f64::INFINITY,
+            true,
+            "−inf < +inf",
+        ),
+        c(
+            "flt.lt",
+            f64::NEG_INFINITY,
+            -f64::MAX,
+            true,
+            "−inf below the finite floor",
+        ),
+        c(
+            "flt.lt",
+            f64::INFINITY,
+            f64::INFINITY,
+            false,
+            "inf not < itself",
+        ),
+        c("flt.lt", 0.0, 5e-324, true, "+0 < the smallest subnormal"),
+        // flt.le — §5.11 compareQuietLessEqual.
+        c("flt.le", 1.0, 1.0, true, "reflexive on non-NaN"),
+        c("flt.le", -0.0, 0.0, true, "−0 == +0: le holds"),
+        c("flt.le", 0.0, -0.0, true, "+0 == −0: le holds both ways"),
+        c("flt.le", 2.0, 1.0, false, "reversed pair"),
+        c(
+            "flt.le",
+            cnan(),
+            1.0,
+            false,
+            "NaN unordered → false (le is NOT ¬gt on floats)",
+        ),
+        c(
+            "flt.le",
+            cnan(),
+            cnan(),
+            false,
+            "le(NaN, NaN) is false — no reflexivity for NaN",
+        ),
+        c(
+            "flt.le",
+            f64::NEG_INFINITY,
+            f64::NEG_INFINITY,
+            true,
+            "−inf == −inf: le holds",
+        ),
+        // flt.gt — §5.11 compareQuietGreater.
+        c("flt.gt", 2.0, 1.0, true, "finite ordered pair"),
+        c("flt.gt", 1.0, 2.0, false, "reversed pair"),
+        c(
+            "flt.gt",
+            cnan(),
+            1.0,
+            false,
+            "NaN unordered → false (NaN is not \"the biggest\" under the partial order)",
+        ),
+        c(
+            "flt.gt",
+            1.0,
+            cnan(),
+            false,
+            "NaN unordered (either side) → false",
+        ),
+        c(
+            "flt.gt",
+            f64::INFINITY,
+            f64::MAX,
+            true,
+            "+inf above the finite ceiling",
+        ),
+        // flt.ge — §5.11 compareQuietGreaterEqual.
+        c("flt.ge", 1.0, 1.0, true, "reflexive on non-NaN"),
+        c("flt.ge", 0.0, -0.0, true, "+0 == −0: ge holds"),
+        c("flt.ge", 1.0, 2.0, false, "reversed pair"),
+        c("flt.ge", cnan(), cnan(), false, "ge(NaN, NaN) is false"),
+        c(
+            "flt.ge",
+            f64::INFINITY,
+            cnan(),
+            false,
+            "unordered even against +inf",
+        ),
+        // flt.eq — §5.11 compareQuietEqual.
+        c("flt.eq", 1.0, 1.0, true, "equal finites"),
+        c(
+            "flt.eq",
+            -0.0,
+            0.0,
+            true,
+            "signed zeros compare EQUAL under §5.11 (the FLAG-4 seam — total_le separates them)",
+        ),
+        c("flt.eq", 1.0, 2.0, false, "distinct finites"),
+        c(
+            "flt.eq",
+            cnan(),
+            cnan(),
+            false,
+            "NaN ≠ NaN — THE unordered-equality row",
+        ),
+        c("flt.eq", cnan(), 1.0, false, "NaN equals nothing"),
+        c(
+            "flt.eq",
+            f64::INFINITY,
+            f64::INFINITY,
+            true,
+            "inf equals itself",
+        ),
+        c(
+            "flt.eq",
+            f64::INFINITY,
+            f64::NEG_INFINITY,
+            false,
+            "opposite infinities differ",
+        ),
+        // flt.total_le — §5.10 totalOrder(a, b): −inf < … < −0 < +0 < … < +inf < NaN
+        // (canonical positive quiet NaN sorts last — ADR-040 §2.3).
+        c(
+            "flt.total_le",
+            -0.0,
+            0.0,
+            true,
+            "−0 strictly precedes +0 in the total order",
+        ),
+        c(
+            "flt.total_le",
+            0.0,
+            -0.0,
+            false,
+            "+0 does NOT precede −0 — the direction flt.eq cannot see",
+        ),
+        c(
+            "flt.total_le",
+            1.0,
+            2.0,
+            true,
+            "agrees with le on ordered finites",
+        ),
+        c(
+            "flt.total_le",
+            2.0,
+            1.0,
+            false,
+            "agrees with le on reversed finites",
+        ),
+        c(
+            "flt.total_le",
+            cnan(),
+            cnan(),
+            true,
+            "REFLEXIVE on NaN (contrast flt.le(NaN, NaN) = false) — total means total",
+        ),
+        c(
+            "flt.total_le",
+            f64::INFINITY,
+            cnan(),
+            true,
+            "+inf precedes NaN: canonical NaN sorts last",
+        ),
+        c(
+            "flt.total_le",
+            cnan(),
+            f64::INFINITY,
+            false,
+            "NaN does not precede +inf",
+        ),
+        c("flt.total_le", 1.0, 1.0, true, "reflexive on finites"),
+        c(
+            "flt.total_le",
+            f64::NEG_INFINITY,
+            cnan(),
+            true,
+            "−inf (the total-order minimum) precedes NaN (the maximum)",
+        ),
+    ]
+}
+
+/// **The comparison conformance corpus (the `EmpiricalFit` evidence):** every row's delivered
+/// truth bit equals its hand-derived IEEE-754 reference, and the row count equals the
+/// `FLT_CMP_CONFORMANCE_TRIALS` the basis records (VR-5 — evidence never drifts from the claim).
+#[test]
+fn flt_cmp_reference_case_corpus() {
+    let reg = PrimRegistry::with_builtins();
+    let cases = flt_cmp_reference_cases();
+    assert_eq!(
+        cases.len() as u64,
+        FLT_CMP_CONFORMANCE_TRIALS,
+        "the recorded trials must equal the trials actually run (VR-5)"
+    );
+    for case in &cases {
+        assert_eq!(
+            flt_cmp(&reg, case.op, case.a, case.b),
+            case.expected,
+            "{}({:?}, {:?}): want {} — {}",
+            case.op,
+            case.a,
+            case.b,
+            case.expected,
+            case.why
+        );
+    }
+}
+
+/// **Property (NaN is unordered — ADR-040 §2.4):** against every corpus value, in either operand
+/// position, **all five** partial-order predicates yield `false` when NaN is involved — there is
+/// no predicate under which NaN is less, greater, or equal to anything (itself included).
+#[test]
+fn flt_cmp_nan_is_unordered_on_every_predicate() {
+    let reg = PrimRegistry::with_builtins();
+    for op in FLT_CMP_PREDICATES {
+        for &x in &flt_value_corpus() {
+            assert!(
+                !flt_cmp(&reg, op, cnan(), x),
+                "{op}(NaN, {x:?}) must be false — NaN is unordered"
+            );
+            assert!(
+                !flt_cmp(&reg, op, x, cnan()),
+                "{op}({x:?}, NaN) must be false — NaN is unordered"
+            );
+        }
+    }
+}
+
+/// **Property (trichotomy on the ordered domain):** for non-NaN `a`, `b`, exactly one of
+/// `lt`/`eq`/`gt` holds, and the compound predicates are consistent (`le ⟺ lt ∨ eq`,
+/// `ge ⟺ gt ∨ eq`). On the *full* domain trichotomy fails only for NaN — pinned by
+/// `flt_cmp_nan_is_unordered_on_every_predicate` (all three false), which is exactly why the
+/// order is *partial* (ADR-040 §2.4).
+#[test]
+fn flt_cmp_trichotomy_and_compound_consistency_on_non_nan() {
+    let reg = PrimRegistry::with_builtins();
+    for &a in &flt_value_corpus() {
+        for &b in &flt_value_corpus() {
+            if a.is_nan() || b.is_nan() {
+                continue;
+            }
+            let (lt, eq, gt) = (
+                flt_cmp(&reg, "flt.lt", a, b),
+                flt_cmp(&reg, "flt.eq", a, b),
+                flt_cmp(&reg, "flt.gt", a, b),
+            );
+            assert_eq!(
+                u8::from(lt) + u8::from(eq) + u8::from(gt),
+                1,
+                "trichotomy: exactly one of lt/eq/gt for ({a:?}, {b:?})"
+            );
+            assert_eq!(
+                flt_cmp(&reg, "flt.le", a, b),
+                lt || eq,
+                "le ⟺ lt ∨ eq for ({a:?}, {b:?})"
+            );
+            assert_eq!(
+                flt_cmp(&reg, "flt.ge", a, b),
+                gt || eq,
+                "ge ⟺ gt ∨ eq for ({a:?}, {b:?})"
+            );
+        }
+    }
+}
+
+/// **Property (duality):** `lt(a, b) ⟺ gt(b, a)` and `le(a, b) ⟺ ge(b, a)` over the *whole*
+/// corpus — NaN included (both sides false on unordered pairs).
+#[test]
+fn flt_cmp_lt_gt_and_le_ge_are_duals() {
+    let reg = PrimRegistry::with_builtins();
+    for &a in &flt_value_corpus() {
+        for &b in &flt_value_corpus() {
+            assert_eq!(
+                flt_cmp(&reg, "flt.lt", a, b),
+                flt_cmp(&reg, "flt.gt", b, a),
+                "lt({a:?}, {b:?}) must equal gt({b:?}, {a:?})"
+            );
+            assert_eq!(
+                flt_cmp(&reg, "flt.le", a, b),
+                flt_cmp(&reg, "flt.ge", b, a),
+                "le({a:?}, {b:?}) must equal ge({b:?}, {a:?})"
+            );
+        }
+    }
+}
+
+/// **Property (equality is reflexive exactly off NaN):** `flt.eq(x, x)` is true iff `x` is not
+/// NaN — `¬flt.eq(x, x)` is the in-band NaN test the predicate set provides (G2: the no-order
+/// case is observable, not swallowed).
+#[test]
+fn flt_eq_is_reflexive_iff_not_nan() {
+    let reg = PrimRegistry::with_builtins();
+    for &x in &flt_value_corpus() {
+        assert_eq!(
+            flt_cmp(&reg, "flt.eq", x, x),
+            !x.is_nan(),
+            "eq({x:?}, {x:?}) must be true exactly when x is not NaN"
+        );
+    }
+}
+
+/// **Property (the total-order laws — the M-511 proof debt's `Empirical` evidence, VR-5):**
+/// over the whole corpus (NaN, ±0, ±inf, subnormals included), `flt.total_le` is **total**
+/// (every pair ordered at least one way), **reflexive**, **antisymmetric** (mutual order ⟺
+/// bit-identical — with the canonical NaN of ADR-040 §2.3 there is one bit pattern per
+/// total-order equivalence class), and **transitive** (swept over all corpus triples). This
+/// corpus sweep is evidence, NOT a proof: the tag stays `Empirical` until M-511 discharges the
+/// proof debt — never upgraded on the strength of the host's documentation (VR-5).
+#[test]
+fn flt_total_le_satisfies_the_total_order_laws_on_the_corpus() {
+    let reg = PrimRegistry::with_builtins();
+    let corpus = flt_value_corpus();
+    for &a in &corpus {
+        assert!(
+            flt_cmp(&reg, "flt.total_le", a, a),
+            "reflexive: total_le({a:?}, {a:?})"
+        );
+        for &b in &corpus {
+            let ab = flt_cmp(&reg, "flt.total_le", a, b);
+            let ba = flt_cmp(&reg, "flt.total_le", b, a);
+            assert!(
+                ab || ba,
+                "total: total_le must order ({a:?}, {b:?}) at least one way"
+            );
+            if ab && ba {
+                assert_eq!(
+                    a.to_bits(),
+                    b.to_bits(),
+                    "antisymmetric: mutual total_le ⟹ bit-identical ({a:?}, {b:?})"
+                );
+            }
+            for &c in &corpus {
+                if ab && flt_cmp(&reg, "flt.total_le", b, c) {
+                    assert!(
+                        flt_cmp(&reg, "flt.total_le", a, c),
+                        "transitive: total_le({a:?}, {b:?}) ∧ total_le({b:?}, {c:?}) ⟹ \
+                         total_le({a:?}, {c:?})"
+                    );
+                }
+            }
+        }
+    }
+}
+
+/// **Property (deterministic placement of the seam values — ADR-040 §2.3/§2.4):** the signed
+/// zeros are IEEE-**equal** under `flt.eq` but **distinct and directed** under `flt.total_le`
+/// (−0 precedes +0, not conversely — the FLAG-4 identity-vs-equality seam made orderable), and
+/// the canonical NaN sorts **last**: every corpus value totally-precedes NaN, and NaN precedes
+/// nothing but itself.
+#[test]
+fn flt_total_le_places_signed_zeros_and_nan_deterministically() {
+    let reg = PrimRegistry::with_builtins();
+    // The zeros: equal to flt.eq, directed to flt.total_le.
+    assert!(
+        flt_cmp(&reg, "flt.eq", -0.0, 0.0),
+        "eq(−0, +0) — IEEE-equal"
+    );
+    assert!(
+        flt_cmp(&reg, "flt.total_le", -0.0, 0.0),
+        "total_le(−0, +0) — −0 precedes +0"
+    );
+    assert!(
+        !flt_cmp(&reg, "flt.total_le", 0.0, -0.0),
+        "¬total_le(+0, −0) — the zeros are DISTINCT under the total order"
+    );
+    // NaN: the total-order maximum (canonical positive quiet NaN — ADR-040 §2.3).
+    for &x in &flt_value_corpus() {
+        assert!(
+            flt_cmp(&reg, "flt.total_le", x, cnan()),
+            "total_le({x:?}, NaN): everything precedes-or-equals the canonical NaN"
+        );
+        assert_eq!(
+            flt_cmp(&reg, "flt.total_le", cnan(), x),
+            x.is_nan(),
+            "total_le(NaN, {x:?}): NaN precedes nothing but itself"
+        );
+    }
+}
+
+/// **Property (the total order refines the partial order):** wherever the §5.11 partial order
+/// *has* an answer, `flt.total_le` agrees with `flt.le` — the only divergences are exactly the
+/// documented seams: NaN (unordered partially, placed totally) and the IEEE-equal-but-
+/// bit-distinct signed-zero pair (equal partially, directed totally).
+#[test]
+fn flt_total_le_refines_le_off_the_documented_seams() {
+    let reg = PrimRegistry::with_builtins();
+    for &a in &flt_value_corpus() {
+        for &b in &flt_value_corpus() {
+            if a.is_nan() || b.is_nan() {
+                continue; // the NaN seam — pinned by the placement test above.
+            }
+            #[allow(clippy::float_cmp)] // probing the IEEE-equal (not approximate) seam.
+            if a == b && a.to_bits() != b.to_bits() {
+                continue; // the ±0 seam — pinned by the placement test above.
+            }
+            assert_eq!(
+                flt_cmp(&reg, "flt.total_le", a, b),
+                flt_cmp(&reg, "flt.le", a, b),
+                "total_le must agree with le off the seams ({a:?}, {b:?})"
+            );
+        }
+    }
+}
+
+/// **The ADR-040 §2.6 tag contract, inspectable off the value (EXPLAIN — G2/SC-3):** every
+/// comparison result over `Exact` inputs is `Empirical` with the zero-deviation-vs-spec bound
+/// (`eps = 0`, `Linf`) on the `EmpiricalFit{FLT_CMP_CONFORMANCE_TRIALS, …}` basis, with
+/// `Derived` provenance — and the Π table's intrinsic agrees (DN-10 §3.4). The
+/// `flt.total_le` method string names the M-511 caveat explicitly, so EXPLAIN shows the
+/// unproven total-order status, never hides it.
+#[test]
+fn flt_cmp_results_carry_the_adr040_empirical_tag_and_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let table = PrimTable::builtins();
+    let one = fv(1.0);
+    let two = fv(2.0);
+    for op in [
+        "flt.lt",
+        "flt.le",
+        "flt.gt",
+        "flt.ge",
+        "flt.eq",
+        "flt.total_le",
+    ] {
+        let f = reg.get(op).expect("registered");
+        let y = f(op, &[&one, &two]).expect("total");
+        assert_eq!(
+            y.meta().guarantee(),
+            GuaranteeStrength::Empirical,
+            "{op}: the per-op tag is the ratified ADR-040 §2.6 Empirical (VR-5)"
+        );
+        assert_eq!(
+            table.intrinsic(op),
+            Some(GuaranteeStrength::Empirical),
+            "{op}: Π intrinsic must agree with the delivered tag (DN-10 §3.4)"
+        );
+        match y.meta().bound() {
+            Some(Bound {
+                kind: BoundKind::Error { eps, norm },
+                basis: BoundBasis::EmpiricalFit { trials, method },
+            }) => {
+                assert_eq!(*eps, 0.0, "{op}: zero deviation vs the IEEE predicate spec");
+                assert_eq!(*norm, NormKind::Linf);
+                assert_eq!(
+                    *trials, FLT_CMP_CONFORMANCE_TRIALS,
+                    "{op}: the basis records the corpus actually run"
+                );
+                assert!(
+                    method.contains("M-511"),
+                    "{op}: the recorded method must surface the M-511 total-order proof debt"
+                );
+            }
+            other => panic!("{op}: expected the EmpiricalFit zero-deviation bound, got {other:?}"),
+        }
+        assert!(
+            matches!(y.meta().provenance(), Provenance::Derived { .. }),
+            "{op}: provenance must be Derived"
+        );
+    }
+}
+
+/// **Composition:** a `flt.*` arithmetic result (Empirical, zero-deviation) is a legal
+/// comparison operand — comparing computed floats works — while a *genuinely* approximate input
+/// (`eps > 0`) is an explicit [`EvalError::ApproxCompositionUnsupported`] refusal: an ε-ball
+/// straddling the compare point could flip the bit, and no ε-rule is defined, so it refuses
+/// rather than fabricating a truth value (G2/VR-5).
+#[test]
+fn flt_cmp_composes_over_flt_results_and_true_approximations_refuse() {
+    let reg = PrimRegistry::with_builtins();
+    let add = reg.get("flt.add").expect("registered");
+    let lt = reg.get("flt.lt").expect("registered");
+    // (1.5 + 2.25) < 4.0 — the Empirical intermediate composes; 3.75 < 4.0 is true.
+    let sum = add("flt.add", &[&fv(1.5), &fv(2.25)]).expect("total");
+    assert_eq!(sum.meta().guarantee(), GuaranteeStrength::Empirical);
+    let four = fv(4.0);
+    let y = lt("flt.lt", &[&sum, &four]).expect("an flt.* result must compose into a comparison");
+    assert!(flt_cmp_truth("flt.lt over a computed operand", &y));
+    // A genuinely-approximate Float operand (eps > 0): refuse, never a fabricated bit.
+    let approx = Value::new(
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(1.0),
+        Meta::new(
+            Provenance::Root,
+            GuaranteeStrength::Empirical,
+            Some(Bound {
+                kind: BoundKind::Error {
+                    eps: 1e-3,
+                    norm: NormKind::Rel,
+                },
+                basis: BoundBasis::EmpiricalFit {
+                    trials: 10,
+                    method: "a synthetic approximate source".to_owned(),
+                },
+            }),
+            None,
+            None,
+            None,
+        )
+        .expect("well-formed meta"),
+    )
+    .expect("well-formed value");
+    for op in ["flt.lt", "flt.eq", "flt.total_le"] {
+        let f = reg.get(op).expect("registered");
+        assert!(
+            matches!(
+                f(op, &[&approx, &fv(1.0)]),
+                Err(EvalError::ApproxCompositionUnsupported { .. })
+            ),
+            "{op}: a true approximation must refuse explicitly, never a fabricated truth bit"
+        );
+    }
+}
+
+/// **Never-silent type/arity discipline:** a non-`Float` operand and a wrong arity are explicit
+/// [`EvalError::PrimType`] refusals on every comparison op — never a coercion (G2). And the D1
+/// `cmp.eq`/`cmp.lt` prims still refuse `Float` operands *by routing*, naming the `flt.*`
+/// predicates and the named total order (never a silently-wrong bitwise order).
+#[test]
+fn flt_cmp_type_and_arity_refusals_are_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let b = byte([false; 8]);
+    let x = fv(1.0);
+    for op in [
+        "flt.lt",
+        "flt.le",
+        "flt.gt",
+        "flt.ge",
+        "flt.eq",
+        "flt.total_le",
+    ] {
+        let f = reg.get(op).expect("registered");
+        assert!(
+            matches!(f(op, &[&b, &x]), Err(EvalError::PrimType { .. })),
+            "{op}: a Binary operand must refuse"
+        );
+        assert!(
+            matches!(f(op, &[&x]), Err(EvalError::PrimType { .. })),
+            "{op}: arity 1 must refuse"
+        );
+    }
+    // The D1 comparison prims route floats to the flt.* surface, explicitly.
+    for op in ["cmp.eq", "cmp.lt"] {
+        let f = reg.get(op).expect("registered");
+        match f(op, &[&x, &x]) {
+            Err(EvalError::PrimType { why, .. }) => assert!(
+                why.contains("flt.total_le"),
+                "{op}: the Float refusal must name the flt.* routing, got: {why}"
+            ),
+            other => panic!("{op} over Float must refuse with PrimType, got {other:?}"),
+        }
+    }
+}
