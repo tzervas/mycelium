@@ -1,10 +1,12 @@
 use crate::ast::Scalar;
 use crate::ast::TypeRef;
+use crate::ast::{Arm, Expr, Path, Pattern};
 use crate::checkty::check_nodule;
 use crate::checkty::{has_var, Env, Ty, Width};
 use crate::elab::ElabError;
 use crate::mono::*;
 use crate::parse;
+use crate::totality::{WalkDepthExceeded, MAX_WALK_DEPTH};
 use std::collections::BTreeSet;
 
 fn env(src: &str) -> Env {
@@ -830,7 +832,7 @@ fn free_vars_respects_binders_and_first_occurrence_order() {
     bound.insert("x".to_owned());
     let mut seen: BTreeSet<String> = BTreeSet::new();
     let mut out: Vec<String> = Vec::new();
-    free_vars(&body, &mut bound, &mut seen, &mut out);
+    free_vars(&body, &mut bound, &mut seen, &mut out).expect("well under the depth budget");
     // `free_vars` is the raw structural set: it includes the call-head name `and` (filtering
     // top-level names to find actual *captures* is `rewrite_lambda`'s scope-membership step). The
     // param `x` is excluded (seeded into `bound`), and the inner `let y` shadows `y`. Order =
@@ -852,7 +854,7 @@ fn free_vars_respects_binders_and_first_occurrence_order() {
     let mut bound2: BTreeSet<String> = BTreeSet::new();
     let mut seen2: BTreeSet<String> = BTreeSet::new();
     let mut out2: Vec<String> = Vec::new();
-    free_vars(&m, &mut bound2, &mut seen2, &mut out2);
+    free_vars(&m, &mut bound2, &mut seen2, &mut out2).expect("well under the depth budget");
     // `z` is bound by the arm pattern (shadowed); `s` (scrutinee), the head `and`, and `c` are free.
     assert_eq!(out2, vec!["s".to_owned(), "and".to_owned(), "c".to_owned()]);
     let _ = Param {
@@ -883,7 +885,7 @@ fn free_vars_is_invariant_under_alpha_renaming_of_bound_vars() {
         let mut b = BTreeSet::new();
         let mut s = BTreeSet::new();
         let mut o = Vec::new();
-        free_vars(e, &mut b, &mut s, &mut o);
+        free_vars(e, &mut b, &mut s, &mut o).expect("well under the depth budget");
         o.into_iter().collect::<BTreeSet<String>>()
     };
     assert_eq!(
@@ -891,4 +893,110 @@ fn free_vars_is_invariant_under_alpha_renaming_of_bound_vars() {
         fv(&make("w")),
         "free-var set is invariant under α-renaming of the bound `let` variable"
     );
+}
+
+// ---- recursion-depth bound (M-866): free_vars / pattern_binders are never-silent ----------
+
+/// A `consume(consume(… consume(x) …))` nest `depth` deep — mirrors `totality::tests::deep_consume`
+/// (M-674 precedent): `Expr::Consume` is a bare `Box<Expr>` wrapper, so it is the simplest way to
+/// build a pathologically-nested `Expr` directly, bypassing the parser's `MAX_EXPR_DEPTH` surface
+/// cap — a direct AST is the way to exercise `free_vars`'s *own* budget.
+fn deep_consume(depth: usize) -> Expr {
+    let mut e = Expr::Path(Path(vec!["x".to_owned()]));
+    for _ in 0..depth {
+        e = Expr::Consume(Box::new(e));
+    }
+    e
+}
+
+/// A `Mk(Mk(… Mk(_) …))` constructor-pattern nest `depth` deep — the pattern-side analogue of
+/// [`deep_consume`], to exercise `pattern_binders`'s own separate depth budget (it resets to a fresh
+/// `0` per `pattern_binders` call, mirroring `totality::pattern_binders`'s own convention — a
+/// pattern's nesting is budgeted independently of the enclosing expression's).
+fn deep_pattern(depth: usize) -> Pattern {
+    let mut p = Pattern::Wildcard;
+    for _ in 0..depth {
+        p = Pattern::Ctor("Mk".to_owned(), vec![p]);
+    }
+    p
+}
+
+/// **The recursion bound itself (M-866; G2 never-silent).** `free_vars`'s own recursive descent
+/// over `Expr` is budgeted at [`MAX_WALK_DEPTH`] (4096) — the same crate-wide AST-pass depth budget
+/// `totality`/`checkty`/`elab` already carry (M-674), reused here rather than inventing a second
+/// constant (DRY). Just under the budget, the walk completes and still finds the leaf free variable;
+/// past it, `free_vars` returns the explicit [`WalkDepthExceeded`] refusal — never a host-stack
+/// overflow — with `limit == MAX_WALK_DEPTH` exactly (`Exact`-tagged: the budget is a checked
+/// constant, not a measurement).
+#[test]
+fn free_vars_trips_the_depth_budget_cleanly_and_just_under_it_succeeds() {
+    // `MAX_WALK_DEPTH` (4096) levels of match-heavy recursion comfortably exceeds a default test
+    // thread's ~2 MiB stack even though it is nowhere near `mycelium_stack`'s deep worker-stack
+    // ceiling — run on the deep stack exactly as `totality`'s own depth-budget tests do (M-674).
+    mycelium_stack::with_deep_stack(|| {
+        // Just under the budget: the walk completes and still finds the leaf `x`.
+        let ok_body = deep_consume((MAX_WALK_DEPTH - 5) as usize);
+        let mut bound: BTreeSet<String> = BTreeSet::new();
+        let mut seen: BTreeSet<String> = BTreeSet::new();
+        let mut out: Vec<String> = Vec::new();
+        free_vars(&ok_body, &mut bound, &mut seen, &mut out)
+            .expect("just under the budget should walk to completion");
+        assert_eq!(out, vec!["x".to_owned()]);
+
+        // Past the budget: a clean, explicit refusal — never a host-stack overflow (G2).
+        let bad_body = deep_consume((MAX_WALK_DEPTH + 50) as usize);
+        let mut bound2: BTreeSet<String> = BTreeSet::new();
+        let mut seen2: BTreeSet<String> = BTreeSet::new();
+        let mut out2: Vec<String> = Vec::new();
+        let err: WalkDepthExceeded = free_vars(&bad_body, &mut bound2, &mut seen2, &mut out2)
+            .expect_err("past the budget must refuse");
+        assert_eq!(err.limit, MAX_WALK_DEPTH);
+        assert!(
+            err.to_string().contains("recursion-depth budget"),
+            "expected the explicit depth-budget refusal, got: {err}"
+        );
+    });
+}
+
+/// **`pattern_binders`'s own depth budget (M-866).** A `match` arm's pattern is walked by
+/// `pattern_binders`, whose recursion is budgeted **independently** of the enclosing expression's
+/// (it resets to a fresh `0` per call — mirrors `totality::pattern_binders`). A pathologically
+/// nested pattern trips `pattern_binders`'s own `WalkDepthExceeded`, propagated up through
+/// `free_vars`'s `?` — never a host-stack overflow, even though the *enclosing* `Match` expression
+/// itself is shallow.
+#[test]
+fn pattern_binders_trips_its_own_depth_budget_via_a_deeply_nested_match_arm_pattern() {
+    mycelium_stack::with_deep_stack(|| {
+        let scrutinee = Box::new(Expr::Path(Path(vec!["s".to_owned()])));
+        let arm_body = Expr::Path(Path(vec!["c".to_owned()]));
+
+        // Just under the budget: the pattern walk (and hence the whole match) completes.
+        let ok_match = Expr::Match {
+            scrutinee: scrutinee.clone(),
+            arms: vec![Arm {
+                pattern: deep_pattern((MAX_WALK_DEPTH - 5) as usize),
+                body: arm_body.clone(),
+            }],
+        };
+        let mut bound: BTreeSet<String> = BTreeSet::new();
+        let mut seen: BTreeSet<String> = BTreeSet::new();
+        let mut out: Vec<String> = Vec::new();
+        free_vars(&ok_match, &mut bound, &mut seen, &mut out)
+            .expect("a pattern just under the budget should walk to completion");
+
+        // Past the budget: `pattern_binders`'s own refusal, surfaced through `free_vars`.
+        let bad_match = Expr::Match {
+            scrutinee,
+            arms: vec![Arm {
+                pattern: deep_pattern((MAX_WALK_DEPTH + 50) as usize),
+                body: arm_body,
+            }],
+        };
+        let mut bound2: BTreeSet<String> = BTreeSet::new();
+        let mut seen2: BTreeSet<String> = BTreeSet::new();
+        let mut out2: Vec<String> = Vec::new();
+        let err: WalkDepthExceeded = free_vars(&bad_match, &mut bound2, &mut seen2, &mut out2)
+            .expect_err("a pathologically-nested match-arm pattern must refuse cleanly");
+        assert_eq!(err.limit, MAX_WALK_DEPTH);
+    });
 }

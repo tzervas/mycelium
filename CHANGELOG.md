@@ -11,6 +11,53 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-02: kickoff `acy` — Phase-I H0 acyclic-deps hardening, integration close-out)
+
+- **Structural acyclic-deps gate landed and wired into `just check`** (M-877…M-880). A new
+  `xtask deps` subcommand (`xtask/src/deps/`) analyzes `cargo metadata --format-version 1` over the
+  full workspace and enforces, per edge (normal, dev, *and* build — cargo itself never rejects a
+  dev-dep cycle): (a) every normal edge respects the frozen per-crate `[strata]` ordering
+  (`xtask/deps-strata.toml`, `Empirical`); (b) the combined normal+dev+build graph is acyclic
+  (Tarjan SCC, `Exact`); and (c) two named cross-boundary rules — `no-interp-std-dep`
+  (`mycelium-interp` may never depend on any `mycelium-std-*` crate, in any dependency kind — the
+  KC-3 trusted-base boundary) and `no-upward-tier-edges` (no crate may depend on a crate in a
+  strictly higher `core < std < tools` architectural tier). Every violation prints the offending
+  edge, its dependency kind, and the rule's citation (never a bare pass/fail exit code — G2). Wired
+  into `just check` with a graceful, never-silent skip when the tool is absent
+  (`scripts/checks/deps-acyclic.sh`).
+- **All three known dev-dep cycles broken** (M-881, M-882): `mycelium-select →[dev] mycelium-cert →
+  mycelium-vsa → mycelium-select` (corrected from the kickoff doc's `mycelium-std-select` typo — the
+  actual crate is `mycelium-select`) and the two `mycelium-cert →[dev] {mycelium-proj,mycelium-spore}
+  → mycelium-l1 → mycelium-cert` cycles are gone; each crate's dev-only cross-crate imports were
+  replaced by local, fixture-driven tests with the same assertions and guarantee-tag strength
+  preserved (VR-5). All three cycles were a single 7-crate strongly-connected component; the gate now
+  reports 0 violations at HEAD.
+- **The `mlir → std-runtime` upward-tier anomaly extracted, not loosened** (M-883, M-884). A new
+  crate, **`mycelium-rt-abi`** (tier `core`, confirmed name — see DN-68), holds the reclamation and
+  supervision surface `mycelium-mlir` actually needs; `mycelium-mlir` now depends on
+  `mycelium-rt-abi` instead of `mycelium-std-runtime`, and `mycelium-std-runtime` re-exports the
+  same modules at their original paths (no consumer-visible API break). Same shape as the PR #864
+  `mycelium-sched` precedent: extraction over rule-loosening.
+- **`mono.rs` recursion-safety bug fixed** (M-866, a real M-674 follow-up, done early and
+  independently of the acyclic-deps sequencing). `free_vars`/`pattern_binders` in
+  `crates/mycelium-l1/src/mono.rs` now carry an explicit `MAX_WALK_DEPTH`-style depth budget
+  matching `totality.rs`'s discipline, returning `ElabError::DepthExceeded` instead of a silent
+  host-stack overflow on a pathologically-nested specialized body (G2); a just-past-budget
+  regression test asserts the explicit error.
+- **`publish = false` sweep verified complete** (M-886) — all 54/54 workspace members resolve
+  `publish = false`, versions stay `0.0.0` per ADR-038 §2.2; this was already satisfied at kickoff
+  start and is recorded here as a verified, not newly-applied, fact.
+- **DN-68 — The Acyclic-Deps Invariant authored** (M-885, `Draft`): the strata/tiers data model,
+  the two named rules, where the gate lives, and the change-procedure (a stratum/tier reassignment is
+  its own reviewed PR, never folded into the PR that needed the exception). Indexed in
+  `docs/Doc-Index.md`.
+- **DN-66 §6 currency note appended** — the `mlir → std-runtime` load-bearing basis §4.c cited is
+  void post-extraction; §4.c's original text is unchanged (append-only, house rule #3).
+- `docs/api-index/` regenerated to cover the new `mycelium-rt-abi` crate and the relocated
+  reclamation/supervision modules.
+- Basis: PRs #935 and #936 (kickoff `acy`, Phase-I H0); `cargo run -p xtask -- deps` reports 0
+  violations at HEAD.
+
 ### Changed (2026-07-01: ADR-038 ratified — Accepted; FLAG-V1/V2 resolved)
 
 - **ADR-038 ratified by the maintainer ("ratify 38") — status `Proposed → Accepted`.** The

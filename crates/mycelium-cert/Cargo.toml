@@ -23,11 +23,16 @@ serde.workspace = true
 
 [dev-dependencies]
 serde_json.workspace = true
-# The M-794 §13 conformance suite (tests/conformance.rs) is the E21-1 capstone: it exercises all six
-# RFC-0034 §13 clauses end-to-end, which span four crates. `mycelium-proj` carries the
-# `@certification` resolution + EXPLAIN-of-mode + cross-mode composition (M-790/M-792; clauses d/f);
-# `mycelium-spore` carries the compile/runtime phase split (M-789; clause e). These are **dev-only**
-# (test-target reach), add no runtime dependency (KC-3), and form no cycle — neither proj nor spore
-# depends on mycelium-cert.
-mycelium-proj = { path = "../mycelium-proj" }
-mycelium-spore = { path = "../mycelium-spore" }
+# M-882: `mycelium-proj`/`mycelium-spore` were previously dev-dependencies here for the M-794 §13
+# conformance suite (tests/conformance.rs). That created two dev-dep cycles — `cert →[dev] proj → …
+# → l1 → cert` and `cert →[dev] spore → proj → … → l1 → cert` — because (unlike the removed comment
+# claimed) `mycelium-proj` depends on `mycelium-l1`, which depends on `mycelium-cert`. On inspection,
+# the clauses that used those crates (d/e/f) never actually exercised any `mycelium-cert` code path:
+# they called `mycelium_proj::cert_scope::{explain_mode, compose, …}` and
+# `mycelium_spore::build_spore` on values built entirely from `mycelium-core` types
+# (`CertMode`/`GuaranteeStrength`), with no wiring back through cert. That exact coverage already
+# exists — more thoroughly, with proptest — in each owning crate's own suite: see
+# `crates/mycelium-proj/src/tests/cert_scope.rs` (clauses d/f) and
+# `crates/mycelium-spore/src/tests/lib_tests.rs` (clause e). The redundant cross-crate duplication is
+# removed; `tests/conformance.rs` now covers clauses a/b/c (the ones that genuinely exercise this
+# crate) plus pointer comments to where d/e/f are verified.

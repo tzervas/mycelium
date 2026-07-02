@@ -14,13 +14,16 @@ workspace = true
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
 mycelium-std-core = { path = "../mycelium-std-core" }
-# E12-1 (M-713): reuse the M-356 supervision/cancellation composition kernel (CancelToken,
-# TaskOutcome, Supervisor) — no cycle (mycelium-interp depends on core + numerics + sched).
-mycelium-interp = { path = "../mycelium-interp" }
 # The work-stealing Scheduler (M-709/M-861), relocated below mycelium-interp so the interpreter
 # can depend on it too (M-862) without an interp<->std-runtime cycle. Re-exported at
 # `crate::scheduler` for existing consumers (see src/scheduler.rs).
 mycelium-sched = { path = "../mycelium-sched" }
+# M-883/M-884: the reclamation (MEM-1) and supervision (M-713) surfaces relocated below
+# mycelium-mlir (the runtime-ABI seam extraction — fixes the mlir->std-runtime upward-tier edge);
+# re-exported at `crate::reclamation` / `crate::supervision` for existing consumers (see
+# src/reclamation.rs / src/supervision.rs). The M-356 composition kernel this crate used to reuse
+# via a direct `mycelium-interp` dependency is now consumed transitively through this crate.
+mycelium-rt-abi = { path = "../mycelium-rt-abi" }
 
 [dev-dependencies]
 # Property-based testing for the RT2 sequentialization + liveness + backpressure differentials.

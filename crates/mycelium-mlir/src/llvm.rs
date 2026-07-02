@@ -2260,7 +2260,7 @@ pub fn emit_llvm_ir_with_swap_mode(
 // ─── parallel per-function/per-nodule codegen (M-860) ─────────────────────────────────────────
 
 /// Lower `nodes` — a batch of **independent** functions/nodules — in parallel across the native
-/// work-stealing [`Scheduler`](mycelium_std_runtime::scheduler::Scheduler) (M-861), returning one
+/// work-stealing [`Scheduler`](mycelium_sched::scheduler::Scheduler) (M-861), returning one
 /// [`AotError`]-or-IR result per input, in the **same order as `nodes`**.
 ///
 /// **Determinism (Exact by construction).** Each call to [`emit_llvm_ir_with_swap_mode`] is a pure
@@ -2273,7 +2273,7 @@ pub fn emit_llvm_ir_with_swap_mode(
 ///   structurally-identical nodes) *before* being submitted, so **which job the scheduler dispatches
 ///   in which slot** is a pure function of the batch's content, never of wall-clock/thread-arrival
 ///   order;
-/// - [`Scheduler::run_indexed`](mycelium_std_runtime::scheduler::Scheduler::run_indexed) returns its
+/// - [`Scheduler::run_indexed`](mycelium_sched::scheduler::Scheduler::run_indexed) returns its
 ///   outputs in **spawn order** (its RT2 differential contract — completion order and worker identity
 ///   are unobservable through that API), and every result is then scattered back to its **original**
 ///   `nodes` index.
@@ -2282,7 +2282,7 @@ pub fn emit_llvm_ir_with_swap_mode(
 /// regardless of worker count, steal schedule, or scheduling — asserted by
 /// [`tests::llvm::parallel_emit_matches_sequential_emit_byte_identical`]. The work-stealing pool is
 /// the same one M-861 landed for the runtime scheduler (zero new dependency — `mycelium-mlir`
-/// already depends on `mycelium-std-runtime`).
+/// already depends on `mycelium-sched` directly, M-865).
 ///
 /// Uses the default swap-cert mode ([`SwapCertMode::Recheck`]); see
 /// [`emit_llvm_ir_many_with_swap_mode`] to select [`SwapCertMode::ReuseInterp`] for the whole batch.
@@ -2299,7 +2299,7 @@ pub fn emit_llvm_ir_many_with_swap_mode(
     nodes: &[Node],
     swap_mode: SwapCertMode,
 ) -> Vec<Result<String, AotError>> {
-    use mycelium_std_runtime::scheduler::Scheduler;
+    use mycelium_sched::scheduler::Scheduler;
 
     if nodes.is_empty() {
         return Vec::new();

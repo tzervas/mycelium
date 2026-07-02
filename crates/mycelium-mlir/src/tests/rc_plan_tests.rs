@@ -6,7 +6,7 @@
 
 use mycelium_core::{CoreValue, Meta, Node, Payload, Provenance, Repr, Value};
 use mycelium_interp::{IdentitySwapEngine, PrimRegistry};
-use mycelium_std_runtime::reclamation::{CollectingSink, ReclamationTrigger, ScopeId, SweepEpoch};
+use mycelium_rt_abi::reclamation::{CollectingSink, ReclamationTrigger, ScopeId, SweepEpoch};
 
 use crate::rc_plan::{emit_reclamation_plan, run_with_reclamation, RcPlanError};
 

@@ -6321,7 +6321,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 448,
+      "line": 449,
       "summary": "RFC-0024 §4A.6 (M-704; house rule #2): the EXPLAIN record of one closure lowering — which arrow,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6365,7 +6365,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 66,
+      "line": 67,
       "summary": "A reified **instance selection** (RFC-0019 §4.4; house rule #2 — no black boxes).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -6398,7 +6398,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 86,
+      "line": 87,
       "summary": "The **EXPLAIN record** of a monomorphization (M-673): every trait-method dispatch mono resolved,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7564,7 +7564,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 357,
+      "line": 358,
       "summary": "The **EXPLAIN record** of a single HOF defunctionalization (RFC-0024 §4, M-687): which",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7575,7 +7575,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 138,
+      "line": 139,
       "summary": "The closure-lowering record for the generated constructor `ctor_name`, if any (RFC-0024 §4A,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7586,7 +7586,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 143,
+      "line": 144,
       "summary": "Every recorded closure lowering, in deterministic (constructor-name) order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7597,7 +7597,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 101,
+      "line": 102,
       "summary": "The selection mono made for the mangled callee `mangled`, if any.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7608,7 +7608,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 126,
+      "line": 127,
       "summary": "The HOF defunctionalization record for the mangled specialization `mangled`, if any",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7619,7 +7619,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 131,
+      "line": 132,
       "summary": "Every recorded HOF specialization, in deterministic (mangled-name) order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7630,7 +7630,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 119,
+      "line": 120,
       "summary": "Were no trait-method selections recorded? (A non-trait program monomorphizes with an empty",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7641,7 +7641,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 106,
+      "line": 107,
       "summary": "Every recorded selection, in deterministic (mangled-name) order.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7652,7 +7652,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1::mono::MonoSelections",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 112,
+      "line": 113,
       "summary": "How many distinct trait-method instances were resolved (0 for a non-trait program).",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7663,7 +7663,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 158,
+      "line": 159,
       "summary": "Monomorphize a checked `Env` from nullary monomorphic `entry`, returning a closed monomorphic",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -7674,7 +7674,7 @@
       "crate": "mycelium-l1",
       "module": "mycelium_l1",
       "file": "crates/mycelium-l1/src/mono.rs",
-      "line": 167,
+      "line": 168,
       "summary": "Like [`monomorphize`] but also returns the [`MonoSelections`] EXPLAIN record of every trait-method",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10336,7 +10336,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 123,
+      "line": 126,
       "summary": "A **`colony`** — the DN-06 dynamic runtime grouping of active `hypha` (a cooperating set of",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10347,7 +10347,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 347,
+      "line": 350,
       "summary": "Why running a `colony` through the concurrent executor refused — **always explicit, never a silent",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10380,7 +10380,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 113,
+      "line": 116,
       "summary": "A dataflow schedule made **no progress** over a full sweep — every remaining task is parked on a",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10534,7 +10534,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 44,
+      "line": 47,
       "summary": "The result of advancing a task one cooperative step.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10578,7 +10578,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 539,
+      "line": 543,
       "summary": "Why running a `reclaim` scope through the supervisor refused — always explicit, never a silent",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10589,7 +10589,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 526,
+      "line": 530,
       "summary": "The result of supervising a `reclaim(policy) { body }` scope: the body's value plus the EXPLAIN",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10622,7 +10622,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 91,
+      "line": 94,
       "summary": "A **structured concurrency scope** (RT7): tasks spawned here are all joined before the scope",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10688,7 +10688,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 101,
+      "line": 104,
       "summary": "The order a **dataflow** sweep visits still-pending children.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10699,7 +10699,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 67,
+      "line": 70,
       "summary": "A cooperative task: `poll` advances it by one step.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -10710,7 +10710,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 54,
+      "line": 57,
       "summary": "The per-step context a task observes (the same cadence it would check fuel/depth): its cancel token",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12030,7 +12030,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 435,
+      "line": 438,
       "summary": "Run an L1 `colony { hypha e1, …, hypha eN }` as **real concurrent execution**, validated equal to",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -12074,7 +12074,7 @@
       "crate": "mycelium-mlir",
       "module": "mycelium_mlir",
       "file": "crates/mycelium-mlir/src/runtime.rs",
-      "line": 607,
+      "line": 611,
       "summary": "Run an L1 `reclaim(policy) { body }` as **real RT7 supervision**, validated equal to its sequential",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18630,7 +18630,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 76,
+      "line": 91,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18696,7 +18696,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 77,
+      "line": 92,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18828,7 +18828,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 78,
+      "line": 93,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -18850,7 +18850,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 79,
+      "line": 94,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19004,7 +19004,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 80,
+      "line": 95,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19037,184 +19037,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 81,
+      "line": 96,
       "summary": null,
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ChannelId",
-      "kind": "struct",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 61,
-      "summary": "A stable, opaque identifier for a channel (RFC-0027 §9, `channel_id`).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink",
-      "kind": "struct",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 343,
-      "summary": "A `ReclamationSink` implementation that collects all emitted records into a `Vec`.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::drain",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation::CollectingSink",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 370,
-      "summary": "Drain all collected records, leaving the sink empty.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::is_empty",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation::CollectingSink",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 365,
-      "summary": "Whether no records have been collected.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::len",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation::CollectingSink",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 359,
-      "summary": "Number of records collected so far.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::new",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation::CollectingSink",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 182,
-      "summary": "Construct a `ReclamationRecord` for a `RcZero` or `ScopeExit` event (no channel).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord",
-      "kind": "struct",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 270,
-      "summary": "The EXPLAIN output for a `ReclamationRecord` — the RFC-0005 EXPLAIN contract applied",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord",
-      "kind": "struct",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 148,
-      "summary": "The EXPLAIN/audit record for a single reclamation event (RFC-0027 §9).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::explain",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation::ReclamationRecord",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 234,
-      "summary": "EXPLAIN-ability (RFC-0005): return a human-readable summary of all five fields.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::for_channel_close",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation::ReclamationRecord",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 207,
-      "summary": "Construct a `ReclamationRecord` for a `ChannelClose` event.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::trigger",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation::ReclamationRecord",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 246,
-      "summary": "Return a reference to the trigger — the G2 \"why\" of this reclamation event.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::value_meta_hash",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation::ReclamationRecord",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 252,
-      "summary": "Return the content-identity hash of the reclaimed value (RFC-0027 §9 / RFC-0001 §4.6).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationSink",
-      "kind": "trait",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 330,
-      "summary": "The never-silent emit contract (G2 / RFC-0027 §9).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger",
-      "kind": "enum",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 93,
-      "summary": "The reason a reclamation event fired — exhaustive over the three structural triggers",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::ScopeId",
-      "kind": "struct",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 52,
-      "summary": "A stable, opaque identifier for a runtime scope (RT7 scope tree node).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch",
-      "kind": "struct",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::reclamation",
-      "file": "crates/mycelium-std-runtime/src/reclamation.rs",
-      "line": 76,
-      "summary": "A monotonic epoch counter from the `SweepOrder` model (RFC-0008 §4.3).",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19224,7 +19048,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 82,
+      "line": 97,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19411,7 +19235,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 83,
+      "line": 98,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19433,7 +19257,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 84,
+      "line": 99,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -19521,19 +19345,8 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 85,
+      "line": 100,
       "summary": null,
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree",
-      "kind": "struct",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 48,
-      "summary": "A cancellation **tree** (RFC-0008 RT7): a node with its own [`CancelToken`] and child tokens.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19542,152 +19355,9 @@
       "kind": "fn",
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime::supervision::CancelTree",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
+      "file": "crates/mycelium-std-runtime/src/colony.rs",
       "line": 88,
-      "summary": "Cancel this node **and every descendant** — the never-silent cascade (G2/RT7).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::child",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision::CancelTree",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 74,
-      "summary": "Attach a fresh child scope and return a mutable handle to it, so callers can build a genuine",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::child_count",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision::CancelTree",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 97,
-      "summary": "The number of direct child scopes (for inspection/tests).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::is_cancelled",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision::CancelTree",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 83,
-      "summary": "Whether this node has been cancelled.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::new",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision::CancelTree",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 56,
-      "summary": "A fresh, un-cancelled root.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::CancelTree::token",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision::CancelTree",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 65,
-      "summary": "This node's cooperative cancel token (clones share the same flag).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH:",
-      "kind": "const",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 32,
-      "summary": "Guarantee strength for cancellation propagation + explicit outcome collection.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH:",
-      "kind": "const",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 35,
-      "summary": "Guarantee strength for the restart bound (inherited from the M-356 [`Supervisor`]).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisedFailure",
-      "kind": "enum",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 190,
-      "summary": "Why a supervised child run ended in failure — always explicit (G2).",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisedRun",
-      "kind": "struct",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 174,
-      "summary": "The result of supervising a restartable child to resolution or escalation.",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisionAction",
-      "kind": "enum",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 153,
-      "summary": "What a supervisor did about one child failure — a reified, inspectable action (EXPLAIN; no black",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::SupervisionRecord",
-      "kind": "struct",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 163,
-      "summary": "One reified supervision decision — the EXPLAIN record (RFC-0008 §4.7; ADR-006: selections are",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::run_supervised",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 120,
-      "summary": "Run `tasks` on the OS-thread pool under a shared [`CancelToken`], collecting **every** child's",
-      "guarantee_tag": null,
-      "corpus_refs": []
-    },
-    {
-      "symbol": "mycelium_std_runtime::supervision::supervise_with_restart",
-      "kind": "fn",
-      "crate": "mycelium-std-runtime",
-      "module": "mycelium_std_runtime::supervision",
-      "file": "crates/mycelium-std-runtime/src/supervision.rs",
-      "line": 208,
-      "summary": "Run a restartable child under a live [`Supervisor`] (M-356) until it succeeds or the supervisor",
+      "summary": "Cancel this scope.",
       "guarantee_tag": null,
       "corpus_refs": []
     },
@@ -19697,7 +19367,7 @@
       "crate": "mycelium-std-runtime",
       "module": "mycelium_std_runtime",
       "file": "crates/mycelium-std-runtime/src/lib.rs",
-      "line": 86,
+      "line": 101,
       "summary": null,
       "guarantee_tag": null,
       "corpus_refs": []
@@ -30688,7 +30358,7 @@
     },
     {
       "symbol": "mycelium_l1::mono::ClosureSpecialization",
-      "reason": "dedup-alias: same definition as `mycelium_l1::ClosureSpecialization` at crates/mycelium-l1/src/mono.rs:448 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::ClosureSpecialization` at crates/mycelium-l1/src/mono.rs:449 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::mono::ClosureSpecialization::clone",
@@ -30728,7 +30398,7 @@
     },
     {
       "symbol": "mycelium_l1::mono::InstanceSelection",
-      "reason": "dedup-alias: same definition as `mycelium_l1::InstanceSelection` at crates/mycelium-l1/src/mono.rs:66 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::InstanceSelection` at crates/mycelium-l1/src/mono.rs:67 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::mono::InstanceSelection::clone",
@@ -30756,7 +30426,7 @@
     },
     {
       "symbol": "mycelium_l1::mono::MonoSelections",
-      "reason": "dedup-alias: same definition as `mycelium_l1::MonoSelections` at crates/mycelium-l1/src/mono.rs:86 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::MonoSelections` at crates/mycelium-l1/src/mono.rs:87 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::mono::MonoSelections::clone",
@@ -30792,11 +30462,11 @@
     },
     {
       "symbol": "mycelium_l1::mono::monomorphize",
-      "reason": "dedup-alias: same definition as `mycelium_l1::monomorphize` at crates/mycelium-l1/src/mono.rs:158 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::monomorphize` at crates/mycelium-l1/src/mono.rs:159 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::mono::monomorphize_with_selections",
-      "reason": "dedup-alias: same definition as `mycelium_l1::monomorphize_with_selections` at crates/mycelium-l1/src/mono.rs:167 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_l1::monomorphize_with_selections` at crates/mycelium-l1/src/mono.rs:168 — one canonical row kept"
     },
     {
       "symbol": "mycelium_l1::nodule::NoduleHeader",
@@ -33960,11 +33630,11 @@
     },
     {
       "symbol": "mycelium_mlir::runtime::Colony",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::Colony` at crates/mycelium-mlir/src/runtime.rs:123 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::Colony` at crates/mycelium-mlir/src/runtime.rs:126 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::ColonyError",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::ColonyError` at crates/mycelium-mlir/src/runtime.rs:347 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::ColonyError` at crates/mycelium-mlir/src/runtime.rs:350 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::ColonyError::clone",
@@ -34000,7 +33670,7 @@
     },
     {
       "symbol": "mycelium_mlir::runtime::Deadlock",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::Deadlock` at crates/mycelium-mlir/src/runtime.rs:113 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::Deadlock` at crates/mycelium-mlir/src/runtime.rs:116 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::Deadlock::clone",
@@ -34028,11 +33698,11 @@
     },
     {
       "symbol": "mycelium_mlir::runtime::Poll",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::Poll` at crates/mycelium-mlir/src/runtime.rs:44 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::Poll` at crates/mycelium-mlir/src/runtime.rs:47 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::ReclaimError",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::ReclaimError` at crates/mycelium-mlir/src/runtime.rs:539 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::ReclaimError` at crates/mycelium-mlir/src/runtime.rs:543 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::ReclaimError::clone",
@@ -34060,7 +33730,7 @@
     },
     {
       "symbol": "mycelium_mlir::runtime::ReclaimRun",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::ReclaimRun` at crates/mycelium-mlir/src/runtime.rs:526 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::ReclaimRun` at crates/mycelium-mlir/src/runtime.rs:530 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::ReclaimRun::clone",
@@ -34136,11 +33806,11 @@
     },
     {
       "symbol": "mycelium_mlir::runtime::Scope",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::Scope` at crates/mycelium-mlir/src/runtime.rs:91 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::Scope` at crates/mycelium-mlir/src/runtime.rs:94 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::SweepOrder",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::SweepOrder` at crates/mycelium-mlir/src/runtime.rs:101 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::SweepOrder` at crates/mycelium-mlir/src/runtime.rs:104 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::SweepOrder::clone",
@@ -34168,7 +33838,7 @@
     },
     {
       "symbol": "mycelium_mlir::runtime::Task",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::Task` at crates/mycelium-mlir/src/runtime.rs:67 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::Task` at crates/mycelium-mlir/src/runtime.rs:70 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::Task::Error",
@@ -34184,15 +33854,15 @@
     },
     {
       "symbol": "mycelium_mlir::runtime::TaskCtx",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::TaskCtx` at crates/mycelium-mlir/src/runtime.rs:54 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::TaskCtx` at crates/mycelium-mlir/src/runtime.rs:57 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::run_colony",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run_colony` at crates/mycelium-mlir/src/runtime.rs:435 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run_colony` at crates/mycelium-mlir/src/runtime.rs:438 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::runtime::run_reclaim",
-      "reason": "dedup-alias: same definition as `mycelium_mlir::run_reclaim` at crates/mycelium-mlir/src/runtime.rs:607 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_mlir::run_reclaim` at crates/mycelium-mlir/src/runtime.rs:611 — one canonical row kept"
     },
     {
       "symbol": "mycelium_mlir::simd::compile_bitnet_dot_simd",
@@ -39691,6 +39361,10 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='RcProbe') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_std_runtime::reclamation::ChannelId",
+      "reason": "definition not found via regex heuristic (kind='struct', name='ChannelId') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_runtime::reclamation::ChannelId::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -39707,8 +39381,16 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink",
+      "reason": "definition not found via regex heuristic (kind='struct', name='CollectingSink') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_runtime::reclamation::CollectingSink::default",
       "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::drain",
+      "reason": "definition not found via regex heuristic (kind='fn', name='drain') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::CollectingSink::emit",
@@ -39721,6 +39403,26 @@
     {
       "symbol": "mycelium_std_runtime::reclamation::CollectingSink::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::is_empty",
+      "reason": "definition not found via regex heuristic (kind='fn', name='is_empty') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::len",
+      "reason": "definition not found via regex heuristic (kind='fn', name='len') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::new",
+      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::CollectingSink::new",
+      "reason": "dedup-alias: same definition as `mycelium_std_runtime::scheduler::Scheduler::new` at crates/mycelium-std-runtime/src/colony.rs:63 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ExplainRecord",
+      "reason": "definition not found via regex heuristic (kind='struct', name='ExplainRecord') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ExplainRecord::clone",
@@ -39739,6 +39441,10 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord",
+      "reason": "definition not found via regex heuristic (kind='struct', name='ReclamationRecord') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::clone",
       "reason": "definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated"
     },
@@ -39747,16 +39453,44 @@
       "reason": "definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::explain",
+      "reason": "definition not found via regex heuristic (kind='fn', name='explain') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
     },
     {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::for_channel_close",
+      "reason": "definition not found via regex heuristic (kind='fn', name='for_channel_close') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::new",
-      "reason": "dedup-alias: same definition as `mycelium_std_runtime::reclamation::CollectingSink::new` at crates/mycelium-std-runtime/src/reclamation.rs:182 — one canonical row kept"
+      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::new",
+      "reason": "dedup-alias: same definition as `mycelium_std_runtime::scheduler::Scheduler::new` at crates/mycelium-std-runtime/src/colony.rs:63 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::trigger",
+      "reason": "definition not found via regex heuristic (kind='fn', name='trigger') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationRecord::value_meta_hash",
+      "reason": "definition not found via regex heuristic (kind='fn', name='value_meta_hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationSink",
+      "reason": "definition not found via regex heuristic (kind='trait', name='ReclamationSink') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ReclamationSink::emit",
       "reason": "definition not found via regex heuristic (kind='fn', name='emit') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger",
+      "reason": "definition not found via regex heuristic (kind='enum', name='ReclamationTrigger') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger::clone",
@@ -39769,6 +39503,10 @@
     {
       "symbol": "mycelium_std_runtime::reclamation::ReclamationTrigger::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::ScopeId",
+      "reason": "definition not found via regex heuristic (kind='struct', name='ScopeId') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::ScopeId::clone",
@@ -39785,6 +39523,10 @@
     {
       "symbol": "mycelium_std_runtime::reclamation::ScopeId::hash",
       "reason": "definition not found via regex heuristic (kind='fn', name='hash') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::reclamation::SweepEpoch",
+      "reason": "definition not found via regex heuristic (kind='struct', name='SweepEpoch') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::reclamation::SweepEpoch::clone",
@@ -39979,12 +39721,44 @@
       "reason": "re-export (pub use) — cannot locate definition without type resolution"
     },
     {
+      "symbol": "mycelium_std_runtime::supervision::CancelTree",
+      "reason": "definition not found via regex heuristic (kind='struct', name='CancelTree') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::CancelTree::cancel",
+      "reason": "ambiguous: short name 'cancel' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::CancelTree::child",
+      "reason": "definition not found via regex heuristic (kind='fn', name='child') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::CancelTree::child_count",
+      "reason": "definition not found via regex heuristic (kind='fn', name='child_count') — possibly macro-generated or cfg-gated"
+    },
+    {
       "symbol": "mycelium_std_runtime::supervision::CancelTree::default",
       "reason": "definition not found via regex heuristic (kind='fn', name='default') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::CancelTree::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::CancelTree::is_cancelled",
+      "reason": "dedup-alias: same definition as `mycelium_std_runtime::task::TaskCtx::is_cancelled` at crates/mycelium-std-runtime/src/task.rs:57 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::CancelTree::new",
+      "reason": "ambiguous: short name 'new' is defined in multiple modules; attributed to crates/mycelium-std-runtime/src/colony.rs by heuristic — verify against source (ground truth)"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::CancelTree::new",
+      "reason": "dedup-alias: same definition as `mycelium_std_runtime::scheduler::Scheduler::new` at crates/mycelium-std-runtime/src/colony.rs:63 — one canonical row kept"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::CancelTree::token",
+      "reason": "definition not found via regex heuristic (kind='fn', name='token') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::Cancelled",
@@ -39997,6 +39771,18 @@
     {
       "symbol": "mycelium_std_runtime::supervision::RestartIntensity",
       "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::SUPERVISION_PROPAGATION_STRENGTH:",
+      "reason": "definition not found via regex heuristic (kind='const', name='SUPERVISION_PROPAGATION_STRENGTH:') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::SUPERVISION_RESTART_BOUND_STRENGTH:",
+      "reason": "definition not found via regex heuristic (kind='const', name='SUPERVISION_RESTART_BOUND_STRENGTH:') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::SupervisedFailure",
+      "reason": "definition not found via regex heuristic (kind='enum', name='SupervisedFailure') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisedFailure::clone",
@@ -40012,7 +39798,7 @@
     },
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisedRun",
-      "reason": "definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated"
+      "reason": "definition not found via regex heuristic (kind='struct', name='SupervisedRun') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisedRun",
@@ -40021,6 +39807,14 @@
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisedRun",
       "reason": "definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::SupervisedRun",
+      "reason": "definition not found via regex heuristic (kind='fn', name='SupervisedRun') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::SupervisionAction",
+      "reason": "definition not found via regex heuristic (kind='enum', name='SupervisionAction') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisionAction::clone",
@@ -40033,6 +39827,10 @@
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisionAction::fmt",
       "reason": "definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::SupervisionRecord",
+      "reason": "definition not found via regex heuristic (kind='struct', name='SupervisionRecord') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::supervision::SupervisionRecord::clone",
@@ -40053,6 +39851,14 @@
     {
       "symbol": "mycelium_std_runtime::supervision::TaskOutcome",
       "reason": "re-export (pub use) — cannot locate definition without type resolution"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::run_supervised",
+      "reason": "definition not found via regex heuristic (kind='fn', name='run_supervised') — possibly macro-generated or cfg-gated"
+    },
+    {
+      "symbol": "mycelium_std_runtime::supervision::supervise_with_restart",
+      "reason": "definition not found via regex heuristic (kind='fn', name='supervise_with_restart') — possibly macro-generated or cfg-gated"
     },
     {
       "symbol": "mycelium_std_runtime::task::Deadlock::eq",
