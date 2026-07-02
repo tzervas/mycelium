@@ -20,3 +20,7 @@ mycelium-numerics = { path = "../crates/mycelium-numerics", version = "0.0.0" }
 # AOT path (compile-once / run-many) vs the reference interpreter.
 mycelium-mlir = { path = "../crates/mycelium-mlir", version = "0.0.0" }
 mycelium-interp = { path = "../crates/mycelium-interp", version = "0.0.0" }
+# The `deps` task (M-877/M-878/M-879) — structural acyclic-deps gate over `cargo metadata`.
+cargo_metadata = "0.18"
+serde.workspace = true
+toml = "0.8"
