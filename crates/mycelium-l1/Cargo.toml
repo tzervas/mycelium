@@ -26,6 +26,10 @@ mycelium-stack = { path = "../mycelium-stack" }
 # through the M-210 shared TV checker.
 mycelium-mlir = { path = "../mycelium-mlir" }
 mycelium-numerics = { path = "../mycelium-numerics" }
+# M-931 (kickoff opp, RFC-0031 D6): the retained Rust oracle for std_error.rs's differential — the
+# .myc port of std.error is checked against mycelium-std-error's public combinator surface. Test
+# scope only (D6: the crate is not retired, and this port does not make it a runtime dependency).
+mycelium-std-error = { path = "../mycelium-std-error" }
 # M-926 (kickoff `opp`, RFC-0031 D5 row 4): the retained Rust oracle for the `std.diag` port
 # (`tests/std_diag.rs`) — the differential compares the `.myc` guarantee-matrix port against the
 # ACTUAL `mycelium_std_diag::guarantee_matrix::MATRIX` data at test time (not a hardcoded literal).
