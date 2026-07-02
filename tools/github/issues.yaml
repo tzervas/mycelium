@@ -9311,7 +9311,7 @@ issues:
   - id: M-881
     title: "Break dev-cycle: mycelium-select ->[dev] mycelium-cert -> mycelium-vsa -> mycelium-select"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:fix, area:stdlib, priority:P1, status:done]
+    labels: [phase:8, type:chore, area:stdlib, priority:P1, status:done]
     epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #935, branch acy/m881-select-cert-devcycle, commit 10e0d6b \"fix(select): break select-cert dev-cycle via local SwapEngine test double\"). Corrects the kickoff doc's crate-name typo: the crate is `mycelium-select`, not `mycelium-std-select`. `mycelium-select`'s dev-dependency on `mycelium-cert` replaced by a local `SwapEngine` test double (fixture-driven, per the house test-layout rule); same assertions preserved, guarantee tags unchanged (VR-5). `cargo test -p mycelium-select` green. Combined with M-882, this was part of one 7-crate strongly-connected component; the gate now reports 0 dev-cycle violations."
     depends_on: [M-878]
@@ -9337,7 +9337,7 @@ issues:
   - id: M-882
     title: "Break dev-cycles: mycelium-cert ->[dev] {mycelium-proj, mycelium-spore} -> mycelium-l1 -> mycelium-cert"
     milestone: "Phase 8 — Toolchain & Release Engineering"
-    labels: [phase:8, type:fix, area:stdlib, priority:P1, status:done]
+    labels: [phase:8, type:chore, area:stdlib, priority:P1, status:done]
     epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #935, branch acy/m882-cert-devcycles, commit c54eb8e \"fix(cert): break the two proj/spore dev-dep cycles\"). `mycelium-cert`'s dev-dependencies on `mycelium-proj` and `mycelium-spore` converted to fixture-driven local tests (both cycles share the `cert ->[dev] X -> ... -> l1 -> cert` shape, fixed in one cohesive change). Coverage preserved; zero dev-dep cycles re-surveyed and recorded at HEAD (Empirical, via `cargo run -p xtask -- deps`). `cargo test -p mycelium-cert` green."
     depends_on: [M-878]
