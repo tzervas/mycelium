@@ -62,7 +62,12 @@
 //! Accepted, library/manifest half (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
 //! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
 //! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
-//! It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
+//! It remains the RFC-0031 D6 differential-oracle reference. A `.myc` port now exists
+//! (`lib/std/spore.myc`, M-934 — kickoff `opp`, RFC-0031 D5), with this crate as its live
+//! Rust oracle (`crates/mycelium-l1/tests/std_spore.rs`, including the M-934 content-address
+//! parity check — the port carries this crate's hashes verbatim, never minting its own); per D6
+//! the crate is **retained**, not retired (retirement is the post-1.0 M-867 decision), and no
+//! item here is `#[deprecated]`.
 #![forbid(unsafe_code)]
 
 pub mod deploy;
