@@ -32,8 +32,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use mycelium_core::{
-    operation_hash, Alt, CtorRef, CtorSpec, DataRegistry, DeclSpec, FieldSpec, FloatWidth, Meta,
-    Node, Payload, PolicyRef, Provenance, Repr, ScalarKind, SparsityClass, Trit, Value,
+    operation_hash, Alt, CtorRef, CtorSpec, DataRegistry, DeclSpec, FieldSpec, FieldTyRef,
+    FloatWidth, FnSig, Meta, Node, Payload, PolicyRef, Provenance, Repr, ScalarKind, SparsityClass,
+    Trit, Value,
 };
 
 use crate::ast::{Arm, BaseType, Expr, Literal, Path, Scalar, Sparsity, TypeRef, WidthRef};
@@ -375,6 +376,39 @@ pub fn elaborate(env: &Env, entry: &str) -> Result<Node, ElabError> {
         // machinery below then runs **unchanged** over the specialized env.
         let mono_env = crate::mono::monomorphize(env, entry)?;
         let (mut el, binders, fd) = elab_prelude(&mono_env, entry)?;
+        let mut stack = vec![entry.to_owned()];
+        let entry_body = el.expr(&mut stack, &[], &fd.body)?;
+        Ok(wrap_in_binders(binders, entry_body))
+    })
+}
+
+/// **ADR-033/DN-74 (M-923):** elaborate `entry` **without** the [`crate::mono::monomorphize`]
+/// pre-pass [`elaborate`] always runs first. Intended for an `env` that is already concrete
+/// (no generics, no traits, no unresolved widths) and whose `Ty::Fn` record fields should lower
+/// through the kernel `FieldSpec::Fn` primitive (`field_spec`'s new arm, Path A — the DN-74-ratified
+/// FLAG-1 disposition) rather than through `mono.rs`'s closure defunctionalization.
+///
+/// **Why this exists, honestly (new evidence surfaced while implementing M-923).** `mono.rs`
+/// unconditionally rewrites *every* reachable `Ty::Fn` field into a closure tag-sum before
+/// `build_registry` ever runs (RFC-0024 §4A/M-704) — so calling `field_spec`'s new `FieldSpec::Fn`
+/// arm through the standard [`elaborate`] entry is unreachable by construction (defunctionalization
+/// already produces a closed, executing term for that case). Making `FieldSpec::Fn` reachable from
+/// a real, parsed-and-checked program therefore needs an elaboration path that does not run through
+/// `mono.rs` at all — this function is that path. It is deliberately **narrow**: it does not
+/// monomorphize generics or lower closures (a `lambda` literal reaching [`Elab::expr`] this way is
+/// still refused, per the `Expr::Lambda` invariant guard), so it only accepts programs that are
+/// already closed and whose function-typed field values are bare references to ordinary top-level
+/// functions (the `field_spec`/`expr` `Ty::Fn`/named-fn-as-value arms this leaf adds). This is
+/// **additive** — [`elaborate`]'s own behavior, and the existing differential corpus that depends on
+/// it (RFC-0024 §4A closures, NFR-7), is unchanged.
+///
+/// # Errors
+/// The same [`ElabError`] variants as [`elaborate`] — most notably [`ElabError::Residual`] for a
+/// generic entry/function or a construct this narrower path does not (yet) accept; **never** a
+/// silent, half-lowered term (G2/VR-5).
+pub fn elaborate_direct(env: &Env, entry: &str) -> Result<Node, ElabError> {
+    mycelium_stack::with_deep_stack(|| {
+        let (mut el, binders, fd) = elab_prelude(env, entry)?;
         let mut stack = vec![entry.to_owned()];
         let entry_body = el.expr(&mut stack, &[], &fd.body)?;
         Ok(wrap_in_binders(binders, entry_body))
@@ -841,6 +875,30 @@ pub fn build_registry(env: &Env) -> Result<DataRegistry, ElabError> {
 /// is *staged* (monomorphization is the M-657 follow-up). Returning `None` makes [`build_registry`]
 /// skip the owning declaration, so any *use* of a generic value surfaces as an explicit `Residual`
 /// (never a silent, half-monomorphized artifact — G2/VR-5).
+///
+/// **`Ty::Fn` (ADR-033/DN-74, M-923).** A function-typed field lowers to the kernel
+/// [`FieldSpec::Fn`] primitive — Path A, the type-carrying full-signature encoding DN-74 ratified
+/// as the final FLAG-1 disposition (2026-07-02): the parameter type and the return type are each
+/// resolved to a [`FieldTyRef`] and folded into an [`FnSig`], so two `Fn`-typed fields with
+/// different signatures hash to **distinct** content addresses (the ADR-033 §10.1 same-arity
+/// collision is closed at the kernel level; `crates/mycelium-core/src/data.rs` §"ADR-033 FLAG-1
+/// Path A"). Curried multi-parameter arrows (`A => B => C`, M-822) compose naturally: each `Ty::Fn`
+/// contributes one parameter, with the return position recursing into a nested [`FieldTyRef::Fn`]
+/// for the remaining arrow — no separate multi-arity encoding needed. This replaces the former
+/// blanket `None` (staged `Residual`) for **concrete** signatures; a signature whose param/return
+/// resolves through a still-open type variable, an unresolved width, or a generic `Data`
+/// instantiation stays honestly staged (`ty_to_field_ty_ref` returns `None` for those leaves,
+/// narrowing — never eliminating — the residual, G2/VR-5).
+///
+/// **Reachability note (honest scope, DN-74 new evidence).** `crate::mono`'s closure
+/// defunctionalization (RFC-0024 §4A/M-704) unconditionally rewrites every reachable `Ty::Fn` field
+/// into a closure tag-sum `Ty::Data` reference *before* [`elaborate`] ever calls [`build_registry`]
+/// — so through the standard `elaborate` entry point this arm is not reached (defunctionalization
+/// already produces a closed, executing L0 term for every such field, verified by the existing
+/// closures three-way differential). This `FieldSpec::Fn` lowering is exercised through
+/// [`build_registry`] called directly, and through [`elaborate_direct`] (below) — the narrow,
+/// additive entry point that targets the kernel primitive `elaborate` cannot reach without also
+/// changing `mono.rs`'s defunctionalization scope (out of this leaf's owned files).
 fn field_spec(ty: &Ty) -> Option<FieldSpec> {
     Some(match ty {
         Ty::Binary(crate::checkty::Width::Lit(n)) => FieldSpec::Repr(Repr::Binary { width: *n }),
@@ -875,10 +933,23 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
         Ty::Data(n, args) if args.is_empty() => FieldSpec::Data(n.clone()),
         Ty::Data(_, _) | Ty::Var(_) => return None,
         Ty::Substrate(_) => return None,
-        // RFC-0024 §4 / M-687: function-typed fields are not yet lowered to kernel form in
-        // stage-1 elaboration (defunctionalization is M-687). A `Ty::Fn` in a field position
-        // returns `None` (staged residual — never a silent, half-elaborated artifact; G2/VR-5).
-        Ty::Fn(_, _) => return None,
+        // ADR-033/DN-74 (M-923): a function-typed field lowers to `FieldSpec::Fn { arity, sig }`
+        // (Path A — the full param+return signature, see the doc comment above). `arity` is always
+        // 1 at this level: `Ty::Fn` is a single-parameter arrow (curried multi-arg values are
+        // nested arrows, RFC-0024 §4A.5/M-822), and the nesting composes through the recursive
+        // `FieldTyRef::Fn` case in `ty_to_field_ty_ref`.
+        Ty::Fn(param, ret) => {
+            let param = ty_to_field_ty_ref(param)?;
+            let ret = ty_to_field_ty_ref(ret)?;
+            FieldSpec::Fn {
+                arity: 1,
+                sig: FnSig {
+                    arity: 1,
+                    params: vec![param],
+                    ret: Box::new(ret),
+                },
+            }
+        }
     })
 }
 
@@ -917,6 +988,33 @@ fn ty_to_repr(ty: &Ty) -> Option<Repr> {
             width: FloatWidth::F64,
         },
         Ty::Data(_, _) | Ty::Var(_) | Ty::Substrate(_) | Ty::Fn(_, _) => return None,
+    })
+}
+
+/// Convert a v0 type to a [`FieldTyRef`] — the leaf type a `Fn`-typed field's signature can hold
+/// (ADR-033 §10.2 Path A): a `Repr` leaf (via [`ty_to_repr`]), a *monomorphic* `Data` reference (by
+/// build-time name — resolved to a `ContentHash` at [`DataRegistry::build`] time, exactly like a
+/// top-level [`FieldSpec::Data`]), or a nested [`FieldTyRef::Fn`] for a higher-order/curried
+/// parameter or return. `None` for anything with no monomorphic form here — a generic `Data`
+/// instantiation, an unresolved [`Ty::Var`]/width, or [`Ty::Substrate`] (M-923; mirrors
+/// [`field_spec`]'s own staging: a signature leaf that cannot resolve keeps the *owning* `Fn`
+/// field staged, never a half-encoded signature — G2/VR-5).
+fn ty_to_field_ty_ref(ty: &Ty) -> Option<FieldTyRef> {
+    Some(match ty {
+        Ty::Data(n, args) if args.is_empty() => FieldTyRef::Data(n.clone()),
+        Ty::Data(_, _) | Ty::Var(_) | Ty::Substrate(_) => return None,
+        Ty::Fn(param, ret) => {
+            let param = ty_to_field_ty_ref(param)?;
+            let ret = ty_to_field_ty_ref(ret)?;
+            FieldTyRef::Fn(Box::new(FnSig {
+                arity: 1,
+                params: vec![param],
+                ret: Box::new(ret),
+            }))
+        }
+        // Every other v0 type is a representation type — delegate to the shared resolver so the
+        // `Repr` leaf encoding can never drift between a `Fn` signature and an ordinary field.
+        _ => FieldTyRef::Repr(ty_to_repr(ty)?),
     })
 }
 
@@ -1088,6 +1186,36 @@ impl Elab<'_> {
                             what: format!("`{name}` is outside the r3 data registry"),
                         })?;
                         return Ok(Node::Construct { ctor, args: vec![] });
+                    }
+                    // ADR-033/DN-74 (M-923): a bare reference to an ordinary, non-recursive
+                    // top-level function in VALUE position (not the head of a call — `app`
+                    // handles that case) is the surface form of a `FieldSpec::Fn` payload — e.g.
+                    // the argument of `MkDict(eq8)` in a dictionary/dynamic-dispatch construction
+                    // (ADR-033 §2.1: "the function is identified by its content hash ... the
+                    // actual method body is a value in the term registry"). A top-level function
+                    // closes over nothing (RFC-0007 §4.7), so it lowers directly to its own closed
+                    // curried lambda term (`Lam`/`App` are already in the RFC-0007 §4.1 node
+                    // budget — no new kernel node, KC-3). A **generic** function used this way
+                    // stays staged, exactly like a generic function *call* (`app` below) — never a
+                    // half-monomorphized artifact (G2/VR-5).
+                    //
+                    // Reachable only through [`elaborate_direct`]: through the standard
+                    // [`elaborate`] entry this arm never fires, because `crate::mono`'s closure
+                    // defunctionalization (RFC-0024 §4A/M-704) already rewrites every such
+                    // reference into a closure-constructor call before elaboration runs (see the
+                    // `field_spec` doc comment for the full reachability note).
+                    if let Some(fd) = self.env.fns.get(name) {
+                        if !fd.sig.params.is_empty() {
+                            return residual(
+                                site,
+                                format!(
+                                    "generic function `{name}<…>` used as a value has no L0 form \
+                                     yet (monomorphization staged — RFC-0007 §11.3, the M-657 \
+                                     follow-up)"
+                                ),
+                            );
+                        }
+                        return self.elab_fn_lam(name);
                     }
                 }
                 residual(site, format!("unresolved name `{}`", p.0.join(".")))
@@ -1577,6 +1705,29 @@ impl Elab<'_> {
             return residual(site, format!("dotted call `{}`", p.0.join(".")));
         }
         let name = &p.0[0];
+
+        // ADR-033/DN-74 (M-923): dynamic dispatch through a `FieldSpec::Fn` payload — `name` is a
+        // scope-bound variable of `Ty::Fn` type (e.g. a `match`-projected dictionary field,
+        // `Mk(f) => f(v)`), not a call to a top-level function/constructor/prim. Checked *before*
+        // every other resolution (lexical scope shadows the global namespace, matching the
+        // `Expr::Path` value-position arm above) — this lowers to an ordinary curried `App` on the
+        // bound variable (`Lam`/`App` are already in the RFC-0007 §4.1 node budget — no new kernel
+        // node, KC-3). Reachable only through [`elaborate_direct`]: on the standard `elaborate`
+        // path `mono.rs` has already rewritten every `Ty::Fn` scope binding into a closure tag-sum
+        // (`Ty::Data`), so this arm never fires there (see `field_spec`'s doc comment).
+        if let Some((_, kvar, sty)) = scope.iter().rev().find(|(s, _, _)| s == name) {
+            if matches!(sty, Ty::Fn(_, _)) {
+                let mut node = Node::Var(kvar.clone());
+                for a in args {
+                    let karg = self.expr(stack, scope, a)?;
+                    node = Node::App {
+                        func: Box::new(node),
+                        arg: Box::new(karg),
+                    };
+                }
+                return Ok(node);
+            }
+        }
 
         // A call to a recursive function is a curried `App` on its `Fix` variable (RFC-0001 r4) —
         // never inlined (that would loop). Arguments evaluate left-to-right (CBV).
