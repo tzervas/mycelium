@@ -3930,6 +3930,18 @@ impl Cx<'_> {
             match (&tys[0], &tys[1]) {
                 (Ty::Binary(x), Ty::Binary(y)) if x == y => {}
                 (Ty::Ternary(x), Ty::Ternary(y)) if x == y => {}
+                // ADR-040 §2.4 (M-899): float ordering is *partial* (NaN is unordered), so
+                // floats never route through the D1 total order — refuse with the real routing
+                // (never a silently-invented order for NaN; G2).
+                (Ty::Float, Ty::Float) => {
+                    return self.err(format!(
+                        "`{name}` is the RFC-0032 D1 Binary/Ternary comparison; float ordering \
+                         is partial (NaN is unordered — ADR-040 §2.4), so floats have their own \
+                         explicit prims: use `flt_lt`/`flt_le`/`flt_gt`/`flt_ge`/`flt_eq` (any \
+                         NaN operand → false) or the named total order `flt_total_le` for \
+                         sorting/keying (M-899)"
+                    ));
+                }
                 _ => {
                     return self.err(format!(
                         "`{name}` compares two equal-width operands of the same paradigm \
@@ -5076,23 +5088,32 @@ impl Cx<'_> {
         }
     }
 
-    /// Try to check a call to a **scalar-float arithmetic prim** (ADR-040 §2.5; M-898, `enb`
-    /// Gap A) — `flt_add`/`flt_sub`/`flt_mul`/`flt_div` (binary) and `flt_neg` (unary), kernel
-    /// `flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg` (surface names are `_`-joined like
-    /// `dense_add`, since `.` is the path separator in the lexer). Returns `Ok(None)` if `name`
-    /// is not one of them.
+    /// Try to check a call to a **scalar-float prim** (ADR-040 §2.4/§2.5; M-898/M-899, `enb`
+    /// Gap A) — the arithmetic group `flt_add`/`flt_sub`/`flt_mul`/`flt_div` (binary) and
+    /// `flt_neg` (unary), kernel `flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg`, plus the
+    /// comparison group `flt_lt`/`flt_le`/`flt_gt`/`flt_ge`/`flt_eq` and the named total order
+    /// `flt_total_le` (all binary), kernel `flt.lt`/…/`flt.eq`/`flt.total_le` (surface names are
+    /// `_`-joined like `dense_add`, since `.` is the path separator in the lexer). Returns
+    /// `Ok(None)` if `name` is not one of them.
     ///
     /// `Float` is nullary (binary64 only at introduction — ADR-040 FLAG-1), so the static rule is
-    /// the simplest of the prim branches: every operand must be exactly `Float`, and the result is
-    /// `Float`. A non-`Float` operand is an explicit refusal (a cross-paradigm edge needs an
+    /// the simplest of the prim branches: every operand must be exactly `Float`, and the result
+    /// is `Float` for the arithmetic ops and **`Binary{1}`** — the realized `Bool` of the
+    /// RFC-0032 D1 engineering note, exactly the `eq`/`lt` shape — for the comparison ops. A
+    /// non-`Float` operand is an explicit refusal (a cross-paradigm edge needs an
     /// explicit `swap`; a bare decimal has no `Float` anchor — RFC-0012 §4.3 gives it none — so it
     /// is refused, never defaulted; write a float literal `1.0`, M-897). The numeric-domain
     /// behaviour is deliberately **not** a static rule and **not** a runtime refusal either:
     /// arithmetic specials (overflow → ±inf, `x/0` → ±inf, `0/0` → NaN) are **in-band,
     /// inspectable, propagating values** per the ratified ADR-040 §2.4 FLAG-2 — the ops are total
     /// over `Float` (contrast `div_bin`, whose integer div-by-zero has no in-band sentinel and
-    /// must refuse at runtime). Per-op tag: `Empirical` per ADR-040 §2.6, carried on the runtime
-    /// value with its zero-deviation-vs-spec bound (`mycelium-interp/src/prims.rs`).
+    /// must refuse at runtime) — and **comparison NaN semantics are value semantics, not types**:
+    /// the five predicates deliver the IEEE-754 §5.11 *defined* result `false` on any NaN operand
+    /// (NaN is unordered; `flt_eq(NaN, NaN)` is false), while `flt_total_le` is the IEEE-754
+    /// §5.10 `totalOrder` — total and reflexive, NaN placed last, `−0` before `+0` (ADR-040
+    /// §2.4; M-899). Per-op tag: `Empirical` per ADR-040 §2.6, carried on the runtime value with
+    /// its zero-deviation-vs-spec bound; for `flt_total_le` the total-order *property* stays
+    /// `Empirical` until the M-511 proof debt is discharged (`mycelium-interp/src/prims.rs`).
     fn try_check_float_prim(
         &self,
         scope: &mut Vec<(String, Ty)>,
@@ -5100,16 +5121,22 @@ impl Cx<'_> {
         name: &str,
         args: &[Expr],
     ) -> Result<Option<(Ty, Expr)>, CheckError> {
-        if !matches!(
+        let is_cmp = matches!(
             name,
-            "flt_add" | "flt_sub" | "flt_mul" | "flt_div" | "flt_neg"
-        ) {
+            "flt_lt" | "flt_le" | "flt_gt" | "flt_ge" | "flt_eq" | "flt_total_le"
+        );
+        if !is_cmp
+            && !matches!(
+                name,
+                "flt_add" | "flt_sub" | "flt_mul" | "flt_div" | "flt_neg"
+            )
+        {
             return Ok(None);
         }
         let want = if name == "flt_neg" { 1 } else { 2 };
         if args.len() != want {
             return self.err(format!(
-                "`{name}` takes {want} operand(s), got {} (ADR-040 §2.5; M-898)",
+                "`{name}` takes {want} operand(s), got {} (ADR-040 §2.4/§2.5; M-898/M-899)",
                 args.len()
             ));
         }
@@ -5124,14 +5151,19 @@ impl Cx<'_> {
                 };
                 return self.err(format!(
                     "`{name}` {which} operand must be a `Float` (IEEE-754 binary64 — ADR-040 \
-                     §2.1), got {ty} (M-898 — never a silent conversion; a cross-paradigm edge \
-                     needs an explicit `swap`, and a bare decimal has no Float anchor — write a \
-                     float literal like `1.0`)"
+                     §2.1), got {ty} (M-898/M-899 — never a silent conversion; a cross-paradigm \
+                     edge needs an explicit `swap`, and a bare decimal has no Float anchor — \
+                     write a float literal like `1.0`)"
                 ));
             }
             rebuilt.push(a2);
         }
-        Ok(Some((Ty::Float, app_node(head, rebuilt))))
+        let ret = if is_cmp {
+            Ty::Binary(Width::Lit(1))
+        } else {
+            Ty::Float
+        };
+        Ok(Some((ret, app_node(head, rebuilt))))
     }
 
     /// Literal typing (Q6): a literal *is* its representation — a binary literal's width is its
@@ -5753,6 +5785,22 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "flt_mul" => "flt.mul",
         "flt_div" => "flt.div",
         "flt_neg" => "flt.neg",
+        // ADR-040 §2.4 (M-899, `enb` Gap A): the scalar-float comparison group — the IEEE-754
+        // §5.11 partial-order predicates (NaN explicitly unordered: any NaN operand → the
+        // *defined* value false, `flt_eq(NaN, NaN)` = false) plus the **named, opt-in total
+        // order** `flt_total_le` (IEEE-754 §5.10 `totalOrder`: −inf < … < −0 < +0 < … < +inf
+        // < NaN — reflexive, NaN placed last, the signed zeros directed). Two `Float` operands
+        // collapse to `Binary{1}` (the realized `Bool`), typed by `try_check_float_prim`. A
+        // distinct namespace from the D1 `eq`/`lt` because float ordering is *partial* — routing
+        // floats through the D1 total order would silently invent an order for NaN (G2). Tag:
+        // `Empirical` per ADR-040 §2.6; `flt_total_le`'s total-order property stays `Empirical`
+        // until the M-511 proof debt is discharged (never `Proven` without the checked theorem).
+        "flt_lt" => "flt.lt",
+        "flt_le" => "flt.le",
+        "flt_gt" => "flt.gt",
+        "flt_ge" => "flt.ge",
+        "flt_eq" => "flt.eq",
+        "flt_total_le" => "flt.total_le",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",
