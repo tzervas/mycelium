@@ -49,6 +49,50 @@ fn infix_sugar_desugars_to_the_word_call() {
     assert_eq!(op_body("a >> b"), op_body("shr(a, b)"));
 }
 
+/// M-916 inventory check (RFC-0025 §4.2): `lte`/`gte` have no glyph — they are word-canonical
+/// already and parse as *ordinary* application (`App { head: Path(["lte"|"gte"]), args: [a, b] }`),
+/// structurally identical to any other named call (e.g. `add(a, b)`). No desugaring step applies
+/// to them — the parser's `infix_op` table (which drives the glyph desugar) has no `<=`/`>=` entry
+/// at all, since no such token exists (confirmed at the lexer level).
+#[test]
+fn lte_gte_are_ordinary_calls_no_glyph_no_desugar() {
+    let lte = op_body("lte(a, b)");
+    let Expr::App { head, args } = &lte else {
+        panic!("expected an App node, got: {lte:?}");
+    };
+    assert!(matches!(head.as_ref(), Expr::Path(p) if p.0 == vec!["lte".to_owned()]));
+    assert_eq!(args.len(), 2);
+
+    let gte = op_body("gte(a, b)");
+    let Expr::App { head, args } = &gte else {
+        panic!("expected an App node, got: {gte:?}");
+    };
+    assert!(matches!(head.as_ref(), Expr::Path(p) if p.0 == vec!["gte".to_owned()]));
+    assert_eq!(args.len(), 2);
+}
+
+/// M-916 inventory check (RFC-0025 §4.2 / RFC-0037 D1): the retired `<=`/`>=` glyphs are a
+/// never-silent parse refusal, not a silent reinterpretation as the old two-char operator or a
+/// panic. `a <= b` lexes as `a`, `LAngle`, `Eq`, `b` (confirmed at the lexer level), so the parser
+/// reads `a < (= b)`: `<` opens a valid comparison RHS, and `=` cannot start an expression there.
+#[test]
+fn le_ge_glyphs_are_a_never_silent_parse_refusal() {
+    let le = parse("nodule d;\nfn f(a: Binary{8}, b: Binary{8}) => Binary{8} = a <= b;")
+        .expect_err("the retired `<=` glyph must not silently parse");
+    assert!(
+        le.message.contains("expected an expression"),
+        "expected an explicit refusal at the `=`, got: {}",
+        le.message
+    );
+    let ge = parse("nodule d;\nfn f(a: Binary{8}, b: Binary{8}) => Binary{8} = a >= b;")
+        .expect_err("the retired `>=` glyph must not silently parse");
+    assert!(
+        ge.message.contains("expected an expression"),
+        "expected an explicit refusal at the `=`, got: {}",
+        ge.message
+    );
+}
+
 #[test]
 fn prefix_sugar_desugars_to_the_word_call() {
     assert_eq!(op_body("-a"), op_body("neg(a)"));
