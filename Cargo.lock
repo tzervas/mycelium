@@ -384,9 +384,9 @@ dependencies = [
  "mycelium-interp",
  "mycelium-mir-passes",
  "mycelium-numerics",
+ "mycelium-rt-abi",
  "mycelium-sched",
  "mycelium-select",
- "mycelium-std-runtime",
  "mycelium-vsa",
 ]
 
@@ -406,6 +406,16 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-l1",
+ "proptest",
+]
+
+[[package]]
+name = "mycelium-rt-abi"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-interp",
+ "mycelium-sched",
  "proptest",
 ]
 
@@ -586,7 +596,7 @@ name = "mycelium-std-runtime"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
- "mycelium-interp",
+ "mycelium-rt-abi",
  "mycelium-sched",
  "mycelium-std-core",
  "proptest",

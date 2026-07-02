@@ -58,17 +58,23 @@ mycelium-interp = { path = "../mycelium-interp" }
 # `mlir` (they depend only on core / std-core / interp) — the dependency graph stays a DAG.
 mycelium-mir-passes = { path = "../mycelium-mir-passes" }
 # M-860: the parallel per-function/per-nodule AOT codegen (`emit_llvm_ir_many`) dispatches across
-# `mycelium_std_runtime::scheduler::Scheduler` — the M-861 work-stealing OS-thread pool — so it
-# reuses this existing dependency and adds no new one (maintainer decision 2026-07-01, grounded in
-# the flag against pulling in `rayon`).
-mycelium-std-runtime = { path = "../mycelium-std-runtime" }
+# `mycelium_sched::scheduler::Scheduler` — the M-861 work-stealing OS-thread pool (see the
+# `mycelium-sched` entry below).
 # M-865: the harness-level AOT/JIT concurrent-batch dispatch (`concurrent.rs`) submits its argument
-# jobs directly through `mycelium_sched::scheduler::Scheduler` — the same relocated M-861/M-864
-# work-stealing pool `mycelium-interp`'s own M-862 parallel-eval path and this crate's M-860
-# `emit_llvm_ir_many` (via the `mycelium-std-runtime` re-export above) both already dispatch through.
-# Depending on it directly adds no new scheduler surface and no cycle (`mycelium-sched` sits below
+# jobs directly through the same `mycelium_sched::scheduler::Scheduler` — the same relocated
+# M-861/M-864 work-stealing pool `mycelium-interp`'s own M-862 parallel-eval path and this crate's
+# M-860 `emit_llvm_ir_many` both dispatch through. No cycle (`mycelium-sched` sits below
 # `mycelium-interp`, which this crate already depends on).
 mycelium-sched = { path = "../mycelium-sched" }
+# M-883/M-884 (runtime-ABI seam extraction): the reclamation EXPLAIN/audit record (RFC-0027 §9,
+# `rc_plan.rs`) and the structured-concurrency supervision surface (M-713 / RFC-0008 RT4·RT7,
+# `runtime.rs`'s `reclaim` driver, DN-58 §B / M-817) — relocated here from `mycelium-std-runtime`
+# (tier `std`) to fix the upward `mlir (core) -> std-runtime (std)` dependency edge the M-879
+# `no-upward-tier-edges` gate flagged. `mycelium-rt-abi` sits below `mycelium-mlir` (it depends only
+# on core / interp / sched, all already depended on above), so this replaces the former
+# `mycelium-std-runtime` normal dependency entirely — `mycelium-mlir` no longer depends on
+# `mycelium-std-runtime` at all (normal or dev).
+mycelium-rt-abi = { path = "../mycelium-rt-abi" }
 
 [dev-dependencies]
 # The interp↔AOT differential (M-151) drives both paths with the certified binary↔ternary swap,
