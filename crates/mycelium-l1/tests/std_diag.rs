@@ -66,9 +66,9 @@ fn myc_bool(b: bool) -> &'static str {
     }
 }
 
-/// Render the `n`-deep nested `add_bin(0b1, add_bin(0b1, …, add_bin(0b1, 0b0)…))` expression that
+/// Render the `n`-deep nested `add_u(0b1, add_u(0b1, …, add_u(0b1, 0b0)…))` expression that
 /// `matrix_len`'s recursive spine-walk expands to for a list of `n` elements (`len(Cons(x,rest)) =
-/// add_bin(0b1, len(rest))`, `len(Nil) = 0b0`). Writing the SAME primitive-op composition directly
+/// add_u(0b1, len(rest))`, `len(Nil) = 0b0`). Writing the SAME primitive-op composition directly
 /// (rather than re-invoking `matrix_len(matrix())`) gives the reference program the matching
 /// `Derived` provenance chain the M-925 harness's `check_core` comparison requires (the
 /// `std_result.rs`/`std_option.rs` precedent: recompute via the SAME underlying prims, not a bare
@@ -77,7 +77,7 @@ fn myc_bool(b: bool) -> &'static str {
 fn myc_len_chain(n: u8) -> String {
     let mut expr = "0b0000_0000".to_owned();
     for _ in 0..n {
-        expr = format!("add_bin(0b0000_0001, {expr})");
+        expr = format!("add_u(0b0000_0001, {expr})");
     }
     expr
 }

@@ -9,7 +9,7 @@ nodule std.collections;
 
 // with honest O(n) bounds and never-silent fallibility. M-716 (E13-1, #461). Guarantee (per-op,
 // audit-precise): constructors + total discriminators are Exact; eliminating/transforming ops carry
-// a Declared type-level contract; `len`'s "fits Binary{8}" bound is Empirical (add_bin refuses at
+// a Declared type-level contract; `len`'s "fits Binary{8}" bound is Empirical (add_u refuses at
 // 256); three-way differential agreement (L1-eval ≡ L0-interp ≡ AOT) is Empirical (trials,
 // std_collections.rs). Never-silent (G2): every fallible op returns Option — no panic, no sentinel.
 // Map/Set lookup use the `eq` kernel prim (width-typed over Binary{N}): map_get and set_contains are
@@ -30,7 +30,7 @@ type Option[Opt] = Some(Opt) | None;
 //
 // Rep: type Vec<A> = Nil | Cons(A, Vec<A>)
 // All ops are O(n) in the spine (Declared). Constructors Nil/Cons are Exact (total).
-// `len` is O(n) and its "fits Binary{8}" contract is Empirical: add_bin refuses at 256 on all paths.
+// `len` is O(n) and its "fits Binary{8}" contract is Empirical: add_u refuses at 256 on all paths.
 // `get` is O(n) and OOB → None (never-silent, G2).
 type Vec[A] = Nil | Cons(A, Vec[A]);
 
@@ -56,17 +56,17 @@ fn head[A](xs: Vec[A]) => Option[A] =
 fn tail[A](xs: Vec[A]) => Option[Vec[A]] =
   match xs { Nil => None, Cons(_, rest) => Some(rest) };
 
-// len: the number of elements. O(n) recursive spine-walk. Uses add_bin at Binary{8}: a list longer
-// than 255 elements causes add_bin to refuse on ALL paths — never a silent wrap (G2). This is an
-// explicit never-silent contract; the "fits Binary{8}" bound is Empirical (add_bin's runtime refusal
+// len: the number of elements. O(n) recursive spine-walk. Uses add_u at Binary{8}: a list longer
+// than 255 elements causes add_u to refuse on ALL paths — never a silent wrap (G2). This is an
+// explicit never-silent contract; the "fits Binary{8}" bound is Empirical (add_u's runtime refusal
 // is the evidence, not a type-level proof). Declared (type-level contract for the O(n) walk).
 fn len[A](xs: Vec[A]) => Binary{8} =
-  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_bin(0b0000_0001, len(rest)) };
+  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_u(0b0000_0001, len(rest)) };
 
 // get: the element at index `i` (Binary{8}), or None if OOB. O(n) spine-walk. Never-silent (G2):
 // OOB → None, never a fabricated value. Declared.
 fn get[A](xs: Vec[A], i: Binary{8}) => Option[A] =
-  match xs { Nil => None, Cons(x, rest) => match eq(i, 0b0000_0000) { 0b1 => Some(x), _ => get(rest, sub_bin(i, 0b0000_0001)) } };
+  match xs { Nil => None, Cons(x, rest) => match eq(i, 0b0000_0000) { 0b1 => Some(x), _ => get(rest, sub_u(i, 0b0000_0001)) } };
 
 // snoc: append `x` at the end of `xs`. O(n) spine-walk to the tail (Declared). The spine is rebuilt
 // on the way back — a pure value-semantics copy. Base case: push_front(x, xs) where xs = Nil (the

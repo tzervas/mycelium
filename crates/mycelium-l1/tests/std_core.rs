@@ -64,7 +64,7 @@ fn myc_bool(b: bool) -> &'static str {
     }
 }
 
-/// Render the `n`-deep nested `add_bin(0b1, add_bin(0b1, …, 0b0)…)` expression that the port's
+/// Render the `n`-deep nested `add_u(0b1, add_u(0b1, …, 0b0)…)` expression that the port's
 /// recursive `Binary{8}` counters (`matrix_len`, `explainable_count`) expand to for `n` matching
 /// elements. Writing the SAME primitive-op composition directly gives the reference program the
 /// matching `Derived` provenance chain the M-925 harness's `check_core` comparison requires (the
@@ -73,7 +73,7 @@ fn myc_bool(b: bool) -> &'static str {
 fn myc_count_chain(n: u8) -> String {
     let mut expr = "0b0000_0000".to_owned();
     for _ in 0..n {
-        expr = format!("add_bin(0b0000_0001, {expr})");
+        expr = format!("add_u(0b0000_0001, {expr})");
     }
     expr
 }

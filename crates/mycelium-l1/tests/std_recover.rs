@@ -313,7 +313,7 @@ fn main() => Result[ClassName, UnknownClass] = Err(UnknownCls(ClsFatal));";
 
 /// A declared budget drains: `consume(Attempts(2), Retry, 1)` returns the decremented ledger
 /// (the functional form of the Rust `&mut` decrement). The expected side recomputes the
-/// decrement via the SAME `sub_bin` prim (Derived provenance — the harness convention).
+/// decrement via the SAME `sub_u` prim (Derived provenance — the harness convention).
 #[test]
 fn budget_consume_drains_declared_budget() {
     let driver = "fn main() => Result[Budgets, EffectBudgetExhausted] = budget_consume(budget_set(BNil, Attempts(0b0000_0010)), EkRetry, 0b0000_0001);";
@@ -323,7 +323,7 @@ type EffectKind = EkRetry | EkAlloc | EkIo | EkCascade | EkTime;\n\
 type EffectBudgetExhausted = Exhausted(EffectKind, Binary{8}, Binary{8});\n\
 type Budgets = BNil | BEntry(EffectKind, Binary{8}, Budgets);\n\
 type Result[A, E] = Ok(A) | Err(E);\n\
-fn main() => Result[Budgets, EffectBudgetExhausted] = Ok(BEntry(EkRetry, sub_bin(0b0000_0010, 0b0000_0001), BNil));";
+fn main() => Result[Budgets, EffectBudgetExhausted] = Ok(BEntry(EkRetry, sub_u(0b0000_0010, 0b0000_0001), BNil));";
     assert_three_way("budget_consume drains", &src, expected);
 }
 
@@ -828,12 +828,12 @@ fn myc_bool(b: bool) -> &'static str {
     }
 }
 
-/// The `n`-deep `add_bin` chain `matrix_len` expands to (the `std_diag.rs` provenance
+/// The `n`-deep `add_u` chain `matrix_len` expands to (the `std_diag.rs` provenance
 /// convention: recompute via the SAME prims, not a bare literal).
 fn myc_len_chain(n: u8) -> String {
     let mut expr = "0b0000_0000".to_owned();
     for _ in 0..n {
-        expr = format!("add_bin(0b0000_0001, {expr})");
+        expr = format!("add_u(0b0000_0001, {expr})");
     }
     expr
 }

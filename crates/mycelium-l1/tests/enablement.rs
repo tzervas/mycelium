@@ -8,7 +8,7 @@
 //!   (RFC-0032 D1). The kernel prim returns `Binary{1}` (`0b1` = true); the `.myc` `std.cmp` lift to
 //!   the `Bool` ADT is demonstrated by the `bool`-bridge smoke port. **Unblocks** E13-1 M-718
 //!   (width-typed `cmp`/`Eq`/`Ord`).
-//! - **M-748** — never-silent fixed-width binary arithmetic `add_bin`/`sub_bin` + the surfaced
+//! - **M-748** — never-silent fixed-width binary arithmetic `add_u`/`sub_u` + the surfaced
 //!   `and`/`or` (RFC-0032 D2). **Unblocks** E13-1 M-718 (binary `math`).
 //!
 //! # Honesty tags
@@ -17,7 +17,7 @@
 //! - **`Empirical`** — the three-way agreement is established by trial on the programs below.
 //!
 //! # Never-silent (G2/VR-5)
-//! Overflow (`add_bin`/`sub_bin` out of `[0, 2^N)`) and paradigm/width mismatch are **explicit
+//! Overflow (`add_u`/`sub_u` out of `[0, 2^N)`) and paradigm/width mismatch are **explicit
 //! refusals on every path**, never a silent wrap or a silent `false` — pinned by the refusal tests.
 //!
 //! # Scope boundary
@@ -264,22 +264,22 @@ fn and_or_surfaced() {
 }
 
 #[test]
-fn add_bin_in_range() {
+fn add_u_in_range() {
     // 0b0000_0001 + 0b0000_0010 = 0b0000_0011 (1 + 2 = 3).
     assert_three_way(
-        "add_bin",
-        "nodule d;\nfn main() => Binary{8} = add_bin(0b0000_0001, 0b0000_0010);",
+        "add_u",
+        "nodule d;\nfn main() => Binary{8} = add_u(0b0000_0001, 0b0000_0010);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
     );
 }
 
 #[test]
-fn sub_bin_in_range() {
+fn sub_u_in_range() {
     // 0b0000_0101 - 0b0000_0010 = 0b0000_0011 (5 - 2 = 3).
     assert_three_way(
-        "sub_bin",
-        "nodule d;\nfn main() => Binary{8} = sub_bin(0b0000_0101, 0b0000_0010);",
+        "sub_u",
+        "nodule d;\nfn main() => Binary{8} = sub_u(0b0000_0101, 0b0000_0010);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
     );
@@ -287,11 +287,11 @@ fn sub_bin_in_range() {
 
 // ── Never-silent (G2/VR-5): overflow + mismatch refuse on every path ─────────────────────────────
 
-/// `add_bin` overflow (`255 + 1` at `Binary{8}`) is an explicit refusal on **all three** paths —
+/// `add_u` overflow (`255 + 1` at `Binary{8}`) is an explicit refusal on **all three** paths —
 /// never a silent wrap to `0`. (The program type-checks: overflow is a runtime contract, D2.)
 #[test]
-fn add_bin_overflow_refuses_on_every_path() {
-    let src = "nodule d;\nfn main() => Binary{8} = add_bin(0b1111_1111, 0b0000_0001);";
+fn add_u_overflow_refuses_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = add_u(0b1111_1111, 0b0000_0001);";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
     let interp = Interpreter::new(
@@ -316,11 +316,11 @@ fn add_bin_overflow_refuses_on_every_path() {
     );
 }
 
-/// `sub_bin` underflow (`0 - 1` at `Binary{8}`, a negative with no unsigned form) refuses on **all
+/// `sub_u` underflow (`0 - 1` at `Binary{8}`, a negative with no unsigned form) refuses on **all
 /// three** paths — never a silent wrap to `255` — exactly like the overflow test above.
 #[test]
-fn sub_bin_underflow_refuses_on_every_path() {
-    let src = "nodule d;\nfn main() => Binary{8} = sub_bin(0b0000_0000, 0b0000_0001);";
+fn sub_u_underflow_refuses_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = sub_u(0b0000_0000, 0b0000_0001);";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
     let interp = Interpreter::new(
@@ -394,43 +394,43 @@ fn eq_concrete_operand_anchors_bare_decimal() {
 
 // ── M-887 (`enb` Gap B): never-silent two's-complement multiply ─────────────────────────────────
 //
-// `mul_bin` (kernel `bin.mul`) is the first Gap-B prim of the RFC-0033 §4.1.2/§4.1.3 shared
+// `mul_s` (kernel `bin.mul`) is the first Gap-B prim of the RFC-0033 §4.1.2/§4.1.3 shared
 // two's-complement arithmetic set (ADR-028). It reads its `Binary{N}` operands under the
-// two's-complement (signed) interpretation — distinct from `add_bin`/`sub_bin`'s existing
+// two's-complement (signed) interpretation — distinct from `add_u`/`sub_u`'s existing
 // **unsigned** overflow contract (RFC-0032 D2) — and refuses out-of-`B_N` products explicitly,
 // never a silent wrap (G2/VR-5).
 
 #[test]
-fn mul_bin_in_range_positive_and_negative() {
+fn mul_s_in_range_positive_and_negative() {
     // 3 * 4 = 12.
     assert_three_way(
-        "mul_bin positive",
-        "nodule d;\nfn main() => Binary{8} = mul_bin(0b0000_0011, 0b0000_0100);",
+        "mul_s positive",
+        "nodule d;\nfn main() => Binary{8} = mul_s(0b0000_0011, 0b0000_0100);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00001100".chars().map(|c| c == '1').collect()),
     );
     // -3 * 4 = -12 (two's complement: -3 = 0b1111_1101, -12 = 0b1111_0100).
     assert_three_way(
-        "mul_bin negative operand",
-        "nodule d;\nfn main() => Binary{8} = mul_bin(0b1111_1101, 0b0000_0100);",
+        "mul_s negative operand",
+        "nodule d;\nfn main() => Binary{8} = mul_s(0b1111_1101, 0b0000_0100);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("11110100".chars().map(|c| c == '1').collect()),
     );
     // -3 * -4 = 12.
     assert_three_way(
-        "mul_bin both negative",
-        "nodule d;\nfn main() => Binary{8} = mul_bin(0b1111_1101, 0b1111_1100);",
+        "mul_s both negative",
+        "nodule d;\nfn main() => Binary{8} = mul_s(0b1111_1101, 0b1111_1100);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00001100".chars().map(|c| c == '1').collect()),
     );
 }
 
-/// `mul_bin` overflow (`127 * 2` at `Binary{8}`, out of `B_8 = [-128, 127]`) is an explicit refusal
+/// `mul_s` overflow (`127 * 2` at `Binary{8}`, out of `B_8 = [-128, 127]`) is an explicit refusal
 /// on **all three** paths — never a silent wrap. (The program type-checks: the two's-complement
-/// overflow bound is a runtime contract, like `add_bin`/`sub_bin`'s unsigned one.)
+/// overflow bound is a runtime contract, like `add_u`/`sub_u`'s unsigned one.)
 #[test]
-fn mul_bin_overflow_refuses_on_every_path() {
-    let src = "nodule d;\nfn main() => Binary{8} = mul_bin(0b0111_1111, 0b0000_0010);";
+fn mul_s_overflow_refuses_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = mul_s(0b0111_1111, 0b0000_0010);";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
     let interp = Interpreter::new(
@@ -458,8 +458,8 @@ fn mul_bin_overflow_refuses_on_every_path() {
 /// The classic two's-complement multiply-overflow edge (`i8::MIN * -1 = 128`, out of `B_8`) refuses
 /// on all three paths — never a silent wrap back to `-128`.
 #[test]
-fn mul_bin_min_times_neg_one_refuses_on_every_path() {
-    let src = "nodule d;\nfn main() => Binary{8} = mul_bin(0b1000_0000, 0b1111_1111);";
+fn mul_s_min_times_neg_one_refuses_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = mul_s(0b1000_0000, 0b1111_1111);";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
     let interp = Interpreter::new(
@@ -485,56 +485,56 @@ fn mul_bin_min_times_neg_one_refuses_on_every_path() {
 }
 
 /// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal —
-/// caught at check time, mirroring `add_bin`/`sub_bin`'s width-preserving contract.
+/// caught at check time, mirroring `add_u`/`sub_u`'s width-preserving contract.
 #[test]
-fn mul_bin_width_mismatch_refuses_statically() {
-    let src = "nodule d;\nfn main() => Binary{8} = mul_bin(0b0000_0001, 0b0);";
+fn mul_s_width_mismatch_refuses_statically() {
+    let src = "nodule d;\nfn main() => Binary{8} = mul_s(0b0000_0001, 0b0);";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
-        "a width-mismatched mul_bin must be a static type error, never a silent coercion"
+        "a width-mismatched mul_s must be a static type error, never a silent coercion"
     );
 }
 
 // ── M-888 (`enb` Gap B): never-silent unsigned division/remainder ───────────────────────────────
 //
-// `div_bin`/`rem_bin` (kernel `bin.div`/`bin.rem`) are the second Gap-B prims of the RFC-0033
-// §4.1.2/§4.1.3 arithmetic set. Division *differs* by signedness (§4.1.2), so — unlike `mul_bin` —
+// `div_u`/`rem_u` (kernel `bin.div`/`bin.rem`) are the second Gap-B prims of the RFC-0033
+// §4.1.2/§4.1.3 arithmetic set. Division *differs* by signedness (§4.1.2), so — unlike `mul_s` —
 // it MUST be a distinct-named op per signedness; this lands the **unsigned** reading first (the
 // signed reading rides M-767 under its own name). Division by zero refuses explicitly on every
 // path, never a panic or a silent value (G2/VR-5).
 
 #[test]
-fn div_bin_and_rem_bin_worked_examples() {
+fn div_u_and_rem_u_worked_examples() {
     // 7 / 2 = 3, 7 % 2 = 1.
     assert_three_way(
-        "div_bin 7/2",
-        "nodule d;\nfn main() => Binary{8} = div_bin(0b0000_0111, 0b0000_0010);",
+        "div_u 7/2",
+        "nodule d;\nfn main() => Binary{8} = div_u(0b0000_0111, 0b0000_0010);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
     );
     assert_three_way(
-        "rem_bin 7%2",
-        "nodule d;\nfn main() => Binary{8} = rem_bin(0b0000_0111, 0b0000_0010);",
+        "rem_u 7%2",
+        "nodule d;\nfn main() => Binary{8} = rem_u(0b0000_0111, 0b0000_0010);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
     );
     // 255 / 1 = 255, 255 % 1 = 0 (upper boundary at Binary{8}).
     assert_three_way(
-        "div_bin 255/1",
-        "nodule d;\nfn main() => Binary{8} = div_bin(0b1111_1111, 0b0000_0001);",
+        "div_u 255/1",
+        "nodule d;\nfn main() => Binary{8} = div_u(0b1111_1111, 0b0000_0001);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("11111111".chars().map(|c| c == '1').collect()),
     );
     assert_three_way(
-        "rem_bin 255%1",
-        "nodule d;\nfn main() => Binary{8} = rem_bin(0b1111_1111, 0b0000_0001);",
+        "rem_u 255%1",
+        "nodule d;\nfn main() => Binary{8} = rem_u(0b1111_1111, 0b0000_0001);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000000".chars().map(|c| c == '1').collect()),
     );
     // 0 / 17 = 0, 0 % 17 = 0.
     assert_three_way(
-        "div_bin 0/17",
-        "nodule d;\nfn main() => Binary{8} = div_bin(0b0000_0000, 0b0001_0001);",
+        "div_u 0/17",
+        "nodule d;\nfn main() => Binary{8} = div_u(0b0000_0000, 0b0001_0001);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000000".chars().map(|c| c == '1').collect()),
     );
@@ -542,12 +542,12 @@ fn div_bin_and_rem_bin_worked_examples() {
 
 /// Division/remainder by zero (`7 / 0`, `7 % 0` at `Binary{8}`) is an explicit refusal on **all
 /// three** paths — never a panic or a silently-defined value. (The program type-checks: div-by-zero
-/// is a runtime contract, like `mul_bin`'s overflow.)
+/// is a runtime contract, like `mul_s`'s overflow.)
 #[test]
-fn div_bin_and_rem_bin_by_zero_refuse_on_every_path() {
+fn div_u_and_rem_u_by_zero_refuse_on_every_path() {
     for src in [
-        "nodule d;\nfn main() => Binary{8} = div_bin(0b0000_0111, 0b0000_0000);",
-        "nodule d;\nfn main() => Binary{8} = rem_bin(0b0000_0111, 0b0000_0000);",
+        "nodule d;\nfn main() => Binary{8} = div_u(0b0000_0111, 0b0000_0000);",
+        "nodule d;\nfn main() => Binary{8} = rem_u(0b0000_0111, 0b0000_0000);",
     ] {
         let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
@@ -575,52 +575,52 @@ fn div_bin_and_rem_bin_by_zero_refuse_on_every_path() {
 }
 
 /// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal —
-/// caught at check time, mirroring `mul_bin`'s width-preserving contract.
+/// caught at check time, mirroring `mul_s`'s width-preserving contract.
 #[test]
-fn div_bin_width_mismatch_refuses_statically() {
-    let src = "nodule d;\nfn main() => Binary{8} = div_bin(0b0000_0001, 0b0);";
+fn div_u_width_mismatch_refuses_statically() {
+    let src = "nodule d;\nfn main() => Binary{8} = div_u(0b0000_0001, 0b0);";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
-        "a width-mismatched div_bin must be a static type error, never a silent coercion"
+        "a width-mismatched div_u must be a static type error, never a silent coercion"
     );
 }
 
 // ── M-889 (`enb` Gap B): never-silent logical left/right shift ──────────────────────────────────
 //
-// `shl_bin`/`shr_bin` (kernel `bin.shl`/`bin.shr`) are the third Gap-B prim pair of the RFC-0033
+// `shl_u`/`shr_u` (kernel `bin.shl`/`bin.shr`) are the third Gap-B prim pair of the RFC-0033
 // §4.1.2/§4.1.3 shared shift op set — the **logical** (unsigned) reading, landed first per the
-// signedness-split requirement (§4.1.2), mirroring `div_bin`/`rem_bin`. Both operands are
+// signedness-split requirement (§4.1.2), mirroring `div_u`/`rem_u`. Both operands are
 // `Binary{N}` (the shift amount is itself read as an unsigned `N`-bit bitvector); a shift amount
 // `>= N` refuses explicitly on every path, never UB, a wrapped shift amount, or a silently-zeroed
 // result (G2/VR-5). The arithmetic/signed right shift rides M-767 under its own distinct name.
 
 #[test]
-fn shl_bin_and_shr_bin_worked_examples() {
+fn shl_u_and_shr_u_worked_examples() {
     // 1 << 3 = 8.
     assert_three_way(
-        "shl_bin 1<<3",
-        "nodule d;\nfn main() => Binary{8} = shl_bin(0b0000_0001, 0b0000_0011);",
+        "shl_u 1<<3",
+        "nodule d;\nfn main() => Binary{8} = shl_u(0b0000_0001, 0b0000_0011);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00001000".chars().map(|c| c == '1').collect()),
     );
     // 8 >> 3 = 1.
     assert_three_way(
-        "shr_bin 8>>3",
-        "nodule d;\nfn main() => Binary{8} = shr_bin(0b0000_1000, 0b0000_0011);",
+        "shr_u 8>>3",
+        "nodule d;\nfn main() => Binary{8} = shr_u(0b0000_1000, 0b0000_0011);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
     );
     // Logical (zero-filling) right shift: 0b1000_0000 >> 4 = 0b0000_1000, never sign-extended.
     assert_three_way(
-        "shr_bin logical zero-fill",
-        "nodule d;\nfn main() => Binary{8} = shr_bin(0b1000_0000, 0b0000_0100);",
+        "shr_u logical zero-fill",
+        "nodule d;\nfn main() => Binary{8} = shr_u(0b1000_0000, 0b0000_0100);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00001000".chars().map(|c| c == '1').collect()),
     );
     // Shift by 0 is the identity.
     assert_three_way(
-        "shl_bin by 0 is identity",
-        "nodule d;\nfn main() => Binary{8} = shl_bin(0b1010_1010, 0b0000_0000);",
+        "shl_u by 0 is identity",
+        "nodule d;\nfn main() => Binary{8} = shl_u(0b1010_1010, 0b0000_0000);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("10101010".chars().map(|c| c == '1').collect()),
     );
@@ -628,13 +628,13 @@ fn shl_bin_and_shr_bin_worked_examples() {
 
 /// A shift amount `>= width` (`8 << 8`/`8 >> 8` at `Binary{8}`) is an explicit refusal on **all
 /// three** paths — never UB, a silently wrapped shift amount, or a silently-zeroed result. (The
-/// program type-checks: an out-of-range shift amount is a runtime contract, like `div_bin`'s
+/// program type-checks: an out-of-range shift amount is a runtime contract, like `div_u`'s
 /// div-by-zero.)
 #[test]
-fn shl_bin_and_shr_bin_out_of_range_shift_refuse_on_every_path() {
+fn shl_u_and_shr_u_out_of_range_shift_refuse_on_every_path() {
     for src in [
-        "nodule d;\nfn main() => Binary{8} = shl_bin(0b0000_0001, 0b0000_1000);",
-        "nodule d;\nfn main() => Binary{8} = shr_bin(0b0000_0001, 0b0000_1000);",
+        "nodule d;\nfn main() => Binary{8} = shl_u(0b0000_0001, 0b0000_1000);",
+        "nodule d;\nfn main() => Binary{8} = shr_u(0b0000_0001, 0b0000_1000);",
     ] {
         let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
@@ -662,97 +662,97 @@ fn shl_bin_and_shr_bin_out_of_range_shift_refuse_on_every_path() {
 }
 
 /// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal —
-/// caught at check time, mirroring `div_bin`'s width-preserving contract.
+/// caught at check time, mirroring `div_u`'s width-preserving contract.
 #[test]
-fn shl_bin_width_mismatch_refuses_statically() {
-    let src = "nodule d;\nfn main() => Binary{8} = shl_bin(0b0000_0001, 0b0);";
+fn shl_u_width_mismatch_refuses_statically() {
+    let src = "nodule d;\nfn main() => Binary{8} = shl_u(0b0000_0001, 0b0);";
     assert!(
         check_nodule(&parse(src).expect("parses")).is_err(),
-        "a width-mismatched shl_bin must be a static type error, never a silent coercion"
+        "a width-mismatched shl_u must be a static type error, never a silent coercion"
     );
 }
 
 // ── M-766 (`enb` Gap B): never-silent two's-complement add/sub/neg ──────────────────────────────
 //
-// `add_tc`/`sub_tc`/`neg_bin` (kernel `bin.add`/`bin.sub`/`bin.neg`) complete the *shared*
-// two's-complement arithmetic set `mul_bin` (M-887) started — RFC-0033 §4.1.2/§4.1.3, ADR-028.
+// `add_s`/`sub_s`/`neg_s` (kernel `bin.add`/`bin.sub`/`bin.neg`) complete the *shared*
+// two's-complement arithmetic set `mul_s` (M-887) started — RFC-0033 §4.1.2/§4.1.3, ADR-028.
 //
 // **Inventory (verified before landing, per the M-766 task's "reconcile against the kpr-landed
-// add/sub" instruction).** The pre-existing `add_bin`/`sub_bin` (kernel `bit.add`/`bit.sub`,
+// add/sub" instruction).** The pre-existing `add_u`/`sub_u` (kernel `bit.add`/`bit.sub`,
 // kpr/E19-1, RFC-0032 D2) are a **different, unsigned-committed** family: their overflow criterion
 // is the unsigned carry/borrow-out, which *under-refuses* relative to the signed range `B_N` (e.g.
 // at `Binary{4}`, `5 + 3 = 8` is unsigned-in-range `[0,15]` but signed-out-of-range `B_4 = [-8,7]`),
-// so they do not stand in for the RFC-0033 shared `add`/`sub`. `add_tc`/`sub_tc` are therefore
-// genuinely missing (not a re-land of E19-1's work), completed here alongside `neg_bin` (which has
-// no pre-existing counterpart at all — negation is inherently a signed concept). Naming: `_tc`
-// (not `_bin`) for `add`/`sub` because `add_bin`/`sub_bin` are already claimed; see the
-// `checkty::prim_family` FLAG comment for the maintainer-facing naming note.
+// so they do not stand in for the RFC-0033 shared `add`/`sub`. `add_s`/`sub_s` are therefore
+// genuinely missing (not a re-land of E19-1's work), completed here alongside `neg_s` (which has
+// no pre-existing counterpart at all — negation is inherently a signed concept). Naming: the
+// `_u`/`_s` signedness suffixes follow the DN-72 surface-naming convention (ratified 2026-07-02;
+// ADR-028); see the `checkty::prim_family` naming comment.
 
 #[test]
-fn add_tc_and_sub_tc_worked_examples() {
+fn add_s_and_sub_s_worked_examples() {
     // 3 + 4 = 7.
     assert_three_way(
-        "add_tc positive",
-        "nodule d;\nfn main() => Binary{8} = add_tc(0b0000_0011, 0b0000_0100);",
+        "add_s positive",
+        "nodule d;\nfn main() => Binary{8} = add_s(0b0000_0011, 0b0000_0100);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000111".chars().map(|c| c == '1').collect()),
     );
     // -3 + 4 = 1 (two's complement: -3 = 0b1111_1101).
     assert_three_way(
-        "add_tc negative operand",
-        "nodule d;\nfn main() => Binary{8} = add_tc(0b1111_1101, 0b0000_0100);",
+        "add_s negative operand",
+        "nodule d;\nfn main() => Binary{8} = add_s(0b1111_1101, 0b0000_0100);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000001".chars().map(|c| c == '1').collect()),
     );
     // 7 - 4 = 3.
     assert_three_way(
-        "sub_tc positive",
-        "nodule d;\nfn main() => Binary{8} = sub_tc(0b0000_0111, 0b0000_0100);",
+        "sub_s positive",
+        "nodule d;\nfn main() => Binary{8} = sub_s(0b0000_0111, 0b0000_0100);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
     );
     // 4 - (-3) = 7 (two's complement: -3 = 0b1111_1101).
     assert_three_way(
-        "sub_tc subtract-negative",
-        "nodule d;\nfn main() => Binary{8} = sub_tc(0b0000_0100, 0b1111_1101);",
+        "sub_s subtract-negative",
+        "nodule d;\nfn main() => Binary{8} = sub_s(0b0000_0100, 0b1111_1101);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000111".chars().map(|c| c == '1').collect()),
     );
 }
 
 #[test]
-fn neg_bin_worked_examples() {
+fn neg_s_worked_examples() {
     // -(3) = -3 (0b1111_1101).
     assert_three_way(
-        "neg_bin positive operand",
-        "nodule d;\nfn main() => Binary{8} = neg_bin(0b0000_0011);",
+        "neg_s positive operand",
+        "nodule d;\nfn main() => Binary{8} = neg_s(0b0000_0011);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("11111101".chars().map(|c| c == '1').collect()),
     );
     // -(-3) = 3.
     assert_three_way(
-        "neg_bin negative operand",
-        "nodule d;\nfn main() => Binary{8} = neg_bin(0b1111_1101);",
+        "neg_s negative operand",
+        "nodule d;\nfn main() => Binary{8} = neg_s(0b1111_1101);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000011".chars().map(|c| c == '1').collect()),
     );
     // -(0) = 0.
     assert_three_way(
-        "neg_bin zero",
-        "nodule d;\nfn main() => Binary{8} = neg_bin(0b0000_0000);",
+        "neg_s zero",
+        "nodule d;\nfn main() => Binary{8} = neg_s(0b0000_0000);",
         &Repr::Binary { width: 8 },
         &Payload::Bits("00000000".chars().map(|c| c == '1').collect()),
     );
 }
 
-/// `add_tc`/`sub_tc` overflow (`127 + 1`, `-128 - 1` at `Binary{8}`, both out of `B_8 = [-128,
+/// `add_s`/`sub_s` overflow (`127 + 1`, `-128 - 1` at `Binary{8}`, both out of `B_8 = [-128,
 /// 127]`) is an explicit refusal on **all three** paths — never a silent wrap. (The program
-/// type-checks: the two's-complement overflow bound is a runtime contract, like `mul_bin`'s.)
+/// type-checks: the two's-complement overflow bound is a runtime contract, like `mul_s`'s.)
 #[test]
-fn add_tc_and_sub_tc_overflow_refuse_on_every_path() {
+fn add_s_and_sub_s_overflow_refuse_on_every_path() {
     for src in [
-        "nodule d;\nfn main() => Binary{8} = add_tc(0b0111_1111, 0b0000_0001);",
-        "nodule d;\nfn main() => Binary{8} = sub_tc(0b1000_0000, 0b0000_0001);",
+        "nodule d;\nfn main() => Binary{8} = add_s(0b0111_1111, 0b0000_0001);",
+        "nodule d;\nfn main() => Binary{8} = sub_s(0b1000_0000, 0b0000_0001);",
     ] {
         let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
@@ -782,8 +782,8 @@ fn add_tc_and_sub_tc_overflow_refuse_on_every_path() {
 /// The classic two's-complement negate-overflow edge (`i8::MIN` negated at `Binary{8}`, out of
 /// `B_8 = [-128, 127]`) refuses on all three paths — never a silent wrap back to `-128`.
 #[test]
-fn neg_bin_min_value_refuses_on_every_path() {
-    let src = "nodule d;\nfn main() => Binary{8} = neg_bin(0b1000_0000);";
+fn neg_s_min_value_refuses_on_every_path() {
+    let src = "nodule d;\nfn main() => Binary{8} = neg_s(0b1000_0000);";
     let env = check_nodule(&parse(src).expect("parses")).expect("checks");
 
     let interp = Interpreter::new(
@@ -809,16 +809,16 @@ fn neg_bin_min_value_refuses_on_every_path() {
 }
 
 /// A width/paradigm mismatch (`Binary{8}` vs `Binary{1}`) is a **static** never-silent refusal for
-/// `add_tc`/`sub_tc` — caught at check time, mirroring `mul_bin`'s width-preserving contract.
+/// `add_s`/`sub_s` — caught at check time, mirroring `mul_s`'s width-preserving contract.
 #[test]
-fn add_tc_and_sub_tc_width_mismatch_refuse_statically() {
+fn add_s_and_sub_s_width_mismatch_refuse_statically() {
     for src in [
-        "nodule d;\nfn main() => Binary{8} = add_tc(0b0000_0001, 0b0);",
-        "nodule d;\nfn main() => Binary{8} = sub_tc(0b0000_0001, 0b0);",
+        "nodule d;\nfn main() => Binary{8} = add_s(0b0000_0001, 0b0);",
+        "nodule d;\nfn main() => Binary{8} = sub_s(0b0000_0001, 0b0);",
     ] {
         assert!(
             check_nodule(&parse(src).expect("parses")).is_err(),
-            "a width-mismatched add_tc/sub_tc must be a static type error, never a silent \
+            "a width-mismatched add_s/sub_s must be a static type error, never a silent \
              coercion: {src}"
         );
     }
@@ -1683,7 +1683,7 @@ fn float_pattern_reject() {
 //     **in-band, inspectable, propagating values** per the ratified ADR-040 §2.4 FLAG-2
 //     (overflow → ±inf, `x/0` → ±inf with the IEEE sign rule, `0/0` → canonical NaN), pinned
 //     three-way by the `flt_arith_specials_*` tests — never a trap, never a silent alias of an
-//     ordinary value (the in-band sentinel IS the signal; contrast integer `div_bin`, which has
+//     ordinary value (the in-band sentinel IS the signal; contrast integer `div_u`, which has
 //     no sentinel and must refuse).
 // Per-op tag: **`Empirical`** per the ratified ADR-040 §2.6 — the correctly-rounded-RNE
 // *definition* is the spec (`Exact` as a definition), the host-delivers-those-bits

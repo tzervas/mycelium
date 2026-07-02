@@ -5,6 +5,6 @@
 // program end-to-end exercises the transitive cross-nodule link the M-909 `Env` merge exists for.
 nodule mathutils;
 
-fn quadruple_inner(x: Binary{8}) => Binary{8} = add_bin(x, x);
+fn quadruple_inner(x: Binary{8}) => Binary{8} = add_u(x, x);
 
-pub fn quadruple(x: Binary{8}) => Binary{8} = add_bin(quadruple_inner(x), quadruple_inner(x));
+pub fn quadruple(x: Binary{8}) => Binary{8} = add_u(quadruple_inner(x), quadruple_inner(x));

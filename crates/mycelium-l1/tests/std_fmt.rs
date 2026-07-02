@@ -6,7 +6,7 @@
 //! driver `fn main` is appended. `assert_three_way` mirrors `std_option.rs` exactly.
 //!
 //! # Honesty tags
-//! - **`Exact`** — `hex_digit` (total over 0..15 via `lt`/`add_bin`; the ≥16 fallback arm is `Declared`), `nibble_lo` (total bit-mask),
+//! - **`Exact`** — `hex_digit` (total over 0..15 via `lt`/`add_u`; the ≥16 fallback arm is `Declared`), `nibble_lo` (total bit-mask),
 //!   `nibble_hi` (total 4-level lt binary-search tree over 16 possible masked values).
 //! - **`Declared`** — `to_hex` (structural composition of Exact parts; correct for all Binary{8}
 //!   inputs by construction).
@@ -123,56 +123,56 @@ fn assert_three_way(label: &str, src: &str, expected_src: &str) {
 //   10 → 'a'=0x61=0b0110_0001   15  → 'f'=0x66=0b0110_0110
 // Hand-computed: 0..9: 0x30+n; 10..15: 0x57+n (since 0x57+10=0x61='a').
 //
-// Reference programs use `add_bin` to match the `Derived` provenance of the computed result
+// Reference programs use `add_u` to match the `Derived` provenance of the computed result
 // (a literal `0b0011_0000` would have `Root` provenance — see std_option.rs `map` comment).
 
-/// `hex_digit(0)` → `add_bin(0, 0x30)` = '0' = 0x30 (Exact: 0 < 10, add_bin(0, 0x30)).
+/// `hex_digit(0)` → `add_u(0, 0x30)` = '0' = 0x30 (Exact: 0 < 10, add_u(0, 0x30)).
 #[test]
 fn hex_digit_zero() {
     let driver = "fn main() => Binary{8} = hex_digit(0b0000_0000);";
     let src = program(driver);
-    // Reference: add_bin(0b0000_0000, 0b0011_0000) — Derived provenance to match computed result.
-    let expected = "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_0000, 0b0011_0000);";
+    // Reference: add_u(0b0000_0000, 0b0011_0000) — Derived provenance to match computed result.
+    let expected = "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_0000, 0b0011_0000);";
     assert_three_way("hex_digit(0)='0'", &src, expected);
 }
 
-/// `hex_digit(9)` → `add_bin(9, 0x30)` = '9' = 0x39 (Exact: 9 < 10, add_bin(9, 0x30)).
+/// `hex_digit(9)` → `add_u(9, 0x30)` = '9' = 0x39 (Exact: 9 < 10, add_u(9, 0x30)).
 #[test]
 fn hex_digit_nine() {
-    // 0b0000_1001 = 9; '9'=0x39=57. Reference: add_bin(0b0000_1001, 0b0011_0000).
+    // 0b0000_1001 = 9; '9'=0x39=57. Reference: add_u(0b0000_1001, 0b0011_0000).
     let driver = "fn main() => Binary{8} = hex_digit(0b0000_1001);";
     let src = program(driver);
-    let expected = "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_1001, 0b0011_0000);";
+    let expected = "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_1001, 0b0011_0000);";
     assert_three_way("hex_digit(9)='9'", &src, expected);
 }
 
-/// `hex_digit(10)` → `add_bin(10, 0x57)` = 'a' = 0x61 (Exact: 10 >= 10, 10 < 16).
+/// `hex_digit(10)` → `add_u(10, 0x57)` = 'a' = 0x61 (Exact: 10 >= 10, 10 < 16).
 #[test]
 fn hex_digit_ten() {
-    // 0b0000_1010 = 10; 'a'=0x61=97. Reference: add_bin(0b0000_1010, 0b0101_0111).
+    // 0b0000_1010 = 10; 'a'=0x61=97. Reference: add_u(0b0000_1010, 0b0101_0111).
     let driver = "fn main() => Binary{8} = hex_digit(0b0000_1010);";
     let src = program(driver);
-    let expected = "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_1010, 0b0101_0111);";
+    let expected = "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_1010, 0b0101_0111);";
     assert_three_way("hex_digit(10)='a'", &src, expected);
 }
 
-/// `hex_digit(15)` → `add_bin(15, 0x57)` = 'f' = 0x66 (Exact: 15 >= 10, 15 < 16).
+/// `hex_digit(15)` → `add_u(15, 0x57)` = 'f' = 0x66 (Exact: 15 >= 10, 15 < 16).
 #[test]
 fn hex_digit_fifteen() {
-    // 0b0000_1111 = 15; 'f'=0x66=102. Reference: add_bin(0b0000_1111, 0b0101_0111).
+    // 0b0000_1111 = 15; 'f'=0x66=102. Reference: add_u(0b0000_1111, 0b0101_0111).
     let driver = "fn main() => Binary{8} = hex_digit(0b0000_1111);";
     let src = program(driver);
-    let expected = "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_1111, 0b0101_0111);";
+    let expected = "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_1111, 0b0101_0111);";
     assert_three_way("hex_digit(15)='f'", &src, expected);
 }
 
-/// `hex_digit(5)` → `add_bin(5, 0x30)` = '5' = 0x35 (Exact: 5 < 10, add_bin(5, 0x30)).
+/// `hex_digit(5)` → `add_u(5, 0x30)` = '5' = 0x35 (Exact: 5 < 10, add_u(5, 0x30)).
 #[test]
 fn hex_digit_five() {
-    // 0b0000_0101 = 5; '5'=0x35=53. Reference: add_bin(0b0000_0101, 0b0011_0000).
+    // 0b0000_0101 = 5; '5'=0x35=53. Reference: add_u(0b0000_0101, 0b0011_0000).
     let driver = "fn main() => Binary{8} = hex_digit(0b0000_0101);";
     let src = program(driver);
-    let expected = "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_0101, 0b0011_0000);";
+    let expected = "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_0101, 0b0011_0000);";
     assert_three_way("hex_digit(5)='5'", &src, expected);
 }
 
@@ -295,7 +295,7 @@ fn nibble_hi_fifteen() {
 // CONSEQUENCE (honest, VR-5): `to_hex_ref` proves L1 ≡ L0 ≡ AOT cross-engine agreement + provenance
 // stability — it does NOT independently confirm bit values (a swapped-nibble composition bug would
 // replicate into the reference). Independent value-grounding comes from the dedicated
-// `hex_digit`/`nibble_lo`/`nibble_hi` tests above (hand-built `add_bin` oracles, not self-referential);
+// `hex_digit`/`nibble_lo`/`nibble_hi` tests above (hand-built `add_u` oracles, not self-referential);
 // `to_hex` is the visible 1-line composition `HP(hex_digit(nibble_hi(x)), hex_digit(nibble_lo(x)))`,
 // and the per-case hand-computed values are documented just below.
 //

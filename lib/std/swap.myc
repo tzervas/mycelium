@@ -212,7 +212,7 @@ fn matrix() => Vec[MatrixRow] =
 // std_swap.rs three-way differential) over Declared data.
 // matrix_len: the row count, as Binary{8}. O(n) spine-walk (Declared, mirrors std.diag::matrix_len).
 fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
-  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_bin(0b0000_0001, matrix_len(rest)) };
+  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_u(0b0000_0001, matrix_len(rest)) };
 
 // all_ops_nonempty: no matrix row has an empty op name (lib.rs: "matrix row has empty op name").
 fn all_ops_nonempty(xs: Vec[MatrixRow]) => Bool =

@@ -1,5 +1,5 @@
 //! Differential tests for `std.ternary` (M-933, E29-1, kickoff `opp`) — the balanced-ternary
-//! value surface: Trit/Bit digit primitives, the `int <-> trits` codec over `div_bin`/`rem_bin`,
+//! value surface: Trit/Bit digit primitives, the `int <-> trits` codec over `div_u`/`rem_u`,
 //! fixed-width `Trits` arithmetic with explicit `Option` fallibility, the I2S/TL1/TL2 packed
 //! codecs, and the RFC-0016 §4.5 guarantee matrix as data.
 //!
@@ -143,8 +143,8 @@ fn biased_option_trits_driver(expr: &str) -> String {
         "fn main() => Binary{{16}} = match {expr} {{ \
            None => 0b0000_0000_0000_0000, \
            Some(ts) => match trits_to_int(ts) {{ \
-             SPos(mag) => add_bin(0b0000_0011_1110_1000, mag), \
-             SNeg(mag) => sub_bin(0b0000_0011_1110_1000, mag) }} }};"
+             SPos(mag) => add_u(0b0000_0011_1110_1000, mag), \
+             SNeg(mag) => sub_u(0b0000_0011_1110_1000, mag) }} }};"
     )
 }
 
@@ -670,7 +670,7 @@ fn oracle_sub_and_neg_pairs() {
     // neg: value(neg(t)) == -value(t) for the worked example, on both sides.
     let a = trits_expr(&rust_int_to_trits(-78, 6).expect("in range"));
     let driver = format!(
-        "fn main() => Binary{{16}} = match trits_to_int(trits_neg({a})) {{ SPos(mag) => add_bin(0b0000_0011_1110_1000, mag), SNeg(mag) => sub_bin(0b0000_0011_1110_1000, mag) }};"
+        "fn main() => Binary{{16}} = match trits_to_int(trits_neg({a})) {{ SPos(mag) => add_u(0b0000_0011_1110_1000, mag), SNeg(mag) => sub_u(0b0000_0011_1110_1000, mag) }};"
     );
     let myc = eval_uint("neg(-78)", &driver);
     let ra = rust_int_to_trits(-78, 6).expect("in range");

@@ -200,14 +200,14 @@ fn kind_ctor(k: Option<&str>) -> &'static str {
 const REF_TYPES: &str = "type Guarantee = GExact | GProven | GEmpirical | GDeclared;\n\
                          type CertKind = KBijective | KBounded | KNone;";
 
-/// Render the `n`-deep nested `add_bin(0b1, …)` expression `matrix_len`'s recursive spine-walk
+/// Render the `n`-deep nested `add_u(0b1, …)` expression `matrix_len`'s recursive spine-walk
 /// expands to (the `std_diag.rs` precedent: the reference recomputes via the SAME primitive-op
 /// composition, so it carries the matching `Derived` provenance while remaining an independent
 /// check of the row count).
 fn myc_len_chain(n: u8) -> String {
     let mut expr = "0b0000_0000".to_owned();
     for _ in 0..n {
-        expr = format!("add_bin(0b0000_0001, {expr})");
+        expr = format!("add_u(0b0000_0001, {expr})");
     }
     expr
 }

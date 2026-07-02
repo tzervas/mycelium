@@ -27,7 +27,7 @@
 //!
 //! # What three-way covers
 //! - `is_empty_l` — total discriminator (Exact), three-way green
-//! - `length` — O(n) spine-walk (Declared), three-way green; never-silent add_bin overflow (Empirical)
+//! - `length` — O(n) spine-walk (Declared), three-way green; never-silent add_u overflow (Empirical)
 //! - `map` / `filter` / `foldl` / `any` / `all` / `find` — recursive HOF combinators over a named
 //!   top-level fn arg (Declared contract; Empirical three-way agreement)
 
@@ -154,15 +154,15 @@ fn is_empty_l_on_cons_returns_false() {
 
 /// `length([0b01, 0b02])` → `0b0000_0010`. O(n) spine-walk; Declared.
 /// Expected (hand-computed, three-way verified): same provenance-matching rationale as
-/// std_collections.rs::len_of_two_element_list — the reference uses add_bin, not a literal,
-/// to match the Derived provenance produced by `length`'s `add_bin` spine.
+/// std_collections.rs::len_of_two_element_list — the reference uses add_u, not a literal,
+/// to match the Derived provenance produced by `length`'s `add_u` spine.
 #[test]
 fn length_of_two_element_list() {
     let driver = "fn mk_two() => List[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Nil));\nfn main() => Binary{8} = length(mk_two());";
     let src = program(driver);
-    // length([e1, e2]) = add_bin(1, add_bin(1, 0)) = 2 — Derived provenance matches.
+    // length([e1, e2]) = add_u(1, add_u(1, 0)) = 2 — Derived provenance matches.
     let expected =
-        "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000));";
+        "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_0001, add_u(0b0000_0001, 0b0000_0000));";
     assert_three_way("length([1,2])", &src, expected);
 }
 
@@ -183,17 +183,17 @@ fn length_of_nil_is_zero() {
 fn length_of_three_element_list() {
     let driver = "fn mk_three() => List[Binary{8}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)));\nfn main() => Binary{8} = length(mk_three());";
     let src = program(driver);
-    // length([e1,e2,e3]) = add_bin(1, add_bin(1, add_bin(1, 0))) = 3
-    let expected = "nodule ref;\nfn main() => Binary{8} = add_bin(0b0000_0001, add_bin(0b0000_0001, add_bin(0b0000_0001, 0b0000_0000)));";
+    // length([e1,e2,e3]) = add_u(1, add_u(1, add_u(1, 0))) = 3
+    let expected = "nodule ref;\nfn main() => Binary{8} = add_u(0b0000_0001, add_u(0b0000_0001, add_u(0b0000_0001, 0b0000_0000)));";
     assert_three_way("length([1,2,3])", &src, expected);
 }
 
-/// `length` never-silent overflow bound: `add_bin(0b0000_0001, 0b1111_1111)` refuses on ALL paths.
+/// `length` never-silent overflow bound: `add_u(0b0000_0001, 0b1111_1111)` refuses on ALL paths.
 /// This pins the Binary{8} capacity ceiling of `length`, mirroring
-/// std_collections.rs::len_bound_add_bin_overflow_refuses_on_every_path. Empirical.
+/// std_collections.rs::len_bound_add_u_overflow_refuses_on_every_path. Empirical.
 #[test]
-fn length_bound_add_bin_overflow_refuses_on_every_path() {
-    let src = program("fn main() => Binary{8} = add_bin(0b0000_0001, 0b1111_1111);");
+fn length_bound_add_u_overflow_refuses_on_every_path() {
+    let src = program("fn main() => Binary{8} = add_u(0b0000_0001, 0b1111_1111);");
 
     let env =
         check_nodule(&parse(&src).expect("length_bound: parse must succeed (overflow is runtime)"))
@@ -208,7 +208,7 @@ fn length_bound_add_bin_overflow_refuses_on_every_path() {
 
     assert!(
         Evaluator::new(&env).call("main", vec![]).is_err(),
-        "length_bound: L1-eval must refuse the add_bin overflow (never a silent wrap to 0)"
+        "length_bound: L1-eval must refuse the add_u overflow (never a silent wrap to 0)"
     );
     let node = elaborate(&env, "main").expect("length_bound: must elaborate");
     assert!(
@@ -226,11 +226,11 @@ fn length_bound_add_bin_overflow_refuses_on_every_path() {
 // map/filter/foldl/any/all/find now run three-way (L1-eval ≡ L0-interp ≡ AOT) over a single named
 // top-level fn argument. The recursive re-pass of the HOF parameter (`map(rest, f)` etc.) is threaded
 // as the same static specialization (mono::resolve_fn_args). References share Derived/Root provenance
-// with the computed value: `map`'s elements are `add_bin(h, 1)` (Derived); `filter`/`find` return the
+// with the computed value: `map`'s elements are `add_u(h, 1)` (Derived); `filter`/`find` return the
 // original element (Root). Closures / multi-arg arrows stay deferred (M-704) — only NAMED fns here.
 
 // A reusable Binary{8} successor as a top-level fn (a valid RFC-0024 §4 defunctionalization target).
-const INC: &str = "fn inc(x: Binary{8}) => Binary{8} = add_bin(x, 0b0000_0001);\n";
+const INC: &str = "fn inc(x: Binary{8}) => Binary{8} = add_u(x, 0b0000_0001);\n";
 // A reusable Binary{8} predicate (== 0b10) as a top-level fn.
 const IS_TWO: &str =
     "fn is_two(x: Binary{8}) => Bool = match eq(x, 0b0000_0010) { 0b1 => True, _ => False };\n";
@@ -241,9 +241,9 @@ fn map_applies_fn_to_each_element() {
     let src = program(&format!(
         "{INC}fn mk() => List[Binary{{8}}] = Cons(0b0000_0001, Cons(0b0000_0010, Nil));\nfn main() => List[Binary{{8}}] = map(mk(), inc);"
     ));
-    // Reference: recompute via the same add_bin so the mapped elements share Derived provenance.
+    // Reference: recompute via the same add_u so the mapped elements share Derived provenance.
     let expected = program(
-        "fn main() => List[Binary{8}] = Cons(add_bin(0b0000_0001, 0b0000_0001), Cons(add_bin(0b0000_0010, 0b0000_0001), Nil));",
+        "fn main() => List[Binary{8}] = Cons(add_u(0b0000_0001, 0b0000_0001), Cons(add_u(0b0000_0010, 0b0000_0001), Nil));",
     );
     assert_three_way("map([1,2], inc)=[2,3]", &src, &expected);
 }
@@ -276,7 +276,7 @@ fn foldl_returns_f_of_last_for_nonempty() {
     let src = program(&format!(
         "{INC}fn mk() => List[Binary{{8}}] = Cons(0b0000_0001, Cons(0b0000_0010, Cons(0b0000_0011, Nil)));\nfn main() => Binary{{8}} = foldl(mk(), inc, 0b0000_0000);"
     ));
-    let expected = program("fn main() => Binary{8} = add_bin(0b0000_0011, 0b0000_0001);");
+    let expected = program("fn main() => Binary{8} = add_u(0b0000_0011, 0b0000_0001);");
     assert_three_way("foldl([1,2,3], inc, 0)=inc(3)=4", &src, &expected);
 }
 

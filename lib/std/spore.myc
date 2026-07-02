@@ -167,7 +167,7 @@ fn nonempty(b: Bytes) => Bool =
 // Every bytes_get is bounds-guarded by the preceding `eq(index, n)` check, so the prim's
 // out-of-range refusal is unreachable by construction (total on its domain). Exact.
 fn bytes_eq_from(a: Bytes, b: Bytes, i: Binary{32}, n: Binary{32}) => Bool =
-  match eq(i, n) { 0b1 => True, _ => match eq(bytes_get(a, i), bytes_get(b, i)) { 0b1 => match eq(add_bin(i, b32_one()), n) { 0b1 => True, _ => match eq(bytes_get(a, add_bin(i, b32_one())), bytes_get(b, add_bin(i, b32_one()))) { 0b1 => match eq(add_bin(i, b32_two()), n) { 0b1 => True, _ => match eq(bytes_get(a, add_bin(i, b32_two())), bytes_get(b, add_bin(i, b32_two()))) { 0b1 => match eq(add_bin(i, b32_three()), n) { 0b1 => True, _ => match eq(bytes_get(a, add_bin(i, b32_three())), bytes_get(b, add_bin(i, b32_three()))) { 0b1 => bytes_eq_from(a, b, add_bin(i, b32_four()), n), _ => False } }, _ => False } }, _ => False } }, _ => False } };
+  match eq(i, n) { 0b1 => True, _ => match eq(bytes_get(a, i), bytes_get(b, i)) { 0b1 => match eq(add_u(i, b32_one()), n) { 0b1 => True, _ => match eq(bytes_get(a, add_u(i, b32_one())), bytes_get(b, add_u(i, b32_one()))) { 0b1 => match eq(add_u(i, b32_two()), n) { 0b1 => True, _ => match eq(bytes_get(a, add_u(i, b32_two())), bytes_get(b, add_u(i, b32_two()))) { 0b1 => match eq(add_u(i, b32_three()), n) { 0b1 => True, _ => match eq(bytes_get(a, add_u(i, b32_three())), bytes_get(b, add_u(i, b32_three()))) { 0b1 => bytes_eq_from(a, b, add_u(i, b32_four()), n), _ => False } }, _ => False } }, _ => False } }, _ => False } };
 
 // bytes_eq: whole byte-string equality composed from the D4 prims (no equality prim exists —
 // the gap std.diag FLAGged; this is the honest composition, not a fabricated prim). Exact.
@@ -477,7 +477,7 @@ fn matrix() => Vec[MatrixRow] =
 
 // matrix_len: the row count as Binary{8} (15 rows fits trivially). O(n) spine-walk. Exact.
 fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
-  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_bin(0b0000_0001, matrix_len(rest)) };
+  match xs { Nil => 0b0000_0000, Cons(_, rest) => add_u(0b0000_0001, matrix_len(rest)) };
 
 // ── structural checks (the ADT-typed analogs of guarantee_matrix.rs::tests; substring-based
 // Rust assertions are covered by the LIVE per-column byte comparison in std_spore.rs) ───────────
