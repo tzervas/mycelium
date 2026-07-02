@@ -209,7 +209,7 @@ declines to introduce. **No crate is marked `#[deprecated]` by this note.**
 - M-719 issue body (`tools/github/issues.yaml`) — the "STILL OPEN... this is a maintainer/
   orchestrator decision, not closed by this leaf" framing this note takes literally and honors.
 
-## 6. Currency note — 2026-07-02 (post-M-883/M-884, kickoff `acy`)
+## 7. Currency note — 2026-07-02 (post-M-883/M-884, kickoff `acy`)
 
 *Append-only currency record (house rule #3 — §4.c's original text stands unchanged; this records a
 changed factual basis, it does not rewrite the decision).*
@@ -234,6 +234,25 @@ Consequences for §4.c:
   this note neither triggers nor forecloses it.
 
 Basis: `cargo xtask deps` (0 violations post-extraction); `docs/notes/DN-68-Acyclic-Deps-Invariant.md`; PRs #935/#936.
+
+## 8. Enactment-timing decision — 2026-07-02 (maintainer)
+
+*Append-only decision record (house rule #3): this fixes the enactment gate; the §2/§3 findings and
+the §4 FLAG list are unchanged.*
+
+**DN-66 — and the RFC-0031 §5 D6 Rust-crate retirement it assesses — does not enact until the
+project's Mycelium (`.myc`) rewrites are fully operational.** The Rust reference crates
+(`mycelium-std-runtime` included) stay authoritative until then; no crate is retired or
+`#[deprecated]`-marked on the strength of a partial `.myc` port. This binds the retirement/enactment
+gate to functional-completeness of the rewrites — ADR-038's Phase-II terminal
+(*"`1.0.0` ≡ fully-rewritten-where-appropriate + 100% operational"*) — and is consistent with §7's
+finding that the `mycelium-mlir` load-bearing basis is void yet retirement stays gated.
+
+An **interim interop harness** (bridging the Rust reference crates and `.myc` implementations during
+the transition) **may** become necessary, but is **preferably addressed as-needed only** — built when a
+concrete transition step requires it, not preemptively.
+
+DN-66 stays **Accepted**; this records the enactment timing, it does not advance the status to Enacted.
 
 ## Changelog
 
