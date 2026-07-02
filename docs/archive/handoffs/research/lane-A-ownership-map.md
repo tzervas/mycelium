@@ -1,9 +1,9 @@
 # Lane A — Rust Ownership/Borrow/Lifetime/`unsafe` → Mycelium Value-Semantics Map
 
-**Lane:** A
-**Date:** 2026-06-24
-**Author:** Research Agent (Sonnet-4.6)
-**Status:** Decision-grade research handoff — `Empirical` findings, `Declared` where noted
+**Lane:** A  
+**Date:** 2026-06-24  
+**Author:** Research Agent (Sonnet-4.6)  
+**Status:** Decision-grade research handoff — `Empirical` findings, `Declared` where noted  
 **Grounding basis:** Mycelium corpus (RFC-0001, RFC-0002, RFC-0007, RFC-0008, RFC-0027, RFC-0028,
 DN-02, DN-03, Glossary.md, ADR-014, ADR-032) + external prior art (cited inline)
 
