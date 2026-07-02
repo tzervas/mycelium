@@ -5009,9 +5009,9 @@ impl Cx<'_> {
         ))
     }
 
-    /// Type a `Seq`/`Bytes` indexing/length/slice/concat prim (RFC-0032 D3/D4; M-749/M-750/M-799), or
-    /// `Ok(None)` if `name` is not one of them (so the caller falls through to the width-preserving
-    /// prim path).
+    /// Type a `Seq`/`Bytes` indexing/length/slice/concat/eq/hash prim (RFC-0032 D3/D4; M-749/M-750/
+    /// M-799; M-912), or `Ok(None)` if `name` is not one of them (so the caller falls through to the
+    /// width-preserving prim path).
     /// The operands are checked, the receiver's repr type is verified (a non-`Seq`/`Bytes` receiver,
     /// or a wrong arity, is an explicit never-silent refusal — G2), and the result type is returned.
     fn try_check_seq_bytes_prim(
@@ -5166,6 +5166,49 @@ impl Cx<'_> {
                     Ty::Binary(Width::Lit(m)),
                     app_node(head, vec![v2, w2]),
                 )))
+            }
+            // M-912 (`enb`, folded-in gap): `bytes_eq(a: Bytes, b: Bytes) -> Binary{1}` — byte-wise
+            // equality, flagged missing by the diag/error/recover ports (`bytes.*` had len/get/
+            // slice/concat but no equality). Both operands must be `Bytes` (a non-`Bytes` operand is
+            // an explicit static refusal — G2); the result is the realized `Bool` truth value, total
+            // over every pair (`prims.rs::prim_bytes_eq` is a straight `[u8]` comparison).
+            "bytes_eq" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (a, a2) = self.check(scope, &args[0], None)?;
+                if !matches!(a, Ty::Bytes) {
+                    return self.err(format!(
+                        "`bytes_eq` expects a `Bytes` first operand, got {a} (M-912)"
+                    ));
+                }
+                let (b, b2) = self.check(scope, &args[1], None)?;
+                if !matches!(b, Ty::Bytes) {
+                    return self.err(format!(
+                        "`bytes_eq` expects a `Bytes` second operand, got {b} (M-912)"
+                    ));
+                }
+                Ok(Some((
+                    Ty::Binary(Width::Lit(1)),
+                    app_node(head, vec![a2, b2]),
+                )))
+            }
+            // M-912 (`enb`): `hash_blake3(b: Bytes) -> Bytes` — the kernel's own BLAKE3
+            // content-addressing hash (M-103) surfaced as a prim: the 32-byte digest of the input
+            // byte string. The operand must be `Bytes` (a non-`Bytes` operand is an explicit static
+            // refusal — G2); total and deterministic over every `Bytes` input, so there is no
+            // runtime failure domain (unlike `bytes_get`/`bytes_slice`).
+            "hash_blake3" => {
+                if args.len() != 1 {
+                    return arity_err(1);
+                }
+                let (recv, recv2) = self.check(scope, &args[0], None)?;
+                if !matches!(recv, Ty::Bytes) {
+                    return self.err(format!(
+                        "`hash_blake3` expects a `Bytes` operand, got {recv} (M-912)"
+                    ));
+                }
+                Ok(Some((Ty::Bytes, app_node(head, vec![recv2]))))
             }
             _ => Ok(None),
         }
@@ -6454,6 +6497,12 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // M-750). Surfacing only — the kernel prims exist + are registered; this maps the surface name.
         "bytes_slice" => "bytes.slice",
         "bytes_concat" => "bytes.concat",
+        // M-912 (`enb`, folded-in gap): byte-wise equality — flagged missing by the diag/error/
+        // recover ports (`bytes.*` had len/get/slice/concat but no equality).
+        "bytes_eq" => "bytes.eq",
+        // M-912 (`enb`): the kernel's own BLAKE3 content-addressing hash (M-103;
+        // `mycelium-core::content::Canon`/`id::ContentHash`) surfaced as a prim.
+        "hash_blake3" => "hash.blake3",
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         "width_cast" => "bit.width_cast",
         // RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the tensor-valued dense elementwise

@@ -1490,6 +1490,97 @@ fn bytes_prims_refuse_non_bytes_operand() {
     );
 }
 
+// ── M-912: `bytes.eq` / `hash.blake3` — prim-level differential (L0-interp ≡ AOT) ────────────────
+//
+// Like the M-750 group above, these are kernel prims exercised directly as L0 `Node` trees before
+// any `.myc` surface existed to name them; the full surface three-way (now that `bytes_eq`/
+// `hash_blake3` are surface-callable) follows below with the rest of the D3/D4 surface tests.
+
+#[test]
+fn bytes_eq_l0_interp_equal_aot() {
+    let a = bytes_val(vec![0x01, 0x02, 0x03]);
+    let a2 = bytes_val(vec![0x01, 0x02, 0x03]);
+    let b = bytes_val(vec![0x01, 0x02, 0x04]);
+
+    // Equal byte strings -> true, on both paths.
+    let eq_node = Node::Op {
+        prim: "bytes.eq".to_owned(),
+        args: vec![Node::Const(a.clone()), Node::Const(a2)],
+    };
+    let (l0, aot) = run_l0_and_aot(&eq_node);
+    let l0 = l0.expect("bytes.eq(equal) L0-interp");
+    let aot = aot.expect("bytes.eq(equal) AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(l0.repr(), &Repr::Binary { width: 1 });
+    assert_eq!(l0.payload(), &Payload::Bits(vec![true]));
+
+    // Unequal byte strings -> false, on both paths.
+    let neq_node = Node::Op {
+        prim: "bytes.eq".to_owned(),
+        args: vec![Node::Const(a), Node::Const(b)],
+    };
+    let (l0, aot) = run_l0_and_aot(&neq_node);
+    let l0 = l0.expect("bytes.eq(unequal) L0-interp");
+    let aot = aot.expect("bytes.eq(unequal) AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(l0.payload(), &Payload::Bits(vec![false]));
+}
+
+/// `bytes.eq` over a non-bytes operand is an explicit type refusal on both paths.
+#[test]
+fn bytes_eq_refuses_non_bytes_operand() {
+    let bad = Node::Op {
+        prim: "bytes.eq".to_owned(),
+        args: vec![
+            Node::Const(b1_val(true)),
+            Node::Const(bytes_val(vec![0x01])),
+        ],
+    };
+    let (l0, aot) = run_l0_and_aot(&bad);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "bytes.eq on a non-bytes operand must refuse on both paths"
+    );
+}
+
+/// `hash.blake3` reproduces the official BLAKE3 empty-input test vector on both paths — the
+/// prim-level twin of the known-digest conformance in `mycelium-interp` (M-912).
+#[test]
+fn hash_blake3_l0_interp_equal_aot() {
+    let node = Node::Op {
+        prim: "hash.blake3".to_owned(),
+        args: vec![Node::Const(bytes_val(vec![]))],
+    };
+    let (l0, aot) = run_l0_and_aot(&node);
+    let l0 = l0.expect("hash.blake3 L0-interp");
+    let aot = aot.expect("hash.blake3 AOT");
+    assert_eq!((l0.repr(), l0.payload()), (aot.repr(), aot.payload()));
+    assert_eq!(l0.repr(), &Repr::Bytes);
+    // The official BLAKE3 empty-input digest (github.com/BLAKE3-team/BLAKE3 test vectors).
+    let expected: Vec<u8> = [
+        0xaf, 0x13, 0x49, 0xb9, 0xf5, 0xf9, 0xa1, 0xa6, 0xa0, 0x40, 0x4d, 0xea, 0x36, 0xdc, 0xc9,
+        0x49, 0x9b, 0xcb, 0x25, 0xc9, 0xad, 0xc1, 0x12, 0xb7, 0xcc, 0x9a, 0x93, 0xca, 0xe4, 0x1f,
+        0x32, 0x62,
+    ]
+    .to_vec();
+    assert_eq!(expected.len(), 32, "BLAKE3 digest is 32 bytes");
+    assert_eq!(l0.payload(), &Payload::Bytes(expected));
+}
+
+/// `hash.blake3` over a non-bytes operand is an explicit type refusal on both paths.
+#[test]
+fn hash_blake3_refuses_non_bytes_operand() {
+    let bad = Node::Op {
+        prim: "hash.blake3".to_owned(),
+        args: vec![Node::Const(b1_val(true))],
+    };
+    let (l0, aot) = run_l0_and_aot(&bad);
+    assert!(
+        l0.is_err() && aot.is_err(),
+        "hash.blake3 on a non-bytes operand must refuse on both paths"
+    );
+}
+
 // ── M-749 surface: Seq{T,N} / `[..]` literal — full three-way differential (RFC-0032 D3) ─────────
 //
 // Now that the `.myc` surface exists (the `Seq{T, N}` type, the `[e1, …]` list literal, and the
@@ -1606,6 +1697,79 @@ fn bytes_len_surface_three_way() {
         "nodule d;\nfn main() => Binary{32} = bytes_len(0x01_02_03);",
         &r,
         &p,
+    );
+}
+
+// ── M-912 surface: `bytes_eq`/`hash_blake3` — full three-way differential ────────────────────────
+
+/// `bytes_eq(0x01_02_03, 0x01_02_03)` over the surface is `true` on all three paths.
+#[test]
+fn bytes_eq_surface_three_way_equal() {
+    let (r, p) = b1(true);
+    assert_three_way(
+        "bytes_eq equal",
+        "nodule d;\nfn main() => Binary{1} = bytes_eq(0x01_02_03, 0x01_02_03);",
+        &r,
+        &p,
+    );
+}
+
+/// `bytes_eq(0x01_02_03, 0x01_02_04)` over the surface is `false` on all three paths.
+#[test]
+fn bytes_eq_surface_three_way_unequal() {
+    let (r, p) = b1(false);
+    assert_three_way(
+        "bytes_eq unequal",
+        "nodule d;\nfn main() => Binary{1} = bytes_eq(0x01_02_03, 0x01_02_04);",
+        &r,
+        &p,
+    );
+}
+
+/// `bytes_eq` over different-length byte strings is `false` on all three paths (a length-sensitive
+/// comparison, never a prefix match).
+#[test]
+fn bytes_eq_surface_three_way_different_length() {
+    let (r, p) = b1(false);
+    assert_three_way(
+        "bytes_eq different length",
+        "nodule d;\nfn main() => Binary{1} = bytes_eq(0x01_02, 0x01_02_03);",
+        &r,
+        &p,
+    );
+}
+
+/// `hash_blake3("")` over the surface is the official BLAKE3 empty-input digest on all three paths
+/// — the surface twin of the known-digest prim-level test above.
+#[test]
+fn hash_blake3_surface_three_way_empty() {
+    let expected_payload = Payload::Bytes(vec![
+        0xaf, 0x13, 0x49, 0xb9, 0xf5, 0xf9, 0xa1, 0xa6, 0xa0, 0x40, 0x4d, 0xea, 0x36, 0xdc, 0xc9,
+        0x49, 0x9b, 0xcb, 0x25, 0xc9, 0xad, 0xc1, 0x12, 0xb7, 0xcc, 0x9a, 0x93, 0xca, 0xe4, 0x1f,
+        0x32, 0x62,
+    ]);
+    assert_three_way(
+        "hash_blake3 empty string",
+        "nodule d;\nfn main() => Bytes = hash_blake3(\"\");",
+        &Repr::Bytes,
+        &expected_payload,
+    );
+}
+
+/// `hash_blake3(0x00_01_02)` over the surface matches the official BLAKE3 length-3 test vector
+/// (the `0, 1, 2, …` repeating-sequence input rule) on all three paths.
+#[test]
+fn hash_blake3_surface_three_way_len3() {
+    let expected_payload = Payload::Bytes(vec![
+        0xe1, 0xbe, 0x4d, 0x7a, 0x8a, 0xb5, 0x56, 0x0a, 0xa4, 0x19, 0x9e, 0xea, 0x33, 0x98, 0x49,
+        0xba, 0x8e, 0x29, 0x3d, 0x55, 0xca, 0x0a, 0x81, 0x00, 0x67, 0x26, 0xd1, 0x84, 0x51, 0x9e,
+        0x64, 0x7f,
+    ]);
+    assert_three_way(
+        "hash_blake3 0x00_01_02 (BLAKE3 test vector, len 3)",
+        "nodule d;\nfn main() => Bytes = hash_blake3(0x00_01_02);",
+        &Repr::Bytes,
+        &expected_payload,
     );
 }
 

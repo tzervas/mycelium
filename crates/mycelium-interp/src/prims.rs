@@ -169,6 +169,11 @@ impl PrimRegistry {
         r.register("bytes.get", prim_bytes_get);
         r.register("bytes.slice", prim_bytes_slice);
         r.register("bytes.concat", prim_bytes_concat);
+        // M-912 (`enb`, folded-in gap): byte-wise equality — flagged missing by the diag/error/
+        // recover ports (`bytes.*` had len/get/slice/concat but no equality).
+        r.register("bytes.eq", prim_bytes_eq);
+        // M-912 (`enb`): the kernel's own BLAKE3 content-addressing hash (M-103) surfaced as a prim.
+        r.register("hash.blake3", prim_hash_blake3);
         // DN-58 §A (M-817): the `Binary` `Fuse` semilattice meet (bitwise-AND). The user-`Data` fuse
         // does **not** register a prim — it elaborates to the resolved `Fuse::join` call (DN-58 §A.5);
         // the non-`Binary` reprs have no committed canonical meet in v0 (DN-58 §A.6 F-A3), so only the
@@ -1446,6 +1451,46 @@ fn prim_bytes_concat(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     )
 }
 
+// --- M-912 (`enb`, folded-in gap): `bytes.eq` — byte-wise equality ------------------------------
+//
+// Three ports (diag/error/recover) flagged the gap: `bytes.*` had `len`/`get`/`slice`/`concat` but
+// no equality. `bytes.eq(a, b) : (Bytes, Bytes) → Binary{1}` is a straight `[u8]` comparison — no
+// approximation involved, total over every pair of `Bytes` operands. Guarantee **`Exact`**.
+
+/// `bytes.eq : (Bytes, Bytes) → Binary{1}` — byte-wise equality (M-912). Total/`Exact`.
+fn prim_bytes_eq(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let a = as_bytes_payload(prim, args[0])?;
+    let b = as_bytes_payload(prim, args[1])?;
+    bool_result(prim, args, a == b)
+}
+
+// --- M-912 (`enb`): `hash.blake3` — the kernel's own content-addressing hash, surfaced -----------
+//
+// The kernel already content-addresses every definition/value with BLAKE3 (M-103;
+// `mycelium-core::content::Canon`/`id::ContentHash`) — deterministic, and the kernel's own basis
+// for calling it `Exact` here: this wrapper invokes the *same* algorithm (the `blake3` crate, the
+// same workspace-pinned version the kernel depends on) the *same* way — hash the raw bytes, keep
+// the raw 32-byte digest — so it adds no additional uncertainty beyond the kernel's own use.
+// Conformance is pinned against the official BLAKE3 test vectors (known digests), not merely
+// self-consistency (`src/tests/prims.rs`).
+
+/// `hash.blake3 : Bytes → Bytes` — the 32-byte BLAKE3 digest of the input byte string (M-912;
+/// M-103). Total and deterministic over every `Bytes` input — there is no failure domain.
+/// Guarantee **`Exact`**.
+fn prim_hash_blake3(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let bytes = as_bytes_payload(prim, args[0])?;
+    let digest = blake3::hash(bytes);
+    compose_result(
+        prim,
+        args,
+        Repr::Bytes,
+        Payload::Bytes(digest.as_bytes().to_vec()),
+        ApproxRule::Refuse,
+    )
+}
+
 // --- DN-58 §A (M-817): the `Binary` `Fuse` semilattice meet ------------------------------------
 //
 // `fuse(a, b)` is a lawful binary merge over a declared commutative/associative/idempotent meet
@@ -1552,7 +1597,7 @@ fn prim_fuse_join_binary(prim: &str, args: &[&Value]) -> Result<Value, EvalError
 // is passed as a **`Dense{1, dtype}` value** (same dtype as the vector; must be `Exact` and
 // on-grid — the kernel re-checks the grid via `ScalarOffGrid`). When the scalar-float form lands,
 // surfacing a true-scalar variant is a maintainer decision (a new distinct op or a migration) —
-// FLAGged in the M-890 report, not silently pre-empted here.
+// FLAGged in the M-890 report, not silently preempted here.
 
 /// Bind the [`DenseSpace`] a dense prim operates in off its **first operand's** `Repr` (the space
 /// anchor); the kernel then enforces every other operand agrees (dim/dtype mismatch → explicit
