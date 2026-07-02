@@ -1,6 +1,4 @@
 pub mod mycelium_vsa
-pub use mycelium_vsa::DecodeMethod
-pub use mycelium_vsa::Explanation
 pub mod mycelium_vsa::bsc
 pub struct mycelium_vsa::bsc::Bsc
 pub mycelium_vsa::bsc::Bsc::dim: u32
@@ -84,33 +82,6 @@ impl core::marker::Unpin for mycelium_vsa::cleanup::Match
 impl core::marker::UnsafeUnpin for mycelium_vsa::cleanup::Match
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::cleanup::Match
 impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::cleanup::Match
-pub mod mycelium_vsa::decode_select
-pub use mycelium_vsa::decode_select::DecodeMethod
-pub use mycelium_vsa::decode_select::Explanation
-pub struct mycelium_vsa::decode_select::DecodeSelection
-pub mycelium_vsa::decode_select::DecodeSelection::explanation: mycelium_select::Explanation
-pub mycelium_vsa::decode_select::DecodeSelection::factors: alloc::vec::Vec<mycelium_vsa::cleanup::Match>
-pub mycelium_vsa::decode_select::DecodeSelection::guarantee: mycelium_core::guarantee::GuaranteeStrength
-pub mycelium_vsa::decode_select::DecodeSelection::method: mycelium_select::DecodeMethod
-pub mycelium_vsa::decode_select::DecodeSelection::resonator_trace: core::option::Option<mycelium_vsa::resonator::ResonatorTrace>
-impl core::clone::Clone for mycelium_vsa::decode_select::DecodeSelection
-pub fn mycelium_vsa::decode_select::DecodeSelection::clone(&self) -> mycelium_vsa::decode_select::DecodeSelection
-impl core::cmp::PartialEq for mycelium_vsa::decode_select::DecodeSelection
-pub fn mycelium_vsa::decode_select::DecodeSelection::eq(&self, &mycelium_vsa::decode_select::DecodeSelection) -> bool
-impl core::fmt::Debug for mycelium_vsa::decode_select::DecodeSelection
-pub fn mycelium_vsa::decode_select::DecodeSelection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_vsa::decode_select::DecodeSelection
-impl core::marker::Freeze for mycelium_vsa::decode_select::DecodeSelection
-impl core::marker::Send for mycelium_vsa::decode_select::DecodeSelection
-impl core::marker::Sync for mycelium_vsa::decode_select::DecodeSelection
-impl core::marker::Unpin for mycelium_vsa::decode_select::DecodeSelection
-impl core::marker::UnsafeUnpin for mycelium_vsa::decode_select::DecodeSelection
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::decode_select::DecodeSelection
-impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::decode_select::DecodeSelection
-pub const mycelium_vsa::decode_select::DEFAULT_ENUM_BUDGET: u128
-pub fn mycelium_vsa::decode_select::decode_method_policy(u128) -> mycelium_select::SelectionPolicy
-pub fn mycelium_vsa::decode_select::explain_decode_method<M: mycelium_vsa::VsaModel>(&M, &[usize], u32, u128) -> mycelium_select::Explanation
-pub fn mycelium_vsa::decode_select::reconstruct_factors_auto<M: mycelium_vsa::VsaModel>(&M, &[f64], &[mycelium_vsa::cleanup::CleanupMemory], &mycelium_vsa::resonator::ResonatorParams, u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa::decode_select::DecodeSelection, mycelium_vsa::VsaError>
 pub mod mycelium_vsa::fhrr
 pub struct mycelium_vsa::fhrr::Fhrr
 pub mycelium_vsa::fhrr::Fhrr::dim: u32
@@ -255,9 +226,10 @@ pub mod mycelium_vsa::matrix
 pub const mycelium_vsa::matrix::RFC0003_MATRIX: &[(&str, mycelium_vsa::VsaOp, mycelium_core::guarantee::GuaranteeStrength)]
 pub fn mycelium_vsa::matrix::matrix_tag(&str, mycelium_vsa::VsaOp) -> core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
 pub mod mycelium_vsa::recon
+pub fn mycelium_vsa::recon::hv_payload<'a, M: mycelium_vsa::VsaModel>(&M, u32, &'a mycelium_core::value::Value) -> core::result::Result<&'a [f64], mycelium_vsa::VsaError>
 pub fn mycelium_vsa::recon::reconstruct_factors<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory]) -> core::result::Result<mycelium_vsa::resonator::Factorization, mycelium_vsa::VsaError>
-pub fn mycelium_vsa::recon::reconstruct_factors_selected<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory], u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa::decode_select::DecodeSelection, mycelium_vsa::VsaError>
 pub fn mycelium_vsa::recon::reconstruct_role<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &str, &mycelium_core::value::Value, &mycelium_vsa::cleanup::CleanupMemory) -> core::result::Result<mycelium_vsa::cleanup::Match, mycelium_vsa::VsaError>
+pub fn mycelium_vsa::recon::resonator_params_from_manifest(&mycelium_core::recon::ReconInfo) -> core::result::Result<mycelium_vsa::resonator::ResonatorParams, mycelium_vsa::VsaError>
 pub mod mycelium_vsa::resonator
 pub enum mycelium_vsa::resonator::Cleanup
 pub mycelium_vsa::resonator::Cleanup::ArgMax
@@ -669,26 +641,6 @@ impl core::marker::Unpin for mycelium_vsa::cleanup::CleanupMemory
 impl core::marker::UnsafeUnpin for mycelium_vsa::cleanup::CleanupMemory
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::cleanup::CleanupMemory
 impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::cleanup::CleanupMemory
-pub struct mycelium_vsa::DecodeSelection
-pub mycelium_vsa::DecodeSelection::explanation: mycelium_select::Explanation
-pub mycelium_vsa::DecodeSelection::factors: alloc::vec::Vec<mycelium_vsa::cleanup::Match>
-pub mycelium_vsa::DecodeSelection::guarantee: mycelium_core::guarantee::GuaranteeStrength
-pub mycelium_vsa::DecodeSelection::method: mycelium_select::DecodeMethod
-pub mycelium_vsa::DecodeSelection::resonator_trace: core::option::Option<mycelium_vsa::resonator::ResonatorTrace>
-impl core::clone::Clone for mycelium_vsa::decode_select::DecodeSelection
-pub fn mycelium_vsa::decode_select::DecodeSelection::clone(&self) -> mycelium_vsa::decode_select::DecodeSelection
-impl core::cmp::PartialEq for mycelium_vsa::decode_select::DecodeSelection
-pub fn mycelium_vsa::decode_select::DecodeSelection::eq(&self, &mycelium_vsa::decode_select::DecodeSelection) -> bool
-impl core::fmt::Debug for mycelium_vsa::decode_select::DecodeSelection
-pub fn mycelium_vsa::decode_select::DecodeSelection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::StructuralPartialEq for mycelium_vsa::decode_select::DecodeSelection
-impl core::marker::Freeze for mycelium_vsa::decode_select::DecodeSelection
-impl core::marker::Send for mycelium_vsa::decode_select::DecodeSelection
-impl core::marker::Sync for mycelium_vsa::decode_select::DecodeSelection
-impl core::marker::Unpin for mycelium_vsa::decode_select::DecodeSelection
-impl core::marker::UnsafeUnpin for mycelium_vsa::decode_select::DecodeSelection
-impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::decode_select::DecodeSelection
-impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::decode_select::DecodeSelection
 pub struct mycelium_vsa::EmpiricalProfile
 pub mycelium_vsa::EmpiricalProfile::delta: f64
 pub mycelium_vsa::EmpiricalProfile::max_items: usize
@@ -1008,7 +960,6 @@ impl core::marker::Unpin for mycelium_vsa::sbc::Sbc
 impl core::marker::UnsafeUnpin for mycelium_vsa::sbc::Sbc
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa::sbc::Sbc
 impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa::sbc::Sbc
-pub const mycelium_vsa::DEFAULT_ENUM_BUDGET: u128
 pub const mycelium_vsa::MAPI_RESONATOR_PROFILE: mycelium_vsa::resonator::ResonatorProfile
 pub const mycelium_vsa::RFC0003_MATRIX: &[(&str, mycelium_vsa::VsaOp, mycelium_core::guarantee::GuaranteeStrength)]
 pub trait mycelium_vsa::VsaModel
@@ -1081,11 +1032,7 @@ pub fn mycelium_vsa::sbc::Sbc::self_inverse(&self) -> bool
 pub fn mycelium_vsa::sbc::Sbc::similarity(&self, &[f64], &[f64]) -> f64
 pub fn mycelium_vsa::sbc::Sbc::unbind(&self, &[f64], &[f64]) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
 pub fn mycelium_vsa::sbc::Sbc::unpermute(&self, &[f64], i64) -> core::result::Result<alloc::vec::Vec<f64>, mycelium_vsa::VsaError>
-pub fn mycelium_vsa::decode_method_policy(u128) -> mycelium_select::SelectionPolicy
-pub fn mycelium_vsa::explain_decode_method<M: mycelium_vsa::VsaModel>(&M, &[usize], u32, u128) -> mycelium_select::Explanation
 pub fn mycelium_vsa::factorize<M: mycelium_vsa::VsaModel>(&M, &[f64], &[mycelium_vsa::cleanup::CleanupMemory], &mycelium_vsa::resonator::ResonatorParams) -> core::result::Result<mycelium_vsa::resonator::Factorization, mycelium_vsa::VsaError>
 pub fn mycelium_vsa::matrix_tag(&str, mycelium_vsa::VsaOp) -> core::option::Option<mycelium_core::guarantee::GuaranteeStrength>
 pub fn mycelium_vsa::reconstruct_factors<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory]) -> core::result::Result<mycelium_vsa::resonator::Factorization, mycelium_vsa::VsaError>
-pub fn mycelium_vsa::reconstruct_factors_auto<M: mycelium_vsa::VsaModel>(&M, &[f64], &[mycelium_vsa::cleanup::CleanupMemory], &mycelium_vsa::resonator::ResonatorParams, u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa::decode_select::DecodeSelection, mycelium_vsa::VsaError>
-pub fn mycelium_vsa::reconstruct_factors_selected<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory], u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa::decode_select::DecodeSelection, mycelium_vsa::VsaError>
 pub fn mycelium_vsa::reconstruct_role<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &str, &mycelium_core::value::Value, &mycelium_vsa::cleanup::CleanupMemory) -> core::result::Result<mycelium_vsa::cleanup::Match, mycelium_vsa::VsaError>
