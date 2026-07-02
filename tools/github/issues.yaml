@@ -8943,6 +8943,32 @@ issues:
       - just check green; guarantee tags honest (VR-5); property test per bound.
 
       Children: M-871 (remote spore registry backend — DN-28 dense-map over GHCR/OCI).
+  - id: E27-1
+    title: "E27-1 (epic) — Phase-I H0: acyclic-deps enforcement + workspace hygiene"
+    milestone: "Phase 8 — Toolchain & Release Engineering"
+    labels: [phase:8, type:chore, area:toolchain, priority:P1, status:done]
+    depends_on: [M-866, M-877, M-878, M-879, M-880, M-881, M-882, M-883, M-884, M-885, M-886]
+    epic: E27
+    doc_refs: [corpus:ADR-038, corpus:DN-68]
+    body: |
+      EPIC (Phase-I H0, ADR-038 §2 / roadmap §2 "Foundations"). Make the workspace's acyclic,
+      downward-only dependency structure enforced by construction: a structural gate (`cargo xtask deps`,
+      wired into `just check`) that goes red on an introduced cycle (normal or dev), an upward-tier edge,
+      or an `interp -> std-*` edge, and green on clean state. Resolve the known dev-dep cycles, extract
+      the `mycelium-rt-abi` runtime-ABI seam (removing the `mlir -> std-runtime` upward edge), verify the
+      `publish = false` sweep, author the invariant note (DN-68), and fix the `mono.rs` recursion bound.
+
+      User stories:
+      - As a contributor, I want an introduced upward/cyclic dependency to fail `just check` naming the
+        offending edge, so that the acyclic architecture cannot erode silently (G2).
+      - As the maintainer, I want the KC-3 trusted-base boundary (interp free of std-*) machine-checked.
+
+      Definition of Done: the structural gate rejects regressions and passes clean state (proven by
+      negative fixtures); zero dev-dep cycles at HEAD; mlir no longer depends on std-runtime;
+      publish = false workspace-wide; DN-68 authored; M-866 bounded with a property test.
+
+      DONE (2026-07-02, kickoff `acy`): all leaf tasks M-877..M-886 + M-866 landed (PRs #935/#936);
+      cargo xtask deps = 0 violations; DN-68 authored (Draft); DN-66 §6 currency note appended.
   - id: M-871
     title: "M-871 -- feat(spore): remote registry backend — DN-28 dense-map over GHCR/OCI (ADR-037)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
@@ -9185,6 +9211,7 @@ issues:
     title: "Stratum-map data file + structural check v0: normal-deps downward-only (xtask deps)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:toolchain, priority:P1, status:done]
+    epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #935, branch acy/deps-acyclic-check). `xtask/deps-strata.toml` (data, not prose) + `xtask/src/deps/` (graph.rs/checks.rs/strata.rs/mod.rs) landed: `check_normal_downward` validates every normal edge's source stratum is strictly greater than its target stratum against the frozen `[strata]` map (Empirical). Violation output names the offending edge + rule (G2). `xtask/src/tests/deps.rs` proves the check fails on a synthetic upward-edge fixture and passes at HEAD. `cargo run -p xtask -- deps` verified 0 violations at HEAD post-wave."
     doc_refs:
       - corpus:DN-68
@@ -9211,6 +9238,7 @@ issues:
     title: "Extend the acyclic-deps check to dev-deps (cargo never rejects a dev-dep cycle)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:toolchain, priority:P1, status:done]
+    epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #935, branch acy/deps-acyclic-check). `check_acyclic_including_dev` (xtask/src/deps/checks.rs) runs Tarjan's SCC over the combined normal+dev+build graph (Exact — finds every crate in any cycle, not just the ones a single DFS traversal order happens to hit). Verified against the three known `mycelium-cert`-centered dev-cycles pre-fix (Empirical, historical re-run); dev/normal/build edges are distinguished in the diagnostic output."
     depends_on: [M-877]
     doc_refs:
@@ -9235,6 +9263,7 @@ issues:
     title: "Encode no-interp-std-dep + no-upward-tier-edges as named, inspectable rules"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:toolchain, priority:P1, status:done]
+    epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #935, branch acy/deps-acyclic-check). `[[named_rules]]` in `xtask/deps-strata.toml` encodes `no-interp-std-dep` (kind = forbidden-target-prefix, source = mycelium-interp, forbidden_target_prefix = mycelium-std-) and `no-upward-tier-edges` (kind = tier-order, over the `[tiers]` core<std<tools bucket map). `check_named_rules` (checks.rs) evaluates every entry by its declared kind; an unrecognized kind is itself reported as a violation (G2), never silently skipped. Each violation message cites the rule's `basis_ref` (DN-68). Negative fixtures in `xtask/src/tests/deps.rs` prove each rule fires."
     depends_on: [M-877]
     doc_refs:
@@ -9259,6 +9288,7 @@ issues:
     title: "Wire the acyclic-deps check into `just check` (+ CI parity, never-silent graceful skip)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:toolchain, priority:P1, status:done]
+    epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #936, commit 0e12c38 on acy/wave-2-integration — integration-tier wiring, orchestrator-authored). `just check` now runs `cargo run -p xtask -- deps` as one of its always-on non-test gates; the justfile recipe documents the check; a graceful skip path prints why when the tool/toolchain is absent (G2). Verified: `cargo run -p xtask -- deps` reports 0 violations at HEAD (re-confirmed at integration close-out, 2026-07-02)."
     depends_on: [M-877, M-878, M-879]
     doc_refs:
@@ -9282,6 +9312,7 @@ issues:
     title: "Break dev-cycle: mycelium-select ->[dev] mycelium-cert -> mycelium-vsa -> mycelium-select"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:fix, area:stdlib, priority:P1, status:done]
+    epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #935, branch acy/m881-select-cert-devcycle, commit 10e0d6b \"fix(select): break select-cert dev-cycle via local SwapEngine test double\"). Corrects the kickoff doc's crate-name typo: the crate is `mycelium-select`, not `mycelium-std-select`. `mycelium-select`'s dev-dependency on `mycelium-cert` replaced by a local `SwapEngine` test double (fixture-driven, per the house test-layout rule); same assertions preserved, guarantee tags unchanged (VR-5). `cargo test -p mycelium-select` green. Combined with M-882, this was part of one 7-crate strongly-connected component; the gate now reports 0 dev-cycle violations."
     depends_on: [M-878]
     doc_refs:
@@ -9307,6 +9338,7 @@ issues:
     title: "Break dev-cycles: mycelium-cert ->[dev] {mycelium-proj, mycelium-spore} -> mycelium-l1 -> mycelium-cert"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:fix, area:stdlib, priority:P1, status:done]
+    epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #935, branch acy/m882-cert-devcycles, commit c54eb8e \"fix(cert): break the two proj/spore dev-dep cycles\"). `mycelium-cert`'s dev-dependencies on `mycelium-proj` and `mycelium-spore` converted to fixture-driven local tests (both cycles share the `cert ->[dev] X -> ... -> l1 -> cert` shape, fixed in one cohesive change). Coverage preserved; zero dev-dep cycles re-surveyed and recorded at HEAD (Empirical, via `cargo run -p xtask -- deps`). `cargo test -p mycelium-cert` green."
     depends_on: [M-878]
     doc_refs:
@@ -9329,6 +9361,7 @@ issues:
     title: "Scaffold the runtime-ABI seam crate mycelium-rt-abi (mlir's reclamation+supervision surface)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:feature, area:execution, priority:P1, status:done]
+    epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #936, branch acy/m883-884-rt-abi-seam, commit 7043ed4 \"refactor(mlir): extract mycelium-rt-abi runtime-ABI seam\"). Crate name confirmed as `mycelium-rt-abi` (the kickoff's FLAGged working name is what landed — no maintainer rename). New crate registered in the workspace (orchestrator-owned edit), `publish = false`, `0.0.0`, tier `core` (xtask/deps-strata.toml); holds `reclamation.rs` + `supervision.rs`, the exact surface `mycelium-mlir` needs. Items moved with `mycelium-std-runtime` re-exporting at the original paths (no consumer-visible API break, no behavior change). Workspace builds green."
     doc_refs:
       - corpus:DN-68
@@ -9353,6 +9386,7 @@ issues:
     title: "Repoint mlir + std-runtime at mycelium-rt-abi; remove and ban the mlir->std-runtime edge"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:feature, area:execution, priority:P1, status:done]
+    epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #936, branch acy/m883-884-rt-abi-seam, commit 7043ed4). `cargo metadata` confirms no `mycelium-mlir -> mycelium-std-runtime` edge (normal or dev) remains; `mycelium-mlir` depends on `mycelium-rt-abi` only. The ban is enforced by the general `no-upward-tier-edges` rule (M-879) re-checked against this specific edge, not a bespoke ban entry. `cargo test -p mycelium-mlir -p mycelium-std-runtime` green; AOT differential tests unchanged. `cargo run -p xtask -- deps` reports 0 violations."
     depends_on: [M-883, M-877]
     doc_refs:
@@ -9376,6 +9410,7 @@ issues:
     title: "Author DN-68 — The Acyclic-Deps Invariant (strata map, named rules, change-procedure)"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:docs, area:toolchain, priority:P2, status:done]
+    epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, PR #936, branch acy/m885-invariant-dn). `docs/notes/DN-68-Acyclic-Deps-Invariant.md` drafted (Draft status, append-only discipline); documents the strata/tiers data model, the two named rules, where the check lives, and the change-procedure (a stratum/tier reassignment is its own reviewed PR, never folded into the PR needing the exception; PR #864 precedent). Cited by the check's violation output (`basis_ref` in xtask/deps-strata.toml). Indexed in docs/Doc-Index.md (this integration-tier reconciliation)."
     depends_on: [M-877]
     doc_refs:
@@ -9398,6 +9433,7 @@ issues:
     title: "Verify + record: publish = false sweep across all 52 (54-with-xtask) workspace crates"
     milestone: "Phase 8 — Toolchain & Release Engineering"
     labels: [phase:8, type:chore, area:toolchain, priority:P3, status:done]
+    epic: E27-1
     landed_basis: "status:done (2026-07-02, kickoff `acy`, verify-only — no code change required). ADR-038 §2.2 publication-hygiene sweep was already satisfied at kickoff start: `grep -rl publish crates/*/Cargo.toml` + xtask/Cargo.toml confirms 54/54 workspace members (53 crates + xtask) resolve `publish = false`; all versions stay `0.0.0` (ADR-038 §2.2). Recorded here as a verified, not newly-applied, fact (the kickoff's own correction #2: 'already satisfied, 54/54')."
     doc_refs:
       - corpus:ADR-038
