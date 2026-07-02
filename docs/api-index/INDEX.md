@@ -809,7 +809,7 @@
 | `mycelium_lsp::AuditView` | struct | `crates/mycelium-lsp/src/diagnostics/audit.rs:34` | The audit view: every crossing in a program, in deterministic traversal order. |
 | `mycelium_lsp::BaselineRule` | struct | `crates/mycelium-lsp/src/baseline.rs:32` | The auto-derived baseline for one error class: its presentation level + route, and the *rationale* |
 | `mycelium_lsp::ClassRegistry` | struct | `crates/mycelium-lsp/src/diagnostics/registry.rs:60` | The known set of error-class names a policy may name (RFC-0013 §4.5). |
-| `mycelium_lsp::CompletionItem` | struct | `crates/mycelium-lsp/src/completions.rs:50` | A single LSP completion item (minimal fields: `label`, `kind`, `insertText`, |
+| `mycelium_lsp::CompletionItem` | struct | `crates/mycelium-lsp/src/completions.rs:53` | A single LSP completion item (minimal fields: `label`, `kind`, `insertText`, |
 | `mycelium_lsp::Crossing` | struct | `crates/mycelium-lsp/src/diagnostics/audit.rs:18` | One representation crossing (`swap` site) and what the audit can read off it. |
 | `mycelium_lsp::DEPTH_LIMIT:` | const | `crates/mycelium-lsp/src/llm_canonical_parser.rs:40` | Maximum nesting depth (banked guard #4 — depth limit prevents stack overflow). |
 | `mycelium_lsp::Diagnostic` | struct | `crates/mycelium-lsp/src/lint.rs:35` | A single lint finding. |
@@ -820,7 +820,7 @@
 | `mycelium_lsp::Feedback` | struct | `crates/mycelium-lsp/src/feedback.rs:95` | The aggregated feedback surface (SC-5 channel) for one Core IR program. |
 | `mycelium_lsp::FeedbackSummary` | struct | `crates/mycelium-lsp/src/feedback.rs:117` | A structured, at-a-glance rollup of a [`Feedback`] (M-310): per-artifact-kind counts and the |
 | `mycelium_lsp::GuaranteeAnnotation` | struct | `crates/mycelium-lsp/src/feedback.rs:42` | A per-value honesty annotation: where it is, its guarantee tag, and its bound (if approximate). |
-| `mycelium_lsp::KEYWORD_COMPLETIONS:` | const | `crates/mycelium-lsp/src/completions.rs:93` | The complete set of active keyword completions. |
+| `mycelium_lsp::KEYWORD_COMPLETIONS:` | const | `crates/mycelium-lsp/src/completions.rs:96` | The complete set of active keyword completions. |
 | `mycelium_lsp::Level` | enum | `crates/mycelium-lsp/src/diagnostics/record.rs:24` | A graded context **level** — a verbosity knob over *one* truth (§4.2). |
 | `mycelium_lsp::Outcome` | enum | `crates/mycelium-lsp/src/recover/mod.rs:67` | The result sum `Ok(τ) \| Err(ε)` (RFC-0014 §4.1). |
 | `mycelium_lsp::ParseError` | enum | `crates/mycelium-lsp/src/llm_canonical_parser.rs:44` | Errors returned by [`parse_llm_canonical`] (G2: always explicit, never silent). |
@@ -831,7 +831,7 @@
 | `mycelium_lsp::RecoveryProfile` | enum | `crates/mycelium-lsp/src/baseline.rs:152` | The **closed v0** set of named, opt-in, bounded recovery profiles (RFC-0015 §8-Q2; A2). |
 | `mycelium_lsp::Resolution` | enum | `crates/mycelium-lsp/src/recover/mod.rs:79` | The outcome of handling: an error is **either recovered** (an explicit value with an honest |
 | `mycelium_lsp::Rule` | struct | `crates/mycelium-lsp/src/diagnostics/policy.rs:28` | A single `on <ErrorClass> => { … }` rule. |
-| `mycelium_lsp::SNIPPET_COMPLETIONS:` | const | `crates/mycelium-lsp/src/completions.rs:465` | The set of high-value scaffolding snippets. |
+| `mycelium_lsp::SNIPPET_COMPLETIONS:` | const | `crates/mycelium-lsp/src/completions.rs:468` | The set of high-value scaffolding snippets. |
 | `mycelium_lsp::Severity` | enum | `crates/mycelium-lsp/src/lint.rs:26` | Severity of a [`Diagnostic`]. |
 | `mycelium_lsp::StructuredError` | struct | `crates/mycelium-lsp/src/recover/mod.rs:43` | The structured error value — the `Err` payload of the result sum (RFC-0001; the same structured |
 | `mycelium_lsp::SwapSite` | struct | `crates/mycelium-lsp/src/feedback.rs:53` | A swap site and the certificate it emits (when statically resolvable). |
@@ -845,9 +845,9 @@
 | `mycelium_lsp::baseline::RecoveryProfile::resolve` | fn | `crates/mycelium-lsp/src/baseline.rs:177` | Resolve a profile name against the closed set (looked up, never evaluated). |
 | `mycelium_lsp::baseline_for_class` | fn | `crates/mycelium-lsp/src/baseline.rs:45` | The **total** baseline derivation (A4): a deterministic function of the class name — a closed table |
 | `mycelium_lsp::check_effects` | fn | `crates/mycelium-lsp/src/recover/effect.rs:58` | The **compositional no-undeclared-effect check** (I3): every effect a definition *performs* (its own |
-| `mycelium_lsp::completion_list` | fn | `crates/mycelium-lsp/src/completions.rs:541` | Return the full list of completion items (keywords + snippets) as an LSP |
+| `mycelium_lsp::completion_list` | fn | `crates/mycelium-lsp/src/completions.rs:544` | Return the full list of completion items (keywords + snippets) as an LSP |
 | `mycelium_lsp::completions` | mod | `crates/mycelium-lsp/src/lib.rs:11` | — |
-| `mycelium_lsp::completions::CompletionItem::to_lsp_value` | fn | `crates/mycelium-lsp/src/completions.rs:68` | Serialize this item to an LSP `CompletionItem` JSON value. |
+| `mycelium_lsp::completions::CompletionItem::to_lsp_value` | fn | `crates/mycelium-lsp/src/completions.rs:71` | Serialize this item to an LSP `CompletionItem` JSON value. |
 | `mycelium_lsp::definition` | mod | `crates/mycelium-lsp/src/lib.rs:12` | — |
 | `mycelium_lsp::definition` | fn | `crates/mycelium-lsp/src/definition.rs:26` | Build the `textDocument/definition` result for `src` at the 0-based position `(line, character)`, |
 | `mycelium_lsp::derive_baseline` | fn | `crates/mycelium-lsp/src/baseline.rs:97` | Derive the baseline [`DiagnosticPolicy`] for **every** class in `registry` (the broadest scope). |
@@ -4267,16 +4267,16 @@ Items the heuristic could not locate (G2: never silently dropped):
 | `mycelium_lsp::baseline::derive_baseline_for` | dedup-alias: same definition as `mycelium_lsp::derive_baseline_for` at crates/mycelium-lsp/src/baseline.rs:110 — one canonical row kept |
 | `mycelium_lsp::baseline::explain_baseline` | dedup-alias: same definition as `mycelium_lsp::explain_baseline` at crates/mycelium-lsp/src/baseline.rs:134 — one canonical row kept |
 | `mycelium_lsp::baseline::recovery_profile` | dedup-alias: same definition as `mycelium_lsp::recovery_profile` at crates/mycelium-lsp/src/baseline.rs:191 — one canonical row kept |
-| `mycelium_lsp::completions::CompletionItem` | dedup-alias: same definition as `mycelium_lsp::CompletionItem` at crates/mycelium-lsp/src/completions.rs:50 — one canonical row kept |
+| `mycelium_lsp::completions::CompletionItem` | dedup-alias: same definition as `mycelium_lsp::CompletionItem` at crates/mycelium-lsp/src/completions.rs:53 — one canonical row kept |
 | `mycelium_lsp::completions::CompletionItem::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_lsp::completions::CompletionItem::clone` | definition not found via regex heuristic (kind='fn', name='clone') — possibly macro-generated or cfg-gated |
 | `mycelium_lsp::completions::CompletionItem::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_lsp::completions::CompletionItem::eq` | definition not found via regex heuristic (kind='fn', name='eq') — possibly macro-generated or cfg-gated |
 | `mycelium_lsp::completions::CompletionItem::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
 | `mycelium_lsp::completions::CompletionItem::fmt` | definition not found via regex heuristic (kind='fn', name='fmt') — possibly macro-generated or cfg-gated |
-| `mycelium_lsp::completions::KEYWORD_COMPLETIONS:` | dedup-alias: same definition as `mycelium_lsp::KEYWORD_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:93 — one canonical row kept |
-| `mycelium_lsp::completions::SNIPPET_COMPLETIONS:` | dedup-alias: same definition as `mycelium_lsp::SNIPPET_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:465 — one canonical row kept |
-| `mycelium_lsp::completions::completion_list` | dedup-alias: same definition as `mycelium_lsp::completion_list` at crates/mycelium-lsp/src/completions.rs:541 — one canonical row kept |
+| `mycelium_lsp::completions::KEYWORD_COMPLETIONS:` | dedup-alias: same definition as `mycelium_lsp::KEYWORD_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:96 — one canonical row kept |
+| `mycelium_lsp::completions::SNIPPET_COMPLETIONS:` | dedup-alias: same definition as `mycelium_lsp::SNIPPET_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:468 — one canonical row kept |
+| `mycelium_lsp::completions::completion_list` | dedup-alias: same definition as `mycelium_lsp::completion_list` at crates/mycelium-lsp/src/completions.rs:544 — one canonical row kept |
 | `mycelium_lsp::definition::definition` | dedup-alias: same definition as `mycelium_lsp::definition` at crates/mycelium-lsp/src/definition.rs:26 — one canonical row kept |
 | `mycelium_lsp::diagnostics::AuditView` | dedup-alias: same definition as `mycelium_lsp::AuditView` at crates/mycelium-lsp/src/diagnostics/audit.rs:34 — one canonical row kept |
 | `mycelium_lsp::diagnostics::ClassRegistry` | dedup-alias: same definition as `mycelium_lsp::ClassRegistry` at crates/mycelium-lsp/src/diagnostics/registry.rs:60 — one canonical row kept |

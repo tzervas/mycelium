@@ -8059,7 +8059,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/completions.rs",
-      "line": 50,
+      "line": 53,
       "summary": "A single LSP completion item (minimal fields: `label`, `kind`, `insertText`,",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8180,7 +8180,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/completions.rs",
-      "line": 93,
+      "line": 96,
       "summary": "The complete set of active keyword completions.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8301,7 +8301,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/completions.rs",
-      "line": 465,
+      "line": 468,
       "summary": "The set of high-value scaffolding snippets.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8455,7 +8455,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp",
       "file": "crates/mycelium-lsp/src/completions.rs",
-      "line": 541,
+      "line": 544,
       "summary": "Return the full list of completion items (keywords + snippets) as an LSP",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -8477,7 +8477,7 @@
       "crate": "mycelium-lsp",
       "module": "mycelium_lsp::completions::CompletionItem",
       "file": "crates/mycelium-lsp/src/completions.rs",
-      "line": 68,
+      "line": 71,
       "summary": "Serialize this item to an LSP `CompletionItem` JSON value.",
       "guarantee_tag": null,
       "corpus_refs": []
@@ -31802,7 +31802,7 @@
     },
     {
       "symbol": "mycelium_lsp::completions::CompletionItem",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::CompletionItem` at crates/mycelium-lsp/src/completions.rs:50 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::CompletionItem` at crates/mycelium-lsp/src/completions.rs:53 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::completions::CompletionItem::clone",
@@ -31830,15 +31830,15 @@
     },
     {
       "symbol": "mycelium_lsp::completions::KEYWORD_COMPLETIONS:",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::KEYWORD_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:93 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::KEYWORD_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:96 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::completions::SNIPPET_COMPLETIONS:",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::SNIPPET_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:465 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::SNIPPET_COMPLETIONS:` at crates/mycelium-lsp/src/completions.rs:468 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::completions::completion_list",
-      "reason": "dedup-alias: same definition as `mycelium_lsp::completion_list` at crates/mycelium-lsp/src/completions.rs:541 — one canonical row kept"
+      "reason": "dedup-alias: same definition as `mycelium_lsp::completion_list` at crates/mycelium-lsp/src/completions.rs:544 — one canonical row kept"
     },
     {
       "symbol": "mycelium_lsp::definition::definition",
