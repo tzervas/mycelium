@@ -2563,3 +2563,380 @@ fn flt_cmp_type_and_arity_refusals_are_never_silent() {
         }
     }
 }
+
+// ── M-892 (`enb` Gap C): the model-dispatched VSA bind group ────────────────────────────────────
+//
+// `vsa.bind`/`vsa.unbind`/`vsa.permute` — model-dispatched (MAP-I/FHRR/BSC) on the first
+// operand's `Repr::Vsa` model id; the `mycelium-vsa` kernel constructs the result `Value` with
+// its honest per-model tag and the wrapper carries it through unchanged (VR-5). These tests pin:
+// (1) accept-path payloads + carried per-model tags/bounds/provenance, (2) the cheap
+// bind→unbind roundtrip property per model (exact recovery for the self-inverse MAP-I/BSC;
+// FHRR recovery within its disclosed-Empirical regime), (3) the never-silent reject surface
+// (model mismatch, out-of-set model, dim mismatch, alphabet violations, the FHRR regime gate,
+// non-Exact operands, arity), and (4) permute's cyclic inverse via the complementary shift.
+// (The Π-table meet-tag consistency guard lives in `tests/prim_table.rs`.)
+
+use mycelium_core::SparsityClass;
+use mycelium_vsa::fhrr::FHRR_UNBIND_PROFILE;
+use mycelium_vsa::{Fhrr, VsaModel};
+
+/// A hypervector `Value` of `model` at `dim` (dense sparsity class, `Exact`/`Root` meta) — built
+/// through core alone, exactly what a surface program's injected argument looks like.
+fn vsa_hv(model: &str, dim: u32, data: Vec<f64>) -> Value {
+    Value::new(
+        Repr::Vsa {
+            model: model.to_owned(),
+            dim,
+            sparsity: SparsityClass::Dense,
+        },
+        Payload::Hypervector(data),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// Deterministic LCG stream (house style — the seed fully determines the atom).
+fn lcg_stream(dim: u32, seed: u64) -> impl Iterator<Item = f64> {
+    let mut s = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1);
+    (0..dim).map(move |_| {
+        s = s
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
+        (s >> 11) as f64 / (1u64 << 53) as f64 // [0, 1)
+    })
+}
+
+/// A bipolar (`±1`) MAP-I atom.
+fn mapi_atom(dim: u32, seed: u64) -> Vec<f64> {
+    lcg_stream(dim, seed)
+        .map(|u| if u < 0.5 { -1.0 } else { 1.0 })
+        .collect()
+}
+
+/// A phasor (`(−π, π]`) FHRR atom.
+fn fhrr_atom(dim: u32, seed: u64) -> Vec<f64> {
+    lcg_stream(dim, seed)
+        .map(|u| {
+            let t = std::f64::consts::TAU * u; // [0, τ)
+            if t > std::f64::consts::PI {
+                t - std::f64::consts::TAU
+            } else {
+                t
+            }
+        })
+        .collect()
+}
+
+/// A binary (`{0, 1}`) BSC atom.
+fn bsc_atom(dim: u32, seed: u64) -> Vec<f64> {
+    lcg_stream(dim, seed)
+        .map(|u| if u < 0.5 { 0.0 } else { 1.0 })
+        .collect()
+}
+
+/// An unsigned `Binary{w}` shift-amount value (MSB-first), the `vsa.permute` second operand.
+fn shift_bin(v: u64, w: u32) -> Value {
+    let bits: Vec<bool> = (0..w).rev().map(|i| (v >> i) & 1 == 1).collect();
+    Value::new(
+        Repr::Binary { width: w },
+        Payload::Bits(bits),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// The per-model accept corpus: (model id, dim, atom builder, the model-namespaced kernel op ids).
+/// FHRR rides dim 256 (its unbind profile's `min_dim`); the self-inverse models use a small dim.
+type AtomFn = fn(u32, u64) -> Vec<f64>;
+fn vsa_corpus() -> [(&'static str, u32, AtomFn, [&'static str; 3]); 3] {
+    [
+        (
+            "MAP-I",
+            16,
+            mapi_atom as AtomFn,
+            ["vsa.map_i.bind", "vsa.map_i.unbind", "vsa.map_i.permute"],
+        ),
+        (
+            "FHRR",
+            256,
+            fhrr_atom as AtomFn,
+            ["vsa.fhrr.bind", "vsa.fhrr.unbind", "vsa.fhrr.permute"],
+        ),
+        (
+            "BSC",
+            16,
+            bsc_atom as AtomFn,
+            ["vsa.bsc.bind", "vsa.bsc.unbind", "vsa.bsc.permute"],
+        ),
+    ]
+}
+
+/// Accept path per model: `vsa.bind` produces a same-model/dim hypervector, tag **`Exact`**
+/// carried from the kernel (no bound), provenance the **model-namespaced** kernel op over both
+/// inputs — dispatch is recorded, inspectable, never silent (G2).
+#[test]
+fn vsa_bind_carries_the_kernel_tag_and_model_provenance_per_model() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.bind").expect("vsa.bind registered");
+    for (model, dim, atom, [bind_op, _, _]) in vsa_corpus() {
+        let a = vsa_hv(model, dim, atom(dim, 1));
+        let b = vsa_hv(model, dim, atom(dim, 2));
+        let y = f("vsa.bind", &[&a, &b]).unwrap_or_else(|e| panic!("{model}: bind failed: {e}"));
+        assert_eq!(
+            y.repr(),
+            &Repr::Vsa {
+                model: model.to_owned(),
+                dim,
+                sparsity: SparsityClass::Dense,
+            },
+            "{model}: bind must preserve model + dim"
+        );
+        assert_eq!(
+            y.meta().guarantee(),
+            mycelium_core::GuaranteeStrength::Exact,
+            "{model}: bind is Exact in every model of the dispatch set"
+        );
+        assert!(
+            y.meta().bound().is_none(),
+            "{model}: Exact carries no bound"
+        );
+        match y.meta().provenance() {
+            Provenance::Derived { op, inputs } => {
+                assert_eq!(
+                    op,
+                    &mycelium_core::operation_hash(bind_op),
+                    "{model}: provenance records the dispatched model-namespaced op"
+                );
+                assert_eq!(inputs, &vec![a.content_hash(), b.content_hash()]);
+            }
+            other => panic!("{model}: expected Derived provenance, got {other:?}"),
+        }
+    }
+}
+
+/// The DoD property, per model, over a seeded corpus: `unbind(bind(a, b), b)` recovers `a` —
+/// **exactly** (payload-equal) for the self-inverse `Exact` models (MAP-I, BSC), and for FHRR
+/// within its disclosed basis: the result is **`Empirical`** carrying the trial-validated
+/// `FHRR_UNBIND_PROFILE` δ bound, and pure-pair recovery is near-exact by the model's own
+/// similarity (the kernel's documented behaviour; the δ = 1e-2 claim is about cleanup-completed
+/// recovery, disclosed on the bound — VR-5: asserted at exactly that strength, no more).
+#[test]
+fn vsa_unbind_bind_roundtrip_recovers_the_operand_per_model() {
+    let reg = PrimRegistry::with_builtins();
+    let bind = reg.get("vsa.bind").expect("registered");
+    let unbind = reg.get("vsa.unbind").expect("registered");
+    for (model, dim, atom, _) in vsa_corpus() {
+        for seed in [3u64, 5, 8, 13, 21, 34, 55, 89] {
+            let a = vsa_hv(model, dim, atom(dim, seed));
+            let b = vsa_hv(model, dim, atom(dim, seed + 1000));
+            let ab = bind("vsa.bind", &[&a, &b]).unwrap();
+            let rec = unbind("vsa.unbind", &[&ab, &b])
+                .unwrap_or_else(|e| panic!("{model}/{seed}: unbind failed: {e}"));
+            match model {
+                "MAP-I" | "BSC" => {
+                    assert_eq!(
+                        rec.payload(),
+                        a.payload(),
+                        "{model}/{seed}: the self-inverse identity recovers a exactly"
+                    );
+                    assert_eq!(
+                        rec.meta().guarantee(),
+                        mycelium_core::GuaranteeStrength::Exact,
+                        "{model}/{seed}: Exact carried from the kernel"
+                    );
+                }
+                "FHRR" => {
+                    assert_eq!(
+                        rec.meta().guarantee(),
+                        mycelium_core::GuaranteeStrength::Empirical,
+                        "FHRR/{seed}: the weak-link Empirical tag carried from the kernel"
+                    );
+                    assert_eq!(
+                        rec.meta().bound(),
+                        Some(&FHRR_UNBIND_PROFILE.bound()),
+                        "FHRR/{seed}: the trial-validated δ bound rides the value"
+                    );
+                    let (Payload::Hypervector(r), Payload::Hypervector(orig)) =
+                        (rec.payload(), a.payload())
+                    else {
+                        panic!("FHRR/{seed}: hypervector payloads expected");
+                    };
+                    let sim = Fhrr::new(dim).similarity(r, orig);
+                    assert!(
+                        sim > 0.999,
+                        "FHRR/{seed}: pure-pair recovery must be near-exact, got {sim}"
+                    );
+                }
+                _ => unreachable!("corpus models"),
+            }
+        }
+    }
+}
+
+/// `vsa.permute` per model: `Exact` carried from the kernel, and cyclic — the complementary
+/// shift `dim − s` inverts it exactly (so the inverse permutation is expressible with the
+/// unsigned `Binary{W}` shift operand; no negative-shift form is needed).
+#[test]
+fn vsa_permute_is_exact_and_inverted_by_the_complementary_shift() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.permute").expect("registered");
+    for (model, dim, atom, [_, _, permute_op]) in vsa_corpus() {
+        let a = vsa_hv(model, dim, atom(dim, 7));
+        let s = shift_bin(3, 8);
+        let p = f("vsa.permute", &[&a, &s]).unwrap_or_else(|e| panic!("{model}: {e}"));
+        assert_eq!(
+            p.meta().guarantee(),
+            mycelium_core::GuaranteeStrength::Exact,
+            "{model}: permute is Exact in every model of the dispatch set"
+        );
+        assert_ne!(
+            p.payload(),
+            a.payload(),
+            "{model}: a nonzero shift moves components"
+        );
+        match p.meta().provenance() {
+            Provenance::Derived { op, .. } => assert_eq!(
+                op,
+                &mycelium_core::operation_hash(permute_op),
+                "{model}: provenance records the dispatched model-namespaced op"
+            ),
+            other => panic!("{model}: expected Derived provenance, got {other:?}"),
+        }
+        // The complementary shift restores the original components exactly (a pure rotation).
+        let back = f("vsa.permute", &[&p, &shift_bin(u64::from(dim) - 3, 16)]).unwrap();
+        assert_eq!(back.payload(), a.payload(), "{model}: cyclic inverse");
+    }
+}
+
+/// The never-silent reject surface — model dispatch: a cross-model operand pair, a model outside
+/// the introduction dispatch set (HRR — a kernel model with no surfaced Value-level set), a
+/// non-Vsa operand, and a dim mismatch are all explicit `PrimType` refusals naming the offense
+/// (G2), never a coercion or a guessed algebra.
+#[test]
+fn vsa_model_dispatch_rejects_are_explicit() {
+    let reg = PrimRegistry::with_builtins();
+    for prim in ["vsa.bind", "vsa.unbind"] {
+        let f = reg.get(prim).expect("registered");
+        // Cross-model operands: dispatch anchors on the FIRST operand's model; the kernel then
+        // refuses the foreign second operand (never a silent cross-model bind).
+        let mapi = vsa_hv("MAP-I", 16, mapi_atom(16, 1));
+        let bsc = vsa_hv("BSC", 16, bsc_atom(16, 2));
+        match f(prim, &[&mapi, &bsc]) {
+            Err(EvalError::PrimType { why, .. }) => assert!(
+                why.contains("MAP-I"),
+                "{prim}: the model-mismatch refusal names the expected model, got: {why}"
+            ),
+            other => panic!("{prim}: cross-model operands must refuse, got {other:?}"),
+        }
+        // An out-of-set model refuses naming the dispatch set (append-only widening, no guess).
+        let hrr = vsa_hv("HRR", 16, mapi_atom(16, 3));
+        match f(prim, &[&hrr, &hrr]) {
+            Err(EvalError::PrimType { why, .. }) => assert!(
+                why.contains("MAP-I, FHRR, BSC"),
+                "{prim}: the out-of-set refusal names the dispatch set, got: {why}"
+            ),
+            other => panic!("{prim}: an out-of-set model must refuse, got {other:?}"),
+        }
+        // A non-Vsa operand refuses explicitly.
+        assert!(
+            matches!(
+                f(prim, &[&byte([true; 8]), &mapi]),
+                Err(EvalError::PrimType { .. })
+            ),
+            "{prim}: a non-Vsa first operand must refuse"
+        );
+        // Dim mismatch: the kernel's DimMismatch/NotThisModel refusal, carried explicitly.
+        let mapi32 = vsa_hv("MAP-I", 32, mapi_atom(32, 4));
+        assert!(
+            matches!(f(prim, &[&mapi, &mapi32]), Err(EvalError::PrimType { .. })),
+            "{prim}: a dim mismatch must refuse"
+        );
+        // Arity is explicit.
+        assert!(
+            matches!(f(prim, &[&mapi]), Err(EvalError::PrimType { .. })),
+            "{prim}: arity 1 must refuse"
+        );
+    }
+}
+
+/// Alphabet violations refuse explicitly per model (the kernel's guard, carried): a non-`±1`
+/// MAP-I component, a non-`{0,1}` BSC component, an out-of-range FHRR phase — the tag would be
+/// wrong off-alphabet, so the kernel refuses rather than mis-stamps (A3-04; VR-5/G2).
+#[test]
+fn vsa_alphabet_violations_refuse_explicitly() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.bind").expect("registered");
+    let cases: [(&str, u32, AtomFn, f64); 3] = [
+        ("MAP-I", 16, mapi_atom, 0.5),
+        ("BSC", 16, bsc_atom, 2.0),
+        ("FHRR", 256, fhrr_atom, 7.0),
+    ];
+    for (model, dim, atom, bad_component) in cases {
+        let mut data = atom(dim, 1);
+        data[3] = bad_component;
+        let bad = vsa_hv(model, dim, data);
+        let ok = vsa_hv(model, dim, atom(dim, 2));
+        match f("vsa.bind", &[&bad, &ok]) {
+            Err(EvalError::PrimType { why, .. }) => assert!(
+                why.contains("alphabet") || why.contains("component"),
+                "{model}: the refusal names the alphabet violation, got: {why}"
+            ),
+            other => panic!("{model}: off-alphabet operand must refuse, got {other:?}"),
+        }
+    }
+}
+
+/// The FHRR unbind regime gate, through the prim path: unbinding a value that is not a single
+/// `vsa.fhrr.bind` product is an explicit refusal (the kernel's `OutsideEmpiricalProfile` — the
+/// Empirical tag is issued only inside its trial-validated regime; VR-5), never a silently
+/// mis-tagged decode.
+#[test]
+fn vsa_fhrr_unbind_is_regime_gated_through_the_prim_path() {
+    let reg = PrimRegistry::with_builtins();
+    let unbind = reg.get("vsa.unbind").expect("registered");
+    let a = vsa_hv("FHRR", 256, fhrr_atom(256, 1));
+    let b = vsa_hv("FHRR", 256, fhrr_atom(256, 2));
+    // Root provenance → outside the validated single-factor regime → explicit refusal.
+    match unbind("vsa.unbind", &[&a, &b]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("empirical profile"),
+            "the refusal names the regime gate, got: {why}"
+        ),
+        other => panic!("an out-of-regime FHRR unbind must refuse, got {other:?}"),
+    }
+}
+
+/// The Exact-input guard (the M-204 posture, VSA form): a non-`Exact` operand — here an
+/// `Empirical` FHRR unbind result, a perfectly in-alphabet phase vector — must NOT come out of
+/// `vsa.bind` re-stamped `Exact`. There is no defined δ-propagation rule through the algebra
+/// yet, so the wrapper refuses explicitly (never a fabricated bound, never a silent upgrade —
+/// G2/VR-5; the honest noisy-decode path is cleanup, M-894).
+#[test]
+fn vsa_non_exact_operands_refuse_composition() {
+    let reg = PrimRegistry::with_builtins();
+    let bind = reg.get("vsa.bind").expect("registered");
+    let unbind = reg.get("vsa.unbind").expect("registered");
+    let a = vsa_hv("FHRR", 256, fhrr_atom(256, 1));
+    let b = vsa_hv("FHRR", 256, fhrr_atom(256, 2));
+    let ab = bind("vsa.bind", &[&a, &b]).unwrap();
+    let noisy = unbind("vsa.unbind", &[&ab, &b]).unwrap();
+    assert_eq!(
+        noisy.meta().guarantee(),
+        mycelium_core::GuaranteeStrength::Empirical
+    );
+    for prim in ["vsa.bind", "vsa.unbind", "vsa.permute"] {
+        let f = reg.get(prim).expect("registered");
+        let second: &Value = if prim == "vsa.permute" {
+            &shift_bin(1, 8)
+        } else {
+            &a
+        };
+        assert!(
+            matches!(
+                f(prim, &[&noisy, second]),
+                Err(EvalError::ApproxCompositionUnsupported { .. })
+            ),
+            "{prim}: a non-Exact operand must refuse composition, not re-stamp Exact"
+        );
+    }
+}

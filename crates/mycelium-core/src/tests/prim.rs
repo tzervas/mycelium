@@ -113,8 +113,11 @@ fn builtins_are_present_and_resolvable() {
     // total-order property stays unproven until the M-511 proof debt is discharged;
     // RFC-0033/M-767 added the signedness-split signed set `bin.div_s`/`bin.rem_s`/`bin.shr_s`
     // + the two's-complement ordering `cmp.lt_s`, the distinct-named signed counterparts to
-    // `bin.div`/`bin.rem`/`bin.shr`/`cmp.lt` per ADR-028).
-    assert_eq!(t.entries().len(), 50);
+    // `bin.div`/`bin.rem`/`bin.shr`/`cmp.lt` per ADR-028; RFC-0003 §3/§4/M-892 added the
+    // model-dispatched VSA bind group `vsa.bind`/`vsa.unbind`/`vsa.permute` — pinned separately
+    // below, `vsa.unbind`'s intrinsic is the `Empirical` meet over the MAP-I/FHRR/BSC dispatch
+    // set).
+    assert_eq!(t.entries().len(), 53);
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -242,6 +245,41 @@ fn flt_cmp_group_carries_the_adr040_empirical_intrinsic() {
             "{name}: operands are the documented `Any` escape hatch"
         );
         assert_eq!(d.sig.result, PrimParadigm::Binary);
+    }
+}
+
+// M-892 (`enb` Gap C): the model-dispatched VSA bind group (RFC-0003 §3/§4; ADR-008). A Π
+// declaration stores ONE intrinsic, but the per-op tag is per-*model* (MAP-I/BSC bind/unbind/
+// permute `Exact`; FHRR bind/permute `Exact`, unbind `Empirical` — the RFC-0003 §4 normative
+// weak-link assignment), so the table records the **meet over the dispatch set** — never the
+// strongest member (VR-5: downgrade to stay accurate): `vsa.bind`/`vsa.permute` `Exact`,
+// `vsa.unbind` `Empirical`. The runtime value still carries the dispatched model's own kernel
+// tag; the table↔kernel meet consistency is guarded in `mycelium-interp` (this crate cannot
+// depend on `mycelium-vsa` — ADR-008 keeps the dependency one-way). This test pins the table
+// side. Widening the dispatch set (HRR/MAP-B/SBC, later waves) must recompute these meets.
+#[test]
+fn vsa_bind_group_carries_the_dispatch_set_meet_tags() {
+    let t = PrimTable::builtins();
+    for (name, intrinsic) in [
+        ("vsa.bind", GuaranteeStrength::Exact),
+        ("vsa.unbind", GuaranteeStrength::Empirical),
+        ("vsa.permute", GuaranteeStrength::Exact),
+    ] {
+        let d = t.get(name).expect("vsa builtin registered");
+        assert_eq!(
+            d.intrinsic, intrinsic,
+            "{name}: intrinsic must stay the meet over the MAP-I/FHRR/BSC dispatch set (VR-5)"
+        );
+        assert_eq!(d.sig.arity(), 2, "{name}: arity drifted");
+        assert_eq!(d.sig.width, WidthRel::Uniform, "{name}: width rel drifted");
+        // Paradigm-model escape hatch (FLAG in builtins()): no first-class `Vsa` paradigm yet;
+        // the real equal-model+dim typing (and vsa.permute's Binary{W} shift operand) is the
+        // interpreter prim + the L1 checker branch (`try_check_vsa_prim`).
+        assert!(
+            d.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+            "{name}: operands are the documented `Any` escape hatch"
+        );
+        assert_eq!(d.sig.result, PrimParadigm::Any);
     }
 }
 
@@ -379,17 +417,18 @@ fn contains_returns_true_iff_registered() {
 fn names_returns_registered_sorted_names() {
     let t = PrimTable::builtins();
     let ns = t.names();
-    // Exactly 46 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
+    // Exactly 53 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
     // seq.len/seq.get + D4 bytes.len/get/slice/concat + DN-41 bit.width_cast + DN-58/M-817
     // fuse_join:binary + RFC-0033/M-887 bin.mul + RFC-0033/M-888 bin.div/bin.rem + RFC-0033/M-889
     // bin.shl/bin.shr + RFC-0033/M-766 bin.add/bin.sub/bin.neg + RFC-0001 §4.1/M-890
     // dense.add/dense.sub/dense.neg/dense.scale + M-891 dense.dot/dense.similarity +
     // ADR-040 §2.5/M-898 flt.add/flt.sub/flt.mul/flt.div/flt.neg + ADR-040 §2.4/M-899
     // flt.lt/flt.le/flt.gt/flt.ge/flt.eq/flt.total_le + RFC-0033/M-767
-    // bin.div_s/bin.rem_s/bin.shr_s/cmp.lt_s, the signedness-split signed set).
+    // bin.div_s/bin.rem_s/bin.shr_s/cmp.lt_s, the signedness-split signed set + RFC-0003
+    // §3/§4/M-892 vsa.bind/vsa.unbind/vsa.permute, the model-dispatched VSA bind group).
     assert_eq!(
         ns.len(),
-        50,
+        53,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

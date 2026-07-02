@@ -34,7 +34,7 @@ pub const FHRR_UNBIND_PROFILE: EmpiricalProfile = EmpiricalProfile {
 };
 
 /// Wrap an angle to `(−π, π]`.
-fn wrap_phase(theta: f64) -> f64 {
+pub(crate) fn wrap_phase(theta: f64) -> f64 {
     let t = theta.rem_euclid(std::f64::consts::TAU);
     if t > std::f64::consts::PI {
         t - std::f64::consts::TAU
@@ -125,6 +125,22 @@ impl Fhrr {
             Some(FHRR_UNBIND_PROFILE.bound()),
         )
     }
+
+    /// Value-level `permute` (Exact): cyclic shift by `shift` (M-892 — completes the FHRR
+    /// Value-level bind group so the `vsa.permute` prim dispatches uniformly across the model
+    /// set). A pure component rotation — no phase arithmetic occurs, so the `Exact` tag needs no
+    /// alphabet guard beyond the model/dim check (the same posture as
+    /// [`Bsc::permute_value`](crate::Bsc::permute_value) and `MapI::permute_value`).
+    pub fn permute_value(&self, a: &Value, shift: i64) -> Result<Value, VsaError> {
+        let out = self.permute(hv_of(self.model_id(), self.dim, a)?, shift)?;
+        wrap_exact(
+            self.model_id(),
+            self.dim,
+            out,
+            "vsa.fhrr.permute",
+            vec![a.content_hash()],
+        )
+    }
 }
 
 impl VsaModel for Fhrr {
@@ -198,132 +214,5 @@ impl VsaModel for Fhrr {
             return 0.0;
         }
         a.iter().zip(b).map(|(x, y)| (x - y).cos()).sum::<f64>() / a.len() as f64
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::CleanupMemory;
-    use mycelium_core::{Meta, Payload, Repr, SparsityClass};
-
-    /// Deterministic uniform-phase atom (tiny LCG — house style).
-    fn phasor_atom(dim: u32, seed: u64) -> Vec<f64> {
-        let mut s = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1);
-        (0..dim)
-            .map(|_| {
-                s = s
-                    .wrapping_mul(6364136223846793005)
-                    .wrapping_add(1442695040888963407);
-                let u = (s >> 11) as f64 / (1u64 << 53) as f64; // [0, 1)
-                wrap_phase(std::f64::consts::TAU * u)
-            })
-            .collect()
-    }
-
-    fn hv_value(dim: u32, seed: u64) -> Value {
-        Value::new(
-            Repr::Vsa {
-                model: "FHRR".to_owned(),
-                dim,
-                sparsity: SparsityClass::Dense,
-            },
-            Payload::Hypervector(phasor_atom(dim, seed)),
-            Meta::exact(mycelium_core::Provenance::Root),
-        )
-        .unwrap()
-    }
-
-    const D: u32 = 256;
-
-    #[test]
-    fn bind_unbind_recovers_up_to_rounding() {
-        let m = Fhrr::new(D);
-        assert!(!m.self_inverse());
-        let a = phasor_atom(D, 1);
-        let b = phasor_atom(D, 2);
-        let bound = m.bind(&a, &b).unwrap();
-        let recovered = m.unbind(&bound, &b).unwrap();
-        let sim = m.similarity(&recovered, &a);
-        assert!(
-            sim > 0.999,
-            "pure-pair recovery should be near-exact: {sim}"
-        );
-        // Still tagged Empirical — the matrix is normative (never upgraded past it).
-        assert_eq!(
-            m.intrinsic_guarantee(VsaOp::Unbind),
-            GuaranteeStrength::Empirical
-        );
-    }
-
-    #[test]
-    fn bundle_is_phasor_valued_and_member_similar() {
-        let m = Fhrr::new(D);
-        let items: Vec<Vec<f64>> = (0..3).map(|i| phasor_atom(D, 30 + i)).collect();
-        let refs: Vec<&[f64]> = items.iter().map(Vec::as_slice).collect();
-        let bundle = m.bundle(&refs).unwrap();
-        assert!(bundle
-            .iter()
-            .all(|&t| t > -std::f64::consts::PI && t <= std::f64::consts::PI));
-        let member = m.similarity(&bundle, &items[0]);
-        let stranger = m.similarity(&bundle, &phasor_atom(D, 555));
-        assert!(
-            member > stranger + 0.2,
-            "member {member} vs stranger {stranger}"
-        );
-    }
-
-    #[test]
-    fn degenerate_bundle_component_is_explicit() {
-        let m = Fhrr::new(2);
-        // Opposite phasors cancel exactly at every component.
-        let a = vec![0.5, -1.0];
-        let b = vec![
-            wrap_phase(0.5 + std::f64::consts::PI),
-            wrap_phase(-1.0 + std::f64::consts::PI),
-        ];
-        assert_eq!(
-            m.bundle(&[&a, &b]),
-            Err(VsaError::DegenerateBundleComponent { index: 0 })
-        );
-    }
-
-    #[test]
-    fn out_of_range_phases_are_refused() {
-        let m = Fhrr::new(2);
-        assert_eq!(
-            m.bind(&[0.1, 7.0], &[0.2, 0.3]),
-            Err(VsaError::NonAlphabetComponent { index: 1 })
-        );
-    }
-
-    #[test]
-    fn value_unbind_is_empirical_and_regime_gated() {
-        let m = Fhrr::new(D);
-        let a = hv_value(D, 1);
-        let b = hv_value(D, 2);
-        let bound = m.bind_values(&a, &b).unwrap();
-        let noisy = m.unbind_values(&bound, &b).unwrap();
-        assert_eq!(noisy.meta().guarantee(), GuaranteeStrength::Empirical);
-        // Root provenance → outside the validated single-factor regime.
-        assert!(matches!(
-            m.unbind_values(&a, &b),
-            Err(VsaError::OutsideEmpiricalProfile { .. })
-        ));
-    }
-
-    #[test]
-    fn unbind_then_cleanup_recovers_the_filler() {
-        let m = Fhrr::new(D);
-        let role = phasor_atom(D, 10);
-        let filler = phasor_atom(D, 20);
-        let bound = m.bind(&role, &filler).unwrap();
-        let mut mem = CleanupMemory::new(D);
-        mem.insert("filler", filler).unwrap();
-        mem.insert("other", phasor_atom(D, 21)).unwrap();
-        let noisy = m.unbind(&bound, &role).unwrap();
-        let hit = mem.cleanup(&noisy, &m).unwrap();
-        assert_eq!(hit.label, "filler");
-        assert!(hit.confidence > 0.9);
     }
 }

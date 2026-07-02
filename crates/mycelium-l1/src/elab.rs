@@ -33,10 +33,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use mycelium_core::{
     operation_hash, Alt, CtorRef, CtorSpec, DataRegistry, DeclSpec, FieldSpec, FloatWidth, Meta,
-    Node, Payload, PolicyRef, Provenance, Repr, ScalarKind, Trit, Value,
+    Node, Payload, PolicyRef, Provenance, Repr, ScalarKind, SparsityClass, Trit, Value,
 };
 
-use crate::ast::{Arm, BaseType, Expr, Literal, Path, Scalar, TypeRef, WidthRef};
+use crate::ast::{Arm, BaseType, Expr, Literal, Path, Scalar, Sparsity, TypeRef, WidthRef};
 use crate::checkty::{infer_type, normalize_pattern, prim_kernel_name, resolve_ty, Env, Ty};
 use crate::decision::{self, Head, Tree};
 
@@ -239,7 +239,7 @@ pub fn lit_value(site: &str, l: &Literal) -> Result<Value, ElabError> {
 }
 
 /// Resolve a surface [`TypeRef`] to a kernel [`Repr`] (swap targets). Only representation types
-/// resolve; named/data, VSA, and `Substrate` types are explicit refusals.
+/// resolve; named/data and `Substrate` types are explicit refusals.
 pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
     match &t.base {
         BaseType::Binary(WidthRef::Lit(n)) => Ok(Repr::Binary { width: *n }),
@@ -267,7 +267,22 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
                 Scalar::F64 => ScalarKind::F64,
             },
         }),
-        BaseType::Vsa { .. } => residual(site, "VSA types are deferred in the L1 v0 prototype"),
+        // RFC-0003 §3 / ADR-008 (M-892): the VSA type resolves to its kernel `Repr` — the lift of
+        // the former blanket deferral (the `vsa_*` prims need typable operands). Not a v0 swap
+        // target (the checker's swap gate admits only Binary/Ternary/Dense), but `type_repr` is
+        // the general surface→`Repr` resolver, so a concrete resolution here is correct and
+        // never-silent (the `Bytes`/`Seq`/`Float` posture). The surface model ident is
+        // canonicalized to the kernel model id exactly as the checker does (one mapping — the
+        // types the checker admits and the reprs elaboration emits must not fork).
+        BaseType::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => Ok(Repr::Vsa {
+            model: crate::checkty::vsa_kernel_model_id(model),
+            dim: *dim,
+            sparsity: sparsity_class(sparsity),
+        }),
         // RFC-0032 D3/D4: the sequence/byte-string reprs resolve to their kernel `Repr` (the element
         // type recurses through `type_repr`). They are not v0 swap targets (the checker refuses a
         // `swap` to them — no swap engine), but `type_repr` is the general surface→`Repr` resolver,
@@ -821,6 +836,17 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
             dim: *d,
             dtype: scalar_kind(*s),
         }),
+        // RFC-0003 §3 (M-892): the VSA repr has a monomorphic kernel form (the model id in the
+        // checked type is already the canonical kernel id).
+        Ty::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => FieldSpec::Repr(Repr::Vsa {
+            model: model.clone(),
+            dim: *dim,
+            sparsity: sparsity_class(sparsity),
+        }),
         // RFC-0032 D3/D4: the sequence/byte-string reprs have monomorphic kernel forms.
         Ty::Seq(elem, n) => FieldSpec::Repr(Repr::Seq {
             elem: Box::new(ty_to_repr(elem)?),
@@ -856,6 +882,16 @@ fn ty_to_repr(ty: &Ty) -> Option<Repr> {
             dim: *d,
             dtype: scalar_kind(*s),
         },
+        // RFC-0003 §3 (M-892): the VSA repr resolves concretely (model already canonical).
+        Ty::Vsa {
+            model,
+            dim,
+            sparsity,
+        } => Repr::Vsa {
+            model: model.clone(),
+            dim: *dim,
+            sparsity: sparsity_class(sparsity),
+        },
         Ty::Seq(elem, n) => Repr::Seq {
             elem: Box::new(ty_to_repr(elem)?),
             len: *n,
@@ -876,6 +912,14 @@ fn scalar_kind(s: Scalar) -> ScalarKind {
         Scalar::Bf16 => ScalarKind::Bf16,
         Scalar::F32 => ScalarKind::F32,
         Scalar::F64 => ScalarKind::F64,
+    }
+}
+
+/// The surface `Sparsity` → kernel `SparsityClass` mapping (M-892; shared with [`type_repr`]).
+fn sparsity_class(sp: &Sparsity) -> SparsityClass {
+    match sp {
+        Sparsity::Dense => SparsityClass::Dense,
+        Sparsity::Sparse(k) => SparsityClass::Sparse { max_active: *k },
     }
 }
 

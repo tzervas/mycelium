@@ -372,3 +372,45 @@ fn surface_signature_matches_the_kernel_declaration() {
         );
     }
 }
+
+/// The M-892 (`enb` Gap C) VSA bind-group prims are **model-dispatched** hypervector ops — their
+/// operands/results are `Ty::Vsa{model, dim, sparsity}`, typed by a dedicated checker branch
+/// (`try_check_vsa_prim`, which also gates the MAP-I/FHRR/BSC dispatch set statically), and their
+/// Π entries use the documented `Any`/`Uniform` paradigm-model escape hatch (no first-class `Vsa`
+/// paradigm yet — the same FLAG as the seq/bytes/dense/flt prims). This guard pins their
+/// surface→Π consistency directly: each `vsa_*` surface name maps to a declared `vsa.*` kernel
+/// prim with the right arity, `Any` operands/result, and — the M-892 core contract — the
+/// intrinsic at the **meet over the dispatch set** (`vsa.bind`/`vsa.permute` `Exact`;
+/// `vsa.unbind` `Empirical` — FHRR's normative weak-link unbind holds the meet down; VR-5: one Π
+/// slot must not over-claim for any model. The kernel-side twin lives in
+/// `mycelium-interp/tests/prim_table.rs`, which recomputes the meet from `mycelium-vsa` itself;
+/// the runtime value carries the dispatched model's own tag).
+#[test]
+fn vsa_prims_resolve_to_declared_model_dispatched_kernel_prims() {
+    use mycelium_core::GuaranteeStrength;
+    let table = PrimTable::builtins();
+    for (surface, kernel_expected, intrinsic) in [
+        ("vsa_bind", "vsa.bind", GuaranteeStrength::Exact),
+        ("vsa_unbind", "vsa.unbind", GuaranteeStrength::Empirical),
+        ("vsa_permute", "vsa.permute", GuaranteeStrength::Exact),
+    ] {
+        let kernel = prim_kernel_name(surface)
+            .unwrap_or_else(|| panic!("vsa prim `{surface}` must map to a kernel name"));
+        assert_eq!(kernel, kernel_expected, "surface→kernel mapping drifted");
+        assert!(
+            table.contains(kernel),
+            "surface `{surface}` → kernel `{kernel}`, but `{kernel}` is not declared in Π",
+        );
+        let decl = table.get(kernel).expect("declared prim");
+        assert_eq!(decl.sig.arity(), 2, "`{kernel}` arity drifted");
+        assert!(
+            decl.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+            "`{kernel}` operands use the documented `Any` escape hatch (no Vsa paradigm yet)",
+        );
+        assert_eq!(decl.sig.result, PrimParadigm::Any);
+        assert_eq!(
+            decl.intrinsic, intrinsic,
+            "`{kernel}` intrinsic must be the meet over the MAP-I/FHRR/BSC dispatch set (VR-5)",
+        );
+    }
+}

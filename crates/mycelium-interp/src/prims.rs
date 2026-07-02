@@ -31,6 +31,7 @@ use mycelium_core::{
 };
 use mycelium_dense::{DenseError, DenseSpace};
 use mycelium_numerics::{compose_error_bound, ErrorOp};
+use mycelium_vsa::{Bsc, Fhrr, MapI, VsaError};
 
 use crate::EvalError;
 
@@ -101,7 +102,12 @@ impl PrimRegistry {
     /// the IEEE-754 §5.11 partial-order predicates, any NaN operand → the *defined* result
     /// `false` — plus the named opt-in total order `flt.total_le` (IEEE-754 §5.10 `totalOrder`),
     /// ADR-040 §2.4, M-899 — `enb` Gap A; the total-order *property* stays `Empirical` until the
-    /// M-511 proof debt is discharged — see the float comparison section note).
+    /// M-511 proof debt is discharged — see the float comparison section note), and the
+    /// **VSA bind group** (`vsa.bind`/`vsa.unbind`/`vsa.permute`, RFC-0003 §3/§4/ADR-008, M-892 —
+    /// `enb` Gap C; **model-dispatched** MAP-I/FHRR/BSC on the operand's `Repr::Vsa` model id, an
+    /// out-of-set model an explicit refusal; the `mycelium-vsa` kernel constructs the result with
+    /// its honest per-model tag — MAP-I/BSC ops `Exact`, FHRR `unbind` `Empirical` with its
+    /// trial-validated δ — carried unchanged; see the vsa section note below).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -189,6 +195,13 @@ impl PrimRegistry {
         r.register("flt.ge", prim_flt_ge);
         r.register("flt.eq", prim_flt_eq);
         r.register("flt.total_le", prim_flt_total_le);
+        // RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the VSA bind group — model-dispatched
+        // (MAP-I/FHRR/BSC) on the operand's `Repr::Vsa` model id. The kernel (`mycelium-vsa`)
+        // constructs the result `Value` with its honest per-model tag; the wrappers carry it
+        // through unchanged (VR-5). See the module note at the vsa section below.
+        r.register("vsa.bind", prim_vsa_bind);
+        r.register("vsa.unbind", prim_vsa_unbind);
+        r.register("vsa.permute", prim_vsa_permute);
         r
     }
 
@@ -2007,4 +2020,208 @@ fn prim_flt_eq(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
 fn prim_flt_total_le(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     let (a, b) = flt_binop(prim, args)?;
     flt_cmp_result(prim, args, a.total_cmp(&b) != Ordering::Greater)
+}
+
+// --- RFC-0003 §3/§4 / ADR-008 (M-892, `enb` Gap C): the VSA bind group ---------------------------
+//
+// `vsa.bind`/`vsa.unbind`/`vsa.permute` surface the `mycelium-vsa` Value-level model ops as
+// **model-dispatched** prims over `Repr::Vsa{model, dim, sparsity}` values: the wrapper reads the
+// **first operand's** model id and dispatches to that model's own Value-level op
+// (`MapI::bind_values` / `Fhrr::unbind_values` / `Bsc::permute_value`, …). The **introduction
+// dispatch set is MAP-I / FHRR / BSC** (the M-892 model set); an operand naming any other model —
+// including kernel models with no Value-level op set surfaced yet (HRR/MAP-B/SBC) — is an explicit
+// [`EvalError::PrimType`] refusal naming the model and the set, never a guessed algebra (G2).
+// Widening the set is an append-only extension (it must also recompute the Π meet tags — see
+// `mycelium-core::PrimTable::builtins`). This mirrors the M-890/M-891 tensor-valued registry
+// pattern and sets the shape for the rest of the VSA surface (M-893 bundle, M-894
+// cleanup/reconstruct).
+//
+// **Tags — constructed by the kernel per model, carried unchanged (VR-5).** The kernel op builds
+// the full result `Value` (payload + `Meta`): MAP-I bind/unbind/permute and BSC bind/unbind/permute
+// are **`Exact`** (algebraic — the bipolar/XOR self-inverse identities and the cyclic shift), FHRR
+// bind/permute are **`Exact`** (deterministic phasor algebra) and FHRR **unbind is `Empirical`**
+// (the RFC-0003 §4 normative weak-link tag) carrying its trial-validated `FHRR_UNBIND_PROFILE` δ
+// bound — and it is **regime-gated by the kernel**: the unbound operand must be a single
+// `vsa.fhrr.bind` product (provenance-checked), refused explicitly outside the validated regime
+// rather than stretching the tag past its evidence. The wrapper never re-derives or re-stamps any
+// of this. Note the Π table's single `vsa.unbind` intrinsic is the **meet** over the dispatch set
+// (`Empirical`); the runtime value carries the dispatched model's own — possibly stronger — kernel
+// tag (guarded by the meet-consistency test in `src/tests/prims.rs`).
+//
+// **Provenance is model-namespaced.** The kernel stamps `Derived{op: hash("vsa.map_i.bind"), …}`
+// (the model's own op id), not `hash("vsa.bind")`: the dispatch *result* is recorded, more specific
+// than the dispatching prim name — inspectable and EXPLAIN-able (G2), and exactly what makes the
+// FHRR unbind regime gate work through the prim path (it recognizes `vsa.fhrr.bind` products).
+//
+// **Exact-input guard (the M-204 posture, VSA form).** The kernel Value-level ops stamp their
+// per-op tag without meeting the *inputs'* strengths (their alphabet/regime guards make that safe
+// for every payload-reachable case — a MAP-I/BSC bundle is out-of-alphabet at unbind, an FHRR
+// non-bind-product is regime-refused). One hole remains reachable through the prim surface: an
+// **in-alphabet but non-`Exact` value** (e.g. an `Empirical` FHRR unbind result — a valid phase
+// vector — fed back into `vsa.bind`) would come out stamped `Exact`, a silent upgrade (VR-5).
+// There is **no defined δ-propagation rule through the VSA algebra yet**, so the wrapper refuses
+// non-`Exact` operands with [`EvalError::ApproxCompositionUnsupported`] — refuse, never fabricate
+// (G2). The honest noisy-decode path is cleanup with its own disclosed confidence (M-894), not a
+// silently-Exact re-bind.
+//
+// **`vsa.permute`'s shift operand.** The kernel takes `shift: i64`; the surface operand is an
+// unsigned `Binary{W}` magnitude (read like `seq.get`'s index — MSB-first). Rotation is cyclic
+// (`rem_euclid dim`), so every permutation is reachable and the *inverse* permute is the
+// complementary shift `dim − s` — no negative-shift form is needed (a signed-shift variant, if
+// ever wanted, is a distinct named op per ADR-028's signedness-as-operations rule).
+//
+// Error mapping ([`map_vsa_err`]): `VsaError::Wf` → [`EvalError::Wf`]; everything else
+// (dim/model mismatch, out-of-alphabet component, outside-empirical-profile regime refusals) →
+// [`EvalError::PrimType`] carrying the kernel's own message — explicit, never a coercion (G2).
+
+/// The model-dispatch target of a `vsa.*` prim: the M-892 introduction set (MAP-I / FHRR / BSC).
+/// Constructed by [`vsa_model_of`] off the first operand's `Repr::Vsa` model id.
+enum VsaDispatch {
+    /// Multiply-Add-Permute (bipolar) — bind/unbind/permute all `Exact`.
+    MapI(MapI),
+    /// Fourier HRR (phasor) — bind/permute `Exact`; unbind `Empirical`, regime-gated.
+    Fhrr(Fhrr),
+    /// Binary Spatter Code — bind/unbind/permute all `Exact`.
+    Bsc(Bsc),
+}
+
+impl VsaDispatch {
+    /// Dispatch `bind` to the model's Value-level op (the kernel constructs the result `Value`).
+    fn bind(&self, a: &Value, b: &Value) -> Result<Value, VsaError> {
+        match self {
+            VsaDispatch::MapI(m) => m.bind_values(a, b),
+            VsaDispatch::Fhrr(m) => m.bind_values(a, b),
+            VsaDispatch::Bsc(m) => m.bind_values(a, b),
+        }
+    }
+
+    /// Dispatch `unbind` (MAP-I/BSC: the self-inverse `Exact` op; FHRR: the regime-gated
+    /// `Empirical` op with its δ bound).
+    fn unbind(&self, a: &Value, b: &Value) -> Result<Value, VsaError> {
+        match self {
+            VsaDispatch::MapI(m) => m.unbind_values(a, b),
+            VsaDispatch::Fhrr(m) => m.unbind_values(a, b),
+            VsaDispatch::Bsc(m) => m.unbind_values(a, b),
+        }
+    }
+
+    /// Dispatch `permute` (cyclic shift — `Exact` in every model of the set).
+    fn permute(&self, a: &Value, shift: i64) -> Result<Value, VsaError> {
+        match self {
+            VsaDispatch::MapI(m) => m.permute_value(a, shift),
+            VsaDispatch::Fhrr(m) => m.permute_value(a, shift),
+            VsaDispatch::Bsc(m) => m.permute_value(a, shift),
+        }
+    }
+}
+
+/// Bind the VSA model a `vsa.*` prim dispatches to off its **first operand's** `Repr::Vsa` model
+/// id + dim (the model anchor); the kernel then enforces every other hypervector operand agrees
+/// (a model/dim mismatch is an explicit `NotThisModel`/`DimMismatch` refusal, never a coercion).
+/// A non-`Vsa` first operand, or a model outside the M-892 introduction dispatch set
+/// (MAP-I / FHRR / BSC), is an explicit [`EvalError::PrimType`] naming the model and the set (G2).
+fn vsa_model_of(prim: &str, v: &Value) -> Result<VsaDispatch, EvalError> {
+    let Repr::Vsa { model, dim, .. } = v.repr() else {
+        return Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("expected a Vsa hypervector operand, got {:?}", v.repr()),
+        });
+    };
+    match model.as_str() {
+        "MAP-I" => Ok(VsaDispatch::MapI(MapI::new(*dim))),
+        "FHRR" => Ok(VsaDispatch::Fhrr(Fhrr::new(*dim))),
+        "BSC" => Ok(VsaDispatch::Bsc(Bsc::new(*dim))),
+        other => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!(
+                "model {other:?} is outside the vsa.* prim dispatch set at introduction \
+                 (MAP-I, FHRR, BSC — M-892); widening the set is an append-only extension, \
+                 never a guessed algebra"
+            ),
+        }),
+    }
+}
+
+/// Map a kernel [`VsaError`] onto the interpreter's never-silent error surface (see the section
+/// note above). Every arm is explicit; nothing is coerced.
+fn map_vsa_err(prim: &str, e: VsaError) -> EvalError {
+    match e {
+        VsaError::Wf(w) => EvalError::Wf(w),
+        // Model/dim/alphabet/regime refusals: the kernel's Display already names the offense
+        // (expected model, expected/got dims, the offending component index, the failed
+        // empirical-profile side-condition, …).
+        other => EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: other.to_string(),
+        },
+    }
+}
+
+/// The Exact-input guard of the section note: a non-`Exact` operand has no defined δ-propagation
+/// rule through the VSA algebra, and the kernel would stamp the op's own tag regardless — an
+/// unearned upgrade (VR-5). Refused explicitly, never fabricated (the dense group's
+/// `ApproximateSource` posture, enforced wrapper-side because the vsa kernel predates the prim
+/// surface).
+fn vsa_operands_exact(prim: &str, args: &[&Value]) -> Result<(), EvalError> {
+    if args
+        .iter()
+        .all(|v| v.meta().guarantee() == GuaranteeStrength::Exact)
+    {
+        Ok(())
+    } else {
+        Err(EvalError::ApproxCompositionUnsupported {
+            prim: prim.to_owned(),
+        })
+    }
+}
+
+/// `vsa.bind : (Vsa{m, d}, Vsa{m, d}) → Vsa{m, d}` — model-dispatched binding (M-892). Tag
+/// carried from the kernel: **`Exact`** in every model of the introduction set (MAP-I elementwise
+/// product on the guarded `±1` alphabet; FHRR phase addition; BSC XOR). A model/dim mismatch or
+/// an out-of-alphabet component is an explicit refusal, never a coercion (G2).
+fn prim_vsa_bind(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    vsa_operands_exact(prim, args)?;
+    let model = vsa_model_of(prim, args[0])?;
+    model
+        .bind(args[0], args[1])
+        .map_err(|e| map_vsa_err(prim, e))
+}
+
+/// `vsa.unbind : (Vsa{m, d}, Vsa{m, d}) → Vsa{m, d}` — model-dispatched factor recovery (M-892).
+/// Tag carried from the kernel **per model** (VR-5, never re-stamped): MAP-I/BSC **`Exact`** (the
+/// self-inverse identities, alphabet-guarded); FHRR **`Empirical`** with its trial-validated
+/// `FHRR_UNBIND_PROFILE` δ bound, **regime-gated by the kernel** (the operand must be a single
+/// `vsa.fhrr.bind` product — refused explicitly outside the validated regime). The Π-table
+/// intrinsic for this prim is the *meet* over the set (`Empirical`); the runtime value's tag is
+/// the dispatched model's own.
+fn prim_vsa_unbind(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    vsa_operands_exact(prim, args)?;
+    let model = vsa_model_of(prim, args[0])?;
+    model
+        .unbind(args[0], args[1])
+        .map_err(|e| map_vsa_err(prim, e))
+}
+
+/// `vsa.permute : (Vsa{m, d}, Binary{W}) → Vsa{m, d}` — model-dispatched cyclic shift (M-892).
+/// Tag carried from the kernel: **`Exact`** in every model of the set (a pure component
+/// rotation). The shift is an unsigned `Binary{W}` magnitude (see the section note: rotation is
+/// cyclic, so the inverse permute is the complementary shift `d − s`); a shift width beyond the
+/// index space is an explicit refusal, never a truncation (G2).
+fn prim_vsa_permute(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    vsa_operands_exact(prim, args)?;
+    let model = vsa_model_of(prim, args[0])?;
+    let raw = as_index(prim, args[1])?;
+    // `rotate` reduces the shift `rem_euclid dim`, but the i64 conversion itself must not wrap:
+    // a usize beyond i64::MAX is refused explicitly (unreachable for any realistic width, kept
+    // as the never-silent guard — G2).
+    let shift = i64::try_from(raw).map_err(|_| EvalError::PrimType {
+        prim: prim.to_owned(),
+        why: format!("shift amount {raw} exceeds the i64 shift space"),
+    })?;
+    model
+        .permute(args[0], shift)
+        .map_err(|e| map_vsa_err(prim, e))
 }

@@ -330,6 +330,7 @@ dependencies = [
  "mycelium-dense",
  "mycelium-numerics",
  "mycelium-sched",
+ "mycelium-vsa",
 ]
 
 [[package]]
