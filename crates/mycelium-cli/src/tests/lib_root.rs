@@ -17,6 +17,24 @@ fn run_multi_fixture_manifest() -> PathBuf {
         .join("tests/fixtures/run-multi-nodule/mycelium-proj.toml")
 }
 
+/// The committed H1-capstone fixture (M-914; E28-1 `enb` — signed/unsigned integer ops, the
+/// string literal + `hash_blake3`/`bytes_eq`, and the `@forage` D-lite placement-policy surface):
+/// `tests/fixtures/run-h1-capstone/{mycelium-proj.toml,h1_signed.myc,h1_unsigned.myc,
+/// h1_strings.myc,run_h1_capstone.myc}`.
+fn run_h1_capstone_fixture_manifest() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/run-h1-capstone/mycelium-proj.toml")
+}
+
+/// The committed H1-capstone float-leg fixture (M-914; E28-1 `enb` — the `Float` value form +
+/// `flt.*` ops, kept separate from `run-h1-capstone` because `bit.and` has no defined
+/// ε-propagation rule for a non-`Exact` operand and every `flt.*` result is `Empirical` — see
+/// `run_h1_float.myc`'s doc comment): `tests/fixtures/run-h1-float/{mycelium-proj.toml,
+/// run_h1_float.myc}`.
+fn run_h1_float_fixture_manifest() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/run-h1-float/mycelium-proj.toml")
+}
+
 /// Write a minimal `mycelium-proj.toml` (matching the ad-hoc manifests already used by the
 /// `run_reports_a_located_parse_error_not_a_panic` / `run_refuses_zero_myc_sources_explicitly`
 /// tests below) into `dir`, named `name`.
@@ -167,6 +185,48 @@ fn run_executes_a_committed_multi_nodule_fixture_end_to_end() {
             .rendered
             .contains("false, false, false, false, true, true, false, false"),
         "rendered result should show 0b0000_1100's bits: {}",
+        report.rendered
+    );
+}
+
+#[test]
+fn run_executes_the_h1_capstone_fixture_end_to_end() {
+    // M-914 (E28-1 `enb` H1 capstone): the entry nodule's `main` folds the signed integer op set
+    // (`h1_signed`), the unsigned integer op set (`h1_unsigned`), and the string-literal +
+    // `hash_blake3`/`bytes_eq` check (`h1_strings`, riding inside a `colony { @forage(…) hypha …
+    // }`) into one `Binary{1}` via `and` — every sub-check is a hand-verified worked example (see
+    // `crates/mycelium-l1/tests/enablement.rs`), so this must render `true`; a single wrong
+    // constant anywhere would flip it to `false`, never silently pass (G2/VR-5).
+    let report = run(&run_h1_capstone_fixture_manifest())
+        .expect("the H1 capstone fixture links and runs end-to-end");
+    assert_eq!(report.entry, "main");
+    assert_eq!(report.source, "run_h1_capstone.myc");
+    assert!(
+        report.rendered.contains("Bits([true])"),
+        "the H1 capstone's folded and-chain must render true (every sub-check passes): {}",
+        report.rendered
+    );
+}
+
+#[test]
+fn run_executes_the_h1_float_fixture_end_to_end() {
+    // M-914: the `Float` value form + `flt.*` op set — kept as its OWN fixture (not folded into
+    // `run-h1-capstone`'s `and`-chain) because `bit.and` has no defined ε-propagation rule for a
+    // non-`Exact` operand (ADR-010/M-204) and every `flt.*` result is `Empirical` (ADR-040 §2.6) —
+    // see `run_h1_float.myc`'s doc comment for the discovered constraint. `main` is a single
+    // `flt_eq(flt_add(flt_mul(1.5, 2.0), 0.25), 3.25)`, so this must render `true`.
+    let report =
+        run(&run_h1_float_fixture_manifest()).expect("the H1 float-leg fixture runs end-to-end");
+    assert_eq!(report.entry, "main");
+    assert_eq!(report.source, "run_h1_float.myc");
+    assert!(
+        report.rendered.contains("Bits([true])"),
+        "the float composition (1.5*2.0)+0.25 == 3.25 must render true: {}",
+        report.rendered
+    );
+    assert!(
+        report.rendered.contains("guarantee: Empirical"),
+        "the float leg must stay honestly Empirical-tagged (ADR-040 §2.6), never upgraded: {}",
         report.rendered
     );
 }

@@ -67,16 +67,69 @@
 >    sibling `enb` tasks M-887…M-894/M-901…M-914 but re-verifying those is not this gate record).
 > 2. **No binary `mul`/`div`/`shl`/`shr` prims + no signed-op set** → blocks the integer numeric half.
 >    `Exact`. Tracked: M-718 FLAG · ADR-028 (signedness-as-operations) · E20-1.
+>    **→ CLOSED (2026-07-02, M-914 re-verification, `Empirical`).** The full DN-72-ratified
+>    signed/unsigned integer op set is landed and **fully three-way clean** (L1-eval ≡
+>    elaborate→L0-interp ≡ AOT), each with worked-example + overflow/div-by-zero/out-of-range
+>    refusal coverage in `crates/mycelium-l1/tests/enablement.rs`: `mul_s`/`div_u`/`rem_u`/
+>    `shl_u`/`shr_u` (M-887/M-888/M-889), `add_s`/`sub_s`/`neg_s` (M-766), and `div_s`/`rem_s`/
+>    `shr_s` (M-767). Surface-runnable end-to-end via `myc run` (not just `check`/differential):
+>    `crates/mycelium-cli/tests/fixtures/run-h1-capstone/{h1_signed.myc,h1_unsigned.myc}` exercise
+>    `add_s`/`sub_s`/`mul_s`/`div_s`/`rem_s`/`neg_s`/`shr_s` and `add_u`/`sub_u`/`div_u`/`rem_u`/
+>    `shl_u`/`shr_u` respectively, asserted by `run_executes_the_h1_capstone_fixture_end_to_end`
+>    (`crates/mycelium-cli/src/tests/lib_root.rs`). No remaining gap for this blocker.
 > 3. **Dense/VSA op-prims not surfaced to L1** (types/literals exist; no `dense.*`/`vsa.*` ops in the
 >    prim registry) → blocks `dense`, `vsa`. `Exact`. **Tracking unclear — recommend minting an issue.**
+>    **→ PRIM-LEVEL LANDED, SURFACE-CONSTRUCTION DEFERRED (2026-07-02, M-914 re-verification,
+>    `Empirical`).** `dense.*`/`vsa.*` op-prims now exist and are three-way tested at the prim
+>    level (dense elementwise/dot/similarity — M-890/M-891; `vsa.bind`/`vsa.bundle`/`vsa.cleanup` —
+>    M-892/M-893/M-894). **Still blocked for stdlib authoring / `myc run`:** there is still **no
+>    surface construction literal** to build a `Dense{…}`/`Vsa{…}` (hypervector) value from a
+>    nullary `main` in a `.myc` program — the recurring "nullary-main surface leg deferred to a
+>    construction form" gap already noted under M-890/M-892/M-902. Confirmed still true by this
+>    task: `crates/mycelium-l1/src/parse.rs`/`token.rs`/`ast.rs` carry no `DenseLit`/`VsaLit`
+>    surface form. So `dense`/`vsa` cannot be exercised by this task's `myc run` demo — recorded
+>    honestly, not faked. Still **no dedicated construction-literal issue found — recommend
+>    minting** (unchanged from the 2026-07-01 note).
 > 4. **RFC-0008 R2 runtime vocabulary inactive** (`mesh`/`graft`/`cyst`/`xloc`/`forage`/`backbone`
 >    reserved-not-active) → blocks `runtime`'s full surface. Tracked: E12-1 / DN-63 / M-828.
+>    **→ PARTIALLY CLOSED (2026-07-02, M-914 re-verification, `Empirical`).** `forage` (the D-lite
+>    `@forage(policy) hypha …` placement-policy annotation, RFC-0008 RT3 / DN-63 §3.5 / DN-70 D1) is
+>    now **landed and active** — checked (`crates/mycelium-l1/tests/check.rs`), three-way tested
+>    (`crates/mycelium-l1/tests/differential.rs` M-906 section), and **surface-runnable via `myc
+>    run`**: `crates/mycelium-cli/tests/fixtures/run-h1-capstone/run_h1_capstone.myc` wraps a
+>    `colony { @forage(0b101) hypha strings_checks() }`, asserted by
+>    `run_executes_the_h1_capstone_fixture_end_to_end`. `backbone` remains **reserved, not yet
+>    active** (`crates/mycelium-l1/src/token.rs` — the token comment is unchanged); `mesh`/`graft`/
+>    `cyst`/`xloc` were not re-checked by this task (out of the H1 Gap scope) and are presumed
+>    unchanged (`Declared`, not directly re-verified). So `runtime`'s full surface stays blocked —
+>    only its `forage` D-lite corner is now open.
 > 5. **`Substrate`/`consume` execution staged** (elaborates to a never-silent `Residual`; no v0 value
 >    form) → blocks `fs`/`io`'s affine-handle model. `Exact` (grammar comment). **No dedicated
 >    execution issue found — recommend minting.**
+>    **→ PARTIALLY CLOSED, STILL BLOCKED FOR `myc run` (2026-07-02, M-914 re-verification,
+>    `Empirical`).** DN-71 **Model S** landed real `Substrate` **execution at the L1-evaluator
+>    level**: creation/passage/inspection (M-902), the affine use-once `try_consume` transition
+>    with a runtime backstop (M-903), and the `consume <expr>` lowering into a checked move plus
+>    the drop-without-consume v0 release posture (M-904) — see
+>    `crates/mycelium-l1/src/substrate.rs`'s module doc. **But** `Substrate` is explicitly "not a
+>    representation type" (DN-71 §4.1; LR-8) — it has **no `Repr`/kernel-IR projection by design**,
+>    so [`elaborate`] still refuses it as an explicit `Residual`
+>    (`crates/mycelium-l1/src/elab.rs:302`, confirmed still present by this task) rather than
+>    lowering it. Since `myc run` v0 executes only the `elaborate`d fragment (never L1-eval
+>    directly), `Substrate`/`consume` — like dense/VSA above — **cannot be exercised by this task's
+>    `myc run` demo**, for a distinct reason (an L1-evaluator-only construct with no L0 lowering by
+>    design, not a missing literal). Recorded honestly, not faked. `fs`/`io`'s affine-handle model
+>    stays blocked for the `myc run` path; the L1-eval path is real and landed.
 > Plus two small **untracked** items: **no textual string literal** (only `0x…` `BytesLit` — an
 > *ergonomic* gap, not an expressive one) and a **`hash.*` prim** for `content` (blake3 lives in
 > `mycelium-core` but isn't surfaced). `Empirical`.
+> **→ BOTH CLOSED (2026-07-02, M-914 re-verification, `Empirical`).** The textual string literal
+> `"…"` (M-910/M-911 — shares `Repr::Bytes` with the `0x…` `BytesLit`, KC-3) and the surfaced
+> `hash_blake3`/`bytes_eq` prims (M-912, `hash.blake3`/`bytes.eq`) are landed and three-way tested
+> (`crates/mycelium-l1/tests/enablement.rs`, M-910/M-911/M-912 sections) and **surface-runnable via
+> `myc run`**: `crates/mycelium-cli/tests/fixtures/run-h1-capstone/h1_strings.myc` calls
+> `hash_blake3("mycelium")`, `bytes_eq(…)`, `bytes_get(…)`, and `bytes_len(…)` on a string literal,
+> asserted by `run_executes_the_h1_capstone_fixture_end_to_end`.
 >
 > **By-design non-gaps (RFC-0031 D1):** `mycelium-std-sys`/`sys-host` and the `io`/`fs`/`time`/`rand`
 > FFI floor are *irreducibly Rust* behind the quarantined `@std-sys` `wild` boundary — "pure Mycelium"
@@ -181,6 +234,39 @@ clear it is the *evidence* that upgrades this verdict — never a forward declar
 
 ## Meta — changelog
 
+- **2026-07-02 — M-914 (E28-1 `enb` H1 capstone): §0 blockers 2 and the 2 untracked items CLOSED;
+  blockers 3/4/5 PARTIALLY CLOSED (prim/L1-eval-level landed, `myc run` surface still blocked for a
+  distinct, honestly-recorded reason each); a committed `myc run` demo + integration test added.
+  `Empirical`, this task's own verification.** This is the H1 usability-gate capstone: it re-runs
+  §0's five numbered blockers + 2 untracked items against the now-landed `enb` Phase-I H1 surface
+  (Gaps A–E: M-887…M-894, M-896…M-907, M-910…M-912) and records the honest result per item (see
+  the in-place `→ CLOSED`/`→ PARTIALLY CLOSED` annotations on each item above), plus delivers the
+  first **committed, running** `myc run` fixture exercising this surface end-to-end (not just
+  `check`/differential-tested): `crates/mycelium-cli/tests/fixtures/run-h1-capstone/` (signed +
+  unsigned integer ops, the string literal + `hash_blake3`/`bytes_eq`, and `@forage` D-lite,
+  folded into one `Binary{1}` via `and` — renders `true`) and the sibling
+  `crates/mycelium-cli/tests/fixtures/run-h1-float/` (the `Float` value form + `flt.*` ops, kept as
+  its own fixture — see below), both asserted end-to-end by
+  `run_executes_the_h1_capstone_fixture_end_to_end` /
+  `run_executes_the_h1_float_fixture_end_to_end` in `crates/mycelium-cli/src/tests/lib_root.rs`.
+  **Two genuine constraints discovered by this task, recorded honestly rather than routed around
+  (G2/VR-5):** (1) `bit.and` (the kernel prim behind surface `and`) is registered with
+  `ApproxRule::Refuse` (`crates/mycelium-interp/src/prims.rs`) — it has no defined ε-propagation
+  rule for a non-`Exact` operand (ADR-010/M-204), and every `flt.*` result is `Empirical`
+  (ADR-040 §2.6), so a `flt_eq`/`flt_lt` result cannot be folded into an `and`-chain with `Exact`
+  checks (or with another `Empirical` result) — hence the float leg is its own fixture, not merged
+  into the main capstone's composite. (2) `mycfmt` v0's canonical expression printer
+  (`render_expr_canonical` in `crates/mycelium-fmt/src/lib.rs`) does not render the `@forage(policy)`
+  annotation on a `Colony`'s `Hypha` (`Hypha::forage` is dropped), so `mycfmt --check`/`--write`
+  on the capstone fixture's entry nodule (which uses `@forage`) correctly refuses (exit 4,
+  "outside mycfmt v0" — an honest identity-preserving refusal, not a silent drop) rather than
+  reformatting; the other four fixture files (no `@forage`) pass `mycfmt --check` clean. Both
+  constraints are FLAGged, not fixed by this task (`mycelium-interp`/`mycelium-fmt` are out of this
+  leaf's ownership scope; the ADR-010 constraint is arguably correct behavior, not a bug). **This
+  completes the `enb` kickoff's H1 usability gate** (E28-1) — every H1 enabler landed under Gaps
+  A–E now has a committed, running, honestly-scoped end-to-end demonstration, with the
+  dense/VSA/Substrate deferrals clearly named as *distinct* (construction-literal vs.
+  L1-eval-only-no-L0-lowering) rather than conflated. Append-only.
 - **2026-07-02 — §0 blocker 1 (float value form/ops) CLOSED (M-900, `Empirical`); the other §0
   blockers are UNCHANGED.** Kickoff `enb` Phase-I H1 Gap A (M-895…M-900) landed the scalar-float
   value form (M-896), the decimal float literal + nullary `Float` type (M-897),
