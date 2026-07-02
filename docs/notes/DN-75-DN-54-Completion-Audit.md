@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-75 |
-| **Status** | **Recommended — pending orchestrator acceptance** (2026-07-02). The maintainer **delegated this disposition to the orchestrator** (2026-07-02); per that delegation this note drafts the options and records a clear recommendation (§6) — it does **not** self-ratify (house rules #3/#4; VR-5: assent is not upgraded past its basis). Drafted as **Draft/advisory**; the forward transition (→ Resolved) is the orchestrator's acceptance, recorded append-only. |
+| **Status** | **Resolved** (2026-07-02 — accepted by the wave orchestrator under the maintainer's 2026-07-02 delegation (`Declared`), per the integration-reconcile promotion gate; the §6 **Option 1** recommendation is adopted: the DN-54 completion audit is accepted as-is (all four conditions verified against the tree, not the changelog), DN-54 stays `Accepted`, and E-1 is a one-line editorial clarification for DN-54's next changelog. Was **Recommended — pending orchestrator acceptance** 2026-07-02; that history stands unchanged below — append-only forward transition to Resolved, house rule #3.) The maintainer **delegated this disposition to the orchestrator** (2026-07-02). |
 | **Feeds** | Kickoff `grm` DoD row 2 (DN-54 completion — the extension-checker verified complete); **M-918** (the derive-site consumption-model dossier — this audit is its declared input, `depends_on: M-917`); **M-919** (extension-checker enactment — the residual ledger §5 names what its DoD must absorb); the DN-54 **Enacted** gate (DN-54 §9). |
 | **Date** | July 2, 2026 |
 | **Decides** | *Nothing normatively.* Records (1) the audit method and the audited tip (§1); (2) the §7-harness re-run result (§2); (3) the per-section audit table — landed / residual / N-A with `file:line` evidence, `Empirical` (§3); (4) one editorial discrepancy (§4); (5) the residual ledger — every gap routed to a task or FLAG, none silent (§5); (6) options + the recommendation for the delegated disposition (§6); (7) guarantee posture + DoD (§7). |
@@ -188,3 +188,8 @@ act, then this note → Resolved, append-only). Enacts no code; moves no other d
   maintainer's 2026-07-02 delegation to the orchestrator. CHANGELOG / Doc-Index / issues.yaml
   / docs/api-index owned by the integrating parent (FLAGged, not edited). (Append-only; VR-5;
   G2.)
+- **2026-07-02 — Resolved (recommended → Resolved).** Accepted by the wave orchestrator at the
+  integration-reconcile promotion gate, under the maintainer's 2026-07-02 delegation (`Declared`).
+  §6 **Option 1** adopted: the audit stands, DN-54 remains `Accepted`, and E-1 is carried as a
+  one-line editorial clarification for DN-54's next append-only changelog entry. Forward transition,
+  append-only (house rule #3); no tag upgraded past its basis (VR-5).

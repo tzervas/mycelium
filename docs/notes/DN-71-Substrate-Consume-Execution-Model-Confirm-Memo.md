@@ -323,3 +323,10 @@ This note moves `Draft` → `Accepted` (house rule #3, stepping forward, not ski
   drafted. Unblocks M-902…M-904 (tools/github/issues.yaml status:blocked → status:todo).
   FLAG-1…FLAG-9 dispositions not itemized in this sign-off — remain open, not guessed (G2).
   Append-only; VR-5; G2.
+- **2026-07-02 — Implementation landed (integration-reconcile note).** Model S now **executes at
+  the L1-eval level**: M-902 (Substrate v0 opaque affine handle), M-903 (static use-once affine
+  tracker + never-silent runtime backstop) and M-904 (identity-move `consume` lowering + v0 drop
+  posture) landed in `crates/mycelium-l1/src/eval.rs` on `dev` this wave — exactly the §4/§6 model,
+  no new L0 node. The `grm` M-918 cross-check is RESOLVED: both landed on the same Model S; the
+  consume model was not forked. Guarantee strength stays `Empirical` (trial-backed; no `Proven`
+  upgrade — VR-5). Append-only; house rule #3.

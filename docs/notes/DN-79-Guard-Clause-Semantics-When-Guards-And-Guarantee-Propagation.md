@@ -3,7 +3,7 @@
 | Field | Value |
 |---|---|
 | **Note** | DN-79 |
-| **Status** | **Recommended, pending orchestrator acceptance** (drafted 2026-07-02, kickoff `frz` task M-968). The maintainer **delegated this ratification decision to the kickoff orchestrator** (2026-07-02, session directive — recorded in §1.3; `Declared`). This dossier therefore carries options plus one clear **RECOMMENDATION** (§6) and is **not self-ratified**: it advances only when the orchestrator's acceptance is recorded append-only (house rule #3). Nothing here is implemented — M-833's RFC-0020 amendment and any code are strictly post-acceptance. |
+| **Status** | **Accepted** (2026-07-02 — accepted by the wave orchestrator under the maintainer's 2026-07-02 delegation (`Declared`), per the integration-reconcile promotion gate; the §6 **RECOMMENDATION** for `when`-guard semantics + guarantee propagation is adopted as the ratified direction. Nothing is implemented by this acceptance — M-833's RFC-0020 amendment and any code remain strictly post-acceptance follow-up (held, not part of this wave). Was **Recommended, pending orchestrator acceptance** 2026-07-02; that history stands unchanged below — append-only forward transition, house rule #3.) The maintainer **delegated this ratification decision to the kickoff orchestrator** (2026-07-02, §1.3). |
 | **Feeds** | RFC-0020 §4.1 S2 / §4.4 (the append-only amendment M-833 specifies); RFC-0018 §4.3/§4.5 (G-Match under Design A — extended, not modified); the conformance corpus (guard cases, §6.3); DN-56 freeze sequencing (FLAG-4, §7) |
 | **Depends on** | DN-64 §6 OQ-G + §7 disposition table (the maintainer decision, 2026-06-29); research/27-dn64-ergonomics-rnd-RECORD.md §3; RFC-0020 §4.4 (Maranget compilation, Accepted scope); RFC-0018 §4.1/§4.3/§4.5 (guarantee meet-semilattice, G-Match Design A — Enacted stage 1a); RFC-0007 §4.1 W7 (flat kernel `Match`); RFC-0006 §4.1 S1–S6; VR-5; G2; KC-3 |
 | **Date** | July 2, 2026 |
@@ -363,3 +363,8 @@ acceptance and remains `Declared` after it until M-833's implementation lands wi
 - **2026-07-02 — Drafted** (M-968, kickoff `frz` Lane D). Options + recommendation for `when`
   guard clauses and guarantee propagation (M-833 / DN-64 OQ-G). Status: **recommended, pending
   orchestrator acceptance** under the maintainer's 2026-07-02 delegation. Nothing implemented.
+- **2026-07-02 — Accepted** (recommended → Accepted). Accepted by the wave orchestrator at the
+  integration-reconcile promotion gate, under the maintainer's 2026-07-02 delegation (`Declared`).
+  The §6 recommendation is the ratified direction for `when`-guard semantics + guarantee
+  propagation; M-833's RFC-0020 amendment and any implementation are post-acceptance follow-up
+  (held, not landed this wave). Forward transition, append-only (house rule #3).
