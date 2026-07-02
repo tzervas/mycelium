@@ -104,8 +104,9 @@ adding a *third* rule of a kind the checker already understands means editing th
   the std layer.
 
 - **`no-upward-tier-edges`** (`kind = "tier-order"`). Forbids any normal, dev, or build edge from a
-  crate in a later `tier_order` bucket to a crate in an earlier one (i.e. `tools → std`, `tools →
-  core`, or `std → core` are fine; `core → std`, `core → tools`, or `std → tools` are violations).
+  crate in an earlier `tier_order` bucket UP to a crate in a later one (i.e. `core → std`, `core →
+  tools`, or `std → tools` are violations; `tools → std`, `tools → core`, or `std → core` — the
+  allowed downward direction — are fine).
   The known HEAD violation this rule reports (`mycelium-mlir → mycelium-std-runtime`) is
   **expected**, not a bug in the check — it is fixed by extracting the runtime-ABI surface `mlir`
   needs into a lower crate, the same shape as the precedent below, not by loosening this rule.

@@ -43,9 +43,10 @@
 # — so a key meant to bind at the TOML root must precede every `[table]`/`[[array]]` header.
 
 # The declared order of `[tiers]` buckets, lowest (most-depended-upon) first. A normal or dev edge
-# from a crate in an earlier tier to a crate in a later tier is "downward" (allowed); same-tier is
-# allowed; an edge from a LATER tier to an EARLIER one is "upward" and is the anomaly the
-# `no-upward-tier-edges` rule below reports.
+# from a crate in a LATER tier to a crate in an EARLIER one (e.g. `tools -> core`) is "downward"
+# (allowed) — the later tier builds on the earlier one; same-tier is allowed; an edge from a crate
+# in an EARLIER tier UP to a crate in a LATER one (e.g. `core -> std`) is "upward" and is the
+# anomaly the `no-upward-tier-edges` rule below reports.
 tier_order = ["core", "std", "tools"]
 
 [meta]
