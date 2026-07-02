@@ -65,6 +65,31 @@ use std::collections::HashMap;
 /// for (G2).
 pub const MYCFMT_VERSION: &str = "mycfmt-0";
 
+/// The target line width for the **readable** layout style (M-974). Purely a *presentation* heuristic:
+/// a construct whose compact single-line rendering, placed at its indent column, would exceed this
+/// width is broken across lines (line breaks after commas / `|`); a shorter construct stays inline.
+/// This is `Declared` — a readability threshold, not a proven bound. It is **functionally inert**: the
+/// readable output re-parses to the *same* surface AST as the compact output (the C1/C2 guards enforce
+/// it), so the width choice never changes any parse/elaborate/eval behavior — machines ingest the
+/// flattened stream / full file either way.
+const READABLE_WIDTH: usize = 88;
+
+/// The layout style a format pass emits (M-974). Both styles are **identity-preserving projections**
+/// (RFC-0001 §4.6/§4.8) — they differ only in *presentation*, never in the surface AST (C1). The
+/// distinction is the inverse posture of `--flatten`: `Compact` keeps each item's body inline (the
+/// original mycfmt-0 canonical form — the machine-leaning default retained for `examples/` and any
+/// generic `.myc` root); `Readable` breaks long argument/field/variant segments across lines with
+/// line breaks after commas for human-authored source (the `lib/std/*.myc` canonical — DN-82).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Style {
+    /// The original mycfmt-0 canonical form: item bodies rendered inline (one expression per line).
+    #[default]
+    Compact,
+    /// The human-readable multi-line form (M-974/DN-82): long segments wrap after commas / `|`,
+    /// nested structure indents, short segments stay inline (the [`READABLE_WIDTH`] heuristic).
+    Readable,
+}
+
 /// A successful format result.
 ///
 /// `Default` is the empty result (no output, unchanged, no notes) — an additive constructor
@@ -159,6 +184,40 @@ fn opens_with_phylum(src: &str) -> bool {
 /// (a pin mismatch, an unplaceable comment, or a body that does not round-trip — identity could change).
 /// On any error nothing is rewritten (G2).
 pub fn format_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError> {
+    format_source_styled(src, pin, Style::Compact)
+}
+
+/// Format `src` into its **human-readable** canonical form (M-974/DN-82): the inverse posture of
+/// `--flatten`. Long argument / field / variant / arm segments break across lines with line breaks
+/// after commas (and `|` for sum-type constructors); nested structure indents; short segments stay
+/// inline (the [`READABLE_WIDTH`] readability heuristic). This is the canonical form the `myc-fmt`
+/// gate enforces for the **human-authored stdlib** (`lib/std/*.myc`); `Style::Compact`
+/// ([`format_source`]) remains the default for `examples/` and any generic `.myc` root, and
+/// [`flatten_source`] stays the explicit machine/stream form.
+///
+/// It is **presentation-only and functionally inert**: the output re-parses to the *same* surface AST
+/// as the compact form (the same C1/C2 identity + idempotence guards apply), so it never changes any
+/// parse/elaborate/eval behavior — machines ingest the flattened stream / full file either way.
+///
+/// # Errors
+/// Identical to [`format_source`]: [`FmtError::Parse`], [`FmtError::Header`], or
+/// [`FmtError::OutOfScope`] (pin mismatch, unplaceable comment, or a body that does not round-trip).
+/// On any error nothing is rewritten (G2).
+pub fn format_source_readable(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError> {
+    format_source_styled(src, pin, Style::Readable)
+}
+
+/// Shared implementation of [`format_source`] (Compact) and [`format_source_readable`] (Readable).
+/// The `style` parameter selects only the *layout* of item bodies — every scope/identity/header
+/// guard is style-independent, so both styles emit the same surface AST (C1) from the same input.
+///
+/// # Errors
+/// See [`format_source`].
+pub fn format_source_styled(
+    src: &str,
+    pin: Option<&str>,
+    style: Style,
+) -> Result<Formatted, FmtError> {
     // Hard pin (M-364 §10.3): never format with rules the project did not pin.
     if let Some(p) = pin {
         if p != MYCFMT_VERSION {
@@ -241,7 +300,7 @@ pub fn format_source(src: &str, pin: Option<&str>) -> Result<Formatted, FmtError
     }
 
     // Render the body: items with their leading/trailing comments interleaved.
-    let (body, body_notes) = render_body_with_comments(&nodule, &plan)?;
+    let (body, body_notes) = render_body_with_comments(&nodule, &plan, style)?;
     out.push_str(&body);
     notes.extend(body_notes);
     notes.push("re-printed the body in canonical surface form".to_owned());
@@ -442,10 +501,10 @@ fn render_item_flat(item: &mycelium_l1::ast::Item) -> String {
         }
         Item::Impl(id) => render_impl_flat(id),
         _ => {
-            // For non-fn, non-impl items: reuse the canonical text from render_non_fn_item,
+            // For non-fn, non-impl items: reuse the canonical text from render_non_fn_item_compact,
             // then collapse it to a single line (it is already single-line for use/default/type
             // in canonical form, but we normalise whitespace for safety).
-            let text = render_non_fn_item(item);
+            let text = render_non_fn_item_compact(item);
             // The text ends with `\n`; trim and ensure the `;` terminator is present.
             let trimmed = text.trim_end();
             // Collapse any interior newlines (e.g. multiline type declarations) to spaces.
@@ -1190,6 +1249,7 @@ fn collect_match_arm_comments(
 fn render_body_with_comments(
     nodule: &Nodule,
     plan: &CommentPlan,
+    style: Style,
 ) -> Result<(String, Vec<String>), FmtError> {
     let mut out = String::new();
     let mut notes = Vec::new();
@@ -1222,7 +1282,7 @@ fn render_body_with_comments(
         }
 
         // Render the item itself.
-        let item_text = render_item_with_comments(item, item_idx, plan, &mut notes)?;
+        let item_text = render_item_with_comments(item, item_idx, plan, style, &mut notes)?;
         out.push_str(&item_text);
     }
 
@@ -1248,29 +1308,48 @@ fn render_item_with_comments(
     item: &Item,
     item_idx: usize,
     plan: &CommentPlan,
+    style: Style,
     notes: &mut Vec<String>,
 ) -> Result<String, FmtError> {
     match item {
         Item::Fn(fd) => {
             let fn_trailing = plan.fn_trailing.get(&item_idx);
             let arm_map = plan.arm_trailing.get(&item_idx);
-            render_fn_decl_with_comments(fd, fn_trailing.map(String::as_str), arm_map, notes)
+            render_fn_decl_with_comments(fd, fn_trailing.map(String::as_str), arm_map, style, notes)
         }
         Item::Impl(id) => {
             // An impl can contain fns; delegate to render_impl which can attach arm comments
             // (currently: arm comments in impl methods are treated the same as top-level fns).
-            render_impl_with_comments(id, item_idx, plan, notes)
+            render_impl_with_comments(id, item_idx, plan, style, notes)
         }
         // Other items (use, default, type, trait) are rendered via expand_to_source on a
         // synthetic single-item nodule-like string, or more simply: we re-implement the trivial
         // render inline (DRY note: these are verbatim copies of the ambient.rs private printers,
         // which are NOT accessible from this crate — this crate must duplicate the output).
-        _ => Ok(render_non_fn_item(item)),
+        _ => Ok(render_non_fn_item(item, style)),
     }
 }
 
 /// Render a non-fn item to its canonical surface form.  Mirrors the private ambient.rs printers.
-fn render_non_fn_item(item: &Item) -> String {
+///
+/// In `Style::Readable`, a `type` sum-type declaration whose compact single line would exceed
+/// [`READABLE_WIDTH`] is re-wrapped one constructor per line (M-974); every other non-fn item
+/// (`use`/`default`/`trait`/`object`/`lower`/`derive`) is short by construction, so it uses the
+/// compact `expand_to_source` render in both styles.
+fn render_non_fn_item(item: &Item, style: Style) -> String {
+    if style == Style::Readable {
+        if let Item::Type(td) = item {
+            if let Some(readable) = render_type_decl_readable(td) {
+                return readable;
+            }
+        }
+    }
+    render_non_fn_item_compact(item)
+}
+
+/// Render a non-fn item to its **compact** canonical surface form.  Mirrors the private ambient.rs
+/// printers by round-tripping through `expand_to_source` on a synthetic single-item nodule.
+fn render_non_fn_item_compact(item: &Item) -> String {
     // We derive the text by calling `expand_to_source` on a synthetic single-item nodule, then
     // extracting the item's text.  This avoids duplicating the printer logic while staying
     // correct.
@@ -1316,24 +1395,43 @@ fn render_fn_decl_with_comments(
     fd: &FnDecl,
     fn_trailing: Option<&str>,
     arm_map: Option<&HashMap<usize, String>>,
+    style: Style,
     notes: &mut Vec<String>,
 ) -> Result<String, FmtError> {
-    let sig_text = render_sig_tail(&fd.sig);
     let pub_prefix = if fd.vis.is_pub() { "pub " } else { "" };
     let thaw_prefix = if fd.thaw { "thaw " } else { "" };
 
-    let body_text = if let Some(amap) = arm_map {
-        if !amap.is_empty() {
-            // The body contains a match with arm trailing comments; render multiline.
-            notes.push(format!(
-                "preserved {} trailing arm comment(s) with multiline match rendering in `{}`",
-                amap.len(),
-                fd.sig.name
-            ));
-            render_expr_with_arm_comments(&fd.body, amap)?
+    let has_arm_comments = arm_map.is_some_and(|m| !m.is_empty());
+
+    // The signature: compact by default. In Readable style, a signature whose header line
+    // (`<pub><thaw>fn <sig> =`) would exceed READABLE_WIDTH wraps its value-parameter list one
+    // parameter per line (M-974) — the "line breaks after commas for large segments" rule applied
+    // to the value-param segment. The arm-comment path keeps the compact signature (its multiline
+    // match rendering is comment-anchored and untouched by M-974).
+    let compact_sig = render_sig_tail(&fd.sig);
+    let sig_text = if style == Style::Readable && !has_arm_comments {
+        let header_len = pub_prefix.len() + thaw_prefix.len() + "fn ".len() + compact_sig.len() + 2;
+        if header_len > READABLE_WIDTH {
+            render_sig_readable(&fd.sig)
         } else {
-            render_expr_canonical(&fd.body)
+            compact_sig
         }
+    } else {
+        compact_sig
+    };
+
+    let body_text = if has_arm_comments {
+        // The body contains a match with arm trailing comments; render multiline (comment-anchored).
+        let amap = arm_map.expect("has_arm_comments implies Some");
+        notes.push(format!(
+            "preserved {} trailing arm comment(s) with multiline match rendering in `{}`",
+            amap.len(),
+            fd.sig.name
+        ));
+        render_expr_with_arm_comments(&fd.body, amap)?
+    } else if style == Style::Readable {
+        // M-974: readable body layout — long segments break, short ones stay inline.
+        render_expr_readable(&fd.body, 2)
     } else {
         render_expr_canonical(&fd.body)
     };
@@ -1341,7 +1439,17 @@ fn render_fn_decl_with_comments(
     // When the body text is multiline (e.g. a multiline match), indent ALL lines by 2 spaces so
     // the canonical form is properly structured relative to the `fn sig =` header line.
     // A single-line body just gets the `  ` prefix directly.
-    let indented_body = if body_text.contains('\n') {
+    //
+    // Two indentation regimes:
+    //   * Compact / arm-comment bodies are rendered relative to column 0, so every line gets a
+    //     blanket 2-space prefix to sit under the `fn sig =` header.
+    //   * Readable bodies (`render_expr_readable(&fd.body, 2)`) are already *absolutely* indented
+    //     for a first line at column 2 — their continuation lines carry their own padding — so only
+    //     the first line is prefixed (prefixing the whole string touches just the leading line).
+    let readable_body = style == Style::Readable && !has_arm_comments;
+    let indented_body = if readable_body {
+        format!("  {body_text}")
+    } else if body_text.contains('\n') {
         body_text
             .lines()
             .map(|l| {
@@ -1386,6 +1494,7 @@ fn render_impl_with_comments(
     id: &ImplDecl,
     item_idx: usize,
     plan: &CommentPlan,
+    style: Style,
     notes: &mut Vec<String>,
 ) -> Result<String, FmtError> {
     let args = if id.trait_args.is_empty() {
@@ -1404,7 +1513,7 @@ fn render_impl_with_comments(
     for method in &id.methods {
         // Each method is itself a component; `render_fn_decl_with_comments` already appends the
         // method's mandatory `;` (DN-57 §3, M-818).
-        let method_text = render_fn_decl_with_comments(method, None, arm_map, notes)?;
+        let method_text = render_fn_decl_with_comments(method, None, arm_map, style, notes)?;
         for line in method_text.lines() {
             s.push_str("  ");
             s.push_str(line);
@@ -1566,6 +1675,179 @@ fn render_expr_canonical(e: &Expr) -> String {
         // `consume e` — affine move of a substrate (mirrors `print_expr` in ambient.rs).
         Expr::Consume(b) => format!("consume {}", render_expr_canonical(b)),
     }
+}
+
+// ================================================================================================
+// Readable (human) layout (M-974 / DN-82).  These renderers break long argument / field / variant
+// / arm segments across lines (line breaks after commas / `|`) while keeping short constructs
+// inline — the inverse posture of `--flatten`.  Every break is whitespace-only, so the readable
+// output re-parses to the SAME surface AST as the compact form (C1) and is a fixed point (C2): the
+// style is a presentation projection, functionally inert.
+// ================================================================================================
+
+/// Does `compact` (a single-line rendering) fit on one line when placed at column `indent`?
+/// The readability decision is `Declared` — a width threshold, not a proven bound.
+fn fits_readable(compact: &str, indent: usize) -> bool {
+    !compact.contains('\n') && indent + compact.chars().count() <= READABLE_WIDTH
+}
+
+/// Render an expression in the human-readable multi-line style (M-974).
+///
+/// **Indent contract:** the returned string's FIRST line carries no leading indentation — the
+/// caller places it at column `indent`; any continuation lines are *absolutely* indented as if the
+/// first line began at column `indent`. The layout is a "fits-or-breaks" heuristic: a node whose
+/// compact single-line render fits within [`READABLE_WIDTH`] at `indent` stays inline; otherwise it
+/// breaks. Because the AST — not the input text — drives every decision, the render is idempotent
+/// by construction (C2).
+fn render_expr_readable(e: &Expr, indent: usize) -> String {
+    use mycelium_l1::ast::Literal;
+    let compact = render_expr_canonical(e);
+    if fits_readable(&compact, indent) {
+        return compact;
+    }
+    let pad = " ".repeat(indent);
+    let inner = indent + 2;
+    let ipad = " ".repeat(inner);
+    match e {
+        // A function application with a long argument list: one argument per line, break after
+        // each comma. `head(\n  arg0,\n  arg1\n)`.
+        Expr::App { head, args } if !args.is_empty() => {
+            let head_s = render_expr_readable(head, indent);
+            let arg_lines: Vec<String> = args
+                .iter()
+                .map(|a| format!("{ipad}{}", render_expr_readable(a, inner)))
+                .collect();
+            format!("{head_s}(\n{}\n{pad})", arg_lines.join(",\n"))
+        }
+        // A match: one arm per line. An arm whose `pat => body` fits stays on one line; an arm with
+        // a long/nested body puts the `=>` on its own line and the body on the next (indented), so
+        // deeply-nested matches stay shallow and readable rather than marching rightward.
+        Expr::Match { scrutinee, arms } => {
+            let scrut = render_expr_readable(scrutinee, indent + "match ".len());
+            let arm_lines: Vec<String> = arms
+                .iter()
+                .enumerate()
+                .map(|(i, arm)| {
+                    let is_last = i + 1 == arms.len();
+                    let comma = if is_last { "" } else { "," };
+                    let patn = render_pattern(&arm.pattern);
+                    let body_compact = render_expr_canonical(&arm.body);
+                    let one_line = format!("{patn} => {body_compact}{comma}");
+                    if fits_readable(&one_line, inner) {
+                        format!("{ipad}{one_line}")
+                    } else {
+                        let body = render_expr_readable(&arm.body, inner + 2);
+                        format!("{ipad}{patn} =>\n{ipad}  {body}{comma}")
+                    }
+                })
+                .collect();
+            format!("match {scrut} {{\n{}\n{pad}}}", arm_lines.join("\n"))
+        }
+        // `let name[: ty] = bound in body` — the binding on one line (its `bound` may itself break
+        // at the `= ` column), the body on the next line at the same indent (sequential reading).
+        Expr::Let {
+            name,
+            ty,
+            bound,
+            body,
+        } => {
+            let ann = ty
+                .as_ref()
+                .map(|t| format!(": {}", render_type_ref(t)))
+                .unwrap_or_default();
+            let head = format!("let {name}{ann} = ");
+            let bound_s = render_expr_readable(bound, indent + head.chars().count());
+            let body_s = render_expr_readable(body, indent);
+            format!("{head}{bound_s} in\n{pad}{body_s}")
+        }
+        // `if cond then conseq else alt` — the three parts on their own lines.
+        Expr::If { cond, conseq, alt } => {
+            let cond_s = render_expr_readable(cond, indent + "if ".len());
+            let conseq_s = render_expr_readable(conseq, inner);
+            let alt_s = render_expr_readable(alt, inner);
+            format!("if {cond_s} then\n{ipad}{conseq_s}\n{pad}else\n{ipad}{alt_s}")
+        }
+        // A tuple literal with long elements: one element per line, break after each comma.
+        Expr::TupleLit(elems) if !elems.is_empty() => {
+            let elem_lines: Vec<String> = elems
+                .iter()
+                .map(|el| format!("{ipad}{}", render_expr_readable(el, inner)))
+                .collect();
+            format!("(\n{}\n{pad})", elem_lines.join(",\n"))
+        }
+        // A list literal with long elements: one element per line, break after each comma.
+        Expr::Lit(Literal::List(es)) if !es.is_empty() => {
+            let elem_lines: Vec<String> = es
+                .iter()
+                .map(|el| format!("{ipad}{}", render_expr_readable(el, inner)))
+                .collect();
+            format!("[\n{}\n{pad}]", elem_lines.join(",\n"))
+        }
+        // Type ascription: wrap the inner expression, keep the type inline.
+        Expr::Ascribe(inner_e, t) => {
+            format!(
+                "{} : {}",
+                render_expr_readable(inner_e, indent),
+                render_type_ref(t)
+            )
+        }
+        // Constructs with no comma/`|` segment to break (or an empty one): fall back to the compact
+        // single-line rendering. The C1 guard still verifies round-trip; nothing is dropped (G2).
+        _ => compact,
+    }
+}
+
+/// Render one sum-type constructor (`Name` or `Name(T1, T2)`) — mirrors the ctor render in
+/// `mycelium_l1::ambient::print_type_decl`, used by [`render_type_decl_readable`].
+fn render_ctor(c: &mycelium_l1::ast::Ctor) -> String {
+    if c.fields.is_empty() {
+        c.name.clone()
+    } else {
+        let fs: Vec<String> = c.fields.iter().map(render_type_ref).collect();
+        format!("{}({})", c.name, fs.join(", "))
+    }
+}
+
+/// Render a `type` sum-type declaration in the readable style (M-974) — one constructor per line,
+/// break after each `|` — **only when** its compact single line would exceed [`READABLE_WIDTH`].
+/// Returns `None` when the compact form already fits (the caller then uses the compact render), so a
+/// short `type Result[A, E] = Ok(A) | Err(E);` stays inline. The output ends with the mandatory `;`
+/// terminator + newline, matching the compact item text (DN-57 §3).
+///
+/// ```text
+/// type Predicate =
+///     PAlways
+///   | PSrcKindIs(Kind)
+///   | PAnd(Predicate, Predicate);
+/// ```
+fn render_type_decl_readable(td: &mycelium_l1::ast::TypeDecl) -> Option<String> {
+    let vis = if td.vis.is_pub() { "pub " } else { "" };
+    let params = if td.params.is_empty() {
+        String::new()
+    } else {
+        format!("[{}]", td.params.join(", "))
+    };
+    let ctors: Vec<String> = td.ctors.iter().map(render_ctor).collect();
+    // Fit decision on the compact one-line form (with its `;`) — AST-driven, so idempotent.
+    let compact_line = format!("{vis}type {}{} = {};", td.name, params, ctors.join(" | "));
+    if compact_line.chars().count() <= READABLE_WIDTH {
+        return None;
+    }
+    // Wrap: first ctor indented 4 (aligned under `= `), each subsequent ctor prefixed `| ` at 2.
+    let mut lines: Vec<String> = Vec::with_capacity(ctors.len());
+    for (i, c) in ctors.iter().enumerate() {
+        if i == 0 {
+            lines.push(format!("    {c}"));
+        } else {
+            lines.push(format!("  | {c}"));
+        }
+    }
+    Some(format!(
+        "{vis}type {}{} =\n{};\n",
+        td.name,
+        params,
+        lines.join("\n")
+    ))
 }
 
 /// Render an expression, using multiline match rendering if the arm_map is non-empty and
@@ -1779,24 +2061,7 @@ fn render_sig_tail(sig: &mycelium_l1::ast::FnSig) -> String {
         .iter()
         .map(|p| format!("{}: {}", p.name, render_type_ref(&p.ty)))
         .collect();
-    let eff = if sig.effects.is_empty() {
-        String::new()
-    } else {
-        // RFC-0014 §4.5 I4 (M-677): render each effect with its budget bound when present —
-        // `name(<=N)`. The parser folds any `KiB`/`MiB`/`GiB` suffix into a unit-less byte
-        // count (`effect_budgets: BTreeMap<String, u64>`), so the canonical surface is the raw
-        // `<=N`; this round-trips AST-equal — parse(render(sig)) yields the same effect_budgets.
-        // (Surface unit preservation would require the AST to retain the suffix — out of scope.)
-        let rendered: Vec<String> = sig
-            .effects
-            .iter()
-            .map(|e| match sig.effect_budgets.get(e) {
-                Some(n) => format!("{e}(<={n})"),
-                None => e.clone(),
-            })
-            .collect();
-        format!(" !{{{}}}", rendered.join(", "))
-    };
+    let eff = render_effects_suffix(sig);
     // RFC-0037 D4: return arrow `=>` (the `->` glyph is retired).
     format!(
         "{}{}{}({}) => {}{}",
@@ -1805,6 +2070,88 @@ fn render_sig_tail(sig: &mycelium_l1::ast::FnSig) -> String {
         cp,
         ps.join(", "),
         render_type_ref(&sig.ret),
+        eff
+    )
+}
+
+/// The trailing effect-set suffix of a signature — ` !{name, name(<=N), …}` when present, else empty.
+///
+/// RFC-0014 §4.5 I4 (M-677): render each effect with its budget bound when present — `name(<=N)`.
+/// The parser folds any `KiB`/`MiB`/`GiB` suffix into a unit-less byte count
+/// (`effect_budgets: BTreeMap<String, u64>`), so the canonical surface is the raw `<=N`; this
+/// round-trips AST-equal. Shared by the compact ([`render_sig_tail`]) and readable
+/// ([`render_sig_readable`]) signature renderers (DRY) so the two never drift.
+fn render_effects_suffix(sig: &mycelium_l1::ast::FnSig) -> String {
+    if sig.effects.is_empty() {
+        return String::new();
+    }
+    let rendered: Vec<String> = sig
+        .effects
+        .iter()
+        .map(|e| match sig.effect_budgets.get(e) {
+            Some(n) => format!("{e}(<={n})"),
+            None => e.clone(),
+        })
+        .collect();
+    format!(" !{{{}}}", rendered.join(", "))
+}
+
+/// Render a signature in the **readable** style (M-974): the value-parameter list breaks one
+/// parameter per line (line breaks after commas), keeping the type/width parameter lists and the
+/// return/effects inline. Returns the signature text *without* the leading `fn ` (the caller adds
+/// it) — the first line follows `fn ` at column 3, the parameters indent to column 2, and the
+/// closing `) => Ret !{eff}` returns to column 0. Whitespace-only vs [`render_sig_tail`], so it
+/// re-parses to the same [`mycelium_l1::ast::FnSig`] (C1).
+///
+/// ```text
+/// name[T]{N}(
+///   p1: T1,
+///   p2: T2
+/// ) => Ret !{eff}
+/// ```
+fn render_sig_readable(sig: &mycelium_l1::ast::FnSig) -> String {
+    use mycelium_l1::ast::ParamKind;
+    let type_ps: Vec<String> = sig
+        .params
+        .iter()
+        .filter(|p| p.kind == ParamKind::Type)
+        .map(render_type_param)
+        .collect();
+    let const_ps: Vec<String> = sig
+        .params
+        .iter()
+        .filter(|p| p.kind == ParamKind::Width)
+        .map(|p| p.name.clone())
+        .collect();
+    let tp = if type_ps.is_empty() {
+        String::new()
+    } else {
+        format!("[{}]", type_ps.join(", "))
+    };
+    let cp = if const_ps.is_empty() {
+        String::new()
+    } else {
+        format!("{{{}}}", const_ps.join(", "))
+    };
+    let eff = render_effects_suffix(sig);
+    let ret = render_type_ref(&sig.ret);
+    // A niladic fn cannot overflow the width via its (empty) parameter list — fall back to the
+    // compact tail so `name() => Ret` never becomes an empty `(\n\n)`.
+    if sig.value_params.is_empty() {
+        return format!("{}{}{}() => {}{}", sig.name, tp, cp, ret, eff);
+    }
+    let ps: Vec<String> = sig
+        .value_params
+        .iter()
+        .map(|p| format!("  {}: {}", p.name, render_type_ref(&p.ty)))
+        .collect();
+    format!(
+        "{}{}{}(\n{}\n) => {}{}",
+        sig.name,
+        tp,
+        cp,
+        ps.join(",\n"),
+        ret,
         eff
     )
 }

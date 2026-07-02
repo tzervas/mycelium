@@ -5,7 +5,7 @@
 //! any refusal leaves the file exactly as it was.
 //!
 //! ```text
-//! mycfmt [--check | --write] [--flatten] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->...
+//! mycfmt [--check | --write] [--flatten | --readable] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->...
 //! ```
 //!
 //! Exit codes (contract §5): 0 ok · 1 `--check` would reformat · 2 parse error · 3 header error ·
@@ -16,11 +16,18 @@
 //! Comments and structured-header metadata are stripped (not part of the surface AST).  The output
 //! re-parses to the same surface AST as the canonical form (`Empirical` round-trip guarantee).
 //! `--flatten` is incompatible with `--write` (the stream form is for stdout / pipe use).
+//!
+//! **`--readable`** emits the human-readable multi-line form (M-974; DN-82) — the inverse posture of
+//! `--flatten`: long argument / field / variant / arm segments break across lines with line breaks
+//! after commas; short segments stay inline. It preserves comments and the structured header (like the
+//! default form) and is **presentation-only, functionally inert** (same surface AST — C1/C2). It is the
+//! canonical form the `myc-fmt` gate enforces for the human-authored stdlib (`lib/std/*.myc`).
+//! `--readable` and `--flatten` are mutually exclusive (opposite layout postures).
 
 use std::process::ExitCode;
 
 use mycelium_cli_common::{read_source, Args};
-use mycelium_fmt::{flatten_source, format_source, Formatted};
+use mycelium_fmt::{flatten_source, format_source, format_source_readable, Formatted};
 use mycelium_proj::parse_manifest;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -35,7 +42,7 @@ enum Mode {
 
 fn usage() -> ExitCode {
     eprintln!(
-        "usage: mycfmt [--check | --write] [--flatten] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->..."
+        "usage: mycfmt [--check | --write] [--flatten | --readable] [--explain] [--config <mycelium-proj.toml>] <file.myc | ->..."
     );
     ExitCode::from(64) // EX_USAGE
 }
@@ -43,6 +50,7 @@ fn usage() -> ExitCode {
 fn main() -> ExitCode {
     let mut mode = Mode::Stdout;
     let mut flatten = false;
+    let mut readable = false;
     let mut explain = false;
     let mut config: Option<String> = None;
     let mut paths: Vec<String> = Vec::new();
@@ -53,6 +61,7 @@ fn main() -> ExitCode {
             "--check" => mode = Mode::Check,
             "--write" => mode = Mode::Write,
             "--flatten" => flatten = true,
+            "--readable" => readable = true,
             "--explain" => explain = true,
             "--config" => match args.value() {
                 Some(p) => config = Some(p),
@@ -78,6 +87,14 @@ fn main() -> ExitCode {
         );
         return usage();
     }
+    // --readable and --flatten are opposite layout postures; requesting both is a usage error (G2).
+    if flatten && readable {
+        eprintln!(
+            "mycfmt: --flatten and --readable are mutually exclusive (opposite layout postures) — \
+             pick one"
+        );
+        return usage();
+    }
 
     // The `[toolchain].format` hard pin (M-364 §10.3), if a manifest is given/discoverable. A manifest
     // that does not parse is an explicit error — we never silently format ignoring a malformed pin (G2).
@@ -88,7 +105,7 @@ fn main() -> ExitCode {
 
     let mut worst = 0u8; // highest exit code seen
     for path in &paths {
-        let code = run_one(path, mode, flatten, explain, pin.as_deref());
+        let code = run_one(path, mode, flatten, readable, explain, pin.as_deref());
         worst = worst.max(code);
     }
     ExitCode::from(worst)
@@ -143,7 +160,14 @@ fn discover_manifest(start: &std::path::Path) -> Option<std::path::PathBuf> {
 }
 
 /// Format one path; return its exit code (contract §5).
-fn run_one(path: &str, mode: Mode, flatten: bool, explain: bool, pin: Option<&str>) -> u8 {
+fn run_one(
+    path: &str,
+    mode: Mode,
+    flatten: bool,
+    readable: bool,
+    explain: bool,
+    pin: Option<&str>,
+) -> u8 {
     // `read_source` prints the same `mycfmt: io-error: …` line the local copy did; a refusal maps to
     // the contract's I/O exit code 66 (EX_IOERR) here, where the exit-code newtype lives.
     let src = match read_source("mycfmt: io-error", path) {
@@ -153,6 +177,8 @@ fn run_one(path: &str, mode: Mode, flatten: bool, explain: bool, pin: Option<&st
 
     let result = if flatten {
         flatten_source(&src, pin)
+    } else if readable {
+        format_source_readable(&src, pin)
     } else {
         format_source(&src, pin)
     };
