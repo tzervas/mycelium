@@ -17,8 +17,8 @@ Brought the editor grammars current with the landed corpus and packaged Mycelium
 identification and highlighting across editors and forges. The keyword set stays **lexer-derived**
 (the `just drift-check` gate is unchanged); the grammars grew from a reserved-word scaffold to the
 full landed surface. All outward-facing publishing is **staged, not fired** — the artifacts plus a
-ready-to-file runbook are in-repo; the maintainer fires the external submissions. Basis: PRs
-#1034, #1035, #1036, #1037, #1039.
+ready-to-file runbook are in-repo; the maintainer fires the external submissions.
+Basis: PRs #1034, #1035, #1036, #1037, #1039.
 
 - **Editor grammars v2** (`tools/grammar/`, PR #1034). `generate.py` now emits full-surface
   tmLanguage + a **structural** tree-sitter grammar covering strings and the minimal escape set
