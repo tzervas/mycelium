@@ -34,3 +34,8 @@ mycelium-std-error = { path = "../mycelium-std-error" }
 # (`tests/std_diag.rs`) — the differential compares the `.myc` guarantee-matrix port against the
 # ACTUAL `mycelium_std_diag::guarantee_matrix::MATRIX` data at test time (not a hardcoded literal).
 mycelium-std-diag = { path = "../mycelium-std-diag" }
+# M-933 (kickoff `opp`, RFC-0031 D5 row 4): the retained Rust oracle for the `std.ternary` port
+# (`tests/std_ternary.rs`) — the numeric-edge differential (carries, bounds, codec round-trips,
+# packed-byte values) compares the `.myc` port against mycelium-std-ternary's public API live at
+# test time. Test scope only (D6: the crate is not retired).
+mycelium-std-ternary = { path = "../mycelium-std-ternary" }
