@@ -137,11 +137,19 @@ type Guarantee = GExact | GProven | GEmpirical | GDeclared;
 
 // ── verdicts (spec §3; the honesty crux C1/G2) ──────────────────────────────────────────────────
 // SkipReason — a Skipped verdict ALWAYS carries a reason; never an absent or unnamed skip.
-type SkipReason = Ignored | UnmetPrecondition | NeedsRecord | BackendUnavailable | ToolMissing;
+type SkipReason =
+    Ignored
+  | UnmetPrecondition
+  | NeedsRecord
+  | BackendUnavailable
+  | ToolMissing;
 
 // UndetReason — ran but could not decide; distinct from both Pass and Skipped. A non-decision is
 // never a Pass (C1/G2).
-type UndetReason = OracleUnavailable | BudgetExhaustedInconclusive | NonDeterministicInput;
+type UndetReason =
+    OracleUnavailable
+  | BudgetExhaustedInconclusive
+  | NonDeterministicInput;
 
 // FailRecord — the structured failure record: FRec(payload, seed, trial, context). The payload
 // (generic F) is the REIFIED counterexample/diff value substituting Rust's Debug-formatted
@@ -152,7 +160,11 @@ type FailRecord[F] = FRec(F, Binary{64}, Binary{8}, Bytes);
 // Verdict — the outcome sum. Skipped and Undetermined are FIRST-CLASS variants, not flavours of
 // Pass (the honesty crux): the aggregator below keeps their counts distinct, so "green" can never
 // silently include "did not actually check".
-type Verdict[V] = Pass | Fail(FailRecord[V]) | Skipped(SkipReason) | Undetermined(UndetReason);
+type Verdict[V] =
+    Pass
+  | Fail(FailRecord[V])
+  | Skipped(SkipReason)
+  | Undetermined(UndetReason);
 
 // Summary — the aggregated outcome: Counts(passed, failed, skipped, undetermined). skipped and
 // undetermined are DISTINCT from passed (C1/G2). Counts are Binary{8} (see the width substitution
@@ -225,7 +237,8 @@ type EffectsClass = EffNone | EffIo | EffPerBackend;
 // MatrixRow — Row(op, tag, fallibility_class, fallibility_prose, effects_class, effects_prose,
 // explainable). Row DATA is Declared (hand-transcribed from guarantee_matrix.rs::MATRIX); the
 // structural checks below are Empirical over it (std_testing.rs three-way + live Rust oracle).
-type MatrixRow = Row(Bytes, Guarantee, FallibilityClass, Bytes, EffectsClass, Bytes, Bool);
+type MatrixRow =
+    Row(Bytes, Guarantee, FallibilityClass, Bytes, EffectsClass, Bytes, Bool);
 
 // ── shared helpers (Exact — total, match-defined, finite domain) ────────────────────────────────
 // bin_eq: Bool projection of the Exact `eq` prim at Binary{8}.
@@ -274,14 +287,37 @@ fn rng_new(seed: Binary{64}) => Binary{64} =
 // bit-exact vs Rust's Rng::next_u64 (whose output IS its new state). Exact: deterministic; the
 // same state always yields the same output (C4/RT3).
 fn rng_next(state: Binary{64}) => Binary{64} =
-  let a = xor(state, shl_u(state, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001101)) in let b = xor(a, shr_u(a, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000111)) in xor(b, shl_u(b, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010001));
+  let a = xor(
+            state,
+            shl_u(
+              state,
+              0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00001101
+            )
+          ) in
+  let b = xor(
+            a,
+            shr_u(
+              a,
+              0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00000111
+            )
+          ) in
+  xor(
+    b,
+    shl_u(b, 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00010001)
+  );
 
 // rng_next_u32: the high 32 bits of the next draw, as Binary{32} — mirrors Rust's
 // `(next_u64() >> 32) as u32`. The narrow is in-range by construction (the high 32 bits are zero
 // after the shift), so the never-silent width_cast prim narrows Exactly (its second operand is a
 // width witness whose bits are ignored). The caller threads the advanced state via rng_next.
 fn rng_next_u32(state: Binary{64}) => Binary{32} =
-  width_cast(shr_u(rng_next(state), 0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100000), 0b00000000_00000000_00000000_00000000);
+  width_cast(
+    shr_u(
+      rng_next(state),
+      0b00000000_00000000_00000000_00000000_00000000_00000000_00000000_00100000
+    ),
+    0b00000000_00000000_00000000_00000000
+  );
 
 // ── budget ops (C6 — declared, bounded trial budgets) ───────────────────────────────────────────
 // budget_new: a budget from a trial count; 0 trials is an explicit None (C1 — never silent).
@@ -304,12 +340,30 @@ fn budget_min() => Budget =
 // ── property harness (spec §3; the C2 crux: a passing for_all backs Empirical, never Proven) ────
 // find_failing: the first shrink candidate that still violates the property, if any. Exact.
 fn find_failing[T](candidates: Vec[T], prop: T => Bool) => Option[T] =
-  match candidates { Nil => None, Cons(c, rest) => match prop(c) { False => Some(c), True => find_failing(rest, prop) } };
+  match candidates {
+    Nil => None,
+    Cons(c, rest) =>
+      match prop(c) { False => Some(c), True => find_failing(rest, prop) }
+  };
 
 // shrink_loop: descend through shrink candidates keeping the smallest still-failing value; the
 // step count is bounded (Rust's literal 1000, at Binary{16}) so shrinking itself is bounded (C6).
-fn shrink_loop[T](best: T, candidates: Vec[T], shrink: T => Vec[T], prop: T => Bool, steps: Binary{16}) => T =
-  match eq(steps, 0b00000000_00000000) { 0b1 => best, _ => match find_failing(candidates, prop) { None => best, Some(c) => shrink_loop(c, shrink(c), shrink, prop, sub_u(steps, 0b00000000_00000001)) } };
+fn shrink_loop[T](
+  best: T,
+  candidates: Vec[T],
+  shrink: T => Vec[T],
+  prop: T => Bool,
+  steps: Binary{16}
+) => T =
+  match eq(steps, 0b00000000_00000000) {
+    0b1 => best,
+    _ =>
+      match find_failing(candidates, prop) {
+        None => best,
+        Some(c) =>
+          shrink_loop(c, shrink(c), shrink, prop, sub_u(steps, 0b00000000_00000001))
+      }
+  };
 
 // shrink_to_minimal: shrink a failing value to a minimal counterexample (spec §3). The result is
 // the REIFIED minimal value (FLAG-testing-3 — Rust renders it into the description String).
@@ -319,8 +373,49 @@ fn shrink_to_minimal[T](initial: T, shrink: T => Vec[T], prop: T => Bool) => T =
 // for_all_loop: the trial spine — generate, check, recurse. generated_any distinguishes "budget
 // done, everything passed" (Pass) from "the generator never produced" (Skipped(NeedsRecord) —
 // C1: a property that could not run is reported, never a silent pass).
-fn for_all_loop[T](gen: Binary{64} => GenStep[T], shrink: T => Vec[T], prop: T => Bool, state: Binary{64}, seed: Binary{64}, remaining: Binary{8}, trial: Binary{8}, generated_any: Bool) => Verdict[T] =
-  match eq(remaining, 0b0000_0000) { 0b1 => match generated_any { True => Pass, False => Skipped(NeedsRecord) }, _ => match gen(state) { Stepped(drawn, state2) => match drawn { None => match generated_any { True => Pass, False => Skipped(NeedsRecord) }, Some(input) => match prop(input) { True => for_all_loop(gen, shrink, prop, state2, seed, sub_u(remaining, 0b0000_0001), add_u(trial, 0b0000_0001), True), False => Fail(FRec(shrink_to_minimal(input, shrink, prop), seed, trial, "for_all property violated")) } } } };
+fn for_all_loop[T](
+  gen: Binary{64} => GenStep[T],
+  shrink: T => Vec[T],
+  prop: T => Bool,
+  state: Binary{64},
+  seed: Binary{64},
+  remaining: Binary{8},
+  trial: Binary{8},
+  generated_any: Bool
+) => Verdict[T] =
+  match eq(remaining, 0b0000_0000) {
+    0b1 => match generated_any { True => Pass, False => Skipped(NeedsRecord) },
+    _ =>
+      match gen(state) {
+        Stepped(drawn, state2) =>
+          match drawn {
+            None => match generated_any { True => Pass, False => Skipped(NeedsRecord) },
+            Some(input) =>
+              match prop(input) {
+                True =>
+                  for_all_loop(
+                    gen,
+                    shrink,
+                    prop,
+                    state2,
+                    seed,
+                    sub_u(remaining, 0b0000_0001),
+                    add_u(trial, 0b0000_0001),
+                    True
+                  ),
+                False =>
+                  Fail(
+                    FRec(
+                      shrink_to_minimal(input, shrink, prop),
+                      seed,
+                      trial,
+                      "for_all property violated"
+                    )
+                  )
+              }
+          }
+      }
+  };
 
 // for_all: run a property over `budget` generated inputs. Returns the first failure (shrunk to a
 // minimal counterexample, with the reproducing seed + trial index), Skipped(NeedsRecord) if the
@@ -328,8 +423,23 @@ fn for_all_loop[T](gen: Binary{64} => GenStep[T], shrink: T => Vec[T], prop: T =
 // (FLAG-testing-1). Guarantee: Exact as a MECHANISM (the verdict is an exact function of the
 // run); a passing for_all backs an EMPIRICAL claim about the property — never Proven; no op here
 // performs that upgrade (C2/VR-5 — the crux this module exists to prevent).
-fn for_all[T](gen: Binary{64} => GenStep[T], shrink: T => Vec[T], seed: Binary{64}, budget: Budget, prop: T => Bool) => Verdict[T] =
-  for_all_loop(gen, shrink, prop, rng_new(seed), seed, budget_trials(budget), 0b0000_0000, False);
+fn for_all[T](
+  gen: Binary{64} => GenStep[T],
+  shrink: T => Vec[T],
+  seed: Binary{64},
+  budget: Budget,
+  prop: T => Bool
+) => Verdict[T] =
+  for_all_loop(
+    gen,
+    shrink,
+    prop,
+    rng_new(seed),
+    seed,
+    budget_trials(budget),
+    0b0000_0000,
+    False
+  );
 
 // ── golden / snapshot harness (spec §3; C1: a missing baseline is NEVER auto-accepted) ──────────
 // golden: compare `produced` against the stored baseline. A missing baseline or a name-code
@@ -337,22 +447,72 @@ fn for_all[T](gen: Binary{64} => GenStep[T], shrink: T => Vec[T], seed: Binary{6
 // auto-accept (the golden-test honesty crux). A mismatch carries the typed GFail(name, expected,
 // produced) diff (C3 — both values inspectable). Exact mechanism; width-generic snapshot
 // (FLAG-testing-4).
-fn golden{N}(baseline: Option[GoldenBaseline[Binary{N}]], name: Binary{8}, produced: Binary{N}) => Verdict[GoldenFail[Binary{N}]] =
-  match baseline { None => Skipped(NeedsRecord), Some(gb) => match gb { GB(bname, expected) => match eq(bname, name) { 0b1 => match eq(expected, produced) { 0b1 => Pass, _ => Fail(FRec(GFail(name, expected, produced), zero64(), 0b0000_0000, "golden")) }, _ => Skipped(NeedsRecord) } } };
+fn golden{N}(
+  baseline: Option[GoldenBaseline[Binary{N}]],
+  name: Binary{8},
+  produced: Binary{N}
+) => Verdict[GoldenFail[Binary{N}]] =
+  match baseline {
+    None => Skipped(NeedsRecord),
+    Some(gb) =>
+      match gb {
+        GB(bname, expected) =>
+          match eq(bname, name) {
+            0b1 =>
+              match eq(expected, produced) {
+                0b1 => Pass,
+                _ =>
+                  Fail(
+                    FRec(
+                      GFail(name, expected, produced),
+                      zero64(),
+                      0b0000_0000,
+                      "golden"
+                    )
+                  )
+              },
+            _ => Skipped(NeedsRecord)
+          }
+      }
+  };
 
 // ── differential / oracle harness (M-151/M-210 pattern; NFR-7) ──────────────────────────────────
 // diff_compare: the observable-equality floor (§8-Q5) over two produced values. A disagreement
 // carries BOTH outputs (C3) and the input description in the context (composed with the Exact
 // bytes_concat prim — parity with Rust's `differential({input_desc})` context).
-fn diff_compare{N}(input_desc: Bytes, lhs_out: Binary{N}, rhs_out: Binary{N}) => Verdict[DiffFail[Binary{N}]] =
-  match eq(lhs_out, rhs_out) { 0b1 => Pass, _ => Fail(FRec(DFail(lhs_out, rhs_out), zero64(), 0b0000_0000, bytes_concat(bytes_concat("differential(", input_desc), ")"))) };
+fn diff_compare{N}(
+  input_desc: Bytes,
+  lhs_out: Binary{N},
+  rhs_out: Binary{N}
+) => Verdict[DiffFail[Binary{N}]] =
+  match eq(lhs_out, rhs_out) {
+    0b1 => Pass,
+    _ =>
+      Fail(
+        FRec(
+          DFail(lhs_out, rhs_out),
+          zero64(),
+          0b0000_0000,
+          bytes_concat(bytes_concat("differential(", input_desc), ")")
+        )
+      )
+  };
 
 // differential: require lhs() == rhs() through two thunked backends. An unavailable backend is
 // Skipped(BackendUnavailable) — NEVER a silent pass (C1/G2, the differential honesty crux); the
 // thunks are only forced when both backends are available. Exact mechanism; the two-level §8-Q5
 // bar's tag/EXPLAIN level is the Rust crate's own FLAG-Q5, carried over unresolved.
-fn differential{N}(input_desc: Bytes, lhs_available: Bool, lhs: Unit => Binary{N}, rhs_available: Bool, rhs: Unit => Binary{N}) => Verdict[DiffFail[Binary{N}]] =
-  match bool_and(lhs_available, rhs_available) { False => Skipped(BackendUnavailable), True => diff_compare(input_desc, lhs(U), rhs(U)) };
+fn differential{N}(
+  input_desc: Bytes,
+  lhs_available: Bool,
+  lhs: Unit => Binary{N},
+  rhs_available: Bool,
+  rhs: Unit => Binary{N}
+) => Verdict[DiffFail[Binary{N}]] =
+  match bool_and(lhs_available, rhs_available) {
+    False => Skipped(BackendUnavailable),
+    True => diff_compare(input_desc, lhs(U), rhs(U))
+  };
 
 // ── the honest aggregator (spec §4; the C1 crux made structural) ────────────────────────────────
 // bump_* — per-class count increments (functional update; add_u refuses at 256, never a
@@ -373,7 +533,16 @@ fn bump_undetermined(s: Summary) => Summary =
 // can never silently include "did not actually check" (C1/G2). Exact (a total function over
 // verdicts).
 fn summarize[V](vs: Vec[Verdict[V]]) => Summary =
-  match vs { Nil => Counts(0b0000_0000, 0b0000_0000, 0b0000_0000, 0b0000_0000), Cons(v, rest) => match v { Pass => bump_pass(summarize(rest)), Fail(_) => bump_fail(summarize(rest)), Skipped(_) => bump_skipped(summarize(rest)), Undetermined(_) => bump_undetermined(summarize(rest)) } };
+  match vs {
+    Nil => Counts(0b0000_0000, 0b0000_0000, 0b0000_0000, 0b0000_0000),
+    Cons(v, rest) =>
+      match v {
+        Pass => bump_pass(summarize(rest)),
+        Fail(_) => bump_fail(summarize(rest)),
+        Skipped(_) => bump_skipped(summarize(rest)),
+        Undetermined(_) => bump_undetermined(summarize(rest))
+      }
+  };
 
 // is_green: True iff there are no failures. Skipped/undetermined counts are SURFACED in the
 // Summary (the caller can inspect them), not hidden and not treated as failures — treating
@@ -447,7 +616,14 @@ fn scope_contains(s: ModeScope, m: CertMode) => Bool =
 
 // scope_filter: the modes whose membership equals `want`, in CertMode::ALL order. Exact.
 fn scope_filter(s: ModeScope, ms: Vec[CertMode], want: Bool) => Vec[CertMode] =
-  match ms { Nil => Nil, Cons(m, rest) => match bool_eq(scope_contains(s, m), want) { True => Cons(m, scope_filter(s, rest, want)), False => scope_filter(s, rest, want) } };
+  match ms {
+    Nil => Nil,
+    Cons(m, rest) =>
+      match bool_eq(scope_contains(s, m), want) {
+        True => Cons(m, scope_filter(s, rest, want)),
+        False => scope_filter(s, rest, want)
+      }
+  };
 
 // modes_in_scope / modes_out_of_scope: the membership split (0..=3 elements each). Exact.
 fn modes_in_scope(s: ModeScope) => Vec[CertMode] =
@@ -458,7 +634,9 @@ fn modes_out_of_scope(s: ModeScope) => Vec[CertMode] =
 
 // scope_count: the number of modes in scope (0..=3). Exact.
 fn scope_count(s: ModeScope) => Binary{8} =
-  match s { MScope(f, b, c) => add_u(bool_to_bin(f), add_u(bool_to_bin(b), bool_to_bin(c))) };
+  match s {
+    MScope(f, b, c) => add_u(bool_to_bin(f), add_u(bool_to_bin(b), bool_to_bin(c)))
+  };
 
 // scope_is_empty: an empty scope is surfaced explicitly, not silently ignored (C1/G2). Exact.
 fn scope_is_empty(s: ModeScope) => Bool =
@@ -466,15 +644,33 @@ fn scope_is_empty(s: ModeScope) => Bool =
 
 // scope_union / scope_intersect: composable derived scopes. Exact.
 fn scope_union(a: ModeScope, b: ModeScope) => ModeScope =
-  match a { MScope(f1, b1, c1) => match b { MScope(f2, b2, c2) => MScope(bool_or(f1, f2), bool_or(b1, b2), bool_or(c1, c2)) } };
+  match a {
+    MScope(f1, b1, c1) =>
+      match b {
+        MScope(f2, b2, c2) => MScope(bool_or(f1, f2), bool_or(b1, b2), bool_or(c1, c2))
+      }
+  };
 
 fn scope_intersect(a: ModeScope, b: ModeScope) => ModeScope =
-  match a { MScope(f1, b1, c1) => match b { MScope(f2, b2, c2) => MScope(bool_and(f1, f2), bool_and(b1, b2), bool_and(c1, c2)) } };
+  match a {
+    MScope(f1, b1, c1) =>
+      match b {
+        MScope(f2, b2, c2) =>
+          MScope(bool_and(f1, f2), bool_and(b1, b2), bool_and(c1, c2))
+      }
+  };
 
 // from_resolved_mode: the resolver→scope bridge — "the modes at or above the resolved depth":
 // Fast → ALL_MODES, Balanced → NON_FAST, Certified → CERTIFIED_ONLY. Exact.
 fn from_resolved_mode(r: ResolvedMode) => ModeScope =
-  match r { RMode(m, _) => match m { Fast => scope_all_modes(), Balanced => scope_non_fast(), Certified => scope_certified_only() } };
+  match r {
+    RMode(m, _) =>
+      match m {
+        Fast => scope_all_modes(),
+        Balanced => scope_non_fast(),
+        Certified => scope_certified_only()
+      }
+  };
 
 // ── ModeTestConfig — the configurable per-test scope (FLAG-testing-7) ───────────────────────────
 // decl accessors. Exact.
@@ -488,11 +684,29 @@ fn decl_mode(d: CertDecl) => CertMode =
 // maximal element wins, mirroring Iterator::max_by_key's documented tie behaviour (the
 // resolve_mode fold this port reimplements — FLAG-testing-7). Exact.
 fn decl_beats(new_d: CertDecl, cur: CertDecl) => Bool =
-  match lt(scope_specificity(decl_scope(new_d)), scope_specificity(decl_scope(cur))) { 0b1 => False, _ => True };
+  match lt(scope_specificity(decl_scope(new_d)), scope_specificity(decl_scope(cur))) {
+    0b1 => False,
+    _ => True
+  };
 
 // resolve_fold: the left-to-right max-specificity fold. Exact.
 fn resolve_fold(decls: Vec[CertDecl], acc: Option[CertDecl]) => ResolvedMode =
-  match decls { Nil => match acc { None => RMode(Fast, None), Some(w) => match w { Decl(sc, m) => RMode(m, Some(sc)) } }, Cons(d, rest) => match acc { None => resolve_fold(rest, Some(d)), Some(w) => match decl_beats(d, w) { True => resolve_fold(rest, Some(d)), False => resolve_fold(rest, Some(w)) } } };
+  match decls {
+    Nil =>
+      match acc {
+        None => RMode(Fast, None),
+        Some(w) => match w { Decl(sc, m) => RMode(m, Some(sc)) }
+      },
+    Cons(d, rest) =>
+      match acc {
+        None => resolve_fold(rest, Some(d)),
+        Some(w) =>
+          match decl_beats(d, w) {
+            True => resolve_fold(rest, Some(d)),
+            False => resolve_fold(rest, Some(w))
+          }
+      }
+  };
 
 // resolve_decls: the reimplemented most-specific-wins resolution (mycelium_proj::resolve_mode's
 // observable contract: highest specificity wins; no declaration → the Fast project default with
@@ -519,7 +733,9 @@ fn config_with_granular(cfg: ModeTestConfig, m: CertMode) => ModeTestConfig =
 // (never ambient, G2). A granular override reports source None (above the lattice), exactly as
 // in Rust. Exact.
 fn config_provenance(cfg: ModeTestConfig) => ResolvedMode =
-  match cfg { MTC(decls, g) => match g { Some(m) => RMode(m, None), None => resolve_decls(decls) } };
+  match cfg {
+    MTC(decls, g) => match g { Some(m) => RMode(m, None), None => resolve_decls(decls) }
+  };
 
 // config_resolve: the effective ModeScope (provenance → from_resolved_mode — the canonical
 // shared mapping). Exact.
@@ -540,7 +756,15 @@ fn visited_all(v: ModeVisit) => Bool =
 
 // mode_list_eq: element-wise Vec[CertMode] equality. Exact.
 fn mode_list_eq(xs: Vec[CertMode], ys: Vec[CertMode]) => Bool =
-  match xs { Nil => match ys { Nil => True, Cons(_, _) => False }, Cons(x, xrest) => match ys { Nil => False, Cons(y, yrest) => match mode_eq(x, y) { True => mode_list_eq(xrest, yrest), False => False } } };
+  match xs {
+    Nil => match ys { Nil => True, Cons(_, _) => False },
+    Cons(x, xrest) =>
+      match ys {
+        Nil => False,
+        Cons(y, yrest) =>
+          match mode_eq(x, y) { True => mode_list_eq(xrest, yrest), False => False }
+      }
+  };
 
 // matches_scope: True iff exactly the in-scope modes were visited (no more, no fewer). Exact.
 fn matches_scope(v: ModeVisit, s: ModeScope) => Bool =
@@ -559,7 +783,14 @@ fn for_each_mode[B](f: CertMode => B) => Vec[B] =
 // `inspect` technique; `.myc` has no effect surface, so this preserves "f runs per visited
 // mode"), collecting the visited modes.
 fn visit_apply[B](s: ModeScope, ms: Vec[CertMode], f: CertMode => B) => Vec[CertMode] =
-  match ms { Nil => Nil, Cons(m, rest) => match scope_contains(s, m) { True => let peeked = f(m) in Cons(m, visit_apply(s, rest, f)), False => visit_apply(s, rest, f) } };
+  match ms {
+    Nil => Nil,
+    Cons(m, rest) =>
+      match scope_contains(s, m) {
+        True => let peeked = f(m) in Cons(m, visit_apply(s, rest, f)),
+        False => visit_apply(s, rest, f)
+      }
+  };
 
 // for_each_mode_in: run `f` for each mode IN scope, returning the never-silent visited/skipped
 // audit (the caller can assert matches_scope and inspect the skips — C1/G2). Exact.
@@ -569,8 +800,32 @@ fn for_each_mode_in[B](s: ModeScope, f: CertMode => B) => ModeVisit =
 // ── cross-mode assertion cores (FLAG-testing-6 — the reified halves of the panic asserts) ───────
 // scope_check_walk: the two-direction conformance walk. neg_only True checks only the negative
 // direction (assert_mode_negative); False checks both (assert_mode_scope). Exact.
-fn scope_check_walk(s: ModeScope, pred: CertMode => Bool, ms: Vec[CertMode], neg_only: Bool) => Option[ModeViolation] =
-  match ms { Nil => None, Cons(m, rest) => match pred(m) { True => match scope_contains(s, m) { True => scope_check_walk(s, pred, rest, neg_only), False => Some(NegativeFires(m)) }, False => match scope_contains(s, m) { True => match neg_only { True => scope_check_walk(s, pred, rest, neg_only), False => Some(PositiveAbsent(m)) }, False => scope_check_walk(s, pred, rest, neg_only) } } };
+fn scope_check_walk(
+  s: ModeScope,
+  pred: CertMode => Bool,
+  ms: Vec[CertMode],
+  neg_only: Bool
+) => Option[ModeViolation] =
+  match ms {
+    Nil => None,
+    Cons(m, rest) =>
+      match pred(m) {
+        True =>
+          match scope_contains(s, m) {
+            True => scope_check_walk(s, pred, rest, neg_only),
+            False => Some(NegativeFires(m))
+          },
+        False =>
+          match scope_contains(s, m) {
+            True =>
+              match neg_only {
+                True => scope_check_walk(s, pred, rest, neg_only),
+                False => Some(PositiveAbsent(m))
+              },
+            False => scope_check_walk(s, pred, rest, neg_only)
+          }
+      }
+  };
 
 // mode_scope_violation: the decision core of assert_mode_scope — the FIRST violation of either
 // direction (the property fires outside scope, or is absent inside it), reified; None = the
@@ -580,13 +835,21 @@ fn mode_scope_violation(s: ModeScope, pred: CertMode => Bool) => Option[ModeViol
 
 // mode_negative_violation: the negative-only half — the property must be ABSENT outside scope
 // (the "invariant fires where it doesn't apply" check). Exact.
-fn mode_negative_violation(s: ModeScope, pred: CertMode => Bool) => Option[ModeViolation] =
+fn mode_negative_violation(
+  s: ModeScope,
+  pred: CertMode => Bool
+) => Option[ModeViolation] =
   scope_check_walk(s, pred, modes_all(), True);
 
 // ── guarantee matrix (spec §4) — the table as CHECKED DATA ──────────────────────────────────────
 // guarantee_code / guarantee_eq: injective code map + ADT equality over the tag lattice. Exact.
 fn guarantee_code(g: Guarantee) => Binary{8} =
-  match g { GExact => 0b0000_0000, GProven => 0b0000_0001, GEmpirical => 0b0000_0010, GDeclared => 0b0000_0011 };
+  match g {
+    GExact => 0b0000_0000,
+    GProven => 0b0000_0001,
+    GEmpirical => 0b0000_0010,
+    GDeclared => 0b0000_0011
+  };
 
 fn guarantee_eq(a: Guarantee, b: Guarantee) => Bool =
   bin_eq(guarantee_code(a), guarantee_code(b));
@@ -624,13 +887,37 @@ fn declares_io(e: EffectsClass) => Bool =
 // ── the 5 rows (hand-transcribed from guarantee_matrix.rs::MATRIX; tags carried at the SAME
 // strength — every harness op is an Exact MECHANISM; the subject's tag is never inflated) ────────
 fn row_for_all() => MatrixRow =
-  Row("for_all", GExact, FalVerdict, "Verdict::Fail{record} / Verdict::Skipped{NeedsRecord}", EffNone, "none (pure; seeded — C6/RT3)", True);
+  Row(
+    "for_all",
+    GExact,
+    FalVerdict,
+    "Verdict::Fail{record} / Verdict::Skipped{NeedsRecord}",
+    EffNone,
+    "none (pure; seeded — C6/RT3)",
+    True
+  );
 
 fn row_golden() => MatrixRow =
-  Row("golden", GExact, FalVerdict, "Verdict::Fail{diff} / Verdict::Skipped{NeedsRecord}", EffIo, "io (baseline read — declared, C6)", True);
+  Row(
+    "golden",
+    GExact,
+    FalVerdict,
+    "Verdict::Fail{diff} / Verdict::Skipped{NeedsRecord}",
+    EffIo,
+    "io (baseline read — declared, C6)",
+    True
+  );
 
 fn row_differential() => MatrixRow =
-  Row("differential", GExact, FalVerdict, "Verdict::Fail{lhs,rhs} / Verdict::Skipped{BackendUnavailable}", EffPerBackend, "none / io per backend (declared, C6)", True);
+  Row(
+    "differential",
+    GExact,
+    FalVerdict,
+    "Verdict::Fail{lhs,rhs} / Verdict::Skipped{BackendUnavailable}",
+    EffPerBackend,
+    "none / io per backend (declared, C6)",
+    True
+  );
 
 fn row_summarize() => MatrixRow =
   Row("summarize", GExact, FalTotal, "total", EffNone, "none", True);
@@ -640,23 +927,50 @@ fn row_is_green() => MatrixRow =
 
 // matrix: the full 5-row table, in guarantee_matrix.rs::MATRIX order.
 fn matrix() => Vec[MatrixRow] =
-  Cons(row_for_all(), Cons(row_golden(), Cons(row_differential(), Cons(row_summarize(), Cons(row_is_green(), Nil)))));
+  Cons(
+    row_for_all(),
+    Cons(
+      row_golden(),
+      Cons(row_differential(), Cons(row_summarize(), Cons(row_is_green(), Nil)))
+    )
+  );
 
 // ── structural checks (the typed analogs of guarantee_matrix.rs::tests) ─────────────────────────
 // all_rows_exact: every harness op's tag is Exact-as-mechanism (spec §4; accidentally tagging a
 // row Empirical/Declared would overclaim SUBJECT strength — the Rust test's own guard).
 fn all_rows_exact(xs: Vec[MatrixRow]) => Bool =
-  match xs { Nil => True, Cons(r, rest) => bool_and(guarantee_eq(row_tag(r), GExact), all_rows_exact(rest)) };
+  match xs {
+    Nil => True,
+    Cons(r, rest) => bool_and(guarantee_eq(row_tag(r), GExact), all_rows_exact(rest))
+  };
 
 // all_rows_explainable: every op surfaces an EXPLAIN artifact (C3/G11/SC-3 — no black boxes).
 fn all_rows_explainable(xs: Vec[MatrixRow]) => Bool =
-  match xs { Nil => True, Cons(r, rest) => bool_and(row_explainable(r), all_rows_explainable(rest)) };
+  match xs {
+    Nil => True,
+    Cons(r, rest) => bool_and(row_explainable(r), all_rows_explainable(rest))
+  };
 
 // only_golden_and_differential_declare_io: the spec §4 effects discipline, read off the typed
 // column (no substring matching).
 fn only_golden_and_differential_declare_io() => Bool =
-  bool_and(declares_io(row_effects_class(row_golden())), bool_and(declares_io(row_effects_class(row_differential())), bool_and(bool_not(declares_io(row_effects_class(row_for_all()))), bool_and(bool_not(declares_io(row_effects_class(row_summarize()))), bool_not(declares_io(row_effects_class(row_is_green())))))));
+  bool_and(
+    declares_io(row_effects_class(row_golden())),
+    bool_and(
+      declares_io(row_effects_class(row_differential())),
+      bool_and(
+        bool_not(declares_io(row_effects_class(row_for_all()))),
+        bool_and(
+          bool_not(declares_io(row_effects_class(row_summarize()))),
+          bool_not(declares_io(row_effects_class(row_is_green())))
+        )
+      )
+    )
+  );
 
 // aggregator_rows_are_total: summarize/is_green are total functions over verdicts (spec §4).
 fn aggregator_rows_are_total() => Bool =
-  bool_and(is_fal_total(row_fallibility_class(row_summarize())), is_fal_total(row_fallibility_class(row_is_green())));
+  bool_and(
+    is_fal_total(row_fallibility_class(row_summarize())),
+    is_fal_total(row_fallibility_class(row_is_green()))
+  );

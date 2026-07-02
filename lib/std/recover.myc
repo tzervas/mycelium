@@ -128,7 +128,9 @@ type PolicyWitness = ByPolicy | NoPolicy;
 // tag for a retry success, GExact for a clean OOk pass-through (FR-R3). `cleanup_overrun` (spec
 // §7-Q4): True means a cleanup_then_propagate cleanup was SKIPPED on budget overrun — recorded,
 // not swallowed; the original error propagates regardless.
-type Resolution[T, E] = Recovered(T, Guarantee, PolicyWitness) | Propagated(E, PolicyWitness, Bool);
+type Resolution[T, E] =
+    Recovered(T, Guarantee, PolicyWitness)
+  | Propagated(E, PolicyWitness, Bool);
 
 // AttemptOut — the product substitution for the Rust attempt thunk's
 // `(Outcome<T, E>, GuaranteeStrength)` tuple: the re-attempt's outcome plus that value's honest
@@ -157,7 +159,12 @@ type EffectKind = EkRetry | EkAlloc | EkIo | EkCascade | EkTime;
 // Fuel/Ops for Retry/Cascade/Alloc/Time/Io), all enforced by the one `budget_consume`
 // mechanism. `AllocBytes` renames Rust's `Bytes` variant — `Bytes` is a reserved repr-type
 // keyword. Amounts are Binary{8} (see the width substitution note above).
-type EffectBudget = Attempts(Binary{8}) | Depth(Binary{8}) | AllocBytes(Binary{8}) | Fuel(Binary{8}) | Ops(Binary{8});
+type EffectBudget =
+    Attempts(Binary{8})
+  | Depth(Binary{8})
+  | AllocBytes(Binary{8})
+  | Fuel(Binary{8})
+  | Ops(Binary{8});
 
 // EffectBudgetExhausted — the explicit, graceful overrun (I4): `Exhausted(kind, requested,
 // remaining)` — never a hang, stack overflow, or OOM.
@@ -183,7 +190,11 @@ type UndeclaredEffect = Undeclared(EffectKind);
 // I4); 0 is valid and means NO retry (immediate propagation, never a silent drop). `Escalate`:
 // the target class intent is carried in the action (X1-validated by `on`); like the Rust generic
 // driver, the propagated `E` payload is not re-typed (the honest Rust-first seam, carried over).
-type RecoveryAction[T] = Fallback(T) | Retry(Binary{8}) | Escalate(ClassName) | CleanupThenPropagate(EffectKind);
+type RecoveryAction[T] =
+    Fallback(T)
+  | Retry(Binary{8})
+  | Escalate(ClassName)
+  | CleanupThenPropagate(EffectKind);
 
 // Policy — the reified recovery policy: an `on <class> => <action>` association list with
 // replace-on-insert (the BTreeMap substitution). The rule list IS the inspection surface (C3);
@@ -202,7 +213,12 @@ fn bool_and(a: Bool, b: Bool) => Bool =
 // class_code: injective code map over the closed ClassName vocabulary (Exact — total,
 // match-defined, checkable by inspection).
 fn class_code(c: ClassName) => Binary{8} =
-  match c { ClsIoError => 0b0000_0000, ClsParseError => 0b0000_0001, ClsTimeout => 0b0000_0010, ClsFatal => 0b0000_0011 };
+  match c {
+    ClsIoError => 0b0000_0000,
+    ClsParseError => 0b0000_0001,
+    ClsTimeout => 0b0000_0010,
+    ClsFatal => 0b0000_0011
+  };
 
 // class_eq: ADT equality via the injective code map (Exact).
 fn class_eq(a: ClassName, b: ClassName) => Bool =
@@ -210,7 +226,13 @@ fn class_eq(a: ClassName, b: ClassName) => Bool =
 
 // effect_code: injective code map over the closed EffectKind kernel (Exact).
 fn effect_code(k: EffectKind) => Binary{8} =
-  match k { EkRetry => 0b0000_0000, EkAlloc => 0b0000_0001, EkIo => 0b0000_0010, EkCascade => 0b0000_0011, EkTime => 0b0000_0100 };
+  match k {
+    EkRetry => 0b0000_0000,
+    EkAlloc => 0b0000_0001,
+    EkIo => 0b0000_0010,
+    EkCascade => 0b0000_0011,
+    EkTime => 0b0000_0100
+  };
 
 // effect_eq: ADT equality via the injective code map (Exact).
 fn effect_eq(a: EffectKind, b: EffectKind) => Bool =
@@ -243,7 +265,11 @@ fn resolution_witness[T, E](r: Resolution[T, E]) => PolicyWitness =
 
 // ── class registry (X1 — a class is looked up, never an eval'd string) ──────────────────────────
 fn registry_contains(reg: ClassRegistry, c: ClassName) => Bool =
-  match reg { RegNil => False, RegCons(x, rest) => match class_eq(x, c) { True => True, False => registry_contains(rest, c) } };
+  match reg {
+    RegNil => False,
+    RegCons(x, rest) =>
+      match class_eq(x, c) { True => True, False => registry_contains(rest, c) }
+  };
 
 // register: idempotent insert (registering the same name twice is a no-op) — Exact.
 fn register(reg: ClassRegistry, c: ClassName) => ClassRegistry =
@@ -257,32 +283,78 @@ fn resolve(reg: ClassRegistry, c: ClassName) => Result[ClassName, UnknownClass] 
 // ── budget ledger (I4/I5 — one enforcement mechanism over separate named budgets) ───────────────
 // budget_kind: the effect kind a budget bounds (mirrors EffectBudget::kind) — Exact.
 fn budget_kind(eb: EffectBudget) => EffectKind =
-  match eb { Attempts(_) => EkRetry, Depth(_) => EkCascade, AllocBytes(_) => EkAlloc, Fuel(_) => EkTime, Ops(_) => EkIo };
+  match eb {
+    Attempts(_) => EkRetry,
+    Depth(_) => EkCascade,
+    AllocBytes(_) => EkAlloc,
+    Fuel(_) => EkTime,
+    Ops(_) => EkIo
+  };
 
 // budget_amount: the budget's scalar ceiling (mirrors EffectBudget::amount) — Exact.
 fn budget_amount(eb: EffectBudget) => Binary{8} =
-  match eb { Attempts(n) => n, Depth(n) => n, AllocBytes(n) => n, Fuel(n) => n, Ops(n) => n };
+  match eb {
+    Attempts(n) => n,
+    Depth(n) => n,
+    AllocBytes(n) => n,
+    Fuel(n) => n,
+    Ops(n) => n
+  };
 
 // budget_set: declare (or reset) a budget for its effect kind (mirrors Budgets::set/with) —
 // functional update; Exact.
 fn budget_set(b: Budgets, eb: EffectBudget) => Budgets =
-  match b { BNil => BEntry(budget_kind(eb), budget_amount(eb), BNil), BEntry(bk, rem, rest) => match effect_eq(bk, budget_kind(eb)) { True => BEntry(bk, budget_amount(eb), rest), False => BEntry(bk, rem, budget_set(rest, eb)) } };
+  match b {
+    BNil => BEntry(budget_kind(eb), budget_amount(eb), BNil),
+    BEntry(bk, rem, rest) =>
+      match effect_eq(bk, budget_kind(eb)) {
+        True => BEntry(bk, budget_amount(eb), rest),
+        False => BEntry(bk, rem, budget_set(rest, eb))
+      }
+  };
 
 // budget_remaining: the remaining budget for a kind; None if none was declared — Exact.
 fn budget_remaining(b: Budgets, k: EffectKind) => Option[Binary{8}] =
-  match b { BNil => None, BEntry(bk, rem, rest) => match effect_eq(bk, k) { True => Some(rem), False => budget_remaining(rest, k) } };
+  match b {
+    BNil => None,
+    BEntry(bk, rem, rest) =>
+      match effect_eq(bk, k) { True => Some(rem), False => budget_remaining(rest, k) }
+  };
 
 // budget_consume: consume `amount` of `k`'s budget. An overrun — INCLUDING consuming an effect
 // with NO declared budget (I5: remaining 0) — is the explicit, graceful
 // Err(Exhausted(kind, requested, remaining)) (I4); never a hang or a silent stall. On success
 // the NEW ledger (decremented via the Exact sub_u prim) is returned in Ok — the functional
 // form of Rust's `&mut` decrement. Exact (budget arithmetic; no accuracy semantics).
-fn budget_consume(b: Budgets, k: EffectKind, amount: Binary{8}) => Result[Budgets, EffectBudgetExhausted] =
-  match b { BNil => Err(Exhausted(k, amount, 0b0000_0000)), BEntry(bk, rem, rest) => match effect_eq(bk, k) { True => match lt(rem, amount) { 0b1 => Err(Exhausted(k, amount, rem)), _ => Ok(BEntry(bk, sub_u(rem, amount), rest)) }, False => match budget_consume(rest, k, amount) { Ok(rest2) => Ok(BEntry(bk, rem, rest2)), Err(x) => Err(x) } } };
+fn budget_consume(
+  b: Budgets,
+  k: EffectKind,
+  amount: Binary{8}
+) => Result[Budgets, EffectBudgetExhausted] =
+  match b {
+    BNil => Err(Exhausted(k, amount, 0b0000_0000)),
+    BEntry(bk, rem, rest) =>
+      match effect_eq(bk, k) {
+        True =>
+          match lt(rem, amount) {
+            0b1 => Err(Exhausted(k, amount, rem)),
+            _ => Ok(BEntry(bk, sub_u(rem, amount), rest))
+          },
+        False =>
+          match budget_consume(rest, k, amount) {
+            Ok(rest2) => Ok(BEntry(bk, rem, rest2)),
+            Err(x) => Err(x)
+          }
+      }
+  };
 
 // ── declared-effect discipline (I3 — manual-declare + compositional-check) ──────────────────────
 fn effect_member(xs: EffectList, k: EffectKind) => Bool =
-  match xs { ENil => False, ECons(x, rest) => match effect_eq(x, k) { True => True, False => effect_member(rest, k) } };
+  match xs {
+    ENil => False,
+    ECons(x, rest) =>
+      match effect_eq(x, k) { True => True, False => effect_member(rest, k) }
+  };
 
 // effect_insert: set-insert (no-op when already present) — the dedup that keeps EffectList a
 // set. Exact.
@@ -292,8 +364,18 @@ fn effect_insert(xs: EffectList, k: EffectKind) => EffectList =
 // check_effects: every performed effect must be in the declared set; the FIRST undeclared one is
 // an explicit Err(Undeclared) (I3 — no unknown side effects). This CHECKS that declared effects
 // compose — it never INFERS one. Exact (static check; no accuracy semantics).
-fn check_effects(declared: EffectList, performed: EffectList) => Result[Unit, UndeclaredEffect] =
-  match performed { ENil => Ok(U), ECons(k, rest) => match effect_member(declared, k) { True => check_effects(declared, rest), False => Err(Undeclared(k)) } };
+fn check_effects(
+  declared: EffectList,
+  performed: EffectList
+) => Result[Unit, UndeclaredEffect] =
+  match performed {
+    ENil => Ok(U),
+    ECons(k, rest) =>
+      match effect_member(declared, k) {
+        True => check_effects(declared, rest),
+        False => Err(Undeclared(k))
+      }
+  };
 
 // ── reified policy (RFC-0014 §4.4; C3 — the rule list is the inspection surface) ───────────────
 // policy_insert: add or REPLACE the rule for a class (the BTreeMap insert semantic) — Exact.
@@ -301,24 +383,56 @@ fn check_effects(declared: EffectList, performed: EffectList) => Result[Unit, Un
 // a bare nullary generic constructor cannot determine its type argument there; the
 // std.collections `snoc` precedent.)
 fn policy_insert[T](p: Policy[T], c: ClassName, a: RecoveryAction[T]) => Policy[T] =
-  match p { PNil => PRule(c, a, p), PRule(pc, pa, rest) => match class_eq(pc, c) { True => PRule(c, a, rest), False => PRule(pc, pa, policy_insert(rest, c, a)) } };
+  match p {
+    PNil => PRule(c, a, p),
+    PRule(pc, pa, rest) =>
+      match class_eq(pc, c) {
+        True => PRule(c, a, rest),
+        False => PRule(pc, pa, policy_insert(rest, c, a))
+      }
+  };
 
 // escalate_target: the Escalate action's target class, if any (the X1 validation hook for `on`).
 fn escalate_target[T](a: RecoveryAction[T]) => Option[ClassName] =
-  match a { Fallback(_) => None, Retry(_) => None, Escalate(target) => Some(target), CleanupThenPropagate(_) => None };
+  match a {
+    Fallback(_) => None,
+    Retry(_) => None,
+    Escalate(target) => Some(target),
+    CleanupThenPropagate(_) => None
+  };
 
 // on: add an `on <class> => <action>` rule, resolving the LHS class AND any Escalate target
 // through the registry (X1 — both are membership-checked, never unvalidated). An unknown class
 // (either side) is an explicit Err(UnknownCls), never a silent fabrication (G2). Returns the
 // UPDATED policy in Ok (functional update — see the substitution note on the dropped
 // prior-action return). Exact (builds a config value; no accuracy semantics).
-fn on[T](reg: ClassRegistry, p: Policy[T], c: ClassName, a: RecoveryAction[T]) => Result[Policy[T], UnknownClass] =
-  match registry_contains(reg, c) { False => Err(UnknownCls(c)), True => match escalate_target(a) { None => Ok(policy_insert(p, c, a)), Some(target) => match registry_contains(reg, target) { True => Ok(policy_insert(p, c, a)), False => Err(UnknownCls(target)) } } };
+fn on[T](
+  reg: ClassRegistry,
+  p: Policy[T],
+  c: ClassName,
+  a: RecoveryAction[T]
+) => Result[Policy[T], UnknownClass] =
+  match registry_contains(reg, c) {
+    False => Err(UnknownCls(c)),
+    True =>
+      match escalate_target(a) {
+        None => Ok(policy_insert(p, c, a)),
+        Some(target) =>
+          match registry_contains(reg, target) {
+            True => Ok(policy_insert(p, c, a)),
+            False => Err(UnknownCls(target))
+          }
+      }
+  };
 
 // action_for: the recovery action for a class, if any — None is explicit absence, never a silent
 // fallthrough to a default action (G2). Exact.
 fn action_for[T](p: Policy[T], c: ClassName) => Option[RecoveryAction[T]] =
-  match p { PNil => None, PRule(pc, pa, rest) => match class_eq(pc, c) { True => Some(pa), False => action_for(rest, c) } };
+  match p {
+    PNil => None,
+    PRule(pc, pa, rest) =>
+      match class_eq(pc, c) { True => Some(pa), False => action_for(rest, c) }
+  };
 
 fn policy_is_empty[T](p: Policy[T]) => Bool =
   match p { PNil => True, PRule(_, _, _) => False };
@@ -326,20 +440,51 @@ fn policy_is_empty[T](p: Policy[T]) => Bool =
 // action_effect: the effect an action declares, if any (Retry → EkRetry; CleanupThenPropagate →
 // its cleanup effect; Fallback/Escalate are effect-free).
 fn action_effect[T](a: RecoveryAction[T]) => Option[EffectKind] =
-  match a { Fallback(_) => None, Retry(_) => Some(EkRetry), Escalate(_) => None, CleanupThenPropagate(ef) => Some(ef) };
+  match a {
+    Fallback(_) => None,
+    Retry(_) => Some(EkRetry),
+    Escalate(_) => None,
+    CleanupThenPropagate(ef) => Some(ef)
+  };
 
 // policy_effects: the policy's declared, closed effect set (I3) — the input to check_effects.
 // Exact.
 fn policy_effects[T](p: Policy[T]) => EffectList =
-  match p { PNil => ENil, PRule(_, a, rest) => match action_effect(a) { Some(k) => effect_insert(policy_effects(rest), k), None => policy_effects(rest) } };
+  match p {
+    PNil => ENil,
+    PRule(_, a, rest) =>
+      match action_effect(a) {
+        Some(k) => effect_insert(policy_effects(rest), k),
+        None => policy_effects(rest)
+      }
+  };
 
 // ── the never-silent driver (RFC-0014 §4.2/§4.3; RFC-0016 C1) ───────────────────────────────────
 // retry_loop: re-attempt up to `remaining` times, consuming one EkRetry budget unit BEFORE each
 // attempt (I4/I5 — a budget overrun propagates the ORIGINAL error immediately; the attempt is
 // not run). A successful attempt recovers with the attempt's OWN tag (inherited, never upgraded
 // — I2/VR-5/FR-R3). Exhaustion propagates the ORIGINAL error (additive — I1).
-fn retry_loop[T, E](remaining: Binary{8}, err: E, b: Budgets, attempt: Unit => AttemptOut[T, E]) => Resolution[T, E] =
-  match eq(remaining, 0b0000_0000) { 0b1 => Propagated(err, ByPolicy, False), _ => match budget_consume(b, EkRetry, 0b0000_0001) { Err(_) => Propagated(err, ByPolicy, False), Ok(b2) => match attempt(U) { Attempted(o2, tag) => match o2 { OOk(v) => Recovered(v, tag, ByPolicy), OErr(_) => retry_loop(sub_u(remaining, 0b0000_0001), err, b2, attempt) } } } };
+fn retry_loop[T, E](
+  remaining: Binary{8},
+  err: E,
+  b: Budgets,
+  attempt: Unit => AttemptOut[T, E]
+) => Resolution[T, E] =
+  match eq(remaining, 0b0000_0000) {
+    0b1 => Propagated(err, ByPolicy, False),
+    _ =>
+      match budget_consume(b, EkRetry, 0b0000_0001) {
+        Err(_) => Propagated(err, ByPolicy, False),
+        Ok(b2) =>
+          match attempt(U) {
+            Attempted(o2, tag) =>
+              match o2 {
+                OOk(v) => Recovered(v, tag, ByPolicy),
+                OErr(_) => retry_loop(sub_u(remaining, 0b0000_0001), err, b2, attempt)
+              }
+          }
+      }
+  };
 
 // apply_action: apply one matched action — every arm yields Recovered or Propagated (I1).
 // Fallback recovers with the fixed GDeclared ceiling (a substituted value has no checked basis —
@@ -347,8 +492,22 @@ fn retry_loop[T, E](remaining: Binary{8}, err: E, b: Budgets, attempt: Unit => A
 // payload is not re-typed — the honest Rust-first seam). CleanupThenPropagate consumes its
 // declared effect ONCE; an overrun SKIPS the cleanup only and records it (True) — the original
 // error propagates regardless (spec §7-Q4: recorded, not swallowed).
-fn apply_action[T, E](a: RecoveryAction[T], err: E, b: Budgets, attempt: Unit => AttemptOut[T, E]) => Resolution[T, E] =
-  match a { Fallback(v) => Recovered(v, GDeclared, ByPolicy), Retry(n) => retry_loop(n, err, b, attempt), Escalate(_) => Propagated(err, ByPolicy, False), CleanupThenPropagate(ef) => match budget_consume(b, ef, 0b0000_0001) { Ok(_) => Propagated(err, ByPolicy, False), Err(_) => Propagated(err, ByPolicy, True) } };
+fn apply_action[T, E](
+  a: RecoveryAction[T],
+  err: E,
+  b: Budgets,
+  attempt: Unit => AttemptOut[T, E]
+) => Resolution[T, E] =
+  match a {
+    Fallback(v) => Recovered(v, GDeclared, ByPolicy),
+    Retry(n) => retry_loop(n, err, b, attempt),
+    Escalate(_) => Propagated(err, ByPolicy, False),
+    CleanupThenPropagate(ef) =>
+      match budget_consume(b, ef, 0b0000_0001) {
+        Ok(_) => Propagated(err, ByPolicy, False),
+        Err(_) => Propagated(err, ByPolicy, True)
+      }
+  };
 
 // handle_classified: the spine — map an Outcome through a Policy; ALWAYS yields a Resolution,
 // never a drop (I1 — enforced by the type). OOk passes through Recovered with tag GExact
@@ -356,13 +515,32 @@ fn apply_action[T, E](a: RecoveryAction[T], err: E, b: Budgets, attempt: Unit =>
 // no matching rule propagates UNCHANGED with NoPolicy (the I1 floor). A matched rule is applied
 // per apply_action, with the ByPolicy witness (C3 presence — FLAG-recover-1 for the content
 // address). Guarantee: inherited honest floor (I2/VR-5); total over budgets.
-fn handle_classified[T, E](o: Outcome[T, E], p: Policy[T], b: Budgets, class_of: E => ClassName, attempt: Unit => AttemptOut[T, E]) => Resolution[T, E] =
-  match o { OOk(v) => Recovered(v, GExact, NoPolicy), OErr(e) => match action_for(p, class_of(e)) { None => Propagated(e, NoPolicy, False), Some(a) => apply_action(a, e, b, attempt) } };
+fn handle_classified[T, E](
+  o: Outcome[T, E],
+  p: Policy[T],
+  b: Budgets,
+  class_of: E => ClassName,
+  attempt: Unit => AttemptOut[T, E]
+) => Resolution[T, E] =
+  match o {
+    OOk(v) => Recovered(v, GExact, NoPolicy),
+    OErr(e) =>
+      match action_for(p, class_of(e)) {
+        None => Propagated(e, NoPolicy, False),
+        Some(a) => apply_action(a, e, b, attempt)
+      }
+  };
 
 // recover_classified: the Result bridge — handle_classified with a Result input (the concrete
 // shape that resolves error.md §7-Q1: RecoverOutcome = Recovered | Propagated, no drop variant,
 // honest inherited tag).
-fn recover_classified[T, E](r: Result[T, E], p: Policy[T], b: Budgets, class_of: E => ClassName, attempt: Unit => AttemptOut[T, E]) => Resolution[T, E] =
+fn recover_classified[T, E](
+  r: Result[T, E],
+  p: Policy[T],
+  b: Budgets,
+  class_of: E => ClassName,
+  attempt: Unit => AttemptOut[T, E]
+) => Resolution[T, E] =
   handle_classified(from_result(r), p, b, class_of, attempt);
 
 // ── guarantee matrix (RFC-0016 §4.5; spec §4) — the §4.5 table as CHECKED DATA ──────────────────
@@ -415,48 +593,166 @@ fn is_expl_policy_ref(x: Explainable) => Bool =
 // nonempty: True iff `b` has at least one byte (bytes_len is the Exact prim at Binary{32};
 // std.diag precedent).
 fn nonempty(b: Bytes) => Bool =
-  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0000) { 0b1 => False, _ => True };
+  match eq(bytes_len(b), 0b0000_0000_0000_0000_0000_0000_0000_0000) {
+    0b1 => False,
+    _ => True
+  };
 
 // ── the 11 rows (hand-transcribed verbatim from guarantee_matrix.rs::MATRIX) ────────────────────
 fn row_handle() => MatrixRow =
-  Row("handle (never-silent driver)", "Inherited-honest-floor: Exact for Ok pass-through, Declared for fallback, attempt-tag for retry success", Total, "total over budgets — yields Recovered | Propagated; no drop (I1); budget overrun is EffectBudgetExhausted routed through the outcome", "the policy's actions' effects (retry → EffectKind::Retry budgeted Attempts(N); cleanup_then_propagate → declared effect budgeted); Ok / fallback / escalate paths are effect-free", PolicyRef, "Resolution has no Dropped variant; every call yields Recovered or Propagated — enforced by the type (I1)");
+  Row(
+    "handle (never-silent driver)",
+    "Inherited-honest-floor: Exact for Ok pass-through, Declared for fallback, attempt-tag for retry success",
+    Total,
+    "total over budgets — yields Recovered | Propagated; no drop (I1); budget overrun is EffectBudgetExhausted routed through the outcome",
+    "the policy's actions' effects (retry → EffectKind::Retry budgeted Attempts(N); cleanup_then_propagate → declared effect budgeted); Ok / fallback / escalate paths are effect-free",
+    PolicyRef,
+    "Resolution has no Dropped variant; every call yields Recovered or Propagated — enforced by the type (I1)"
+  );
 
 fn row_recover_bridge() => MatrixRow =
-  Row("recover / handle_classified (std.error bridge)", "= handle — inherits the honest floor; never upgraded (I2/VR-5)", Total, "RecoverOutcome = Resolution = Recovered | Propagated; never a drop (I1)", "= handle (the policy's declared, budgeted effects)", PolicyRef, "Resolution = Recovered | Propagated; no Dropped variant — I1 is a property of the type");
+  Row(
+    "recover / handle_classified (std.error bridge)",
+    "= handle — inherits the honest floor; never upgraded (I2/VR-5)",
+    Total,
+    "RecoverOutcome = Resolution = Recovered | Propagated; never a drop (I1)",
+    "= handle (the policy's declared, budgeted effects)",
+    PolicyRef,
+    "Resolution = Recovered | Propagated; no Dropped variant — I1 is a property of the type"
+  );
 
 fn row_fallback() => MatrixRow =
-  Row("fallback(value) (action)", "Declared — a substituted fallback has no checked basis (I2/VR-5)", Total, "always Recovered(value, Declared) — the one always-recovering action", "none (pure value substitution)", PolicyRef, "always Recovered — the error is replaced by an explicit value (I1); the substitution is honest-tagged Declared");
+  Row(
+    "fallback(value) (action)",
+    "Declared — a substituted fallback has no checked basis (I2/VR-5)",
+    Total,
+    "always Recovered(value, Declared) — the one always-recovering action",
+    "none (pure value substitution)",
+    PolicyRef,
+    "always Recovered — the error is replaced by an explicit value (I1); the substitution is honest-tagged Declared"
+  );
 
 fn row_retry() => MatrixRow =
-  Row("retry(<=N) (action)", "Inherited-from-attempt — the successful attempt's own tag; on exhaustion no value is produced", Total, "Recovered on success; Propagated(original_error) on exhaustion — bounded by <=N (I4); EffectBudgetExhausted on budget overrun", "EffectKind::Retry, budgeted Attempts(N); overrun → graceful EffectBudgetExhausted (I4)", PolicyRef, "either Recovered (attempt succeeded) or Propagated(original_error) (exhausted) — original error never discarded (I1)");
+  Row(
+    "retry(<=N) (action)",
+    "Inherited-from-attempt — the successful attempt's own tag; on exhaustion no value is produced",
+    Total,
+    "Recovered on success; Propagated(original_error) on exhaustion — bounded by <=N (I4); EffectBudgetExhausted on budget overrun",
+    "EffectKind::Retry, budgeted Attempts(N); overrun → graceful EffectBudgetExhausted (I4)",
+    PolicyRef,
+    "either Recovered (attempt succeeded) or Propagated(original_error) (exhausted) — original error never discarded (I1)"
+  );
 
 fn row_escalate() => MatrixRow =
-  Row("escalate(class') (action)", "n/a — re-propagates an error, not a value; no accuracy semantics", Total, "always Propagated(transformed_error) — still explicit; never a drop (I1)", "none (pure structural transform — class label changes, error continues)", PolicyRef, "always Propagated — the error is re-tagged but never discarded (I1); the escalated class is in the PolicyRef (C3)");
+  Row(
+    "escalate(class') (action)",
+    "n/a — re-propagates an error, not a value; no accuracy semantics",
+    Total,
+    "always Propagated(transformed_error) — still explicit; never a drop (I1)",
+    "none (pure structural transform — class label changes, error continues)",
+    PolicyRef,
+    "always Propagated — the error is re-tagged but never discarded (I1); the escalated class is in the PolicyRef (C3)"
+  );
 
 fn row_cleanup() => MatrixRow =
-  Row("cleanup_then_propagate(effect) (action)", "n/a — re-propagates the original error", Total, "always Propagated(original_error); cleanup budget overrun is recorded in cleanup_overrun field (legible — spec §7-Q4); original error propagates regardless (I1)", "declared cleanup effect, budgeted (I4/I5); overrun graceful (skips cleanup, records overrun, propagates original error)", PolicyRef, "original error always propagates (I1) — even if the cleanup budget overruns; the overrun is recorded (not swallowed)");
+  Row(
+    "cleanup_then_propagate(effect) (action)",
+    "n/a — re-propagates the original error",
+    Total,
+    "always Propagated(original_error); cleanup budget overrun is recorded in cleanup_overrun field (legible — spec §7-Q4); original error propagates regardless (I1)",
+    "declared cleanup effect, budgeted (I4/I5); overrun graceful (skips cleanup, records overrun, propagates original error)",
+    PolicyRef,
+    "original error always propagates (I1) — even if the cleanup budget overruns; the overrun is recorded (not swallowed)"
+  );
 
 fn row_on() => MatrixRow =
-  Row("on (policy registration)", "Exact (builds a config value; no accuracy semantics)", FallibleConfig, "Err(UnknownClass) — a class not in the diag registry is an explicit config error, never an eval'd string (X1)", "none", NotApplicable, "Err(UnknownClass) is explicit — an unknown class never silently becomes a default action (X1/G2)");
+  Row(
+    "on (policy registration)",
+    "Exact (builds a config value; no accuracy semantics)",
+    FallibleConfig,
+    "Err(UnknownClass) — a class not in the diag registry is an explicit config error, never an eval'd string (X1)",
+    "none",
+    NotApplicable,
+    "Err(UnknownClass) is explicit — an unknown class never silently becomes a default action (X1/G2)"
+  );
 
 fn row_policy_ref() => MatrixRow =
-  Row("policy_ref", "Exact", Total, "", "none", IsPolicyRef, "pure deterministic hash — no error path; policy_ref is the EXPLAIN identity (C3)");
+  Row(
+    "policy_ref",
+    "Exact",
+    Total,
+    "",
+    "none",
+    IsPolicyRef,
+    "pure deterministic hash — no error path; policy_ref is the EXPLAIN identity (C3)"
+  );
 
 fn row_action_for() => MatrixRow =
-  Row("action_for", "Exact", Total, "Option<RecoveryAction> — None if no rule for the class (never a silent fallthrough)", "none", NotApplicable, "None is explicit absence — no silent fallthrough to a default action (G2)");
+  Row(
+    "action_for",
+    "Exact",
+    Total,
+    "Option<RecoveryAction> — None if no rule for the class (never a silent fallthrough)",
+    "none",
+    NotApplicable,
+    "None is explicit absence — no silent fallthrough to a default action (G2)"
+  );
 
 fn row_consume() => MatrixRow =
-  Row("consume (budget ledger)", "Exact (budget arithmetic; no accuracy semantics)", FallibleBudget, "Err(EffectBudgetExhausted) — the graceful, explicit overrun (I4); names kind + requested + remaining; never a hang/OOM", "the consumed EffectKind, bounded", NotApplicable, "Err(EffectBudgetExhausted) is explicit — an overrun never hangs or silently stalls (I4)");
+  Row(
+    "consume (budget ledger)",
+    "Exact (budget arithmetic; no accuracy semantics)",
+    FallibleBudget,
+    "Err(EffectBudgetExhausted) — the graceful, explicit overrun (I4); names kind + requested + remaining; never a hang/OOM",
+    "the consumed EffectKind, bounded",
+    NotApplicable,
+    "Err(EffectBudgetExhausted) is explicit — an overrun never hangs or silently stalls (I4)"
+  );
 
 fn row_check_effects() => MatrixRow =
-  Row("check_effects (I3)", "Exact (static check; no accuracy semantics)", FallibleConfig, "Err(UndeclaredEffect) — a performed-but-undeclared effect is an explicit checker error (I3); names the undeclared effect", "none (a static checker — not a runtime concern; KC-3)", NotApplicable, "Err(UndeclaredEffect) is explicit — an undeclared effect never silently becomes a valid side effect (I3/G2)");
+  Row(
+    "check_effects (I3)",
+    "Exact (static check; no accuracy semantics)",
+    FallibleConfig,
+    "Err(UndeclaredEffect) — a performed-but-undeclared effect is an explicit checker error (I3); names the undeclared effect",
+    "none (a static checker — not a runtime concern; KC-3)",
+    NotApplicable,
+    "Err(UndeclaredEffect) is explicit — an undeclared effect never silently becomes a valid side effect (I3/G2)"
+  );
 
 // ── Vec (local, self-contained — std.diag precedent) ────────────────────────────────────────────
 type Vec[A] = Nil | Cons(A, Vec[A]);
 
 // matrix: the full 11-row table, in the same order as guarantee_matrix.rs::MATRIX.
 fn matrix() => Vec[MatrixRow] =
-  Cons(row_handle(), Cons(row_recover_bridge(), Cons(row_fallback(), Cons(row_retry(), Cons(row_escalate(), Cons(row_cleanup(), Cons(row_on(), Cons(row_policy_ref(), Cons(row_action_for(), Cons(row_consume(), Cons(row_check_effects(), Nil)))))))))));
+  Cons(
+    row_handle(),
+    Cons(
+      row_recover_bridge(),
+      Cons(
+        row_fallback(),
+        Cons(
+          row_retry(),
+          Cons(
+            row_escalate(),
+            Cons(
+              row_cleanup(),
+              Cons(
+                row_on(),
+                Cons(
+                  row_policy_ref(),
+                  Cons(
+                    row_action_for(),
+                    Cons(row_consume(), Cons(row_check_effects(), Nil))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  );
 
 // matrix_len: the row count as Binary{8} (11 rows fits trivially). O(n) spine-walk.
 fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
@@ -467,18 +763,40 @@ fn matrix_len(xs: Vec[MatrixRow]) => Binary{8} =
 // handle_classified in std_recover.rs instead) ───────────────────────────────────────────────────
 // every_row_states_never_silent_property (C1/I1).
 fn all_never_silent_nonempty(xs: Vec[MatrixRow]) => Bool =
-  match xs { Nil => True, Cons(r, rest) => bool_and(nonempty(row_never_silent(r)), all_never_silent_nonempty(rest)) };
+  match xs {
+    Nil => True,
+    Cons(r, rest) =>
+      bool_and(nonempty(row_never_silent(r)), all_never_silent_nonempty(rest))
+  };
 
 // driver_rows_are_total: the handle/recover bridge rows are Total (total over budgets — I1/I4).
 fn driver_rows_are_total() => Bool =
-  bool_and(is_total(row_fallibility(row_handle())), is_total(row_fallibility(row_recover_bridge())));
+  bool_and(
+    is_total(row_fallibility(row_handle())),
+    is_total(row_fallibility(row_recover_bridge()))
+  );
 
 // driver_rows_are_policy_ref_explainable: both driver rows carry PolicyRef for EXPLAIN (C3).
 fn driver_rows_are_policy_ref_explainable() => Bool =
-  bool_and(is_expl_policy_ref(row_explainable(row_handle())), is_expl_policy_ref(row_explainable(row_recover_bridge())));
+  bool_and(
+    is_expl_policy_ref(row_explainable(row_handle())),
+    is_expl_policy_ref(row_explainable(row_recover_bridge()))
+  );
 
 // config_ops_fallibility_is_typed: the typed half of the Rust exact-ops row check — `on` and
 // `check_effects` are FallibleConfig, `consume` is FallibleBudget, `policy_ref`/`action_for`
 // are Total (read off the typed Fallibility column, no substring needed).
 fn config_ops_fallibility_is_typed() => Bool =
-  bool_and(is_fallible_config(row_fallibility(row_on())), bool_and(is_fallible_config(row_fallibility(row_check_effects())), bool_and(is_fallible_budget(row_fallibility(row_consume())), bool_and(is_total(row_fallibility(row_policy_ref())), is_total(row_fallibility(row_action_for()))))));
+  bool_and(
+    is_fallible_config(row_fallibility(row_on())),
+    bool_and(
+      is_fallible_config(row_fallibility(row_check_effects())),
+      bool_and(
+        is_fallible_budget(row_fallibility(row_consume())),
+        bool_and(
+          is_total(row_fallibility(row_policy_ref())),
+          is_total(row_fallibility(row_action_for()))
+        )
+      )
+    )
+  );
