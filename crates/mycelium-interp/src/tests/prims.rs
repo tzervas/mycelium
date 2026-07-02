@@ -679,6 +679,234 @@ fn bin_shift_matches_native_oracle_at_width6() {
     }
 }
 
+// ---- RFC-0033 §4.1.2/§4.1.3 (M-767, `enb` Gap B): the signedness-split signed op set ----------
+//
+// `bin.div_s`/`bin.rem_s`/`bin.shr_s`/`cmp.lt_s` — the signed counterparts to the unsigned
+// `bin.div`/`bin.rem`/`bin.shr` and the D1 unsigned `cmp.lt` (ADR-028: distinct named ops).
+// These tests pin the wrapper's never-silent error mapping (div-by-zero / width mismatch /
+// over-cap / out-of-range shift amount → `PrimType`; the single signed-division overflow
+// `min ÷ −1` → `Overflow`) and the signed semantics the `_u` twins would get wrong (truncation
+// toward zero, sign extension, the −1-sorts-below-0 order). Deep coverage of the codecs lives in
+// `mycelium-core/src/tests/binary.rs`; here the fixture is the corpus table + assert-over-a-case.
+
+/// A `Ternary{n}` value from an MSB-first digit string over `{-, 0, +}` (test fixture).
+fn trits(s: &str) -> Value {
+    use mycelium_core::Trit;
+    let ds: Vec<Trit> = s
+        .chars()
+        .map(|c| match c {
+            '-' => Trit::Neg,
+            '0' => Trit::Zero,
+            '+' => Trit::Pos,
+            other => panic!("bad trit digit {other:?}"),
+        })
+        .collect();
+    let n = u32::try_from(ds.len()).expect("small test widths");
+    Value::new(
+        Repr::Ternary { trits: n },
+        Payload::Trits(ds),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// A `Binary{n}` value from a signed `i64`, built via `mycelium_core::binary::int_to_bits`.
+fn s_bin(value: i64, n: u32) -> Value {
+    let bits = mycelium_core::binary::int_to_bits(value, n).expect("in range");
+    Value::new(
+        Repr::Binary { width: n },
+        Payload::Bits(bits),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// Worked examples pinning **truncation toward zero** (SMT-LIB `bvsdiv`/`bvsrem`; the module
+/// rounding-convention note): `-7 / 2 = -3` r `-1` — floored division would answer `-4` r `1`.
+#[test]
+fn bin_div_s_and_rem_s_pin_truncation_toward_zero() {
+    let reg = PrimRegistry::with_builtins();
+    let div = reg.get("bin.div_s").expect("bin.div_s registered");
+    let rem = reg.get("bin.rem_s").expect("bin.rem_s registered");
+    // (a, b, q, r) — the four sign quadrants at Binary{8}.
+    for (a, b, q, r) in [
+        (7i64, 2i64, 3i64, 1i64),
+        (-7, 2, -3, -1),
+        (7, -2, -3, 1),
+        (-7, -2, 3, -1),
+    ] {
+        let got_q = div("bin.div_s", &[&s_bin(a, 8), &s_bin(b, 8)]).expect("quotient");
+        let got_r = rem("bin.rem_s", &[&s_bin(a, 8), &s_bin(b, 8)]).expect("remainder");
+        assert_eq!(
+            got_q.payload(),
+            &Payload::Bits(mycelium_core::binary::int_to_bits(q, 8).unwrap()),
+            "{a} / {b}"
+        );
+        assert_eq!(
+            got_r.payload(),
+            &Payload::Bits(mycelium_core::binary::int_to_bits(r, 8).unwrap()),
+            "{a} % {b}"
+        );
+    }
+}
+
+/// The §4.1.3 signed overflow-detect case: `-128 ÷ -1` (true quotient `+128`, out of `B_8`) is an
+/// explicit `Overflow` — never a silent wrap back to `-128` and never SMT-LIB's defined wrap.
+/// `rem_s(-128, -1) = 0` fits `B_8` exactly and succeeds.
+#[test]
+fn bin_div_s_min_by_neg_one_is_explicit_overflow() {
+    let reg = PrimRegistry::with_builtins();
+    let div = reg.get("bin.div_s").expect("bin.div_s registered");
+    let rem = reg.get("bin.rem_s").expect("bin.rem_s registered");
+    let min = s_bin(-128, 8);
+    let neg_one = s_bin(-1, 8);
+    assert!(
+        matches!(
+            div("bin.div_s", &[&min, &neg_one]),
+            Err(EvalError::Overflow { .. })
+        ),
+        "-128 / -1 must be an explicit Overflow, never a silent wrap"
+    );
+    let r = rem("bin.rem_s", &[&min, &neg_one]).expect("-128 % -1 = 0 fits B_8");
+    assert_eq!(
+        r.payload(),
+        &Payload::Bits(mycelium_core::binary::int_to_bits(0, 8).unwrap())
+    );
+}
+
+#[test]
+fn bin_div_s_and_rem_s_by_zero_are_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    for name in ["bin.div_s", "bin.rem_s"] {
+        let f = reg.get(name).expect("registered");
+        let a = s_bin(-7, 8);
+        let zero = s_bin(0, 8);
+        assert!(
+            matches!(f(name, &[&a, &zero]), Err(EvalError::PrimType { .. })),
+            "{name}: division by zero must be an explicit PrimType refusal, never a panic"
+        );
+    }
+}
+
+#[test]
+fn bin_div_s_width_mismatch_and_over_cap_are_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    for name in ["bin.div_s", "bin.rem_s"] {
+        let f = reg.get(name).expect("registered");
+        assert!(
+            matches!(
+                f(name, &[&s_bin(1, 8), &s_bin(1, 4)]),
+                Err(EvalError::PrimType { .. })
+            ),
+            "{name}: mismatched widths must be PrimType, never a silent coercion"
+        );
+        let width = mycelium_core::binary::DIV_MAX_WIDTH + 1;
+        let one = wide_binary(width, &[width - 1]);
+        assert!(
+            matches!(f(name, &[&one, &one]), Err(EvalError::PrimType { .. })),
+            "{name}: an over-cap width must be an explicit PrimType refusal"
+        );
+    }
+}
+
+/// `bin.shr_s` sign-extends (SMT-LIB `bvashr`): `-128 >> 4 = -8` (`0b1000_0000` → `0b1111_1000`),
+/// where the logical `bin.shr` answers `+8` (`0b0000_1000`) — pinned side by side so the
+/// signedness split is visible in one test. `-1` is a fixed point; non-negatives agree with the
+/// logical shift.
+#[test]
+fn bin_shr_s_sign_extends_where_logical_shr_zero_fills() {
+    let reg = PrimRegistry::with_builtins();
+    let shr_s = reg.get("bin.shr_s").expect("bin.shr_s registered");
+    let shr_u = reg.get("bin.shr").expect("bin.shr registered");
+    let a = b8("1000_0000"); // -128 signed; 128 unsigned.
+    let k = b8("0000_0100"); // shift by 4.
+    let signed = shr_s("bin.shr_s", &[&a, &k]).expect("arithmetic shift");
+    let logical = shr_u("bin.shr", &[&a, &k]).expect("logical shift");
+    assert_eq!(signed.payload(), &Payload::Bits(bits("1111_1000")), "-8");
+    assert_eq!(logical.payload(), &Payload::Bits(bits("0000_1000")), "+8");
+    // -1 >> 3 = -1 (all-ones is a fixed point of sign extension).
+    let r = shr_s("bin.shr_s", &[&b8("1111_1111"), &b8("0000_0011")]).expect("shift");
+    assert_eq!(r.payload(), &Payload::Bits(bits("1111_1111")));
+    // A non-negative value agrees with the logical shift: 64 >> 3 = 8.
+    let r = shr_s("bin.shr_s", &[&b8("0100_0000"), &b8("0000_0011")]).expect("shift");
+    assert_eq!(r.payload(), &Payload::Bits(bits("0000_1000")));
+}
+
+/// The shift-amount bound holds for the arithmetic shift exactly as for the logical one: `k >= N`
+/// is an explicit `PrimType` refusal — never an implicit "all sign bits" result.
+#[test]
+fn bin_shr_s_out_of_range_amount_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("bin.shr_s").expect("bin.shr_s registered");
+    for k in ["0000_1000", "1111_1111"] {
+        assert!(
+            matches!(
+                f("bin.shr_s", &[&b8("1111_1111"), &b8(k)]),
+                Err(EvalError::PrimType { .. })
+            ),
+            "shift amount {k} >= width must refuse explicitly"
+        );
+    }
+}
+
+/// `cmp.lt_s` is the two's-complement order: `0b1111_1111` is `-1 < 0` here, while the D1
+/// `cmp.lt` reads the same bits as `255 > 0` — the distinguishing case pinned against both prims.
+#[test]
+fn cmp_lt_s_orders_two_complement_where_lt_orders_magnitude() {
+    let reg = PrimRegistry::with_builtins();
+    let lt_s = reg.get("cmp.lt_s").expect("cmp.lt_s registered");
+    let lt_u = reg.get("cmp.lt").expect("cmp.lt registered");
+    let neg_one = b8("1111_1111");
+    let zero = b8("0000_0000");
+    let signed = lt_s("cmp.lt_s", &[&neg_one, &zero]).expect("signed order");
+    let unsigned = lt_u("cmp.lt", &[&neg_one, &zero]).expect("unsigned order");
+    assert_eq!(signed.payload(), &Payload::Bits(vec![true]), "-1 < 0");
+    assert_eq!(unsigned.payload(), &Payload::Bits(vec![false]), "255 !< 0");
+    // min < max; equal is not less; a positive pair agrees with the unsigned order.
+    let cases = [
+        ("1000_0000", "0111_1111", true),  // -128 < 127
+        ("0111_1111", "1000_0000", false), // 127 !< -128
+        ("0000_0101", "0000_0101", false), // 5 !< 5
+        ("0000_0011", "0000_0101", true),  // 3 < 5
+    ];
+    for (a, b, expected) in cases {
+        let r = lt_s("cmp.lt_s", &[&b8(a), &b8(b)]).expect("orderable");
+        assert_eq!(r.payload(), &Payload::Bits(vec![expected]), "{a} lt_s {b}");
+        assert_eq!(r.repr(), &Repr::Binary { width: 1 });
+    }
+}
+
+/// `cmp.lt_s` refusal surface: a width mismatch, a ternary pair (its D1 order is already the
+/// signed order — refused with that routing, never a silently duplicated order), and a
+/// cross-paradigm pair are explicit `PrimType` refusals — never a silent `false` (G2).
+#[test]
+fn cmp_lt_s_refuses_non_binary_and_mismatched_operands() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("cmp.lt_s").expect("cmp.lt_s registered");
+    // Width mismatch.
+    assert!(
+        matches!(
+            f("cmp.lt_s", &[&s_bin(0, 8), &s_bin(0, 4)]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "mismatched widths must refuse, never a silent false"
+    );
+    // Ternary operands: the balanced-ternary D1 order is already signed — explicit routing.
+    let t = trits("00+-");
+    assert!(
+        matches!(f("cmp.lt_s", &[&t, &t]), Err(EvalError::PrimType { .. })),
+        "a ternary pair must refuse with the cmp.lt routing"
+    );
+    // Cross-paradigm.
+    assert!(
+        matches!(
+            f("cmp.lt_s", &[&s_bin(0, 4), &trits("00+-")]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a cross-paradigm pair must refuse"
+    );
+}
+
 // ── M-890 (`enb` Gap C): the dense elementwise prim group ───────────────────────────────────────
 //
 // `dense.add`/`dense.sub`/`dense.neg`/`dense.scale` — the first tensor-valued prims. The kernel
