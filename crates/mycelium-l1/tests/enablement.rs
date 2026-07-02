@@ -85,6 +85,16 @@
 //!   flt.add doc comment) — NaN is detectable today via `¬flt_eq(x, x)` and finiteness via
 //!   `flt_lt(-inf, x) ∧ flt_lt(x, +inf)`, so the float gate itself does not need them; and the
 //!   `flt.*`/`Float` surface-name ratification is deferred to the `integration` tier.
+//! - **M-892** (RFC-0003 §3/§4, ADR-008, kickoff `enb` Phase-I H1 Gap C) — the **model-dispatched
+//!   VSA bind group** `vsa_bind`/`vsa_unbind`/`vsa_permute` (kernel `vsa.*`, dispatch set
+//!   MAP-I/FHRR/BSC), riding the new `Ty::Vsa` type-level lift (`VSA{model, dim, sparsity}` now
+//!   resolves; the surface `MAP_I` ident canonicalizes to the kernel `MAP-I` id). Per-op tags are
+//!   **per-model**, constructed by the `mycelium-vsa` kernel and carried unchanged (MAP-I/BSC ops
+//!   `Exact`; FHRR `unbind` `Empirical` with its trial-validated δ — VR-5). Like the M-890 dense
+//!   group, there is **no surface hypervector construction form**, so the three-way's surface leg
+//!   injects `Repr::Vsa` argument values (see the M-892 section note below — recorded honestly,
+//!   not silently skipped); AOT closes over the equivalent hand-built `Node::Op` on every case,
+//!   including the runtime refusals. Static accept/reject in the `vsa_prims_conformance_*` tests.
 
 use mycelium_core::{
     Bound, BoundBasis, BoundKind, FloatWidth, GuaranteeStrength, Meta, Node, NormKind, Payload,
@@ -2994,6 +3004,429 @@ fn dense_measurement_conformance_reject() {
     ] {
         let err = check_nodule(&parse(src).expect("parses"))
             .expect_err(&format!("must reject: {src}"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains(needle),
+            "the refusal must name the offense.\n  src: {src}\n  want: {needle}\n  got: {msg}"
+        );
+    }
+}
+
+// ── M-892 (`enb` Gap C): the model-dispatched VSA bind group ────────────────────────────────────
+//
+// `vsa_bind`/`vsa_unbind`/`vsa_permute` (kernel `vsa.bind`/`vsa.unbind`/`vsa.permute`, the
+// `mycelium-vsa` surface) — model-dispatched across MAP-I / FHRR / BSC on the operand's
+// `VSA{model, dim, sparsity}` type. Model + dim live in the type, so the never-silent model/shape
+// contract is *static* (a cross-model or cross-dim call is a check-time refusal, never a
+// coercion), and an out-of-set model is a *static* refusal naming the dispatch set; the
+// numeric-domain contracts (alphabet violations, the FHRR unbind regime gate, non-Exact-operand
+// composition) stay *runtime* refusals owned by the kernel, which also constructs the result's
+// honest **per-model** tag (MAP-I/BSC ops `Exact`; FHRR `unbind` `Empirical` with its
+// trial-validated δ bound) — carried through every path unchanged (VR-5).
+//
+// **Where the three-way closes (recorded honestly — G2/VR-5).** L1 has **no hypervector
+// value-construction form** (no VSA literal; a bare decimal has no VSA anchor — RFC-0012 §4.3),
+// so a *nullary* `main` over hypervectors is **inexpressible** and the surface-program three-way
+// of `assert_three_way` cannot run — exactly the M-890 dense posture. The three-way below
+// therefore closes over the forms that DO exist: **L1-eval with kernel-shaped `Repr::Vsa`
+// argument values injected through `Evaluator::call`** ≡ **L0-interp over the equivalent
+// hand-built `Node::Op`** ≡ **AOT (`mycelium_mlir::run`) over the same node** — agreement on
+// repr + payload + the carried per-model tag, and on the never-silent runtime refusals. The
+// nullary-main surface closure is deferred to a VSA value-construction form (a later wave), not
+// silently skipped. (This suite builds hypervectors through `mycelium-core` alone —
+// `Repr::Vsa` + `Payload::Hypervector` are core value forms; `mycelium-l1` takes no
+// `mycelium-vsa` dependency.)
+
+use mycelium_core::SparsityClass;
+
+/// A hypervector `Value` of `model` at `dim` (dense class, `Exact`/`Root` meta) — the injected
+/// argument form (core value forms only; the kernel models validate the alphabet at op time).
+fn vsa_hv(model: &str, dim: u32, data: Vec<f64>) -> Value {
+    Value::new(
+        Repr::Vsa {
+            model: model.to_owned(),
+            dim,
+            sparsity: SparsityClass::Dense,
+        },
+        Payload::Hypervector(data),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// A deterministic FHRR phasor atom (phases in `(−π, π]`; tiny LCG — house style).
+fn phasor_atom(dim: u32, seed: u64) -> Vec<f64> {
+    let mut s = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(1);
+    (0..dim)
+        .map(|_| {
+            s = s
+                .wrapping_mul(6364136223846793005)
+                .wrapping_add(1442695040888963407);
+            let u = (s >> 11) as f64 / (1u64 << 53) as f64; // [0, 1)
+            let t = std::f64::consts::TAU * u;
+            if t > std::f64::consts::PI {
+                t - std::f64::consts::TAU
+            } else {
+                t
+            }
+        })
+        .collect()
+}
+
+/// An unsigned `Binary{8}` shift-amount value (MSB-first) — `vsa_permute`'s second operand.
+fn shift8(v: u64) -> Value {
+    let bits: Vec<bool> = (0..8u32).rev().map(|i| (v >> i) & 1 == 1).collect();
+    Value::new(
+        Repr::Binary { width: 8 },
+        Payload::Bits(bits),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// Run the M-892 three-way on one checked surface program + the equivalent hand-built L0 node
+/// (see the section note for why the surface leg takes injected argument values): L1-eval
+/// (`Evaluator::call` on `entry`) ≡ L0-interp ≡ AOT (both over `node`). Asserts all three agree
+/// on repr + payload + the carried tag and returns the L0 value for tag/bound inspection.
+fn assert_vsa_three_way(label: &str, src: &str, entry: &str, node: &Node, args: &[Value]) -> Value {
+    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
+        .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
+
+    // Path 1: the L1 fuel-guarded evaluator, with the injected hypervector arguments.
+    let l1 = Evaluator::new(&env)
+        .call(entry, args.iter().cloned().map(L1Value::Repr).collect())
+        .unwrap_or_else(|e| panic!("{label}: L1-eval failed: {e}"));
+    let l1 = l1
+        .as_repr()
+        .unwrap_or_else(|| panic!("{label}: result must be a repr value"))
+        .clone();
+
+    // Paths 2+3: the equivalent L0 term on the reference interpreter and through the AOT path.
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let l0 = interp
+        .eval(node)
+        .unwrap_or_else(|e| panic!("{label}: L0-interp failed: {e}"));
+    let aot = mycelium_mlir::run(
+        node,
+        &PrimRegistry::with_builtins(),
+        &mycelium_cert::BinaryTernarySwapEngine,
+    )
+    .unwrap_or_else(|e| panic!("{label}: AOT failed: {e}"));
+
+    for (path, v) in [("L1-eval", &l1), ("L0-interp", &l0), ("AOT", &aot)] {
+        assert_eq!(v.repr(), l0.repr(), "{label}: {path} repr diverged");
+        assert_eq!(
+            v.payload(),
+            l0.payload(),
+            "{label}: {path} payload diverged"
+        );
+        assert_eq!(
+            v.meta().guarantee(),
+            l0.meta().guarantee(),
+            "{label}: {path} carried tag diverged"
+        );
+    }
+    l0
+}
+
+/// One prim application as a hand-built L0 node (the prim over `Const`s of the argument values).
+fn op_node(kernel: &str, args: &[Value]) -> Node {
+    Node::Op {
+        prim: kernel.to_owned(),
+        args: args.iter().cloned().map(Node::Const).collect(),
+    }
+}
+
+/// Three-way, per self-inverse model: `vsa_bind` carries the kernel's **`Exact`** tag on every
+/// path, with the algebraically-checkable payloads (MAP-I elementwise product; BSC XOR).
+#[test]
+fn vsa_bind_three_way_carries_the_exact_tag_per_model() {
+    // MAP-I: [1,-1,1,-1] ⊗ [1,1,-1,-1] = [1,-1,-1,1] (elementwise product).
+    let a = vsa_hv("MAP-I", 4, vec![1.0, -1.0, 1.0, -1.0]);
+    let b = vsa_hv("MAP-I", 4, vec![1.0, 1.0, -1.0, -1.0]);
+    let y = assert_vsa_three_way(
+        "vsa_bind/MAP-I",
+        "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, b: VSA{MAP_I, 4, Dense}) => \
+         VSA{MAP_I, 4, Dense} = vsa_bind(a, b);",
+        "f",
+        &op_node("vsa.bind", &[a.clone(), b.clone()]),
+        &[a, b],
+    );
+    assert_eq!(
+        y.payload(),
+        &Payload::Hypervector(vec![1.0, -1.0, -1.0, 1.0])
+    );
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Exact);
+    assert!(y.meta().bound().is_none(), "Exact results carry no bound");
+
+    // BSC: [0,1,1,0] ⊕ [0,1,0,1] = [0,0,1,1] (XOR).
+    let a = vsa_hv("BSC", 4, vec![0.0, 1.0, 1.0, 0.0]);
+    let b = vsa_hv("BSC", 4, vec![0.0, 1.0, 0.0, 1.0]);
+    let y = assert_vsa_three_way(
+        "vsa_bind/BSC",
+        "nodule v;\nfn f(a: VSA{BSC, 4, Dense}, b: VSA{BSC, 4, Dense}) => \
+         VSA{BSC, 4, Dense} = vsa_bind(a, b);",
+        "f",
+        &op_node("vsa.bind", &[a.clone(), b.clone()]),
+        &[a, b],
+    );
+    assert_eq!(y.payload(), &Payload::Hypervector(vec![0.0, 0.0, 1.0, 1.0]));
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Exact);
+}
+
+/// Three-way composition: `vsa_unbind(vsa_bind(a, b), b)` recovers `a` **exactly** for the
+/// self-inverse MAP-I (tag `Exact` carried), and for FHRR carries the kernel's **`Empirical`**
+/// weak-link tag with its disclosed probability bound — the carried-tag distinction *inside one
+/// prim*, decided by the dispatched model (VR-5: per-model, never re-stamped).
+#[test]
+fn vsa_unbind_composition_three_way_is_model_tagged() {
+    // MAP-I (self-inverse, Exact): recover a exactly.
+    let a = vsa_hv("MAP-I", 4, vec![1.0, -1.0, 1.0, 1.0]);
+    let b = vsa_hv("MAP-I", 4, vec![-1.0, 1.0, 1.0, -1.0]);
+    let src = "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, b: VSA{MAP_I, 4, Dense}) => \
+               VSA{MAP_I, 4, Dense} = vsa_unbind(vsa_bind(a, b), b);";
+    let node = Node::Op {
+        prim: "vsa.unbind".to_owned(),
+        args: vec![
+            op_node("vsa.bind", &[a.clone(), b.clone()]),
+            Node::Const(b.clone()),
+        ],
+    };
+    let y = assert_vsa_three_way("vsa_unbind/MAP-I", src, "f", &node, &[a.clone(), b]);
+    assert_eq!(y.payload(), a.payload(), "self-inverse recovery is exact");
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Exact);
+
+    // FHRR (approximate-inverse role): Empirical + the disclosed probability bound.
+    let a = vsa_hv("FHRR", 256, phasor_atom(256, 1));
+    let b = vsa_hv("FHRR", 256, phasor_atom(256, 2));
+    let src = "nodule v;\nfn f(a: VSA{FHRR, 256, Dense}, b: VSA{FHRR, 256, Dense}) => \
+               VSA{FHRR, 256, Dense} = vsa_unbind(vsa_bind(a, b), b);";
+    let node = Node::Op {
+        prim: "vsa.unbind".to_owned(),
+        args: vec![
+            op_node("vsa.bind", &[a.clone(), b.clone()]),
+            Node::Const(b.clone()),
+        ],
+    };
+    let y = assert_vsa_three_way("vsa_unbind/FHRR", src, "f", &node, &[a, b]);
+    assert_eq!(
+        y.meta().guarantee(),
+        GuaranteeStrength::Empirical,
+        "FHRR unbind carries the kernel's weak-link Empirical tag (RFC-0003 §4; VR-5)"
+    );
+    match y.meta().bound() {
+        Some(Bound {
+            kind: BoundKind::Probability { .. },
+            basis: BoundBasis::EmpiricalFit { .. },
+        }) => {} // the disclosed trial-validated δ (its constants are pinned in mycelium-interp)
+        other => panic!("expected the kernel's EmpiricalFit probability bound, got {other:?}"),
+    }
+}
+
+/// Three-way: `vsa_permute` is `Exact` on every path, the shift rides an unsigned `Binary{8}`
+/// (surface literal `0b0000_0001`), and the complementary shift is its inverse (cyclic rotation).
+#[test]
+fn vsa_permute_three_way_is_exact_and_cyclic() {
+    // MAP-I: rotate [1,-1,1,1] by 1 → [-1,1,1,1] (out[i] = a[(i+shift) mod d]).
+    let a = vsa_hv("MAP-I", 4, vec![1.0, -1.0, 1.0, 1.0]);
+    let s = shift8(1);
+    let y = assert_vsa_three_way(
+        "vsa_permute/MAP-I",
+        "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, s: Binary{8}) => VSA{MAP_I, 4, Dense} = \
+         vsa_permute(a, s);",
+        "f",
+        &op_node("vsa.permute", &[a.clone(), s.clone()]),
+        &[a.clone(), s],
+    );
+    assert_eq!(
+        y.payload(),
+        &Payload::Hypervector(vec![-1.0, 1.0, 1.0, 1.0])
+    );
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Exact);
+
+    // The complementary shift (dim − s = 3) restores the original — the inverse permute is
+    // expressible with the unsigned shift operand (no negative-shift form needed).
+    let back = assert_vsa_three_way(
+        "vsa_permute/inverse",
+        "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, s: Binary{8}) => VSA{MAP_I, 4, Dense} = \
+         vsa_permute(a, s);",
+        "f",
+        &op_node("vsa.permute", &[y.clone(), shift8(3)]),
+        &[y, shift8(3)],
+    );
+    assert_eq!(back.payload(), a.payload(), "cyclic inverse");
+}
+
+/// Runtime reject, three-way: a **model mismatch reachable only at runtime** (injected arguments
+/// bypass the static types — the declared params say MAP-I, the injected second argument is BSC)
+/// refuses explicitly and *consistently* on every path (L1-eval wraps the kernel's refusal in
+/// `L1Error::Kernel`; L0-interp and AOT surface it directly) — never a cross-model coercion (G2).
+#[test]
+fn vsa_model_mismatch_refuses_on_every_path() {
+    let a = vsa_hv("MAP-I", 4, vec![1.0, -1.0, 1.0, -1.0]);
+    let foreign = vsa_hv("BSC", 4, vec![0.0, 1.0, 1.0, 0.0]);
+    let src = "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, b: VSA{MAP_I, 4, Dense}) => \
+               VSA{MAP_I, 4, Dense} = vsa_bind(a, b);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let l1 = Evaluator::new(&env).call(
+        "f",
+        vec![L1Value::Repr(a.clone()), L1Value::Repr(foreign.clone())],
+    );
+    assert!(
+        matches!(l1, Err(L1Error::Kernel(EvalError::PrimType { .. }))),
+        "L1-eval must refuse the model mismatch explicitly, got {l1:?}"
+    );
+
+    let node = op_node("vsa.bind", &[a, foreign]);
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    assert!(
+        matches!(interp.eval(&node), Err(EvalError::PrimType { .. })),
+        "L0-interp must refuse the model mismatch explicitly"
+    );
+    assert!(
+        matches!(
+            mycelium_mlir::run(
+                &node,
+                &PrimRegistry::with_builtins(),
+                &mycelium_cert::BinaryTernarySwapEngine
+            ),
+            Err(EvalError::PrimType { .. })
+        ),
+        "AOT must refuse the model mismatch explicitly"
+    );
+}
+
+/// Runtime reject, three-way: the FHRR unbind **regime gate** — unbinding a value that is not a
+/// single `vsa.fhrr.bind` product is an explicit refusal on every path (the kernel's
+/// `OutsideEmpiricalProfile`: the Empirical tag is issued only inside its trial-validated
+/// regime; VR-5), never a silently mis-tagged decode.
+#[test]
+fn vsa_fhrr_unbind_regime_gate_refuses_on_every_path() {
+    let a = vsa_hv("FHRR", 256, phasor_atom(256, 1));
+    let b = vsa_hv("FHRR", 256, phasor_atom(256, 2));
+    let src = "nodule v;\nfn f(a: VSA{FHRR, 256, Dense}, b: VSA{FHRR, 256, Dense}) => \
+               VSA{FHRR, 256, Dense} = vsa_unbind(a, b);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    // Root provenance → outside the validated single-factor regime, on every path.
+    let l1 = Evaluator::new(&env).call(
+        "f",
+        vec![L1Value::Repr(a.clone()), L1Value::Repr(b.clone())],
+    );
+    assert!(
+        matches!(l1, Err(L1Error::Kernel(EvalError::PrimType { .. }))),
+        "L1-eval must refuse the out-of-regime unbind explicitly, got {l1:?}"
+    );
+    let node = op_node("vsa.unbind", &[a, b]);
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    assert!(
+        matches!(interp.eval(&node), Err(EvalError::PrimType { .. })),
+        "L0-interp must refuse the out-of-regime unbind explicitly"
+    );
+    assert!(
+        matches!(
+            mycelium_mlir::run(
+                &node,
+                &PrimRegistry::with_builtins(),
+                &mycelium_cert::BinaryTernarySwapEngine
+            ),
+            Err(EvalError::PrimType { .. })
+        ),
+        "AOT must refuse the out-of-regime unbind explicitly"
+    );
+}
+
+/// Static conformance — accept: every VSA bind-group signature the checker must admit, across
+/// the model set (incl. the surface `MAP_I` → kernel `MAP-I` ident canonicalization, prim
+/// composition, and an out-of-set model as a legal type *mention* — the ADR-008 mention/algebra
+/// split: the type checks; only the prims are gated).
+#[test]
+fn vsa_prims_conformance_accept() {
+    for src in [
+        // The model set, bind/unbind/permute.
+        "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, b: VSA{MAP_I, 4, Dense}) => \
+         VSA{MAP_I, 4, Dense} = vsa_bind(a, b);",
+        "nodule v;\nfn f(a: VSA{FHRR, 256, Dense}, b: VSA{FHRR, 256, Dense}) => \
+         VSA{FHRR, 256, Dense} = vsa_unbind(a, b);",
+        "nodule v;\nfn f(a: VSA{BSC, 1024, Dense}, s: Binary{16}) => VSA{BSC, 1024, Dense} = \
+         vsa_permute(a, s);",
+        // Composition: model + dim are preserved, so results feed sibling prims.
+        "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, b: VSA{MAP_I, 4, Dense}, s: Binary{8}) => \
+         VSA{MAP_I, 4, Dense} = vsa_permute(vsa_bind(a, b), s);",
+        // An out-of-set model is a legal *mention* (no algebra invoked).
+        "nodule v;\nfn f(a: VSA{HRR, 4, Dense}) => VSA{HRR, 4, Dense} = a;",
+    ] {
+        check_nodule(&parse(src).expect("parses"))
+            .unwrap_or_else(|e| panic!("must accept: {src}\n  got: {e}"));
+    }
+}
+
+/// Static conformance — reject: the never-silent model/shape contract is a *check-time* refusal
+/// (model + dim live in the type), with a message naming the offense (G2).
+#[test]
+fn vsa_prims_conformance_reject() {
+    for (src, needle) in [
+        // Cross-model: never a coercion.
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, b: VSA{BSC, 4, Dense}) => \
+             VSA{MAP_I, 4, Dense} = vsa_bind(a, b);",
+            "share one model and dim",
+        ),
+        // Dim mismatch: never a resize.
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, b: VSA{MAP_I, 8, Dense}) => \
+             VSA{MAP_I, 4, Dense} = vsa_unbind(a, b);",
+            "share one model and dim",
+        ),
+        // A model outside the introduction dispatch set: static refusal naming the set.
+        (
+            "nodule v;\nfn f(a: VSA{HRR, 4, Dense}, b: VSA{HRR, 4, Dense}) => \
+             VSA{HRR, 4, Dense} = vsa_bind(a, b);",
+            "outside the vsa prim dispatch set",
+        ),
+        // Sparse operands: refused at introduction (kernel results are dense-class).
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 4, Sparse{2}}, b: VSA{MAP_I, 4, Sparse{2}}) => \
+             VSA{MAP_I, 4, Sparse{2}} = vsa_bind(a, b);",
+            "requires a `Dense`-sparsity hypervector",
+        ),
+        // Cross-paradigm operand: an explicit refusal pointing at the missing swap.
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, b: Binary{8}) => VSA{MAP_I, 4, Dense} = \
+             vsa_bind(a, b);",
+            "must be a `VSA{model, dim, sparsity}`",
+        ),
+        // The permute shift must be a Binary magnitude, not a hypervector.
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, s: VSA{MAP_I, 4, Dense}) => \
+             VSA{MAP_I, 4, Dense} = vsa_permute(a, s);",
+            "shift must be an unsigned `Binary{W}`",
+        ),
+        // Arity: explicit.
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}) => VSA{MAP_I, 4, Dense} = vsa_bind(a);",
+            "takes 2 operand(s)",
+        ),
+        // The result type is computed (model + dim preserved) — declaring another is a static
+        // mismatch, never a silent re-model.
+        (
+            "nodule v;\nfn f(a: VSA{MAP_I, 4, Dense}, b: VSA{MAP_I, 4, Dense}) => \
+             VSA{BSC, 4, Dense} = vsa_bind(a, b);",
+            "VSA{MAP-I, 4, Dense}",
+        ),
+    ] {
+        let err =
+            check_nodule(&parse(src).expect("parses")).expect_err(&format!("must reject: {src}"));
         let msg = err.to_string();
         assert!(
             msg.contains(needle),
