@@ -24,6 +24,7 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::Action
 impl core::panic::unwind_safe::UnwindSafe for mycelium_select::Action
 pub enum mycelium_select::Candidate
 pub mycelium_select::Candidate::Decode(mycelium_select::DecodeMethod)
+pub mycelium_select::Candidate::Node(mycelium_select::NodeRef)
 pub mycelium_select::Candidate::Packing(mycelium_core::meta::PackScheme)
 pub mycelium_select::Candidate::Repr(mycelium_core::repr::Repr)
 impl core::clone::Clone for mycelium_select::Candidate
@@ -72,6 +73,7 @@ pub enum mycelium_select::ParadigmKind
 pub mycelium_select::ParadigmKind::Binary
 pub mycelium_select::ParadigmKind::Bytes
 pub mycelium_select::ParadigmKind::Dense
+pub mycelium_select::ParadigmKind::Float
 pub mycelium_select::ParadigmKind::Seq
 pub mycelium_select::ParadigmKind::Ternary
 pub mycelium_select::ParadigmKind::Vsa
@@ -275,6 +277,26 @@ impl core::marker::Unpin for mycelium_select::Explanation
 impl core::marker::UnsafeUnpin for mycelium_select::Explanation
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::Explanation
 impl core::panic::unwind_safe::UnwindSafe for mycelium_select::Explanation
+pub struct mycelium_select::NodeRef(pub alloc::string::String)
+impl core::clone::Clone for mycelium_select::NodeRef
+pub fn mycelium_select::NodeRef::clone(&self) -> mycelium_select::NodeRef
+impl core::cmp::Eq for mycelium_select::NodeRef
+impl core::cmp::PartialEq for mycelium_select::NodeRef
+pub fn mycelium_select::NodeRef::eq(&self, &mycelium_select::NodeRef) -> bool
+impl core::fmt::Debug for mycelium_select::NodeRef
+pub fn mycelium_select::NodeRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_select::NodeRef
+impl serde_core::ser::Serialize for mycelium_select::NodeRef
+pub fn mycelium_select::NodeRef::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_select::NodeRef
+pub fn mycelium_select::NodeRef::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_select::NodeRef
+impl core::marker::Send for mycelium_select::NodeRef
+impl core::marker::Sync for mycelium_select::NodeRef
+impl core::marker::Unpin for mycelium_select::NodeRef
+impl core::marker::UnsafeUnpin for mycelium_select::NodeRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_select::NodeRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_select::NodeRef
 pub struct mycelium_select::PolicyRegistry
 impl mycelium_select::PolicyRegistry
 pub fn mycelium_select::PolicyRegistry::get(&self, &mycelium_core::id::ContentHash) -> core::option::Option<&mycelium_select::SelectionPolicy>
@@ -378,4 +400,5 @@ pub fn mycelium_select::select(&mycelium_select::SelectionPolicy, &mycelium_sele
 pub fn mycelium_select::select_decode_method(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_select::DecodeMethod, mycelium_select::Explanation), mycelium_select::SelectError>
 pub fn mycelium_select::select_layout(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_core::meta::PhysicalLayout, mycelium_select::Explanation), mycelium_select::SelectError>
 pub fn mycelium_select::select_packing(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_core::meta::PackScheme, mycelium_select::Explanation), mycelium_select::SelectError>
+pub fn mycelium_select::select_placement(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_select::NodeRef, mycelium_select::Explanation), mycelium_select::SelectError>
 pub fn mycelium_select::select_swap_target(&mycelium_select::SelectionPolicy, &mycelium_select::SelectionInputs, core::option::Option<usize>) -> core::result::Result<(mycelium_core::repr::Repr, mycelium_select::Explanation), mycelium_select::SelectError>

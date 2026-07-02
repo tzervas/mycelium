@@ -73,6 +73,231 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::registry::Resolved
 pub fn mycelium_spore::registry::artifact_hash(&[u8]) -> mycelium_core::id::ContentHash
 pub fn mycelium_spore::registry::publish(&std::path::Path, &mycelium_spore::Spore, &[u8], &str, &str) -> core::result::Result<mycelium_spore::registry::PublishReceipt, mycelium_spore::registry::RegistryError>
 pub fn mycelium_spore::registry::resolve(&std::path::Path, &str, &str) -> core::result::Result<mycelium_spore::registry::Resolved, mycelium_spore::registry::RegistryError>
+pub mod mycelium_spore::remote
+pub enum mycelium_spore::remote::RegistryTarget
+pub mycelium_spore::remote::RegistryTarget::Local(std::path::PathBuf)
+pub mycelium_spore::remote::RegistryTarget::Oci
+pub mycelium_spore::remote::RegistryTarget::Oci::base: alloc::string::String
+pub mycelium_spore::remote::RegistryTarget::Oci::plain_http: bool
+impl core::clone::Clone for mycelium_spore::remote::RegistryTarget
+pub fn mycelium_spore::remote::RegistryTarget::clone(&self) -> mycelium_spore::remote::RegistryTarget
+impl core::cmp::Eq for mycelium_spore::remote::RegistryTarget
+impl core::cmp::PartialEq for mycelium_spore::remote::RegistryTarget
+pub fn mycelium_spore::remote::RegistryTarget::eq(&self, &mycelium_spore::remote::RegistryTarget) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::RegistryTarget
+pub fn mycelium_spore::remote::RegistryTarget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::RegistryTarget
+impl core::marker::Freeze for mycelium_spore::remote::RegistryTarget
+impl core::marker::Send for mycelium_spore::remote::RegistryTarget
+impl core::marker::Sync for mycelium_spore::remote::RegistryTarget
+impl core::marker::Unpin for mycelium_spore::remote::RegistryTarget
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::RegistryTarget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::RegistryTarget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::RegistryTarget
+pub enum mycelium_spore::remote::RemoteError
+pub mycelium_spore::remote::RemoteError::Conflict(alloc::string::String)
+pub mycelium_spore::remote::RemoteError::Integrity(alloc::string::String)
+pub mycelium_spore::remote::RemoteError::InvalidInput(alloc::string::String)
+pub mycelium_spore::remote::RemoteError::Io(alloc::string::String)
+pub mycelium_spore::remote::RemoteError::NotFound(alloc::string::String)
+pub mycelium_spore::remote::RemoteError::ToolMissing(alloc::string::String)
+pub mycelium_spore::remote::RemoteError::Transport(alloc::string::String)
+pub mycelium_spore::remote::RemoteError::Unsupported(alloc::string::String)
+impl mycelium_spore::remote::RemoteError
+pub fn mycelium_spore::remote::RemoteError::exit_code(&self) -> u8
+impl core::clone::Clone for mycelium_spore::remote::RemoteError
+pub fn mycelium_spore::remote::RemoteError::clone(&self) -> mycelium_spore::remote::RemoteError
+impl core::cmp::Eq for mycelium_spore::remote::RemoteError
+impl core::cmp::PartialEq for mycelium_spore::remote::RemoteError
+pub fn mycelium_spore::remote::RemoteError::eq(&self, &mycelium_spore::remote::RemoteError) -> bool
+impl core::error::Error for mycelium_spore::remote::RemoteError
+impl core::fmt::Debug for mycelium_spore::remote::RemoteError
+pub fn mycelium_spore::remote::RemoteError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_spore::remote::RemoteError
+pub fn mycelium_spore::remote::RemoteError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::RemoteError
+impl core::marker::Freeze for mycelium_spore::remote::RemoteError
+impl core::marker::Send for mycelium_spore::remote::RemoteError
+impl core::marker::Sync for mycelium_spore::remote::RemoteError
+impl core::marker::Unpin for mycelium_spore::remote::RemoteError
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::RemoteError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::RemoteError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::RemoteError
+pub struct mycelium_spore::remote::DenseMap
+pub mycelium_spore::remote::DenseMap::deps: alloc::vec::Vec<mycelium_spore::ResolvedDep>
+pub mycelium_spore::remote::DenseMap::format_version: &'static str
+pub mycelium_spore::remote::DenseMap::kind: mycelium_proj::manifest::ProjectKind
+pub mycelium_spore::remote::DenseMap::name: alloc::string::String
+pub mycelium_spore::remote::DenseMap::objects: alloc::vec::Vec<mycelium_spore::remote::ObjectRef>
+pub mycelium_spore::remote::DenseMap::spore_id: mycelium_core::id::ContentHash
+pub mycelium_spore::remote::DenseMap::surface: alloc::vec::Vec<alloc::string::String>
+pub mycelium_spore::remote::DenseMap::version: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_spore::remote::DenseMap
+pub fn mycelium_spore::remote::DenseMap::clone(&self) -> mycelium_spore::remote::DenseMap
+impl core::cmp::Eq for mycelium_spore::remote::DenseMap
+impl core::cmp::PartialEq for mycelium_spore::remote::DenseMap
+pub fn mycelium_spore::remote::DenseMap::eq(&self, &mycelium_spore::remote::DenseMap) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::DenseMap
+pub fn mycelium_spore::remote::DenseMap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::DenseMap
+impl core::marker::Freeze for mycelium_spore::remote::DenseMap
+impl core::marker::Send for mycelium_spore::remote::DenseMap
+impl core::marker::Sync for mycelium_spore::remote::DenseMap
+impl core::marker::Unpin for mycelium_spore::remote::DenseMap
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::DenseMap
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::DenseMap
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::DenseMap
+pub struct mycelium_spore::remote::MemTransport
+impl mycelium_spore::remote::MemTransport
+pub fn mycelium_spore::remote::MemTransport::new() -> Self
+impl core::default::Default for mycelium_spore::remote::MemTransport
+pub fn mycelium_spore::remote::MemTransport::default() -> mycelium_spore::remote::MemTransport
+impl mycelium_spore::remote::OciTransport for mycelium_spore::remote::MemTransport
+pub fn mycelium_spore::remote::MemTransport::list_tags(&self, &str) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::MemTransport::pull(&self, &str) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_spore::remote::PulledLayers), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::MemTransport::push(&self, &str, &[u8], &[mycelium_spore::remote::ObjectBlob]) -> core::result::Result<alloc::string::String, mycelium_spore::remote::RemoteError>
+impl !core::marker::Freeze for mycelium_spore::remote::MemTransport
+impl core::marker::Send for mycelium_spore::remote::MemTransport
+impl !core::marker::Sync for mycelium_spore::remote::MemTransport
+impl core::marker::Unpin for mycelium_spore::remote::MemTransport
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::MemTransport
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::MemTransport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::MemTransport
+pub struct mycelium_spore::remote::ObjectBlob
+pub mycelium_spore::remote::ObjectBlob::bytes: alloc::vec::Vec<u8>
+pub mycelium_spore::remote::ObjectBlob::content_hash: mycelium_core::id::ContentHash
+pub mycelium_spore::remote::ObjectBlob::rel_path: alloc::string::String
+impl mycelium_spore::remote::ObjectBlob
+pub fn mycelium_spore::remote::ObjectBlob::oci_title(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_spore::remote::ObjectBlob
+pub fn mycelium_spore::remote::ObjectBlob::clone(&self) -> mycelium_spore::remote::ObjectBlob
+impl core::cmp::Eq for mycelium_spore::remote::ObjectBlob
+impl core::cmp::PartialEq for mycelium_spore::remote::ObjectBlob
+pub fn mycelium_spore::remote::ObjectBlob::eq(&self, &mycelium_spore::remote::ObjectBlob) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::ObjectBlob
+pub fn mycelium_spore::remote::ObjectBlob::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::ObjectBlob
+impl core::marker::Freeze for mycelium_spore::remote::ObjectBlob
+impl core::marker::Send for mycelium_spore::remote::ObjectBlob
+impl core::marker::Sync for mycelium_spore::remote::ObjectBlob
+impl core::marker::Unpin for mycelium_spore::remote::ObjectBlob
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::ObjectBlob
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::ObjectBlob
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::ObjectBlob
+pub struct mycelium_spore::remote::ObjectRef
+pub mycelium_spore::remote::ObjectRef::content_hash: mycelium_core::id::ContentHash
+pub mycelium_spore::remote::ObjectRef::rel_path: alloc::string::String
+impl mycelium_spore::remote::ObjectRef
+pub fn mycelium_spore::remote::ObjectRef::oci_title(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_spore::remote::ObjectRef
+pub fn mycelium_spore::remote::ObjectRef::clone(&self) -> mycelium_spore::remote::ObjectRef
+impl core::cmp::Eq for mycelium_spore::remote::ObjectRef
+impl core::cmp::PartialEq for mycelium_spore::remote::ObjectRef
+pub fn mycelium_spore::remote::ObjectRef::eq(&self, &mycelium_spore::remote::ObjectRef) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::ObjectRef
+pub fn mycelium_spore::remote::ObjectRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::ObjectRef
+impl core::marker::Freeze for mycelium_spore::remote::ObjectRef
+impl core::marker::Send for mycelium_spore::remote::ObjectRef
+impl core::marker::Sync for mycelium_spore::remote::ObjectRef
+impl core::marker::Unpin for mycelium_spore::remote::ObjectRef
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::ObjectRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::ObjectRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::ObjectRef
+pub struct mycelium_spore::remote::OrasTransport
+pub mycelium_spore::remote::OrasTransport::plain_http: bool
+impl mycelium_spore::remote::OciTransport for mycelium_spore::remote::OrasTransport
+pub fn mycelium_spore::remote::OrasTransport::list_tags(&self, &str) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::OrasTransport::pull(&self, &str) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_spore::remote::PulledLayers), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::OrasTransport::push(&self, &str, &[u8], &[mycelium_spore::remote::ObjectBlob]) -> core::result::Result<alloc::string::String, mycelium_spore::remote::RemoteError>
+impl core::marker::Freeze for mycelium_spore::remote::OrasTransport
+impl core::marker::Send for mycelium_spore::remote::OrasTransport
+impl core::marker::Sync for mycelium_spore::remote::OrasTransport
+impl core::marker::Unpin for mycelium_spore::remote::OrasTransport
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::OrasTransport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::OrasTransport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::OrasTransport
+pub struct mycelium_spore::remote::Reconstructed
+pub mycelium_spore::remote::Reconstructed::dense_map: mycelium_spore::remote::DenseMap
+pub mycelium_spore::remote::Reconstructed::sources: alloc::vec::Vec<(alloc::string::String, alloc::vec::Vec<u8>)>
+pub mycelium_spore::remote::Reconstructed::spore_id: mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_spore::remote::Reconstructed
+pub fn mycelium_spore::remote::Reconstructed::clone(&self) -> mycelium_spore::remote::Reconstructed
+impl core::cmp::Eq for mycelium_spore::remote::Reconstructed
+impl core::cmp::PartialEq for mycelium_spore::remote::Reconstructed
+pub fn mycelium_spore::remote::Reconstructed::eq(&self, &mycelium_spore::remote::Reconstructed) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::Reconstructed
+pub fn mycelium_spore::remote::Reconstructed::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::Reconstructed
+impl core::marker::Freeze for mycelium_spore::remote::Reconstructed
+impl core::marker::Send for mycelium_spore::remote::Reconstructed
+impl core::marker::Sync for mycelium_spore::remote::Reconstructed
+impl core::marker::Unpin for mycelium_spore::remote::Reconstructed
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::Reconstructed
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::Reconstructed
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::Reconstructed
+pub struct mycelium_spore::remote::RemotePublishReceipt
+pub mycelium_spore::remote::RemotePublishReceipt::manifest_digest: alloc::string::String
+pub mycelium_spore::remote::RemotePublishReceipt::name: alloc::string::String
+pub mycelium_spore::remote::RemotePublishReceipt::reference: alloc::string::String
+pub mycelium_spore::remote::RemotePublishReceipt::spore_id: mycelium_core::id::ContentHash
+pub mycelium_spore::remote::RemotePublishReceipt::version: alloc::string::String
+impl core::clone::Clone for mycelium_spore::remote::RemotePublishReceipt
+pub fn mycelium_spore::remote::RemotePublishReceipt::clone(&self) -> mycelium_spore::remote::RemotePublishReceipt
+impl core::cmp::Eq for mycelium_spore::remote::RemotePublishReceipt
+impl core::cmp::PartialEq for mycelium_spore::remote::RemotePublishReceipt
+pub fn mycelium_spore::remote::RemotePublishReceipt::eq(&self, &mycelium_spore::remote::RemotePublishReceipt) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::RemotePublishReceipt
+pub fn mycelium_spore::remote::RemotePublishReceipt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::RemotePublishReceipt
+impl core::marker::Freeze for mycelium_spore::remote::RemotePublishReceipt
+impl core::marker::Send for mycelium_spore::remote::RemotePublishReceipt
+impl core::marker::Sync for mycelium_spore::remote::RemotePublishReceipt
+impl core::marker::Unpin for mycelium_spore::remote::RemotePublishReceipt
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::RemotePublishReceipt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::RemotePublishReceipt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::RemotePublishReceipt
+pub struct mycelium_spore::remote::RemoteResolved
+pub mycelium_spore::remote::RemoteResolved::name: alloc::string::String
+pub mycelium_spore::remote::RemoteResolved::reconstructed: mycelium_spore::remote::Reconstructed
+pub mycelium_spore::remote::RemoteResolved::version: alloc::string::String
+impl core::clone::Clone for mycelium_spore::remote::RemoteResolved
+pub fn mycelium_spore::remote::RemoteResolved::clone(&self) -> mycelium_spore::remote::RemoteResolved
+impl core::cmp::Eq for mycelium_spore::remote::RemoteResolved
+impl core::cmp::PartialEq for mycelium_spore::remote::RemoteResolved
+pub fn mycelium_spore::remote::RemoteResolved::eq(&self, &mycelium_spore::remote::RemoteResolved) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::RemoteResolved
+pub fn mycelium_spore::remote::RemoteResolved::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::RemoteResolved
+impl core::marker::Freeze for mycelium_spore::remote::RemoteResolved
+impl core::marker::Send for mycelium_spore::remote::RemoteResolved
+impl core::marker::Sync for mycelium_spore::remote::RemoteResolved
+impl core::marker::Unpin for mycelium_spore::remote::RemoteResolved
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::RemoteResolved
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::RemoteResolved
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::RemoteResolved
+pub trait mycelium_spore::remote::OciTransport
+pub fn mycelium_spore::remote::OciTransport::list_tags(&self, &str) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::OciTransport::pull(&self, &str) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_spore::remote::PulledLayers), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::OciTransport::push(&self, &str, &[u8], &[mycelium_spore::remote::ObjectBlob]) -> core::result::Result<alloc::string::String, mycelium_spore::remote::RemoteError>
+impl mycelium_spore::remote::OciTransport for mycelium_spore::remote::MemTransport
+pub fn mycelium_spore::remote::MemTransport::list_tags(&self, &str) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::MemTransport::pull(&self, &str) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_spore::remote::PulledLayers), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::MemTransport::push(&self, &str, &[u8], &[mycelium_spore::remote::ObjectBlob]) -> core::result::Result<alloc::string::String, mycelium_spore::remote::RemoteError>
+impl mycelium_spore::remote::OciTransport for mycelium_spore::remote::OrasTransport
+pub fn mycelium_spore::remote::OrasTransport::list_tags(&self, &str) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::OrasTransport::pull(&self, &str) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_spore::remote::PulledLayers), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::OrasTransport::push(&self, &str, &[u8], &[mycelium_spore::remote::ObjectBlob]) -> core::result::Result<alloc::string::String, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::build_dense_map(&mycelium_spore::Spore, &std::path::Path) -> core::result::Result<(mycelium_spore::remote::DenseMap, alloc::vec::Vec<mycelium_spore::remote::ObjectBlob>), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::content_hash_from_title(&str) -> core::option::Option<mycelium_core::id::ContentHash>
+pub fn mycelium_spore::remote::decode_dense_map(&[u8]) -> core::result::Result<mycelium_spore::remote::DenseMap, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::encode_dense_map(&mycelium_spore::remote::DenseMap) -> alloc::vec::Vec<u8>
+pub fn mycelium_spore::remote::oras_preflight() -> core::result::Result<(), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::parse_registry(&str) -> core::result::Result<mycelium_spore::remote::RegistryTarget, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::publish_remote(&mycelium_spore::remote::RegistryTarget, &mycelium_spore::Spore, &std::path::Path, &str, &str, &dyn mycelium_spore::remote::OciTransport) -> core::result::Result<mycelium_spore::remote::RemotePublishReceipt, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::resolve_remote(&mycelium_spore::remote::RegistryTarget, &str, &str, &dyn mycelium_spore::remote::OciTransport) -> core::result::Result<mycelium_spore::remote::RemoteResolved, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::verify_and_reconstruct(mycelium_spore::remote::DenseMap, &[(alloc::string::String, alloc::vec::Vec<u8>)]) -> core::result::Result<mycelium_spore::remote::Reconstructed, mycelium_spore::remote::RemoteError>
+pub type mycelium_spore::remote::PulledLayers = alloc::vec::Vec<(alloc::string::String, alloc::vec::Vec<u8>)>
 pub enum mycelium_spore::RegistryError
 pub mycelium_spore::RegistryError::Conflict(alloc::string::String)
 pub mycelium_spore::RegistryError::Integrity(alloc::string::String)
@@ -100,6 +325,55 @@ impl core::marker::Unpin for mycelium_spore::registry::RegistryError
 impl core::marker::UnsafeUnpin for mycelium_spore::registry::RegistryError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::registry::RegistryError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::registry::RegistryError
+pub enum mycelium_spore::RegistryTarget
+pub mycelium_spore::RegistryTarget::Local(std::path::PathBuf)
+pub mycelium_spore::RegistryTarget::Oci
+pub mycelium_spore::RegistryTarget::Oci::base: alloc::string::String
+pub mycelium_spore::RegistryTarget::Oci::plain_http: bool
+impl core::clone::Clone for mycelium_spore::remote::RegistryTarget
+pub fn mycelium_spore::remote::RegistryTarget::clone(&self) -> mycelium_spore::remote::RegistryTarget
+impl core::cmp::Eq for mycelium_spore::remote::RegistryTarget
+impl core::cmp::PartialEq for mycelium_spore::remote::RegistryTarget
+pub fn mycelium_spore::remote::RegistryTarget::eq(&self, &mycelium_spore::remote::RegistryTarget) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::RegistryTarget
+pub fn mycelium_spore::remote::RegistryTarget::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::RegistryTarget
+impl core::marker::Freeze for mycelium_spore::remote::RegistryTarget
+impl core::marker::Send for mycelium_spore::remote::RegistryTarget
+impl core::marker::Sync for mycelium_spore::remote::RegistryTarget
+impl core::marker::Unpin for mycelium_spore::remote::RegistryTarget
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::RegistryTarget
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::RegistryTarget
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::RegistryTarget
+pub enum mycelium_spore::RemoteError
+pub mycelium_spore::RemoteError::Conflict(alloc::string::String)
+pub mycelium_spore::RemoteError::Integrity(alloc::string::String)
+pub mycelium_spore::RemoteError::InvalidInput(alloc::string::String)
+pub mycelium_spore::RemoteError::Io(alloc::string::String)
+pub mycelium_spore::RemoteError::NotFound(alloc::string::String)
+pub mycelium_spore::RemoteError::ToolMissing(alloc::string::String)
+pub mycelium_spore::RemoteError::Transport(alloc::string::String)
+pub mycelium_spore::RemoteError::Unsupported(alloc::string::String)
+impl mycelium_spore::remote::RemoteError
+pub fn mycelium_spore::remote::RemoteError::exit_code(&self) -> u8
+impl core::clone::Clone for mycelium_spore::remote::RemoteError
+pub fn mycelium_spore::remote::RemoteError::clone(&self) -> mycelium_spore::remote::RemoteError
+impl core::cmp::Eq for mycelium_spore::remote::RemoteError
+impl core::cmp::PartialEq for mycelium_spore::remote::RemoteError
+pub fn mycelium_spore::remote::RemoteError::eq(&self, &mycelium_spore::remote::RemoteError) -> bool
+impl core::error::Error for mycelium_spore::remote::RemoteError
+impl core::fmt::Debug for mycelium_spore::remote::RemoteError
+pub fn mycelium_spore::remote::RemoteError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_spore::remote::RemoteError
+pub fn mycelium_spore::remote::RemoteError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::RemoteError
+impl core::marker::Freeze for mycelium_spore::remote::RemoteError
+impl core::marker::Send for mycelium_spore::remote::RemoteError
+impl core::marker::Sync for mycelium_spore::remote::RemoteError
+impl core::marker::Unpin for mycelium_spore::remote::RemoteError
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::RemoteError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::RemoteError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::RemoteError
 pub enum mycelium_spore::SporeError
 pub mycelium_spore::SporeError::Io(alloc::string::String)
 pub mycelium_spore::SporeError::Publish(alloc::string::String)
@@ -123,6 +397,84 @@ impl core::marker::Unpin for mycelium_spore::SporeError
 impl core::marker::UnsafeUnpin for mycelium_spore::SporeError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::SporeError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::SporeError
+pub struct mycelium_spore::DenseMap
+pub mycelium_spore::DenseMap::deps: alloc::vec::Vec<mycelium_spore::ResolvedDep>
+pub mycelium_spore::DenseMap::format_version: &'static str
+pub mycelium_spore::DenseMap::kind: mycelium_proj::manifest::ProjectKind
+pub mycelium_spore::DenseMap::name: alloc::string::String
+pub mycelium_spore::DenseMap::objects: alloc::vec::Vec<mycelium_spore::remote::ObjectRef>
+pub mycelium_spore::DenseMap::spore_id: mycelium_core::id::ContentHash
+pub mycelium_spore::DenseMap::surface: alloc::vec::Vec<alloc::string::String>
+pub mycelium_spore::DenseMap::version: core::option::Option<alloc::string::String>
+impl core::clone::Clone for mycelium_spore::remote::DenseMap
+pub fn mycelium_spore::remote::DenseMap::clone(&self) -> mycelium_spore::remote::DenseMap
+impl core::cmp::Eq for mycelium_spore::remote::DenseMap
+impl core::cmp::PartialEq for mycelium_spore::remote::DenseMap
+pub fn mycelium_spore::remote::DenseMap::eq(&self, &mycelium_spore::remote::DenseMap) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::DenseMap
+pub fn mycelium_spore::remote::DenseMap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::DenseMap
+impl core::marker::Freeze for mycelium_spore::remote::DenseMap
+impl core::marker::Send for mycelium_spore::remote::DenseMap
+impl core::marker::Sync for mycelium_spore::remote::DenseMap
+impl core::marker::Unpin for mycelium_spore::remote::DenseMap
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::DenseMap
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::DenseMap
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::DenseMap
+pub struct mycelium_spore::ObjectBlob
+pub mycelium_spore::ObjectBlob::bytes: alloc::vec::Vec<u8>
+pub mycelium_spore::ObjectBlob::content_hash: mycelium_core::id::ContentHash
+pub mycelium_spore::ObjectBlob::rel_path: alloc::string::String
+impl mycelium_spore::remote::ObjectBlob
+pub fn mycelium_spore::remote::ObjectBlob::oci_title(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_spore::remote::ObjectBlob
+pub fn mycelium_spore::remote::ObjectBlob::clone(&self) -> mycelium_spore::remote::ObjectBlob
+impl core::cmp::Eq for mycelium_spore::remote::ObjectBlob
+impl core::cmp::PartialEq for mycelium_spore::remote::ObjectBlob
+pub fn mycelium_spore::remote::ObjectBlob::eq(&self, &mycelium_spore::remote::ObjectBlob) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::ObjectBlob
+pub fn mycelium_spore::remote::ObjectBlob::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::ObjectBlob
+impl core::marker::Freeze for mycelium_spore::remote::ObjectBlob
+impl core::marker::Send for mycelium_spore::remote::ObjectBlob
+impl core::marker::Sync for mycelium_spore::remote::ObjectBlob
+impl core::marker::Unpin for mycelium_spore::remote::ObjectBlob
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::ObjectBlob
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::ObjectBlob
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::ObjectBlob
+pub struct mycelium_spore::ObjectRef
+pub mycelium_spore::ObjectRef::content_hash: mycelium_core::id::ContentHash
+pub mycelium_spore::ObjectRef::rel_path: alloc::string::String
+impl mycelium_spore::remote::ObjectRef
+pub fn mycelium_spore::remote::ObjectRef::oci_title(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_spore::remote::ObjectRef
+pub fn mycelium_spore::remote::ObjectRef::clone(&self) -> mycelium_spore::remote::ObjectRef
+impl core::cmp::Eq for mycelium_spore::remote::ObjectRef
+impl core::cmp::PartialEq for mycelium_spore::remote::ObjectRef
+pub fn mycelium_spore::remote::ObjectRef::eq(&self, &mycelium_spore::remote::ObjectRef) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::ObjectRef
+pub fn mycelium_spore::remote::ObjectRef::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::ObjectRef
+impl core::marker::Freeze for mycelium_spore::remote::ObjectRef
+impl core::marker::Send for mycelium_spore::remote::ObjectRef
+impl core::marker::Sync for mycelium_spore::remote::ObjectRef
+impl core::marker::Unpin for mycelium_spore::remote::ObjectRef
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::ObjectRef
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::ObjectRef
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::ObjectRef
+pub struct mycelium_spore::OrasTransport
+pub mycelium_spore::OrasTransport::plain_http: bool
+impl mycelium_spore::remote::OciTransport for mycelium_spore::remote::OrasTransport
+pub fn mycelium_spore::remote::OrasTransport::list_tags(&self, &str) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::OrasTransport::pull(&self, &str) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_spore::remote::PulledLayers), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::OrasTransport::push(&self, &str, &[u8], &[mycelium_spore::remote::ObjectBlob]) -> core::result::Result<alloc::string::String, mycelium_spore::remote::RemoteError>
+impl core::marker::Freeze for mycelium_spore::remote::OrasTransport
+impl core::marker::Send for mycelium_spore::remote::OrasTransport
+impl core::marker::Sync for mycelium_spore::remote::OrasTransport
+impl core::marker::Unpin for mycelium_spore::remote::OrasTransport
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::OrasTransport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::OrasTransport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::OrasTransport
 pub struct mycelium_spore::PublishReceipt
 pub mycelium_spore::PublishReceipt::already_present: bool
 pub mycelium_spore::PublishReceipt::artifact: mycelium_core::id::ContentHash
@@ -145,6 +497,65 @@ impl core::marker::Unpin for mycelium_spore::registry::PublishReceipt
 impl core::marker::UnsafeUnpin for mycelium_spore::registry::PublishReceipt
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::registry::PublishReceipt
 impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::registry::PublishReceipt
+pub struct mycelium_spore::Reconstructed
+pub mycelium_spore::Reconstructed::dense_map: mycelium_spore::remote::DenseMap
+pub mycelium_spore::Reconstructed::sources: alloc::vec::Vec<(alloc::string::String, alloc::vec::Vec<u8>)>
+pub mycelium_spore::Reconstructed::spore_id: mycelium_core::id::ContentHash
+impl core::clone::Clone for mycelium_spore::remote::Reconstructed
+pub fn mycelium_spore::remote::Reconstructed::clone(&self) -> mycelium_spore::remote::Reconstructed
+impl core::cmp::Eq for mycelium_spore::remote::Reconstructed
+impl core::cmp::PartialEq for mycelium_spore::remote::Reconstructed
+pub fn mycelium_spore::remote::Reconstructed::eq(&self, &mycelium_spore::remote::Reconstructed) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::Reconstructed
+pub fn mycelium_spore::remote::Reconstructed::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::Reconstructed
+impl core::marker::Freeze for mycelium_spore::remote::Reconstructed
+impl core::marker::Send for mycelium_spore::remote::Reconstructed
+impl core::marker::Sync for mycelium_spore::remote::Reconstructed
+impl core::marker::Unpin for mycelium_spore::remote::Reconstructed
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::Reconstructed
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::Reconstructed
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::Reconstructed
+pub struct mycelium_spore::RemotePublishReceipt
+pub mycelium_spore::RemotePublishReceipt::manifest_digest: alloc::string::String
+pub mycelium_spore::RemotePublishReceipt::name: alloc::string::String
+pub mycelium_spore::RemotePublishReceipt::reference: alloc::string::String
+pub mycelium_spore::RemotePublishReceipt::spore_id: mycelium_core::id::ContentHash
+pub mycelium_spore::RemotePublishReceipt::version: alloc::string::String
+impl core::clone::Clone for mycelium_spore::remote::RemotePublishReceipt
+pub fn mycelium_spore::remote::RemotePublishReceipt::clone(&self) -> mycelium_spore::remote::RemotePublishReceipt
+impl core::cmp::Eq for mycelium_spore::remote::RemotePublishReceipt
+impl core::cmp::PartialEq for mycelium_spore::remote::RemotePublishReceipt
+pub fn mycelium_spore::remote::RemotePublishReceipt::eq(&self, &mycelium_spore::remote::RemotePublishReceipt) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::RemotePublishReceipt
+pub fn mycelium_spore::remote::RemotePublishReceipt::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::RemotePublishReceipt
+impl core::marker::Freeze for mycelium_spore::remote::RemotePublishReceipt
+impl core::marker::Send for mycelium_spore::remote::RemotePublishReceipt
+impl core::marker::Sync for mycelium_spore::remote::RemotePublishReceipt
+impl core::marker::Unpin for mycelium_spore::remote::RemotePublishReceipt
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::RemotePublishReceipt
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::RemotePublishReceipt
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::RemotePublishReceipt
+pub struct mycelium_spore::RemoteResolved
+pub mycelium_spore::RemoteResolved::name: alloc::string::String
+pub mycelium_spore::RemoteResolved::reconstructed: mycelium_spore::remote::Reconstructed
+pub mycelium_spore::RemoteResolved::version: alloc::string::String
+impl core::clone::Clone for mycelium_spore::remote::RemoteResolved
+pub fn mycelium_spore::remote::RemoteResolved::clone(&self) -> mycelium_spore::remote::RemoteResolved
+impl core::cmp::Eq for mycelium_spore::remote::RemoteResolved
+impl core::cmp::PartialEq for mycelium_spore::remote::RemoteResolved
+pub fn mycelium_spore::remote::RemoteResolved::eq(&self, &mycelium_spore::remote::RemoteResolved) -> bool
+impl core::fmt::Debug for mycelium_spore::remote::RemoteResolved
+pub fn mycelium_spore::remote::RemoteResolved::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_spore::remote::RemoteResolved
+impl core::marker::Freeze for mycelium_spore::remote::RemoteResolved
+impl core::marker::Send for mycelium_spore::remote::RemoteResolved
+impl core::marker::Sync for mycelium_spore::remote::RemoteResolved
+impl core::marker::Unpin for mycelium_spore::remote::RemoteResolved
+impl core::marker::UnsafeUnpin for mycelium_spore::remote::RemoteResolved
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::remote::RemoteResolved
+impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::remote::RemoteResolved
 pub struct mycelium_spore::Resolved
 pub mycelium_spore::Resolved::artifact: mycelium_core::id::ContentHash
 pub mycelium_spore::Resolved::bytes: alloc::vec::Vec<u8>
@@ -227,10 +638,24 @@ impl core::marker::Unpin for mycelium_spore::Spore
 impl core::marker::UnsafeUnpin for mycelium_spore::Spore
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_spore::Spore
 impl core::panic::unwind_safe::UnwindSafe for mycelium_spore::Spore
+pub trait mycelium_spore::OciTransport
+pub fn mycelium_spore::OciTransport::list_tags(&self, &str) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::OciTransport::pull(&self, &str) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_spore::remote::PulledLayers), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::OciTransport::push(&self, &str, &[u8], &[mycelium_spore::remote::ObjectBlob]) -> core::result::Result<alloc::string::String, mycelium_spore::remote::RemoteError>
+impl mycelium_spore::remote::OciTransport for mycelium_spore::remote::MemTransport
+pub fn mycelium_spore::remote::MemTransport::list_tags(&self, &str) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::MemTransport::pull(&self, &str) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_spore::remote::PulledLayers), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::MemTransport::push(&self, &str, &[u8], &[mycelium_spore::remote::ObjectBlob]) -> core::result::Result<alloc::string::String, mycelium_spore::remote::RemoteError>
+impl mycelium_spore::remote::OciTransport for mycelium_spore::remote::OrasTransport
+pub fn mycelium_spore::remote::OrasTransport::list_tags(&self, &str) -> core::result::Result<alloc::vec::Vec<alloc::string::String>, mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::OrasTransport::pull(&self, &str) -> core::result::Result<(alloc::vec::Vec<u8>, mycelium_spore::remote::PulledLayers), mycelium_spore::remote::RemoteError>
+pub fn mycelium_spore::remote::OrasTransport::push(&self, &str, &[u8], &[mycelium_spore::remote::ObjectBlob]) -> core::result::Result<alloc::string::String, mycelium_spore::remote::RemoteError>
 pub fn mycelium_spore::artifact_hash(&[u8]) -> mycelium_core::id::ContentHash
 pub fn mycelium_spore::build_spore(&mycelium_proj::manifest::Manifest, &std::path::Path) -> core::result::Result<mycelium_spore::Spore, mycelium_spore::SporeError>
 pub fn mycelium_spore::content_address(mycelium_proj::manifest::ProjectKind, &[alloc::string::String], &[mycelium_spore::SourceFile], &[mycelium_spore::ResolvedDep]) -> mycelium_core::id::ContentHash
 pub fn mycelium_spore::explain(&mycelium_spore::Spore) -> alloc::string::String
 pub fn mycelium_spore::kind_str(mycelium_proj::manifest::ProjectKind) -> &'static str
 pub fn mycelium_spore::publish(&std::path::Path, &mycelium_spore::Spore, &[u8], &str, &str) -> core::result::Result<mycelium_spore::registry::PublishReceipt, mycelium_spore::registry::RegistryError>
+pub fn mycelium_spore::publish_remote(&mycelium_spore::remote::RegistryTarget, &mycelium_spore::Spore, &std::path::Path, &str, &str, &dyn mycelium_spore::remote::OciTransport) -> core::result::Result<mycelium_spore::remote::RemotePublishReceipt, mycelium_spore::remote::RemoteError>
 pub fn mycelium_spore::resolve(&std::path::Path, &str, &str) -> core::result::Result<mycelium_spore::registry::Resolved, mycelium_spore::registry::RegistryError>
+pub fn mycelium_spore::resolve_remote(&mycelium_spore::remote::RegistryTarget, &str, &str, &dyn mycelium_spore::remote::OciTransport) -> core::result::Result<mycelium_spore::remote::RemoteResolved, mycelium_spore::remote::RemoteError>

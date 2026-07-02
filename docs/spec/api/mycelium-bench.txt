@@ -566,6 +566,43 @@ impl core::marker::Unpin for mycelium_bench::report::LossRollup
 impl core::marker::UnsafeUnpin for mycelium_bench::report::LossRollup
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::LossRollup
 impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::LossRollup
+pub struct mycelium_bench::report::RegressionRow
+pub mycelium_bench::report::RegressionRow::backend: &'static str
+pub mycelium_bench::report::RegressionRow::baseline_ns: core::option::Option<f64>
+pub mycelium_bench::report::RegressionRow::case_id: alloc::string::String
+pub mycelium_bench::report::RegressionRow::outcome: mycelium_bench::verdict::RegressionOutcome
+pub mycelium_bench::report::RegressionRow::this_ns: core::option::Option<f64>
+impl core::clone::Clone for mycelium_bench::report::RegressionRow
+pub fn mycelium_bench::report::RegressionRow::clone(&self) -> mycelium_bench::report::RegressionRow
+impl core::fmt::Debug for mycelium_bench::report::RegressionRow
+pub fn mycelium_bench::report::RegressionRow::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::report::RegressionRow
+pub fn mycelium_bench::report::RegressionRow::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::RegressionRow
+impl core::marker::Send for mycelium_bench::report::RegressionRow
+impl core::marker::Sync for mycelium_bench::report::RegressionRow
+impl core::marker::Unpin for mycelium_bench::report::RegressionRow
+impl core::marker::UnsafeUnpin for mycelium_bench::report::RegressionRow
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::RegressionRow
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::RegressionRow
+pub struct mycelium_bench::report::RegressionSection
+pub mycelium_bench::report::RegressionSection::baseline_captured: alloc::string::String
+pub mycelium_bench::report::RegressionSection::baseline_host_tag: alloc::string::String
+pub mycelium_bench::report::RegressionSection::regression_band: f64
+pub mycelium_bench::report::RegressionSection::rows: alloc::vec::Vec<mycelium_bench::report::RegressionRow>
+impl core::clone::Clone for mycelium_bench::report::RegressionSection
+pub fn mycelium_bench::report::RegressionSection::clone(&self) -> mycelium_bench::report::RegressionSection
+impl core::fmt::Debug for mycelium_bench::report::RegressionSection
+pub fn mycelium_bench::report::RegressionSection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::report::RegressionSection
+pub fn mycelium_bench::report::RegressionSection::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::report::RegressionSection
+impl core::marker::Send for mycelium_bench::report::RegressionSection
+impl core::marker::Sync for mycelium_bench::report::RegressionSection
+impl core::marker::Unpin for mycelium_bench::report::RegressionSection
+impl core::marker::UnsafeUnpin for mycelium_bench::report::RegressionSection
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::RegressionSection
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::RegressionSection
 pub struct mycelium_bench::report::Report
 pub mycelium_bench::report::Report::honesty: mycelium_bench::report::Honesty
 pub mycelium_bench::report::Report::host_note: alloc::string::String
@@ -573,13 +610,16 @@ pub mycelium_bench::report::Report::llm: core::option::Option<mycelium_bench::re
 pub mycelium_bench::report::Report::mlir_dialect_feature: bool
 pub mycelium_bench::report::Report::neutral_band: f64
 pub mycelium_bench::report::Report::profile: &'static str
+pub mycelium_bench::report::Report::regression: core::option::Option<mycelium_bench::report::RegressionSection>
 pub mycelium_bench::report::Report::run: mycelium_bench::measure::RunRecord
+pub mycelium_bench::report::Report::scaling: core::option::Option<mycelium_bench::scaling::ScalingRun>
 pub mycelium_bench::report::Report::tool: &'static str
 impl mycelium_bench::report::Report
 pub fn mycelium_bench::report::Report::loss_rollup(&self) -> mycelium_bench::report::LossRollup
 pub fn mycelium_bench::report::Report::tallies(&self) -> mycelium_bench::report::Tallies
 pub fn mycelium_bench::report::Report::to_json(&self) -> core::result::Result<alloc::string::String, serde_json::error::Error>
 pub fn mycelium_bench::report::Report::to_markdown(&self) -> alloc::string::String
+pub fn mycelium_bench::report::Report::with_regression_gate(self, &str, &mycelium_bench::verdict::RegressionBaseline) -> Self
 impl core::clone::Clone for mycelium_bench::report::Report
 pub fn mycelium_bench::report::Report::clone(&self) -> mycelium_bench::report::Report
 impl core::fmt::Debug for mycelium_bench::report::Report
@@ -619,6 +659,83 @@ impl core::marker::UnsafeUnpin for mycelium_bench::report::Tallies
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::report::Tallies
 impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::report::Tallies
 pub fn mycelium_bench::report::neutral_band() -> f64
+pub mod mycelium_bench::scaling
+pub enum mycelium_bench::scaling::ScalingOutcome
+pub mycelium_bench::scaling::ScalingOutcome::Measured(alloc::vec::Vec<mycelium_bench::scaling::ScalingSample>)
+pub mycelium_bench::scaling::ScalingOutcome::Skipped(alloc::string::String)
+pub mycelium_bench::scaling::ScalingOutcome::Unmeasurable(alloc::string::String)
+impl core::clone::Clone for mycelium_bench::scaling::ScalingOutcome
+pub fn mycelium_bench::scaling::ScalingOutcome::clone(&self) -> mycelium_bench::scaling::ScalingOutcome
+impl core::fmt::Debug for mycelium_bench::scaling::ScalingOutcome
+pub fn mycelium_bench::scaling::ScalingOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::scaling::ScalingOutcome
+pub fn mycelium_bench::scaling::ScalingOutcome::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::scaling::ScalingOutcome
+impl core::marker::Send for mycelium_bench::scaling::ScalingOutcome
+impl core::marker::Sync for mycelium_bench::scaling::ScalingOutcome
+impl core::marker::Unpin for mycelium_bench::scaling::ScalingOutcome
+impl core::marker::UnsafeUnpin for mycelium_bench::scaling::ScalingOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::scaling::ScalingOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::scaling::ScalingOutcome
+pub struct mycelium_bench::scaling::ScalingPoint
+pub mycelium_bench::scaling::ScalingPoint::backend: mycelium_bench::backend::Backend
+pub mycelium_bench::scaling::ScalingPoint::batch_size: u32
+pub mycelium_bench::scaling::ScalingPoint::case_id: alloc::string::String
+pub mycelium_bench::scaling::ScalingPoint::outcome: mycelium_bench::scaling::ScalingOutcome
+pub mycelium_bench::scaling::ScalingPoint::repeats: u32
+impl mycelium_bench::scaling::ScalingPoint
+pub fn mycelium_bench::scaling::ScalingPoint::amdahl_serial_fraction(&self) -> core::option::Option<f64>
+pub fn mycelium_bench::scaling::ScalingPoint::speedups(&self) -> core::option::Option<alloc::vec::Vec<(usize, f64, f64)>>
+impl core::clone::Clone for mycelium_bench::scaling::ScalingPoint
+pub fn mycelium_bench::scaling::ScalingPoint::clone(&self) -> mycelium_bench::scaling::ScalingPoint
+impl core::fmt::Debug for mycelium_bench::scaling::ScalingPoint
+pub fn mycelium_bench::scaling::ScalingPoint::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::scaling::ScalingPoint
+pub fn mycelium_bench::scaling::ScalingPoint::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::scaling::ScalingPoint
+impl core::marker::Send for mycelium_bench::scaling::ScalingPoint
+impl core::marker::Sync for mycelium_bench::scaling::ScalingPoint
+impl core::marker::Unpin for mycelium_bench::scaling::ScalingPoint
+impl core::marker::UnsafeUnpin for mycelium_bench::scaling::ScalingPoint
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::scaling::ScalingPoint
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::scaling::ScalingPoint
+pub struct mycelium_bench::scaling::ScalingRun
+pub mycelium_bench::scaling::ScalingRun::host_note: alloc::string::String
+pub mycelium_bench::scaling::ScalingRun::points: alloc::vec::Vec<mycelium_bench::scaling::ScalingPoint>
+pub mycelium_bench::scaling::ScalingRun::worker_counts: alloc::vec::Vec<usize>
+impl core::clone::Clone for mycelium_bench::scaling::ScalingRun
+pub fn mycelium_bench::scaling::ScalingRun::clone(&self) -> mycelium_bench::scaling::ScalingRun
+impl core::fmt::Debug for mycelium_bench::scaling::ScalingRun
+pub fn mycelium_bench::scaling::ScalingRun::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::scaling::ScalingRun
+pub fn mycelium_bench::scaling::ScalingRun::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::scaling::ScalingRun
+impl core::marker::Send for mycelium_bench::scaling::ScalingRun
+impl core::marker::Sync for mycelium_bench::scaling::ScalingRun
+impl core::marker::Unpin for mycelium_bench::scaling::ScalingRun
+impl core::marker::UnsafeUnpin for mycelium_bench::scaling::ScalingRun
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::scaling::ScalingRun
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::scaling::ScalingRun
+pub struct mycelium_bench::scaling::ScalingSample
+pub mycelium_bench::scaling::ScalingSample::batch_ns: f64
+pub mycelium_bench::scaling::ScalingSample::ns_per_job: f64
+pub mycelium_bench::scaling::ScalingSample::workers: usize
+impl core::clone::Clone for mycelium_bench::scaling::ScalingSample
+pub fn mycelium_bench::scaling::ScalingSample::clone(&self) -> mycelium_bench::scaling::ScalingSample
+impl core::fmt::Debug for mycelium_bench::scaling::ScalingSample
+pub fn mycelium_bench::scaling::ScalingSample::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_bench::scaling::ScalingSample
+impl serde_core::ser::Serialize for mycelium_bench::scaling::ScalingSample
+pub fn mycelium_bench::scaling::ScalingSample::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::scaling::ScalingSample
+impl core::marker::Send for mycelium_bench::scaling::ScalingSample
+impl core::marker::Sync for mycelium_bench::scaling::ScalingSample
+impl core::marker::Unpin for mycelium_bench::scaling::ScalingSample
+impl core::marker::UnsafeUnpin for mycelium_bench::scaling::ScalingSample
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::scaling::ScalingSample
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::scaling::ScalingSample
+pub fn mycelium_bench::scaling::measure_case_scaling(&mycelium_bench::corpus::Case, mycelium_bench::backend::Backend, usize, u32, u32) -> mycelium_bench::scaling::ScalingPoint
+pub fn mycelium_bench::scaling::run_scaling(&[mycelium_bench::corpus::Case], usize, u32, u32) -> mycelium_bench::scaling::ScalingRun
 pub mod mycelium_bench::timing
 pub struct mycelium_bench::timing::Timing
 pub mycelium_bench::timing::Timing::batches: u32
@@ -649,6 +766,37 @@ pub fn mycelium_bench::timing::bench(u32, impl core::ops::function::FnMut()) -> 
 pub fn mycelium_bench::timing::is_debug_build() -> bool
 pub fn mycelium_bench::timing::refuse_debug_build()
 pub mod mycelium_bench::verdict
+pub enum mycelium_bench::verdict::RegressionOutcome
+pub mycelium_bench::verdict::RegressionOutcome::Hold
+pub mycelium_bench::verdict::RegressionOutcome::Hold::ratio_x1000: u64
+pub mycelium_bench::verdict::RegressionOutcome::HostMismatch
+pub mycelium_bench::verdict::RegressionOutcome::HostMismatch::baseline_host: alloc::string::String
+pub mycelium_bench::verdict::RegressionOutcome::HostMismatch::this_host: alloc::string::String
+pub mycelium_bench::verdict::RegressionOutcome::Improvement
+pub mycelium_bench::verdict::RegressionOutcome::Improvement::ratio_x1000: u64
+pub mycelium_bench::verdict::RegressionOutcome::NoBaseline
+pub mycelium_bench::verdict::RegressionOutcome::NotTimed
+pub mycelium_bench::verdict::RegressionOutcome::Regression
+pub mycelium_bench::verdict::RegressionOutcome::Regression::ratio_x1000: u64
+impl mycelium_bench::verdict::RegressionOutcome
+pub fn mycelium_bench::verdict::RegressionOutcome::is_regression(&self) -> bool
+pub fn mycelium_bench::verdict::RegressionOutcome::status(&self) -> &'static str
+impl core::clone::Clone for mycelium_bench::verdict::RegressionOutcome
+pub fn mycelium_bench::verdict::RegressionOutcome::clone(&self) -> mycelium_bench::verdict::RegressionOutcome
+impl core::cmp::PartialEq for mycelium_bench::verdict::RegressionOutcome
+pub fn mycelium_bench::verdict::RegressionOutcome::eq(&self, &mycelium_bench::verdict::RegressionOutcome) -> bool
+impl core::fmt::Debug for mycelium_bench::verdict::RegressionOutcome
+pub fn mycelium_bench::verdict::RegressionOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_bench::verdict::RegressionOutcome
+impl serde_core::ser::Serialize for mycelium_bench::verdict::RegressionOutcome
+pub fn mycelium_bench::verdict::RegressionOutcome::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::verdict::RegressionOutcome
+impl core::marker::Send for mycelium_bench::verdict::RegressionOutcome
+impl core::marker::Sync for mycelium_bench::verdict::RegressionOutcome
+impl core::marker::Unpin for mycelium_bench::verdict::RegressionOutcome
+impl core::marker::UnsafeUnpin for mycelium_bench::verdict::RegressionOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::verdict::RegressionOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::verdict::RegressionOutcome
 pub enum mycelium_bench::verdict::Speed
 pub mycelium_bench::verdict::Speed::Loss
 pub mycelium_bench::verdict::Speed::Neutral
@@ -711,8 +859,59 @@ impl core::marker::Unpin for mycelium_bench::verdict::Verdict
 impl core::marker::UnsafeUnpin for mycelium_bench::verdict::Verdict
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::verdict::Verdict
 impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::verdict::Verdict
+pub struct mycelium_bench::verdict::BaselineEntry
+pub mycelium_bench::verdict::BaselineEntry::backend: alloc::string::String
+pub mycelium_bench::verdict::BaselineEntry::case_id: alloc::string::String
+pub mycelium_bench::verdict::BaselineEntry::ns_per_call: f64
+impl core::clone::Clone for mycelium_bench::verdict::BaselineEntry
+pub fn mycelium_bench::verdict::BaselineEntry::clone(&self) -> mycelium_bench::verdict::BaselineEntry
+impl core::cmp::PartialEq for mycelium_bench::verdict::BaselineEntry
+pub fn mycelium_bench::verdict::BaselineEntry::eq(&self, &mycelium_bench::verdict::BaselineEntry) -> bool
+impl core::fmt::Debug for mycelium_bench::verdict::BaselineEntry
+pub fn mycelium_bench::verdict::BaselineEntry::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_bench::verdict::BaselineEntry
+impl serde_core::ser::Serialize for mycelium_bench::verdict::BaselineEntry
+pub fn mycelium_bench::verdict::BaselineEntry::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::verdict::BaselineEntry
+pub fn mycelium_bench::verdict::BaselineEntry::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::verdict::BaselineEntry
+impl core::marker::Send for mycelium_bench::verdict::BaselineEntry
+impl core::marker::Sync for mycelium_bench::verdict::BaselineEntry
+impl core::marker::Unpin for mycelium_bench::verdict::BaselineEntry
+impl core::marker::UnsafeUnpin for mycelium_bench::verdict::BaselineEntry
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::verdict::BaselineEntry
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::verdict::BaselineEntry
+pub struct mycelium_bench::verdict::RegressionBaseline
+pub mycelium_bench::verdict::RegressionBaseline::captured: alloc::string::String
+pub mycelium_bench::verdict::RegressionBaseline::entries: alloc::vec::Vec<mycelium_bench::verdict::BaselineEntry>
+pub mycelium_bench::verdict::RegressionBaseline::host_tag: alloc::string::String
+pub mycelium_bench::verdict::RegressionBaseline::trial_iters: u32
+impl mycelium_bench::verdict::RegressionBaseline
+pub fn mycelium_bench::verdict::RegressionBaseline::from_json(&str) -> core::result::Result<Self, serde_json::error::Error>
+pub fn mycelium_bench::verdict::RegressionBaseline::lookup(&self, &str, mycelium_bench::backend::Backend) -> core::option::Option<f64>
+pub fn mycelium_bench::verdict::RegressionBaseline::to_json(&self) -> core::result::Result<alloc::string::String, serde_json::error::Error>
+impl core::clone::Clone for mycelium_bench::verdict::RegressionBaseline
+pub fn mycelium_bench::verdict::RegressionBaseline::clone(&self) -> mycelium_bench::verdict::RegressionBaseline
+impl core::cmp::PartialEq for mycelium_bench::verdict::RegressionBaseline
+pub fn mycelium_bench::verdict::RegressionBaseline::eq(&self, &mycelium_bench::verdict::RegressionBaseline) -> bool
+impl core::fmt::Debug for mycelium_bench::verdict::RegressionBaseline
+pub fn mycelium_bench::verdict::RegressionBaseline::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_bench::verdict::RegressionBaseline
+impl serde_core::ser::Serialize for mycelium_bench::verdict::RegressionBaseline
+pub fn mycelium_bench::verdict::RegressionBaseline::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_bench::verdict::RegressionBaseline
+pub fn mycelium_bench::verdict::RegressionBaseline::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_bench::verdict::RegressionBaseline
+impl core::marker::Send for mycelium_bench::verdict::RegressionBaseline
+impl core::marker::Sync for mycelium_bench::verdict::RegressionBaseline
+impl core::marker::Unpin for mycelium_bench::verdict::RegressionBaseline
+impl core::marker::UnsafeUnpin for mycelium_bench::verdict::RegressionBaseline
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::verdict::RegressionBaseline
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::verdict::RegressionBaseline
 pub const mycelium_bench::verdict::NEUTRAL_BAND: f64
+pub const mycelium_bench::verdict::REGRESSION_BAND: f64
 pub fn mycelium_bench::verdict::classify(mycelium_bench::backend::Backend, (&mycelium_bench::backend::Outcome, core::option::Option<mycelium_bench::timing::Timing>), (&mycelium_bench::backend::Outcome, core::option::Option<mycelium_bench::timing::Timing>)) -> mycelium_bench::verdict::Verdict
+pub fn mycelium_bench::verdict::regression_classify(&mycelium_bench::verdict::RegressionBaseline, &str, &str, mycelium_bench::backend::Backend, core::option::Option<f64>) -> mycelium_bench::verdict::RegressionOutcome
 pub enum mycelium_bench::Backend
 pub mycelium_bench::Backend::AotEnv
 pub mycelium_bench::Backend::DirectLlvm
@@ -794,6 +993,23 @@ impl core::marker::Unpin for mycelium_bench::backend::Outcome
 impl core::marker::UnsafeUnpin for mycelium_bench::backend::Outcome
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::backend::Outcome
 impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::backend::Outcome
+pub enum mycelium_bench::ScalingOutcome
+pub mycelium_bench::ScalingOutcome::Measured(alloc::vec::Vec<mycelium_bench::scaling::ScalingSample>)
+pub mycelium_bench::ScalingOutcome::Skipped(alloc::string::String)
+pub mycelium_bench::ScalingOutcome::Unmeasurable(alloc::string::String)
+impl core::clone::Clone for mycelium_bench::scaling::ScalingOutcome
+pub fn mycelium_bench::scaling::ScalingOutcome::clone(&self) -> mycelium_bench::scaling::ScalingOutcome
+impl core::fmt::Debug for mycelium_bench::scaling::ScalingOutcome
+pub fn mycelium_bench::scaling::ScalingOutcome::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::scaling::ScalingOutcome
+pub fn mycelium_bench::scaling::ScalingOutcome::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::scaling::ScalingOutcome
+impl core::marker::Send for mycelium_bench::scaling::ScalingOutcome
+impl core::marker::Sync for mycelium_bench::scaling::ScalingOutcome
+impl core::marker::Unpin for mycelium_bench::scaling::ScalingOutcome
+impl core::marker::UnsafeUnpin for mycelium_bench::scaling::ScalingOutcome
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::scaling::ScalingOutcome
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::scaling::ScalingOutcome
 pub enum mycelium_bench::Speed
 pub mycelium_bench::Speed::Loss
 pub mycelium_bench::Speed::Neutral
@@ -1017,13 +1233,16 @@ pub mycelium_bench::Report::llm: core::option::Option<mycelium_bench::report::Ll
 pub mycelium_bench::Report::mlir_dialect_feature: bool
 pub mycelium_bench::Report::neutral_band: f64
 pub mycelium_bench::Report::profile: &'static str
+pub mycelium_bench::Report::regression: core::option::Option<mycelium_bench::report::RegressionSection>
 pub mycelium_bench::Report::run: mycelium_bench::measure::RunRecord
+pub mycelium_bench::Report::scaling: core::option::Option<mycelium_bench::scaling::ScalingRun>
 pub mycelium_bench::Report::tool: &'static str
 impl mycelium_bench::report::Report
 pub fn mycelium_bench::report::Report::loss_rollup(&self) -> mycelium_bench::report::LossRollup
 pub fn mycelium_bench::report::Report::tallies(&self) -> mycelium_bench::report::Tallies
 pub fn mycelium_bench::report::Report::to_json(&self) -> core::result::Result<alloc::string::String, serde_json::error::Error>
 pub fn mycelium_bench::report::Report::to_markdown(&self) -> alloc::string::String
+pub fn mycelium_bench::report::Report::with_regression_gate(self, &str, &mycelium_bench::verdict::RegressionBaseline) -> Self
 impl core::clone::Clone for mycelium_bench::report::Report
 pub fn mycelium_bench::report::Report::clone(&self) -> mycelium_bench::report::Report
 impl core::fmt::Debug for mycelium_bench::report::Report
@@ -1052,7 +1271,67 @@ impl core::marker::Unpin for mycelium_bench::measure::RunRecord
 impl core::marker::UnsafeUnpin for mycelium_bench::measure::RunRecord
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::measure::RunRecord
 impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::measure::RunRecord
+pub struct mycelium_bench::ScalingPoint
+pub mycelium_bench::ScalingPoint::backend: mycelium_bench::backend::Backend
+pub mycelium_bench::ScalingPoint::batch_size: u32
+pub mycelium_bench::ScalingPoint::case_id: alloc::string::String
+pub mycelium_bench::ScalingPoint::outcome: mycelium_bench::scaling::ScalingOutcome
+pub mycelium_bench::ScalingPoint::repeats: u32
+impl mycelium_bench::scaling::ScalingPoint
+pub fn mycelium_bench::scaling::ScalingPoint::amdahl_serial_fraction(&self) -> core::option::Option<f64>
+pub fn mycelium_bench::scaling::ScalingPoint::speedups(&self) -> core::option::Option<alloc::vec::Vec<(usize, f64, f64)>>
+impl core::clone::Clone for mycelium_bench::scaling::ScalingPoint
+pub fn mycelium_bench::scaling::ScalingPoint::clone(&self) -> mycelium_bench::scaling::ScalingPoint
+impl core::fmt::Debug for mycelium_bench::scaling::ScalingPoint
+pub fn mycelium_bench::scaling::ScalingPoint::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::scaling::ScalingPoint
+pub fn mycelium_bench::scaling::ScalingPoint::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::scaling::ScalingPoint
+impl core::marker::Send for mycelium_bench::scaling::ScalingPoint
+impl core::marker::Sync for mycelium_bench::scaling::ScalingPoint
+impl core::marker::Unpin for mycelium_bench::scaling::ScalingPoint
+impl core::marker::UnsafeUnpin for mycelium_bench::scaling::ScalingPoint
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::scaling::ScalingPoint
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::scaling::ScalingPoint
+pub struct mycelium_bench::ScalingRun
+pub mycelium_bench::ScalingRun::host_note: alloc::string::String
+pub mycelium_bench::ScalingRun::points: alloc::vec::Vec<mycelium_bench::scaling::ScalingPoint>
+pub mycelium_bench::ScalingRun::worker_counts: alloc::vec::Vec<usize>
+impl core::clone::Clone for mycelium_bench::scaling::ScalingRun
+pub fn mycelium_bench::scaling::ScalingRun::clone(&self) -> mycelium_bench::scaling::ScalingRun
+impl core::fmt::Debug for mycelium_bench::scaling::ScalingRun
+pub fn mycelium_bench::scaling::ScalingRun::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_bench::scaling::ScalingRun
+pub fn mycelium_bench::scaling::ScalingRun::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::scaling::ScalingRun
+impl core::marker::Send for mycelium_bench::scaling::ScalingRun
+impl core::marker::Sync for mycelium_bench::scaling::ScalingRun
+impl core::marker::Unpin for mycelium_bench::scaling::ScalingRun
+impl core::marker::UnsafeUnpin for mycelium_bench::scaling::ScalingRun
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::scaling::ScalingRun
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::scaling::ScalingRun
+pub struct mycelium_bench::ScalingSample
+pub mycelium_bench::ScalingSample::batch_ns: f64
+pub mycelium_bench::ScalingSample::ns_per_job: f64
+pub mycelium_bench::ScalingSample::workers: usize
+impl core::clone::Clone for mycelium_bench::scaling::ScalingSample
+pub fn mycelium_bench::scaling::ScalingSample::clone(&self) -> mycelium_bench::scaling::ScalingSample
+impl core::fmt::Debug for mycelium_bench::scaling::ScalingSample
+pub fn mycelium_bench::scaling::ScalingSample::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_bench::scaling::ScalingSample
+impl serde_core::ser::Serialize for mycelium_bench::scaling::ScalingSample
+pub fn mycelium_bench::scaling::ScalingSample::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_bench::scaling::ScalingSample
+impl core::marker::Send for mycelium_bench::scaling::ScalingSample
+impl core::marker::Sync for mycelium_bench::scaling::ScalingSample
+impl core::marker::Unpin for mycelium_bench::scaling::ScalingSample
+impl core::marker::UnsafeUnpin for mycelium_bench::scaling::ScalingSample
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_bench::scaling::ScalingSample
+impl core::panic::unwind_safe::UnwindSafe for mycelium_bench::scaling::ScalingSample
 pub fn mycelium_bench::classify(mycelium_bench::backend::Backend, (&mycelium_bench::backend::Outcome, core::option::Option<mycelium_bench::timing::Timing>), (&mycelium_bench::backend::Outcome, core::option::Option<mycelium_bench::timing::Timing>)) -> mycelium_bench::verdict::Verdict
 pub fn mycelium_bench::corpus() -> alloc::vec::Vec<mycelium_bench::corpus::Case>
+pub fn mycelium_bench::host_note_for_scaling() -> alloc::string::String
+pub fn mycelium_bench::host_tag() -> alloc::string::String
 pub fn mycelium_bench::parse_any_llm_json(&str, alloc::string::String) -> core::result::Result<mycelium_bench::llm::ParsedLlmSection, mycelium_bench::llm::LlmIngestError>
 pub fn mycelium_bench::run_corpus(&[mycelium_bench::corpus::Case], &mycelium_bench::backend::Engines) -> mycelium_bench::measure::RunRecord
+pub fn mycelium_bench::run_scaling(&[mycelium_bench::corpus::Case], usize, u32, u32) -> mycelium_bench::scaling::ScalingRun

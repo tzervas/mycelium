@@ -1,7 +1,24 @@
 pub mod mycelium_core
 pub mod mycelium_core::binary
+pub const mycelium_core::binary::DIV_MAX_WIDTH: usize
+pub const mycelium_core::binary::MUL_MAX_WIDTH: usize
+pub const mycelium_core::binary::SHIFT_MAX_WIDTH: usize
+pub const mycelium_core::binary::TC_MAX_WIDTH: usize
+pub fn mycelium_core::binary::add(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::bits_to_int(&[bool]) -> i64
+pub fn mycelium_core::binary::bits_to_uint(&[bool]) -> u64
+pub fn mycelium_core::binary::cmp_signed(&[bool], &[bool]) -> core::option::Option<core::cmp::Ordering>
+pub fn mycelium_core::binary::div_rem(&[bool], &[bool]) -> core::option::Option<(alloc::vec::Vec<bool>, alloc::vec::Vec<bool>)>
+pub fn mycelium_core::binary::div_signed(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
 pub fn mycelium_core::binary::int_to_bits(i64, u32) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::mul(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::neg(&[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::rem_signed(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::shl(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::shr(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::shr_signed(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::sub(&[bool], &[bool]) -> core::option::Option<alloc::vec::Vec<bool>>
+pub fn mycelium_core::binary::uint_to_bits(u64, u32) -> core::option::Option<alloc::vec::Vec<bool>>
 pub mod mycelium_core::bound
 pub enum mycelium_core::bound::BoundBasis
 pub mycelium_core::bound::BoundBasis::EmpiricalFit
@@ -1227,6 +1244,30 @@ impl core::marker::UnsafeUnpin for mycelium_core::recon::ReconInfo
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::recon::ReconInfo
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::recon::ReconInfo
 pub mod mycelium_core::repr
+pub enum mycelium_core::repr::FloatWidth
+pub mycelium_core::repr::FloatWidth::F64
+impl mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::tag(self) -> u8
+impl core::clone::Clone for mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::clone(&self) -> mycelium_core::repr::FloatWidth
+impl core::cmp::Eq for mycelium_core::repr::FloatWidth
+impl core::cmp::PartialEq for mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::eq(&self, &mycelium_core::repr::FloatWidth) -> bool
+impl core::fmt::Debug for mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::repr::FloatWidth
+impl core::marker::StructuralPartialEq for mycelium_core::repr::FloatWidth
+impl serde_core::ser::Serialize for mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::repr::FloatWidth
+impl core::marker::Send for mycelium_core::repr::FloatWidth
+impl core::marker::Sync for mycelium_core::repr::FloatWidth
+impl core::marker::Unpin for mycelium_core::repr::FloatWidth
+impl core::marker::UnsafeUnpin for mycelium_core::repr::FloatWidth
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::FloatWidth
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::FloatWidth
 pub enum mycelium_core::repr::Repr
 pub mycelium_core::repr::Repr::Binary
 pub mycelium_core::repr::Repr::Binary::width: u32
@@ -1234,6 +1275,8 @@ pub mycelium_core::repr::Repr::Bytes
 pub mycelium_core::repr::Repr::Dense
 pub mycelium_core::repr::Repr::Dense::dim: u32
 pub mycelium_core::repr::Repr::Dense::dtype: mycelium_core::repr::ScalarKind
+pub mycelium_core::repr::Repr::Float
+pub mycelium_core::repr::Repr::Float::width: mycelium_core::repr::FloatWidth
 pub mycelium_core::repr::Repr::Seq
 pub mycelium_core::repr::Repr::Seq::elem: alloc::boxed::Box<mycelium_core::repr::Repr>
 pub mycelium_core::repr::Repr::Seq::len: u32
@@ -1381,6 +1424,7 @@ pub mod mycelium_core::value
 pub enum mycelium_core::value::Payload
 pub mycelium_core::value::Payload::Bits(alloc::vec::Vec<bool>)
 pub mycelium_core::value::Payload::Bytes(alloc::vec::Vec<u8>)
+pub mycelium_core::value::Payload::Float(f64)
 pub mycelium_core::value::Payload::Hypervector(alloc::vec::Vec<f64>)
 pub mycelium_core::value::Payload::Scalars(alloc::vec::Vec<f64>)
 pub mycelium_core::value::Payload::Seq(alloc::vec::Vec<mycelium_core::value::Value>)
@@ -1429,6 +1473,7 @@ pub fn mycelium_core::value::Value::bytes(&self) -> core::option::Option<&[u8]>
 pub fn mycelium_core::value::Value::bytes_get(&self, usize) -> core::option::Option<u8>
 pub fn mycelium_core::value::Value::bytes_len(&self) -> core::option::Option<usize>
 pub fn mycelium_core::value::Value::bytes_slice(&self, usize, usize) -> core::option::Option<&[u8]>
+pub fn mycelium_core::value::Value::float(&self) -> core::option::Option<f64>
 pub fn mycelium_core::value::Value::meta(&self) -> &mycelium_core::meta::Meta
 pub fn mycelium_core::value::Value::new(mycelium_core::repr::Repr, mycelium_core::value::Payload, mycelium_core::meta::Meta) -> core::result::Result<Self, mycelium_core::WfError>
 pub fn mycelium_core::value::Value::payload(&self) -> &mycelium_core::value::Payload
@@ -1458,6 +1503,7 @@ impl core::marker::Unpin for mycelium_core::value::Value
 impl core::marker::UnsafeUnpin for mycelium_core::value::Value
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::value::Value
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::value::Value
+pub const mycelium_core::value::CANONICAL_NAN_BITS: u64
 pub mod mycelium_core::wrapping
 pub struct mycelium_core::wrapping::WrappingOpt
 impl mycelium_core::wrapping::WrappingOpt
@@ -1723,6 +1769,30 @@ impl core::marker::Unpin for mycelium_core::data::FieldTyRef
 impl core::marker::UnsafeUnpin for mycelium_core::data::FieldTyRef
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::data::FieldTyRef
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::data::FieldTyRef
+pub enum mycelium_core::FloatWidth
+pub mycelium_core::FloatWidth::F64
+impl mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::tag(self) -> u8
+impl core::clone::Clone for mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::clone(&self) -> mycelium_core::repr::FloatWidth
+impl core::cmp::Eq for mycelium_core::repr::FloatWidth
+impl core::cmp::PartialEq for mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::eq(&self, &mycelium_core::repr::FloatWidth) -> bool
+impl core::fmt::Debug for mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_core::repr::FloatWidth
+impl core::marker::StructuralPartialEq for mycelium_core::repr::FloatWidth
+impl serde_core::ser::Serialize for mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl<'de> serde_core::de::Deserialize<'de> for mycelium_core::repr::FloatWidth
+pub fn mycelium_core::repr::FloatWidth::deserialize<__D>(__D) -> core::result::Result<Self, <__D as serde_core::de::Deserializer>::Error> where __D: serde_core::de::Deserializer<'de>
+impl core::marker::Freeze for mycelium_core::repr::FloatWidth
+impl core::marker::Send for mycelium_core::repr::FloatWidth
+impl core::marker::Sync for mycelium_core::repr::FloatWidth
+impl core::marker::Unpin for mycelium_core::repr::FloatWidth
+impl core::marker::UnsafeUnpin for mycelium_core::repr::FloatWidth
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::repr::FloatWidth
+impl core::panic::unwind_safe::UnwindSafe for mycelium_core::repr::FloatWidth
 pub enum mycelium_core::GuaranteeStrength
 pub mycelium_core::GuaranteeStrength::Declared
 pub mycelium_core::GuaranteeStrength::Empirical
@@ -1885,6 +1955,7 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_core::meta::PackScheme
 pub enum mycelium_core::Payload
 pub mycelium_core::Payload::Bits(alloc::vec::Vec<bool>)
 pub mycelium_core::Payload::Bytes(alloc::vec::Vec<u8>)
+pub mycelium_core::Payload::Float(f64)
 pub mycelium_core::Payload::Hypervector(alloc::vec::Vec<f64>)
 pub mycelium_core::Payload::Scalars(alloc::vec::Vec<f64>)
 pub mycelium_core::Payload::Seq(alloc::vec::Vec<mycelium_core::value::Value>)
@@ -2034,6 +2105,8 @@ pub mycelium_core::Repr::Bytes
 pub mycelium_core::Repr::Dense
 pub mycelium_core::Repr::Dense::dim: u32
 pub mycelium_core::Repr::Dense::dtype: mycelium_core::repr::ScalarKind
+pub mycelium_core::Repr::Float
+pub mycelium_core::Repr::Float::width: mycelium_core::repr::FloatWidth
 pub mycelium_core::Repr::Seq
 pub mycelium_core::Repr::Seq::elem: alloc::boxed::Box<mycelium_core::repr::Repr>
 pub mycelium_core::Repr::Seq::len: u32
@@ -2708,6 +2781,7 @@ pub fn mycelium_core::value::Value::bytes(&self) -> core::option::Option<&[u8]>
 pub fn mycelium_core::value::Value::bytes_get(&self, usize) -> core::option::Option<u8>
 pub fn mycelium_core::value::Value::bytes_len(&self) -> core::option::Option<usize>
 pub fn mycelium_core::value::Value::bytes_slice(&self, usize, usize) -> core::option::Option<&[u8]>
+pub fn mycelium_core::value::Value::float(&self) -> core::option::Option<f64>
 pub fn mycelium_core::value::Value::meta(&self) -> &mycelium_core::meta::Meta
 pub fn mycelium_core::value::Value::new(mycelium_core::repr::Repr, mycelium_core::value::Payload, mycelium_core::meta::Meta) -> core::result::Result<Self, mycelium_core::WfError>
 pub fn mycelium_core::value::Value::payload(&self) -> &mycelium_core::value::Payload
@@ -2758,6 +2832,7 @@ impl core::marker::Unpin for mycelium_core::wrapping::WrappingOpt
 impl core::marker::UnsafeUnpin for mycelium_core::wrapping::WrappingOpt
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_core::wrapping::WrappingOpt
 impl core::panic::unwind_safe::UnwindSafe for mycelium_core::wrapping::WrappingOpt
+pub const mycelium_core::CANONICAL_NAN_BITS: u64
 pub fn mycelium_core::operation_hash(&str) -> mycelium_core::id::ContentHash
 pub type mycelium_core::PolicyRef = mycelium_core::id::ContentHash
 pub type mycelium_core::Prim = alloc::string::String

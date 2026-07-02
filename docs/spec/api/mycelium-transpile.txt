@@ -1,0 +1,340 @@
+pub mod mycelium_transpile
+pub mod mycelium_transpile::batch
+pub struct mycelium_transpile::batch::BatchSummary
+pub mycelium_transpile::batch::BatchSummary::files: alloc::vec::Vec<mycelium_transpile::batch::FileSummary>
+pub mycelium_transpile::batch::BatchSummary::totals: mycelium_transpile::batch::Totals
+impl core::clone::Clone for mycelium_transpile::batch::BatchSummary
+pub fn mycelium_transpile::batch::BatchSummary::clone(&self) -> mycelium_transpile::batch::BatchSummary
+impl core::fmt::Debug for mycelium_transpile::batch::BatchSummary
+pub fn mycelium_transpile::batch::BatchSummary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_transpile::batch::BatchSummary
+pub fn mycelium_transpile::batch::BatchSummary::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::batch::BatchSummary
+impl core::marker::Send for mycelium_transpile::batch::BatchSummary
+impl core::marker::Sync for mycelium_transpile::batch::BatchSummary
+impl core::marker::Unpin for mycelium_transpile::batch::BatchSummary
+impl core::marker::UnsafeUnpin for mycelium_transpile::batch::BatchSummary
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::batch::BatchSummary
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::batch::BatchSummary
+pub struct mycelium_transpile::batch::FileResult
+pub mycelium_transpile::batch::FileResult::myc: alloc::string::String
+pub mycelium_transpile::batch::FileResult::path: std::path::PathBuf
+pub mycelium_transpile::batch::FileResult::report: mycelium_transpile::gap::GapReport
+impl core::marker::Freeze for mycelium_transpile::batch::FileResult
+impl core::marker::Send for mycelium_transpile::batch::FileResult
+impl core::marker::Sync for mycelium_transpile::batch::FileResult
+impl core::marker::Unpin for mycelium_transpile::batch::FileResult
+impl core::marker::UnsafeUnpin for mycelium_transpile::batch::FileResult
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::batch::FileResult
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::batch::FileResult
+pub struct mycelium_transpile::batch::FileSummary
+pub mycelium_transpile::batch::FileSummary::category_counts: alloc::collections::btree::map::BTreeMap<&'static str, usize>
+pub mycelium_transpile::batch::FileSummary::emitted: usize
+pub mycelium_transpile::batch::FileSummary::expressible_pct: f64
+pub mycelium_transpile::batch::FileSummary::file: alloc::string::String
+pub mycelium_transpile::batch::FileSummary::gaps: usize
+pub mycelium_transpile::batch::FileSummary::non_test_items: usize
+pub mycelium_transpile::batch::FileSummary::total_items: usize
+impl core::clone::Clone for mycelium_transpile::batch::FileSummary
+pub fn mycelium_transpile::batch::FileSummary::clone(&self) -> mycelium_transpile::batch::FileSummary
+impl core::fmt::Debug for mycelium_transpile::batch::FileSummary
+pub fn mycelium_transpile::batch::FileSummary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_transpile::batch::FileSummary
+pub fn mycelium_transpile::batch::FileSummary::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::batch::FileSummary
+impl core::marker::Send for mycelium_transpile::batch::FileSummary
+impl core::marker::Sync for mycelium_transpile::batch::FileSummary
+impl core::marker::Unpin for mycelium_transpile::batch::FileSummary
+impl core::marker::UnsafeUnpin for mycelium_transpile::batch::FileSummary
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::batch::FileSummary
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::batch::FileSummary
+pub struct mycelium_transpile::batch::Totals
+pub mycelium_transpile::batch::Totals::category_counts: alloc::collections::btree::map::BTreeMap<&'static str, usize>
+pub mycelium_transpile::batch::Totals::emitted: usize
+pub mycelium_transpile::batch::Totals::expressible_pct: f64
+pub mycelium_transpile::batch::Totals::gaps: usize
+pub mycelium_transpile::batch::Totals::non_test_items: usize
+pub mycelium_transpile::batch::Totals::total_items: usize
+impl core::clone::Clone for mycelium_transpile::batch::Totals
+pub fn mycelium_transpile::batch::Totals::clone(&self) -> mycelium_transpile::batch::Totals
+impl core::fmt::Debug for mycelium_transpile::batch::Totals
+pub fn mycelium_transpile::batch::Totals::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_transpile::batch::Totals
+pub fn mycelium_transpile::batch::Totals::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::batch::Totals
+impl core::marker::Send for mycelium_transpile::batch::Totals
+impl core::marker::Sync for mycelium_transpile::batch::Totals
+impl core::marker::Unpin for mycelium_transpile::batch::Totals
+impl core::marker::UnsafeUnpin for mycelium_transpile::batch::Totals
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::batch::Totals
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::batch::Totals
+pub struct mycelium_transpile::batch::UnionGapReport
+pub mycelium_transpile::batch::UnionGapReport::category_counts: alloc::collections::btree::map::BTreeMap<&'static str, usize>
+pub mycelium_transpile::batch::UnionGapReport::gaps: alloc::vec::Vec<mycelium_transpile::gap::Gap>
+impl core::clone::Clone for mycelium_transpile::batch::UnionGapReport
+pub fn mycelium_transpile::batch::UnionGapReport::clone(&self) -> mycelium_transpile::batch::UnionGapReport
+impl core::fmt::Debug for mycelium_transpile::batch::UnionGapReport
+pub fn mycelium_transpile::batch::UnionGapReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_transpile::batch::UnionGapReport
+pub fn mycelium_transpile::batch::UnionGapReport::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::batch::UnionGapReport
+impl core::marker::Send for mycelium_transpile::batch::UnionGapReport
+impl core::marker::Sync for mycelium_transpile::batch::UnionGapReport
+impl core::marker::Unpin for mycelium_transpile::batch::UnionGapReport
+impl core::marker::UnsafeUnpin for mycelium_transpile::batch::UnionGapReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::batch::UnionGapReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::batch::UnionGapReport
+pub fn mycelium_transpile::batch::discover_rs_files(&std::path::Path) -> core::io::error::Result<alloc::vec::Vec<std::path::PathBuf>>
+pub fn mycelium_transpile::batch::summarize(&[mycelium_transpile::batch::FileResult]) -> (mycelium_transpile::batch::BatchSummary, mycelium_transpile::batch::UnionGapReport)
+pub fn mycelium_transpile::batch::transpile_batch(&[std::path::PathBuf]) -> (alloc::vec::Vec<mycelium_transpile::batch::FileResult>, alloc::vec::Vec<(std::path::PathBuf, alloc::string::String)>)
+pub mod mycelium_transpile::emit
+pub struct mycelium_transpile::emit::Emitted
+pub mycelium_transpile::emit::Emitted::myc: alloc::string::String
+pub mycelium_transpile::emit::Emitted::name: alloc::string::String
+pub mycelium_transpile::emit::Emitted::sub_gaps: alloc::vec::Vec<mycelium_transpile::gap::GapReason>
+impl core::marker::Freeze for mycelium_transpile::emit::Emitted
+impl core::marker::Send for mycelium_transpile::emit::Emitted
+impl core::marker::Sync for mycelium_transpile::emit::Emitted
+impl core::marker::Unpin for mycelium_transpile::emit::Emitted
+impl core::marker::UnsafeUnpin for mycelium_transpile::emit::Emitted
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::emit::Emitted
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::emit::Emitted
+pub fn mycelium_transpile::emit::doc_lines(&[syn::attr::Attribute]) -> alloc::vec::Vec<alloc::string::String>
+pub fn mycelium_transpile::emit::emit_block_as_expr(&syn::stmt::Block, core::option::Option<&str>) -> core::result::Result<alloc::string::String, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::emit::emit_enum(&syn::item::ItemEnum) -> core::result::Result<mycelium_transpile::emit::Emitted, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::emit::emit_expr(&syn::expr::Expr, core::option::Option<&str>) -> core::result::Result<alloc::string::String, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::emit::emit_fn(&syn::item::ItemFn) -> core::result::Result<mycelium_transpile::emit::Emitted, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::emit::emit_impl(&syn::item::ItemImpl) -> core::result::Result<mycelium_transpile::emit::Emitted, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::emit::emit_struct(&syn::item::ItemStruct) -> core::result::Result<mycelium_transpile::emit::Emitted, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::emit::emit_trait(&syn::item::ItemTrait) -> core::result::Result<mycelium_transpile::emit::Emitted, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::emit::is_cfg_test(&[syn::attr::Attribute]) -> bool
+pub fn mycelium_transpile::emit::map_pattern(&syn::pat::Pat) -> core::result::Result<alloc::string::String, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::emit::non_doc_attrs(&[syn::attr::Attribute]) -> alloc::vec::Vec<alloc::string::String>
+pub mod mycelium_transpile::gap
+pub enum mycelium_transpile::gap::Category
+pub mycelium_transpile::gap::Category::AssocConst
+pub mycelium_transpile::gap::Category::Conversion
+pub mycelium_transpile::gap::Category::DeriveAttr
+pub mycelium_transpile::gap::Category::GenericBound
+pub mycelium_transpile::gap::Category::Impl
+pub mycelium_transpile::gap::Category::MacroDef
+pub mycelium_transpile::gap::Category::MacroInvocation
+pub mycelium_transpile::gap::Category::MultiStmtBody
+pub mycelium_transpile::gap::Category::Other
+pub mycelium_transpile::gap::Category::PayloadVariant
+pub mycelium_transpile::gap::Category::Struct
+pub mycelium_transpile::gap::Category::TestItem
+pub mycelium_transpile::gap::Category::Trait
+pub mycelium_transpile::gap::Category::WhereClause
+impl mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::clone(&self) -> mycelium_transpile::gap::Category
+impl core::cmp::Eq for mycelium_transpile::gap::Category
+impl core::cmp::Ord for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::cmp(&self, &mycelium_transpile::gap::Category) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::eq(&self, &mycelium_transpile::gap::Category) -> bool
+impl core::cmp::PartialOrd for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::partial_cmp(&self, &mycelium_transpile::gap::Category) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::gap::Category
+impl core::marker::StructuralPartialEq for mycelium_transpile::gap::Category
+impl serde_core::ser::Serialize for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::gap::Category
+impl core::marker::Send for mycelium_transpile::gap::Category
+impl core::marker::Sync for mycelium_transpile::gap::Category
+impl core::marker::Unpin for mycelium_transpile::gap::Category
+impl core::marker::UnsafeUnpin for mycelium_transpile::gap::Category
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::gap::Category
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::gap::Category
+pub struct mycelium_transpile::gap::Gap
+pub mycelium_transpile::gap::Gap::category: mycelium_transpile::gap::Category
+pub mycelium_transpile::gap::Gap::col: usize
+pub mycelium_transpile::gap::Gap::file: alloc::string::String
+pub mycelium_transpile::gap::Gap::item_name: core::option::Option<alloc::string::String>
+pub mycelium_transpile::gap::Gap::line: usize
+pub mycelium_transpile::gap::Gap::reason: alloc::string::String
+pub mycelium_transpile::gap::Gap::rust_construct: alloc::string::String
+pub mycelium_transpile::gap::Gap::snippet: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::gap::Gap
+pub fn mycelium_transpile::gap::Gap::clone(&self) -> mycelium_transpile::gap::Gap
+impl core::fmt::Debug for mycelium_transpile::gap::Gap
+pub fn mycelium_transpile::gap::Gap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_transpile::gap::Gap
+pub fn mycelium_transpile::gap::Gap::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::gap::Gap
+impl core::marker::Send for mycelium_transpile::gap::Gap
+impl core::marker::Sync for mycelium_transpile::gap::Gap
+impl core::marker::Unpin for mycelium_transpile::gap::Gap
+impl core::marker::UnsafeUnpin for mycelium_transpile::gap::Gap
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::gap::Gap
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::gap::Gap
+pub struct mycelium_transpile::gap::GapReason
+pub mycelium_transpile::gap::GapReason::category: mycelium_transpile::gap::Category
+pub mycelium_transpile::gap::GapReason::reason: alloc::string::String
+impl mycelium_transpile::gap::GapReason
+pub fn mycelium_transpile::gap::GapReason::new(mycelium_transpile::gap::Category, impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_transpile::gap::GapReason
+pub fn mycelium_transpile::gap::GapReason::clone(&self) -> mycelium_transpile::gap::GapReason
+impl core::fmt::Debug for mycelium_transpile::gap::GapReason
+pub fn mycelium_transpile::gap::GapReason::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_transpile::gap::GapReason
+impl core::marker::Send for mycelium_transpile::gap::GapReason
+impl core::marker::Sync for mycelium_transpile::gap::GapReason
+impl core::marker::Unpin for mycelium_transpile::gap::GapReason
+impl core::marker::UnsafeUnpin for mycelium_transpile::gap::GapReason
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::gap::GapReason
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::gap::GapReason
+pub struct mycelium_transpile::gap::GapReport
+pub mycelium_transpile::gap::GapReport::emitted_items: alloc::vec::Vec<alloc::string::String>
+pub mycelium_transpile::gap::GapReport::gaps: alloc::vec::Vec<mycelium_transpile::gap::Gap>
+pub mycelium_transpile::gap::GapReport::source: alloc::string::String
+pub mycelium_transpile::gap::GapReport::total_top_level_items: usize
+impl mycelium_transpile::gap::GapReport
+pub fn mycelium_transpile::gap::GapReport::category_counts(&self) -> alloc::collections::btree::map::BTreeMap<&'static str, usize>
+pub fn mycelium_transpile::gap::GapReport::expressible_fraction(&self) -> f64
+pub fn mycelium_transpile::gap::GapReport::non_test_item_count(&self) -> usize
+pub fn mycelium_transpile::gap::GapReport::test_item_count(&self) -> usize
+impl core::clone::Clone for mycelium_transpile::gap::GapReport
+pub fn mycelium_transpile::gap::GapReport::clone(&self) -> mycelium_transpile::gap::GapReport
+impl core::fmt::Debug for mycelium_transpile::gap::GapReport
+pub fn mycelium_transpile::gap::GapReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_transpile::gap::GapReport
+pub fn mycelium_transpile::gap::GapReport::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::gap::GapReport
+impl core::marker::Send for mycelium_transpile::gap::GapReport
+impl core::marker::Sync for mycelium_transpile::gap::GapReport
+impl core::marker::Unpin for mycelium_transpile::gap::GapReport
+impl core::marker::UnsafeUnpin for mycelium_transpile::gap::GapReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::gap::GapReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::gap::GapReport
+pub mod mycelium_transpile::map
+pub fn mycelium_transpile::map::map_type(&syn::ty::Type, core::option::Option<&str>) -> core::result::Result<alloc::string::String, mycelium_transpile::gap::GapReason>
+pub fn mycelium_transpile::map::tokens_to_string<T: quote::to_tokens::ToTokens>(&T) -> alloc::string::String
+pub mod mycelium_transpile::transpile
+pub fn mycelium_transpile::transpile::transpile_file(&std::path::Path) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>
+pub fn mycelium_transpile::transpile::transpile_source(&str, &str, &str) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>
+pub enum mycelium_transpile::Category
+pub mycelium_transpile::Category::AssocConst
+pub mycelium_transpile::Category::Conversion
+pub mycelium_transpile::Category::DeriveAttr
+pub mycelium_transpile::Category::GenericBound
+pub mycelium_transpile::Category::Impl
+pub mycelium_transpile::Category::MacroDef
+pub mycelium_transpile::Category::MacroInvocation
+pub mycelium_transpile::Category::MultiStmtBody
+pub mycelium_transpile::Category::Other
+pub mycelium_transpile::Category::PayloadVariant
+pub mycelium_transpile::Category::Struct
+pub mycelium_transpile::Category::TestItem
+pub mycelium_transpile::Category::Trait
+pub mycelium_transpile::Category::WhereClause
+impl mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::clone(&self) -> mycelium_transpile::gap::Category
+impl core::cmp::Eq for mycelium_transpile::gap::Category
+impl core::cmp::Ord for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::cmp(&self, &mycelium_transpile::gap::Category) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::eq(&self, &mycelium_transpile::gap::Category) -> bool
+impl core::cmp::PartialOrd for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::partial_cmp(&self, &mycelium_transpile::gap::Category) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_transpile::gap::Category
+impl core::marker::StructuralPartialEq for mycelium_transpile::gap::Category
+impl serde_core::ser::Serialize for mycelium_transpile::gap::Category
+pub fn mycelium_transpile::gap::Category::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::gap::Category
+impl core::marker::Send for mycelium_transpile::gap::Category
+impl core::marker::Sync for mycelium_transpile::gap::Category
+impl core::marker::Unpin for mycelium_transpile::gap::Category
+impl core::marker::UnsafeUnpin for mycelium_transpile::gap::Category
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::gap::Category
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::gap::Category
+pub struct mycelium_transpile::BatchSummary
+pub mycelium_transpile::BatchSummary::files: alloc::vec::Vec<mycelium_transpile::batch::FileSummary>
+pub mycelium_transpile::BatchSummary::totals: mycelium_transpile::batch::Totals
+impl core::clone::Clone for mycelium_transpile::batch::BatchSummary
+pub fn mycelium_transpile::batch::BatchSummary::clone(&self) -> mycelium_transpile::batch::BatchSummary
+impl core::fmt::Debug for mycelium_transpile::batch::BatchSummary
+pub fn mycelium_transpile::batch::BatchSummary::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_transpile::batch::BatchSummary
+pub fn mycelium_transpile::batch::BatchSummary::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::batch::BatchSummary
+impl core::marker::Send for mycelium_transpile::batch::BatchSummary
+impl core::marker::Sync for mycelium_transpile::batch::BatchSummary
+impl core::marker::Unpin for mycelium_transpile::batch::BatchSummary
+impl core::marker::UnsafeUnpin for mycelium_transpile::batch::BatchSummary
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::batch::BatchSummary
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::batch::BatchSummary
+pub struct mycelium_transpile::Gap
+pub mycelium_transpile::Gap::category: mycelium_transpile::gap::Category
+pub mycelium_transpile::Gap::col: usize
+pub mycelium_transpile::Gap::file: alloc::string::String
+pub mycelium_transpile::Gap::item_name: core::option::Option<alloc::string::String>
+pub mycelium_transpile::Gap::line: usize
+pub mycelium_transpile::Gap::reason: alloc::string::String
+pub mycelium_transpile::Gap::rust_construct: alloc::string::String
+pub mycelium_transpile::Gap::snippet: alloc::string::String
+impl core::clone::Clone for mycelium_transpile::gap::Gap
+pub fn mycelium_transpile::gap::Gap::clone(&self) -> mycelium_transpile::gap::Gap
+impl core::fmt::Debug for mycelium_transpile::gap::Gap
+pub fn mycelium_transpile::gap::Gap::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_transpile::gap::Gap
+pub fn mycelium_transpile::gap::Gap::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::gap::Gap
+impl core::marker::Send for mycelium_transpile::gap::Gap
+impl core::marker::Sync for mycelium_transpile::gap::Gap
+impl core::marker::Unpin for mycelium_transpile::gap::Gap
+impl core::marker::UnsafeUnpin for mycelium_transpile::gap::Gap
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::gap::Gap
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::gap::Gap
+pub struct mycelium_transpile::GapReport
+pub mycelium_transpile::GapReport::emitted_items: alloc::vec::Vec<alloc::string::String>
+pub mycelium_transpile::GapReport::gaps: alloc::vec::Vec<mycelium_transpile::gap::Gap>
+pub mycelium_transpile::GapReport::source: alloc::string::String
+pub mycelium_transpile::GapReport::total_top_level_items: usize
+impl mycelium_transpile::gap::GapReport
+pub fn mycelium_transpile::gap::GapReport::category_counts(&self) -> alloc::collections::btree::map::BTreeMap<&'static str, usize>
+pub fn mycelium_transpile::gap::GapReport::expressible_fraction(&self) -> f64
+pub fn mycelium_transpile::gap::GapReport::non_test_item_count(&self) -> usize
+pub fn mycelium_transpile::gap::GapReport::test_item_count(&self) -> usize
+impl core::clone::Clone for mycelium_transpile::gap::GapReport
+pub fn mycelium_transpile::gap::GapReport::clone(&self) -> mycelium_transpile::gap::GapReport
+impl core::fmt::Debug for mycelium_transpile::gap::GapReport
+pub fn mycelium_transpile::gap::GapReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_transpile::gap::GapReport
+pub fn mycelium_transpile::gap::GapReport::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::gap::GapReport
+impl core::marker::Send for mycelium_transpile::gap::GapReport
+impl core::marker::Sync for mycelium_transpile::gap::GapReport
+impl core::marker::Unpin for mycelium_transpile::gap::GapReport
+impl core::marker::UnsafeUnpin for mycelium_transpile::gap::GapReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::gap::GapReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::gap::GapReport
+pub struct mycelium_transpile::UnionGapReport
+pub mycelium_transpile::UnionGapReport::category_counts: alloc::collections::btree::map::BTreeMap<&'static str, usize>
+pub mycelium_transpile::UnionGapReport::gaps: alloc::vec::Vec<mycelium_transpile::gap::Gap>
+impl core::clone::Clone for mycelium_transpile::batch::UnionGapReport
+pub fn mycelium_transpile::batch::UnionGapReport::clone(&self) -> mycelium_transpile::batch::UnionGapReport
+impl core::fmt::Debug for mycelium_transpile::batch::UnionGapReport
+pub fn mycelium_transpile::batch::UnionGapReport::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl serde_core::ser::Serialize for mycelium_transpile::batch::UnionGapReport
+pub fn mycelium_transpile::batch::UnionGapReport::serialize<__S>(&self, __S) -> core::result::Result<<__S as serde_core::ser::Serializer>::Ok, <__S as serde_core::ser::Serializer>::Error> where __S: serde_core::ser::Serializer
+impl core::marker::Freeze for mycelium_transpile::batch::UnionGapReport
+impl core::marker::Send for mycelium_transpile::batch::UnionGapReport
+impl core::marker::Sync for mycelium_transpile::batch::UnionGapReport
+impl core::marker::Unpin for mycelium_transpile::batch::UnionGapReport
+impl core::marker::UnsafeUnpin for mycelium_transpile::batch::UnionGapReport
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_transpile::batch::UnionGapReport
+impl core::panic::unwind_safe::UnwindSafe for mycelium_transpile::batch::UnionGapReport
+pub fn mycelium_transpile::discover_rs_files(&std::path::Path) -> core::io::error::Result<alloc::vec::Vec<std::path::PathBuf>>
+pub fn mycelium_transpile::summarize(&[mycelium_transpile::batch::FileResult]) -> (mycelium_transpile::batch::BatchSummary, mycelium_transpile::batch::UnionGapReport)
+pub fn mycelium_transpile::transpile_batch(&[std::path::PathBuf]) -> (alloc::vec::Vec<mycelium_transpile::batch::FileResult>, alloc::vec::Vec<(std::path::PathBuf, alloc::string::String)>)
+pub fn mycelium_transpile::transpile_file(&std::path::Path) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>
+pub fn mycelium_transpile::transpile_source(&str, &str, &str) -> core::result::Result<(alloc::string::String, mycelium_transpile::gap::GapReport), alloc::string::String>

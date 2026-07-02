@@ -1,10 +1,10 @@
 pub mod mycelium_std_sys
 pub mod mycelium_std_sys::fs
-pub fn mycelium_std_sys::fs::create_dir_all(&std::path::Path) -> core::result::Result<(), std::io::error::Error>
+pub fn mycelium_std_sys::fs::create_dir_all(&std::path::Path) -> core::result::Result<(), core::io::error::Error>
 pub fn mycelium_std_sys::fs::exists(&std::path::Path) -> bool
-pub fn mycelium_std_sys::fs::read(&std::path::Path) -> core::result::Result<alloc::vec::Vec<u8>, std::io::error::Error>
-pub fn mycelium_std_sys::fs::remove_file(&std::path::Path) -> core::result::Result<(), std::io::error::Error>
-pub fn mycelium_std_sys::fs::write(&std::path::Path, &[u8]) -> core::result::Result<(), std::io::error::Error>
+pub fn mycelium_std_sys::fs::read(&std::path::Path) -> core::result::Result<alloc::vec::Vec<u8>, core::io::error::Error>
+pub fn mycelium_std_sys::fs::remove_file(&std::path::Path) -> core::result::Result<(), core::io::error::Error>
+pub fn mycelium_std_sys::fs::write(&std::path::Path, &[u8]) -> core::result::Result<(), core::io::error::Error>
 pub mod mycelium_std_sys::guarantee_matrix
 pub enum mycelium_std_sys::guarantee_matrix::Fallibility
 pub mycelium_std_sys::guarantee_matrix::Fallibility::Fallible
@@ -72,11 +72,11 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_std_sys::guarantee_matrix
 pub const mycelium_std_sys::guarantee_matrix::MATRIX: &[mycelium_std_sys::guarantee_matrix::MatrixRow]
 pub mod mycelium_std_sys::io
 pub enum mycelium_std_sys::io::ReadCappedError
-pub mycelium_std_sys::io::ReadCappedError::Io(std::io::error::Error)
+pub mycelium_std_sys::io::ReadCappedError::Io(core::io::error::Error)
 pub mycelium_std_sys::io::ReadCappedError::TooLarge
 pub mycelium_std_sys::io::ReadCappedError::TooLarge::cap: usize
-impl core::convert::From<std::io::error::Error> for mycelium_std_sys::io::ReadCappedError
-pub fn mycelium_std_sys::io::ReadCappedError::from(std::io::error::Error) -> Self
+impl core::convert::From<core::io::error::Error> for mycelium_std_sys::io::ReadCappedError
+pub fn mycelium_std_sys::io::ReadCappedError::from(core::io::error::Error) -> Self
 impl core::error::Error for mycelium_std_sys::io::ReadCappedError
 pub fn mycelium_std_sys::io::ReadCappedError::source(&self) -> core::option::Option<&(dyn core::error::Error + 'static)>
 impl core::fmt::Debug for mycelium_std_sys::io::ReadCappedError
@@ -90,12 +90,12 @@ impl core::marker::Unpin for mycelium_std_sys::io::ReadCappedError
 impl core::marker::UnsafeUnpin for mycelium_std_sys::io::ReadCappedError
 impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_std_sys::io::ReadCappedError
 impl !core::panic::unwind_safe::UnwindSafe for mycelium_std_sys::io::ReadCappedError
-pub fn mycelium_std_sys::io::flush_out() -> core::result::Result<(), std::io::error::Error>
-pub fn mycelium_std_sys::io::read_line() -> core::result::Result<alloc::string::String, std::io::error::Error>
-pub fn mycelium_std_sys::io::read_to_end() -> core::result::Result<alloc::vec::Vec<u8>, std::io::error::Error>
+pub fn mycelium_std_sys::io::flush_out() -> core::result::Result<(), core::io::error::Error>
+pub fn mycelium_std_sys::io::read_line() -> core::result::Result<alloc::string::String, core::io::error::Error>
+pub fn mycelium_std_sys::io::read_to_end() -> core::result::Result<alloc::vec::Vec<u8>, core::io::error::Error>
 pub fn mycelium_std_sys::io::read_to_end_capped(usize) -> core::result::Result<alloc::vec::Vec<u8>, mycelium_std_sys::io::ReadCappedError>
-pub fn mycelium_std_sys::io::write_err(&[u8]) -> core::result::Result<(), std::io::error::Error>
-pub fn mycelium_std_sys::io::write_out(&[u8]) -> core::result::Result<(), std::io::error::Error>
+pub fn mycelium_std_sys::io::write_err(&[u8]) -> core::result::Result<(), core::io::error::Error>
+pub fn mycelium_std_sys::io::write_out(&[u8]) -> core::result::Result<(), core::io::error::Error>
 pub mod mycelium_std_sys::math
 pub fn mycelium_std_sys::math::acos(f64) -> f64
 pub fn mycelium_std_sys::math::asin(f64) -> f64
