@@ -148,7 +148,11 @@ pub fn resonator_params_from_manifest(manifest: &ReconInfo) -> Result<ResonatorP
 ///
 /// `pub` for the same reason as [`resonator_params_from_manifest`]: the relocated RFC-0010
 /// selected-decode layer (`mycelium-vsa-decode`, M-971) reuses this payload resolver verbatim.
-pub fn hv_payload<'a, M: VsaModel>(model: &M, dim: u32, v: &'a Value) -> Result<&'a [f64], VsaError> {
+pub fn hv_payload<'a, M: VsaModel>(
+    model: &M,
+    dim: u32,
+    v: &'a Value,
+) -> Result<&'a [f64], VsaError> {
     match (v.repr(), v.payload()) {
         (
             mycelium_core::Repr::Vsa {

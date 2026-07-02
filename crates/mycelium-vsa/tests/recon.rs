@@ -13,7 +13,6 @@ use mycelium_core::{
 };
 use mycelium_vsa::{
     capacity, reconstruct_factors, reconstruct_role, CleanupMemory, MapI, StopReason, VsaError,
-    VsaModel,
 };
 
 const D: u32 = 2048; // ≥ requiredDim(2, 1e-2) — the record bundles two bound pairs
@@ -403,4 +402,3 @@ fn resonator_decode_refuses_out_of_regime() {
         Err(VsaError::OutsideEmpiricalProfile { .. })
     ));
 }
-
