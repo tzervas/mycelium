@@ -465,3 +465,269 @@ fn lex_trit_empty_literal_is_a_lex_error() {
     // `0t` in a larger source still errors before EOF (no glyph), rather than emitting an empty token.
     lex("fn f() => Ternary{1} = 0t").expect_err("trailing `0t` with no glyph must be a lex error");
 }
+
+// ── M-910/M-911: textual string literal `"…"` (kickoff `enb` Phase-I H1) ───────────────────────
+
+/// A string literal with no escapes lexes to a `StrLit` carrying its content verbatim; the empty
+/// literal `""` is legal (unlike `0b`/`0x`/`0t`, which require at least one digit/glyph — a string
+/// has no such minimum).
+#[test]
+fn lex_string_plain_content() {
+    assert_eq!(
+        toks("\"hello\""),
+        vec![Tok::StrLit("hello".to_owned()), Tok::Eof]
+    );
+    assert_eq!(toks("\"\""), vec![Tok::StrLit(String::new()), Tok::Eof]);
+    // Spaces and punctuation that aren't `"`/`\` pass through untouched.
+    assert_eq!(
+        toks("\"a b, c!\""),
+        vec![Tok::StrLit("a b, c!".to_owned()), Tok::Eof]
+    );
+}
+
+/// Every escape in the minimal set (`\n \t \\ \" \0 \r`) decodes to its target char, individually
+/// and combined in one literal (M-910's "explicit, minimal escape set").
+#[test]
+fn lex_string_escape_set_decodes() {
+    assert_eq!(
+        toks(r#""\n""#),
+        vec![Tok::StrLit("\n".to_owned()), Tok::Eof]
+    );
+    assert_eq!(
+        toks(r#""\t""#),
+        vec![Tok::StrLit("\t".to_owned()), Tok::Eof]
+    );
+    assert_eq!(
+        toks(r#""\\""#),
+        vec![Tok::StrLit("\\".to_owned()), Tok::Eof]
+    );
+    assert_eq!(
+        toks(r#""\"""#),
+        vec![Tok::StrLit("\"".to_owned()), Tok::Eof]
+    );
+    assert_eq!(
+        toks(r#""\0""#),
+        vec![Tok::StrLit("\0".to_owned()), Tok::Eof]
+    );
+    assert_eq!(
+        toks(r#""\r""#),
+        vec![Tok::StrLit("\r".to_owned()), Tok::Eof]
+    );
+    // Combined, interleaved with plain chars.
+    assert_eq!(
+        toks(r#""a\nb\tc\\d\"e\0f\rg""#),
+        vec![Tok::StrLit("a\nb\tc\\d\"e\0f\rg".to_owned()), Tok::Eof]
+    );
+}
+
+/// Never-silent (G2): an unknown escape (`\q`) is an explicit lex error naming the bad escape —
+/// never a silently-dropped backslash or a silently-literal `q`.
+#[test]
+fn lex_string_unknown_escape_is_a_lex_error() {
+    let err = lex(r#""\q""#).expect_err("`\\q` must be a lex error (not in the minimal set)");
+    assert!(
+        err.to_string().contains("unknown escape") && err.to_string().contains('q'),
+        "error must name the unknown escape: {err}"
+    );
+}
+
+/// Never-silent (G2): `\xNN` is deliberately NOT in the escape set (it would let a "textual"
+/// literal inject a non-UTF-8 byte) — it must be refused with the same unknown-escape diagnostic.
+#[test]
+fn lex_string_hex_escape_is_not_supported() {
+    lex(r#""\x41""#).expect_err("`\\x41` must be a lex error — \\xNN is not in the minimal set");
+}
+
+/// Never-silent (G2): a string literal with no closing `"` before EOF is an explicit lex error —
+/// never a silent truncation to whatever content was scanned.
+#[test]
+fn lex_string_unterminated_at_eof_is_a_lex_error() {
+    let err = lex("\"abc").expect_err("an unterminated string literal must be a lex error");
+    assert!(
+        err.to_string().contains("unterminated"),
+        "error must name the unterminated cause: {err}"
+    );
+}
+
+/// Never-silent (G2): a raw newline or carriage-return inside `"…"` is refused (never a silent
+/// multi-line literal) — the source must use `\n`/`\r` instead.
+#[test]
+fn lex_string_raw_newline_is_a_lex_error() {
+    let err =
+        lex("\"a\nb\"").expect_err("a raw newline inside a string literal must be a lex error");
+    assert!(
+        err.to_string().contains("unterminated"),
+        "error must name the unterminated (raw-newline) cause: {err}"
+    );
+    lex("\"a\rb\"").expect_err("a raw carriage-return inside a string literal must be a lex error");
+}
+
+/// Never-silent (G2): a trailing `\` immediately before EOF (no escape char to decode) is an
+/// explicit lex error, never a silently-dropped backslash.
+#[test]
+fn lex_string_trailing_backslash_at_eof_is_a_lex_error() {
+    let err = lex("\"abc\\").expect_err("a trailing `\\` before EOF must be a lex error");
+    assert!(
+        err.to_string().contains("unterminated"),
+        "error must name the unterminated (trailing-backslash) cause: {err}"
+    );
+}
+
+/// The scan stops exactly at the closing `"`, so subsequent source lexes as normal tokens — a
+/// string literal never over-consumes into the next token.
+#[test]
+fn lex_string_stops_at_closing_quote() {
+    assert_eq!(
+        toks("\"hi\" + 1"),
+        vec![
+            Tok::StrLit("hi".to_owned()),
+            Tok::Plus,
+            Tok::Int(1),
+            Tok::Eof
+        ]
+    );
+}
+
+/// **Property: the escape-encoding round-trip bound.** For every string built from a swept mix of
+/// plain printable-ASCII chars and every char in the minimal escape set (`\n \t \\ \" \0 \r`), at
+/// every length `0..=16`, re-escaping the content into its `"…"` surface form (mirroring
+/// `crate::ambient`'s `escape_string_literal`) and lexing it back recovers the EXACT original
+/// content — decode ∘ encode = identity over the whole escapable alphabet, not just a handful of
+/// examples (the `Empirical` confidence basis behind M-910/M-911's never-silent escape claim).
+#[test]
+fn prop_string_escape_round_trip_over_swept_content() {
+    // The escapable alphabet: every char the lexer can decode, in a fixed order so the sweep is
+    // deterministic (no `proptest` dependency in this crate — the established loop idiom, see
+    // `elab.rs`'s `prop_colony_value_is_its_last_hypha_for_any_leading_count`).
+    let alphabet: Vec<char> = vec![
+        'a', 'Z', '0', '9', ' ', ',', '!', '_', '\n', '\t', '\\', '"', '\0', '\r',
+    ];
+    fn escape_one(c: char) -> String {
+        match c {
+            '\\' => "\\\\".to_owned(),
+            '"' => "\\\"".to_owned(),
+            '\n' => "\\n".to_owned(),
+            '\t' => "\\t".to_owned(),
+            '\r' => "\\r".to_owned(),
+            '\0' => "\\0".to_owned(),
+            other => other.to_string(),
+        }
+    }
+    for len in 0usize..=16 {
+        // Build a length-`len` string cycling through the alphabet, offset by `len` so different
+        // lengths exercise different alignments against the alphabet.
+        let content: String = (0..len)
+            .map(|i| alphabet[(i + len) % alphabet.len()])
+            .collect();
+        let escaped: String = content.chars().map(escape_one).collect();
+        let src = format!("\"{escaped}\"");
+        let decoded = toks(&src);
+        assert_eq!(
+            decoded,
+            vec![Tok::StrLit(content.clone()), Tok::Eof],
+            "len={len}: decode(encode(content)) must equal content exactly"
+        );
+    }
+}
+
+// -------------------------------------------------------------------------
+// ADR-040 (M-897) — decimal float literals. The lexer is the never-silent
+// gate: form (digits `.` digits and/or an `e|E` exponent with >= 1 digit)
+// and binary64 finiteness are validated here; the token carries the source
+// text verbatim (the single text→f64 conversion is elaboration's).
+// -------------------------------------------------------------------------
+
+/// Valid float literals lex to a `FloatLit` carrying the source text verbatim: fractional,
+/// exponent-only, combined, signed-exponent, and uppercase-`E` forms.
+#[test]
+fn lex_float_valid_literals() {
+    for text in ["1.5", "0.0", "3.14159", "1e10", "2.5e-3", "1E+5", "10e0"] {
+        assert_eq!(
+            toks(text),
+            vec![Tok::FloatLit(text.to_owned()), Tok::Eof],
+            "float literal {text:?} must lex whole, text preserved verbatim"
+        );
+    }
+}
+
+/// The Int-disambiguation is structural (never a guess): a `.` NOT followed by a digit stays the
+/// path/field glyph, so `1.` is `Int(1)` + `Dot` — a float always has digits on both sides of its
+/// dot, and there is no leading-dot `.5` float form (`.` never starts a number).
+#[test]
+fn lex_float_trailing_dot_stays_int_then_dot() {
+    assert_eq!(toks("1."), vec![Tok::Int(1), Tok::Dot, Tok::Eof]);
+    // `1.e5` likewise: no digit after the dot, so the number ends at `1`.
+    assert_eq!(
+        toks("1.e5"),
+        vec![Tok::Int(1), Tok::Dot, Tok::Ident("e5".to_owned()), Tok::Eof]
+    );
+    // `.5` — a bare dot never opens a number.
+    assert_eq!(toks(".5"), vec![Tok::Dot, Tok::Int(5), Tok::Eof]);
+}
+
+/// A second dot ends the float: `1.5.5` is `FloatLit(1.5)` + `Dot` + `Int(5)` (the grammar has no
+/// double-fraction form; whatever follows is the parser's to refuse).
+#[test]
+fn lex_float_second_dot_ends_the_literal() {
+    assert_eq!(
+        toks("1.5.5"),
+        vec![
+            Tok::FloatLit("1.5".to_owned()),
+            Tok::Dot,
+            Tok::Int(5),
+            Tok::Eof
+        ]
+    );
+}
+
+/// Never-silent (G2): an exponent with no digits (`1e`, `1e+`, `2.5e-` — including a sign with
+/// nothing behind it, or a letter where digits must be) is an explicit lex error naming the cause.
+#[test]
+fn lex_float_exponent_without_digits_is_a_lex_error() {
+    for text in ["1e", "1e+", "1e-", "2.5e-", "1ex"] {
+        let err = lex(text).expect_err("an exponent with no digits must be a lex error");
+        assert!(
+            err.to_string().contains("exponent with no digits"),
+            "{text:?}: error must name the empty-exponent cause: {err}"
+        );
+    }
+}
+
+/// Never-silent (G2, ADR-040 §2.4): a literal whose correctly-rounded binary64 value is not
+/// finite (magnitude beyond ~1.8e308) is an explicit out-of-range lex error — a literal is a
+/// conversion boundary, so it never silently lands on ±inf (in-band IEEE specials arise only
+/// from arithmetic).
+#[test]
+fn lex_float_overflow_to_infinity_is_a_lex_error() {
+    for text in ["1e999", "1.8e308", "123456789e400"] {
+        let err = lex(text).expect_err("a literal rounding to +inf must be a lex error");
+        assert!(
+            err.to_string().contains("float literal out of range"),
+            "{text:?}: error must name the out-of-range cause: {err}"
+        );
+    }
+}
+
+/// Correct rounding (FLAG-3) makes tiny magnitudes legal, not errors: a literal below the
+/// smallest subnormal rounds to `0.0` (the nearest representable) — that IS the correctly-rounded
+/// binary64, so the lexer accepts it (finite), preserving the text for elaboration.
+#[test]
+fn lex_float_underflow_rounds_finite_and_lexes() {
+    assert_eq!(
+        toks("1e-999"),
+        vec![Tok::FloatLit("1e-999".to_owned()), Tok::Eof]
+    );
+}
+
+/// The base-prefixed literals are untouched by the float extension: `0b1`, `0x48`, `0t+-` still
+/// lex as their own token kinds (the `0` dispatch runs before the decimal-number scanner), and an
+/// integer followed by whitespace and an identifier stays two tokens.
+#[test]
+fn lex_float_does_not_disturb_neighbouring_forms() {
+    assert_eq!(toks("0b1"), vec![Tok::BinLit("1".to_owned()), Tok::Eof]);
+    assert_eq!(toks("0x48"), vec![Tok::BytesLit("48".to_owned()), Tok::Eof]);
+    assert_eq!(
+        toks("1 e10"),
+        vec![Tok::Int(1), Tok::Ident("e10".to_owned()), Tok::Eof]
+    );
+}

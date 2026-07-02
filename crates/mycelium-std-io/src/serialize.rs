@@ -94,6 +94,11 @@ fn check_json_representable(v: &Value) -> Result<(), SerError> {
         }
         // A byte string (RFC-0032 D4) carries no f64 — always JSON-representable here.
         Payload::Bytes(_) => return Ok(()),
+        // A scalar float (ADR-040; M-896) is always JSON-representable: its wire form is a
+        // *string* ("1.5"/"-0.0"/"inf"/"-inf"/"NaN" — mycelium-core `PayloadWire::Float`), so the
+        // in-band IEEE specials ride the wire faithfully; nothing to refuse here (unlike the
+        // number-array `Scalars`/`Hypervector` forms above).
+        Payload::Float(_) => return Ok(()),
     };
     if let Some(pos) = scalars.iter().position(|x| !x.is_finite()) {
         return Err(SerError::OutOfDomain {

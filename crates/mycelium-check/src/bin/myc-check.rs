@@ -210,6 +210,8 @@ fn render_type(t: &TypeRef) -> String {
         // RFC-0032 D3/D4 (M-749/M-750): `Seq{T, N}` / nullary `Bytes`.
         BaseType::Seq { elem, len } => format!("Seq{{{}, {len}}}", render_type(elem)),
         BaseType::Bytes => "Bytes".to_owned(),
+        // ADR-040 (M-897): the nullary scalar-float repr keyword (binary64 only — FLAG-1).
+        BaseType::Float => "Float".to_owned(),
         BaseType::Named(n, args) => {
             if args.is_empty() {
                 n.clone()

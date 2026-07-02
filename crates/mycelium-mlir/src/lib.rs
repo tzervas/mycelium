@@ -65,6 +65,8 @@ pub mod deploy;
 pub mod dense_codegen;
 pub mod dialect;
 pub mod inject;
+pub mod inject_cert;
+pub mod inject_gate;
 pub mod jit;
 pub mod llvm;
 pub mod mode;
@@ -117,6 +119,11 @@ pub use dialect::native::{
     Compiled as MlirCompiled, DialectError, MlirTools, ResultKind,
 };
 pub use inject::{recompile_closure, Image, InjectError, Resolution};
+pub use inject_cert::{signed_message, InjectCert};
+pub use inject_gate::{
+    declared_digest64, Admission, EnforcementGrain, InjectMode, InjectPolicy, PolicyDeviation,
+    PolicyError, PolicyManifest, SignatureScheme, SignerId, TestScheme, TrustRoot, VerifyRefusal,
+};
 pub use jit::{compile_so, jit_run, JitArtifact};
 pub use llvm::{compile, compile_and_run, emit_llvm_ir, AotError, CompiledArtifact};
 pub use mode::{run as run_mode, ExecMode, ModeError};

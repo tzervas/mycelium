@@ -2,4 +2,6 @@
 //! source module under test). New modules land here directly.
 
 mod cert_mode_test;
+mod guarantee_matrix;
 mod lib_tests;
+mod verdict;

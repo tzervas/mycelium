@@ -19,6 +19,7 @@ use mycelium_cert::{check, CheckVerdict, Evidence, RefinementRelation};
 use mycelium_core::{ContentHash, GuaranteeStrength, Meta, Node, Payload, Provenance, Repr, Value};
 use mycelium_interp::Interpreter;
 use mycelium_mlir::inject::{recompile_closure, Image, InjectError, Resolution};
+use mycelium_mlir::inject_gate::{Admission, InjectMode};
 use mycelium_mlir::AotError;
 use mycelium_numerics::Certificate;
 
@@ -46,21 +47,37 @@ fn toolchain_missing(e: &InjectError) -> bool {
     matches!(e, InjectError::Compile(AotError::ToolchainMissing(_)))
 }
 
+/// The default (loose, unsigned) resolutions on `Image::new()` — the M-961 I1 G2 tag.
+fn interpreted_loose_unsigned() -> Resolution {
+    Resolution::Interpreted {
+        inject_mode: InjectMode::Loose,
+        admission: Admission::Unsigned,
+    }
+}
+fn compiled_loose_unsigned() -> Resolution {
+    Resolution::Compiled {
+        inject_mode: InjectMode::Loose,
+        admission: Admission::Unsigned,
+    }
+}
+
 #[test]
 fn a_call_prefers_the_compiled_entry_else_interprets() {
     let mut img = Image::new();
     let prog = not_prog(vec![true, false, true, true]);
 
     // Defined-only → resolves to the interpreter.
-    let hash = img.define(prog.clone());
-    assert_eq!(img.resolve(&hash), Resolution::Interpreted);
+    let hash = img
+        .define(prog.clone())
+        .expect("loose image admits unsigned");
+    assert_eq!(img.resolve(&hash), interpreted_loose_unsigned());
     let interpreted = img.call(&hash).expect("interpreted call runs");
 
     // After injecting the same definition, the same hash now resolves to the compiled entry.
     match img.inject(&prog) {
         Ok(h) => {
             assert_eq!(h, hash, "injection key is the content hash");
-            assert_eq!(img.resolve(&hash), Resolution::Compiled);
+            assert_eq!(img.resolve(&hash), compiled_loose_unsigned());
             let compiled = img.call(&hash).expect("compiled call runs");
             // NFR-7: the compiled and interpreted observables agree, via the shared M-210 checker.
             assert_observably_equal(&interpreted, &compiled, "interp ≡ injected-compiled");
@@ -101,7 +118,7 @@ fn injecting_a_new_hash_never_disturbs_the_old_live_entry() {
     );
 
     // The old hash STILL dispatches to the old code and yields the old result (no live-entry mutation).
-    assert_eq!(img.resolve(&hash_old), Resolution::Compiled);
+    assert_eq!(img.resolve(&hash_old), compiled_loose_unsigned());
     let result_old_after = img.call(&hash_old).expect("old hash still callable");
     assert_eq!(
         result_old_before.payload(),

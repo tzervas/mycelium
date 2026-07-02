@@ -22,7 +22,7 @@ use core::fmt::Write as _;
 use crate::data::CtorRef;
 use crate::meta::PackScheme;
 use crate::node::{Alt, Node, VarId};
-use crate::repr::{Repr, ScalarKind, SparsityClass};
+use crate::repr::{FloatWidth, Repr, ScalarKind, SparsityClass};
 use crate::value::{Payload, Trit, Value};
 use crate::{GuaranteeStrength, PhysicalLayout};
 
@@ -54,10 +54,11 @@ pub fn schedule(repr: &Repr) -> Option<PhysicalLayout> {
         Repr::Vsa { sparsity, .. } => Some(PhysicalLayout::VsaStore {
             sparse: matches!(sparsity, SparsityClass::Sparse { .. }),
         }),
-        // No designed packing schedule for indexed sequences (RFC-0032 D3) or byte strings
-        // (RFC-0032 D4) in the fixed set yet — explicitly absent, never a silently-wrong scalar
+        // No designed packing schedule for indexed sequences (RFC-0032 D3), byte strings
+        // (RFC-0032 D4), or the scalar float (ADR-040/M-896 — layout scheduling is M-898+
+        // territory) in the fixed set yet — explicitly absent, never a silently-wrong scalar
         // layout.
-        Repr::Seq { .. } | Repr::Bytes => None,
+        Repr::Seq { .. } | Repr::Bytes | Repr::Float { .. } => None,
     }
 }
 
@@ -104,6 +105,11 @@ fn render_repr(repr: &Repr) -> String {
             format!("VSA{{{model}:{dim} {s}}}")
         }
         Repr::Seq { elem, len } => format!("Seq{{{}; {len}}}", render_repr(elem)),
+        // The frozen width registry has exactly F64 today (ADR-040 FLAG-1); render it by name so a
+        // future width renders distinctly by construction.
+        Repr::Float { width } => match width {
+            FloatWidth::F64 => "Float{F64}".to_owned(),
+        },
         Repr::Bytes => "Bytes".to_owned(),
     }
 }
@@ -127,6 +133,9 @@ fn render_payload(p: &Payload) -> String {
         }
         Payload::Scalars(xs) => format!("scalars={xs:?}"),
         Payload::Hypervector(xs) => format!("hv={xs:?}"),
+        // Shortest round-trip decimal (`{:?}`) — deterministic and diffable (SC-4); specials
+        // render in-band as `inf`/`-inf`/`NaN` (ADR-040 §2.4).
+        Payload::Float(x) => format!("float={x:?}"),
         Payload::Seq(elems) => {
             // Render each element by its repr+payload head, comma-joined inside brackets — diffable
             // and deterministic (SC-4), recursing through the same helpers.

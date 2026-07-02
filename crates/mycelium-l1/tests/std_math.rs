@@ -124,14 +124,14 @@ fn assert_op(label: &str, ret: &str, call: &str, ref_body: &str) {
 
 // ── Binary arithmetic (badd / bsub) at Binary{8} and Binary{16} ─────────────────────────────────────
 
-/// `badd(3, 5)` at Binary{8} → 8. Exact; ref recomputes via the same `add_bin` (Derived provenance).
+/// `badd(3, 5)` at Binary{8} → 8. Exact; ref recomputes via the same `add_u` (Derived provenance).
 #[test]
 fn badd_binary8() {
     assert_op(
         "badd8(3,5)",
         "Binary{8}",
         "badd(0b0000_0011, 0b0000_0101)",
-        "add_bin(0b0000_0011, 0b0000_0101)",
+        "add_u(0b0000_0011, 0b0000_0101)",
     );
 }
 
@@ -143,7 +143,7 @@ fn badd_binary16() {
         "badd16(256,1)",
         "Binary{16}",
         "badd(0b0000_0001_0000_0000, 0b0000_0000_0000_0001)",
-        "add_bin(0b0000_0001_0000_0000, 0b0000_0000_0000_0001)",
+        "add_u(0b0000_0001_0000_0000, 0b0000_0000_0000_0001)",
     );
 }
 
@@ -154,7 +154,7 @@ fn bsub_binary8() {
         "bsub8(5,3)",
         "Binary{8}",
         "bsub(0b0000_0101, 0b0000_0011)",
-        "sub_bin(0b0000_0101, 0b0000_0011)",
+        "sub_u(0b0000_0101, 0b0000_0011)",
     );
 }
 
@@ -165,7 +165,7 @@ fn bsub_binary16() {
         "bsub16(256,1)",
         "Binary{16}",
         "bsub(0b0000_0001_0000_0000, 0b0000_0000_0000_0001)",
-        "sub_bin(0b0000_0001_0000_0000, 0b0000_0000_0000_0001)",
+        "sub_u(0b0000_0001_0000_0000, 0b0000_0000_0000_0001)",
     );
 }
 

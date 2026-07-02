@@ -559,9 +559,12 @@ pub mod mycelium_mlir::dialect
 pub fn mycelium_mlir::dialect::emit(&mycelium_core::node::Node) -> alloc::string::String
 pub mod mycelium_mlir::inject
 pub enum mycelium_mlir::inject::InjectError
+pub mycelium_mlir::inject::InjectError::BadSignature(mycelium_core::id::ContentHash, mycelium_mlir::inject_gate::SignerId)
 pub mycelium_mlir::inject::InjectError::Compile(mycelium_mlir::llvm::AotError)
 pub mycelium_mlir::inject::InjectError::DispatchMiss(mycelium_core::id::ContentHash)
 pub mycelium_mlir::inject::InjectError::Interp(mycelium_interp::EvalError)
+pub mycelium_mlir::inject::InjectError::TrustRootImmutable
+pub mycelium_mlir::inject::InjectError::UnsignedCode(mycelium_core::id::ContentHash)
 impl core::clone::Clone for mycelium_mlir::inject::InjectError
 pub fn mycelium_mlir::inject::InjectError::clone(&self) -> mycelium_mlir::inject::InjectError
 impl core::cmp::PartialEq for mycelium_mlir::inject::InjectError
@@ -581,7 +584,11 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::InjectEr
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::InjectError
 pub enum mycelium_mlir::inject::Resolution
 pub mycelium_mlir::inject::Resolution::Compiled
+pub mycelium_mlir::inject::Resolution::Compiled::admission: mycelium_mlir::inject_gate::Admission
+pub mycelium_mlir::inject::Resolution::Compiled::inject_mode: mycelium_mlir::inject_gate::InjectMode
 pub mycelium_mlir::inject::Resolution::Interpreted
+pub mycelium_mlir::inject::Resolution::Interpreted::admission: mycelium_mlir::inject_gate::Admission
+pub mycelium_mlir::inject::Resolution::Interpreted::inject_mode: mycelium_mlir::inject_gate::InjectMode
 pub mycelium_mlir::inject::Resolution::Miss
 impl core::clone::Clone for mycelium_mlir::inject::Resolution
 pub fn mycelium_mlir::inject::Resolution::clone(&self) -> mycelium_mlir::inject::Resolution
@@ -590,7 +597,6 @@ impl core::cmp::PartialEq for mycelium_mlir::inject::Resolution
 pub fn mycelium_mlir::inject::Resolution::eq(&self, &mycelium_mlir::inject::Resolution) -> bool
 impl core::fmt::Debug for mycelium_mlir::inject::Resolution
 pub fn mycelium_mlir::inject::Resolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::Copy for mycelium_mlir::inject::Resolution
 impl core::marker::StructuralPartialEq for mycelium_mlir::inject::Resolution
 impl core::marker::Freeze for mycelium_mlir::inject::Resolution
 impl core::marker::Send for mycelium_mlir::inject::Resolution
@@ -602,16 +608,24 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::Resolution
 pub struct mycelium_mlir::inject::Image
 impl mycelium_mlir::inject::Image
 pub fn mycelium_mlir::inject::Image::call(&self, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::inject::InjectError>
-pub fn mycelium_mlir::inject::Image::define(&mut self, mycelium_core::node::Node) -> mycelium_core::id::ContentHash
+pub fn mycelium_mlir::inject::Image::define(&mut self, mycelium_core::node::Node) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_mlir::inject::InjectError>
+pub fn mycelium_mlir::inject::Image::define_signed(&mut self, mycelium_core::node::Node, &mycelium_mlir::inject_cert::InjectCert) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_mlir::inject::InjectError>
 pub fn mycelium_mlir::inject::Image::defined_count(&self) -> usize
+pub fn mycelium_mlir::inject::Image::explain_policy(&self) -> alloc::string::String
+pub fn mycelium_mlir::inject::Image::germinate(mycelium_interp::Interpreter, mycelium_mlir::inject_gate::InjectPolicy) -> Self
 pub fn mycelium_mlir::inject::Image::inject(&mut self, &mycelium_core::node::Node) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_mlir::inject::InjectError>
+pub fn mycelium_mlir::inject::Image::inject_mode(&self) -> mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject::Image::inject_signed(&mut self, &mycelium_core::node::Node, &mycelium_mlir::inject_cert::InjectCert) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_mlir::inject::InjectError>
 pub fn mycelium_mlir::inject::Image::injected_count(&self) -> usize
 pub fn mycelium_mlir::inject::Image::is_injected(&self, &mycelium_core::id::ContentHash) -> bool
 pub fn mycelium_mlir::inject::Image::new() -> Self
+pub fn mycelium_mlir::inject::Image::policy_manifest(&self) -> mycelium_mlir::inject_gate::PolicyManifest
 pub fn mycelium_mlir::inject::Image::resolve(&self, &mycelium_core::id::ContentHash) -> mycelium_mlir::inject::Resolution
+pub fn mycelium_mlir::inject::Image::set_trust_root(&mut self, mycelium_mlir::inject_gate::TrustRoot) -> core::result::Result<(), mycelium_mlir::inject::InjectError>
+pub fn mycelium_mlir::inject::Image::trust_root(&self) -> &mycelium_mlir::inject_gate::TrustRoot
 pub fn mycelium_mlir::inject::Image::with_interpreter(mycelium_interp::Interpreter) -> Self
 impl core::default::Default for mycelium_mlir::inject::Image
-pub fn mycelium_mlir::inject::Image::default() -> mycelium_mlir::inject::Image
+pub fn mycelium_mlir::inject::Image::default() -> Self
 impl core::marker::Freeze for mycelium_mlir::inject::Image
 impl core::marker::Send for mycelium_mlir::inject::Image
 impl core::marker::Sync for mycelium_mlir::inject::Image
@@ -620,6 +634,279 @@ impl core::marker::UnsafeUnpin for mycelium_mlir::inject::Image
 impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::Image
 impl !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::Image
 pub fn mycelium_mlir::inject::recompile_closure(&std::collections::hash::map::HashMap<mycelium_core::id::ContentHash, alloc::vec::Vec<mycelium_core::id::ContentHash>>, &[mycelium_core::id::ContentHash]) -> std::collections::hash::set::HashSet<mycelium_core::id::ContentHash>
+pub mod mycelium_mlir::inject_cert
+pub struct mycelium_mlir::inject_cert::InjectCert
+impl mycelium_mlir::inject_cert::InjectCert
+pub fn mycelium_mlir::inject_cert::InjectCert::content_hash(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_mlir::inject_cert::InjectCert::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::inject_cert::InjectCert::from_parts(mycelium_mlir::inject_gate::SignerId, mycelium_core::id::ContentHash, alloc::vec::Vec<u8>, mycelium_mlir::vr4::CrossBackendGate, u64) -> Self
+pub fn mycelium_mlir::inject_cert::InjectCert::issue_with_test_scheme(mycelium_mlir::inject_gate::SignerId, mycelium_core::id::ContentHash, mycelium_mlir::vr4::CrossBackendGate, u64) -> Self
+pub fn mycelium_mlir::inject_cert::InjectCert::issued_at(&self) -> u64
+pub fn mycelium_mlir::inject_cert::InjectCert::signature(&self) -> &[u8]
+pub fn mycelium_mlir::inject_cert::InjectCert::signer(&self) -> &mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_cert::InjectCert::vr4(&self) -> &mycelium_mlir::vr4::CrossBackendGate
+impl core::clone::Clone for mycelium_mlir::inject_cert::InjectCert
+pub fn mycelium_mlir::inject_cert::InjectCert::clone(&self) -> mycelium_mlir::inject_cert::InjectCert
+impl core::fmt::Debug for mycelium_mlir::inject_cert::InjectCert
+pub fn mycelium_mlir::inject_cert::InjectCert::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::inject_cert::InjectCert
+impl core::marker::Send for mycelium_mlir::inject_cert::InjectCert
+impl core::marker::Sync for mycelium_mlir::inject_cert::InjectCert
+impl core::marker::Unpin for mycelium_mlir::inject_cert::InjectCert
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_cert::InjectCert
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_cert::InjectCert
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_cert::InjectCert
+pub fn mycelium_mlir::inject_cert::signed_message(&mycelium_core::id::ContentHash, &mycelium_mlir::vr4::CrossBackendGate) -> alloc::vec::Vec<u8>
+pub mod mycelium_mlir::inject_gate
+pub enum mycelium_mlir::inject_gate::Admission
+pub mycelium_mlir::inject_gate::Admission::Unsigned
+pub mycelium_mlir::inject_gate::Admission::Verified
+pub mycelium_mlir::inject_gate::Admission::Verified::signer: mycelium_mlir::inject_gate::SignerId
+impl core::clone::Clone for mycelium_mlir::inject_gate::Admission
+pub fn mycelium_mlir::inject_gate::Admission::clone(&self) -> mycelium_mlir::inject_gate::Admission
+impl core::cmp::Eq for mycelium_mlir::inject_gate::Admission
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::Admission
+pub fn mycelium_mlir::inject_gate::Admission::eq(&self, &mycelium_mlir::inject_gate::Admission) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject_gate::Admission
+pub fn mycelium_mlir::inject_gate::Admission::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::Admission
+pub fn mycelium_mlir::inject_gate::Admission::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::Admission
+impl core::marker::Freeze for mycelium_mlir::inject_gate::Admission
+impl core::marker::Send for mycelium_mlir::inject_gate::Admission
+impl core::marker::Sync for mycelium_mlir::inject_gate::Admission
+impl core::marker::Unpin for mycelium_mlir::inject_gate::Admission
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::Admission
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::Admission
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::Admission
+pub enum mycelium_mlir::inject_gate::EnforcementGrain
+pub mycelium_mlir::inject_gate::EnforcementGrain::Call
+pub mycelium_mlir::inject_gate::EnforcementGrain::Module
+pub mycelium_mlir::inject_gate::EnforcementGrain::Whole
+impl mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::EnforcementGrain::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::EnforcementGrain::clone(&self) -> mycelium_mlir::inject_gate::EnforcementGrain
+impl core::cmp::Eq for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::EnforcementGrain::eq(&self, &mycelium_mlir::inject_gate::EnforcementGrain) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::EnforcementGrain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::EnforcementGrain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::Freeze for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::Send for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::Sync for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::Unpin for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::EnforcementGrain
+pub enum mycelium_mlir::inject_gate::InjectMode
+pub mycelium_mlir::inject_gate::InjectMode::Inoculated
+pub mycelium_mlir::inject_gate::InjectMode::Loose
+impl mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectMode::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectMode::clone(&self) -> mycelium_mlir::inject_gate::InjectMode
+impl core::cmp::Eq for mycelium_mlir::inject_gate::InjectMode
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectMode::eq(&self, &mycelium_mlir::inject_gate::InjectMode) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::Freeze for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::Send for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::Sync for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::Unpin for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::InjectMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::InjectMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::InjectMode
+pub enum mycelium_mlir::inject_gate::PolicyError
+pub mycelium_mlir::inject_gate::PolicyError::EmptyTrustRoot
+pub mycelium_mlir::inject_gate::PolicyError::GrainNotYetEnforced(mycelium_mlir::inject_gate::EnforcementGrain)
+impl core::clone::Clone for mycelium_mlir::inject_gate::PolicyError
+pub fn mycelium_mlir::inject_gate::PolicyError::clone(&self) -> mycelium_mlir::inject_gate::PolicyError
+impl core::cmp::Eq for mycelium_mlir::inject_gate::PolicyError
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::PolicyError
+pub fn mycelium_mlir::inject_gate::PolicyError::eq(&self, &mycelium_mlir::inject_gate::PolicyError) -> bool
+impl core::error::Error for mycelium_mlir::inject_gate::PolicyError
+impl core::fmt::Debug for mycelium_mlir::inject_gate::PolicyError
+pub fn mycelium_mlir::inject_gate::PolicyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::PolicyError
+pub fn mycelium_mlir::inject_gate::PolicyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::PolicyError
+impl core::marker::Freeze for mycelium_mlir::inject_gate::PolicyError
+impl core::marker::Send for mycelium_mlir::inject_gate::PolicyError
+impl core::marker::Sync for mycelium_mlir::inject_gate::PolicyError
+impl core::marker::Unpin for mycelium_mlir::inject_gate::PolicyError
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::PolicyError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::PolicyError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::PolicyError
+pub enum mycelium_mlir::inject_gate::VerifyRefusal
+pub mycelium_mlir::inject_gate::VerifyRefusal::SignatureMismatch(mycelium_mlir::inject_gate::SignerId)
+pub mycelium_mlir::inject_gate::VerifyRefusal::UntrustedSigner(mycelium_mlir::inject_gate::SignerId)
+impl core::clone::Clone for mycelium_mlir::inject_gate::VerifyRefusal
+pub fn mycelium_mlir::inject_gate::VerifyRefusal::clone(&self) -> mycelium_mlir::inject_gate::VerifyRefusal
+impl core::cmp::Eq for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::VerifyRefusal
+pub fn mycelium_mlir::inject_gate::VerifyRefusal::eq(&self, &mycelium_mlir::inject_gate::VerifyRefusal) -> bool
+impl core::error::Error for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::fmt::Debug for mycelium_mlir::inject_gate::VerifyRefusal
+pub fn mycelium_mlir::inject_gate::VerifyRefusal::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::VerifyRefusal
+pub fn mycelium_mlir::inject_gate::VerifyRefusal::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::marker::Freeze for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::marker::Send for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::marker::Sync for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::marker::Unpin for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::VerifyRefusal
+pub struct mycelium_mlir::inject_gate::InjectPolicy
+impl mycelium_mlir::inject_gate::InjectPolicy
+pub fn mycelium_mlir::inject_gate::InjectPolicy::germinate(mycelium_mlir::inject_gate::InjectMode, mycelium_mlir::inject_gate::EnforcementGrain, mycelium_mlir::inject_gate::TrustRoot, alloc::boxed::Box<dyn mycelium_mlir::inject_gate::SignatureScheme>) -> core::result::Result<Self, mycelium_mlir::inject_gate::PolicyError>
+pub fn mycelium_mlir::inject_gate::InjectPolicy::grain(&self) -> mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::InjectPolicy::loose() -> Self
+pub fn mycelium_mlir::inject_gate::InjectPolicy::mode(&self) -> mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectPolicy::scheme_name(&self) -> &'static str
+pub fn mycelium_mlir::inject_gate::InjectPolicy::trust_root(&self) -> &mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::InjectPolicy::verify(&self, &mycelium_mlir::inject_gate::SignerId, &[u8], &[u8]) -> core::result::Result<(), mycelium_mlir::inject_gate::VerifyRefusal>
+impl core::fmt::Debug for mycelium_mlir::inject_gate::InjectPolicy
+pub fn mycelium_mlir::inject_gate::InjectPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::inject_gate::InjectPolicy
+impl core::marker::Send for mycelium_mlir::inject_gate::InjectPolicy
+impl core::marker::Sync for mycelium_mlir::inject_gate::InjectPolicy
+impl core::marker::Unpin for mycelium_mlir::inject_gate::InjectPolicy
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::InjectPolicy
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::InjectPolicy
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::InjectPolicy
+pub struct mycelium_mlir::inject_gate::PolicyDeviation
+pub mycelium_mlir::inject_gate::PolicyDeviation::posture: alloc::string::String
+pub mycelium_mlir::inject_gate::PolicyDeviation::site: alloc::string::String
+pub mycelium_mlir::inject_gate::PolicyDeviation::why: alloc::string::String
+impl core::clone::Clone for mycelium_mlir::inject_gate::PolicyDeviation
+pub fn mycelium_mlir::inject_gate::PolicyDeviation::clone(&self) -> mycelium_mlir::inject_gate::PolicyDeviation
+impl core::cmp::Eq for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::PolicyDeviation
+pub fn mycelium_mlir::inject_gate::PolicyDeviation::eq(&self, &mycelium_mlir::inject_gate::PolicyDeviation) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject_gate::PolicyDeviation
+pub fn mycelium_mlir::inject_gate::PolicyDeviation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::marker::Freeze for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::marker::Send for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::marker::Sync for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::marker::Unpin for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::PolicyDeviation
+pub struct mycelium_mlir::inject_gate::PolicyManifest
+pub mycelium_mlir::inject_gate::PolicyManifest::deviations: alloc::vec::Vec<mycelium_mlir::inject_gate::PolicyDeviation>
+pub mycelium_mlir::inject_gate::PolicyManifest::grain: mycelium_mlir::inject_gate::EnforcementGrain
+pub mycelium_mlir::inject_gate::PolicyManifest::mode: mycelium_mlir::inject_gate::InjectMode
+pub mycelium_mlir::inject_gate::PolicyManifest::scheme: alloc::string::String
+pub mycelium_mlir::inject_gate::PolicyManifest::trusted_signers: alloc::vec::Vec<mycelium_mlir::inject_gate::SignerId>
+impl mycelium_mlir::inject_gate::PolicyManifest
+pub fn mycelium_mlir::inject_gate::PolicyManifest::explain(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_mlir::inject_gate::PolicyManifest
+pub fn mycelium_mlir::inject_gate::PolicyManifest::clone(&self) -> mycelium_mlir::inject_gate::PolicyManifest
+impl core::cmp::Eq for mycelium_mlir::inject_gate::PolicyManifest
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::PolicyManifest
+pub fn mycelium_mlir::inject_gate::PolicyManifest::eq(&self, &mycelium_mlir::inject_gate::PolicyManifest) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject_gate::PolicyManifest
+pub fn mycelium_mlir::inject_gate::PolicyManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::PolicyManifest
+impl core::marker::Freeze for mycelium_mlir::inject_gate::PolicyManifest
+impl core::marker::Send for mycelium_mlir::inject_gate::PolicyManifest
+impl core::marker::Sync for mycelium_mlir::inject_gate::PolicyManifest
+impl core::marker::Unpin for mycelium_mlir::inject_gate::PolicyManifest
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::PolicyManifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::PolicyManifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::PolicyManifest
+pub struct mycelium_mlir::inject_gate::SignerId(_)
+impl mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::as_str(&self) -> &str
+pub fn mycelium_mlir::inject_gate::SignerId::new(impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::clone(&self) -> mycelium_mlir::inject_gate::SignerId
+impl core::cmp::Eq for mycelium_mlir::inject_gate::SignerId
+impl core::cmp::Ord for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::cmp(&self, &mycelium_mlir::inject_gate::SignerId) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::eq(&self, &mycelium_mlir::inject_gate::SignerId) -> bool
+impl core::cmp::PartialOrd for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::partial_cmp(&self, &mycelium_mlir::inject_gate::SignerId) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::SignerId
+impl core::marker::Freeze for mycelium_mlir::inject_gate::SignerId
+impl core::marker::Send for mycelium_mlir::inject_gate::SignerId
+impl core::marker::Sync for mycelium_mlir::inject_gate::SignerId
+impl core::marker::Unpin for mycelium_mlir::inject_gate::SignerId
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::SignerId
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::SignerId
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::SignerId
+pub struct mycelium_mlir::inject_gate::TestScheme
+impl mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::sign(&self, &mycelium_mlir::inject_gate::SignerId, &[u8]) -> alloc::vec::Vec<u8>
+impl core::clone::Clone for mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::clone(&self) -> mycelium_mlir::inject_gate::TestScheme
+impl core::default::Default for mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::default() -> mycelium_mlir::inject_gate::TestScheme
+impl core::fmt::Debug for mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::inject_gate::TestScheme
+impl mycelium_mlir::inject_gate::SignatureScheme for mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::name(&self) -> &'static str
+pub fn mycelium_mlir::inject_gate::TestScheme::verify(&self, &mycelium_mlir::inject_gate::SignerId, &[u8], &[u8]) -> bool
+impl core::marker::Freeze for mycelium_mlir::inject_gate::TestScheme
+impl core::marker::Send for mycelium_mlir::inject_gate::TestScheme
+impl core::marker::Sync for mycelium_mlir::inject_gate::TestScheme
+impl core::marker::Unpin for mycelium_mlir::inject_gate::TestScheme
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::TestScheme
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::TestScheme
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::TestScheme
+pub struct mycelium_mlir::inject_gate::TrustRoot
+impl mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::TrustRoot::empty() -> Self
+pub fn mycelium_mlir::inject_gate::TrustRoot::is_empty(&self) -> bool
+pub fn mycelium_mlir::inject_gate::TrustRoot::len(&self) -> usize
+pub fn mycelium_mlir::inject_gate::TrustRoot::new(impl core::iter::traits::collect::IntoIterator<Item = mycelium_mlir::inject_gate::SignerId>) -> Self
+pub fn mycelium_mlir::inject_gate::TrustRoot::signers(&self) -> impl core::iter::traits::iterator::Iterator<Item = &mycelium_mlir::inject_gate::SignerId>
+pub fn mycelium_mlir::inject_gate::TrustRoot::trusts(&self, &mycelium_mlir::inject_gate::SignerId) -> bool
+impl core::clone::Clone for mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::TrustRoot::clone(&self) -> mycelium_mlir::inject_gate::TrustRoot
+impl core::cmp::Eq for mycelium_mlir::inject_gate::TrustRoot
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::TrustRoot::eq(&self, &mycelium_mlir::inject_gate::TrustRoot) -> bool
+impl core::default::Default for mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::TrustRoot::default() -> mycelium_mlir::inject_gate::TrustRoot
+impl core::fmt::Debug for mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::TrustRoot::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::TrustRoot
+impl core::marker::Freeze for mycelium_mlir::inject_gate::TrustRoot
+impl core::marker::Send for mycelium_mlir::inject_gate::TrustRoot
+impl core::marker::Sync for mycelium_mlir::inject_gate::TrustRoot
+impl core::marker::Unpin for mycelium_mlir::inject_gate::TrustRoot
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::TrustRoot
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::TrustRoot
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::TrustRoot
+pub trait mycelium_mlir::inject_gate::SignatureScheme: core::marker::Send + core::marker::Sync
+pub fn mycelium_mlir::inject_gate::SignatureScheme::name(&self) -> &'static str
+pub fn mycelium_mlir::inject_gate::SignatureScheme::verify(&self, &mycelium_mlir::inject_gate::SignerId, &[u8], &[u8]) -> bool
+impl mycelium_mlir::inject_gate::SignatureScheme for mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::name(&self) -> &'static str
+pub fn mycelium_mlir::inject_gate::TestScheme::verify(&self, &mycelium_mlir::inject_gate::SignerId, &[u8], &[u8]) -> bool
+pub fn mycelium_mlir::inject_gate::declared_digest64(&[u8]) -> [u8; 8]
 pub mod mycelium_mlir::jit
 pub struct mycelium_mlir::jit::JitArtifact
 impl mycelium_mlir::jit::JitArtifact
@@ -1518,6 +1805,27 @@ impl core::marker::Unpin for mycelium_mlir::accel::Path
 impl core::marker::UnsafeUnpin for mycelium_mlir::accel::Path
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::accel::Path
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::accel::Path
+pub enum mycelium_mlir::Admission
+pub mycelium_mlir::Admission::Unsigned
+pub mycelium_mlir::Admission::Verified
+pub mycelium_mlir::Admission::Verified::signer: mycelium_mlir::inject_gate::SignerId
+impl core::clone::Clone for mycelium_mlir::inject_gate::Admission
+pub fn mycelium_mlir::inject_gate::Admission::clone(&self) -> mycelium_mlir::inject_gate::Admission
+impl core::cmp::Eq for mycelium_mlir::inject_gate::Admission
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::Admission
+pub fn mycelium_mlir::inject_gate::Admission::eq(&self, &mycelium_mlir::inject_gate::Admission) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject_gate::Admission
+pub fn mycelium_mlir::inject_gate::Admission::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::Admission
+pub fn mycelium_mlir::inject_gate::Admission::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::Admission
+impl core::marker::Freeze for mycelium_mlir::inject_gate::Admission
+impl core::marker::Send for mycelium_mlir::inject_gate::Admission
+impl core::marker::Sync for mycelium_mlir::inject_gate::Admission
+impl core::marker::Unpin for mycelium_mlir::inject_gate::Admission
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::Admission
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::Admission
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::Admission
 pub enum mycelium_mlir::AotError
 pub mycelium_mlir::AotError::Compile(alloc::string::String)
 pub mycelium_mlir::AotError::DepthLimit(alloc::string::String)
@@ -1771,6 +2079,30 @@ impl core::marker::Unpin for mycelium_mlir::budget::DepthBasis
 impl core::marker::UnsafeUnpin for mycelium_mlir::budget::DepthBasis
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::budget::DepthBasis
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::DepthBasis
+pub enum mycelium_mlir::EnforcementGrain
+pub mycelium_mlir::EnforcementGrain::Call
+pub mycelium_mlir::EnforcementGrain::Module
+pub mycelium_mlir::EnforcementGrain::Whole
+impl mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::EnforcementGrain::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::EnforcementGrain::clone(&self) -> mycelium_mlir::inject_gate::EnforcementGrain
+impl core::cmp::Eq for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::EnforcementGrain::eq(&self, &mycelium_mlir::inject_gate::EnforcementGrain) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::EnforcementGrain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::EnforcementGrain::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::Freeze for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::Send for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::Sync for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::Unpin for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::EnforcementGrain
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::EnforcementGrain
 #[non_exhaustive] pub enum mycelium_mlir::ExecMode
 pub mycelium_mlir::ExecMode::Aot
 pub mycelium_mlir::ExecMode::Interpreter
@@ -1798,9 +2130,12 @@ impl core::marker::UnsafeUnpin for mycelium_mlir::mode::ExecMode
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::mode::ExecMode
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::mode::ExecMode
 pub enum mycelium_mlir::InjectError
+pub mycelium_mlir::InjectError::BadSignature(mycelium_core::id::ContentHash, mycelium_mlir::inject_gate::SignerId)
 pub mycelium_mlir::InjectError::Compile(mycelium_mlir::llvm::AotError)
 pub mycelium_mlir::InjectError::DispatchMiss(mycelium_core::id::ContentHash)
 pub mycelium_mlir::InjectError::Interp(mycelium_interp::EvalError)
+pub mycelium_mlir::InjectError::TrustRootImmutable
+pub mycelium_mlir::InjectError::UnsignedCode(mycelium_core::id::ContentHash)
 impl core::clone::Clone for mycelium_mlir::inject::InjectError
 pub fn mycelium_mlir::inject::InjectError::clone(&self) -> mycelium_mlir::inject::InjectError
 impl core::cmp::PartialEq for mycelium_mlir::inject::InjectError
@@ -1818,6 +2153,29 @@ impl core::marker::Unpin for mycelium_mlir::inject::InjectError
 impl core::marker::UnsafeUnpin for mycelium_mlir::inject::InjectError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::InjectError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::InjectError
+pub enum mycelium_mlir::InjectMode
+pub mycelium_mlir::InjectMode::Inoculated
+pub mycelium_mlir::InjectMode::Loose
+impl mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectMode::as_str(self) -> &'static str
+impl core::clone::Clone for mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectMode::clone(&self) -> mycelium_mlir::inject_gate::InjectMode
+impl core::cmp::Eq for mycelium_mlir::inject_gate::InjectMode
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectMode::eq(&self, &mycelium_mlir::inject_gate::InjectMode) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectMode::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::Freeze for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::Send for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::Sync for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::Unpin for mycelium_mlir::inject_gate::InjectMode
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::InjectMode
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::InjectMode
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::InjectMode
 pub enum mycelium_mlir::MemSource
 pub mycelium_mlir::MemSource::AddressSpaceRlimit
 pub mycelium_mlir::MemSource::MemAvailable
@@ -1858,6 +2216,27 @@ impl core::marker::Unpin for mycelium_mlir::mode::ModeError
 impl core::marker::UnsafeUnpin for mycelium_mlir::mode::ModeError
 impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::mode::ModeError
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::mode::ModeError
+pub enum mycelium_mlir::PolicyError
+pub mycelium_mlir::PolicyError::EmptyTrustRoot
+pub mycelium_mlir::PolicyError::GrainNotYetEnforced(mycelium_mlir::inject_gate::EnforcementGrain)
+impl core::clone::Clone for mycelium_mlir::inject_gate::PolicyError
+pub fn mycelium_mlir::inject_gate::PolicyError::clone(&self) -> mycelium_mlir::inject_gate::PolicyError
+impl core::cmp::Eq for mycelium_mlir::inject_gate::PolicyError
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::PolicyError
+pub fn mycelium_mlir::inject_gate::PolicyError::eq(&self, &mycelium_mlir::inject_gate::PolicyError) -> bool
+impl core::error::Error for mycelium_mlir::inject_gate::PolicyError
+impl core::fmt::Debug for mycelium_mlir::inject_gate::PolicyError
+pub fn mycelium_mlir::inject_gate::PolicyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::PolicyError
+pub fn mycelium_mlir::inject_gate::PolicyError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::PolicyError
+impl core::marker::Freeze for mycelium_mlir::inject_gate::PolicyError
+impl core::marker::Send for mycelium_mlir::inject_gate::PolicyError
+impl core::marker::Sync for mycelium_mlir::inject_gate::PolicyError
+impl core::marker::Unpin for mycelium_mlir::inject_gate::PolicyError
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::PolicyError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::PolicyError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::PolicyError
 pub enum mycelium_mlir::Poll<T, E>
 pub mycelium_mlir::Poll::Pending
 pub mycelium_mlir::Poll::Ready(mycelium_interp::supervise::TaskOutcome<T, E>)
@@ -1914,7 +2293,11 @@ impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::Reclaim
 impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::ReclaimError
 pub enum mycelium_mlir::Resolution
 pub mycelium_mlir::Resolution::Compiled
+pub mycelium_mlir::Resolution::Compiled::admission: mycelium_mlir::inject_gate::Admission
+pub mycelium_mlir::Resolution::Compiled::inject_mode: mycelium_mlir::inject_gate::InjectMode
 pub mycelium_mlir::Resolution::Interpreted
+pub mycelium_mlir::Resolution::Interpreted::admission: mycelium_mlir::inject_gate::Admission
+pub mycelium_mlir::Resolution::Interpreted::inject_mode: mycelium_mlir::inject_gate::InjectMode
 pub mycelium_mlir::Resolution::Miss
 impl core::clone::Clone for mycelium_mlir::inject::Resolution
 pub fn mycelium_mlir::inject::Resolution::clone(&self) -> mycelium_mlir::inject::Resolution
@@ -1923,7 +2306,6 @@ impl core::cmp::PartialEq for mycelium_mlir::inject::Resolution
 pub fn mycelium_mlir::inject::Resolution::eq(&self, &mycelium_mlir::inject::Resolution) -> bool
 impl core::fmt::Debug for mycelium_mlir::inject::Resolution
 pub fn mycelium_mlir::inject::Resolution::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
-impl core::marker::Copy for mycelium_mlir::inject::Resolution
 impl core::marker::StructuralPartialEq for mycelium_mlir::inject::Resolution
 impl core::marker::Freeze for mycelium_mlir::inject::Resolution
 impl core::marker::Send for mycelium_mlir::inject::Resolution
@@ -2049,6 +2431,27 @@ impl<V> core::marker::Unpin for mycelium_mlir::channel::TrySend<V> where V: core
 impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::TrySend<V> where V: core::marker::UnsafeUnpin
 impl<V> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::TrySend<V> where V: core::panic::unwind_safe::RefUnwindSafe
 impl<V> core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::TrySend<V> where V: core::panic::unwind_safe::UnwindSafe
+pub enum mycelium_mlir::VerifyRefusal
+pub mycelium_mlir::VerifyRefusal::SignatureMismatch(mycelium_mlir::inject_gate::SignerId)
+pub mycelium_mlir::VerifyRefusal::UntrustedSigner(mycelium_mlir::inject_gate::SignerId)
+impl core::clone::Clone for mycelium_mlir::inject_gate::VerifyRefusal
+pub fn mycelium_mlir::inject_gate::VerifyRefusal::clone(&self) -> mycelium_mlir::inject_gate::VerifyRefusal
+impl core::cmp::Eq for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::VerifyRefusal
+pub fn mycelium_mlir::inject_gate::VerifyRefusal::eq(&self, &mycelium_mlir::inject_gate::VerifyRefusal) -> bool
+impl core::error::Error for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::fmt::Debug for mycelium_mlir::inject_gate::VerifyRefusal
+pub fn mycelium_mlir::inject_gate::VerifyRefusal::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::VerifyRefusal
+pub fn mycelium_mlir::inject_gate::VerifyRefusal::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::marker::Freeze for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::marker::Send for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::marker::Sync for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::marker::Unpin for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::VerifyRefusal
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::VerifyRefusal
 pub enum mycelium_mlir::VsaAotError
 pub mycelium_mlir::VsaAotError::Compile(alloc::string::String)
 pub mycelium_mlir::VsaAotError::DegenerateBundleComponent
@@ -2373,16 +2776,24 @@ impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::budget::DepthResolu
 pub struct mycelium_mlir::Image
 impl mycelium_mlir::inject::Image
 pub fn mycelium_mlir::inject::Image::call(&self, &mycelium_core::id::ContentHash) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::inject::InjectError>
-pub fn mycelium_mlir::inject::Image::define(&mut self, mycelium_core::node::Node) -> mycelium_core::id::ContentHash
+pub fn mycelium_mlir::inject::Image::define(&mut self, mycelium_core::node::Node) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_mlir::inject::InjectError>
+pub fn mycelium_mlir::inject::Image::define_signed(&mut self, mycelium_core::node::Node, &mycelium_mlir::inject_cert::InjectCert) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_mlir::inject::InjectError>
 pub fn mycelium_mlir::inject::Image::defined_count(&self) -> usize
+pub fn mycelium_mlir::inject::Image::explain_policy(&self) -> alloc::string::String
+pub fn mycelium_mlir::inject::Image::germinate(mycelium_interp::Interpreter, mycelium_mlir::inject_gate::InjectPolicy) -> Self
 pub fn mycelium_mlir::inject::Image::inject(&mut self, &mycelium_core::node::Node) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_mlir::inject::InjectError>
+pub fn mycelium_mlir::inject::Image::inject_mode(&self) -> mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject::Image::inject_signed(&mut self, &mycelium_core::node::Node, &mycelium_mlir::inject_cert::InjectCert) -> core::result::Result<mycelium_core::id::ContentHash, mycelium_mlir::inject::InjectError>
 pub fn mycelium_mlir::inject::Image::injected_count(&self) -> usize
 pub fn mycelium_mlir::inject::Image::is_injected(&self, &mycelium_core::id::ContentHash) -> bool
 pub fn mycelium_mlir::inject::Image::new() -> Self
+pub fn mycelium_mlir::inject::Image::policy_manifest(&self) -> mycelium_mlir::inject_gate::PolicyManifest
 pub fn mycelium_mlir::inject::Image::resolve(&self, &mycelium_core::id::ContentHash) -> mycelium_mlir::inject::Resolution
+pub fn mycelium_mlir::inject::Image::set_trust_root(&mut self, mycelium_mlir::inject_gate::TrustRoot) -> core::result::Result<(), mycelium_mlir::inject::InjectError>
+pub fn mycelium_mlir::inject::Image::trust_root(&self) -> &mycelium_mlir::inject_gate::TrustRoot
 pub fn mycelium_mlir::inject::Image::with_interpreter(mycelium_interp::Interpreter) -> Self
 impl core::default::Default for mycelium_mlir::inject::Image
-pub fn mycelium_mlir::inject::Image::default() -> mycelium_mlir::inject::Image
+pub fn mycelium_mlir::inject::Image::default() -> Self
 impl core::marker::Freeze for mycelium_mlir::inject::Image
 impl core::marker::Send for mycelium_mlir::inject::Image
 impl core::marker::Sync for mycelium_mlir::inject::Image
@@ -2390,6 +2801,45 @@ impl core::marker::Unpin for mycelium_mlir::inject::Image
 impl core::marker::UnsafeUnpin for mycelium_mlir::inject::Image
 impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject::Image
 impl !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject::Image
+pub struct mycelium_mlir::InjectCert
+impl mycelium_mlir::inject_cert::InjectCert
+pub fn mycelium_mlir::inject_cert::InjectCert::content_hash(&self) -> &mycelium_core::id::ContentHash
+pub fn mycelium_mlir::inject_cert::InjectCert::explain(&self) -> alloc::string::String
+pub fn mycelium_mlir::inject_cert::InjectCert::from_parts(mycelium_mlir::inject_gate::SignerId, mycelium_core::id::ContentHash, alloc::vec::Vec<u8>, mycelium_mlir::vr4::CrossBackendGate, u64) -> Self
+pub fn mycelium_mlir::inject_cert::InjectCert::issue_with_test_scheme(mycelium_mlir::inject_gate::SignerId, mycelium_core::id::ContentHash, mycelium_mlir::vr4::CrossBackendGate, u64) -> Self
+pub fn mycelium_mlir::inject_cert::InjectCert::issued_at(&self) -> u64
+pub fn mycelium_mlir::inject_cert::InjectCert::signature(&self) -> &[u8]
+pub fn mycelium_mlir::inject_cert::InjectCert::signer(&self) -> &mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_cert::InjectCert::vr4(&self) -> &mycelium_mlir::vr4::CrossBackendGate
+impl core::clone::Clone for mycelium_mlir::inject_cert::InjectCert
+pub fn mycelium_mlir::inject_cert::InjectCert::clone(&self) -> mycelium_mlir::inject_cert::InjectCert
+impl core::fmt::Debug for mycelium_mlir::inject_cert::InjectCert
+pub fn mycelium_mlir::inject_cert::InjectCert::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::inject_cert::InjectCert
+impl core::marker::Send for mycelium_mlir::inject_cert::InjectCert
+impl core::marker::Sync for mycelium_mlir::inject_cert::InjectCert
+impl core::marker::Unpin for mycelium_mlir::inject_cert::InjectCert
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_cert::InjectCert
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_cert::InjectCert
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_cert::InjectCert
+pub struct mycelium_mlir::InjectPolicy
+impl mycelium_mlir::inject_gate::InjectPolicy
+pub fn mycelium_mlir::inject_gate::InjectPolicy::germinate(mycelium_mlir::inject_gate::InjectMode, mycelium_mlir::inject_gate::EnforcementGrain, mycelium_mlir::inject_gate::TrustRoot, alloc::boxed::Box<dyn mycelium_mlir::inject_gate::SignatureScheme>) -> core::result::Result<Self, mycelium_mlir::inject_gate::PolicyError>
+pub fn mycelium_mlir::inject_gate::InjectPolicy::grain(&self) -> mycelium_mlir::inject_gate::EnforcementGrain
+pub fn mycelium_mlir::inject_gate::InjectPolicy::loose() -> Self
+pub fn mycelium_mlir::inject_gate::InjectPolicy::mode(&self) -> mycelium_mlir::inject_gate::InjectMode
+pub fn mycelium_mlir::inject_gate::InjectPolicy::scheme_name(&self) -> &'static str
+pub fn mycelium_mlir::inject_gate::InjectPolicy::trust_root(&self) -> &mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::InjectPolicy::verify(&self, &mycelium_mlir::inject_gate::SignerId, &[u8], &[u8]) -> core::result::Result<(), mycelium_mlir::inject_gate::VerifyRefusal>
+impl core::fmt::Debug for mycelium_mlir::inject_gate::InjectPolicy
+pub fn mycelium_mlir::inject_gate::InjectPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for mycelium_mlir::inject_gate::InjectPolicy
+impl core::marker::Send for mycelium_mlir::inject_gate::InjectPolicy
+impl core::marker::Sync for mycelium_mlir::inject_gate::InjectPolicy
+impl core::marker::Unpin for mycelium_mlir::inject_gate::InjectPolicy
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::InjectPolicy
+impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::InjectPolicy
+impl !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::InjectPolicy
 pub struct mycelium_mlir::JitArtifact
 impl mycelium_mlir::jit::JitArtifact
 pub fn mycelium_mlir::jit::JitArtifact::call(&self) -> core::result::Result<mycelium_core::value::Value, mycelium_mlir::llvm::AotError>
@@ -2461,6 +2911,48 @@ impl core::marker::Unpin for mycelium_mlir::channel::Network
 impl core::marker::UnsafeUnpin for mycelium_mlir::channel::Network
 impl !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Network
 impl !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Network
+pub struct mycelium_mlir::PolicyDeviation
+pub mycelium_mlir::PolicyDeviation::posture: alloc::string::String
+pub mycelium_mlir::PolicyDeviation::site: alloc::string::String
+pub mycelium_mlir::PolicyDeviation::why: alloc::string::String
+impl core::clone::Clone for mycelium_mlir::inject_gate::PolicyDeviation
+pub fn mycelium_mlir::inject_gate::PolicyDeviation::clone(&self) -> mycelium_mlir::inject_gate::PolicyDeviation
+impl core::cmp::Eq for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::PolicyDeviation
+pub fn mycelium_mlir::inject_gate::PolicyDeviation::eq(&self, &mycelium_mlir::inject_gate::PolicyDeviation) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject_gate::PolicyDeviation
+pub fn mycelium_mlir::inject_gate::PolicyDeviation::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::marker::Freeze for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::marker::Send for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::marker::Sync for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::marker::Unpin for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::PolicyDeviation
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::PolicyDeviation
+pub struct mycelium_mlir::PolicyManifest
+pub mycelium_mlir::PolicyManifest::deviations: alloc::vec::Vec<mycelium_mlir::inject_gate::PolicyDeviation>
+pub mycelium_mlir::PolicyManifest::grain: mycelium_mlir::inject_gate::EnforcementGrain
+pub mycelium_mlir::PolicyManifest::mode: mycelium_mlir::inject_gate::InjectMode
+pub mycelium_mlir::PolicyManifest::scheme: alloc::string::String
+pub mycelium_mlir::PolicyManifest::trusted_signers: alloc::vec::Vec<mycelium_mlir::inject_gate::SignerId>
+impl mycelium_mlir::inject_gate::PolicyManifest
+pub fn mycelium_mlir::inject_gate::PolicyManifest::explain(&self) -> alloc::string::String
+impl core::clone::Clone for mycelium_mlir::inject_gate::PolicyManifest
+pub fn mycelium_mlir::inject_gate::PolicyManifest::clone(&self) -> mycelium_mlir::inject_gate::PolicyManifest
+impl core::cmp::Eq for mycelium_mlir::inject_gate::PolicyManifest
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::PolicyManifest
+pub fn mycelium_mlir::inject_gate::PolicyManifest::eq(&self, &mycelium_mlir::inject_gate::PolicyManifest) -> bool
+impl core::fmt::Debug for mycelium_mlir::inject_gate::PolicyManifest
+pub fn mycelium_mlir::inject_gate::PolicyManifest::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::PolicyManifest
+impl core::marker::Freeze for mycelium_mlir::inject_gate::PolicyManifest
+impl core::marker::Send for mycelium_mlir::inject_gate::PolicyManifest
+impl core::marker::Sync for mycelium_mlir::inject_gate::PolicyManifest
+impl core::marker::Unpin for mycelium_mlir::inject_gate::PolicyManifest
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::PolicyManifest
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::PolicyManifest
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::PolicyManifest
 pub struct mycelium_mlir::RcRun
 pub mycelium_mlir::RcRun::reclaimed: core::option::Option<usize>
 pub mycelium_mlir::RcRun::value: mycelium_core::datum::CoreValue
@@ -2532,6 +3024,33 @@ impl<V> core::marker::Unpin for mycelium_mlir::channel::Sender<V>
 impl<V> core::marker::UnsafeUnpin for mycelium_mlir::channel::Sender<V>
 impl<V> !core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::channel::Sender<V>
 impl<V> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::channel::Sender<V>
+pub struct mycelium_mlir::SignerId(_)
+impl mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::as_str(&self) -> &str
+pub fn mycelium_mlir::inject_gate::SignerId::new(impl core::convert::Into<alloc::string::String>) -> Self
+impl core::clone::Clone for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::clone(&self) -> mycelium_mlir::inject_gate::SignerId
+impl core::cmp::Eq for mycelium_mlir::inject_gate::SignerId
+impl core::cmp::Ord for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::cmp(&self, &mycelium_mlir::inject_gate::SignerId) -> core::cmp::Ordering
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::eq(&self, &mycelium_mlir::inject_gate::SignerId) -> bool
+impl core::cmp::PartialOrd for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::partial_cmp(&self, &mycelium_mlir::inject_gate::SignerId) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for mycelium_mlir::inject_gate::SignerId
+pub fn mycelium_mlir::inject_gate::SignerId::hash<__H: core::hash::Hasher>(&self, &mut __H)
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::SignerId
+impl core::marker::Freeze for mycelium_mlir::inject_gate::SignerId
+impl core::marker::Send for mycelium_mlir::inject_gate::SignerId
+impl core::marker::Sync for mycelium_mlir::inject_gate::SignerId
+impl core::marker::Unpin for mycelium_mlir::inject_gate::SignerId
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::SignerId
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::SignerId
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::SignerId
 pub struct mycelium_mlir::SpecializedDotKernel
 impl mycelium_mlir::specialize::SpecializedDotKernel
 pub fn mycelium_mlir::specialize::SpecializedDotKernel::bind(&self) -> core::result::Result<mycelium_mlir::specialize::BoundSpecializedDot<'_>, mycelium_mlir::llvm::AotError>
@@ -2595,6 +3114,51 @@ impl<'a> core::marker::Unpin for mycelium_mlir::runtime::TaskCtx<'a>
 impl<'a> core::marker::UnsafeUnpin for mycelium_mlir::runtime::TaskCtx<'a>
 impl<'a> core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::runtime::TaskCtx<'a>
 impl<'a> !core::panic::unwind_safe::UnwindSafe for mycelium_mlir::runtime::TaskCtx<'a>
+pub struct mycelium_mlir::TestScheme
+impl mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::sign(&self, &mycelium_mlir::inject_gate::SignerId, &[u8]) -> alloc::vec::Vec<u8>
+impl core::clone::Clone for mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::clone(&self) -> mycelium_mlir::inject_gate::TestScheme
+impl core::default::Default for mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::default() -> mycelium_mlir::inject_gate::TestScheme
+impl core::fmt::Debug for mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_mlir::inject_gate::TestScheme
+impl mycelium_mlir::inject_gate::SignatureScheme for mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::name(&self) -> &'static str
+pub fn mycelium_mlir::inject_gate::TestScheme::verify(&self, &mycelium_mlir::inject_gate::SignerId, &[u8], &[u8]) -> bool
+impl core::marker::Freeze for mycelium_mlir::inject_gate::TestScheme
+impl core::marker::Send for mycelium_mlir::inject_gate::TestScheme
+impl core::marker::Sync for mycelium_mlir::inject_gate::TestScheme
+impl core::marker::Unpin for mycelium_mlir::inject_gate::TestScheme
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::TestScheme
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::TestScheme
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::TestScheme
+pub struct mycelium_mlir::TrustRoot
+impl mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::TrustRoot::empty() -> Self
+pub fn mycelium_mlir::inject_gate::TrustRoot::is_empty(&self) -> bool
+pub fn mycelium_mlir::inject_gate::TrustRoot::len(&self) -> usize
+pub fn mycelium_mlir::inject_gate::TrustRoot::new(impl core::iter::traits::collect::IntoIterator<Item = mycelium_mlir::inject_gate::SignerId>) -> Self
+pub fn mycelium_mlir::inject_gate::TrustRoot::signers(&self) -> impl core::iter::traits::iterator::Iterator<Item = &mycelium_mlir::inject_gate::SignerId>
+pub fn mycelium_mlir::inject_gate::TrustRoot::trusts(&self, &mycelium_mlir::inject_gate::SignerId) -> bool
+impl core::clone::Clone for mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::TrustRoot::clone(&self) -> mycelium_mlir::inject_gate::TrustRoot
+impl core::cmp::Eq for mycelium_mlir::inject_gate::TrustRoot
+impl core::cmp::PartialEq for mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::TrustRoot::eq(&self, &mycelium_mlir::inject_gate::TrustRoot) -> bool
+impl core::default::Default for mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::TrustRoot::default() -> mycelium_mlir::inject_gate::TrustRoot
+impl core::fmt::Debug for mycelium_mlir::inject_gate::TrustRoot
+pub fn mycelium_mlir::inject_gate::TrustRoot::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_mlir::inject_gate::TrustRoot
+impl core::marker::Freeze for mycelium_mlir::inject_gate::TrustRoot
+impl core::marker::Send for mycelium_mlir::inject_gate::TrustRoot
+impl core::marker::Sync for mycelium_mlir::inject_gate::TrustRoot
+impl core::marker::Unpin for mycelium_mlir::inject_gate::TrustRoot
+impl core::marker::UnsafeUnpin for mycelium_mlir::inject_gate::TrustRoot
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_mlir::inject_gate::TrustRoot
+impl core::panic::unwind_safe::UnwindSafe for mycelium_mlir::inject_gate::TrustRoot
 pub struct mycelium_mlir::VsaArtifact
 impl mycelium_mlir::vsa_codegen::VsaArtifact
 pub fn mycelium_mlir::vsa_codegen::VsaArtifact::run(&self) -> core::result::Result<mycelium_mlir::vsa_codegen::VsaResult, mycelium_mlir::vsa_codegen::VsaAotError>
@@ -2668,6 +3232,12 @@ impl mycelium_mlir::budget::DepthBudget for mycelium_mlir::budget::AutoDepthBudg
 pub fn mycelium_mlir::budget::AutoDepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
 impl mycelium_mlir::budget::DepthBudget for mycelium_mlir::budget::StaticDepthBudget
 pub fn mycelium_mlir::budget::StaticDepthBudget::resolve(&self) -> mycelium_mlir::budget::DepthResolution
+pub trait mycelium_mlir::SignatureScheme: core::marker::Send + core::marker::Sync
+pub fn mycelium_mlir::SignatureScheme::name(&self) -> &'static str
+pub fn mycelium_mlir::SignatureScheme::verify(&self, &mycelium_mlir::inject_gate::SignerId, &[u8], &[u8]) -> bool
+impl mycelium_mlir::inject_gate::SignatureScheme for mycelium_mlir::inject_gate::TestScheme
+pub fn mycelium_mlir::inject_gate::TestScheme::name(&self) -> &'static str
+pub fn mycelium_mlir::inject_gate::TestScheme::verify(&self, &mycelium_mlir::inject_gate::SignerId, &[u8], &[u8]) -> bool
 pub trait mycelium_mlir::Task
 pub type mycelium_mlir::Task::Error
 pub type mycelium_mlir::Task::Output
@@ -2687,6 +3257,7 @@ pub fn mycelium_mlir::compile_so(&mycelium_core::node::Node) -> core::result::Re
 pub fn mycelium_mlir::compile_specialized_dot(&[mycelium_core::value::Trit]) -> core::result::Result<mycelium_mlir::specialize::SpecializedDotKernel, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::compile_with_swap_mode(&mycelium_core::node::Node, mycelium_mlir::swap_codegen::SwapCertMode) -> core::result::Result<mycelium_mlir::llvm::CompiledArtifact, mycelium_mlir::llvm::AotError>
 pub fn mycelium_mlir::cross_backend_gate(&mycelium_core::node::Node) -> mycelium_mlir::vr4::CrossBackendGate
+pub fn mycelium_mlir::declared_digest64(&[u8]) -> [u8; 8]
 pub fn mycelium_mlir::default_depth_budget() -> mycelium_mlir::budget::DepthResolution
 pub fn mycelium_mlir::dense_compile(&mycelium_mlir::dense_codegen::DenseProgram) -> core::result::Result<mycelium_mlir::dense_codegen::DenseArtifact, mycelium_mlir::dense_codegen::DenseAotError>
 pub fn mycelium_mlir::dense_compile_and_run(&mycelium_mlir::dense_codegen::DenseProgram) -> core::result::Result<mycelium_mlir::dense_codegen::DenseResult, mycelium_mlir::dense_codegen::DenseAotError>
@@ -2722,6 +3293,7 @@ pub fn mycelium_mlir::run_mode(mycelium_mlir::mode::ExecMode, &mycelium_core::no
 pub fn mycelium_mlir::run_reclaim(&mycelium_core::node::Node, &mycelium_core::node::Node, mycelium_interp::supervise::RestartIntensity, u64, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, u64, usize) -> core::result::Result<mycelium_mlir::runtime::ReclaimRun, mycelium_mlir::runtime::ReclaimError>
 pub fn mycelium_mlir::run_with_layout(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, mycelium_core::meta::PackScheme, mycelium_core::meta::PackScheme) -> core::result::Result<mycelium_core::value::Value, mycelium_interp::EvalError>
 pub fn mycelium_mlir::run_with_reclamation(&mycelium_core::node::Node, &mycelium_interp::prims::PrimRegistry, &dyn mycelium_interp::swap::SwapEngine, &mut dyn mycelium_rt_abi::reclamation::ReclamationSink) -> core::result::Result<mycelium_mlir::rc_plan::RcRun, mycelium_interp::EvalError>
+pub fn mycelium_mlir::signed_message(&mycelium_core::id::ContentHash, &mycelium_mlir::vr4::CrossBackendGate) -> alloc::vec::Vec<u8>
 pub fn mycelium_mlir::swap_legal_pair(u32, u32) -> bool
 pub fn mycelium_mlir::ternary_dot_ref(&[mycelium_core::value::Trit], &[i32]) -> i64
 pub fn mycelium_mlir::unpack_trits(&[u8], mycelium_core::meta::PackScheme, usize) -> core::result::Result<alloc::vec::Vec<mycelium_core::value::Trit>, mycelium_mlir::pack::PackError>

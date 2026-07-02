@@ -396,3 +396,193 @@ fn bytes_content_hash_distinguishes_and_collides() {
     .unwrap();
     assert_ne!(mk(vec![1]).content_hash(), as_binary.content_hash());
 }
+
+// --- ADR-040 (M-896): the scalar-float value form ------------------------------------------------
+
+use crate::repr::FloatWidth;
+use crate::value::CANONICAL_NAN_BITS;
+
+fn float_value(x: f64) -> Value {
+    Value::new(
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(x),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed float value")
+}
+
+fn float_bits(v: &Value) -> u64 {
+    v.float().expect("float payload").to_bits()
+}
+
+/// The deterministic edge corpus every float property is swept over (data-driven, fixture-first):
+/// zeros (both signs), ordinary values, extremes, subnormals, the exactness boundary 2^53, the
+/// in-band specials, and NaNs with non-canonical payload/sign bits (ADR-040 §2.3/§2.4).
+const FLOAT_EDGE_BITS: [u64; 16] = [
+    0x0000_0000_0000_0000, // +0.0
+    0x8000_0000_0000_0000, // -0.0
+    0x3ff8_0000_0000_0000, // 1.5
+    0xbff8_0000_0000_0000, // -1.5
+    0x7fef_ffff_ffff_ffff, // f64::MAX
+    0xffef_ffff_ffff_ffff, // f64::MIN
+    0x0010_0000_0000_0000, // f64::MIN_POSITIVE
+    0x0000_0000_0000_0001, // smallest subnormal
+    0x4340_0000_0000_0000, // 2^53 (the int-exactness boundary, ADR-040 §2.4)
+    0x7ff0_0000_0000_0000, // +inf
+    0xfff0_0000_0000_0000, // -inf
+    CANONICAL_NAN_BITS,    // the canonical quiet NaN
+    0x7ff8_0000_0000_0001, // quiet NaN, non-zero payload
+    0xfff8_0000_0000_0000, // quiet NaN, sign bit set
+    0x7ff0_0000_0000_0001, // signaling NaN
+    0xfff7_ffff_ffff_ffff, // signaling NaN, sign bit set, max payload
+];
+
+/// DN-20 case tiering for the LCG sweeps below: `PROPTEST_CASES` selects the count (LOW on the
+/// everyday `just check`, HIGH on `just check-full`); the property is never dropped, only its
+/// case count is tiered.
+fn sweep_cases() -> u64 {
+    std::env::var("PROPTEST_CASES")
+        .ok()
+        .and_then(|v| v.parse::<u64>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(64)
+}
+
+/// A tiny deterministic LCG over u64 bit patterns (the pre-M-654 idiom): mycelium-core carries no
+/// proptest dev-dep (kernel manifest kept minimal), so the property sweeps draw from this instead —
+/// same tiering (`PROPTEST_CASES`), fixed seed, fully reproducible.
+fn lcg_bits(seed: u64) -> impl Iterator<Item = u64> {
+    let mut s = seed;
+    std::iter::from_fn(move || {
+        s = s
+            .wrapping_mul(6_364_136_223_846_793_005)
+            .wrapping_add(1_442_695_040_888_963_407);
+        Some(s)
+    })
+}
+
+#[test]
+fn float_value_constructs_and_accessor_returns_it() {
+    let v = float_value(1.5);
+    assert_eq!(v.float(), Some(1.5));
+    // Never-silent accessor: a non-float value has no scalar here (G2).
+    let b = Value::new(
+        Repr::Binary { width: 1 },
+        Payload::Bits(vec![true]),
+        Meta::exact(Provenance::Root),
+    )
+    .expect("well-formed");
+    assert_eq!(b.float(), None);
+}
+
+#[test]
+fn float_payload_must_match_float_repr() {
+    // Wrong payload paradigm for Float → explicit rejection, never coerced (G2).
+    let bad = Value::new(
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Bits(vec![true]),
+        Meta::exact(Provenance::Root),
+    );
+    assert_eq!(bad.unwrap_err(), WfError::PayloadReprMismatch);
+    // And a Float payload under a non-Float repr is equally rejected.
+    let bad = Value::new(
+        Repr::Binary { width: 64 },
+        Payload::Float(1.0),
+        Meta::exact(Provenance::Root),
+    );
+    assert_eq!(bad.unwrap_err(), WfError::PayloadReprMismatch);
+}
+
+/// **Property (ADR-040 §2.3, `Empirical` over the corpus + sweep):** every NaN bit pattern —
+/// quiet/signaling, any payload, either sign — constructs to the single canonical quiet NaN;
+/// every non-NaN constructs bit-unchanged (including `-0.0` and subnormals).
+#[test]
+fn construction_canonicalizes_every_nan_and_only_nan() {
+    let sweep = FLOAT_EDGE_BITS
+        .into_iter()
+        .chain(lcg_bits(0x0ADF_0040).take(sweep_cases() as usize));
+    for bits in sweep {
+        let x = f64::from_bits(bits);
+        let got = float_bits(&float_value(x));
+        if x.is_nan() {
+            assert_eq!(
+                got, CANONICAL_NAN_BITS,
+                "NaN bits {bits:#018x} not canonical"
+            );
+        } else {
+            assert_eq!(got, bits, "non-NaN bits {bits:#018x} must pass unchanged");
+        }
+    }
+}
+
+/// The signed zeros stay bit-distinct through construction (ADR-040 §2.3: observably distinct
+/// values are never aliased), while `==` remains IEEE equality (`+0.0 == -0.0`) — the documented
+/// FLAG-4 seam.
+#[test]
+fn signed_zeros_distinct_bits_ieee_equal() {
+    let pos = float_value(0.0);
+    let neg = float_value(-0.0);
+    assert_ne!(float_bits(&pos), float_bits(&neg));
+    assert_eq!(pos, neg); // derived PartialEq == IEEE equality on the payload
+}
+
+/// Canonical NaN is IEEE-unequal to itself under `==` (the other half of the FLAG-4 seam);
+/// identity (content addressing) is tested in `tests/content.rs`.
+#[test]
+fn nan_value_is_ieee_unequal_to_itself() {
+    let n = float_value(f64::NAN);
+    assert_ne!(n, n.clone());
+}
+
+/// **Property (wire round-trip, `Empirical`; the finite-value exactness rides Rust's documented
+/// shortest-round-trip float formatting, `Declared`):** `deserialize(serialize(v)) == v` bit-for-bit
+/// over the edge corpus + sweep — `-0.0` keeps its sign, specials ride in-band as strings, NaN
+/// round-trips to the canonical NaN.
+#[test]
+fn float_wire_round_trip_is_bit_exact() {
+    let sweep = FLOAT_EDGE_BITS
+        .into_iter()
+        .chain(lcg_bits(0x0ADF_0041).take(sweep_cases() as usize));
+    for bits in sweep {
+        let v = float_value(f64::from_bits(bits));
+        let json = serde_json::to_string(&v).expect("serialize");
+        let back: Value = serde_json::from_str(&json).expect("deserialize");
+        assert_eq!(
+            float_bits(&back),
+            float_bits(&v),
+            "wire round-trip drifted for bits {bits:#018x}"
+        );
+    }
+}
+
+/// The wire payload is the externally-tagged string form `{"float":"…"}` — a string, not a JSON
+/// number, so the in-band specials (ADR-040 §2.4) are representable (a JSON number cannot carry
+/// NaN/±inf; `serde_json` would silently null them — G2).
+#[test]
+fn float_wire_form_is_a_tagged_string() {
+    let cases: [(f64, &str); 5] = [
+        (1.5, "1.5"),
+        (-0.0, "-0.0"),
+        (f64::INFINITY, "inf"),
+        (f64::NEG_INFINITY, "-inf"),
+        (f64::NAN, "NaN"),
+    ];
+    for (x, s) in cases {
+        let json = serde_json::to_value(float_value(x).payload()).expect("serialize");
+        assert_eq!(json, serde_json::json!({ "float": s }));
+    }
+}
+
+/// A malformed float string on the wire is rejected never-silently (G2), naming the offender.
+#[test]
+fn malformed_float_wire_string_is_rejected() {
+    for bad in ["", "1.5.5", "0x1p3", "float", "NaN payload"] {
+        let json = format!(r#"{{"float":{}}}"#, serde_json::json!(bad));
+        let got: Result<Payload, _> = serde_json::from_str(&json);
+        assert!(got.is_err(), "malformed float string {bad:?} was accepted");
+    }
+}

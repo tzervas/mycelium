@@ -1,0 +1,55 @@
+pub mod mycelium_vsa_decode
+pub use mycelium_vsa_decode::DecodeMethod
+pub use mycelium_vsa_decode::Explanation
+pub mod mycelium_vsa_decode::decode_select
+pub use mycelium_vsa_decode::decode_select::DecodeMethod
+pub use mycelium_vsa_decode::decode_select::Explanation
+pub struct mycelium_vsa_decode::decode_select::DecodeSelection
+pub mycelium_vsa_decode::decode_select::DecodeSelection::explanation: mycelium_select::Explanation
+pub mycelium_vsa_decode::decode_select::DecodeSelection::factors: alloc::vec::Vec<mycelium_vsa::cleanup::Match>
+pub mycelium_vsa_decode::decode_select::DecodeSelection::guarantee: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_vsa_decode::decode_select::DecodeSelection::method: mycelium_select::DecodeMethod
+pub mycelium_vsa_decode::decode_select::DecodeSelection::resonator_trace: core::option::Option<mycelium_vsa::resonator::ResonatorTrace>
+impl core::clone::Clone for mycelium_vsa_decode::decode_select::DecodeSelection
+pub fn mycelium_vsa_decode::decode_select::DecodeSelection::clone(&self) -> mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::cmp::PartialEq for mycelium_vsa_decode::decode_select::DecodeSelection
+pub fn mycelium_vsa_decode::decode_select::DecodeSelection::eq(&self, &mycelium_vsa_decode::decode_select::DecodeSelection) -> bool
+impl core::fmt::Debug for mycelium_vsa_decode::decode_select::DecodeSelection
+pub fn mycelium_vsa_decode::decode_select::DecodeSelection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::marker::Freeze for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::marker::Send for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::marker::Sync for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::marker::Unpin for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::marker::UnsafeUnpin for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa_decode::decode_select::DecodeSelection
+pub const mycelium_vsa_decode::decode_select::DEFAULT_ENUM_BUDGET: u128
+pub fn mycelium_vsa_decode::decode_select::decode_method_policy(u128) -> mycelium_select::SelectionPolicy
+pub fn mycelium_vsa_decode::decode_select::explain_decode_method<M: mycelium_vsa::VsaModel>(&M, &[usize], u32, u128) -> mycelium_select::Explanation
+pub fn mycelium_vsa_decode::decode_select::reconstruct_factors_auto<M: mycelium_vsa::VsaModel>(&M, &[f64], &[mycelium_vsa::cleanup::CleanupMemory], &mycelium_vsa::resonator::ResonatorParams, u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa_decode::decode_select::DecodeSelection, mycelium_vsa::VsaError>
+pub struct mycelium_vsa_decode::DecodeSelection
+pub mycelium_vsa_decode::DecodeSelection::explanation: mycelium_select::Explanation
+pub mycelium_vsa_decode::DecodeSelection::factors: alloc::vec::Vec<mycelium_vsa::cleanup::Match>
+pub mycelium_vsa_decode::DecodeSelection::guarantee: mycelium_core::guarantee::GuaranteeStrength
+pub mycelium_vsa_decode::DecodeSelection::method: mycelium_select::DecodeMethod
+pub mycelium_vsa_decode::DecodeSelection::resonator_trace: core::option::Option<mycelium_vsa::resonator::ResonatorTrace>
+impl core::clone::Clone for mycelium_vsa_decode::decode_select::DecodeSelection
+pub fn mycelium_vsa_decode::decode_select::DecodeSelection::clone(&self) -> mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::cmp::PartialEq for mycelium_vsa_decode::decode_select::DecodeSelection
+pub fn mycelium_vsa_decode::decode_select::DecodeSelection::eq(&self, &mycelium_vsa_decode::decode_select::DecodeSelection) -> bool
+impl core::fmt::Debug for mycelium_vsa_decode::decode_select::DecodeSelection
+pub fn mycelium_vsa_decode::decode_select::DecodeSelection::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::StructuralPartialEq for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::marker::Freeze for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::marker::Send for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::marker::Sync for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::marker::Unpin for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::marker::UnsafeUnpin for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_vsa_decode::decode_select::DecodeSelection
+impl core::panic::unwind_safe::UnwindSafe for mycelium_vsa_decode::decode_select::DecodeSelection
+pub const mycelium_vsa_decode::DEFAULT_ENUM_BUDGET: u128
+pub fn mycelium_vsa_decode::decode_method_policy(u128) -> mycelium_select::SelectionPolicy
+pub fn mycelium_vsa_decode::explain_decode_method<M: mycelium_vsa::VsaModel>(&M, &[usize], u32, u128) -> mycelium_select::Explanation
+pub fn mycelium_vsa_decode::reconstruct_factors_auto<M: mycelium_vsa::VsaModel>(&M, &[f64], &[mycelium_vsa::cleanup::CleanupMemory], &mycelium_vsa::resonator::ResonatorParams, u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa_decode::decode_select::DecodeSelection, mycelium_vsa::VsaError>
+pub fn mycelium_vsa_decode::reconstruct_factors_selected<M: mycelium_vsa::VsaModel>(&M, &mycelium_core::recon::ReconInfo, &mycelium_core::value::Value, &[mycelium_vsa::cleanup::CleanupMemory], u128, core::option::Option<mycelium_select::DecodeMethod>) -> core::result::Result<mycelium_vsa_decode::decode_select::DecodeSelection, mycelium_vsa::VsaError>

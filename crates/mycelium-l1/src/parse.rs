@@ -1545,6 +1545,12 @@ impl Parser {
                 self.bump();
                 Ok(BaseType::Bytes)
             }
+            // ADR-040 (M-897): `Float` — a nullary repr keyword like `Bytes` (binary64 only at
+            // introduction, FLAG-1; a later width extends the surface append-only).
+            Tok::Float => {
+                self.bump();
+                Ok(BaseType::Float)
+            }
             Tok::Ident(s) => {
                 self.bump();
                 let args = self.parse_type_args_opt()?;
@@ -2026,9 +2032,13 @@ impl Parser {
                     Ok(Pattern::Ident(s))
                 }
             }
-            Tok::BinLit(_) | Tok::TritLit(_) | Tok::BytesLit(_) | Tok::Int(_) | Tok::LBracket => {
-                Ok(Pattern::Lit(self.parse_literal()?))
-            }
+            Tok::BinLit(_)
+            | Tok::TritLit(_)
+            | Tok::BytesLit(_)
+            | Tok::StrLit(_)
+            | Tok::FloatLit(_)
+            | Tok::Int(_)
+            | Tok::LBracket => Ok(Pattern::Lit(self.parse_literal()?)),
             // M-826: `(x, y, …)` is a tuple pattern (arity ≥ 2). A single `(_)` is grouping.
             Tok::LParen => {
                 self.bump();
@@ -2147,17 +2157,36 @@ impl Parser {
         Ok(Expr::Colony(hyphae))
     }
 
-    /// One `hypha <expr>` spawn inside a [`parse_colony`] body. The `hypha` keyword is mandatory
-    /// (RT7: every concurrent unit is named — a bare body would be ambiguous with a value), and its
-    /// computation is parsed as an `app_expr` (a call like `compute(x)` — the issue's canonical form),
-    /// matching `for`'s use of `app_expr` for its bounded sub-expressions.
+    /// One `hypha <expr>` spawn inside a [`parse_colony`] body, with an optional leading
+    /// `@forage(policy) ` placement-policy annotation (RFC-0008 RT3; DN-63 §3.5; D-lite, M-906/
+    /// DN-70 D1) — the same `@` **attribute-before-construct** shape as `@tier(mode) fn …`
+    /// (DN-58 §C), applied to `hypha`. The `hypha` keyword is mandatory (RT7: every concurrent
+    /// unit is named — a bare body would be ambiguous with a value), and its computation is parsed
+    /// as an `app_expr` (a call like `compute(x)` — the issue's canonical form), matching `for`'s
+    /// use of `app_expr` for its bounded sub-expressions.
+    ///
+    /// `policy` is parsed as a general expression (mirroring `reclaim(policy) { body }`'s open
+    /// policy — DN-58 §B); the D-lite **narrowing** to a literal binary bitmask is a *checker*
+    /// rule ([`crate::checkty::Cx::check_forage_policy`]), not a grammar restriction, so a
+    /// non-literal policy still parses and gets a precise, checker-level teaching diagnostic
+    /// rather than an opaque parse error.
     fn parse_hypha(&mut self) -> Result<Hypha, ParseError> {
+        let forage = if self.at(&Tok::At) {
+            self.bump(); // `@`
+            self.expect_keyword(&Tok::Forage)?;
+            self.expect(&Tok::LParen, "`(` to open the `@forage` policy argument")?;
+            let policy = self.parse_expr()?;
+            self.expect(&Tok::RParen, "`)` to close the `@forage` policy argument")?;
+            Some(Box::new(policy))
+        } else {
+            None
+        };
         self.expect(
             &Tok::Hypha,
             "`hypha` to open a concurrent task in the `colony` block (RFC-0008 §4.7)",
         )?;
         let body = self.parse_app()?;
-        Ok(Hypha { body })
+        Ok(Hypha { forage, body })
     }
 
     fn parse_app(&mut self) -> Result<Expr, ParseError> {
@@ -2183,9 +2212,13 @@ impl Parser {
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         match self.cur() {
-            Tok::BinLit(_) | Tok::TritLit(_) | Tok::BytesLit(_) | Tok::Int(_) | Tok::LBracket => {
-                Ok(Expr::Lit(self.parse_literal()?))
-            }
+            Tok::BinLit(_)
+            | Tok::TritLit(_)
+            | Tok::BytesLit(_)
+            | Tok::StrLit(_)
+            | Tok::FloatLit(_)
+            | Tok::Int(_)
+            | Tok::LBracket => Ok(Expr::Lit(self.parse_literal()?)),
             Tok::Ident(_) => Ok(Expr::Path(self.parse_path()?)),
             Tok::LParen => {
                 // M-826: `(e, e2, …)` is a tuple literal (arity ≥ 2); `(e)` is grouping.
@@ -2237,6 +2270,19 @@ impl Parser {
             Tok::BytesLit(s) => {
                 self.bump();
                 Ok(Literal::Bytes(s))
+            }
+            // M-910/M-911: `"…"` textual string literal; the lexer already decoded its escape set
+            // and validated termination, so the content is stored verbatim.
+            Tok::StrLit(s) => {
+                self.bump();
+                Ok(Literal::Str(s))
+            }
+            // ADR-040 (M-897): a decimal float literal; the lexer already validated the form
+            // (digits `.` digits and/or an exponent with digits) and binary64 finiteness, so the
+            // source text is stored verbatim (the single text→f64 conversion is elaboration's).
+            Tok::FloatLit(s) => {
+                self.bump();
+                Ok(Literal::Float(s))
             }
             Tok::Int(n) => {
                 self.bump();

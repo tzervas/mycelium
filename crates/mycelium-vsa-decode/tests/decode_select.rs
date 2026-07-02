@@ -5,9 +5,10 @@
 //! selection always emits the mandatory EXPLAIN (RFC-0005 §2.2). No `rand` (deterministic LCG).
 
 use mycelium_core::GuaranteeStrength;
-use mycelium_vsa::{
-    decode_method_policy, explain_decode_method, factorize, reconstruct_factors_auto,
-    CleanupMemory, DecodeMethod, MapI, ResonatorParams, VsaError, VsaModel, DEFAULT_ENUM_BUDGET,
+use mycelium_vsa::{factorize, CleanupMemory, MapI, ResonatorParams, VsaError, VsaModel};
+use mycelium_vsa_decode::{
+    decode_method_policy, explain_decode_method, reconstruct_factors_auto, DecodeMethod,
+    DEFAULT_ENUM_BUDGET,
 };
 
 const D: u32 = 4096;

@@ -1,0 +1,93 @@
+pub mod mycelium_sched
+pub mod mycelium_sched::scheduler
+pub enum mycelium_sched::scheduler::SchedulerError
+pub mycelium_sched::scheduler::SchedulerError::ZeroCapacity
+pub mycelium_sched::scheduler::SchedulerError::ZeroWorkers
+impl core::clone::Clone for mycelium_sched::scheduler::SchedulerError
+pub fn mycelium_sched::scheduler::SchedulerError::clone(&self) -> mycelium_sched::scheduler::SchedulerError
+impl core::cmp::Eq for mycelium_sched::scheduler::SchedulerError
+impl core::cmp::PartialEq for mycelium_sched::scheduler::SchedulerError
+pub fn mycelium_sched::scheduler::SchedulerError::eq(&self, &mycelium_sched::scheduler::SchedulerError) -> bool
+impl core::error::Error for mycelium_sched::scheduler::SchedulerError
+impl core::fmt::Debug for mycelium_sched::scheduler::SchedulerError
+pub fn mycelium_sched::scheduler::SchedulerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::fmt::Display for mycelium_sched::scheduler::SchedulerError
+pub fn mycelium_sched::scheduler::SchedulerError::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_sched::scheduler::SchedulerError
+impl core::marker::StructuralPartialEq for mycelium_sched::scheduler::SchedulerError
+impl core::marker::Freeze for mycelium_sched::scheduler::SchedulerError
+impl core::marker::Send for mycelium_sched::scheduler::SchedulerError
+impl core::marker::Sync for mycelium_sched::scheduler::SchedulerError
+impl core::marker::Unpin for mycelium_sched::scheduler::SchedulerError
+impl core::marker::UnsafeUnpin for mycelium_sched::scheduler::SchedulerError
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_sched::scheduler::SchedulerError
+impl core::panic::unwind_safe::UnwindSafe for mycelium_sched::scheduler::SchedulerError
+pub enum mycelium_sched::scheduler::StealPolicy
+pub mycelium_sched::scheduler::StealPolicy::RoundRobin
+impl mycelium_sched::scheduler::StealPolicy
+pub fn mycelium_sched::scheduler::StealPolicy::select_victim(&self, usize, usize, &[usize]) -> core::option::Option<mycelium_sched::scheduler::StealDecision>
+impl core::clone::Clone for mycelium_sched::scheduler::StealPolicy
+pub fn mycelium_sched::scheduler::StealPolicy::clone(&self) -> mycelium_sched::scheduler::StealPolicy
+impl core::cmp::Eq for mycelium_sched::scheduler::StealPolicy
+impl core::cmp::PartialEq for mycelium_sched::scheduler::StealPolicy
+pub fn mycelium_sched::scheduler::StealPolicy::eq(&self, &mycelium_sched::scheduler::StealPolicy) -> bool
+impl core::default::Default for mycelium_sched::scheduler::StealPolicy
+pub fn mycelium_sched::scheduler::StealPolicy::default() -> mycelium_sched::scheduler::StealPolicy
+impl core::fmt::Debug for mycelium_sched::scheduler::StealPolicy
+pub fn mycelium_sched::scheduler::StealPolicy::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_sched::scheduler::StealPolicy
+impl core::marker::StructuralPartialEq for mycelium_sched::scheduler::StealPolicy
+impl core::marker::Freeze for mycelium_sched::scheduler::StealPolicy
+impl core::marker::Send for mycelium_sched::scheduler::StealPolicy
+impl core::marker::Sync for mycelium_sched::scheduler::StealPolicy
+impl core::marker::Unpin for mycelium_sched::scheduler::StealPolicy
+impl core::marker::UnsafeUnpin for mycelium_sched::scheduler::StealPolicy
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_sched::scheduler::StealPolicy
+impl core::panic::unwind_safe::UnwindSafe for mycelium_sched::scheduler::StealPolicy
+pub struct mycelium_sched::scheduler::Scheduler
+impl mycelium_sched::scheduler::Scheduler
+pub fn mycelium_sched::scheduler::Scheduler::capacity(&self) -> usize
+pub fn mycelium_sched::scheduler::Scheduler::new() -> Self
+pub fn mycelium_sched::scheduler::Scheduler::run_indexed<T, F>(&self, alloc::vec::Vec<F>, core::option::Option<&mut usize>, core::option::Option<&mut usize>) -> alloc::vec::Vec<T> where F: core::ops::function::FnOnce() -> T + core::marker::Send + 'static, T: core::marker::Send + 'static
+pub fn mycelium_sched::scheduler::Scheduler::steal_policy(&self) -> mycelium_sched::scheduler::StealPolicy
+pub fn mycelium_sched::scheduler::Scheduler::with_workers(usize, usize) -> core::result::Result<Self, mycelium_sched::scheduler::SchedulerError>
+pub fn mycelium_sched::scheduler::Scheduler::with_workers_and_policy(usize, usize, mycelium_sched::scheduler::StealPolicy) -> core::result::Result<Self, mycelium_sched::scheduler::SchedulerError>
+pub fn mycelium_sched::scheduler::Scheduler::workers(&self) -> usize
+impl core::clone::Clone for mycelium_sched::scheduler::Scheduler
+pub fn mycelium_sched::scheduler::Scheduler::clone(&self) -> mycelium_sched::scheduler::Scheduler
+impl core::default::Default for mycelium_sched::scheduler::Scheduler
+pub fn mycelium_sched::scheduler::Scheduler::default() -> Self
+impl core::fmt::Debug for mycelium_sched::scheduler::Scheduler
+pub fn mycelium_sched::scheduler::Scheduler::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_sched::scheduler::Scheduler
+impl core::marker::Freeze for mycelium_sched::scheduler::Scheduler
+impl core::marker::Send for mycelium_sched::scheduler::Scheduler
+impl core::marker::Sync for mycelium_sched::scheduler::Scheduler
+impl core::marker::Unpin for mycelium_sched::scheduler::Scheduler
+impl core::marker::UnsafeUnpin for mycelium_sched::scheduler::Scheduler
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_sched::scheduler::Scheduler
+impl core::panic::unwind_safe::UnwindSafe for mycelium_sched::scheduler::Scheduler
+pub struct mycelium_sched::scheduler::StealDecision
+pub mycelium_sched::scheduler::StealDecision::candidates_scanned: usize
+pub mycelium_sched::scheduler::StealDecision::thief: usize
+pub mycelium_sched::scheduler::StealDecision::victim: usize
+pub mycelium_sched::scheduler::StealDecision::victim_depth: usize
+impl core::clone::Clone for mycelium_sched::scheduler::StealDecision
+pub fn mycelium_sched::scheduler::StealDecision::clone(&self) -> mycelium_sched::scheduler::StealDecision
+impl core::cmp::Eq for mycelium_sched::scheduler::StealDecision
+impl core::cmp::PartialEq for mycelium_sched::scheduler::StealDecision
+pub fn mycelium_sched::scheduler::StealDecision::eq(&self, &mycelium_sched::scheduler::StealDecision) -> bool
+impl core::fmt::Debug for mycelium_sched::scheduler::StealDecision
+pub fn mycelium_sched::scheduler::StealDecision::fmt(&self, &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for mycelium_sched::scheduler::StealDecision
+impl core::marker::StructuralPartialEq for mycelium_sched::scheduler::StealDecision
+impl core::marker::Freeze for mycelium_sched::scheduler::StealDecision
+impl core::marker::Send for mycelium_sched::scheduler::StealDecision
+impl core::marker::Sync for mycelium_sched::scheduler::StealDecision
+impl core::marker::Unpin for mycelium_sched::scheduler::StealDecision
+impl core::marker::UnsafeUnpin for mycelium_sched::scheduler::StealDecision
+impl core::panic::unwind_safe::RefUnwindSafe for mycelium_sched::scheduler::StealDecision
+impl core::panic::unwind_safe::UnwindSafe for mycelium_sched::scheduler::StealDecision
+pub const mycelium_sched::scheduler::SCHEDULER_LIVENESS_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub const mycelium_sched::scheduler::SCHEDULER_RT2_STRENGTH: mycelium_core::guarantee::GuaranteeStrength
+pub const mycelium_sched::scheduler::STEAL_POLICY_STRENGTH: mycelium_core::guarantee::GuaranteeStrength

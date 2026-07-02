@@ -171,7 +171,7 @@ fn narrow_32_to_8_fits_at_boundary() {
 
 /// `width_cast(Binary{32}(256), into Binary{8})` does NOT fit (`256` needs bit 8, dropped by the
 /// narrow) — an explicit refusal on **every** path, never a silent truncation to `0`. The program
-/// type-checks: the value→M fit is a runtime contract (DN-41), exactly like `add_bin` overflow.
+/// type-checks: the value→M fit is a runtime contract (DN-41), exactly like `add_u` overflow.
 #[test]
 fn narrow_overflow_refuses_on_every_path() {
     let src = format!(

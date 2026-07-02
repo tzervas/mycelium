@@ -1614,11 +1614,44 @@ fn render_literal(l: &mycelium_l1::ast::Literal) -> String {
             let s: Vec<String> = es.iter().map(render_expr_canonical).collect();
             format!("[{}]", s.join(", "))
         }
-        // #[non_exhaustive]: new literal variants surface as a never-silent internal error (G2).
+        // M-910/M-911: a `"…"` textual string literal round-trips to its source form; the
+        // escape set here is the exact inverse of `Lexer::lex_string`'s decode table
+        // (`\n \t \\ \" \0 \r`) so re-lexing the rendered output reproduces the same
+        // `Literal::Str`.
+        Literal::Str(s) => format!("\"{}\"", escape_string_literal(s)),
+        // ADR-040 (M-897): a decimal float literal stores its source text verbatim, so it
+        // round-trips as-is (re-lexing the rendered output reproduces the same `Literal::Float`).
+        Literal::Float(s) => s.clone(),
+        // `Literal` is `#[non_exhaustive]` (mycelium-l1/src/ast.rs) precisely so a downstream
+        // crate like this one is *required* to keep a wildcard arm — every variant as of this
+        // writing (Bin/Trit/Int/AmbientInt/List/Bytes/Str/Float) has an explicit arm above, so
+        // this only fires for a variant added after this file and not yet wired up here: a
+        // never-silent internal error (G2) rather than a silently-wrong render.
         _ => unreachable!(
             "unrecognized Literal variant — mycelium-l1 version mismatch (G2: never silent)"
         ),
     }
+}
+
+/// Re-escape a decoded string literal's content back to `.myc` source form. The exact inverse
+/// of `mycelium_l1::lexer::Lexer::lex_string`'s decode table (`\n \t \\ \" \0 \r`) — mirrors
+/// `mycelium_l1::ambient::escape_string_literal` (private to that crate; mycelium-fmt does not
+/// depend on mycelium-l1's private internals, so the escape set is kept in sync by definition
+/// rather than by import).
+fn escape_string_literal(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\t' => out.push_str("\\t"),
+            '\r' => out.push_str("\\r"),
+            '\0' => out.push_str("\\0"),
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 fn render_type_ref(t: &mycelium_l1::ast::TypeRef) -> String {
@@ -1643,6 +1676,8 @@ fn render_type_ref(t: &mycelium_l1::ast::TypeRef) -> String {
         // RFC-0032 D3/D4 (M-749/M-750): `Seq{T, N}` / nullary `Bytes`.
         BaseType::Seq { elem, len } => format!("Seq{{{}, {len}}}", render_type_ref(elem)),
         BaseType::Bytes => "Bytes".to_owned(),
+        // ADR-040 (M-897): the nullary scalar-float repr keyword (binary64 only — FLAG-1).
+        BaseType::Float => "Float".to_owned(),
         BaseType::Named(n, args) if args.is_empty() => n.clone(),
         BaseType::Named(n, args) => {
             // RFC-0037 D1: type arguments in `[…]` (was `<…>`).

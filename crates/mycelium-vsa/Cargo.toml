@@ -13,9 +13,12 @@ workspace = true
 
 [dependencies]
 mycelium-core = { path = "../mycelium-core" }
-# RFC-0010: the one RFC-0005 selection mechanism, reused for the decode-method site (no parallel
-# selector). Acyclic — mycelium-select depends only on mycelium-core.
-mycelium-select = { path = "../mycelium-select" }
+# NOTE (M-971): `mycelium-select` is NO LONGER a dependency. The only code here that used it — the
+# RFC-0010 decode-methodology selection (`decode_select` + `reconstruct_factors_selected`) — moved to
+# the `mycelium-vsa-decode` crate. Reason: `mycelium-select -[dev]-> mycelium-interp` and
+# `mycelium-interp -[normal]-> mycelium-vsa`, so a `mycelium-vsa -> mycelium-select` edge closed the
+# `{interp, select, vsa}` dependency cycle DN-68's acyclic-deps invariant forbids. `mycelium-vsa` now
+# depends only on `mycelium-core` (stratum 1). See DN-68 + xtask/deps-strata.toml.
 
 [dev-dependencies]
 # Manifest/value wire round-trip tests (M-260); the on-the-wire form is JSON (M-104).

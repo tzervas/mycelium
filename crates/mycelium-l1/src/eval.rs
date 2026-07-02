@@ -33,8 +33,13 @@ use mycelium_interp::{
     Budgets, EffectBudget, EffectBudgetExhausted, EvalError as KernelError, PrimRegistry,
     SwapEngine,
 };
+// M-906 (DN-70 D1; RFC-0008 RT3): `@forage`'s D-lite placement decision reuses the existing
+// RFC-0005 `SelectionPolicy` machinery verbatim — no new mechanism (DN-70).
+use mycelium_select::{
+    select_placement, Candidate, CostModel, NodeRef, SelectionInputs, SelectionPolicy,
+};
 
-use crate::ast::{Expr, Literal, Pattern, Strength};
+use crate::ast::{Expr, Hypha, Literal, Pattern, Strength};
 use crate::checkty::{prim_kernel_name, Env};
 use crate::elab::{lit_value, policy_name_ref, type_repr, ElabError};
 
@@ -54,15 +59,39 @@ pub enum L1Value {
         /// The constructor's field values, in declaration order.
         fields: Vec<L1Value>,
     },
+    /// An affine `Substrate` handle (DN-71 Model S §4.1; M-902) — an opaque, runtime-only
+    /// external-resource handle ([`crate::substrate::SubstrateHandle`]). It is **not** a repr value
+    /// and **not** algebraic data: it names an external resource (RFC-0006 LR-8), carries no
+    /// `Repr`/`Meta`, and never lowers to L0 (no kernel node — KC-3). It lives at this evaluator
+    /// level only, is *passed* by the ordinary value-binding machinery, and is *inspected* via its
+    /// [`SubstrateHandle`](crate::substrate::SubstrateHandle) accessors. The affine use-once
+    /// enforcement is M-903 (a static checker pass plus a runtime backstop) and the `consume`
+    /// lowering — M-904, DN-71 §4.3 — now **executes** the checked move (never a silent move —
+    /// G2/VR-5); a live, un-`consume`d handle is deterministically released at scope exit and the
+    /// release recorded (M-904, DN-71 §8 FLAG-4's v0 posture — never a silent leak).
+    Substrate(crate::substrate::SubstrateHandle),
 }
 
 impl L1Value {
-    /// The underlying L0 value, if this is a representation value.
+    /// The underlying L0 value, if this is a representation value; `None` for data or a `Substrate`
+    /// handle (never-silent — neither has a repr value here, G2).
     #[must_use]
     pub fn as_repr(&self) -> Option<&Value> {
         match self {
             L1Value::Repr(v) => Some(v),
-            L1Value::Data { .. } => None,
+            L1Value::Data { .. } | L1Value::Substrate(_) => None,
+        }
+    }
+
+    /// The affine [`SubstrateHandle`](crate::substrate::SubstrateHandle), if this is a `Substrate`
+    /// value; `None` otherwise (never-silent — a non-Substrate has no handle here, G2). The
+    /// inspection window onto the opaque handle (its tag, opaque identity, and acquisition
+    /// provenance — DN-71 §4.1; M-902).
+    #[must_use]
+    pub fn as_substrate(&self) -> Option<&crate::substrate::SubstrateHandle> {
+        match self {
+            L1Value::Substrate(h) => Some(h),
+            L1Value::Repr(_) | L1Value::Data { .. } => None,
         }
     }
 
@@ -87,9 +116,72 @@ impl L1Value {
                     .collect::<Option<Vec<_>>>()?;
                 Some(CoreValue::Data(Datum::new(ctor_ref, core_fields)))
             }
+            // A `Substrate` handle has **no** L0 projection — it is not a kernel value (no `Repr`,
+            // no L0 node; DN-71 §4.1). It never participates in the L0/AOT differential, so `None`
+            // here is the honest "no core value", never a fabricated lowering (G2). M-904 keeps this
+            // property: `consume` lowers through existing paths, and `Substrate` itself stays absent
+            // from the L0 value world.
+            L1Value::Substrate(_) => None,
         }
     }
 }
+
+/// Whether `v` transitively contains a `Substrate` handle with the given `id` — the M-904 (DN-71
+/// §8 FLAG-4) scope-exit-release **escape check**: a handle still reachable from a scope's own
+/// result (directly, or nested inside a constructed `Data` value) must never be released, even if
+/// it was never explicitly `consume`d. `L1Value` is finite and acyclic by construction (`Data`'s
+/// own doc comment — every field existed before its containing value), so this recursion always
+/// terminates and is a **precise** (not merely approximating) check for everything the v0 evaluator
+/// can construct — never a false negative that would let a live, still-reachable handle be wrongly
+/// released (G2).
+fn value_contains_substrate_id(v: &L1Value, id: u64) -> bool {
+    match v {
+        L1Value::Substrate(h) => h.id() == id,
+        L1Value::Data { fields, .. } => fields.iter().any(|f| value_contains_substrate_id(f, id)),
+        L1Value::Repr(_) => false,
+    }
+}
+
+/// One recorded `@forage(policy)` placement decision (M-906; DN-70 D1; RFC-0008 RT3) — the
+/// mandatory RFC-0005 §2.2 EXPLAIN record, `site`-tagged (mirrors
+/// [`crate::substrate::ReleaseEvent`]'s `site` field — no fabricated line/column; this evaluator
+/// has no source spans, VR-5) so a caller can attribute each decision to the function it occurred
+/// in. `explanation` is [`mycelium_select::Explanation`] **verbatim** — the real RFC-0005
+/// mechanism's own record, not a reimplementation (DN-70 D1: "no new mechanism").
+#[derive(Debug, Clone, PartialEq)]
+pub struct ForageDecision {
+    /// The function in which the `@forage`-annotated hypha spawned.
+    pub site: String,
+    /// The `mycelium-select` EXPLAIN record for this decision.
+    pub explanation: mycelium_select::Explanation,
+}
+
+/// Why a `@forage(policy)` placement failed — always explicit, never a silent hang or a fabricated
+/// placement (RT4/G2; DN-63 §3.5 FLAG-14; M-906/DN-70 D1).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ForageError {
+    /// The D-lite worker-availability bitmask has no set bits — the (degenerate, single-node)
+    /// candidate set is empty. DN-63 §3.5 FLAG-14's required shape, implemented exactly: a typed,
+    /// explicit error, never a silent hang. `elaborate`/`elaborate_colony` refuse the identical
+    /// source with an explicit [`ElabError::Residual`] (see `crate::elab::forage_reject_if_empty`)
+    /// — never-silent on every path (L1-eval and elaborate→{L0-interp, AOT} agree: none of them
+    /// silently accepts a no-candidate forage).
+    NoCandidates,
+}
+
+impl core::fmt::Display for ForageError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            ForageError::NoCandidates => write!(
+                f,
+                "`@forage` has no placement candidates (DN-63 §3.5 FLAG-14): the worker- \
+                 availability bitmask is all-zero — an explicit refusal, never a silent placement"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ForageError {}
 
 /// Why L1 evaluation could not produce a value — always explicit (S5/G2).
 #[derive(Debug, Clone, PartialEq)]
@@ -140,6 +232,9 @@ pub enum L1Error {
     /// primed from `FnSig::effect_budgets` at the call site and consumed once per declared effect
     /// per invocation.
     EffectBudget(EffectBudgetExhausted),
+    /// A `@forage(policy)` placement decision refused (M-906; DN-70 D1; RFC-0008 RT3) — see
+    /// [`ForageError`].
+    Forage(ForageError),
 }
 
 impl core::fmt::Display for L1Error {
@@ -167,6 +262,7 @@ impl core::fmt::Display for L1Error {
                 "in `{site}`: stuck — {why} (the typechecker should have refused this program)"
             ),
             L1Error::EffectBudget(e) => write!(f, "{e}"),
+            L1Error::Forage(e) => write!(f, "{e}"),
         }
     }
 }
@@ -182,6 +278,12 @@ impl From<KernelError> for L1Error {
 impl From<EffectBudgetExhausted> for L1Error {
     fn from(e: EffectBudgetExhausted) -> Self {
         L1Error::EffectBudget(e)
+    }
+}
+
+impl From<ForageError> for L1Error {
+    fn from(e: ForageError) -> Self {
+        L1Error::Forage(e)
     }
 }
 
@@ -278,6 +380,18 @@ pub struct Evaluator<'e> {
     swap: Box<dyn SwapEngine + Send + Sync>,
     fuel: u64,
     depth: u32,
+    /// The M-904 (DN-71 §8 FLAG-4 v0 posture) scope-exit **release log** — every deterministic
+    /// release of a live, never-`consume`d `Substrate` binding is recorded here (never a silent
+    /// leak — G2), inspectable via [`Self::release_events`]. A [`std::sync::Mutex`] (not a
+    /// `RefCell`) so `Evaluator` stays `Sync` — [`Self::call`]'s deep-stack worker closure captures
+    /// `&self` (see that method's doc for the full `Sync` argument); the lock is only ever held for
+    /// the length of a single `Vec::push`/clone, so it never contends across the recursive walk.
+    releases: std::sync::Mutex<Vec<crate::substrate::ReleaseEvent>>,
+    /// The M-906 (DN-70 D1; RFC-0008 RT3) **mandatory-EXPLAIN placement trail** — every `@forage`
+    /// decision made during evaluation, inspectable via [`Self::forage_decisions`] (never a black
+    /// box — house rule 2). Same [`std::sync::Mutex`]-not-`RefCell` pattern as [`Self::releases`]
+    /// (`Evaluator` stays `Sync`; the lock is only ever held for a single `Vec::push`/clone).
+    forage_trail: std::sync::Mutex<Vec<ForageDecision>>,
 }
 
 impl<'e> Evaluator<'e> {
@@ -290,6 +404,70 @@ impl<'e> Evaluator<'e> {
             swap: Box::new(BinaryTernarySwapEngine),
             fuel: DEFAULT_FUEL,
             depth: DEFAULT_DEPTH,
+            releases: std::sync::Mutex::new(Vec::new()),
+            forage_trail: std::sync::Mutex::new(Vec::new()),
+        }
+    }
+
+    /// The [`ForageDecision`] EXPLAIN trail accumulated by every `@forage(policy)` placement
+    /// decision (M-906; DN-70 D1; RFC-0008 RT3) across every [`Self::call`] made on this
+    /// `Evaluator` so far — mandatory EXPLAIN, never a black box (house rule 2; RFC-0005 §2.2).
+    /// Empty iff no `@forage`-annotated hypha ever ran. A poisoned lock (only reachable after an
+    /// unrelated panic while holding it, which this evaluator never does by design) is recovered
+    /// rather than propagated (mirrors [`Self::release_events`]).
+    #[must_use]
+    pub fn forage_decisions(&self) -> Vec<ForageDecision> {
+        self.forage_trail
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+
+    /// The [`ReleaseEvent`](crate::substrate::ReleaseEvent) log accumulated by scope-exit releases
+    /// (M-904; DN-71 §8 FLAG-4's v0 drop-without-consume posture) across every [`Self::call`] made
+    /// on this `Evaluator` so far — inspectable, never a black box (house rule 2). Empty iff no live
+    /// `Substrate` binding was ever abandoned (every one reached either escaped into its scope's own
+    /// result, or had already been explicitly `consume`d). A poisoned lock (only reachable if a prior
+    /// panic occurred while holding it, which this evaluator never does by design) is recovered
+    /// rather than propagated, so an unrelated panic elsewhere can never make this accessor itself
+    /// panic or silently report an empty log (G2).
+    #[must_use]
+    pub fn release_events(&self) -> Vec<crate::substrate::ReleaseEvent> {
+        self.releases
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
+    }
+
+    /// M-904 (DN-71 §8 FLAG-4 v0 posture): release `popped` at its scope-exit iff it is a still-live
+    /// `Substrate` handle that does **not** escape into `escaping` (the enclosing scope's own
+    /// result — checked via [`value_contains_substrate_id`], not assumed, so a returned handle, or
+    /// one nested inside a constructed `Data` value, is never wrongly released). Records a
+    /// [`ReleaseEvent`](crate::substrate::ReleaseEvent) into [`Self::releases`] when a release
+    /// actually happens. A non-`Substrate` binding, an already-terminal handle (already `consume`d,
+    /// or already released through another clone of the same identity), or an escaping handle are
+    /// all legitimate no-ops here — nothing to release, never an error.
+    ///
+    /// **Known v0 limitation (honest, not silently hidden — mirrors `crate::affine`'s documented
+    /// loop/closure gap):** this is called at the two scope-exit points M-904 wires it into —
+    /// `Expr::Let` and a function's own parameters at the end of [`Self::invoke`] — not at every
+    /// binder in the evaluator (e.g. a `match`-arm pattern binder that captures a `Substrate` out of
+    /// a data field is not yet covered). A handle abandoned only through such an uncovered binder is
+    /// not released here; closing that gap is future work, not silently claimed done.
+    fn release_if_abandoned(&self, popped: &(String, L1Value), escaping: Option<&L1Value>) {
+        let L1Value::Substrate(handle) = &popped.1 else {
+            return;
+        };
+        if let Some(v) = escaping {
+            if value_contains_substrate_id(v, handle.id()) {
+                return;
+            }
+        }
+        if let Some(event) = handle.release(popped.0.clone()) {
+            self.releases
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .push(event);
         }
     }
 
@@ -429,11 +607,125 @@ impl<'e> Evaluator<'e> {
             .map(|p| p.name.clone())
             .zip(args)
             .collect();
-        let result = self.eval(fuel, depth, ledger, name, &mut scope, &fd.body)?;
+        let result = self.eval(fuel, depth, ledger, name, &mut scope, &fd.body);
+        // M-904 (DN-71 §8 FLAG-4 v0 posture): this call's own parameter scope ends here — release
+        // any still-live `Substrate` param that isn't escaping into the call's own result (deep, via
+        // `value_contains_substrate_id`), on both the success and error path (deterministic, never
+        // skipped just because the body itself failed — G2).
+        let escaping = result.as_ref().ok();
+        for popped in &scope {
+            self.release_if_abandoned(popped, escaping);
+        }
+        let result = result?;
         if let Some(g) = fd.sig.ret.guarantee {
             self.assert_guarantee(name, &result, g)?;
         }
         Ok(result)
+    }
+
+    /// Evaluate one hypha's `@forage(policy)` placement decision, if present (M-906; DN-70 D1;
+    /// RFC-0008 RT3; DN-63 §3.5), **before** its body runs. Mirrors `reclaim`'s "evaluate the
+    /// policy for its effect" sequential reference (DN-58 §B) with one real addition: the D-lite
+    /// mechanism genuinely consults `mycelium-select`'s `SelectionPolicy`/[`select_placement`]
+    /// (RFC-0005 §2 — total, deterministic, mandatory-EXPLAIN) over the **single-node** candidate
+    /// set the policy's bitmask names (DN-70 D1: "degenerate but real" — one local worker per set
+    /// bit). Placement is semantics-free (RT3: it changes performance, never `body`'s value), so
+    /// this returns `()`, not a value — the caller runs `body` unchanged afterward.
+    ///
+    /// Never-silent (DN-63 §3.5 FLAG-14 / G2): an all-zero bitmask is an explicit
+    /// [`L1Error::Forage`]`(`[`ForageError::NoCandidates`]`)`, never a fabricated placement or a
+    /// hang. `elaborate`/`elaborate_colony` refuse the *identical* source statically (see
+    /// `crate::elab::forage_reject_if_empty`), so every execution path agrees.
+    ///
+    /// Guarantee: `Declared` — the D-lite candidate set (one worker per bitmask bit,
+    /// `default_choice: 0`, no cost-differentiating rules) is a placeholder policy shape; the full
+    /// adaptive/cost-based policy surface is DN-63 FLAG-13, narrowed here, not resolved.
+    fn eval_hypha_forage(
+        &self,
+        fuel: &mut u64,
+        depth: u32,
+        ledger: &mut Budgets,
+        site: &str,
+        scope: &mut Vec<(String, L1Value)>,
+        h: &Hypha,
+    ) -> Result<(), L1Error> {
+        let Some(policy) = &h.forage else {
+            return Ok(());
+        };
+        let pv = self.eval(fuel, depth, ledger, site, scope, policy)?;
+        let L1Value::Repr(v) = &pv else {
+            return Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: "internal: `@forage(policy)` evaluated to a non-repr value — the checker \
+                      requires a literal binary bitmask (M-906/DN-70 D1)"
+                    .to_owned(),
+            });
+        };
+        let mycelium_core::Payload::Bits(bits) = v.payload() else {
+            return Err(L1Error::Stuck {
+                site: site.to_owned(),
+                why: "internal: `@forage(policy)` evaluated to a non-`Binary` repr — the checker \
+                      requires a literal binary bitmask (M-906/DN-70 D1)"
+                    .to_owned(),
+            });
+        };
+        let candidates: Vec<Candidate> = bits
+            .iter()
+            .enumerate()
+            .filter(|(_, b)| **b)
+            .map(|(i, _)| Candidate::Node(NodeRef(format!("worker-{i}"))))
+            .collect();
+        if candidates.is_empty() {
+            return Err(ForageError::NoCandidates.into());
+        }
+        // A trivial, deterministic single-arm policy: no cost-differentiating rules yet (DN-63
+        // FLAG-13 stays open), so the default arm always picks the lowest-index available worker
+        // (`Action`-free — `rules: []`) — matching `StealPolicy::RoundRobin`'s "lowest index wins
+        // a tie" convention (`mycelium-sched`).
+        let policy = SelectionPolicy::new(
+            "forage.dlite.v0",
+            candidates,
+            Vec::new(),
+            0,
+            CostModel {
+                storage_weight: 1.0,
+            },
+        )
+        .map_err(|e| L1Error::Stuck {
+            site: site.to_owned(),
+            why: format!(
+                "internal: `@forage` D-lite policy construction failed unexpectedly: {e} \
+                 (the caller always supplies ≥ 1 candidate and a valid cost weight)"
+            ),
+        })?;
+        // `src: Bytes` is the crate's own documented "no static representation applies here"
+        // sentinel (see `mycelium_select::repr_storage_bits`'s `Repr::Bytes => 0.0` precedent) —
+        // `forage` places a *hypha* (a computation), not a value with a `Repr`, and the D-lite
+        // policy's `rules: []` never inspects `inputs` anyway (only the mandatory default arm
+        // fires), so no predicate ever reads this sentinel (honesty note, not a fabricated value).
+        let inputs = SelectionInputs {
+            src: mycelium_core::Repr::Bytes,
+            guarantee: GuaranteeStrength::Declared,
+            bound: None,
+            sparsity: None,
+            decode: None,
+        };
+        let (_chosen, explanation) =
+            select_placement(&policy, &inputs, None).map_err(|e| L1Error::Stuck {
+                site: site.to_owned(),
+                why: format!(
+                    "internal: `@forage` D-lite `select_placement` failed unexpectedly: {e} (the \
+                     caller always supplies a `Node` candidate set)"
+                ),
+            })?;
+        self.forage_trail
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .push(ForageDecision {
+                site: site.to_owned(),
+                explanation,
+            });
+        Ok(())
     }
 
     /// Big-step evaluation of `e` under `scope`. Every node costs one unit of fuel, so an
@@ -471,10 +763,19 @@ impl<'e> Evaluator<'e> {
             .ok_or(L1Error::DepthExceeded { limit: self.depth })?;
         match e {
             // RFC-0032 D4 (M-750): `0x…` byte-string literals share the `lit_value` lowering with the
-            // binary/ternary repr literals (all are context-free repr literals).
-            Expr::Lit(l @ (Literal::Bin(_) | Literal::Trit(_) | Literal::Bytes(_))) => Ok(
-                L1Value::Repr(lit_value(site, l).map_err(|e| unsupported(site, &e))?),
-            ),
+            // binary/ternary repr literals (all are context-free repr literals). M-910/M-911: `"…"`
+            // string literals join the same group (they lower to the same `Repr::Bytes` form).
+            // ADR-040 (M-897): decimal float literals join it too (they lower to the M-896
+            // `Repr::Float`/`Payload::Float` scalar form — KC-3, no new L0 node).
+            Expr::Lit(
+                l @ (Literal::Bin(_)
+                | Literal::Trit(_)
+                | Literal::Bytes(_)
+                | Literal::Str(_)
+                | Literal::Float(_)),
+            ) => Ok(L1Value::Repr(
+                lit_value(site, l).map_err(|e| unsupported(site, &e))?,
+            )),
             // RFC-0032 D3 (M-749): a list literal `[e1, …]` evaluates to a `Repr::Seq` value. Each
             // element is evaluated to a repr value; the element repr (from the first) anchors the
             // descriptor. The checker has already verified homogeneity; the `Value::new`
@@ -561,7 +862,12 @@ impl<'e> Evaluator<'e> {
                 }
                 scope.push((name.clone(), bv));
                 let r = self.eval(fuel, depth, ledger, site, scope, body);
-                scope.pop();
+                let popped = scope.pop().expect("just pushed above");
+                // M-904 (DN-71 §8 FLAG-4 v0 posture): `name`'s binding scope ends exactly here —
+                // release it if it's a still-live `Substrate` that isn't escaping into this `let`'s
+                // own result (`r`'s `Ok` value, if any). Runs on both the success and error path
+                // (deterministic scope-exit release, never a silent leak — G2).
+                self.release_if_abandoned(&popped, r.as_ref().ok());
                 r
             }
 
@@ -632,14 +938,35 @@ impl<'e> Evaluator<'e> {
                 what: "`spore` is deferred to the reconstruction-manifest work (E2-5/M-260)"
                     .to_owned(),
             }),
-            // M-664: `consume` of a `Substrate` has no v0 evaluation — `Substrate` has no value
-            // forms (LR-8; DN-03 §1). Never-silent (G2): an explicit `Unsupported`, never a guess.
-            Expr::Consume(_) => Err(L1Error::Unsupported {
-                site: site.to_owned(),
-                what: "`consume` of an affine `Substrate` is staged — `Substrate` has no v0 value \
-                       forms to consume (LR-8; DN-03 §1; M-664)"
-                    .to_owned(),
-            }),
+            // M-904 (DN-71 Model S §4.3, maintainer-accepted 2026-07-02): `consume <expr>` executes
+            // as the **checked identity-move** through existing paths — evaluate the operand (the
+            // checker's `check_consume` type rule, DN-03 §1, guarantees it is `Substrate{tag}`-typed)
+            // and perform the affine Live→Consumed transition via `SubstrateHandle::try_consume`
+            // (M-903's runtime backstop). Under a well-typed program the static affine pass
+            // (`crate::affine`, M-903) already guarantees no reachable path double-consumes this
+            // identity, so `try_consume` succeeds here; a trip is exactly the internal-invariant-break
+            // case the backstop exists to catch — surfaced loudly as `L1Error::Stuck` (an evaluation
+            // state the checker proves unreachable), never a silent no-op or a fabricated second move
+            // (G2/VR-5). This lifts the M-664/M-903-era `Unsupported` staging refusal: `consume` no
+            // longer merely type-checks, it runs.
+            Expr::Consume(operand) => {
+                let v = self.eval(fuel, depth, ledger, site, scope, operand)?;
+                let Some(handle) = v.as_substrate() else {
+                    return Err(L1Error::Stuck {
+                        site: site.to_owned(),
+                        why: "internal: `consume`'s operand evaluated to a non-Substrate value — \
+                              `check_consume`'s type rule (DN-03 §1 / LR-8) guarantees a \
+                              `Substrate{tag}` operand, so this is a staging invariant break, never \
+                              a silent move (G2)"
+                            .to_owned(),
+                    });
+                };
+                let moved = handle.try_consume().map_err(|e| L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: e.to_string(),
+                })?;
+                Ok(L1Value::Substrate(moved))
+            }
             // RFC-0024 §4A (M-704): the L1 evaluator runs on the **monomorphized** env, where every
             // closure has been lowered (`mono.rs`) to an ordinary `L1Value::Data` constructor value +
             // an `apply` dispatch fn — so a raw `Expr::Lambda` never reaches eval. This arm is a
@@ -673,10 +1000,15 @@ impl<'e> Evaluator<'e> {
                 };
                 // Evaluate each leading hypha for its (sequentialized) effect, in order; a refusal in
                 // any one propagates (never silently dropped — RT4/I1). Their values are not the
-                // colony's observable in this no-product v0 (only the last hypha's is).
+                // colony's observable in this no-product v0 (only the last hypha's is). Each
+                // hypha's `@forage(policy)` (M-906/DN-70 D1), if present, is consulted immediately
+                // before its body runs (RT3 semantics-free placement — the decision never changes
+                // the body's value, only its EXPLAIN trail).
                 for h in leading {
+                    self.eval_hypha_forage(fuel, depth, ledger, site, scope, h)?;
                     self.eval(fuel, depth, ledger, site, scope, &h.body)?;
                 }
+                self.eval_hypha_forage(fuel, depth, ledger, site, scope, last)?;
                 self.eval(fuel, depth, ledger, site, scope, &last.body)
             }
 
@@ -917,7 +1249,10 @@ impl<'e> Evaluator<'e> {
                     }
                     Ok(true)
                 }
-                L1Value::Repr(_) => Ok(false),
+                // A `Substrate` handle matches no constructor pattern (the checker's type discipline
+                // keeps a `Substrate`-typed scrutinee off a data-ctor arm anyway); never-silent
+                // `Ok(false)`, never a panic (G2).
+                L1Value::Repr(_) | L1Value::Substrate(_) => Ok(false),
             },
             Pattern::Lit(lit) => match val {
                 L1Value::Repr(v) => {
@@ -927,7 +1262,9 @@ impl<'e> Evaluator<'e> {
                     })?;
                     Ok(lv.repr() == v.repr() && lv.payload() == v.payload())
                 }
-                L1Value::Data { .. } => Ok(false),
+                // A `Substrate` handle has no literal form to compare against — never-silent
+                // `Ok(false)` (a Substrate has no repr/payload; G2).
+                L1Value::Data { .. } | L1Value::Substrate(_) => Ok(false),
             },
             // M-826: a tuple pattern `(x, y, …)` desugars to `Ctor(MkTuple$N, subs)` during
             // checking/resolve. A raw `Pattern::Tuple` here means the evaluator was handed an
@@ -1104,6 +1441,16 @@ impl<'e> Evaluator<'e> {
                 site: site.to_owned(),
                 what: "a guarantee index on a data-typed value has no Meta to check in v0"
                     .to_owned(),
+            }),
+            // A `Substrate` handle carries no `Meta`/guarantee tag (it names an external resource,
+            // not a value — LR-8; DN-71 §4.1). A guarantee index on it has nothing to check: an
+            // explicit refusal, never a silently-passed assertion (G2/VR-5).
+            L1Value::Substrate(_) => Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what:
+                    "a guarantee index on a `Substrate` handle has no Meta to check — a Substrate \
+                       is an affine external-resource handle, not a repr value (LR-8; DN-71 §4.1)"
+                        .to_owned(),
             }),
         }
     }

@@ -126,6 +126,8 @@ fn paradigm(repr: &Repr) -> &'static str {
         Repr::Seq { .. } => "seq",
         // RFC-0032 D4 (M-750): the byte-string repr.
         Repr::Bytes => "bytes",
+        // ADR-040 (M-896): the scalar-float repr.
+        Repr::Float { .. } => "float",
     }
 }
 

@@ -1354,11 +1354,11 @@ pub fn mycelium_lsp::wire::initialize_result() -> serde_json::value::Value
 pub fn mycelium_lsp::wire::lsp_severity(mycelium_lsp::lint::Severity) -> u8
 pub fn mycelium_lsp::wire::publish_diagnostics_notification(&str, &mycelium_lsp::feedback::Feedback) -> serde_json::value::Value
 pub fn mycelium_lsp::wire::publish_diagnostics_params(&str, &mycelium_lsp::feedback::Feedback) -> serde_json::value::Value
-pub fn mycelium_lsp::wire::read_message<R: std::io::BufRead>(&mut R) -> std::io::error::Result<core::option::Option<serde_json::value::Value>>
-pub fn mycelium_lsp::wire::serve<R: std::io::BufRead, W: std::io::Write>(&mut R, &mut W) -> std::io::error::Result<()>
-pub fn mycelium_lsp::wire::serve_stdio() -> std::io::error::Result<()>
+pub fn mycelium_lsp::wire::read_message<R: std::io::BufRead>(&mut R) -> core::io::error::Result<core::option::Option<serde_json::value::Value>>
+pub fn mycelium_lsp::wire::serve<R: std::io::BufRead, W: std::io::Write>(&mut R, &mut W) -> core::io::error::Result<()>
+pub fn mycelium_lsp::wire::serve_stdio() -> core::io::error::Result<()>
 pub fn mycelium_lsp::wire::to_lsp_diagnostic(&mycelium_lsp::lint::Diagnostic) -> serde_json::value::Value
-pub fn mycelium_lsp::wire::write_message<W: std::io::Write>(&mut W, &serde_json::value::Value) -> std::io::error::Result<()>
+pub fn mycelium_lsp::wire::write_message<W: std::io::Write>(&mut W, &serde_json::value::Value) -> core::io::error::Result<()>
 pub enum mycelium_lsp::Level
 pub mycelium_lsp::Level::Detailed
 pub mycelium_lsp::Level::Medium
@@ -2002,14 +2002,14 @@ pub fn mycelium_lsp::parse_llm_canonical(&str) -> core::result::Result<alloc::st
 pub fn mycelium_lsp::present(mycelium_lsp::diagnostics::record::ReasonedError, core::option::Option<&mycelium_lsp::diagnostics::policy::DiagnosticPolicy>) -> mycelium_lsp::diagnostics::record::Presentation
 pub fn mycelium_lsp::publish_diagnostics_notification(&str, &mycelium_lsp::feedback::Feedback) -> serde_json::value::Value
 pub fn mycelium_lsp::publish_for_source(&str, &str) -> serde_json::value::Value
-pub fn mycelium_lsp::read_message<R: std::io::BufRead>(&mut R) -> std::io::error::Result<core::option::Option<serde_json::value::Value>>
+pub fn mycelium_lsp::read_message<R: std::io::BufRead>(&mut R) -> core::io::error::Result<core::option::Option<serde_json::value::Value>>
 pub fn mycelium_lsp::recovery_profile(mycelium_lsp::baseline::RecoveryProfile, &mycelium_lsp::diagnostics::registry::ClassRegistry, &[&str]) -> core::result::Result<mycelium_lsp::recover::policy::RecoveryPolicy, mycelium_lsp::diagnostics::registry::UnknownClass>
 pub fn mycelium_lsp::resilient_publish_for_source(&str, &str) -> serde_json::value::Value
 pub fn mycelium_lsp::resilient_source_diagnostics(&str) -> alloc::vec::Vec<serde_json::value::Value>
 pub fn mycelium_lsp::semantic_tokens_full(&str) -> serde_json::value::Value
 pub fn mycelium_lsp::semantic_tokens_legend() -> serde_json::value::Value
-pub fn mycelium_lsp::serve<R: std::io::BufRead, W: std::io::Write>(&mut R, &mut W) -> std::io::error::Result<()>
-pub fn mycelium_lsp::serve_stdio() -> std::io::error::Result<()>
+pub fn mycelium_lsp::serve<R: std::io::BufRead, W: std::io::Write>(&mut R, &mut W) -> core::io::error::Result<()>
+pub fn mycelium_lsp::serve_stdio() -> core::io::error::Result<()>
 pub fn mycelium_lsp::source_diagnostics(&str) -> alloc::vec::Vec<serde_json::value::Value>
 pub fn mycelium_lsp::to_lsp_diagnostic(&mycelium_lsp::lint::Diagnostic) -> serde_json::value::Value
-pub fn mycelium_lsp::write_message<W: std::io::Write>(&mut W, &serde_json::value::Value) -> std::io::error::Result<()>
+pub fn mycelium_lsp::write_message<W: std::io::Write>(&mut W, &serde_json::value::Value) -> core::io::error::Result<()>

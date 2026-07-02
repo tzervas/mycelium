@@ -348,6 +348,35 @@ fn a_nullary_generic_entry_stages_with_the_monomorphization_residual() {
     );
 }
 
+// ---- M-904: the `consume`-specific residual is gone (DN-71 §4.3) --------------------------
+
+#[test]
+fn consume_no_longer_produces_the_m664_era_substrate_residual() {
+    // Before M-904, `elaborate` on any entry reaching a `consume` refused with a
+    // Substrate-specific `Residual` ("`consume` of an affine `Substrate` is staged …"). That arm is
+    // gone (M-904; DN-71 §4.3) — `Expr::Consume` now elaborates transparently as its operand.
+    //
+    // v0 has no surface syntax that constructs a live `Substrate` value (DN-71 §4.1/§8 FLAG-8: the
+    // only entry point is a fn *parameter*, and `elab_prelude` refuses *any* value-parameterized
+    // entry — "v0 elaborates closed (nullary) entries" — independently of Substrate), so this
+    // program still fails to elaborate. The point of this test is that it fails for that
+    // *pre-existing, orthogonal, nullary-entry* reason, never again for the old
+    // Substrate-specific one — proving the M-904 residual really is lifted, not just reworded.
+    let env = env("nodule d;\nfn take(s: Substrate{Sock}) => Substrate{Sock} = consume s;");
+    let err = elaborate(&env, "take").expect_err("a value-parameterized entry still can't close");
+    let ElabError::Residual { what, .. } = &err else {
+        panic!("expected a Residual, got {err:?}");
+    };
+    assert!(
+        what.contains("value parameters") && what.contains("nullary"),
+        "must fail on the pre-existing nullary-entry gate, not a Substrate-specific one: {what}"
+    );
+    assert!(
+        !what.contains("Substrate") && !what.contains("M-664"),
+        "the M-664-era Substrate-specific residual message must be gone: {what}"
+    );
+}
+
 #[test]
 fn an_unqualified_trait_method_call_now_elaborates_via_monomorphization() {
     // M-673: a *concrete* trait-method call type-checks (resolved via the instance) and now

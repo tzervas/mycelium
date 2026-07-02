@@ -13,9 +13,12 @@
 //! intentionally excluded from keyword completions: they lex as keywords (never silent, G2) but
 //! no construct consumes them yet, so offering them as if usable would violate the honesty rule
 //! (VR-5 / G2). This set is `phylum`, the 8 remaining DN-03 §4 runtime words
-//! `fuse`/`mesh`/`graft`/`cyst`/`xloc`/`forage`/`backbone`/`tier`/`reclaim` (reserved by M-665),
+//! `fuse`/`mesh`/`graft`/`cyst`/`xloc`/`backbone`/`tier`/`reclaim` (reserved by M-665),
 //! and the DN-03 §1 surface-tier words `consume`/`grow` (lexed, but the parser refuses them with a
-//! teaching diagnostic until their constructs land with M-664). `impl` graduated to a real, active
+//! teaching diagnostic until their constructs land with M-664). `forage` left this set in M-906
+//! (DN-70 D1): it is now active *only* as the `@forage(policy)` hypha placement annotation (a
+//! prefix-attribute form, not a bare item-position keyword — `forage` at item position is still an
+//! explicit parse error), so it is not offered as a plain keyword completion here either. `impl` graduated to a real, active
 //! keyword in M-659 and is offered. `colony` and `hypha` were reserved-not-active through M-665;
 //! M-666 made them **active** (they now open real surface constructs — RFC-0008 §4.5/§4.7) and are
 //! offered here.

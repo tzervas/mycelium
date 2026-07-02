@@ -61,6 +61,29 @@ impl ScalarKind {
     }
 }
 
+/// Scalar-float width registry (ADR-040 §2.1) — a **dedicated** enum, deliberately *not* a reuse of
+/// [`ScalarKind`] (ADR-040 FLAG-6: reuse would admit scalar `F16`/`BF16` by construction, silently
+/// widening the ratified surface). **F64-only at introduction** (ADR-040 FLAG-1, ratified
+/// 2026-07-02): every scalar-float consumer named in the corpus needs binary64 and only binary64.
+/// Later widths are appended under new frozen tags — append-only, address-stable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FloatWidth {
+    /// IEEE-754 binary64.
+    F64,
+}
+
+impl FloatWidth {
+    /// A stable one-byte code for content-addressing, mirroring the [`ScalarKind::tag`] frozen-tag
+    /// discipline (ADR-040 §2.1). Append-only: existing codes are frozen so a value's identity
+    /// never shifts when the width registry grows.
+    #[must_use]
+    pub fn tag(self) -> u8 {
+        match self {
+            FloatWidth::F64 => 0,
+        }
+    }
+}
+
 /// Declared sparsity class of a VSA value (RFC-0001 §4.1; RFC-0003 §5). The *declared* class is a
 /// static refinement; *observed* sparsity lives in [`crate::meta::Meta`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -117,6 +140,15 @@ pub enum Repr {
         elem: Box<Repr>,
         /// Declared element count (`≤ MAX_DIM` when well-formed; `0` is allowed — the empty seq).
         len: u32,
+    },
+    /// A first-class scalar IEEE-754 float of the given frozen-tag width (ADR-040 §2.1; M-896) —
+    /// sibling to `Binary`/`Ternary`, **distinct from** [`Repr::Dense`]'s float *dtypes* (tensor
+    /// storage formats, RFC-0033 §4.3.2): no implicit scalar↔rank-0-tensor identification.
+    /// Arithmetic semantics (RNE-only, in-band IEEE specials) are carried by *operations*
+    /// (M-898+), never by this descriptor — the ADR-028 parallel (ADR-040 §2.2).
+    Float {
+        /// The frozen-tag width ([`FloatWidth::F64`] only at introduction — ADR-040 FLAG-1).
+        width: FloatWidth,
     },
     /// A first-class byte string (RFC-0032 D4; M-750) — **well-formed for any byte content**,
     /// carrying no declared length (the payload [`crate::value::Payload::Bytes`] carries the bytes).
@@ -208,6 +240,10 @@ impl Repr {
                 elem.check_well_formed()?;
                 true
             }
+            // A scalar float is well-formed for every width in the frozen registry (ADR-040 §2.1):
+            // it declares no dimension, so there is nothing to bound — the width enum itself is the
+            // whole static constraint (F64-only at introduction).
+            Repr::Float { .. } => true,
             // A byte string is well-formed for any byte content (RFC-0032 D4): it declares no length
             // (the payload carries the bytes), so there is nothing to bound here. Any over-allocation
             // is bounded by the payload itself, which a deserializer materializes directly — there is

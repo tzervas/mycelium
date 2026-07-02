@@ -265,6 +265,7 @@ name = "mycelium-cli"
 version = "0.0.0"
 dependencies = [
  "mycelium-cli-common",
+ "mycelium-interp",
  "mycelium-l1",
  "mycelium-proj",
  "mycelium-spore",
@@ -325,9 +326,12 @@ dependencies = [
 name = "mycelium-interp"
 version = "0.0.0"
 dependencies = [
+ "blake3",
  "mycelium-core",
+ "mycelium-dense",
  "mycelium-numerics",
  "mycelium-sched",
+ "mycelium-vsa",
 ]
 
 [[package]]
@@ -336,9 +340,11 @@ version = "0.0.0"
 dependencies = [
  "mycelium-cert",
  "mycelium-core",
+ "mycelium-dense",
  "mycelium-interp",
  "mycelium-mlir",
  "mycelium-numerics",
+ "mycelium-select",
  "mycelium-stack",
 ]
 
@@ -388,6 +394,7 @@ dependencies = [
  "mycelium-sched",
  "mycelium-select",
  "mycelium-vsa",
+ "proptest",
 ]
 
 [[package]]
@@ -472,6 +479,26 @@ version = "0.0.0"
 dependencies = [
  "mycelium-core",
  "mycelium-std-core",
+]
+
+[[package]]
+name = "mycelium-std-conformance"
+version = "0.0.0"
+dependencies = [
+ "mycelium-cert",
+ "mycelium-core",
+ "mycelium-interp",
+ "mycelium-l1",
+ "mycelium-mlir",
+ "mycelium-std-core",
+ "mycelium-std-diag",
+ "mycelium-std-error",
+ "mycelium-std-recover",
+ "mycelium-std-select",
+ "mycelium-std-spore",
+ "mycelium-std-swap",
+ "mycelium-std-ternary",
+ "mycelium-std-testing",
 ]
 
 [[package]]
@@ -598,6 +625,7 @@ dependencies = [
  "mycelium-core",
  "mycelium-rt-abi",
  "mycelium-sched",
+ "mycelium-select",
  "mycelium-std-core",
  "proptest",
 ]
@@ -706,9 +734,17 @@ name = "mycelium-vsa"
 version = "0.0.0"
 dependencies = [
  "mycelium-core",
- "mycelium-select",
  "proptest",
  "serde_json",
+]
+
+[[package]]
+name = "mycelium-vsa-decode"
+version = "0.0.0"
+dependencies = [
+ "mycelium-core",
+ "mycelium-select",
+ "mycelium-vsa",
 ]
 
 [[package]]

@@ -316,7 +316,7 @@ fn le_ge_antisymmetry() {
 //
 // max_u8/min_u8 return a `Binary{8}` value. The reference must share the same provenance (Root,
 // since both args are Root literals and the result is matched from one of them — not a Derived
-// computation like add_bin). We use the literal directly in the reference program.
+// computation like add_u). We use the literal directly in the reference program.
 
 /// A `main` returning `Binary{8}`; `expected` is the reference Binary{8} literal.
 fn assert_u8(label: &str, call: &str, expected_lit: &str) {

@@ -688,7 +688,15 @@ impl Resolver {
             Expr::Colony(hyphae) => {
                 let mut out = Vec::with_capacity(hyphae.len());
                 for h in hyphae {
+                    // M-906 (DN-70 D1): a hypha's optional `@forage(policy)` annotation resolves
+                    // under the same ambient as its body (no new ambient frame — it is a plain
+                    // value expression, like `reclaim`'s policy).
+                    let forage = match &h.forage {
+                        Some(p) => Some(Box::new(self.expr(amb, site, p, depth)?)),
+                        None => None,
+                    };
                     out.push(crate::ast::Hypha {
+                        forage,
                         body: self.expr(amb, site, &h.body, depth)?,
                     });
                 }
@@ -765,9 +773,15 @@ impl Resolver {
             }
             // Tagged literals already name their paradigm; AmbientInt is only produced here.
             // RFC-0032 D4: a `0x…` byte-string literal is a tagged repr literal (no ambient).
-            Literal::Bin(_) | Literal::Trit(_) | Literal::Bytes(_) | Literal::AmbientInt(_, _) => {
-                l.clone()
-            }
+            // M-910/M-911: a `"…"` string literal joins the same group (no ambient either).
+            // M-897: a float literal already names its representation (ADR-040) — an integer
+            // ambient never touches it (the group below is unchanged-under-ambients).
+            Literal::Bin(_)
+            | Literal::Trit(_)
+            | Literal::Bytes(_)
+            | Literal::Str(_)
+            | Literal::Float(_)
+            | Literal::AmbientInt(_, _) => l.clone(),
         })
     }
 
@@ -1111,6 +1125,8 @@ impl core::fmt::Display for DisplayBase<'_> {
                 write!(f, "Seq{{{}, {len}}}", print_type_ref(elem))
             }
             BaseType::Bytes => write!(f, "Bytes"),
+            // ADR-040 (M-897): nullary scalar-float repr keyword.
+            BaseType::Float => write!(f, "Float"),
             BaseType::Named(n, args) if args.is_empty() => write!(f, "{n}"),
             BaseType::Named(n, args) => {
                 // RFC-0037 D2: type arguments render in `[…]` (parsed by `parse_type_args_opt`).
@@ -1297,7 +1313,13 @@ fn print_literal(l: &Literal) -> String {
         Literal::Trit(s) => format!("0t{s}"),
         // RFC-0032 D4: a `0x…` byte-string literal round-trips to its source form.
         Literal::Bytes(s) => format!("0x{s}"),
+        // M-910/M-911: a `"…"` string literal round-trips by RE-ESCAPING its decoded content (the
+        // inverse of `Lexer::lex_string`) — every char the lexer's escape set can decode is
+        // re-escaped here, so `parse → expand_to_source → parse` is stable (M-818 discipline).
+        Literal::Str(s) => format!("\"{}\"", escape_string_literal(s)),
         Literal::Int(i) => format!("{i}"),
+        // M-897: the float literal's surface form IS its stored source text (verbatim round-trip).
+        Literal::Float(s) => s.clone(),
         // A still-unresolved ambient decimal: show the decimal + its resolved paradigm (the width is
         // the checker's to fill — this only appears when expanding a type-form-only nodule).
         Literal::AmbientInt(p, i) => format!("{i} /* {p} (width from context) */"),
@@ -1306,6 +1328,25 @@ fn print_literal(l: &Literal) -> String {
             format!("[{}]", s.join(", "))
         }
     }
+}
+
+/// Re-escape a decoded string literal's content back to its `"…"` surface form (M-910/M-911) — the
+/// exact inverse of `Lexer::lex_string`'s decode step, over the same minimal escape set (`\n \t \\
+/// \" \0 \r`). Every char the lexer can decode is re-escaped here, so no other char needs escaping.
+fn escape_string_literal(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\t' => out.push_str("\\t"),
+            '\r' => out.push_str("\\r"),
+            '\0' => out.push_str("\\0"),
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 /// Round-trip a `lower Name[params] = <rhs>` declaration (DN-54 / M-812).

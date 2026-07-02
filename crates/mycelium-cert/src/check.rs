@@ -543,8 +543,12 @@ fn numeric_payload(v: &Value) -> Option<&[f64]> {
         Payload::Scalars(xs) => Some(xs),
         Payload::Hypervector(xs) => Some(xs),
         // A sequence (RFC-0032 D3) and a byte string (RFC-0032 D4) have no flat numeric payload here
-        // — explicitly None, not coerced.
+        // — explicitly None, not coerced. The scalar float (ADR-040; M-896) is deliberately None
+        // too: no float swap/deviation metric is ratified yet (the float op/swap surface is
+        // M-898+), so the checker reports honest incompleteness (`Unsupported`) rather than
+        // improvising a metric over the in-band specials (NaN/±inf) — never a guessed number (G2).
         Payload::Bits(_) | Payload::Trits(_) | Payload::Seq(_) | Payload::Bytes(_) => None,
+        Payload::Float(_) => None,
     }
 }
 

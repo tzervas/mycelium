@@ -84,6 +84,13 @@ fn colony_and_hypha_are_active() {
         parse("nodule demo;\nfn hypha() => Binary{8} = 0b0").is_err(),
         "`hypha` as a fn name must stay an error (still a keyword)"
     );
+    // M-906 (DN-70 D1): every hypha's `forage` field defaults to `None` when no `@forage(policy)`
+    // annotation is written — the D-lite surface is additive, never a silent behavior change for
+    // existing colonies.
+    assert!(
+        hyphae.iter().all(|h| h.forage.is_none()),
+        "an un-annotated hypha's `forage` field must be `None`"
+    );
     // A bare `hypha` outside a colony is a never-silent error (RT7 — no orphan hypha).
     let orphan = parse("nodule demo;\nfn f() => Binary{8} = hypha g(0b0)").unwrap_err();
     assert!(
@@ -106,8 +113,28 @@ fn runtime_vocab_keywords_are_reserved_not_active() {
     // DN-03 §4 / RFC-0008 §4.5 / M-665: the Runtime-tier names are reserved keywords — they lex
     // as keywords (never silent identifiers, G2) but no L1 construct consumes them. `hypha`
     // **left** this set with M-666 (it is now active inside a `colony`); `fuse`/`reclaim`/`tier`
-    // left with M-667 / DN-58 (they are now active constructs). The remaining six stay
-    // reserved-not-active until their own constructs land (RFC-0008 §4.6 R1/R2).
+    // left with M-667 / DN-58 (they are now active constructs). `forage` gained a **narrow, D-lite**
+    // active surface with M-906/DN-70 D1 — but ONLY the `@forage(policy) hypha …` attribute form
+    // (`parse_hypha` special-cases `Tok::At` immediately followed by `Tok::Forage`); a *bare*
+    // `forage` at item/expression/fn-name/param-name position is still refused exactly as before
+    // (this test's cases a–d below are unaffected — see `forage_dlite_annotation_parses_and_is_
+    // recorded` for the new active-surface coverage). The remaining five (mesh/graft/cyst/xloc/
+    // backbone) stay fully reserved-not-active until their own constructs land (RFC-0008 §4.6 R2).
+    //
+    // M-907 (DN-70 §D2, verify-only — no re-land) re-verified `backbone` specifically against this
+    // test at `origin/dev` 367c601 (2026-07-02), after M-906 landed forage's D-lite surface above.
+    // Inventory (`Empirical`): `backbone` still lexes as `Tok::Backbone` (token.rs:58-59) and is
+    // rejected — never silently — at item position (parse.rs:513-525) and expression position
+    // (parse.rs:1741-1752) with the same RFC-0008 teaching diagnostic exercised by cases (b-item)/
+    // (d) below; no executing `backbone` construct, and no `BackboneRef` type, exists anywhere in
+    // the tree (repo-wide grep, zero hits). The D-lite `@forage(policy)` surface (M-906) consumes
+    // only a policy expression (parse.rs:2161-2189) — it does not reference or require a backbone
+    // input, so DN-70 §D2's predicted outcome ("recorded residual, nothing to build" on a single
+    // node) holds: **no residual to close** in this crate. The multi-node/promotion residual
+    // (DN-63 FLAG-16, backbone's H2 maturity) is separately mechanized outside `mycelium-l1`, in
+    // `mycelium-std-runtime::r2_residual::DeferredR2::MultiNodePlacement` (DN-78 §4 R-6, tracker
+    // M-828) — a total, tested refusal ledger entry, not silently dropped. FLAG-16 itself stays
+    // open, owned by the future backbone implementation RFC (unaffected by this verification pass).
     //
     // Honesty (Declared): the RFC-0008 teaching diagnostic fires when the runtime keyword is
     // reached in a position where the parser dispatches to `parse_item` or `parse_expr_inner`
@@ -165,6 +192,61 @@ fn runtime_vocab_keywords_are_reserved_not_active() {
             err.message
         );
     }
+}
+
+#[test]
+fn forage_dlite_annotation_parses_and_is_recorded() {
+    // M-906 (DN-70 D1; RFC-0008 RT3): `@forage(policy) hypha <expr>` — the D-lite active surface.
+    // `forage` is still the same reserved keyword (never a silent identifier, G2); this is a
+    // grammar-level special case for exactly the `@forage(…) hypha` sequence (`parse_hypha`), not
+    // a general reactivation — see `runtime_vocab_keywords_are_reserved_not_active` above for the
+    // bare-word behavior, which is unchanged.
+    let n = parse(
+        "nodule demo;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\n\
+         fn run() => Binary{8} = colony { @forage(0b101) hypha compute(0b0000_0001) };",
+    )
+    .expect("a `@forage(…) hypha` annotation parses (M-906)");
+    let Item::Fn(run) = n
+        .items
+        .iter()
+        .find(|i| matches!(i, Item::Fn(f) if f.sig.name == "run"))
+        .expect("run fn")
+    else {
+        panic!("run fn");
+    };
+    let Expr::Colony(hyphae) = &run.body else {
+        panic!("run body must be a colony, got {:?}", run.body);
+    };
+    assert_eq!(hyphae.len(), 1, "one hypha");
+    let policy = hyphae[0]
+        .forage
+        .as_deref()
+        .expect("the hypha's `forage` field must be `Some` after `@forage(0b101)`");
+    assert!(
+        matches!(policy, Expr::Lit(Literal::Bin(s)) if s == "101"),
+        "the parsed policy must be the literal bitmask expression, got {policy:?}"
+    );
+
+    // A hypha with no `@forage(…)` prefix in the SAME colony still parses with `forage: None` —
+    // the annotation is per-hypha, not per-colony (additive, never a silent colony-wide default).
+    let mixed = parse(
+        "nodule demo;\nfn compute(x: Binary{8}) => Binary{8} = not(x);\n\
+         fn run() => Binary{8} =\n  colony { @forage(0b1) hypha compute(0b0000_0001), hypha compute(0b0000_0010) };",
+    )
+    .expect("a mixed annotated/un-annotated colony parses");
+    let Item::Fn(run2) = mixed
+        .items
+        .iter()
+        .find(|i| matches!(i, Item::Fn(f) if f.sig.name == "run"))
+        .expect("run fn")
+    else {
+        panic!("run fn");
+    };
+    let Expr::Colony(hyphae2) = &run2.body else {
+        panic!("run body must be a colony");
+    };
+    assert!(hyphae2[0].forage.is_some(), "first hypha is annotated");
+    assert!(hyphae2[1].forage.is_none(), "second hypha is not annotated");
 }
 
 #[test]

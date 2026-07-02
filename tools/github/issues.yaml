@@ -8508,6 +8508,14 @@ issues:
       DoD: forage/backbone promoted from reserved-not-active to active per a future R2 RFC; the
       capture/set surface specified as EXPLAIN-able + provenance-tagged (no black box). See
       research/27-dn64-ergonomics-rnd-RECORD.md.
+
+      INTEGRATOR NOTE (2026-07-02, integration-reconcile): this scope was SPLIT by the Phase-I wave.
+      DN-70 §7 defined the D-lite split — its D1 slice landed as M-906: `forage` is now active as
+      the `@forage(policy)` hypha placement annotation (EXPLAIN-able, provenance-tagged). `backbone`
+      remains a landed DECISION only (DN-70 §4/FLAG-D3, M-907), still reserved-not-active. The
+      REMAINDER — full forage/backbone activation as runtime constructs + the mechanized
+      SelectionPolicy capture/set surface — is the R2 lane, whose split is now recorded in DN-78
+      (M-962…M-964). This issue stays `needs-design` as the umbrella for that R2 remainder.
   - id: M-829
     title: "M-829 -- Tractable composition rule for approximation bounds (E2-1)"
     milestone: "Phase 2 — Full Unification & Verified Swaps"
@@ -8849,6 +8857,13 @@ issues:
       on mismatch); (6) per-colony posture in a mesh (own TrustRoot). Gives M-838 (OQ-M scoping) its shape.
       DoD: RFC-0038 §8.4-§8.7 ratified; the config surface + resolution algorithm chosen (the residual R&D
       under §K.2/§M); the granularity/scope/override + deviation-manifest realized Rust-first; never-silent.
+
+      INTEGRATOR NOTE (2026-07-02, integration-reconcile): the Phase-I `frz` wave built ONLY the
+      `whole` enforcement grain (RFC-0038 §8.4/§8.6) via M-961 (DN-77 §4 confirmed subset;
+      Declared->Enacted for that slice). This issue COORDINATES WITH — it is NOT duplicated by —
+      that built subset: M-847 remains the fuller design (the `module`/`call` grains, the full
+      scope-resolution hierarchy + auto-decoration + override, and the never-silent deviation
+      manifest), which M-961 deliberately left `Declared`/unbuilt. Stays `needs-design`.
   - id: M-848
     title: "M-848 -- Scoped-toolchain setup automation (just setup-scoped) per DN-65"
     milestone: "Phase 8 — Toolchain & Release Engineering"
@@ -9451,3 +9466,1943 @@ issues:
       Definition of Done:
       - `grep`-verifiable: every workspace member resolves `publish = false`; recorded (Empirical);
         workspace builds green.
+
+  - id: E28-1
+    title: "E28-1 (epic) — Phase-I H1: below-grammar enabler-gap closure"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P1, status:in-progress]
+    epic: E28
+    depends_on: [M-766, M-767, M-887, M-888, M-889, M-890, M-891, M-892, M-893, M-894, M-895,
+                 M-896, M-897, M-898, M-899, M-900, M-901, M-902, M-903, M-904, M-905, M-906,
+                 M-907, M-908, M-909, M-910, M-911, M-912, M-913, M-914]
+    doc_refs:
+      - corpus:ADR-038
+      - corpus:RFC-0033
+      - corpus:ADR-028
+      - corpus:DN-39
+      - corpus:DN-63
+      - src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md
+      - src:docs/spec/stdlib/self-hosting-readiness.md
+      - src:.claude/kickoffs/enb.md
+    body: |
+      EPIC (Phase-I H1, kickoff `enb`; ADR-038 §2.2/§2.6 + roadmap §3). Close the below-grammar
+      functional-usability enablers so a Mycelium program can exercise the whole ratified surface
+      end-to-end: the serial prim lane B (binary integer arithmetic + signed ops) → C (dense/VSA
+      op-prims) → A (scalar float, route ii) → E (Substrate/consume execution), the parallel tracks
+      D-lite (forage/backbone subset of M-828), `myc run`, textual string literal, and `hash.*`
+      surfacing — each never-silent, honestly tagged (VR-5), conformance-tested (accept + reject),
+      with a property test per bound. This epic IS Phase I's critical path: its DoD is the bulk of
+      ADR-038's Phase-I usability gate.
+
+      Sequencing: the wave sits under H0 `acy` (E27-1), which LANDED 2026-07-02 — no live blocker;
+      every task here lands under the cycle-enforcement gate. Collision law: the prim lane
+      (B → C → A → E) plus the string-literal tasks are SERIAL on `crates/mycelium-interp/src/prims.rs`
+      + the `mycelium-l1` frontend (one L1 surgery in flight at a time, shared with `grm`'s
+      implementation slots M-915/M-916/M-921/M-923); `myc run`, `hash.*`, and the mesh research note
+      are disjoint by directory and run concurrently.
+
+      Maintainer gates inside the wave (FLAG, never guess): M-895's float ADR must be Accepted +
+      the DN-39 review passed before M-896…M-900; M-901's consume-model memo signed off before
+      M-902…M-904; M-905's D-lite split signed off before M-906/M-907.
+
+      User stories:
+      - As a language user, I want Mycelium programs to run end-to-end through `myc run` with
+        integers, floats, strings, dense/VSA ops, and affine handles, so that Mycelium is a language
+        I can use, not a corpus I can read.
+      - As the maintainer, I want the H1 gap set closed under the transparency rule with explicit
+        gates on kernel growth, so that usability lands without eroding the trusted base (KC-3).
+
+      Definition of Done: each gap A–E closed (or explicitly maintainer-deferred with rationale —
+      G2); the three small items landed; M-914's demo runs; readiness §0 re-verified and recorded
+      (Empirical); every op never-silent + honestly tagged; no content-address rehash spent
+      (RFC-0033 §7, verified in M-896); grammar + api-index regenerated at the integration tier.
+
+      Children: M-887/M-888/M-889/M-766/M-767 (Gap B), M-890…M-894 (Gap C), M-895…M-900 (Gap A),
+      M-901…M-904 (Gap E), M-905…M-907 (D-lite), M-908…M-913 (small items + research start),
+      M-914 (capstone).
+
+  - id: M-887
+    title: "bin.mul prim — two's-complement multiply with never-silent overflow"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
+    epic: E28-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "bin.mul prim (two's-complement multiply, never-silent overflow) registered + typed in crates/mycelium-interp/src/prims.rs; property + conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0033
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap B). Two's-complement multiply prim with
+      never-silent overflow — explicit `Option`/error, no wrap-by-default (RFC-0033 §4.1.2).
+      Sequencing note: sits under H0 `acy` (E27-1), which landed 2026-07-02 — no live blocker.
+      First task of the serial prim lane (prims.rs + the mycelium-l1 frontend). Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want integer multiply in-language, so that `math`'s integer half is
+        expressible in `.myc`.
+
+      Definition of Done:
+      - Prim registered + typed; overflow → explicit error (no wrap-by-default); property test on
+        the overflow bound; conformance accept + reject; three-way where forms close.
+
+  - id: M-888
+    title: "bin.div + bin.rem prims — division with explicit div-by-zero error"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-887]
+    landed_date: 2026-07-02
+    landed_basis: "bin.div + bin.rem prims with explicit div-by-zero error (prims.rs); Euclidean-identity property + conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0033
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap B). Division prims with explicit
+      div-by-zero error; unsigned semantics first — signed variants ride M-767. Serial prim lane
+      (follows M-887's registry pattern). Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want integer division that fails loudly on zero, so that no program
+        divides silently.
+
+      Definition of Done:
+      - Prims registered; div-by-zero → explicit error; property test (`div`/`rem` Euclidean
+        identity on the domain); conformance accept + reject.
+
+  - id: M-889
+    title: "bin.shl + bin.shr prims — shifts with explicit out-of-range shift-amount handling"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-887]
+    landed_date: 2026-07-02
+    landed_basis: "bin.shl + bin.shr prims with explicit out-of-range shift-amount handling (prims.rs); conformance accept+reject green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0033
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap B). Shift prims with defined bounds:
+      shift-amount ≥ width is an explicit error (not UB/wrap). Serial prim lane. Model: Haiku.
+
+      User stories:
+      - As a stdlib author, I want shifts with defined bounds, so that bit-level code is portable
+        and never-silent.
+
+      Definition of Done:
+      - Prims registered; shift-amount ≥ width → explicit error (not UB/wrap); property test on the
+        bound; conformance accept + reject.
+
+  - id: M-766
+    title: "Two's-complement shared-op completion — neg + overflow-detect ops (RFC-0033 §4.1.2)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-887]
+    landed_date: 2026-07-02
+    landed_basis: "signed two's-complement neg + overflow-detect ops surfaced in crates/mycelium-interp/src/prims.rs + mycelium-l1 frontend (RFC-0033 §4.1.2); conformance accept+reject, three-way differential green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0033
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap B). RFC-0033-NAMED PULL-FORWARD SLOT —
+      minted under this id to keep the corpus cross-refs true (RFC-0033 §4.1.2 + its 2026-07-01
+      pull-forward note name M-766 explicitly; slot verified free at minting). Complete the shared
+      two's-complement op set: `neg` + overflow-detect ops; reconcile against the kpr-landed
+      `add`/`sub` — VERIFY the current registry FIRST, don't re-land what E19-1 shipped.
+      Serial prim lane. Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want the full shared two's-complement set (§4.1.2), so that
+        signed-magnitude workarounds are never needed.
+
+      Definition of Done:
+      - Verified inventory of landed vs missing ops recorded (Empirical); missing ops landed with
+        overflow-detect; property tests; conformance.
+
+  - id: M-767
+    title: "Signedness-split op set — signed div/cmp/shift + overflow-detect (RFC-0033 §4.1.3)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-766, M-888]
+    landed_date: 2026-07-02
+    landed_basis: "signed div/rem/shift variants landed (prims.rs); div-by-zero + out-of-range never-silent; conformance + property tests green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0033
+      - corpus:ADR-028
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap B). RFC-0033-NAMED PULL-FORWARD SLOT —
+      minted under this id to keep the corpus cross-refs true (slot verified free at minting).
+      The signedness-split op set: signed `div`/`cmp`/`shift` + overflow-detect (RFC-0033 §4.1.3;
+      ADR-028 signedness-as-operations — signedness lives in the *op*, not the type).
+      Serial prim lane. Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want signed comparisons and division as distinct ops, so that
+        `numerics` can express signed algorithms honestly.
+
+      Definition of Done:
+      - Signed op set registered; sign-sensitive property tests (e.g. `sdiv` rounding, `scmp` total
+        order on the domain); conformance accept + reject; ADR-028 cited in the op docs.
+
+  - id: M-890
+    title: "Surface the dense elementwise group — dense.add/sub/neg/scale prims"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-766, M-767, M-887, M-888, M-889]
+    landed_date: 2026-07-02
+    landed_basis: "dense elementwise prims landed (crates/mycelium-dense + interp surface); differential green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:crates/mycelium-dense/src/lib.rs
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap C). Surface the dense elementwise group —
+      `dense.add`/`dense.sub`/`dense.neg`/`dense.scale` (kernel: `add_values`/`sub_values`/
+      `neg_value`/`scale_value`, which already exist in `mycelium-dense` — Exact). Sets the
+      tensor-valued-prim registry pattern. Serial prim lane (after Gap B). Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want elementwise dense ops callable from `.myc`, so that the `dense`
+        module is expressible.
+
+      Definition of Done:
+      - Prims registered with honest per-op tags carried from `op_guarantee`; shape-mismatch →
+        explicit error; conformance accept + reject; three-way where forms close.
+
+  - id: M-891
+    title: "Surface dense.dot + dense.similarity — kernel guarantee metadata flows into the tag"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-890]
+    landed_date: 2026-07-02
+    landed_basis: "dense dot/sim prims landed (mycelium-dense + interp); property + conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:crates/mycelium-dense/src/lib.rs
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap C). Surface `dense.dot` +
+      `dense.similarity` with the kernel's `op_guarantee`/`op_rel_eps` metadata flowing into the
+      per-op tag (EXPLAIN-able). Model: Haiku.
+
+      User stories:
+      - As a certified-mode user, I want dot/similarity with their real error bounds attached, so
+        that accuracy claims are inspectable, never asserted.
+
+      Definition of Done:
+      - Prims registered; tag = the kernel's guarantee (no upgrade — VR-5); EXPLAIN shows the
+        bound; conformance.
+
+  - id: M-892
+    title: "Surface the VSA bind group — vsa.bind/unbind/permute (model-dispatched)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:vsa, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-890]
+    landed_date: 2026-07-02
+    landed_basis: "vsa.bind prim landed (crates/mycelium-vsa + interp surface); three-way/conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:crates/mycelium-vsa/src/lib.rs
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap C). Surface the VSA bind group —
+      `vsa.bind`/`vsa.unbind`/`vsa.permute`, model-dispatched (MAP-I/FHRR/BSC per the kernel's
+      `VsaModel`). Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want core VSA algebra in-language, so that the `vsa` module is
+        expressible.
+
+      Definition of Done:
+      - Prims registered across the model set; model mismatch → explicit error; per-model
+        conformance cases; tags honest per model.
+
+  - id: M-893
+    title: "Surface vsa.bundle — superpose via the certified path (bundle_values_certified)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:vsa, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-892]
+    landed_date: 2026-07-02
+    landed_basis: "vsa.bundle (certified) prim landed (mycelium-vsa + interp); three-way/conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:crates/mycelium-vsa/src/lib.rs
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap C). Surface `vsa.bundle` (superpose —
+      certified path via `bundle_values_certified`). Model: Haiku.
+
+      User stories:
+      - As a certified-mode user, I want bundling with its capacity-honest tag, so that
+        superposition claims carry their basis.
+
+      Definition of Done:
+      - Prim registered; certified path preserves the kernel's tag + bound; conformance; property
+        test vs capacity bound where cheap.
+
+  - id: M-894
+    title: "Surface VSA cleanup + reconstruction — vsa.cleanup + vsa.reconstruct with capacity bounds"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:vsa, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-892]
+    landed_date: 2026-07-02
+    landed_basis: "vsa.cleanup/reconstruct/required_dim prims landed (mycelium-vsa + interp; pi-table + l1 surface); three-way/conformance green. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:crates/mycelium-vsa/src/lib.rs
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap C). Surface VSA cleanup + reconstruction:
+      `vsa.cleanup` (cleanup memory) + `vsa.reconstruct` (`reconstruct_role`/`reconstruct_factors`),
+      with `required_dim`/`proven_capacity_bound` surfaced. Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want cleanup/reconstruction callable with their capacity bounds
+        visible, so that recovery guarantees are never black-boxed.
+
+      Definition of Done:
+      - Prims registered; capacity-bound query surfaced; below-capacity property test; conformance
+        accept + reject.
+
+  - id: M-895
+    title: "Float ADR draft + DN-39 promotion dossier (scalar-float route ii; maintainer ratifies)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:numerics, priority:P1, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:ADR-038
+      - corpus:DN-39
+      - corpus:RFC-0033
+      - corpus:ADR-030
+      - corpus:ADR-031
+    landed_basis: "status:done (2026-07-02, maintainer-ratified). ADR-040 (Scalar-Float Value Form,
+      Route II) transitioned Proposed -> Accepted 2026-07-02: route-ii + F64-only width set +
+      in-band IEEE overflow (FLAG-2) + the §7 FLAG recommendations approved. DN-69's PROMOTE
+      verdict (DN-39 promotion dossier) ratified alongside it -- the ADR-038 §2.6 double gate is
+      now satisfied. Unblocks M-896...M-900 (this same ratification, status:blocked -> status:todo)."
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap A — the design gate). Float ADR draft +
+      DN-39 promotion dossier: width set, NaN/rounding semantics, never-silent boundaries;
+      content-address impact coordinated with the deferred ADR-030/031 one-way doors (single
+      rehash, deferred to first value-persistence — RFC-0033 §7). Drafted from kickoff so
+      ratification overlaps the B/C lane — in progress now, in parallel. Model: Sonnet.
+
+      MAINTAINER GATE: the ADR is drafted Proposed — the maintainer ratifies; it is NOT
+      self-ratified. M-896…M-900 are status:blocked on this ADR reaching Accepted + the DN-39
+      (kernel-promotion bar) review passing — kernel entry is earned, default-DENY.
+
+      MAINTAINER GATE CLEARED 2026-07-02: ADR-040 Accepted (route-ii + F64-only + in-band IEEE
+      overflow + §7 FLAG recommendations approved) and DN-69's PROMOTE verdict ratified. The
+      double gate (ADR-038 §2.6) is satisfied; M-896…M-900 unblocked.
+
+      User stories:
+      - As the maintainer, I want the float design + kernel-entry case laid out for ratification,
+        so that the trusted base grows only through the DN-39 bar.
+
+      Definition of Done:
+      - ADR drafted (Proposed — maintainer ratifies; not self-ratified); DN-39 four-clause dossier
+        complete; rehash-coordination section explicit; FLAGged decision points listed.
+
+  - id: M-896
+    title: "Scalar-float Repr variant + value form in mycelium-core (per the Accepted ADR)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-895]
+    landed_date: 2026-07-02
+    landed_basis: "Repr::Float value form (IEEE-754 binary64, route-ii) landed per ADR-040/DN-69; source crates/mycelium-l1 + numerics. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0033
+      - corpus:DN-39
+      - src:crates/mycelium-core/src/content.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap A). Scalar-float `Repr` variant + value
+      form in `mycelium-core`, per the Accepted ADR; identity impact *documented, not spent* — no
+      content-address rehash (RFC-0033 §7 / M-780 discipline). Model: Sonnet.
+
+      maintainer gate cleared 2026-07-02 — M-895's ADR-040 reached Accepted and DN-69's DN-39
+      review passed (PROMOTE ratified); this task is unblocked.
+
+      User stories:
+      - As a language user, I want floats to be first-class values, so that `math`'s f64 half stops
+        being inexpressible.
+
+      Definition of Done:
+      - Repr + value form landed per ADR; content-address note verifies NO rehash occurred; kernel
+        tests green; KC-3 delta reviewed.
+
+  - id: M-897
+    title: "Float literal — lex + parse + typecheck in the L1 surface"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-896]
+    landed_date: 2026-07-02
+    landed_basis: "float literal lexing/parsing landed (mycelium.ebnf + mycelium-l1 lexer/parser); grammar artifacts regenerated. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:docs/spec/grammar/mycelium.ebnf
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap A). Float literal: lex + parse + typecheck
+      in the L1 surface. Serial-lane slot (L1 frontend). Model: Sonnet.
+
+      maintainer gate cleared 2026-07-02 — M-895's ADR-040 reached Accepted and DN-39 passed
+      (transitively, via M-896); this task is unblocked.
+
+      User stories:
+      - As a stdlib author, I want to write `1.5` in `.myc`, so that float code is authorable, not
+        just representable.
+
+      Definition of Done:
+      - Literal lexed/parsed/typed; malformed literals → explicit diagnostics; grammar
+        (`mycelium.ebnf`) updated; conformance accept + reject.
+
+  - id: M-898
+    title: "Float arithmetic prims — flt.add/sub/mul/div/neg with honest accuracy tags"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-897]
+    landed_date: 2026-07-02
+    landed_basis: "float arithmetic ops landed with in-band IEEE overflow policy (ADR-040 FLAG-2). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap A). Float arithmetic prims:
+      `flt.add`/`sub`/`mul`/`div`/`neg` — rounding per the ADR; tags honest (Empirical where
+      libm-dependent — the M-541 audit is pending). Model: Sonnet.
+
+      maintainer gate cleared 2026-07-02 — M-895's ADR-040 reached Accepted and DN-39 passed
+      (transitively); this task is unblocked.
+
+      User stories:
+      - As a stdlib author, I want float arithmetic with honest accuracy tags, so that `numerics`
+        claims trace to a basis.
+
+      Definition of Done:
+      - Prims registered; per-op tags at the supportable strength (no Proven without checked
+        side-conditions — VR-5); NaN/inf behavior per ADR, never-silent; conformance.
+
+  - id: M-899
+    title: "Float comparison/total-order prims — explicit NaN semantics (ties to M-511 proof debt)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:numerics, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-898]
+    landed_date: 2026-07-02
+    landed_basis: "float comparison ops landed (NaN/zero identity rules ADR-040 FLAG-4/5). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap A). Float comparison/total-order prims,
+      NaN handling per the ADR; ties to M-511 — the total-order proof debt becomes load-bearing,
+      the tag stays Empirical until proven. Model: Haiku.
+
+      maintainer gate cleared 2026-07-02 — M-895's ADR-040 reached Accepted and DN-39 passed
+      (transitively); this task is unblocked.
+
+      User stories:
+      - As a stdlib author, I want float ordering with explicit NaN semantics, so that sorting
+        floats is defined behavior.
+
+      Definition of Done:
+      - Cmp prims registered; NaN cases in conformance (accept + reject); M-511 cross-referenced,
+        tag honest.
+
+  - id: M-900
+    title: "Float three-way conformance closure + readiness §0 blocker-1 re-verified"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:numerics, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-898, M-899]
+    landed_date: 2026-07-02
+    landed_basis: "float certified-mode gate landed (ADR-040 §7); guarantee tags at supportable strength. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:docs/spec/stdlib/self-hosting-readiness.md
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap A). Float three-way conformance closure
+      (L1-eval ≡ L0-interp ≡ AOT where forms close) + readiness §0 blocker-1 re-verified.
+      Model: Haiku.
+
+      maintainer gate cleared 2026-07-02 — M-895's ADR-040 reached Accepted and DN-39 passed
+      (transitively); this task is unblocked.
+
+      User stories:
+      - As the Phase-I gate, I want the float gap checked off with evidence, so that the usability
+        DoD row is Empirical, not Declared.
+
+      Definition of Done:
+      - Three-way suite green (or AOT refusal explicitly recorded as a decision); readiness §0
+        item 1 re-verified + recorded.
+
+  - id: M-901
+    title: "Confirm the Substrate/consume execution model — DN-54 §10 design-pass confirm-memo"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P1, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-54
+    landed_basis: "status:done (2026-07-02, maintainer-ratified). DN-71 (Substrate/consume
+      Execution Model Confirm-Memo) transitioned Draft -> Accepted 2026-07-02: Model S
+      (interpreter-level opaque affine handle; static use-once enforcement with a never-silent
+      runtime backstop; identity-move consume lowering) approved as recommended. Unblocks
+      M-902...M-904 (status:blocked -> status:todo, this same ratification)."
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap E — the design gate). Confirm the execution
+      model: the DN-54 §10 derive-site `consume` design-pass (M-824) as the target — a short
+      confirm-memo for the maintainer (confirm, THEN implement; readiness §0 item 5 notes no
+      execution issue exists). MAINTAINER GATE: M-902…M-904 are status:blocked on this memo's
+      sign-off. Model: Sonnet. Runs in parallel with the Gap-A design work.
+
+      Cross-check: this memo MUST be checked against `grm` M-918's DN-54 dossier (M-918 is a
+      reserved `grm`-kickoff slot, not yet minted) — the two kickoffs share the same consume model
+      and must not fork it; FLAG if they diverge.
+
+      MAINTAINER GATE CLEARED 2026-07-02: DN-71 Accepted — Model S approved. M-902…M-904 unblocked.
+
+      INTEGRATOR CLOSE-OUT (2026-07-02, integration-reconcile): Model S now EXECUTES at the L1-eval
+      level — M-902 (Substrate v0 opaque affine handle), M-903 (affine use-once tracker + runtime
+      backstop) and M-904 (identity-move consume lowering + v0 drop) landed in
+      crates/mycelium-l1/src/eval.rs. Cross-check against `grm` M-918's DN-54 dossier RESOLVED: both
+      landed on the same Model S; the consume model was NOT forked (no divergence FLAG).
+
+      User stories:
+      - As the maintainer, I want the consume-execution model confirmed before code, so that the
+        affine semantics aren't improvised mid-implementation.
+
+      Definition of Done:
+      - Memo with the model, alternatives, and a recommendation; maintainer sign-off recorded;
+        FLAGs listed; cross-checked against `grm` M-918's DN-54 dossier (FLAG if they diverge).
+
+  - id: M-902
+    title: "Substrate v0 value form — creation, passage, inspection (never-silent errors)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:core-ir, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-901]
+    landed_date: 2026-07-02
+    landed_basis: "Substrate v0 opaque affine handle value form landed at the L1-eval level (crates/mycelium-l1/src/eval.rs) per DN-71 Model S. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:DN-54
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap E). `Substrate` v0 value form — the
+      value-model plumbing (creation, passage, inspection; never-silent errors). Model: Sonnet.
+
+      maintainer gate cleared 2026-07-02 — M-901's DN-71 consume-model confirm-memo was signed off
+      (Model S accepted); this task is unblocked.
+
+      User stories:
+      - As a stdlib author, I want `Substrate` values to exist at runtime, so that `fs`/`io`'s
+        handle model has something to hold.
+
+      Definition of Done:
+      - Value form lands; invalid states unrepresentable or explicit errors; kernel/interp tests
+        green.
+
+  - id: M-903
+    title: "Affine tracker — consume checked semantics (use-once; double-consume/leak explicit)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-902]
+    landed_date: 2026-07-02
+    landed_basis: "affine consume tracker (static use-once check + never-silent runtime backstop) landed in mycelium-l1 (DN-71 Model S). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:DN-54
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap E). Affine tracker — `consume` checked
+      semantics: use-once enforcement; double-consume/leak → explicit diagnostics. Model: Sonnet.
+
+      maintainer gate cleared 2026-07-02 — M-901's DN-71 sign-off (Model S accepted); this task is
+      unblocked (transitively, via M-902).
+
+      User stories:
+      - As a language user, I want double-use of a consumed handle to be a compile/runtime error
+        with a clear message, so that resource bugs are impossible to write silently.
+
+      Definition of Done:
+      - Tracker enforces use-once; property test (no path consumes twice undetected); reject-case
+        conformance; diagnostics name the violation site.
+
+  - id: M-904
+    title: "Lift the staged Residual — Substrate/consume elaborate to executing forms"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-903]
+    landed_date: 2026-07-02
+    landed_basis: "consume/Substrate execute end-to-end (identity-move lower + v0 drop posture) at L1-eval (DN-71 Model S, M-901). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:DN-54
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, Gap E). Lift the staged `Residual` —
+      `Substrate`/`consume` elaborate to *executing* forms in the interpreter; conformance accept
+      + reject. Model: Sonnet.
+
+      maintainer gate cleared 2026-07-02 — M-901's DN-71 sign-off (Model S accepted); this task is
+      unblocked (transitively).
+
+      User stories:
+      - As a stdlib author, I want `fs`/`io`'s affine-handle model to actually run, so that those
+        modules become portable.
+
+      Definition of Done:
+      - The elab `Residual` for this fragment is gone (or explicitly narrowed + recorded);
+        end-to-end accept cases run; reject cases still refuse cleanly.
+
+  - id: M-905
+    title: "Scope-split M-828 — define the D-lite subset (forage/backbone) vs the H2 remainder"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:design, area:execution, priority:P2, status:done]
+    epic: E28-1
+    depends_on: []
+    doc_refs:
+      - corpus:DN-63
+      - corpus:ADR-038
+    landed_basis: "status:done (2026-07-02, maintainer-ratified). DN-70 (M-828 D-lite Scope Split)
+      transitioned Draft -> Accepted 2026-07-02: the D-lite split (§3 in-scope rows D1 forage /
+      D2 backbone vs §5 deferred R-1...R-6) is approved as drafted (FLAG-D1 cleared). Unblocks
+      M-906/M-907 (status:blocked -> status:todo, this same ratification)."
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, D-lite). Scope-split M-828: define the D-lite
+      subset (`forage`/`backbone` per roadmap §3; what exactly `std.runtime`'s *usable surface*
+      needs per DN-63) vs the H2 remainder. MAINTAINER GATE (FLAG): the maintainer signs the split
+      — M-906/M-907 are status:blocked on that sign-off. Model: Sonnet.
+
+      MAINTAINER GATE CLEARED 2026-07-02: DN-70 Accepted — the D-lite split signed off
+      (FLAG-D1 cleared). M-906/M-907 unblocked.
+
+      User stories:
+      - As the maintainer, I want the usability subset explicitly split from the full R2 wave, so
+        that H1 stays bounded and honest.
+
+      Definition of Done:
+      - Split memo (in-scope rows vs deferred rows, each grounded in DN-63); M-828 body updated
+        with the split; maintainer sign-off.
+
+  - id: M-906
+    title: "Activate forage per the D-lite subset (lex → parse → elab → interp; DN-63 semantics)"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:feature, area:execution, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-905]
+    landed_date: 2026-07-02
+    landed_basis: "forage single-node placement activated as the @forage(policy) hypha annotation with a mandatory-EXPLAIN placement trail (crates/mycelium-l1/src/eval.rs; DN-70 D1, RFC-0008 RT3). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:DN-63
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, D-lite). Activate `forage` per the D-lite
+      subset: lex → parse → elab → interp, DN-63 semantics. Serial-lane slot (L1 frontend) — joins
+      the one-L1-surgery-at-a-time lane. Model: Sonnet.
+
+      maintainer gate cleared 2026-07-02 — M-905's DN-70 D-lite split was signed off
+      (FLAG-D1 cleared); this task is unblocked.
+
+      User stories:
+      - As a language user, I want `forage` working end-to-end, so that runtime-vocabulary programs
+        execute rather than refuse.
+
+      Definition of Done:
+      - Construct executes three-way where forms close; never-silent on the deferred parts
+        (explicit residual + tracker); conformance accept + reject.
+
+  - id: M-907
+    title: "Verify backbone's landed state vs the D-lite subset (M-825 landed; verify, don't re-land)"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:verification, area:execution, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-905]
+    landed_date: 2026-07-02
+    landed_basis: "backbone D-lite verified — re-verified inventory recorded (Empirical); DN-70 §4/FLAG-D3 confirms M-825 landed the backbone DECISION, not an executing construct. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:DN-63
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, D-lite). Verify `backbone`'s landed state vs
+      the D-lite subset — M-825 landed a backbone construct 2026-06-29; verify against DN-63/the
+      split, close residual gaps ONLY, don't re-land. Model: Haiku.
+
+      maintainer gate cleared 2026-07-02 — M-905's DN-70 D-lite split was signed off
+      (FLAG-D1 cleared); this task is unblocked. Note (DN-70 §4/FLAG-D3): the phrase "M-825 landed
+      a backbone construct" is corrected by DN-70 to "M-825 landed the backbone decision" —
+      carried here for the assignee's awareness pending the integrator's formal wording fix.
+
+      INTEGRATOR CLOSE-OUT (2026-07-02, integration-reconcile): the DN-70 §4/FLAG-D3 wording is now
+      FINAL — `backbone` is a landed DECISION only, not an executing construct; it remains
+      reserved-not-active at the lexer (no `@backbone` annotation form activated this wave, unlike
+      `forage`/M-906). Re-verified inventory recorded (Empirical); no residual gaps opened.
+
+      User stories:
+      - As the Phase-I gate, I want backbone's D-lite row checked with evidence, so that landed
+        work isn't redone and gaps aren't assumed closed.
+
+      Definition of Done:
+      - Verified inventory (landed vs subset) recorded (Empirical); residual gaps closed or
+        FLAGged; conformance current.
+
+  - id: M-908
+    title: "myc run v0 — lift the honest CLI refusal: single-nodule project → interpreter"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P1, status:done]
+    epic: E28-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "myc run single-nodule execution path landed (crates/mycelium-cli). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:crates/mycelium-cli/src/lib.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, small items — first-among-equals). `myc run`
+      v0: lift the honest CLI refusal (`mycelium-cli/src/lib.rs` `run()`) — a single-nodule project
+      runs through the interpreter, end-to-end. Parallel track (`mycelium-cli` is disjoint from the
+      serial prim lane). Model: Sonnet.
+
+      User stories:
+      - As a language user, I want `myc run` to execute my program, so that Mycelium is a language
+        I can use, not a corpus I can read.
+
+      Definition of Done:
+      - `myc run` executes a single-nodule project through the interpreter; failures are explicit
+        `Report`s; CLI tests green.
+
+  - id: M-909
+    title: "myc run multi-nodule — manifest-driven project loading, nodule linking, end-to-end demo"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:toolchain, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-908]
+    landed_date: 2026-07-02
+    landed_basis: "myc run multi-nodule — manifest-driven linking + end-to-end demo landed (mycelium-cli). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:crates/mycelium-cli/src/lib.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, small items). `myc run` multi-nodule:
+      manifest-driven project loading, nodule linking, end-to-end demo. Model: Sonnet.
+
+      User stories:
+      - As a language user, I want multi-nodule projects to run, so that real programs (not toys)
+        execute through the shipped toolchain.
+
+      Definition of Done:
+      - A real multi-nodule project runs via `myc run` (committed as a fixture); link errors
+        explicit; CLI tests green.
+
+  - id: M-910
+    title: "Textual string literal — lex + grammar (explicit minimal escape set)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:done]
+    epic: E28-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "string literals landed (mycelium.ebnf + mycelium-l1 lexer/parser); grammar artifacts regenerated. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:docs/spec/grammar/mycelium.ebnf
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, small items). Textual string literal — lex +
+      grammar: `"…"` with an explicit, minimal escape set (ergonomic, not expressive — only `0x…`
+      `BytesLit` exists today). SERIAL-LANE SLOT (L1 lexer): no id dependency, but it must take a
+      one-at-a-time slot in the L1-frontend lane; slot it early. Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want to write string literals, so that authoring `text`/`fmt`/`diag`/
+        `error` in `.myc` stops requiring hex bytes.
+
+      Definition of Done:
+      - Literal lexed/parsed; escape errors explicit; `mycelium.ebnf` updated; serial-lane slot
+        respected (L1 lexer).
+
+  - id: M-911
+    title: "String-literal lowering + conformance — lower to the existing Bytes/text value form"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-910]
+    landed_date: 2026-07-02
+    landed_basis: "mycelium-fmt string-literal formatting fix landed. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:docs/spec/grammar/mycelium.ebnf
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, small items). String-literal lowering +
+      conformance: lower to the existing Bytes/text value form; accept + reject cases.
+      Model: Haiku.
+
+      User stories:
+      - As a stdlib author, I want the literal to mean the same bytes everywhere, so that string
+        behavior is deterministic three-way.
+
+      Definition of Done:
+      - Lowering lands (no new L0 node — KC-3); three-way conformance; reject cases (bad escapes)
+        refuse cleanly.
+
+  - id: M-912
+    title: "Surface hash.* — blake3 (already in mycelium-core) as prims"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E28-1
+    depends_on: [M-887]
+    landed_date: 2026-07-02
+    landed_basis: "hash.blake3 + bytes.eq prims surfaced in crates/mycelium-interp/src/prims.rs. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:crates/mycelium-core/src/id.rs
+      - src:crates/mycelium-core/src/content.rs
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, small items). Surface `hash.*` — blake3
+      (already in `mycelium-core`, `id.rs`/`content.rs`) as prims. Depends on the Gap-B registry
+      pattern (M-887's pattern suffices; full Gap B need not be done). Model: Haiku.
+
+      User stories:
+      - As a stdlib author, I want content hashing in-language, so that the `content` module is
+        expressible.
+
+      Definition of Done:
+      - `hash.*` prim(s) registered; Exact tag justified by the kernel's own use; conformance
+        vector tests (known digests).
+
+  - id: M-913
+    title: "Start the mesh research track (mesh/xloc/cyst) — research note, NOT the build"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:research, area:execution, priority:P3, status:done]
+    epic: E28-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "mesh distributed-runtime research start recorded (research/28-mesh-xloc-cyst-distributed-runtime-research-start-RECORD.md). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:ADR-038
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, research start). Start the mesh research track
+      (D-heavy: `mesh`/`xloc`/`cyst`) — a research note: problem statement, prior-art survey plan,
+      open questions, DN skeleton. SPEC THE RESEARCH, NOT THE BUILD — a separate, parallel,
+      long-lead lane; explicitly NON-GATING for H1 (M-914 does not depend on it). Model: Sonnet.
+
+      User stories:
+      - As the Phase-II runtime effort, I want the distributed-vocabulary research started now, so
+        that its long lead time overlaps Phase I instead of following it.
+
+      Definition of Done:
+      - Research note committed (`research/` or DN — Draft, Declared posture); explicitly
+        non-gating; scoped questions listed; no implementation.
+
+  - id: M-914
+    title: "H1 integration demo + readiness re-verify (the Phase-I usability capstone)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:language, priority:P1, status:done]
+    epic: E28-1
+    depends_on: [M-766, M-767, M-887, M-888, M-889, M-890, M-891, M-892, M-893, M-894, M-895,
+                 M-896, M-897, M-898, M-899, M-900, M-901, M-902, M-903, M-904, M-905, M-906,
+                 M-907, M-908, M-909, M-910, M-911, M-912]
+    landed_date: 2026-07-02
+    landed_basis: "H1 capstone — committed myc-run demo + Phase-I H1 readiness re-verify. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:ADR-038
+      - src:docs/spec/stdlib/self-hosting-readiness.md
+    body: |
+      Minted 2026-07-02 (kickoff `enb`, Phase-I H1, capstone). H1 integration demo + readiness
+      re-verify: a committed Mycelium program exercising integers (signed ops), floats, strings,
+      dense/vsa ops, fs/io (Substrate), and the R2-lite surface via `myc run`; re-run the readiness
+      §0 verification and record the result. Depends on all H1 lanes; M-913 (mesh research) is
+      explicitly non-gating and excluded. Model: Sonnet.
+
+      User stories:
+      - As the maintainer, I want the H1 DoD demonstrated by one running program plus a re-verified
+        blocker list, so that "usable" is checked (Empirical), not declared.
+
+      Definition of Done:
+      - Demo program committed + running via `myc run` (three-way-clean where forms close);
+        readiness §0 blocker list re-verified empty or explicitly reduced, recorded append-only.
+
+  - id: E29-1
+    title: "E29-1 (epic) — Phase-I opportunistic .myc ports (ready-now; non-gating)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:stdlib, priority:P2, status:done]
+    epic: E29
+    depends_on: [M-925, M-926, M-927, M-928, M-929, M-930, M-931, M-932, M-933, M-934, M-935]
+    doc_refs:
+      - corpus:ADR-038
+      - corpus:RFC-0031
+      - corpus:DN-34
+      - src:docs/planning/self-hosting-port-ledger.md
+      - src:docs/spec/stdlib/self-hosting-readiness.md
+      - src:.claude/kickoffs/opp.md
+    body: |
+      EPIC (Phase-I, kickoff `opp`; ADR-038 §2.2/§2.5 + roadmap §6). Port the ~9 pure/structural
+      `mycelium-std-*` crates the surface can express TODAY — no H1 enabler needed — as `.myc`
+      phyla/nodules under the RFC-0031 D5 method: verify-the-surface first, pre-port polish,
+      transpiler-assisted where coverage genuinely helps (progressive hardening: start smallest),
+      hand-finished, then the `std_result.rs`-pattern harness with three-way execution + a
+      differential vs the retained Rust reference oracle (D6 — no crate retirement; M-867 is
+      post-1.0). Candidate order, smallest-first by non-test LOC (Empirical, 2026-07-01):
+      diag (531) → core (623) → select (1105) → swap (1118) → recover (1380) → error (1606) →
+      testing (1671) → ternary (1924) → spore (2613). `convert` is NOT in this wave's set — FLAG it
+      to the port ledger as a next-wave candidate rather than growing this scope.
+
+      POSTURE: welcome, honest, and NEVER the release gate (ADR-038 §2.2). Sequencing: sits under
+      H0 `acy` (E27-1), which LANDED 2026-07-02 — no live blocker; `enb` (E28-1) is NOT a
+      prerequisite — this set was chosen precisely because it needs no H1 enabler (each task
+      re-verifies that claim first and FLAGs instead of waiting). A candidate that needs an enabler
+      is FLAGged back to `enb`, never forced (G2). Transpiler is an assist, not a gate
+      (`crates/mycelium-transpile`, landed — `trx`); transpiler feature demand routes to E18-1.
+
+      Every port task's DoD includes the same five D5 rows: (1) surface-check recorded before
+      porting (Empirical — or the task STOPS and FLAGs); (2) pre-port polish committed separately
+      Rust-side, behavior-neutral (tests prove it); (3) `.myc` nodule + `include_str!` harness,
+      three-way where forms close; (4) differential vs the Rust oracle green (D5 bar; signature
+      frozen); (5) per-op tags carried at the same strength, transpiler-assist fraction recorded
+      honestly in the port ledger.
+
+      User stories:
+      - As a stdlib author, I want the expressible-today crates self-hosted, so that dogfooding
+        starts now instead of after full grammar maturity.
+      - As the maintainer, I want measured assist/defect data from real ports, so that the Phase-II
+        mass-port plan is grounded in data, not the PoC's estimates.
+
+      Definition of Done: each of the 9 crates either ported (D5 rows all green) or explicitly
+      FLAGged blocked with the named missing enabler routed to `enb`/the ledger — never forced,
+      never silently dropped (G2); Rust oracles retained (D6); transpiler-assist fractions measured
+      + recorded per crate; ledger/indices reconciled at the integration tier.
+
+      Children: M-925 (harness fixture), M-926…M-934 (the 9 ports, smallest-first), M-935 (ledger
+      + readiness close-out).
+
+  - id: M-925
+    title: "Generalize the port harness — reusable data-driven three-way + differential fixture"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:infra, area:stdlib, priority:P2, status:done]
+    epic: E29-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "opp port harness landed (differential Rust-ref ≡ self-hosted .myc). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-conformance/tests/std_result.rs
+      - src:crates/mycelium-std-conformance/tests/std_option.rs
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Generalize the port harness: extract the
+      `std_result.rs`/`std_option.rs` pattern (verbatim `include_str!` load, three-way execution,
+      Rust-reference differential) into a reusable, data-driven fixture so each new port is
+      *cases, not bespoke logic* (house test-layout rule). Model: Sonnet.
+
+      User stories:
+      - As a port leaf, I want a drop-in harness fixture, so that every port ships the same
+        three-way + differential rigor without re-deriving it.
+
+      Definition of Done:
+      - Fixture landed; `std_result`/`std_option` migrated onto it (proof it generalizes); a
+        new-port checklist (the D5 rows) embedded as the fixture's doc; `cargo test -p mycelium-l1`
+        green.
+
+      NOTE (2026-07-02, M-971 fallout): `std_result.rs`/`std_option.rs` (and the rest of the
+      relocated port-differential set) moved from `crates/mycelium-l1/tests/` to the new
+      `crates/mycelium-std-conformance/tests/` crate as part of the M-971 acyclic-deps fix
+      (PR #1015); `doc_refs` above updated to the new paths, tests unchanged and still green.
+
+  - id: M-926
+    title: "Port std-diag to .myc (531 LOC — smallest; pattern-setter #1)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E29-1
+    depends_on: [M-925]
+    landed_date: 2026-07-02
+    landed_basis: "std.diag nodule ported to self-hosted lib/std/diag.myc; differential green; transpiler-assist ~0% (see port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-diag/src/lib.rs
+      - src:docs/planning/self-hosting-port-ledger.md
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Port `std-diag` (531 non-test LOC — smallest;
+      pattern-setter #1): structural diagnostics. Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want `diag` self-hosted, so that diagnostics are expressed in the
+        language they diagnose.
+
+      Definition of Done:
+      - The five D5 rows (surface-check first — STOP + FLAG if an enabler is missing; behavior-
+        neutral pre-port polish; `.myc` nodule + `include_str!` harness three-way; differential vs
+        the Rust oracle green; tags carried at the same strength — VR-5); measured transpiler-
+        assist rate recorded (Empirical — calibrates the wave).
+
+  - id: M-927
+    title: "Port std-core to .myc (623 LOC; pattern-setter #2 — the stdlib std-core, not the kernel)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E29-1
+    depends_on: [M-926]
+    landed_date: 2026-07-02
+    landed_basis: "std.core nodule ported to lib/std/core.myc; differential green; transpiler-assist ~13.6% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-core/src/lib.rs
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Port `std-core` (623 LOC; pattern-setter #2).
+      NOTE: the *stdlib* `std-core` crate, not the kernel `mycelium-core`, which stays Rust per
+      RFC-0031 D1. Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want the stdlib's own core nodule self-hosted, so that the dogfooding
+        story starts at its root.
+
+      Definition of Done:
+      - The five D5 rows; any D1-boundary item found inside it FLAGged, never ported past.
+
+  - id: M-928
+    title: "Port std-select to .myc (1105 LOC): selection/decision surface"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P3, status:done]
+    epic: E29-1
+    depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.select nodule ported to lib/std/select.myc; differential green; transpiler-assist ~0% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-select/src/lib.rs
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Port `std-select` (1105 LOC): the
+      selection/decision surface. Model: Haiku.
+
+      User stories:
+      - As a certified-mode user, I want `select`'s reified selections expressed in `.myc`, so that
+        EXPLAIN-able choice logic is itself inspectable language code.
+
+      Definition of Done:
+      - The five D5 rows; EXPLAIN behavior differentially identical.
+
+  - id: M-929
+    title: "Port std-swap to .myc (1118 LOC): the never-silent representation-change surface"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P3, status:done]
+    epic: E29-1
+    depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.swaps nodule ported to lib/std/swap.myc; differential green; transpiler-assist ~9.1% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-swap/src/lib.rs
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Port `std-swap` (1118 LOC): the never-silent
+      representation-change surface. Model: Haiku.
+
+      User stories:
+      - As a language user, I want `swap` self-hosted with its never-silent guarantees intact, so
+        that the language's signature feature is written in the language.
+
+      Definition of Done:
+      - The five D5 rows; never-silent swap semantics covered by reject-case conformance (no
+        silent path survives translation — G2).
+
+  - id: M-930
+    title: "Port std-recover to .myc (1380 LOC): recovery/fallback surface"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P3, status:done]
+    epic: E29-1
+    depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.recover nodule ported to lib/std/recover.myc; differential green; transpiler-assist ~3.4% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-recover/src/lib.rs
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Port `std-recover` (1380 LOC): the
+      recovery/fallback surface. Model: Haiku.
+
+      User stories:
+      - As a stdlib author, I want `recover` self-hosted, so that error-recovery combinators are
+        dogfooded.
+
+      Definition of Done:
+      - The five D5 rows.
+
+  - id: M-931
+    title: "Port std-error to .myc (1606 LOC): error taxonomy + construction"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E29-1
+    depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.error nodule ported to lib/std/error.myc; differential green; transpiler-assist ~3.4% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-error/src/lib.rs
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Port `std-error` (1606 LOC): error taxonomy +
+      construction. Model: Sonnet.
+
+      User stories:
+      - As a stdlib author, I want `error` self-hosted, so that the error model the stdlib throws
+        is defined in-language.
+
+      Definition of Done:
+      - The five D5 rows; error-formatting parity in the differential.
+
+  - id: M-932
+    title: "Port std-testing to .myc (1671 LOC): the structural testing surface"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E29-1
+    depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.testing nodule ported to lib/std/testing.myc; differential green; transpiler-assist ~18% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-testing/src/lib.rs
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Port `std-testing` (1671 LOC): the structural
+      testing surface. Model: Sonnet.
+
+      User stories:
+      - As a contributor, I want `testing` self-hosted, so that `.myc` code can be tested by
+        `.myc` infrastructure.
+
+      Definition of Done:
+      - The five D5 rows; the ported harness can express at least one existing conformance case
+        (self-application smoke).
+
+  - id: M-933
+    title: "Port std-ternary to .myc (1924 LOC): balanced-ternary value surface"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E29-1
+    depends_on: [M-927]
+    landed_date: 2026-07-02
+    landed_basis: "std.ternary nodule ported to lib/std/ternary.myc; differential green; transpiler-assist ~10% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-ternary/src/lib.rs
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Port `std-ternary` (1924 LOC): the
+      balanced-ternary value surface. Model: Sonnet.
+
+      User stories:
+      - As a language user, I want `ternary` self-hosted, so that a paradigm pillar is expressed
+        in the language that claims it.
+
+      Definition of Done:
+      - The five D5 rows; numeric edge cases (carries, bounds) in the differential corpus; tags at
+        kernel strength, never above (VR-5).
+
+  - id: M-934
+    title: "Port std-spore to .myc (2613 LOC — largest; last by progressive hardening)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:stdlib, priority:P2, status:done]
+    epic: E29-1
+    depends_on: [M-928, M-929, M-930, M-931, M-932, M-933]
+    landed_date: 2026-07-02
+    landed_basis: "std.spores nodule ported to lib/std/spore.myc; differential green; transpiler-assist ~0% (port ledger M-935). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0031
+      - src:crates/mycelium-std-spore/src/lib.rs
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Port `std-spore` (2613 LOC — largest; last by
+      progressive hardening — the wave tail): the artifact/packaging surface. Model: Sonnet.
+
+      User stories:
+      - As a package author, I want `spore` self-hosted, so that the deployable-artifact model is
+        dogfooded end-to-end.
+
+      Definition of Done:
+      - The five D5 rows; content-address behavior differentially identical (no identity drift —
+        the hashes must match the oracle's).
+
+  - id: M-935
+    title: "Ledger + readiness close-out — record the opp wave's measured Empirical outcomes"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:stdlib, priority:P3, status:done]
+    epic: E29-1
+    depends_on: [M-926, M-927, M-928, M-929, M-930, M-931, M-932, M-933, M-934]
+    landed_date: 2026-07-02
+    landed_basis: "self-hosting port ledger updated with the opp-wave transpiler-assist % per crate (Empirical) + D1-kernel-boundary note; docs/planning/self-hosting-port-ledger.md. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - src:docs/planning/self-hosting-port-ledger.md
+      - src:docs/planning/dogfooding-effort-and-usage-assessment.md
+      - src:docs/spec/stdlib/self-hosting-readiness.md
+    body: |
+      Minted 2026-07-02 (kickoff `opp`, Phase-I). Ledger + readiness close-out: update
+      `self-hosting-port-ledger.md` + the dogfooding assessment with measured Empirical rates
+      (assist %, LOC, defects found by the differential); record which candidates failed the
+      surface check (if any) and why. Model: Haiku.
+
+      User stories:
+      - As the maintainer, I want the wave's real costs and outcomes on the record, so that the
+        Phase-II mass-port plan is grounded in data, not the PoC's estimates.
+
+      Definition of Done:
+      - Ledger rows for all 9 (landed or FLAGged-blocked, none silent); assessment doc updated;
+        readiness §0 crate counts refreshed; issue statuses current.
+
+  - id: E30-1
+    title: "E30-1 (epic) — Phase-I H2a: grammar-stability gate"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P1, status:done]
+    epic: E30
+    depends_on: [M-915, M-916, M-917, M-918, M-919, M-920, M-921, M-922, M-923, M-924]
+    doc_refs:
+      - corpus:ADR-038
+      - corpus:RFC-0037
+      - corpus:RFC-0025
+      - corpus:DN-54
+      - corpus:RFC-0024
+      - corpus:ADR-033
+      - corpus:DN-56
+      - src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md
+      - src:docs/planning/Blocked-Decisions-Ratification-Map.md
+      - src:.claude/kickoffs/grm.md
+    body: |
+      EPIC (Phase-I H2a, kickoff `grm`; ADR-038 §2.7 + roadmap §5). Close the four grammar-
+      stability items so the surface a mass port writes against is the final one: (1) the RFC-0037
+      follow-ons (D2-b short repr keywords; RFC-0025 operator wiring); (2) DN-54 completion — the
+      extension-checker verified complete + the derive-site consumption model resolved (already
+      = DN-71 Model S, maintainer-ratified 2026-07-02 via `enb`); (3) the tuple-type decision
+      (RFC-0024 §4A.8); (4) ADR-033 FLAG-1 (`FieldSpec::Fn`; DN-56 kernel-freeze condition 2).
+      Then regenerate `mycelium.ebnf`, editor grammars, and the api-index, and propose the
+      no-normative-change window. Rule (roadmap §5): no mass `.myc` porting against a moving
+      grammar — this epic is the gate between `opp` and the Phase-II corpus port.
+
+      Delegation (2026-07-02): the maintainer DELEGATED the design decisions — the dossier tasks
+      (M-920 → DN-73, M-922 → DN-74, M-917 → DN-75) are NOT maintainer-blocked; the orchestrator
+      decides per each dossier's recommendation and records the decision append-only. The
+      no-normative-change window length is proposed in M-924 (Declared until set).
+
+      Collision law: the implementation slots (M-915/M-916/M-919/M-921/M-923) touch the
+      `mycelium-l1` frontend — the repo's one serial lane, shared with `enb` — so they run one at
+      a time, after `enb`'s lane clears (status:blocked until then). The dossier/audit tasks are
+      docs-only and run in parallel with each other and with the lane.
+
+      User stories:
+      - As the mass-port effort, I want the grammar surface closed and dated, so that ported
+        nodules never chase a moving target.
+      - As the maintainer, I want the remaining grammar decisions closed via grounded dossiers
+        under the 2026-07-02 delegation, so that "stable" is a checked claim, not a hope.
+
+      Definition of Done: all four H2a items closed with their decisions cited (roadmap §5);
+      `mycelium.ebnf` + editor grammars + api-index regenerated and stable; the window proposed
+      (length = maintainer's call, Declared until set); every decision recorded append-only at
+      its supportable strength (VR-5); doc-maintenance per `_doc-maintenance.md`.
+
+      Children: M-915/M-916 (RFC-0037 follow-ons), M-917/M-918/M-919 (DN-54 completion),
+      M-920/M-921 (tuple), M-922/M-923 (ADR-033 FLAG-1), M-924 (stability close-out).
+
+  - id: M-915
+    title: "RFC-0037 D2-b short repr keywords — lexer + grammar + mycfmt + conformance"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    epic: E30-1
+    depends_on: []
+    doc_refs:
+      - corpus:RFC-0037
+      - src:crates/mycelium-l1/src/lexer.rs
+      - src:docs/spec/grammar/mycelium.ebnf
+    body: |
+      Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). RFC-0037 D2-b short repr keywords — the
+      ergonomic aliases for the paradigm type-keywords (lexer + grammar + `mycfmt` + conformance).
+      BLOCKED: serial L1 lane — after `enb` (one `mycelium-l1` surgery in flight at a time;
+      serial-lane slot 1 of this kickoff). Verification-first: verify the landed RFC-0037 state
+      before building. Model: Sonnet.
+
+      User stories:
+      - As a `.myc` author, I want the short repr keywords the ratified grammar promises, so that
+        ported code reads idiomatically before the corpus is ported.
+
+      Definition of Done:
+      - Aliases lexed/parsed/formatted per RFC-0037 D2-b; `mycelium.ebnf` + editor grammars
+        updated; conformance accept + reject; `mycelium-l1` + `mycelium-fmt` green.
+
+  - id: M-916
+    title: "RFC-0025 operator wiring follow-on — verify wired inventory, land only the residual"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    epic: E30-1
+    depends_on: [M-915]
+    doc_refs:
+      - corpus:RFC-0025
+      - corpus:RFC-0037
+      - src:crates/mycelium-l1/src/lexer.rs
+    body: |
+      Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). RFC-0025 operator wiring follow-on — close
+      the enacted migration's named non-blocker: verify what M-745/RFC-0037 already wired
+      (`< <= > >= << >>`, `lte`/`gte` desugaring), land ONLY the residual wiring. BLOCKED: serial
+      L1 lane — after `enb` (follows M-915 in the lane). Model: Sonnet.
+
+      User stories:
+      - As a `.myc` author, I want the full ratified operator surface wired, so that operator
+        spellings don't churn under a port.
+
+      Definition of Done:
+      - Verified inventory (wired vs residual) recorded (Empirical); residual wired per RFC-0025
+        §4.2/§4.3 as resolved by RFC-0037; desugaring conformance; no new precedence decisions
+        (FLAG if one appears).
+
+  - id: M-917
+    title: "DN-54 completion audit — verify the landed M-812-cont checks against DN-54 as written"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:language, priority:P1, status:done]
+    epic: E30-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-75 (DN-54 completion-audit) dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:DN-54
+      - src:.claude/kickoffs/grm.md
+    body: |
+      Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). DN-54 completion audit — verify the
+      `lwd`-landed M-812-cont checks (§4.1 RHS type-check, §4.2 cross-rule acyclicity, §6 KC-3
+      kernel-growth guard, §7 harness, RHS elaboration to L0) against DN-54 as written; re-run the
+      §7 harness; ledger residuals. Parallel, read-mostly (no L1 surgery). Pre-assigned decision
+      note for the audit's disposition record: DN-75. Delegation (2026-07-02): NOT
+      maintainer-blocked — the orchestrator decides per the audit's recommendation. Model: Sonnet.
+
+      User stories:
+      - As the mass-port effort, I want the lowering/extension surface verified final, so that
+        ported nodules never chase a moving `lower`/`derive` semantics.
+
+      Definition of Done:
+      - Per-section audit table (landed / residual / N-A) recorded (Empirical); §7 harness re-run
+        green; residuals become explicit tasks or FLAGs — none silent.
+
+  - id: M-918
+    title: "DN-54 derive-site consumption-model dossier — RESOLVED: DN-71 Model S"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P1, status:done]
+    epic: E30-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "docs/notes/DN-71-Substrate-Consume-Execution-Model-Confirm-Memo.md — Model S, maintainer-ratified 2026-07-02 (via kickoff `enb` M-901)"
+    doc_refs:
+      - corpus:DN-54
+      - src:docs/notes/DN-71-Substrate-Consume-Execution-Model-Confirm-Memo.md
+    body: |
+      Minted 2026-07-02 (kickoff `grm`, Phase-I H2a) — ALREADY RESOLVED at minting. The kickoff
+      table scoped this as an options + recommendation dossier from the M-824 §10 design-pass,
+      with an `enb` M-901 cross-check ("the two kickoffs must not fork the model"). That
+      resolution landed first: the consume model was ratified 2026-07-02 as DN-71 Model S (via
+      `enb`'s M-901 memo), so no separate grm dossier is needed — do NOT fork the model. M-919
+      enacts DN-71 Model S in the extension-checker. Deviation from the kickoff table recorded
+      here: the table's depends_on (M-917, audit input) is mooted by the ratified decision, so it
+      is dropped (transparency over literal fidelity — G2). Model: Sonnet (not spawned).
+
+      User stories:
+      - As the maintainer, I want the consume-model choice laid out with tradeoffs, so that I
+        ratify a grounded design, not a default. (Satisfied by DN-71 Model S.)
+
+      Definition of Done:
+      - Dossier with options, evidence, recommendation, and the `enb` M-901 cross-check (same
+        model — FLAG if they diverge); decision requested. MET BY: DN-71 Model S (ratified
+        2026-07-02) — one model, no fork.
+
+  - id: M-919
+    title: "Enact DN-71 Model S in the extension-checker + step DN-54's status honestly"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    epic: E30-1
+    depends_on: [M-918]
+    doc_refs:
+      - corpus:DN-54
+      - src:docs/notes/DN-71-Substrate-Consume-Execution-Model-Confirm-Memo.md
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). Enact the ratified consume model — DN-71
+      Model S (maintainer-ratified 2026-07-02; the ratification gate the kickoff table named is
+      already satisfied) — in the extension-checker, and step DN-54's status honestly (Accepted →
+      Enacted only when fully landed; append-only). BLOCKED: serial L1 lane — after `enb`.
+      Model: Sonnet.
+
+      User stories:
+      - As a `.myc` author, I want `derive`-site consumption checked per the ratified model, so
+        that extension-lowering is sound before the corpus depends on it.
+
+      Definition of Done:
+      - Checker enforces the ratified model (DN-71 Model S); reject-case conformance; DN-54
+        status stepped only if genuinely complete (else recorded as partial — VR-5).
+
+  - id: M-920
+    title: "Tuple-type decision dossier (RFC-0024 §4A.8) — landed-state reconcile + options"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P1, status:done]
+    epic: E30-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-73 (tuple type decision) dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0024
+      - src:docs/planning/Blocked-Decisions-Ratification-Map.md
+    body: |
+      Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). Tuple-type decision dossier (RFC-0024
+      §4A.8) — reconcile the landed M-822/M-826 state (first-class tuple + `f(x)(y)` + partial
+      application) with the open formal decision; enumerate what the decision still governs
+      (multi-arg arrows, signature forms); options + recommendation. Pre-assigned decision note:
+      DN-73. Delegation (2026-07-02): NOT maintainer-blocked — the orchestrator decides per this
+      dossier's recommendation and records DN-73 append-only. Docs-only; parallel. Model: Sonnet.
+
+      User stories:
+      - As the maintainer, I want the tuple question closed formally against what already landed,
+        so that ported signatures never reshape after the fact.
+
+      Definition of Done:
+      - Dossier: landed-state inventory (Empirical), the residual decision surface, options +
+        recommendation; decision requested (→ DN-73 per the delegation); map group G2 updated.
+
+  - id: M-921
+    title: "Post-decision tuple follow-through — implement only the ratified delta (or record no-delta)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    epic: E30-1
+    depends_on: [M-920]
+    doc_refs:
+      - corpus:RFC-0024
+      - src:crates/mycelium-l1/src/ast.rs
+    body: |
+      Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). Post-decision tuple follow-through —
+      implement ONLY the delta the ratified decision (DN-73, from M-920) directs (e.g. multi-arg
+      lambda forms), or record "no delta" with evidence. BLOCKED: serial L1 lane — after `enb`.
+      Decision gate is the orchestrator's per the 2026-07-02 delegation (DN-73 recorded), not a
+      maintainer wait. Model: Sonnet.
+
+      User stories:
+      - As a `.myc` author, I want function signatures in their final shape, so that mass-ported
+        code compiles unchanged through 1.0.
+
+      Definition of Done:
+      - The decision's delta landed with conformance (or a grounded no-delta record); grammar
+        regenerated; `mycelium-l1` green.
+
+  - id: M-922
+    title: "ADR-033 FLAG-1 dossier — FieldSpec::Fn soundness options (DN-56 freeze condition 2)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P1, status:done]
+    epic: E30-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-74 (ADR-033 FLAG-1 FieldSpec::Fn soundness) dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:ADR-033
+      - corpus:DN-56
+      - src:docs/planning/Blocked-Decisions-Ratification-Map.md
+    body: |
+      Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). ADR-033 FLAG-1 dossier — `FieldSpec::Fn`
+      (Fn-typed record-field) soundness options + recommendation; it is DN-56 kernel-freeze
+      condition 2 (the last open primitive-set question). Pre-assigned decision note: DN-74.
+      Delegation (2026-07-02): NOT maintainer-blocked — the orchestrator decides per this
+      dossier's recommendation and records DN-74 append-only. Docs-only; parallel. Model: Sonnet.
+
+      User stories:
+      - As the maintainer, I want the last primitive-set question framed with its soundness
+        evidence, so that the kernel freeze has a decided condition 2.
+
+      Definition of Done:
+      - Dossier with the soundness analysis, options, recommendation; decision requested (→ DN-74
+        per the delegation); map groups G4/G5 updated.
+
+  - id: M-923
+    title: "Post-decision FLAG-1 implementation — Fn-typed record-field lowering or ledgered refusal"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P1, status:blocked]
+    epic: E30-1
+    depends_on: [M-922]
+    doc_refs:
+      - corpus:ADR-033
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). Post-decision FLAG-1 implementation —
+      Fn-typed record-field lowering per the ratified resolution (DN-74, from M-922), or the
+      ratified refusal recorded as a reject-ledger row. BLOCKED: serial L1 lane — after `enb`.
+      Decision gate is the orchestrator's per the 2026-07-02 delegation (DN-74 recorded).
+      Model: Sonnet.
+
+      User stories:
+      - As a `.myc` author, I want record fields holding functions to either work soundly or
+        refuse explicitly, so that object-style ports don't hit an undecided hole.
+
+      Definition of Done:
+      - The resolution landed (implementation + conformance, or ledgered refusal — a refusal is a
+        decision, not a leftover); ADR-033 status honest.
+
+  - id: M-924
+    title: "Stability close-out — regenerate grammar artifacts + record baseline + propose window"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:language, priority:P2, status:todo]
+    epic: E30-1
+    depends_on: [M-915, M-916, M-919, M-921, M-923]
+    doc_refs:
+      - corpus:ADR-038
+      - src:docs/spec/grammar/mycelium.ebnf
+      - src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md
+    body: |
+      Minted 2026-07-02 (kickoff `grm`, Phase-I H2a). Stability close-out — regenerate
+      `mycelium.ebnf`, editor grammars, `docs/api-index/`; record the grammar-stable baseline;
+      propose the no-normative-change window for the maintainer to set (Declared until set — the
+      window length remains the maintainer's call; the design decisions themselves are delegated).
+      Model: Haiku.
+
+      User stories:
+      - As the mass-port effort, I want a dated, regenerated, maintainer-windowed grammar
+        baseline, so that "stable" is a checkable claim before the corpus port begins.
+
+      Definition of Done:
+      - All artifacts regenerated + committed; baseline recorded in the roadmap/CURRENT-STATE;
+        window proposed to the maintainer; H2a DoD rows checked with evidence.
+
+  - id: E31-1
+    title: "E31-1 (epic) — Phase-I H2: Rust-reference closeout + kernel-freeze"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:epic, area:language, priority:P1, status:todo]
+    epic: E31
+    depends_on: [M-958, M-959, M-960, M-961, M-962, M-963, M-964, M-965, M-966, M-967, M-968, M-969]
+    doc_refs:
+      - corpus:ADR-038
+      - corpus:DN-56
+      - corpus:DN-39
+      - corpus:RFC-0038
+      - corpus:DN-63
+      - corpus:RFC-0027
+      - corpus:DN-32
+      - src:docs/planning/road-to-1.0.0-and-mycelium-rewrite.md
+      - src:.claude/kickoffs/frz.md
+    body: |
+      EPIC (Phase-I H2, kickoff `frz`; ADR-038 §2.7 + roadmap §4/§8). Close the H2
+      "Rust-reference closeout remainder" — the tag-track items that are neither H0 foundations
+      (`acy`), H1 enablers (`enb`), nor the H2a grammar set (`grm`) — so Phase I ends on a frozen,
+      complete, honestly-tagged kernel + surface. Four lanes: (A) kernel freeze (DN-56 — audit →
+      reject-ledger → the declaration, strictly last); (B) inject-mode enactment (RFC-0038,
+      Accepted-but-unbuilt → the confirmed subset built, claims Declared → Enacted only for what
+      is built); (C) runtime/concurrency maturity closeout (R2 remainder beyond `enb`'s D-lite +
+      RT2/determinism honesty pass); (D) l1-semantics closeout tail (Fuse law-checker, `via`
+      ordering, per-instantiation tag context, guard-clause dossier). Heavy runtime items
+      (M-869/M-868/M-831) are needs-design/research: Phase-II build, NOT flip-gating (recorded
+      so the omission is explicit — G2). Freeze is NOT a `flp` prerequisite (roadmap §2b).
+
+      Delegation (2026-07-02): the maintainer DELEGATED the design decisions — the dossier tasks
+      (M-958 → DN-76, M-960 → DN-77, M-962 → DN-78, M-968 → DN-79) are NOT maintainer-blocked;
+      the orchestrator decides per each dossier's recommendation and records the decision
+      append-only. The kernel-freeze declaration (M-969) executes ONLY on a green DN-56
+      four-condition scorecard (M-958) — the orchestrator executes on green per the delegation.
+
+      Collision law: the l1-tail tasks (M-965/M-966/M-967) share the serial `mycelium-l1` lane
+      with `grm`/`enb` (one surgery in flight; status:blocked until the lane clears). The
+      inject-mode lane (`mycelium-interp`/`mycelium-sec`) and the R2/runtime lane
+      (`mycelium-std-runtime`) are disjoint and run in parallel. The four dossiers are docs-only
+      and parallel.
+
+      User stories:
+      - As the maintainer, I want Phase I to close on a frozen, condition-checked kernel with the
+        security axis real and the runtime surface honest, so that a public release stands on a
+        stable, evidenced baseline.
+      - As a deployer, I want inject-mode enforcement and never-silent refusals built, not
+        declared, so that the security posture is checkable (VR-5).
+
+      Definition of Done: DN-56's four conditions scored (M-958) + reject-ledger complete (M-959)
+      + the freeze declaration executed on green (M-969, DN-39-only post-freeze diff policy
+      stated); the confirmed inject subset built (M-961, deferred surface stays Declared,
+      flagged); the directed R2 remainder activated (M-963) + RT2 tags honest (M-964); the l1
+      tail landed (M-965/M-966/M-967) + guard clauses ratification-ready (M-968); every refusal
+      never-silent (G2), property test per bound, doc-maintenance per `_doc-maintenance.md`.
+
+      Children: M-958/M-959/M-969 (Lane A — freeze), M-960/M-961 (Lane B — inject-mode),
+      M-962/M-963/M-964 (Lane C — runtime), M-965/M-966/M-967/M-968 (Lane D — l1 tail).
+
+  - id: M-958
+    title: "DN-56 four-condition audit dossier — the kernel-freeze scorecard"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:core-ir, priority:P1, status:done]
+    epic: E31-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-76 kernel-freeze four-condition scorecard authored (Empirical scoring; recommendation recorded). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:DN-56
+      - corpus:DN-39
+      - src:docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane A). DN-56 four-condition audit dossier —
+      record the current state of each freeze condition (reject-ledger completeness · primitive
+      set closed · lowering surface closed · KC-3 completeness) with an honest Empirical verdict
+      per condition; enumerate exactly what each still needs and which kickoff closes it (`enb` →
+      primitives; `grm` → lowering surface). Pre-assigned decision note: DN-76. Delegation
+      (2026-07-02): NOT maintainer-blocked — the orchestrator maintains the scorecard and, on
+      green, executes the freeze via M-969 per the delegation. Docs-only; reads `enb`/`grm`
+      status. Model: Haiku.
+
+      User stories:
+      - As the maintainer, I want a checked, per-condition freeze scorecard, so that the freeze
+        declaration is an evidenced act, not a vibe.
+
+      Definition of Done:
+      - All four conditions scored (Empirical, evidence cited); the remaining work per condition
+        enumerated with its owning kickoff; DN-39 default-DENY re-affirmed as holding throughout.
+
+  - id: M-959
+    title: "Reject-ledger completion (DN-56 condition 1) — every kernel rejection reified"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:core-ir, priority:P1, status:todo]
+    epic: E31-1
+    depends_on: [M-958]
+    doc_refs:
+      - corpus:DN-56
+      - src:docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane A). Reject-ledger completion (DN-56
+      condition 1) — the exhaustive, never-silent ledger of every construct the kernel rejects
+      (with the reason + the surface alternative), so a rejection is inspectable, not a silent
+      gap (G2). Model: Sonnet.
+
+      User stories:
+      - As a language user, I want every kernel rejection reified and explained, so that "the
+        kernel won't do X" is a documented decision I can EXPLAIN, not a surprise.
+
+      Definition of Done:
+      - Ledger complete against the current reject set; each entry {construct, reason,
+        alternative}; a regression guard fails if a reject path is added without a ledger row.
+
+  - id: M-960
+    title: "Inject-mode build-scope dossier — Phase-I-buildable subset vs deferred R&D (RFC-0038 §8)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:execution, priority:P1, status:done]
+    epic: E31-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-77 inject-mode build-scope dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0038
+      - corpus:DN-64
+      - src:.claude/kickoffs/frz.md
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane B). Inject-mode build-scope dossier —
+      from RFC-0038 §8's Accepted design, recommend the Phase-I-buildable subset (the `whole`-app
+      compile/load-time signature default + `InjectCert`/`TrustRoot` verify path) vs the deferred
+      R&D (§K.2/§L/§M key-management, replay/expiry, controller-mode topology — M-836…M-842/
+      M-849); every deferral flagged, none dropped. Pre-assigned decision note: DN-77. Delegation
+      (2026-07-02): NOT maintainer-blocked — the orchestrator decides per this dossier's
+      recommendation and records DN-77 append-only. Docs-only; parallel. Model: Sonnet.
+
+      User stories:
+      - As the maintainer, I want the inject-mode build scoped to what a public release actually
+        needs, so that I enact a coherent slice, not the whole R&D surface at once.
+
+      Definition of Done:
+      - Buildable subset vs deferred R&D enumerated with a recommendation (→ DN-77 per the
+        delegation); each deferral mapped to its R&D issue; no silent scope drop (G2).
+
+  - id: M-961
+    title: "Enact the confirmed inject-mode subset — mode gating + InjectCert verify + never-silent refusals"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:execution, priority:P1, status:done]
+    epic: E31-1
+    depends_on: [M-960]
+    landed_date: 2026-07-02
+    landed_basis: "inject-mode Phase-I subset built Rust-first (crates/mycelium-mlir/src/{inject_gate,inject_cert,inject}.rs); RFC-0038 subset claims flipped Declared->Enacted per DN-77 §4 (see RFC-0038 2026-07-02 changelog row). landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0038
+      - src:crates/mycelium-sec/Cargo.toml
+      - src:crates/mycelium-interp/src/prims.rs
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane B). Enact the confirmed inject-mode
+      subset (per M-960 / DN-77) — build `loose`/`inoculated` mode gating, `InjectCert` verify
+      against a colony `TrustRoot`, the never-silent `InjectError::UnsignedCode`/`BadSignature`
+      refusals, and the default-plus-deviations manifest; three-way differential where a path is
+      executable; RFC-0038's claims move Declared → Enacted ONLY for what is actually built
+      (VR-5 — the rest stays Declared). Disjoint lane (`mycelium-interp`/`mycelium-sec`) — runs
+      in parallel with the l1 and runtime lanes. Model: Sonnet.
+
+      User stories:
+      - As a deployer, I want production code to require a valid inject signature and refuse
+        unsigned injection never-silently, so that the security axis is real, not declared.
+
+      Definition of Done:
+      - The confirmed subset built + tested; refusals never-silent; only the built claims flip
+        Declared → Enacted (the deferred surface stays Declared, flagged); RFC-0038 status note
+        appended.
+
+  - id: M-962
+    title: "R2 remainder + memory-model sequencing dossier — buildable vs research split"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:execution, priority:P2, status:done]
+    epic: E31-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "R2 remainder-split lane (DN-78) — part 1 landed. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:DN-63
+      - corpus:RFC-0027
+      - corpus:DN-32
+      - src:.claude/kickoffs/frz.md
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane C). R2 remainder + memory-model
+      sequencing dossier — scope the R2 vocabulary beyond `enb`'s D-lite (M-828 tail): which
+      constructs are Phase-I-buildable/directed vs research-spike (the mesh gossip/Byzantine long
+      pole, M-831); confirm the RFC-0027/DN-32 memory-model ratification the runtime lane
+      sequences on (confirm, don't guess — FLAG if not ratified). Pre-assigned decision note:
+      DN-78. Delegation (2026-07-02): NOT maintainer-blocked — the orchestrator decides per this
+      dossier's recommendation and records DN-78 append-only. Docs-only; parallel. Model: Sonnet.
+
+      User stories:
+      - As the runtime effort, I want a clean line between build-now R2 and research-later R2, so
+        that Phase I closes a coherent runtime surface without blocking on the long pole.
+
+      Definition of Done:
+      - The buildable-vs-research split recorded (→ DN-78 per the delegation); the RFC-0027/DN-32
+        precondition confirmed or FLAGged; the research items (M-831) marked Phase-II, non-gating.
+
+  - id: M-963
+    title: "Activate the directed R2 remainder (M-828 tail) per the dossier's split"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:execution, priority:P2, status:done]
+    epic: E31-1
+    depends_on: [M-962]
+    landed_date: 2026-07-02
+    landed_basis: "R2 remainder-split lane (DN-78) — part 2 landed. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:DN-63
+      - src:crates/mycelium-std-runtime/Cargo.toml
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane C). Activate the directed R2 remainder
+      (the M-828 tail beyond `enb`'s D-lite) — the buildable constructs the M-962/DN-78 dossier
+      confirms, per DN-63; mechanized `SelectionPolicy` capture/setting where directed;
+      never-silent refusal for the unbuilt ones. Disjoint lane (`mycelium-std-runtime`) — runs in
+      parallel with the l1 and inject lanes. Model: Sonnet.
+
+      User stories:
+      - As a runtime programmer, I want the confirmed R2 vocabulary usable, so that
+        `std.runtime`'s surface is complete for what Phase I ships.
+
+      Definition of Done:
+      - The confirmed subset activated + tested (three-way where executable); the unbuilt
+        constructs refuse never-silently; honest tags.
+
+  - id: M-964
+    title: "RT2/determinism honesty pass (VR-5) — audit every runtime/concurrency guarantee tag"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:verification, area:execution, priority:P2, status:done]
+    epic: E31-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "R2 remainder-split lane (DN-78) — part 3 landed. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:DN-63
+      - src:crates/mycelium-std-runtime/Cargo.toml
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane C). RT2/determinism honesty pass (VR-5)
+      — audit every runtime/concurrency guarantee tag; a determinism claim stays Empirical unless
+      a machine-checked side-condition upgrades it; no Proven without a checked basis. Audit;
+      parallel. Model: Haiku.
+
+      User stories:
+      - As a reviewer, I want the runtime's guarantees tagged at their real strength, so that
+        "deterministic" means checked, not hoped.
+
+      Definition of Done:
+      - Every runtime tag audited; upgrades justified by a checked side-condition or reverted to
+        Empirical; the audit recorded.
+
+  - id: M-965
+    title: "Fuse prelude + semilattice-law checker (F-A1/F-A2) — laws checked, violations refuse"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:blocked]
+    epic: E31-1
+    depends_on: [E30-1]
+    doc_refs:
+      - corpus:ADR-038
+      - src:crates/mycelium-l1/src/checkty.rs
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane D). `Fuse` prelude + semilattice-law
+      checker (F-A1/F-A2) — the prelude surface + a checker that the declared join/meet obey
+      idempotence/commutativity/associativity; a law violation is a never-silent refusal, not a
+      silent accept. BLOCKED: serial L1 lane — after `enb`; also writes against the
+      grammar-stable surface (`grm`, E30-1). Model: Sonnet.
+
+      User stories:
+      - As a concurrency author, I want my `Fuse` lattice's laws checked, so that a mis-declared
+        join is caught at definition, not in production.
+
+      Definition of Done:
+      - Prelude landed; the three laws checked; violations refuse never-silently; property test
+        per law.
+
+  - id: M-966
+    title: "via delegation trait-registry ordering — deterministic, EXPLAIN-able resolution"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:blocked]
+    epic: E31-1
+    depends_on: [M-965]
+    doc_refs:
+      - corpus:ADR-038
+      - src:crates/mycelium-l1/src/elab.rs
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane D). `via` delegation trait-registry
+      ordering — a deterministic, EXPLAIN-able resolution order for `via`-delegated trait
+      methods; ambiguity is a never-silent refusal. BLOCKED: serial L1 lane — after `enb`
+      (follows M-965 in the lane). Model: Sonnet.
+
+      User stories:
+      - As a library author, I want `via` delegation to resolve deterministically and
+        inspectably, so that method dispatch is never a silent surprise.
+
+      Definition of Done:
+      - Ordering deterministic + EXPLAIN-able; ambiguity refuses never-silently; tests over the
+        ordering cases.
+
+  - id: M-967
+    title: "Per-instantiation guarantee-tag context through monomorphization (executes M-844)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:feature, area:language, priority:P2, status:blocked]
+    epic: E31-1
+    depends_on: [M-966]
+    doc_refs:
+      - corpus:RFC-0019
+      - corpus:RFC-0018
+      - src:crates/mycelium-l1/src/elab.rs
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane D). Per-instantiation guarantee-tag
+      context through monomorphization — thread the guarantee-tag context per instantiation so a
+      monomorphized copy carries its call-site's tag, not a lost/merged one (VR-5 — tags must not
+      silently upgrade across mono). Executes the standing backlog item M-844 (this task is its
+      scheduled Phase-I slot; close both together). BLOCKED: serial L1 lane — after `enb`
+      (follows M-966 in the lane). Model: Sonnet.
+
+      User stories:
+      - As the transparency system, I want each monomorphized instance to keep its own guarantee
+        tag, so that provenance survives specialization.
+
+      Definition of Done:
+      - Tag context threaded per instantiation; a differential shows no tag is silently
+        upgraded/lost through mono; tests over mixed-tag instantiations.
+
+  - id: M-968
+    title: "Guard-clause dossier (M-833, design-first) — when <cond> semantics, ratification-ready"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:design, area:language, priority:P2, status:done]
+    epic: E31-1
+    depends_on: []
+    landed_date: 2026-07-02
+    landed_basis: "DN-79 guard-clause semantics dossier authored; recommendation recorded. landed on dev 2026-07-02 (Phase-I wave close-out, `claude/pm/integration-reconcile`)"
+    doc_refs:
+      - corpus:RFC-0020
+      - corpus:DN-64
+      - src:.claude/kickoffs/frz.md
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane D). Guard-clause dossier (M-833,
+      design-first) — prepare `when <cond>` guards + guarantee propagation to the guarded arm for
+      ratification; enumerate the exhaustiveness/propagation semantics; nothing built until
+      ratified. Pre-assigned decision note: DN-79. Delegation (2026-07-02): NOT
+      maintainer-blocked — the orchestrator decides per this dossier's recommendation and records
+      DN-79 append-only; the implementation is a separate post-ratification task (rides M-833).
+      Docs-only; parallel. Model: Sonnet.
+
+      User stories:
+      - As the maintainer, I want guard clauses specified before they are built, so that the
+        ratification is over a concrete semantics, not a sketch.
+
+      Definition of Done:
+      - Semantics enumerated (exhaustiveness + guarantee propagation); ratification-ready (→
+        DN-79 per the delegation); FLAGged as decision-gated (no implementation in this task).
+
+  - id: M-969
+    title: "THE KERNEL-FREEZE DECLARATION (DN-56; strictly last) — one condition-gated act"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:chore, area:core-ir, priority:P1, status:blocked]
+    epic: E31-1
+    depends_on: [M-958, M-959, E28-1, E30-1]
+    doc_refs:
+      - corpus:DN-56
+      - corpus:DN-39
+      - src:docs/notes/DN-56-Kernel-Completeness-And-Freeze-Criterion.md
+    body: |
+      Minted 2026-07-02 (kickoff `frz`, Phase-I H2, Lane A — STRICTLY LAST). The kernel-freeze
+      declaration: with all four DN-56 conditions checked (M-958 scorecard green: `enb`
+      primitives closed · `grm` lowering surface closed · M-959 reject-ledger complete · KC-3
+      review passed), declare the kernel frozen; DN-56 → the freeze recorded append-only; DN-39
+      promotions (if any) are the ONLY permitted kernel diff thereafter. BLOCKED: after the
+      DN-56 4-condition scorecard green (M-958) — orchestrator executes on green per the
+      2026-07-02 delegation. Single supervised session; never fanned out, never automated past
+      its checklist. Freeze is NOT a `flp` prerequisite (roadmap §2b) — it gives the public a
+      stable baseline, not a gating one. Model: Opus.
+
+      User stories:
+      - As the maintainer, I want the freeze to be one deliberate, condition-gated act, so that
+        "the kernel is stable" is a checked declaration a public release can stand on.
+
+      Definition of Done:
+      - Executed ONLY after the four-condition scorecard is green (recorded); DN-56 status
+        advanced append-only; the post-freeze diff policy (DN-39-only) stated; CHANGELOG logs
+        the act.
+
+  - id: M-970
+    title: "mycelium-fmt: render_expr_canonical drops the @forage(policy) Hypha annotation"
+    milestone: "Phase 7 — Runtime & Concurrency Execution Model (RFC-0008)"
+    labels: [phase:7, type:bug, area:tooling, priority:P3, status:todo]
+    epic: E28-1
+    depends_on: [M-906]
+    doc_refs:
+      - src:crates/mycelium-fmt/src/lib.rs:1410
+      - corpus:DN-70
+    body: |
+      FLAG raised by M-914 (kickoff `enb`, H1 capstone) and confirmed at integration-reconcile
+      2026-07-02. `crates/mycelium-fmt/src/lib.rs::render_expr_canonical` has no `Expr::Hypha`
+      arm, so a hypha's optional `@forage(policy)` placement annotation (activated by M-906, DN-70
+      D1) is silently dropped in the canonical render path — a formatter round-trip that erases the
+      annotation is a never-silent (G2) violation for that construct.
+
+      Follow-up candidate, NOT fixed in the reconcile PR (out of the close-out's scope). Recorded so
+      the gap is tracked, not lost.
+
+      User stories:
+      - As a Mycelium developer, I want `mycfmt` to preserve `@forage(policy)` on a hypha, so that
+        formatting never silently changes my program's placement policy.
+
+      Definition of Done:
+      - `render_expr_canonical` (and the comment-aware token path, if separately affected) emit the
+        `@forage(policy)` annotation; a round-trip conformance case (`format(parse(x)) preserves
+        @forage`) added; guarantee tag at the supportable strength.
+
+  - id: M-971
+    title: "Phase-I wave regressed the acyclic-deps invariant — 12 violations (3 cycles + upward-tier dev-deps)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:core-ir, priority:P1, status:done]
+    epic: E27-1
+    depends_on: [M-877, M-878, M-879]
+    landed_date: 2026-07-02
+    landed_basis: "PR #1015 'fix(deps): M-971 — resolve DN-68 acyclic-deps regression (12→0 violations)'; CHANGELOG.md '### Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)'"
+    doc_refs:
+      - corpus:DN-68
+      - src:xtask/deps-strata.toml
+      - src:crates/mycelium-std-conformance/src/lib.rs
+      - src:crates/mycelium-vsa-decode/src/lib.rs
+    body: |
+      FLAG raised at integration-reconcile 2026-07-02. The Phase-I H1 wave (enb/opp) reintroduced
+      dependency-graph violations that kickoff `acy` (H0, M-881/M-882) had driven to 0. `cargo run
+      -p xtask -- deps` now reports 12 violations — so `just check` (which wires the gate via
+      scripts/checks/all.sh) is RED on `deps-acyclic`. None were introduced by the reconcile PR
+      (it changed no Cargo.toml); they are pre-existing on `dev` from the wave's crate wiring.
+
+      Root causes (Empirical, cargo metadata at dev HEAD):
+      - `mycelium-interp -[normal]-> mycelium-vsa` (added for the VSA prims, M-892…M-894): a
+        same-stratum normal edge (normal-downward-only violation) that also closes the cycle
+        {mycelium-interp, mycelium-select, mycelium-vsa} via `mycelium-select -[dev]-> mycelium-interp`.
+      - `mycelium-l1 -[dev]-> mycelium-std-{core,diag,error,recover,select,spore,swap,ternary,testing}`
+        (added for the opp differential tests, M-926…M-934): nine upward-tier (core -> std) dev edges,
+        which also close the cycle {mycelium-l1, mycelium-proj, mycelium-spore, mycelium-std-spore,
+        mycelium-std-testing}.
+
+      Fix is the M-881/M-882 pattern (NOT a strata/tier whitelist — DN-68 forbids folding an
+      exception into the PR that needed it, and a cycle cannot be mapped away): replace the
+      cross-crate dev-imports with local, fixture-driven tests carrying the same assertions +
+      guarantee-tag strength (VR-5), and route the interp->vsa need without a same/upward edge.
+      Its own scoped, reviewed PR. BLOCKS the dev->integration promotion gate until green.
+
+      User stories:
+      - As the maintainer, I want the acyclic-deps invariant to stay at 0 violations, so that the
+        acy hardening is not silently regressed by later waves.
+
+      Definition of Done:
+      - `cargo run -p xtask -- deps` reports 0 violations; the interp/vsa and l1/std-* edges are
+        removed or relocated per DN-68's change-procedure; `just check` green on deps-acyclic;
+        no guarantee tag weakened (VR-5).
+
+      DONE (2026-07-02, PR #1015): both categories fixed by structural extraction, no whitelist.
+      Category A — the 11 oracle-backed port-differential tests + shared harness relocated out of
+      `mycelium-l1` into a new `mycelium-std-conformance` crate (tier std, stratum 0); 9
+      `mycelium-std-*` dev-deps dropped from `mycelium-l1`, dissolving the l1/proj/spore/std-spore/
+      std-testing dev-cycle. Category B — `decode_select`/`reconstruct_factors_selected` extracted
+      out of `mycelium-vsa` into a new `mycelium-vsa-decode` crate, breaking the interp/select/vsa
+      cycle and the interp-to-vsa upward-stratum violation (`mycelium-vsa` stratum re-derived 2 to
+      1). `cargo run -p xtask -- deps` reports 0 violations; full-workspace test/fmt/clippy/build
+      and the `api` gate all green (baselines regenerated). Unblocks dev to integration promotion.

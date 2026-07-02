@@ -49,6 +49,26 @@ impl Trit {
     }
 }
 
+/// The single canonical NaN bit pattern — the positive quiet NaN (ADR-040 §2.3). Every NaN held by
+/// a [`Payload::Float`] value carries exactly these bits: [`Value::new`] normalizes on
+/// construction, so a value's content address never depends on platform NaN payload/sign bits
+/// (which hardware arithmetic does not determine — `Declared`, per the Rust reference).
+pub const CANONICAL_NAN_BITS: u64 = 0x7ff8_0000_0000_0000;
+
+/// Canonicalize a scalar float for the [`Repr::Float`] value form (ADR-040 §2.3): any NaN becomes
+/// the single positive quiet NaN ([`CANONICAL_NAN_BITS`]); every non-NaN — including `-0.0`,
+/// `±inf`, and subnormals — passes through **bit-unchanged**. A reified, documented normalization
+/// at the value boundary, not a silent swap: no observable float operation distinguishes NaN
+/// payloads, so no observable information is dropped (`Declared`; checked as a property test).
+#[must_use]
+pub(crate) fn canonical_float(x: f64) -> f64 {
+    if x.is_nan() {
+        f64::from_bits(CANONICAL_NAN_BITS)
+    } else {
+        x
+    }
+}
+
 /// Representation-specific payload. Detailed VSA storage (sparse index/value pairs) lands with the
 /// VSA submodule (M-130); here a hypervector is a dense scalar vector.
 #[derive(Debug, Clone, PartialEq)]
@@ -61,6 +81,12 @@ pub enum Payload {
     Scalars(Vec<f64>),
     /// Components of a `Vsa` value (length == `dim`).
     Hypervector(Vec<f64>),
+    /// The scalar of a [`Repr::Float`] value (ADR-040 §2.1; M-896). **Canonical-NaN invariant:**
+    /// [`Value::new`] canonicalizes any NaN to the single positive quiet-NaN bit pattern
+    /// ([`CANONICAL_NAN_BITS`]) — NaN payload bits are not identity-bearing and not observable
+    /// (ADR-040 §2.3). `+0.0`/`-0.0` stay **bit-distinct** in identity while remaining IEEE-equal
+    /// under the derived `==` — the documented identity-vs-equality seam (ADR-040 FLAG-4).
+    Float(f64),
     /// Elements of a [`Repr::Seq`] value (length == the seq's `len`; every element's `repr` matches
     /// the seq's `elem`). RFC-0032 D3 (M-749).
     Seq(Vec<Value>),
@@ -81,6 +107,14 @@ enum PayloadWire {
     Scalars(Vec<f64>),
     #[serde(rename = "hypervector")]
     Hypervector(Vec<f64>),
+    /// A scalar-float payload renders as a **string** (`"1.5"`, `"-0.0"`, `"inf"`, `"-inf"`,
+    /// `"NaN"`), not a JSON number: JSON numbers cannot carry the in-band IEEE specials
+    /// (ADR-040 §2.4), and `serde_json` would serialize a non-finite `f64` as `null` — a silent
+    /// loss (G2). Finite values use Rust's shortest round-trip decimal (`{:?}` — exact by the
+    /// std round-trip guarantee, `Declared`; re-checked by a property test); a malformed string
+    /// is rejected on the way in, never coerced. ADR-040 (M-896).
+    #[serde(rename = "float")]
+    Float(String),
     /// A sequence payload renders as a JSON array of self-describing element [`Value`]s — each
     /// element round-trips through its own `Value` (de)serialization, so the seq is checked
     /// element-wise on the way in. RFC-0032 D3 (M-749).
@@ -104,6 +138,9 @@ impl Serialize for Payload {
             }
             Payload::Scalars(xs) => PayloadWire::Scalars(xs.clone()),
             Payload::Hypervector(xs) => PayloadWire::Hypervector(xs.clone()),
+            // Shortest round-trip decimal (`{:?}`): "1.5", "-0.0", "inf", "-inf", "NaN" — exact
+            // for finite values (std round-trip guarantee) and faithful to the in-band specials.
+            Payload::Float(x) => PayloadWire::Float(format!("{x:?}")),
             Payload::Seq(elems) => PayloadWire::Seq(elems.clone()),
             Payload::Bytes(bytes) => {
                 // Lowercase hex, two chars per byte — compact and exactly round-trippable.
@@ -149,6 +186,15 @@ impl<'de> Deserialize<'de> for Payload {
             }
             PayloadWire::Scalars(xs) => Payload::Scalars(xs),
             PayloadWire::Hypervector(xs) => Payload::Hypervector(xs),
+            PayloadWire::Float(s) => {
+                // Never-silent parse (G2): a malformed float string is rejected with the offending
+                // text, not coerced. NaN payload bits cannot ride the wire (the only NaN spelling
+                // parses to the canonical quiet NaN), and `Value::new` re-canonicalizes anyway.
+                let x = s.parse::<f64>().map_err(|e| {
+                    Error::custom(format!("float string {s:?} is not a valid f64: {e}"))
+                })?;
+                Payload::Float(x)
+            }
             PayloadWire::Seq(elems) => Payload::Seq(elems),
             PayloadWire::Bytes(s) => {
                 // Decode the lowercase-hex string; a non-hex char or an odd length is rejected
@@ -201,6 +247,14 @@ impl Value {
         if !payload_matches(&repr, &payload) {
             return Err(WfError::PayloadReprMismatch);
         }
+        // Canonical-NaN normalization at the value boundary (ADR-040 §2.3): every constructor path
+        // (including deserialize, which routes through here) yields the single canonical quiet NaN,
+        // so a value's identity never forks on platform NaN bits. Reified here — documented, not a
+        // silent swap (no observable op distinguishes NaN payloads). Non-NaN bits pass unchanged.
+        let payload = match payload {
+            Payload::Float(x) => Payload::Float(canonical_float(x)),
+            other => other,
+        };
         Ok(Value {
             repr,
             payload,
@@ -222,6 +276,18 @@ impl Value {
     #[must_use]
     pub fn meta(&self) -> &Meta {
         &self.meta
+    }
+
+    /// The scalar of a [`Repr::Float`] value, or `None` for any other representation
+    /// (never-silent — a non-float has no scalar here, G2; ADR-040 / M-896). `Exact`: a total
+    /// decidable query. The returned NaN, if any, carries the canonical bits
+    /// ([`CANONICAL_NAN_BITS`]) by the construction invariant of [`Value::new`].
+    #[must_use]
+    pub fn float(&self) -> Option<f64> {
+        match self.payload() {
+            Payload::Float(x) => Some(*x),
+            _ => None,
+        }
     }
 
     /// The element count of a [`Repr::Seq`] value, or `None` for any other representation
@@ -306,6 +372,9 @@ fn payload_matches(repr: &Repr, payload: &Payload) -> bool {
         (Repr::Ternary { trits }, Payload::Trits(t)) => t.len() == *trits as usize,
         (Repr::Dense { dim, .. }, Payload::Scalars(s)) => s.len() == *dim as usize,
         (Repr::Vsa { dim, .. }, Payload::Hypervector(h)) => h.len() == *dim as usize,
+        // A scalar float declares no dimension; any single f64 matches (its NaN canonicalization
+        // is `Value::new`'s job, after this check). ADR-040 §2.1 (M-896).
+        (Repr::Float { .. }, Payload::Float(_)) => true,
         // A sequence payload matches iff it has exactly `len` elements **and** every element's own
         // `repr` equals the declared element repr `elem` (homogeneity — RFC-0032 D3). Each element
         // is itself a `Value`, so its payload↔repr agreement was already enforced by its own
