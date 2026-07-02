@@ -2909,6 +2909,9 @@ pub(crate) fn mangle_ty(t: &Ty) -> String {
         // length from the recursively-mangled element); `Bytes` is nullary.
         Ty::Seq(elem, n) => format!("Seq{n}${}", mangle_ty(elem)),
         Ty::Bytes => "Bytes".to_owned(),
+        // ADR-040 (M-897): the nullary scalar-float repr mangles like `Bytes` (a data type named
+        // `Float` mangles to `Float#` via the `#` tag below — no collision, injectivity holds).
+        Ty::Float => "Float".to_owned(),
         // A nullary data type tags its name with `#` (not a surface-identifier char — the lexer
         // never produces it), so a data type whose name happens to equal a repr mangle (e.g. a type
         // literally named `Binary8`) becomes `Binary8#` and can NEVER collide with the repr
@@ -3006,9 +3009,12 @@ pub(crate) fn mangle_ty_or_fn(t: &Ty) -> String {
 /// reprs pass through unchanged.
 fn mangle_ty_in_ty(t: &Ty) -> Ty {
     match t {
-        Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Substrate(_) | Ty::Bytes => {
-            t.clone()
-        }
+        Ty::Binary(_)
+        | Ty::Ternary(_)
+        | Ty::Dense(_, _)
+        | Ty::Substrate(_)
+        | Ty::Bytes
+        | Ty::Float => t.clone(),
         // RFC-0032 D3: mangle the element type (it may carry a mono'd applied data type), keeping the
         // sequence structure; primitive element reprs pass through unchanged.
         Ty::Seq(elem, n) => Ty::Seq(Box::new(mangle_ty_in_ty(elem)), *n),
@@ -3040,6 +3046,8 @@ fn ty_to_source_ref(t: &Ty) -> TypeRef {
             len: *n,
         },
         Ty::Bytes => BaseType::Bytes,
+        // ADR-040 (M-897): the nullary scalar-float repr round-trips like `Bytes`.
+        Ty::Float => BaseType::Float,
         Ty::Data(n, args) => {
             BaseType::Named(n.clone(), args.iter().map(ty_to_source_ref).collect())
         }
@@ -3071,6 +3079,8 @@ fn ty_to_ref(t: &Ty) -> TypeRef {
             len: *n,
         },
         Ty::Bytes => BaseType::Bytes,
+        // ADR-040 (M-897): the nullary scalar-float repr round-trips like `Bytes`.
+        Ty::Float => BaseType::Float,
         // A mono'd data type is nullary (its arguments are baked into its mangled name).
         Ty::Data(n, args) if args.is_empty() => BaseType::Named(n.clone(), vec![]),
         Ty::Data(_, _) => BaseType::Named(mangle_ty(t), vec![]),

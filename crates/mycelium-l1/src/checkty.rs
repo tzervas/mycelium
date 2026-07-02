@@ -96,6 +96,13 @@ pub enum Ty {
     /// `Bytes` — a first-class byte string (RFC-0032 D4; M-750). Constructed by the `0x…` literal.
     /// Guarantee: `Exact`.
     Bytes,
+    /// `Float` — the first-class scalar float, IEEE-754 binary64 (ADR-040; M-897). A nullary repr
+    /// type like [`Ty::Bytes`] (the width set is F64-only at introduction — ADR-040 FLAG-1).
+    /// Constructed by the decimal float literal (`1.5`), which denotes the **correctly-rounded**
+    /// (RNE) binary64 of its decimal text (FLAG-3). Guarantee: `Exact` as a *definition* (the
+    /// literal denotes exactly that binary64 value); the host-conversion claim is pinned
+    /// `Empirical` by the round-trip conformance corpus (ADR-040 §2.6 — VR-5, no silent upgrade).
+    Float,
     /// An **abstract type parameter** (a skolem variable) — in scope only while checking a generic
     /// declaration's constructors or a generic function's body (RFC-0007 §11.2). Two `Var`s are equal
     /// iff their names match; that structural equality is the engine of parametric checking. A
@@ -132,6 +139,7 @@ impl core::fmt::Display for Ty {
             Ty::Substrate(t) => write!(f, "Substrate{{{t}}}"),
             Ty::Seq(elem, n) => write!(f, "Seq{{{elem}, {n}}}"),
             Ty::Bytes => write!(f, "Bytes"),
+            Ty::Float => write!(f, "Float"),
             Ty::Var(v) => write!(f, "{v}"),
             // RFC-0024 §3: render as `A -> B` (right-associative). Parenthesize a function-typed
             // LHS so `(A -> B) -> C` is unambiguous in diagnostics, not `A -> B -> C` (Copilot #397).
@@ -268,6 +276,9 @@ pub fn type_head(ty: &Ty) -> Option<String> {
         // scalar paradigms — a documented stage-1 coherence simplification).
         Ty::Seq(_, _) => "Seq".to_owned(),
         Ty::Bytes => "Bytes".to_owned(),
+        // ADR-040 (M-897): the scalar float is a primitive repr head like `Bytes` (F64-only at
+        // introduction, so the head carries no width — FLAG-1).
+        Ty::Float => "Float".to_owned(),
         Ty::Data(n, _) => format!("Data:{n}"),
         // `Ty::Var` and `Ty::Fn` are not legal instance heads in stage-1 — a blanket instance
         // over an abstract variable or a function type is refused explicitly (RFC-0024 §3 / RFC-0019 §4.5).
@@ -312,7 +323,8 @@ pub(crate) fn subst_ty(ty: &Ty, s: &BTreeMap<String, Ty>) -> Ty {
         | Ty::Ternary(Width::Lit(_))
         | Ty::Dense(_, _)
         | Ty::Substrate(_)
-        | Ty::Bytes => ty.clone(),
+        | Ty::Bytes
+        | Ty::Float => ty.clone(),
     }
 }
 
@@ -342,7 +354,8 @@ pub(crate) fn has_var(ty: &Ty) -> bool {
         | Ty::Ternary(Width::Lit(_))
         | Ty::Dense(_, _)
         | Ty::Substrate(_)
-        | Ty::Bytes => false,
+        | Ty::Bytes
+        | Ty::Float => false,
     }
 }
 
@@ -595,6 +608,8 @@ pub(crate) fn resolve_ty(
             Ty::Seq(Box::new(elem_ty), *len)
         }
         BaseType::Bytes => Ty::Bytes,
+        // ADR-040 (M-897): the nullary scalar-float repr type (binary64 only — FLAG-1).
+        BaseType::Float => Ty::Float,
         BaseType::Vsa { .. } => {
             return Err(CheckError::new(
                 site,
@@ -2570,7 +2585,8 @@ pub(crate) fn register_instances(
             | Ty::Dense(_, _)
             | Ty::Substrate(_)
             | Ty::Seq(_, _)
-            | Ty::Bytes => true,
+            | Ty::Bytes
+            | Ty::Float => true,
             // `Ty::Var` and `Ty::Fn` are not legal instance heads; type_head() returns None for them,
             // so this arm is unreachable in practice (the coherence key check rejects them upstream).
             // Kept for exhaustiveness — never a silent accept (G2).
@@ -3569,6 +3585,10 @@ impl Cx<'_> {
             ));
         }
         // Fusibility check (Empirical for repr types; Declared for Data types with a Fuse instance).
+        // `Ty::Float` is deliberately NOT in the fusible repr set (M-897): the repr-level meet is
+        // bitwise-and, which has no lawful meaning over IEEE-754 bit patterns — a float `fuse`
+        // requires an explicit `Fuse` instance (the Data-type path below), never a silent
+        // bit-level merge (G2/VR-5).
         let fusible = matches!(
             &lty,
             Ty::Binary(_) | Ty::Ternary(_) | Ty::Dense(_, _) | Ty::Bytes | Ty::Seq(_, _)
@@ -5094,6 +5114,9 @@ pub(crate) fn lit_ty_of(site: &str, l: &Literal) -> Result<Ty, CheckError> {
         )),
         // RFC-0032 D4 (M-750): a `0x…` byte-string literal *is* a `Bytes` value.
         Literal::Bytes(_) => Ok(Ty::Bytes),
+        // ADR-040 (M-897): a decimal float literal types as the scalar-float repr type. The lexer
+        // already validated form + binary64 finiteness, so the literal is well-typed context-free.
+        Literal::Float(_) => Ok(Ty::Float),
         // M-910/M-911: a `"…"` textual string literal lowers to the SAME `Repr::Bytes` value form
         // as `Literal::Bytes` (UTF-8-encoded; KC-3 — no new value form), so it types as `Bytes` too.
         Literal::Str(_) => Ok(Ty::Bytes),
@@ -5216,6 +5239,20 @@ pub(crate) fn normalize_pattern(
             })
         }
         Pattern::Lit(lit) => {
+            // ADR-040 FLAG-4 (M-897): float literals are refused in match patterns — an explicit
+            // refusal, never a silently-chosen equality. IEEE `==` and bit-level content identity
+            // diverge on floats (`+0.0 == -0.0` but two identities; canonical NaN is one identity
+            // but `NaN != NaN`), so a literal-pattern arm would have to silently pick one of the
+            // two semantics. Float dispatch goes through the comparison prims when they land
+            // (M-899), where the choice is a named op, never a hidden pattern semantic (G2/VR-5).
+            if matches!(lit, Literal::Float(_)) {
+                return Err(CheckError::new(
+                    site,
+                    "a float literal is not a legal match pattern (ADR-040 FLAG-4: IEEE equality \
+                     and content identity diverge on floats — `-0.0`/NaN; match on the result of \
+                     an explicit comparison instead — never a silent equality choice, G2)",
+                ));
+            }
             let lty = lit_ty_of(site, lit)?;
             if lty != *expected {
                 return Err(CheckError::new(
@@ -5297,6 +5334,10 @@ fn literal_key(lit: &Literal) -> String {
         // it can reach here too; keyed on its decoded content (a distinct prefix — `s:` never
         // collides with `by:`'s hex-digit alphabet).
         Literal::Str(s) => format!("s:{s}"),
+        // M-897: float literal patterns are refused by `normalize_pattern` before keying (ADR-040
+        // FLAG-4), so this arm is unreachable in practice; a stable key (the verbatim source text,
+        // distinct `f:` prefix) keeps the function total without a silent collision (G2).
+        Literal::Float(s) => format!("f:{s}"),
         Literal::List(_) => "list".to_owned(),
     }
 }
@@ -5393,8 +5434,11 @@ fn paradigm_name(t: &Ty) -> Option<&'static str> {
         // `Ty::Fn` is not a representation type — it has no paradigm (RFC-0024 §3). `Seq`/`Bytes`
         // are first-class reprs but not *swap*-paradigms (no cross-paradigm swap edge), so they have
         // no paradigm name here (RFC-0032 D3/D4).
+        // `Ty::Float` likewise: a first-class repr but not a v0 swap-paradigm (no swap engine —
+        // any future float<->binary/dense conversion is an explicit certed swap, ADR-040 §5).
         Ty::Seq(_, _)
         | Ty::Bytes
+        | Ty::Float
         | Ty::Data(_, _)
         | Ty::Substrate(_)
         | Ty::Var(_)

@@ -42,10 +42,18 @@
 //!   in the `string_literal_*_surface_three_way` tests below; the explicit, minimal escape set
 //!   (`\n \t \\ \" \0 \r`) and its never-silent termination/escape errors are pinned by the
 //!   `string_*_reject` tests.
+//! - **M-897** (ADR-040, kickoff `enb` Phase-I H1 Gap A) — the **`.myc` surface is now wired** for
+//!   the decimal float literal (`1.5` / `0.0` / `1e10` / `2.5e-3`) and the nullary `Float` type
+//!   (binary64 only — ADR-040 FLAG-1): it lowers to the **existing** `Repr::Float`/`Payload::Float`
+//!   scalar value form landed by M-896 (KC-3 — no new L0 node). The literal denotes the
+//!   **correctly-rounded** (RNE) binary64 of its decimal text (FLAG-3); that claim is pinned
+//!   `Empirical` by the bit-exact `float_literal_round_trip_corpus` differential against rustc's
+//!   own decimal→binary64 conversion. The full three-way runs in the `float_literal_*_three_way`
+//!   tests; the never-silent form/range/pattern refusals are pinned by the `float_*_reject` tests.
 
 use mycelium_core::{
-    Bound, BoundBasis, BoundKind, GuaranteeStrength, Meta, Node, NormKind, Payload, Provenance,
-    Repr, Value,
+    Bound, BoundBasis, BoundKind, FloatWidth, GuaranteeStrength, Meta, Node, NormKind, Payload,
+    Provenance, Repr, Value,
 };
 use mycelium_interp::{Interpreter, PrimRegistry};
 use mycelium_l1::{check_nodule, elaborate, parse, Evaluator};
@@ -1394,6 +1402,240 @@ fn string_raw_newline_reject() {
     );
 }
 
+// ── M-897 (ADR-040, `enb` Gap A): the decimal float literal — full three-way differential ───────
+//
+// `1.5` lowers to the EXISTING `Repr::Float{width: F64}`/`Payload::Float` scalar value form landed
+// by M-896 (KC-3 — no new L0 node); the nullary `Float` type keyword names it (binary64 only at
+// introduction — ADR-040 FLAG-1). The literal denotes the **correctly-rounded** (RNE) binary64 of
+// its decimal text (FLAG-3 — the documented, EXPLAIN-able conversion posture); the conversion runs
+// once, at elaboration, via `f64::from_str`. Honesty tags: the denotation is `Exact` as a
+// definition (ADR-040 §2.6); the host-conversion claim ("`from_str` is correctly rounded") is
+// `Declared` (Rust-std) pinned `Empirical` here by the bit-exact round-trip corpus against rustc's
+// own compile-time decimal→binary64 conversion — two independent implementations of the same
+// IEEE-754 conversion agreeing bit-for-bit. Never-silent (G2): form, empty-exponent, and
+// out-of-range (rounds-to-±inf) errors are the lexer's; the float-pattern refusal is the
+// checker's (FLAG-4). **AOT closure (recorded honestly):** the three-way — L1-eval ≡
+// elaborate→L0-interp ≡ AOT — closes over nullary `main` programs returning a float value; all
+// three paths run below (no refusal to record).
+
+/// The `Float` value observable, bit-exact: repr is `Float{F64}` and the payload carries exactly
+/// the expected bits (payload `==` would pass `-0.0 == 0.0`; bits do not — the ADR-040 §2.3
+/// identity posture).
+#[track_caller]
+fn assert_float_three_way_bits(label: &str, src: &str, expected: f64) {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let prims = PrimRegistry::with_builtins();
+    let engine = mycelium_cert::BinaryTernarySwapEngine;
+
+    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
+        .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
+
+    let l1 = Evaluator::new(&env)
+        .call("main", vec![])
+        .unwrap_or_else(|e| panic!("{label}: L1-eval failed: {e}"));
+    let l1 = l1
+        .as_repr()
+        .unwrap_or_else(|| panic!("{label}: result must be a repr value"))
+        .clone();
+    let node =
+        elaborate(&env, "main").unwrap_or_else(|e| panic!("{label}: must be in the fragment: {e}"));
+    let l0 = interp
+        .eval(&node)
+        .unwrap_or_else(|e| panic!("{label}: L0-interp failed: {e}"));
+    let aot = mycelium_mlir::run(&node, &prims, &engine)
+        .unwrap_or_else(|e| panic!("{label}: AOT failed: {e}"));
+
+    for (path, v) in [("L1-eval", &l1), ("L0-interp", &l0), ("AOT", &aot)] {
+        assert_eq!(
+            v.repr(),
+            &Repr::Float {
+                width: FloatWidth::F64
+            },
+            "{label}: {path} repr mismatch"
+        );
+        let Payload::Float(x) = v.payload() else {
+            panic!("{label}: {path} payload is not Float: {:?}", v.payload());
+        };
+        assert_eq!(
+            x.to_bits(),
+            expected.to_bits(),
+            "{label}: {path} bits mismatch (got {x:?}, want {expected:?})"
+        );
+    }
+}
+
+/// `1.5` (exactly representable in binary64) round-trips identically on all three paths.
+#[test]
+fn float_literal_surface_three_way() {
+    assert_float_three_way_bits(
+        "float literal 1.5",
+        "nodule d;\nfn main() => Float = 1.5;",
+        1.5,
+    );
+}
+
+/// `0.0` is positive zero — bit-exactly (`+0.0`/`-0.0` are distinct identities, ADR-040 §2.3;
+/// a payload `==` check alone could not see the difference).
+#[test]
+fn float_literal_zero_three_way() {
+    assert_float_three_way_bits(
+        "float literal 0.0",
+        "nodule d;\nfn main() => Float = 0.0;",
+        0.0,
+    );
+}
+
+/// The exponent forms: integer-mantissa `1e10`, fractional `2.5e-3`, and uppercase `1E+5`.
+#[test]
+fn float_literal_exponent_forms_three_way() {
+    assert_float_three_way_bits(
+        "float literal 1e10",
+        "nodule d;\nfn main() => Float = 1e10;",
+        1e10,
+    );
+    assert_float_three_way_bits(
+        "float literal 2.5e-3",
+        "nodule d;\nfn main() => Float = 2.5e-3;",
+        2.5e-3,
+    );
+    assert_float_three_way_bits(
+        "float literal 1E+5",
+        "nodule d;\nfn main() => Float = 1E+5;",
+        1E+5,
+    );
+}
+
+/// `0.1` is NOT exactly representable — the literal denotes its correctly-rounded binary64
+/// (FLAG-3), which is exactly what rustc's `0.1` denotes too; both conversions agree bit-for-bit.
+#[test]
+fn float_literal_inexact_decimal_three_way() {
+    assert_float_three_way_bits(
+        "float literal 0.1 (correctly rounded)",
+        "nodule d;\nfn main() => Float = 0.1;",
+        0.1,
+    );
+}
+
+/// The `Float` type annotation flows through params and returns: a float literal is a legal
+/// argument to a `Float -> Float` function on all three paths.
+#[test]
+fn float_type_annotation_param_return_three_way() {
+    assert_float_three_way_bits(
+        "Float param/return",
+        "nodule d;\nfn id(x: Float) => Float = x;\nfn main() => Float = id(2.5);",
+        2.5,
+    );
+}
+
+/// **The round-trip property, on a corpus (Empirical):** for each reference value `v`, rendering
+/// its shortest decimal form (`{v:?}` — Rust's shortest round-trip render) and running that text
+/// through the full surface pipeline (lex → parse → check → L1-eval, and elaborate → L0-interp)
+/// reproduces `v` **bit-for-bit**. This is decimal→binary64→render→binary64 closure, and — since
+/// the pipeline converts via `f64::from_str` while the reference bits come from rustc's own
+/// compile-time conversion — a two-implementation differential of the correctly-rounded
+/// conversion (VR-5: the FLAG-3 claim is tested, not asserted). Corpus rows pin the boundary
+/// cases: exact/inexact decimals, exponent extremes, `f64::MAX` (largest finite), subnormals down
+/// to `5e-324` (smallest positive), and the 2^53 exact-integer edge.
+#[test]
+// The near-MAX / deep-subnormal rows below carry their full shortest-round-trip digit strings on
+// purpose (they pin conversion at the representability boundaries); trimming the "excessive"
+// digits would change which binary64 the row denotes.
+#[allow(clippy::excessive_precision)]
+fn float_literal_round_trip_corpus() {
+    let corpus: &[f64] = &[
+        0.0,
+        1.0,
+        1.5,
+        0.1,
+        0.2,
+        1.0 / 3.0,
+        2.5e-3,
+        1e10,
+        std::f64::consts::PI,
+        std::f64::consts::E,
+        f64::MAX,
+        f64::MIN_POSITIVE,
+        5e-324,                  // smallest positive subnormal
+        9007199254740992.0,      // 2^53 — the exact-integer representability edge
+        1.7976931348623155e308,  // one ULP below f64::MAX (…157e308)
+        4.9406564584124654e-321, // a deep subnormal
+    ];
+    for &v in corpus {
+        let text = format!("{v:?}");
+        let src = format!("nodule d;\nfn main() => Float = {text};");
+        assert_float_three_way_bits(&format!("round-trip {text}"), &src, v);
+    }
+}
+
+/// Never-silent (G2): an exponent with no digits (`1e`) is an explicit lex/parse refusal naming
+/// the cause — never a silent `Int` + identifier split.
+#[test]
+fn float_exponent_no_digits_reject() {
+    let src = "nodule d;\nfn main() => Float = 1e;";
+    let err = parse(src).expect_err("an exponent with no digits must be a parse error");
+    assert!(
+        err.to_string().contains("exponent with no digits"),
+        "the refusal must name the empty-exponent cause: {err}"
+    );
+}
+
+/// Never-silent (G2, ADR-040 §2.4): a literal whose correctly-rounded binary64 value is not
+/// finite (`1e999`) is an explicit out-of-range refusal — a literal is a conversion boundary; it
+/// never silently lands on ±inf (in-band IEEE specials arise only from arithmetic).
+#[test]
+fn float_out_of_range_reject() {
+    let src = "nodule d;\nfn main() => Float = 1e999;";
+    let err = parse(src).expect_err("a literal rounding to +inf must be a parse error");
+    assert!(
+        err.to_string().contains("float literal out of range"),
+        "the refusal must name the out-of-range cause: {err}"
+    );
+}
+
+/// The Int-disambiguation boundary, pinned at the surface: `1.` is NOT a float (no digit after
+/// the dot — `.` stays the path glyph), so the trailing dot is an explicit parse refusal; and a
+/// leading-dot `.5` never opens a number.
+#[test]
+fn float_trailing_and_leading_dot_reject() {
+    parse("nodule d;\nfn main() => Float = 1.;")
+        .expect_err("`1.` must not parse as a float literal (Int `1` + a dangling `.`)");
+    parse("nodule d;\nfn main() => Float = .5;")
+        .expect_err("`.5` must not parse as a float literal (no leading-dot form)");
+}
+
+/// Never-silent type discipline: a float literal where a `Binary{8}` is expected is an explicit
+/// check refusal naming both types — never a silent conversion (S1/G2).
+#[test]
+fn float_type_mismatch_reject() {
+    let src = "nodule d;\nfn main() => Binary{8} = 1.5;";
+    let env = parse(src).expect("parses");
+    let err = check_nodule(&env).expect_err("Float where Binary{8} is expected must be refused");
+    assert!(
+        err.to_string().contains("Float"),
+        "the refusal must name the Float type: {err}"
+    );
+}
+
+/// ADR-040 FLAG-4: floats cannot be matched by literal patterns — IEEE `==` and content identity
+/// diverge on floats (`-0.0`/NaN), so a literal-pattern arm would have to silently pick one
+/// semantic. Pinned at the first gate that fires: the checker's scrutinee rule refuses `match`
+/// over a `Float` outright (explicit, names the type). A second, defense-in-depth refusal sits in
+/// `normalize_pattern` (naming ADR-040 FLAG-4) should a float scrutinee ever become matchable.
+#[test]
+fn float_pattern_reject() {
+    let src = "nodule d;\nfn f(x: Float) => Float = match x { 1.5 => x, _ => x };\nfn main() => Float = f(0.0);";
+    let env = parse(src).expect("parses");
+    let err = check_nodule(&env).expect_err("a match over a Float scrutinee must be refused");
+    let msg = err.to_string();
+    assert!(
+        msg.contains("match scrutinee") && msg.contains("Float"),
+        "the refusal must name the scrutinee rule and the Float type: {err}"
+    );
+}
+
 // ── M-890 (`enb` Gap C): the dense elementwise prim group ───────────────────────────────────────
 //
 // `dense_add`/`dense_sub`/`dense_neg`/`dense_scale` (kernel `dense.add`/`dense.sub`/`dense.neg`/
@@ -1405,8 +1647,9 @@ fn string_raw_newline_reject() {
 // with the ProvenThm relative-ε bound) — carried through every path unchanged (VR-5).
 //
 // **Where the three-way closes (recorded honestly — G2/VR-5).** L1 has **no dense
-// value-construction form yet**: there is no float literal (Gap A, M-895/M-897 — design-gated)
-// hence no dense literal, a bare decimal under a `Dense` ambient is an explicit refusal
+// value-construction form yet**: at this suite's writing there was no float literal (Gap A —
+// M-897 has since landed the *scalar* float literal below, but a **dense** construction form
+// still does not exist), a bare decimal under a `Dense` ambient is an explicit refusal
 // (RFC-0012 §4.3; `tests/ambient.rs`), and the Binary→Dense swap is an Explicit-Residual on all
 // paths (DN-52 FLAG-1, `tests/differential.rs`). So a *nullary* `main` over dense values is
 // **inexpressible**, and the surface-program three-way of `assert_three_way` cannot run. The

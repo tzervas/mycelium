@@ -531,6 +531,28 @@ impl Lexer {
         Ok(Tok::BytesLit(digits))
     }
 
+    /// Lex a decimal number: an integer literal, or — when the digits continue with a fractional
+    /// part (`.` followed by a digit) and/or an exponent (`e`/`E`) — a float literal (ADR-040 /
+    /// M-897). The Int-disambiguation is **structural, never a guess**:
+    ///
+    /// - `1.5` / `0.0` — a `.` followed by a **digit** continues the number as a float. A `.` *not*
+    ///   followed by a digit is left unconsumed (`1.` stays `Int(1)` + `Tok::Dot` — `.` remains the
+    ///   path/field glyph, so a float always has digits on **both** sides of its dot; there is no
+    ///   leading-dot `.5` form either, since a bare `.` never starts a number).
+    /// - `1e10` / `2.5e-3` — an `e`/`E` immediately after the digits opens an exponent
+    ///   (optional `+`/`-` sign, then **at least one** digit). Today `1e10` could only lex as
+    ///   `Int(1)` + `Ident("e10")`, which no production accepts adjacently — so claiming the
+    ///   exponent form introduces no grammar ambiguity.
+    ///
+    /// Never-silent (G2), mirroring [`Tok::Int`]'s out-of-range refusal: an exponent with no digit
+    /// (`1e`, `1e+`) is an explicit [`ParseError`], and a literal whose **correctly-rounded**
+    /// binary64 value is not finite (`1e999` — magnitude beyond f64::MAX rounds to ±inf) is an
+    /// explicit out-of-range error, never a silent ±inf value (ADR-040 §2.4: a literal is a
+    /// *conversion boundary*, so out-of-range is an explicit error — in-band IEEE specials arise
+    /// only from *arithmetic*). Rounding posture (ADR-040 FLAG-3): the literal denotes the
+    /// correctly-rounded (RNE) binary64 of its decimal text; the token carries the text verbatim
+    /// and the single conversion happens at elaboration via `f64::from_str` (correct rounding is a
+    /// Rust-std claim — `Declared`, pinned `Empirical` by the round-trip conformance corpus).
     fn lex_int(&mut self, pos: Pos) -> Result<Tok, ParseError> {
         let mut s = String::new();
         while let Some(c) = self.peek() {
@@ -540,6 +562,65 @@ impl Lexer {
             } else {
                 break;
             }
+        }
+        // Fractional part: only a `.` with a digit right behind it extends the number (see doc).
+        let mut is_float = false;
+        if self.peek() == Some('.') && self.peek2().is_some_and(|c| c.is_ascii_digit()) {
+            is_float = true;
+            s.push('.');
+            self.bump(); // '.'
+            while let Some(c) = self.peek() {
+                if c.is_ascii_digit() {
+                    s.push(c);
+                    self.bump();
+                } else {
+                    break;
+                }
+            }
+        }
+        // Exponent part: `e`/`E`, optional sign, then at least one digit (else a never-silent error).
+        if matches!(self.peek(), Some('e' | 'E')) {
+            is_float = true;
+            s.push(self.bump().expect("peeked exponent char exists"));
+            if matches!(self.peek(), Some('+' | '-')) {
+                s.push(self.bump().expect("peeked sign char exists"));
+            }
+            let mut saw_digit = false;
+            while let Some(c) = self.peek() {
+                if c.is_ascii_digit() {
+                    saw_digit = true;
+                    s.push(c);
+                    self.bump();
+                } else {
+                    break;
+                }
+            }
+            if !saw_digit {
+                return Err(ParseError::new(
+                    pos,
+                    format!(
+                        "float literal `{s}` has an exponent with no digits (expected at least \
+                         one digit after `e`/`E`, e.g. `1e10`, `2.5e-3`)"
+                    ),
+                ));
+            }
+        }
+        if is_float {
+            // The form is validated above, so `from_str` cannot fail; the parse here exists only to
+            // range-check finiteness at the lex gate (defense in depth — never an `unwrap`).
+            let x: f64 = s.parse().map_err(|_| {
+                ParseError::new(pos, format!("malformed float literal: {s} (internal)"))
+            })?;
+            if !x.is_finite() {
+                return Err(ParseError::new(
+                    pos,
+                    format!(
+                        "float literal out of range: {s} (its correctly-rounded IEEE-754 binary64 \
+                         value is not finite — magnitude exceeds ~1.8e308; ADR-040 §2.4)"
+                    ),
+                ));
+            }
+            return Ok(Tok::FloatLit(s));
         }
         s.parse::<i64>()
             .map(Tok::Int)

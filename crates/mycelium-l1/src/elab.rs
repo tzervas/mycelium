@@ -32,8 +32,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use mycelium_core::{
-    operation_hash, Alt, CtorRef, CtorSpec, DataRegistry, DeclSpec, FieldSpec, Meta, Node, Payload,
-    PolicyRef, Provenance, Repr, ScalarKind, Trit, Value,
+    operation_hash, Alt, CtorRef, CtorSpec, DataRegistry, DeclSpec, FieldSpec, FloatWidth, Meta,
+    Node, Payload, PolicyRef, Provenance, Repr, ScalarKind, Trit, Value,
 };
 
 use crate::ast::{Arm, BaseType, Expr, Literal, Path, Scalar, TypeRef, WidthRef};
@@ -183,6 +183,40 @@ pub fn lit_value(site: &str, l: &Literal) -> Result<Value, ElabError> {
             |e| residual(site, format!("malformed string literal: {e}")),
             Ok,
         ),
+        // ADR-040 (M-897, kickoff `enb` Phase-I H1 Gap A): a decimal float literal lowers to the
+        // EXISTING `Repr::Float`/`Payload::Float` scalar value form landed by M-896 (KC-3 — no new
+        // L0 node). The single text→f64 conversion happens here, via `f64::from_str` — the
+        // **correctly-rounded** (RNE) decimal→binary64 conversion the literal's spec documents
+        // (ADR-040 FLAG-3; correct rounding is a Rust-std claim — `Declared` — pinned `Empirical`
+        // by the round-trip conformance corpus). Meta is `Exact` **as a definition**: the literal
+        // denotes exactly the correctly-rounded binary64 of its decimal text, and this value *is*
+        // that binary64 (ADR-040 §2.6 — the definition is Exact; the host-conversion claim is the
+        // Empirical residue, tested, never silently upgraded — VR-5). The lexer already validated
+        // form + finiteness, so the parse is total; a failure here is a never-silent internal
+        // `Residual` (defense in depth, mirroring the `Bytes` arm). `Value::new` canonicalizes any
+        // NaN (unreachable for a finite literal) per ADR-040 §2.3.
+        Literal::Float(s) => {
+            let x: f64 = match s.parse() {
+                Ok(x) => x,
+                Err(_) => {
+                    return residual(
+                        site,
+                        format!("internal: malformed float literal text {s:?} reached elaboration"),
+                    )
+                }
+            };
+            Value::new(
+                Repr::Float {
+                    width: FloatWidth::F64,
+                },
+                Payload::Float(x),
+                Meta::exact(Provenance::Root),
+            )
+            .map_or_else(
+                |e| residual(site, format!("malformed float literal: {e}")),
+                Ok,
+            )
+        }
         Literal::Int(_) => residual(
             site,
             "a bare integer literal has no representation family (Q6)",
@@ -243,6 +277,13 @@ pub fn type_repr(site: &str, t: &TypeRef) -> Result<Repr, ElabError> {
             len: *len,
         }),
         BaseType::Bytes => Ok(Repr::Bytes),
+        // ADR-040 (M-897): the nullary scalar-float repr type resolves to its kernel `Repr`
+        // (binary64 only — FLAG-1). Not a v0 swap target (the checker's swap gate admits only
+        // Binary/Ternary/Dense), but `type_repr` is the general surface→`Repr` resolver, so a
+        // concrete resolution here is correct and never-silent (the `Bytes`/`Seq` posture).
+        BaseType::Float => Ok(Repr::Float {
+            width: FloatWidth::F64,
+        }),
         BaseType::Substrate(tag) => residual(
             site,
             format!("Substrate{{{tag}}} is not a representation type"),
@@ -786,6 +827,10 @@ fn field_spec(ty: &Ty) -> Option<FieldSpec> {
             len: *n,
         }),
         Ty::Bytes => FieldSpec::Repr(Repr::Bytes),
+        // ADR-040 (M-897): the scalar float has a monomorphic kernel form (binary64 — FLAG-1).
+        Ty::Float => FieldSpec::Repr(Repr::Float {
+            width: FloatWidth::F64,
+        }),
         Ty::Data(n, args) if args.is_empty() => FieldSpec::Data(n.clone()),
         Ty::Data(_, _) | Ty::Var(_) => return None,
         Ty::Substrate(_) => return None,
@@ -816,6 +861,10 @@ fn ty_to_repr(ty: &Ty) -> Option<Repr> {
             len: *n,
         },
         Ty::Bytes => Repr::Bytes,
+        // ADR-040 (M-897): the scalar float resolves to its kernel `Repr` (binary64 — FLAG-1).
+        Ty::Float => Repr::Float {
+            width: FloatWidth::F64,
+        },
         Ty::Data(_, _) | Ty::Var(_) | Ty::Substrate(_) | Ty::Fn(_, _) => return None,
     })
 }
@@ -1912,6 +1961,17 @@ fn lit_key_to_value(site: &str, key: &str) -> Result<Value, ElabError> {
         .map_or_else(
             |e| residual(site, format!("malformed ternary literal key: {e}")),
             Ok,
+        )
+    } else if let Some(text) = key.strip_prefix("f:") {
+        // M-897: a float literal pattern is refused by the checker (`normalize_pattern`, ADR-040
+        // FLAG-4) before any decision tree is built, so an `f:` key reaching the L0 bridge is an
+        // internal invariant break — refused explicitly, never a silently-picked equality (G2).
+        residual(
+            site,
+            format!(
+                "internal: a float literal-pattern key `f:{text}` reached elaboration — the \
+                 checker refuses float patterns (ADR-040 FLAG-4)"
+            ),
         )
     } else {
         residual(site, format!("unrecognised literal key `{key}`"))

@@ -177,6 +177,15 @@ pub enum Tok {
     /// repr-type keyword (no descriptor), like a paradigm keyword. Reserved so it can never be a
     /// silent identifier (G2).
     Bytes,
+    /// `Float` — the first-class scalar-float repr-type keyword (ADR-040, M-897; kickoff `enb`
+    /// Phase-I H1 Gap A). A **nullary** repr-type keyword like [`Tok::Bytes`]: at introduction the
+    /// width set is IEEE-754 binary64 only (ADR-040 FLAG-1), so `Float` names exactly
+    /// `Repr::Float{width: F64}` — no descriptor. A later width lands as an append-only surface
+    /// extension under its own decision, never by silently widening this keyword (VR-5). Distinct
+    /// from the `F64` *Dense-dtype* scalar keyword ([`Tok::Scalar`]) — tensor storage dtypes are
+    /// `Dense`'s concern (RFC-0033 §4.3.2), not the scalar value form's. Reserved so it can never be
+    /// a silent identifier (G2).
+    Float,
     /// `Substrate` — the affine external-resource kind (themed; LR-8).
     Substrate,
     /// `Sparse`.
@@ -207,6 +216,15 @@ pub enum Tok {
     StrLit(String),
     /// A non-negative decimal integer literal.
     Int(i64),
+    /// A decimal float literal (`1.5`, `0.0`, `1e10`, `2.5e-3`; ADR-040 / M-897), carrying the
+    /// **source text verbatim** (like [`Tok::BinLit`]/[`Tok::TritLit`] — the value conversion
+    /// happens once, at elaboration, so the token stays `PartialEq`-clean and the surface text is
+    /// preserved for diagnostics/formatting). The lexer is the never-silent gate (G2): it has
+    /// already validated the form (digits `.` digits, and/or an `e|E`-exponent with at least one
+    /// digit) **and** that the correctly-rounded IEEE-754 binary64 value is finite — an empty
+    /// exponent or a literal whose magnitude rounds to ±inf is an explicit
+    /// [`crate::error::ParseError`], mirroring [`Tok::Int`]'s out-of-range refusal.
+    FloatLit(String),
 
     // --- punctuation ---
     /// `(`.
@@ -424,6 +442,9 @@ pub fn keyword(word: &str) -> Option<Tok> {
         // they can never be silent identifiers (G2).
         "Seq" => Tok::Seq,
         "Bytes" => Tok::Bytes,
+        // ADR-040 (M-897): the nullary scalar-float repr-type keyword (binary64 only at
+        // introduction — FLAG-1). Reserved so it can never be a silent identifier (G2).
+        "Float" => Tok::Float,
         "Substrate" => Tok::Substrate,
         "Sparse" => Tok::Sparse,
         "F16" => Tok::Scalar(ScalarTok::F16),
