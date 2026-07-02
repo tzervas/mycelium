@@ -124,6 +124,47 @@ fn surface_cases() -> Vec<(&'static str, Vec<Ty>, Ty)> {
     ]
 }
 
+/// The M-890 (`enb` Gap C) dense elementwise prims are **tensor-valued** — their operands/results
+/// are `Ty::Dense(dim, scalar)`, typed by a dedicated checker branch (`try_check_dense_prim`), and
+/// their Π entries use the documented `Any`/`Uniform` paradigm-model escape hatch (no first-class
+/// `Dense` paradigm yet — the same FLAG as the seq/bytes prims). So they fit neither
+/// `surface_cases` (which asserts Binary/Ternary operand paradigms) nor the comparison guard. This
+/// guard pins their surface→Π consistency directly: each surface name maps to a declared kernel
+/// prim with the right arity, `Any` operands/result, and — the M-890 core contract — the intrinsic
+/// tag **carried from the kernel** (`dense.neg` `Exact`; `dense.add`/`dense.sub`/`dense.scale`
+/// `Proven`; VR-5 — the kernel-side twin lives in `mycelium-interp/tests/prim_table.rs`, which can
+/// see `DenseSpace::op_guarantee` itself).
+#[test]
+fn dense_prims_resolve_to_declared_tensor_valued_kernel_prims() {
+    use mycelium_core::GuaranteeStrength;
+    let table = PrimTable::builtins();
+    for (surface, kernel_expected, arity, intrinsic) in [
+        ("dense_add", "dense.add", 2, GuaranteeStrength::Proven),
+        ("dense_sub", "dense.sub", 2, GuaranteeStrength::Proven),
+        ("dense_neg", "dense.neg", 1, GuaranteeStrength::Exact),
+        ("dense_scale", "dense.scale", 2, GuaranteeStrength::Proven),
+    ] {
+        let kernel = prim_kernel_name(surface)
+            .unwrap_or_else(|| panic!("dense prim `{surface}` must map to a kernel name"));
+        assert_eq!(kernel, kernel_expected, "surface→kernel mapping drifted");
+        assert!(
+            table.contains(kernel),
+            "surface `{surface}` → kernel `{kernel}`, but `{kernel}` is not declared in Π",
+        );
+        let decl = table.get(kernel).expect("declared prim");
+        assert_eq!(decl.sig.arity(), arity, "`{kernel}` arity drifted");
+        assert!(
+            decl.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+            "`{kernel}` operands use the documented `Any` escape hatch (no Dense paradigm yet)",
+        );
+        assert_eq!(decl.sig.result, PrimParadigm::Any);
+        assert_eq!(
+            decl.intrinsic, intrinsic,
+            "`{kernel}` intrinsic must be carried from the kernel's op_guarantee (VR-5)",
+        );
+    }
+}
+
 /// The RFC-0032 D1 (M-747) comparison prims are **width-collapsing** and paradigm-flexible
 /// (`Any, Any → Binary`, `WidthRel::Collapse`), so they do not fit the width-uniform `surface_cases`
 /// shape (they bypass `prim_sig` via a dedicated checker branch). This guard pins their surface→Π

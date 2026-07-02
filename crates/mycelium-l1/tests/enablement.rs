@@ -1393,3 +1393,277 @@ fn string_raw_newline_reject() {
         "the refusal must name the unterminated (raw-newline) cause: {err}"
     );
 }
+
+// ── M-890 (`enb` Gap C): the dense elementwise prim group ───────────────────────────────────────
+//
+// `dense_add`/`dense_sub`/`dense_neg`/`dense_scale` (kernel `dense.add`/`dense.sub`/`dense.neg`/
+// `dense.scale`, the `mycelium-dense` surface) — the first **tensor-valued** prims. Dim + dtype
+// live in the type (`Dense{d, s}`), so the never-silent shape contract is *static* (a mismatch is
+// a check-time refusal, never a broadcast); the numeric-domain contracts (overflow, subnormal,
+// off-grid, approximate sources) stay *runtime* refusals owned by the kernel, which also
+// constructs the result's honest per-op tag (`op_guarantee`: `neg` `Exact`, the rest `Proven`
+// with the ProvenThm relative-ε bound) — carried through every path unchanged (VR-5).
+//
+// **Where the three-way closes (recorded honestly — G2/VR-5).** L1 has **no dense
+// value-construction form yet**: there is no float literal (Gap A, M-895/M-897 — design-gated)
+// hence no dense literal, a bare decimal under a `Dense` ambient is an explicit refusal
+// (RFC-0012 §4.3; `tests/ambient.rs`), and the Binary→Dense swap is an Explicit-Residual on all
+// paths (DN-52 FLAG-1, `tests/differential.rs`). So a *nullary* `main` over dense values is
+// **inexpressible**, and the surface-program three-way of `assert_three_way` cannot run. The
+// three-way below therefore closes over the forms that DO exist: **L1-eval with kernel-built
+// `Dense` argument values injected through `Evaluator::call`** ≡ **L0-interp over the equivalent
+// hand-built `Node::Op`** ≡ **AOT (`mycelium_mlir::run`) over the same node** — agreement on
+// repr + payload + the carried tag, and on the never-silent overflow refusal. The nullary-main
+// surface closure is deferred to the dense value-construction form (Gap A / a dense literal),
+// not silently skipped.
+
+use mycelium_core::ScalarKind;
+use mycelium_dense::DenseSpace;
+use mycelium_interp::EvalError;
+use mycelium_l1::{L1Error, L1Value};
+
+/// A `Dense{n, F32}` value from on-grid elements, built through the kernel's own constructor —
+/// the only dense value-construction form until a surface literal lands (Gap A).
+fn dense_f32(xs: Vec<f64>) -> Value {
+    let n = u32::try_from(xs.len()).expect("test dims are small");
+    DenseSpace::new(n, ScalarKind::F32)
+        .expect("F32 is a supported dtype")
+        .value(xs)
+        .expect("fixture elements are finite and on-grid")
+}
+
+/// Run the M-890 three-way on one dense prim application (see the section note for why the
+/// surface leg takes injected argument values): L1-eval (`Evaluator::call` on the checked surface
+/// program `entry`) ≡ L0-interp ≡ AOT (both over the equivalent hand-built `Node::Op`). Asserts
+/// all three agree on repr + payload and returns the L0 value for tag inspection.
+fn assert_dense_three_way(
+    label: &str,
+    src: &str,
+    entry: &str,
+    kernel: &str,
+    args: &[Value],
+) -> Value {
+    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
+        .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
+
+    // Path 1: the L1 fuel-guarded evaluator, with the kernel-built Dense values as arguments.
+    let l1 = Evaluator::new(&env)
+        .call(entry, args.iter().cloned().map(L1Value::Repr).collect())
+        .unwrap_or_else(|e| panic!("{label}: L1-eval failed: {e}"));
+    let l1 = l1
+        .as_repr()
+        .unwrap_or_else(|| panic!("{label}: result must be a repr value"))
+        .clone();
+
+    // Paths 2+3: the equivalent L0 term (the prim over `Const`s of the same values), on the
+    // reference interpreter and through the AOT path.
+    let node = Node::Op {
+        prim: kernel.to_owned(),
+        args: args.iter().cloned().map(Node::Const).collect(),
+    };
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let l0 = interp
+        .eval(&node)
+        .unwrap_or_else(|e| panic!("{label}: L0-interp failed: {e}"));
+    let aot = mycelium_mlir::run(
+        &node,
+        &PrimRegistry::with_builtins(),
+        &mycelium_cert::BinaryTernarySwapEngine,
+    )
+    .unwrap_or_else(|e| panic!("{label}: AOT failed: {e}"));
+
+    for (path, v) in [("L1-eval", &l1), ("L0-interp", &l0), ("AOT", &aot)] {
+        assert_eq!(v.repr(), l0.repr(), "{label}: {path} repr diverged");
+        assert_eq!(
+            v.payload(),
+            l0.payload(),
+            "{label}: {path} payload diverged"
+        );
+        assert_eq!(
+            v.meta().guarantee(),
+            l0.meta().guarantee(),
+            "{label}: {path} carried tag diverged"
+        );
+    }
+    l0
+}
+
+#[test]
+fn dense_add_three_way_carries_the_proven_tag() {
+    let a = dense_f32(vec![1.5, 2.5]);
+    let b = dense_f32(vec![0.25, -1.0]);
+    let y = assert_dense_three_way(
+        "dense_add",
+        "nodule d;\nfn f(a: Dense{2, F32}, b: Dense{2, F32}) => Dense{2, F32} = dense_add(a, b);",
+        "f",
+        "dense.add",
+        &[a, b],
+    );
+    assert_eq!(y.payload(), &Payload::Scalars(vec![1.75, 1.5]));
+    // The kernel's tag, carried on every path: Proven + the ProvenThm relative-ε bound.
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
+    let space = DenseSpace::new(2, ScalarKind::F32).unwrap();
+    match y.meta().bound() {
+        Some(Bound {
+            kind: BoundKind::Error { eps, norm },
+            basis: BoundBasis::ProvenThm { .. },
+        }) => {
+            assert_eq!(*eps, space.op_rel_eps());
+            assert_eq!(*norm, NormKind::Rel);
+        }
+        other => panic!("expected the kernel's ProvenThm Error bound, got {other:?}"),
+    }
+}
+
+#[test]
+fn dense_sub_neg_scale_three_way() {
+    let a = dense_f32(vec![1.5, 2.5]);
+    let b = dense_f32(vec![0.5, -1.0]);
+    let y = assert_dense_three_way(
+        "dense_sub",
+        "nodule d;\nfn f(a: Dense{2, F32}, b: Dense{2, F32}) => Dense{2, F32} = dense_sub(a, b);",
+        "f",
+        "dense.sub",
+        &[a.clone(), b],
+    );
+    assert_eq!(y.payload(), &Payload::Scalars(vec![1.0, 3.5]));
+    assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
+
+    // neg: Exact (never rounds), no bound — the carried-tag distinction inside one group.
+    let n = assert_dense_three_way(
+        "dense_neg",
+        "nodule d;\nfn f(a: Dense{2, F32}) => Dense{2, F32} = dense_neg(a);",
+        "f",
+        "dense.neg",
+        std::slice::from_ref(&a),
+    );
+    assert_eq!(n.payload(), &Payload::Scalars(vec![-1.5, -2.5]));
+    assert_eq!(n.meta().guarantee(), GuaranteeStrength::Exact);
+    assert!(n.meta().bound().is_none(), "Exact results carry no bound");
+
+    // scale: the factor is a Dense{1, F32} scalar (the pre-Gap-A scalar form).
+    let c = dense_f32(vec![2.0]);
+    let s = assert_dense_three_way(
+        "dense_scale",
+        "nodule d;\nfn f(a: Dense{2, F32}, c: Dense{1, F32}) => Dense{2, F32} = dense_scale(a, c);",
+        "f",
+        "dense.scale",
+        &[a, c],
+    );
+    assert_eq!(s.payload(), &Payload::Scalars(vec![3.0, 5.0]));
+    assert_eq!(s.meta().guarantee(), GuaranteeStrength::Proven);
+}
+
+/// Runtime reject, three-way: an out-of-range result refuses explicitly and *consistently* on
+/// every path (L1-eval wraps the kernel's refusal in `L1Error::Kernel`; L0-interp and AOT surface
+/// it directly) — never a silent ±Inf (G2).
+#[test]
+fn dense_add_overflow_refuses_on_every_path() {
+    let max = dense_f32(vec![f64::from(f32::MAX)]);
+    let src =
+        "nodule d;\nfn f(a: Dense{1, F32}, b: Dense{1, F32}) => Dense{1, F32} = dense_add(a, b);";
+    let env = check_nodule(&parse(src).expect("parses")).expect("checks");
+
+    let l1 = Evaluator::new(&env).call(
+        "f",
+        vec![L1Value::Repr(max.clone()), L1Value::Repr(max.clone())],
+    );
+    assert!(
+        matches!(l1, Err(L1Error::Kernel(EvalError::Overflow { .. }))),
+        "L1-eval must refuse the overflow explicitly, got {l1:?}"
+    );
+
+    let node = Node::Op {
+        prim: "dense.add".to_owned(),
+        args: vec![Node::Const(max.clone()), Node::Const(max)],
+    };
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    assert!(
+        matches!(interp.eval(&node), Err(EvalError::Overflow { .. })),
+        "L0-interp must refuse the overflow explicitly"
+    );
+    assert!(
+        matches!(
+            mycelium_mlir::run(
+                &node,
+                &PrimRegistry::with_builtins(),
+                &mycelium_cert::BinaryTernarySwapEngine
+            ),
+            Err(EvalError::Overflow { .. })
+        ),
+        "AOT must refuse the overflow explicitly"
+    );
+}
+
+/// Static conformance — accept: every dense prim signature the checker must admit.
+#[test]
+fn dense_prims_conformance_accept() {
+    for src in [
+        "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{4, F32}) => Dense{4, F32} = dense_add(a, b);",
+        "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{4, F32}) => Dense{4, F32} = dense_sub(a, b);",
+        "nodule d;\nfn f(a: Dense{4, F32}) => Dense{4, F32} = dense_neg(a);",
+        "nodule d;\nfn f(a: Dense{4, F32}, c: Dense{1, F32}) => Dense{4, F32} = dense_scale(a, c);",
+        // BF16 spaces type identically (the dtype rides the type).
+        "nodule d;\nfn f(a: Dense{8, BF16}, b: Dense{8, BF16}) => Dense{8, BF16} = dense_add(a, b);",
+        // Composition: the result of one dense prim feeds the next (dim/dtype-preserving).
+        "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{4, F32}) => Dense{4, F32} = dense_neg(dense_add(a, b));",
+    ] {
+        check_nodule(&parse(src).expect("parses"))
+            .unwrap_or_else(|e| panic!("must accept: {src}\n  got: {e}"));
+    }
+}
+
+/// Static conformance — reject: the never-silent shape/dtype contract is a *check-time* refusal
+/// (dim + dtype live in the type), with a message naming the offense (G2).
+#[test]
+fn dense_prims_conformance_reject() {
+    for (src, needle) in [
+        // Dim mismatch: never a broadcast.
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{8, F32}) => Dense{4, F32} = dense_add(a, b);",
+            "share one dim and dtype",
+        ),
+        // Dtype mismatch: never a silent re-round.
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}, b: Dense{4, BF16}) => Dense{4, F32} = dense_sub(a, b);",
+            "share one dim and dtype",
+        ),
+        // Cross-paradigm operand: an explicit refusal pointing at the missing swap.
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}, b: Binary{8}) => Dense{4, F32} = dense_add(a, b);",
+            "must be a `Dense{dim, scalar}`",
+        ),
+        (
+            "nodule d;\nfn f(a: Binary{8}) => Binary{8} = dense_neg(a);",
+            "must be a `Dense{dim, scalar}`",
+        ),
+        // The scale factor must be Dense{1, s} of the SAME dtype.
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}, c: Dense{3, F32}) => Dense{4, F32} = dense_scale(a, c);",
+            "factor must be a `Dense{1, scalar}`",
+        ),
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}, c: Dense{1, BF16}) => Dense{4, F32} = dense_scale(a, c);",
+            "factor dtype",
+        ),
+        // Arity: explicit.
+        (
+            "nodule d;\nfn f(a: Dense{4, F32}) => Dense{4, F32} = dense_add(a);",
+            "takes 2 operand(s)",
+        ),
+    ] {
+        let err = check_nodule(&parse(src).expect("parses"))
+            .expect_err(&format!("must reject: {src}"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains(needle),
+            "the refusal must name the offense.\n  src: {src}\n  want: {needle}\n  got: {msg}"
+        );
+    }
+}

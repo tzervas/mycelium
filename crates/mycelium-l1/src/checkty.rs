@@ -3937,6 +3937,14 @@ impl Cx<'_> {
         if let Some(ret) = self.try_check_seq_bytes_prim(scope, head, name, args)? {
             return Ok(ret);
         }
+        // RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the tensor-valued dense elementwise
+        // prims. Dim + dtype live in the type (`Dense{d, s}`), so a shape/dtype mismatch is a
+        // *static* explicit refusal here — never a broadcast/coercion (G2). Not width-preserving
+        // in the `prim_family` sense (Dense has no bare-decimal encoding to anchor — RFC-0012
+        // §4.3 refuses bare decimals under a Dense ambient), so a dedicated branch, like seq/bytes.
+        if let Some(ret) = self.try_check_dense_prim(scope, head, name, args)? {
+            return Ok(ret);
+        }
         let Some(fam) = prim_family(name) else {
             return self.err(teach_unknown(
                 name,
@@ -4908,6 +4916,108 @@ impl Cx<'_> {
         }
     }
 
+    /// Try to check a call to a **dense elementwise prim** (RFC-0001 §4.1 / RFC-0002 §5; M-890,
+    /// `enb` Gap C) — the tensor-valued group `dense_add`/`dense_sub`/`dense_neg`/`dense_scale`
+    /// (kernel `dense.add`/`dense.sub`/`dense.neg`/`dense.scale`, the `mycelium-dense` surface).
+    /// Returns `Ok(None)` if `name` is not one of them.
+    ///
+    /// Dim and dtype are part of the type (`Dense{d, s}`), so the never-silent shape contract is
+    /// **static** here: `dense_add`/`dense_sub` require two `Dense{d, s}` operands with *equal*
+    /// dim and dtype (a mismatch is an explicit refusal naming both types — never a broadcast or
+    /// re-round; G2), and the result is the same `Dense{d, s}`. `dense_neg` is unary,
+    /// dim/dtype-preserving. `dense_scale(a: Dense{d, s}, c: Dense{1, s})` takes its factor as a
+    /// **`Dense{1, s}` scalar** of the *same* dtype — the pre-Gap-A scalar form (no scalar-float
+    /// type exists until the M-895/M-896 float ADR lands; FLAGged at the kernel wrapper,
+    /// `mycelium-interp/src/prims.rs`). The numeric-domain contracts (off-grid/non-finite
+    /// elements, overflow, subnormal results, approximate sources) are *runtime* refusals owned by
+    /// the kernel, not static rules — exactly as `add_bin`'s overflow is (RFC-0032 D2 precedent).
+    /// A bare-decimal operand has no Dense anchor (RFC-0012 §4.3 gives Dense no bare-decimal
+    /// encoding), so it is refused by the operand check itself, never defaulted.
+    fn try_check_dense_prim(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        name: &str,
+        args: &[Expr],
+    ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        if !matches!(
+            name,
+            "dense_add" | "dense_sub" | "dense_neg" | "dense_scale"
+        ) {
+            return Ok(None);
+        }
+        let arity_err = |want: usize| -> Result<Option<(Ty, Expr)>, CheckError> {
+            self.err(format!(
+                "`{name}` takes {want} operand(s), got {} (RFC-0001 §4.1; M-890)",
+                args.len()
+            ))
+        };
+        // Every operand must be a concrete `Dense{d, s}`; check the first and destructure.
+        let check_dense = |scope: &mut Vec<(String, Ty)>,
+                           a: &Expr,
+                           which: &str|
+         -> Result<(u32, Scalar, Expr), CheckError> {
+            let (ty, a2) = self.check(scope, a, None)?;
+            let Ty::Dense(d, s) = ty else {
+                return Err(CheckError::new(
+                    self.site,
+                    format!(
+                        "`{name}` {which} operand must be a `Dense{{dim, scalar}}`, got {ty} \
+                         (RFC-0001 §4.1; M-890 — never a silent conversion; a cross-paradigm \
+                         edge needs an explicit `swap`)"
+                    ),
+                ));
+            };
+            Ok((d, s, a2))
+        };
+        match name {
+            "dense_add" | "dense_sub" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (da, sa, a2) = check_dense(scope, &args[0], "first")?;
+                let (db, sb, b2) = check_dense(scope, &args[1], "second")?;
+                if da != db || sa != sb {
+                    // The never-silent shape contract, statically: name both full types.
+                    return self.err(format!(
+                        "`{name}` operands must share one dim and dtype, got Dense{{{da}, \
+                         {sa:?}}} and Dense{{{db}, {sb:?}}} (M-890 — a shape/dtype mismatch is \
+                         an explicit refusal, never a broadcast or re-round; G2)"
+                    ));
+                }
+                Ok(Some((Ty::Dense(da, sa), app_node(head, vec![a2, b2]))))
+            }
+            "dense_neg" => {
+                if args.len() != 1 {
+                    return arity_err(1);
+                }
+                let (d, s, a2) = check_dense(scope, &args[0], "single")?;
+                Ok(Some((Ty::Dense(d, s), app_node(head, vec![a2]))))
+            }
+            "dense_scale" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (d, s, a2) = check_dense(scope, &args[0], "vector")?;
+                let (dc, sc, c2) = check_dense(scope, &args[1], "scale-factor")?;
+                if dc != 1 {
+                    return self.err(format!(
+                        "`dense_scale` factor must be a `Dense{{1, scalar}}` (the pre-Gap-A \
+                         scalar form), got Dense{{{dc}, {sc:?}}} (M-890)"
+                    ));
+                }
+                if sc != s {
+                    return self.err(format!(
+                        "`dense_scale` factor dtype {sc:?} must match the vector dtype {s:?} \
+                         (M-890 — never a silent re-round; G2)"
+                    ));
+                }
+                Ok(Some((Ty::Dense(d, s), app_node(head, vec![a2, c2]))))
+            }
+            _ => unreachable!("gated by the matches! above"),
+        }
+    }
+
     /// Literal typing (Q6): a literal *is* its representation — a binary literal's width is its
     /// digit count, a ternary literal's trit count its width. Bare integers need context v0 does not
     /// yet give them → explicit refusal, never a cross-family default. (List literals are checked by
@@ -5478,6 +5588,15 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "bytes_concat" => "bytes.concat",
         // DN-41 (M-798): never-silent `Binary` width-cast (zero-extend widen / checked narrow).
         "width_cast" => "bit.width_cast",
+        // RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the tensor-valued dense elementwise
+        // group — kernel `mycelium-dense`, per-op tags carried from `DenseSpace::op_guarantee`
+        // (`dense.neg` `Exact`, the rest `Proven`; VR-5). Surface names are `_`-joined like
+        // `seq_len` (a `.` is the path separator in the lexer); typed by the dedicated
+        // `try_check_dense_prim` branch (shape/dtype in the type ⇒ static never-silent mismatch).
+        "dense_add" => "dense.add",
+        "dense_sub" => "dense.sub",
+        "dense_neg" => "dense.neg",
+        "dense_scale" => "dense.scale",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",

@@ -338,6 +338,7 @@ version = "0.0.0"
 dependencies = [
  "mycelium-cert",
  "mycelium-core",
+ "mycelium-dense",
  "mycelium-interp",
  "mycelium-mlir",
  "mycelium-numerics",
