@@ -83,10 +83,11 @@ impl PrimRegistry {
     /// variant rides M-767), and the never-silent two's-complement `add`/`sub`/`neg`
     /// (`bin.add`/`bin.sub`/`bin.neg`, RFC-0033 §4.1.2/§4.1.3, M-766 — completes the shared
     /// two's-complement set `bin.mul` started; distinct from `bit.add`/`bit.sub`'s unsigned overflow
-    /// criterion), and the **dense elementwise group**
+    /// criterion), and the **dense group**
     /// (`dense.add`/`dense.sub`/`dense.neg`/`dense.scale`, RFC-0001 §4.1/RFC-0002 §5, M-890 —
-    /// `enb` Gap C; the first tensor-valued prims, delegating to the `mycelium-dense` kernel and
-    /// carrying its per-op guarantee tags unchanged — `dense.neg` `Exact`, the rest `Proven`; see
+    /// `enb` Gap C; the first tensor-valued prims — plus the M-891 measurement pair
+    /// `dense.dot`/`dense.similarity`; all delegate to the `mycelium-dense` kernel and
+    /// carry its per-op guarantee tags unchanged — `dense.neg` `Exact`, the rest `Proven`; see
     /// the module note at the dense section below).
     #[must_use]
     pub fn with_builtins() -> Self {
@@ -134,13 +135,15 @@ impl PrimRegistry {
         // the non-`Binary` reprs have no committed canonical meet in v0 (DN-58 §A.6 F-A3), so only the
         // `Binary` meet is a built-in here. (RFC-0008 RT6; RFC-0027 §10.6 provenance shape.)
         r.register("fuse_join:binary", prim_fuse_join_binary);
-        // RFC-0001 §4.1 / RFC-0002 §5 (M-890, `enb` Gap C): the dense elementwise group — the
+        // RFC-0001 §4.1 / RFC-0002 §5 (M-890/M-891, `enb` Gap C): the dense group — the
         // first *tensor-valued* prims. The kernel (`mycelium-dense`) constructs the result with
         // its honest per-op tag/bound; the wrappers carry it through unchanged (VR-5).
         r.register("dense.add", prim_dense_add);
         r.register("dense.sub", prim_dense_sub);
         r.register("dense.neg", prim_dense_neg);
         r.register("dense.scale", prim_dense_scale);
+        r.register("dense.dot", prim_dense_dot);
+        r.register("dense.similarity", prim_dense_similarity);
         r
     }
 
@@ -1256,6 +1259,17 @@ fn prim_fuse_join_binary(prim: &str, args: &[&Value]) -> Result<Value, EvalError
 //     subnormal results outside the cited theorem's side-conditions) → [`EvalError::PrimType`]
 //     carrying the kernel's own message — an explicit refusal, never a broadcast/coercion (G2).
 //
+// **The measurement pair `dense.dot`/`dense.similarity` (M-891).** Same bind-space-and-delegate
+// shape, same carried-tag contract — with one honesty point worth naming: their result is a
+// **`Dense{1, F64}`** value (the f64 the kernel computed, delivered exactly — never re-rounded
+// onto the operand grid), and the carried `Proven` bound is the **binary64 accumulation bound**
+// (absolute/`Linf`, `DenseSpace::dot_abs_eps`/`similarity_abs_eps`), NOT the dtype's per-element
+// `op_rel_eps`: over exact on-grid operands every product is exact in the f64 accumulator, so the
+// dtype ε never enters — and a per-element *relative* claim on a dot product would be false under
+// cancellation (VR-5: the tag equals what the kernel can prove, nothing else). `F64` has no dense
+// op set (kernel v1 scope), so a measurement cannot silently feed back into dense arithmetic —
+// re-entry is an explicit `UnsupportedDtype` refusal via `dense_space_of` (G2).
+//
 // **`dense.scale`'s scalar operand (pre-Gap-A form — FLAG).** The kernel takes the factor as an
 // `f64`, but no scalar-float value form exists yet (that is `enb` Gap A, M-895/M-896, design-gated
 // behind the float ADR). The only float-bearing value form today is `Dense` itself, so the factor
@@ -1380,5 +1394,31 @@ fn prim_dense_scale(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     };
     space
         .scale_value(args[0], *c)
+        .map_err(|e| map_dense_err(prim, e))
+}
+
+/// `dense.dot : (Dense{d, s}, Dense{d, s}) → Dense{1, F64}` — the dot-product measurement
+/// (M-891). **`Proven`**, carried from the kernel: the absolute (`Linf`) binary64 accumulation
+/// bound `dot_abs_eps` with its `ProvenThm` citation rides the result `Value` (see the module
+/// note — the dtype's `op_rel_eps` deliberately does NOT appear); a dim/dtype mismatch is an
+/// explicit refusal, never a broadcast (G2).
+fn prim_dense_dot(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let space = dense_space_of(prim, args[0])?;
+    space
+        .dot_value(args[0], args[1])
+        .map_err(|e| map_dense_err(prim, e))
+}
+
+/// `dense.similarity : (Dense{d, s}, Dense{d, s}) → Dense{1, F64}` — the cosine-similarity
+/// measurement (M-891). **`Proven`**, carried from the kernel: the input-independent absolute
+/// (`Linf`) bound `similarity_abs_eps` (normalization caps the error) with its `ProvenThm`
+/// citation. Zero-norm operands yield the kernel's documented convention `0` exactly (disclosed
+/// in the citation, never silent).
+fn prim_dense_similarity(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 2)?;
+    let space = dense_space_of(prim, args[0])?;
+    space
+        .similarity_value(args[0], args[1])
         .map_err(|e| map_dense_err(prim, e))
 }
