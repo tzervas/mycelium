@@ -42,7 +42,15 @@
 //! Accepted (2026-06-20)) and asserted by its guarantee-matrix table, is the **frozen baseline** per
 //! [DN-66](../../../docs/notes/DN-66-Stdlib-Stable-API-Freeze-And-Rust-Crate-Retirement-Status.md).
 //! A future breaking change here needs a spec amendment + changelog entry, not a silent edit (G2).
-//! It remains the RFC-0031 D6 differential-oracle reference; no `.myc` port of this module exists yet, so the D6 retirement trigger has not fired and no item here is `#[deprecated]`.
+//! It remains the RFC-0031 D6 differential-oracle reference. A `.myc` port of the
+//! [`GUARANTEE_MATRIX`] DATA now exists (`lib/std/core.myc`, M-927, kickoff `opp`) — but the
+//! kernel re-export facade that is the bulk of this crate's surface (the `mycelium-core` type
+//! re-exports, the `prelude`, the §4.8 query fns over `CoreValue`, and the `error_scaffold`)
+//! remains Rust-only per RFC-0031 D1 (no `.myc`-surface FFI/kernel-type construction or
+//! value-reflection mechanism exists yet). So the D6 retirement trigger has still NOT fired for
+//! this crate as a whole (D6 retires a crate only once its full public surface has a `.myc`
+//! counterpart, not just part of it — M-867 is post-1.0 regardless); no item here is
+//! `#[deprecated]`.
 #![forbid(unsafe_code)]
 
 // ---- shared stdlib error scaffold (M-535, E5-1; DN-17 §2.4/§4 P3) ----------------
@@ -211,86 +219,4 @@ pub const GUARANTEE_MATRIX: &[GuaranteeRow] = &[
 ];
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use mycelium_core::data::CtorRef;
-
-    fn exact_repr_value() -> CoreValue {
-        let meta = Meta::exact(Provenance::Root);
-        let v = Value::new(
-            Repr::Binary { width: 2 },
-            Payload::Bits(vec![true, false]),
-            meta,
-        )
-        .expect("well-formed binary value");
-        CoreValue::Repr(v)
-    }
-
-    fn nil_datum() -> CoreValue {
-        let ctor = CtorRef::new(ContentHash::parse("blake3:nil").expect("hash"), 0);
-        CoreValue::Data(Datum::new(ctor, vec![]))
-    }
-
-    #[test]
-    fn matrix_is_all_exact_and_effect_free() {
-        // Spec §4: every row of the Ring-0 re-export surface is the honest `Exact`
-        // floor and declares no effects. This guards against an accidental overclaim
-        // (a `Proven`/`Empirical` tag here would itself violate VR-5).
-        assert_eq!(GUARANTEE_MATRIX.len(), 9, "spec §4 lists nine rows");
-        for row in GUARANTEE_MATRIX {
-            assert_eq!(
-                row.tag,
-                GuaranteeStrength::Exact,
-                "{} must be Exact",
-                row.op
-            );
-            assert_eq!(row.effects, "none", "{} must be effect-free", row.op);
-        }
-    }
-
-    #[test]
-    fn only_query_rows_are_explainable() {
-        // The EXPLAIN window is exactly the value-tag/bound/provenance queries.
-        let explainable: Vec<&str> = GUARANTEE_MATRIX
-            .iter()
-            .filter(|r| r.explainable)
-            .map(|r| r.op)
-            .collect();
-        assert_eq!(explainable, ["guarantee_of", "bound_of", "provenance_of"]);
-    }
-
-    #[test]
-    fn queries_on_a_repr_value_are_present() {
-        let v = exact_repr_value();
-        assert_eq!(repr_of(&v), Some(&Repr::Binary { width: 2 }));
-        assert!(meta_of(&v).is_some());
-        assert_eq!(guarantee_of(&v), GuaranteeStrength::Exact);
-        assert_eq!(provenance_of(&v), Some(&Provenance::Root));
-        assert_eq!(bound_of(&v), None); // an exact value carries no bound
-    }
-
-    #[test]
-    fn queries_on_algebraic_data_report_absence_never_silently() {
-        // C1 never-silent: a Datum has no Repr/Meta; the queries say so explicitly
-        // with `None` rather than fabricating a default.
-        let d = nil_datum();
-        assert_eq!(repr_of(&d), None);
-        assert_eq!(meta_of(&d), None);
-        assert_eq!(bound_of(&d), None);
-        assert_eq!(provenance_of(&d), None);
-        // guarantee_of stays total even for data.
-        let _g = guarantee_of(&d);
-    }
-
-    #[test]
-    fn lattice_meet_never_upgrades() {
-        // Sanity re-check of the re-exported floor: composition cannot strengthen.
-        use GuaranteeStrength::{Declared, Empirical, Exact, Proven};
-        for a in [Exact, Proven, Empirical, Declared] {
-            for b in [Exact, Proven, Empirical, Declared] {
-                let m = a.meet(b);
-                assert!(m.rank() >= a.rank().max(b.rank()));
-            }
-        }
-    }
-}
+mod tests;

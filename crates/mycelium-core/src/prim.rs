@@ -17,7 +17,10 @@
 //! `enb` Gap C) is the first to use that capacity: their intrinsic is **`Proven`**, carried
 //! verbatim from the kernel's per-op tag (`mycelium-dense`'s `DenseSpace::op_guarantee` — the
 //! round-to-nearest relative-error theorem with per-element *checked* side-conditions; `dense.neg`
-//! stays `Exact`, negation never rounds). *How* a non-`Exact` prim's bound-basis is stored **with
+//! stays `Exact`, negation never rounds). The **dense measurement pair**
+//! (`dense.dot`/`dense.similarity`, M-891) is likewise `Proven`, its bound the binary64
+//! *accumulation* theorem (absolute/`Linf`, dimension-dependent) rather than the dtype's
+//! per-element `op_rel_eps` — see the entry comment in [`PrimTable::builtins`]. *How* a non-`Exact` prim's bound-basis is stored **with
 //! the declaration** (a cited theorem vs an empirical fit, with its [`crate::BoundBasis`]) is the
 //! **RP-7** spike (DN-10 §3.6), deliberately *not* settled here — the declaration stores the
 //! *strength* only, and the checked basis (theorem citation + per-element ε) rides the runtime
@@ -182,10 +185,14 @@ impl PrimTable {
     /// domain), and the **dense elementwise group**
     /// (`dense.add`/`dense.sub`/`dense.neg`/`dense.scale`, RFC-0001 §4.1/RFC-0002 §5, M-890 —
     /// `enb` Gap C; the first *tensor-valued* prims, and the first non-`Exact` intrinsics — see
-    /// the crate-level Scope note). Every entry is `intrinsic = Exact` **except**
-    /// `dense.add`/`dense.sub`/`dense.scale` (`Proven`, carried from the kernel's per-op tag);
-    /// all are width-`Uniform` **except** `cmp.eq`/`cmp.lt`, which are width-`Collapse` (operand
-    /// width → `Binary{1}`). This is the single source of truth the `mycelium-interp` intrinsic
+    /// the crate-level Scope note), plus the **dense measurement pair**
+    /// (`dense.dot`/`dense.similarity`, M-891 — two `Dense{d, s}` operands reduce to a
+    /// `Dense{1, F64}` measurement carrying the kernel's proven binary64 accumulation bound).
+    /// Every entry is `intrinsic = Exact` **except** `dense.add`/`dense.sub`/`dense.scale`/
+    /// `dense.dot`/`dense.similarity` (`Proven`, carried from the kernel's per-op tag);
+    /// all are width-`Uniform` **except** `cmp.eq`/`cmp.lt` and `dense.dot`/`dense.similarity`,
+    /// which are width-`Collapse` (operand width → `Binary{1}` / operand dim → a dim-1
+    /// measurement). This is the single source of truth the `mycelium-interp` intrinsic
     /// and the `mycelium-l1` surface table are checked against.
     #[must_use]
     pub fn builtins() -> Self {
@@ -337,6 +344,31 @@ impl PrimTable {
         t.insert("dense.sub", dense_proven(vec![Any, Any]));
         t.insert("dense.neg", exact(vec![Any], Any));
         t.insert("dense.scale", dense_proven(vec![Any, Any]));
+        // RFC-0001 §4.1 / RFC-0002 §5 (M-891, `enb` Gap C): the **dense measurement pair** —
+        // `dense.dot`/`dense.similarity` reduce two `Dense{d, s}` operands to a single
+        // `Dense{1, F64}` measurement, so their width relation is `Collapse` (the tensor
+        // analogue of `cmp.eq`/`cmp.lt`'s reduce-to-`Bool`; the result dim is fixed at 1,
+        // independent of the operands' shared dim).
+        //
+        // **Intrinsic — `Proven`, carried from the kernel (`DenseSpace::op_guarantee`), and its
+        // bound is the binary64 *accumulation* bound, NOT `op_rel_eps`:** over exact on-grid
+        // F32/BF16 operands every product is exact in the f64 accumulator, so the dtype's
+        // per-element rounding ε never enters, and a per-element *relative* claim on a dot
+        // product would be false under cancellation. The honest disclosed ε is absolute (`Linf`)
+        // and dimension-dependent (`DenseSpace::dot_abs_eps`/`similarity_abs_eps`), riding the
+        // runtime result `Value` with its `ProvenThm` citation (RP-7 posture unchanged: the
+        // declaration stores the strength only). Consistency with the kernel is guarded in
+        // `mycelium-interp` (as for the M-890 group).
+        let dense_measure = || PrimDecl {
+            sig: PrimSig {
+                operands: vec![Any, Any],
+                result: Any,
+                width: WidthRel::Collapse,
+            },
+            intrinsic: GuaranteeStrength::Proven,
+        };
+        t.insert("dense.dot", dense_measure());
+        t.insert("dense.similarity", dense_measure());
         t
     }
 

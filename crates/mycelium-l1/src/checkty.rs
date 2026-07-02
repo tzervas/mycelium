@@ -4916,10 +4916,11 @@ impl Cx<'_> {
         }
     }
 
-    /// Try to check a call to a **dense elementwise prim** (RFC-0001 §4.1 / RFC-0002 §5; M-890,
+    /// Try to check a call to a **dense prim** (RFC-0001 §4.1 / RFC-0002 §5; M-890/M-891,
     /// `enb` Gap C) — the tensor-valued group `dense_add`/`dense_sub`/`dense_neg`/`dense_scale`
-    /// (kernel `dense.add`/`dense.sub`/`dense.neg`/`dense.scale`, the `mycelium-dense` surface).
-    /// Returns `Ok(None)` if `name` is not one of them.
+    /// (kernel `dense.add`/`dense.sub`/`dense.neg`/`dense.scale`, the `mycelium-dense` surface)
+    /// plus the measurement pair `dense_dot`/`dense_similarity` (kernel `dense.dot`/
+    /// `dense.similarity`, M-891). Returns `Ok(None)` if `name` is not one of them.
     ///
     /// Dim and dtype are part of the type (`Dense{d, s}`), so the never-silent shape contract is
     /// **static** here: `dense_add`/`dense_sub` require two `Dense{d, s}` operands with *equal*
@@ -4928,7 +4929,13 @@ impl Cx<'_> {
     /// dim/dtype-preserving. `dense_scale(a: Dense{d, s}, c: Dense{1, s})` takes its factor as a
     /// **`Dense{1, s}` scalar** of the *same* dtype — the pre-Gap-A scalar form (no scalar-float
     /// type exists until the M-895/M-896 float ADR lands; FLAGged at the kernel wrapper,
-    /// `mycelium-interp/src/prims.rs`). The numeric-domain contracts (off-grid/non-finite
+    /// `mycelium-interp/src/prims.rs`). `dense_dot`/`dense_similarity` (M-891) take the same
+    /// equal-dim/dtype operand pair and return **`Dense{1, F64}`** — the measurement-result form:
+    /// the binary64 the kernel computed, delivered exactly (never re-rounded onto the operand
+    /// grid), carrying the kernel's `Proven` absolute accumulation bound at runtime; `F64` has no
+    /// dense op set (kernel v1 scope), so a measurement cannot silently feed back into dense
+    /// arithmetic — re-entry is an explicit runtime `UnsupportedDtype` refusal (G2). The
+    /// numeric-domain contracts (off-grid/non-finite
     /// elements, overflow, subnormal results, approximate sources) are *runtime* refusals owned by
     /// the kernel, not static rules — exactly as `add_bin`'s overflow is (RFC-0032 D2 precedent).
     /// A bare-decimal operand has no Dense anchor (RFC-0012 §4.3 gives Dense no bare-decimal
@@ -4942,7 +4949,12 @@ impl Cx<'_> {
     ) -> Result<Option<(Ty, Expr)>, CheckError> {
         if !matches!(
             name,
-            "dense_add" | "dense_sub" | "dense_neg" | "dense_scale"
+            "dense_add"
+                | "dense_sub"
+                | "dense_neg"
+                | "dense_scale"
+                | "dense_dot"
+                | "dense_similarity"
         ) {
             return Ok(None);
         }
@@ -4986,6 +4998,26 @@ impl Cx<'_> {
                     ));
                 }
                 Ok(Some((Ty::Dense(da, sa), app_node(head, vec![a2, b2]))))
+            }
+            "dense_dot" | "dense_similarity" => {
+                if args.len() != 2 {
+                    return arity_err(2);
+                }
+                let (da, sa, a2) = check_dense(scope, &args[0], "first")?;
+                let (db, sb, b2) = check_dense(scope, &args[1], "second")?;
+                if da != db || sa != sb {
+                    return self.err(format!(
+                        "`{name}` operands must share one dim and dtype, got Dense{{{da}, \
+                         {sa:?}}} and Dense{{{db}, {sb:?}}} (M-891 — a shape/dtype mismatch is \
+                         an explicit refusal, never a broadcast or re-round; G2)"
+                    ));
+                }
+                // The measurement-result form (M-891): Dense{1, F64} — the binary64 the kernel
+                // computed, exactly; its Proven accumulation bound rides the runtime value.
+                Ok(Some((
+                    Ty::Dense(1, Scalar::F64),
+                    app_node(head, vec![a2, b2]),
+                )))
             }
             "dense_neg" => {
                 if args.len() != 1 {
@@ -5597,6 +5629,10 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         "dense_sub" => "dense.sub",
         "dense_neg" => "dense.neg",
         "dense_scale" => "dense.scale",
+        // M-891: the measurement pair — `Proven`, the kernel's binary64 accumulation bound
+        // (absolute/Linf; see `mycelium-interp/src/prims.rs`), result form Dense{1, F64}.
+        "dense_dot" => "dense.dot",
+        "dense_similarity" => "dense.similarity",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",

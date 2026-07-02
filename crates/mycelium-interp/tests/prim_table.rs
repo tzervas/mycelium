@@ -46,6 +46,9 @@ fn every_interp_builtin_intrinsic_matches_its_composition_path() {
             "dense.sub" => DenseOp::Sub,
             "dense.neg" => DenseOp::Neg,
             "dense.scale" => DenseOp::Scale,
+            // M-891: the measurement pair — Proven (the binary64 accumulation bound).
+            "dense.dot" => DenseOp::Dot,
+            "dense.similarity" => DenseOp::Similarity,
             _ => return None,
         };
         Some(DenseSpace::op_guarantee(op))
