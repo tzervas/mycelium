@@ -82,6 +82,13 @@ digest is a snapshot, that table is live.
   sufficient for **~19/26** stdlib crates; the **~5 real blockers are below-grammar** (float ops,
   binary mul/div + signed, Dense/VSA-to-L1 prims, R2 vocab, `Substrate` execution) — these are
   exactly the roadmap's **H1** enabler set.
+- **Phase-I kickoffs authored (2026-07-01, planning tier per ADR-038 §2.7)** —
+  `.claude/kickoffs/{acy,enb,grm,opp}.md`: `acy` (H0 acyclic-deps + hygiene, **lands first**) →
+  `enb` (H1 enabler closure, the usability critical path) · `grm` (H2a grammar-stability gate,
+  ratification-gated) · `opp` (opportunistic `.myc` ports, non-gating, parallel). Every task
+  carries a user story + DoD; M-ids **M-877…M-935** (plus the RFC-0033-named M-766/M-767) are
+  **proposed only** — minted at each kickoff after slot re-verification (mitigation #1). Phase-II
+  kickoffs are deliberately **not** authored (post-public — roadmap §7).
 
 ## Open maintainer decisions
 
