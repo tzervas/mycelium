@@ -1,0 +1,23 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "mycelium",
+      "camelcase": "Mycelium",
+      "title": "Mycelium",
+      "scope": "source.mycelium",
+      "path": ".",
+      "file-types": ["myc"],
+      "injection-regex": "^(mycelium|myc)$"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Mycelium grammar for tree-sitter (generated keyword sets — see tools/grammar/generate.py)",
+    "authors": [{ "name": "Tyler Zervas" }],
+    "links": {
+      "repository": "https://github.com/tzervas/mycelium"
+    }
+  }
+}
