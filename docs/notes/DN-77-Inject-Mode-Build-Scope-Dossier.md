@@ -4,7 +4,7 @@
 |---|---|
 | **Note** | DN-77 |
 | **Status** | **Recommended, pending orchestrator acceptance** (drafted 2026-07-02). The maintainer **delegated this build-scope decision to the wave orchestrator** (2026-07-02, session directive; the `frz` kickoff's maintainer-decision table names M-960 as the preparer and RFC-0038 §8 · DN-64 §7 as the basis). This dossier is therefore an argued **RECOMMENDATION (⟐)** for the orchestrator to accept or amend — it is **not self-ratified**, and it enacts nothing. RFC-0038 itself stays **Accepted** untouched (append-only, house rule #3); only M-961's build scope is decided here, and only upon acceptance. |
-| **Feeds** | **M-961** (enact the confirmed inject-mode subset); RFC-0038 §13 Implementation DoD; the deferral ledger below feeds M-836/M-837/M-838/M-839/M-842/M-849. |
+| **Feeds** | **M-961** (enact the confirmed inject-mode subset); RFC-0038 §13 Implementation DoD; the deferral ledger below feeds M-836/M-837/M-838/M-839/M-842/M-847/M-849. |
 | **Date** | July 2, 2026 |
 | **Decides** | *Nothing normatively.* Records (1) the delegation + decision framing (§1); (2) the verified as-built baseline (§2, `Empirical`); (3) the option analysis (§3); (4) the recommended Phase-I-buildable subset (§4, ⟐); (5) the deferral ledger — every deferral flagged and mapped to its R&D issue, none dropped (§5, G2); (6) open questions + FLAGs (§6); (7) guarantee posture + DoD (§7). |
 | **Task** | M-960 (kickoff `frz`, Lane B — Phase-I H2) |
@@ -36,8 +36,9 @@ an append-only changelog row recording that disposition; nothing is rewritten.
 
 **Scope.** In: the build-now vs. defer-as-R&D partition over RFC-0038 §4–§8 for the M-961 slice.
 Out: any design change to RFC-0038 (append-only — a change would be a supersession, not this note);
-the deferred R&D itself (M-836…M-842/M-849 keep their own issues); the kernel-freeze lane (M-958/
-M-959/M-969 — the inject lane is parallel to and does not gate the freeze).
+the deferred R&D itself (M-836/M-837/M-838/M-839/M-842/M-847/M-849 keep their own issues); the
+kernel-freeze lane (M-958/M-959/M-969 — the inject lane is parallel to and does not gate the
+freeze).
 
 ---
 
@@ -150,12 +151,16 @@ for these (VR-5), each verified per the RFC-0038 §13 conformance clauses cited.
    tagging) is built; the `module`/`call` **enforcement paths** are deferred and **refuse
    never-silently** when selected (an explicit "grain not yet enforced" error — the DN-63 pattern),
    so no posture is silently downgraded to `whole`. [§13 (g), scoped to `whole` + never-silent
-   refusal of the rest]
+   refusal of the rest] The deferred `module`/`call` enforcement-path build-out is **M-847's**
+   tracked scope (RFC-0038 §8.4-§8.7, `needs-design`) — this item's stub-plus-refusal *coordinates*
+   with M-847 rather than substituting for it (§5 row 7, §6 F-1 correction).
 7. **The default-plus-deviations manifest** (§8.5) — the effective policy rendered as a declared
    default plus enumerated deviations, surfaced via EXPLAIN. Phase-I scope: project-level default
    with per-inject override (§8.7's per-inject signing in an otherwise-`loose` context rides this);
-   the **full seven-level hierarchy + config surface** is §M R&D and defers (§5 row M-838).
-   [§13 (g), manifest clause]
+   the **full seven-level hierarchy + config surface** is §M R&D and defers (§5 row M-838). This
+   minimal manifest slice is a Phase-I precursor to, and *coordinates with* (does not duplicate),
+   **M-847**, whose DoD covers "the granularity/scope/override + deviation-manifest realized
+   Rust-first" for RFC-0038 §8.4-§8.7 as a whole. [§13 (g), manifest clause]
 
 **Signature scheme:** per §3.3 B-1 — the `SignatureScheme` seam + test scheme; production cipher
 gated on M-836. **Testing:** the §13 conformance suite parameterized over `InjectMode`, three-way
@@ -181,7 +186,7 @@ Each row names what stays `Declared`, its owning R&D issue (verified present in
 | `myc-prepare` signed-spore emission + ADR-013 wire-format/schema (spore signature component end-to-end) | §6.3/§14 | **M-839** | needs-design | Depends on ADR-013's impl-pending artifact schema (RFC-0038 §14); M-961 verifies certs, `myc-prepare` *production* of them rides M-839/M-836 |
 | Cross-colony mesh verify path (peer-inbound spore extraction/verification flow) | §7.2 | **M-842** | needs-design | The I4 own-`TrustRoot` *rule* is built (item 3); the mesh *transport/flow* needs RFC-0008's germination/mesh contracts (R8-Q5) |
 | Colony trust topology — controller mode/stack, masterless propagation, node invalidation/blacklist | §8.8 | **M-849** | needs-design | RFC-0038 itself marks the controller protocol, propagation, and blacklist TTL semantics "open infrastructure R&D"; Phase-7 milestone |
-| `module`/`call` enforcement-grain paths | §8.4 | **FLAG — no dedicated issue** (see §6 F-1) | — | Phase I ships the `whole` default (§8.6 app row); the other grains' knob exists + refuses never-silently (item 6), enforcement builds later |
+| `module`/`call` enforcement-grain paths | §8.4-§8.7 | **M-847** (see §6 F-1 correction) | needs-design, depends_on [M-836, M-838, M-840] | Phase I ships the `whole` default (§8.6 app row) and refuses `module`/`call` never-silently (item 6); the enforcement-path build-out (plus the wider granularity/scope-resolution/deviation-manifest system) is M-847's tracked scope (RFC-0038 §8.4-§8.7) — items 6-7 coordinate with it, not duplicate it |
 | Byzantine/adversarial mesh hardening | §5.2 | RFC-0008 **R8-Q4** (its own future RFC) | out of scope | RFC-0038 §5.2 already excludes it; restated so the exclusion survives into the build scope |
 
 Related, not deferrals: **M-840** (inoculated gates the interpreter fallback — design) is
@@ -193,10 +198,16 @@ throughout, and M-841's remaining sweep is unaffected. Neither is dropped.
 
 ## §6 Open questions / FLAGs (for the orchestrator)
 
-- **F-1 — untracked deferral (mitigation for a silent-scope-drop risk).** The `module`/`call`
-  enforcement-grain build-out has no dedicated M-id (M-838 owns the *scoping config*, not the
-  *enforcement paths*). Recommend the orchestrator mint one (or extend M-838's scope note) when
-  reconciling `issues.yaml` — this dossier cannot edit orchestrator-owned files.
+- **F-1 — CORRECTED 2026-07-02 (was: "untracked deferral, mint an M-id").** The original claim was
+  factually wrong: verified in `tools/github/issues.yaml` (2026-07-02) that **M-847** — "Inject
+  enforcement granularity + scope resolution + deviation manifest (RFC-0038 §8.4-§8.7)",
+  `needs-design`, `depends_on: [M-836, M-838, M-840]`, DoD "the granularity/scope/override +
+  deviation-manifest realized Rust-first" — **already owns** the `module`/`call` enforcement-grain
+  build-out. **No new M-id should be minted**; doing so would create duplicate tracking (G2). M-838
+  remains correctly cited (§5 row above) as the narrower scoping-config-surface R&D that M-847
+  depends on. Item 6's never-silent refusal stub for `module`/`call` and item 7's Phase-I manifest
+  slice (§4) are a minimal, *coordinating* instantiation of the surface M-847 will complete — not a
+  separate or duplicate effort.
 - **F-2 — shared-file updates.** `CHANGELOG.md`, `docs/Doc-Index.md`, `docs/api-index/`, and the
   M-960 `issues.yaml` close-out are orchestrator-owned; this note lands without touching them
   (FLAGged here for the integration-tier reconciliation).
@@ -218,10 +229,11 @@ acceptance — **no claim here is `Proven`**, and nothing in this note moves any
 (only M-961's landed code does that, and only for §4's seven items).
 
 **DoD (this dossier).** (a) Buildable subset vs. deferred R&D enumerated with a recommendation (⟐)
-— §3/§4; (b) each deferral mapped to its R&D issue — §5, with the one unmapped surface FLAGged
-(F-1) rather than dropped; (c) no silent scope drop (G2) — §5 + §6; (d) delegation cited and the
-status marked "recommended, pending orchestrator acceptance" — header + §1. Met when the
-orchestrator records acceptance/amendment as an append-only changelog row below.
+— §3/§4; (b) every deferral mapped to its R&D issue — §5 (the `module`/`call` enforcement-grain row
+maps to **M-847**, corrected 2026-07-02 per §6 F-1 — no unmapped surface remains); (c) no silent
+scope drop (G2) — §5 + §6; (d) delegation cited and the status marked "recommended, pending
+orchestrator acceptance" — header + §1. Met when the orchestrator records acceptance/amendment as an
+append-only changelog row below.
 
 ---
 
@@ -230,3 +242,4 @@ orchestrator records acceptance/amendment as an append-only changelog row below.
 | Date | Status | Note |
 |---|---|---|
 | 2026-07-02 | **Recommended, pending orchestrator acceptance** | Initial dossier (M-960, kickoff `frz` Lane B). Records the maintainer's 2026-07-02 delegation of the RFC-0038 build-scope decision to the wave orchestrator; verifies the as-built baseline (`inject.rs`/`deploy.rs`/`mycelium-sec`, `Empirical`); analyzes three scope options and recommends (⟐) the directed coherent slice — `loose`/`inoculated` gating, `InjectCert`→`TrustRoot` verify via a `SignatureScheme` seam (B-1; production cipher gated on M-836), never-silent `UnsignedCode`/`BadSignature` refusals on both paths, `inject_mode` on `Resolution`, the `whole`-grain application default with never-silent refusal of unbuilt grains, and the default-plus-deviations manifest. Deferral ledger maps §K.2/§L/§M, `myc-prepare` wire-format, cross-colony flow, and §8.8 topology to M-836/M-837/M-838/M-839/M-842/M-849; the `module`/`call` enforcement build-out FLAGged as untracked (F-1). Enacts nothing; RFC-0038 untouched. (Append-only; VR-5; G2.) |
+| 2026-07-02 | **Recommended, pending orchestrator acceptance** (correction, adversarial-verification pass) | **Correction:** F-1 and deferral-ledger row 7 wrongly claimed the `module`/`call` enforcement-grain build-out had "no dedicated M-id." Verified in `tools/github/issues.yaml` that **M-847** ("Inject enforcement granularity + scope resolution + deviation manifest (RFC-0038 §8.4-§8.7)", `needs-design`, `depends_on: [M-836, M-838, M-840]`) already owns exactly that surface. F-1 and §5 row 7 revised to cite M-847 as the existing owner — no new M-id minted, avoiding duplicate tracking (G2). §4 items 6-7 (the `whole`-grain default's never-silent refusal stub and the Phase-I manifest slice) are unchanged in the recommended buildable subset, now explicitly noted as *coordinating with*, not duplicating, M-847's tracked scope. The recommendation direction (Option B, the Phase-I-buildable inject subset) is unchanged; only the grounding for F-1/row 7 was wrong and is corrected here (append-only; house rule #4). |
