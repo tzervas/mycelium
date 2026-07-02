@@ -11347,3 +11347,43 @@ issues:
       - `render_expr_canonical` (and the comment-aware token path, if separately affected) emit the
         `@forage(policy)` annotation; a round-trip conformance case (`format(parse(x)) preserves
         @forage`) added; guarantee tag at the supportable strength.
+
+  - id: M-971
+    title: "Phase-I wave regressed the acyclic-deps invariant — 12 violations (3 cycles + upward-tier dev-deps)"
+    milestone: "Phase 5 — Self-Hosting & Core Library"
+    labels: [phase:5, type:bug, area:core-ir, priority:P1, status:todo]
+    epic: E27-1
+    depends_on: [M-877, M-878, M-879]
+    doc_refs:
+      - corpus:DN-68
+      - src:xtask/deps-strata.toml
+    body: |
+      FLAG raised at integration-reconcile 2026-07-02. The Phase-I H1 wave (enb/opp) reintroduced
+      dependency-graph violations that kickoff `acy` (H0, M-881/M-882) had driven to 0. `cargo run
+      -p xtask -- deps` now reports 12 violations — so `just check` (which wires the gate via
+      scripts/checks/all.sh) is RED on `deps-acyclic`. None were introduced by the reconcile PR
+      (it changed no Cargo.toml); they are pre-existing on `dev` from the wave's crate wiring.
+
+      Root causes (Empirical, cargo metadata at dev HEAD):
+      - `mycelium-interp -[normal]-> mycelium-vsa` (added for the VSA prims, M-892…M-894): a
+        same-stratum normal edge (normal-downward-only violation) that also closes the cycle
+        {mycelium-interp, mycelium-select, mycelium-vsa} via `mycelium-select -[dev]-> mycelium-interp`.
+      - `mycelium-l1 -[dev]-> mycelium-std-{core,diag,error,recover,select,spore,swap,ternary,testing}`
+        (added for the opp differential tests, M-926…M-934): nine upward-tier (core -> std) dev edges,
+        which also close the cycle {mycelium-l1, mycelium-proj, mycelium-spore, mycelium-std-spore,
+        mycelium-std-testing}.
+
+      Fix is the M-881/M-882 pattern (NOT a strata/tier whitelist — DN-68 forbids folding an
+      exception into the PR that needed it, and a cycle cannot be mapped away): replace the
+      cross-crate dev-imports with local, fixture-driven tests carrying the same assertions +
+      guarantee-tag strength (VR-5), and route the interp->vsa need without a same/upward edge.
+      Its own scoped, reviewed PR. BLOCKS the dev->integration promotion gate until green.
+
+      User stories:
+      - As the maintainer, I want the acyclic-deps invariant to stay at 0 violations, so that the
+        acy hardening is not silently regressed by later waves.
+
+      Definition of Done:
+      - `cargo run -p xtask -- deps` reports 0 violations; the interp/vsa and l1/std-* edges are
+        removed or relocated per DN-68's change-procedure; `just check` green on deps-acyclic;
+        no guarantee tag weakened (VR-5).
