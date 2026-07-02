@@ -694,24 +694,55 @@ ARTIFACTS = {
     "tree-sitter-mycelium/queries/highlights.scm": render_highlights_scm,
 }
 
+# DOWNSTREAM COPIES of a canonical artifact, keyed by REPO_ROOT-relative path -> renderer. These
+# are byte-identical build-time copies of a `tools/grammar/` artifact that must live inside another
+# consumer's tree. Emitting + drift-checking them HERE (rather than via a consumer-side npm script)
+# makes the copy impossible to silently stale vs the lexer-derived canonical grammar (G2): the same
+# `just drift-check` gate that guards `tools/grammar/` now also guards the copy. Only processed on
+# an in-place run (default --output-dir); a custom --output-dir renders the four canonical artifacts
+# only (used by the offline determinism test), so these fixed repo-paths are never written elsewhere.
+EXTRA_COPIES = {
+    # The VS Code / Cursor extension ships the tmLanguage inside its own package (editors/vscode);
+    # this copy is what `contributes.grammars` points at. `npm run sync-grammar` remains as a manual
+    # convenience, but THIS gate is the authority — the copy cannot drift from the canonical grammar.
+    "editors/vscode/syntaxes/mycelium.tmLanguage.json": render_tmlanguage,
+}
+
 
 def generate(buckets: dict[str, list[str]]) -> dict[str, str]:
-    """Render every artifact to its string content (the in-memory truth the gate diffs against)."""
+    """Render every canonical artifact to its string content (the in-memory truth the gate diffs)."""
     return {rel: render(buckets) for rel, render in ARTIFACTS.items()}
 
 
-def write(out_dir: Path, rendered: dict[str, str]) -> None:
+def generate_extra(buckets: dict[str, list[str]]) -> dict[str, str]:
+    """Render the downstream copies, keyed by REPO_ROOT-relative path."""
+    return {rel: render(buckets) for rel, render in EXTRA_COPIES.items()}
+
+
+def write(out_dir: Path, rendered: dict[str, str], extra: dict[str, str] | None = None) -> None:
     for rel, content in rendered.items():
         path = out_dir / rel
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(content, encoding="utf-8")
+    for rel, content in (extra or {}).items():
+        path = REPO_ROOT / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
 
 
-def check(out_dir: Path, rendered: dict[str, str]) -> int:
-    """Drift gate: committed artifacts must match a fresh regeneration. Exit 2 on any drift (G2)."""
+def check(out_dir: Path, rendered: dict[str, str], extra: dict[str, str] | None = None) -> int:
+    """Drift gate: committed artifacts (+ downstream copies) must match a fresh regeneration.
+
+    Exit 2 on any drift (G2). A downstream copy that is MISSING is drift too (never-silent): once
+    the consumer exists in-tree, the gate requires its copy present and current.
+    """
     stale: list[str] = []
     for rel, content in rendered.items():
         path = out_dir / rel
+        if not path.exists() or path.read_text(encoding="utf-8") != content:
+            stale.append(f"tools/grammar/{rel}")
+    for rel, content in (extra or {}).items():
+        path = REPO_ROOT / rel
         if not path.exists() or path.read_text(encoding="utf-8") != content:
             stale.append(rel)
     if stale:
@@ -719,7 +750,7 @@ def check(out_dir: Path, rendered: dict[str, str]) -> int:
             "drift: the committed editor grammars are stale vs the lexer keyword() table:"
         )
         for rel in stale:
-            print(f"  - tools/grammar/{rel}")
+            print(f"  - {rel}")
         print(
             "fix: run `python3 tools/grammar/generate.py` and commit the result (G2)."
         )
@@ -804,13 +835,16 @@ def main() -> int:
     if args.self_test:
         return self_test(buckets)
     rendered = generate(buckets)
+    # Downstream copies are fixed REPO_ROOT paths — only processed on an in-place run (the drift
+    # gate + a plain regenerate). A custom --output-dir renders the four canonical artifacts only.
+    in_place = out_dir.resolve() == HERE.resolve()
+    extra = generate_extra(buckets) if in_place else None
     if args.check:
-        return check(out_dir, rendered)
-    write(out_dir, rendered)
+        return check(out_dir, rendered, extra)
+    write(out_dir, rendered, extra)
+    n = len(rendered) + (len(extra) if extra else 0)
     total = sum(len(v) for v in buckets.values())
-    print(
-        f"wrote {len(rendered)} grammar artifact(s) from {total} lexer keywords -> {out_dir}"
-    )
+    print(f"wrote {n} grammar artifact(s) from {total} lexer keywords -> {out_dir}")
     return 0
 
 

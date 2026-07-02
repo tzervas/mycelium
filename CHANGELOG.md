@@ -11,6 +11,45 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Added (2026-07-02: M-697 — language identity and full-surface syntax highlighting for `.myc`)
+
+Brought the editor grammars current with the landed corpus and packaged Mycelium for
+identification and highlighting across editors and forges. The keyword set stays **lexer-derived**
+(the `just drift-check` gate is unchanged); the grammars grew from a reserved-word scaffold to the
+full landed surface. All outward-facing publishing is **staged, not fired** — the artifacts plus a
+ready-to-file runbook are in-repo; the maintainer fires the external submissions.
+Basis: PRs #1034, #1035, #1036, #1037, #1039.
+
+- **Editor grammars v2** (`tools/grammar/`, PR #1034). `generate.py` now emits full-surface
+  tmLanguage + a **structural** tree-sitter grammar covering strings and the minimal escape set
+  (M-910), floats (ADR-040/M-897), `0b`/`0t`/`0x` literals, the RFC-0025/M-745 operator set, the
+  M-915 short repr aliases (`bin`/`tern`/`emb`/`hvec`), ambient reprs, tuples, generics `[…]`,
+  guarantee annotations `T @ Strength`, function types `A => B`, effects `!{…}`, and every landed
+  declaration/expression form. The retired `<+0->` compact-ternary pattern is removed (RFC-0037 D4);
+  the retired `->` renders `invalid.deprecated`. Bucket correction: `Float` and the short aliases
+  bucket as `type`. Guarantee: keyword sets mechanical; structural productions **Empirical** —
+  verified by parsing the full conformance accept corpus (25) plus `lib/std` (18) with zero ERROR
+  nodes, not proven equivalent to the EBNF (which stays the accept/reject oracle); two Declared
+  permissive deviations documented in-file.
+- **VS Code / Cursor extension** (`editors/vscode/`, PR #1035) — `tzervas.mycelium-language`, language
+  id `mycelium`, `scopeName: source.mycelium`, extension `.myc`; committed `.vsix`, a
+  `language-configuration.json`, and `vscode-tmgrammar-test` scope tests (2/2 green). Packaging is
+  verified; live in-editor rendering is Empirical-not-UI-tested (no GUI editor in the build env).
+- **Publishable tree-sitter package** (`tools/grammar/tree-sitter-mycelium/`, PR #1036) — committed
+  generated `src/`, a `tree-sitter.json`, and `test/corpus/` (12/12 `tree-sitter test` green;
+  42/42 parse sweep). This is the asset Linguist and Neovim/Zed/Helix/Emacs consume.
+- **Distribution runbook, Rouge lexer, and `.gitattributes`** (PR #1039). `tools/grammar/DISTRIBUTION.md`
+  is the ready-to-file runbook (Open VSX as the chosen Azure-free registry; the MS Marketplace as
+  optional; the `github-linguist/linguist` `languages.yml` entry with the collision check — `.myc`
+  is **FREE**, verified 2026-07-02; per-editor tree-sitter setup). A tested Rouge lexer draft
+  (`tools/grammar/rouge/`, exercised against `rouge` 5.0.0 over 48 real `.myc` files) stages the
+  GitLab path. The root `.gitattributes` classifies generated/vendored/binary artifacts and,
+  per the maintainer's honesty constraint, **does not** map `.myc` to any existing language —
+  "Mycelium" in the GitHub bar comes only from the gated Linguist submission.
+- **Drift-gate the downstream copy** (PR #1037 + the integration wiring). `generate.py` emits the
+  extension's `syntaxes/` tmLanguage as a drift-checked downstream copy (a missing/stale copy fails
+  the gate — G2); `.codespellrc` allowlists `rouge`/`notin`; `generate.py` gains its exec bit.
+
 ### Fixed (2026-07-02: M-971 — DN-68 acyclic-deps regression, 12 to 0 violations; dev to integration close-out)
 
 The Phase-I H1 wave (below) regressed the DN-68 acyclic-deps invariant to 12 violations; this fix
