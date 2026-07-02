@@ -198,6 +198,13 @@ pub enum Tok {
     /// A balanced-ternary literal `0t…` (the inner `+0-` string, MSB-first; RFC-0037 D4 — the
     /// former `<…>` angle form is retired, mirroring the `0b…`/`0x…` literal prefixes).
     TritLit(String),
+    /// A textual string literal `"…"` (M-910/M-911, kickoff `enb` Phase-I H1): the **decoded**
+    /// content (escapes already resolved — the lexer is the never-silent gate, mirroring
+    /// [`Tok::BytesLit`]'s "even hex digits" invariant). An unterminated literal (EOF or a raw
+    /// newline/CR before the closing `"`), an unknown escape sequence, or a trailing `\` before EOF
+    /// is a never-silent [`crate::error::ParseError`] (G2) — never a silently-truncated or
+    /// half-escaped token.
+    StrLit(String),
     /// A non-negative decimal integer literal.
     Int(i64),
 

@@ -765,9 +765,12 @@ impl Resolver {
             }
             // Tagged literals already name their paradigm; AmbientInt is only produced here.
             // RFC-0032 D4: a `0x…` byte-string literal is a tagged repr literal (no ambient).
-            Literal::Bin(_) | Literal::Trit(_) | Literal::Bytes(_) | Literal::AmbientInt(_, _) => {
-                l.clone()
-            }
+            // M-910/M-911: a `"…"` string literal joins the same group (no ambient either).
+            Literal::Bin(_)
+            | Literal::Trit(_)
+            | Literal::Bytes(_)
+            | Literal::Str(_)
+            | Literal::AmbientInt(_, _) => l.clone(),
         })
     }
 
@@ -1297,6 +1300,10 @@ fn print_literal(l: &Literal) -> String {
         Literal::Trit(s) => format!("0t{s}"),
         // RFC-0032 D4: a `0x…` byte-string literal round-trips to its source form.
         Literal::Bytes(s) => format!("0x{s}"),
+        // M-910/M-911: a `"…"` string literal round-trips by RE-ESCAPING its decoded content (the
+        // inverse of `Lexer::lex_string`) — every char the lexer's escape set can decode is
+        // re-escaped here, so `parse → expand_to_source → parse` is stable (M-818 discipline).
+        Literal::Str(s) => format!("\"{}\"", escape_string_literal(s)),
         Literal::Int(i) => format!("{i}"),
         // A still-unresolved ambient decimal: show the decimal + its resolved paradigm (the width is
         // the checker's to fill — this only appears when expanding a type-form-only nodule).
@@ -1306,6 +1313,25 @@ fn print_literal(l: &Literal) -> String {
             format!("[{}]", s.join(", "))
         }
     }
+}
+
+/// Re-escape a decoded string literal's content back to its `"…"` surface form (M-910/M-911) — the
+/// exact inverse of `Lexer::lex_string`'s decode step, over the same minimal escape set (`\n \t \\
+/// \" \0 \r`). Every char the lexer can decode is re-escaped here, so no other char needs escaping.
+fn escape_string_literal(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '"' => out.push_str("\\\""),
+            '\n' => out.push_str("\\n"),
+            '\t' => out.push_str("\\t"),
+            '\r' => out.push_str("\\r"),
+            '\0' => out.push_str("\\0"),
+            other => out.push(other),
+        }
+    }
+    out
 }
 
 /// Round-trip a `lower Name[params] = <rhs>` declaration (DN-54 / M-812).

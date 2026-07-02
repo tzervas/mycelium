@@ -2026,9 +2026,12 @@ impl Parser {
                     Ok(Pattern::Ident(s))
                 }
             }
-            Tok::BinLit(_) | Tok::TritLit(_) | Tok::BytesLit(_) | Tok::Int(_) | Tok::LBracket => {
-                Ok(Pattern::Lit(self.parse_literal()?))
-            }
+            Tok::BinLit(_)
+            | Tok::TritLit(_)
+            | Tok::BytesLit(_)
+            | Tok::StrLit(_)
+            | Tok::Int(_)
+            | Tok::LBracket => Ok(Pattern::Lit(self.parse_literal()?)),
             // M-826: `(x, y, …)` is a tuple pattern (arity ≥ 2). A single `(_)` is grouping.
             Tok::LParen => {
                 self.bump();
@@ -2183,9 +2186,12 @@ impl Parser {
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         match self.cur() {
-            Tok::BinLit(_) | Tok::TritLit(_) | Tok::BytesLit(_) | Tok::Int(_) | Tok::LBracket => {
-                Ok(Expr::Lit(self.parse_literal()?))
-            }
+            Tok::BinLit(_)
+            | Tok::TritLit(_)
+            | Tok::BytesLit(_)
+            | Tok::StrLit(_)
+            | Tok::Int(_)
+            | Tok::LBracket => Ok(Expr::Lit(self.parse_literal()?)),
             Tok::Ident(_) => Ok(Expr::Path(self.parse_path()?)),
             Tok::LParen => {
                 // M-826: `(e, e2, …)` is a tuple literal (arity ≥ 2); `(e)` is grouping.
@@ -2237,6 +2243,12 @@ impl Parser {
             Tok::BytesLit(s) => {
                 self.bump();
                 Ok(Literal::Bytes(s))
+            }
+            // M-910/M-911: `"…"` textual string literal; the lexer already decoded its escape set
+            // and validated termination, so the content is stored verbatim.
+            Tok::StrLit(s) => {
+                self.bump();
+                Ok(Literal::Str(s))
             }
             Tok::Int(n) => {
                 self.bump();

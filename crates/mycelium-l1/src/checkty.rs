@@ -4952,6 +4952,9 @@ pub(crate) fn lit_ty_of(site: &str, l: &Literal) -> Result<Ty, CheckError> {
         )),
         // RFC-0032 D4 (M-750): a `0x…` byte-string literal *is* a `Bytes` value.
         Literal::Bytes(_) => Ok(Ty::Bytes),
+        // M-910/M-911: a `"…"` textual string literal lowers to the SAME `Repr::Bytes` value form
+        // as `Literal::Bytes` (UTF-8-encoded; KC-3 — no new value form), so it types as `Bytes` too.
+        Literal::Str(_) => Ok(Ty::Bytes),
         // A list literal is checked in `Cx::check_list` (it needs the element-expression context).
         // Reaching `lit_ty_of` means a `Literal::List` appeared where only context-free literals are
         // expected — a **pattern** position (a `Seq` pattern is not a v0 surface). An explicit
@@ -5130,8 +5133,8 @@ pub(crate) fn infer_type(
 }
 
 /// A canonical key for de-duplicating literal patterns (M-320): normalize away `_` separators so
-/// `0b1010` and `0b10_10` collide as the *same* literal. Only `Bin`/`Trit` reach here (the caller
-/// type-checks the literal first, which rejects `Int`/`List`).
+/// `0b1010` and `0b10_10` collide as the *same* literal. `Bin`/`Trit`/`Bytes`/`Str` reach here (the
+/// caller type-checks the literal first, which rejects `Int`/`List`).
 fn literal_key(lit: &Literal) -> String {
     match lit {
         Literal::Bin(s) => format!(
@@ -5148,6 +5151,10 @@ fn literal_key(lit: &Literal) -> String {
         Literal::Bytes(s) => {
             format!("by:{}", s.chars().filter(|c| *c != '_').collect::<String>())
         }
+        // M-910/M-911: a string literal pattern types as `Bytes` (like `Literal::Bytes` above), so
+        // it can reach here too; keyed on its decoded content (a distinct prefix — `s:` never
+        // collides with `by:`'s hex-digit alphabet).
+        Literal::Str(s) => format!("s:{s}"),
         Literal::List(_) => "list".to_owned(),
     }
 }

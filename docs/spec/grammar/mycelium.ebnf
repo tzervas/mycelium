@@ -373,7 +373,7 @@ path           ::= Ident ('.' Ident)*
  * names its paradigm; a bare Int has no representation family on its own (Q6) UNLESS an ambient is
  * in scope, in which case it adopts the ambient paradigm and takes its width from the checked
  * context, else an explicit UnresolvedWidth (RFC-0012 §4.3; M-344). */
-literal        ::= BinLit | TritLit | BytesLit | Int | ListLit
+literal        ::= BinLit | TritLit | BytesLit | StrLit | Int | ListLit
 ListLit        ::= '[' (expr (',' expr)*)? ']'       /* constructs a Seq{T, N} (RFC-0032 D3) */
 
 /* Terminals (lexer). */
@@ -382,6 +382,17 @@ BytesLit       ::= '0x' HexDigit (HexDigit | '_')*   /* even hex-digit count req
 HexDigit       ::= [0-9a-fA-F]
 TritLit        ::= '0t' Trit+                        /* MSB-first balanced trits (RFC-0037 D4; the `<…>` form is retired, `<` is operator-only) */
 Trit           ::= '+' | '0' | '-'
+
+/* StrLit: a textual string literal (M-910/M-911, kickoff `enb` Phase-I H1) — ergonomic, not
+ * expressive: an explicit, MINIMAL escape set (`\n \t \\ \" \0 \r`), no raw newline/CR inside the
+ * literal (use `\n`), and deliberately no `\xNN` (it would let a "textual" literal inject a
+ * non-UTF-8 byte; left for a follow-up with its own justification). Lowers to the SAME
+ * `Repr::Bytes` value form as BytesLit (UTF-8-encoded; KC-3 — no new L0 node). An unterminated
+ * literal or an unknown escape is a never-silent lex error (G2), never a silent truncation. */
+StrLit         ::= '"' (StrChar | EscapeSeq)* '"'
+StrChar        ::= [^"\\\n\r]                        /* any char but the closing quote, a backslash,
+                                                       * or a raw newline/CR */
+EscapeSeq      ::= '\' ('n' | 't' | '\\' | '"' | '0' | 'r')
 Int            ::= '-'? [0-9]+
 Ident          ::= (Letter | '_') (Letter | [0-9] | '_')*
 Letter         ::= [a-zA-Z]
