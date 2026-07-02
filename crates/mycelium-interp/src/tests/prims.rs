@@ -2940,3 +2940,361 @@ fn vsa_non_exact_operands_refuse_composition() {
         );
     }
 }
+
+// ── M-893 (`enb` Gap C): `vsa.bundle` — superposition via the certified path ────────────────────
+//
+// `vsa.bundle : (Seq{Vsa{m, d}, N≥1}, Float δ) → Vsa{m, d}` — MAP-I's `bundle_values_certified`
+// (the M-131 checked-instantiation pattern). These tests pin: (1) the accept path — the kernel's
+// `Proven` tag and its checked `CapacityBound` carried unchanged, the disclosed bound being the
+// value's OWN (items = this bundle's m, dim = its d), model-namespaced provenance over every
+// input hash; (2) the certified-singleton dispatch (FHRR/BSC refuse naming the certified set —
+// their kernel bundles are Empirical-profile ops; an out-of-set model refuses naming the M-892
+// set); (3) the never-silent reject surface (insufficient capacity naming the required dim,
+// duplicates, off-alphabet, empty seq, non-Seq/non-Float operands, out-of-range δ, arity);
+// (4) the elementwise Exact-input guard (a Proven bundle fed back in refuses — no nested-bundle
+// δ-composition rule exists); and (5) the cheap capacity-bound property: below the checked bound
+// every member stays recoverable by similarity against strangers.
+
+use mycelium_vsa::capacity;
+use mycelium_vsa::MapI;
+
+/// A `Seq` value over hypervector elements (`Exact`/`Root` meta — exactly what the L1 list
+/// literal builds). `elem_of` anchors the descriptor so an empty seq is constructible too.
+fn vsa_seq_of(elem_of: &Value, items: &[Value]) -> Value {
+    Value::new(
+        Repr::Seq {
+            elem: Box::new(elem_of.repr().clone()),
+            len: u32::try_from(items.len()).expect("test seqs are small"),
+        },
+        Payload::Seq(items.to_vec()),
+        Meta::exact(Provenance::Root),
+    )
+    .unwrap()
+}
+
+/// Accept path: the kernel's **`Proven`** tag + checked `CapacityBound` are carried unchanged
+/// (VR-5), the payload is the elementwise sum, and the disclosed bound is the **value's own**
+/// (`Capacity{items, dim}` = this bundle's m and d, `ProvenThm` basis carrying the citation +
+/// the checked side-condition record). Provenance is the model-namespaced `vsa.map_i.bundle`
+/// over every input hash, in order — inspectable, EXPLAIN-able dispatch (G2).
+#[test]
+fn vsa_bundle_carries_the_kernel_proven_tag_and_its_own_capacity_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.bundle").expect("vsa.bundle registered");
+    let dim = 2048u32; // ≥ requiredDim(3, 1e-2) = 1141 — the checked side-condition holds.
+    assert!(u64::from(dim) >= capacity::required_dim(3, 1e-2, capacity::MARGIN_MU));
+    let items: Vec<Value> = (0..3)
+        .map(|i| vsa_hv("MAP-I", dim, mapi_atom(dim, 100 + i)))
+        .collect();
+    let seq = vsa_seq_of(&items[0], &items);
+    let y = f("vsa.bundle", &[&seq, &fv(1e-2)]).expect("certified bundle accepts");
+    assert_eq!(
+        y.repr(),
+        &Repr::Vsa {
+            model: "MAP-I".to_owned(),
+            dim,
+            sparsity: SparsityClass::Dense,
+        }
+    );
+    // Payload: the elementwise integer superposition (sum of the three bipolar atoms).
+    let expected: Vec<f64> = (0..dim as usize)
+        .map(|k| {
+            items
+                .iter()
+                .map(|v| match v.payload() {
+                    Payload::Hypervector(h) => h[k],
+                    _ => unreachable!(),
+                })
+                .sum()
+        })
+        .collect();
+    assert_eq!(y.payload(), &Payload::Hypervector(expected));
+    // The kernel's Proven tag, carried unchanged — with its checked bound (never Proven bare).
+    assert_eq!(
+        y.meta().guarantee(),
+        mycelium_core::GuaranteeStrength::Proven
+    );
+    match y.meta().bound() {
+        Some(mycelium_core::Bound {
+            kind: mycelium_core::BoundKind::Capacity { items: m, dim: d },
+            basis: mycelium_core::BoundBasis::ProvenThm { citation },
+        }) => {
+            // The disclosed bound is the value's OWN: its m and d, not a generic table row.
+            assert_eq!(*m, 3, "the bound discloses this bundle's item count");
+            assert_eq!(*d, u64::from(dim), "the bound discloses this bundle's dim");
+            assert!(
+                citation.contains("Clarkson") && citation.contains("requiredDim"),
+                "the ProvenThm basis records the citation + checked side-condition: {citation}"
+            );
+        }
+        other => panic!("expected the kernel's checked Capacity/ProvenThm bound, got {other:?}"),
+    }
+    // Model-namespaced provenance over every input hash, in order (G2: dispatch is recorded).
+    match y.meta().provenance() {
+        Provenance::Derived { op, inputs } => {
+            assert_eq!(op, &mycelium_core::operation_hash("vsa.map_i.bundle"));
+            assert_eq!(
+                inputs,
+                &items.iter().map(Value::content_hash).collect::<Vec<_>>()
+            );
+        }
+        other => panic!("expected Derived provenance, got {other:?}"),
+    }
+}
+
+/// Insufficient dimension: the theorem's side-condition fails, so NO `Proven` bound can be issued
+/// — an explicit refusal **naming the required dim** (the kernel's `InsufficientCapacity`),
+/// never an unbacked tag and never a silently-weaker result (M-I2/VR-5; G2).
+#[test]
+fn vsa_bundle_refuses_insufficient_capacity_never_an_unbacked_proven() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.bundle").expect("registered");
+    let items: Vec<Value> = (0..3)
+        .map(|i| vsa_hv("MAP-I", 16, mapi_atom(16, 200 + i)))
+        .collect();
+    let seq = vsa_seq_of(&items[0], &items);
+    match f("vsa.bundle", &[&seq, &fv(1e-2)]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("insufficient capacity") && why.contains("1141"),
+            "the refusal names the failed side-condition + the required dim, got: {why}"
+        ),
+        other => panic!("an under-dimensioned certified bundle must refuse, got {other:?}"),
+    }
+}
+
+/// The certified-singleton dispatch: FHRR/BSC are in the M-892 bind-group set but have **no
+/// certified Value-level bundle** — routing them through the certified prim would silently
+/// re-tag their Empirical-profile evidence (VR-5), so each refuses explicitly naming the
+/// certified set; an out-of-set model (HRR) refuses naming the M-892 dispatch set as usual.
+#[test]
+fn vsa_bundle_dispatch_is_the_certified_singleton() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.bundle").expect("registered");
+    for (model, dim, atom) in [
+        ("FHRR", 256u32, fhrr_atom as AtomFn),
+        ("BSC", 16, bsc_atom as AtomFn),
+    ] {
+        let items: Vec<Value> = (0..3)
+            .map(|i| vsa_hv(model, dim, atom(dim, 10 + i)))
+            .collect();
+        let seq = vsa_seq_of(&items[0], &items);
+        match f("vsa.bundle", &[&seq, &fv(1e-2)]) {
+            Err(EvalError::PrimType { why, .. }) => assert!(
+                why.contains(model) && why.contains("certified singleton"),
+                "{model}: the refusal names the model + the certified set, got: {why}"
+            ),
+            other => panic!("{model}: an uncertified-model bundle must refuse, got {other:?}"),
+        }
+    }
+    // Out-of-set model: the shared vsa_model_of refusal names the M-892 dispatch set.
+    let hrr = vsa_hv("HRR", 16, mapi_atom(16, 3));
+    let seq = vsa_seq_of(&hrr, std::slice::from_ref(&hrr));
+    match f("vsa.bundle", &[&seq, &fv(1e-2)]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("MAP-I, FHRR, BSC"),
+            "the out-of-set refusal names the dispatch set, got: {why}"
+        ),
+        other => panic!("an out-of-set model must refuse, got {other:?}"),
+    }
+}
+
+/// The never-silent reject surface: empty seq, duplicate items, an off-alphabet component, a
+/// non-Seq first operand, a non-Float δ, an out-of-range/non-finite δ, and arity — every one an
+/// explicit `PrimType`, never a coercion or a defaulted parameter (G2). A dim/model-mismatched
+/// *element* is refused upstream by the core `Seq` well-formedness invariant (pinned here too).
+#[test]
+fn vsa_bundle_reject_surface_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.bundle").expect("registered");
+    let dim = 2048u32;
+    let a = vsa_hv("MAP-I", dim, mapi_atom(dim, 1));
+    let b = vsa_hv("MAP-I", dim, mapi_atom(dim, 2));
+    let delta = fv(1e-2);
+
+    // Empty seq: no superposition is defined — refused with its own message.
+    let empty = vsa_seq_of(&a, &[]);
+    match f("vsa.bundle", &[&empty, &delta]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("at least one item"),
+            "the empty-bundle refusal is named, got: {why}"
+        ),
+        other => panic!("an empty bundle must refuse, got {other:?}"),
+    }
+
+    // Duplicate items: the theorem assumes distinct atoms — the kernel's refusal is carried.
+    let dup = vsa_seq_of(&a, &[a.clone(), a.clone()]);
+    match f("vsa.bundle", &[&dup, &delta]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("distinct"),
+            "the duplicate-items refusal is named, got: {why}"
+        ),
+        other => panic!("duplicate items must refuse, got {other:?}"),
+    }
+
+    // Off-alphabet component: the theorem assumes bipolar atoms — refused, never mis-tagged.
+    let mut bad_data = mapi_atom(dim, 3);
+    bad_data[5] = 0.5;
+    let bad = vsa_hv("MAP-I", dim, bad_data);
+    let off = vsa_seq_of(&a, &[a.clone(), bad]);
+    match f("vsa.bundle", &[&off, &delta]) {
+        Err(EvalError::PrimType { why, .. }) => assert!(
+            why.contains("alphabet") || why.contains("component"),
+            "the off-alphabet refusal is named, got: {why}"
+        ),
+        other => panic!("an off-alphabet item must refuse, got {other:?}"),
+    }
+
+    // A dim/model-mismatched *element* is unreachable through this prim: the core `Seq`
+    // well-formedness invariant (every element's repr matches the descriptor) refuses the
+    // heterogeneous seq at *construction* (`Value::new` → `PayloadReprMismatch`), upstream of
+    // the prim — verified here so the invariant this wrapper leans on cannot silently relax.
+    // (The kernel's own per-item `hv_of` dim/model check stays as defense in depth.)
+    let small = vsa_hv("MAP-I", 16, mapi_atom(16, 4));
+    assert!(
+        Value::new(
+            Repr::Seq {
+                elem: Box::new(a.repr().clone()),
+                len: 2,
+            },
+            Payload::Seq(vec![a.clone(), small]),
+            Meta::exact(Provenance::Root),
+        )
+        .is_err(),
+        "a heterogeneous seq (dim-mismatched element) must be refused at construction"
+    );
+
+    // A non-Seq first operand / a non-Float δ: explicit type refusals.
+    assert!(
+        matches!(
+            f("vsa.bundle", &[&a, &delta]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a bare hypervector (non-Seq) first operand must refuse"
+    );
+    let pair = vsa_seq_of(&a, &[a.clone(), b.clone()]);
+    assert!(
+        matches!(
+            f("vsa.bundle", &[&pair, &byte([false; 8])]),
+            Err(EvalError::PrimType { .. })
+        ),
+        "a non-Float δ must refuse"
+    );
+
+    // δ outside (0, 1] or non-finite: refused with the named δ-domain message (not the kernel's
+    // misleading required-dim-u64::MAX fold).
+    for bad_delta in [0.0, -1e-3, 1.5, f64::NAN, f64::INFINITY] {
+        match f("vsa.bundle", &[&pair, &fv(bad_delta)]) {
+            Err(EvalError::PrimType { why, .. }) => assert!(
+                why.contains("(0, 1]"),
+                "δ={bad_delta}: the δ-domain refusal is named, got: {why}"
+            ),
+            other => panic!("δ={bad_delta} must refuse, got {other:?}"),
+        }
+    }
+    // δ = 1.0 is the domain's closed edge — the kernel's own domain, not a wrapper refusal.
+    assert!(
+        f("vsa.bundle", &[&pair, &fv(1.0)]).is_ok(),
+        "δ = 1.0 is in the kernel's (0, 1] domain"
+    );
+
+    // Arity is explicit.
+    assert!(
+        matches!(f("vsa.bundle", &[&pair]), Err(EvalError::PrimType { .. })),
+        "arity 1 must refuse"
+    );
+}
+
+/// The elementwise Exact-input guard: a **`Proven` bundle fed back as an item** (an in-range
+/// integer hypervector the alphabet guard alone would not stop… and the kernel's bipolar check
+/// would — but the guard must refuse FIRST on the tag, since no δ-composition rule for nested
+/// certified bundles exists) refuses as `ApproxCompositionUnsupported`, never a silently
+/// re-certified nesting (VR-5/G2). A non-`Exact` seq value or δ refuses via the same guard.
+#[test]
+fn vsa_bundle_non_exact_elements_refuse_composition() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.bundle").expect("registered");
+    let dim = 2048u32;
+    let items: Vec<Value> = (0..3)
+        .map(|i| vsa_hv("MAP-I", dim, mapi_atom(dim, 300 + i)))
+        .collect();
+    let seq = vsa_seq_of(&items[0], &items);
+    let bundle = f("vsa.bundle", &[&seq, &fv(1e-2)]).expect("accepts");
+    assert_eq!(
+        bundle.meta().guarantee(),
+        mycelium_core::GuaranteeStrength::Proven
+    );
+    // Feed the Proven bundle back in next to a fresh Exact atom.
+    let fresh = vsa_hv("MAP-I", dim, mapi_atom(dim, 999));
+    let nested = vsa_seq_of(&fresh, &[fresh.clone(), bundle]);
+    assert!(
+        matches!(
+            f("vsa.bundle", &[&nested, &fv(1e-2)]),
+            Err(EvalError::ApproxCompositionUnsupported { .. })
+        ),
+        "a non-Exact element must refuse composition, not re-certify a nested bundle"
+    );
+}
+
+/// The cheap capacity-bound property (the M-893 DoD row): **below the checked bound, every
+/// member stays recoverable** — for m ∈ {2, 3, 5} at dim 2048 ≥ requiredDim(m, δ=1e-2), each
+/// bundled member's cosine similarity to the bundle strictly exceeds every stranger atom's, over
+/// a deterministic multi-seed corpus. This exercises the bound's *operational content*
+/// (member-vs-stranger separation at the certified dimension) — the δ-tail itself is the cited
+/// theorem's claim, not re-proven here (Empirical evidence FOR the Proven instantiation, per the
+/// M-131 posture). Also pins that the disclosed bound is each value's own (m, dim).
+#[test]
+fn vsa_bundle_members_recoverable_below_the_proven_capacity_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("vsa.bundle").expect("registered");
+    let dim = 2048u32;
+    let delta = 1e-2;
+    let model = MapI::new(dim);
+    for m in [2usize, 3, 5] {
+        assert!(
+            u64::from(dim) >= capacity::required_dim(m as u64, delta, capacity::MARGIN_MU),
+            "corpus precondition: the checked side-condition holds at m={m}"
+        );
+        for base_seed in [0u64, 1, 2] {
+            let items: Vec<Value> = (0..m as u64)
+                .map(|i| vsa_hv("MAP-I", dim, mapi_atom(dim, 1000 * (base_seed + 1) + i)))
+                .collect();
+            let seq = vsa_seq_of(&items[0], &items);
+            let y = f("vsa.bundle", &[&seq, &fv(delta)]).expect("certified bundle accepts");
+            // The disclosed bound is this value's own m and d.
+            match y.meta().bound() {
+                Some(mycelium_core::Bound {
+                    kind: mycelium_core::BoundKind::Capacity { items: bm, dim: bd },
+                    ..
+                }) => {
+                    assert_eq!(*bm, m as u64);
+                    assert_eq!(*bd, u64::from(dim));
+                }
+                other => panic!("expected the value's own Capacity bound, got {other:?}"),
+            }
+            let bundle_hv = match y.payload() {
+                Payload::Hypervector(h) => h.clone(),
+                _ => unreachable!(),
+            };
+            let strangers: Vec<Vec<f64>> = (0..8u64)
+                .map(|i| mapi_atom(dim, 777_000 + 100 * base_seed + i))
+                .collect();
+            let worst_stranger = strangers
+                .iter()
+                .map(|s| model.similarity(&bundle_hv, s))
+                .fold(f64::NEG_INFINITY, f64::max);
+            for (k, item) in items.iter().enumerate() {
+                let member_hv = match item.payload() {
+                    Payload::Hypervector(h) => h,
+                    _ => unreachable!(),
+                };
+                let member_sim = model.similarity(&bundle_hv, member_hv);
+                assert!(
+                    member_sim > worst_stranger,
+                    "m={m} seed={base_seed} member {k}: recoverability below the certified \
+                     bound — member sim {member_sim} must exceed the best stranger \
+                     {worst_stranger}"
+                );
+            }
+        }
+    }
+}

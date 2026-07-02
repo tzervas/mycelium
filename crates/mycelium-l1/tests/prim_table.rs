@@ -384,7 +384,11 @@ fn surface_signature_matches_the_kernel_declaration() {
 /// `vsa.unbind` `Empirical` — FHRR's normative weak-link unbind holds the meet down; VR-5: one Π
 /// slot must not over-claim for any model. The kernel-side twin lives in
 /// `mycelium-interp/tests/prim_table.rs`, which recomputes the meet from `mycelium-vsa` itself;
-/// the runtime value carries the dispatched model's own tag).
+/// the runtime value carries the dispatched model's own tag). The M-893 certified superposition
+/// `vsa_bundle` rides the same shape (`Seq{VSA{…}, N}` × `Float` δ under the `Any` hatch) with
+/// its intrinsic the meet over its **certified singleton** dispatch set {MAP-I} = `Proven` (the
+/// checked `CapacityBound` rides the runtime value; an FHRR/BSC bundle is a *static* refusal in
+/// `try_check_vsa_prim` naming the certified set).
 #[test]
 fn vsa_prims_resolve_to_declared_model_dispatched_kernel_prims() {
     use mycelium_core::GuaranteeStrength;
@@ -393,6 +397,7 @@ fn vsa_prims_resolve_to_declared_model_dispatched_kernel_prims() {
         ("vsa_bind", "vsa.bind", GuaranteeStrength::Exact),
         ("vsa_unbind", "vsa.unbind", GuaranteeStrength::Empirical),
         ("vsa_permute", "vsa.permute", GuaranteeStrength::Exact),
+        ("vsa_bundle", "vsa.bundle", GuaranteeStrength::Proven),
     ] {
         let kernel = prim_kernel_name(surface)
             .unwrap_or_else(|| panic!("vsa prim `{surface}` must map to a kernel name"));
@@ -410,7 +415,8 @@ fn vsa_prims_resolve_to_declared_model_dispatched_kernel_prims() {
         assert_eq!(decl.sig.result, PrimParadigm::Any);
         assert_eq!(
             decl.intrinsic, intrinsic,
-            "`{kernel}` intrinsic must be the meet over the MAP-I/FHRR/BSC dispatch set (VR-5)",
+            "`{kernel}` intrinsic must be the meet over its dispatch set (MAP-I/FHRR/BSC for \
+             the bind group; the certified singleton {{MAP-I}} for vsa.bundle — VR-5)",
         );
     }
 }
