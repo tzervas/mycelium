@@ -96,8 +96,39 @@ fn builtins_are_present_and_resolvable() {
     // D4/M-750 added bytes.len/get/slice/concat; DN-41/M-798 added bit.width_cast; DN-58/M-817
     // added the `Binary` `Fuse` meet `fuse_join:binary`; RFC-0033/M-887 added `bin.mul`; RFC-0033/
     // M-888 added `bin.div`/`bin.rem`; RFC-0033/M-889 added `bin.shl`/`bin.shr`; RFC-0033/M-766
-    // added `bin.add`/`bin.sub`/`bin.neg`, completing the shared two's-complement set).
-    assert_eq!(t.entries().len(), 29);
+    // added `bin.add`/`bin.sub`/`bin.neg`, completing the shared two's-complement set; RFC-0001
+    // §4.1/M-890 added the dense elementwise group `dense.add`/`dense.sub`/`dense.neg`/
+    // `dense.scale`, the first tensor-valued prims — pinned separately below because their
+    // intrinsics are NOT all `Exact`).
+    assert_eq!(t.entries().len(), 33);
+}
+
+// M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
+// The tags are carried from the kernel's `DenseSpace::op_guarantee` (VR-5: never upgraded):
+// `neg` is `Exact` (negation never rounds on the symmetric dtype grids); `add`/`sub`/`scale`
+// are `Proven` (Higham 2002 Thm 2.2, side-conditions checked per element by the kernel). The
+// cross-crate consistency with `mycelium-dense` itself is guarded in `mycelium-interp` (this
+// crate cannot depend on `mycelium-dense`); this test pins the table side of that contract.
+#[test]
+fn dense_elementwise_group_carries_the_kernel_tags() {
+    let t = PrimTable::builtins();
+    for (name, arity, intrinsic) in [
+        ("dense.add", 2, GuaranteeStrength::Proven),
+        ("dense.sub", 2, GuaranteeStrength::Proven),
+        ("dense.neg", 1, GuaranteeStrength::Exact),
+        ("dense.scale", 2, GuaranteeStrength::Proven),
+    ] {
+        let d = t.get(name).expect("dense builtin registered");
+        assert_eq!(d.intrinsic, intrinsic, "{name}: intrinsic tag drifted");
+        assert_eq!(d.sig.arity(), arity, "{name}: arity drifted");
+        // Paradigm-model escape hatch (FLAG in builtins()): Dense operands/results are `Any`
+        // until a first-class Dense paradigm lands; the real typing is kernel + L1-checker.
+        assert!(
+            d.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+            "{name}: operands are the documented `Any` escape hatch"
+        );
+        assert_eq!(d.sig.result, PrimParadigm::Any);
+    }
 }
 
 #[test]
@@ -199,13 +230,14 @@ fn contains_returns_true_iff_registered() {
 fn names_returns_registered_sorted_names() {
     let t = PrimTable::builtins();
     let ns = t.names();
-    // Exactly 29 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
+    // Exactly 33 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
     // seq.len/seq.get + D4 bytes.len/get/slice/concat + DN-41 bit.width_cast + DN-58/M-817
     // fuse_join:binary + RFC-0033/M-887 bin.mul + RFC-0033/M-888 bin.div/bin.rem + RFC-0033/M-889
-    // bin.shl/bin.shr + RFC-0033/M-766 bin.add/bin.sub/bin.neg).
+    // bin.shl/bin.shr + RFC-0033/M-766 bin.add/bin.sub/bin.neg + RFC-0001 §4.1/M-890
+    // dense.add/dense.sub/dense.neg/dense.scale).
     assert_eq!(
         ns.len(),
-        29,
+        33,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).
