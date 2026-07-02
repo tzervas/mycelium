@@ -4,9 +4,9 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, DeriveDecl, ExecutionMode, Expr, FnDecl, FnSig, Hypha,
-    ImplDecl, InherentImplDecl, Item, Literal, LowerDecl, Nodule, ObjectDecl, Paradigm, Param,
-    ParamKind, Path, Pattern, Phylum, Scalar, Sparsity, Strength, TraitDecl, TraitRef, TypeDecl,
-    TypeParam, TypeRef, UsePath, ViaDecl, Vis, WidthRef,
+    ImplDecl, InherentImplDecl, Item, Literal, LowerDecl, LowerRhs, Nodule, ObjectDecl, Paradigm,
+    Param, ParamKind, Path, Pattern, Phylum, Scalar, Sparsity, Strength, TraitDecl, TraitRef,
+    TypeDecl, TypeParam, TypeRef, UsePath, ViaDecl, Vis, WidthRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -1404,9 +1404,28 @@ impl Parser {
             &Tok::Eq,
             "`=` after the rule name/params in a `lower` declaration (DN-54 §3)",
         )?;
-        // The RHS is a full expression — type-checked against the IL grammar at check time.
-        let rhs = self.parse_expr()?;
+        // The RHS is either **item-shaped** (`impl Trait for T { … }` — DN-54 §10.1(b) / §10.3
+        // Model A, the sibling-injection template; parsed by [`Self::parse_lower_item_rhs`]) or a
+        // full **expression** (the v0 form, type-checked against the IL grammar at check time). The
+        // leading `impl` keyword disambiguates: only the item form can open with it (M-973).
+        let rhs = if self.at(&Tok::Impl) {
+            LowerRhs::Impl(self.parse_lower_item_rhs()?)
+        } else {
+            LowerRhs::Expr(self.parse_expr()?)
+        };
         Ok(LowerDecl { name, params, rhs })
+    }
+
+    /// Parse an **item-shaped** `lower`-rule RHS (DN-54 §10.1(b) / §10.3 Model A; OQ-B; M-973). The
+    /// **only** legal item form in v1 is a trait-instance template `impl Trait[args]? for T { … }`
+    /// (DN-54 §10.6 OQ-B — the minimum for the §3.2 worked example; `type` aliases and standalone
+    /// `fn` items are deliberately out of v1 scope, YAGNI). The template's `for` type is the rule's
+    /// type parameter (e.g. `T`); a `derive Name for C` use site substitutes `C` for it and injects
+    /// the concrete impl as a sibling (checked in `checkty.rs`). Reuses [`Self::parse_impl_decl`], so
+    /// an inherent `impl T { … }` (no `for`) is a never-silent parse error (G2 — no silent
+    /// over-generalization of the legal item set).
+    fn parse_lower_item_rhs(&mut self) -> Result<ImplDecl, ParseError> {
+        self.parse_impl_decl()
     }
 
     /// `derive Name for T` — use-site application of a generative-lowering rule (DN-54 / DN-38
@@ -1483,34 +1502,43 @@ impl Parser {
 
     fn parse_base_type(&mut self) -> Result<BaseType, ParseError> {
         match self.cur().clone() {
-            Tok::Binary => {
+            // RFC-0037 D2-b: `bin` is a short repr-keyword alias for `Binary` — it elaborates
+            // identically (the exact same `BaseType::Binary`), so both spellings share one arm.
+            Tok::Binary | Tok::BinShort => {
                 self.bump();
                 let w = self.braced_width()?;
                 Ok(BaseType::Binary(w))
             }
-            Tok::Ternary => {
+            // RFC-0037 D2-b: `tern` is a short repr-keyword alias for `Ternary` (see `Tok::Binary`
+            // arm above).
+            Tok::Ternary | Tok::TernShort => {
                 self.bump();
                 let t = self.braced_width()?;
                 Ok(BaseType::Ternary(t))
             }
-            Tok::Dense => {
+            // RFC-0037 D2-b: `emb` is a short repr-keyword alias for `Dense` (see `Tok::Binary` arm
+            // above).
+            Tok::Dense | Tok::EmbShort => {
                 self.bump();
-                self.expect(&Tok::LBrace, "`{` after `Dense`")?;
+                self.expect(&Tok::LBrace, "`{` after `Dense`/`emb`")?;
                 let dim = self.u32_lit()?;
                 self.expect(&Tok::Comma, "`,` between dim and dtype")?;
                 let scalar = self.parse_scalar()?;
-                self.expect(&Tok::RBrace, "`}` to close `Dense{…}`")?;
+                self.expect(&Tok::RBrace, "`}` to close `Dense{…}`/`emb{…}`")?;
                 Ok(BaseType::Dense(dim, scalar))
             }
-            Tok::Vsa => {
+            // RFC-0037 D2-b: `hvec` is a short repr-keyword alias for `VSA` (see `Tok::Binary` arm
+            // above). `vec` was rejected (collides with `std.collections.Vec`) — it is never a
+            // keyword, so it cannot reach this arm.
+            Tok::Vsa | Tok::HvecShort => {
                 self.bump();
-                self.expect(&Tok::LBrace, "`{` after `VSA`")?;
+                self.expect(&Tok::LBrace, "`{` after `VSA`/`hvec`")?;
                 let model = self.ident()?;
                 self.expect(&Tok::Comma, "`,` after the model")?;
                 let dim = self.u32_lit()?;
                 self.expect(&Tok::Comma, "`,` before the sparsity")?;
                 let sparsity = self.parse_sparsity()?;
-                self.expect(&Tok::RBrace, "`}` to close `VSA{…}`")?;
+                self.expect(&Tok::RBrace, "`}` to close `VSA{…}`/`hvec{…}`")?;
                 Ok(BaseType::Vsa {
                     model,
                     dim,
@@ -2310,13 +2338,16 @@ impl Parser {
 /// The infix binding power and canonical word function for an operator token (RFC-0025 / M-705),
 /// or `None` if the token does not open an infix operator. Higher binding power binds tighter;
 /// every binary operator is left-associative. The precedence tiers follow **Rust's** table (the
-/// implementation language, syntactically adjacent; RFC-0025 §4), omitting the angle-bracket
-/// operators (`<`, `<=`, `>`, `>=`, `<<`, `>>`) which are **deferred** (RFC-0025 §3 / M-745)
-/// because `<`/`>` collide with the type-argument `<…>` grammar (resolving that cleanly needs
-/// contextual lexing, a separate effort). The desugaring is purely syntactic: a word target whose
-/// prim/stdlib function does not yet exist (`div`, `rem`, `band`, `bor`, `eq`, `ne`, `and`, `or`)
-/// still desugars here and surfaces an explicit "unknown function/prim" refusal downstream (never
-/// silent — G2); only `add`/`sub`/`mul`/`xor` (and unary `neg`/`not`) resolve end-to-end today.
+/// implementation language, syntactically adjacent; RFC-0025 §4.1). The angle-bracket/shift
+/// operators (`<`, `>`, `<<`, `>>`) are **wired** (M-745, resolved by RFC-0037 D1's `[…]`
+/// type-argument kind-split, which frees `<>` for operators-only use — no contextual lexing
+/// needed; see `Tok::LAngle`/`RAngle`/`Shl`/`Shr` below). `<=`/`>=` have **no glyph at all** —
+/// they are retired (RFC-0037 D1); their word-canonical forms `lte`/`gte` are ordinary calls, not
+/// entries in this table (M-916 verified this inventory; no residual glyph wiring remained). The
+/// desugaring is purely syntactic: a word target whose prim/stdlib function does not yet exist
+/// (`div`, `rem`, `band`, `bor`, `ne`, `and`, `or`, `gt`, `shl`, `shr`) still desugars here and
+/// surfaces an explicit "unknown function/prim" refusal downstream (never silent — G2); today
+/// `add`/`sub`/`mul`/`xor`/`eq`/`lt` (and unary `neg`/`not`) resolve end-to-end.
 fn infix_op(tok: &Tok) -> Option<(u8, &'static str)> {
     Some(match tok {
         Tok::Star => (70, "mul"),

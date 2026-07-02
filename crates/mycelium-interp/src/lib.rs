@@ -588,8 +588,19 @@ fn node_to_core_value(node: &Node) -> Result<CoreValue, EvalError> {
     }
 }
 
-/// The guarantee of a **value** node (a `Const` or a saturated `Construct`): the representation
-/// value's own `Meta.guarantee`, or the `meet`-summary of a data value's fields (RFC-0011 §4.6).
+/// The guarantee of a **value** node (a `Const`, a saturated `Construct`, or a `Lam`): the
+/// representation value's own `Meta.guarantee`, the `meet`-summary of a data value's fields
+/// (RFC-0011 §4.6), or — for a bare function value — `Exact` (a closed lambda term carries no
+/// representational approximation to summarize; it is the identity element for the field-wise
+/// meet, same as an empty `Construct`).
+///
+/// **`Node::Lam` (ADR-033/DN-74, M-923).** Before this fix a `Construct` field holding a `Lam`
+/// (the normal form of a `FieldSpec::Fn`-typed field — ADR-033 §3.1: "a `Lam` node *is* a function
+/// value") fell through to the `DataMalformed` catch-all below, because no program ever produced
+/// such a field until `mycelium-l1`'s `field_spec`/`elaborate_direct` (M-923) made `FieldSpec::Fn`
+/// reachable. This is a pre-existing latent gap, not a new relaxation: a `Lam` was already a
+/// legitimate `Step::Value` normal form (`Node::Lam { .. } => Ok(Step::Value)` above); this only
+/// teaches the **guarantee**-meet computation the same fact `Step`-reduction already knew.
 fn guarantee_of_value(node: &Node) -> Result<GuaranteeStrength, EvalError> {
     match node {
         Node::Const(v) => Ok(v.meta().guarantee()),
@@ -600,6 +611,7 @@ fn guarantee_of_value(node: &Node) -> Result<GuaranteeStrength, EvalError> {
             }
             Ok(g)
         }
+        Node::Lam { .. } => Ok(GuaranteeStrength::Exact),
         Node::Var(x) => Err(EvalError::FreeVariable(x.clone())),
         _ => Err(EvalError::DataMalformed {
             why: "match scrutinee did not reduce to a value".to_owned(),

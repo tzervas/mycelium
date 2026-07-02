@@ -1,0 +1,142 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Mycelium",
+  "scopeName": "source.mycelium",
+  "fileTypes": [
+    "myc"
+  ],
+  "_generated_by": "tools/grammar/generate.py \u2014 DO NOT EDIT BY HAND",
+  "_scope_names_status": "RATIFIED \u2014 RFC-0026 \u00a73.2 (Accepted) for the four keyword buckets; the v2 comment/string/literal/operator/declaration scopes are the standard TextMate names (RFC-0026 \u00a73.4 follow-up, Empirical vs the conformance corpus).",
+  "patterns": [
+    {
+      "name": "comment.line.double-slash.mycelium",
+      "begin": "//",
+      "end": "$",
+      "patterns": [
+        {
+          "name": "storage.type.annotation.header-tag.mycelium",
+          "match": "@[A-Za-z][A-Za-z0-9-]*:"
+        }
+      ]
+    },
+    {
+      "name": "string.quoted.double.mycelium",
+      "begin": "\"",
+      "end": "\"|$",
+      "patterns": [
+        {
+          "name": "constant.character.escape.mycelium",
+          "match": "\\\\[nt\\\\\"0r]"
+        },
+        {
+          "name": "invalid.illegal.escape.mycelium",
+          "match": "\\\\."
+        }
+      ]
+    },
+    {
+      "name": "constant.numeric.binary.mycelium",
+      "match": "\\b0b[01_]+\\b"
+    },
+    {
+      "name": "constant.numeric.ternary.mycelium",
+      "match": "\\b0t[+0-]+"
+    },
+    {
+      "name": "constant.numeric.bytes.mycelium",
+      "match": "\\b0x[0-9A-Fa-f_]+\\b"
+    },
+    {
+      "name": "constant.numeric.float.mycelium",
+      "match": "\\b[0-9]+\\.[0-9]+(?:[eE][+-]?[0-9]+)?\\b|\\b[0-9]+[eE][+-]?[0-9]+\\b"
+    },
+    {
+      "name": "constant.numeric.integer.mycelium",
+      "match": "\\b[0-9]+\\b"
+    },
+    {
+      "name": "invalid.deprecated.return-arrow.mycelium",
+      "match": "->"
+    },
+    {
+      "match": "\\b(nodule|phylum|use)\\s+([A-Za-z_][A-Za-z0-9_.]*)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.mycelium"
+        },
+        "2": {
+          "name": "entity.name.namespace.mycelium"
+        }
+      }
+    },
+    {
+      "match": "\\b(fn)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.mycelium"
+        },
+        "2": {
+          "name": "entity.name.function.mycelium"
+        }
+      }
+    },
+    {
+      "match": "\\b(type|trait|object)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.mycelium"
+        },
+        "2": {
+          "name": "entity.name.type.mycelium"
+        }
+      }
+    },
+    {
+      "match": "\\b(lower|derive)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": {
+          "name": "keyword.control.mycelium"
+        },
+        "2": {
+          "name": "entity.name.function.lowering.mycelium"
+        }
+      }
+    },
+    {
+      "name": "entity.other.attribute-name.mycelium",
+      "match": "@(?:tier|forage|std-sys)\\b"
+    },
+    {
+      "name": "keyword.control.mycelium",
+      "match": "\\b(backbone|paradigm|consume|default|matured|reclaim|colony|derive|forage|lambda|nodule|object|phylum|policy|graft|hypha|lower|match|spore|trait|cyst|else|fuse|grow|impl|mesh|swap|thaw|then|tier|type|wild|with|xloc|for|let|pub|use|via|fn|if|in|to)\\b"
+    },
+    {
+      "name": "storage.type.mycelium",
+      "match": "\\b(Substrate|Ternary|Binary|Sparse|Bytes|Dense|Float|hvec|tern|Seq|VSA|bin|emb)\\b"
+    },
+    {
+      "name": "support.type.builtin.mycelium",
+      "match": "\\b(BF16|F16|F32|F64)\\b"
+    },
+    {
+      "name": "storage.modifier.guarantee.mycelium",
+      "match": "\\b(Empirical|Declared|Proven|Exact)\\b"
+    },
+    {
+      "name": "entity.name.type.mycelium",
+      "match": "\\b[A-Z][A-Za-z0-9_]*\\b"
+    },
+    {
+      "name": "keyword.operator.mycelium",
+      "match": "<<|>>|=>|==|!=|&&|\\|\\||[-+*/%^&|<>=!@]"
+    },
+    {
+      "name": "punctuation.terminator.mycelium",
+      "match": ";"
+    },
+    {
+      "name": "punctuation.separator.mycelium",
+      "match": "[,.:]"
+    }
+  ]
+}

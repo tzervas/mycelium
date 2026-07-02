@@ -552,8 +552,11 @@ impl<'e> Mono<'e> {
             instances: BTreeMap::new(),
             impls: BTreeMap::new(),
             // DN-54 / M-812: monomorphized specializations do not carry lower rules (the rule
-            // registry is a pre-mono artefact — rules are expanded before/at elaborate time).
+            // registry is a pre-mono artefact — rules are expanded before/at elaborate time). The
+            // same holds for derive-provenance (M-973): it is recorded during nodule checking, before
+            // monomorphization, so a mono specialization carries none.
             lower_rules: BTreeMap::new(),
+            derived_provenance: BTreeMap::new(),
         };
         Ok((
             env,

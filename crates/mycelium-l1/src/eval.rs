@@ -70,6 +70,17 @@ pub enum L1Value {
     /// G2/VR-5); a live, un-`consume`d handle is deterministically released at scope exit and the
     /// release recorded (M-904, DN-71 §8 FLAG-4's v0 posture — never a silent leak).
     Substrate(crate::substrate::SubstrateHandle),
+    /// A function-typed value: a reference to an ordinary top-level function, by name (ADR-033/
+    /// DN-74, M-923 — the `FieldSpec::Fn` dictionary-dispatch payload). This is deliberately **not**
+    /// a general closure: ADR-033 §2.1 identifies the function by its own top-level identity (no
+    /// captured environment — a dictionary field is a content-addressed term reference), so a name
+    /// is the whole value. Produced when a bare top-level function is referenced in value position
+    /// (`crate::elab`'s mirror-image arm); applied by looking the name up in `env.fns` and invoking
+    /// it (`eval_app`'s new dispatch-through-a-bound-value case). Never constructed from a `lambda`
+    /// literal or a captured value — that remains `mono.rs`'s closure-defunctionalization territory
+    /// (RFC-0024 §4A/M-704); this variant is reachable only when `Evaluator` runs directly on a
+    /// checked-but-**not**-monomorphized `Env` (mirroring [`crate::elab::elaborate_direct`]).
+    Fn(String),
 }
 
 impl L1Value {
@@ -79,7 +90,7 @@ impl L1Value {
     pub fn as_repr(&self) -> Option<&Value> {
         match self {
             L1Value::Repr(v) => Some(v),
-            L1Value::Data { .. } | L1Value::Substrate(_) => None,
+            L1Value::Data { .. } | L1Value::Substrate(_) | L1Value::Fn(_) => None,
         }
     }
 
@@ -91,7 +102,7 @@ impl L1Value {
     pub fn as_substrate(&self) -> Option<&crate::substrate::SubstrateHandle> {
         match self {
             L1Value::Substrate(h) => Some(h),
-            L1Value::Repr(_) | L1Value::Data { .. } => None,
+            L1Value::Repr(_) | L1Value::Data { .. } | L1Value::Fn(_) => None,
         }
     }
 
@@ -122,6 +133,13 @@ impl L1Value {
             // property: `consume` lowers through existing paths, and `Substrate` itself stays absent
             // from the L0 value world.
             L1Value::Substrate(_) => None,
+            // ADR-033/DN-74 (M-923): a bare function value has no [`CoreValue`] counterpart either
+            // — `CoreValue` is `Repr | Data` only (a *fully-applied* result), never an unapplied
+            // function. The differential this leaf lands compares `main`'s fully-dispatched
+            // (applied) result, never the raw dictionary/function value itself, so this arm is
+            // never exercised by that harness; it exists so this match stays exhaustive rather than
+            // silently panicking if some future caller ever does `to_core` a bare `Fn` (G2).
+            L1Value::Fn(_) => None,
         }
     }
 }
@@ -138,7 +156,9 @@ fn value_contains_substrate_id(v: &L1Value, id: u64) -> bool {
     match v {
         L1Value::Substrate(h) => h.id() == id,
         L1Value::Data { fields, .. } => fields.iter().any(|f| value_contains_substrate_id(f, id)),
-        L1Value::Repr(_) => false,
+        // A function value names a top-level definition, not a runtime handle — it can never carry
+        // a `Substrate` (ADR-033 §2.1: no captured environment), so it never contributes an escape.
+        L1Value::Repr(_) | L1Value::Fn(_) => false,
     }
 }
 
@@ -843,6 +863,15 @@ impl<'e> Evaluator<'e> {
                             });
                         }
                     }
+                    // ADR-033/DN-74 (M-923): a bare reference to an ordinary top-level function in
+                    // value position is a `FieldSpec::Fn` payload (mirrors `crate::elab`'s Path arm
+                    // — see its doc comment for the full rationale + reachability note: this is
+                    // exercised when `Evaluator` runs on a checked-but-not-monomorphized `Env`,
+                    // never on the standard mono'd differential corpus, since `mono.rs`'s closure
+                    // defunctionalization already rewrites every such reference first).
+                    if self.env.fns.contains_key(name) {
+                        return Ok(L1Value::Fn(name.clone()));
+                    }
                 }
                 Err(L1Error::Stuck {
                     site: site.to_owned(),
@@ -1249,10 +1278,10 @@ impl<'e> Evaluator<'e> {
                     }
                     Ok(true)
                 }
-                // A `Substrate` handle matches no constructor pattern (the checker's type discipline
-                // keeps a `Substrate`-typed scrutinee off a data-ctor arm anyway); never-silent
+                // A `Substrate` handle or a bare function value matches no constructor pattern (the
+                // checker's type discipline keeps either off a data-ctor arm anyway); never-silent
                 // `Ok(false)`, never a panic (G2).
-                L1Value::Repr(_) | L1Value::Substrate(_) => Ok(false),
+                L1Value::Repr(_) | L1Value::Substrate(_) | L1Value::Fn(_) => Ok(false),
             },
             Pattern::Lit(lit) => match val {
                 L1Value::Repr(v) => {
@@ -1262,9 +1291,9 @@ impl<'e> Evaluator<'e> {
                     })?;
                     Ok(lv.repr() == v.repr() && lv.payload() == v.payload())
                 }
-                // A `Substrate` handle has no literal form to compare against — never-silent
-                // `Ok(false)` (a Substrate has no repr/payload; G2).
-                L1Value::Data { .. } | L1Value::Substrate(_) => Ok(false),
+                // A `Substrate` handle or a bare function value has no literal form to compare
+                // against — never-silent `Ok(false)` (neither has a repr/payload; G2).
+                L1Value::Data { .. } | L1Value::Substrate(_) | L1Value::Fn(_) => Ok(false),
             },
             // M-826: a tuple pattern `(x, y, …)` desugars to `Ctor(MkTuple$N, subs)` during
             // checking/resolve. A raw `Pattern::Tuple` here means the evaluator was handed an
@@ -1377,6 +1406,22 @@ impl<'e> Evaluator<'e> {
         for a in args {
             argv.push(self.eval(fuel, depth, ledger, site, scope, a)?);
         }
+        // ADR-033/DN-74 (M-923): dynamic dispatch through a `FieldSpec::Fn` payload — `name` is a
+        // scope-bound variable (e.g. a `match`-projected dictionary field, `Mk(f) => f(x, y)`)
+        // holding an `L1Value::Fn`, not a call to a top-level function directly. Checked *before*
+        // `env.fns` (lexical scope shadows the global namespace, matching the value-position `Path`
+        // arm above) — a scope-bound name that is **not** a function value is a never-silent
+        // `Stuck` (never a silent fallthrough to some unrelated global of the same name, G2).
+        if let Some((_, v)) = scope.iter().rev().find(|(n, _)| n == name) {
+            let L1Value::Fn(callee) = v else {
+                return Err(L1Error::Stuck {
+                    site: site.to_owned(),
+                    why: format!("`{name}` is bound to a non-function value and cannot be applied"),
+                });
+            };
+            let callee = callee.clone();
+            return self.invoke(fuel, depth, ledger, &callee, argv);
+        }
         if self.env.fns.contains_key(name) {
             return self.invoke(fuel, depth, ledger, name, argv);
         }
@@ -1451,6 +1496,13 @@ impl<'e> Evaluator<'e> {
                     "a guarantee index on a `Substrate` handle has no Meta to check — a Substrate \
                        is an affine external-resource handle, not a repr value (LR-8; DN-71 §4.1)"
                         .to_owned(),
+            }),
+            // ADR-033/DN-74 (M-923): a bare function value carries no `Meta`/guarantee tag either
+            // (it names a top-level definition, not a representation value) — an explicit refusal,
+            // never a silently-passed assertion (G2/VR-5).
+            L1Value::Fn(_) => Err(L1Error::Unsupported {
+                site: site.to_owned(),
+                what: "a guarantee index on a function value has no Meta to check in v0".to_owned(),
             }),
         }
     }

@@ -49,6 +49,50 @@ fn infix_sugar_desugars_to_the_word_call() {
     assert_eq!(op_body("a >> b"), op_body("shr(a, b)"));
 }
 
+/// M-916 inventory check (RFC-0025 §4.2): `lte`/`gte` have no glyph — they are word-canonical
+/// already and parse as *ordinary* application (`App { head: Path(["lte"|"gte"]), args: [a, b] }`),
+/// structurally identical to any other named call (e.g. `add(a, b)`). No desugaring step applies
+/// to them — the parser's `infix_op` table (which drives the glyph desugar) has no `<=`/`>=` entry
+/// at all, since no such token exists (confirmed at the lexer level).
+#[test]
+fn lte_gte_are_ordinary_calls_no_glyph_no_desugar() {
+    let lte = op_body("lte(a, b)");
+    let Expr::App { head, args } = &lte else {
+        panic!("expected an App node, got: {lte:?}");
+    };
+    assert!(matches!(head.as_ref(), Expr::Path(p) if p.0 == vec!["lte".to_owned()]));
+    assert_eq!(args.len(), 2);
+
+    let gte = op_body("gte(a, b)");
+    let Expr::App { head, args } = &gte else {
+        panic!("expected an App node, got: {gte:?}");
+    };
+    assert!(matches!(head.as_ref(), Expr::Path(p) if p.0 == vec!["gte".to_owned()]));
+    assert_eq!(args.len(), 2);
+}
+
+/// M-916 inventory check (RFC-0025 §4.2 / RFC-0037 D1): the retired `<=`/`>=` glyphs are a
+/// never-silent parse refusal, not a silent reinterpretation as the old two-char operator or a
+/// panic. `a <= b` lexes as `a`, `LAngle`, `Eq`, `b` (confirmed at the lexer level), so the parser
+/// reads `a < (= b)`: `<` opens a valid comparison RHS, and `=` cannot start an expression there.
+#[test]
+fn le_ge_glyphs_are_a_never_silent_parse_refusal() {
+    let le = parse("nodule d;\nfn f(a: Binary{8}, b: Binary{8}) => Binary{8} = a <= b;")
+        .expect_err("the retired `<=` glyph must not silently parse");
+    assert!(
+        le.message.contains("expected an expression"),
+        "expected an explicit refusal at the `=`, got: {}",
+        le.message
+    );
+    let ge = parse("nodule d;\nfn f(a: Binary{8}, b: Binary{8}) => Binary{8} = a >= b;")
+        .expect_err("the retired `>=` glyph must not silently parse");
+    assert!(
+        ge.message.contains("expected an expression"),
+        "expected an explicit refusal at the `=`, got: {}",
+        ge.message
+    );
+}
+
 #[test]
 fn prefix_sugar_desugars_to_the_word_call() {
     assert_eq!(op_body("-a"), op_body("neg(a)"));
@@ -909,5 +953,135 @@ fn pipe_in_expr_position_is_bitwise_or_not_or_pattern() {
         matches!(&fd.body, Expr::App { head, .. } if matches!(head.as_ref(), Expr::Path(p) if p.0 == vec!["bor"])),
         "pipe in expression position desugars to bor(), not an or-pattern; got {:?}",
         fd.body
+    );
+}
+
+// -------------------------------------------------------------------------
+// RFC-0037 D2-b: short repr-keyword aliases (M-915) — `bin`/`tern`/`emb`/`hvec`
+// -------------------------------------------------------------------------
+
+/// Parse a `derive Trivial for <src>;` item and return the resolved `for_ty` base — a compact way
+/// to drive [`crate::parse::Parser::parse_base_type`] (private) through the public [`parse`] entry.
+fn base_type_of(src: &str) -> BaseType {
+    let n = parse(&format!("nodule d;\nderive Trivial for {src};")).expect("parses");
+    let Item::Derive(dd) = &n.items[0] else {
+        panic!("expected Item::Derive");
+    };
+    dd.for_ty.base.clone()
+}
+
+/// `bin{N}` parses to the exact same `BaseType::Binary` as `Binary{N}` — the short form
+/// **elaborates identically** (D2-b): no new AST node distinguishes the spelling used.
+#[test]
+fn bin_short_alias_elaborates_identically_to_binary() {
+    assert_eq!(base_type_of("bin{8}"), base_type_of("Binary{8}"));
+    let BaseType::Binary(crate::ast::WidthRef::Lit(8)) = base_type_of("bin{8}") else {
+        panic!("expected BaseType::Binary(Lit(8))");
+    };
+}
+
+/// `tern{N}` parses identically to `Ternary{N}`.
+#[test]
+fn tern_short_alias_elaborates_identically_to_ternary() {
+    assert_eq!(base_type_of("tern{6}"), base_type_of("Ternary{6}"));
+    let BaseType::Ternary(crate::ast::WidthRef::Lit(6)) = base_type_of("tern{6}") else {
+        panic!("expected BaseType::Ternary(Lit(6))");
+    };
+}
+
+/// `emb{D,S}` parses identically to `Dense{D,S}`.
+#[test]
+fn emb_short_alias_elaborates_identically_to_dense() {
+    assert_eq!(
+        base_type_of("emb{768, F32}"),
+        base_type_of("Dense{768, F32}")
+    );
+    let BaseType::Dense(768, crate::ast::Scalar::F32) = base_type_of("emb{768, F32}") else {
+        panic!("expected BaseType::Dense(768, F32)");
+    };
+}
+
+/// `hvec{model,dim,sparsity}` parses identically to `VSA{model,dim,sparsity}`.
+#[test]
+fn hvec_short_alias_elaborates_identically_to_vsa() {
+    assert_eq!(
+        base_type_of("hvec{MAP, 10000, Dense}"),
+        base_type_of("VSA{MAP, 10000, Dense}")
+    );
+    let BaseType::Vsa {
+        model,
+        dim,
+        sparsity,
+    } = base_type_of("hvec{MAP, 10000, Sparse{4}}")
+    else {
+        panic!("expected BaseType::Vsa");
+    };
+    assert_eq!(model, "MAP");
+    assert_eq!(dim, 10000);
+    assert_eq!(sparsity, crate::ast::Sparsity::Sparse(4));
+}
+
+/// The width-parameter form (`bin{N}` with `N` a name, not a literal — DN-42/M-753 v1) works for
+/// the short alias exactly as it does for the long form.
+#[test]
+fn bin_short_alias_supports_a_width_parameter_name() {
+    let BaseType::Binary(crate::ast::WidthRef::Name(n)) = base_type_of("bin{N}") else {
+        panic!("expected BaseType::Binary(Name(\"N\"))");
+    };
+    assert_eq!(n, "N");
+}
+
+/// A short-alias repr type composes normally in a full fn signature, mixed with long-form types.
+#[test]
+fn short_repr_keywords_parse_in_a_fn_signature() {
+    let n = parse("nodule d;\nfn widen(x: bin{8}) => Binary{8} = x;").expect("parses");
+    let Item::Fn(fd) = &n.items[0] else {
+        panic!("expected Item::Fn");
+    };
+    assert_eq!(fd.sig.value_params.len(), 1);
+    let BaseType::Binary(crate::ast::WidthRef::Lit(8)) = &fd.sig.value_params[0].ty.base else {
+        panic!("expected the param type to be Binary{{8}} (via `bin`)");
+    };
+}
+
+/// `vec` was explicitly REJECTED as a short alias (DN-02/RFC-0037 D2-b) — it is not a keyword, so
+/// `vec{4, F32}` in type position is a never-silent parse error (never a silent accept as a repr
+/// type), not a rewrite (G2).
+#[test]
+fn vec_is_never_accepted_as_a_repr_keyword() {
+    let err = parse("nodule d;\nfn f(x: vec{4, F32}) => Binary{8} = 0b0;")
+        .expect_err("`vec{...}` must not parse as a repr type");
+    // `vec` lexes as a plain identifier (`BaseType::Named`), so the parser expects a param-list
+    // delimiter after it, not `{` — the explicit diagnostic differs from the repr-keyword arms
+    // but is still a real, explained parse error (G2), never a silent accept.
+    assert!(
+        err.message.contains("`)` to close the parameter list"),
+        "expected the param-list diagnostic, got: {}",
+        err.message
+    );
+}
+
+/// A malformed short-form repr type (`emb` with no `{…}` descriptor at all) is a never-silent
+/// parse error whose message names both spellings, mirroring the long form's diagnostic.
+#[test]
+fn malformed_emb_short_form_is_an_explicit_parse_error() {
+    let err = parse("nodule d;\nfn f() => emb = 0;").expect_err("a bare `emb` must error");
+    assert!(
+        err.message.contains("Dense") && err.message.contains("emb"),
+        "expected the diagnostic to name both `Dense` and `emb`, got: {}",
+        err.message
+    );
+}
+
+/// The `emb{…}` short form still requires the `,` between dim and dtype, exactly like `Dense{…}`
+/// (same underlying arm) — a never-silent parse error either way.
+#[test]
+fn emb_short_form_still_requires_the_comma() {
+    let err = parse("nodule d;\nfn f() => emb{4 F32} = 0;")
+        .expect_err("missing comma inside emb{...} must error");
+    assert!(
+        err.message.contains("dim and dtype"),
+        "expected the missing-comma diagnostic, got: {}",
+        err.message
     );
 }

@@ -15,6 +15,15 @@
 //! **M-822 / RFC-0024 §4A.5/§4A.8**: multi-argument lambdas via currying and multi-param fn-as-value
 //! (partial application). `lambda(p1, p2) => body` desugars to `lambda(p1) => lambda(p2) => body`;
 //! a multi-param fn used as a value becomes a curried lambda wrapper. Both are `Empirical` (trials).
+//!
+//! **DN-73 (M-921) — the tuple-domain arrow `(A, B) => C`.** DN-73 ratified Option A: the curried
+//! arrow (above) is the canonical multi-argument function-*value* type, and a tuple-domain arrow
+//! `(A, B) => C` is a **distinct** type (`Ty::Fn` over a `BaseType::Tuple` domain, M-826) with **no
+//! implicit interconversion** between the two (D2). Shape 12 below upgrades DN-73 §2.4's
+//! by-construction `Declared` claim — that `(A, B) => C` parses/checks/monomorphizes/evaluates — to
+//! `Empirical`; [`tuple_domain_arrow_rejects_a_curried_value_naming_both_types`] pins the
+//! distinctness: passing a curried value where a tuple-domain arrow is expected is a never-silent
+//! type error naming both types (G2/VR-5).
 
 use mycelium_cert::{check_core, BinaryTernarySwapEngine, CheckVerdict};
 use mycelium_core::GuaranteeStrength;
@@ -98,6 +107,18 @@ fn closure_corpus() -> Vec<Shape> {
         Shape {
             name: "multi-param-fn-as-value",
             src: "nodule d;\nfn xor_fn(x: Binary{8}, y: Binary{8}) => Binary{8} = xor(x, y);\nfn apply2(f: Binary{8} => Binary{8} => Binary{8}, x: Binary{8}, y: Binary{8}) => Binary{8} =\n  let g = f(x) in g(y);\nfn main() => Binary{8} = apply2(xor_fn, 0b1010_1010, 0b0000_1111);",
+        },
+        // (12) DN-73 (M-921) — the tuple-domain arrow `(A, B) => C` as a first-class function value.
+        // `add_pair: (Binary{8}, Binary{8}) => Binary{8}` is a single-value-param fn whose one
+        // parameter's type is itself a tuple (M-826), so referencing it bare as a value takes the
+        // ORDINARY single-param fn-as-value path (not the M-822 currying branch, which only fires
+        // for `value_params.len() > 1`) — synthesizing `Ty::Fn(Tuple$2<B8,B8>, B8)` directly, exactly
+        // the composition DN-73 §2.4 held at `Declared`. `apply_pair` applies it to a tuple literal.
+        // xor(0b1010_1010, 0b0000_1111) = 0b1010_0101. Upgrades DN-73 §2.4 to `Empirical` (this
+        // three-way differential) once run through the corpus test below.
+        Shape {
+            name: "tuple-domain-arrow-as-value",
+            src: "nodule d;\nfn add_pair(t: (Binary{8}, Binary{8})) => Binary{8} = match t { (a, b) => xor(a, b) };\nfn apply_pair(f: (Binary{8}, Binary{8}) => Binary{8}, p: (Binary{8}, Binary{8})) => Binary{8} = f(p);\nfn main() => Binary{8} = apply_pair(add_pair, (0b1010_1010, 0b0000_1111));",
         },
     ]
 }
@@ -249,6 +270,35 @@ fn multi_argument_lambda_curries_and_partial_application_is_a_function_value() {
         r.is_err(),
         "f(arg) is a partially-applied `B8 -> B8` function, not the declared `Binary{{8}}` return — \
          an explicit type-mismatch error (G2), not a silent accept"
+    );
+}
+
+/// **DN-73 D2 (M-921) — no implicit interconversion between the curried and tuple-domain arrows.**
+/// `add2: Binary{8}, Binary{8} => Binary{8}` used bare as a value synthesizes the **curried** type
+/// `Binary{8} => Binary{8} => Binary{8}` (M-822 — unconditionally, ignoring the call-site's expected
+/// type; see `check_path`'s multi-param-fn-as-value branch). `apply_pair` expects a **tuple-domain**
+/// arrow `(Binary{8}, Binary{8}) => Binary{8}` (M-826). These are structurally distinct `Ty::Fn`
+/// values (`Fn(B8, Fn(B8, B8))` vs `Fn(Tuple$2<B8,B8>, B8)`) with no coercion between them, so the
+/// checker refuses the call with an explicit type-mismatch **naming both types** — never a silent
+/// auto-curry/uncurry adaptation (DN-73 D2/G2/VR-5). This is the fixture that pins the "distinct type,
+/// no implicit interconversion" half of DN-73's ratification, alongside the accepting shape 12 above.
+#[test]
+fn tuple_domain_arrow_rejects_a_curried_value_naming_both_types() {
+    let src = "nodule d;\n\
+        fn add2(x: Binary{8}, y: Binary{8}) => Binary{8} = xor(x, y);\n\
+        fn apply_pair(f: (Binary{8}, Binary{8}) => Binary{8}, p: (Binary{8}, Binary{8})) => Binary{8} =\n  f(p);\n\
+        fn main() => Binary{8} = apply_pair(add2, (0b1010_1010, 0b0000_1111));";
+    let err = check_nodule(&parse(src).expect("parses")).expect_err(
+        "a curried 2-arg value must NOT satisfy a tuple-domain arrow parameter — DN-73 D2",
+    );
+    let msg = err.to_string();
+    assert!(
+        msg.contains("Binary{8} => Binary{8} => Binary{8}"),
+        "error must name the curried type actually synthesized for `add2` — got: {msg:?}"
+    );
+    assert!(
+        msg.contains("Tuple$2<Binary{8}, Binary{8}>") && msg.contains("=> Binary{8}"),
+        "error must name the expected tuple-domain arrow type — got: {msg:?}"
     );
 }
 
