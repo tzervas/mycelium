@@ -3,8 +3,8 @@
 | Field | Value |
 |---|---|
 | **Status** | **Advisory / Proposed for maintainer review** (revised 2026-07-01). Planning posture, like the other `docs/planning/*.md` — this doc **decides nothing**; it sequences the ratified + proposed decisions and flags every maintainer decision it depends on. `Declared` wherever it forecasts effort or ordering. **This is the revised form of the Rust-reference-completion + acyclic-deps closeout plan** (kickoff UID `rcp`; see the meta-changelog — the prior plan's content is absorbed, not lost). |
-| **Governing decision** | **ADR-038** (Proposed — *Pragmatic Dogfooding: the Function-First Release Strategy*): North Star *"Rust where appropriate, Mycelium everywhere else"*; **Phase I → `lang 1.0.0` + public release, gated on functional usability**; **Phase II → post-public progressive Mycelium rewrite**. Within Phase I the tag gate stays ADR-022 (as amended by ADR-024/034/035); ADR-036 §2.1–§2.3 govern the dogfooding/validation model throughout. |
-| **Goal** | **Phase I:** a **fully functional, usable** language — a Mycelium *program* can exercise the whole ratified surface + stdlib end-to-end (`myc run`) — on a clean, structurally-enforced **acyclic** crate graph; then the `lang 1.0.0` tag and the **public release** (DN-27 decomposition + per-repo GHCR). **Phase II:** the progressive rewrite of the remaining corpus in Mycelium, with compiler self-hosting a conditional, evidence-gated aspiration. |
+| **Governing decision** | **ADR-038** (Proposed — *Pragmatic Dogfooding: the Function-First Release Strategy*): North Star *"Rust where appropriate, Mycelium everywhere else"*; **Phase I → reach functional usability, then go public at a `0.x`** (the public release is gated on usability and is **version-independent** — ADR-038 §2.8; **not** at `1.0.0`); **Phase II → post-public progressive Mycelium rewrite**, the public semver climbing `0.x → 1.0.0` in the open, where **`1.0.0` ≡ "fully rewritten into Mycelium (where appropriate) and 100% operational."** Within Phase I the functional-completeness gate stays ADR-022 (as amended by ADR-024/034/035); ADR-036 §2.1–§2.3 govern the dogfooding/validation model throughout. **For now the version stays `0.0.0`; the semver scheme is deferred until publish-time** (ADR-038 §2.8, FLAG-V1/V2). |
+| **Goal** | **Phase I:** a **fully functional, usable** language — a Mycelium *program* can exercise the whole ratified surface + stdlib end-to-end (`myc run`) — on a clean, structurally-enforced **acyclic** crate graph; then **go public at whatever `0.x` version fits** (DN-27 decomposition + per-repo GHCR). **Phase II:** the progressive rewrite of the remaining corpus in Mycelium, in the open, advancing the public semver toward **`1.0.0` (= fully rewritten + 100% operational)**, with compiler self-hosting a conditional, evidence-gated aspiration. |
 | **Basis** | ADR-038 (Proposed) · ADR-022 (tracks T1–T9 as amended) · ADR-035/ADR-036 (gates) · RFC-0031 §5 (composition + boundary; D1 permanence lifted, 2026-07-01 note) · RFC-0033 §7 (dogfood-gate rehash discipline) · `docs/spec/stdlib/self-hosting-readiness.md` §0 (the 2026-07-01 surface-sufficiency verification) · DN-34 §8 / M-873 (transpiler PoC data) · the three Fable-5 research digs, 2026-07-01 (dep-graph / roadmap / open-work surveys, `Empirical`) |
 
 **The reframe (2026-07-01).** The prior form of this plan ("Rust reference complete, acyclic deps,
@@ -23,27 +23,37 @@ three-way) — the real blockers are a short list of **below-grammar enablers** 
 ## 1. Phase map and exit criteria
 
 ```text
-PHASE I  (private · 0.0.0 · publish=false)          PHASE II  (public · progressive)
-──────────────────────────────────────────          ─────────────────────────────────
+PHASE I  (private · 0.0.0 · publish=false)          PHASE II  (PUBLIC · progressive · semver 0.x → 1.0.0)
+──────────────────────────────────────────          ────────────────────────────────────────────────
 H0  foundations: acyclic-deps enforcement,           mass .myc porting (rest of corpus)
     workspace hygiene                                transpiler-accelerated (polished)
-H1  functional-usability enablers                    Rust replaced module-by-module
-    (B→C→A→E→D-lite, myc run, strings, hash)         (ADR-036 §2.3, unchanged)
-H2  Rust-reference closeout remainder                V-wave remainder (one rehash,
-    (l1 semantics · value/AOT tail · runtime ·       at first value-persistence)
-     toolchain · inject-mode · kernel freeze)        compiler self-hosting: ONLY IF
-H2a grammar-stability gate (before mass porting)     stability/perf-proven, post-
-opportunistic .myc ports (ready-now crates)          transpiler-polish (ADR-038 §2.3)
+H1  functional-usability enablers                    Rust replaced module-by-module, IN THE OPEN
+    (B→C→A→E→D-lite, myc run, strings, hash)         (ADR-036 §2.3, unchanged); each replacement
+H2  Rust-reference closeout remainder                 advances the public semver
+    (l1 semantics · value/AOT tail · runtime ·       V-wave remainder (one rehash, at first
+     toolchain · inject-mode · kernel freeze)          value-persistence)
+H2a grammar-stability gate (before mass porting)     compiler self-hosting: ONLY IF stability/perf-
+opportunistic .myc ports (ready-now crates)           proven, post-transpiler-polish (ADR-038 §2.3)
     ↓
-lang 1.0.0 tag (ADR-022) → usability check (ADR-038 DoD) → PUBLIC FLIP
-    (DN-27 decomposition · per-repo GHCR · versioning starts)
+functional-usability gate (ADR-022 completeness + ADR-038 DoD)  →  maintainer usability check
+    →  PUBLIC FLIP at a 0.x  (DN-27 decomposition · per-repo GHCR · public version decided here)
+    →  … progressive rewrite in public …  →  semver 1.0.0 = fully rewritten + 100% operational
 ```
 
+**Note (§2.8 / FLAG-V1):** "functional-usability gate" is ADR-022's full-language completeness
+milestone (historically labelled `lang 1.0.0` — a release *event*, ADR-023). Under ADR-038 §2.8 it
+is the **public-release trigger at a `0.x`**, and the numeric `1.0.0` is **reserved for the completed
+rewrite** — the label reconciliation is a maintainer decision (FLAG-V1). Read "the ADR-022 tag" as
+the functional-completeness event, not the semver `1.0.0`.
+
 **Phase I is done** when ADR-038's Phase-I Definition of Done is checked by the maintainer: the H1
-enabler set closed, `myc run` end-to-end, the ADR-022 tag gate closed on its own criteria, and the
-maintainer ratifies "fully functional + usable". **Until then:** repo private, every crate `0.0.0`,
-`publish = false` workspace-wide (H0 closes the current 3-of-52 gap — `Empirical`, 2026-07-01).
-**Phase II has no terminal gate** — it is the North Star in steady state.
+enabler set closed, `myc run` end-to-end, the ADR-022 functional-completeness gate closed on its own
+criteria, and the maintainer ratifies "fully functional + usable" — then the **public flip executes at
+a `0.x`** (the public version is decided at that point; the semver scheme was deferred to here per
+ADR-038 §2.8). **Until then:** repo private, every crate `0.0.0`, `publish = false` workspace-wide (H0
+closes the current 3-of-52 gap — `Empirical`, 2026-07-01). **Phase II's terminal is the semver `1.0.0`**
+(= fully rewritten into Mycelium where appropriate + 100% operational, subject to FLAG-V2 on the
+compiler), reached progressively in public; past `1.0.0` the North Star continues as maintenance.
 
 ### User stories (the roadmap's own)
 
@@ -206,8 +216,11 @@ welcome, honest, and **never the release gate**:
 
 ## 7. Phase II — post-public, progressive (clearly separated)
 
-Everything below happens **after** the Phase-I flip, at the progressive cadence ADR-038 §2.3 sets.
-None of it gates the tag or the release.
+Everything below happens **after** the Phase-I flip, **in the open**, at the progressive cadence
+ADR-038 §2.3 sets. None of it gated the public release (that already happened at a `0.x`); instead
+this phase is the axis the **public semver climbs `0.x → 1.0.0`** (ADR-038 §2.8), where **`1.0.0` =
+fully rewritten into Mycelium (where appropriate) + 100% operational** (subject to FLAG-V2 on whether
+that requires compiler self-hosting). The concrete semver scheme is decided at the flip, not here.
 
 - **Mass `.myc` porting** of the remaining corpus (post-H2a), transpiler-accelerated under the
   polished-transpiler + pre-port-polish + manifest-where-ROI-positive doctrine (ADR-038 §2.5); each
@@ -258,10 +271,14 @@ H0 (serial, short, FIRST)
 | RFC-0027/DN-32 memory-model ratification | H2 runtime-lane sequencing | RFC-0027 · DN-32 |
 | Kernel-freeze declaration (DN-56, after its 4 conditions) | Phase-I closeout | DN-56 |
 | "Fully functional + usable" ratification (the flip) | Phase I → Phase II | ADR-038 §5 |
+| **`lang 1.0.0` label reconciliation (FLAG-V1)** — ADR-022's functional-completeness event vs the semver `1.0.0` reserved for the completed rewrite | the flip's version + naming | ADR-038 §2.8 · ADR-022/023 |
+| **Whether `1.0.0` requires compiler self-hosting (FLAG-V2)** | Phase-II terminal definition | ADR-038 §2.8 · §2.3 |
+| **Public semver scheme** (how rewrite progress maps to `0.x`; deferred until publish-time) | the flip | ADR-038 §2.8 |
 
-Execution follows ADR-038 §2.7: this plan and its decompositions are prepared by the
-planning/reasoning tier; implementation lands as bite-sized, PM-prepped (user stories + DoD) tasks
-for the implementation tier; issue minting happens at each kickoff, not here (mitigation #1).
+Execution follows ADR-038 §2.7: **Fable-class models are reserved solely for planning + complex
+design** — this plan and its decompositions are prepared by that tier; **implementation and lighter
+work land on Opus/Sonnet/Haiku scoped to task complexity**, as bite-sized, PM-prepped (user stories +
+DoD) tasks; issue minting happens at each kickoff, not here (mitigation #1).
 
 ## 9. Grounding / corpus references
 
@@ -309,3 +326,14 @@ for the implementation tier; issue minting happens at each kickoff, not here (mi
   separated cleanly (§7). Nothing from the prior plan was dropped: every workstream row is absorbed
   into a horizon/lane or explicitly listed as Phase II / reserved. Forecasts remain `Declared`;
   survey facts `Empirical`. Append-only meta-log; the prior entries above are preserved verbatim.
+- **2026-07-01 — versioning-axis + execution-doctrine refinement** (maintainer, same session; folds
+  ADR-038's same-day pre-ratification refinement into this roadmap). **Public release decoupled from
+  the version number:** the flip happens at functional usability, at **whatever `0.x` fits — well
+  before `1.0.0`** (ADR-038 §2.8); the public semver **tracks the Mycelium rewrite**, climbing
+  `0.x → 1.0.0` **in the open**, with **`1.0.0` = fully rewritten + 100% operational** as Phase II's
+  terminal (was "no terminal gate"). **For now the version stays `0.0.0`; the semver scheme is
+  deferred to publish-time.** Updated: the phase-map ASCII (public flip at a `0.x`, semver climb in
+  Phase II), §1 exit criteria, the Governing/Goal cells, §7, and §8's FLAG table (added FLAG-V1 label
+  reconciliation, FLAG-V2 compiler-in-`1.0.0`, and the deferred semver-scheme rows). **Execution
+  doctrine (§8):** Fable reserved solely for planning/complex-design; implementation on
+  Opus/Sonnet/Haiku scoped to complexity. Append-only; prior entries preserved verbatim.

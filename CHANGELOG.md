@@ -11,6 +11,30 @@ corpus and the landing kernel/stdlib code. Semantic versioning will begin when t
 
 ## [Unreleased]
 
+### Changed (2026-07-01: ADR-038 refinement — versioning axis + execution doctrine, still Proposed)
+
+- **ADR-038 refined (same session, pre-ratification; held `Proposed`).** Two maintainer-directed
+  refinements folded into the still-Proposed strategy ADR (with an append-only changelog row in the
+  ADR — the authoring trail recorded, not silently overwritten):
+  - **Public release decoupled from the version number (§2.8, new).** The public flip is gated on
+    **functional usability alone** and happens at **whatever semantic version fits — a `0.x`, well
+    before `1.0.0`** ("v1 as a publicity gate is arbitrary"). The **public semver tracks the
+    Mycelium-rewrite progress**, climbing `0.x → 1.0.0` in the open, with **`1.0.0` ≡ "fully
+    rewritten into Mycelium (where appropriate) and 100% operational"** (Phase II's terminal).
+    **For now the version stays `0.0.0`; the concrete semver scheme is deferred until actually ready
+    to publish.** Two ambiguities FLAGged for the maintainer, not guessed: **FLAG-V1** (the
+    `lang 1.0.0` label collision with ADR-022's functional-completeness milestone) and **FLAG-V2**
+    (whether `1.0.0` requires compiler self-hosting).
+  - **Execution doctrine (§2.7) refined.** **Fable-class models are reserved *solely* for planning
+    and complex design (they do not implement); implementation and all lighter work run on
+    Opus/Sonnet/Haiku scoped to the intensity and complexity of the task.** (Recorded as strategy;
+    the CLAUDE.md swarm-mode-table wording update is a small follow-up FLAGged for the maintainer.)
+  - Propagated the append-only pointer on **ADR-036 §2.4** (release gate now also version-independent)
+    and revised the umbrella roadmap `road-to-1.0.0-and-mycelium-rewrite.md` (phase map, exit
+    criteria, §7, §8 FLAG table — added FLAG-V1/V2 + the deferred semver-scheme row) and the ADR-038
+    rows in `docs/adr/README.md` + `docs/Doc-Index.md`. ADR-038 stays **Proposed** at the maintainer's
+    instruction ("once adapted I'll say it's ratify-ready").
+
 ### Added (2026-07-01: ADR-038 Proposed — function-first release strategy + the road-to-1.0.0 umbrella roadmap)
 
 - **ADR-038 — Pragmatic Dogfooding: the Function-First Release Strategy** (**Proposed**, awaiting
