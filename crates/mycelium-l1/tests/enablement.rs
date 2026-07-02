@@ -60,6 +60,17 @@
 //!   surface three-way closes** for float arithmetic (`flt_arith_*_three_way` below) — unlike the
 //!   dense group, whose surface leg still injects kernel-built arguments (see the M-890 note).
 //!   Static conformance accept/reject in the `flt_prims_conformance_*` tests.
+//! - **M-899** (ADR-040 §2.4, kickoff `enb` Phase-I H1 Gap A) — the **scalar-float comparison
+//!   prims** `flt_lt`/`flt_le`/`flt_gt`/`flt_ge`/`flt_eq` (the IEEE-754 §5.11 partial-order
+//!   predicates: **NaN is unordered — any NaN operand yields the defined value `false`**,
+//!   `flt_eq(NaN, NaN)` included) plus the **named, opt-in total order** `flt_total_le`
+//!   (IEEE-754 §5.10 `totalOrder`: `−inf < … < −0 < +0 < … < +inf < NaN`, reflexive, canonical
+//!   NaN last, signed zeros directed), kernel `flt.lt`/…/`flt.eq`/`flt.total_le`. Two `Float`
+//!   operands collapse to `Binary{1}` (the realized `Bool`). Per-op tag **`Empirical`** per
+//!   ADR-040 §2.6; **the `flt_total_le` total-order property is the M-511 proof debt — it stays
+//!   `Empirical` until a proof lands, never `Proven` on host documentation (VR-5)**. The
+//!   nullary-main surface three-way closes (`flt_cmp_*_three_way` below) with the NaN-unordered
+//!   behavior pinned on every path; static accept/reject in the `flt_cmp_conformance_*` tests.
 
 use mycelium_core::{
     Bound, BoundBasis, BoundKind, FloatWidth, GuaranteeStrength, Meta, Node, NormKind, Payload,
@@ -1897,6 +1908,330 @@ fn flt_prims_conformance_reject() {
         (
             "nodule d;\nfn main() => Binary{8} = flt_add(1.5, 2.5);",
             "Float",
+        ),
+    ] {
+        let err =
+            check_nodule(&parse(src).expect("parses")).expect_err(&format!("must reject: {src}"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains(needle),
+            "the refusal must name the offense.\n  src: {src}\n  want: {needle}\n  got: {msg}"
+        );
+    }
+}
+
+// ── M-899 (ADR-040 §2.4, `enb` Gap A): the scalar-float comparison prims ────────────────────────
+//
+// `flt_lt`/`flt_le`/`flt_gt`/`flt_ge`/`flt_eq` (kernel `flt.lt`/…/`flt.eq`) — the IEEE-754 §5.11
+// quiet comparison **predicates** — plus `flt_total_le` (kernel `flt.total_le`), the **named,
+// opt-in total order** (IEEE-754 §5.10 `totalOrder`). Two `Float` operands collapse to
+// `Binary{1}` (the realized `Bool` — the RFC-0032 D1 note, exactly the `eq`/`lt` result shape).
+//
+// **The explicit NaN semantics (ADR-040 §2.4 — the point of this group):** float ordering is
+// *partial*. NaN is unordered against everything, itself included, and every one of the five
+// predicates yields the IEEE-*defined* value **false** on a NaN operand — `flt_eq(NaN, NaN)` is
+// false, and NaN is not "the biggest" (`flt_gt(NaN, x)` is false too). That false is never a
+// silent ordering: unordered is observable from the predicates themselves (`¬flt_le ∧ ¬flt_gt`;
+// `¬flt_eq(x, x)` is the NaN test), and the D1 `eq`/`lt` refuse Float operands *by routing*
+// (`flt_cmp_conformance_reject`) rather than inventing a bitwise order (G2). Sorting/keying —
+// which a partial order cannot serve — goes through `flt_total_le` **by name**: total,
+// reflexive (`flt_total_le(NaN, NaN)` is true), canonical NaN last, and the signed zeros
+// *directed* (`−0` precedes `+0`) where `flt_eq` calls them equal (the ADR-040 FLAG-4 seam).
+//
+// Per-op tag: **`Empirical`** per the ratified ADR-040 §2.6, with the zero-deviation-vs-spec
+// comparison bound (EXPLAIN-able off the value; the `EmpiricalFit` method string names the
+// M-511 caveat). **The `flt_total_le` total-order property (totality/antisymmetry/transitivity/
+// placement) is the M-511 proof debt — corpus/property evidence only, no checked theorem; the
+// tag stays `Empirical` until M-511 discharges it (VR-5, never upgraded).** The nullary-main
+// surface three-way closes exactly as for the M-898 arithmetic (same trusted `PrimRegistry` on
+// every path), NaN rows included — NaN operands are *produced in-language* via `flt_div(0.0,
+// 0.0)` (the in-band FLAG-2 specials), so the unordered behavior is exercised end-to-end.
+
+/// Like [`assert_flt_three_way_with_tag`] but for the comparison group: asserts the `Binary{1}`
+/// truth value bit-for-bit on **every** path (L1-eval ≡ L0-interp ≡ AOT), plus the ADR-040 §2.6
+/// tag contract — guarantee `Empirical`, bound `eps = 0`/`Linf` on an `EmpiricalFit` basis whose
+/// method names the M-511 total-order proof debt (G2/SC-3: the unproven status is EXPLAIN-able,
+/// never hidden).
+#[track_caller]
+fn assert_flt_cmp_three_way_with_tag(label: &str, src: &str, expected: bool) {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
+        .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
+    let l1 = Evaluator::new(&env)
+        .call("main", vec![])
+        .unwrap_or_else(|e| panic!("{label}: L1-eval failed: {e}"));
+    let l1 = l1
+        .as_repr()
+        .unwrap_or_else(|| panic!("{label}: result must be a repr value"))
+        .clone();
+    let node =
+        elaborate(&env, "main").unwrap_or_else(|e| panic!("{label}: must be in the fragment: {e}"));
+    let l0 = interp
+        .eval(&node)
+        .unwrap_or_else(|e| panic!("{label}: L0-interp failed: {e}"));
+    let aot = mycelium_mlir::run(
+        &node,
+        &PrimRegistry::with_builtins(),
+        &mycelium_cert::BinaryTernarySwapEngine,
+    )
+    .unwrap_or_else(|e| panic!("{label}: AOT failed: {e}"));
+    for (path, v) in [("L1-eval", &l1), ("L0-interp", &l0), ("AOT", &aot)] {
+        assert_eq!(
+            v.repr(),
+            &Repr::Binary { width: 1 },
+            "{label}: {path} result must be the Binary{{1}} truth value"
+        );
+        let Payload::Bits(bits) = v.payload() else {
+            panic!("{label}: {path} payload is not Bits: {:?}", v.payload());
+        };
+        assert_eq!(
+            bits.as_slice(),
+            &[expected],
+            "{label}: {path} truth bit mismatch (want {expected})"
+        );
+        assert_eq!(
+            v.meta().guarantee(),
+            GuaranteeStrength::Empirical,
+            "{label}: {path} must carry the ratified ADR-040 §2.6 Empirical tag (VR-5)"
+        );
+        match v.meta().bound() {
+            Some(Bound {
+                kind: BoundKind::Error { eps, norm },
+                basis: BoundBasis::EmpiricalFit { trials, method },
+            }) => {
+                assert_eq!(*eps, 0.0, "{label}: {path} zero-deviation-vs-spec bound");
+                assert_eq!(*norm, NormKind::Linf);
+                assert!(*trials >= 1, "an Empirical basis is never evidence-free");
+                assert!(
+                    method.contains("M-511"),
+                    "{label}: {path} basis must surface the M-511 total-order proof debt"
+                );
+            }
+            other => panic!("{label}: {path} expected the EmpiricalFit bound, got {other:?}"),
+        }
+    }
+}
+
+/// The nullary-main surface three-way closes for each comparison op, with a true and a false
+/// row per op (bit-asserted on all three paths, tag inspected on all three paths).
+#[test]
+fn flt_cmp_ops_three_way() {
+    for (label, src, expected) in [
+        (
+            "flt_lt true",
+            "nodule d;\nfn main() => Binary{1} = flt_lt(1.5, 2.5);",
+            true,
+        ),
+        (
+            "flt_lt false",
+            "nodule d;\nfn main() => Binary{1} = flt_lt(2.5, 1.5);",
+            false,
+        ),
+        (
+            "flt_le reflexive",
+            "nodule d;\nfn main() => Binary{1} = flt_le(1.5, 1.5);",
+            true,
+        ),
+        (
+            "flt_le false",
+            "nodule d;\nfn main() => Binary{1} = flt_le(2.5, 1.5);",
+            false,
+        ),
+        (
+            "flt_gt true",
+            "nodule d;\nfn main() => Binary{1} = flt_gt(2.5, 1.5);",
+            true,
+        ),
+        (
+            "flt_gt false",
+            "nodule d;\nfn main() => Binary{1} = flt_gt(1.5, 2.5);",
+            false,
+        ),
+        (
+            "flt_ge reflexive",
+            "nodule d;\nfn main() => Binary{1} = flt_ge(1.5, 1.5);",
+            true,
+        ),
+        (
+            "flt_ge false",
+            "nodule d;\nfn main() => Binary{1} = flt_ge(1.5, 2.5);",
+            false,
+        ),
+        (
+            "flt_eq true",
+            "nodule d;\nfn main() => Binary{1} = flt_eq(1.5, 1.5);",
+            true,
+        ),
+        (
+            "flt_eq false",
+            "nodule d;\nfn main() => Binary{1} = flt_eq(1.5, 2.5);",
+            false,
+        ),
+        (
+            "flt_total_le true",
+            "nodule d;\nfn main() => Binary{1} = flt_total_le(1.5, 2.5);",
+            true,
+        ),
+        (
+            "flt_total_le false",
+            "nodule d;\nfn main() => Binary{1} = flt_total_le(2.5, 1.5);",
+            false,
+        ),
+    ] {
+        assert_flt_cmp_three_way_with_tag(label, src, expected);
+    }
+}
+
+/// **NaN is unordered, end-to-end on every path (ADR-040 §2.4).** The NaN operand is produced
+/// *in-language* by `flt_div(0.0, 0.0)` (the in-band FLAG-2 special), so this is the full
+/// surface→kernel NaN story: every §5.11 predicate is `false` with NaN on either side —
+/// including `flt_eq(NaN, NaN)` — while the *named* total order places NaN deterministically
+/// (reflexive, above +inf).
+#[test]
+fn flt_cmp_nan_is_unordered_three_way() {
+    for (label, src, expected) in [
+        (
+            "lt(NaN, 1) is false",
+            "nodule d;\nfn main() => Binary{1} = flt_lt(flt_div(0.0, 0.0), 1.0);",
+            false,
+        ),
+        (
+            "gt(NaN, 1) is false (NaN is not \"the biggest\")",
+            "nodule d;\nfn main() => Binary{1} = flt_gt(flt_div(0.0, 0.0), 1.0);",
+            false,
+        ),
+        (
+            "le(1, NaN) is false (either operand side)",
+            "nodule d;\nfn main() => Binary{1} = flt_le(1.0, flt_div(0.0, 0.0));",
+            false,
+        ),
+        (
+            "ge(1, NaN) is false",
+            "nodule d;\nfn main() => Binary{1} = flt_ge(1.0, flt_div(0.0, 0.0));",
+            false,
+        ),
+        (
+            "eq(NaN, NaN) is false — NaN ≠ NaN",
+            "nodule d;\nfn main() => Binary{1} = flt_eq(flt_div(0.0, 0.0), flt_div(0.0, 0.0));",
+            false,
+        ),
+        (
+            "total_le(NaN, NaN) is true — the total order IS reflexive on NaN",
+            "nodule d;\nfn main() => Binary{1} = flt_total_le(flt_div(0.0, 0.0), flt_div(0.0, 0.0));",
+            true,
+        ),
+        (
+            "total_le(+inf, NaN) is true — canonical NaN sorts last",
+            "nodule d;\nfn main() => Binary{1} = flt_total_le(flt_div(1.0, 0.0), flt_div(0.0, 0.0));",
+            true,
+        ),
+        (
+            "total_le(NaN, +inf) is false — NaN precedes nothing but itself",
+            "nodule d;\nfn main() => Binary{1} = flt_total_le(flt_div(0.0, 0.0), flt_div(1.0, 0.0));",
+            false,
+        ),
+    ] {
+        assert_flt_cmp_three_way_with_tag(label, src, expected);
+    }
+}
+
+/// **The signed-zero seam, three-way (ADR-040 FLAG-4):** `−0` and `+0` are IEEE-**equal** under
+/// `flt_eq` (and unordered by `flt_lt` in both directions) yet **distinct and directed** under
+/// the named total order — `flt_total_le(−0, +0)` but not `flt_total_le(+0, −0)`.
+#[test]
+fn flt_cmp_signed_zero_three_way() {
+    for (label, src, expected) in [
+        (
+            "eq(+0, −0) — IEEE-equal",
+            "nodule d;\nfn main() => Binary{1} = flt_eq(0.0, flt_neg(0.0));",
+            true,
+        ),
+        (
+            "lt(−0, +0) — equal zeros are not less",
+            "nodule d;\nfn main() => Binary{1} = flt_lt(flt_neg(0.0), 0.0);",
+            false,
+        ),
+        (
+            "total_le(−0, +0) — −0 precedes +0",
+            "nodule d;\nfn main() => Binary{1} = flt_total_le(flt_neg(0.0), 0.0);",
+            true,
+        ),
+        (
+            "total_le(+0, −0) — the zeros are DISTINCT under the total order",
+            "nodule d;\nfn main() => Binary{1} = flt_total_le(0.0, flt_neg(0.0));",
+            false,
+        ),
+    ] {
+        assert_flt_cmp_three_way_with_tag(label, src, expected);
+    }
+}
+
+/// Static conformance — accept: every comparison signature the checker must admit (two `Float`
+/// operands → `Binary{1}`, params/literals/composed `flt.*` results all admissible operands).
+#[test]
+fn flt_cmp_conformance_accept() {
+    for src in [
+        "nodule d;\nfn f(a: Float, b: Float) => Binary{1} = flt_lt(a, b);",
+        "nodule d;\nfn f(a: Float, b: Float) => Binary{1} = flt_le(a, b);",
+        "nodule d;\nfn f(a: Float, b: Float) => Binary{1} = flt_gt(a, b);",
+        "nodule d;\nfn f(a: Float, b: Float) => Binary{1} = flt_ge(a, b);",
+        "nodule d;\nfn f(a: Float, b: Float) => Binary{1} = flt_eq(a, b);",
+        "nodule d;\nfn f(a: Float, b: Float) => Binary{1} = flt_total_le(a, b);",
+        // Literal operands (M-897) and composed flt.* operands.
+        "nodule d;\nfn main() => Binary{1} = flt_eq(1.5, 2.5e-3);",
+        "nodule d;\nfn f(a: Float) => Binary{1} = flt_lt(flt_mul(a, 2.0), 8.0);",
+    ] {
+        check_nodule(&parse(src).expect("parses"))
+            .unwrap_or_else(|e| panic!("must accept: {src}\n  got: {e}"));
+    }
+}
+
+/// Static conformance — reject: the never-silent operand/arity/result contract is a *check-time*
+/// refusal naming the offense (G2), and — the M-899 routing rule — the D1 `eq`/`lt` refuse
+/// `Float` operands by **pointing at the float predicates and the named total order**, never by
+/// silently inventing an order for NaN.
+#[test]
+fn flt_cmp_conformance_reject() {
+    for (src, needle) in [
+        // Non-Float operand: never a silent conversion.
+        (
+            "nodule d;\nfn f(a: Binary{8}, b: Float) => Binary{1} = flt_lt(a, b);",
+            "must be a `Float`",
+        ),
+        (
+            "nodule d;\nfn f(t: Ternary{4}, b: Float) => Binary{1} = flt_total_le(t, b);",
+            "must be a `Float`",
+        ),
+        // A bare decimal has no Float anchor (Q6/RFC-0012 §4.3): no cross-family defaulting.
+        (
+            "nodule d;\nfn main() => Binary{1} = flt_lt(1, 1.5);",
+            "no representation family",
+        ),
+        // Arity: explicit.
+        (
+            "nodule d;\nfn main() => Binary{1} = flt_lt(1.5);",
+            "takes 2 operand(s)",
+        ),
+        (
+            "nodule d;\nfn main() => Binary{1} = flt_total_le(1.5);",
+            "takes 2 operand(s)",
+        ),
+        // The result is Binary{1}, not Float: a wrong return edge is an explicit mismatch.
+        (
+            "nodule d;\nfn main() => Float = flt_lt(1.5, 2.5);",
+            "Binary",
+        ),
+        // The D1 comparisons route floats to the flt_* surface — the refusal names it.
+        (
+            "nodule d;\nfn f(a: Float, b: Float) => Binary{1} = eq(a, b);",
+            "flt_total_le",
+        ),
+        (
+            "nodule d;\nfn f(a: Float, b: Float) => Binary{1} = lt(a, b);",
+            "flt_lt",
         ),
     ] {
         let err =

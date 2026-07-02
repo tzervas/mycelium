@@ -216,6 +216,61 @@ fn float_prims_resolve_to_declared_empirical_kernel_prims() {
     }
 }
 
+/// The M-899 (`enb` Gap A) scalar-float comparison prims — the IEEE-754 §5.11 partial-order
+/// predicates (`flt_lt`/`flt_le`/`flt_gt`/`flt_ge`/`flt_eq`, NaN explicitly unordered → false)
+/// plus the named opt-in total order `flt_total_le` (IEEE-754 §5.10 `totalOrder`) — are
+/// **width-collapsing** like the D1 pair: two `Float` operands reduce to a `Binary{1}` truth
+/// value (typed by the `try_check_float_prim` branch). This guard pins their surface→Π
+/// consistency: each `flt_*` comparison maps to a declared collapsing `flt.*` kernel prim with
+/// arity 2, `Any` operands (the documented no-Float-paradigm escape hatch), a genuinely
+/// `Binary` result, and the intrinsic at the ratified ADR-040 §2.6 **`Empirical`** — for
+/// `flt.total_le` that tag is load-bearing: the total-order property is the **M-511 proof
+/// debt**, `Empirical` until a proof lands, never `Proven` on host documentation (VR-5).
+#[test]
+fn float_cmp_prims_resolve_to_declared_collapsing_empirical_kernel_prims() {
+    use mycelium_core::{GuaranteeStrength, WidthRel};
+    let table = PrimTable::builtins();
+    for (surface, kernel_expected) in [
+        ("flt_lt", "flt.lt"),
+        ("flt_le", "flt.le"),
+        ("flt_gt", "flt.gt"),
+        ("flt_ge", "flt.ge"),
+        ("flt_eq", "flt.eq"),
+        ("flt_total_le", "flt.total_le"),
+    ] {
+        let kernel = prim_kernel_name(surface)
+            .unwrap_or_else(|| panic!("float cmp prim `{surface}` must map to a kernel name"));
+        assert_eq!(kernel, kernel_expected, "surface→kernel mapping drifted");
+        assert!(
+            table.contains(kernel),
+            "surface `{surface}` → kernel `{kernel}`, but `{kernel}` is not declared in Π",
+        );
+        let decl = table.get(kernel).expect("declared prim");
+        assert_eq!(decl.sig.arity(), 2, "`{kernel}` is binary (two operands)");
+        assert!(
+            decl.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+            "`{kernel}` operands use the documented `Any` escape hatch (no Float paradigm yet)",
+        );
+        assert_eq!(
+            decl.sig.result,
+            PrimParadigm::Binary,
+            "`{kernel}` reduces to a Binary{{1}} truth value",
+        );
+        assert_eq!(
+            decl.sig.width,
+            WidthRel::Collapse,
+            "`{kernel}` is width-collapsing (two Float scalars → Binary{{1}})",
+        );
+        assert_eq!(
+            decl.intrinsic,
+            GuaranteeStrength::Empirical,
+            "`{kernel}` intrinsic must stay the ratified ADR-040 §2.6 Empirical (VR-5; the \
+             flt.total_le total-order property is the M-511 proof debt — never `Proven` \
+             without the checked theorem)",
+        );
+    }
+}
+
 /// The RFC-0032 D1 (M-747) comparison prims are **width-collapsing** and paradigm-flexible
 /// (`Any, Any → Binary`, `WidthRel::Collapse`), so they do not fit the width-uniform `surface_cases`
 /// shape (they bypass `prim_sig` via a dedicated checker branch). This guard pins their surface→Π

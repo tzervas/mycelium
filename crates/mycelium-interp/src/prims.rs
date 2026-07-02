@@ -91,7 +91,12 @@ impl PrimRegistry {
     /// the module note at the dense section below), and the **scalar-float arithmetic group**
     /// (`flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg`, ADR-040 §2.5, M-898 — `enb` Gap A;
     /// IEEE-754 binary64 under RNE over `Repr::Float`, arithmetic specials in-band per the
-    /// ratified FLAG-2, per-op tag `Empirical` per ADR-040 §2.6 — see the float section note).
+    /// ratified FLAG-2, per-op tag `Empirical` per ADR-040 §2.6 — see the float section note),
+    /// and the **scalar-float comparison group** (`flt.lt`/`flt.le`/`flt.gt`/`flt.ge`/`flt.eq` —
+    /// the IEEE-754 §5.11 partial-order predicates, any NaN operand → the *defined* result
+    /// `false` — plus the named opt-in total order `flt.total_le` (IEEE-754 §5.10 `totalOrder`),
+    /// ADR-040 §2.4, M-899 — `enb` Gap A; the total-order *property* stays `Empirical` until the
+    /// M-511 proof debt is discharged — see the float comparison section note).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -157,6 +162,19 @@ impl PrimRegistry {
         r.register("flt.mul", prim_flt_mul);
         r.register("flt.div", prim_flt_div);
         r.register("flt.neg", prim_flt_neg);
+        // ADR-040 §2.4 (M-899, `enb` Gap A): the scalar-float comparison group —
+        // `flt.lt`/`flt.le`/`flt.gt`/`flt.ge`/`flt.eq` (the IEEE-754 §5.11 partial-order
+        // predicates; NaN is explicitly unordered — any NaN operand yields the *defined*
+        // predicate value `false`, `flt.eq(NaN, NaN) = false`) plus the **named, opt-in total
+        // order** `flt.total_le` (IEEE-754 §5.10 `totalOrder`). Per-op tag `Empirical`; the
+        // total-order *property* stays `Empirical` until the M-511 proof debt is discharged —
+        // see the float comparison section note below.
+        r.register("flt.lt", prim_flt_lt);
+        r.register("flt.le", prim_flt_le);
+        r.register("flt.gt", prim_flt_gt);
+        r.register("flt.ge", prim_flt_ge);
+        r.register("flt.eq", prim_flt_eq);
+        r.register("flt.total_le", prim_flt_total_le);
         r
     }
 
@@ -440,14 +458,18 @@ fn cmp_repr_operands(prim: &str, a: &Value, b: &Value) -> Result<Ordering, EvalE
                 .map(|t| ternary::digit(*t))
                 .cmp(xb.iter().map(|t| ternary::digit(*t))))
         }
-        // ADR-040 §2.4 (M-896): the float comparison prims are NOT built yet — float ordering is
-        // *partial* (NaN has no order) with a named opt-in total order, and both land with the
-        // float op surface (M-899). Refused explicitly with the real reason, never funneled into
-        // the generic same-paradigm message below (and never a silently-wrong bitwise order).
+        // ADR-040 §2.4 (M-899): float comparison is *partial* (NaN has no order), so it never
+        // routes through this D1 total order — it has its own explicit prims: the IEEE-754 §5.11
+        // predicates `flt.lt`/`flt.le`/`flt.gt`/`flt.ge`/`flt.eq` (NaN unordered → false) and the
+        // named opt-in total order `flt.total_le`. Refused explicitly with the real routing,
+        // never funneled into the generic same-paradigm message below (and never a
+        // silently-wrong bitwise order).
         (Repr::Float { .. }, Repr::Float { .. }) => Err(EvalError::PrimType {
             prim: prim.to_owned(),
-            why: "float comparison prims are not built yet (ADR-040 §2.4: partial order + named \
-                  total order land with M-899); explicit refusal, not an ordering"
+            why: "float comparison is partial (NaN is unordered — ADR-040 §2.4) and does not use \
+                  the D1 Binary/Ternary total order; use the explicit predicates \
+                  flt.lt/flt.le/flt.gt/flt.ge/flt.eq (any NaN operand → false) or the named \
+                  total order flt.total_le for sorting/keying (M-899)"
                 .to_owned(),
         }),
         _ => Err(EvalError::PrimType {
@@ -1630,4 +1652,171 @@ fn prim_flt_neg(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
     expect_arity(prim, args, 1)?;
     let a = as_float(prim, args[0])?;
     flt_result(prim, args, -a)
+}
+
+// --- ADR-040 §2.4 (M-899, `enb` Gap A): scalar-float comparison + the named total order --------
+//
+// `flt.lt`/`flt.le`/`flt.gt`/`flt.ge`/`flt.eq` — the IEEE-754 §5.11 quiet comparison
+// **predicates** over two `Float` operands, reducing to a `Binary{1}` truth value (the realized
+// `Bool`, the RFC-0032 D1 engineering note). Float ordering is **partial** (ADR-040 §2.4): NaN is
+// **unordered against everything, itself included**, and a comparison involving NaN yields the
+// IEEE-*defined* predicate value **false** on every one of the five — `flt.lt(NaN, x)`,
+// `flt.gt(NaN, x)`, `flt.le(NaN, x)`, `flt.ge(NaN, x)`, and `flt.eq(NaN, NaN)` are all `false`
+// (NaN ≠ NaN). This is **not** a silent `false`-as-less-than (the §2.4 clause): `false` from
+// `flt.lt` asserts only "no `<` relation holds", and the no-order case is directly *observable*
+// from the predicate set — `¬flt.le(a,b) ∧ ¬flt.gt(a,b)` ⟺ unordered, `¬flt.eq(x,x)` ⟺ NaN — so
+// nothing is funneled into a fabricated ordering (G2). The `Option`-shaped three-way
+// (`partial_cmp → None` on NaN, `docs/spec/stdlib/cmp.md` Q1) is the `std.cmp` *surface* built on
+// these predicates, not a kernel prim.
+//
+// **`flt.total_le` — the named, opt-in total order (IEEE-754 §5.10 `totalOrder`).** For
+// sorting/keying, where a partial order cannot place NaN, the ADR ships a *distinct, named* op —
+// imposing a total order silently is exactly what cmp.md Q1 rejects. `flt.total_le(a, b)` is
+// `totalOrder(a, b)`: true iff `a` precedes-or-equals `b` in the total order
+// `−inf < … < −0 < +0 < … < +inf < NaN` (with §2.3's canonical positive quiet NaN, the one NaN
+// sorts *last*, deterministically). It is **total and reflexive** — `flt.total_le(NaN, NaN)` is
+// `true` where `flt.le(NaN, NaN)` is `false` — and it separates the signed zeros
+// (`total_le(−0, +0)` but not `total_le(+0, −0)`) where `flt.eq(−0, +0)` calls them equal: the
+// documented ADR-040 FLAG-4 identity-vs-equality seam, made orderable *by name*.
+//
+// **Per-op tag — `Empirical`, per the ratified ADR-040 §2.6 (VR-5: never upgraded).** Two
+// distinct claims, both `Empirical`:
+//   - the five predicates: the *definition* is IEEE-754 §5.11 (`Exact` as a definition); the
+//     *implementation claim* that the host's `f64` comparison operators deliver it is
+//     `Empirical`, pinned by the hand-derived reference corpus (`flt_cmp_reference_case_corpus`,
+//     exactly [`FLT_CMP_CONFORMANCE_TRIALS`] rows) atop the `Declared` "Rust f64 is IEEE-754
+//     binary64" platform statement;
+//   - `flt.total_le`: additionally, the **total-order property itself** (totality,
+//     antisymmetry, transitivity, the NaN/−0/+0 placement) is property-tested over the value
+//     corpus but **not proven — this is the M-511 proof debt, load-bearing here**. The tag
+//     stays `Empirical` until a checked theorem lands (M-511); claiming `Proven` from
+//     "Rust's `total_cmp` says it implements totalOrder" would upgrade past the basis (VR-5).
+// The disclosed bound is the same zero-deviation-vs-spec shape as the arithmetic group: the
+// delivered truth value deviates from the IEEE-defined predicate value by 0 (`Linf`) on the
+// `EmpiricalFit` evidence of the comparison corpus.
+//
+// **Composition (the M-204 posture, unchanged).** Same rule as `flt_result`: inputs must be
+// `Exact` or the zero-deviation `Empirical` form; a genuinely-approximate input has no defined
+// comparison ε-rule (an ε-ball straddling the compare point flips the bit) and is an explicit
+// [`EvalError::ApproxCompositionUnsupported`] refusal — refuse, don't guess (G2/VR-5).
+
+/// The trial count of the M-899 IEEE comparison reference corpus (`src/tests/prims.rs`,
+/// `flt_cmp_reference_case_corpus`) — the evidence behind the `EmpiricalFit` basis every
+/// float-comparison result carries. The corpus test asserts its row count equals this constant,
+/// so the recorded trials can never silently drift from the trials actually run (VR-5).
+pub const FLT_CMP_CONFORMANCE_TRIALS: u64 = 44;
+
+/// The method recorded in the `EmpiricalFit` basis of every float-comparison result
+/// (ADR-040 §2.4/§2.6).
+pub const FLT_CMP_CONFORMANCE_METHOD: &str = "truth-table differential against hand-derived \
+     IEEE-754 §5.11 predicate rows (NaN unordered on every predicate, NaN ≠ NaN, signed-zero \
+     equality, ±inf ordering) and §5.10 totalOrder rows (−0 ≺ +0, canonical NaN last, NaN \
+     reflexive) — total-order property evidence is Empirical pending the M-511 proof";
+
+/// The zero-deviation-vs-spec bound every float-comparison result carries (see the section note):
+/// the delivered `Binary{1}` truth value deviates from the IEEE-754-defined predicate value by
+/// at most 0 (`Linf`), on the `EmpiricalFit` evidence of the comparison reference corpus.
+fn flt_cmp_bound() -> Bound {
+    Bound {
+        kind: BoundKind::Error {
+            eps: 0.0,
+            norm: NormKind::Linf,
+        },
+        basis: BoundBasis::EmpiricalFit {
+            trials: FLT_CMP_CONFORMANCE_TRIALS,
+            method: FLT_CMP_CONFORMANCE_METHOD.to_owned(),
+        },
+    }
+}
+
+/// Build a float-comparison result: `Binary{1}` (`0b1` = true), `Derived` provenance, and the
+/// honest ADR-040 §2.6 tag — strength `meet(Empirical, inputs)` with the zero-deviation
+/// `EmpiricalFit` comparison bound. An input that is neither `Exact` nor the composable
+/// zero-deviation form is an explicit [`EvalError::ApproxCompositionUnsupported`] (an ε-ball
+/// around a compared operand could flip the bit — no fabricated bound, G2/VR-5).
+fn flt_cmp_result(prim: &str, inputs: &[&Value], truth: bool) -> Result<Value, EvalError> {
+    if !inputs.iter().all(|v| flt_input_composable(v)) {
+        return Err(EvalError::ApproxCompositionUnsupported {
+            prim: prim.to_owned(),
+        });
+    }
+    let strength = GuaranteeStrength::propagate(
+        GuaranteeStrength::Empirical,
+        inputs.iter().map(|v| v.meta().guarantee()),
+    );
+    let provenance = Provenance::Derived {
+        op: operation_hash(prim),
+        inputs: inputs.iter().map(|v| v.content_hash()).collect(),
+    };
+    // Defensive `Wf` arms, as in `flt_result`: strength is Empirical-with-bound by construction
+    // and a one-bit payload matches `Binary{1}` — kept explicit so a future inconsistency
+    // refuses honestly instead of panicking (G2).
+    let meta = Meta::new(
+        provenance,
+        strength,
+        Some(flt_cmp_bound()),
+        None,
+        None,
+        None,
+    )
+    .map_err(EvalError::Wf)?;
+    Value::new(Repr::Binary { width: 1 }, Payload::Bits(vec![truth]), meta).map_err(EvalError::Wf)
+}
+
+/// `flt.lt : (Float, Float) → Binary{1}` — IEEE-754 §5.11 `compareQuietLess` (ADR-040 §2.4;
+/// M-899). **NaN is unordered:** any NaN operand → `false` (the defined predicate value, not a
+/// fallback — see the section note). Tag `Empirical` with the zero-deviation comparison bound.
+fn prim_flt_lt(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = flt_binop(prim, args)?;
+    flt_cmp_result(prim, args, a < b)
+}
+
+/// `flt.le : (Float, Float) → Binary{1}` — IEEE-754 §5.11 `compareQuietLessEqual`. **NaN is
+/// unordered:** any NaN operand → `false` (`le` is NOT `¬gt` on floats — both are false on
+/// unordered). Tag as [`prim_flt_lt`].
+fn prim_flt_le(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = flt_binop(prim, args)?;
+    flt_cmp_result(prim, args, a <= b)
+}
+
+/// `flt.gt : (Float, Float) → Binary{1}` — IEEE-754 §5.11 `compareQuietGreater`. **NaN is
+/// unordered:** any NaN operand → `false` (NaN is not "the biggest" under the partial order —
+/// only the *named* total order `flt.total_le` places it). Tag as [`prim_flt_lt`].
+fn prim_flt_gt(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = flt_binop(prim, args)?;
+    flt_cmp_result(prim, args, a > b)
+}
+
+/// `flt.ge : (Float, Float) → Binary{1}` — IEEE-754 §5.11 `compareQuietGreaterEqual`. **NaN is
+/// unordered:** any NaN operand → `false`. Tag as [`prim_flt_lt`].
+fn prim_flt_ge(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = flt_binop(prim, args)?;
+    flt_cmp_result(prim, args, a >= b)
+}
+
+/// `flt.eq : (Float, Float) → Binary{1}` — IEEE-754 §5.11 `compareQuietEqual`. **NaN ≠ NaN**
+/// (`flt.eq(NaN, NaN) = false` — the honest unordered result; `¬flt.eq(x, x)` is the in-band
+/// NaN test), and the signed zeros compare **equal** (`flt.eq(−0, +0) = true`) even though they
+/// are bit- and address-distinct — the documented ADR-040 FLAG-4 identity-vs-equality seam
+/// (`flt.total_le` is the op that *does* separate them). Tag as [`prim_flt_lt`].
+fn prim_flt_eq(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = flt_binop(prim, args)?;
+    #[allow(clippy::float_cmp)] // IEEE §5.11 compareQuietEqual IS the op's spec, not a bug.
+    flt_cmp_result(prim, args, a == b)
+}
+
+/// `flt.total_le : (Float, Float) → Binary{1}` — IEEE-754 §5.10 `totalOrder(a, b)`: `a`
+/// precedes-or-equals `b` in the **named, opt-in total order**
+/// `−inf < … < −0 < +0 < … < +inf < NaN` (ADR-040 §2.4; M-899). Total and reflexive — every
+/// pair is ordered, `total_le(NaN, NaN) = true`, the canonical NaN (§2.3) sorts last, and
+/// `−0`/`+0` are *distinct* (`total_le(−0, +0) ∧ ¬total_le(+0, −0)`) — so sorting/keying floats
+/// is deterministic, by explicit request, never by a silently-imposed order (cmp.md Q1).
+///
+/// **Tag `Empirical` — the M-511 proof debt (VR-5).** The total-order *property* (totality,
+/// antisymmetry, transitivity, the placement rules) is corpus/property-tested here but has **no
+/// checked proof**; it stays `Empirical` until M-511 discharges it — never `Proven` on the
+/// strength of the host's `total_cmp` documentation alone.
+fn prim_flt_total_le(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = flt_binop(prim, args)?;
+    flt_cmp_result(prim, args, a.total_cmp(&b) != Ordering::Greater)
 }

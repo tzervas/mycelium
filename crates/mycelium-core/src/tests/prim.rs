@@ -102,8 +102,12 @@ fn builtins_are_present_and_resolvable() {
     // `dense.dot`/`dense.similarity` — pinned separately below because their
     // intrinsics are NOT all `Exact`; ADR-040 §2.5/M-898 added the scalar-float arithmetic
     // group `flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg` — likewise pinned separately
-    // below, its intrinsic is `Empirical` per the ratified ADR-040 §2.6).
-    assert_eq!(t.entries().len(), 40);
+    // below, its intrinsic is `Empirical` per the ratified ADR-040 §2.6; ADR-040 §2.4/M-899
+    // added the scalar-float comparison group `flt.lt`/`flt.le`/`flt.gt`/`flt.ge`/`flt.eq`
+    // (the IEEE-754 §5.11 partial-order predicates, NaN unordered) plus the named opt-in
+    // total order `flt.total_le` — likewise `Empirical`, pinned separately below; the
+    // total-order property stays unproven until the M-511 proof debt is discharged).
+    assert_eq!(t.entries().len(), 46);
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -187,6 +191,50 @@ fn flt_group_carries_the_adr040_empirical_intrinsic() {
             "{name}: operands are the documented `Any` escape hatch"
         );
         assert_eq!(d.sig.result, PrimParadigm::Any);
+    }
+}
+
+// M-899 (`enb` Gap A): the scalar-float comparison group — explicit NaN semantics per the
+// ratified ADR-040 §2.4. `flt.lt`/`flt.le`/`flt.gt`/`flt.ge`/`flt.eq` are the IEEE-754 §5.11
+// partial-order *predicates* (any comparison involving NaN is the defined value false —
+// `flt.eq(NaN, NaN) = false`), and `flt.total_le` is the **named, opt-in** total order
+// (IEEE-754 §5.10 `totalOrder`). The intrinsic is `Empirical` per ADR-040 §2.6 (VR-5: never
+// upgraded) — and, load-bearing here, the `totalOrder` total-order *property* stays `Empirical`
+// **until the M-511 proof debt is discharged**: no `Proven` is claimed anywhere (no checked
+// side-condition theorem exists). This test pins the table side; the runtime NaN-semantics
+// corpus + property evidence lives in `mycelium-interp`.
+#[test]
+fn flt_cmp_group_carries_the_adr040_empirical_intrinsic() {
+    let t = PrimTable::builtins();
+    for name in [
+        "flt.lt",
+        "flt.le",
+        "flt.gt",
+        "flt.ge",
+        "flt.eq",
+        "flt.total_le",
+    ] {
+        let d = t.get(name).expect("flt comparison builtin registered");
+        assert_eq!(
+            d.intrinsic,
+            GuaranteeStrength::Empirical,
+            "{name}: intrinsic must stay the ratified ADR-040 §2.6 `Empirical` (VR-5; for \
+             flt.total_le the total-order property is the M-511 proof debt — never `Proven` \
+             without the checked theorem)"
+        );
+        assert_eq!(d.sig.arity(), 2, "{name}: arity drifted");
+        assert_eq!(
+            d.sig.width,
+            WidthRel::Collapse,
+            "{name}: width-collapsing (two Float scalars → Binary{{1}})"
+        );
+        // Operands stay the documented `Any` escape hatch (no first-class `Float` paradigm yet);
+        // the result genuinely is a Binary{1} truth value, so `Binary` is precise.
+        assert!(
+            d.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+            "{name}: operands are the documented `Any` escape hatch"
+        );
+        assert_eq!(d.sig.result, PrimParadigm::Binary);
     }
 }
 
@@ -289,15 +337,16 @@ fn contains_returns_true_iff_registered() {
 fn names_returns_registered_sorted_names() {
     let t = PrimTable::builtins();
     let ns = t.names();
-    // Exactly 40 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
+    // Exactly 46 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
     // seq.len/seq.get + D4 bytes.len/get/slice/concat + DN-41 bit.width_cast + DN-58/M-817
     // fuse_join:binary + RFC-0033/M-887 bin.mul + RFC-0033/M-888 bin.div/bin.rem + RFC-0033/M-889
     // bin.shl/bin.shr + RFC-0033/M-766 bin.add/bin.sub/bin.neg + RFC-0001 §4.1/M-890
     // dense.add/dense.sub/dense.neg/dense.scale + M-891 dense.dot/dense.similarity +
-    // ADR-040 §2.5/M-898 flt.add/flt.sub/flt.mul/flt.div/flt.neg).
+    // ADR-040 §2.5/M-898 flt.add/flt.sub/flt.mul/flt.div/flt.neg + ADR-040 §2.4/M-899
+    // flt.lt/flt.le/flt.gt/flt.ge/flt.eq/flt.total_le).
     assert_eq!(
         ns.len(),
-        40,
+        46,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).
