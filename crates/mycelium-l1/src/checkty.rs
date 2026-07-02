@@ -3965,6 +3965,12 @@ impl Cx<'_> {
         if let Some(ret) = self.try_check_dense_prim(scope, head, name, args)? {
             return Ok(ret);
         }
+        // ADR-040 §2.5 (M-898, `enb` Gap A): the scalar-float arithmetic prims. `Float` is a
+        // nullary type (no width to anchor — every operand and the result are exactly `Float`),
+        // so a dedicated branch like dense/seq/bytes, not the width-polymorphic `prim_family`.
+        if let Some(ret) = self.try_check_float_prim(scope, head, name, args)? {
+            return Ok(ret);
+        }
         let Some(fam) = prim_family(name) else {
             return self.err(teach_unknown(
                 name,
@@ -5070,6 +5076,64 @@ impl Cx<'_> {
         }
     }
 
+    /// Try to check a call to a **scalar-float arithmetic prim** (ADR-040 §2.5; M-898, `enb`
+    /// Gap A) — `flt_add`/`flt_sub`/`flt_mul`/`flt_div` (binary) and `flt_neg` (unary), kernel
+    /// `flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg` (surface names are `_`-joined like
+    /// `dense_add`, since `.` is the path separator in the lexer). Returns `Ok(None)` if `name`
+    /// is not one of them.
+    ///
+    /// `Float` is nullary (binary64 only at introduction — ADR-040 FLAG-1), so the static rule is
+    /// the simplest of the prim branches: every operand must be exactly `Float`, and the result is
+    /// `Float`. A non-`Float` operand is an explicit refusal (a cross-paradigm edge needs an
+    /// explicit `swap`; a bare decimal has no `Float` anchor — RFC-0012 §4.3 gives it none — so it
+    /// is refused, never defaulted; write a float literal `1.0`, M-897). The numeric-domain
+    /// behaviour is deliberately **not** a static rule and **not** a runtime refusal either:
+    /// arithmetic specials (overflow → ±inf, `x/0` → ±inf, `0/0` → NaN) are **in-band,
+    /// inspectable, propagating values** per the ratified ADR-040 §2.4 FLAG-2 — the ops are total
+    /// over `Float` (contrast `div_bin`, whose integer div-by-zero has no in-band sentinel and
+    /// must refuse at runtime). Per-op tag: `Empirical` per ADR-040 §2.6, carried on the runtime
+    /// value with its zero-deviation-vs-spec bound (`mycelium-interp/src/prims.rs`).
+    fn try_check_float_prim(
+        &self,
+        scope: &mut Vec<(String, Ty)>,
+        head: &Expr,
+        name: &str,
+        args: &[Expr],
+    ) -> Result<Option<(Ty, Expr)>, CheckError> {
+        if !matches!(
+            name,
+            "flt_add" | "flt_sub" | "flt_mul" | "flt_div" | "flt_neg"
+        ) {
+            return Ok(None);
+        }
+        let want = if name == "flt_neg" { 1 } else { 2 };
+        if args.len() != want {
+            return self.err(format!(
+                "`{name}` takes {want} operand(s), got {} (ADR-040 §2.5; M-898)",
+                args.len()
+            ));
+        }
+        let mut rebuilt = Vec::with_capacity(want);
+        for (i, a) in args.iter().enumerate() {
+            let (ty, a2) = self.check(scope, a, Some(&Ty::Float))?;
+            if !matches!(ty, Ty::Float) {
+                let which = match (want, i) {
+                    (1, _) => "single",
+                    (_, 0) => "first",
+                    _ => "second",
+                };
+                return self.err(format!(
+                    "`{name}` {which} operand must be a `Float` (IEEE-754 binary64 — ADR-040 \
+                     §2.1), got {ty} (M-898 — never a silent conversion; a cross-paradigm edge \
+                     needs an explicit `swap`, and a bare decimal has no Float anchor — write a \
+                     float literal like `1.0`)"
+                ));
+            }
+            rebuilt.push(a2);
+        }
+        Ok(Some((Ty::Float, app_node(head, rebuilt))))
+    }
+
     /// Literal typing (Q6): a literal *is* its representation — a binary literal's width is its
     /// digit count, a ternary literal's trit count its width. Bare integers need context v0 does not
     /// yet give them → explicit refusal, never a cross-family default. (List literals are checked by
@@ -5677,6 +5741,18 @@ pub fn prim_kernel_name(name: &str) -> Option<&'static str> {
         // (absolute/Linf; see `mycelium-interp/src/prims.rs`), result form Dense{1, F64}.
         "dense_dot" => "dense.dot",
         "dense_similarity" => "dense.similarity",
+        // ADR-040 §2.5 (M-898, `enb` Gap A): the scalar-float arithmetic group — IEEE-754
+        // binary64 under RNE over the nullary `Float` type (M-896/M-897), in-band specials per
+        // the ratified FLAG-2, per-op tag `Empirical` per ADR-040 §2.6. Surface names are
+        // `_`-joined like `dense_add` (a `.` is the path separator in the lexer); a distinct
+        // `flt_*` namespace because floats are their own type — the `_bin`/`_tc` signedness
+        // suffixes of the integer set don't apply (there is one float reading, not two). Typed
+        // by the dedicated `try_check_float_prim` branch (all operands `Float`, result `Float`).
+        "flt_add" => "flt.add",
+        "flt_sub" => "flt.sub",
+        "flt_mul" => "flt.mul",
+        "flt_div" => "flt.div",
+        "flt_neg" => "flt.neg",
         "add" => "trit.add",
         "sub" => "trit.sub",
         "mul" => "trit.mul",

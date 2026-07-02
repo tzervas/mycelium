@@ -26,8 +26,8 @@ use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
 use mycelium_core::{
-    binary, operation_hash, ternary, Bound, GuaranteeStrength, Meta, Payload, Provenance, Repr,
-    Trit, Value,
+    binary, operation_hash, ternary, Bound, BoundBasis, BoundKind, FloatWidth, GuaranteeStrength,
+    Meta, NormKind, Payload, Provenance, Repr, Trit, Value,
 };
 use mycelium_dense::{DenseError, DenseSpace};
 use mycelium_numerics::{compose_error_bound, ErrorOp};
@@ -88,7 +88,10 @@ impl PrimRegistry {
     /// `enb` Gap C; the first tensor-valued prims — plus the M-891 measurement pair
     /// `dense.dot`/`dense.similarity`; all delegate to the `mycelium-dense` kernel and
     /// carry its per-op guarantee tags unchanged — `dense.neg` `Exact`, the rest `Proven`; see
-    /// the module note at the dense section below).
+    /// the module note at the dense section below), and the **scalar-float arithmetic group**
+    /// (`flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg`, ADR-040 §2.5, M-898 — `enb` Gap A;
+    /// IEEE-754 binary64 under RNE over `Repr::Float`, arithmetic specials in-band per the
+    /// ratified FLAG-2, per-op tag `Empirical` per ADR-040 §2.6 — see the float section note).
     #[must_use]
     pub fn with_builtins() -> Self {
         let mut r = PrimRegistry::empty();
@@ -144,6 +147,16 @@ impl PrimRegistry {
         r.register("dense.scale", prim_dense_scale);
         r.register("dense.dot", prim_dense_dot);
         r.register("dense.similarity", prim_dense_similarity);
+        // ADR-040 §2.5 (M-898, `enb` Gap A): the scalar-float arithmetic group over
+        // `Repr::Float{F64}` — IEEE-754 binary64 under round-to-nearest-even, in-band specials
+        // (±inf/NaN propagate as first-class values — the ratified FLAG-2 policy; never a trap,
+        // never a silent wrap onto an ordinary value). Per-op tag `Empirical` per the ratified
+        // ADR-040 §2.6 — see the module note at the float section below.
+        r.register("flt.add", prim_flt_add);
+        r.register("flt.sub", prim_flt_sub);
+        r.register("flt.mul", prim_flt_mul);
+        r.register("flt.div", prim_flt_div);
+        r.register("flt.neg", prim_flt_neg);
         r
     }
 
@@ -1431,4 +1444,190 @@ fn prim_dense_similarity(prim: &str, args: &[&Value]) -> Result<Value, EvalError
     space
         .similarity_value(args[0], args[1])
         .map_err(|e| map_dense_err(prim, e))
+}
+
+// --- ADR-040 §2.5 (M-898, `enb` Gap A): scalar-float arithmetic over `Repr::Float` -------------
+//
+// `flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg` — IEEE-754 **binary64** arithmetic under
+// **round-to-nearest-even only** (RNE, the IEEE default; there is no rounding-mode register —
+// rounding is a property of the *operation*, never hidden state; any future non-RNE rounding is a
+// distinct named op — ADR-040 §2.2, the ADR-028 signedness-as-operations parallel).
+//
+// **Never-silent, the float reading (ratified FLAG-2 — ADR-040 §2.4).** Arithmetic specials are
+// **in-band, inspectable, propagating values**, not errors: overflow → ±inf, x/±0 → ±inf (sign by
+// IEEE), 0/0 and inf−inf → NaN. The rationale (argued in the ADR, not assumed): integer overflow
+// is never-silent-by-refusal because wraparound *aliases an ordinary in-range value*; float
+// overflow lands on a *distinguished sentinel that propagates* and is directly inspectable — the
+// in-band signal IS the never-silent mechanism, and trapping would make standard IEEE algorithms
+// inexpressible. So these five ops are **total** over `Float` operands: no `Overflow` refusal, no
+// silent alias. (Conversion boundaries — float↔integer etc. — remain explicit-error; they are not
+// these ops.) Every NaN result carries the canonical bits by [`Value::new`]'s construction
+// invariant (ADR-040 §2.3; `mycelium_core::CANONICAL_NAN_BITS`) — one NaN, one address.
+//
+// **Per-op tag — `Empirical`, per the ratified ADR-040 §2.6 (VR-5: never upgraded).** The op's
+// *definition* is "the correctly-rounded IEEE-754 binary64 result under RNE" (`Exact` as a
+// definition — it is the spec). The *implementation claim* — that the host's f64 arithmetic
+// delivers exactly that bit pattern — is **`Empirical`** at introduction: it rests on the
+// "Rust f64 is IEEE-754 binary64" platform statement (`Declared`, the Rust reference; not
+// independently verified) and is pinned by the hand-derived IEEE reference-case corpus in
+// `src/tests/prims.rs` (exactly [`FLT_CONFORMANCE_TRIALS`] cases whose expected bit patterns are
+// derived from IEEE-754 semantics by hand, not recomputed with the op under test). The disclosed
+// bound is therefore a **zero-deviation-vs-spec** claim: `ErrorBound{eps: 0.0, Linf}` against the
+// IEEE-defined correctly-rounded result, basis `EmpiricalFit{FLT_CONFORMANCE_TRIALS, method}` —
+// deliberately NOT a rounding-error bound vs *real* arithmetic (that claim is a theorem with
+// side-conditions nobody checks here; claiming it would be an unearned `Proven` — ADR-040 §2.6
+// claims no `Proven` anywhere). libm is NOT involved (§2.5 keeps transcendentals out of the
+// kernel), so this is not the Empirical-libm accuracy case: the `Empirical` here is host-RNE
+// *conformance*, not an approximation fit.
+//
+// **Composition (the M-204 posture, float form).** A `flt.*` result is `Empirical`, so chained
+// float arithmetic must compose: an input is accepted iff it is `Exact` (e.g. a float literal,
+// M-897) or carries exactly this zero-deviation `Empirical` form (a prior `flt.*` result) —
+// zero-deviation-vs-spec composes to zero-deviation-vs-spec under any deterministic op, so the
+// composed claim stays checked, never fabricated. Any *other* bound (a genuine approximation)
+// has no defined float ε-propagation rule yet and is an explicit
+// [`EvalError::ApproxCompositionUnsupported`] refusal (G2/VR-5 — refuse, don't guess).
+
+/// The trial count of the M-898 IEEE reference-case corpus (`src/tests/prims.rs`,
+/// `flt_reference_case_corpus`) — the evidence behind the `EmpiricalFit` basis every `flt.*`
+/// result carries. The corpus test asserts its row count equals this constant, so the recorded
+/// trials can never silently drift from the trials actually run (VR-5).
+pub const FLT_CONFORMANCE_TRIALS: u64 = 40;
+
+/// The method recorded in the `EmpiricalFit` basis of every `flt.*` result (ADR-040 §2.6).
+pub const FLT_CONFORMANCE_METHOD: &str = "bit-reproducibility differential against hand-derived \
+     IEEE-754 binary64 RNE reference cases (exact-arithmetic rows, ties-to-even at the 2^53 \
+     boundary, overflow/underflow edges, signed zeros, in-band specials algebra, canonical-NaN \
+     identity)";
+
+/// The zero-deviation-vs-spec bound every `flt.*` result carries (see the module note above):
+/// the delivered bit pattern deviates from the IEEE-754-defined correctly-rounded RNE binary64
+/// result by at most 0 (`Linf`), on the `EmpiricalFit` evidence of the reference-case corpus.
+fn flt_bound() -> Bound {
+    Bound {
+        kind: BoundKind::Error {
+            eps: 0.0,
+            norm: NormKind::Linf,
+        },
+        basis: BoundBasis::EmpiricalFit {
+            trials: FLT_CONFORMANCE_TRIALS,
+            method: FLT_CONFORMANCE_METHOD.to_owned(),
+        },
+    }
+}
+
+/// Extract the binary64 scalar of a `Float` operand; any other representation is an explicit
+/// [`EvalError::PrimType`] — never a silent coercion (G2). The returned NaN, if any, already
+/// carries the canonical bits ([`mycelium_core::CANONICAL_NAN_BITS`]) by `Value::new`'s
+/// construction invariant.
+fn as_float(prim: &str, v: &Value) -> Result<f64, EvalError> {
+    match (v.repr(), v.payload()) {
+        (Repr::Float { .. }, Payload::Float(x)) => Ok(*x),
+        _ => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: format!("expected a Float operand, got {:?}", v.repr()),
+        }),
+    }
+}
+
+/// Whether a `flt.*` input's tag/bound is composable (the module-note rule): `Exact`, or the
+/// zero-deviation `Empirical` form a prior `flt.*` op produced. Anything else — a genuine
+/// approximation bound — has no defined float ε-propagation rule yet.
+fn flt_input_composable(v: &Value) -> bool {
+    match v.meta().guarantee() {
+        GuaranteeStrength::Exact => true,
+        GuaranteeStrength::Empirical => matches!(
+            v.meta().bound(),
+            Some(Bound {
+                kind: BoundKind::Error { eps, .. },
+                basis: BoundBasis::EmpiricalFit { .. },
+            }) if *eps == 0.0
+        ),
+        _ => false,
+    }
+}
+
+/// Build a `flt.*` result: `Float{F64}` repr, the computed scalar (NaN canonicalized by
+/// [`Value::new`] — ADR-040 §2.3), `Derived` provenance, and the honest ADR-040 §2.6 tag —
+/// strength `meet(Empirical, inputs)` with the zero-deviation `EmpiricalFit` bound. An input
+/// that is neither `Exact` nor the composable zero-deviation form is an explicit
+/// [`EvalError::ApproxCompositionUnsupported`] (never a fabricated bound — G2/VR-5).
+fn flt_result(prim: &str, inputs: &[&Value], out: f64) -> Result<Value, EvalError> {
+    if !inputs.iter().all(|v| flt_input_composable(v)) {
+        return Err(EvalError::ApproxCompositionUnsupported {
+            prim: prim.to_owned(),
+        });
+    }
+    // Inputs are Exact or the zero-deviation Empirical form, and the op contributes Empirical
+    // (ADR-040 §2.6) ⇒ the meet is Empirical, paired with the zero-deviation bound (M-I1/M-I3).
+    let strength = GuaranteeStrength::propagate(
+        GuaranteeStrength::Empirical,
+        inputs.iter().map(|v| v.meta().guarantee()),
+    );
+    let provenance = Provenance::Derived {
+        op: operation_hash(prim),
+        inputs: inputs.iter().map(|v| v.content_hash()).collect(),
+    };
+    // The `Wf` arms are defensive, as in `compose_result`: strength is Empirical-with-bound by
+    // construction here, and the payload matches the repr — kept explicit so a future
+    // inconsistency refuses honestly instead of panicking (G2).
+    let meta = Meta::new(provenance, strength, Some(flt_bound()), None, None, None)
+        .map_err(EvalError::Wf)?;
+    Value::new(
+        Repr::Float {
+            width: FloatWidth::F64,
+        },
+        Payload::Float(out),
+        meta,
+    )
+    .map_err(EvalError::Wf)
+}
+
+/// Shared arity/operand extraction for the binary `flt.*` ops.
+fn flt_binop(prim: &str, args: &[&Value]) -> Result<(f64, f64), EvalError> {
+    expect_arity(prim, args, 2)?;
+    Ok((as_float(prim, args[0])?, as_float(prim, args[1])?))
+}
+
+/// `flt.add : (Float, Float) → Float` — IEEE-754 binary64 addition, RNE (ADR-040 §2.2/§2.5;
+/// M-898). Total: overflow → ±inf, NaN propagates (in-band specials, ratified FLAG-2 — the
+/// module note above). Tag `Empirical` with the zero-deviation-vs-spec bound (ADR-040 §2.6).
+fn prim_flt_add(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = flt_binop(prim, args)?;
+    flt_result(prim, args, a + b)
+}
+
+/// `flt.sub : (Float, Float) → Float` — IEEE-754 binary64 subtraction, RNE. Same total/in-band
+/// contract and `Empirical` tag as [`prim_flt_add`].
+fn prim_flt_sub(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = flt_binop(prim, args)?;
+    flt_result(prim, args, a - b)
+}
+
+/// `flt.mul : (Float, Float) → Float` — IEEE-754 binary64 multiplication, RNE. Same total/in-band
+/// contract and `Empirical` tag as [`prim_flt_add`] (`0 × inf → NaN`, canonical).
+fn prim_flt_mul(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = flt_binop(prim, args)?;
+    flt_result(prim, args, a * b)
+}
+
+/// `flt.div : (Float, Float) → Float` — IEEE-754 binary64 division, RNE. Total: `x/±0 → ±inf`
+/// (sign by IEEE), `0/0 → NaN` (canonical) — **in-band, never a trap** (the ratified FLAG-2
+/// policy; the distinguished sentinel is the never-silent signal, unlike `bin.div`'s integer
+/// div-by-zero, which has no in-band sentinel and must refuse). Tag as [`prim_flt_add`].
+fn prim_flt_div(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    let (a, b) = flt_binop(prim, args)?;
+    flt_result(prim, args, a / b)
+}
+
+/// `flt.neg : Float → Float` — IEEE-754 binary64 negation (sign-bit flip; exact in binary64 —
+/// negation never rounds, and `neg(neg(x))` is a bit-identity). The tag still carries the group's
+/// `Empirical` host-conformance posture (ADR-040 §2.6 tags the whole `flt.*` set; splitting `neg`
+/// out at a stronger tag is a maintainer call — FLAGged in the M-898 report, not silently taken).
+/// `neg(NaN)` re-canonicalizes to the positive quiet NaN (§2.3 — NaN sign/payload bits are not
+/// observable).
+fn prim_flt_neg(prim: &str, args: &[&Value]) -> Result<Value, EvalError> {
+    expect_arity(prim, args, 1)?;
+    let a = as_float(prim, args[0])?;
+    flt_result(prim, args, -a)
 }

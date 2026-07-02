@@ -50,6 +50,16 @@
 //!   `Empirical` by the bit-exact `float_literal_round_trip_corpus` differential against rustc's
 //!   own decimal→binary64 conversion. The full three-way runs in the `float_literal_*_three_way`
 //!   tests; the never-silent form/range/pattern refusals are pinned by the `float_*_reject` tests.
+//! - **M-898** (ADR-040 §2.5, kickoff `enb` Phase-I H1 Gap A) — the **scalar-float arithmetic
+//!   prims** `flt_add`/`flt_sub`/`flt_mul`/`flt_div`/`flt_neg` (kernel `flt.*`): IEEE-754 binary64
+//!   under RNE, arithmetic specials **in-band** per the ratified FLAG-2 (overflow → ±inf,
+//!   `x/0` → ±inf, `0/0` → NaN — never a trap; the distinguished sentinel is the never-silent
+//!   signal), every NaN canonical (§2.3). Per-op tag **`Empirical`** per the ratified ADR-040
+//!   §2.6 (host-RNE conformance, zero-deviation-vs-spec bound; no `Proven` anywhere), inspected
+//!   off the value on every path below. Because M-897's float literal landed, the **nullary-main
+//!   surface three-way closes** for float arithmetic (`flt_arith_*_three_way` below) — unlike the
+//!   dense group, whose surface leg still injects kernel-built arguments (see the M-890 note).
+//!   Static conformance accept/reject in the `flt_prims_conformance_*` tests.
 
 use mycelium_core::{
     Bound, BoundBasis, BoundKind, FloatWidth, GuaranteeStrength, Meta, Node, NormKind, Payload,
@@ -1634,6 +1644,269 @@ fn float_pattern_reject() {
         msg.contains("match scrutinee") && msg.contains("Float"),
         "the refusal must name the scrutinee rule and the Float type: {err}"
     );
+}
+
+// ── M-898 (ADR-040 §2.5, `enb` Gap A): the scalar-float arithmetic prims ────────────────────────
+//
+// `flt_add`/`flt_sub`/`flt_mul`/`flt_div`/`flt_neg` (kernel `flt.add`/`flt.sub`/`flt.mul`/
+// `flt.div`/`flt.neg`) — IEEE-754 binary64 arithmetic under **round-to-nearest-even only**
+// (rounding is a property of the operation, never hidden state — ADR-040 §2.2, the ADR-028
+// parallel). The never-silent contract has two distinct halves (G2):
+//   - **static** — every operand must be exactly `Float` (a non-`Float` operand, a bare decimal,
+//     and a wrong arity are explicit check-time refusals — `flt_prims_conformance_reject`);
+//   - - none at runtime by design — the ops are **total** over `Float`: arithmetic specials are
+//     **in-band, inspectable, propagating values** per the ratified ADR-040 §2.4 FLAG-2
+//     (overflow → ±inf, `x/0` → ±inf with the IEEE sign rule, `0/0` → canonical NaN), pinned
+//     three-way by the `flt_arith_specials_*` tests — never a trap, never a silent alias of an
+//     ordinary value (the in-band sentinel IS the signal; contrast integer `div_bin`, which has
+//     no sentinel and must refuse).
+// Per-op tag: **`Empirical`** per the ratified ADR-040 §2.6 — the correctly-rounded-RNE
+// *definition* is the spec (`Exact` as a definition), the host-delivers-those-bits
+// *implementation claim* is `Empirical` (pinned by the 40-case hand-derived IEEE reference corpus
+// in `mycelium-interp/src/tests/prims.rs`), the platform IEEE statement stays `Declared`; no
+// `Proven` anywhere. The disclosed bound is zero-deviation-vs-spec (`eps = 0`, `Linf`,
+// `EmpiricalFit`), EXPLAIN-able off the value — checked on every path below.
+//
+// **Where the three-way closes (recorded honestly — G2/VR-5).** M-897's float literal makes a
+// *nullary* `main` over float values expressible, so the **full surface three-way**
+// (L1-eval ≡ elaborate→L0-interp ≡ AOT over `assert_float_three_way_bits`) **closes** for the
+// whole group — including the in-band specials — with no refusal to record (the AOT env-machine
+// dispatches `Op` nodes through the same trusted `PrimRegistry`). This is the Gap-A closure the
+// dense group's section note anticipated.
+
+/// Like [`assert_float_three_way_bits`], and additionally asserts the ADR-040 §2.6 tag contract
+/// on **every** path: guarantee `Empirical`, bound `eps = 0`/`Linf` on an `EmpiricalFit` basis
+/// (the zero-deviation-vs-spec claim, EXPLAIN-able off the value — G2/SC-3).
+#[track_caller]
+fn assert_flt_three_way_with_tag(label: &str, src: &str, expected: f64) {
+    let interp = Interpreter::new(
+        PrimRegistry::with_builtins(),
+        Box::new(mycelium_cert::BinaryTernarySwapEngine),
+    );
+    let env = check_nodule(&parse(src).unwrap_or_else(|e| panic!("{label}: parse failed: {e}")))
+        .unwrap_or_else(|e| panic!("{label}: check failed: {e}"));
+    let l1 = Evaluator::new(&env)
+        .call("main", vec![])
+        .unwrap_or_else(|e| panic!("{label}: L1-eval failed: {e}"));
+    let l1 = l1
+        .as_repr()
+        .unwrap_or_else(|| panic!("{label}: result must be a repr value"))
+        .clone();
+    let node =
+        elaborate(&env, "main").unwrap_or_else(|e| panic!("{label}: must be in the fragment: {e}"));
+    let l0 = interp
+        .eval(&node)
+        .unwrap_or_else(|e| panic!("{label}: L0-interp failed: {e}"));
+    let aot = mycelium_mlir::run(
+        &node,
+        &PrimRegistry::with_builtins(),
+        &mycelium_cert::BinaryTernarySwapEngine,
+    )
+    .unwrap_or_else(|e| panic!("{label}: AOT failed: {e}"));
+    for (path, v) in [("L1-eval", &l1), ("L0-interp", &l0), ("AOT", &aot)] {
+        let Payload::Float(x) = v.payload() else {
+            panic!("{label}: {path} payload is not Float: {:?}", v.payload());
+        };
+        assert_eq!(
+            x.to_bits(),
+            expected.to_bits(),
+            "{label}: {path} bits mismatch (got {x:?}, want {expected:?})"
+        );
+        assert_eq!(
+            v.meta().guarantee(),
+            GuaranteeStrength::Empirical,
+            "{label}: {path} must carry the ratified ADR-040 §2.6 Empirical tag (VR-5)"
+        );
+        match v.meta().bound() {
+            Some(Bound {
+                kind: BoundKind::Error { eps, norm },
+                basis: BoundBasis::EmpiricalFit { trials, .. },
+            }) => {
+                assert_eq!(*eps, 0.0, "{label}: {path} zero-deviation-vs-spec bound");
+                assert_eq!(*norm, NormKind::Linf);
+                assert!(*trials >= 1, "an Empirical basis is never evidence-free");
+            }
+            other => panic!("{label}: {path} expected the EmpiricalFit bound, got {other:?}"),
+        }
+    }
+}
+
+/// The nullary-main surface three-way closes for each arithmetic op over exact dyadic operands
+/// (bit-exact reference results), and the ADR-040 §2.6 tag rides every path.
+#[test]
+fn flt_arith_ops_three_way() {
+    assert_flt_three_way_with_tag(
+        "flt_add",
+        "nodule d;\nfn main() => Float = flt_add(1.5, 2.25);",
+        3.75,
+    );
+    assert_flt_three_way_with_tag(
+        "flt_sub",
+        "nodule d;\nfn main() => Float = flt_sub(3.75, 1.5);",
+        2.25,
+    );
+    assert_flt_three_way_with_tag(
+        "flt_mul",
+        "nodule d;\nfn main() => Float = flt_mul(1.5, 2.0);",
+        3.0,
+    );
+    assert_flt_three_way_with_tag(
+        "flt_div",
+        "nodule d;\nfn main() => Float = flt_div(3.0, 2.0);",
+        1.5,
+    );
+    assert_flt_three_way_with_tag(
+        "flt_neg",
+        "nodule d;\nfn main() => Float = flt_neg(1.5);",
+        -1.5,
+    );
+}
+
+/// RNE is observable at the surface: `0.1 + 0.2` is the correctly-rounded binary64
+/// `0.30000000000000004` (not `0.3`) on all three paths — the canonical rounding witness.
+#[test]
+fn flt_arith_rne_rounding_three_way() {
+    assert_flt_three_way_with_tag(
+        "flt_add rounds RNE",
+        "nodule d;\nfn main() => Float = flt_add(0.1, 0.2);",
+        0.300_000_000_000_000_04,
+    );
+}
+
+/// Chained float arithmetic composes (an `Empirical` intermediate is a legal operand):
+/// `(1.5 × 2.0) + 0.25 = 3.25`, bit-exact on all three paths.
+#[test]
+fn flt_arith_composition_three_way() {
+    assert_flt_three_way_with_tag(
+        "flt composition",
+        "nodule d;\nfn main() => Float = flt_add(flt_mul(1.5, 2.0), 0.25);",
+        3.25,
+    );
+}
+
+/// `Float` params/returns flow through functions: the ops accept function-bound `Float` values.
+#[test]
+fn flt_arith_through_functions_three_way() {
+    assert_flt_three_way_with_tag(
+        "flt through fn",
+        "nodule d;\nfn scale2(x: Float) => Float = flt_mul(x, 2.0);\nfn main() => Float = scale2(2.25);",
+        4.5,
+    );
+}
+
+/// **In-band specials (the ratified ADR-040 FLAG-2), three-way:** div-by-zero → ±inf with the
+/// IEEE sign rule, `0/0` → the canonical NaN, and overflow → +inf — **values on every path**,
+/// never a trap/refusal and never a silent alias of an ordinary number (the sentinel is the
+/// never-silent signal; every path agrees bit-for-bit, NaN included, because NaN is canonical).
+#[test]
+fn flt_arith_specials_are_in_band_three_way() {
+    assert_flt_three_way_with_tag(
+        "1/0 → +inf",
+        "nodule d;\nfn main() => Float = flt_div(1.0, 0.0);",
+        f64::INFINITY,
+    );
+    assert_flt_three_way_with_tag(
+        "-1/0 → -inf",
+        "nodule d;\nfn main() => Float = flt_div(flt_neg(1.0), 0.0);",
+        f64::NEG_INFINITY,
+    );
+    assert_flt_three_way_with_tag(
+        "1/-0 → -inf (signed zero is observable)",
+        "nodule d;\nfn main() => Float = flt_div(1.0, flt_neg(0.0));",
+        f64::NEG_INFINITY,
+    );
+    assert_flt_three_way_with_tag(
+        "0/0 → canonical NaN",
+        "nodule d;\nfn main() => Float = flt_div(0.0, 0.0);",
+        f64::from_bits(mycelium_core::CANONICAL_NAN_BITS),
+    );
+    // Overflow: MAX + MAX → +inf, in-band (f64::MAX's shortest round-trip literal).
+    assert_flt_three_way_with_tag(
+        "overflow → +inf",
+        "nodule d;\nfn main() => Float = flt_add(1.7976931348623157e308, 1.7976931348623157e308);",
+        f64::INFINITY,
+    );
+    // The signed-zero identity: neg(+0) is −0, bit-distinct (ADR-040 §2.3 — a payload `==`
+    // could not see this; the bit assertion can).
+    assert_flt_three_way_with_tag(
+        "neg(0.0) → -0.0 bit-exactly",
+        "nodule d;\nfn main() => Float = flt_neg(0.0);",
+        -0.0,
+    );
+}
+
+/// Static conformance — accept: every float-prim signature the checker must admit.
+#[test]
+fn flt_prims_conformance_accept() {
+    for src in [
+        "nodule d;\nfn f(a: Float, b: Float) => Float = flt_add(a, b);",
+        "nodule d;\nfn f(a: Float, b: Float) => Float = flt_sub(a, b);",
+        "nodule d;\nfn f(a: Float, b: Float) => Float = flt_mul(a, b);",
+        "nodule d;\nfn f(a: Float, b: Float) => Float = flt_div(a, b);",
+        "nodule d;\nfn f(a: Float) => Float = flt_neg(a);",
+        // Literal operands (M-897) and composition (dim-free: Float is nullary).
+        "nodule d;\nfn main() => Float = flt_add(1.5, 2.5e-3);",
+        "nodule d;\nfn f(a: Float) => Float = flt_neg(flt_mul(a, 2.0));",
+    ] {
+        check_nodule(&parse(src).expect("parses"))
+            .unwrap_or_else(|e| panic!("must accept: {src}\n  got: {e}"));
+    }
+}
+
+/// Static conformance — reject: the never-silent operand/arity contract is a *check-time*
+/// refusal with a message naming the offense (G2). A bare decimal has no `Float` anchor
+/// (RFC-0012 §4.3 — never a cross-family default), and a non-`Float` operand points at the
+/// missing explicit `swap`.
+#[test]
+fn flt_prims_conformance_reject() {
+    for (src, needle) in [
+        // Non-Float operand: never a silent conversion.
+        (
+            "nodule d;\nfn f(a: Binary{8}, b: Float) => Float = flt_add(a, b);",
+            "must be a `Float`",
+        ),
+        (
+            "nodule d;\nfn f(a: Float, b: Binary{8}) => Float = flt_add(a, b);",
+            "must be a `Float`",
+        ),
+        (
+            "nodule d;\nfn f(t: Ternary{4}) => Float = flt_neg(t);",
+            "must be a `Float`",
+        ),
+        // A bare decimal is not a float literal: no cross-family defaulting (Q6/RFC-0012 §4.3) —
+        // without an ambient it has no representation family at all, and even under a declared
+        // `default paradigm` it cannot fill a `Float` context (no silent int→float).
+        (
+            "nodule d;\nfn main() => Float = flt_add(1, 1.5);",
+            "no representation family",
+        ),
+        (
+            "nodule d;\ndefault paradigm Binary;\nfn main() => Float = flt_add(1, 1.5);",
+            "cannot fill a Float context",
+        ),
+        // Arity: explicit.
+        (
+            "nodule d;\nfn main() => Float = flt_add(1.5);",
+            "takes 2 operand(s)",
+        ),
+        (
+            "nodule d;\nfn main() => Float = flt_neg(1.5, 2.5);",
+            "takes 1 operand(s)",
+        ),
+        // The result is Float: a non-Float return edge is an explicit mismatch naming the type.
+        (
+            "nodule d;\nfn main() => Binary{8} = flt_add(1.5, 2.5);",
+            "Float",
+        ),
+    ] {
+        let err =
+            check_nodule(&parse(src).expect("parses")).expect_err(&format!("must reject: {src}"));
+        let msg = err.to_string();
+        assert!(
+            msg.contains(needle),
+            "the refusal must name the offense.\n  src: {src}\n  want: {needle}\n  got: {msg}"
+        );
+    }
 }
 
 // ── M-890 (`enb` Gap C): the dense elementwise prim group ───────────────────────────────────────

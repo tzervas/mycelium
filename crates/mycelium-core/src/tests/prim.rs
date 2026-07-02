@@ -100,8 +100,10 @@ fn builtins_are_present_and_resolvable() {
     // §4.1/M-890 added the dense elementwise group `dense.add`/`dense.sub`/`dense.neg`/
     // `dense.scale`, the first tensor-valued prims, and M-891 the measurement pair
     // `dense.dot`/`dense.similarity` — pinned separately below because their
-    // intrinsics are NOT all `Exact`).
-    assert_eq!(t.entries().len(), 35);
+    // intrinsics are NOT all `Exact`; ADR-040 §2.5/M-898 added the scalar-float arithmetic
+    // group `flt.add`/`flt.sub`/`flt.mul`/`flt.div`/`flt.neg` — likewise pinned separately
+    // below, its intrinsic is `Empirical` per the ratified ADR-040 §2.6).
+    assert_eq!(t.entries().len(), 40);
 }
 
 // M-890 (`enb` Gap C): the dense elementwise group — the first non-`Exact` intrinsics in Π.
@@ -145,6 +147,41 @@ fn dense_group_carries_the_kernel_tags() {
         assert_eq!(d.sig.width, width, "{name}: width relation drifted");
         // Paradigm-model escape hatch (FLAG in builtins()): Dense operands/results are `Any`
         // until a first-class Dense paradigm lands; the real typing is kernel + L1-checker.
+        assert!(
+            d.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+            "{name}: operands are the documented `Any` escape hatch"
+        );
+        assert_eq!(d.sig.result, PrimParadigm::Any);
+    }
+}
+
+// M-898 (`enb` Gap A): the scalar-float arithmetic group — the first `Empirical` intrinsics in Π.
+// The tag is the ratified ADR-040 §2.6 posture (VR-5: never upgraded without a checked basis):
+// the op's *definition* is the correctly-rounded IEEE-754 binary64 RNE result (`Exact` as a
+// definition), the *implementation claim* that host f64 delivers that bit pattern is `Empirical`
+// (pinned by the reference-case corpus in `mycelium-interp`), and the platform IEEE statement is
+// `Declared`. No `Proven` anywhere (no checked side-condition theorem is claimed). This test pins
+// the table side; the runtime-value tag/bound contract is guarded in `mycelium-interp`.
+#[test]
+fn flt_group_carries_the_adr040_empirical_intrinsic() {
+    let t = PrimTable::builtins();
+    for (name, arity) in [
+        ("flt.add", 2),
+        ("flt.sub", 2),
+        ("flt.mul", 2),
+        ("flt.div", 2),
+        ("flt.neg", 1),
+    ] {
+        let d = t.get(name).expect("flt builtin registered");
+        assert_eq!(
+            d.intrinsic,
+            GuaranteeStrength::Empirical,
+            "{name}: intrinsic must stay the ratified ADR-040 §2.6 `Empirical` (VR-5)"
+        );
+        assert_eq!(d.sig.arity(), arity, "{name}: arity drifted");
+        assert_eq!(d.sig.width, WidthRel::Uniform, "{name}: width rel drifted");
+        // Paradigm-model escape hatch (FLAG in builtins()): no first-class `Float` paradigm yet;
+        // the real all-operands-Float typing is the interpreter prim + the L1 checker branch.
         assert!(
             d.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
             "{name}: operands are the documented `Any` escape hatch"
@@ -252,14 +289,15 @@ fn contains_returns_true_iff_registered() {
 fn names_returns_registered_sorted_names() {
     let t = PrimTable::builtins();
     let ns = t.names();
-    // Exactly 35 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
+    // Exactly 40 builtins (the original 9 + RFC-0032 cmp.eq/cmp.lt/bit.add/bit.sub + D3
     // seq.len/seq.get + D4 bytes.len/get/slice/concat + DN-41 bit.width_cast + DN-58/M-817
     // fuse_join:binary + RFC-0033/M-887 bin.mul + RFC-0033/M-888 bin.div/bin.rem + RFC-0033/M-889
     // bin.shl/bin.shr + RFC-0033/M-766 bin.add/bin.sub/bin.neg + RFC-0001 §4.1/M-890
-    // dense.add/dense.sub/dense.neg/dense.scale + M-891 dense.dot/dense.similarity).
+    // dense.add/dense.sub/dense.neg/dense.scale + M-891 dense.dot/dense.similarity +
+    // ADR-040 §2.5/M-898 flt.add/flt.sub/flt.mul/flt.div/flt.neg).
     assert_eq!(
         ns.len(),
-        35,
+        40,
         "names() count must match the builtin count: {ns:?}"
     );
     // Sorted (BTreeMap iteration is sorted).

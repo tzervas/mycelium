@@ -61,6 +61,16 @@ fn every_interp_builtin_intrinsic_matches_its_composition_path() {
                 "prim `{name}`: the table's intrinsic must be carried verbatim from the \
                  mycelium-dense kernel's op_guarantee (VR-5)",
             );
+        } else if name.starts_with("flt.") {
+            // ADR-040 §2.6 (M-898): the scalar-float group routes through `flt_result`, whose
+            // per-op tag is the ratified `Empirical` host-conformance posture (the value-side
+            // twin — tag + zero-deviation bound — is guarded in `src/tests/prims.rs`).
+            assert_eq!(
+                table.intrinsic(name),
+                Some(GuaranteeStrength::Empirical),
+                "prim `{name}`: the table's intrinsic must match flt_result's ADR-040 §2.6 \
+                 Empirical (VR-5)",
+            );
         } else {
             assert_eq!(
                 table.intrinsic(name),

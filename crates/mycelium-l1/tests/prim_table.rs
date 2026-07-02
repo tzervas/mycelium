@@ -174,6 +174,48 @@ fn dense_prims_resolve_to_declared_tensor_valued_kernel_prims() {
     }
 }
 
+/// The M-898 (`enb` Gap A) scalar-float arithmetic prims operate on the nullary `Ty::Float`
+/// (IEEE-754 binary64 — ADR-040), typed by a dedicated checker branch (`try_check_float_prim`),
+/// and their Π entries use the documented `Any`/`Uniform` paradigm-model escape hatch (no
+/// first-class `Float` paradigm yet — the same FLAG as the seq/bytes/dense prims). This guard
+/// pins their surface→Π consistency directly: each `flt_*` surface name maps to a declared
+/// `flt.*` kernel prim with the right arity, `Any` operands/result, and — the M-898 core
+/// contract — the intrinsic at the ratified ADR-040 §2.6 **`Empirical`** (VR-5: the
+/// host-conformance claim, never upgraded; the value-side twin — tag + zero-deviation bound —
+/// lives in `mycelium-interp`).
+#[test]
+fn float_prims_resolve_to_declared_empirical_kernel_prims() {
+    use mycelium_core::GuaranteeStrength;
+    let table = PrimTable::builtins();
+    for (surface, kernel_expected, arity) in [
+        ("flt_add", "flt.add", 2),
+        ("flt_sub", "flt.sub", 2),
+        ("flt_mul", "flt.mul", 2),
+        ("flt_div", "flt.div", 2),
+        ("flt_neg", "flt.neg", 1),
+    ] {
+        let kernel = prim_kernel_name(surface)
+            .unwrap_or_else(|| panic!("float prim `{surface}` must map to a kernel name"));
+        assert_eq!(kernel, kernel_expected, "surface→kernel mapping drifted");
+        assert!(
+            table.contains(kernel),
+            "surface `{surface}` → kernel `{kernel}`, but `{kernel}` is not declared in Π",
+        );
+        let decl = table.get(kernel).expect("declared prim");
+        assert_eq!(decl.sig.arity(), arity, "`{kernel}` arity drifted");
+        assert!(
+            decl.sig.operands.iter().all(|p| *p == PrimParadigm::Any),
+            "`{kernel}` operands use the documented `Any` escape hatch (no Float paradigm yet)",
+        );
+        assert_eq!(decl.sig.result, PrimParadigm::Any);
+        assert_eq!(
+            decl.intrinsic,
+            GuaranteeStrength::Empirical,
+            "`{kernel}` intrinsic must stay the ratified ADR-040 §2.6 Empirical (VR-5)",
+        );
+    }
+}
+
 /// The RFC-0032 D1 (M-747) comparison prims are **width-collapsing** and paradigm-flexible
 /// (`Any, Any → Binary`, `WidthRel::Collapse`), so they do not fit the width-uniform `surface_cases`
 /// shape (they bypass `prim_sig` via a dedicated checker branch). This guard pins their surface→Π
