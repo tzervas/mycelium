@@ -4,9 +4,9 @@
 
 use crate::ast::{
     AmbientParams, Arm, BaseType, Ctor, DeriveDecl, ExecutionMode, Expr, FnDecl, FnSig, Hypha,
-    ImplDecl, InherentImplDecl, Item, Literal, LowerDecl, Nodule, ObjectDecl, Paradigm, Param,
-    ParamKind, Path, Pattern, Phylum, Scalar, Sparsity, Strength, TraitDecl, TraitRef, TypeDecl,
-    TypeParam, TypeRef, UsePath, ViaDecl, Vis, WidthRef,
+    ImplDecl, InherentImplDecl, Item, Literal, LowerDecl, LowerRhs, Nodule, ObjectDecl, Paradigm,
+    Param, ParamKind, Path, Pattern, Phylum, Scalar, Sparsity, Strength, TraitDecl, TraitRef,
+    TypeDecl, TypeParam, TypeRef, UsePath, ViaDecl, Vis, WidthRef,
 };
 use crate::error::ParseError;
 use crate::lexer::lex;
@@ -1404,9 +1404,28 @@ impl Parser {
             &Tok::Eq,
             "`=` after the rule name/params in a `lower` declaration (DN-54 §3)",
         )?;
-        // The RHS is a full expression — type-checked against the IL grammar at check time.
-        let rhs = self.parse_expr()?;
+        // The RHS is either **item-shaped** (`impl Trait for T { … }` — DN-54 §10.1(b) / §10.3
+        // Model A, the sibling-injection template; parsed by [`Self::parse_lower_item_rhs`]) or a
+        // full **expression** (the v0 form, type-checked against the IL grammar at check time). The
+        // leading `impl` keyword disambiguates: only the item form can open with it (M-973).
+        let rhs = if self.at(&Tok::Impl) {
+            LowerRhs::Impl(self.parse_lower_item_rhs()?)
+        } else {
+            LowerRhs::Expr(self.parse_expr()?)
+        };
         Ok(LowerDecl { name, params, rhs })
+    }
+
+    /// Parse an **item-shaped** `lower`-rule RHS (DN-54 §10.1(b) / §10.3 Model A; OQ-B; M-973). The
+    /// **only** legal item form in v1 is a trait-instance template `impl Trait[args]? for T { … }`
+    /// (DN-54 §10.6 OQ-B — the minimum for the §3.2 worked example; `type` aliases and standalone
+    /// `fn` items are deliberately out of v1 scope, YAGNI). The template's `for` type is the rule's
+    /// type parameter (e.g. `T`); a `derive Name for C` use site substitutes `C` for it and injects
+    /// the concrete impl as a sibling (checked in `checkty.rs`). Reuses [`Self::parse_impl_decl`], so
+    /// an inherent `impl T { … }` (no `for`) is a never-silent parse error (G2 — no silent
+    /// over-generalization of the legal item set).
+    fn parse_lower_item_rhs(&mut self) -> Result<ImplDecl, ParseError> {
+        self.parse_impl_decl()
     }
 
     /// `derive Name for T` — use-site application of a generative-lowering rule (DN-54 / DN-38

@@ -549,6 +549,15 @@ pub struct Env {
     /// must lower to existing L0 nodes, never grow the kernel) are both enforced at check time —
     /// never-silent (G2).
     pub lower_rules: BTreeMap<String, LowerDecl>,
+    /// **Provenance of `derive`-generated sibling impls** (DN-54 §10.6 OQ-A / DN-81 §6.5 / RFC-0001
+    /// §4.3; M-973). Keyed by the same `(trait_name, type_head)` coherence key as [`Self::instances`],
+    /// each value records the `(rule_name, for_ty_render)` a Model-A sibling injection came from — so
+    /// a derived impl is distinguishable from a hand-written one (`reveal`/EXPLAIN provenance), and
+    /// Model A retains Model B's one intrinsic edge (DN-81 §5.3 Objection 2). Empty in any nodule with
+    /// no `derive` sites. **Guarantee: `Declared`** — this is recorded metadata, not a checked
+    /// property; ADR-003 content-addressing is the substantive identity, this map is the human-facing
+    /// origin label (VR-5 — carried honestly, never upgraded).
+    pub derived_provenance: BTreeMap<(String, String), (String, String)>,
 }
 
 impl Env {
@@ -828,9 +837,21 @@ fn collect_tuple_arities_item(
                 collect_tuple_arities_expr(&f.body, out);
             }
         }
-        Item::Lower(ld) => {
-            collect_tuple_arities_expr(&ld.rhs, out);
-        }
+        Item::Lower(ld) => match &ld.rhs {
+            crate::ast::LowerRhs::Expr(e) => collect_tuple_arities_expr(e, out),
+            // Item-shaped RHS (DN-54 §10 Model A, M-973): collect tuple arities from the impl
+            // template's method signatures + bodies, exactly as the `Item::Impl` arm above.
+            crate::ast::LowerRhs::Impl(id) => {
+                for t in &id.trait_args {
+                    collect_tuple_arities_typeref(t, out);
+                }
+                collect_tuple_arities_typeref(&id.for_ty, out);
+                for m in &id.methods {
+                    collect_tuple_arities_sig(&m.sig, out);
+                    collect_tuple_arities_expr(&m.body, out);
+                }
+            }
+        },
         Item::InherentImpl(iid) => {
             collect_tuple_arities_typeref(&iid.for_ty, out);
             for m in &iid.methods {
@@ -1805,23 +1826,121 @@ fn check_nodule_with(
         }
         all
     };
-    // Build the effective nodule (with via impls appended) for the instance + impl-body passes.
-    // If there are no via impls, borrow the original nodule directly (avoids a clone in the common
-    // case of no `via` declarations). The `Option` owner keeps the `Nodule` alive long enough for
-    // the borrow `effective_nodule` to be valid across pass 2b and 3b below.
-    let effective_nodule_owned: Option<Nodule> = if via_generated_impls.is_empty() {
-        None
-    } else {
-        let mut items = nodule.items.clone();
-        for id in &via_generated_impls {
-            items.push(Item::Impl(id.clone()));
+    // Phase 0c (DN-54 §10 Model A / DN-81 §10.4 / M-973): **register `lower` rules and expand
+    // `derive` sites to sibling `impl`s BEFORE Pass 2b/3b** — the deliberate affine wiring the
+    // ratified correction demands. This is the enactment of the attachment model: a `derive Name for
+    // C` whose rule has an item-shaped RHS (`lower Name[T] = impl Trait for T { … }`) is instantiated
+    // (substitute `C` for the rule's type param) and its concrete `impl` **injected as a sibling
+    // item** into `effective_nodule` — exactly as `via` injects its forwarding impls. Because the
+    // injection happens *before* `register_instances` (Pass 2b, coherence/orphan) and
+    // `check_impl_methods` (Pass 3b, whose `check_fn_body` runs the **active** M-919 affine tracker),
+    // the derived impl gets coherence, orphan, effect, guarantee-grading **and affine use-once**
+    // coverage **by construction** — the affine wiring is "process derives before Pass 3b" (DN-81
+    // §10.4 option (a)), never an unchecked no-op (proved by the derive-site double-consume reject
+    // test). Only the *item-shaped* rules inject a sibling; an expression-shaped rule's `derive` has
+    // no sibling (its L0 is the `elaborate_lower_rule` nullary term — unchanged). All never-silent
+    // (G2): an unknown rule, an ill-formed target type, or a non-single type-parameter item rule is an
+    // explicit refusal here, before any sibling is built.
+    //
+    // Structural registration + §4.2 acyclicity run here too (moved up from the former Pass 3e) so
+    // `lower_rules` is populated before the derive expansion reads it; the §4.1 RHS type-check stays
+    // *after* Pass 2b (Pass 3e-late) because it needs the resolved `instances`.
+    let mut lower_rules: BTreeMap<String, LowerDecl> = BTreeMap::new();
+    for item in &nodule.items {
+        if let Item::Lower(ld) = item {
+            check_lower_decl_structural(ld, &lower_rules)?;
+            lower_rules.insert(ld.name.clone(), ld.clone());
         }
-        Some(Nodule {
-            path: nodule.path.clone(),
-            std_sys: nodule.std_sys,
-            items,
-        })
-    };
+    }
+    check_lower_rule_acyclicity(&lower_rules, &types, &fns)?;
+    // Expand each `derive` into its concrete sibling impl (item-shaped rules only). De-dup by the
+    // ADR-003 content key `(trait, type_head)`: two *identical* `derive`s collapse to one injected
+    // impl (a no-op duplicate — DN-54 §10.3); a genuine conflict (a different impl on the same key,
+    // or a hand-written impl on that key) is left for `register_instances` to refuse as a coherence
+    // violation, never silently (G2). Provenance (OQ-A / DN-81 §6.5) is recorded per injected impl.
+    let mut derive_generated_impls: Vec<ImplDecl> = Vec::new();
+    let mut derived_provenance: BTreeMap<(String, String), (String, String)> = BTreeMap::new();
+    let mut derived_seen: BTreeMap<(String, String), ImplDecl> = BTreeMap::new();
+    for item in &nodule.items {
+        let Item::Derive(dd) = item else { continue };
+        // Rule resolution + target-type well-formedness (never-silent, G2).
+        check_derive_application(dd, &lower_rules, &types)?;
+        let rule = &lower_rules[&dd.name];
+        let Some(template) = rule.impl_rhs() else {
+            // An expression-shaped rule: no sibling impl to inject (its L0 is the nullary
+            // `elaborate_lower_rule` term). The derive site is validated (above); nothing attaches.
+            continue;
+        };
+        // Model A instantiation requires exactly one type parameter to bind to the `derive`'s target
+        // type (`lower Name[T] = impl … for T`; DN-54 §3.2). A nullary or multi-param item rule is a
+        // never-silent refusal in v1 (multi-param instantiation is OQ-C, a future extension).
+        if rule.params.len() != 1 {
+            return Err(CheckError::new(
+                &dd.name,
+                format!(
+                    "`derive {} for …` targets an item-shaped rule with {} type parameter(s), but \
+                     Model-A sibling injection binds the single `derive` target type to exactly one \
+                     rule parameter (`lower {}[T] = impl … for T`; DN-54 §10.3 / OQ-C multi-param is \
+                     a future extension — never a silent mis-instantiation, G2)",
+                    dd.name,
+                    rule.params.len(),
+                    dd.name
+                ),
+            ));
+        }
+        let concrete = subst_type_param_in_impl(template, &rule.params[0], &dd.for_ty);
+        // The content key = the resolved `(trait, type_head)` of the concrete impl — the same key
+        // `register_instances` coheres on. Resolve the head now for the de-dup + provenance key.
+        let (for_ty_resolved, _) = resolve_ty(&dd.name, &types, &[], &concrete.for_ty)?;
+        let Some(head) = type_head(&for_ty_resolved) else {
+            return Err(CheckError::new(
+                &dd.name,
+                format!(
+                    "`derive {} for {for_ty_resolved}` instantiates to an `impl … for \
+                     {for_ty_resolved}` whose target is not a concrete instance head (DN-54 §10.2 / \
+                     RFC-0019 §4.5 — a derive target must be a concrete type, never a bare type \
+                     variable; G2)",
+                    dd.name
+                ),
+            ));
+        };
+        let key = (concrete.trait_name.clone(), head);
+        match derived_seen.get(&key) {
+            // Identical prior derive on the same key ⇒ ADR-003 content-key de-dup: a no-op (DN-54
+            // §10.3). A *different* impl on the same key is NOT resolved here — it is left to
+            // `register_instances`, which refuses it as an overlapping-instance coherence violation
+            // (the correct never-silent diagnostic, G2). So we only skip an exact duplicate.
+            Some(prev) if *prev == concrete => continue,
+            _ => {}
+        }
+        derived_seen.insert(key.clone(), concrete.clone());
+        // Provenance (OQ-A / DN-81 §6.5 / RFC-0001 §4.3): record the originating rule + target so a
+        // derived impl is distinguishable from a hand-written one (`Declared` — carried, not upgraded).
+        derived_provenance.insert(key, (dd.name.clone(), format!("{for_ty_resolved}")));
+        derive_generated_impls.push(concrete);
+    }
+
+    // Build the effective nodule (with via impls AND derive-generated sibling impls appended) for the
+    // instance + impl-body passes. If neither is present, borrow the original nodule directly (avoids
+    // a clone in the common case). The `Option` owner keeps the `Nodule` alive long enough for the
+    // borrow `effective_nodule` to be valid across pass 2b and 3b below.
+    let effective_nodule_owned: Option<Nodule> =
+        if via_generated_impls.is_empty() && derive_generated_impls.is_empty() {
+            None
+        } else {
+            let mut items = nodule.items.clone();
+            for id in &via_generated_impls {
+                items.push(Item::Impl(id.clone()));
+            }
+            for id in &derive_generated_impls {
+                items.push(Item::Impl(id.clone()));
+            }
+            Some(Nodule {
+                path: nodule.path.clone(),
+                std_sys: nodule.std_sys,
+                items,
+            })
+        };
     let effective_nodule: &Nodule = effective_nodule_owned.as_ref().unwrap_or(nodule);
 
     // Pass 2b: register trait **instances** (RFC-0019 §4.5). Coherence (global uniqueness + the
@@ -1898,62 +2017,22 @@ fn check_nodule_with(
         }
     }
 
-    // Pass 3e: **lower-rule validation** (DN-54 §4/§6 / M-812-cont). For each
-    // `lower Name[params] = <rhs>` declaration, validate the RHS:
-    //   (1) **Structural** (§3): rule-name uniqueness + param-name uniqueness (never-silent, G2).
-    //   (2) **§4.1 IL-grammar RHS type-check**: the RHS must type-check as an L1 expression under a
-    //       typing context that binds each param name as an abstract type variable ([`Ty::Var`]) —
-    //       the rule is parametric. An ill-typed / ill-formed RHS is refused at definition time, so
-    //       no `derive` site can invoke a rule that would produce broken L0.
-    //   (3) **§4.6 purity**: the RHS may not contain a `wild { … }` block — a generative-lowering
-    //       rule is a *pure compile-time* mechanism; the FFI gate does not vanish under a `derive`.
-    //   (4) **§6 KC-3 (kernel-growth)**: enforced **by construction** (see [`check_lower_decl`] and
-    //       [`crate::elab::elaborate_lower_rule`]): the L0 kernel node set is a *closed* Rust enum
-    //       ([`mycelium_core::Node`]), so the elaborator can only ever produce one of the frozen
-    //       variants — a `lower` rule **cannot** add a kernel node. The §4.6 `wild`-refusal in (3)
-    //       is the one *surface* growth a rule could smuggle in (a host op), so refusing it is the
-    //       substantive KC-3 surface check.
-    // For a `derive Name for T` declaration, the name must resolve to a registered `lower` rule, and
-    // the type argument is checked against the rule's parameter arity (DN-54 §4).
+    // Pass 3e-late: **§4.1 IL-grammar RHS type-check** of each `lower` rule (DN-54 §4.1 / M-812-cont).
+    // The structural checks (§3 uniqueness / param-uniqueness / §4.6 `wild`-purity), rule registration,
+    // §4.2 acyclicity, and the `derive`-site expansion all ran in **Phase 0c** above (before Pass 2b),
+    // so the derived sibling impls are already coherence/orphan-checked (Pass 2b) and their method
+    // bodies affine/body-checked (Pass 3b) — the DN-81 §10.4 affine wiring. What remains here is the
+    // per-rule RHS type-check, which is deferred to *after* Pass 2b because it needs the resolved
+    // `instances` (a rule's RHS may call trait methods). For an **expression**-shaped rule this is the
+    // IL-grammar `infer` (with the M-919 active affine tracker); for an **item**-shaped rule it is the
+    // template's trait/method-set validation (its full body/affine check already happened at each
+    // derive site — DN-54 §10.4). See [`check_lower_rule_rhs_type`].
     //
-    // Acyclicity (§4.2) is enforced once over the whole rule set after registration (a cyclic rule
-    // set would diverge the elaboration pipeline) — see [`check_lower_rule_acyclicity`].
-    //
-    // Guarantee posture (VR-5, honest): the RHS type-check (2) and the `wild`-refusal (3) are
-    // `Declared` (structural checks against the IL grammar, not theorems). The KC-3 guard (4) is
-    // `Proven`-by-construction *only* in the narrow, checked sense above (the frozen-enum codomain of
-    // the elaborator) — it is not a proof that an arbitrary RHS elaborates, only that **if** it
-    // elaborates, it adds no kernel node (which is exactly KC-3). The elaboration itself
-    // ([`crate::elab::elaborate_lower_rule`]) is `Empirical` (its observational identity is earned by
-    // the §7 differential, never self-attested).
-    // Ordering is load-bearing (G2 — the most structural refusal wins so the diagnostic is precise):
-    //   (a) **structural** per-rule checks (uniqueness, param-uniqueness, §4.6 `wild`-refusal) +
-    //       register the rule, and resolve each `derive`'s rule-name + target type;
-    //   (b) **§4.2 acyclicity** over the *whole* registered set — a cyclic rule set is a structural
-    //       error regardless of whether a rule-reference is type-valid (a bare path to another rule
-    //       name is the cycle edge; it would *also* fail the §4.1 type-check as an unresolved name,
-    //       but the cycle is the more specific, more useful diagnostic, so it runs first);
-    //   (c) **§4.1 IL-grammar RHS type-check** of each rule, last (an acyclic, structurally-valid
-    //       rule whose RHS is nonetheless ill-typed is refused here).
-    let mut lower_rules: BTreeMap<String, LowerDecl> = BTreeMap::new();
-    for item in &nodule.items {
-        match item {
-            Item::Lower(ld) => {
-                check_lower_decl_structural(ld, &lower_rules)?;
-                lower_rules.insert(ld.name.clone(), ld.clone());
-            }
-            Item::Derive(dd) => {
-                check_derive_application(dd, &lower_rules, &types)?;
-            }
-            _ => {}
-        }
-    }
-    // (b) §4.2 cross-rule acyclicity — reject a `lower` rule set whose rules (transitively) reference
-    // one another in a cycle (mutual recursion among rules), which would diverge the elaboration
-    // pipeline. Over the full set, so a forward reference is seen.
-    check_lower_rule_acyclicity(&lower_rules, &types, &fns)?;
-    // (c) §4.1 IL-grammar RHS type-check of each rule (after acyclicity, so a cyclic set reports the
-    // cycle, not an "unknown name" for the cycle edge).
+    // Guarantee posture (VR-5, honest): the RHS type-check is `Declared` (a structural IL-grammar
+    // check, not a theorem). KC-3 (§6) holds **by construction** — the elaborator's codomain is the
+    // *closed* [`mycelium_core::Node`] enum, so a rule can add no kernel node; the §4.6 `wild`-refusal
+    // (Phase 0c) closes the one surface-growth a rule could smuggle in. The elaboration itself
+    // ([`crate::elab::elaborate_lower_rule`]) is `Empirical` (earned by the §7 differential).
     for ld in lower_rules.values() {
         check_lower_rule_rhs_type(ld, &types, &fns, &traits, &instances, imports)?;
     }
@@ -2012,6 +2091,7 @@ fn check_nodule_with(
         instances,
         impls,
         lower_rules,
+        derived_provenance,
     })
 }
 
@@ -2056,7 +2136,26 @@ fn check_lower_decl_structural(
     // (3) §4.6 purity — a `lower` rule's RHS must be a pure compile-time term; a `wild { … }` block
     // (the audited FFI floor — LR-9/S6) is refused **structurally** here so the diagnostic names
     // DN-54 §4.6 precisely (and so the refusal holds even in an `@std-sys` nodule). Never-silent (G2).
-    if rhs_contains_wild(&ld.rhs).map_err(|e| CheckError::new(&ld.name, e.to_string()))? {
+    // The RHS is pure whether it is expression-shaped (walk the expr) or item-shaped (walk every
+    // method body of the `impl` template — DN-54 §10 Model A, M-973). A `wild` anywhere is refused.
+    let has_wild = match &ld.rhs {
+        crate::ast::LowerRhs::Expr(e) => {
+            rhs_contains_wild(e).map_err(|err| CheckError::new(&ld.name, err.to_string()))?
+        }
+        crate::ast::LowerRhs::Impl(id) => {
+            let mut found = false;
+            for m in &id.methods {
+                if rhs_contains_wild(&m.body)
+                    .map_err(|err| CheckError::new(&ld.name, err.to_string()))?
+                {
+                    found = true;
+                    break;
+                }
+            }
+            found
+        }
+    };
+    if has_wild {
         return Err(CheckError::new(
             &ld.name,
             format!(
@@ -2107,6 +2206,42 @@ fn check_lower_rule_rhs_type(
     instances: &BTreeMap<(String, String), InstanceInfo>,
     imports: &NoduleImports,
 ) -> Result<(), CheckError> {
+    // An **item-shaped** rule (DN-54 §10 Model A, M-973) is not an expression: its full type-check
+    // happens at each `derive` site, over the concrete (substituted) sibling `impl` — through the
+    // ordinary `register_instances` (coherence/orphan) + `check_impl_methods` (bodies + the M-919
+    // affine tracker) passes. At definition time we validate only what is decidable on the parametric
+    // template without a concrete `for` type: the trait must exist and the method **set** must match
+    // the trait's requirement set exactly (never silently filled/dropped — G2). A rule that is never
+    // derived is thus still refused if its impl names an unknown trait or the wrong method set; a
+    // *derived* rule gets the full body/affine check at its use site (DN-54 §10.4). This is honest
+    // (VR-5): the template's per-body type-check is `Declared` here and earned `Empirical`/checked at
+    // the derive site, never over-claimed at definition.
+    if let crate::ast::LowerRhs::Impl(id) = &ld.rhs {
+        let Some(tr) = traits.get(&id.trait_name) else {
+            return Err(CheckError::new(
+                &ld.name,
+                format!(
+                    "`lower {}`'s item RHS is `impl {} for …`, but trait `{}` is not declared in \
+                     scope (DN-54 §10.3 Model A; a derive template's trait must be visible — never \
+                     silent, G2)",
+                    ld.name, id.trait_name, id.trait_name
+                ),
+            ));
+        };
+        check_impl_method_set(tr, id).map_err(|e| {
+            CheckError::new(
+                &ld.name,
+                format!(
+                    "`lower {}`'s item RHS `impl {} for …`: {}",
+                    ld.name, id.trait_name, e.message
+                ),
+            )
+        })?;
+        return Ok(());
+    }
+    let rhs = ld
+        .expr_rhs()
+        .expect("item-shaped rules returned above; this is the expression arm");
     let cx = Cx {
         site: &ld.name,
         types,
@@ -2125,7 +2260,7 @@ fn check_lower_rule_rhs_type(
         affine: Tracker::seeded(&[]),
     };
     let mut scope: Vec<(String, Ty)> = Vec::new();
-    cx.infer(&mut scope, &ld.rhs).map_err(|e| {
+    cx.infer(&mut scope, rhs).map_err(|e| {
         CheckError::new(
             &ld.name,
             format!(
@@ -2150,6 +2285,251 @@ fn rhs_contains_wild(rhs: &Expr) -> Result<bool, crate::totality::WalkDepthExcee
         }
     })?;
     Ok(found)
+}
+
+// ---- DN-54 §10 Model A: derive-site type-parameter instantiation (M-973) ----
+//
+// A `derive Name for C` instantiates an item-shaped `lower Name[T] = impl … for T { … }` rule by
+// substituting the concrete target `C` for the rule's single type parameter `T` throughout the
+// `impl` template, then injecting the resulting concrete `ImplDecl` as a sibling item (Phase 0c). The
+// substitution is **purely structural** (no typing context needed), **Swap-free** (it never inserts a
+// representation change — VR-5/G2), and **hygiene-preserving** (a method that shadows the rule param
+// with its own type parameter is left untouched). Any occurrence the substitution does not reach (a
+// type-parameter mention the walk misses) is caught **never-silently** downstream: the concrete impl
+// is fully re-checked by `register_instances` + `check_impl_methods`, where an unresolved `T` is an
+// explicit "unknown type" [`CheckError`] — a missed substitution degrades to a loud refusal, never a
+// silent mis-lowering (G2).
+
+/// Substitute the rule's type parameter `param` with the concrete type `concrete` throughout a
+/// [`TypeRef`] (DN-54 §10 Model A instantiation; M-973). A bare `Named(param, [])` occurrence becomes
+/// `concrete` (keeping the occurrence's own guarantee index if written — `T @ Exact` ↦ `C @ Exact`);
+/// every structural form recurses; reprs / `Substrate` / `Bytes` / `Float` / VSA / dense carry no
+/// nested type-name and are cloned verbatim. Total, allocation-bounded by the input's size.
+fn subst_type_param_in_typeref(tr: &TypeRef, param: &str, concrete: &TypeRef) -> TypeRef {
+    match &tr.base {
+        BaseType::Named(name, args) if name == param && args.is_empty() => TypeRef {
+            base: concrete.base.clone(),
+            guarantee: tr.guarantee.or(concrete.guarantee),
+        },
+        BaseType::Named(name, args) => TypeRef {
+            base: BaseType::Named(
+                name.clone(),
+                args.iter()
+                    .map(|a| subst_type_param_in_typeref(a, param, concrete))
+                    .collect(),
+            ),
+            guarantee: tr.guarantee,
+        },
+        BaseType::Seq { elem, len } => TypeRef {
+            base: BaseType::Seq {
+                elem: Box::new(subst_type_param_in_typeref(elem, param, concrete)),
+                len: *len,
+            },
+            guarantee: tr.guarantee,
+        },
+        BaseType::Fn(a, b) => TypeRef {
+            base: BaseType::Fn(
+                Box::new(subst_type_param_in_typeref(a, param, concrete)),
+                Box::new(subst_type_param_in_typeref(b, param, concrete)),
+            ),
+            guarantee: tr.guarantee,
+        },
+        BaseType::Tuple(elems) => TypeRef {
+            base: BaseType::Tuple(
+                elems
+                    .iter()
+                    .map(|e| subst_type_param_in_typeref(e, param, concrete))
+                    .collect(),
+            ),
+            guarantee: tr.guarantee,
+        },
+        // No nested type-name that could be the rule parameter (widths are a *separate* parameter
+        // space — DN-42; a type parameter never appears in a width slot). Clone verbatim.
+        BaseType::Binary(_)
+        | BaseType::Ternary(_)
+        | BaseType::Dense(_, _)
+        | BaseType::Vsa { .. }
+        | BaseType::Substrate(_)
+        | BaseType::Bytes
+        | BaseType::Float
+        | BaseType::Ambient(_) => tr.clone(),
+    }
+}
+
+/// Substitute `param` ↦ `concrete` in a function **signature** (value-parameter types + return type;
+/// M-973). The signature's own type parameters (`sig.params`) and effect annotations are cloned
+/// verbatim — a method's own generics are a separate, shadowing scope, and effects carry no type.
+fn subst_type_param_in_sig(sig: &FnSig, param: &str, concrete: &TypeRef) -> FnSig {
+    FnSig {
+        name: sig.name.clone(),
+        params: sig.params.clone(),
+        value_params: sig
+            .value_params
+            .iter()
+            .map(|p| Param {
+                name: p.name.clone(),
+                ty: subst_type_param_in_typeref(&p.ty, param, concrete),
+            })
+            .collect(),
+        ret: subst_type_param_in_typeref(&sig.ret, param, concrete),
+        effects: sig.effects.clone(),
+        effect_budgets: sig.effect_budgets.clone(),
+    }
+}
+
+/// Substitute `param` ↦ `concrete` throughout an **expression** (a derived method body; M-973). The
+/// only positions an [`Expr`] carries a [`TypeRef`] are `Let`'s ascription, `Swap`'s target,
+/// `Lambda`'s parameter types, and `Ascribe`; everything else recurses structurally. Total; a
+/// [`Literal::List`]'s element expressions recurse, other literals are cloned.
+fn subst_type_param_in_expr(e: &Expr, param: &str, concrete: &TypeRef) -> Expr {
+    let boxed = |x: &Expr| Box::new(subst_type_param_in_expr(x, param, concrete));
+    match e {
+        Expr::Let {
+            name,
+            ty,
+            bound,
+            body,
+        } => Expr::Let {
+            name: name.clone(),
+            ty: ty
+                .as_ref()
+                .map(|t| subst_type_param_in_typeref(t, param, concrete)),
+            bound: boxed(bound),
+            body: boxed(body),
+        },
+        Expr::If { cond, conseq, alt } => Expr::If {
+            cond: boxed(cond),
+            conseq: boxed(conseq),
+            alt: boxed(alt),
+        },
+        Expr::Match { scrutinee, arms } => Expr::Match {
+            scrutinee: boxed(scrutinee),
+            arms: arms
+                .iter()
+                .map(|a| Arm {
+                    pattern: a.pattern.clone(),
+                    body: subst_type_param_in_expr(&a.body, param, concrete),
+                })
+                .collect(),
+        },
+        Expr::For {
+            x,
+            xs,
+            acc,
+            init,
+            body,
+        } => Expr::For {
+            x: x.clone(),
+            xs: boxed(xs),
+            acc: acc.clone(),
+            init: boxed(init),
+            body: boxed(body),
+        },
+        Expr::Swap {
+            value,
+            target,
+            policy,
+        } => Expr::Swap {
+            value: boxed(value),
+            target: subst_type_param_in_typeref(target, param, concrete),
+            policy: policy.clone(),
+        },
+        Expr::WithParadigm { paradigm, body } => Expr::WithParadigm {
+            paradigm: *paradigm,
+            body: boxed(body),
+        },
+        Expr::Wild(b) => Expr::Wild(boxed(b)),
+        Expr::Spore(b) => Expr::Spore(boxed(b)),
+        Expr::Consume(b) => Expr::Consume(boxed(b)),
+        Expr::Colony(hyphae) => Expr::Colony(
+            hyphae
+                .iter()
+                .map(|h| Hypha {
+                    forage: h.forage.as_ref().map(|f| boxed(f)),
+                    body: subst_type_param_in_expr(&h.body, param, concrete),
+                })
+                .collect(),
+        ),
+        Expr::Lambda { params, body } => Expr::Lambda {
+            params: params
+                .iter()
+                .map(|p| Param {
+                    name: p.name.clone(),
+                    ty: subst_type_param_in_typeref(&p.ty, param, concrete),
+                })
+                .collect(),
+            body: boxed(body),
+        },
+        Expr::App { head, args } => Expr::App {
+            head: boxed(head),
+            args: args
+                .iter()
+                .map(|a| subst_type_param_in_expr(a, param, concrete))
+                .collect(),
+        },
+        Expr::Fuse { left, right } => Expr::Fuse {
+            left: boxed(left),
+            right: boxed(right),
+        },
+        Expr::Reclaim { policy, body } => Expr::Reclaim {
+            policy: boxed(policy),
+            body: boxed(body),
+        },
+        Expr::Ascribe(inner, ty) => Expr::Ascribe(
+            boxed(inner),
+            subst_type_param_in_typeref(ty, param, concrete),
+        ),
+        Expr::TupleLit(elems) => Expr::TupleLit(
+            elems
+                .iter()
+                .map(|x| subst_type_param_in_expr(x, param, concrete))
+                .collect(),
+        ),
+        Expr::Lit(Literal::List(elems)) => Expr::Lit(Literal::List(
+            elems
+                .iter()
+                .map(|x| subst_type_param_in_expr(x, param, concrete))
+                .collect(),
+        )),
+        // A `Path`, or any non-`List` literal, carries no type-parameter occurrence — clone verbatim.
+        Expr::Path(_) | Expr::Lit(_) => e.clone(),
+    }
+}
+
+/// Instantiate an item-shaped `lower`-rule template at a concrete target type — the Model-A
+/// substitution `param ↦ concrete` over an entire [`ImplDecl`] (DN-54 §10.3; M-973). Substitutes the
+/// trait arguments, the `for` type, and each method's signature + body. **Hygiene (never-silent
+/// correctness):** a method that shadows the rule parameter with its **own** type parameter of the
+/// same name is left untouched (the inner binding wins; the rule param does not leak past the shadow).
+fn subst_type_param_in_impl(id: &ImplDecl, param: &str, concrete: &TypeRef) -> ImplDecl {
+    ImplDecl {
+        trait_name: id.trait_name.clone(),
+        trait_args: id
+            .trait_args
+            .iter()
+            .map(|a| subst_type_param_in_typeref(a, param, concrete))
+            .collect(),
+        for_ty: subst_type_param_in_typeref(&id.for_ty, param, concrete),
+        methods: id
+            .methods
+            .iter()
+            .map(|m| {
+                // Shadowing: if the method declares its own type parameter named `param`, that inner
+                // scope shadows the rule parameter — do not substitute inside this method (hygiene).
+                if m.sig.param_names().iter().any(|n| n == param) {
+                    m.clone()
+                } else {
+                    FnDecl {
+                        vis: m.vis,
+                        thaw: m.thaw,
+                        tier: m.tier,
+                        sig: subst_type_param_in_sig(&m.sig, param, concrete),
+                        body: subst_type_param_in_expr(&m.body, param, concrete),
+                    }
+                }
+            })
+            .collect(),
+    }
 }
 
 /// Validate a `derive Name for T` use-site application (DN-54 §4 / M-812 / DN-38 §8.1).
@@ -2220,14 +2600,25 @@ fn check_lower_rule_acyclicity(
         .iter()
         .map(|(name, ld)| {
             let mut refs = BTreeSet::new();
-            crate::totality::walk_expr(&ld.rhs, &mut |x| {
+            let mut collect = |x: &Expr| {
                 if let Expr::Path(p) = x {
                     if p.0.len() == 1 && is_rule_edge(&p.0[0]) {
                         refs.insert(p.0[0].clone());
                     }
                 }
-            })
-            .map_err(|e| CheckError::new(name, e.to_string()))?;
+            };
+            // A rule-reference edge can hide in an expression RHS *or* in any method body of an
+            // item-shaped RHS (DN-54 §10 Model A, M-973); walk whichever form the rule carries.
+            match &ld.rhs {
+                crate::ast::LowerRhs::Expr(e) => crate::totality::walk_expr(e, &mut collect)
+                    .map_err(|err| CheckError::new(name, err.to_string()))?,
+                crate::ast::LowerRhs::Impl(id) => {
+                    for m in &id.methods {
+                        crate::totality::walk_expr(&m.body, &mut collect)
+                            .map_err(|err| CheckError::new(name, err.to_string()))?;
+                    }
+                }
+            }
             Ok::<_, CheckError>((name.as_str(), refs))
         })
         .collect::<Result<_, _>>()?;
@@ -3009,10 +3400,13 @@ struct Cx<'a> {
     /// mutability so [`Self::check`] stays `&self`). Reset per body; accounted by [`DepthGuard`].
     depth: Cell<u32>,
     /// The **affine `Substrate` use-once tracker** (M-903; DN-71 §4.2) — mirrors `scope` by index
-    /// (interior mutability, matching `depth`'s pattern, so [`Self::check`] stays `&self`). Active
-    /// (seeded from the parameter scope) only in [`check_fn_body`]; **inert** (a guaranteed no-op)
-    /// in the other two `Cx` contexts (`check_lower_rule_rhs_type`, `infer_type`) — see
-    /// `crate::affine`'s module docs for why.
+    /// (interior mutability, matching `depth`'s pattern, so [`Self::check`] stays `&self`). **Active**
+    /// (seeded via [`Tracker::seeded`]) in both [`check_fn_body`] (seeded from the parameter scope)
+    /// **and** [`check_lower_rule_rhs_type`] (seeded from the empty initial scope — M-919 fix, DN-71
+    /// Model S §4.2: a `lower` rule's RHS can still bind a `Substrate` via a helper-fn call, so it is
+    /// use-once-checked too); **inert** (a guaranteed no-op) only in the `infer_type` context — see
+    /// `crate::affine`'s module docs for why. (FLAG-6 fix, M-973: this doc previously read that the
+    /// tracker was inert in `check_lower_rule_rhs_type`, stale since M-919 made it active there.)
     affine: Tracker,
 }
 
