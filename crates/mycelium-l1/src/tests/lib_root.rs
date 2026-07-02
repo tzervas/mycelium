@@ -121,6 +121,21 @@ fn runtime_vocab_keywords_are_reserved_not_active() {
     // recorded` for the new active-surface coverage). The remaining five (mesh/graft/cyst/xloc/
     // backbone) stay fully reserved-not-active until their own constructs land (RFC-0008 §4.6 R2).
     //
+    // M-907 (DN-70 §D2, verify-only — no re-land) re-verified `backbone` specifically against this
+    // test at `origin/dev` 367c601 (2026-07-02), after M-906 landed forage's D-lite surface above.
+    // Inventory (`Empirical`): `backbone` still lexes as `Tok::Backbone` (token.rs:58-59) and is
+    // rejected — never silently — at item position (parse.rs:513-525) and expression position
+    // (parse.rs:1741-1752) with the same RFC-0008 teaching diagnostic exercised by cases (b-item)/
+    // (d) below; no executing `backbone` construct, and no `BackboneRef` type, exists anywhere in
+    // the tree (repo-wide grep, zero hits). The D-lite `@forage(policy)` surface (M-906) consumes
+    // only a policy expression (parse.rs:2161-2189) — it does not reference or require a backbone
+    // input, so DN-70 §D2's predicted outcome ("recorded residual, nothing to build" on a single
+    // node) holds: **no residual to close** in this crate. The multi-node/promotion residual
+    // (DN-63 FLAG-16, backbone's H2 maturity) is separately mechanized outside `mycelium-l1`, in
+    // `mycelium-std-runtime::r2_residual::DeferredR2::MultiNodePlacement` (DN-78 §4 R-6, tracker
+    // M-828) — a total, tested refusal ledger entry, not silently dropped. FLAG-16 itself stays
+    // open, owned by the future backbone implementation RFC (unaffected by this verification pass).
+    //
     // Honesty (Declared): the RFC-0008 teaching diagnostic fires when the runtime keyword is
     // reached in a position where the parser dispatches to `parse_item` or `parse_expr_inner`
     // (cases b-item and d). At positions where the parser expects a plain Ident token (the
