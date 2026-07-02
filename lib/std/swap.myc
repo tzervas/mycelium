@@ -1,4 +1,4 @@
-// nodule: std.swaps (file: swap.myc)
+// nodule: std.swaps
 // @version: 0.1.0
 // @license: MIT
 // @authors: Tyler Zervas
@@ -73,7 +73,6 @@ nodule std.swaps;
 //     AOT path all dispatch to the same `mycelium-cert` engine the Rust oracle wraps (RFC-0031 D1),
 //     so this port validates the TRANSLATION SURFACE, not an independent second implementation —
 //     stated plainly (VR-5).
-
 // ── Guarantee ────────────────────────────────────────────────────────────────────────────────────
 // The lattice tag Exact ⊐ Proven ⊐ Empirical ⊐ Declared (VR-5), as VALUE-level data. G-prefixed
 // because the bare strength words are reserved (`T @ Exact` type-annotation surface) — FLAG-swap-0;
@@ -96,6 +95,7 @@ type CertKind = KBijective | KBounded | KNone;
 // port carries it as its human-readable detail (Bytes — the same information the Rust `Display`
 // impl surfaces), not as a kernel-typed payload.
 type Fallback = UseReference;
+
 type CheckError = Refuted(Bytes) | NotValidated(Bytes, Fallback);
 
 // refuted: build the concrete-counterexample arm (the swap is WRONG). Total (Exact).
