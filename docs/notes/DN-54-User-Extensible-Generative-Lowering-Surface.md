@@ -894,3 +894,70 @@ entry by offering a grounded, ratifiable design position.
   already-Accepted affine `Substrate` construct, not a completion of DN-54's own open design
   question. CHANGELOG / Doc-Index / issues.yaml / docs/api-index reconciled by the integrating
   parent (FLAGged, not edited here). (Append-only; VR-5; G2.)
+- **2026-07-02 — §10 attachment model ENACTED (Rust-first): Model A sibling-impl injection (M-973);
+  status held at `Accepted` (honest partial — VR-5).** Kickoff `grm`, epic E30-1, following the DN-81
+  (M-972 / M-972b) attachment-model dossier whose §10-corrected recommendation — **Model A
+  (sibling-item injection)** — the orchestrator accepted. Enacts the DN-54 §10.3 attachment model in
+  the `mycelium-l1` frontend. **Landed (all Rust-first, `mycelium-l1`):**
+  1. **Item-shaped `lower`-rule RHS (OQ-B / §10.1(b)).** A `lower Name[T] = impl Trait for T { … }`
+     rule now parses (`parse_lower_item_rhs`, trait-instance form only — the §3.2 minimum; `type`
+     aliases and standalone `fn` items stay out of v1, YAGNI/G2), carried by a new `LowerRhs::{Expr,
+     Impl}` AST enum. The v0 expression-shaped form is unchanged.
+  2. **`elaborate_derive_as_sibling` (§6.2 / §10.3 Model A).** In the checker, a `derive Name for C`
+     whose rule is item-shaped is instantiated — the single rule type-parameter is substituted by the
+     concrete target `C` throughout the `impl` template (`subst_type_param_in_*`, structural and
+     Swap-free) — and the resulting concrete `impl` is **injected as a sibling item** into the nodule
+     **before** the instance-registration (Pass 2b) and method-body (Pass 3b) passes. De-dup is by the
+     ADR-003 content key `(trait, type_head)`: two identical `derive`s collapse to one (a no-op
+     duplicate, §10.3); a genuine conflict is left to `register_instances` to refuse as an
+     overlapping-instance coherence violation (never silent).
+  3. **Deliberate affine wiring (the load-bearing DN-81 §10.4 fix — NOT inherited).** Because the
+     sibling is injected before Pass 3b (the DN-81 §10.4 option-(a) reordering), the derived impl's
+     method bodies flow through `check_impl_methods` → `check_fn_body`'s **active** M-919 affine
+     tracker, so a derive-site double-consume of a `Substrate` is refused, never-silently, citing
+     DN-71 — proven (not self-attested) by the red-then-green reject test
+     `derive_site_double_consume_of_a_substrate_is_refused` (the derive-site twin of M-919's rule-RHS
+     test). This closes the skeptic-identified gap DN-81 §10 records: affine coverage for derived-impl
+     bodies is a *deliberate* wiring deliverable, and it is now wired + tested.
+  4. **Coherence / orphan by construction (OQ-D / §10.2 crit. 3–4 / RFC-0019 §4.5).** The injected
+     impl enters the **existing** `register_instances` pass, so global-uniqueness and the phylum-wide
+     orphan rule cover it with no new code path — a derived impl colliding with a hand-written one is a
+     never-silent coherence refusal (tested). (The orphan *arm* is proven non-vacuous by the
+     pre-existing `register_instances`-direct tests; a resolvable derive in a phylum-of-one is never
+     itself an orphan by the M-662 resolvability property, so coherence entry is demonstrated via the
+     constructible overlap arm.)
+  5. **Provenance (OQ-A / §6.5 / RFC-0001 §4.3).** `Env::derived_provenance` records `(rule_name,
+     for_ty)` per injected impl, keyed by the coherence key — a derived impl is distinguishable from a
+     hand-written one (`Declared`; ADR-003 content-addressing is the substantive identity, this map is
+     the human-facing origin label — carried honestly, never upgraded).
+  6. **FLAG-6 (DN-81 §10.5) fixed.** The stale `Cx::affine` field doc (`checkty.rs`) that read the
+     tracker is "inert in `check_lower_rule_rhs_type`" is corrected — M-919 made it active there.
+  **Guarantee posture (VR-5, honest).** The substitution + injection + coherence routing are
+  `Declared` (structural); the affine coverage of derived bodies is `Empirical` (earned by the
+  red-then-green reject test, not self-attested); KC-3 holds by construction (the elaborator's codomain
+  is the frozen `mycelium_core::Node` enum, and the §4.6 `wild`-refusal covers the derived impl's
+  method bodies too). Tests: six new cases in `crates/mycelium-l1/src/tests/checkty.rs`; all
+  `mycelium-l1` suites green; `cargo fmt` + `clippy -D warnings -A unsafe_code` clean.
+  **Status held at `Accepted` (partial — NOT stepped to `Enacted`).** This closes DN-75 residual
+  **R-1** (attachment model chosen + enacted; item-shaped RHS; parametric-instantiation path) and the
+  §4.4 content-addressed-dedup half of **R-2**. **Residuals that keep `Enacted` gated (VR-5, named not
+  buried):** the §4.5 `reveal`-exercisability of a derived impl (rides the DN-38 §5 inspector track,
+  not landed here), the §7.1/§7.2 **generated-corpus differential** for the item-shaped derive path
+  (R-3 — the injected impls are checked/coherent/affine-covered, but no `observe(surface) ==
+  observe(lower)` differential harness over derived output is added here), **R-4** (certified-mode
+  `delaborate ∘ lower = id` + `Proven`-per-run TV witness, gated on ADR-032), OQ-C (mixed
+  expr-and-item / multi-param rules — a multi-param item rule derive is a never-silent refusal in v1),
+  OQ-E (effect annotation interaction beyond the exact-match conformance already enforced), and the
+  §9 ratification gate itself. Per house rule #3, `Enacted` is the integrating parent's step through
+  `Accepted`, only once these close and the maintainer ratifies. **FLAGs (for the orchestrator; not
+  edited here — G2):** (a) this leaf touched **`ast.rs`** (the `LowerRhs` enum + accessors) and
+  **`ambient.rs`** (`print_lower_decl` for the item form) — two `mycelium-l1` frontend files outside
+  the task's explicit 4-file (`checkty`/`elab`/`parse`/`mono`) OWN enumeration, necessary because
+  item-shaped RHS cannot be represented without extending `LowerDecl` (disclosed, not silent). (b) The
+  kickoff frames this as closing "DN-56 condition 3 (lowering surface closed)", but **DN-56's own text
+  numbers the lowering-surface-closed condition as #4** (its §2 item 4 / status-line #4); this work
+  **substantially advances** that condition (the attachment model — the last structural hole in the
+  derive lowering surface — is filled) but does **not** fully close it (the R-2 `reveal` + R-3 §7
+  harness residuals above remain). DN-56 is orchestrator-owned; the closure call + the #3-vs-#4
+  numbering is left to the integrating parent. CHANGELOG / Doc-Index / issues.yaml / docs/api-index
+  reconciled by the integrating parent (FLAGged, not edited here). (Append-only; VR-5; G2.)
