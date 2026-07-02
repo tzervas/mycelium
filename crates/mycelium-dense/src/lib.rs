@@ -14,7 +14,16 @@
 //!   zero-or-normal, non-overflowing results). A violated side-condition is an explicit
 //!   [`DenseError`], never a bound the theorem does not cover (VR-5).
 //! - **`dot`/`similarity`** are *measurement helpers* returning bare `f64` (no `Meta` to tag),
-//!   mirroring `VsaModel::similarity`.
+//!   mirroring `VsaModel::similarity`. Their value-returning twins **`dot_value`/
+//!   `similarity_value`** (M-891) deliver the same `f64` as a `Dense{1, F64}` result carrying a
+//!   **`Proven` absolute (ℓ∞) bound**: over exact on-grid F32/BF16 operands every product is
+//!   *exact* in the binary64 accumulator (≤ 24-bit significands ⇒ ≤ 48-bit products), so the
+//!   only error is the recursive-summation rounding — bounded by the standard `γ`-analysis
+//!   (Higham 2002, §4.2), disclosed via [`DenseSpace::dot_abs_eps`] /
+//!   [`DenseSpace::similarity_abs_eps`]. Note this is deliberately **not** [`DenseSpace::op_rel_eps`]:
+//!   the dtype's per-element rounding ε never enters (inputs are exact, accumulation is f64), and a
+//!   per-element *relative* claim on a dot product is false under cancellation — the honest bound
+//!   is absolute and dimension-dependent (VR-5).
 //!
 //! **Honest scope (v1, same as M-211).** Sources must be `Exact`: composing an approximate
 //! input's own bound with the op's rounding ε needs the magnitude-aware Dense composition rule
@@ -42,6 +51,11 @@ pub const BF16_OP_REL_EPS: f64 = 0.003_906_25 + 1.192_092_895_507_812_5e-7; // 2
 /// keeps f32's exponent range). Below it the relative-error theorem's side-condition fails.
 pub const DENSE_MIN_NORMAL: f64 = f32::MIN_POSITIVE as f64;
 
+/// Unit roundoff of the binary64 accumulator the measurement ops (`dot`/`similarity`) sum in:
+/// `u = β^(1−p)/2 = 2^−53` for IEEE binary64 (`p = 53`) under round-to-nearest (Higham 2002,
+/// Thm 2.2) — the ε unit of [`DenseSpace::dot_abs_eps`]/[`DenseSpace::similarity_abs_eps`].
+pub const F64_ACC_U: f64 = 1.110_223_024_625_156_5e-16; // 2⁻⁵³, exact in f64 (pinned by test)
+
 const F32_OP_CITATION: &str = "round-to-nearest relative error ≤ u = β^(1−p)/2 = 2^−24 for IEEE \
      binary32 (β=2, p=24) — Higham, Accuracy and Stability of Numerical Algorithms (2002), Thm 2.2; \
      native f32 op (single rounding); side-conditions checked per element: exact on-grid inputs, \
@@ -51,6 +65,29 @@ const BF16_OP_CITATION: &str = "two-rounding composition (1+δ₁)(1+δ₂)−1 
      op (u₁ = 2^−24) then bfloat16 round-to-nearest (u₂ = 2^−8) — Higham (2002), Thm 2.2 applied at \
      each rounding; side-conditions checked per element at both steps: exact on-grid inputs, finite \
      zero-or-normal results, no overflow";
+
+const DOT_CITATION: &str = "recursive binary64 summation of exact products: each x_i*y_i is exact \
+     in f64 (operands checked exact on the F32/BF16 grid, so significands are <= 24 bits — products \
+     need <= 48 <= 53 — and product exponents lie in binary64's normal range), and the (dim−1)-add \
+     recursive sum satisfies |fl(Σ) − Σ| <= γ_{dim−1}·Σ|x_i·y_i| with γ_k = k·u/(1−k·u), u = 2^−53 \
+     — Higham, Accuracy and Stability of Numerical Algorithms (2002), §4.2 + Thm 2.2; additions \
+     that underflow are exact (Hauser), so no subnormal side-condition arises. The stored ε = \
+     1.05·dim·u·Σ̂ (Σ̂ = the computed abs-product sum) over-covers γ_{dim−1}·Σ|x_i·y_i| for every \
+     dim < 2^32: the ×1.05 slack absorbs Σ̂'s own summation rounding and the ε-formula's evaluation \
+     rounding. Side-conditions checked: per-element (exact on-grid finite inputs) and on the result \
+     (finite — overflow is unreachable for dim < 2^32 since every |product| < 2^257)";
+
+const SIMILARITY_CITATION: &str = "cosine dot/(‖a‖·‖b‖) in binary64 over exact products (see \
+     dense.dot): |computed − true| <= 2.1·(dim+2)·u, u = 2^−53 — first-order sum of the numerator \
+     term γ_{dim−1} (|fl(Σx_i·y_i) − Σ| <= γ_{dim−1}·Σ|x_i·y_i| <= γ_{dim−1}·‖a‖·‖b‖ by \
+     Cauchy–Schwarz) and the denominator/quotient term (two positive-term norm sums + sqrt + \
+     product + quotient roundings, <= (dim+3)·u to first order) times |cos| <= 1 — Higham (2002) \
+     §4.2 + Thm 2.2; the slack in 2.1·(dim+2) over the first-order (2·dim+2)·u absorbs all \
+     second-order γ-terms for dim < 2^32 and the ε-formula's own rounding. A zero-norm operand \
+     returns the documented convention 0 exactly (an operand norm is 0 iff that operand is the \
+     zero vector: squares of nonzero on-grid elements are >= 2^−298, so they cannot underflow to 0 \
+     in f64). Side-conditions checked: per-element (exact on-grid finite inputs) and on the result \
+     (finite)";
 
 /// The Dense operations this surface supplies (RFC-0001 §4.1 — the Dense analogue of
 /// [`VsaOp`](https://docs.rs/mycelium-vsa)'s closed op set).
@@ -64,6 +101,10 @@ pub enum DenseOp {
     Neg,
     /// Scalar multiplication.
     Scale,
+    /// Dot-product measurement (M-891).
+    Dot,
+    /// Cosine-similarity measurement (M-891).
+    Similarity,
 }
 
 /// Why a Dense operation could not be performed — always explicit, never a silent coercion (G2).
@@ -218,12 +259,18 @@ impl DenseSpace {
     }
 
     /// The honest intrinsic guarantee per op: `neg` never rounds (`Exact`); `add`/`sub`/`scale`
-    /// round once (or twice for BF16) under the cited theorem (`Proven`).
+    /// round once (or twice for BF16) under the cited theorem (`Proven`); `dot`/`similarity`
+    /// carry the proven binary64 accumulation bound (M-891 — see [`Self::dot_abs_eps`]/
+    /// [`Self::similarity_abs_eps`]; `Proven`, never `Exact`: the recursive sum rounds).
     #[must_use]
     pub fn op_guarantee(op: DenseOp) -> GuaranteeStrength {
         match op {
             DenseOp::Neg => GuaranteeStrength::Exact,
-            DenseOp::Add | DenseOp::Sub | DenseOp::Scale => GuaranteeStrength::Proven,
+            DenseOp::Add
+            | DenseOp::Sub
+            | DenseOp::Scale
+            | DenseOp::Dot
+            | DenseOp::Similarity => GuaranteeStrength::Proven,
         }
     }
 
@@ -242,6 +289,29 @@ impl DenseSpace {
             ScalarKind::Bf16 => BF16_OP_CITATION,
             _ => F32_OP_CITATION,
         }
+    }
+
+    /// The disclosed **absolute** (ℓ∞ over the single result element) error bound of
+    /// [`Self::dot_value`], given `abs_sum` = the computed `fl(Σ|xᵢ·yᵢ|)`:
+    /// `1.05 · dim · u · abs_sum` with `u =` [`F64_ACC_U`] — a conservative cover of the
+    /// summation bound `γ_{dim−1}·Σ|xᵢ·yᵢ|` (products are exact; see [`DOT_CITATION`] via the
+    /// result's `ProvenThm` basis). Deliberately **not** [`Self::op_rel_eps`]: the dtype's
+    /// per-element rounding ε never enters (inputs are exact on-grid, accumulation is binary64),
+    /// and a *relative* claim on a dot product is false under cancellation (VR-5).
+    #[must_use]
+    pub fn dot_abs_eps(&self, abs_sum: f64) -> f64 {
+        1.05 * f64::from(self.dim) * F64_ACC_U * abs_sum
+    }
+
+    /// The disclosed **absolute** error bound of [`Self::similarity_value`]:
+    /// `2.1 · (dim + 2) · u` with `u =` [`F64_ACC_U`] — a conservative cover of the first-order
+    /// bound `(2·dim + 2)·u` (numerator summation over exact products, via Cauchy–Schwarz, plus
+    /// the norm/sqrt/quotient roundings against `|cos| ≤ 1`; see the result's `ProvenThm`
+    /// citation). Input-independent: cosine's normalization caps the absolute error by
+    /// construction.
+    #[must_use]
+    pub fn similarity_abs_eps(&self) -> f64 {
+        2.1 * (f64::from(self.dim) + 2.0) * F64_ACC_U
     }
 
     /// Construct an **`Exact`** Dense value, checking every element is finite and exactly on the
@@ -424,210 +494,138 @@ impl DenseSpace {
         self.wrap_proven(out, "dense.scale", vec![a.content_hash()])
     }
 
-    /// Dot product in `f64` — a *measurement* helper (no `Meta` to tag), mirroring
-    /// `VsaModel::similarity`. Typed errors for space mismatches.
-    pub fn dot(&self, a: &Value, b: &Value) -> Result<f64, DenseError> {
-        let xs = self.scalars_of(a)?;
-        let ys = self.scalars_of(b)?;
-        Ok(xs.iter().zip(ys).map(|(x, y)| x * y).sum())
+    /// The shared measurement accumulation: the recursive (left-to-right) binary64 sum of the
+    /// products and of their absolute values. Every product is **exact** in f64 (both factors
+    /// are on the F32/BF16 grid — `scalars_of` has checked them), so the returned sums carry
+    /// only the recursive-summation rounding the `DOT_CITATION` bound covers.
+    fn dot_sums(xs: &[f64], ys: &[f64]) -> (f64, f64) {
+        let mut sum = 0.0;
+        let mut abs_sum = 0.0;
+        for (&x, &y) in xs.iter().zip(ys) {
+            let p = x * y; // exact in f64: ≤ 24-bit significands, normal-range exponents
+            sum += p;
+            abs_sum += p.abs();
+        }
+        (sum, abs_sum)
     }
 
-    /// Cosine similarity in `[-1, 1]` (`0` if either operand has zero norm) — a measurement
-    /// helper in `f64`.
-    pub fn similarity(&self, a: &Value, b: &Value) -> Result<f64, DenseError> {
-        let xs = self.scalars_of(a)?;
-        let ys = self.scalars_of(b)?;
-        let dot: f64 = xs.iter().zip(ys.iter()).map(|(x, y)| x * y).sum();
+    /// The shared cosine computation (`0` by documented convention if either norm is `0` — which
+    /// happens iff that operand is exactly the zero vector; see `SIMILARITY_CITATION`).
+    fn cosine(xs: &[f64], ys: &[f64]) -> f64 {
+        let (dot, _) = Self::dot_sums(xs, ys);
         let na: f64 = xs.iter().map(|x| x * x).sum::<f64>().sqrt();
         let nb: f64 = ys.iter().map(|x| x * x).sum::<f64>().sqrt();
         if na == 0.0 || nb == 0.0 {
-            Ok(0.0)
+            0.0
         } else {
-            Ok(dot / (na * nb))
+            dot / (na * nb)
         }
+    }
+
+    /// Dot product in `f64` — a *measurement* helper (no `Meta` to tag), mirroring
+    /// `VsaModel::similarity`. Typed errors for space mismatches. The value-returning twin
+    /// with the honest `Proven` bound attached is [`Self::dot_value`] (M-891).
+    pub fn dot(&self, a: &Value, b: &Value) -> Result<f64, DenseError> {
+        let xs = self.scalars_of(a)?;
+        let ys = self.scalars_of(b)?;
+        Ok(Self::dot_sums(xs, ys).0)
+    }
+
+    /// Cosine similarity in `[-1, 1]` (`0` if either operand has zero norm) — a measurement
+    /// helper in `f64`. The value-returning twin with the honest `Proven` bound attached is
+    /// [`Self::similarity_value`] (M-891).
+    pub fn similarity(&self, a: &Value, b: &Value) -> Result<f64, DenseError> {
+        let xs = self.scalars_of(a)?;
+        let ys = self.scalars_of(b)?;
+        Ok(Self::cosine(xs, ys))
+    }
+
+    /// Wrap a scalar `f64` measurement as a **`Dense{1, F64}`** result `Value` carrying its
+    /// honest `Proven` absolute (`Linf` over the single element) error bound (M-891). The
+    /// payload is the `f64` **exactly as computed** — never re-rounded onto the operand dtype
+    /// grid (that would add error and spurious overflow/subnormal refusals to a measurement).
+    /// `F64` has no Dense op set (v1 scope), so a measurement cannot silently feed back into
+    /// dense arithmetic — re-entry would be an explicit `UnsupportedDtype` refusal (G2).
+    fn wrap_measurement(
+        &self,
+        y: f64,
+        eps: f64,
+        citation: &'static str,
+        op: &str,
+        inputs: Vec<ContentHash>,
+    ) -> Result<Value, DenseError> {
+        // Checked side-condition on the result (unreachable for dim < 2^32 — see the citation's
+        // no-overflow argument — but checked, never assumed; VR-5).
+        if !y.is_finite() || !eps.is_finite() {
+            return Err(DenseError::Overflow { index: 0 });
+        }
+        let bound = Bound {
+            kind: BoundKind::Error {
+                eps,
+                norm: NormKind::Linf,
+            },
+            basis: BoundBasis::ProvenThm {
+                citation: citation.to_owned(),
+            },
+        };
+        let meta = Meta::new(
+            Provenance::Derived {
+                op: operation_hash(op),
+                inputs,
+            },
+            GuaranteeStrength::Proven,
+            Some(bound),
+            None,
+            None,
+            None,
+        )
+        .map_err(DenseError::Wf)?;
+        Value::new(
+            Repr::Dense {
+                dim: 1,
+                dtype: ScalarKind::F64,
+            },
+            Payload::Scalars(vec![y]),
+            meta,
+        )
+        .map_err(DenseError::Wf)
+    }
+
+    /// Dot product as a **`Dense{1, F64}` value** with its honest per-op tag (M-891):
+    /// **`Proven`**, absolute (`Linf`) ε = [`Self::dot_abs_eps`] of the computed abs-product
+    /// sum, `ProvenThm` basis (binary64 summation over exact products — the citation carries
+    /// the full argument and the checked side-conditions). Same operand contract as
+    /// [`Self::dot`] (equal dim + dtype, `Exact` on-grid sources — typed errors otherwise).
+    pub fn dot_value(&self, a: &Value, b: &Value) -> Result<Value, DenseError> {
+        let xs = self.scalars_of(a)?;
+        let ys = self.scalars_of(b)?;
+        let (sum, abs_sum) = Self::dot_sums(xs, ys);
+        self.wrap_measurement(
+            sum,
+            self.dot_abs_eps(abs_sum),
+            DOT_CITATION,
+            "dense.dot",
+            vec![a.content_hash(), b.content_hash()],
+        )
+    }
+
+    /// Cosine similarity as a **`Dense{1, F64}` value** with its honest per-op tag (M-891):
+    /// **`Proven`**, absolute (`Linf`) ε = [`Self::similarity_abs_eps`] (input-independent —
+    /// normalization caps the absolute error), `ProvenThm` basis. Zero-norm operands yield the
+    /// documented convention `0` exactly (disclosed in the citation). Same operand contract as
+    /// [`Self::similarity`].
+    pub fn similarity_value(&self, a: &Value, b: &Value) -> Result<Value, DenseError> {
+        let xs = self.scalars_of(a)?;
+        let ys = self.scalars_of(b)?;
+        self.wrap_measurement(
+            Self::cosine(xs, ys),
+            self.similarity_abs_eps(),
+            SIMILARITY_CITATION,
+            "dense.similarity",
+            vec![a.content_hash(), b.content_hash()],
+        )
     }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn op_rel_eps_constants_match_their_cited_formulas() {
-        // A5-07: pin the disclosed per-op ε to the exact formulas of their ProvenThm citation, so
-        // the literals cannot silently drift from `F32_OP_CITATION`/`BF16_OP_CITATION` (VR-5).
-        // F32: single-rounding unit roundoff u = β^(1−p)/2 = 2⁻²⁴ (IEEE binary32, p = 24).
-        assert_eq!(F32_OP_REL_EPS, 2f64.powi(-24));
-        // BF16: two-rounding composition u₁ + u₂ + u₁u₂ ≤ 2⁻⁸ + 2⁻²³ (the disclosed slack bound).
-        assert_eq!(BF16_OP_REL_EPS, 2f64.powi(-8) + 2f64.powi(-23));
-    }
-
-    #[test]
-    fn unsupported_dtypes_are_explicit() {
-        assert_eq!(
-            DenseSpace::new(4, ScalarKind::F64),
-            Err(DenseError::UnsupportedDtype {
-                dtype: ScalarKind::F64
-            })
-        );
-        assert_eq!(
-            DenseSpace::new(4, ScalarKind::F16),
-            Err(DenseError::UnsupportedDtype {
-                dtype: ScalarKind::F16
-            })
-        );
-    }
-
-    #[test]
-    fn construction_checks_the_grid() {
-        let s = DenseSpace::new(2, ScalarKind::F32).unwrap();
-        assert!(s.value(vec![1.5, -0.625]).is_ok());
-        // 0.1 is not exactly an f32.
-        assert_eq!(
-            s.value(vec![1.0, 0.1]),
-            Err(DenseError::NotOnGrid { index: 1 })
-        );
-        assert_eq!(
-            s.value(vec![f64::NAN, 0.0]),
-            Err(DenseError::NonFinite { index: 0 })
-        );
-        let b = DenseSpace::new(2, ScalarKind::Bf16).unwrap();
-        // 1.5 is on the bf16 grid; 1.501953125 (1.5 + 2^-9) is f32-exact but off the bf16 grid.
-        assert!(b.value(vec![1.5, -2.0]).is_ok());
-        assert_eq!(
-            b.value(vec![1.5, 1.501_953_125]),
-            Err(DenseError::NotOnGrid { index: 1 })
-        );
-    }
-
-    #[test]
-    fn neg_is_exact() {
-        let s = DenseSpace::new(3, ScalarKind::F32).unwrap();
-        let a = s.value(vec![1.5, -0.625, 0.0]).unwrap();
-        let n = s.neg_value(&a).unwrap();
-        assert_eq!(n.meta().guarantee(), GuaranteeStrength::Exact);
-        assert_eq!(n.payload(), &Payload::Scalars(vec![-1.5, 0.625, 0.0]));
-        assert_eq!(
-            DenseSpace::op_guarantee(DenseOp::Neg),
-            GuaranteeStrength::Exact
-        );
-    }
-
-    #[test]
-    fn add_carries_the_proven_rounding_bound() {
-        let s = DenseSpace::new(2, ScalarKind::F32).unwrap();
-        let a = s.value(vec![1.5, 2.5]).unwrap();
-        let b = s.value(vec![0.25, -1.0]).unwrap();
-        let y = s.add_values(&a, &b).unwrap();
-        assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
-        match y.meta().bound() {
-            Some(Bound {
-                kind: BoundKind::Error { eps, norm },
-                basis: BoundBasis::ProvenThm { .. },
-            }) => {
-                assert_eq!(*eps, F32_OP_REL_EPS);
-                assert_eq!(*norm, NormKind::Rel);
-            }
-            other => panic!("expected a ProvenThm Error bound, got {other:?}"),
-        }
-        match y.meta().provenance() {
-            Provenance::Derived { op, inputs } => {
-                assert_eq!(op, &operation_hash("dense.add"));
-                assert_eq!(inputs, &vec![a.content_hash(), b.content_hash()]);
-            }
-            other => panic!("expected Derived, got {other:?}"),
-        }
-    }
-
-    #[test]
-    fn mismatches_and_approximate_sources_are_typed_errors() {
-        let s = DenseSpace::new(2, ScalarKind::F32).unwrap();
-        let a = s.value(vec![1.0, 2.0]).unwrap();
-        let wrong_dim = DenseSpace::new(3, ScalarKind::F32)
-            .unwrap()
-            .value(vec![1.0, 2.0, 3.0])
-            .unwrap();
-        assert_eq!(
-            s.add_values(&a, &wrong_dim),
-            Err(DenseError::DimMismatch {
-                expected: 2,
-                got: 3
-            })
-        );
-        let wrong_dtype = DenseSpace::new(2, ScalarKind::Bf16)
-            .unwrap()
-            .value(vec![1.0, 2.0])
-            .unwrap();
-        assert_eq!(
-            s.add_values(&a, &wrong_dtype),
-            Err(DenseError::DtypeMismatch {
-                expected: ScalarKind::F32
-            })
-        );
-        // An approximate source is refused (no composition rule yet) — built via the M-204-style
-        // derived bound to simulate one.
-        let approx = Value::new(
-            s.repr(),
-            Payload::Scalars(vec![1.0, 2.0]),
-            Meta::new(
-                Provenance::Root,
-                GuaranteeStrength::Declared,
-                Some(Bound {
-                    kind: BoundKind::Error {
-                        eps: 0.1,
-                        norm: NormKind::Rel,
-                    },
-                    basis: BoundBasis::UserDeclared,
-                }),
-                None,
-                None,
-                None,
-            )
-            .unwrap(),
-        )
-        .unwrap();
-        assert_eq!(
-            s.add_values(&a, &approx),
-            Err(DenseError::ApproximateSource)
-        );
-    }
-
-    #[test]
-    fn overflow_and_subnormal_results_are_explicit() {
-        let s = DenseSpace::new(1, ScalarKind::F32).unwrap();
-        let max = s.value(vec![f64::from(f32::MAX)]).unwrap();
-        assert_eq!(
-            s.add_values(&max, &max),
-            Err(DenseError::Overflow { index: 0 })
-        );
-        // 1.5·2⁻¹²⁶ − 1.25·2⁻¹²⁶ = 0.25·2⁻¹²⁶: subnormal, refused.
-        let a = s.value(vec![1.5 * DENSE_MIN_NORMAL]).unwrap();
-        let b = s.value(vec![1.25 * DENSE_MIN_NORMAL]).unwrap();
-        assert_eq!(
-            s.sub_values(&a, &b),
-            Err(DenseError::SubnormalUnsupported { index: 0 })
-        );
-    }
-
-    #[test]
-    fn scale_checks_the_factor() {
-        let s = DenseSpace::new(2, ScalarKind::Bf16).unwrap();
-        let a = s.value(vec![1.5, -2.0]).unwrap();
-        assert_eq!(s.scale_value(&a, 0.1), Err(DenseError::ScalarOffGrid));
-        let y = s.scale_value(&a, 2.0).unwrap();
-        assert_eq!(y.payload(), &Payload::Scalars(vec![3.0, -4.0]));
-        assert_eq!(y.meta().guarantee(), GuaranteeStrength::Proven);
-    }
-
-    #[test]
-    fn similarity_is_a_measurement_helper() {
-        let s = DenseSpace::new(2, ScalarKind::F32).unwrap();
-        let a = s.value(vec![1.0, 0.0]).unwrap();
-        let b = s.value(vec![0.0, 1.0]).unwrap();
-        assert!((s.similarity(&a, &b).unwrap()).abs() < 1e-12);
-        assert!((s.similarity(&a, &a).unwrap() - 1.0).abs() < 1e-12);
-        let z = s.value(vec![0.0, 0.0]).unwrap();
-        assert_eq!(s.similarity(&a, &z).unwrap(), 0.0);
-        assert_eq!(s.dot(&a, &b).unwrap(), 0.0);
-    }
-}
+mod tests;

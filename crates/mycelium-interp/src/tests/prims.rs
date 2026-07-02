@@ -711,6 +711,8 @@ fn dense_prim_table_intrinsics_match_the_kernel_op_guarantees() {
         ("dense.sub", DenseOp::Sub),
         ("dense.neg", DenseOp::Neg),
         ("dense.scale", DenseOp::Scale),
+        ("dense.dot", DenseOp::Dot),
+        ("dense.similarity", DenseOp::Similarity),
     ] {
         assert_eq!(
             table.intrinsic(name),
@@ -961,5 +963,198 @@ fn dense_elementwise_results_respect_the_disclosed_relative_bound() {
                 "dense.neg must be an exact involution"
             );
         }
+    }
+}
+
+// ── M-891 (`enb` Gap C): the dense measurement pair `dense.dot`/`dense.similarity` ──────────────
+//
+// The kernel constructs the `Dense{1, F64}` measurement value with its honest per-op tag —
+// `Proven` with the **binary64 accumulation bound** (absolute/`Linf`, `dot_abs_eps`/
+// `similarity_abs_eps` — deliberately NOT the dtype's per-element `op_rel_eps`; see the module
+// note in `prims.rs`) — and the wrapper carries it through unchanged (VR-5). These tests pin:
+// (1) the Π ↔ kernel tag consistency (folded into the M-890 guard above), (2) the accept-path
+// payload + the carried tag/bound/provenance, (3) the EXPLAIN inspectability of the disclosed ε +
+// its ProvenThm citation off the result value itself, (4) the never-silent reject surface, and
+// (5) the disclosed-bound property over analytically-known dots, including the cancellation case
+// a per-element relative claim would fail.
+
+/// M-891 accept path: `dense.dot` returns the f64 measurement as `Dense{1, F64}` with the
+/// kernel's `Proven` accumulation bound — and that bound is **EXPLAIN-able**: guarantee, ε,
+/// norm, and the ProvenThm citation are all inspectable off the value's `Meta` (G2/SC-3).
+#[test]
+fn dense_dot_carries_the_inspectable_accumulation_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("dense.dot").expect("dense.dot registered");
+    let a = dense_f32(vec![1.5, 2.0, -0.5]);
+    let b = dense_f32(vec![2.0, 0.25, 4.0]);
+    let y = f("dense.dot", &[&a, &b]).expect("in-range dot");
+    // 3.0 + 0.5 − 2.0 = 1.5 (every product and partial sum exact in f64).
+    assert_eq!(
+        y.repr(),
+        &Repr::Dense {
+            dim: 1,
+            dtype: ScalarKind::F64
+        },
+        "the measurement result form is Dense{{1, F64}}"
+    );
+    assert_eq!(y.payload(), &Payload::Scalars(vec![1.5]));
+    assert_eq!(
+        y.meta().guarantee(),
+        mycelium_core::GuaranteeStrength::Proven
+    );
+    let space = DenseSpace::new(3, ScalarKind::F32).unwrap();
+    match y.meta().bound() {
+        Some(Bound {
+            kind: BoundKind::Error { eps, norm },
+            basis: BoundBasis::ProvenThm { citation },
+        }) => {
+            // ε is the kernel's disclosed absolute accumulation bound over the computed
+            // abs-product sum (3.0 + 0.5 + 2.0) — NOT op_rel_eps (the dtype ε never enters).
+            assert_eq!(*eps, space.dot_abs_eps(3.0 + 0.5 + 2.0));
+            assert_eq!(*norm, NormKind::Linf);
+            assert!(
+                citation.contains("Higham"),
+                "the EXPLAIN-able citation must name its theorem basis: {citation}"
+            );
+        }
+        other => panic!("expected the kernel's ProvenThm Linf bound, got {other:?}"),
+    }
+    match y.meta().provenance() {
+        Provenance::Derived { op, inputs } => {
+            assert_eq!(op, &mycelium_core::operation_hash("dense.dot"));
+            assert_eq!(inputs, &vec![a.content_hash(), b.content_hash()]);
+        }
+        other => panic!("expected Derived provenance, got {other:?}"),
+    }
+}
+
+#[test]
+fn dense_similarity_accept_paths_and_zero_convention() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("dense.similarity").expect("registered");
+    let a = dense_f32(vec![1.0, 0.0]);
+    let b = dense_f32(vec![0.0, 1.0]);
+    let space = DenseSpace::new(2, ScalarKind::F32).unwrap();
+    // Orthogonal → exactly 0 (products are 0 each).
+    let y = f("dense.similarity", &[&a, &b]).expect("similarity is total over on-grid inputs");
+    assert_eq!(
+        y.repr(),
+        &Repr::Dense {
+            dim: 1,
+            dtype: ScalarKind::F64
+        }
+    );
+    assert_eq!(y.payload(), &Payload::Scalars(vec![0.0]));
+    assert_eq!(
+        y.meta().guarantee(),
+        mycelium_core::GuaranteeStrength::Proven
+    );
+    match y.meta().bound() {
+        Some(Bound {
+            kind: BoundKind::Error { eps, norm },
+            basis: BoundBasis::ProvenThm { .. },
+        }) => {
+            assert_eq!(*eps, space.similarity_abs_eps());
+            assert_eq!(*norm, NormKind::Linf);
+        }
+        other => panic!("expected the kernel's ProvenThm Linf bound, got {other:?}"),
+    }
+    // Self-similarity is 1 within the disclosed ε.
+    let s = f("dense.similarity", &[&a, &a]).expect("self-similarity");
+    let Payload::Scalars(sim) = s.payload() else {
+        panic!("similarity must return scalars")
+    };
+    assert!((sim[0] - 1.0).abs() <= space.similarity_abs_eps());
+    // The zero-norm convention (documented in the citation): exactly 0, never silent.
+    let z = dense_f32(vec![0.0, 0.0]);
+    let zc = f("dense.similarity", &[&a, &z]).expect("zero-norm convention");
+    assert_eq!(zc.payload(), &Payload::Scalars(vec![0.0]));
+}
+
+#[test]
+fn dense_measurement_reject_surface_is_never_silent() {
+    let reg = PrimRegistry::with_builtins();
+    for prim in ["dense.dot", "dense.similarity"] {
+        let f = reg.get(prim).expect("registered");
+        let a = dense_f32(vec![1.0, 2.0]);
+        // Dim mismatch → explicit PrimType naming the offense — never a broadcast (G2).
+        let b3 = dense_f32(vec![1.0, 2.0, 3.0]);
+        let err = f(prim, &[&a, &b3]).expect_err("dim mismatch must refuse");
+        match err {
+            EvalError::PrimType { prim: p, why } => {
+                assert_eq!(p, prim);
+                assert!(why.contains("dimension mismatch"), "{prim}: {why}");
+            }
+            other => panic!("{prim}: expected PrimType, got {other:?}"),
+        }
+        // Dtype mismatch → explicit PrimType, never a re-round.
+        let bf = DenseSpace::new(2, ScalarKind::Bf16)
+            .unwrap()
+            .value(vec![1.5, -2.0])
+            .unwrap();
+        assert!(matches!(
+            f(prim, &[&a, &bf]),
+            Err(EvalError::PrimType { .. })
+        ));
+        // A non-Dense operand (either side) → explicit PrimType.
+        let bits = byte([true; 8]);
+        assert!(matches!(
+            f(prim, &[&bits, &a]),
+            Err(EvalError::PrimType { .. })
+        ));
+        assert!(matches!(
+            f(prim, &[&a, &bits]),
+            Err(EvalError::PrimType { .. })
+        ));
+        // Wrong arity → explicit PrimType.
+        assert!(matches!(f(prim, &[&a]), Err(EvalError::PrimType { .. })));
+        // An approximate source → ApproxCompositionUnsupported (no composition rule yet).
+        let approx = reg.get("dense.add").unwrap()(
+            "dense.add",
+            &[&a, &dense_f32(vec![0.5, 0.5])],
+        )
+        .expect("a Proven value");
+        assert!(matches!(
+            f(prim, &[&a, &approx]),
+            Err(EvalError::ApproxCompositionUnsupported { .. })
+        ));
+    }
+}
+
+/// **Property test (the disclosed bound):** over cases whose *true* real-arithmetic dot is known
+/// analytically, the computed payload differs from the truth by at most the ε **the value's own
+/// bound discloses** — including the catastrophic-cancellation case (`fl(2⁶⁰ + 1) = 2⁶⁰`, so the
+/// computed dot is 0 against a true 1) where a per-element relative claim (`op_rel_eps`) would be
+/// flat-out false. The absolute accumulation bound must (and does) cover it.
+#[test]
+fn dense_dot_respects_its_own_disclosed_bound() {
+    let reg = PrimRegistry::with_builtins();
+    let f = reg.get("dense.dot").expect("registered");
+    let two30 = f64::from(2f32.powi(30));
+    let cases: [(&[f64], &[f64], f64); 4] = [
+        (&[1.5, 2.0, -0.5], &[2.0, 0.25, 4.0], 1.5),
+        (&[1.0, 2.0, 3.0, 4.0], &[4.0, 3.0, 2.0, 1.0], 20.0),
+        (&[0.0, 0.0], &[1.0, -1.0], 0.0),
+        (&[two30, 1.0, -two30], &[two30, 1.0, two30], 1.0),
+    ];
+    for (xs, ys, exact) in cases {
+        let a = dense_f32(xs.to_vec());
+        let b = dense_f32(ys.to_vec());
+        let y = f("dense.dot", &[&a, &b]).expect("in-range dot");
+        let Payload::Scalars(out) = y.payload() else {
+            panic!("dense.dot must return Payload::Scalars")
+        };
+        let Some(Bound {
+            kind: BoundKind::Error { eps, .. },
+            ..
+        }) = y.meta().bound()
+        else {
+            panic!("dense.dot must carry its Error bound")
+        };
+        assert!(
+            (out[0] - exact).abs() <= *eps,
+            "|{} − {exact}| exceeds the value's own disclosed ε = {eps}",
+            out[0]
+        );
     }
 }
