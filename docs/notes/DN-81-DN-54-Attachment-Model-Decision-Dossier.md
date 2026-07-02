@@ -18,6 +18,14 @@
 > upgraded past its basis. The recommendation is argued **on merit** and its strongest counter-case
 > is developed in a dedicated adversarial section (§5.3) before it is allowed to stand — assent is a
 > claim and is tagged at its strength (house rule #4).
+>
+> **Correction (2026-07-02).** An adversarial skeptic refuted this dossier's affine
+> "by-construction" tie-breaker (§2.3 / §5.2-point-3). On independent source re-read the refutation
+> is **correct** — the claim is **WITHDRAWN**; both Model A and Model B require deliberate
+> affine-check wiring for derived-impl method bodies. The recommendation was re-weighed on the
+> remaining, independent merits and **Model A still stands** — now at DN-54 §10.5's *favored*
+> strength, **not** the *firm* strength the invalid tie-breaker had inflated it to. Full correction,
+> re-weighing, tag fix, and the affine-wiring enactment deliverable: **§10** (append-only).
 
 ---
 
@@ -115,6 +123,13 @@ gap M-919 just closed reopens at the derive site. The tracker is active precisel
 through `check_fn_body` inherits the affine guarantee **by construction**; a model that stores derived
 impls in a side-table must additionally wire that table's method bodies into the affine pass or
 silently lose the M-919 coverage. §5.2 develops this as the decisive new argument.
+**[CORRECTED 2026-07-02 — this "by construction" inference is WITHDRAWN (see §10). Verified at
+source: `elab.rs:550-552` (`elaborate_lower_rule`, the closest analogue to Model A's not-yet-built
+`elaborate_derive_as_sibling`) feeds its synthetic item "straight to `elaborate`" and explicitly does
+"not re-check" it; and `checkty.rs` Pass 3b (`check_impl_methods`, ~L1878, where `check_fn_body`'s
+active tracker runs) executes BEFORE Pass 3e (`Item::Derive`, ~L1945). An impl injected at the derive
+site is therefore too late for the affine loop — so Model A does NOT inherit affine coverage for free;
+BOTH models require deliberate wiring. Not a differentiator.]**
 
 ---
 
@@ -167,7 +182,7 @@ consult the table in addition to the hand-written `impl` namespace.
 | **KC-3 / new L0 node** | None | None (table is an elaboration artifact) |
 | **New `Env`/dispatch machinery** | `parse_lower_item_rhs`; `elaborate_derive_as_sibling`; a content-key de-dup guard (trivial via ADR-003) | `parse_lower_item_rhs`; `DerivedImplTable`; **extended coherence + dispatch + reveal + affine** — four new table-aware arms |
 | **Coherence (RFC-0019 §4.2)** | Free — injected impl enters the existing pass; global-uniqueness by construction | Dual-namespace check required; explicit invariant that both are covered |
-| **Affine use-once (M-919, new)** | **Free — method bodies flow through `check_fn_body`'s active tracker** | Requires wiring the table's bodies into the affine pass, or the M-919 coverage silently reopens at the derive site |
+| **Affine use-once (M-919, new)** | ~~Free — method bodies flow through `check_fn_body`'s active tracker~~ **[WITHDRAWN 2026-07-02 — §10]** deliberate wiring required (Pass 3e runs after Pass 3b); *lighter* than B (a sequencing fix within the existing loop vs a new walk), but not free | Requires wiring the table's bodies into the affine pass, or the M-919 coverage silently reopens at the derive site |
 | **`reveal` (§4.5)** | Free — first-class item in the elaborated nodule | New query arm over the table |
 | **Never-silent (G2)** | Coherence + affine errors on the existing paths | More surface for a missed case (four arms must each be complete) |
 | **KISS / KC-3 preference (house rule #5)** | Strongly favored — fewer concepts, existing paths | Weaker — one new structure, four new arms to keep in sync |
@@ -184,6 +199,14 @@ consult the table in addition to the hand-written `impl` namespace.
 DN-54 §10.5's own Model-A recommendation, and it aligns with DN-71 §7's shared-commitment #2
 (*"reuse existing machinery … never a parallel bespoke path"*) and DN-33 §8.1 Q4's ratified
 *"subsume, not a separate path"* discipline.
+
+**[CORRECTED 2026-07-02 — see §10.]** The recommendation **still stands (Model A)**, but its *strength*
+is corrected from *firm* back to *favored* (DN-54 §10.5): the "firm" upgrade rested on the affine
+tie-breaker (§5.2-point-3), now withdrawn. Model A is favored on the **remaining** independent merits —
+KISS/KC-3, the confirmed-sound orphan/coherence never-silent property (§5.3 Objection 1; RFC-0019 §4.5
+plus DN-54 §8 Q6), free `reveal`, and alignment with the landed elaboration-time-insertion precedent
+(`elaborate_lower_rule`, itself Model-A-shaped). No merit favoring B survived the re-weighing. See
+§10.3.
 
 ### §5.2 The evidence
 
@@ -202,6 +225,13 @@ DN-54 §10.5's own Model-A recommendation, and it aligns with DN-71 §7's shared
    the M-919 double-consume coverage would either need re-wiring or silently regress — a G2 risk on
    the very construct M-919 was landed to protect. This single axis, absent from the original §10.4
    table, tips an already-favored recommendation to a firm one.
+   **[WITHDRAWN 2026-07-02 — this argument is REFUTED; see §10.]** Verified at source: Model A does
+   NOT get affine coverage "by construction." `elab.rs:550-552` feeds the synthetic item to
+   `elaborate` un-re-checked, and `checkty.rs` Pass 3b (the affine loop) runs BEFORE Pass 3e (the
+   `Item::Derive` site), so an injected impl is affine-checked only with deliberate new wiring — the
+   SAME obligation this point attributed to Model B alone. The axis is a shared obligation, not a
+   discriminator; the recommendation returns to *favored* (DN-54 §10.5), not *firm*. §10.3 re-weighs
+   without it; §10.4 makes the wiring an explicit enactment deliverable.
 4. **Reveal is already exact (§4.5).** The injected item went through the full pipeline, so `reveal`
    needs no special case; DN-54 §4.5's by-construction argument holds directly.
 5. **The item-not-Expr parser gap is shared** — `parse_lower_item_rhs` is needed by both models, so
@@ -282,15 +312,25 @@ resulting closed `Item` into the nodule's item list; content-addresses it by `(r
 and de-dups via the ADR-003 content key (a duplicate is a no-op if identical, a coherence error if
 different). Undetermined `T` continues to surface `ElabError::Residual` (never-silent).
 
-### §6.3 Coherence + affine + reveal — inherited, but tested
+### §6.3 Coherence + reveal — inherited, but tested; affine — deliberately wired (corrected)
+
+> **[CORRECTED 2026-07-02 — see §10.4.]** The affine bullet below was written under the withdrawn
+> "inherited by construction" premise. Coherence and `reveal` remain by-construction under Model A;
+> **affine is NOT** — it is a deliberate wiring deliverable (Pass 3e runs after Pass 3b). §10.4 states
+> the corrected obligation; the bullet is retained (append-only) with its correction noted inline.
 
 - **Coherence:** confirm the injected impl enters the RFC-0019 coherence pass; add a reject-
   conformance case that a duplicate `derive` (or a derive colliding with a hand-written impl) is a
   never-silent global-uniqueness refusal.
-- **Affine (M-919):** confirm the injected impl's method bodies flow through `check_fn_body`'s active
-  affine tracker; add the derive-site analogue of M-919's reject test — a derived impl whose method
-  double-consumes a `Substrate` is refused, citing DN-71 by name (the derive-site twin of
-  `lower_rule_rhs_double_consume_of_a_helper_acquired_substrate_is_refused`).
+- **Affine (M-919) — [CORRECTED 2026-07-02, §10.4: deliberate wiring, NOT inherited]:** the enactment
+  MUST wire the derived impl's method bodies into the affine pass — EITHER reorder Pass 3e ahead of
+  Pass 3b so the injected `Item::Impl` is present when `check_impl_methods` runs, OR add an explicit
+  `check_impl_methods`/`check_fn_body` call on the synthesized item — and add the derive-site analogue
+  of M-919's reject test: a derived impl whose method double-consumes a `Substrate` is refused, citing
+  DN-71 by name (the derive-site twin of
+  `lower_rule_rhs_double_consume_of_a_helper_acquired_substrate_is_refused`). The reject test is what
+  proves the wiring landed and did not silently no-op (VR-5 — coverage is earned by a red-then-green
+  test, never self-attested).
 - **`reveal` (§4.5):** rides the DN-38 §5 inspector track (R-2); when it lands, no special case for
   derived items.
 
@@ -384,6 +424,13 @@ status; the M-918/M-919 corrections of FLAG-1…FLAG-3) — all owned by the int
   hygiene contrasts).
 - **No upgrade** — the recommendation is not stated more strongly than "recommended, pending
   acceptance"; the adversarial §5.3 is the disconfirming-evidence surface house rule #4 requires.
+- **[CORRECTED 2026-07-02 — §10.6.]** One claim **was** upgraded past its basis: the affine
+  "by-construction" tie-breaker (§2.3 / §5.2-point-3), presented at by-construction / `Exact`
+  strength, is in truth `Declared` **and false-as-stated**, so it is **WITHDRAWN** (a VR-5 overclaim,
+  now corrected). The `Exact` tag on the mere *existence* of the active tracker in
+  `check_lower_rule_rhs_type` (`checkty.rs:2125`) stands — the error was the *inference* to
+  "derived-impl bodies are covered for free," not the source-read fact. The Model A recommendation
+  stays `Declared`, at *favored* not *firm* strength (§10.3).
 
 **Definition of Done (M-972 / this note).** Met when: **(a)** the attachment decision is framed
 precisely with the current-code state (§2 — done); **(b)** Model A vs Model B are enumerated with
@@ -419,6 +466,142 @@ acceptance**; acceptance is the orchestrator's act, after which this note → th
 
 ---
 
+## §10 — Correction (2026-07-02): the affine "by-construction" tie-breaker is WITHDRAWN
+
+> **Append-only correction.** This section is added after review; it does **not** delete or rewrite
+> the original §2.3 / §4 / §5.2 / §6.3 / §8 text (that record stands, each marked inline `[CORRECTED …]`
+> so no reader takes the withdrawn claim at face value — G2, never-silent). It records the defect, fixes
+> the VR-5 tag, re-weighs the recommendation without the invalid tie-breaker, and converts the affine
+> coverage into an explicit enactment deliverable. Attribution: an **adversarial skeptic** reviewing
+> this dossier refuted the tie-breaker; on independent source re-read (cited below) the refutation is
+> **correct**.
+
+### §10.1 The defect, verified at source (`Exact`, re-read at branch base)
+
+DN-81 §2.3 and §5.2-point-3 asserted that Model A "inherits M-919's affine use-once checking **by
+construction / for free**," because a derived impl's method bodies "flow through `check_fn_body`'s
+active tracker." **That is false.** Two facts, each verified by direct source read (not trusted from
+the prior text):
+
+1. **`crates/mycelium-l1/src/elab.rs:550-552`** — `elaborate_lower_rule` (the closest **existing**
+   analogue to Model A's not-yet-built `elaborate_derive_as_sibling`, and itself Model-A-shaped) builds
+   a synthetic `%lower-rhs%` fn and feeds it **"straight to `elaborate`."** Its own comment states the
+   synthetic item is **"not re-checked"** ("the checker has already validated the RHS … so this
+   synthetic fn is not re-checked — it is fed straight to `elaborate`"). Elaboration-time item insertion
+   does **not** route through the type-checker's affine pass.
+2. **`crates/mycelium-l1/src/checkty.rs`** — **Pass 3b** (`check_impl_methods` loop over `Item::Impl`,
+   ~L1878–1899 — the pass where `check_fn_body`'s **active** affine tracker runs on method bodies)
+   executes **BEFORE Pass 3e** (`Item::Derive` handling, ~L1939–1950). The `Item::Derive` arm calls
+   only `check_derive_application` (~L1945: name-resolution + arity + target-type — `Declared`, **no
+   body walk**). So an `impl` injected at the derive site is produced **after** the affine loop has
+   already finished — too late to be covered.
+
+**Consequence.** Getting a derived-impl method body affine-checked requires **NEW deliberate wiring**
+under **either** model — reorder Pass 3e ahead of Pass 3b, **or** an explicit
+`check_impl_methods`/`check_fn_body` call on the synthesized item. This is the **same** obligation the
+original §2.3 / §4 table / §5.2-point-3 attributed to Model B **alone**. The axis is a **shared
+obligation**, not a Model-A "for free" advantage. The tie-breaker is invalid and is **withdrawn**.
+
+### §10.2 Tag correction (VR-5)
+
+The load-bearing inference "Model A inherits affine coverage by construction" was presented at
+**by-construction / `Exact`** strength (§2.3, §4 table row, §5.2-point-3). Its true strength is
+`Declared`, and **as stated** — a claim of *automatic / free* coverage — it is **false**, so it is
+**WITHDRAWN**, not merely downgraded-and-retained. VR-5: a claim must not be upgraded past its basis;
+this one was. What remains `Exact` and stands: the **existence** of the active tracker in
+`check_lower_rule_rhs_type` (`checkty.rs:2125`, `Tracker::seeded(&[])`) — M-919 did make the
+**rule-RHS** check affine-active. The error was the *inference* from that fact to "derived-impl bodies
+are covered for free," not the fact itself.
+
+### §10.3 Re-weighing Model A vs Model B **without** the invalid tie-breaker
+
+With the affine axis now a **wash** (a shared obligation), does the recommendation still hold? The
+skeptic conceded the remaining merits are **independent** of the affine claim and may still favor A.
+Assessed honestly:
+
+1. **KISS / KC-3 (house rule #5) — still favors A, by less.** Model B's `DerivedImplTable` still
+   requires table-aware arms for **coherence, dispatch, and `reveal`** that Model A does not. Even on
+   the now-shared affine axis the *relative* wiring cost modestly favors A: Model A's fix is a
+   **sequencing / visibility** change *within the existing* Pass 3b loop (once the injected `Item::Impl`
+   exists before the loop, the existing loop covers it), whereas Model B must add a **separate** affine
+   walk over side-table entries that `for item in &nodule.items { if let Item::Impl … }` never sees.
+   Tag: `Declared`; **explicitly not decisive** — the corrected, deflated form of the withdrawn
+   argument, a modest lean, not a tie-breaker.
+2. **Coherence / OQ-D orphan rule as a never-silent feature — CONFIRMED sound; the strongest remaining
+   discriminator.** The skeptic concurred with this reasoning (RFC-0019 §4.5 orphan rule + DN-54 §8 Q6).
+   Independent of affine. Model A routes the injected impl through the **existing** coherence/orphan
+   pass, so an orphan derived impl is refused **never-silent by construction** (criteria 3–4); Model B
+   would have to **re-implement** orphan checking over the table or risk **silently admitting** an
+   orphan derived impl (a G2 violation). A genuine, still-standing never-silent advantage for A — see
+   §5.3 Objection 1, which this correction re-affirms unchanged.
+3. **Reveal / provenance — favors A / wash.** `reveal` is free under A (the injected item goes through
+   the full pipeline; no special case) — a real advantage. Provenance (Model B's one intrinsic edge) is
+   **matched** by adopting OQ-A (ADR-003 content hash + RFC-0001 §4.3 provenance metadata, §6.5), so it
+   is a wash, not a Model-B win.
+4. **Alignment with the elaboration-time-insertion precedent — favors A, with an honest caveat.**
+   `elaborate_lower_rule` (`elab.rs:532`) **already** performs Model-A-shaped elaboration-time synthesis
+   (build a synthetic item, feed to `elaborate`); Model A's `elaborate_derive_as_sibling` is the **same
+   shape**, reusing the same machinery, while Model B introduces a novel side-table with **no in-tree
+   precedent** (DN-71 §7 shared-commitment #2, "reuse existing machinery"). The honest caveat: that
+   **same** precedent is the concrete proof that elaboration-time insertion does **not** get checker
+   coverage automatically (`elab.rs:550-552`'s "not re-checked") — which is exactly why §10.4 makes the
+   affine wiring an **explicit deliverable**. The precedent supports A's *shape* and simultaneously
+   *demonstrates why the affine coverage must be deliberately wired*.
+
+**Corrected recommendation — Model A is RE-AFFIRMED**, at the strength DN-54 §10.5 originally set:
+**favored on the balance of the remaining independent merits** (KISS/KC-3, the confirmed-sound
+orphan/coherence never-silent property, free `reveal`, elaboration-precedent alignment) — **not** the
+*firm* strength the withdrawn tie-breaker had inflated it to (§5.2-point-3). The recommendation does
+**not flip**: no merit favoring B survived the re-weighing (B's provenance edge is neutralized by OQ-A;
+its affine "advantage" never existed — both models share the obligation). The withdrawal lowers the
+**confidence**, not the **direction**. Tag: `Declared` — design recommendation, pending orchestrator
+acceptance (posture unchanged; strength corrected).
+
+### §10.4 Affine wiring is an **EXPLICIT enactment deliverable** (supersedes §6.3's "inherited" framing)
+
+Whichever model is enacted, the enactment **MUST** add deliberate affine-check wiring for derived-impl
+method bodies — it is **NOT** inherited. For Model A:
+
+- **Wire the injected impl into the affine pass**, by **EITHER** (a) **reordering Pass 3e**
+  (`Item::Derive` → `elaborate_derive_as_sibling` injection) **ahead of Pass 3b** (`check_impl_methods`)
+  so the injected `Item::Impl` is present when the existing affine loop runs, **OR** (b) an **explicit
+  `check_impl_methods` / `check_fn_body` call** on each synthesized impl. Note the phase gap that makes
+  the coverage non-automatic: affine checking is a **check-phase** concern (`checkty.rs`), while
+  `elaborate_derive_as_sibling` is **elaboration-phase** (`elab.rs`) — the enactment must bridge the two
+  deliberately.
+- **A derive-site double-consume reject test** — a derived impl whose method double-consumes a
+  `Substrate` **MUST** be refused, never-silent, citing DN-71 by name (the derive-site twin of the
+  existing `lower_rule_rhs_double_consume_of_a_helper_acquired_substrate_is_refused`). This test proves
+  the wiring landed and did not silently no-op (VR-5 — the coverage is earned red-then-green, never
+  self-attested).
+
+Under Model A, coherence and `reveal` remain by-construction; **affine is a deliberate wiring
+deliverable.** (Under Model B the same reject test is required, over the side-table's stored bodies.)
+
+### §10.5 FLAGs — carried forward and added
+
+The prior FLAGs stand unchanged: **FLAG-1** (M-918 `issues.yaml` conflation — *"RESOLVED: DN-71 Model
+S"* wrongly equates the affine construct with the attachment model), **FLAG-2** (DN-71 §7 "attachment
+model" naming), **FLAG-3** (M-919 title overstatement), **FLAG-4** (M-972 mint), and the **§6.4
+OQ-D-as-deliverable** obligation (cross-phylum orphan scope, now doubly-grounded by §10.3-point-2).
+
+**FLAG-6 (new; code-comment nit, non-blocking).** The `Cx::affine` field doc at `checkty.rs:3013-3015`
+still reads that the tracker is **"inert … in `check_lower_rule_rhs_type`,"** but M-919 changed that
+call site to an **active** `Tracker::seeded(&[])` (`checkty.rs:2125`). The doc comment is **stale
+post-M-919** — the code is correct, the comment is not. Orchestrator/enactment: correct the field doc
+when `mycelium-l1` is next touched (behaviour-neutral; flagged, not guessed — G2).
+
+### §10.6 §8 posture amendment
+
+§8's guarantee posture is amended: the "affine coverage by construction" inference (§2.3 /
+§5.2-point-3) is re-tagged from the by-construction / `Exact` strength at which it was presented to
+`Declared` **and WITHDRAWN as false**. The `Exact` tag on the *existence* of the active tracker (a
+source-read fact) stands. The Model A recommendation stays `Declared` — now at *favored* not *firm*
+strength (§10.3). No claim in this note is left upgraded past its basis (VR-5); the one that was is
+now corrected.
+
+---
+
 ## Meta — changelog
 
 - **2026-07-02 — Created (Recommended — pending orchestrator acceptance) — authored (M-972, kickoff
@@ -440,3 +623,24 @@ acceptance**; acceptance is the orchestrator's act, after which this note → th
   maintainer's 2026-07-02 delegation; **not** self-ratified (house rule #4). Enacts no code; advances
   no status; DN-54 stays `Accepted`. CHANGELOG / Doc-Index / issues.yaml / docs/api-index owned by
   the integrating parent (FLAGged, not edited). (Append-only; VR-5; G2.)
+- **2026-07-02 — Correction (append-only) — the affine "by-construction" tie-breaker WITHDRAWN
+  (skeptic-refuted; §10).** An adversarial skeptic refuted the §2.3 / §5.2-point-3 claim that Model A
+  inherits M-919's affine use-once checking "by construction / for free"; independent source re-read
+  confirmed the refutation. Verified: `elab.rs:550-552` (`elaborate_lower_rule`) feeds its synthetic
+  item to `elaborate` **un-re-checked**, and `checkty.rs` **Pass 3b** (`check_impl_methods`, the affine
+  loop) runs **before Pass 3e** (`Item::Derive`, ~L1945) — so a derived-impl method body is affine-
+  checked only with **new deliberate wiring** under **either** model (reorder Pass 3e/3b **or** an
+  explicit `check_impl_methods`/`check_fn_body` call). The tie-breaker is **withdrawn**; its VR-5 tag
+  is corrected from by-construction/`Exact` to `Declared`/withdrawn (§10.2, §10.6). Re-weighed **without**
+  the invalid axis (§10.3): **Model A is re-affirmed** on the remaining independent merits — KISS/KC-3,
+  the confirmed-sound orphan/coherence never-silent property (RFC-0019 §4.5 + DN-54 §8 Q6), free
+  `reveal`, and alignment with the landed elaboration-time-insertion precedent (`elaborate_lower_rule`,
+  itself Model-A-shaped) — but at **favored** (DN-54 §10.5) not **firm** strength; the recommendation
+  does not flip (no B-favoring merit survived; B's provenance edge is neutralized by OQ-A). The affine
+  wiring is made an **explicit enactment deliverable** plus a derive-site double-consume reject test
+  (§10.4), **not** treated as inherited (supersedes §6.3's framing). Adds **FLAG-6** (stale
+  `Cx::affine` field doc at `checkty.rs:3013-3015` — says "inert" but M-919 made it active at L2125;
+  behaviour-neutral, orchestrator to fix in-crate). Original §2.3 / §4 / §5.2 / §6.3 / §8 text retained
+  with inline `[CORRECTED …]` markers (never rewritten — G2). Enacts no code; advances no status;
+  DN-54 stays `Accepted`; recommendation stays `Declared`, pending orchestrator acceptance.
+  (Append-only; VR-5; G2.)
