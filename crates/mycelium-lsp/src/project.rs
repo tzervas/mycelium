@@ -204,6 +204,8 @@ fn render_repr(r: &Repr) -> String {
         Repr::Seq { elem, len } => format!("Seq{{{},{len}}}", render_repr(elem)),
         // RFC-0032 D4 (M-750): the byte-string repr.
         Repr::Bytes => "Bytes".to_owned(),
+        // ADR-040 (M-896): the scalar-float repr renders its frozen width by name (F64-only today).
+        Repr::Float { .. } => "Float{F64}".to_owned(),
     }
 }
 

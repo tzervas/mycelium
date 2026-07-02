@@ -427,6 +427,16 @@ fn cmp_repr_operands(prim: &str, a: &Value, b: &Value) -> Result<Ordering, EvalE
                 .map(|t| ternary::digit(*t))
                 .cmp(xb.iter().map(|t| ternary::digit(*t))))
         }
+        // ADR-040 §2.4 (M-896): the float comparison prims are NOT built yet — float ordering is
+        // *partial* (NaN has no order) with a named opt-in total order, and both land with the
+        // float op surface (M-899). Refused explicitly with the real reason, never funneled into
+        // the generic same-paradigm message below (and never a silently-wrong bitwise order).
+        (Repr::Float { .. }, Repr::Float { .. }) => Err(EvalError::PrimType {
+            prim: prim.to_owned(),
+            why: "float comparison prims are not built yet (ADR-040 §2.4: partial order + named \
+                  total order land with M-899); explicit refusal, not an ordering"
+                .to_owned(),
+        }),
         _ => Err(EvalError::PrimType {
             prim: prim.to_owned(),
             why: "comparison requires two operands of the same paradigm (both Binary or both \

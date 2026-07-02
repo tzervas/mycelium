@@ -252,8 +252,9 @@ fn first_non_finite(v: &Value) -> Option<usize> {
         // A sequence (RFC-0032 D3) carries no flat f64 payload at this level; nested non-finite
         // scalars are caught by the recursive `mycelium-std-io` representability check, not here —
         // return None for the seq's own (absent) scalar payload. A byte string (RFC-0032 D4) has no
-        // f64 either.
-        Payload::Seq(_) | Payload::Bytes(_) => return None,
+        // f64 either. A scalar float (ADR-040; M-896) is always JSON-representable — its wire form
+        // is a *string* carrying the in-band specials faithfully — so it is never non-finite here.
+        Payload::Seq(_) | Payload::Bytes(_) | Payload::Float(_) => return None,
     };
     scalars.iter().position(|x| !x.is_finite())
 }
@@ -568,6 +569,19 @@ fn format_value_human(v: &Value, detailed: bool) -> String {
                 format!("0x{hex}")
             }
         }
+        Repr::Float { .. } => {
+            // ADR-040 (M-896): shortest round-trip decimal (`{:?}`), so `-0.0` keeps its sign and
+            // the in-band specials render as `inf`/`-inf`/`NaN` — deterministic, never lossy.
+            let x = match v.payload() {
+                Payload::Float(x) => *x,
+                _ => unreachable!("Float value must have Float payload"),
+            };
+            if detailed {
+                format!("Float<F64>({x:?})")
+            } else {
+                format!("{x:?}")
+            }
+        }
     }
 }
 
@@ -581,6 +595,8 @@ fn format_repr_short(r: &Repr) -> String {
         Repr::Vsa { model, dim, .. } => format!("Vsa<{model},{dim}>"),
         Repr::Seq { elem, len } => format!("Seq<{},{len}>", format_repr_short(elem)),
         Repr::Bytes => "Bytes".to_owned(),
+        // ADR-040 (M-896): the frozen width registry has exactly F64 today; render it by name.
+        Repr::Float { .. } => "Float<F64>".to_owned(),
     }
 }
 
@@ -777,6 +793,20 @@ fn display_bounded_impl(v: &Value, limit: Budget) -> Rendering {
                     text: Text(format!("0x{rendered}{marker}")),
                     truncation: Truncation::Elided { omitted, marker },
                 }
+            }
+        }
+
+        Repr::Float { .. } => {
+            // ADR-040 (M-896): a scalar float is one indivisible element — it always renders
+            // complete (a budget can only elide *elements*, and there is exactly one; truncating
+            // digits would be a silently-lossy rendering, G2).
+            let x = match v.payload() {
+                Payload::Float(x) => *x,
+                _ => unreachable!("Float value must have Float payload"),
+            };
+            Rendering {
+                text: Text(format!("{x:?}")),
+                truncation: Truncation::Complete,
             }
         }
     }
