@@ -7,7 +7,7 @@
   "patterns": [
     {
       "name": "keyword.control.mycelium",
-      "match": "\\b(backbone|paradigm|consume|default|matured|reclaim|colony|derive|forage|lambda|nodule|object|phylum|policy|graft|hypha|lower|match|spore|trait|cyst|else|fuse|grow|impl|mesh|swap|thaw|then|tier|type|wild|with|xloc|for|let|pub|use|via|fn|if|in|to)\\b"
+      "match": "\\b(backbone|paradigm|consume|default|matured|reclaim|colony|derive|forage|lambda|nodule|object|phylum|policy|Float|graft|hypha|lower|match|spore|trait|cyst|else|fuse|grow|impl|mesh|swap|thaw|then|tier|type|wild|with|xloc|for|let|pub|use|via|fn|if|in|to)\\b"
     },
     {
       "name": "storage.type.mycelium",

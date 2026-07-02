@@ -23,6 +23,7 @@ module.exports = grammar({
       'F16',
       'F32',
       'F64',
+      'Float',
       'Proven',
       'Seq',
       'Sparse',
