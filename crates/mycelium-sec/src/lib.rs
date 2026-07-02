@@ -11,6 +11,13 @@
 //! The secrets / supply-chain families orchestrate the existing `scripts/checks/{secrets,deny}.sh` gates
 //! (the bin); the load-bearing honesty rule is **skip ≠ pass** — a missing scanner is *reduced coverage*,
 //! reported as such, never folded into a clean bill. KC-3: above the kernel; no new dependency.
+//!
+//! **M-961 (RFC-0038 / DN-77) placement note:** the inject-mode gate core (`loose`/`inoculated`
+//! policy, `TrustRoot`, the `SignatureScheme` verify seam, refusals, manifest) lives at the
+//! gate's insertion point — `mycelium-mlir::inject_gate` (core tier) — NOT here: this crate is
+//! tools-tier, and a `core → tools` dependency would violate DN-68's `no-upward-tier-edges`
+//! rule (`xtask/deps-strata.toml`; the M-883/M-884 seam precedent). Security *tooling* built in
+//! this crate can depend downward on that module.
 
 use std::path::{Path, PathBuf};
 
@@ -254,60 +261,6 @@ fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), String> {
     Ok(())
 }
 
+// Tests live in src/tests/ (CLAUDE.md test-layout rule; extracted as-touched, M-797).
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn an_unjustified_wild_block_is_flagged() {
-        let a = audit_wild(&[(
-            "io.myc".to_owned(),
-            "nodule io\nfn read(h: Substrate{Handle}) -> Binary{8} =\n    wild { foreign_read(h) }\n".to_owned(),
-        )]);
-        assert_eq!(a.inventory.len(), 1);
-        assert!(!a.inventory[0].justified);
-        assert_eq!(a.findings.len(), 1);
-        assert_eq!(a.findings[0].rule, "wild-unjustified");
-        assert_eq!(a.findings[0].severity, Severity::Medium);
-        assert_eq!(a.inventory[0].line, 3);
-    }
-
-    #[test]
-    fn a_safety_justified_wild_block_passes() {
-        // SAFETY on the preceding comment line.
-        let a = audit_wild(&[(
-            "io.myc".to_owned(),
-            "nodule io\nfn read(h: Substrate{Handle}) -> Binary{8} =\n    // SAFETY: h is an affine handle, read once\n    wild { foreign_read(h) }\n".to_owned(),
-        )]);
-        assert_eq!(a.inventory.len(), 1);
-        assert!(a.inventory[0].justified);
-        assert!(a.findings.is_empty());
-        // SAFETY as a trailing comment on the same line also counts.
-        let b = audit_wild(&[(
-            "io.myc".to_owned(),
-            "nodule io\nfn r() -> Binary{8} = wild { x } // SAFETY: trivial\n".to_owned(),
-        )]);
-        assert!(b.inventory[0].justified, "{:?}", b.inventory);
-    }
-
-    #[test]
-    fn wild_in_prose_or_identifiers_is_not_a_false_positive() {
-        // `wild` mentioned in a comment is not a block; `wildcard`/`rewild` are not the keyword.
-        let a = audit_wild(&[(
-            "x.myc".to_owned(),
-            "// the wild { } block is unsafe\nnodule x\nfn f(wildcard: Binary{8}) -> Binary{8} = wildcard\n".to_owned(),
-        )]);
-        assert!(a.inventory.is_empty(), "{:?}", a.inventory);
-    }
-
-    #[test]
-    fn a_blank_line_breaks_the_justification_block() {
-        // A SAFETY comment separated from the wild by a blank line does NOT justify it (G2 — be strict).
-        let a = audit_wild(&[(
-            "io.myc".to_owned(),
-            "nodule io\n// SAFETY: stale, not adjacent\n\nfn r() -> Binary{8} =\n    wild { x }\n"
-                .to_owned(),
-        )]);
-        assert_eq!(a.unjustified(), 1, "{:?}", a.inventory);
-    }
-}
+mod tests;

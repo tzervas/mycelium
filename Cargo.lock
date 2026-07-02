@@ -401,6 +401,7 @@ dependencies = [
  "mycelium-sched",
  "mycelium-select",
  "mycelium-vsa",
+ "proptest",
 ]
 
 [[package]]
