@@ -343,10 +343,15 @@ dependencies = [
  "mycelium-mlir",
  "mycelium-numerics",
  "mycelium-stack",
+ "mycelium-std-core",
  "mycelium-std-diag",
  "mycelium-std-error",
  "mycelium-std-recover",
+ "mycelium-std-select",
+ "mycelium-std-spore",
+ "mycelium-std-swap",
  "mycelium-std-ternary",
+ "mycelium-std-testing",
 ]
 
 [[package]]

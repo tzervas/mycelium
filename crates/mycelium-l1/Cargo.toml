@@ -46,3 +46,11 @@ mycelium-std-ternary = { path = "../mycelium-std-ternary" }
 # M-930 (kickoff `opp`, RFC-0031 D6): the retained Rust oracle for the `std.recover` port
 # (`tests/std_recover.rs`) — test scope only; the crate is not retired.
 mycelium-std-recover = { path = "../mycelium-std-recover" }
+# opp-wave oracle dev-deps pre-wired by the orchestrator (eliminates the Cargo.toml collision seam):
+# the retained Rust oracles for the M-932/934/927/928/929 ports (RFC-0031 D6, test scope only, crates
+# not retired). Port leaves add only their lib/std/*.myc + tests/std_*.rs, never this manifest.
+mycelium-std-testing = { path = "../mycelium-std-testing" }
+mycelium-std-spore = { path = "../mycelium-std-spore" }
+mycelium-std-core = { path = "../mycelium-std-core" }
+mycelium-std-select = { path = "../mycelium-std-select" }
+mycelium-std-swap = { path = "../mycelium-std-swap" }
