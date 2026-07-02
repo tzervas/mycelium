@@ -1,0 +1,24 @@
+# Test fixture: a named_rule with an unrecognized `kind` must be reported as a config error
+# (never-silent, G2), not silently skipped.
+#
+# `tier_order` must precede EVERY `[table]` header (including `[meta]`) to bind at the TOML root —
+# once any `[table]` opens, subsequent bare keys belong to that table, not the root document.
+tier_order = ["core"]
+
+[meta]
+derived_from = "test fixture"
+strata_guarantee = "n/a (test fixture)"
+tiers_guarantee = "n/a (test fixture)"
+basis_ref = "test fixture"
+
+[strata]
+mycelium-core = 0
+
+[tiers]
+mycelium-core = "core"
+
+[[named_rules]]
+id = "bogus-rule"
+description = "test: an unrecognized rule kind"
+basis_ref = "test fixture"
+kind = "bogus-kind"
